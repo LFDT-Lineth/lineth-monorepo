@@ -152,12 +152,8 @@ export class SparseMerkleTree {
       newRight = this.insert(node.right || defaultNode, key, value, depth + 1);
     }
 
-    return new MerkleTreeNode(
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-non-null-asserted-optional-chain
-      this.hash(newLeft?.value!, newRight?.value!),
-      newLeft,
-      newRight,
-    );
+    // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
+    return new MerkleTreeNode(this.hash(newLeft?.value!, newRight?.value!), newLeft, newRight);
   }
 
   /**

@@ -35,8 +35,7 @@ export class OperationModeSelector implements IOperationModeSelector {
     private readonly ossificationCompleteOperationModeProcessor: IOperationModeProcessor,
     private readonly yieldProvider: Address,
     private readonly contractReadRetryTimeMs: number,
-  ) {
-  }
+  ) {}
 
   /**
    * Starts the operation mode selection loop.

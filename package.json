@@ -6,26 +6,19 @@
     "build": "pnpm run -r --if-present build",
     "clean": "pnpm run -r --if-present clean && rm -rf node_modules",
     "preinstall": "npx only-allow pnpm",
+    "lint": "pnpm run -r --if-present lint",
     "lint:fix": "pnpm run -r --if-present lint:fix",
-    "lint:ts": "pnpm run -r --if-present lint:ts",
-    "lint:ts:fix": "pnpm run -r --if-present lint:ts:fix",
     "prepare": "husky",
-    "prettier": "pnpm run -r --if-present prettier",
-    "prettier:fix": "pnpm run -r --if-present prettier:fix",
     "test": "pnpm run -r --if-present test"
   },
   "devDependencies": {
     "@types/node": "22.19.3",
-    "@typescript-eslint/eslint-plugin": "7.6.0",
-    "@typescript-eslint/parser": "7.6.0",
-    "eslint": "8.57.0",
-    "eslint-config-prettier": "9.1.0",
-    "eslint-plugin-prettier": "5.1.3",
+    "eslint": "catalog:",
     "husky": "9.1.7",
-    "prettier": "3.2.5",
+    "prettier": "catalog:",
     "rimraf": "5.0.5",
     "ts-node": "10.9.2",
-    "typescript": "5.4.5"
+    "typescript": "catalog:"
   },
   "packageManager": "pnpm@10.28.0",
   "engines": {

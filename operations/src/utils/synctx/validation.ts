@@ -5,7 +5,7 @@ export const isValidNodeTarget = (sourceNode: string, targetNode: string): boole
     }
     new URL(targetNode);
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 };

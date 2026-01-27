@@ -5,15 +5,17 @@
     "func-visibility": ["warn", { "ignoreConstructors": true }],
     "no-inline-assembly": "off",
     "var-name-mixedcase": "off",
-    "const-name-snakecase": "off",
+    "const-name-snakecase": "warn",
     "func-name-mixedcase": "off",
-    "state-visibility": "off",
     "no-empty-blocks": "off",
     "avoid-low-level-calls": "off",
     "reason-string": "off",
     "check-send-result": "off",
-    "no-unused-import": ["error"],
-    "gas-custom-errors": "off",
-    "no-complex-fallback": "off"
+    "no-unused-import": "error",
+    "no-complex-fallback": "off",
+    "gas-strict-inequalities": "off",
+    "gas-increment-by-one": "off",
+    "gas-indexed-events": "off",
+    "gas-small-strings": "off"
   }
 }

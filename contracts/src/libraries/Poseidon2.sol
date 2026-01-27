@@ -69,7 +69,6 @@ library Poseidon2 {
 
       let q := shr(5, len)
       let ptrMsg := _msg.offset
-
       for {
         let i := 0
       } lt(i, q) {

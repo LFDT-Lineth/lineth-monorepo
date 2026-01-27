@@ -90,4 +90,6 @@ jobs:
         uses: ./.github/actions/setup-nodejs
 
       - name: Check Solidity formatting
-        run: pnpm -F contracts run lint:sol
+        run: |
+          pnpm -F contracts run lint:sol
+          pnpm -F contracts run prettier:sol

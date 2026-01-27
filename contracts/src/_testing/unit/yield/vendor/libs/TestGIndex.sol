@@ -1,7 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.25;
 
-import { GIndex, pack as gindexPack, unwrap as gindexUnwrap, index as gindexIndex, width as gindexWidth, concat as gindexConcat, shr as gindexShr, shl as gindexShl, pow as gindexPow, fls as gindexFls, isRoot as gindexIsRoot } from "../../../../../yield/libs/vendor/lido/GIndex.sol";
+import {
+  GIndex,
+  pack as gindexPack,
+  unwrap as gindexUnwrap,
+  index as gindexIndex,
+  width as gindexWidth,
+  concat as gindexConcat,
+  shr as gindexShr,
+  shl as gindexShl,
+  pow as gindexPow,
+  fls as gindexFls,
+  isRoot as gindexIsRoot
+} from "../../../../../yield/libs/vendor/lido/GIndex.sol";
 
 contract TestGIndex {
   function wrap(bytes32 value) external pure returns (GIndex) {

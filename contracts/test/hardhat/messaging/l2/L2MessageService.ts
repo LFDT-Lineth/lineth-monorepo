@@ -47,7 +47,6 @@ import {
 
 describe("L2MessageService", () => {
   let l2MessageService: TestL2MessageService;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let admin: SignerWithAddress;
   let securityCouncil: SignerWithAddress;
   let l1l2MessageSetter: SignerWithAddress;

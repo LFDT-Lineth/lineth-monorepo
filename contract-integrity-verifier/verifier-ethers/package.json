@@ -25,11 +25,8 @@
     "test": "npx jest --bail --detectOpenHandles",
     "test:integration": "npx ts-node tests/integration.test.ts",
     "test:live": "npx ts-node tests/live.test.ts",
-    "lint:ts": "npx eslint 'src/**/*.ts'",
-    "lint:ts:fix": "npx eslint --fix 'src/**/*.ts'",
-    "prettier": "prettier -c 'src/**/*.ts'",
-    "prettier:fix": "prettier -w 'src/**/*.ts'",
-    "lint:fix": "pnpm run lint:ts:fix && pnpm run prettier:fix",
+    "lint": "eslint 'src/**/*.ts'",
+    "lint:fix": "eslint --fix 'src/**/*.ts'",
     "clean": "rimraf dist node_modules coverage"
   },
   "keywords": [
@@ -43,6 +40,7 @@
     "@consensys/linea-contract-integrity-verifier": "workspace:*"
   },
   "devDependencies": {
+    "@consensys/eslint-config": "workspace:*",
     "@types/jest": "catalog:",
     "jest": "catalog:",
     "ts-jest": "catalog:",

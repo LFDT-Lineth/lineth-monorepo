@@ -3,6 +3,7 @@ import { ClaimOnL2Parameters, ClaimOnL2ReturnType } from "../actions/claimOnL2";
 import { DepositParameters, DepositReturnType } from "../actions/deposit";
 import { WithdrawParameters, WithdrawReturnType } from "../actions/withdraw";
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface WalletClient {}
 
 export interface L1WalletClient extends WalletClient {

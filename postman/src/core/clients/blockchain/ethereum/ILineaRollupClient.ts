@@ -10,12 +10,12 @@ export interface ILineaRollupClient<
   ContractTransactionResponse,
   ErrorDescription,
 > extends IMessageServiceContract<
-    Overrides,
-    TransactionReceipt,
-    TransactionResponse,
-    ContractTransactionResponse,
-    ErrorDescription
-  > {
+  Overrides,
+  TransactionReceipt,
+  TransactionResponse,
+  ContractTransactionResponse,
+  ErrorDescription
+> {
   getFinalizationMessagingInfo(transactionHash: string): Promise<FinalizationMessagingInfo>;
   getL2MessageHashesInBlockRange(fromBlock: number, toBlock: number): Promise<string[]>;
   getMessageSiblings(messageHash: string, messageHashes: string[], treeDepth: number): string[];

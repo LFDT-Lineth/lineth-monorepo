@@ -254,7 +254,9 @@ async function main(): Promise<void> {
               const paramsStr = vc.params?.length
                 ? `(${vc.params.map((p) => truncateValue(String(p))).join(", ")})`
                 : "()";
-              console.log(`    ${vcIcon} ${vc.function}${paramsStr}: ${vc.function}() = ${truncateValue(String(vc.actual))}`);
+              console.log(
+                `    ${vcIcon} ${vc.function}${paramsStr}: ${vc.function}() = ${truncateValue(String(vc.actual))}`,
+              );
             }
           }
 
@@ -262,7 +264,9 @@ async function main(): Promise<void> {
           if (sr.slotResults) {
             for (const slot of sr.slotResults) {
               const slotIcon = slot.status === "pass" ? "✓" : slot.status === "fail" ? "✗" : "!";
-              console.log(`    ${slotIcon} ${slot.name} (${slot.slot}): ${slot.name} = ${truncateValue(String(slot.actual))}`);
+              console.log(
+                `    ${slotIcon} ${slot.name} (${slot.slot}): ${slot.name} = ${truncateValue(String(slot.actual))}`,
+              );
             }
           }
 

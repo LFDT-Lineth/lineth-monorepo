@@ -145,7 +145,7 @@ export default function TransactionDetails({ transaction, isModalOpen, onCloseMo
             <span>{transaction?.fromChain.name} Tx hash</span>
             <div className={styles.hash}>
               <Link
-                href={`${transaction?.fromChain.blockExplorers?.default.url}/tx/${transaction?.bridgingTx}` || ""}
+                href={`${transaction?.fromChain.blockExplorers?.default.url}/tx/${transaction?.bridgingTx}`}
                 target="_blank"
                 rel="noopenner noreferrer"
               >
@@ -159,7 +159,7 @@ export default function TransactionDetails({ transaction, isModalOpen, onCloseMo
             <div className={styles.hash}>
               {transaction?.claimingTx ? (
                 <Link
-                  href={`${transaction?.toChain.blockExplorers?.default.url}/tx/${transaction.claimingTx}` || ""}
+                  href={`${transaction?.toChain.blockExplorers?.default.url}/tx/${transaction.claimingTx}`}
                   target="_blank"
                   rel="noopenner noreferrer"
                 >

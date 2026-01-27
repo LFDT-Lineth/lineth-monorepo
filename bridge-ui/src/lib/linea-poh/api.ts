@@ -2,6 +2,8 @@ const BASE_URL = "https://poh-api.linea.build/";
 
 async function fetchWithBackoff(url: string, opts?: RequestInit, maxRetries = 5): Promise<Response> {
   let attempt = 0;
+
+  // TODO: remove this constant condition
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const res = await fetch(url, opts);

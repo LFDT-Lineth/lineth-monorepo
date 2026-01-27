@@ -79,9 +79,7 @@ async function prepareERC20TokenParams(
 async function estimateClaimMessageGasUsed(
   publicClient: ReturnType<typeof getPublicClient>,
   contractAddress: Address,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   args: any[],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   stateOverride: any,
   account: Address,
   value: bigint = 0n,

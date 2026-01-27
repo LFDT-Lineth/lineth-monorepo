@@ -34,7 +34,6 @@ describe("Linea Rollup Yield Extension", () => {
   let yieldManager: string;
   let operator: SignerWithAddress;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let admin: SignerWithAddress;
   let securityCouncil: SignerWithAddress;
   let nonAuthorizedAccount: SignerWithAddress;

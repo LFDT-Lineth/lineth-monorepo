@@ -1,6 +1,7 @@
 import { describe, it, beforeEach, expect } from "@jest/globals";
 import { parseEther, serializeTransaction, toBytes, toRlp } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+
 import { GoNativeCompressor } from "../GoNativeCompressor";
 
 const TEST_ADDRESS = "0x0000000000000000000000000000000000000001";

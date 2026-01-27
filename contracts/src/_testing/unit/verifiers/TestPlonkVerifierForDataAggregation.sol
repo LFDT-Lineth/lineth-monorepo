@@ -703,7 +703,6 @@ contract TestPlonkVerifierForDataAggregation is IPlonkVerifier {
         let p := add(aproof, PROOF_BSB_COMMITMENTS)
 
         let h_fr, ith_lagrange
-
         h_fr := hash_fr(calldataload(p), calldataload(add(p, 0x20)), mPtr)
         ith_lagrange := compute_ith_lagrange_at_z(z, zpnmo, add(nb_public_inputs, VK_INDEX_COMMIT_API_0), mPtr)
         pi_commit := addmod(pi_commit, mulmod(h_fr, ith_lagrange, R_MOD), R_MOD)

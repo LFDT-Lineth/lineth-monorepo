@@ -37,7 +37,7 @@ async function main() {
   try {
     const receipt = await executeTx.wait();
     console.log(`Executed transaction with gasUsed=${receipt?.gasUsed} status=${receipt?.status}`);
-  } catch (error) {
+  } catch {
     const receipt = await provider.getTransactionReceipt(executeTx.hash);
     console.error("Transaction failed - tx receipt=", JSON.stringify(receipt));
   }

@@ -1,7 +1,8 @@
 import { describe, it, expect } from "@jest/globals";
+import fs from "fs";
 import os from "os";
-import fs, { Dirent } from "fs";
 import path from "path";
+
 import { getCompressorLibPath } from "../helpers";
 
 describe("Helpers", () => {
@@ -43,7 +44,7 @@ describe("Helpers", () => {
       jest.mock("os");
       jest.spyOn(fs, "existsSync").mockReturnValueOnce(true);
       const filename = "blob_compressor_v0.1.0.dylib";
-      jest.spyOn(fs, "readdirSync").mockReturnValueOnce([filename] as unknown as Dirent[]);
+      (jest.spyOn(fs, "readdirSync") as jest.Mock).mockReturnValueOnce([filename]);
       const platform = "darwin";
       const arch = "arm64";
       jest.spyOn(os, "platform").mockReturnValueOnce(platform);

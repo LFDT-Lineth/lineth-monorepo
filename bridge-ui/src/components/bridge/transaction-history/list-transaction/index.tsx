@@ -9,7 +9,7 @@ type Props = {
 };
 
 export default function ListTransaction({ transactions }: Props) {
-  const [currentTransaction, setCurrentTransaction] = useState<BridgeTransaction | undefined>(false || undefined);
+  const [currentTransaction, setCurrentTransaction] = useState<BridgeTransaction | undefined>(undefined);
   const handleCloseModal = () => {
     setCurrentTransaction(undefined);
   };

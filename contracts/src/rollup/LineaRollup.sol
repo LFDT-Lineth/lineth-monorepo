@@ -10,6 +10,7 @@ import { LivenessRecovery } from "./LivenessRecovery.sol";
 import { IPermissionsManager } from "../security/access/interfaces/IPermissionsManager.sol";
 import { IPauseManager } from "../security/pausing/interfaces/IPauseManager.sol";
 import { LineaRollupYieldExtension } from "./LineaRollupYieldExtension.sol";
+
 /**
  * @title Contract to manage cross-chain messaging on L1, L2 data submission, and rollup proof verification.
  * @author ConsenSys Software Inc.

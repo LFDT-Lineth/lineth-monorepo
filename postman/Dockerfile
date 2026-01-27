@@ -28,6 +28,7 @@ COPY ./postman/package.json ./postman/package.json
 COPY ./sdk/sdk-ethers/package.json ./sdk/sdk-ethers/package.json
 COPY ./ts-libs/linea-native-libs/package.json ./ts-libs/linea-native-libs/package.json
 COPY ./ts-libs/linea-shared-utils/package.json ./ts-libs/linea-shared-utils/package.json
+COPY ./ts-libs/eslint-config/package.json ./ts-libs/eslint-config/package.json
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
 
@@ -35,6 +36,7 @@ COPY ./postman ./postman
 COPY ./sdk/sdk-ethers ./sdk/sdk-ethers
 COPY ts-libs/linea-native-libs ./ts-libs/linea-native-libs
 COPY ts-libs/linea-shared-utils ./ts-libs/linea-shared-utils
+COPY ts-libs/eslint-config ./ts-libs/eslint-config
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm run build \
     && pnpm deploy --legacy --filter=./postman --prod ./prod/postman

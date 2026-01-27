@@ -19,8 +19,8 @@
     "build": "tsup --tsconfig tsconfig.build.json",
     "clean": "rimraf dist build coverage node_modules",
     "test": "jest --bail --detectOpenHandles --forceExit && jest-it-up",
-    "lint:ts": "npx eslint '**/*.ts'",
-    "lint:ts:fix": "npx eslint --fix '**/*.ts'",
+    "lint:ts": "eslint '**/*.ts'",
+    "lint:ts:fix": "eslint --fix '**/*.ts'",
     "prettier": "prettier -c '**/*.ts'",
     "prettier:fix": "prettier -w '**/*.ts'",
     "lint:fix": "pnpm run lint:ts:fix && pnpm run prettier:fix"
@@ -28,6 +28,7 @@
   "author": "",
   "license": "(MIT OR Apache-2.0)",
   "devDependencies": {
+    "@consensys/eslint-config": "workspace:*",
     "@jest/globals": "catalog:",
     "@types/jest": "catalog:",
     "@types/unzipper": "0.10.11",

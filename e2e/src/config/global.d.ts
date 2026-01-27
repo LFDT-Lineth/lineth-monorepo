@@ -1,5 +1,3 @@
-/* eslint-disable no-var */
-
 import { Logger } from "winston";
 
 declare global {

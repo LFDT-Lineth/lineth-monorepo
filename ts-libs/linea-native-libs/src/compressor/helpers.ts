@@ -19,7 +19,7 @@ const OS_COMPRESSOR_LIB_EXTENSION_MAPPING: Record<string, string> = {
  * @throws {Error} Throws an error if the platform is unsupported, the directory does not exist, or no matching library file is found.
  */
 export function getCompressorLibPath(): string {
-  const platform = os.platform().toString();
+  const platform = os.platform();
   const arch = os.arch();
 
   const directory = `${platform}-${arch}`;

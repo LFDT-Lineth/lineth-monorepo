@@ -63,7 +63,7 @@ export async function validateTokenURI(url: string): Promise<string> {
       next: { revalidate: 3600 }, // Cache 1h
     });
     return url;
-  } catch (error) {
+  } catch {
     return `${process.env.NEXT_PUBLIC_BASE_PATH}/images/logo/noTokenLogo.svg`;
   }
 }

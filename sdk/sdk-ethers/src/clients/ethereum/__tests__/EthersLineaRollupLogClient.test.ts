@@ -27,7 +27,6 @@ describe("TestEthersLineaRollupLogClient", () => {
       MessageSent: jest.fn(),
       L2MessagingBlockAnchored: jest.fn(),
       MessageClaimed: jest.fn(),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     jest.spyOn(LineaRollup__factory, "connect").mockReturnValue(lineaRollupMock);
 

@@ -35,7 +35,6 @@ describe("MessageMetricsUpdater", () => {
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
       getRawMany: jest.fn().mockResolvedValue(getMessagesCountQueryResp),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as unknown as SelectQueryBuilder<any>);
 
     await messageMetricsUpdater.initialize();

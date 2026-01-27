@@ -24,7 +24,7 @@ import {
 
 describe("L2MessageManager", () => {
   let l2MessageManager: TestL2MessageManager;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   let admin: SignerWithAddress;
   let pauser: SignerWithAddress;
   let l1l2MessageSetter: SignerWithAddress;
@@ -159,9 +159,12 @@ describe("L2MessageManager", () => {
         .connect(l1l2MessageSetter)
         .anchorL1L2MessageHashes(messageHashes, 1, 99, HASH_ZERO);
 
-      await expectRevertWithCustomError(l2MessageManager, anchorCall, "MessageHashesListLengthHigherThanOneHundred", [
-        101,
-      ]);
+      await expectRevertWithCustomError(
+        l2MessageManager,
+        anchorCall,
+        "MessageHashesListLengthHigherThanOneHundred",
+        [101],
+      );
     });
 
     it("Should revert when final rolling hash is zero hash", async () => {

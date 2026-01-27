@@ -13,6 +13,7 @@ WORKDIR /usr/src/app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 
+COPY ts-libs/eslint-config/ ./ts-libs/eslint-config/
 COPY operations/ ./operations/
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prefer-offline --ignore-scripts

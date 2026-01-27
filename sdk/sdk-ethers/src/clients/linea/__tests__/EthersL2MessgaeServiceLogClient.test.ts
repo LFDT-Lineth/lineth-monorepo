@@ -24,7 +24,6 @@ describe("TestEthersL2MessgaeServiceLogClient", () => {
       ...l2MessgaeServiceMock.filters,
       MessageSent: jest.fn(),
       ServiceVersionMigrated: jest.fn(),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     jest.spyOn(L2MessageService__factory, "connect").mockReturnValue(l2MessgaeServiceMock);
 

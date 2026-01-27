@@ -77,7 +77,7 @@ function bigintFromEnv(name: string, defaultValue: bigint): bigint {
   }
   try {
     return BigInt(raw);
-  } catch (err) {
+  } catch {
     throw new Error(`Environment variable ${name} must be a bigint-compatible value, received: ${raw}`);
   }
 }

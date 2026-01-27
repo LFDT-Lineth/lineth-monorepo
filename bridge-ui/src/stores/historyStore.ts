@@ -68,7 +68,6 @@ export const useHistoryStore = createWithEqualityFn<HistoryStore>()(
           if (value instanceof Map) value = { __type: "Map", value: Array.from(value.entries()) };
           return value;
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         reviver: (_, value: any) => {
           if (value?.__type === "bigint") value = BigInt(value.value);
           if (value?.__type === "Map") value = new Map(value.value);

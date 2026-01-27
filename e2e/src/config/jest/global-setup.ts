@@ -1,4 +1,3 @@
-/* eslint-disable no-var */
 import { ethers, toBeHex } from "ethers";
 import { config } from "../tests-config";
 import { deployContract } from "../../common/deployments";

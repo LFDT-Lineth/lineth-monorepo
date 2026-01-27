@@ -19,7 +19,6 @@ import { L2_MESSAGE_SERVICE_ROLES } from "contracts/common/constants";
 describe("MessageServiceBase", () => {
   let messageServiceBase: TestMessageServiceBase;
   let messageService: TestL2MessageService;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let admin: SignerWithAddress;
   let remoteSender: SignerWithAddress;
   let securityCouncil: SignerWithAddress;

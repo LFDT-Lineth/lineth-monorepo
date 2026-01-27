@@ -2,7 +2,11 @@
 pragma solidity ^0.8.0;
 
 import { IYieldProvider } from "../../../yield/interfaces/IYieldProvider.sol";
-import { ProgressOssificationResult, YieldProviderRegistration, YieldProviderVendor } from "../../../yield/interfaces/YieldTypes.sol";
+import {
+  ProgressOssificationResult,
+  YieldProviderRegistration,
+  YieldProviderVendor
+} from "../../../yield/interfaces/YieldTypes.sol";
 import { IGenericErrors } from "../../../interfaces/IGenericErrors.sol";
 
 import { YieldManagerStorageLayout } from "../../../yield/YieldManagerStorageLayout.sol";

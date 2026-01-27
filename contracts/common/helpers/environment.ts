@@ -25,7 +25,7 @@ export function getEnvVarOrDefault(envVar: string, defaultValue: unknown) {
     if (Array.isArray(parsedValue) && parsedValue.every((item) => typeof item === "object")) {
       return parsedValue;
     }
-  } catch (error) {
+  } catch {
     console.log(`Unable to parse ${envVar}, returning as string.`);
   }
   return envValue;

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 import { default as NextImage, ImageProps, StaticImageData } from "next/image";
 
@@ -49,6 +48,7 @@ const Image = ({
       height={!fill ? height : undefined}
       sizes={sizes}
       fill={fill}
+      loading={loading}
       unoptimized={unoptimized || (typeof src === "string" && src.includes(".svg"))}
       loader={isContentfulImage(src) ? ({ src, width }) => contentfulLoader({ src, width, quality }) : undefined}
       priority={priority}

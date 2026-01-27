@@ -221,7 +221,9 @@ describe("OssificationPendingProcessor", () => {
     expect(lidoReportClient.getLatestSubmitVaultReportParams).not.toHaveBeenCalled();
     expect(lidoReportClient.submitLatestVaultReport).not.toHaveBeenCalled();
     expect(metricsUpdater.incrementLidoVaultAccountingReport).not.toHaveBeenCalled();
-    expect(logger.info).toHaveBeenCalledWith("_process - Skipping vault report submission (SHOULD_SUBMIT_VAULT_REPORT=false)");
+    expect(logger.info).toHaveBeenCalledWith(
+      "_process - Skipping vault report submission (SHOULD_SUBMIT_VAULT_REPORT=false)",
+    );
     expect(yieldManager.progressPendingOssification).toHaveBeenCalledWith(yieldProvider);
     expect(metricsRecorder.recordProgressOssificationMetrics).toHaveBeenCalledWith(yieldProvider, expect.anything());
 

@@ -16,8 +16,8 @@
   "scripts": {
     "build": "tsup --tsconfig tsconfig.build.json",
     "test": "npx jest --bail --detectOpenHandles",
-    "lint:ts": "npx eslint '**/*.ts'",
-    "lint:ts:fix": "npx eslint --fix '**/*.ts'",
+    "lint:ts": "eslint '**/*.ts'",
+    "lint:ts:fix": "eslint --fix '**/*.ts'",
     "prettier": "prettier -c '**/*.ts'",
     "prettier:fix": "prettier -w '**/*.ts'",
     "lint:fix": "pnpm run lint:ts:fix && pnpm run prettier:fix",
@@ -25,6 +25,7 @@
   },
   "keywords": [],
   "devDependencies": {
+    "@consensys/eslint-config": "workspace:*",
     "@types/express": "5.0.4",
     "@types/jest": "catalog:",
     "@types/node-forge": "1.3.14",

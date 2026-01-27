@@ -443,7 +443,7 @@ export async function getBlockByNumberOrBlockTag(
   try {
     const blockNumber = await provider.getBlock(blockTag, prefetchTxs);
     return blockNumber;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

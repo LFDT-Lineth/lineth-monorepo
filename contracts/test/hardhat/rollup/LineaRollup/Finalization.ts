@@ -40,7 +40,6 @@ import { expect } from "chai";
 describe("Linea Rollup contract: Finalization", () => {
   let lineaRollup: TestLineaRollup;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let securityCouncil: SignerWithAddress;
   let operator: SignerWithAddress;
   let nonAuthorizedAccount: SignerWithAddress;

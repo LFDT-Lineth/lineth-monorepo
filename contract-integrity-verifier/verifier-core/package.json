@@ -26,11 +26,8 @@
     "test": "npx ts-node tests/run-tests.ts",
     "test:integration": "npx ts-node tests/integration.test.ts",
     "test:all": "npm run test && npm run test:integration",
-    "lint:ts": "npx eslint 'src/**/*.ts'",
-    "lint:ts:fix": "npx eslint --fix 'src/**/*.ts'",
-    "prettier": "prettier -c 'src/**/*.ts'",
-    "prettier:fix": "prettier -w 'src/**/*.ts'",
-    "lint:fix": "pnpm run lint:ts:fix && pnpm run prettier:fix",
+    "lint": "eslint 'src/**/*.ts'",
+    "lint:fix": "eslint --fix 'src/**/*.ts'",
     "clean": "rimraf dist node_modules coverage"
   },
   "keywords": [
@@ -41,6 +38,7 @@
     "linea"
   ],
   "devDependencies": {
+    "@consensys/eslint-config": "workspace:*",
     "@types/jest": "catalog:",
     "jest": "catalog:",
     "ts-jest": "catalog:",

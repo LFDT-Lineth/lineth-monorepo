@@ -19,17 +19,14 @@ import { IMessageRetriever } from "../../core/clients/IMessageRetriever";
 import { LineaBrowserProvider, LineaProvider } from "../providers";
 import { makeBaseError } from "../../core/errors/utils";
 
-export class L2MessageServiceClient
-  implements
-    IL2MessageServiceClient<
-      Overrides,
-      TransactionReceipt,
-      TransactionResponse,
-      ContractTransactionResponse,
-      Signer,
-      ErrorDescription
-    >
-{
+export class L2MessageServiceClient implements IL2MessageServiceClient<
+  Overrides,
+  TransactionReceipt,
+  TransactionResponse,
+  ContractTransactionResponse,
+  Signer,
+  ErrorDescription
+> {
   private readonly contract: L2MessageService;
 
   /**
@@ -302,7 +299,7 @@ export class L2MessageServiceClient
       }
 
       return error;
-    } catch (e) {
+    } catch {
       return errorEncodedData;
     }
   }

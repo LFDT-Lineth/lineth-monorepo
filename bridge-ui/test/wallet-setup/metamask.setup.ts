@@ -15,11 +15,7 @@ import { z } from "zod";
 const closeRenameAccountButtonSelector = 'button[aria-label="Close"]';
 
 export default defineWalletSetup(METAMASK_PASSWORD, async (context, walletPage) => {
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  //@ts-ignore
   const extensionId = await getExtensionId(context, "MetaMask");
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  //@ts-ignore
   const metamask = new MetaMask(context, walletPage, METAMASK_PASSWORD, extensionId);
   await metamask.importWallet(METAMASK_SEED_PHRASE);
 

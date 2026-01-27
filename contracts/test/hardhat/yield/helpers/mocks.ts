@@ -15,7 +15,7 @@ export const buildMockYieldProviderRegistration = (
   }> = {},
 ): YieldProviderRegistration => ({
   yieldProviderVendor:
-    overrides.yieldProviderVendor ?? Math.random() < 0.5
+    (overrides.yieldProviderVendor ?? Math.random() < 0.5)
       ? YieldProviderVendor.UNUSED_YIELD_PROVIDER_VENDOR
       : YieldProviderVendor.LIDO_ST_VAULT_YIELD_PROVIDER_VENDOR,
   primaryEntrypoint: overrides.primaryEntrypoint ?? ethers.Wallet.createRandom().address,

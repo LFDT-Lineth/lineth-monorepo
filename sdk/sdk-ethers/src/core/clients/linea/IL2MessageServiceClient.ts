@@ -11,12 +11,12 @@ export interface IL2MessageServiceClient<
   Signer,
   ErrorDescription,
 > extends IMessageServiceContract<
-    Overrides,
-    TransactionReceipt,
-    TransactionResponse,
-    ContractTransactionResponse,
-    ErrorDescription
-  > {
+  Overrides,
+  TransactionReceipt,
+  TransactionResponse,
+  ContractTransactionResponse,
+  ErrorDescription
+> {
   getMessageStatus(params: { messageHash: string; overrides?: Overrides }): Promise<OnChainMessageStatus>;
   encodeClaimMessageTransactionData(message: Message & { feeRecipient?: string }): string;
   estimateClaimGasFees(

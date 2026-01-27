@@ -2,7 +2,11 @@
 pragma solidity ^0.8.25;
 
 import { SSZ } from "../../../../../yield/libs/vendor/lido/SSZ.sol";
-import { Validator, BeaconBlockHeader, PendingPartialWithdrawal } from "../../../../../yield/libs/vendor/lido/BeaconTypes.sol";
+import {
+  Validator,
+  BeaconBlockHeader,
+  PendingPartialWithdrawal
+} from "../../../../../yield/libs/vendor/lido/BeaconTypes.sol";
 import { GIndex } from "../../../../../yield/libs/vendor/lido/GIndex.sol";
 
 contract TestSSZ {

@@ -363,7 +363,9 @@ describe("YieldReportingProcessor", () => {
     const processor = createProcessor();
     const unstakeSpy = jest
       .spyOn(
-        processor as unknown as { _handleUnstakingRebalance(amount: bigint, shouldReportYield: boolean): Promise<void> },
+        processor as unknown as {
+          _handleUnstakingRebalance(amount: bigint, shouldReportYield: boolean): Promise<void>;
+        },
         "_handleUnstakingRebalance",
       )
       .mockResolvedValue(undefined);
@@ -654,9 +656,7 @@ describe("YieldReportingProcessor", () => {
       expect(DashboardContractClientMock.getOrCreate).toHaveBeenCalledWith(dashboardAddress);
       expect(dashboardClient.peekUnpaidLidoProtocolFees).toHaveBeenCalledTimes(1);
       expect(yieldManager.peekYieldReport).toHaveBeenCalledWith(yieldProvider, l2Recipient);
-      expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining("_shouldReportYield - unpaidLidoProtocolFees="),
-      );
+      expect(logger.info).toHaveBeenCalledWith(expect.stringContaining("_shouldReportYield - unpaidLidoProtocolFees="));
     });
 
     it("returns true when only yield threshold is met", async () => {

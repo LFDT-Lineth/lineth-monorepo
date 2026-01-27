@@ -123,7 +123,6 @@ describe("TestL2MessageServiceClient", () => {
       ]);
       mockProperty(l2MessageServiceMock, "interface", {
         encodeFunctionData: jest.fn().mockReturnValue(transactionData),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const gasFeesSpy = jest.spyOn(gasFeeProvider, "getGasFees").mockResolvedValue({
@@ -162,7 +161,6 @@ describe("TestL2MessageServiceClient", () => {
       ]);
       mockProperty(l2MessageServiceMock, "interface", {
         encodeFunctionData: jest.fn().mockReturnValue(transactionData),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const gasFeesSpy = jest.spyOn(gasFeeProvider, "getGasFees").mockResolvedValue({
@@ -417,7 +415,6 @@ describe("TestL2MessageServiceClient", () => {
       mockProperty(l2MessageServiceMock, "interface", {
         ...l2MessageServiceMock.interface,
         parseError: jest.fn().mockReturnValueOnce({ name: "RateLimitExceeded" }),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
       jest.spyOn(providerMock, "getTransaction").mockResolvedValueOnce(generateTransactionResponse());
       jest.spyOn(providerMock, "call").mockResolvedValueOnce("0xa74c1c5f");

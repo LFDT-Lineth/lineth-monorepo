@@ -20,7 +20,6 @@ describe("RecoverFunds contract", () => {
   let testContract: TestExternalCalls;
   let testContractAddress: string;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let admin: SignerWithAddress;
   let securityCouncil: SignerWithAddress;
   let executor: SignerWithAddress;

@@ -209,7 +209,6 @@ library SparseMerkleProof {
     isZeroBytes = true;
     assembly {
       let dataStart := _data.offset
-
       for {
         let currentPtr := dataStart
       } lt(currentPtr, add(dataStart, _data.length)) {

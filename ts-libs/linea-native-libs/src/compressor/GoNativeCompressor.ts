@@ -1,5 +1,6 @@
 import { KoffiFunction, load } from "koffi";
 import path from "path";
+
 import { getCompressorLibPath } from "./helpers";
 
 const COMPRESSOR_DICT_PATH = path.join(__dirname, "./lib/25-04-21.bin");
@@ -36,7 +37,8 @@ export class GoNativeCompressor {
   private init(dataLimit: number): boolean {
     const isInitSuccess = this.initFunc(dataLimit, COMPRESSOR_DICT_PATH);
     if (!isInitSuccess) {
-      throw new Error("Error while initialization the compressor library.");
+      const error = this.getError();
+      throw new Error(`Error while initialization the compressor library. error=${error}`);
     }
     return isInitSuccess;
   }
@@ -65,7 +67,7 @@ export class GoNativeCompressor {
   private getError(): string | null {
     try {
       return this.errorFunc();
-    } catch (e) {
+    } catch {
       return null;
     }
   }

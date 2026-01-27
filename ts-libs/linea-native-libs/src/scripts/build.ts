@@ -1,7 +1,8 @@
+import { execFile } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { Open } from "unzipper";
-import { exec } from "child_process";
+
 import { getBuildConfig } from "./config";
 
 async function downloadFileUsingCurl(url: string, outputFilePath: string): Promise<string> {
@@ -9,17 +10,19 @@ async function downloadFileUsingCurl(url: string, outputFilePath: string): Promi
 
   // Ensure the output directory exists
   fs.mkdirSync(outputDirectory, { recursive: true });
-  const command = `curl -L -H 'Accept:application/octet-stream' -o ${outputFilePath} ${url}`;
 
   return new Promise((resolve, reject) => {
-    /* eslint-disable @typescript-eslint/no-explicit-any */
-    exec(command, (error: any, _: any, stderr: any) => {
-      if (error) {
-        reject(new Error(`Failed to download file using curl: ${stderr}`));
-      } else {
-        resolve(outputFilePath);
-      }
-    });
+    execFile(
+      "curl",
+      ["-L", "-H", "Accept:application/octet-stream", "-o", outputFilePath, url],
+      (error: unknown, _: unknown, stderr: unknown) => {
+        if (error) {
+          reject(new Error(`Failed to download file using curl: ${stderr}`));
+        } else {
+          resolve(outputFilePath);
+        }
+      },
+    );
   });
 }
 

@@ -239,7 +239,6 @@ describe("TestLineaRollupClient", () => {
       const estimatedGasLimit = 50_000n;
       mockProperty(lineaRollupMock, "claimMessage", {
         estimateGas: jest.fn().mockResolvedValueOnce(estimatedGasLimit),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const gasFeesSpy = jest.spyOn(gasFeeProvider, "getGasFees").mockResolvedValue({
@@ -274,7 +273,6 @@ describe("TestLineaRollupClient", () => {
 
       mockProperty(lineaRollupMock, "claimMessage", {
         estimateGas: jest.fn().mockResolvedValueOnce(estimatedGasLimit),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const claimMessageSpy = jest.spyOn(lineaRollupMock.claimMessage, "estimateGas");
@@ -514,20 +512,16 @@ describe("TestLineaRollupClient", () => {
       const estimatedGasLimit = 50_000n;
       mockProperty(lineaRollupMock, "claimMessageWithProof", {
         estimateGas: jest.fn().mockResolvedValueOnce(estimatedGasLimit),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
       mockProperty(lineaRollupMock, "interface", {
         parseLog: jest
           .fn()
           .mockReturnValueOnce({
             args: { treeDepth: 5, l2MerkleRoot: TEST_MERKLE_ROOT },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any)
           .mockReturnValueOnce({
             args: { l2Block: 10n },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const gasFeesSpy = jest.spyOn(gasFeeProvider, "getGasFees").mockResolvedValue({
@@ -706,13 +700,10 @@ describe("TestLineaRollupClient", () => {
           .fn()
           .mockReturnValueOnce({
             args: { treeDepth: 5, l2MerkleRoot: TEST_MERKLE_ROOT },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any)
           .mockReturnValueOnce({
             args: { l2Block: 10n },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
       jest.spyOn(gasFeeProvider, "getGasFees").mockResolvedValue({
         maxFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
@@ -928,7 +919,6 @@ describe("TestLineaRollupClient", () => {
       mockProperty(lineaRollupMock, "interface", {
         ...lineaRollupMock.interface,
         parseError: jest.fn().mockReturnValueOnce({ name: "RateLimitExceeded" }),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
       jest.spyOn(providerMock, "getTransaction").mockResolvedValueOnce(generateTransactionResponse());
       jest.spyOn(providerMock, "call").mockResolvedValueOnce("0xa74c1c5f");

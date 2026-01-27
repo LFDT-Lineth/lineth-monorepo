@@ -6,11 +6,8 @@
   "license": "(MIT OR Apache-2.0)",
   "scripts": {
     "build": "shx rm -rf dist && tsc -p tsconfig.build.json",
-    "prettier": "prettier -c '**/*.{js,ts,md}'",
-    "prettier:fix": "prettier -w '**/*.{js,ts,md}'",
-    "lint": "eslint . --ext .ts",
-    "lint:fix": "pnpm run lint:ts:fix",
-    "lint:ts:fix": "eslint . --ext .ts --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest --bail --detectOpenHandles --forceExit",
     "clean": "rimraf node_modules dist coverage",
     "postpack": "shx rm -f oclif.manifest.json",
@@ -33,6 +30,7 @@
     "viem": "catalog:"
   },
   "devDependencies": {
+    "@consensys/eslint-config": "workspace:*",
     "@jest/globals": "catalog:",
     "@oclif/test": "4.1.14",
     "@types/jest": "catalog:",

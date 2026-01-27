@@ -16,15 +16,13 @@
   "scripts": {
     "build": "tsup --tsconfig tsconfig.build.json",
     "test": "npx jest --bail --detectOpenHandles",
-    "lint:ts": "npx eslint '**/*.ts'",
-    "lint:ts:fix": "npx eslint --fix '**/*.ts'",
-    "prettier": "prettier -c '**/*.ts'",
-    "prettier:fix": "prettier -w '**/*.ts'",
-    "lint:fix": "pnpm run lint:ts:fix && pnpm run prettier:fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
     "clean": "rimraf dist node_modules coverage"
   },
   "keywords": [],
   "devDependencies": {
+    "@consensys/eslint-config": "workspace:*",
     "@types/jest": "catalog:",
     "jest": "catalog:",
     "ts-jest": "catalog:",

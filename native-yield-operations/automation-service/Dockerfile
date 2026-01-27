@@ -23,11 +23,13 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 
 COPY ./native-yield-operations/automation-service/package.json ./native-yield-operations/automation-service/package.json
 COPY ./ts-libs/linea-shared-utils/package.json ./ts-libs/linea-shared-utils/package.json
+COPY ./ts-libs/eslint-config/package.json ./ts-libs/eslint-config/package.json
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
 
 COPY ./native-yield-operations/automation-service ./native-yield-operations/automation-service
 COPY ts-libs/linea-shared-utils ./ts-libs/linea-shared-utils
+COPY ts-libs/eslint-config ./ts-libs/eslint-config
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm run build \
     && pnpm deploy --legacy --filter=./native-yield-operations/automation-service --prod ./prod/native-yield-operations/automation-service

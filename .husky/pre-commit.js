@@ -47,8 +47,8 @@ const FILE_EXTENSION_FILTERS = {
 
 // File extension => script in package.json to run for linting
 const FILE_EXTENSION_LINTING_COMMAND = {
-    [FILE_EXTENSION.TYPESCRIPT]: "pnpm run lint:ts:fix",
-    [FILE_EXTENSION.SOLIDITY]: "pnpm run lint:sol:fix",
+    [FILE_EXTENSION.TYPESCRIPT]: "pnpm run lint:fix",
+    [FILE_EXTENSION.SOLIDITY]: "pnpm run lint:sol:fix && pnpm run prettier:sol:fix",
 };
 
 // File extension => script in package.json to run for documentation generation

@@ -4,7 +4,6 @@ import { ContractFactory, JsonRpcProvider } from "ethers";
 import { ethers, upgrades } from "hardhat";
 import { FactoryOptions, HardhatEthersHelpers } from "hardhat/types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function deployFromFactory(
   contractName: string,
   provider: JsonRpcProvider | HardhatEthersHelpers["provider"] | null = null,

@@ -11,7 +11,7 @@ export function isValidProtocolUrl(input: string, allowedProtocols: string[]): b
   try {
     const url = new URL(input);
     return allowedProtocols.includes(url.protocol);
-  } catch (e) {
+  } catch {
     return false;
   }
 }

@@ -89,7 +89,6 @@ const main = async (args: typeof argv) => {
   const signer = new Wallet(args.privKey, provider);
 
   const functionArgs: SendMessageArgs & Overrides = {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     to: args.to,
     fee: BigInt(args.fee!),
     calldata: args.calldata,

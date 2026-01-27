@@ -104,7 +104,12 @@ function fls(uint256 x) pure returns (uint256 r) {
     r := or(r, shl(4, lt(0xffff, shr(r, x))))
     r := or(r, shl(3, lt(0xff, shr(r, x))))
     // prettier-ignore
-    r := or(r, byte(and(0x1f, shr(shr(r, x), 0x8421084210842108cc6318c6db6d54be)),
-                0x0706060506020504060203020504030106050205030304010505030400000000))
+    r := or(
+      r,
+      byte(
+        and(0x1f, shr(shr(r, x), 0x8421084210842108cc6318c6db6d54be)),
+        0x0706060506020504060203020504030106050205030304010505030400000000
+      )
+    )
   }
 }

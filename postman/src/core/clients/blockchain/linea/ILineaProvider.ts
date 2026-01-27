@@ -7,7 +7,12 @@ export type BlockExtraData = {
   ethGasPrice: number;
 };
 
-export interface ILineaProvider<TransactionReceipt, Block, TransactionRequest, TransactionResponse, Provider>
-  extends IProvider<TransactionReceipt, Block, TransactionRequest, TransactionResponse, Provider> {
+export interface ILineaProvider<
+  TransactionReceipt,
+  Block,
+  TransactionRequest,
+  TransactionResponse,
+  Provider,
+> extends IProvider<TransactionReceipt, Block, TransactionRequest, TransactionResponse, Provider> {
   getBlockExtraData(blockNumber: number | bigint | string): Promise<BlockExtraData | null>;
 }

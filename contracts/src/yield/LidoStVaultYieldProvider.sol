@@ -12,7 +12,11 @@ import { IStakingVault } from "../yield/interfaces/vendor/lido/IStakingVault.sol
 import { Math256 } from "../libraries/Math256.sol";
 import { ErrorUtils } from "../libraries/ErrorUtils.sol";
 import { IPermissionsManager } from "../security/access/interfaces/IPermissionsManager.sol";
-import { ProgressOssificationResult, YieldProviderRegistration, YieldProviderVendor } from "../yield/interfaces/YieldTypes.sol";
+import {
+  ProgressOssificationResult,
+  YieldProviderRegistration,
+  YieldProviderVendor
+} from "../yield/interfaces/YieldTypes.sol";
 import { IValidatorContainerProofVerifier } from "../yield/interfaces/IValidatorContainerProofVerifier.sol";
 import { PendingPartialWithdrawal } from "../yield/libs/vendor/lido/BeaconTypes.sol";
 

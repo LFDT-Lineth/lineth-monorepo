@@ -10,7 +10,6 @@ import { fileURLToPath } from "url";
  */
 export function getModuleDir(): string {
   // In CommonJS, __dirname is available (check first for CJS compatibility)
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   if (typeof __dirname !== "undefined") {
     return __dirname;
   }

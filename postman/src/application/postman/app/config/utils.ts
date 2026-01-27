@@ -164,7 +164,7 @@ export function isFunctionInterfaceValid(functionInterface: string): boolean {
     const i = new Interface([functionInterface]);
 
     return i.fragments.length !== 0;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -173,7 +173,7 @@ export function isValidFiltrexExpression(expression: string): boolean {
   try {
     compileExpression(expression, { customProp: useDotAccessOperator });
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }

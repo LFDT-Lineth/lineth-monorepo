@@ -32,16 +32,13 @@ import { IProvider } from "../../core/clients/IProvider";
 import { BrowserProvider, Provider } from "../providers";
 import { makeBaseError } from "../../core/errors/utils";
 
-export class LineaRollupClient
-  implements
-    ILineaRollupClient<
-      Overrides,
-      TransactionReceipt,
-      TransactionResponse,
-      ContractTransactionResponse,
-      ErrorDescription
-    >
-{
+export class LineaRollupClient implements ILineaRollupClient<
+  Overrides,
+  TransactionReceipt,
+  TransactionResponse,
+  ContractTransactionResponse,
+  ErrorDescription
+> {
   private readonly contract: LineaRollup;
 
   /**
@@ -533,7 +530,7 @@ export class LineaRollupClient
       }
 
       return error;
-    } catch (e) {
+    } catch {
       return errorEncodedData;
     }
   }

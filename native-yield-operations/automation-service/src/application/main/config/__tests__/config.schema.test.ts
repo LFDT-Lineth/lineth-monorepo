@@ -139,7 +139,9 @@ describe("configSchema", () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues.some((issue) => issue.path.join(".") === "MIN_POSITIVE_YIELD_TO_REPORT_WEI")).toBe(true);
+        expect(result.error.issues.some((issue) => issue.path.join(".") === "MIN_POSITIVE_YIELD_TO_REPORT_WEI")).toBe(
+          true,
+        );
       }
     });
   });
@@ -199,7 +201,11 @@ describe("configSchema", () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues.some((issue) => issue.path.join(".") === "MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI")).toBe(true);
+        expect(
+          result.error.issues.some(
+            (issue) => issue.path.join(".") === "MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI",
+          ),
+        ).toBe(true);
       }
     });
   });

@@ -10,12 +10,12 @@ export interface ILineaRollupClient<
   ContractTransactionResponse,
   ErrorDescription,
 > extends IMessageServiceContract<
-    Overrides,
-    TransactionReceipt,
-    TransactionResponse,
-    ContractTransactionResponse,
-    ErrorDescription
-  > {
+  Overrides,
+  TransactionReceipt,
+  TransactionResponse,
+  ContractTransactionResponse,
+  ErrorDescription
+> {
   getMessageStatus(params: {
     messageHash: string;
     messageBlockNumber?: number;
