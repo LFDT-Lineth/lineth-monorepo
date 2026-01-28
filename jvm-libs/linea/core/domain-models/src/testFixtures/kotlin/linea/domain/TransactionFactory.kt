@@ -97,7 +97,7 @@ object TransactionFactory {
     maxFeePerGas: ULong? = 3UL.gwei, // null for EIP-1559 transactions
     maxPriorityFeePerGas: ULong? = 2UL.gwei, // null for non EIP-1559 transactions
     accessList: List<AccessListEntry>? = null, // null non for EIP-2930 transactions
-    codeDelegations: List<CodeDelegation>? = null, // Only for DELEGATE_CODE / EIP - 7702 transactions
+    authorizationTuples: List<AuthorizationTuple>? = null, // Only for DELEGATE_CODE / EIP - 7702 transactions
   ): Transaction {
     val signatureArgs = listOfNotNull(r, s, v)
     require(signatureArgs.let { it.size == 3 || it.isEmpty() }) {
@@ -148,7 +148,7 @@ object TransactionFactory {
       maxFeePerGas = maxFeePerGas,
       maxPriorityFeePerGas = maxPriorityFeePerGas,
       accessList = accessList,
-      codeDelegations = codeDelegations,
+      authorizationList = authorizationTuples,
     )
   }
 

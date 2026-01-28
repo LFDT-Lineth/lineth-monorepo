@@ -1,7 +1,7 @@
 package linea.web3j.mappers
 
 import linea.domain.AccessListEntry
-import linea.domain.CodeDelegation
+import linea.domain.AuthorizationTuple
 import linea.domain.Transaction
 import linea.domain.TransactionType
 import linea.kotlin.decodeHex
@@ -34,8 +34,17 @@ fun org.web3j.protocol.core.methods.response.Transaction.toDomain(): Transaction
       accessListEntry.storageKeys.map { it.decodeHex() },
     )
   }
-  // TODO: Web3j doesn't support Type 4 / 7702 parsing transactions from the block
-  val codeDelegations = emptyList<CodeDelegation>()
+
+  val authorizationList = this.authorizationList?.map { authorizationTuple ->
+    AuthorizationTuple(
+      chainId = authorizationTuple.chainId.toULong(),
+      address = authorizationTuple.address.decodeHex(),
+      nonce = authorizationTuple.nonce.toULong(),
+      v = authorizationTuple.yParity.toByte(),
+      r = authorizationTuple.r,
+      s = authorizationTuple.s,
+    )
+  }
 
   val chainId = run {
     this.chainId?.toULong()?.let {
@@ -62,7 +71,7 @@ fun org.web3j.protocol.core.methods.response.Transaction.toDomain(): Transaction
     maxFeePerGas = maxFeePerGas, // Optional field for EIP-1559 transactions
     maxPriorityFeePerGas = maxPriorityFeePerGas, // Optional field for EIP-1559 transactions,
     accessList = accessList,
-    codeDelegations = codeDelegations,
+    authorizationList = authorizationList,
   )
   return domainTx
 }

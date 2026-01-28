@@ -1,6 +1,5 @@
 package linea.domain
 
-import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import java.math.BigInteger
 import java.util.EnumSet
@@ -52,7 +51,7 @@ enum class TransactionType(private val typeValue: Int) {
   }
 }
 
-data class CodeDelegation(
+data class AuthorizationTuple(
   val chainId: ULong,
   val address: ByteArray,
   val nonce: ULong,
@@ -64,7 +63,7 @@ data class CodeDelegation(
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
 
-    other as CodeDelegation
+    other as AuthorizationTuple
 
     if (v != other.v) return false
     if (chainId != other.chainId) return false
@@ -87,20 +86,9 @@ data class CodeDelegation(
   }
 
   override fun toString(): String {
-    return "CodeDelegation(chainId=$chainId, address=${address.encodeHex()}, nonce=$nonce, v=$v, r=$r, s=$s)"
+    return "AuthorizationTuple(chainId=$chainId, address=${address.encodeHex()}, nonce=$nonce, v=$v, r=$r, s=$s)"
   }
 }
-
-// TODO: Delete once 7702 is supported by Web3j
-val DUMMY_DELEGATION =
-  CodeDelegation(
-    chainId = 0u,
-    address = "0x0000000000000000000000000000000000000000".decodeHex(),
-    nonce = 0u,
-    v = 27,
-    r = BigInteger.ZERO,
-    s = BigInteger.ZERO,
-  )
 
 data class Transaction(
   val type: TransactionType,
@@ -109,16 +97,16 @@ data class Transaction(
   val to: ByteArray?, // Nullable for contract creation transactions
   val value: BigInteger,
   val input: ByteArray,
-  val r: BigInteger,
-  val s: BigInteger,
-  val v: ULong?, // is defined if type is FRONTIER
-  val yParity: ULong?, // EIP-2718 yParity is defined for all transactions types after FRONTIER
   val chainId: ULong? = null, // Optional field for EIP-155 transactions
   val gasPrice: ULong?, // null for EIP-1559 transactions
   val maxFeePerGas: ULong? = null, // null for EIP-1559 transactions
   val maxPriorityFeePerGas: ULong? = null, // null for non EIP-1559 transactions
   val accessList: List<AccessListEntry>?, // null for non EIP-2930 transactions
-  val codeDelegations: List<CodeDelegation>?, // Only for DELEGATE_CODE / EIP - 7702 transactions
+  val authorizationList: List<AuthorizationTuple>?, // Only for DELEGATE_CODE / EIP - 7702 transactions
+  val r: BigInteger,
+  val s: BigInteger,
+  val v: ULong?, // is defined if type is FRONTIER
+  val yParity: ULong?, // EIP-2718 yParity is defined for all transactions types after FRONTIER
 ) {
   companion object {
     // companion object to allow static extension functions
@@ -130,44 +118,43 @@ data class Transaction(
 
     other as Transaction
 
+    if (type != other.type) return false
     if (nonce != other.nonce) return false
-    if (gasPrice != other.gasPrice) return false
     if (gasLimit != other.gasLimit) return false
-    if (to != null) {
-      if (other.to == null) return false
-      if (!to.contentEquals(other.to)) return false
-    } else if (other.to != null) return false
+    if (!to.contentEquals(other.to)) return false
     if (value != other.value) return false
     if (!input.contentEquals(other.input)) return false
     if (r != other.r) return false
     if (s != other.s) return false
     if (v != other.v) return false
     if (yParity != other.yParity) return false
-    if (type != other.type) return false
     if (chainId != other.chainId) return false
-    if (maxPriorityFeePerGas != other.maxPriorityFeePerGas) return false
+    if (gasPrice != other.gasPrice) return false
     if (maxFeePerGas != other.maxFeePerGas) return false
+    if (maxPriorityFeePerGas != other.maxPriorityFeePerGas) return false
     if (accessList != other.accessList) return false
+    if (authorizationList != other.authorizationList) return false
 
     return true
   }
 
   override fun hashCode(): Int {
-    var result = nonce.hashCode()
-    result = 31 * result + gasPrice.hashCode()
+    var result = type.hashCode()
+    result = 31 * result + nonce.hashCode()
     result = 31 * result + gasLimit.hashCode()
     result = 31 * result + (to?.contentHashCode() ?: 0)
     result = 31 * result + value.hashCode()
     result = 31 * result + input.contentHashCode()
     result = 31 * result + r.hashCode()
     result = 31 * result + s.hashCode()
-    result = 31 * result + v.hashCode()
-    result = 31 * result + yParity.hashCode()
-    result = 31 * result + type.hashCode()
+    result = 31 * result + (v?.hashCode() ?: 0)
+    result = 31 * result + (yParity?.hashCode() ?: 0)
     result = 31 * result + (chainId?.hashCode() ?: 0)
-    result = 31 * result + (maxPriorityFeePerGas?.hashCode() ?: 0)
+    result = 31 * result + (gasPrice?.hashCode() ?: 0)
     result = 31 * result + (maxFeePerGas?.hashCode() ?: 0)
-    result = 31 * result + accessList.hashCode()
+    result = 31 * result + (maxPriorityFeePerGas?.hashCode() ?: 0)
+    result = 31 * result + (accessList?.hashCode() ?: 0)
+    result = 31 * result + (authorizationList?.hashCode() ?: 0)
     return result
   }
 
@@ -179,15 +166,16 @@ data class Transaction(
       "to=${to?.encodeHex()}, " +
       "value=$value, " +
       "input=${input.encodeHex()}, " +
-      "r=$r, " +
-      "s=$s, " +
-      "v=$v, " +
-      "yParity=$yParity, " +
       "chainId=$chainId, " +
       "gasPrice=$gasPrice, " +
       "maxFeePerGas=$maxFeePerGas, " +
       "maxPriorityFeePerGas=$maxPriorityFeePerGas, " +
-      "accessList=$accessList)"
+      "accessList=$accessList, " +
+      "authorizationList=$authorizationList, " +
+      "r=$r, " +
+      "s=$s, " +
+      "v=$v, " +
+      "yParity=$yParity)"
   }
 }
 

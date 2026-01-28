@@ -1,7 +1,7 @@
 package linea.web3j.mappers
 
 import linea.domain.AccessListEntry
-import linea.domain.CodeDelegation
+import linea.domain.AuthorizationTuple
 import linea.domain.Transaction
 import linea.domain.TransactionType
 import linea.domain.toBesu
@@ -13,7 +13,6 @@ import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions
 import org.hyperledger.besu.datatypes.Address
 import org.hyperledger.besu.datatypes.Wei
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.web3j.protocol.ObjectMapperFactory
 import org.web3j.protocol.core.methods.response.EthBlock
@@ -73,7 +72,7 @@ class EthGetBlockToLineaBlockMapperTest {
         maxFeePerGas = 0xeUL,
         maxPriorityFeePerGas = 0x0UL,
         accessList = emptyList(),
-        codeDelegations = emptyList(),
+        authorizationList = null,
       ),
     )
 
@@ -142,7 +141,7 @@ class EthGetBlockToLineaBlockMapperTest {
         maxFeePerGas = null,
         maxPriorityFeePerGas = null,
         accessList = null,
-        codeDelegations = null,
+        authorizationList = null,
       ),
     )
     domainTx.toBesu().also { besuTx ->
@@ -229,7 +228,7 @@ class EthGetBlockToLineaBlockMapperTest {
             ),
           ),
         ),
-        codeDelegations = null,
+        authorizationList = null,
       ),
     )
 
@@ -265,14 +264,14 @@ class EthGetBlockToLineaBlockMapperTest {
     }
   }
 
-  @Disabled("Until Web3j supports decoding of the CodeDelegation / EIP-7702 transactions")
+  @Test
   fun `should map transaction with CodeDelegationList`() {
     val txWeb3j = serialize(
       """
       {
         "authorizationList": [
           {
-            "chainId": "0xe703",
+            "chainId": "0x53a",
             "address": "0x484be06b591d7bca761444e04e35acdf269a7873",
             "nonce": "0xf",
             "yParity": "0x1",
@@ -285,13 +284,14 @@ class EthGetBlockToLineaBlockMapperTest {
         "chainId": "0x539",
         "from": "0xce3b7d471fd1fdd10d788ae64e48a9c2f2361179",
         "gas": "0x30d40",
-        "gasPrice": "0x1017df87",
         "hash": "0x8ef620582ed8ba98c8496a42b27a30ff7b1de901b1ff7e65b22ea59a2d0668ce",
         "input": "0x",
         "nonce": "0x0",
         "to": "0x8d97689c9818892b700e27f316cc3e41e17fbeb9",
         "transactionIndex": "0x2",
-        "type": "0x1",
+        "type": "0x4",
+        "maxFeePerGas": "0x1017df87",
+        "maxPriorityFeePerGas": "0x1017df87",
         "value": "0x2386f26fc10000",
         "yParity": "0x1",
         "v": "0x1",
@@ -305,7 +305,7 @@ class EthGetBlockToLineaBlockMapperTest {
     Assertions.assertThat(domainTx).isEqualTo(
       Transaction(
         nonce = 0UL,
-        gasPrice = 0x1017df87UL,
+        gasPrice = null,
         gasLimit = 0x30d40UL,
         to = "0x8d97689c9818892b700e27f316cc3e41e17fbeb9".decodeHex(),
         value = 0x2386f26fc10000UL.toBigInteger(),
@@ -314,16 +314,16 @@ class EthGetBlockToLineaBlockMapperTest {
         s = "0x6277bb9d2614843a4791ff2c192e70876438ec940c39d92deb504591b83dfeb3".toBigIntegerFromHex(),
         v = 1UL,
         yParity = 1UL,
-        type = TransactionType.ACCESS_LIST,
+        type = TransactionType.DELEGATE_CODE,
         chainId = 0x539UL,
-        maxFeePerGas = null,
-        maxPriorityFeePerGas = null,
+        maxFeePerGas = 0x1017df87UL,
+        maxPriorityFeePerGas = 0x1017df87UL,
         accessList = null,
-        codeDelegations = listOf(
-          CodeDelegation(
-            chainId = 0x539UL,
+        authorizationList = listOf(
+          AuthorizationTuple(
+            chainId = 0x53aUL,
             address = "0x484be06b591d7bca761444e04e35acdf269a7873".decodeHex(),
-            nonce = 16uL,
+            nonce = 15uL,
             v = 1,
             r = "0x981f39bf086898f5a236f60dab3a4d56a14bc2b083ec52d3dec5238d2e8cc116".toBigIntegerFromHex(),
             s = "0x19b739390989da89acbd16d3eb937863dfe863744fe1101b95d37a412bd3a606".toBigIntegerFromHex(),
@@ -334,7 +334,7 @@ class EthGetBlockToLineaBlockMapperTest {
 
     domainTx.toBesu().also { besuTx ->
       Assertions.assertThat(besuTx.nonce).isEqualTo(0L)
-      Assertions.assertThat(besuTx.gasPrice.getOrNull()).isEqualTo(Wei.of(0x1017df87L))
+      Assertions.assertThat(besuTx.gasPrice.getOrNull()).isNull()
       Assertions.assertThat(besuTx.gasLimit).isEqualTo(0x30d40L)
       Assertions.assertThat(
         besuTx.to.getOrNull(),
@@ -348,18 +348,18 @@ class EthGetBlockToLineaBlockMapperTest {
         "0x6277bb9d2614843a4791ff2c192e70876438ec940c39d92deb504591b83dfeb3".toBigIntegerFromHex(),
       )
       Assertions.assertThat(besuTx.signature.recId).isEqualTo(1)
-      Assertions.assertThat(besuTx.type).isEqualTo(org.hyperledger.besu.datatypes.TransactionType.ACCESS_LIST)
+      Assertions.assertThat(besuTx.type).isEqualTo(org.hyperledger.besu.datatypes.TransactionType.DELEGATE_CODE)
       Assertions.assertThat(besuTx.chainId.getOrNull()).isEqualTo(0x539L)
-      Assertions.assertThat(besuTx.maxFeePerGas).isEmpty()
-      Assertions.assertThat(besuTx.maxPriorityFeePerGas).isEmpty()
+      Assertions.assertThat(besuTx.maxFeePerGas.getOrNull()).isEqualTo(Wei.of(0x1017df87L))
+      Assertions.assertThat(besuTx.maxPriorityFeePerGas.getOrNull()).isEqualTo(Wei.of(0x1017df87L))
       val codeDelegationList = besuTx.codeDelegationList.getOrElse { Assertions.fail("CodeDelegationList is empty") }
 
       Assertions.assertThat(codeDelegationList).hasSize(1)
       val codeDelegationListEntry = codeDelegationList[0]
       Assertions.assertThat(codeDelegationListEntry.address())
         .isEqualTo(Address.fromHexString("0x484be06b591d7bca761444e04e35acdf269a7873"))
-      Assertions.assertThat(codeDelegationListEntry.chainId()).isEqualTo(1337.toBigInteger())
-      Assertions.assertThat(codeDelegationListEntry.nonce()).isEqualTo(16L)
+      Assertions.assertThat(codeDelegationListEntry.chainId()).isEqualTo(1338.toBigInteger())
+      Assertions.assertThat(codeDelegationListEntry.nonce()).isEqualTo(15L)
       Assertions.assertThat(codeDelegationListEntry.v()).isEqualTo(
         1,
       )
@@ -417,7 +417,7 @@ class EthGetBlockToLineaBlockMapperTest {
         maxFeePerGas = null,
         maxPriorityFeePerGas = null,
         accessList = emptyList(),
-        codeDelegations = null,
+        authorizationList = null,
       ),
     )
 
@@ -499,7 +499,7 @@ class EthGetBlockToLineaBlockMapperTest {
         maxFeePerGas = 0x1017dff7UL,
         maxPriorityFeePerGas = 0x1017df87UL,
         accessList = emptyList(),
-        codeDelegations = null,
+        authorizationList = null,
       ),
     )
 
@@ -577,7 +577,7 @@ class EthGetBlockToLineaBlockMapperTest {
         maxFeePerGas = 0xeUL,
         maxPriorityFeePerGas = 0UL,
         accessList = emptyList(),
-        codeDelegations = null,
+        authorizationList = null,
       ),
     )
 
@@ -646,7 +646,7 @@ class EthGetBlockToLineaBlockMapperTest {
         maxFeePerGas = null,
         maxPriorityFeePerGas = null,
         accessList = null,
-        codeDelegations = null,
+        authorizationList = null,
       ),
     )
     domainTx.toBesu().also { besuTx ->
