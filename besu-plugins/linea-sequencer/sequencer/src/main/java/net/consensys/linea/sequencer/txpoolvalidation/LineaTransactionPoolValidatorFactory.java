@@ -19,9 +19,10 @@ import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
-import net.consensys.linea.sequencer.txpoolvalidation.validators.AllowedAddressValidator;
 import net.consensys.linea.sequencer.txpoolvalidation.validators.CalldataValidator;
+import net.consensys.linea.sequencer.txpoolvalidation.validators.DeniedAddressValidator;
 import net.consensys.linea.sequencer.txpoolvalidation.validators.GasLimitValidator;
+import net.consensys.linea.sequencer.txpoolvalidation.validators.PrecompileAddressValidator;
 import net.consensys.linea.sequencer.txpoolvalidation.validators.ProfitabilityValidator;
 import net.consensys.linea.sequencer.txpoolvalidation.validators.SimulationValidator;
 import net.consensys.linea.sequencer.txpoolvalidation.validators.TraceLineLimitValidator;
@@ -89,7 +90,8 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
     final var validators =
         new PluginTransactionPoolValidator[] {
           new TraceLineLimitValidator(invalidTransactionByLineCountCache),
-          new AllowedAddressValidator(deniedAddresses),
+          new DeniedAddressValidator(deniedAddresses),
+          new PrecompileAddressValidator(),
           new GasLimitValidator(txPoolValidatorConf.maxTxGasLimit()),
           new CalldataValidator(txPoolValidatorConf.maxTxCalldataSize()),
           new ProfitabilityValidator(

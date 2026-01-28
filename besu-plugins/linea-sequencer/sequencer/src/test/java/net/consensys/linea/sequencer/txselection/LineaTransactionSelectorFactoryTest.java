@@ -11,6 +11,7 @@ package net.consensys.linea.sequencer.txselection;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -35,6 +36,7 @@ import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
+import net.consensys.linea.sequencer.liveness.LivenessService;
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
 import net.consensys.linea.sequencer.txselection.selectors.TraceLineLimitTransactionSelectorTest;
 import net.consensys.linea.utils.CachingTransactionCompressor;
@@ -66,9 +68,11 @@ class LineaTransactionSelectorFactoryTest {
       Address.fromHexString("0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec");
   private static final Bytes32 BRIDGE_LOG_TOPIC =
       Bytes32.fromHexString("e856c2b8bd4eb0027ce32eeaf595c21b0b6b4644b326e5b7bd80a1cf8db72e6c");
+  private static final long BLOCK_TIMESTAMP = 1753867173L;
 
   private LineaLimitedBundlePool bundlePool;
   private LineaTransactionSelectorFactory factory;
+  private BlockchainService mockBlockchainService;
 
   @TempDir static Path tempDir;
   @TempDir Path dataDir;
@@ -86,6 +90,10 @@ class LineaTransactionSelectorFactoryTest {
 
   @BeforeEach
   void setUp() {
+    setUpWithLivenessService(Optional.empty());
+  }
+
+  private void setUpWithLivenessService(Optional<LivenessService> livenessService) {
     LineaTracerConfiguration lineaTracerConfiguration =
         LineaTracerConfiguration.builder()
             .moduleLimitsFilePath(lineLimitsConfPath.toString())
@@ -95,10 +103,10 @@ class LineaTransactionSelectorFactoryTest {
             .isLimitless(false)
             .build();
 
-    BlockchainService mockBlockchainService = mock(BlockchainService.class, RETURNS_DEEP_STUBS);
+    mockBlockchainService = mock(BlockchainService.class, RETURNS_DEEP_STUBS);
     when(mockBlockchainService.getChainId()).thenReturn(Optional.of(BigInteger.ONE));
     when(mockBlockchainService.getNextBlockBaseFee()).thenReturn(Optional.of(Wei.of(7)));
-    when(mockBlockchainService.getChainHeadHeader().getTimestamp()).thenReturn(1753867173L);
+    when(mockBlockchainService.getChainHeadHeader().getTimestamp()).thenReturn(BLOCK_TIMESTAMP);
     when(mockBlockchainService.getNextBlockHardforkId(any(), anyLong()))
         .thenReturn(HardforkId.MainnetHardforkId.OSAKA);
 
@@ -124,13 +132,14 @@ class LineaTransactionSelectorFactoryTest {
             l1L2BridgeConfiguration,
             mockProfitabilityConfiguration,
             lineaTracerConfiguration,
-            Optional.empty(),
+            livenessService,
             Optional.empty(),
             Optional.empty(),
             bundlePool,
             invalidTransactionByLineCountCache,
             new AtomicReference<>(Collections.emptyMap()),
             new AtomicReference<>(Collections.emptyMap()),
+            new AtomicReference<>(Collections.emptySet()),
             transactionProfitabilityCalculator);
     factory.create(new SelectorsStateManager());
   }
@@ -149,7 +158,7 @@ class LineaTransactionSelectorFactoryTest {
 
     factory.selectPendingTransactions(mockBts, mockPendingBlockHeader, Collections.emptyList());
 
-    verify(mockBts).commit();
+    verify(mockBts, atLeastOnce()).commit();
   }
 
   @ParameterizedTest()

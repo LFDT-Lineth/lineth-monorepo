@@ -57,6 +57,7 @@
         <Logger level="INFO" name="org.web3j.protocol.http.HttpService" />
         <Logger level="INFO" name="org.hyperledger.besu.ethereum.p2p.network.DefaultP2PNetwork" />
         <Logger level="INFO" name="org.hyperledger.besu.ethereum.eth.manager.EthPeers" />
+        <Logger level="TRACE" name="net.consensys.linea.sequencer.txselection.selectors" />
         <Root level="${sys:root.log.level}">
             <AppenderRef ref="Main" />
         </Root>

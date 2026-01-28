@@ -20,9 +20,10 @@ import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaTransactionPoolValidatorCliOptions;
 import net.consensys.linea.rpc.methods.LineaCancelBundle;
 import net.consensys.linea.rpc.methods.LineaSendBundle;
-import net.consensys.linea.sequencer.txpoolvalidation.validators.AllowedAddressValidator;
 import net.consensys.linea.sequencer.txpoolvalidation.validators.CalldataValidator;
+import net.consensys.linea.sequencer.txpoolvalidation.validators.DeniedAddressValidator;
 import net.consensys.linea.sequencer.txpoolvalidation.validators.GasLimitValidator;
+import net.consensys.linea.sequencer.txpoolvalidation.validators.PrecompileAddressValidator;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
@@ -61,7 +62,8 @@ public class LineaBundleEndpointsPlugin extends AbstractLineaRequiredPlugin {
   public PluginTransactionPoolValidator createTransactionValidator() {
     final var validators =
         new PluginTransactionPoolValidator[] {
-          new AllowedAddressValidator(bundleDeniedAddresses),
+          new DeniedAddressValidator(bundleDeniedAddresses),
+          new PrecompileAddressValidator(),
           new GasLimitValidator(transactionPoolValidatorConfiguration().maxTxGasLimit()),
           new CalldataValidator(transactionPoolValidatorConfiguration().maxTxCalldataSize())
         };

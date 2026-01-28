@@ -8,12 +8,9 @@
  */
 package linea.plugin.acc.test
 
-import linea.plugin.acc.test.tests.web3j.generated.ExcludedPrecompiles
-import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts
 import org.junit.jupiter.api.Test
-import org.web3j.abi.datatypes.generated.Bytes8
 import org.web3j.crypto.Credentials
 import org.web3j.crypto.Hash
 import org.web3j.crypto.RawTransaction
@@ -21,7 +18,6 @@ import org.web3j.crypto.TransactionEncoder
 import org.web3j.tx.gas.DefaultGasProvider
 import org.web3j.utils.Numeric
 import java.math.BigInteger
-import java.nio.charset.StandardCharsets
 
 class ExcludedPrecompilesLimitlessTest : LineaPluginPoSTestBase() {
 
@@ -63,16 +59,14 @@ class ExcludedPrecompilesLimitlessTest : LineaPluginPoSTestBase() {
       InvalidCall(
         Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY,
         2,
-        excludedPrecompiles
-          .callRIPEMD160("I am not allowed here".toByteArray(StandardCharsets.UTF_8))
-          .encodeFunctionCall(),
+        PrecompileCallEncoder.encodeRipemd160Call(excludedPrecompiles),
         "Tx 0xe4648fd59d4289e59b112bf60931336440d306c85c2aac5a8b0c64ab35bc55b7 " +
           "line count for module PRECOMPILE_RIPEMD_BLOCKS=21 is above the limit 0",
       ),
       InvalidCall(
         Accounts.GENESIS_ACCOUNT_TWO_PRIVATE_KEY,
         0,
-        encodedCallBlake2F(excludedPrecompiles),
+        PrecompileCallEncoder.encodeBlake2fCall(excludedPrecompiles),
         "Tx 0x9f457b1b5244b03c54234f7f9e8225d4253135dd3c99a46dc527d115e7ea5dac " +
           "line count for module PRECOMPILE_BLAKE_EFFECTIVE_CALLS=1 is above the limit 0",
       ),
@@ -122,32 +116,6 @@ class ExcludedPrecompilesLimitlessTest : LineaPluginPoSTestBase() {
     invalidCalls.forEach { invalidCall ->
       assertThat(log).contains(invalidCall.expectedTraceLog)
     }
-  }
-
-  private fun encodedCallBlake2F(excludedPrecompiles: ExcludedPrecompiles): String {
-    return excludedPrecompiles
-      .callBlake2f(
-        BigInteger.valueOf(12),
-        listOf(
-          Bytes32.fromHexString(
-            "0x48c9bdf267e6096a3ba7ca8485ae67bb2bf894fe72f36e3cf1361d5f3af54fa5",
-          ).toArrayUnsafe(),
-          Bytes32.fromHexString(
-            "0xd182e6ad7f520e511f6c3e2b8c68059b6bbd41fbabd9831f79217e1319cde05b",
-          ).toArrayUnsafe(),
-        ),
-        listOf(
-          Bytes32.fromHexString(
-            "0x6162630000000000000000000000000000000000000000000000000000000000",
-          ).toArrayUnsafe(),
-          Bytes32.ZERO.toArrayUnsafe(),
-          Bytes32.ZERO.toArrayUnsafe(),
-          Bytes32.ZERO.toArrayUnsafe(),
-        ),
-        listOf(Bytes8.DEFAULT.value, Bytes8.DEFAULT.value),
-        true,
-      )
-      .encodeFunctionCall()
   }
 
   companion object {

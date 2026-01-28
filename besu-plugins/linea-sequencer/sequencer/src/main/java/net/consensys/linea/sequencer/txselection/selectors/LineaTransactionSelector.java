@@ -59,6 +59,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache,
       final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedEvents,
       final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedBundleEvents,
+      final AtomicReference<Set<Address>> deniedAddresses,
       final TransactionProfitabilityCalculator transactionProfitabilityCalculator) {
     this.rejectedTxJsonRpcManager = rejectedTxJsonRpcManager;
 
@@ -80,6 +81,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
             invalidTransactionByLineCountCache,
             deniedEvents,
             deniedBundleEvents,
+            deniedAddresses,
             transactionProfitabilityCalculator);
   }
 
@@ -94,6 +96,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
    * @param maybeProfitabilityMetrics The optional profitability metrics
    * @param deniedEvents The transaction event deny list
    * @param deniedBundleEvents The bundle transaction event deny list
+   * @param deniedAddresses The denied addresses set
    * @return A list of selectors.
    */
   private List<PluginTransactionSelector> createTransactionSelectors(
@@ -107,6 +110,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache,
       final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedEvents,
       final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedBundleEvents,
+      final AtomicReference<Set<Address>> deniedAddresses,
       final TransactionProfitabilityCalculator transactionProfitabilityCalculator) {
 
     traceLineLimitTransactionSelector =
@@ -117,24 +121,22 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
             tracerConfiguration,
             invalidTransactionByLineCountCache);
 
-    List<PluginTransactionSelector> selectors =
-        List.of(
-            new MaxBlockCallDataTransactionSelector(
-                selectorsStateManager, txSelectorConfiguration.maxBlockCallDataSize()),
-            new MaxBlockGasTransactionSelector(
-                selectorsStateManager, txSelectorConfiguration.maxGasPerBlock()),
-            new ProfitableTransactionSelector(
-                blockchainService,
-                profitabilityConfiguration,
-                maybeProfitabilityMetrics,
-                transactionProfitabilityCalculator),
-            new BundleConstraintTransactionSelector(),
-            new MaxBundleGasPerBlockTransactionSelector(
-                selectorsStateManager, txSelectorConfiguration.maxBundleGasPerBlock()),
-            traceLineLimitTransactionSelector,
-            new TransactionEventSelector(deniedEvents, deniedBundleEvents));
-
-    return selectors;
+    return List.of(
+        new AllowedAddressTransactionSelector(deniedAddresses),
+        new MaxBlockCallDataTransactionSelector(
+            selectorsStateManager, txSelectorConfiguration.maxBlockCallDataSize()),
+        new MaxBlockGasTransactionSelector(
+            selectorsStateManager, txSelectorConfiguration.maxGasPerBlock()),
+        new ProfitableTransactionSelector(
+            blockchainService,
+            profitabilityConfiguration,
+            maybeProfitabilityMetrics,
+            transactionProfitabilityCalculator),
+        new BundleConstraintTransactionSelector(),
+        new MaxBundleGasPerBlockTransactionSelector(
+            selectorsStateManager, txSelectorConfiguration.maxBundleGasPerBlock()),
+        traceLineLimitTransactionSelector,
+        new TransactionEventSelector(deniedEvents, deniedBundleEvents));
   }
 
   /**

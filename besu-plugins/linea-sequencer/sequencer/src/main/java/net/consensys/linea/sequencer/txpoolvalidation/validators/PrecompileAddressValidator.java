@@ -10,20 +10,15 @@ package net.consensys.linea.sequencer.txpoolvalidation.validators;
 
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolValidator;
 
-/**
- * Validator that checks if the sender or the recipient are accepted. By default, precompiles are
- * not valid recipient.
- */
+/** Validator that rejects transactions sent to precompile addresses. */
 @Slf4j
-@RequiredArgsConstructor
-public class AllowedAddressValidator implements PluginTransactionPoolValidator {
+public class PrecompileAddressValidator implements PluginTransactionPoolValidator {
+
   private static final Set<Address> PRECOMPILES =
       Set.of(
           Address.fromHexString("0x0000000000000000000000000000000000000001"),
@@ -35,44 +30,27 @@ public class AllowedAddressValidator implements PluginTransactionPoolValidator {
           Address.fromHexString("0x0000000000000000000000000000000000000007"),
           Address.fromHexString("0x0000000000000000000000000000000000000008"),
           Address.fromHexString("0x0000000000000000000000000000000000000009"),
-          Address.fromHexString("0x000000000000000000000000000000000000000a"));
-
-  private final AtomicReference<Set<Address>> denied;
+          Address.fromHexString("0x000000000000000000000000000000000000000a"),
+          Address.fromHexString("0x000000000000000000000000000000000000000b"),
+          Address.fromHexString("0x000000000000000000000000000000000000000c"),
+          Address.fromHexString("0x000000000000000000000000000000000000000d"),
+          Address.fromHexString("0x000000000000000000000000000000000000000e"),
+          Address.fromHexString("0x000000000000000000000000000000000000000f"),
+          Address.fromHexString("0x0000000000000000000000000000000000000010"),
+          Address.fromHexString("0x0000000000000000000000000000000000000011"),
+          Address.fromHexString("0x0000000000000000000000000000000000000100"));
 
   @Override
   public Optional<String> validateTransaction(
       final Transaction transaction, final boolean isLocal, final boolean hasPriority) {
-    return validateSender(transaction).or(() -> validateRecipient(transaction));
-  }
-
-  private Optional<String> validateRecipient(final Transaction transaction) {
     if (transaction.getTo().isPresent()) {
       final Address to = transaction.getTo().get();
-      if (denied.get().contains(to)) {
-        final String errMsg =
-            String.format(
-                "recipient %s is blocked as appearing on the SDN or other legally prohibited list",
-                to);
-        log.debug(errMsg);
-        return Optional.of(errMsg);
-      } else if (PRECOMPILES.contains(to)) {
+      if (PRECOMPILES.contains(to)) {
         final String errMsg =
             "destination address is a precompile address and cannot receive transactions";
         log.debug(errMsg);
         return Optional.of(errMsg);
       }
-    }
-    return Optional.empty();
-  }
-
-  private Optional<String> validateSender(final Transaction transaction) {
-    if (denied.get().contains(transaction.getSender())) {
-      final String errMsg =
-          String.format(
-              "sender %s is blocked as appearing on the SDN or other legally prohibited list",
-              transaction.getSender());
-      log.debug(errMsg);
-      return Optional.of(errMsg);
     }
     return Optional.empty();
   }
