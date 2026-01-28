@@ -55,6 +55,11 @@ library SparseMerkleProof {
    */
   error WrongProofLength(uint256 expectedLength, uint256 actualLength);
 
+  /**
+   * Thrown when the computed subtree Merkle root does not match the provided subSmtRoot.
+   */
+  error SubSmtRootMismatch(bytes32 expected, bytes32 actual);
+
   uint256 internal constant TREE_DEPTH = 40;
   uint256 internal constant UNFORMATTED_PROOF_LENGTH = 42;
   bytes32 internal constant ZERO_HASH = 0x0;
@@ -72,8 +77,10 @@ library SparseMerkleProof {
       revert WrongProofLength(UNFORMATTED_PROOF_LENGTH, _rawProof.length);
     }
 
-    (bytes32[2] memory nextFreeNode, bytes32 leafHash, bytes32[] memory proof) = _formatProof(_rawProof);
-    return _verify(proof, leafHash, _leafIndex, _root, nextFreeNode);
+    (bytes32[2] memory nextFreeNode, bytes32 subSmtRoot, bytes32 leafHash, bytes32[] memory proof) = _formatProof(
+      _rawProof
+    );
+    return _verify(proof, leafHash, _leafIndex, _root, nextFreeNode, subSmtRoot);
   }
 
   /**
@@ -166,7 +173,7 @@ library SparseMerkleProof {
    */
   function _formatProof(
     bytes[] calldata _rawProof
-  ) private pure returns (bytes32[2] memory, bytes32, bytes32[] memory) {
+  ) private pure returns (bytes32[2] memory, bytes32, bytes32, bytes32[] memory) {
     uint256 rawProofLength = _rawProof.length;
     uint256 formattedProofLength = rawProofLength - 2;
 
@@ -176,7 +183,8 @@ library SparseMerkleProof {
       revert WrongBytesLength(0x60, _rawProof[0].length);
     }
 
-    bytes32[2] memory nextFreeNode = abi.decode(_rawProof[0][:64], (bytes32[2]));
+    (bytes32[2] memory nextFreeNode, bytes32 subSmtRoot) = abi.decode(_rawProof[0], (bytes32[2], bytes32));
+
     bytes32 leafHash = Poseidon2.hash(_rawProof[rawProofLength - 1]);
 
     for (uint256 i = 1; i < formattedProofLength; ) {
@@ -193,7 +201,7 @@ library SparseMerkleProof {
       proof[0] = Poseidon2.hash(_rawProof[formattedProofLength]);
     }
 
-    return (nextFreeNode, leafHash, proof);
+    return (nextFreeNode, subSmtRoot, leafHash, proof);
   }
 
   /**
@@ -231,6 +239,7 @@ library SparseMerkleProof {
    * @param _leafIndex Index of the leaf.
    * @param _root Sparse merkle root.
    * @param _nextFreeNode Next free node.
+   * @param _subSmtRoot The root hash of the subtree corresponding to the path in the sparse Merkle tree.
    * @return bool If the computed merkle root matches the provided one.
    */
   function _verify(
@@ -238,7 +247,8 @@ library SparseMerkleProof {
     bytes32 _leafHash,
     uint256 _leafIndex,
     bytes32 _root,
-    bytes32[2] memory _nextFreeNode
+    bytes32[2] memory _nextFreeNode,
+    bytes32 _subSmtRoot
   ) private pure returns (bool) {
     bytes32 computedHash = _leafHash;
     uint256 currentIndex = _leafIndex;
@@ -252,6 +262,8 @@ library SparseMerkleProof {
         computedHash = Poseidon2.hash(abi.encodePacked(_proof[height], computedHash));
       else computedHash = Poseidon2.hash(abi.encodePacked(computedHash, _proof[height]));
     }
+
+    require(computedHash == _subSmtRoot, SubSmtRootMismatch(_subSmtRoot, computedHash));
 
     return Poseidon2.hash(abi.encodePacked(_nextFreeNode, computedHash)) == _root;
   }
