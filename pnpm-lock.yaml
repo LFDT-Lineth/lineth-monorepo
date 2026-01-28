@@ -248,9 +248,6 @@ importers:
       dotenv:
         specifier: 'catalog:'
         version: 16.5.0
-      eslint:
-        specifier: 'catalog:'
-        version: 9.39.2(jiti@2.3.3)
       nock:
         specifier: 14.0.1
         version: 14.0.1
