@@ -10,7 +10,8 @@ dependencies {
   api project(':jvm-libs:linea:clients:interfaces')
   api project(':jvm-libs:generic:extensions:futures')
   api project(':jvm-libs:generic:extensions:kotlin')
-  api 'build.linea:l1-rollup-contract-client:6.0.0-rc2'
+  // api 'build.linea:l1-rollup-contract-client:6.0.0-rc2'
+  api project(':jvm-libs:linea:linea-contracts:l1-rollup')
   api 'build.linea:l2-message-service-contract-client:0.1.0'
   api project(':jvm-libs:linea:linea-contracts:l1-validium')
 

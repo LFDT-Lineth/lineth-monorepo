@@ -383,8 +383,8 @@ class EthLogsFilterPollerTest {
       templateLog.copy(blockNumber = 20UL, logIndex = 1UL),
     )
     val logs2 = listOf(
-      templateLog.copy(blockNumber = 30UL, logIndex = 2UL),
-      templateLog.copy(blockNumber = 40UL, logIndex = 0UL),
+      templateLog.copy(blockNumber = 300UL, logIndex = 2UL),
+      templateLog.copy(blockNumber = 400UL, logIndex = 0UL),
     )
     fakeEthApiClient.setLogs(logs1)
     fakeEthApiClient.setFinalizedBlockTag(25UL)
@@ -394,17 +394,18 @@ class EthLogsFilterPollerTest {
     poller = createPoller(
       fromBlock = BlockParameter.BlockNumber(0UL),
       toBlock = BlockParameter.Tag.FINALIZED,
-      pollingInterval = 10.milliseconds,
+      pollingInterval = 5.milliseconds,
+      blockChunkSize = 5u,
       consumer = { log -> consumedLogs.add(log) },
     )
 
-    poller.start().get() // Should complete successfully
+    poller.start().get()
     awaitUntilAsserted {
       assertThat(consumedLogs).containsExactlyElementsOf(logs1)
     }
     poller.stop().get()
     fakeEthApiClient.addLogs(logs2.toSet())
-    fakeEthApiClient.setFinalizedBlockTag(50UL)
+    fakeEthApiClient.setFinalizedBlockTag(500UL)
 
     Thread.sleep(200)
     assertThat(consumedLogs).containsExactlyElementsOf(logs1)

@@ -9,17 +9,16 @@ import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.DynamicArray
 import org.web3j.abi.datatypes.DynamicBytes
 import org.web3j.abi.datatypes.Function
-import org.web3j.abi.datatypes.Type
 import org.web3j.abi.datatypes.generated.Bytes32
 import org.web3j.abi.datatypes.generated.Uint256
 import java.math.BigInteger
-import java.util.Arrays
 
 internal object Web3JLineaRollupFunctionBuilders {
   fun buildSubmitBlobsFunction(version: LineaRollupContractVersion, blobs: List<BlobRecord>): Function {
     return when (version) {
       LineaRollupContractVersion.V6,
       LineaRollupContractVersion.V7,
+      LineaRollupContractVersion.V8,
       -> buildSubmitBlobsFunctionV6(blobs)
     }
   }
@@ -53,7 +52,7 @@ internal object Web3JLineaRollupFunctionBuilders {
      */
     return Function(
       LineaRollupV6.FUNC_SUBMITBLOBS,
-      Arrays.asList<Type<*>>(
+      listOf(
         DynamicArray(LineaRollupV6.BlobSubmission::class.java, blobsSubmissionData),
         Bytes32(blobs.first().blobCompressionProof!!.prevShnarf),
         Bytes32(blobs.last().blobCompressionProof!!.expectedShnarf),
@@ -69,17 +68,19 @@ internal object Web3JLineaRollupFunctionBuilders {
     parentL1RollingHash: ByteArray,
     parentL1RollingHashMessageNumber: Long,
   ): Function {
-    when (version) {
+    return when (version) {
       LineaRollupContractVersion.V6,
       LineaRollupContractVersion.V7,
       -> {
-        return buildFinalizeBlockFunctionV6(
+        buildFinalizeBlockFunctionV6(
           aggregationProof,
           aggregationLastBlob,
           parentL1RollingHash,
           parentL1RollingHashMessageNumber,
         )
       }
+
+      LineaRollupContractVersion.V8 -> TODO("Contract version=$version not supported for FinalizeBlocks!")
     }
   }
 
@@ -156,7 +157,7 @@ internal object Web3JLineaRollupFunctionBuilders {
     val function =
       Function(
         LineaRollupV6.FUNC_FINALIZEBLOCKS,
-        Arrays.asList<Type<*>>(
+        listOf(
           DynamicBytes(aggregationProof.aggregatedProof),
           Uint256(aggregationProof.aggregatedVerifierIndex.toLong()),
           finalizationData,

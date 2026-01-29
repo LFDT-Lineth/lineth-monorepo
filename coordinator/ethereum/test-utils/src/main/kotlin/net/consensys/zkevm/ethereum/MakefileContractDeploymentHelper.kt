@@ -80,6 +80,7 @@ fun makeDeployLineaRollup(
   val command = when (contractVersion) {
     LineaRollupContractVersion.V6 -> "make deploy-linea-rollup-v6"
     LineaRollupContractVersion.V7 -> "make deploy-linea-rollup-v7"
+    LineaRollupContractVersion.V8 -> "make deploy-linea-rollup-v8"
     // else -> throw IllegalArgumentException("Unsupported contract version: $contractVersion")
   }
 

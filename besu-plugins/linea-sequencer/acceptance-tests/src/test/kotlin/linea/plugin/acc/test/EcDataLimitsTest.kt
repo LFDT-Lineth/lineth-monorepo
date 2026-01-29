@@ -36,7 +36,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     // due to EcParing sometime taking all the selection time before all pending txs
     // have been evaluated
     return GenesisConfigurationFactory.CliqueOptions(
-      BLOCK_PERIOD_SECONDS+1,
+      BLOCK_PERIOD_SECONDS + 1,
       GenesisConfigurationFactory.CliqueOptions.DEFAULT.epochLength(),
       false,
     )
