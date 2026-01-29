@@ -78,6 +78,21 @@ class PrecompileAddressValidatorTest {
         .isEqualTo("destination address is a precompile address and cannot receive transactions");
   }
 
+  @Test
+  void senderCanBePrecompileAddress() {
+    // Precompile as sender is allowed (this is unlikely in practice but validator shouldn't block)
+    final Address precompile = Address.precompiled(1);
+    final Transaction transaction =
+        Transaction.builder()
+            .sender(precompile)
+            .to(REGULAR_ADDRESS)
+            .gasPrice(Wei.ZERO)
+            .payload(Bytes.EMPTY)
+            .build();
+
+    assertThat(validator.validateTransaction(transaction, false, false)).isEmpty();
+  }
+
   static Stream<Arguments> precompileAddresses() {
     return Stream.of(
         Arguments.of("0000000000000000000000000000000000000001"), // ecRecover

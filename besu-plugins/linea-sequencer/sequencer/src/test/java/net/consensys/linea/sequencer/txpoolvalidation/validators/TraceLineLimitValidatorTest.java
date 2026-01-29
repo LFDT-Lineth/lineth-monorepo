@@ -51,7 +51,7 @@ public class TraceLineLimitValidatorTest {
   @Test
   void shouldRejectTransactionInCache() {
     // Given: transaction is in cache (marked as exceeding line count limit)
-    cache.remember(transactionHash);
+    cache.remember(transactionHash, "EXT");
     assertThat(cache.contains(transactionHash)).isTrue();
 
     // When: validating transaction
@@ -66,7 +66,7 @@ public class TraceLineLimitValidatorTest {
   @Test
   void shouldRejectTransactionInCache_LocalTransaction() {
     // Given: transaction is in cache
-    cache.remember(transactionHash);
+    cache.remember(transactionHash, "EXT");
 
     // When: validating local transaction
     Optional<String> result = validator.validateTransaction(mockTransaction, true, false);
@@ -78,7 +78,7 @@ public class TraceLineLimitValidatorTest {
   @Test
   void shouldRejectTransactionInCache_RemoteTransaction() {
     // Given: transaction is in cache
-    cache.remember(transactionHash);
+    cache.remember(transactionHash, "EXT");
 
     // When: validating remote transaction
     Optional<String> result = validator.validateTransaction(mockTransaction, false, false);
@@ -90,7 +90,7 @@ public class TraceLineLimitValidatorTest {
   @Test
   void shouldRejectTransactionInCache_PriorityTransaction() {
     // Given: transaction is in cache
-    cache.remember(transactionHash);
+    cache.remember(transactionHash, "EXT");
 
     // When: validating priority transaction
     Optional<String> result = validator.validateTransaction(mockTransaction, false, true);
@@ -115,8 +115,8 @@ public class TraceLineLimitValidatorTest {
     when(tx3.getHash()).thenReturn(hash3);
 
     // Add only tx1 and tx3 to cache
-    cache.remember(hash1);
-    cache.remember(hash3);
+    cache.remember(hash1, "EXT");
+    cache.remember(hash3, "RAM");
 
     // When: validating all transactions
     Optional<String> result1 = validator.validateTransaction(tx1, true, false);

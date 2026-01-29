@@ -8,8 +8,7 @@
  */
 package net.consensys.linea.sequencer.txselection;
 
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_MODULE_LINE_COUNT_OVERFLOW;
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_MODULE_LINE_COUNT_OVERFLOW_CACHED;
+import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.txModuleLineCountOverflowCached;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 import static org.mockito.ArgumentMatchers.any;
@@ -136,7 +135,7 @@ public class TraceLineLimitCacheIntegrationTest {
     var postProcessingResult =
         transactionSelector.evaluateTransactionPostProcessing(
             evaluationContext, mock(TransactionProcessingResult.class));
-    assertThat(postProcessingResult).isEqualTo(TX_MODULE_LINE_COUNT_OVERFLOW);
+    assertThat(postProcessingResult.toString()).startsWith("TX_MODULE_LINE_COUNT_OVERFLOW");
 
     // Notify selector of the rejection (this should add to cache)
     transactionSelector.onTransactionNotSelected(evaluationContext, postProcessingResult);
@@ -185,7 +184,7 @@ public class TraceLineLimitCacheIntegrationTest {
     var postProcessingResult =
         transactionSelector.evaluateTransactionPostProcessing(
             evaluationContext, mock(TransactionProcessingResult.class));
-    assertThat(postProcessingResult).isEqualTo(TX_MODULE_LINE_COUNT_OVERFLOW);
+    assertThat(postProcessingResult.toString()).startsWith("TX_MODULE_LINE_COUNT_OVERFLOW");
 
     // And: Selector is notified of rejection (adds to cache)
     transactionSelector.onTransactionNotSelected(evaluationContext, postProcessingResult);
@@ -208,9 +207,10 @@ public class TraceLineLimitCacheIntegrationTest {
     // Given: A transaction that was previously marked as over-the-line-count
     Transaction mockTransaction = createMockTransaction();
     Hash transactionHash = mockTransaction.getHash();
+    String overflowingModule = "EXT";
 
     // Add transaction to cache (simulating previous rejection)
-    sharedCache.remember(transactionHash);
+    sharedCache.remember(transactionHash, overflowingModule);
     assertThat(sharedCache.contains(transactionHash)).isTrue();
 
     // When: Transaction pool validator checks the transaction
@@ -225,8 +225,8 @@ public class TraceLineLimitCacheIntegrationTest {
     var preProcessingResult =
         transactionSelector.evaluateTransactionPreProcessing(evaluationContext);
 
-    // Then: Should be rejected in pre-processing (cached)
-    assertThat(preProcessingResult).isEqualTo(TX_MODULE_LINE_COUNT_OVERFLOW_CACHED);
+    // Then: Should be rejected in pre-processing (cached) with the module name
+    assertThat(preProcessingResult).isEqualTo(txModuleLineCountOverflowCached(overflowingModule));
   }
 
   @Test
@@ -236,12 +236,12 @@ public class TraceLineLimitCacheIntegrationTest {
     Hash originalHash = originalTransaction.getHash();
 
     // Add original transaction to cache
-    sharedCache.remember(originalHash);
+    sharedCache.remember(originalHash, "EXT");
     assertThat(sharedCache.contains(originalHash)).isTrue();
 
     // Fill cache beyond capacity to evict original transaction
     for (int i = 0; i < CACHE_SIZE; i++) {
-      sharedCache.remember(Hash.wrap(Bytes32.random()));
+      sharedCache.remember(Hash.wrap(Bytes32.random()), "RAM");
     }
 
     // Then: Original transaction should no longer be in cache (evicted)

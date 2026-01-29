@@ -10,9 +10,11 @@ package net.consensys.linea.sequencer.txselection;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -36,6 +38,7 @@ import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
+import net.consensys.linea.sequencer.forced.ForcedTransactionPoolService;
 import net.consensys.linea.sequencer.liveness.LivenessService;
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
 import net.consensys.linea.sequencer.txselection.selectors.TraceLineLimitTransactionSelectorTest;
@@ -68,10 +71,12 @@ class LineaTransactionSelectorFactoryTest {
       Address.fromHexString("0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec");
   private static final Bytes32 BRIDGE_LOG_TOPIC =
       Bytes32.fromHexString("e856c2b8bd4eb0027ce32eeaf595c21b0b6b4644b326e5b7bd80a1cf8db72e6c");
+  private static final long BLOCK_NUMBER = 1L;
   private static final long BLOCK_TIMESTAMP = 1753867173L;
 
   private LineaLimitedBundlePool bundlePool;
   private LineaTransactionSelectorFactory factory;
+  private ForcedTransactionPoolService mockForcedTransactionPoolService;
   private BlockchainService mockBlockchainService;
 
   @TempDir static Path tempDir;
@@ -125,6 +130,8 @@ class LineaTransactionSelectorFactoryTest {
         new TransactionProfitabilityCalculator(
             mockProfitabilityConfiguration, transactionCompressor);
 
+    mockForcedTransactionPoolService = mock(ForcedTransactionPoolService.class);
+
     factory =
         new LineaTransactionSelectorFactory(
             mockBlockchainService,
@@ -136,6 +143,7 @@ class LineaTransactionSelectorFactoryTest {
             Optional.empty(),
             Optional.empty(),
             bundlePool,
+            mockForcedTransactionPoolService,
             invalidTransactionByLineCountCache,
             new AtomicReference<>(Collections.emptyMap()),
             new AtomicReference<>(Collections.emptyMap()),
@@ -188,6 +196,54 @@ class LineaTransactionSelectorFactoryTest {
     factory.selectPendingTransactions(mockBts, mockPendingBlockHeader, Collections.emptyList());
 
     verifyNoInteractions(mockBts);
+  }
+
+  @Test
+  void
+      testSelectPendingTransactions_WhenLivenessTransactionSelected_ForcedTransactionsNotProcessed() {
+    LivenessService mockLivenessService = mock(LivenessService.class);
+    TransactionBundle livenessBundle =
+        createBundle(Hash.wrap(Bytes32.random()), BLOCK_NUMBER, Optional.empty());
+    when(mockLivenessService.checkBlockTimestampAndBuildBundle(anyLong(), anyLong(), anyLong()))
+        .thenReturn(Optional.of(livenessBundle));
+
+    setUpWithLivenessService(Optional.of(mockLivenessService));
+
+    var mockBts = mock(BlockTransactionSelectionService.class);
+    var mockPendingBlockHeader = mock(ProcessableBlockHeader.class);
+    when(mockPendingBlockHeader.getNumber()).thenReturn(BLOCK_NUMBER);
+    when(mockPendingBlockHeader.getTimestamp()).thenReturn(BLOCK_TIMESTAMP);
+
+    when(mockBts.evaluatePendingTransaction(any())).thenReturn(TransactionSelectionResult.SELECTED);
+
+    factory.selectPendingTransactions(mockBts, mockPendingBlockHeader, Collections.emptyList());
+
+    verify(mockLivenessService)
+        .checkBlockTimestampAndBuildBundle(anyLong(), anyLong(), eq(BLOCK_NUMBER));
+    verify(mockLivenessService).updateUptimeMetrics(true, BLOCK_TIMESTAMP);
+
+    verify(mockForcedTransactionPoolService, never()).processForBlock(anyLong(), any());
+  }
+
+  @Test
+  void testSelectPendingTransactions_WhenNoLivenessBundle_ForcedTransactionsProcessed() {
+    LivenessService mockLivenessService = mock(LivenessService.class);
+    when(mockLivenessService.checkBlockTimestampAndBuildBundle(anyLong(), anyLong(), anyLong()))
+        .thenReturn(Optional.empty());
+
+    setUpWithLivenessService(Optional.of(mockLivenessService));
+
+    var mockBts = mock(BlockTransactionSelectionService.class);
+    var mockPendingBlockHeader = mock(ProcessableBlockHeader.class);
+    when(mockPendingBlockHeader.getNumber()).thenReturn(BLOCK_NUMBER);
+    when(mockPendingBlockHeader.getTimestamp()).thenReturn(BLOCK_TIMESTAMP);
+
+    factory.selectPendingTransactions(mockBts, mockPendingBlockHeader, Collections.emptyList());
+
+    verify(mockLivenessService)
+        .checkBlockTimestampAndBuildBundle(anyLong(), anyLong(), eq(BLOCK_NUMBER));
+
+    verify(mockForcedTransactionPoolService).processForBlock(eq(BLOCK_NUMBER), any());
   }
 
   private TransactionBundle createBundle(

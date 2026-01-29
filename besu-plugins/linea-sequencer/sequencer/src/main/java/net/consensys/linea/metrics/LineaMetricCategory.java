@@ -20,7 +20,9 @@ public enum LineaMetricCategory implements MetricCategory {
   /** Runtime pricing configuration */
   PRICING_CONF,
   /** Sequencer liveness monitoring */
-  SEQUENCER_LIVENESS;
+  SEQUENCER_LIVENESS,
+  /** Sequencer forced transactions */
+  SEQUENCER_FORCED_TX;
 
   private static final Optional<String> APPLICATION_PREFIX = Optional.of("linea_");
 

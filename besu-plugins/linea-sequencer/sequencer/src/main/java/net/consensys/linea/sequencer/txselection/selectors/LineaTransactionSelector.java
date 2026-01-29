@@ -8,11 +8,7 @@
  */
 package net.consensys.linea.sequencer.txselection.selectors;
 
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_MODULE_LINE_COUNT_OVERFLOW;
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_MODULE_LINE_COUNT_OVERFLOW_CACHED;
-
 import java.time.Instant;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -42,10 +38,12 @@ import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationCon
 @Slf4j
 public class LineaTransactionSelector implements PluginTransactionSelector {
 
+  private static final Set<String> REJECTED_TX_STATUS_NAMES =
+      Set.of("TX_MODULE_LINE_COUNT_OVERFLOW", "TX_MODULE_LINE_COUNT_OVERFLOW_CACHED");
+
   private TraceLineLimitTransactionSelector traceLineLimitTransactionSelector;
   private final List<PluginTransactionSelector> selectors;
   private final Optional<JsonRpcManager> rejectedTxJsonRpcManager;
-  private final Set<String> rejectedTransactionReasonsMap = new HashSet<>();
 
   public LineaTransactionSelector(
       final SelectorsStateManager selectorsStateManager,
@@ -62,12 +60,6 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final AtomicReference<Set<Address>> deniedAddresses,
       final TransactionProfitabilityCalculator transactionProfitabilityCalculator) {
     this.rejectedTxJsonRpcManager = rejectedTxJsonRpcManager;
-
-    // only report rejected transaction selection result from TraceLineLimitTransactionSelector
-    if (rejectedTxJsonRpcManager.isPresent()) {
-      rejectedTransactionReasonsMap.add(TX_MODULE_LINE_COUNT_OVERFLOW.toString());
-      rejectedTransactionReasonsMap.add(TX_MODULE_LINE_COUNT_OVERFLOW_CACHED.toString());
-    }
 
     selectors =
         createTransactionSelectors(
@@ -221,7 +213,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
     rejectedTxJsonRpcManager.ifPresent(
         jsonRpcManager -> {
           if (transactionSelectionResult.discard()
-              && rejectedTransactionReasonsMap.contains(transactionSelectionResult.toString())) {
+              && isRejectedTransactionForNotification(transactionSelectionResult)) {
             jsonRpcManager.submitNewJsonRpcCallAsync(
                 JsonRpcRequestBuilder.generateSaveRejectedTxJsonRpc(
                     jsonRpcManager.getNodeType(),
@@ -242,5 +234,19 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
   @Override
   public LineCountingTracer getOperationTracer() {
     return traceLineLimitTransactionSelector.getOperationTracer();
+  }
+
+  /**
+   * Checks if a transaction selection result should trigger a rejected transaction JSON-RPC
+   * notification. Uses startsWith() to handle factory-created results that include module names in
+   * their toString() output (e.g., "TX_MODULE_LINE_COUNT_OVERFLOW EXT").
+   *
+   * @param result The transaction selection result to check
+   * @return true if this result should trigger a notification
+   */
+  private static boolean isRejectedTransactionForNotification(
+      final TransactionSelectionResult result) {
+    final String resultString = result.toString();
+    return REJECTED_TX_STATUS_NAMES.stream().anyMatch(resultString::startsWith);
   }
 }
