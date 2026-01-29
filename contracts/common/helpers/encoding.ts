@@ -1,4 +1,4 @@
-import { ethers, AbiCoder } from "ethers";
+import { ethers, AbiCoder, hexlify, randomBytes } from "ethers";
 
 export const encodeData = (types: string[], values: unknown[], packed?: boolean) => {
   if (packed) {
@@ -18,3 +18,19 @@ export function convertStringToPaddedHexBytes(strVal: string, paddedSize: number
 
   return bytes8Hex;
 }
+
+export function encodeSendMessage(
+  sender: string,
+  receiver: string,
+  fee: bigint,
+  amount: bigint,
+  salt: bigint,
+  calldata: string,
+): string {
+  return AbiCoder.defaultAbiCoder().encode(
+    ["address", "address", "uint256", "uint256", "uint256", "bytes"],
+    [sender, receiver, fee, amount, salt, calldata],
+  );
+}
+
+export const randomBytes32 = (): string => hexlify(randomBytes(32));

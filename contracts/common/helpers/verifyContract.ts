@@ -1,4 +1,3 @@
-import { run } from "hardhat";
 import { delay } from "./general";
 
 export async function tryVerifyContract(contractAddress: string, contractForVerification?: string) {
@@ -8,6 +7,8 @@ export async function tryVerifyContract(contractAddress: string, contractForVeri
     console.log("Etherscan verification ongoing...");
     // Verify contract
     try {
+      // Use dynamic import to avoid loading hardhat during config initialization
+      const { run } = await import("hardhat");
       const verifyArgs: Record<string, string> = {
         address: contractAddress,
       };
@@ -34,6 +35,8 @@ export async function tryVerifyContractWithConstructorArgs(
 
     // Verify contract
     try {
+      // Use dynamic import to avoid loading hardhat during config initialization
+      const { run } = await import("hardhat");
       await run("verify:verify", {
         address: contractAddress,
         contract: contractForVerification,

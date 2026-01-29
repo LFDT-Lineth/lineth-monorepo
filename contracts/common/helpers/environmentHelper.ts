@@ -1,4 +1,4 @@
-import { TaskArguments } from "hardhat/types";
+import type { TaskArguments } from "hardhat/types";
 
 function getCliOrEnvValue(cliParam: string, envParam: string): string | undefined {
   const argv = process.argv;

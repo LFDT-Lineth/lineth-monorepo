@@ -42,12 +42,12 @@ import { deployFromFactory, deployUpgradableFromFactory } from "../../common/dep
 import {
   buildAccessErrorMessage,
   calculateRollingHash,
-  encodeSendMessage,
   expectEvent,
   expectRevertWithCustomError,
   expectRevertWithReason,
   generateKeccak256Hash,
 } from "../../common/helpers";
+import { encodeSendMessage } from "../../../../common/helpers/encoding";
 
 describe("L1MessageService", () => {
   let l1MessageService: TestL1MessageService;
@@ -183,7 +183,7 @@ describe("L1MessageService", () => {
     });
 
     it("Should send an ether only message with fees emitting the MessageSent event", async () => {
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         notAuthorizedAccount.address,
         MESSAGE_FEE,
@@ -212,7 +212,7 @@ describe("L1MessageService", () => {
     });
 
     it("Should send max limit ether only message with no fee emitting the MessageSent event", async () => {
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         notAuthorizedAccount.address,
         0n,
@@ -239,7 +239,7 @@ describe("L1MessageService", () => {
 
     // this is testing to allow even if claim is blocked
     it("Should send a message even when L2 to L1 communication is paused", async () => {
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         notAuthorizedAccount.address,
         MESSAGE_FEE,
@@ -270,7 +270,7 @@ describe("L1MessageService", () => {
     });
 
     it("Should update the rolling hash when sending a message post migration", async () => {
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         notAuthorizedAccount.address,
         MESSAGE_FEE,
@@ -308,7 +308,7 @@ describe("L1MessageService", () => {
     });
 
     it("Should use the previous existing rolling hash when sending a message post migration", async () => {
-      let expectedBytes = await encodeSendMessage(
+      let expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         notAuthorizedAccount.address,
         MESSAGE_FEE,
@@ -324,7 +324,7 @@ describe("L1MessageService", () => {
         value: MESSAGE_FEE + MESSAGE_VALUE_1ETH,
       });
 
-      expectedBytes = await encodeSendMessage(
+      expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         notAuthorizedAccount.address,
         MESSAGE_FEE,
@@ -364,7 +364,7 @@ describe("L1MessageService", () => {
 
   describe("Claiming messages", () => {
     it("Should fail when the message hash does not exist", async () => {
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         notAuthorizedAccount.address,
         MESSAGE_FEE,
@@ -394,7 +394,7 @@ describe("L1MessageService", () => {
     });
 
     it("Should execute the claim message and send fees to recipient, left over fee to destination", async () => {
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         notAuthorizedAccount.address,
         MESSAGE_FEE,
@@ -419,7 +419,7 @@ describe("L1MessageService", () => {
     });
 
     it("Should claim message and send the fees when L1 to L2 communication is paused", async () => {
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         notAuthorizedAccount.address,
         MESSAGE_FEE,
@@ -447,7 +447,7 @@ describe("L1MessageService", () => {
     });
 
     it("Should execute the claim message and emit the MessageClaimed event", async () => {
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         notAuthorizedAccount.address,
         MESSAGE_FEE,
@@ -474,7 +474,7 @@ describe("L1MessageService", () => {
     });
 
     it("Should fail when the message hash has been claimed", async () => {
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         notAuthorizedAccount.address,
         MESSAGE_FEE,
@@ -516,7 +516,7 @@ describe("L1MessageService", () => {
     });
 
     it("Should execute the claim message and send the fees to msg.sender, left over fee to destination", async () => {
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         notAuthorizedAccount.address,
         MESSAGE_FEE,
@@ -525,7 +525,7 @@ describe("L1MessageService", () => {
         EMPTY_CALLDATA,
       );
 
-      const expectedSecondBytes = await encodeSendMessage(
+      const expectedSecondBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         notAuthorizedAccount.address,
         MESSAGE_FEE,
@@ -576,7 +576,7 @@ describe("L1MessageService", () => {
     });
 
     it("Should execute the claim message and send the fees to msg.sender and NOT refund the destination", async () => {
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         notAuthorizedAccount.address,
         LOW_NO_REFUND_MESSAGE_FEE,
@@ -614,7 +614,7 @@ describe("L1MessageService", () => {
       const factory = await ethers.getContractFactory("TestReceivingContract");
       const testContract = (await factory.deploy()) as TestReceivingContract;
 
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         await testContract.getAddress(),
         MESSAGE_FEE,
@@ -647,7 +647,7 @@ describe("L1MessageService", () => {
     });
 
     it("Should execute the claim message and send fees to EOA with calldata and no refund sent", async () => {
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         notAuthorizedAccount.address,
         MESSAGE_FEE,
@@ -684,7 +684,7 @@ describe("L1MessageService", () => {
     });
 
     it("Should execute the claim message and no fees to EOA with calldata and no refund sent", async () => {
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         notAuthorizedAccount.address,
         0n,
@@ -721,7 +721,7 @@ describe("L1MessageService", () => {
     });
 
     it("Should execute the claim message and no fees to EOA with empty calldata and no refund sent", async () => {
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         notAuthorizedAccount.address,
         0n,
@@ -758,7 +758,7 @@ describe("L1MessageService", () => {
     });
 
     it("Should execute the claim message when there are no fees", async () => {
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         notAuthorizedAccount.address,
         0n,
@@ -799,7 +799,7 @@ describe("L1MessageService", () => {
         l2Sender.address,
       )) as unknown as TestClaimingCaller;
 
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         l2Sender.address,
         await claimingCaller.getAddress(),
         MESSAGE_FEE,
@@ -831,7 +831,7 @@ describe("L1MessageService", () => {
     it("Should allow sending post claiming a message", async () => {
       const sendCalldata = generateKeccak256Hash("sendNewMessage()").substring(0, 10);
 
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         await l1MessageService.getAddress(),
         MESSAGE_FEE,
@@ -860,7 +860,7 @@ describe("L1MessageService", () => {
     it("Should fail on reentry when sending to recipient", async () => {
       const callSignature = generateKeccak256Hash("doReentry()").substring(0, 10);
 
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         await l1MessageService.getAddress(),
         MESSAGE_FEE,
@@ -887,7 +887,7 @@ describe("L1MessageService", () => {
     });
 
     it("Should fail when the destination errors", async () => {
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         await l1MessageService.getAddress(),
         MESSAGE_FEE,
@@ -919,7 +919,7 @@ describe("L1MessageService", () => {
     });
 
     it("Should fail when the fee recipient fails errors", async () => {
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         await l1MessageService.getAddress(),
         admin.address,
         MESSAGE_FEE,
@@ -1392,7 +1392,7 @@ describe("L1MessageService", () => {
   });
 
   async function setHash(fee: bigint, value: bigint) {
-    const expectedBytes = await encodeSendMessage(
+    const expectedBytes = encodeSendMessage(
       await l1MessageService.getAddress(),
       notAuthorizedAccount.address,
       fee,
@@ -1405,7 +1405,7 @@ describe("L1MessageService", () => {
   }
 
   async function setHashAndClaimMessage(fee: bigint, value: bigint) {
-    const expectedBytes = await encodeSendMessage(
+    const expectedBytes = encodeSendMessage(
       await l1MessageService.getAddress(),
       notAuthorizedAccount.address,
       fee,

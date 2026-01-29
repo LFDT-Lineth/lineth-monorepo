@@ -20,17 +20,3 @@ export async function encodeSendMessageLog(
     data,
   };
 }
-
-export async function encodeSendMessage(
-  sender: string,
-  receiver: string,
-  fee: bigint,
-  amount: bigint,
-  salt: bigint,
-  calldata: string,
-) {
-  return encodeData(
-    ["address", "address", "uint256", "uint256", "uint256", "bytes"],
-    [sender, receiver, fee, amount, salt, calldata],
-  );
-}

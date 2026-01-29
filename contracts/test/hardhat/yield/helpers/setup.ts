@@ -22,8 +22,8 @@ import {
   ONE_ETHER,
 } from "../../common/constants";
 import { ClaimMessageWithProofParams, YieldManagerInitializationData } from "./types";
-import { generateLidoUnstakePermissionlessWitness, randomBytes32 } from "./proof";
-import { encodeSendMessage } from "../../common/helpers";
+import { generateLidoUnstakePermissionlessWitness } from "./proof";
+import { encodeSendMessage, randomBytes32 } from "../../../../common/helpers/encoding";
 import { BaseContract } from "ethers";
 
 // TODO - Existence of this setup function means that YieldManager has invariants that withdraw cannot underflow for userFunds and userFundsInYieldProvidersTotal
@@ -135,7 +135,7 @@ export const setupLineaRollupMessageMerkleTree = async (
 ): Promise<ClaimMessageWithProofParams> => {
   // Generate random L2 message number (not correlated with L1's nextMessageNumber)
   const messageNumber = ethers.toBigInt(ethers.randomBytes(32));
-  const expectedBytes = await encodeSendMessage(from, to, 0n, value, messageNumber, data);
+  const expectedBytes = encodeSendMessage(from, to, 0n, value, messageNumber, data);
 
   const messageHash = ethers.keccak256(expectedBytes);
   const proof = Array.from({ length: 32 }, () => randomBytes32());

@@ -25,8 +25,8 @@ import {
   expectRevertWithReason,
   calculateRollingHash,
   getAccountsFixture,
-  encodeSendMessage,
 } from "../../common/helpers";
+import { encodeSendMessage } from "../../../../common/helpers/encoding";
 import { deployLineaRollupFixture } from "../../rollup/helpers/deploy";
 
 describe("Linea Rollup Yield Extension", () => {
@@ -499,7 +499,7 @@ describe("Linea Rollup Yield Extension", () => {
         .connect(securityCouncil)
         .addL2MerkleRoots([VALID_MERKLE_PROOF.merkleRoot], VALID_MERKLE_PROOF.proof.length);
 
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         admin.address,
         admin.address,
         MESSAGE_FEE,

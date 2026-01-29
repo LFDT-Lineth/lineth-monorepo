@@ -1,6 +1,7 @@
 // Test scenarios with LineaRollup + YieldManager + LidoStVaultYieldProvider
 import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
-import { encodeSendMessage, expectRevertWithCustomError, getAccountsFixture } from "../../common/helpers";
+import { expectRevertWithCustomError, getAccountsFixture } from "../../common/helpers";
+import { encodeSendMessage } from "../../../../common/helpers/encoding";
 import {
   decrementBalance,
   deployAndAddAdditionalLidoStVaultYieldProvider,
@@ -323,7 +324,7 @@ describe("Integration tests with LineaRollup, YieldManager and LidoStVaultYieldP
       // Arrange - Get message params
       const nextMessageNumberBefore = await lineaRollup.nextMessageNumber();
 
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         l1MessageServiceAddress,
         await l2YieldRecipient.getAddress(),
         0n,
@@ -364,7 +365,7 @@ describe("Integration tests with LineaRollup, YieldManager and LidoStVaultYieldP
       // Arrange - Get message params
       const nextMessageNumberBefore = await lineaRollup.nextMessageNumber();
 
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         l1MessageServiceAddress,
         await l2YieldRecipient.getAddress(),
         0n,
@@ -405,7 +406,7 @@ describe("Integration tests with LineaRollup, YieldManager and LidoStVaultYieldP
       // Arrange - Get message params
       const nextMessageNumberBefore = await lineaRollup.nextMessageNumber();
 
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         l1MessageServiceAddress,
         await l2YieldRecipient.getAddress(),
         0n,
@@ -451,7 +452,7 @@ describe("Integration tests with LineaRollup, YieldManager and LidoStVaultYieldP
       // Arrange - Get message params
       const nextMessageNumberBefore = await lineaRollup.nextMessageNumber();
 
-      const expectedBytes = await encodeSendMessage(
+      const expectedBytes = encodeSendMessage(
         l1MessageServiceAddress,
         await l2YieldRecipient.getAddress(),
         0n,

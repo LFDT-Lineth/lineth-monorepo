@@ -40,7 +40,8 @@ import {
   OperationType,
   BEACON_PROOF_WITNESS_TYPE,
 } from "../../common/constants";
-import { generateLidoUnstakePermissionlessWitness, randomBytes32 } from "../helpers/proof";
+import { generateLidoUnstakePermissionlessWitness } from "../helpers/proof";
+import { randomBytes32 } from "../../../../common/helpers/encoding";
 
 describe("LidoStVaultYieldProvider contract - basic operations", () => {
   let yieldProvider: TestLidoStVaultYieldProvider;
