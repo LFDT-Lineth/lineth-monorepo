@@ -263,7 +263,9 @@ library SparseMerkleProof {
       else computedHash = Poseidon2.hash(abi.encodePacked(computedHash, _proof[height]));
     }
 
-    require(computedHash == _subSmtRoot, SubSmtRootMismatch(_subSmtRoot, computedHash));
+    if (computedHash != _subSmtRoot) {
+      revert SubSmtRootMismatch(_subSmtRoot, computedHash);
+    }
 
     return Poseidon2.hash(abi.encodePacked(_nextFreeNode, computedHash)) == _root;
   }
