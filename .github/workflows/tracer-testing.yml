@@ -10,6 +10,7 @@ on:
       - main
     paths:
       - 'tracer/**'
+      - 'tracer-constraints/**'
       - '.github/actions/setup-tracer-environment/**'
       - '.github/workflows/tracer-*.yml'
       - '.github/workflows/reusable-tracer-*.yml'
@@ -18,6 +19,7 @@ on:
       - main
     paths:
       - 'tracer/**'
+      - 'tracer-constraints/**'
       - '.github/actions/setup-tracer-environment/**'
       - '.github/workflows/tracer-*.yml'
       - '.github/workflows/reusable-tracer-*.yml'
