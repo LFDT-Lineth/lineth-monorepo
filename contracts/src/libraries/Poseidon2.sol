@@ -91,7 +91,7 @@ library Poseidon2 {
       }
 
       /**
-       * @dev Poseidon2 permutation over a 2-element state (ra, rb).
+       * @dev Poseidon2 permutation over a 16-element state (ra, rb).
        *
        * The permutation consists of:
        *  1. Initial external MDS mixing
@@ -99,7 +99,7 @@ library Poseidon2 {
        *  3. 21 partial rounds
        *  4. 3 final full rounds
        *
-       * Each round follows the Poseidon2 specification for t = 2.
+       * Each round follows the Poseidon2 specification for t = 16.
        *
        * @param a First state element (capacity/output lane)
        * @param b Second state element (rate/input lane)

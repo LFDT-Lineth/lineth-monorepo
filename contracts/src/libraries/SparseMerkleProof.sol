@@ -103,7 +103,7 @@ library SparseMerkleProof {
 
   /**
    * @notice Get account.
-   * @param _encodedAccountValue Encoded account value bytes (nonce, balance, storageRoot, mimcCodeHash, keccakCodeHash, codeSize).
+   * @param _encodedAccountValue Encoded account value bytes (nonce, balance, storageRoot, snarkCodeHash, keccakCodeHash, codeSize).
    * @return Account Formatted account struct.
    */
   function getAccount(bytes calldata _encodedAccountValue) external pure returns (Account memory) {
@@ -112,7 +112,7 @@ library SparseMerkleProof {
 
   /**
    * @notice Hash account value.
-   * @param _value Encoded account value bytes (nonce, balance, storageRoot, mimcCodeHash, keccakCodeHash, codeSize).
+   * @param _value Encoded account value bytes (nonce, balance, storageRoot, snarkCodeHash, keccakCodeHash, codeSize).
    * @return bytes32 Account value hash.
    */
   function hashAccountValue(bytes calldata _value) external pure returns (bytes32) {
@@ -154,7 +154,7 @@ library SparseMerkleProof {
 
   /**
    * @notice Parse account value.
-   * @param _value Encoded account value bytes (nonce, balance, storageRoot, mimcCodeHash, keccakCodeHash, codeSize).
+   * @param _value Encoded account value bytes (nonce, balance, storageRoot, snarkCodeHash, keccakCodeHash, codeSize).
    * @return Account Formatted account struct.
    */
   function _parseAccount(bytes calldata _value) private pure returns (Account memory) {
