@@ -163,8 +163,10 @@ public class LineaForcedTransactionPool
 
     // Get or create the rejections map for this specific block.
     // We do NOT clear between iterations - rejections accumulate/overwrite.
-    // This ensures we don't lose rejection reasons if getPayload returns a block from an earlier iteration.
-    // Note: We only track rejections, not selections. Inclusions are determined from actual block content.
+    // This ensures we don't lose rejection reasons if getPayload returns a block from an earlier
+    // iteration.
+    // Note: We only track rejections, not selections. Inclusions are determined from actual block
+    // content.
     final Map<Long, TentativeRejection> blockRejections =
         tentativeRejectionsByBlock.computeIfAbsent(blockNumber, k -> new ConcurrentHashMap<>());
 
