@@ -19,8 +19,8 @@ class ZkProofCreationCoordinatorImpl(
   private val executionProverClient: ExecutionProverClientV2,
   private val messageServiceAddress: String,
   private val l2EthApiClient: EthApiClient,
+  private val log: Logger = LogManager.getLogger(ZkProofCreationCoordinatorImpl::class.java),
 ) : ZkProofCreationCoordinator {
-  private val log: Logger = LogManager.getLogger(this::class.java)
   private val messageEventsTopics: List<String> =
     listOf(
       MessageSentEvent.topic,

@@ -15,9 +15,9 @@ import java.util.concurrent.TimeUnit
 class ConflationServiceImpl(
   private val calculator: TracesConflationCalculator,
   metricsFacade: MetricsFacade,
+  private val log: Logger = LogManager.getLogger(ConflationServiceImpl::class.java),
 ) :
   ConflationService {
-  private val log: Logger = LogManager.getLogger(this::class.java)
   private var listener: ConflationHandler = ConflationHandler { SafeFuture.completedFuture<Unit>(null) }
   private val blocksInProgress: MutableList<Block> = mutableListOf()
 

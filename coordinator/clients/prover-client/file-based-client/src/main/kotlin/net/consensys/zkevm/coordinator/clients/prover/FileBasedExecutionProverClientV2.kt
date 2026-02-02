@@ -16,6 +16,7 @@ import net.consensys.zkevm.encoding.BlockEncoder
 import net.consensys.zkevm.fileio.FileReader
 import net.consensys.zkevm.fileio.FileWriter
 import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.nio.file.Path
 
@@ -108,6 +109,7 @@ class FileBasedExecutionProverClientV2(
       stateManagerVersion = stateManagerVersion,
     ),
   executionProofResponseFileNameProvider: ProverFileNameProvider = ExecutionProofResponseFileNameProvider,
+  log: Logger,
 ) :
   GenericFileBasedProverClient<
     BatchExecutionProofRequestV1,
@@ -131,7 +133,7 @@ class FileBasedExecutionProverClientV2(
     },
     responseMapper = { throw UnsupportedOperationException("Batch execution proof response shall not be parsed!") },
     proofTypeLabel = "batch",
-    log = LogManager.getLogger(FileBasedExecutionProverClientV2::class.java),
+    log = log,
   ),
   ExecutionProverClientV2 {
 
@@ -142,5 +144,8 @@ class FileBasedExecutionProverClientV2(
         endBlockNumber = proofIndex.endBlockNumber,
       ),
     )
+  }
+  companion object {
+    val LOG: Logger = LogManager.getLogger(FileBasedExecutionProverClientV2::class.java)
   }
 }

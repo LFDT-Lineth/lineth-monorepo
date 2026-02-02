@@ -5,6 +5,7 @@ import linea.blob.BlobCompressorVersion
 import linea.domain.RetryConfig
 import net.consensys.linea.traces.TracesCounters
 import java.net.URL
+import java.nio.file.Path
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -29,6 +30,7 @@ data class ConflationConfig(
   val blobCompression: BlobCompression = BlobCompression(),
   val proofAggregation: ProofAggregation = ProofAggregation(),
   val tracesLimits: TracesCounters,
+  val backtestingDirectory: Path? = null,
 ) : FeatureToggle {
   data class BlobCompression(
     val blobSizeLimit: UInt = 102400u,

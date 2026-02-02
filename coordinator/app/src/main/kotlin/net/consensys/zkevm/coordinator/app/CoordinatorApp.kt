@@ -3,6 +3,7 @@ package net.consensys.zkevm.coordinator.app
 import io.micrometer.core.instrument.MeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.micrometer.backends.BackendRegistries
+import io.vertx.micrometer.backends.NoopBackendRegistry
 import io.vertx.sqlclient.SqlClient
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.DatabaseConfig
@@ -51,7 +52,11 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
       failuresLogLevel = Level.WARN,
     )
 
-  private val conflationBacktestingService = ConflationBacktestingService()
+  private val conflationBacktestingService = ConflationBacktestingService(
+    vertx = vertx,
+    configs = configs,
+    metricsFacade = MicrometerMetricsFacade(NoopBackendRegistry.INSTANCE.meterRegistry, "conflationbacktesting"),
+  )
   private val api =
     Api(
       configs = Api.Config(

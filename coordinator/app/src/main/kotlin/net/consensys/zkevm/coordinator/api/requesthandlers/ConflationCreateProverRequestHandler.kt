@@ -38,7 +38,7 @@ class ConflationCreateProverRequestHandler(private val conflationBacktestingServ
     }
     val jobIds = createProverRequestJsonDtoList.map { dto ->
       conflationBacktestingService.submitConflationBacktestingJob(
-        ConflationCreateProverRequestJsonDto.toDomainObject(dto),
+        dto.toDomainObject(),
       )
     }
     return Future.succeededFuture(

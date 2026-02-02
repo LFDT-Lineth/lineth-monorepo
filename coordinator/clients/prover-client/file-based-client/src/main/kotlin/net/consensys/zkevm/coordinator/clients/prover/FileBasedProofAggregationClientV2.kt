@@ -14,6 +14,7 @@ import net.consensys.zkevm.ethereum.crypto.Sha256HashFunction
 import net.consensys.zkevm.fileio.FileReader
 import net.consensys.zkevm.fileio.FileWriter
 import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 data class AggregationProofRequestDto(
@@ -96,6 +97,7 @@ class FileBasedProofAggregationClientV2(
   executionProofResponseFileNameProvider: ProverFileNameProvider = ExecutionProofResponseFileNameProvider,
   compressionProofResponseFileNameProvider: ProverFileNameProvider = CompressionProofResponseFileNameProvider,
   jsonObjectMapper: ObjectMapper = JsonSerialization.proofResponseMapperV1,
+  log: Logger,
 ) :
   GenericFileBasedProverClient<
     ProofsToAggregate,
@@ -120,11 +122,13 @@ class FileBasedProofAggregationClientV2(
     ),
     responseMapper = ProofToFinalizeJsonResponse::toDomainObject,
     proofTypeLabel = "aggregation",
-    log = LogManager.getLogger(FileBasedProofAggregationClientV2::class.java),
+    log = log,
   ),
   ProofAggregationProverClientV2 {
 
   companion object {
+    val LOG: Logger = LogManager.getLogger(FileBasedProofAggregationClientV2::class.java)
+
     fun createProofIndexProviderFn(
       hashFunction: HashFunction,
       executionProofResponseFileNameProvider: ProverFileNameProvider = ExecutionProofResponseFileNameProvider,

@@ -14,7 +14,6 @@ import linea.encoding.BlockRLPEncoder
 import linea.ethapi.EthApiClient
 import linea.web3j.createWeb3jHttpClient
 import linea.web3j.ethapi.createEthApiClient
-import net.consensys.linea.contract.l1.GenesisStateProvider
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
@@ -197,10 +196,6 @@ class ConflationApp(
         maxProvenBlobCache,
       ),
     )
-    val genesisStateProvider = GenesisStateProvider(
-      stateRootHash = configs.protocol.genesis.genesisStateRootHash,
-      shnarf = configs.protocol.genesis.genesisShnarf,
-    )
 
     val blobCompressionProofCoordinator = BlobCompressionProofCoordinator(
       vertx = vertx,
@@ -211,7 +206,7 @@ class ConflationApp(
           metricsFacade = metricsFacade,
         ),
         parentBlobDataProvider = ParentBlobDataProviderImpl(blobsRepository),
-        genesisShnarf = genesisStateProvider.shnarf,
+        genesisShnarf = configs.protocol.genesis.genesisShnarf,
       ),
       blobZkStateProvider = BlobZkStateProviderImpl(
         zkStateClient = zkStateClient,

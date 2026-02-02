@@ -6,6 +6,7 @@ import linea.coordinator.config.v2.ConflationConfig
 import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.linea.traces.TracesCountersV4
 import java.net.URL
+import java.nio.file.Path
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -25,6 +26,7 @@ data class ConflationToml(
   val l2LogsEndpoint: URL? = null,
   val blobCompression: BlobCompressionToml = BlobCompressionToml(),
   val proofAggregation: ProofAggregationToml = ProofAggregationToml(),
+  val backtestingDirectory: Path? = null,
 ) {
   init {
     require(proofAggregation.proofsLimit >= (blobCompression.batchesLimit ?: 1u) + 1u) {
@@ -109,6 +111,7 @@ data class ConflationToml(
       blobCompression = this.blobCompression.reified(),
       proofAggregation = this.proofAggregation.reified(),
       tracesLimits = tracesCountersLimitsV2 ?: tracesCountersLimitsV4!!,
+      backtestingDirectory = backtestingDirectory,
     )
   }
 }
