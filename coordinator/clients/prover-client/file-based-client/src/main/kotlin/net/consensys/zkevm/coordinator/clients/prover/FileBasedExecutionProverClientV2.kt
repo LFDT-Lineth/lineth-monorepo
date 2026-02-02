@@ -123,6 +123,12 @@ class FileBasedExecutionProverClientV2(
     requestFileNameProvider = executionProofRequestFileNameProvider,
     responseFileNameProvider = executionProofResponseFileNameProvider,
     requestMapper = ExecutionProofRequestDtoMapper(),
+    proofIndexProvider = { request ->
+      ProofIndex(
+        startBlockNumber = request.startBlockNumber,
+        endBlockNumber = request.endBlockNumber,
+      )
+    },
     responseMapper = { throw UnsupportedOperationException("Batch execution proof response shall not be parsed!") },
     proofTypeLabel = "batch",
     log = LogManager.getLogger(FileBasedExecutionProverClientV2::class.java),

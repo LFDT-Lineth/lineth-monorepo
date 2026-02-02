@@ -18,7 +18,7 @@ data class InvalidityProofRequest(
   val simulatedExecutionBlockTimestamp: Instant,
   val ftxNumber: ULong,
   val ftxBlockNumberDeadline: ULong,
-  val ftxHash: ByteArray, // necessary for file name
+  val ftxHash: ByteArray,
   val ftxRlp: ByteArray,
   val prevFtxRollingHash: ByteArray,
   val parentBlockHash: ByteArray,

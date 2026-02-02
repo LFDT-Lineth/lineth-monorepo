@@ -26,6 +26,7 @@ object FileNameSuffixes {
   const val EXECUTION_PROOF_SUFFIX = "getZkProof.json"
   const val COMPRESSION_PROOF_SUFFIX = "getZkBlobCompressionProof.json"
   const val AGGREGATION_PROOF_SUFFIX = "getZkAggregatedProof.json"
+  const val INVALIDITY_PROOF_SUFFIX = "getZkInvalidityProof.json"
 }
 
 class ExecutionProofRequestFileNameProvider(
@@ -54,3 +55,9 @@ object CompressionProofRequestFileNameProvider : ProverFileNameProvider(FileName
 object CompressionProofResponseFileNameProvider : ProverFileNameProvider(FileNameSuffixes.COMPRESSION_PROOF_SUFFIX)
 
 object AggregationProofFileNameProvider : ProverFileNameProvider(FileNameSuffixes.AGGREGATION_PROOF_SUFFIX)
+
+object InvalidityProofFileNameProvider : ProverFileNameProvider(FileNameSuffixes.INVALIDITY_PROOF_SUFFIX) {
+  override fun getFileName(proofIndex: ProofIndex): String {
+    return "${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}-$fileNameSuffix"
+  }
+}

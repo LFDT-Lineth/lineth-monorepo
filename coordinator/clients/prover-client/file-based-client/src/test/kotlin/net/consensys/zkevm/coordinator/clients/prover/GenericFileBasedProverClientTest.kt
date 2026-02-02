@@ -76,6 +76,12 @@ class GenericFileBasedProverClientTest {
       requestMapper = { SafeFuture.completedFuture(ProofRequestDto.fromDomain(it)) },
       proofTypeLabel = "batch",
       responseMapper = ProofResponseDto::toDomain,
+      proofIndexProvider = { request ->
+        ProofIndex(
+          startBlockNumber = request.startBlockNumber,
+          endBlockNumber = request.endBlockNumber,
+        )
+      },
     )
   }
 

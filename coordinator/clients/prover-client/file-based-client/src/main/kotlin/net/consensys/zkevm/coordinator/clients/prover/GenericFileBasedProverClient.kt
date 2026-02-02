@@ -4,7 +4,6 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.map
 import io.vertx.core.Vertx
-import linea.domain.BlockInterval
 import net.consensys.linea.errors.ErrorResponse
 import net.consensys.zkevm.coordinator.clients.ProverProofRequestCreator
 import net.consensys.zkevm.coordinator.clients.ProverProofResponseChecker
@@ -32,13 +31,13 @@ open class GenericFileBasedProverClient<Request, Response, RequestDto, ResponseD
     vertx,
     FileMonitor.Config(config.pollingInterval, config.pollingTimeout),
   ),
-  private val proofIndexProvider: (Request) -> ProofIndex = ::blockIntervalProofIndex,
+  private val proofIndexProvider: (Request) -> ProofIndex,
   private val requestMapper: (Request) -> SafeFuture<RequestDto>,
   private val responseMapper: (ResponseDto) -> Response,
   private val proofTypeLabel: String,
   private val log: Logger = LogManager.getLogger(GenericFileBasedProverClient::class.java),
 ) : ProverProofResponseChecker<Response>, Supplier<Number>, ProverProofRequestCreator<Request>
-  where Request : BlockInterval,
+  where Request : Any,
         Response : Any,
         RequestDto : Any,
         ResponseDto : Any {
@@ -183,13 +182,6 @@ open class GenericFileBasedProverClient<Request, Response, RequestDto, ResponseD
   }
 
   companion object {
-    fun <R : BlockInterval> blockIntervalProofIndex(request: R): ProofIndex {
-      return ProofIndex(
-        startBlockNumber = request.startBlockNumber,
-        endBlockNumber = request.endBlockNumber,
-      )
-    }
-
     fun createDirectoryIfNotExists(
       directory: Path,
       log: Logger = LogManager.getLogger(GenericFileBasedProverClient::class.java),
