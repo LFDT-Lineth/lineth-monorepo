@@ -1,0 +1,18 @@
+plugins {
+  id 'net.consensys.zkevm.kotlin-library-conventions'
+}
+
+dependencies {
+  api project(":coordinator:core")
+  api project(":coordinator:persistence:aggregation")
+  api project(":jvm-libs:linea:clients:linea-contract-clients")
+  api project(":jvm-libs:linea:clients:interfaces")
+  api project(":jvm-libs:linea:clients:eth-logs-searcher")
+
+
+  testImplementation project(":jvm-libs:generic:logging")
+  testImplementation project(":coordinator:ethereum:test-utils")
+  testImplementation testFixtures(project(":jvm-libs:linea:core:domain-models"))
+  testImplementation testFixtures(project(":jvm-libs:linea:clients:interfaces"))
+  testImplementation testFixtures(project(":coordinator:persistence:aggregation"))
+}

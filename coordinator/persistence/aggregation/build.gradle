@@ -1,5 +1,6 @@
 plugins {
   id "net.consensys.zkevm.kotlin-library-conventions"
+  id "java-test-fixtures"
 }
 
 dependencies {

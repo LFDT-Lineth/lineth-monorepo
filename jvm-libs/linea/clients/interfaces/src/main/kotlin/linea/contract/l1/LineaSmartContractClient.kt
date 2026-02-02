@@ -60,7 +60,7 @@ interface LineaRollupSmartContractClientReadOnlyFinalizedStateProvider {
    * Provides the latest finalized state.
    * It relies on Linea contract V8 FinalizedStateUpdated event
    *
-   * @throws UnsupportedOperationException when contract is not yet upgraded to V8 and 1st event was emitted yet
+   * @throws UnsupportedOperationException when contract is not yet upgraded to V8 or when 1st event was not emitted yet
    */
   fun getLatestFinalizedState(blockParameter: BlockParameter): SafeFuture<LineaRollupFinalizedState>
 }
