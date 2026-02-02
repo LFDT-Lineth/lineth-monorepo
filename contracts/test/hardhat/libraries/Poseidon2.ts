@@ -23,8 +23,8 @@ describe("Poseidon2", () => {
       }
     });
 
-    it("Should returns zero hash if the data is zero length", async () => {
-      expect(await poseidon2.hash("0x")).to.equal("0x0000000000000000000000000000000000000000000000000000000000000000");
+    it("Should revert if the data is zero length", async () => {
+      await expectRevertWithCustomError(poseidon2, poseidon2.hash("0x"), "DataIsEmpty");
     });
 
     it("Should revert if the data is less than 32 and not mod32", async () => {
