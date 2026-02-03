@@ -29,8 +29,6 @@ import net.consensys.linea.zktracer.container.module.IncrementingModule;
 import net.consensys.linea.zktracer.container.module.OperationListModule;
 import net.consensys.linea.zktracer.container.stacked.ModuleOperationStackedList;
 import net.consensys.linea.zktracer.module.ModuleName;
-import net.consensys.linea.zktracer.module.blake2f.Blake2f;
-import net.consensys.linea.zktracer.module.blake2f.Blake2fOperation;
 import net.consensys.linea.zktracer.module.limits.precompiles.BlakeRounds;
 import net.consensys.linea.zktracer.module.wcp.Wcp;
 import org.hyperledger.besu.evm.worldstate.WorldView;
@@ -44,7 +42,6 @@ public class BlakeModexpData implements OperationListModule<BlakeModexpDataOpera
   private final IncrementingModule modexpLargeCall;
   private final IncrementingModule blakeEffectiveCall;
   private final BlakeRounds blakeRounds;
-  private Optional<Blake2f> blake2f;
 
   private final ModuleOperationStackedList<BlakeModexpDataOperation> operations =
       new ModuleOperationStackedList<>();
@@ -66,12 +63,9 @@ public class BlakeModexpData implements OperationListModule<BlakeModexpDataOpera
     callWcpForIdCheck(modexpOperation.id());
   }
 
-  public void callBlake(BlakeModexpDataOperation blakeOperation, Blake2f blake2f) {
+  public void callBlake(BlakeModexpDataOperation blakeOperation) {
     checkState(blakeOperation.isBlakeOperation(), "Operation must be a BLAKE2f operation");
     operations.add(blakeOperation);
-
-    // Call to Blake2f module
-    blake2f.call(new Blake2fOperation(blakeOperation.blake2fComponents.get()));
 
     blakeEffectiveCall.updateTally(1);
     blakeRounds.addPrecompileLimit(blakeOperation.blake2fComponents.get().r());

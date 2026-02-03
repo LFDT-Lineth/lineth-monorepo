@@ -19,7 +19,6 @@ public enum ModuleName {
   // tracing Modules
   ADD,
   BIN,
-  BLAKE2F,
   BLAKE_MODEXP_DATA,
   BLOCK_DATA,
   BLOCK_HASH,

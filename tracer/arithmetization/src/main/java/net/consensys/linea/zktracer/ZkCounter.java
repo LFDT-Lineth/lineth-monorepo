@@ -130,7 +130,6 @@ public class ZkCounter implements LineCountingTracer {
   // traced modules
   final CountingOnlyModule add = new CountingOnlyModule(ADD);
   final CountingOnlyModule bin = new CountingOnlyModule(BIN);
-  final CountingOnlyModule blake2f = new CountingOnlyModule(BLAKE2F);
   final CountingOnlyModule blakemodexp;
   final CountingOnlyModule blockData;
   final CountingOnlyModule blockHash;
@@ -254,8 +253,7 @@ public class ZkCounter implements LineCountingTracer {
         trm, // not trivial
         wcp, // need MMU/TxnData/Oob etc ... to be counted
         // traceless modules
-        blakeRounds, // blakeEffectiveCall is counted and already rejects all BLAKE calls
-        blake2f // not counting blake2f, limited by number of calls and rounds already
+        blakeRounds// blakeEffectiveCall is counted and already rejects all BLAKE calls
         );
   }
 
