@@ -93,7 +93,6 @@ deploy-token-bridge-l1:
 deploy-token-bridge-l2:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
 		cd contracts/; \
-		SAVE_ADDRESS=true \
 		PRIVATE_KEY=0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae \
 		REMOTE_DEPLOYER_ADDRESS=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 \
 		RPC_URL=http:\\localhost:8545/ \
