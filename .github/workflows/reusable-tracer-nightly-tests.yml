@@ -57,12 +57,12 @@ jobs:
           name: jacoco-nightly-tests-exec-file-${{ inputs.zkevm_fork }}
           path: tracer/arithmetization/build/jacoco/nightlyTests.exec
 
-      # - name: Failure Notification
-      #   if: github.ref == 'refs/heads/arith-dev' && (failure() || cancelled())
-      #   uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
-      #   with:
-      #     webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-      #     webhook-type: webhook-trigger
-      #     payload: |
-      #       name: "Nightly"
-      #       status: "${{ job.status }}"
+      - name: Failure Notification
+        if: github.ref == 'refs/heads/main' && (failure() || cancelled())
+        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: webhook-trigger
+          payload: |
+            name: "Nightly"
+            status: "${{ job.status }}"
