@@ -3,7 +3,6 @@ name: bridge-ui-build-and-publish
 permissions:
   contents: read
   actions: read
-  packages: write
 
 on:
   pull_request:
@@ -31,12 +30,40 @@ jobs:
     strategy:
       matrix:
         environment: [development, production]
+    # Needed for SARIF upload (code scanning)
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
     env:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+
+      # ---------------------------
+      # Dockerfile scanning using KICS (run once per workflow run)
+      # ---------------------------
+      - name: Run KICS (Dockerfile)
+        # The following if makes sure we only run it once to avoid doing identical work twice
+        if: ${{ matrix.environment == 'development' }}
+        uses: checkmarx/kics-github-action@00def9108246ec656aea725db2167522d26a99d2 # v2.1.19
+        with:
+          path: ./bridge-ui/Dockerfile
+          type: Dockerfile
+          output_formats: 'sarif'
+          output_path: kics-results
+          ignore_on_exit: results  # never fail on findings, report only
+
+      - name: Upload KICS SARIF to GitHub Security
+        if: ${{ !cancelled() && matrix.environment == 'development' && hashFiles('kics-results/results.sarif') != '' }}
+        continue-on-error: true  # Don't block build if upload fails
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: kics-results/results.sarif
+          category: kics-bridge-ui-dockerfile
 
       - name: Get version from package.json
         run: |
@@ -104,12 +131,14 @@ jobs:
 
   test-build:
     if: github.event.pull_request.head.repo.fork == true
+    permissions:
+      contents: read  # Only needs to checkout code
     # ~1 min saved vs small
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     name: Test Build Bridge UI
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
