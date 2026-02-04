@@ -95,7 +95,7 @@ jobs:
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1
       - name: Docker meta
         id: transaction-exclusion-api
-        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 #v5.7.0
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 #v5.10.0
         with:
           images: ${{ env.IMAGE_NAME }}
       - name: Build for testing
