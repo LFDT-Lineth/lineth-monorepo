@@ -16,7 +16,6 @@ import "./scripts/operational/tasks/setRateLimitTask";
 import "./scripts/operational/tasks/setVerifierAddressTask";
 import "./scripts/operational/tasks/setMessageServiceOnTokenBridgeTask";
 import "./scripts/operational/yieldBoost/addLidoStVaultYieldProvider";
-import "./scripts/operational/yieldBoost/deployPaymentSplitter";
 import "./scripts/operational/yieldBoost/prepareInitiateOssification";
 import "./scripts/operational/yieldBoost/testing/addAndClaimMessage";
 import "./scripts/operational/yieldBoost/testing/addAndClaimMessageForLST";
