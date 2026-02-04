@@ -1,0 +1,60 @@
+export const MESSAGE_SERVICE_ABI = [
+  {
+    inputs: [
+      { internalType: "address", name: "_to", type: "address" },
+      { internalType: "uint256", name: "_fee", type: "uint256" },
+      { internalType: "bytes", name: "_calldata", type: "bytes" },
+    ],
+    name: "sendMessage",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "nextMessageNumber",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        components: [
+          { internalType: "bytes32[]", name: "proof", type: "bytes32[]" },
+          { internalType: "uint256", name: "messageNumber", type: "uint256" },
+          { internalType: "uint32", name: "leafIndex", type: "uint32" },
+          { internalType: "address", name: "from", type: "address" },
+          { internalType: "address", name: "to", type: "address" },
+          { internalType: "uint256", name: "fee", type: "uint256" },
+          { internalType: "uint256", name: "value", type: "uint256" },
+          { internalType: "address payable", name: "feeRecipient", type: "address" },
+          { internalType: "bytes32", name: "merkleRoot", type: "bytes32" },
+          { internalType: "bytes", name: "data", type: "bytes" },
+        ],
+        internalType: "struct IL1MessageService.ClaimMessageWithProofParams",
+        name: "_params",
+        type: "tuple",
+      },
+    ],
+    name: "claimMessageWithProof",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "_from", type: "address" },
+      { internalType: "address", name: "_to", type: "address" },
+      { internalType: "uint256", name: "_fee", type: "uint256" },
+      { internalType: "uint256", name: "_value", type: "uint256" },
+      { internalType: "address payable", name: "_feeRecipient", type: "address" },
+      { internalType: "bytes", name: "_calldata", type: "bytes" },
+      { internalType: "uint256", name: "_nonce", type: "uint256" },
+    ],
+    name: "claimMessage",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;

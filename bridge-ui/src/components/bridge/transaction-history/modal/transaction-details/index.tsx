@@ -3,14 +3,14 @@ import { useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { formatEther } from "viem";
-import { useAccount, useSwitchChain, useTransactionReceipt } from "wagmi";
+import { useConnection, useSwitchChain, useTransactionReceipt } from "wagmi";
 
 import ArrowRightIcon from "@/assets/icons/arrow-right.svg";
 import Modal from "@/components/modal";
 import Button from "@/components/ui/button";
 import { useClaim, useClaimingTx, useBridgeTransactionMessage } from "@/hooks";
 import { BridgeTransaction, TransactionStatus } from "@/types";
-import { formatBalance, formatHex, formatTimestamp } from "@/utils";
+import { formatBalance, formatHex, formatTimestamp } from "@/utils/format";
 
 import styles from "./transaction-details.module.scss";
 
@@ -21,8 +21,8 @@ type Props = {
 };
 
 export default function TransactionDetails({ transaction, isModalOpen, onCloseModal }: Props) {
-  const { chain } = useAccount();
-  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
+  const { chain } = useConnection();
+  const { mutate: switchChain, isPending: isSwitchingChain } = useSwitchChain();
 
   const formattedDate = transaction?.timestamp ? formatTimestamp(Number(transaction.timestamp), "MMM, dd, yyyy") : "";
   const formattedTime = transaction?.timestamp ? formatTimestamp(Number(transaction.timestamp), "ppp") : "";

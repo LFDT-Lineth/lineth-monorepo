@@ -1,5 +1,5 @@
 "use client";
-import { createContext, ReactNode, useContext, useEffect, useRef, useState } from "react";
+import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 interface EIP6963ProviderInfo {
   name: string;
@@ -10,7 +10,7 @@ interface EIP6963ProviderInfo {
 
 interface EIP6963ProviderDetail {
   info: EIP6963ProviderInfo;
-  provider: any;
+  provider: unknown;
 }
 
 interface EIP6963AnnounceProviderEvent extends Event {
@@ -72,5 +72,7 @@ export default function WalletDetectionProvider({ children }: Props) {
     setTimeout(initWallets, 0);
   }, []);
 
-  return <WalletDetectionContext.Provider value={{ walletsInstalled }}>{children}</WalletDetectionContext.Provider>;
+  const value = useMemo(() => ({ walletsInstalled }), [walletsInstalled]);
+
+  return <WalletDetectionContext.Provider value={value}>{children}</WalletDetectionContext.Provider>;
 }

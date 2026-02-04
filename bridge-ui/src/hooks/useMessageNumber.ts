@@ -1,6 +1,6 @@
 import { useReadContract } from "wagmi";
 
-import MessageService from "@/abis/MessageService.json";
+import { MESSAGE_SERVICE_ABI } from "@/abis/MessageService";
 import { Chain, ChainLayer, ClaimType } from "@/types";
 
 type UseMessageNumberProps = {
@@ -11,7 +11,7 @@ type UseMessageNumberProps = {
 const useMessageNumber = ({ fromChain, claimingType }: UseMessageNumberProps) => {
   const { data } = useReadContract({
     address: fromChain.messageServiceAddress,
-    abi: MessageService.abi,
+    abi: MESSAGE_SERVICE_ABI,
     functionName: "nextMessageNumber",
     chainId: fromChain.id,
     query: {

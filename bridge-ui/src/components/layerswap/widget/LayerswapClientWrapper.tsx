@@ -1,21 +1,39 @@
 "use client";
 
-import { EVMProvider } from "@layerswap/wallet-evm";
-import { Swap, LayerswapProvider, LayerSwapSettings, ThemeData } from "@layerswap/widget";
+import { useEffect, useState } from "react";
+
+import { createEVMProvider } from "@layerswap/wallet-evm";
+import { Swap, LayerswapProvider, LayerSwapSettings, ThemeData, getSettings } from "@layerswap/widget";
 
 import { config } from "@/config";
 
+import { LayerswapSkeleton } from "./LayerswapSkeleton";
 import useEVM from "./useCustomEvm";
 
-interface LayerswapClientWrapperProps {
-  settings: LayerSwapSettings | undefined;
-}
+export function LayerswapClientWrapper() {
+  const [settings, setSettings] = useState<LayerSwapSettings | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(true);
 
-export function LayerswapClientWrapper({ settings }: LayerswapClientWrapperProps) {
-  const evmProvider = {
-    ...EVMProvider,
-    walletConnectionProvider: useEVM,
-  };
+  const evmProvider = createEVMProvider({
+    customHook: useEVM,
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const fetchedSettings = await getSettings(config.layerswapApiKey);
+        setSettings(fetchedSettings ?? undefined);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
+  if (isLoading) {
+    return <LayerswapSkeleton />;
+  }
 
   return (
     <LayerswapProvider

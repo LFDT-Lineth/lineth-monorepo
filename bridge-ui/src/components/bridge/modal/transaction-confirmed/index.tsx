@@ -2,8 +2,9 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import Modal from "@/components/modal";
 import Button from "@/components/ui/button";
-import { USDC_SYMBOL } from "@/constants";
-import { useFormStore, useNativeBridgeNavigationStore } from "@/stores";
+import { USDC_SYMBOL } from "@/constants/tokens";
+import { useFormStore } from "@/stores/formStoreProvider";
+import { useNativeBridgeNavigationStore } from "@/stores/nativeBridgeNavigationStore";
 
 import styles from "./transaction-confirmed.module.scss";
 

@@ -8,7 +8,9 @@ import CurrencyDropdown from "@/components/bridge/currency-dropdown";
 import ToggleSwitch from "@/components/ui/toggle-switch";
 import { config } from "@/config";
 import { useChains } from "@/hooks";
-import { useConfigStore, useChainStore, useFormStore } from "@/stores";
+import { useChainStore } from "@/stores/chainStore";
+import { useConfigStore } from "@/stores/configStore";
+import { useFormStore } from "@/stores/formStoreProvider";
 import { ChainLayer } from "@/types";
 
 import styles from "./setting.module.scss";

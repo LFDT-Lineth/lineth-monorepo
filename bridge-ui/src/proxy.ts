@@ -1,7 +1,7 @@
 // Next.js automatically recognises a single middleware.ts file in the project root - https://nextjs.org/docs/app/building-your-application/routing/middleware#convention
 import { NextRequest, NextResponse } from "next/server";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
 
   // We only want to allow unsafe-eval in local environment for Next.js dev server

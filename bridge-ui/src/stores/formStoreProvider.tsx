@@ -1,10 +1,10 @@
 "use client";
 
-import { type ReactNode, createContext, useRef, useContext } from "react";
+import { type ReactNode, createContext, useState, useContext } from "react";
 
 import { useStore } from "zustand";
 
-import { isUndefined } from "@/utils";
+import { isUndefined } from "@/utils/misc";
 
 import { FormState, type FormStore, createFormStore } from "./formStore";
 
@@ -18,12 +18,9 @@ export interface FormStoreProviderProps {
 }
 
 export function FormStoreProvider({ children, initialState }: FormStoreProviderProps) {
-  const storeRef = useRef<FormStoreApi | undefined>(undefined);
-  if (isUndefined(storeRef.current)) {
-    storeRef.current = createFormStore(initialState);
-  }
+  const [store] = useState(() => createFormStore(initialState));
 
-  return <FormStoreContext.Provider value={storeRef.current}>{children}</FormStoreContext.Provider>;
+  return <FormStoreContext.Provider value={store}>{children}</FormStoreContext.Provider>;
 }
 
 export const useFormStore = <T,>(selector: (store: FormStore) => T): T => {

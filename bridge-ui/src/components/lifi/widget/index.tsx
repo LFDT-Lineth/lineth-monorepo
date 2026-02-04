@@ -6,7 +6,8 @@ import dynamic from "next/dynamic";
 
 import atypTextFont from "@/assets/fonts/atypText";
 import { config as appConfig } from "@/config";
-import { CHAINS_RPC_URLS, ETH_SYMBOL } from "@/constants";
+import { CHAINS_RPC_URLS } from "@/constants/chains";
+import { ETH_SYMBOL } from "@/constants/tokens";
 
 const widgetConfig: Partial<WidgetConfig> = {
   variant: "compact",

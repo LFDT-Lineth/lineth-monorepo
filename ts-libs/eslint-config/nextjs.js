@@ -14,15 +14,6 @@ export const nextjs = defineConfig([
   ]),
   ...nextVitals,
   ...node,
-  {
-    rules: {
-       // TODO: remove this rules after fix bridge ui typing
-      "@typescript-eslint/no-explicit-any": "off",
-      "react-hooks/refs": "off",
-      "react-hooks/set-state-in-effect": "off",
-      "react-hooks/immutability": "off"
-    },
-  },
 ]);
 
 export default nextjs;

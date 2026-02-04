@@ -3,9 +3,10 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 
 import ClockIcon from "@/assets/icons/clock.svg";
-import { useChainStore, useFormStore } from "@/stores";
+import { useChainStore } from "@/stores/chainStore";
+import { useFormStore } from "@/stores/formStoreProvider";
 import { CCTPMode } from "@/types";
-import { getEstimatedTimeText } from "@/utils";
+import { getEstimatedTimeText } from "@/utils/message";
 
 import styles from "./estimated-time.module.scss";
 

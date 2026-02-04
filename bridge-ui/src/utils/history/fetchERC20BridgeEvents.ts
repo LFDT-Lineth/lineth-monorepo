@@ -8,7 +8,7 @@ import { Address, Client, decodeAbiParameters } from "viem";
 import { Config } from "wagmi";
 
 import { config } from "@/config";
-import { HistoryActionsForCompleteTxCaching } from "@/stores";
+import { type HistoryActionsForCompleteTxCaching } from "@/stores/historyStore";
 import {
   BridgeTransaction,
   BridgeTransactionType,
@@ -18,7 +18,7 @@ import {
   ChainLayer,
   Token,
 } from "@/types";
-import { isUndefined, isUndefinedOrNull } from "@/utils";
+import { isUndefined, isUndefinedOrNull } from "@/utils/misc";
 
 import { formatOnChainMessageStatus } from "./formatOnChainMessageStatus";
 import { isBlockTooOld } from "./isBlockTooOld";

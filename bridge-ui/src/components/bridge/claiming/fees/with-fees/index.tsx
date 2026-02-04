@@ -7,7 +7,8 @@ import { formatUnits } from "viem";
 import { useFees } from "@/hooks";
 import { useCctpFee } from "@/hooks/transaction-args/cctp/useCctpUtilHooks";
 import { useFormattedDigit } from "@/hooks/useFormattedDigit";
-import { useConfigStore, useFormStore } from "@/stores";
+import { useConfigStore } from "@/stores/configStore";
+import { useFormStore } from "@/stores/formStoreProvider";
 
 import styles from "./with-fees.module.scss";
 
@@ -30,6 +31,7 @@ export default function WithFees({ iconPath }: Props) {
 
   const formattedFees = useFormattedDigit(total.fees, 18);
   const formattedCctpFees = cctpFee ? formatUnits(cctpFee, token.decimals) : "";
+  console.log(formattedCctpFees);
 
   if (isLoading) {
     return null;

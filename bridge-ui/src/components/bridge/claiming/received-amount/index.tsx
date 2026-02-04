@@ -2,12 +2,15 @@ import { useMemo } from "react";
 
 import { formatUnits } from "viem";
 
-import { ETH_SYMBOL } from "@/constants";
+import { ETH_SYMBOL } from "@/constants/tokens";
 import { useTokenPrices } from "@/hooks";
 import { useCctpFee } from "@/hooks/transaction-args/cctp/useCctpUtilHooks";
-import { useChainStore, useConfigStore, useFormStore } from "@/stores";
+import { useChainStore } from "@/stores/chainStore";
+import { useConfigStore } from "@/stores/configStore";
+import { useFormStore } from "@/stores/formStoreProvider";
 import { ChainLayer, Token } from "@/types";
-import { formatBalance, isCctp } from "@/utils";
+import { formatBalance } from "@/utils/format";
+import { isCctp } from "@/utils/tokens";
 
 import styles from "./received-amount.module.scss";
 

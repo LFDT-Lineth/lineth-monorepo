@@ -1,4 +1,4 @@
-import { JSX, useEffect, useState } from "react";
+import { JSX, useSyncExternalStore } from "react";
 
 import clsx from "clsx";
 import { motion, AnimatePresence } from "motion/react";
@@ -18,14 +18,12 @@ type Props = {
   modalHeader?: JSX.Element;
 };
 
+const subscribe = () => () => {};
+const getSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 const Modal = ({ isOpen, onClose, children, title, isDrawer = false, size = "md", modalHeader }: Props) => {
-  const [mounted, setMounted] = useState<boolean>(false);
-
-  useEffect(() => {
-    setMounted(true);
-
-    return () => setMounted(false);
-  }, []);
+  const mounted = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const overlayAnimation = {
     hidden: { opacity: 0 },

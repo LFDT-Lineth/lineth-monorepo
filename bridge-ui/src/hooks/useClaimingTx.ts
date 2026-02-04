@@ -3,8 +3,9 @@ import { getPublicClient } from "@wagmi/core";
 import { Config, useConfig } from "wagmi";
 
 import { BridgeTransaction, BridgeTransactionType, CctpMessageReceivedAbiEvent, TransactionStatus } from "@/types";
-import { getNativeBridgeMessageClaimedTxHash, isUndefined, isUndefinedOrEmptyString } from "@/utils";
+import { getNativeBridgeMessageClaimedTxHash } from "@/utils/events";
 import { isCctpV2BridgeMessage, isNativeBridgeMessage } from "@/utils/message";
+import { isUndefined, isUndefinedOrEmptyString } from "@/utils/misc";
 
 const useClaimingTx = (transaction: BridgeTransaction | undefined): string | undefined => {
   const wagmiConfig = useConfig();

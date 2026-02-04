@@ -2,7 +2,7 @@ import { Client, Hex, parseEther } from "viem";
 import { estimateMaxPriorityFeePerGas, getAddresses, sendTransaction, waitForTransactionReceipt } from "viem/actions";
 import { estimateGas } from "viem/linea";
 
-import { localL1Network, localL2Network } from "@/constants";
+import { localL1Network, localL2Network } from "@/constants/chains";
 
 export async function sendTransactionsToGenerateTrafficWithInterval(client: Client, pollingInterval: number = 1_000) {
   let timeoutId: NodeJS.Timeout | null = null;

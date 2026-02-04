@@ -1,6 +1,7 @@
 import ArrowRightIcon from "@/assets/icons/arrow-right.svg";
 import Tooltip from "@/components/ui/tooltip";
-import { useFormStore, useChainStore } from "@/stores";
+import { useChainStore } from "@/stores/chainStore";
+import { useFormStore } from "@/stores/formStoreProvider";
 
 import styles from "./swap-chain.module.scss";
 

@@ -2,11 +2,13 @@ import { useMemo } from "react";
 
 import { encodeFunctionData } from "viem";
 
-import MessageService from "@/abis/MessageService.json";
-import { DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER } from "@/constants";
-import { useFormStore, useChainStore } from "@/stores";
+import { MESSAGE_SERVICE_ABI } from "@/abis/MessageService";
+import { DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER } from "@/constants/general";
+import { useChainStore } from "@/stores/chainStore";
+import { useFormStore } from "@/stores/formStoreProvider";
 import { BridgeProvider, ChainLayer, ClaimType } from "@/types";
-import { isEth, isUndefinedOrNull, isZero, isUndefinedOrEmptyString } from "@/utils";
+import { isUndefinedOrNull, isZero, isUndefinedOrEmptyString } from "@/utils/misc";
+import { isEth } from "@/utils/tokens";
 
 type UseEthBridgeTxArgsProps = {
   isConnected: boolean;
@@ -42,7 +44,7 @@ const useEthBridgeTxArgs = ({ isConnected }: UseEthBridgeTxArgsProps) => {
       args: {
         to: fromChain.messageServiceAddress,
         data: encodeFunctionData({
-          abi: MessageService.abi,
+          abi: MESSAGE_SERVICE_ABI,
           functionName: "sendMessage",
           args: [toAddress, minimumFees + bridgingFees, "0x"],
         }),

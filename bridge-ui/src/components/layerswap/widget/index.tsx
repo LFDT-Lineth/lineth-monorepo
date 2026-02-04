@@ -1,11 +1,17 @@
-import { getSettings } from "@layerswap/widget";
+"use client";
 
-import { config } from "@/config";
+import dynamic from "next/dynamic";
 
-import { LayerswapClientWrapper } from "./LayerswapClientWrapper";
+import { LayerswapSkeleton } from "./LayerswapSkeleton";
 
-export async function Widget() {
-  const settings = await getSettings(config.layerswapApiKey);
+const LayerswapClientWrapper = dynamic(
+  () => import("./LayerswapClientWrapper").then((mod) => mod.LayerswapClientWrapper),
+  {
+    ssr: false,
+    loading: () => <LayerswapSkeleton />,
+  },
+);
 
-  return <LayerswapClientWrapper settings={settings} />;
+export function Widget() {
+  return <LayerswapClientWrapper />;
 }

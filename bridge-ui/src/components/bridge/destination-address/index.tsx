@@ -3,11 +3,12 @@ import { ChangeEvent, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import Link from "next/link";
 import { Address, isAddress } from "viem";
-import { useAccount } from "wagmi";
+import { useConnection } from "wagmi";
 
 import ArrowRightIcon from "@/assets/icons/arrow-right.svg";
 import XCircleIcon from "@/assets/icons/x-circle.svg";
-import { useChainStore, useFormStore } from "@/stores";
+import { useChainStore } from "@/stores/chainStore";
+import { useFormStore } from "@/stores/formStoreProvider";
 import { ChainLayer } from "@/types";
 
 import styles from "./destination-address.module.scss";
@@ -33,7 +34,7 @@ function formatMessage({
 }
 
 export function DestinationAddress() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useConnection();
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const toChain = useChainStore.useToChain();

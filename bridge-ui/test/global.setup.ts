@@ -12,7 +12,7 @@ import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts";
 import { waitForTransactionReceipt } from "viem/actions";
 import { estimateGas } from "viem/linea";
 
-import { localL1Network, localL2Network } from "@/constants";
+import { localL1Network, localL2Network } from "@/constants/chains";
 
 import {
   L1_TEST_ERC2O_CONTRACT_ADDRESS,

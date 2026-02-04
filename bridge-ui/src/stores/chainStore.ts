@@ -3,9 +3,9 @@ import { linea, lineaSepolia, mainnet, sepolia } from "viem/chains";
 import { create } from "zustand";
 
 import { config } from "@/config";
-import { localL1Network, localL2Network } from "@/constants";
+import { localL1Network, localL2Network } from "@/constants/chains";
 import { Chain } from "@/types";
-import { generateChain, generateChains } from "@/utils";
+import { generateChain, generateChains } from "@/utils/chains";
 
 export type ChainState = {
   chains: Chain[];

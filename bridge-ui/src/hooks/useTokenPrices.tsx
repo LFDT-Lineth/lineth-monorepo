@@ -5,7 +5,7 @@ import log from "loglevel";
 import { Address } from "viem";
 
 import { fetchTokenPrices } from "@/services/tokenService";
-import { useConfigStore } from "@/stores";
+import { useConfigStore } from "@/stores/configStore";
 
 type UseTokenPrices = {
   data: Record<string, number>;
@@ -17,11 +17,12 @@ type UseTokenPrices = {
 export default function useTokenPrices(tokenAddresses: Address[], chainId?: number): UseTokenPrices {
   const currency = useConfigStore((state) => state.currency);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const memoizedTokenAddresses = useMemo(() => tokenAddresses, [JSON.stringify(tokenAddresses)]);
+  const addressesKey = tokenAddresses.join("-");
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- addressesKey is derived from tokenAddresses
+  const memoizedTokenAddresses = useMemo(() => tokenAddresses, [addressesKey]);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["tokenPrices", memoizedTokenAddresses.join("-"), chainId, currency.value],
+    queryKey: ["tokenPrices", addressesKey, chainId, currency.value],
     queryFn: () => fetchTokenPrices(memoizedTokenAddresses, currency.value, chainId),
     enabled: !!chainId && memoizedTokenAddresses.length > 0 && [1, 59144].includes(chainId),
     refetchOnWindowFocus: false,

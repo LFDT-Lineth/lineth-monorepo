@@ -1,0 +1,188 @@
+.skeleton {
+  background-color: var(--color-white);
+  border-radius: 1.5rem;
+  padding: 1rem 1.25rem 1.25rem;
+  width: 100%;
+  margin: 0 auto 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+// Header
+.header {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 1rem;
+}
+
+.menuIcon {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 1.125rem;
+  height: 1.125rem;
+
+  span {
+    display: block;
+    width: 100%;
+    height: 2px;
+    border-radius: 1px;
+  }
+}
+
+// Section
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.sectionLabel {
+  width: 4rem;
+  height: 0.75rem;
+  margin-left: 0.25rem;
+  border-radius: 0.25rem;
+}
+
+// Card (white rounded container)
+.card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--color-smoke);
+  border-radius: 1.5rem;
+  padding: 0.75rem 1rem;
+  min-height: 3.35rem;
+}
+
+.cardContent {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+// Icons
+.iconSmall {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+}
+
+.iconWithBadge {
+  position: relative;
+  width: 2rem;
+  height: 2rem;
+}
+
+.iconLarge {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+}
+
+.iconBadge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 50%;
+  border: 2px solid var(--color-smoke);
+}
+
+// Text placeholders
+.textMedium {
+  width: 6rem;
+  height: 0.875rem;
+  border-radius: 0.25rem;
+}
+
+.textStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.textPrimary {
+  width: 2rem;
+  height: 0.9375rem;
+  border-radius: 0.25rem;
+}
+
+.textSecondary {
+  width: 2.5rem;
+  height: 0.75rem;
+  border-radius: 0.25rem;
+}
+
+// Chevron
+.chevron {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+// Amount card
+.amountCard {
+  background-color: var(--color-smoke);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.amountLabel {
+  width: 5.5rem;
+  height: 0.875rem;
+  border-radius: 0.25rem;
+}
+
+.amountInput {
+  background-color: #ededed;
+  border-radius: 1rem;
+  padding: 0.5rem 0.75rem;
+  min-height: 3rem;
+}
+
+.amountValues {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.amountMain {
+  width: 0.75rem;
+  height: 1.125rem;
+  border-radius: 0.125rem;
+}
+
+.amountFiat {
+  width: 1rem;
+  height: 0.6875rem;
+  border-radius: 0.125rem;
+}
+
+// Button
+.button {
+  width: 100%;
+  height: 3rem;
+  border-radius: 1rem;
+  margin-top: 0.25rem;
+}
+
+// Footer
+.footer {
+  display: flex;
+  justify-content: center;
+  padding-top: 0.5rem;
+}
+
+.footerContent {
+  width: 8rem;
+  height: 0.6875rem;
+  border-radius: 0.25rem;
+}

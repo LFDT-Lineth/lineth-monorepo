@@ -50,9 +50,17 @@ export default function InternalNav({ hide }: { hide?: boolean }) {
   const pathname = usePathname();
   const { isMobile } = useDevice();
   const [isOpen, setIsOpen] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(pathname);
   const selected = useMemo(() => navList.find((item) => item.href === pathname), [pathname]);
   const currentList = useMemo(() => navList.filter((item) => item.href !== pathname), [pathname]);
 
+  // Reset dropdown on pathname change (adjusting state during render)
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
+    setIsOpen(false);
+  }
+
+  // Close dropdown when clicking outside (desktop only)
   useEffect(() => {
     if (isMobile) return;
     const handleClickOutside = (event: MouseEvent) => {
@@ -65,10 +73,6 @@ export default function InternalNav({ hide }: { hide?: boolean }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isMobile]);
-
-  useEffect(() => {
-    setIsOpen(false);
-  }, [pathname]);
 
   const toggleDropdown = () => setIsOpen((prev) => !prev);
 

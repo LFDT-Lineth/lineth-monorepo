@@ -1,4 +1,5 @@
-import { useFormStore, useChainStore } from "@/stores";
+import { useChainStore } from "@/stores/chainStore";
+import { useFormStore } from "@/stores/formStoreProvider";
 import { ClaimType } from "@/types";
 
 import styles from "./fees.module.scss";

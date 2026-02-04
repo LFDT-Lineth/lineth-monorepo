@@ -8,7 +8,7 @@ import CloseIcon from "@/assets/icons/close.svg";
 import LineaIcon from "@/assets/logos/linea.svg";
 import Modal from "@/components/modal";
 import Button from "@/components/ui/button";
-import { useConfigStore } from "@/stores";
+import { useConfigStore } from "@/stores/configStore";
 
 import styles from "./first-time-visit.module.scss";
 

@@ -1,10 +1,10 @@
 "use client";
 
-import { type ReactNode, createContext, useRef, useContext } from "react";
+import { type ReactNode, createContext, useState, useContext } from "react";
 
 import { useStore } from "zustand";
 
-import { isUndefined } from "@/utils";
+import { isUndefined } from "@/utils/misc";
 
 import { TokenState, type TokenStore, createTokenStore } from "./tokenStore";
 
@@ -18,12 +18,9 @@ export interface TokenStoreProviderProps {
 }
 
 export function TokenStoreProvider({ children, initialState }: TokenStoreProviderProps) {
-  const storeRef = useRef<TokenStoreApi | undefined>(undefined);
-  if (isUndefined(storeRef.current)) {
-    storeRef.current = createTokenStore(initialState);
-  }
+  const [store] = useState(() => createTokenStore(initialState));
 
-  return <TokenStoreContext.Provider value={storeRef.current}>{children}</TokenStoreContext.Provider>;
+  return <TokenStoreContext.Provider value={store}>{children}</TokenStoreContext.Provider>;
 }
 
 export const useTokenStore = <T,>(selector: (store: TokenStore) => T): T => {

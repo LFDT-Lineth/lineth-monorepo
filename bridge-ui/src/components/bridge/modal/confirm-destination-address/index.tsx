@@ -4,8 +4,8 @@ import { Address } from "viem";
 import UnionIcon from "@/assets/icons/union.svg";
 import Modal from "@/components/modal";
 import Button from "@/components/ui/button";
-import { useChainStore } from "@/stores";
-import { formatAddress } from "@/utils";
+import { useChainStore } from "@/stores/chainStore";
+import { formatAddress } from "@/utils/format";
 
 import styles from "./confirm-destination-address.module.scss";
 

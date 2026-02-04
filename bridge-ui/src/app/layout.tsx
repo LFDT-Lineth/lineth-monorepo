@@ -14,7 +14,7 @@ import { getNavData } from "@/services";
 
 import "../scss/app.scss";
 
-const metadata: Metadata = {
+export const metadata: Metadata = {
   title: "Linea Bridge",
   description: `Linea Bridge is a bridge solution, providing secure and efficient cross-chain transactions between Layer 1 and Linea networks.
   Discover the future of blockchain interaction with Linea Bridge.`,

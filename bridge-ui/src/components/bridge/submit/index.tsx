@@ -1,20 +1,21 @@
-import { MouseEventHandler, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import clsx from "clsx";
 import dynamic from "next/dynamic";
-import { useAccount, useChainId, useSwitchChain } from "wagmi";
+import { useConnection, useChainId, useSwitchChain } from "wagmi";
 
 import WalletIcon from "@/assets/icons/wallet.svg";
 import ConnectButton from "@/components/connect-button";
 import Button from "@/components/ui/button";
 import { useBridge } from "@/hooks";
-import { useFormStore, useChainStore } from "@/stores";
+import { useChainStore } from "@/stores/chainStore";
+import { useFormStore } from "@/stores/formStoreProvider";
 
 import styles from "./submit.module.scss";
 
 type Props = {
   isDestinationAddressOpen: boolean;
-  setIsDestinationAddressOpen: MouseEventHandler<HTMLButtonElement>;
+  setIsDestinationAddressOpen: () => void;
 };
 
 const ConfirmDestinationAddress = dynamic(() => import("../modal/confirm-destination-address"), {
@@ -26,7 +27,7 @@ const TransactionConfirmed = dynamic(() => import("../modal/transaction-confirme
 });
 
 export function Submit({ isDestinationAddressOpen, setIsDestinationAddressOpen }: Props) {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useConnection();
 
   const [showTransactionConfirmedModal, setShowTransactionConfirmedModal] = useState<boolean>(false);
   const [showConfirmDestinationAddressModal, setShowConfirmDestinationAddressModal] = useState<boolean>(false);
@@ -41,11 +42,9 @@ export function Submit({ isDestinationAddressOpen, setIsDestinationAddressOpen }
   const { bridge, transactionType, isPending, isConfirming, isConfirmed, refetchAllowance } = useBridge();
 
   const chainId = useChainId();
-  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
+  const { mutate: switchChain, isPending: isSwitchingChain } = useSwitchChain();
 
-  const needChainSwitch = useMemo(() => {
-    return fromChain.id !== chainId;
-  }, [fromChain.id, chainId]);
+  const needChainSwitch = fromChain.id !== chainId;
 
   const disabled = useMemo(() => {
     if (needChainSwitch) return false;
@@ -90,26 +89,21 @@ export function Submit({ isDestinationAddressOpen, setIsDestinationAddressOpen }
     }
   }, [isConfirmed]);
 
+  const handleSubmit = useCallback(() => {
+    if (needChainSwitch) {
+      switchChain({ chainId: fromChain.id });
+    } else if (transactionType !== "approve") {
+      setShowConfirmDestinationAddressModal(true);
+    } else {
+      bridge?.();
+    }
+  }, [needChainSwitch, switchChain, fromChain.id, transactionType, bridge]);
+
   return (
     <>
       <div className={styles.container}>
         {isConnected ? (
-          <Button
-            className={styles["submit-button"]}
-            onClick={() => {
-              if (needChainSwitch) {
-                switchChain({ chainId: fromChain.id });
-              } else {
-                if (transactionType !== "approve") {
-                  setShowConfirmDestinationAddressModal(true);
-                } else {
-                  bridge?.();
-                }
-              }
-            }}
-            disabled={disabled}
-            fullWidth
-          >
+          <Button className={styles["submit-button"]} onClick={handleSubmit} disabled={disabled} fullWidth>
             {buttonText}
           </Button>
         ) : (

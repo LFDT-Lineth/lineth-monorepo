@@ -5,7 +5,7 @@ import Image from "next/image";
 import CaretDownIcon from "@/assets/icons/caret-down.svg";
 import Modal from "@/components/modal";
 import { useDevice } from "@/hooks";
-import { useFormStore } from "@/stores";
+import { useFormStore } from "@/stores/formStoreProvider";
 import { CCTPMode } from "@/types";
 
 import styles from "./cctp-mode-dropdown.module.scss";

@@ -2,11 +2,13 @@ import { useMemo } from "react";
 
 import { encodeFunctionData } from "viem";
 
-import TokenBridge from "@/abis/TokenBridge.json";
-import { DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER } from "@/constants";
-import { useFormStore, useChainStore } from "@/stores";
+import { TOKEN_BRIDGE_ABI } from "@/abis/TokenBridge";
+import { DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER } from "@/constants/general";
+import { useChainStore } from "@/stores/chainStore";
+import { useFormStore } from "@/stores/formStoreProvider";
 import { BridgeProvider, ChainLayer, ClaimType } from "@/types";
-import { isEth, isNull, isUndefined, isUndefinedOrNull, isZero, isUndefinedOrEmptyString } from "@/utils";
+import { isNull, isUndefined, isUndefinedOrNull, isZero, isUndefinedOrEmptyString } from "@/utils/misc";
+import { isEth } from "@/utils/tokens";
 
 type UseERC20BridgeTxArgsProps = {
   isConnected: boolean;
@@ -43,7 +45,7 @@ const useERC20BridgeTxArgs = ({ isConnected, allowance }: UseERC20BridgeTxArgsPr
       args: {
         to: fromChain.tokenBridgeAddress,
         data: encodeFunctionData({
-          abi: TokenBridge.abi,
+          abi: TOKEN_BRIDGE_ABI,
           functionName: "bridgeToken",
           args: [token[fromChain.layer], amount, toAddress],
         }),

@@ -1,6 +1,6 @@
 import { isAddress, isAddressEqual, zeroAddress } from "viem";
 
-import { USDC_SYMBOL } from "@/constants";
+import { USDC_SYMBOL } from "@/constants/tokens";
 import { BridgeProvider, Token } from "@/types";
 
 export const isEth = (token: Token) => {

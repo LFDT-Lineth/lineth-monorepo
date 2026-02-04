@@ -2,7 +2,7 @@ import { Address } from "viem";
 import { Config } from "wagmi";
 
 import { config } from "@/config";
-import { HistoryActionsForCompleteTxCaching } from "@/stores";
+import { type HistoryActionsForCompleteTxCaching } from "@/stores/historyStore";
 import { BridgeTransaction, Chain, Token } from "@/types";
 
 import { fetchCctpBridgeEvents } from "./fetchCctpBridgeEvents";

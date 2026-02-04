@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 
 import { config } from "@/config";
-import { USDC_SYMBOL } from "@/constants";
-import { useChainStore, useTokenStore } from "@/stores";
+import { USDC_SYMBOL } from "@/constants/tokens";
+import { useChainStore } from "@/stores/chainStore";
+import { useTokenStore } from "@/stores/tokenStoreProvider";
 import { ChainLayer, Token } from "@/types";
-import { isUndefined } from "@/utils";
+import { isUndefined } from "@/utils/misc";
 
 const useTokens = (): Token[] => {
   const tokensList = useTokenStore((state) => state.tokensList);

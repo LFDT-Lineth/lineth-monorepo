@@ -29,3 +29,7 @@ export const isUndefinedOrEmptyString = (value: string | undefined): value is un
 export const isHomePage = (pathname: string): boolean => {
   return pathname === "/";
 };
+
+export const ceilDiv = (a: bigint, b: bigint): bigint => {
+  return a === 0n ? 0n : (a - 1n) / b + 1n;
+};

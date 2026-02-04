@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import clsx from "clsx";
 import { usePathname } from "next/navigation";
-import { useAccount, useDisconnect } from "wagmi";
+import { useConnection, useDisconnect } from "wagmi";
 
 import Close from "@/assets/icons/close.svg";
 import UserWalletInfo from "@/components/modal-base/user-wallet/user-wallet-info";
@@ -22,9 +22,9 @@ export enum PohStep {
 }
 
 export function UserWallet() {
-  const { disconnectAsync, isPending: isDisconnecting } = useDisconnect();
+  const { mutateAsync: disconnectAsync, isPending: isDisconnecting } = useDisconnect();
   const { updateModal, isModalOpen } = useModal();
-  const { address } = useAccount();
+  const { address } = useConnection();
   const { data: isHuman, refetch: refetchPoh, isLoading: isCheckingPoh } = useCheckPoh(address as string);
   const [step, setStep] = useState<PohStep>(PohStep.IDLE);
   const pathname = usePathname();

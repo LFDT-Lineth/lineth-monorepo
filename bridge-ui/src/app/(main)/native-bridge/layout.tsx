@@ -1,13 +1,15 @@
 "use client";
 
-import { useAccount } from "wagmi";
+import { useConnection } from "wagmi";
 
 import { useTokens } from "@/hooks";
-import { FormState, FormStoreProvider, useChainStore } from "@/stores";
+import { useChainStore } from "@/stores/chainStore";
+import type { FormState } from "@/stores/formStore";
+import { FormStoreProvider } from "@/stores/formStoreProvider";
 import { CCTPMode, ChainLayer, ClaimType } from "@/types";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const { address } = useAccount();
+  const { address } = useConnection();
   const tokens = useTokens();
   const fromChain = useChainStore.useFromChain();
 

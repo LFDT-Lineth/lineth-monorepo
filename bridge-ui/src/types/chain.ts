@@ -1,6 +1,6 @@
 import { Address } from "viem";
 
-import { NATIVE_BRIDGE_SUPPORTED_CHAIN_IDS } from "@/constants";
+import { NATIVE_BRIDGE_SUPPORTED_CHAIN_IDS } from "@/constants/chains";
 
 export type SupportedChainIds = (typeof NATIVE_BRIDGE_SUPPORTED_CHAIN_IDS)[number];
 

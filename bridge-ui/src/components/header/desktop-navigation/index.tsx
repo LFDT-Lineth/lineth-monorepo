@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import clsx from "clsx";
 import Link from "next/link";
@@ -49,10 +49,13 @@ type MenuItemProps = {
 function MenuItem({ menu, subMenuWithIcon, subMenuWithoutIcon }: MenuItemProps) {
   const [showSubmenu, setShowsubmenu] = useState<boolean>(false);
   const pathname = usePathname();
+  const [prevPathname, setPrevPathname] = useState(pathname);
 
-  useEffect(() => {
+  // Reset submenu on pathname change (adjusting state during render)
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
     setShowsubmenu(false);
-  }, [pathname]);
+  }
 
   return (
     <li

@@ -1,6 +1,6 @@
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 import { ReadContractErrorType } from "@wagmi/core";
-import { useAccount } from "wagmi";
+import { useConnection } from "wagmi";
 
 import { SupportedChainIds } from "@/types";
 
@@ -24,7 +24,7 @@ type TransactionArgs =
   | undefined;
 
 const useTransactionArgs = (): TransactionArgs => {
-  const { isConnected } = useAccount();
+  const { isConnected } = useConnection();
   const ethBridgeTxArgs = useEthBridgeTxArgs({ isConnected });
   const { allowance, refetchAllowance } = useAllowance();
   const erc20BridgeTxArgs = useERC20BridgeTxArgs({ allowance, isConnected });

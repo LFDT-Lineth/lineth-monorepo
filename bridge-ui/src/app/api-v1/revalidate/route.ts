@@ -28,7 +28,7 @@ export async function POST(req: Request): Promise<Response> {
   try {
     const validTags = ["nav-data"];
     if (validTags.includes(tag)) {
-      revalidateTag(tag);
+      revalidateTag(tag, "max");
       return new Response(JSON.stringify({ message: `Revalidated tag: ${tag}` }), { status: 200 });
     } else {
       return new Response(JSON.stringify({ message: `Tag not recognized: ${tag}` }), { status: 400 });

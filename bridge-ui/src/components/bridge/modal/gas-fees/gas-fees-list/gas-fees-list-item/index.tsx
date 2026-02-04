@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 
 import { useFormattedDigit } from "@/hooks/useFormattedDigit";
-import { CurrencyOption } from "@/stores";
+import { type CurrencyOption } from "@/stores/configStore";
 
 import styles from "./gas-fees-list-item.module.scss";
 

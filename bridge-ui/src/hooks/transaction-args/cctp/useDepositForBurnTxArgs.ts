@@ -2,10 +2,12 @@ import { useMemo } from "react";
 
 import { encodeFunctionData, padHex, zeroHash } from "viem";
 
-import { CCTP_MAX_FINALITY_THRESHOLD, CCTP_MIN_FINALITY_THRESHOLD } from "@/constants";
-import { useFormStore, useChainStore } from "@/stores";
+import { TOKEN_MESSENGER_V2_ABI } from "@/abis/TokenMessengerV2";
+import { CCTP_MAX_FINALITY_THRESHOLD, CCTP_MIN_FINALITY_THRESHOLD } from "@/constants/cctp";
+import { useChainStore } from "@/stores/chainStore";
+import { useFormStore } from "@/stores/formStoreProvider";
 import { CCTPMode } from "@/types";
-import { isNull, isUndefined, isUndefinedOrEmptyString } from "@/utils";
+import { isNull, isUndefined, isUndefinedOrEmptyString } from "@/utils/misc";
 import { isCctp } from "@/utils/tokens";
 
 import { useCctpFee, useCctpDestinationDomain } from "./useCctpUtilHooks";
@@ -40,23 +42,7 @@ const useDepositForBurnTxArgs = ({ allowance }: UseDepositForBurnTxArgs) => {
       args: {
         to: fromChain.cctpTokenMessengerV2Address,
         data: encodeFunctionData({
-          abi: [
-            {
-              type: "function",
-              name: "depositForBurn",
-              stateMutability: "nonpayable",
-              inputs: [
-                { name: "amount", type: "uint256" },
-                { name: "destinationDomain", type: "uint32" },
-                { name: "mintRecipient", type: "bytes32" },
-                { name: "burnToken", type: "address" },
-                { name: "destinationCaller", type: "bytes32" },
-                { name: "maxFee", type: "uint256" },
-                { name: "minFinalityThreshold", type: "uint32" },
-              ],
-              outputs: [],
-            },
-          ],
+          abi: TOKEN_MESSENGER_V2_ABI,
           functionName: "depositForBurn",
           args: [
             amount,

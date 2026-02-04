@@ -4,8 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useBlockNumber } from "wagmi";
 
 import { useTokenBalance, useSelectedToken } from "@/hooks";
-import { useFormStore } from "@/stores";
-import { formatBalance } from "@/utils";
+import { useFormStore } from "@/stores/formStoreProvider";
+import { formatBalance } from "@/utils/format";
 
 import styles from "./balance.module.scss";
 

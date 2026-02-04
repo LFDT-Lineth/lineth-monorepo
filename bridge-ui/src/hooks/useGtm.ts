@@ -12,7 +12,7 @@ const useGTM = () => {
    * @param {Object} data - The event data to send to GTM
    * @param {Function} callback - Optional callback to execute after sending event
    */
-  const trackEvent = useCallback((data: any) => {
+  const trackEvent = useCallback((data: Record<string, unknown>) => {
     try {
       sendGTMEvent({
         page_title: document.title,
@@ -28,7 +28,7 @@ const useGTM = () => {
    * Track page views with GTM
    * @param {Object} pageData - The page data to send to GTM
    */
-  const trackPageView = useCallback((pageData: any) => {
+  const trackPageView = useCallback((pageData: Record<string, unknown>) => {
     try {
       sendGTMEvent({
         event: "page_view",

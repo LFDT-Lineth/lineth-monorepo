@@ -9,7 +9,7 @@ import SideBar from "@/components/side-bar";
 import SideBarMobile from "@/components/side-bar-mobile";
 import { useInitialiseChain } from "@/hooks";
 import { LinkBlock } from "@/types";
-import { isHomePage } from "@/utils";
+import { isHomePage } from "@/utils/misc";
 
 import styles from "./layout.module.scss";
 

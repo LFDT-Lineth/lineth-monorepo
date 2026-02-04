@@ -9,14 +9,14 @@ import {
 } from "@layerswap/widget/types";
 import { CONNECTOR_EVENTS } from "@web3auth/modal";
 import { useWeb3Auth, useWeb3AuthConnect, useWeb3AuthDisconnect } from "@web3auth/modal/react";
-import { useAccount } from "wagmi";
+import { useConnection } from "wagmi";
 
 export default function useEVM({ networks }: WalletConnectionProviderProps): WalletConnectionProvider {
   const name = "EVM";
   const id = "evm";
 
   // wagmi
-  const { connector: activeConnector, address: activeAddress, isConnected } = useAccount();
+  const { connector: activeConnector, address: activeAddress, isConnected } = useConnection();
   const { web3Auth } = useWeb3Auth();
   const { connect } = useWeb3AuthConnect();
   const { disconnect } = useWeb3AuthDisconnect();
@@ -117,6 +117,7 @@ export default function useEVM({ networks }: WalletConnectionProviderProps): Wal
     name,
     id,
     providerIcon: logo,
+    ready: true,
   };
 }
 

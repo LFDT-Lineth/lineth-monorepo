@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 
 import { encodeFunctionData, zeroAddress } from "viem";
-import { useAccount } from "wagmi";
+import { useConnection } from "wagmi";
 
-import MessageService from "@/abis/MessageService.json";
-import MessageTransmitterV2 from "@/abis/MessageTransmitterV2.json";
+import { MESSAGE_SERVICE_ABI } from "@/abis/MessageService";
+import { MESSAGE_TRANSMITTER_V2_ABI } from "@/abis/MessageTransmitterV2";
 import {
   BridgeTransactionType,
   CctpV2BridgeMessage,
@@ -13,8 +13,8 @@ import {
   NativeBridgeMessage,
   TransactionStatus,
 } from "@/types";
-import { isUndefined, isUndefinedOrEmptyString } from "@/utils";
 import { isCctpV2BridgeMessage, isNativeBridgeMessage } from "@/utils/message";
+import { isUndefined, isUndefinedOrEmptyString } from "@/utils/misc";
 
 type UseClaimTxArgsProps = {
   status?: TransactionStatus;
@@ -25,7 +25,7 @@ type UseClaimTxArgsProps = {
 };
 
 const useClaimTxArgs = ({ status, type, fromChain, toChain, args }: UseClaimTxArgsProps) => {
-  const { address } = useAccount();
+  const { address } = useConnection();
 
   return useMemo(() => {
     // Missing props
@@ -68,27 +68,35 @@ const useClaimTxArgs = ({ status, type, fromChain, toChain, args }: UseClaimTxAr
         encodedData =
           toChain.layer === ChainLayer.L1
             ? encodeFunctionData({
-                abi: MessageService.abi,
+                abi: MESSAGE_SERVICE_ABI,
                 functionName: "claimMessageWithProof",
                 args: [
                   {
-                    data: args.calldata,
+                    data: args.calldata as `0x{string}`,
                     fee: args.fee,
                     feeRecipient: zeroAddress,
                     from: args.from,
                     to: args.to,
-                    leafIndex: args.proof?.leafIndex,
-                    merkleRoot: args.proof?.root,
+                    leafIndex: args.proof?.leafIndex as number,
+                    merkleRoot: args.proof?.root as `0x{string}`,
                     messageNumber: args.nonce,
-                    proof: args.proof?.proof,
+                    proof: args.proof?.proof as `0x{string}`[],
                     value: args.value,
                   },
                 ],
               })
             : encodeFunctionData({
-                abi: MessageService.abi,
+                abi: MESSAGE_SERVICE_ABI,
                 functionName: "claimMessage",
-                args: [args.from, args.to, args.fee, args.value, zeroAddress, args.calldata, args.nonce],
+                args: [
+                  args.from,
+                  args.to,
+                  args.fee,
+                  args.value,
+                  zeroAddress,
+                  args.calldata as `0x{string}`,
+                  args.nonce,
+                ],
               });
 
         break;
@@ -102,9 +110,9 @@ const useClaimTxArgs = ({ status, type, fromChain, toChain, args }: UseClaimTxAr
         }
         toAddress = toChain.cctpMessageTransmitterV2Address;
         encodedData = encodeFunctionData({
-          abi: MessageTransmitterV2.abi,
+          abi: MESSAGE_TRANSMITTER_V2_ABI,
           functionName: "receiveMessage",
-          args: [args.message, args.attestation],
+          args: [args.message as `0x{string}`, args.attestation as `0x{string}`],
         });
         break;
       default:

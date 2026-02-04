@@ -3,7 +3,9 @@ import { ChangeEvent, useEffect, useState } from "react";
 import { formatUnits, parseUnits } from "viem";
 
 import { useTokenPrices } from "@/hooks";
-import { useChainStore, useConfigStore, useFormStore } from "@/stores";
+import { useChainStore } from "@/stores/chainStore";
+import { useConfigStore } from "@/stores/configStore";
+import { useFormStore } from "@/stores/formStoreProvider";
 
 import styles from "./amount.module.scss";
 

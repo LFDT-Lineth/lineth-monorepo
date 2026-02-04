@@ -9,12 +9,12 @@ import { WagmiProvider } from "@web3auth/modal/react/wagmi";
 import { toHex } from "viem";
 
 import { config as appConfig } from "@/config";
-import { localL1Network, localL2Network } from "@/constants";
+import { localL1Network, localL2Network } from "@/constants/chains";
 import { useCachedIdentityToken } from "@/hooks/useCachedIdentityToken";
 import useGTM from "@/hooks/useGtm";
 
 import { useWalletDetection } from "./WalletDetectionProvider";
-import { isProd } from "../../next.config.mjs";
+import { isProd } from "../../next.config";
 
 interface DynamicProviderProps {
   children: ReactNode;

@@ -13,8 +13,8 @@ import {
   NativeBridgeMessage,
   TransactionStatus,
 } from "@/types";
-import { isUndefined, isUndefinedOrEmptyString } from "@/utils";
 import { isNativeBridgeMessage } from "@/utils/message";
+import { isUndefined, isUndefinedOrEmptyString } from "@/utils/misc";
 
 const useBridgeTransactionMessage = (
   transaction: BridgeTransaction | undefined,

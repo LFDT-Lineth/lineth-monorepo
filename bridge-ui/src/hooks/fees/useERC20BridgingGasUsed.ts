@@ -3,7 +3,8 @@ import { Address } from "viem";
 import { useConfig } from "wagmi";
 
 import { BridgeProvider, Chain, ChainLayer, ClaimType, Token } from "@/types";
-import { estimateERC20BridgingGasUsed, isEth } from "@/utils";
+import { estimateERC20BridgingGasUsed } from "@/utils/fees";
+import { isEth } from "@/utils/tokens";
 
 type UseERC20BridgingFeeProps = {
   account?: Address;

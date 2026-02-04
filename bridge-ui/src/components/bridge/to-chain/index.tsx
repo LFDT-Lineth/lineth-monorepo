@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 
 import { useChains } from "@/hooks";
-import { useChainStore } from "@/stores";
+import { useChainStore } from "@/stores/chainStore";
 import { Chain } from "@/types";
 
 import styles from "./to-chain.module.scss";

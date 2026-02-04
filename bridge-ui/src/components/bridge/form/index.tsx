@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import { useAccount } from "wagmi";
+import { useConnection } from "wagmi";
 
 import { Amount } from "@/components/bridge/amount";
 import Claiming from "@/components/bridge/claiming";
@@ -12,7 +12,9 @@ import ToChain from "@/components/bridge/to-chain";
 import TokenList from "@/components/bridge/token-list";
 import Setting from "@/components/setting";
 import { useTokenBalance } from "@/hooks";
-import { useChainStore, useFormStore, useNativeBridgeNavigationStore } from "@/stores";
+import { useChainStore } from "@/stores/chainStore";
+import { useFormStore } from "@/stores/formStoreProvider";
+import { useNativeBridgeNavigationStore } from "@/stores/nativeBridgeNavigationStore";
 import { ChainLayer, ClaimType } from "@/types";
 
 import styles from "./bridge-form.module.scss";
@@ -24,7 +26,7 @@ export default function BridgeForm() {
   const setIsTransactionHistoryOpen = useNativeBridgeNavigationStore.useSetIsTransactionHistoryOpen();
   const setIsBridgeOpen = useNativeBridgeNavigationStore.useSetIsBridgeOpen();
 
-  const { isConnected, address } = useAccount();
+  const { isConnected, address } = useConnection();
   const fromChain = useChainStore.useFromChain();
   const token = useFormStore((state) => state.token);
   const setRecipient = useFormStore((state) => state.setRecipient);
@@ -33,6 +35,10 @@ export default function BridgeForm() {
   const resetForm = useFormStore((state) => state.resetForm);
 
   const { balance, refetch } = useTokenBalance(token);
+
+  const toggleDestinationAddress = useCallback(() => {
+    setIsDestinationAddressOpen((prev) => !prev);
+  }, []);
 
   useEffect(() => {
     refetch();
@@ -99,7 +105,7 @@ export default function BridgeForm() {
           <div className={styles["connect-btn-wrapper"]}>
             <Submit
               isDestinationAddressOpen={isDestinationAddressOpen}
-              setIsDestinationAddressOpen={() => setIsDestinationAddressOpen((prev) => !prev)}
+              setIsDestinationAddressOpen={toggleDestinationAddress}
             />
           </div>
         </div>

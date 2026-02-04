@@ -2,9 +2,10 @@ import { useMemo } from "react";
 
 import { encodeFunctionData, erc20Abi } from "viem";
 
-import { useFormStore, useChainStore } from "@/stores";
-import { isEth, isNull, isUndefined } from "@/utils";
-import { isCctp } from "@/utils/tokens";
+import { useChainStore } from "@/stores/chainStore";
+import { useFormStore } from "@/stores/formStoreProvider";
+import { isNull, isUndefined } from "@/utils/misc";
+import { isCctp, isEth } from "@/utils/tokens";
 
 type UseERC20ApproveTxArgsProps = {
   isConnected: boolean;

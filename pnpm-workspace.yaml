@@ -1,15 +1,6 @@
 # 3 days
 minimumReleaseAge: 4320
 
-minimumReleaseAgeExclude:
-  - '@next/third-parties'
-  - 'next'
-  - '@next/env'
-  - 'react'
-  - 'react-dom'
-  - '@types/react'
-  - '@types/react-dom'
-
 packages:
   - 'contracts/**'
   - 'contract-integrity-verifier/**'
@@ -43,7 +34,7 @@ catalog:
   typechain: 8.3.2
   winston: 3.17.0
   yargs: 17.7.2
-  viem: 2.31.3
+  viem: 2.45.0
   zod: "3.24.2"
 
 ignoredBuiltDependencies:

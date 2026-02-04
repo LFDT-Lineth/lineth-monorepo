@@ -1,12 +1,13 @@
 import { Address, maxUint256 } from "viem";
 import { useEstimateGas } from "wagmi";
 
-import { DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER } from "@/constants";
+import { DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER } from "@/constants/general";
 import { Chain, Token } from "@/types";
-import { isCctp, isEth, isUndefined } from "@/utils";
+import { isUndefined } from "@/utils/misc";
+import { isCctp, isEth } from "@/utils/tokens";
 
 import useFeeData from "./useFeeData";
-import { useTransactionArgs } from "../transaction-args";
+import useTransactionArgs from "../transaction-args/useTransactionArgs";
 
 type UseGasFeesProps = {
   token: Token;
@@ -57,7 +58,7 @@ const useGasFees = ({ address, amount, fromChain, isConnected, token }: UseGasFe
     query: {
       enabled: !!transactionArgs && amount > 0n && !!fromAddress && !!isEnabled,
     },
-  } as any);
+  });
 
   if (isLoading) {
     return null;

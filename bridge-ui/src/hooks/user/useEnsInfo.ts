@@ -1,8 +1,8 @@
 import { linea, mainnet } from "viem/chains";
-import { useAccount, useEnsAvatar, useEnsName } from "wagmi";
+import { useConnection, useEnsAvatar, useEnsName } from "wagmi";
 
 export function useEnsInfo() {
-  const { address } = useAccount();
+  const { address } = useConnection();
 
   const { data: ensNameLinea } = useEnsName({
     address,

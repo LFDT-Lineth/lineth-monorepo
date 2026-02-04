@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 
 import TransactionDetails from "@/components/bridge/transaction-history/modal/transaction-details";
 import { BridgeTransaction } from "@/types";
@@ -12,15 +12,23 @@ type Props = {
 
 export default function ListTransaction({ transactions }: Props) {
   const [currentTransaction, setCurrentTransaction] = useState<BridgeTransaction | undefined>(undefined);
-  const handleCloseModal = () => {
+
+  // Build index map for O(1) lookup instead of O(n) find
+  const transactionsByHash = useMemo(() => new Map(transactions.map((t) => [t.bridgingTx, t])), [transactions]);
+
+  const handleCloseModal = useCallback(() => {
     setCurrentTransaction(undefined);
-  };
-  const handleClickTransaction = (transactionHash: string) => {
-    const transaction = transactions.find((t) => t.bridgingTx === transactionHash);
-    if (transaction) {
-      setCurrentTransaction(transaction);
-    }
-  };
+  }, []);
+
+  const handleClickTransaction = useCallback(
+    (transactionHash: string) => {
+      const transaction = transactionsByHash.get(transactionHash);
+      if (transaction) {
+        setCurrentTransaction(transaction);
+      }
+    },
+    [transactionsByHash],
+  );
   return (
     <>
       <ul className={styles["list"]} data-testid="native-bridge-transaction-history-list">

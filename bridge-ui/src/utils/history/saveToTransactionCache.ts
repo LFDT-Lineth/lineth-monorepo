@@ -1,4 +1,4 @@
-import { HistoryActionsForCompleteTxCaching } from "@/stores";
+import { type HistoryActionsForCompleteTxCaching } from "@/stores/historyStore";
 import { BridgeTransaction } from "@/types";
 
 import { isTimestampTooOld } from "./isTimestampTooOld";

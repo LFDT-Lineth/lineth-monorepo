@@ -4,7 +4,8 @@ import { Address, Client, Hex } from "viem";
 import { Config } from "wagmi";
 
 import { config } from "@/config";
-import { defaultTokensConfig, HistoryActionsForCompleteTxCaching } from "@/stores";
+import { type HistoryActionsForCompleteTxCaching } from "@/stores/historyStore";
+import { defaultTokensConfig } from "@/stores/tokenStore";
 import {
   BridgeTransaction,
   BridgeTransactionType,

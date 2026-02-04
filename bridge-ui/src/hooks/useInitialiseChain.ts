@@ -3,9 +3,9 @@ import { useEffect } from "react";
 import { watchAccount } from "@wagmi/core";
 import { useConfig } from "wagmi";
 
-import { useChainStore } from "@/stores";
+import { useChainStore } from "@/stores/chainStore";
 import { Chain } from "@/types";
-import { isUndefined } from "@/utils";
+import { isUndefined } from "@/utils/misc";
 
 import useChains from "./useChains";
 

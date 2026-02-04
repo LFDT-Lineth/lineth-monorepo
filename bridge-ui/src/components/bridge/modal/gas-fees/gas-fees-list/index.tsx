@@ -1,4 +1,4 @@
-import { useConfigStore } from "@/stores";
+import { useConfigStore } from "@/stores/configStore";
 
 import GasFeesListItem from "./gas-fees-list-item";
 import styles from "./gas-fees-list.module.scss";

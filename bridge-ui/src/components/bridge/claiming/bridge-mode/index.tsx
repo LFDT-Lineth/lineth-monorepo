@@ -3,8 +3,8 @@ import React from "react";
 import Image from "next/image";
 
 import CctpModeDropdown from "@/components/bridge/cctp-mode-dropdown";
-import { useFormStore } from "@/stores";
-import { isCctp } from "@/utils";
+import { useFormStore } from "@/stores/formStoreProvider";
+import { isCctp } from "@/utils/tokens";
 
 import styles from "./bridge-mode.module.scss";
 
