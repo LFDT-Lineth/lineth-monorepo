@@ -55,6 +55,15 @@ export class LineaRollupYieldExtensionContractClient implements ILineaRollupYiel
   }
 
   /**
+   * Gets the balance of the LineaRollupYieldExtension contract.
+   *
+   * @returns {Promise<bigint>} The contract balance in wei.
+   */
+  async getBalance(): Promise<bigint> {
+    return this.contractClientLibrary.getBalance(this.contractAddress);
+  }
+
+  /**
    * Transfers funds for native yield operations on the Linea rollup.
    * Encodes the function call and sends a signed transaction via the blockchain client.
    *
@@ -69,7 +78,12 @@ export class LineaRollupYieldExtensionContractClient implements ILineaRollupYiel
       args: [amount],
     });
 
-    const txReceipt = await this.contractClientLibrary.sendSignedTransaction(this.contractAddress, calldata);
+    const txReceipt = await this.contractClientLibrary.sendSignedTransaction(
+      this.contractAddress,
+      calldata,
+      undefined,
+      LineaRollupYieldExtensionABI,
+    );
     this.logger.info(
       `transferFundsForNativeYield succeeded, amount=${amount.toString()}, txHash=${txReceipt.transactionHash}`,
     );

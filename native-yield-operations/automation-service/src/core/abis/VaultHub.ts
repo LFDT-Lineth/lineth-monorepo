@@ -20,4 +20,43 @@ export const VaultHubABI = [
     name: "VaultRebalanced",
     type: "event",
   },
+  {
+    inputs: [{ internalType: "address", name: "_vault", type: "address" }],
+    name: "settleableLidoFeesValue",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "_vault", type: "address" }],
+    name: "latestReport",
+    outputs: [
+      {
+        components: [
+          { internalType: "uint104", name: "totalValue", type: "uint104" },
+          { internalType: "int104", name: "inOutDelta", type: "int104" },
+          { internalType: "uint48", name: "timestamp", type: "uint48" },
+        ],
+        internalType: "struct VaultHub.Report",
+        name: "",
+        type: "tuple",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "_vault", type: "address" }],
+    name: "isReportFresh",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "_vault", type: "address" }],
+    name: "isVaultConnected",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function",
+  },
 ] as const;

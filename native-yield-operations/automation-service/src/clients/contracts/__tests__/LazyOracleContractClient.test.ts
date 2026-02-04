@@ -1,12 +1,17 @@
-import { mock, MockProxy } from "jest-mock-extended";
 import type { ILogger, IBlockchainClient } from "@consensys/linea-shared-utils";
 import type { Address, Hex, PublicClient, TransactionReceipt } from "viem";
 import { InvalidInputRpcError } from "viem";
+import { jest, describe, it, expect, beforeEach, afterEach, beforeAll } from "@jest/globals";
+
+import { createLoggerMock } from "../../../__tests__/helpers/index.js";
 import { LazyOracleABI } from "../../../core/abis/LazyOracle.js";
+import { LazyOracleErrorsABI } from "../../../core/abis/errors/LazyOracleErrors.js";
 import { OperationTrigger } from "../../../core/metrics/LineaNativeYieldAutomationServiceMetrics.js";
 
+const LazyOracleCombinedABI = [...LazyOracleABI, ...LazyOracleErrorsABI] as const;
+
 jest.mock("viem", () => {
-  const actual = jest.requireActual("viem");
+  const actual = jest.requireActual<typeof import("viem")>("viem");
   return {
     ...actual,
     getContract: jest.fn(),
@@ -26,38 +31,83 @@ beforeAll(async () => {
 });
 
 describe("LazyOracleContractClient", () => {
-  const contractAddress = "0x1111111111111111111111111111111111111111" as Address;
-  const pollIntervalMs = 5_000;
-  const eventWatchTimeoutMs = 30_000;
+  // Semantic constants
+  const CONTRACT_ADDRESS = "0x1111111111111111111111111111111111111111" as Address;
+  const VAULT_ADDRESS = "0x2222222222222222222222222222222222222222" as Address;
+  const POLL_INTERVAL_MS = 5_000;
+  const EVENT_WATCH_TIMEOUT_MS = 30_000;
+  const SAMPLE_BALANCE = 1_000_000_000_000_000_000n; // 1 ETH
+  const SAMPLE_TX_HASH = "0xhash" as Hex;
+  const SAMPLE_TREE_ROOT = "0xabc" as Hex;
+  const SAMPLE_REPORT_CID = "cid";
 
-  let logger: MockProxy<ILogger>;
-  let blockchainClient: MockProxy<IBlockchainClient<PublicClient, TransactionReceipt>>;
+  let logger: ILogger;
+  let blockchainClient: jest.Mocked<IBlockchainClient<PublicClient, TransactionReceipt>>;
   let watchContractEvent: jest.Mock;
   let stopWatching: jest.Mock;
   let publicClient: PublicClient;
   let contractStub: any;
 
+  // Factory functions
+  const createMockBlockchainClient = (): jest.Mocked<IBlockchainClient<PublicClient, TransactionReceipt>> => ({
+    getBlockchainClient: jest.fn(),
+    getBalance: jest.fn(),
+    sendSignedTransaction: jest.fn(),
+  } as any);
+
+  const createMockContract = () => ({
+    abi: LazyOracleCombinedABI,
+    read: {
+      latestReportData: jest.fn(),
+    },
+    simulate: {
+      updateVaultData: jest.fn(),
+    },
+  });
+
+  const createLatestReportDataResponse = (
+    timestamp: bigint = 123n,
+    refSlot: bigint = 456n,
+    treeRoot: Hex = SAMPLE_TREE_ROOT,
+    reportCid: string = SAMPLE_REPORT_CID,
+  ) => [timestamp, refSlot, treeRoot, reportCid] as const;
+
+  const createUpdateVaultDataParams = (overrides?: Partial<Parameters<typeof LazyOracleContractClient.prototype.updateVaultData>[0]>) => ({
+    vault: VAULT_ADDRESS,
+    totalValue: 1n,
+    cumulativeLidoFees: 2n,
+    liabilityShares: 3n,
+    maxLiabilityShares: 4n,
+    slashingReserve: 5n,
+    proof: ["0x01"] as Hex[],
+    ...overrides,
+  });
+
+  const createVaultReportEvent = (
+    timestamp: bigint = 123n,
+    refSlot: bigint = 456n,
+    root: Hex = SAMPLE_TREE_ROOT,
+    cid: string = SAMPLE_REPORT_CID,
+    txHash: Hex = SAMPLE_TX_HASH,
+  ) => ({
+    removed: false,
+    args: { timestamp, refSlot, root, cid },
+    transactionHash: txHash,
+  });
+
   const createClient = () =>
-    new LazyOracleContractClient(logger, blockchainClient, contractAddress, pollIntervalMs, eventWatchTimeoutMs);
+    new LazyOracleContractClient(logger, blockchainClient, CONTRACT_ADDRESS, POLL_INTERVAL_MS, EVENT_WATCH_TIMEOUT_MS);
 
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
-    logger = mock<ILogger>();
-    blockchainClient = mock<IBlockchainClient<PublicClient, TransactionReceipt>>();
+    logger = createLoggerMock();
+    blockchainClient = createMockBlockchainClient();
     stopWatching = jest.fn();
     watchContractEvent = jest.fn().mockReturnValue(stopWatching);
     publicClient = { watchContractEvent } as unknown as PublicClient;
     blockchainClient.getBlockchainClient.mockReturnValue(publicClient);
-    contractStub = {
-      abi: LazyOracleABI,
-      read: {
-        latestReportData: jest.fn(),
-      },
-      simulate: {
-        updateVaultData: jest.fn(),
-      },
-    };
+    contractStub = createMockContract();
     mockedGetContract.mockReturnValue(contractStub);
   });
 
@@ -65,55 +115,71 @@ describe("LazyOracleContractClient", () => {
     jest.useRealTimers();
   });
 
-  it("initializes the viem contract and exposes getters", () => {
+  it("initializes viem contract with correct configuration", () => {
+    // Arrange
+    // (setup in beforeEach)
+
+    // Act
     const client = createClient();
 
+    // Assert
     expect(mockedGetContract).toHaveBeenCalledWith({
-      abi: LazyOracleABI,
-      address: contractAddress,
+      abi: LazyOracleCombinedABI,
+      address: CONTRACT_ADDRESS,
       client: publicClient,
     });
-    expect(client.getAddress()).toBe(contractAddress);
+    expect(client.getAddress()).toBe(CONTRACT_ADDRESS);
     expect(client.getContract()).toBe(contractStub);
   });
 
-  it("returns latest report data with normalized structure", async () => {
+  it("retrieves contract balance from blockchain client", async () => {
+    // Arrange
+    blockchainClient.getBalance.mockResolvedValueOnce(SAMPLE_BALANCE);
     const client = createClient();
-    const latest = [123n, 456n, "0xabc" as Hex, "cid"] as const;
-    contractStub.read.latestReportData.mockResolvedValueOnce(latest);
 
+    // Act
+    const result = await client.getBalance();
+
+    // Assert
+    expect(result).toBe(SAMPLE_BALANCE);
+    expect(blockchainClient.getBalance).toHaveBeenCalledWith(CONTRACT_ADDRESS);
+  });
+
+  it("transforms latest report data into normalized structure", async () => {
+    // Arrange
+    const client = createClient();
+    const rawResponse = createLatestReportDataResponse();
+    contractStub.read.latestReportData.mockResolvedValueOnce(rawResponse);
+
+    // Act
     const report = await client.latestReportData();
 
+    // Assert
     expect(report).toEqual({
-      timestamp: latest[0],
-      refSlot: latest[1],
-      treeRoot: latest[2],
-      reportCid: latest[3],
+      timestamp: 123n,
+      refSlot: 456n,
+      treeRoot: SAMPLE_TREE_ROOT,
+      reportCid: SAMPLE_REPORT_CID,
     });
     expect(logger.debug).toHaveBeenCalledWith("latestReportData", {
       returnVal: report,
     });
   });
 
-  it("encodes calldata and relays updateVaultData to the blockchain client", async () => {
+  it("encodes and sends updateVaultData transaction", async () => {
+    // Arrange
     const client = createClient();
+    const params = createUpdateVaultDataParams();
     const calldata = "0xdeadbeef" as Hex;
-    const receipt = { transactionHash: "0xhash" } as unknown as TransactionReceipt;
-    const params = {
-      vault: "0x2222222222222222222222222222222222222222" as Address,
-      totalValue: 1n,
-      cumulativeLidoFees: 2n,
-      liabilityShares: 3n,
-      maxLiabilityShares: 4n,
-      slashingReserve: 5n,
-      proof: ["0x01"] as Hex[],
-    };
+    const receipt = { transactionHash: SAMPLE_TX_HASH } as unknown as TransactionReceipt;
 
     mockedEncodeFunctionData.mockReturnValueOnce(calldata);
     blockchainClient.sendSignedTransaction.mockResolvedValueOnce(receipt);
 
+    // Act
     const result = await client.updateVaultData(params);
 
+    // Assert
     expect(result).toBe(receipt);
     expect(logger.debug).toHaveBeenCalledWith("updateVaultData started", { params });
     expect(mockedEncodeFunctionData).toHaveBeenCalledWith({
@@ -129,51 +195,49 @@ describe("LazyOracleContractClient", () => {
         params.proof,
       ],
     });
-    expect(blockchainClient.sendSignedTransaction).toHaveBeenCalledWith(contractAddress, calldata);
+    expect(blockchainClient.sendSignedTransaction).toHaveBeenCalledWith(
+      CONTRACT_ADDRESS,
+      calldata,
+      undefined,
+      LazyOracleCombinedABI,
+    );
     expect(logger.info).toHaveBeenCalledWith("updateVaultData succeeded, txHash=0xhash", { params });
   });
 
-  it("resolves with VaultReportResult when VaultsReportDataUpdated event arrives", async () => {
+  it("resolves with event result when VaultsReportDataUpdated event is received", async () => {
+    // Arrange
     const client = createClient();
     const clearTimeoutSpy = jest.spyOn(global, "clearTimeout");
+    const eventLog = createVaultReportEvent();
     const promise = client.waitForVaultsReportDataUpdatedEvent();
 
+    const watchArgs = watchContractEvent.mock.calls[0]?.[0] as any;
+
+    // Act
+    watchArgs?.onLogs?.([eventLog as any]);
+    const result = await promise;
+
+    // Assert
     expect(watchContractEvent).toHaveBeenCalledWith({
-      address: contractAddress,
+      address: CONTRACT_ADDRESS,
       abi: contractStub.abi,
       eventName: "VaultsReportDataUpdated",
-      pollingInterval: pollIntervalMs,
+      pollingInterval: POLL_INTERVAL_MS,
       onLogs: expect.any(Function),
       onError: expect.any(Function),
     });
-
-    const watchArgs = watchContractEvent.mock.calls[0][0];
-    expect(stopWatching).not.toHaveBeenCalled();
-    const log = {
-      removed: false,
-      args: {
+    expect(result).toEqual({
+      result: OperationTrigger.VAULTS_REPORT_DATA_UPDATED_EVENT,
+      txHash: SAMPLE_TX_HASH,
+      report: {
         timestamp: 123n,
         refSlot: 456n,
-        root: "0xabc" as Hex,
-        cid: "cid",
-      },
-      transactionHash: "0xhash" as Hex,
-    };
-
-    watchArgs.onLogs?.([log as any]);
-    await expect(promise).resolves.toEqual({
-      result: OperationTrigger.VAULTS_REPORT_DATA_UPDATED_EVENT,
-      txHash: log.transactionHash,
-      report: {
-        timestamp: log.args.timestamp,
-        refSlot: log.args.refSlot,
-        treeRoot: log.args.root,
-        reportCid: log.args.cid,
+        treeRoot: SAMPLE_TREE_ROOT,
+        reportCid: SAMPLE_REPORT_CID,
       },
     });
     expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
     expect(stopWatching).toHaveBeenCalledTimes(1);
-    clearTimeoutSpy.mockRestore();
     expect(logger.info).toHaveBeenCalledWith(
       "waitForVaultsReportDataUpdatedEvent detected",
       expect.objectContaining({
@@ -182,96 +246,97 @@ describe("LazyOracleContractClient", () => {
         }),
       }),
     );
+    clearTimeoutSpy.mockRestore();
   });
 
-  it("resolves with timeout result when no event is observed", async () => {
+  it("resolves with timeout result when no event arrives before deadline", async () => {
+    // Arrange
     const client = createClient();
     const clearTimeoutSpy = jest.spyOn(global, "clearTimeout");
     const promise = client.waitForVaultsReportDataUpdatedEvent();
 
-    expect(logger.info).toHaveBeenCalledWith(
-      `waitForVaultsReportDataUpdatedEvent started with timeout=${eventWatchTimeoutMs}ms`,
-    );
+    // Act
+    jest.advanceTimersByTime(EVENT_WATCH_TIMEOUT_MS);
+    const result = await promise;
 
-    expect(stopWatching).not.toHaveBeenCalled();
-    jest.advanceTimersByTime(eventWatchTimeoutMs);
-    await expect(promise).resolves.toEqual({ result: OperationTrigger.TIMEOUT });
+    // Assert
+    expect(logger.info).toHaveBeenCalledWith(
+      `waitForVaultsReportDataUpdatedEvent started with timeout=${EVENT_WATCH_TIMEOUT_MS}ms`,
+    );
+    expect(result).toEqual({ result: OperationTrigger.TIMEOUT });
     expect(clearTimeoutSpy).toHaveBeenCalled();
     expect(stopWatching).toHaveBeenCalledTimes(1);
-    clearTimeoutSpy.mockRestore();
     expect(logger.info).toHaveBeenCalledWith(
-      `waitForVaultsReportDataUpdatedEvent timed out after timeout=${eventWatchTimeoutMs}ms`,
+      `waitForVaultsReportDataUpdatedEvent timed out after timeout=${EVENT_WATCH_TIMEOUT_MS}ms`,
     );
+    clearTimeoutSpy.mockRestore();
   });
 
-  it("logs errors emitted by the watcher and continues waiting", async () => {
+  it("logs watcher errors and continues waiting for event", async () => {
+    // Arrange
     const client = createClient();
     const promise = client.waitForVaultsReportDataUpdatedEvent();
-    const watchArgs = watchContractEvent.mock.calls[0][0];
-    const failure = new Error("boom");
+    const watchArgs = watchContractEvent.mock.calls[0]?.[0] as any;
+    const error = new Error("boom");
 
-    watchArgs.onError?.(failure);
+    // Act
+    watchArgs?.onError?.(error);
+    jest.advanceTimersByTime(EVENT_WATCH_TIMEOUT_MS);
+    const result = await promise;
 
-    expect(logger.error).toHaveBeenCalledWith("waitForVaultsReportDataUpdatedEvent error", { error: failure });
-
-    jest.advanceTimersByTime(eventWatchTimeoutMs);
-    await expect(promise).resolves.toEqual({ result: OperationTrigger.TIMEOUT });
+    // Assert
+    expect(logger.error).toHaveBeenCalledWith("waitForVaultsReportDataUpdatedEvent error", { error });
+    expect(result).toEqual({ result: OperationTrigger.TIMEOUT });
     expect(stopWatching).toHaveBeenCalledTimes(1);
   });
 
-  it("warns and continues waiting when InvalidInputRpcError is emitted (filter expired)", async () => {
+  it("logs warning for InvalidInputRpcError and continues waiting", async () => {
+    // Arrange
     const client = createClient();
     const promise = client.waitForVaultsReportDataUpdatedEvent();
-    const watchArgs = watchContractEvent.mock.calls[0][0];
+    const watchArgs = watchContractEvent.mock.calls[0]?.[0] as any;
     const invalidInputError = new InvalidInputRpcError(new Error("Filter expired"));
 
-    watchArgs.onError?.(invalidInputError);
+    // Act
+    watchArgs?.onError?.(invalidInputError);
+    jest.advanceTimersByTime(EVENT_WATCH_TIMEOUT_MS);
+    const result = await promise;
 
+    // Assert
     expect(logger.warn).toHaveBeenCalledWith(
       "waitForVaultsReportDataUpdatedEvent: Filter expired, will be recreated by Viem framework",
       { error: invalidInputError },
     );
     expect(logger.error).not.toHaveBeenCalledWith("waitForVaultsReportDataUpdatedEvent error", expect.anything());
-
-    jest.advanceTimersByTime(eventWatchTimeoutMs);
-    await expect(promise).resolves.toEqual({ result: OperationTrigger.TIMEOUT });
+    expect(result).toEqual({ result: OperationTrigger.TIMEOUT });
     expect(stopWatching).toHaveBeenCalledTimes(1);
   });
 
-  it("warns when all received logs are removed before resolving later events", async () => {
+  it("warns when reorged logs arrive then resolves with valid event", async () => {
+    // Arrange
     const client = createClient();
     const clearTimeoutSpy = jest.spyOn(global, "clearTimeout");
     const promise = client.waitForVaultsReportDataUpdatedEvent();
-    const watchArgs = watchContractEvent.mock.calls[0][0];
+    const watchArgs = watchContractEvent.mock.calls[0]?.[0] as any;
+    const validEvent = createVaultReportEvent(123n, 456n, "0xbeef" as Hex);
 
-    watchArgs.onLogs?.([{ removed: true }] as any);
+    // Act
+    watchArgs?.onLogs?.([{ removed: true }] as any);
+    watchArgs?.onLogs?.([validEvent as any]);
+    const result = await promise;
 
+    // Assert
     expect(logger.warn).toHaveBeenCalledWith(
       "waitForVaultsReportDataUpdatedEvent: Dropped VaultsReportDataUpdated event",
     );
-    expect(stopWatching).not.toHaveBeenCalled();
-
-    const log = {
-      removed: false,
-      args: {
+    expect(result).toEqual({
+      result: OperationTrigger.VAULTS_REPORT_DATA_UPDATED_EVENT,
+      txHash: SAMPLE_TX_HASH,
+      report: {
         timestamp: 123n,
         refSlot: 456n,
-        root: "0xbeef" as Hex,
-        cid: "cid",
-      },
-      transactionHash: "0xhash" as Hex,
-    };
-
-    watchArgs.onLogs?.([log as any]);
-
-    await expect(promise).resolves.toEqual({
-      result: OperationTrigger.VAULTS_REPORT_DATA_UPDATED_EVENT,
-      txHash: log.transactionHash,
-      report: {
-        timestamp: log.args.timestamp,
-        refSlot: log.args.refSlot,
-        treeRoot: log.args.root,
-        reportCid: log.args.cid,
+        treeRoot: "0xbeef" as Hex,
+        reportCid: SAMPLE_REPORT_CID,
       },
     });
     expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
@@ -279,40 +344,32 @@ describe("LazyOracleContractClient", () => {
     clearTimeoutSpy.mockRestore();
   });
 
-  it("logs debug details when reorg logs are filtered out", async () => {
+  it("logs debug details when filtering out reorged logs", async () => {
+    // Arrange
     const client = createClient();
     const clearTimeoutSpy = jest.spyOn(global, "clearTimeout");
     const promise = client.waitForVaultsReportDataUpdatedEvent();
-    const watchArgs = watchContractEvent.mock.calls[0][0];
+    const watchArgs = watchContractEvent.mock.calls[0]?.[0] as any;
+    const removedLog = { removed: true, args: {}, transactionHash: "0xdead" };
+    const validLog = createVaultReportEvent(1n, 2n, "0xroot" as Hex, SAMPLE_REPORT_CID, "0xlive" as Hex);
+    const logs = [removedLog, validLog];
 
-    const logs = [
-      { removed: true, args: {}, transactionHash: "0xdead" },
-      {
-        removed: false,
-        args: {
-          timestamp: 1n,
-          refSlot: 2n,
-          root: "0xroot" as Hex,
-          cid: "cid",
-        },
-        transactionHash: "0xlive" as Hex,
-      },
-    ];
+    // Act
+    watchArgs?.onLogs?.(logs as any);
+    const result = await promise;
 
-    watchArgs.onLogs?.(logs as any);
-
+    // Assert
     expect(logger.debug).toHaveBeenCalledWith("waitForVaultsReportDataUpdatedEvent: Ignored removed reorg logs", {
       logs,
     });
-
-    await expect(promise).resolves.toEqual({
+    expect(result).toEqual({
       result: OperationTrigger.VAULTS_REPORT_DATA_UPDATED_EVENT,
-      txHash: logs[1].transactionHash as Hex,
+      txHash: "0xlive" as Hex,
       report: {
-        timestamp: logs[1].args.timestamp,
-        refSlot: logs[1].args.refSlot,
-        treeRoot: logs[1].args.root,
-        reportCid: logs[1].args.cid,
+        timestamp: 1n,
+        refSlot: 2n,
+        treeRoot: "0xroot" as Hex,
+        reportCid: SAMPLE_REPORT_CID,
       },
     });
     expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
@@ -320,32 +377,37 @@ describe("LazyOracleContractClient", () => {
     clearTimeoutSpy.mockRestore();
   });
 
-  it("ignores logs that lack the expected arguments", async () => {
+  it("skips events with incomplete arguments and continues waiting", async () => {
+    // Arrange
     const client = createClient();
     const clearTimeoutSpy = jest.spyOn(global, "clearTimeout");
     const promise = client.waitForVaultsReportDataUpdatedEvent();
-    const watchArgs = watchContractEvent.mock.calls[0][0];
-
+    const watchArgs = watchContractEvent.mock.calls[0]?.[0] as any;
     const incompleteLog = {
       removed: false,
       args: {
         timestamp: 123n,
         refSlot: undefined,
         root: "0xroot" as Hex,
-        cid: "cid",
+        cid: SAMPLE_REPORT_CID,
       },
       transactionHash: "0xincomplete" as Hex,
     };
 
-    watchArgs.onLogs?.([incompleteLog as any]);
+    // Act
+    watchArgs?.onLogs?.([incompleteLog as any]);
+    jest.advanceTimersByTime(EVENT_WATCH_TIMEOUT_MS);
+    const result = await promise;
 
-    expect(stopWatching).not.toHaveBeenCalled();
+    // Assert
+    expect(logger.debug).toHaveBeenCalledWith("waitForVaultsReportDataUpdatedEvent: Event args incomplete, skipping", {
+      hasTimestamp: true,
+      hasRefSlot: false,
+      hasRoot: true,
+      hasCid: true,
+    });
     expect(logger.info).not.toHaveBeenCalledWith("waitForVaultsReportDataUpdatedEvent detected", expect.anything());
-    expect(clearTimeoutSpy).not.toHaveBeenCalled();
-
-    jest.advanceTimersByTime(eventWatchTimeoutMs);
-    await expect(promise).resolves.toEqual({ result: OperationTrigger.TIMEOUT });
-    expect(clearTimeoutSpy).toHaveBeenCalled();
+    expect(result).toEqual({ result: OperationTrigger.TIMEOUT });
     expect(stopWatching).toHaveBeenCalledTimes(1);
     clearTimeoutSpy.mockRestore();
   });

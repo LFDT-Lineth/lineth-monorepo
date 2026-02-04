@@ -1,6 +1,7 @@
-import { IBlockchainClient, ILogger } from "@consensys/linea-shared-utils";
+import { absDiff, IBlockchainClient, ILogger, weiToGweiNumber } from "@consensys/linea-shared-utils";
 import {
   Address,
+  concat,
   encodeAbiParameters,
   encodeFunctionData,
   getContract,
@@ -22,6 +23,21 @@ import { ONE_ETHER } from "@consensys/linea-shared-utils";
 import { YieldReport } from "../../core/entities/YieldReport.js";
 import { StakingVaultABI } from "../../core/abis/StakingVault.js";
 import { WithdrawalEvent } from "../../core/entities/WithdrawalEvent.js";
+import { DashboardContractClient } from "./DashboardContractClient.js";
+import { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
+import { IRebalanceQuotaService } from "../../core/services/IRebalanceQuotaService.js";
+import { DashboardErrorsABI } from "../../core/abis/errors/DashboardErrors.js";
+import { LidoStVaultYieldProviderErrorsABI } from "../../core/abis/errors/LidoStVaultYieldProviderErrors.js";
+import { StakingVaultErrorsABI } from "../../core/abis/errors/StakingVaultErrors.js";
+import { VaultHubErrorsABI } from "../../core/abis/errors/VaultHubErrors.js";
+
+const YieldManagerCombinedABI = [
+  ...YieldManagerABI,
+  ...DashboardErrorsABI,
+  ...LidoStVaultYieldProviderErrorsABI,
+  ...StakingVaultErrorsABI,
+  ...VaultHubErrorsABI,
+] as const;
 
 /**
  * Client for interacting with YieldManager smart contracts.
@@ -29,7 +45,7 @@ import { WithdrawalEvent } from "../../core/entities/WithdrawalEvent.js";
  * rebalancing, ossification, and extracting event data from transaction receipts.
  */
 export class YieldManagerContractClient implements IYieldManager<TransactionReceipt> {
-  private readonly contract: GetContractReturnType<typeof YieldManagerABI, PublicClient, Address>;
+  private readonly contract: GetContractReturnType<typeof YieldManagerCombinedABI, PublicClient, Address>;
 
   /**
    * Creates a new YieldManagerContractClient instance.
@@ -37,18 +53,22 @@ export class YieldManagerContractClient implements IYieldManager<TransactionRece
    * @param {ILogger} logger - Logger instance for logging operations.
    * @param {IBlockchainClient<PublicClient, TransactionReceipt>} contractClientLibrary - Blockchain client for sending transactions and reading contract data.
    * @param {Address} contractAddress - The address of the YieldManager contract.
-   * @param {number} rebalanceToleranceBps - Rebalance tolerance in basis points (for determining when rebalancing is required).
+   * @param {bigint} rebalanceToleranceAmountWei - Rebalance tolerance amount in wei (absolute tolerance band for determining when rebalancing is required).
    * @param {bigint} minWithdrawalThresholdEth - Minimum withdrawal threshold in ETH (for threshold-based withdrawal operations).
+   * @param {IRebalanceQuotaService} [rebalanceQuotaService] - Service for enforcing rebalance quota limits on STAKE direction rebalances.
+   * @param {INativeYieldAutomationMetricsUpdater} [metricsUpdater] - Optional metrics updater for tracking circuit breaker trips and rebalance requirements.
    */
   constructor(
     private readonly logger: ILogger,
     private readonly contractClientLibrary: IBlockchainClient<PublicClient, TransactionReceipt>,
     private readonly contractAddress: Address,
-    private readonly rebalanceToleranceBps: number,
+    private readonly rebalanceToleranceAmountWei: bigint,
     private readonly minWithdrawalThresholdEth: bigint,
+    private readonly rebalanceQuotaService: IRebalanceQuotaService,
+    private readonly metricsUpdater?: INativeYieldAutomationMetricsUpdater,
   ) {
     this.contract = getContract({
-      abi: YieldManagerABI,
+      abi: YieldManagerCombinedABI,
       address: contractAddress,
       client: this.contractClientLibrary.getBlockchainClient(),
     });
@@ -70,6 +90,15 @@ export class YieldManagerContractClient implements IYieldManager<TransactionRece
    */
   getContract(): GetContractReturnType {
     return this.contract;
+  }
+
+  /**
+   * Gets the balance of the YieldManager contract.
+   *
+   * @returns {Promise<bigint>} The contract balance in wei.
+   */
+  async getBalance(): Promise<bigint> {
+    return this.contractClientLibrary.getBalance(this.contractAddress);
   }
 
   /**
@@ -139,6 +168,16 @@ export class YieldManagerContractClient implements IYieldManager<TransactionRece
   }
 
   /**
+   * Gets the user funds for a yield provider from the YieldManager contract.
+   *
+   * @param {Address} yieldProvider - The yield provider address.
+   * @returns {Promise<bigint>} The user funds in wei.
+   */
+  async userFunds(yieldProvider: Address): Promise<bigint> {
+    return this.contract.read.userFunds([yieldProvider]);
+  }
+
+  /**
    * Gets the withdrawable value for a yield provider using simulation.
    *
    * @param {Address} yieldProvider - The yield provider address.
@@ -167,14 +206,19 @@ export class YieldManagerContractClient implements IYieldManager<TransactionRece
    * @returns {Promise<TransactionReceipt>} The transaction receipt if successful.
    */
   async fundYieldProvider(yieldProvider: Address, amount: bigint): Promise<TransactionReceipt> {
-    this.logger.debug(`fundYieldProvider started, yieldProvider=${yieldProvider}, amount=${amount.toString()}`);
+    this.logger.info(`fundYieldProvider started, yieldProvider=${yieldProvider}, amount=${amount.toString()}`);
     const calldata = encodeFunctionData({
       abi: this.contract.abi,
       functionName: "fundYieldProvider",
       args: [yieldProvider, amount],
     });
 
-    const txReceipt = await this.contractClientLibrary.sendSignedTransaction(this.contractAddress, calldata);
+    const txReceipt = await this.contractClientLibrary.sendSignedTransaction(
+      this.contractAddress,
+      calldata,
+      undefined,
+      YieldManagerCombinedABI,
+    );
     this.logger.info(
       `fundYieldProvider succeeded, yieldProvider=${yieldProvider}, amount=${amount.toString()}, txHash=${txReceipt.transactionHash}`,
     );
@@ -189,14 +233,19 @@ export class YieldManagerContractClient implements IYieldManager<TransactionRece
    * @returns {Promise<TransactionReceipt>} The transaction receipt if successful.
    */
   async reportYield(yieldProvider: Address, l2YieldRecipient: Address): Promise<TransactionReceipt> {
-    this.logger.debug(`reportYield started, yieldProvider=${yieldProvider}, l2YieldRecipient=${l2YieldRecipient}`);
+    this.logger.info(`reportYield started, yieldProvider=${yieldProvider}, l2YieldRecipient=${l2YieldRecipient}`);
     const calldata = encodeFunctionData({
       abi: this.contract.abi,
       functionName: "reportYield",
       args: [yieldProvider, l2YieldRecipient],
     });
 
-    const txReceipt = await this.contractClientLibrary.sendSignedTransaction(this.contractAddress, calldata);
+    const txReceipt = await this.contractClientLibrary.sendSignedTransaction(
+      this.contractAddress,
+      calldata,
+      undefined,
+      YieldManagerCombinedABI,
+    );
     this.logger.info(
       `reportYield succeeded, yieldProvider=${yieldProvider}, l2YieldRecipient=${l2YieldRecipient}, txHash=${txReceipt.transactionHash}`,
     );
@@ -212,7 +261,14 @@ export class YieldManagerContractClient implements IYieldManager<TransactionRece
    * @returns {Promise<TransactionReceipt>} The transaction receipt if successful.
    */
   async unstake(yieldProvider: Address, withdrawalParams: WithdrawalRequests): Promise<TransactionReceipt> {
-    this.logger.debug(`unstake started, yieldProvider=${yieldProvider}`, { withdrawalParams });
+    this.logger.info(
+      `unstake started, yieldProvider=${yieldProvider}, validatorCount=${withdrawalParams.pubkeys.length}`,
+    );
+    this.logger.debug(`unstake started withdrawalParams`, { withdrawalParams });
+    // Note: Empty amountsGwei array signals full withdrawals (validator exits) per contract logic.
+    // The contract checks: if amountsGwei.length == 0, it triggers full withdrawals via addFullWithdrawalRequests.
+    // If amountsGwei.length > 0, it triggers amount-driven withdrawals via addWithdrawalRequests.
+    // Therefore, pubkeys and amountsGwei arrays may have mismatched lengths when requesting validator exits.
     const encodedWithdrawalParams = this._encodeLidoWithdrawalParams({
       ...withdrawalParams,
       refundRecipient: this.contractAddress,
@@ -228,38 +284,33 @@ export class YieldManagerContractClient implements IYieldManager<TransactionRece
       this.contractAddress,
       calldata,
       validatorWithdrawalFee,
+      YieldManagerCombinedABI,
     );
-    this.logger.info(`unstake succeeded, yieldProvider=${yieldProvider}, txHash=${txReceipt.transactionHash}`, {
-      withdrawalParams,
-    });
+    this.logger.info(
+      `unstake succeeded, yieldProvider=${yieldProvider}, validatorCount=${withdrawalParams.pubkeys.length}, txHash=${txReceipt.transactionHash}`,
+    );
+    this.logger.debug(`unstake succeeded withdrawalParams`, { withdrawalParams });
     return txReceipt;
   }
 
   /**
    * Encodes Lido staking vault withdrawal parameters into ABI-encoded format.
+   * Note: Empty amountsGwei array signals full withdrawals (validator exits) per contract logic.
+   * The contract checks: if amountsGwei.length == 0, it triggers full withdrawals via addFullWithdrawalRequests.
+   * If amountsGwei.length > 0, it triggers amount-driven withdrawals via addWithdrawalRequests.
    *
    * @param {LidoStakingVaultWithdrawalParams} params - The withdrawal parameters including pubkeys, amounts, and refund recipient.
    * @returns {Hex} The ABI-encoded withdrawal parameters.
    */
   private _encodeLidoWithdrawalParams(params: LidoStakingVaultWithdrawalParams): Hex {
+    const concatenatedPubkeys = concat(params.pubkeys);
     return encodeAbiParameters(
       [
-        {
-          type: "tuple",
-          components: [
-            { name: "pubkeys", type: "bytes[]" },
-            { name: "amounts", type: "uint64[]" },
-            { name: "refundRecipient", type: "address" },
-          ],
-        },
+        { name: "pubkeys", type: "bytes" },
+        { name: "amounts", type: "uint64[]" },
+        { name: "refundRecipient", type: "address" },
       ],
-      [
-        {
-          pubkeys: params.pubkeys,
-          amounts: params.amountsGwei,
-          refundRecipient: params.refundRecipient,
-        },
-      ],
+      [concatenatedPubkeys, params.amountsGwei, params.refundRecipient],
     );
   }
 
@@ -293,18 +344,50 @@ export class YieldManagerContractClient implements IYieldManager<TransactionRece
    * @returns {Promise<TransactionReceipt>} The transaction receipt if successful.
    */
   async safeAddToWithdrawalReserve(yieldProvider: Address, amount: bigint): Promise<TransactionReceipt> {
-    this.logger.debug(
-      `safeAddToWithdrawalReserve started, yieldProvider=${yieldProvider}, amount=${amount.toString()}`,
-    );
+    this.logger.info(`safeAddToWithdrawalReserve started, yieldProvider=${yieldProvider}, amount=${amount.toString()}`);
     const calldata = encodeFunctionData({
       abi: this.contract.abi,
       functionName: "safeAddToWithdrawalReserve",
       args: [yieldProvider, amount],
     });
 
-    const txReceipt = await this.contractClientLibrary.sendSignedTransaction(this.contractAddress, calldata);
+    const txReceipt = await this.contractClientLibrary.sendSignedTransaction(
+      this.contractAddress,
+      calldata,
+      undefined,
+      YieldManagerCombinedABI,
+    );
     this.logger.info(
       `safeAddToWithdrawalReserve succeeded, yieldProvider=${yieldProvider}, amount=${amount.toString()}, txHash=${txReceipt.transactionHash}`,
+    );
+    return txReceipt;
+  }
+
+  /**
+   * Safely withdraws funds from a yield provider.
+   *
+   * @param {Address} yieldProvider - The yield provider address.
+   * @param {bigint} amount - The amount to withdraw from the yield provider in wei.
+   * @returns {Promise<TransactionReceipt>} The transaction receipt if successful.
+   */
+  async safeWithdrawFromYieldProvider(yieldProvider: Address, amount: bigint): Promise<TransactionReceipt> {
+    this.logger.info(
+      `safeWithdrawFromYieldProvider started, yieldProvider=${yieldProvider}, amount=${amount.toString()}`,
+    );
+    const calldata = encodeFunctionData({
+      abi: this.contract.abi,
+      functionName: "safeWithdrawFromYieldProvider",
+      args: [yieldProvider, amount],
+    });
+
+    const txReceipt = await this.contractClientLibrary.sendSignedTransaction(
+      this.contractAddress,
+      calldata,
+      undefined,
+      YieldManagerCombinedABI,
+    );
+    this.logger.info(
+      `safeWithdrawFromYieldProvider succeeded, yieldProvider=${yieldProvider}, amount=${amount.toString()}, txHash=${txReceipt.transactionHash}`,
     );
     return txReceipt;
   }
@@ -316,14 +399,19 @@ export class YieldManagerContractClient implements IYieldManager<TransactionRece
    * @returns {Promise<TransactionReceipt>} The transaction receipt if successful.
    */
   async pauseStaking(yieldProvider: Address): Promise<TransactionReceipt> {
-    this.logger.debug(`pauseStaking started, yieldProvider=${yieldProvider}`);
+    this.logger.info(`pauseStaking started, yieldProvider=${yieldProvider}`);
     const calldata = encodeFunctionData({
       abi: this.contract.abi,
       functionName: "pauseStaking",
       args: [yieldProvider],
     });
 
-    const txReceipt = await this.contractClientLibrary.sendSignedTransaction(this.contractAddress, calldata);
+    const txReceipt = await this.contractClientLibrary.sendSignedTransaction(
+      this.contractAddress,
+      calldata,
+      undefined,
+      YieldManagerCombinedABI,
+    );
     this.logger.info(`pauseStaking succeeded, yieldProvider=${yieldProvider}, txHash=${txReceipt.transactionHash}`);
     return txReceipt;
   }
@@ -335,14 +423,19 @@ export class YieldManagerContractClient implements IYieldManager<TransactionRece
    * @returns {Promise<TransactionReceipt>} The transaction receipt if successful.
    */
   async unpauseStaking(yieldProvider: Address): Promise<TransactionReceipt> {
-    this.logger.debug(`unpauseStaking started, yieldProvider=${yieldProvider}`);
+    this.logger.info(`unpauseStaking started, yieldProvider=${yieldProvider}`);
     const calldata = encodeFunctionData({
       abi: this.contract.abi,
       functionName: "unpauseStaking",
       args: [yieldProvider],
     });
 
-    const txReceipt = await this.contractClientLibrary.sendSignedTransaction(this.contractAddress, calldata);
+    const txReceipt = await this.contractClientLibrary.sendSignedTransaction(
+      this.contractAddress,
+      calldata,
+      undefined,
+      YieldManagerCombinedABI,
+    );
     this.logger.info(`unpauseStaking succeeded, yieldProvider=${yieldProvider}, txHash=${txReceipt.transactionHash}`);
     return txReceipt;
   }
@@ -354,14 +447,19 @@ export class YieldManagerContractClient implements IYieldManager<TransactionRece
    * @returns {Promise<TransactionReceipt>} The transaction receipt if successful.
    */
   async progressPendingOssification(yieldProvider: Address): Promise<TransactionReceipt> {
-    this.logger.debug(`progressPendingOssification started, yieldProvider=${yieldProvider}`);
+    this.logger.info(`progressPendingOssification started, yieldProvider=${yieldProvider}`);
     const calldata = encodeFunctionData({
       abi: this.contract.abi,
       functionName: "progressPendingOssification",
       args: [yieldProvider],
     });
 
-    const txReceipt = await this.contractClientLibrary.sendSignedTransaction(this.contractAddress, calldata);
+    const txReceipt = await this.contractClientLibrary.sendSignedTransaction(
+      this.contractAddress,
+      calldata,
+      undefined,
+      YieldManagerCombinedABI,
+    );
     this.logger.info(
       `progressPendingOssification succeeded, yieldProvider=${yieldProvider}, txHash=${txReceipt.transactionHash}`,
     );
@@ -373,66 +471,201 @@ export class YieldManagerContractClient implements IYieldManager<TransactionRece
    * Determines if rebalancing is needed (in deficit or in surplus) and calculates the required rebalance amount.
    * Returns NONE direction with 0 amount if rebalancing is not required.
    *
+   * @param {Address} yieldProvider - The yield provider address.
+   * @param {Address} l2YieldRecipient - The L2 yield recipient address.
    * @returns {Promise<RebalanceRequirement>} The rebalance requirement containing direction (NONE, STAKE, or UNSTAKE) and amount.
    */
-  async getRebalanceRequirements(): Promise<RebalanceRequirement> {
-    const l1MessageServiceAddress = await this.L1_MESSAGE_SERVICE();
-    const [l1MessageServiceBalance, totalSystemBalance, effectiveTargetWithdrawalReserve] = await Promise.all([
+  async getRebalanceRequirements(yieldProvider: Address, l2YieldRecipient: Address): Promise<RebalanceRequirement> {
+    const [l1MessageServiceAddress, dashboardAddress, vaultAddress] = await Promise.all([
+      this.L1_MESSAGE_SERVICE(),
+      this.getLidoDashboardAddress(yieldProvider),
+      this.getLidoStakingVaultAddress(yieldProvider),
+    ]);
+    const dashboardClient = DashboardContractClient.getOrCreate(dashboardAddress);
+    const [
+      l1MessageServiceBalance,
+      totalSystemBalance,
+      effectiveTargetWithdrawalReserve,
+      dashboardTotalValue,
+      peekedYieldReport,
+      userFunds,
+    ] = await Promise.all([
       this.contractClientLibrary.getBalance(l1MessageServiceAddress),
       this.getTotalSystemBalance(),
       this.getEffectiveTargetWithdrawalReserve(),
+      dashboardClient.totalValue(),
+      this.peekYieldReport(yieldProvider, l2YieldRecipient),
+      this.userFunds(yieldProvider),
     ]);
-    const isRebalanceRequired = this._isRebalanceRequired(
+    if (peekedYieldReport === undefined) {
+      throw new Error("peekYieldReport returned undefined, cannot determine rebalance requirements");
+    }
+    const result = this._getRebalanceRequirements(
+      vaultAddress,
       totalSystemBalance,
       l1MessageServiceBalance,
       effectiveTargetWithdrawalReserve,
+      userFunds,
+      dashboardTotalValue,
+      peekedYieldReport.yieldAmount,
+      peekedYieldReport.outstandingNegativeYield,
     );
-    if (!isRebalanceRequired) {
+    // Track the reported rebalance requirement (after applying tolerance band, circuit breaker, and rate limit)
+    if (this.metricsUpdater) {
+      this.metricsUpdater.setReportedRebalanceRequirement(
+        vaultAddress,
+        weiToGweiNumber(result.rebalanceAmount),
+        result.rebalanceDirection,
+      );
+      // Clear the opposite direction to prevent stale metrics
+      if (result.rebalanceDirection === RebalanceDirection.STAKE) {
+        this.metricsUpdater.setReportedRebalanceRequirement(vaultAddress, 0, RebalanceDirection.UNSTAKE);
+      } else if (result.rebalanceDirection === RebalanceDirection.UNSTAKE) {
+        this.metricsUpdater.setReportedRebalanceRequirement(vaultAddress, 0, RebalanceDirection.STAKE);
+      } else if (result.rebalanceDirection === RebalanceDirection.NONE) {
+        // Clear both directions when direction is NONE
+        this.metricsUpdater.setReportedRebalanceRequirement(vaultAddress, 0, RebalanceDirection.STAKE);
+        this.metricsUpdater.setReportedRebalanceRequirement(vaultAddress, 0, RebalanceDirection.UNSTAKE);
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Determines if rebalancing is required based on tolerance band calculations.
+   * Calculates system obligations (Lido fees, node operator fees, and LST liability) from the yield report,
+   * adjusts balances to exclude these obligations, and determines if the L1 Message Service balance
+   * is within the tolerance band compared to the adjusted effective target withdrawal reserve.
+   * Returns a RebalanceRequirement with direction (NONE, STAKE, or UNSTAKE) and amount.
+   *
+   * @param {Address} yieldProvider - The yield provider (vault) address for metrics tracking.
+   * @param {bigint} totalSystemBalance - The total system balance.
+   * @param {bigint} l1MessageServiceBalance - The L1 Message Service balance.
+   * @param {bigint} effectiveTargetWithdrawalReserve - The effective target withdrawal reserve.
+   * @param {bigint} userFunds - The user funds for the yield provider.
+   * @param {bigint} dashboardTotalValue - The total value from the Dashboard contract.
+   * @param {bigint} peekedYieldReportYieldAmount - The yield amount from the peeked yield report.
+   * @param {bigint} peekedYieldReportOutstandingNegativeYield - The outstanding negative yield from the peeked yield report.
+   * @returns {RebalanceRequirement} The rebalance requirement containing direction (NONE, STAKE, or UNSTAKE) and amount.
+   */
+  private _getRebalanceRequirements(
+    vaultAddress: Address,
+    totalSystemBalance: bigint,
+    l1MessageServiceBalance: bigint,
+    effectiveTargetWithdrawalReserve: bigint,
+    userFunds: bigint,
+    dashboardTotalValue: bigint,
+    peekedYieldReportYieldAmount: bigint,
+    peekedYieldReportOutstandingNegativeYield: bigint,
+  ): RebalanceRequirement {
+    this.logger.info("_getRebalanceRequirements - inputs", {
+      totalSystemBalance,
+      l1MessageServiceBalance,
+      effectiveTargetWithdrawalReserve,
+      userFunds,
+      dashboardTotalValue,
+      peekedYieldReportYieldAmount,
+      peekedYieldReportOutstandingNegativeYield,
+      rebalanceToleranceAmountWei: this.rebalanceToleranceAmountWei,
+    });
+
+    if (totalSystemBalance === 0n) {
       return {
         rebalanceDirection: RebalanceDirection.NONE,
         rebalanceAmount: 0n,
       };
     }
-    // In deficit
-    if (l1MessageServiceBalance < effectiveTargetWithdrawalReserve) {
-      return {
-        rebalanceDirection: RebalanceDirection.UNSTAKE,
-        rebalanceAmount: effectiveTargetWithdrawalReserve - l1MessageServiceBalance,
-      };
-      // In surplus
-    } else {
-      return {
-        rebalanceDirection: RebalanceDirection.STAKE,
-        rebalanceAmount: l1MessageServiceBalance - effectiveTargetWithdrawalReserve,
-      };
-    }
-  }
 
-  /**
-   * Determines if rebalancing is required based on tolerance band calculations.
-   * Checks if the L1 Message Service balance is below tolerance band or above tolerance band
-   * compared to the effective target withdrawal reserve.
-   *
-   * @param {bigint} totalSystemBalance - The total system balance.
-   * @param {bigint} l1MessageServiceBalance - The L1 Message Service balance.
-   * @param {bigint} effectiveTargetWithdrawalReserve - The effective target withdrawal reserve.
-   * @returns {boolean} True if rebalancing is required, false otherwise.
-   */
-  private _isRebalanceRequired(
-    totalSystemBalance: bigint,
-    l1MessageServiceBalance: bigint,
-    effectiveTargetWithdrawalReserve: bigint,
-  ): boolean {
-    const toleranceBand = (totalSystemBalance * BigInt(this.rebalanceToleranceBps)) / 10000n;
-    // Below tolerance band
-    if (l1MessageServiceBalance < effectiveTargetWithdrawalReserve - toleranceBand) {
-      return true;
+    // Get Lido fees + node operator fees + LST liability
+    const systemObligations =
+      peekedYieldReportYieldAmount > 0n
+        ? dashboardTotalValue - peekedYieldReportYieldAmount - userFunds
+        : peekedYieldReportOutstandingNegativeYield + dashboardTotalValue - userFunds;
+    this.logger.info(`_getRebalanceRequirements - systemObligations=${systemObligations}`);
+
+    // Get balances adjusted for system obligations
+    const totalSystemBalanceExcludingObligations = totalSystemBalance - systemObligations;
+    this.logger.info(
+      `_getRebalanceRequirements - totalSystemBalanceExcludingObligations=${totalSystemBalanceExcludingObligations}`,
+    );
+
+    const effectiveTargetWithdrawalReserveExcludingObligations =
+      (effectiveTargetWithdrawalReserve * totalSystemBalanceExcludingObligations) / totalSystemBalance;
+    this.logger.info(
+      `_getRebalanceRequirements - effectiveTargetWithdrawalReserveExcludingObligations=${effectiveTargetWithdrawalReserveExcludingObligations}`,
+    );
+
+    const toleranceBand = this.rebalanceToleranceAmountWei;
+    this.logger.info(`_getRebalanceRequirements - toleranceBand=${toleranceBand}`);
+
+    // Rebalance requirement = Reserve rebalance requirement + system obligations
+    const absRebalanceRequirement =
+      absDiff(l1MessageServiceBalance, effectiveTargetWithdrawalReserveExcludingObligations) + systemObligations;
+    this.logger.info(`_getRebalanceRequirements - absRebalanceRequirement=${absRebalanceRequirement}`);
+
+    // Determine the direction for metrics tracking (without considering tolerance band)
+    const directionForMetrics: RebalanceDirection =
+      l1MessageServiceBalance < effectiveTargetWithdrawalReserveExcludingObligations
+        ? RebalanceDirection.UNSTAKE
+        : RebalanceDirection.STAKE;
+
+    // Track the original rebalance requirement for all paths (before tolerance band, circuit breaker, or rate limit)
+    if (this.metricsUpdater) {
+      this.metricsUpdater.setActualRebalanceRequirement(
+        vaultAddress,
+        weiToGweiNumber(absRebalanceRequirement),
+        directionForMetrics,
+      );
+      // Clear the opposite direction to prevent stale metrics
+      if (directionForMetrics === RebalanceDirection.STAKE) {
+        this.metricsUpdater.setActualRebalanceRequirement(vaultAddress, 0, RebalanceDirection.UNSTAKE);
+      } else if (directionForMetrics === RebalanceDirection.UNSTAKE) {
+        this.metricsUpdater.setActualRebalanceRequirement(vaultAddress, 0, RebalanceDirection.STAKE);
+      }
     }
-    // Above tolerance band
-    if (l1MessageServiceBalance > effectiveTargetWithdrawalReserve + toleranceBand) {
-      return true;
+
+    const absRebalanceAmountAfterQuota =
+      directionForMetrics === RebalanceDirection.STAKE
+        ? this.rebalanceQuotaService.getRebalanceAmountAfterQuota(
+            vaultAddress,
+            totalSystemBalance,
+            absRebalanceRequirement,
+          )
+        : absRebalanceRequirement;
+    this.logger.info(`_getRebalanceRequirements - absRebalanceAmountAfterQuota=${absRebalanceAmountAfterQuota}`);
+
+    if (absRebalanceAmountAfterQuota < toleranceBand) {
+      const result = {
+        rebalanceDirection: RebalanceDirection.NONE,
+        rebalanceAmount: 0n,
+      };
+      this.logger.info("_getRebalanceRequirements - result", result);
+      return result;
     }
-    return false;
+
+    if (l1MessageServiceBalance < effectiveTargetWithdrawalReserveExcludingObligations) {
+      const result = {
+        rebalanceDirection: RebalanceDirection.UNSTAKE,
+        rebalanceAmount: absRebalanceAmountAfterQuota,
+      };
+      this.logger.info("_getRebalanceRequirements - result", result);
+      return result;
+    } else {
+      // Cap staking amount to prevent l1MessageServiceBalance from falling below effectiveTargetWithdrawalReserve,
+      // which would create a target reserve deficit which will cause YieldManager::fundYieldProvider revert
+      const stakingRebalanceCeiling = l1MessageServiceBalance - effectiveTargetWithdrawalReserve;
+      this.logger.info(`_getRebalanceRequirements - stakingRebalanceCeiling=${stakingRebalanceCeiling}`);
+
+      const result = {
+        rebalanceDirection: RebalanceDirection.STAKE,
+        rebalanceAmount:
+          stakingRebalanceCeiling > 0n && absRebalanceAmountAfterQuota > stakingRebalanceCeiling
+            ? stakingRebalanceCeiling
+            : absRebalanceAmountAfterQuota,
+      };
+      this.logger.info("_getRebalanceRequirements - result", result);
+      return result;
+    }
   }
 
   /**
@@ -479,12 +712,13 @@ export class YieldManagerContractClient implements IYieldManager<TransactionRece
    * @returns {Promise<TransactionReceipt | undefined>} The transaction receipt if staking was unpaused, undefined if already unpaused.
    */
   async unpauseStakingIfNotAlready(yieldProvider: Address): Promise<TransactionReceipt | undefined> {
-    if (await this.isStakingPaused(yieldProvider)) {
-      const txReceipt = await this.unpauseStaking(yieldProvider);
-      return txReceipt;
+    if (!(await this.isStakingPaused(yieldProvider))) {
+      this.logger.info(`Already resumed staking for yieldProvider=${yieldProvider}`);
+      return undefined;
     }
-    this.logger.info(`Already resumed staking for yieldProvider=${yieldProvider}`);
-    return undefined;
+
+    const txReceipt = await this.unpauseStaking(yieldProvider);
+    return txReceipt;
   }
 
   /**
@@ -514,7 +748,12 @@ export class YieldManagerContractClient implements IYieldManager<TransactionRece
     amount: bigint,
   ): Promise<TransactionReceipt | undefined> {
     const availableWithdrawalBalance = await this.getAvailableUnstakingRebalanceBalance(yieldProvider);
-    if (availableWithdrawalBalance < this.minWithdrawalThresholdEth * ONE_ETHER) return undefined;
+    if (availableWithdrawalBalance < this.minWithdrawalThresholdEth * ONE_ETHER) {
+      this.logger.info(
+        `safeAddToWithdrawalReserveIfAboveThreshold - skipping as availableWithdrawalBalance=${availableWithdrawalBalance} is below the minimum withdrawal threshold of ${this.minWithdrawalThresholdEth * ONE_ETHER}`,
+      );
+      return undefined;
+    }
     return await this.safeAddToWithdrawalReserve(yieldProvider, amount);
   }
 
@@ -527,7 +766,12 @@ export class YieldManagerContractClient implements IYieldManager<TransactionRece
    */
   async safeMaxAddToWithdrawalReserve(yieldProvider: Address): Promise<TransactionReceipt | undefined> {
     const availableWithdrawalBalance = await this.getAvailableUnstakingRebalanceBalance(yieldProvider);
-    if (availableWithdrawalBalance < this.minWithdrawalThresholdEth * ONE_ETHER) return undefined;
+    if (availableWithdrawalBalance < this.minWithdrawalThresholdEth * ONE_ETHER) {
+      this.logger.info(
+        `safeMaxAddToWithdrawalReserve - skipping as availableWithdrawalBalance=${availableWithdrawalBalance} is below the minimum withdrawal threshold of ${this.minWithdrawalThresholdEth * ONE_ETHER}`,
+      );
+      return undefined;
+    }
     return await this.safeAddToWithdrawalReserve(yieldProvider, availableWithdrawalBalance);
   }
 
@@ -547,7 +791,10 @@ export class YieldManagerContractClient implements IYieldManager<TransactionRece
     });
 
     const event = logs.find((log) => log.address.toLowerCase() === this.contractAddress.toLowerCase());
-    if (!event) return undefined;
+    if (!event) {
+      this.logger.debug("getWithdrawalEventFromTxReceipt - WithdrawalReserveAugmented event not found in receipt");
+      return undefined;
+    }
 
     const { reserveIncrementAmount, yieldProvider } = event.args;
     return { reserveIncrementAmount, yieldProvider };
@@ -569,7 +816,10 @@ export class YieldManagerContractClient implements IYieldManager<TransactionRece
     });
 
     const event = logs.find((log) => log.address.toLowerCase() === this.contractAddress.toLowerCase());
-    if (!event) return undefined;
+    if (!event) {
+      this.logger.debug("getYieldReportFromTxReceipt - NativeYieldReported event not found in receipt");
+      return undefined;
+    }
 
     const { yieldAmount, outstandingNegativeYield, yieldProvider } = event.args;
     return {
@@ -589,7 +839,9 @@ export class YieldManagerContractClient implements IYieldManager<TransactionRece
    */
   async peekYieldReport(yieldProvider: Address, l2YieldRecipient: Address): Promise<YieldReport | undefined> {
     try {
-      const { result } = await this.contract.simulate.reportYield([yieldProvider, l2YieldRecipient]);
+      const { result } = await this.contract.simulate.reportYield([yieldProvider, l2YieldRecipient], {
+        account: this.contractClientLibrary.getSignerAddress(),
+      });
       const [newReportedYield, outstandingNegativeYield] = result;
       return {
         yieldAmount: newReportedYield,
@@ -597,7 +849,7 @@ export class YieldManagerContractClient implements IYieldManager<TransactionRece
         yieldProvider,
       };
     } catch (error) {
-      this.logger.debug(
+      this.logger.error(
         `peekYieldReport failed, yieldProvider=${yieldProvider}, l2YieldRecipient=${l2YieldRecipient}`,
         { error },
       );

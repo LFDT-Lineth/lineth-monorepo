@@ -6,4 +6,11 @@ export const StakingVaultABI = [
     stateMutability: "view",
     type: "function",
   },
+  {
+    inputs: [],
+    name: "beaconChainDepositsPaused",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function",
+  },
 ] as const;

@@ -1,17 +1,18 @@
 import { ILogger, wait } from "@consensys/linea-shared-utils";
 import { IYieldManager } from "../core/clients/contracts/IYieldManager.js";
 import { Address, TransactionReceipt } from "viem";
-import { IOperationModeSelector } from "../core/services/operation-mode/IOperationModeSelector.js";
+import { IOperationLoop } from "./IOperationLoop.js";
 import { IOperationModeProcessor } from "../core/services/operation-mode/IOperationModeProcessor.js";
 import { INativeYieldAutomationMetricsUpdater } from "../core/metrics/INativeYieldAutomationMetricsUpdater.js";
 import { OperationMode } from "../core/enums/OperationModeEnums.js";
+import { OperationModeExecutionStatus } from "../core/metrics/LineaNativeYieldAutomationServiceMetrics.js";
 
 /**
  * Selects and executes the appropriate operation mode based on the yield provider's ossification state.
  * Continuously polls the YieldManager contract to determine the current state and routes execution
  * to the corresponding operation mode processor. Handles errors with retry logic.
  */
-export class OperationModeSelector implements IOperationModeSelector {
+export class OperationModeSelector implements IOperationLoop {
   private isRunning = false;
 
   /**
@@ -46,6 +47,7 @@ export class OperationModeSelector implements IOperationModeSelector {
    */
   public async start(): Promise<void> {
     if (this.isRunning) {
+      this.logger.debug("OperationModeSelector.start() - already running, skipping");
       return;
     }
 
@@ -61,6 +63,7 @@ export class OperationModeSelector implements IOperationModeSelector {
    */
   public stop(): void {
     if (!this.isRunning) {
+      this.logger.debug("OperationModeSelector.stop() - not running, skipping");
       return;
     }
 
@@ -80,6 +83,7 @@ export class OperationModeSelector implements IOperationModeSelector {
    */
   private async selectOperationModeLoop(): Promise<void> {
     while (this.isRunning) {
+      let currentMode: OperationMode = OperationMode.UNKNOWN;
       try {
         const [isOssificationInitiated, isOssified] = await Promise.all([
           this.yieldManagerContractClient.isOssificationInitiated(this.yieldProvider),
@@ -87,23 +91,36 @@ export class OperationModeSelector implements IOperationModeSelector {
         ]);
 
         if (isOssified) {
+          currentMode = OperationMode.OSSIFICATION_COMPLETE_MODE;
           this.logger.info("Selected OSSIFICATION_COMPLETE_MODE");
           await this.ossificationCompleteOperationModeProcessor.process();
           this.logger.info("Completed OSSIFICATION_COMPLETE_MODE");
-          this.metricsUpdater.incrementOperationModeExecution(OperationMode.OSSIFICATION_COMPLETE_MODE);
+          this.metricsUpdater.incrementOperationModeExecution(
+            OperationMode.OSSIFICATION_COMPLETE_MODE,
+            OperationModeExecutionStatus.Success,
+          );
         } else if (isOssificationInitiated) {
+          currentMode = OperationMode.OSSIFICATION_PENDING_MODE;
           this.logger.info("Selected OSSIFICATION_PENDING_MODE");
           await this.ossificationPendingOperationModeProcessor.process();
           this.logger.info("Completed OSSIFICATION_PENDING_MODE");
-          this.metricsUpdater.incrementOperationModeExecution(OperationMode.OSSIFICATION_PENDING_MODE);
+          this.metricsUpdater.incrementOperationModeExecution(
+            OperationMode.OSSIFICATION_PENDING_MODE,
+            OperationModeExecutionStatus.Success,
+          );
         } else {
+          currentMode = OperationMode.YIELD_REPORTING_MODE;
           this.logger.info("Selected YIELD_REPORTING_MODE");
           await this.yieldReportingOperationModeProcessor.process();
           this.logger.info("Completed YIELD_REPORTING_MODE");
-          this.metricsUpdater.incrementOperationModeExecution(OperationMode.YIELD_REPORTING_MODE);
+          this.metricsUpdater.incrementOperationModeExecution(
+            OperationMode.YIELD_REPORTING_MODE,
+            OperationModeExecutionStatus.Success,
+          );
         }
       } catch (error) {
         this.logger.error(`selectOperationModeLoop error, retrying in ${this.contractReadRetryTimeMs}ms`, { error });
+        this.metricsUpdater.incrementOperationModeExecution(currentMode, OperationModeExecutionStatus.Failure);
         await wait(this.contractReadRetryTimeMs);
       }
     }

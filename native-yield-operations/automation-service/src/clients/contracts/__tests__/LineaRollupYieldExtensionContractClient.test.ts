@@ -1,6 +1,7 @@
 import { mock, MockProxy } from "jest-mock-extended";
 import type { ILogger, IBlockchainClient } from "@consensys/linea-shared-utils";
 import type { PublicClient, TransactionReceipt, Address, Hex } from "viem";
+
 import { LineaRollupYieldExtensionABI } from "../../../core/abis/LineaRollupYieldExtension.js";
 
 jest.mock("viem", () => {
@@ -24,12 +25,22 @@ beforeAll(async () => {
 });
 
 describe("LineaRollupYieldExtensionContractClient", () => {
-  const contractAddress = "0x1111111111111111111111111111111111111111" as Address;
+  // Semantic constants
+  const CONTRACT_ADDRESS = "0x1111111111111111111111111111111111111111" as Address;
+  const ONE_ETH = 1_000_000_000_000_000_000n;
+  const TRANSFER_AMOUNT = 123n;
+  const ENCODED_CALLDATA = "0xdeadbeef" as Hex;
+  const TX_HASH = "0xhash";
 
   let logger: MockProxy<ILogger>;
   let blockchainClient: MockProxy<IBlockchainClient<PublicClient, TransactionReceipt>>;
   let publicClient: PublicClient;
   const contractStub = { abi: LineaRollupYieldExtensionABI } as any;
+
+  // Factory function for transaction receipt
+  const createTransactionReceipt = (transactionHash: string): TransactionReceipt => ({
+    transactionHash,
+  }) as unknown as TransactionReceipt;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -40,44 +51,104 @@ describe("LineaRollupYieldExtensionContractClient", () => {
     mockedGetContract.mockReturnValue(contractStub);
   });
 
-  const createClient = () => new LineaRollupYieldExtensionContractClient(logger, blockchainClient, contractAddress);
+  describe("initialization", () => {
+    it("initializes viem contract with provided address and client", () => {
+      // Arrange
+      // (no additional setup needed)
 
-  it("initializes viem contract with provided address and client", () => {
-    const client = createClient();
+      // Act
+      const client = new LineaRollupYieldExtensionContractClient(logger, blockchainClient, CONTRACT_ADDRESS);
 
-    expect(mockedGetContract).toHaveBeenCalledWith({
-      abi: LineaRollupYieldExtensionABI,
-      address: contractAddress,
-      client: publicClient,
+      // Assert
+      expect(mockedGetContract).toHaveBeenCalledWith({
+        abi: LineaRollupYieldExtensionABI,
+        address: CONTRACT_ADDRESS,
+        client: publicClient,
+      });
+      expect(client.getContract()).toBe(contractStub);
     });
-    expect(client.getContract()).toBe(contractStub);
   });
 
-  it("exposes the configured contract address", () => {
-    const client = createClient();
+  describe("getAddress", () => {
+    it("returns the configured contract address", () => {
+      // Arrange
+      const client = new LineaRollupYieldExtensionContractClient(logger, blockchainClient, CONTRACT_ADDRESS);
 
-    expect(client.getAddress()).toBe(contractAddress);
+      // Act
+      const address = client.getAddress();
+
+      // Assert
+      expect(address).toBe(CONTRACT_ADDRESS);
+    });
   });
 
-  it("encodes calldata and relays transferFundsForNativeYield to the blockchain client", async () => {
-    const client = createClient();
-    const amount = 123n;
-    const calldata = "0xdeadbeef" as Hex;
-    const txReceipt = { transactionHash: "0xhash" } as unknown as TransactionReceipt;
+  describe("getBalance", () => {
+    it("retrieves contract balance from blockchain client", async () => {
+      // Arrange
+      blockchainClient.getBalance.mockResolvedValue(ONE_ETH);
+      const client = new LineaRollupYieldExtensionContractClient(logger, blockchainClient, CONTRACT_ADDRESS);
 
-    mockedEncodeFunctionData.mockReturnValue(calldata);
-    blockchainClient.sendSignedTransaction.mockResolvedValue(txReceipt);
+      // Act
+      const balance = await client.getBalance();
 
-    const receipt = await client.transferFundsForNativeYield(amount);
-
-    expect(receipt).toBe(txReceipt);
-    expect(logger.debug).toHaveBeenCalledWith("transferFundsForNativeYield started, amount=123");
-    expect(mockedEncodeFunctionData).toHaveBeenCalledWith({
-      abi: contractStub.abi,
-      functionName: "transferFundsForNativeYield",
-      args: [amount],
+      // Assert
+      expect(balance).toBe(ONE_ETH);
+      expect(blockchainClient.getBalance).toHaveBeenCalledWith(CONTRACT_ADDRESS);
     });
-    expect(blockchainClient.sendSignedTransaction).toHaveBeenCalledWith(contractAddress, calldata);
-    expect(logger.info).toHaveBeenCalledWith("transferFundsForNativeYield succeeded, amount=123, txHash=0xhash");
+  });
+
+  describe("transferFundsForNativeYield", () => {
+    it("encodes function data and sends signed transaction", async () => {
+      // Arrange
+      const txReceipt = createTransactionReceipt(TX_HASH);
+      mockedEncodeFunctionData.mockReturnValue(ENCODED_CALLDATA);
+      blockchainClient.sendSignedTransaction.mockResolvedValue(txReceipt);
+      const client = new LineaRollupYieldExtensionContractClient(logger, blockchainClient, CONTRACT_ADDRESS);
+
+      // Act
+      const receipt = await client.transferFundsForNativeYield(TRANSFER_AMOUNT);
+
+      // Assert
+      expect(receipt).toBe(txReceipt);
+      expect(mockedEncodeFunctionData).toHaveBeenCalledWith({
+        abi: contractStub.abi,
+        functionName: "transferFundsForNativeYield",
+        args: [TRANSFER_AMOUNT],
+      });
+      expect(blockchainClient.sendSignedTransaction).toHaveBeenCalledWith(
+        CONTRACT_ADDRESS,
+        ENCODED_CALLDATA,
+        undefined,
+        LineaRollupYieldExtensionABI,
+      );
+    });
+
+    it("logs debug message before transfer", async () => {
+      // Arrange
+      const txReceipt = createTransactionReceipt(TX_HASH);
+      mockedEncodeFunctionData.mockReturnValue(ENCODED_CALLDATA);
+      blockchainClient.sendSignedTransaction.mockResolvedValue(txReceipt);
+      const client = new LineaRollupYieldExtensionContractClient(logger, blockchainClient, CONTRACT_ADDRESS);
+
+      // Act
+      await client.transferFundsForNativeYield(TRANSFER_AMOUNT);
+
+      // Assert
+      expect(logger.debug).toHaveBeenCalledWith("transferFundsForNativeYield started, amount=123");
+    });
+
+    it("logs info message after successful transfer", async () => {
+      // Arrange
+      const txReceipt = createTransactionReceipt(TX_HASH);
+      mockedEncodeFunctionData.mockReturnValue(ENCODED_CALLDATA);
+      blockchainClient.sendSignedTransaction.mockResolvedValue(txReceipt);
+      const client = new LineaRollupYieldExtensionContractClient(logger, blockchainClient, CONTRACT_ADDRESS);
+
+      // Act
+      await client.transferFundsForNativeYield(TRANSFER_AMOUNT);
+
+      // Assert
+      expect(logger.info).toHaveBeenCalledWith("transferFundsForNativeYield succeeded, amount=123, txHash=0xhash");
+    });
   });
 });

@@ -8,6 +8,8 @@ import { IBeaconChainStakingClient } from "../../core/clients/IBeaconChainStakin
 import { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
 import { OperationMode } from "../../core/enums/OperationModeEnums.js";
 import { IOperationModeMetricsRecorder } from "../../core/metrics/IOperationModeMetricsRecorder.js";
+import { IVaultHub } from "../../core/clients/contracts/IVaultHub.js";
+import { submitVaultReportIfNotFresh } from "./vaultReportSubmission.js";
 
 /**
  * Processor for OSSIFICATION_PENDING_MODE operations.
@@ -25,6 +27,7 @@ export class OssificationPendingProcessor implements IOperationModeProcessor {
    * @param {ILazyOracle<TransactionReceipt>} lazyOracleContractClient - Client for waiting on LazyOracle events.
    * @param {ILidoAccountingReportClient} lidoAccountingReportClient - Client for submitting Lido accounting reports.
    * @param {IBeaconChainStakingClient} beaconChainStakingClient - Client for managing beacon chain staking operations.
+   * @param {IVaultHub<TransactionReceipt>} vaultHubContractClient - Client for interacting with VaultHub contracts.
    * @param {Address} yieldProvider - The yield provider address to process.
    * @param {boolean} shouldSubmitVaultReport - Whether to submit the vault accounting report. Can be set to false if other actors are expected to submit.
    */
@@ -36,6 +39,7 @@ export class OssificationPendingProcessor implements IOperationModeProcessor {
     private readonly lazyOracleContractClient: ILazyOracle<TransactionReceipt>,
     private readonly lidoAccountingReportClient: ILidoAccountingReportClient,
     private readonly beaconChainStakingClient: IBeaconChainStakingClient,
+    private readonly vaultHubContractClient: IVaultHub<TransactionReceipt>,
     private readonly yieldProvider: Address,
     private readonly shouldSubmitVaultReport: boolean,
   ) {}
@@ -50,8 +54,7 @@ export class OssificationPendingProcessor implements IOperationModeProcessor {
    * @returns {Promise<void>} A promise that resolves when the processing cycle completes.
    */
   public async process(): Promise<void> {
-    const triggerEvent = await this.lazyOracleContractClient.waitForVaultsReportDataUpdatedEvent();
-    this.metricsUpdater.incrementOperationModeTrigger(OperationMode.OSSIFICATION_PENDING_MODE, triggerEvent.result);
+    await this.lazyOracleContractClient.waitForVaultsReportDataUpdatedEvent();
     const startedAt = performance.now();
     await this._process();
     const durationMs = performance.now() - startedAt;
@@ -77,23 +80,16 @@ export class OssificationPendingProcessor implements IOperationModeProcessor {
     );
 
     // Submit vault report if available and enabled
-    if (this.shouldSubmitVaultReport) {
-      this.logger.info("_process - Fetching latest vault report");
-      const vault = await this.yieldManagerContractClient.getLidoStakingVaultAddress(this.yieldProvider);
-      await this.lidoAccountingReportClient.getLatestSubmitVaultReportParams(vault);
-      this.logger.info("_process - Submitting latest vault report");
-      const vaultReportResult = await attempt(
-        this.logger,
-        () => this.lidoAccountingReportClient.submitLatestVaultReport(vault),
-        "submitLatestVaultReport failed (tolerated)",
-      );
-      if (vaultReportResult.isOk()) {
-        this.logger.info("_process - Successfully submitted latest vault report");
-        this.metricsUpdater.incrementLidoVaultAccountingReport(vault);
-      }
-    } else {
-      this.logger.info("_process - Skipping vault report submission (SHOULD_SUBMIT_VAULT_REPORT=false)");
-    }
+    const vault = await this.yieldManagerContractClient.getLidoStakingVaultAddress(this.yieldProvider);
+    await submitVaultReportIfNotFresh(
+      this.logger,
+      this.vaultHubContractClient,
+      this.lidoAccountingReportClient,
+      this.metricsUpdater,
+      vault,
+      this.shouldSubmitVaultReport,
+      "_process",
+    );
 
     // Process Pending Ossification
 
@@ -103,7 +99,12 @@ export class OssificationPendingProcessor implements IOperationModeProcessor {
       "_process - progressPendingOssification failed",
     );
     // Stop if failed.
-    if (ossificationResult.isErr()) return;
+    if (ossificationResult.isErr()) {
+      this.logger.error("_process - progressPendingOssification failed, stopping processing", {
+        error: ossificationResult.error,
+      });
+      return;
+    }
 
     await this.operationModeMetricsRecorder.recordProgressOssificationMetrics(this.yieldProvider, ossificationResult);
     this.logger.info("_process - Ossification completed, performing max safe withdrawal");

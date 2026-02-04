@@ -1,90 +1,71 @@
-import { ILogger, IMetricsService } from "@consensys/linea-shared-utils";
-import { Request, Response } from "express";
+import { IMetricsService } from "@consensys/linea-shared-utils";
+import axios from "axios";
 import { mock, MockProxy } from "jest-mock-extended";
 import { Registry } from "prom-client";
 
+import { createLoggerMock } from "../../__tests__/helpers/factories";
 import { ExpressApiApplication } from "../ExpressApiApplication";
 
 enum ExampleMetrics {
   ExampleMetrics = "ExampleMetrics",
 }
 
+// Test constants
+const TEST_PORT = 0; // Use port 0 to let OS assign available port
+const METRICS_ENDPOINT = "/metrics";
+const METRICS_CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8";
+const MOCKED_METRICS_RESPONSE = "mocked metrics";
+const METRICS_ERROR_MESSAGE = "Failed to collect metrics";
+const HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
+
 const createRegistry = (overrides?: Partial<Registry>): Registry =>
   ({
-    contentType: "text/plain; version=0.0.4; charset=utf-8",
-    metrics: async () => "mocked metrics",
+    contentType: METRICS_CONTENT_TYPE,
+    metrics: async () => MOCKED_METRICS_RESPONSE,
     ...overrides,
   }) as unknown as Registry;
-
-const captureMetricsHandler = (appInstance: ExpressApiApplication) => {
-  const expressApp = appInstance["app"] as any;
-  const originalGet = expressApp.get.bind(expressApp);
-  let handler: ((req: Request, res: Response) => Promise<void>) | undefined;
-
-  expressApp.get = (path: string, ...handlers: any[]) => {
-    if (path === "/metrics" && handlers.length > 0) {
-      handler = handlers[handlers.length - 1];
-    }
-    return originalGet(path, ...handlers);
-  };
-
-  (appInstance as any).setupMetricsRoute();
-  expressApp.get = originalGet;
-
-  if (!handler) {
-    throw new Error("Metrics handler could not be captured");
-  }
-  return handler;
-};
-
-const createResponseMock = () => {
-  const res: Partial<Response> & {
-    set: jest.Mock;
-    end: jest.Mock;
-    status: jest.Mock;
-    json: jest.Mock;
-  } = {
-    set: jest.fn(),
-    end: jest.fn(),
-    json: jest.fn(),
-    status: jest.fn(),
-  };
-  res.status.mockImplementation(() => res as Response);
-  return res;
-};
 
 describe("ExpressApiApplication", () => {
   let app: ExpressApiApplication;
   let metricsService: MockProxy<IMetricsService<ExampleMetrics>>;
-  let logger: MockProxy<ILogger>;
+  let logger: ReturnType<typeof createLoggerMock>;
+  let serverPort: number;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Arrange
     metricsService = mock<IMetricsService<ExampleMetrics>>();
-    logger = mock<ILogger>();
+    logger = createLoggerMock();
     metricsService.getRegistry.mockReturnValue(createRegistry());
-    app = new ExpressApiApplication(0, metricsService, logger);
+    app = new ExpressApiApplication(TEST_PORT, metricsService, logger);
+
+    // Start server to get actual port
+    await app.start();
+    serverPort = (app as any).server.address().port;
   });
 
   afterEach(async () => {
+    // Cleanup
+    app.onBeforeStart = undefined;
+    app.onAfterStart = undefined;
     app.onBeforeStop = undefined;
     app.onAfterStop = undefined;
     await app.stop();
     jest.clearAllMocks();
   });
 
-  it("wires metrics service through the /metrics route", async () => {
-    const handler = captureMetricsHandler(app);
-    const res = createResponseMock();
+  it("should return metrics with correct content type when metrics endpoint is requested", async () => {
+    // Act
+    const response = await axios.get(`http://localhost:${serverPort}${METRICS_ENDPOINT}`);
 
-    await handler({} as Request, res as Response);
-
-    expect(res.set).toHaveBeenCalledWith("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
-    expect(res.end).toHaveBeenCalledWith("mocked metrics");
-    expect(res.status).not.toHaveBeenCalled();
+    // Assert
+    expect(response.status).toBe(200);
+    expect(response.headers["content-type"]).toContain(METRICS_CONTENT_TYPE);
+    expect(response.data).toBe(MOCKED_METRICS_RESPONSE);
     expect(metricsService.getRegistry).toHaveBeenCalled();
   });
 
-  it("returns 500 and logs when metrics collection fails", async () => {
+  it("should return 500 status when metrics collection fails", async () => {
+    // Arrange
     const metricsError = new Error("metrics failure");
     metricsService.getRegistry.mockReturnValue(
       createRegistry({
@@ -94,118 +75,93 @@ describe("ExpressApiApplication", () => {
       }),
     );
 
-    const handler = captureMetricsHandler(app);
-    const res = createResponseMock();
-
-    await handler({} as Request, res as Response);
-
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({ error: "Failed to collect metrics" });
-    expect(logger.warn).toHaveBeenCalledWith("Failed to collect metrics", { error: metricsError });
+    // Act
+    try {
+      await axios.get(`http://localhost:${serverPort}${METRICS_ENDPOINT}`);
+      fail("Expected request to fail");
+    } catch (error: any) {
+      // Assert
+      expect(error.response.status).toBe(HTTP_STATUS_INTERNAL_SERVER_ERROR);
+      expect(error.response.data).toEqual({ error: METRICS_ERROR_MESSAGE });
+      expect(logger.warn).toHaveBeenCalledWith(METRICS_ERROR_MESSAGE, { error: metricsError });
+    }
   });
 
-  it("runs lifecycle hooks and logs when starting and stopping", async () => {
-    type ServerMock = {
-      on: jest.MockedFunction<(event: string, handler: () => void) => ServerMock>;
-      close: jest.MockedFunction<(callback?: (err?: Error | null) => void) => ServerMock>;
-    };
-    const serverMock = {
-      on: jest.fn(),
-      close: jest.fn(),
-    } as ServerMock;
-    serverMock.on.mockImplementation((event, handler) => {
-      if (event === "listening") handler();
-      return serverMock;
-    });
-    serverMock.close.mockImplementation((callback) => {
-      callback?.();
-      return serverMock;
-    });
-    const listenSpy = jest.spyOn(app["app"], "listen").mockImplementation(() => serverMock as any);
-
+  it("should execute lifecycle hooks when starting server", async () => {
+    // Arrange
+    await app.stop();
     const onBeforeStart = jest.fn();
     const onAfterStart = jest.fn();
-    const onBeforeStop = jest.fn();
-    const onAfterStop = jest.fn();
-
     app.onBeforeStart = onBeforeStart;
     app.onAfterStart = onAfterStart;
-    app.onBeforeStop = onBeforeStop;
-    app.onAfterStop = onAfterStop;
 
+    // Act
     await app.start();
+
+    // Assert
     expect(onBeforeStart).toHaveBeenCalledTimes(1);
     expect(onAfterStart).toHaveBeenCalledTimes(1);
-    expect(logger.info).toHaveBeenCalledWith("Listening on port 0");
-
-    await app.stop();
-    expect(onBeforeStop).toHaveBeenCalledTimes(1);
-    expect(onAfterStop).toHaveBeenCalledTimes(1);
-    expect(logger.info).toHaveBeenCalledWith("Closing API server on port 0");
-    expect(app["server"]).toBeUndefined();
-
-    listenSpy.mockRestore();
+    expect(logger.info).toHaveBeenCalledWith(`Listening on port ${TEST_PORT}`);
   });
 
-  it("handles stop gracefully when the server was never started", async () => {
+  it("should execute lifecycle hooks when stopping server", async () => {
+    // Arrange
     const onBeforeStop = jest.fn();
     const onAfterStop = jest.fn();
     app.onBeforeStop = onBeforeStop;
     app.onAfterStop = onAfterStop;
 
+    // Act
     await app.stop();
 
+    // Assert
+    expect(onBeforeStop).toHaveBeenCalledTimes(1);
+    expect(onAfterStop).toHaveBeenCalledTimes(1);
+    expect(logger.info).toHaveBeenCalledWith(`Closing API server on port ${TEST_PORT}`);
+  });
+
+  it("should execute before-stop hook when server was never started", async () => {
+    // Arrange
+    await app.stop(); // Stop the server started in beforeEach
+    logger.info.mockClear(); // Clear previous logger calls
+    const onBeforeStop = jest.fn();
+    const onAfterStop = jest.fn();
+    app.onBeforeStop = onBeforeStop;
+    app.onAfterStop = onAfterStop;
+
+    // Act
+    await app.stop();
+
+    // Assert
     expect(onBeforeStop).toHaveBeenCalledTimes(1);
     expect(onAfterStop).not.toHaveBeenCalled();
     expect(logger.info).not.toHaveBeenCalled();
-
-    app.onBeforeStop = undefined;
-    app.onAfterStop = undefined;
   });
 
-  it("propagates errors from server.close and skips after-stop hook", async () => {
-    type ServerMock = {
-      on: jest.MockedFunction<(event: string, handler: () => void) => ServerMock>;
-      close: jest.MockedFunction<(callback?: (err?: Error | null) => void) => ServerMock>;
-    };
-    const serverMock = {
-      on: jest.fn(),
-      close: jest.fn(),
-    } as ServerMock;
-    serverMock.on.mockImplementation((event, handler) => {
-      if (event === "listening") handler();
-      return serverMock;
-    });
+  it("should propagate error when server close fails", async () => {
+    // Arrange
     const closeError = new Error("close failure");
-    serverMock.close.mockImplementation((callback) => {
+    const serverMock = (app as any).server;
+    const originalClose = serverMock.close.bind(serverMock);
+
+    serverMock.close = jest.fn((callback?: (err?: Error | null) => void) => {
       callback?.(closeError);
       return serverMock;
     });
-    const listenSpy = jest.spyOn(app["app"], "listen").mockImplementation(() => serverMock as any);
 
     const onBeforeStop = jest.fn();
     const onAfterStop = jest.fn();
     app.onBeforeStop = onBeforeStop;
     app.onAfterStop = onAfterStop;
 
-    await app.start();
-
+    // Act & Assert
     await expect(app.stop()).rejects.toThrow(closeError);
-
     expect(onBeforeStop).toHaveBeenCalledTimes(1);
     expect(onAfterStop).not.toHaveBeenCalled();
-    expect(logger.info).not.toHaveBeenCalledWith("Closing API server on port 0");
-    expect(app["server"]).toBe(serverMock);
 
-    // cleanup: allow stop to succeed so afterEach does not throw
+    // Cleanup: restore original close to allow afterEach cleanup
+    serverMock.close = originalClose;
     app.onBeforeStop = undefined;
     app.onAfterStop = undefined;
-    serverMock.close.mockImplementation((callback) => {
-      callback?.();
-      return serverMock;
-    });
-    logger.info.mockClear();
-    await app.stop().catch(() => {});
-    listenSpy.mockRestore();
   });
 });

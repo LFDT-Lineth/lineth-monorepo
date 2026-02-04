@@ -1,27 +1,49 @@
+import { describe, it, expect } from "@jest/globals";
+
 import { NativeYieldAutomationMetricsService } from "../NativeYieldAutomationMetricsService.js";
 import { LineaNativeYieldAutomationServiceMetrics } from "../../../core/metrics/LineaNativeYieldAutomationServiceMetrics.js";
 
+// Test constants
+const DEFAULT_APP_LABEL = 'app="native-yield-automation-service"';
+const CUSTOM_SERVICE_LABEL = 'service="custom"';
+
+const createMetricsService = (defaultLabels?: Record<string, string>): NativeYieldAutomationMetricsService => {
+  return new NativeYieldAutomationMetricsService(defaultLabels);
+};
+
 describe("NativeYieldAutomationMetricsService", () => {
-  const TEST_METRIC = LineaNativeYieldAutomationServiceMetrics.ReportYieldTotal;
+  describe("default labels", () => {
+    it("applies default labels when none are provided", async () => {
+      // Arrange
+      const service = createMetricsService();
+      const counter = service.createCounter(
+        LineaNativeYieldAutomationServiceMetrics.ReportYieldTotal,
+        "test counter",
+      );
 
-  it("applies default labels when none are provided", async () => {
-    const service = new NativeYieldAutomationMetricsService();
-    const counter = service.createCounter(TEST_METRIC, "test counter");
+      // Act
+      counter.inc();
+      const metricsOutput = await service.getRegistry().metrics();
 
-    counter.inc();
+      // Assert
+      expect(metricsOutput).toContain(DEFAULT_APP_LABEL);
+    });
 
-    const metricsOutput = await service.getRegistry().metrics();
-    expect(metricsOutput).toContain('app="native-yield-automation-service"');
-  });
+    it("overrides default labels when custom labels are provided", async () => {
+      // Arrange
+      const service = createMetricsService({ service: "custom" });
+      const counter = service.createCounter(
+        LineaNativeYieldAutomationServiceMetrics.ReportYieldTotal,
+        "custom label counter",
+      );
 
-  it("allows overriding default labels through constructor parameter", async () => {
-    const service = new NativeYieldAutomationMetricsService({ service: "custom" });
-    const counter = service.createCounter(TEST_METRIC, "custom label counter");
+      // Act
+      counter.inc();
+      const metricsOutput = await service.getRegistry().metrics();
 
-    counter.inc();
-
-    const metricsOutput = await service.getRegistry().metrics();
-    expect(metricsOutput).toContain('service="custom"');
-    expect(metricsOutput).not.toContain('app="native-yield-automation-service"');
+      // Assert
+      expect(metricsOutput).toContain(CUSTOM_SERVICE_LABEL);
+      expect(metricsOutput).not.toContain(DEFAULT_APP_LABEL);
+    });
   });
 });

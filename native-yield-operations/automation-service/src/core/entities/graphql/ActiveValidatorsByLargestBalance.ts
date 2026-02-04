@@ -1,10 +1,10 @@
 import { gql, TypedDocumentNode } from "@apollo/client";
-import { ValidatorBalance } from "../ValidatorBalance.js";
+import { ValidatorBalance } from "../Validator.js";
 // https://www.apollographql.com/docs/react/data/typescript#using-operation-types
 
 /** Result shape returned by the server */
 type ActiveValidatorsByLargestBalanceQuery = {
-  allValidators: {
+  allHeadValidators: {
     nodes: Array<ValidatorBalance>;
   };
 };
@@ -19,12 +19,13 @@ export const ALL_VALIDATORS_BY_LARGEST_BALANCE_QUERY: TypedDocumentNode<
   ActiveValidatorsByLargestBalanceQueryVariables
 > = gql`
   query AllValidatorsByLargestBalanceQuery($first: Int = 100) {
-    allValidators(condition: { state: ACTIVE }, orderBy: EFFECTIVE_BALANCE_DESC, first: $first) {
+    allHeadValidators(filter: { state: { in: [DEPOSITED, ACTIVE] } }, orderBy: EXIT_EPOCH_ASC, first: $first) {
       nodes {
         balance
         effectiveBalance
         publicKey
         validatorIndex
+        activationEpoch
       }
     }
   }

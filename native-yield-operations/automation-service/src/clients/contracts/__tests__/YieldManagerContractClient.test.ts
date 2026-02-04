@@ -1,11 +1,25 @@
 import { mock, MockProxy } from "jest-mock-extended";
 import type { ILogger, IBlockchainClient } from "@consensys/linea-shared-utils";
+import { absDiff, ONE_ETHER, weiToGweiNumber } from "@consensys/linea-shared-utils";
 import type { Address, Hex, PublicClient, TransactionReceipt } from "viem";
 import { YieldManagerABI } from "../../../core/abis/YieldManager.js";
 import { StakingVaultABI } from "../../../core/abis/StakingVault.js";
+import { DashboardErrorsABI } from "../../../core/abis/errors/DashboardErrors.js";
+import { LidoStVaultYieldProviderErrorsABI } from "../../../core/abis/errors/LidoStVaultYieldProviderErrors.js";
+import { StakingVaultErrorsABI } from "../../../core/abis/errors/StakingVaultErrors.js";
+import { VaultHubErrorsABI } from "../../../core/abis/errors/VaultHubErrors.js";
 import { RebalanceDirection } from "../../../core/entities/RebalanceRequirement.js";
 import type { WithdrawalRequests } from "../../../core/entities/LidoStakingVaultWithdrawalParams.js";
-import { ONE_ETHER } from "@consensys/linea-shared-utils";
+import type { INativeYieldAutomationMetricsUpdater } from "../../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
+import type { IRebalanceQuotaService } from "../../../core/services/IRebalanceQuotaService.js";
+
+const YieldManagerCombinedABI = [
+  ...YieldManagerABI,
+  ...DashboardErrorsABI,
+  ...LidoStVaultYieldProviderErrorsABI,
+  ...StakingVaultErrorsABI,
+  ...VaultHubErrorsABI,
+] as const;
 
 jest.mock("viem", () => {
   const actual = jest.requireActual("viem");
@@ -18,12 +32,24 @@ jest.mock("viem", () => {
   };
 });
 
-import { getContract, encodeFunctionData, parseEventLogs, encodeAbiParameters } from "viem";
+import { concat, getContract, encodeFunctionData, parseEventLogs, encodeAbiParameters } from "viem";
+
+jest.mock("../DashboardContractClient.js", () => ({
+  DashboardContractClient: {
+    getOrCreate: jest.fn(),
+    initialize: jest.fn(),
+  },
+}));
+
+import { DashboardContractClient } from "../DashboardContractClient.js";
 
 const mockedGetContract = getContract as jest.MockedFunction<typeof getContract>;
 const mockedEncodeFunctionData = encodeFunctionData as jest.MockedFunction<typeof encodeFunctionData>;
 const mockedParseEventLogs = parseEventLogs as jest.MockedFunction<typeof parseEventLogs>;
 const mockedEncodeAbiParameters = encodeAbiParameters as jest.MockedFunction<typeof encodeAbiParameters>;
+const mockedDashboardContractClientGetOrCreate = DashboardContractClient.getOrCreate as jest.MockedFunction<
+  typeof DashboardContractClient.getOrCreate
+>;
 
 let YieldManagerContractClient: typeof import("../YieldManagerContractClient.js").YieldManagerContractClient;
 
@@ -32,11 +58,15 @@ beforeAll(async () => {
 });
 
 describe("YieldManagerContractClient", () => {
-  const contractAddress = "0xcccccccccccccccccccccccccccccccccccccccc" as Address;
-  const yieldProvider = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
-  const l2Recipient = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address;
-  const l1MessageServiceAddress = "0x9999999999999999999999999999999999999999" as Address;
-  const stakingVaultAddress = "0x8888888888888888888888888888888888888888" as Address;
+  // Semantic constants
+  const CONTRACT_ADDRESS = "0xcccccccccccccccccccccccccccccccccccccccc" as Address;
+  const YIELD_PROVIDER = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
+  const L2_RECIPIENT = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address;
+  const L1_MESSAGE_SERVICE_ADDRESS = "0x9999999999999999999999999999999999999999" as Address;
+  const STAKING_VAULT_ADDRESS = "0x8888888888888888888888888888888888888888" as Address;
+  const SIGNER_ADDRESS = "0xdddddddddddddddddddddddddddddddddddddddd" as Address;
+  const ONE_ETH = 1_000_000_000_000_000_000n;
+  const DEFAULT_REBALANCE_TOLERANCE = ONE_ETH;
 
   let logger: MockProxy<ILogger>;
   let blockchainClient: MockProxy<IBlockchainClient<PublicClient, TransactionReceipt>>;
@@ -47,42 +77,57 @@ describe("YieldManagerContractClient", () => {
     simulate: Record<string, jest.Mock>;
   };
 
-  const defaultYieldProviderData = {
+  // Factory functions for test data
+  const createYieldProviderData = (overrides = {}) => ({
     yieldProviderVendor: 0,
     isStakingPaused: false,
     isOssificationInitiated: false,
     isOssified: false,
-    primaryEntrypoint: l2Recipient,
-    ossifiedEntrypoint: stakingVaultAddress,
+    primaryEntrypoint: L2_RECIPIENT,
+    ossifiedEntrypoint: STAKING_VAULT_ADDRESS,
     yieldProviderIndex: 0n,
     userFunds: 0n,
     yieldReportedCumulative: 0n,
     lstLiabilityPrincipal: 0n,
-  };
+    lastReportedNegativeYield: 0n,
+    ...overrides,
+  });
 
-  const buildReceipt = (logs: Array<{ address: string; data: string; topics: string[] }>): TransactionReceipt =>
+  const createTransactionReceipt = (logs: Array<{ address: string; data: string; topics: string[] }>): TransactionReceipt =>
     ({
       logs,
     }) as unknown as TransactionReceipt;
 
+  const createDefaultQuotaService = (): IRebalanceQuotaService => ({
+    getRebalanceAmountAfterQuota: jest.fn((_vaultAddress, _totalSystemBalance, reBalanceAmountWei) => reBalanceAmountWei),
+    getStakingDirection: jest.fn(() => RebalanceDirection.STAKE),
+  });
+
   const createClient = ({
-    rebalanceToleranceBps = 100,
+    rebalanceToleranceAmountWei = DEFAULT_REBALANCE_TOLERANCE,
     minWithdrawalThresholdEth = 0n,
+    rebalanceQuotaService = createDefaultQuotaService(),
+    metricsUpdater,
   }: {
-    rebalanceToleranceBps?: number;
+    rebalanceToleranceAmountWei?: bigint;
     minWithdrawalThresholdEth?: bigint;
+    rebalanceQuotaService?: IRebalanceQuotaService;
+    metricsUpdater?: Partial<INativeYieldAutomationMetricsUpdater>;
   } = {}) =>
     new YieldManagerContractClient(
       logger,
       blockchainClient,
-      contractAddress,
-      rebalanceToleranceBps,
+      CONTRACT_ADDRESS,
+      rebalanceToleranceAmountWei,
       minWithdrawalThresholdEth,
+      rebalanceQuotaService,
+      metricsUpdater as INativeYieldAutomationMetricsUpdater | undefined,
     );
 
   beforeEach(() => {
     jest.clearAllMocks();
     logger = mock<ILogger>();
+
     blockchainClient = mock<IBlockchainClient<PublicClient, TransactionReceipt>>();
     publicClient = {
       readContract: jest.fn(),
@@ -100,7 +145,8 @@ describe("YieldManagerContractClient", () => {
         isStakingPaused: jest.fn(),
         isOssificationInitiated: jest.fn(),
         isOssified: jest.fn(),
-        getYieldProviderData: jest.fn().mockResolvedValue(defaultYieldProviderData),
+        getYieldProviderData: jest.fn().mockResolvedValue(createYieldProviderData()),
+        userFunds: jest.fn(),
       },
       simulate: {
         withdrawableValue: jest.fn(),
@@ -110,10 +156,11 @@ describe("YieldManagerContractClient", () => {
 
     mockedGetContract.mockReturnValue(contractStub as any);
     blockchainClient.getBalance.mockResolvedValue(0n);
+    blockchainClient.getSignerAddress.mockReturnValue(SIGNER_ADDRESS);
     blockchainClient.sendSignedTransaction.mockResolvedValue({
       transactionHash: "0xreceipt",
     } as unknown as TransactionReceipt);
-    contractStub.read.L1_MESSAGE_SERVICE.mockResolvedValue(l1MessageServiceAddress);
+    contractStub.read.L1_MESSAGE_SERVICE.mockResolvedValue(L1_MESSAGE_SERVICE_ADDRESS);
     contractStub.read.getTotalSystemBalance.mockResolvedValue(0n);
     contractStub.read.getEffectiveTargetWithdrawalReserve.mockResolvedValue(0n);
     contractStub.read.getTargetReserveDeficit.mockResolvedValue(0n);
@@ -123,19 +170,39 @@ describe("YieldManagerContractClient", () => {
     contractStub.simulate.withdrawableValue.mockResolvedValue({ result: 0n });
   });
 
-  it("initializes the viem contract and exposes address & contract accessors", () => {
+  it("initializes the viem contract and exposes address and contract accessors", () => {
+    // Arrange
+    // (setup in beforeEach)
+
+    // Act
     const client = createClient();
 
+    // Assert
     expect(mockedGetContract).toHaveBeenCalledWith({
-      abi: YieldManagerABI,
-      address: contractAddress,
+      abi: YieldManagerCombinedABI,
+      address: CONTRACT_ADDRESS,
       client: publicClient,
     });
-    expect(client.getAddress()).toBe(contractAddress);
+    expect(client.getAddress()).toBe(CONTRACT_ADDRESS);
     expect(client.getContract()).toBe(contractStub);
   });
 
+  it("gets the contract balance", async () => {
+    // Arrange
+    const balance = ONE_ETH;
+    blockchainClient.getBalance.mockResolvedValueOnce(balance);
+    const client = createClient();
+
+    // Act
+    const result = await client.getBalance();
+
+    // Assert
+    expect(blockchainClient.getBalance).toHaveBeenCalledWith(CONTRACT_ADDRESS);
+    expect(result).toBe(balance);
+  });
+
   it("delegates simple reads to the viem contract", async () => {
+    // Arrange
     const stakingPaused = true;
     const ossificationInitiated = true;
     const ossified = true;
@@ -145,119 +212,157 @@ describe("YieldManagerContractClient", () => {
     contractStub.read.isStakingPaused.mockResolvedValueOnce(stakingPaused);
     contractStub.read.isOssificationInitiated.mockResolvedValueOnce(ossificationInitiated);
     contractStub.read.isOssified.mockResolvedValueOnce(ossified);
-
     const client = createClient();
 
-    await expect(client.getTotalSystemBalance()).resolves.toBe(123n);
-    await expect(client.getEffectiveTargetWithdrawalReserve()).resolves.toBe(456n);
-    await expect(client.getTargetReserveDeficit()).resolves.toBe(789n);
-    await expect(client.L1_MESSAGE_SERVICE()).resolves.toBe(l1MessageServiceAddress);
-    await expect(client.isStakingPaused(yieldProvider)).resolves.toBe(stakingPaused);
-    await expect(client.isOssificationInitiated(yieldProvider)).resolves.toBe(ossificationInitiated);
-    await expect(client.isOssified(yieldProvider)).resolves.toBe(ossified);
+    // Act
+    const totalSystemBalance = await client.getTotalSystemBalance();
+    const effectiveTarget = await client.getEffectiveTargetWithdrawalReserve();
+    const targetDeficit = await client.getTargetReserveDeficit();
+    const l1MessageService = await client.L1_MESSAGE_SERVICE();
+    const isPaused = await client.isStakingPaused(YIELD_PROVIDER);
+    const isOssifying = await client.isOssificationInitiated(YIELD_PROVIDER);
+    const isOssifiedResult = await client.isOssified(YIELD_PROVIDER);
 
+    // Assert
+    expect(totalSystemBalance).toBe(123n);
+    expect(effectiveTarget).toBe(456n);
+    expect(targetDeficit).toBe(789n);
+    expect(l1MessageService).toBe(L1_MESSAGE_SERVICE_ADDRESS);
+    expect(isPaused).toBe(stakingPaused);
+    expect(isOssifying).toBe(ossificationInitiated);
+    expect(isOssifiedResult).toBe(ossified);
     expect(contractStub.read.getTotalSystemBalance).toHaveBeenCalledTimes(1);
     expect(contractStub.read.getEffectiveTargetWithdrawalReserve).toHaveBeenCalledTimes(1);
     expect(contractStub.read.getTargetReserveDeficit).toHaveBeenCalledTimes(1);
     expect(contractStub.read.L1_MESSAGE_SERVICE).toHaveBeenCalledTimes(1);
-    expect(contractStub.read.isStakingPaused).toHaveBeenCalledWith([yieldProvider]);
-    expect(contractStub.read.isOssificationInitiated).toHaveBeenCalledWith([yieldProvider]);
-    expect(contractStub.read.isOssified).toHaveBeenCalledWith([yieldProvider]);
+    expect(contractStub.read.isStakingPaused).toHaveBeenCalledWith([YIELD_PROVIDER]);
+    expect(contractStub.read.isOssificationInitiated).toHaveBeenCalledWith([YIELD_PROVIDER]);
+    expect(contractStub.read.isOssified).toHaveBeenCalledWith([YIELD_PROVIDER]);
   });
 
-  it("reads withdrawableValue via simulate and returns the result", async () => {
+  it("reads withdrawable value via simulate and returns the result", async () => {
+    // Arrange
     const withdrawable = 42n;
     contractStub.simulate.withdrawableValue.mockResolvedValueOnce({ result: withdrawable });
-
     const client = createClient();
-    const result = await client.withdrawableValue(yieldProvider);
 
-    expect(contractStub.simulate.withdrawableValue).toHaveBeenCalledWith([yieldProvider]);
+    // Act
+    const result = await client.withdrawableValue(YIELD_PROVIDER);
+
+    // Assert
+    expect(contractStub.simulate.withdrawableValue).toHaveBeenCalledWith([YIELD_PROVIDER]);
     expect(result).toBe(withdrawable);
   });
 
   it("peeks yield report via simulate and returns mapped YieldReport", async () => {
+    // Arrange
     const newReportedYield = 100n;
     const outstandingNegativeYield = 25n;
     contractStub.simulate.reportYield.mockResolvedValueOnce({
       result: [newReportedYield, outstandingNegativeYield],
     });
-
     const client = createClient();
-    const result = await client.peekYieldReport(yieldProvider, l2Recipient);
 
-    expect(contractStub.simulate.reportYield).toHaveBeenCalledWith([yieldProvider, l2Recipient]);
+    // Act
+    const result = await client.peekYieldReport(YIELD_PROVIDER, L2_RECIPIENT);
+
+    // Assert
+    expect(contractStub.simulate.reportYield).toHaveBeenCalledWith([YIELD_PROVIDER, L2_RECIPIENT], {
+      account: SIGNER_ADDRESS,
+    });
     expect(result).toEqual({
       yieldAmount: newReportedYield,
       outstandingNegativeYield,
-      yieldProvider,
+      yieldProvider: YIELD_PROVIDER,
     });
   });
 
   it("returns undefined when peekYieldReport simulation fails", async () => {
+    // Arrange
     contractStub.simulate.reportYield.mockRejectedValueOnce(new Error("Simulation failed"));
-
     const client = createClient();
-    const result = await client.peekYieldReport(yieldProvider, l2Recipient);
 
-    expect(contractStub.simulate.reportYield).toHaveBeenCalledWith([yieldProvider, l2Recipient]);
+    // Act
+    const result = await client.peekYieldReport(YIELD_PROVIDER, L2_RECIPIENT);
+
+    // Assert
+    expect(contractStub.simulate.reportYield).toHaveBeenCalledWith([YIELD_PROVIDER, L2_RECIPIENT], {
+      account: SIGNER_ADDRESS,
+    });
     expect(result).toBeUndefined();
-    expect(logger.debug).toHaveBeenCalledWith(
-      `peekYieldReport failed, yieldProvider=${yieldProvider}, l2YieldRecipient=${l2Recipient}`,
+    expect(logger.error).toHaveBeenCalledWith(
+      `peekYieldReport failed, yieldProvider=${YIELD_PROVIDER}, l2YieldRecipient=${L2_RECIPIENT}`,
       { error: expect.any(Error) },
     );
   });
 
-  it("encodes calldata and sends fundYieldProvider transactions", async () => {
+  it("encodes calldata and sends fundYieldProvider transaction", async () => {
+    // Arrange
     const amount = 100n;
     const calldata = "0xcalldata" as Hex;
     const txReceipt = { transactionHash: "0xhash" } as unknown as TransactionReceipt;
     mockedEncodeFunctionData.mockReturnValueOnce(calldata);
     blockchainClient.sendSignedTransaction.mockResolvedValueOnce(txReceipt);
-
     const client = createClient();
-    const receipt = await client.fundYieldProvider(yieldProvider, amount);
 
-    expect(logger.debug).toHaveBeenCalledWith(
-      `fundYieldProvider started, yieldProvider=${yieldProvider}, amount=${amount.toString()}`,
+    // Act
+    const receipt = await client.fundYieldProvider(YIELD_PROVIDER, amount);
+
+    // Assert
+    expect(logger.info).toHaveBeenCalledWith(
+      `fundYieldProvider started, yieldProvider=${YIELD_PROVIDER}, amount=${amount.toString()}`,
     );
     expect(mockedEncodeFunctionData).toHaveBeenCalledWith({
       abi: contractStub.abi,
       functionName: "fundYieldProvider",
-      args: [yieldProvider, amount],
+      args: [YIELD_PROVIDER, amount],
     });
-    expect(blockchainClient.sendSignedTransaction).toHaveBeenCalledWith(contractAddress, calldata);
+    expect(blockchainClient.sendSignedTransaction).toHaveBeenCalledWith(
+      CONTRACT_ADDRESS,
+      calldata,
+      undefined,
+      YieldManagerCombinedABI,
+    );
     expect(logger.info).toHaveBeenCalledWith(
-      `fundYieldProvider succeeded, yieldProvider=${yieldProvider}, amount=${amount.toString()}, txHash=${txReceipt.transactionHash}`,
+      `fundYieldProvider succeeded, yieldProvider=${YIELD_PROVIDER}, amount=${amount.toString()}, txHash=${txReceipt.transactionHash}`,
     );
     expect(receipt).toBe(txReceipt);
   });
 
   it("reports yield with encoded calldata", async () => {
+    // Arrange
     const calldata = "0xreport" as Hex;
     const txReceipt = { transactionHash: "0xreporthash" } as unknown as TransactionReceipt;
     mockedEncodeFunctionData.mockReturnValueOnce(calldata);
     blockchainClient.sendSignedTransaction.mockResolvedValueOnce(txReceipt);
-
     const client = createClient();
-    const receipt = await client.reportYield(yieldProvider, l2Recipient);
 
-    expect(logger.debug).toHaveBeenCalledWith(
-      `reportYield started, yieldProvider=${yieldProvider}, l2YieldRecipient=${l2Recipient}`,
+    // Act
+    const receipt = await client.reportYield(YIELD_PROVIDER, L2_RECIPIENT);
+
+    // Assert
+    expect(logger.info).toHaveBeenCalledWith(
+      `reportYield started, yieldProvider=${YIELD_PROVIDER}, l2YieldRecipient=${L2_RECIPIENT}`,
     );
     expect(mockedEncodeFunctionData).toHaveBeenCalledWith({
       abi: contractStub.abi,
       functionName: "reportYield",
-      args: [yieldProvider, l2Recipient],
+      args: [YIELD_PROVIDER, L2_RECIPIENT],
     });
-    expect(blockchainClient.sendSignedTransaction).toHaveBeenCalledWith(contractAddress, calldata);
+    expect(blockchainClient.sendSignedTransaction).toHaveBeenCalledWith(
+      CONTRACT_ADDRESS,
+      calldata,
+      undefined,
+      YieldManagerCombinedABI,
+    );
     expect(logger.info).toHaveBeenCalledWith(
-      `reportYield succeeded, yieldProvider=${yieldProvider}, l2YieldRecipient=${l2Recipient}, txHash=${txReceipt.transactionHash}`,
+      `reportYield succeeded, yieldProvider=${YIELD_PROVIDER}, l2YieldRecipient=${L2_RECIPIENT}, txHash=${txReceipt.transactionHash}`,
     );
     expect(receipt).toBe(txReceipt);
   });
 
   it("unstakes with encoded withdrawal params and pays validator fee", async () => {
+    // Arrange
     const withdrawalParams: WithdrawalRequests = {
       pubkeys: ["0x01"] as Hex[],
       amountsGwei: [32n],
@@ -266,39 +371,32 @@ describe("YieldManagerContractClient", () => {
     const calldata = "0xunstake" as Hex;
     const fee = 123n;
     const txReceipt = { transactionHash: "0xunstakehash" } as unknown as TransactionReceipt;
-
     mockedEncodeAbiParameters.mockReturnValueOnce(encodedWithdrawalParams);
     mockedEncodeFunctionData.mockReturnValueOnce(calldata);
     blockchainClient.sendSignedTransaction.mockResolvedValueOnce(txReceipt);
     (publicClient.readContract as jest.Mock).mockResolvedValueOnce(fee);
-
     const client = createClient();
-    const receipt = await client.unstake(yieldProvider, withdrawalParams);
 
-    expect(logger.debug).toHaveBeenCalledWith(`unstake started, yieldProvider=${yieldProvider}`, {
+    // Act
+    const receipt = await client.unstake(YIELD_PROVIDER, withdrawalParams);
+
+    // Assert
+    expect(logger.info).toHaveBeenCalledWith(
+      `unstake started, yieldProvider=${YIELD_PROVIDER}, validatorCount=${withdrawalParams.pubkeys.length}`,
+    );
+    expect(logger.debug).toHaveBeenCalledWith(`unstake started withdrawalParams`, {
       withdrawalParams,
     });
     expect(mockedEncodeAbiParameters).toHaveBeenCalledWith(
       [
-        {
-          type: "tuple",
-          components: [
-            { name: "pubkeys", type: "bytes[]" },
-            { name: "amounts", type: "uint64[]" },
-            { name: "refundRecipient", type: "address" },
-          ],
-        },
+        { name: "pubkeys", type: "bytes" },
+        { name: "amounts", type: "uint64[]" },
+        { name: "refundRecipient", type: "address" },
       ],
-      [
-        {
-          pubkeys: withdrawalParams.pubkeys,
-          amounts: withdrawalParams.amountsGwei,
-          refundRecipient: contractAddress,
-        },
-      ],
+      [concat(withdrawalParams.pubkeys), withdrawalParams.amountsGwei, CONTRACT_ADDRESS],
     );
     expect(publicClient.readContract).toHaveBeenCalledWith({
-      address: stakingVaultAddress,
+      address: STAKING_VAULT_ADDRESS,
       abi: StakingVaultABI,
       functionName: "calculateValidatorWithdrawalFee",
       args: [BigInt(withdrawalParams.pubkeys.length)],
@@ -306,213 +404,990 @@ describe("YieldManagerContractClient", () => {
     expect(mockedEncodeFunctionData).toHaveBeenCalledWith({
       abi: contractStub.abi,
       functionName: "unstake",
-      args: [yieldProvider, encodedWithdrawalParams],
+      args: [YIELD_PROVIDER, encodedWithdrawalParams],
     });
-    expect(blockchainClient.sendSignedTransaction).toHaveBeenCalledWith(contractAddress, calldata, fee);
-    expect(logger.info).toHaveBeenCalledWith(
-      `unstake succeeded, yieldProvider=${yieldProvider}, txHash=${txReceipt.transactionHash}`,
-      { withdrawalParams },
+    expect(blockchainClient.sendSignedTransaction).toHaveBeenCalledWith(
+      CONTRACT_ADDRESS,
+      calldata,
+      fee,
+      YieldManagerCombinedABI,
     );
+    expect(logger.info).toHaveBeenCalledWith(
+      `unstake succeeded, yieldProvider=${YIELD_PROVIDER}, validatorCount=${withdrawalParams.pubkeys.length}, txHash=${txReceipt.transactionHash}`,
+    );
+    expect(logger.debug).toHaveBeenCalledWith(`unstake succeeded withdrawalParams`, {
+      withdrawalParams,
+    });
     expect(receipt).toBe(txReceipt);
   });
 
   it("adds to withdrawal reserve and logs success", async () => {
+    // Arrange
     const amount = 55n;
     const calldata = "0xreserve" as Hex;
     const txReceipt = { transactionHash: "0xreservehash" } as unknown as TransactionReceipt;
     mockedEncodeFunctionData.mockReturnValueOnce(calldata);
     blockchainClient.sendSignedTransaction.mockResolvedValueOnce(txReceipt);
-
     const client = createClient();
-    const receipt = await client.safeAddToWithdrawalReserve(yieldProvider, amount);
 
+    // Act
+    const receipt = await client.safeAddToWithdrawalReserve(YIELD_PROVIDER, amount);
+
+    // Assert
     expect(mockedEncodeFunctionData).toHaveBeenCalledWith({
       abi: contractStub.abi,
       functionName: "safeAddToWithdrawalReserve",
-      args: [yieldProvider, amount],
+      args: [YIELD_PROVIDER, amount],
     });
-    expect(blockchainClient.sendSignedTransaction).toHaveBeenCalledWith(contractAddress, calldata);
+    expect(blockchainClient.sendSignedTransaction).toHaveBeenCalledWith(
+      CONTRACT_ADDRESS,
+      calldata,
+      undefined,
+      YieldManagerCombinedABI,
+    );
     expect(logger.info).toHaveBeenCalledWith(
-      `safeAddToWithdrawalReserve succeeded, yieldProvider=${yieldProvider}, amount=${amount.toString()}, txHash=${txReceipt.transactionHash}`,
+      `safeAddToWithdrawalReserve succeeded, yieldProvider=${YIELD_PROVIDER}, amount=${amount.toString()}, txHash=${txReceipt.transactionHash}`,
     );
     expect(receipt).toBe(txReceipt);
   });
 
-  it("pauses and unpauses staking through encoded calls", async () => {
-    const pauseCalldata = "0xpause" as Hex;
-    const unpauseCalldata = "0xunpause" as Hex;
-    const txReceipt = { transactionHash: "0xhash" } as unknown as TransactionReceipt;
-
-    mockedEncodeFunctionData.mockReturnValueOnce(pauseCalldata).mockReturnValueOnce(unpauseCalldata);
-    blockchainClient.sendSignedTransaction.mockResolvedValue(txReceipt);
-
+  it("withdraws from yield provider and logs success", async () => {
+    // Arrange
+    const amount = 75n;
+    const calldata = "0xwithdraw" as Hex;
+    const txReceipt = { transactionHash: "0xwithdrawhash" } as unknown as TransactionReceipt;
+    mockedEncodeFunctionData.mockReturnValueOnce(calldata);
+    blockchainClient.sendSignedTransaction.mockResolvedValueOnce(txReceipt);
     const client = createClient();
 
-    await client.pauseStaking(yieldProvider);
-    expect(mockedEncodeFunctionData).toHaveBeenNthCalledWith(1, {
+    // Act
+    const receipt = await client.safeWithdrawFromYieldProvider(YIELD_PROVIDER, amount);
+
+    // Assert
+    expect(logger.info).toHaveBeenCalledWith(
+      `safeWithdrawFromYieldProvider started, yieldProvider=${YIELD_PROVIDER}, amount=${amount.toString()}`,
+    );
+    expect(mockedEncodeFunctionData).toHaveBeenCalledWith({
+      abi: contractStub.abi,
+      functionName: "safeWithdrawFromYieldProvider",
+      args: [YIELD_PROVIDER, amount],
+    });
+    expect(blockchainClient.sendSignedTransaction).toHaveBeenCalledWith(
+      CONTRACT_ADDRESS,
+      calldata,
+      undefined,
+      YieldManagerCombinedABI,
+    );
+    expect(logger.info).toHaveBeenCalledWith(
+      `safeWithdrawFromYieldProvider succeeded, yieldProvider=${YIELD_PROVIDER}, amount=${amount.toString()}, txHash=${txReceipt.transactionHash}`,
+    );
+    expect(receipt).toBe(txReceipt);
+  });
+
+  it("pauses staking through encoded call", async () => {
+    // Arrange
+    const pauseCalldata = "0xpause" as Hex;
+    const txReceipt = { transactionHash: "0xhash" } as unknown as TransactionReceipt;
+    mockedEncodeFunctionData.mockReturnValueOnce(pauseCalldata);
+    blockchainClient.sendSignedTransaction.mockResolvedValue(txReceipt);
+    const client = createClient();
+
+    // Act
+    await client.pauseStaking(YIELD_PROVIDER);
+
+    // Assert
+    expect(mockedEncodeFunctionData).toHaveBeenCalledWith({
       abi: contractStub.abi,
       functionName: "pauseStaking",
-      args: [yieldProvider],
+      args: [YIELD_PROVIDER],
     });
     expect(logger.info).toHaveBeenCalledWith(
-      `pauseStaking succeeded, yieldProvider=${yieldProvider}, txHash=${txReceipt.transactionHash}`,
+      `pauseStaking succeeded, yieldProvider=${YIELD_PROVIDER}, txHash=${txReceipt.transactionHash}`,
     );
+  });
 
-    await client.unpauseStaking(yieldProvider);
-    expect(mockedEncodeFunctionData).toHaveBeenNthCalledWith(2, {
+  it("unpauses staking through encoded call", async () => {
+    // Arrange
+    const unpauseCalldata = "0xunpause" as Hex;
+    const txReceipt = { transactionHash: "0xhash" } as unknown as TransactionReceipt;
+    mockedEncodeFunctionData.mockReturnValueOnce(unpauseCalldata);
+    blockchainClient.sendSignedTransaction.mockResolvedValue(txReceipt);
+    const client = createClient();
+
+    // Act
+    await client.unpauseStaking(YIELD_PROVIDER);
+
+    // Assert
+    expect(mockedEncodeFunctionData).toHaveBeenCalledWith({
       abi: contractStub.abi,
       functionName: "unpauseStaking",
-      args: [yieldProvider],
+      args: [YIELD_PROVIDER],
     });
     expect(logger.info).toHaveBeenCalledWith(
-      `unpauseStaking succeeded, yieldProvider=${yieldProvider}, txHash=${txReceipt.transactionHash}`,
+      `unpauseStaking succeeded, yieldProvider=${YIELD_PROVIDER}, txHash=${txReceipt.transactionHash}`,
     );
   });
 
   it("progresses pending ossification", async () => {
+    // Arrange
     const calldata = "0xprogress" as Hex;
     mockedEncodeFunctionData.mockReturnValueOnce(calldata);
-
     const client = createClient();
-    await client.progressPendingOssification(yieldProvider);
 
+    // Act
+    await client.progressPendingOssification(YIELD_PROVIDER);
+
+    // Assert
     expect(mockedEncodeFunctionData).toHaveBeenCalledWith({
       abi: contractStub.abi,
       functionName: "progressPendingOssification",
-      args: [yieldProvider],
+      args: [YIELD_PROVIDER],
     });
-    expect(blockchainClient.sendSignedTransaction).toHaveBeenCalledWith(contractAddress, calldata);
+    expect(blockchainClient.sendSignedTransaction).toHaveBeenCalledWith(
+      CONTRACT_ADDRESS,
+      calldata,
+      undefined,
+      YieldManagerCombinedABI,
+    );
   });
 
-  it("evaluates rebalance requirements with tolerance band", async () => {
-    const totalSystemBalance = 1_000_000n;
-    const effectiveTarget = 500_000n;
-    contractStub.read.getTotalSystemBalance.mockResolvedValue(totalSystemBalance);
-    contractStub.read.getEffectiveTargetWithdrawalReserve.mockResolvedValue(effectiveTarget);
+  // ⚠️ N.B. — WARNING: Below describe block tests were intentionally handwritten because
+  // the rebalance logic is too critical (and too fragile) to trust to vibe-coding.
+  // Do NOT vibe-code away unless you fully understand the consequences.
+  describe("getRebalanceRequirements", () => {
+    /**
+     * Helper to setup all mocks for a rebalance test scenario.
+     */
+    function setupRebalanceTest(
+      l1MessageServiceBalance: bigint,
+      totalSystemBalance: bigint,
+      effectiveTarget: bigint,
+      dashboardTotalValue: bigint,
+      userFunds: bigint,
+      peekedYieldAmount: bigint,
+      peekedOutstandingNegativeYield: bigint,
+      rebalanceToleranceAmountWei: bigint = DEFAULT_REBALANCE_TOLERANCE,
+      rebalanceQuotaService?: IRebalanceQuotaService,
+      metricsUpdater?: Partial<INativeYieldAutomationMetricsUpdater>,
+    ) {
+      // Arrange
+      contractStub.read.getTotalSystemBalance.mockResolvedValue(totalSystemBalance);
+      contractStub.read.getEffectiveTargetWithdrawalReserve.mockResolvedValue(effectiveTarget);
+      contractStub.read.userFunds.mockResolvedValue(userFunds);
 
-    const client = createClient({ rebalanceToleranceBps: 100 });
+      contractStub.simulate.reportYield.mockResolvedValue({
+        result: [peekedYieldAmount, peekedOutstandingNegativeYield],
+      });
 
-    // Within tolerance band => no rebalance
-    blockchainClient.getBalance.mockResolvedValueOnce(effectiveTarget + 5_000n);
-    await expect(client.getRebalanceRequirements()).resolves.toEqual({
-      rebalanceDirection: RebalanceDirection.NONE,
-      rebalanceAmount: 0n,
+      const mockDashboardClient = {
+        totalValue: jest.fn().mockResolvedValue(dashboardTotalValue),
+      };
+      mockedDashboardContractClientGetOrCreate.mockReturnValue(mockDashboardClient as any);
+
+      blockchainClient.getBalance.mockResolvedValueOnce(l1MessageServiceBalance);
+
+      const client = createClient({
+        rebalanceToleranceAmountWei,
+        rebalanceQuotaService,
+        metricsUpdater: metricsUpdater as INativeYieldAutomationMetricsUpdater | undefined,
+      });
+
+      return {
+        client,
+        mockDashboardClient,
+        contractStub,
+        blockchainClient,
+      };
+    }
+
+    it("throws error when peekYieldReport returns undefined", async () => {
+      // Arrange
+      contractStub.read.getTotalSystemBalance.mockResolvedValue(1_000_000n);
+      contractStub.read.getEffectiveTargetWithdrawalReserve.mockResolvedValue(500_000n);
+      contractStub.read.userFunds.mockResolvedValue(100_000n);
+      contractStub.simulate.reportYield.mockResolvedValue(undefined);
+      const mockDashboardClient = {
+        totalValue: jest.fn().mockResolvedValue(600_000n),
+      };
+      mockedDashboardContractClientGetOrCreate.mockReturnValue(mockDashboardClient as any);
+      const client = createClient();
+
+      // Act & Assert
+      await expect(client.getRebalanceRequirements(YIELD_PROVIDER, L2_RECIPIENT)).rejects.toThrow(
+        "peekYieldReport returned undefined, cannot determine rebalance requirements",
+      );
     });
 
-    // Deficit => UNSTAKE
-    blockchainClient.getBalance.mockResolvedValueOnce(effectiveTarget - 20_000n);
-    await expect(client.getRebalanceRequirements()).resolves.toEqual({
-      rebalanceDirection: RebalanceDirection.UNSTAKE,
-      rebalanceAmount: 20_000n,
+    it("returns NONE when absRebalanceRequirement is within tolerance band lower bound", async () => {
+      // Arrange
+      const l1MessageServiceBalance = 490_001n;
+      const totalSystemBalance = 1_000_000n;
+      const effectiveTarget = 500_000n;
+      const dashboardTotalValue = 500_000n;
+      const userFunds = 500_000n;
+      const peekedYieldAmount = 0n;
+      const peekedOutstandingNegativeYield = 0n;
+      const rebalanceToleranceAmountWei = 10_000n;
+      const { client } = setupRebalanceTest(
+        l1MessageServiceBalance,
+        totalSystemBalance,
+        effectiveTarget,
+        dashboardTotalValue,
+        userFunds,
+        peekedYieldAmount,
+        peekedOutstandingNegativeYield,
+        rebalanceToleranceAmountWei,
+      );
+
+      // Act
+      const result = await client.getRebalanceRequirements(YIELD_PROVIDER, L2_RECIPIENT);
+
+      // Assert
+      expect(result).toEqual({
+        rebalanceDirection: RebalanceDirection.NONE,
+        rebalanceAmount: 0n,
+      });
     });
 
-    // Surplus => STAKE
-    blockchainClient.getBalance.mockResolvedValueOnce(effectiveTarget + 30_000n);
-    await expect(client.getRebalanceRequirements()).resolves.toEqual({
-      rebalanceDirection: RebalanceDirection.STAKE,
-      rebalanceAmount: 30_000n,
+    it("returns NONE when absRebalanceRequirement is within tolerance band upper bound", async () => {
+      // Arrange
+      const l1MessageServiceBalance = 509_999n;
+      const totalSystemBalance = 1_000_000n;
+      const effectiveTarget = 500_000n;
+      const dashboardTotalValue = 500_000n;
+      const userFunds = 500_000n;
+      const peekedYieldAmount = 0n;
+      const peekedOutstandingNegativeYield = 0n;
+      const rebalanceToleranceAmountWei = 10_000n;
+      const { client } = setupRebalanceTest(
+        l1MessageServiceBalance,
+        totalSystemBalance,
+        effectiveTarget,
+        dashboardTotalValue,
+        userFunds,
+        peekedYieldAmount,
+        peekedOutstandingNegativeYield,
+        rebalanceToleranceAmountWei,
+      );
+
+      // Act
+      const result = await client.getRebalanceRequirements(YIELD_PROVIDER, L2_RECIPIENT);
+
+      // Assert
+      expect(result).toEqual({
+        rebalanceDirection: RebalanceDirection.NONE,
+        rebalanceAmount: 0n,
+      });
+    });
+
+    it("correctly evaluates rebalance requirements for negative yield scenario with system obligations", async () => {
+      // Arrange
+      const l1MessageServiceBalance = 500_000n;
+      const totalSystemBalance = 1_000_000n;
+      const effectiveTarget = 500_000n;
+      const dashboardTotalValue = 500_000n;
+      const userFunds = 500_000n;
+      const peekedYieldAmount = 0n;
+      const peekedOutstandingNegativeYield = 100_000n;
+      const rebalanceToleranceAmountWei = 10_000n;
+      const { client } = setupRebalanceTest(
+        l1MessageServiceBalance,
+        totalSystemBalance,
+        effectiveTarget,
+        dashboardTotalValue,
+        userFunds,
+        peekedYieldAmount,
+        peekedOutstandingNegativeYield,
+        rebalanceToleranceAmountWei,
+      );
+
+      // Act
+      const result = await client.getRebalanceRequirements(YIELD_PROVIDER, L2_RECIPIENT);
+
+      // Assert
+      expect(result).toEqual({
+        rebalanceDirection: RebalanceDirection.STAKE,
+        rebalanceAmount: 150_000n,
+      });
+    });
+
+    it("correctly evaluates rebalance requirements for negative yield scenario with different balance", async () => {
+      // Arrange
+      const l1MessageServiceBalance = 450_000n;
+      const totalSystemBalance = 1_000_000n;
+      const effectiveTarget = 500_000n;
+      const dashboardTotalValue = 500_000n;
+      const userFunds = 500_000n;
+      const peekedYieldAmount = 0n;
+      const peekedOutstandingNegativeYield = 100_000n;
+      const rebalanceToleranceAmountWei = 10_000n;
+      const { client } = setupRebalanceTest(
+        l1MessageServiceBalance,
+        totalSystemBalance,
+        effectiveTarget,
+        dashboardTotalValue,
+        userFunds,
+        peekedYieldAmount,
+        peekedOutstandingNegativeYield,
+        rebalanceToleranceAmountWei,
+      );
+
+      // Act
+      const result = await client.getRebalanceRequirements(YIELD_PROVIDER, L2_RECIPIENT);
+
+      // Assert
+      expect(result).toEqual({
+        rebalanceDirection: RebalanceDirection.STAKE,
+        rebalanceAmount: 100_000n,
+      });
+    });
+
+    it("correctly evaluates rebalance requirements for positive yield scenario", async () => {
+      // Arrange
+      const totalSystemBalance = 1_000_000n;
+      const effectiveTarget = 200_000n;
+      const dashboardTotalValue = 600_000n;
+      const userFunds = 500_000n;
+      const peekedYieldAmount = 50_000n;
+      const peekedOutstandingNegativeYield = 0n;
+      const rebalanceToleranceAmountWei = 10_000n;
+      const l1MessageServiceBalance = 50_000n;
+      const { client } = setupRebalanceTest(
+        l1MessageServiceBalance,
+        totalSystemBalance,
+        effectiveTarget,
+        dashboardTotalValue,
+        userFunds,
+        peekedYieldAmount,
+        peekedOutstandingNegativeYield,
+        rebalanceToleranceAmountWei,
+      );
+
+      // Act
+      const result = await client.getRebalanceRequirements(YIELD_PROVIDER, L2_RECIPIENT);
+
+      // Assert
+      expect(result).toEqual({
+        rebalanceDirection: RebalanceDirection.UNSTAKE,
+        rebalanceAmount: 190_000n,
+      });
+    });
+
+    it("correctly evaluates rebalance requirements for whale depletion scenario", async () => {
+      // Arrange
+      const totalSystemBalance = 10_000_000n;
+      const effectiveTarget = 4_000_000n;
+      const dashboardTotalValue = 10_000_000n;
+      const userFunds = 10_000_000n;
+      const peekedYieldAmount = 0n;
+      const peekedOutstandingNegativeYield = 5_000_000n;
+      const rebalanceToleranceAmountWei = 250_000n;
+      const l1MessageServiceBalance = 0n;
+      const { client } = setupRebalanceTest(
+        l1MessageServiceBalance,
+        totalSystemBalance,
+        effectiveTarget,
+        dashboardTotalValue,
+        userFunds,
+        peekedYieldAmount,
+        peekedOutstandingNegativeYield,
+        rebalanceToleranceAmountWei,
+      );
+
+      // Act
+      const result = await client.getRebalanceRequirements(YIELD_PROVIDER, L2_RECIPIENT);
+
+      // Assert
+      expect(result).toEqual({
+        rebalanceDirection: RebalanceDirection.UNSTAKE,
+        rebalanceAmount: 7_000_000n,
+      });
+    });
+
+    it("caps staking rebalance amount when quota service returns partial amount", async () => {
+      // Arrange
+      const totalSystemBalance = 1_000_000n;
+      const effectiveTarget = 400_000n;
+      const dashboardTotalValue = 100_000n;
+      const userFunds = 100_000n;
+      const peekedYieldAmount = 0n;
+      const peekedOutstandingNegativeYield = 0n;
+      const rebalanceToleranceAmountWei = 10_000n;
+      const l1MessageServiceBalance = 900_000n;
+      const absRebalanceRequirement = l1MessageServiceBalance - effectiveTarget;
+      const cappedAmount = 100_000n;
+      const mockQuotaService = createDefaultQuotaService();
+      (mockQuotaService.getRebalanceAmountAfterQuota as jest.Mock).mockReturnValue(cappedAmount);
+      const { client } = setupRebalanceTest(
+        l1MessageServiceBalance,
+        totalSystemBalance,
+        effectiveTarget,
+        dashboardTotalValue,
+        userFunds,
+        peekedYieldAmount,
+        peekedOutstandingNegativeYield,
+        rebalanceToleranceAmountWei,
+        mockQuotaService,
+      );
+
+      // Act
+      const result = await client.getRebalanceRequirements(YIELD_PROVIDER, L2_RECIPIENT);
+
+      // Assert
+      expect(result).toEqual({
+        rebalanceDirection: RebalanceDirection.STAKE,
+        rebalanceAmount: cappedAmount,
+      });
+      expect(mockQuotaService.getRebalanceAmountAfterQuota).toHaveBeenCalledWith(
+        STAKING_VAULT_ADDRESS,
+        totalSystemBalance,
+        absRebalanceRequirement,
+      );
+    });
+
+    it("correctly applies quota when quota service returns 0n", async () => {
+      // Arrange
+      const totalSystemBalance = 1_000_000n;
+      const effectiveTarget = 400_000n;
+      const dashboardTotalValue = 100_000n;
+      const userFunds = 100_000n;
+      const peekedYieldAmount = 0n;
+      const peekedOutstandingNegativeYield = 0n;
+      const rebalanceToleranceAmountWei = 10_000n;
+      const l1MessageServiceBalance = 900_000n;
+      const absRebalanceRequirement = l1MessageServiceBalance - effectiveTarget;
+      const mockQuotaService = createDefaultQuotaService();
+      (mockQuotaService.getRebalanceAmountAfterQuota as jest.Mock).mockReturnValue(0n);
+      const { client } = setupRebalanceTest(
+        l1MessageServiceBalance,
+        totalSystemBalance,
+        effectiveTarget,
+        dashboardTotalValue,
+        userFunds,
+        peekedYieldAmount,
+        peekedOutstandingNegativeYield,
+        rebalanceToleranceAmountWei,
+        mockQuotaService,
+      );
+
+      // Act
+      const result = await client.getRebalanceRequirements(YIELD_PROVIDER, L2_RECIPIENT);
+
+      // Assert
+      expect(result).toEqual({
+        rebalanceDirection: RebalanceDirection.NONE,
+        rebalanceAmount: 0n,
+      });
+      expect(mockQuotaService.getRebalanceAmountAfterQuota).toHaveBeenCalledWith(
+        STAKING_VAULT_ADDRESS,
+        totalSystemBalance,
+        absRebalanceRequirement,
+      );
+    });
+
+    it("caps staking amount when absRebalanceAmountAfterQuota exceeds stakingRebalanceCeiling", async () => {
+      // Arrange
+      const totalSystemBalance = 1_000_000n;
+      const effectiveTarget = 400_000n;
+      const dashboardTotalValue = 100_000n;
+      const userFunds = 100_000n;
+      const peekedYieldAmount = 0n;
+      const peekedOutstandingNegativeYield = 0n;
+      const rebalanceToleranceAmountWei = 10_000n;
+      const l1MessageServiceBalance = 1_000_000n;
+      const absRebalanceAmountAfterQuota = 800_000n;
+      const mockQuotaService = createDefaultQuotaService();
+      (mockQuotaService.getRebalanceAmountAfterQuota as jest.Mock).mockReturnValue(absRebalanceAmountAfterQuota);
+      const { client } = setupRebalanceTest(
+        l1MessageServiceBalance,
+        totalSystemBalance,
+        effectiveTarget,
+        dashboardTotalValue,
+        userFunds,
+        peekedYieldAmount,
+        peekedOutstandingNegativeYield,
+        rebalanceToleranceAmountWei,
+        mockQuotaService,
+      );
+
+      // Act
+      const result = await client.getRebalanceRequirements(YIELD_PROVIDER, L2_RECIPIENT);
+
+      // Assert
+      expect(result).toEqual({
+        rebalanceDirection: RebalanceDirection.STAKE,
+        rebalanceAmount: 600_000n,
+      });
+    });
+
+    it("uses full absRebalanceAmountAfterQuota when below stakingRebalanceCeiling", async () => {
+      // Arrange
+      const totalSystemBalance = 1_000_000n;
+      const effectiveTarget = 400_000n;
+      const dashboardTotalValue = 100_000n;
+      const userFunds = 100_000n;
+      const peekedYieldAmount = 0n;
+      const peekedOutstandingNegativeYield = 0n;
+      const rebalanceToleranceAmountWei = 10_000n;
+      const l1MessageServiceBalance = 1_000_000n;
+      const absRebalanceAmountAfterQuota = 300_000n;
+      const mockQuotaService = createDefaultQuotaService();
+      (mockQuotaService.getRebalanceAmountAfterQuota as jest.Mock).mockReturnValue(absRebalanceAmountAfterQuota);
+      const { client } = setupRebalanceTest(
+        l1MessageServiceBalance,
+        totalSystemBalance,
+        effectiveTarget,
+        dashboardTotalValue,
+        userFunds,
+        peekedYieldAmount,
+        peekedOutstandingNegativeYield,
+        rebalanceToleranceAmountWei,
+        mockQuotaService,
+      );
+
+      // Act
+      const result = await client.getRebalanceRequirements(YIELD_PROVIDER, L2_RECIPIENT);
+
+      // Assert
+      expect(result).toEqual({
+        rebalanceDirection: RebalanceDirection.STAKE,
+        rebalanceAmount: 300_000n,
+      });
+    });
+
+    it("handles edge case where stakingRebalanceCeiling equals absRebalanceAmountAfterQuota", async () => {
+      // Arrange
+      const totalSystemBalance = 1_000_000n;
+      const effectiveTarget = 400_000n;
+      const dashboardTotalValue = 100_000n;
+      const userFunds = 100_000n;
+      const peekedYieldAmount = 0n;
+      const peekedOutstandingNegativeYield = 0n;
+      const rebalanceToleranceAmountWei = 10_000n;
+      const l1MessageServiceBalance = 1_000_000n;
+      const absRebalanceAmountAfterQuota = 600_000n;
+      const mockQuotaService = createDefaultQuotaService();
+      (mockQuotaService.getRebalanceAmountAfterQuota as jest.Mock).mockReturnValue(absRebalanceAmountAfterQuota);
+      const { client } = setupRebalanceTest(
+        l1MessageServiceBalance,
+        totalSystemBalance,
+        effectiveTarget,
+        dashboardTotalValue,
+        userFunds,
+        peekedYieldAmount,
+        peekedOutstandingNegativeYield,
+        rebalanceToleranceAmountWei,
+        mockQuotaService,
+      );
+
+      // Act
+      const result = await client.getRebalanceRequirements(YIELD_PROVIDER, L2_RECIPIENT);
+
+      // Assert
+      expect(result).toEqual({
+        rebalanceDirection: RebalanceDirection.STAKE,
+        rebalanceAmount: 600_000n,
+      });
+    });
+
+    it("handles small stakingRebalanceCeiling edge case", async () => {
+      // Arrange
+      const totalSystemBalance = 1_000_000n;
+      const effectiveTarget = 400_000n;
+      const dashboardTotalValue = 100_000n;
+      const userFunds = 100_000n;
+      const peekedYieldAmount = 0n;
+      const peekedOutstandingNegativeYield = 0n;
+      const rebalanceToleranceAmountWei = 10_000n;
+      const l1MessageServiceBalance = 400_100n;
+      const absRebalanceAmountAfterQuota = 50_000n;
+      const mockQuotaService = createDefaultQuotaService();
+      (mockQuotaService.getRebalanceAmountAfterQuota as jest.Mock).mockReturnValue(absRebalanceAmountAfterQuota);
+      const { client } = setupRebalanceTest(
+        l1MessageServiceBalance,
+        totalSystemBalance,
+        effectiveTarget,
+        dashboardTotalValue,
+        userFunds,
+        peekedYieldAmount,
+        peekedOutstandingNegativeYield,
+        rebalanceToleranceAmountWei,
+        mockQuotaService,
+      );
+
+      // Act
+      const result = await client.getRebalanceRequirements(YIELD_PROVIDER, L2_RECIPIENT);
+
+      // Assert
+      expect(result).toEqual({
+        rebalanceDirection: RebalanceDirection.STAKE,
+        rebalanceAmount: 100n,
+      });
+    });
+
+    it("tracks metrics when metricsUpdater is provided and quota service returns 0n", async () => {
+      // Arrange
+      const metricsUpdater = {
+        incrementStakingDepositQuotaExceeded: jest.fn(),
+        setActualRebalanceRequirement: jest.fn(),
+        setReportedRebalanceRequirement: jest.fn(),
+        incrementContractEstimateGasError: jest.fn(),
+      };
+      const totalSystemBalance = 1_000_000n;
+      const effectiveTarget = 400_000n;
+      const dashboardTotalValue = 100_000n;
+      const userFunds = 100_000n;
+      const peekedYieldAmount = 0n;
+      const peekedOutstandingNegativeYield = 0n;
+      const rebalanceToleranceAmountWei = 10_000n;
+      const l1MessageServiceBalance = 900_000n;
+      const absRebalanceRequirement = l1MessageServiceBalance - effectiveTarget;
+      const mockQuotaService = createDefaultQuotaService();
+      (mockQuotaService.getRebalanceAmountAfterQuota as jest.Mock).mockReturnValue(0n);
+      const { client } = setupRebalanceTest(
+        l1MessageServiceBalance,
+        totalSystemBalance,
+        effectiveTarget,
+        dashboardTotalValue,
+        userFunds,
+        peekedYieldAmount,
+        peekedOutstandingNegativeYield,
+        rebalanceToleranceAmountWei,
+        mockQuotaService,
+        metricsUpdater,
+      );
+
+      // Act
+      await client.getRebalanceRequirements(YIELD_PROVIDER, L2_RECIPIENT);
+
+      // Assert
+      expect(metricsUpdater.setActualRebalanceRequirement).toHaveBeenCalledWith(
+        STAKING_VAULT_ADDRESS,
+        weiToGweiNumber(absRebalanceRequirement),
+        RebalanceDirection.STAKE,
+      );
+      expect(metricsUpdater.setReportedRebalanceRequirement).toHaveBeenCalledWith(
+        STAKING_VAULT_ADDRESS,
+        0,
+        RebalanceDirection.NONE,
+      );
+    });
+
+    it("tracks gauge metric for all rebalance paths when metricsUpdater is provided", async () => {
+      // Arrange
+      const metricsUpdater = {
+        incrementStakingDepositQuotaExceeded: jest.fn(),
+        setActualRebalanceRequirement: jest.fn(),
+        setReportedRebalanceRequirement: jest.fn(),
+        incrementContractEstimateGasError: jest.fn(),
+      };
+      const totalSystemBalance = 1_000_000n;
+      const effectiveTarget = 400_000n;
+      const dashboardTotalValue = 100_000n;
+      const userFunds = 100_000n;
+      const peekedYieldAmount = 0n;
+      const peekedOutstandingNegativeYield = 0n;
+      const rebalanceToleranceAmountWei = 10_000n;
+      const l1MessageServiceBalance = 450_000n;
+      const absRebalanceRequirement = absDiff(l1MessageServiceBalance, effectiveTarget);
+      const { client } = setupRebalanceTest(
+        l1MessageServiceBalance,
+        totalSystemBalance,
+        effectiveTarget,
+        dashboardTotalValue,
+        userFunds,
+        peekedYieldAmount,
+        peekedOutstandingNegativeYield,
+        rebalanceToleranceAmountWei,
+        undefined,
+        metricsUpdater,
+      );
+
+      // Act
+      await client.getRebalanceRequirements(YIELD_PROVIDER, L2_RECIPIENT);
+
+      // Assert
+      expect(metricsUpdater.setActualRebalanceRequirement).toHaveBeenCalledWith(
+        STAKING_VAULT_ADDRESS,
+        weiToGweiNumber(absRebalanceRequirement),
+        RebalanceDirection.STAKE,
+      );
+      expect(metricsUpdater.setReportedRebalanceRequirement).toHaveBeenCalledWith(
+        STAKING_VAULT_ADDRESS,
+        0,
+        RebalanceDirection.STAKE,
+      );
+      expect(metricsUpdater.incrementStakingDepositQuotaExceeded).not.toHaveBeenCalled();
+    });
+
+    it("tracks reported requirement for UNSTAKE path when metricsUpdater is provided", async () => {
+      // Arrange
+      const metricsUpdater = {
+        incrementStakingDepositQuotaExceeded: jest.fn(),
+        setActualRebalanceRequirement: jest.fn(),
+        setReportedRebalanceRequirement: jest.fn(),
+        incrementContractEstimateGasError: jest.fn(),
+      };
+      const totalSystemBalance = 1_000_000n;
+      const effectiveTarget = 400_000n;
+      const dashboardTotalValue = 100_000n;
+      const userFunds = 100_000n;
+      const peekedYieldAmount = 0n;
+      const peekedOutstandingNegativeYield = 0n;
+      const rebalanceToleranceAmountWei = 10_000n;
+      const l1MessageServiceBalance = 300_000n;
+      const absRebalanceRequirement = effectiveTarget - l1MessageServiceBalance;
+      const { client } = setupRebalanceTest(
+        l1MessageServiceBalance,
+        totalSystemBalance,
+        effectiveTarget,
+        dashboardTotalValue,
+        userFunds,
+        peekedYieldAmount,
+        peekedOutstandingNegativeYield,
+        rebalanceToleranceAmountWei,
+        undefined,
+        metricsUpdater,
+      );
+
+      // Act
+      await client.getRebalanceRequirements(YIELD_PROVIDER, L2_RECIPIENT);
+
+      // Assert
+      expect(metricsUpdater.setActualRebalanceRequirement).toHaveBeenCalledWith(
+        STAKING_VAULT_ADDRESS,
+        weiToGweiNumber(absRebalanceRequirement),
+        RebalanceDirection.UNSTAKE,
+      );
+      expect(metricsUpdater.setReportedRebalanceRequirement).toHaveBeenCalledWith(
+        STAKING_VAULT_ADDRESS,
+        weiToGweiNumber(absRebalanceRequirement),
+        RebalanceDirection.UNSTAKE,
+      );
+    });
+
+    it("tracks reported requirement for STAKE path when metricsUpdater is provided", async () => {
+      // Arrange
+      const metricsUpdater = {
+        incrementStakingDepositQuotaExceeded: jest.fn(),
+        setActualRebalanceRequirement: jest.fn(),
+        setReportedRebalanceRequirement: jest.fn(),
+        incrementContractEstimateGasError: jest.fn(),
+      };
+      const totalSystemBalance = 1_000_000n;
+      const effectiveTarget = 400_000n;
+      const dashboardTotalValue = 100_000n;
+      const userFunds = 100_000n;
+      const peekedYieldAmount = 0n;
+      const peekedOutstandingNegativeYield = 0n;
+      const rebalanceToleranceAmountWei = 10_000n;
+      const l1MessageServiceBalance = 500_000n;
+      const absRebalanceRequirement = l1MessageServiceBalance - effectiveTarget;
+      const { client } = setupRebalanceTest(
+        l1MessageServiceBalance,
+        totalSystemBalance,
+        effectiveTarget,
+        dashboardTotalValue,
+        userFunds,
+        peekedYieldAmount,
+        peekedOutstandingNegativeYield,
+        rebalanceToleranceAmountWei,
+        undefined,
+        metricsUpdater,
+      );
+
+      // Act
+      await client.getRebalanceRequirements(YIELD_PROVIDER, L2_RECIPIENT);
+
+      // Assert
+      expect(metricsUpdater.setActualRebalanceRequirement).toHaveBeenCalledWith(
+        STAKING_VAULT_ADDRESS,
+        weiToGweiNumber(absRebalanceRequirement),
+        RebalanceDirection.STAKE,
+      );
+      expect(metricsUpdater.setReportedRebalanceRequirement).toHaveBeenCalledWith(
+        STAKING_VAULT_ADDRESS,
+        weiToGweiNumber(absRebalanceRequirement),
+        RebalanceDirection.STAKE,
+      );
+    });
+
+    it("handles zero totalSystemBalance without division by zero", async () => {
+      // Arrange
+      const totalSystemBalance = 0n;
+      const effectiveTarget = 0n;
+      const dashboardTotalValue = 0n;
+      const userFunds = 0n;
+      const peekedYieldAmount = 0n;
+      const peekedOutstandingNegativeYield = 0n;
+      const rebalanceToleranceAmountWei = 10_000n;
+      const l1MessageServiceBalance = 0n;
+      const { client } = setupRebalanceTest(
+        l1MessageServiceBalance,
+        totalSystemBalance,
+        effectiveTarget,
+        dashboardTotalValue,
+        userFunds,
+        peekedYieldAmount,
+        peekedOutstandingNegativeYield,
+        rebalanceToleranceAmountWei,
+      );
+
+      // Act
+      const result = await client.getRebalanceRequirements(YIELD_PROVIDER, L2_RECIPIENT);
+
+      // Assert
+      expect(result).toEqual({
+        rebalanceDirection: RebalanceDirection.NONE,
+        rebalanceAmount: 0n,
+      });
     });
   });
 
   it("returns staking vault and dashboard addresses from yield provider data", async () => {
-    contractStub.read.getYieldProviderData.mockResolvedValueOnce({
-      ...defaultYieldProviderData,
-      primaryEntrypoint: l2Recipient,
-      ossifiedEntrypoint: stakingVaultAddress,
-    });
-
+    // Arrange
+    contractStub.read.getYieldProviderData.mockResolvedValueOnce(
+      createYieldProviderData({
+        primaryEntrypoint: L2_RECIPIENT,
+        ossifiedEntrypoint: STAKING_VAULT_ADDRESS,
+      }),
+    );
     const client = createClient();
 
-    await expect(client.getLidoStakingVaultAddress(yieldProvider)).resolves.toBe(stakingVaultAddress);
-    await expect(client.getLidoDashboardAddress(yieldProvider)).resolves.toBe(l2Recipient);
+    // Act
+    const stakingVaultAddress = await client.getLidoStakingVaultAddress(YIELD_PROVIDER);
+    const dashboardAddress = await client.getLidoDashboardAddress(YIELD_PROVIDER);
+
+    // Assert
+    expect(stakingVaultAddress).toBe(STAKING_VAULT_ADDRESS);
+    expect(dashboardAddress).toBe(L2_RECIPIENT);
   });
 
   it("pauses staking only when not already paused", async () => {
+    // Arrange
     const txReceipt = { transactionHash: "0xpause" } as unknown as TransactionReceipt;
     const client = createClient();
     const pauseSpy = jest.spyOn(client, "pauseStaking").mockResolvedValue(txReceipt);
-
     contractStub.read.isStakingPaused.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
 
-    await expect(client.pauseStakingIfNotAlready(yieldProvider)).resolves.toBe(txReceipt);
-    await expect(client.pauseStakingIfNotAlready(yieldProvider)).resolves.toBeUndefined();
-    expect(logger.info).toHaveBeenCalledWith(`Already paused staking for yieldProvider=${yieldProvider}`);
+    // Act
+    const result1 = await client.pauseStakingIfNotAlready(YIELD_PROVIDER);
+    const result2 = await client.pauseStakingIfNotAlready(YIELD_PROVIDER);
+
+    // Assert
+    expect(result1).toBe(txReceipt);
+    expect(result2).toBeUndefined();
+    expect(logger.info).toHaveBeenCalledWith(`Already paused staking for yieldProvider=${YIELD_PROVIDER}`);
     expect(pauseSpy).toHaveBeenCalledTimes(1);
   });
 
   it("unpauses staking only when currently paused", async () => {
+    // Arrange
     const txReceipt = { transactionHash: "0xunpause" } as unknown as TransactionReceipt;
     const client = createClient();
     const unpauseSpy = jest.spyOn(client, "unpauseStaking").mockResolvedValue(txReceipt);
-
     contractStub.read.isStakingPaused.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
 
-    await expect(client.unpauseStakingIfNotAlready(yieldProvider)).resolves.toBe(txReceipt);
-    await expect(client.unpauseStakingIfNotAlready(yieldProvider)).resolves.toBeUndefined();
-    expect(logger.info).toHaveBeenCalledWith(`Already resumed staking for yieldProvider=${yieldProvider}`);
+    // Act
+    const result1 = await client.unpauseStakingIfNotAlready(YIELD_PROVIDER);
+    const result2 = await client.unpauseStakingIfNotAlready(YIELD_PROVIDER);
+
+    // Assert
+    expect(result1).toBe(txReceipt);
+    expect(unpauseSpy).toHaveBeenCalledWith(YIELD_PROVIDER);
+    expect(result2).toBeUndefined();
+    expect(logger.info).toHaveBeenCalledWith(`Already resumed staking for yieldProvider=${YIELD_PROVIDER}`);
     expect(unpauseSpy).toHaveBeenCalledTimes(1);
   });
 
   it("computes available unstaking rebalance balance", async () => {
+    // Arrange
     blockchainClient.getBalance.mockResolvedValueOnce(1_000n);
     contractStub.simulate.withdrawableValue.mockResolvedValueOnce({ result: 500n });
-
     const client = createClient();
-    await expect(client.getAvailableUnstakingRebalanceBalance(yieldProvider)).resolves.toBe(1_500n);
 
-    expect(blockchainClient.getBalance).toHaveBeenCalledWith(contractAddress);
-    expect(contractStub.simulate.withdrawableValue).toHaveBeenCalledWith([yieldProvider]);
+    // Act
+    const result = await client.getAvailableUnstakingRebalanceBalance(YIELD_PROVIDER);
+
+    // Assert
+    expect(blockchainClient.getBalance).toHaveBeenCalledWith(CONTRACT_ADDRESS);
+    expect(contractStub.simulate.withdrawableValue).toHaveBeenCalledWith([YIELD_PROVIDER]);
+    expect(result).toBe(1_500n);
   });
 
   it("adds to withdrawal reserve only when above threshold", async () => {
+    // Arrange
     const client = createClient({ minWithdrawalThresholdEth: 1n });
     const addSpy = jest.spyOn(client, "safeAddToWithdrawalReserve").mockResolvedValue(undefined as any);
+    const belowThresholdBalance = ONE_ETHER - 1n;
+    const minThreshold = 1n * ONE_ETHER;
     jest
       .spyOn(client, "getAvailableUnstakingRebalanceBalance")
-      .mockResolvedValueOnce(ONE_ETHER - 1n)
+      .mockResolvedValueOnce(belowThresholdBalance)
       .mockResolvedValueOnce(ONE_ETHER + 100n);
 
-    await expect(client.safeAddToWithdrawalReserveIfAboveThreshold(yieldProvider, 5n)).resolves.toBeUndefined();
-    expect(addSpy).not.toHaveBeenCalled();
+    // Act
+    await client.safeAddToWithdrawalReserveIfAboveThreshold(YIELD_PROVIDER, 5n);
+    await client.safeAddToWithdrawalReserveIfAboveThreshold(YIELD_PROVIDER, 7n);
 
-    await client.safeAddToWithdrawalReserveIfAboveThreshold(yieldProvider, 7n);
-    expect(addSpy).toHaveBeenCalledWith(yieldProvider, 7n);
+    // Assert
+    expect(addSpy).not.toHaveBeenCalledWith(YIELD_PROVIDER, 5n);
+    expect(addSpy).toHaveBeenCalledWith(YIELD_PROVIDER, 7n);
+    expect(logger.info).toHaveBeenCalledWith(
+      `safeAddToWithdrawalReserveIfAboveThreshold - skipping as availableWithdrawalBalance=${belowThresholdBalance} is below the minimum withdrawal threshold of ${minThreshold}`,
+    );
   });
 
   it("adds the full available balance when calling safeMaxAddToWithdrawalReserve", async () => {
+    // Arrange
     const client = createClient({ minWithdrawalThresholdEth: 1n });
     const addSpy = jest.spyOn(client, "safeAddToWithdrawalReserve").mockResolvedValue(undefined as any);
     const available = ONE_ETHER + 50n;
     jest.spyOn(client, "getAvailableUnstakingRebalanceBalance").mockResolvedValue(available);
 
-    await client.safeMaxAddToWithdrawalReserve(yieldProvider);
+    // Act
+    await client.safeMaxAddToWithdrawalReserve(YIELD_PROVIDER);
 
-    expect(addSpy).toHaveBeenCalledWith(yieldProvider, available);
+    // Assert
+    expect(addSpy).toHaveBeenCalledWith(YIELD_PROVIDER, available);
   });
 
   it("skips safeMaxAddToWithdrawalReserve when below the threshold", async () => {
+    // Arrange
     const client = createClient({ minWithdrawalThresholdEth: 2n });
     const addSpy = jest.spyOn(client, "safeAddToWithdrawalReserve").mockResolvedValue(undefined as any);
-    jest.spyOn(client, "getAvailableUnstakingRebalanceBalance").mockResolvedValue(2n * ONE_ETHER - 1n);
+    const belowThresholdBalance = 2n * ONE_ETHER - 1n;
+    const minThreshold = 2n * ONE_ETHER;
+    jest.spyOn(client, "getAvailableUnstakingRebalanceBalance").mockResolvedValue(belowThresholdBalance);
 
-    await expect(client.safeMaxAddToWithdrawalReserve(yieldProvider)).resolves.toBeUndefined();
+    // Act
+    const result = await client.safeMaxAddToWithdrawalReserve(YIELD_PROVIDER);
+
+    // Assert
+    expect(result).toBeUndefined();
     expect(addSpy).not.toHaveBeenCalled();
+    expect(logger.info).toHaveBeenCalledWith(
+      `safeMaxAddToWithdrawalReserve - skipping as availableWithdrawalBalance=${belowThresholdBalance} is below the minimum withdrawal threshold of ${minThreshold}`,
+    );
   });
 
   it("extracts withdrawal events from receipts emitted by the contract", () => {
+    // Arrange
     const client = createClient();
-    const log = { address: contractAddress, data: "0xdata", topics: ["0x01"] };
+    const log = { address: CONTRACT_ADDRESS, data: "0xdata", topics: ["0x01"] };
     mockedParseEventLogs.mockReturnValueOnce([
       {
         eventName: "WithdrawalReserveAugmented",
-        args: { reserveIncrementAmount: 10n, yieldProvider },
-        address: contractAddress,
+        args: { reserveIncrementAmount: 10n, yieldProvider: YIELD_PROVIDER },
+        address: CONTRACT_ADDRESS,
       } as any,
     ]);
 
-    const event = client.getWithdrawalEventFromTxReceipt(buildReceipt([log]));
+    // Act
+    const event = client.getWithdrawalEventFromTxReceipt(createTransactionReceipt([log]));
 
-    expect(event).toEqual({ reserveIncrementAmount: 10n, yieldProvider });
+    // Assert
+    expect(event).toEqual({ reserveIncrementAmount: 10n, yieldProvider: YIELD_PROVIDER });
     expect(mockedParseEventLogs).toHaveBeenCalledWith({
       abi: contractStub.abi,
       eventName: "WithdrawalReserveAugmented",
@@ -521,49 +1396,60 @@ describe("YieldManagerContractClient", () => {
   });
 
   it("returns undefined when withdrawal events are absent or decoding fails", () => {
+    // Arrange
     const client = createClient();
     mockedParseEventLogs.mockReturnValueOnce([]);
 
+    // Act
     const event = client.getWithdrawalEventFromTxReceipt(
-      buildReceipt([{ address: contractAddress.toUpperCase(), data: "0x", topics: [] }]),
+      createTransactionReceipt([{ address: CONTRACT_ADDRESS.toUpperCase(), data: "0x", topics: [] }]),
     );
 
+    // Assert
     expect(event).toBeUndefined();
+    expect(logger.debug).toHaveBeenCalledWith(
+      "getWithdrawalEventFromTxReceipt - WithdrawalReserveAugmented event not found in receipt",
+    );
     expect(mockedParseEventLogs).toHaveBeenCalledTimes(1);
   });
 
   it("ignores withdrawal events from other contracts", () => {
+    // Arrange
     const client = createClient();
     const foreignLog = { address: "0x1234567890123456789012345678901234567890", data: "0x", topics: [] };
-
     mockedParseEventLogs.mockReturnValueOnce([
       {
         eventName: "WithdrawalReserveAugmented",
-        args: { reserveIncrementAmount: 10n, yieldProvider },
+        args: { reserveIncrementAmount: 10n, yieldProvider: YIELD_PROVIDER },
         address: "0x1234567890123456789012345678901234567890",
       } as any,
     ]);
 
-    const event = client.getWithdrawalEventFromTxReceipt(buildReceipt([foreignLog]));
+    // Act
+    const event = client.getWithdrawalEventFromTxReceipt(createTransactionReceipt([foreignLog]));
 
+    // Assert
     expect(event).toBeUndefined();
     expect(mockedParseEventLogs).toHaveBeenCalledTimes(1);
   });
 
   it("extracts yield reports from receipts emitted by the contract", () => {
+    // Arrange
     const client = createClient();
-    const log = { address: contractAddress, data: "0xfeed", topics: ["0x1111"] };
+    const log = { address: CONTRACT_ADDRESS, data: "0xfeed", topics: ["0x1111"] };
     mockedParseEventLogs.mockReturnValueOnce([
       {
         eventName: "NativeYieldReported",
-        args: { yieldAmount: 12n, outstandingNegativeYield: 5n, yieldProvider },
-        address: contractAddress,
+        args: { yieldAmount: 12n, outstandingNegativeYield: 5n, yieldProvider: YIELD_PROVIDER },
+        address: CONTRACT_ADDRESS,
       } as any,
     ]);
 
-    const report = client.getYieldReportFromTxReceipt(buildReceipt([log]));
+    // Act
+    const report = client.getYieldReportFromTxReceipt(createTransactionReceipt([log]));
 
-    expect(report).toEqual({ yieldAmount: 12n, outstandingNegativeYield: 5n, yieldProvider });
+    // Assert
+    expect(report).toEqual({ yieldAmount: 12n, outstandingNegativeYield: 5n, yieldProvider: YIELD_PROVIDER });
     expect(mockedParseEventLogs).toHaveBeenCalledWith({
       abi: contractStub.abi,
       eventName: "NativeYieldReported",
@@ -572,30 +1458,36 @@ describe("YieldManagerContractClient", () => {
   });
 
   it("returns undefined when yield report events are absent", () => {
+    // Arrange
     const client = createClient();
     mockedParseEventLogs.mockReturnValueOnce([]);
 
+    // Act
     const report = client.getYieldReportFromTxReceipt(
-      buildReceipt([{ address: contractAddress, data: "0x0", topics: [] }]),
+      createTransactionReceipt([{ address: CONTRACT_ADDRESS, data: "0x0", topics: [] }]),
     );
 
+    // Assert
     expect(report).toBeUndefined();
+    expect(logger.debug).toHaveBeenCalledWith("getYieldReportFromTxReceipt - NativeYieldReported event not found in receipt");
   });
 
   it("ignores yield report logs from other contracts", () => {
+    // Arrange
     const client = createClient();
     const foreignLog = { address: "0x1234567890123456789012345678901234567890", data: "0x", topics: [] };
-
     mockedParseEventLogs.mockReturnValueOnce([
       {
         eventName: "NativeYieldReported",
-        args: { yieldAmount: 12n, outstandingNegativeYield: 5n, yieldProvider },
+        args: { yieldAmount: 12n, outstandingNegativeYield: 5n, yieldProvider: YIELD_PROVIDER },
         address: "0x1234567890123456789012345678901234567890",
       } as any,
     ]);
 
-    const report = client.getYieldReportFromTxReceipt(buildReceipt([foreignLog]));
+    // Act
+    const report = client.getYieldReportFromTxReceipt(createTransactionReceipt([foreignLog]));
 
+    // Assert
     expect(report).toBeUndefined();
     expect(mockedParseEventLogs).toHaveBeenCalledTimes(1);
   });

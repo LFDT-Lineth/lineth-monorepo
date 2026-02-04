@@ -1,16 +1,12 @@
-import { mock, MockProxy } from "jest-mock-extended";
-import type { IBlockchainClient, ILogger } from "@consensys/linea-shared-utils";
+import { jest, describe, it, expect, beforeAll, beforeEach } from "@jest/globals";
 import type { PublicClient, TransactionReceipt, Address } from "viem";
 import { DashboardABI } from "../../../core/abis/Dashboard.js";
+import { createLoggerMock } from "../../../__tests__/helpers/index.js";
 
-jest.mock("viem", () => {
-  const actual = jest.requireActual("viem");
-  return {
-    ...actual,
-    getContract: jest.fn(),
-    parseEventLogs: jest.fn(),
-  };
-});
+jest.mock("viem", () => ({
+  getContract: jest.fn(),
+  parseEventLogs: jest.fn(),
+}));
 
 import { getContract, parseEventLogs } from "viem";
 
@@ -24,284 +20,389 @@ beforeAll(async () => {
 });
 
 describe("DashboardContractClient", () => {
-  const contractAddress = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
+  // Test data constants
+  const DASHBOARD_ADDRESS = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
+  const OTHER_CONTRACT_ADDRESS = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address;
+  const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
+  const ONE_ETH = 1_000_000_000_000_000_000n;
+  const NODE_OPERATOR_FEE = 123n;
+  const WITHDRAWABLE_AMOUNT = 1000n;
+  const TOTAL_VALUE_AMOUNT = 5000n;
+  const LIABILITY_SHARES_AMOUNT = 3000n;
 
-  let blockchainClient: MockProxy<IBlockchainClient<PublicClient, TransactionReceipt>>;
-  let logger: MockProxy<ILogger>;
+  let blockchainClient: any;
+  let logger: any;
   let publicClient: PublicClient;
-  const viemContractStub = {
+  let viemContractStub: any;
+
+  const createBlockchainClientMock = () => ({
+    getBlockchainClient: jest.fn(),
+    getBalance: jest.fn(),
+  });
+
+  const createViemContractStub = () => ({
     abi: DashboardABI,
     read: {
       obligations: jest.fn(),
+      withdrawableValue: jest.fn(),
+      totalValue: jest.fn(),
+      liabilityShares: jest.fn(),
     },
-  } as any;
+  });
+
+  const createTransactionReceipt = (
+    logs: Array<{ address: string; data: string; topics: string[] }>,
+  ): TransactionReceipt =>
+    ({
+      logs,
+    }) as unknown as TransactionReceipt;
+
+  const createFeeDisbursedEvent = (fee: bigint | undefined, address: Address) => ({
+    eventName: "FeeDisbursed",
+    args: { fee },
+    address,
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
-    blockchainClient = mock<IBlockchainClient<PublicClient, TransactionReceipt>>();
-    logger = mock<ILogger>();
+    blockchainClient = createBlockchainClientMock();
+    logger = createLoggerMock();
     publicClient = {} as PublicClient;
+    viemContractStub = createViemContractStub();
     blockchainClient.getBlockchainClient.mockReturnValue(publicClient);
     mockedGetContract.mockReturnValue(viemContractStub);
-    // Clear static state before each test
     (DashboardContractClient as any).blockchainClient = undefined;
     (DashboardContractClient as any).logger = undefined;
     (DashboardContractClient as any).clientCache.clear();
   });
 
-  const createClient = () => {
-    // Initialize logger if not already initialized (needed for constructor)
+  const initializeClient = () => {
     if (!(DashboardContractClient as any).logger) {
       DashboardContractClient.initialize(blockchainClient, logger);
     }
-    return new DashboardContractClient(contractAddress);
+    return new DashboardContractClient(DASHBOARD_ADDRESS);
   };
 
-  const buildReceipt = (logs: Array<{ address: string; data: string; topics: string[] }>): TransactionReceipt =>
-    ({
-      logs,
-    }) as unknown as TransactionReceipt;
+  describe("constructor", () => {
+    it("throws error when blockchainClient is not initialized", () => {
+      // Arrange
+      // (blockchainClient is not initialized)
 
-  it("initializes the viem contract and exposes it through getters", () => {
-    const client = createClient();
-
-    expect(mockedGetContract).toHaveBeenCalledWith({
-      abi: DashboardABI,
-      address: contractAddress,
-      client: publicClient,
+      // Act & Assert
+      expect(() => {
+        new DashboardContractClient(DASHBOARD_ADDRESS);
+      }).toThrow(
+        "DashboardContractClient: blockchainClient must be initialized via DashboardContractClient.initialize() before use",
+      );
     });
-    expect(client.getAddress()).toBe(contractAddress);
-    expect(client.getContract()).toBe(viemContractStub);
-  });
 
-  it("returns node operator fees when FeeDisbursed event is present", () => {
-    const client = createClient();
-    const receipt = buildReceipt([
-      {
-        address: "0x0000000000000000000000000000000000000000",
-        data: "0x",
-        topics: [],
-      },
-      {
-        address: contractAddress,
-        data: "0xdata",
-        topics: ["0xtopic"],
-      },
-    ]);
+    it("throws error when logger is not initialized", () => {
+      // Arrange
+      (DashboardContractClient as any).blockchainClient = blockchainClient;
+      (DashboardContractClient as any).logger = undefined;
 
-    mockedParseEventLogs.mockReturnValueOnce([
-      {
-        eventName: "FeeDisbursed",
-        args: { fee: 123n },
-        address: contractAddress,
-      } as any,
-    ]);
-
-    const fee = client.getNodeOperatorFeesPaidFromTxReceipt(receipt);
-
-    expect(fee).toBe(123n);
-    expect(mockedParseEventLogs).toHaveBeenCalledWith({
-      abi: viemContractStub.abi,
-      eventName: "FeeDisbursed",
-      logs: receipt.logs,
+      // Act & Assert
+      expect(() => {
+        new DashboardContractClient(DASHBOARD_ADDRESS);
+      }).toThrow(
+        "DashboardContractClient: logger must be initialized via DashboardContractClient.initialize() before use",
+      );
     });
-  });
 
-  it("ignores logs that fail to decode and returns zero when no FeeDisbursed event", () => {
-    const client = createClient();
-    const receipt = buildReceipt([
-      {
-        address: contractAddress.toUpperCase(),
-        data: "0xdead",
-        topics: [],
-      },
-    ]);
+    it("initializes viem contract with correct configuration", () => {
+      // Arrange
+      DashboardContractClient.initialize(blockchainClient, logger);
 
-    mockedParseEventLogs.mockReturnValueOnce([]);
+      // Act
+      const client = new DashboardContractClient(DASHBOARD_ADDRESS);
 
-    const fee = client.getNodeOperatorFeesPaidFromTxReceipt(receipt);
-
-    expect(fee).toBe(0n);
-    expect(mockedParseEventLogs).toHaveBeenCalledTimes(1);
-  });
-
-  it("returns zero when logs belong to other contracts or events", () => {
-    const client = createClient();
-    const receipt = buildReceipt([
-      {
-        address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        data: "0xaaa",
-        topics: [],
-      },
-      {
-        address: contractAddress,
-        data: "0xbb",
-        topics: [],
-      },
-    ]);
-
-    mockedParseEventLogs.mockReturnValueOnce([
-      {
-        eventName: "FeeDisbursed",
-        args: { fee: 456n },
-        address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-      } as any,
-    ]);
-
-    const fee = client.getNodeOperatorFeesPaidFromTxReceipt(receipt);
-
-    expect(fee).toBe(0n);
-    expect(mockedParseEventLogs).toHaveBeenCalledTimes(1);
-  });
-
-  it("returns unpaid Lido protocol fees from obligations", async () => {
-    const client = createClient();
-    const sharesToBurn = 1000n;
-    const feesToSettle = 500n;
-    viemContractStub.read.obligations.mockResolvedValueOnce([sharesToBurn, feesToSettle]);
-
-    const result = await client.peekUnpaidLidoProtocolFees();
-
-    expect(result).toBe(feesToSettle);
-    expect(viemContractStub.read.obligations).toHaveBeenCalledTimes(1);
-    expect(viemContractStub.read.obligations).toHaveBeenCalledWith();
-  });
-
-  it("returns zero when there are no unpaid fees", async () => {
-    const client = createClient();
-    const sharesToBurn = 0n;
-    const feesToSettle = 0n;
-    viemContractStub.read.obligations.mockResolvedValueOnce([sharesToBurn, feesToSettle]);
-
-    const result = await client.peekUnpaidLidoProtocolFees();
-
-    expect(result).toBe(0n);
-    expect(viemContractStub.read.obligations).toHaveBeenCalledTimes(1);
-  });
-
-  it("returns zero when feesToSettle is null", async () => {
-    const client = createClient();
-    const sharesToBurn = 1000n;
-    const feesToSettle = null;
-    viemContractStub.read.obligations.mockResolvedValueOnce([sharesToBurn, feesToSettle]);
-
-    const result = await client.peekUnpaidLidoProtocolFees();
-
-    expect(result).toBe(0n);
-    expect(viemContractStub.read.obligations).toHaveBeenCalledTimes(1);
-  });
-
-  it("returns undefined and logs error when obligations call fails", async () => {
-    DashboardContractClient.initialize(blockchainClient, logger);
-    const client = createClient();
-    const error = new Error("Contract call failed");
-    viemContractStub.read.obligations.mockRejectedValueOnce(error);
-
-    const result = await client.peekUnpaidLidoProtocolFees();
-
-    expect(result).toBeUndefined();
-    expect(logger.error).toHaveBeenCalledWith(`peekUnpaidLidoProtocolFees failed, error=${error}`);
-    expect(viemContractStub.read.obligations).toHaveBeenCalledTimes(1);
+      // Assert
+      expect(client).toBeInstanceOf(DashboardContractClient);
+      expect(mockedGetContract).toHaveBeenCalledWith({
+        abi: DashboardABI,
+        address: DASHBOARD_ADDRESS,
+        client: publicClient,
+      });
+    });
   });
 
   describe("initialize", () => {
-    it("sets the static blockchainClient and logger", () => {
+    it("sets static blockchainClient and logger", () => {
+      // Arrange & Act
       DashboardContractClient.initialize(blockchainClient, logger);
 
+      // Assert
       expect((DashboardContractClient as any).blockchainClient).toBe(blockchainClient);
       expect((DashboardContractClient as any).logger).toBe(logger);
     });
   });
 
+  describe("getAddress", () => {
+    it("returns contract address", () => {
+      // Arrange
+      const client = initializeClient();
+
+      // Act
+      const address = client.getAddress();
+
+      // Assert
+      expect(address).toBe(DASHBOARD_ADDRESS);
+    });
+  });
+
+  describe("getContract", () => {
+    it("returns viem contract instance", () => {
+      // Arrange
+      const client = initializeClient();
+
+      // Act
+      const contract = client.getContract();
+
+      // Assert
+      expect(contract).toBe(viemContractStub);
+    });
+  });
+
+  describe("getBalance", () => {
+    it("returns contract balance", async () => {
+      // Arrange
+      blockchainClient.getBalance.mockResolvedValue(ONE_ETH);
+      const client = initializeClient();
+
+      // Act
+      const balance = await client.getBalance();
+
+      // Assert
+      expect(balance).toBe(ONE_ETH);
+      expect(blockchainClient.getBalance).toHaveBeenCalledWith(DASHBOARD_ADDRESS);
+    });
+
+    it("throws error when blockchainClient is not initialized", async () => {
+      // Arrange
+      const client = initializeClient();
+      (DashboardContractClient as any).blockchainClient = undefined;
+
+      // Act & Assert
+      await expect(client.getBalance()).rejects.toThrow(
+        "DashboardContractClient: blockchainClient must be initialized via DashboardContractClient.initialize() before use",
+      );
+    });
+  });
+
+  describe("getNodeOperatorFeesPaidFromTxReceipt", () => {
+    it("returns node operator fees when FeeDisbursed event is present", () => {
+      // Arrange
+      const client = initializeClient();
+      const receipt = createTransactionReceipt([
+        {
+          address: ZERO_ADDRESS,
+          data: "0x",
+          topics: [],
+        },
+        {
+          address: DASHBOARD_ADDRESS,
+          data: "0xdata",
+          topics: ["0xtopic"],
+        },
+      ]);
+      mockedParseEventLogs.mockReturnValue([createFeeDisbursedEvent(NODE_OPERATOR_FEE, DASHBOARD_ADDRESS) as any]);
+
+      // Act
+      const fee = client.getNodeOperatorFeesPaidFromTxReceipt(receipt);
+
+      // Assert
+      expect(fee).toBe(NODE_OPERATOR_FEE);
+      expect(mockedParseEventLogs).toHaveBeenCalledWith({
+        abi: viemContractStub.abi,
+        eventName: "FeeDisbursed",
+        logs: receipt.logs,
+      });
+    });
+
+    it("returns zero when FeeDisbursed event has undefined fee", () => {
+      // Arrange
+      const client = initializeClient();
+      const receipt = createTransactionReceipt([
+        {
+          address: DASHBOARD_ADDRESS,
+          data: "0xdata",
+          topics: ["0xtopic"],
+        },
+      ]);
+      mockedParseEventLogs.mockReturnValue([createFeeDisbursedEvent(undefined, DASHBOARD_ADDRESS) as any]);
+
+      // Act
+      const fee = client.getNodeOperatorFeesPaidFromTxReceipt(receipt);
+
+      // Assert
+      expect(fee).toBe(0n);
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it("returns zero when FeeDisbursed event is not found", () => {
+      // Arrange
+      const client = initializeClient();
+      const receipt = createTransactionReceipt([
+        {
+          address: DASHBOARD_ADDRESS.toUpperCase(),
+          data: "0xdead",
+          topics: [],
+        },
+      ]);
+      mockedParseEventLogs.mockReturnValue([]);
+
+      // Act
+      const fee = client.getNodeOperatorFeesPaidFromTxReceipt(receipt);
+
+      // Assert
+      expect(fee).toBe(0n);
+      expect(logger.warn).toHaveBeenCalledWith(
+        "getNodeOperatorFeesPaidFromTxReceipt - FeeDisbursed event not found in receipt",
+      );
+    });
+
+    it("returns zero when FeeDisbursed event belongs to different contract", () => {
+      // Arrange
+      const client = initializeClient();
+      const receipt = createTransactionReceipt([
+        {
+          address: OTHER_CONTRACT_ADDRESS,
+          data: "0xaaa",
+          topics: [],
+        },
+        {
+          address: DASHBOARD_ADDRESS,
+          data: "0xbb",
+          topics: [],
+        },
+      ]);
+      mockedParseEventLogs.mockReturnValue([createFeeDisbursedEvent(456n, OTHER_CONTRACT_ADDRESS) as any]);
+
+      // Act
+      const fee = client.getNodeOperatorFeesPaidFromTxReceipt(receipt);
+
+      // Assert
+      expect(fee).toBe(0n);
+      expect(logger.warn).toHaveBeenCalledWith(
+        "getNodeOperatorFeesPaidFromTxReceipt - FeeDisbursed event not found in receipt",
+      );
+    });
+  });
+
+  describe("withdrawableValue", () => {
+    it("returns withdrawable value from contract", async () => {
+      // Arrange
+      viemContractStub.read.withdrawableValue.mockResolvedValue(WITHDRAWABLE_AMOUNT);
+      const client = initializeClient();
+
+      // Act
+      const result = await client.withdrawableValue();
+
+      // Assert
+      expect(result).toBe(WITHDRAWABLE_AMOUNT);
+      expect(viemContractStub.read.withdrawableValue).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("totalValue", () => {
+    it("returns total value from contract", async () => {
+      // Arrange
+      viemContractStub.read.totalValue.mockResolvedValue(TOTAL_VALUE_AMOUNT);
+      const client = initializeClient();
+
+      // Act
+      const result = await client.totalValue();
+
+      // Assert
+      expect(result).toBe(TOTAL_VALUE_AMOUNT);
+      expect(viemContractStub.read.totalValue).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("liabilityShares", () => {
+    it("returns liability shares from contract", async () => {
+      // Arrange
+      viemContractStub.read.liabilityShares.mockResolvedValue(LIABILITY_SHARES_AMOUNT);
+      const client = initializeClient();
+
+      // Act
+      const result = await client.liabilityShares();
+
+      // Assert
+      expect(result).toBe(LIABILITY_SHARES_AMOUNT);
+      expect(viemContractStub.read.liabilityShares).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("getOrCreate", () => {
     it("throws error when blockchainClient is not initialized", () => {
+      // Arrange
+      // (blockchainClient is not initialized)
+
+      // Act & Assert
       expect(() => {
-        DashboardContractClient.getOrCreate(contractAddress);
+        DashboardContractClient.getOrCreate(DASHBOARD_ADDRESS);
       }).toThrow(
         "DashboardContractClient: blockchainClient must be initialized via DashboardContractClient.initialize() before use",
       );
     });
 
     it("throws error when logger is not initialized", () => {
+      // Arrange
       (DashboardContractClient as any).blockchainClient = blockchainClient;
       (DashboardContractClient as any).logger = undefined;
 
+      // Act & Assert
       expect(() => {
-        DashboardContractClient.getOrCreate(contractAddress);
+        DashboardContractClient.getOrCreate(DASHBOARD_ADDRESS);
       }).toThrow(
         "DashboardContractClient: logger must be initialized via DashboardContractClient.initialize() before use",
       );
     });
 
-    it("creates and caches a new client when not cached", () => {
+    it("creates and caches new client instance", () => {
+      // Arrange
       DashboardContractClient.initialize(blockchainClient, logger);
 
-      const client = DashboardContractClient.getOrCreate(contractAddress);
+      // Act
+      const client = DashboardContractClient.getOrCreate(DASHBOARD_ADDRESS);
 
+      // Assert
       expect(client).toBeInstanceOf(DashboardContractClient);
-      expect(client.getAddress()).toBe(contractAddress);
+      expect(client.getAddress()).toBe(DASHBOARD_ADDRESS);
       expect(mockedGetContract).toHaveBeenCalledWith({
         abi: DashboardABI,
-        address: contractAddress,
+        address: DASHBOARD_ADDRESS,
         client: publicClient,
       });
     });
 
-    it("returns cached client when already exists", () => {
+    it("returns cached client for same address", () => {
+      // Arrange
       DashboardContractClient.initialize(blockchainClient, logger);
-
-      const client1 = DashboardContractClient.getOrCreate(contractAddress);
+      const client1 = DashboardContractClient.getOrCreate(DASHBOARD_ADDRESS);
       mockedGetContract.mockClear();
-      const client2 = DashboardContractClient.getOrCreate(contractAddress);
 
+      // Act
+      const client2 = DashboardContractClient.getOrCreate(DASHBOARD_ADDRESS);
+
+      // Assert
       expect(client1).toBe(client2);
       expect(mockedGetContract).not.toHaveBeenCalled();
     });
 
     it("creates separate clients for different addresses", () => {
+      // Arrange
       DashboardContractClient.initialize(blockchainClient, logger);
-      const otherAddress = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address;
 
-      const client1 = DashboardContractClient.getOrCreate(contractAddress);
-      const client2 = DashboardContractClient.getOrCreate(otherAddress);
+      // Act
+      const client1 = DashboardContractClient.getOrCreate(DASHBOARD_ADDRESS);
+      const client2 = DashboardContractClient.getOrCreate(OTHER_CONTRACT_ADDRESS);
 
+      // Assert
       expect(client1).not.toBe(client2);
-      expect(client1.getAddress()).toBe(contractAddress);
-      expect(client2.getAddress()).toBe(otherAddress);
-    });
-  });
-
-  describe("constructor", () => {
-    it("throws error when blockchainClient is not initialized", () => {
-      expect(() => {
-        new DashboardContractClient(contractAddress);
-      }).toThrow(
-        "DashboardContractClient: blockchainClient must be initialized via DashboardContractClient.initialize() before use",
-      );
-    });
-
-    it("uses static blockchainClient when initialized", () => {
-      DashboardContractClient.initialize(blockchainClient, logger);
-
-      const client = new DashboardContractClient(contractAddress);
-
-      expect(client).toBeInstanceOf(DashboardContractClient);
-      expect(mockedGetContract).toHaveBeenCalledWith({
-        abi: DashboardABI,
-        address: contractAddress,
-        client: publicClient,
-      });
-    });
-
-    it("throws error when logger is not initialized", () => {
-      (DashboardContractClient as any).blockchainClient = blockchainClient;
-      (DashboardContractClient as any).logger = undefined;
-
-      expect(() => {
-        new DashboardContractClient(contractAddress);
-      }).toThrow(
-        "DashboardContractClient: logger must be initialized via DashboardContractClient.initialize() before use",
-      );
+      expect(client1.getAddress()).toBe(DASHBOARD_ADDRESS);
+      expect(client2.getAddress()).toBe(OTHER_CONTRACT_ADDRESS);
     });
   });
 });

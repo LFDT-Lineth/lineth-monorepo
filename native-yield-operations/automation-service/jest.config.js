@@ -13,7 +13,7 @@ export default {
   collectCoverageFrom: ["src/**/*.ts"],
   coverageReporters: ["html", "lcov", "text"],
   testPathIgnorePatterns: ["src/run.ts", "src/utils/createApolloClient.ts", "src/core"],
-  coveragePathIgnorePatterns: ["src/run.ts", "src/utils/createApolloClient.ts", "src/core"],
+  coveragePathIgnorePatterns: ["src/run.ts", "src/utils/createApolloClient.ts", "src/core", "src/__tests__/helpers"],
 
   // Tell Jest that .ts files are ESM and have ts-jest emit ESM
   extensionsToTreatAsEsm: [".ts"],

@@ -63,15 +63,41 @@ async function main() {
   );
 
   try {
-    const validators = await consensysStakingClient.getActiveValidatorsWithPendingWithdrawals();
+    const validators = await consensysStakingClient.getValidatorsForWithdrawalRequestsAscending();
     if (validators === undefined) {
-      console.error("Failed getActiveValidatorsWithPendingWithdrawals");
-      throw "Failed getActiveValidatorsWithPendingWithdrawals";
+      console.error("Failed getValidatorsForWithdrawalRequestsAscending");
+      throw "Failed getValidatorsForWithdrawalRequestsAscending";
     }
     console.log(`Fetched ${validators.length} validators with pending withdrawals.`);
     console.log(validators);
     const totalPendingWei = consensysStakingClient.getTotalPendingPartialWithdrawalsWei(validators);
     console.log(`Total pending partial withdrawals (wei): ${totalPendingWei.toString()}`);
+  } catch (err) {
+    console.error("ConsensysStakingApiClient integration script failed:", err);
+    process.exitCode = 1;
+  }
+
+  try {
+    const validators = await consensysStakingClient.getExitingValidators();
+    if (validators === undefined) {
+      console.error("Failed getExitingValidators");
+      throw "Failed getExitingValidators";
+    }
+    console.log(`Fetched ${validators.length} exiting validators.`);
+    console.log(validators);
+  } catch (err) {
+    console.error("ConsensysStakingApiClient integration script failed:", err);
+    process.exitCode = 1;
+  }
+
+  try {
+    const validators = await consensysStakingClient.getExitedValidators();
+    if (validators === undefined) {
+      console.error("Failed getExitedValidators");
+      throw "Failed getExitedValidators";
+    }
+    console.log(`Fetched ${validators.length} exited validators.`);
+    console.log(validators);
   } catch (err) {
     console.error("ConsensysStakingApiClient integration script failed:", err);
     process.exitCode = 1;

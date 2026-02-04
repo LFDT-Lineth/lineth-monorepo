@@ -30,7 +30,8 @@
     "@types/jest": "catalog:",
     "jest": "catalog:",
     "jest-mock-extended": "catalog:",
-    "ts-jest": "catalog:"
+    "ts-jest": "catalog:",
+    "tsx": "catalog:"
   },
   "files": [
     "dist/**/*"

@@ -1,7 +1,14 @@
 import { Address, TransactionReceipt } from "viem";
 import { IYieldManager } from "../../core/clients/contracts/IYieldManager.js";
 import { IOperationModeProcessor } from "../../core/services/operation-mode/IOperationModeProcessor.js";
-import { bigintReplacer, ILogger, attempt, msToSeconds, weiToGweiNumber } from "@consensys/linea-shared-utils";
+import {
+  bigintReplacer,
+  ILogger,
+  attempt,
+  msToSeconds,
+  weiToGweiNumber,
+  ONE_ETHER,
+} from "@consensys/linea-shared-utils";
 import { ILazyOracle } from "../../core/clients/contracts/ILazyOracle.js";
 import { ILidoAccountingReportClient } from "../../core/clients/ILidoAccountingReportClient.js";
 import { RebalanceDirection, RebalanceRequirement } from "../../core/entities/RebalanceRequirement.js";
@@ -10,7 +17,8 @@ import { IBeaconChainStakingClient } from "../../core/clients/IBeaconChainStakin
 import { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
 import { OperationMode } from "../../core/enums/OperationModeEnums.js";
 import { IOperationModeMetricsRecorder } from "../../core/metrics/IOperationModeMetricsRecorder.js";
-import { DashboardContractClient } from "../../clients/contracts/DashboardContractClient.js";
+import { IVaultHub } from "../../core/clients/contracts/IVaultHub.js";
+import { submitVaultReportIfNotFresh } from "./vaultReportSubmission.js";
 
 /**
  * Processor for YIELD_REPORTING_MODE operations.
@@ -18,6 +26,7 @@ import { DashboardContractClient } from "../../clients/contracts/DashboardContra
  */
 export class YieldReportingProcessor implements IOperationModeProcessor {
   private vault: Address;
+  private cycleCount: number = 0;
 
   /**
    * Creates a new YieldReportingProcessor instance.
@@ -30,11 +39,15 @@ export class YieldReportingProcessor implements IOperationModeProcessor {
    * @param {ILineaRollupYieldExtension<TransactionReceipt>} lineaRollupYieldExtensionClient - Client for interacting with LineaRollupYieldExtension contracts.
    * @param {ILidoAccountingReportClient} lidoAccountingReportClient - Client for submitting Lido accounting reports.
    * @param {IBeaconChainStakingClient} beaconChainStakingClient - Client for managing beacon chain staking operations.
+   * @param {IVaultHub<TransactionReceipt>} vaultHubContractClient - Client for interacting with VaultHub contracts.
    * @param {Address} yieldProvider - The yield provider address to process.
    * @param {Address} l2YieldRecipient - The L2 yield recipient address for yield reporting.
    * @param {boolean} shouldSubmitVaultReport - Whether to submit the vault accounting report. Can be set to false if other actors are expected to submit.
-   * @param {bigint} minPositiveYieldToReportWei - Minimum positive yield amount (in wei) required before triggering a yield report.
-   * @param {bigint} minUnpaidLidoProtocolFeesToReportYieldWei - Minimum unpaid Lido protocol fees amount (in wei) required before triggering a fee settlement.
+   * @param {boolean} shouldReportYield - Whether to report yield. Can be set to false to disable yield reporting entirely.
+   * @param {boolean} isUnpauseStakingEnabled - Whether to unpause staking when conditions are met. Can be set to false to disable automatic unpause of staking operations.
+   * @param {bigint} minNegativeYieldDiffToReportYieldWei - Minimum difference between peeked negative yield and on-state negative yield (in wei) required before triggering a yield report.
+   * @param {bigint} minWithdrawalThresholdEth - Minimum withdrawal threshold in ETH (stored as wei) required before withdrawal operations proceed.
+   * @param {number} cyclesPerYieldReport - Number of processing cycles between forced yield reports. Yield will be reported every N cycles regardless of threshold checks.
    */
   constructor(
     private readonly logger: ILogger,
@@ -45,12 +58,18 @@ export class YieldReportingProcessor implements IOperationModeProcessor {
     private readonly lineaRollupYieldExtensionClient: ILineaRollupYieldExtension<TransactionReceipt>,
     private readonly lidoAccountingReportClient: ILidoAccountingReportClient,
     private readonly beaconChainStakingClient: IBeaconChainStakingClient,
+    private readonly vaultHubContractClient: IVaultHub<TransactionReceipt>,
     private readonly yieldProvider: Address,
     private readonly l2YieldRecipient: Address,
     private readonly shouldSubmitVaultReport: boolean,
-    private readonly minPositiveYieldToReportWei: bigint,
-    private readonly minUnpaidLidoProtocolFeesToReportYieldWei: bigint,
-  ) {}
+    private readonly shouldReportYield: boolean,
+    private readonly isUnpauseStakingEnabled: boolean,
+    private readonly minNegativeYieldDiffToReportYieldWei: bigint,
+    private readonly minWithdrawalThresholdEth: bigint,
+    private readonly cyclesPerYieldReport: number,
+  ) {
+    this.cycleCount = 0;
+  }
 
   /**
    * Executes one processing cycle:
@@ -62,8 +81,7 @@ export class YieldReportingProcessor implements IOperationModeProcessor {
    * @returns {Promise<void>} A promise that resolves when the processing cycle completes.
    */
   public async process(): Promise<void> {
-    const triggerEvent = await this.lazyOracleContractClient.waitForVaultsReportDataUpdatedEvent();
-    this.metricsUpdater.incrementOperationModeTrigger(OperationMode.YIELD_REPORTING_MODE, triggerEvent.result);
+    await this.lazyOracleContractClient.waitForVaultsReportDataUpdatedEvent();
     const startedAt = performance.now();
     await this._process();
     const durationMs = performance.now() - startedAt;
@@ -104,14 +122,17 @@ export class YieldReportingProcessor implements IOperationModeProcessor {
    *  - May queue beacon-chain withdrawals
    */
   private async _process(): Promise<void> {
+    // Increment cycle counter
+    this.cycleCount++;
+    this.logger.info(`_process - cycleCount incremented to ${this.cycleCount}`);
     // Fetch initial data
     this.vault = await this.yieldManagerContractClient.getLidoStakingVaultAddress(this.yieldProvider);
-    const [initialRebalanceRequirements] = await Promise.all([
-      this.yieldManagerContractClient.getRebalanceRequirements(),
-      this.shouldSubmitVaultReport
-        ? this.lidoAccountingReportClient.getLatestSubmitVaultReportParams(this.vault)
-        : Promise.resolve(),
-    ]);
+    // Fresh vault report is a dependency for getRebalanceRequirements
+    await this._handleSubmitLatestVaultReport();
+    const initialRebalanceRequirements = await this.yieldManagerContractClient.getRebalanceRequirements(
+      this.yieldProvider,
+      this.l2YieldRecipient,
+    );
     this.logger.info(
       `_process - Initial data fetch: initialRebalanceRequirements=${JSON.stringify(initialRebalanceRequirements, bigintReplacer, 2)}`,
     );
@@ -128,35 +149,48 @@ export class YieldReportingProcessor implements IOperationModeProcessor {
     // Do primary rebalance +/- report submission
     await this._handleRebalance(initialRebalanceRequirements);
 
-    const postReportRebalanceRequirements = await this.yieldManagerContractClient.getRebalanceRequirements();
+    const postReportRebalanceRequirements = await this.yieldManagerContractClient.getRebalanceRequirements(
+      this.yieldProvider,
+      this.l2YieldRecipient,
+    );
     this.logger.info(
       `_process - Post rebalance data fetch: postReportRebalanceRequirements=${JSON.stringify(postReportRebalanceRequirements, bigintReplacer, 2)}`,
     );
 
     // Mid-cycle drift check:
-    // If we *started* with EXCESS (STAKE) but external flows flipped us to DEFICIT,
-    // immediately correct with a targeted UNSTAKE amendment.
-    if (initialRebalanceRequirements.rebalanceDirection === RebalanceDirection.STAKE) {
-      if (postReportRebalanceRequirements.rebalanceDirection === RebalanceDirection.UNSTAKE) {
-        await this._handleUnstakingRebalance(postReportRebalanceRequirements.rebalanceAmount, false);
-      } else {
-        await attempt(
-          this.logger,
-          () => this.yieldManagerContractClient.unpauseStakingIfNotAlready(this.yieldProvider),
-          "_process - unpause staking failed (tolerated)",
-        );
-      }
+    // If external flows flipped us to DEFICIT, immediately correct with a targeted UNSTAKE amendment.
+    if (
+      initialRebalanceRequirements.rebalanceDirection !== RebalanceDirection.UNSTAKE &&
+      postReportRebalanceRequirements.rebalanceDirection === RebalanceDirection.UNSTAKE
+    ) {
+      await this._handleUnstakingRebalance(postReportRebalanceRequirements.rebalanceAmount, false);
     }
 
     // Beacon-chain withdrawals are last:
     // These have fulfillment latency beyond this method; queue them after local state is stable.
-    const beaconChainWithdrawalRequirements = await this.yieldManagerContractClient.getRebalanceRequirements();
+    const beaconChainWithdrawalRequirements = await this.yieldManagerContractClient.getRebalanceRequirements(
+      this.yieldProvider,
+      this.l2YieldRecipient,
+    );
     this.logger.info(
       `_process - Beacon chain withdrawal data fetch: beaconChainWithdrawalRequirements=${JSON.stringify(beaconChainWithdrawalRequirements, bigintReplacer, 2)}`,
     );
     if (beaconChainWithdrawalRequirements.rebalanceDirection === RebalanceDirection.UNSTAKE) {
       await this.beaconChainStakingClient.submitWithdrawalRequestsToFulfilAmount(
         beaconChainWithdrawalRequirements.rebalanceAmount,
+      );
+    }
+
+    // If we don't need any ETH on L1MessageService, and there is ETH sitting on StakingVault, unpause staking to allow Deposit Service to stake.
+    if (
+      this.isUnpauseStakingEnabled &&
+      initialRebalanceRequirements.rebalanceDirection !== RebalanceDirection.UNSTAKE &&
+      postReportRebalanceRequirements.rebalanceDirection !== RebalanceDirection.UNSTAKE
+    ) {
+      await attempt(
+        this.logger,
+        () => this.yieldManagerContractClient.unpauseStakingIfNotAlready(this.yieldProvider),
+        "_process - unpause staking failed (tolerated)",
       );
     }
   }
@@ -173,15 +207,59 @@ export class YieldReportingProcessor implements IOperationModeProcessor {
    */
   private async _handleRebalance(rebalanceRequirements: RebalanceRequirement): Promise<void> {
     if (rebalanceRequirements.rebalanceDirection === RebalanceDirection.NONE) {
-      // No-op
-      this.logger.info("_handleRebalance - no rebalance pathway, calling _handleSubmitLatestVaultReport");
-      await this._handleSubmitLatestVaultReport();
-      return;
+      await this._handleNoRebalance();
     } else if (rebalanceRequirements.rebalanceDirection === RebalanceDirection.STAKE) {
       await this._handleStakingRebalance(rebalanceRequirements.rebalanceAmount);
     } else {
       await this._handleUnstakingRebalance(rebalanceRequirements.rebalanceAmount, true);
     }
+  }
+
+  /**
+   * Handles the no-rebalance pathway when rebalance direction is NONE.
+   * Processes edge cases where funds may be sitting on the YieldManager contract and submits the vault report.
+   *
+   * Flow:
+   * 1. Checks if YieldManager has a balance exceeding the minimum withdrawal threshold
+   * 2. If threshold is met, transfers all YieldManager balance to the yield provider (tolerates failures)
+   * 3. Records transfer metrics if a transfer was attempted
+   * 4. Submits the latest vault report and reports yield (if thresholds are met)
+   *
+   * Edge case handling:
+   * - Funds may accumulate on YieldManager from various sources (e.g., refunds, fees)
+   * - These funds should be transferred to the yield provider to maintain proper accounting
+   * - Only transfers if balance exceeds MIN_WITHDRAWAL_THRESHOLD_ETH to avoid gas-inefficient transactions
+   *
+   * @returns {Promise<void>} A promise that resolves when the no-rebalance pathway is handled.
+   */
+  private async _handleNoRebalance(): Promise<void> {
+    // Handle edge case where funds on the YieldManager
+    const [yieldManagerBalance, targetReserveDeficit] = await Promise.all([
+      this.yieldManagerContractClient.getBalance(),
+      this.yieldManagerContractClient.getTargetReserveDeficit(),
+    ]);
+    if (yieldManagerBalance > this.minWithdrawalThresholdEth * ONE_ETHER) {
+      // Must amend target deficit or else fundYieldProvider reverts
+      if (targetReserveDeficit > 0n) {
+        const withdrawalResult = await attempt(
+          this.logger,
+          () => this.yieldManagerContractClient.safeWithdrawFromYieldProvider(this.yieldProvider, targetReserveDeficit),
+          "_handleNoRebalance - safeWithdrawFromYieldProvider failed (tolerated)",
+        );
+        await this.operationModeMetricsRecorder.recordSafeWithdrawalMetrics(this.yieldProvider, withdrawalResult);
+      }
+
+      const transferFundsResult = await attempt(
+        this.logger,
+        () => this.yieldManagerContractClient.fundYieldProvider(this.yieldProvider, yieldManagerBalance),
+        "_handleStakingRebalance - fundYieldProvider failed (tolerated)",
+      );
+      await this.operationModeMetricsRecorder.recordTransferFundsMetrics(this.yieldProvider, transferFundsResult);
+    }
+
+    this.logger.info("_handleNoRebalance - no rebalance pathway, calling _handleReportYield");
+    await this._handleReportYield();
+    return;
   }
 
   /**
@@ -221,8 +299,8 @@ export class YieldReportingProcessor implements IOperationModeProcessor {
     }
 
     // Submit report last
-    this.logger.info("_handleStakingRebalance calling _handleSubmitLatestVaultReport");
-    await this._handleSubmitLatestVaultReport();
+    this.logger.info("_handleStakingRebalance calling _handleReportYield");
+    await this._handleReportYield();
   }
 
   /**
@@ -233,12 +311,11 @@ export class YieldReportingProcessor implements IOperationModeProcessor {
    * @param {boolean} shouldReportYield - Whether to report yield before rebalancing. If true, submits vault report before rebalancing.
    * @returns {Promise<void>} A promise that resolves when unstaking rebalance is handled.
    */
-  // Deficit
   private async _handleUnstakingRebalance(rebalanceAmount: bigint, shouldReportYield: boolean): Promise<void> {
     if (shouldReportYield) {
       // Submit report first
-      this.logger.info("_handleUnstakingRebalance calling _handleSubmitLatestVaultReport");
-      await this._handleSubmitLatestVaultReport();
+      this.logger.info("_handleUnstakingRebalance calling _handleReportYield");
+      await this._handleReportYield();
     }
 
     this.logger.info(`_handleUnstakingRebalance - reserve deficit, rebalanceAmount=${rebalanceAmount}`);
@@ -259,83 +336,90 @@ export class YieldReportingProcessor implements IOperationModeProcessor {
    *        A key assumption is that it is safe to submit multiple yield reports for the same vault report.
    * @dev We tolerate report submission errors because they should not block rebalances
    * @dev If shouldSubmitVaultReport is false, skips vault report submission but still reports yield.
+   * @dev Checks if report is fresh before submitting to avoid unnecessary transactions.
    * @returns {Promise<void>} A promise that resolves when both operations are attempted (regardless of success/failure).
    */
   private async _handleSubmitLatestVaultReport() {
-    // First call: submit vault report (if enabled)
-    if (this.shouldSubmitVaultReport) {
-      const vaultResult = await attempt(
-        this.logger,
-        () => this.lidoAccountingReportClient.submitLatestVaultReport(this.vault),
-        "_handleSubmitLatestVaultReport: submitLatestVaultReport failed",
-      );
-      if (vaultResult.isOk()) {
-        this.logger.info("_handleSubmitLatestVaultReport: vault report succeeded");
-        this.metricsUpdater.incrementLidoVaultAccountingReport(this.vault);
-      }
-    } else {
-      this.logger.info(
-        "_handleSubmitLatestVaultReport: skipping vault report submission (SHOULD_SUBMIT_VAULT_REPORT=false)",
-      );
-    }
+    await submitVaultReportIfNotFresh(
+      this.logger,
+      this.vaultHubContractClient,
+      this.lidoAccountingReportClient,
+      this.metricsUpdater,
+      this.vault,
+      this.shouldSubmitVaultReport,
+      "_handleSubmitLatestVaultReport",
+    );
+  }
 
-    // Second call: report yield
+  async _handleReportYield(): Promise<void> {
     if (await this._shouldReportYield()) {
       const yieldResult = await attempt(
         this.logger,
         () => this.yieldManagerContractClient.reportYield(this.yieldProvider, this.l2YieldRecipient),
-        "_handleSubmitLatestVaultReport - reportYield failed",
+        "_handleReportYield - reportYield failed",
       );
       if (yieldResult.isOk()) {
-        this.logger.info("_handleSubmitLatestVaultReport: yield report succeeded");
+        this.logger.info("_handleReportYield: yield report succeeded");
         await this.operationModeMetricsRecorder.recordReportYieldMetrics(this.yieldProvider, yieldResult);
       }
     }
   }
 
   /**
-   * Determines whether yield should be reported based on configurable thresholds.
-   * Checks both the yield amount and unpaid Lido protocol fees against their respective thresholds.
-   * Returns true if either threshold is met or exceeded.
+   * Determines whether yield should be reported based on configurable thresholds and cycle count.
+   * Checks the negative yield difference against its threshold,
+   * and cycle-based reporting (every N cycles).
+   * Returns true if any threshold is met or exceeded, or if cycle-based reporting is due.
    * Sets gauge metrics for peeked values when reads are successful.
    *
-   * @returns {Promise<boolean>} True if yield should be reported (either threshold met), false otherwise.
+   * @returns {Promise<boolean>} True if yield should be reported (any threshold met), false otherwise.
    */
   async _shouldReportYield(): Promise<boolean> {
-    // Get dashboard address
-    const dashboardAddress = await this.yieldManagerContractClient.getLidoDashboardAddress(this.yieldProvider);
-    const dashboardClient = DashboardContractClient.getOrCreate(dashboardAddress);
-
-    // Use Promise.all to concurrently fetch both values
-    const [unpaidLidoProtocolFees, yieldReport] = await Promise.all([
-      dashboardClient.peekUnpaidLidoProtocolFees(),
+    // Use Promise.all to concurrently fetch values
+    const [settleableLidoFees, yieldReport, yieldProviderData] = await Promise.all([
+      this.vaultHubContractClient.settleableLidoFeesValue(this.vault),
       this.yieldManagerContractClient.peekYieldReport(this.yieldProvider, this.l2YieldRecipient),
+      this.yieldManagerContractClient.getYieldProviderData(this.yieldProvider),
     ]);
 
-    // Log both results
-    this.logger.info(
-      `_shouldReportYield - unpaidLidoProtocolFees=${JSON.stringify(unpaidLidoProtocolFees, bigintReplacer)}, yieldReport=${JSON.stringify(yieldReport, bigintReplacer)}`,
-    );
-
-    let yieldThresholdMet = false;
-    let feesThresholdMet = false;
+    let negativeYieldDiffThresholdMet = false;
+    let isCycleBasedReportingDue = false;
 
     if (yieldReport !== undefined) {
       const outstandingNegativeYield = yieldReport?.outstandingNegativeYield;
       const yieldAmount = yieldReport?.yieldAmount;
-      await Promise.all([
-        this.metricsUpdater.setLastPeekedNegativeYieldReport(this.vault, weiToGweiNumber(outstandingNegativeYield)),
-        this.metricsUpdater.setLastPeekedPositiveYieldReport(this.vault, weiToGweiNumber(yieldAmount)),
-      ]);
-      yieldThresholdMet = yieldAmount >= this.minPositiveYieldToReportWei;
+      this.metricsUpdater.setLastPeekedNegativeYieldReport(this.vault, weiToGweiNumber(outstandingNegativeYield));
+      this.metricsUpdater.setLastPeekedPositiveYieldReport(this.vault, weiToGweiNumber(yieldAmount));
+
+      // Check negative yield difference threshold
+      if (yieldProviderData !== undefined) {
+        const onStateNegativeYield = yieldProviderData.lastReportedNegativeYield;
+        const negativeYieldDiff = outstandingNegativeYield - onStateNegativeYield;
+        negativeYieldDiffThresholdMet = negativeYieldDiff >= this.minNegativeYieldDiffToReportYieldWei;
+      }
     }
 
-    if (unpaidLidoProtocolFees !== undefined) {
-      await this.metricsUpdater.setLastPeekUnpaidLidoProtocolFees(this.vault, weiToGweiNumber(unpaidLidoProtocolFees));
-      feesThresholdMet = unpaidLidoProtocolFees >= this.minUnpaidLidoProtocolFeesToReportYieldWei;
+    if (settleableLidoFees !== undefined) {
+      this.metricsUpdater.setLastSettleableLidoFees(this.vault, weiToGweiNumber(settleableLidoFees));
     }
 
-    // Return true if either threshold is met
-    return feesThresholdMet || yieldThresholdMet;
+    // Check if cycle-based reporting is due
+    isCycleBasedReportingDue = this.cycleCount % this.cyclesPerYieldReport === 0;
+
+    const shouldReportYield = this.shouldReportYield && (negativeYieldDiffThresholdMet || isCycleBasedReportingDue);
+
+    // Log results
+    const onStateNegativeYield = yieldProviderData?.lastReportedNegativeYield;
+    const peekedNegativeYield = yieldReport?.outstandingNegativeYield;
+    const negativeYieldDiff =
+      peekedNegativeYield !== undefined && onStateNegativeYield !== undefined
+        ? peekedNegativeYield - onStateNegativeYield
+        : undefined;
+    this.logger.info(
+      `_shouldReportYield - shouldReportYield=${shouldReportYield}, cycleCount=${this.cycleCount}, cycleBasedReportingDue=${isCycleBasedReportingDue}, settleableLidoFees=${JSON.stringify(settleableLidoFees, bigintReplacer)}, yieldReport=${JSON.stringify(yieldReport, bigintReplacer)}, onStateNegativeYield=${JSON.stringify(onStateNegativeYield, bigintReplacer)}, negativeYieldDiff=${JSON.stringify(negativeYieldDiff, bigintReplacer)}`,
+    );
+
+    // Return true if any threshold is met
+    return shouldReportYield;
   }
 }

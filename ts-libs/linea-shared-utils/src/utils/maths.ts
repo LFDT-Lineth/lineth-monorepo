@@ -20,3 +20,14 @@ export function safeSub(a: bigint, b: bigint): bigint {
 export function min(a: bigint, b: bigint): bigint {
   return a < b ? a : b;
 }
+
+/**
+ * Returns the absolute difference between two bigint values.
+ *
+ * @param {bigint} a - The first value.
+ * @param {bigint} b - The second value.
+ * @returns {bigint} The absolute difference between a and b (always non-negative).
+ */
+export function absDiff(a: bigint, b: bigint): bigint {
+  return a > b ? a - b : b - a;
+}

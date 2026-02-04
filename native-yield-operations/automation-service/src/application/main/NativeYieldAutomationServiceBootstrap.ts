@@ -8,7 +8,7 @@ import {
   WinstonLogger,
 } from "@consensys/linea-shared-utils";
 import { NativeYieldAutomationServiceBootstrapConfig } from "./config/config.js";
-import { IOperationModeSelector } from "../../core/services/operation-mode/IOperationModeSelector.js";
+import { IOperationLoop } from "../../services/IOperationLoop.js";
 import { OperationModeSelector } from "../../services/OperationModeSelector.js";
 import {
   IBlockchainClient,
@@ -49,6 +49,13 @@ import { VaultHubContractClient } from "../../clients/contracts/VaultHubContract
 import { IOperationModeMetricsRecorder } from "../../core/metrics/IOperationModeMetricsRecorder.js";
 import { OperationModeMetricsRecorder } from "../metrics/OperationModeMetricsRecorder.js";
 import { DashboardContractClient } from "../../clients/contracts/DashboardContractClient.js";
+import { StakingVaultContractClient } from "../../clients/contracts/StakingVaultContractClient.js";
+import { STETHContractClient } from "../../clients/contracts/STETHContractClient.js";
+import { ISTETH } from "../../core/clients/contracts/ISTETH.js";
+import { GaugeMetricsPoller } from "../../services/GaugeMetricsPoller.js";
+import { EstimateGasErrorReporter } from "../../core/services/EstimateGasErrorReporter.js";
+import { RebalanceQuotaService } from "../../services/RebalanceQuotaService.js";
+import { RebalanceDirection } from "../../core/entities/RebalanceRequirement.js";
 
 /**
  * Bootstrap class for the Native Yield Automation Service.
@@ -69,6 +76,7 @@ export class NativeYieldAutomationServiceBootstrap {
   private lazyOracleContractClient: ILazyOracle<TransactionReceipt>;
   private vaultHubContractClient: IVaultHub<TransactionReceipt>;
   private lineaRollupYieldExtensionContractClient: ILineaRollupYieldExtension<TransactionReceipt>;
+  private stethContractClient: ISTETH;
 
   private exponentialBackoffRetryService: IRetryService;
   private beaconNodeApiClient: IBeaconNodeAPIClient;
@@ -79,7 +87,8 @@ export class NativeYieldAutomationServiceBootstrap {
   private consensysStakingGraphQLClient: IValidatorDataClient;
 
   private readonly operationModeMetricsRecorder: IOperationModeMetricsRecorder;
-  private operationModeSelector: IOperationModeSelector;
+  private gaugeMetricsPoller: IOperationLoop;
+  private operationModeSelector: IOperationLoop;
   private yieldReportingOperationModeProcessor: IOperationModeProcessor;
   private ossificationPendingOperationModeProcessor: IOperationModeProcessor;
   private ossificationCompleteOperationModeProcessor: IOperationModeProcessor;
@@ -127,22 +136,38 @@ export class NativeYieldAutomationServiceBootstrap {
           throw new Error(`Unsupported chain ID: ${chainId}`);
       }
     };
+    const estimateGasErrorReporter = new EstimateGasErrorReporter(this.metricsUpdater);
     this.viemBlockchainClientAdapter = new ViemBlockchainClientAdapter(
       new WinstonLogger(ViemBlockchainClientAdapter.name, config.loggerOptions),
       config.dataSources.l1RpcUrl,
       getChain(config.dataSources.chainId),
       this.web3SignerClient,
+      estimateGasErrorReporter,
     );
     DashboardContractClient.initialize(
       this.viemBlockchainClientAdapter,
       new WinstonLogger(DashboardContractClient.name, config.loggerOptions),
     );
+    StakingVaultContractClient.initialize(
+      this.viemBlockchainClientAdapter,
+      new WinstonLogger(StakingVaultContractClient.name, config.loggerOptions),
+    );
+    const rebalanceQuotaService = new RebalanceQuotaService(
+      new WinstonLogger(RebalanceQuotaService.name, config.loggerOptions),
+      this.metricsUpdater,
+      RebalanceDirection.STAKE,
+      config.rebalance.stakingRebalanceQuotaWindowSizeInCycles,
+      config.rebalance.stakingRebalanceQuotaBps,
+      config.rebalance.toleranceAmountWei,
+    );
     this.yieldManagerContractClient = new YieldManagerContractClient(
       new WinstonLogger(YieldManagerContractClient.name, config.loggerOptions),
       this.viemBlockchainClientAdapter,
       config.contractAddresses.yieldManagerAddress,
-      config.rebalanceToleranceBps,
-      config.minWithdrawalThresholdEth,
+      config.rebalance.toleranceAmountWei,
+      config.rebalance.minWithdrawalThresholdEth,
+      rebalanceQuotaService,
+      this.metricsUpdater,
     );
     this.lazyOracleContractClient = new LazyOracleContractClient(
       new WinstonLogger(LazyOracleContractClient.name, config.loggerOptions),
@@ -154,11 +179,17 @@ export class NativeYieldAutomationServiceBootstrap {
     this.vaultHubContractClient = new VaultHubContractClient(
       this.viemBlockchainClientAdapter,
       config.contractAddresses.vaultHubAddress,
+      new WinstonLogger(VaultHubContractClient.name, config.loggerOptions),
     );
     this.lineaRollupYieldExtensionContractClient = new LineaRollupYieldExtensionContractClient(
       new WinstonLogger(LineaRollupYieldExtensionContractClient.name, config.loggerOptions),
       this.viemBlockchainClientAdapter,
       config.contractAddresses.lineaRollupContractAddress,
+    );
+    this.stethContractClient = new STETHContractClient(
+      this.viemBlockchainClientAdapter,
+      config.contractAddresses.stethAddress,
+      new WinstonLogger(STETHContractClient.name, config.loggerOptions),
     );
 
     this.exponentialBackoffRetryService = new ExponentialBackoffRetryService(
@@ -194,9 +225,10 @@ export class NativeYieldAutomationServiceBootstrap {
       new WinstonLogger(BeaconChainStakingClient.name, config.loggerOptions),
       this.metricsUpdater,
       this.consensysStakingGraphQLClient,
-      config.maxValidatorWithdrawalRequestsPerTransaction,
+      config.rebalance.maxValidatorWithdrawalRequestsPerTransaction,
       this.yieldManagerContractClient,
       this.config.contractAddresses.lidoYieldProviderAddress,
+      config.rebalance.minWithdrawalThresholdEth,
     );
 
     // Processor Services
@@ -216,11 +248,15 @@ export class NativeYieldAutomationServiceBootstrap {
       this.lineaRollupYieldExtensionContractClient,
       this.lidoAccountingReportClient,
       this.beaconChainStakingClient,
+      this.vaultHubContractClient,
       config.contractAddresses.lidoYieldProviderAddress,
       config.contractAddresses.l2YieldRecipientAddress,
       config.reporting.shouldSubmitVaultReport,
-      config.reporting.minPositiveYieldToReportWei,
-      config.reporting.minUnpaidLidoProtocolFeesToReportYieldWei,
+      config.reporting.shouldReportYield,
+      config.reporting.isUnpauseStakingEnabled,
+      config.reporting.minNegativeYieldDiffToReportYieldWei,
+      config.rebalance.minWithdrawalThresholdEth,
+      config.reporting.cyclesPerYieldReport,
     );
 
     this.ossificationPendingOperationModeProcessor = new OssificationPendingProcessor(
@@ -231,6 +267,7 @@ export class NativeYieldAutomationServiceBootstrap {
       this.lazyOracleContractClient,
       this.lidoAccountingReportClient,
       this.beaconChainStakingClient,
+      this.vaultHubContractClient,
       config.contractAddresses.lidoYieldProviderAddress,
       config.reporting.shouldSubmitVaultReport,
     );
@@ -243,6 +280,18 @@ export class NativeYieldAutomationServiceBootstrap {
       this.beaconChainStakingClient,
       config.timing.trigger.maxInactionMs,
       config.contractAddresses.lidoYieldProviderAddress,
+    );
+
+    this.gaugeMetricsPoller = new GaugeMetricsPoller(
+      new WinstonLogger(GaugeMetricsPoller.name, config.loggerOptions),
+      this.consensysStakingGraphQLClient,
+      this.metricsUpdater,
+      this.yieldManagerContractClient,
+      this.vaultHubContractClient,
+      config.contractAddresses.lidoYieldProviderAddress,
+      this.beaconNodeApiClient,
+      config.timing.gaugeMetricsPollIntervalMs,
+      this.stethContractClient,
     );
 
     this.operationModeSelector = new OperationModeSelector(
@@ -260,22 +309,26 @@ export class NativeYieldAutomationServiceBootstrap {
   /**
    * Starts all services.
    * Purposely refrains from awaiting .start() methods so they don't become blocking calls.
-   * Starts the metrics API server and the operation mode selector.
+   * Starts the metrics API server, gauge metrics poller, and the operation mode selector.
    */
   public startAllServices(): void {
     this.api.start();
     this.logger.info("Metrics API server started");
+    this.gaugeMetricsPoller.start();
+    this.logger.info("Gauge metrics poller started");
     this.operationModeSelector.start();
     this.logger.info("Native yield automation service started");
   }
 
   /**
    * Stops all services gracefully.
-   * Stops the metrics API server and the operation mode selector.
+   * Stops the metrics API server, gauge metrics poller, and the operation mode selector.
    */
   public stopAllServices(): void {
     this.api.stop();
     this.logger.info("Metrics API server stopped");
+    this.gaugeMetricsPoller.stop();
+    this.logger.info("Gauge metrics poller stopped");
     this.operationModeSelector.stop();
     this.logger.info("Native yield automation service stopped");
   }

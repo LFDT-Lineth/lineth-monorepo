@@ -32,7 +32,8 @@
     "jest": "catalog:",
     "jest-mock-extended": "catalog:",
     "ts-jest": "catalog:",
-    "tsup": "catalog:"
+    "tsup": "catalog:",
+    "tsx": "catalog:"
   },
   "dependencies": {
     "axios": "catalog:",

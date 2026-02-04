@@ -1,20 +1,58 @@
 import { bigintReplacer, isString, serialize } from "../string";
 
 describe("bigintReplacer", () => {
-  it("converts bigint values to strings", () => {
-    expect(bigintReplacer("amount", 123n)).toBe("123");
-    expect(bigintReplacer("negative", -456n)).toBe("-456");
+  it("converts positive bigint to string", () => {
+    // Arrange
+    const key = "amount";
+    const value = 123n;
+
+    // Act
+    const result = bigintReplacer(key, value);
+
+    // Assert
+    expect(result).toBe("123");
   });
 
-  it("returns non-bigint values unchanged", () => {
+  it("converts negative bigint to string", () => {
+    // Arrange
+    const key = "negative";
+    const value = -456n;
+
+    // Act
+    const result = bigintReplacer(key, value);
+
+    // Assert
+    expect(result).toBe("-456");
+  });
+
+  it("returns object values unchanged", () => {
+    // Arrange
+    const key = "object";
     const value = { foo: "bar" };
-    expect(bigintReplacer("object", value)).toBe(value);
-    expect(bigintReplacer("number", 10)).toBe(10);
+
+    // Act
+    const result = bigintReplacer(key, value);
+
+    // Assert
+    expect(result).toBe(value);
+  });
+
+  it("returns number values unchanged", () => {
+    // Arrange
+    const key = "number";
+    const value = 10;
+
+    // Act
+    const result = bigintReplacer(key, value);
+
+    // Assert
+    expect(result).toBe(value);
   });
 });
 
 describe("serialize", () => {
-  it("stringifies bigint values recursively", () => {
+  it("converts nested bigint values to strings", () => {
+    // Arrange
     const input = {
       total: 999n,
       nested: {
@@ -22,24 +60,67 @@ describe("serialize", () => {
       },
     };
 
-    const serialized = serialize(input);
-    expect(serialized).toBe('{"total":"999","nested":{"arr":["1",2,{"inner":"3"}]}}');
+    // Act
+    const result = serialize(input);
+
+    // Assert
+    expect(result).toBe('{"total":"999","nested":{"arr":["1",2,{"inner":"3"}]}}');
   });
 
-  it("matches JSON.stringify behaviour for non-bigint values", () => {
+  it("produces same output as JSON.stringify for non-bigint values", () => {
+    // Arrange
     const input = { foo: "bar", count: 3 };
-    expect(serialize(input)).toBe(JSON.stringify(input));
+
+    // Act
+    const result = serialize(input);
+
+    // Assert
+    expect(result).toBe(JSON.stringify(input));
   });
 });
 
 describe("isString", () => {
-  it("returns true for primitive strings", () => {
-    expect(isString("hello")).toBe(true);
+  it("returns true for primitive string", () => {
+    // Arrange
+    const value = "hello";
+
+    // Act
+    const result = isString(value);
+
+    // Assert
+    expect(result).toBe(true);
   });
 
-  it("returns false for non-strings", () => {
-    expect(isString(123)).toBe(false);
-    expect(isString({ text: "hi" })).toBe(false);
-    expect(isString(new String("wrapped"))).toBe(false);
+  it("returns false for number", () => {
+    // Arrange
+    const value = 123;
+
+    // Act
+    const result = isString(value);
+
+    // Assert
+    expect(result).toBe(false);
+  });
+
+  it("returns false for object", () => {
+    // Arrange
+    const value = { text: "hi" };
+
+    // Act
+    const result = isString(value);
+
+    // Assert
+    expect(result).toBe(false);
+  });
+
+  it("returns false for String object", () => {
+    // Arrange
+    const value = new String("wrapped");
+
+    // Act
+    const result = isString(value);
+
+    // Assert
+    expect(result).toBe(false);
   });
 });

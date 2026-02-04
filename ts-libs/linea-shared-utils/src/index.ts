@@ -15,6 +15,7 @@ export * from "./core/constants/maths";
 export * from "./core/constants/time";
 export * from "./core/services/IRetryService";
 export * from "./core/services/IMetricsService";
+export * from "./core/services/IEstimateGasErrorReporter";
 export * from "./logging/ILogger";
 export * from "./logging/WinstonLogger";
 export * from "./services/ExponentialBackoffRetryService";

@@ -36,7 +36,7 @@ export class Web3SignerClientAdapter implements IContractSignerClient {
     web3SignerTrustedStorePath: string,
     web3SignerTrustedStorePassphrase: string,
   ) {
-    this.logger.info("Initialising HTTPS agent");
+    this.logger.info("Initialising Web3SignerClientAdapter");
     this.agent = this.getHttpsAgent(
       web3SignerKeystorePath,
       web3SignerKeystorePassphrase,

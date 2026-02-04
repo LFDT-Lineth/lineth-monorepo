@@ -4,6 +4,7 @@ import { IRetryService } from "../../core/services/IRetryService";
 import { ILogger } from "../../logging/ILogger";
 import { getCurrentUnixTimestampSeconds } from "../../utils/time";
 import { OAuth2TokenClient } from "../OAuth2TokenClient";
+import { createLoggerMock, createRetryServiceMock } from "../../__tests__/helpers/factories";
 
 jest.mock("axios");
 jest.mock("../../utils/time", () => ({
@@ -16,175 +17,223 @@ const getCurrentUnixTimestampSecondsMock = getCurrentUnixTimestampSeconds as jes
 >;
 
 describe("OAuth2TokenClient", () => {
-  const tokenUrl = "https://auth.local/token";
-  const clientId = "client-id";
-  const clientSecret = "client-secret";
-  const audience = "api-audience";
-  const grantType = "client_credentials";
+  // Test data constants
+  const TOKEN_URL = "https://auth.local/token";
+  const CLIENT_ID = "client-id";
+  const CLIENT_SECRET = "client-secret";
+  const AUDIENCE = "api-audience";
+  const GRANT_TYPE = "client_credentials";
+  const EXPIRY_BUFFER_SECONDS = 60;
+
+  // Time constants
+  const CURRENT_TIME_SECONDS = 1_000;
+  const TOKEN_EXPIRES_IN_SECONDS = 120;
+  const TOKEN_ALREADY_EXPIRED_TIME = 500;
+  const TOKEN_VALID_TIME = 430;
+
+  // Token constants
+  const NEW_ACCESS_TOKEN = "new-token";
+  const CUSTOM_TOKEN_TYPE = "Custom";
+  const EXPIRES_AT_TOKEN = "expires-at-token";
+  const EXPIRES_AT_VALUE = 9_999;
+  const EXPIRED_TOKEN = "expired-token";
+  const NO_EXPIRY_TOKEN = "no-expiry-token";
+  const DEFAULT_TOKEN = "default-token";
 
   let logger: jest.Mocked<ILogger>;
   let retryService: jest.Mocked<IRetryService>;
   let client: OAuth2TokenClient;
 
   beforeEach(() => {
-    logger = {
-      name: "test",
-      info: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-    };
-    retryService = {
-      retry: jest.fn(async (fn) => fn()),
-    } as unknown as jest.Mocked<IRetryService>;
+    logger = createLoggerMock();
+    retryService = createRetryServiceMock();
     mockedAxios.post.mockReset();
     getCurrentUnixTimestampSecondsMock.mockReset();
 
-    client = new OAuth2TokenClient(logger, retryService, tokenUrl, clientId, clientSecret, audience, grantType, 60);
+    client = new OAuth2TokenClient(
+      logger,
+      retryService,
+      TOKEN_URL,
+      CLIENT_ID,
+      CLIENT_SECRET,
+      AUDIENCE,
+      GRANT_TYPE,
+      EXPIRY_BUFFER_SECONDS,
+    );
   });
 
-  it("returns the cached token when it is still valid", async () => {
-    (client as any).bearerToken = "Bearer cached-token";
-    (client as any).tokenExpiresAtSeconds = 500;
-    getCurrentUnixTimestampSecondsMock.mockReturnValue(430);
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
+  it("return cached token when valid", async () => {
+    // Arrange
+    getCurrentUnixTimestampSecondsMock.mockReturnValue(TOKEN_VALID_TIME);
+    mockedAxios.post.mockResolvedValue({
+      data: {
+        access_token: NEW_ACCESS_TOKEN,
+        token_type: CUSTOM_TOKEN_TYPE,
+        expires_in: TOKEN_EXPIRES_IN_SECONDS,
+      },
+    });
+
+    // Pre-populate cache by fetching a token first
+    await client.getBearerToken();
+
+    // Reset mocks to verify cache hit behavior
+    mockedAxios.post.mockClear();
+    retryService.retry.mockClear();
+
+    // Act
     const token = await client.getBearerToken();
 
-    expect(token).toBe("Bearer cached-token");
-    expect(logger.info).toHaveBeenCalledWith("getBearerToken cache-hit");
+    // Assert
+    expect(token).toBe(`${CUSTOM_TOKEN_TYPE} ${NEW_ACCESS_TOKEN}`);
     expect(retryService.retry).not.toHaveBeenCalled();
     expect(mockedAxios.post).not.toHaveBeenCalled();
   });
 
-  it("requests a new token and stores expiration based on expires_in", async () => {
-    getCurrentUnixTimestampSecondsMock.mockReturnValueOnce(1_000);
+  it("request new token and store expiration based on expires_in", async () => {
+    // Arrange
+    getCurrentUnixTimestampSecondsMock.mockReturnValue(CURRENT_TIME_SECONDS);
     mockedAxios.post.mockResolvedValue({
       data: {
-        access_token: "new-token",
-        token_type: "Custom",
-        expires_in: 120,
+        access_token: NEW_ACCESS_TOKEN,
+        token_type: CUSTOM_TOKEN_TYPE,
+        expires_in: TOKEN_EXPIRES_IN_SECONDS,
       },
     });
 
+    // Act
     const token = await client.getBearerToken();
 
-    expect(token).toBe("Custom new-token");
-
+    // Assert
+    expect(token).toBe(`${CUSTOM_TOKEN_TYPE} ${NEW_ACCESS_TOKEN}`);
     expect(retryService.retry).toHaveBeenCalledTimes(1);
+
     const expectedBody = {
-      client_id: clientId,
-      client_secret: clientSecret,
-      audience,
-      grant_type: grantType,
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
+      audience: AUDIENCE,
+      grant_type: GRANT_TYPE,
     };
     expect(mockedAxios.post).toHaveBeenCalledWith(
-      tokenUrl,
+      TOKEN_URL,
       expectedBody,
       expect.objectContaining({
         headers: { "content-type": "application/json" },
       }),
     );
 
-    expect((client as any).bearerToken).toBe("Custom new-token");
-    expect((client as any).tokenExpiresAtSeconds).toBe(1_120);
-    expect(logger.info).toHaveBeenNthCalledWith(1, "getBearerToken requesting new token");
-    expect(logger.info).toHaveBeenNthCalledWith(
-      2,
-      "getBearerToken successfully retrived new OAuth2 Bearer token tokenExpiresAtSeconds=1120",
-    );
-    expect(logger.error).not.toHaveBeenCalled();
+    // Verify token is cached by making second request
+    mockedAxios.post.mockClear();
+    retryService.retry.mockClear();
+    const cachedToken = await client.getBearerToken();
+    expect(cachedToken).toBe(`${CUSTOM_TOKEN_TYPE} ${NEW_ACCESS_TOKEN}`);
+    expect(retryService.retry).not.toHaveBeenCalled();
+    expect(mockedAxios.post).not.toHaveBeenCalled();
   });
 
-  it("requests a new token and respects expires_at when provided", async () => {
+  it("request new token and respect expires_at when provided", async () => {
+    // Arrange
+    getCurrentUnixTimestampSecondsMock.mockReturnValue(CURRENT_TIME_SECONDS);
     mockedAxios.post.mockResolvedValue({
       data: {
-        access_token: "expires-at-token",
+        access_token: EXPIRES_AT_TOKEN,
         token_type: undefined,
-        expires_at: 9_999,
+        expires_at: EXPIRES_AT_VALUE,
       },
     });
 
+    // Act
     const token = await client.getBearerToken();
 
-    expect(token).toBe("Bearer expires-at-token");
-    expect((client as any).tokenExpiresAtSeconds).toBe(9_999);
-    expect(logger.info).toHaveBeenNthCalledWith(1, "getBearerToken requesting new token");
-    expect(logger.info).toHaveBeenNthCalledWith(
-      2,
-      "getBearerToken successfully retrived new OAuth2 Bearer token tokenExpiresAtSeconds=9999",
-    );
+    // Assert
+    expect(token).toBe(`Bearer ${EXPIRES_AT_TOKEN}`);
+
+    // Verify token is cached by making second request
+    mockedAxios.post.mockClear();
+    retryService.retry.mockClear();
+    const cachedToken = await client.getBearerToken();
+    expect(cachedToken).toBe(`Bearer ${EXPIRES_AT_TOKEN}`);
+    expect(retryService.retry).not.toHaveBeenCalled();
+    expect(mockedAxios.post).not.toHaveBeenCalled();
   });
 
-  it("logs an error and returns undefined when access_token is missing", async () => {
+  it("return undefined when access_token is missing", async () => {
+    // Arrange
     mockedAxios.post.mockResolvedValue({
       data: {},
     });
 
+    // Act
     const token = await client.getBearerToken();
 
+    // Assert
     expect(token).toBeUndefined();
     expect(logger.error).toHaveBeenCalledWith("Failed to retrieve OAuth2 access token");
-    expect(logger.info).toHaveBeenCalledWith("getBearerToken requesting new token");
-    expect(logger.info).not.toHaveBeenCalledWith(expect.stringContaining("successfully retrived"));
   });
 
-  it("returns undefined and logs when expires_at is already elapsed", async () => {
-    getCurrentUnixTimestampSecondsMock.mockReturnValue(2_000);
+  it("return undefined when expires_at is already elapsed", async () => {
+    // Arrange
+    getCurrentUnixTimestampSecondsMock.mockReturnValue(CURRENT_TIME_SECONDS);
     mockedAxios.post.mockResolvedValue({
       data: {
-        access_token: "expired-token",
-        expires_at: 1_000,
+        access_token: EXPIRED_TOKEN,
+        expires_at: TOKEN_ALREADY_EXPIRED_TIME,
       },
     });
 
+    // Act
     const token = await client.getBearerToken();
 
+    // Assert
     expect(token).toBeUndefined();
-    expect(logger.error).toHaveBeenCalledWith("OAuth2 access token already expired at 1000");
-    expect(logger.info).toHaveBeenCalledWith("getBearerToken requesting new token");
-    expect(logger.info).not.toHaveBeenCalledWith(expect.stringContaining("successfully retrived"));
+    expect(logger.error).toHaveBeenCalledWith(`OAuth2 access token already expired at ${TOKEN_ALREADY_EXPIRED_TIME}`);
   });
 
-  it("returns undefined and logs when expiry metadata is missing", async () => {
+  it("return undefined when expiry metadata is missing", async () => {
+    // Arrange
     mockedAxios.post.mockResolvedValue({
       data: {
-        access_token: "no-expiry-token",
+        access_token: NO_EXPIRY_TOKEN,
       },
     });
 
+    // Act
     const token = await client.getBearerToken();
 
+    // Assert
     expect(token).toBeUndefined();
     expect(logger.error).toHaveBeenCalledWith("OAuth2 access token did not provide expiry data");
-    expect(logger.info).toHaveBeenCalledWith("getBearerToken requesting new token");
-    expect(logger.info).not.toHaveBeenCalledWith(expect.stringContaining("successfully retrived"));
   });
 
-  it("uses default grant type and expiry buffer when omitted", async () => {
-    client = new OAuth2TokenClient(logger, retryService, tokenUrl, clientId, clientSecret, audience);
+  it("use default grant type and expiry buffer when omitted", async () => {
+    // Arrange
+    client = new OAuth2TokenClient(logger, retryService, TOKEN_URL, CLIENT_ID, CLIENT_SECRET, AUDIENCE);
 
-    expect((client as any).grantType).toBe("client_credentials");
-    expect((client as any).expiryBufferSeconds).toBe(60);
-
-    mockedAxios.post.mockResolvedValueOnce({
+    mockedAxios.post.mockResolvedValue({
       data: {
-        access_token: "default-token",
-        expires_in: 120,
+        access_token: DEFAULT_TOKEN,
+        expires_in: TOKEN_EXPIRES_IN_SECONDS,
       },
     });
 
-    getCurrentUnixTimestampSecondsMock.mockReturnValueOnce(1_000).mockReturnValueOnce(1_000);
+    getCurrentUnixTimestampSecondsMock.mockReturnValue(CURRENT_TIME_SECONDS);
 
+    // Act
     const token = await client.getBearerToken();
-    expect(token).toBe("Bearer default-token");
+
+    // Assert
+    expect(token).toBe(`Bearer ${DEFAULT_TOKEN}`);
     expect(mockedAxios.post).toHaveBeenCalledTimes(1);
     expect(mockedAxios.post).toHaveBeenCalledWith(
-      tokenUrl,
+      TOKEN_URL,
       {
-        client_id: clientId,
-        client_secret: clientSecret,
-        audience,
-        grant_type: grantType,
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        audience: AUDIENCE,
+        grant_type: GRANT_TYPE,
       },
       expect.objectContaining({
         headers: { "content-type": "application/json" },

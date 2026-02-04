@@ -82,10 +82,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 #v3.6.0
-        with:
-          platforms: 'arm64,arm'
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1
       - name: Show the "version" build argument
@@ -107,6 +103,11 @@ jobs:
           load: true
           push: false
           tags: ${{ env.IMAGE_NAME }}:${{ env.COMMIT_TAG }}
+          cache-from: |
+            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-amd64,platform=linux/amd64
+          cache-to: |
+            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-amd64,mode=max,platform=linux/amd64
+            type=inline
           build-args: |
             NODE_VERSION=${{ steps.get-node-version.outputs.node-version }}
       - name: Save Docker image as artifact
@@ -126,14 +127,13 @@ jobs:
         with:
           context: ./
           file: ./native-yield-operations/automation-service/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: ${{ env.TAGS }}
           cache-from: |
             type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-amd64,platform=linux/amd64
-            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-arm64,platform=linux/arm64
           cache-to: |
             type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-amd64,mode=max,platform=linux/amd64
-            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-arm64,mode=max,platform=linux/arm64
+            type=inline
           build-args: |
             NODE_VERSION=${{ steps.get-node-version.outputs.node-version }}

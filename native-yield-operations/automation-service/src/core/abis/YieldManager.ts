@@ -1,305 +1,104 @@
 export const YieldManagerABI = [
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_l1MessageService",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "_l1MessageService", type: "address" }],
     stateMutability: "nonpayable",
     type: "constructor",
   },
-  {
-    inputs: [],
-    name: "AlreadyOssified",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "BpsMoreThan10000",
-    type: "error",
-  },
+  { inputs: [], name: "AlreadyOssified", type: "error" },
+  { inputs: [], name: "ArrayLengthsDoNotMatch", type: "error" },
+  { inputs: [], name: "BpsMoreThan10000", type: "error" },
   {
     inputs: [
-      {
-        internalType: "bytes32",
-        name: "role1",
-        type: "bytes32",
-      },
-      {
-        internalType: "bytes32",
-        name: "role2",
-        type: "bytes32",
-      },
+      { internalType: "bytes32", name: "role1", type: "bytes32" },
+      { internalType: "bytes32", name: "role2", type: "bytes32" },
     ],
     name: "CallerMissingRole",
     type: "error",
   },
+  { inputs: [], name: "CallerNotProxyAdmin", type: "error" },
+  { inputs: [], name: "DelegateCallFailed", type: "error" },
+  { inputs: [], name: "InsufficientWithdrawalReserve", type: "error" },
   {
-    inputs: [],
-    name: "DelegateCallFailed",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "InsufficientWithdrawalReserve",
-    type: "error",
-  },
-  {
-    inputs: [
-      {
-        internalType: "enum IPauseManager.PauseType",
-        name: "pauseType",
-        type: "uint8",
-      },
-    ],
+    inputs: [{ internalType: "enum IPauseManager.PauseType", name: "pauseType", type: "uint8" }],
     name: "IsNotPaused",
     type: "error",
   },
   {
-    inputs: [
-      {
-        internalType: "enum IPauseManager.PauseType",
-        name: "pauseType",
-        type: "uint8",
-      },
-    ],
+    inputs: [{ internalType: "enum IPauseManager.PauseType", name: "pauseType", type: "uint8" }],
     name: "IsPaused",
     type: "error",
   },
+  { inputs: [], name: "L2YieldRecipientAlreadyAdded", type: "error" },
+  { inputs: [], name: "LSTWithdrawalExceedsYieldProviderFunds", type: "error" },
+  { inputs: [], name: "LSTWithdrawalNotAllowed", type: "error" },
+  { inputs: [], name: "NoAvailableFundsToReplenishWithdrawalReserve", type: "error" },
+  { inputs: [], name: "NoEthSent", type: "error" },
+  { inputs: [], name: "OssificationAlreadyInitiated", type: "error" },
+  { inputs: [], name: "OssificationNotInitiated", type: "error" },
+  { inputs: [], name: "PauseTypeNotUsed", type: "error" },
+  { inputs: [], name: "PermissionlessUnstakeRequestPlusAvailableFundsExceedsTargetDeficit", type: "error" },
+  { inputs: [], name: "RolesNotDifferent", type: "error" },
+  { inputs: [], name: "SenderNotL1MessageService", type: "error" },
+  { inputs: [], name: "StakingAlreadyPaused", type: "error" },
+  { inputs: [], name: "StakingAlreadyUnpaused", type: "error" },
+  { inputs: [], name: "TargetReserveAmountMustBeAboveMinimum", type: "error" },
+  { inputs: [], name: "TargetReservePercentageMustBeAboveMinimum", type: "error" },
+  { inputs: [], name: "UnknownL2YieldRecipient", type: "error" },
+  { inputs: [], name: "UnknownYieldProvider", type: "error" },
+  { inputs: [], name: "UnpauseStakingForbiddenDuringPendingOssification", type: "error" },
+  { inputs: [], name: "UnpauseStakingForbiddenWithCurrentLSTLiability", type: "error" },
+  { inputs: [], name: "WithdrawalReserveNotInDeficit", type: "error" },
+  { inputs: [], name: "YieldProviderAlreadyAdded", type: "error" },
   {
-    inputs: [],
-    name: "L2YieldRecipientAlreadyAdded",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "LSTWithdrawalExceedsYieldProviderFunds",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "LSTWithdrawalNotAllowed",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "NoAvailableFundsToReplenishWithdrawalReserve",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "OssificationNotInitiated",
-    type: "error",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "expiryEnd",
-        type: "uint256",
-      },
-    ],
-    name: "PauseNotExpired",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "PauseTypeNotUsed",
-    type: "error",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "cooldownEnd",
-        type: "uint256",
-      },
-    ],
-    name: "PauseUnavailableDueToCooldown",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "PermissionlessUnstakeRequestPlusAvailableFundsExceedsTargetDeficit",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "RolesNotDifferent",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "SenderNotL1MessageService",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "StakingAlreadyPaused",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "StakingAlreadyUnpaused",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "TargetReserveAmountMustBeAboveMinimum",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "TargetReservePercentageMustBeAboveMinimum",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "UnknownL2YieldRecipient",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "UnknownYieldProvider",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "UnpauseStakingForbiddenDuringPendingOssification",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "UnpauseStakingForbiddenWithCurrentLSTLiability",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "WithdrawalReserveNotInDeficit",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "YieldProviderAlreadyAdded",
-    type: "error",
-  },
-  {
-    inputs: [],
+    inputs: [{ internalType: "uint256", name: "remainingUserFunds", type: "uint256" }],
     name: "YieldProviderHasRemainingFunds",
     type: "error",
   },
-  {
-    inputs: [],
-    name: "YieldProviderHasRemainingNegativeYield",
-    type: "error",
-  },
+  { inputs: [], name: "YieldProviderHasRemainingNegativeYield", type: "error" },
   {
     inputs: [
-      {
-        internalType: "uint256",
-        name: "index",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "count",
-        type: "uint256",
-      },
+      { internalType: "uint256", name: "index", type: "uint256" },
+      { internalType: "uint256", name: "count", type: "uint256" },
     ],
     name: "YieldProviderIndexOutOfBounds",
     type: "error",
   },
-  {
-    inputs: [],
-    name: "ZeroAddressNotAllowed",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "ZeroHashNotAllowed",
-    type: "error",
-  },
+  { inputs: [], name: "YieldProviderReturnedZeroUnstakeAmount", type: "error" },
+  { inputs: [], name: "ZeroAddressNotAllowed", type: "error" },
+  { inputs: [], name: "ZeroHashNotAllowed", type: "error" },
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "yieldProvider",
-        type: "address",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
+      { indexed: true, internalType: "address", name: "yieldProvider", type: "address" },
+      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
     ],
     name: "DonationProcessed",
     type: "event",
   },
   {
     anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: "uint8",
-        name: "version",
-        type: "uint8",
-      },
-    ],
+    inputs: [{ indexed: false, internalType: "uint8", name: "version", type: "uint8" }],
     name: "Initialized",
     type: "event",
   },
   {
     anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: "address",
-        name: "l2YieldRecipient",
-        type: "address",
-      },
-    ],
+    inputs: [{ indexed: false, internalType: "address", name: "l2YieldRecipient", type: "address" }],
     name: "L2YieldRecipientAdded",
     type: "event",
   },
   {
     anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: "address",
-        name: "l2YieldRecipient",
-        type: "address",
-      },
-    ],
+    inputs: [{ indexed: false, internalType: "address", name: "l2YieldRecipient", type: "address" }],
     name: "L2YieldRecipientRemoved",
     type: "event",
   },
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "yieldProvider",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "recipient",
-        type: "address",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
+      { indexed: true, internalType: "address", name: "yieldProvider", type: "address" },
+      { indexed: true, internalType: "address", name: "recipient", type: "address" },
+      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
     ],
     name: "LSTMinted",
     type: "event",
@@ -307,30 +106,10 @@ export const YieldManagerABI = [
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "yieldProvider",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "l2YieldRecipient",
-        type: "address",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "yieldAmount",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "outstandingNegativeYield",
-        type: "uint256",
-      },
+      { indexed: true, internalType: "address", name: "yieldProvider", type: "address" },
+      { indexed: true, internalType: "address", name: "l2YieldRecipient", type: "address" },
+      { indexed: false, internalType: "uint256", name: "yieldAmount", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "outstandingNegativeYield", type: "uint256" },
     ],
     name: "NativeYieldReported",
     type: "event",
@@ -338,18 +117,8 @@ export const YieldManagerABI = [
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: true,
-        internalType: "enum IPauseManager.PauseType",
-        name: "pauseType",
-        type: "uint8",
-      },
-      {
-        indexed: true,
-        internalType: "bytes32",
-        name: "role",
-        type: "bytes32",
-      },
+      { indexed: true, internalType: "enum IPauseManager.PauseType", name: "pauseType", type: "uint8" },
+      { indexed: true, internalType: "bytes32", name: "role", type: "bytes32" },
     ],
     name: "PauseTypeRoleSet",
     type: "event",
@@ -357,24 +126,9 @@ export const YieldManagerABI = [
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: true,
-        internalType: "enum IPauseManager.PauseType",
-        name: "pauseType",
-        type: "uint8",
-      },
-      {
-        indexed: true,
-        internalType: "bytes32",
-        name: "role",
-        type: "bytes32",
-      },
-      {
-        indexed: true,
-        internalType: "bytes32",
-        name: "previousRole",
-        type: "bytes32",
-      },
+      { indexed: true, internalType: "enum IPauseManager.PauseType", name: "pauseType", type: "uint8" },
+      { indexed: true, internalType: "bytes32", name: "role", type: "bytes32" },
+      { indexed: true, internalType: "bytes32", name: "previousRole", type: "bytes32" },
     ],
     name: "PauseTypeRoleUpdated",
     type: "event",
@@ -382,56 +136,24 @@ export const YieldManagerABI = [
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: false,
-        internalType: "address",
-        name: "messageSender",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "enum IPauseManager.PauseType",
-        name: "pauseType",
-        type: "uint8",
-      },
+      { indexed: false, internalType: "address", name: "messageSender", type: "address" },
+      { indexed: true, internalType: "enum IPauseManager.PauseType", name: "pauseType", type: "uint8" },
     ],
     name: "Paused",
     type: "event",
   },
   {
     anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
-    ],
+    inputs: [{ indexed: false, internalType: "uint256", name: "amount", type: "uint256" }],
     name: "ReserveFundsReceived",
     type: "event",
   },
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: true,
-        internalType: "bytes32",
-        name: "role",
-        type: "bytes32",
-      },
-      {
-        indexed: true,
-        internalType: "bytes32",
-        name: "previousAdminRole",
-        type: "bytes32",
-      },
-      {
-        indexed: true,
-        internalType: "bytes32",
-        name: "newAdminRole",
-        type: "bytes32",
-      },
+      { indexed: true, internalType: "bytes32", name: "role", type: "bytes32" },
+      { indexed: true, internalType: "bytes32", name: "previousAdminRole", type: "bytes32" },
+      { indexed: true, internalType: "bytes32", name: "newAdminRole", type: "bytes32" },
     ],
     name: "RoleAdminChanged",
     type: "event",
@@ -439,24 +161,9 @@ export const YieldManagerABI = [
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: true,
-        internalType: "bytes32",
-        name: "role",
-        type: "bytes32",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "account",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "sender",
-        type: "address",
-      },
+      { indexed: true, internalType: "bytes32", name: "role", type: "bytes32" },
+      { indexed: true, internalType: "address", name: "account", type: "address" },
+      { indexed: true, internalType: "address", name: "sender", type: "address" },
     ],
     name: "RoleGranted",
     type: "event",
@@ -464,24 +171,9 @@ export const YieldManagerABI = [
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: true,
-        internalType: "bytes32",
-        name: "role",
-        type: "bytes32",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "account",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "sender",
-        type: "address",
-      },
+      { indexed: true, internalType: "bytes32", name: "role", type: "bytes32" },
+      { indexed: true, internalType: "address", name: "account", type: "address" },
+      { indexed: true, internalType: "address", name: "sender", type: "address" },
     ],
     name: "RoleRevoked",
     type: "event",
@@ -489,18 +181,8 @@ export const YieldManagerABI = [
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: true,
-        internalType: "enum IPauseManager.PauseType",
-        name: "unPauseType",
-        type: "uint8",
-      },
-      {
-        indexed: true,
-        internalType: "bytes32",
-        name: "role",
-        type: "bytes32",
-      },
+      { indexed: true, internalType: "enum IPauseManager.PauseType", name: "unPauseType", type: "uint8" },
+      { indexed: true, internalType: "bytes32", name: "role", type: "bytes32" },
     ],
     name: "UnPauseTypeRoleSet",
     type: "event",
@@ -508,24 +190,9 @@ export const YieldManagerABI = [
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: true,
-        internalType: "enum IPauseManager.PauseType",
-        name: "unPauseType",
-        type: "uint8",
-      },
-      {
-        indexed: true,
-        internalType: "bytes32",
-        name: "role",
-        type: "bytes32",
-      },
-      {
-        indexed: true,
-        internalType: "bytes32",
-        name: "previousRole",
-        type: "bytes32",
-      },
+      { indexed: true, internalType: "enum IPauseManager.PauseType", name: "unPauseType", type: "uint8" },
+      { indexed: true, internalType: "bytes32", name: "role", type: "bytes32" },
+      { indexed: true, internalType: "bytes32", name: "previousRole", type: "bytes32" },
     ],
     name: "UnPauseTypeRoleUpdated",
     type: "event",
@@ -533,18 +200,8 @@ export const YieldManagerABI = [
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: false,
-        internalType: "address",
-        name: "messageSender",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "enum IPauseManager.PauseType",
-        name: "pauseType",
-        type: "uint8",
-      },
+      { indexed: false, internalType: "address", name: "messageSender", type: "address" },
+      { indexed: true, internalType: "enum IPauseManager.PauseType", name: "pauseType", type: "uint8" },
     ],
     name: "UnPaused",
     type: "event",
@@ -552,55 +209,10 @@ export const YieldManagerABI = [
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: false,
-        internalType: "enum IPauseManager.PauseType",
-        name: "pauseType",
-        type: "uint8",
-      },
-    ],
-    name: "UnPausedDueToExpiry",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "yieldProvider",
-        type: "address",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "requestedAmount",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "reserveIncrementAmount",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "fromYieldManager",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "fromYieldProvider",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "lstPrincipalPaid",
-        type: "uint256",
-      },
+      { indexed: true, internalType: "address", name: "yieldProvider", type: "address" },
+      { indexed: false, internalType: "uint256", name: "reserveIncrementAmount", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "fromYieldManager", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "fromYieldProvider", type: "uint256" },
     ],
     name: "WithdrawalReserveAugmented",
     type: "event",
@@ -608,54 +220,14 @@ export const YieldManagerABI = [
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "oldMinimumWithdrawalReservePercentageBps",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "newMinimumWithdrawalReservePercentageBps",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "oldMinimumWithdrawalReserveAmount",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "newMinimumWithdrawalReserveAmount",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "oldTargetWithdrawalReservePercentageBps",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "newTargetWithdrawalReservePercentageBps",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "oldTargetWithdrawalReserveAmount",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "newTargetWithdrawalReserveAmount",
-        type: "uint256",
-      },
+      { indexed: false, internalType: "uint256", name: "oldMinimumWithdrawalReservePercentageBps", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "oldMinimumWithdrawalReserveAmount", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "oldTargetWithdrawalReservePercentageBps", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "oldTargetWithdrawalReserveAmount", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "newMinimumWithdrawalReservePercentageBps", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "newMinimumWithdrawalReserveAmount", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "newTargetWithdrawalReservePercentageBps", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "newTargetWithdrawalReserveAmount", type: "uint256" },
     ],
     name: "WithdrawalReserveParametersSet",
     type: "event",
@@ -663,67 +235,34 @@ export const YieldManagerABI = [
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "yieldProvider",
-        type: "address",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "targetDeficit",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "reserveIncrementAmount",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "fromYieldManager",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "fromYieldProvider",
-        type: "uint256",
-      },
+      { indexed: true, internalType: "address", name: "yieldProvider", type: "address" },
+      { indexed: false, internalType: "uint256", name: "targetDeficit", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "reserveIncrementAmount", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "fromYieldManager", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "fromYieldProvider", type: "uint256" },
     ],
     name: "WithdrawalReserveReplenished",
     type: "event",
   },
   {
     anonymous: false,
+    inputs: [{ indexed: false, internalType: "address", name: "l1MessageService", type: "address" }],
+    name: "YieldManagerDeployed",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [{ indexed: false, internalType: "address[]", name: "initialL2YieldRecipients", type: "address[]" }],
+    name: "YieldManagerInitialized",
+    type: "event",
+  },
+  {
+    anonymous: false,
     inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "yieldProvider",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "enum YieldManagerStorageLayout.YieldProviderVendor",
-        name: "yieldProviderVendor",
-        type: "uint8",
-      },
-      {
-        indexed: false,
-        internalType: "address",
-        name: "primaryEntrypoint",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "ossifiedEntrypoint",
-        type: "address",
-      },
+      { indexed: true, internalType: "address", name: "yieldProvider", type: "address" },
+      { indexed: true, internalType: "enum YieldProviderVendor", name: "yieldProviderVendor", type: "uint8" },
+      { indexed: false, internalType: "address", name: "primaryEntrypoint", type: "address" },
+      { indexed: true, internalType: "address", name: "ossifiedEntrypoint", type: "address" },
     ],
     name: "YieldProviderAdded",
     type: "event",
@@ -731,59 +270,25 @@ export const YieldManagerABI = [
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "yieldProvider",
-        type: "address",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "userFundsIncrement",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "lstPrincipalRepaid",
-        type: "uint256",
-      },
+      { indexed: true, internalType: "address", name: "yieldProvider", type: "address" },
+      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
     ],
     name: "YieldProviderFunded",
     type: "event",
   },
   {
     anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "yieldProvider",
-        type: "address",
-      },
-    ],
+    inputs: [{ indexed: true, internalType: "address", name: "yieldProvider", type: "address" }],
     name: "YieldProviderOssificationInitiated",
     type: "event",
   },
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "yieldProvider",
-        type: "address",
-      },
+      { indexed: true, internalType: "address", name: "yieldProvider", type: "address" },
       {
         indexed: false,
-        internalType: "enum IYieldProvider.ProgressOssificationResult",
+        internalType: "enum ProgressOssificationResult",
         name: "progressOssificationResult",
         type: "uint8",
       },
@@ -794,431 +299,197 @@ export const YieldManagerABI = [
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "yieldProvider",
-        type: "address",
-      },
-      {
-        indexed: false,
-        internalType: "bool",
-        name: "emergencyRemoval",
-        type: "bool",
-      },
+      { indexed: true, internalType: "address", name: "yieldProvider", type: "address" },
+      { indexed: false, internalType: "bool", name: "emergencyRemoval", type: "bool" },
     ],
     name: "YieldProviderRemoved",
     type: "event",
   },
   {
     anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "yieldProvider",
-        type: "address",
-      },
-    ],
+    inputs: [{ indexed: true, internalType: "address", name: "yieldProvider", type: "address" }],
     name: "YieldProviderStakingPaused",
     type: "event",
   },
   {
     anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "yieldProvider",
-        type: "address",
-      },
-    ],
+    inputs: [{ indexed: true, internalType: "address", name: "yieldProvider", type: "address" }],
     name: "YieldProviderStakingUnpaused",
     type: "event",
   },
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "yieldProvider",
-        type: "address",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "amountRequested",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "amountWithdrawn",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "reserveIncrementAmount",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "lstPrincipalPaid",
-        type: "uint256",
-      },
+      { indexed: true, internalType: "address", name: "yieldProvider", type: "address" },
+      { indexed: false, internalType: "uint256", name: "amountWithdrawn", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "reserveIncrementAmount", type: "uint256" },
     ],
     name: "YieldProviderWithdrawal",
     type: "event",
   },
   {
     inputs: [],
-    name: "COOLDOWN_DURATION",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
     name: "DEFAULT_ADMIN_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "L1_MESSAGE_SERVICE",
-    outputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-    ],
+    outputs: [{ internalType: "address", name: "", type: "address" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "OSSIFICATION_INITIATOR_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "OSSIFICATION_PROCESSOR_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "PAUSE_ALL_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "PAUSE_DURATION",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "PAUSE_NATIVE_YIELD_DONATION_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "PAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "PAUSE_NATIVE_YIELD_REPORTING_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "PAUSE_NATIVE_YIELD_STAKING_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "PAUSE_NATIVE_YIELD_UNSTAKING_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "SECURITY_COUNCIL_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "SET_L2_YIELD_RECIPIENT_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "SET_YIELD_PROVIDER_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "STAKING_PAUSE_CONTROLLER_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "UNPAUSE_ALL_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "UNPAUSE_NATIVE_YIELD_DONATION_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "UNPAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "UNPAUSE_NATIVE_YIELD_REPORTING_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "UNPAUSE_NATIVE_YIELD_STAKING_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "UNPAUSE_NATIVE_YIELD_UNSTAKING_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "WITHDRAWAL_RESERVE_SETTER_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "YIELD_PROVIDER_STAKING_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "YIELD_PROVIDER_UNSTAKER_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "YIELD_REPORTER_ROLE",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_l2YieldRecipient",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "_l2YieldRecipient", type: "address" }],
     name: "addL2YieldRecipient",
     outputs: [],
     stateMutability: "nonpayable",
@@ -1226,69 +497,8 @@ export const YieldManagerABI = [
   },
   {
     inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "_amount",
-        type: "uint256",
-      },
-    ],
-    name: "addToWithdrawalReserve",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "_amount",
-        type: "uint256",
-      },
-    ],
-    name: "safeAddToWithdrawalReserve",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-      {
-        components: [
-          {
-            internalType: "enum YieldManagerStorageLayout.YieldProviderVendor",
-            name: "yieldProviderVendor",
-            type: "uint8",
-          },
-          {
-            internalType: "address",
-            name: "primaryEntrypoint",
-            type: "address",
-          },
-          {
-            internalType: "address",
-            name: "ossifiedEntrypoint",
-            type: "address",
-          },
-        ],
-        internalType: "struct YieldManagerStorageLayout.YieldProviderRegistration",
-        name: "_registration",
-        type: "tuple",
-      },
+      { internalType: "address", name: "_yieldProvider", type: "address" },
+      { internalType: "bytes", name: "_vendorInitializationData", type: "bytes" },
     ],
     name: "addYieldProvider",
     outputs: [],
@@ -1297,11 +507,8 @@ export const YieldManagerABI = [
   },
   {
     inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
+      { internalType: "address", name: "_yieldProvider", type: "address" },
+      { internalType: "bytes", name: "_vendorExitData", type: "bytes" },
     ],
     name: "emergencyRemoveYieldProvider",
     outputs: [],
@@ -1310,16 +517,8 @@ export const YieldManagerABI = [
   },
   {
     inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "_amount",
-        type: "uint256",
-      },
+      { internalType: "address", name: "_yieldProvider", type: "address" },
+      { internalType: "uint256", name: "_amount", type: "uint256" },
     ],
     name: "fundYieldProvider",
     outputs: [],
@@ -1329,149 +528,62 @@ export const YieldManagerABI = [
   {
     inputs: [],
     name: "getEffectiveMinimumWithdrawalReserve",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "minimumWithdrawalReserve",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "minimumWithdrawalReserve", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "getEffectiveTargetWithdrawalReserve",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "targetWithdrawalReserve",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "targetWithdrawalReserve", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "getMinimumReserveDeficit",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "minimumReserveDeficit",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "minimumReserveDeficit", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "bytes32",
-        name: "role",
-        type: "bytes32",
-      },
-    ],
+    inputs: [{ internalType: "bytes32", name: "role", type: "bytes32" }],
     name: "getRoleAdmin",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "getTargetReserveDeficit",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "targetReserveDeficit",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "targetReserveDeficit", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "getTotalSystemBalance",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "totalSystemBalance",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "totalSystemBalance", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "_yieldProvider", type: "address" }],
     name: "getYieldProviderData",
     outputs: [
       {
         components: [
-          {
-            internalType: "enum YieldManagerStorageLayout.YieldProviderVendor",
-            name: "yieldProviderVendor",
-            type: "uint8",
-          },
-          {
-            internalType: "bool",
-            name: "isStakingPaused",
-            type: "bool",
-          },
-          {
-            internalType: "bool",
-            name: "isOssificationInitiated",
-            type: "bool",
-          },
-          {
-            internalType: "bool",
-            name: "isOssified",
-            type: "bool",
-          },
-          {
-            internalType: "address",
-            name: "primaryEntrypoint",
-            type: "address",
-          },
-          {
-            internalType: "address",
-            name: "ossifiedEntrypoint",
-            type: "address",
-          },
-          {
-            internalType: "uint96",
-            name: "yieldProviderIndex",
-            type: "uint96",
-          },
-          {
-            internalType: "uint256",
-            name: "userFunds",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "yieldReportedCumulative",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "lstLiabilityPrincipal",
-            type: "uint256",
-          },
+          { internalType: "enum YieldProviderVendor", name: "yieldProviderVendor", type: "uint8" },
+          { internalType: "bool", name: "isStakingPaused", type: "bool" },
+          { internalType: "bool", name: "isOssificationInitiated", type: "bool" },
+          { internalType: "bool", name: "isOssified", type: "bool" },
+          { internalType: "address", name: "primaryEntrypoint", type: "address" },
+          { internalType: "address", name: "ossifiedEntrypoint", type: "address" },
+          { internalType: "uint96", name: "yieldProviderIndex", type: "uint96" },
+          { internalType: "uint256", name: "userFunds", type: "uint256" },
+          { internalType: "uint256", name: "yieldReportedCumulative", type: "uint256" },
+          { internalType: "uint256", name: "lstLiabilityPrincipal", type: "uint256" },
+          { internalType: "uint256", name: "lastReportedNegativeYield", type: "uint256" },
         ],
         internalType: "struct YieldManagerStorageLayout.YieldProviderStorage",
         name: "yieldProviderData",
@@ -1483,16 +595,8 @@ export const YieldManagerABI = [
   },
   {
     inputs: [
-      {
-        internalType: "bytes32",
-        name: "role",
-        type: "bytes32",
-      },
-      {
-        internalType: "address",
-        name: "account",
-        type: "address",
-      },
+      { internalType: "bytes32", name: "role", type: "bytes32" },
+      { internalType: "address", name: "account", type: "address" },
     ],
     name: "grantRole",
     outputs: [],
@@ -1501,25 +605,11 @@ export const YieldManagerABI = [
   },
   {
     inputs: [
-      {
-        internalType: "bytes32",
-        name: "role",
-        type: "bytes32",
-      },
-      {
-        internalType: "address",
-        name: "account",
-        type: "address",
-      },
+      { internalType: "bytes32", name: "role", type: "bytes32" },
+      { internalType: "address", name: "account", type: "address" },
     ],
     name: "hasRole",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
     stateMutability: "view",
     type: "function",
   },
@@ -1529,16 +619,8 @@ export const YieldManagerABI = [
         components: [
           {
             components: [
-              {
-                internalType: "enum IPauseManager.PauseType",
-                name: "pauseType",
-                type: "uint8",
-              },
-              {
-                internalType: "bytes32",
-                name: "role",
-                type: "bytes32",
-              },
+              { internalType: "enum IPauseManager.PauseType", name: "pauseType", type: "uint8" },
+              { internalType: "bytes32", name: "role", type: "bytes32" },
             ],
             internalType: "struct IPauseManager.PauseTypeRole[]",
             name: "pauseTypeRoles",
@@ -1546,16 +628,8 @@ export const YieldManagerABI = [
           },
           {
             components: [
-              {
-                internalType: "enum IPauseManager.PauseType",
-                name: "pauseType",
-                type: "uint8",
-              },
-              {
-                internalType: "bytes32",
-                name: "role",
-                type: "bytes32",
-              },
+              { internalType: "enum IPauseManager.PauseType", name: "pauseType", type: "uint8" },
+              { internalType: "bytes32", name: "role", type: "bytes32" },
             ],
             internalType: "struct IPauseManager.PauseTypeRole[]",
             name: "unpauseTypeRoles",
@@ -1563,51 +637,19 @@ export const YieldManagerABI = [
           },
           {
             components: [
-              {
-                internalType: "address",
-                name: "addressWithRole",
-                type: "address",
-              },
-              {
-                internalType: "bytes32",
-                name: "role",
-                type: "bytes32",
-              },
+              { internalType: "address", name: "addressWithRole", type: "address" },
+              { internalType: "bytes32", name: "role", type: "bytes32" },
             ],
             internalType: "struct IPermissionsManager.RoleAddress[]",
             name: "roleAddresses",
             type: "tuple[]",
           },
-          {
-            internalType: "address[]",
-            name: "initialL2YieldRecipients",
-            type: "address[]",
-          },
-          {
-            internalType: "address",
-            name: "defaultAdmin",
-            type: "address",
-          },
-          {
-            internalType: "uint16",
-            name: "initialMinimumWithdrawalReservePercentageBps",
-            type: "uint16",
-          },
-          {
-            internalType: "uint16",
-            name: "initialTargetWithdrawalReservePercentageBps",
-            type: "uint16",
-          },
-          {
-            internalType: "uint256",
-            name: "initialMinimumWithdrawalReserveAmount",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "initialTargetWithdrawalReserveAmount",
-            type: "uint256",
-          },
+          { internalType: "address[]", name: "initialL2YieldRecipients", type: "address[]" },
+          { internalType: "address", name: "defaultAdmin", type: "address" },
+          { internalType: "uint16", name: "initialMinimumWithdrawalReservePercentageBps", type: "uint16" },
+          { internalType: "uint16", name: "initialTargetWithdrawalReservePercentageBps", type: "uint16" },
+          { internalType: "uint256", name: "initialMinimumWithdrawalReserveAmount", type: "uint256" },
+          { internalType: "uint256", name: "initialTargetWithdrawalReserveAmount", type: "uint256" },
         ],
         internalType: "struct IYieldManager.YieldManagerInitializationData",
         name: "_initializationData",
@@ -1620,257 +662,113 @@ export const YieldManagerABI = [
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "_yieldProvider", type: "address" }],
     name: "initiateOssification",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_l2YieldRecipient",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "_l2YieldRecipient", type: "address" }],
     name: "isL2YieldRecipientKnown",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "_yieldProvider", type: "address" }],
     name: "isOssificationInitiated",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "isInitiated",
-        type: "bool",
-      },
-    ],
+    outputs: [{ internalType: "bool", name: "isInitiated", type: "bool" }],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "_yieldProvider", type: "address" }],
     name: "isOssified",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "enum IPauseManager.PauseType",
-        name: "_pauseType",
-        type: "uint8",
-      },
-    ],
+    inputs: [{ internalType: "enum IPauseManager.PauseType", name: "_pauseType", type: "uint8" }],
     name: "isPaused",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "pauseTypeIsPaused",
-        type: "bool",
-      },
-    ],
+    outputs: [{ internalType: "bool", name: "pauseTypeIsPaused", type: "bool" }],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "_yieldProvider", type: "address" }],
     name: "isStakingPaused",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "isPaused",
-        type: "bool",
-      },
-    ],
+    outputs: [{ internalType: "bool", name: "isPaused", type: "bool" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "isWithdrawalReserveBelowMinimum",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "_yieldProvider", type: "address" }],
     name: "isYieldProviderKnown",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "minimumWithdrawalReserveAmount",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "minimumWithdrawalReservePercentageBps",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "enum IPauseManager.PauseType",
-        name: "_pauseType",
-        type: "uint8",
-      },
-    ],
+    inputs: [{ internalType: "enum IPauseManager.PauseType", name: "_pauseType", type: "uint8" }],
     name: "pauseByType",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
   },
   {
-    inputs: [],
-    name: "pauseExpiryTimestamp",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "_yieldProvider", type: "address" }],
     name: "pauseStaking",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
   },
   {
-    inputs: [],
-    name: "pendingPermissionlessUnstake",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "pendingUnstake",
-        type: "uint256",
-      },
-    ],
+    inputs: [{ internalType: "bytes32", name: "pauseType", type: "bytes32" }],
+    name: "pauseTypeStatuses",
+    outputs: [{ internalType: "bool", name: "pauseStatus", type: "bool" }],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-    ],
+    inputs: [],
+    name: "pendingPermissionlessUnstake",
+    outputs: [{ internalType: "uint256", name: "pendingUnstake", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "_yieldProvider", type: "address" }],
     name: "progressPendingOssification",
-    outputs: [
-      {
-        internalType: "enum IYieldProvider.ProgressOssificationResult",
-        name: "progressOssificationResult",
-        type: "uint8",
-      },
-    ],
+    outputs: [{ internalType: "enum ProgressOssificationResult", name: "progressOssificationResult", type: "uint8" }],
     stateMutability: "nonpayable",
     type: "function",
   },
+  { inputs: [], name: "receiveFundsFromReserve", outputs: [], stateMutability: "payable", type: "function" },
   {
-    inputs: [],
-    name: "receiveFundsFromReserve",
-    outputs: [],
-    stateMutability: "payable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_l2YieldRecipient",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "_l2YieldRecipient", type: "address" }],
     name: "removeL2YieldRecipient",
     outputs: [],
     stateMutability: "nonpayable",
@@ -1878,11 +776,8 @@ export const YieldManagerABI = [
   },
   {
     inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
+      { internalType: "address", name: "_yieldProvider", type: "address" },
+      { internalType: "bytes", name: "_vendorExitData", type: "bytes" },
     ],
     name: "removeYieldProvider",
     outputs: [],
@@ -1891,16 +786,8 @@ export const YieldManagerABI = [
   },
   {
     inputs: [
-      {
-        internalType: "bytes32",
-        name: "role",
-        type: "bytes32",
-      },
-      {
-        internalType: "address",
-        name: "account",
-        type: "address",
-      },
+      { internalType: "bytes32", name: "role", type: "bytes32" },
+      { internalType: "address", name: "account", type: "address" },
     ],
     name: "renounceRole",
     outputs: [],
@@ -1908,13 +795,7 @@ export const YieldManagerABI = [
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "_yieldProvider", type: "address" }],
     name: "replenishWithdrawalReserve",
     outputs: [],
     stateMutability: "nonpayable",
@@ -1922,45 +803,21 @@ export const YieldManagerABI = [
   },
   {
     inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-      {
-        internalType: "address",
-        name: "_l2YieldRecipient",
-        type: "address",
-      },
+      { internalType: "address", name: "_yieldProvider", type: "address" },
+      { internalType: "address", name: "_l2YieldRecipient", type: "address" },
     ],
     name: "reportYield",
     outputs: [
-      {
-        internalType: "uint256",
-        name: "newReportedYield",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "outstandingNegativeYield",
-        type: "uint256",
-      },
+      { internalType: "uint256", name: "newReportedYield", type: "uint256" },
+      { internalType: "uint256", name: "outstandingNegativeYield", type: "uint256" },
     ],
     stateMutability: "nonpayable",
     type: "function",
   },
   {
     inputs: [
-      {
-        internalType: "bytes32",
-        name: "role",
-        type: "bytes32",
-      },
-      {
-        internalType: "address",
-        name: "account",
-        type: "address",
-      },
+      { internalType: "bytes32", name: "role", type: "bytes32" },
+      { internalType: "address", name: "account", type: "address" },
     ],
     name: "revokeRole",
     outputs: [],
@@ -1969,28 +826,32 @@ export const YieldManagerABI = [
   },
   {
     inputs: [
+      { internalType: "address", name: "_yieldProvider", type: "address" },
+      { internalType: "uint256", name: "_amount", type: "uint256" },
+    ],
+    name: "safeAddToWithdrawalReserve",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "_yieldProvider", type: "address" },
+      { internalType: "uint256", name: "_amount", type: "uint256" },
+    ],
+    name: "safeWithdrawFromYieldProvider",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
       {
         components: [
-          {
-            internalType: "uint16",
-            name: "minimumWithdrawalReservePercentageBps",
-            type: "uint16",
-          },
-          {
-            internalType: "uint16",
-            name: "targetWithdrawalReservePercentageBps",
-            type: "uint16",
-          },
-          {
-            internalType: "uint256",
-            name: "minimumWithdrawalReserveAmount",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "targetWithdrawalReserveAmount",
-            type: "uint256",
-          },
+          { internalType: "uint16", name: "minimumWithdrawalReservePercentageBps", type: "uint16" },
+          { internalType: "uint16", name: "targetWithdrawalReservePercentageBps", type: "uint16" },
+          { internalType: "uint256", name: "minimumWithdrawalReserveAmount", type: "uint256" },
+          { internalType: "uint256", name: "targetWithdrawalReserveAmount", type: "uint256" },
         ],
         internalType: "struct IYieldManager.UpdateReserveParametersConfig",
         name: "_params",
@@ -2003,97 +864,42 @@ export const YieldManagerABI = [
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "bytes4",
-        name: "interfaceId",
-        type: "bytes4",
-      },
-    ],
+    inputs: [{ internalType: "bytes4", name: "interfaceId", type: "bytes4" }],
     name: "supportsInterface",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "targetWithdrawalReserveAmount",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "targetWithdrawalReservePercentageBps",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "_amount",
-        type: "uint256",
-      },
-    ],
+    inputs: [{ internalType: "uint256", name: "_amount", type: "uint256" }],
     name: "transferFundsToReserve",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "enum IPauseManager.PauseType",
-        name: "_pauseType",
-        type: "uint8",
-      },
-    ],
-    name: "unPauseByExpiredType",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "enum IPauseManager.PauseType",
-        name: "_pauseType",
-        type: "uint8",
-      },
-    ],
+    inputs: [{ internalType: "enum IPauseManager.PauseType", name: "_pauseType", type: "uint8" }],
     name: "unPauseByType",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "_yieldProvider", type: "address" }],
     name: "unpauseStaking",
     outputs: [],
     stateMutability: "nonpayable",
@@ -2101,16 +907,8 @@ export const YieldManagerABI = [
   },
   {
     inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-      {
-        internalType: "bytes",
-        name: "_withdrawalParams",
-        type: "bytes",
-      },
+      { internalType: "address", name: "_yieldProvider", type: "address" },
+      { internalType: "bytes", name: "_withdrawalParams", type: "bytes" },
     ],
     name: "unstake",
     outputs: [],
@@ -2119,45 +917,19 @@ export const YieldManagerABI = [
   },
   {
     inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-      {
-        internalType: "bytes",
-        name: "_withdrawalParams",
-        type: "bytes",
-      },
-      {
-        internalType: "bytes",
-        name: "_withdrawalParamsProof",
-        type: "bytes",
-      },
+      { internalType: "address", name: "_yieldProvider", type: "address" },
+      { internalType: "bytes", name: "_withdrawalParams", type: "bytes" },
+      { internalType: "bytes", name: "_withdrawalParamsProof", type: "bytes" },
     ],
     name: "unstakePermissionless",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "maxUnstakeAmount",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "maxUnstakeAmount", type: "uint256" }],
     stateMutability: "payable",
     type: "function",
   },
   {
     inputs: [
-      {
-        internalType: "enum IPauseManager.PauseType",
-        name: "_pauseType",
-        type: "uint8",
-      },
-      {
-        internalType: "bytes32",
-        name: "_newRole",
-        type: "bytes32",
-      },
+      { internalType: "enum IPauseManager.PauseType", name: "_pauseType", type: "uint8" },
+      { internalType: "bytes32", name: "_newRole", type: "bytes32" },
     ],
     name: "updatePauseTypeRole",
     outputs: [],
@@ -2166,16 +938,8 @@ export const YieldManagerABI = [
   },
   {
     inputs: [
-      {
-        internalType: "enum IPauseManager.PauseType",
-        name: "_pauseType",
-        type: "uint8",
-      },
-      {
-        internalType: "bytes32",
-        name: "_newRole",
-        type: "bytes32",
-      },
+      { internalType: "enum IPauseManager.PauseType", name: "_pauseType", type: "uint8" },
+      { internalType: "bytes32", name: "_newRole", type: "bytes32" },
     ],
     name: "updateUnpauseTypeRole",
     outputs: [],
@@ -2183,72 +947,24 @@ export const YieldManagerABI = [
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "_yieldProvider", type: "address" }],
     name: "userFunds",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "funds",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "funds", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "userFundsInYieldProvidersTotal",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "totalUserFunds",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "totalUserFunds", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "_amount",
-        type: "uint256",
-      },
-    ],
-    name: "withdrawFromYieldProvider",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "_amount",
-        type: "uint256",
-      },
-      {
-        internalType: "address",
-        name: "_recipient",
-        type: "address",
-      },
+      { internalType: "address", name: "_yieldProvider", type: "address" },
+      { internalType: "uint256", name: "_amount", type: "uint256" },
+      { internalType: "address", name: "_recipient", type: "address" },
     ],
     name: "withdrawLST",
     outputs: [],
@@ -2256,58 +972,25 @@ export const YieldManagerABI = [
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_yieldProvider",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "_yieldProvider", type: "address" }],
     name: "withdrawableValue",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "withdrawableAmount",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "withdrawableAmount", type: "uint256" }],
     stateMutability: "nonpayable",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "_index",
-        type: "uint256",
-      },
-    ],
+    inputs: [{ internalType: "uint256", name: "_index", type: "uint256" }],
     name: "yieldProviderByIndex",
-    outputs: [
-      {
-        internalType: "address",
-        name: "yieldProvider",
-        type: "address",
-      },
-    ],
+    outputs: [{ internalType: "address", name: "yieldProvider", type: "address" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
     name: "yieldProviderCount",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "count",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "count", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
-  {
-    stateMutability: "payable",
-    type: "receive",
-  },
+  { stateMutability: "payable", type: "receive" },
 ] as const;

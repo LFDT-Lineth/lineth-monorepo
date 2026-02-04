@@ -48,6 +48,7 @@
 .idea
 .claude/
 .ipynb_checkpoints
+.cursor
 
 atlassian-ide-plugin.xml
 circuit.bin
@@ -154,3 +155,6 @@ __pycache__/
 !/sdk/src/lib/compressor/bin
 # Allow BLS glue testdata generators
 !prover/zkevm/prover/bls/testdata/*.go
+
+.beads/
+native-yield-operations/lido-governance-monitor/**

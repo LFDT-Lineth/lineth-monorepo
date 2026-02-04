@@ -1,0 +1,70 @@
+export const DashboardErrorsABI = [
+  { inputs: [], name: "AbnormallyHighFee", type: "error" },
+  { inputs: [], name: "AccessControlBadConfirmation", type: "error" },
+  {
+    inputs: [
+      { internalType: "address", name: "account", type: "address" },
+      { internalType: "bytes32", name: "neededRole", type: "bytes32" },
+    ],
+    name: "AccessControlUnauthorizedAccount",
+    type: "error",
+  },
+  { inputs: [], name: "AlreadyInitialized", type: "error" },
+  { inputs: [], name: "ConfirmExpiryOutOfBounds", type: "error" },
+  { inputs: [], name: "ConnectedToVaultHub", type: "error" },
+  { inputs: [], name: "CorrectionAfterReport", type: "error" },
+  { inputs: [], name: "DashboardNotAllowed", type: "error" },
+  {
+    inputs: [
+      { internalType: "address", name: "recipient", type: "address" },
+      { internalType: "uint256", name: "amount", type: "uint256" },
+    ],
+    name: "EthTransferFailed",
+    type: "error",
+  },
+  {
+    inputs: [
+      { internalType: "uint256", name: "requestedShares", type: "uint256" },
+      { internalType: "uint256", name: "remainingShares", type: "uint256" },
+    ],
+    name: "ExceedsMintingCapacity",
+    type: "error",
+  },
+  {
+    inputs: [
+      { internalType: "uint256", name: "amount", type: "uint256" },
+      { internalType: "uint256", name: "withdrawableValue", type: "uint256" },
+    ],
+    name: "ExceedsWithdrawable",
+    type: "error",
+  },
+  { inputs: [], name: "FeeValueExceed100Percent", type: "error" },
+  { inputs: [], name: "ForbiddenByPDGPolicy", type: "error" },
+  { inputs: [], name: "InsufficientBalance", type: "error" },
+  { inputs: [], name: "PDGPolicyAlreadyActive", type: "error" },
+  { inputs: [], name: "ReportStale", type: "error" },
+  { inputs: [], name: "RoleRenouncementDisabled", type: "error" },
+  {
+    inputs: [
+      { internalType: "uint8", name: "bits", type: "uint8" },
+      { internalType: "int256", name: "value", type: "int256" },
+    ],
+    name: "SafeCastOverflowedIntDowncast",
+    type: "error",
+  },
+  {
+    inputs: [{ internalType: "address", name: "token", type: "address" }],
+    name: "SafeERC20FailedOperation",
+    type: "error",
+  },
+  { inputs: [], name: "SameRecipient", type: "error" },
+  { inputs: [], name: "SameSettledGrowth", type: "error" },
+  { inputs: [], name: "SenderNotMember", type: "error" },
+  { inputs: [], name: "SettleGrowthIsNotSet", type: "error" },
+  { inputs: [], name: "TierChangeNotConfirmed", type: "error" },
+  { inputs: [], name: "UnexpectedFeeExemptionAmount", type: "error" },
+  { inputs: [], name: "UnexpectedSettledGrowth", type: "error" },
+  { inputs: [], name: "ZeroAddress", type: "error" },
+  { inputs: [], name: "ZeroArgument", type: "error" },
+  { inputs: [], name: "ZeroConfirmingRoles", type: "error" },
+] as const;

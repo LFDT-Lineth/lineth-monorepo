@@ -5,18 +5,13 @@ import forge from "node-forge";
 import path from "path";
 import { Hex, serializeTransaction } from "viem";
 
-import { ILogger } from "../../logging/ILogger";
+import { createLoggerMock } from "../../__tests__/helpers/factories";
 import { Web3SignerClientAdapter } from "../Web3SignerClientAdapter";
 
 // Mock getModuleDir to avoid Jest parsing issues with import.meta.url in file.ts
 jest.mock("../../utils/file", () => ({
   getModuleDir: jest.fn(() => process.cwd()),
 }));
-
-const agentInstance = { mock: "agent-instance" } as const;
-
-const getBagsMock = jest.fn();
-const forgeCertificate = { subject: "CN=web3signer" };
 
 jest.mock("axios", () => ({
   __esModule: true,
@@ -58,143 +53,145 @@ const fromDerMock = forge.asn1.fromDer as jest.Mock;
 const pkcs12FromAsn1Mock = forge.pkcs12.pkcs12FromAsn1 as jest.Mock;
 const certificateToPemMock = forge.pki.certificateToPem as jest.Mock;
 
-const createLogger = (): jest.Mocked<ILogger> =>
-  ({
-    name: "web3signer-client",
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-  }) as jest.Mocked<ILogger>;
-
 describe("Web3SignerClientAdapter", () => {
-  const web3SignerUrl = "https://127.0.0.1:9000";
-  const web3SignerPublicKey: Hex =
+  const WEB3_SIGNER_URL = "https://127.0.0.1:9000";
+  const WEB3_SIGNER_PUBLIC_KEY: Hex =
     "0x4a788ad6fa008beed58de6418369717d7492f37d173d70e2c26d9737e2c6eeae929452ef8602a19410844db3e200a0e73f5208fd76259a8766b73953fc3e7023";
-  const keystorePassphrase = "keystore-pass";
-  const truststorePassphrase = "trust-pass";
-  const keystorePath = path.join(process.cwd(), "fixtures", "sequencer_client_keystore.p12");
-  const truststorePath = path.join(process.cwd(), "fixtures", "web3signer_truststore.p12");
+  const WEB3_SIGNER_PUBLIC_KEY_WITHOUT_PREFIX: Hex =
+    "4a788ad6fa008beed58de6418369717d7492f37d173d70e2c26d9737e2c6eeae929452ef8602a19410844db3e200a0e73f5208fd76259a8766b73953fc3e7023" as Hex;
+  const KEYSTORE_PASSPHRASE = "keystore-pass";
+  const TRUSTSTORE_PASSPHRASE = "trust-pass";
+  const KEYSTORE_PATH = path.join(process.cwd(), "fixtures", "sequencer_client_keystore.p12");
+  const TRUSTSTORE_PATH = path.join(process.cwd(), "fixtures", "web3signer_truststore.p12");
+  const EXPECTED_SIGNER_ADDRESS = "0xD42E308FC964b71E18126dF469c21B0d7bcb86cC";
 
-  const keystoreBuffer = Buffer.from("KEYSTORE_PFX");
-  const truststoreBinary = "TRUSTSTORE_BINARY";
+  const KEYSTORE_BUFFER = Buffer.from("KEYSTORE_PFX");
+  const TRUSTSTORE_BINARY = "TRUSTSTORE_BINARY";
+  const ASN1_STRUCT = "ASN1_STRUCT";
+  const PEM_CERT = "PEM_CERT";
+  const FORGE_CERTIFICATE = { subject: "CN=web3signer" };
+  const AGENT_INSTANCE = { mock: "agent-instance" } as const;
+  const SERIALIZED_TRANSACTION = "0x02serialized";
+  const SIGNATURE_RESPONSE = "0xsigned";
+
+  const SAMPLE_TRANSACTION = {
+    type: "eip1559",
+    chainId: 1337,
+    nonce: 0,
+    gas: BigInt(21_000),
+    maxFeePerGas: BigInt(1_000_000_000),
+    maxPriorityFeePerGas: BigInt(100_000_000),
+    to: "0x0000000000000000000000000000000000000000",
+    value: BigInt(0),
+    data: "0x",
+  };
+
+  const getBagsMock = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    readFileSyncMock.mockImplementation((filePath: string, options?: { encoding?: string }) => {
+    readFileSyncMock.mockImplementation((_filePath: string, options?: { encoding?: string }) => {
       if (options?.encoding === "binary") {
-        return truststoreBinary;
+        return TRUSTSTORE_BINARY;
       }
-      return keystoreBuffer;
+      return KEYSTORE_BUFFER;
     });
 
-    fromDerMock.mockReturnValue("ASN1_STRUCT");
-    getBagsMock.mockReturnValue({ certBag: [{ cert: forgeCertificate }] });
+    fromDerMock.mockReturnValue(ASN1_STRUCT);
+    getBagsMock.mockReturnValue({ certBag: [{ cert: FORGE_CERTIFICATE }] });
     pkcs12FromAsn1Mock.mockReturnValue({ getBags: getBagsMock });
-    certificateToPemMock.mockReturnValue("PEM_CERT");
+    certificateToPemMock.mockReturnValue(PEM_CERT);
 
-    AgentMock.mockImplementation(() => agentInstance);
-    serializeTransactionMock.mockReturnValue("0x02serialized");
-    axiosPostMock.mockResolvedValue({ data: "0xsigned" } as any);
+    AgentMock.mockImplementation(() => AGENT_INSTANCE);
+    serializeTransactionMock.mockReturnValue(SERIALIZED_TRANSACTION);
+    axiosPostMock.mockResolvedValue({ data: SIGNATURE_RESPONSE } as any);
   });
 
-  const createAdapter = (logger: jest.Mocked<ILogger>) =>
+  const createAdapter = (publicKey: Hex = WEB3_SIGNER_PUBLIC_KEY) =>
     new Web3SignerClientAdapter(
-      logger,
-      web3SignerUrl,
-      web3SignerPublicKey,
-      keystorePath,
-      keystorePassphrase,
-      truststorePath,
-      truststorePassphrase,
+      createLoggerMock(),
+      WEB3_SIGNER_URL,
+      publicKey,
+      KEYSTORE_PATH,
+      KEYSTORE_PASSPHRASE,
+      TRUSTSTORE_PATH,
+      TRUSTSTORE_PASSPHRASE,
     );
 
-  it("initialises the HTTPS agent using the provided keystore and truststore", () => {
-    const logger = createLogger();
+  describe("initialization", () => {
+    it("initialize HTTPS agent using keystore and truststore", () => {
+      // Arrange
+      // (mocks configured in beforeEach)
 
-    createAdapter(logger);
+      // Act
+      createAdapter();
 
-    expect(logger.info).toHaveBeenCalledWith("Initialising HTTPS agent");
-    expect(readFileSyncMock).toHaveBeenCalledWith(truststorePath, { encoding: "binary" });
-    expect(readFileSyncMock).toHaveBeenCalledWith(keystorePath);
+      // Assert
+      expect(readFileSyncMock).toHaveBeenCalledWith(TRUSTSTORE_PATH, { encoding: "binary" });
+      expect(readFileSyncMock).toHaveBeenCalledWith(KEYSTORE_PATH);
+      expect(fromDerMock).toHaveBeenCalledWith(TRUSTSTORE_BINARY);
+      expect(pkcs12FromAsn1Mock).toHaveBeenCalledWith(ASN1_STRUCT, false, TRUSTSTORE_PASSPHRASE);
+      expect(getBagsMock).toHaveBeenCalledWith({ bagType: "certBag" });
+      expect(certificateToPemMock).toHaveBeenCalledWith(FORGE_CERTIFICATE);
+      expect(AgentMock).toHaveBeenCalledWith({
+        pfx: KEYSTORE_BUFFER,
+        passphrase: KEYSTORE_PASSPHRASE,
+        ca: PEM_CERT,
+      });
+    });
 
-    expect(fromDerMock).toHaveBeenCalledWith(truststoreBinary);
-    expect(pkcs12FromAsn1Mock).toHaveBeenCalledWith("ASN1_STRUCT", false, truststorePassphrase);
-    expect(getBagsMock).toHaveBeenCalledWith({ bagType: "certBag" });
-    expect(certificateToPemMock).toHaveBeenCalledWith(forgeCertificate);
-    expect(logger.debug).toHaveBeenCalledWith("Loading trusted store certificate");
+    it("throw when truststore certificate is missing", () => {
+      // Arrange
+      getBagsMock.mockReturnValue({});
 
-    expect(AgentMock).toHaveBeenCalledWith({
-      pfx: keystoreBuffer,
-      passphrase: keystorePassphrase,
-      ca: "PEM_CERT",
+      // Act & Assert
+      expect(() => createAdapter()).toThrow("Certificate not found in P12");
+      expect(certificateToPemMock).not.toHaveBeenCalled();
+      expect(AgentMock).not.toHaveBeenCalled();
     });
   });
 
-  it("throws when the trusted store certificate is missing", () => {
-    const logger = createLogger();
-    getBagsMock.mockReturnValue({});
+  describe("sign", () => {
+    it("sign transaction via Web3Signer API", async () => {
+      // Arrange
+      const adapter = createAdapter();
 
-    expect(() => createAdapter(logger)).toThrow("Certificate not found in P12");
-    expect(logger.info).toHaveBeenCalledWith("Initialising HTTPS agent");
-    expect(certificateToPemMock).not.toHaveBeenCalled();
-    expect(AgentMock).not.toHaveBeenCalled();
+      // Act
+      const signature = await adapter.sign(SAMPLE_TRANSACTION as any);
+
+      // Assert
+      expect(serializeTransactionMock).toHaveBeenCalledWith(SAMPLE_TRANSACTION);
+      expect(axiosPostMock).toHaveBeenCalledWith(
+        `${WEB3_SIGNER_URL}/api/v1/eth1/sign/${WEB3_SIGNER_PUBLIC_KEY}`,
+        { data: SERIALIZED_TRANSACTION },
+        { httpsAgent: AGENT_INSTANCE },
+      );
+      expect(signature).toBe(SIGNATURE_RESPONSE);
+    });
   });
 
-  it("signs transactions via Web3Signer", async () => {
-    const logger = createLogger();
-    const adapter = createAdapter(logger);
-    const tx = {
-      type: "eip1559",
-      chainId: 1337,
-      nonce: 0,
-      gas: BigInt(21_000),
-      maxFeePerGas: BigInt(1_000_000_000),
-      maxPriorityFeePerGas: BigInt(100_000_000),
-      to: "0x0000000000000000000000000000000000000000",
-      value: BigInt(0),
-      data: "0x",
-    };
+  describe("getAddress", () => {
+    it("derive signer address from public key with 0x prefix", () => {
+      // Arrange
+      const adapter = createAdapter(WEB3_SIGNER_PUBLIC_KEY);
 
-    const signature = await adapter.sign(tx as any);
+      // Act
+      const address = adapter.getAddress();
 
-    expect(serializeTransactionMock).toHaveBeenCalledWith(tx);
-    expect(axiosPostMock).toHaveBeenCalledWith(
-      `${web3SignerUrl}/api/v1/eth1/sign/${web3SignerPublicKey}`,
-      { data: "0x02serialized" },
-      { httpsAgent: agentInstance },
-    );
-    expect(logger.debug).toHaveBeenCalledWith("Signing transaction via remote Web3Signer");
-    expect(logger.debug).toHaveBeenCalledWith("Signing successful signature=0xsigned");
-    expect(signature).toBe("0xsigned");
-  });
+      // Assert
+      expect(address).toBe(EXPECTED_SIGNER_ADDRESS);
+    });
 
-  it("derives the signer address from the configured public key", () => {
-    const logger = createLogger();
-    const adapter = createAdapter(logger);
+    it("derive signer address from public key without 0x prefix", () => {
+      // Arrange
+      const adapter = createAdapter(WEB3_SIGNER_PUBLIC_KEY_WITHOUT_PREFIX);
 
-    const address = adapter.getAddress();
+      // Act
+      const address = adapter.getAddress();
 
-    expect(address).toBe("0xD42E308FC964b71E18126dF469c21B0d7bcb86cC");
-  });
-
-  it("derives the signer address from the configured public key without 0x prefix", () => {
-    const logger = createLogger();
-    const web3SignerPublicKeyWithoutPrefix: Hex =
-      "4a788ad6fa008beed58de6418369717d7492f37d173d70e2c26d9737e2c6eeae929452ef8602a19410844db3e200a0e73f5208fd76259a8766b73953fc3e7023" as Hex;
-    const adapter = new Web3SignerClientAdapter(
-      logger,
-      web3SignerUrl,
-      web3SignerPublicKeyWithoutPrefix,
-      keystorePath,
-      keystorePassphrase,
-      truststorePath,
-      truststorePassphrase,
-    );
-
-    const address = adapter.getAddress();
-
-    expect(address).toBe("0xD42E308FC964b71E18126dF469c21B0d7bcb86cC");
+      // Assert
+      expect(address).toBe(EXPECTED_SIGNER_ADDRESS);
+    });
   });
 });

@@ -14,10 +14,17 @@ const buildLogger = () => {
 };
 
 describe("tryResult", () => {
-  it("wraps synchronous success values", async () => {
-    await tryResult(() => 42).match(
+  it("wrap synchronous success value in Result", async () => {
+    // Arrange
+    const EXPECTED_VALUE = 42;
+
+    // Act
+    const result = tryResult(() => EXPECTED_VALUE);
+
+    // Assert
+    await result.match(
       (value) => {
-        expect(value).toBe(42);
+        expect(value).toBe(EXPECTED_VALUE);
       },
       () => {
         throw new Error("expected success branch");
@@ -25,12 +32,17 @@ describe("tryResult", () => {
     );
   });
 
-  it("captures thrown errors from async functions", async () => {
+  it("capture thrown error from async function", async () => {
+    // Arrange
     const expectedError = new Error("boom");
 
-    await tryResult(async () => {
+    // Act
+    const result = tryResult(async () => {
       throw expectedError;
-    }).match(
+    });
+
+    // Assert
+    await result.match(
       () => {
         throw new Error("expected error branch");
       },
@@ -40,28 +52,42 @@ describe("tryResult", () => {
     );
   });
 
-  it("converts non-Error throws into Error instances", async () => {
-    await tryResult(() => {
-      throw "not-an-error";
-    }).match(
+  it("convert non-Error throw to Error instance", async () => {
+    // Arrange
+    const NON_ERROR_VALUE = "not-an-error";
+
+    // Act
+    const result = tryResult(() => {
+      throw NON_ERROR_VALUE;
+    });
+
+    // Assert
+    await result.match(
       () => {
         throw new Error("expected error branch");
       },
       (error) => {
         expect(error).toBeInstanceOf(Error);
-        expect(error.message).toBe("not-an-error");
+        expect(error.message).toBe(NON_ERROR_VALUE);
       },
     );
   });
 });
 
 describe("attempt", () => {
-  it("returns successful results without logging", async () => {
+  it("return successful result without logging", async () => {
+    // Arrange
     const { logger, warnMock } = buildLogger();
+    const EXPECTED_VALUE = "ok";
+    const CONTEXT_MESSAGE = "should not log";
 
-    await attempt(logger, () => "ok", "should not log").match(
+    // Act
+    const result = attempt(logger, () => EXPECTED_VALUE, CONTEXT_MESSAGE);
+
+    // Assert
+    await result.match(
       (value) => {
-        expect(value).toBe("ok");
+        expect(value).toBe(EXPECTED_VALUE);
       },
       () => {
         throw new Error("expected success branch");
@@ -71,17 +97,24 @@ describe("attempt", () => {
     expect(warnMock).not.toHaveBeenCalled();
   });
 
-  it("logs and propagates errors", async () => {
+  it("log error with context message when operation fails", async () => {
+    // Arrange
     const { logger, warnMock } = buildLogger();
     const expectedError = new Error("failure");
+    const CONTEXT_MESSAGE = "operation failed";
+    const EXPECTED_CALL_COUNT = 1;
 
-    await attempt(
+    // Act
+    const result = attempt(
       logger,
       () => {
         throw expectedError;
       },
-      "operation failed",
-    ).match(
+      CONTEXT_MESSAGE,
+    );
+
+    // Assert
+    await result.match(
       () => {
         throw new Error("expected error branch");
       },
@@ -90,32 +123,92 @@ describe("attempt", () => {
       },
     );
 
-    expect(warnMock).toHaveBeenCalledTimes(1);
-    expect(warnMock).toHaveBeenCalledWith("operation failed", { error: expectedError });
+    expect(warnMock).toHaveBeenCalledTimes(EXPECTED_CALL_COUNT);
+    expect(warnMock).toHaveBeenCalledWith(CONTEXT_MESSAGE, { error: expectedError });
   });
 
-  it("logs coerced Error instances when non-Error values are thrown", async () => {
-    const { logger, warnMock } = buildLogger();
+  it("propagate error when operation fails", async () => {
+    // Arrange
+    const { logger } = buildLogger();
+    const expectedError = new Error("failure");
 
-    await attempt(
+    // Act
+    const result = attempt(
       logger,
       () => {
-        throw "coerce me";
+        throw expectedError;
+      },
+      "operation failed",
+    );
+
+    // Assert
+    await result.match(
+      () => {
+        throw new Error("expected error branch");
+      },
+      (error) => {
+        expect(error).toBe(expectedError);
+      },
+    );
+  });
+
+  it("coerce non-Error throw to Error instance", async () => {
+    // Arrange
+    const { logger } = buildLogger();
+    const NON_ERROR_VALUE = "coerce me";
+
+    // Act
+    const result = attempt(
+      logger,
+      () => {
+        throw NON_ERROR_VALUE;
       },
       "non-error throw",
-    ).match(
+    );
+
+    // Assert
+    await result.match(
       () => {
         throw new Error("expected error branch");
       },
       (error) => {
         expect(error).toBeInstanceOf(Error);
-        expect(error.message).toBe("coerce me");
+        expect(error.message).toBe(NON_ERROR_VALUE);
+      },
+    );
+  });
+
+  it("log coerced Error instance when non-Error value is thrown", async () => {
+    // Arrange
+    const { logger, warnMock } = buildLogger();
+    const NON_ERROR_VALUE = "coerce me";
+    const CONTEXT_MESSAGE = "non-error throw";
+    const EXPECTED_CALL_COUNT = 1;
+    const ERROR_PROPERTY_INDEX = 0;
+    const CALL_CONTEXT_ARG_INDEX = 1;
+
+    // Act
+    const result = attempt(
+      logger,
+      () => {
+        throw NON_ERROR_VALUE;
+      },
+      CONTEXT_MESSAGE,
+    );
+
+    // Assert
+    await result.match(
+      () => {
+        throw new Error("expected error branch");
+      },
+      () => {
+        // Error validation happens in logging assertions below
       },
     );
 
-    expect(warnMock).toHaveBeenCalledTimes(1);
-    expect(warnMock.mock.calls[0][1]).toHaveProperty("error");
-    expect(warnMock.mock.calls[0][1].error).toBeInstanceOf(Error);
-    expect(warnMock.mock.calls[0][1].error.message).toBe("coerce me");
+    expect(warnMock).toHaveBeenCalledTimes(EXPECTED_CALL_COUNT);
+    expect(warnMock.mock.calls[ERROR_PROPERTY_INDEX][CALL_CONTEXT_ARG_INDEX]).toHaveProperty("error");
+    expect(warnMock.mock.calls[ERROR_PROPERTY_INDEX][CALL_CONTEXT_ARG_INDEX].error).toBeInstanceOf(Error);
+    expect(warnMock.mock.calls[ERROR_PROPERTY_INDEX][CALL_CONTEXT_ARG_INDEX].error.message).toBe(NON_ERROR_VALUE);
   });
 });

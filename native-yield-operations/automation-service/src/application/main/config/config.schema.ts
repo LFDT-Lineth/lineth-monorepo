@@ -9,6 +9,21 @@ const Address = z
 
 const Hex = z.string().refine((v) => isHex(v), { message: "Invalid Hex" });
 
+/** Boolean schema for environment variables. Handles "true"/"false"/"1"/"0" (case-insensitive). */
+const BooleanFromString = z.preprocess(
+  (val) => {
+    if (typeof val === "boolean") return val;
+    if (typeof val === "number") return val !== 0;
+    if (typeof val === "string") {
+      const lower = val.toLowerCase().trim();
+      if (lower === "true" || lower === "1") return true;
+      if (lower === "false" || lower === "0") return false;
+    }
+    return val; // Trigger validation error
+  },
+  z.boolean({ errorMap: () => ({ message: 'Expected "true", "false", "1", "0", or boolean.' }) }),
+);
+
 export const configSchema = z
   .object({
     /** Ethereum chain ID for the L1 network (e.g., 1 for mainnet, 560048 for hoodi).
@@ -49,6 +64,8 @@ export const configSchema = z
     YIELD_MANAGER_ADDRESS: Address,
     // Address of the LidoStVaultYieldProvider contract.
     LIDO_YIELD_PROVIDER_ADDRESS: Address,
+    // Address of the STETH contract.
+    STETH_ADDRESS: Address,
     // L2 address that receives yield distributions.
     L2_YIELD_RECIPIENT: Address,
     // Polling interval in milliseconds for watching blockchain events.
@@ -57,32 +74,37 @@ export const configSchema = z
     TRIGGER_MAX_INACTION_MS: z.coerce.number().int().positive(),
     // Retry delay in milliseconds between contract read attempts after failures.
     CONTRACT_READ_RETRY_TIME_MS: z.coerce.number().int().positive(),
+    // Polling interval in milliseconds for updating gauge metrics from various data sources.
+    GAUGE_METRICS_POLL_INTERVAL_MS: z.coerce.number().int().positive(),
     // Whether to submit the vault accounting report. Can set to false if we expect other actors to submit.
-    SHOULD_SUBMIT_VAULT_REPORT: z.coerce.boolean(),
-    /** Minimum positive yield amount (in wei) required before triggering a yield report.
-     * Yield reporting will proceed if either this threshold OR MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI is met.
-     * This prevents gas-inefficient transactions for very small yield amounts.
+    SHOULD_SUBMIT_VAULT_REPORT: BooleanFromString,
+    // Whether to report yield. Can set to false to disable yield reporting entirely (e.g., during maintenance or when other actors are handling yield reporting).
+    SHOULD_REPORT_YIELD: BooleanFromString,
+    // Whether to unpause staking when conditions are met. Can set to false to disable automatic unpause of staking operations.
+    IS_UNPAUSE_STAKING_ENABLED: BooleanFromString,
+    /** Minimum difference between peeked negative yield and on-state negative yield (in wei) required before triggering a yield report.
+     * Yield reporting will proceed if this threshold is met.
+     * The difference is calculated as: peekedNegativeYield - onStateNegativeYield.
+     * This prevents gas-inefficient transactions for very small negative yield changes.
      */
-    MIN_POSITIVE_YIELD_TO_REPORT_WEI: z
+    MIN_NEGATIVE_YIELD_DIFF_TO_REPORT_YIELD_WEI: z
       .union([z.string(), z.number(), z.bigint()])
       .transform((val) => BigInt(val))
       .refine((v) => v >= 0n, { message: "Must be nonnegative" }),
-    /** Minimum unpaid Lido protocol fees amount (in wei) required before triggering a yield report.
-     * Yield reporting will proceed if either this threshold OR MIN_POSITIVE_YIELD_TO_REPORT_WEI is met.
-     * This prevents gas-inefficient transactions for very small fee amounts.
+    /** Number of processing cycles between forced yield reports.
+     * Yield will be reported every N cycles regardless of threshold checks.
+     * This ensures periodic yield reporting even when thresholds aren't met.
      */
-    MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI: z
-      .union([z.string(), z.number(), z.bigint()])
-      .transform((val) => BigInt(val))
-      .refine((v) => v >= 0n, { message: "Must be nonnegative" }),
-    /** Rebalance tolerance in basis points (1 bps = 0.01%, max 10000 bps = 100%).
-     * Used to calculate tolerance band for rebalancing decisions.
-     * The tolerance band is calculated as: `(totalSystemBalance * REBALANCE_TOLERANCE_BPS) / 10000`.
+    CYCLES_PER_YIELD_REPORT: z.coerce.number().int().positive(),
+    /** Rebalance tolerance amount (in wei) used as an absolute tolerance band for rebalancing decisions.
      * Rebalancing occurs only when the L1 Message Service balance deviates from the effective
-     * target withdrawal reserve by more than this tolerance band (either above or below).
+     * target withdrawal reserve by more than this tolerance amount (either above or below).
      * Prevents unnecessary rebalancing operations for small fluctuations.
      */
-    REBALANCE_TOLERANCE_BPS: z.coerce.number().int().positive().max(10000),
+    REBALANCE_TOLERANCE_AMOUNT_WEI: z
+      .union([z.string(), z.number(), z.bigint()])
+      .transform((val) => BigInt(val))
+      .refine((v) => v >= 0n, { message: "Must be nonnegative" }),
     // Maximum number of validator withdrawal requests that will be batched in a single transaction.
     MAX_VALIDATOR_WITHDRAWAL_REQUESTS_PER_TRANSACTION: z.coerce.number().int().positive(),
     /**
@@ -93,6 +115,19 @@ export const configSchema = z
       .union([z.string(), z.number(), z.bigint()])
       .transform((val) => BigInt(val))
       .refine((v) => v >= 0n, { message: "Must be nonnegative" }),
+    /** Staking rebalance quota as basis points (bps) of Total System Balance (TSB).
+     * The quota is calculated as a percentage of TSB over a rolling window of cycles.
+     * 100 bps = 1%, 1800 bps = 18%, 10000 bps = 100%.
+     * Used to mitigate whale-driven reserve depletion risk by limiting cumulative deposits.
+     * Valid range: 0 to 10000 (0% to 100%).
+     */
+    STAKING_REBALANCE_QUOTA_BPS: z.coerce.number().int().min(0).max(10000),
+    /** Number of cycles in the rolling window for staking rebalance quota tracking.
+     * Each cycle corresponds to a YieldReportingProcessor.process() call.
+     * The quota service tracks cumulative deposits over this many cycles.
+     * Set to 0 to disable the quota mechanism entirely - all rebalance amounts will pass through without quota enforcement.
+     */
+    STAKING_REBALANCE_QUOTA_WINDOW_SIZE_IN_CYCLES: z.coerce.number().int().min(0),
     /** Web3Signer service URL for transaction signing.
      * The service signs transactions using the key specified by WEB3SIGNER_PUBLIC_KEY.
      * Must be a valid HTTPS (not HTTP) URL.
@@ -124,12 +159,21 @@ export const configSchema = z
     // Passphrase to access the Web3Signer truststore file.
     WEB3SIGNER_TRUSTSTORE_PASSPHRASE: z.string().min(1),
     // Note: Doesn't currently do anything. Implementation currently only supports HTTPS anyway.
-    WEB3SIGNER_TLS_ENABLED: z.coerce.boolean(),
+    WEB3SIGNER_TLS_ENABLED: BooleanFromString,
     /** Port number for the metrics API HTTP server.
      * Used to expose metrics endpoints for monitoring and observability.
      * Must be between 1024 and 49000 (inclusive) to avoid system ports and common application ports.
      */
     API_PORT: z.coerce.number().int().min(1024).max(49000),
+    /** Winston logger level for controlling log verbosity.
+     * Valid values: "error", "warn", "info", "verbose", "debug", "silly".
+     * Defaults to "info" if not specified.
+     */
+    LOG_LEVEL: z
+      .enum(["error", "warn", "info", "verbose", "debug", "silly"], {
+        errorMap: () => ({ message: "LOG_LEVEL must be one of: error, warn, info, verbose, debug, silly" }),
+      })
+      .optional(),
   })
   .strip();
 

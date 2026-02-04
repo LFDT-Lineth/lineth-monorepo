@@ -10,6 +10,8 @@ import {
   WatchContractEventReturnType,
 } from "viem";
 import { LazyOracleABI } from "../../core/abis/LazyOracle.js";
+import { LazyOracleErrorsABI } from "../../core/abis/errors/LazyOracleErrors.js";
+
 import {
   ILazyOracle,
   UpdateVaultDataParams,
@@ -19,13 +21,15 @@ import {
 } from "../../core/clients/contracts/ILazyOracle.js";
 import { OperationTrigger } from "../../core/metrics/LineaNativeYieldAutomationServiceMetrics.js";
 
+const LazyOracleCombinedABI = [...LazyOracleABI, ...LazyOracleErrorsABI] as const;
+
 /**
  * Client for interacting with LazyOracle smart contracts.
  * Provides methods for reading report data, updating vault data, simulating transactions,
  * and waiting for VaultsReportDataUpdated events with timeout handling.
  */
 export class LazyOracleContractClient implements ILazyOracle<TransactionReceipt> {
-  private readonly contract: GetContractReturnType<typeof LazyOracleABI, PublicClient, Address>;
+  private readonly contract: GetContractReturnType<typeof LazyOracleCombinedABI, PublicClient, Address>;
   /**
    * Creates a new LazyOracleContractClient instance.
    *
@@ -43,7 +47,7 @@ export class LazyOracleContractClient implements ILazyOracle<TransactionReceipt>
     private readonly eventWatchTimeoutMs: number,
   ) {
     this.contract = getContract({
-      abi: LazyOracleABI,
+      abi: LazyOracleCombinedABI,
       address: contractAddress,
       client: contractClientLibrary.getBlockchainClient(),
     });
@@ -65,6 +69,15 @@ export class LazyOracleContractClient implements ILazyOracle<TransactionReceipt>
    */
   getContract(): GetContractReturnType {
     return this.contract;
+  }
+
+  /**
+   * Gets the balance of the LazyOracle contract.
+   *
+   * @returns {Promise<bigint>} The contract balance in wei.
+   */
+  async getBalance(): Promise<bigint> {
+    return this.contractClientLibrary.getBalance(this.contractAddress);
   }
 
   /**
@@ -100,7 +113,12 @@ export class LazyOracleContractClient implements ILazyOracle<TransactionReceipt>
       args: [vault, totalValue, cumulativeLidoFees, liabilityShares, maxLiabilityShares, slashingReserve, proof],
     });
     this.logger.debug(`updateVaultData started`, { params });
-    const txReceipt = await this.contractClientLibrary.sendSignedTransaction(this.contractAddress, calldata);
+    const txReceipt = await this.contractClientLibrary.sendSignedTransaction(
+      this.contractAddress,
+      calldata,
+      undefined,
+      LazyOracleCombinedABI,
+    );
     this.logger.info(`updateVaultData succeeded, txHash=${txReceipt.transactionHash}`, { params });
     return txReceipt;
   }
@@ -174,6 +192,12 @@ export class LazyOracleContractClient implements ILazyOracle<TransactionReceipt>
           firstEvent.args?.root === undefined ||
           firstEvent.args?.cid === undefined
         ) {
+          this.logger.debug("waitForVaultsReportDataUpdatedEvent: Event args incomplete, skipping", {
+            hasTimestamp: firstEvent.args?.timestamp !== undefined,
+            hasRefSlot: firstEvent.args?.refSlot !== undefined,
+            hasRoot: firstEvent.args?.root !== undefined,
+            hasCid: firstEvent.args?.cid !== undefined,
+          });
           return;
         }
 

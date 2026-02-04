@@ -23,9 +23,36 @@ async function main() {
       throw "undefined withdrawals";
     }
     console.log(`Received ${withdrawals.length} withdrawals.`);
-    if (withdrawals.length > 0) {
-      console.log("Sample entry:", withdrawals[0]);
+    withdrawals.forEach((withdrawal, index) => {
+      console.log(`Withdrawal ${index + 1}:`, withdrawal);
+    });
+  } catch (err) {
+    console.error("BeaconNodeApiClient integration script failed:", err);
+    process.exitCode = 1;
+  }
+
+  console.log(`Fetching pending deposits from ${rpcUrl}...`);
+  try {
+    const deposits = await client.getPendingDeposits();
+    if (!deposits) {
+      throw "undefined deposits";
     }
+    console.log(`Received ${deposits.length} deposits.`);
+    deposits.forEach((deposit, index) => {
+      console.log(`Deposit ${index + 1}:`, deposit);
+    });
+  } catch (err) {
+    console.error("BeaconNodeApiClient integration script failed:", err);
+    process.exitCode = 1;
+  }
+
+  console.log(`Fetching current epoch from ${rpcUrl}...`);
+  try {
+    const epoch = await client.getCurrentEpoch();
+    if (epoch === undefined) {
+      throw "undefined epoch";
+    }
+    console.log(`Current epoch: ${epoch}`);
   } catch (err) {
     console.error("BeaconNodeApiClient integration script failed:", err);
     process.exitCode = 1;

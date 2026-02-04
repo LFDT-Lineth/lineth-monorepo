@@ -102,6 +102,20 @@ export class DashboardContractClient implements IDashboard<TransactionReceipt> {
   }
 
   /**
+   * Gets the balance of the Dashboard contract.
+   *
+   * @returns {Promise<bigint>} The contract balance in wei.
+   */
+  async getBalance(): Promise<bigint> {
+    if (!DashboardContractClient.blockchainClient) {
+      throw new Error(
+        "DashboardContractClient: blockchainClient must be initialized via DashboardContractClient.initialize() before use",
+      );
+    }
+    return DashboardContractClient.blockchainClient.getBalance(this.contractAddress);
+  }
+
+  /**
    * Extracts the node operator fee amount from a transaction receipt by decoding FeeDisbursed events.
    * Only decodes logs emitted by this contract. Skips unrelated logs (from the same contract or different ABIs).
    * If event not found, returns 0n.
@@ -116,24 +130,39 @@ export class DashboardContractClient implements IDashboard<TransactionReceipt> {
       logs: txReceipt.logs,
     });
 
-    const fee = logs.find((log) => log.address.toLowerCase() === this.contractAddress.toLowerCase())?.args.fee ?? 0n;
-    return fee;
+    const event = logs.find((log) => log.address.toLowerCase() === this.contractAddress.toLowerCase());
+    if (!event) {
+      this.logger.warn("getNodeOperatorFeesPaidFromTxReceipt - FeeDisbursed event not found in receipt");
+      return 0n;
+    }
+
+    return event.args.fee ?? 0n;
   }
 
   /**
-   * Peeks the unpaid Lido protocol fees from the Dashboard contract.
-   * Reads the obligations() function which returns a tuple of [sharesToBurn, feesToSettle].
-   * Returns the feesToSettle value, representing the amount of unpaid Lido protocol fees.
+   * Gets the withdrawable value from the Dashboard contract.
    *
-   * @returns {Promise<bigint>} The unpaid Lido protocol fees amount in wei.
+   * @returns {Promise<bigint>} The withdrawable value in wei.
    */
-  async peekUnpaidLidoProtocolFees(): Promise<bigint | undefined> {
-    try {
-      const [, feesToSettle] = await this.contract.read.obligations();
-      return feesToSettle ?? 0n;
-    } catch (error) {
-      this.logger.error(`peekUnpaidLidoProtocolFees failed, error=${error}`);
-      return undefined;
-    }
+  async withdrawableValue(): Promise<bigint> {
+    return this.contract.read.withdrawableValue();
+  }
+
+  /**
+   * Gets the total value from the Dashboard contract.
+   *
+   * @returns {Promise<bigint>} The total value in wei.
+   */
+  async totalValue(): Promise<bigint> {
+    return this.contract.read.totalValue();
+  }
+
+  /**
+   * Gets the liability shares from the Dashboard contract.
+   *
+   * @returns {Promise<bigint>} The liability shares.
+   */
+  async liabilityShares(): Promise<bigint> {
+    return this.contract.read.liabilityShares();
   }
 }

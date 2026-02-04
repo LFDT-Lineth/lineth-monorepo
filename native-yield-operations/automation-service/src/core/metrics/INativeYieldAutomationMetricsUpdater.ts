@@ -1,26 +1,59 @@
 import { Address, Hex } from "viem";
 import { RebalanceDirection } from "../entities/RebalanceRequirement.js";
 import { OperationMode } from "../enums/OperationModeEnums.js";
-import { OperationTrigger } from "./LineaNativeYieldAutomationServiceMetrics.js";
+import { OperationModeExecutionStatus } from "./LineaNativeYieldAutomationServiceMetrics.js";
 
 export interface INativeYieldAutomationMetricsUpdater {
-  recordRebalance(direction: RebalanceDirection.STAKE | RebalanceDirection.UNSTAKE, amountGwei: number): void;
+  recordRebalance(direction: RebalanceDirection, amountGwei: number): void;
 
   addValidatorPartialUnstakeAmount(validatorPubkey: Hex, amountGwei: number): void;
 
   incrementValidatorExit(validatorPubkey: Hex, count?: number): void;
 
+  setValidatorStakedAmountGwei(pubkey: Hex, amountGwei: number): void;
+
   incrementLidoVaultAccountingReport(vaultAddress: Address): void;
 
   incrementReportYield(vaultAddress: Address): void;
 
-  addReportedYieldAmount(vaultAddress: Address, amountGwei: number): void;
+  setLastPeekedNegativeYieldReport(vaultAddress: Address, negativeYield: number): void;
 
-  setLastPeekedNegativeYieldReport(vaultAddress: Address, negativeYield: number): Promise<void>;
+  setLastPeekedPositiveYieldReport(vaultAddress: Address, yieldAmount: number): void;
 
-  setLastPeekedPositiveYieldReport(vaultAddress: Address, yieldAmount: number): Promise<void>;
+  setLastSettleableLidoFees(vaultAddress: Address, feesAmount: number): void;
 
-  setLastPeekUnpaidLidoProtocolFees(vaultAddress: Address, feesAmount: number): Promise<void>;
+  setLastVaultReportTimestamp(vaultAddress: Address, timestamp: number): void;
+
+  setYieldReportedCumulative(vaultAddress: Address, amountGwei: number): void;
+
+  setLstLiabilityPrincipalGwei(vaultAddress: Address, amountGwei: number): void;
+
+  setLastReportedNegativeYield(vaultAddress: Address, amountGwei: number): void;
+
+  setLidoLstLiabilityGwei(vaultAddress: Address, amountGwei: number): void;
+
+  setLastTotalPendingPartialWithdrawalsGwei(totalPendingPartialWithdrawalsGwei: number): void;
+
+  setLastTotalValidatorBalanceGwei(totalValidatorBalanceGwei: number): void;
+
+  setLastTotalPendingDepositGwei(totalPendingDepositGwei: number): void;
+
+  setPendingPartialWithdrawalQueueAmountGwei(pubkey: Hex, withdrawableEpoch: number, amountGwei: number): void;
+
+  setPendingDepositQueueAmountGwei(pubkey: Hex, slot: number, amountGwei: number): void;
+
+  setPendingExitQueueAmountGwei(pubkey: Hex, exitEpoch: number, amountGwei: number, slashed: boolean): void;
+
+  setLastTotalPendingExitGwei(totalPendingExitGwei: number): void;
+
+  setPendingFullWithdrawalQueueAmountGwei(
+    pubkey: Hex,
+    withdrawableEpoch: number,
+    amountGwei: number,
+    slashed: boolean,
+  ): void;
+
+  setLastTotalPendingFullWithdrawalGwei(totalPendingFullWithdrawalGwei: number): void;
 
   addNodeOperatorFeesPaid(vaultAddress: Address, amountGwei: number): void;
 
@@ -28,9 +61,15 @@ export interface INativeYieldAutomationMetricsUpdater {
 
   addLidoFeesPaid(vaultAddress: Address, amountGwei: number): void;
 
-  incrementOperationModeTrigger(mode: OperationMode, trigger: OperationTrigger): void;
-
-  incrementOperationModeExecution(mode: OperationMode): void;
+  incrementOperationModeExecution(mode: OperationMode, status?: OperationModeExecutionStatus): void;
 
   recordOperationModeDuration(mode: OperationMode, durationSeconds: number): void;
+
+  incrementStakingDepositQuotaExceeded(vaultAddress: Address): void;
+
+  setActualRebalanceRequirement(vaultAddress: Address, requirementGwei: number, direction: RebalanceDirection): void;
+
+  setReportedRebalanceRequirement(vaultAddress: Address, requirementGwei: number, direction: RebalanceDirection): void;
+
+  incrementContractEstimateGasError(contractAddress: Address, rawRevertData: string, errorName?: string): void;
 }

@@ -1,4 +1,4 @@
-import { ApolloClient, HttpLink, InMemoryCache, from } from "@apollo/client";
+import { ApolloClient, HttpLink, InMemoryCache, ApolloLink } from "@apollo/client";
 import { SetContextLink } from "@apollo/client/link/context";
 import { IOAuth2TokenClient } from "@consensys/linea-shared-utils";
 
@@ -31,7 +31,7 @@ export function createApolloClient(oAuth2TokenClient: IOAuth2TokenClient, graphq
   });
   // --- combine links so authLink runs before httpLink
   const client = new ApolloClient({
-    link: from([asyncAuthLink, httpLink]),
+    link: ApolloLink.from([asyncAuthLink, httpLink]),
     cache: new InMemoryCache(),
   });
   return client;
