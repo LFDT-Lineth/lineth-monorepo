@@ -9,7 +9,7 @@ import net.consensys.zkevm.coordinator.clients.InvalidityProofRequest
 import net.consensys.zkevm.coordinator.clients.InvalidityProofResponse
 import net.consensys.zkevm.coordinator.clients.InvalidityProverClientV1
 import net.consensys.zkevm.coordinator.clients.prover.serialization.JsonSerialization
-import net.consensys.zkevm.domain.ProofIndex
+import net.consensys.zkevm.domain.InvalidityProofIndex
 import net.consensys.zkevm.fileio.FileReader
 import net.consensys.zkevm.fileio.FileWriter
 import org.apache.logging.log4j.LogManager
@@ -70,6 +70,7 @@ class FileBasedInvalidityProverClient(
     InvalidityProofResponse,
     InvalidityProofRequestDto,
     InvalidityProofResponse,
+    InvalidityProofIndex,
     >(
     config = config,
     vertx = vertx,
@@ -93,20 +94,22 @@ class FileBasedInvalidityProverClient(
     log = LogManager.getLogger(FileBasedInvalidityProverClient::class.java),
   ),
   InvalidityProverClientV1 {
-  override fun parseResponse(responseFilePath: Path, proofIndex: ProofIndex): SafeFuture<InvalidityProofResponse> {
+  override fun parseResponse(
+    responseFilePath: Path,
+    proofIndex: InvalidityProofIndex,
+  ): SafeFuture<InvalidityProofResponse> {
     return SafeFuture.completedFuture(
       InvalidityProofResponse(
-        ftxNumber = proofIndex.endBlockNumber,
+        ftxNumber = proofIndex.ftxNumber,
       ),
     )
   }
 
   companion object {
-    fun invalidityProofIndex(request: InvalidityProofRequest): ProofIndex {
-      return ProofIndex(
-        startBlockNumber = request.simulatedExecutionBlockNumber,
-        endBlockNumber = request.ftxNumber,
-        hash = request.ftxHash,
+    fun invalidityProofIndex(request: InvalidityProofRequest): InvalidityProofIndex {
+      return InvalidityProofIndex(
+        simulatedExecutionBlockNumber = request.simulatedExecutionBlockNumber,
+        ftxNumber = request.ftxNumber,
       )
     }
   }

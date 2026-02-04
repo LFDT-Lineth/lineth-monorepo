@@ -42,14 +42,24 @@ class GenericFileBasedProverClientTest {
     }
   }
 
-  private val requestFileNameProvider = ProverFileNameProvider("proof-request.json")
-  private val responseFileNameProvider = ProverFileNameProvider("proof-response.json")
+  data class ProofIndexImpl(val startBlockNumber: ULong, val endBlockNumber: ULong) : ProofIndex
+  private val requestFileNameProvider = object : ProverFileNameProvider<ProofIndexImpl> {
+    override fun getFileName(proofIndex: ProofIndexImpl): String {
+      return "request-${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}-proof-request.json"
+    }
+  }
+  private val responseFileNameProvider = object : ProverFileNameProvider<ProofIndexImpl> {
+    override fun getFileName(proofIndex: ProofIndexImpl): String {
+      return "request-${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}-proof-request.json"
+    }
+  }
 
   private lateinit var proverClient: GenericFileBasedProverClient<
     ProofRequest,
     ProofResponse,
     ProofRequestDto,
     ProofResponseDto,
+    ProofIndexImpl,
     >
   private lateinit var proverConfig: FileBasedProverConfig
 
@@ -61,6 +71,7 @@ class GenericFileBasedProverClientTest {
     ProofResponse,
     ProofRequestDto,
     ProofResponseDto,
+    ProofIndexImpl,
     > {
     return GenericFileBasedProverClient(
       config = config,
@@ -77,7 +88,7 @@ class GenericFileBasedProverClientTest {
       proofTypeLabel = "batch",
       responseMapper = ProofResponseDto::toDomain,
       proofIndexProvider = { request ->
-        ProofIndex(
+        ProofIndexImpl(
           startBlockNumber = request.startBlockNumber,
           endBlockNumber = request.endBlockNumber,
         )
@@ -99,11 +110,11 @@ class GenericFileBasedProverClientTest {
     proverClient = createProverClient(proverConfig, vertx)
   }
 
-  private fun responseFilePath(proofIndex: ProofIndex): Path {
+  private fun responseFilePath(proofIndex: ProofIndexImpl): Path {
     return proverConfig.responsesDirectory.resolve(responseFileNameProvider.getFileName(proofIndex))
   }
 
-  private fun requestFilePath(proofIndex: ProofIndex): Path {
+  private fun requestFilePath(proofIndex: ProofIndexImpl): Path {
     return proverConfig.requestsDirectory.resolve(requestFileNameProvider.getFileName(proofIndex))
   }
 
@@ -131,7 +142,7 @@ class GenericFileBasedProverClientTest {
 
   @Test
   fun `when request does not exist shall write it and wait for response`() {
-    val proofIndex = ProofIndex(startBlockNumber = 1u, endBlockNumber = 20u)
+    val proofIndex = ProofIndexImpl(startBlockNumber = 1u, endBlockNumber = 20u)
     val responseFuture = proverClient.requestProof(proofIndex.toRequest())
     // assert it will write the request file
     val expectedRequestFile = requestFilePath(proofIndex)
@@ -155,7 +166,7 @@ class GenericFileBasedProverClientTest {
 
   @Test
   fun `when response already exists, should reuse it`() {
-    val proofIndex = ProofIndex(startBlockNumber = 2u, endBlockNumber = 22u)
+    val proofIndex = ProofIndexImpl(startBlockNumber = 2u, endBlockNumber = 22u)
     // write response
     saveToFile(responseFilePath(proofIndex), ProofResponseDto(blockNumberStart = 2u, blockNumberEnd = 22u))
 
@@ -170,7 +181,7 @@ class GenericFileBasedProverClientTest {
     // this is to prevent when coordinator is restarted
     // and the request is already in the requests directory and create a duplicated one
 
-    val proofIndex = ProofIndex(startBlockNumber = 3u, endBlockNumber = 33u)
+    val proofIndex = ProofIndexImpl(startBlockNumber = 3u, endBlockNumber = 33u)
 
     // write request
     // Write with a different block number content to check that it was not overwritten
@@ -195,7 +206,7 @@ class GenericFileBasedProverClientTest {
     // this is to prevent when coordinator is restarted
     // and the request is already in the requests directory being proved by the prover,
     // we must not create a duplicated one
-    val proofIndex = ProofIndex(startBlockNumber = 4u, endBlockNumber = 44u)
+    val proofIndex = ProofIndexImpl(startBlockNumber = 4u, endBlockNumber = 44u)
     // example of PROD file name
     // 8930088-8930101-etv0.2.0-stv2.2.0-getZkProof.json.inprogress.prover-aggregation-97695c877-vgsfg
     val requestProvingInprogressFilePath = proverConfig.requestsDirectory.resolve(
@@ -225,5 +236,5 @@ class GenericFileBasedProverClientTest {
       }
   }
 
-  private fun ProofIndex.toRequest(): ProofRequest = ProofRequest(startBlockNumber, endBlockNumber)
+  private fun ProofIndexImpl.toRequest(): ProofRequest = ProofRequest(startBlockNumber, endBlockNumber)
 }

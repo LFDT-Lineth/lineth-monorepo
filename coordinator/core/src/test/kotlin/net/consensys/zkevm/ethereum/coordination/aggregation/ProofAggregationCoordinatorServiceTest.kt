@@ -14,7 +14,7 @@ import net.consensys.zkevm.domain.Aggregation
 import net.consensys.zkevm.domain.BlobAndBatchCounters
 import net.consensys.zkevm.domain.BlobCounters
 import net.consensys.zkevm.domain.BlobsToAggregate
-import net.consensys.zkevm.domain.ProofIndex
+import net.consensys.zkevm.domain.CompressionProofIndex
 import net.consensys.zkevm.domain.ProofToFinalize
 import net.consensys.zkevm.domain.ProofsToAggregate
 import net.consensys.zkevm.persistence.AggregationsRepository
@@ -202,7 +202,7 @@ class ProofAggregationCoordinatorServiceTest {
       ProofsToAggregate(
         compressionProofIndexes =
         compressionBlobs1.map {
-          ProofIndex(
+          CompressionProofIndex(
             it.blobCounters.startBlockNumber,
             it.blobCounters.endBlockNumber,
             it.blobCounters.expectedShnarf,
@@ -218,7 +218,7 @@ class ProofAggregationCoordinatorServiceTest {
       ProofsToAggregate(
         compressionProofIndexes =
         compressionBlobs2.map {
-          ProofIndex(
+          CompressionProofIndex(
             it.blobCounters.startBlockNumber,
             it.blobCounters.endBlockNumber,
             it.blobCounters.expectedShnarf,

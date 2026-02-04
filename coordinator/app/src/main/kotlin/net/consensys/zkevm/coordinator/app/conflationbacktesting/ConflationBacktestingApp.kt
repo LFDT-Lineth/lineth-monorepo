@@ -24,7 +24,7 @@ import net.consensys.zkevm.coordinator.blockcreation.LastProvenBlockNumberProvid
 import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
 import net.consensys.zkevm.coordinator.clients.prover.ProverClientFactory
 import net.consensys.zkevm.coordinator.clients.prover.ProverConfig
-import net.consensys.zkevm.domain.ProofIndex
+import net.consensys.zkevm.domain.CompressionProofIndex
 import net.consensys.zkevm.ethereum.coordination.blob.BlobCompressionProofCoordinator
 import net.consensys.zkevm.ethereum.coordination.blob.BlobShnarfMetaData
 import net.consensys.zkevm.ethereum.coordination.blob.BlobZkStateProviderImpl
@@ -77,7 +77,7 @@ class ConflationBacktestingApp(
   fun isConflationBacktestingComplete(): Boolean = conflationBacktestingComplete.load()
 
   fun onConflationProgress(
-    proofIndex: ProofIndex,
+    proofIndex: CompressionProofIndex,
   ): SafeFuture<*> {
     return if (proofIndex.endBlockNumber == conflationBacktestingAppConfig.endBlockNumber) {
       conflationBacktestingComplete.store(true)

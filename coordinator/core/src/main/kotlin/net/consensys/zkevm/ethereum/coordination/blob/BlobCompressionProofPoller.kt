@@ -7,7 +7,7 @@ import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProverClientV2
 import net.consensys.zkevm.domain.BlobRecord
-import net.consensys.zkevm.domain.ProofIndex
+import net.consensys.zkevm.domain.CompressionProofIndex
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ConcurrentLinkedDeque
@@ -30,7 +30,7 @@ class BlobCompressionProofPoller(
   timerSchedule = timerSchedule,
 ) {
   data class ProofInProgress(
-    val proofIndex: ProofIndex,
+    val proofIndex: CompressionProofIndex,
     val unProvenBlobRecord: BlobRecord,
   )
 
@@ -46,7 +46,7 @@ class BlobCompressionProofPoller(
   }
 
   @Synchronized
-  fun addProofRequestsInProgressForPolling(proofIndex: ProofIndex, unProvenBlobRecord: BlobRecord) {
+  fun addProofRequestsInProgressForPolling(proofIndex: CompressionProofIndex, unProvenBlobRecord: BlobRecord) {
     proofRequestsInProgress.add(ProofInProgress(proofIndex, unProvenBlobRecord))
   }
 

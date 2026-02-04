@@ -17,7 +17,7 @@ import net.consensys.zkevm.coordinator.clients.ProofAggregationProverClientV2
 import net.consensys.zkevm.domain.Aggregation
 import net.consensys.zkevm.domain.BlobAndBatchCounters
 import net.consensys.zkevm.domain.BlobsToAggregate
-import net.consensys.zkevm.domain.ProofIndex
+import net.consensys.zkevm.domain.CompressionProofIndex
 import net.consensys.zkevm.domain.ProofToFinalize
 import net.consensys.zkevm.domain.ProofsToAggregate
 import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
@@ -170,7 +170,7 @@ class ProofAggregationCoordinatorService(
 
     val compressionProofIndexes =
       compressionBlobs.map {
-        ProofIndex(
+        CompressionProofIndex(
           startBlockNumber = it.blobCounters.startBlockNumber,
           endBlockNumber = it.blobCounters.endBlockNumber,
           hash = it.blobCounters.expectedShnarf,
@@ -247,7 +247,7 @@ class ProofAggregationCoordinatorService(
 
   private fun aggregationProofCreation(
     batchIntervals: BlockIntervals,
-    compressionProofIndexes: List<ProofIndex>,
+    compressionProofIndexes: List<CompressionProofIndex>,
   ): SafeFuture<ProofToFinalize> {
     val blobsToAggregate = batchIntervals.toBlockInterval()
     return aggregationL2StateProvider

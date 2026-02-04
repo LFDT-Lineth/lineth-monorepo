@@ -11,9 +11,9 @@ typealias BlobsToAggregate = BlockInterval
  * @property parentAggregationLastBlockTimestamp The timestamp of the last block of the previous aggregation.
  */
 data class ProofsToAggregate(
-  val compressionProofIndexes: List<ProofIndex>,
+  val compressionProofIndexes: List<CompressionProofIndex>,
   val executionProofs: BlockIntervals,
-  val invalidityProofs: List<ProofIndex> = emptyList(),
+  val invalidityProofs: List<InvalidityProofIndex> = emptyList(),
   val parentAggregationLastBlockTimestamp: Instant,
   val parentAggregationLastL1RollingHashMessageNumber: ULong,
   val parentAggregationLastL1RollingHash: ByteArray,

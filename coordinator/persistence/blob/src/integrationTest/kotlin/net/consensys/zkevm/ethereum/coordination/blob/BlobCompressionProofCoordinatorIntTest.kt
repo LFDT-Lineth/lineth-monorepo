@@ -17,6 +17,7 @@ import net.consensys.zkevm.coordinator.clients.BlobCompressionProof
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProofRequest
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProverClientV2
 import net.consensys.zkevm.domain.Blob
+import net.consensys.zkevm.domain.CompressionProofIndex
 import net.consensys.zkevm.domain.ConflationCalculationResult
 import net.consensys.zkevm.domain.ConflationTrigger
 import net.consensys.zkevm.domain.ProofIndex
@@ -146,7 +147,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
           kzgProofContract = Random.nextBytes(48),
           kzgProofSidecar = Random.nextBytes(48),
         )
-        val proofIndex = ProofIndex(
+        val proofIndex = CompressionProofIndex(
           startBlockNumber = proofReq.startBlockNumber,
           endBlockNumber = proofReq.conflations.last().endBlockNumber,
           hash = proofReq.expectedShnarfResult.dataHash,

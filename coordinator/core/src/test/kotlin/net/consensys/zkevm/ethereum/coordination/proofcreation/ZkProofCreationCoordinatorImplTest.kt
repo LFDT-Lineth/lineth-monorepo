@@ -16,7 +16,7 @@ import net.consensys.zkevm.coordinator.clients.GenerateTracesResponse
 import net.consensys.zkevm.domain.BlocksConflation
 import net.consensys.zkevm.domain.ConflationCalculationResult
 import net.consensys.zkevm.domain.ConflationTrigger
-import net.consensys.zkevm.domain.ProofIndex
+import net.consensys.zkevm.domain.ExecutionProofIndex
 import net.consensys.zkevm.ethereum.coordination.conflation.BlocksTracesConflated
 import org.apache.logging.log4j.Level
 import org.assertj.core.api.Assertions.assertThat
@@ -86,7 +86,7 @@ class ZkProofCreationCoordinatorImplTest {
     whenever(executionProverClient.createProofRequest(any()))
       .thenReturn(
         SafeFuture.completedFuture(
-          ProofIndex(
+          ExecutionProofIndex(
             startBlockNumber = 123UL,
             endBlockNumber = 124UL,
           ),

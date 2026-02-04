@@ -1,7 +1,6 @@
 package net.consensys.zkevm.coordinator.clients.prover
 
 import io.vertx.core.Vertx
-import linea.domain.BlockInterval
 import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.GaugeAggregator
@@ -9,6 +8,7 @@ import net.consensys.zkevm.coordinator.clients.BlobCompressionProverClientV2
 import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
 import net.consensys.zkevm.coordinator.clients.ProofAggregationProverClientV2
 import net.consensys.zkevm.coordinator.clients.ProverClient
+import net.consensys.zkevm.domain.ProofIndex
 import org.apache.logging.log4j.Logger
 
 class ProverClientFactory(
@@ -96,13 +96,13 @@ class ProverClientFactory(
     }
   }
 
-  private fun <ProofRequest, ProofResponse> createClient(
+  private fun <ProofRequest, ProofResponse, TProofIndex> createClient(
     proverAConfig: FileBasedProverConfig,
     proverBConfig: FileBasedProverConfig?,
     switchBlockNumberInclusive: ULong?,
-    clientBuilder: (FileBasedProverConfig) -> ProverClient<ProofRequest, ProofResponse>,
-  ): ProverClient<ProofRequest, ProofResponse>
-    where ProofRequest : BlockInterval {
+    clientBuilder: (FileBasedProverConfig) -> ProverClient<ProofRequest, ProofResponse, TProofIndex>,
+  ): ProverClient<ProofRequest, ProofResponse, TProofIndex>
+    where ProofRequest : Any, TProofIndex : ProofIndex {
     return if (switchBlockNumberInclusive != null) {
       val switchPredicate = StartBlockNumberBasedSwitchPredicate(switchBlockNumberInclusive)
       ABProverClientRouter(

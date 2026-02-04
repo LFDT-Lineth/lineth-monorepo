@@ -9,9 +9,9 @@ import net.consensys.zkevm.coordinator.clients.BlobCompressionProof
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProofRequest
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProverClientV2
 import net.consensys.zkevm.domain.Blob
+import net.consensys.zkevm.domain.CompressionProofIndex
 import net.consensys.zkevm.domain.ConflationCalculationResult
 import net.consensys.zkevm.domain.ConflationTrigger
-import net.consensys.zkevm.domain.ProofIndex
 import net.consensys.zkevm.ethereum.coordination.blob.BlobCompressionProofCoordinator
 import net.consensys.zkevm.ethereum.coordination.blob.BlobZkState
 import net.consensys.zkevm.ethereum.coordination.blob.BlobZkStateProvider
@@ -75,9 +75,10 @@ class BlobCompressionProofCoordinatorTest {
       .thenAnswer { invocationOnMock ->
         val request = invocationOnMock.getArgument<BlobCompressionProofRequest>(0)
         SafeFuture.completedFuture(
-          ProofIndex(
+          CompressionProofIndex(
             startBlockNumber = request.conflations.first().startBlockNumber,
             endBlockNumber = request.conflations.last().endBlockNumber,
+            hash = request.expectedShnarfResult.expectedShnarf,
           ),
         )
       }
@@ -176,7 +177,13 @@ class BlobCompressionProofCoordinatorTest {
             ),
           )
         verify(blobCompressionProverClient, times(1))
-          .findProofResponse(ProofIndex(expectedStartBlock, expectedEndBlock))
+          .findProofResponse(
+            CompressionProofIndex(
+              expectedStartBlock,
+              expectedEndBlock,
+              shnarfResult.expectedShnarf,
+            ),
+          )
       }
   }
 
@@ -292,9 +299,21 @@ class BlobCompressionProofCoordinatorTest {
           )
 
         verify(blobCompressionProverClient, times(1))
-          .findProofResponse(ProofIndex(blob1.startBlockNumber, blob1.endBlockNumber))
+          .findProofResponse(
+            CompressionProofIndex(
+              blob1.startBlockNumber,
+              blob1.endBlockNumber,
+              shnarfResult.expectedShnarf,
+            ),
+          )
         verify(blobCompressionProverClient, times(1))
-          .findProofResponse(ProofIndex(blob2.startBlockNumber, blob2.endBlockNumber))
+          .findProofResponse(
+            CompressionProofIndex(
+              blob2.startBlockNumber,
+              blob2.endBlockNumber,
+              shnarfResult.expectedShnarf,
+            ),
+          )
       }
   }
 }

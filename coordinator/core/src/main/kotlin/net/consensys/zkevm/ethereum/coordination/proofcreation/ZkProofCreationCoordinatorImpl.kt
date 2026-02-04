@@ -9,7 +9,7 @@ import linea.ethapi.EthApiClient
 import net.consensys.zkevm.coordinator.clients.BatchExecutionProofRequestV1
 import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
 import net.consensys.zkevm.domain.BlocksConflation
-import net.consensys.zkevm.domain.ProofIndex
+import net.consensys.zkevm.domain.ExecutionProofIndex
 import net.consensys.zkevm.ethereum.coordination.conflation.BlocksTracesConflated
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -51,7 +51,7 @@ class ZkProofCreationCoordinatorImpl(
   override fun createZkProofRequest(
     blocksConflation: BlocksConflation,
     traces: BlocksTracesConflated,
-  ): SafeFuture<ProofIndex> {
+  ): SafeFuture<ExecutionProofIndex> {
     val startBlockNumber = blocksConflation.blocks.first().number
     val endBlockNumber = blocksConflation.blocks.last().number
     val blocksConflationInterval = blocksConflation.intervalString()
@@ -84,6 +84,6 @@ class ZkProofCreationCoordinatorImpl(
       }
   }
 
-  override fun isZkProofRequestProven(proofIndex: ProofIndex): SafeFuture<Boolean> =
+  override fun isZkProofRequestProven(proofIndex: ExecutionProofIndex): SafeFuture<Boolean> =
     executionProverClient.isProofAlreadyDone(proofIndex)
 }

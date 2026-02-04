@@ -9,7 +9,7 @@ import linea.domain.BlockIntervals
 import linea.kotlin.ByteArrayExt
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
-import net.consensys.zkevm.domain.ProofIndex
+import net.consensys.zkevm.domain.CompressionProofIndex
 import net.consensys.zkevm.domain.ProofsToAggregate
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
@@ -19,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
@@ -72,21 +73,39 @@ class ProverClientFactoryTest {
   private lateinit var testTmpDir: Path
 
   private val request1 = ProofsToAggregate(
-    compressionProofIndexes = listOf(ProofIndex(startBlockNumber = 1uL, endBlockNumber = 9uL)),
+    compressionProofIndexes = listOf(
+      CompressionProofIndex(
+        startBlockNumber = 1uL,
+        endBlockNumber = 9uL,
+        hash = Random.nextBytes(32),
+      ),
+    ),
     executionProofs = BlockIntervals(startingBlockNumber = 1uL, listOf(9uL)),
     parentAggregationLastBlockTimestamp = Clock.System.now(),
     parentAggregationLastL1RollingHashMessageNumber = 0uL,
     parentAggregationLastL1RollingHash = ByteArrayExt.random32(),
   )
   private val request2 = ProofsToAggregate(
-    compressionProofIndexes = listOf(ProofIndex(startBlockNumber = 10uL, endBlockNumber = 19uL)),
+    compressionProofIndexes = listOf(
+      CompressionProofIndex(
+        startBlockNumber = 10uL,
+        endBlockNumber = 19uL,
+        hash = Random.nextBytes(32),
+      ),
+    ),
     executionProofs = BlockIntervals(startingBlockNumber = 10uL, listOf(19uL)),
     parentAggregationLastBlockTimestamp = Clock.System.now(),
     parentAggregationLastL1RollingHashMessageNumber = 9uL,
     parentAggregationLastL1RollingHash = ByteArrayExt.random32(),
   )
   private val request3 = ProofsToAggregate(
-    compressionProofIndexes = listOf(ProofIndex(startBlockNumber = 300uL, endBlockNumber = 319uL)),
+    compressionProofIndexes = listOf(
+      CompressionProofIndex(
+        startBlockNumber = 300uL,
+        endBlockNumber = 319uL,
+        hash = Random.nextBytes(32),
+      ),
+    ),
     executionProofs = BlockIntervals(startingBlockNumber = 300uL, listOf(319uL)),
     parentAggregationLastBlockTimestamp = Clock.System.now(),
     parentAggregationLastL1RollingHashMessageNumber = 299uL,

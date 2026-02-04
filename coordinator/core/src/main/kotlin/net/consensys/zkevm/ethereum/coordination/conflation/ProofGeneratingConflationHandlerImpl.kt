@@ -15,7 +15,7 @@ import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.zkevm.domain.Batch
 import net.consensys.zkevm.domain.BlocksConflation
-import net.consensys.zkevm.domain.ProofIndex
+import net.consensys.zkevm.domain.ExecutionProofIndex
 import net.consensys.zkevm.ethereum.coordination.proofcreation.BatchProofHandler
 import net.consensys.zkevm.ethereum.coordination.proofcreation.ZkProofCreationCoordinator
 import org.apache.logging.log4j.LogManager
@@ -46,7 +46,7 @@ class ProofGeneratingConflationHandlerImpl(
     val executionProofPollingInterval: Duration,
   )
 
-  private val proofRequestsInProgress = ConcurrentLinkedDeque<ProofIndex>()
+  private val proofRequestsInProgress = ConcurrentLinkedDeque<ExecutionProofIndex>()
 
   init {
     metricsFacade.createGauge(
@@ -120,7 +120,7 @@ class ProofGeneratingConflationHandlerImpl(
       .getOrThrow().let { blocksRange ->
         val batch = Batch(conflation.startBlockNumber, conflation.endBlockNumber)
         zkProofProductionCoordinator.isZkProofRequestProven(
-          ProofIndex(
+          ExecutionProofIndex(
             startBlockNumber = batch.startBlockNumber,
             endBlockNumber = batch.endBlockNumber,
           ),
