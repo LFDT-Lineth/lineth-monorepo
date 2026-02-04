@@ -30,7 +30,7 @@ ban-period = "30 seconds"
 [payload-validator]
 engine-api-endpoint = { endpoint = "http://sequencer:8550" }
 eth-api-endpoint = { endpoint = "http://sequencer:8545" }
-payload-validation-enabled = false
+payload-validation-enabled = true
 
 [follower-engine-apis]
 follower-besu = { endpoint = "http://l2-node-besu:8550" }
