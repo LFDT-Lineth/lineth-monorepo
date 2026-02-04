@@ -54,7 +54,7 @@ jobs:
     steps:
       - name: Download Jacoco test coverage report (from coordinator-testing.yml)
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         id: coordinator-report-download
         with:
           name: jacocoRootReport-${{ needs.get-commit-tag.outputs.commit-tag }}.xml
@@ -85,7 +85,7 @@ jobs:
       - name: Download smart contract coverage report (from run-smc.tests.yml)
         id: smc-report-download
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: smart-contract-coverage-${{ needs.get-commit-tag.outputs.commit-tag }}.json
           path: |

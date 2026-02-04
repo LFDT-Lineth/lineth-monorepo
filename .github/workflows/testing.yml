@@ -134,31 +134,31 @@ jobs:
 
       - name: Download Jacoco execution data from coordinator
         if: needs.coordinator.result != 'skipped'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: jacoco-coordinator-exec
           path: .
       - name: Download Jacoco execution data from linea-sequencer unit tests
         if: needs.linea-sequencer.result != 'skipped'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: jacoco-linea-sequencer-unit-exec
           path: .
       - name: Download Jacoco execution data from linea-sequencer acceptance tests
         if: needs.linea-sequencer.result != 'skipped'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: jacoco-linea-sequencer-acceptance-exec
           path: .
       - name: Download Jacoco execution data from staterecovery
         if: needs.staterecovery.result != 'skipped'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: jacoco-staterecovery-exec
           path: .
       - name: Download Jacoco execution data from transaction-exclusion-api
         if: needs.transaction-exclusion-api.result != 'skipped'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: jacoco-transaction-exclusion-api-exec
           path: .

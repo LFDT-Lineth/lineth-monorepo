@@ -114,7 +114,7 @@ jobs:
           command: |
             make docker-pull-images-external-to-monorepo
       - name: Download local docker image artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: linea-*
       - name: Load Docker images

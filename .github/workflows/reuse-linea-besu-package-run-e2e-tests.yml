@@ -77,7 +77,7 @@ jobs:
           mkdir -p tmp/local/traces/v2/conflated
           chmod -R a+rw tmp/local/
       - name: Download local docker image artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: linea-besu-package*
       - name: Load Docker images
