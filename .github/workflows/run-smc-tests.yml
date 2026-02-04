@@ -51,7 +51,7 @@ jobs:
 
       # Required for hardhat commands due to @nomicfoundation/hardhat-foundry package
       - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@82dee4ba654bd2146511f85f0d013af94670c4de #v1.4.0
+        uses: foundry-rs/foundry-toolchain@8789b3e21e6c11b2697f5eb56eddae542f746c10 #v1.7.0
 
       - name: Compile kzg.node
         run: npx node-gyp --directory=contracts/node_modules/c-kzg rebuild # explicitly running rebuild to get the .node file
