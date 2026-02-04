@@ -6,7 +6,7 @@ import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.isDisabled
 import linea.ethapi.EthApiClient
 import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.zkevm.coordinator.blockcreation.GethCliqueSafeBlockProvider
+import net.consensys.zkevm.coordinator.blockcreation.FixedLaggingHeadSafeBlockProvider
 import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculator
 import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculatorByBlockLimit
 import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculatorByDataCompressed
@@ -156,9 +156,9 @@ object ConflationAppHelper {
         ),
         lastBlockNumber = lastProcessedBlockNumber,
         clock = Clock.System,
-        latestBlockProvider = GethCliqueSafeBlockProvider(
+        latestBlockProvider = FixedLaggingHeadSafeBlockProvider(
           ethApiBlockClient = l2EthClient,
-          config = GethCliqueSafeBlockProvider.Config(blocksToFinalization = 0),
+          blocksToFinalization = 0UL,
         ),
       ),
     )

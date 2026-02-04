@@ -25,7 +25,7 @@ import net.consensys.zkevm.coordinator.app.conflation.ConflationAppHelper.resume
 import net.consensys.zkevm.coordinator.app.conflation.TracesClientFactory.createTracesClients
 import net.consensys.zkevm.coordinator.blockcreation.BatchesRepoBasedLastProvenBlockNumberProvider
 import net.consensys.zkevm.coordinator.blockcreation.BlockCreationMonitor
-import net.consensys.zkevm.coordinator.blockcreation.GethCliqueSafeBlockProvider
+import net.consensys.zkevm.coordinator.blockcreation.FixedLaggingHeadSafeBlockProvider
 import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
 import net.consensys.zkevm.coordinator.clients.prover.ProverClientFactory
 import net.consensys.zkevm.domain.BlobRecord
@@ -269,9 +269,9 @@ class ConflationApp(
         aggregationCoordinatorPollingInterval = configs.conflation.proofAggregation.coordinatorPollingInterval,
         deadlineCheckInterval = configs.conflation.proofAggregation.deadlineCheckInterval,
         aggregationDeadline = configs.conflation.proofAggregation.deadline,
-        latestBlockProvider = GethCliqueSafeBlockProvider(
+        latestBlockProvider = FixedLaggingHeadSafeBlockProvider(
           ethApiBlockClient = l2EthClient,
-          config = GethCliqueSafeBlockProvider.Config(0),
+          blocksToFinalization = 0UL,
         ),
         maxProofsPerAggregation = configs.conflation.proofAggregation.proofsLimit,
         maxBlobsPerAggregation = configs.conflation.proofAggregation.blobsLimit,
