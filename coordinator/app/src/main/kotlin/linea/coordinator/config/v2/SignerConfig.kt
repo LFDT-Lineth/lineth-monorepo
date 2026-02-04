@@ -1,6 +1,7 @@
 package linea.coordinator.config.v2
 
 import com.sksamuel.hoplite.Masked
+import linea.kotlin.encodeHex
 import java.net.URL
 import java.nio.file.Path
 import kotlin.io.path.exists
@@ -17,6 +18,7 @@ data class SignerConfig(
           "signerType=$type requires web3j config"
         }
       }
+
       SignerType.WEB3SIGNER -> {
         require(web3signer != null) {
           "signerType=$type requires web3signer config"
@@ -124,6 +126,15 @@ data class SignerConfig(
       result = 31 * result + endpoint.hashCode()
       result = 31 * result + publicKey.contentHashCode()
       return result
+    }
+
+    override fun toString(): String {
+      return "Web3SignerConfig(" +
+        "endpoint=$endpoint, " +
+        "publicKey=${publicKey.encodeHex()}, " +
+        "maxPoolSize=$maxPoolSize," +
+        " keepAlive=$keepAlive, " +
+        "tls=$tls)"
     }
   }
 }

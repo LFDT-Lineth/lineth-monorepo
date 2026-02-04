@@ -2,14 +2,17 @@ import { describe, expect, it } from "@jest/globals";
 import { config } from "./config/tests-config";
 import { awaitUntil, execDockerCommand, getBlockByNumberOrBlockTag, GetEthLogsClient, wait } from "./common/utils";
 import { Wallet } from "ethers";
+import { LIVENESS_ACCOUNT_INDEX } from "./common/constants";
 
 // should remove skip only when the linea-sequencer plugin supports liveness
 describe("Liveness test suite", () => {
   it.concurrent(
     "Should succeed to send liveness transactions after sequencer restarted",
     async () => {
-      // Account index 19 is reserved for liveness testing to avoid nonce conflicts with other concurrent e2e tests"
-      const livenessSigner = config.getL2AccountManager().whaleAccount(19);
+      /**
+       * Account index {@link LIVENESS_ACCOUNT_INDEX} is reserved for liveness testing to avoid nonce conflicts with other concurrent e2e tests.
+       */
+      const livenessSigner = config.getL2AccountManager().whaleAccount(LIVENESS_ACCOUNT_INDEX);
 
       const livenessContract = config.getL2LineaSequencerUptimeFeedContract(livenessSigner.signer as Wallet);
       const livenessContractAddress = await livenessContract.getAddress();

@@ -11,6 +11,8 @@ export const HASH_ZERO = ethers.ZeroHash;
 export const EMPTY_CONTRACT_CODE = "0x";
 export const TRANSACTION_CALLDATA_LIMIT = 30_000;
 
+export const LIVENESS_ACCOUNT_INDEX = 1;
+
 export const PAUSE_ALL_ROLE = generateKeccak256(["string"], ["PAUSE_ALL_ROLE"], true);
 export const UNPAUSE_ALL_ROLE = generateKeccak256(["string"], ["UNPAUSE_ALL_ROLE"], true);
 export const PAUSE_L1_L2_ROLE = generateKeccak256(["string"], ["PAUSE_L1_L2_ROLE"], true);
