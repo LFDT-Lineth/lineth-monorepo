@@ -1,17 +1,22 @@
 # required for `source`
 SHELL := /usr/bin/env bash
-CORSET_ROOT := $(shell pwd)/../go-corset
 
 VERSION := $(shell git rev-parse --short=7 HEAD)
 
 CONSTRAINTS_COMMIT_HASH := b88da9e199b6b7c8a413902f6035dd2774c43def
+GO_CORSET_VERSION := v1.1.28
+
 CONSTRAINTS_TEMP_FOLDER := build/tmp/deps
+# Find where Go installs binaries
+GOBIN := $(shell go env GOBIN)
+ifeq ($(GOBIN),)
+    GOBIN := $(shell go env GOPATH)/bin
+endif
+# Ensure that we are using go-corset from go install
+GO_CORSET := PATH="$(GOBIN):$$PATH"
 
 LINUX_AMD64_FLAGS := CGO_ENABLED=1 CC="x86_64-linux-musl-gcc" CXX="x86_64-linux-musl-g++" GOOS="linux" GOARCH="amd64"
 DARWIN_ARM64_FLAGS := CGO_ENABLED=1 GOOS="linux" GOARCH="arm64"
-
-# Ensure that we are using go-corset from the monorepo
-GO_CORSET := PATH="${CORSET_ROOT}/bin":$$PATH
 
 # these targets are not defined as depending on source files,
 # so they should be recompiled by default “just in case”.
@@ -38,8 +43,7 @@ GO_CORSET := PATH="${CORSET_ROOT}/bin":$$PATH
 ## This rule produces the go-corset binary
 ##
 go-corset:
-	cd ${CORSET_ROOT} && make build
-
+	go install github.com/consensys/go-corset/cmd/go-corset@$(GO_CORSET_VERSION)
 
 extract-constraints-git-archive:
 	mkdir -p ${CONSTRAINTS_TEMP_FOLDER} && pushd .. && git archive --format=tar ${CONSTRAINTS_COMMIT_HASH} tracer-constraints | tar -x -C prover/${CONSTRAINTS_TEMP_FOLDER} && popd
