@@ -2,7 +2,7 @@ import { ethers, NonceManager, Provider, toBeHex, TransactionRequest, Transactio
 import { Mutex } from "async-mutex";
 import type { Logger } from "winston";
 import Account from "./account";
-import { etherToWei, LineaEstimateGasClient } from "../../../common/utils";
+import { etherToWei, LineaEstimateGasClient, normalizeAddress } from "../../../common/utils";
 import { createTestLogger } from "../../../config/logger";
 import { config } from "..";
 
@@ -29,6 +29,7 @@ function getWallet(provider: Provider, privateKey: string): Wallet {
 abstract class AccountManager implements IAccountManager {
   protected readonly chainId: number;
   protected readonly whaleAccounts: Account[];
+  protected readonly reservedAddresses: string[];
   protected provider: Provider;
   protected accountWallets: NonceManager[];
   private whaleAccountMutex: Mutex;
@@ -37,10 +38,11 @@ abstract class AccountManager implements IAccountManager {
   private readonly MAX_RETRIES = 5;
   private readonly RETRY_DELAY_MS = 1_000;
 
-  constructor(provider: Provider, whaleAccounts: Account[], chainId: number) {
+  constructor(provider: Provider, whaleAccounts: Account[], chainId: number, reservedAddresses: string[] = []) {
     this.provider = provider;
     this.whaleAccounts = whaleAccounts;
     this.chainId = chainId;
+    this.reservedAddresses = reservedAddresses.map(normalizeAddress);
     this.accountWallets = this.whaleAccounts.map(
       (account) => new NonceManager(getWallet(this.provider, account.privateKey)),
     );
@@ -50,14 +52,27 @@ abstract class AccountManager implements IAccountManager {
   }
 
   selectWhaleAccount(accIndex?: number): { account: Account; accountWallet: NonceManager } {
-    if (accIndex) {
+    if (accIndex !== undefined) {
       return { account: this.whaleAccounts[accIndex], accountWallet: this.accountWallets[accIndex] };
     }
-    const workerIdEnv = process.env.JEST_WORKER_ID || "1";
-    const workerId = parseInt(workerIdEnv, 10) - 1;
 
-    const accountIndex = workerId;
-    const whaleAccount = this.whaleAccounts[accountIndex];
+    const workerIdEnv = process.env.JEST_WORKER_ID ?? "1";
+    const workerId = Number(workerIdEnv) - 1;
+
+    const availableWhaleAccounts = this.whaleAccounts.filter(
+      (account) => !this.reservedAddresses.includes(normalizeAddress(account.address)),
+    );
+
+    if (availableWhaleAccounts.length === 0) {
+      throw new Error("No available whale accounts found after filtering reserved addresses.");
+    }
+
+    const isValidWorkerId = Number.isFinite(workerId) && workerId >= 0;
+    if (!isValidWorkerId) {
+      this.logger.warn(`Invalid JEST_WORKER_ID value. value=${workerIdEnv}`);
+    }
+    const accountIndex = isValidWorkerId ? workerId % availableWhaleAccounts.length : 0;
+    const whaleAccount = availableWhaleAccounts[accountIndex];
     const whaleTxManager = this.accountWallets[this.whaleAccounts.indexOf(whaleAccount)];
     return { account: whaleAccount, accountWallet: whaleTxManager };
   }

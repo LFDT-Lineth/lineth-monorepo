@@ -1,7 +1,8 @@
-import { ethers, Provider } from "ethers";
+import { Provider } from "ethers";
 import { readFileSync } from "fs";
 import Account from "./account";
 import { AccountManager } from "./account-manager";
+import { normalizeAddress } from "../../../common/utils";
 
 interface GenesisJson {
   config: {
@@ -18,16 +19,12 @@ type GenesisBasedAccountManagerOptions = {
   provider: Provider;
   genesisFilePath: string;
   excludeAddresses?: string[];
-  priorityAddresses?: string[];
+  reservedAddresses?: string[];
 };
 
 function readJsonFile(filePath: string): unknown {
   const data = readFileSync(filePath, "utf8");
   return JSON.parse(data);
-}
-
-function normalizeAddress(address: string): string {
-  return ethers.getAddress(address);
 }
 
 function readGenesisFileAccounts(genesisJson: GenesisJson): Account[] {
@@ -52,32 +49,36 @@ function filterExcludedAccounts(accounts: Account[], excludeAddresses: string[])
   return accounts.filter((account) => !normalizedExcludeAddresses.includes(account.address));
 }
 
-function prioritizeAccounts(accounts: Account[], priorityAddresses: string[]): Account[] {
-  if (!priorityAddresses || priorityAddresses.length === 0) {
+function prioritizeReservedAccounts(accounts: Account[], reservedAddresses: string[]): Account[] {
+  if (!reservedAddresses || reservedAddresses.length === 0) {
     return accounts;
   }
 
-  const normalizedPriorityAddresses = priorityAddresses.map(normalizeAddress);
-  const priorityAccounts = accounts.filter((account) => normalizedPriorityAddresses.includes(account.address));
+  const normalizedReservedAddresses = reservedAddresses.map(normalizeAddress);
+  const accountsByAddress = new Map(accounts.map((account) => [account.address, account]));
+  const reservedAccounts = normalizedReservedAddresses
+    .map((address) => accountsByAddress.get(address))
+    .filter((account): account is Account => Boolean(account));
   const remainingAccounts = filterExcludedAccounts(
     accounts,
-    priorityAccounts.map((account) => account.address),
+    reservedAccounts.map((account) => account.address),
   );
-  return [...priorityAccounts, ...remainingAccounts];
+
+  return [...reservedAccounts, ...remainingAccounts];
 }
 
 class GenesisBasedAccountManager extends AccountManager {
   constructor(options: GenesisBasedAccountManagerOptions) {
-    const { provider, genesisFilePath, excludeAddresses = [], priorityAddresses = [] } = options;
+    const { provider, genesisFilePath, excludeAddresses = [], reservedAddresses = [] } = options;
 
     const genesisJson = readJsonFile(genesisFilePath);
     const genesis = genesisJson as GenesisJson;
     const chainId = genesis.config.chainId;
     const accounts = readGenesisFileAccounts(genesis);
     const filteredAccounts = filterExcludedAccounts(accounts, excludeAddresses);
-    const whaleAccounts = prioritizeAccounts(filteredAccounts, priorityAddresses);
+    const whaleAccounts = prioritizeReservedAccounts(filteredAccounts, reservedAddresses);
 
-    super(provider, whaleAccounts, chainId);
+    super(provider, whaleAccounts, chainId, reservedAddresses);
   }
 }
 

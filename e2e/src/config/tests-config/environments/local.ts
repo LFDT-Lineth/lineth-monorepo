@@ -33,7 +33,7 @@ const config: Config = {
         "0x90F79bf6EB2c4f870365E785982E1f101E93b906", // L1 Security council
         "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc", // L1 Postman account
       ],
-      priorityAddresses: [
+      reservedAddresses: [
         "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // L1 deployer account
       ],
     }),
@@ -62,7 +62,7 @@ const config: Config = {
         "0xd42e308fc964b71e18126df469c21b0d7bcb86cc", // Message anchorer
         "0xc8c92fe825d8930b9357c006e0af160dfa727a62", // L2 postman account
       ],
-      priorityAddresses: [
+      reservedAddresses: [
         "0x1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0", // L2 deployer account
         "0x54d450f4d728da50f1271a1700b42657940324aa", // Liveness signer account
       ],
