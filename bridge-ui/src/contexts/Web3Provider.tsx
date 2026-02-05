@@ -26,14 +26,17 @@ const googleAuthConnectionId = process.env.NEXT_PUBLIC_CONNECTOR_GOOGLE_ID || ""
 const passwordlessAuthConnectionId = process.env.NEXT_PUBLIC_CONNECTOR_PASSWORDLESS_ID || "";
 const groupedAuthConnectionId = process.env.NEXT_PUBLIC_CONNECTOR_GROUPED_ID || "";
 
+const isSocialLoginEnabled =
+  process.env.NEXT_PUBLIC_SOCIAL_LOGIN_ENABLED === 'true';
+
 const connectorLabel = "Web3Auth";
 
-const connectorConfigProduction = {
+const socialLoginDisabledConfig = {
   label: connectorLabel,
   showOnModal: false,
 };
 
-const connectorConfigStaging = {
+const socialLoginEnabledConfig = {
   label: connectorLabel,
   loginMethods: {
     google: {
@@ -92,7 +95,9 @@ const web3AuthContextConfig: Web3AuthContextConfig = {
     connectors: [coinbaseConnector({ options: "eoaOnly" })],
     modalConfig: {
       connectors: {
-        [WALLET_CONNECTORS.AUTH]: isProd ? connectorConfigProduction : connectorConfigStaging,
+        [WALLET_CONNECTORS.AUTH]: isSocialLoginEnabled
+          ? socialLoginEnabledConfig
+          : socialLoginDisabledConfig,
       },
     },
   },
