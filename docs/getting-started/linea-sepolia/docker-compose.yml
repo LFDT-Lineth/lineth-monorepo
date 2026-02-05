@@ -57,7 +57,7 @@ services:
   maru-node:
     hostname: linea-maru
     container_name: linea-maru
-    image: consensys/maru:9737a45
+    image: consensys/maru:v1.1.0-20260204153030-00cd762
     restart: unless-stopped
     ports:
       - "8080:8080" # Beacon/REST API
