@@ -6,6 +6,7 @@ import kotlin.time.Duration.Companion.milliseconds
 data class RetryConfig(
   val maxRetries: UInt? = null,
   val timeout: Duration? = null,
+  val ignoreFirstExceptionsUntilTimeElapsed: Duration? = null,
   val backoffDelay: Duration = 100.milliseconds,
   val failuresWarningThreshold: UInt = 0u,
 ) {
@@ -19,11 +20,18 @@ data class RetryConfig(
           " maxRetries=$maxRetries, failuresWarningThreshold=$failuresWarningThreshold"
       }
     }
+
     timeout?.also {
-      require(timeout > 0.milliseconds) { "timeout must be >= 1ms. value=$timeout" }
+      require(timeout >= 1.milliseconds) { "timeout must be >= 1ms. value=$timeout" }
     }
 
-    require(backoffDelay > 0.milliseconds) { "backoffDelay must be >= 1ms. value=$timeout" }
+    require(backoffDelay >= 1.milliseconds) { "backoffDelay must be >= 1ms. value=$backoffDelay" }
+
+    ignoreFirstExceptionsUntilTimeElapsed?.also {
+      require(ignoreFirstExceptionsUntilTimeElapsed >= 1.milliseconds) {
+        "ignoreFirstExceptionsUntilTimeElapsed must be >= 1ms. value=$ignoreFirstExceptionsUntilTimeElapsed"
+      }
+    }
   }
 
   companion object {

@@ -109,6 +109,10 @@
       <DebouncingFilter/>
       <appender-ref ref="rewrite"/>
     </Logger>
+    <Logger name="net.consensys.zkevm.persistence.db.PersistenceRetryer" level="WARN" additivity="false">
+      <DebouncingFilter/>
+      <appender-ref ref="console"/>
+    </Logger>
     <Logger name="clients.l2" level="DEBUG" additivity="false">
       <DebouncingFilter/>
       <appender-ref ref="console"/>

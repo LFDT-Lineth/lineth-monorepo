@@ -16,6 +16,7 @@ open class PersistenceRetryer(
     val backoffDelay: Duration,
     val maxRetries: Int? = null,
     val timeout: Duration? = null,
+    val ignoreFirstExceptionsUntilTimeElapsed: Duration? = null,
   )
 
   fun <T> retryQuery(
@@ -23,16 +24,18 @@ open class PersistenceRetryer(
     stopRetriesOnErrorPredicate: (Throwable) -> Boolean = Companion::stopRetriesOnErrorPredicate,
     exceptionConsumer: (Throwable) -> Unit = { error ->
       when {
-        isDuplicateKeyException(error) -> log.info(
+        isDuplicateKeyException(error) -> log.warn(
           "Persistence errorMessage={}",
           error.message,
         )
-        else -> log.info(
-          "Persistence errorMessage={}, it will retry again in {}",
-          error.message,
-          config.backoffDelay,
-          error,
-        )
+        else -> {
+          log.warn(
+            "Persistence errorMessage={}, it will retry again in {}",
+            error.message,
+            config.backoffDelay,
+            error,
+          )
+        }
       }
     },
   ): SafeFuture<T> {
@@ -43,6 +46,7 @@ open class PersistenceRetryer(
       maxRetries = config.maxRetries,
       stopRetriesOnErrorPredicate = stopRetriesOnErrorPredicate,
       exceptionConsumer = exceptionConsumer,
+      ignoreFirstExceptionsUntilTimeElapsed = config.ignoreFirstExceptionsUntilTimeElapsed,
       action = action,
     )
   }

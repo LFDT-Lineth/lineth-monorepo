@@ -6,6 +6,7 @@ import linea.coordinator.config.v2.toml.RequestRetriesToml
 import linea.coordinator.config.v2.toml.parseConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
@@ -26,6 +27,7 @@ class DataBaseConfigParsingTest {
       max-retries = 3
       backoff-delay = "PT1S"
       timeout = "PT40S"
+      ignore-first-exceptions-until-time-elapsed = "PT1H"
       failures-warning-threshold = 2
       """.trimIndent()
 
@@ -45,6 +47,7 @@ class DataBaseConfigParsingTest {
           backoffDelay = 1.seconds,
           timeout = 40.seconds,
           failuresWarningThreshold = 2u,
+          ignoreFirstExceptionsUntilTimeElapsed = 1.hours,
         ),
       )
 
@@ -71,6 +74,7 @@ class DataBaseConfigParsingTest {
           maxRetries = null,
           backoffDelay = 1.seconds,
           timeout = 10.minutes,
+          ignoreFirstExceptionsUntilTimeElapsed = null,
           failuresWarningThreshold = 3u,
         ),
       )
