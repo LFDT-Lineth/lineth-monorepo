@@ -18,7 +18,7 @@ const IV_7 = 0x5BE0CD19137E2179
 ;; corresponds to the default value for padding h0, h1 ... h7
 ;; cannot use constants for padding default for now
 
-pub fn blake2f(h0h1_be_input u128, h2h3_be_input u128, h4h5_be_input u128, h6h7_be_input u128, m0m1_be u128, m2m3_be u128, m4m5_be u128, m6m7_be u128, m8m9_be u128, m10m11_be u128, m12m13_be u128, m14m15_be u128, t0t1_be u128, r u64, f u1 ) -> (h0h1_be=0x08C9BCF367E6096A3BA7CA8485AE67BB u128, h2h3_be=0x2BF894FE72F36E3CF1361D5F3AF54FA5 u128, h4h5_be=0xD182E6AD7F520E511F6C3E2B8C68059B u128, h6h7_be=0x6BBD41FBABD9831F79217E1319CDE05B u128) {
+pub fn blake2f(h0h1_be_input u128, h2h3_be_input u128, h4h5_be_input u128, h6h7_be_input u128, m0m1_be u128, m2m3_be u128, m4m5_be u128, m6m7_be u128, m8m9_be u128, m10m11_be u128, m12m13_be u128, m14m15_be u128, t0t1_be u128, r u32, f u1 ) -> (h0h1_be=0x08C9BCF367E6096A3BA7CA8485AE67BB u128, h2h3_be=0x2BF894FE72F36E3CF1361D5F3AF54FA5 u128, h4h5_be=0xD182E6AD7F520E511F6C3E2B8C68059B u128, h6h7_be=0x6BBD41FBABD9831F79217E1319CDE05B u128) {
       ;; split inputs from u128 to u64 - inputs are given in u128 to fit the blakefmodexpdata lookup
       var h0_be_input, h1_be_input, h2_be_input, h3_be_input, h4_be_input, h5_be_input, h6_be_input, h7_be_input u64
       var m0_be, m1_be, m2_be, m3_be, m4_be, m5_be, m6_be, m7_be, m8_be, m9_be, m10_be, m11_be, m12_be, m13_be, m14_be, m15_be u64

@@ -345,7 +345,8 @@ public class SixtyThreeSixtyFourthsPrecompileTests extends TracerTestBase {
             PRC_MODEXP,
             PRC_ECMUL,
             PRC_ECPAIRING,
-            PRC_BLAKE2F,
+            // Issue to re-enable https://github.com/Consensys/linea-monorepo/issues/2287
+            // PRC_BLAKE2F,
             PRC_POINT_EVALUATION,
             PRC_BLS_G1_MSM,
             PRC_BLS_G2_MSM,

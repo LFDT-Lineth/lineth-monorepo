@@ -27,7 +27,7 @@
  (
   (shift LIMB 0)  (shift LIMB 1)  (shift LIMB 2)  (shift LIMB 3) (shift LIMB 4)
   (shift LIMB 5)  (shift LIMB 6)  (shift LIMB 7)  (shift LIMB 8) (shift LIMB 9)
-  (shift LIMB 10) (shift LIMB 11) (shift LIMB 12) (i64 (shift LIMB 13)) (i1 (shift LIMB 14))
+  (shift LIMB 10) (shift LIMB 11) (shift LIMB 12) (i32 (shift LIMB 13)) (i1 (shift LIMB 14))
   )
   (blake2f-selector)
  )
