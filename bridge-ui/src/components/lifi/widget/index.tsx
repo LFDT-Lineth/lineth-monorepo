@@ -160,9 +160,6 @@ const widgetConfig: Partial<WidgetConfig> = {
       ChainId.KAI,
     ],
   },
-  bridges: {
-    allow: ["mayanMCTP", "stargateV2", "stargateV2Bus", "across", "hop", "squid", "relay", "symbiosis"],
-  },
   apiKey: appConfig.lifiApiKey,
 };
 
