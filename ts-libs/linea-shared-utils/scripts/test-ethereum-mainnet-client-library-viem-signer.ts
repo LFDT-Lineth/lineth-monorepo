@@ -32,9 +32,9 @@ async function main() {
   );
   const clientLibrary = new ViemBlockchainClientAdapter(
     new WinstonLogger("ViemBlockchainClientAdapter.integration"),
-    rpcUrl,
-    anvil,
     signer,
+    anvil,
+    rpcUrl,
   );
 
   try {

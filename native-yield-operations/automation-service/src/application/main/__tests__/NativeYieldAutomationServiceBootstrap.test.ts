@@ -204,6 +204,7 @@ const createBootstrapConfig = () => ({
   dataSources: {
     chainId: CHAIN_ID_MAINNET,
     l1RpcUrl: "https://rpc.example.com",
+    l1RpcUrlFallback: undefined,
     beaconChainRpcUrl: "https://beacon.example.com",
     stakingGraphQLUrl: "https://staking.example.com/graphql",
     ipfsBaseUrl: "https://ipfs.example.com",
@@ -374,9 +375,10 @@ describe("NativeYieldAutomationServiceBootstrap", () => {
       const { hoodi } = jest.requireMock("viem/chains") as { hoodi: { id: number } };
       expect(mockViemBlockchainClientAdapter).toHaveBeenCalledWith(
         expect.anything(), // logger
-        config.dataSources.l1RpcUrl,
-        hoodi,
         expect.anything(), // contractSignerClient
+        hoodi,
+        config.dataSources.l1RpcUrl,
+        config.dataSources.l1RpcUrlFallback, // fallbackRpcUrl
         expect.anything(), // errorReporter
       );
     });

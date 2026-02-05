@@ -32,6 +32,8 @@ export const configSchema = z
     CHAIN_ID: z.coerce.number().int().positive(),
     // RPC endpoint URL for the L1 Ethereum blockchain. Must be a valid HTTP/HTTPS URL.
     L1_RPC_URL: z.string().url(),
+    // Optional fallback RPC endpoint URL for the L1 Ethereum blockchain. Used for automatic failover when primary RPC fails.
+    L1_RPC_URL_FALLBACK: z.string().url().optional(),
     // Beacon chain API endpoint URL for Ethereum 2.0 consensus layer.
     // See API documentation - https://ethereum.github.io/beacon-APIs/
     BEACON_CHAIN_RPC_URL: z.string().url(),

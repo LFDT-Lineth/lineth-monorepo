@@ -18,6 +18,8 @@ import {
   RpcRequestError,
   Abi,
   decodeErrorResult,
+  fallback,
+  Transport,
 } from "viem";
 import { sendRawTransaction, waitForTransactionReceipt } from "viem/actions";
 
@@ -39,9 +41,10 @@ export class ViemBlockchainClientAdapter implements IBlockchainClient<PublicClie
    * Creates a new ViemBlockchainClientAdapter instance.
    *
    * @param {ILogger} logger - The logger instance for logging blockchain operations.
-   * @param {string} rpcUrl - The RPC URL for the blockchain network.
-   * @param {Chain} chain - The blockchain chain configuration.
    * @param {IContractSignerClient} contractSignerClient - The client for signing transactions.
+   * @param {Chain} chain - The blockchain chain configuration.
+   * @param {string} rpcUrl - The RPC URL for the blockchain network.
+   * @param {string} [fallbackRpcUrl] - Optional fallback RPC URL for automatic failover when primary RPC fails.
    * @param {IEstimateGasErrorReporter} [errorReporter] - Optional error reporter for tracking estimateGas errors via metrics.
    * @param {number} [sendTransactionsMaxRetries=3] - Maximum number of retry attempts for sending transactions (must be at least 1).
    * @param {bigint} [gasRetryBumpBps=1000n] - Gas price bump in basis points per retry (e.g., 1000n = +10% per retry).
@@ -51,9 +54,10 @@ export class ViemBlockchainClientAdapter implements IBlockchainClient<PublicClie
    */
   constructor(
     private readonly logger: ILogger,
-    rpcUrl: string,
-    chain: Chain,
     private readonly contractSignerClient: IContractSignerClient,
+    chain: Chain,
+    rpcUrl: string,
+    fallbackRpcUrl?: string,
     private readonly errorReporter?: IEstimateGasErrorReporter,
     private readonly sendTransactionsMaxRetries = 3,
     private readonly gasRetryBumpBps: bigint = 1000n, // +10% per retry
@@ -63,6 +67,19 @@ export class ViemBlockchainClientAdapter implements IBlockchainClient<PublicClie
     if (sendTransactionsMaxRetries < 1) {
       throw new Error("sendTransactionsMaxRetries must be at least 1");
     }
+
+    const hasFallback = Boolean(fallbackRpcUrl);
+
+    // Create primary transport
+    const primaryTransport = this._createHttpTransport(rpcUrl, "primary", hasFallback);
+
+    // Create fallback transport if fallback URL is provided
+    const transport: Transport = hasFallback
+      ? fallback([primaryTransport, this._createHttpTransport(fallbackRpcUrl!, "secondary", hasFallback)], {
+          rank: false, // Always try primary first
+        })
+      : primaryTransport;
+
     // Aim re-use single blockchain client for
     // i.) Better connection pooling
     // ii.) Memory efficient
@@ -72,41 +89,59 @@ export class ViemBlockchainClientAdapter implements IBlockchainClient<PublicClie
         ...chain,
         id: chain.id, // Explicitly set chainId to prevent redundant eth_chainId validation calls
       },
-      transport: http(rpcUrl, {
-        batch: true,
-        // TODO - How does this interact with our custom retry logic in sendSignedTransaction?
-        // Hypothesis - Default Viem timeout of 10s will kick in first. It should still retry because we are using the native Viem Timeout error.
-        retryCount: 3,
-        onFetchRequest: async (request) => {
-          const cloned = request.clone(); // clone before reading body
-          try {
-            const bodyText = await cloned.text();
-            this.logger.debug("onFetchRequest", {
-              method: request.method,
-              url: request.url,
-              body: bodyText,
-            });
-          } catch (err) {
-            this.logger.warn("Failed to read request body", { err });
-          }
-        },
-        onFetchResponse: async (resp) => {
-          const cloned = resp.clone(); // clone before reading body
-          try {
-            const bodyText = await cloned.text();
-            this.logger.debug("onFetchResponse", {
-              status: resp.status,
-              statusText: resp.statusText,
-              body: bodyText,
-            });
-          } catch (err) {
-            this.logger.warn("Failed to read response body", { err });
-          }
-        },
-      }),
+      transport,
       batch: {
         // Not sure if this will help or not, need to experiment in testnet
         multicall: true,
+      },
+    });
+  }
+
+  /**
+   * Creates an HTTP transport with logging hooks and retry configuration.
+   *
+   * @param {string} rpcUrl - The RPC URL for the transport.
+   * @param {"primary" | "secondary"} label - Label to identify the transport in logs.
+   * @param {boolean} hasFallback - Whether a fallback transport is configured.
+   * @returns {Transport} Configured HTTP transport.
+   */
+  private _createHttpTransport(rpcUrl: string, label: "primary" | "secondary", hasFallback: boolean): Transport {
+    // Primary transport retries only 1 time if fallback exists (to fail over quickly), otherwise 3
+    // Secondary transport always retries 3 times
+    const retryCount = label === "primary" && hasFallback ? 1 : 3;
+
+    return http(rpcUrl, {
+      batch: true,
+      retryCount,
+      onFetchRequest: async (request) => {
+        if (label === "secondary") {
+          this.logger.warn("Secondary http transport being used", { transport: label });
+        }
+        const cloned = request.clone(); // clone before reading body
+        try {
+          const bodyText = await cloned.text();
+          this.logger.debug(`onFetchRequest [${label}]`, {
+            transport: label,
+            method: request.method,
+            body: bodyText,
+          });
+        } catch (err) {
+          this.logger.warn(`Failed to read request body [${label}]`, { err });
+        }
+      },
+      onFetchResponse: async (resp) => {
+        const cloned = resp.clone(); // clone before reading body
+        try {
+          const bodyText = await cloned.text();
+          this.logger.debug(`onFetchResponse [${label}]`, {
+            transport: label,
+            status: resp.status,
+            statusText: resp.statusText,
+            body: bodyText,
+          });
+        } catch (err) {
+          this.logger.warn(`Failed to read response body [${label}]`, { err });
+        }
       },
     });
   }
@@ -475,7 +510,7 @@ export class ViemBlockchainClientAdapter implements IBlockchainClient<PublicClie
           args: decoded.args,
           reason: undefined,
         };
-      } catch (decodeErr) {
+      } catch {
         // Manual decoding failed, keep decodedError as undefined or existing value
       }
     }

@@ -23,6 +23,7 @@ export const toClientConfig = (env: FlattenedConfigSchema) => ({
   dataSources: {
     chainId: env.CHAIN_ID,
     l1RpcUrl: env.L1_RPC_URL,
+    l1RpcUrlFallback: env.L1_RPC_URL_FALLBACK,
     beaconChainRpcUrl: env.BEACON_CHAIN_RPC_URL,
     stakingGraphQLUrl: env.STAKING_GRAPHQL_URL,
     ipfsBaseUrl: env.IPFS_BASE_URL,

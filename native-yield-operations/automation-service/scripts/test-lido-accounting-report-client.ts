@@ -51,9 +51,9 @@ async function main() {
   );
   const contractClientLibrary = new ViemBlockchainClientAdapter(
     new WinstonLogger("ViemBlockchainClientAdapter.integration", { level: "debug" }),
-    rpcUrl,
-    hoodi,
     signer,
+    hoodi,
+    rpcUrl,
   );
 
   const lazyOracleClient = new LazyOracleContractClient(
