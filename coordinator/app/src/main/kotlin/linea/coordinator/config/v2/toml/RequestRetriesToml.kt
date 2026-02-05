@@ -50,7 +50,10 @@ data class RequestRetriesToml(
     )
 
   companion object {
-    fun endlessRetry(backoffDelay: Duration, failuresWarningThreshold: UInt) = RequestRetriesToml(
+    fun endlessRetry(
+      backoffDelay: Duration = 1.seconds,
+      failuresWarningThreshold: UInt = 3u,
+    ) = RequestRetriesToml(
       maxRetries = null,
       timeout = null,
       backoffDelay = backoffDelay,

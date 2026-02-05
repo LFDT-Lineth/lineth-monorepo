@@ -65,6 +65,7 @@ data class CoordinatorConfigToml(
       l1Submission =
       this.configs.l1Submission.reified(
         l1DefaultEndpoint = this.configs.defaults.l1Endpoint,
+        l1DefaultRequestRetries = this.configs.defaults.l1RequestRetries,
         timeOfDayMultipliers =
         l1DynamicGasPriceCapTimeOfDayMultipliers
           ?.gasPriceCapTimeOfDayMultipliers
@@ -76,10 +77,7 @@ data class CoordinatorConfigToml(
         l2DefaultEndpoint = this.configs.defaults.l2Endpoint,
       ),
       l2NetworkGasPricing =
-      this.configs.l2NetworkGasPricing.reified(
-        l1DefaultEndpoint = this.configs.defaults.l1Endpoint,
-        l2DefaultEndpoint = this.configs.defaults.l2Endpoint,
-      ),
+      this.configs.l2NetworkGasPricing.reified(defaults = this.configs.defaults),
       database = this.configs.database.reified(),
       api = this.configs.api.reified(),
       smartContractErrors = smartContractErrors?.smartContractErrors ?: emptyMap(),

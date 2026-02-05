@@ -150,6 +150,8 @@ class L1DependentApp(
     val l1EthApiClient = createEthApiClient(
       rpcUrl = configs.l1Submission!!.dynamicGasPriceCap.feeHistoryFetcher.l1Endpoint.toString(),
       log = LogManager.getLogger("clients.l1.eth.fees-fetcher"),
+      vertx = vertx,
+      requestRetryConfig = configs.l1Submission.dynamicGasPriceCap.feeHistoryFetcher.l1RequestRetries,
     )
 
     FeeHistoryFetcherImpl(
@@ -181,6 +183,8 @@ class L1DependentApp(
       l2EthApiClient = createEthApiClient(
         rpcUrl = configs.l1FinalizationMonitor.l2Endpoint.toString(),
         log = LogManager.getLogger("clients.l2.eth.finalization-monitor"),
+        requestRetryConfig = configs.l1FinalizationMonitor.l2RequestRetries,
+        vertx = vertx,
       ),
       vertx = vertx,
     )
@@ -190,6 +194,8 @@ class L1DependentApp(
     val l2EthApiClient: EthApiClient = createEthApiClient(
       rpcUrl = configs.l1FinalizationMonitor.l2Endpoint.toString(),
       log = LogManager.getLogger("clients.l2.eth.shomei-frontend"),
+      requestRetryConfig = configs.l1FinalizationMonitor.l2RequestRetries,
+      vertx = vertx,
     )
     setupL1FinalizationMonitorForShomeiFrontend(
       type2StateProofProviderConfig = configs.type2StateProofProvider,
@@ -229,6 +235,8 @@ class L1DependentApp(
         createEthApiClient(
           rpcUrl = configs.l1FinalizationMonitor.l2Endpoint.toString(),
           log = LogManager.getLogger("clients.l2.eth.gascap-provider"),
+          vertx = vertx,
+          requestRetryConfig = configs.l1FinalizationMonitor.l2RequestRetries,
         )
 
       GasPriceCapProviderImpl(
@@ -566,10 +574,14 @@ class L1DependentApp(
       val l2EthApiClient = createEthApiClient(
         rpcUrl = configs.l2NetworkGasPricing.l2Endpoint.toString(),
         log = LogManager.getLogger("clients.l2.eth.l2pricing"),
+        vertx = vertx,
+        requestRetryConfig = configs.l2NetworkGasPricing.l2RequestRetries,
       )
       val l1EthApiClient = createEthApiClient(
         rpcUrl = configs.l2NetworkGasPricing.l1Endpoint.toString(),
         log = LogManager.getLogger("clients.l1.eth.l1pricing"),
+        vertx = vertx,
+        requestRetryConfig = configs.l2NetworkGasPricing.l1RequestRetries,
       )
       L2NetworkGasPricingService(
         vertx = vertx,
@@ -595,6 +607,8 @@ class L1DependentApp(
       val l1EthApiClient = createEthApiClient(
         rpcUrl = configs.l1Submission.dynamicGasPriceCap.feeHistoryFetcher.l1Endpoint.toString(),
         log = LogManager.getLogger("clients.l1.eth.feehistory-cache"),
+        vertx = vertx,
+        requestRetryConfig = configs.l1Submission.dynamicGasPriceCap.feeHistoryFetcher.l1RequestRetries,
       )
 
       val l1FeeHistoryFetcher: GasPriceCapFeeHistoryFetcher = GasPriceCapFeeHistoryFetcherImpl(

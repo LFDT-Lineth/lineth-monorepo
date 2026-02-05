@@ -11,6 +11,8 @@ data class L1FinalizationMonitorConfigToml(
   val l2Endpoint: URL?,
   val l1PollingInterval: Duration = 6.seconds,
   val l1QueryBlockTag: BlockParameter.Tag = BlockParameter.Tag.FINALIZED,
+  val l1RequestRetries: RequestRetriesToml? = null,
+  val l2RequestRetries: RequestRetriesToml? = null,
 ) {
   fun reified(defaults: DefaultsToml): L1FinalizationMonitorConfig {
     return L1FinalizationMonitorConfig(
@@ -18,6 +20,8 @@ data class L1FinalizationMonitorConfigToml(
       l2Endpoint = this.l2Endpoint ?: defaults.l2Endpoint ?: throw AssertionError("l2Endpoint missing"),
       l1PollingInterval = this.l1PollingInterval,
       l1QueryBlockTag = this.l1QueryBlockTag,
+      l1RequestRetries = this.l1RequestRetries?.asDomain ?: defaults.l1RequestRetries.asDomain,
+      l2RequestRetries = this.l2RequestRetries?.asDomain ?: defaults.l2RequestRetries.asDomain,
     )
   }
 }

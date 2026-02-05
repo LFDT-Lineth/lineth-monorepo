@@ -15,7 +15,9 @@ data class L2NetworkGasPricingConfig(
   val extraDataUpdateEndpoint: URL,
   val extraDataUpdateRequestRetries: RetryConfig,
   val l1Endpoint: URL,
+  val l1RequestRetries: RetryConfig,
   val l2Endpoint: URL,
+  val l2RequestRetries: RetryConfig,
 ) : FeatureToggle {
   data class DynamicGasPricing(
     val l1BlobGas: ULong,
