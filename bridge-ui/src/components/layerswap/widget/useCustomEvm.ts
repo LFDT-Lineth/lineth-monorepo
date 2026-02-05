@@ -161,7 +161,7 @@ function resolveWallet(props: {
 }
 
 /**
- * Helper function to wait for Web3Auth connection and get account address
+ * Helper function to wait for Web3Auth authorization and get account address.
  * @param web3Auth - Web3Auth instance
  * @param timeout - Maximum time to wait in milliseconds (default: 30000)
  * @returns Promise that resolves with the account address or rejects on timeout
@@ -190,7 +190,7 @@ function waitForWeb3AuthConnection(
     // Set up timeout
     const timeoutId = setTimeout(() => {
       cleanup();
-      reject(new Error("Timeout waiting for wallet connection"));
+      reject(new Error("Timeout waiting for wallet authorization"));
     }, timeout);
 
     // Get address from Web3Auth provider
@@ -217,8 +217,8 @@ function waitForWeb3AuthConnection(
       }
     };
 
-    // Handle Web3Auth connection
-    const onConnected = async () => {
+    // Handle Web3Auth authorization (fires after connect-and-sign completes)
+    const onAuthorized = async () => {
       if (web3AuthUnsubscribe) {
         web3AuthUnsubscribe();
         web3AuthUnsubscribe = undefined;
@@ -246,21 +246,21 @@ function waitForWeb3AuthConnection(
 
     const onErrored = () => {
       cleanup();
-      reject(new Error("Web3Auth connection error"));
+      reject(new Error("Web3Auth authorization error"));
     };
 
-    // Listen to Web3Auth events
-    web3Auth.on(CONNECTOR_EVENTS.CONNECTED, onConnected);
+    // Listen to Web3Auth events - use AUTHORIZED for connect-and-sign mode
+    web3Auth.on(CONNECTOR_EVENTS.AUTHORIZED, onAuthorized);
     web3Auth.on(CONNECTOR_EVENTS.ERRORED, onErrored);
 
     web3AuthUnsubscribe = () => {
-      web3Auth.off(CONNECTOR_EVENTS.CONNECTED, onConnected);
+      web3Auth.off(CONNECTOR_EVENTS.AUTHORIZED, onAuthorized);
       web3Auth.off(CONNECTOR_EVENTS.ERRORED, onErrored);
     };
 
-    // Check if already connected
+    // Check if already authorized
     if (web3Auth.connected) {
-      onConnected();
+      onAuthorized();
     }
   });
 }

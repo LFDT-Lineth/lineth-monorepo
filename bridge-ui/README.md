@@ -171,6 +171,9 @@ The config variables are:
 | NEXT_PUBLIC_ALCHEMY_API_KEY                   | Alchemy API Key                                |                                                                                                           |
 | NEXT_PUBLIC_STORAGE_MIN_VERSION               | Local storage version for reseting the storage | 1                                                                                                         |
 | NEXT_PUBLIC_WEB3_AUTH_CLIENT_ID               | Web3Auth client key                            |                                                                                                           |
+| NEXT_PUBLIC_CONNECTOR_GOOGLE_ID               | Web3Auth Google OAuth connection ID (staging)  | Obtained from Web3Auth dashboard                                                                          |
+| NEXT_PUBLIC_CONNECTOR_PASSWORDLESS_ID         | Web3Auth Email passwordless connection ID      | Obtained from Web3Auth dashboard                                                                          |
+| NEXT_PUBLIC_CONNECTOR_GROUPED_ID              | Web3Auth Grouped auth connection ID            | Links multiple auth methods to same account                                                               |
 | NEXT_PUBLIC_QUICKNODE_ID                      | QuickNode API key                              |                                                                                                           |
 | NEXT_PUBLIC_LIFI_API_KEY                      | LiFi API key                                   |                                                                                                           |
 | NEXT_PUBLIC_ONRAMPER_API_KEY                  | OnRamper API key                               |                                                                                                           |
