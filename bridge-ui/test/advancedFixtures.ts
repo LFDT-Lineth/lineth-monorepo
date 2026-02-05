@@ -162,6 +162,7 @@ export const test = metaMaskFixtures(setup).extend<{
       }
 
       await metamask.connectToDapp([account]);
+      await metamask.confirmSignature();
       await metamask.goBackToHomePage();
       await page.bringToFront();
     });
