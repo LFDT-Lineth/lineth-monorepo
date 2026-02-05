@@ -7,15 +7,16 @@
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
 package linea.plugin.acc.test.rpc.linea
-
 import linea.plugin.acc.test.LineaPluginPoSTestBase
 import linea.plugin.acc.test.TestCommandLineOptionsBuilder
 import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.besu.tests.acceptance.dsl.account.Account
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.web3j.tx.gas.DefaultGasProvider
 import java.math.BigInteger
 
+@Disabled("The sequencer is using the ZkCounter as of now")
 class EstimateGasModuleLimitOverflowTest : LineaPluginPoSTestBase() {
 
   override fun getTestCliOptions(): List<String> {

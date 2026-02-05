@@ -10,6 +10,7 @@ package linea.plugin.acc.test
 
 import org.hyperledger.besu.datatypes.Hash
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.web3j.crypto.Credentials
 import org.web3j.crypto.RawTransaction
@@ -30,6 +31,7 @@ class TransactionTraceLimitOverflowTest : LineaPluginPoSTestBase() {
       .build()
   }
 
+  @Disabled("The sequencer is using the ZkCounter as of now")
   @Test
   fun transactionOverModuleLineCountRemoved() {
     val dummyAdder = deployDummyAdder()

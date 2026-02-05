@@ -15,11 +15,15 @@
 
 package net.consensys.linea.zktracer.module.bin;
 
+import static net.consensys.linea.zktracer.opcode.OpCode.AND;
+import static net.consensys.linea.zktracer.opcode.OpCode.POP;
+
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;
 import net.consensys.linea.testing.BytecodeRunner;
 import net.consensys.linea.zktracer.opcode.OpCode;
+import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt256;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -30,7 +34,7 @@ public class BinTest extends TracerTestBase {
   @Test
   public void edgeCase(TestInfo testInfo) {
     BytecodeRunner.of(
-            BytecodeCompiler.newProgram(chainConfig).push(0xf0).push(0xf0).op(OpCode.AND).compile())
+            BytecodeCompiler.newProgram(chainConfig).push(0xf0).push(0xf0).op(AND).compile())
         .run(chainConfig, testInfo);
   }
 
@@ -65,6 +69,26 @@ public class BinTest extends TracerTestBase {
                 .push(0)
                 .op(OpCode.SIGNEXTEND)
                 .op(OpCode.POP)
+                .compile())
+        .run(chainConfig, testInfo);
+  }
+
+  @Test
+  void failingAndFromReplay(TestInfo testInfo) {
+    BytecodeRunner.of(
+            BytecodeCompiler.newProgram(chainConfig)
+                .push(
+                    Bytes.fromHexString(
+                        "64BF69450000000000025F4AF30DE23BCA8800000000113BB6A96EEA38821FB7"))
+                .push(Bytes.fromHexString("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))
+                .op(AND)
+                .op(POP)
+                .push(Bytes.fromHexString("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))
+                .push(
+                    Bytes.fromHexString(
+                        "64BF69450000000000025F4AF30DE23BCA8800000000113BB6A96EEA38821FB7"))
+                .op(AND)
+                .op(POP)
                 .compile())
         .run(chainConfig, testInfo);
   }

@@ -8,7 +8,7 @@ GO_CORSET_COMPILE := ${GO_CORSET} compile -Dtags="${GIT_TAGS}" -Dcommit="${GIT_C
 ## Some modules set below are fork specific. Eg. For OOB, OOB_LONDON is the OOB module for London and OOB_SHANGHAI the OOB module for Shanghai.
 ## The discrimination is done by having one bin file per fork - see command line below
 
-ALU := alu/add.zkasm alu/ext alu/mod.zkasm alu/mul.zkasm
+ALU := alu/add.zkasm alu/ext.zkasm alu/mod.zkasm alu/mul.zkasm
 
 BIN := bin/bin.zkasm
 

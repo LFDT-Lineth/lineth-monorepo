@@ -1,0 +1,16 @@
+;; compute A mod M where A is a u512 and M a u256
+;; A mod 0 = 0
+
+fn modulus_u512_u256(A u512, M u256) -> (RES u256) {
+  var quot u512
+  var sum u768
+  var witsum u257
+  var witness u256
+  ;; handle division by 0
+  if M == 0 goto exit_0
+  quot, RES, witness, sum, witsum = A / M
+  return
+exit_0:
+  RES = 0
+  return
+}

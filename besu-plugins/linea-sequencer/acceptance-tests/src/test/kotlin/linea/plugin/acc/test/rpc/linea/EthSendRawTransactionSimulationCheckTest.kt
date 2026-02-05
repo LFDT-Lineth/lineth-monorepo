@@ -18,6 +18,7 @@ import org.hyperledger.besu.datatypes.Hash
 import org.hyperledger.besu.tests.acceptance.dsl.account.Account
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.account.TransferTransactionSet
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.web3j.abi.datatypes.generated.Bytes8
 import org.web3j.crypto.Credentials
@@ -29,6 +30,7 @@ import org.web3j.utils.Numeric
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 
+@Disabled("The sequencer is using the ZkCounter as of now")
 class EthSendRawTransactionSimulationCheckTest : LineaPluginPoSTestBase() {
 
   override fun getTestCliOptions(): List<String> {

@@ -1,0 +1,25 @@
+include "../constants/evm.zkasm"
+include "../util/modulus.zkasm"
+
+;; The EXT module deals with following EVM opcodes:
+;;
+;; ADDMOD    (A + B) % M                   0x08
+;; MULMOD    (A * B) % M                   0x09
+;;
+;; Both of these operate on u256 words.
+pub fn ext(INST=8 u8, A u256, B u256, M u256) -> (RES u256) {
+  var tmp u512
+  ;;
+  if INST == EVM_INST_ADDMOD goto inst_addmod
+  if INST == EVM_INST_MULMOD goto inst_mulmod
+  fail
+inst_addmod:
+  tmp = A + B
+  goto compute_modulo
+inst_mulmod:
+  tmp = A * B
+  goto compute_modulo
+compute_modulo:
+  RES = modulus_u512_u256(tmp, M)
+  return
+}

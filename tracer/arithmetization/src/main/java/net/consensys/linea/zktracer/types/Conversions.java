@@ -15,7 +15,6 @@
 
 package net.consensys.linea.zktracer.types;
 
-import static net.consensys.linea.zktracer.Trace.LLARGE;
 import static net.consensys.linea.zktracer.types.Checks.checkArgument;
 import static net.consensys.linea.zktracer.types.Utils.leftPadToBytes16;
 
@@ -28,7 +27,6 @@ public class Conversions {
   public static final Bytes ONE = Bytes.of(1);
   public static final BigInteger UNSIGNED_LONG_MASK =
       BigInteger.ONE.shiftLeft(Long.SIZE).subtract(BigInteger.ONE);
-  public static int LIMB_BIT_SIZE = 8 * LLARGE;
 
   public static Bytes bigIntegerToBytes(final BigInteger input) {
     Bytes bytes;
@@ -118,24 +116,6 @@ public class Conversions {
     final Bytes trimmedBytes = input.trimLeadingZeros();
     checkArgument(trimmedBytes.size() <= 2, "Input bytes must be at most 2 bytes long");
     return (short) trimmedBytes.toInt();
-  }
-
-  public static BigInteger hiPart(final BigInteger input) {
-    if (input.bitLength() <= LIMB_BIT_SIZE) {
-      return BigInteger.ZERO;
-    }
-    final Bytes inputBytes = bigIntegerToBytes(input);
-    final Bytes hiBytes = inputBytes.slice(0, inputBytes.size() - LLARGE);
-    return hiBytes.toUnsignedBigInteger();
-  }
-
-  public static BigInteger lowPart(final BigInteger input) {
-    if (input.bitLength() <= LIMB_BIT_SIZE) {
-      return input;
-    }
-    final Bytes inputBytes = bigIntegerToBytes(input);
-    final Bytes lowBytes = inputBytes.slice(inputBytes.size() - LLARGE, LLARGE);
-    return lowBytes.toUnsignedBigInteger();
   }
 
   public static boolean bytesToBoolean(final Bytes input) {

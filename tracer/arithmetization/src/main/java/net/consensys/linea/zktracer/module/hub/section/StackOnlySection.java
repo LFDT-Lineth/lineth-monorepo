@@ -32,7 +32,7 @@ public class StackOnlySection extends TraceSection {
     if (Exceptions.none(hub.pch().exceptions())) {
       switch (opcode.instructionFamily()) {
         case ADD -> hub.add().callAdd(hub.messageFrame(), opcode.mnemonic());
-        case BIN -> hub.bin().callBin(hub.messageFrame(), opcode.mnemonic());
+        // case BIN -> hub.bin().callBin(hub.messageFrame(), opcode.mnemonic()); done by corset
         case MOD -> hub.mod().callMod(hub.messageFrame(), opcode.mnemonic());
         case SHF -> hub.shf().callShf(hub.messageFrame(), opcode.mnemonic());
         case WCP -> hub.wcp().callWcp(hub.messageFrame(), opcode.mnemonic());

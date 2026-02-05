@@ -9,6 +9,8 @@ const EVM_INST_DIV                              = 0x04
 const EVM_INST_SDIV                             = 0x05
 const EVM_INST_MOD                              = 0x06
 const EVM_INST_SMOD                             = 0x07
+const EVM_INST_ADDMOD                           = 0x08
+const EVM_INST_MULMOD                           = 0x09
 const EVM_INST_EXP                              = 0x0a
 const EVM_INST_SIGNEXTEND                       = 0x0b
 const EVM_INST_LT                               = 0x10
@@ -85,7 +87,7 @@ const RLP_PREFIX_LIST_SHORT                     = 0xC0     ;; RLP prefix of a sh
 const RLP_PREFIX_LIST_LONG                      = 0xF7     ;; RLP prefix of a long list     (≥ 56 bytes), defined in the EYP = 247
 const RLP_PREFIX_FROM_LONG_TO_SHORT             = 0x37     ;; diff between short and long prefix = 55
 const RLP_FROM_INT_TO_LIST                      = 0x40     ;; diff between int and list prefix = 64
-const TWO_FIVE_SIX_POWER_FIFTEEN                = 0x01000000000000000000000000000000 ;; 
+const TWO_FIVE_SIX_POWER_FIFTEEN                = 0x01000000000000000000000000000000 ;;
 
 ;; =============================================================================
 ;; Wcp

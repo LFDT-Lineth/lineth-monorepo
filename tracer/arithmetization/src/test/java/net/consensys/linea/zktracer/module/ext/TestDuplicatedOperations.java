@@ -15,6 +15,7 @@
 
 package net.consensys.linea.zktracer.module.ext;
 
+import static net.consensys.linea.zktracer.module.ext.ExtOperation.NB_ROWS_EXT;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import net.consensys.linea.UnitTestWatcher;
@@ -48,7 +49,7 @@ public class TestDuplicatedOperations extends TracerTestBase {
                 .compile())
         .zkTracerValidator(
             zkTracer -> {
-              assertThat(zkTracer.getModulesLineCount().get("EXT")).isEqualTo(8);
+              assertThat(zkTracer.getModulesLineCount().get("EXT")).isEqualTo(NB_ROWS_EXT);
             })
         .run(chainConfig, testInfo);
   }

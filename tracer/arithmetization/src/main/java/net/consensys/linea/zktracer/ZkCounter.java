@@ -129,7 +129,6 @@ public class ZkCounter implements LineCountingTracer {
 
   // traced modules
   final CountingOnlyModule add = new CountingOnlyModule(ADD);
-  final CountingOnlyModule bin = new CountingOnlyModule(BIN);
   final CountingOnlyModule blakemodexp;
   final CountingOnlyModule blockData;
   final CountingOnlyModule blockHash;
@@ -236,7 +235,6 @@ public class ZkCounter implements LineCountingTracer {
   public List<Module> uncheckedModules() {
     return List.of(
         add,
-        bin,
         euc, // need MMU
         exp,
         ext,
@@ -244,7 +242,7 @@ public class ZkCounter implements LineCountingTracer {
         mmu, // not trivial
         mod,
         mul,
-        oob, // need to t duplicates to have an accurate counting. We have *10 line count if not.
+        oob, // need to duplicate to have an accurate counting. We have *10 line count if not.
         rlpTxn, // need a refacto to have rlpTxn using not only TransactionProcessingMetadata
         rlpUtils, // need RLP_TXN
         rom, // not trivial

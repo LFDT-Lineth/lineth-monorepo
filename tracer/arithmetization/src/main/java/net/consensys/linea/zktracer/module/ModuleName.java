@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module;
 public enum ModuleName {
   // tracing Modules
   ADD,
-  BIN,
   BLAKE_MODEXP_DATA,
   BLOCK_DATA,
   BLOCK_HASH,

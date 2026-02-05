@@ -23,8 +23,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.Trace;
-import net.consensys.linea.zktracer.container.module.OperationSetWithAdditionalRowsModule;
-import net.consensys.linea.zktracer.container.stacked.CountOnlyOperation;
+import net.consensys.linea.zktracer.container.module.OperationSetModule;
 import net.consensys.linea.zktracer.container.stacked.ModuleOperationAdder;
 import net.consensys.linea.zktracer.container.stacked.ModuleOperationStackedSet;
 import net.consensys.linea.zktracer.module.ModuleName;
@@ -36,11 +35,10 @@ import org.hyperledger.besu.evm.frame.MessageFrame;
 @RequiredArgsConstructor
 @Getter
 @Accessors(fluent = true)
-public class Ext implements OperationSetWithAdditionalRowsModule<ExtOperation> {
+public class Ext implements OperationSetModule<ExtOperation> {
 
   private final ModuleOperationStackedSet<ExtOperation> operations =
       new ModuleOperationStackedSet<>();
-  private final CountOnlyOperation additionalRows = new CountOnlyOperation();
 
   @Override
   public ModuleName moduleKey() {
@@ -60,7 +58,7 @@ public class Ext implements OperationSetWithAdditionalRowsModule<ExtOperation> {
     if (addedOp.isNew()) {
       ((ExtOperation) addedOp.op()).computeResult();
     }
-    return ((ExtOperation) addedOp.op()).resultUInt256();
+    return ((ExtOperation) addedOp.op()).result();
   }
 
   @Override
@@ -75,10 +73,8 @@ public class Ext implements OperationSetWithAdditionalRowsModule<ExtOperation> {
 
   @Override
   public void commit(Trace trace) {
-    OperationSetWithAdditionalRowsModule.super.commit(trace);
-    int stamp = 0;
     for (ExtOperation operation : operations.sortOperations(new ExtOperationComparator())) {
-      operation.trace(trace.ext(), ++stamp);
+      operation.trace(trace.ext());
     }
   }
 }

@@ -12,7 +12,7 @@ include "../util/log2.zkasm"
 ;; The first four correspond to the bitwise operations.
 ;; BYTE and SIGNEXTEND need to extract a byte from ARGUMENT_2.
 
-pub fn bin(INST=0x16 u8, ARGUMENT_1 u256, ARGUMENT_2 u256) -> (RES u256) {
+fn bin(INST=0x16 u8, ARGUMENT_1 u256, ARGUMENT_2 u256) -> (RES u256) {
 
    if INST==EVM_INST_XOR        goto xor_call
    if INST==EVM_INST_OR         goto or_call

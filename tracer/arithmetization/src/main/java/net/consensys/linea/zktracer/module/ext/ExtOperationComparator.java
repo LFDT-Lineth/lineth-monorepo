@@ -26,16 +26,16 @@ public class ExtOperationComparator implements Comparator<ExtOperation> {
       return opCodeComp;
     }
     // Second sort by Arg1
-    final int arg1Comp = op1.arg1().getBytes32().compareTo(op2.arg1().getBytes32());
+    final int arg1Comp = op1.a().compareTo(op2.a());
     if (arg1Comp != 0) {
       return arg1Comp;
     }
     // Third, sort by Arg2
-    final int arg2Comp = op1.arg2().getBytes32().compareTo(op2.arg2().getBytes32());
+    final int arg2Comp = op1.b().compareTo(op2.b());
     if (arg2Comp != 0) {
       return arg2Comp;
     }
     // Fourth, sort by Arg3
-    return op1.arg3().getBytes32().compareTo(op2.arg3().getBytes32());
+    return op1.m().compareTo(op2.m());
   }
 }

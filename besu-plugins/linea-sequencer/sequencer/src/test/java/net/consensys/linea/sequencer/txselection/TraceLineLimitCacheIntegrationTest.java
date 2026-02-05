@@ -91,7 +91,7 @@ public class TraceLineLimitCacheIntegrationTest {
             .build();
 
     // Set a low enough limit to exceed line counts even with a mock tx
-    tracerConfiguration.moduleLimitsMap().put("EXT", 5);
+    tracerConfiguration.moduleLimitsMap().put("HUB", 5);
 
     // Create transaction selector
     SelectorsStateManager stateManager = new SelectorsStateManager();
@@ -207,7 +207,7 @@ public class TraceLineLimitCacheIntegrationTest {
     // Given: A transaction that was previously marked as over-the-line-count
     Transaction mockTransaction = createMockTransaction();
     Hash transactionHash = mockTransaction.getHash();
-    String overflowingModule = "EXT";
+    String overflowingModule = "HUB";
 
     // Add transaction to cache (simulating previous rejection)
     sharedCache.remember(transactionHash, overflowingModule);
@@ -236,7 +236,7 @@ public class TraceLineLimitCacheIntegrationTest {
     Hash originalHash = originalTransaction.getHash();
 
     // Add original transaction to cache
-    sharedCache.remember(originalHash, "EXT");
+    sharedCache.remember(originalHash, "HUB");
     assertThat(sharedCache.contains(originalHash)).isTrue();
 
     // Fill cache beyond capacity to evict original transaction
