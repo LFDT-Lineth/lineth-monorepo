@@ -3,11 +3,11 @@
  *
  * Parses markdown files as verification configs.
  * Allows documentation to serve as the config source of truth.
+ *
+ * This file is browser-compatible - uses no Node.js-only modules.
  */
 
-import { readFileSync } from "fs";
-import { dirname, resolve } from "path";
-
+import { MAX_MARKDOWN_CONFIG_SIZE } from "../constants";
 import {
   VerifierConfig,
   ChainConfig,
@@ -29,6 +29,25 @@ interface ParsedContract {
   viewCalls: ViewCallConfig[];
   slots: SlotConfig[];
   storagePaths: StoragePathConfig[];
+}
+
+/**
+ * Browser-safe path join function.
+ * Joins path segments, handling both Unix and Windows separators.
+ */
+function joinPath(base: string, relative: string): string {
+  // If relative is absolute, return it
+  if (relative.startsWith("/") || /^[a-zA-Z]:/.test(relative)) {
+    return relative;
+  }
+  // Normalize base path (remove trailing slashes)
+  // Use trimEnd approach to avoid ReDoS with nested quantifiers
+  let normalizedBase = base;
+  while (normalizedBase.endsWith("/") || normalizedBase.endsWith("\\")) {
+    normalizedBase = normalizedBase.slice(0, -1);
+  }
+  // Join with forward slash
+  return normalizedBase + "/" + relative;
 }
 
 /**
@@ -208,28 +227,8 @@ function parseCheckRow(
     const rawSlotType = params.replace(/`/g, "").toLowerCase();
 
     // Validate slot type - use uint256 as default for unknown types
-    const validSlotTypes = [
-      "address",
-      "uint256",
-      "uint128",
-      "uint96",
-      "uint64",
-      "uint32",
-      "uint16",
-      "uint8",
-      "int256",
-      "int128",
-      "int96",
-      "int64",
-      "int32",
-      "int16",
-      "int8",
-      "bool",
-      "bytes32",
-    ];
-    const slotType: SlotConfig["type"] = validSlotTypes.includes(rawSlotType)
-      ? (rawSlotType as SlotConfig["type"])
-      : "uint256";
+    // Accepts: address, bool, uint8-uint256 (8-bit increments), int8-int256, bytes1-bytes32
+    const slotType: SlotConfig["type"] = isValidSlotType(rawSlotType) ? (rawSlotType as SlotConfig["type"]) : "uint256";
 
     const slot: SlotConfig = {
       slot: check.replace(/`/g, ""),
@@ -256,6 +255,40 @@ function parseCheckRow(
  */
 function isValidAddress(address: string): boolean {
   return /^0x[a-fA-F0-9]{40}$/.test(address);
+}
+
+/**
+ * Validates if a string is a valid Solidity slot type.
+ * Accepts: address, bool, uint8-uint256 (8-bit increments), int8-int256, bytes1-bytes32
+ */
+function isValidSlotType(type: string): boolean {
+  // Fixed types
+  if (type === "address" || type === "bool") {
+    return true;
+  }
+
+  // uint<N> where N is 8-256 in multiples of 8
+  const uintMatch = type.match(/^uint(\d+)$/);
+  if (uintMatch) {
+    const bits = parseInt(uintMatch[1], 10);
+    return bits >= 8 && bits <= 256 && bits % 8 === 0;
+  }
+
+  // int<N> where N is 8-256 in multiples of 8
+  const intMatch = type.match(/^int(\d+)$/);
+  if (intMatch) {
+    const bits = parseInt(intMatch[1], 10);
+    return bits >= 8 && bits <= 256 && bits % 8 === 0;
+  }
+
+  // bytes<N> where N is 1-32
+  const bytesMatch = type.match(/^bytes(\d+)$/);
+  if (bytesMatch) {
+    const bytes = parseInt(bytesMatch[1], 10);
+    return bytes >= 1 && bytes <= 32;
+  }
+
+  return false;
 }
 
 /**
@@ -307,9 +340,15 @@ function extractChains(markdown: string): Record<string, ChainConfig> {
 }
 
 /**
- * Parse a markdown file into a VerifierConfig
+ * Parse a markdown file into a VerifierConfig.
+ * Includes size validation to prevent DoS from large files.
  */
 export function parseMarkdownConfig(markdown: string, configDir: string): VerifierConfig {
+  // Validate size to prevent DoS
+  if (markdown.length > MAX_MARKDOWN_CONFIG_SIZE) {
+    throw new Error(`Markdown content exceeds maximum size of ${MAX_MARKDOWN_CONFIG_SIZE / 1024 / 1024}MB`);
+  }
+
   const contracts: ContractConfig[] = [];
   const chains = extractChains(markdown);
 
@@ -401,7 +440,7 @@ export function parseMarkdownConfig(markdown: string, configDir: string): Verifi
         name: currentContract.name,
         chain: currentContract.chain,
         address: currentContract.address,
-        artifactFile: resolve(configDir, currentContract.artifact),
+        artifactFile: joinPath(configDir, currentContract.artifact),
         isProxy: currentContract.isProxy,
       };
 
@@ -438,13 +477,4 @@ export function parseMarkdownConfig(markdown: string, configDir: string): Verifi
   }
 
   return { chains, contracts };
-}
-
-/**
- * Load a markdown config file
- */
-export function loadMarkdownConfig(filePath: string): VerifierConfig {
-  const content = readFileSync(filePath, "utf-8");
-  const configDir = dirname(resolve(filePath));
-  return parseMarkdownConfig(content, configDir);
 }

@@ -1,0 +1,123 @@
+.header {
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--spacing-md) var(--spacing-lg);
+
+  @include bp(tablet) {
+    padding: var(--spacing-lg) var(--spacing-xl);
+  }
+}
+
+.inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+
+  @include bp(tablet) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.titleSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text);
+
+  @include bp(tablet) {
+    font-size: 1.5rem;
+  }
+}
+
+.subtitle {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.adapterGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.adapterLabel {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.adapterOptions {
+  display: flex;
+  gap: 2px;
+  background-color: var(--color-surface-elevated);
+  padding: 2px;
+  border-radius: var(--radius-md);
+}
+
+.adapterOption {
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    color: var(--color-text);
+  }
+
+  &.checked {
+    background-color: var(--color-primary);
+    color: var(--color-background);
+    font-weight: 500;
+  }
+}
+
+.resetButton {
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    color: var(--color-text);
+    border-color: var(--color-text-muted);
+  }
+}
+
+.sessionInfo {
+  max-width: 1200px;
+  margin: var(--spacing-sm) auto 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: 0.75rem;
+}
+
+.sessionLabel {
+  color: var(--color-text-muted);
+}
+
+.sessionId {
+  color: var(--color-text-secondary);
+  background: transparent;
+  padding: 0;
+}

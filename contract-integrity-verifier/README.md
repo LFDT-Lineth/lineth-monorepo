@@ -11,6 +11,7 @@ Supports **multiple web3 libraries** (ethers, viem) via an adapter pattern.
 | `@consensys/linea-contract-integrity-verifier` | Core library with adapter interface | None (pure TypeScript) |
 | `@consensys/linea-contract-integrity-verifier-ethers` | Ethers v6 adapter + CLI | peer: `ethers >=6.0.0` |
 | `@consensys/linea-contract-integrity-verifier-viem` | Viem adapter + CLI | peer: `viem >=2.22.0` |
+| `@consensys/linea-contract-integrity-verifier-ui` | Next.js web interface | viem, React 19, Next.js 15 |
 
 ## Installation
 
@@ -84,6 +85,49 @@ CLI Options:
 - `--skip-abi` - Skip ABI verification
 - `--skip-state` - Skip state verification
 
+## Web UI
+
+The `verifier-ui` package provides a web-based interface for contract verification.
+
+### Running the Web UI
+
+```bash
+cd contract-integrity-verifier/verifier-ui
+
+# Install dependencies
+pnpm install
+
+# Start development server
+pnpm dev
+
+# Or build and start production server
+pnpm build && pnpm start
+```
+
+The UI will be available at `http://localhost:3000`.
+
+### Static Export
+
+The UI supports fully static deployment (e.g., GitHub Pages) with client-side verification:
+
+```bash
+# Build static export
+STATIC_EXPORT=true pnpm build
+
+# Output in verifier-ui/out/ directory
+```
+
+Static mode uses IndexedDB for file storage and runs verification entirely in the browser.
+
+### Features
+
+- Upload configuration files (JSON or Markdown)
+- Upload contract artifacts
+- Set environment variables for RPC URLs
+- Run verification with real-time results
+- Toggle verification options (bytecode, ABI, state)
+- Client-side verification (no server required in static mode)
+
 ## Configuration
 
 Supports JSON and Markdown configuration formats.
@@ -129,6 +173,11 @@ State verification validates on-chain contract state after deployment or upgrade
 
 Call public/external view functions and verify return values. **Best for:** values exposed via getter functions (roles, version strings, addresses).
 
+Supports all Solidity return types including:
+- Primitive types (address, bool, uint/int variants, bytes)
+- Tuples and structs (compared as arrays)
+- Address case-insensitivity (checksummed or lowercase addresses match)
+
 ```json
 {
   "stateVerification": {
@@ -150,6 +199,10 @@ Call public/external view functions and verify return values. **Best for:** valu
         "params": ["0x..."],
         "expected": "1000000000000000000",
         "comparison": "gte"
+      },
+      {
+        "function": "getConfig",
+        "expected": ["1000", "0x1234567890123456789012345678901234567890"]
       }
     ]
   }
@@ -200,10 +253,17 @@ Read raw storage slots directly. **Best for:** internal state not exposed via ge
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `slot` | string | ✓ | Storage slot as hex (e.g., `"0x0"`, `"0x65"`) |
-| `type` | string | ✓ | Solidity type: `address`, `bool`, `uint8`-`uint256`, `int8`-`int256`, `bytes32` |
+| `type` | string | ✓ | Solidity type (see supported types below) |
 | `name` | string | ✓ | Variable name (for display) |
 | `expected` | any | ✓ | Expected value |
 | `offset` | number | | Byte offset for packed storage (0-31, default 0) |
+
+**Supported Types:**
+- `address` - 20 bytes
+- `bool` - 1 byte
+- `uint8` to `uint256` - All sizes in 8-bit increments (uint8, uint16, uint24, ..., uint256)
+- `int8` to `int256` - All sizes in 8-bit increments (int8, int16, int24, ..., int256)
+- `bytes1` to `bytes32` - All fixed-size byte arrays
 
 **Common Slot Locations:**
 | Pattern | Slot | Type | Description |
@@ -508,31 +568,58 @@ npx ts-node tools/analyze-initializers.ts \
 
 Generate storage schema JSON from Solidity storage layout files. Parses struct definitions and ERC-7201 namespace annotations.
 
-```bash
-cd verifier-core
+**CLI Usage:**
 
-npx ts-node tools/generate-schema.ts <input.sol> <output.json> [--verbose]
+```bash
+# Using viem
+npx generate-schema-viem <input.sol...> -o <output.json> [--verbose]
+
+# Using ethers
+npx generate-schema-ethers <input.sol...> -o <output.json> [--verbose]
+
+# Or run directly after building
+cd verifier-viem && pnpm build
+node dist/generate-schema-cli.mjs Storage.sol -o schema.json
 ```
 
 **Examples:**
 
 ```bash
-# Generate schema from YieldManager storage layout
-npx ts-node tools/generate-schema.ts \
-  ../../contracts/src/yield/YieldManagerStorageLayout.sol \
-  examples/schemas/yield-manager.json
+# Single file (legacy mode)
+npx generate-schema-viem Storage.sol schema.json
 
-# With verbose output to see field details
-npx ts-node tools/generate-schema.ts \
-  ../../contracts/src/LineaRollupStorage.sol \
-  examples/schemas/linea-rollup.json \
-  --verbose
+# Multiple files (for inherited storage)
+npx generate-schema-viem LineaRollupYieldExtension.sol YieldManager.sol -o schema.json
+
+# Process all .sol files in a directory
+npx generate-schema-viem ./contracts/storage/ -o schema.json --verbose
+```
+
+**Programmatic Usage:**
+
+```typescript
+// Using viem adapter (recommended)
+import { generateSchema, calculateErc7201BaseSlot } from "@consensys/linea-contract-integrity-verifier-viem/tools";
+import { readFileSync } from "fs";
+
+const { schema, warnings } = generateSchema([
+  { source: readFileSync("Storage.sol", "utf-8"), fileName: "Storage.sol" }
+]);
+
+// Or calculate a single baseSlot
+const baseSlot = calculateErc7201BaseSlot("linea.storage.MyContract");
+```
+
+```typescript
+// Using ethers adapter
+import { generateSchema } from "@consensys/linea-contract-integrity-verifier-ethers/tools";
+
+const { schema } = generateSchema([{ source, fileName }]);
 ```
 
 **Options:**
 - `--verbose, -v` - Show detailed field-level output
-
-**Note:** This tool requires either `ethers` or `viem` to be installed for ERC-7201 slot calculations.
+- `-o, --output` - Output file path
 
 **Solidity Annotations:**
 
@@ -571,11 +658,14 @@ This produces a schema with computed `baseSlot` for the namespace:
 contract-integrity-verifier/
 ├── verifier-core/                    # @consensys/linea-contract-integrity-verifier
 │   ├── src/
-│   │   ├── adapter.ts               # Web3Adapter interface
+│   │   ├── adapter.ts               # CryptoAdapter + Web3Adapter interfaces
 │   │   ├── config.ts                # Config loading (JSON + Markdown)
 │   │   ├── index.ts                 # Public exports
 │   │   ├── types.ts                 # All TypeScript types
 │   │   ├── verifier.ts              # Main Verifier class
+│   │   ├── tools/                   # Framework-agnostic tools (require CryptoAdapter)
+│   │   │   ├── generate-schema.ts   # Storage schema generator core logic
+│   │   │   └── index.ts             # Tool exports
 │   │   └── utils/
 │   │       ├── abi.ts               # ABI utilities
 │   │       ├── bytecode.ts          # Bytecode comparison
@@ -583,20 +673,39 @@ contract-integrity-verifier/
 │   │       └── storage.ts           # ERC-7201 storage utilities
 │   ├── tests/
 │   │   └── run-tests.ts             # Test suite
-│   ├── tools/
+│   ├── tools/                       # Standalone CLI tools (legacy, use adapter CLIs)
 │   │   ├── analyze-initializers.ts  # Initializer analysis for verification suggestions
 │   │   ├── convert-artifact.ts      # Artifact format converter
-│   │   ├── generate-schema.ts       # Storage schema generator
 │   │   └── generate-viewcalls.ts    # View call template generator
 │   └── examples/                    # Example configs and schemas
 ├── verifier-ethers/                  # @consensys/linea-contract-integrity-verifier-ethers
 │   └── src/
-│       ├── index.ts                 # EthersAdapter
-│       └── cli.ts                   # CLI using ethers
-└── verifier-viem/                    # @consensys/linea-contract-integrity-verifier-viem
-    └── src/
-        ├── index.ts                 # ViemAdapter
-        └── cli.ts                   # CLI using viem
+│       ├── index.ts                 # EthersAdapter (browser-safe)
+│       ├── tools.ts                 # Pre-bound tools with ethers crypto (Node.js only)
+│       ├── cli.ts                   # Verifier CLI using ethers
+│       └── generate-schema-cli.ts   # Schema generator CLI using ethers
+├── verifier-viem/                    # @consensys/linea-contract-integrity-verifier-viem
+│   └── src/
+│       ├── index.ts                 # ViemAdapter (browser-safe)
+│       ├── tools.ts                 # Pre-bound tools with viem crypto (Node.js only)
+│       ├── cli.ts                   # Verifier CLI using viem
+│       └── generate-schema-cli.ts   # Schema generator CLI using viem
+└── verifier-ui/                      # @consensys/linea-contract-integrity-verifier-ui
+    └── src/                          # Next.js web interface
+        ├── app/                      # Next.js App Router pages
+        │   ├── api/                  # API routes (session, upload, verify)
+        │   ├── layout.tsx            # Root layout
+        │   └── page.tsx              # Main verification page
+        ├── components/               # React components
+        │   ├── config-section/       # Configuration upload
+        │   ├── files-section/        # Artifact file management
+        │   ├── env-vars-section/     # Environment variable input
+        │   ├── options-section/      # Verification options
+        │   ├── results-section/      # Verification results display
+        │   └── ui/                   # Reusable UI components
+        ├── lib/                      # Utilities and helpers
+        ├── services/                 # Verification service layer
+        └── stores/                   # Zustand state management
 ```
 
 ## Development
@@ -606,17 +715,22 @@ contract-integrity-verifier/
 cd contract-integrity-verifier/verifier-core && pnpm build
 cd ../verifier-ethers && pnpm build
 cd ../verifier-viem && pnpm build
+cd ../verifier-ui && pnpm build
 
 # Or build all at once
 pnpm --filter "@consensys/linea-contract-integrity-verifier" build
 pnpm --filter "@consensys/linea-contract-integrity-verifier-ethers" build
 pnpm --filter "@consensys/linea-contract-integrity-verifier-viem" build
+pnpm --filter "@consensys/linea-contract-integrity-verifier-ui" build
 
 # Typecheck
 cd verifier-core && npx tsc --noEmit
 
 # Lint
 cd verifier-core && pnpm lint:fix
+
+# Run UI in development mode
+cd verifier-ui && pnpm dev
 ```
 
 ## Testing
@@ -652,6 +766,14 @@ cd verifier-viem && pnpm test:live
 
 Live tests will skip gracefully if the environment variable is not set.
 
+### UI Tests
+
+The UI package uses Playwright for end-to-end testing:
+
+```bash
+cd verifier-ui && pnpm test
+```
+
 ### Test Artifacts
 
 The packages use real Hardhat artifacts from `contracts/deployments/bytecode/` for live tests.
@@ -663,10 +785,13 @@ Mock artifacts in `tests/fixtures/artifacts/` are used for offline unit tests.
 - **Immutable Detection**: Automatically detect and validate immutable values
 - **ABI Verification**: Validate function selectors match artifact ABI
 - **State Verification**: Verify on-chain state (storage slots, view calls)
+- **Full Solidity Type Support**: All primitive types (uint8-uint256, int8-int256, bytes1-bytes32, address, bool)
+- **Tuple/Struct Comparison**: Deep equality comparison for complex return types
 - **ERC-7201 Support**: Compute and verify namespaced storage slots
 - **Artifact Support**: Works with both Hardhat and Foundry artifacts
 - **Markdown Config**: Human-readable configuration files
 - **Multiple Web3 Libraries**: Use ethers or viem via adapter pattern
+- **Web Interface**: Browser-based verification UI with file upload and real-time results
 
 ## Security Considerations
 

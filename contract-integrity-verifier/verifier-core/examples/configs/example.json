@@ -1,9 +1,9 @@
 {
   "chains": {
-    "mainnet": {
-      "chainId": 1,
-      "rpcUrl": "${MAINNET_RPC_URL}",
-      "explorerUrl": "https://etherscan.io"
+    "ethereum-sepolia": {
+      "chainId": 11155111,
+      "rpcUrl": "${ETHEREUM_SEPOLIA_RPC_URL}",
+      "explorerUrl": "https://sepolia.etherscan.io"
     },
     "hoodi": {
       "chainId": 560048,
@@ -35,6 +35,93 @@
           }
         ]
       }
+    },
+    {
+      "name": "LineaRollup-Proxy",
+      "chain": "ethereum-sepolia",
+      "address": "0x2A5CDCfc38856e2590E9Bd32F54Fa348e5De5f48",
+      "artifactFile": "../artifacts/hardhat/LineaRollup.json",
+      "isProxy": true,
+      "stateVerification": {
+        "ozVersion": "v4",
+        "schemaFile": "../schemas/linea-rollup.json",
+        "viewCalls": [
+          {
+            "$comment": "Verify initialized version is 7",
+            "function": "CONTRACT_VERSION",
+            "expected": "7.0"
+          },
+          {
+            "$comment": "OPERATOR_ROLE granted to Safe - keccak256('OPERATOR_ROLE') = 0x76ef52a5...",
+            "function": "hasRole",
+            "params": [
+              "0x76ef52a5344b10ed112c1d48c7c06f51e919518ea6fb005f9b25b359b955e3be",
+              "0xe6Ec44e651B6d961c15f1A8df9eA7DFaDb986eA1"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "VERIFIER_SETTER_ROLE granted to Safe - keccak256('VERIFIER_SETTER_ROLE') = 0x220bd22e...",
+            "function": "hasRole",
+            "params": [
+              "0x220bd22ef7c53d75fe3eac0a09e90815a0c5ba4f9e8da8b039542cd3db347258",
+              "0xe6Ec44e651B6d961c15f1A8df9eA7DFaDb986eA1"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "VERIFIER_SETTER_ROLE also granted to dead address (burn)",
+            "function": "hasRole",
+            "params": [
+              "0x220bd22ef7c53d75fe3eac0a09e90815a0c5ba4f9e8da8b039542cd3db347258",
+              "0x000000000000000000000000000000000000dEaD"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "PAUSE_NATIVE_YIELD_STAKING_ROLE granted to Safe - keccak256('PAUSE_NATIVE_YIELD_STAKING_ROLE') = 0xcc10d6ee...",
+            "function": "hasRole",
+            "params": [
+              "0xcc10d6eec3c757d645e27b3f3001a3ba52f692da0bce25fabf58c6ecaf376450",
+              "0xe6Ec44e651B6d961c15f1A8df9eA7DFaDb986eA1"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "UNPAUSE_NATIVE_YIELD_STAKING_ROLE granted to Safe - keccak256('UNPAUSE_NATIVE_YIELD_STAKING_ROLE') = 0x4b4665d8...",
+            "function": "hasRole",
+            "params": [
+              "0x4b4665d8754e6ea0608430ef3e91c1b45c72aafe8800e289cd35f38d85361858",
+              "0xe6Ec44e651B6d961c15f1A8df9eA7DFaDb986eA1"
+            ],
+            "expected": true
+          }
+        ],
+        "slots": [
+          {
+            "$comment": "OZ v4 Initializable._initialized at slot 0 (uint8, right-aligned)",
+            "slot": "0x0",
+            "type": "uint8",
+            "name": "_initialized",
+            "expected": "7"
+          }
+        ],
+        "storagePaths": [
+          {
+            "$comment": "yieldManager from ERC-7201 storage (linea.storage.LineaRollupYieldExtensionStorage)",
+            "path": "LineaRollupYieldExtensionStorage:_yieldManager",
+            "expected": "0xafeB487DD3E3Cb0342e8CF0215987FfDc9b72c9b"
+          }
+        ]
+      }
+    },
+    {
+      "$comment": "Verify implementation bytecode directly (before proxy upgrade)",
+      "name": "LineaRollup-Implementation",
+      "chain": "ethereum-sepolia",
+      "address": "0xCaAa421FfCF701bEFd676a2F5d0A161CCFA5a07E",
+      "artifactFile": "../artifacts/hardhat/LineaRollup.json",
+      "isProxy": false
     }
   ]
 }

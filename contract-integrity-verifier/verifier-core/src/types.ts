@@ -25,6 +25,22 @@ export interface ContractConfig {
    */
   constructorArgs?: unknown[] | string;
   /**
+   * Named immutable values to verify against deployed bytecode.
+   * Maps Solidity immutable variable names to expected values.
+   * This is the recommended approach for contracts with mixed constructor args
+   * (some become immutables, some go to storage).
+   *
+   * Example:
+   * ```json
+   * "immutableValues": {
+   *   "L1_MESSAGE_SERVICE": "0x1234...",
+   *   "YIELD_MANAGER": "0x5678...",
+   *   "MAX_AMOUNT": 1000000
+   * }
+   * ```
+   */
+  immutableValues?: Record<string, string | number | boolean | bigint>;
+  /**
    * Optional state verification configuration.
    * Used to verify contract state after initialization/upgrade.
    */
@@ -79,23 +95,116 @@ export interface NamespaceVariable {
   expected: unknown;
 }
 
+/**
+ * Solidity primitive types for storage slot verification.
+ * Supports all valid Solidity value types:
+ * - address: 20 bytes
+ * - bool: 1 byte
+ * - uint8 to uint256 (in 8-bit increments): 1-32 bytes
+ * - int8 to int256 (in 8-bit increments): 1-32 bytes
+ * - bytes1 to bytes32: 1-32 bytes
+ */
 export type SlotType =
   | "address"
-  | "uint256"
-  | "uint128"
-  | "uint96"
-  | "uint64"
-  | "uint32"
-  | "uint16"
-  | "uint8"
-  | "int256"
-  | "int128"
-  | "int96"
-  | "int64"
-  | "int32"
-  | "int16"
-  | "int8"
   | "bool"
+  // All uint types (8-bit increments)
+  | "uint8"
+  | "uint16"
+  | "uint24"
+  | "uint32"
+  | "uint40"
+  | "uint48"
+  | "uint56"
+  | "uint64"
+  | "uint72"
+  | "uint80"
+  | "uint88"
+  | "uint96"
+  | "uint104"
+  | "uint112"
+  | "uint120"
+  | "uint128"
+  | "uint136"
+  | "uint144"
+  | "uint152"
+  | "uint160"
+  | "uint168"
+  | "uint176"
+  | "uint184"
+  | "uint192"
+  | "uint200"
+  | "uint208"
+  | "uint216"
+  | "uint224"
+  | "uint232"
+  | "uint240"
+  | "uint248"
+  | "uint256"
+  // All int types (8-bit increments)
+  | "int8"
+  | "int16"
+  | "int24"
+  | "int32"
+  | "int40"
+  | "int48"
+  | "int56"
+  | "int64"
+  | "int72"
+  | "int80"
+  | "int88"
+  | "int96"
+  | "int104"
+  | "int112"
+  | "int120"
+  | "int128"
+  | "int136"
+  | "int144"
+  | "int152"
+  | "int160"
+  | "int168"
+  | "int176"
+  | "int184"
+  | "int192"
+  | "int200"
+  | "int208"
+  | "int216"
+  | "int224"
+  | "int232"
+  | "int240"
+  | "int248"
+  | "int256"
+  // All bytes types (1-32)
+  | "bytes1"
+  | "bytes2"
+  | "bytes3"
+  | "bytes4"
+  | "bytes5"
+  | "bytes6"
+  | "bytes7"
+  | "bytes8"
+  | "bytes9"
+  | "bytes10"
+  | "bytes11"
+  | "bytes12"
+  | "bytes13"
+  | "bytes14"
+  | "bytes15"
+  | "bytes16"
+  | "bytes17"
+  | "bytes18"
+  | "bytes19"
+  | "bytes20"
+  | "bytes21"
+  | "bytes22"
+  | "bytes23"
+  | "bytes24"
+  | "bytes25"
+  | "bytes26"
+  | "bytes27"
+  | "bytes28"
+  | "bytes29"
+  | "bytes30"
+  | "bytes31"
   | "bytes32";
 
 export interface SlotConfig {
@@ -115,28 +224,120 @@ export interface SlotConfig {
 // Storage Path Types (ERC-7201 Schema-based)
 // ============================================================================
 
+/**
+ * Solidity types for storage schema definitions.
+ * Includes all primitive types plus arrays and mappings.
+ */
 export type SolidityType =
   | "address"
   | "bool"
+  | "string"
+  | "bytes"
+  // All uint types (8-bit increments)
   | "uint8"
   | "uint16"
+  | "uint24"
   | "uint32"
+  | "uint40"
+  | "uint48"
+  | "uint56"
   | "uint64"
+  | "uint72"
+  | "uint80"
+  | "uint88"
   | "uint96"
+  | "uint104"
+  | "uint112"
+  | "uint120"
   | "uint128"
+  | "uint136"
+  | "uint144"
+  | "uint152"
+  | "uint160"
+  | "uint168"
+  | "uint176"
+  | "uint184"
+  | "uint192"
+  | "uint200"
+  | "uint208"
+  | "uint216"
+  | "uint224"
+  | "uint232"
+  | "uint240"
+  | "uint248"
   | "uint256"
+  // All int types (8-bit increments)
   | "int8"
   | "int16"
+  | "int24"
   | "int32"
+  | "int40"
+  | "int48"
+  | "int56"
   | "int64"
+  | "int72"
+  | "int80"
+  | "int88"
   | "int96"
+  | "int104"
+  | "int112"
+  | "int120"
   | "int128"
+  | "int136"
+  | "int144"
+  | "int152"
+  | "int160"
+  | "int168"
+  | "int176"
+  | "int184"
+  | "int192"
+  | "int200"
+  | "int208"
+  | "int216"
+  | "int224"
+  | "int232"
+  | "int240"
+  | "int248"
   | "int256"
-  | "bytes32"
+  // All bytes types (1-32)
+  | "bytes1"
+  | "bytes2"
+  | "bytes3"
   | "bytes4"
-  | `address[]`
-  | `uint256[]`
-  | `mapping(${string} => ${string})`;
+  | "bytes5"
+  | "bytes6"
+  | "bytes7"
+  | "bytes8"
+  | "bytes9"
+  | "bytes10"
+  | "bytes11"
+  | "bytes12"
+  | "bytes13"
+  | "bytes14"
+  | "bytes15"
+  | "bytes16"
+  | "bytes17"
+  | "bytes18"
+  | "bytes19"
+  | "bytes20"
+  | "bytes21"
+  | "bytes22"
+  | "bytes23"
+  | "bytes24"
+  | "bytes25"
+  | "bytes26"
+  | "bytes27"
+  | "bytes28"
+  | "bytes29"
+  | "bytes30"
+  | "bytes31"
+  | "bytes32"
+  // Array types
+  | `${string}[]`
+  // Mapping types
+  | `mapping(${string} => ${string})`
+  // Struct types (referenced by name)
+  | string;
 
 export interface StorageFieldDef {
   /** Slot offset from struct base */
@@ -225,6 +426,72 @@ export interface ImmutableDifference {
   localValue: string;
   remoteValue: string;
   possibleType: string | undefined;
+}
+
+/**
+ * Result of verifying a single named immutable value.
+ */
+export interface ImmutableValueResult {
+  /** The immutable variable name */
+  name: string;
+  /** Expected value from config */
+  expected: string;
+  /** Actual value found in bytecode */
+  actual: string | undefined;
+  /** Verification status */
+  status: VerificationStatus;
+  /** Human-readable message */
+  message: string;
+}
+
+/**
+ * Result of verifying all named immutable values.
+ */
+export interface ImmutableValuesResult {
+  /** Overall status */
+  status: VerificationStatus;
+  /** Summary message */
+  message: string;
+  /** Individual results for each named immutable */
+  results: ImmutableValueResult[];
+}
+
+/**
+ * Result of definitive bytecode comparison after immutable substitution.
+ * This provides 100% confidence by substituting known immutable values
+ * into the local bytecode and comparing byte-for-byte with remote.
+ */
+export interface DefinitiveBytecodeResult {
+  /** Whether bytecode matches exactly after immutable substitution */
+  exactMatch: boolean;
+  /** Verification status */
+  status: VerificationStatus;
+  /** Human-readable message */
+  message: string;
+  /** Number of immutables substituted */
+  immutablesSubstituted: number;
+  /** Hash of local bytecode after substitution (for debugging) */
+  localHashAfterSubstitution?: string;
+  /** Hash of remote bytecode (for debugging) */
+  remoteHash?: string;
+}
+
+/**
+ * Grouped immutable difference - groups detected fragments by their parent immutable reference.
+ */
+export interface GroupedImmutableDifference {
+  /** Index number for display (1-based) */
+  index: number;
+  /** Start position of the immutable reference (from artifact) */
+  refStart: number;
+  /** Length of the immutable reference (from artifact) */
+  refLength: number;
+  /** The full value reconstructed from fragments or read directly */
+  fullValue: string;
+  /** Whether this immutable was detected as fragmented */
+  isFragmented: boolean;
+  /** The individual fragments (if fragmented) */
+  fragments: ImmutableDifference[];
 }
 
 export interface VerifierConfig {
@@ -362,6 +629,11 @@ export interface ContractVerificationResult {
   bytecodeResult?: BytecodeComparisonResult;
   abiResult?: AbiComparisonResult;
   stateResult?: StateVerificationResult;
+  immutableValuesResult?: ImmutableValuesResult;
+  /** Definitive bytecode verification (100% confidence, no ambiguity) */
+  definitiveResult?: DefinitiveBytecodeResult;
+  /** Grouped immutable differences for better display (shows fragmented immutables) */
+  groupedImmutables?: GroupedImmutableDifference[];
   error?: string;
 }
 
@@ -372,14 +644,4 @@ export interface VerificationSummary {
   warnings: number;
   skipped: number;
   results: ContractVerificationResult[];
-}
-
-export interface CliOptions {
-  config: string;
-  verbose: boolean;
-  contract: string | undefined;
-  chain: string | undefined;
-  skipBytecode: boolean;
-  skipAbi: boolean;
-  skipState: boolean;
 }

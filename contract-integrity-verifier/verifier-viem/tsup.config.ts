@@ -3,7 +3,7 @@ import { defineConfig } from "tsup";
 export default defineConfig([
   // Library build (with .d.ts)
   {
-    entry: ["src/index.ts"],
+    entry: ["src/index.ts", "src/tools.ts"],
     tsconfig: "tsconfig.build.json",
     format: ["esm", "cjs"],
     target: "esnext",
@@ -13,9 +13,9 @@ export default defineConfig([
     minify: true,
     outDir: "dist",
   },
-  // CLI build (no .d.ts needed)
+  // CLI builds (no .d.ts needed)
   {
-    entry: ["src/cli.ts"],
+    entry: ["src/cli.ts", "src/generate-schema-cli.ts"],
     tsconfig: "tsconfig.build.json",
     format: ["esm"],
     target: "esnext",

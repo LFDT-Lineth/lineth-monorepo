@@ -1,0 +1,100 @@
+{
+    "$comment": "Config to verify LineaRollup V7 upgrade",
+    "chains": {
+      "ethereum-dynamic": {
+        "chainId": ${VERIFICATION_CHAIN_ID},
+        "rpcUrl": "${ETHEREUM_RPC_URL}"
+      }
+    },
+    "contracts": [
+      {
+        "$comment": "Verify implementation bytecode directly (after a proxy upgrade)",
+        "name": "LineaRollup-Proxy",
+        "chain": "ethereum-dynamic",
+        "address": "${LINEA_ROLLUP_ADDRESS}",
+        "artifactFile": "../LineaRollup.json",
+        "isProxy": true,
+        "stateVerification": {
+          "ozVersion": "v4",
+          "schemaFile": "./linea-rollup.schema.json",
+          "viewCalls": [
+            {
+              "$comment": "Verify initialized version is 7",
+              "function": "CONTRACT_VERSION",
+              "expected": "7.0"
+            },
+            {
+              "$comment": "PAUSE_NATIVE_YIELD_STAKING_ROLE granted to Safe - keccak256('PAUSE_NATIVE_YIELD_STAKING_ROLE') = 0xcc10d6ee...",
+              "function": "hasRole",
+              "params": [
+                "0xcc10d6eec3c757d645e27b3f3001a3ba52f692da0bce25fabf58c6ecaf376450",
+                "${L1_SECURITY_COUNCIL}"
+              ],
+              "expected": true
+            },
+            {
+              "$comment": "UNPAUSE_NATIVE_YIELD_STAKING_ROLE granted to Safe - keccak256('UNPAUSE_NATIVE_YIELD_STAKING_ROLE') = 0x4b4665d8...",
+              "function": "hasRole",
+              "params": [
+                "0x4b4665d8754e6ea0608430ef3e91c1b45c72aafe8800e289cd35f38d85361858",
+                "${L1_SECURITY_COUNCIL}"
+              ],
+              "expected": true
+            },
+            {
+              "$comment": "YIELD_PROVIDER_STAKING_ROLE granted to Safe - keccak256('YIELD_PROVIDER_STAKING_ROLE') = 0x220bd22e...",
+              "function": "hasRole",
+              "params": [
+                "0x220bd22ef7c53d75fe3eac0a09e90815a0c5ba4f9e8da8b039542cd3db347258",
+                "${L1_SECURITY_COUNCIL}"
+              ],
+              "expected": true
+            },
+            {
+              "$comment": "SET_YIELD_MANAGER_ROLE granted to Safe - keccak256('SET_YIELD_MANAGER_ROLE') = 0x76ef52a5...",
+              "function": "hasRole",
+              "params": [
+                "0x76ef52a5344b10ed112c1d48c7c06f51e919518ea6fb005f9b25b359b955e3be",
+                "${L1_SECURITY_COUNCIL}"
+              ],
+              "expected": true
+            },            
+            {
+              "$comment": "YIELD_PROVIDER_STAKING_ROLE granted to automation service - keccak256('YIELD_PROVIDER_STAKING_ROLE') = 0x220bd22e...",
+              "function": "hasRole",
+              "params": [
+                "0x220bd22ef7c53d75fe3eac0a09e90815a0c5ba4f9e8da8b039542cd3db347258",
+                "${AUTOMATION_SERVICE_ADDRESS}"
+              ],
+              "expected": true
+            }
+          ],
+          "slots": [
+            {
+              "$comment": "OZ v4 Initializable._initialized at slot 0 (uint8, right-aligned)",
+              "slot": "0x0",
+              "type": "uint8",
+              "name": "_initialized",
+              "expected": "7"
+            }
+          ],
+          "storagePaths": [
+            {
+              "$comment": "yieldManager from ERC-7201 storage (linea.storage.LineaRollupYieldExtensionStorage)",
+              "path": "LineaRollupYieldExtensionStorage:_yieldManager",
+              "expected": "${YIELD_MANAGER_ADDRESS}"
+            }
+          ]
+        }
+      },
+      {
+        "$comment": "Verify implementation bytecode directly (before proxy upgrade)",
+        "name": "LineaRollup-Implementation",
+        "chain": "ethereum-dynamic",
+        "address": "${LINEA_ROLLUP_IMPLEMENTATION_ADDRESS}",
+        "artifactFile": "../LineaRollup.json",
+        "isProxy": false
+      }
+    ]
+  }
+  

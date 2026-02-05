@@ -12,9 +12,17 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
+    "./browser": {
+      "import": "./dist/browser.mjs",
+      "require": "./dist/browser.js"
+    },
     "./adapter": {
       "import": "./dist/adapter.mjs",
       "require": "./dist/adapter.js"
+    },
+    "./tools": {
+      "import": "./dist/tools/index.mjs",
+      "require": "./dist/tools/index.js"
     }
   },
   "files": [
@@ -28,7 +36,11 @@
     "test:all": "npm run test && npm run test:integration",
     "lint": "eslint 'src/**/*.ts'",
     "lint:fix": "eslint --fix 'src/**/*.ts'",
-    "clean": "rimraf dist node_modules coverage"
+    "prettier": "prettier -c 'src/**/*.ts'",
+    "prettier:fix": "prettier -w 'src/**/*.ts'",
+    "clean": "rimraf dist node_modules coverage",
+    "enrich": "npx ts-node tools/enrich-hardhat-artifact.ts",
+    "enrich:all": "npx ts-node tools/enrich-all-artifacts.ts"
   },
   "keywords": [
     "ethereum",

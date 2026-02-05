@@ -1,0 +1,20 @@
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+.toggles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.filters {
+  display: grid;
+  gap: var(--spacing-lg);
+
+  @include bp(tablet) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

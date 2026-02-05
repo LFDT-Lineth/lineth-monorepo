@@ -22,7 +22,9 @@ import {
   type Chain,
 } from "viem";
 
-import type { Web3Adapter, Web3AdapterOptions, AbiElement } from "@consensys/linea-contract-integrity-verifier";
+// Import from /adapter to avoid pulling in Node.js 'fs' module in browser bundles
+import type { Web3Adapter, Web3AdapterOptions } from "@consensys/linea-contract-integrity-verifier/adapter";
+import type { AbiElement } from "@consensys/linea-contract-integrity-verifier/browser";
 
 /**
  * Options for creating a ViemAdapter.
@@ -161,3 +163,7 @@ export function createViemAdapter(rpcUrl: string, chain?: Chain): ViemAdapter {
 export function createViemAdapterFromClient(client: PublicClient): ViemAdapter {
   return new ViemAdapter({ rpcUrl: "", client });
 }
+
+// Note: Schema generation tools are in a separate entry point (verifier-viem/tools)
+// to avoid bundling Node.js-only dependencies in browser builds.
+// Import { createCryptoAdapter, generateSchema, ... } from "@consensys/linea-contract-integrity-verifier-viem/tools"

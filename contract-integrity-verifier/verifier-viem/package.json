@@ -8,12 +8,17 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "bin": {
-    "verify-contract-viem": "./dist/cli.mjs"
+    "verify-contract-viem": "./dist/cli.mjs",
+    "generate-schema-viem": "./dist/generate-schema-cli.mjs"
   },
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./tools": {
+      "import": "./dist/tools.mjs",
+      "require": "./dist/tools.js"
     }
   },
   "files": [

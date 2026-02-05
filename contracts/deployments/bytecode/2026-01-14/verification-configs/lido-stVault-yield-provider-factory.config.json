@@ -1,0 +1,69 @@
+{
+    "$comment": "Config to verify the LidoStVaultYieldProviderFactory contract",
+    "chains": {
+        "ethereum-dynamic": {
+            "chainId": "${VERIFICATION_CHAIN_ID}",
+            "rpcUrl": "${ETHEREUM_RPC_URL}"
+        }
+    },
+    "contracts": [
+        {
+            "$comment": "Verify LidoStVaultYieldProviderFactory implementation bytecode directly",
+            "name": "LidoStVaultYieldProviderFactory",
+            "chain": "ethereum-dynamic",
+            "address": "${LIDO_ST_VAULT_YIELD_PROVIDER_FACTORY_ADDRESS}",
+            "artifactFile": "../LidoStVaultYieldProviderFactory.json",
+            "isProxy": false,
+            "constructorArgs": [
+                "${L1_MESSAGE_SERVICE_ADDRESS}",
+                "${YIELD_MANAGER_ADDRESS}",
+                "${LIDO_VAULT_HUB_ADDRESS}",
+                "${LIDO_VAULT_FACTORY_ADDRESS}",
+                "${LIDO_STETH_ADDRESS}",
+                "${VALIDATOR_CONTAINER_PROOF_VERIFIER_ADDRESS}"
+            ],
+            "immutableValues": {
+                "L1_MESSAGE_SERVICE": "${L1_MESSAGE_SERVICE_ADDRESS}",
+                "YIELD_MANAGER": "${YIELD_MANAGER_ADDRESS}",
+                "VAULT_HUB": "${LIDO_VAULT_HUB_ADDRESS}",
+                "VAULT_FACTORY": "${LIDO_VAULT_FACTORY_ADDRESS}",
+                "STETH": "${LIDO_STETH_ADDRESS}",
+                "VALIDATOR_CONTAINER_PROOF_VERIFIER": "${VALIDATOR_CONTAINER_PROOF_VERIFIER_ADDRESS}"
+            },
+            "stateVerification": {
+                "viewCalls": [
+                    {
+                        "$comment": "Double-verify L1_MESSAGE_SERVICE via public getter",
+                        "function": "L1_MESSAGE_SERVICE",
+                        "expected": "${L1_MESSAGE_SERVICE_ADDRESS}"
+                    },
+                    {
+                        "$comment": "Double-verify YIELD_MANAGER via public getter",
+                        "function": "YIELD_MANAGER",
+                        "expected": "${YIELD_MANAGER_ADDRESS}"
+                    },
+                    {
+                        "$comment": "Double-verify VAULT_HUB via public getter",
+                        "function": "VAULT_HUB",
+                        "expected": "${LIDO_VAULT_HUB_ADDRESS}"
+                    },
+                    {
+                        "$comment": "Double-verify VAULT_FACTORY via public getter",
+                        "function": "VAULT_FACTORY",
+                        "expected": "${LIDO_VAULT_FACTORY_ADDRESS}"
+                    },
+                    {
+                        "$comment": "Double-verify STETH via public getter",
+                        "function": "STETH",
+                        "expected": "${LIDO_STETH_ADDRESS}"
+                    },
+                    {
+                        "$comment": "Double-verify VALIDATOR_CONTAINER_PROOF_VERIFIER via public getter",
+                        "function": "VALIDATOR_CONTAINER_PROOF_VERIFIER",
+                        "expected": "${VALIDATOR_CONTAINER_PROOF_VERIFIER_ADDRESS}"
+                    }
+                ]
+            }
+        }
+    ]
+}

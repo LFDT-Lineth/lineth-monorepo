@@ -11,7 +11,7 @@
 import { resolve } from "path";
 import { loadConfig, checkArtifactExists } from "../src/config";
 import { loadArtifact, extractSelectorsFromArtifact } from "../src/utils/abi";
-import { compareBytecode, extractSelectorsFromBytecode, stripCborMetadata } from "../src/utils/bytecode";
+import { compareBytecode, extractSelectorsFromBytecode, stripCborMetadata, verifyImmutableValues } from "../src/utils/bytecode";
 import { calculateErc7201BaseSlot, parsePath, loadStorageSchema, decodeSlotValue } from "../src/utils/storage";
 import { parseMarkdownConfig } from "../src/utils/markdown-config";
 import { Verifier } from "../src/verifier";
@@ -328,6 +328,129 @@ async function testBytecodeComparison(): Promise<void> {
 }
 
 /**
+ * Tests for immutable values verification.
+ */
+async function testImmutableValues(): Promise<void> {
+  console.log("\n=== Immutable Values Tests ===");
+
+  // Mock immutable differences (as would be detected from bytecode comparison)
+  const mockImmutableDifferences = [
+    {
+      position: 100,
+      length: 32,
+      localValue: "0".repeat(64),
+      remoteValue: "000000000000000000000000d19d4b5d358258f05d7b411e21a1460d11b0876f",
+      possibleType: "address",
+    },
+    {
+      position: 200,
+      length: 32,
+      localValue: "0".repeat(64),
+      remoteValue: "00000000000000000000000073bf00ad18c7c0871eba03bcbef8c98225f9ceaa",
+      possibleType: "address",
+    },
+    {
+      position: 300,
+      length: 32,
+      localValue: "0".repeat(64),
+      remoteValue: "0000000000000000000000000000000000000000000000000000000000000064",
+      possibleType: "uint256",
+    },
+  ];
+
+  // Test 1: All immutable values match
+  const immutableValues1 = {
+    L1_MESSAGE_SERVICE: "0xd19d4b5d358258f05d7b411e21a1460d11b0876f",
+    YIELD_MANAGER: "0x73bf00ad18c7c0871eba03bcbef8c98225f9ceaa",
+    MAX_AMOUNT: 100, // 0x64 in hex
+  };
+
+  const result1 = verifyImmutableValues(immutableValues1, mockImmutableDifferences);
+  assertEqual(result1.status, "pass", "All immutable values match");
+  assertEqual(result1.results.length, 3, "Three results returned");
+  assert(result1.results.every((r) => r.status === "pass"), "All individual results pass");
+
+  // Test 2: Partial match (one missing)
+  const immutableValues2 = {
+    L1_MESSAGE_SERVICE: "0xd19d4b5d358258f05d7b411e21a1460d11b0876f",
+    YIELD_MANAGER: "0x73bf00ad18c7c0871eba03bcbef8c98225f9ceaa",
+    WRONG_VALUE: "0x1234567890123456789012345678901234567890",
+  };
+
+  const result2 = verifyImmutableValues(immutableValues2, mockImmutableDifferences);
+  assertEqual(result2.status, "fail", "Partial match fails");
+  assertEqual(result2.results.filter((r) => r.status === "pass").length, 2, "Two results pass");
+  assertEqual(result2.results.filter((r) => r.status === "fail").length, 1, "One result fails");
+
+  // Test 3: Match with bigint
+  const immutableValues3 = {
+    MAX_AMOUNT: BigInt(100),
+  };
+
+  const result3 = verifyImmutableValues(immutableValues3, mockImmutableDifferences);
+  assertEqual(result3.status, "pass", "BigInt value matches");
+
+  // Test 4: Match with boolean
+  const boolImmutableDifferences = [
+    {
+      position: 100,
+      length: 32,
+      localValue: "0".repeat(64),
+      remoteValue: "0".repeat(63) + "1",
+      possibleType: "bool",
+    },
+  ];
+
+  const immutableValues4 = {
+    IS_ENABLED: true,
+  };
+
+  const result4 = verifyImmutableValues(immutableValues4, boolImmutableDifferences);
+  assertEqual(result4.status, "pass", "Boolean true value matches");
+
+  // Test 5: Empty immutable values
+  const result5 = verifyImmutableValues({}, mockImmutableDifferences);
+  assertEqual(result5.status, "pass", "Empty immutable values passes (nothing to verify)");
+  assertEqual(result5.results.length, 0, "No results for empty config");
+
+  // Test 6: Fragment matching (addresses split due to matching bytes)
+  // This simulates the case where YIELD_MANAGER 0x73bf00ad18c7c0871eba03bcbef8c98225f9ceaa
+  // is split into "73bf" and "ad18c7c0871eba03bcbef8c98225f9ceaa" because of the "00" byte
+  const fragmentedImmutableDifferences = [
+    {
+      position: 262,
+      length: 2,
+      localValue: "0000",
+      remoteValue: "73bf",
+      possibleType: "uint16",
+    },
+    {
+      position: 265,
+      length: 17,
+      localValue: "0".repeat(34),
+      remoteValue: "ad18c7c0871eba03bcbef8c98225f9ceaa",
+      possibleType: undefined,
+    },
+    {
+      position: 300,
+      length: 20,
+      localValue: "0".repeat(40),
+      remoteValue: "d19d4b5d358258f05d7b411e21a1460d11b0876f",
+      possibleType: "address",
+    },
+  ];
+
+  const immutableValues6 = {
+    YIELD_MANAGER: "0x73bf00ad18c7c0871eba03bcbef8c98225f9ceaa",
+    L1_MESSAGE_SERVICE: "0xd19d4b5d358258f05d7b411e21a1460d11b0876f",
+  };
+
+  const result6 = verifyImmutableValues(immutableValues6, fragmentedImmutableDifferences);
+  assertEqual(result6.status, "pass", "Fragment matching passes for split addresses");
+  assertEqual(result6.results.filter((r) => r.status === "pass").length, 2, "Both fragmented values matched");
+}
+
+/**
  * Tests for storage utilities.
  */
 async function testStorageUtilities(): Promise<void> {
@@ -463,6 +586,7 @@ async function main(): Promise<void> {
     await testArtifactLoading();
     await testConfigLoading();
     await testBytecodeComparison();
+    await testImmutableValues();
     await testStorageUtilities();
     await testVerifier();
     await testFullIntegration();

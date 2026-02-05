@@ -8,12 +8,17 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "bin": {
-    "verify-contract-ethers": "./dist/cli.mjs"
+    "verify-contract-ethers": "./dist/cli.mjs",
+    "generate-schema-ethers": "./dist/generate-schema-cli.mjs"
   },
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./tools": {
+      "import": "./dist/tools.mjs",
+      "require": "./dist/tools.js"
     }
   },
   "files": [

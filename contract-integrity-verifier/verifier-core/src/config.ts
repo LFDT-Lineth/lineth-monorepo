@@ -9,6 +9,7 @@
 import { readFileSync, existsSync } from "fs";
 import { resolve, dirname, extname } from "path";
 
+import { MAX_MARKDOWN_CONFIG_SIZE } from "./constants";
 import { VerifierConfig, ChainConfig, ContractConfig } from "./types";
 import { parseMarkdownConfig } from "./utils/markdown-config";
 
@@ -97,6 +98,7 @@ function resolveFilePaths(config: VerifierConfig, configDir: string): void {
 
 /**
  * Loads a JSON configuration file.
+ * Uses try-catch for file reading to avoid TOCTOU race conditions.
  */
 function loadJsonConfig(configPath: string): VerifierConfig {
   const absolutePath = resolve(configPath);
@@ -105,6 +107,9 @@ function loadJsonConfig(configPath: string): VerifierConfig {
   try {
     rawConfig = readFileSync(absolutePath, "utf-8");
   } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      throw new Error(`Configuration file not found: ${absolutePath}`);
+    }
     throw new Error(`Failed to read configuration file: ${error}`);
   }
 
@@ -127,20 +132,30 @@ function loadJsonConfig(configPath: string): VerifierConfig {
 /**
  * Loads and validates a configuration file.
  * Supports both JSON (.json) and Markdown (.md) formats.
+ * Uses try-catch for file reading to avoid TOCTOU race conditions.
  */
 export function loadConfig(configPath: string): VerifierConfig {
   const absolutePath = resolve(configPath);
-
-  if (!existsSync(absolutePath)) {
-    throw new Error(`Configuration file not found: ${absolutePath}`);
-  }
-
   const ext = extname(absolutePath).toLowerCase();
   let config: VerifierConfig;
 
   if (ext === ".md") {
-    // Load markdown config
-    const rawContent = readFileSync(absolutePath, "utf-8");
+    // Load markdown config - uses try-catch to avoid TOCTOU
+    let rawContent: string;
+    try {
+      rawContent = readFileSync(absolutePath, "utf-8");
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+        throw new Error(`Configuration file not found: ${absolutePath}`);
+      }
+      throw new Error(`Failed to read configuration file: ${error}`);
+    }
+
+    // Check size limit before parsing
+    if (rawContent.length > MAX_MARKDOWN_CONFIG_SIZE) {
+      throw new Error(`Markdown config file exceeds maximum size of ${MAX_MARKDOWN_CONFIG_SIZE / 1024 / 1024}MB`);
+    }
+
     config = parseMarkdownConfig(rawContent, dirname(absolutePath));
     // Interpolate env vars in chain configs (default chains have placeholders)
     interpolateChainConfigs(config.chains);
@@ -170,6 +185,12 @@ export function loadConfig(configPath: string): VerifierConfig {
 
 /**
  * Checks if the artifact file exists for a contract configuration.
+ *
+ * @deprecated This function is TOCTOU-vulnerable (time-of-check-time-of-use).
+ * The file may be deleted or modified between this check and actual loading.
+ * For production code, use try-catch around loadArtifact() instead.
+ * This function is retained only for test pre-validation where race conditions
+ * are not a concern.
  */
 export function checkArtifactExists(contract: ContractConfig): boolean {
   return existsSync(contract.artifactFile);

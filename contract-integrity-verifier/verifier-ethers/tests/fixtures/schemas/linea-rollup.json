@@ -3,6 +3,7 @@
   "structs": {
     "LineaRollupYieldExtensionStorage": {
       "namespace": "linea.storage.LineaRollupYieldExtensionStorage",
+      "baseSlot": "0x594904a11ae10ad7613c91ac3c92c7c3bba397934d377ce6d3e0aaffbc17df00",
       "fields": {
         "_yieldManager": { "slot": 0, "type": "address" }
       }

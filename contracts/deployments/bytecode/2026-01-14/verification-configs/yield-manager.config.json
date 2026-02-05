@@ -1,0 +1,328 @@
+{
+  "$comment": "Config to verify YieldManager deployment on Sepolia (Jan 20, 2026). Deployment tx: 0x2e0cf9d3774416276e5cefce3bca707c8ab66737cfdc7cb9f3f1765b9dd4ddb9",
+  "chains": {
+    "ethereum-dynamic": {
+      "chainId": ${VERIFICATION_CHAIN_ID},
+      "rpcUrl": "${ETHEREUM_RPC_URL}"
+    }
+  },
+  "contracts": [
+    {
+      "$comment": "Verify YieldManager implementation bytecode directly (after a proxy upgrade)",
+      "name": "YieldManager-Proxy",
+      "chain": "ethereum-dynamic",
+      "address": "${YIELD_MANAGER_ADDRESS}",
+      "artifactFile": "../YieldManager.json",
+      "isProxy": true,
+      "stateVerification": {
+        "ozVersion": "v4",
+        "schemaFile": "./yield-manager.schema.json",
+        "viewCalls": [
+          {
+            "$comment": "Verify lineaRollup immutable - the LineaRollup proxy address",
+            "function": "L1_MESSAGE_SERVICE",
+            "expected": "${LINEA_ROLLUP_ADDRESS}"
+          },
+          {
+            "$comment": "Verify minimumWithdrawalReservePercentageBps - 9000 = 90%",
+            "function": "minimumWithdrawalReservePercentageBps",
+            "expected": "9000"
+          },
+          {
+            "$comment": "Verify targetWithdrawalReservePercentageBps - 9985 = 99.85%",
+            "function": "targetWithdrawalReservePercentageBps",
+            "expected": "9985"
+          },
+          {
+            "$comment": "Verify minimumWithdrawalReserveAmount - 17,500 ETH",
+            "function": "minimumWithdrawalReserveAmount",
+            "expected": "17500000000000000000000"
+          },
+          {
+            "$comment": "Verify targetWithdrawalReserveAmount - 20,000 ETH",
+            "function": "targetWithdrawalReserveAmount",
+            "expected": "20000000000000000000000"
+          },
+          {
+            "$comment": "DEFAULT_ADMIN_ROLE granted to Safe - keccak256('') = 0x0",
+            "function": "hasRole",
+            "params": [
+              "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "PAUSE_ALL_ROLE granted to Safe - keccak256('PAUSE_ALL_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0x56bdc3c9ec86cb7db110a7699b2ade72f0b8819727d9f7d906b012641505fa77",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "UNPAUSE_ALL_ROLE granted to Safe - keccak256('UNPAUSE_ALL_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0xd8b4c34c2ec1f3194471108c64ad2beda340c0337ee4ca35592f9ef270f4228b",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "SECURITY_COUNCIL_ROLE granted to Safe - keccak256('SECURITY_COUNCIL_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0x1453a531db80c85f2d944d498709d84959bc5bf839eefe9acb784571e5a32118",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "YIELD_PROVIDER_STAKING_ROLE granted to Safe - keccak256('YIELD_PROVIDER_STAKING_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0x220bd22ef7c53d75fe3eac0a09e90815a0c5ba4f9e8da8b039542cd3db347258",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "YIELD_PROVIDER_UNSTAKER_ROLE granted to Safe - keccak256('YIELD_PROVIDER_UNSTAKER_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0x1208ee08ba851b41059d729bfba4fffc3a98c2b6d121e3cf0db274417dea3d70",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "YIELD_REPORTER_ROLE granted to Safe - keccak256('YIELD_REPORTER_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0xa980ae8105ebca8c4bda1143caefa4ff96b61271718a11b7239cdb9eabfc7e27",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "STAKING_PAUSE_CONTROLLER_ROLE granted to Safe - keccak256('STAKING_PAUSE_CONTROLLER_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0xb05f5f3bc6b24add2de79f85477c2f0351f8e8a2209394f90c9e1c6c7e540c79",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "OSSIFICATION_INITIATOR_ROLE granted to Safe - keccak256('OSSIFICATION_INITIATOR_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0x9b6f6cc60cc992c1b2dbfe3564c7159c78b4c15a858781972f9be245ab0a7962",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "OSSIFICATION_PROCESSOR_ROLE granted to Safe - keccak256('OSSIFICATION_PROCESSOR_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0x9ef55ee0235bd9abf16b2b7865531896bd633b74155b6c1d064d0402f2d1b3c8",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "WITHDRAWAL_RESERVE_SETTER_ROLE granted to Safe - keccak256('WITHDRAWAL_RESERVE_SETTER_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0x58cd6cd2c63b9e5685aee547419caac3d1184e3aeb3ed7c8b63ec61cda1e27e0",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "SET_YIELD_PROVIDER_ROLE granted to Safe - keccak256('SET_YIELD_PROVIDER_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0x4bfab1661ce1ffeb4b53fc15e3fd6e7ae742e97d90ba229951fcc314e10f05d9",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "SET_L2_YIELD_RECIPIENT_ROLE granted to Safe - keccak256('SET_L2_YIELD_RECIPIENT_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0xedd66f6e9b5c4d0e97b7d84abd332823333b4210446a6cb917983caefd083143",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "PAUSE_NATIVE_YIELD_STAKING_ROLE granted to Safe - keccak256('PAUSE_NATIVE_YIELD_STAKING_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0xcc10d6eec3c757d645e27b3f3001a3ba52f692da0bce25fabf58c6ecaf376450",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "UNPAUSE_NATIVE_YIELD_STAKING_ROLE granted to Safe - keccak256('UNPAUSE_NATIVE_YIELD_STAKING_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0x4b4665d8754e6ea0608430ef3e91c1b45c72aafe8800e289cd35f38d85361858",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "PAUSE_NATIVE_YIELD_UNSTAKING_ROLE granted to Safe - keccak256('PAUSE_NATIVE_YIELD_UNSTAKING_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0x06c421ad716396bcfdef0d016c4820d40cf7f6fbcb79641777bac5e94c752f3d",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "UNPAUSE_NATIVE_YIELD_UNSTAKING_ROLE granted to Safe - keccak256('UNPAUSE_NATIVE_YIELD_UNSTAKING_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0xf3b4edd31d82596b9f4e954680c4101d115ae7609dd7c1e14a6fdb7387f56e5c",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "PAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE granted to Safe - keccak256('PAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0x393d2e95deba7a477d5535948d830f9760a4cec17bbb245b27328519bc352f86",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "UNPAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE granted to Safe - keccak256('UNPAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0x7961622440af20a7a00804174e730d12d511766368df55fbaf2d698ffa1d4216",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "PAUSE_NATIVE_YIELD_REPORTING_ROLE granted to Safe - keccak256('PAUSE_NATIVE_YIELD_REPORTING_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0xc7320f8b3278900bd319b3ad770ea73ce548c217978874599400e3b17e120c19",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "UNPAUSE_NATIVE_YIELD_REPORTING_ROLE granted to Safe - keccak256('UNPAUSE_NATIVE_YIELD_REPORTING_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0x32026462812ef90f03ebdf4117c1e143d38ab0e31e1266d4e8bd348c28ee2aa5",
+              "${L1_SECURITY_COUNCIL}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "YIELD_PROVIDER_STAKING_ROLE granted to the automation service - keccak256('YIELD_PROVIDER_STAKING_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0x220bd22ef7c53d75fe3eac0a09e90815a0c5ba4f9e8da8b039542cd3db347258",
+              "${AUTOMATION_SERVICE_ADDRESS}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "YIELD_PROVIDER_UNSTAKER_ROLE granted to the automation service - keccak256('YIELD_PROVIDER_UNSTAKER_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0x1208ee08ba851b41059d729bfba4fffc3a98c2b6d121e3cf0db274417dea3d70",
+              "${AUTOMATION_SERVICE_ADDRESS}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "YIELD_REPORTER_ROLE granted to the automation service - keccak256('YIELD_REPORTER_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0xa980ae8105ebca8c4bda1143caefa4ff96b61271718a11b7239cdb9eabfc7e27",
+              "${AUTOMATION_SERVICE_ADDRESS}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "STAKING_PAUSE_CONTROLLER_ROLE granted to the automation service - keccak256('STAKING_PAUSE_CONTROLLER_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0xb05f5f3bc6b24add2de79f85477c2f0351f8e8a2209394f90c9e1c6c7e540c79",
+              "${AUTOMATION_SERVICE_ADDRESS}"
+            ],
+            "expected": true
+          },
+          {
+            "$comment": "OSSIFICATION_PROCESSOR_ROLE granted to the automation service - keccak256('OSSIFICATION_PROCESSOR_ROLE')",
+            "function": "hasRole",
+            "params": [
+              "0x9ef55ee0235bd9abf16b2b7865531896bd633b74155b6c1d064d0402f2d1b3c8",
+              "${AUTOMATION_SERVICE_ADDRESS}"
+            ],
+            "expected": true
+          }
+        ],
+        "slots": [
+          {
+            "$comment": "OZ v4 Initializable._initialized at slot 0 (uint8, right-aligned)",
+            "slot": "0x0",
+            "type": "uint8",
+            "name": "_initialized",
+            "expected": "1"
+          }
+        ],
+        "storagePaths": [
+          {
+            "$comment": "minimumWithdrawalReservePercentageBps from ERC-7201 storage (linea.storage.YieldManagerStorage)",
+            "path": "YieldManagerStorage:minimumWithdrawalReservePercentageBps",
+            "expected": "9000"
+          },
+          {
+            "$comment": "targetWithdrawalReservePercentageBps from ERC-7201 storage",
+            "path": "YieldManagerStorage:targetWithdrawalReservePercentageBps",
+            "expected": "9985"
+          }
+        ]
+      }
+    },
+    {
+      "$comment": "Verify implementation bytecode directly. Constructor arg: LineaRollup proxy address",
+      "name": "YieldManager-Implementation",
+      "chain": "ethereum-dynamic",
+      "address": "${YIELD_MANAGER_IMPLEMENTATION_ADDRESS}",
+      "artifactFile": "../YieldManager.json",
+      "isProxy": false,
+      "constructorArgs": ["${LINEA_ROLLUP_ADDRESS}"],
+      "immutableValues": {
+        "L1_MESSAGE_SERVICE": "${LINEA_ROLLUP_ADDRESS}"
+      },
+      "stateVerification": {
+      "slots": [
+        {
+          "$comment": "OZ v4 Initializable._initialized at slot 0 (uint8, right-aligned)",
+          "slot": "0x0",
+          "type": "uint8",
+          "name": "_initialized",
+          "expected": "255"
+        }
+      ]
+      }
+    }
+  ]
+}

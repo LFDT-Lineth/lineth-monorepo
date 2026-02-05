@@ -199,6 +199,43 @@ export const CBOR_METADATA_MARKER = "a265";
 export const IPFS_HASH_PREFIX = "697066735822";
 
 // ============================================================================
+// Bytecode Comparison Configuration
+// ============================================================================
+
+/**
+ * CBOR metadata length bounds (in bytes).
+ *
+ * Typical metadata structure:
+ * - IPFS hash: 34 bytes
+ * - Solc version: 4 bytes
+ * - CBOR encoding overhead: ~10-20 bytes
+ * - Experimental/custom fields: variable
+ *
+ * Conservative bounds to accommodate various compiler versions and toolchains:
+ * - Min: 20 bytes (smallest valid CBOR map with minimal content)
+ * - Max: 500 bytes (allows for large experimental builds, extra metadata)
+ *
+ * Note: The CBOR marker (a1/a2) is validated separately, so these bounds
+ * serve as a sanity check rather than the primary validation.
+ */
+export const CBOR_METADATA_MIN_LENGTH = 20;
+export const CBOR_METADATA_MAX_LENGTH = 500;
+
+/**
+ * Absolute maximum metadata length for hard validation.
+ * Metadata larger than this is almost certainly invalid.
+ * This prevents stripping large portions of bytecode by mistake.
+ */
+export const CBOR_METADATA_ABSOLUTE_MAX = 1000;
+
+/**
+ * Match percentage threshold for upgrading bytecode status.
+ * When match percentage is above this threshold and named immutables
+ * are verified, bytecode status can be upgraded from "fail" to "pass".
+ */
+export const BYTECODE_MATCH_THRESHOLD_PERCENT = 90;
+
+// ============================================================================
 // Contract Versions
 // ============================================================================
 
@@ -208,3 +245,111 @@ export const IPFS_HASH_PREFIX = "697066735822";
 export const CONTRACT_VERSIONS = {
   LINEA_ROLLUP_V7: "7.0",
 } as const;
+
+// ============================================================================
+// Configuration Limits
+// ============================================================================
+
+/**
+ * Maximum size for markdown config files (in bytes).
+ * Prevents DoS from extremely large files.
+ */
+export const MAX_MARKDOWN_CONFIG_SIZE = 5 * 1024 * 1024; // 5MB
+
+// ============================================================================
+// Hex and Byte Constants
+// ============================================================================
+
+/** Length of "0x" prefix in hex strings */
+export const HEX_PREFIX_LENGTH = 2;
+
+/** Number of hex characters per byte (2 hex chars = 1 byte) */
+export const HEX_CHARS_PER_BYTE = 2;
+
+/** Bytes in an EVM storage slot */
+export const BYTES_PER_STORAGE_SLOT = 32;
+
+/** Hex characters in a 32-byte storage slot (64 chars) */
+export const HEX_CHARS_PER_STORAGE_SLOT = 64;
+
+/** Hex characters in an Ethereum address (40 chars, without 0x) */
+export const ADDRESS_HEX_CHARS = 40;
+
+/** Bytes in an Ethereum address */
+export const ADDRESS_BYTES = 20;
+
+/** Hex characters in a function selector (8 chars) */
+export const SELECTOR_HEX_CHARS = 8;
+
+/** PUSH4 opcode used for function selectors in bytecode */
+export const PUSH4_OPCODE = "63";
+
+/** Null selector (all zeros) */
+export const NULL_SELECTOR = "00000000";
+
+/** Max selector (all f's) */
+export const MAX_SELECTOR = "ffffffff";
+
+// ============================================================================
+// Bytecode Analysis Constants
+// ============================================================================
+
+/** Minimum bytecode length in hex chars for metadata stripping */
+export const MIN_BYTECODE_HEX_LENGTH = 8;
+
+/** Minimum bytecode hex chars after metadata stripping */
+export const MIN_BYTECODE_AFTER_STRIP = 20;
+
+/** Hex chars for metadata length indicator (2 bytes = 4 chars) */
+export const METADATA_LENGTH_HEX_CHARS = 4;
+
+/** Minimum bytecode hex chars for selector extraction */
+export const MIN_BYTECODE_FOR_SELECTORS = 10;
+
+/** Common immutable byte sizes in Solidity */
+export const COMMON_IMMUTABLE_SIZES = [1, 2, 4, 8, 12, 16, 20, 32];
+
+/** Maximum difference regions to consider as immutable-only */
+export const MAX_REGIONS_FOR_IMMUTABLE_CHECK = 5;
+
+/** Stricter threshold for immutable check */
+export const MAX_REGIONS_FOR_IMMUTABLE_CHECK_STRICT = 8;
+
+/** Maximum differences to return in comparison results */
+export const MAX_DIFFERENCES_TO_RETURN = 10;
+
+/** Maximum diff positions to include in grouped results */
+export const MAX_DIFF_POSITIONS = 10;
+
+/** Minimum fragment length for immutable grouping */
+export const MIN_FRAGMENT_LENGTH = 4;
+
+// ============================================================================
+// Display Constants
+// ============================================================================
+
+/** Default maximum length for display truncation */
+export const DEFAULT_MAX_DISPLAY_LENGTH = 20;
+
+/** Summary separator line length */
+export const SUMMARY_LINE_LENGTH = 50;
+
+/** Full separator line length */
+export const FULL_LINE_LENGTH = 60;
+
+// ============================================================================
+// Comparison Constants
+// ============================================================================
+
+/** Maximum extra selectors to report in ABI comparison */
+export const MAX_EXTRA_SELECTORS_TO_REPORT = 10;
+
+// ============================================================================
+// Markdown Config Constants
+// ============================================================================
+
+/** Number of header rows in markdown tables */
+export const TABLE_HEADER_ROWS = 2;
+
+/** Minimum rows required in a valid markdown table */
+export const MIN_TABLE_ROWS = 2;

@@ -8,7 +8,9 @@
 
 import { ethers } from "ethers";
 
-import type { Web3Adapter, Web3AdapterOptions, AbiElement } from "@consensys/linea-contract-integrity-verifier";
+// Import from /adapter to avoid pulling in Node.js 'fs' module in browser bundles
+import type { Web3Adapter, Web3AdapterOptions } from "@consensys/linea-contract-integrity-verifier/adapter";
+import type { AbiElement } from "@consensys/linea-contract-integrity-verifier/browser";
 
 /**
  * Options for creating an EthersAdapter.
@@ -118,3 +120,7 @@ export class EthersAdapter implements Web3Adapter {
 export function createEthersAdapter(rpcUrl: string, chainId?: number): EthersAdapter {
   return new EthersAdapter({ rpcUrl, chainId });
 }
+
+// Note: Schema generation tools are in a separate entry point (verifier-ethers/tools)
+// to avoid bundling Node.js-only dependencies in browser builds.
+// Import { createCryptoAdapter, generateSchema, ... } from "@consensys/linea-contract-integrity-verifier-ethers/tools"

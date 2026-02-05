@@ -1,0 +1,19 @@
+{
+    "$comment": "Config to verify the ValidatorContainerProofVerifier contract",
+    "chains": {
+        "ethereum-dynamic": {
+          "chainId": ${VERIFICATION_CHAIN_ID},
+          "rpcUrl": "${ETHEREUM_RPC_URL}"
+        }
+      },
+    "contracts": [
+        {
+            "$comment": "Verify ValidatorContainerProofVerifier implementation bytecode directly",
+            "name": "ValidatorContainerProofVerifier",
+            "chain": "ethereum-dynamic",
+            "address": "${VALIDATOR_CONTAINER_PROOF_VERIFIER_ADDRESS}",
+            "artifactFile": "../ValidatorContainerProofVerifier.json",
+            "isProxy": false
+        }
+    ]
+}

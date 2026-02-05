@@ -10,10 +10,43 @@
 import type { AbiElement } from "./types";
 
 /**
+ * Minimal interface for cryptographic operations.
+ *
+ * This interface provides just the crypto/encoding operations needed by tools
+ * like schema generators, without requiring RPC connectivity.
+ *
+ * @example
+ * ```typescript
+ * import { createCryptoAdapter } from "@consensys/linea-verifier-viem";
+ *
+ * const crypto = createCryptoAdapter();
+ * const hash = crypto.keccak256("hello");
+ * ```
+ */
+export interface CryptoAdapter {
+  /**
+   * Compute keccak256 hash.
+   * @param value - UTF-8 string or raw bytes to hash
+   * @returns Hex-encoded hash with 0x prefix
+   */
+  keccak256(value: string | Uint8Array): string;
+
+  /**
+   * ABI-encode values with given types.
+   * @param types - Solidity type strings (e.g., ["uint256", "address"])
+   * @param values - Values to encode
+   * @returns Hex-encoded ABI data with 0x prefix
+   */
+  encodeAbiParameters(types: readonly string[], values: readonly unknown[]): string;
+}
+
+/**
  * Abstract interface for web3 operations.
  *
  * This interface abstracts all blockchain interactions, allowing the core
  * verifier to work with any web3 library (ethers, viem, etc.).
+ *
+ * Extends CryptoAdapter to include crypto operations needed by tools.
  *
  * @example
  * ```typescript
@@ -24,17 +57,10 @@ import type { AbiElement } from "./types";
  * const verifier = new Verifier(adapter);
  * ```
  */
-export interface Web3Adapter {
+export interface Web3Adapter extends CryptoAdapter {
   // ============================================
-  // Crypto Operations (synchronous)
+  // Additional Crypto Operations (synchronous)
   // ============================================
-
-  /**
-   * Compute keccak256 hash.
-   * @param value - UTF-8 string or raw bytes to hash
-   * @returns Hex-encoded hash with 0x prefix
-   */
-  keccak256(value: string | Uint8Array): string;
 
   /**
    * Convert address to checksummed format (EIP-55).
@@ -52,14 +78,6 @@ export interface Web3Adapter {
   // ============================================
   // ABI Operations (synchronous)
   // ============================================
-
-  /**
-   * ABI-encode values with given types.
-   * @param types - Solidity type strings (e.g., ["uint256", "address"])
-   * @param values - Values to encode
-   * @returns Hex-encoded ABI data with 0x prefix
-   */
-  encodeAbiParameters(types: readonly string[], values: readonly unknown[]): string;
 
   /**
    * Encode function call data from ABI.

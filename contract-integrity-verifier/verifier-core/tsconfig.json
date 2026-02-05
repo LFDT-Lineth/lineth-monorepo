@@ -4,8 +4,8 @@
     "composite": true,
     "removeComments": false,
     "isolatedModules": false,
-    "strictPropertyInitialization": false,
-    "exactOptionalPropertyTypes": false,
+    "strictPropertyInitialization": true,
+    "exactOptionalPropertyTypes": true,
     "skipLibCheck": true
   },
   "include": ["src/**/*"],
