@@ -20,6 +20,30 @@ data class GetStateMerkleProofRequest(val blockInterval: BlockInterval) :
   StateManagerRequest<GetZkEVMStateMerkleProofResponse>,
   BlockInterval by blockInterval
 
+data class GetVirtualStateMerkleProofRequest(
+  val blockNumber: ULong,
+  val transaction: ByteArray,
+) :
+  StateManagerRequest<GetZkEVMStateMerkleProofResponse> {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as GetVirtualStateMerkleProofRequest
+
+    if (blockNumber != other.blockNumber) return false
+    if (!transaction.contentEquals(other.transaction)) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = blockNumber.hashCode()
+    result = 31 * result + transaction.contentHashCode()
+    return result
+  }
+}
+
 sealed interface StateManagerResponse
 
 data class GetZkEVMStateMerkleProofResponse(
@@ -52,7 +76,8 @@ data class GetZkEVMStateMerkleProofResponse(
 
   override fun toString(): String {
     return "GetZkEVMStateMerkleProofResponse(" +
-      "zkStateMerkleProof=$zkStateMerkleProof, zkParentStateRootHash=${zkParentStateRootHash.encodeHex()}, " +
+      "zkStateMerkleProof=$zkStateMerkleProof, " +
+      "zkParentStateRootHash=${zkParentStateRootHash.encodeHex()}, " +
       "zkEndStateRootHash=${zkEndStateRootHash.encodeHex()}, " +
       "zkStateManagerVersion='$zkStateManagerVersion')"
   }
@@ -72,10 +97,23 @@ interface StateManagerClientV1 : AsyncClient<StateManagerRequest<*>> {
 
   /**
    * This is for backward compatibility with the old version in the coordinator side.
-   * This error typing is not really usefull anymore
+   * This error typing is not really useful anymore
    */
   fun rollupGetStateMerkleProofWithTypedError(
     blockInterval: BlockInterval,
+  ): SafeFuture<Result<GetZkEVMStateMerkleProofResponse, ErrorResponse<StateManagerErrorType>>>
+
+  fun rollupGetVirtualStateMerkleProof(
+    blockNumber: ULong,
+    transaction: ByteArray,
+  ): SafeFuture<GetZkEVMStateMerkleProofResponse> = rollupGetVirtualStateMerkleProofWithTypedError(
+    blockNumber,
+    transaction,
+  ).unwrapResultMonad()
+
+  fun rollupGetVirtualStateMerkleProofWithTypedError(
+    blockNumber: ULong,
+    transaction: ByteArray,
   ): SafeFuture<Result<GetZkEVMStateMerkleProofResponse, ErrorResponse<StateManagerErrorType>>>
 
   fun rollupGetHeadBlockNumber(): SafeFuture<ULong>
@@ -84,6 +122,10 @@ interface StateManagerClientV1 : AsyncClient<StateManagerRequest<*>> {
     @Suppress("UNCHECKED_CAST")
     return when (request) {
       is GetStateMerkleProofRequest -> rollupGetStateMerkleProof(request.blockInterval) as SafeFuture<Response>
+      is GetVirtualStateMerkleProofRequest -> rollupGetVirtualStateMerkleProof(
+        request.blockNumber,
+        request.transaction,
+      ) as SafeFuture<Response>
       is GetChainHeadRequest -> rollupGetHeadBlockNumber()
         .thenApply { GetChainHeadResponse(it) } as SafeFuture<Response>
 

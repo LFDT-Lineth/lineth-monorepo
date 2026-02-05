@@ -58,6 +58,22 @@ open class FakeStateManagerClient(
         )
       }
   }
+
+  override fun rollupGetVirtualStateMerkleProofWithTypedError(
+    blockNumber: ULong,
+    transaction: ByteArray,
+  ): SafeFuture<Result<GetZkEVMStateMerkleProofResponse, ErrorResponse<StateManagerErrorType>>> {
+    return SafeFuture.completedFuture(
+      Ok(
+        GetZkEVMStateMerkleProofResponse(
+          zkStateMerkleProof = ArrayNode(null),
+          zkParentStateRootHash = ByteArray(32),
+          zkEndStateRootHash = ByteArray(32),
+          zkStateManagerVersion = "fake-version",
+        ),
+      ),
+    )
+  }
 }
 
 class FakeStateManagerClientBasedOnBlobsRecords(

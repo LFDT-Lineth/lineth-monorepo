@@ -1,6 +1,5 @@
 package build.linea.clients
 
-import linea.domain.BlockParameter
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 /**
@@ -24,9 +23,9 @@ data class LineaAccountProof(val accountProof: ByteArray) {
 }
 
 interface StateManagerAccountProofClient {
-  fun lineaGetProof(
+  fun lineaGetAccountProof(
     address: ByteArray,
     storageKeys: List<ByteArray>,
-    block: BlockParameter,
+    blockNumber: ULong,
   ): SafeFuture<LineaAccountProof>
 }

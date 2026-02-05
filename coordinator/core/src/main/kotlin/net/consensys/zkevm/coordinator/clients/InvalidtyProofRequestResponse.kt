@@ -26,11 +26,11 @@ data class InvalidityProofRequest(
   val tracesResponse: GenerateTracesResponse,
   /**
    * Account MerkleProof is defined when
-   * invalidityReason = BadNonce, BadBalance
+   * invalidityReason = BadNonce, BadBalance, null otherwise
    */
   val accountProof: LineaAccountProof? = null,
   /**
-   * type2StateData needs to needs provided when
+   * type2StateData needs to be provided when
    * invalidityReason is one of {BadPrecompile, TooManyLogs}, null otherwise
    */
   val zkStateMerkleProof: GetZkEVMStateMerkleProofResponse? = null,
