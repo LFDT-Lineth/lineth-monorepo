@@ -263,6 +263,7 @@ class ConflationApp(
       description = "Highest consecutive proven aggregation block number",
       measurementSupplier = highestConsecutiveAggregationTracker,
     )
+    log.info("Resuming aggregation from block={} inclusive", lastConsecutiveAggregatedBlockNumber + 1u)
     ProofAggregationCoordinatorService.Companion
       .create(
         vertx = vertx,

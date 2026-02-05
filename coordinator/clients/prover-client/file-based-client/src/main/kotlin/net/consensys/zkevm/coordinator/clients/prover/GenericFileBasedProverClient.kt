@@ -49,6 +49,7 @@ open class GenericFileBasedProverClient<Request, Response, RequestDto, ResponseD
 
   fun isResponseAlreadyDone(proofIndex: TProofIndex): SafeFuture<Path?> {
     val responseFilePath = config.responsesDirectory.resolve(responseFileNameProvider.getFileName(proofIndex))
+    log.trace("Checking if response file exists. file={}", responseFilePath)
     return fileMonitor
       .fileExists(responseFilePath)
       .thenApply { responseFileExists ->
@@ -61,6 +62,7 @@ open class GenericFileBasedProverClient<Request, Response, RequestDto, ResponseD
           )
           responseFilePath
         } else {
+          log.trace("Response file not found file={}", responseFilePath)
           null
         }
       }
