@@ -59,7 +59,6 @@ env:
 
 jobs:
   build-and-publish:
-    # ~1 min saved vs small
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     name: Prover build
     env:
@@ -67,68 +66,30 @@ jobs:
       DEVELOP_TAG: ${{ inputs.develop_tag }}
       IMAGE_NAME: ${{ inputs.image_name }}
       PUSH_IMAGE: ${{ inputs.push_image }}
-      TAGS: ${{ inputs.image_name }}:${{ inputs.commit_tag }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
-      - name: Set develop tag if main branch
-        if: ${{ github.ref == 'refs/heads/main' }}
-        run: |
-          echo "TAGS=${{ env.IMAGE_NAME }}:${{ env.COMMIT_TAG }},${{ env.IMAGE_NAME }}:${{ env.DEVELOP_TAG }}" >> $GITHUB_ENV
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: true
+
       - name: Login to Docker Hub
         if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 #v3.4.0
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1
-      - name: Show the "version" build argument
-        run: |
-          echo "We inject the commit tag in the docker image ${{ env.COMMIT_TAG }}"
-          echo COMMIT_TAG=${{ env.COMMIT_TAG }} >> $GITHUB_ENV
-      - name: Build and push prover image
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
-        if: ${{ env.PUSH_IMAGE == 'false' }}
+
+      - name: Build and publish Docker image
+        uses: ./.github/actions/docker-build-publish
         with:
-          context: .
-          file: ./prover/Dockerfile
-          build-args: |
-            RUSTFLAGS="-C target-cpu=x86-64-v3"
-          build-contexts: |
-            prover=prover/
-          platforms: linux/amd64
-          load: true
-          push: false
-          tags: ${{ env.IMAGE_NAME }}:${{ env.COMMIT_TAG }}
-      - name: Save Docker image as artifact
-        if: ${{ env.PUSH_IMAGE == 'false' }}
-        run: |
-          docker save ${{ env.IMAGE_NAME }}:${{ env.COMMIT_TAG }} | gzip > linea-prover-docker-image.tar.gz
-        shell: bash
-      - name: Upload Docker image artifact
-        if: ${{ env.PUSH_IMAGE == 'false' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: linea-prover
-          path: linea-prover-docker-image.tar.gz
-      - name: Build and push prover image
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
-        if: ${{ env.PUSH_IMAGE == 'true' || github.event_name == 'workflow_dispatch' }}
-        with:
-          context: .
-          file: ./prover/Dockerfile
-          build-args: |
-            RUSTFLAGS="-C target-cpu=x86-64-v3"
-          build-contexts: |
-            prover=prover/
-          platforms: linux/amd64
-          load: false
-          push: true
-          tags: ${{ env.TAGS }}
-          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
+          image_name: ${{ env.IMAGE_NAME }}
+          commit_tag: ${{ env.COMMIT_TAG }}
+          develop_tag: ${{ env.DEVELOP_TAG }}
+          push_image: ${{ env.PUSH_IMAGE }}
+          dockerfile_path: ./prover/Dockerfile
+          build_args: RUSTFLAGS="-C target-cpu=x86-64-v3"
+          build_contexts: prover=prover/
+          push_platforms: linux/amd64
+          artifact_name: linea-prover

@@ -1,0 +1,129 @@
+name: Docker Build and Publish
+description: Build and publish Docker images with caching support
+
+inputs:
+  image_name:
+    description: 'Docker image name (e.g., consensys/linea-coordinator)'
+    required: true
+  commit_tag:
+    description: 'Image tag for this commit'
+    required: true
+  develop_tag:
+    description: 'Develop tag (used when on main branch)'
+    required: false
+    default: ''
+  push_image:
+    description: 'Whether to push the image to registry'
+    required: false
+    default: 'false'
+  dockerfile_path:
+    description: 'Path to Dockerfile'
+    required: true
+  docker_context:
+    description: 'Docker build context'
+    required: false
+    default: '.'
+  build_args:
+    description: 'Docker build arguments (multiline)'
+    required: false
+    default: ''
+  build_contexts:
+    description: 'Docker build contexts (multiline)'
+    required: false
+    default: ''
+  requires_qemu:
+    description: 'Whether QEMU setup is required for multi-arch builds'
+    required: false
+    default: 'false'
+  push_platforms:
+    description: 'Platforms to build for when pushing'
+    required: false
+    default: 'linux/amd64,linux/arm64'
+  artifact_name:
+    description: 'Name for the uploaded artifact'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set tags
+      id: set-tags
+      shell: bash
+      run: |
+        TAGS="${{ inputs.image_name }}:${{ inputs.commit_tag }}"
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]] && [[ -n "${{ inputs.develop_tag }}" ]]; then
+          TAGS="${{ inputs.image_name }}:${{ inputs.commit_tag }},${{ inputs.image_name }}:${{ inputs.develop_tag }}"
+        fi
+        echo "tags=$TAGS" >> $GITHUB_OUTPUT
+
+    - name: Set up QEMU
+      if: ${{ inputs.requires_qemu == 'true' }}
+      uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+      with:
+        platforms: 'arm64,arm'
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+    - name: Configure cache
+      id: cache-config
+      shell: bash
+      run: |
+        if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
+          echo "cache_from_test=" >> $GITHUB_OUTPUT
+          echo "cache_from_push=" >> $GITHUB_OUTPUT
+          echo "cache_to_push=" >> $GITHUB_OUTPUT
+        else
+          echo "cache_from_test=type=registry,ref=${{ inputs.image_name }}:buildcache-amd64" >> $GITHUB_OUTPUT
+          echo "cache_from_push<<EOF" >> $GITHUB_OUTPUT
+          echo "type=registry,ref=${{ inputs.image_name }}:buildcache-amd64,platform=linux/amd64" >> $GITHUB_OUTPUT
+          echo "type=registry,ref=${{ inputs.image_name }}:buildcache-arm64,platform=linux/arm64" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "cache_to_push<<EOF" >> $GITHUB_OUTPUT
+          echo "type=registry,ref=${{ inputs.image_name }}:buildcache-amd64,mode=max,platform=linux/amd64" >> $GITHUB_OUTPUT
+          echo "type=registry,ref=${{ inputs.image_name }}:buildcache-arm64,mode=max,platform=linux/arm64" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        fi
+
+    # Build for testing (when push_image is false)
+    - name: Build for testing
+      uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+      if: ${{ inputs.push_image == 'false' }}
+      with:
+        context: ${{ inputs.docker_context }}
+        build-contexts: ${{ inputs.build_contexts }}
+        file: ${{ inputs.dockerfile_path }}
+        platforms: linux/amd64
+        load: true
+        push: false
+        tags: ${{ inputs.image_name }}:${{ inputs.commit_tag }}
+        build-args: ${{ inputs.build_args }}
+        cache-from: ${{ steps.cache-config.outputs.cache_from_test }}
+
+    - name: Save Docker image as artifact
+      if: ${{ inputs.push_image == 'false' }}
+      shell: bash
+      run: |
+        docker save ${{ inputs.image_name }}:${{ inputs.commit_tag }} | gzip > ${{ inputs.artifact_name }}-docker-image.tar.gz
+
+    - name: Upload Docker image artifact
+      if: ${{ inputs.push_image == 'false' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact_name }}
+        path: ${{ inputs.artifact_name }}-docker-image.tar.gz
+
+    # Build & push
+    - name: Build & push
+      uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+      if: ${{ inputs.push_image == 'true' || github.event_name == 'workflow_dispatch' }}
+      with:
+        context: ${{ inputs.docker_context }}
+        build-contexts: ${{ inputs.build_contexts }}
+        file: ${{ inputs.dockerfile_path }}
+        platforms: ${{ inputs.push_platforms }}
+        push: true
+        tags: ${{ steps.set-tags.outputs.tags }}
+        build-args: ${{ inputs.build_args }}
+        cache-from: ${{ steps.cache-config.outputs.cache_from_push }}
+        cache-to: ${{ steps.cache-config.outputs.cache_to_push }}

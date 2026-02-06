@@ -113,10 +113,12 @@ jobs:
           timeout_minutes: 10
           command: |
             make docker-pull-images-external-to-monorepo
+
       - name: Download local docker image artifacts
         uses: actions/download-artifact@v7
         with:
           pattern: linea-*
+
       - name: Load Docker images
         run: |
           pwd && ls -la && echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE" &&

@@ -1,6 +1,10 @@
 name: 'Setup Java and Gradle Environment'
 description: 'Installs Java 21 and Gradle for building and testing'
 inputs:
+  distribution:
+    description: 'Java distribution to install (e.g., temurin, zulu, adopt)'
+    required: false
+    default: 'temurin'
   java-version:
     description: 'Java version to install'
     required: false
@@ -13,7 +17,7 @@ runs:
         uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
         with:
           java-version: ${{ inputs.java-version }}
-          distribution: temurin
+          distribution: ${{ inputs.distribution }}
 
       - name: Setup Gradle
         # Configure Gradle for optimal use in GiHub Actions, including caching of downloaded dependencies.

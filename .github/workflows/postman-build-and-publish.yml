@@ -56,7 +56,6 @@ concurrency:
 
 jobs:
   build-and-publish:
-    # ~1 min saved vs small
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     name: Postman build
     env:
@@ -64,78 +63,33 @@ jobs:
       DEVELOP_TAG: ${{ inputs.develop_tag }}
       IMAGE_NAME: ${{ inputs.image_name }}
       PUSH_IMAGE: ${{ inputs.push_image }}
-      TAGS: ${{ inputs.image_name }}:${{ inputs.commit_tag }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
-      - name: Set develop tag if main branch
-        if: ${{ github.ref == 'refs/heads/main' }}
-        run: |
-          echo "TAGS=${{ env.IMAGE_NAME }}:${{ env.COMMIT_TAG }},${{ env.IMAGE_NAME }}:${{ env.DEVELOP_TAG }}" >> $GITHUB_ENV
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: true
+
       - name: Login to Docker Hub
         if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 #v3.4.0
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 #v3.6.0
-        with:
-          platforms: 'arm64,arm'
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1
-      - name: Show the "version" build argument
-        run: |
-          echo "We inject the commit tag in the docker image ${{ env.COMMIT_TAG }}"
-          echo COMMIT_TAG=${{ env.COMMIT_TAG }} >> $GITHUB_ENV
-      
-      - name: "Get Node.js version"
+
+      - name: Get Node.js version
         id: get-node-version
         uses: ./.github/actions/get-node-version
 
-      - name: Build postman image for testing
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
-        if: ${{ env.PUSH_IMAGE == 'false' }}
+      - name: Build and publish Docker image
+        uses: ./.github/actions/docker-build-publish
         with:
-          context: ./
-          file: ./postman/Dockerfile
-          platforms: linux/amd64
-          load: true
-          push: false
-          tags: ${{ env.IMAGE_NAME }}:${{ env.COMMIT_TAG }}
-          build-args: |
+          image_name: ${{ env.IMAGE_NAME }}
+          commit_tag: ${{ env.COMMIT_TAG }}
+          develop_tag: ${{ env.DEVELOP_TAG }}
+          push_image: ${{ env.PUSH_IMAGE }}
+          dockerfile_path: ./postman/Dockerfile
+          build_args: |
             NATIVE_LIBS_RELEASE_TAG=blob-libs-v1.2.0
             NODE_VERSION=${{ steps.get-node-version.outputs.node-version }}
-      - name: Save Docker image as artifact
-        if: ${{ env.PUSH_IMAGE == 'false' }}
-        run: |
-          docker save ${{ env.IMAGE_NAME }}:${{ env.COMMIT_TAG }} | gzip > linea-postman-docker-image.tar.gz
-        shell: bash
-      - name: Upload Docker image artifact
-        if: ${{ env.PUSH_IMAGE == 'false' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: linea-postman
-          path: linea-postman-docker-image.tar.gz
-      - name: Build and push postman image
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
-        if: ${{ env.PUSH_IMAGE == 'true' || github.event_name == 'workflow_dispatch' }}
-        with:
-          context: ./
-          file: ./postman/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ env.TAGS }}
-          cache-from: |
-            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-amd64,platform=linux/amd64
-            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-arm64,platform=linux/arm64
-          cache-to: |
-            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-amd64,mode=max,platform=linux/amd64
-            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-arm64,mode=max,platform=linux/arm64
-          build-args: |
-            NATIVE_LIBS_RELEASE_TAG=blob-libs-v1.2.0
-            NODE_VERSION=${{ steps.get-node-version.outputs.node-version }}
+          artifact_name: linea-postman
+          requires_qemu: ${{ env.PUSH_IMAGE }}

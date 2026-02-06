@@ -17,7 +17,6 @@ jobs:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     name: Filter commit changes
     outputs:
-      changed-file-count: ${{ steps.filter.outputs.all_count }}
       coordinator: ${{ steps.filter.outputs.coordinator }}
       staterecovery: ${{ steps.filter.outputs.staterecovery }}
       postman: ${{ steps.filter.outputs.postman }}
@@ -40,8 +39,6 @@ jobs:
           base: ${{ github.ref }}
           list-files: "json"
           filters: |
-            all:
-              - '**/**'
             coordinator:
               - 'coordinator/**'
               - 'testdata/**'
@@ -57,7 +54,6 @@ jobs:
               - '.github/workflows/reuse-*.yml'
               - 'config/common/traces-limits-v2.toml'
               - 'config/coordinator/**'
-              - 'e2e/**'
               - 'docker/compose-*.yml'
             staterecovery:
               - 'state-recovery/**'
