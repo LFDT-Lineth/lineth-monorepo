@@ -25,7 +25,7 @@ jobs:
     - name: install Go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.24.x
+        go-version: 1.24.6
         cache-dependency-path: |
               prover/go.sum
     - uses: actions/cache@v4.2.0
