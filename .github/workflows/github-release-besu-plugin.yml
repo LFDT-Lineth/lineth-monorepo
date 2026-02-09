@@ -67,7 +67,7 @@ jobs:
           ls -lh besu-plugins/${{inputs.workspaceModulePath}}/build/libs
 
       - name: Release to GitHub
-        uses: jreleaser/release-action@f69e545b05f149483cecb2fb81866247992694b8 #v2.4.2
+        uses: jreleaser/release-action@90ac653bb9c79d11179e65d81499f3f34527dcd5 #v2.5.0
         with:
           arguments: full-release --git-root-search --basedir=${{github.workspace}}/besu-plugins/${{inputs.workspaceModulePath}} -P=version=v${{inputs.version}}
         env:
