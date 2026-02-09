@@ -15,11 +15,15 @@
 
 package net.consensys.linea.zktracer.module.mod;
 
+import static net.consensys.linea.zktracer.opcode.OpCode.POP;
+import static net.consensys.linea.zktracer.opcode.OpCode.SMOD;
+
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;
 import net.consensys.linea.testing.BytecodeRunner;
 import net.consensys.linea.zktracer.opcode.OpCode;
+import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt256;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -33,7 +37,7 @@ public class ModTest extends TracerTestBase {
             BytecodeCompiler.newProgram(chainConfig)
                 .push(UInt256.MAX_VALUE)
                 .push(UInt256.MAX_VALUE)
-                .op(OpCode.SMOD)
+                .op(SMOD)
                 .op(OpCode.POP)
                 .push(0)
                 .push(UInt256.MAX_VALUE)
@@ -46,7 +50,7 @@ public class ModTest extends TracerTestBase {
                 .push(UInt256.MAX_VALUE)
                 .push(0)
                 .op(OpCode.SDIV)
-                .op(OpCode.POP)
+                .op(POP)
                 .push(0)
                 .push(0)
                 .op(OpCode.DIV)
@@ -55,6 +59,16 @@ public class ModTest extends TracerTestBase {
                 .push(UInt256.valueOf(0xffffffffL))
                 .op(OpCode.DIV)
                 .op(OpCode.POP)
+
+                // SMOD with num > 0 and denominator < 0
+                .push(
+                    Bytes.fromHexString(
+                        "0x8000000000000000000000000000000000000000000000000000000000001111")) // denom
+                .push(
+                    Bytes.fromHexString(
+                        "0x0000000000000000000000000000000000000000000000000000000011111111")) // num
+                .op(SMOD)
+                .op(POP)
                 .compile())
         .run(chainConfig, testInfo);
   }
