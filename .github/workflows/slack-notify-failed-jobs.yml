@@ -15,6 +15,18 @@ on:
         description: "GitHub Actions Run ID"
         required: true
         type: string
+      extra_message:
+        description: "Optional extra context"
+        required: false
+        default: ""
+        type: string
+    secrets:
+      channel_id:
+        description: "Slack channel ID (from secrets)"
+        required: true
+      slack_bot_token:
+        description: "Slack bot token for posting messages"
+        required: true
 
 jobs:
   notify:
@@ -101,14 +113,39 @@ jobs:
           echo "$items" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+      - name: Build extra block
+        id: extra_block
+        if: ${{ steps.failed_jobs.outputs.result != 'None' }}
+        shell: bash
+        env:
+          EXTRA_MESSAGE: "${{ inputs.extra_message }}"
+        run: |
+          if [[ -n "${EXTRA_MESSAGE}" ]]; then
+            block=$(jq -n -c --arg msg "$EXTRA_MESSAGE" '{
+              type: "rich_text",
+              elements: [{
+                type: "rich_text_section",
+                elements: [
+                  { type: "text", text: "Message: ", style: { bold: true } },
+                  { type: "text", text: $msg }
+                ]
+              }]
+            }')
+            echo "block<<EOF" >> "$GITHUB_OUTPUT"
+            echo "- $block" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+          else
+            echo "block=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Send Slack Notification
         if: ${{ steps.failed_jobs.outputs.result != 'None' }}
         uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a #v2.1.1
         with:
           method: chat.postMessage
-          token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}
+          token: ${{ secrets.slack_bot_token }}
           payload: |
-            channel: ${{ secrets.SLACK_ENGINEERING_ALERTS_CHANNEL_ID }}
+            channel: ${{ secrets.channel_id }}
             text: ":x: GitHub CI for *${{ steps.ctx.outputs.repo }}* — *${{ inputs.title }}*"
             blocks:
               - type: header
@@ -163,3 +200,4 @@ jobs:
                   - type: rich_text_list
                     style: bullet
                     elements: ${{ steps.failed_jobs.outputs.result }}
+              ${{ steps.extra_block.outputs.block }}

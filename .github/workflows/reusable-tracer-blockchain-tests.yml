@@ -4,6 +4,19 @@ permissions:
 
 on:
   workflow_call:
+    outputs:
+      success:
+        description: "Number of successful tests"
+        value: ${{ jobs.blockchain-reference-tests.outputs.success }}
+      failed:
+        description: "Number of failed tests"
+        value: ${{ jobs.blockchain-reference-tests.outputs.failed }}
+      aborted:
+        description: "Number of aborted tests"
+        value: ${{ jobs.blockchain-reference-tests.outputs.aborted }}
+      disabled:
+        description: "Number of disabled tests"
+        value: ${{ jobs.blockchain-reference-tests.outputs.disabled }}
     inputs:
       zkevm_fork:
         required: true
@@ -28,6 +41,11 @@ jobs:
   # ==================================================================
   blockchain-reference-tests:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xxl
+    outputs:
+      success: ${{ steps.metrics.outputs.success }}
+      failed: ${{ steps.metrics.outputs.failed }}
+      aborted: ${{ steps.metrics.outputs.aborted }}
+      disabled: ${{ steps.metrics.outputs.disabled }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -107,6 +125,7 @@ jobs:
           path: tracer/reference-tests/build/jacoco/referenceExecutionSpecBlockchainTests.exec
 
       - name: Extract Metrics
+        id: metrics
         if: ${{ failure() || cancelled() }}
         run: |
           # Gather metrics
@@ -114,20 +133,10 @@ jobs:
           FAILED_COUNTER=$(cat $JSON_REPORT | sed -e "s/.*\"failedCounter\":\([0-9]*\).*/\1/")
           ABORTED_COUNTER=$(cat $JSON_REPORT | sed -e "s/.*\"abortedCounter\":\([0-9]*\).*/\1/")
           DISABLED_COUNTER=$(cat $JSON_REPORT | sed -e "s/.*\"disabledCounter\":\([0-9]*\).*/\1/")
-          # Set environment variables
-          echo "SUCCESS=$SUCCESS_COUNTER" >> $GITHUB_ENV
-          echo "FAILED=$FAILED_COUNTER" >> $GITHUB_ENV
-          echo "ABORTED=$ABORTED_COUNTER" >> $GITHUB_ENV
-          echo "DISABLED=$DISABLED_COUNTER" >> $GITHUB_ENV
+          # Set step outputs (used by notify job)
+          echo "success=$SUCCESS_COUNTER" >> $GITHUB_OUTPUT
+          echo "failed=$FAILED_COUNTER" >> $GITHUB_OUTPUT
+          echo "aborted=$ABORTED_COUNTER" >> $GITHUB_OUTPUT
+          echo "disabled=$DISABLED_COUNTER" >> $GITHUB_OUTPUT
         env:
           JSON_REPORT: ${{ github.workspace }}/tmp/${{ steps.extract_branch.outputs.branch }}/BlockchainReferenceTestOutcome.json
-
-      - name: Failure Notification
-        if: github.ref == 'refs/heads/main' && (failure() || cancelled())
-        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
-        with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          webhook-type: webhook-trigger
-          payload: |
-            name: "Daily Blockchain"
-            status: "${{ env.SUCCESS }} successful, ${{ env.FAILED }} failed, ${{ env.ABORTED }} aborted, ${{ env.DISABLED }} disabled"

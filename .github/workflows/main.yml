@@ -297,9 +297,11 @@ jobs:
         publish-images-after-run-tests-success-on-main,
         cleanup-deployments,
       ]
-    if: ${{ always() && github.ref == 'refs/heads/main' && (needs.filter-commit-changes.result == 'failure' || needs.check-and-tag-images.result == 'failure' || needs.code-analysis.result == 'failure' || needs.testing.result == 'failure' || needs.get-has-changes-requiring-e2e-testing.result == 'failure' || needs.manual-docker-build-and-e2e-tests.result == 'failure' || needs.docker-build.result == 'failure' || needs.run-e2e-tests.result == 'failure' || needs.publish-images-after-run-tests-success-on-main.result == 'failure' || needs.cleanup-deployments.result == 'failure') }}
+    if: ${{ always() && github.ref == 'refs/heads/main' && contains(needs.*.result, 'failure') }}
     uses: ./.github/workflows/slack-notify-failed-jobs.yml
     with:
       title: "Main workflow Failed"
       run_id: ${{ github.run_id }}
-    secrets: inherit
+    secrets:
+      channel_id: ${{ secrets.SLACK_ENGINEERING_ALERTS_CHANNEL_ID }}
+      slack_bot_token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}

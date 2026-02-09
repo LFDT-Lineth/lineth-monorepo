@@ -147,9 +147,11 @@ jobs:
         all-tools-tag-only,
         build-and-publish,
       ]
-    if: ${{ always() && github.ref == 'refs/heads/main' && (needs.changes.result == 'failure' || needs.store_image_name_and_tags.result == 'failure' || needs.check_image_tags_exist.result == 'failure' || needs.all-tools-tag-only.result == 'failure' || needs.build-and-publish.result == 'failure') }}
+    if: ${{ always() && github.ref == 'refs/heads/main' && contains(needs.*.result, 'failure') }}
     uses: ./.github/workflows/slack-notify-failed-jobs.yml
     with:
       title: "All tools workflow failed"
       run_id: ${{ github.run_id }}
-    secrets: inherit
+    secrets:
+      channel_id: ${{ secrets.SLACK_ENGINEERING_ALERTS_CHANNEL_ID }}
+      slack_bot_token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}

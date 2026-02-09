@@ -47,12 +47,13 @@ jobs:
           name: nightly-replay-tests-report
           path: tracer/arithmetization/build/reports/tests/**/*
 
-      - name: Failure Notification
-        if: github.ref == 'refs/heads/main' && (failure() || cancelled())
-        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
-        with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          webhook-type: webhook-trigger
-          payload: |
-            name: "NightlyReplay"
-            status: "${{ job.status }}"
+  notify:
+    needs: [ nightly-tests-osaka, nightly-replay-tests ]
+    if: ${{ always() && github.ref == 'refs/heads/main' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
+    uses: ./.github/workflows/slack-notify-failed-jobs.yml
+    with:
+      title: "Nightly Tracer Tests workflow Failed"
+      run_id: ${{ github.run_id }}
+    secrets:
+      channel_id: ${{ secrets.SLACK_ARITHMETIZATION_ALERTS_CHANNEL_ID }}
+      slack_bot_token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}

@@ -39,3 +39,15 @@ jobs:
       failed_module: ${{ inputs.failed_module || '' }}
       failed_constraint: ${{ inputs.failed_constraint || '' }}
       commit: ${{ inputs.commit || '' }}
+
+  notify:
+    needs: [ blockchain-reference-tests-osaka ]
+    if: ${{ always() && github.ref == 'refs/heads/main' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
+    uses: ./.github/workflows/slack-notify-failed-jobs.yml
+    with:
+      title: "Daily Tracer Blockchain Tests workflow Failed"
+      run_id: ${{ github.run_id }}
+      extra_message: "${{ needs.blockchain-reference-tests-osaka.outputs.success }} successful, ${{ needs.blockchain-reference-tests-osaka.outputs.failed }} failed, ${{ needs.blockchain-reference-tests-osaka.outputs.aborted }} aborted, ${{ needs.blockchain-reference-tests-osaka.outputs.disabled }} disabled"
+    secrets:
+      channel_id: ${{ secrets.SLACK_ARITHMETIZATION_ALERTS_CHANNEL_ID }}
+      slack_bot_token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}
