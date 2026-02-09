@@ -67,15 +67,6 @@ public class RomLex implements OperationSetModule<RomOperation>, ContextEntryDef
     return ROM_LEX;
   }
 
-  public int getCodeFragmentIndexByMetadata(
-      final Address address,
-      final int deploymentNumber,
-      final boolean depStatus,
-      final int delegationNumber) {
-    return getCodeFragmentIndexByMetadata(
-        ContractMetadata.make(address, deploymentNumber, depStatus, delegationNumber));
-  }
-
   public int getCodeFragmentIndexByMetadata(final ContractMetadata metadata) {
     if (sortedOperations.isEmpty()) {
       throw new RuntimeException("Chunks have not been sorted yet");
@@ -277,7 +268,8 @@ public class RomLex implements OperationSetModule<RomOperation>, ContextEntryDef
     final Hash codeHash =
         operation.metadata().underDeployment() ? Hash.EMPTY : Hash.hash(operation.byteCode());
     final boolean couldBeDelegationCode =
-        operation.byteCode().size() == EIP_7702_DELEGATED_ACCOUNT_CODE_SIZE;
+        operation.byteCode().size() == EIP_7702_DELEGATED_ACCOUNT_CODE_SIZE
+            && !operation.metadata().underDeployment();
     final int leadingThreeBytes =
         couldBeDelegationCode ? bytesToInt(operation.byteCode().slice(0, 3)) : 0;
     final boolean actuallyDelegationCode = leadingThreeBytes == EIP_7702_DELEGATION_INDICATOR;

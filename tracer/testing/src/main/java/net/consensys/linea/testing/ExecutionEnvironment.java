@@ -104,7 +104,7 @@ public class ExecutionEnvironment {
           boolean traceFileDeleted = traceFilePath.toFile().delete();
           final Path finalTraceFilePath = traceFilePath;
           logger.ifPresent(
-            log -> log.debug("trace file {} deleted {}", finalTraceFilePath, traceFileDeleted));
+              log -> log.debug("trace file {} deleted {}", finalTraceFilePath, traceFileDeleted));
         }
       }
     }

@@ -1,5 +1,5 @@
 (deflookup
-  romlex-into-rom
+  romlex-into-rom-for-CFI
   ;; target columns
   (
     rom.CODE_FRAGMENT_INDEX
