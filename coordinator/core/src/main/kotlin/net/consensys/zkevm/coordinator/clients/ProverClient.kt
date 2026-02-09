@@ -16,13 +16,13 @@ interface ProverProofResponseChecker<ProofResponse, TProofIndex : ProofIndex> {
     findProofResponse(proofIndex).thenApply { it != null }
 }
 
-interface ProverProofRequestCreator<ProofRequest : Any, T : ProofIndex> {
-  fun createProofRequest(proofRequest: ProofRequest): SafeFuture<T>
+interface ProverProofRequestCreator<ProofRequest : Any, TProofIndex : ProofIndex> {
+  fun createProofRequest(proofRequest: ProofRequest): SafeFuture<TProofIndex>
 }
 
-interface ProverClient<ProofRequest : Any, ProofResponse, T : ProofIndex> :
-  ProverProofResponseChecker<ProofResponse, T>,
-  ProverProofRequestCreator<ProofRequest, T> {
+interface ProverClient<ProofRequest : Any, ProofResponse, TProofIndex : ProofIndex> :
+  ProverProofResponseChecker<ProofResponse, TProofIndex>,
+  ProverProofRequestCreator<ProofRequest, TProofIndex> {
   fun requestProof(proofRequest: ProofRequest): SafeFuture<ProofResponse>
 }
 

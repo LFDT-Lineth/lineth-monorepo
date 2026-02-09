@@ -38,8 +38,8 @@ class ABProverClientRouter<ProofRequest : Any, ProofResponse, TProofIndex : Proo
   private val switchToProverBPredicate: (Any) -> Boolean,
 ) : ProverClient<ProofRequest, ProofResponse, TProofIndex> {
 
-  private fun getProver(proofRequest: Any): ProverClient<ProofRequest, ProofResponse, TProofIndex> {
-    return if (switchToProverBPredicate(proofRequest)) {
+  private fun getProver(proofRequestOrIndex: Any): ProverClient<ProofRequest, ProofResponse, TProofIndex> {
+    return if (switchToProverBPredicate(proofRequestOrIndex)) {
       proverB
     } else {
       proverA

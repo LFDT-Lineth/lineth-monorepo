@@ -7,8 +7,8 @@ import net.consensys.zkevm.domain.ExecutionProofIndex
 import net.consensys.zkevm.domain.InvalidityProofIndex
 import net.consensys.zkevm.domain.ProofIndex
 
-interface ProverFileNameProvider<T : ProofIndex> {
-  fun getFileName(proofIndex: T): String
+interface ProverFileNameProvider<TProofIndex : ProofIndex> {
+  fun getFileName(proofIndex: TProofIndex): String
 }
 
 object FileNameSuffixes {
