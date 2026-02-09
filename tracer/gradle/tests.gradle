@@ -91,6 +91,7 @@ tasks.withType(Test).configureEach {
   delete("${project.getLayout().getBuildDirectory().get()}/besu/traces")
   mkdir("${project.getLayout().getBuildDirectory().get()}/besu/traces")
   mkdir("${project.getLayout().getBuildDirectory().get()}/besu/traces/prague")
+  mkdir("${project.getLayout().getBuildDirectory().get()}/besu/traces/osaka")
   mkdir("${project.getLayout().getBuildDirectory().get()}/besu/plugins")
   System.setProperty("besu.plugins.dir",
           System.getenv().getOrDefault("besu.plugins.dir",
@@ -172,6 +173,8 @@ tasks.test.configure {
 }
 
 tasks.register("fastReplayTests", Test) {
+  // Following required as some fast replay tests run BESU checks
+  dependsOn("copyTracerPlugin", "extractShomeiBesuPlugin")
   useJUnitPlatform {
     includeTags("replay")
     excludeTags("nightly | weekly")

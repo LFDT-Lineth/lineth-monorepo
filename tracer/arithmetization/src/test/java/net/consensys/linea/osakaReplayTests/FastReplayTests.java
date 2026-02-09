@@ -150,7 +150,7 @@ public class FastReplayTests extends TracerTestBase {
         false);
   }
 
-  @Disabled("https://github.com/Consensys/linea-monorepo/issues/1912")
+  @Tag("nightly")
   @Test
   void modexpTriggeringNonAlignedFirstLimbSingleSourceMmuModexp(TestInfo testInfo) {
     replay(
