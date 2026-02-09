@@ -48,7 +48,16 @@
 .idea
 .claude/
 .ipynb_checkpoints
-.cursor
+# Ignore .cursor config but commit shared team rules (BUGBOT.md, rules/).
+# Each intermediate directory must be un-ignored then re-ignored so git
+# descends into it and evaluates the deeper negation patterns.
+.cursor/*
+!.cursor/BUGBOT.md
+!.cursor/rules/
+.cursor/rules/*
+!.cursor/rules/security-logging-guidelines/
+.cursor/rules/security-logging-guidelines/*
+!.cursor/rules/security-logging-guidelines/EXAMPLES.md
 
 atlassian-ide-plugin.xml
 circuit.bin
@@ -155,6 +164,3 @@ __pycache__/
 !/sdk/src/lib/compressor/bin
 # Allow BLS glue testdata generators
 !prover/zkevm/prover/bls/testdata/*.go
-
-.beads/
-native-yield-operations/lido-governance-monitor/**
