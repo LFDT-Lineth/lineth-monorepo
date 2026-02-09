@@ -75,14 +75,16 @@ fn call_gas_extra(inst=0xf1 u8, value u256, warm u1, exists u1) -> (gas_extra=26
 ;; PRE: inst in {0xf1,0xf2,0xf4,0xf5]
 {
   var gas_access u16
-  var notWarm, notExists u1
+  var notWarm, notExists, is_value_zero u1
   ;; inversions
   notWarm = 1 - warm
   notExists = 1 - exists
   ;; calculate gas access cost
   gas_access = (warm * G_WARMACCESS) + (notWarm * G_COLDACCOUNTACCESS)
   ;;
-  if value == 0 goto call_no_transfer
+  is_value_zero = value == 0 ? 1 : 0
+  ;;
+  if is_value_zero == 1 goto call_no_transfer
   if inst == EVM_INST_CALL goto call
   if inst == EVM_INST_CALLCODE goto callcode
   goto call_no_transfer

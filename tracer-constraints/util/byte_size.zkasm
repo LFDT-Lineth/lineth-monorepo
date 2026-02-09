@@ -4,7 +4,9 @@ include "../util/log256.zkasm"
 
 
 fn byte_size(arg u256) -> (res u6) {
-  if arg != 0 goto compute
+  var is_arg_zero u1
+  is_arg_zero = arg == 0 ? 1 : 0
+  if is_arg_zero == 0 goto compute
   ;; case arg == 0, byte size of 0 is 0
   res = 0
   return

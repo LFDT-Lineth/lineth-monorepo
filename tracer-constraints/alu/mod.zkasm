@@ -76,11 +76,13 @@ neg_remainder:
 ;; Divide numerator by denominator, where divizion by zero evaluates
 ;; to 0 (as per the Yellow Paper).
 fn divide(num u256, den=1 u256) -> (quot u256, rem u256) {
+  var is_den_zero u1
   var sum u512
   var witsum u257
   var witness u256
   ;; handle division by 0
-  if den == 0 goto exit_0
+  is_den_zero = den == 0 ? 1 : 0
+  if is_den_zero == 1 goto exit_0
   ;;
   quot, rem, witness, sum, witsum = num / den
   ;;

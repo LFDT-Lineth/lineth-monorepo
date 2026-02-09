@@ -43,20 +43,26 @@ not_call:
 byte_call:
    var n u5
    var c0 u251
+   var is_c0_zero u1
    c0, n = ARGUMENT_1
-   if c0 != 0 goto exit_0
+   is_c0_zero = c0 == 0 ? 1 : 0
+   if is_c0_zero == 0 goto exit_0
    RES = byte256(ARGUMENT_2, n)
    return
 signextend_call:
    var size u5
    var c1 u251
+   var is_c1_zero u1
    c1, size = ARGUMENT_1
-   if c1 != 0 goto exit_unchanged
+   is_c1_zero = c1 == 0 ? 1 : 0
+   if is_c1_zero == 0 goto exit_unchanged
    RES = signextend(size, ARGUMENT_2)
    return
 clz_call:
   ;; special case for 0
-  if ARGUMENT_1 == 0 goto exit_256
+  var is_arg1_zero u1
+  is_arg1_zero = ARGUMENT_1 == 0 ? 1 : 0
+  if is_arg1_zero == 1 goto exit_256
   var lg2 u8
   var tmp u8
   ;; TODO: we shouldn't those intermediate result ...

@@ -16,11 +16,14 @@ include "../util/bit_sar.zkasm"
 ;; and -1 (when sign bit set).
 pub fn shf(INST=0x1b u8, ARG_1 u256, ARG_2 u256) -> (RES u256) {
   var tmp u248
+  var is_tmp_zero u1
   var n u8
   ;; split shift
   tmp, n = ARG_1
   ;;
-  if tmp != 0 goto exit_01
+  is_tmp_zero = tmp == 0 ? 1 : 0
+  ;;
+  if is_tmp_zero == 0 goto exit_01
   if INST == EVM_INST_SHL goto insn_shl
   if INST == EVM_INST_SHR goto insn_shr
   if INST == EVM_INST_SAR goto insn_sar

@@ -32,7 +32,9 @@ pub fn exp(INST=0xEE0A u16, ARG u256, CDS u6, EBS u6) -> (RES=0 u128)
    if INST == EXP_INST_MODEXPLOG goto modexplog
    fail
 explog:
-   if ARG != 0 goto explog2
+   var is_arg_zero u1
+   is_arg_zero = ARG == 0 ? 1 : 0
+   if is_arg_zero == 0 goto explog2
    RES = 0
    return
 explog2:

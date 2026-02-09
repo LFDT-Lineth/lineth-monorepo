@@ -3,9 +3,11 @@ fn pow(n u256, k u256) -> (res=1 u256) {
   var tmp1, tmp2, val u256
   var nk2 u256
   var i u255
-  var b u1
+  var b, is_k_zero u1
   ;;
-  if k == 0 goto one
+  is_k_zero = k == 0 ? 1 : 0
+  ;;
+  if is_k_zero == 1 goto one
   ;; divide by 2
   i,b = k
   ;;
