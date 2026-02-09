@@ -62,7 +62,7 @@ open class GenericFileBasedProverClient<Request, Response, RequestDto, ResponseD
           )
           responseFilePath
         } else {
-          log.trace("Response file not found file={}", responseFilePath)
+          log.trace("Response file not found. file={}", responseFilePath)
           null
         }
       }
@@ -79,6 +79,12 @@ open class GenericFileBasedProverClient<Request, Response, RequestDto, ResponseD
 
   override fun createProofRequest(proofRequest: Request): SafeFuture<TProofIndex> {
     val proofIndex = proofIndexProvider(proofRequest)
+    log.debug(
+      "Creating proof: {}={}, proofIndexProvider={}",
+      proofTypeLabel,
+      proofIndex,
+      proofIndexProvider.toString(),
+    )
     val requestFileName = requestFileNameProvider.getFileName(proofIndex)
     val requestFilePath = config.requestsDirectory.resolve(requestFileName)
 
@@ -95,11 +101,13 @@ open class GenericFileBasedProverClient<Request, Response, RequestDto, ResponseD
         } else {
           requestMapper(proofRequest)
             .thenCompose { proofRequestDto ->
+              log.trace("Creating proof request file. file={}", requestFilePath)
               fileWriter.write(
                 proofRequestDto,
                 requestFilePath,
                 config.inprogressRequestWritingSuffix,
               ).thenApply {
+                log.trace("Created proof request file. file={}", requestFilePath)
                 proofIndex
               }
             }
@@ -109,6 +117,12 @@ open class GenericFileBasedProverClient<Request, Response, RequestDto, ResponseD
 
   fun requestProof(proofRequest: Request): SafeFuture<Response> {
     val proofIndex = proofIndexProvider(proofRequest)
+    log.debug(
+      "Requesting proof: {}={}, proofIndexProvider={}",
+      proofTypeLabel,
+      proofIndex,
+      proofIndexProvider.toString(),
+    )
     val responseFilePath = config.responsesDirectory.resolve(responseFileNameProvider.getFileName(proofIndex))
 
     return findProofResponse(proofIndex)
@@ -118,7 +132,15 @@ open class GenericFileBasedProverClient<Request, Response, RequestDto, ResponseD
         } else {
           responsesWaiting.incrementAndGet()
           createProofRequest(proofRequest)
-            .thenCompose { waitForResponse(responseFilePath) }
+            .thenCompose { proofIndex2 ->
+              log.trace(
+                "proofIndex1={}, proofIndex2={}, sameProofIndex={}",
+                proofIndex,
+                proofIndex2,
+                proofIndex == proofIndex2,
+              )
+              waitForResponse(responseFilePath)
+            }
             .thenCompose {
               responsesWaiting.decrementAndGet()
               parseResponse(responseFilePath, proofIndex)
@@ -143,9 +165,6 @@ open class GenericFileBasedProverClient<Request, Response, RequestDto, ResponseD
           FileMonitor.ErrorType.TIMED_OUT -> {
             SafeFuture.failedFuture<Path>(RuntimeException("Timeout waiting for response file=$responseFilePath"))
           }
-          // else -> {
-          //  SafeFuture.failedFuture(RuntimeException("Unexpected error=$it"))
-          // }
         }
       } else {
         SafeFuture.completedFuture(responseFilePath)
