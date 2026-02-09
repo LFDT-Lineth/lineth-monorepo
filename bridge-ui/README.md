@@ -1,185 +1,133 @@
-# Linea Bridge UI
+# Linea Bridge UI (temporary README draft)
 
-## Deployment
+Frontend for the Linea Bridge, built with Next.js.
 
-### Config
+## Live sites
+- Production: https://bridge.linea.build/
 
-The config file `.env.production` is used for public configuration variables.
+## Scope of this README
+- How to run and test the app locally
+- How CI produces Docker image tags
+- A high-level internal deployment workflow
 
-Private configuration variables are store on GitHub Secrets.
+## Quickstart (external dev)
+Goal: run against public Linea endpoints with your own API keys.
 
-### Get a Frontend Tag
+1) Create `.env` from the template
+   - `cp .env.template .env`
+   - Fill these required fields (leave addresses as-is):
+     - WalletConnect: `NEXT_PUBLIC_WALLET_CONNECT_ID`
+     - Web3Auth: `NEXT_PUBLIC_WEB3_AUTH_CLIENT_ID`
+     - One RPC provider: set **one** of `NEXT_PUBLIC_INFURA_ID` **or** `NEXT_PUBLIC_ALCHEMY_API_KEY` **or** `NEXT_PUBLIC_QUICKNODE_ID`
+   - Optional (only if you use the feature): `NEXT_PUBLIC_LIFI_API_KEY`, `NEXT_PUBLIC_ONRAMPER_API_KEY`, `NEXT_PUBLIC_LAYERSWAP_API_KEY`
+2) Install dependencies and start dev server
+   - `pnpm i`
+   - `pnpm run dev`
+3) Open http://localhost:3000
+   - Defaults to production contracts/endpoints; your wallet + RPC key handle access.
 
-- Retrieve an existing tag.
-  - Get a Tag from [GitHub Actions](https://github.com/Consensys/linea-monorepo/actions) on `Bridge UI Build and Publish` job, `Set Docker Tag` action.
-- Or create a new tag.
-  - Create a PR and merge the last version to develop branch, and get a Tag from [GitHub Actions](https://github.com/Consensys/linea-monorepo/actions) on `Bridge UI Build and Publish` job, `Set Docker Tag` action.
+## Local development
 
-Example:
+### Requirements
+- Node.js >= 22.22.0
+- pnpm >= 10.28.0
 
-In `Set Docker Tag`
-
-```
-Run echo "DOCKER_TAG=${GITHUB_SHA:0:7}-$(date +%s)-bridge-ui-${{ steps.package-version.outputs.current-version }}" | tee $GITHUB_ENV
-DOCKER_TAG=f3afe33-1705598198-bridge-ui-0.5.3
-```
-
-The Tag is `f3afe33-1705598198-bridge-ui-0.5.3`
-
-### Deployment on Dev
-
-To publish updates to [https://bridge.dev.linea.build/](https://bridge.dev.linea.build/):
-
-#### Update a Frontend Tag on Linea cluster
-
-1. Get a Frontend Tag
-2. Go to [zk-apps-dev](https://github.com/Consensys/zk-apps-dev) project, create a branch from `main` branch.
-3. Modify [values.yaml](https://github.com/ConsenSys/zk-apps-dev/blob/main/argocd/bridge-ui/values.yaml) by replacing it with the specified tag.
-
-```
----
-image:
-  bridge_ui:
-    repository: consensys/bridge-ui
-    tag: f3afe33-1705598198-bridge-ui-0.5.3
-    [...]
-```
-
-- Push the branch and create a merge request
-
-The update should appear on [https://bridge.dev.linea.build/](https://bridge.dev.linea.build/).
-
-#### Check ArgoCD deployment
-
-To check the deployment, go to: [argocd.dev.zkevm.consensys.net](https://argocd.dev.zkevm.consensys.net/applications/argocd/bridge-ui?resource=)
-
-Access are in [1password](https://consensys.1password.com/vaults/blu7ljyqd5zgkj5vbjlmooayya/allitems/ccljvnh2hgs6jh5zc4s5apww4i)
-
-### Deployment on Production
-
-To publish updates to [https://bridge.linea.build/](https://bridge.linea.build/):
-
-#### Update a Frontend Tag on Linea cluster
-
-1. Get a Frontend Tag
-2. Go to [zk-apps-prod](https://github.com/Consensys/zk-apps-prod) project, create a branch from `main` branch.
-3. Modify [values.yaml](https://github.com/Consensys/zk-apps-prod/blob/main/argocd/bridge-ui/values.yaml) by replacing it with the specified tag.
-
-Example:
-
-```
----
-image:
-  bridge_ui:
-    repository: consensys/bridge-ui
-    tag: f3afe33-1705598198-bridge-ui-0.5.3
-    [...]
-```
-
-3. Push the branch and create a merge request
-
-The update should appear on [https://bridge.linea.build/](https://bridge.linea.build/).
-
-## Development
-
-### Run development server
-
-To start Linea Bridge UI for development:
-
-1. Create a `.env` file by copying `.env.template` and add your private API keys.
-
-```shell
+### Setup
+1) Create a local env file:
+```sh
 cp .env.template .env
 ```
+2) Edit `.env` and add any required API keys for local development.
 
-2. Install packages:
-
-```shell
+### Run the dev server
+```sh
 pnpm i
-```
-
-3. Start the development server, execute:
-
-```shell
 pnpm run dev
 ```
+Open: http://localhost:3000
 
-Frontend should be available at: http://localhost:3000
+To target a local stack instead of prod endpoints, set in `.env`:
+```
+NEXT_PUBLIC_ENVIRONMENT=local
+```
+and start the local infra from repo root:
+```
+make start-env-with-tracing-v2-ci
+```
 
-### Build and test Docker image
+## Configuration
 
-Commands to test locally the Docker image used in production.
+### Public vs private variables
+- Public configuration variables are read from `.env.production` (and from your local `.env` while developing).
+- Private configuration variables used by CI/CD are stored in GitHub Actions secrets.
+- Important: any variable prefixed with `NEXT_PUBLIC_` is exposed to the browser; do not put secrets there.
 
-Build the image:
+### Config variables
+Reference list: `.env.template`, including:
+- Contract addresses (mainnet and sepolia)
+- Token list URLs
+- Third-party API keys (WalletConnect, Infura, Alchemy, QuickNode, etc.)
+- Feature flags (e.g., CCTP)
 
-```shell
-# build local image
+## Build and run the Docker image locally
+This matches the Docker image used for deployments.
+
+### Build
+```sh
 docker build --build-arg ENV_FILE=.env.production -t linea/bridge-ui .
 ```
+Notes:
+- The file passed via `ENV_FILE` must exist in the build context.
+- Use `ENV_FILE=.env.production` for production-like config.
 
-Replace with `ENV_FILE=.env.production` to test dev env.
-
-Run the image:
-
-```shell
-# run local image
+### Run
+```sh
 docker run -p 3000:3000 linea/bridge-ui
+# optional: mount a specific env file
+# docker run -p 3000:3000 -v $(pwd)/.env.production:/app/.env.production linea/bridge-ui
+```
+Open: http://localhost:3000
+
+## CI and Docker image tags
+- Docker image tags are produced by the GitHub Actions workflow “Bridge UI Build and Publish”.
+
+### How to retrieve a tag
+1) Open the latest successful workflow run for the Bridge UI build/publish pipeline.
+2) Find the step named “Set Docker Tag”.
+3) Copy the printed `DOCKER_TAG` value.
+
+### Tag format
+```
+<GITHUB_SHA_7>-<unix_timestamp>-bridge-ui-<package_version>
+```
+Example: `f3afe33-1705598198-bridge-ui-0.5.3`
+
+## End-to-end tests
+E2E tests run in CI and can also be run locally.
+
+### Run locally (from repo root)
+1) In your `.env`, set: `NEXT_PUBLIC_E2E_TEST_MODE=true`
+2) Build the app:
+```sh
+pnpm run build
+```
+3) From the repository root, start the local docker stack:
+```sh
+make start-env-with-tracing-v2-ci
+```
+4) Run the tests (still from repo root):
+```sh
+pnpm run test:e2e:headful
 ```
 
-Frontend should be available at: http://localhost:3000
+## Deployment (internal ops)
+Deployments are managed internally via ArgoCD and internal deployment repositories.
 
-### End to end tests
+High-level process:
+1) Get a Bridge UI image tag from CI (see CI and Docker image tags above).
+2) Update the Bridge UI image tag in the internal deployment values file (example path: `argocd/bridge-ui/values.yaml`).
+3) Open a PR/MR, merge, then sync/apply via ArgoCD.
 
-E2E tests are run in the CI but can also be run locally.
-Make sure to set the`NEXT_PUBLIC_E2E_TEST_MODE=true` .env
-
-1. Copy `.env.template` to `.env` file
-2. Build the Bridge UI in local in a terminal: `pnpm run build`
-3. Start the local docker stack by running the following command from the root folder: `make start-env-with-tracing-v2-ci`
-3. Run the command: `pnpm run test:e2e:headful` in another terminal
-
-## Config
-
-The config variables are:
-
-| Var                                           | Description                                    | Values                                                                                                    |
-|-----------------------------------------------|------------------------------------------------| --------------------------------------------------------------------------------------------------------- |
-| NEXT_PUBLIC_MAINNET_L1_TOKEN_BRIDGE           | Linea Token Bridge on Ethereum mainnet         | 0x051F1D88f0aF5763fB888eC4378b4D8B29ea3319                                                                |
-| NEXT_PUBLIC_MAINNET_LINEA_TOKEN_BRIDGE        | Linea Token Bridge on Linea mainnet            | 0x353012dc4a9A6cF55c941bADC267f82004A8ceB9                                                                |
-| NEXT_PUBLIC_MAINNET_L1_MESSAGE_SERVICE        | Linea Message Service on Ethereum mainnet      | 0xd19d4B5d358258f05D7B411E21A1460D11B0876F                                                                |
-| NEXT_PUBLIC_MAINNET_LINEA_MESSAGE_SERVICE     | Linea Message Service on Linea mainnet         | 0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec                                                                |
-| NEXT_PUBLIC_MAINNET_L1_USDC_BRIDGE            | Linea USDC Bridge on Ethereum mainnet          | 0x504A330327A089d8364C4ab3811Ee26976d388ce                                                                |
-| NEXT_PUBLIC_MAINNET_LINEA_USDC_BRIDGE         | Linea USDC Bridge on Linea mainnet             | 0xA2Ee6Fce4ACB62D95448729cDb781e3BEb62504A                                                                |
-| NEXT_PUBLIC_MAINNET_GAS_ESTIMATED             | Linea gas estimated on mainnet                 | 100000                                                                                                    |
-| NEXT_PUBLIC_MAINNET_DEFAULT_GAS_LIMIT_SURPLUS | Linea gas limit surplus on mainnet             | 6000                                                                                                      |
-| NEXT_PUBLIC_MAINNET_PROFIT_MARGIN             | Linea profit margin on mainnet                 | 2                                                                                                         |
-| NEXT_PUBLIC_MAINNET_TOKEN_LIST                | Linea Token list on mainnet                    | https://raw.githubusercontent.com/Consensys/linea-token-list/main/json/linea-mainnet-token-shortlist.json |
-|                                               |                                                |                                                                                                           |
-| NEXT_PUBLIC_SEPOLIA_L1_TOKEN_BRIDGE           | Linea Token Bridge on Ethereum Sepolia         | 0x5A0a48389BB0f12E5e017116c1105da97E129142                                                                |
-| NEXT_PUBLIC_SEPOLIA_LINEA_TOKEN_BRIDGE        | Linea Token Bridge on Linea Sepolia            | 0x93DcAdf238932e6e6a85852caC89cBd71798F463                                                                |
-| NEXT_PUBLIC_SEPOLIA_L1_MESSAGE_SERVICE        | Linea Message Service on Ethereum Sepolia      | 0xB218f8A4Bc926cF1cA7b3423c154a0D627Bdb7E5                                                                |
-| NEXT_PUBLIC_SEPOLIA_LINEA_MESSAGE_SERVICE     | Linea Message Service on Linea Sepolia         | 0x971e727e956690b9957be6d51Ec16E73AcAC83A7                                                                |
-| NEXT_PUBLIC_SEPOLIA_L1_USDC_BRIDGE            | Linea USDC Bridge on Ethereum Sepolia          | 0x32D123756d32d3eD6580935f8edF416e57b940f4                                                                |
-| NEXT_PUBLIC_SEPOLIA_LINEA_USDC_BRIDGE         | Linea USDC Bridge on Linea Sepolia             | 0xDFa112375c9be9D124932b1d104b73f888655329                                                                |
-| NEXT_PUBLIC_SEPOLIA_GAS_ESTIMATED             | Linea gas estimated on Sepolia                 | 6100000000                                                                                                |
-| NEXT_PUBLIC_SEPOLIA_DEFAULT_GAS_LIMIT_SURPLUS | Linea gas limit surplus on Sepolia             | 6000                                                                                                      |
-| NEXT_PUBLIC_SEPOLIA_PROFIT_MARGIN             | Linea profit margin on Sepolia                 | 2                                                                                                         |
-| NEXT_PUBLIC_SEPOLIA_TOKEN_LIST                | Linea Token list on Sepolia                    | https://raw.githubusercontent.com/Consensys/linea-token-list/main/json/linea-sepolia-token-shortlist.json |
-|                                               |                                                |                                                                                                           |
-| NEXT_PUBLIC_WALLET_CONNECT_ID                 | Wallet Connect Api Key                         |                                                                                                           |
-| NEXT_PUBLIC_INFURA_ID                         | Infura API Key                                 |                                                                                                           |
-| NEXT_PUBLIC_ALCHEMY_API_KEY                   | Alchemy API Key                                |                                                                                                           |
-| NEXT_PUBLIC_STORAGE_MIN_VERSION               | Local storage version for reseting the storage | 1                                                                                                         |
-| NEXT_PUBLIC_WEB3_AUTH_CLIENT_ID               | Web3Auth client key                            |                                                                                                           |
-| NEXT_PUBLIC_CONNECTOR_GOOGLE_ID               | Web3Auth Google OAuth connection ID (staging)  | Obtained from Web3Auth dashboard                                                                          |
-| NEXT_PUBLIC_CONNECTOR_PASSWORDLESS_ID         | Web3Auth Email passwordless connection ID      | Obtained from Web3Auth dashboard                                                                          |
-| NEXT_PUBLIC_CONNECTOR_GROUPED_ID              | Web3Auth Grouped auth connection ID            | Links multiple auth methods to same account                                                               |
-| NEXT_PUBLIC_QUICKNODE_ID                      | QuickNode API key                              |                                                                                                           |
-| NEXT_PUBLIC_LIFI_API_KEY                      | LiFi API key                                   |                                                                                                           |
-| NEXT_PUBLIC_ONRAMPER_API_KEY                  | OnRamper API key                               |                                                                                                           |
-| NEXT_PUBLIC_IS_CCTP_ENABLED                   | Feature flag for CCTPV2                        | false                                                                                                     |
-| NEXT_PUBLIC_LAYERSWAP_API_KEY                 | LayerSwap API key                              |                                                                                                           |
-
-## About
-
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+Notes:
+- Internal repositories and ArgoCD dashboards are intentionally not linked here to avoid broken links for external readers.
+- Access details are managed internally.

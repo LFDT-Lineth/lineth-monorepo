@@ -80,8 +80,6 @@ EXAMPLES
   $ synctx  --source=http://geth-archive-1:8545 --target=http://geth-validator-1:8545 --concurrency=10
 ```
 
-_See code: [dist/index.ts](https://github.com/scripts/synctx/blob/v0.0.0/dist/index.ts)_
-
 ## `synctx help [COMMANDS]`
 
 Display help for synctx.
@@ -99,7 +97,5 @@ FLAGS
 DESCRIPTION
   Display help for synctx.
 ```
-
-_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v5.2.20/src/commands/help.ts)_
 
 <!-- commandsstop -->
