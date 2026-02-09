@@ -18,6 +18,7 @@ class LocalStackConfigsParsingTest {
       ),
       tracesLimitsFileV2 = Path.of("../../config/common/traces-limits-v2.toml"),
       tracesLimitsFileV4 = null,
+      tracesLimitsFileV5 = null,
       gasPriceCapTimeOfDayMultipliersFile = Path.of("../../config/common/gas-price-cap-time-of-day-multipliers.toml"),
       smartContractErrorsFile = Path.of("../../config/common/smart-contract-errors.toml"),
       enforceStrict = true,

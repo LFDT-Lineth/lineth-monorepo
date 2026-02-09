@@ -5,8 +5,10 @@ import linea.web3j.SmartContractErrors
 import net.consensys.linea.ethereum.gaspricing.dynamiccap.TimeOfDayMultipliers
 import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.linea.traces.TracesCountersV4
+import net.consensys.linea.traces.TracesCountersV5
 import net.consensys.linea.traces.TracingModuleV2
 import net.consensys.linea.traces.TracingModuleV4
+import net.consensys.linea.traces.TracingModuleV5
 
 data class CoordinatorConfigFileToml(
   val defaults: DefaultsToml = DefaultsToml(),
@@ -32,6 +34,10 @@ data class TracesLimitsConfigFileV4Toml(
   val tracesLimits: Map<TracingModuleV4, UInt>,
 )
 
+data class TracesLimitsConfigFileV5Toml(
+  val tracesLimits: Map<TracingModuleV5, UInt>,
+)
+
 data class GasPriceCapTimeOfDayMultipliersConfigFileToml(
   val gasPriceCapTimeOfDayMultipliers: TimeOfDayMultipliers,
 )
@@ -42,6 +48,7 @@ data class CoordinatorConfigToml(
   val configs: CoordinatorConfigFileToml,
   val tracesLimitsV2: TracesLimitsConfigFileV2Toml?,
   val tracesLimitsV4: TracesLimitsConfigFileV4Toml?,
+  val tracesLimitsV5: TracesLimitsConfigFileV5Toml?,
   val l1DynamicGasPriceCapTimeOfDayMultipliers: GasPriceCapTimeOfDayMultipliersConfigFileToml? = null,
   val smartContractErrors: SmartContractErrorCodesConfigFileToml? = null,
 ) {
@@ -53,6 +60,7 @@ data class CoordinatorConfigToml(
         defaults = configs.defaults,
         tracesCountersLimitsV2 = tracesLimitsV2?.let { TracesCountersV2(it.tracesLimits) },
         tracesCountersLimitsV4 = tracesLimitsV4?.let { TracesCountersV4(it.tracesLimits) },
+        tracesCountersLimitsV5 = tracesLimitsV5?.let { TracesCountersV5(it.tracesLimits) },
       ),
       proversConfig = this.configs.prover.reified(),
       traces = this.configs.traces.reified(),

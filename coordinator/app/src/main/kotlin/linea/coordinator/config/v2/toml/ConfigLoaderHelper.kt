@@ -89,6 +89,7 @@ fun loadConfigsOrError(
   coordinatorConfigFiles: List<Path>,
   tracesLimitsFileV2: Path?,
   tracesLimitsFileV4: Path?,
+  tracesLimitsFileV5: Path?,
   gasPriceCapTimeOfDayMultipliersFile: Path,
   smartContractErrorsFile: Path,
   logger: Logger = LogManager.getLogger("linea.coordinator.config"),
@@ -103,6 +104,10 @@ fun loadConfigsOrError(
   val tracesLimitsV4Configs =
     tracesLimitsFileV4?.let {
       loadConfigsAndLogErrors<TracesLimitsConfigFileV4Toml>(listOf(it), logger, strict)
+    }
+  val tracesLimitsV5Configs =
+    tracesLimitsFileV5?.let {
+      loadConfigsAndLogErrors<TracesLimitsConfigFileV5Toml>(listOf(it), logger, strict)
     }
   val gasPriceCapTimeOfDayMultipliersConfig =
     loadConfigsAndLogErrors<GasPriceCapTimeOfDayMultipliersConfigFileToml>(
@@ -121,6 +126,7 @@ fun loadConfigsOrError(
       coordinatorBaseConfigs,
       tracesLimitsV2Configs,
       tracesLimitsV4Configs,
+      tracesLimitsV5Configs,
       gasPriceCapTimeOfDayMultipliersConfig,
       smartContractErrorsConfig,
     )
@@ -136,6 +142,7 @@ fun loadConfigsOrError(
       configs = coordinatorBaseConfigs.get()!!,
       tracesLimitsV2 = tracesLimitsV2Configs?.get(),
       tracesLimitsV4 = tracesLimitsV4Configs?.get(),
+      tracesLimitsV5 = tracesLimitsV5Configs?.get(),
       l1DynamicGasPriceCapTimeOfDayMultipliers = gasPriceCapTimeOfDayMultipliersConfig.get(),
       smartContractErrors = smartContractErrorsConfig.get(),
     )
@@ -146,28 +153,31 @@ fun loadConfigs(
   coordinatorConfigFiles: List<Path>,
   tracesLimitsFileV2: Path?,
   tracesLimitsFileV4: Path?,
+  tracesLimitsFileV5: Path?,
   gasPriceCapTimeOfDayMultipliersFile: Path,
   smartContractErrorsFile: Path,
   logger: Logger = LogManager.getLogger("linea.coordinator.config"),
   enforceStrict: Boolean = false,
 ): CoordinatorConfig {
   return loadConfigsOrError(
-    coordinatorConfigFiles,
-    tracesLimitsFileV2,
-    tracesLimitsFileV4,
-    gasPriceCapTimeOfDayMultipliersFile,
-    smartContractErrorsFile,
-    logger,
+    coordinatorConfigFiles = coordinatorConfigFiles,
+    tracesLimitsFileV2 = tracesLimitsFileV2,
+    tracesLimitsFileV4 = tracesLimitsFileV4,
+    tracesLimitsFileV5 = tracesLimitsFileV5,
+    gasPriceCapTimeOfDayMultipliersFile = gasPriceCapTimeOfDayMultipliersFile,
+    smartContractErrorsFile = smartContractErrorsFile,
+    logger = logger,
     strict = true,
   )
     .recoverIf({ !enforceStrict }, {
       loadConfigsOrError(
-        coordinatorConfigFiles,
-        tracesLimitsFileV2,
-        tracesLimitsFileV4,
-        gasPriceCapTimeOfDayMultipliersFile,
-        smartContractErrorsFile,
-        logger,
+        coordinatorConfigFiles = coordinatorConfigFiles,
+        tracesLimitsFileV2 = tracesLimitsFileV2,
+        tracesLimitsFileV4 = tracesLimitsFileV4,
+        tracesLimitsFileV5 = tracesLimitsFileV5,
+        gasPriceCapTimeOfDayMultipliersFile = gasPriceCapTimeOfDayMultipliersFile,
+        smartContractErrorsFile = smartContractErrorsFile,
+        logger = logger,
         strict = false,
       ).getOrElse {
         throw RuntimeException("Invalid configurations: $it")

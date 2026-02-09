@@ -107,3 +107,18 @@ data class TracesCountersV4(private val countersMap: Map<TracingModuleV4, UInt>)
 
   override val emptyTracesCounters = EMPTY_TRACES_COUNT
 }
+
+data class TracesCountersV5(private val countersMap: Map<TracingModuleV5, UInt>) :
+  TracesCountersImpl(countersMap, TracingModuleV5.entries) {
+  companion object {
+    val EMPTY_TRACES_COUNT = TracesCountersV5(TracingModuleV5.entries.associateWith { 0u })
+  }
+
+  override fun add(o: TracesCounters): TracesCountersV5 {
+    val sum = add(this, o)
+    @Suppress("UNCHECKED_CAST")
+    return TracesCountersV5(sum as Map<TracingModuleV5, UInt>)
+  }
+
+  override val emptyTracesCounters = EMPTY_TRACES_COUNT
+}

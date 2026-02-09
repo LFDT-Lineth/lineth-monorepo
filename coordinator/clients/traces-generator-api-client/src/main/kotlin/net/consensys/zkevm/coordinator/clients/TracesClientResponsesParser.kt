@@ -9,8 +9,10 @@ import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse
 import net.consensys.linea.traces.TracesCounters
 import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.linea.traces.TracesCountersV4
+import net.consensys.linea.traces.TracesCountersV5
 import net.consensys.linea.traces.TracingModuleV2
 import net.consensys.linea.traces.TracingModuleV4
+import net.consensys.linea.traces.TracingModuleV5
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 
@@ -38,6 +40,12 @@ object TracesClientResponsesParser {
       ::parseTracesCountersV4,
     )
 
+  internal fun parseTracesCounterResponseV5(jsonRpcResponse: JsonRpcSuccessResponse): GetTracesCountersResponse =
+    parseTracesCounterResponse(
+      jsonRpcResponse,
+      ::parseTracesCountersV5,
+    )
+
   internal fun parseTracesCounterResponse(
     jsonRpcResponse: JsonRpcSuccessResponse,
     parserFn: (JsonObject) -> TracesCounters,
@@ -55,6 +63,9 @@ object TracesClientResponsesParser {
 
   internal fun parseTracesCountersV4(tracesCounters: JsonObject): TracesCountersV4 =
     parseTracesCounters(tracesCounters, TracingModuleV4::class.java, ::TracesCountersV4) as TracesCountersV4
+
+  internal fun parseTracesCountersV5(tracesCounters: JsonObject): TracesCountersV5 =
+    parseTracesCounters(tracesCounters, TracingModuleV5::class.java, ::TracesCountersV5) as TracesCountersV5
 
   private fun <T : Enum<T>> parseTracesCounters(
     tracesCounters: JsonObject,
