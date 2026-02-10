@@ -1,6 +1,7 @@
 name: Nightly Tracer Tests
 permissions:
   contents: read
+  actions: read
 
 on:
   schedule:

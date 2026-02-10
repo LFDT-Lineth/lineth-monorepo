@@ -75,47 +75,101 @@ jobs:
           cat jobs.json >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Extract failed jobs dynamically
-        id: failed_jobs
+      - name: Extract failed and cancelled jobs
+        id: extract_jobs
         shell: bash
         env:
           JOBS_JSON: "${{ steps.jobs.outputs.json }}"
         run: |
           set -euo pipefail
 
-          items=$(printf "%s" "$JOBS_JSON" | jq -c '
-            [
-              .jobs[]
-              | select(.conclusion == "failure")
-              | {
-                  type: "rich_text_section",
-                  elements: [
-                    {
-                      type: "text",
-                      text: (.name + ": ")
-                    },
-                    {
-                      type: "link",
-                      url: .html_url,
-                      text: .html_url
-                    }
-                  ]
-                }
-            ]
-          ')
+          extract_jobs() {
+            local conclusion="$1"
+            printf "%s" "$JOBS_JSON" | jq -c --arg c "$conclusion" '
+              [
+                .jobs[]
+                | select(.conclusion == $c)
+                | {
+                    type: "rich_text_section",
+                    elements: [
+                      { type: "text", text: (.name + ": ") },
+                      { type: "link", url: .html_url, text: .html_url }
+                    ]
+                  }
+              ]
+            '
+          }
 
-          if [[ "$items" == "[]" ]]; then
-            echo "result=None" >> $GITHUB_OUTPUT
-            exit 0
+          failed=$(extract_jobs "failure")
+          cancelled=$(extract_jobs "cancelled")
+
+          set_output() {
+            local name="$1" value="$2"
+            if [[ "$value" == "[]" ]]; then
+              echo "${name}=" >> "$GITHUB_OUTPUT"
+            else
+              echo "${name}<<EOF" >> "$GITHUB_OUTPUT"
+              echo "$value" >> "$GITHUB_OUTPUT"
+              echo "EOF" >> "$GITHUB_OUTPUT"
+            fi
+          }
+
+          set_output "failed" "$failed"
+          set_output "cancelled" "$cancelled"
+
+          if [[ "$failed" == "[]" && "$cancelled" == "[]" ]]; then
+            echo "has_results=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_results=true" >> "$GITHUB_OUTPUT"
           fi
 
-          echo "result<<EOF" >> $GITHUB_OUTPUT
-          echo "$items" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+      - name: Build job sections
+        id: job_sections
+        if: ${{ steps.extract_jobs.outputs.has_results == 'true' }}
+        shell: bash
+        env:
+          FAILED: "${{ steps.extract_jobs.outputs.failed }}"
+          CANCELLED: "${{ steps.extract_jobs.outputs.cancelled }}"
+        run: |
+          set -euo pipefail
+
+          build_section() {
+            local label="$1" items="$2"
+            jq -n -c --arg label "$label" --argjson items "$items" '{
+              type: "rich_text",
+              elements: [
+                {
+                  type: "rich_text_section",
+                  elements: [
+                    { type: "text", text: $label, style: { bold: true } }
+                  ]
+                },
+                {
+                  type: "rich_text_list",
+                  style: "bullet",
+                  elements: $items
+                }
+              ]
+            }'
+          }
+
+          if [[ -n "$FAILED" ]]; then
+            block=$(build_section "Failed Jobs:" "$FAILED")
+            echo "failed_section=- ${block}" >> "$GITHUB_OUTPUT"
+          else
+            echo "failed_section=" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [[ -n "$CANCELLED" ]]; then
+            block=$(build_section "Cancelled Jobs:" "$CANCELLED")
+            echo "cancelled_section=- ${block}" >> "$GITHUB_OUTPUT"
+          else
+            echo "cancelled_section=" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build extra block
         id: extra_block
-        if: ${{ steps.failed_jobs.outputs.result != 'None' }}
+        if: ${{ steps.extract_jobs.outputs.has_results == 'true' }}
         shell: bash
         env:
           EXTRA_MESSAGE: "${{ inputs.extra_message }}"
@@ -139,7 +193,7 @@ jobs:
           fi
 
       - name: Send Slack Notification
-        if: ${{ steps.failed_jobs.outputs.result != 'None' }}
+        if: ${{ steps.extract_jobs.outputs.has_results == 'true' }}
         uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a #v2.1.1
         with:
           method: chat.postMessage
@@ -188,16 +242,6 @@ jobs:
                         url: "${{ steps.ctx.outputs.commit_url }}"
                         text: "${{ steps.ctx.outputs.commit_sha }}"
 
-              - type: rich_text
-                elements:
-                  - type: rich_text_section
-                    elements:
-                      - type: text
-                        text: "Failed Job:"
-                        style:
-                          bold: true
-
-                  - type: rich_text_list
-                    style: bullet
-                    elements: ${{ steps.failed_jobs.outputs.result }}
+              ${{ steps.job_sections.outputs.failed_section }}
+              ${{ steps.job_sections.outputs.cancelled_section }}
               ${{ steps.extra_block.outputs.block }}
