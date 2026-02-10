@@ -55,46 +55,17 @@ public class ToPhaseSection extends PhaseSection {
 
       // first row for deployment : rlp prefix
       traceTransactionConstantValues(trace, tracedValues);
-      trace
-          .cmp(true)
-          .ctMax(RLP_TXN_CT_MAX_ADDRESS)
-          .pCmpTrmFlag(true)
-          .pCmpExoData1(to.slice(0, 4))
-          .pCmpExoData2(lowPart(to))
-          .limbConstructed(true)
-          .lt(true)
-          .lx(true)
-          .pCmpLimb(BYTES16_PREFIX_ADDRESS)
-          .pCmpLimbSize(1);
-      tracedValues.decrementLtAndLxSizeBy(1);
+      traceAddressPrefix(trace, to, tracedValues);
       tracePostValues(trace, tracedValues);
 
       // second row for deployment : address hi
       traceTransactionConstantValues(trace, tracedValues);
-      trace
-          .cmp(true)
-          .ct(1)
-          .ctMax(RLP_TXN_CT_MAX_ADDRESS)
-          .limbConstructed(true)
-          .lt(true)
-          .lx(true)
-          .pCmpLimb(rightPadToBytes16(to.slice(0, 4)))
-          .pCmpLimbSize(4);
-      tracedValues.decrementLtAndLxSizeBy(4);
+      traceAddressHi(trace, to, tracedValues);
       tracePostValues(trace, tracedValues);
 
       // third row for deployment : address lo
       traceTransactionConstantValues(trace, tracedValues);
-      trace
-          .cmp(true)
-          .ct(2)
-          .ctMax(RLP_TXN_CT_MAX_ADDRESS)
-          .limbConstructed(true)
-          .lt(true)
-          .lx(true)
-          .pCmpLimb(to.slice(4, LLARGE))
-          .pCmpLimbSize(LLARGE);
-      tracedValues.decrementLtAndLxSizeBy(LLARGE);
+      traceAddressLo(trace, to, tracedValues);
       tracePostValues(trace, tracedValues);
     }
   }
@@ -107,5 +78,49 @@ public class ToPhaseSection extends PhaseSection {
   @Override
   public int lineCount() {
     return 1 + (isDeployment ? 1 : (RLP_TXN_CT_MAX_ADDRESS + 1));
+  }
+
+  public static void traceAddressPrefix(
+      Trace.Rlptxn trace, Address address, GenericTracedValue tracedValues) {
+    trace
+        .cmp(true)
+        .ctMax(RLP_TXN_CT_MAX_ADDRESS)
+        .pCmpTrmFlag(true)
+        .pCmpExoData1(address.slice(0, 4))
+        .pCmpExoData2(lowPart(address))
+        .limbConstructed(true)
+        .lt(true)
+        .lx(true)
+        .pCmpLimb(BYTES16_PREFIX_ADDRESS)
+        .pCmpLimbSize(1);
+    tracedValues.decrementLtAndLxSizeBy(1);
+  }
+
+  public static void traceAddressHi(
+      Trace.Rlptxn trace, Address address, GenericTracedValue tracedValues) {
+    trace
+        .cmp(true)
+        .ct(1)
+        .ctMax(RLP_TXN_CT_MAX_ADDRESS)
+        .limbConstructed(true)
+        .lt(true)
+        .lx(true)
+        .pCmpLimb(rightPadToBytes16(address.slice(0, 4)))
+        .pCmpLimbSize(4);
+    tracedValues.decrementLtAndLxSizeBy(4);
+  }
+
+  public static void traceAddressLo(
+      Trace.Rlptxn trace, Address address, GenericTracedValue tracedValues) {
+    trace
+        .cmp(true)
+        .ct(2)
+        .ctMax(RLP_TXN_CT_MAX_ADDRESS)
+        .limbConstructed(true)
+        .lt(true)
+        .lx(true)
+        .pCmpLimb(lowPart(address))
+        .pCmpLimbSize(LLARGE);
+    tracedValues.decrementLtAndLxSizeBy(LLARGE);
   }
 }

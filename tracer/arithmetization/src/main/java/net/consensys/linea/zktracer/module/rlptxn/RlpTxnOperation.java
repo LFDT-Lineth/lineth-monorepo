@@ -16,7 +16,6 @@
 package net.consensys.linea.zktracer.module.rlptxn;
 
 import static net.consensys.linea.zktracer.module.rlptxn.phaseSection.IntegerEntry.*;
-import static org.hyperledger.besu.datatypes.TransactionType.EIP1559;
 import static org.hyperledger.besu.datatypes.TransactionType.FRONTIER;
 
 import java.util.ArrayList;
@@ -48,17 +47,17 @@ public class RlpTxnOperation extends ModuleOperation {
     phaseSectionList.add(new IntegerPhaseSection(rlpUtils, NONCE, tx));
 
     // Phase Gas Price
-    if (tx.getBesuTransaction().getType() != EIP1559) {
+    if (!tx.getBesuTransaction().getType().supports1559FeeMarket()) {
       phaseSectionList.add(new IntegerPhaseSection(rlpUtils, GAS_PRICE, tx));
     }
 
     // Phase Max Priority Fee Per Gas
-    if (tx.getBesuTransaction().getType() == EIP1559) {
+    if (tx.getBesuTransaction().getType().supports1559FeeMarket()) {
       phaseSectionList.add(new IntegerPhaseSection(rlpUtils, MAX_PRIORITY_FEE_PER_GAS, tx));
     }
 
     // Phase Max Fee Per Gas
-    if (tx.getBesuTransaction().getType() == EIP1559) {
+    if (tx.getBesuTransaction().getType().supports1559FeeMarket()) {
       phaseSectionList.add(new IntegerPhaseSection(rlpUtils, MAX_FEE_PER_GAS, tx));
     }
 
@@ -75,8 +74,13 @@ public class RlpTxnOperation extends ModuleOperation {
     phaseSectionList.add(new DataPhaseSection(rlpUtils, tx));
 
     // Phase Access List
-    if (tx.getBesuTransaction().getType() != FRONTIER) {
+    if (tx.getBesuTransaction().getType().supportsAccessList()) {
       phaseSectionList.add(new AccessListPhaseSection(rlpUtils, trm, tx));
+    }
+
+    // Phase Authorization List
+    if (tx.getBesuTransaction().getType().supportsDelegateCode()) {
+      phaseSectionList.add(new AuthorizationListSection(rlpUtils, tx));
     }
 
     // Phase Beta

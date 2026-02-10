@@ -13,6 +13,7 @@
                IS_VALUE
                IS_DATA
                IS_ACCESS_LIST
+               IS_AUTHORIZATION_LIST
                ;; IS_BETA
                ;; IS_Y
                ;; IS_R

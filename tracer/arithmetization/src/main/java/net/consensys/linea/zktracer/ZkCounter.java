@@ -417,9 +417,12 @@ public class ZkCounter implements LineCountingTracer {
   @Override
   public void tracePrepareTransaction(WorldView worldView, Transaction tx) {
     switch (tx.getType()) {
-      case FRONTIER, ACCESS_LIST, EIP1559 -> {
+      case FRONTIER, ACCESS_LIST, EIP1559, DELEGATE_CODE -> {
         blockTransactions.traceStartTx(null, null);
         final boolean triggersEvm = computeRequiresEvmExecution(worldView, tx);
+        if (tx.getType().supportsDelegateCode()) {
+          // TODO count the delegation phase size of the HUB
+        }
         if (triggersEvm) {
           hub.updateTally(NB_ROWS_HUB_INIT + NB_ROWS_HUB_FINL);
           if (tx.getAccessList().isPresent()) {
@@ -442,7 +445,7 @@ public class ZkCounter implements LineCountingTracer {
           keccak.updateTally(MAX_SIZE_RLP_HASH_CREATE);
         }
       }
-      case BLOB, DELEGATE_CODE ->
+      case BLOB ->
           throw new IllegalStateException(
               "Arithmetization doesn't support tx type: " + tx.getType());
       default -> throw new IllegalArgumentException("tx type unknown: " + tx.getType());

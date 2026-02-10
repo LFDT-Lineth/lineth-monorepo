@@ -159,8 +159,8 @@ public class InstructionInteger extends RlpUtilsCall {
     return rightPadToBytes16(leadingBytesNotShifted());
   }
 
-  private int leadingLimbByteSize() {
-    return leadingBytesNotShifted().size();
+  private short leadingLimbByteSize() {
+    return (short) leadingBytesNotShifted().size();
   }
 
   private Bytes leadingBytesNotShifted() {
@@ -171,5 +171,19 @@ public class InstructionInteger extends RlpUtilsCall {
     return rlpPrefixRequired
         ? rightPadToBytes16(Bytes.of(RLP_PREFIX_INT_SHORT + integer.trimLeadingZeros().size()))
         : Bytes.EMPTY;
+  }
+
+  public short rlpSize() {
+    return (short) (nBytes(0) + nBytes(1) + nBytes(2));
+  }
+
+  public short nBytes(int ct) {
+    return (short)
+        switch (ct) {
+          case 0 -> rlpPrefixRequired ? 1 : 0;
+          case 1 -> integerHiIsNonZero ? leadingLimbByteSize() : 0;
+          case 2 -> integerHiIsNonZero ? LLARGE : leadingLimbByteSize();
+          default -> throw new IllegalArgumentException("Invalid counter: " + ct);
+        };
   }
 }

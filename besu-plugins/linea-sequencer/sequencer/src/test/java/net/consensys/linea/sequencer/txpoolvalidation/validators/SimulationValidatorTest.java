@@ -213,8 +213,8 @@ public class SimulationValidatorTest {
             .signature(FAKE_SIGNATURE)
             .build();
     final var expectedReasonMessage =
-        "Transaction 0xbf668c5dc926c008d5b34f347e1842b94911b46f4a36b668812f821e20303322 line count for module HUB=18 " +
-          "is above the limit 5";
+        "Transaction 0xbf668c5dc926c008d5b34f347e1842b94911b46f4a36b668812f821e20303322 line count for module HUB=18 "
+            + "is above the limit 5";
     assertThat(simulationValidator.validateTransaction(transaction, true, false))
         .contains(expectedReasonMessage);
 

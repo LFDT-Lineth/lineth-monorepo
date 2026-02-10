@@ -15,6 +15,7 @@
 
 package net.consensys.linea.zktracer.module.rlptxn;
 
+import static com.google.common.base.Preconditions.*;
 import static org.hyperledger.besu.datatypes.TransactionType.*;
 
 import lombok.Getter;
@@ -35,6 +36,8 @@ public class GenericTracedValue {
   private int rlpLtByteSize;
   private int rlpLxByteSize;
   @Setter @Getter private int userTxnNumberMax;
+  private int listRlpSize;
+  private int itemRlpSize;
 
   public GenericTracedValue(TransactionProcessingMetadata tx) {
     this.tx = tx;
@@ -43,6 +46,25 @@ public class GenericTracedValue {
     type2 = tx.getBesuTransaction().getType() == EIP1559;
     type3 = tx.getBesuTransaction().getType() == BLOB;
     type4 = tx.getBesuTransaction().getType() == DELEGATE_CODE;
+  }
+
+  public void setListRlpSize(int listRlpSize) {
+    checkArgument(this.listRlpSize == 0);
+    this.listRlpSize = listRlpSize;
+  }
+
+  public void setItemRlpSize(int itemRlpSize) {
+    checkArgument(this.itemRlpSize == 0);
+    this.itemRlpSize = itemRlpSize;
+  }
+
+  public void decrementAllCountersBy(short size) {
+    listRlpSize -= size;
+    itemRlpSize -= size;
+  }
+
+  public void decrementListRlpSizeBy(short size) {
+    listRlpSize -= size;
   }
 
   public void decrementLtAndLxSizeBy(int size) {

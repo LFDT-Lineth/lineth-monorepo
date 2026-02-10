@@ -15,11 +15,9 @@
 
 package net.consensys.linea.zktracer.module.rlpcommon;
 
-import java.math.BigInteger;
 import java.util.Random;
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
-import org.apache.tuweni.bytes.Bytes;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith(UnitTestWatcher.class)
@@ -29,38 +27,6 @@ public class RlpRandEdgeCase extends TracerTestBase {
    * process.
    */
   private final Random RAND = new Random(666);
-
-  public BigInteger randBigInt(boolean onlyFourteenByte) {
-    final int selectorBound = onlyFourteenByte ? 4 : 5;
-    int selector = RAND.nextInt(0, selectorBound);
-
-    return switch (selector) {
-      case 0 -> BigInteger.ZERO;
-      case 1 -> BigInteger.valueOf(RAND.nextInt(1, 128));
-      case 2 -> BigInteger.valueOf(RAND.nextInt(128, 256));
-      case 3 -> new BigInteger(14 * 8, RAND);
-      case 4 -> new BigInteger(32 * 8, RAND);
-      default -> throw new IllegalStateException("Unexpected value: " + selector);
-    };
-  }
-
-  public Bytes randData(boolean nonEmpty) {
-    final int maxDataSize = 1000;
-    int selectorOrigin = 0;
-    if (nonEmpty) {
-      selectorOrigin += 1;
-    }
-    int selector = RAND.nextInt(selectorOrigin, 6);
-    return switch (selector) {
-      case 0 -> Bytes.EMPTY;
-      case 1 -> Bytes.of(0x0);
-      case 2 -> Bytes.minimalBytes(RAND.nextLong(1, 128));
-      case 3 -> Bytes.minimalBytes(RAND.nextLong(128, 256));
-      case 4 -> Bytes.random(RAND.nextInt(1, 56), RAND);
-      case 5 -> Bytes.random(RAND.nextInt(56, maxDataSize), RAND);
-      default -> throw new IllegalStateException("Unexpected value: " + selector);
-    };
-  }
 
   public Long randLong() {
     int selector = RAND.nextInt(0, 4);

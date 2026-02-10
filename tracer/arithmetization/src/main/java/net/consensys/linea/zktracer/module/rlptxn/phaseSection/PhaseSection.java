@@ -76,11 +76,12 @@ public abstract class PhaseSection {
         .type1(tracedValues.type1())
         .type2(tracedValues.type2())
         // .type3(tracedValues.type3())
-        // .type4(tracedValues.type4())
+        .type4(tracedValues.type4())
         .replayProtection(tracedValues.tx().replayProtection())
         .yParity(tracedValues.tx().yParity())
         .requiresEvmExecution(tracedValues.tx().requiresEvmExecution())
         .isDeployment(tracedValues.tx().isDeployment())
+        .numberOfAuthorizations(tracedValues.tx().getBesuTransaction().codeDelegationListSize())
         .proverUserTxnNumberMax(tracedValues.userTxnNumberMax());
   }
 

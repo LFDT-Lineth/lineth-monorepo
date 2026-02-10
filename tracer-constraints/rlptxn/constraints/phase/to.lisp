@@ -8,6 +8,8 @@
                                          ;; deployment transaction case
                                          ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                                          (begin
+                                           ;; can't be 7702-txs
+                                           (vanishes! TYPE_4)
                                            ;; setting CT_MAX
                                            (debug  (vanishes!  (shift   CT_MAX   1)))
                                            ;; writing the RLP prefix to the RLP string

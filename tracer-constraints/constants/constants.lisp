@@ -586,6 +586,10 @@
   RLP_UTILS_INST_BYTE_STRING_PREFIX         2
   RLP_UTILS_INST_BYTES32                    4
   RLP_UTILS_INST_DATA_PRICING               8
+  ;;
+  ;; RLP_TXN
+  ;;
+  RLP_TXN_NB_ROWS_PER_AUTHORIZATION         19
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;                ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; SHAKIRA MODULE ;;
