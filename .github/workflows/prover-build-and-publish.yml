@@ -85,11 +85,12 @@ jobs:
         uses: ./.github/actions/docker-build-publish
         with:
           image_name: ${{ env.IMAGE_NAME }}
-          commit_tag: ${{ env.COMMIT_TAG }}
+          image_tag: ${{ env.COMMIT_TAG }}
           develop_tag: ${{ env.DEVELOP_TAG }}
           push_image: ${{ env.PUSH_IMAGE }}
           dockerfile_path: ./prover/Dockerfile
           build_args: RUSTFLAGS="-C target-cpu=x86-64-v3"
           build_contexts: prover=prover/
           push_platforms: linux/amd64
+          save_artifact: ${{ env.PUSH_IMAGE == 'false' }}
           artifact_name: linea-prover

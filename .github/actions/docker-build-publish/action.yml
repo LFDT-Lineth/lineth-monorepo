@@ -5,8 +5,8 @@ inputs:
   image_name:
     description: 'Docker image name (e.g., consensys/linea-coordinator)'
     required: true
-  commit_tag:
-    description: 'Image tag for this commit'
+  image_tag:
+    description: 'Docker image tag'
     required: true
   develop_tag:
     description: 'Develop tag (used when on main branch)'
@@ -27,6 +27,10 @@ inputs:
     description: 'Docker build arguments (multiline)'
     required: false
     default: ''
+  build_secrets:
+    description: 'Docker build secrets (one per line, in buildx --secret format: id=mysecret,src=<path> or "id=mysecret,env=VAR_NAME")'
+    required: false
+    default: ''
   build_contexts:
     description: 'Docker build contexts (multiline)'
     required: false
@@ -39,9 +43,14 @@ inputs:
     description: 'Platforms to build for when pushing'
     required: false
     default: 'linux/amd64,linux/arm64'
+  save_artifact:
+    description: 'Whether to save and upload the Docker image as an artifact (only applies when push_image is false)'
+    required: false
+    default: 'false'
   artifact_name:
-    description: 'Name for the uploaded artifact'
-    required: true
+    description: 'Name for the uploaded artifact (required when save_artifact is true)'
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
@@ -50,9 +59,9 @@ runs:
       id: set-tags
       shell: bash
       run: |
-        TAGS="${{ inputs.image_name }}:${{ inputs.commit_tag }}"
+        TAGS="${{ inputs.image_name }}:${{ inputs.image_tag }}"
         if [[ "${{ github.ref }}" == "refs/heads/main" ]] && [[ -n "${{ inputs.develop_tag }}" ]]; then
-          TAGS="${{ inputs.image_name }}:${{ inputs.commit_tag }},${{ inputs.image_name }}:${{ inputs.develop_tag }}"
+          TAGS="${{ inputs.image_name }}:${{ inputs.image_tag }},${{ inputs.image_name }}:${{ inputs.develop_tag }}"
         fi
         echo "tags=$TAGS" >> $GITHUB_OUTPUT
 
@@ -96,18 +105,19 @@ runs:
         platforms: linux/amd64
         load: true
         push: false
-        tags: ${{ inputs.image_name }}:${{ inputs.commit_tag }}
+        tags: ${{ inputs.image_name }}:${{ inputs.image_tag }}
+        secrets: ${{ inputs.build_secrets }}
         build-args: ${{ inputs.build_args }}
         cache-from: ${{ steps.cache-config.outputs.cache_from_test }}
 
     - name: Save Docker image as artifact
-      if: ${{ inputs.push_image == 'false' }}
+      if: ${{ inputs.save_artifact == 'true' }}
       shell: bash
       run: |
-        docker save ${{ inputs.image_name }}:${{ inputs.commit_tag }} | gzip > ${{ inputs.artifact_name }}-docker-image.tar.gz
+        docker save ${{ inputs.image_name }}:${{ inputs.image_tag }} | gzip > ${{ inputs.artifact_name }}-docker-image.tar.gz
 
     - name: Upload Docker image artifact
-      if: ${{ inputs.push_image == 'false' }}
+      if: ${{ inputs.save_artifact == 'true' }}
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.artifact_name }}
@@ -124,6 +134,7 @@ runs:
         platforms: ${{ inputs.push_platforms }}
         push: true
         tags: ${{ steps.set-tags.outputs.tags }}
+        secrets: ${{ inputs.build_secrets }}
         build-args: ${{ inputs.build_args }}
         cache-from: ${{ steps.cache-config.outputs.cache_from_push }}
         cache-to: ${{ steps.cache-config.outputs.cache_to_push }}

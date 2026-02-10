@@ -84,12 +84,13 @@ jobs:
         uses: ./.github/actions/docker-build-publish
         with:
           image_name: ${{ env.IMAGE_NAME }}
-          commit_tag: ${{ env.COMMIT_TAG }}
+          image_tag: ${{ env.COMMIT_TAG }}
           develop_tag: ${{ env.DEVELOP_TAG }}
           push_image: ${{ env.PUSH_IMAGE }}
           dockerfile_path: ./postman/Dockerfile
           build_args: |
             NATIVE_LIBS_RELEASE_TAG=blob-libs-v1.2.0
             NODE_VERSION=${{ steps.get-node-version.outputs.node-version }}
+          save_artifact: ${{ env.PUSH_IMAGE == 'false' }}
           artifact_name: linea-postman
           requires_qemu: ${{ env.PUSH_IMAGE }}

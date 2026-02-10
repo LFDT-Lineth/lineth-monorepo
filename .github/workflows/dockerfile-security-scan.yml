@@ -1,0 +1,35 @@
+name: Weekly Dockerfile Security Scan
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # Every Monday at 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  security-events: write
+  contents: read
+
+jobs:
+  kics-scan:
+    name: KICS Dockerfile Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run KICS
+        uses: checkmarx/kics-github-action@00def9108246ec656aea725db2167522d26a99d2 # v2.1.19
+        with:
+          path: '.'
+          platform_type: Dockerfile
+          output_formats: 'sarif'
+          output_path: kics-results
+          ignore_on_exit: results
+
+      - name: Upload SARIF to GitHub Security
+        if: ${{ !cancelled() && hashFiles('kics-results/results.sarif') != '' }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: kics-results/results.sarif
+          category: kics-dockerfiles

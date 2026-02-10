@@ -43,28 +43,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      # ---------------------------
-      # Dockerfile scanning using KICS (run once per workflow run)
-      # ---------------------------
-      - name: Run KICS (Dockerfile)
-        # The following if makes sure we only run it once to avoid doing identical work twice
-        if: ${{ matrix.environment == 'development' }}
-        uses: checkmarx/kics-github-action@00def9108246ec656aea725db2167522d26a99d2 # v2.1.19
-        with:
-          path: ./bridge-ui/Dockerfile
-          type: Dockerfile
-          output_formats: 'sarif'
-          output_path: kics-results
-          ignore_on_exit: results  # never fail on findings, report only
-
-      - name: Upload KICS SARIF to GitHub Security
-        if: ${{ !cancelled() && matrix.environment == 'development' && hashFiles('kics-results/results.sarif') != '' }}
-        continue-on-error: true  # Don't block build if upload fails
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: kics-results/results.sarif
-          category: kics-bridge-ui-dockerfile
-
       - name: Get version from package.json
         run: |
           VERSION=$(jq -r .version bridge-ui/package.json)
@@ -81,23 +59,21 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1
-
       - name: "Get Node.js version"
         id: get-node-version
         uses: ./.github/actions/get-node-version
 
       - name: Docker Image Build and Publish
         id: docker-build-publish
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
+        uses: ./.github/actions/docker-build-publish
         with:
-          context: .
-          file: ./bridge-ui/Dockerfile
-          platforms: linux/amd64
-          push: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
-          tags: consensys/linea-bridge-ui:${{ env.DOCKER_TAG }}
-          build-args: |
+          docker_context: .
+          dockerfile_path: ./bridge-ui/Dockerfile
+          push_platforms: linux/amd64
+          push_image: ${{ github.ref == 'refs/heads/main' }}
+          image_name: consensys/linea-bridge-ui
+          image_tag: ${{ env.DOCKER_TAG }}
+          build_args: |
             ENV_FILE=./bridge-ui/.env.production
             NEXT_PUBLIC_ENVIRONMENT=${{ env.NEXT_PUBLIC_ENVIRONMENT }}
             NEXT_PUBLIC_WALLET_CONNECT_ID=${{ env.NEXT_PUBLIC_WALLET_CONNECT_ID }}
@@ -114,9 +90,7 @@ jobs:
             NEXT_PUBLIC_ONRAMPER_API_KEY=${{ env.NEXT_PUBLIC_ONRAMPER_API_KEY }}
             NEXT_PUBLIC_LAYERSWAP_API_KEY=${{ env.NEXT_PUBLIC_LAYERSWAP_API_KEY }}
             NODE_VERSION=${{ steps.get-node-version.outputs.node-version }}
-          cache-from: type=registry,ref=consensys/linea-bridge-ui:buildcache
-          cache-to: type=registry,ref=consensys/linea-bridge-ui:buildcache,mode=max
-          secrets: |
+          build_secrets: |
             "revalidate_secret=${{ env.REVALIDATE_SECRET }}"
             "contentful_space_id=${{ secrets.CONTENTFUL_SPACE_ID }}"
         env:
@@ -154,7 +128,7 @@ jobs:
           pnpm-install-options: '--frozen-lockfile --prefer-offline'
 
       - name: Test Build Bridge UI
-        run: pnpm run -F bridge-ui build;
+        run: pnpm run -F bridge-ui... build;
         env:
           NODE_OPTIONS: --max-old-space-size=8192 # Temporary fix for out of memory error
 

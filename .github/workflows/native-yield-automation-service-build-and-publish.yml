@@ -85,11 +85,12 @@ jobs:
         with:
           docker_context: .
           image_name: ${{ env.IMAGE_NAME }}
-          commit_tag: ${{ env.COMMIT_TAG }}
+          image_tag: ${{ env.COMMIT_TAG }}
           develop_tag: ${{ env.DEVELOP_TAG }}
           push_platforms: linux/amd64
           push_image: ${{ env.PUSH_IMAGE }}
           dockerfile_path: ./native-yield-operations/automation-service/Dockerfile
           build_args: NODE_VERSION=${{ steps.get-node-version.outputs.node-version }}
+          save_artifact: ${{ env.PUSH_IMAGE == 'false' }}
           artifact_name: linea-native-yield-automation-service
           requires_qemu: ${{ env.PUSH_IMAGE }}

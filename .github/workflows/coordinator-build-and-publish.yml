@@ -90,10 +90,11 @@ jobs:
         with:
           docker_context: .
           image_name: ${{ env.IMAGE_NAME }}
-          commit_tag: ${{ env.COMMIT_TAG }}
+          image_tag: ${{ env.COMMIT_TAG }}
           develop_tag: ${{ env.DEVELOP_TAG }}
           push_image: ${{ env.PUSH_IMAGE }}
           dockerfile_path: ./coordinator/Dockerfile
           requires_qemu: ${{ env.PUSH_IMAGE }}
           build_contexts: libs=./coordinator/app/build/install/coordinator/lib
+          save_artifact: ${{ env.PUSH_IMAGE == 'false' }}
           artifact_name: linea-coordinator
