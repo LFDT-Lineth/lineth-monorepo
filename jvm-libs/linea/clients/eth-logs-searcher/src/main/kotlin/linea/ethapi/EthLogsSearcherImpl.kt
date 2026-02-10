@@ -1,7 +1,6 @@
 package linea.ethapi
 
 import io.vertx.core.Vertx
-import kotlinx.datetime.Clock
 import linea.EthLogsSearcher
 import linea.SearchDirection
 import linea.domain.BlockParameter
@@ -17,6 +16,7 @@ import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 

@@ -2,8 +2,6 @@ package net.consensys.zkevm.ethereum.coordination.aggregation
 
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import linea.LongRunningService
 import net.consensys.zkevm.domain.BlobCounters
 import net.consensys.zkevm.domain.BlobsToAggregate
@@ -12,8 +10,10 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CompletableFuture
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 class AggregationTriggerCalculatorByDeadline(
   private val config: Config,

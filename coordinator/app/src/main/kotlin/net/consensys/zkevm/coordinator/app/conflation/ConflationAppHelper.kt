@@ -1,7 +1,5 @@
 package net.consensys.zkevm.coordinator.app.conflation
 
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.isDisabled
 import linea.ethapi.EthApiClient
@@ -20,6 +18,8 @@ import net.consensys.zkevm.persistence.BatchesRepository
 import net.consensys.zkevm.persistence.BlobsRepository
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 object ConflationAppHelper {
   /**

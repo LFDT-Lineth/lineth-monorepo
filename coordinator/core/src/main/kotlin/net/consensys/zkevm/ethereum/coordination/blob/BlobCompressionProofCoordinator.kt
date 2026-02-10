@@ -2,7 +2,6 @@ package net.consensys.zkevm.ethereum.coordination.blob
 
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
-import kotlinx.datetime.Instant
 import linea.LongRunningService
 import linea.domain.BlockIntervals
 import linea.domain.toBlockIntervalsString
@@ -19,6 +18,7 @@ import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.LinkedBlockingDeque
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 class BlobCompressionProofCoordinator(
   private val vertx: Vertx,

@@ -1,6 +1,6 @@
 package linea.kotlin
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 fun Instant.trimToMillisecondPrecision(): Instant {
   return Instant.fromEpochMilliseconds(this.toEpochMilliseconds())

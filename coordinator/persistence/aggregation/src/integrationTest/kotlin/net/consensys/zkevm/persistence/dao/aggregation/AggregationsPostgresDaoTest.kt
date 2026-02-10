@@ -3,8 +3,6 @@ package net.consensys.zkevm.persistence.dao.aggregation
 import io.vertx.junit5.VertxExtension
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.RowSet
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import linea.domain.BlockIntervals
 import linea.kotlin.trimToSecondPrecision
 import net.consensys.FakeFixedClock
@@ -34,6 +32,8 @@ import org.junit.jupiter.api.extension.ExtendWith
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 @ExtendWith(VertxExtension::class)
 class AggregationsPostgresDaoTest : CleanDbTestSuiteParallel() {

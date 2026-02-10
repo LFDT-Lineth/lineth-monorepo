@@ -1,7 +1,6 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
-import kotlinx.datetime.Instant
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.traces.TracesCounters
 import net.consensys.linea.traces.TracesCountersV2
@@ -14,6 +13,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
+import kotlin.time.Instant
 
 class ConflationCalculatorByExecutionTracesTest {
   private val tracesLimit = fakeTracesCountersV2(100u)

@@ -1,11 +1,11 @@
 package net.consensys.zkevm.ethereum.coordination.aggregation
 
-import kotlinx.datetime.Instant
 import net.consensys.zkevm.domain.BlobsToAggregate
 import net.consensys.zkevm.domain.blobCounters
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import kotlin.time.Instant
 
 class AggregationTriggerCalculatorByTimestampHardForkTest {
   private val baseTimestamp = Instant.parse("2023-01-01T10:00:00Z")

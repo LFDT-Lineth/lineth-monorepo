@@ -1,6 +1,5 @@
 package net.consensys.zkevm.ethereum.coordination.aggregation
 
-import kotlinx.datetime.Instant
 import net.consensys.zkevm.domain.BlobCounters
 import net.consensys.zkevm.domain.BlobsToAggregate
 import org.assertj.core.api.Assertions.assertThat
@@ -9,6 +8,7 @@ import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import kotlin.random.Random
 import kotlin.random.nextULong
+import kotlin.time.Instant
 
 class AggregationTriggerCalculatorByProofLimitTest {
 

@@ -3,7 +3,6 @@ package net.consensys.linea.transactionexclusion.service
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
-import kotlinx.datetime.Clock
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.transactionexclusion.ErrorType
 import net.consensys.linea.transactionexclusion.RejectedTransaction
@@ -14,6 +13,7 @@ import net.consensys.linea.transactionexclusion.metrics.LineaMetricsCategory
 import net.consensys.zkevm.persistence.dao.rejectedtransaction.RejectedTransactionsDao
 import net.consensys.zkevm.persistence.db.DuplicatedRecordException
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Clock
 import kotlin.time.Duration
 
 class TransactionExclusionServiceV1Impl(

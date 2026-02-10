@@ -1,8 +1,8 @@
 package net.consensys.zkevm.domain
 
-import kotlinx.datetime.Instant
 import linea.domain.BlockInterval
 import linea.domain.BlockIntervals
+import kotlin.time.Instant
 
 typealias BlobsToAggregate = BlockInterval
 

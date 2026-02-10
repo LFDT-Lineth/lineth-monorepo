@@ -1,7 +1,7 @@
 package linea.staterecovery
 
-import kotlinx.datetime.Instant
 import linea.kotlin.encodeHex
+import kotlin.time.Instant
 
 data class BlockHeaderFromL1RecoveredData(
   val blockNumber: ULong,

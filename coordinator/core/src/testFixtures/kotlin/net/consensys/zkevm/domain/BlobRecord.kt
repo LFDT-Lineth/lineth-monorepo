@@ -1,8 +1,6 @@
 package net.consensys.zkevm.domain
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import linea.blob.ShnarfCalculatorVersion
 import linea.domain.BlockIntervals
 import linea.kotlin.setFirstByteToZero
@@ -14,6 +12,8 @@ import net.consensys.zkevm.domain.Constants.LINEA_BLOCK_INTERVAL
 import net.consensys.zkevm.ethereum.coordination.blob.BlobShnarfCalculator
 import net.consensys.zkevm.ethereum.coordination.blob.GoBackedBlobShnarfCalculator
 import kotlin.random.Random
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 private val meterRegistry = SimpleMeterRegistry()
 private val metricsFacade: MetricsFacade =

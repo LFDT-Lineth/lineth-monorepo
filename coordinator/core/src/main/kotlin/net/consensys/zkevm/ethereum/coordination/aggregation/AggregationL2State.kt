@@ -1,6 +1,6 @@
 package net.consensys.zkevm.ethereum.coordination.aggregation
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 data class AggregationL2State(
   val parentAggregationLastBlockTimestamp: Instant,

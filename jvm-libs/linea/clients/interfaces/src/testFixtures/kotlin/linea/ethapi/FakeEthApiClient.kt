@@ -1,6 +1,5 @@
 package linea.ethapi
 
-import kotlinx.datetime.Instant
 import linea.domain.Block
 import linea.domain.BlockParameter
 import linea.domain.BlockWithTxHashes
@@ -19,6 +18,7 @@ import java.math.BigInteger
 import kotlin.random.Random
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 class FakeEthApiClient(
   initialLogsDb: Set<EthLog> = emptySet(),

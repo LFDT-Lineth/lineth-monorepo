@@ -1,6 +1,5 @@
 package net.consensys.zkevm.ethereum.finalization
 
-import kotlinx.datetime.Clock
 import net.consensys.zkevm.coordinator.clients.smartcontract.LineaSmartContractClient
 import net.consensys.zkevm.domain.BlobRecord
 import net.consensys.zkevm.domain.FinalizationSubmittedEvent
@@ -11,6 +10,7 @@ import org.apache.logging.log4j.LogManager
 import org.web3j.tx.exceptions.ContractCallException
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.function.Consumer
+import kotlin.time.Clock
 
 interface AggregationSubmitter {
   /**

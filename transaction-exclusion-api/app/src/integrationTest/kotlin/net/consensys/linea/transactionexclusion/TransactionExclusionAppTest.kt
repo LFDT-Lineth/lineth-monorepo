@@ -6,7 +6,6 @@ import io.restassured.builder.RequestSpecBuilder
 import io.restassured.http.ContentType
 import io.restassured.specification.RequestSpecification
 import io.vertx.junit5.VertxExtension
-import kotlinx.datetime.Clock
 import linea.kotlin.encodeHex
 import linea.kotlin.trimToMillisecondPrecision
 import net.consensys.linea.async.get
@@ -28,6 +27,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.time.Duration
 import kotlin.random.Random
+import kotlin.time.Clock
 
 @ExtendWith(VertxExtension::class)
 class TransactionExclusionAppTest : CleanDbTestSuiteParallel() {

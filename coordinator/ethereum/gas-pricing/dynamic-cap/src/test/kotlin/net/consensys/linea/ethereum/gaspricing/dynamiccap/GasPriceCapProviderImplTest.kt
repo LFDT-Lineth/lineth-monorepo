@@ -1,8 +1,6 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
 import io.vertx.junit5.VertxExtension
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import linea.domain.BlockWithTxHashes
 import linea.domain.gas.GasPriceCaps
 import linea.ethapi.EthApiBlockClient
@@ -15,8 +13,10 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Instant
 
 @ExtendWith(VertxExtension::class)
 class GasPriceCapProviderImplTest {

@@ -3,7 +3,6 @@ package net.consensys.zkevm.ethereum.coordination.conflation
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import io.vertx.core.Vertx
-import kotlinx.datetime.Instant
 import linea.domain.Block
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.errors.ErrorResponse
@@ -18,6 +17,7 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.Callable
+import kotlin.time.Instant
 
 class BlockToBatchSubmissionCoordinator(
   private val conflationService: ConflationService,

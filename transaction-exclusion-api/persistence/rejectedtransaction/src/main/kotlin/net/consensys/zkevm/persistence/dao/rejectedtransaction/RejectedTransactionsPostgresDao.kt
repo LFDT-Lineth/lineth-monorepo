@@ -5,8 +5,6 @@ import io.vertx.core.Future
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import linea.kotlin.encodeHex
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.transactionexclusion.ModuleOverflow
@@ -18,6 +16,8 @@ import net.consensys.zkevm.persistence.db.isDuplicateKeyException
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 class RejectedTransactionsPostgresDao(
   private val readConnection: SqlClient,

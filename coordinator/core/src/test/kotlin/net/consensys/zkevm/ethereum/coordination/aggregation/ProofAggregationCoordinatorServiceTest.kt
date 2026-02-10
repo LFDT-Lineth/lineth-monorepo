@@ -3,8 +3,6 @@ package net.consensys.zkevm.ethereum.coordination.aggregation
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import linea.domain.BlockIntervals
 import linea.kotlin.trimToSecondPrecision
 import net.consensys.linea.metrics.MetricsFacade
@@ -33,8 +31,10 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
 import java.util.function.Supplier
 import kotlin.random.Random
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 import kotlin.time.toJavaDuration
 
 @ExtendWith(VertxExtension::class)

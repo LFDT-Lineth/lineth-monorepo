@@ -1,6 +1,5 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
-import kotlinx.datetime.Instant
 import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.linea.traces.fakeTracesCountersV2
 import net.consensys.zkevm.domain.BlockCounters
@@ -8,6 +7,7 @@ import net.consensys.zkevm.domain.ConflationTrigger
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import kotlin.time.Instant
 
 class TimestampHardForkConflationCalculatorTest {
   private val baseTimestamp = Instant.parse("2023-01-01T10:00:00Z")

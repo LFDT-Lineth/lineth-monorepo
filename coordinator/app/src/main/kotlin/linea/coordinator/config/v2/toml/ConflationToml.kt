@@ -1,6 +1,5 @@
 package linea.coordinator.config.v2.toml
 
-import kotlinx.datetime.Instant
 import linea.blob.BlobCompressorVersion
 import linea.coordinator.config.v2.ConflationConfig
 import net.consensys.linea.traces.TracesCountersV2
@@ -10,6 +9,7 @@ import java.net.URL
 import java.nio.file.Path
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 data class ConflationToml(
   val disabled: Boolean = false,

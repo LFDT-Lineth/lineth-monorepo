@@ -1,7 +1,6 @@
 package net.consensys.zkevm.ethereum.coordination.aggregation
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
-import kotlinx.datetime.Instant
 import linea.domain.BlockHeaderSummary
 import linea.kotlin.ByteArrayExt
 import net.consensys.FakeFixedClock
@@ -36,6 +35,7 @@ import kotlin.random.Random
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 class GlobalAggregationCalculatorTest {
   private lateinit var fixedClock: FakeFixedClock

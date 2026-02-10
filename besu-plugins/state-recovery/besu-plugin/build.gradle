@@ -28,7 +28,6 @@ ext.groupsToIncludeInShadow = [
   "io.vertx:vertx-web-client",
   "io.vertx:vertx-uri-template",
   "org.jetbrains.kotlin:kotlin-reflect.*",
-  "org.jetbrains.kotlinx:kotlinx-datetime.*",
   "tech.pegasys.teku.internal:async",
   "com.michael-bull.kotlin-result:kotlin-result.*",
   "com.fasterxml.jackson.module:jackson-module-kotlin",

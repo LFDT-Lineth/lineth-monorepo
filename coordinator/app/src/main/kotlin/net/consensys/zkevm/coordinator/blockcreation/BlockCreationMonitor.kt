@@ -1,7 +1,6 @@
 package net.consensys.zkevm.coordinator.blockcreation
 
 import io.vertx.core.Vertx
-import kotlinx.datetime.Instant
 import linea.domain.Block
 import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.ethapi.EthApiBlockClient
@@ -19,6 +18,7 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Instant
 
 class BlockCreationMonitor(
   private val vertx: Vertx,

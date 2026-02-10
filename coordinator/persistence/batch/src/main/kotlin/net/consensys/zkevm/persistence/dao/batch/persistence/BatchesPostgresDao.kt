@@ -4,7 +4,6 @@ import io.vertx.core.Future
 import io.vertx.pgclient.PgException
 import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
-import kotlinx.datetime.Clock
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.zkevm.domain.Batch
 import net.consensys.zkevm.persistence.db.DuplicatedRecordException
@@ -12,6 +11,7 @@ import net.consensys.zkevm.persistence.db.SQLQueryLogger
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Clock
 
 class BatchesPostgresDao(
   connection: SqlClient,

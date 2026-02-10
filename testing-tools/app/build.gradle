@@ -39,5 +39,4 @@ dependencies {
   testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
   testImplementation 'org.junit.jupiter:junit-jupiter:5.9.2'
   testImplementation "org.jetbrains.kotlin:kotlin-test-junit:${libs.versions.kotlin.get()}"
-  implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
 }

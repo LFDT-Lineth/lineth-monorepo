@@ -1,7 +1,5 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import linea.LongRunningService
 import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.domain.ConflationTrigger
@@ -12,8 +10,10 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.Timer
 import java.util.concurrent.CompletableFuture
 import kotlin.concurrent.timer
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 class DeadlineConflationCalculatorRunner(
   private val conflationDeadlineCheckInterval: Duration,

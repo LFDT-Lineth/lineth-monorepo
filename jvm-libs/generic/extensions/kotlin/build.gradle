@@ -6,7 +6,6 @@ plugins {
 description = "Basic Kotlin types extensions"
 
 dependencies {
-  api "org.jetbrains.kotlinx:kotlinx-datetime:${libs.versions.kotlinxDatetime.get()}"
 }
 
 jar {

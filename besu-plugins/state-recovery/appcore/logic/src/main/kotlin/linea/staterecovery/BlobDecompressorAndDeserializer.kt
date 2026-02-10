@@ -1,8 +1,6 @@
 package linea.staterecovery
 
 import io.vertx.core.Vertx
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import linea.domain.BinaryDecoder
 import linea.domain.CommonDomainFunctions
 import linea.kotlin.decodeHex
@@ -17,6 +15,8 @@ import org.hyperledger.besu.ethereum.core.Block
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.Callable
 import kotlin.jvm.optionals.getOrNull
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 interface BlobDecompressorAndDeserializer {
   /**

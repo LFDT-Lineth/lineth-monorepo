@@ -1,6 +1,5 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
-import kotlinx.datetime.Instant
 import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.linea.traces.fakeTracesCountersV2
 import net.consensys.zkevm.domain.BlockCounters
@@ -17,6 +16,7 @@ import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Instant
 
 class GlobalBlockConflationCalculatorTest {
   private lateinit var calculatorByDealine: DeferredTriggerConflationCalculator

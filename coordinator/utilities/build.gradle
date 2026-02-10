@@ -5,7 +5,6 @@ plugins {
 dependencies {
   implementation project(':jvm-libs:generic:extensions:futures')
   implementation project(':jvm-libs:generic:errors')
-  implementation "org.jetbrains.kotlinx:kotlinx-datetime:${libs.versions.kotlinxDatetime.get()}"
   implementation "io.vertx:vertx-core"
   implementation "com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}"
   implementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"

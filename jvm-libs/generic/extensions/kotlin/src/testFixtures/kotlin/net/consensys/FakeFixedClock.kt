@@ -1,7 +1,7 @@
 package net.consensys
 
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /**
  * Kotlin Clock Mocking class to make unittest easier and less boilerplate

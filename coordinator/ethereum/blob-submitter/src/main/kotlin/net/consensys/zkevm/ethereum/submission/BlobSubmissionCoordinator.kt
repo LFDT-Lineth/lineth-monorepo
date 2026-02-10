@@ -1,7 +1,6 @@
 package net.consensys.zkevm.ethereum.submission
 
 import io.vertx.core.Vertx
-import kotlinx.datetime.Clock
 import linea.domain.filterOutWithEndBlockNumberBefore
 import linea.domain.toBlockIntervals
 import linea.domain.toBlockIntervalsString
@@ -22,6 +21,7 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.function.Consumer
+import kotlin.time.Clock
 import kotlin.time.Duration
 
 class BlobSubmissionCoordinator(

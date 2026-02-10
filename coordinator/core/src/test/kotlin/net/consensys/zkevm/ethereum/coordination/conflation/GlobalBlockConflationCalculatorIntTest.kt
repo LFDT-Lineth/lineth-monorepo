@@ -1,6 +1,5 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
-import kotlinx.datetime.Instant
 import linea.domain.BlockHeaderSummary
 import linea.kotlin.ByteArrayExt
 import net.consensys.FakeFixedClock
@@ -23,6 +22,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 class GlobalBlockConflationCalculatorIntTest {
   // NOTE: this breaks the test isolation, but adds some confidence that the integration works

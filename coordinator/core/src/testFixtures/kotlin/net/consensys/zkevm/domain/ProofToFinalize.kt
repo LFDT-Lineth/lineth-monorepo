@@ -1,11 +1,11 @@
 package net.consensys.zkevm.domain
 
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import linea.kotlin.setFirstByteToZero
 import linea.kotlin.trimToSecondPrecision
 import kotlin.random.Random
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 fun createProofToFinalize(
   firstBlockNumber: Long,

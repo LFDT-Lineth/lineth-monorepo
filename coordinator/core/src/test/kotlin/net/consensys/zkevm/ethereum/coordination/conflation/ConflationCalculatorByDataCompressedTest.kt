@@ -1,6 +1,5 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
-import kotlinx.datetime.Instant
 import net.consensys.linea.traces.fakeTracesCountersV2
 import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.domain.ConflationTrigger
@@ -15,6 +14,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import kotlin.random.Random
+import kotlin.time.Instant
 
 class ConflationCalculatorByDataCompressedTest {
   private lateinit var calculator: ConflationCalculatorByDataCompressed

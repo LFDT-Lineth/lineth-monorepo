@@ -1,9 +1,9 @@
 package linea.kotlin
 
-import kotlinx.datetime.Instant
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.time.Duration.Companion.nanoseconds
+import kotlin.time.Instant
 
 class InstantExtensionsTest {
 

@@ -8,8 +8,6 @@ import com.github.michaelbull.result.Ok
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import linea.domain.BlockIntervals
 import linea.kotlin.ByteArrayExt
 import net.consensys.linea.traces.TracesCountersV2
@@ -44,8 +42,10 @@ import org.mockito.kotlin.whenever
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.nio.file.Path
 import kotlin.random.Random
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 import kotlin.time.toJavaDuration
 
 @ExtendWith(VertxExtension::class)

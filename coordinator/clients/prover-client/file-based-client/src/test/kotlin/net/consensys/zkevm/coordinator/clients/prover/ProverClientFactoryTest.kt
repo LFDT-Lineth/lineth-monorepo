@@ -4,7 +4,6 @@ import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import kotlinx.datetime.Clock
 import linea.domain.BlockIntervals
 import linea.kotlin.ByteArrayExt
 import net.consensys.linea.metrics.MetricsFacade
@@ -20,6 +19,7 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.random.Random
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration

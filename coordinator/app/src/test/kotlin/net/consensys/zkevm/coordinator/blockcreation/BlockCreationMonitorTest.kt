@@ -3,8 +3,6 @@ package net.consensys.zkevm.coordinator.blockcreation
 import build.linea.s11n.jackson.ethApiObjectMapper
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import linea.domain.Block
 import linea.domain.createBlock
 import linea.domain.toEthGetBlockResponse
@@ -32,9 +30,11 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 import kotlin.time.toJavaDuration
 
 @ExtendWith(VertxExtension::class)

@@ -1,10 +1,10 @@
 package build.linea.s11n.jackson
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import kotlinx.datetime.Instant
 import net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import kotlin.time.Instant
 
 class InstantISO8601SerDeTest {
   private lateinit var objectMapper: ObjectMapper

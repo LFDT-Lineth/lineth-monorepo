@@ -2,7 +2,6 @@ package net.consensys.zkevm.persistence.dao.aggregation
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import kotlinx.datetime.Instant
 import linea.domain.BlockIntervals
 import net.consensys.FakeFixedClock
 import net.consensys.zkevm.domain.BlobAndBatchCounters
@@ -20,6 +19,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 @ExtendWith(VertxExtension::class)
 class RetryingPostgresAggregationsDaoTest {

@@ -9,11 +9,11 @@ import com.sksamuel.hoplite.StringNode
 import com.sksamuel.hoplite.decoder.Decoder
 import com.sksamuel.hoplite.fp.invalid
 import com.sksamuel.hoplite.fp.valid
-import kotlinx.datetime.Instant
 import linea.coordinator.config.v2.toml.SignerConfigToml
 import linea.kotlin.decodeHex
 import kotlin.reflect.KType
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 class TomlByteArrayHexDecoder : Decoder<ByteArray> {
   override fun decode(node: Node, type: KType, context: DecoderContext): ConfigResult<ByteArray> {

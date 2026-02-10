@@ -1,10 +1,10 @@
 package net.consensys.zkevm.ethereum.coordination.aggregation
 
-import kotlinx.datetime.Instant
 import net.consensys.zkevm.domain.BlobCounters
 import net.consensys.zkevm.domain.BlobsToAggregate
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
+import kotlin.time.Instant
 
 /**
  * Aggregation trigger calculator that triggers on timestamp-based hard forks.

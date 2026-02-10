@@ -4,7 +4,6 @@ import io.vertx.junit5.VertxExtension
 import io.vertx.sqlclient.PreparedQuery
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.RowSet
-import kotlinx.datetime.Clock
 import net.consensys.FakeFixedClock
 import net.consensys.linea.async.get
 import net.consensys.zkevm.domain.createAggregation
@@ -26,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Clock
 
 @ExtendWith(VertxExtension::class)
 class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {

@@ -2,8 +2,8 @@ package net.consensys.zkevm.coordinator.clients.prover.serialization
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import kotlinx.datetime.Instant
 import net.consensys.zkevm.domain.ProofToFinalize
+import kotlin.time.Instant
 
 data class ProofToFinalizeJsonResponse(
   @JsonSerialize(using = ByteArraySerializer::class)

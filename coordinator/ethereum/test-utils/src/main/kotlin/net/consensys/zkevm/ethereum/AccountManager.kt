@@ -2,7 +2,6 @@ package net.consensys.zkevm.ethereum
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import kotlinx.datetime.Clock
 import linea.domain.BlockParameter
 import linea.ethapi.EthApiClient
 import linea.kotlin.decodeHex
@@ -24,6 +23,7 @@ import java.io.File
 import java.math.BigInteger
 import java.nio.file.Path
 import kotlin.concurrent.timer
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds

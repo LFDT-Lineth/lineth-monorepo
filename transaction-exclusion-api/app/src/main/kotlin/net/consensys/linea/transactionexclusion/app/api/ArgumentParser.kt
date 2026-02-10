@@ -1,6 +1,5 @@
 package net.consensys.linea.transactionexclusion.app.api
 
-import kotlinx.datetime.Instant
 import linea.kotlin.assertIs32Bytes
 import linea.kotlin.decodeHex
 import net.consensys.linea.transactionexclusion.ModuleOverflow
@@ -12,6 +11,7 @@ import org.hyperledger.besu.ethereum.core.encoding.EncodingContext
 import org.hyperledger.besu.ethereum.core.encoding.TransactionDecoder
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+import kotlin.time.Instant
 
 const val MAX_REASON_MESSAGE_STR_LEN = 1024
 

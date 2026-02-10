@@ -18,7 +18,6 @@ dependencies {
   api project(':jvm-libs:generic:errors')
   api project(':jvm-libs:generic:extensions:kotlin')
   api project(':jvm-libs:generic:extensions:futures')
-  api "org.jetbrains.kotlinx:kotlinx-datetime:${libs.versions.kotlinxDatetime.get()}"
 
   testFixturesImplementation project(':jvm-libs:linea:metrics:micrometer')
   testImplementation(project(':jvm-libs:generic:logging'))

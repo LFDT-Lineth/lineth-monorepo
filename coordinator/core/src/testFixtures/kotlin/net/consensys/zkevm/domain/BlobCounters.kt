@@ -1,9 +1,9 @@
 package net.consensys.zkevm.domain
 
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import net.consensys.zkevm.domain.Constants.LINEA_BLOCK_INTERVAL
 import kotlin.random.Random
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 fun blobCounters(
   startBlockNumber: ULong,

@@ -1,7 +1,5 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import linea.domain.BlockHeaderSummary
 import linea.kotlin.ByteArrayExt
 import net.consensys.linea.traces.fakeTracesCountersV2
@@ -23,8 +21,10 @@ import org.mockito.kotlin.spy
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 import kotlin.time.toJavaDuration
 
 class ConflationCalculatorByTimeDeadlineTest {

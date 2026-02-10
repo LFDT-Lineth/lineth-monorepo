@@ -4,7 +4,6 @@ import io.vertx.junit5.VertxExtension
 import io.vertx.sqlclient.PreparedQuery
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.RowSet
-import kotlinx.datetime.Instant
 import net.consensys.FakeFixedClock
 import net.consensys.linea.async.get
 import net.consensys.zkevm.domain.Batch
@@ -22,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ExecutionException
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 @ExtendWith(VertxExtension::class)
 class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {

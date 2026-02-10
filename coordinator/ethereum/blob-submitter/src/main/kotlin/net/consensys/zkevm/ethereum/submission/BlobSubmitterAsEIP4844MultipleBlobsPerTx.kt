@@ -1,6 +1,5 @@
 package net.consensys.zkevm.ethereum.submission
 
-import kotlinx.datetime.Clock
 import linea.domain.BlockIntervalData
 import linea.domain.toBlockIntervalsString
 import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
@@ -11,6 +10,7 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.function.Consumer
+import kotlin.time.Clock
 
 class BlobSubmitterAsEIP4844MultipleBlobsPerTx(
   private val contract: LineaRollupSmartContractClient,

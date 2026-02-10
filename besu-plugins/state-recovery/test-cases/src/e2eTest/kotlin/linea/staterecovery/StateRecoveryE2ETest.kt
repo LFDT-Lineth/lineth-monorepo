@@ -5,7 +5,6 @@ import build.linea.clients.StateManagerV1JsonRpcClient
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import kotlinx.datetime.Clock
 import linea.domain.EthLogEvent
 import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.decodeHex
@@ -36,6 +35,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds

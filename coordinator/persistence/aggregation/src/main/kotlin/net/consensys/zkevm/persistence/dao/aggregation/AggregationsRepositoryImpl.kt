@@ -1,12 +1,12 @@
 package net.consensys.zkevm.persistence.dao.aggregation
 
-import kotlinx.datetime.Instant
 import net.consensys.zkevm.domain.Aggregation
 import net.consensys.zkevm.domain.BlobAndBatchCounters
 import net.consensys.zkevm.domain.ProofToFinalize
 import net.consensys.zkevm.persistence.AggregationsRepository
 import net.consensys.zkevm.persistence.db.DuplicatedRecordException
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Instant
 
 class AggregationsRepositoryImpl(
   private val aggregationsPostgresDao: AggregationsDao,

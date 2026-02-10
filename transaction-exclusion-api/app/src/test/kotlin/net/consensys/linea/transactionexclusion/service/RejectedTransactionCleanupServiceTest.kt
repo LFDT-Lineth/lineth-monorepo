@@ -4,7 +4,6 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
-import kotlinx.datetime.Clock
 import net.consensys.FakeFixedClock
 import net.consensys.zkevm.persistence.dao.rejectedtransaction.RejectedTransactionsDao
 import org.awaitility.Awaitility
@@ -20,6 +19,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.TimeUnit
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.toJavaDuration

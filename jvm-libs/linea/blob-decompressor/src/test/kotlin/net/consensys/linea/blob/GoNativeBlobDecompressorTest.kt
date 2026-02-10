@@ -1,6 +1,5 @@
 package net.consensys.linea.blob
 
-import kotlinx.datetime.Instant
 import linea.blob.BlobCompressor
 import linea.blob.BlobCompressorVersion
 import linea.blob.GoBackedBlobCompressor
@@ -24,6 +23,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import java.math.BigInteger
 import kotlin.jvm.optionals.getOrNull
+import kotlin.time.Instant
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class GoNativeBlobDecompressorTest {

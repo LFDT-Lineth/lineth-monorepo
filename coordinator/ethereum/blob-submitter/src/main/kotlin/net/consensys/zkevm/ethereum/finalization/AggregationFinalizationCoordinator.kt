@@ -1,7 +1,6 @@
 package net.consensys.zkevm.ethereum.finalization
 
 import io.vertx.core.Vertx
-import kotlinx.datetime.Clock
 import linea.kotlin.trimToMinutePrecision
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
@@ -15,6 +14,7 @@ import net.consensys.zkevm.persistence.BlobsRepository
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Clock
 import kotlin.time.Duration
 
 class AggregationFinalizationCoordinator(

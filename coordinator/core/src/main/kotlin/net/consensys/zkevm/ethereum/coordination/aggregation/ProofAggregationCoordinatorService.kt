@@ -1,8 +1,6 @@
 package net.consensys.zkevm.ethereum.coordination.aggregation
 
 import io.vertx.core.Vertx
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import linea.LongRunningService
 import linea.contract.l2.L2MessageServiceSmartContractClientReadOnly
 import linea.domain.BlockIntervals
@@ -28,8 +26,10 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.function.Consumer
 import java.util.function.Supplier
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 class ProofAggregationCoordinatorService(
   private val vertx: Vertx,

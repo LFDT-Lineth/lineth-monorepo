@@ -7,7 +7,6 @@ description="Linea domain models"
 
 dependencies {
   implementation project(":jvm-libs:generic:extensions:kotlin")
-  testFixturesApi "org.jetbrains.kotlinx:kotlinx-datetime:${libs.versions.kotlinxDatetime.get()}"
   testFixturesApi project(":jvm-libs:linea:besu-libs")
   testFixturesApi project(":jvm-libs:generic:extensions:kotlin")
 }

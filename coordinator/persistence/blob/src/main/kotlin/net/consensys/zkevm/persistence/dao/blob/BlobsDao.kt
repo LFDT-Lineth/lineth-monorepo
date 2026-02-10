@@ -1,8 +1,8 @@
 package net.consensys.zkevm.persistence.dao.blob
 
-import kotlinx.datetime.Instant
 import net.consensys.zkevm.domain.BlobRecord
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Instant
 
 interface BlobsDao {
   fun saveNewBlob(blobRecord: BlobRecord): SafeFuture<Unit>

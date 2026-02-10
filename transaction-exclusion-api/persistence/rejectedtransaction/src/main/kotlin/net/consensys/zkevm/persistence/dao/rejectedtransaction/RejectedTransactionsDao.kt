@@ -1,8 +1,8 @@
 package net.consensys.zkevm.persistence.dao.rejectedtransaction
 
-import kotlinx.datetime.Instant
 import net.consensys.linea.transactionexclusion.RejectedTransaction
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Instant
 
 interface RejectedTransactionsDao {
   fun saveNewRejectedTransaction(rejectedTransaction: RejectedTransaction): SafeFuture<Unit>

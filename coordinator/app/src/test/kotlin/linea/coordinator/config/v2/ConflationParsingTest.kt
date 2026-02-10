@@ -1,7 +1,6 @@
 package linea.coordinator.config.v2
 
 import com.sksamuel.hoplite.ConfigException
-import kotlinx.datetime.Instant
 import linea.coordinator.config.v2.toml.ConflationToml
 import linea.coordinator.config.v2.toml.parseConfig
 import linea.kotlin.toURL
@@ -9,6 +8,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 class ConflationParsingTest {
   companion object {

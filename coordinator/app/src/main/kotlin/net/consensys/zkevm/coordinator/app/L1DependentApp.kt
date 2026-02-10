@@ -2,7 +2,6 @@ package net.consensys.zkevm.coordinator.app
 
 import io.vertx.core.Vertx
 import io.vertx.sqlclient.SqlClient
-import kotlinx.datetime.Clock
 import linea.LongRunningService
 import linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
@@ -68,6 +67,7 @@ import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 

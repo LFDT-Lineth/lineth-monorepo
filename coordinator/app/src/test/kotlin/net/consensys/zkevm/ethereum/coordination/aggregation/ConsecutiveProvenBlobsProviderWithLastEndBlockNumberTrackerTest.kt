@@ -1,6 +1,5 @@
 package net.consensys.zkevm.ethereum.coordination.aggregation
 
-import kotlinx.datetime.Instant
 import linea.domain.BlockIntervals
 import net.consensys.zkevm.domain.BlobAndBatchCounters
 import net.consensys.zkevm.domain.BlobCounters
@@ -12,6 +11,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.random.Random
+import kotlin.time.Instant
 
 class ConsecutiveProvenBlobsProviderWithLastEndBlockNumberTrackerTest {
   @Test

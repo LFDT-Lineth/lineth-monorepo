@@ -1,10 +1,10 @@
 package net.consensys.zkevm.ethereum.coordination.aggregation
 
-import kotlinx.datetime.Instant
 import linea.contract.l2.L2MessageServiceSmartContractClientReadOnly
 import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.ethapi.EthApiClient
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Instant
 
 interface AggregationL2StateProvider {
   fun getAggregationL2State(blockNumber: Long): SafeFuture<AggregationL2State>

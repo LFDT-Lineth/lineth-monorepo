@@ -1,7 +1,7 @@
 package linea.domain
 
-import kotlinx.datetime.Instant
 import linea.kotlin.encodeHex
+import kotlin.time.Instant
 
 typealias Block = BlockData<Transaction>
 typealias BlockWithTxHashes = BlockData<ByteArray>

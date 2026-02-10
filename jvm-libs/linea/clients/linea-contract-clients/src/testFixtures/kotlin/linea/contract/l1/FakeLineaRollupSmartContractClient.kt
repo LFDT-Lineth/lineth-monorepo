@@ -1,12 +1,12 @@
 package linea.contract.l1
 
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import linea.domain.BlockParameter
 import linea.kotlin.encodeHex
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.random.Random
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 data class FinalizedBlock(
   val number: ULong,

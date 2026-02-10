@@ -3,10 +3,10 @@ package build.linea.s11n.jackson
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import kotlinx.datetime.Instant
 import net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import kotlin.time.Instant
 
 class InstantAsHexNumberSerDeTest {
   private lateinit var objectMapper: ObjectMapper

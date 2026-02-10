@@ -1,7 +1,5 @@
 package net.consensys.zkevm.ethereum.coordination.aggregation
 
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import linea.domain.BlockHeaderSummary
 import linea.kotlin.ByteArrayExt
 import net.consensys.FakeFixedClock
@@ -14,9 +12,11 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.random.Random
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 
 class AggregationTriggerCalculatorByDeadlineTest {
   @Test

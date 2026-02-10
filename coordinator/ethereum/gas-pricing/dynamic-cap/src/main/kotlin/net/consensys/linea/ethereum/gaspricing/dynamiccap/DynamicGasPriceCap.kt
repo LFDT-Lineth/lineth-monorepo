@@ -1,15 +1,10 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
-import kotlinx.datetime.DayOfWeek
 import linea.domain.FeeHistory
 import linea.kotlin.toGWei
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import java.time.DayOfWeek
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.days
-
-const val MAX_REWARD_PERCENTILES_SIZE = 10
-const val MAX_FEE_HISTORY_BLOCK_COUNT = 1024U
-val MAX_FEE_HISTORIES_STORAGE_PERIOD = 30.days
 
 data class PercentileGasFees(
   val percentileBaseFeePerGas: ULong,

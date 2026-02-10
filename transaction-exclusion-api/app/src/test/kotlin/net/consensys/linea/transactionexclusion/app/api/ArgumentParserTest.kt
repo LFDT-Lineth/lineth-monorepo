@@ -1,7 +1,6 @@
 package net.consensys.linea.transactionexclusion.app.api
 
 import io.vertx.core.json.JsonObject
-import kotlinx.datetime.Instant
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import net.consensys.linea.transactionexclusion.ModuleOverflow
@@ -12,6 +11,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.random.Random
+import kotlin.time.Instant
 
 class ArgumentParserTest {
   @Test
