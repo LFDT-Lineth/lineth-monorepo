@@ -57,7 +57,7 @@ jobs:
           path: tracer/arithmetization/build/libs
 
       - name: Run Spotless Check
-        run: ./gradlew --no-daemon --parallel :tracer:clean :tracer:spotlessCheck
+        run: ./gradlew spotlessCheck
 
       - name: Compile all Java/Kotlin code in tracer module
         run: ./gradlew :tracer:classes :tracer:testClasses

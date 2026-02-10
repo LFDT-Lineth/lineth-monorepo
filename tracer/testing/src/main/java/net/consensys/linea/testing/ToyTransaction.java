@@ -30,8 +30,8 @@ import org.hyperledger.besu.crypto.CodeDelegationSignature;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECPSignature;
 import org.hyperledger.besu.datatypes.*;
-import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.CodeDelegation;
+import org.hyperledger.besu.ethereum.core.Transaction;
 
 @Builder
 public class ToyTransaction {
@@ -93,8 +93,10 @@ public class ToyTransaction {
       }
 
       if (transactionType == TransactionType.DELEGATE_CODE) {
-         checkArgument(codeDelegations != null && !codeDelegations.isEmpty(), "Code delegations must be provided for DELEGATE_CODE transactions");
-         builder.codeDelegations(codeDelegations);
+        checkArgument(
+            codeDelegations != null && !codeDelegations.isEmpty(),
+            "Code delegations must be provided for DELEGATE_CODE transactions");
+        builder.codeDelegations(codeDelegations);
       }
 
       if (signature != null) {
@@ -112,10 +114,7 @@ public class ToyTransaction {
     }
 
     public ToyTransactionBuilder addCodeDelegation(
-      BigInteger chainId,
-      Address address,
-      long nonce,
-      KeyPair keyPair) {
+        BigInteger chainId, Address address, long nonce, KeyPair keyPair) {
       if (this.codeDelegations == null) {
         this.codeDelegations = new ArrayList<>();
       }
@@ -130,31 +129,23 @@ public class ToyTransaction {
     }
 
     public ToyTransactionBuilder addCodeDelegation(
-      BigInteger chainId,
-      Address address,
-      long nonce,
-      SECPSignature signature) {
+        BigInteger chainId, Address address, long nonce, SECPSignature signature) {
       if (this.codeDelegations == null) {
         this.codeDelegations = new ArrayList<>();
       }
       org.hyperledger.besu.datatypes.CodeDelegation delegation =
-        CodeDelegation.builder()
-          .chainId(chainId)
-          .address(address)
-          .nonce(nonce)
-          .signature(signature)
-          .build();
+          CodeDelegation.builder()
+              .chainId(chainId)
+              .address(address)
+              .nonce(nonce)
+              .signature(signature)
+              .build();
       this.codeDelegations.add(delegation);
       return this;
     }
 
     public ToyTransactionBuilder addCodeDelegation(
-      BigInteger chainId,
-      Address address,
-      long nonce,
-      BigInteger r,
-      BigInteger s,
-      Byte yParity) {
+        BigInteger chainId, Address address, long nonce, BigInteger r, BigInteger s, Byte yParity) {
       return addCodeDelegation(chainId, address, nonce, new CodeDelegationSignature(r, s, yParity));
     }
   }

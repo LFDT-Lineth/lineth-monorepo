@@ -62,10 +62,15 @@ public class ReplayTestTools {
    * @param resultChecking enable checking of transaction results. This should always be enabled.
    *     However until existing problems are resolved with the replay mechanism, it may be useful to
    *     disable this for specific tests on a case-by-case basis.
-   * @param runWithBesuNode enable the test to run on a Besu node whose version is defined in libs.versions.toml
+   * @param runWithBesuNode enable the test to run on a Besu node whose version is defined in
+   *     libs.versions.toml
    */
   public static void replay(
-      ChainConfig chain, String filename, TestInfo testInfo, boolean resultChecking, boolean runWithBesuNode) {
+      ChainConfig chain,
+      String filename,
+      TestInfo testInfo,
+      boolean resultChecking,
+      boolean runWithBesuNode) {
     final InputStream fileStream =
         ReplayTestTools.class
             .getClassLoader()
@@ -98,7 +103,7 @@ public class ReplayTestTools {
                     conflation.historicalBlockHashes(), conflation.blobBaseFeesOrDefault())))
         .txResultChecking(resultChecking)
         .useCoinbaseAddressFromBlockHeader(Fork.isPostPrague(chain.fork))
-      .runWithBesuNode(runWithBesuNode)
+        .runWithBesuNode(runWithBesuNode)
         .build()
         .replay(chain, testInfo, conflation);
   }
@@ -114,8 +119,6 @@ public class ReplayTestTools {
     replay(chain, filename, testInfo, true, false);
   }
 
-
-
   /**
    * Implementation of replay for tests running on a given chain, with result checking enabled.
    *
@@ -125,7 +128,8 @@ public class ReplayTestTools {
    *     However until existing problems are resolved with the replay mechanism, it may be useful to
    *     disable this for specific tests on a case-by-case basis.
    */
-  public static void replay(ChainConfig chain, String filename, TestInfo testInfo, boolean resultChecking) {
+  public static void replay(
+      ChainConfig chain, String filename, TestInfo testInfo, boolean resultChecking) {
     replay(chain, filename, testInfo, resultChecking, false);
   }
 }
