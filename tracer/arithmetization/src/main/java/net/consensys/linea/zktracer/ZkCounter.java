@@ -421,7 +421,7 @@ public class ZkCounter implements LineCountingTracer {
         blockTransactions.traceStartTx(null, null);
         final boolean triggersEvm = computeRequiresEvmExecution(worldView, tx);
         if (tx.getType().supportsDelegateCode()) {
-          // TODO count the delegation phase size of the HUB
+          hub.updateTally(2 * tx.codeDelegationListSize() + 1);
         }
         if (triggersEvm) {
           hub.updateTally(NB_ROWS_HUB_INIT + NB_ROWS_HUB_FINL);
