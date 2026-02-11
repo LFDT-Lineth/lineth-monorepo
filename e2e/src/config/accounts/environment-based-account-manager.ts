@@ -1,10 +1,11 @@
-import { Provider } from "ethers";
+import { Client } from "viem";
+
 import Account from "./account";
 import { AccountManager } from "./account-manager";
 
 class EnvironmentBasedAccountManager extends AccountManager {
-  constructor(provider: Provider, whaleAccounts: Account[], chainId: number) {
-    super(provider, whaleAccounts, chainId);
+  constructor(client: Client, whaleAccounts: Account[], chainId: number) {
+    super(client, whaleAccounts, chainId);
   }
 }
 

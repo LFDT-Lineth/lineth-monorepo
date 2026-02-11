@@ -1,71 +1,38 @@
-import { AbiCoder, AbstractSigner, BaseContract, ContractFactory, Wallet, ethers } from "ethers";
-import { ProxyAdmin__factory, TransparentUpgradeableProxy__factory, ProxyAdmin } from "../typechain";
-import { createTestLogger } from "../config/logger";
+import { Client, DeployContractParameters } from "viem";
+import { deployContract as viemDeployContract, waitForTransactionReceipt } from "viem/actions";
 
-const logger = createTestLogger();
+export function linkBytecode(
+  bytecode: `0x${string}`,
+  linkReferences: Record<string, Record<string, { start: number; length: number }[]>>,
+  libraries: Record<string, `0x${string}`>,
+): `0x${string}` {
+  let linked = bytecode;
 
-export const encodeData = (types: string[], values: unknown[], packed?: boolean) => {
-  if (packed) {
-    return ethers.solidityPacked(types, values);
+  for (const file of Object.keys(linkReferences)) {
+    for (const libName of Object.keys(linkReferences[file])) {
+      const address = libraries[libName];
+      if (!address) {
+        throw new Error(`Missing address for library: ${libName}`);
+      }
+
+      const refs = linkReferences[file][libName];
+
+      for (const { start, length } of refs) {
+        const addressBytes = address.replace("0x", "").toLowerCase();
+
+        const startPos = 2 + start * 2;
+        const endPos = startPos + length * 2;
+
+        linked = linked.slice(0, startPos) + addressBytes + linked.slice(endPos);
+      }
+    }
   }
-  return AbiCoder.defaultAbiCoder().encode(types, values);
-};
 
-function getInitializerData(contractInterface: ethers.Interface, args: unknown[]) {
-  const initializer = "initialize";
-  const fragment = contractInterface.getFunction(initializer);
-  return contractInterface.encodeFunctionData(fragment!, args);
+  return linked as `0x${string}`;
 }
 
-export const encodeLibraryName = (libraryName: string) => {
-  const encodedLibraryName = ethers.keccak256(encodeData(["string"], [libraryName])).slice(2, 36);
-  return `__$${encodedLibraryName}$__`;
-};
-
-export const deployContract = async <T extends ContractFactory>(
-  contractFactory: T,
-  deployer: AbstractSigner,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  args?: any[],
-): Promise<BaseContract> => {
-  const deploymentArgs = args || [];
-  const instance = await contractFactory.connect(deployer).deploy(...deploymentArgs);
-  return instance.waitForDeployment();
-};
-
-const deployUpgradableContract = async <T extends ContractFactory>(
-  contractFactory: T,
-  deployer: Wallet,
-  admin: ProxyAdmin,
-  initializerData = "0x",
-): Promise<BaseContract> => {
-  const instance = await contractFactory.connect(deployer).deploy();
-  await instance.waitForDeployment();
-
-  const proxy = await new TransparentUpgradeableProxy__factory()
-    .connect(deployer)
-    .deploy(await instance.getAddress(), await admin.getAddress(), initializerData);
-  await proxy.waitForDeployment();
-
-  return instance.attach(await proxy.getAddress());
-};
-
-export async function deployUpgradableContractWithProxyAdmin<T extends ContractFactory>(
-  contractFactory: T,
-  deployer: Wallet,
-  args: unknown[],
-) {
-  const proxyFactory = new ProxyAdmin__factory(deployer);
-  const proxyAdmin = await proxyFactory.connect(deployer).deploy();
-  await proxyAdmin.waitForDeployment();
-  logger.info(`ProxyAdmin contract deployed. address=${await proxyAdmin.getAddress()}`);
-
-  const contract = await deployUpgradableContract(
-    contractFactory,
-    deployer,
-    proxyAdmin,
-    getInitializerData(contractFactory.interface, args),
-  );
-  logger.info(`Contract deployed. address=${await contract.getAddress()}`);
-  return contract;
+export async function deployContract(client: Client, params: DeployContractParameters) {
+  const hash = await viemDeployContract(client, params);
+  const receipt = await waitForTransactionReceipt(client, { hash });
+  return receipt.contractAddress!;
 }

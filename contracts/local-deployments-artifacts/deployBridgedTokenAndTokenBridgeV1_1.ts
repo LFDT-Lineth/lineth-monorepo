@@ -59,6 +59,7 @@ async function main() {
 
   let walletNonce;
   let remoteDeployerNonce;
+  let fees = {};
 
   if (process.env.TOKEN_BRIDGE_L1 === "true") {
     walletNonce = await getL1DeployerNonce();
@@ -66,6 +67,10 @@ async function main() {
   } else {
     walletNonce = await getL2DeployerNonce();
     remoteDeployerNonce = await getL1DeployerNonce();
+    fees = {
+      maxFeePerGas: 7_200_000_000_000n,
+      maxPriorityFeePerGas: 7_000_000_000_000n,
+    };
   }
 
   async function getL1DeployerNonce(): Promise<number> {
@@ -89,12 +94,15 @@ async function main() {
   const [bridgedToken, tokenBridgeImplementation, proxyAdmin] = await Promise.all([
     deployContractFromArtifacts(BridgedTokenContractName, BridgedTokenAbi, BridgedTokenBytecode, wallet, {
       nonce: walletNonce,
+      ...fees,
     }),
     deployContractFromArtifacts(tokenBridgeContractImplementationName, TokenBridgeAbi, TokenBridgeBytecode, wallet, {
       nonce: walletNonce + 1,
+      ...fees,
     }),
     deployContractFromArtifacts(ProxyAdminContractName, ProxyAdminAbi, ProxyAdminBytecode, wallet, {
       nonce: walletNonce + 2,
+      ...fees,
     }),
   ]);
 
@@ -112,6 +120,7 @@ async function main() {
     UpgradeableBeaconBytecode,
     wallet,
     bridgedTokenAddress,
+    fees,
   );
 
   const beaconProxyAddress = await beaconProxy.getAddress();
@@ -162,6 +171,7 @@ async function main() {
     tokenBridgeImplementationAddress,
     proxyAdminAddress,
     initializer,
+    fees,
   );
 }
 

@@ -1,7 +1,9 @@
-import { ethers } from "ethers";
 import path from "path";
+import { createWalletClient, http } from "viem";
+
+import { Config } from "./config-schema";
 import { GenesisBasedAccountManager } from "../accounts/genesis-based-account-manager";
-import { Config } from "../types";
+import { localL1Network, localL2Network } from "../chains/constants";
 
 const L1_RPC_URL = new URL("http://localhost:8445");
 const L2_RPC_URL = new URL("http://localhost:9045");
@@ -22,10 +24,13 @@ const config: Config = {
     tokenBridgeAddress: "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
     l1TokenAddress: "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318",
     accountManager: new GenesisBasedAccountManager({
-      provider: new ethers.JsonRpcProvider(L1_RPC_URL.toString()),
+      client: createWalletClient({
+        chain: localL1Network,
+        transport: http(L1_RPC_URL.toString()),
+      }),
       genesisFilePath: path.resolve(
         process.env.LOCAL_L1_GENESIS ||
-          path.resolve(__dirname, "../../../../..", "docker/config/l1-node/el", "genesis.json"),
+          path.resolve(__dirname, "../../../..", "docker/config/l1-node/el", "genesis.json"),
       ),
       excludeAddresses: [
         "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", // Finalization operator
@@ -51,10 +56,13 @@ const config: Config = {
     l2SparseMerkleProofAddress: "0x670365526A9971E4A225c38538c5D7Ac248e4087", // Nonce 13
     l2LineaSequencerUptimeFeedAddress: "0x7917AbB0cDbf3D3C4057d6a2808eE85ec16260C1", // Nonce 12
     accountManager: new GenesisBasedAccountManager({
-      provider: new ethers.JsonRpcProvider(L2_RPC_URL.toString()),
+      client: createWalletClient({
+        chain: localL2Network,
+        transport: http(L2_RPC_URL.toString()),
+      }),
       genesisFilePath: path.resolve(
         process.env.LOCAL_L2_GENESIS ||
-          path.resolve(__dirname, "../../../../..", "docker/config/l2-genesis-initialization", "genesis-besu.json"),
+          path.resolve(__dirname, "../../../..", "docker/config/l2-genesis-initialization", "genesis-besu.json"),
       ),
       excludeAddresses: [
         "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73", // Used for Opcode testing

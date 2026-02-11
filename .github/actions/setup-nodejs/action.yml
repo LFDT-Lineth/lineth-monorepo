@@ -6,6 +6,15 @@ inputs:
     description: 'The options to pass to pnpm install'
     required: true
     default: '--frozen-lockfile --prefer-offline --ignore-scripts'
+  commands:
+    description: |
+      Optional newline-separated list of commands to run after install.
+      Example:
+        commands: |
+          pnpm run build
+          pnpm run build:libs
+    required: false
+    default: ''
 
 outputs:
   node-version:
@@ -37,3 +46,8 @@ runs:
     - name: pnpm install
       run: pnpm i ${{ inputs.pnpm-install-options }}
       shell: bash
+
+    - name: Run post-install commands
+      if: inputs.commands != ''
+      shell: bash
+      run: ${{ inputs.commands }}

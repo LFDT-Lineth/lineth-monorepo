@@ -1,81 +1,121 @@
+import { serialize } from "@consensys/linea-shared-utils";
 import { describe, expect, it } from "@jest/globals";
-import { config } from "./config/tests-config";
-import { etherToWei, getTransactionHash, getWallet, TransactionExclusionClient, wait } from "./common/utils";
-import { TransactionRequest } from "ethers";
+import { PrepareTransactionRequestReturnType, SendRawTransactionErrorType, encodeFunctionData, parseGwei } from "viem";
 
-const l2AccountManager = config.getL2AccountManager();
+import { getTransactionHash, awaitUntil } from "./common/utils";
+import { L2RpcEndpoint } from "./config/clients/l2-client";
+import { createTestContext } from "./config/setup";
+import { TestContractAbi } from "./generated";
+
+const context = createTestContext();
+const l2AccountManager = context.getL2AccountManager();
 
 describe("Transaction exclusion test suite", () => {
   it.concurrent(
     "Should get the status of the rejected transaction reported from Besu RPC node",
     async () => {
-      const transactionExclusionEndpoint = config.getTransactionExclusionEndpoint();
-      expect(transactionExclusionEndpoint).toBeDefined();
+      const transactionExclusionClient = context.l2PublicClient({
+        type: L2RpcEndpoint.TransactionExclusion,
+        httpConfig: { timeout: 60_000 },
+      });
 
-      const transactionExclusionClient = new TransactionExclusionClient(transactionExclusionEndpoint!);
       const l2Account = await l2AccountManager.generateAccount();
-      const l2AccountLocal = getWallet(l2Account.privateKey, config.getL2BesuNodeProvider()!);
-      const testContract = config.getL2TestContract(l2AccountLocal)!;
-      const txRequest: TransactionRequest = {
-        to: await testContract.getAddress(),
-        data: testContract.interface.encodeFunctionData("testAddmod", [13000, 31]),
-        maxPriorityFeePerGas: etherToWei("0.000000001"), // 1 Gwei
-        maxFeePerGas: etherToWei("0.00000001"), // 10 Gwei
-      };
-      const rejectedTxHash = await getTransactionHash(txRequest, l2AccountLocal);
+
+      const l2WalletClient = context.l2WalletClient({
+        type: L2RpcEndpoint.BesuNode,
+        account: l2Account,
+        httpConfig: { timeout: 60_000 },
+      });
+      const l2PublicClient = context.l2PublicClient({ type: L2RpcEndpoint.BesuNode });
+      const testContract = context.l2Contracts.testContract(l2PublicClient);
+
+      const txRequest = await l2WalletClient.prepareTransactionRequest({
+        account: l2Account,
+        to: testContract.address,
+        data: encodeFunctionData({
+          abi: TestContractAbi,
+          functionName: "testAddmod",
+          args: [13000n, 31n],
+        }),
+        maxPriorityFeePerGas: parseGwei("1"),
+        maxFeePerGas: parseGwei("10"),
+      });
+
+      const rejectedTxHash = await getTransactionHash(l2PublicClient, txRequest);
 
       try {
+        const serializedTransaction = await l2WalletClient.signTransaction(
+          txRequest as PrepareTransactionRequestReturnType,
+        );
+
         // This shall be rejected by the Besu node due to traces module limit overflow
-        await l2AccountLocal.sendTransaction(txRequest);
+        await l2WalletClient.sendRawTransaction({ serializedTransaction });
+        throw new Error("Transaction was expected to be rejected, but it was not.");
       } catch (err) {
-        // This shall return error with traces limit overflow
-        logger.debug(`sendTransaction expected rejection: ${JSON.stringify(err)}`);
-        // assert it was indeed rejected by the traces module limit
-        // @ts-expect-error error is not typed
-        expect(err.message).toContain("is above the limit");
+        const e = err as SendRawTransactionErrorType;
+
+        if (e.name === "InvalidInputRpcError") {
+          // This shall return error with traces limit overflow
+          logger.debug(`sendTransaction expected rejection: ${serialize(err)}`);
+          // assert it was indeed rejected by the traces module limit
+          expect(e.details).toContain("is above the limit");
+        } else {
+          throw new Error("Transaction was expected to be rejected with traces limit overflow, but it was not.");
+        }
       }
 
-      expect(rejectedTxHash).toBeDefined();
       logger.debug(`Transaction rejected as expected (RPC). transactionHash=${rejectedTxHash}`);
 
-      let getResponse;
-      do {
-        await wait(1_000);
-        getResponse = await transactionExclusionClient.getTransactionExclusionStatusV1(rejectedTxHash!);
-      } while (!getResponse?.result);
+      const exclusionStatus = await awaitUntil(
+        async () => {
+          const status = await transactionExclusionClient.getTransactionExclusionStatusV1({ txHash: rejectedTxHash });
+          logger.debug(`Polling for transaction exclusion status... response=${serialize(status)}`);
+          return status;
+        },
+        (status) => status !== null && status !== undefined,
+        { pollingIntervalMs: 1_000, timeoutMs: 100_000 },
+      );
 
-      logger.debug(`Transaction exclusion status received. response=${JSON.stringify(getResponse.result)}`);
+      logger.debug(`Transaction exclusion status received. response=${serialize(exclusionStatus)}`);
 
-      expect(getResponse.result.txHash).toStrictEqual(rejectedTxHash);
-      expect(getResponse.result.txRejectionStage).toStrictEqual("RPC");
-      expect(getResponse.result.from.toLowerCase()).toStrictEqual(l2AccountLocal.address.toLowerCase());
+      expect(exclusionStatus.txHash).toStrictEqual(rejectedTxHash);
+      expect(exclusionStatus.txRejectionStage).toStrictEqual("RPC");
+      expect(exclusionStatus.from.toLowerCase()).toStrictEqual(l2Account.address.toLowerCase());
     },
     120_000,
   );
 
   it.skip("Should get the status of the rejected transaction reported from Besu SEQUENCER node", async () => {
-    expect(config.getTransactionExclusionEndpoint()).toBeDefined();
-
-    const transactionExclusionClient = new TransactionExclusionClient(config.getTransactionExclusionEndpoint()!);
+    const transactionExclusionClient = context.l2PublicClient({
+      type: L2RpcEndpoint.TransactionExclusion,
+      httpConfig: { timeout: 60_000 },
+    });
     const l2Account = await l2AccountManager.generateAccount();
-    const l2AccountLocal = getWallet(l2Account.privateKey, config.getL2SequencerProvider()!);
-    const testContract = config.getL2TestContract(l2AccountLocal);
+    const walletClient = context.l2WalletClient({
+      type: L2RpcEndpoint.Sequencer,
+      account: l2Account,
+      httpConfig: { timeout: 60_000 },
+    });
+    const testContract = context.l2Contracts.testContract(walletClient);
 
     // This shall be rejected by sequencer due to traces module limit overflow
-    const tx = await testContract!.connect(l2AccountLocal).testAddmod(13000, 31);
-    const rejectedTxHash = tx.hash;
+    const rejectedTxHash = await testContract.write.testAddmod([13000n, 31n]);
     logger.debug(`Transaction rejected as expected (SEQUENCER). transactionHash=${rejectedTxHash}`);
 
-    let getResponse;
-    do {
-      await wait(1_000);
-      getResponse = await transactionExclusionClient.getTransactionExclusionStatusV1(rejectedTxHash);
-    } while (!getResponse?.result);
+    const exclusionStatus = await awaitUntil(
+      async () => {
+        const status = await transactionExclusionClient.getTransactionExclusionStatusV1({ txHash: rejectedTxHash });
+        logger.debug(`Polling for transaction exclusion status... response=${serialize(status)}`);
+        return status;
+      },
+      (status) => status !== null && status !== undefined,
+      { pollingIntervalMs: 1_000, timeoutMs: 100_000 },
+    );
 
-    logger.debug(`Transaction exclusion status received. response=${JSON.stringify(getResponse.result)}`);
+    logger.debug(`Transaction exclusion status received. response=${serialize(exclusionStatus)}`);
 
-    expect(getResponse.result.txHash).toStrictEqual(rejectedTxHash);
-    expect(getResponse.result.txRejectionStage).toStrictEqual("SEQUENCER");
-    expect(getResponse.result.from.toLowerCase()).toStrictEqual(l2AccountLocal.address.toLowerCase());
+    expect(exclusionStatus.txHash).toStrictEqual(rejectedTxHash);
+    expect(exclusionStatus.txRejectionStage).toStrictEqual("SEQUENCER");
+    expect(exclusionStatus.from.toLowerCase()).toStrictEqual(l2Account.address.toLowerCase());
   }, 120_000);
 });

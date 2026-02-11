@@ -1,8 +1,9 @@
-import { Provider } from "ethers";
+import { normalizeAddress } from "@consensys/linea-shared-utils";
 import { readFileSync } from "fs";
+import { Client } from "viem";
+
 import Account from "./account";
 import { AccountManager } from "./account-manager";
-import { normalizeAddress } from "../../../common/utils";
 
 interface GenesisJson {
   config: {
@@ -15,8 +16,15 @@ interface GenesisJson {
   };
 }
 
+/**
+ * @notice Options for creating a GenesisBasedAccountManager.
+ * @property client The viem Client instance to interact with the chain.
+ * @property genesisFilePath Path to the genesis file (JSON) containing accounts data.
+ * @property excludeAddresses (Optional) List of addresses to be excluded from the managed accounts.
+ * @property reservedAddresses (Optional) List of addresses to be prioritized or reserved among managed accounts.
+ */
 type GenesisBasedAccountManagerOptions = {
-  provider: Provider;
+  client: Client;
   genesisFilePath: string;
   excludeAddresses?: string[];
   reservedAddresses?: string[];
@@ -33,8 +41,9 @@ function readGenesisFileAccounts(genesisJson: GenesisJson): Account[] {
   for (const address in alloc) {
     const accountData = alloc[address];
     if (accountData.privateKey) {
-      const addr = normalizeAddress(address);
-      accounts.push(new Account(accountData.privateKey, addr));
+      const prefixedAddress = address.startsWith("0x") ? address : `0x${address}`;
+      const addr = normalizeAddress(prefixedAddress);
+      accounts.push(new Account(accountData.privateKey as `0x${string}`, addr));
     }
   }
   return accounts;
@@ -69,7 +78,7 @@ function prioritizeReservedAccounts(accounts: Account[], reservedAddresses: stri
 
 class GenesisBasedAccountManager extends AccountManager {
   constructor(options: GenesisBasedAccountManagerOptions) {
-    const { provider, genesisFilePath, excludeAddresses = [], reservedAddresses = [] } = options;
+    const { client, genesisFilePath, excludeAddresses = [], reservedAddresses = [] } = options;
 
     const genesisJson = readJsonFile(genesisFilePath);
     const genesis = genesisJson as GenesisJson;
@@ -78,7 +87,7 @@ class GenesisBasedAccountManager extends AccountManager {
     const filteredAccounts = filterExcludedAccounts(accounts, excludeAddresses);
     const whaleAccounts = prioritizeReservedAccounts(filteredAccounts, reservedAddresses);
 
-    super(provider, whaleAccounts, chainId, reservedAddresses);
+    super(client, whaleAccounts, chainId, reservedAddresses);
   }
 }
 

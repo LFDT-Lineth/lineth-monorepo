@@ -1,4 +1,4 @@
-import { BytesLike } from "ethers";
+import { Address, Hash, Hex } from "viem";
 
 export type FinalizationData = {
   aggregatedProof: string;
@@ -19,18 +19,18 @@ export type FinalizationData = {
 };
 
 export type MessageEvent = {
-  from: string;
-  to: string;
+  from: Address;
+  to: Address;
   fee: bigint;
   value: bigint;
   messageNumber: bigint;
-  calldata: string;
-  messageHash: string;
-  blockNumber: number;
+  calldata: Hex;
+  messageHash: Hash;
+  blockNumber: bigint;
 };
 
 export type SendMessageArgs = {
-  to: string;
+  to: Address;
   fee: bigint;
-  calldata: BytesLike;
+  calldata: Hex;
 };
