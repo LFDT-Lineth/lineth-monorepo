@@ -1,118 +1,11 @@
 include "../constants/evm.zkasm"
-include "oob_modexp.zkasm"
-
-;; The Out-Of-Bounds Precompiles (OOBPRC) module performs various "out
-;; of bounds" and related checks for the various precompile calls.  A
-;; key aspect of what this function does is dispatch based on the
-;; instruction to the relevant set of checks.
-;;
-fn oob_prc(INST=0xFF01 u16, DATA_1 u128, DATA_2 u128, DATA_3 u128, DATA_4 u128, DATA_5 u128, DATA_6 u128, DATA_7 u128, DATA_8 u128, DATA_9 u128, DATA_10 u128) -> (dummy=1 u1) {
-  var return_gas u128
-  var tmp u96
-  var cds u32
-  var inst_hi, inst_lo u8
-  var success, extract_cd, empty_cd, rc_nz u1
-  ;; split instruction
-  inst_hi, inst_lo = INST
-  ;; type 1 & 2 checks
-  if inst_hi == 0xFF goto oob_type12
-  if inst_hi == 0xF1 goto oob_type12
-  ;; blake
-  if INST == OOB_INST_BLAKE_CDS goto oob_blake_cds
-  if INST == OOB_INST_BLAKE_PARAMS goto oob_blake_pricing
-  ;; modexp
-  dummy = oob_modexp(INST,DATA_1,DATA_2,DATA_3,DATA_4,DATA_5,DATA_6,DATA_7,DATA_8,DATA_9,DATA_10)
-  return
-
-;; -------------------------------------------------------------------
-;; ECRECOVER / SHA2 / RIPEMD / IDENT / ECADD / ECMUL (type 1)
-;; --
-;; ECPAIRING / POINTEVAL / BLS_XXX (type 2)
-;; -------------------------------------------------------------------
-;; Check: (a) success <==> (gas_cost <= callee_gas && valid_cds); (b)
-;; if success then return_gas == callee_gas - gas_cost else return_gas
-;; == 0; (c) extract_call_data <==> (success && cds != 0); (d)
-;; r@c_nonzero <==> r@c != 0.
-;;
-;; [in]           DATA_1 = callee_gas
-;; [in]           DATA_2 = call_data_size (cds)
-;; [in,binary?]   DATA_3 = return_at_capacity (r@c)
-;; --
-;; [out,binary]   DATA_4 = success
-;; [out]          DATA_5 = return_gas
-;; [out,binary]   DATA_6 = extract_call_data [binary]
-;; [out,binary]   DATA_7 = empty_call_data [binary]
-;; [out,binary]   DATA_8 = r@c_non_zero
-;;
-;; NOTE: the call_data_size for type 1 instructions is always valid;
-;; for type 2 instructions, there are restrictions depending on the
-;; case (e.g. POINTEVAL requires cds == 192).
-oob_type12:
-  ;; cast call_data_size
-  tmp,cds = DATA_2
-  if tmp != 0 goto exit_f
-  ;;
-  success, return_gas, extract_cd, empty_cd, rc_nz = oob_prc_pricing(INST, DATA_1, cds, DATA_3)
-  ;; check predictions
-  if success != DATA_4 goto exit_f
-  if return_gas != DATA_5 goto exit_f
-  if extract_cd != DATA_6 goto exit_f
-  if empty_cd != DATA_7 goto exit_f
-  if rc_nz != DATA_8 goto exit_f
-  ;; passed
-  goto exit_s
-
-;; -------------------------------------------------------------------
-;; BLAKE_CDS
-;; -------------------------------------------------------------------
-;; Check: (a) success <==> (cds == 213); (b) r@c_nonzero <==>
-;; r@c != 0.
-;;
-;; [in]          DATA_2 = call_data_size (cds)
-;; [in,binary?]  DATA_3 = return_at_capacity (r@c)
-;; --
-;; [out,binary]  DATA_4 = success
-;; [out,binary]  DATA_8 = r@c_non_zero
-;;
-;; NOTES: see EIP-152.
-oob_blake_cds:
-  success, return_gas, rc_nz = oob_prc_blake(INST, 0, DATA_2, DATA_3)
-  ;; check predictions
-  if success != DATA_4 goto exit_f
-  if rc_nz != DATA_8 goto exit_f
-  ;; passed
-  goto exit_s
-
-;; ECPAIRING / POINTEVAL / BLS_XXX (type 2)
-;; -------------------------------------------------------------------
-;; Check: (a) success <==> (r <= callee_gas && f is u1); (b) if
-;; success then return_gas == callee_gas - r else return_gas == 0.
-;;
-;; [in]          DATA_1 = callee_gas
-;; [in]          DATA_6 = rounds (r)
-;; [in]          DATA_7 = indicator flag (f)
-;; --
-;; [out,binary]  DATA_4 = success
-;; [out]         DATA_5 = return_gas
-;;
-;; NOTES: see EIP-152.  The gas_cost for BLAKE is the number of
-;; rounds.
-oob_blake_pricing:
-  success, return_gas, rc_nz = oob_prc_blake(INST, DATA_1, DATA_6, DATA_7)
-  ;; check predictions
-  if success != DATA_4 goto exit_f
-  if return_gas != DATA_5 goto exit_f
-  ;; fall thru
-exit_s:
-  dummy = 1
-  return
-exit_f:
-  fail
-}
 
 fn oob_prc_blake(inst=0xFA09 u16, callee_gas u128, cds_rounds u128, rc_f u128) -> (success u1, return_gas u128, rc_nz u1) {
    var delta u128
-   var b u1
+   var b, rc_f_0, rc_f_1 u1
+   ;;
+   rc_f_0 = rc_f == 0 ? 1 : 0
+   rc_f_1 = rc_f == 1 ? 1 : 0
    ;;
    if inst == OOB_INST_BLAKE_CDS goto blake_cds
    if inst == OOB_INST_BLAKE_PARAMS goto blake_params
@@ -120,7 +13,7 @@ fn oob_prc_blake(inst=0xFA09 u16, callee_gas u128, cds_rounds u128, rc_f u128) -
 
 blake_cds:
   ;; calculate r@c != 0
-  rc_nz = rc_f != 0 ? 1 : 0
+  rc_nz = rc_f_0 == 0 ? 1 : 0
   ;; check cds==213
   success = cds_rounds == 213 ? 1 : 0
   return_gas = 0
@@ -131,8 +24,8 @@ blake_params:
   ;; check gas_cost <= rounds
   b, delta = callee_gas - cds_rounds
   if b != 0 goto exit_f
-  if rc_f == 0 goto exit_s
-  if rc_f == 1 goto exit_s
+  if rc_f_0 == 1 goto exit_s
+  if rc_f_1 == 1 goto exit_s
 exit_f:
   success = 0
   return_gas = 0
@@ -159,7 +52,7 @@ fn oob_prc_pricing(inst=0xFF01 u16, callee_gas u128, cds u32, r_c u128) -> (succ
   ;; cds validity
   cds_valid = oob_cds_valid(inst,cds)
   if inst == OOB_INST_P256_VERIFY goto p256verify
-  if cds_valid == 0 goto exit_f  
+  if cds_valid == 0 goto exit_f
   success = 1
   return_gas = delta
   extract_call_data = cds != 0 ? 1 : 0
@@ -170,7 +63,7 @@ p256verify:
   return_gas = delta
   extract_call_data = cds == 160 ? 1 : 0
   empty_call_data = 0
-  return  
+  return
 exit_f:
   success = 0
   return_gas = 0
@@ -239,9 +132,9 @@ cds_mod_nz:
   ;; ensure cds != 0
   if call_data_size == 0 goto exit_f
 cds_mod:
-  ;; compute cds%288
+  ;; compute cds%n
   quot,rem,wit,sum,witsum = call_data_size / divisor
-  ;; check cds%288==0
+  ;; check cds%n==0
   if rem==0 goto exit_s
   goto exit_f
 exit_f:
