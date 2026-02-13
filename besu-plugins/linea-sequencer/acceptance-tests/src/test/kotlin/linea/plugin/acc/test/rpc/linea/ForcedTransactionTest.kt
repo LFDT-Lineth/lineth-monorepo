@@ -16,23 +16,13 @@ import linea.plugin.acc.test.rpc.SendForcedRawTransactionRequest
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.hyperledger.besu.datatypes.Wei
-import org.hyperledger.besu.tests.acceptance.dsl.account.Account
 import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.genesis.GenesisConfigurationFactory
 import org.junit.jupiter.api.Test
-import org.web3j.crypto.Credentials
 import org.web3j.crypto.Hash.sha3
-import org.web3j.crypto.RawTransaction
-import org.web3j.crypto.TransactionEncoder
-import org.web3j.tx.gas.DefaultGasProvider
-import org.web3j.utils.Numeric
 import java.math.BigInteger
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicLong
 
-class ForcedTransactionTest : AbstractSendBundleTest() {
-  private val forcedTxNumberGenerator = AtomicLong(1)
-
-  private fun nextForcedTxNumber(): Long = forcedTxNumberGenerator.getAndIncrement()
+class ForcedTransactionTest : AbstractForcedTransactionTest() {
 
   override fun getTestCliOptions(): List<String> {
     return TestCommandLineOptionsBuilder()
@@ -513,125 +503,45 @@ class ForcedTransactionTest : AbstractSendBundleTest() {
       }
   }
 
-  private fun createSignedTransfer(
-    sender: Account,
-    recipient: Account,
-    nonce: Int,
-  ): String {
-    return createSignedTransferWithValue(sender, recipient, nonce, BigInteger.valueOf(1000))
-  }
+  @Test
+  fun forcedTransactionOverflowingOtherLimitBlocksFollowingForcedTransactions() {
+    val bls12MapFPtoG1 = deployBLS12_MAP_FP_TO_G1()
+    val sender = accounts.secondaryBenefactor
+    val recipient = accounts.primaryBenefactor
 
-  private fun createSignedTransferWithValue(
-    sender: Account,
-    recipient: Account,
-    nonce: Int,
-    value: BigInteger,
-  ): String {
-    return createSignedTransferToAddressWithValue(sender, recipient.address, nonce, value)
-  }
+    val overflowCallData = BlsMapFpToG1OverflowSetup.encodeOverflowCall(bls12MapFPtoG1)
+    val rawTxOverflow =
+      createSignedContractCall(sender, bls12MapFPtoG1.contractAddress, overflowCallData, 0)
+    val rawTxValid = createSignedTransfer(sender, recipient, 0)
+    val txHashOverflow = sha3(rawTxOverflow)
+    val txHashValid = sha3(rawTxValid)
+    val forcedTxNumberOverflow = nextForcedTxNumber()
+    val forcedTxNumberValid = nextForcedTxNumber()
 
-  private fun createSignedTransferToAddress(
-    sender: Account,
-    recipientAddress: String,
-    nonce: Int,
-  ): String {
-    return createSignedTransferToAddressWithValue(sender, recipientAddress, nonce, BigInteger.valueOf(1000))
-  }
+    val sendResponse = SendForcedRawTransactionRequest(
+      listOf(
+        ForcedTransactionParam(forcedTxNumberOverflow, rawTxOverflow, DEFAULT_DEADLINE),
+        ForcedTransactionParam(forcedTxNumberValid, rawTxValid, DEFAULT_DEADLINE),
+      ),
+    ).execute(minerNode.nodeRequests())
 
-  private fun createSignedTransferToAddressWithValue(
-    sender: Account,
-    recipientAddress: String,
-    nonce: Int,
-    value: BigInteger,
-  ): String {
-    val tx = RawTransaction.createTransaction(
-      CHAIN_ID,
-      BigInteger.valueOf(nonce.toLong()),
-      TRANSFER_GAS_LIMIT,
-      recipientAddress,
-      value,
-      "",
-      GAS_PRICE,
-      GAS_PRICE.multiply(BigInteger.TEN).add(BigInteger.ONE),
-    )
+    assertThat(sendResponse.hasError()).isFalse()
+    assertThat(sendResponse.result).hasSize(2)
 
-    return Numeric.toHexString(
-      TransactionEncoder.signMessage(tx, sender.web3jCredentialsOrThrow()),
-    )
-  }
+    Thread.sleep(BLOCK_PERIOD_SECONDS * 2 * 1000L)
+    val statusResponse = GetForcedTransactionInclusionStatusRequest(forcedTxNumberOverflow)
+      .execute(minerNode.nodeRequests())
+    assertThat(statusResponse.result).isNull()
 
-  private fun createSignedContractCall(
-    sender: Account,
-    contractAddress: String,
-    callData: String,
-    nonce: Int,
-  ): String {
-    val tx = RawTransaction.createTransaction(
-      CHAIN_ID,
-      BigInteger.valueOf(nonce.toLong()),
-      CONTRACT_CALL_GAS_LIMIT,
-      contractAddress,
-      BigInteger.ZERO,
-      callData,
-      GAS_PRICE,
-      GAS_PRICE.multiply(BigInteger.TEN).add(BigInteger.ONE),
-    )
-
-    return Numeric.toHexString(
-      TransactionEncoder.signMessage(tx, sender.web3jCredentialsOrThrow()),
-    )
-  }
-
-  private fun createSignedTransferFromPrivateKey(
-    senderPrivateKey: String,
-    recipientAddress: String,
-    nonce: Int,
-  ): String {
-    val tx = RawTransaction.createTransaction(
-      CHAIN_ID,
-      BigInteger.valueOf(nonce.toLong()),
-      TRANSFER_GAS_LIMIT,
-      recipientAddress,
-      BigInteger.valueOf(1000),
-      "",
-      GAS_PRICE,
-      GAS_PRICE.multiply(BigInteger.TEN).add(BigInteger.ONE),
-    )
-
-    return Numeric.toHexString(
-      TransactionEncoder.signMessage(tx, Credentials.create(senderPrivateKey)),
-    )
-  }
-
-  private fun createSignedTransferWithCustomGasPrice(
-    sender: Account,
-    recipient: Account,
-    nonce: Int,
-    gasPrice: BigInteger,
-  ): String {
-    val tx = RawTransaction.createTransaction(
-      CHAIN_ID,
-      BigInteger.valueOf(nonce.toLong()),
-      TRANSFER_GAS_LIMIT,
-      recipient.address,
-      BigInteger.valueOf(1000),
-      "",
-      gasPrice,
-      gasPrice.multiply(BigInteger.TEN).add(BigInteger.ONE),
-    )
-
-    return Numeric.toHexString(
-      TransactionEncoder.signMessage(tx, sender.web3jCredentialsOrThrow()),
-    )
+    minerNode.verify(eth.expectNoTransactionReceipt(txHashOverflow))
+    minerNode.verify(eth.expectNoTransactionReceipt(txHashValid))
   }
 
   companion object {
-    private const val DEFAULT_DEADLINE = "0xF4240" // 1000000
     private const val DENIED_RECIPIENT_ADDRESS = "0xf17f52151EbEF6C7334FAD080c5704D77216b732"
 
     // Address 0x44b30d738d2dec1952b92c091724e8aedd52b9b2 - on the deny list
     private const val DENIED_SENDER_PRIVATE_KEY =
       "0xf326e86ba27e2286725a154922094f02573f4921a25a27046b74ec90e653438e"
-    private val CONTRACT_CALL_GAS_LIMIT: BigInteger = DefaultGasProvider.GAS_LIMIT.divide(BigInteger.TEN)
   }
 }

@@ -36,4 +36,13 @@ contract LogEmitter {
             log4(add(data.offset, 0x20), data.length, t1, t2, t3, t4)
         }
     }
+
+    // Emit multiple logs with the same topic (for L2L1 log limit testing)
+    function emitMultipleLogs(uint256 count, bytes32 topic) external {
+        for (uint256 i = 0; i < count; i++) {
+            assembly {
+                log1(0, 0, topic)
+            }
+        }
+    }
 }

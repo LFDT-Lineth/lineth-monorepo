@@ -224,7 +224,8 @@ public class LineaForcedTransactionPool
               .addArgument(inclusionResult)
               .log();
         } else {
-          // Retry - keep in queue, will try again next block
+          // Retry - keep in queue, will try again next block (e.g. unknown rejection reason;
+          // status is not recorded so getInclusionStatus returns absent)
           log.atInfo()
               .setMessage(
                   "action=forced_tx_retry_scheduled forcedTxNumber={} txHash={} blockNumber={} index={} inclusionResult={}")
