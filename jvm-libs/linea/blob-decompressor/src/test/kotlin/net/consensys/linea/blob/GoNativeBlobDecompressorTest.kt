@@ -31,7 +31,7 @@ class GoNativeBlobDecompressorTest {
   private val compressor: BlobCompressor = GoBackedBlobCompressor
     .getInstance(BlobCompressorVersion.V2, blobCompressedLimit)
   private val decompressor: BlobDecompressor =
-    GoNativeBlobDecompressorFactory.getInstance(BlobDecompressorVersion.V2)
+    GoNativeBlobDecompressorFactory.getInstance(BlobDecompressorVersion.V3)
   private val dummyAuthorizationList =
     AuthorizationTuple(
       chainId = 1337u,

@@ -1,12 +1,18 @@
 package linea.coordinator.config.v2
 
 import com.sksamuel.hoplite.ConfigException
+import linea.blob.BlobCompressorVersion
+import linea.blob.ShnarfCalculatorVersion
 import linea.coordinator.config.v2.toml.ConflationToml
 import linea.coordinator.config.v2.toml.parseConfig
 import linea.kotlin.toURL
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import java.util.stream.Stream
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
@@ -34,6 +40,7 @@ class ConflationParsingTest {
       # default batches limit is  aggregation-proofs-limit -1
       # batches-limit must be less than or equal to aggregation-proofs-limit-1
       batches-limit = 1
+      blob-compressor-version = "V3"
 
       [conflation.proof-aggregation]
       proofs-limit = 4
@@ -63,6 +70,7 @@ class ConflationParsingTest {
           blobSizeLimit = 102_400U,
           handlerPollingInterval = 1.seconds,
           batchesLimit = 1u,
+          blobCompressorVersion = BlobCompressorVersion.V3,
         ),
         proofAggregation =
         ConflationToml.ProofAggregationToml(
@@ -100,6 +108,7 @@ class ConflationParsingTest {
           blobSizeLimit = 102_400U,
           handlerPollingInterval = 1.seconds,
           batchesLimit = null,
+          blobCompressorVersion = BlobCompressorVersion.V1_2,
         ),
         proofAggregation =
         ConflationToml.ProofAggregationToml(
@@ -111,10 +120,32 @@ class ConflationParsingTest {
           timestampBasedHardForks = emptyList(),
         ),
       )
+
+    fun blobCompressionToml(version: BlobCompressorVersion): String =
+      """
+      [blob-compression]
+      blob-size-limit = 102_400 # 100KB
+      handler-polling-interval = "PT1S"
+      # default batches limit is  aggregation-proofs-limit -1
+      # batches-limit must be less than or equal to aggregation-proofs-limit-1
+      batches-limit = 1
+      blob-compressor-version = "${version.name}"
+      """.trimIndent()
+
+    @JvmStatic
+    fun blobCompressionVersionTestCases(): Stream<Arguments> = Stream.of(
+      Arguments.of(BlobCompressorVersion.V1_2, ShnarfCalculatorVersion.V1_2),
+      Arguments.of(BlobCompressorVersion.V2, ShnarfCalculatorVersion.V1_2),
+      Arguments.of(BlobCompressorVersion.V3, ShnarfCalculatorVersion.V3),
+    )
   }
 
   data class WrapperConfig(
     val conflation: ConflationToml = ConflationToml(),
+  )
+
+  data class BlobCompressionWrapperConfig(
+    val blobCompression: ConflationToml.BlobCompressionToml = ConflationToml.BlobCompressionToml(),
   )
 
   @Test
@@ -131,6 +162,26 @@ class ConflationParsingTest {
       parseConfig<WrapperConfig>(tomlMinimal).conflation,
     )
       .isEqualTo(configMinimal)
+  }
+
+  @ParameterizedTest(name = "compressor {0} should use calculator {1}")
+  @MethodSource("blobCompressionVersionTestCases")
+  fun `should parse and reify blob compression toml configs with correct shnarf calculator version`(
+    blobCompressorVersion: BlobCompressorVersion,
+    expectedShnarfCalculatorVersion: ShnarfCalculatorVersion,
+  ) {
+    val toml = blobCompressionToml(blobCompressorVersion)
+    val expectedBlobCompression = ConflationConfig.BlobCompression(
+      blobSizeLimit = 102_400U,
+      handlerPollingInterval = 1.seconds,
+      batchesLimit = 1u,
+      blobCompressorVersion = blobCompressorVersion,
+    )
+
+    val reifiedBlobCompression = parseConfig<BlobCompressionWrapperConfig>(toml).blobCompression.reified()
+
+    assertThat(reifiedBlobCompression).isEqualTo(expectedBlobCompression)
+    assertThat(reifiedBlobCompression.shnarfCalculatorVersion).isEqualTo(expectedShnarfCalculatorVersion)
   }
 
   @Test

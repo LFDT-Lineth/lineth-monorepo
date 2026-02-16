@@ -1,6 +1,7 @@
 package linea.coordinator.config.v2
 
 import linea.blob.BlobCompressorVersion
+import linea.blob.ShnarfCalculatorVersion
 import linea.domain.RetryConfig
 import net.consensys.linea.traces.TracesCounters
 import java.net.URL
@@ -37,7 +38,14 @@ data class ConflationConfig(
     val handlerPollingInterval: Duration = 1.seconds,
     val batchesLimit: UInt? = null,
     val blobCompressorVersion: BlobCompressorVersion = BlobCompressorVersion.V1_2,
-  )
+  ) {
+    val shnarfCalculatorVersion: ShnarfCalculatorVersion
+      get() = when (blobCompressorVersion) {
+        BlobCompressorVersion.V1_2 -> ShnarfCalculatorVersion.V1_2
+        BlobCompressorVersion.V2 -> ShnarfCalculatorVersion.V1_2
+        BlobCompressorVersion.V3 -> ShnarfCalculatorVersion.V3
+      }
+  }
 
   data class ProofAggregation(
     val proofsLimit: UInt = 300u,

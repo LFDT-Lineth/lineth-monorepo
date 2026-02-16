@@ -59,6 +59,7 @@ internal interface GoNativeBlobShnarfCalculatorJna : GoNativeBlobShnarfCalculato
 
 enum class ShnarfCalculatorVersion(val version: String) {
   V1_2("v1.2.0"),
+  V3("v3.0.0"),
 }
 
 class GoNativeShnarfCalculatorFactory {

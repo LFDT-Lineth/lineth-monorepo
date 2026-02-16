@@ -19,7 +19,7 @@ private val meterRegistry = SimpleMeterRegistry()
 private val metricsFacade: MetricsFacade =
   MicrometerMetricsFacade(registry = meterRegistry, metricsPrefix = "linea")
 private val shnarfCalculator: BlobShnarfCalculator =
-  GoBackedBlobShnarfCalculator(version = ShnarfCalculatorVersion.V1_2, metricsFacade = metricsFacade)
+  GoBackedBlobShnarfCalculator(version = ShnarfCalculatorVersion.V3, metricsFacade = metricsFacade)
 
 fun createBlobRecord(
   startBlockNumber: ULong? = null,

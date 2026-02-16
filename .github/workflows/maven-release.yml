@@ -11,7 +11,7 @@ on:
       libToRelease:
         required: true
         type: string
-        description: 'Library to release, e.g :jvm-libs:blob-compressor'
+        description: 'Library to release, e.g :jvm-libs:linea:blob-compressor'
       version:
         required: true
         type: string

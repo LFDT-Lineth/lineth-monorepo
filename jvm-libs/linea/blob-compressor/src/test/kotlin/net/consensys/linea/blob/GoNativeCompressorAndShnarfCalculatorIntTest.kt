@@ -12,83 +12,82 @@ import linea.kotlin.encodeHex
 import net.consensys.linea.nativecompressor.CompressorTestData
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import java.util.Base64
+import java.util.stream.Stream
 import kotlin.random.Random
 
 class GoNativeCompressorAndShnarfCalculatorIntTest {
-  private val DATA_LIMIT = 128 * 1024
-  private lateinit var compressor: GoNativeBlobCompressor
-  private lateinit var shnarfCalculator: GoNativeBlobShnarfCalculator
-
   private fun encodeBase64(bytes: ByteArray): String {
     return Base64.getEncoder().encodeToString(bytes)
   }
 
-  @Nested
-  inner class CompressorV0 {
-    @BeforeEach
-    fun beforeEach() {
-      compressor = GoNativeBlobCompressorFactory.getInstance(BlobCompressorVersion.V2)
+  companion object {
+    private const val DATA_LIMIT = 128 * 1024
+
+    @JvmStatic
+    fun enumerateValidBlobCompressorAndShnarfCalculatorPair(): Stream<Arguments> {
+      val compressorV1 = GoNativeBlobCompressorFactory.getInstance(BlobCompressorVersion.V1_2)
         .apply {
           this.Init(DATA_LIMIT, GoNativeBlobCompressorFactory.dictionaryPath.toString())
           this.Reset()
         }
-      shnarfCalculator = GoNativeShnarfCalculatorFactory.getInstance(ShnarfCalculatorVersion.V1_2)
-    }
+      val compressorV2 = GoNativeBlobCompressorFactory.getInstance(BlobCompressorVersion.V2)
+        .apply {
+          this.Init(DATA_LIMIT, GoNativeBlobCompressorFactory.dictionaryPath.toString())
+          this.Reset()
+        }
+      val compressorV3 = GoNativeBlobCompressorFactory.getInstance(BlobCompressorVersion.V3)
+        .apply {
+          this.Init(DATA_LIMIT, GoNativeBlobCompressorFactory.dictionaryPath.toString())
+          this.Reset()
+        }
+      val shnarfCalculatorV1 = GoNativeShnarfCalculatorFactory.getInstance(ShnarfCalculatorVersion.V1_2)
+      val shnarfCalculatorV3 = GoNativeShnarfCalculatorFactory.getInstance(ShnarfCalculatorVersion.V3)
 
-    @Test
-    fun `should compress and shnarf with eip4844 disabled`() {
-      testsCompressionAndsShnarfCalculationWithEip4844Disabled(compressor, shnarfCalculator)
-    }
-
-    @Test
-    fun `should compress and shnarf with eip4844 enabled`() {
-      testsCompressionAndsShnarfCalculationWithEip4844Enabled(compressor, shnarfCalculator)
-    }
-
-    @Test
-    fun `compressed size estimation should be consistent with blob maker output`() {
-      testCompressedSizeEstimationIsConsistentWithBlobMakerOutput()
+      return Stream.of(
+        Arguments.of(compressorV1, shnarfCalculatorV1),
+        Arguments.of(compressorV2, shnarfCalculatorV1),
+        Arguments.of(compressorV3, shnarfCalculatorV3),
+      )
     }
   }
 
-  @Nested
-  inner class CompressorV1 {
-    @BeforeEach
-    fun beforeEach() {
-      compressor = GoNativeBlobCompressorFactory.getInstance(BlobCompressorVersion.V2)
-        .apply {
-          this.Init(DATA_LIMIT, GoNativeBlobCompressorFactory.dictionaryPath.toString())
-          this.Reset()
-        }
-      shnarfCalculator = GoNativeShnarfCalculatorFactory.getInstance(ShnarfCalculatorVersion.V1_2)
-    }
+  @ParameterizedTest
+  @MethodSource("enumerateValidBlobCompressorAndShnarfCalculatorPair")
+  fun `should compress and shnarf with eip4844 disabled`(
+    compressor: GoNativeBlobCompressor,
+    shnarfCalculator: GoNativeBlobShnarfCalculator,
+  ) {
+    testsCompressionAndsShnarfCalculationWithEip4844Disabled(compressor, shnarfCalculator)
+  }
 
-    @Test
-    fun `should compress and shnarf with eip4844 disabled`() {
-      testsCompressionAndsShnarfCalculationWithEip4844Disabled(compressor, shnarfCalculator)
-    }
+  @ParameterizedTest
+  @MethodSource("enumerateValidBlobCompressorAndShnarfCalculatorPair")
+  fun `should compress and shnarf with eip4844 enabled`(
+    compressor: GoNativeBlobCompressor,
+    shnarfCalculator: GoNativeBlobShnarfCalculator,
+  ) {
+    testsCompressionAndsShnarfCalculationWithEip4844Enabled(compressor, shnarfCalculator)
+  }
 
-    @Test
-    fun `should compress and shnarf with eip4844 enabled`() {
-      testsCompressionAndsShnarfCalculationWithEip4844Enabled(compressor, shnarfCalculator)
-    }
-
-    @Test
-    fun `compressed size estimation should be consistent with blob maker output`() {
-      testCompressedSizeEstimationIsConsistentWithBlobMakerOutput()
-    }
+  @ParameterizedTest
+  @MethodSource("enumerateValidBlobCompressorAndShnarfCalculatorPair")
+  fun `compressed size estimation should be consistent with blob maker output`(
+    compressor: GoNativeBlobCompressor,
+  ) {
+    testCompressedSizeEstimationIsConsistentWithBlobMakerOutput(compressor)
   }
 
   @Nested
   inner class CompressorSupportsMultipleInstances {
-    @Disabled("we only have v1 Atm, but keepin this for future")
+    @Test
     fun `should support multiple instances`() {
-      val compressorInstance1 = GoNativeBlobCompressorFactory.getInstance(BlobCompressorVersion.V2)
+      val compressorInstance1 = GoNativeBlobCompressorFactory.getInstance(BlobCompressorVersion.V1_2)
         .apply {
           this.Init(DATA_LIMIT, GoNativeBlobCompressorFactory.dictionaryPath.toString())
           this.Reset()
@@ -99,18 +98,36 @@ class GoNativeCompressorAndShnarfCalculatorIntTest {
           this.Init(DATA_LIMIT, GoNativeBlobCompressorFactory.dictionaryPath.toString())
           this.Reset()
         }
+
+      val compressorInstance3 = GoNativeBlobCompressorFactory.getInstance(BlobCompressorVersion.V3)
+        .apply {
+          this.Init(DATA_LIMIT, GoNativeBlobCompressorFactory.dictionaryPath.toString())
+          this.Reset()
+        }
+
       val block0 = CompressorTestData.blocksRlpEncoded[0]
       val block1 = CompressorTestData.blocksRlpEncoded[1]
+      val block2 = CompressorTestData.blocksRlpEncoded[2]
       assertThat(block0.encodeHex()).isNotEqualTo(block1.encodeHex())
+      assertThat(block0.encodeHex()).isNotEqualTo(block2.encodeHex())
+      assertThat(block1.encodeHex()).isNotEqualTo(block2.encodeHex())
 
       compressorInstance1.Write(block0, block0.size)
       assertThat(compressorInstance1.Len()).isGreaterThan(0)
       assertThat(compressorInstance2.Len()).isEqualTo(0)
+      assertThat(compressorInstance3.Len()).isEqualTo(0)
 
       compressorInstance1.Reset()
       compressorInstance2.Write(block1, block1.size)
       assertThat(compressorInstance1.Len()).isEqualTo(0)
       assertThat(compressorInstance2.Len()).isGreaterThan(0)
+      assertThat(compressorInstance3.Len()).isEqualTo(0)
+
+      compressorInstance2.Reset()
+      compressorInstance3.Write(block1, block1.size)
+      assertThat(compressorInstance1.Len()).isEqualTo(0)
+      assertThat(compressorInstance2.Len()).isEqualTo(0)
+      assertThat(compressorInstance3.Len()).isGreaterThan(0)
     }
   }
 
@@ -179,7 +196,7 @@ class GoNativeCompressorAndShnarfCalculatorIntTest {
     resultAsserterFn(result)
   }
 
-  fun testCompressedSizeEstimationIsConsistentWithBlobMakerOutput() {
+  fun testCompressedSizeEstimationIsConsistentWithBlobMakerOutput(compressor: GoNativeBlobCompressor) {
     val block = CompressorTestData.blocksRlpEncoded.first()
 
     // Write the block to the blob maker and get the effective compressed size

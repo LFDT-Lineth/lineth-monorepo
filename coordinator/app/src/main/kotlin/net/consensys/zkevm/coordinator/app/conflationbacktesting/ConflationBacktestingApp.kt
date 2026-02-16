@@ -4,7 +4,6 @@ import build.linea.clients.StateManagerClientV1
 import build.linea.clients.StateManagerV1JsonRpcClient
 import io.vertx.core.Vertx
 import linea.LongRunningService
-import linea.blob.ShnarfCalculatorVersion
 import linea.coordinator.config.toJsonRpcRetry
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.TracesConfig.ClientApiConfig
@@ -285,7 +284,7 @@ class ConflationBacktestingApp(
       blobCompressionProverClient = proverClientFactory.blobCompressionProverClient(log = log),
       rollingBlobShnarfCalculator = RollingBlobShnarfCalculator(
         blobShnarfCalculator = GoBackedBlobShnarfCalculator(
-          version = ShnarfCalculatorVersion.V1_2,
+          version = backtestingCoordinatorConfig.conflation.blobCompression.shnarfCalculatorVersion,
           metricsFacade = metricsFacade,
         ),
         parentBlobDataProvider = parentBlobDataProvider,
