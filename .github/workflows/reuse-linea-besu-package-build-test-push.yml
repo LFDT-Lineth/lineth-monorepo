@@ -8,9 +8,9 @@ permissions:
 on:
   workflow_call:
     inputs:
-      release_tag_prefix:
+      build_from_source:
         required: true
-        type: string
+        type: boolean
       run_test:
         required: true
         type: boolean
@@ -20,10 +20,7 @@ on:
       push_image:
         required: true
         type: boolean
-      skip_e2e_test:
-        required: true
-        type: boolean
-      expected_traces_api_ver:
+      expected_traces_api_version_override:
         required: true
         type: string
       with_besu_fleet_plugin:
@@ -44,8 +41,8 @@ jobs:
     uses: ./.github/workflows/linea-besu-package-build-and-upload.yml
     if: ${{ inputs.run_test || inputs.run_e2e_test }}
     with:
-      release_tag_prefix: ${{ inputs.release_tag_prefix }}
       with_besu_fleet_plugin: ${{ inputs.with_besu_fleet_plugin }}
+      build_from_source: ${{ inputs.build_from_source }}
     secrets: inherit
 
   run-test:
@@ -60,21 +57,21 @@ jobs:
 
   run-e2e-tests:
     needs: [ build-and-upload-artifact ]
-    if: ${{ inputs.run_e2e_test && !inputs.skip_e2e_test }}
+    if: ${{ inputs.run_e2e_test }}
     concurrency:
       group: run-e2e-tests-${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: ${{ github.ref != 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
     uses: ./.github/workflows/reuse-linea-besu-package-run-e2e-tests.yml
     with:
       linea_besu_package_tag: ${{ needs.build-and-upload-artifact.outputs.linea_besu_package_tag }}
-      expected_traces_api_version: ${{ inputs.expected_traces_api_ver || needs.build-and-upload-artifact.outputs.expected_traces_api_version }}
+      expected_traces_api_version: ${{ inputs.expected_traces_api_version_override || needs.build-and-upload-artifact.outputs.expected_traces_api_version }}
       e2e-tests-logs-dump: true
       e2e-tests-with-besu-fleet: ${{ inputs.with_besu_fleet_plugin }}
     secrets: inherit
 
   build-and-push-dockerhub:
     needs: [ run-test, run-e2e-tests ]
-    if: ${{ always() && !cancelled() && inputs.push_image && (inputs.skip_e2e_test || needs.run-e2e-test.result == 'skipped' || needs.run-e2e-tests.outputs.tests_outcome == 'success') && (needs.run-test.result == 'skipped' || needs.run-test.result == 'success') }}
+    if: ${{ always() && !cancelled() && inputs.push_image && (needs.run-e2e-tests.result == 'skipped' || needs.run-e2e-tests.outputs.tests_outcome == 'success') && (needs.run-test.result == 'skipped' || needs.run-test.result == 'success') }}
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     environment: dockerhub
     env:
@@ -84,12 +81,12 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
 
-      - name: build the linea artifacts
-        id: assemble
-        uses: ./.github/actions/linea-besu-package/assemble
+      - name: Build plugins and assemble
+        id: build-plugins-and-assemble
+        uses: ./.github/actions/linea-besu-package/build-plugins-and-assemble
         with:
-          release_tag_prefix: ${{ inputs.release_tag_prefix }}
-          fetch_besu_fleet_plugin: ${{ inputs.with_besu_fleet_plugin }}
+          build_from_source: ${{ inputs.build_from_source }}
+          with_besu_fleet_plugin: ${{ inputs.with_besu_fleet_plugin }}
           fleet_github_app_id: ${{ secrets.FLEET_GITHUB_APP_ID }}
           fleet_github_app_private_key: ${{ secrets.FLEET_GITHUB_APP_PRIVATE_KEY }}
 
@@ -108,9 +105,9 @@ jobs:
 
       - name: set docker build args
         run: |
-          echo "Building docker image (without fleet): consensys/linea-besu-package:${{ steps.assemble.outputs.dockertag }}"
+          echo "Building docker image (without fleet): consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag }}"
           if [[ "${{ inputs.with_besu_fleet_plugin }}" == "true" ]]; then
-            echo "Building docker image (with fleet): consensys/linea-besu-package-with-fleet:${{ steps.assemble.outputs.dockertag }}"
+            echo "Building docker image (with fleet): consensys/linea-besu-package-with-fleet:${{ steps.build-plugins-and-assemble.outputs.dockertag }}"
           fi
 
       - name: build and push the combined manifest (if Besu fleet plugin is included)
@@ -125,29 +122,19 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           build-args: |
-            VERSION=${{ steps.assemble.outputs.dockertag }}
+            VERSION=${{ steps.build-plugins-and-assemble.outputs.dockertag }}
             VCS_REF=${{ github.sha }}
-            BUILD_DATE=${{ steps.assemble.outputs.build_date }}
+            BUILD_DATE=${{ steps.build-plugins-and-assemble.outputs.build_date }}
           push: true
           tags: |
-            consensys/linea-besu-package-with-fleet:${{ steps.assemble.outputs.dockertag }}
+            consensys/linea-besu-package-with-fleet:${{ steps.build-plugins-and-assemble.outputs.dockertag }}
 
-      - name: get versions via dotenv
-        id: dotenv
-        uses: falti/dotenv-action@f4656c46de6bc223dda660f6724d52537bc0642a #v1.1.5
-        with:
-          path: linea-besu-package/versions.env
-          mode: development
-          keys-case: lower
-          log-variables: true
-          load-mode: strict
-      
       - name: Calculate the checksum of Besu fleet plugin
         id: besu-fleet-plugin-checksum
         if: ${{ inputs.with_besu_fleet_plugin }}
         shell: bash
         run: |
-          echo "sha256sum=$(sha256sum linea-besu-package/linea-besu/besu/plugins/besu-fleet-plugin-${{ steps.dotenv.outputs.BESU_FLEET_PLUGIN_VERSION }}.jar | awk '{ print $1 }' )" >> $GITHUB_OUTPUT
+          echo "sha256sum=$(sha256sum linea-besu-package/linea-besu/besu/plugins/besu-fleet-plugin-${{ steps.build-plugins-and-assemble.outputs.besu_fleet_version }}.jar | awk '{ print $1 }' )" >> $GITHUB_OUTPUT
 
       - name: Remove the Besu fleet plugin after image build (if existed)
         shell: bash
@@ -165,12 +152,12 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           build-args: |
-            VERSION=${{ steps.assemble.outputs.dockertag }}
+            VERSION=${{ steps.build-plugins-and-assemble.outputs.dockertag }}
             VCS_REF=${{ github.sha }}
-            BUILD_DATE=${{ steps.assemble.outputs.build_date }}
+            BUILD_DATE=${{ steps.build-plugins-and-assemble.outputs.build_date }}
           push: true
           tags: |
-            consensys/linea-besu-package:${{ steps.assemble.outputs.dockertag }}
+            consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag }}
             ${{ github.ref == 'refs/heads/main' && 'consensys/linea-besu-package:develop' || '' }}
             ${{ github.event_name == 'workflow_dispatch' && 'consensys/linea-besu-package:latest' || '' }}
 
@@ -179,38 +166,38 @@ jobs:
         id: release_create_artifacts
         run: |
           mkdir release && cd release
-          tar -czvf linea-besu-package-${{ steps.assemble.outputs.dockertag }}.tar.gz ../linea-besu-package/linea-besu/
+          tar -czvf linea-besu-package-${{ steps.build-plugins-and-assemble.outputs.dockertag }}.tar.gz ../linea-besu-package/linea-besu/
           echo "# Release Artifact: Linea Besu Package" > output.md
-          echo "**Name:** linea-besu-package-${{ steps.assemble.outputs.dockertag }}.tar.gz" >> output.md
-          echo "**SHA256:** $(sha256sum linea-besu-package-${{ steps.assemble.outputs.dockertag }}.tar.gz | awk '{ print $1 }' )" >> output.md
+          echo "**Name:** linea-besu-package-${{ steps.build-plugins-and-assemble.outputs.dockertag }}.tar.gz" >> output.md
+          echo "**SHA256:** $(sha256sum linea-besu-package-${{ steps.build-plugins-and-assemble.outputs.dockertag }}.tar.gz | awk '{ print $1 }' )" >> output.md
           echo "**From:** [${{ github.ref_name }} (${{ github.event_name }})](https://github.com/Consensys/linea-monorepo/actions/runs/${{ github.run_id }})" >> output.md
           echo "" >> output.md
 
           echo "### Besu and Plugin Details" >> output.md
           echo "| Module | Version | SHA-256 |" >> output.md
           echo "|--------|---------|--------------|" >> output.md
-          echo "| linea-besu | ${{ steps.dotenv.outputs.LINEA_BESU_TAR_GZ }} | $(sha256sum ../linea-besu-package/tmp/${{ steps.dotenv.outputs.LINEA_BESU_FILENAME_PREFIX }}-${{ steps.dotenv.outputs.LINEA_BESU_TAR_GZ }}.tar.gz | awk '{ print $1 }' ) |" >> output.md
-          echo "| linea-sequencer-plugin | ${{ steps.dotenv.outputs.LINEA_SEQUENCER_PLUGIN_VERSION }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/linea-sequencer-v${{ steps.dotenv.outputs.LINEA_SEQUENCER_PLUGIN_VERSION }}.jar | awk '{ print $1 }' ) |" >> output.md    
-          echo "| linea-tracer-plugin | ${{ steps.dotenv.outputs.LINEA_TRACER_PLUGIN_VERSION }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/linea-tracer-${{ steps.dotenv.outputs.LINEA_TRACER_PLUGIN_VERSION }}.jar | awk '{ print $1 }' ) |" >> output.md    
-          echo "| linea-staterecovery-plugin | ${{ steps.dotenv.outputs.LINEA_STATERECOVERY_PLUGIN_VERSION }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/linea-staterecovery-besu-plugin-v${{ steps.dotenv.outputs.LINEA_STATERECOVERY_PLUGIN_VERSION }}.jar | awk '{ print $1 }' ) |" >> output.md    
-          echo "| shomei-plugin | ${{ steps.dotenv.outputs.SHOMEI_PLUGIN_VERSION }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/besu-shomei-plugin-v${{ steps.dotenv.outputs.SHOMEI_PLUGIN_VERSION }}.jar | awk '{ print $1 }' ) |" >> output.md
+          echo "| linea-besu | ${{ steps.build-plugins-and-assemble.outputs.besu_version }} | $(sha256sum ../linea-besu-package/tmp/${{ steps.build-plugins-and-assemble.outputs.besu_filename_prefix }}-${{ steps.build-plugins-and-assemble.outputs.besu_version }}.tar.gz | awk '{ print $1 }' ) |" >> output.md
+          echo "| linea-sequencer-plugin | ${{ steps.build-plugins-and-assemble.outputs.sequencer_plugin_version }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/linea-sequencer-${{steps.build-plugins-and-assemble.outputs.sequencer_plugin_version }}.jar | awk '{ print $1 }' ) |" >> output.md    
+          echo "| linea-tracer-plugin | ${{ steps.build-plugins-and-assemble.outputs.tracer_plugin_version }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/linea-tracer-${{ steps.build-plugins-and-assemble.outputs.tracer_plugin_version }}.jar | awk '{ print $1 }' ) |" >> output.md    
+          echo "| linea-staterecovery-plugin | ${{ steps.build-plugins-and-assemble.outputs.staterecovery_version }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/linea-staterecovery-besu-plugin-v${{ steps.build-plugins-and-assemble.outputs.staterecovery_version }}.jar | awk '{ print $1 }' ) |" >> output.md    
+          echo "| shomei-plugin | ${{ steps.build-plugins-and-assemble.outputs.shomei_version }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/besu-shomei-plugin-v${{ steps.build-plugins-and-assemble.outputs.shomei_version }}.jar | awk '{ print $1 }' ) |" >> output.md
           if [[ "${{ inputs.with_besu_fleet_plugin }}" == "true" ]]; then
-            echo "| besu-fleet-plugin | ${{ steps.dotenv.outputs.BESU_FLEET_PLUGIN_VERSION }} | ${{ steps.besu-fleet-plugin-checksum.outputs.sha256sum }} |" >> output.md    
+            echo "| besu-fleet-plugin | ${{ steps.build-plugins-and-assemble.outputs.besu_fleet_version }} | ${{ steps.besu-fleet-plugin-checksum.outputs.sha256sum }} |" >> output.md    
           fi
           echo "" >> output.md
 
-          MANIFEST=$(docker manifest inspect consensys/linea-besu-package:${{ steps.assemble.outputs.dockertag }})
+          MANIFEST=$(docker manifest inspect consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag }})
           if [ $? -eq 0 ]; then
             echo "### Docker Image Details" >> output.md
             echo "" >> output.md
             echo "To pull the image, use the following command:" >> output.md
             echo "\`\`\`" >> output.md
-            echo "docker pull consensys/linea-besu-package:${{ steps.assemble.outputs.dockertag }}" >> output.md
+            echo "docker pull consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag }}" >> output.md
             echo "\`\`\`" >> output.md
             if [[ "${{ inputs.with_besu_fleet_plugin }}" == "true" ]]; then
               echo "To pull the image with Besu fleet plugin, use the following command:" >> output.md
               echo "\`\`\`" >> output.md
-              echo "docker pull consensys/linea-besu-package-with-fleet:${{ steps.assemble.outputs.dockertag }}" >> output.md
+              echo "docker pull consensys/linea-besu-package-with-fleet:${{ steps.build-plugins-and-assemble.outputs.dockertag }}" >> output.md
               echo "\`\`\`" >> output.md
             fi
             echo "" >> output.md
@@ -218,7 +205,7 @@ jobs:
             echo "|--------|----|--------------|" >> output.md
             echo "$MANIFEST" | jq -r '.manifests[] | select(.platform.architecture != "unknown" and .platform.os != "unknown") | "| \(.digest) | \(.platform.os) | \(.platform.architecture) |"' >> output.md
           else
-            echo "Docker image consensys/linea-besu-package:${{ steps.assemble.outputs.dockertag }} does not exist on dockerhub"
+            echo "Docker image consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag }} does not exist on dockerhub"
             exit 1
           fi
 
@@ -245,12 +232,12 @@ jobs:
         id: release_publish
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b #v2.5.0
         with:
-          name: Linea Besu Package ${{ steps.assemble.outputs.releasetag }}
-          tag_name: linea-besu-package-${{ steps.assemble.outputs.releasetag }}
+          name: Linea Besu Package ${{ steps.build-plugins-and-assemble.outputs.releasetag }}
+          tag_name: linea-besu-package-${{ steps.build-plugins-and-assemble.outputs.releasetag }}
           body_path: release/output.md
           prerelease: ${{  github.event_name != 'workflow_dispatch' }}
           generate_release_notes: false
           target_commitish: ${{ github.sha }}
           fail_on_unmatched_files: true
           files: |
-            release/linea-besu-package-${{ steps.assemble.outputs.dockertag }}.tar.gz
+            release/linea-besu-package-${{ steps.build-plugins-and-assemble.outputs.dockertag }}.tar.gz

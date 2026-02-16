@@ -80,6 +80,7 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           pattern: linea-besu-package*
+          path: ${{ github.workspace }}/linea-besu-package
       - name: Load Docker images
         run: |
           pwd && ls -la && echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE" &&

@@ -1,0 +1,48 @@
+name: 'Extracts release versions'
+
+description: 'Extracts release versions when build from source'
+inputs:
+  commit_tag_override:
+    description: 'Commit tag override'
+    required: false
+outputs:
+  arithmetization_version:
+    description: 'Arithmetization release version extracted from releases.versions.toml'
+    value: ${{ steps.parse_release_versions.outputs.arithmetization_version }}
+  tracer_version:
+    description: 'Tracer release version extracted from releases.versions.toml plus the 7-character commit hash suffix'
+    value: ${{ steps.parse_release_versions.outputs.tracer_version }}
+  sequencer_version:
+    description: 'Sequencer release version extracted from releases.versions.toml plus the 7-character commit hash suffix'
+    value: ${{ steps.parse_release_versions.outputs.sequencer_version }}
+  besu_version:
+    description: 'Besu release version extracted from libs.versions.toml'
+    value: ${{ steps.parse_release_versions.outputs.besu_version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Compute version tags
+      if: ${{ inputs.commit_tag_override == '' }}
+      id: compute_version_tags
+      uses: ./.github/actions/compute-version-tags
+    
+    - name: Parse releases.versions.toml
+      id: parse_release_versions
+      shell: bash
+      run: |
+        ARITHMETIZATION_VERSION=$(grep -E '^\s*arithmetization\s*=' gradle/releases.versions.toml | sed -n 's/.*"\([^"]*\)".*/\1/p')
+        TRACER_VERSION=$ARITHMETIZATION_VERSION-${{ inputs.commit_tag_override || steps.compute_version_tags.outputs.commit_tag }}
+        SEQUENCER_VERSION=$ARITHMETIZATION_VERSION-${{ inputs.commit_tag_override || steps.compute_version_tags.outputs.commit_tag }}
+        BESU_VERSION=$(grep -E '^\s*besu\s*=' gradle/libs.versions.toml | sed -n 's/.*"\([^"]*\)".*/\1/p')
+        echo "arithmetization_version=$ARITHMETIZATION_VERSION" >> $GITHUB_OUTPUT
+        echo "tracer_version=$TRACER_VERSION" >> $GITHUB_OUTPUT
+        echo "sequencer_version=$SEQUENCER_VERSION" >> $GITHUB_OUTPUT
+        echo "besu_version=$BESU_VERSION" >> $GITHUB_OUTPUT
+    - name: Show outputs
+      shell: bash
+      run: |
+        echo "arithmetization_version: ${{ steps.parse_release_versions.outputs.arithmetization_version }}"
+        echo "tracer_version: ${{ steps.parse_release_versions.outputs.tracer_version }}"
+        echo "sequencer_version: ${{ steps.parse_release_versions.outputs.sequencer_version }}"
+        echo "besu_version: ${{ steps.parse_release_versions.outputs.besu_version }}"

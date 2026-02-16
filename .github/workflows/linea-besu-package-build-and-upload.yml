@@ -8,10 +8,10 @@ permissions:
 on:
   workflow_call:
     inputs:
-      release_tag_prefix:
-        required: true
-        type: string
       with_besu_fleet_plugin:
+        required: true
+        type: boolean
+      build_from_source:
         required: true
         type: boolean
     outputs:
@@ -35,19 +35,19 @@ jobs:
   build-and-upload-artifact:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     outputs:
-      linea_besu_package_tag: ${{ steps.assemble.outputs.dockertag }}
-      expected_traces_api_version: ${{ steps.assemble.outputs.tracer_plugin_version }}
-      dockerimage: ${{ steps.assemble.outputs.dockerimage }}
+      linea_besu_package_tag: ${{ steps.build-plugins-and-assemble.outputs.dockertag }}
+      expected_traces_api_version: ${{ steps.build-plugins-and-assemble.outputs.arithmetization_version }}
+      dockerimage: ${{ steps.build-plugins-and-assemble.outputs.dockerimage }}
     steps:
-      - name: checkout
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: build the linea artifacts
-        id: assemble
-        uses: ./.github/actions/linea-besu-package/assemble
+      - name: Build plugins and assemble
+        id: build-plugins-and-assemble
+        uses: ./.github/actions/linea-besu-package/build-plugins-and-assemble
         with:
-          release_tag_prefix: ${{ inputs.release_tag_prefix }}
-          fetch_besu_fleet_plugin: ${{ inputs.with_besu_fleet_plugin }}
+          build_from_source: ${{ inputs.build_from_source }}
+          with_besu_fleet_plugin: ${{ inputs.with_besu_fleet_plugin }}
           fleet_github_app_id: ${{ secrets.FLEET_GITHUB_APP_ID }}
           fleet_github_app_private_key: ${{ secrets.FLEET_GITHUB_APP_PRIVATE_KEY }}
 
@@ -56,8 +56,8 @@ jobs:
 
       - name: set docker build args
         run: |
-          echo "Building docker tag: ${{ steps.assemble.outputs.dockertag }}"
-          echo "Building docker image: ${{ steps.assemble.outputs.dockerimage }}"
+          echo "Building docker tag: ${{ steps.build-plugins-and-assemble.outputs.dockertag }}"
+          echo "Building docker image: ${{ steps.build-plugins-and-assemble.outputs.dockerimage }}"
 
       - name: build the combined manifest
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
@@ -68,18 +68,18 @@ jobs:
           platforms: linux/amd64
           provenance: false
           build-args: |
-            VERSION=${{ steps.assemble.outputs.dockertag }}
+            VERSION=${{ steps.build-plugins-and-assemble.outputs.dockertag }}
             VCS_REF=${{ github.sha }}
-            BUILD_DATE=${{ steps.assemble.outputs.build_date }}
+            BUILD_DATE=${{ steps.build-plugins-and-assemble.outputs.build_date }}
           load: true
           push: false
           tags: |
-            consensys/linea-besu-package:${{ steps.assemble.outputs.dockertag }}
+            consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag }}
 
       - name: Save Docker image as artifact
         run: |
           docker images
-          docker save consensys/linea-besu-package:${{ steps.assemble.outputs.dockertag }} | gzip > linea-besu-package-image.tar.gz
+          docker save consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag }} | gzip > linea-besu-package-image.tar.gz
         shell: bash
 
       - name: Upload Docker image artifact

@@ -1,0 +1,122 @@
+---
+name: 'build-plugins-and-assemble'
+description: 'Composite action to build and assemble the artifacts for the target environment'
+
+inputs:
+  with_besu_fleet_plugin:
+    description: When "true", assemble with besu fleet plugin
+    required: true
+
+  fleet_github_app_id:
+    description: When "with_besu_fleet_plugin" is true, it should be set with besu fleet github app id
+    required: true
+
+  fleet_github_app_private_key:
+    description: When "with_besu_fleet_plugin" is true, it should be set with besu fleet github app private key
+    required: true
+  
+  build_from_source:
+    description: When "true", build tracer and sequencer zips from source, and assemble with those local zips
+    required: true
+
+outputs:
+  workflow_id:
+    description: workflow id
+    value: ${{ steps.metadata.outputs.workflow_id }}
+
+  build_date:
+    description: build date
+    value: ${{ steps.metadata.outputs.build_date }}
+
+  dockertag:
+    description: docker tag
+    value: ${{ steps.metadata.outputs.dockertag }}
+
+  dockerimage:
+    description: docker image
+    value: ${{ steps.metadata.outputs.dockerimage }}
+
+  releasetag:
+    description: release tag
+    value: ${{ steps.metadata.outputs.releasetag }}
+
+  arithmetization_version:
+    description: arithmetization version
+    value: ${{ steps.metadata.outputs.arithmetization_version }}
+  
+  tracer_plugin_version:
+    description: tracer plugin version
+    value: ${{ steps.metadata.outputs.tracer_plugin_version }}
+
+  sequencer_plugin_version:
+    description: sequencer plugin version
+    value: ${{ steps.metadata.outputs.sequencer_plugin_version }}
+
+  besu_version:
+    description: Linea besu version
+    value: ${{ steps.metadata.outputs.besu_version }}
+
+  staterecovery_version:
+    description: staterecovery plugin version
+    value: ${{ steps.metadata.outputs.staterecovery_version }}
+
+  shomei_version:
+    description: shomei plugin version
+    value: ${{ steps.metadata.outputs.shomei_version }}
+
+  besu_fleet_version:
+    description: besu fleet plugin version
+    value: ${{ steps.metadata.outputs.besu_fleet_version }}
+  
+  besu_base_url:
+    description: Linea besu Github repo base URL
+    value: ${{ steps.metadata.outputs.besu_base_url }}
+  
+  besu_filename_prefix:
+    description: Linea besu filename prefix
+    value: ${{ steps.metadata.outputs.besu_filename_prefix }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Compute linea-besu-package metadata
+      id: metadata
+      uses: ./.github/actions/linea-besu-package/compute-metadata
+      with:
+        build_from_source: ${{ inputs.build_from_source }}
+
+    - name: Display linea-besu-package metadata
+      shell: bash
+      run: echo "${{ toJson(steps.metadata.outputs) }}"
+
+    - name: Setup Tracer Environment (build from source)
+      if: ${{ inputs.build_from_source == 'true' }}
+      uses: ./.github/actions/setup-tracer-environment
+      with:
+        enable-ssh: false
+
+    - name: Build tracer zip from source
+      if: ${{ inputs.build_from_source == 'true' }}
+      shell: bash
+      run: ./gradlew :tracer:artifacts -PreleaseVersion=${{ steps.metadata.outputs.tracer_plugin_version }}
+      env:
+        JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
+
+    - name: Build sequencer zip from source
+      if: ${{ inputs.build_from_source == 'true' }}
+      shell: bash
+      run: ./gradlew besu-plugins:linea-sequencer:sequencer:artifacts -PreleaseVersion=${{ steps.metadata.outputs.sequencer_plugin_version }}
+      env:
+        JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
+
+    - name: build the linea artifacts
+      id: assemble
+      uses: ./.github/actions/linea-besu-package/assemble
+      with:
+        local_besu_version: ${{ inputs.build_from_source == 'true' && steps.metadata.outputs.besu_version || '' }}
+        local_arithmetization_version: ${{ inputs.build_from_source == 'true' && steps.metadata.outputs.tracer_plugin_version || '' }}
+        local_sequencer_version: ${{ inputs.build_from_source == 'true' && steps.metadata.outputs.sequencer_plugin_version || '' }}
+        fetch_besu_fleet_plugin: ${{ inputs.with_besu_fleet_plugin }}
+        besu_fleet_plugin_version: ${{ steps.metadata.outputs.besu_fleet_version }}
+        fleet_github_app_id: ${{ inputs.fleet_github_app_id }}
+        fleet_github_app_private_key: ${{ inputs.fleet_github_app_private_key }}

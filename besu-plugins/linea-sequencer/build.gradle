@@ -3,7 +3,7 @@ import com.github.jk1.license.filter.LicenseBundleNormalizer
 buildscript {
   ext {
     distributionIdentifier = "linea-sequencer"
-    releaseVersion = "${libs.versions.arithmetization.get()}-SNAPSHOT"
+    releaseVersion = "${releases.versions.arithmetization.get()}-SNAPSHOT"
   }
 }
 

@@ -1,0 +1,57 @@
+name: Check target lib version change
+description: 'Check if the version of the target lib has changed'
+
+inputs:
+  target_lib:
+    description: 'The name of the target lib'
+    required: true
+  target_file_path:
+    description: 'The target file path relative to the repo root'
+    required: false
+    default: 'gradle/releases.versions.toml'
+outputs:
+  version_changed:
+    description: 'Whether the target lib version has changed: true (changed) and false (unchanged)'
+    value: ${{ steps.check_target_lib_version_change.outputs.version_changed }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: check_target_lib_version_change
+      shell: bash
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        BASE_REF: ${{ github.base_ref }}
+        TARGET_FILE_PATH: ${{ inputs.target_file_path }}
+        TARGET_LIB: ${{ inputs.target_lib }}
+      run: |
+        # 1. Define variables
+        FILE="$TARGET_FILE_PATH"
+        # github.base_ref is only set for pull_request; for push (e.g. merge to main) use parent commit
+        if [ "$EVENT_NAME" = "pull_request" ] && [ -n "$BASE_REF" ]; then
+          BASE_BRANCH="origin/$BASE_REF"
+        else
+          BASE_BRANCH="HEAD^1"
+        fi
+
+        # Build the pattern to match the target lib line literally
+        TARGET_LIB_PATTERN="^$TARGET_LIB\s*="
+
+        # 2. Get the version value from the base ref (OLD)
+        # grep finds the line, tr deletes ALL spaces/tabs
+        OLD_VAL=$(git show "$BASE_BRANCH:$FILE" | grep "$TARGET_LIB_PATTERN" | tr -d '[:space:]' || echo "")
+        
+        # 3. Get the verion value from the current branch (NEW)
+        NEW_VAL=$(grep "$TARGET_LIB_PATTERN" "$FILE" | tr -d '[:space:]' || echo "")
+
+        echo "Old: $OLD_VAL"
+        echo "New: $NEW_VAL"
+
+        # 4. Compare
+        if [ "$OLD_VAL" != "$NEW_VAL" ]; then
+          echo "version_changed=true" >> $GITHUB_OUTPUT
+          echo "version has been updated!"
+        else
+          echo "version_changed=false" >> $GITHUB_OUTPUT
+          echo "version is unchanged."
+        fi

@@ -1,4 +1,13 @@
 rootProject.name = 'linea'
+
+dependencyResolutionManagement {
+  versionCatalogs {
+    releases {
+      from(files("gradle/releases.versions.toml"))
+    }
+  }
+}
+
 // please keep deps sorted by group and alphabetically
 include 'jvm-libs:generic:serialization:jackson'
 include 'jvm-libs:generic:json-rpc'

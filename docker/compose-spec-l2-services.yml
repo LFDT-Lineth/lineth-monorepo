@@ -39,7 +39,7 @@ services:
   sequencer:
     hostname: sequencer
     container_name: sequencer
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.4-rc7.4-20260120101516-9c16ce3}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.4-rc7.4-20260210173356-7d711e6}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       l2-genesis-initialization:
@@ -114,7 +114,7 @@ services:
   l2-node-besu:
     hostname: l2-node-besu
     container_name: l2-node-besu
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.4-rc7.4-20260120101516-9c16ce3}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.4-rc7.4-20260210173356-7d711e6}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -155,7 +155,7 @@ services:
   l2-node-besu-follower:
     hostname: l2-node-besu-follower
     container_name: l2-node-besu-follower
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.4-rc7.4-20260120101516-9c16ce3}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.4-rc7.4-20260210173356-7d711e6}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -196,7 +196,7 @@ services:
   traces-node:
     hostname: traces-node
     container_name: traces-node
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.4-rc7.4-20260120101516-9c16ce3}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.4-rc7.4-20260210173356-7d711e6}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -274,7 +274,7 @@ services:
   coordinator:
     hostname: coordinator
     container_name: coordinator
-    image: consensys/linea-coordinator:${COORDINATOR_TAG:-3e62ae1}
+    image: consensys/linea-coordinator:${COORDINATOR_TAG:-a23ccb1}
     profiles: [ "l2", "debug" ]
     depends_on:
       l2-genesis-initialization:
@@ -298,11 +298,11 @@ services:
       config__override__l1-submission__aggregation__signer__type: ${LINEA_COORDINATOR_SIGNER_TYPE:-web3j}
       config__override__l1-submission__data-availability: ${LINEA_COORDINATOR_DATA_AVAILABILITY:-ROLLUP}
       config__override__message-anchoring__signer__type: ${LINEA_COORDINATOR_SIGNER_TYPE:-web3j}
-    command: [ 'java', '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005','-Dvertx.configurationFile=/var/lib/coordinator/vertx-options.json', '-Dlog4j2.configurationFile=/var/lib/coordinator/log4j2-dev.xml', '-jar', 'libs/coordinator.jar', '--traces-limits-v4', 'config/traces-limits-v4.4.toml', '--smart-contract-errors', 'config/smart-contract-errors.toml', '--gas-price-cap-time-of-day-multipliers', 'config/gas-price-cap-time-of-day-multipliers.toml', 'config/coordinator-config.toml']
+    command: [ 'java', '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005','-Dvertx.configurationFile=/var/lib/coordinator/vertx-options.json', '-Dlog4j2.configurationFile=/var/lib/coordinator/log4j2-dev.xml', '-jar', 'libs/coordinator.jar', '--traces-limits-v5', 'config/traces-limits-v5.toml', '--smart-contract-errors', 'config/smart-contract-errors.toml', '--gas-price-cap-time-of-day-multipliers', 'config/gas-price-cap-time-of-day-multipliers.toml', 'config/coordinator-config.toml']
     #command: [ 'echo', 'forced exit' ]
     volumes:
       - ./config/l2-genesis-initialization/coordinator-config-v2-hardforks.toml:/opt/consensys/linea/coordinator/config/coordinator-config.toml:ro
-      - ../config/common/traces-limits-v4.4.toml:/opt/consensys/linea/coordinator/config/traces-limits-v4.4.toml:ro
+      - ../config/common/traces-limits-v5.toml:/opt/consensys/linea/coordinator/config/traces-limits-v5.toml:ro
       - ../config/common/smart-contract-errors.toml:/opt/consensys/linea/coordinator/config/smart-contract-errors.toml:ro
       - ../config/common/gas-price-cap-time-of-day-multipliers.toml:/opt/consensys/linea/coordinator/config/gas-price-cap-time-of-day-multipliers.toml:ro
       - ../config/coordinator/vertx-options.json:/var/lib/coordinator/vertx-options.json:ro
@@ -375,7 +375,7 @@ services:
       - l1network
 
   zkbesu-shomei:
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.4-rc7.4-20260120101516-9c16ce3}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.4-rc7.4-20260210173356-7d711e6}
     hostname: zkbesu-shomei
     container_name: zkbesu-shomei
     profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
@@ -593,7 +593,7 @@ services:
         ipv4_address: 10.10.10.205
 
   zkbesu-shomei-sr:
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.4-rc7.4-20260120101516-9c16ce3}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.4-rc7.4-20260210173356-7d711e6}
     hostname: zkbesu-shomei-sr
     container_name: zkbesu-shomei-sr
     profiles: [ "staterecovery", "external-to-monorepo" ]

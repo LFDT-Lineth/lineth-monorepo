@@ -1,117 +1,56 @@
 ---
 name: 'assemble'
-description: 'Composite action to assemble the artifacts for the targer environment'
+description: 'Composite action to assemble the artifacts for the target environment'
 
 inputs:
-  release_tag_prefix:
-    description: 'Custom release tag prefix'
-    required: true
   fetch_besu_fleet_plugin:
     description: 'Fetch Besu Fleet plugin or not'
     required: false
     default: 'false'
+  besu_fleet_plugin_version:
+    description: 'Besu Fleet plugin version'
+    required: false
   fleet_github_app_id:
     description: 'GitHub App ID to authenticate to besu-fleet-plugin repo'
     required: false
   fleet_github_app_private_key:
     description: 'GitHub App private key to authenticate to besu-fleet-plugin repo'
     required: false
-
-outputs:
-  workflow_id:
-    description: workflow id
-    value: ${{ steps.workflowdetails.outputs.id }}
-
-  build_date:
-    description: build date
-    value: ${{ steps.workflowdetails.outputs.build_date }}
-
-  dockertag:
-    description: docker tag
-    value: ${{ steps.dockertag.outputs.dockertag }}
-
-  dockerimage:
-    description: docker image
-    value: ${{ steps.dockerimage.outputs.dockerimage }}
-
-  releasetag:
-    description: release tag
-    value: ${{ steps.releasetag.outputs.releasetag }}
-  
-  tracer_plugin_version:
-    description: tracer plugin version
-    value: ${{ steps.dotenv.outputs.LINEA_TRACER_PLUGIN_VERSION }}
+  local_besu_version:
+    description: 'Besu version when build from source, defined in gradle/libs.versions.toml'
+    required: false
+  local_arithmetization_version:
+    description: 'Arithmetization version from local zip; if set, used instead of downloading from releases'
+    required: false
+  local_sequencer_version:
+    description: 'Sequencer version from local zip; if set, used instead of downloading from releases'
+    required: false
 
 runs:
   using: "composite"
   steps:
-    - name: Checkout tools repo
-      uses: actions/checkout@v4
-      with:
-        repository: Consensys/docs-gha
-        path: .docs-gha
-
-    - name: get workflow_details
-      id: workflowdetails
-      shell: bash      
-      run: |
-        echo "id=${{ github.run_id }}" >> $GITHUB_OUTPUT
-        echo "build_date=$(date --rfc-3339=date)" >> $GITHUB_OUTPUT
-    
-    - name: get versions via dotenv
-      id: dotenv
-      uses: falti/dotenv-action@a33be0b8cf6a6e6f1b82cc9f3782061ab1022be5 #v1.1.4
-      with:
-        path: linea-besu-package/versions.env
-        mode: development
-        keys-case: lower
-        log-variables: true
-        load-mode: strict
-    
-    - name: Set timestamp
-      id: timestamp
-      shell: bash     
-      run: |
-        echo "TIMESTAMP=$(date -u +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
-
-    - name: Compute commit hash
-      id: commithash
+    - name: Set local zip paths (build from source)
+      if: ${{ inputs.local_besu_version != '' && inputs.local_arithmetization_version != '' && inputs.local_sequencer_version != '' }}
+      id: set_local_zip_paths
       shell: bash
       run: |
-        # For PR, GITHUB_SHA is NOT the last commit pushed onto the PR branch - https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#pull_request
-        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          echo "commithash=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})" >> $GITHUB_OUTPUT
-        else
-          echo "commithash=$(git rev-parse --short=7 $GITHUB_SHA)" >> $GITHUB_OUTPUT
-        fi
-
-    - name: set docker tag
-      id: dockertag
-      shell: bash
-      run: |
-        if [ -n "${{ inputs.release_tag_prefix }}" ]; then
-          echo "dockertag=${{ inputs.release_tag_prefix }}-${{ steps.timestamp.outputs.TIMESTAMP }}-${{ steps.commithash.outputs.commithash }}" >> $GITHUB_OUTPUT
-        else
-          echo "dockertag=${{ steps.dotenv.outputs.LINEA_TRACER_PLUGIN_VERSION }}-${{ steps.timestamp.outputs.TIMESTAMP }}-${{ steps.commithash.outputs.commithash }}" >> $GITHUB_OUTPUT
-        fi
-    
-    - name: set release tag
-      id: releasetag
-      shell: bash
-      run: |
-        echo "releasetag=${{ steps.dockertag.outputs.dockertag }}" >> $GITHUB_OUTPUT
-
-    - name: set docker image
-      id: dockerimage
-      shell: bash
-      run: |
-        echo "dockerimage=consensys/linea-besu-package:${{ steps.dockertag.outputs.dockertag }}" >> "$GITHUB_OUTPUT"
+        echo "local_tracer_zip_path=$GITHUB_WORKSPACE/tracer/plugins/build/distributions/linea-tracer-${{ inputs.local_arithmetization_version }}.zip" >> $GITHUB_OUTPUT
+        echo "local_sequencer_zip_path=$GITHUB_WORKSPACE/besu-plugins/linea-sequencer/sequencer/build/distributions/linea-sequencer-${{ inputs.local_sequencer_version }}.zip" >> $GITHUB_OUTPUT
 
     - name: assemble the packages to linea-besu
       shell: bash
+      env:
+        ASSEMBLE_LOCAL_ZIPS: ${{ inputs.local_besu_version != '' && inputs.local_arithmetization_version != '' && inputs.local_sequencer_version != '' }}
+        LOCAL_BESU_VERSION: ${{ inputs.local_besu_version }}
+        LOCAL_TRACER_ZIP_PATH: ${{ steps.set_local_zip_paths.outputs.local_tracer_zip_path }}
+        LOCAL_SEQUENCER_ZIP_PATH: ${{ steps.set_local_zip_paths.outputs.local_sequencer_zip_path }}
       run: |
         cd linea-besu-package
-        make assemble
+        if [[ "$ASSEMBLE_LOCAL_ZIPS" == "true" ]]; then
+          BESU_VERSION="$LOCAL_BESU_VERSION" LOCAL_TRACER_ZIP_PATH="$LOCAL_TRACER_ZIP_PATH" LOCAL_SEQUENCER_ZIP_PATH="$LOCAL_SEQUENCER_ZIP_PATH" make assemble-local
+        else
+          make assemble
+        fi
         mv ./tmp/besu ./linea-besu
     
     - name: generate token to fetch artifacts from private besu-fleet-plugin
@@ -127,13 +66,13 @@ runs:
       uses: dsaltares/fetch-gh-release-asset@master
       with:
         repo: 'Consensys/besu-fleet-plugin'
-        version: 'tags/${{ steps.dotenv.outputs.BESU_FLEET_PLUGIN_VERSION }}'
-        target: './linea-besu-package/linea-besu/besu/plugins/besu-fleet-plugin-${{ steps.dotenv.outputs.BESU_FLEET_PLUGIN_VERSION }}.jar'
-        file: 'besu-fleet-plugin-${{ steps.dotenv.outputs.BESU_FLEET_PLUGIN_VERSION }}.jar'
+        version: 'tags/${{ inputs.besu_fleet_plugin_version }}'
+        target: './linea-besu-package/linea-besu/besu/plugins/besu-fleet-plugin-${{ inputs.besu_fleet_plugin_version }}.jar'
+        file: 'besu-fleet-plugin-${{ inputs.besu_fleet_plugin_version }}.jar'
         token: ${{ steps.generate_token.outputs.token }}
     
     - name: show folder structure
-      shell: bash    
+      shell: bash
       run: |
         cd linea-besu-package
         sudo apt update

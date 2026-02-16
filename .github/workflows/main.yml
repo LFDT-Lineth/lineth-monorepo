@@ -23,12 +23,13 @@ jobs:
       prover: ${{ steps.filter.outputs.prover }}
       transaction-exclusion-api: ${{ steps.filter.outputs.transaction-exclusion-api }}
       linea-besu-package: ${{ steps.filter.outputs.linea-besu-package }}
-      has-changes-requiring-build: ${{ steps.exclusion-filter.outputs.has-changes-requiring-build }}
       smart-contracts: ${{ steps.filter.outputs.smart-contracts }}
       linea-sequencer-plugin: ${{ steps.filter.outputs.linea-sequencer-plugin }}
       native-yield-automation-service: ${{ steps.filter.outputs.native-yield-automation-service }}
       tracer: ${{ steps.filter.outputs.tracer }}
       tracer-constraints: ${{ steps.filter.outputs.tracer-constraints }}
+      has-changes-requiring-build: ${{ steps.exclusion-filter.outputs.has-changes-requiring-build }}
+      has-changes-requiring-linea-besu-package-build-from-source: ${{ steps.filter.outputs.linea-sequencer-plugin == 'true' || steps.filter.outputs.tracer == 'true' || steps.filter.outputs.tracer-constraints == 'true' ||  steps.filter.outputs.linea-besu-package == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -198,7 +199,7 @@ jobs:
       - name: Deploy environment
         run: |
           echo "Build and e2e test environment deployed"
-
+  
   docker-build:
     needs:
       [
@@ -206,6 +207,10 @@ jobs:
         check-and-tag-images,
         manual-docker-build-and-e2e-tests,
       ]
+    permissions:
+      contents: read
+      actions: write  # allow nested linea_besu_package_build_and_publish to trigger workflow_dispatch
+      packages: write
     uses: ./.github/workflows/build-and-publish.yml
     with:
       commit_tag: ${{ needs.check-and-tag-images.outputs.commit_tag }}
@@ -215,7 +220,7 @@ jobs:
       prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
       native_yield_automation_service_changed: ${{ needs.filter-commit-changes.outputs.native-yield-automation-service }}
-      build_linea_besu_package: ${{ needs.filter-commit-changes.outputs.linea-besu-package }}
+      build_linea_besu_package_from_source: ${{ needs.filter-commit-changes.outputs.has-changes-requiring-linea-besu-package-build-from-source }}
       coordinator_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_coordinator }}
       postman_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_postman }}
       prover_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_prover }}
@@ -248,6 +253,10 @@ jobs:
   publish-images-after-run-tests-success-on-main:
     needs: [filter-commit-changes, check-and-tag-images, testing, run-e2e-tests]
     if: ${{ always() && github.ref == 'refs/heads/main' && needs.testing.result == 'success' && needs.run-e2e-tests.outputs.tests_outcome == 'success' }}
+    permissions:
+      contents: read
+      actions: write  # allow nested linea_besu_package_build_and_publish to trigger workflow_dispatch
+      packages: write
     uses: ./.github/workflows/build-and-publish.yml
     with:
       push_image: true
@@ -258,7 +267,7 @@ jobs:
       prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
       native_yield_automation_service_changed: ${{ needs.filter-commit-changes.outputs.native-yield-automation-service }}
-      build_linea_besu_package: "false" # dockerhub image build and push will be on linea-besu-package-release when push to main
+      build_linea_besu_package_from_source: ${{ needs.filter-commit-changes.outputs.has-changes-requiring-linea-besu-package-build-from-source }}
       coordinator_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_coordinator }}
       postman_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_postman }}
       prover_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_prover }}
@@ -280,7 +289,7 @@ jobs:
           environment: docker-build-and-e2e
           # ref_name is incorrect for PR trigger - https://github.com/strumwolf/delete-deployment-environment/issues/42
           # head_ref is correct for PR trigger, but only available for PR trigger
-          ref: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
+          ref: ${{ github.head_ref || github.ref_name }}
           onlyRemoveDeployments: true
 
   notify:

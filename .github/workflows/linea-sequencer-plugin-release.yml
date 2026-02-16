@@ -1,60 +1,55 @@
-name: linea-sequencer-plugin-release
+name: Manual Linea Sequencer Release Assets
 
 permissions:
   contents: write
-  actions: read
+  packages: write
 
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version (e.g. v3.1-rc8.2)'
+      release_tag:
+        description: Release tag (Must prefix with "linea-sequencer-")
         required: true
         type: string
+        default: "linea-sequencer-v4.4-rc8.1"
 
 jobs:
   build:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK 21
-        uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
+      - name: Configure Tag
+        id: config
+        # set tag to use in subsequent steps.
+        run: |
+          if [[ "$tag_name" != "linea-sequencer-"* ]]; then
+            echo "Error: The given 'inputs.release_tag' does not start with 'linea-sequencer-'"
+            exit 1
+          fi
+          echo "VERSION_TAG=${tag_name#linea-sequencer-}" >> $GITHUB_OUTPUT
+          echo "RELEASE_TAG=${tag_name}" >> $GITHUB_OUTPUT
+        env:
+          tag_name: ${{ inputs.release_tag }}
+      
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
-          java-version: 21
-          distribution: temurin
-          cache: 'gradle'
-
+          submodules: false
       - name: Setup Tracer Environment # configures Go, Java, Gradle, and gets submodules
         uses: ./.github/actions/setup-tracer-environment
         with:
           enable-ssh: false
 
       - name: Build artifacts
-        run: ./gradlew besu-plugins:linea-sequencer:sequencer:artifacts -PreleaseVersion=${{ github.event.inputs.version }}
+        run: ./gradlew besu-plugins:linea-sequencer:sequencer:artifacts -PreleaseVersion=${{ steps.config.outputs.VERSION_TAG }}
         env:
           JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
-
-      # TODO in later ticket - actions/create-release and actions/upload-release-asset are both archived
-      # ncipollo/release-action@v1 is an actively-maintained alternative that can combine release creation and artifact upload
-      - name: Draft Release
-        id: create_release
-        uses: actions/create-release@v1
+      
+      - name: Upload assets
+        id: upload-assets
+        run: |
+          echo "CREATE_TAG=$(gh release create "${{ steps.config.outputs.RELEASE_TAG }}" $jar_asset --target "${{ github.ref }}" 2>&1)" >> $GITHUB_OUTPUT
+          gh release upload ${{ steps.config.outputs.RELEASE_TAG }} $zip_asset
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: 'Draft release of version ${{ github.event.inputs.version }}.'
-          draft: true
-          prerelease: false
+          zip_asset: ./besu-plugins/linea-sequencer/sequencer/build/distributions/linea-sequencer-${{ steps.config.outputs.VERSION_TAG }}.zip
+          GH_TOKEN: ${{ github.token }}
 
-      - name: Upload Release Dist Asset
-        id: upload-release-dist-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./besu-plugins/linea-sequencer/sequencer/build/distributions/linea-sequencer-${{ github.event.inputs.version }}.zip
-          asset_name: linea-sequencer-${{ github.event.inputs.version }}.zip
-          asset_content_type: application/octet-stream

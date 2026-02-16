@@ -1,0 +1,32 @@
+---
+name: Compute version tags
+description: 'Composite action to compute the version tags for release'
+
+outputs:
+  commit_tag:
+    description: commit tag
+    value: ${{ steps.compute_version_tags.outputs.COMMIT_TAG }}
+
+  last_commit_tag:
+    description: last commit tag
+    value: ${{ steps.compute_version_tags.outputs.LAST_COMMIT_TAG }}
+
+  develop_tag:
+    description: develop tag
+    value: ${{ steps.compute_version_tags.outputs.DEVELOP_TAG }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Compute version tags
+      id: compute_version_tags
+      shell: bash
+      run: |
+        # For PR, GITHUB_SHA is NOT the last commit pushed onto the PR branch - https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#pull_request
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          echo "COMMIT_TAG=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})" >> $GITHUB_OUTPUT
+        else
+          echo "COMMIT_TAG=$(git rev-parse --short=7 $GITHUB_SHA)" >> $GITHUB_OUTPUT
+        fi
+        echo LAST_COMMIT_TAG=$(git rev-parse --short=7 "${{ github.event.before }}") >> $GITHUB_OUTPUT
+        echo DEVELOP_TAG=develop >> $GITHUB_OUTPUT

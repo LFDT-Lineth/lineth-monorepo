@@ -33,7 +33,7 @@ on:
       transaction_exclusion_api_changed:
         required: true
         type: string
-      build_linea_besu_package:
+      build_linea_besu_package_from_source:
         required: true
         type: string
       coordinator_image_tagged:
@@ -53,9 +53,9 @@ on:
         type: string
     outputs:
       linea_besu_package_tag:
-        value: ${{ jobs.linea_besu_package.outputs.linea_besu_package_tag }}
+        value: ${{ jobs.linea_besu_package_build_and_upload.outputs.linea_besu_package_tag }}
       expected_traces_api_version:
-        value: ${{ jobs.linea_besu_package.outputs.expected_traces_api_version }}
+        value: ${{ jobs.linea_besu_package_build_and_upload.outputs.expected_traces_api_version }}
     secrets:
       DOCKERHUB_USERNAME:
         required: false
@@ -113,10 +113,29 @@ jobs:
       push_image: ${{ inputs.push_image }}
     secrets: inherit
 
-  linea_besu_package:
+  linea_besu_package_build_and_upload:
     uses: ./.github/workflows/linea-besu-package-build-and-upload.yml
-    if: ${{ always() && (inputs.build_linea_besu_package == 'true') }}
+    if: ${{ always() && inputs.build_linea_besu_package_from_source == 'true' && !inputs.push_image }}
     with:
-      release_tag_prefix: ''
       with_besu_fleet_plugin: false
+      build_from_source: true
     secrets: inherit
+
+  linea_besu_package_build_and_publish:
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    if: ${{ always() && inputs.build_linea_besu_package_from_source == 'true' && inputs.push_image && github.ref == 'refs/heads/main' }}
+    permissions:
+      actions: write  # required for gh workflow run (workflow_dispatch)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Trigger Linea Besu Package Release
+        run: |
+          echo "Triggering linea-besu-package-release"
+          gh workflow run "linea-besu-package-release.yml" \
+            --ref ${{ github.head_ref || github.ref_name }} \
+            -f skip_e2e_test="true"
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

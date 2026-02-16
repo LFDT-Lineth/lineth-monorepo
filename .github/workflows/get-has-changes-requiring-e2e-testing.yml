@@ -32,6 +32,7 @@ jobs:
               - 'config/**/*.toml'
               - 'linea-besu-package/versions.env'
               - 'linea-besu-package/scripts/assemble-packages.sh'
+              - 'gradle/releases.versions.toml'
               - 'postman/src/**'
               - 'postman/package.json'
               - 'prover/**/*.go'

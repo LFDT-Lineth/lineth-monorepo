@@ -66,30 +66,22 @@ jobs:
       last_commit_tag_exists_postman: ${{ steps.check_image_tags_exist_postman.outputs.last_commit_tag_exists }}
       last_commit_tag_exists_prover: ${{ steps.check_image_tags_exist_prover.outputs.last_commit_tag_exists }}
       last_commit_tag_exists_transaction_exclusion_api: ${{ steps.check_image_tags_exist_transaction_exclusion_api.outputs.last_commit_tag_exists }}
-      commit_tag: ${{ steps.compute-version-tags.outputs.COMMIT_TAG }}
-      last_commit_tag: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}
-      develop_tag: ${{ steps.compute-version-tags.outputs.DEVELOP_TAG }}
+      commit_tag: ${{ steps.compute-version-tags.outputs.commit_tag }}
+      last_commit_tag: ${{ steps.compute-version-tags.outputs.last_commit_tag }}
+      develop_tag: ${{ steps.compute-version-tags.outputs.develop_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Compute version tags
         id: compute-version-tags
-        run: |
-          # For PR, GITHUB_SHA is NOT the last commit pushed onto the PR branch - https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#pull_request
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "COMMIT_TAG=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})" >> $GITHUB_OUTPUT
-          else
-            echo "COMMIT_TAG=$(git rev-parse --short=7 $GITHUB_SHA)" >> $GITHUB_OUTPUT
-          fi
-          echo LAST_COMMIT_TAG=$(git rev-parse --short=7 "${{ env.EVENT_BEFORE }}") >> $GITHUB_OUTPUT
-          echo DEVELOP_TAG=develop >> $GITHUB_OUTPUT
-      
+        uses: ./.github/actions/compute-version-tags
+
       - name: Show version tags
         run: |
-          echo "COMMIT_TAG: ${{ steps.compute-version-tags.outputs.COMMIT_TAG }}"
-          echo "LAST_COMMIT_TAG: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}"
-          echo "DEVELOP_TAG: ${{ steps.compute-version-tags.outputs.DEVELOP_TAG }}"
+          echo "COMMIT_TAG: ${{ steps.compute-version-tags.outputs.commit_tag }}"
+          echo "LAST_COMMIT_TAG: ${{ steps.compute-version-tags.outputs.last_commit_tag }}"
+          echo "DEVELOP_TAG: ${{ steps.compute-version-tags.outputs.develop_tag }}"
           echo "github.ref: ${{ github.ref }}"
 
       - name: Check image tags exist for coordinator
@@ -97,7 +89,7 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' && inputs.coordinator_changed == 'false' }}
         id: check_image_tags_exist_coordinator
         with:
-          last_commit_tag: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}
+          last_commit_tag: ${{ steps.compute-version-tags.outputs.last_commit_tag }}
           image_name: consensys/linea-coordinator
 
       - name: Check image tags exist for postman
@@ -105,7 +97,7 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' && inputs.postman_changed == 'false' }}
         id: check_image_tags_exist_postman
         with:
-          last_commit_tag: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}
+          last_commit_tag: ${{ steps.compute-version-tags.outputs.last_commit_tag }}
           image_name: consensys/linea-postman
 
       - name: Check image tags exist for native-yield-automation-service
@@ -113,7 +105,7 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' && inputs.native_yield_automation_service_changed == 'false' }}
         id: check_image_tags_exist_native_yield_automation_service
         with:
-          last_commit_tag: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}
+          last_commit_tag: ${{ steps.compute-version-tags.outputs.last_commit_tag }}
           image_name: consensys/linea-native-yield-automation-service
 
       - name: Check image tags exist for prover
@@ -121,7 +113,7 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' && inputs.prover_changed == 'false' }}
         id: check_image_tags_exist_prover
         with:
-          last_commit_tag: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}
+          last_commit_tag: ${{ steps.compute-version-tags.outputs.last_commit_tag }}
           image_name: consensys/linea-prover
 
       - name: Check image tags exist for transaction-exclusion-api
@@ -129,7 +121,7 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' && inputs.transaction_exclusion_api_changed == 'false' }}
         id: check_image_tags_exist_transaction_exclusion_api
         with:
-          last_commit_tag: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}
+          last_commit_tag: ${{ steps.compute-version-tags.outputs.last_commit_tag }}
           image_name: consensys/linea-transaction-exclusion-api
 
   image_tag_push:

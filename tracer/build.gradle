@@ -2,7 +2,7 @@
 buildscript {
   ext {
     besuPluginDir = File.createTempDir("plugins")
-    targetReleaseVersion = "beta-v4.4-rc7"
+    targetReleaseVersion = "${releases.versions.arithmetization.get()}"
     releaseVersion = findProperty('releaseVersion') ?: targetReleaseVersion
     distributionIdentifier = "linea-tracer"
     distibutionBaseName = "linea-arithmetization"

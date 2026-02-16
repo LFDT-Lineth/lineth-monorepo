@@ -1,6 +1,7 @@
 # The purpose of this workflow is to upload the necessary assets when
 # a release is made manually on github.
 name: Manual Linea Tracer Release Assets
+
 permissions:
   contents: write
   packages: write
@@ -9,17 +10,17 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Specify tag where assets should be added. (Must prefix with "linea-tracer-")
+        description: Release tag (Must prefix with "linea-tracer-")
         required: true
         type: string
-        default: "linea-tracer-beta-v4.4-rc7"
+        default: "linea-tracer-beta-v4.4-rc8"
 
 jobs:
   # ==================================================================
   # Build - for release and for tests
   # ==================================================================
   build:
-    runs-on: ubuntu-latest
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     outputs:
       createTag: ${{ steps.upload-assets.outputs.CREATE_TAG }}
       releaseTag: ${{ steps.config.outputs.RELEASE_TAG }}
@@ -30,13 +31,13 @@ jobs:
         # set tag to use in subsequent steps.
         run: |
           if [[ "$tag_name" != "linea-tracer-"* ]]; then
-            echo "Error: The given 'inputs.release_tag' or 'release.tag_name' ($tag_name) does not start with 'linea-tracer-'"
+            echo "Error: The given 'inputs.release_tag' does not start with 'linea-tracer-'"
             exit 1
           fi
           echo "VERSION_TAG=${tag_name#linea-tracer-}" >> $GITHUB_OUTPUT
           echo "RELEASE_TAG=${tag_name}" >> $GITHUB_OUTPUT
         env:
-          tag_name: ${{ inputs.release_tag || github.event.release.tag_name }}
+          tag_name: ${{ inputs.release_tag }}
 
       - name: Checkout repository
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -44,15 +45,16 @@ jobs:
           submodules: false
 
       - name: Setup Tracer Environment
-        # setup go-corset
         uses: ./.github/actions/setup-tracer-environment
+        with:
+          enable-ssh: false
 
-      - name: Build Assets
+      - name: Build artifacts
         run: ./gradlew :tracer:artifacts -PreleaseVersion=${{ steps.config.outputs.VERSION_TAG }}
         env:
           JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
 
-      - name: Upload Assets
+      - name: Upload assets
         id: upload-assets
         run: |
           echo "CREATE_TAG=$(gh release create "${{ steps.config.outputs.RELEASE_TAG }}" $jar_asset --target "${{ github.ref }}" 2>&1)" >> $GITHUB_OUTPUT

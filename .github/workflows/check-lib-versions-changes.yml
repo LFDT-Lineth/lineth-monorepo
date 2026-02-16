@@ -1,0 +1,35 @@
+name: Check target lib versions changes
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  workflow_call:
+    outputs:
+      arithmetization_version_changed:
+        description: 'Whether the target lib version has changed: true (changed) and false (unchanged)'
+        value: ${{ jobs.check_lib_version_change.outputs.arithmetization_version_changed }}
+
+concurrency:
+  group: check-lib-versions-changes-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  check_lib_version_change:
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    outputs:
+      arithmetization_version_changed: ${{ steps.check_arithmetization.outputs.version_changed }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check arithmetization version change
+        uses: ./.github/actions/check-lib-version-change
+        id: check_arithmetization
+        with:
+          target_lib: arithmetization
+          target_file_path: gradle/releases.versions.toml

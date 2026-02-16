@@ -10,7 +10,7 @@ inputs:
     required: true
 outputs:
   last_commit_tag_exists:
-    description: 'Whether the last commit image tag exists'
+    description: 'Whether the last commit image tag exists: 0 (exists) and 1 (not exists)'
     value: ${{ steps.last_commit_image_exists.outputs.last_commit_tag_exists }}
 
 runs:

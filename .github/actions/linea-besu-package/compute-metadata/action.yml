@@ -1,0 +1,123 @@
+---
+name: 'compute metadata'
+description: 'Composite action to compute the metadata for linea-besu-package'
+
+inputs:
+  build_from_source:
+    description: 'Indicates whether the tracer and sequencer plugins will be built from source'
+    required: true
+
+outputs:
+  workflow_id:
+    description: workflow id
+    value: ${{ steps.workflowdetails.outputs.id }}
+
+  build_date:
+    description: build date
+    value: ${{ steps.workflowdetails.outputs.build_date }}
+
+  dockertag:
+    description: docker tag
+    value: ${{ steps.dockertag.outputs.dockertag }}
+
+  dockerimage:
+    description: docker image
+    value: ${{ steps.dockerimage.outputs.dockerimage }}
+
+  releasetag:
+    description: release tag
+    value: ${{ steps.releasetag.outputs.releasetag }}
+  
+  arithmetization_version:
+    description: arithmetization version
+    value: ${{ inputs.build_from_source == 'true' && steps.release_versions.outputs.arithmetization_version || steps.dotenv.outputs.LINEA_TRACER_PLUGIN_VERSION }}
+
+  tracer_plugin_version:
+    description: tracer plugin version
+    value: ${{ inputs.build_from_source == 'true' && steps.release_versions.outputs.tracer_version || steps.dotenv.outputs.LINEA_TRACER_PLUGIN_VERSION }}
+
+  sequencer_plugin_version:
+    description: sequencer plugin version
+    value: ${{ inputs.build_from_source == 'true' && steps.release_versions.outputs.sequencer_version || format('v{0}', steps.dotenv.outputs.LINEA_SEQUENCER_PLUGIN_VERSION) }}
+
+  besu_version:
+    description: Linea besu version
+    value: ${{ inputs.build_from_source == 'true' && steps.release_versions.outputs.besu_version || steps.dotenv.outputs.LINEA_BESU_TAR_GZ }}
+
+  staterecovery_version:
+    description: staterecovery plugin version
+    value: ${{ steps.dotenv.outputs.LINEA_STATERECOVERY_PLUGIN_VERSION }}
+
+  shomei_version:
+    description: shomei plugin version
+    value: ${{ steps.dotenv.outputs.SHOMEI_PLUGIN_VERSION }}
+
+  besu_fleet_version:
+    description: besu fleet plugin version
+    value: ${{ steps.dotenv.outputs.BESU_FLEET_PLUGIN_VERSION }}
+  
+  besu_base_url:
+    description: Linea besu Github repo base URL
+    value: ${{ steps.dotenv.outputs.LINEA_BESU_BASE_URL }}
+  
+  besu_filename_prefix:
+    description: Linea besu filename prefix
+    value: ${{ steps.dotenv.outputs.LINEA_BESU_FILENAME_PREFIX }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Compute commit hash
+      id: compute_version_tags
+      uses: ./.github/actions/compute-version-tags
+    
+    - name: Parse release versions from releases.versions.toml if build from source
+      id: release_versions
+      uses: ./.github/actions/parse-release-versions
+      with:
+        commit_tag_override: ${{ steps.compute_version_tags.outputs.commit_tag }}
+    
+    - name: get versions via dotenv
+      id: dotenv
+      uses: falti/dotenv-action@a33be0b8cf6a6e6f1b82cc9f3782061ab1022be5 #v1.1.4
+      with:
+        path: linea-besu-package/versions.env
+        mode: development
+        keys-case: lower
+        log-variables: true
+        load-mode: strict
+    
+    - name: get workflow_details
+      id: workflowdetails
+      shell: bash
+      run: |
+        echo "id=${{ github.run_id }}" >> $GITHUB_OUTPUT
+        echo "build_date=$(date --rfc-3339=date)" >> $GITHUB_OUTPUT
+    
+    - name: Set timestamp
+      id: timestamp
+      shell: bash
+      run: |
+        echo "TIMESTAMP=$(date -u +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
+
+    - name: set docker tag
+      id: dockertag
+      shell: bash
+      run: |
+        if [ "${{ inputs.build_from_source }}" == "true" ]; then
+          echo "dockertag=${{ steps.release_versions.outputs.arithmetization_version }}-${{ steps.timestamp.outputs.TIMESTAMP }}-${{ steps.compute_version_tags.outputs.commit_tag }}" >> $GITHUB_OUTPUT
+        else
+          echo "dockertag=${{ steps.dotenv.outputs.LINEA_TRACER_PLUGIN_VERSION }}-${{ steps.timestamp.outputs.TIMESTAMP }}-${{ steps.compute_version_tags.outputs.commit_tag }}" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: set release tag
+      id: releasetag
+      shell: bash
+      run: |
+        echo "releasetag=${{ steps.dockertag.outputs.dockertag }}" >> $GITHUB_OUTPUT
+
+    - name: set docker image
+      id: dockerimage
+      shell: bash
+      run: |
+        echo "dockerimage=consensys/linea-besu-package:${{ steps.dockertag.outputs.dockertag }}" >> "$GITHUB_OUTPUT"

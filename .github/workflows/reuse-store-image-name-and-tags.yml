@@ -25,27 +25,18 @@ jobs:
       # REF_NAME: ${{ github.ref_name }}
       EVENT_BEFORE: ${{ github.event.before }}
     outputs:
-      commit_tag: ${{ steps.step1.outputs.COMMIT_TAG }}
-      last_commit_tag: ${{ steps.step1.outputs.LAST_COMMIT_TAG }}
-      develop_tag: ${{ steps.step1.outputs.DEVELOP_TAG }}
+      commit_tag: ${{ steps.compute-version-tags.outputs.commit_tag }}
+      last_commit_tag: ${{ steps.compute-version-tags.outputs.last_commit_tag }}
+      develop_tag: ${{ steps.compute-version-tags.outputs.develop_tag}}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Compute version tags
-        id: step1
-        run: |
-          # For PR, GITHUB_SHA is NOT the last commit pushed onto the PR branch - https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#pull_request
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "COMMIT_TAG=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})" >> $GITHUB_OUTPUT
-          else
-            echo "COMMIT_TAG=$(git rev-parse --short=7 $GITHUB_SHA)" >> $GITHUB_OUTPUT
-          fi
-          echo LAST_COMMIT_TAG=$(git rev-parse --short=7 "${{ env.EVENT_BEFORE }}") >> $GITHUB_OUTPUT
-          echo DEVELOP_TAG=develop >> $GITHUB_OUTPUT
+        id: compute-version-tags
+        uses: ./.github/actions/compute-version-tags
       - name: Show version tags
-        id: step2
         run: |
-          echo "COMMIT_TAG: ${{ steps.step1.outputs.COMMIT_TAG }}"
-          echo "LAST_COMMIT_TAG: ${{ steps.step1.outputs.LAST_COMMIT_TAG }}"
-          echo "DEVELOP_TAG: ${{ steps.step1.outputs.DEVELOP_TAG }}"
+          echo "COMMIT_TAG: ${{ steps.compute-version-tags.outputs.commit_tag }}"
+          echo "LAST_COMMIT_TAG: ${{ steps.compute-version-tags.outputs.last_commit_tag }}"
+          echo "DEVELOP_TAG: ${{ steps.compute-version-tags.outputs.develop_tag }}"
           echo "github.ref: ${{ github.ref }}"
