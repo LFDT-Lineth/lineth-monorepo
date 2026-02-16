@@ -34,15 +34,15 @@ on:
       develop_tag:
         value: ${{ jobs.check_image_tags_exist.outputs.develop_tag }}
       image_tagged_coordinator:
-        value: ${{ jobs.image_tag_push.outputs.image_tagged_coordinator }}
+        value: ${{ jobs.image_tag_push.outputs.image_tagged_coordinator || 'false' }}
       image_tagged_prover:
-        value: ${{ jobs.image_tag_push.outputs.image_tagged_prover }}
+        value: ${{ jobs.image_tag_push.outputs.image_tagged_prover || 'false' }}
       image_tagged_postman:
-        value: ${{ jobs.image_tag_push.outputs.image_tagged_postman }}
+        value: ${{ jobs.image_tag_push.outputs.image_tagged_postman || 'false' }}
       image_tagged_native_yield_automation_service:
-        value: ${{ jobs.image_tag_push.outputs.image_tagged_native_yield_automation_service }}
+        value: ${{ jobs.image_tag_push.outputs.image_tagged_native_yield_automation_service || 'false' }}
       image_tagged_transaction_exclusion_api:
-        value: ${{ jobs.image_tag_push.outputs.image_tagged_transaction_exclusion_api }}
+        value: ${{ jobs.image_tag_push.outputs.image_tagged_transaction_exclusion_api || 'false' }}
     secrets:
       DOCKERHUB_USERNAME:
         required: false
@@ -94,7 +94,7 @@ jobs:
 
       - name: Check image tags exist for coordinator
         uses: ./.github/actions/check-image-tags-exist
-        if: ${{ inputs.coordinator_changed == 'false' }}
+        if: ${{ github.ref == 'refs/heads/main' && inputs.coordinator_changed == 'false' }}
         id: check_image_tags_exist_coordinator
         with:
           last_commit_tag: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}
@@ -102,7 +102,7 @@ jobs:
 
       - name: Check image tags exist for postman
         uses: ./.github/actions/check-image-tags-exist
-        if: ${{ inputs.postman_changed == 'false' }}
+        if: ${{ github.ref == 'refs/heads/main' && inputs.postman_changed == 'false' }}
         id: check_image_tags_exist_postman
         with:
           last_commit_tag: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}
@@ -110,7 +110,7 @@ jobs:
 
       - name: Check image tags exist for native-yield-automation-service
         uses: ./.github/actions/check-image-tags-exist
-        if: ${{ inputs.native_yield_automation_service_changed == 'false' }}
+        if: ${{ github.ref == 'refs/heads/main' && inputs.native_yield_automation_service_changed == 'false' }}
         id: check_image_tags_exist_native_yield_automation_service
         with:
           last_commit_tag: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}
@@ -118,7 +118,7 @@ jobs:
 
       - name: Check image tags exist for prover
         uses: ./.github/actions/check-image-tags-exist
-        if: ${{ inputs.prover_changed == 'false' }}
+        if: ${{ github.ref == 'refs/heads/main' && inputs.prover_changed == 'false' }}
         id: check_image_tags_exist_prover
         with:
           last_commit_tag: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}
@@ -126,7 +126,7 @@ jobs:
 
       - name: Check image tags exist for transaction-exclusion-api
         uses: ./.github/actions/check-image-tags-exist
-        if: ${{ inputs.transaction_exclusion_api_changed == 'false' }}
+        if: ${{ github.ref == 'refs/heads/main' && inputs.transaction_exclusion_api_changed == 'false' }}
         id: check_image_tags_exist_transaction_exclusion_api
         with:
           last_commit_tag: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}

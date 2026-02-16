@@ -71,10 +71,6 @@ jobs:
     # We can only use conditionals, and not path filters to 'successfully' skip a required job - https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks#handling-skipped-but-required-checks
     if: ${{ inputs.has-changes-requiring-e2e-testing == 'true' }}
     env:
-      COORDINATOR_TAG: ${{ inputs.commit_tag }}
-      POSTMAN_TAG: ${{ inputs.commit_tag }}
-      PROVER_TAG: ${{ inputs.commit_tag }}
-      TRANSACTION_EXCLUSION_API_TAG: ${{ inputs.commit_tag }}
       BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
       EXPECTED_TRACES_API_VERSION: ${{ inputs.expected_traces_api_version }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -121,14 +117,37 @@ jobs:
         with:
           pattern: linea-*
 
-      - name: Load Docker images
-        run: |
-          pwd && ls -la && echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE" &&
-          gunzip -c $GITHUB_WORKSPACE/linea-coordinator/linea-coordinator-docker-image.tar.gz | docker load &&
-          gunzip -c $GITHUB_WORKSPACE/linea-postman/linea-postman-docker-image.tar.gz | docker load &&
-          gunzip -c $GITHUB_WORKSPACE/linea-prover/linea-prover-docker-image.tar.gz | docker load &&
-          gunzip -c $GITHUB_WORKSPACE/linea-transaction-exclusion-api/linea-transaction-exclusion-api-docker-image.tar.gz | docker load
+      - name: Load Docker images from artifacts or pull develop for unchanged services
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
+        with:
+          max_attempts: 10
+          retry_on: error
+          retry_wait_seconds: 30
+          timeout_minutes: 10
+          command: |
+            set -eo pipefail
+            for service in coordinator postman prover transaction-exclusion-api; do
+              artifact_path="$GITHUB_WORKSPACE/linea-${service}/linea-${service}-docker-image.tar.gz"
+              if [ -f "$artifact_path" ]; then
+                echo "Loading ${service} from build artifact..."
+                gunzip -c "$artifact_path" | docker load
+              else
+                echo "No artifact found for ${service}, pulling develop tag from registry..."
+                docker pull "consensys/linea-${service}:develop"
+              fi
+            done
+      - name: Set Docker image tags
         shell: bash
+        run: |
+          for service in coordinator postman prover transaction-exclusion-api; do
+            artifact_path="$GITHUB_WORKSPACE/linea-${service}/linea-${service}-docker-image.tar.gz"
+            env_var="$(echo "${service}" | tr '[:lower:]-' '[:upper:]_')_TAG"
+            if [ -f "$artifact_path" ]; then
+              echo "${env_var}=${{ inputs.commit_tag }}" >> "$GITHUB_ENV"
+            else
+              echo "${env_var}=develop" >> "$GITHUB_ENV"
+            fi
+          done
       - name: Load linea-besu-package Docker image
         if: ${{ inputs.linea_besu_package_tag != '' }}
         run: |
