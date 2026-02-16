@@ -32,7 +32,7 @@ open class Web3JLineaValidiumSmartContractClientReadOnly(
 
   override fun getAddress(): String = contractAddress
 
-  override fun getVersion(): SafeFuture<LineaValidiumContractVersion> =
+  override fun getVersion(blockParameter: BlockParameter): SafeFuture<LineaValidiumContractVersion> =
     SafeFuture.completedFuture(LineaValidiumContractVersion.V1)
 
   override fun finalizedL2BlockNumber(blockParameter: BlockParameter): SafeFuture<ULong> {

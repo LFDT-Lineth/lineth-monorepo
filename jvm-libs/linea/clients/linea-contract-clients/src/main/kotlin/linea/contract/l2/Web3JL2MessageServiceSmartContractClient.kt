@@ -146,8 +146,10 @@ class Web3JL2MessageServiceSmartContractClient(
     }
   }
 
-  private fun fetchSmartContractVersion(): SafeFuture<L2MessageServiceSmartContractVersion> {
-    return contractClientAtBlock(BlockParameter.Tag.LATEST, L2MessageService::class.java)
+  private fun fetchSmartContractVersion(
+    blockParameter: BlockParameter = BlockParameter.Tag.LATEST,
+  ): SafeFuture<L2MessageServiceSmartContractVersion> {
+    return contractClientAtBlock(blockParameter, L2MessageService::class.java)
       .CONTRACT_VERSION()
       .requestAsync { version ->
         when {
@@ -158,7 +160,14 @@ class Web3JL2MessageServiceSmartContractClient(
   }
 
   override fun getAddress(): String = contractAddress
-  override fun getVersion(): SafeFuture<L2MessageServiceSmartContractVersion> = getSmartContractVersion()
+  override fun getVersion(blockParameter: BlockParameter): SafeFuture<L2MessageServiceSmartContractVersion> {
+    return if (blockParameter == BlockParameter.Tag.LATEST) {
+      getSmartContractVersion()
+    } else {
+      fetchSmartContractVersion(blockParameter)
+    }
+  }
+
   override fun getDeploymentBlock(): SafeFuture<ULong> {
     return deploymentBlockNumberProvider()
   }

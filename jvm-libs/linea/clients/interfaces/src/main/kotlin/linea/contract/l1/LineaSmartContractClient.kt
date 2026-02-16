@@ -2,6 +2,7 @@ package linea.contract.l1
 
 import linea.domain.BlockParameter
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Duration
 import kotlin.time.Instant
 
 enum class LineaRollupContractVersion : Comparable<LineaRollupContractVersion> {
@@ -68,3 +69,26 @@ interface LineaRollupSmartContractClientReadOnlyFinalizedStateProvider {
 interface LineaValidiumSmartContractClientReadOnly :
   LineaSmartContractClientReadOnly,
   ContractVersionProvider<LineaValidiumContractVersion>
+
+/**
+ * Polls contract's version until contract's is equal or greater than target version.
+ *
+ * This is useful for components that depend on a Contract upcoming feature and
+ * need to wait for contract upgrade before starting normal operation.
+ */
+interface ContractVersionAwaiter<VersionType : Comparable<VersionType>> {
+  /**
+   * Waits until contract version reaches target version
+   *
+   * @param minTargetVersion minimum contractVersion to wait for
+   * @param highestBlockTag Highest block tag (LATEST, SAFE, FINALIZED) to consider for version check
+   * @param timeout Maximum time to wait for contractVersion to reach minTargetVersion
+   *
+   * @return Future that completes with the target version once reached, with
+   */
+  fun awaitVersion(
+    minTargetVersion: VersionType,
+    highestBlockTag: BlockParameter,
+    timeout: Duration? = null,
+  ): SafeFuture<VersionType>
+}

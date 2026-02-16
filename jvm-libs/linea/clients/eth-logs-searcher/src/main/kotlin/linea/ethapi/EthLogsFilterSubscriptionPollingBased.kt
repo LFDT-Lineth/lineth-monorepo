@@ -5,14 +5,19 @@ import linea.EthLogsSearcher
 import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.EthLog
 import linea.ethapi.extensions.EthLogConsumer
+import linea.ethapi.extensions.EthLogsFilterState
+import linea.ethapi.extensions.EthLogsFilterStateListener
 import linea.ethapi.extensions.EthLogsFilterSubscriptionFactory
 import linea.ethapi.extensions.EthLogsFilterSubscriptionManager
 import linea.ethapi.extensions.getAbsoluteBlockNumbers
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
+import net.consensys.linea.async.RetriedExecutionException
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.time.Duration
 
 class EthLogsFilterSubscriptionFactoryPollingBased(
@@ -46,6 +51,7 @@ class EthLogsFilterSubscriptionFactoryPollingBased(
  * when filter.toBlock is a tag (FINALIZED, SAFE, LATEST) the service will keep on polling forever
  * PENDING tag is not supported.
  */
+@OptIn(ExperimentalAtomicApi::class)
 class EthLogsFilterPoller(
   vertx: Vertx,
   private val ethApiClient: EthApiClient,
@@ -80,8 +86,26 @@ class EthLogsFilterPoller(
   // Tracks the position of the last successfully processed log for exactly-once semantics
   private var lastProcessedPosition: LogPosition? = null
 
+  // State tracking
+  private var stateListener: EthLogsFilterStateListener? = null
+
+  private val currentState: AtomicReference<EthLogsFilterState> = AtomicReference(EthLogsFilterState.Idle)
+
   override fun setConsumer(logsConsumer: EthLogConsumer) {
     this.consumer = logsConsumer
+  }
+
+  override fun setStateListener(stateListener: EthLogsFilterStateListener?) {
+    this.stateListener = stateListener
+  }
+
+  private fun transitionTo(newState: EthLogsFilterState) {
+    val lastState = currentState.load()
+    if (lastState != newState) {
+      currentState.store(newState)
+      stateListener?.onStateChange(lastState, newState)
+      log.debug("state transition: {} -> {}", lastState, newState)
+    }
   }
 
   override fun start(): SafeFuture<Unit> {
@@ -111,6 +135,7 @@ class EthLogsFilterPoller(
     ).thenCompose { (start, end) ->
       if (start > end) {
         // it means we reached toBlock tag (eg SAFE/FINALIZED) on L1, wait for the next tick
+        transitionTo(EthLogsFilterState.CaughtUp(lastSearchedBlockNumber = lastSearchedBlock ?: 0u))
         log.trace(
           "skipping search iteration, block interval is empty: from={} to={}({})",
           fromBlock,
@@ -119,6 +144,9 @@ class EthLogsFilterPoller(
         )
         return@thenCompose SafeFuture.completedFuture(Unit)
       }
+
+      // Searching through available blocks
+      transitionTo(EthLogsFilterState.Searching(startBlockNumber = start))
       log.debug("fetching logs: filter={}", filter)
 
       ethLogsSearcher.getLogsRollingForward(
@@ -177,6 +205,17 @@ class EthLogsFilterPoller(
           log.trace("no new logs found in block range {}..{}", result.startBlockNumber, result.endBlockNumber)
         }
       }
+    }
+  }
+
+  override fun handleError(error: Throwable) {
+    if (error.cause is RetriedExecutionException &&
+      error.cause?.message?.startsWith("Stop condition wasn't met after timeout") ?: false
+    ) {
+      // ignore timeout errors, we're just waiting for the next tick'
+      return
+    } else {
+      super.handleError(error)
     }
   }
 }

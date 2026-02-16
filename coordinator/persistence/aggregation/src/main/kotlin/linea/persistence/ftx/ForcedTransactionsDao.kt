@@ -8,4 +8,7 @@ interface ForcedTransactionsDao {
   fun findByNumber(ftxNumber: ULong): SafeFuture<ForcedTransactionRecord?>
   fun list(): SafeFuture<List<ForcedTransactionRecord>>
   fun deleteFtxUpToInclusive(ftxNumber: ULong): SafeFuture<Int>
+  fun findHighestForcedTransaction(): SafeFuture<ForcedTransactionRecord?> {
+    return list().thenApply { it.maxByOrNull { ftx -> ftx.ftxNumber } }
+  }
 }

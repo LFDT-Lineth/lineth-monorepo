@@ -20,6 +20,7 @@ data class CoordinatorConfigFileToml(
   val type2StateProofProvider: Type2StateProofManagerToml,
   val l1FinalizationMonitor: L1FinalizationMonitorConfigToml,
   val l1Submission: L1SubmissionConfigToml,
+  val forcedTransactions: ForcedTransactionsConfigToml? = null,
   val messageAnchoring: MessageAnchoringConfigToml,
   val l2NetworkGasPricing: L2NetworkGasPricingConfigToml,
   val database: DatabaseToml,
@@ -78,6 +79,14 @@ data class CoordinatorConfigToml(
         l1DynamicGasPriceCapTimeOfDayMultipliers
           ?.gasPriceCapTimeOfDayMultipliers
           ?: emptyMap(),
+      ),
+      forcedTransactions =
+      this.configs.forcedTransactions?.reified(
+        l1DefaultEndpoint = this.configs.defaults.l1Endpoint,
+        l1DefaultRequestRetries = this.configs.defaults.l1RequestRetries,
+      ) ?: ForcedTransactionsConfigToml().reified(
+        l1DefaultEndpoint = this.configs.defaults.l1Endpoint,
+        l1DefaultRequestRetries = this.configs.defaults.l1RequestRetries,
       ),
       messageAnchoring =
       this.configs.messageAnchoring.reified(

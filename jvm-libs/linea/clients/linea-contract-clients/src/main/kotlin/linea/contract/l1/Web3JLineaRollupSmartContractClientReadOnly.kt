@@ -81,24 +81,34 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
     }
   }
 
-  private fun fetchSmartContractVersion(): SafeFuture<LineaRollupContractVersion> {
-    return contractClientAtBlock(BlockParameter.Tag.LATEST, LineaRollupV6::class.java)
+  private fun fetchSmartContractVersion(
+    blockParameter: BlockParameter = BlockParameter.Tag.LATEST,
+  ): SafeFuture<LineaRollupContractVersion> {
+    return contractClientAtBlock(blockParameter, LineaRollupV6::class.java)
       .CONTRACT_VERSION()
       .sendAsync()
       .toSafeFuture()
-      .thenApply { version ->
-        when {
-          version.startsWith("6") -> LineaRollupContractVersion.V6
-          version.startsWith("7") -> LineaRollupContractVersion.V7
-          version.startsWith("8") -> LineaRollupContractVersion.V8
-          else -> throw IllegalStateException("Unsupported contract version: $version")
-        }
-      }
+      .thenApply(::parseContractVersion)
+  }
+
+  private fun parseContractVersion(version: String): LineaRollupContractVersion {
+    return when {
+      version.startsWith("6") -> LineaRollupContractVersion.V6
+      version.startsWith("7") -> LineaRollupContractVersion.V7
+      version.startsWith("8") -> LineaRollupContractVersion.V8
+      else -> throw IllegalStateException("Unsupported contract version: $version")
+    }
   }
 
   override fun getAddress(): String = contractAddress
 
-  override fun getVersion(): SafeFuture<LineaRollupContractVersion> = getSmartContractVersion()
+  override fun getVersion(blockParameter: BlockParameter): SafeFuture<LineaRollupContractVersion> {
+    return if (blockParameter == BlockParameter.Tag.LATEST) {
+      getSmartContractVersion()
+    } else {
+      fetchSmartContractVersion(blockParameter)
+    }
+  }
 
   override fun finalizedL2BlockNumber(blockParameter: BlockParameter): SafeFuture<ULong> {
     return contractClientV8AtBlock(blockParameter)

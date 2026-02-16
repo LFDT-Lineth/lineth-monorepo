@@ -5,10 +5,12 @@ import linea.contract.events.ForcedTransactionAddedEvent
 import linea.domain.BlockParameter
 import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.EthLog
-import linea.ethapi.EthLogsClient
+import linea.ethapi.EthApiClient
 import linea.ethapi.EthLogsFilterOptions
+import linea.ethapi.extensions.EthLogsFilterState
 import linea.ethapi.extensions.EthLogsFilterSubscriptionFactory
 import linea.ethapi.extensions.EthLogsFilterSubscriptionManager
+import linea.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
 import linea.kotlin.toHexStringUInt256
 import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.LogManager
@@ -19,16 +21,18 @@ import java.util.concurrent.CompletableFuture
 import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.decrementAndFetch
+import kotlin.time.Instant
 
 @OptIn(ExperimentalAtomicApi::class)
-class ForcedTransactionsL1EventsFetcher(
+internal class ForcedTransactionsL1EventsFetcher(
   private val address: String,
-  private val ethLogsClient: EthLogsClient,
+  private val ethLogsClient: EthApiClient,
   private val resumePointProvider: ForcedTransactionsResumePointProvider,
   private val ethLogsFilterSubscriptionFactory: EthLogsFilterSubscriptionFactory,
+  private val safeBlockNumberManager: ForcedTransactionsSafeBlockNumberManager,
   private val l1EarliestBlock: BlockParameter = BlockParameter.Tag.EARLIEST,
   private val l1HighestBlock: BlockParameter = BlockParameter.Tag.FINALIZED,
-  private val ftxQueue: Queue<ForcedTransactionAddedEvent>,
+  private val ftxQueue: Queue<ForcedTransactionWithTimestamp>,
   private val log: Logger = LogManager.getLogger(ForcedTransactionsL1EventsFetcher::class.java),
 ) : LongRunningService {
   private lateinit var eventsSubscription: EthLogsFilterSubscriptionManager
@@ -103,6 +107,9 @@ class ForcedTransactionsL1EventsFetcher(
             filterOptions = filterOptions,
             logsConsumer = ::onNewForcedTransaction,
           )
+
+        // Set up state listener to release safe block number lock when caught up
+        tmpEventsSubscription.setStateListener(this::onSearchStateUpdated)
         tmpEventsSubscription
           .start()
           .toSafeFuture()
@@ -121,9 +128,29 @@ class ForcedTransactionsL1EventsFetcher(
         event.event.forcedTransactionNumber.toLong() + 1,
       )
     if (eventIsInOrder) {
-      log.info("event ForcedTransactionAdded: l1Block={} event={}", event.log.blockNumber, event.event)
-      // if queue is full, will throw and events fetch will retry on next tick
-      runCatching { ftxQueue.add(event.event) }
+      // if queue is full or something fails, will throw and events fetch will retry on next tick
+      runCatching {
+        // Fetch L1 block timestamp
+        // Using blocking call since FTX events are rare and we need the timestamp immediately
+        val l1Block = ethLogsClient
+          .ethGetBlockByNumberTxHashes(event.log.blockNumber.toBlockParameter())
+          .get()
+        val l1BlockTimestamp = Instant.fromEpochSeconds(l1Block.timestamp.toLong())
+
+        log.info(
+          "event ForcedTransactionAdded: l1Block={} l1BlockTimestamp={} event={}",
+          event.log.blockNumber,
+          l1BlockTimestamp,
+          event.event,
+        )
+
+        // Wrap event with L1 block timestamp
+        val ftxWithTimestamp = ForcedTransactionWithTimestamp(
+          event = event.event,
+          l1BlockTimestamp = l1BlockTimestamp,
+        )
+        ftxQueue.add(ftxWithTimestamp)
+      }
         .onFailure {
           log.warn("failed to add event to queue, it will retry on next tick: errorMessage={}", it.message)
           // rollback expected ftx number, it was optimistically incremented above
@@ -135,6 +162,14 @@ class ForcedTransactionsL1EventsFetcher(
       log.error(message)
       this.stop()
       throw IllegalStateException(message)
+    }
+  }
+
+  private fun onSearchStateUpdated(prevState: EthLogsFilterState, newState: EthLogsFilterState) {
+    log.info("l1 events search state updated: prevState={} newState={}", prevState, newState)
+    if (newState is EthLogsFilterState.CaughtUp) {
+      log.info("caught up with l1 events, releasing safe block number lock")
+      safeBlockNumberManager.caughtUpWithChainHeadAfterStartUp()
     }
   }
 

@@ -20,6 +20,7 @@ class CoordinatorConfigTest {
       ${L1FinalizationMonitorParsingTest.toml}
       ${L1SubmissionConfigParsingTest.toml}
       ${MessageAnchoringConfigParsingTest.toml}
+      ${ForcedTransactionsConfigParsingTest.toml}
       ${L2NetWorkingGasPricingConfigParsingTest.toml}
       ${DataBaseConfigParsingTest.toml}
       ${ApiConfigParsingTest.toml}
@@ -36,6 +37,7 @@ class CoordinatorConfigTest {
         l1FinalizationMonitor = L1FinalizationMonitorParsingTest.config,
         l1Submission = L1SubmissionConfigParsingTest.config,
         messageAnchoring = MessageAnchoringConfigParsingTest.config,
+        forcedTransactions = ForcedTransactionsConfigParsingTest.config,
         l2NetworkGasPricing = L2NetWorkingGasPricingConfigParsingTest.config,
         database = DataBaseConfigParsingTest.config,
         api = ApiConfigParsingTest.config,
@@ -73,6 +75,7 @@ class CoordinatorConfigTest {
         l1FinalizationMonitor = L1FinalizationMonitorParsingTest.configMinimal,
         l1Submission = L1SubmissionConfigParsingTest.configMinimal,
         messageAnchoring = MessageAnchoringConfigParsingTest.configMinimal,
+        forcedTransactions = null, // this is optional, when null will default to suitable defaults
         l2NetworkGasPricing = L2NetWorkingGasPricingConfigParsingTest.configMinimal,
         database = DataBaseConfigParsingTest.configMinimal,
         api = ApiConfigParsingTest.configMinimal,

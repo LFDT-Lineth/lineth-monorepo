@@ -16,15 +16,22 @@ class FakeL2MessageService(
   private var lastAnchoredL1MessageNumber: ULong = 0uL
   private var lastAnchoredRollingHash: ByteArray = ByteArray(0)
 
-  @get:Synchronized @set:Synchronized
+  @get:Synchronized
+  @set:Synchronized
   var forceAnchoringFailures: Boolean = false
 
   override fun getAddress(): String = contractAddress
   override fun getDeploymentBlock(): SafeFuture<ULong> = SafeFuture.completedFuture(contractDeployBlock)
 
   @Synchronized
-  override fun getVersion(): SafeFuture<L2MessageServiceSmartContractVersion> =
-    SafeFuture.completedFuture(contractVersion)
+  override fun getVersion(blockParameter: BlockParameter): SafeFuture<L2MessageServiceSmartContractVersion> {
+    if (blockParameter != BlockParameter.Tag.LATEST) {
+      return SafeFuture.failedFuture(
+        IllegalArgumentException("Only LATEST is supported, blockParameter=$blockParameter{}"),
+      )
+    }
+    return SafeFuture.completedFuture(contractVersion)
+  }
 
   @Synchronized
   fun setLastAnchoredL1Message(l1MessageNumber: ULong, rollingHash: ByteArray) {

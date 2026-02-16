@@ -12,7 +12,9 @@ dependencies {
 
   testImplementation project(":jvm-libs:generic:logging")
   testImplementation project(":coordinator:ethereum:test-utils")
+  testImplementation testFixtures(project(":jvm-libs:generic:extensions:kotlin"))
   testImplementation testFixtures(project(":jvm-libs:linea:core:domain-models"))
   testImplementation testFixtures(project(":jvm-libs:linea:clients:interfaces"))
+  testImplementation testFixtures(project(":jvm-libs:linea:clients:linea-contract-clients"))
   testImplementation testFixtures(project(":coordinator:persistence:aggregation"))
 }

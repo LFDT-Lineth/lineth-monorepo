@@ -42,4 +42,17 @@ data class ForcedTransactionRecord(
   val inclusionResult: ForcedTransactionInclusionResult,
   val simulatedExecutionBlockNumber: ULong,
   val simulatedExecutionBlockTimestamp: Instant,
-)
+  val proofStatus: ProofStatus,
+  val proofIndex: InvalidityProofIndex? = null,
+) {
+  enum class ProofStatus {
+    /** Invalidity proof has not been requested yet, execution status just inserted into the DB */
+    UNREQUESTED,
+
+    /** Invalidity proof has been requested from the prover */
+    REQUESTED,
+
+    /** Invalidity proof has been successfully generated */
+    PROVEN,
+  }
+}

@@ -3,8 +3,10 @@ package linea.ftx
 import io.vertx.core.Vertx
 import linea.LongRunningService
 import linea.contract.events.ForcedTransactionAddedEvent
+import linea.ethapi.EthApiBlockClient
 import linea.forcedtx.ForcedTransactionRequest
 import linea.forcedtx.ForcedTransactionsClient
+import linea.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager
@@ -15,13 +17,15 @@ import kotlin.time.Duration
 /**
  * Takes ForcedTransactionEventAdded from the queue and sends them to the sequencer.
  */
-class ForcedTransactionsSenderForExecution(
+internal class ForcedTransactionsSenderForExecution(
   vertx: Vertx,
-  val unprocessedFtxProvider: ForcedTransactionsProvider,
-  val ftxClient: ForcedTransactionsClient,
-  val pollingInterval: Duration,
-  val log: Logger = LogManager.getLogger(ForcedTransactionsSenderForExecution::class.java),
-  val txLimitToSendPerTick: Int = 10,
+  private val unprocessedFtxProvider: ForcedTransactionsProvider,
+  private val ftxClient: ForcedTransactionsClient,
+  private val l2EthApi: EthApiBlockClient,
+  private val safeBlockNumberManager: ForcedTransactionsSafeBlockNumberManager,
+  private val pollingInterval: Duration,
+  private val log: Logger = LogManager.getLogger(ForcedTransactionsSenderForExecution::class.java),
+  private val txLimitToSendPerTick: Int = 10,
 ) :
   VertxPeriodicPollingService(
     vertx = vertx,
@@ -44,7 +48,17 @@ class ForcedTransactionsSenderForExecution(
         if (unprocessedFtx.isEmpty()) {
           SafeFuture.completedFuture(null)
         } else {
-          this.sendTransactions(unprocessedTransactions = unprocessedFtx.take(txLimitToSendPerTick))
+          l2EthApi
+            .ethBlockNumber()
+            .thenCompose { latestBlockNumber ->
+              safeBlockNumberManager.lockSafeBlockNumberBeforeSendingToSequencer(latestBlockNumber)
+              val unprocessedFtxToSend = unprocessedFtx.take(txLimitToSendPerTick)
+              // we flag then as sent to sequencer regardless of promise resolution:
+              // promise may fail because of network error just on the response,
+              // which means sequencer got them and will try to process them
+              safeBlockNumberManager.ftxSentToSequencer(unprocessedFtxToSend)
+              this.sendTransactions(unprocessedTransactions = unprocessedFtxToSend)
+            }
         }
       }
   }
