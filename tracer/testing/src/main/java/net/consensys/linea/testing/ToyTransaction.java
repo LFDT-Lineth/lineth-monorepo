@@ -86,7 +86,7 @@ public class ToyTransaction {
               .payload(Optional.ofNullable(payload).orElse(DEFAULT_INPUT_DATA))
               .chainId(Optional.ofNullable(chainId).orElse(BigInteger.valueOf(LINEA_CHAIN_ID)));
 
-      if (transactionType == TransactionType.EIP1559) {
+      if (builder.getTransactionType().supports1559FeeMarket()) {
         builder.maxPriorityFeePerGas(
             Optional.ofNullable(maxPriorityFeePerGas).orElse(DEFAULT_MAX_PRIORITY_FEE_PER_GAS));
         builder.maxFeePerGas(Optional.ofNullable(maxFeePerGas).orElse(DEFAULT_MAX_FEE_PER_GAS));

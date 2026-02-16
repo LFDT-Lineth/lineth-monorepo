@@ -123,52 +123,49 @@ public class ToyExecutionEnvironmentV2 {
           zkTracerValidator,
           testInfo);
 
-      if (isPostOsaka(tracer.getHub().fork)) {
-        // This is to check that the light counter is really counting more than the full tracer
-        final ZkTracer tracer = this.tracer;
+      final ZkTracer tracer = this.tracer;
 
-        final Map<String, Integer> tracerCount = tracer.getModulesLineCount();
+      final Map<String, Integer> tracerCount = tracer.getModulesLineCount();
 
-        final ToyExecutionEnvironmentV2 copyEnvironment =
-            ToyExecutionEnvironmentV2.builder(chainConfig, testInfo)
-                .transactionProcessingResultValidator(
-                    TransactionProcessingResultValidator.EMPTY_VALIDATOR)
-                .accounts(accounts)
-                .zkTracerValidator(zkTracerValidator)
-                .transactions(transactions)
-                .build();
-        copyEnvironment.runForCounting();
-        final Map<String, Integer> lightCounterCount =
-            copyEnvironment.zkCounter.getModulesLineCount();
+      final ToyExecutionEnvironmentV2 copyEnvironment =
+          ToyExecutionEnvironmentV2.builder(chainConfig, testInfo)
+              .transactionProcessingResultValidator(
+                  TransactionProcessingResultValidator.EMPTY_VALIDATOR)
+              .accounts(accounts)
+              .zkTracerValidator(zkTracerValidator)
+              .transactions(transactions)
+              .build();
+      copyEnvironment.runForCounting();
+      final Map<String, Integer> lightCounterCount =
+          copyEnvironment.zkCounter.getModulesLineCount();
 
-        final List<String> moduleToCheck =
-            copyEnvironment.zkCounter.checkedModules().stream()
-                .map(module -> module.moduleKey().toString())
-                .toList();
+      final List<String> moduleToCheck =
+          copyEnvironment.zkCounter.checkedModules().stream()
+              .map(module -> module.moduleKey().toString())
+              .toList();
 
-        for (String module : moduleToCheck) {
-          checkArgument(
-              tracerCount.get(module) <= lightCounterCount.get(module),
-              "Module "
-                  + module
-                  + " has more lines in full tracer: "
-                  + tracerCount.get(module)
-                  + " than in light counter: "
-                  + lightCounterCount.get(module));
+      for (String module : moduleToCheck) {
+        checkArgument(
+            tracerCount.get(module) <= lightCounterCount.get(module),
+            "Module "
+                + module
+                + " has more lines in full tracer: "
+                + tracerCount.get(module)
+                + " than in light counter: "
+                + lightCounterCount.get(module));
 
-          // TODO: how to make it smart ?
+        // TODO: how to make it smart ?
 
-          // Note: we compare to twice the (tracer count +1) to not get exceptions when tracer
-          // module is empty (GAS for SKIP tx for example)
-          // checkArgument(
-          //     lightCounterCount.get(module) <= 2 * (tracerCount.get(module) + 1),
-          //     "Module "
-          //         + module
-          //         + " has more than twice line counts in light tracer: "
-          //         + lightCounterCount.get(module)
-          //         + " than in full counter: "
-          //         + tracerCount.get(module));
-        }
+        // Note: we compare to twice the (tracer count +1) to not get exceptions when tracer
+        // module is empty (GAS for SKIP tx for example)
+        // checkArgument(
+        //     lightCounterCount.get(module) <= 2 * (tracerCount.get(module) + 1),
+        //     "Module "
+        //         + module
+        //         + " has more than twice line counts in light tracer: "
+        //         + lightCounterCount.get(module)
+        //         + " than in full counter: "
+        //         + tracerCount.get(module));
       }
     }
   }

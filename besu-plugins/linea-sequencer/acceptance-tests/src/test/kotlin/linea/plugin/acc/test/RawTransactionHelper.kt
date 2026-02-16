@@ -12,7 +12,6 @@ import org.hyperledger.besu.tests.acceptance.dsl.account.Account
 import org.web3j.crypto.Credentials
 import org.web3j.crypto.RawTransaction
 import org.web3j.crypto.TransactionEncoder
-import org.web3j.tx.gas.DefaultGasProvider
 import org.web3j.utils.Numeric
 import java.math.BigInteger
 

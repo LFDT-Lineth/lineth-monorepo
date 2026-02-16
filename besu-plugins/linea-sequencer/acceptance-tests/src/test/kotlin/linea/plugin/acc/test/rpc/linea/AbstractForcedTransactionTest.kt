@@ -59,7 +59,12 @@ abstract class AbstractForcedTransactionTest : LineaPluginPoSTestBase() {
     senderPrivateKey: String,
     recipientAddress: String,
     nonce: Int,
-  ): String = RawTransactionHelper.createSignedTransferFromPrivateKey(CHAIN_ID, senderPrivateKey, recipientAddress, nonce)
+  ): String = RawTransactionHelper.createSignedTransferFromPrivateKey(
+    CHAIN_ID,
+    senderPrivateKey,
+    recipientAddress,
+    nonce,
+  )
 
   protected fun createSignedTransferWithCustomGasPrice(
     sender: Account,

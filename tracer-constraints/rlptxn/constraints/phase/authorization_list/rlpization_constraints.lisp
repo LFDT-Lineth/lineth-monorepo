@@ -11,7 +11,7 @@
 (defconstraint tuple-rlpization (:guard IS_AUTHORIZATION_LIST)
   (if-not-zero (rlptxn---authorization-list---first-row-tuple-processing)
     (begin
-    (vanishes! (shift (rlptxn---authorization-list---item-RLP-length-countdown) RLP_TXN_NB_ROWS_PER_AUTHORIZATION))
+    (vanishes! (shift (rlptxn---authorization-list---item-RLP-length-countdown) ( - RLP_TXN_NB_ROWS_PER_AUTHORIZATION 1)))
     ;; prefix
     (rlp-compound-constraint---BYTE_STRING_PREFIX-non-trivial    0
                                                                  (rlptxn---authorization-list---item-RLP-length-countdown)

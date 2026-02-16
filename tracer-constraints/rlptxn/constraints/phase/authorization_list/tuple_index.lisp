@@ -11,7 +11,8 @@
 
 (defconstraint index-growth (:guard IS_AUTHORIZATION_LIST)
   (if-not-zero (rlptxn---authorization-list---again-CMP-row)
-  (has-0-1-increments (rlptxn---authorization-list---tuple-index))))
+  ;; note has-0-1-increments looks in the future row, but we want to look from the past, thus the prefix (prev ...)
+  (prev (has-0-1-increments (rlptxn---authorization-list---tuple-index)))))
 
 (defconstraint index-increment (:guard IS_AUTHORIZATION_LIST)
  (if-not-zero (* CMP (- NUMBER_OF_AUTHORIZATIONS (rlptxn---authorization-list---tuple-index)))
