@@ -111,6 +111,26 @@ describe("SparseMerkleProof", () => {
         );
       });
 
+      it("Should revert when the leaf length is not 192 bytes", async () => {
+        const {
+          accountProof: {
+            proof: { proofRelatedNodes },
+          },
+        } = merkleProofTestData;
+
+        const leafIndex = 200;
+
+        const clonedProof = proofRelatedNodes.slice(0, proofRelatedNodes.length);
+        clonedProof[clonedProof.length - 1] = "0x1234";
+
+        await expectRevertWithCustomError(
+          sparseMerkleProof,
+          sparseMerkleProof.verifyProof(clonedProof, leafIndex, STATE_ROOT),
+          "WrongBytesLength",
+          [192, 2],
+        );
+      });
+
       it("Should revert when the computedHash != subSmtRoot", async () => {
         if (process.env.SOLIDITY_COVERAGE === "true") {
           // Skipping this test in coverage mode due to high gas consumption.
