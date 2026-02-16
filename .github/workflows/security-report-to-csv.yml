@@ -11,7 +11,7 @@ jobs:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     steps:
       - name: CSV export
-        uses: advanced-security/ghas-to-csv@v2
+        uses: advanced-security/ghas-to-csv@v3
       - name: Upload CSV
         uses: actions/upload-artifact@v4
         with:
