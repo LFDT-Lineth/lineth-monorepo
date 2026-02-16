@@ -12,6 +12,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -169,6 +170,8 @@ public class LineaSendForcedRawTransaction {
       }
 
       if (!forcedTransactions.isEmpty()) {
+        forcedTransactions.sort(
+            Comparator.comparingLong(ForcedTransaction::forcedTransactionNumber));
         forcedTransactionPoolService.addForcedTransactions(forcedTransactions);
       }
 

@@ -13,8 +13,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -22,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import net.consensys.linea.rpc.methods.LineaSendForcedRawTransaction.ForcedTransactionResponse;
+import net.consensys.linea.sequencer.forced.ForcedTransaction;
 import net.consensys.linea.sequencer.forced.ForcedTransactionPoolService;
 import net.consensys.linea.sequencer.forced.LineaForcedTransactionPool;
 import net.consensys.linea.utils.TestTransactionFactory;
@@ -239,6 +242,40 @@ class LineaSendForcedRawTransactionTest {
 
     // Only first 2 transactions should be in the pool
     assertThat(pool.pendingCount()).isEqualTo(2);
+  }
+
+  @Test
+  void execute_sortsTransactionsByForcedTransactionNumberBeforeAddingToPool() {
+    final List<ForcedTransaction> capturedTransactions = new ArrayList<>();
+    final ForcedTransactionPoolService mockPool = mock(ForcedTransactionPoolService.class);
+    doAnswer(
+            invocation -> {
+              capturedTransactions.addAll(invocation.getArgument(0));
+              return null;
+            })
+        .when(mockPool)
+        .addForcedTransactions(anyList());
+
+    final LineaSendForcedRawTransaction methodWithMock =
+        new LineaSendForcedRawTransaction().init(mockPool);
+
+    final Transaction tx1 = txFactory.createTransaction();
+    final Transaction tx2 = txFactory.createTransaction();
+    final Transaction tx3 = txFactory.createTransaction();
+
+    // Submit transactions out of order: 9, 5, 7
+    methodWithMock.execute(
+        request(
+            new ForcedTxParam(9L, TestTransactionFactory.encodeTransaction(tx1), "0x1000"),
+            new ForcedTxParam(5L, TestTransactionFactory.encodeTransaction(tx2), "0x2000"),
+            new ForcedTxParam(7L, TestTransactionFactory.encodeTransaction(tx3), "0x3000")));
+
+    verify(mockPool).addForcedTransactions(anyList());
+    assertThat(capturedTransactions).hasSize(3);
+    // Verify they are sorted by forcedTransactionNumber: 5, 7, 9
+    assertThat(capturedTransactions.get(0).forcedTransactionNumber()).isEqualTo(5L);
+    assertThat(capturedTransactions.get(1).forcedTransactionNumber()).isEqualTo(7L);
+    assertThat(capturedTransactions.get(2).forcedTransactionNumber()).isEqualTo(9L);
   }
 
   @Test
