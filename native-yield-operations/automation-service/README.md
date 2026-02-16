@@ -2,25 +2,7 @@
 
 ## Overview
 
-The Linea Native Yield Automation Service automates native yield operations by continuously monitoring the YieldManager contract's ossification state and executing mode-specific processors. 
-
-The service is triggered through an event-driven mechanism that watches for `VaultsReportDataUpdated` events from the LazyOracle contract. The `waitForVaultsReportDataUpdatedEvent()` function implements a race condition between event detection and a configurable maximum wait duration — whichever occurs first triggers the operation cycle, ensuring timely execution even when events are absent.
-
-Operation modes are selected dynamically based on the yield provider's state:
-- `YIELD_REPORTING_MODE` for normal operations
-- `OSSIFICATION_PENDING_MODE` during transition
-- `OSSIFICATION_COMPLETE_MODE` once ossified.
-
-## Codebase Architecture
-
-The codebase follows a **Layered Architecture with Dependency Inversion**, incorporating concepts from Hexagonal Architecture (Ports and Adapters) and Domain-Driven Design:
-
-- **`core/`** - Domain layer containing interfaces (ports), entities, enums, and ABIs. This layer has no dependencies on other internal layers.
-- **`services/`** - Application layer containing business logic that orchestrates operations using interfaces from `core/`.
-- **`clients/`** - Infrastructure layer containing adapter implementations of interfaces defined in `core/`.
-- **`application/`** - Composition layer that wires dependencies and bootstraps the service.
-
-Dependencies flow inward: `application` → `services/clients` → `core`. This ensures business logic remains independent of infrastructure concerns, making the codebase testable and maintainable.
+Automates native yield operations on Linea by monitoring the YieldManager contract and executing the appropriate operation mode (yield reporting, ossification pending, or ossification complete). See [docs/architecture.md](./docs/architecture.md) for design details.
 
 ## Folder Structure
 
@@ -43,22 +25,16 @@ automation-service/
 │   │   ├── operation-mode-processors/  # Mode-specific processors
 │   │   └── OperationModeSelector.ts    # Mode selection orchestrator
 │   └── utils/                # Utility functions
-└── scripts/                  # Testing and utility scripts
+└── scripts/                  # Manual integration runner scripts
 ```
 
 ## Configuration
 
-See the [configuration schema file](./src/application/main/config/config.schema.ts)
+See the [configuration schema file](./src/application/main/config/config.schema.ts) for all available options and their defaults.
 
 ## Development
 
-### Running
-
-#### Start the docker local stack
-
-TODO - Planning to write E2E tests with mock Lido contracts once this branch + Native Yield contracts are together
-
-#### Run the automation service locally:
+### Running locally
 
 1. Create `.env` as per `.env.sample` and the [configuration schema](./src/application/main/config/config.schema.ts)
 
@@ -71,10 +47,30 @@ TODO - Planning to write E2E tests with mock Lido contracts once this branch + N
 pnpm --filter @consensys/linea-native-yield-automation-service build
 ```
 
-### Unit Test
+### Unit tests
 
 ```bash
-pnpm --filter @consensys/linea-shared-utils test
+pnpm --filter @consensys/linea-native-yield-automation-service test
+```
+
+### Manual integration scripts
+
+The `scripts/` directory contains manual runners for exercising individual clients against a live environment. Each script requires environment variables - see the file header for usage.
+
+| Script | Client under test |
+|--------|-------------------|
+| `test-consensys-staking-graphql-client.ts` | `ConsensysStakingApiClient` (validator data via GraphQL) |
+| `test-lazy-oracle-contract-client.ts` | `LazyOracleContractClient` (event watching, oracle reads) |
+| `test-lido-accounting-report-client.ts` | `LidoAccountingReportClient` (report fetching/submission) |
+| `test-yield-manager-contract-client.ts` | `YieldManagerContractClient` (rebalance, withdraw, state queries) |
+
+Example:
+
+```bash
+RPC_URL=https://0xrpc.io/hoodi \
+PRIVATE_KEY=0xabc123... \
+YIELD_MANAGER_ADDRESS=0x... \
+pnpm --filter @consensys/linea-native-yield-automation-service exec tsx scripts/test-yield-manager-contract-client.ts
 ```
 
 ## License
