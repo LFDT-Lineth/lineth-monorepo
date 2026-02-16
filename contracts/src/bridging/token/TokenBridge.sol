@@ -2,6 +2,7 @@
 pragma solidity 0.8.33;
 
 import { TokenBridgeBase } from "./TokenBridgeBase.sol";
+import { InitializationVersionCheck } from "../../common/InitializationVersionCheck.sol";
 
 /**
  * @title Linea Canonical Token Bridge
@@ -9,7 +10,7 @@ import { TokenBridgeBase } from "./TokenBridgeBase.sol";
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-contract TokenBridge is TokenBridgeBase {
+contract TokenBridge is InitializationVersionCheck, TokenBridgeBase {
   /// @dev Disable constructor for safety
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
@@ -29,7 +30,8 @@ contract TokenBridge is TokenBridgeBase {
     nonZeroAddress(_initializationData.tokenBeacon)
     nonZeroChainId(_initializationData.sourceChainId)
     nonZeroChainId(_initializationData.targetChainId)
-    initializer
+    onlyInitializedVersion(0)
+    reinitializer(3)
   {
     __TokenBridge_init(_initializationData);
   }
@@ -37,14 +39,13 @@ contract TokenBridge is TokenBridgeBase {
   /**
    * @notice Reinitializes TokenBridge and clears the old reentry slot value.
    */
-  function reinitializeV2() external reinitializer(2) {
-    address proxyAdmin;
-    assembly {
-      proxyAdmin := sload(PROXY_ADMIN_SLOT)
-    }
-    require(msg.sender == proxyAdmin, CallerNotProxyAdmin());
-
-    assembly {
+  function reinitializeV3() external reinitializer(3) {
+    uint256 oldReentrancyGuardEntered = 2;
+    assembly ("memory-safe") {
+      if eq(sload(1), oldReentrancyGuardEntered) {
+        mstore(0x00, 0x37ed32e8) //ReentrantCall.selector;
+        revert(0x1c, 0x04)
+      }
       sstore(1, 0)
     }
   }

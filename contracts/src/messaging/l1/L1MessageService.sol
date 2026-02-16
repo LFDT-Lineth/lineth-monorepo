@@ -21,9 +21,6 @@ abstract contract L1MessageService is
   IL1MessageService,
   IGenericErrors
 {
-  using SparseMerkleTreeVerifier for *;
-  using MessageHashing for *;
-
   /// @dev This is currently not in use, but is reserved for future upgrades.
   uint256 public systemMigrationBlock;
 
@@ -94,7 +91,7 @@ abstract contract L1MessageService is
    */
   function claimMessageWithProof(
     ClaimMessageWithProofParams calldata _params
-  ) external virtual nonReentrant distributeFees(_params.fee, _params.to, _params.data, _params.feeRecipient) {
+  ) public virtual nonReentrant distributeFees(_params.fee, _params.to, _params.data, _params.feeRecipient) {
     _claimMessageWithProof(_params);
   }
 
@@ -201,7 +198,7 @@ abstract contract L1MessageService is
    * @dev The message sender address is set temporarily in the transient storage when claiming.
    * @return originalSender The message sender address that is stored temporarily in the transient storage when claiming.
    */
-  function sender() external view virtual returns (address originalSender) {
+  function sender() public view virtual returns (address originalSender) {
     originalSender = TRANSIENT_MESSAGE_SENDER;
   }
 }

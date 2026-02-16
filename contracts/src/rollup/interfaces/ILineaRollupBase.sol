@@ -127,7 +127,12 @@ interface ILineaRollupBase {
     bytes32 finalStateRootHash
   );
 
-  event LineaRollupBaseInitialized(BaseInitializationData InitializationData);
+  /**
+   * @notice Emitted when the LineaRollup contract is initialized.
+   * @param InitializationData The initialization data.
+   * @param genesisShnarf The genesis shnarf.
+   */
+  event LineaRollupBaseInitialized(BaseInitializationData InitializationData, bytes32 genesisShnarf);
 
   /**
    * @dev Thrown when finalizationData.l1RollingHash does not exist on L1 (Feedback loop).

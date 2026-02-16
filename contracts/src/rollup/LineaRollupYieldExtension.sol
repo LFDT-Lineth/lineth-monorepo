@@ -50,7 +50,7 @@ abstract contract LineaRollupYieldExtension is LineaRollupBase, ILineaRollupYiel
     _setYieldManager(_yieldManager);
   }
 
-  function isWithdrawLSTAllowed() external view virtual returns (bool) {
+  function isWithdrawLSTAllowed() public view virtual returns (bool) {
     return IS_WITHDRAW_LST_ALLOWED;
   }
 
@@ -62,7 +62,7 @@ abstract contract LineaRollupYieldExtension is LineaRollupBase, ILineaRollupYiel
    */
   function transferFundsForNativeYield(
     uint256 _amount
-  ) external virtual whenTypeAndGeneralNotPaused(PauseType.NATIVE_YIELD_STAKING) onlyRole(YIELD_PROVIDER_STAKING_ROLE) {
+  ) public virtual whenTypeAndGeneralNotPaused(PauseType.NATIVE_YIELD_STAKING) onlyRole(YIELD_PROVIDER_STAKING_ROLE) {
     IYieldManager(yieldManager()).receiveFundsFromReserve{ value: _amount }();
   }
 
@@ -104,7 +104,7 @@ abstract contract LineaRollupYieldExtension is LineaRollupBase, ILineaRollupYiel
   function reportNativeYield(
     uint256 _amount,
     address _l2YieldRecipient
-  ) external virtual whenTypeAndGeneralNotPaused(PauseType.L1_L2) {
+  ) public virtual whenTypeAndGeneralNotPaused(PauseType.L1_L2) {
     if (msg.sender != yieldManager()) {
       revert CallerIsNotYieldManager();
     }
@@ -143,7 +143,7 @@ abstract contract LineaRollupYieldExtension is LineaRollupBase, ILineaRollupYiel
   function claimMessageWithProofAndWithdrawLST(
     ClaimMessageWithProofParams calldata _params,
     address _yieldProvider
-  ) external virtual nonReentrant {
+  ) public virtual nonReentrant {
     if (_params.value <= address(this).balance) {
       revert LSTWithdrawalRequiresDeficit();
     }

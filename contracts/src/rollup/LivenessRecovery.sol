@@ -19,7 +19,7 @@ abstract contract LivenessRecovery is LineaRollupBase, ILivenessRecovery {
    * @notice Initializes _LivenessRecovery - used for new networks only.
    * @param _livenessRecoveryOperator The initial computed genesis shnarf.
    */
-  function __LivenessRecovery_init(address _livenessRecoveryOperator) internal virtual {
+  function __LivenessRecovery_init(address _livenessRecoveryOperator) internal virtual onlyInitializing {
     require(_livenessRecoveryOperator != address(0), ZeroAddressNotAllowed());
     livenessRecoveryOperator = _livenessRecoveryOperator;
     emit LivenessRecoveryOperatorAddressSet(msg.sender, _livenessRecoveryOperator);

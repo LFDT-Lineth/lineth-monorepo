@@ -22,8 +22,6 @@ abstract contract L2MessageServiceV1 is
   IL2MessageServiceV1,
   IGenericErrors
 {
-  using MessageHashing for *;
-
   /**
    * @dev Keep 50 free storage slots for future implementation updates to avoid storage collision.
    * NB: Take note that this is at the beginning of the file where other storage gaps,
@@ -31,15 +29,16 @@ abstract contract L2MessageServiceV1 is
    */
   uint256[50] private __gap_L2MessageServiceV1;
 
-  address transient TRANSIENT_MESSAGE_SENDER;
+  /// @dev This is the transient message sender address.
+  address internal transient TRANSIENT_MESSAGE_SENDER;
 
   /// @notice The role required to set the minimum DDOS fee.
   bytes32 public constant MINIMUM_FEE_SETTER_ROLE = keccak256("MINIMUM_FEE_SETTER_ROLE");
 
-  /// @notice The default value for the message sender reset to post claiming using the MESSAGE_SENDER_TRANSIENT_KEY.
+  /// @notice The default value for the message sender reset to post claiming using the `TRANSIENT_MESSAGE_SENDER`.
   address internal constant DEFAULT_MESSAGE_SENDER_TRANSIENT_VALUE = address(0);
 
-  /// @dev DEPRECATED in favor of new transient storage with `MESSAGE_SENDER_TRANSIENT_KEY` key.
+  /// @dev DEPRECATED in favor of new transient storage with `TRANSIENT_MESSAGE_SENDER` key.
   address private _messageSender_DEPRECATED;
 
   // @notice initialize to save user cost with existing slot.
@@ -136,7 +135,7 @@ abstract contract L2MessageServiceV1 is
     bytes calldata _calldata,
     uint256 _nonce
   )
-    external
+    public
     virtual
     nonReentrant
     distributeFees(_fee, _to, _calldata, _feeRecipient)
@@ -201,7 +200,7 @@ abstract contract L2MessageServiceV1 is
    * @dev The message sender address is set temporarily in the transient storage when claiming.
    * @return originalSender The message sender address that is stored temporarily in the transient storage when claiming.
    */
-  function sender() external view returns (address originalSender) {
+  function sender() public view virtual returns (address originalSender) {
     originalSender = TRANSIENT_MESSAGE_SENDER;
   }
 

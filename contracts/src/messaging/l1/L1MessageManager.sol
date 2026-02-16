@@ -13,7 +13,6 @@ import { EfficientLeftRightKeccak } from "../../libraries/EfficientLeftRightKecc
  */
 abstract contract L1MessageManager is L1MessageManagerV1, IL1MessageManager {
   using BitMaps for BitMaps.BitMap;
-  using EfficientLeftRightKeccak for *;
 
   /// @notice Contains the L1 to L2 messaging rolling hashes mapped to message number computed on L1.
   mapping(uint256 messageNumber => bytes32 rollingHash) public rollingHashes;

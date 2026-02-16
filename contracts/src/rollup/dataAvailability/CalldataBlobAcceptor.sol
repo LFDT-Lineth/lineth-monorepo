@@ -23,7 +23,7 @@ abstract contract CalldataBlobAcceptor is LocalShnarfProvider, ShnarfDataAccepto
     CompressedCalldataSubmission calldata _submission,
     bytes32 _parentShnarf,
     bytes32 _expectedShnarf
-  ) external virtual whenTypeAndGeneralNotPaused(PauseType.STATE_DATA_SUBMISSION) onlyRole(OPERATOR_ROLE) {
+  ) public virtual whenTypeAndGeneralNotPaused(PauseType.STATE_DATA_SUBMISSION) onlyRole(OPERATOR_ROLE) {
     _submitDataAsCalldata(_submission, _parentShnarf, _expectedShnarf);
   }
 

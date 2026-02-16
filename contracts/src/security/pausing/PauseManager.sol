@@ -21,11 +21,11 @@ abstract contract PauseManager is IPauseManager, AccessControlUpgradeable {
   bytes32 public constant SECURITY_COUNCIL_ROLE = keccak256("SECURITY_COUNCIL_ROLE");
 
   /// @notice Duration of pauses, after which pauses will expire (except by the SECURITY_COUNCIL_ROLE).
-  uint256 public constant PAUSE_DURATION = 72 hours;
+  uint256 public constant PAUSE_DURATION = 48 hours;
 
-  /// @notice Duration of cooldown after a pause expires, during which no pauses (except by the SECURITY_COUNCIL_ROLE) can be enacted.
-  /// @dev This prevents indefinite pause chaining by a non-SECURITY_COUNCIL_ROLE.
-  uint256 public constant COOLDOWN_DURATION = 24 hours;
+  /// @notice Duration of cooldown after the pause window closes, during which no pauses (except by the SECURITY_COUNCIL_ROLE) can be enacted.
+  /// @dev The non-SC lockout spans from expiryTimestamp to nonSecurityCouncilCooldownEnd (i.e. COOLDOWN_DURATION).
+  uint256 public constant COOLDOWN_DURATION = 48 hours;
 
   // @dev DEPRECATED. USE _pauseTypeStatusesBitMap INSTEAD
   mapping(bytes32 pauseType => bool pauseStatus) private pauseTypeStatuses_DEPRECATED;
@@ -39,15 +39,21 @@ abstract contract PauseManager is IPauseManager, AccessControlUpgradeable {
   /// @dev This maps the unpause type to the role that is allowed to unpause it.
   mapping(PauseType unPauseType => bytes32 role) private _unPauseTypeRoles;
 
-  /// @notice Unix timestamp of pause expiry.
-  /// @dev pauseExpiryTimestamp applies to all pause types. Pausing with one pause type blocks other pause types from being enacted (unless the SECURITY_COUNCIL_ROLE is used).
-  /// @dev This prevents indefinite pause chaining by a non-SECURITY_COUNCIL_ROLE.
-  uint256 public pauseExpiryTimestamp;
+  /**
+   * @notice Unix timestamp after which non-SECURITY_COUNCIL_ROLE actors can start a fresh pause window.
+   * @dev Set to block.timestamp + PAUSE_DURATION + COOLDOWN_DURATION on the first non-SC pause in a window.
+   * @dev Within the pause window (block.timestamp < cooldownEnd - COOLDOWN_DURATION), additional types may be paused.
+   * @dev After the pause window, a COOLDOWN_DURATION period blocks further non-SC pausing.
+   */
+  uint256 public nonSecurityCouncilCooldownEnd;
 
-  /// @dev Total contract storage is 12 slots with the gap below.
-  /// @dev Keep 6 free storage slots for future implementation updates to avoid storage collision.
+  /// @notice Maps each pause type to its expiry timestamp. Set per-type on pause; cleared on unpause.
+  mapping(PauseType pauseType => uint256 expiryTimestamp) public pauseTypeExpiryTimestamps;
+
+  /// @dev Total contract storage is 11 slots with the gap below.
+  /// @dev Keep 5 free storage slots for future implementation updates to avoid storage collision.
   /// @dev Note: This was reduced previously to cater for new functionality.
-  uint256[6] private __gap;
+  uint256[5] private __gap;
 
   /**
    * @dev Modifier to prevent usage of unused PauseType.
@@ -140,25 +146,42 @@ abstract contract PauseManager is IPauseManager, AccessControlUpgradeable {
    * @notice Pauses functionality by specific type.
    * @dev Throws if UNUSED pause type is used.
    * @dev Requires the role mapped in `_pauseTypeRoles` for the pauseType.
-   * @dev Non-SECURITY_COUNCIL_ROLE can only pause after cooldown has passed.
+   * @dev Non-SECURITY_COUNCIL_ROLE can pause additional types within the pause window (first PAUSE_DURATION).
+   * @dev After the pause window, a COOLDOWN_DURATION period blocks further non-SC pausing.
    * @dev SECURITY_COUNCIL_ROLE can pause without cooldown or expiry restrictions.
    * @param _pauseType The pause type value.
    */
   function pauseByType(
     PauseType _pauseType
   ) external onlyUsedPausedTypes(_pauseType) onlyRole(_pauseTypeRoles[_pauseType]) {
-    if (isPaused(_pauseType)) {
+    bool senderHasSecurityCouncilRole = hasRole(SECURITY_COUNCIL_ROLE, _msgSender());
+
+    if (
+      (isPaused(_pauseType) && !senderHasSecurityCouncilRole) ||
+      (pauseTypeExpiryTimestamps[_pauseType] == type(uint256).max)
+    ) {
       revert IsPaused(_pauseType);
     }
 
+    if (senderHasSecurityCouncilRole) {
+      pauseTypeExpiryTimestamps[_pauseType] = type(uint256).max;
+      _pauseTypeStatusesBitMap |= 1 << uint256(_pauseType);
+      emit PausedIndefinitely(_msgSender(), _pauseType);
+      return;
+    }
+
+    uint256 cachedNonSecurityCouncilCooldownEnd = nonSecurityCouncilCooldownEnd;
+
     unchecked {
-      if (hasRole(SECURITY_COUNCIL_ROLE, _msgSender())) {
-        pauseExpiryTimestamp = type(uint256).max - COOLDOWN_DURATION;
+      if (block.timestamp >= cachedNonSecurityCouncilCooldownEnd) {
+        uint256 expiryTimestamp = block.timestamp + PAUSE_DURATION;
+        pauseTypeExpiryTimestamps[_pauseType] = expiryTimestamp;
+        nonSecurityCouncilCooldownEnd = expiryTimestamp + COOLDOWN_DURATION;
       } else {
-        if (block.timestamp < pauseExpiryTimestamp + COOLDOWN_DURATION) {
-          revert PauseUnavailableDueToCooldown(pauseExpiryTimestamp + COOLDOWN_DURATION);
+        if (cachedNonSecurityCouncilCooldownEnd - block.timestamp <= COOLDOWN_DURATION) {
+          revert PauseUnavailableDueToCooldown(cachedNonSecurityCouncilCooldownEnd);
         }
-        pauseExpiryTimestamp = block.timestamp + PAUSE_DURATION;
+        pauseTypeExpiryTimestamps[_pauseType] = cachedNonSecurityCouncilCooldownEnd - COOLDOWN_DURATION;
       }
     }
 
@@ -167,10 +190,21 @@ abstract contract PauseManager is IPauseManager, AccessControlUpgradeable {
   }
 
   /**
+   * @notice Reset the non-SECURITY_COUNCIL_ROLE cooldown end.
+   * @dev SECURITY_COUNCIL_ROLE role is required to execute this function.
+   * @dev Resets the non-SECURITY_COUNCIL_ROLE cooldown end to the current block timestamp.
+   */
+  function resetNonSecurityCouncilCooldownEnd() external onlyRole(SECURITY_COUNCIL_ROLE) {
+    nonSecurityCouncilCooldownEnd = block.timestamp;
+    emit NonSecurityCouncilCooldownEndReset();
+  }
+
+  /**
    * @notice Unpauses functionality by specific type.
    * @dev Throws if UNUSED pause type is used.
    * @dev Requires the role mapped in `_unPauseTypeRoles` for the pauseType.
-   * @dev SECURITY_COUNCIL_ROLE unpause will reset the cooldown, enabling non-SECURITY_COUNCIL_ROLE pausing.
+   * @dev Only SECURITY_COUNCIL_ROLE can unpause indefinite (SECURITY_COUNCIL_ROLE-initiated) pauses.
+   * @dev Resets the per-type expiry timestamp. Does not affect nonSecurityCouncilCooldownEnd.
    * @param _pauseType The pause type value.
    */
   function unPauseByType(
@@ -180,9 +214,11 @@ abstract contract PauseManager is IPauseManager, AccessControlUpgradeable {
       revert IsNotPaused(_pauseType);
     }
 
-    if (hasRole(SECURITY_COUNCIL_ROLE, _msgSender())) {
-      pauseExpiryTimestamp = block.timestamp - COOLDOWN_DURATION;
+    if (pauseTypeExpiryTimestamps[_pauseType] == type(uint256).max && !hasRole(SECURITY_COUNCIL_ROLE, _msgSender())) {
+      revert OnlySecurityCouncilCanUnpauseIndefinitePause(_pauseType);
     }
+
+    delete pauseTypeExpiryTimestamps[_pauseType];
     _pauseTypeStatusesBitMap &= ~(1 << uint256(_pauseType));
     emit UnPaused(_msgSender(), _pauseType);
   }
@@ -190,17 +226,19 @@ abstract contract PauseManager is IPauseManager, AccessControlUpgradeable {
   /**
    * @notice Unpauses a specific pause type when the pause has expired.
    * @dev Can be called by anyone.
-   * @dev Throws if UNUSED pause type is used, or the pause expiry period has not passed.
+   * @dev Throws if UNUSED pause type is used, or the per-type expiry period has not passed.
    * @param _pauseType The pause type value.
    */
   function unPauseByExpiredType(PauseType _pauseType) external onlyUsedPausedTypes(_pauseType) {
     if (!isPaused(_pauseType)) {
       revert IsNotPaused(_pauseType);
     }
-    if (block.timestamp < pauseExpiryTimestamp) {
-      revert PauseNotExpired(pauseExpiryTimestamp);
+
+    if (block.timestamp < pauseTypeExpiryTimestamps[_pauseType]) {
+      revert PauseNotExpired(pauseTypeExpiryTimestamps[_pauseType]);
     }
 
+    delete pauseTypeExpiryTimestamps[_pauseType];
     _pauseTypeStatusesBitMap &= ~(1 << uint256(_pauseType));
     emit UnPausedDueToExpiry(_pauseType);
   }

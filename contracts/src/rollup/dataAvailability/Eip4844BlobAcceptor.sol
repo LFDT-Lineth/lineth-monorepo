@@ -23,7 +23,7 @@ abstract contract Eip4844BlobAcceptor is LocalShnarfProvider, ShnarfDataAcceptor
     BlobSubmission[] calldata _blobSubmissions,
     bytes32 _parentShnarf,
     bytes32 _finalBlobShnarf
-  ) external virtual whenTypeAndGeneralNotPaused(PauseType.STATE_DATA_SUBMISSION) onlyRole(OPERATOR_ROLE) {
+  ) public virtual whenTypeAndGeneralNotPaused(PauseType.STATE_DATA_SUBMISSION) onlyRole(OPERATOR_ROLE) {
     _submitBlobs(_blobSubmissions, _parentShnarf, _finalBlobShnarf);
   }
 

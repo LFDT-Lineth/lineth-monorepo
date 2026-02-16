@@ -61,6 +61,18 @@ contract TestLineaRollup is LineaRollup, CalldataBlobAcceptor {
     super.renounceRole(_role, _account);
   }
 
+  function setSlotValue(uint256 _slot, uint256 _value) external {
+    assembly {
+      sstore(_slot, _value)
+    }
+  }
+
+  function getSlotValue(uint256 _slot) external view returns (uint256 slotValue) {
+    assembly {
+      slotValue := sload(_slot)
+    }
+  }
+
   function addL2MerkleRoots(bytes32[] calldata _newRoot, uint256 _treeDepth) external onlyRole(DEFAULT_ADMIN_ROLE) {
     _addL2MerkleRoots(_newRoot, _treeDepth);
   }

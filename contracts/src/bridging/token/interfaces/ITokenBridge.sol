@@ -118,13 +118,6 @@ interface ITokenBridge {
   event NewTokenDeployed(address indexed bridgedToken, address indexed nativeToken);
 
   /**
-   * @notice Emitted when the remote token bridge is set.
-   * @param remoteTokenBridge The indexed remote token bridge address.
-   * @param setBy The indexed address that set the remote token bridge.
-   */
-  event RemoteTokenBridgeSet(address indexed remoteTokenBridge, address indexed setBy);
-
-  /**
    * @notice Emitted when the token is set as deployed.
    * @dev This can be triggered by anyone calling confirmDeployment on the alternate chain.
    * @param token The indexed token address.

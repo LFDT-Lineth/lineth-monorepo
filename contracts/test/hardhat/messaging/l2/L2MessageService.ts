@@ -11,7 +11,6 @@ import {
   GENERAL_PAUSE_TYPE,
   INBOX_STATUS_CLAIMED,
   INBOX_STATUS_RECEIVED,
-  INITIALIZED_ALREADY_MESSAGE,
   INITIAL_WITHDRAW_LIMIT,
   L1_L2_MESSAGE_SETTER_ROLE,
   L1_L2_PAUSE_TYPE,
@@ -171,7 +170,7 @@ describe("L2MessageService", () => {
         L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES,
       );
 
-      await expectRevertWithReason(deployCall, INITIALIZED_ALREADY_MESSAGE);
+      await expectRevertWithCustomError(l2MessageService, deployCall, "InitializedVersionWrong", [0, 3]);
     });
 
     it.skip("Can upgrade existing contract", async () => {
@@ -1409,30 +1408,40 @@ describe("L2MessageService", () => {
   });
 
   describe("L2MessageService Upgradeable Tests", () => {
+    it("Should set initialized version to 3 on fresh deploy", async function () {
+      const testL2MessageService = await deployL2MessageServiceFixture();
+
+      const slotValue = await testL2MessageService.getSlotValue(0);
+      expect(slotValue).equal(3);
+    });
+
     it("Should deploy and manually upgrade the L2MessageService contract", async function () {
       const testL2MessageService = await deployL2MessageServiceFixture();
+
+      // Simulate a pre-upgrade state by lowering the initialized version
+      await testL2MessageService.setSlotValue(0, 2);
 
       let slotValue = await testL2MessageService.getSlotValue(177);
       expect(slotValue).equal(0);
       await testL2MessageService.setSlotValue(177, 1);
 
-      // simulating reentry value at slot 1
+      // simulating reentry value at slot 177
       slotValue = await testL2MessageService.getSlotValue(177);
       expect(slotValue).equal(1);
 
-      // Deploy new TokenBridge implementation
-      const newTokenBridgeFactory = await ethers.getContractFactory(
+      // Deploy new L2MessageService implementation
+      const newL2MessageServiceFactory = await ethers.getContractFactory(
         "src/_testing/unit/messaging/TestL2MessageService.sol:TestL2MessageService",
       );
 
-      const newTokenBridge = await upgrades.upgradeProxy(testL2MessageService, newTokenBridgeFactory, {
+      const newL2MessageService = await upgrades.upgradeProxy(testL2MessageService, newL2MessageServiceFactory, {
         call: { fn: "reinitializeV3" },
         kind: "transparent",
         unsafeAllowRenames: true,
         unsafeAllow: ["incorrect-initializer-order"],
       });
 
-      await newTokenBridge.waitForDeployment();
+      await newL2MessageService.waitForDeployment();
 
       // reentry slot cleared
       slotValue = await testL2MessageService.getSlotValue(177);
@@ -1441,6 +1450,31 @@ describe("L2MessageService", () => {
       // version changed
       slotValue = await testL2MessageService.getSlotValue(0);
       expect(slotValue).equal(3);
+    });
+
+    it("Should revert reinitializeV3 if old reentrancy guard slot indicates ENTERED", async function () {
+      const testL2MessageService = await deployL2MessageServiceFixture();
+
+      // Simulate a pre-upgrade state by lowering the initialized version
+      await testL2MessageService.setSlotValue(0, 2);
+
+      // Set legacy reentrancy guard slot 1 to OZ ENTERED value (2) — the assembly checks sload(1)
+      await testL2MessageService.setSlotValue(177, 2);
+
+      const newL2MessageServiceFactory = await ethers.getContractFactory(
+        "src/_testing/unit/messaging/TestL2MessageService.sol:TestL2MessageService",
+      );
+
+      await expectRevertWithCustomError(
+        testL2MessageService,
+        upgrades.upgradeProxy(testL2MessageService, newL2MessageServiceFactory, {
+          call: { fn: "reinitializeV3" },
+          kind: "transparent",
+          unsafeAllowRenames: true,
+          unsafeAllow: ["incorrect-initializer-order"],
+        }),
+        "ReentrantCall",
+      );
     });
   });
 });

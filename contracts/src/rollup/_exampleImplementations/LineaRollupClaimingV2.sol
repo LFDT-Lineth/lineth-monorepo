@@ -41,12 +41,6 @@ contract LineaRollupClaimingV2 is LineaRollupBase, Eip4844BlobAcceptor, Calldata
    * @notice Reinitializes LineaRollup and sets the _shnarfProvider to itself.
    */
   function reinitializeV8() external reinitializer(8) {
-    address proxyAdmin;
-    assembly {
-      proxyAdmin := sload(PROXY_ADMIN_SLOT)
-    }
-    require(msg.sender == proxyAdmin, CallerNotProxyAdmin());
-
     shnarfProvider = IProvideShnarf(address(this));
   }
 }

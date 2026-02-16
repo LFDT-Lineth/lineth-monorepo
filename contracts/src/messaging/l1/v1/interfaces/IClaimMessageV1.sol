@@ -12,8 +12,8 @@ interface IClaimMessageV1 {
    * @notice Is called by the Postman, dApp or end user.
    * @param _from The msg.sender calling the origin message service.
    * @param _to The destination address on the destination chain.
-   * @param _value The value to be transferred to the destination address.
    * @param _fee The message service fee on the origin chain.
+   * @param _value The value to be transferred to the destination address.
    * @param _feeRecipient Address that will receive the fees.
    * @param _calldata The calldata used by the destination message service to call/forward to the destination contract.
    * @param _nonce Unique message number.

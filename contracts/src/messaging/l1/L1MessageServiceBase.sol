@@ -6,7 +6,6 @@ import { RateLimiter } from "../../security/limiting/RateLimiter.sol";
 import { L1MessageManagerV1 } from "./v1/L1MessageManagerV1.sol";
 import { TransientStorageReentrancyGuardUpgradeable } from "../../security/reentrancy/TransientStorageReentrancyGuardUpgradeable.sol";
 import { IMessageService } from "../interfaces/IMessageService.sol";
-import { MessageHashing } from "../libraries/MessageHashing.sol";
 
 /**
  * @title Contract to manage cross-chain messaging on L1.
@@ -20,14 +19,13 @@ abstract contract L1MessageServiceBase is
   LineaRollupPauseManager,
   IMessageService
 {
-  using MessageHashing for *;
-
-  address transient TRANSIENT_MESSAGE_SENDER;
+  /// @dev This is the transient message sender address.
+  address internal transient TRANSIENT_MESSAGE_SENDER;
 
   // @dev This is initialised to save user cost with existing slot.
   uint256 public nextMessageNumber;
 
-  /// @dev DEPRECATED in favor of new transient storage with `MESSAGE_SENDER_TRANSIENT_KEY` key.
+  /// @dev DEPRECATED in favor of new transient storage with `TRANSIENT_MESSAGE_SENDER` key.
   address private _messageSender_DEPRECATED;
 
   /// @dev Total contract storage is 52 slots including the gap below.
@@ -37,7 +35,7 @@ abstract contract L1MessageServiceBase is
   /// @dev adding these should not affect storage as they are constants and are stored in bytecode.
   uint256 internal constant REFUND_OVERHEAD_IN_GAS = 48252;
 
-  /// @notice The default value for the message sender reset to post claiming using the MESSAGE_SENDER_TRANSIENT_KEY.
+  /// @notice The default value for the message sender reset to post claiming using the `TRANSIENT_MESSAGE_SENDER`.
   address internal constant DEFAULT_MESSAGE_SENDER_TRANSIENT_VALUE = address(0);
 
   /**

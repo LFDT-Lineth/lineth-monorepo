@@ -12,8 +12,6 @@ import { EfficientLeftRightKeccak } from "../../libraries/EfficientLeftRightKecc
  * @custom:security-contact security-report@linea.build
  */
 abstract contract L2MessageManager is AccessControlUpgradeable, IL2MessageManager, L2MessageManagerV1 {
-  using EfficientLeftRightKeccak for *;
-
   /// @notice The role required to anchor L1 to L2 message hashes.
   bytes32 public constant L1_L2_MESSAGE_SETTER_ROLE = keccak256("L1_L2_MESSAGE_SETTER_ROLE");
 

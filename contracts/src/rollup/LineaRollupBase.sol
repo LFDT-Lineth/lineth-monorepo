@@ -9,7 +9,6 @@ import { IProvideShnarf } from "./dataAvailability/interfaces/IProvideShnarf.sol
 import { PermissionsManager } from "../security/access/PermissionsManager.sol";
 import { IPlonkVerifier } from "../verifiers/interfaces/IPlonkVerifier.sol";
 
-import { EfficientLeftRightKeccak } from "../libraries/EfficientLeftRightKeccak.sol";
 /**
  * @title Contract to manage cross-chain messaging on L1, L2 data submission, and rollup proof verification.
  * @author ConsenSys Software Inc.
@@ -23,15 +22,6 @@ abstract contract LineaRollupBase is
   ILineaRollupBase,
   IProvideShnarf
 {
-  /**
-   * @dev Storage slot with the admin of the contract.
-   * This is the keccak-256 hash of "eip1967.proxy.admin" subtracted by 1, and is
-   * used to validate on the proxy admin can reinitialize the contract.
-   */
-  bytes32 internal constant PROXY_ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
-
-  using EfficientLeftRightKeccak for *;
-
   /// @notice The role required to set/add  proof verifiers by type.
   bytes32 public constant VERIFIER_SETTER_ROLE = keccak256("VERIFIER_SETTER_ROLE");
 
@@ -57,15 +47,15 @@ abstract contract LineaRollupBase is
   /// @notice This is the ABI version and not the reinitialize version.
   string private constant _CONTRACT_VERSION = "7.1";
 
-  /// @dev DEPRECATED in favor of the single blobShnarfExists mapping.
+  /// @dev DEPRECATED in favor of the single _blobShnarfExists mapping.
   mapping(bytes32 dataHash => bytes32 finalStateRootHash) private dataFinalStateRootHashes_DEPRECATED;
-  /// @dev DEPRECATED in favor of the single blobShnarfExists mapping.
+  /// @dev DEPRECATED in favor of the single _blobShnarfExists mapping.
   mapping(bytes32 dataHash => bytes32 parentHash) private dataParents_DEPRECATED;
-  /// @dev DEPRECATED in favor of the single blobShnarfExists mapping.
+  /// @dev DEPRECATED in favor of the single _blobShnarfExists mapping.
   mapping(bytes32 dataHash => bytes32 shnarfHash) private dataShnarfHashes_DEPRECATED;
-  /// @dev DEPRECATED in favor of the single blobShnarfExists mapping.
+  /// @dev DEPRECATED in favor of the single _blobShnarfExists mapping.
   mapping(bytes32 dataHash => uint256 startingBlock) private dataStartingBlock_DEPRECATED;
-  /// @dev DEPRECATED in favor of the single blobShnarfExists mapping.
+  /// @dev DEPRECATED in favor of the single _blobShnarfExists mapping.
   mapping(bytes32 dataHash => uint256 endingBlock) private dataEndingBlock_DEPRECATED;
 
   /// @dev DEPRECATED in favor of currentFinalizedState hash.
@@ -96,7 +86,7 @@ abstract contract LineaRollupBase is
   /// @dev Keep 50 free storage slots for inheriting contracts.
   uint256[50] private __gap_LineaRollup;
 
-  /// @dev Total contract storage is 61 slots.
+  /// @dev Total contract storage is 62 slots.
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
@@ -148,14 +138,14 @@ abstract contract LineaRollupBase is
 
     shnarfProvider = IProvideShnarf(shnarfProviderAddress);
 
-    emit LineaRollupBaseInitialized(_initializationData);
+    emit LineaRollupBaseInitialized(_initializationData, _genesisShnarf);
   }
 
   /**
    * @notice Returns the ABI version and not the reinitialize version.
    * @return contractVersion The contract ABI version.
    */
-  function CONTRACT_VERSION() external view virtual returns (string memory contractVersion) {
+  function CONTRACT_VERSION() public view virtual returns (string memory contractVersion) {
     contractVersion = _CONTRACT_VERSION;
   }
 
@@ -245,7 +235,7 @@ abstract contract LineaRollupBase is
     bytes calldata _aggregatedProof,
     uint256 _proofType,
     FinalizationDataV3 calldata _finalizationData
-  ) external virtual whenTypeAndGeneralNotPaused(PauseType.FINALIZATION) onlyRole(OPERATOR_ROLE) {
+  ) public virtual whenTypeAndGeneralNotPaused(PauseType.FINALIZATION) onlyRole(OPERATOR_ROLE) {
     if (_aggregatedProof.length == 0) {
       revert ProofIsEmpty();
     }
@@ -417,6 +407,7 @@ abstract contract LineaRollupBase is
    * Dynamic l2MessagingBlocksOffsetsLength (location depends on where l2MerkleRoots ends)
    * Dynamic l2MessagingBlocksOffsets (location depends on where l2MerkleRoots ends)
    * @param _finalizationData The full finalization data.
+   * @param _lastFinalizedShnarf The last finalized shnarf.
    * @param _finalShnarf The final shnarf in the finalization.
    * @param _lastFinalizedBlockNumber The last finalized block number.
    * @param _verifierChainConfiguration The verifier chain configuration.

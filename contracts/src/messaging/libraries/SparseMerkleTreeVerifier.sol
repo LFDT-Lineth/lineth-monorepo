@@ -9,8 +9,6 @@ import { EfficientLeftRightKeccak } from "../../libraries/EfficientLeftRightKecc
  * @custom:security-contact security-report@linea.build
  */
 library SparseMerkleTreeVerifier {
-  using EfficientLeftRightKeccak for *;
-
   /**
    * @dev Value doesn't fit in a uint of `bits` size.
    * @dev This is based on OpenZeppelin's SafeCast library.
