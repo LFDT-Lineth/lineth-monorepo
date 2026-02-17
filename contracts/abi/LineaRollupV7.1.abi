@@ -1,4 +1,4 @@
- [
+[
     {
       "inputs": [],
       "stateMutability": "nonpayable",
@@ -39,11 +39,6 @@
     {
       "inputs": [],
       "name": "CallerNotLSTWithdrawalRecipient",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "CallerNotProxyAdmin",
       "type": "error"
     },
     {
@@ -140,6 +135,22 @@
         }
       ],
       "name": "FinalizationStateIncorrect",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "expected",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "actual",
+          "type": "uint256"
+        }
+      ],
+      "name": "InitializedVersionWrong",
       "type": "error"
     },
     {
@@ -762,6 +773,12 @@
           "internalType": "struct ILineaRollupBase.BaseInitializationData",
           "name": "InitializationData",
           "type": "tuple"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "genesisShnarf",
+          "type": "bytes32"
         }
       ],
       "name": "LineaRollupBaseInitialized",
@@ -1166,7 +1183,7 @@
       "anonymous": false,
       "inputs": [
         {
-          "indexed": false,
+          "indexed": true,
           "internalType": "enum IPauseManager.PauseType",
           "name": "pauseType",
           "type": "uint8"

@@ -45,6 +45,48 @@ async function deployFromFactory(
   return contract;
 }
 
+async function deployFromFactoryWithOpts(
+  contractName: string,
+  provider: JsonRpcProvider | HardhatEthersHelpers["provider"] | null = null,
+  factoryOpts: FactoryOptions,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ...args: any[]
+) {
+  const startTime = performance.now();
+  const skipLog = process.env.SKIP_DEPLOY_LOG === "true" || false;
+  if (!skipLog) {
+    const signer = await provider?.getSigner();
+    console.log(`Going to deploy ${contractName} with account ${await signer?.getAddress()}...`);
+  }
+
+  const factory = await ethers.getContractFactory(contractName, factoryOpts);
+  if (provider) {
+    factory.connect(await provider.getSigner());
+  }
+  const contract = await factory.deploy(...args);
+  if (!skipLog) {
+    const deployTx = contract.deploymentTransaction();
+
+    console.log(`${contractName} deployment transaction has been sent, waiting...`, {
+      nonce: deployTx?.nonce,
+      hash: deployTx?.hash,
+      gasPrice: deployTx?.gasPrice?.toString(),
+      maxFeePerGas: deployTx?.maxFeePerGas?.toString(),
+      maxPriorityFeePerGas: deployTx?.maxPriorityFeePerGas?.toString(),
+      gasLimit: deployTx?.gasLimit.toString(),
+    });
+  }
+  const afterDeploy = await contract.waitForDeployment();
+  const timeDiff = performance.now() - startTime;
+  if (!skipLog) {
+    console.log(
+      `${contractName} deployed: time=${timeDiff / 1000}s blockNumber=${afterDeploy.deploymentTransaction()?.blockNumber}` +
+        ` tx-hash=${afterDeploy.deploymentTransaction()?.hash}`,
+    );
+  }
+  return contract;
+}
+
 async function deployUpgradableFromFactory(
   contractName: string,
   args?: unknown[],
@@ -155,6 +197,7 @@ function requireEnv(name: string): string {
 
 export {
   deployFromFactory,
+  deployFromFactoryWithOpts,
   deployUpgradableFromFactory,
   deployUpgradableWithAbiAndByteCode,
   deployUpgradableFromFactoryWithConstructorArgs,

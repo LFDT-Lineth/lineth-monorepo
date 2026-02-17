@@ -21,7 +21,7 @@ clean-environment:
 start-env: COMPOSE_PROFILES:=l1,l2
 start-env: CLEAN_PREVIOUS_ENV:=true
 start-env: COMPOSE_FILE:=docker/compose-tracing-v2.yml
-start-env: L1_CONTRACT_VERSION:=6
+start-env: L1_CONTRACT_VERSION:=7_1
 start-env: SKIP_CONTRACTS_DEPLOYMENT:=false
 start-env: SKIP_L1_L2_NODE_HEALTH_CHECK:=false
 start-env: LINEA_PROTOCOL_CONTRACTS_ONLY:=false

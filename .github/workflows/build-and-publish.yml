@@ -139,3 +139,12 @@ jobs:
             -f skip_e2e_test="true"
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  
+  # If all jobs are skipped, the workflow will still succeed.
+  always_succeed:
+    runs-on: ubuntu-24.04
+    needs: [coordinator, postman, prover, transaction_exclusion_api, native_yield_automation_service, linea_besu_package_build_and_upload, linea_besu_package_build_and_publish]
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'success') && !contains(needs.*.result, 'cancelled') }}
+    steps:
+      - name: Ensure Workflow Success
+        run: echo "All jobs were skipped, but workflow succeeds."

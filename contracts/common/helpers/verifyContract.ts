@@ -40,6 +40,7 @@ export async function tryVerifyContractWithConstructorArgs(
   contractAddress: string,
   contractForVerification: string,
   args: unknown[],
+  libraries?: Record<string, string>,
 ) {
   if (process.env.VERIFY_CONTRACT === "true") {
     console.log("Waiting 30 seconds for contract propagation...");
@@ -53,6 +54,7 @@ export async function tryVerifyContractWithConstructorArgs(
         address: contractAddress,
         contract: contractForVerification,
         constructorArguments: args,
+        libraries: libraries,
       });
     } catch (err) {
       console.log(`Error happened during verification: ${err}`);

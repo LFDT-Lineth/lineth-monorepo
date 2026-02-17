@@ -6,6 +6,7 @@ import {
   PAUSE_STATE_DATA_SUBMISSION_ROLE,
   UNPAUSE_STATE_DATA_SUBMISSION_ROLE,
   STATE_DATA_SUBMISSION_PAUSE_TYPE,
+  SECURITY_COUNCIL_ROLE,
 } from "contracts/common/constants";
 
 const func: DeployFunction = async function () {
@@ -14,8 +15,13 @@ const func: DeployFunction = async function () {
   let upgradeRoleAddresses = [];
 
   const securityCouncilAddress = getRequiredEnvVar("LINEA_ROLLUP_SECURITY_COUNCIL");
+  const proxyAddress = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS");
 
   upgradeRoleAddresses = [
+    {
+      addressWithRole: securityCouncilAddress,
+      role: SECURITY_COUNCIL_ROLE,
+    },
     {
       addressWithRole: securityCouncilAddress,
       role: PAUSE_STATE_DATA_SUBMISSION_ROLE,
@@ -30,8 +36,6 @@ const func: DeployFunction = async function () {
   upgradeUnpauseTypeRoles = [{ pauseType: STATE_DATA_SUBMISSION_PAUSE_TYPE, role: UNPAUSE_STATE_DATA_SUBMISSION_ROLE }];
 
   const contractName = "LineaRollup";
-
-  const proxyAddress = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS");
 
   const factory = await ethers.getContractFactory(contractName);
 
