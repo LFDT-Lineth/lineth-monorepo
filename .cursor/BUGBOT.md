@@ -2,41 +2,22 @@
 
 Automated security and code quality enforcement across the Linea monorepo.
 
-## Reference
+## Rule Sets
 
-Refer to [security-logging-guidelines](rules/security-logging-guidelines/EXAMPLES.md) for detailed examples of what to do, and what not to do. That rule applies to every code file (`.ts`, `.js`, `.kt`, `.java`, `.go`, `.sol`, `.py`).
+### Security Logging
 
-## MUST NOT
+Prevents leaking secrets, credentials, and sensitive data in logs, error messages, tests, and config files. Applies to all code files (`.ts`, `.js`, `.kt`, `.java`, `.go`, `.sol`, `.py`).
 
-- Log passwords, API keys, auth tokens, session IDs, private keys (cryptographic/SSH/PGP), JWT tokens, AWS keys, or GitHub tokens.
-- Log URLs containing sensitive query parameters (`token`, `apiKey`, `secret`, `password`, `auth`) without sanitization.
-- Log environment variables wholesale or config objects without redacting sensitive fields.
-- Log RPC URLs with embedded tokens or database connection strings containing credentials.
-- Log private keys or raw signatures during transaction signing or message signing.
-- Expose secrets in error messages, stack traces, exception propagation, metrics labels, trace data, or health-check endpoints.
-- Hardcode secrets in source code, operation scripts, configuration files, documentation, or code comments.
-- Include real credentials in tests, fixtures, mock servers, Postman collections, or example code.
-- Log request/response bodies or headers that contain auth tokens.
+- [Rules](rules/security-logging-guidelines/RULES.md)
+- [Examples](rules/security-logging-guidelines/EXAMPLES.md)
 
-## MUST
+### API and Asset Versioning
 
-- Sanitize URLs by redacting sensitive query parameters before any logging.
-- Redact sensitive fields when logging objects or configuration; override `toString()` on config classes (Kotlin/Java) to redact secrets.
-- Configure structured logging frameworks (Log4j/SLF4J/etc.) to filter sensitive data.
-- Load secrets from environment variables or secure vaults exclusively.
-- Use obviously fake/placeholder credentials in all tests, fixtures, `.env.template` files, and documentation.
-- Ensure `.env` files are in `.gitignore` and template files reference placeholders only.
-- Sanitize error details before propagation -- log `error.message` and `error.code`, not full config or request objects.
+Enforces backwards compatibility for public APIs and versioned assets (ABIs, configs). Components released beyond devnet must create new versioned methods/assets instead of breaking existing ones. Applies to all code files plus `.abi` and `.json`.
 
-## MAY log
-
-- Log levels, categories, timestamps, and request IDs.
-- Endpoint paths without query parameters.
-- Error types and status codes.
-- Configuration keys (not values); indicate presence with `[CONFIGURED]` / `[NOT SET]`.
-- Wallet addresses and transaction hashes (never private keys).
-- Partial identifiers (last 4 characters).
+- [Rules](rules/versioning-guidelines/RULES.md)
+- [Examples](rules/versioning-guidelines/EXAMPLES.md)
 
 ## Enforcement
 
-When a violation is detected, **block the change** with a clear explanation and suggest a safe alternative. Always reference [security-logging-guidelines](rules/security-logging-guidelines/EXAMPLES.md) for correct patterns.
+When a violation is detected, **block the change** with a clear explanation and suggest a safe alternative. Always reference the relevant rule's examples for correct patterns.
