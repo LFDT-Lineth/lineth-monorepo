@@ -1,0 +1,5 @@
+Deployed Address: TBD
+EVM Version: Osaka
+Optimizer Runs: 10_000
+Compiler Version 0.8.33
+CONTRACT_VERSION 1.1
