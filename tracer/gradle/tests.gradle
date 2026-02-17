@@ -180,6 +180,7 @@ tasks.register("fastReplayTests", Test) {
     excludeTags("nightly | weekly")
   }
   finalizedBy("jacocoFastReplayTestsReport")
+  systemProperty("junit.jupiter.execution.timeout.default", "30 m")
 }
 
 tasks.register("nightlyReplayTests", Test) {
