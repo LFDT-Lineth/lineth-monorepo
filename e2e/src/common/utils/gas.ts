@@ -16,6 +16,6 @@ export async function estimateLineaGas<
   return {
     maxFeePerGas: baseFeePerGas + maxPriorityFeePerGas,
     maxPriorityFeePerGas,
-    gasLimit: result.gasLimit,
+    gas: result.gasLimit,
   };
 }

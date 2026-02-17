@@ -78,8 +78,7 @@ describe("Liveness test suite", () => {
         async () => {
           try {
             logger.debug(`Trial ${i++} to get liveness events`);
-            // using fetch JSON-RPC call to get logs instead of JsonRpcProvider to aviod flaky issue
-            // where logs would fail to be retrieve from time to time
+
             return await (i % 2 == 0 ? l2BesuNodeClient : sequencerClient).getLogs({
               address: livenessContract.address,
               fromBlock: targetBlockNumber,

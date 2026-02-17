@@ -44,7 +44,7 @@ export async function awaitUntil<T>(
       lastError = error as Error;
       attemptCount++;
 
-      logger.error(
+      logger.debug(
         `awaitUntil callback error (attempt ${attemptCount}). Will retry until timeout. error=${lastError.message}`,
       );
     }

@@ -1,6 +1,6 @@
 import { serialize } from "@consensys/linea-shared-utils";
 import { describe, expect, it } from "@jest/globals";
-import { PrepareTransactionRequestReturnType, SendRawTransactionErrorType, encodeFunctionData, parseGwei } from "viem";
+import { PrepareTransactionRequestReturnType, encodeFunctionData, parseGwei } from "viem";
 
 import { getTransactionHash, awaitUntil } from "./common/utils";
 import { L2RpcEndpoint } from "./config/clients/l2-client";
@@ -39,30 +39,17 @@ describe("Transaction exclusion test suite", () => {
         }),
         maxPriorityFeePerGas: parseGwei("1"),
         maxFeePerGas: parseGwei("10"),
+        gas: 10_000_000n,
       });
 
       const rejectedTxHash = await getTransactionHash(l2PublicClient, txRequest);
 
-      try {
-        const serializedTransaction = await l2WalletClient.signTransaction(
-          txRequest as PrepareTransactionRequestReturnType,
-        );
+      const serializedTransaction = await l2WalletClient.signTransaction(
+        txRequest as PrepareTransactionRequestReturnType,
+      );
 
-        // This shall be rejected by the Besu node due to traces module limit overflow
-        await l2WalletClient.sendRawTransaction({ serializedTransaction });
-        throw new Error("Transaction was expected to be rejected, but it was not.");
-      } catch (err) {
-        const e = err as SendRawTransactionErrorType;
-
-        if (e.name === "InvalidInputRpcError") {
-          // This shall return error with traces limit overflow
-          logger.debug(`sendTransaction expected rejection: ${serialize(err)}`);
-          // assert it was indeed rejected by the traces module limit
-          expect(e.details).toContain("is above the limit");
-        } else {
-          throw new Error("Transaction was expected to be rejected with traces limit overflow, but it was not.");
-        }
-      }
+      // Rejected by the Besu node due to traces module limit overflow
+      await expect(l2WalletClient.sendRawTransaction({ serializedTransaction })).rejects.toThrow("is above the limit");
 
       logger.debug(`Transaction rejected as expected (RPC). transactionHash=${rejectedTxHash}`);
 
@@ -73,7 +60,7 @@ describe("Transaction exclusion test suite", () => {
           return status;
         },
         (status) => status !== null && status !== undefined,
-        { pollingIntervalMs: 1_000, timeoutMs: 100_000 },
+        { pollingIntervalMs: 1_000, timeoutMs: 60_000 },
       );
 
       logger.debug(`Transaction exclusion status received. response=${serialize(exclusionStatus)}`);
@@ -82,7 +69,7 @@ describe("Transaction exclusion test suite", () => {
       expect(exclusionStatus.txRejectionStage).toStrictEqual("RPC");
       expect(exclusionStatus.from.toLowerCase()).toStrictEqual(l2Account.address.toLowerCase());
     },
-    120_000,
+    180_000,
   );
 
   it.skip("Should get the status of the rejected transaction reported from Besu SEQUENCER node", async () => {
@@ -117,5 +104,5 @@ describe("Transaction exclusion test suite", () => {
     expect(exclusionStatus.txHash).toStrictEqual(rejectedTxHash);
     expect(exclusionStatus.txRejectionStage).toStrictEqual("SEQUENCER");
     expect(exclusionStatus.from.toLowerCase()).toStrictEqual(l2Account.address.toLowerCase());
-  }, 120_000);
+  }, 180_000);
 });

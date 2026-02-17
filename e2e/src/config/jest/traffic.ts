@@ -11,7 +11,7 @@ type StartTrafficOptions = {
 export async function startL2TrafficGeneration(
   context: TestContext,
   options: StartTrafficOptions = {},
-): Promise<() => void> {
+): Promise<() => Promise<void>> {
   const pollingIntervalMs = options.pollingIntervalMs ?? 2_000;
   const pollingAccount = await context.getL2AccountManager().generateAccount(etherToWei("200"));
   const walletClient = context.l2WalletClient({ account: pollingAccount });

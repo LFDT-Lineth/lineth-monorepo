@@ -2,15 +2,34 @@ import { etherToWei, serialize } from "@consensys/linea-shared-utils";
 import { describe, expect, it } from "@jest/globals";
 
 import { MINIMUM_FEE_IN_WEI } from "./common/constants";
-import { execDockerCommand, getEvents, waitForEvents, getMessageSentEventFromLogs, sendMessage } from "./common/utils";
+import { sendL1ToL2Message } from "./common/test-helpers/messaging";
+import { awaitUntil, execDockerCommand, getEvents, waitForEvents, getMessageSentEventFromLogs } from "./common/utils";
 import { createTestContext } from "./config/setup";
 import { L2MessageServiceV1Abi, LineaRollupV6Abi } from "./generated";
 
 import type { Logger } from "winston";
 
+const COORDINATOR_HEALTH_URL = "http://localhost:9545/health";
+const COORDINATOR_READINESS_TIMEOUT_MS = 60_000;
+const COORDINATOR_READINESS_POLLING_MS = 500;
+
+async function waitForCoordinatorReadiness(logger: Logger): Promise<void> {
+  logger.debug("Waiting for coordinator readiness...");
+  await awaitUntil(
+    async () => {
+      const response = await fetch(COORDINATOR_HEALTH_URL);
+      return response.ok;
+    },
+    (isHealthy) => isHealthy,
+    { pollingIntervalMs: COORDINATOR_READINESS_POLLING_MS, timeoutMs: COORDINATOR_READINESS_TIMEOUT_MS },
+  );
+  logger.debug("Coordinator is ready.");
+}
+
 /**
  * Barrier that restarts the coordinator exactly once, after all participants arrive.
- * Early arrivers wait. The last to arrive triggers the restart and unblocks everyone.
+ * Early arrivers wait. The last to arrive triggers the restart, waits for readiness,
+ * then unblocks everyone.
  */
 function createRestartBarrier(participantCount: number) {
   let arrivals = 0;
@@ -28,17 +47,21 @@ function createRestartBarrier(participantCount: number) {
       }
 
       logger.debug("All participants arrived. Restarting coordinator...");
-      return execDockerCommand("restart", "coordinator").then(
-        () => {
-          logger.debug("Coordinator restarted.");
-          waiters.forEach(({ resolve }) => resolve());
-        },
-        (error) => {
-          logger.error(`Failed to restart coordinator: ${error}`);
-          waiters.forEach(({ reject }) => reject(error));
-          throw error;
-        },
-      );
+      return execDockerCommand("restart", "coordinator")
+        .then(() => {
+          logger.debug("Coordinator container restarted. Waiting for health endpoint...");
+          return waitForCoordinatorReadiness(logger);
+        })
+        .then(
+          () => {
+            waiters.forEach(({ resolve }) => resolve());
+          },
+          (error) => {
+            logger.debug(`Failed to restart coordinator: ${error}`);
+            waiters.forEach(({ reject }) => reject(error));
+            throw error;
+          },
+        );
     },
   };
 }
@@ -67,6 +90,7 @@ describe("Coordinator restart test suite", () => {
           eventName: "DataSubmittedV3",
           fromBlock: 0n,
           toBlock: "latest",
+          pollingIntervalMs: 1_000,
           strict: true,
         }),
         waitForEvents(l1PublicClient, {
@@ -75,6 +99,7 @@ describe("Coordinator restart test suite", () => {
           eventName: "DataFinalizedV3",
           fromBlock: 0n,
           toBlock: "latest",
+          pollingIntervalMs: 1_000,
           strict: true,
         }),
       ]);
@@ -185,52 +210,29 @@ describe("Coordinator restart test suite", () => {
       const lineaRollup = context.l1Contracts.lineaRollup(l1PublicClient);
       const l2MessageService = context.l2Contracts.l2MessageService(l2PublicClient);
 
-      const [l1MessageSender, { maxPriorityFeePerGas, maxFeePerGas }] = await Promise.all([
-        l1AccountManager.generateAccount(),
-        l1PublicClient.estimateFeesPerGas(),
-      ]);
-
-      const l1WalletClient = context.l1WalletClient({ account: l1MessageSender });
-      let l1MessageSenderNonce = await l1PublicClient.getTransactionCount({ address: l1MessageSender.address });
-
-      logger.debug(`Fetched fee data. maxPriorityFeePerGas=${maxPriorityFeePerGas} maxFeePerGas=${maxFeePerGas}`);
+      const l1MessageSender = await l1AccountManager.generateAccount();
 
       const messageFee = MINIMUM_FEE_IN_WEI;
       const messageValue = etherToWei("0.0051");
-      const destinationAddress = "0x8D97689C9818892B700e27F316cc3E41e17fBeb9";
 
-      // Phase 1: Send messages L1 -> L2 and wait for anchoring before restart
-      logger.debug("Sending messages L1 -> L2 before coordinator restart...");
-      const l1MessagesPromises = [];
-      for (let i = 0; i < 5; i++) {
-        l1MessagesPromises.push(
-          sendMessage(l1WalletClient, {
-            account: l1MessageSender,
-            chain: l1PublicClient.chain,
-            args: {
-              to: destinationAddress,
-              fee: messageFee,
-              calldata: "0x",
-            },
-            contractAddress: lineaRollup.address,
-            value: messageValue,
-            nonce: l1MessageSenderNonce,
-            maxPriorityFeePerGas,
-            maxFeePerGas,
-          }),
-        );
-        l1MessageSenderNonce++;
-      }
+      // Phase 1: Send an L1->L2 message and confirm it is anchored before restart
+      logger.debug("Sending L1 -> L2 message before coordinator restart...");
 
-      const l1Receipts = await Promise.all(l1MessagesPromises);
-      const l1Messages = getMessageSentEventFromLogs(l1Receipts);
-      const lastNewL1MessageNumber = l1Messages.slice(-1)[0].messageNumber;
+      const { receipt: l1ReceiptBeforeRestart } = await sendL1ToL2Message(context, {
+        account: l1MessageSender,
+        fee: messageFee,
+        value: messageValue,
+      });
 
-      logger.debug(`Waiting for L1->L2 anchoring before coordinator restart. messageNumber=${lastNewL1MessageNumber}`);
+      const [l1MessageBeforeRestart] = getMessageSentEventFromLogs([l1ReceiptBeforeRestart]);
+
+      logger.debug(
+        `Waiting for L1->L2 anchoring before coordinator restart. messageNumber=${l1MessageBeforeRestart.messageNumber}`,
+      );
 
       const l2BlockBeforeAnchoring = await l2PublicClient.getBlockNumber();
 
-      const [rollingHashUpdatedEvent] = await waitForEvents(l2PublicClient, {
+      await waitForEvents(l2PublicClient, {
         abi: L2MessageServiceV1Abi,
         address: l2MessageService.address,
         eventName: "RollingHashUpdated",
@@ -239,46 +241,26 @@ describe("Coordinator restart test suite", () => {
         pollingIntervalMs: 1_000,
         strict: true,
         criteria: async (events) => {
-          return events.filter((event) => event.args.messageNumber >= lastNewL1MessageNumber);
+          return events.filter((event) => event.args.messageNumber >= l1MessageBeforeRestart.messageNumber);
         },
       });
 
-      expect(rollingHashUpdatedEvent).toBeDefined();
+      logger.info("Successfully anchored L1 -> L2 message before coordinator restart.");
 
       // Phase 2: Restart coordinator
       await restartBarrier.arrive(logger);
 
-      // Phase 3: Send messages L1 -> L2 after restart and wait for anchoring
-      const l1Fees = await l1PublicClient.estimateFeesPerGas();
+      // Phase 3: Send a new L1->L2 message after restart and wait for anchoring
+      const { receipt: l1ReceiptAfterRestart } = await sendL1ToL2Message(context, {
+        account: l1MessageSender,
+        fee: messageFee,
+        value: messageValue,
+      });
 
-      logger.debug("Sending messages L1 -> L2 after coordinator restart...");
-      const l1MessagesPromisesAfterRestart = [];
-      for (let i = 0; i < 5; i++) {
-        l1MessagesPromisesAfterRestart.push(
-          sendMessage(l1WalletClient, {
-            account: l1MessageSender,
-            chain: l1PublicClient.chain,
-            args: {
-              to: destinationAddress,
-              fee: messageFee,
-              calldata: "0x",
-            },
-            contractAddress: lineaRollup.address,
-            value: messageValue,
-            nonce: l1MessageSenderNonce,
-            maxPriorityFeePerGas: l1Fees.maxPriorityFeePerGas,
-            maxFeePerGas: l1Fees.maxFeePerGas,
-          }),
-        );
-        l1MessageSenderNonce++;
-      }
-
-      const l1ReceiptsAfterRestart = await Promise.all(l1MessagesPromisesAfterRestart);
-      const l1MessagesAfterRestart = getMessageSentEventFromLogs(l1ReceiptsAfterRestart);
-      const lastNewL1MessageNumberAfterRestart = l1MessagesAfterRestart.slice(-1)[0].messageNumber;
+      const [l1MessageAfterRestart] = getMessageSentEventFromLogs([l1ReceiptAfterRestart]);
 
       logger.debug(
-        `Waiting for L1->L2 anchoring after coordinator restart. messageNumber=${lastNewL1MessageNumberAfterRestart}`,
+        `Waiting for L1->L2 anchoring after coordinator restart. messageNumber=${l1MessageAfterRestart.messageNumber}`,
       );
 
       const l2BlockAfterRestart = await l2PublicClient.getBlockNumber();
@@ -292,12 +274,11 @@ describe("Coordinator restart test suite", () => {
         pollingIntervalMs: 1_000,
         strict: true,
         criteria: async (events) => {
-          return events.filter((event) => event.args.messageNumber >= lastNewL1MessageNumberAfterRestart);
+          return events.filter((event) => event.args.messageNumber >= l1MessageAfterRestart.messageNumber);
         },
       });
 
-      expect(rollingHashUpdatedEventAfterRestart).toBeDefined();
-
+      // Phase 4: Verify anchored data matches on-chain state
       const [lastNewMessageRollingHashAfterRestart, lastAnchoredL1MessageNumberAfterRestart] = await Promise.all([
         lineaRollup.read.rollingHashes([rollingHashUpdatedEventAfterRestart.args.messageNumber]),
         l2MessageService.read.lastAnchoredL1MessageNumber(),

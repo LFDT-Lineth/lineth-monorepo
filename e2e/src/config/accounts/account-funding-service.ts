@@ -1,9 +1,9 @@
 import { Mutex } from "async-mutex";
-import { Address, Client, parseGwei, PrivateKeyAccount, SendTransactionReturnType } from "viem";
-import { estimateFeesPerGas, sendTransaction } from "viem/actions";
+import { Address, Client, parseGwei, PrivateKeyAccount } from "viem";
+import { estimateFeesPerGas, getTransactionCount, sendTransaction } from "viem/actions";
 
-import { RetryPolicy } from "./retry-policy";
 import { estimateLineaGas } from "../../common/utils";
+import { sendTransactionWithRetry, type TransactionResult } from "../../common/utils/retry";
 
 import type { Logger } from "winston";
 
@@ -12,77 +12,94 @@ type FeeData = {
   maxFeePerGas: bigint;
 };
 
+const DEFAULT_RECEIPT_TIMEOUT_MS = 30_000;
+
 /**
  * Sends funding transactions from a whale account to newly generated test accounts.
- * Uses a mutex to serialize sends from the same whale and avoid nonce races,
- * and a retry policy to handle transient RPC or mempool failures.
+ * Uses a local nonce counter (protected by a mutex) to assign sequential nonces
+ * without holding the lock during receipt confirmation. This allows concurrent
+ * in-flight funding transactions from the same whale while preventing nonce collisions.
  */
 export class AccountFundingService {
-  private readonly whaleAccountMutex = new Mutex();
-  private readonly retryPolicy: RetryPolicy;
+  private readonly nonceMutex = new Mutex();
+  private readonly localNonces = new Map<Address, number>();
 
   constructor(
     private readonly client: Client,
     private readonly chainId: number,
     private readonly logger: Logger,
-    retryOptions: { retries: number; delayMs: number },
-  ) {
-    this.retryPolicy = new RetryPolicy(logger, retryOptions);
-  }
+  ) {}
 
   /**
    * Funds a single target address from the whale account.
-   * Returns the tx hash on success or null if all retry attempts are exhausted.
-   * On terminal failure, resets the whale's nonce manager to resync with on-chain state.
+   * Returns the transaction result on success or null if all retry attempts are exhausted.
+   * On terminal failure, invalidates the cached nonce so the next call re-fetches from chain.
    */
   async fundAccount(
     whaleAccountWallet: PrivateKeyAccount,
     whaleAccountAddress: Address,
     targetAddress: Address,
     initialBalanceWei: bigint,
-  ): Promise<SendTransactionReturnType | null> {
-    const feeData = await this.estimateFees(whaleAccountWallet.address, targetAddress, initialBalanceWei);
+  ): Promise<TransactionResult | null> {
+    try {
+      const feeData = await this.estimateFees(whaleAccountWallet.address, targetAddress, initialBalanceWei);
+      const nonce = await this.nextNonce(whaleAccountAddress);
 
-    const sendWithRetry = async (): Promise<SendTransactionReturnType> => {
-      return this.retryPolicy.execute(async () => {
-        // Mutex ensures only one transaction is in-flight per whale at a time,
-        // preventing nonce collisions when multiple accounts are funded concurrently.
-        const release = await this.whaleAccountMutex.acquire();
-        try {
-          const transactionHash = await sendTransaction(this.client, {
+      const result = await sendTransactionWithRetry(
+        this.client,
+        (fees) =>
+          sendTransaction(this.client, {
             account: whaleAccountWallet,
             chain: this.client.chain,
             type: "eip1559",
             to: targetAddress,
             value: initialBalanceWei,
-            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
-            maxFeePerGas: feeData.maxFeePerGas,
+            nonce,
             gas: 21000n,
-          });
-          this.logger.debug(
-            `Transaction sent. newAccount=${targetAddress} txHash=${transactionHash} whaleAccount=${whaleAccountAddress}`,
-          );
-          return transactionHash;
-        } catch (error) {
-          this.logger.warn(`sendTransaction failed for account=${targetAddress}. Error: ${(error as Error).message}`);
-          throw error;
-        } finally {
-          release();
-        }
-      });
-    };
-
-    return sendWithRetry().catch((error) => {
-      this.logger.error(
-        `Failed to fund account after retries. address=${targetAddress} error=${(error as Error).message}`,
+            ...feeData,
+            ...fees,
+          }),
+        { receiptTimeoutMs: DEFAULT_RECEIPT_TIMEOUT_MS },
       );
-      // Reset nonce manager so subsequent sends don't use a stale nonce.
-      whaleAccountWallet.nonceManager?.reset({
-        address: whaleAccountWallet.address,
-        chainId: this.chainId,
-      });
+
+      this.logger.debug(
+        `Account funded. targetAddress=${targetAddress} txHash=${result.hash} whaleAccount=${whaleAccountAddress}`,
+      );
+
+      return result;
+    } catch (error) {
+      this.logger.error(`Failed to fund account. address=${targetAddress} error=${(error as Error).message}`);
+      this.invalidateNonce(whaleAccountAddress);
       return null;
-    });
+    }
+  }
+
+  /**
+   * Assigns the next nonce for the given whale address.
+   * On first call (or after invalidation), fetches the pending nonce from chain;
+   * subsequent calls increment a local counter, allowing concurrent funding
+   * without holding a lock during receipt confirmation.
+   */
+  private async nextNonce(address: Address): Promise<number> {
+    const release = await this.nonceMutex.acquire();
+    try {
+      let nonce = this.localNonces.get(address);
+      if (nonce === undefined) {
+        nonce = await getTransactionCount(this.client, { address, blockTag: "pending" });
+      }
+      this.localNonces.set(address, nonce + 1);
+      return nonce;
+    } finally {
+      release();
+    }
+  }
+
+  /**
+   * Clears the cached nonce for the given address so the next call re-fetches from chain.
+   * Called on funding failure to resync with on-chain state.
+   */
+  private invalidateNonce(address: Address): void {
+    this.localNonces.delete(address);
   }
 
   /**

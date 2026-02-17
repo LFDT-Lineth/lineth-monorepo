@@ -15,6 +15,8 @@ describe("Messaging test suite", () => {
     "Should send a transaction with fee and calldata to L1 message service, be successfully claimed it on L2",
     async () => {
       const l1Account = await l1AccountManager.generateAccount();
+      const l2PublicClient = context.l2PublicClient();
+      const l2BlockBeforeSend = await l2PublicClient.getBlockNumber();
 
       const { txHash, receipt } = await sendL1ToL2Message(context, {
         account: l1Account,
@@ -28,7 +30,6 @@ describe("Messaging test suite", () => {
       logger.debug(`L1 message sent. messageHash=${messageHash} transactionHash=${txHash}`);
 
       logger.debug(`Waiting for MessageClaimed event on L2. messageHash=${messageHash}`);
-      const l2PublicClient = context.l2PublicClient();
       const [messageClaimedEvent] = await waitForEvents(l2PublicClient, {
         abi: L2MessageServiceV1Abi,
         address: context.l2Contracts.l2MessageService(l2PublicClient).address,
@@ -36,6 +37,9 @@ describe("Messaging test suite", () => {
         args: {
           _messageHash: messageHash,
         },
+        fromBlock: l2BlockBeforeSend,
+        toBlock: "latest",
+        pollingIntervalMs: 1_000,
         strict: true,
       });
 
@@ -51,6 +55,8 @@ describe("Messaging test suite", () => {
     "Should send a transaction with fee and without calldata to L1 message service, be successfully claimed it on L2",
     async () => {
       const l1Account = await l1AccountManager.generateAccount();
+      const l2PublicClient = context.l2PublicClient();
+      const l2BlockBeforeSend = await l2PublicClient.getBlockNumber();
 
       const { txHash, receipt } = await sendL1ToL2Message(context, {
         account: l1Account,
@@ -64,7 +70,6 @@ describe("Messaging test suite", () => {
       logger.debug(`L1 message sent. messageHash=${messageHash} transactionHash=${txHash}`);
 
       logger.debug(`Waiting for MessageClaimed event on L2. messageHash=${messageHash}`);
-      const l2PublicClient = context.l2PublicClient();
       const [messageClaimedEvent] = await waitForEvents(l2PublicClient, {
         abi: L2MessageServiceV1Abi,
         address: context.l2Contracts.l2MessageService(l2PublicClient).address,
@@ -72,6 +77,9 @@ describe("Messaging test suite", () => {
         args: {
           _messageHash: messageHash,
         },
+        fromBlock: l2BlockBeforeSend,
+        toBlock: "latest",
+        pollingIntervalMs: 1_000,
         strict: true,
       });
       expect(messageClaimedEvent).toBeDefined();
@@ -87,6 +95,8 @@ describe("Messaging test suite", () => {
     "Should send a transaction without fee and without calldata to L1 message service, be successfully claimed it on L2",
     async () => {
       const l1Account = await l1AccountManager.generateAccount();
+      const l2PublicClient = context.l2PublicClient();
+      const l2BlockBeforeSend = await l2PublicClient.getBlockNumber();
 
       const { txHash, receipt } = await sendL1ToL2Message(context, {
         account: l1Account,
@@ -98,7 +108,6 @@ describe("Messaging test suite", () => {
       logger.debug(`L1 message sent. messageHash=${messageHash} transactionHash=${txHash}`);
 
       logger.debug(`Waiting for MessageClaimed event on L2. messageHash=${messageHash}`);
-      const l2PublicClient = context.l2PublicClient();
       const [messageClaimedEvent] = await waitForEvents(l2PublicClient, {
         abi: L2MessageServiceV1Abi,
         address: context.l2Contracts.l2MessageService(l2PublicClient).address,
@@ -106,6 +115,8 @@ describe("Messaging test suite", () => {
         args: {
           _messageHash: messageHash,
         },
+        fromBlock: l2BlockBeforeSend,
+        toBlock: "latest",
         pollingIntervalMs: 1_000,
         strict: true,
       });
@@ -124,6 +135,7 @@ describe("Messaging test suite", () => {
       const l2Account = await l2AccountManager.generateAccount();
       const l1PublicClient = context.l1PublicClient();
       const lineaRollup = context.l1Contracts.lineaRollup(l1PublicClient);
+      const l1BlockBeforeSend = await l1PublicClient.getBlockNumber();
 
       const { txHash, receipt } = await sendL2ToL1Message(context, {
         account: l2Account,
@@ -144,6 +156,8 @@ describe("Messaging test suite", () => {
         args: {
           l2Block: messageSentEvent.blockNumber,
         },
+        fromBlock: l1BlockBeforeSend,
+        toBlock: "latest",
         pollingIntervalMs: 1_000,
         strict: true,
       });
@@ -158,6 +172,8 @@ describe("Messaging test suite", () => {
         args: {
           _messageHash: messageHash,
         },
+        fromBlock: l1BlockBeforeSend,
+        toBlock: "latest",
         pollingIntervalMs: 1_000,
         strict: true,
       });
@@ -176,6 +192,7 @@ describe("Messaging test suite", () => {
       const l2Account = await l2AccountManager.generateAccount();
       const l1PublicClient = context.l1PublicClient();
       const lineaRollup = context.l1Contracts.lineaRollup(l1PublicClient);
+      const l1BlockBeforeSend = await l1PublicClient.getBlockNumber();
 
       const { txHash, receipt } = await sendL2ToL1Message(context, {
         account: l2Account,
@@ -196,6 +213,8 @@ describe("Messaging test suite", () => {
         args: {
           l2Block: messageSentEvent.blockNumber,
         },
+        fromBlock: l1BlockBeforeSend,
+        toBlock: "latest",
         pollingIntervalMs: 1_000,
         strict: true,
       });
@@ -210,6 +229,8 @@ describe("Messaging test suite", () => {
         args: {
           _messageHash: messageHash,
         },
+        fromBlock: l1BlockBeforeSend,
+        toBlock: "latest",
         pollingIntervalMs: 1_000,
         strict: true,
       });

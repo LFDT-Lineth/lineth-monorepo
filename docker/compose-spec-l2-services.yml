@@ -291,6 +291,11 @@ services:
 #        condition: service_started
     ports:
       - "9545:9545"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9545/health || exit 1"]
+      interval: 1s
+      timeout: 1s
+      retries: 120
     restart: on-failure
     environment:
       config__override__type2-state-proof-provider__disabled: ${LINEA_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER:-true}

@@ -9,9 +9,16 @@ import { createTestLogger } from "../../config/logger";
 const logger = createTestLogger();
 
 const FEE_REFRESH_INTERVAL = 10;
-const FEE_BUMP_PERCENT = 150n;
-const MAX_PENDING_TXS = 5;
+const FEE_BUMP_PERCENT = 115n;
+const MAX_PENDING_TXS = 3;
 const TX_VALUE = etherToWei("0.000001");
+
+/**
+ * Maximum multiplier above the last-estimated base fee before the compounding
+ * bump is capped and fees are re-estimated from chain. Prevents runaway gas
+ * prices under sustained congestion.
+ */
+const MAX_FEE_MULTIPLIER = 10n;
 
 type GasFees = Awaited<ReturnType<typeof estimateLineaGas>>;
 
@@ -19,7 +26,7 @@ function bumpFees(fees: GasFees): GasFees {
   return {
     maxPriorityFeePerGas: (fees.maxPriorityFeePerGas * FEE_BUMP_PERCENT) / 100n,
     maxFeePerGas: (fees.maxFeePerGas * FEE_BUMP_PERCENT) / 100n,
-    gasLimit: fees.gasLimit,
+    gas: fees.gas,
   };
 }
 
@@ -29,8 +36,10 @@ export class TrafficGenerator<
 > {
   private nonce = 0;
   private fees!: GasFees;
+  private baseFees!: GasFees;
   private txSinceRefresh = 0;
   private isRunning = false;
+  private loopPromise: Promise<void> | null = null;
 
   private readonly address: `0x${string}`;
   private readonly gasParams: EstimateGasParameters;
@@ -50,14 +59,19 @@ export class TrafficGenerator<
   async start(): Promise<void> {
     this.nonce = await getTransactionCount(this.publicClient, { address: this.address, blockTag: "pending" });
     this.fees = await estimateLineaGas(this.publicClient, this.gasParams);
+    this.baseFees = this.fees;
     this.txSinceRefresh = 0;
     this.isRunning = true;
 
-    void this.loop();
+    this.loopPromise = this.loop();
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
     this.isRunning = false;
+    if (this.loopPromise) {
+      await this.loopPromise;
+      this.loopPromise = null;
+    }
     logger.debug("Stopped generating traffic on L2");
   }
 
@@ -67,12 +81,13 @@ export class TrafficGenerator<
         await this.refreshFeesIfStale();
         if (!this.isRunning) break;
 
-        await this.unstickIfNeeded();
-
-        const currentNonce = this.nonce++;
-        const hash = await this.sendTx(currentNonce, this.fees);
-        this.txSinceRefresh++;
-        logger.debug(`Traffic tx sent. hash=${hash} nonce=${currentNonce}`);
+        const wasStuck = await this.unstickIfNeeded();
+        if (!wasStuck) {
+          const currentNonce = this.nonce++;
+          const hash = await this.sendTx(currentNonce, this.fees);
+          this.txSinceRefresh++;
+          logger.debug(`Traffic tx sent. hash=${hash} nonce=${currentNonce}`);
+        }
       } catch (error) {
         await this.recover(error);
       }
@@ -89,30 +104,47 @@ export class TrafficGenerator<
       nonce: txNonce,
       maxPriorityFeePerGas: txFees.maxPriorityFeePerGas,
       maxFeePerGas: txFees.maxFeePerGas,
-      gas: txFees.gasLimit,
+      gas: txFees.gas,
     } as SendTransactionParameters);
   }
 
   private async refreshFeesIfStale(): Promise<void> {
     if (this.txSinceRefresh >= FEE_REFRESH_INTERVAL) {
       this.fees = await estimateLineaGas(this.publicClient, this.gasParams);
+      this.baseFees = this.fees;
       this.txSinceRefresh = 0;
     }
   }
 
-  private async unstickIfNeeded(): Promise<void> {
+  private async unstickIfNeeded(): Promise<boolean> {
     const confirmed = await getTransactionCount(this.publicClient, { address: this.address, blockTag: "latest" });
     const pendingCount = this.nonce - confirmed;
 
-    if (pendingCount <= MAX_PENDING_TXS) return;
+    if (pendingCount <= MAX_PENDING_TXS) return false;
 
     logger.debug(`Stuck txs detected. confirmed=${confirmed} local=${this.nonce} pending=${pendingCount}`);
 
-    this.fees = await estimateLineaGas(this.publicClient, this.gasParams);
-    const hash = await this.sendTx(confirmed, bumpFees(this.fees));
+    // Bump from current fees so each successive unstick attempt is progressively
+    // higher. A fresh estimateLineaGas would return the same values on a stable
+    // chain, producing a "Known transaction" rejection.
+    this.fees = bumpFees(this.fees);
+
+    // Cap compounding: if fees grew beyond MAX_FEE_MULTIPLIER of the last
+    // chain-estimated base, re-estimate from chain and bump once from there.
+    if (this.fees.maxFeePerGas > this.baseFees.maxFeePerGas * MAX_FEE_MULTIPLIER) {
+      logger.debug(
+        `Fee cap reached. Re-estimating from chain. maxFeePerGas=${this.fees.maxFeePerGas} cap=${this.baseFees.maxFeePerGas * MAX_FEE_MULTIPLIER}`,
+      );
+      this.fees = await estimateLineaGas(this.publicClient, this.gasParams);
+      this.baseFees = this.fees;
+      this.fees = bumpFees(this.fees);
+    }
+
+    const hash = await this.sendTx(confirmed, this.fees);
     this.txSinceRefresh = 0;
 
     logger.debug(`Replacement tx sent. nonce=${confirmed} hash=${hash}`);
+    return true;
   }
 
   private async recover(error: unknown): Promise<void> {
@@ -122,6 +154,7 @@ export class TrafficGenerator<
     try {
       this.nonce = await getTransactionCount(this.publicClient, { address: this.address, blockTag: "pending" });
       this.fees = await estimateLineaGas(this.publicClient, this.gasParams);
+      this.baseFees = this.fees;
       this.txSinceRefresh = 0;
     } catch (recoveryError) {
       logger.debug(`Recovery failed. error=${serialize(recoveryError)}`);
@@ -140,7 +173,7 @@ export async function sendTransactionsToGenerateTrafficWithInterval<
   walletClient: Client<Transport, chain, account>,
   publicClient: Client<Transport, chain, account>,
   params: { pollingInterval?: number },
-): Promise<() => void> {
+): Promise<() => Promise<void>> {
   const generator = new TrafficGenerator(walletClient, publicClient, params.pollingInterval);
   await generator.start();
   return () => generator.stop();

@@ -7,12 +7,13 @@ import { createTestLogger } from "../../config/logger";
 import { DummyContractAbi, L2MessageServiceV1Abi } from "../../generated";
 import { MINIMUM_FEE_IN_WEI } from "../constants";
 import { estimateLineaGas } from "../utils/gas";
+import { sendTransactionWithRetry } from "../utils/retry";
 
 import type { TestContext } from "../../config/setup";
 
 const logger = createTestLogger();
 
-const DEFAULT_TRANSACTION_TIMEOUT_MS = 30_000;
+const DEFAULT_TRANSACTION_TIMEOUT_MS = 15_000;
 const CALLDATA_BYTE_SIZE = 100;
 const DEFAULT_L2_DESTINATION_ADDRESS = "0x8D97689C9818892B700e27F316cc3E41e17fBeb9";
 const DEFAULT_L1_DESTINATION_ADDRESS = "0x8D97689C9818892B700e27F316cc3E41e17fBeb9";
@@ -55,30 +56,22 @@ export async function sendL1ToL2Message(context: TestContext, params: SendMessag
   const calldata = generateCalldata(withCalldata);
   const destinationAddress = withCalldata ? dummyContract.address : DEFAULT_L2_DESTINATION_ADDRESS;
 
-  const { maxPriorityFeePerGas, maxFeePerGas } = await l1PublicClient.estimateFeesPerGas();
+  const estimatedGasFees = await l1PublicClient.estimateFeesPerGas();
+  const nonce = await l1PublicClient.getTransactionCount({ address: account.address, blockTag: "pending" });
 
-  logger.debug(`Fetched fee data. maxPriorityFeePerGas=${maxPriorityFeePerGas} maxFeePerGas=${maxFeePerGas}`);
+  const { hash: txHash, receipt } = await sendTransactionWithRetry(
+    l1PublicClient,
+    (fees) =>
+      lineaRollup.write.sendMessage([destinationAddress, fee, calldata], {
+        value,
+        nonce,
+        ...estimatedGasFees,
+        ...fees,
+      }),
+    { receiptTimeoutMs: timeoutMs },
+  );
 
-  const txHash = await lineaRollup.write.sendMessage([destinationAddress, fee, calldata], {
-    value,
-    maxPriorityFeePerGas,
-    maxFeePerGas,
-  });
-
-  logger.debug(`sendMessage transaction sent. transactionHash=${txHash}`);
-
-  logger.debug(`Waiting for transaction to be mined... transactionHash=${txHash}`);
-  const receipt = await l1PublicClient.waitForTransactionReceipt({ hash: txHash, timeout: timeoutMs });
-
-  if (!receipt) {
-    throw new Error(`Transaction receipt not received for hash: ${txHash}`);
-  }
-
-  if (receipt.status !== "success") {
-    logger.error(`L1 transaction reverted. transactionHash=${txHash} status=${receipt.status}`);
-  } else {
-    logger.debug(`Transaction mined. transactionHash=${txHash} status=${receipt.status}`);
-  }
+  logger.debug(`sendMessage transaction sent. transactionHash=${txHash} status=${receipt.status}`);
 
   return { txHash, receipt };
 }
@@ -102,8 +95,8 @@ export async function sendL2ToL1Message(context: TestContext, params: SendMessag
   const calldata = generateCalldata(withCalldata);
   const destinationAddress = withCalldata ? dummyContract.address : DEFAULT_L1_DESTINATION_ADDRESS;
 
-  const { maxPriorityFeePerGas, maxFeePerGas, gasLimit } = await estimateLineaGas(l2PublicClient, {
-    account: account,
+  const estimatedGasFees = await estimateLineaGas(l2PublicClient, {
+    account,
     to: l2MessageService.address,
     data: encodeFunctionCall({
       abi: L2MessageServiceV1Abi,
@@ -113,31 +106,25 @@ export async function sendL2ToL1Message(context: TestContext, params: SendMessag
     value,
   });
 
-  logger.debug(
-    `Fetched fee data. maxPriorityFeePerGas=${maxPriorityFeePerGas} maxFeePerGas=${maxFeePerGas} gasLimit=${gasLimit}`,
+  const nonce = await l2PublicClient.getTransactionCount({ address: account.address, blockTag: "pending" });
+
+  logger.debug(`Estimated gas limit. gasLimit=${estimatedGasFees.gas} nonce=${nonce}`);
+
+  const { hash: txHash, receipt } = await sendTransactionWithRetry(
+    l2PublicClient,
+    (fees) =>
+      l2MessageService.write.sendMessage([destinationAddress, fee, calldata], {
+        value,
+        nonce,
+        ...estimatedGasFees,
+        ...fees,
+      }),
+    {
+      receiptTimeoutMs: timeoutMs,
+    },
   );
 
-  const txHash = await l2MessageService.write.sendMessage([destinationAddress, fee, calldata], {
-    value,
-    maxPriorityFeePerGas,
-    maxFeePerGas,
-    gas: gasLimit,
-  });
-
-  logger.debug(`sendMessage transaction sent. transactionHash=${txHash}`);
-
-  logger.debug(`Waiting for transaction to be mined... transactionHash=${txHash}`);
-  const receipt = await l2PublicClient.waitForTransactionReceipt({ hash: txHash, timeout: timeoutMs });
-
-  if (!receipt) {
-    throw new Error(`Transaction receipt not received for hash: ${txHash}`);
-  }
-
-  if (receipt.status !== "success") {
-    logger.error(`L2 transaction reverted. transactionHash=${txHash} status=${receipt.status}`);
-  } else {
-    logger.debug(`Transaction mined. transactionHash=${txHash} status=${receipt.status}`);
-  }
+  logger.debug(`sendMessage transaction sent. transactionHash=${txHash} status=${receipt.status}`);
 
   return { txHash, receipt };
 }

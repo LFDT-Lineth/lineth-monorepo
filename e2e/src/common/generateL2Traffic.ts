@@ -31,8 +31,8 @@ async function main() {
     cleanup();
   });
 
-  function cleanup() {
-    stopPolling();
+  async function cleanup() {
+    await stopPolling();
     logger.info("Terminated L2 traffic...");
     process.exit(0);
   }

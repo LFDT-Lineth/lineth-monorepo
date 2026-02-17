@@ -1,11 +1,10 @@
 import { etherToWei, normalizeAddress } from "@consensys/linea-shared-utils";
-import { Client, createNonceManager, Hex, PrivateKeyAccount, SendTransactionReturnType } from "viem";
+import { Client, Hex, PrivateKeyAccount } from "viem";
 import { privateKeyToAccount, generatePrivateKey, privateKeyToAddress } from "viem/accounts";
-import { waitForTransactionReceipt } from "viem/actions";
-import { jsonRpc } from "viem/nonce";
 
 import Account from "./account";
 import { AccountFundingService } from "./account-funding-service";
+import { type TransactionResult } from "../../common/utils/retry";
 import { createTestLogger } from "../logger";
 
 import type { Logger } from "winston";
@@ -47,27 +46,17 @@ abstract class AccountManager implements IAccountManager {
   private logger: Logger;
   private fundingService: AccountFundingService;
 
-  private readonly MAX_RETRIES = 5;
-  private readonly RETRY_DELAY_MS = 1_000;
-
   constructor(client: Client, whaleAccounts: Account[], chainId: number, reservedAddresses: string[] = []) {
     this.client = client;
     this.whaleAccounts = whaleAccounts;
     this.chainId = chainId;
     this.reservedAddresses = reservedAddresses.map(normalizeAddress);
-    this.accountWallets = this.whaleAccounts.map((account) => {
-      const nonceManager = createNonceManager({
-        source: jsonRpc(),
-      });
-
-      return privateKeyToAccount(formatPrivateKey(account.privateKey), { nonceManager });
-    });
+    this.accountWallets = this.whaleAccounts.map((account) =>
+      privateKeyToAccount(formatPrivateKey(account.privateKey)),
+    );
 
     this.logger = createTestLogger();
-    this.fundingService = new AccountFundingService(this.client, this.chainId, this.logger, {
-      retries: this.MAX_RETRIES,
-      delayMs: this.RETRY_DELAY_MS,
-    });
+    this.fundingService = new AccountFundingService(this.client, this.chainId, this.logger);
   }
 
   /**
@@ -91,6 +80,14 @@ abstract class AccountManager implements IAccountManager {
 
     if (availableWhaleAccounts.length === 0) {
       throw new Error("No available whale accounts found after filtering reserved addresses.");
+    }
+
+    if (workerId >= availableWhaleAccounts.length) {
+      this.logger.warn(
+        `More Jest workers than available whale accounts. ` +
+          `workerId=${workerId} whaleAccounts=${availableWhaleAccounts.length} — ` +
+          `multiple workers will share the same whale, risking nonce conflicts.`,
+      );
     }
 
     const isValidWorkerId = Number.isFinite(workerId) && workerId >= 0;
@@ -130,8 +127,7 @@ abstract class AccountManager implements IAccountManager {
     );
 
     // Step 1: Generate random accounts and kick off funding transactions concurrently.
-    const accountTransactionPairs: Array<{ account: Account; txPromise: Promise<SendTransactionReturnType | null> }> =
-      [];
+    const accountTransactionPairs: Array<{ account: Account; txPromise: Promise<TransactionResult | null> }> = [];
 
     for (let i = 0; i < numberOfAccounts; i++) {
       const randomPrivKey = generatePrivateKey();
@@ -147,12 +143,10 @@ abstract class AccountManager implements IAccountManager {
       accountTransactionPairs.push({ account: newAccount, txPromise });
     }
 
-    // Step 2: Await all funding transactions and separate successes from failures.
+    // Step 2: Await all funding transactions (each includes receipt confirmation via sendTransactionWithRetry).
     const transactionResults = await Promise.all(accountTransactionPairs.map((pair) => pair.txPromise));
 
-    const successfulTransactions = transactionResults.filter(
-      (txResponse): txResponse is SendTransactionReturnType => txResponse !== null,
-    );
+    const successfulTransactions = transactionResults.filter((result): result is TransactionResult => result !== null);
 
     // Step 3: Fail fast — all accounts must be funded for tests to be reliable.
     const failedCount = numberOfAccounts - successfulTransactions.length;
@@ -161,9 +155,6 @@ abstract class AccountManager implements IAccountManager {
         `Failed to fund all accounts. successful=${successfulTransactions.length} failed=${failedCount} expected=${numberOfAccounts}`,
       );
     }
-
-    // Step 4: Wait for on-chain confirmations before returning usable accounts.
-    await Promise.all(successfulTransactions.map((tx) => waitForTransactionReceipt(this.client, { hash: tx })));
 
     const allAccounts = accountTransactionPairs.map((pair) => pair.account);
 
