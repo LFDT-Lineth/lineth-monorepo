@@ -209,31 +209,22 @@
                     (if-not-zero (selfdestruct-instruction---OOGX)
                                  (begin
                                    (account-same-balance               ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW)
-                                   (account-same-warmth                ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW)))
+                                   (account-same-warmth                ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW)
+                                   ))
                     (if-not-zero (scenario-shorthand---SELFDESTRUCT---unexceptional)
                                  (begin
                                    (account-turn-on-warmth             ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW)
-
-                                   (if-not-zero (selfdestruct-instruction---had-no-code-initially)
                                    ;; case HAD_CODE_INITIALLY = 1
-                                      (if-eq-else (selfdestruct-instruction---account-address) (selfdestruct-instruction---recipient-address)
-                                                   ;; self destructing account address = recipient address
-                                                   (begin
-                                                     ;;(debug (vanishes! account/BALANCE     ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW))
-                                                    (account-same-balance                 ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW))
-                                                      ;; self destructing account address ≠ recipient address
-                                                    (account-increment-balance-by           ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW    (selfdestruct-instruction---balance)))
-                                   )))))
+                                   (if-not-zero (selfdestruct-instruction---had-code-initially)
+                                                (account-increment-balance-by           ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW    (selfdestruct-instruction---balance)))
+                                   ;; case HAD_CODE_INITIALLY = 0
+                                   (if-not-zero (selfdestruct-instruction---had-no-code-initially)
+                                                (if-eq-else (selfdestruct-instruction---account-address) (selfdestruct-instruction---recipient-address)
+                                                            ;; self destructing account address = recipient address
+                                                            (begin
+                                                              (debug (vanishes! (shift   account/BALANCE     ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW)))
+                                                              (account-same-balance                 ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW))
+                                                            ;; self destructing account address ≠ recipient address
+                                                            (account-increment-balance-by           ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW    (selfdestruct-instruction---balance)))
+                                                )))))
 
-;; (defconstraint    selfdestruct-instruction---returning-empty-return-data (:guard (selfdestruct-instruction---scenario-precondition))
-;;                (begin
-;;                  (if-zero     (selfdestruct-instruction---STATICX)
-;;                  (if-not-zero (prev stack/STATICX)
-;;                  (if-not-zero (selfdestruct-instruction---OOGX)
-;;                  (if-not-zero scenario/SELFDESTRUCT_WILL_REVERT
-;;                  (if-not-zero scenario/SELFDESTRUCT_WONT_REVERT_ALREADY_MARKED
-;;                  (if-not-zero scenario/SELFDESTRUCT_WONT_REVERT_NOT_YET_MARKED
-
-
-;; (defconstraint    selfdestruct-instruction--- (:guard (selfdestruct-instruction---scenario-precondition))
-;;                (begin

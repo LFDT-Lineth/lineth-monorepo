@@ -43,8 +43,8 @@
 ;;
 (defun    (selfdestruct-instruction---balance)                   (shift account/BALANCE                     ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW))
 (defun    (selfdestruct-instruction---is-marked)                 (shift account/MARKED_FOR_DELETION         ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW))
-(defun    (selfdestruct-instruction---had-no-code-initially)     (force-bin (- 1 
-                                                                 (shift account/HAD_CODE_INITIALLY          ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW))))
+(defun    (selfdestruct-instruction---had-code-initially)        (shift account/HAD_CODE_INITIALLY          ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW))
+(defun    (selfdestruct-instruction---had-no-code-initially)     (force-bin (- 1 (selfdestruct-instruction---had-code-initially))))
 ;;
 (defun    (selfdestruct-instruction---recipient-address-hi)      (shift account/ADDRESS_HI                  ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW))
 (defun    (selfdestruct-instruction---recipient-address-lo)      (shift account/ADDRESS_LO                  ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW))
@@ -55,6 +55,6 @@
 (defun    (selfdestruct-instruction---account-address)           (+ (* (^ 256 LLARGE) (selfdestruct-instruction---account-address-hi))   (selfdestruct-instruction---account-address-lo)))
 (defun    (selfdestruct-instruction---recipient-address)         (+ (* (^ 256 LLARGE) (selfdestruct-instruction---recipient-address-hi)) (selfdestruct-instruction---recipient-address-lo)))  ;; ""
 
-(defun    (selfdestruct-instruction---trigger-future-acc-deletion)          
-          (* (- 1 (selfdestruct-instruction---is-marked))
-             (selfdestruct-instruction---had-no-code-initially)))
+(defun    (selfdestruct-instruction---trigger-future-acc-deletion)
+  (* (- 1 (selfdestruct-instruction---is-marked))
+     (selfdestruct-instruction---had-no-code-initially)))
