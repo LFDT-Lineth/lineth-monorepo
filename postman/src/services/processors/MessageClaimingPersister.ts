@@ -168,10 +168,11 @@ export class MessageClaimingPersister implements IMessageClaimingPersister {
         this.messageBeingRetry.message?.toString(),
       );
 
+      const retryCreationDate = new Date();
       const tx = await this.messageServiceContract.retryTransactionWithHigherFee(transactionHash);
 
       this.messageBeingRetry.message?.edit({
-        claimTxCreationDate: new Date(),
+        claimTxCreationDate: retryCreationDate,
         claimTxGasLimit: parseInt(tx.gasLimit.toString()),
         claimTxMaxFeePerGas: tx.maxFeePerGas ?? undefined,
         claimTxMaxPriorityFeePerGas: tx.maxPriorityFeePerGas ?? undefined,
@@ -222,8 +223,11 @@ export class MessageClaimingPersister implements IMessageClaimingPersister {
     if (this.config.direction === Direction.L1_TO_L2 && message.claimTxCreationDate) {
       const block = await this.provider.getBlock(receipt.blockNumber);
       if (block) {
-        processingTimeInSeconds = block.timestamp - message.claimTxCreationDate.getTime() / 1_000;
-        infuraConfirmationTimeInSeconds = (receiptReceivedAt.getTime() - message.claimTxCreationDate.getTime()) / 1_000;
+        processingTimeInSeconds = Math.max(0, block.timestamp - message.claimTxCreationDate.getTime() / 1_000);
+        infuraConfirmationTimeInSeconds = Math.max(
+          0,
+          (receiptReceivedAt.getTime() - message.claimTxCreationDate.getTime()) / 1_000,
+        );
 
         this.transactionMetricsUpdater.addTransactionProcessingTime(this.config.direction, processingTimeInSeconds);
         this.transactionMetricsUpdater.addTransactionInfuraConfirmationTime(
