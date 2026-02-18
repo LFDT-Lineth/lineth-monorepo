@@ -17,6 +17,7 @@ package net.consensys.linea.zktracer.json;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -126,7 +127,9 @@ public class JsonConverter {
      * @return an instance of {@link JsonConverter}.
      */
     public JsonConverter build() {
-      objectMapper.registerModule(module);
+      objectMapper
+          .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+          .registerModule(module);
 
       return new JsonConverter(this);
     }

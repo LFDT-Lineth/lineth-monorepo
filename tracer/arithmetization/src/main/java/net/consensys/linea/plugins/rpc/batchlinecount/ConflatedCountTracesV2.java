@@ -110,6 +110,6 @@ public class ConflatedCountTracesV2 {
     sw.reset().start();
 
     return new ConflatedLineCounts(
-        params.expectedTracesEngineVersion(), fromBlock, toBlock, new TreeMap<>(counts));
+        TraceRequestParams.getTracerRuntime(), fromBlock, toBlock, new TreeMap<>(counts));
   }
 }

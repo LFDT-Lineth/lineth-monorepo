@@ -114,13 +114,11 @@ public class GenerateConflatedTracesV2 {
 
     final long fromBlock = params.startBlockNumber();
     final long toBlock = params.endBlockNumber();
+    final String tracesVersion = TraceRequestParams.getTracerRuntime();
     // Determine expected path of the trace file.
     Path path =
         this.traceWriter.traceFilePath(
-            fromBlock,
-            toBlock,
-            params.expectedTracesEngineVersion(),
-            TraceRequestParams.getBesuRuntime());
+            fromBlock, toBlock, tracesVersion, TraceRequestParams.getBesuRuntime());
     // Check whether the trace file already exists (or not).
     if (cachedTraceFileAvailable(path)) {
       log.info("[TRACING] cached trace for {}-{} detected as {}", fromBlock, toBlock, path);
@@ -159,12 +157,12 @@ public class GenerateConflatedTracesV2 {
               tracer,
               params.startBlockNumber(),
               params.endBlockNumber(),
-              params.expectedTracesEngineVersion(),
+              tracesVersion,
               TraceRequestParams.getBesuRuntime());
       log.info("[TRACING] trace for {}-{} serialized to {} in {}", fromBlock, toBlock, path, sw);
     }
 
-    return new TraceFile(params.expectedTracesEngineVersion(), path.toString());
+    return new TraceFile(tracesVersion, path.toString());
   }
 
   /**

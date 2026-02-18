@@ -291,7 +291,7 @@ public class BesuExecutionTools {
     return jsonRpcRequest(
         besuNode.jsonRpcBaseUrl().get(),
         "linea_generateConflatedTracesToFileV2",
-        new TraceRequestParams(startBlockNumber, endBlockNumber, "test"),
+        new TraceRequestParams(startBlockNumber, endBlockNumber),
         TraceFile.class);
   }
 

@@ -91,7 +91,7 @@ public class GenerateLineCountsV2 {
 
     final LineCounts r =
         new LineCounts(
-            params.expectedTracesEngineVersion(),
+            LineCountsRequestParams.getTracerRuntime(),
             requestedBlockNumber,
             CACHE
                 .asMap()

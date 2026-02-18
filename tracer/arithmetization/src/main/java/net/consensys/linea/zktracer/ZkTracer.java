@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
 import lombok.Getter;
 import lombok.Setter;
@@ -73,9 +72,6 @@ public class ZkTracer implements LineCountingTracer {
 
   /** Determines which version the LT trace file format to use by default. */
   @Setter private int ltFileMajorVersion = 2;
-
-  /** The 7-character commit hash version suffix, e.g. beta-v4.4-rc7.4-b02123f */
-  public static final Pattern VERSION_HEX_SUFFIX_PATTERN = Pattern.compile("-[0-9a-fA-F]{7}$");
 
   /**
    * Construct a ZkTracer for a given bridge configuration and chainId. This is used, for example,

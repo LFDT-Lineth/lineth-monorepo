@@ -20,17 +20,9 @@ import net.consensys.linea.zktracer.ZkTracer;
 import org.hyperledger.besu.evm.EVM;
 
 /** Holds needed parameters for sending an execution trace generation request. */
-public record TraceRequestParams(
-    long startBlockNumber, long endBlockNumber, String expectedTracesEngineVersion) {
+public record TraceRequestParams(long startBlockNumber, long endBlockNumber) {
 
   public void validate() {
-    if (!expectedTracesEngineVersion.equals("test")
-        && !expectedTracesEngineVersion.equals(getTracerRuntime())) {
-      throw new InvalidParameterException(
-          "INVALID_TRACES_VERSION: Runtime version is %s, requesting version %s"
-              .formatted(getTracerRuntime(), expectedTracesEngineVersion));
-    }
-
     if (startBlockNumber < 0) {
       throw new InvalidParameterException(
           "INVALID_START_BLOCK_NUMBER: startBlockNumber: %d cannot be a negative number"
@@ -50,12 +42,8 @@ public record TraceRequestParams(
     }
   }
 
-  static String getTracerRuntime() {
-    String tracerVersion = ZkTracer.class.getPackage().getSpecificationVersion();
-    // remove the "7-character hex string" suffix (if any) from the tracer version
-    return tracerVersion != null
-        ? ZkTracer.VERSION_HEX_SUFFIX_PATTERN.matcher(tracerVersion).replaceAll("")
-        : null;
+  public static String getTracerRuntime() {
+    return ZkTracer.class.getPackage().getSpecificationVersion();
   }
 
   static String getBesuRuntime() {
