@@ -127,13 +127,13 @@ jobs:
         id: run_e2e_tests
         timeout-minutes: 6
         run: |
-          pnpm run -F e2e test:e2e:local
+          pnpm run -F e2e test:local
       - name: Run extra e2e tests for Besu fleet nodes
         id: run_e2e_tests_fleet
         if: ${{ inputs.e2e-tests-with-besu-fleet }}
         timeout-minutes: 4
         run: |
-          pnpm run -F e2e test:e2e:fleet:local
+          pnpm run -F e2e test:fleet:local
       - name: Show e2e tests result
         if: always()
         run: |

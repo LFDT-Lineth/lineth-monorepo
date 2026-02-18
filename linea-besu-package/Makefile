@@ -53,7 +53,7 @@ run-e2e-test:
 	elif [ "$(shell uname)" = "Darwin" ]; then \
 		sed -i '' 's/^\(expected-traces-api-version[ ]*=[ ]*\).*/\1"$(EXPECTED_TRACES_API_VERSION)"/' ../config/coordinator/coordinator-config-v2.toml; \
 	fi
-	cd .. && BESU_PACKAGE_TAG=$(TAG) make start-env-with-tracing-v2-ci && pnpm run -F e2e test:e2e:local
+	cd .. && BESU_PACKAGE_TAG=$(TAG) make start-env-with-tracing-v2-ci && pnpm run -F e2e test:local
 
 run-e2e-test-with-arithmetization-version:
 	EXPECTED_TRACES_API_VERSION=$(ARITHMETIZATION_VERSION) $(MAKE) run-e2e-test

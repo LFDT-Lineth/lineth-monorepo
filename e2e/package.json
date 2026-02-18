@@ -7,14 +7,15 @@
   "scripts": {
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "test:e2e:local": "TEST_ENV=local npx jest --testPathIgnorePatterns=linea-besu-fleet.spec.ts --testPathIgnorePatterns=liveness.spec.ts && pnpm run test:e2e:liveness:local",
-    "test:e2e:fleet:local": "TEST_ENV=local npx jest ./src/linea-besu-fleet.spec.ts",
-    "test:e2e:liveness:local": "TEST_ENV=local npx jest ./src/liveness.spec.ts",
-    "test:e2e:sendbundle:local": "TEST_ENV=local npx jest ./src/send-bundle.spec.ts",
-    "test:e2e:dev": "TEST_ENV=dev npx jest --config ./jest.testnet.config.ts --bail --runInBand --testPathIgnorePatterns=linea-besu-fleet.spec.ts --testPathIgnorePatterns=liveness.spec.ts",
-    "test:e2e:sepolia": "TEST_ENV=sepolia npx jest --config ./jest.testnet.config.ts --bail --runInBand --testPathIgnorePatterns=linea-besu-fleet.spec.ts --testPathIgnorePatterns=liveness.spec.ts",
+    "test:local:run": "TEST_ENV=local npx jest",
+    "test:local": "pnpm run test:local:run --testPathIgnorePatterns=linea-besu-fleet.spec.ts --testPathIgnorePatterns=liveness.spec.ts && pnpm run test:liveness:local",
+    "test:fleet:local": "TEST_ENV=local npx jest ./src/linea-besu-fleet.spec.ts",
+    "test:liveness:local": "TEST_ENV=local npx jest ./src/liveness.spec.ts",
+    "test:sendbundle:local": "TEST_ENV=local npx jest ./src/send-bundle.spec.ts",
+    "test:dev": "TEST_ENV=dev npx jest --config ./jest.testnet.config.ts --bail --runInBand --testPathIgnorePatterns=linea-besu-fleet.spec.ts --testPathIgnorePatterns=liveness.spec.ts",
+    "test:sepolia": "TEST_ENV=sepolia npx jest --config ./jest.testnet.config.ts --bail --runInBand --testPathIgnorePatterns=linea-besu-fleet.spec.ts --testPathIgnorePatterns=liveness.spec.ts",
     "postinstall": "npx ts-node ./scripts/generateAbi.ts",
-    "clean": "rimraf node_modules src/typechain"
+    "clean": "rimraf node_modules src/generated"
   },
   "author": "",
   "license": "(MIT OR Apache-2.0)",

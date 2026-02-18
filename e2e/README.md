@@ -1,67 +1,60 @@
 # End to end tests
-## Setup
-Run `pnpm install` to setup typechain
 
-Run `make start-env-with-tracing-v2-ci` from root directory to spin up local environment
+## Prerequisites
 
+1. Install dependencies from this directory (the `postinstall` script generates ABI typings from contract artifacts):
+
+```bash
+pnpm install
+```
+
+2. Build workspace dependencies from the **repo root**:
+
+```bash
+pnpm run --filter="e2e..." build
+```
+
+3. Spin up the local environment from the **repo root**:
+
+```bash
+make start-env-with-tracing-v2-ci
+```
+
+For **fleet** tests, use the fleet-specific target instead:
+
+```bash
+make start-env-with-tracing-v2-fleet-ci
+```
+
+4. For remote environments (dev / sepolia), copy `.env.template` to `.env` and fill in the required RPC keys and private keys.
 
 ## Run tests
-| ENV   | Command                                       | Description                                                          |
-|-------|-----------------------------------------------|----------------------------------------------------------------------|
-| Local | `pnpm run test:e2e:local`                     | Uses already running docker environment and deployed smart contracts |
-| Local | `pnpm run test:e2e:local -t "test suite"`     | Runs a test suite                                                    |
-| Local | `pnpm run test:e2e:local -t "specific test"`  | Runs a single test                                                   |
-| DEV   | `pnpm run test:e2e:dev`                       | Uses DEV env, may need to update constants in `constants.dev.ts`     |
-| UAT   | `pnpm run test:e2e:uat`                       | Uses UAT env, may need to update constants in `constants.uat.ts`     |
 
-## Remote workflows
-Workflow options:
-- `e2e-tests-with-ssh` - Enable to run `Setup upterm session` step, manually ssh into the github actions workflow using
-the steps output, can be used to debug containers.
-  - The step will output a string used to connect to the workflow.
-  - Example: `ssh XTpun7OCRZMgaCZkiHqU:MWNlNmQ0OGEudm0udXB0ZXJtLmludGVybmFsOjIyMjI=@uptermd.upterm.dev`
-  - After connecting create a new file called `continue` in the root directory: `touch continue`
-- `e2e-tests-logs-dump` - Enable to print logs after e2e tests have ran
+### Local
 
+| Command                                            | Description                                                         |
+|----------------------------------------------------|---------------------------------------------------------------------|
+| `pnpm run test:local`                          | Full suite (excludes fleet and liveness, then runs liveness)    |
+| `pnpm run test:local:run "<file.spec.ts>"`     | Run one test suite                                               |
+| `pnpm run test:local:run "<file.spec.ts>" -t "<test name>"` | Run one test                                              |
+| `pnpm run test:fleet:local`                    | Fleet leader/follower consistency tests                         |
+| `pnpm run test:liveness:local`                 | Sequencer liveness tests                                        |
+| `pnpm run test:sendbundle:local`               | sendBundle RPC tests                                            |
 
-## Debugging test in vscode
-Install the `vscode-jest` plugin and open `linea-monorepo/e2e/` directory. Use the following config in `linea-monorepo/e2e/.vscode/settings.json`
-```
-{
-  "jest.autoRun": { "watch": false },
-  "jest.jestCommandLine": "pnpm run test:e2e:vscode --",
-}
-```
-and the following config in `linea-monorepo/e2e/.vscode/launch.json`
-```
-{
-    "configurations": [
-        {
-            "type": "node",
-            "name": "vscode-jest-tests.v2",
-            "request": "launch",
-            "program": "${workspaceFolder}/node_modules/.bin/jest",
-            "args": [
-                "--config",
-                "./jest.vscode.config.js",
-                "--detectOpenHandles",
-                "--runInBand",
-                "--watchAll=false",
-                "--testNamePattern",
-                "${jest.testNamePattern}",
-                "--runTestsByPath",
-                "${jest.testFile}"
-            ],
-            "cwd": "${workspaceFolder}",
-            "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
-            "disableOptimisticBPs": true,
-            "windows": {
-                "program": "${workspaceFolder}/node_modules/jest/bin/jest"
-            }
-        }
+Example:
 
-    ]
-}
+```bash
+# Run one test suite (all tests in opcodes.spec.ts)
+pnpm run test:local:run "opcodes.spec.ts"
+
+# Run one test
+pnpm run test:local:run "opcodes.spec.ts" -t "Should be able to execute all opcodes"
 ```
-Now you should be able to run and debug individual tests from the `Testing` explorer tab.
+
+### Remote
+
+| Command                        | Description                                                                       |
+|--------------------------------|-----------------------------------------------------------------------------------|
+| `pnpm run test:dev`       | Uses DEV env, may need to update config in `src/config/schema/dev.ts`              |
+| `pnpm run test:sepolia`   | Uses Sepolia env, may need to update config in `src/config/schema/sepolia.ts`      |
+

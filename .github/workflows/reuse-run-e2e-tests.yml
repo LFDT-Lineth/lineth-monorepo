@@ -182,7 +182,7 @@ jobs:
         id: run_e2e_tests
         timeout-minutes: 6
         run: |
-          pnpm run -F e2e test:e2e:local
+          pnpm run -F e2e test:local
       - name: Show e2e tests result
         if: always()
         run: |

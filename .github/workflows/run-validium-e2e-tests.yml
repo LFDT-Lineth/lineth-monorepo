@@ -79,7 +79,7 @@ jobs:
         id: run_e2e_tests
         timeout-minutes: 6
         run: |
-          pnpm run -F e2e test:e2e:local
+          pnpm run -F e2e test:local
 
       - name: Dump logs
         if: ${{ failure() && inputs.e2e-tests-logs-dump }}
