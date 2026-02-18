@@ -21,6 +21,7 @@ class TransactionTraceLimitTest : LineaPluginPoSTestBase() {
 
   override fun getTestCliOptions(): List<String> {
     return TestCommandLineOptionsBuilder()
+      .set("--plugin-linea-limitless-enabled=", "false")
       .set("--plugin-linea-module-limit-file-path=", getResourcePath("/strictModuleLimits.toml"))
       .build()
   }

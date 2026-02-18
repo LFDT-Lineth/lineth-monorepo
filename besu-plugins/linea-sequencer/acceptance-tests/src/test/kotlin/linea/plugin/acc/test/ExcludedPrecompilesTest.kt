@@ -29,6 +29,8 @@ class ExcludedPrecompilesTest : LineaPluginPoSTestBase() {
     return TestCommandLineOptionsBuilder()
       // disable line count validation to accept excluded precompile txs in the txpool
       .set("--plugin-linea-tx-pool-simulation-check-api-enabled=", "false")
+      .set("--plugin-linea-limitless-enabled=", "false")
+      .set("--plugin-linea-module-limit-file-path=", getResourcePath("/noModuleLimits.toml"))
       .build()
   }
 

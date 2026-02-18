@@ -26,8 +26,9 @@ class TestCommandLineOptionsBuilder {
     cliOptions.setProperty("--plugin-linea-deny-list-path=", getResourcePath("/emptyDenyList.txt"))
     cliOptions.setProperty(
       "--plugin-linea-module-limit-file-path=",
-      getResourcePath("/noModuleLimits.toml"),
+      getResourcePath("/moduleLimitsLimitless.toml"),
     )
+    cliOptions.set("--plugin-linea-limitless-enabled=", "true")
     cliOptions.setProperty("--plugin-linea-max-block-gas=", MAX_VALUE)
     cliOptions.setProperty(
       "--plugin-linea-l1l2-bridge-contract=",
