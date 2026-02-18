@@ -17,6 +17,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.junit5.VertxExtension
+import linea.kotlin.encodeHex
 import net.consensys.linea.async.get
 import net.consensys.linea.errors.ErrorResponse
 import net.consensys.linea.jsonrpc.client.JsonRpcClient
@@ -499,5 +500,173 @@ class TracesGeneratorJsonRpcClientV2Test {
     result as Ok
     assertThat(result.value.tracesCounters).isEqualTo(TracesCountersV2.EMPTY_TRACES_COUNT)
     assertThat(result.value.tracesEngineVersion).isEqualTo(expectedTracesApiVersion)
+  }
+
+  @Test
+  fun generateVirtualBlockConflatedTracesToFile() {
+    val blockNumber = 50L
+
+    val tracesEngineVersion = "0.0.1"
+    val conflatedTracesFileName =
+      "$blockNumber.conflated.v$tracesEngineVersion.json.gz"
+
+    val response =
+      JsonObject.of(
+        "jsonrpc",
+        "2.0",
+        "id",
+        1,
+        "result",
+        mapOf(
+          "tracesEngineVersion" to tracesEngineVersion,
+          "conflatedTracesFileName" to conflatedTracesFileName,
+        ),
+      )
+
+    wiremock.stubFor(
+      post("/")
+        .withHeader("Content-Type", containing("application/json"))
+        .willReturn(
+          ok()
+            .withHeader("Content-type", "application/json")
+            .withBody(response.toString().toByteArray()),
+        ),
+    )
+
+    val queryBlockNumber = 50UL
+    val queryTxn = Random.nextBytes(32)
+
+    val resultFuture =
+      tracesGeneratorClient.generateVirtualBlockConflatedTracesToFile(
+        queryBlockNumber,
+        queryTxn,
+      )
+    resultFuture.get()
+
+    assertThat(resultFuture)
+      .isCompletedWithValue(
+        Ok(GenerateTracesResponse(conflatedTracesFileName, tracesEngineVersion)),
+      )
+
+    val expectedJsonRequest =
+      JsonObject.of(
+        "jsonrpc",
+        "2.0",
+        "id",
+        1,
+        "method",
+        "linea_generateVirtualBlockConflatedTracesToFileV1",
+        "params",
+        listOf(
+          JsonObject.of(
+            "blockNumber",
+            queryBlockNumber.toLong(),
+            "txsRlpEncoded",
+            listOf(queryTxn.encodeHex()),
+          ),
+        ),
+      )
+    wiremock.verify(
+      postRequestedFor(urlEqualTo("/"))
+        .withHeader("Content-Type", equalTo("application/json"))
+        .withRequestBody(equalToJson(expectedJsonRequest.toString(), false, true)),
+    )
+  }
+
+  @Test
+  fun error_generateVirtualConflatedTracesToFile() {
+    val errorMessage = "Internal error!"
+    val data = "BLOCK_MISSING_IN_CHAIN: Block 1 doesn't exist in the chain"
+    val response = jsonRpcErrorResponse(errorMessage, data)
+
+    wiremock.stubFor(
+      post("/")
+        .withHeader("Content-Type", containing("application/json"))
+        .willReturn(
+          ok()
+            .withHeader("Content-type", "application/json")
+            .withBody(response.toString().toByteArray()),
+        ),
+    )
+
+    val queryBlockNumber = 1UL
+    val queryTxn = Random.nextBytes(32)
+    val resultFuture =
+      tracesGeneratorClient.generateVirtualBlockConflatedTracesToFile(
+        queryBlockNumber,
+        queryTxn,
+      )
+    resultFuture.get()
+
+    assertThat(resultFuture)
+      .isCompletedWithValue(
+        Err(ErrorResponse(TracesServiceErrorType.BLOCK_MISSING_IN_CHAIN, errorMessage)),
+      )
+  }
+
+  @Test
+  fun error_generateVirtualBlockConflatedTracesToFile_retriesRequest() {
+    val tracesEngineVersion = "0.0.1"
+    val errorMessage = "Internal error!"
+    val data = "BLOCK_MISSING_IN_CHAIN: Block 1 doesn't exist in the chain"
+    val jsonRpcErrorResponse = jsonRpcErrorResponse(errorMessage, data)
+    wiremock.stubFor(
+      post("/")
+        .inScenario("retry")
+        .whenScenarioStateIs(STARTED)
+        .willSetStateTo("first failure")
+        .withHeader("Content-Type", containing("application/json"))
+        .willReturn(
+          aResponse()
+            .withStatus(500)
+            .withBody("Internal Server Error"),
+        ),
+    )
+    wiremock.stubFor(
+      post("/")
+        .inScenario("retry")
+        .whenScenarioStateIs("first failure")
+        .willSetStateTo("second failure")
+        .withHeader("Content-Type", containing("application/json"))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(jsonRpcErrorResponse.toString()),
+        ),
+    )
+    wiremock.stubFor(
+      post("/")
+        .inScenario("retry")
+        .whenScenarioStateIs("second failure")
+        .willSetStateTo("success")
+        .withHeader("Content-Type", containing("application/json"))
+        .willReturn(
+          ok()
+            .withHeader("Content-type", "application/json")
+            .withBody(
+              JsonObject.of(
+                "jsonrpc",
+                "2.0",
+                "id",
+                1,
+                "result",
+                mapOf(
+                  "tracesEngineVersion" to tracesEngineVersion,
+                  "conflatedTracesFileName" to "conflated-traces-1.json",
+                ),
+              ).toString(),
+            ),
+        ),
+    )
+
+    val queryBlockNumber = 1UL
+    val queryTxn = Random.nextBytes(32)
+    val resultFuture =
+      tracesGeneratorClient.generateVirtualBlockConflatedTracesToFile(
+        queryBlockNumber,
+        queryTxn,
+      )
+
+    assertThat(resultFuture.get()).isInstanceOf(Ok::class.java)
   }
 }

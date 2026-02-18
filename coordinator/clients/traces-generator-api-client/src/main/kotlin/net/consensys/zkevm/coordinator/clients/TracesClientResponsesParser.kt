@@ -112,4 +112,8 @@ object TracesClientResponsesParser {
       result.getString("tracesEngineVersion"),
     )
   }
+
+  internal fun parseVirtualBlockConflatedTracesToFileResponse(
+    jsonRpcResponse: JsonRpcSuccessResponse,
+  ): GenerateTracesResponse = parseConflatedTracesToFileResponse(jsonRpcResponse)
 }

@@ -6,6 +6,7 @@ import com.github.michaelbull.result.mapEither
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.core.json.get
+import linea.kotlin.encodeHex
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.errors.ErrorResponse
 import net.consensys.linea.jsonrpc.JsonRpcRequest
@@ -28,7 +29,7 @@ class TracesGeneratorJsonRpcClientV2(
   private val rpcClient: JsonRpcClient,
   private val config: Config,
 ) :
-  TracesCountersClientV2, TracesConflationClientV2 {
+  TracesCountersClientV2, TracesConflationClientV2, TracesConflationVirtualBlockClientV1 {
   constructor(
     vertx: Vertx,
     rpcClient: JsonRpcClient,
@@ -88,6 +89,21 @@ class TracesGeneratorJsonRpcClientV2(
     ) { createFallbackConflatedTracesResponse(startBlockNumber, endBlockNumber) }
   }
 
+  override fun generateVirtualBlockConflatedTracesToFile(
+    blockNumber: ULong,
+    transaction: ByteArray,
+  ): SafeFuture<Result<GenerateTracesResponse, ErrorResponse<TracesServiceErrorType>>> {
+    val jsonRequest =
+      requestBuilder.buildGenerateVirtualBlockConflatedTracesToFileV1Request(
+        blockNumber = blockNumber,
+        transaction = transaction,
+      )
+    return executeWithFallback(
+      jsonRequest,
+      TracesClientResponsesParser::parseVirtualBlockConflatedTracesToFileResponse,
+    ) { createFallbackVirtualBlockConflatedTracesResponse(blockNumber) }
+  }
+
   private fun createFallbackTracesCountersResponse(): GetTracesCountersResponse {
     return GetTracesCountersResponse(
       tracesCounters = config.fallBackTracesCounters,
@@ -100,6 +116,16 @@ class TracesGeneratorJsonRpcClientV2(
     endBlockNumber: ULong,
   ): GenerateTracesResponse {
     val defaultFileName = "$startBlockNumber-$endBlockNumber.fake-empty.conflated.${config.expectedTracesApiVersion}.lt"
+    return GenerateTracesResponse(
+      tracesFileName = defaultFileName,
+      tracesEngineVersion = config.expectedTracesApiVersion,
+    )
+  }
+
+  private fun createFallbackVirtualBlockConflatedTracesResponse(
+    blockNumber: ULong,
+  ): GenerateTracesResponse {
+    val defaultFileName = "$blockNumber.fake-empty.conflated.${config.expectedTracesApiVersion}.lt"
     return GenerateTracesResponse(
       tracesFileName = defaultFileName,
       tracesEngineVersion = config.expectedTracesApiVersion,
@@ -178,10 +204,33 @@ class TracesGeneratorJsonRpcClientV2(
         ),
       )
     }
+
+    fun buildGenerateVirtualBlockConflatedTracesToFileV1Request(
+      blockNumber: ULong,
+      transaction: ByteArray,
+    ): JsonRpcRequest {
+      return JsonRpcRequestListParams(
+        "2.0",
+        id.incrementAndGet(),
+        "linea_generateVirtualBlockConflatedTracesToFileV1",
+        listOf(
+          JsonObject.of(
+            "blockNumber",
+            blockNumber,
+            "txsRlpEncoded",
+            listOf(transaction.encodeHex()),
+          ),
+        ),
+      )
+    }
   }
 
   companion object {
-    internal val retryableMethods = setOf("linea_getBlockTracesCountersV2", "linea_generateConflatedTracesToFileV2")
+    internal val retryableMethods = setOf(
+      "linea_getBlockTracesCountersV2",
+      "linea_generateConflatedTracesToFileV2",
+      "linea_generateVirtualBlockConflatedTracesToFileV1",
+    )
 
     @Suppress("UNCHECKED_CAST")
     val requestPriorityComparator =
