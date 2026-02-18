@@ -11,6 +11,7 @@ import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.milliseconds
@@ -77,7 +78,7 @@ class EthLogsFilterPollerTest {
     fakeEthApiClient.setFinalizedBlockTag(50UL)
 
     // When: poller starts and polls
-    val consumedLogs = mutableListOf<EthLog>()
+    val consumedLogs = CopyOnWriteArrayList<EthLog>()
     poller = createPoller(
       fromBlock = BlockParameter.BlockNumber(0UL),
       toBlock = BlockParameter.Tag.FINALIZED,
@@ -103,7 +104,7 @@ class EthLogsFilterPollerTest {
     fakeEthApiClient.setFinalizedBlockTag(30UL)
 
     // When: first poll processes initial logs
-    val consumedLogs = mutableListOf<EthLog>()
+    val consumedLogs = CopyOnWriteArrayList<EthLog>()
     poller = createPoller(
       fromBlock = BlockParameter.BlockNumber(0UL),
       toBlock = BlockParameter.Tag.FINALIZED,
@@ -143,7 +144,7 @@ class EthLogsFilterPollerTest {
     fakeEthApiClient.setFinalizedBlockTag(50UL)
 
     // When: poller processes logs
-    val consumedLogs = mutableListOf<EthLog>()
+    val consumedLogs = CopyOnWriteArrayList<EthLog>()
     poller = createPoller(
       fromBlock = BlockParameter.BlockNumber(0UL),
       toBlock = BlockParameter.Tag.FINALIZED,
@@ -176,7 +177,7 @@ class EthLogsFilterPollerTest {
     fakeEthApiClient.setFinalizedBlockTag(50UL)
 
     // When: consumer fails on second log, then succeeds
-    val consumedLogs = mutableListOf<EthLog>()
+    val consumedLogs = CopyOnWriteArrayList<EthLog>()
     val throwErrorLatch = AtomicBoolean(true)
     val failureCount = AtomicInteger(0)
 
@@ -214,7 +215,7 @@ class EthLogsFilterPollerTest {
     fakeEthApiClient.setLogs(emptyList())
     fakeEthApiClient.setFinalizedBlockTag(10UL)
 
-    val consumedLogs = mutableListOf<EthLog>()
+    val consumedLogs = CopyOnWriteArrayList<EthLog>()
     poller = createPoller(
       fromBlock = BlockParameter.BlockNumber(0UL),
       toBlock = BlockParameter.Tag.FINALIZED,
@@ -246,7 +247,7 @@ class EthLogsFilterPollerTest {
     // Given: finalized block is behind current search position
     fakeEthApiClient.setFinalizedBlockTag(10UL)
 
-    val consumedLogs = mutableListOf<EthLog>()
+    val consumedLogs = CopyOnWriteArrayList<EthLog>()
     poller = createPoller(
       fromBlock = BlockParameter.BlockNumber(20UL),
       toBlock = BlockParameter.Tag.FINALIZED,
@@ -281,7 +282,7 @@ class EthLogsFilterPollerTest {
     fakeEthApiClient.setFinalizedBlockTag(150UL)
 
     // When: poller uses small chunk size
-    val consumedLogs = mutableListOf<EthLog>()
+    val consumedLogs = CopyOnWriteArrayList<EthLog>()
     poller = createPoller(
       fromBlock = BlockParameter.BlockNumber(0UL),
       toBlock = BlockParameter.Tag.FINALIZED,
@@ -313,7 +314,7 @@ class EthLogsFilterPollerTest {
     fakeEthApiClient.setFinalizedBlockTag(50UL)
 
     // When: logs are consumed
-    val consumedLogs = mutableListOf<EthLog>()
+    val consumedLogs = CopyOnWriteArrayList<EthLog>()
     poller = createPoller(
       fromBlock = BlockParameter.BlockNumber(0UL),
       toBlock = BlockParameter.Tag.FINALIZED,
@@ -360,7 +361,7 @@ class EthLogsFilterPollerTest {
     fakeEthApiClient.setFinalizedBlockTag(50UL)
 
     // When: poller filters by address and topic
-    val consumedLogs = mutableListOf<EthLog>()
+    val consumedLogs = CopyOnWriteArrayList<EthLog>()
     poller = createPoller(
       fromBlock = BlockParameter.BlockNumber(0UL),
       toBlock = BlockParameter.Tag.FINALIZED,
@@ -391,7 +392,7 @@ class EthLogsFilterPollerTest {
     fakeEthApiClient.setFinalizedBlockTag(25UL)
 
     // Given: poller with consumer
-    val consumedLogs = mutableListOf<EthLog>()
+    val consumedLogs = CopyOnWriteArrayList<EthLog>()
     poller = createPoller(
       fromBlock = BlockParameter.BlockNumber(0UL),
       toBlock = BlockParameter.Tag.FINALIZED,
@@ -419,7 +420,7 @@ class EthLogsFilterPollerTest {
     fakeEthApiClient.setLogs(listOf(logAtBlock11))
     fakeEthApiClient.setFinalizedBlockTag(10UL) // Only block 10 is finalized (no logs)
 
-    val consumedLogs = mutableListOf<EthLog>()
+    val consumedLogs = CopyOnWriteArrayList<EthLog>()
     poller = createPoller(
       fromBlock = BlockParameter.BlockNumber(10UL),
       toBlock = BlockParameter.Tag.FINALIZED,
@@ -456,7 +457,7 @@ class EthLogsFilterPollerTest {
     fakeEthApiClient.setFinalizedBlockTag(30UL)
 
     // When: poller starts with state listener
-    val stateTransitions = mutableListOf<Pair<EthLogsFilterState, EthLogsFilterState>>()
+    val stateTransitions = CopyOnWriteArrayList<Pair<EthLogsFilterState, EthLogsFilterState>>()
     poller = createPoller(
       fromBlock = BlockParameter.BlockNumber(0UL),
       toBlock = BlockParameter.Tag.FINALIZED,

@@ -53,8 +53,6 @@ jobs:
               - '.github/workflows/build-and-publish.yml'
               - '.github/workflows/main.yml'
               - '.github/workflows/reuse-*.yml'
-              - 'config/common/traces-limits-v2.toml'
-              - 'config/coordinator/**'
               - 'docker/compose-*.yml'
             staterecovery:
               - 'state-recovery/**'
@@ -199,7 +197,7 @@ jobs:
       - name: Deploy environment
         run: |
           echo "Build and e2e test environment deployed"
-  
+
   docker-build:
     needs:
       [
