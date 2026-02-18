@@ -3,3 +3,7 @@ lib/forge-std
 test/foundry
 src/_testing
 src/proxies
+src/rollup/_exampleImplementations
+src/yield/libs/vendor
+src/yield/interfaces/vendor/
+src/verifiers/
