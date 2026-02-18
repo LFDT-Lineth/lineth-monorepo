@@ -28,7 +28,7 @@ tasks.register('corsetExists') {
 ext {
   corsetVersion = project.hasProperty('corsetVersion')
     ? project.property('corsetVersion')
-    : System.getenv().getOrDefault('CORSET_VERSION', "v1.2.1")
+    : System.getenv().getOrDefault('CORSET_VERSION', "v1.2.2")
 }
 
 tasks.register('installGoCorset') {
