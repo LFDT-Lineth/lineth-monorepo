@@ -26,6 +26,9 @@ on:
       native_yield_automation_service_changed:
         required: true
         type: string
+      lido_governance_monitor_changed:
+        required: true
+        type: string
     outputs:
       commit_tag:
         value: ${{ jobs.check_image_tags_exist.outputs.commit_tag }}
@@ -41,6 +44,8 @@ on:
         value: ${{ jobs.image_tag_push.outputs.image_tagged_postman || 'false' }}
       image_tagged_native_yield_automation_service:
         value: ${{ jobs.image_tag_push.outputs.image_tagged_native_yield_automation_service || 'false' }}
+      image_tagged_lido_governance_monitor:
+        value: ${{ jobs.image_tag_push.outputs.image_tagged_lido_governance_monitor || 'false' }}
       image_tagged_transaction_exclusion_api:
         value: ${{ jobs.image_tag_push.outputs.image_tagged_transaction_exclusion_api || 'false' }}
     secrets:
@@ -63,6 +68,7 @@ jobs:
     outputs:
       last_commit_tag_exists_coordinator: ${{ steps.check_image_tags_exist_coordinator.outputs.last_commit_tag_exists }}
       last_commit_tag_exists_native_yield_automation_service: ${{ steps.check_image_tags_exist_native_yield_automation_service.outputs.last_commit_tag_exists }}
+      last_commit_tag_exists_lido_governance_monitor: ${{ steps.check_image_tags_exist_lido_governance_monitor.outputs.last_commit_tag_exists }}
       last_commit_tag_exists_postman: ${{ steps.check_image_tags_exist_postman.outputs.last_commit_tag_exists }}
       last_commit_tag_exists_prover: ${{ steps.check_image_tags_exist_prover.outputs.last_commit_tag_exists }}
       last_commit_tag_exists_transaction_exclusion_api: ${{ steps.check_image_tags_exist_transaction_exclusion_api.outputs.last_commit_tag_exists }}
@@ -108,6 +114,14 @@ jobs:
           last_commit_tag: ${{ steps.compute-version-tags.outputs.last_commit_tag }}
           image_name: consensys/linea-native-yield-automation-service
 
+      - name: Check image tags exist for lido-governance-monitor
+        uses: ./.github/actions/check-image-tags-exist
+        if: ${{ github.ref == 'refs/heads/main' && inputs.lido_governance_monitor_changed == 'false' }}
+        id: check_image_tags_exist_lido_governance_monitor
+        with:
+          last_commit_tag: ${{ steps.compute-version-tags.outputs.last_commit_tag }}
+          image_name: consensys/linea-lido-governance-monitor
+
       - name: Check image tags exist for prover
         uses: ./.github/actions/check-image-tags-exist
         if: ${{ github.ref == 'refs/heads/main' && inputs.prover_changed == 'false' }}
@@ -132,6 +146,7 @@ jobs:
     outputs:
       image_tagged_coordinator: ${{ steps.image_tag_push_coordinator.outputs.image_tagged }}
       image_tagged_native_yield_automation_service: ${{ steps.image_tag_push_native_yield_automation_service.outputs.image_tagged }}
+      image_tagged_lido_governance_monitor: ${{ steps.image_tag_push_lido_governance_monitor.outputs.image_tagged }}
       image_tagged_prover: ${{ steps.image_tag_push_prover.outputs.image_tagged }}
       image_tagged_postman: ${{ steps.image_tag_push_postman.outputs.image_tagged }}
       image_tagged_transaction_exclusion_api: ${{ steps.image_tag_push_transaction_exclusion_api.outputs.image_tagged }}
@@ -178,6 +193,19 @@ jobs:
           develop_tag: ${{ needs.check_image_tags_exist.outputs.develop_tag }}
           image_name: consensys/linea-native-yield-automation-service
           last_commit_tag_exists: ${{ needs.check_image_tags_exist.outputs.last_commit_tag_exists_native_yield_automation_service }}
+          docker_username: ${{ secrets.DOCKERHUB_USERNAME }}
+          docker_password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Tag and push lido-governance-monitor image
+        id: image_tag_push_lido_governance_monitor
+        uses: ./.github/actions/image-tag-and-push
+        if: ${{ inputs.lido_governance_monitor_changed == 'false' }}
+        with:
+          commit_tag: ${{ needs.check_image_tags_exist.outputs.commit_tag }}
+          last_commit_tag: ${{ needs.check_image_tags_exist.outputs.last_commit_tag }}
+          develop_tag: ${{ needs.check_image_tags_exist.outputs.develop_tag }}
+          image_name: consensys/linea-lido-governance-monitor
+          last_commit_tag_exists: ${{ needs.check_image_tags_exist.outputs.last_commit_tag_exists_lido_governance_monitor }}
           docker_username: ${{ secrets.DOCKERHUB_USERNAME }}
           docker_password: ${{ secrets.DOCKERHUB_TOKEN }}
 

@@ -76,6 +76,9 @@ proving_key.bin
 **/src/*/generated
 **/.direnv
 
+# Prisma generated clients
+/native-yield-operations/lido-governance-monitor/prisma/client/
+
 bin/
 build/
 cache_forge/

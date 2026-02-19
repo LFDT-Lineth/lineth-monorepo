@@ -33,6 +33,7 @@
 **/CHANGELOG.md
 **/LICENSE
 **/*.md
+!**/prompts/*.md
 !**/package.json
 
 # CI/CD

@@ -24,6 +24,9 @@ on:
       native_yield_automation_service_changed:
         required: true
         type: string
+      lido_governance_monitor_changed:
+        required: true
+        type: string
       postman_changed:
         required: true
         type: string
@@ -40,6 +43,9 @@ on:
         required: true
         type: string
       native_yield_automation_service_image_tagged:
+        required: true
+        type: string
+      lido_governance_monitor_image_tagged:
         required: true
         type: string
       prover_image_tagged:
@@ -80,6 +86,16 @@ jobs:
       commit_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
       image_name: consensys/linea-native-yield-automation-service
+      push_image: ${{ inputs.push_image }}
+    secrets: inherit
+
+  lido_governance_monitor:
+    uses: ./.github/workflows/lido-governance-monitor-build-and-publish.yml
+    if: ${{ always() && (inputs.lido_governance_monitor_changed == 'true' || (inputs.push_image && inputs.lido_governance_monitor_image_tagged != 'true')) }}
+    with:
+      commit_tag: ${{ inputs.commit_tag }}
+      develop_tag: ${{ inputs.develop_tag }}
+      image_name: consensys/linea-lido-governance-monitor
       push_image: ${{ inputs.push_image }}
     secrets: inherit
 

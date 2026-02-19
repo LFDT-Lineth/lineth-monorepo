@@ -1,0 +1,95 @@
+name: lido-governance-monitor-build
+
+permissions:
+  contents: read
+  actions: read
+  packages: write
+
+on:
+  workflow_call:
+    inputs:
+      commit_tag:
+        required: true
+        type: string
+      develop_tag:
+        required: true
+        type: string
+      image_name:
+        required: true
+        type: string
+      push_image:
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: false
+      DOCKERHUB_TOKEN:
+        required: false
+  workflow_dispatch:
+    inputs:
+      commit_tag:
+        description: 'Image tag'
+        required: true
+        type: string
+      develop_tag:
+        description: 'Image tag will be "develop" if target branch is main'
+        required: true
+        type: choice
+        options:
+          - develop
+        default: 'develop'
+      image_name:
+        description: 'Image name'
+        required: true
+        type: string
+        default: 'consensys/linea-lido-governance-monitor'
+      push_image:
+        description: 'Toggle whether to push image to docker registry'
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: lido-governance-monitor-build-and-publish-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build-and-publish:
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    name: lido-governance-monitor
+    env:
+      COMMIT_TAG: ${{ inputs.commit_tag }}
+      DEVELOP_TAG: ${{ inputs.develop_tag }}
+      IMAGE_NAME: ${{ inputs.image_name }}
+      PUSH_IMAGE: ${{ inputs.push_image }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get Node.js version
+        id: get-node-version
+        uses: ./.github/actions/get-node-version
+
+      - name: Build and publish Docker image
+        uses: ./.github/actions/docker-build-publish
+        with:
+          docker_context: .
+          image_name: ${{ env.IMAGE_NAME }}
+          image_tag: ${{ env.COMMIT_TAG }}
+          develop_tag: ${{ env.DEVELOP_TAG }}
+          push_platforms: linux/amd64
+          push_image: ${{ env.PUSH_IMAGE }}
+          dockerfile_path: ./native-yield-operations/lido-governance-monitor/Dockerfile
+          build_args: NODE_VERSION=${{ steps.get-node-version.outputs.node-version }}
+          artifact_name: linea-lido-governance-monitor
+          requires_qemu: ${{ env.PUSH_IMAGE }}

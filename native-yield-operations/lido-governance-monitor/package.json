@@ -1,0 +1,52 @@
+{
+  "name": "@consensys/lido-governance-monitor",
+  "version": "1.0.0",
+  "author": "Consensys Software Inc.",
+  "license": "(MIT OR Apache-2.0)",
+  "description": "Monitors Lido governance proposals and alerts on high-risk ones",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "scripts": {
+    "postinstall": "DATABASE_URL=postgresql://localhost:5432/dummy prisma generate",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "clean": "rimraf dist node_modules coverage tsconfig.build.tsbuildinfo",
+    "build": "tsc -p tsconfig.build.json",
+    "test": "npx jest --bail --detectOpenHandles --forceExit",
+    "test:watch": "npx jest --watch",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:status": "prisma migrate status",
+    "db:push": "prisma db push"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.30.0",
+    "@consensys/linea-shared-utils": "workspace:*",
+    "@prisma/adapter-pg": "7.3.0",
+    "@prisma/client": "7.3.0",
+    "dotenv": "catalog:",
+    "html-to-text": "9.0.5",
+    "neverthrow": "catalog:",
+    "winston": "catalog:",
+    "prisma": "7.3.0",
+    "viem": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@consensys/eslint-config": "workspace:*",
+    "@jest/globals": "catalog:",
+    "@types/html-to-text": "9.0.4",
+    "@types/jest": "catalog:",
+    "jest": "catalog:",
+    "jest-mock-extended": "catalog:",
+    "rimraf": "5.0.0",
+    "ts-jest": "catalog:",
+    "tsx": "4.19.0",
+    "typescript": "catalog:"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "type": "module"
+}

@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client"
+  output   = "./client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProposalSource {
+  DISCOURSE
+  SNAPSHOT
+  LDO_VOTING_CONTRACT
+  STETH_VOTING_CONTRACT
+}
+
+enum ProposalState {
+  NEW
+  ANALYZED
+  ANALYSIS_FAILED
+  NOTIFY_FAILED
+  NOT_NOTIFIED
+  NOTIFIED
+}
+
+model Proposal {
+  id                      String          @id @default(uuid())
+  source                  ProposalSource
+  sourceId                String          @map("source_id")
+  createdAt               DateTime        @default(now()) @map("created_at")
+  updatedAt               DateTime        @updatedAt @map("updated_at")
+
+  url                     String
+  title                   String
+  author                  String?
+  sourceCreatedAt         DateTime        @map("source_created_at")
+  rawProposalText         String          @map("raw_proposal_text")
+  sourceMetadata          Json?           @map("source_metadata")
+
+  state                   ProposalState   @default(NEW)
+  stateUpdatedAt          DateTime        @default(now()) @map("state_updated_at")
+
+  analysisAttemptCount    Int             @default(0) @map("analysis_attempt_count")
+  llmModel                String?         @map("llm_model")
+  riskThreshold           Int?            @map("risk_threshold")
+  assessmentPromptVersion String?         @map("assessment_prompt_version")
+  analyzedAt              DateTime?       @map("analyzed_at")
+  assessmentJson          Json?           @map("assessment_json")
+  riskScore               Int?            @map("risk_score")
+
+  notifyAttemptCount      Int             @default(0) @map("notify_attempt_count")
+  notifiedAt              DateTime?       @map("notified_at")
+
+  @@unique([source, sourceId])
+  @@index([state, stateUpdatedAt])
+  @@index([source, sourceCreatedAt])
+  @@map("proposals")
+}

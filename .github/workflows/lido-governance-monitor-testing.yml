@@ -1,0 +1,34 @@
+name: lido-governance-monitor-testing
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  workflow_call:
+
+concurrency:
+  group: lido-governance-monitor-testing-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  run-tests:
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    name: lido-governance-monitor-testing
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup nodejs environment
+        uses: ./.github/actions/setup-nodejs
+
+      - name: Build
+        run: |
+          pnpm --filter @consensys/linea-shared-utils build
+          DATABASE_URL=postgresql://localhost:5432/dummy pnpm --filter @consensys/lido-governance-monitor db:generate
+          pnpm --filter @consensys/lido-governance-monitor build
+
+      - name: Run tests and generate coverage report
+        run: |
+          pnpm --filter @consensys/linea-shared-utils test
+          pnpm --filter @consensys/lido-governance-monitor test
