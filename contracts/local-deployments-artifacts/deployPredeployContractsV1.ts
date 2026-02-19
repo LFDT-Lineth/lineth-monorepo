@@ -32,7 +32,7 @@ async function main() {
   console.log("Starting deployment of predeploy contracts...");
 
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-  const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
+  const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
   let walletNonce;
 
   if (!process.env.L2_NONCE) {

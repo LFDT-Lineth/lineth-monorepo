@@ -7,12 +7,12 @@ const func: DeployFunction = async function () {
   const contractName = "RollupRevenueVault";
 
   const lastInvoiceDate = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_LAST_INVOICE_DATE");
-  const securityCouncil = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_SECURITY_COUNCIL");
+  const securityCouncil = getRequiredEnvVar("L2_SECURITY_COUNCIL");
   const invoiceSubmitter = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_INVOICE_SUBMITTER");
   const burner = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_BURNER");
   const invoicePaymentReceiver = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_INVOICE_PAYMENT_RECEIVER");
   const tokenBridge = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_TOKEN_BRIDGE");
-  const messageService = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_MESSAGE_SERVICE");
+  const messageService = getRequiredEnvVar("L2_MESSAGE_SERVICE_ADDRESS");
   const l1LineaTokenBurner = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_L1_LINEA_TOKEN_BURNER");
   const lineaToken = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_LINEA_TOKEN");
   const dexSwapAdapter = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_DEX_SWAP_ADAPTER");

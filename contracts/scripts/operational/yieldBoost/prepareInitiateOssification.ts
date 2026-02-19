@@ -16,8 +16,8 @@ import { getTaskCliOrEnvValue } from "../../../common/helpers/environmentHelper"
   -------------------------------------------------------------------------------------------
   Example (Hoodi):
   -------------------------------------------------------------------------------------------
-  CUSTOM_PRIVATE_KEY=0000000000000000000000000000000000000000000000000000000000000002 \
-  CUSTOM_BLOCKCHAIN_URL=https://0xrpc.io/hoodi \
+  DEPLOYER_PRIVATE_KEY=0000000000000000000000000000000000000000000000000000000000000002 \
+  CUSTOM_RPC_URL=https://0xrpc.io/hoodi \
   npx hardhat prepareInitiateOssification \
     --yield-manager <address> \
     --yield-provider <address> \
@@ -26,8 +26,8 @@ import { getTaskCliOrEnvValue } from "../../../common/helpers/environmentHelper"
   -------------------------------------------------------------------------------------------
   
   Env var alternatives (used if CLI params omitted):
-    YIELD_MANAGER
-    YIELD_PROVIDER
+    YIELD_MANAGER_ADDRESS
+    YIELD_PROVIDER_ADDRESS
     DASHBOARD
   *******************************************************************************************
 */
@@ -39,14 +39,14 @@ task("prepareInitiateOssification", "Generates calldata for prerequisites before
     const { ethers } = hre;
 
     // --- Resolve inputs from CLI or ENV ---
-    const yieldManager = getTaskCliOrEnvValue(taskArgs, "yieldManager", "YIELD_MANAGER");
-    const yieldProvider = getTaskCliOrEnvValue(taskArgs, "yieldProvider", "YIELD_PROVIDER");
+    const yieldManager = getTaskCliOrEnvValue(taskArgs, "yieldManager", "YIELD_MANAGER_ADDRESS");
+    const yieldProvider = getTaskCliOrEnvValue(taskArgs, "yieldProvider", "YIELD_PROVIDER_ADDRESS");
     const dashboard = getTaskCliOrEnvValue(taskArgs, "dashboard", "DASHBOARD");
 
     // --- Basic required fields check ---
     const missing: string[] = [];
-    if (!yieldManager) missing.push("yieldManager / YIELD_MANAGER");
-    if (!yieldProvider) missing.push("yieldProvider / YIELD_PROVIDER");
+    if (!yieldManager) missing.push("yieldManager / YIELD_MANAGER_ADDRESS");
+    if (!yieldProvider) missing.push("yieldProvider / YIELD_PROVIDER_ADDRESS");
     if (!dashboard) missing.push("dashboard / DASHBOARD");
     if (missing.length) {
       throw new Error(`Missing required params/envs: ${missing.join(", ")}`);

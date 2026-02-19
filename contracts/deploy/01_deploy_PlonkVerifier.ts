@@ -17,7 +17,7 @@ const func: DeployFunction = async function () {
   const chainId = getRequiredEnvVar("VERIFIER_CHAIN_ID");
   const baseFee = getRequiredEnvVar("VERIFIER_BASE_FEE");
   const coinbase = getRequiredEnvVar("VERIFIER_COINBASE");
-  const l2MessageServiceAddress = getRequiredEnvVar("VERIFIER_L2_MESSAGE_SERVICE_ADDRESS");
+  const l2MessageServiceAddress = getRequiredEnvVar("L2_MESSAGE_SERVICE_ADDRESS");
 
   const mimc = (await deployFromFactory("Mimc", provider)) as Mimc;
 

@@ -34,13 +34,13 @@ $ forge test
   - `L2_LINEA_TOKEN_ADDRESS`: Address of the deployed LineaToken contract on L2.
   - `TOKEN_NAME`: The name of the token.
   - `TOKEN_SYMBOL`: The symbol of the token.
-  - `PRIVATE_KEY`: The private key of the deployer account, used to sign and send transactions.
+  - `DEPLOYER_PRIVATE_KEY`: The private key of the deployer account, used to sign and send transactions.
   - `EXPLORER_API_KEY`: API key for the block explorer (e.g., Etherscan) to enable contract verification.
   - `EXPLORER_API_URL`: The API endpoint for the block explorer (e.g., Etherscan) used for contract verification.
   - `RPC_URL`: The RPC endpoint URL for the target blockchain network.
 - **Command:**
   ```sh
-  forge script script/DeployLineaToken.s.sol --broadcast --private-key $PRIVATE_KEY --verifier-api-key $EXPLORER_API_KEY --verifier-url $EXPLORER_API_URL --rpc-url $RPC_URL --verify
+  forge script script/DeployLineaToken.s.sol --broadcast --private-key $DEPLOYER_PRIVATE_KEY --verifier-api-key $EXPLORER_API_KEY --verifier-url $EXPLORER_API_URL --rpc-url $RPC_URL --verify
   ```
 
 
@@ -66,13 +66,13 @@ eth:0x9EcE20C1878E4D67a0a8bA730f3F990a031B00a7
   - `L1_LINEA_TOKEN_ADDRESS`: Address of the deployed LineaToken contract on L1.
   - `TOKEN_NAME`: The name of the token.
   - `TOKEN_SYMBOL`: The symbol of the token.
-  - `PRIVATE_KEY`: The private key of the deployer account, used to sign and send transactions.
+  - `DEPLOYER_PRIVATE_KEY`: The private key of the deployer account, used to sign and send transactions.
   - `EXPLORER_API_KEY`: API key for the block explorer (e.g., Lineascan) to enable contract verification.
   - `EXPLORER_API_URL`: The API endpoint for the block explorer (e.g., Lineascan) used for contract verification.
   - `RPC_URL`: The RPC endpoint URL for the target blockchain network.
 - **Command:**
   ```sh
-  forge script script/DeployL2LineaToken.s.sol --broadcast --private-key $PRIVATE_KEY --verifier-api-key $EXPLORER_API_KEY --verifier-url $EXPLORER_API_URL --rpc-url $RPC_URL --verify
+  forge script script/DeployL2LineaToken.s.sol --broadcast --private-key $DEPLOYER_PRIVATE_KEY --verifier-api-key $EXPLORER_API_KEY --verifier-url $EXPLORER_API_URL --rpc-url $RPC_URL --verify
   ```
 
 ##### c. Deploy TokenAirdrop
@@ -85,11 +85,11 @@ eth:0x9EcE20C1878E4D67a0a8bA730f3F990a031B00a7
   - `PRIMARY_FACTOR_ADDRESS`: Address of the contract providing the primary factor for airdrop calculations.
   - `PRIMARY_CONDITIONAL_MULTIPLIER_ADDRESS`: Address of the contract providing the primary conditional multiplier for airdrop calculations.
   - `SECONDARY_FACTOR_ADDRESS`: Address of the contract providing the secondary factor for airdrop calculations.
-  - `PRIVATE_KEY`: The private key of the deployer account, used to sign and send transactions.
+  - `DEPLOYER_PRIVATE_KEY`: The private key of the deployer account, used to sign and send transactions.
   - `EXPLORER_API_KEY`: API key for the block explorer (e.g., Lineascan) to enable contract verification.
   - `EXPLORER_API_URL`: The API endpoint for the block explorer (e.g., Lineascan) used for contract verification.
   - `RPC_URL`: The RPC endpoint URL for the target blockchain network.
 - **Command:**
   ```sh
-  forge script script/DeployTokenAirdrop.s.sol --broadcast --private-key $PRIVATE_KEY --verifier-api-key $EXPLORER_API_KEY --verifier-url $EXPLORER_API_URL --rpc-url $RPC_URL --verify
+  forge script script/DeployTokenAirdrop.s.sol --broadcast --private-key $DEPLOYER_PRIVATE_KEY --verifier-api-key $EXPLORER_API_KEY --verifier-url $EXPLORER_API_URL --rpc-url $RPC_URL --verify
   ```

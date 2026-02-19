@@ -17,7 +17,7 @@ import { get1559Fees } from "../scripts/utils";
 const func: DeployFunction = async function () {
   const contractName = "TokenBridge";
 
-  const l2MessageServiceAddress = getRequiredEnvVar("L2MESSAGESERVICE_ADDRESS");
+  const l2MessageServiceAddress = getRequiredEnvVar("L2_MESSAGE_SERVICE_ADDRESS");
   const lineaRollupAddress = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS");
   const remoteChainId = getRequiredEnvVar("REMOTE_CHAIN_ID");
   const pauseTypeRoles = getEnvVarOrDefault("TOKEN_BRIDGE_PAUSE_TYPES_ROLES", TOKEN_BRIDGE_PAUSE_TYPES_ROLES);
@@ -36,7 +36,7 @@ const func: DeployFunction = async function () {
     : [];
 
   if (process.env.TOKEN_BRIDGE_L1 === "true") {
-    securityCouncilAddress = getRequiredEnvVar("L1_TOKEN_BRIDGE_SECURITY_COUNCIL");
+    securityCouncilAddress = getRequiredEnvVar("L1_SECURITY_COUNCIL");
     console.log(
       `TOKEN_BRIDGE_L1=${process.env.TOKEN_BRIDGE_L1}. Deploying TokenBridge on L1, using L1_RESERVED_TOKEN_ADDRESSES environment variable`,
     );
@@ -45,7 +45,7 @@ const func: DeployFunction = async function () {
       ? process.env.L1_RESERVED_TOKEN_ADDRESSES.split(",")
       : [];
   } else {
-    securityCouncilAddress = getRequiredEnvVar("L2_TOKEN_BRIDGE_SECURITY_COUNCIL");
+    securityCouncilAddress = getRequiredEnvVar("L2_SECURITY_COUNCIL");
     console.log(
       `TOKEN_BRIDGE_L1=${process.env.TOKEN_BRIDGE_L1}. Deploying TokenBridge on L2, using L2_RESERVED_TOKEN_ADDRESSES environment variable`,
     );

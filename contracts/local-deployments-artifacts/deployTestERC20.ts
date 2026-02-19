@@ -14,7 +14,7 @@ async function main() {
   const ORDERED_NONCE_POST_L2MESSAGESERVICE = 3;
 
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-  const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
+  const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
 
   const erc20Name = getRequiredEnvVar("TEST_ERC20_NAME");
   const erc20Symbol = getRequiredEnvVar("TEST_ERC20_SYMBOL");

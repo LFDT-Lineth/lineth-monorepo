@@ -6,7 +6,7 @@ import { generateFunctionSelector } from "contracts/common/helpers";
 // Prerequisite - Deploy a contract with NON-VIEW initialize() function, e.g. TestEIP7702Delegation
 // Use this contract for TARGET_ADDRESS env
 
-// RPC_URL=<> PRIVATE_KEY=<> TARGET_ADDRESS=<> npx hardhat run scripts/testEIP7702/sendType4Tx.ts
+// RPC_URL=<> DEPLOYER_PRIVATE_KEY=<> TARGET_ADDRESS=<> npx hardhat run scripts/testEIP7702/sendType4Tx.ts
 
 dotenv.config();
 
@@ -21,7 +21,7 @@ class EIP7702TransactionSender {
     this.lineaEstimateGasClient = new LineaEstimateGasClient(new URL(rpcUrl), this.signer.address);
   }
 
-  // Create Authorization for process.env.PRIVATE_KEY
+  // Create Authorization for process.env.DEPLOYER_PRIVATE_KEY
   async createAuthorizationForSelf(targetContractAddress: string): Promise<Authorization> {
     const network = await this.provider.getNetwork();
     const currentChainId = network.chainId;
@@ -147,7 +147,7 @@ function requireEnv(name: string): string {
 async function main() {
   try {
     const rpcUrl = requireEnv("RPC_URL");
-    const privateKey = requireEnv("PRIVATE_KEY");
+    const privateKey = requireEnv("DEPLOYER_PRIVATE_KEY");
     const targetAddress = requireEnv("TARGET_ADDRESS");
 
     const sender = new EIP7702TransactionSender(rpcUrl, privateKey);

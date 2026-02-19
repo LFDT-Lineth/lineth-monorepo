@@ -14,7 +14,7 @@ const func: DeployFunction = async function () {
   let upgradeUnpauseTypeRoles = [];
   let upgradeRoleAddresses = [];
 
-  const securityCouncilAddress = getRequiredEnvVar("LINEA_ROLLUP_SECURITY_COUNCIL");
+  const securityCouncilAddress = getRequiredEnvVar("L1_SECURITY_COUNCIL");
   const proxyAddress = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS");
 
   upgradeRoleAddresses = [

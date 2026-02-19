@@ -6,7 +6,7 @@ import { L2MessageService__factory } from "contracts/typechain-types";
 const func: DeployFunction = async function () {
   const contractName = "L2MessageService";
 
-  const proxyAddress = getRequiredEnvVar("L2MESSAGESERVICE_ADDRESS");
+  const proxyAddress = getRequiredEnvVar("L2_MESSAGE_SERVICE_ADDRESS");
 
   const factory = await ethers.getContractFactory(contractName);
 

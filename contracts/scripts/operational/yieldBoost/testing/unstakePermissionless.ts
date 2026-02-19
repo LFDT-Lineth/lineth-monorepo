@@ -22,8 +22,8 @@ const gIndexPendingPartialWithdrawals = 99n;
   -------------------------------------------------------------------------------------------
   Example (Hoodi):
   -------------------------------------------------------------------------------------------
-  CUSTOM_PRIVATE_KEY=0000000000000000000000000000000000000000000000000000000000000002 \
-  CUSTOM_BLOCKCHAIN_URL=https://0xrpc.io/hoodi \
+  DEPLOYER_PRIVATE_KEY=0000000000000000000000000000000000000000000000000000000000000002 \
+  CUSTOM_RPC_URL=https://0xrpc.io/hoodi \
   npx hardhat unstakePermissionless \
     --yield-manager <address> \
     --yield-provider <address> \
@@ -34,8 +34,8 @@ const gIndexPendingPartialWithdrawals = 99n;
   -------------------------------------------------------------------------------------------
 
   Env var alternatives (used if CLI params omitted):
-    YIELD_MANAGER
-    YIELD_PROVIDER
+    YIELD_MANAGER_ADDRESS
+    YIELD_PROVIDER_ADDRESS
     VALIDATOR_INDEX
     SLOT
     BEACON_RPC_URL
@@ -56,16 +56,16 @@ task("unstakePermissionless", "Performs YieldManager::unstakePermissionless (cur
     const [signer] = await ethers.getSigners();
 
     // --- Resolve inputs from CLI or ENV ---
-    const yieldManagerAddress = getTaskCliOrEnvValue(taskArgs, "yieldManager", "YIELD_MANAGER");
-    const yieldProvider = getTaskCliOrEnvValue(taskArgs, "yieldProvider", "YIELD_PROVIDER");
+    const yieldManagerAddress = getTaskCliOrEnvValue(taskArgs, "yieldManager", "YIELD_MANAGER_ADDRESS");
+    const yieldProvider = getTaskCliOrEnvValue(taskArgs, "yieldProvider", "YIELD_PROVIDER_ADDRESS");
     const validatorIndexRaw = getTaskCliOrEnvValue(taskArgs, "validatorIndex", "VALIDATOR_INDEX");
     const slotRaw = getTaskCliOrEnvValue(taskArgs, "slot", "SLOT");
     const beaconRpcUrl = getTaskCliOrEnvValue(taskArgs, "beaconRpcUrl", "BEACON_RPC_URL");
 
     // --- Basic required fields check (adjust as needed) ---
     const missing: string[] = [];
-    if (!yieldManagerAddress) missing.push("yieldManager / YIELD_MANAGER");
-    if (!yieldProvider) missing.push("yieldProvider / YIELD_PROVIDER");
+    if (!yieldManagerAddress) missing.push("yieldManager / YIELD_MANAGER_ADDRESS");
+    if (!yieldProvider) missing.push("yieldProvider / YIELD_PROVIDER_ADDRESS");
     if (!validatorIndexRaw) missing.push("validatorIndex / VALIDATOR_INDEX");
     if (!slotRaw) missing.push("slot / SLOT");
     if (!beaconRpcUrl) missing.push("beaconRpcUrl / BEACON_RPC_URL");

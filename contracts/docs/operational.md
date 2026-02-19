@@ -12,16 +12,16 @@ The command-line arguments will create or replace existing .env (only in memory)
 
 ## Network specific variables
 
-dependent on which network you are using, a specific network private key needs to be used, as well as the corresponding API Key or RPC URL.  The following table highlights which private key variable will be used per network. Please use the variable that pertains to the network. e.g. for `linea_sepolia` use `LINEA_SEPOLIA_PRIVATE_KEY` (`LINEA_SEPOLIA_PRIVATE_KEY=<key> INFURA_API_KEY=<key>`)  
+dependent on which network you are using, the corresponding API Key or RPC URL must be set. The following table highlights which deployer key and API config is used per network. For all networks, use `DEPLOYER_PRIVATE_KEY` (e.g. `DEPLOYER_PRIVATE_KEY=<key> INFURA_API_KEY=<key>`).
 
 | Network       | Private key parameter name   | API Key / RPC URL |
 | ------------- | ----------------- | ---- | 
-| sepolia    | SEPOLIA_PRIVATE_KEY    | INFURA_API_KEY  |
-| linea_sepolia | LINEA_SEPOLIA_PRIVATE_KEY   | INFURA_API_KEY  |
-| mainnet   | MAINNET_PRIVATE_KEY | INFURA_API_KEY | 
-| linea_mainnet | LINEA_MAINNET_PRIVATE_KEY |  INFURA_API_KEY  | 
-| custom    | CUSTOM_PRIVATE_KEY | CUSTOM_BLOCKCHAIN_URL | 
-| zkevm_dev | PRIVATE_KEY | BLOCKCHAIN_NODE or L2_BLOCKCHAIN_NODE | 
+| sepolia    | DEPLOYER_PRIVATE_KEY    | INFURA_API_KEY  |
+| linea_sepolia | DEPLOYER_PRIVATE_KEY   | INFURA_API_KEY  |
+| mainnet   | DEPLOYER_PRIVATE_KEY | INFURA_API_KEY | 
+| linea_mainnet | DEPLOYER_PRIVATE_KEY |  INFURA_API_KEY  | 
+| custom    | DEPLOYER_PRIVATE_KEY | CUSTOM_RPC_URL | 
+| zkevm_dev | DEPLOYER_PRIVATE_KEY | L1_RPC_URL or L2_RPC_URL | 
 
 
 <br />
@@ -33,7 +33,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 | Parameter name        | Required | Input Value | Description |
 | ------------------ | -------- | ---------- | ----------- |
-| \**PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
+| \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | INFURA_API_KEY     | true     | key | Infura API Key |
 | CONTRACT_TYPE   | true    | Contract name | Contract name parameter. If ommited in the .env, it must be provided as CLI argument using the `--contract-type` flag |
 | PROXY_ADDRESS | true | address | Proxy contract address. If ommited in the .env, it must be provided as CLI argument using the `--proxy-address` flag| 
@@ -50,7 +50,7 @@ npx hardhat getCurrentFinalizedBlockNumber --network sepolia
 Base command with cli arguments:
 
 ```shell
-SEPOLIA_PRIVATE_KEY=<key> \
+DEPLOYER_PRIVATE_KEY=<key> \
 INFURA_API_KEY=<key> \
 npx hardhat getCurrentFinalizedBlockNumber \
 --contract-type <string> \
@@ -70,7 +70,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 | Parameter name        | Required | Input Value | Description |
 | ------------------ | -------- | ---------- | ----------- |
-| \**PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
+| \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | INFURA_API_KEY     | true     | key | Infura API Key |
 | CONTRACT_TYPE   | true    | Contract name | Contract name parameter. If ommited in the .env, it must be provided as CLI argument using the `--contract-type` flag |
 | PROXY_ADDRESS | true | address | Proxy contract address. If ommited in the .env, it must be provided as CLI argument using the `--proxy-address` flag| 
@@ -87,7 +87,7 @@ npx hardhat grantContractRoles --network sepolia
 Base command with cli arguments:
 
 ```shell
-SEPOLIA_PRIVATE_KEY=<key> \
+DEPLOYER_PRIVATE_KEY=<key> \
 INFURA_API_KEY=<key> \
 npx hardhat grantContractRoles \
 --admin-address <address>  \
@@ -110,7 +110,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 | Parameter name        | Required | Input Value | Description |
 | ------------------ | -------- | ---------- | ----------- |
-| \**PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
+| \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | INFURA_API_KEY     | true     | key | Infura API Key |
 | OLD_ADMIN_ADDRESS | true | address | Old admin address. If ommited in the .env, it must be provided as CLI argument using the `--old-admin-address` flag |
 | NEW_ADMIN_ADDRESS | true | address | New admin address. If ommited in the .env, it must be provided as CLI argument using the `--new-admin-address` flag |
@@ -127,7 +127,7 @@ npx hardhat renounceContractRoles --network sepolia
 Base command with cli arguments:
 
 ```shell
-SEPOLIA_PRIVATE_KEY=<key> \
+DEPLOYER_PRIVATE_KEY=<key> \
 INFURA_API_KEY=<key> \
 npx hardhat renounceContractRoles \
 --old-admin-address <address>  \
@@ -156,7 +156,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 | Parameter name        | Required | Input Value | Description |
 | ------------------ | -------- | ---------- | ----------- |
-| \**PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
+| \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | INFURA_API_KEY     | true     | key | Infura API Key |
 | MESSAGE_SERVICE_TYPE | true | contract name | Contract name parameter. If ommited in the .env, it must be provided as CLI argument using the `--message-service-type` flag |
 | MESSAGE_SERVICE_ADDRESS | true | address | Proxy contract address. If ommited in the .env, it must be provided as CLI argument using the `--message-service-address` flag|
@@ -171,7 +171,7 @@ npx hardhat setRateLimit --network linea_sepolia
 Base command with cli arguments:
 
 ```shell
-LINEA_SEPOLIA_PRIVATE_KEY=<key> \
+DEPLOYER_PRIVATE_KEY=<key> \
 INFURA_API_KEY=<key> \
 npx hardhat setRateLimit \
 --message-service-address <address> \
@@ -193,12 +193,12 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 | Parameter name        | Required | Input Value | Description |
 | ------------------ | -------- | ---------- | ----------- |
-| \**PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
+| \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | INFURA_API_KEY     | true     | key | Infura API Key |
-| VERIFIER_PROOF_TYPE | true | uint256 | Verifier Proof type ("0" - Full Verifier, "1" - Full-Large Verifier, "2" - Light Verifier). If ommited in the .env, it must be provided as CLI argument using the `--verifier-proof-type` flag| |
-| LINEA_ROLLUP_ADDRESS | true | address | Proxy contract address. If ommited in the .env, it must be provided as CLI argument using the `--proxy-address` flag|
-| VERIFIER_ADDRESS | true | address | Verifier Address. If ommited in the .env, it must be provided as CLI argument using the `--verifier-address` flag|
-| VERIFIER_CONTRACT_NAME | true | address | Verifier Name. If ommited in the .env, it must be provided as CLI argument using the `--verifier-contract-name` flag|
+| VERIFIER_PROOF_TYPE | true | uint256 | Verifier Proof type ("0" - Full Verifier, "1" - Full-Large Verifier, "2" - Light Verifier). If omitted in the .env, it must be provided as CLI argument using the `--verifier-proof-type` flag|
+| LINEA_ROLLUP_ADDRESS | true | address | Proxy contract address. If omitted in the .env, it must be provided as CLI argument using the `--proxy-address` flag|
+| VERIFIER_ADDRESS | true | address | Verifier Address. If omitted in the .env, it must be provided as CLI argument using the `--verifier-address` flag|
+| VERIFIER_CONTRACT_NAME | true | string | Verifier Name. If omitted in the .env, it must be provided as CLI argument using the `--verifier-contract-name` flag|
 
 <br />
 
@@ -211,7 +211,7 @@ npx hardhat setVerifierAddress --network sepolia
 Base command with cli arguments:
 
 ```shell
-SEPOLIA_PRIVATE_KEY=<key> \
+DEPLOYER_PRIVATE_KEY=<key> \
 INFURA_API_KEY=<key> \
 npx hardhat setVerifierAddress \
 --verifier-proof-type <uint256> \
@@ -222,6 +222,127 @@ npx hardhat setVerifierAddress \
 ```
 
 (make sure to replace `<key>` with actual values)
+
+<br />
+<br />
+
+### setMessageServiceOnTokenBridge
+
+<br />
+Sets the message service address on a TokenBridge contract.
+<br />
+<br />
+Parameters that should be filled either in .env or passed as CLI arguments:
+
+| Parameter name        | Required | Input Value | Description |
+| ------------------ | -------- | ---------- | ----------- |
+| \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
+| INFURA_API_KEY     | true     | key | Infura API Key |
+| MESSAGE_SERVICE_ADDRESS | true | address | Message Service contract address. If omitted in the .env, it must be provided as CLI argument using the `--message-service-address` flag|
+| TOKEN_BRIDGE_ADDRESS | true | address | TokenBridge contract address. If omitted in the .env, it must be provided as CLI argument using the `--token-bridge-address` flag|
+
+<br />
+
+Base command:
+
+```shell
+npx hardhat setMessageServiceOnTokenBridge --network sepolia
+```
+
+Base command with cli arguments:
+
+```shell
+DEPLOYER_PRIVATE_KEY=<key> \
+INFURA_API_KEY=<key> \
+npx hardhat setMessageServiceOnTokenBridge \
+--message-service-address <address> \
+--token-bridge-address <address> \
+--network sepolia
+```
+
+(make sure to replace `<key>` `<address>` with actual values)
+
+<br />
+<br />
+
+### transferProxyAdminOwnership
+
+<br />
+Transfers ownership of a proxy's ProxyAdmin to a new address.
+<br />
+<br />
+Parameters that should be filled either in .env or passed as CLI arguments:
+
+| Parameter name        | Required | Input Value | Description |
+| ------------------ | -------- | ---------- | ----------- |
+| \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
+| INFURA_API_KEY     | true     | key | Infura API Key |
+| PROXY_ADMIN_OWNER_ADDRESS | true | address | New owner address for the ProxyAdmin. If omitted in the .env, it must be provided as CLI argument using the `--proxy-admin-owner-address` flag|
+| PROXY_ADDRESS | true | address | Proxy contract address. If omitted in the .env, it must be provided as CLI argument using the `--proxy-address` flag|
+| CONTRACT_TYPE | true | Contract name | Contract name parameter. If omitted in the .env, it must be provided as CLI argument using the `--contract-type` flag|
+
+<br />
+
+Base command:
+
+```shell
+npx hardhat transferProxyAdminOwnership --network sepolia
+```
+
+Base command with cli arguments:
+
+```shell
+DEPLOYER_PRIVATE_KEY=<key> \
+INFURA_API_KEY=<key> \
+npx hardhat transferProxyAdminOwnership \
+--proxy-admin-owner-address <address> \
+--proxy-address <address> \
+--contract-type <string> \
+--network sepolia
+```
+
+(make sure to replace `<key>` `<address>` with actual values)
+
+<br />
+<br />
+
+### changeProxyAdmin
+
+<br />
+Changes the ProxyAdmin contract for a given proxy.
+<br />
+<br />
+Parameters that should be filled either in .env or passed as CLI arguments:
+
+| Parameter name        | Required | Input Value | Description |
+| ------------------ | -------- | ---------- | ----------- |
+| \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
+| INFURA_API_KEY     | true     | key | Infura API Key |
+| NEW_PROXY_ADMIN_ADDRESS | true | address | New ProxyAdmin contract address. If omitted in the .env, it must be provided as CLI argument using the `--new-proxy-admin-address` flag|
+| PROXY_ADDRESS | true | address | Proxy contract address. If omitted in the .env, it must be provided as CLI argument using the `--proxy-address` flag|
+| CONTRACT_TYPE | true | Contract name | Contract name parameter. If omitted in the .env, it must be provided as CLI argument using the `--contract-type` flag|
+
+<br />
+
+Base command:
+
+```shell
+npx hardhat changeProxyAdmin --network sepolia
+```
+
+Base command with cli arguments:
+
+```shell
+DEPLOYER_PRIVATE_KEY=<key> \
+INFURA_API_KEY=<key> \
+npx hardhat changeProxyAdmin \
+--new-proxy-admin-address <address> \
+--proxy-address <address> \
+--contract-type <string> \
+--network sepolia
+```
+
+(make sure to replace `<key>` `<address>` with actual values)
 
 <br />
 <br />

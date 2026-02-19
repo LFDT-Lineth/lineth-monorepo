@@ -9,7 +9,7 @@ import { getDeployedContractOnNetwork } from "../../../common/helpers/readAddres
     1. Deploy the TokenBridge + MessageService contracts on both networks and get the addresses
     2. Run this script on both addresses with the correct variables set.
     *******************************************************************************************
-    SEPOLIA_PRIVATE_KEY=<key> \
+    DEPLOYER_PRIVATE_KEY=<key> \
     INFURA_API_KEY=<key> \
     npx hardhat setMessageServiceOnTokenBridge \
     --message-service-address <address> \

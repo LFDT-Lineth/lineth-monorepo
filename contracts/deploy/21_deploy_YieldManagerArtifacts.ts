@@ -3,7 +3,7 @@
 //
 // Required environment variables:
 //   LINEA_ROLLUP_ADDRESS
-//   LINEA_ROLLUP_SECURITY_COUNCIL
+//   L1_SECURITY_COUNCIL
 //   NATIVE_YIELD_AUTOMATION_SERVICE_ADDRESS
 //   VAULT_HUB
 //   VAULT_FACTORY
@@ -63,7 +63,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   // YieldManager DEPLOYED AS UPGRADEABLE PROXY
   const lineaRollupAddress = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS");
-  const lineaRollupSecurityCouncil = getRequiredEnvVar("LINEA_ROLLUP_SECURITY_COUNCIL");
+  const lineaRollupSecurityCouncil = getRequiredEnvVar("L1_SECURITY_COUNCIL");
   const nativeYieldAutomationServiceAddress = getRequiredEnvVar("NATIVE_YIELD_AUTOMATION_SERVICE_ADDRESS");
   const vaultHub = getRequiredEnvVar("VAULT_HUB");
   const vaultFactory = getRequiredEnvVar("VAULT_FACTORY");

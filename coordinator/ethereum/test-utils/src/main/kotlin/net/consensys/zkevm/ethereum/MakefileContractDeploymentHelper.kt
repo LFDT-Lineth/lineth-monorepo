@@ -96,7 +96,7 @@ fun makeDeployL2MessageService(
   anchorOperatorAddresses: String,
 ): SafeFuture<DeployedContract> {
   val env = mutableMapOf(
-    "L2MSGSERVICE_L1L2_MESSAGE_SETTER" to anchorOperatorAddresses,
+    "L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER" to anchorOperatorAddresses,
   )
   deploymentPrivateKey?.let { env["DEPLOYMENT_PRIVATE_KEY"] = it }
 

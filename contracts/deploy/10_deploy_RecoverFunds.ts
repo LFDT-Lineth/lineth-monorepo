@@ -6,7 +6,7 @@ const func: DeployFunction = async function () {
   const contractName = "RecoverFunds";
 
   // RecoverFunds DEPLOYED AS UPGRADEABLE PROXY
-  const RecoverFunds_securityCouncil = getRequiredEnvVar("RECOVERFUNDS_SECURITY_COUNCIL");
+  const RecoverFunds_securityCouncil = getRequiredEnvVar("L1_SECURITY_COUNCIL");
   const RecoverFunds_executorAddress = getRequiredEnvVar("RECOVERFUNDS_EXECUTOR_ADDRESS");
 
   const contract = await deployUpgradableFromFactory(

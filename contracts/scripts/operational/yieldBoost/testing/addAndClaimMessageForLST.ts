@@ -13,8 +13,8 @@ import { prepareAndAddMessageMerkleRoot } from "./addAndClaimMessageHelper";
   -------------------------------------------------------------------------------------------
   Example (Hoodi):
   -------------------------------------------------------------------------------------------
-  CUSTOM_PRIVATE_KEY=<key> \
-  CUSTOM_BLOCKCHAIN_URL=https://0xrpc.io/hoodi \
+  DEPLOYER_PRIVATE_KEY=<key> \
+  CUSTOM_RPC_URL=https://0xrpc.io/hoodi \
   npx hardhat addAndClaimMessageForLST \
     --linea-rollup-address <address> \
     --to <address> \

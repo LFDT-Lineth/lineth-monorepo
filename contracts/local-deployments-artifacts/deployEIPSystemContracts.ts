@@ -146,7 +146,7 @@ async function main() {
   }
 
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-  const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
+  const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
 
   const contractNames = ["EIP2935", "EIP4788"] as const;
 

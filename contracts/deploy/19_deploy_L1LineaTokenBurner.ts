@@ -5,7 +5,7 @@ import { getRequiredEnvVar, LogContractDeployment, tryVerifyContractWithConstruc
 const func: DeployFunction = async function () {
   const contractName = "L1LineaTokenBurner";
 
-  const messageService = getRequiredEnvVar("LINEA_TOKEN_BURNER_MESSAGE_SERVICE");
+  const messageService = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS");
   const lineaToken = getRequiredEnvVar("LINEA_TOKEN_BURNER_LINEA_TOKEN");
 
   const factory = await ethers.getContractFactory(contractName);

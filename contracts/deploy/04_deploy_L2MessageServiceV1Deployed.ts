@@ -21,10 +21,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const contractName = "L2MessageServiceLineaMainnet";
 
-  const L2MessageService_securityCouncil = getRequiredEnvVar("L2MSGSERVICE_SECURITY_COUNCIL");
-  const L2MessageService_l1l2MessageSetter = getRequiredEnvVar("L2MSGSERVICE_L1L2_MESSAGE_SETTER");
-  const L2MessageService_rateLimitPeriod = getRequiredEnvVar("L2MSGSERVICE_RATE_LIMIT_PERIOD");
-  const L2MessageService_rateLimitAmount = getRequiredEnvVar("L2MSGSERVICE_RATE_LIMIT_AMOUNT");
+  const L2MessageService_securityCouncil = getRequiredEnvVar("L2_SECURITY_COUNCIL");
+  const L2MessageService_l1l2MessageSetter = getRequiredEnvVar("L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER");
+  const L2MessageService_rateLimitPeriod = getRequiredEnvVar("L2_MESSAGE_SERVICE_RATE_LIMIT_PERIOD");
+  const L2MessageService_rateLimitAmount = getRequiredEnvVar("L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT");
 
   const [deployer] = await ethers.getSigners();
 

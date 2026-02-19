@@ -18,20 +18,23 @@ import {
 const func: DeployFunction = async function () {
   const contractName = "L2MessageService";
 
-  const l2MessageServiceSecurityCouncil = getRequiredEnvVar("L2MSGSERVICE_SECURITY_COUNCIL");
-  const l2MessageServiceL1L2MessageSetter = getRequiredEnvVar("L2MSGSERVICE_L1L2_MESSAGE_SETTER");
-  const l2MessageServiceRateLimitPeriod = getRequiredEnvVar("L2MSGSERVICE_RATE_LIMIT_PERIOD");
-  const l2MessageServiceRateLimitAmount = getRequiredEnvVar("L2MSGSERVICE_RATE_LIMIT_AMOUNT");
+  const l2MessageServiceSecurityCouncil = getRequiredEnvVar("L2_SECURITY_COUNCIL");
+  const l2MessageServiceL1L2MessageSetter = getRequiredEnvVar("L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER");
+  const l2MessageServiceRateLimitPeriod = getRequiredEnvVar("L2_MESSAGE_SERVICE_RATE_LIMIT_PERIOD");
+  const l2MessageServiceRateLimitAmount = getRequiredEnvVar("L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT");
 
-  const pauseTypeRoles = getEnvVarOrDefault("L2MSGSERVICE_PAUSE_TYPE_ROLES", L2_MESSAGE_SERVICE_PAUSE_TYPES_ROLES);
+  const pauseTypeRoles = getEnvVarOrDefault(
+    "L2_MESSAGE_SERVICE_PAUSE_TYPES_ROLES",
+    L2_MESSAGE_SERVICE_PAUSE_TYPES_ROLES,
+  );
   const unpauseTypeRoles = getEnvVarOrDefault(
-    "L2MSGSERVICE_UNPAUSE_TYPE_ROLES",
+    "L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES",
     L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES,
   );
   const defaultRoleAddresses = generateRoleAssignments(L2_MESSAGE_SERVICE_ROLES, l2MessageServiceSecurityCouncil, [
     { role: L1_L2_MESSAGE_SETTER_ROLE, addresses: [l2MessageServiceL1L2MessageSetter] },
   ]);
-  const roleAddresses = getEnvVarOrDefault("L2MSGSERVICE_ROLE_ADDRESSES", defaultRoleAddresses);
+  const roleAddresses = getEnvVarOrDefault("L2_MESSAGE_SERVICE_ROLE_ADDRESSES", defaultRoleAddresses);
 
   const contract = await deployUpgradableFromFactory(
     "L2MessageService",

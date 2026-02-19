@@ -47,7 +47,7 @@ export async function prepareAndAddMessageMerkleRoot(
   const toAddress = getTaskCliOrEnvValue(taskArgs, "to", "TO_ADDRESS");
   const valueRaw = getTaskCliOrEnvValue(taskArgs, "value", "VALUE");
   const data = getTaskCliOrEnvValue(taskArgs, "data", "DATA") || "0x";
-  const yieldProvider = getTaskCliOrEnvValue(taskArgs, "yieldProvider", "YIELD_PROVIDER");
+  const yieldProvider = getTaskCliOrEnvValue(taskArgs, "yieldProvider", "YIELD_PROVIDER_ADDRESS");
 
   // Validate required params
   const missing: string[] = [];
@@ -56,7 +56,7 @@ export async function prepareAndAddMessageMerkleRoot(
   if (!valueRaw) missing.push("value / VALUE");
   // Note: data has a default value of "0x" (empty calldata), so validation is not needed
   if (requireYieldProvider && !yieldProvider) {
-    missing.push("yieldProvider / YIELD_PROVIDER");
+    missing.push("yieldProvider / YIELD_PROVIDER_ADDRESS");
   }
   if (missing.length) {
     throw new Error(`Missing required params/envs: ${missing.join(", ")}`);

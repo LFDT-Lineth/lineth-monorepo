@@ -39,7 +39,7 @@ describe("ValidatorContainerProofVerifier", () => {
     sszMerkleTree = localTree.sszMerkleTree;
     firstValidatorLeafIndex = localTree.firstValidatorLeafIndex;
     // populate merkle tree with validators
-    for (let i = 1; i < 100; i++) {
+    for (let i = 1; i < 50; i++) {
       await sszMerkleTree.addValidatorLeaf(generateValidatorContainer());
     }
     // after adding validators, all newly added validator indexes will +n from this

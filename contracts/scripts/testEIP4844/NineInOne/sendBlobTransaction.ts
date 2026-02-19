@@ -148,7 +148,7 @@ function kzgCommitmentsToVersionedHashes(commitments: Uint8Array[]): string[] {
 
 async function main() {
   const rpcUrl = requireEnv("RPC_URL");
-  const privateKey = requireEnv("PRIVATE_KEY");
+  const privateKey = requireEnv("DEPLOYER_PRIVATE_KEY");
   const destinationAddress = requireEnv("DESTINATION_ADDRESS");
 
   const provider = new ethers.JsonRpcProvider(rpcUrl);
@@ -247,7 +247,7 @@ async function sendMessage() {
   console.log("sending the message");
 
   const rpcUrl = requireEnv("RPC_URL");
-  const privateKey = requireEnv("PRIVATE_KEY");
+  const privateKey = requireEnv("DEPLOYER_PRIVATE_KEY");
   const destinationAddress = requireEnv("DESTINATION_ADDRESS");
 
   const provider = new ethers.JsonRpcProvider(rpcUrl);
@@ -326,7 +326,7 @@ async function sendProof(
   console.log("proof");
 
   const rpcUrl = requireEnv("RPC_URL");
-  const privateKey = requireEnv("PRIVATE_KEY");
+  const privateKey = requireEnv("DEPLOYER_PRIVATE_KEY");
   const destinationAddress = requireEnv("DESTINATION_ADDRESS");
 
   const provider = new ethers.JsonRpcProvider(rpcUrl);

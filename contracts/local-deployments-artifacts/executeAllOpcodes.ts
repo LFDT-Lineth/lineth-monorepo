@@ -1,14 +1,14 @@
 /*
     *******************************************************************************************
     1. Set the RPC_URL 
-    2. Set the PRIVATE_KEY
+    2. Set the DEPLOYER_PRIVATE_KEY
     3. Set OPCODE_TEST_CONTRACT_ADDRESS
     4. Set NUMBER_OF_RUNS
     *******************************************************************************************
     *******************************************************************************************
     OPCODE_TEST_CONTRACT_ADDRESS=<address> \
     NUMBER_OF_RUNS=<number> \
-    PRIVATE_KEY=<key> \
+    DEPLOYER_PRIVATE_KEY=<key> \
     RPC_URL=<url> \
     npx ts-node local-deployments-artifacts/executeAllOpcodes.ts
     *******************************************************************************************
@@ -20,7 +20,7 @@ import { abi as opcodeTesterAbi } from "./static-artifacts/OpcodeTester.json";
 
 async function main() {
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-  const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
+  const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
 
   const opcodeTestContractAddress = getRequiredEnvVar("OPCODE_TEST_CONTRACT_ADDRESS");
   const numberOfRuns = getRequiredEnvVar("NUMBER_OF_RUNS");

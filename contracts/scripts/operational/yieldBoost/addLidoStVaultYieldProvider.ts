@@ -18,8 +18,8 @@ import { LIDO_DASHBOARD_OPERATIONAL_ROLES } from "../../../common/constants";
   -------------------------------------------------------------------------------------------
   Example (Hoodi):
   -------------------------------------------------------------------------------------------
-  CUSTOM_PRIVATE_KEY=0000000000000000000000000000000000000000000000000000000000000002 \
-  CUSTOM_BLOCKCHAIN_URL=https://0xrpc.io/hoodi \
+  DEPLOYER_PRIVATE_KEY=0000000000000000000000000000000000000000000000000000000000000002 \
+  CUSTOM_RPC_URL=https://0xrpc.io/hoodi \
   npx hardhat addLidoStVaultYieldProvider \
     --yield-manager <address> \
     --yield-provider <address> \
@@ -31,10 +31,10 @@ import { LIDO_DASHBOARD_OPERATIONAL_ROLES } from "../../../common/constants";
   -------------------------------------------------------------------------------------------
 
   Env var alternatives (used if CLI params omitted):
-    YIELD_MANAGER
-    YIELD_PROVIDER
+    YIELD_MANAGER_ADDRESS
+    YIELD_PROVIDER_ADDRESS
     NODE_OPERATOR
-    SECURITY_COUNCIL
+    L1_SECURITY_COUNCIL
     NODE_OPERATOR_FEE
     CONFIRM_EXPIRY
   *******************************************************************************************
@@ -51,10 +51,10 @@ task("addLidoStVaultYieldProvider", "Generates parameters for adding and configu
     const { get } = deployments;
 
     // --- Resolve inputs from CLI or ENV (with sensible fallbacks to deployments) ---
-    let yieldManager = getTaskCliOrEnvValue(taskArgs, "yieldManager", "YIELD_MANAGER");
-    const yieldProvider = getTaskCliOrEnvValue(taskArgs, "yieldProvider", "YIELD_PROVIDER");
+    let yieldManager = getTaskCliOrEnvValue(taskArgs, "yieldManager", "YIELD_MANAGER_ADDRESS");
+    const yieldProvider = getTaskCliOrEnvValue(taskArgs, "yieldProvider", "YIELD_PROVIDER_ADDRESS");
     const nodeOperator = getTaskCliOrEnvValue(taskArgs, "nodeOperator", "NODE_OPERATOR");
-    const securityCouncil = getTaskCliOrEnvValue(taskArgs, "securityCouncil", "SECURITY_COUNCIL");
+    const securityCouncil = getTaskCliOrEnvValue(taskArgs, "securityCouncil", "L1_SECURITY_COUNCIL");
     const nodeOperatorFeeRaw = getTaskCliOrEnvValue(taskArgs, "nodeOperatorFee", "NODE_OPERATOR_FEE");
     const confirmExpiryRaw = getTaskCliOrEnvValue(taskArgs, "confirmExpiry", "CONFIRM_EXPIRY");
 
@@ -65,9 +65,9 @@ task("addLidoStVaultYieldProvider", "Generates parameters for adding and configu
 
     // --- Basic required fields check (adjust as needed) ---
     const missing: string[] = [];
-    if (!yieldProvider) missing.push("yieldProvider / YIELD_PROVIDER");
+    if (!yieldProvider) missing.push("yieldProvider / YIELD_PROVIDER_ADDRESS");
     if (!nodeOperator) missing.push("nodeOperator / NODE_OPERATOR");
-    if (!securityCouncil) missing.push("securityCouncil / SECURITY_COUNCIL");
+    if (!securityCouncil) missing.push("securityCouncil / L1_SECURITY_COUNCIL");
     if (missing.length) {
       throw new Error(`Missing required params/envs: ${missing.join(", ")}`);
     }
