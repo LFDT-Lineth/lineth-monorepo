@@ -24,6 +24,7 @@ type inpFileNamesCases struct {
 func TestExecutionInFileRegexp(t *testing.T) {
 
 	var (
+		correctNoEtvNoStvM = "102-103-getZkProof.json"
 		correctM           = "102-103-etv0.2.3-stv1.2.3-getZkProof.json"
 		correctL           = "102-103-etv0.2.3-stv1.2.3-getZkProof.json.large"
 		correctWithFailM   = "102-103-etv0.2.3-stv1.2.3-getZkProof.json.failure.code_77"
@@ -38,8 +39,9 @@ func TestExecutionInFileRegexp(t *testing.T) {
 
 	// The responses in case of success
 	var (
-		respM = "responses/102-103-getZkProof.json"
-		respL = "responses/102-103-getZkProof.json"
+		respNoEtvNoStvM = "responses/102-103-getZkProof.json"
+		respM           = "responses/102-103-getZkProof.json"
+		respL           = "responses/102-103-getZkProof.json"
 		// #nosec G101 -- Not a credential
 		respWithFailM = "responses/102-103-getZkProof.json"
 		// #nosec G101 -- Not a credential
@@ -52,6 +54,7 @@ func TestExecutionInFileRegexp(t *testing.T) {
 
 	// The rename in case it is deferred to the large prover
 	var (
+		toLargeNoEtvNoStvM = "requests/102-103-getZkProof.json.large.failure.code_137"
 		toLargeM           = "requests/102-103-etv0.2.3-stv1.2.3-getZkProof.json.large.failure.code_137"
 		toLargeWithFailM   = "requests/102-103-etv0.2.3-stv1.2.3-getZkProof.json.large.failure.code_137"
 		toLargeWith2FailsM = "requests/102-103-etv0.2.3-stv1.2.3-getZkProof.json.large.failure.code_137"
@@ -61,6 +64,7 @@ func TestExecutionInFileRegexp(t *testing.T) {
 
 	// The rename in case it is a success
 	var (
+		successNoEtvNoStvM = "requests-done/102-103-getZkProof.json.success"
 		successM           = "requests-done/102-103-etv0.2.3-stv1.2.3-getZkProof.json.success"
 		successMWoStv      = "requests-done/102-103-etv0.2.3-getZkProof.json.success"
 		successtWoEtv      = "requests-done/102-103-stv1.2.3-getZkProof.json.success"
@@ -73,6 +77,7 @@ func TestExecutionInFileRegexp(t *testing.T) {
 
 	// The rename in case it is a panic (code = 2)
 	var (
+		failNoEtvNoStvM = "requests-done/102-103-getZkProof.json.failure.code_2"
 		failM           = "requests-done/102-103-etv0.2.3-stv1.2.3-getZkProof.json.failure.code_2"
 		failMWoStv      = "requests-done/102-103-etv0.2.3-getZkProof.json.failure.code_2"
 		failtWoEtv      = "requests-done/102-103-stv1.2.3-getZkProof.json.failure.code_2"
@@ -86,12 +91,12 @@ func TestExecutionInFileRegexp(t *testing.T) {
 	testcase := []inpFileNamesCases{
 		{
 			Ext: "", Fail: "code", ShouldMatch: true,
-			Fnames:         []string{correctM, correctWithFailM, correctWith2FailsM, missingEtv, missingStv},
+			Fnames:         []string{correctNoEtvNoStvM, correctM, correctWithFailM, correctWith2FailsM, missingEtv, missingStv},
 			Explainer:      "happy path, case M",
-			ExpectedOutput: []string{respM, respWithFailM, respWith2FailsM, respM, respM},
-			ExpToLarge:     []string{toLargeM, toLargeWithFailM, toLargeWith2FailsM, toLargeWoEtv, toLargeWoStv},
-			ExpSuccess:     []string{successM, successWithFailM, successWith2FailsM, successtWoEtv, successMWoStv},
-			ExpFailW2:      []string{failM, failWithFailM, failWith2FailsM, failtWoEtv, failMWoStv},
+			ExpectedOutput: []string{respNoEtvNoStvM, respM, respWithFailM, respWith2FailsM, respM, respM},
+			ExpToLarge:     []string{toLargeNoEtvNoStvM, toLargeM, toLargeWithFailM, toLargeWith2FailsM, toLargeWoEtv, toLargeWoStv},
+			ExpSuccess:     []string{successNoEtvNoStvM, successM, successWithFailM, successWith2FailsM, successtWoEtv, successMWoStv},
+			ExpFailW2:      []string{failNoEtvNoStvM, failM, failWithFailM, failWith2FailsM, failtWoEtv, failMWoStv},
 		},
 		{
 			Ext: "large", Fail: "code", ShouldMatch: true,
