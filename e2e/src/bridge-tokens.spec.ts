@@ -2,7 +2,13 @@ import { etherToWei, serialize } from "@consensys/linea-shared-utils";
 import { describe, expect, it } from "@jest/globals";
 import { encodeFunctionData, parseEther, toHex } from "viem";
 
-import { waitForEvents, getMessageSentEventFromLogs, estimateLineaGas, sendTransactionWithRetry } from "./common/utils";
+import {
+  waitForEvents,
+  getMessageSentEventFromLogs,
+  estimateLineaGas,
+  sendTransactionWithRetry,
+  normalizeEip1559Fees,
+} from "./common/utils";
 import { L2RpcEndpoint } from "./config/clients/l2-client";
 import { createTestContext } from "./config/setup";
 import { L2MessageServiceV1Abi, LineaRollupV6Abi, TestERC20Abi, TokenBridgeV1_1Abi } from "./generated";
@@ -32,7 +38,8 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
 
     logger.debug("Minting and approving tokens to L1 TokenBridge");
 
-    const estimatedGasFees = await l1PublicClient.estimateFeesPerGas();
+    const { maxPriorityFeePerGas, maxFeePerGas } = await l1PublicClient.estimateFeesPerGas();
+    const normalizedFees = normalizeEip1559Fees(maxPriorityFeePerGas, maxFeePerGas);
 
     await Promise.all([
       sendTransactionWithRetry(
@@ -41,7 +48,7 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
           l1Token.write.mint([l1Account.address, bridgeAmount], {
             account: l1Account,
             nonce,
-            ...estimatedGasFees,
+            ...normalizedFees,
             ...fees,
           }),
         { receiptTimeoutMs: 60_000 },
@@ -52,7 +59,7 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
           l1Token.write.approve([l1TokenBridge.address, bridgeAmount], {
             account: l1Account,
             nonce: nonce + 1,
-            ...estimatedGasFees,
+            ...normalizedFees,
             ...fees,
           }),
         { receiptTimeoutMs: 60_000 },
@@ -69,7 +76,9 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
 
     const bridgeNonce = await l1PublicClient.getTransactionCount({ address: l1Account.address, blockTag: "pending" });
 
-    const bridgeTokenEstimatedGasFees = await l1PublicClient.estimateFeesPerGas();
+    const { maxPriorityFeePerGas: maxPriorityFeeBridgeToken, maxFeePerGas: maxFeeBridgeToken } =
+      await l1PublicClient.estimateFeesPerGas();
+    const normalizedBridgeFees = normalizeEip1559Fees(maxPriorityFeeBridgeToken, maxFeeBridgeToken);
 
     const { receipt: bridgedTxReceipt } = await sendTransactionWithRetry(
       l1PublicClient,
@@ -78,7 +87,7 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
           account: l1Account,
           value: etherToWei("0.01"),
           nonce: bridgeNonce,
-          ...bridgeTokenEstimatedGasFees,
+          ...normalizedBridgeFees,
           ...fees,
         }),
       {

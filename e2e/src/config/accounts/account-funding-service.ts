@@ -1,16 +1,13 @@
 import { Mutex } from "async-mutex";
-import { Address, Client, parseGwei, PrivateKeyAccount } from "viem";
+import { Address, Client, PrivateKeyAccount } from "viem";
 import { estimateFeesPerGas, getTransactionCount, sendTransaction } from "viem/actions";
 
-import { estimateLineaGas } from "../../common/utils";
+import { estimateLineaGas, normalizeEip1559Fees, type Eip1559Fees } from "../../common/utils";
 import { sendTransactionWithRetry, type TransactionResult } from "../../common/utils/retry";
 
 import type { Logger } from "winston";
 
-type FeeData = {
-  maxPriorityFeePerGas: bigint;
-  maxFeePerGas: bigint;
-};
+type FeeData = Eip1559Fees;
 
 const DEFAULT_RECEIPT_TIMEOUT_MS = 30_000;
 
@@ -121,9 +118,6 @@ export class AccountFundingService {
     }
 
     const feeData = await estimateFeesPerGas(this.client);
-    return {
-      maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? parseGwei("1"),
-      maxFeePerGas: feeData.maxFeePerGas ?? parseGwei("10"),
-    };
+    return normalizeEip1559Fees(feeData.maxPriorityFeePerGas, feeData.maxFeePerGas);
   }
 }

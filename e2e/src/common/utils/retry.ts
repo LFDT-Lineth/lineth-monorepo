@@ -11,6 +11,8 @@ import { createTestLogger } from "../../config/logger";
 
 const DEFAULT_RECEIPT_TIMEOUT_MS = 30_000;
 const DEFAULT_FEE_BUMP_FACTOR = 115n;
+const DEFAULT_FEE_BUMP_STEP = 20n;
+const MAX_FEE_MULTIPLIER = 10n;
 const DEFAULT_MAX_RETRIES = 20;
 const DEFAULT_OVERALL_TIMEOUT_MS = 3 * 60_000;
 
@@ -67,6 +69,26 @@ function bumpFeesFromTx(
   };
 }
 
+function capBumpedFees(fees: FeeOverrides, baseFees: FeeOverrides): FeeOverrides {
+  if (
+    fees.maxFeePerGas === undefined ||
+    fees.maxPriorityFeePerGas === undefined ||
+    baseFees.maxFeePerGas === undefined ||
+    baseFees.maxPriorityFeePerGas === undefined
+  ) {
+    throw new Error("sendTransactionWithRetry: non EIP-1559 transaction");
+  }
+
+  const maxAllowedFeePerGas = baseFees.maxFeePerGas * MAX_FEE_MULTIPLIER;
+  const maxAllowedPriorityFeePerGas = baseFees.maxPriorityFeePerGas * MAX_FEE_MULTIPLIER;
+
+  return {
+    maxFeePerGas: fees.maxFeePerGas > maxAllowedFeePerGas ? maxAllowedFeePerGas : fees.maxFeePerGas,
+    maxPriorityFeePerGas:
+      fees.maxPriorityFeePerGas > maxAllowedPriorityFeePerGas ? maxAllowedPriorityFeePerGas : fees.maxPriorityFeePerGas,
+  };
+}
+
 function assertReceiptSuccess(hash: Hash, receipt: TransactionReceipt, rejectOnRevert: boolean): void {
   if (rejectOnRevert && receipt.status === "reverted") {
     throw new Error(`Transaction reverted: hash=${hash} blockNumber=${receipt.blockNumber}`);
@@ -92,6 +114,7 @@ export async function sendTransactionWithRetry(
 
   const { maxPriorityFeePerGas, maxFeePerGas } = await getTransaction(client, { hash: lastHash });
   let fees = { maxPriorityFeePerGas, maxFeePerGas };
+  const baseFees = fees;
   let attempt = 0;
 
   logger.debug(
@@ -153,15 +176,27 @@ export async function sendTransactionWithRetry(
     }
 
     /* ---------- bump from actual tx ---------- */
-    const nextFees = bumpFeesFromTx(fees, feeBumpFactor);
+    const bumpFactor = feeBumpFactor + BigInt(attempt) * DEFAULT_FEE_BUMP_STEP;
+    const nextFees = bumpFeesFromTx(fees, bumpFactor);
+    const cappedFees = capBumpedFees(nextFees, baseFees);
+    const wasCapped =
+      cappedFees.maxFeePerGas !== nextFees.maxFeePerGas ||
+      cappedFees.maxPriorityFeePerGas !== nextFees.maxPriorityFeePerGas;
 
     logger.debug(
-      `bumping fees hash=${lastHash} attempt=${attempt + 1} ` +
-        `prevMaxFeePerGas=${fees.maxFeePerGas} nextMaxFeePerGas=${nextFees.maxFeePerGas} ` +
-        `prevMaxPriorityFeePerGas=${fees.maxPriorityFeePerGas} nextMaxPriorityFeePerGas=${nextFees.maxPriorityFeePerGas}`,
+      `bumping fees hash=${lastHash} attempt=${attempt + 1} bumpFactor=${bumpFactor} ` +
+        `prevMaxFeePerGas=${fees.maxFeePerGas} nextMaxFeePerGas=${cappedFees.maxFeePerGas} ` +
+        `prevMaxPriorityFeePerGas=${fees.maxPriorityFeePerGas} nextMaxPriorityFeePerGas=${cappedFees.maxPriorityFeePerGas}`,
     );
 
-    fees = nextFees;
+    if (wasCapped) {
+      logger.debug(
+        `fee cap reached hash=${lastHash} maxFeePerGasCap=${baseFees.maxFeePerGas! * MAX_FEE_MULTIPLIER} ` +
+          `maxPriorityFeePerGasCap=${baseFees.maxPriorityFeePerGas! * MAX_FEE_MULTIPLIER}`,
+      );
+    }
+
+    fees = cappedFees;
     attempt++;
 
     try {

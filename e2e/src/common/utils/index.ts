@@ -14,6 +14,8 @@ export { pollForBlockNumber, getBlockByNumberOrBlockTag } from "./block";
 
 // Gas
 export { estimateLineaGas } from "./gas";
+export { normalizeEip1559Fees } from "./fees";
+export type { Eip1559Fees } from "./fees";
 
 // Traffic
 export { sendTransactionsToGenerateTrafficWithInterval } from "./traffic";

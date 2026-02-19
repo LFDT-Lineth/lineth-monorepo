@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-1. Install dependencies from this directory (the `postinstall` script generates ABI typings from contract artifacts):
+1. Install dependencies from the **repo root**:
 
 ```bash
 pnpm install
@@ -26,35 +26,52 @@ For **fleet** tests, use the fleet-specific target instead:
 make start-env-with-tracing-v2-fleet-ci
 ```
 
-4. For remote environments (dev / sepolia), copy `.env.template` to `.env` and fill in the required RPC keys and private keys.
+4. For remote environments (devnet / sepolia), copy `.env.template` to `.env` and fill in the required values.
+
+### Environment variables
+
+`e2e/.env.template`:
+
+```bash
+# Optional: override default genesis file paths (local only)
+# LOCAL_L1_GENESIS=
+# LOCAL_L2_GENESIS=
+
+# Optional: log level (defaults to "info")
+# LOG_LEVEL=
+```
+
+Variable meanings:
+
+- `LOCAL_L1_GENESIS`: optional absolute/relative path override for local L1 genesis file.
+- `LOCAL_L2_GENESIS`: optional absolute/relative path override for local L2 genesis file.
+- `LOG_LEVEL`: optional logger level (for example `debug`, `info`, `warn`, `error`).
 
 ## Run tests
 
 ### Local
 
-| Command                                            | Description                                                         |
-|----------------------------------------------------|---------------------------------------------------------------------|
-| `pnpm run test:local`                          | Full suite (excludes fleet and liveness, then runs liveness)    |
-| `pnpm run test:local:run "<file.spec.ts>"`     | Run one test suite                                               |
-| `pnpm run test:local:run "<file.spec.ts>" -t "<test name>"` | Run one test                                              |
-| `pnpm run test:fleet:local`                    | Fleet leader/follower consistency tests                         |
-| `pnpm run test:liveness:local`                 | Sequencer liveness tests                                        |
-| `pnpm run test:sendbundle:local`               | sendBundle RPC tests                                            |
+Run these commands from the monorepo root.
 
-Example:
+| Command                                                       | Description                                                      |
+|---------------------------------------------------------------|------------------------------------------------------------------|
+| `pnpm run -F e2e test:local`                                 | All tests (excludes fleet and liveness, then runs liveness)     |
+| `pnpm run -F e2e test:local:run "<file.spec.ts>"`            | Run one test suite                                               |
+| `pnpm run -F e2e test:local:run "<file.spec.ts>" -t "<test name>"` | Run one test                                              |
+| `pnpm run -F e2e test:fleet:local`                           | Fleet leader/follower consistency tests                          |
+| `pnpm run -F e2e test:liveness:local`                        | Sequencer liveness tests                                         |
+| `pnpm run -F e2e test:sendbundle:local`                      | sendBundle RPC tests                                             |
+
+If you are already inside `e2e/`, remove `-F e2e` and run the same scripts directly with `pnpm run`.
+
+Examples:
 
 ```bash
 # Run one test suite (all tests in opcodes.spec.ts)
-pnpm run test:local:run "opcodes.spec.ts"
+pnpm run -F e2e test:local:run "opcodes.spec.ts"
 
 # Run one test
-pnpm run test:local:run "opcodes.spec.ts" -t "Should be able to execute all opcodes"
+pnpm run -F e2e test:local:run "opcodes.spec.ts" -t "Should be able to execute all opcodes"
 ```
 
-### Remote
-
-| Command                        | Description                                                                       |
-|--------------------------------|-----------------------------------------------------------------------------------|
-| `pnpm run test:dev`       | Uses DEV env, may need to update config in `src/config/schema/dev.ts`              |
-| `pnpm run test:sepolia`   | Uses Sepolia env, may need to update config in `src/config/schema/sepolia.ts`      |
 
