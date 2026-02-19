@@ -109,7 +109,7 @@ public class Conversions {
   public static long bytesToLong(final Bytes input) {
     final Bytes trimmedBytes = input.trimLeadingZeros();
     checkArgument(trimmedBytes.size() <= 8, "Input bytes must be at most 8 bytes long");
-    return trimmedBytes.toLong();
+    return trimmedBytes.toUnsignedBigInteger().longValueExact();
   }
 
   public static short bytesToShort(final Bytes input) {
@@ -131,10 +131,6 @@ public class Conversions {
       sb.append(String.format("%02X ", b));
     }
     return sb.toString().trim();
-  }
-
-  public static int bytesToInt(Bytes bytes) {
-    return bytes.trimLeadingZeros().toInt();
   }
 
   /**
