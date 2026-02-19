@@ -9,8 +9,8 @@ import {
   DummyContractAbiBytecode,
   LineaSequencerUptimeFeedAbi,
   LineaSequencerUptimeFeedAbiBytecode,
-  MimcAbi,
-  MimcAbiBytecode,
+  Poseidon2Abi,
+  Poseidon2AbiBytecode,
   SparseMerkleProofAbi,
   SparseMerkleProofAbiBytecode,
   SparseMerkleProofAbiLinkReferences,
@@ -61,7 +61,7 @@ async function configureOnceOffPrerequisities(context: TestContext, logger: { in
   const [
     { maxPriorityFeePerGas, maxFeePerGas },
     { maxPriorityFeePerGas: maxPriorityFeePerGasTestContract, maxFeePerGas: maxFeePerGasTestContract },
-    { maxPriorityFeePerGas: maxPriorityFeePerGasMimc, maxFeePerGas: maxFeePerGasMimc },
+    { maxPriorityFeePerGas: maxPriorityFeePerGasPoseidon2, maxFeePerGas: maxFeePerGasPoseidon2 },
     {
       maxPriorityFeePerGas: maxPriorityFeePerGasLineaSequencerUptimeFeed,
       maxFeePerGas: maxFeePerGasLineaSequencerUptimeFeed,
@@ -86,8 +86,8 @@ async function configureOnceOffPrerequisities(context: TestContext, logger: { in
     estimateLineaGas(l2BesuNodePublicClient, {
       account: l2Account.address,
       data: encodeDeployData({
-        abi: MimcAbi,
-        bytecode: MimcAbiBytecode,
+        abi: Poseidon2Abi,
+        bytecode: Poseidon2AbiBytecode,
       }),
       value: 0n,
     }),
@@ -106,7 +106,7 @@ async function configureOnceOffPrerequisities(context: TestContext, logger: { in
     dummyContractAddress,
     l2DummyContractAddress,
     l2TestContractAddress,
-    l2MimcContractAddress,
+    l2Poseidon2ContractAddress,
     l2LineaSequencerUptimeFeedContractAddress,
   ] = await Promise.all([
     deployContract(l1WalletClient, {
@@ -137,11 +137,11 @@ async function configureOnceOffPrerequisities(context: TestContext, logger: { in
     deployContract(l2SequencerWalletClient!, {
       account: l2Account,
       chain: l2SequencerWalletClient!.chain,
-      abi: MimcAbi,
-      bytecode: MimcAbiBytecode,
+      abi: Poseidon2Abi,
+      bytecode: Poseidon2AbiBytecode,
       nonce: l2AccountNonce! + 2,
-      maxPriorityFeePerGas: maxPriorityFeePerGasMimc,
-      maxFeePerGas: maxFeePerGasMimc,
+      maxPriorityFeePerGas: maxPriorityFeePerGasPoseidon2,
+      maxFeePerGas: maxFeePerGasPoseidon2,
     }),
     deployContract(l2SequencerWalletClient!, {
       account: l2Account,
@@ -173,7 +173,7 @@ async function configureOnceOffPrerequisities(context: TestContext, logger: { in
       data: encodeDeployData({
         abi: SparseMerkleProofAbi,
         bytecode: linkBytecode(SparseMerkleProofAbiBytecode, SparseMerkleProofAbiLinkReferences, {
-          Mimc: l2MimcContractAddress!,
+          Poseidon2: l2Poseidon2ContractAddress,
         }),
       }),
       value: 0n,
@@ -184,7 +184,7 @@ async function configureOnceOffPrerequisities(context: TestContext, logger: { in
     chain: l2SequencerWalletClient!.chain,
     abi: SparseMerkleProofAbi,
     bytecode: linkBytecode(SparseMerkleProofAbiBytecode, SparseMerkleProofAbiLinkReferences, {
-      Mimc: l2MimcContractAddress!,
+      Poseidon2: l2Poseidon2ContractAddress,
     }),
     nonce: l2AccountNonce! + 4,
     maxPriorityFeePerGas: maxPriorityFeePerGasSparseMerkleProof,
@@ -194,7 +194,7 @@ async function configureOnceOffPrerequisities(context: TestContext, logger: { in
   logger.info(`L1 Dummy contract deployed. address=${dummyContractAddress}`);
   logger.info(`L2 Dummy contract deployed. address=${l2DummyContractAddress}`);
   logger.info(`L2 Test contract deployed. address=${l2TestContractAddress}`);
-  logger.info(`L2 Mimc contract deployed. address=${l2MimcContractAddress}`);
+  logger.info(`L2 Poseidon2 contract deployed. address=${l2Poseidon2ContractAddress}`);
   logger.info(`L2 LineaSequencerUptimeFeed contract deployed. address=${l2LineaSequencerUptimeFeedContractAddress}`);
   logger.info(`L2 SparseMerkleProof contract deployed. address=${l2SparseMerkleProofContractAddress}`);
   logger.info(`LineaRollup funded with ${formatEther(lineaRollupBalance)} ETH on L1`);

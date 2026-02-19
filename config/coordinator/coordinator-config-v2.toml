@@ -4,12 +4,12 @@ l2-endpoint = "http://sequencer:8545"
 
 [protocol]
 [protocol.genesis]
-genesis-state-root-hash = "0x0bfa819643b4edd205c0dfcc31b7ddf75c7cecd49dbd674309bd8d7dda7312f5"
-# shnarf for contract V5
+genesis-state-root-hash = "0x01d9afcd495c870f3ae9d8362cd0257a7de2057055058183596719285cae6101"
+# shnarf for contract V6
 # Keccak256(parentShnarf="0x00...00", snarkHash="0x00...00",
-#   parentStateRootHash="0x0bfa819643b4edd205c0dfcc31b7ddf75c7cecd49dbd674309bd8d7dda7312f5",
+#   parentStateRootHash="0x01d9afcd495c870f3ae9d8362cd0257a7de2057055058183596719285cae6101",
 #   evaludationClaim="0x00...00", evaludationPoint="0x00...00")
-genesis-shnarf = "0xa59f7a85db6e25ba6b51667e3aa9405cba89dd89d991fcfb23663b7fba03ba25"
+genesis-shnarf = "0xc286ff42414401ccdc23ea8e738775378e8f6c6f7b2966eb2747798d45571b79"
 [protocol.l1]
 contract-address = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
 block-time = "PT1S"
@@ -37,9 +37,8 @@ consistent-number-of-blocks-on-l1-to-wait = 1
 backoff-delay = "PT1S"
 failures-warning-threshold = 3
 
-
 [conflation.blob-compression]
-blob-compressor-version="V2"
+blob-compressor-version="V3"
 blob-size-limit = 102400 # 100KB
 handler-polling-interval = "PT1S"
 # default batches-limit is proof-aggregation.proofs-limit - 1
@@ -96,7 +95,7 @@ backoff-delay = "PT1S"
 failures-warning-threshold = 10
 
 [state-manager]
-version = "2.3.0"
+version = "3.0.0"
 endpoints = ["http://shomei:8888/"]
 request-limit-per-endpoint = 3
 [state-manager.request-retries]
@@ -248,6 +247,9 @@ key-store-path = "/tls-files/coordinator-client-keystore.p12"
 key-store-password = "changeit"
 trust-store-path = "/tls-files/web3signer-truststore.p12"
 trust-store-password = "changeit"
+
+[forced-transactions]
+disabled = true
 
 [l2-network-gas-pricing] # old [dynamic-gas-price-service]
 disabled = false

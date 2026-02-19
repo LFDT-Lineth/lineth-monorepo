@@ -39,7 +39,7 @@ services:
   sequencer:
     hostname: sequencer
     container_name: sequencer
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.4-rc7.4-20260210173356-7d711e6}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v5.0-rc2-20260219034704-7602d8c}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       l2-genesis-initialization:
@@ -114,7 +114,7 @@ services:
   l2-node-besu:
     hostname: l2-node-besu
     container_name: l2-node-besu
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.4-rc7.4-20260210173356-7d711e6}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v5.0-rc2-20260219034704-7602d8c}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -155,7 +155,7 @@ services:
   l2-node-besu-follower:
     hostname: l2-node-besu-follower
     container_name: l2-node-besu-follower
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.4-rc7.4-20260210173356-7d711e6}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v5.0-rc2-20260219034704-7602d8c}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -196,7 +196,7 @@ services:
   traces-node:
     hostname: traces-node
     container_name: traces-node
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.4-rc7.4-20260210173356-7d711e6}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v5.0-rc2-20260219034704-7602d8c}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -233,7 +233,7 @@ services:
   prover-v3: # prover compatible with the traces from zkbesu
     container_name: prover-v3
     hostname: prover-v3
-    image: consensys/linea-prover:${PROVER_TAG:-b2768fa}
+    image: consensys/linea-prover:${PROVER_TAG:-2fc4392}
     platform: linux/amd64
     # to avoid spinning up on CI for now
     profiles: [ "l2" ]
@@ -274,7 +274,7 @@ services:
   coordinator:
     hostname: coordinator
     container_name: coordinator
-    image: consensys/linea-coordinator:${COORDINATOR_TAG:-a23ccb1}
+    image: consensys/linea-coordinator:${COORDINATOR_TAG:-0862246}
     profiles: [ "l2", "debug" ]
     depends_on:
       l2-genesis-initialization:
@@ -381,7 +381,7 @@ services:
       - l1network
 
   zkbesu-shomei:
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.4-rc7.4-20260210173356-7d711e6}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v5.0-rc2-20260219034704-7602d8c}
     hostname: zkbesu-shomei
     container_name: zkbesu-shomei
     profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
@@ -427,7 +427,7 @@ services:
       - ./config/l2-genesis-initialization:/initialization/:ro
 
   shomei:
-    image: consensys/linea-shomei:2.3.0
+    image: consensys/linea-shomei:3.0.0
     hostname: shomei
     container_name: shomei
     profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
@@ -462,7 +462,7 @@ services:
   #      - ../tmp/local/shomei:/data/shomei/:z
 
   shomei-frontend:
-    image: consensys/linea-shomei:2.3.0
+    image: consensys/linea-shomei:3.0.0
     hostname: shomei-frontend
     container_name: shomei-frontend
     profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
@@ -599,7 +599,7 @@ services:
         ipv4_address: 10.10.10.205
 
   zkbesu-shomei-sr:
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.4-rc7.4-20260210173356-7d711e6}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v5.0-rc2-20260219034704-7602d8c}
     hostname: zkbesu-shomei-sr
     container_name: zkbesu-shomei-sr
     profiles: [ "staterecovery", "external-to-monorepo" ]
@@ -655,7 +655,7 @@ services:
       - ../besu-plugins/state-recovery/besu-plugin/build/libs/linea-staterecovery-besu-plugin-SNAPSHOT.jar:/opt/besu/plugins/linea-staterecovery-besu-plugin-SNAPSHOT.jar
 
   shomei-sr:
-    image: consensys/linea-shomei:2.3.0
+    image: consensys/linea-shomei:3.0.0
     hostname: shomei-sr
     container_name: shomei-sr
     profiles: [ "staterecovery", "external-to-monorepo" ]

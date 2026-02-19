@@ -21,7 +21,7 @@ const INCLUDE_FILES: string[] = [
   "SparseMerkleProof",
   "LineaSequencerUptimeFeed",
   "OpcodeTester",
-  "Mimc",
+  "Poseidon2",
 ];
 
 async function main() {
