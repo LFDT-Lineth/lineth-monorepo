@@ -166,6 +166,7 @@ tasks.test.configure {
   //
   useJUnitPlatform {
     excludeTags("nightly | replay | weekly")
+    excludeTags("nightly-modexp")
     excludeTags("prc-calltests")
   }
   finalizedBy(jacocoTestReport)
@@ -187,15 +188,24 @@ tasks.register("nightlyReplayTests", Test) {
   useJUnitPlatform {
     includeTags("nightly & replay")
   }
+  systemProperty("junit.jupiter.execution.timeout.default", "60 m")
 }
 
 tasks.register("nightlyTests", Test) {
   useJUnitPlatform {
     includeTags("nightly")
+    excludeTags("nightly-modexp")
     excludeTags("replay")
   }
   finalizedBy("jacocoNightlyTestsReport")
   systemProperty("junit.jupiter.execution.timeout.default", "20 m")
+}
+
+tasks.register("nightlyModexpTests", Test) {
+  useJUnitPlatform {
+    includeTags("nightly-modexp")
+  }
+  systemProperty("junit.jupiter.execution.timeout.default", "60 m")
 }
 
 tasks.register("weeklyTests", Test) {
@@ -233,6 +243,7 @@ tasks.register("besuNodeTests", Test) {
   //
   useJUnitPlatform {
     excludeTags("nightly")
+    excludeTags("nightly-modexp")
     excludeTags("replay")
     excludeTags("weekly")
     excludeTags("prc-calltests")

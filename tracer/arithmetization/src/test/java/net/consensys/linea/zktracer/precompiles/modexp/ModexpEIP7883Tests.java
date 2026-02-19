@@ -91,7 +91,7 @@ public class ModexpEIP7883Tests extends TracerTestBase {
     modexpEIP7883TestBody(bbs, ebs, mbs, cds, exponentLeadingWord, testInfo);
   }
 
-  @Tag("nightly")
+  @Tag("nightly-modexp")
   @ParameterizedTest
   @MethodSource("modexpEIP7883TestSourceNightly")
   void modexpEIP7883TestNightly(
