@@ -46,7 +46,6 @@
 .gocache
 .vscode
 .idea
-.claude/
 .ipynb_checkpoints
 # Ignore .cursor config but commit shared team rules (BUGBOT.md, rules/).
 .cursor/*
@@ -159,3 +158,5 @@ __pycache__/
 !/sdk/src/lib/compressor/bin
 # Allow BLS glue testdata generators
 !prover/zkevm/prover/bls/testdata/*.go
+
+.claude/settings.local.json
