@@ -90,26 +90,21 @@ internal class ExecutionProofRequestDtoMapper(
  * Implementation of interface with the Execution Prover through Files.
  *
  * Prover will ingest file like
- * path/to/prover/requests/<startBlockNumber>-<endBlockNumber>--etv<tracesVersion>-stv<stateManagerVersion>-getZkProof.json
+ * path/to/prover/requests/<startBlockNumber>-<endBlockNumber>--getZkProof.json
  *
  * When done prover will output file
- * path/to/prover/responses/<startBlockNumber>-<endBlockNumber>--etv<tracesVersion>-stv<stateManagerVersion>-getZkProof.json
+ * path/to/prover/responses/<startBlockNumber>-<endBlockNumber>-getZkProof.json
  *
  * So, this class will need to watch the file system and wait for the output proof to be generated
  */
 class FileBasedExecutionProverClientV2(
   config: FileBasedProverConfig,
-  private val tracesVersion: String,
-  private val stateManagerVersion: String,
   vertx: Vertx,
   jsonObjectMapper: ObjectMapper = JsonSerialization.proofResponseMapperV1,
   executionProofRequestFileNameProvider: ProverFileNameProvider<ExecutionProofIndex> =
-    ExecutionProofRequestFileNameProvider(
-      tracesVersion = tracesVersion,
-      stateManagerVersion = stateManagerVersion,
-    ),
+    ExecutionProofFileNameProvider,
   executionProofResponseFileNameProvider: ProverFileNameProvider<ExecutionProofIndex> =
-    ExecutionProofResponseFileNameProvider,
+    ExecutionProofFileNameProvider,
   log: Logger,
 ) :
   GenericFileBasedProverClient<

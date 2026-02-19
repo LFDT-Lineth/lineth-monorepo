@@ -42,11 +42,7 @@ class ProverClientFactory(
     )
   }
 
-  fun executionProverClient(
-    tracesVersion: String,
-    stateManagerVersion: String,
-    log: Logger = FileBasedExecutionProverClientV2.LOG,
-  ): ExecutionProverClientV2 {
+  fun executionProverClient(log: Logger = FileBasedExecutionProverClientV2.LOG): ExecutionProverClientV2 {
     return createClient(
       proverAConfig = config.proverA.execution,
       proverBConfig = config.proverB?.execution,
@@ -55,8 +51,6 @@ class ProverClientFactory(
       FileBasedExecutionProverClientV2(
         config = proverConfig,
         vertx = vertx,
-        tracesVersion = tracesVersion,
-        stateManagerVersion = stateManagerVersion,
         log = log,
       ).also { executionWaitingResponsesMetric.addReporter(it) }
     }

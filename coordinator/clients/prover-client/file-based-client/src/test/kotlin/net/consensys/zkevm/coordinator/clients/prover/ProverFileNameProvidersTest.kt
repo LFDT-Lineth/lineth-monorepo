@@ -10,27 +10,10 @@ import org.junit.jupiter.api.Test
 class ProverFileNameProvidersTest {
 
   @Test
-  fun test_getExecutionProof_requestFileName() {
-    val executionProofRequestFileNameProvider = ExecutionProofRequestFileNameProvider(
-      tracesVersion = "0.1",
-      stateManagerVersion = "0.2",
-    )
-    Assertions.assertEquals(
-      "11-17-etv0.1-stv0.2-getZkProof.json",
-      executionProofRequestFileNameProvider.getFileName(
-        ExecutionProofIndex(
-          startBlockNumber = 11u,
-          endBlockNumber = 17u,
-        ),
-      ),
-    )
-  }
-
-  @Test
-  fun test_getExecutionProof_responseFileName() {
+  fun test_getExecutionProof_fileName() {
     Assertions.assertEquals(
       "11-17-getZkProof.json",
-      ExecutionProofResponseFileNameProvider.getFileName(
+      ExecutionProofFileNameProvider.getFileName(
         ExecutionProofIndex(
           startBlockNumber = 11u,
           endBlockNumber = 17u,

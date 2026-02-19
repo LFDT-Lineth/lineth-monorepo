@@ -97,7 +97,7 @@ class FileBasedProofAggregationClientV2(
   config: FileBasedProverConfig,
   hashFunction: HashFunction = Sha256HashFunction(),
   executionProofResponseFileNameProvider: ProverFileNameProvider<ExecutionProofIndex> =
-    ExecutionProofResponseFileNameProvider,
+    ExecutionProofFileNameProvider,
   compressionProofResponseFileNameProvider: ProverFileNameProvider<CompressionProofIndex> =
     CompressionProofResponseFileNameProvider,
   jsonObjectMapper: ObjectMapper = JsonSerialization.proofResponseMapperV1,
@@ -137,7 +137,7 @@ class FileBasedProofAggregationClientV2(
     fun createProofIndexProviderFn(
       hashFunction: HashFunction,
       executionProofResponseFileNameProvider: ProverFileNameProvider<ExecutionProofIndex> =
-        ExecutionProofResponseFileNameProvider,
+        ExecutionProofFileNameProvider,
       compressionProofResponseFileNameProvider: ProverFileNameProvider<CompressionProofIndex> =
         CompressionProofResponseFileNameProvider,
     ): (ProofsToAggregate) -> AggregationProofIndex {

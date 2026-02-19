@@ -227,12 +227,7 @@ class ConflationBacktestingApp(
   )
 
   val proofGeneratingConflationHandlerImpl = run {
-    val executionProverClient: ExecutionProverClientV2 = proverClientFactory.executionProverClient(
-      // we cannot use configs.traces.expectedTracesApiVersion because it breaks prover expected version pattern
-      tracesVersion = "2.1.0",
-      stateManagerVersion = backtestingCoordinatorConfig.stateManager.version,
-      log = log,
-    )
+    val executionProverClient: ExecutionProverClientV2 = proverClientFactory.executionProverClient(log = log)
 
     ProofGeneratingConflationHandlerImpl(
       tracesProductionCoordinator = TracesConflationCoordinatorImpl(

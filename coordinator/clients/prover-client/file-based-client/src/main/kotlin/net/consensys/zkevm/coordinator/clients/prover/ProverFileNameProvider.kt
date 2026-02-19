@@ -18,17 +18,7 @@ object FileNameSuffixes {
   const val INVALIDITY_PROOF_SUFFIX = "getZkInvalidityProof.json"
 }
 
-class ExecutionProofRequestFileNameProvider(
-  private val tracesVersion: String,
-  private val stateManagerVersion: String,
-) : ProverFileNameProvider<ExecutionProofIndex> {
-  override fun getFileName(proofIndex: ExecutionProofIndex): String {
-    return "${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}" +
-      "-etv$tracesVersion-stv$stateManagerVersion" +
-      "-${FileNameSuffixes.EXECUTION_PROOF_SUFFIX}"
-  }
-}
-object ExecutionProofResponseFileNameProvider : ProverFileNameProvider<ExecutionProofIndex> {
+object ExecutionProofFileNameProvider : ProverFileNameProvider<ExecutionProofIndex> {
   override fun getFileName(proofIndex: ExecutionProofIndex): String {
     return "${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}-${FileNameSuffixes.EXECUTION_PROOF_SUFFIX}"
   }
@@ -47,6 +37,7 @@ object CompressionProofRequestFileNameProvider : ProverFileNameProvider<Compress
       FileNameSuffixes.COMPRESSION_PROOF_SUFFIX
   }
 }
+
 object CompressionProofResponseFileNameProvider : ProverFileNameProvider<CompressionProofIndex> {
   private fun encodeHash(hash: ByteArray): String = hash.encodeHex(prefix = false)
 
