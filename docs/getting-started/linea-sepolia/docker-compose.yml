@@ -85,7 +85,7 @@ services:
   geth-node:
     hostname: el-client
     container_name: geth-node
-    image: ethereum/client-go:v1.16.8
+    image: ethereum/client-go:v1.16.9
     pull_policy: always
     restart: unless-stopped
     stop_grace_period: 30s
