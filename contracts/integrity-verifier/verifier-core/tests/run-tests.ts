@@ -12,6 +12,9 @@ import {
   validateImmutablesAgainstArgs,
   verifyImmutableValues,
   stripCborMetadata,
+  linkLibraries,
+  detectUnlinkedLibraries,
+  verifyLinkedLibraries,
 } from "../src/utils/bytecode";
 import {
   calculateErc7201BaseSlot,
@@ -36,6 +39,7 @@ import {
   NormalizedArtifact,
   ImmutableReference,
   ImmutableDifference,
+  DeployedLinkReferences,
   StorageSchema,
 } from "../src/types";
 import { parseMarkdownConfig } from "../src/utils/markdown-config";
@@ -444,6 +448,7 @@ async function testFoundryMethodIdentifiers(): Promise<void> {
       ["8da5cb5b", "owner()"],
       ["91d14854", "hasRole(bytes32,address)"],
     ]),
+    deployedLinkReferences: undefined,
   };
 
   const selectors = extractSelectorsFromArtifact(mockAdapter, artifact);
@@ -563,6 +568,18 @@ async function main(): Promise<void> {
 
   // Bug fix: CBOR stripping edge cases
   testCborStrippingEdgeCases();
+
+  // Linked library tests
+  testLinkLibraries();
+  testLinkLibrariesMissingAddress();
+  testLinkLibrariesInvalidAddress();
+  testLinkLibrariesMultiplePositions();
+  testLinkLibrariesMultipleDistinctLibraries();
+  testLinkLibrariesPartialAddresses();
+  testVerifyLinkedLibraries();
+  testDetectUnlinkedLibraries();
+  testDetectUnlinkedLibrariesMultiple();
+  testLinkLibrariesWithoutPrefix();
 
   console.log("\n" + "=".repeat(50));
   console.log(`\n📊 Results: ${testsPassed} passed, ${testsFailed} failed`);
@@ -1939,6 +1956,293 @@ function testCborStrippingEdgeCases(): void {
   const tinyBytecode = codePrefix + tinyMetadata;
   const tinyStripped = stripCborMetadata(tinyBytecode);
   assertEqual(tinyStripped, tinyBytecode.toLowerCase(), "Tiny metadata (15 bytes) not stripped");
+}
+
+// ============================================================================
+// Linked Library Tests
+// ============================================================================
+
+function testLinkLibraries(): void {
+  console.log("\n🧪 Testing linkLibraries...");
+
+  // Build a bytecode string with a known placeholder at a specific position
+  const prefix = "6080604052" + "00".repeat(95); // 100 bytes
+  const placeholder = "__$21f52c64f029e7b8ff2bccb2a7d14460c1$__"; // 40 chars = 20 bytes
+  const suffix = "00".repeat(50);
+  const bytecode = "0x" + prefix + placeholder + suffix;
+
+  const linkRefs: DeployedLinkReferences = {
+    "src/libraries/Mimc.sol": {
+      Mimc: [{ start: 100, length: 20 }],
+    },
+  };
+
+  const libraries = {
+    "src/libraries/Mimc.sol:Mimc": "0x1234567890AbCdEf1234567890aBcDeF12345678",
+  };
+
+  const result = linkLibraries(bytecode, linkRefs, libraries);
+
+  // Verify the placeholder was replaced
+  const expectedAddress = "1234567890abcdef1234567890abcdef12345678";
+  const hexPos = 100 * 2; // byte position -> hex position
+  const linkedHex = result.linkedBytecode.slice(2); // Remove 0x
+  const insertedValue = linkedHex.slice(hexPos, hexPos + 40);
+  assertEqual(insertedValue, expectedAddress, "Library address inserted at correct position");
+
+  // Verify no placeholder remains
+  assert(!result.linkedBytecode.includes("__$"), "No placeholder remains after linking");
+
+  // Verify result status
+  assertEqual(result.results.length, 1, "One library result");
+  assertEqual(result.results[0].status, "pass", "Library linking passed");
+  assertEqual(result.results[0].name, "src/libraries/Mimc.sol:Mimc", "Correct library name");
+  assertEqual(result.results[0].positions.length, 1, "One position substituted");
+
+  // Verify 0x prefix preserved
+  assert(result.linkedBytecode.startsWith("0x"), "0x prefix preserved");
+}
+
+function testLinkLibrariesMissingAddress(): void {
+  console.log("\n🧪 Testing linkLibraries with missing address...");
+
+  const bytecode = "0x" + "00".repeat(100);
+  const linkRefs: DeployedLinkReferences = {
+    "src/libraries/Mimc.sol": {
+      Mimc: [{ start: 50, length: 20 }],
+    },
+  };
+
+  // No address provided
+  const result = linkLibraries(bytecode, linkRefs, {});
+
+  assertEqual(result.results.length, 1, "One library result");
+  assertEqual(result.results[0].status, "fail", "Library linking failed");
+  assert(result.results[0].message.includes("No address provided"), "Error message mentions missing address");
+}
+
+function testLinkLibrariesInvalidAddress(): void {
+  console.log("\n🧪 Testing linkLibraries with invalid address...");
+
+  const bytecode = "0x" + "00".repeat(100);
+  const linkRefs: DeployedLinkReferences = {
+    "src/libraries/Mimc.sol": {
+      Mimc: [{ start: 50, length: 20 }],
+    },
+  };
+
+  const result = linkLibraries(bytecode, linkRefs, {
+    "src/libraries/Mimc.sol:Mimc": "not-a-valid-address",
+  });
+
+  assertEqual(result.results.length, 1, "One library result");
+  assertEqual(result.results[0].status, "fail", "Library linking failed");
+  assert(result.results[0].message.includes("Invalid address"), "Error message mentions invalid address");
+}
+
+function testLinkLibrariesMultiplePositions(): void {
+  console.log("\n🧪 Testing linkLibraries with multiple positions...");
+
+  const bytecode = "0x" + "00".repeat(200);
+  const linkRefs: DeployedLinkReferences = {
+    "src/libraries/Mimc.sol": {
+      Mimc: [
+        { start: 50, length: 20 },
+        { start: 150, length: 20 },
+      ],
+    },
+  };
+
+  const address = "0xDeadBeefDeadBeefDeadBeefDeadBeefDeadBeef";
+  const result = linkLibraries(bytecode, linkRefs, {
+    "src/libraries/Mimc.sol:Mimc": address,
+  });
+
+  assertEqual(result.results.length, 1, "One library result");
+  assertEqual(result.results[0].status, "pass", "Library linking passed");
+  assertEqual(result.results[0].positions.length, 2, "Two positions substituted");
+
+  // Verify both positions have the address
+  const hex = result.linkedBytecode.slice(2);
+  const pos1 = hex.slice(50 * 2, 50 * 2 + 40);
+  const pos2 = hex.slice(150 * 2, 150 * 2 + 40);
+  assertEqual(pos1, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef", "First position linked");
+  assertEqual(pos2, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef", "Second position linked");
+}
+
+function testLinkLibrariesMultipleDistinctLibraries(): void {
+  console.log("\n🧪 Testing linkLibraries with multiple distinct libraries...");
+
+  const bytecode = "0x" + "00".repeat(300);
+  const linkRefs: DeployedLinkReferences = {
+    "src/libraries/Mimc.sol": {
+      Mimc: [{ start: 30, length: 20 }],
+    },
+    "src/libraries/Poseidon.sol": {
+      Poseidon: [
+        { start: 100, length: 20 },
+        { start: 200, length: 20 },
+      ],
+    },
+    "src/utils/Math.sol": {
+      SafeMath: [{ start: 250, length: 20 }],
+    },
+  };
+
+  const mimcAddr = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const poseidonAddr = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  const mathAddr = "0xcccccccccccccccccccccccccccccccccccccccc";
+
+  const result = linkLibraries(bytecode, linkRefs, {
+    "src/libraries/Mimc.sol:Mimc": mimcAddr,
+    "src/libraries/Poseidon.sol:Poseidon": poseidonAddr,
+    "src/utils/Math.sol:SafeMath": mathAddr,
+  });
+
+  assertEqual(result.results.length, 3, "Three library results");
+  assert(
+    result.results.every((r) => r.status === "pass"),
+    "All libraries linked successfully",
+  );
+
+  // Verify each address is at the correct position(s)
+  const hex = result.linkedBytecode.slice(2);
+  assertEqual(hex.slice(30 * 2, 30 * 2 + 40), "a".repeat(40), "Mimc at position 30");
+  assertEqual(hex.slice(100 * 2, 100 * 2 + 40), "b".repeat(40), "Poseidon at position 100");
+  assertEqual(hex.slice(200 * 2, 200 * 2 + 40), "b".repeat(40), "Poseidon at position 200");
+  assertEqual(hex.slice(250 * 2, 250 * 2 + 40), "c".repeat(40), "SafeMath at position 250");
+
+  // Verify Poseidon result has 2 positions
+  const poseidonResult = result.results.find((r) => r.name === "src/libraries/Poseidon.sol:Poseidon");
+  assert(poseidonResult !== undefined, "Poseidon result exists");
+  assertEqual(poseidonResult!.positions.length, 2, "Poseidon has 2 positions");
+}
+
+function testLinkLibrariesPartialAddresses(): void {
+  console.log("\n🧪 Testing linkLibraries with partial addresses (some missing)...");
+
+  const bytecode = "0x" + "00".repeat(200);
+  const linkRefs: DeployedLinkReferences = {
+    "src/libraries/Mimc.sol": {
+      Mimc: [{ start: 30, length: 20 }],
+    },
+    "src/libraries/Poseidon.sol": {
+      Poseidon: [{ start: 100, length: 20 }],
+    },
+  };
+
+  // Only provide address for Mimc, not Poseidon
+  const result = linkLibraries(bytecode, linkRefs, {
+    "src/libraries/Mimc.sol:Mimc": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  });
+
+  assertEqual(result.results.length, 2, "Two library results");
+
+  const mimcResult = result.results.find((r) => r.name === "src/libraries/Mimc.sol:Mimc");
+  const poseidonResult = result.results.find((r) => r.name === "src/libraries/Poseidon.sol:Poseidon");
+
+  assertEqual(mimcResult!.status, "pass", "Mimc linked successfully");
+  assertEqual(poseidonResult!.status, "fail", "Poseidon fails (no address)");
+  assert(poseidonResult!.message.includes("No address provided"), "Poseidon error message is clear");
+}
+
+function testVerifyLinkedLibraries(): void {
+  console.log("\n🧪 Testing verifyLinkedLibraries (on-chain address extraction)...");
+
+  // Simulate on-chain bytecode with a known library address at position 50
+  const address = "aabbccddaabbccddaabbccddaabbccddaabbccdd";
+  const remoteBytecode = "0x" + "00".repeat(50) + address + "00".repeat(50);
+  const linkRefs: DeployedLinkReferences = {
+    "src/lib.sol": {
+      MyLib: [{ start: 50, length: 20 }],
+    },
+  };
+
+  // Correct address
+  const matchResult = verifyLinkedLibraries(remoteBytecode, linkRefs, {
+    "src/lib.sol:MyLib": "0xaabbccddaabbccddaabbccddaabbccddaabbccdd",
+  });
+  assertEqual(matchResult.length, 1, "One result");
+  assertEqual(matchResult[0].status, "pass", "Address matches on-chain");
+  assertEqual(matchResult[0].actualAddress, "0x" + address, "Actual address extracted correctly");
+  assert(matchResult[0].message.includes("matches"), "Message confirms match");
+
+  // Wrong address
+  const mismatchResult = verifyLinkedLibraries(remoteBytecode, linkRefs, {
+    "src/lib.sol:MyLib": "0x1111111111111111111111111111111111111111",
+  });
+  assertEqual(mismatchResult.length, 1, "One result for mismatch");
+  assertEqual(mismatchResult[0].status, "fail", "Address mismatch detected");
+  assertEqual(mismatchResult[0].actualAddress, "0x" + address, "Actual address still extracted");
+  assert(mismatchResult[0].message.includes("expected"), "Message shows expected vs actual");
+
+  // Multiple positions - all must match
+  const address2 = "1234567890123456789012345678901234567890";
+  const remoteBytecode2 = "0x" + "00".repeat(30) + address2 + "00".repeat(30) + address2 + "00".repeat(20);
+  const linkRefs2: DeployedLinkReferences = {
+    "src/lib.sol": {
+      MyLib: [
+        { start: 30, length: 20 },
+        { start: 80, length: 20 },
+      ],
+    },
+  };
+
+  const multiResult = verifyLinkedLibraries(remoteBytecode2, linkRefs2, {
+    "src/lib.sol:MyLib": "0x" + address2,
+  });
+  assertEqual(multiResult[0].status, "pass", "Both positions match");
+  assertEqual(multiResult[0].positions.length, 2, "Two positions verified");
+}
+
+function testDetectUnlinkedLibraries(): void {
+  console.log("\n🧪 Testing detectUnlinkedLibraries...");
+
+  // Bytecode with a placeholder
+  const placeholder = "__$21f52c64f029e7b8ff2bccb2a7d14460c1$__";
+  const bytecode = "0x" + "6080604052" + "00".repeat(95) + placeholder + "00".repeat(50);
+
+  const unlinked = detectUnlinkedLibraries(bytecode);
+
+  assertEqual(unlinked.length, 1, "One unlinked library detected");
+  assertEqual(unlinked[0].placeholder, placeholder, "Correct placeholder detected");
+  assertEqual(unlinked[0].positions.length, 1, "One position found");
+
+  // Bytecode without placeholders
+  const cleanBytecode = "0x" + "6080604052" + "00".repeat(200);
+  const cleanResult = detectUnlinkedLibraries(cleanBytecode);
+  assertEqual(cleanResult.length, 0, "No unlinked libraries in clean bytecode");
+}
+
+function testDetectUnlinkedLibrariesMultiple(): void {
+  console.log("\n🧪 Testing detectUnlinkedLibraries with multiple placeholders...");
+
+  const placeholder1 = "__$21f52c64f029e7b8ff2bccb2a7d14460c1$__";
+  const placeholder2 = "__$aabbccddee11223344556677889900aabb$__";
+  const bytecode = "0x" + "00".repeat(20) + placeholder1 + "00".repeat(20) + placeholder2 + "00".repeat(20);
+
+  const unlinked = detectUnlinkedLibraries(bytecode);
+
+  assertEqual(unlinked.length, 2, "Two different unlinked libraries detected");
+}
+
+function testLinkLibrariesWithoutPrefix(): void {
+  console.log("\n🧪 Testing linkLibraries without 0x prefix...");
+
+  const bytecode = "00".repeat(100);
+  const linkRefs: DeployedLinkReferences = {
+    "src/lib.sol": {
+      Lib: [{ start: 10, length: 20 }],
+    },
+  };
+
+  const result = linkLibraries(bytecode, linkRefs, {
+    "src/lib.sol:Lib": "0xaabbccddaabbccddaabbccddaabbccddaabbccdd",
+  });
+
+  // Verify no 0x prefix added when input didn't have one
+  assert(!result.linkedBytecode.startsWith("0x"), "No 0x prefix when input lacked one");
+  assertEqual(result.results[0].status, "pass", "Linking succeeded without prefix");
 }
 
 /**

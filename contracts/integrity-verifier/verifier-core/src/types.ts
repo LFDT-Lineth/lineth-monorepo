@@ -41,6 +41,19 @@ export interface ContractConfig {
    */
   immutableValues?: Record<string, string | number | boolean | bigint>;
   /**
+   * Deployed library addresses for contracts that use linked libraries.
+   * Maps fully-qualified library name to its deployed address.
+   * The key format is "sourcePath:LibraryName" matching Solidity's convention.
+   *
+   * Example:
+   * ```json
+   * "linkedLibraries": {
+   *   "src/libraries/Mimc.sol:Mimc": "0x1234...abcd"
+   * }
+   * ```
+   */
+  linkedLibraries?: Record<string, string>;
+  /**
    * Optional state verification configuration.
    * Used to verify contract state after initialization/upgrade.
    */
@@ -420,6 +433,17 @@ export interface ImmutableReference {
   length: number; // always 32 for immutables
 }
 
+export interface LinkReference {
+  start: number; // byte position in deployed bytecode
+  length: number; // always 20 for library addresses
+}
+
+/**
+ * Nested link references structure from Hardhat/Foundry artifacts.
+ * Maps source file path -> library name -> array of byte positions.
+ */
+export type DeployedLinkReferences = Record<string, Record<string, LinkReference[]>>;
+
 export interface ImmutableDifference {
   position: number;
   length: number;
@@ -454,6 +478,24 @@ export interface ImmutableValuesResult {
   message: string;
   /** Individual results for each named immutable */
   results: ImmutableValueResult[];
+}
+
+/**
+ * Result of verifying a single linked library substitution.
+ */
+export interface LinkedLibraryResult {
+  /** Fully-qualified library name ("sourcePath:LibraryName") */
+  name: string;
+  /** Deployed address provided in config */
+  address: string;
+  /** Actual address extracted from on-chain bytecode (if available) */
+  actualAddress: string | undefined;
+  /** Byte positions where the address was substituted */
+  positions: number[];
+  /** Verification status */
+  status: VerificationStatus;
+  /** Human-readable message */
+  message: string;
 }
 
 /**
@@ -515,8 +557,8 @@ export interface HardhatArtifact {
   abi: AbiElement[];
   bytecode: string;
   deployedBytecode: string;
-  linkReferences?: Record<string, unknown>;
-  deployedLinkReferences?: Record<string, unknown>;
+  linkReferences?: DeployedLinkReferences;
+  deployedLinkReferences?: DeployedLinkReferences;
 }
 
 /**
@@ -527,12 +569,12 @@ export interface FoundryArtifact {
   bytecode: {
     object: string;
     sourceMap?: string;
-    linkReferences?: Record<string, unknown>;
+    linkReferences?: DeployedLinkReferences;
   };
   deployedBytecode: {
     object: string;
     sourceMap?: string;
-    linkReferences?: Record<string, unknown>;
+    linkReferences?: DeployedLinkReferences;
     immutableReferences?: Record<string, FoundryImmutableRef[]>;
   };
   methodIdentifiers?: Record<string, string>;
@@ -561,6 +603,8 @@ export interface NormalizedArtifact {
   immutableReferences: ImmutableReference[] | undefined;
   /** Pre-computed method identifiers from Foundry (selector -> signature) */
   methodIdentifiers: Map<string, string> | undefined;
+  /** Deployed link references for external library linking */
+  deployedLinkReferences: DeployedLinkReferences | undefined;
 }
 
 /**
@@ -573,8 +617,8 @@ export interface ArtifactJson {
   abi: AbiElement[];
   bytecode: string;
   deployedBytecode: string;
-  linkReferences?: Record<string, unknown>;
-  deployedLinkReferences?: Record<string, unknown>;
+  linkReferences?: DeployedLinkReferences;
+  deployedLinkReferences?: DeployedLinkReferences;
 }
 
 export interface AbiElement {
@@ -634,6 +678,8 @@ export interface ContractVerificationResult {
   definitiveResult?: DefinitiveBytecodeResult;
   /** Grouped immutable differences for better display (shows fragmented immutables) */
   groupedImmutables?: GroupedImmutableDifference[];
+  /** Linked library verification results */
+  linkedLibrariesResult?: LinkedLibraryResult[];
   error?: string;
 }
 

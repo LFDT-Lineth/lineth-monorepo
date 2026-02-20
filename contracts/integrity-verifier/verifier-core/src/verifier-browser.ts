@@ -154,6 +154,7 @@ export class BrowserVerifier {
           remoteBytecode,
           constructorArgs: contract.constructorArgs,
           immutableValues: contract.immutableValues,
+          linkedLibraries: contract.linkedLibraries,
           verbose: options.verbose,
         });
 
@@ -166,6 +167,9 @@ export class BrowserVerifier {
         }
         if (bytecodeVerification.groupedImmutables) {
           result.groupedImmutables = bytecodeVerification.groupedImmutables;
+        }
+        if (bytecodeVerification.linkedLibrariesResult) {
+          result.linkedLibrariesResult = bytecodeVerification.linkedLibrariesResult;
         }
       }
 

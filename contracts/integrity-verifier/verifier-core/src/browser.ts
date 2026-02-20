@@ -26,6 +26,9 @@ export {
   definitiveCompareBytecode,
   groupImmutableDifferences,
   formatGroupedImmutables,
+  linkLibraries,
+  detectUnlinkedLibraries,
+  verifyLinkedLibraries,
 } from "./utils/bytecode";
 
 // Browser-compatible ABI utilities (excluding loadArtifact which uses fs)
@@ -145,4 +148,8 @@ export type {
   ImmutableValueResult,
   DefinitiveBytecodeResult,
   GroupedImmutableDifference,
+  // Linked library types
+  LinkReference,
+  DeployedLinkReferences,
+  LinkedLibraryResult,
 } from "./types";

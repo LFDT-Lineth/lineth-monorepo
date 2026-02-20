@@ -178,6 +178,7 @@ export class Verifier {
           remoteBytecode,
           constructorArgs: contract.constructorArgs,
           immutableValues: contract.immutableValues,
+          linkedLibraries: contract.linkedLibraries,
           verbose: options.verbose,
         });
 
@@ -190,6 +191,9 @@ export class Verifier {
         }
         if (bytecodeVerification.groupedImmutables) {
           result.groupedImmutables = bytecodeVerification.groupedImmutables;
+        }
+        if (bytecodeVerification.linkedLibrariesResult) {
+          result.linkedLibrariesResult = bytecodeVerification.linkedLibrariesResult;
         }
       }
 
@@ -278,6 +282,7 @@ export class Verifier {
           remoteBytecode,
           constructorArgs: contract.constructorArgs,
           immutableValues: contract.immutableValues,
+          linkedLibraries: contract.linkedLibraries,
           verbose: options.verbose,
         });
 
@@ -290,6 +295,9 @@ export class Verifier {
         }
         if (bytecodeVerification.groupedImmutables) {
           result.groupedImmutables = bytecodeVerification.groupedImmutables;
+        }
+        if (bytecodeVerification.linkedLibrariesResult) {
+          result.linkedLibrariesResult = bytecodeVerification.linkedLibrariesResult;
         }
       }
 
@@ -541,19 +549,30 @@ export class Verifier {
           console.log(`  Definitive: ${icon} ${dr.message}`);
         }
 
+        if (result.linkedLibrariesResult) {
+          for (const lr of result.linkedLibrariesResult) {
+            const icon = lr.status === "pass" ? "✓" : "✗";
+            console.log(`  Library: ${icon} ${lr.message}`);
+          }
+        }
+
         // Count results
         const bytecodeStatus = result.bytecodeResult?.status;
         const abiStatus = result.abiResult?.status;
         const stateStatus = result.stateResult?.status;
         const immutableValuesStatus = result.immutableValuesResult?.status;
         const definitiveStatus = result.definitiveResult?.status;
+        const linkedLibrariesStatus = result.linkedLibrariesResult?.some((lr) => lr.status === "fail")
+          ? "fail"
+          : undefined;
 
         if (
           bytecodeStatus === "fail" ||
           abiStatus === "fail" ||
           stateStatus === "fail" ||
           immutableValuesStatus === "fail" ||
-          definitiveStatus === "fail"
+          definitiveStatus === "fail" ||
+          linkedLibrariesStatus === "fail"
         ) {
           failed++;
         } else if (
@@ -619,6 +638,7 @@ export function printSummary(summary: VerificationSummary): void {
       const hasStateFailure = result.stateResult?.status === "fail";
       const hasImmutableValuesFailure = result.immutableValuesResult?.status === "fail";
       const hasDefinitiveFailure = result.definitiveResult?.status === "fail";
+      const hasLinkedLibrariesFailure = result.linkedLibrariesResult?.some((lr) => lr.status === "fail");
       const hasError = result.error;
 
       if (
@@ -627,6 +647,7 @@ export function printSummary(summary: VerificationSummary): void {
         hasStateFailure ||
         hasImmutableValuesFailure ||
         hasDefinitiveFailure ||
+        hasLinkedLibrariesFailure ||
         hasError
       ) {
         console.log(`  - ${result.contract.name} (${result.contract.chain})`);
@@ -652,6 +673,13 @@ export function printSummary(summary: VerificationSummary): void {
         }
         if (hasDefinitiveFailure) {
           console.log(`    Definitive: ${result.definitiveResult!.message}`);
+        }
+        if (hasLinkedLibrariesFailure) {
+          for (const lr of result.linkedLibrariesResult!) {
+            if (lr.status === "fail") {
+              console.log(`    Library: ${lr.message}`);
+            }
+          }
         }
       }
     }

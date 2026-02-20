@@ -20,6 +20,7 @@ import {
   HardhatArtifact,
   FoundryArtifact,
   ImmutableReference,
+  DeployedLinkReferences,
 } from "../types";
 
 import type { Web3Adapter } from "../adapter";
@@ -109,6 +110,11 @@ function normalizeHardhatArtifact(artifact: HardhatArtifact): NormalizedArtifact
     }
   }
 
+  let deployedLinkReferences: DeployedLinkReferences | undefined;
+  if (artifact.deployedLinkReferences && Object.keys(artifact.deployedLinkReferences).length > 0) {
+    deployedLinkReferences = artifact.deployedLinkReferences;
+  }
+
   return {
     format: "hardhat",
     contractName: artifact.contractName,
@@ -117,6 +123,7 @@ function normalizeHardhatArtifact(artifact: HardhatArtifact): NormalizedArtifact
     deployedBytecode: artifact.deployedBytecode,
     immutableReferences,
     methodIdentifiers: undefined,
+    deployedLinkReferences,
   };
 }
 
@@ -159,6 +166,11 @@ function normalizeFoundryArtifact(artifact: FoundryArtifact, filePath: string): 
     }
   }
 
+  let deployedLinkReferences: DeployedLinkReferences | undefined;
+  if (artifact.deployedBytecode.linkReferences && Object.keys(artifact.deployedBytecode.linkReferences).length > 0) {
+    deployedLinkReferences = artifact.deployedBytecode.linkReferences;
+  }
+
   return {
     format: "foundry",
     contractName,
@@ -167,6 +179,7 @@ function normalizeFoundryArtifact(artifact: FoundryArtifact, filePath: string): 
     deployedBytecode: artifact.deployedBytecode.object,
     immutableReferences,
     methodIdentifiers,
+    deployedLinkReferences,
   };
 }
 

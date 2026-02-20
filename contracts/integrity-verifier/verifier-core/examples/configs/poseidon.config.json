@@ -1,0 +1,20 @@
+{
+    "chains": {
+      "ethereum-sepolia": {
+        "chainId": 11155111,
+        "rpcUrl": "${ETHEREUM_SEPOLIA_RPC_URL}",
+        "explorerUrl": "https://sepolia.etherscan.io"
+      }
+    },
+    "contracts": [
+      {
+        "$comment": "Verify implementation bytecode directly",
+        "name": "Poseidon2-Implementation",
+        "chain": "ethereum-sepolia",
+        "address": "0xd0cAC555C1aCE8aa1F81f5A17D5Ba1C8a5b6925d",
+        "artifactFile": "./poseidon2.artifact.json",
+        "isProxy": false
+      }
+    ]
+  }
+  

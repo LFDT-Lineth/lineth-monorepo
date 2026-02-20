@@ -1,0 +1,23 @@
+{
+    "chains": {
+      "ethereum-sepolia": {
+        "chainId": 11155111,
+        "rpcUrl": "${ETHEREUM_SEPOLIA_RPC_URL}",
+        "explorerUrl": "https://sepolia.etherscan.io"
+      }
+    },
+    "contracts": [
+      {
+        "$comment": "Verify implementation bytecode directly",
+        "name": "SparseMerkleProof-Implementation",
+        "chain": "ethereum-sepolia",
+        "address": "0x53dD5b36C7ffE549aA9Ca9890599887bcdb406cA",
+        "artifactFile": "./sparse-merkle-proof.artifact.json",
+        "isProxy": false,
+        "linkedLibraries": {
+          "@consensys/linea-state-verifier/contracts/lib/Poseidon2.sol:Poseidon2": "0xd0cac555c1ace8aa1f81f5a17d5ba1c8a5b6925d"
+        }
+      }
+    ]
+  }
+  
