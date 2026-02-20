@@ -13,6 +13,9 @@ include "../util/log2.zkasm"
 ;; BYTE and SIGNEXTEND need to extract a byte from ARGUMENT_2.
 
 fn bin(INST=0x16 u8, ARGUMENT_1 u256, ARGUMENT_2 u256) -> (RES u256) {
+   var inst u2
+   var c0 u251
+   var n u5
 
    if INST==EVM_INST_XOR        goto xor_call
    if INST==EVM_INST_OR         goto or_call
@@ -22,7 +25,6 @@ fn bin(INST=0x16 u8, ARGUMENT_1 u256, ARGUMENT_2 u256) -> (RES u256) {
    if INST==EVM_INST_SIGNEXTEND goto signextend_call
    if INST==EVM_INST_CLZ        goto clz_call
    fail
-   var inst u2
 
 xor_call:
    inst = 0
@@ -41,34 +43,22 @@ not_call:
    RES = bit_xoan_u256(inst, ARGUMENT_1, ARGUMENT_2)
    return
 byte_call:
-   var n u5
-   var c0 u251
-   var is_c0_zero u1
    c0, n = ARGUMENT_1
-   is_c0_zero = c0 == 0 ? 1 : 0
-   if is_c0_zero == 0 goto exit_0
+   if c0 != 0 goto exit_0
    RES = byte256(ARGUMENT_2, n)
    return
 signextend_call:
-   var size u5
-   var c1 u251
-   var is_c1_zero u1
-   c1, size = ARGUMENT_1
-   is_c1_zero = c1 == 0 ? 1 : 0
-   if is_c1_zero == 0 goto exit_unchanged
-   RES = signextend(size, ARGUMENT_2)
+   c0, n = ARGUMENT_1
+   if c0 != 0 goto exit_unchanged
+   RES = signextend(n, ARGUMENT_2)
    return
 clz_call:
   ;; special case for 0
-  var is_arg1_zero u1
-  is_arg1_zero = ARGUMENT_1 == 0 ? 1 : 0
-  if is_arg1_zero == 1 goto exit_256
+  if ARGUMENT_1 == 0 goto exit_256
   var lg2 u8
-  var tmp u8
-  ;; TODO: we shouldn't those intermediate result ...
+  ;;
   lg2 = log2(ARGUMENT_1)
-  tmp = 255 - lg2
-  RES = tmp
+  RES = 255 - lg2
   return
 exit_0:
    RES = 0
