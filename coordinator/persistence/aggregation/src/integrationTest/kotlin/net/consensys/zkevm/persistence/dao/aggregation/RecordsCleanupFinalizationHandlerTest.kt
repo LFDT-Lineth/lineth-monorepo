@@ -135,7 +135,6 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
     val update = FinalizationMonitor.FinalizationUpdate(
       blockNumber = 21u,
       blockHash = Bytes32.random(),
-      zkStateRootHash = Bytes32.random(),
     )
 
     val batchesBeforeCleanup = batchesContentQuery().execute().get()

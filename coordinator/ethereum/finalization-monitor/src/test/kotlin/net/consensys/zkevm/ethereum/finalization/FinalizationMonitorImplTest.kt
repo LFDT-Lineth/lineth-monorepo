@@ -53,9 +53,6 @@ class FinalizationMonitorImplTest {
   fun start_startsPollingProcess(vertx: Vertx, testContext: VertxTestContext) {
     whenever(contractMock.finalizedL2BlockNumber(eq(BlockParameter.Tag.FINALIZED)))
       .thenReturn(SafeFuture.completedFuture(expectedBlockNumber))
-    val expectedStateRootHash = ByteArrayExt.random32()
-    whenever(contractMock.blockStateRootHash(any(), any()))
-      .thenReturn(SafeFuture.completedFuture(expectedStateRootHash))
 
     val expectedBlockHash = ByteArrayExt.random32()
     val mockBlockByNumberReturn = mock<BlockWithTxHashes>()
@@ -81,7 +78,6 @@ class FinalizationMonitorImplTest {
               atLeastOnce(),
             ).ethGetBlockByNumberTxHashes(eq(BlockParameter.fromNumber(expectedBlockNumber)))
             verify(contractMock, atLeastOnce()).finalizedL2BlockNumber(BlockParameter.Tag.FINALIZED)
-            verify(contractMock, atLeastOnce()).blockStateRootHash(BlockParameter.Tag.FINALIZED, expectedBlockNumber)
           }
       }
       .thenCompose { finalizationMonitorImpl.stop() }
@@ -95,9 +91,6 @@ class FinalizationMonitorImplTest {
     whenever(contractMock.finalizedL2BlockNumber(any())).thenAnswer {
       blockNumber += 1
       SafeFuture.completedFuture(blockNumber.toULong())
-    }
-    whenever(contractMock.blockStateRootHash(any(), any())).thenAnswer {
-      SafeFuture.completedFuture(intToBytes32(blockNumber).toArray())
     }
 
     val expectedBlockHash = intToBytes32(blockNumber).toArray()
@@ -153,9 +146,6 @@ class FinalizationMonitorImplTest {
     whenever(contractMock.finalizedL2BlockNumber(any())).thenAnswer {
       blockNumber += 1
       SafeFuture.completedFuture(blockNumber.toULong())
-    }
-    whenever(contractMock.blockStateRootHash(any(), any())).thenAnswer {
-      SafeFuture.completedFuture(intToBytes32(blockNumber).toArray())
     }
 
     val expectedBlockHash = intToBytes32(blockNumber).toArray()
@@ -223,9 +213,6 @@ class FinalizationMonitorImplTest {
       }
       SafeFuture.completedFuture(blockNumber.toULong())
     }
-    whenever(contractMock.blockStateRootHash(any(), any())).thenAnswer {
-      SafeFuture.completedFuture(intToBytes32(blockNumber).toArray())
-    }
 
     val expectedBlockHash = intToBytes32(blockNumber).toArray()
     val mockBlockByNumberReturn = mock<BlockWithTxHashes>()
@@ -264,9 +251,6 @@ class FinalizationMonitorImplTest {
     whenever(contractMock.finalizedL2BlockNumber(any())).thenAnswer {
       blockNumber += 1
       SafeFuture.completedFuture(blockNumber.toULong())
-    }
-    whenever(contractMock.blockStateRootHash(any(), any())).thenAnswer {
-      SafeFuture.completedFuture(intToBytes32(blockNumber).toArray())
     }
 
     val expectedBlockHash = intToBytes32(blockNumber).toArray()

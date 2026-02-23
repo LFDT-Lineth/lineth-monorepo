@@ -72,15 +72,9 @@ class FinalizationMonitorImpl(
       .thenCompose { lineaFinalizedBlockNumber ->
         l2EthApiClient
           .ethGetBlockByNumberTxHashes(BlockParameter.fromNumber(lineaFinalizedBlockNumber))
-          .thenCombine(
-            contract.blockStateRootHash(
-              blockParameter = config.l1QueryBlockTag,
-              lineaL2BlockNumber = lineaFinalizedBlockNumber,
-            ),
-          ) { finalizedBlock, stateRootHash ->
+          .thenApply { finalizedBlock ->
             FinalizationMonitor.FinalizationUpdate(
               lineaFinalizedBlockNumber,
-              Bytes32.wrap(stateRootHash),
               Bytes32.wrap(finalizedBlock.hash),
             )
           }
