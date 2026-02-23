@@ -65,7 +65,9 @@ jobs:
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
         with:
-          pnpm-install-options: '-F contracts -F e2e --frozen-lockfile --prefer-offline'
+          pnpm-install-options: '-F contracts -F "e2e..." --frozen-lockfile --prefer-offline'
+          commands: |
+            pnpm run -F "e2e^..." build
       - name: Login to Docker Hub
         if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 #v3.4.0

@@ -94,9 +94,10 @@ To run the e2e test locally with the locally-built `linea-besu-package` image (e
     - docker version 27.x.x
 
 - The following only needed for first run or e2e failures that require npm package update, on your_repo_root_folder:
-    ```
-    pnpm i -F contracts -F e2e --frozen-lockfile --prefer-offline
-    ```
+```
+pnpm i -F contracts -F "e2e..." --frozen-lockfile --prefer-offline
+pnpm run -F "e2e^..." build
+```
 To run the test locally:
 ```
 TAG=xxx make run-e2e-test

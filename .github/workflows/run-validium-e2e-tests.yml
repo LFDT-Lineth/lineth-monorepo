@@ -39,7 +39,9 @@ jobs:
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
         with:
-          pnpm-install-options: '-F contracts -F e2e --frozen-lockfile --prefer-offline'
+          pnpm-install-options: '-F contracts -F "e2e..." --frozen-lockfile --prefer-offline'
+          commands: |
+            pnpm run -F "e2e^..." build
 
       - name: Create directory for conflated traces
         run: |
