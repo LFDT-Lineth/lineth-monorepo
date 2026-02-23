@@ -26,7 +26,7 @@ const func: DeployFunction = async function () {
     "0x9623609d",
     ethers.AbiCoder.defaultAbiCoder().encode(
       ["address", "address", "bytes"],
-      [proxyAddress, newContract, TokenBridge__factory.createInterface().encodeFunctionData("reinitializeV2")],
+      [proxyAddress, newContract, TokenBridge__factory.createInterface().encodeFunctionData("reinitializeV3")],
     ),
   ]);
 
