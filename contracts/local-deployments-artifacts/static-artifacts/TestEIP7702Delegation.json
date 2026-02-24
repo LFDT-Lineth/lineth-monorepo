@@ -1,0 +1,31 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "TestEIP7702Delegation",
+  "sourceName": "src/_testing/mocks/base/TestEIP7702Delegation.sol",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "message",
+          "type": "string"
+        }
+      ],
+      "name": "Log",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "initialize",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x6080604052348015600e575f5ffd5b5060d080601a5f395ff3fe6080604052348015600e575f5ffd5b50600436106026575f3560e01c80638129fc1c14602a575b5f5ffd5b60306032565b005b7fcf34ef537ac33ee1ac626ca1587a0a7e8e51561e5514f8cb36afa1c5102b3bab60405160909060208082526016908201527f48656c6c6f2c20776f726c6420636f6d70757465722100000000000000000000604082015260600190565b60405180910390a156fea264697066735822122068622a6b6c1b4dce6f6a71c88c2c25f35d2167fb4843cfd2e7e83da33af12f2564736f6c63430008210033",
+  "deployedBytecode": "0x6080604052348015600e575f5ffd5b50600436106026575f3560e01c80638129fc1c14602a575b5f5ffd5b60306032565b005b7fcf34ef537ac33ee1ac626ca1587a0a7e8e51561e5514f8cb36afa1c5102b3bab60405160909060208082526016908201527f48656c6c6f2c20776f726c6420636f6d70757465722100000000000000000000604082015260600190565b60405180910390a156fea264697066735822122068622a6b6c1b4dce6f6a71c88c2c25f35d2167fb4843cfd2e7e83da33af12f2564736f6c63430008210033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

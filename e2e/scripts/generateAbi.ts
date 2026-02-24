@@ -22,6 +22,7 @@ const INCLUDE_FILES: string[] = [
   "LineaSequencerUptimeFeed",
   "OpcodeTester",
   "Poseidon2",
+  "TestEIP7702Delegation",
 ];
 
 async function main() {
