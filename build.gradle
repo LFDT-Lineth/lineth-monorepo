@@ -69,6 +69,10 @@ allprojects {
     dependsOn test
   }
 
+  tasks.withType(Javadoc).configureEach {
+    exclude '**/generated/**'
+  }
+
   tasks.withType(Test).configureEach {
     testLogging {
       events = [
