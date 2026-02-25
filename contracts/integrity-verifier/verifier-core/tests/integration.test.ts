@@ -10,14 +10,16 @@
 
 import { resolve } from "path";
 import { loadConfig, checkArtifactExists } from "../src/config";
-import { loadArtifact, extractSelectorsFromArtifact } from "../src/utils/abi";
+import { extractSelectorsFromArtifact } from "../src/utils/abi";
+import { loadArtifact } from "../src/utils/abi-node";
 import {
   compareBytecode,
   extractSelectorsFromBytecode,
   stripCborMetadata,
   verifyImmutableValues,
 } from "../src/utils/bytecode";
-import { calculateErc7201BaseSlot, parsePath, loadStorageSchema, decodeSlotValue } from "../src/utils/storage";
+import { calculateErc7201BaseSlot, parsePath, decodeSlotValue } from "../src/utils/storage";
+import { loadStorageSchema } from "../src/utils/storage-node";
 import { parseMarkdownConfig } from "../src/utils/markdown-config";
 import { Verifier } from "../src/verifier";
 import type { Web3Adapter } from "../src/adapter";

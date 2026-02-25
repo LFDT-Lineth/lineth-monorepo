@@ -27,9 +27,7 @@ task("setVerifierAddress", "Sets the verifier address on a Message Service contr
   .setAction(async (taskArgs, hre) => {
     const ethers = hre.ethers;
 
-    const { deployments, getNamedAccounts } = hre;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { deployer } = await getNamedAccounts();
+    const { deployments } = hre;
     const { get } = deployments;
 
     const proofType = getTaskCliOrEnvValue(taskArgs, "verifierProofType", "VERIFIER_PROOF_TYPE");

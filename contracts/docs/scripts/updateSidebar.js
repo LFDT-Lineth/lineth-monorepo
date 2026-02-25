@@ -11,7 +11,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { execSync } = require("child_process");
+const { execFileSync } = require("child_process");
 
 /**
  * TYPES
@@ -162,12 +162,13 @@ function createNewSidebarFile(sidebarObject) {
  */
 function lintJSFile(filePath) {
   try {
-    const installCmd = `npm install --save-dev --no-save eslint`;
-    execSync(installCmd, { stdio: "inherit" });
+    execFileSync("npm", ["install", "--save-dev", "--no-save", "eslint"], {
+      stdio: "inherit",
+    });
 
-    const lintCmd = `npx eslint --fix --no-ignore ${filePath}`;
-    // Execute command synchronously and route output directly to the current stdout
-    execSync(lintCmd, { stdio: "inherit" });
+    execFileSync("npx", ["eslint", "--fix", "--no-ignore", filePath], {
+      stdio: "inherit",
+    });
   } catch (error) {
     console.error(`Error:`, error.message);
     console.error(`Exiting...`);
