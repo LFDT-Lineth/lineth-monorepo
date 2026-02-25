@@ -35,8 +35,9 @@ type Sha2SingleProvider struct {
 	MaxNumSha2F int
 
 	// prover actions for  internal modules
-	Pa_importPad, Pa_packing wizard.ProverAction
-	Pa_cSha2                 *sha2BlockModule
+	Pa_importPad *importpad.Importation
+	Pa_packing   *packing.Packing
+	Pa_cSha2     *sha2BlockModule
 }
 
 // NewSha2ZkEvm constructs the Sha2 module as used in Linea's zkEVM.

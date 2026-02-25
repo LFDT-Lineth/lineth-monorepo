@@ -17,7 +17,7 @@ func TestStandardDiscoveryOnZkEVM(t *testing.T) {
 		z    = zkevm.GetTestZkEVM()
 		disc = &distributed.StandardModuleDiscoverer{
 			TargetWeight: 1 << 28,
-			Advices:      zkevm.DiscoveryAdvices,
+			Advices:      zkevm.DiscoveryAdvices(z),
 			Predivision:  16,
 		}
 	)
@@ -85,7 +85,7 @@ func TestStandardDiscoveryOnZkEVMWithAdvices(t *testing.T) {
 		disc = &distributed.StandardModuleDiscoverer{
 			TargetWeight: 1 << 29,
 			Predivision:  1,
-			Advices:      zkevm.DiscoveryAdvices,
+			Advices:      zkevm.DiscoveryAdvices(z),
 		}
 	)
 

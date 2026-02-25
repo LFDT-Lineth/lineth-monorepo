@@ -32,9 +32,9 @@ type KeccakZkEVM struct {
 	SuppProverSteps []wizard.ProverAction
 
 	// The [wizard.ProverAction] for submodules.
-	Pa_accData wizard.ProverAction
-	Pa_accInfo wizard.ProverAction
-	Pa_keccak  wizard.ProverAction
+	Pa_accData *gen_acc.GenericDataAccumulator
+	Pa_accInfo *gen_acc.GenericInfoAccumulator
+	Pa_keccak  *KeccakSingleProvider
 }
 
 func NewKeccakZkEVM(comp *wizard.CompiledIOP, settings Settings, providersFromEcdsa []generic.GenericByteModule) *KeccakZkEVM {

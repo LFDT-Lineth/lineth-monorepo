@@ -101,6 +101,7 @@ func NewPack(comp *wizard.CompiledIOP, inp PackingInput) *Packing {
 		Decomposed: decomposed,
 		Repacked:   lanes,
 		Block:      block,
+		LookUps:    lookup,
 	}
 }
 
@@ -121,7 +122,7 @@ type spaghettiCtx struct {
 	NewHashSp                          ifaces.Column
 	// FilterSpaghetti
 	FilterSpaghetti ifaces.Column
-	PA              wizard.ProverAction
+	PA              *spaghettifier.Spaghettification
 	SpaghettiSize   int
 }
 

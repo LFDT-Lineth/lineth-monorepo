@@ -193,7 +193,7 @@ func GetDistWizard() *distributed.DistributedWizard {
 		z    = zkevm.GetTestZkEVM()
 		disc = &distributed.StandardModuleDiscoverer{
 			TargetWeight: 1 << 28,
-			Advices:      zkevm.DiscoveryAdvices,
+			Advices:      zkevm.DiscoveryAdvices(z),
 			Predivision:  1,
 		}
 

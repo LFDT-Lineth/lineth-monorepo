@@ -36,9 +36,9 @@ type KeccakOverBlocks struct {
 	MaxNumKeccakF int
 
 	// prover actions for  internal modules
-	Pa_blockBaseConversion wizard.ProverAction
-	Pa_hashBaseConversion  wizard.ProverAction
-	Pa_spaghetti           wizard.ProverAction
+	Pa_blockBaseConversion *base_conversion.BlockBaseConversion
+	Pa_hashBaseConversion  *base_conversion.HashBaseConversion
+	Pa_spaghetti           *spaghettifier.Spaghettification
 	KeccakF                keccakf.Module
 }
 
