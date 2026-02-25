@@ -33,7 +33,7 @@ import org.apache.tuweni.bytes.Bytes32;
 
 public class SysiEip4788Transaction extends TxnDataOperation {
 
-  public static final short NB_ROWS_TXN_DATA_SYSI_EIP4788 = 3;
+  public static final short NB_ROWS_TXN_DATA_SYSI_EIP_4788 = 3;
 
   public SysiEip4788Transaction(final TxnData txnData) {
     super(txnData, SYSI);
@@ -76,6 +76,6 @@ public class SysiEip4788Transaction extends TxnDataOperation {
 
   @Override
   protected int ctMax() {
-    return NB_ROWS_TXN_DATA_SYSI_EIP4788 - 1;
+    return NB_ROWS_TXN_DATA_SYSI_EIP_4788 - 1;
   }
 }

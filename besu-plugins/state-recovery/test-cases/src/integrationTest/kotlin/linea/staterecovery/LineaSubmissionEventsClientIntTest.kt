@@ -2,6 +2,8 @@ package linea.staterecovery
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
+import linea.contract.events.DataFinalizedV3
+import linea.contract.events.DataSubmittedV3
 import linea.contract.l1.LineaRollupContractVersion
 import linea.domain.BlockParameter
 import linea.ethapi.EthLogsSearcherImpl

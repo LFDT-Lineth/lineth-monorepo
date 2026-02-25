@@ -15,12 +15,13 @@
                 ( VALUE                        :i128 )
 
                 ;; to account related
-                ( TO_ADDRESS_HI                :i32    )
-                ( TO_ADDRESS_LO                :i128   )
-                ( REQUIRES_EVM_EXECUTION       :binary )
-                ( COPY_TXCD                    :binary )
-                ( IS_DEPLOYMENT                :binary )
-                ( IS_TYPE2                     :binary )
+                ( TO_ADDRESS_HI                                    :i32    )
+                ( TO_ADDRESS_LO                                    :i128   )
+                ( REQUIRES_EVM_EXECUTION                           :binary )
+                ( COPY_TXCD                                        :binary )
+                ( IS_DEPLOYMENT                                    :binary )
+                ( TRANSACTION_TYPE_SUPPORTS_EIP_1559_GAS_SEMANTICS :binary )
+                ( TRANSACTION_TYPE_SUPPORTS_DELEGATION_LISTS       :binary )
 
                 ;; gas related
                 ( GAS_LIMIT                    :i25 )
@@ -52,5 +53,9 @@
                 ( SYST_TXN_DATA_3              :i128         )
                 ( SYST_TXN_DATA_4              :i128         )
                 ( SYST_TXN_DATA_5              :binary       )
+
+                ;; related to EIP-7702
+                ( LENGTH_OF_DELEGATION_LIST                   :i10 ) ;; used by TXN_DATA to price the transaction; provided by both HUB and RLP_TXN ⇒ delegation lists agree e2e
+                ( NUMBER_OF_SUCCESSFUL_SENDER_DELEGATIONS     :i10 ) ;; used by TXN_DATA to "correct" the sender nonce comparison
         )
 )

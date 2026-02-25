@@ -29,11 +29,11 @@ import org.apache.tuweni.bytes.Bytes;
 
 public class SysiEip2935Transaction extends TxnDataOperation {
 
-  public static final short NB_ROWS_TXN_DATA_SYSI_EIP2935 = 3;
+  public static final short NB_ROWS_TXN_DATA_SYSI_EIP_2935 = 3;
 
   @Override
   protected int ctMax() {
-    return NB_ROWS_TXN_DATA_SYSI_EIP2935 - 1;
+    return NB_ROWS_TXN_DATA_SYSI_EIP_2935 - 1;
   }
 
   public SysiEip2935Transaction(final TxnData txnData) {

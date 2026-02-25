@@ -18,8 +18,8 @@ package net.consensys.linea.zktracer.module.rlptxn.phaseSection;
 import static net.consensys.linea.zktracer.Trace.LLARGE;
 import static net.consensys.linea.zktracer.Trace.RLP_TXN_NB_ROWS_PER_AUTHORIZATION;
 import static net.consensys.linea.zktracer.module.rlptxn.phaseSection.ToPhaseSection.*;
-import static net.consensys.linea.zktracer.types.AddressUtils.highPart;
-import static net.consensys.linea.zktracer.types.AddressUtils.lowPart;
+import static net.consensys.linea.zktracer.types.AddressUtils.hiPart;
+import static net.consensys.linea.zktracer.types.AddressUtils.loPart;
 import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes32;
 
 import java.util.ArrayList;
@@ -63,7 +63,7 @@ public class AuthorizationListSection extends PhaseSection {
   }
 
   @Override
-  protected void traceComputationsRows(
+  protected void traceComputationRows(
       Trace.Rlptxn trace, TransactionProcessingMetadata tx, GenericTracedValue tracedValues) {
 
     tracedValues.setListRlpSize(authorizationListRlpPrefix.byteStringLength());
@@ -189,8 +189,8 @@ public class AuthorizationListSection extends PhaseSection {
           .pCmpAuxCcc1(index)
           .pCmpAux8(chainId.integer().slice(0, LLARGE))
           .pCmpAux3(chainId.integer().slice(LLARGE, LLARGE))
-          .pCmpAuxCcc4(highPart(address))
-          .pCmpAuxCcc5(lowPart(address))
+          .pCmpAuxCcc4(hiPart(address))
+          .pCmpAuxCcc5(loPart(address))
           .pCmpAuxCcc2(nonce.integer())
           .pCmpAuxCcc3(y.integer().toLong())
           .pCmpAux4(r.integer().slice(0, LLARGE))

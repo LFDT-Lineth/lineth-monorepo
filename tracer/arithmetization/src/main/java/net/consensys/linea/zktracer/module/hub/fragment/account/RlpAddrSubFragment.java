@@ -16,9 +16,8 @@
 package net.consensys.linea.zktracer.module.hub.fragment.account;
 
 import static net.consensys.linea.zktracer.Trace.LLARGE;
-import static net.consensys.linea.zktracer.opcode.OpCode.CREATE2;
-import static net.consensys.linea.zktracer.types.AddressUtils.highPart;
-import static net.consensys.linea.zktracer.types.AddressUtils.lowPart;
+import static net.consensys.linea.zktracer.types.AddressUtils.hiPart;
+import static net.consensys.linea.zktracer.types.AddressUtils.loPart;
 
 import lombok.RequiredArgsConstructor;
 import net.consensys.linea.zktracer.Trace;
@@ -63,8 +62,8 @@ public class RlpAddrSubFragment implements TraceSubFragment {
     return trace
         .pAccountRlpaddrFlag(true)
         .pAccountRlpaddrRecipe(recipe)
-        .pAccountRlpaddrDepAddrHi(highPart(deploymentAddress))
-        .pAccountRlpaddrDepAddrLo(lowPart(deploymentAddress))
+        .pAccountRlpaddrDepAddrHi(hiPart(deploymentAddress))
+        .pAccountRlpaddrDepAddrLo(loPart(deploymentAddress))
         .pAccountRlpaddrSaltHi(salt.slice(0, LLARGE))
         .pAccountRlpaddrSaltLo(salt.slice(LLARGE, LLARGE))
         .pAccountRlpaddrKecHi(keccak.slice(0, LLARGE))

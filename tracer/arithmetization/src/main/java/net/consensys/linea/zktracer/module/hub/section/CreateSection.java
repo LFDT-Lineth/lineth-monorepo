@@ -236,7 +236,7 @@ public final class CreateSection extends TraceSection
             .decrementBalanceBy(value);
     firstCreateeNew =
         AccountSnapshot.canonical(hub, frame.getWorldUpdater(), firstCreatee.address())
-            .raiseNonceByOne()
+            .incrementNonceByOne()
             .incrementBalanceBy(value);
 
     final AccountFragment creatorAccountFragment =
@@ -310,7 +310,7 @@ public final class CreateSection extends TraceSection
         scenarioFragment.setScenario(CREATE_NON_EMPTY_INIT_CODE_FAILURE_WONT_REVERT);
 
         secondCreator = firstCreatorNew.deepCopy().setDeploymentNumber(hub);
-        secondCreatorNew = firstCreator.deepCopy().setDeploymentNumber(hub).raiseNonceByOne();
+        secondCreatorNew = firstCreator.deepCopy().setDeploymentNumber(hub).incrementNonceByOne();
 
         secondCreatee = firstCreateeNew.deepCopy().setDeploymentNumber(hub);
         secondCreateeNew = firstCreatee.deepCopy().setDeploymentNumber(hub).turnOnWarmth();

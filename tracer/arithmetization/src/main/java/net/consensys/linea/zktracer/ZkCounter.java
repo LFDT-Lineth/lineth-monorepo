@@ -57,8 +57,8 @@ import static net.consensys.linea.zktracer.module.hub.section.halt.RevertSection
 import static net.consensys.linea.zktracer.module.hub.section.halt.SelfdestructSection.NB_ROWS_HUB_SELFDESTRUCT;
 import static net.consensys.linea.zktracer.module.hub.section.halt.StopSection.NB_ROWS_HUB_STOP_DEPLOYMENT;
 import static net.consensys.linea.zktracer.module.hub.section.halt.StopSection.NB_ROWS_HUB_STOP_MSG_CALL;
-import static net.consensys.linea.zktracer.module.hub.section.systemTransaction.EIP2935HistoricalHash.NB_ROWS_HUB_SYSI_EIP2935;
-import static net.consensys.linea.zktracer.module.hub.section.systemTransaction.EIP4788BeaconBlockRootSection.NB_ROWS_HUB_SYSI_EIP4788;
+import static net.consensys.linea.zktracer.module.hub.section.systemTransaction.EIP2935HistoricalHash.NB_ROWS_HUB_SYSI_EIP_2935;
+import static net.consensys.linea.zktracer.module.hub.section.systemTransaction.EIP4788BeaconBlockRootSection.NB_ROWS_HUB_SYSI_EIP_4788;
 import static net.consensys.linea.zktracer.module.hub.section.systemTransaction.SysfNoopSection.NB_ROWS_HUB_SYSF_NOOP;
 import static net.consensys.linea.zktracer.module.hub.section.transients.TLoadSection.NB_ROWS_HUB_TLOAD;
 import static net.consensys.linea.zktracer.module.hub.section.transients.TStoreSection.NB_ROWS_HUB_TSTORE;
@@ -72,8 +72,8 @@ import static net.consensys.linea.zktracer.module.rlptxrcpt.RlpTxrcptOperation.l
 import static net.consensys.linea.zktracer.module.shakiradata.ShakiraDataOperation.NB_ROWS_SHAKIRA_RESULT;
 import static net.consensys.linea.zktracer.module.stp.StpOperation.NB_ROWS_STP;
 import static net.consensys.linea.zktracer.module.txndata.transactions.SysfNoopTransaction.NB_ROWS_TXN_DATA_SYSF_NOOP;
-import static net.consensys.linea.zktracer.module.txndata.transactions.SysiEip2935Transaction.NB_ROWS_TXN_DATA_SYSI_EIP2935;
-import static net.consensys.linea.zktracer.module.txndata.transactions.SysiEip4788Transaction.NB_ROWS_TXN_DATA_SYSI_EIP4788;
+import static net.consensys.linea.zktracer.module.txndata.transactions.SysiEip2935Transaction.NB_ROWS_TXN_DATA_SYSI_EIP_2935;
+import static net.consensys.linea.zktracer.module.txndata.transactions.SysiEip4788Transaction.NB_ROWS_TXN_DATA_SYSI_EIP_4788;
 import static net.consensys.linea.zktracer.module.txndata.transactions.UserTransaction.NB_ROWS_TXN_DATA_OSAKA_USER_1559_SEMANTIC;
 import static net.consensys.linea.zktracer.module.txndata.transactions.UserTransaction.NB_ROWS_TXN_DATA_OSAKA_USER_NO_1559_SEMANTIC;
 import static net.consensys.linea.zktracer.opcode.OpCode.*;
@@ -150,6 +150,7 @@ public class ZkCounter implements LineCountingTracer {
   final CountingOnlyModule rlpAddr;
   final CountingOnlyModule rlpTxn;
   final CountingOnlyModule rlpTxnRcpt;
+  final CountingOnlyModule rlpAuth;
   final CountingOnlyModule rlpUtils;
   final CountingOnlyModule rom;
   final CountingOnlyModule romlex;
@@ -243,6 +244,7 @@ public class ZkCounter implements LineCountingTracer {
         mod,
         mul,
         oob, // need to duplicate to have an accurate counting. We have *10 line count if not.
+        rlpAuth,
         rlpTxn, // need a refacto to have rlpTxn using not only TransactionProcessingMetadata
         rlpUtils, // need RLP_TXN
         rom, // not trivial
@@ -331,6 +333,7 @@ public class ZkCounter implements LineCountingTracer {
     mmio = new CountingOnlyModule(MMIO, trace.mmio().spillage());
     mmu = new CountingOnlyModule(MMU, trace.mmu().spillage());
     mxp = new CountingOnlyModule(MXP, trace.mxp().spillage());
+    rlpAuth = new CountingOnlyModule(RLP_AUTH, trace.rlpauth().spillage());
     rlpAddr = new CountingOnlyModule(RLP_ADDR, trace.rlpaddr().spillage());
     rlpTxn = new CountingOnlyModule(RLP_TXN, trace.rlptxn().spillage());
     rlpTxnRcpt = new CountingOnlyModule(RLP_TXN_RCPT, trace.rlptxrcpt().spillage());
@@ -404,26 +407,44 @@ public class ZkCounter implements LineCountingTracer {
       final Address miningBeneficiary) {
     l1BlockSize.traceStartBlock(world, blockHeader, miningBeneficiary);
     blockData.updateTally(NB_ROWS_BLOCK_DATA);
-    hub.updateTally(NB_ROWS_HUB_SYSI_EIP4788);
-    txnData.updateTally(NB_ROWS_TXN_DATA_SYSI_EIP4788);
-    hub.updateTally(NB_ROWS_HUB_SYSI_EIP2935);
-    txnData.updateTally(NB_ROWS_TXN_DATA_SYSI_EIP2935);
+    hub.updateTally(NB_ROWS_HUB_SYSI_EIP_4788);
+    txnData.updateTally(NB_ROWS_TXN_DATA_SYSI_EIP_4788);
+    hub.updateTally(NB_ROWS_HUB_SYSI_EIP_2935);
+    txnData.updateTally(NB_ROWS_TXN_DATA_SYSI_EIP_2935);
     hub.updateTally(NB_ROWS_HUB_SYSF_NOOP);
     txnData.updateTally(NB_ROWS_TXN_DATA_SYSF_NOOP);
 
     commitTransactionBundle();
   }
 
+  final String nonsenseEcRecoverInput = "0x" + "11".repeat(128);
+  final String zeroOutput = "0x" + "00".repeat(32);
+
+  // Note: We need to call at traceStartTransaction and not tracePrepareTransaction to have the
+  // authorization updated
   @Override
-  public void tracePrepareTransaction(WorldView worldView, Transaction tx) {
+  public void traceStartTransaction(WorldView worldView, Transaction tx) {
     switch (tx.getType()) {
       case FRONTIER, ACCESS_LIST, EIP1559, DELEGATE_CODE -> {
         blockTransactions.traceStartTx(null, null);
-        final boolean triggersEvm = computeRequiresEvmExecution(worldView, tx);
+        final boolean requiresEvmExecution = computeRequiresEvmExecution(fork, worldView, tx);
         if (tx.getType().supportsDelegateCode()) {
-          hub.updateTally(2 * tx.codeDelegationListSize() + 1);
+
+          // gross overestimations
+          for (int i = 0; i < tx.codeDelegationListSize(); i++) {
+            hub.updateTally(2); // up to two rows per delegation
+            ecdata.callEcData(
+                0,
+                PRC_ECRECOVER,
+                Bytes.fromHexString(nonsenseEcRecoverInput),
+                Bytes.fromHexString(zeroOutput));
+            ecRecoverEffectiveCall.updateTally(1);
+            shakiradata.updateTally(5 + 2);
+            keccak.updateTally(1);
+          }
+          hub.updateTally(1); // the final transaction row
         }
-        if (triggersEvm) {
+        if (requiresEvmExecution) {
           hub.updateTally(NB_ROWS_HUB_INIT + NB_ROWS_HUB_FINL);
           if (tx.getAccessList().isPresent()) {
             final int nRowsWarmPhase =

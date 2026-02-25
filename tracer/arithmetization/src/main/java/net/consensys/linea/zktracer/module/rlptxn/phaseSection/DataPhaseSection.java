@@ -59,7 +59,7 @@ public class DataPhaseSection extends PhaseSection {
   }
 
   @Override
-  protected void traceComputationsRows(
+  protected void traceComputationRows(
       Trace.Rlptxn trace, TransactionProcessingMetadata tx, GenericTracedValue tracedValues) {
     // Trace the prefix
     traceTransactionConstantValues(trace, tracedValues);

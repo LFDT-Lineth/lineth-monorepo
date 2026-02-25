@@ -164,11 +164,11 @@ public class AddressUtils {
         : Address.wrap(leftPadTo(input.trimLeadingZeros(), Address.SIZE));
   }
 
-  public static long highPart(Address address) {
+  public static long hiPart(Address address) {
     return address.slice(0, 4).toLong();
   }
 
-  public static Bytes lowPart(Address address) {
+  public static Bytes loPart(Address address) {
     return address.slice(4, LLARGE);
   }
 

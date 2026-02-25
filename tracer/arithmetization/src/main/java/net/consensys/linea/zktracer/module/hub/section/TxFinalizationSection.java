@@ -36,6 +36,10 @@ import org.hyperledger.besu.evm.worldstate.WorldView;
 
 public final class TxFinalizationSection extends TraceSection implements EndTransactionDefer {
 
+  /**
+   * + 1 TXN + 1 ACC (sender gas payment) + 1 ACC (coinbase) + 1 CON (print the ZERO_CONTEXT)
+   * ======================================= = 4 rows at most
+   */
   public static final short NB_ROWS_HUB_FINL = 4;
 
   private final TransactionProcessingMetadata txMetadata;

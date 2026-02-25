@@ -15,8 +15,8 @@
 
 package net.consensys.linea.zktracer.module.hub.fragment;
 
-import static net.consensys.linea.zktracer.types.AddressUtils.highPart;
-import static net.consensys.linea.zktracer.types.AddressUtils.lowPart;
+import static net.consensys.linea.zktracer.types.AddressUtils.hiPart;
+import static net.consensys.linea.zktracer.types.AddressUtils.loPart;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -108,16 +108,16 @@ public class ContextFragment implements TraceFragment {
         .pContextCallStackDepth((short) callFrame.depth())
         .pContextIsRoot(callFrame.isRoot())
         .pContextIsStatic(callFrame.type().isStatic())
-        .pContextAccountAddressHi(highPart(address))
-        .pContextAccountAddressLo(lowPart(address))
+        .pContextAccountAddressHi(hiPart(address))
+        .pContextAccountAddressLo(loPart(address))
         .pContextAccountDeploymentNumber(callFrame.accountDeploymentNumber())
-        .pContextByteCodeAddressHi(highPart(codeAddress))
-        .pContextByteCodeAddressLo(lowPart(codeAddress))
+        .pContextByteCodeAddressHi(hiPart(codeAddress))
+        .pContextByteCodeAddressLo(loPart(codeAddress))
         .pContextByteCodeDeploymentNumber(callFrame.byteCodeDeploymentNumber())
         .pContextByteCodeDeploymentStatus(callFrame.isDeployment() ? 1 : 0)
         .pContextByteCodeCodeFragmentIndex(callFrame.getCodeFragmentIndex(hub))
-        .pContextCallerAddressHi(highPart(callerAddress))
-        .pContextCallerAddressLo(lowPart(callerAddress))
+        .pContextCallerAddressHi(hiPart(callerAddress))
+        .pContextCallerAddressLo(loPart(callerAddress))
         .pContextCallValue(callFrame.value())
         .pContextCallDataContextNumber(callFrame.callDataRange().contextNumber())
         .pContextCallDataOffset(callFrame.callDataRange().offset())

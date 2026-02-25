@@ -20,6 +20,7 @@
       ;;
       acp_BLK_NUMBER
       acp_TOTL_TXN_NUMBER
+      acp_TX_AUTH
       acp_CODE_FRAGMENT_INDEX
       acp_BALANCE
       acp_BALANCE_NEW
@@ -41,6 +42,14 @@
       acp_DEPLOYMENT_NUMBER_NEW
       acp_DEPLOYMENT_STATUS
       acp_DEPLOYMENT_STATUS_NEW
+      acp_DELEGATION_ADDRESS_HI
+      acp_DELEGATION_ADDRESS_LO
+      acp_DELEGATION_ADDRESS_HI_NEW
+      acp_DELEGATION_ADDRESS_LO_NEW
+      acp_DELEGATION_NUMBER
+      acp_DELEGATION_NUMBER_NEW
+      acp_IS_DELEGATED
+      acp_IS_DELEGATED_NEW
       acp_MARKED_FOR_DELETION
       acp_MARKED_FOR_DELETION_NEW
       acp_TRM_FLAG
@@ -57,6 +66,7 @@
       ;;
       BLK_NUMBER
       TOTL_TXN_NUMBER
+      TX_AUTH
       account/CODE_FRAGMENT_INDEX
       account/BALANCE
       account/BALANCE_NEW
@@ -78,6 +88,14 @@
       account/DEPLOYMENT_NUMBER_NEW
       account/DEPLOYMENT_STATUS
       account/DEPLOYMENT_STATUS_NEW
+      account/DELEGATION_ADDRESS_HI
+      account/DELEGATION_ADDRESS_LO
+      account/DELEGATION_ADDRESS_HI_NEW
+      account/DELEGATION_ADDRESS_LO_NEW
+      account/DELEGATION_NUMBER
+      account/DELEGATION_NUMBER_NEW
+      account/IS_DELEGATED
+      account/IS_DELEGATED_NEW
       account/MARKED_FOR_DELETION
       account/MARKED_FOR_DELETION_NEW
       account/TRM_FLAG

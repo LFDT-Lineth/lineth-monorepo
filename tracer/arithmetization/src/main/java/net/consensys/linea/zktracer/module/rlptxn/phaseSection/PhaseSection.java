@@ -29,7 +29,7 @@ public abstract class PhaseSection {
 
   public void trace(Trace.Rlptxn trace, GenericTracedValue tracedValues) {
     traceTransactionRow(trace, tracedValues.tx(), tracedValues);
-    traceComputationsRows(trace, tracedValues.tx(), tracedValues);
+    traceComputationRows(trace, tracedValues.tx(), tracedValues);
   }
 
   private void traceTransactionRow(
@@ -59,7 +59,7 @@ public abstract class PhaseSection {
     tracePostValues(trace, tracedValues);
   }
 
-  protected abstract void traceComputationsRows(
+  protected abstract void traceComputationRows(
       Trace.Rlptxn trace, TransactionProcessingMetadata tx, GenericTracedValue tracedValues);
 
   protected abstract void traceIsPhaseX(Trace.Rlptxn trace);
@@ -81,7 +81,7 @@ public abstract class PhaseSection {
         .yParity(tracedValues.tx().yParity())
         .requiresEvmExecution(tracedValues.tx().requiresEvmExecution())
         .isDeployment(tracedValues.tx().isDeployment())
-        .numberOfAuthorizations(tracedValues.tx().getBesuTransaction().codeDelegationListSize())
+        .lengthOfDelegationList(tracedValues.tx().getBesuTransaction().codeDelegationListSize())
         .proverUserTxnNumberMax(tracedValues.userTxnNumberMax());
   }
 

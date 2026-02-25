@@ -38,5 +38,5 @@
 	 ( CHAIN_ID                           :i64          )
 	 ( CFI                                :i16          )
 	 ( REQUIRES_EVM_EXECUTION             :binary@prove )
-	 ( NUMBER_OF_AUTHORIZATIONS           :i10          )
+	 ( LENGTH_OF_DELEGATION_LIST          :i10          )
 	 ))

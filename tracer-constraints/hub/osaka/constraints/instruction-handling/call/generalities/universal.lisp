@@ -65,22 +65,26 @@
                                                                                   (call-instruction---STACK-value-lo)            ;; value (low  part, stack argument of CALL-type instruction)
                                                                                   ))
                                   (if-not-zero    (scenario-shorthand---CALL---unexceptional)
-                                                  (set-OOB-instruction---call    CALL_misc_row___row_offset                     ;; offset
-                                                                                 (call-instruction---STACK-value-hi)            ;; value   (high part)
-                                                                                 (call-instruction---STACK-value-lo)            ;; value   (low  part, stack argument of CALL-type instruction)
-                                                                                 (call-instruction---caller-balance)            ;; balance (from caller account)
-                                                                                 (call-instruction---current-call-stack-depth)  ;; call stack depth
+                                                  (set-OOB-instruction---call    CALL_misc_row___row_offset                             ;; offset
+                                                                                 (call-instruction---STACK-value-hi)                    ;; value   (high part)
+                                                                                 (call-instruction---STACK-value-lo)                    ;; value   (low  part, stack argument of CALL-type instruction)
+                                                                                 (call-instruction---caller---balance)                    ;; balance (from caller account)
+                                                                                 (call-instruction---current-frame---call-stack-depth)  ;; call stack depth
                                                                                  ))
                                   ))
 
-(defconstraint    call-instruction---justifying-staticx                    (:guard    (call-instruction---standard-precondition))
+(defconstraint    call-instruction---justifying-staticx
+                  (:guard    (call-instruction---standard-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (eq!    (call-instruction---STACK-staticx)
                           (*    (call-instruction---is-CALL)
                                 (call-instruction---OOB-nonzero-value)
-                                (call-instruction---current-context-is-static))
-                          ))
+                                (call-instruction---current-frame---context-is-static)
+                                )))
 
-(defconstraint    call-instruction---setting-MXP-instruction-parameters    (:guard    (call-instruction---standard-precondition))
+(defconstraint    call-instruction---setting-MXP-instruction-parameters
+                  (:guard    (call-instruction---standard-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (if-not-zero    (shift    misc/MXP_FLAG    CALL_misc_row___row_offset)
                                   (set-MXP-instruction---for-CALL-type    CALL_misc_row___row_offset                ;; row offset kappa
                                                                           (call-instruction---STACK-instruction)    ;; instruction
@@ -95,13 +99,17 @@
                                                                           )
                                   ))
 
-(defconstraint    call-instruction---justifying-mxpx                       (:guard    (call-instruction---standard-precondition))
+(defconstraint    call-instruction---justifying-mxpx
+                  (:guard    (call-instruction---standard-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (if-not-zero    (shift    misc/MXP_FLAG    CALL_misc_row___row_offset)
                                   (eq!    (call-instruction---STACK-mxpx)
                                           (call-instruction---MXP-memory-expansion-exception))
                                   ))
 
-(defconstraint    call-instruction---setting-STP-instruction-parameters    (:guard    (call-instruction---standard-precondition))
+(defconstraint    call-instruction---setting-STP-instruction-parameters
+                  (:guard    (call-instruction---standard-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (if-not-zero    (shift    misc/STP_FLAG     CALL_misc_row___row_offset)
                                   (set-STP-instruction-call   CALL_misc_row___row_offset                                           ;; relative row offset
                                                               (call-instruction---STACK-instruction)                               ;; instruction
@@ -109,16 +117,65 @@
                                                               (call-instruction---STACK-gas-lo)                                    ;; max gas allowance argument, low  part
                                                               (call-instruction---STACK-value-hi)                                  ;; value to transfer, high part
                                                               (call-instruction---STACK-value-lo)                                  ;; value to transfer, low  part
-                                                              (* (call-instruction---callee-exists) (call-instruction---is-CALL))  ;; bit indicating target account existence
-                                                              (call-instruction---callee-warmth)                                   ;; bit indicating target account warmth
+                                                              (* (call-instruction---callee---exists) (call-instruction---is-CALL))  ;; bit indicating target account existence
+                                                              (call-instruction---callee---warmth)                                   ;; bit indicating target account warmth
+                                                              (call-instruction---callee---is-delegated)                             ;; bit indicating whether callee is delegated
+                                                              (call-instruction---callee---is-delegated-to-self)                     ;; bit indicating whether callee is delegated to itself
+                                                              (call-instruction---is-delegate-warmth)                              ;; bit containing the delegate warmth (provided it is delegated)
                                                               (call-instruction---MXP-memory-expansion-gas)                        ;; memory expansion gas
                                                               )
                                   ))
 
-(defconstraint    call-instruction---justifying-oogx                       (:guard    (call-instruction---standard-precondition))
+(defconstraint    call-instruction---justifying-oogx
+                  (:guard    (call-instruction---standard-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (if-not-zero    (shift    misc/STP_FLAG     CALL_misc_row___row_offset)
                                   (eq!    (call-instruction---STACK-oogx)    (call-instruction---STP-out-of-gas-exception))
                                   ))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun   (call-instruction---general_PRC_scenario )   (call-instruction---callee---is-precompile ) )
+(defun   (call-instruction---general_EOA_scenario )   (+  (call-instruction---callee---has-empty-code-but-isnt-precompile       )
+                                                          (call-instruction---callee---is-delegated-and-delegate-has-empty-code )
+                                                          ;; (call-instruction---callee---is-delegated-and-delegate-is-itself-delegated )
+                                                          ))
+(defun   (call-instruction---general_SMC_scenario )   (+  (call-instruction---callee_has_nonempty_code_and_isnt_delegated        )
+                                                          (call-instruction---callee_is_delegated_and_delegate_has_nonempty_code )
+                                                          ;; (call-instruction---callee_is_delegated_and_delegate_has_nonempty_code_and_isnt_delegated )
+                                                          ))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun   (call-instruction---callee_has_nonempty_code_and_isnt_delegated        )   (*  (call-instruction---callee---has-code       )
+                                                                                        (call-instruction---callee---isnt-delegated )
+                                                                                        ))
+(defun   (call-instruction---callee_is_delegated_and_delegate_has_nonempty_code )   (*  (call-instruction---callee---is-delegated               )
+                                                                                        (call-instruction---delegate-or-callee---has-code       )
+                                                                                        ))
+;; (defun   (call-instruction---callee_is_delegated_and_delegate_has_nonempty_code_and_isnt_delegated )   (*  (call-instruction---callee---is-delegated               )
+;;                                                                                                            (call-instruction---delegate-or-callee---has-code       )
+;;                                                                                                            (call-instruction---delegate-or-callee---isnt-delegated )
+;;                                                                                                            ))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun   (call-instruction---callee---has-empty-code-but-isnt-precompile            )   (*  (call-instruction---callee---isnt-precompile )
+                                                                                            (call-instruction---callee---has-empty-code  )
+                                                                                            ))
+(defun   (call-instruction---callee---is-delegated-and-delegate-has-empty-code      )   (*  (call-instruction---callee---is-delegated               )
+                                                                                            (call-instruction---delegate-or-callee---has-empty-code )
+                                                                                            ))
+;; (defun   (call-instruction---callee---is-delegated-and-delegate-is-itself-delegated )   (*  (call-instruction---callee---is-delegated             )
+;;                                                                                             (call-instruction---delegate-or-callee---is-delegated )
+;;                                                                                             ))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun   (call-instruction---callee---isnt-precompile            )   (-  1  (call-instruction---callee---is-precompile            ) ))
+(defun   (call-instruction---callee---has-empty-code             )   (-  1  (call-instruction---callee---has-code                 ) ))
+(defun   (call-instruction---callee---isnt-delegated             )   (-  1  (call-instruction---callee---is-delegated             ) ))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun   (call-instruction---delegate-or-callee---has-empty-code )   (-  1  (call-instruction---delegate-or-callee---has-code     ) ))
+(defun   (call-instruction---delegate-or-callee---isnt-delegated )   (-  1  (call-instruction---delegate-or-callee---is-delegated ) ))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defconstraint    call-instruction---setting-the-CALL-scenario-flag        (:guard    (call-instruction---standard-precondition))
                   (begin
@@ -128,30 +185,30 @@
                                             (call-instruction---OOB-aborting-condition)))
                     (if-not-zero    (scenario-shorthand---CALL---abort)
                                     (begin
-                                      (eq!              scenario/CALL_ABORT_WILL_REVERT               (call-instruction---caller-will-revert))
-                                      (debug    (eq!    scenario/CALL_ABORT_WONT_REVERT    (-    1    (call-instruction---caller-will-revert))))))
+                                      (eq!              scenario/CALL_ABORT_WILL_REVERT               (call-instruction---caller---will-revert))
+                                      (debug    (eq!    scenario/CALL_ABORT_WONT_REVERT    (-    1    (call-instruction---caller---will-revert))))))
                     (if-not-zero    (scenario-shorthand---CALL---entry)
                                     (begin
-                                      (eq!    (scenario-shorthand---CALL---precompile)                  (call-instruction---callee-is-precompile))
-                                      (eq!    (scenario-shorthand---CALL---externally-owned-account)    (*   (-    1    (call-instruction---callee-is-precompile))
-                                                                                                             (-    1    (call-instruction---callee-has-code))))
-                                      (eq!    (scenario-shorthand---CALL---smart-contract)              (call-instruction---callee-has-code))))
+                                      (eq!    (scenario-shorthand---CALL---externally-owned-account)    (call-instruction---general_EOA_scenario ))
+                                      (eq!    (scenario-shorthand---CALL---smart-contract)              (call-instruction---general_SMC_scenario ))
+                                      (eq!    (scenario-shorthand---CALL---precompile)                  (call-instruction---general_PRC_scenario ))
+                                      ))
                     (if-not-zero    (+    scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT    scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT)
                                     (begin
-                                      (eq!              scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT               (call-instruction---caller-will-revert))
-                                      (debug    (eq!    scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT    (-    1    (call-instruction---caller-will-revert))))))
+                                      (eq!              scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT               (call-instruction---caller---will-revert))
+                                      (debug    (eq!    scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT    (-    1    (call-instruction---caller---will-revert))))))
                     (if-not-zero    (scenario-shorthand---CALL---externally-owned-account)
                                     (begin
-                                      (eq!              scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT               (call-instruction---caller-will-revert))
-                                      (debug    (eq!    scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT    (-    1    (call-instruction---caller-will-revert))))))
+                                      (eq!              scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT               (call-instruction---caller---will-revert))
+                                      (debug    (eq!    scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT    (-    1    (call-instruction---caller---will-revert))))))
                     (if-not-zero    (scenario-shorthand---CALL---smart-contract)
                                     (begin
                                       (eq!                (+    scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT    scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT)
-                                                          (call-instruction---caller-will-revert))
+                                                          (call-instruction---caller---will-revert))
                                       (debug    (eq!      (+    scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT    scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT)
-                                                          (-    1    (call-instruction---caller-will-revert))))
-                                      (eq!                (scenario-shorthand---CALL---smc-failure)               (call-instruction---callee-self-reverts))
-                                      (eq!                (scenario-shorthand---CALL---smc-success)    (-    1    (call-instruction---callee-self-reverts)))))))
+                                                          (-    1    (call-instruction---caller---will-revert))))
+                                      (eq!                (scenario-shorthand---CALL---smc-failure)               (call-instruction---callee---self-reverts))
+                                      (eq!                (scenario-shorthand---CALL---smc-success)    (-    1    (call-instruction---callee---self-reverts)))))))
 
 (defconstraint    call-instruction---setting-the-next-context-number       (:guard    (call-instruction---standard-precondition))
                   (begin

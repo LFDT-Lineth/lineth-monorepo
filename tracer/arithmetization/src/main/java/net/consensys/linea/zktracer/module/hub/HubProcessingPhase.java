@@ -16,9 +16,10 @@
 package net.consensys.linea.zktracer.module.hub;
 
 public enum HubProcessingPhase {
+  TX_WARM,
+  TX_AUTH,
+  TX_SKIP,
+  TX_INIT,
   TX_EXEC,
   TX_FINL,
-  TX_INIT,
-  TX_SKIP,
-  TX_WARM
 }

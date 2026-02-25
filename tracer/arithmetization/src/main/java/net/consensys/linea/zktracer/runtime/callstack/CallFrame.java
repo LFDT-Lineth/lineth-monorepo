@@ -52,7 +52,6 @@ public class CallFrame {
   @Getter private final int depth;
   @Getter private boolean isDeployment;
   @Getter private final CallFrameType type;
-  @Getter private int delegationNumber;
 
   public boolean isMessageCall() {
     return !isDeployment;
@@ -65,6 +64,7 @@ public class CallFrame {
   // byte code that is running in the present frame
   @Getter private Address byteCodeAddress = Address.ZERO;
   @Getter private int byteCodeDeploymentNumber;
+  @Getter private int bytecodeDelegationNumber;
   @Getter private Bytecode code = Bytecode.EMPTY;
 
   // caller related information
@@ -74,7 +74,7 @@ public class CallFrame {
     return this == CallFrame.EMPTY || type == CallFrameType.TRANSACTION_CALL_DATA_HOLDER
         ? 0
         : hub.getCodeFragmentIndexByMetaData(
-            byteCodeAddress, byteCodeDeploymentNumber, isDeployment, delegationNumber);
+            byteCodeAddress, byteCodeDeploymentNumber, isDeployment, bytecodeDelegationNumber);
   }
 
   @Getter @Setter private int pc;
@@ -177,6 +177,7 @@ public class CallFrame {
       int accountDeploymentNumber,
       Address byteCodeAddress,
       int byteCodeDeploymentNumber,
+      int byteCodeDelegationNumber,
       Bytecode byteCode,
       Address callerAddress,
       int parentId,
@@ -193,6 +194,7 @@ public class CallFrame {
     this.accountDeploymentNumber = accountDeploymentNumber;
     this.byteCodeAddress = byteCodeAddress;
     this.byteCodeDeploymentNumber = byteCodeDeploymentNumber;
+    this.bytecodeDelegationNumber = byteCodeDelegationNumber;
     this.code = byteCode;
     this.callerAddress = callerAddress;
     this.parentId = parentId;
@@ -212,7 +214,7 @@ public class CallFrame {
    */
   public ContractMetadata metadata() {
     return ContractMetadata.make(
-        byteCodeAddress, byteCodeDeploymentNumber, isDeployment, delegationNumber);
+        byteCodeAddress, byteCodeDeploymentNumber, isDeployment, bytecodeDelegationNumber);
   }
 
   private void revertChildren(CallStack callStack, int parentRevertStamp) {

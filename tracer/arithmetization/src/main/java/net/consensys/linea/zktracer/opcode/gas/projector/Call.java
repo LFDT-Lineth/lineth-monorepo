@@ -20,6 +20,7 @@ import static net.consensys.linea.zktracer.types.AddressUtils.isAddressWarm;
 
 import lombok.RequiredArgsConstructor;
 import net.consensys.linea.zktracer.Fork;
+import net.consensys.linea.zktracer.types.Bytecode;
 import net.consensys.linea.zktracer.types.Range;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Wei;
@@ -73,11 +74,41 @@ public class Call extends GasProjection {
       return 0;
     }
 
-    if (isAddressWarm(fork, frame, to)) {
-      return GAS_CONST_G_WARM_ACCESS;
-    } else {
-      return GAS_CONST_G_COLD_ACCOUNT_ACCESS;
+    final boolean isCallTypeInstruction =
+        frame.getCurrentOperation().getName().equals("CALL")
+            || frame.getCurrentOperation().getName().equals("CALLCODE")
+            || frame.getCurrentOperation().getName().equals("DELEGATECALL")
+            || frame.getCurrentOperation().getName().equals("STATICCALL");
+    final boolean currentTargetWarmth = isAddressWarm(fork, frame, to);
+
+    if (!isCallTypeInstruction) {
+      return currentTargetWarmth ? GAS_CONST_G_WARM_ACCESS : GAS_CONST_G_COLD_ACCOUNT_ACCESS;
     }
+
+    // beyond this point: CALL-type instruction
+    final Account target = frame.getWorldUpdater().get(to);
+    if (target == null) {
+      return currentTargetWarmth ? GAS_CONST_G_WARM_ACCESS : GAS_CONST_G_COLD_ACCOUNT_ACCESS;
+    }
+
+    // beyond this point: to address exists in the state
+    final Bytecode targetCode = new Bytecode(target.getCode());
+    if (!targetCode.isDelegated()) {
+      return currentTargetWarmth ? GAS_CONST_G_WARM_ACCESS : GAS_CONST_G_COLD_ACCOUNT_ACCESS;
+    }
+
+    // beyond this point: to address is delegated
+    final Address delegateAddress = targetCode.getDelegateAddress().orElseThrow();
+    final boolean isSelfDelegated = delegateAddress.equals(to);
+    if (isSelfDelegated) {
+      return (currentTargetWarmth ? GAS_CONST_G_WARM_ACCESS : GAS_CONST_G_COLD_ACCOUNT_ACCESS)
+          + GAS_CONST_G_WARM_ACCESS;
+    }
+
+    // beyond this point: to address is delegated but not to itself
+    final boolean currentDelegateWarmth = isAddressWarm(fork, frame, delegateAddress);
+    return (currentTargetWarmth ? GAS_CONST_G_WARM_ACCESS : GAS_CONST_G_COLD_ACCOUNT_ACCESS)
+        + (currentDelegateWarmth ? GAS_CONST_G_WARM_ACCESS : GAS_CONST_G_COLD_ACCOUNT_ACCESS);
   }
 
   @Override

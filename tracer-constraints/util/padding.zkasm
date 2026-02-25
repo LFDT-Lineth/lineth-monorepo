@@ -1,6 +1,5 @@
 ;; Right or Left Pad an input to a given size.
 
-
 ;; right pad u128
 fn rpad_128(input u128) -> (res u128) {
   var leading_zeroes u8

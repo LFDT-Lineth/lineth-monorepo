@@ -267,7 +267,7 @@ public class ZkTracer implements LineCountingTracer {
   public void tracePrepareTransaction(WorldView worldView, Transaction transaction) {
     try {
       this.debugMode.ifPresent(x -> x.tracePrepareTx(worldView, transaction));
-      this.hub.traceStartTransaction(worldView, transaction);
+      this.hub.tracePrepareTransaction(worldView, transaction);
     } catch (final Exception e) {
       collectException(e);
     }

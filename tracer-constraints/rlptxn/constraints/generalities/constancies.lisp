@@ -9,5 +9,5 @@
                  (transaction-constant CFI)
                  (transaction-constant REPLAY_PROTECTION)
                  (transaction-constant Y_PARITY)
-                 (transaction-constant NUMBER_OF_AUTHORIZATIONS)
+                 (transaction-constant LENGTH_OF_DELEGATION_LIST)
                  ))

@@ -68,19 +68,22 @@ public final class CallStack {
       int callDataContextNumber,
       Bytes callData,
       int accountDeploymentNumber,
-      int codeDeploymentNumber,
-      boolean codeDeploymentStatus) {
+      Address byteCodeAddress,
+      int byteCodeDeploymentNumber,
+      boolean byteCodeDeploymentStatus,
+      int byteCodeDelegationNumber) {
     this.depth = -1;
     this.enter(
         CallFrameType.ROOT,
         contextNumber,
-        codeDeploymentStatus,
+        byteCodeDeploymentStatus,
         value,
         gas,
         to,
         accountDeploymentNumber,
-        to,
-        codeDeploymentNumber,
+        byteCodeAddress,
+        byteCodeDeploymentNumber,
+        byteCodeDelegationNumber,
         toCode == null ? Bytecode.EMPTY : toCode,
         from,
         new MemoryRange(callDataContextNumber, 0, callData.size(), callData),
@@ -106,6 +109,7 @@ public final class CallStack {
         Address.ZERO, // useless
         0,
         Address.ZERO, // useless
+        0,
         0,
         Bytecode.EMPTY,
         Address.ZERO, // useless
@@ -167,6 +171,7 @@ public final class CallStack {
       int accountDeploymentNumber,
       Address byteCodeAddress,
       int byteCodeDeploymentNumber,
+      int byteCodeDelegationNumber,
       Bytecode byteCode,
       Address callerAddress,
       MemoryRange callData,
@@ -188,6 +193,7 @@ public final class CallStack {
             accountDeploymentNumber,
             byteCodeAddress,
             byteCodeDeploymentNumber,
+            byteCodeDelegationNumber,
             byteCode,
             callerAddress,
             callerId,

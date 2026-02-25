@@ -279,7 +279,7 @@
     ;; scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
     ))
 
-;;  CALL/requires_both_accounts_twice
+;;  CALL/requires_accounts_twice
 (defun (scenario-shorthand---CALL---requires-both-accounts-twice)
   (+
     ;; scenario/CALL_EXCEPTION
@@ -293,6 +293,23 @@
     ;; scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
     ;; scenario/CALL_PRC_FAILURE
     scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
+    ))
+
+;;  CALL/requires_accounts_thrice
+(defun (scenario-shorthand---CALL---requires-both-accounts-thrice)
+  (+
+    ;; scenario/CALL_EXCEPTION
+    ;; scenario/CALL_ABORT_WILL_REVERT
+    ;; scenario/CALL_ABORT_WONT_REVERT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
+    scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_PRC_FAILURE
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
     ;; scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
     ))
 

@@ -21,6 +21,7 @@
 (defun   (USER-transaction---RLP---max-fee)                           (shift   rlp/MAX_FEE_PER_GAS                      ROFF___USER___RLP_ROW))
 (defun   (USER-transaction---RLP---number-of-access-list-keys)        (shift   rlp/NUMBER_OF_ACCESS_LIST_STORAGE_KEYS   ROFF___USER___RLP_ROW))
 (defun   (USER-transaction---RLP---number-of-access-list-addresses)   (shift   rlp/NUMBER_OF_ACCESS_LIST_ADDRESSES      ROFF___USER___RLP_ROW))
+(defun   (USER-transaction---RLP---length-of-delegation-list)         (shift   rlp/LENGTH_OF_DELEGATION_LIST            ROFF___USER___RLP_ROW))
 
 (defun   (USER-transaction---RLP---is-message-call)    (-   1    (USER-transaction---RLP---is-deployment)))
 

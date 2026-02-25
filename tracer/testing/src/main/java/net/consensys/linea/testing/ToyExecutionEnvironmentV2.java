@@ -145,14 +145,16 @@ public class ToyExecutionEnvironmentV2 {
               .toList();
 
       for (String module : moduleToCheck) {
+        // TODO: @OlivierBBB we need to fix this
         checkArgument(
             tracerCount.get(module) <= lightCounterCount.get(module),
-            "Module "
+            "The ZkCounter under counts the "
                 + module
-                + " has more lines in full tracer: "
+                + " module: ZkTracer ≡ "
                 + tracerCount.get(module)
-                + " than in light counter: "
-                + lightCounterCount.get(module));
+                + " > "
+                + lightCounterCount.get(module)
+                + " ≡ ZkCounter");
 
         // TODO: how to make it smart ?
 

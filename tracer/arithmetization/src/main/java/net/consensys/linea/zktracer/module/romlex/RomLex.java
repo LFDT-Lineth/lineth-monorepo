@@ -19,8 +19,8 @@ import static com.google.common.base.Preconditions.*;
 import static net.consensys.linea.zktracer.Trace.*;
 import static net.consensys.linea.zktracer.module.ModuleName.ROM_LEX;
 import static net.consensys.linea.zktracer.types.AddressUtils.getDeploymentAddress;
-import static net.consensys.linea.zktracer.types.AddressUtils.highPart;
-import static net.consensys.linea.zktracer.types.AddressUtils.lowPart;
+import static net.consensys.linea.zktracer.types.AddressUtils.hiPart;
+import static net.consensys.linea.zktracer.types.AddressUtils.loPart;
 import static net.consensys.linea.zktracer.types.Conversions.bytesToLong;
 
 import com.google.common.base.Preconditions;
@@ -32,6 +32,7 @@ import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.container.module.OperationSetModule;
 import net.consensys.linea.zktracer.container.stacked.ModuleOperationStackedSet;
 import net.consensys.linea.zktracer.module.ModuleName;
+import net.consensys.linea.zktracer.module.hub.ExecutionType;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.defer.ContextEntryDefer;
 import net.consensys.linea.zktracer.opcode.OpCodeData;
@@ -76,10 +77,11 @@ public class RomLex implements OperationSetModule<RomOperation>, ContextEntryDef
     if (romOps == null) {
       throw new RuntimeException(
           "RomChunk with:"
-              + String.format("\n\t\taddress = %s", metadata.address())
-              + String.format("\n\t\tdeployment number = %s", metadata.deploymentNumber())
-              + String.format("\n\t\tdeployment status = %s", metadata.underDeployment())
-              + "\n\tnot found");
+              + String.format("\n\taddress = %s", metadata.address())
+              + String.format("\n\tdeployment number = %s", metadata.deploymentNumber())
+              + String.format("\n\tdeployment status = %s", metadata.underDeployment())
+              + String.format("\n\tdelegation number = %s", metadata.delegationNumber())
+              + "\nnot found\n");
     }
     return romOps;
   }
@@ -110,6 +112,14 @@ public class RomLex implements OperationSetModule<RomOperation>, ContextEntryDef
     return getChunkByMetadata(metadata).map(RomOperation::byteCode).orElseThrow();
   }
 
+  /**
+   * Make sure that this is run <i>after</i> the delegation list was processed by Besu. The
+   * processing of the delegation list may lead to accounts popping into existence in the state that
+   * didn't exist before. This would make the {@code executionAddress} stuff not work properly.
+   *
+   * <p><b>Note.</b> Delegation list processing may <b>NOT</b> lead to account being removed from
+   * the state (due to the nonce)
+   */
   @Override
   public void traceStartTx(WorldView worldView, TransactionProcessingMetadata txMetaData) {
     final Transaction tx = txMetaData.getBesuTransaction();
@@ -125,22 +135,25 @@ public class RomLex implements OperationSetModule<RomOperation>, ContextEntryDef
       operations.add(operation);
     }
 
-    // Call to an account with bytecode
-    tx.getTo()
-        .map(worldView::get)
-        .map(AccountState::getCode)
-        .ifPresent(
-            code -> {
-              if (!code.isEmpty()) {
+    if (tx.getTo().isEmpty()) {
+      return;
+    }
 
-                final Address calledAddress = tx.getTo().get();
-                final RomOperation operation =
-                    new RomOperation(
-                        ContractMetadata.canonical(hub, calledAddress), code, hub.opCodes());
+    final ExecutionType executionType =
+        ExecutionType.getExecutionType(hub.fork, worldView, tx.getTo().get());
+    final Address executionAddress = executionType.executionAddress();
 
-                operations.add(operation);
-              }
-            });
+    if (worldView.get(executionAddress) == null
+        || worldView.get(executionAddress).isEmpty()
+        || worldView.get(executionAddress).getCode().isEmpty()) {
+      return;
+    }
+
+    operations.add(
+        new RomOperation(
+            ContractMetadata.canonical(hub, executionAddress),
+            worldView.get(executionAddress).getCode(),
+            hub.opCodes()));
   }
 
   public void callRomLex(final MessageFrame frame) {
@@ -219,10 +232,37 @@ public class RomLex implements OperationSetModule<RomOperation>, ContextEntryDef
             "EXTCODECOPY should only trigger a ROM_LEX chunk if nonzero size parameter");
         checkArgument(
             !hub.deploymentStatusOf(foreignCodeAddress),
-            "EXTCODECOPY should only trigger a ROM_LEX chunk if its target isn't currently deploying");
+            "EXTCODECOPY should only trigger the ROM_LEX module if its target isn't currently undergoing deployment");
         checkArgument(
             !frame.getWorldUpdater().get(foreignCodeAddress).isEmpty()
-                && frame.getWorldUpdater().get(foreignCodeAddress).hasCode());
+                && frame.getWorldUpdater().get(foreignCodeAddress).hasCode(),
+            "EXTCODECOPY should only trigger the ROM_LEX module if its target has code");
+
+        Optional.ofNullable(frame.getWorldUpdater().get(foreignCodeAddress))
+            .map(AccountState::getCode)
+            .ifPresent(
+                byteCode -> {
+                  if (!byteCode.isEmpty()) {
+                    final RomOperation operation =
+                        new RomOperation(
+                            ContractMetadata.canonical(hub, foreignCodeAddress),
+                            byteCode,
+                            hub.opCodes());
+
+                    operations.add(operation);
+                  }
+                });
+      }
+
+      case EXTCODESIZE -> {
+        final Address foreignCodeAddress = Words.toAddress(frame.getStackItem(0));
+        checkArgument(
+            !hub.deploymentStatusOf(foreignCodeAddress),
+            "EXTCODESIZE should only trigger the ROM_LEX module if its target isn't currently undergoing deployment");
+        checkArgument(
+            !frame.getWorldUpdater().get(foreignCodeAddress).isEmpty()
+                && frame.getWorldUpdater().get(foreignCodeAddress).hasCode(),
+            "EXTCODESIZE should only trigger the ROM_LEX module if its target has code");
 
         Optional.ofNullable(frame.getWorldUpdater().get(foreignCodeAddress))
             .map(AccountState::getCode)
@@ -242,7 +282,7 @@ public class RomLex implements OperationSetModule<RomOperation>, ContextEntryDef
 
       default ->
           throw new RuntimeException(
-              String.format("%s does not trigger the creation of ROM_LEX", opCode.mnemonic()));
+              String.format("Opcode %s may not trigger the ROM_LEX module", opCode.mnemonic()));
     }
   }
 
@@ -281,8 +321,8 @@ public class RomLex implements OperationSetModule<RomOperation>, ContextEntryDef
         .codeFragmentIndex(cfi)
         .codeFragmentIndexInfty(codeFragmentIndexInfinity)
         .codeSize(operation.byteCode().size())
-        .addressHi(highPart(operation.metadata().address()))
-        .addressLo(lowPart(operation.metadata().address()))
+        .addressHi(hiPart(operation.metadata().address()))
+        .addressLo(loPart(operation.metadata().address()))
         .deploymentNumber(operation.metadata().deploymentNumber())
         .deploymentStatus(operation.metadata().underDeployment())
         .delegationNumber(operation.metadata().delegationNumber())

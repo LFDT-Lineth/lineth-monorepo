@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.*;
 import static net.consensys.linea.zktracer.module.hub.signals.Exceptions.OUT_OF_GAS_EXCEPTION;
 
 import net.consensys.linea.zktracer.module.hub.AccountSnapshot;
+import net.consensys.linea.zktracer.module.hub.ExecutionType;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.TransactionProcessingType;
 import net.consensys.linea.zktracer.module.hub.fragment.ContextFragment;
@@ -68,8 +69,13 @@ public class CodeCopySection extends TraceSection {
     this.addFragment(contextFragment);
 
     // Account row
+    final ExecutionType executionType =
+        ExecutionType.getExecutionType(
+            hub.fork,
+            hub.messageFrame().getWorldUpdater(),
+            hub.messageFrame().getContractAddress());
     final AccountSnapshot codeAccountSnapshot =
-        AccountSnapshot.canonical(hub, hub.messageFrame().getContractAddress());
+        AccountSnapshot.canonical(hub, executionType.executionAddress());
     checkArgument(codeAccountSnapshot.isWarm(), "CODECOPY: code account should be warm but isn't");
 
     final DomSubStampsSubFragment doingDomSubStamps =

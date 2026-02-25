@@ -16,10 +16,13 @@
 package net.consensys.linea.zktracer.module.hub.section;
 
 import static com.google.common.base.Preconditions.checkState;
-import static net.consensys.linea.zktracer.module.hub.AccountSnapshot.canonical;
+import static net.consensys.linea.zktracer.module.hub.AccountSnapshot.canonicalWithoutFrame;
 import static net.consensys.linea.zktracer.module.hub.HubProcessingPhase.TX_EXEC;
 
+import java.util.Map;
+import java.util.Optional;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.zktracer.module.hub.AccountSnapshot;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.TransactionProcessingType;
@@ -28,26 +31,36 @@ import net.consensys.linea.zktracer.module.hub.fragment.ContextFragment;
 import net.consensys.linea.zktracer.module.hub.fragment.DomSubStampsSubFragment;
 import net.consensys.linea.zktracer.module.hub.fragment.account.AccountFragment;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.ImcFragment;
-import net.consensys.linea.zktracer.module.hub.transients.DeploymentInfo;
 import net.consensys.linea.zktracer.types.Bytecode;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
-import org.hyperledger.besu.evm.account.Account;
 import org.hyperledger.besu.evm.worldstate.WorldView;
 
+@Slf4j
 public final class TxInitializationSection extends TraceSection implements EndTransactionDefer {
 
-  public static final short NB_ROWS_HUB_INIT = 9;
+  /**
+   * + 1 TXN + 1 MISC + 1 ACC (coinbase) + 1 ACC (sender gas payment) + 1 ACC (sender value
+   * transfer) + 1 ACC (recipient value reception) + 1 ACC (delegate or recipient)
+   * -------------------------------------- + 1 ACC (undoing sender value transfer) + 1 ACC (undoing
+   * sender value transfer) -------------------------------------- + 1 CON (intialization of root
+   * frame) ======================================= = 10 rows at most
+   */
+  public static final short NB_ROWS_HUB_INIT = 10;
 
   @Getter private final int hubStamp;
+  private final WorldView world;
   final AccountFragment.AccountFragmentFactory accountFragmentFactory;
+  final Map<Address, AccountSnapshot> latestAccountSnapshots;
 
   private final ImcFragment miscFragment;
 
   public final AccountFragment coinbaseWarmingAccountFragment;
+  @Getter private final AccountSnapshot coinbase;
+  @Getter private final AccountSnapshot coinbaseNew;
 
   private final AccountFragment gasPaymentAccountFragment;
   @Getter private final AccountSnapshot senderGasPayment;
@@ -61,6 +74,19 @@ public final class TxInitializationSection extends TraceSection implements EndTr
   @Getter private final AccountSnapshot recipientValueReception;
   @Getter private final AccountSnapshot recipientValueReceptionNew;
 
+  // the only difference between delegateNew and delegate
+  // is that delegateNew does not check for deletation
+  // TODO: this constraint that outside of TX_AUTH one should not
+  //  check for delegation ... is a little annoying given that we
+  //  like to create account snapshots by .deepCopy()
+  //  I think the correct approach is to impose on the contrary that
+  //  outside of TX_AUTH-rows one should impose maybe equality between
+  //  the current check and the new check bits ... I don't believe this
+  //  would interfere with anything (in particular deployments or so)
+  private final AccountFragment delegateAccountFragment;
+  @Getter private final AccountSnapshot delegateOrRecipient;
+  @Getter private final AccountSnapshot delegateOrRecipientNew;
+
   @Getter private AccountSnapshot senderUndoingValueTransfer;
   @Getter private AccountSnapshot senderUndoingValueTransferNew;
 
@@ -70,113 +96,152 @@ public final class TxInitializationSection extends TraceSection implements EndTr
   @Getter private final ContextFragment initializationContextFragment;
 
   /** This is used to generate the Dom / Sub offset */
-  private int domSubOffset = 0;
+  private int domSubOffset = 2;
 
-  public TxInitializationSection(Hub hub, WorldView world) {
+  public TxInitializationSection(
+      Hub hub, WorldView world, Map<Address, AccountSnapshot> initialAccountSnapshots) {
     super(hub, NB_ROWS_HUB_INIT);
     hub.defers().scheduleForEndTransaction(this);
 
+    this.world = world;
     hubStamp = hub.stamp();
     accountFragmentFactory = hub.factories().accountFragment();
+    latestAccountSnapshots = initialAccountSnapshots;
 
     hub.txStack().setInitializationSection(this);
 
     final TransactionProcessingMetadata tx = hub.txStack().current();
+    final Address coinbaseAddress = hub.coinbaseAddress();
     final Address senderAddress = tx.getSender();
     final Address recipientAddress = tx.getEffectiveRecipient();
-    final Account senderAccount = world.get(senderAddress);
-    final DeploymentInfo deploymentInfo = hub.transients().conflation().deploymentInfo();
+    Optional<Address> delegateAddress =
+        latestAccountSnapshots.get(recipientAddress).delegationAddress();
+    final Address delegateOrRecipientAddress = delegateAddress.orElse(recipientAddress);
 
-    final boolean isDeployment = tx.isDeployment();
+    coinbase =
+        deepCopyAndMaybeCheckForDelegation(hub, coinbaseAddress, "coinbase [turn on warmth]", false)
+            .dontCheckForDelegation(hub);
+    coinbaseNew = coinbase.deepCopy().turnOnWarmth().dontCheckForDelegation(hub);
+    latestAccountSnapshots.put(coinbaseAddress, coinbaseNew);
+
+    if (!latestAccountSnapshots.containsKey(coinbaseAddress)) {
+      checkState(
+          tx.isCoinbasePreWarmed() == coinbase.isWarm(),
+          "If the coinbase address is not present in the latest account snapshots map, it should be warm if and only if it is a precompile address");
+    }
+
     final Wei transactionGasPrice = Wei.of(tx.getEffectiveGasPrice());
     final Wei gasCost = transactionGasPrice.multiply(tx.getBesuTransaction().getGasLimit());
 
-    coinbaseWarmingAccountFragment = makeCoinbaseWarmingFragment(hub, world, tx);
-
     senderGasPayment =
-        canonical(hub, world, senderAccount.getAddress(), senderWarmthAtGasPayment(tx));
-
+        deepCopyAndMaybeCheckForDelegation(hub, senderAddress, "sender [gas payment]", true);
     senderGasPaymentNew =
-        senderGasPayment.deepCopy().decrementBalanceBy(gasCost).turnOnWarmth().raiseNonceByOne();
+        senderGasPayment
+            .deepCopy()
+            .decrementBalanceBy(gasCost)
+            .turnOnWarmth()
+            .incrementNonceByOne()
+            .dontCheckForDelegation(hub);
+    latestAccountSnapshots.put(senderAddress, senderGasPaymentNew);
 
     final Wei value = (Wei) tx.getBesuTransaction().getValue();
 
-    senderValueTransfer = senderGasPaymentNew.deepCopy();
-    senderValueTransferNew = senderValueTransfer.deepCopy().decrementBalanceBy(value);
+    senderValueTransfer =
+        deepCopyAndMaybeCheckForDelegation(hub, senderAddress, "sender [value transfer]", false);
+    senderValueTransferNew =
+        senderValueTransfer.deepCopy().decrementBalanceBy(value).dontCheckForDelegation(hub);
+    latestAccountSnapshots.put(senderAddress, senderValueTransferNew);
 
-    final Account recipientAccount = world.get(recipientAddress);
-
-    if (recipientAccount != null) {
-      recipientValueReception =
-          tx.senderIsRecipient()
-              ? senderValueTransferNew
-              : canonical(hub, world, recipientAddress, recipientWarmthAtValueReception(tx));
-    } else {
-      recipientValueReception =
-          AccountSnapshot.fromAddress(
-              recipientAddress,
-              recipientWarmthAtValueReception(tx),
-              deploymentInfo.deploymentNumber(recipientAddress),
-              deploymentInfo.getDeploymentStatus(recipientAddress),
-              hub.delegationNumberOf(recipientAddress));
-    }
+    recipientValueReception =
+        deepCopyAndMaybeCheckForDelegation(
+            hub, recipientAddress, "recipient [value reception]", true);
 
     checkState(
         !recipientValueReception.deploymentStatus(),
         "TxInitializationSection: recipient should not have been undergoing deployment before transaction start");
 
-    recipientValueReceptionNew = recipientValueReception.deepCopy();
+    recipientValueReceptionNew = recipientValueReception.deepCopy().dontCheckForDelegation(hub);
 
-    if (isDeployment) {
-      if (recipientAccount != null) {
-        checkState(
-            recipientAccount.getCode().equals(Bytes.EMPTY),
-            "TxInitializationSection: the recipient of a deployment transaction must have empty code");
-        checkState(
-            recipientAccount.getNonce() == 0,
-            "TxInitializationSection: the recipient of a deployment transaction must have zero nonce");
-      }
+    if (tx.isDeployment()) {
+      checkState(
+          recipientValueReception.code().isEmpty(),
+          "TxInitializationSection: the recipient of a deployment transaction must have empty code");
+      checkState(
+          recipientValueReception.nonce() == 0,
+          "TxInitializationSection: the recipient of a deployment transaction must have zero nonce");
 
-      deploymentInfo.newDeploymentWithExecutionAt(
-          recipientAddress, tx.getBesuTransaction().getInit().orElse(Bytes.EMPTY));
+      hub.transients()
+          .conflation()
+          .deploymentInfo()
+          .newDeploymentWithExecutionAt(
+              recipientAddress, tx.getBesuTransaction().getInit().orElse(Bytes.EMPTY));
 
       // this should be useless
       checkState(
-          deploymentInfo.getDeploymentStatus(recipientAddress),
+          hub.deploymentStatusOf(recipientAddress),
           "at this point the recipient should be undergoing deployment");
       checkState(
           recipientValueReception.deploymentNumber() + 1
-              == deploymentInfo.deploymentNumber(recipientAddress),
+              == hub.deploymentNumberOf(recipientAddress),
           "Deployment status should be true and deployment number should have incremented by 1");
 
       final Bytecode initCode = new Bytecode(tx.getBesuTransaction().getInit().orElse(Bytes.EMPTY));
       recipientValueReceptionNew
-          .raiseNonceByOne()
+          .incrementNonceByOne()
           .incrementBalanceBy(value)
           .code(initCode)
           .turnOnWarmth()
-          .setDeploymentInfo(deploymentInfo);
+          .setDeploymentInfo(hub);
     } else {
       recipientValueReceptionNew.incrementBalanceBy(value).turnOnWarmth();
     }
+    latestAccountSnapshots.put(recipientAddress, recipientValueReceptionNew);
     recipientUndoingValueReception = recipientValueReceptionNew.deepCopy();
+
+    // delegate or recipient
+    delegateOrRecipient =
+        deepCopyAndMaybeCheckForDelegation(
+            hub,
+            delegateOrRecipientAddress,
+            delegateAddress.isPresent()
+                ? "delegate [reading]"
+                : "recipient [reading instead of delegate]",
+            true);
+    delegateOrRecipientNew = delegateOrRecipient.deepCopy().turnOnWarmth();
+    latestAccountSnapshots.put(delegateOrRecipientAddress, delegateOrRecipientNew);
 
     miscFragment = ImcFragment.forTxInit(hub);
     hub.defers().scheduleForContextEntry(miscFragment);
 
+    coinbaseWarmingAccountFragment =
+        accountFragmentFactory
+            .makeWithTrm(
+                coinbase,
+                coinbaseNew,
+                coinbaseAddress,
+                DomSubStampsSubFragment.standardDomSubStamps(getHubStamp(), domSubOffset()),
+                TransactionProcessingType.USER)
+            .dontCheckForDelegation(hub);
+
     gasPaymentAccountFragment =
-        accountFragmentFactory.makeWithTrm(
-            senderGasPayment,
-            senderGasPaymentNew,
-            senderGasPayment.address(),
-            DomSubStampsSubFragment.standardDomSubStamps(hubStamp, domSubOffset()),
-            TransactionProcessingType.USER);
+        accountFragmentFactory
+            .makeWithTrm(
+                senderGasPayment,
+                senderGasPaymentNew,
+                senderGasPayment.address(),
+                DomSubStampsSubFragment.standardDomSubStamps(hubStamp, domSubOffset()),
+                TransactionProcessingType.USER)
+            .checkForDelegationIfAccountHasCode(hub);
+
     valueSendingAccountFragment =
-        accountFragmentFactory.make(
-            senderValueTransfer,
-            senderValueTransferNew,
-            DomSubStampsSubFragment.standardDomSubStamps(hubStamp, domSubOffset()),
-            TransactionProcessingType.USER);
+        accountFragmentFactory
+            .make(
+                senderValueTransfer,
+                senderValueTransferNew,
+                DomSubStampsSubFragment.standardDomSubStamps(hubStamp, domSubOffset()),
+                TransactionProcessingType.USER)
+            .dontCheckForDelegation(hub);
+
     valueReceptionAccountFragment =
         accountFragmentFactory
             .makeWithTrm(
@@ -185,7 +250,18 @@ public final class TxInitializationSection extends TraceSection implements EndTr
                 recipientValueReception.address(),
                 DomSubStampsSubFragment.standardDomSubStamps(hubStamp, domSubOffset()),
                 TransactionProcessingType.USER)
-            .requiresRomlex(true);
+            .checkForDelegationIfAccountHasCode(hub);
+
+    delegateAccountFragment =
+        accountFragmentFactory
+            .makeWithTrm(
+                delegateOrRecipient,
+                delegateOrRecipientNew,
+                delegateOrRecipient.address(),
+                DomSubStampsSubFragment.standardDomSubStamps(hubStamp, domSubOffset()),
+                TransactionProcessingType.USER)
+            .requiresRomlex(true)
+            .checkForDelegationIfAccountHasCode(hub);
 
     initializationContextFragment = ContextFragment.initializeExecutionContext(hub);
 
@@ -199,9 +275,10 @@ public final class TxInitializationSection extends TraceSection implements EndTr
     addFragment(hub().txStack().current().userTransactionFragment());
     addFragment(miscFragment);
     addFragment(coinbaseWarmingAccountFragment);
-    addFragment(gasPaymentAccountFragment); // ACC i +  (sender: gas payment)
-    addFragment(valueSendingAccountFragment); // ACC i +  (sender: value transfer)
-    addFragment(valueReceptionAccountFragment); // ACC i +  (recipient: value reception)
+    addFragment(gasPaymentAccountFragment);
+    addFragment(valueSendingAccountFragment);
+    addFragment(valueReceptionAccountFragment);
+    addFragment(delegateAccountFragment);
 
     if (!isSuccessful) {
       senderUndoingValueTransfer = senderValueTransferNew.deepCopy().setDeploymentNumber(hub);
@@ -237,30 +314,29 @@ public final class TxInitializationSection extends TraceSection implements EndTr
               TransactionProcessingType.USER));
     }
 
-    this.addFragment(initializationContextFragment); // CON i +
+    this.addFragment(initializationContextFragment);
   }
 
   protected int domSubOffset() {
     return domSubOffset++;
   }
 
-  private AccountFragment makeCoinbaseWarmingFragment(
-      final Hub hub, final WorldView world, final TransactionProcessingMetadata tx) {
-    final AccountSnapshot coinbase =
-        canonical(hub, world, hub.coinbaseAddress(), tx.isCoinbasePreWarmed());
-    return accountFragmentFactory.makeWithTrm(
-        coinbase,
-        coinbase.deepCopy().turnOnWarmth(),
-        coinbase.address(),
-        DomSubStampsSubFragment.standardDomSubStamps(getHubStamp(), domSubOffset()),
-        TransactionProcessingType.USER);
-  }
+  private AccountSnapshot deepCopyAndMaybeCheckForDelegation(
+      Hub hub, Address address, String purpose, boolean checkingForDelegationIsDesirable) {
 
-  private boolean senderWarmthAtGasPayment(final TransactionProcessingMetadata tx) {
-    return tx.isSenderPreWarmed() || tx.senderIsCoinbase();
-  }
+    if (!latestAccountSnapshots.containsKey(address)) {
+      System.out.println(
+          String.format(
+              "Address %s for purpose \"%s\" not present in account snapshot map",
+              address, purpose));
+      return canonicalWithoutFrame(hub, world, address);
+    }
 
-  private boolean recipientWarmthAtValueReception(TransactionProcessingMetadata tx) {
-    return tx.isRecipientPreWarmed() || tx.recipientIsCoinbase();
+    final AccountSnapshot snapshot = latestAccountSnapshots.get(address).deepCopy();
+    if (checkingForDelegationIsDesirable) {
+      snapshot.checkForDelegationIfAccountHasCode(hub);
+    }
+
+    return snapshot;
   }
 }

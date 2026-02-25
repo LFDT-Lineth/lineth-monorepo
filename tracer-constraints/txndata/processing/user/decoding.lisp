@@ -86,23 +86,22 @@
 
 
 (defconstraint   USER-transaction---transaction-decoding---precisely-one-of-the-transaction-type-flags-lights-up
-		 (:guard   (first-row-of-USER-transaction))
-		 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-		 (eq!   (USER-transaction---tx-decoding---tx-type-flag-sum)   1))
+                 (:guard   (first-row-of-USER-transaction))
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                 (eq!   (USER-transaction---tx-decoding---tx-type-flag-sum)   1))
 
 (defconstraint   USER-transaction---transaction-decoding---the-transaction-type-flags-decode-the-transaction-type
-		 (:guard   (first-row-of-USER-transaction))
-		 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-		 (eq!   (USER-transaction---RLP---tx-type)
-			(USER-transaction---tx-decoding---tx-type-wght-sum)))
+                 (:guard   (first-row-of-USER-transaction))
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                 (eq!   (USER-transaction---RLP---tx-type)
+                        (USER-transaction---tx-decoding---tx-type-wght-sum)))
 
 (defconstraint   USER-transaction---transaction-decoding---transactions-sans-access-list-have-no-addresses-nor-storage-keys-to-prewarm
-		 (:guard   (first-row-of-USER-transaction))
-		 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-		 (if-not-zero   (USER-transaction---tx-decoding---tx-type-sans-access-set)
-				(begin
-				  (vanishes!   (USER-transaction---RLP---number-of-access-list-keys))
-				  (vanishes!   (USER-transaction---RLP---number-of-access-list-addresses))
-				  )))
-
+                 (:guard   (first-row-of-USER-transaction))
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                 (if-not-zero   (USER-transaction---tx-decoding---tx-type-sans-access-set)
+                                (begin
+                                  (vanishes!   (USER-transaction---RLP---number-of-access-list-keys))
+                                  (vanishes!   (USER-transaction---RLP---number-of-access-list-addresses))
+                                  )))
 

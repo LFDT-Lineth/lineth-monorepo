@@ -49,7 +49,10 @@ public class HubRowForUserTransactions extends HubRow {
         .pHubGasInitiallyAvailable(txn.getInitiallyAvailableGas())
         .pHubCallDataSize(txn.isMessageCall() ? txn.getBesuTransaction().getPayload().size() : 0)
         .pHubInitCodeSize(txn.isDeployment() ? txn.getBesuTransaction().getPayload().size() : 0)
-        .pHubHasEip1559GasSemantics(txn.getBesuTransaction().getType().supports1559FeeMarket())
+        .pHubTransactionTypeSupportsEip1559GasSemantics(
+            txn.getBesuTransaction().getType().supports1559FeeMarket())
+        .pHubTransactionTypeSupportsDelegationLists(
+            txn.getBesuTransaction().getType().supportsDelegateCode())
         .pHubRequiresEvmExecution(txn.requiresEvmExecution())
         .pHubCopyTxcd(txn.copyTransactionCallData())
         .pHubCfi(txn.getCodeFragmentIndex())
@@ -58,6 +61,8 @@ public class HubRowForUserTransactions extends HubRow {
         .pHubGasLeftover(txn.getLeftoverGas())
         .pHubRefundCounterFinal(txn.getRefundCounterMax())
         .pHubRefundEffective(txn.computeRefunded())
+        .pHubLengthOfDelegationList(txn.lengthOfDelegationList())
+        .pHubNumberOfSuccessfulSenderDelegations(txn.getNumberOfSuccessfulSenderDelegations())
     // EIP-4844, EIP-2935, NOOP flags aswell as SYST_TXN_DATA_k not set for USER transactions
     ;
   }

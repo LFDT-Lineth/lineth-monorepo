@@ -38,7 +38,7 @@ public class Conflation {
     return delegationNumber.getOrDefault(address, 0);
   }
 
-  public void updateDelegationNumber(Address address) {
+  public void incrementDelegationNumber(Address address) {
     delegationNumber.put(address, getDelegationNumber(address) + 1);
   }
 }

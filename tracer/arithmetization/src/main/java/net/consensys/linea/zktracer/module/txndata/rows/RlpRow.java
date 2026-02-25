@@ -66,6 +66,7 @@ public class RlpRow extends TxnDataRow {
                 : Bytes.EMPTY)
         .pRlpNumberOfAccessListAddresses(txn.numberOfWarmedAddresses())
         .pRlpNumberOfAccessListStorageKeys(txn.numberOfWarmedStorageKeys())
+        .pRlpLengthOfDelegationList(txn.lengthOfDelegationList())
         .pRlpChainId(txn.chainId())
         .pRlpCfi(txn.getCodeFragmentIndex())
         .pRlpRequiresEvmExecution(txn.requiresEvmExecution());

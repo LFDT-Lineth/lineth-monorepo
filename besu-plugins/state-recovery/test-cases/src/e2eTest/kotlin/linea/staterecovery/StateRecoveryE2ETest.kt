@@ -5,6 +5,7 @@ import build.linea.clients.StateManagerV1JsonRpcClient
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
+import linea.contract.events.DataFinalizedV3
 import linea.domain.EthLogEvent
 import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.decodeHex

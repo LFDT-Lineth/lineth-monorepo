@@ -15,7 +15,7 @@
 
 package net.consensys.linea.zktracer.module.trm;
 
-import static net.consensys.linea.zktracer.types.AddressUtils.highPart;
+import static net.consensys.linea.zktracer.types.AddressUtils.hiPart;
 import static net.consensys.linea.zktracer.types.AddressUtils.isPrecompile;
 
 import lombok.EqualsAndHashCode;
@@ -41,7 +41,7 @@ public class TrmOperation extends ModuleOperation {
   void trace(Trace.Trm trace) {
     final Address trmAddress = rawAddress.toAddress();
     final boolean isPrec = isPrecompile(fork, trmAddress);
-    final long trmAddrHi = highPart(trmAddress);
+    final long trmAddrHi = hiPart(trmAddress);
 
     trace.rawAddress(rawAddress).addressHi(trmAddrHi).isPrecompile(isPrec).validateRow();
   }

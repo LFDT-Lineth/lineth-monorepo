@@ -80,3 +80,21 @@ low:
   res = 0
   return
 }
+
+;; Compute log256 of 2 words
+fn log256_u512(arg u512) -> (res u6) {
+  var hi, lo u256
+  var tmp u5
+  ;; split argument
+  hi,lo = arg
+  ;; check hi or lo
+  if hi == 0 goto low
+  ;; hi mode
+  tmp = log256(hi)
+  res = tmp + 32
+  return
+low:
+  tmp = log256(lo)
+  res = tmp
+  return
+}

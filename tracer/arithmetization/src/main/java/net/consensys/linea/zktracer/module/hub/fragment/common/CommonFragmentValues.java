@@ -71,7 +71,7 @@ public class CommonFragmentValues {
   @Getter final long gasCost;
   @Getter @Setter long gasNext;
   @Getter final long gasCostExcluduingDeploymentCost;
-  @Setter public long refundDelta = 0; // 0 is default Value, can be modified only by SSTORE section
+  @Setter public long refundDelta = 0; // 0 is default Value, can be modified by SSTORE and TX_AUTH
   @Setter public long gasRefund; // Set at commit time
   @Setter public long gasRefundNew; // Set at commit time
   @Setter public int numberOfNonStackRows;

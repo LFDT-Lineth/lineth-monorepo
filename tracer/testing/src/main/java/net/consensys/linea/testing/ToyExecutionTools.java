@@ -96,10 +96,6 @@ public class ToyExecutionTools {
     final BlockBody blockBody = new BlockBody(transactions, new ArrayList<>());
     final WorldUpdater worldStateUpdater = initialWorldState.updater();
 
-    // Add system accounts if the fork requires it.
-    final Fork fork =
-        fromMainnetHardforkIdToTracerFork(
-            (HardforkId.MainnetHardforkId) protocolSpec.getHardforkId());
     addSystemAccountsIfRequired(worldStateUpdater);
 
     final MainnetTransactionProcessor processor = protocolSpec.getTransactionProcessor();

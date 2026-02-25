@@ -15,6 +15,7 @@
     ( SYSF_TXN_NUMBER                           :i24 )
 
     ;; transaction processing phases
+    ( TX_AUTH                                   :binary@prove )
     ( TX_SKIP                                   :binary@prove )
     ( TX_WARM                                   :binary@prove )
     ( TX_INIT                                   :binary@prove )
@@ -53,6 +54,7 @@
     ( HEIGHT_NEW                                :i11 )
 
     ;; peeking flags
+    ( PEEK_AT_AUTHORIZATION                     :binary@prove )
     ( PEEK_AT_ACCOUNT                           :binary@prove )
     ( PEEK_AT_CONTEXT                           :binary@prove )
     ( PEEK_AT_MISCELLANEOUS                     :binary@prove )
@@ -101,6 +103,7 @@
     PC                  PROGRAM_COUNTER
     PC_NEW              PROGRAM_COUNTER_NEW
     ACC                 PEEK_AT_ACCOUNT
+    AUTH                PEEK_AT_AUTHORIZATION
     CON                 PEEK_AT_CONTEXT
     SCN                 PEEK_AT_SCENARIO
     STK                 PEEK_AT_STACK

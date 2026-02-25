@@ -42,7 +42,7 @@
   ( Y_PARITY                      :binary@prove )
   ( REQUIRES_EVM_EXECUTION        :binary       )
   ( IS_DEPLOYMENT                 :binary       )
-  ( NUMBER_OF_AUTHORIZATIONS      :i10          )
+  ( LENGTH_OF_DELEGATION_LIST     :i10          )
   ( IS_PREFIX_OF_ACCESS_LIST_ITEM :binary@prove )
   ( IS_PREFIX_OF_STORAGE_KEY_LIST :binary@prove )
   ( IS_ACCESS_LIST_ADDRESS        :binary@prove )

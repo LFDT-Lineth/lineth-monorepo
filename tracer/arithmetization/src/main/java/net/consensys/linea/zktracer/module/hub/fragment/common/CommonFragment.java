@@ -66,16 +66,14 @@ public final class CommonFragment implements TraceFragment {
         .sysi(commonFragmentValues.transactionProcessingType == SYSI)
         .user(commonFragmentValues.transactionProcessingType == USER)
         .sysf(commonFragmentValues.transactionProcessingType == SYSF)
-        .txSkip(commonFragmentValues.hubProcessingPhase == TX_SKIP)
+        .txAuth(commonFragmentValues.hubProcessingPhase == TX_AUTH)
         .txWarm(commonFragmentValues.hubProcessingPhase == TX_WARM)
+        .txSkip(commonFragmentValues.hubProcessingPhase == TX_SKIP)
         .txInit(commonFragmentValues.hubProcessingPhase == TX_INIT)
         .txExec(commonFragmentValues.hubProcessingPhase == TX_EXEC)
         .txFinl(commonFragmentValues.hubProcessingPhase == TX_FINL)
         .hubStamp(commonFragmentValues.hubStamp)
-        .hubStampTransactionEnd(
-            commonFragmentValues.hubProcessingPhase == TX_SKIP
-                ? 0
-                : tx().getHubStampTransactionEnd())
+        .hubStampTransactionEnd(tx() == null ? 0 : tx().getHubStampTransactionEnd())
         .contextMayChange(commonFragmentValues.contextMayChange)
         .exceptionAhoy(Exceptions.any(commonFragmentValues.exceptions) && isExec)
         .logInfoStamp(commonFragmentValues.logStamp)
@@ -101,8 +99,8 @@ public final class CommonFragment implements TraceFragment {
         .gasCost(Bytes.ofUnsignedLong(commonFragmentValues.gasCostToTrace()))
         .gasNext(
             Bytes.ofUnsignedLong(isExec && isUnexceptional() ? commonFragmentValues.gasNext : 0))
-        .refundCounter(isExec ? commonFragmentValues.gasRefund : 0)
-        .refundCounterNew(isExec ? commonFragmentValues.gasRefundNew : 0)
+        .refundCounter(commonFragmentValues.gasRefund)
+        .refundCounterNew(commonFragmentValues.gasRefundNew)
         .twoLineInstruction(commonFragmentValues.TLI)
         .counterTli(twoLineInstructionCounter)
         .nonStackRows((short) commonFragmentValues.numberOfNonStackRows)

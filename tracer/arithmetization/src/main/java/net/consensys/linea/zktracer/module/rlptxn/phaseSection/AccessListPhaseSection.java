@@ -19,8 +19,8 @@ import static net.consensys.linea.zktracer.Trace.LLARGE;
 import static net.consensys.linea.zktracer.Trace.Rlptxn.RLP_TXN_CT_MAX_ADDRESS;
 import static net.consensys.linea.zktracer.module.rlpUtils.RlpUtils.BYTES16_PREFIX_ADDRESS;
 import static net.consensys.linea.zktracer.module.rlputilsOld.Pattern.outerRlpSize;
-import static net.consensys.linea.zktracer.types.AddressUtils.highPart;
-import static net.consensys.linea.zktracer.types.AddressUtils.lowPart;
+import static net.consensys.linea.zktracer.types.AddressUtils.hiPart;
+import static net.consensys.linea.zktracer.types.AddressUtils.loPart;
 import static net.consensys.linea.zktracer.types.Utils.rightPadToBytes16;
 
 import java.util.ArrayList;
@@ -71,7 +71,7 @@ public class AccessListPhaseSection extends PhaseSection {
   }
 
   @Override
-  protected void traceComputationsRows(
+  protected void traceComputationRows(
       Trace.Rlptxn trace, TransactionProcessingMetadata tx, GenericTracedValue tracedValues) {
     totalAddress = tx.numberOfWarmedAddresses();
     totalKeys = tx.numberOfWarmedStorageKeys();
@@ -143,8 +143,8 @@ public class AccessListPhaseSection extends PhaseSection {
           .pCmpAux1(phaseSize)
           .pCmpAux2(tupleSize)
           .pCmpAuxCcc3(totalStorageForThisAddress)
-          .pCmpAuxCcc4(highPart(address))
-          .pCmpAuxCcc5(lowPart(address));
+          .pCmpAuxCcc4(hiPart(address))
+          .pCmpAuxCcc5(loPart(address));
     }
 
     public void trace(Trace.Rlptxn trace, GenericTracedValue tracedValues) {
@@ -170,7 +170,7 @@ public class AccessListPhaseSection extends PhaseSection {
           .ctMax(RLP_TXN_CT_MAX_ADDRESS)
           .pCmpTrmFlag(true)
           .pCmpExoData1(address.slice(0, 4))
-          .pCmpExoData2(lowPart(address))
+          .pCmpExoData2(loPart(address))
           .limbConstructed(true)
           .lt(true)
           .lx(true)
@@ -210,7 +210,7 @@ public class AccessListPhaseSection extends PhaseSection {
           .limbConstructed(true)
           .lt(true)
           .lx(true)
-          .pCmpLimb(lowPart(address))
+          .pCmpLimb(loPart(address))
           .pCmpLimbSize(LLARGE);
       phaseSize -= LLARGE;
       tupleSize -= LLARGE;

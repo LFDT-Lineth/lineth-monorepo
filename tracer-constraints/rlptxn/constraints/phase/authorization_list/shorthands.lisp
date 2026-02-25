@@ -22,4 +22,4 @@
 (defun (rlptxn---authorization-list---s-hi)                       cmp/AUX_6)
 (defun (rlptxn---authorization-list---s-lo)                       cmp/AUX_7)
 (defun (rlptxn---authorization-list---end-of-phase)               (- 1 (~ (- (rlptxn---authorization-list---tuple-index)
-                                                                              NUMBER_OF_AUTHORIZATIONS))))
+                                                                              LENGTH_OF_DELEGATION_LIST))))

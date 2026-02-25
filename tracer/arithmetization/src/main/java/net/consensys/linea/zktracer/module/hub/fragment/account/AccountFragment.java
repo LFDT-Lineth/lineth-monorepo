@@ -43,6 +43,7 @@ import net.consensys.linea.zktracer.module.hub.section.halt.EphemeralAccount;
 import net.consensys.linea.zktracer.types.EWord;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.evm.worldstate.WorldView;
 
@@ -63,6 +64,7 @@ public final class AccountFragment
   @Getter final TransactionProcessingMetadata transactionProcessingMetadata;
   protected boolean markedForDeletion;
   protected boolean markedForDeletionNew;
+  final boolean txAuthAccountFragment;
 
   /**
    * {@link AccountFragment} creation requires access to a {@link DeferRegistry} for post-conflation
@@ -78,7 +80,13 @@ public final class AccountFragment
         DomSubStampsSubFragment domSubStampsSubFragment,
         TransactionProcessingType txProcessingType) {
       return new AccountFragment(
-          hub, oldState, newState, Optional.empty(), domSubStampsSubFragment, txProcessingType);
+          hub,
+          oldState,
+          newState,
+          Optional.empty(),
+          domSubStampsSubFragment,
+          txProcessingType,
+          false);
     }
 
     public AccountFragment makeWithTrm(
@@ -89,7 +97,30 @@ public final class AccountFragment
         TransactionProcessingType txProcessingType) {
       hub.trm().callTrimming(toTrim);
       return new AccountFragment(
-          hub, oldState, newState, Optional.of(toTrim), domSubStampsSubFragment, txProcessingType);
+          hub,
+          oldState,
+          newState,
+          Optional.of(toTrim),
+          domSubStampsSubFragment,
+          txProcessingType,
+          false);
+    }
+
+    public AccountFragment makeWithTrmDuringTxAuth(
+        AccountSnapshot oldState,
+        AccountSnapshot newState,
+        Bytes toTrim,
+        DomSubStampsSubFragment domSubStampsSubFragment,
+        TransactionProcessingType txProcessingType) {
+      hub.trm().callTrimming(toTrim);
+      return new AccountFragment(
+          hub,
+          oldState,
+          newState,
+          Optional.of(toTrim),
+          domSubStampsSubFragment,
+          txProcessingType,
+          true);
     }
   }
 
@@ -99,7 +130,8 @@ public final class AccountFragment
       AccountSnapshot newState,
       Optional<Bytes> addressToTrim,
       DomSubStampsSubFragment domSubStampsSubFragment,
-      TransactionProcessingType txProcessingType) {
+      TransactionProcessingType txProcessingType,
+      boolean txAuthAccountFragment) {
     checkArgument(
         oldState.address().equals(newState.address()),
         "AccountFragment: address mismatch in constructor");
@@ -110,14 +142,16 @@ public final class AccountFragment
     this.newState = newState;
     this.addressToTrim = addressToTrim;
     this.domSubStampsSubFragment = domSubStampsSubFragment;
-    txType = txProcessingType;
+    this.txType = txProcessingType;
+    this.txAuthAccountFragment = txAuthAccountFragment;
     if (isUserTransaction(txType)) {
       tx = hub.txStack().current();
       tx.updateHadCodeInitially(
           oldState.address(),
           domSubStampsSubFragment.domStamp(),
           domSubStampsSubFragment.subStamp(),
-          oldState().tracedHasCode());
+          oldState().tracedHasCode(),
+          this.txAuthAccountFragment);
     } else {
       tx = null;
     }
@@ -138,19 +172,19 @@ public final class AccountFragment
   @Override
   public Trace.Hub trace(Trace.Hub trace) {
 
+    oldState.delegationSanityCheck();
+    newState.delegationSanityCheck();
+
     // tracing
     domSubStampsSubFragment.traceHub(trace);
     if (rlpAddrSubFragment != null) {
       rlpAddrSubFragment.traceHub(trace);
     }
 
-    final boolean hasCode = oldState.tracedHasCode();
-    final boolean hasCodeNew = newState.tracedHasCode();
-
     trace
         .peekAtAccount(true)
-        .pAccountAddressHi(highPart(oldState.address()))
-        .pAccountAddressLo(lowPart(oldState.address()))
+        .pAccountAddressHi(hiPart(oldState.address()))
+        .pAccountAddressLo(loPart(oldState.address()))
         .pAccountNonce(Bytes.ofUnsignedLong(oldState.nonce()))
         .pAccountNonceNew(Bytes.ofUnsignedLong(newState.nonce()))
         .pAccountBalance(oldState.balance())
@@ -161,12 +195,12 @@ public final class AccountFragment
         .pAccountCodeHashLo(oldState.tracedCodeHash().lo())
         .pAccountCodeHashHiNew(newState.tracedCodeHash().hi())
         .pAccountCodeHashLoNew(newState.tracedCodeHash().lo())
-        .pAccountHasCode(hasCode)
-        .pAccountHasCodeNew(hasCodeNew)
+        .pAccountHasCode(oldState.tracedHasCode())
+        .pAccountHasCodeNew(newState.tracedHasCode())
         .pAccountCodeFragmentIndex(codeFragmentIndex)
         .pAccountRomlexFlag(requiresRomlex)
-        .pAccountExists(oldState.nonce() > 0 || hasCode || !oldState.balance().isZero())
-        .pAccountExistsNew(newState.nonce() > 0 || hasCodeNew || !newState.balance().isZero())
+        .pAccountExists(oldState.exists())
+        .pAccountExistsNew(newState.exists())
         .pAccountWarmth(oldState.isWarm())
         .pAccountWarmthNew(newState.isWarm())
         .pAccountDeploymentNumber(oldState.deploymentNumber())
@@ -176,8 +210,19 @@ public final class AccountFragment
         .pAccountTrmFlag(addressToTrim.isPresent())
         .pAccountTrmRawAddressHi(addressToTrim.map(a -> EWord.of(a).hi()).orElse(Bytes.EMPTY))
         .pAccountIsPrecompile(isPrecompile(fork, oldState().address()))
+        // EIP-7702 and account delegation related
         .pAccountMarkedForDeletion(markedForDeletion)
-        .pAccountMarkedForDeletionNew(markedForDeletionNew);
+        .pAccountMarkedForDeletionNew(markedForDeletionNew)
+        .pAccountCheckForDelegation(oldState.checkForDelegation())
+        .pAccountCheckForDelegationNew(newState.checkForDelegation())
+        .pAccountDelegationAddressHi(hiPart(oldState.delegationAddress().orElse(Address.ZERO)))
+        .pAccountDelegationAddressLo(loPart(oldState.delegationAddress().orElse(Address.ZERO)))
+        .pAccountDelegationAddressHiNew(hiPart(newState.delegationAddress().orElse(Address.ZERO)))
+        .pAccountDelegationAddressLoNew(loPart(newState.delegationAddress().orElse(Address.ZERO)))
+        .pAccountIsDelegated(oldState.isDelegated())
+        .pAccountIsDelegatedNew(newState.isDelegated())
+        .pAccountDelegationNumber(oldState.delegationNumber())
+        .pAccountDelegationNumberNew(newState.delegationNumber());
     traceHadCodeInitially(trace);
 
     return trace;
@@ -186,7 +231,7 @@ public final class AccountFragment
   private void traceHadCodeInitially(Trace.Hub trace) {
     trace.pAccountHadCodeInitially(
         isUserTransaction(txType)
-            ? tx.hadCodeInitiallyMap().get(oldState().address()).hadCode()
+            ? tx.hadCodeInitiallyMap().get(oldState().address()).tracedHadCode()
             : oldState().tracedHasCode());
   }
 
@@ -232,8 +277,35 @@ public final class AccountFragment
       // getCfi should NEVER throw en exception when requiresRomLex ≡ true
       checkState(
           !requiresRomlex,
-          "AccountFragment: can't get an exception to get CFI when RomLex is required");
+          "\nAccountFragment with"
+              + "\n\taddress: "
+              + newState.address()
+              + "\n\tdeployment number: "
+              + newState.deploymentNumber()
+              + "\n\tdeployment status: "
+              + newState.deploymentStatus()
+              + "\n\tdelegation number: "
+              + newState.delegationNumber()
+              + "\ndidn't return a CFI yet requiresRomLex ≡ true");
       codeFragmentIndex = 0;
     }
+  }
+
+  public AccountFragment checkForDelegationIfAccountHasCode(Hub hub) {
+    oldState.checkForDelegationIfAccountHasCode(hub);
+    newState.dontCheckForDelegation(hub);
+    return this;
+  }
+
+  public AccountFragment dontCheckForDelegation(Hub hub) {
+    oldState.dontCheckForDelegation(hub);
+    newState.dontCheckForDelegation(hub);
+    return this;
+  }
+
+  public AccountFragment checkForDelegationAuthorizationPhase(Hub hub) {
+    oldState.checkForDelegationIfAccountHasCode(hub);
+    newState.checkForDelegationIfAccountHasCode(hub);
+    return this;
   }
 }

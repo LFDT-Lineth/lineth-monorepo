@@ -22,9 +22,12 @@ include "../constants/evm.zkasm"
 ;; Finally, EXISTS indicates for a CALL instruction whether target
 ;; account exists already, and WARM indicates whether the target
 ;; account for a call instruction is warm (or not).
-pub fn stp(INST=0xf0 u8, GAS_ACTUAL u64, GAS_MXP u64, GAS u256, VALUE u256, EXISTS u1, WARM u1) -> (OOGX=1 u1, GAS_UPFRONT=32000 u64, GAS_OOP u64, GAS_STIPEND u64)
+pub fn stp(INST=0xf0 u8, GAS_ACTUAL u64, GAS_MXP u64, GAS u256, VALUE u256, EXISTS u1, WARM u1,
+CALLEE_IS_DELEGATED u1, CALLEE_IS_DELEGATED_TO_SELF u1, DELEGATE_WARMTH u1)
+-> (OOGX=1 u1, GAS_UPFRONT=32000 u64, GAS_OOP u64, GAS_STIPEND u64)
 ;; PRE: GAS_UPFRONT calculation does not overflow.
 {
+
   var L_gas_diff u64
   var stipend, gas_extra u64
   var c u1
@@ -34,7 +37,7 @@ pub fn stp(INST=0xf0 u8, GAS_ACTUAL u64, GAS_MXP u64, GAS u256, VALUE u256, EXIS
   ;; ===========================================================================
   ;; CALL / CALLCODE / DELEGATECALL / STATICCALL
   ;; ===========================================================================
-  gas_extra, stipend = call_gas_extra(INST, VALUE, WARM, EXISTS)
+  gas_extra, stipend = call_gas_extra(INST, VALUE, WARM, EXISTS, CALLEE_IS_DELEGATED, CALLEE_IS_DELEGATED_TO_SELF, DELEGATE_WARMTH)
   ;; determine upfront cost for call
   c, GAS_UPFRONT = GAS_MXP + gas_extra
   ;; sanity check precondition
@@ -71,7 +74,9 @@ failed_pre:
 ;; transfering value) and computes the gas stipend for the caller
 ;; context.  The logic of this function is essentially determined by
 ;; the yellow paper.
-fn call_gas_extra(inst=0xf1 u8, value u256, warm u1, exists u1) -> (gas_extra=2600 u64, stipend u64)
+fn call_gas_extra(inst=0xf1 u8, value u256, warm u1, exists u1,
+callee_is_delegated u1, callee_is_delegated_to_self u1, delegate_warmth u1)
+ -> (gas_extra=2600 u64, stipend u64)
 ;; PRE: inst in {0xf1,0xf2,0xf4,0xf5]
 {
   var gas_access u16
@@ -79,8 +84,22 @@ fn call_gas_extra(inst=0xf1 u8, value u256, warm u1, exists u1) -> (gas_extra=26
   ;; inversions
   notWarm = 1 - warm
   notExists = 1 - exists
+
+  ;; delegate access bit
+  ;; extra_delegation_warming_cost := if CALLEE_IS_DELEGATED then:
+  ;;       CALLEE_IS_DELEGATED_TO_SELF  ? G_WARM_ACCESS
+  ;;                                    : (DELEGATE_WARMTH ? G_WARM_ACCESS : G_COLD_ACCESS)
+  ;;       else: 0;
+
+  var delegate_to_other, delegate_hot_access, delegate_cold_access, tmp u1
+  var callee_is_delegated_to_other, delegate_is_cold u1
+  callee_is_delegated_to_other = 1 - callee_is_delegated_to_self
+  delegate_is_cold = 1 - delegate_warmth
+  delegate_to_other = callee_is_delegated * callee_is_delegated_to_other
+  delegate_cold_access = delegate_to_other * delegate_is_cold
+  tmp, delegate_hot_access = callee_is_delegated - delegate_cold_access ;; can't overflow
   ;; calculate gas access cost
-  gas_access = (warm * G_WARMACCESS) + (notWarm * G_COLDACCOUNTACCESS)
+  gas_access = ((warm + delegate_hot_access) * G_WARMACCESS) + ((notWarm + delegate_cold_access)  * G_COLDACCOUNTACCESS)
   ;;
   is_value_zero = value == 0 ? 1 : 0
   ;;

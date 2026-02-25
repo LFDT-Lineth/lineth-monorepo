@@ -52,6 +52,8 @@ PRECOMPILES := # blake2f/blake2f.zkasm
 
 RLP_ADDR := rlpaddr
 
+RLP_AUTH := rlpauth/rlpauth.zkasm rlpauth/lookups
+
 RLP_TXN := rlptxn
 
 RLP_TXN_RCPT := rlptxrcpt
@@ -105,6 +107,7 @@ ZKEVM_MODULES_COMMON := ${CONSTANTS} \
 		 ${OOB} \
 		 ${PRECOMPILES} \
 		 ${RLP_ADDR} \
+		 ${RLP_AUTH} \
 		 ${RLP_TXN} \
 		 ${RLP_TXN_RCPT} \
 		 ${RLP_UTILS} \

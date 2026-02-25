@@ -196,6 +196,7 @@
   GAS_CONST_G_WARM_ACCESS                   100
   GAS_CONST_G_ACCESS_LIST_ADRESS            2400
   GAS_CONST_G_ACCESS_LIST_STORAGE           1900
+  GAS_CONST_G_PER_EMPTY_ACCOUNT_COST        25000
   GAS_CONST_G_COLD_ACCOUNT_ACCESS           2600
   GAS_CONST_G_COLD_SLOAD                    2100
   GAS_CONST_G_SSET                          20000
@@ -247,6 +248,8 @@
   GAS_CONST_BLS_PAIRING_CHECK               37700
   GAS_CONST_BLS_PAIRING_CHECK_PAIR          32600
   GAS_CONST_P256_VERIFY                     6900
+  GAS_CONST_PER_EMPTY_ACCOUNT               25000
+  GAS_CONST_PER_AUTH_BASE_COST              12500
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;           ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  EVM MISC ;;
@@ -306,6 +309,7 @@
   LLARGEPO                                  (+ LLARGE 1)
   WORD_SIZE                                 32
   WORD_SIZE_MO                              (- WORD_SIZE 1)
+  EOA_DELEGATED_CODE_LENGTH                 23
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;         ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; SHIFT   ;;

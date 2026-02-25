@@ -15,8 +15,8 @@
 
 package net.consensys.linea.zktracer.module.hub.fragment.transaction;
 
-import static net.consensys.linea.zktracer.types.AddressUtils.highPart;
-import static net.consensys.linea.zktracer.types.AddressUtils.lowPart;
+import static net.consensys.linea.zktracer.types.AddressUtils.hiPart;
+import static net.consensys.linea.zktracer.types.AddressUtils.loPart;
 import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,6 @@ import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Transaction;
-import org.hyperledger.besu.datatypes.TransactionType;
 
 @RequiredArgsConstructor
 public final class UserTransactionFragment implements TraceFragment {
@@ -40,18 +39,20 @@ public final class UserTransactionFragment implements TraceFragment {
 
     return trace
         .peekAtTransaction(true)
-        .pTransactionFromAddressHi(highPart(from))
-        .pTransactionFromAddressLo(lowPart(from))
+        .pTransactionFromAddressHi(hiPart(from))
+        .pTransactionFromAddressLo(loPart(from))
         .pTransactionNonce(Bytes.ofUnsignedLong(tx.getNonce()))
         .pTransactionInitialBalance(
             bigIntegerToBytes(transactionProcessingMetadata.getInitialBalance()))
         .pTransactionValue(bigIntegerToBytes(tx.getValue().getAsBigInteger()))
-        .pTransactionToAddressHi(highPart(to))
-        .pTransactionToAddressLo(lowPart(to))
+        .pTransactionToAddressHi(hiPart(to))
+        .pTransactionToAddressLo(loPart(to))
         .pTransactionRequiresEvmExecution(transactionProcessingMetadata.requiresEvmExecution())
         .pTransactionCopyTxcd(transactionProcessingMetadata.copyTransactionCallData())
         .pTransactionIsDeployment(tx.getTo().isEmpty())
-        .pTransactionIsType2(tx.getType() == TransactionType.EIP1559)
+        .pTransactionTransactionTypeSupportsEip1559GasSemantics(
+            tx.getType().supports1559FeeMarket())
+        .pTransactionTransactionTypeSupportsDelegationLists(tx.getType().supportsDelegateCode())
         .pTransactionGasLimit(tx.getGasLimit())
         .pTransactionGasInitiallyAvailable(transactionProcessingMetadata.getInitiallyAvailableGas())
         .pTransactionGasPrice(
@@ -65,7 +66,17 @@ public final class UserTransactionFragment implements TraceFragment {
         .pTransactionGasLeftover(transactionProcessingMetadata.getLeftoverGas())
         .pTransactionRefundCounterInfinity(transactionProcessingMetadata.getRefundCounterMax())
         .pTransactionRefundEffective(transactionProcessingMetadata.getGasRefunded())
-        .pTransactionCoinbaseAddressHi(highPart(transactionProcessingMetadata.getCoinbaseAddress()))
-        .pTransactionCoinbaseAddressLo(lowPart(transactionProcessingMetadata.getCoinbaseAddress()));
+        .pTransactionCoinbaseAddressHi(hiPart(transactionProcessingMetadata.getCoinbaseAddress()))
+        .pTransactionCoinbaseAddressLo(loPart(transactionProcessingMetadata.getCoinbaseAddress()))
+        .pTransactionLengthOfDelegationList(
+            transactionProcessingMetadata.getBesuTransaction().getCodeDelegationList().isPresent()
+                ? transactionProcessingMetadata
+                    .getBesuTransaction()
+                    .getCodeDelegationList()
+                    .get()
+                    .size()
+                : 0)
+        .pTransactionNumberOfSuccessfulSenderDelegations(
+            transactionProcessingMetadata.getNumberOfSuccessfulSenderDelegations());
   }
 }

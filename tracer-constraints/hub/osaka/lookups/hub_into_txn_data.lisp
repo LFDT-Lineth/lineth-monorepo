@@ -20,7 +20,8 @@
    (*   txndata.USER   txndata.hub/NONCE                      )
    (*   txndata.USER   txndata.hub/VALUE                      )
    (*   txndata.USER   txndata.hub/IS_DEPLOYMENT              )
-   (*   txndata.USER   txndata.hub/HAS_EIP_1559_GAS_SEMANTICS )
+   (*   txndata.USER   txndata.hub/TRANSACTION_TYPE_SUPPORTS_EIP_1559_GAS_SEMANTICS )
+   (*   txndata.USER   txndata.hub/TRANSACTION_TYPE_SUPPORTS_DELEGATION_LISTS       )
    (*   txndata.USER   txndata.hub/GAS_PRICE                  )
    (*   txndata.USER   txndata.hub/GAS_LIMIT                  )
    (txn-data---priority-fee-per-gas)
@@ -37,6 +38,9 @@
    (*   txndata.USER   txndata.hub/GAS_LEFTOVER               )
    (*   txndata.USER   txndata.hub/REFUND_COUNTER_FINAL       )
    (*   txndata.USER   txndata.hub/REFUND_EFFECTIVE           )
+   ;;
+   (*   txndata.USER   txndata.hub/LENGTH_OF_DELEGATION_LIST               )
+   (*   txndata.USER   txndata.hub/NUMBER_OF_SUCCESSFUL_SENDER_DELEGATIONS )
    ;; system transaction stuff
    txndata.hub/NOOP
    txndata.hub/EIP_4788
@@ -64,7 +68,8 @@
    (*   hub.USER    hub.transaction/NONCE                   )
    (*   hub.USER    hub.transaction/VALUE                   )
    (*   hub.USER    hub.transaction/IS_DEPLOYMENT           )
-   (*   hub.USER    hub.transaction/IS_TYPE2                )
+   (*   hub.USER    hub.transaction/TRANSACTION_TYPE_SUPPORTS_EIP_1559_GAS_SEMANTICS )
+   (*   hub.USER    hub.transaction/TRANSACTION_TYPE_SUPPORTS_DELEGATION_LISTS       )
    (*   hub.USER    hub.transaction/GAS_PRICE               )
    (*   hub.USER    hub.transaction/GAS_LIMIT               )
    (*   hub.USER    hub.transaction/PRIORITY_FEE_PER_GAS    )
@@ -81,6 +86,9 @@
    (*   hub.USER    hub.transaction/GAS_LEFTOVER            )
    (*   hub.USER    hub.transaction/REFUND_COUNTER_INFINITY )
    (*   hub.USER    hub.transaction/REFUND_EFFECTIVE        )
+   ;;
+   (*   hub.USER    hub.transaction/LENGTH_OF_DELEGATION_LIST               )
+   (*   hub.USER    hub.transaction/NUMBER_OF_SUCCESSFUL_SENDER_DELEGATIONS )
    ;;
    hub.transaction/NOOP
    hub.transaction/EIP_4788

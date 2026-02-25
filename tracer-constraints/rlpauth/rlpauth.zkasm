@@ -1,0 +1,534 @@
+include "../constants/evm.zkasm"
+include "../util/padding.zkasm"
+include "../util/byte.zkasm"
+include "../util/max2.zkasm"
+include "../util/bit_shl.zkasm"
+include "../util/byte_shift.zkasm"
+include "../util/byte_size.zkasm"
+
+;; https://eips.ethereum.org/EIPS/eip-7702
+
+pub fn rlpauth(chain_id u256, nonce u64, delegation_address u160, y_parity u8, r u256, s u256,
+msg u256, ;; predicted returned value by keccak 
+authority_address u160, ;; predicticted returned value by ecrecover
+blk_number u16, user_txn_number u24, txn_from_address u160, ;; columns for lookup into txndata (to get txn_from_address)
+network_chain_id u256, ;; additional columns for lookup into blockdata (to get network_chain_id)
+authority_ecrecover_success u1, authority_nonce u64, authority_has_empty_code_or_is_delegated u1, sender_is_authority_acc u10, tuple_index u10, hub_stamp u32) ;; additional columns for lookup into hub
+-> (authorization_tuple_is_valid u1)
+{
+    var not_padding_selector u1
+    var rlpauth_into_hub_lookup_selector u1 ;; this selector needs to be set at the end of the computation
+    var invalid_step u3  
+
+    ;; this is to avoid triggering lookups during padding rows
+    var hub_stamp_minus_3 u32
+    var hub_stamp_is_smaller_than_3 u1
+    hub_stamp_is_smaller_than_3, hub_stamp_minus_3 = hub_stamp - 3
+    if hub_stamp_is_smaller_than_3 == 0 goto step_0
+  
+    authorization_tuple_is_valid = 0
+    return
+    step_0: ;; preliminary computation
+        not_padding_selector = 1
+
+        ;; preliminary computation
+        var delegation_address_is_zero u1
+        delegation_address_is_zero = delegation_address == 0 ? 1 : 0
+
+        var sender_is_authority u1 ;; this is set only if ecrecover step is reached 
+
+        var id u32
+        var b u1
+        b, id = hub_stamp + 1 ;; id for lookups to ECDATA and SHAKIRA
+    step_1:
+        ;; verify that chain_id is 0 or the ID of the current chain
+        if chain_id == 0 goto step_2
+        if chain_id == network_chain_id goto step_2
+        invalid_step = 1
+        goto exit_invalid
+    step_2:
+        ;; check that nonce < 2^64 - 1
+        var nonce_is_in_bounds u1
+        var nonce_minus_2_to_the_power_of_64_minus_1_tmp u64
+        nonce_is_in_bounds, nonce_minus_2_to_the_power_of_64_minus_1_tmp = nonce - (2^64 - 1) 
+        if nonce_is_in_bounds == 1 goto step_3
+        invalid_step = 2
+        goto exit_invalid
+    step_3:
+        ;; check that s <= SECP256K1N_DIVIDED_BY_TWO
+        var secp256k1n_is_out_of_bounds u1
+        var secp256k1n_divided_by_two_minus_s_tmp u256
+        secp256k1n_is_out_of_bounds, secp256k1n_divided_by_two_minus_s_tmp = SECP256K1N_DIVIDED_BY_TWO - s
+        if secp256k1n_is_out_of_bounds == 0 goto step_3_continuation
+        invalid_step = 3
+        goto exit_invalid
+    step_3_continuation:    
+        var rlp_output u520
+        var rlp_output_byte_size u7
+        rlp_output, rlp_output_byte_size = compute_rlp(chain_id, delegation_address, nonce)
+        ;; note that rlp_output is already left-aligned
+
+        ;; compute keccak input by concatenating MAGIC and rlp_output
+        var keccak_input_wihtout_right_padding u528
+        keccak_input_wihtout_right_padding = (MAGIC * 2^520) + rlp_output
+
+        var keccak_input u1024
+        keccak_input = keccak_input_wihtout_right_padding * 2^496
+        
+        var keccak_input_byte_size u7
+        b, keccak_input_byte_size = 1 + rlp_output_byte_size ;; 1 byte for MAGIC
+       
+        var dummy u1
+
+        dummy = keccak(id, keccak_input, keccak_input_byte_size, msg)
+
+        dummy = ecrecover(id, msg, y_parity, r, s, authority_address, authority_ecrecover_success)
+
+        sender_is_authority = txn_from_address == authority_address ? 1 : 0
+    ;; step_4: happens in the HUB
+    ;;  Add authority to accessed_addresses, as defined in EIP-2929.
+    step_5:
+        if authority_has_empty_code_or_is_delegated == 1 goto step_6
+        invalid_step = 5
+        goto exit_invalid
+    step_6:
+        ;; NOTE: the sender_nonce will be incremented after the authority list in Linea; if sender == authority_address (SENDER_IS_AUTHORITY) 
+        ;; one must verify authority_nonce + 1 == nonce
+        var authority_nonce_plus_sender_is_authority u65
+        authority_nonce_plus_sender_is_authority = authority_nonce + sender_is_authority
+        if authority_nonce_plus_sender_is_authority == nonce goto exit_valid
+        invalid_step = 6
+        goto exit_invalid       
+    ;; step_7: happens in the HUB
+    ;;  Add PER_EMPTY_ACCOUNT_COST - PER_AUTH_BASE_COST gas to the global refund counter if authority is not empty.
+    ;; step_8: happens in the HUB
+    ;;  Set the code of authority
+    ;; step_9: happens in the HUB
+    ;;  authority_nonce = authority_nonce + 1
+    exit_valid:
+        invalid_step = 7 ;; no step is invalid
+        rlpauth_into_hub_lookup_selector = 1
+        authorization_tuple_is_valid = 1
+        return
+    exit_invalid:
+        ;; invalid step is in {0, 1, 2, 3, 5, 6}
+        rlpauth_into_hub_lookup_selector = 1
+        authorization_tuple_is_valid = 0
+        return
+}
+
+fn compute_rlp(chain_id u256, address u160, nonce u64) -> (rlp_output=2889412887765752714270500009118055495763961338276586671318722234760251419298386188008200465194623125069238309106640583294759292979977564806494616314429046784 u520, rlp_output_byte_size=24 u7)
+{    
+    ;; chain_id is assumed to be at most 8 bytes
+    var chain_id_rlp u264
+    chain_id_rlp = compute_rlp_integer_u256(chain_id)
+
+    var address_rlp u168
+    address_rlp = ((RLP_PREFIX_INT_SHORT + 20) * 2^160) + address ;; compute rlp address
+
+    var nonce_rlp u264
+    nonce_rlp = compute_rlp_integer_u256(nonce)
+
+    ;; output (max 65 bytes, 520 bits):
+    ;;  list_rlp_prefix (max 2 bytes) since list content max 63 bytes > 55 bytes
+    ;;  chain_id_rlp (max 33 bytes)
+    ;;  address_rlp (21 bytes)
+    ;;  nonce_rlp (max 9 bytes)
+
+    var chain_id_rlp_byte_size u7
+    chain_id_rlp_byte_size = byte_size_u512(chain_id_rlp)
+    var nonce_rlp_byte_size u7
+    nonce_rlp_byte_size = byte_size_u512(nonce_rlp)
+
+    var list_byte_size u7
+    var b2 u2
+    b2, list_byte_size = chain_id_rlp_byte_size + 21 + nonce_rlp_byte_size ;; 9 + 21 + 9 = 39 bytes at most
+
+    var list_byte_size_minus_55 u7
+    var list_byte_size_is_greater_than_55 u1
+    list_byte_size_is_greater_than_55, list_byte_size_minus_55 = 55 - list_byte_size
+
+    if list_byte_size_is_greater_than_55 == 0 goto list_rlp_prefix_is_1_byte
+    if list_byte_size_is_greater_than_55 == 1 goto list_rlp_prefix_is_2_bytes
+
+    var list_rlp_prefix u16  
+    list_rlp_prefix_is_1_byte:
+        list_rlp_prefix = 
+            RLP_PREFIX_LIST_SHORT + ;; list prefix for payload <= 55 bytes
+            chain_id_rlp_byte_size + ;; chain_id
+            21 + ;; address
+            nonce_rlp_byte_size ;; nonce
+            goto after_list_rlp_prefix_computation
+
+    list_rlp_prefix_is_2_bytes:
+        list_rlp_prefix =
+            ((RLP_PREFIX_LIST_LONG + 1) * 2^8) + ;; list prefix for payload > 55 bytes plus 1 as list content is at most 63 bytes
+            chain_id_rlp_byte_size + ;; chain_id
+            21 + ;; address
+            nonce_rlp_byte_size ;; nonce
+    
+    after_list_rlp_prefix_computation:
+        var nonce_rlp_address_rlp_byte_size u7
+        var b u1
+        b, nonce_rlp_address_rlp_byte_size = nonce_rlp_byte_size + 21 ;; 9 + 21 = 30 bytes at most
+
+        var list_rlp_prefix_left_shifted u1024
+        list_rlp_prefix_left_shifted = byte_shl1024(list_rlp_prefix, list_byte_size)
+        ;; 2 bytes shifted at most by 63 bytes (520 bits)
+
+        var chain_id_rlp_left_shifted u1024
+        chain_id_rlp_left_shifted = byte_shl1024(chain_id_rlp, nonce_rlp_address_rlp_byte_size)
+        ;; 33 bytes shifted at most by 30 bytes 
+
+        var address_rlp_left_shifted u1024
+        address_rlp_left_shifted = byte_shl1024(address_rlp, nonce_rlp_byte_size)
+        ;; 21 bytes shifted at most by 9 bytes
+
+        ;; compose output with leading zeros
+        var rlp_output_with_leading_zeros u1024   
+        b2, rlp_output_with_leading_zeros = list_rlp_prefix_left_shifted + chain_id_rlp_left_shifted + address_rlp_left_shifted + nonce_rlp
+
+        ;; left shift output to remove leading zeros
+        b, rlp_output_byte_size = (1 + list_byte_size_is_greater_than_55) + list_byte_size
+
+        var rlp_output_left_shift u7
+        b, rlp_output_left_shift = 65 - rlp_output_byte_size ;; 65 bytes (520 bits) is the max size of rlp_output
+
+        var rlp_output_left_shifted u1024
+        rlp_output_left_shifted = byte_shl1024(rlp_output_with_leading_zeros, rlp_output_left_shift)
+
+        var b504 u504 ;; 1024 - 520
+        b504, rlp_output = rlp_output_left_shifted
+
+        return
+}
+
+fn compute_rlp_integer_u256(integer u256) -> (integer_rlp=128 u264) { ;; 8 + 256 (max 33 bytes)    
+    ;; checking if rlp prefix is required
+    var rlp_prefix_required u1
+    var integer_greater_or_equal_to_128 u1
+    var integer_smaller_than_128 u1
+    var integer_minus_128_tmp u256
+    integer_smaller_than_128, integer_minus_128_tmp = integer - 128    
+    integer_greater_or_equal_to_128 = integer_smaller_than_128 == 0 ? 1 : 0
+    rlp_prefix_required = integer == 0 ? 1 : integer_greater_or_equal_to_128
+
+    ;; compute rlp prefix
+    var b u1
+    var integer_byte_size u5
+    var integer_byte_size_tmp u6
+    var rlp_prefix u8
+    integer_byte_size_tmp = byte_size(integer) ;; at most 32 bytes
+    b, integer_byte_size = integer_byte_size_tmp
+    b, rlp_prefix = rlp_prefix_required == 0 ? 0 : (RLP_PREFIX_INT_SHORT + integer_byte_size)
+
+    var rlp_prefix_left_shifted u264
+    if integer_byte_size_tmp == 32 goto integer_rlp_is_33_bytes
+    if integer_byte_size_tmp != 32 goto integer_rlp_is_less_than_33_bytes
+
+    integer_rlp_is_33_bytes:
+        rlp_prefix_left_shifted = rlp_prefix * 2^256
+        goto exit
+
+    integer_rlp_is_less_than_33_bytes:
+        rlp_prefix_left_shifted = byte_shl256(rlp_prefix, integer_byte_size)
+        goto exit
+
+    exit:
+        b, integer_rlp = rlp_prefix_left_shifted + integer
+        return
+}
+
+;; TODO: fix alignment of the 2 functions below, verify limb_size is needed and lookups correctness
+
+;; h is a prediction to be confirmed by SHAKIRA
+fn keccak(id u32, keccak_input u1024, keccak_input_byte_size u7, h u256) -> (dummy u1) {
+    ;; this is to avoid triggering the lookup during padding rows
+    var id_minus_4 u32
+    var id_is_smaller_than_4 u1
+    id_is_smaller_than_4, id_minus_4 = id - 4
+    if id_is_smaller_than_4 == 1 goto exit
+
+    var limbs_are_5 u1
+    var limbs_are_4 u1
+    var limbs_are_3 u1
+    var limbs_are_2 u1
+    var index u3
+    var limb u128
+    var limb_size u8  
+    var is_keccak_data u1
+    var is_keccak_result u1
+    var total_size u32
+
+    var total_size_data u32
+    total_size_data = keccak_input_byte_size
+    var h_lo u128
+    var b u1
+
+    ;; determine numbers of limbs based on keccak_input_byte_size
+    var keccak_input_byte_size_vs_64 u8
+    keccak_input_byte_size_vs_64 = max_u8(keccak_input_byte_size, 64)
+
+    var keccak_input_byte_size_vs_48 u8
+    keccak_input_byte_size_vs_48 = max_u8(keccak_input_byte_size, 48)
+
+    var keccak_input_byte_size_vs_32 u8
+    keccak_input_byte_size_vs_32 = max_u8(keccak_input_byte_size, 32)
+
+    var keccak_input_byte_size_vs_16 u8
+    keccak_input_byte_size_vs_16 = max_u8(keccak_input_byte_size, 16)
+
+    if keccak_input_byte_size == keccak_input_byte_size_vs_64 goto limbs_are_5_case
+    if keccak_input_byte_size == keccak_input_byte_size_vs_48 goto limbs_are_4_case
+    if keccak_input_byte_size == keccak_input_byte_size_vs_32 goto limbs_are_3_case
+    if keccak_input_byte_size == keccak_input_byte_size_vs_16 goto limbs_are_2_case
+
+    limbs_are_5_case:
+        ;; lookup to SHAKIRA for keccak computation (case 5 limbs)
+        limbs_are_4 = 0
+        limbs_are_3 = 0
+        limbs_are_2 = 0
+      
+        ;; 5 data limbs
+        limbs_are_5 = 1
+        index = 0
+        limb = limb_u1024(keccak_input, 0)
+        limb_size = 16
+        is_keccak_data = 1
+        is_keccak_result = 0
+        total_size = total_size_data
+
+        limbs_are_5 = 0
+        index = 1
+        limb = limb_u1024(keccak_input, 16)
+        limb_size = 16
+        is_keccak_data = 1
+        is_keccak_result = 0
+        total_size = total_size_data
+
+        index = 2
+        limb = limb_u1024(keccak_input, 32)
+        limb_size = 16
+        is_keccak_data = 1
+        is_keccak_result = 0
+        total_size = total_size_data
+
+        index = 3
+        limb = limb_u1024(keccak_input, 48)
+        limb_size = 16
+        is_keccak_data = 1
+        is_keccak_result = 0
+        total_size = total_size_data
+
+        index = 4
+        limb = limb_u1024(keccak_input, 64)
+        b, limb_size = keccak_input_byte_size - 64
+        is_keccak_data = 1
+        is_keccak_result = 0
+        total_size = total_size_data
+
+        goto result
+
+    limbs_are_4_case:
+        ;; lookup to SHAKIRA for keccak computation (case 4 limbs)
+        limbs_are_5 = 0        
+        limbs_are_3 = 0
+        limbs_are_2 = 0
+
+        ;; 4 data limbs
+        limbs_are_4 = 1
+        index = 0
+        limb = limb_u1024(keccak_input, 0)
+        limb_size = 16
+        is_keccak_data = 1
+        is_keccak_result = 0
+        total_size = total_size_data
+
+        limbs_are_4 = 0
+        index = 1
+        limb = limb_u1024(keccak_input, 16)
+        limb_size = 16
+        is_keccak_data = 1
+        is_keccak_result = 0
+        total_size = total_size_data
+
+        index = 2
+        limb = limb_u1024(keccak_input, 32)
+        limb_size = 16
+        is_keccak_data = 1
+        is_keccak_result = 0
+        total_size = total_size_data
+
+        index = 3
+        limb = limb_u1024(keccak_input, 48)
+        b, limb_size = keccak_input_byte_size - 48
+        is_keccak_data = 1
+        is_keccak_result = 0
+        total_size = total_size_data
+
+        goto result
+
+    limbs_are_3_case:
+        ;; lookup to SHAKIRA for keccak computation (case 3 limbs)
+        limbs_are_5 = 0
+        limbs_are_4 = 0        
+        limbs_are_2 = 0
+
+        ;; 3 data limbs
+        limbs_are_3 = 1
+        index = 0
+        limb = limb_u1024(keccak_input, 0)
+        limb_size = 16
+        is_keccak_data = 1
+        is_keccak_result = 0
+        total_size = total_size_data
+
+        limbs_are_3 = 0
+        index = 1
+        limb = limb_u1024(keccak_input, 16)
+        limb_size = 16
+        is_keccak_data = 1
+        is_keccak_result = 0
+        total_size = total_size_data
+
+        index = 2
+        limb = limb_u1024(keccak_input, 32)
+        b, limb_size = keccak_input_byte_size - 32
+        is_keccak_data = 1
+        is_keccak_result = 0
+        total_size = total_size_data
+
+        goto result
+
+    limbs_are_2_case:
+        ;; lookup to SHAKIRA for keccak computation (case 2 limbs)
+        limbs_are_5 = 0
+        limbs_are_4 = 0
+        limbs_are_3 = 0
+       
+        ;; 2 data limbs
+        limbs_are_2 = 1
+        index = 0
+        limb = limb_u1024(keccak_input, 0)
+        limb_size = 16
+        is_keccak_data = 1
+        is_keccak_result = 0
+        total_size = total_size_data
+
+        limbs_are_2 = 0
+        index = 1
+        limb = limb_u1024(keccak_input, 16)
+        b, limb_size = keccak_input_byte_size - 16
+        is_keccak_data = 1
+        is_keccak_result = 0
+        total_size = total_size_data
+    
+    result:
+        ;; 2 result limbs
+        index = 0
+        limb, h_lo = h ;; h_hi
+        is_keccak_data = 0
+        is_keccak_result = 1
+        total_size = 32 
+       
+        index = 1
+        limb = h_lo ;; h_lo
+        is_keccak_data = 0
+        is_keccak_result = 1
+        total_size = 32 
+       
+    exit:
+        dummy = 0
+        return
+}
+
+;; address and success_bit are predictions to be confirmed by ECDATA 
+fn ecrecover(id u32, h u256, y_parity u8, r u256, s u256, address u160, success_bit u1) -> (dummy u1) {
+    ;; this is to avoid triggering the lookup during padding rows
+    var id_minus_4 u32
+    var id_is_smaller_than_4 u1
+    id_is_smaller_than_4, id_minus_4 = id - 4
+    if id_is_smaller_than_4 == 1 goto exit
+
+    var lookup_selector u1
+    var index u3
+    var limb u128
+    var is_ecrecover_data u1
+    var is_ecrecover_result u1
+    var total_size u16
+    
+    var h_lo u128
+    var r_lo u128
+    var s_lo u128
+    var address_lo u128
+    var b u1
+
+    ;; lookup to ECDATA for ecrecover computation
+    ;; 8 data limbs 
+    lookup_selector = 1
+    index = 0
+    limb, h_lo = h ;; h_hi
+    is_ecrecover_data = 1
+    is_ecrecover_result = 0
+    total_size = 128 
+
+    lookup_selector = 0
+    index = 1
+    limb = h_lo ;; h_lo
+    is_ecrecover_data = 1
+    is_ecrecover_result = 0
+    total_size = 128 
+
+    index = 2
+    limb = 0 ;; v_hi
+    is_ecrecover_data = 1
+    is_ecrecover_result = 0
+    total_size = 128 
+
+    index = 3
+    limb = y_parity + 27 ;; v_lo
+    is_ecrecover_data = 1
+    is_ecrecover_result = 0
+    total_size = 128 
+
+    index = 4
+    limb, r_lo = r ;; r_hi
+    is_ecrecover_data = 1
+    is_ecrecover_result = 0
+    total_size = 128 
+
+    index = 5
+    limb = r_lo ;; r_lo
+    is_ecrecover_data = 1
+    is_ecrecover_result = 0
+    total_size = 128 
+
+    index = 6
+    limb, s_lo = s ;; s_hi
+    is_ecrecover_data = 1
+    is_ecrecover_result = 0
+    total_size = 128 
+
+    index = 7
+    limb = s_lo ;; s_lo
+    is_ecrecover_data = 1
+    is_ecrecover_result = 0
+    total_size = 128 
+
+    ;; 2 result limbs
+    index = 0
+    limb, address_lo = address ;; address_hi
+    is_ecrecover_data = 0
+    is_ecrecover_result = 1
+    total_size = 32 
+
+    index = 1
+    limb = address_lo ;; address_lo
+    is_ecrecover_data = 0
+    is_ecrecover_result = 1
+    total_size = 32 
+
+    exit:   
+        dummy = 0
+        return
+}

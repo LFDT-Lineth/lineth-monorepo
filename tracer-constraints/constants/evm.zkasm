@@ -133,3 +133,12 @@ const MAX_INIT_CODE_SIZE = 49152
 ;; 2^64 - 1
 const EIP2681_MAX_NONCE=18446744073709551615
 const EIP_7823_MODEXP_UPPER_BYTE_SIZE_BOUND=1024
+
+;; =============================================================================
+;; EIP-7702
+;; =============================================================================
+;; const SECP256K1N = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f
+const SECP256K1N_DIVIDED_BY_TWO = 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0
+const MAGIC = 0x05
+const DELEGATION_PREFIX = 0xef0100
+const KECCAK_OF_EMPTY_STRING = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470

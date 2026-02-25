@@ -15,19 +15,41 @@
 
 package net.consensys.linea.zktracer.module.hub.fragment.account;
 
-public record TimeAndExistence(int domStamp, int subStamp, boolean hadCode) {
+public record TimeAndExistence(int domStamp, int subStamp, boolean hadCode, boolean seenInTxAuth) {
 
-  public boolean needsUpdate(TimeAndExistence other) {
-    if (other.hadCode() == this.hadCode) {
+  public boolean needsUpdate(TimeAndExistence next) {
+    // if next stems from a TX_AUTH row, we don't update
+    if (next.seenInTxAuth) {
+      return false;
+    }
+    // below, next DOES NOT stem from a TX_AUTH row
+
+    // if this DOES, we update
+    if (this.seenInTxAuth) {
+      return true;
+    }
+
+    // NOTE. Beyond this point:
+    // this.txAuthAccountFragment == false
+    // next.txAuthAccountFragment == false
+
+    if (next.hadCode() == this.hadCode) {
       return false;
     }
 
-    if (other.domStamp < this.domStamp) {
+    if (next.domStamp < this.domStamp) {
       return true;
-    } else if (other.domStamp == this.domStamp) {
-      return other.subStamp > this.subStamp;
+    } else if (next.domStamp == this.domStamp) {
+      return next.subStamp > this.subStamp;
     } else {
       return false;
     }
+  }
+
+  public boolean tracedHadCode() {
+    if (seenInTxAuth) {
+      return false;
+    }
+    return hadCode;
   }
 }

@@ -10,9 +10,9 @@
 
 
 (defconstraint    phase-flags---setting-the-transaction-phase-flag-sum ()
-		  (eq!    (phase-flag-sum)
-			  (system-flag-sum)))
+                  (eq!    (phase-flag-sum)
+                          (system-flag-sum)))
 
 (defconstraint    phase-flags---weighted-transaction-phase-flag-sum-constancy ()
-		  (hub-stamp-constancy    (phase-wght-sum)))
+                  (hub-stamp-constancy    (phase-wght-sum)))
 

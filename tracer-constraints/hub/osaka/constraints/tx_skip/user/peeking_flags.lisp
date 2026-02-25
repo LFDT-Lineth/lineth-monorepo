@@ -17,7 +17,8 @@
                   (eq!    (+   (shift    PEEK_AT_TRANSACTION   tx-skip---USER---row-offset---TXN                      )
                                (shift    PEEK_AT_ACCOUNT       tx-skip---USER---row-offset---ACC---sender             )
                                (shift    PEEK_AT_ACCOUNT       tx-skip---USER---row-offset---ACC---recipient          )
+                               (shift    PEEK_AT_ACCOUNT       tx-skip---USER---row-offset---ACC---delegate           )
                                (shift    PEEK_AT_ACCOUNT       tx-skip---USER---row-offset---ACC---coinbase           )
                                (shift    PEEK_AT_CONTEXT       tx-skip---USER---row-offset---CON---final-zero-context ))
-                          tx-skip---USER---NSR))                                               
+                          tx-skip---USER---NSR))
 

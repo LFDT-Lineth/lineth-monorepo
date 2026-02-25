@@ -16,6 +16,9 @@
     stp.GAS_MXP
     stp.GAS_OOP
     stp.GAS_STIPEND
+    stp.CALLEE_IS_DELEGATED
+    stp.CALLEE_IS_DELEGATED_TO_SELF
+    stp.DELEGATE_WARMTH
   )
   ;; source selector
   (hub-into-stp-trigger)
@@ -32,6 +35,9 @@
     hub.misc/STP_GAS_MXP
     hub.misc/STP_GAS_PAID_OUT_OF_POCKET
     hub.misc/STP_GAS_STIPEND
+    hub.misc/STP_CALLEE_IS_DELEGATED
+    hub.misc/STP_CALLEE_IS_DELEGATED_TO_SELF
+    hub.misc/STP_DELEGATE_WARMTH
   )
   )
 

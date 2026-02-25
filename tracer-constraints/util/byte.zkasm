@@ -1,3 +1,169 @@
+;; Extract a limb of 16 bytes from index n from a u1024 value.
+fn limb_u1024(word u1024, n u7) -> (res u128) {
+  var m u7
+  var b u1
+  b, m = n + 15
+  var tmp u1024
+  tmp = byte_slice_u1024(word, n, m)
+  var b896 u896
+  b896, res = tmp
+  return
+}
+
+;; Extract a limb of 16 bytes from index n from a u512 value.
+fn limb_u512(word u512, n u6) -> (res u128) {
+  var m u6
+  var b u1
+  b, m = n + 15
+  var tmp u512
+  tmp = byte_slice_u512(word, n, m)
+  var b384 u384
+  b384, res = tmp
+  return
+}
+
+;; byte_slice
+
+;; Extract a slice of bytes from index n to m (inclusive) from a u1024 value.
+fn byte_slice_u1024(word u1024, n u7, m u7) -> (res u1024) {
+  ;; ensure m >= n
+  var m_smaller_than_n u1
+  var m_minus_n u7
+  m_smaller_than_n, m_minus_n = m - n
+  if m_smaller_than_n == 1 goto failure
+  if n != m goto induction_step
+  ;; Implicitly if n == m goto base_case
+  base_case:
+    res = byte1024(word, n)
+    return
+  induction_step:
+    ;; Get least significant byte
+    var lsb u8
+    lsb = byte1024(word, m)
+    ;; Recursive call to get remaining bytes
+    var remaining u1024
+    var b u1
+    var m_minus_1 u7
+    b, m_minus_1 = m - 1
+    remaining = byte_slice_u1024(word, n, m_minus_1)
+    ;; Left shift remaining by 8 bits
+    var remaning_left_shifted u1024
+    var b8 u8
+    b8, remaning_left_shifted = remaining * 2^8
+    ;; Combine
+    b, res = remaning_left_shifted + lsb
+    return
+  failure:
+    fail
+}
+
+;; Extract a slice of bytes from index n to m (inclusive) from a u512 value.
+fn byte_slice_u512(word u512, n u6, m u6) -> (res u512) {
+  ;; ensure m >= n
+  var m_smaller_than_n u1
+  var m_minus_n u6
+  m_smaller_than_n, m_minus_n = m - n
+  if m_smaller_than_n == 1 goto failure
+  if n != m goto induction_step
+  ;; Implicitly if n == m goto base_case
+  base_case:
+    res = byte512(word, n)
+    return
+  induction_step:
+    ;; Get least significant byte
+    var lsb u8
+    lsb = byte512(word, m)
+    ;; Recursive call to get remaining bytes
+    var remaining u512
+    var b u1
+    var m_minus_1 u6
+    b, m_minus_1 = m - 1
+    remaining = byte_slice_u512(word, n, m_minus_1)
+    ;; Left shift remaining by 8 bits
+    var remaning_left_shifted u512
+    var b8 u8
+    b8, remaning_left_shifted = remaining * 2^8
+    ;; Combine
+    b, res = remaning_left_shifted + lsb
+    return
+  failure:
+    fail
+}
+
+;; Extract a slice of bytes from index n to m (inclusive) from a u256 value.
+fn byte_slice_u256(word u256, n u5, m u5) -> (res u256) {
+  ;; ensure m >= n
+  var m_smaller_than_n u1
+  var m_minus_n u5
+  m_smaller_than_n, m_minus_n = m - n
+  if m_smaller_than_n == 1 goto failure
+  if n != m goto induction_step
+  ;; Implicitly if n == m goto base_case
+  base_case:
+    res = byte256(word, n)
+    return
+  induction_step:
+    ;; Get least significant byte
+    var lsb u8
+    lsb = byte256(word, m)
+    ;; Recursive call to get remaining bytes
+    var remaining u256
+    var b u1
+    var m_minus_1 u5
+    b, m_minus_1 = m - 1
+    remaining = byte_slice_u256(word, n, m_minus_1)
+    ;; Left shift remaining by 8 bits
+    var remaning_left_shifted u256
+    var b8 u8
+    b8, remaning_left_shifted = remaining * 2^8
+    ;; Combine
+    b, res = remaning_left_shifted + lsb
+    return
+  failure:
+    fail
+}
+
+;; byte
+
+;; Extract the nth byte from a u1024 value, where n==0 returns the most
+;; significant byte.
+fn byte1024(word u1024, n u7) -> (res u8) {
+  var msb u1
+  var m u6
+  var high, low u512
+  ;; Break down index
+  msb, m = n
+  ;; Break down word
+  high,low = word
+  ;;
+  if msb == 0 goto high_lab
+  res = byte512(low,m)
+  return
+high_lab:
+  res = byte512(high,m)
+  return
+}
+
+
+;; Extract the nth byte from a u512 value, where n==0 returns the most
+;; significant byte.
+fn byte512(word u512, n u6) -> (res u8) {
+  var msb u1
+  var m u5
+  var high, low u256
+  ;; Break down index
+  msb, m = n
+  ;; Break down word
+  high,low = word
+  ;;
+  if msb == 0 goto high_lab
+  res = byte256(low,m)
+  return
+high_lab:
+  res = byte256(high,m)
+  return
+}
+
 ;; Extract the nth byte from a u256 value, where n==0 returns the most
 ;; significant byte.
 fn byte256(word u256, n u5) -> (res u8) {

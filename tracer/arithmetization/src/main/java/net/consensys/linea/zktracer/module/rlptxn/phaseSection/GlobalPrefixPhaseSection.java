@@ -63,7 +63,7 @@ public class GlobalPrefixPhaseSection extends PhaseSection {
   }
 
   @Override
-  protected void traceComputationsRows(
+  protected void traceComputationRows(
       Trace.Rlptxn trace, TransactionProcessingMetadata tx, GenericTracedValue tracedValues) {
     // First Computation Row: byte type prefix
     traceTransactionConstantValues(trace, tracedValues);

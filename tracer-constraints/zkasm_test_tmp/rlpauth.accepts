@@ -1,0 +1,6 @@
+;; test compute_rlp_integer_u256
+{"compute_rlp_integer_u256":{"integer":[0],"integer_rlp":[128]}}
+{"compute_rlp_integer_u256":{"integer":[1],"integer_rlp":[1]}}
+{"compute_rlp_integer_u256":{"integer":[127],"integer_rlp":[127]}}
+{"compute_rlp_integer_u256":{"integer":[128],"integer_rlp":[33152]}}
+{"compute_rlp_integer_u256":{"integer":[255],"integer_rlp":[33279]}}

@@ -113,10 +113,23 @@ public class ToyTransaction {
       }
     }
 
+    public void clearCodeDelegations() {
+      if (!transactionType.supportsDelegateCode()) {
+        return;
+      }
+      codeDelegations = new ArrayList<>();
+    }
+
     public ToyTransactionBuilder addCodeDelegation(
         BigInteger chainId, Address address, long nonce, KeyPair keyPair) {
-      if (this.codeDelegations == null) {
-        this.codeDelegations = new ArrayList<>();
+      if (transactionType == null) {
+        transactionType = TransactionType.DELEGATE_CODE;
+      }
+      checkArgument(
+          transactionType == TransactionType.DELEGATE_CODE,
+          "Can only add delegation to DELEGATE_CODE transactions");
+      if (codeDelegations == null) {
+        codeDelegations = new ArrayList<>();
       }
       org.hyperledger.besu.datatypes.CodeDelegation delegation =
           CodeDelegation.builder()
@@ -124,12 +137,18 @@ public class ToyTransaction {
               .address(address)
               .nonce(nonce)
               .signAndBuild(keyPair);
-      this.codeDelegations.add(delegation);
+      codeDelegations.add(delegation);
       return this;
     }
 
     public ToyTransactionBuilder addCodeDelegation(
         BigInteger chainId, Address address, long nonce, SECPSignature signature) {
+      if (transactionType == null) {
+        transactionType = TransactionType.DELEGATE_CODE;
+      }
+      checkArgument(
+          transactionType == TransactionType.DELEGATE_CODE,
+          "Can only add delegation to DELEGATE_CODE transactions");
       if (this.codeDelegations == null) {
         this.codeDelegations = new ArrayList<>();
       }
@@ -147,6 +166,21 @@ public class ToyTransaction {
     public ToyTransactionBuilder addCodeDelegation(
         BigInteger chainId, Address address, long nonce, BigInteger r, BigInteger s, Byte yParity) {
       return addCodeDelegation(chainId, address, nonce, new CodeDelegationSignature(r, s, yParity));
+    }
+
+    public ToyTransactionBuilder addCodeDelegation(
+        org.hyperledger.besu.datatypes.CodeDelegation delegation) {
+      if (transactionType == null) {
+        transactionType = TransactionType.DELEGATE_CODE;
+      }
+      checkArgument(
+          transactionType == TransactionType.DELEGATE_CODE,
+          "Can only add delegation to DELEGATE_CODE transactions");
+      if (codeDelegations == null) {
+        codeDelegations = new ArrayList<>();
+      }
+      codeDelegations.add(delegation);
+      return this;
     }
   }
 }

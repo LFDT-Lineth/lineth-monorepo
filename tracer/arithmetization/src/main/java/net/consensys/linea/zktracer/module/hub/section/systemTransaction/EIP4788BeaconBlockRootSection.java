@@ -42,7 +42,7 @@ import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 
 public class EIP4788BeaconBlockRootSection extends TraceSection {
 
-  public static final short NB_ROWS_HUB_SYSI_EIP4788 = 5;
+  public static final short NB_ROWS_HUB_SYSI_EIP_4788 = 5;
 
   public static final Address EIP4788_BEACONROOT_ADDRESS =
       AddressUtils.addressFromBytes(
@@ -55,7 +55,7 @@ public class EIP4788BeaconBlockRootSection extends TraceSection {
 
   public EIP4788BeaconBlockRootSection(
       Hub hub, WorldView world, ProcessableBlockHeader blockHeader) {
-    super(hub, NB_ROWS_HUB_SYSI_EIP4788);
+    super(hub, NB_ROWS_HUB_SYSI_EIP_4788);
     final AccountSnapshot beaconrootAccount =
         AccountSnapshot.canonical(hub, world, EIP4788_BEACONROOT_ADDRESS, false);
     final BigInteger timestamp = longToUnsignedBigInteger(blockHeader.getTimestamp());

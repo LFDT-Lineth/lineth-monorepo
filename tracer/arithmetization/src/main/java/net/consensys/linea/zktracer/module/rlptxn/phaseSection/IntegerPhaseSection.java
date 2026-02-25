@@ -55,7 +55,7 @@ public class IntegerPhaseSection extends PhaseSection {
   }
 
   @Override
-  protected void traceComputationsRows(
+  protected void traceComputationRows(
       Trace.Rlptxn trace, TransactionProcessingMetadata tx, GenericTracedValue tracedValues) {
     for (int ct = 0; ct <= 2; ct++) {
       traceTransactionConstantValues(trace, tracedValues);

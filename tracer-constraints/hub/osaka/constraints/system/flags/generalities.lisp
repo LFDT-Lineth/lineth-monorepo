@@ -8,17 +8,23 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defproperty      system-flag-generalities---binary
-		  (is-binary    (system-flag-sum)))
+                  (is-binary    (system-flag-sum)))
 
 (defconstraint    system-flag-generalities---initialization (:domain {0}) ;; ""
-		  (vanishes!    (system-flag-sum)))
+                  (vanishes!    (system-flag-sum)))
+
+(defproperty      system-flag-generalities---the-first-non-padding-row-belongs-to-a-SYSI-transaction
+                  (if-zero   (system-flag-sum)
+                             (eq!   (next   (system-flag-sum))
+                                    (next    SYSI)
+                                    )))
 
 (defconstraint    system-flag-generalities---monotonicity ()
-		  (if-not-zero    (system-flag-sum)
-				  (eq!    (next    (system-flag-sum))    1)))
+                  (if-not-zero    (system-flag-sum)
+                                  (eq!    (next    (system-flag-sum))    1)))
 
 (defconstraint    system-flag-generalities---pegging-to-block-number ()
-		  (if-not-zero    BLK_NUMBER
-				  (eq!    (system-flag-sum)   1)
-				  (eq!    (system-flag-sum)   0)))
+                  (if-not-zero    BLK_NUMBER
+                                  (eq!    (system-flag-sum)   1)
+                                  (eq!    (system-flag-sum)   0)))
 

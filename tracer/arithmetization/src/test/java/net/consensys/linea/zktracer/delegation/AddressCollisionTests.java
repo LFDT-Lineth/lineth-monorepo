@@ -29,7 +29,10 @@ import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.*;
-import org.junit.jupiter.api.Disabled;
+import org.hyperledger.besu.datatypes.Address;
+import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.datatypes.TransactionType;
+import org.hyperledger.besu.datatypes.Wei;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -39,7 +42,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 @ExtendWith(UnitTestWatcher.class)
 public class AddressCollisionTests extends TracerTestBase {
 
-  @Disabled
+  // @Disabled
   @ParameterizedTest
   @MethodSource("addressCollisionTestSource")
   void simpleDelegationTest(
@@ -54,19 +57,19 @@ public class AddressCollisionTests extends TracerTestBase {
     final Address add1Address =
         Address.extract(Hash.hash(add1KeyPair.getPublicKey().getEncodedBytes()));
     final ToyAccount add1Account =
-        ToyAccount.builder().balance(Wei.fromEth(1789)).nonce(0).address(add1Address).build();
+        ToyAccount.builder().balance(Wei.fromEth(42)).nonce(420).address(add1Address).build();
 
     final KeyPair add2KeyPair = new SECP256K1().generateKeyPair();
     final Address add2Address =
         Address.extract(Hash.hash(add2KeyPair.getPublicKey().getEncodedBytes()));
     final ToyAccount add2Account =
-        ToyAccount.builder().balance(Wei.fromEth(1789)).nonce(0).address(add2Address).build();
+        ToyAccount.builder().balance(Wei.fromEth(13)).nonce(69).address(add2Address).build();
 
     final KeyPair add3KeyPair = new SECP256K1().generateKeyPair();
     final Address add3Address =
         Address.extract(Hash.hash(add3KeyPair.getPublicKey().getEncodedBytes()));
     final ToyAccount add3Account =
-        ToyAccount.builder().balance(Wei.fromEth(1789)).nonce(0).address(add3Address).build();
+        ToyAccount.builder().balance(Wei.fromEth(1789)).nonce(1337).address(add3Address).build();
 
     // useless stupid code or empty. In the case sender == delegated, we can't set the code of the
     // sender prior to the transaction, but will instead add a self delegation to trigger the evm

@@ -39,4 +39,8 @@ public class TransactionUtils {
   public static boolean transactionHasEip1559GasSemantics(Transaction tx) {
     return tx.getType().supports1559FeeMarket();
   }
+
+  public static boolean transactionSupportsDelegateCode(Transaction tx) {
+    return tx.getType().supportsDelegateCode();
+  }
 }

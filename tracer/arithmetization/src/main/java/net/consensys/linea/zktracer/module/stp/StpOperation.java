@@ -77,6 +77,9 @@ public final class StpOperation extends ModuleOperation {
         .gasStipend(Bytes.ofUnsignedLong(stpCall.stipend()))
         .exists(stpCall.exists())
         .warm(stpCall.warm())
+        .calleeIsDelegated(stpCall.isDelegated())
+        .calleeIsDelegatedToSelf(stpCall.isDelegatedToSelf())
+        .delegateWarmth(stpCall.delegateWarmth())
         .validateRow();
   }
 

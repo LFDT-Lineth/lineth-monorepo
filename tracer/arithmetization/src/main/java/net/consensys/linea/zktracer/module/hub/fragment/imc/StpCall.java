@@ -31,8 +31,10 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.Trace;
+import net.consensys.linea.zktracer.module.hub.AccountSnapshot;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.TraceSubFragment;
+import net.consensys.linea.zktracer.module.hub.signals.Exceptions;
 import net.consensys.linea.zktracer.opcode.OpCode;
 import net.consensys.linea.zktracer.opcode.OpCodeData;
 import net.consensys.linea.zktracer.types.EWord;
@@ -54,6 +56,9 @@ public class StpCall implements TraceSubFragment {
   @EqualsAndHashCode.Include EWord value;
   @EqualsAndHashCode.Include boolean exists;
   @EqualsAndHashCode.Include boolean warm;
+  @EqualsAndHashCode.Include boolean isDelegated = false;
+  @EqualsAndHashCode.Include boolean isDelegatedToSelf = false;
+  @EqualsAndHashCode.Include boolean delegateWarmth = false;
   @EqualsAndHashCode.Include long upfrontGasCost;
   @EqualsAndHashCode.Include boolean outOfGasException;
   @EqualsAndHashCode.Include long gasPaidOutOfPocket;
@@ -81,19 +86,40 @@ public class StpCall implements TraceSubFragment {
 
   private void stpCallForCalls(Hub hub, MessageFrame frame, OpCode opCode) {
 
-    final Address to = Words.toAddress(frame.getStackItem(1));
-    final Account toAccount = frame.getWorldUpdater().get(to);
+    final Address calleeAddress = Words.toAddress(frame.getStackItem(1));
+    final Account calleeAccount = frame.getWorldUpdater().get(calleeAddress);
     this.gas = EWord.of(frame.getStackItem(0));
     this.value = opCodeData.callHasValueArgument() ? EWord.of(frame.getStackItem(2)) : ZERO;
     this.exists =
         switch (opCode) {
-          case CALL -> toAccount != null && !toAccount.isEmpty();
+          case CALL -> calleeAccount != null && !calleeAccount.isEmpty();
           case CALLCODE, DELEGATECALL, STATICCALL -> false;
           default ->
               throw new IllegalArgumentException(
                   "STP module triggered for a non CALL-type instruction");
         };
-    this.warm = isAddressWarm(hub.fork, frame, to);
+    this.warm = isAddressWarm(hub.fork, frame, calleeAddress);
+
+    AccountSnapshot callee = AccountSnapshot.canonical(hub, calleeAddress);
+    if (callee.isDelegated()) {
+      checkState(
+          callee.delegationAddress().isPresent(),
+          "STP: delegated callee should have a delegation address");
+      this.isDelegated = true;
+      final Address delegateAddress = callee.delegationAddress().get();
+      this.isDelegatedToSelf = delegateAddress.equals(calleeAddress);
+      // if the instruction raises an exception then we keep the same warmth
+      // otherwise we have to use the updated value of the delegate's warmth
+      // at this point the only account that may have changed warmth is the callee,
+      // thus we set:
+      // - if delegated to self,  then delegateWarmth = true
+      // - if delegated to other, then delegateWarmth = isAddressWarm(delegateAddress)
+      this.delegateWarmth =
+          Exceptions.any(hub.pch().exceptions())
+              ? isAddressWarm(hub.fork, frame, delegateAddress)
+              : this.isDelegatedToSelf || isAddressWarm(hub.fork, frame, delegateAddress);
+    }
+
     this.upfrontGasCost = upfrontGasCostForCalls();
     this.outOfGasException = gasActual < upfrontGasCost;
     this.gasPaidOutOfPocket = gasPaidOutOfPocketForCalls();
@@ -148,6 +174,12 @@ public class StpCall implements TraceSubFragment {
     upfrontGasCost += nonzeroValueTransfer() ? GAS_CONST_G_CALL_VALUE : 0;
     upfrontGasCost += warm ? GAS_CONST_G_WARM_ACCESS : GAS_CONST_G_COLD_ACCOUNT_ACCESS;
     upfrontGasCost += callWouldLeadToAccountCreation() ? GAS_CONST_G_NEW_ACCOUNT : 0;
+    if (isDelegated) {
+      upfrontGasCost +=
+          isDelegatedToSelf || delegateWarmth
+              ? GAS_CONST_G_WARM_ACCESS
+              : GAS_CONST_G_COLD_ACCOUNT_ACCESS;
+    }
 
     return upfrontGasCost;
   }
@@ -171,7 +203,10 @@ public class StpCall implements TraceSubFragment {
         .pMiscStpGasMxp(Bytes.ofUnsignedLong(memoryExpansionGas))
         .pMiscStpGasUpfrontGasCost(Bytes.ofUnsignedLong(upfrontGasCost))
         .pMiscStpGasPaidOutOfPocket(Bytes.ofUnsignedLong(gasPaidOutOfPocket))
-        .pMiscStpGasStipend(stipend);
+        .pMiscStpGasStipend(stipend)
+        .pMiscStpCalleeIsDelegated(isDelegated)
+        .pMiscStpCalleeIsDelegatedToSelf(isDelegatedToSelf)
+        .pMiscStpDelegateWarmth(delegateWarmth);
   }
 
   public int compareTo(StpCall stpCall) {

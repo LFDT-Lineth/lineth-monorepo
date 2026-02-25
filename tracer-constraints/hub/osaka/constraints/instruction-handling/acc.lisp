@@ -155,9 +155,14 @@
                                   (account-same-nonce                           ROFF_ACC___ACCOUNT_DOING_ROW)
                                   (account-same-code                            ROFF_ACC___ACCOUNT_DOING_ROW)
                                   (account-same-deployment-number-and-status    ROFF_ACC___ACCOUNT_DOING_ROW)
+                                  (account-conditionally-check-for-delegation   ROFF_ACC___ACCOUNT_DOING_ROW    (justify-code-size-for-EXTCODESIZE))
                                   ;; (account-turn-on-warmth                       ROFF_ACC___ACCOUNT_DOING_ROW)
                                   (account-same-marked-for-deletion             ROFF_ACC___ACCOUNT_DOING_ROW)
                                   (DOM-SUB-stamps---standard                    ROFF_ACC___ACCOUNT_DOING_ROW    0)))))
+
+(defun   (justify-code-size-for-EXTCODESIZE)   (*   (-  1  XAHOY)
+                                                    (account-instruction---is-EXTCODESIZE)
+                                                    (shift   account/HAS_CODE   ROFF_ACC___ACCOUNT_DOING_ROW)))
 
 (defconstraint   account-instruction---foreign-address-opcode---doing-account-row---warmth-update
                  (:guard (account-instruction---standard-hypothesis))

@@ -48,7 +48,7 @@ public class JumpSection extends TraceSection {
     final ContextFragment contextRowCurrentContext = ContextFragment.readCurrentContextData(hub);
 
     // ACCOUNT fragment
-    final Address codeAddress = hub.messageFrame().getContractAddress();
+    final Address codeAddress = hub.callStack().currentCallFrame().byteCodeAddress();
 
     final boolean warmth = hub.messageFrame().isAddressWarm(codeAddress);
     checkArgument(warmth, "Must be warm when doing a JUMP");

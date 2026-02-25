@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module.hub.section;
 import static com.google.common.base.Preconditions.*;
 import static net.consensys.linea.zktracer.module.hub.HubProcessingPhase.TX_EXEC;
 import static net.consensys.linea.zktracer.module.hub.HubProcessingPhase.TX_FINL;
-import static net.consensys.linea.zktracer.module.hub.HubProcessingPhase.TX_INIT;
 import static net.consensys.linea.zktracer.module.hub.HubProcessingPhase.TX_SKIP;
 import static net.consensys.linea.zktracer.module.hub.HubProcessingPhase.TX_WARM;
 
@@ -134,14 +133,13 @@ public class TraceSection {
                     commonValues.callFrame().byteCodeAddress(),
                     commonValues.callFrame().byteCodeDeploymentNumber(),
                     commonValues.callFrame().isDeployment(),
-                    commonValues.callFrame().delegationNumber())
+                    commonValues.callFrame().bytecodeDelegationNumber())
             : 0);
     commonValues.contextNumberNew(computeContextNumberNew());
 
-    commonValues.gasRefund(
-        currentPhase == TX_SKIP || currentPhase == TX_WARM || currentPhase == TX_INIT
-            ? 0
-            : previousSection.commonValues.gasRefundNew);
+    // starting with EIP-7702 refunds can be accrued during the TX_AUTH phase and may
+    // thus endow the TX_SKIP and TX_INIT phases with nonzero refunds
+    commonValues.gasRefund(resetRefundCounter() ? 0 : previousSection.commonValues.gasRefundNew);
     commonValues.gasRefundNew(commonValues.gasRefund + commonValues.refundDelta);
 
     /* If the logStamp hasn't been set (either by being first section of the tx, or by the LogSection), set it to the previous section logStamp */
@@ -254,5 +252,15 @@ public class TraceSection {
 
   protected Hub hub() {
     return commonValues.hub;
+  }
+
+  private boolean resetRefundCounter() {
+
+    // first section to be traced
+    if (previousSection == null) {
+      return true;
+    }
+
+    return false;
   }
 }

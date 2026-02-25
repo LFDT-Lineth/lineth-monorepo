@@ -92,7 +92,7 @@ public class ExecutionEnvironment {
       Optional<Logger> logger) {
     boolean traceValidated = false;
     try {
-      log.info("Corset checking the trace" + traceFilePath);
+      log.info("Corset checking the trace " + traceFilePath);
       CorsetValidator.Result corsetValidationResult = corsetValidator.validate(traceFilePath);
       traceValidated = corsetValidationResult.isValid();
       assertThat(traceValidated)

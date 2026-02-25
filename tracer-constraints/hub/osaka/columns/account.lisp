@@ -34,6 +34,18 @@
    (DEPLOYMENT_STATUS           :binary@prove) ;; rmk2
    (DEPLOYMENT_STATUS_NEW       :binary@prove) ;; rmk2
 
+   ;; EIP-7702 related columns
+   ( DELEGATION_ADDRESS_HI               :i32          )
+   ( DELEGATION_ADDRESS_LO               :i128         )
+   ( DELEGATION_ADDRESS_HI_NEW           :i32          )
+   ( DELEGATION_ADDRESS_LO_NEW           :i128         )
+   ( DELEGATION_NUMBER                   :i10          ) ;; delegations have an upfront cost of 25k gas, transactions are limited to 16M gas
+   ( DELEGATION_NUMBER_NEW               :i10          )
+   ( CHECK_FOR_DELEGATION                :binary@prove )
+   ( CHECK_FOR_DELEGATION_NEW            :binary@prove )
+   ( IS_DELEGATED                        :binary@prove )
+   ( IS_DELEGATED_NEW                    :binary@prove )
+
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;;                               ;;
    ;;   TRM module lookup columns   ;;

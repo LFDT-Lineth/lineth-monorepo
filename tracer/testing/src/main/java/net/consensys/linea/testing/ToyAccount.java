@@ -16,19 +16,22 @@
 
 package net.consensys.linea.testing;
 
-import static com.google.common.base.Preconditions.*;
+import static net.consensys.linea.zktracer.Trace.EIP_7702_DELEGATION_INDICATOR;
 
 import com.google.common.base.Suppliers;
-import java.security.KeyPair;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.function.Supplier;
 import lombok.Builder;
+import lombok.Getter;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;
 import org.hyperledger.besu.config.GenesisAccount;
+import org.hyperledger.besu.crypto.KeyPair;
+import org.hyperledger.besu.crypto.SECPPrivateKey;
+import org.hyperledger.besu.crypto.SECPPublicKey;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.Wei;
@@ -44,18 +47,37 @@ public class ToyAccount implements MutableAccount {
 
   @Builder.Default private boolean mutable = true;
 
-  private Address address;
+  @Getter private Address address;
   private final Supplier<Hash> addressHash = Suppliers.memoize(() -> address.addressHash());
-  private long nonce;
-  @Builder.Default private Wei balance = Wei.ZERO;
-  @Builder.Default private Bytes code = Bytes.EMPTY;
+  @Getter private long nonce;
+  @Getter @Builder.Default private Wei balance = Wei.ZERO;
+  @Getter @Builder.Default private Bytes code = Bytes.EMPTY;
   private Supplier<Hash> codeHash;
-  final Map<UInt256, UInt256> storage = new HashMap<>();
-  final KeyPair keyPair;
+  @Builder.Default final Map<UInt256, UInt256> storage = new HashMap<>();
+  @Getter final KeyPair keyPair;
 
-  @Override
-  public Address getAddress() {
-    return address;
+  public ToyAccount deepCopy() {
+    ToyAccount copy =
+        ToyAccount.builder()
+            .mutable(this.mutable)
+            .address(Address.wrap(this.address.copy()))
+            .nonce(this.nonce)
+            .balance(Wei.of(this.balance.toLong()))
+            .code(Bytes.wrap(this.code.toArray()))
+            .keyPair(
+                new KeyPair(
+                    SECPPrivateKey.create(
+                        Bytes32.wrap(this.keyPair.getPrivateKey().getEncoded()),
+                        this.keyPair.getPrivateKey().getAlgorithm()),
+                    SECPPublicKey.create(
+                        Bytes.wrap(this.keyPair.getPublicKey().getEncoded()),
+                        this.keyPair.getPublicKey().getAlgorithm())))
+            .build();
+    for (Map.Entry<UInt256, UInt256> e : this.storage.entrySet()) {
+      copy.storage.put(
+          UInt256.fromBytes(e.getKey().toBytes()), UInt256.fromBytes(e.getValue().toBytes()));
+    }
+    return copy;
   }
 
   @Override
@@ -66,21 +88,6 @@ public class ToyAccount implements MutableAccount {
   @Override
   public Hash getAddressHash() {
     return addressHash.get();
-  }
-
-  @Override
-  public long getNonce() {
-    return nonce;
-  }
-
-  @Override
-  public Wei getBalance() {
-    return balance;
-  }
-
-  @Override
-  public Bytes getCode() {
-    return code;
   }
 
   @Override
@@ -172,10 +179,10 @@ public class ToyAccount implements MutableAccount {
    *     be inserted into the parent contact).
    */
   public boolean updateParent() {
-    if (parent instanceof ToyAccount toyAccount) {
-      toyAccount.balance = balance;
-      toyAccount.nonce = nonce;
-      toyAccount.storage.putAll(storage);
+    if (parent instanceof ToyAccount parentAsToyAccount) {
+      parentAsToyAccount.balance = balance;
+      parentAsToyAccount.nonce = nonce;
+      parentAsToyAccount.storage.putAll(storage);
       return true;
     } else {
       return false;
@@ -189,7 +196,7 @@ public class ToyAccount implements MutableAccount {
         balance,
         code,
         storage,
-        keyPair == null ? null : Bytes32.wrap(keyPair.getPrivate().getEncoded()));
+        keyPair == null ? null : Bytes32.wrap(keyPair.getPrivateKey().getEncoded()));
   }
 
   public ReferenceTestWorldState.AccountMock toAccountMock() {
@@ -199,5 +206,18 @@ public class ToyAccount implements MutableAccount {
     }
     return new ReferenceTestWorldState.AccountMock(
         Long.toHexString(nonce), balance.toHexString(), accountMockStorage, code.toHexString());
+  }
+
+  // EIP-7702
+  public ToyAccount delegateTo(Address address) {
+    this.code =
+        Bytes.fromHexString(
+            Integer.toHexString(EIP_7702_DELEGATION_INDICATOR)
+                + address.toHexString().substring(2));
+    return this;
+  }
+
+  public ToyAccount delegateTo(ToyAccount account) {
+    return delegateTo(account.getAddress());
   }
 }

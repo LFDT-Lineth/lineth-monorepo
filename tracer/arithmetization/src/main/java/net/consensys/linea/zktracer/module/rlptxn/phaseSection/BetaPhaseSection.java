@@ -46,7 +46,7 @@ public class BetaPhaseSection extends PhaseSection {
   }
 
   @Override
-  protected void traceComputationsRows(
+  protected void traceComputationRows(
       Trace.Rlptxn trace, TransactionProcessingMetadata tx, GenericTracedValue tracedValues) {
     // trace rlpTw
     for (int ct = 0; ct <= 2; ct++) {
