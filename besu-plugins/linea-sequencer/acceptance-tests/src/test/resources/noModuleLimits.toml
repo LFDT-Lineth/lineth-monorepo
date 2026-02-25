@@ -31,6 +31,7 @@ MXP                 = 524288
 OOB                 = 262144
 RLP_ADDR            = 262144
 RLP_TXN             = 262144
+RLP_AUTH            = 262144
 RLP_TXN_RCPT        = 262144
 ROM                 = 1048576
 ROM_LEX             = 1048576

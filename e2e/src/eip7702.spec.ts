@@ -12,7 +12,7 @@ const l2AccountManager = context.getL2AccountManager();
 describe("EIP-7702 test suite", () => {
   const lineaEstimateGasClient = context.l2PublicClient({ type: L2RpcEndpoint.BesuNode });
 
-  it.concurrent("Should reject EIP-7702 (Set Code) transaction from transaction pool", async () => {
+  it.concurrent("should execute EIP-7702 (Set Code) transactions", async () => {
     const [deployer, eoa] = await l2AccountManager.generateAccounts(2);
     const l2PublicClient = context.l2PublicClient();
 
@@ -63,23 +63,21 @@ describe("EIP-7702 test suite", () => {
       data: initializeData,
     });
 
-    // EIP-7702 is currently rejected by Linea. Two rejection paths exist:
-    // 1. RPC node tx-pool simulation check - returns "Internal error" (current path)
-    // 2. LineaTransactionValidatorPlugin - returns "Plugin has marked the transaction as invalid"
-    // Reference: besu-plugins/.../EIP7702TransactionDenialTest.kt
-    //
-    // When EIP-7702 support is enabled, flip this to assert success and verify
-    // delegation (check EOA code prefix 0xef0100) and Log event emission.
-    await expect(
-      eoaWalletClient.sendTransaction({
-        authorizationList: [authorization],
-        to: eoa.address,
-        data: initializeData,
-        nonce: eoaNonce,
-        gas: 100_000n,
-        maxFeePerGas,
-        maxPriorityFeePerGas,
-      }),
-    ).rejects.toThrow(/Internal error|Plugin has marked the transaction as invalid/);
+    const txHash = await eoaWalletClient.sendTransaction({
+      authorizationList: [authorization],
+      to: eoa.address,
+      data: initializeData,
+      nonce: eoaNonce,
+      gas: 100_000n,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
+    });
+
+    logger.debug(`EIP-7702 transaction sent. transactionHash=${txHash}`);
+
+    const receipt = await l2PublicClient.waitForTransactionReceipt({ hash: txHash, timeout: 60_000 });
+    logger.debug(`EIP-7702 transaction receipt received. transactionHash=${txHash} status=${receipt.status}`);
+
+    expect(receipt.status).toEqual("success");
   });
 });

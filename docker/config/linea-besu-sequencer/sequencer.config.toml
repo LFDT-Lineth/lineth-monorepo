@@ -70,6 +70,7 @@ plugin-linea-variable-gas-cost-wei=1000000000
 plugin-linea-extra-data-set-min-gas-price-enabled=false
 plugin-linea-estimate-gas-min-margin="1.2"
 plugin-linea-limitless-enabled=false
+plugin-linea-delegate-code-tx-enabled=true
 strict-tx-replay-protection-enabled=false
 
 # should uncomment only when the linea-sequencer plugin supports liveness

@@ -95,7 +95,7 @@ jobs:
 
   linea-sequencer:
     uses: ./.github/workflows/linea-sequencer-plugin-testing.yml
-    if: ${{ inputs.linea_sequencer_changed == 'true' }}
+    if: ${{ inputs.linea_sequencer_changed == 'true' || inputs.tracer_changed == 'true' }}
     secrets: inherit
 
   # tracer:

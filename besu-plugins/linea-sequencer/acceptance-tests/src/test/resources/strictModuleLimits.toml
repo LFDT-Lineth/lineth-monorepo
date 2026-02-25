@@ -33,6 +33,7 @@ LOG_DATA            = 262144
 LOG_INFO            = 262144
 RLP_ADDR            = 262144
 RLP_TXN             = 262144
+RLP_AUTH            = 262144
 RLP_TXN_RCPT        = 262144
 TXN_DATA            = 262144
 SHAKIRA_DATA        = 262144
