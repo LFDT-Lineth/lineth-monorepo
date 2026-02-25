@@ -326,6 +326,7 @@ var DiscoveryAdvices = []distributed.ModuleDiscoveryAdvice{
 	{BaseSize: 512, Cluster: "BLS_G2", Column: "BLS_PAIR_FE"},
 	{BaseSize: 1024, Cluster: "BLS_G2", Column: "BLS_ADD_G2_ALIGNMENT"},
 	{BaseSize: 512, Cluster: "BLS_G2", Column: "BLS_MSM_G2_MSM"},
+	{BaseSize: 256, Cluster: "BLS_G2", Column: "BLS_PAIR_G2_MEMBERSHIP"},
 
 	// BLS POINT EVAL
 	{BaseSize: 32, Cluster: "BLS_KZG", Column: "BLS_POINTEVAL"},
@@ -375,6 +376,7 @@ var DiscoveryAdvices = []distributed.ModuleDiscoveryAdvice{
 	{BaseSize: 512, Column: "REPEATED_PATTERN_REPEATED_PATTERN_BLS_PAIR_ML", Cluster: "STATIC"},
 	{BaseSize: 512, Column: "REPEATED_PATTERN_REPEATED_PATTERN_BLS_PAIR_FE", Cluster: "STATIC"},
 	{BaseSize: 64, Column: "REPEATED_PATTERN_REPEATED_PATTERN_BLS_PAIR_G1_MEMBERSHIP", Cluster: "STATIC"},
+	{BaseSize: 256, Column: "REPEATED_PATTERN_REPEATED_PATTERN_BLS_PAIR_G2_MEMBERSHIP", Cluster: "STATIC"},
 	{BaseSize: 32, Column: "REPEATED_PATTERN_REPEATED_PATTERN_BLS_POINTEVAL", Cluster: "STATIC"},
 	{BaseSize: 32, Column: "REPEATED_PATTERN_REPEATED_PATTERN_BLS_POINTEVAL_FAILURE", Cluster: "STATIC"},
 	{BaseSize: 128, Column: "REPEATED_PATTERN_REPEATED_PATTERN_P256_VERIFY_ALIGNMENT", Cluster: "STATIC"},

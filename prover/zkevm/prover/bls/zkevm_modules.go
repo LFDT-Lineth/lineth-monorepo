@@ -32,7 +32,8 @@ func NewG2MsmZkEvm(comp *wizard.CompiledIOP, limits *Limits) *BlsMsm {
 func NewPairingZkEvm(comp *wizard.CompiledIOP, limits *Limits) *BlsPair {
 	return newPair(comp, limits, newPairDataSource(comp)).
 		WithPairingCircuit(comp, query.PlonkRangeCheckOption(16, 6, true)).
-		WithG1MembershipCircuit(comp, query.PlonkRangeCheckOption(16, 6, true))
+		WithG1MembershipCircuit(comp, query.PlonkRangeCheckOption(16, 6, true)).
+		WithG2MembershipCircuit(comp, query.PlonkRangeCheckOption(16, 6, true))
 }
 
 func NewG1MapZkEvm(comp *wizard.CompiledIOP, limits *Limits) *BlsMap {
