@@ -99,14 +99,16 @@ export default function FirstVisitModal() {
   const modalType = pathToModalType[pathname];
   const data = modalType ? modalData[modalType] : null;
 
+  const agreeToTerms = useConfigStore.useAgreeToTerms();
+
   useEffect(() => {
-    if (!modalType || !rehydrated) return;
+    if (!modalType || !rehydrated || !agreeToTerms) return;
 
     if (!visited[modalType]) {
       setShowModal(true);
       setShouldRenderModal(true);
     }
-  }, [modalType, visited, rehydrated]);
+  }, [modalType, visited, rehydrated, agreeToTerms]);
 
   const handleClose = useCallback(() => {
     if (!modalType) return;

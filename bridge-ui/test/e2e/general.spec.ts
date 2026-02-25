@@ -19,7 +19,9 @@ describe("General", () => {
   test("should have 'Native Bridge' button link on homepage", async ({
     clickNativeBridgeButton,
     clickFirstVisitModalConfirmButton,
+    clickTermsOfServiceModalAcceptButton,
   }) => {
+    await clickTermsOfServiceModalAcceptButton();
     const nativeBridgeBtn = await clickNativeBridgeButton();
     await clickFirstVisitModalConfirmButton();
     await expect(nativeBridgeBtn).toBeVisible();
@@ -29,8 +31,10 @@ describe("General", () => {
     page,
     clickNativeBridgeButton,
     clickFirstVisitModalConfirmButton,
+    clickTermsOfServiceModalAcceptButton,
     openNativeBridgeTransactionHistory,
   }) => {
+    await clickTermsOfServiceModalAcceptButton();
     await clickNativeBridgeButton();
     await clickFirstVisitModalConfirmButton();
     await openNativeBridgeTransactionHistory();
@@ -43,7 +47,9 @@ describe("General", () => {
     connectMetamaskToDapp,
     clickNativeBridgeButton,
     clickFirstVisitModalConfirmButton,
+    clickTermsOfServiceModalAcceptButton,
   }) => {
+    await clickTermsOfServiceModalAcceptButton();
     await clickNativeBridgeButton();
     await clickFirstVisitModalConfirmButton();
     await connectMetamaskToDapp(L1_ACCOUNT_METAMASK_NAME);
@@ -55,7 +61,9 @@ describe("General", () => {
     clickNativeBridgeButton,
     openNativeBridgeTransactionHistory,
     clickFirstVisitModalConfirmButton,
+    clickTermsOfServiceModalAcceptButton,
   }) => {
+    await clickTermsOfServiceModalAcceptButton();
     await connectMetamaskToDapp(L1_ACCOUNT_METAMASK_NAME);
     await clickNativeBridgeButton();
     await clickFirstVisitModalConfirmButton();
@@ -73,8 +81,10 @@ describe("General", () => {
     selectTokenAndInputAmount,
     swapChain,
     clickFirstVisitModalConfirmButton,
+    clickTermsOfServiceModalAcceptButton,
   }) => {
     test.setTimeout(60_000);
+    await clickTermsOfServiceModalAcceptButton();
     await connectMetamaskToDapp(L1_ACCOUNT_METAMASK_NAME);
     await clickNativeBridgeButton();
     await clickFirstVisitModalConfirmButton();

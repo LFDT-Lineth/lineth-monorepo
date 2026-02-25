@@ -1,0 +1,50 @@
+.header-wrapper {
+  position: relative;
+  height: 11.2rem;
+  background-color: var(--color-light-pink);
+  display: flex;
+
+  .title {
+    color: var(--color-indigo);
+    line-height: 1.4;
+    font-size: 1.5rem;
+    width: 12.2rem;
+  }
+
+  .logo {
+    width: 2.6rem;
+    margin-bottom: 0.5rem;
+    height: auto;
+    color: var(--color-indigo);
+  }
+
+  .illustration {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    height: 100%;
+    width: auto;
+  }
+
+  .header-content {
+    padding: 1.25rem 1.5rem;
+    align-self: flex-end;
+  }
+}
+
+.body {
+  font-family: var(--font-atyp-text);
+  padding: 1.5rem;
+  font-size: 1rem;
+  line-height: 1.5;
+
+  p {
+    margin-bottom: 1rem;
+  }
+}
+
+.link {
+  font-weight: 700;
+  text-decoration: underline;
+  color: inherit;
+}

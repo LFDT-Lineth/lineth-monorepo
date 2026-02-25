@@ -15,6 +15,7 @@ import { L1_ACCOUNT_METAMASK_NAME, LOCAL_L2_NETWORK, PAGE_TIMEOUT, POLLING_INTER
 export const test = metaMaskFixtures(setup).extend<{
   // Bridge UI Actions
   clickFirstVisitModalConfirmButton: () => Promise<void>;
+  clickTermsOfServiceModalAcceptButton: () => Promise<void>;
   clickNativeBridgeButton: () => Promise<Locator>;
   openNativeBridgeTransactionHistory: () => Promise<void>;
   closeNativeBridgeTransactionHistory: () => Promise<void>;
@@ -46,6 +47,14 @@ export const test = metaMaskFixtures(setup).extend<{
       await expect(confirmButton).toBeVisible();
       await expect(confirmButton).toBeEnabled();
       await confirmButton.click();
+    });
+  },
+  clickTermsOfServiceModalAcceptButton: async ({ page }, use) => {
+    await use(async () => {
+      const acceptButton = page.getByTestId("tos-modal-accept-btn");
+      await expect(acceptButton).toBeVisible();
+      await expect(acceptButton).toBeEnabled();
+      await acceptButton.click();
     });
   },
   // Bridge UI Actions
