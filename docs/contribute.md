@@ -63,6 +63,7 @@ We use GitOps, ArgoCD, Helm, and Kubernetes for our release process. When change
 Contributors are responsible for pushing their changes to testnet and mainnet, and monitoring the impact of their changes.
 
 The Release Manager is responsible for the technical soundness of each release. This includes:
+* Ensuring that any code deployed to any environment (including Devnet) has corresponding E2E test coverage. If blockers prevent E2E coverage, they must be flagged and tracked before deployment proceeds.
 * Reviewing each PR. Will it break something? Were necessary integration and regression tests done? What are dependencies? Are we following the correct order/timeline for testnet/mainnet?
 * Ensuring communication has been shared with the relevant channels (Ops, SRE, support, community & documentation). Both with internal and external stakeholders (partners, community). This doesn't have to be done directly by the release manager, however the release manager is responsible for ensuring it's done.
 * Ensuring people are available to react in case the release has an issue (engineer, SRE).
@@ -94,9 +95,9 @@ Configuration changes that are part of ops are not considered releases. This inc
 ### Release to testnet
 We release on a weekly basis. The standard internal contributor's day-by-day process is as follows:
 1. **Create a testnet PR**: Create a new pull request to deploy the changes, once your PR has been merged. Only release changes that were merged in `Consensys/linea-monorepo/main`. Include a detailed description of your changes and link the related issue number.
-1. **Prepare deployment with Release Manager**: Contributor reaches out to the Release Manager with the PR to prepare its inclusion in the next batch of releases. Use the next Testnet release, and add a tentative deployment to Mainnet at least 1 week after. 
-1. **Open a maintenance window for releases having an impact on user experience**: Internal contributors, reach out to NOC to share the expected maintenance window so it can be added to the [status page](https://linea.statuspage.io/). Maintenance windows can be requested by adding a ticket to the NOC board.
-1. **Merge PR**: Contributor releases changes and follows instructions on the Testnet PR template. DevOps and SRE teams should be involved in the deployment activities. Major releases should include a detailed release plan that also includes a study of risks, mitigations, and revert plans.
+2. **Prepare deployment with Release Manager**: Contributor reaches out to the Release Manager with the PR to prepare its inclusion in the next batch of releases. Use the next Testnet release, and add a tentative deployment to Mainnet at least 1 week after.
+3. **Open a maintenance window for releases having an impact on user experience**: Internal contributors, reach out to NOC to share the expected maintenance window so it can be added to the [status page](https://linea.statuspage.io/). Maintenance windows can be requested by adding a ticket to the NOC board.
+4. **Merge PR**: Contributor releases changes and follows instructions on the Testnet PR template. DevOps and SRE teams should be involved in the deployment activities. Major releases should include a detailed release plan that also includes a study of risks, mitigations, and revert plans.
 
 ### Release to mainnet
 
