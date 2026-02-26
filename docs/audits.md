@@ -22,6 +22,17 @@
 * [Kudelski Security - October 2022 - gnark-crypto (contracted by Algorand Foundation)](https://github.com/Consensys/gnark/blob/53ce9b74e7ab372aa7358f1eac7fe3d689743f5f/audits/2022-10%20-%20Kudelski%20-%20gnark-crypto.pdf)
 
 ---
+## Yield Boost Smart Contract Audits
+**Diligence**
+- Linea Yield Manager - [https://diligence.security/audits/2025/12/linea-yield-manager/](https://diligence.security/audits/2025/12/linea-yield-manager/)
+
+**OpenZeppelin**
+- Linea Yield Manager - [https://www.openzeppelin.com/news/linea-yield-manager-audit](https://www.openzeppelin.com/news/linea-yield-manager-audit)
+
+**Cyfrin**
+- Linea Yield Manager - [https://github.com/Cyfrin/cyfrin-audit-reports/blob/d0f4523388a964891a17cb04c6b3cc26da8c788a/reports/2026-02-12-cyfrin-linea-yield-manager-v2.0.pdf](https://github.com/Cyfrin/cyfrin-audit-reports/blob/d0f4523388a964891a17cb04c6b3cc26da8c788a/reports/2026-02-12-cyfrin-linea-yield-manager-v2.0.pdf)
+
+---
 
 ## Linea Burn Mechanism Smart Contract Audits
 **Diligence**
