@@ -151,7 +151,7 @@ class LineaTransactionPoolValidatorPlugin : AbstractLineaSharedPrivateOptionsPlu
         return CompositeValidator(
             listOf(
                 GasLimitValidator(maxTxGas),
-                CallDataSizeValidator(maxCallDataSize),
+                CalldataValidator(maxCallDataSize),
                 ProfitabilityValidator(minProfit),
                 SimulationValidator(simulationService),
                 DeniedAddressValidator(deniedAddresses)

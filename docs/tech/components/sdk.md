@@ -252,3 +252,7 @@ pnpm install && pnpm run build && pnpm run test
 ```
 
 See individual package READMEs for detailed contribution guidelines.
+
+## Related Documentation
+
+- [Feature: SDK](../../features/sdk.md) — Usage guide, package overview, and integration examples

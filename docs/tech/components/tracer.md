@@ -409,3 +409,7 @@ EVM Execution  →  Tracer  →  .lt Files  →  Prover  →  Proofs
 - **Disk I/O**: Large trace files (GBs for big batches)
 - **CPU**: Matrix operations during commit
 - **Line Limits**: Conflation triggered by module limits
+
+## Related Documentation
+
+- [Feature: Tracer](../../features/tracer.md) — Business-level overview, trace modules, arithmetization, and test coverage

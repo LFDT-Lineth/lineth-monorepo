@@ -115,7 +115,7 @@ A fork of Hyperledger Besu with Linea-specific modifications for the sequencer a
 
 ## Shomei
 
-**Repository**: Part of [Consensys/linea-monorepo](https://github.com/Consensys/linea-monorepo) or separate
+**Repository**: External — distributed as `consensys/linea-shomei` Docker image; source is not part of this monorepo
 
 Shomei is the state manager that provides Merkle proofs for L2 state.
 
@@ -182,13 +182,16 @@ Blob data indexer for EIP-4844 blobs.
 
 - **Local**: http://localhost:4001
 - Used by state recovery to fetch historical blob data
+- Only active when using the `staterecovery` compose profile (`compose-spec-l2-services.yml`)
 
 ### Blockscout
 
 Block explorer for debugging.
 
-- **L1 Explorer**: http://localhost:4001
-- **L2 Explorer**: http://localhost:4000
+- **L1 Explorer**: http://localhost:4001 — only available with the extra-observability compose file (`compose-spec-extra-observability.yml`)
+- **L2 Explorer**: http://localhost:4000 — only available with the extra-observability compose file
+
+> **Note**: BlobScan (`staterecovery` profile) and Blockscout L1 (extra-observability) both bind to port 4001 on localhost. They are in different compose files and are never active simultaneously in a standard setup, but avoid enabling both at the same time.
 
 ## Version Compatibility
 

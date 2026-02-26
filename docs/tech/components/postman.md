@@ -303,3 +303,4 @@ See the [README.md](../../postman/README.md) for complete environment variable d
 
 - [Canonical Message Service](https://docs.linea.build/protocol/architecture/interoperability/canonical-message-service) - Architecture overview
 - [Linea Gas Estimation](https://docs.linea.build/network/how-to/gas-fees#variable-cost-and-linea_estimategas) - Variable gas pricing
+- [Feature: Postman](../../features/postman.md) — Sponsorship model, retry logic, message lifecycle, and operational guide

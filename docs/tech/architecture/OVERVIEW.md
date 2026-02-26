@@ -83,6 +83,9 @@ Linea is a zkEVM Layer 2 rollup that inherits Ethereum's security through zero-k
 │  │  - Time         │        │  shnarf hash    │    │      ↓          │ │
 │  │  - Data size    │        │                 │    │  State finalized│ │
 │  │  - Trace lines  │        │                 │    │                 │ │
+│  │  - Block count  │        │                 │    │                 │ │
+│  │  - Target block │        │                 │    │                 │ │
+│  │  - Timestamp HF │        │                 │    │                 │ │
 │  └─────────────────┘        └─────────────────┘    └─────────────────┘ │
 │                                                                        │
 └────────────────────────────────────────────────────────────────────────┘
@@ -195,9 +198,15 @@ Linea is a zkEVM Layer 2 rollup that inherits Ethereum's security through zero-k
 │  PROVING STACK         COORDINATION          STORAGE                   │
 │  ┌─────────────┐       ┌─────────────┐       ┌─────────────┐           │
 │  │ Traces Node │──────▶│ Coordinator │──────▶│ PostgreSQL  │           │
-│  │   Tracer    │       │   Postman   │       └─────────────┘           │
-│  │   Prover    │       │   Shomei    │                                 │
-│  └─────────────┘       └─────────────┘                                 │
+│  │   Tracer    │       │   Shomei    │       └─────────────┘           │
+│  │   Prover    │       └─────────────┘                                 │
+│  └─────────────┘                                                       │
+│                                                                        │
+│  CROSS-CHAIN RELAY                                                     │
+│  ┌──────────────────────────────────┐                                  │
+│  │  Postman (TypeScript)            │                                  │
+│  │  Monitors L1 + L2, claims msgs   │                                  │
+│  └──────────────────────────────────┘                                  │
 │                                                                        │
 └────────────────────────────────────────────────────────────────────────┘
 ```
@@ -368,6 +377,27 @@ State recovery allows rebuilding L2 state from L1 data:
 │                                                                        │
 └────────────────────────────────────────────────────────────────────────┘
 ```
+
+## Key Terminology
+
+Several terms appear throughout the diagrams and docs with distinct meanings:
+
+### "Finalization"
+
+| Context | Meaning |
+|---------|---------|
+| **Coordinator: "Finalization"** | The coordinator submitting an aggregated ZK proof to `LineaRollup.finalizeBlocksWithProof()` on L1 |
+| **L1 contract: "Finalize"** | `LineaRollup` verifying the proof on-chain via `PlonkVerifier` and updating `currentFinalizedShnarf` |
+| **L2 block tag: "finalized"** | The Ethereum `finalized` block tag on L2, updated after L1 finalization is confirmed |
+
+### "Anchoring"
+
+| Context | Meaning |
+|---------|---------|
+| **Coordinator: "Anchor msgs"** | The coordinator calling `L2MessageService.anchorL1L2MessageHashes()` on L2 to store L1→L2 message hashes, making them claimable on L2 |
+| **LineaRollup: "Anchor msgs"** | `LineaRollup` storing L2→L1 Merkle roots (`l2MerkleRoots`) during finalization, enabling L2 messages to be claimed on L1 |
+
+These two anchoring operations flow in opposite directions and should not be confused.
 
 ## External Dependencies
 

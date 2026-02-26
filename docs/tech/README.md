@@ -13,6 +13,7 @@
 | [Component Guide](./components/README.md) | Detailed documentation for each component |
 | [Development Guide](./development/README.md) | Local setup, building, and testing |
 | [Operations Guide](./operations/README.md) | Deployment, monitoring, and operational tools |
+| [Feature Docs](../features/README.md) | Business-level feature documentation with flow diagrams |
 
 ## Repository Structure
 
@@ -31,7 +32,7 @@ linea-monorepo/
 │
 ├── Solidity
 │   ├── contracts/            # Core protocol contracts
-│   └── contracts-tge/        # Token generation event contracts
+│   └── contracts/token-generation-event/  # Token generation event contracts
 │
 ├── TypeScript
 │   ├── sdk/                  # Developer SDK (viem/ethers)

@@ -1,5 +1,7 @@
 # Linea architecture alpha v3
 
+> For per-feature documentation covering contracts, backend services, test coverage, and configuration, see the [Feature Documentation](features/README.md).
+
 <!--
 ToC can be automatically updated with:
 A) VC Code "Markdown All In One" plugin - https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one#table-of-contents
@@ -86,6 +88,8 @@ A script automatically removes all files that are more than one week old.
 
 
 ## Sequencer
+
+> **Note**: The consensus protocol has since moved from Clique to QBFT via the [Maru](https://github.com/Consensys/maru) consensus client. See the [official architecture docs](https://docs.linea.build/protocol/architecture) for the current design.
 
 There is a unique instance of Sequencer. It’s a special instance of a consensus client based on Besu. The consensus protocol used is Clique.
 

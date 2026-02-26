@@ -201,26 +201,26 @@ Combines execution and compression proofs for efficient L1 verification.
 The prover uses file-based communication with the coordinator:
 
 ```
-/data/prover/v3/
-├── execution/
+/shared/
+├── prover-execution/
 │   ├── requests/
-│   │   └── {start}-{end}-getZkProof.json
+│   │   └── {start}-{end}-{contentHash}-getZkProof.json
 │   ├── responses/
-│   │   └── {start}-{end}-getZkProof.json
+│   │   └── {start}-{end}-{contentHash}-getZkProof.json
 │   └── done/
-│       └── {start}-{end}-getZkProof.json.success
+│       └── {start}-{end}-{contentHash}-getZkProof.json.success
 │
-├── compression/
+├── prover-compression/
 │   ├── requests/
-│   │   └── {start}-{end}-getZkBlobCompressionProof.json
+│   │   └── {start}-{end}-{contentHash}-getZkBlobCompressionProof.json
 │   └── responses/
-│       └── {start}-{end}-getZkBlobCompressionProof.json
+│       └── {start}-{end}-{contentHash}-getZkBlobCompressionProof.json
 │
-└── aggregation/
+└── prover-aggregation/
     ├── requests/
-    │   └── {start}-{end}-getZkProofAggregation.json
+    │   └── {start}-{end}-{contentHash}-getZkAggregatedProof.json
     └── responses/
-        └── {start}-{end}-getZkProofAggregation.json
+        └── {start}-{end}-{contentHash}-getZkAggregatedProof.json
 ```
 
 ### Request Format (Execution)
@@ -309,8 +309,8 @@ go test ./...
 ```bash
 ./prover prove \
   --circuit execution \
-  --request /data/prover/v3/execution/requests/1-10.json \
-  --output /data/prover/v3/execution/responses/1-10.json \
+  --request /shared/prover-execution/requests/1-10.json \
+  --output /shared/prover-execution/responses/1-10.json \
   --keys-dir /data/keys
 ```
 
@@ -319,7 +319,7 @@ go test ./...
 ```bash
 ./controller \
   --config /config/prover-config.toml \
-  --watch-dir /data/prover/v3
+  --watch-dir /shared
 ```
 
 ## Configuration
@@ -339,9 +339,9 @@ memory-limit = "64GB"
 [controller]
 # Directory watching
 request-dirs = [
-  "/data/prover/v3/execution/requests",
-  "/data/prover/v3/compression/requests",
-  "/data/prover/v3/aggregation/requests"
+  "/shared/prover-execution/requests",
+  "/shared/prover-compression/requests",
+  "/shared/prover-aggregation/requests"
 ]
 
 # Polling interval
@@ -374,3 +374,7 @@ Key metrics exposed:
 - `prover_proofs_generated_total`
 - `prover_memory_usage_bytes`
 - `prover_circuit_constraints_total`
+
+## Related Documentation
+
+- [Feature: Prover](../../features/prover.md) — Business-level overview, proving stages, key interfaces, and configuration reference

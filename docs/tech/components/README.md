@@ -18,6 +18,7 @@ This section provides detailed documentation for each component in the Linea mon
 | [Bridge UI](./bridge-ui.md) | TypeScript | `bridge-ui/` | Web interface |
 | [E2E Tests](./e2e.md) | TypeScript | `e2e/` | End-to-end tests |
 | [Tracer Constraints](./tracer-constraints.md) | Lisp | `tracer-constraints/` | ZK constraints |
+| [Corset](./corset.md) | Rust | `corset/` | Constraint compiler (DSL → binary + Java interfaces) |
 
 ## Component Dependency Graph
 
@@ -144,7 +145,7 @@ root package.json
 - Hardhat for development
 - Solidity 0.8.x
 - OpenZeppelin upgradeable contracts
-- Compile: `cd contracts && npx hardhat compile`
+- Compile: `pnpm -F contracts run compile`
 
 ### Lisp (Corset)
 

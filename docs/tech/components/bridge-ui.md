@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `bridge-ui` folder contains the official Linea Bridge web application, a Next.js 15 frontend that enables users to transfer assets between Ethereum and Linea networks. It provides multiple bridging options through a unified interface.
+The `bridge-ui` folder contains the official Linea Bridge web application, a Next.js 16 frontend that enables users to transfer assets between Ethereum and Linea networks. It provides multiple bridging options through a unified interface.
 
 ### Features
 
@@ -505,4 +505,8 @@ pnpm run test:unit
 4. Run tests
 
 E2E tests use Synpress for MetaMask automation with Playwright.
+
+## Related Documentation
+
+- [Feature: Bridge UI](../../features/bridge-ui.md) — Business-level overview, bridging options, wallet integration, and configuration reference
 

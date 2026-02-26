@@ -1,6 +1,6 @@
 ---
 description: Linea Smart Contract Development Guidelines
-globs: contracts/**/*.sol, contracts-tge/**/*.sol
+globs: contracts/**/*.sol, contracts/token-generation-event/**/*.sol
 alwaysApply: false
 ---
 

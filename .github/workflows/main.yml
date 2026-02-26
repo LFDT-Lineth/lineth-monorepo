@@ -147,7 +147,7 @@ jobs:
               - '!**/*.mdx'
               - '!**/docs/**'
               - '!docs/**'
-              - '!contracts-tge/**'
+              - '!contracts/token-generation-event/**'
               - '!.github/workflows/codeql.yml'
           # Means that ALL (and not just one) filter patterns must match. In other words applies the 'AND' operator to filter patterns.
           # The default is 'some', which requires just one filter pattern match and applies the 'OR' operator.
