@@ -1,0 +1,33 @@
+%% Prover Architecture
+flowchart TB
+    subgraph Prover["PROVER"]
+        subgraph Controller["cmd/controller"]
+            FSWatcher["File-system watcher"]
+            JobQueue["Job Queue"]
+            ProofExec["Proof Execution"]
+            
+            FSWatcher --> JobQueue --> ProofExec
+        end
+
+        subgraph ProverCmd["cmd/prover"]
+            Setup["setup: Generate<br/>proving/verifying keys"]
+            Prove["prove: Process<br/>proof request"]
+        end
+
+        subgraph Circuits["circuits/"]
+            Execution["execution<br/>circuit<br/><br/>Batch exec<br/>correctness"]
+            BlobDecomp["blob<br/>decompres.<br/>circuit<br/><br/>Compression<br/>validity"]
+            Aggregation["aggregation<br/>circuit<br/><br/>Combines execution +<br/>compression proofs"]
+        end
+
+        subgraph Protocol["protocol/"]
+            WizardIOP["Wizard IOP<br/>(Interactive Oracle<br/>Proof framework)"]
+            Vortex["Vortex Commitments<br/>(Polynomial commitment<br/>scheme)"]
+            Arcane["Arcane Compiler<br/>(PLONK-in-Wizard)"]
+            PLONKCircuit["PLONK Circuit<br/>Compiler"]
+        end
+
+        Controller --> ProverCmd
+        ProverCmd --> Circuits
+        Circuits --> Protocol
+    end

@@ -1,0 +1,40 @@
+%% ZK Proving Architecture
+flowchart TB
+    subgraph Tracer["TRACER (Java Plugin)"]
+        EVM["EVM Execution"]
+        ModuleTracing["Module Tracing"]
+        MatrixGen["Matrix Generation"]
+        LtFiles["Output: .lt files<br/>(binary trace format)"]
+        
+        EVM --> ModuleTracing
+        ModuleTracing --> MatrixGen
+        MatrixGen --> LtFiles
+        
+        Modules["Modules: HUB, ADD, MUL, MOD,<br/>MMU, MMIO, ROM, RLP, EC, BLS, etc."]
+    end
+
+    subgraph Constraints["TRACER-CONSTRAINTS (Lisp/Corset)"]
+        ConstraintDefs["Constraint Definitions"]
+        GoCorset["go-corset"]
+        JavaCodeGen["Java Code Generation"]
+        
+        ConstraintDefs --> GoCorset
+        GoCorset --> JavaCodeGen
+        
+        ConstraintDirs["hub/ - Central coordination<br/>alu/ - Arithmetic logic unit<br/>mmu/mmio/ - Memory management<br/>txndata/ - Transaction data<br/>rlptxn/ - RLP encoding<br/>ecdata/blsdata - Precompiles"]
+    end
+
+    subgraph Prover["PROVER (Go/gnark)"]
+        subgraph Provers["Proof Types"]
+            Execution["Execution Prover<br/>Batch proof correctness"]
+            Compression["Compression Prover<br/>Blob proof compression"]
+            Aggregation["Aggregation Prover<br/>Combine proofs"]
+        end
+        
+        ProofSystem["Proof System: PLONK + Vortex<br/>polynomial commitments"]
+        Curves["Curves: BLS12-377, BN254, BW6-761"]
+        Library["Library: gnark (Consensys)"]
+    end
+
+    Tracer --> Constraints
+    Constraints --> Prover

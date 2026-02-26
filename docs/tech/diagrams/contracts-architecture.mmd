@@ -1,0 +1,34 @@
+%% Smart Contracts Architecture
+flowchart TB
+    subgraph L1["L1 (ETHEREUM)"]
+        subgraph Rollup["Rollup Core"]
+            LineaRollup["LineaRollup<br/>(Transparent Proxy)<br/><br/>- Data submission<br/>- State finalization<br/>- Message anchoring"]
+            PlonkVerifier["PlonkVerifier<br/><br/>- ZK proof verification"]
+        end
+
+        subgraph MessagingL1["Messaging"]
+            L1MessageService["L1MessageService<br/>(in LineaRollup)<br/><br/>- sendMessage()<br/>- claimMessageWithProof()"]
+        end
+
+        subgraph BridgeL1["Token Bridge"]
+            TokenBridgeL1["TokenBridge L1<br/><br/>- bridgeToken()<br/>- Native bridge support"]
+        end
+
+        LineaRollup --> PlonkVerifier
+    end
+
+    subgraph L2["L2 (LINEA)"]
+        subgraph MessagingL2["Messaging"]
+            L2MessageService["L2MessageService<br/>(System Contract)<br/><br/>- sendMessage()<br/>- claimMessage()<br/>- Rolling hash"]
+        end
+
+        subgraph BridgeL2["Token Bridge"]
+            TokenBridgeL2["TokenBridge L2<br/><br/>- bridgeToken()<br/>- completeBridging()"]
+            BridgedToken["BridgedToken<br/>(ERC20 wrapper)"]
+        end
+
+        TokenBridgeL2 --> BridgedToken
+    end
+
+    L1MessageService <-->|"Cross-chain<br/>messages"| L2MessageService
+    TokenBridgeL1 <-->|"Token<br/>bridging"| TokenBridgeL2

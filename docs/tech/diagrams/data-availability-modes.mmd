@@ -1,0 +1,25 @@
+%% Data Availability Modes
+flowchart TB
+    subgraph Rollup["ROLLUP MODE"]
+        R1["L2 Blocks"]
+        R2["Compress to Blob"]
+        R3["Submit EIP-4844<br/>Blob to L1"]
+        R4["Full data on L1"]
+        
+        R1 --> R2 --> R3 --> R4
+        
+        RollupPros["+ Higher security<br/>+ No trust assumptions"]
+        RollupCons["- Higher L1 gas cost"]
+    end
+
+    subgraph Validium["VALIDIUM MODE"]
+        V1["L2 Blocks"]
+        V2["Compress to Blob"]
+        V3["Store Off-chain<br/>(DAC/external)"]
+        V4["Commitment on L1"]
+        
+        V1 --> V2 --> V3 --> V4
+        
+        ValidiumPros["+ Lower cost"]
+        ValidiumCons["- Requires data committee<br/>- Trust assumptions"]
+    end

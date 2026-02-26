@@ -1,0 +1,15 @@
+%% L1 to L2 Deposit Flow (SDK)
+sequenceDiagram
+    participant User
+    participant L1 as L1 (LineaRollup)
+    participant Coord as Coordinator
+    participant L2 as L2 (L2MessageService)
+
+    User->>L1: deposit()
+    L1->>L1: MessageSent event
+    L1->>Coord: Event detected
+    Coord->>L2: anchor hash
+    User->>L2: getL1ToL2MessageStatus()
+    L2-->>User: CLAIMABLE
+    User->>L2: claimOnL2()
+    L2-->>User: ETH received

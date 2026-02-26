@@ -1,0 +1,22 @@
+%% State Recovery Flow
+flowchart LR
+    subgraph Monitor["1. Monitor L1"]
+        StateRecovery["State Recovery<br/>Plugin"]
+        WatchRollup["Watch<br/>LineaRollup<br/>events"]
+    end
+
+    subgraph Fetch["2. Fetch Blobs"]
+        BlobScan["BlobScan<br/>Client"]
+        FetchBlob["Fetch blob<br/>data from<br/>L1/BlobScan"]
+    end
+
+    subgraph Import["3. Decompress & Import"]
+        zkBesu["zkBesu<br/>+ Shomei"]
+        Decompress["Decompress<br/>blob data"]
+        Rebuild["Rebuild<br/>blocks"]
+        Verify["Verify<br/>state root"]
+        
+        Decompress --> Rebuild --> Verify
+    end
+
+    Monitor --> Fetch --> Import

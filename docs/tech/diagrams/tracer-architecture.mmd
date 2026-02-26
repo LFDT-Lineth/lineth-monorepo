@@ -1,0 +1,39 @@
+%% Tracer Architecture
+flowchart TB
+    subgraph Tracer["TRACER"]
+        subgraph ZkTracer["ZkTracer (Main Tracer Implementation)"]
+            BesuEVM["Besu EVM<br/>Execution"]
+            
+            BesuEVM -->|"tracePreExecution /<br/>tracePostExecution"| Hub
+            
+            subgraph Hub["Hub (Central Coordination Module)"]
+                Dispatch["Dispatches to specialized<br/>modules based on opcode"]
+            end
+            
+            subgraph Modules["Modules"]
+                direction LR
+                ADD["ADD"]
+                MUL["MUL"]
+                MOD["MOD"]
+                MMU["MMU"]
+                ROM["ROM"]
+                RLP["RLP"]
+                EXP["EXP"]
+                SHF["SHF"]
+                GAS["GAS"]
+                TRM["TRM"]
+                EC["EC"]
+                BLS["BLS"]
+                BLOCKDATA["BLOCKDATA"]
+                TXNDATA["TXNDATA"]
+                LOGINFO["LOGINFO"]
+                SHAKIRA["SHAKIRA"]
+            end
+            
+            Hub --> Modules
+            
+            Modules -->|"commit()"| TraceObj["Trace Object<br/>Column data from all modules,<br/>aligned by register ID"]
+            
+            TraceObj -->|"writeToFile()"| LtFile["LtFile (Binary)<br/>{start}-{end}.conflated.{tracerV}.{besuV}.lt.gz"]
+        end
+    end

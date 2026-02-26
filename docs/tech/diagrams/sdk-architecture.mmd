@@ -1,0 +1,27 @@
+%% SDK Architecture
+flowchart TB
+    subgraph UserApp["User Application"]
+        ImportEthers["import { LineaSDK } from<br/>'@consensys/linea-sdk'"]
+        ImportViem["import { publicActionsL1 } from<br/>'@consensys/linea-sdk-viem'"]
+    end
+
+    subgraph SDKs["SDK Implementations"]
+        subgraph SdkEthers["sdk-ethers"]
+            LineaSDK["LineaSDK<br/><br/>- getL1Contract()<br/>- getL2Contract()"]
+            Clients["LineaRollupClient<br/>L2MessageService<br/>Client"]
+        end
+
+        subgraph SdkViem["sdk-viem"]
+            WalletActions["Wallet Actions<br/><br/>- deposit()<br/>- withdraw()<br/>- claimOnL1()<br/>- claimOnL2()"]
+            PublicActions["Public Actions<br/><br/>- getMessageStatus()<br/>- getMessageProof()<br/>- getBlockExtraData()"]
+        end
+    end
+
+    subgraph Core["sdk-core"]
+        Types["Types<br/><br/>- Message<br/>- Proof<br/>- Status"]
+        SparseMerkle["SparseMerkle<br/>Tree<br/><br/>- Generate proofs"]
+        Addresses["Contract Addresses<br/><br/>- Mainnet<br/>- Sepolia"]
+    end
+
+    UserApp --> SDKs
+    SDKs --> Core

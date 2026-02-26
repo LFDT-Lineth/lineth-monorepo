@@ -1,0 +1,41 @@
+%% Sequencer Architecture (Besu + Maru)
+flowchart TB
+    subgraph Sequencer["SEQUENCER STACK"]
+        subgraph Besu["Linea Besu (Consensus Layer)"]
+            P2P["P2P Networking"]
+            BlockGossip["Block Gossip & Sync"]
+            TxPool["Transaction Pool"]
+            
+            subgraph Plugins["Linea Plugins"]
+                TxSelector["Transaction Selector<br/>- Trace limits<br/>- Gas limits<br/>- Profitability"]
+                TxValidator["Transaction Validator<br/>- Gas checks<br/>- Calldata size<br/>- Simulation"]
+                GasEstimation["Gas Estimation<br/>linea_estimateGas"]
+                BundleEndpoints["Bundle Endpoints<br/>linea_sendBundle"]
+            end
+        end
+
+        subgraph EngineAPI["Engine API"]
+            newPayload["newPayload"]
+            forkchoiceUpdated["forkchoiceUpdated"]
+            getPayload["getPayload"]
+        end
+
+        subgraph Maru["Maru Engine (Execution Layer) - EXTERNAL"]
+            PayloadBuilder["Payload Building<br/>Constructs new L2 blocks"]
+            TxExecution["Transaction Execution"]
+            StateManagement["State Management<br/>L2 world state"]
+            EVM["EVM Execution"]
+        end
+    end
+
+    subgraph External["External Connections"]
+        Users["Users / dApps"]
+        Coordinator["Coordinator"]
+        TracesNode["Traces Node"]
+    end
+
+    Users -->|"RPC"| Besu
+    Besu -->|"Engine API"| EngineAPI
+    EngineAPI --> Maru
+    Coordinator -->|"Read blocks"| Besu
+    TracesNode -->|"Replay"| Maru

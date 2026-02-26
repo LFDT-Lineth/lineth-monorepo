@@ -1,0 +1,51 @@
+%% Proving Pipeline
+flowchart LR
+    subgraph Block["1. BLOCK CREATION"]
+        Sequencer["Sequencer"]
+        Transactions["Transactions"]
+        L2Block["L2 Block"]
+        Transactions --> L2Block
+    end
+
+    subgraph Tracing["2. TRACING"]
+        TracerMod["Tracer"]
+        ExecuteEVM["Execute EVM"]
+        TraceMatrices["Trace Matrices<br/>(.lt files)"]
+        ExecuteEVM --> TraceMatrices
+    end
+
+    subgraph ProofGen["3. PROOF GEN"]
+        ProverMod["Prover"]
+        ExecutionProof["Execution Proof"]
+        CompressionProof["Compression Proof"]
+        AggregationProof["Aggregation Proof"]
+        ExecutionProof --> CompressionProof
+        CompressionProof --> AggregationProof
+    end
+
+    subgraph Conflation["4. CONFLATION"]
+        CoordConf["Coordinator"]
+        GroupBlocks["Group blocks<br/>into batches"]
+        Limits["Trigger limits:<br/>- Time<br/>- Data size<br/>- Trace lines"]
+    end
+
+    subgraph Submission["5. SUBMISSION"]
+        CoordSub["Coordinator"]
+        SubmitBlob["Submit blob<br/>to L1 (EIP-4844)"]
+        Shnarf["Calculate<br/>shnarf hash"]
+    end
+
+    subgraph Finalization["6. FINALIZATION"]
+        CoordFin["Coordinator"]
+        SubmitProof["Submit proof<br/>to L1"]
+        VerifyOnChain["Verify on-chain"]
+        StateFinalized["State finalized"]
+        SubmitProof --> VerifyOnChain
+        VerifyOnChain --> StateFinalized
+    end
+
+    Block --> Tracing
+    Tracing --> ProofGen
+    ProofGen --> Conflation
+    Conflation --> Submission
+    Submission --> Finalization

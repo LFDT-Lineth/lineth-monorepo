@@ -1,0 +1,33 @@
+%% Module Interactions (tracer-constraints)
+flowchart TB
+    HUB["HUB<br/>(central)"]
+    
+    subgraph Modules["Modules"]
+        ALU["ALU<br/>add/mul/mod/exp/shf"]
+        MMU["MMU"]
+        ROM["ROM"]
+        TXN["TXN<br/>DATA"]
+        BLK["BLK<br/>DATA"]
+        LOG["LOG<br/>DATA"]
+        EC["EC<br/>DATA"]
+    end
+
+    subgraph Memory["Memory"]
+        MMIO["MMIO"]
+    end
+
+    subgraph Lookups["LOOKUPS"]
+        LookupDefs["hub_into_add<br/>hub_into_mmu<br/>mmio_into_rom<br/>etc."]
+    end
+
+    HUB --> ALU
+    HUB --> MMU
+    HUB --> ROM
+    HUB --> TXN
+    HUB --> BLK
+    HUB --> LOG
+    HUB --> EC
+    
+    MMU --> MMIO
+    ALU --> Lookups
+    MMIO --> Lookups

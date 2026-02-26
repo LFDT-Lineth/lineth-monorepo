@@ -1,0 +1,17 @@
+%% L2 to L1 Withdrawal Flow (SDK)
+sequenceDiagram
+    participant User
+    participant L2 as L2 (L2MessageService)
+    participant Coord as Coordinator
+    participant L1 as L1 (LineaRollup)
+
+    User->>L2: withdraw()
+    L2->>L2: MessageSent event<br/>Rolling hash update
+    L2->>Coord: Event detected
+    Coord->>L1: finalization with proof
+    User->>L2: getL2ToL1MessageStatus()
+    L2-->>User: CLAIMABLE
+    User->>L2: getMessageProof()
+    L2-->>User: proof
+    User->>L1: claimOnL1(proof)
+    L1-->>User: ETH received

@@ -1,0 +1,37 @@
+%% Docker Network Topology (Local Development)
+flowchart TB
+    subgraph L1Network["L1 NETWORK (10.10.10.0/24)"]
+        l1el["l1-el-node .201<br/>(Besu)<br/>:8445 HTTP<br/>:8446 WS"]
+        l1cl["l1-cl-node .202<br/>(Teku)<br/>:4003 REST"]
+        blobscan["blobscan-api .203<br/>:4001"]
+    end
+
+    subgraph LineaNetwork["LINEA NETWORK (11.11.11.0/24)"]
+        sequencer["sequencer .101<br/>(Linea-Besu)<br/>:8545 HTTP<br/>:8546 WS"]
+        maru["maru .210<br/>(Maru Engine)<br/>:8080"]
+        tracesnode["traces-node .115<br/>:8745 HTTP"]
+        prover["prover-v3 .109<br/>(ZK Prover)"]
+        shomei["shomei .114<br/>:8998"]
+        zkbesu["zkbesu-shomei .113<br/>:8945 HTTP"]
+        l2node["l2-node-besu .119<br/>:9045 HTTP"]
+    end
+
+    subgraph Shared["SHARED SERVICES"]
+        coord["coordinator .106<br/>:9545"]
+        postman["postman .222<br/>:9090"]
+    end
+
+    subgraph Services["INFRASTRUCTURE"]
+        postgres["postgres :5432"]
+        redis["redis :6379"]
+        grafana["grafana :3001"]
+        prometheus["prometheus :9091"]
+        loki["loki :3100"]
+        blockscoutL1["blockscout L1 :4001"]
+        blockscoutL2["blockscout L2 :4000"]
+    end
+
+    coord <--> L1Network
+    coord <--> LineaNetwork
+    postman <--> L1Network
+    postman <--> LineaNetwork

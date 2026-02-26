@@ -1,0 +1,15 @@
+%% Native Yield Automation
+flowchart TB
+    subgraph Automation["Native Yield Automation"]
+        ModeSelector["Operation Mode Selector<br/>Determines current mode<br/>based on contract state"]
+        
+        subgraph Processors["Processors"]
+            YieldReporting["Yield<br/>Reporting<br/>Processor"]
+            OssificationPending["Ossification<br/>Pending<br/>Processor"]
+            OssificationComplete["Ossification<br/>Complete<br/>Processor"]
+        end
+        
+        ModeSelector --> YieldReporting
+        ModeSelector --> OssificationPending
+        ModeSelector --> OssificationComplete
+    end

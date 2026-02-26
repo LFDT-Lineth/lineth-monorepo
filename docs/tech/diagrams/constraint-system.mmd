@@ -1,0 +1,20 @@
+%% Constraint System (tracer-constraints)
+flowchart TB
+    subgraph ConstraintFiles["Constraint Files (.lisp / .zkasm)"]
+        Define["Define columns, constraints,<br/>lookups for each module"]
+    end
+
+    subgraph GoCorset["go-corset"]
+        Compile["Compile<br/>.lisp → .bin"]
+        Generate["Generate<br/>.bin → .java"]
+        Check["Check<br/>Validate trace<br/>against .bin"]
+    end
+
+    subgraph Outputs["Outputs"]
+        ZkevmBin["zkevm.bin<br/><br/>Binary constraints<br/>for prover"]
+        TraceJava["Trace.java<br/>TraceOsaka.java<br/><br/>Java interfaces for<br/>tracer module generation"]
+        Validation["Validation<br/><br/>Trace files checked<br/>against constraints"]
+    end
+
+    ConstraintFiles --> GoCorset
+    GoCorset --> Outputs

@@ -1,0 +1,42 @@
+%% Component Dependency Graph
+flowchart TB
+    BridgeUI["bridge-ui<br/>(Next.js)"]
+    
+    subgraph SDK["sdk"]
+        Core["core"]
+        Viem["viem"]
+        Ethers["ethers"]
+    end
+    
+    BridgeUI --> SDK
+    
+    Contracts["contracts<br/>(L1 + L2)"]
+    Postman["postman<br/>(message relay)"]
+    E2E["e2e<br/>(testing)"]
+    TsLibs["ts-libs<br/>shared utilities"]
+    
+    SDK --> Contracts
+    SDK --> Postman
+    SDK --> E2E
+    
+    Postman --> TsLibs
+    
+    Coordinator["coordinator<br/>(Kotlin)"]
+    
+    Contracts --> Coordinator
+    Postman --> Coordinator
+    
+    Prover["prover<br/>(Go)"]
+    JvmLibs["jvm-libs<br/>shared"]
+    BesuPlugins["besu-plugins<br/>sequencer + state<br/>recovery"]
+    
+    Coordinator --> Prover
+    Coordinator --> JvmLibs
+    Coordinator --> BesuPlugins
+    
+    Tracer["tracer<br/>(Java Plugin)"]
+    TracerConstraints["tracer-constraints<br/>(Lisp)"]
+    
+    Prover --> Tracer
+    BesuPlugins --> Tracer
+    TracerConstraints --> Tracer

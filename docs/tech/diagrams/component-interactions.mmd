@@ -1,0 +1,74 @@
+graph TB
+    subgraph "User Layer"
+        DAPP[dApps]
+        WALLET[Wallets]
+        BRIDGEUI[Bridge UI]
+    end
+    
+    subgraph "SDK Layer"
+        SDK_VIEM[SDK Viem]
+        SDK_ETHERS[SDK Ethers]
+    end
+    
+    subgraph "L1 Contracts"
+        ROLLUP[LineaRollup]
+        VERIFIER[PlonkVerifier]
+        L1BRIDGE[TokenBridge L1]
+    end
+    
+    subgraph "L2 Contracts"
+        L2MSG[L2MessageService]
+        L2BRIDGE[TokenBridge L2]
+    end
+    
+    subgraph "Sequencer Stack"
+        SEQ[Sequencer Node]
+        MARU[Maru Engine]
+        PLUGINS[Besu Plugins]
+    end
+    
+    subgraph "Proving Stack"
+        TRACES[Traces Node]
+        TRACER[Tracer Plugin]
+        PROVER[ZK Prover]
+    end
+    
+    subgraph "Coordination"
+        COORD[Coordinator]
+        POSTMAN[Postman]
+        SHOMEI[Shomei State Manager]
+    end
+    
+    subgraph "Storage"
+        PG[(PostgreSQL)]
+    end
+    
+    DAPP --> SDK_VIEM
+    WALLET --> SDK_ETHERS
+    BRIDGEUI --> SDK_VIEM
+    
+    SDK_VIEM --> ROLLUP
+    SDK_VIEM --> L2MSG
+    SDK_ETHERS --> ROLLUP
+    SDK_ETHERS --> L2MSG
+    
+    ROLLUP --> VERIFIER
+    L1BRIDGE --> ROLLUP
+    L2BRIDGE --> L2MSG
+    
+    SEQ --> MARU
+    SEQ --> PLUGINS
+    SEQ --> L2MSG
+    
+    TRACES --> TRACER
+    TRACER --> PROVER
+    
+    COORD --> PROVER
+    COORD --> ROLLUP
+    COORD --> SEQ
+    COORD --> SHOMEI
+    COORD --> PG
+    
+    POSTMAN --> ROLLUP
+    POSTMAN --> L2MSG
+    POSTMAN --> PG

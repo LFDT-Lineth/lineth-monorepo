@@ -1,0 +1,41 @@
+%% Coordinator Architecture
+flowchart TB
+    subgraph Coordinator["COORDINATOR (Kotlin)"]
+        subgraph App["app/"]
+            Main["Main Application<br/>Entry point"]
+        end
+
+        subgraph Core["core/"]
+            subgraph Conflation["Conflation"]
+                ConflationService["ConflationService<br/>Groups L2 blocks<br/>into batches"]
+                ConflationCalc["ConflationCalculator<br/>Determines batch<br/>boundaries"]
+            end
+            
+            subgraph Aggregation["Aggregation"]
+                AggregationService["Aggregation<br/>Coordinates proof<br/>aggregation"]
+            end
+        end
+
+        subgraph Clients["clients/"]
+            L2Client["L2 Client<br/>Sequencer RPC"]
+            ProverClient["Prover Client<br/>File-based requests"]
+            ShomeiClient["Shomei Client<br/>State proofs"]
+        end
+
+        subgraph Ethereum["ethereum/"]
+            BlobSubmission["Blob Submission<br/>EIP-4844 blobs"]
+            Finalization["Finalization<br/>Submit proofs"]
+            GasPricing["Gas Pricing<br/>Dynamic pricing"]
+        end
+
+        subgraph Persistence["persistence/"]
+            BatchRepo["Batch Repository"]
+            AggRepo["Aggregation<br/>Repository"]
+            BlobRepo["Blob Repository"]
+        end
+    end
+
+    App --> Core
+    Core --> Clients
+    Core --> Ethereum
+    Core --> Persistence

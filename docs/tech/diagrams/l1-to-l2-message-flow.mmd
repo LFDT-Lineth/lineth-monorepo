@@ -1,0 +1,16 @@
+%% L1 to L2 Message Flow
+sequenceDiagram
+    participant User as USER/CONTRACT
+    participant L1 as L1 (LineaRollup)
+    participant Coord as Coordinator
+    participant L2 as L2 (L2MessageService)
+
+    User->>L1: 1. sendMessage()
+    L1->>L1: 2. MessageSent event
+    L1->>Coord: Event detected
+    Coord->>L2: 3. Anchor hash
+    L2->>L2: 4. Hash stored
+    Note over L2: Message now CLAIMABLE
+    User->>L2: 5. claimMessage()<br/>(or Postman)
+    L2->>L2: 6. Execute calldata
+    L2-->>User: Message delivered

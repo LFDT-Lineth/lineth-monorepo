@@ -1,0 +1,38 @@
+graph TB
+    subgraph "External"
+        L1[Ethereum L1]
+        Users[Users/dApps]
+    end
+    
+    subgraph "Layer 2"
+        SEQ[Sequencer<br/>Besu + Plugins]
+        MARU[Maru<br/>Execution Engine]
+    end
+    
+    subgraph "Proving Pipeline"
+        TRACER[Tracer<br/>Java Plugin]
+        PROVER[Prover<br/>Go/gnark]
+        COORD[Coordinator<br/>Kotlin]
+    end
+    
+    subgraph "Cross-chain"
+        PM[Postman<br/>TypeScript]
+        SDK[SDK<br/>TypeScript]
+        UI[Bridge UI<br/>Next.js]
+    end
+    
+    Users --> UI
+    UI --> SDK
+    SDK --> L1
+    SDK --> SEQ
+    
+    SEQ --> MARU
+    SEQ --> TRACER
+    TRACER --> PROVER
+    PROVER --> COORD
+    COORD --> L1
+    
+    PM --> L1
+    PM --> SEQ
+    
+    L1 -.->|finality| SEQ

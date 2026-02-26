@@ -1,0 +1,24 @@
+%% Message Lifecycle
+stateDiagram-v2
+    [*] --> Sent: sendMessage()
+    Sent --> Anchored: Coordinator anchors hash
+    Anchored --> Claimable: Hash verified on destination
+    Claimable --> Claimed: claim (L1: withProof)
+    Claimed --> [*]: Executed
+
+    note right of Sent
+        L1: MessageSent event emitted
+        L2: MessageSent event + rolling hash
+    end note
+
+    note right of Anchored
+        L1→L2: Coordinator anchors on L2
+        L2→L1: Included in finalization
+    end note
+
+    note right of Claimable
+        L1→L2: claimMessage() on L2
+        L2→L1: claimMessageWithProof() on L1
+        (requires Merkle proof from Shomei)
+        Can be claimed by user or Postman
+    end note

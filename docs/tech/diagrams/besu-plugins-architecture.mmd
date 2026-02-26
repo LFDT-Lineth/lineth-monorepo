@@ -1,0 +1,25 @@
+%% Besu Plugins Architecture
+flowchart TB
+    subgraph BesuPlugins["BESU PLUGINS"]
+        subgraph LineaSequencer["linea-sequencer"]
+            subgraph TopRow["Transaction Processing"]
+                TxSelector["Transaction<br/>Selector Plugin<br/><br/>- Trace limits<br/>- Block gas<br/>- Profitability<br/>- Bundle handling"]
+                TxPoolValidator["Transaction Pool<br/>Validator Plugin<br/><br/>- Gas limits<br/>- Call data size<br/>- Profitability<br/>- Simulation"]
+                ExtraData["Extra Data<br/>Plugin<br/><br/>- Block pricing<br/>- Extra data<br/>management"]
+            end
+            
+            subgraph BottomRow["RPC Endpoints"]
+                GasEstimation["Gas Estimation<br/>Endpoint Plugin<br/><br/>linea_estimateGas"]
+                BundleEndpoints["Bundle Endpoints<br/>Plugin<br/><br/>linea_sendBundle<br/>linea_cancelBundle"]
+                ForcedTx["Forced Tx<br/>Endpoints<br/>Plugin<br/><br/>linea_sendForced<br/>RawTransaction"]
+            end
+        end
+
+        subgraph StateRecovery["state-recovery"]
+            subgraph RecoveryPlugin["LineaStateRecoveryPlugin"]
+                L1Monitor["L1 Event<br/>Monitor<br/><br/>Watch<br/>LineaRollup"]
+                BlobScanClient["BlobScan<br/>Client<br/><br/>Fetch blob<br/>data"]
+                BlockImporter["Block Importer<br/><br/>- Decompress blob<br/>- Import blocks<br/>- Verify state"]
+            end
+        end
+    end

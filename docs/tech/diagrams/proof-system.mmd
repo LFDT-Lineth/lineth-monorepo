@@ -1,0 +1,35 @@
+%% Proof System (PLONK + Vortex)
+flowchart TB
+    subgraph Arithmetization["Arithmetization"]
+        Trace["Trace<br/>Matrices"]
+        FromTracer["From tracer"]
+    end
+
+    subgraph PolyIOP["Polynomial IOP"]
+        Wizard["Wizard IOP"]
+        ColumnDefs["- Column definitions"]
+        ConstraintSystem["- Constraint system"]
+        PermutationArgs["- Permutation args"]
+    end
+
+    subgraph Compiler["Compilation"]
+        Arcane["Arcane Compiler"]
+        PLONK["PLONK-in-Wizard<br/>compilation"]
+    end
+
+    subgraph Commitments["Commitments"]
+        PolyCommit["Polynomial<br/>Commitments"]
+        BLS["BLS12-377"]
+        BN254["BN254"]
+        BW6["BW6-761"]
+    end
+
+    subgraph VortexScheme["Vortex Scheme"]
+        ReedSolomon["Reed-Solomon based"]
+        Efficient["Efficient for large circuits"]
+    end
+
+    Arithmetization --> PolyIOP
+    PolyIOP --> Compiler
+    Compiler --> Commitments
+    VortexScheme --> Commitments

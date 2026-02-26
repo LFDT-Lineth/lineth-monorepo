@@ -1,0 +1,38 @@
+%% Linea System Architecture
+flowchart TB
+    subgraph L1["ETHEREUM L1"]
+        LineaRollup["LineaRollup<br/>- Submit blobs<br/>- Finalize<br/>- Anchor msgs"]
+        PlonkVerifier["PlonkVerifier<br/>- Verify ZK proofs"]
+        TokenBridgeL1["TokenBridge (L1)<br/>- Bridge ERC20<br/>- L1 → L2 deposits<br/>- L2 → L1 withdraws"]
+    end
+
+    subgraph L2["LINEA L2"]
+        subgraph Sequencer["Sequencer Stack"]
+            SequencerNode["Sequencer<br/>(Besu + Plugins)<br/>- Block production<br/>- TX selection<br/>- Gas estimation<br/>- Bundle mgmt"]
+            Maru["Maru Engine<br/>- Exec layer"]
+        end
+        
+        L2MessageService["L2MessageService<br/>- Send L2→L1 msgs<br/>- Claim L1→L2 msgs"]
+        TokenBridgeL2["TokenBridge (L2)<br/>- L1 mirror"]
+        
+        subgraph Proving["Proving Stack"]
+            TracesNode["Traces Node<br/>(Besu + Plugin)<br/>- Replay blocks<br/>- Generate traces"]
+            Tracer["Tracer<br/>(Java Plugin)<br/>- Trace EVM<br/>- Generate matrices"]
+        end
+        
+        Coordinator["Coordinator<br/>(Kotlin)<br/>- Conflation<br/>- Blob submit<br/>- Finalization<br/>- Gas pricing"]
+        
+        Prover["Prover<br/>(Go)<br/>- Execution<br/>- Compression<br/>- Aggregation"]
+    end
+
+    LineaRollup -->|"Submit/Finalize"| Coordinator
+    PlonkVerifier -->|"Verify"| Prover
+    TokenBridgeL1 -->|"Bridge"| L2MessageService
+    
+    Coordinator --> TracesNode
+    TracesNode --> Tracer
+    Tracer --> Prover
+    Prover --> Coordinator
+    
+    SequencerNode --> L2MessageService
+    L2MessageService --> TokenBridgeL2

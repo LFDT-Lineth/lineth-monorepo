@@ -1,0 +1,17 @@
+%% L2 to L1 Message Flow
+sequenceDiagram
+    participant User as USER/CONTRACT
+    participant L2 as L2 (L2MessageService)
+    participant Coord as Coordinator
+    participant L1 as L1 (LineaRollup)
+
+    User->>L2: 1. sendMessage()
+    L2->>L2: 2. MessageSent event<br/>+ rolling hash update
+    L2->>L2: Merkle tree updated
+    L2->>Coord: Event detected
+    Coord->>L1: 3. Submit finalization
+    L1->>L1: 4. Root stored
+    Note over L1: Message now CLAIMABLE
+    User->>L1: 5. claimMessageWithProof()<br/>(or Postman)
+    L1->>L1: 6. Verify proof<br/>+ execute
+    L1-->>User: Message delivered

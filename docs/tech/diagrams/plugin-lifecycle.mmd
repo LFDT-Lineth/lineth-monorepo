@@ -1,0 +1,34 @@
+%% Besu Plugin Lifecycle
+flowchart LR
+    subgraph Discovery["1. Discovery"]
+        AutoService["@AutoService<br/>(BesuPlugin)"]
+        MetaInf["META-INF/<br/>services/"]
+    end
+
+    subgraph Register["2. Register"]
+        RegisterFn["register()"]
+        GetServices["- Get services"]
+        RegisterCLI["- Register CLI"]
+        RegisterRPC["- Register RPC"]
+    end
+
+    subgraph Start["3. Start"]
+        StartFn["start()"]
+        Initialize["- Initialize"]
+        StartWorkers["- Start workers"]
+        BeginProcessing["- Begin processing"]
+    end
+
+    subgraph Running["4. Running"]
+        ProcessBlocks["Process blocks"]
+        HandleRequests["Handle requests"]
+        ValidateTxs["Validate txs"]
+    end
+
+    subgraph Stop["5. Stop"]
+        StopFn["stop()"]
+        Cleanup["- Cleanup"]
+        CloseConns["- Close conns"]
+    end
+
+    Discovery --> Register --> Start --> Running --> Stop

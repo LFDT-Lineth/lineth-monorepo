@@ -1,0 +1,52 @@
+%% E2E Test Coverage
+flowchart TB
+    subgraph Bridging["Bridging Tests"]
+        BridgeTokens["bridge-tokens.spec.ts"]
+        L1ToL2Bridge["L1 → L2: mint, approve,<br/>bridge, anchor, claim"]
+        L2ToL1Bridge["L2 → L1: mint, approve,<br/>bridge, finalize, claim"]
+    end
+
+    subgraph Messaging["Messaging Tests"]
+        MessagingSpec["messaging.spec.ts"]
+        L1ToL2Msg["L1 → L2: with/without fees,<br/>with/without calldata"]
+        L2ToL1Msg["L2 → L1: with/without fees,<br/>with/without calldata"]
+        PostmanSponsoring["Postman sponsoring"]
+    end
+
+    subgraph Rollup["Rollup Tests"]
+        SubmissionSpec["submission-finalization.spec.ts"]
+        L2Anchoring["L2 anchoring via<br/>RollingHashUpdated"]
+        L1DataSubmission["L1 data submission<br/>(DataSubmittedV3)"]
+        Finalization["Finalization with proofs<br/>(DataFinalizedV3)"]
+        SafeFinalized["Safe/finalized tag updates"]
+        
+        RestartSpec["restart.spec.ts"]
+        CoordRestart["Coordinator restart recovery"]
+        AnchoringResume["Anchoring resume after restart"]
+    end
+
+    subgraph Infrastructure["Infrastructure Tests"]
+        FleetSpec["linea-besu-fleet.spec.ts"]
+        LeaderFollower["Leader/follower consistency"]
+        EstimateGas["linea_estimateGas matching"]
+        BlockSync["Block sync verification"]
+        
+        LivenessSpec["liveness.spec.ts"]
+        SequencerDowntime["Sequencer downtime detection"]
+        
+        L2Spec["l2.spec.ts"]
+        TxTypes["Transaction type support"]
+        CalldataLimits["Calldata size limits"]
+        
+        OpcodesSpec["opcodes.spec.ts"]
+        EVMOpcodes["EVM opcode execution"]
+        
+        BundleSpec["send-bundle.spec.ts"]
+        TxBundling["Transaction bundling"]
+        
+        ExclusionSpec["transaction-exclusion.spec.ts"]
+        RejectionTracking["Rejection tracking"]
+        
+        ShomeiSpec["shomei-get-proof.spec.ts"]
+        MerkleProof["Merkle proof generation"]
+    end

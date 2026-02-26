@@ -1,0 +1,38 @@
+%% Bridge UI Architecture
+flowchart TB
+    subgraph BridgeUI["BRIDGE UI (Next.js)"]
+        subgraph Pages["Pages"]
+            Home["Home<br/>Landing page"]
+            Bridge["Bridge<br/>Main bridging interface"]
+            Transactions["Transactions<br/>History & status"]
+        end
+
+        subgraph Components["Components"]
+            TokenSelector["Token Selector<br/>ERC20 selection"]
+            AmountInput["Amount Input<br/>Value entry"]
+            ChainSelector["Chain Selector<br/>L1 ↔ L2"]
+            TransactionStatus["Transaction Status<br/>Progress tracking"]
+        end
+
+        subgraph Hooks["Hooks"]
+            UseBridge["useBridge<br/>Bridge operations"]
+            UseTokens["useTokens<br/>Token data"]
+            UseTransactions["useTransactions<br/>History"]
+        end
+
+        subgraph State["State Management"]
+            WalletState["Wallet State<br/>wagmi/viem"]
+            BridgeState["Bridge State<br/>React Query"]
+        end
+    end
+
+    subgraph External["External"]
+        SDK["@consensys/linea-sdk-viem"]
+        Wallet["Wallet<br/>(MetaMask, etc.)"]
+        RPC["L1/L2 RPC"]
+    end
+
+    Pages --> Components
+    Components --> Hooks
+    Hooks --> State
+    State --> External

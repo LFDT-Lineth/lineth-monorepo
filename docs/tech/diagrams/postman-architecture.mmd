@@ -1,0 +1,29 @@
+%% Postman Service Architecture
+flowchart TB
+    subgraph Postman["POSTMAN SERVICE"]
+        subgraph Monitors["Event Monitors"]
+            L1Monitor["L1 Monitor<br/>Watch MessageSent<br/>on LineaRollup"]
+            L2Monitor["L2 Monitor<br/>Watch MessageSent<br/>on L2MessageService"]
+        end
+
+        subgraph Processors["Message Processors"]
+            L1ToL2["L1→L2 Processor<br/>Claims messages on L2"]
+            L2ToL1["L2→L1 Processor<br/>Claims messages on L1<br/>with Merkle proofs"]
+        end
+
+        subgraph Services["Support Services"]
+            ProofService["Proof Service<br/>Generate Merkle proofs"]
+            GasService["Gas Service<br/>Estimate & optimize"]
+            NonceService["Nonce Manager<br/>Sequential nonces"]
+        end
+    end
+
+    subgraph External["External"]
+        L1RPC["L1 RPC"]
+        L2RPC["L2 RPC"]
+        Database["Database<br/>(PostgreSQL)"]
+    end
+
+    Monitors --> Processors
+    Processors --> Services
+    Postman --> External

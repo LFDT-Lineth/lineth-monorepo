@@ -1,0 +1,24 @@
+%% Prover Controller Workflow
+flowchart LR
+    subgraph Watch["1. Watch"]
+        Scan["Scan<br/>requests/<br/>directory"]
+    end
+
+    subgraph Process["2. Process"]
+        MoveInProgress["Move to<br/>.inprogress"]
+        ExecuteProver["Execute<br/>prover"]
+    end
+
+    subgraph Complete["3. Complete"]
+        WriteResponse["Write<br/>response"]
+        MoveDone["Move to<br/>done/"]
+    end
+
+    subgraph Error["On Error"]
+        Retry["Retry or<br/>Mark fail"]
+    end
+
+    Watch --> Process
+    Process --> Complete
+    Process --> Error
+    Error --> Watch
