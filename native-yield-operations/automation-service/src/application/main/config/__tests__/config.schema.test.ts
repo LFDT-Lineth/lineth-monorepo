@@ -733,6 +733,46 @@ describe("configSchema", () => {
     });
   });
 
+  describe("MAX_VALIDATOR_WITHDRAWAL_REQUESTS_PER_TRANSACTION", () => {
+    it("accepts zero value (disables withdrawal requests)", () => {
+      // Arrange
+      const env = {
+        ...createValidEnv(),
+        MAX_VALIDATOR_WITHDRAWAL_REQUESTS_PER_TRANSACTION: "0",
+      };
+
+      // Act
+      const result = configSchema.safeParse(env);
+
+      // Assert
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.MAX_VALIDATOR_WITHDRAWAL_REQUESTS_PER_TRANSACTION).toBe(0);
+      }
+    });
+
+    it("rejects negative values", () => {
+      // Arrange
+      const env = {
+        ...createValidEnv(),
+        MAX_VALIDATOR_WITHDRAWAL_REQUESTS_PER_TRANSACTION: "-1",
+      };
+
+      // Act
+      const result = configSchema.safeParse(env);
+
+      // Assert
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(
+          result.error.issues.some(
+            (issue) => issue.path.join(".") === "MAX_VALIDATOR_WITHDRAWAL_REQUESTS_PER_TRANSACTION",
+          ),
+        ).toBe(true);
+      }
+    });
+  });
+
   describe("LOG_LEVEL", () => {
     it("accepts valid log levels", () => {
       // Arrange
