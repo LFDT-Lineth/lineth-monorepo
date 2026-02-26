@@ -3,6 +3,12 @@
 Automated security and code quality enforcement across the Linea monorepo.
 For the complete repository guide, see [AGENTS.md](../AGENTS.md).
 
+## Precedence and Discovery
+
+- Canonical repository instructions: [AGENTS.md](../AGENTS.md)
+- Cursor docs index: [rules/documentation.mdc](rules/documentation.mdc)
+- If this file conflicts with `../AGENTS.md`, follow `../AGENTS.md`.
+
 ## Scope
 
 Review all pull requests targeting `main`. Focus on files changed in the PR diff. Skip generated files (`typechain-types/`, `dist/`, `build/`, `coverage/`, `node_modules/`).

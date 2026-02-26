@@ -1,0 +1,52 @@
+---
+description: Documentation discovery index for Linea monorepo
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Documentation Discoverability
+
+## Precedence
+
+- Canonical repository instructions: `/AGENTS.md`
+- If this file conflicts with `/AGENTS.md`, follow `/AGENTS.md`.
+
+## Agent Entry Points
+
+- Codex: `/AGENTS.md`
+- Cursor: `/.cursor/rules/documentation.mdc`, `/.cursor/BUGBOT.md`, then `/AGENTS.md`
+- Claude Code: `/CLAUDE.md`, then `/AGENTS.md`
+- GitHub Copilot: `/.github/copilot-instructions.md`, then `/AGENTS.md`
+
+## Context and Documentation
+
+- Repository overview: `/README.md`
+- Contributing: `/CONTRIBUTING.md`, `/docs/contribute.md`
+- Setup: `/docs/get-started.md`, `/docs/local-development-guide.md`
+- Architecture: `/docs/architecture-description.md`
+- Engineering guidelines: `/docs/development-guidelines.md`
+- Security: `/docs/security.md`
+- Audits: `/docs/audits.md`
+
+## Rules
+
+- Cursor review and quality rules: `/.cursor/BUGBOT.md`
+- Security logging rules: `/.cursor/rules/security-logging-guidelines/RULES.md`
+- API/versioning rules: `/.cursor/rules/versioning-guidelines/RULES.md`
+- Smart-contract specific Cursor rule: `/.cursor/rules/smart-contract-guidelines/RULE.md`
+
+## Package-Specific Agent Docs
+
+- `/contracts/AGENTS.md`
+- `/coordinator/AGENTS.md`
+- `/prover/AGENTS.md`
+- `/tracer/AGENTS.md`
+- `/sdk/AGENTS.md`
+- `/bridge-ui/AGENTS.md`
+- `/besu-plugins/AGENTS.md`
+- `/transaction-exclusion-api/AGENTS.md`
+- `/e2e/AGENTS.md`
+
+## Note
+
+This file is an index only. Do not duplicate commands or conventions maintained in `/AGENTS.md`.

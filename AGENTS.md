@@ -1,5 +1,45 @@
 # AGENTS.md
 
+## Documentation Precedence
+
+- `AGENTS.md` is the canonical source for repository-wide agent instructions.
+- Tool-specific files should stay concise and link back to `AGENTS.md`.
+- If instructions conflict, follow `AGENTS.md`.
+
+## Agent Entry Points
+
+- Codex: `AGENTS.md` (this file)
+- Cursor: `.cursor/rules/documentation.mdc`, `.cursor/BUGBOT.md`, then `AGENTS.md`
+- Claude Code: `CLAUDE.md`, then `AGENTS.md`
+- GitHub Copilot: `.github/copilot-instructions.md`, then `AGENTS.md`
+
+## Discoverability Index
+
+- Repository overview: `README.md`
+- Contribution process: `CONTRIBUTING.md`, `docs/contribute.md`
+- Local setup: `docs/get-started.md`, `docs/local-development-guide.md`
+- Architecture: `docs/architecture-description.md`
+- Engineering guidelines: `docs/development-guidelines.md`
+- Security and audits: `docs/security.md`, `docs/audits.md`
+- Package-specific agent rules: `*/AGENTS.md` (`contracts/`, `coordinator/`, `prover/`, `tracer/`, `sdk/`, `bridge-ui/`, `besu-plugins/`, `transaction-exclusion-api/`, `e2e/`)
+
+## Project Guidelines
+
+- [contracts/AGENTS.md](contracts/AGENTS.md) — Solidity contracts, deployment artifacts
+- [e2e/AGENTS.md](e2e/AGENTS.md) — E2E tests, ABI generation
+
+## Continuous Improvement
+
+When a task requires a significant course correction (e.g., wrong architecture choice, misunderstood repository pattern, missed convention), propose an update to the relevant `AGENTS.md`.
+
+For each proposal, include:
+- What failed or was ambiguous
+- Why it caused rework or risk
+- The concrete rule to add or modify
+- The correct scope (`AGENTS.md` at root vs package-level `*/AGENTS.md`)
+
+Only propose rules that are repository-specific and repeatable.
+
 ## Repository
 
 Linea zkEVM monorepo — the principal repository for [Linea](https://linea.build), a Layer 2 zero-knowledge rollup scaling Ethereum. Contains smart contracts, ZK prover, coordinator, postman (bridge message executor), bridge UI, SDKs, and supporting tooling. Licensed under Apache-2.0 and MIT.

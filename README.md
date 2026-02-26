@@ -32,6 +32,16 @@ If you already have an understanding of the tech stack, use our [Get Started](do
 
 For developers looking to build services locally (such as, the coordinator), see our detailed [Local Development Guide](docs/local-development-guide.md).
 
+## Agent Documentation
+
+For AI coding agents and developer tools:
+
+- Canonical instructions: [AGENTS.md](AGENTS.md)
+- Claude Code entry point: [CLAUDE.md](CLAUDE.md)
+- GitHub Copilot entry point: [.github/copilot-instructions.md](.github/copilot-instructions.md)
+- Cursor documentation index: [.cursor/rules/documentation.mdc](.cursor/rules/documentation.mdc)
+- Cursor review/rule set: [.cursor/BUGBOT.md](.cursor/BUGBOT.md)
+
 ## Looking for the Linea code?
 
 Linea's stack is made up of multiple repositories, these include:
