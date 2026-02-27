@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
+import linea.blob.BlobCompressor;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
@@ -126,6 +127,12 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
     deniedBundleEvents.set(txSelectorConfiguration.eventsBundleDenyList());
     deniedAddresses.set(transactionPoolValidatorConfiguration().deniedAddresses());
 
+    // blobCompressor is initialised in AbstractLineaSharedPrivateOptionsPlugin with the effective
+    // limit. Only pass it to the factory when a blob size limit is explicitly configured so that
+    // CompressionAwareTransactionSelector is only active when intentionally enabled.
+    final BlobCompressor selectorBlobCompressor =
+        txSelectorConfiguration.blobSizeLimit() != null ? blobCompressor : null;
+
     transactionSelectionService.registerPluginTransactionSelectorFactory(
         new LineaTransactionSelectorFactory(
             blockchainService,
@@ -142,7 +149,9 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
             deniedEvents,
             deniedBundleEvents,
             deniedAddresses,
-            transactionProfitabilityCalculator));
+            transactionProfitabilityCalculator,
+            transactionCompressor,
+            selectorBlobCompressor));
   }
 
   @Override

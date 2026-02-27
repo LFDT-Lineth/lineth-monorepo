@@ -31,6 +31,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
+import linea.blob.BlobCompressorVersion;
+import linea.blob.GoBackedBlobCompressor;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.bundles.LineaLimitedBundlePool;
 import net.consensys.linea.bundles.TransactionBundle;
@@ -117,6 +119,8 @@ class LineaTransactionSelectorFactoryTest {
 
     LineaTransactionSelectorConfiguration mockTxSelectorConfiguration =
         mock(LineaTransactionSelectorConfiguration.class);
+    when(mockTxSelectorConfiguration.blobSizeLimit()).thenReturn(null);
+    when(mockTxSelectorConfiguration.maxBlockCallDataSize()).thenReturn(null);
     LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration =
         new LineaL1L2BridgeSharedConfiguration(BRIDGE_CONTRACT, BRIDGE_LOG_TOPIC);
     LineaProfitabilityConfiguration mockProfitabilityConfiguration =
@@ -125,7 +129,9 @@ class LineaTransactionSelectorFactoryTest {
     bundlePool = spy(new LineaLimitedBundlePool(dataDir, 4096, mockEvents, mockBlockchainService));
     InvalidTransactionByLineCountCache invalidTransactionByLineCountCache =
         new InvalidTransactionByLineCountCache(10);
-    final var transactionCompressor = new CachingTransactionCompressor();
+    final var transactionCompressor =
+        new CachingTransactionCompressor(
+            GoBackedBlobCompressor.getInstance(BlobCompressorVersion.V2, 128 * 1024));
     TransactionProfitabilityCalculator transactionProfitabilityCalculator =
         new TransactionProfitabilityCalculator(
             mockProfitabilityConfiguration, transactionCompressor);
@@ -148,7 +154,9 @@ class LineaTransactionSelectorFactoryTest {
             new AtomicReference<>(Collections.emptyMap()),
             new AtomicReference<>(Collections.emptyMap()),
             new AtomicReference<>(Collections.emptySet()),
-            transactionProfitabilityCalculator);
+            transactionProfitabilityCalculator,
+            transactionCompressor,
+            null);
     factory.create(new SelectorsStateManager());
   }
 

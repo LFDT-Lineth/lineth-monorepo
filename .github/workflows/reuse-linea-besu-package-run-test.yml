@@ -43,13 +43,14 @@ jobs:
       - name: Download local docker image artifacts
         uses: actions/download-artifact@v7
         with:
-          pattern: linea-besu-package*
-          path: ${{ github.workspace }}/linea-besu-package
+          pattern: linea-besu-package
+          path: ${{ github.workspace }}/tmp/artifacts
+          merge-multiple: true
 
       - name: Load Docker image
         run: |
           pwd && ls -la && echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE" &&
-          gunzip -c $GITHUB_WORKSPACE/linea-besu-package/linea-besu-package-image.tar.gz | docker load
+          gunzip -c $GITHUB_WORKSPACE/tmp/artifacts/linea-besu-package-image.tar.gz | docker load
         shell: bash
 
       - name: Start container # disabling color in the output

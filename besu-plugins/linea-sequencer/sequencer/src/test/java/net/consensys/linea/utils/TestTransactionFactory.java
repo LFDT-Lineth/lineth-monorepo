@@ -81,6 +81,25 @@ public class TestTransactionFactory {
   }
 
   /**
+   * Builds a legacy (type 0) transaction with a custom payload and the default recipient.
+   *
+   * @param payload the transaction payload (call data)
+   * @return a signed transaction
+   */
+  public Transaction createTransactionWithPayload(final Bytes payload) {
+    return Transaction.builder()
+        .type(TransactionType.FRONTIER)
+        .chainId(DEFAULT_CHAIN_ID)
+        .nonce(nonce++)
+        .gasLimit(DEFAULT_GAS_LIMIT)
+        .gasPrice(DEFAULT_GAS_PRICE)
+        .to(DEFAULT_RECIPIENT)
+        .value(Wei.ZERO)
+        .payload(payload)
+        .signAndBuild(keyPair);
+  }
+
+  /**
    * Builds a legacy (type 0) transaction with custom parameters.
    *
    * @param recipient the recipient address

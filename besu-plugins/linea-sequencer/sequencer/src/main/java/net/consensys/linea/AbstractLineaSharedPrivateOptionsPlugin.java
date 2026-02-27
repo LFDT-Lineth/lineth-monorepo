@@ -12,6 +12,9 @@ package net.consensys.linea;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import linea.blob.BlobCompressor;
+import linea.blob.BlobCompressorVersion;
+import linea.blob.GoBackedBlobCompressor;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.bundles.BundlePoolService;
@@ -45,7 +48,6 @@ import net.consensys.linea.sequencer.forced.ForcedTransactionPoolService;
 import net.consensys.linea.sequencer.forced.LineaForcedTransactionPool;
 import net.consensys.linea.sequencer.txselection.InvalidTransactionByLineCountCache;
 import net.consensys.linea.utils.CachingTransactionCompressor;
-import net.consensys.linea.utils.Compressor;
 import net.consensys.linea.utils.TransactionCompressor;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
@@ -82,15 +84,13 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
   protected static MetricCategoryRegistry metricCategoryRegistry;
   protected static RpcEndpointService rpcEndpointService;
   protected static InvalidTransactionByLineCountCache invalidTransactionByLineCountCache;
+  protected static BlobCompressor blobCompressor;
+  protected static TransactionCompressor transactionCompressor;
   protected static TransactionProfitabilityCalculator transactionProfitabilityCalculator;
 
+  public static final int DEFAULT_COMPRESSED_SIZE_LIMIT = 128 * 1024;
   private static final AtomicBoolean sharedRegisterTasksDone = new AtomicBoolean(false);
   private static final AtomicBoolean sharedStartTasksDone = new AtomicBoolean(false);
-
-  static {
-    // force the initialization of the gnark compress native library to fail fast in case of issues
-    Compressor.instance.compressedSize(new byte[1024]);
-  }
 
   private ServiceManager serviceManager;
 
@@ -293,9 +293,20 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
         new InvalidTransactionByLineCountCache(
             transactionSelectorConfiguration().overLinesLimitCacheSize());
 
+    // Initialise the native compressor once with the authoritative limit so that
+    // CachingTransactionCompressor and CompressionAwareTransactionSelector share
+    // the same instance. Fall back to the default when no blob size limit is configured.
+    final int effectiveBlobLimit =
+        transactionSelectorConfiguration().blobSizeLimit() != null
+            ? transactionSelectorConfiguration().blobSizeLimit()
+            : DEFAULT_COMPRESSED_SIZE_LIMIT;
+    blobCompressor =
+        GoBackedBlobCompressor.getInstance(BlobCompressorVersion.V2, effectiveBlobLimit);
+
     final LineaProfitabilityConfiguration profitabilityConfiguration = profitabilityConfiguration();
-    final TransactionCompressor transactionCompressor =
-        new CachingTransactionCompressor(profitabilityConfiguration.compressedTxCacheSize());
+    transactionCompressor =
+        new CachingTransactionCompressor(
+            profitabilityConfiguration.compressedTxCacheSize(), blobCompressor);
     transactionProfitabilityCalculator =
         new TransactionProfitabilityCalculator(profitabilityConfiguration, transactionCompressor);
   }
@@ -307,5 +318,6 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
     sharedStartTasksDone.set(false);
     blockchainService = null;
     metricsSystem = null;
+    blobCompressor = null;
   }
 }

@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import linea.blob.BlobCompressor;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.bundles.BundlePoolService;
@@ -35,6 +36,7 @@ import net.consensys.linea.sequencer.forced.ForcedTransactionPoolService;
 import net.consensys.linea.sequencer.liveness.LivenessService;
 import net.consensys.linea.sequencer.txselection.selectors.LineaTransactionSelector;
 import net.consensys.linea.sequencer.txselection.selectors.TransactionEventFilter;
+import net.consensys.linea.utils.TransactionCompressor;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
@@ -70,6 +72,8 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   private final AtomicReference<Set<Address>> deniedAddresses;
   private final AtomicBoolean isSelectionInterrupted = new AtomicBoolean(false);
   private final TransactionProfitabilityCalculator transactionProfitabilityCalculator;
+  private final TransactionCompressor transactionCompressor;
+  private final BlobCompressor blobCompressor;
 
   public LineaTransactionSelectorFactory(
       final BlockchainService blockchainService,
@@ -86,7 +90,9 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
       final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedEvents,
       final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedBundleEvents,
       final AtomicReference<Set<Address>> deniedAddresses,
-      final TransactionProfitabilityCalculator transactionProfitabilityCalculator) {
+      final TransactionProfitabilityCalculator transactionProfitabilityCalculator,
+      final TransactionCompressor transactionCompressor,
+      final BlobCompressor blobCompressor) {
     this.blockchainService = blockchainService;
     this.txSelectorConfiguration = txSelectorConfiguration;
     this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
@@ -102,6 +108,15 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
     this.deniedBundleEvents = deniedBundleEvents;
     this.deniedAddresses = deniedAddresses;
     this.transactionProfitabilityCalculator = transactionProfitabilityCalculator;
+    this.transactionCompressor = transactionCompressor;
+    this.blobCompressor = blobCompressor;
+
+    if (txSelectorConfiguration.maxBlockCallDataSize() != null) {
+      log.warn(
+          "DEPRECATION: --plugin-linea-max-block-calldata-size is deprecated and will be removed "
+              + "in a future release. Use --plugin-linea-blob-size-limit instead for "
+              + "compression-aware block building.");
+    }
   }
 
   @Override
@@ -120,7 +135,9 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
             deniedEvents,
             deniedBundleEvents,
             deniedAddresses,
-            transactionProfitabilityCalculator);
+            transactionProfitabilityCalculator,
+            transactionCompressor,
+            blobCompressor);
     currSelector.set(selector);
     return selector;
   }

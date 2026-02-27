@@ -10,6 +10,7 @@
 package net.consensys.linea.config;
 
 import com.google.common.base.MoreObjects;
+import jakarta.validation.constraints.Positive;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -73,15 +74,14 @@ public class LineaTransactionPoolValidatorCliOptions implements LineaCliOptions 
               + ")")
   private int maxTxGasLimit = DEFAULT_MAX_TRANSACTION_GAS_LIMIT;
 
+  @Positive
   @CommandLine.Option(
       names = {MAX_TX_CALLDATA_SIZE},
       hidden = true,
       paramLabel = "<INTEGER>",
       description =
-          "Maximum size for the calldata of a Transaction (default: "
-              + DEFAULT_MAX_TX_CALLDATA_SIZE
-              + ")")
-  private int maxTxCallDataSize = DEFAULT_MAX_TX_CALLDATA_SIZE;
+          "Maximum size for the calldata of a Transaction. If set, the calldata validator is enabled.")
+  private Integer maxTxCallDataSize;
 
   @CommandLine.Option(
       names = {TX_POOL_ENABLE_SIMULATION_CHECK_API},

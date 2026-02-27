@@ -33,7 +33,10 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
   public static final String CONFIG_KEY = "transaction-selector-config";
 
   public static final String MAX_BLOCK_CALLDATA_SIZE = "--plugin-linea-max-block-calldata-size";
-  public static final int DEFAULT_MAX_BLOCK_CALLDATA_SIZE = 70_000;
+  public static final String BLOB_SIZE_LIMIT = "--plugin-linea-blob-size-limit";
+  public static final String COMPRESSED_BLOCK_HEADER_OVERHEAD =
+      "--plugin-linea-compressed-block-header-overhead";
+  public static final int DEFAULT_COMPRESSED_BLOCK_HEADER_OVERHEAD = 1024;
   public static final String OVER_LINE_COUNT_LIMIT_CACHE_SIZE =
       "--plugin-linea-over-line-count-limit-cache-size";
   public static final int DEFAULT_OVER_LINE_COUNT_LIMIT_CACHE_SIZE = 10_000;
@@ -55,8 +58,30 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
       names = {MAX_BLOCK_CALLDATA_SIZE},
       hidden = true,
       paramLabel = "<INTEGER>",
-      description = "Maximum size for the calldata of a block (default: ${DEFAULT-VALUE})")
-  private int maxBlockCallDataSize = DEFAULT_MAX_BLOCK_CALLDATA_SIZE;
+      description =
+          "Maximum size for the calldata of a block. If set, the raw calldata size selector is enabled.")
+  private Integer maxBlockCallDataSize;
+
+  @Positive
+  @CommandLine.Option(
+      names = {BLOB_SIZE_LIMIT},
+      hidden = true,
+      paramLabel = "<INTEGER>",
+      description =
+          "Maximum compressed block size in bytes (block must fit in blob when compressed). "
+              + "If set, the compression-aware selector is enabled.")
+  private Integer blobSizeLimit;
+
+  @Positive
+  @CommandLine.Option(
+      names = {COMPRESSED_BLOCK_HEADER_OVERHEAD},
+      hidden = true,
+      paramLabel = "<INTEGER>",
+      description =
+          "Estimated compressed block header overhead in bytes. Subtracted from blobSizeLimit "
+              + "during the fast-path compression check to account for block header data that is "
+              + "not included in per-tx compression estimates (default: ${DEFAULT-VALUE})")
+  private int compressedBlockHeaderOverhead = DEFAULT_COMPRESSED_BLOCK_HEADER_OVERHEAD;
 
   @Positive
   @CommandLine.Option(
@@ -128,6 +153,8 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
       final LineaTransactionSelectorConfiguration config) {
     final LineaTransactionSelectorCliOptions options = create();
     options.maxBlockCallDataSize = config.maxBlockCallDataSize();
+    options.blobSizeLimit = config.blobSizeLimit();
+    options.compressedBlockHeaderOverhead = config.compressedBlockHeaderOverhead();
     options.overLineCountLimitCacheSize = config.overLinesLimitCacheSize();
     options.maxGasPerBlock = config.maxGasPerBlock();
     options.eventsDenyListPath = config.eventsDenyListPath();
@@ -144,6 +171,8 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
   public LineaTransactionSelectorConfiguration toDomainObject() {
     return LineaTransactionSelectorConfiguration.builder()
         .maxBlockCallDataSize(maxBlockCallDataSize)
+        .blobSizeLimit(blobSizeLimit)
+        .compressedBlockHeaderOverhead(compressedBlockHeaderOverhead)
         .overLinesLimitCacheSize(overLineCountLimitCacheSize)
         .maxGasPerBlock(maxGasPerBlock)
         .maxBundleGasPerBlock(maxBundleGasPerBlock)
@@ -159,6 +188,8 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
   public String toString() {
     return MoreObjects.toStringHelper(this)
         .add(MAX_BLOCK_CALLDATA_SIZE, maxBlockCallDataSize)
+        .add(BLOB_SIZE_LIMIT, blobSizeLimit)
+        .add(COMPRESSED_BLOCK_HEADER_OVERHEAD, compressedBlockHeaderOverhead)
         .add(OVER_LINE_COUNT_LIMIT_CACHE_SIZE, overLineCountLimitCacheSize)
         .add(MAX_GAS_PER_BLOCK, maxGasPerBlock)
         .add(MAX_BUNDLE_GAS_PER_BLOCK, maxBundleGasPerBlock)

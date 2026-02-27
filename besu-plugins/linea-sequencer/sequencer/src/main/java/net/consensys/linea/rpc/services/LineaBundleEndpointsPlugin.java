@@ -10,8 +10,9 @@
 package net.consensys.linea.rpc.services;
 
 import com.google.auto.service.AutoService;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -60,16 +61,18 @@ public class LineaBundleEndpointsPlugin extends AbstractLineaRequiredPlugin {
   }
 
   public PluginTransactionPoolValidator createTransactionValidator() {
-    final var validators =
-        new PluginTransactionPoolValidator[] {
-          new DeniedAddressValidator(bundleDeniedAddresses),
-          new PrecompileAddressValidator(),
-          new GasLimitValidator(transactionPoolValidatorConfiguration().maxTxGasLimit()),
-          new CalldataValidator(transactionPoolValidatorConfiguration().maxTxCalldataSize())
-        };
+    final List<PluginTransactionPoolValidator> validators = new ArrayList<>();
+    validators.add(new DeniedAddressValidator(bundleDeniedAddresses));
+    validators.add(new PrecompileAddressValidator());
+    validators.add(new GasLimitValidator(transactionPoolValidatorConfiguration().maxTxGasLimit()));
+
+    final Integer maxTxCalldataSize = transactionPoolValidatorConfiguration().maxTxCalldataSize();
+    if (maxTxCalldataSize != null) {
+      validators.add(new CalldataValidator(maxTxCalldataSize));
+    }
 
     return (transaction, isLocal, hasPriority) ->
-        Arrays.stream(validators)
+        validators.stream()
             .map(v -> v.validateTransaction(transaction, isLocal, hasPriority))
             .filter(Optional::isPresent)
             .findFirst()

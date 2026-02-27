@@ -17,6 +17,8 @@ import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.ObjectReader
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import linea.blob.BlobCompressorVersion
+import linea.blob.GoBackedBlobCompressor
 import linea.plugin.acc.test.LineaPluginPoSTestBase
 import linea.plugin.acc.test.TestCommandLineOptionsBuilder
 import net.consensys.linea.bl.TransactionProfitabilityCalculator
@@ -75,7 +77,10 @@ open class EstimateGasTest : LineaPluginPoSTestBase() {
         .minMargin(MIN_MARGIN)
         .estimateGasMinMargin(ESTIMATE_GAS_MIN_MARGIN)
         .build()
-    profitabilityCalculator = TransactionProfitabilityCalculator(profitabilityConf, CachingTransactionCompressor())
+    profitabilityCalculator = TransactionProfitabilityCalculator(
+      profitabilityConf,
+      CachingTransactionCompressor(GoBackedBlobCompressor.getInstance(BlobCompressorVersion.V2, 128 * 1024)),
+    )
   }
 
   @Test

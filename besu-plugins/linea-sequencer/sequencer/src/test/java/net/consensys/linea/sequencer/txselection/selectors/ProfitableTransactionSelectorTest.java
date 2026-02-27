@@ -15,20 +15,29 @@ import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECT
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.math.BigInteger;
+import java.util.List;
 import java.util.Optional;
+import linea.blob.BlobCompressorVersion;
+import linea.blob.GoBackedBlobCompressor;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityCliOptions;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.utils.CachingTransactionCompressor;
 import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes32;
-import org.bouncycastle.crypto.digests.KeccakDigest;
-import org.hyperledger.besu.datatypes.Hash;
+import org.bouncycastle.asn1.sec.SECNamedCurves;
+import org.bouncycastle.asn1.x9.X9ECParameters;
+import org.bouncycastle.crypto.params.ECDomainParameters;
+import org.hyperledger.besu.crypto.SECPSignature;
+import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.PendingTransaction;
-import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
+import org.hyperledger.besu.ethereum.core.Transaction;
+import org.hyperledger.besu.ethereum.eth.transactions.PendingTransaction.Local;
+import org.hyperledger.besu.ethereum.eth.transactions.PendingTransaction.Remote;
+import org.hyperledger.besu.ethereum.mainnet.ValidationResult;
+import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
-import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
@@ -40,6 +49,28 @@ public class ProfitableTransactionSelectorTest {
   private static final int VARIABLE_GAS_COST_WEI = 1_000_000;
   private static final double MIN_MARGIN = 1.5;
   private static final Wei BASE_FEE = Wei.of(7);
+
+  private static final Address SENDER =
+      Address.fromHexString("0x0000000000000000000000000000000000001000");
+  private static final Address RECIPIENT =
+      Address.fromHexString("0x0000000000000000000000000000000000001001");
+
+  private static final SECPSignature FAKE_SIGNATURE;
+
+  static {
+    final X9ECParameters params = SECNamedCurves.getByName("secp256k1");
+    final ECDomainParameters curve =
+        new ECDomainParameters(params.getCurve(), params.getG(), params.getN(), params.getH());
+    FAKE_SIGNATURE =
+        SECPSignature.create(
+            new BigInteger(
+                "66397251408932042429874251838229702988618145381408295790259650671563847073199"),
+            new BigInteger(
+                "24729624138373455972486746091821238755870276413282629437244319694880507882088"),
+            (byte) 0,
+            curve.getN());
+  }
+
   private final LineaProfitabilityConfiguration profitabilityConf =
       LineaProfitabilityCliOptions.create().toDomainObject().toBuilder()
           .minMargin(MIN_MARGIN)
@@ -56,7 +87,9 @@ public class ProfitableTransactionSelectorTest {
   private ProfitableTransactionSelector newSelectorForNewBlock() {
     final var blockchainService = mock(BlockchainService.class);
     when(blockchainService.getNextBlockBaseFee()).thenReturn(Optional.of(BASE_FEE));
-    final var transactionCompressor = new CachingTransactionCompressor();
+    final var transactionCompressor =
+        new CachingTransactionCompressor(
+            GoBackedBlobCompressor.getInstance(BlobCompressorVersion.V2, 128 * 1024));
     final var transactionProfitabilityCalculator =
         new TransactionProfitabilityCalculator(profitabilityConf, transactionCompressor);
     return new ProfitableTransactionSelector(
@@ -65,56 +98,56 @@ public class ProfitableTransactionSelectorTest {
 
   @Test
   public void shouldSelectWhenProfitable() {
-    var mockTransactionProcessingResult = mockTransactionProcessingResult(21000);
+    var createProcessingResult = createProcessingResult(21000);
     verifyTransactionSelection(
         transactionSelector,
-        mockEvaluationContext(false, 100, Wei.of(1_100_000_000), Wei.of(1_000_000_000), 21000),
-        mockTransactionProcessingResult,
+        createEvaluationContext(false, 100, Wei.of(1_100_000_000), Wei.of(1_000_000_000), 21000),
+        createProcessingResult,
         SELECTED,
         SELECTED);
   }
 
   @Test
   public void shouldNotSelectWhenUnprofitableUpfront() {
-    var mockTransactionProcessingResult = mockTransactionProcessingResult(21000);
+    var createProcessingResult = createProcessingResult(21000);
     verifyTransactionSelection(
         transactionSelector,
-        mockEvaluationContext(false, 10000, Wei.of(1_000_100), Wei.of(1_000_000), 21000),
-        mockTransactionProcessingResult,
+        createEvaluationContext(false, 10000, Wei.of(1_000_100), Wei.of(1_000_000), 21000),
+        createProcessingResult,
         TX_UNPROFITABLE_UPFRONT,
         null);
   }
 
   @Test
   public void shouldNotSelectWhenUnprofitable() {
-    var mockTransactionProcessingResult = mockTransactionProcessingResult(21000);
+    var createProcessingResult = createProcessingResult(21000);
     verifyTransactionSelection(
         transactionSelector,
-        mockEvaluationContext(false, 10000, Wei.of(1_000_100), Wei.of(1_000_000), 210000),
-        mockTransactionProcessingResult,
+        createEvaluationContext(false, 10000, Wei.of(1_000_100), Wei.of(1_000_000), 210000),
+        createProcessingResult,
         SELECTED,
         TX_UNPROFITABLE);
   }
 
   @Test
   public void shouldSelectPrevUnprofitableAfterGasPriceBump() {
-    var mockTransactionProcessingResult = mockTransactionProcessingResult(21000);
+    var createProcessingResult = createProcessingResult(21000);
     verifyTransactionSelection(
         transactionSelector,
-        mockEvaluationContext(
+        createEvaluationContext(
             false, 1000, Wei.of(1_100_000_000).multiply(9), Wei.of(1_000_000_000), 210000),
-        mockTransactionProcessingResult,
+        createProcessingResult,
         SELECTED,
         SELECTED);
   }
 
   @Test
   public void shouldSelectPriorityTxEvenWhenUnprofitable() {
-    var mockTransactionProcessingResult = mockTransactionProcessingResult(21000);
+    var createProcessingResult = createProcessingResult(21000);
     verifyTransactionSelection(
         transactionSelector,
-        mockEvaluationContext(true, 1000, Wei.of(1_100_000_000), Wei.of(1_000_000_000), 21000),
-        mockTransactionProcessingResult,
+        createEvaluationContext(true, 1000, Wei.of(1_100_000_000), Wei.of(1_000_000_000), 21000),
+        createProcessingResult,
         SELECTED,
         SELECTED);
   }
@@ -122,27 +155,23 @@ public class ProfitableTransactionSelectorTest {
   @Test
   public void profitableAndUnprofitableTxsMix() {
     var minGasPriceBlock1 = Wei.of(1_000_000);
-    var mockTransactionProcessingResult1 = mockTransactionProcessingResult(21000);
-    var mockEvaluationContext1 =
-        mockEvaluationContext(false, 10000, Wei.of(1_000_010), minGasPriceBlock1, 210000);
+    var createProcessingResult1 = createProcessingResult(21000);
+    var evaluationContext1 =
+        createEvaluationContext(false, 10000, Wei.of(1_000_010), minGasPriceBlock1, 210000);
     // first try of first tx
     verifyTransactionSelection(
         transactionSelector,
-        mockEvaluationContext1,
-        mockTransactionProcessingResult1,
+        evaluationContext1,
+        createProcessingResult1,
         SELECTED,
         TX_UNPROFITABLE);
 
-    var mockTransactionProcessingResult2 = mockTransactionProcessingResult(21000);
-    var mockEvaluationContext2 =
-        mockEvaluationContext(false, 1000, Wei.of(1_000_010), minGasPriceBlock1, 210000);
+    var createProcessingResult2 = createProcessingResult(21000);
+    var evaluationContext2 =
+        createEvaluationContext(false, 1000, Wei.of(1_000_010), minGasPriceBlock1, 210000);
     // first try of second tx
     verifyTransactionSelection(
-        transactionSelector,
-        mockEvaluationContext2,
-        mockTransactionProcessingResult2,
-        SELECTED,
-        SELECTED);
+        transactionSelector, evaluationContext2, createProcessingResult2, SELECTED, SELECTED);
 
     // simulate another block
     transactionSelector = newSelectorForNewBlock();
@@ -152,22 +181,18 @@ public class ProfitableTransactionSelectorTest {
     // second try of the first tx
     verifyTransactionSelection(
         transactionSelector,
-        mockEvaluationContext1.setMinGasPrice(minGasPriceBlock2),
-        mockTransactionProcessingResult1,
+        evaluationContext1.setMinGasPrice(minGasPriceBlock2),
+        createProcessingResult1,
         SELECTED,
         TX_UNPROFITABLE);
 
-    var mockTransactionProcessingResult3 = mockTransactionProcessingResult(21000);
-    var mockEvaluationContext3 =
-        mockEvaluationContext(false, 100, Wei.of(1_100_000_000), minGasPriceBlock1, 21000);
+    var createProcessingResult3 = createProcessingResult(21000);
+    var evaluationContext3 =
+        createEvaluationContext(false, 100, Wei.of(1_100_000_000), minGasPriceBlock1, 21000);
 
     // new profitable tx is selected
     verifyTransactionSelection(
-        transactionSelector,
-        mockEvaluationContext3,
-        mockTransactionProcessingResult3,
-        SELECTED,
-        SELECTED);
+        transactionSelector, evaluationContext3, createProcessingResult3, SELECTED, SELECTED);
   }
 
   private void verifyTransactionSelection(
@@ -188,48 +213,38 @@ public class ProfitableTransactionSelectorTest {
     }
   }
 
-  private TestTransactionEvaluationContext mockEvaluationContext(
+  private TestTransactionEvaluationContext createEvaluationContext(
       final boolean hasPriority,
-      final int size,
+      final int payloadSize,
       final Wei effectiveGasPrice,
       final Wei minGasPrice,
       final long gasLimit) {
-    PendingTransaction pendingTransaction = mock(PendingTransaction.class);
-    Transaction transaction = mock(Transaction.class);
-    when(transaction.getHash()).thenReturn(Hash.wrap(Bytes32.random()));
-    when(transaction.getGasLimit()).thenReturn(gasLimit);
-    when(transaction.encoded()).thenReturn(Bytes.wrap(pseudoRandomBytes(size)));
-    when(pendingTransaction.getTransaction()).thenReturn(transaction);
-    when(pendingTransaction.hasPriority()).thenReturn(hasPriority);
+    final Transaction transaction =
+        Transaction.builder()
+            .sender(SENDER)
+            .to(RECIPIENT)
+            .gasLimit(gasLimit)
+            .gasPrice(effectiveGasPrice)
+            .payload(Bytes.random(payloadSize))
+            .value(Wei.ONE)
+            .signature(FAKE_SIGNATURE)
+            .build();
+
+    final PendingTransaction pendingTransaction =
+        hasPriority ? new Local.Priority(transaction) : new Remote(transaction);
+
     return new TestTransactionEvaluationContext(
         mock(ProcessableBlockHeader.class), pendingTransaction, effectiveGasPrice, minGasPrice);
   }
 
-  private byte[] pseudoRandomBytes(int size) {
-    final int expectedCompressedSize =
-        (size - 58) / 5; // This emulates old behaviour of compression ratio and size adjustment
-    byte[] bytes = new byte[expectedCompressedSize];
-    final KeccakDigest keccakDigest = new KeccakDigest(256);
-
-    final byte[] out = new byte[32];
-    int offset = 0;
-    int i = 0;
-    do {
-      keccakDigest.update(new byte[] {(byte) i++}, 0, 1);
-      keccakDigest.doFinal(out, 0);
-      System.arraycopy(out, 0, bytes, offset, Math.min(expectedCompressedSize - offset, 32));
-      offset += 32;
-    } while (offset < expectedCompressedSize);
-
-    return bytes;
-  }
-
-  private TransactionProcessingResult mockTransactionProcessingResult(long gasUsedByTransaction) {
-    TransactionProcessingResult mockTransactionProcessingResult =
-        mock(TransactionProcessingResult.class);
-    when(mockTransactionProcessingResult.getEstimateGasUsedByTransaction())
-        .thenReturn(gasUsedByTransaction);
-    return mockTransactionProcessingResult;
+  private TransactionProcessingResult createProcessingResult(long gasUsedByTransaction) {
+    return TransactionProcessingResult.successful(
+        List.of(),
+        gasUsedByTransaction,
+        0,
+        Bytes.EMPTY,
+        Optional.empty(),
+        ValidationResult.valid());
   }
 
   private void notifySelector(

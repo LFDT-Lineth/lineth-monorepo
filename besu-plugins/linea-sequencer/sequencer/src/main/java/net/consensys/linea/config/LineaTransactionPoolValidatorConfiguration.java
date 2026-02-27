@@ -34,7 +34,7 @@ public record LineaTransactionPoolValidatorConfiguration(
     String bundleOverridingDenyListPath,
     Set<Address> bundleDeniedAddresses,
     int maxTxGasLimit,
-    int maxTxCalldataSize,
+    Integer maxTxCalldataSize,
     boolean txPoolSimulationCheckApiEnabled,
     boolean txPoolSimulationCheckP2pEnabled)
     implements LineaOptionsConfiguration {}

@@ -9,10 +9,12 @@
 
 package net.consensys.linea.sequencer.txpoolvalidation;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTracerConfiguration;
@@ -36,6 +38,7 @@ import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolVal
 import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolValidatorFactory;
 
 /** Represents a factory for creating transaction pool validators. */
+@Slf4j
 public class LineaTransactionPoolValidatorFactory implements PluginTransactionPoolValidatorFactory {
 
   private final BesuConfiguration besuConfiguration;
@@ -77,6 +80,13 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
     this.transactionProfitabilityCalculator = transactionProfitabilityCalculator;
 
     this.deniedAddresses = new AtomicReference<>(txPoolValidatorConf.deniedAddresses());
+
+    if (txPoolValidatorConf.maxTxCalldataSize() != null) {
+      log.warn(
+          "DEPRECATION: --plugin-linea-max-tx-calldata-size is deprecated and will be removed "
+              + "in a future release. Use --plugin-linea-blob-size-limit instead for "
+              + "compression-aware block building.");
+    }
   }
 
   /**
@@ -87,30 +97,34 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
    */
   @Override
   public PluginTransactionPoolValidator createTransactionValidator() {
-    final var validators =
-        new PluginTransactionPoolValidator[] {
-          new TraceLineLimitValidator(invalidTransactionByLineCountCache),
-          new DeniedAddressValidator(deniedAddresses),
-          new PrecompileAddressValidator(),
-          new GasLimitValidator(txPoolValidatorConf.maxTxGasLimit()),
-          new CalldataValidator(txPoolValidatorConf.maxTxCalldataSize()),
-          new ProfitabilityValidator(
-              besuConfiguration,
-              blockchainService,
-              profitabilityConf,
-              transactionProfitabilityCalculator),
-          new SimulationValidator(
-              blockchainService,
-              worldStateService,
-              transactionSimulationService,
-              txPoolValidatorConf,
-              tracerConfiguration,
-              l1L2BridgeConfiguration,
-              rejectedTxJsonRpcManager)
-        };
+    final List<PluginTransactionPoolValidator> validators = new ArrayList<>();
+    validators.add(new TraceLineLimitValidator(invalidTransactionByLineCountCache));
+    validators.add(new DeniedAddressValidator(deniedAddresses));
+    validators.add(new PrecompileAddressValidator());
+    validators.add(new GasLimitValidator(txPoolValidatorConf.maxTxGasLimit()));
+
+    if (txPoolValidatorConf.maxTxCalldataSize() != null) {
+      validators.add(new CalldataValidator(txPoolValidatorConf.maxTxCalldataSize()));
+    }
+
+    validators.add(
+        new ProfitabilityValidator(
+            besuConfiguration,
+            blockchainService,
+            profitabilityConf,
+            transactionProfitabilityCalculator));
+    validators.add(
+        new SimulationValidator(
+            blockchainService,
+            worldStateService,
+            transactionSimulationService,
+            txPoolValidatorConf,
+            tracerConfiguration,
+            l1L2BridgeConfiguration,
+            rejectedTxJsonRpcManager));
 
     return (transaction, isLocal, hasPriority) ->
-        Arrays.stream(validators)
+        validators.stream()
             .map(v -> v.validateTransaction(transaction, isLocal, hasPriority))
             .filter(Optional::isPresent)
             .findFirst()

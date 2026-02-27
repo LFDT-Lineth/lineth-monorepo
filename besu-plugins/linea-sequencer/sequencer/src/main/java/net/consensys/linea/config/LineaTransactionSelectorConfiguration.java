@@ -19,7 +19,9 @@ import org.hyperledger.besu.datatypes.Address;
 /** The Linea transaction selectors configuration. */
 @Builder(toBuilder = true)
 public record LineaTransactionSelectorConfiguration(
-    int maxBlockCallDataSize,
+    Integer maxBlockCallDataSize,
+    Integer blobSizeLimit,
+    int compressedBlockHeaderOverhead,
     int overLinesLimitCacheSize,
     long maxGasPerBlock,
     long maxBundleGasPerBlock,

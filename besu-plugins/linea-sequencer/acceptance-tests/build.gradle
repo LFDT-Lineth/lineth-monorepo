@@ -72,7 +72,7 @@ tasks.register('acceptanceTests', Test) {
 
   // Configure resource limits
   boolean isCiServer = System.getenv().containsKey("CI")
-  maxParallelForks = isCiServer ? Runtime.runtime.availableProcessors() : 3
+  maxParallelForks = isCiServer ? Runtime.runtime.availableProcessors() : Math.max(1, Runtime.runtime.availableProcessors() - 2)
   systemProperties["junit.jupiter.execution.parallel.enabled"] = false
 }
 
@@ -81,7 +81,8 @@ dependencies {
   annotationProcessor "org.apache.logging.log4j:log4j-core:${libs.versions.log4j.get()}"
   implementation "org.apache.logging.log4j:log4j-core:${libs.versions.log4j.get()}"
 
-  testImplementation project("${lineaSequencerProjectPath}:sequencer")
+  implementation project("${lineaSequencerProjectPath}:sequencer")
+  testImplementation "build.linea:blob-compressor:${libs.versions.blobCompressor.get()}"
   testImplementation project(":tracer:arithmetization")
   testImplementation project(":jvm-libs:generic:serialization:jackson")
   testImplementation project(":jvm-libs:generic:extensions:kotlin")
