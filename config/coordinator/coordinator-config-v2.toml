@@ -54,7 +54,6 @@ target-end-blocks = []
 timestamp-based-hard-forks = []
 
 [prover]
-version = "v3.0.0"
 [prover.execution]
 fs-requests-directory = "/data/prover/v3/execution/requests"
 fs-responses-directory = "/data/prover/v3/execution/responses"

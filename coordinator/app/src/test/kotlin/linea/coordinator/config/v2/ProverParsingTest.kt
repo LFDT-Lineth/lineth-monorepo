@@ -12,7 +12,6 @@ class ProverParsingTest {
     val toml =
       """
       [prover]
-      version = "v2.0.0"
       fs-inprogress-request-writing-suffix = ".coordinator_writing_request"
       fs-inprogress-proving-suffix-pattern = "\\.inprogress\\.prover_is_proving.*"
       fs-polling-interval = "PT1S"
@@ -28,7 +27,6 @@ class ProverParsingTest {
       fs-responses-directory = "/data/prover/v2/aggregation/responses"
 
       [prover.new]
-      version = "v3.0.0"
       switch-block-number-inclusive=1000
       [prover.new.execution]
       fs-requests-directory = "/data/prover/v3/execution/requests"
@@ -44,7 +42,6 @@ class ProverParsingTest {
     val tomlWithCleanupEnabled =
       """
       [prover]
-      version = "v2.0.0"
       enable-request-files-cleanup = true
       [prover.execution]
       fs-requests-directory = "/data/prover/v2/execution/requests"
@@ -59,7 +56,6 @@ class ProverParsingTest {
 
     val config =
       ProverToml(
-        version = "v2.0.0",
         fsInprogressRequestWritingSuffix = ".coordinator_writing_request",
         fsInprogressProvingSuffixPattern = "\\.inprogress\\.prover_is_proving.*",
         fsPollingInterval = 1.seconds,
@@ -82,7 +78,6 @@ class ProverParsingTest {
         new =
         ProverToml(
           switchBlockNumberInclusive = 1_000u,
-          version = "v3.0.0",
           execution =
           ProverToml.ProverDirectoriesToml(
             fsRequestsDirectory = "/data/prover/v3/execution/requests",
@@ -104,7 +99,6 @@ class ProverParsingTest {
     val tomlMinimal =
       """
       [prover]
-      version = "v2.0.0"
       [prover.execution]
       fs-requests-directory = "/data/prover/v2/execution/requests"
       fs-responses-directory = "/data/prover/v2/execution/responses"
@@ -118,7 +112,6 @@ class ProverParsingTest {
 
     val configMinimal =
       ProverToml(
-        version = "v2.0.0",
         fsInprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
         fsInprogressProvingSuffixPattern = "\\.inprogress\\.prover.*",
         execution =
@@ -179,7 +172,6 @@ class ProverParsingTest {
     val tomlWithCleanupDisabled =
       """
       [prover]
-      version = "v2.0.0"
       enable-request-files-cleanup = false
       [prover.execution]
       fs-requests-directory = "/data/prover/v2/execution/requests"

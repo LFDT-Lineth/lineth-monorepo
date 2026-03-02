@@ -8,7 +8,6 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 data class ProverToml(
-  val version: String,
   val fsInprogressRequestWritingSuffix: String = ".inprogress_coordinator_writing",
   val fsInprogressProvingSuffixPattern: String = "\\.inprogress\\.prover.*",
   val fsPollingInterval: Duration = 15.seconds,
