@@ -49,7 +49,7 @@ Safe Member
 
 | Contract           | Address                                           |
 |--------------------|---------------------------------------------------|
-| L2MessageService   | `0x508cA82Df566dCD1B0DE828967a0e96332cDc446`      |
+| L2MessageService   | `0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec`      |
 
 ---
 

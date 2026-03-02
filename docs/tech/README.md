@@ -120,7 +120,7 @@ make pnpm-install
 make start-env-with-tracing-v2
 
 # 3. Run end-to-end tests
-cd e2e && pnpm run test:e2e:local
+pnpm -F e2e run test:local
 
 # 4. Stop and clean
 make clean-environment

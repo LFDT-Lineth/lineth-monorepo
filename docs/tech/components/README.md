@@ -127,15 +127,15 @@ root package.json
 
 ### Go
 
-- Go 1.21+ required
+- Go 1.24.6 required
 - Build: `go build ./...`
 - Test: `go test ./...`
 - Uses gnark library for ZK circuits
 
 ### TypeScript
 
-- Node.js 22+ required
-- pnpm 10+ for package management
+- Node.js >= 22.22.0 required
+- pnpm >= 10.28.0 for package management
 - Build: `pnpm run build`
 - Test: `pnpm run test`
 - Lint: `pnpm run lint`

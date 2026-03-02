@@ -49,15 +49,15 @@ Safe Member
 
 | Network   | Address                                      |
 |-----------|----------------------------------------------|
-| Ethereum  | `0x892bb72De7f1b06B08a09140e7825d1827991DD3` |
+| Ethereum  | `0x892bb7EeD71efB060ab90140e7825d8127991DD3` |
 | Linea     | `0xf5cc7604a5ef3565b4D2050D65729A06B68AA0bD` |
 
 ### 📦 Proxy Addresses
 
 | Contract         | Address                                           |
 |------------------|---------------------------------------------------|
-| L1 TokenBridge   | `0x051F1D88f0aF5673fB88BeC4378eD4BB29ea3319`       |
-| L2 Token Bridge  | `0x353012d04a9A6cF5C941bADC267f82004A8ceB9`        |
+| L1 TokenBridge   | `0x051F1D88f0aF5763fB888eC4378b4D8B29ea3319`       |
+| L2 Token Bridge  | `0x353012dc4a9A6cF55c941bADC267f82004A8ceB9`        |
 
 ---
 

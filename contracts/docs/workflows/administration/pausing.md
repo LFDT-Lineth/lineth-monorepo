@@ -44,16 +44,21 @@ Safe Member
 ## 🗂️ Pause Types
 
 
-| Value | Address                              |
-|-------|---------------------------------------|
-| 1     | GENERAL_PAUSE_TYPE                   |
-| 2     | L1_L2_PAUSE_TYPE                     |
-| 3     | L2_L1_PAUSE_TYPE                     |
-| 4     | PROVING_SYSTEM_PAUSE_TYPE           |
-| 5     | CALLDATA_SUBMISSION_PAUSE_TYPE      |
-| 6     | FINALIZATION_PAUSE_TYPE             |
-| 7     | INITIATE_TOKEN_BRIDGING_PAUSE_TYPE  |
-| 8     | COMPLETE_TOKEN_BRIDGING_PAUSE_TYPE  |
+| Value | Pause Type                                    | Notes       |
+|-------|-----------------------------------------------|-------------|
+| 1     | GENERAL_PAUSE_TYPE                            |             |
+| 2     | L1_L2_PAUSE_TYPE                              |             |
+| 3     | L2_L1_PAUSE_TYPE                              |             |
+| 4     | BLOB_SUBMISSION_PAUSE_TYPE                    | deprecated  |
+| 5     | CALLDATA_SUBMISSION_PAUSE_TYPE                | deprecated  |
+| 6     | FINALIZATION_PAUSE_TYPE                       |             |
+| 7     | INITIATE_TOKEN_BRIDGING_PAUSE_TYPE            |             |
+| 8     | COMPLETE_TOKEN_BRIDGING_PAUSE_TYPE            |             |
+| 9     | NATIVE_YIELD_STAKING_PAUSE_TYPE               |             |
+| 10    | NATIVE_YIELD_UNSTAKING_PAUSE_TYPE             |             |
+| 11    | NATIVE_YIELD_PERMISSIONLESS_ACTIONS_PAUSE_TYPE|             |
+| 12    | NATIVE_YIELD_REPORTING_PAUSE_TYPE             |             |
+| 13    | STATE_DATA_SUBMISSION_PAUSE_TYPE              |             |
 
 
 ---
@@ -64,7 +69,7 @@ Safe Member
 
 | Network   | Address                                      |
 |-----------|----------------------------------------------|
-| Ethereum  | `0x892bb72De7f1b06B08a09140e7825d1827991DD3` |
+| Ethereum  | `0x892bb7EeD71efB060ab90140e7825d8127991DD3` |
 | Linea     | `0xf5cc7604a5ef3565b4D2050D65729A06B68AA0bD` |
 
 ### 📦 Proxy Addresses
@@ -72,8 +77,8 @@ Safe Member
 | Contract           | Address                                           |
 |--------------------|---------------------------------------------------|
 | LineaRollup        | `0xd194Bd535d285f05D7B411E21A1460D11B0876F`       |
-| L1 TokenBridge     | `0x051F1D88f0aF5673fB88BeC4378eD4BB29ea3319`       |
-| L2MessageService   | `0x508cA82Df566dCD1B0DE828967a0e96332cDc446`      |
-| L2 Token Bridge    | `0x353012d04a9A6cF5C941bADC267f82004A8ceB9`        |
+| L1 TokenBridge     | `0x051F1D88f0aF5763fB888eC4378b4D8B29ea3319`       |
+| L2MessageService   | `0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec`      |
+| L2 Token Bridge    | `0x353012dc4a9A6cF55c941bADC267f82004A8ceB9`        |
 
 <img src="../diagrams/pausing.png">

@@ -78,9 +78,9 @@ Council Member
 
 | Component               | Chain         | Address                                                                 |
 |------------------------|---------------|-------------------------------------------------------------------------|
-| **TimelockController** | Ethereum      | `0xd6B9c960f779c728C86752119849318E5d550574`                            |
-| **Proxy**              | LineaRollup   | `0xd194Bd535d285f05D7B411E21A1460D11B0876F`                             |
-| **Deployer**           | Ethereum      | `0x6dD3120E329dC5FaA3d2c6f65705E4f648fF65F7`                            |
+| **TimelockController** | Ethereum      | `0xd6B95c960779c72B8C6752119849318E5d550574`                            |
+| **Proxy**              | LineaRollup   | `0xd19d4B5d358258f05D7B411E21A1460D11B0876F`                             |
+| **Deployer**           | Ethereum      | `0x6dD3120E329dC5FaA3d2Cf65705Ef4f6486F65F7`                            |
 
 ---
 

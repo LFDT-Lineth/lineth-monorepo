@@ -2,12 +2,12 @@
 
 ### Requirements:
 
-- Node.js v20 or higher
+- Node.js >= 22.22.0 (see `.nvmrc`)
 - Docker v24 or higher
   - Docker should ideally have ~16 GB of Memory and 4+ CPUs to run the entire stack.
 - Docker Compose version v2.19+
 - Make v3.81+
-- Pnpm v10.18.3 (https://pnpm.io/installation)
+- Pnpm >= 10.28.0 (https://pnpm.io/installation)
 
 ### Run stack locally
 
@@ -21,8 +21,7 @@ make pnpm-install
 
 ```
 make start-env-with-tracing-v2
-cd e2e
-pnpm run test:e2e:local
+pnpm -F e2e run test:local
 ```
 
 To stop the stack:

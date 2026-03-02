@@ -55,12 +55,12 @@ Run these commands from the monorepo root.
 
 | Command                                                       | Description                                                      |
 |---------------------------------------------------------------|------------------------------------------------------------------|
-| `pnpm run -F e2e test:local`                                 | All tests (excludes fleet and liveness, then runs liveness)     |
-| `pnpm run -F e2e test:local:run "<file.spec.ts>"`            | Run one test suite                                               |
-| `pnpm run -F e2e test:local:run "<file.spec.ts>" -t "<test name>"` | Run one test                                              |
-| `pnpm run -F e2e test:fleet:local`                           | Fleet leader/follower consistency tests                          |
-| `pnpm run -F e2e test:liveness:local`                        | Sequencer liveness tests                                         |
-| `pnpm run -F e2e test:sendbundle:local`                      | sendBundle RPC tests                                             |
+| `pnpm -F e2e run test:local`                                 | All tests (excludes fleet and liveness, then runs liveness)     |
+| `pnpm -F e2e run test:local:run "<file.spec.ts>"`            | Run one test suite                                               |
+| `pnpm -F e2e run test:local:run "<file.spec.ts>" -t "<test name>"` | Run one test                                              |
+| `pnpm -F e2e run test:fleet:local`                           | Fleet leader/follower consistency tests                          |
+| `pnpm -F e2e run test:liveness:local`                        | Sequencer liveness tests                                         |
+| `pnpm -F e2e run test:sendbundle:local`                      | sendBundle RPC tests                                             |
 
 If you are already inside `e2e/`, remove `-F e2e` and run the same scripts directly with `pnpm run`.
 
@@ -68,10 +68,10 @@ Examples:
 
 ```bash
 # Run one test suite (all tests in opcodes.spec.ts)
-pnpm run -F e2e test:local:run "opcodes.spec.ts"
+pnpm -F e2e run test:local:run "opcodes.spec.ts"
 
 # Run one test
-pnpm run -F e2e test:local:run "opcodes.spec.ts" -t "Should be able to execute all opcodes"
+pnpm -F e2e run test:local:run "opcodes.spec.ts" -t "Should be able to execute all opcodes"
 ```
 
 

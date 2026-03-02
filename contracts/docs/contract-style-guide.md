@@ -49,7 +49,7 @@ All interfaces should be laid out in the following format from top to bottom:
 
 ```
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity >=0.8.19 <=0.8.26; 
+pragma solidity ^0.8.33;
 
 // imports here
 import { ImportType } from "../ImportType.sol";
@@ -74,7 +74,7 @@ All libraries should be laid out in the following format from top to bottom:
 
 ```
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity >=0.8.19 <=0.8.26; 
+pragma solidity ^0.8.33;
 
 // imports here
 import { ImportType } from "../ImportType.sol";
@@ -96,7 +96,7 @@ All contracts should be laid out in the following format from top to bottom:
 
 ```
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity >=0.8.19 <=0.8.26; 
+pragma solidity 0.8.33;
 contract SampleContract {
 	// All items have NatSpec
 	// 1. CONSTANTS (Public, internal and then private)

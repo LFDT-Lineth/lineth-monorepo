@@ -6,12 +6,12 @@ This guide provides instructions for setting up and running Linea services local
 
 Before you start, make sure you have the following installed:
 
-- Node.js v20 or higher
+- Node.js >= 22.22.0 (see `.nvmrc`)
 - Docker v24 or higher
   - Docker should have ~16 GB of Memory and 4+ CPUs to run the entire stack
 - Docker Compose version v2.19+
 - Make v3.81+
-- Pnpm v10.18.3 (https://pnpm.io/installation)
+- Pnpm >= 10.28.0 (https://pnpm.io/installation)
 - Java Development Kit (JDK) 21 (required for building the coordinator)
 - Gradle 8.5+ (for building Java-based services)
 

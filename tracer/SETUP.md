@@ -5,10 +5,10 @@ an [existing implementation in Go](https://github.com/Consensys/zk-evm/).
 
 ## Development Setup
 
-### Install Java 17
+### Install Java 21
 
 ```
-brew install openjdk@17
+brew install openjdk@21
 ```
 
 ### Install the Go toolchain

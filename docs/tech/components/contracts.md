@@ -460,7 +460,7 @@ All major contracts use OpenZeppelin's **Transparent Upgradeable Proxy** pattern
 |----------|---------|
 | LineaRollup | `0xd19d4B5d358258f05D7B411E21A1460D11B0876F` |
 | L2MessageService | `0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec` |
-| TokenBridge (L1) | `0x051F1D88f0aF5763fB888eC78378F1109b52Cd01` |
+| TokenBridge (L1) | `0x051F1D88f0aF5763fB888eC4378b4D8B29ea3319` |
 | TokenBridge (L2) | `0x353012dc4a9A6cF55c941bADC267f82004A8ceB9` |
 
 ### Sepolia (Testnet)

@@ -11,7 +11,7 @@ Token Bridge is a canonical brige between Ethereum and Linea networks.
 To install packages, execute:
 
 ```shell
-npm i
+pnpm install
 ```
 
 ### Config
@@ -41,13 +41,13 @@ Edit `.env` and add your configuration values. For the full list of variables, s
 In a first terminal, run:
 
 ```shell
-npx hardhat node
+pnpm hardhat node
 ```
 
 In a second terminal, run:
 
 ```shell
-npx hardhat run --network localhost scripts/tokenBridge/test/deployMock.ts
+pnpm hardhat run --network localhost scripts/tokenBridge/test/deployMock.ts
 ```
 
 ### On a Sepolia Testnet network with mocked messaging service
@@ -55,7 +55,7 @@ npx hardhat run --network localhost scripts/tokenBridge/test/deployMock.ts
 In a terminal, run:
 
 ```shell
-npx hardhat run --network sepolia scripts/tokenBridge/test/deployMock.ts
+pnpm hardhat run --network sepolia scripts/tokenBridge/test/deployMock.ts
 ```
 
 ### On Sepolia Testnet and Sepolia Linea Testnet
@@ -75,13 +75,13 @@ All addresses created will be stored in the deployments folder as a separate fil
 To run tests, execute:
 
 ```shell
-npm run test
+pnpm -F contracts run test
 ```
 
 or
 
 ```shell
-npx hardhat test
+pnpm hardhat test
 ```
 
 ### Test coverage
@@ -90,13 +90,13 @@ This project uses the Hardhat plugin [solidity-coverage](https://github.com/sc-f
 To generate a boilerplate report, use the following command:
 
 ```shell
-npm run coverage
+pnpm -F contracts run coverage
 ```
 
 or
 
 ```shell
-npx hardhat coverage --solcoverjs ./.solcover.js
+pnpm hardhat coverage --solcoverjs ./.solcover.js
 ```
 
 The report will be generated in the `coverage` folder at the root of the repository. To visualize it in your web browser, you can use the `coverage/index.html` file.
@@ -107,7 +107,7 @@ Note: the second command line might not work if the folder `coverage` already ex
 To verify the contract on Etherscan.
 
 ```shell
- npx hardhat verify --network NETWORK DEPLOYED_CONTRACT_ADDRESS "Constructor argument 1" "Constructor argument 2"
+pnpm hardhat verify --network NETWORK DEPLOYED_CONTRACT_ADDRESS "Constructor argument 1" "Constructor argument 2"
 ```
 
 ### Gas Estimation
@@ -117,13 +117,13 @@ You can estimate the contracts gas costs.
 - On a terminal start a local node:
 
 ```shell
-npx hardhat node
+pnpm hardhat node
 ```
 
 - On another terminal, execute the gas estimation script:
 
 ```shell
-npx hardhat run --network localhost scripts/tokenBridge/gasEstimation/gasEstimation.ts
+pnpm hardhat run --network localhost scripts/tokenBridge/gasEstimation/gasEstimation.ts
 ```
 
 It should return gas estimation:
@@ -140,13 +140,13 @@ bridgeToken with permit after confirmDeploy:  202909
 ### Lint Solidity
 
 ```bash
-npm run lint:sol
+pnpm -F contracts run lint:sol
 ```
 
 ### Lint TypeScript
 
 ```bash
-npm run lint:ts
+pnpm -F contracts run lint:ts
 ```
 
 ### Prettier
@@ -154,11 +154,11 @@ npm run lint:ts
 Check format code:
 
 ```bash
-npm run prettier:check
+pnpm -F contracts run prettier:check
 ```
 
 Format code:
 
 ```bash
-npm run prettier
+pnpm -F contracts run prettier
 ```

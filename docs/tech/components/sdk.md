@@ -157,7 +157,7 @@ interface MessageProof {
 const mainnetAddresses = {
   l1: {
     lineaRollup: '0xd19d4B5d358258f05D7B411E21A1460D11B0876F',
-    tokenBridge: '0x051F1D88f0aF5763fB888eC78378F1109b52Cd01',
+    tokenBridge: '0x051F1D88f0aF5763fB888eC4378b4D8B29ea3319',
   },
   l2: {
     messageService: '0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec',

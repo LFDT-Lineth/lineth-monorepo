@@ -71,7 +71,7 @@ This guide outlines the process of **upgrading an upgradable contract** (e.g. **
 
 | Network   | Address                                      |
 |-----------|----------------------------------------------|
-| Ethereum  | `0x892bb72De7f1b06B08a09140e7825d1827991DD3` |
+| Ethereum  | `0x892bb7EeD71efB060ab90140e7825d8127991DD3` |
 | Linea     | `0xf5cc7604a5ef3565b4D2050D65729A06B68AA0bD` |
 
 ### 🕓 TimelockController Addresses
@@ -79,7 +79,7 @@ This guide outlines the process of **upgrading an upgradable contract** (e.g. **
 | Network   | Address                                      |
 |-----------|----------------------------------------------|
 | Ethereum  | `0xd6B9c960f779c728C6752119849318E5d550574`  |
-| Linea     | `0xC80BB1C8eD34D049bA579CaBa646e67B9A03C56a` |
+| Linea     | `0xc808BfCBeD34D90fa9579CAa664e67B9A03C56ca` |
 
 - Security Council has **Proposer and Executor roles**
 - Timelock owns `ProxyAdmin` contracts
@@ -88,24 +88,24 @@ This guide outlines the process of **upgrading an upgradable contract** (e.g. **
 
 | Network   | Address                                      |
 |-----------|----------------------------------------------|
-| Ethereum  | `0xF50586165710C86c7b7EcC6B9F636Ada9606d6d6` |
-| Linea     | `0x1E16fF2297b4a7522Df8b62e99353692399774E` |
+| Ethereum  | `0xF5058616517C068C7b8c7EbC69FF636Ade9066d6` |
+| Linea     | `0x1E1f6F22f97b4a7522D8B62e983953639239774E` |
 
 ### 🧑‍💻 Deployer Addresses
 
 | Network   | Address                                      |
 |-----------|----------------------------------------------|
-| Ethereum  | `0x6dD3120E329dC5FaA3d2c6f65705E4f648fF65F7` |
+| Ethereum  | `0x6dD3120E329dC5FaA3d2Cf65705Ef4f6486F65F7` |
 | Linea     | `0x49ee40140E522651744c1C2878c76eE9f28028d33` |
 
 ### 📦 Proxy Addresses
 
 | Contract           | Address                                           |
 |--------------------|---------------------------------------------------|
-| LineaRollup        | `0xd194Bd535d285f05D7B411E21A1460D11B0876F`       |
-| TokenBridge        | `0x051F1D88f0aF5673fB88BeC4378eD4BB29ea3319`       |
-| L2MessageService   | `0x508cA82Df566dCD1B0DE828967a0e96332cDc446`      |
-| L2 Token Bridge    | `0x353012d04a9A6cF5C541BADC267f82004A8ceB9`        |
+| LineaRollup        | `0xd19d4B5d358258f05D7B411E21A1460D11B0876F`       |
+| TokenBridge        | `0x051F1D88f0aF5763fB888eC4378b4D8B29ea3319`       |
+| L2MessageService   | `0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec`      |
+| L2 Token Bridge    | `0x353012dc4a9A6cF55c941bADC267f82004A8ceB9`        |
 
 ---
 
