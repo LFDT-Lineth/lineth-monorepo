@@ -9,22 +9,22 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
 class TracesCountersTest {
-  data class TracesConfigV2(val tracesLimits: Map<TracingModuleV2, UInt>)
+  data class TracesConfigV4(val tracesLimits: Map<TracingModuleV4, UInt>)
 
   @Test
-  fun `configs v2 match specifiedModules`() {
-    val path = findPathTo("config/common/traces-limits-v2.toml")
+  fun `configs v4 match specifiedModules`() {
+    val path = findPathTo("config/common/traces-limits-v4.4.toml")
 
     val tracesConfig = ConfigLoaderBuilder.default()
       .addFileSource(path.toString())
       .build()
-      .loadConfigOrThrow<TracesConfigV2>()
+      .loadConfigOrThrow<TracesConfigV4>()
 
-    val tracesCountersLimit = TracesCountersV2(tracesConfig.tracesLimits)
+    val tracesCountersLimit = TracesCountersV4(tracesConfig.tracesLimits)
 
     tracesCountersLimit.entries().forEach { moduleLimit ->
       // PoW 2 requirement only apply to traces passed to the prover
-      if (TracingModuleV2.evmModules.contains(moduleLimit.first)) {
+      if (TracingModuleV4.evmModules.contains(moduleLimit.first) && TracingModuleV4.BLOCK_HASH != moduleLimit.first) {
         val isPowerOf2 = (moduleLimit.second and (moduleLimit.second - 1u)) == 0u
         assertThat(isPowerOf2)
           .withFailMessage("Trace limit ${moduleLimit.first}=${moduleLimit.second} is not a power of 2!")

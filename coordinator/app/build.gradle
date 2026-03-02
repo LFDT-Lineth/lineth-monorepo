@@ -101,8 +101,8 @@ run {
   .findAll { it.key.startsWith("config") }
   .collect { "-D${it.key}=${it.value}" }
   args = [
-    "--traces-limits-v2",
-    "config/common/traces-limits-v2.toml",
+    "--traces-limits-v5",
+    "config/common/traces-limits-v5.toml",
     "--smart-contract-errors",
     "config/common/smart-contract-errors.toml",
     "--gas-price-cap-time-of-day-multipliers",

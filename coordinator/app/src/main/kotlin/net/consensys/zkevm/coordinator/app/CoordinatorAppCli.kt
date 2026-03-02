@@ -35,14 +35,6 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
 
   class TracesLimitsFiles {
     @CommandLine.Option(
-      names = ["--traces-limits-v2"],
-      paramLabel = "<FILE>",
-      description = ["Prover traces limits V2 for linea besu"],
-      required = false,
-    )
-    var tracesLimitsV2File: File? = null
-
-    @CommandLine.Option(
       names = ["--traces-limits-v4"],
       paramLabel = "<FILE>",
       description = ["Prover traces limits V4 for linea besu"],
@@ -90,7 +82,7 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
         printUsage(errorWriter)
         return 1
       }
-      if (tracesLimitsFiles!!.tracesLimitsV2File == null &&
+      if (
         tracesLimitsFiles!!.tracesLimitsV4File == null &&
         tracesLimitsFiles!!.tracesLimitsV5File == null
       ) {
@@ -118,7 +110,6 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
       val configs =
         loadConfigs(
           coordinatorConfigFiles = configFiles.map { it.toPath() },
-          tracesLimitsFileV2 = tracesLimitsFiles!!.tracesLimitsV2File?.toPath(),
           tracesLimitsFileV4 = tracesLimitsFiles!!.tracesLimitsV4File?.toPath(),
           tracesLimitsFileV5 = tracesLimitsFiles!!.tracesLimitsV5File?.toPath(),
           smartContractErrorsFile = smartContractErrorsFile.toPath(),

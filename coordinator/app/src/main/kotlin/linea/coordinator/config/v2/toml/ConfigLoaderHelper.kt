@@ -87,7 +87,6 @@ inline fun <reified T : Any> loadConfigsAndLogErrors(
 
 fun loadConfigsOrError(
   coordinatorConfigFiles: List<Path>,
-  tracesLimitsFileV2: Path?,
   tracesLimitsFileV4: Path?,
   tracesLimitsFileV5: Path?,
   gasPriceCapTimeOfDayMultipliersFile: Path,
@@ -97,10 +96,6 @@ fun loadConfigsOrError(
 ): Result<CoordinatorConfigToml, String> {
   val coordinatorBaseConfigs =
     loadConfigsAndLogErrors<CoordinatorConfigFileToml>(coordinatorConfigFiles, logger, strict)
-  val tracesLimitsV2Configs =
-    tracesLimitsFileV2?.let {
-      loadConfigsAndLogErrors<TracesLimitsConfigFileV2Toml>(listOf(it), logger, strict)
-    }
   val tracesLimitsV4Configs =
     tracesLimitsFileV4?.let {
       loadConfigsAndLogErrors<TracesLimitsConfigFileV4Toml>(listOf(it), logger, strict)
@@ -124,7 +119,6 @@ fun loadConfigsOrError(
   val configError =
     listOf(
       coordinatorBaseConfigs,
-      tracesLimitsV2Configs,
       tracesLimitsV4Configs,
       tracesLimitsV5Configs,
       gasPriceCapTimeOfDayMultipliersConfig,
@@ -140,7 +134,6 @@ fun loadConfigsOrError(
   val finalConfig =
     CoordinatorConfigToml(
       configs = coordinatorBaseConfigs.get()!!,
-      tracesLimitsV2 = tracesLimitsV2Configs?.get(),
       tracesLimitsV4 = tracesLimitsV4Configs?.get(),
       tracesLimitsV5 = tracesLimitsV5Configs?.get(),
       l1DynamicGasPriceCapTimeOfDayMultipliers = gasPriceCapTimeOfDayMultipliersConfig.get(),
@@ -151,7 +144,6 @@ fun loadConfigsOrError(
 
 fun loadConfigs(
   coordinatorConfigFiles: List<Path>,
-  tracesLimitsFileV2: Path?,
   tracesLimitsFileV4: Path?,
   tracesLimitsFileV5: Path?,
   gasPriceCapTimeOfDayMultipliersFile: Path,
@@ -161,7 +153,6 @@ fun loadConfigs(
 ): CoordinatorConfig {
   return loadConfigsOrError(
     coordinatorConfigFiles = coordinatorConfigFiles,
-    tracesLimitsFileV2 = tracesLimitsFileV2,
     tracesLimitsFileV4 = tracesLimitsFileV4,
     tracesLimitsFileV5 = tracesLimitsFileV5,
     gasPriceCapTimeOfDayMultipliersFile = gasPriceCapTimeOfDayMultipliersFile,
@@ -172,7 +163,6 @@ fun loadConfigs(
     .recoverIf({ !enforceStrict }, {
       loadConfigsOrError(
         coordinatorConfigFiles = coordinatorConfigFiles,
-        tracesLimitsFileV2 = tracesLimitsFileV2,
         tracesLimitsFileV4 = tracesLimitsFileV4,
         tracesLimitsFileV5 = tracesLimitsFileV5,
         gasPriceCapTimeOfDayMultipliersFile = gasPriceCapTimeOfDayMultipliersFile,

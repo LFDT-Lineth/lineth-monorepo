@@ -2,7 +2,6 @@ package linea.coordinator.config.v2.toml
 
 import linea.blob.BlobCompressorVersion
 import linea.coordinator.config.v2.ConflationConfig
-import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.linea.traces.TracesCountersV4
 import net.consensys.linea.traces.TracesCountersV5
 import java.net.URL
@@ -86,7 +85,6 @@ data class ConflationToml(
 
   fun reified(
     defaults: DefaultsToml,
-    tracesCountersLimitsV2: TracesCountersV2?,
     tracesCountersLimitsV4: TracesCountersV4?,
     tracesCountersLimitsV5: TracesCountersV5?,
   ): ConflationConfig {
@@ -112,7 +110,7 @@ data class ConflationToml(
         ?: throw AssertionError("please set l2GetLogsEndpoint or l2Endpoint config"),
       blobCompression = this.blobCompression.reified(),
       proofAggregation = this.proofAggregation.reified(),
-      tracesLimits = tracesCountersLimitsV2 ?: tracesCountersLimitsV4 ?: tracesCountersLimitsV5!!,
+      tracesLimits = tracesCountersLimitsV4 ?: tracesCountersLimitsV5!!,
       backtestingDirectory = backtestingDirectory,
     )
   }
