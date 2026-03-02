@@ -8,6 +8,7 @@
 * feat: Add CLI option `--plugin-linea-blob-tx-enabled` to control blob transaction acceptance in LineaTransactionValidatorPlugin
 * feat: Add support for blocking delegate code transactions (EIP-7702) in LineaTransactionValidatorPlugin
 * feat: Add CLI option `--plugin-linea-delegate-code-tx-enabled` to control delegate code transaction acceptance in LineaTransactionValidatorPlugin
+* feat: Check EIP-7702 authorization list authority and delegation address against deny list in DeniedAddressValidator and AllowedAddressTransactionSelector
 
 ## 0.6.0-rc1.1
 * bump linea-arithmetization version to 0.6.0-rc1 [#71](https://github.com/Consensys/linea-sequencer/pull/71)

@@ -41,7 +41,7 @@ Before entering the mempool, transactions pass through:
 | Validator | Rule |
 |-----------|------|
 | `TraceLineLimitValidator` | Estimated trace counts within limits |
-| `DeniedAddressValidator` | Sender/recipient deny list check |
+| `DeniedAddressValidator` | Sender, recipient, and EIP-7702 authorization list (authority + delegation address) deny list check |
 | `PrecompileAddressValidator` | Excluded precompile address check |
 | `GasLimitValidator` | Gas limit below configured maximum |
 | `CalldataValidator` | Calldata size below limit (default 30,000 bytes) |

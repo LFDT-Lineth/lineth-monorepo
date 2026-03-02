@@ -88,7 +88,8 @@ This plugin extends the default transaction validation rules for adding transact
 transaction pool. It leverages the `PluginTransactionValidatorService` to manage and customize the
 process of transaction validation.
 This includes setting limits such as `TraceLineLimit`, `maxTxGasLimit`, and checking the profitability
-of a transaction. Per-transaction calldata size validation is optional and only enabled when
+of a transaction, and enforcing deny list rules against sender, recipient, and EIP-7702 authorization list entries
+(recovered authority and delegation target address). Per-transaction calldata size validation is optional and only enabled when
 `--plugin-linea-max-tx-calldata-size` is set.
 The validators are in the package `net.consensys.linea.sequencer.txpoolvalidation.validators`.
 
@@ -120,8 +121,8 @@ The plugin implements transaction filtering for blob transactions (EIP-4844) and
 | `--plugin-linea-blob-tx-enabled`          | false         |
 | `--plugin-linea-delegate-code-tx-enabled` | false         |
 
-### Reporting rejected transactions 
-The transaction selection and validation plugins can report rejected transactions as JSON-RPC calls to an external 
+### Reporting rejected transactions
+The transaction selection and validation plugins can report rejected transactions as JSON-RPC calls to an external
 service. This feature can be enabled by setting the following CLI options:
 
 | Command Line Argument                 | Default Value | Expected Values                                              |
@@ -134,8 +135,8 @@ service. This feature can be enabled by setting the following CLI options:
 ### Linea Estimate Gas
 #### `linea_estimateGas`
 
-This endpoint simulates a transaction, including line count limit validation, and returns the estimated gas used 
-(as the standard `eth_estimateGas` with `strict=true`) plus the estimated gas price to be used when submitting the tx. 
+This endpoint simulates a transaction, including line count limit validation, and returns the estimated gas used
+(as the standard `eth_estimateGas` with `strict=true`) plus the estimated gas price to be used when submitting the tx.
 
 #### Parameters
 same as `eth_estimateGas`
