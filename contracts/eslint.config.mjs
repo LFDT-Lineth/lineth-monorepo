@@ -3,7 +3,7 @@ import { node } from "@consensys/eslint-config/node";
 /** @type {import("eslint").Linter.Config[]} */
 export default [
   {
-    ignores: [".solcover.js", "docs/**"],
+    ignores: [".solcover.js", "docs/**", "integrity-verifier/**"],
   },
   ...node,
   {
