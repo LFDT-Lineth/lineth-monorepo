@@ -17,8 +17,8 @@ package net.consensys.linea.zktracer.delegation.multiDelegation;
 
 import static net.consensys.linea.testing.ToyExecutionEnvironmentV2.DEFAULT_COINBASE_ADDRESS;
 import static net.consensys.linea.zktracer.Trace.LINEA_CHAIN_ID;
-import static net.consensys.linea.zktracer.Utils.addDelegationPrefixToAddress;
-import static net.consensys.linea.zktracer.Utils.getDelegationAddress;
+import static net.consensys.linea.zktracer.utilities.Utils.addDelegationPrefixToAddress;
+import static net.consensys.linea.zktracer.utilities.Utils.getDelegationAddress;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.math.BigInteger;

@@ -16,8 +16,9 @@
 
 package net.consensys.linea.zktracer.delegation;
 
-import static net.consensys.linea.zktracer.Utils.*;
 import static net.consensys.linea.zktracer.opcode.OpCode.*;
+import static net.consensys.linea.zktracer.utilities.Utils.addDelegationPrefixToAccount;
+import static net.consensys.linea.zktracer.utilities.Utils.addDelegationPrefixToAddress;
 
 import java.util.List;
 import net.consensys.linea.reporting.TracerTestBase;

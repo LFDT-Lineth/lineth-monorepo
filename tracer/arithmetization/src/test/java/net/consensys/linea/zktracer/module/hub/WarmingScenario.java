@@ -15,7 +15,7 @@
 
 package net.consensys.linea.zktracer.module.hub;
 
-public enum WarmingScenarii {
+public enum WarmingScenario {
   NO_WARMING,
   WARMING_SENDER,
   WARMING_EFFECTIVE_RECIPIENT,

@@ -20,6 +20,7 @@ import static net.consensys.linea.testing.ToyExecutionEnvironmentV2.DEFAULT_COIN
 import static net.consensys.linea.zktracer.types.AddressUtils.getCreate2RawAddress;
 import static net.consensys.linea.zktracer.types.Utils.leftPadTo;
 import static net.consensys.linea.zktracer.types.Utils.rightPadTo;
+import static net.consensys.linea.zktracer.utilities.AccountDelegationType.getAccountForDelegationTypeWithKeyPair;
 import static org.hyperledger.besu.crypto.Hash.keccak256;
 
 import java.util.ArrayList;
@@ -32,6 +33,7 @@ import net.consensys.linea.testing.ToyAccount;
 import net.consensys.linea.testing.ToyExecutionEnvironmentV2;
 import net.consensys.linea.testing.ToyTransaction;
 import net.consensys.linea.zktracer.opcode.OpCode;
+import net.consensys.linea.zktracer.utilities.AccountDelegationType;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.crypto.KeyPair;
@@ -56,10 +58,6 @@ public class AddressCollisionWarmingAndDeploymentTests extends TracerTestBase {
 
   // sender account
   private static final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
-  private static final Address senderAddress =
-      Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
-  private static final ToyAccount senderAccount =
-      ToyAccount.builder().balance(Wei.fromEth(123)).nonce(12).address(senderAddress).build();
 
   private static final Address RECIPIENT_STD_ADDRESS =
       Address.wrap(leftPadTo(Bytes.fromHexString("0xdeadbeef"), Address.SIZE));
@@ -90,15 +88,39 @@ public class AddressCollisionWarmingAndDeploymentTests extends TracerTestBase {
   private static Stream<Arguments> inputs() {
     final List<Arguments> arguments = new ArrayList<>();
 
-    for (int skip = 0; skip <= 1; skip++) {
-      for (AddressCollisions collision : AddressCollisions.values()) {
-        for (int isDeployment = 0; isDeployment <= 1; isDeployment++) {
-          for (WarmingScenarii warming1 : WarmingScenarii.values()) {
-            for (WarmingScenarii warming2 : WarmingScenarii.values()) {
-              for (WarmingScenarii warming3 : WarmingScenarii.values()) {
-                arguments.add(
-                    Arguments.of(
-                        skip == 1, collision, isDeployment == 1, warming1, warming2, warming3));
+    for (AccountDelegationType delegationType : AccountDelegationType.values()) {
+      ToyAccount senderAccount =
+          getAccountForDelegationTypeWithKeyPair(senderKeyPair, delegationType);
+      for (int skip = 0; skip <= 1; skip++) {
+        for (AddressCollisions collision : AddressCollisions.values()) {
+          for (int isDeployment = 0; isDeployment <= 1; isDeployment++) {
+            for (WarmingScenario warming1 : WarmingScenario.values()) {
+              for (WarmingScenario warming2 : WarmingScenario.values()) {
+                for (WarmingScenario warming3 : WarmingScenario.values()) {
+
+                  // not possible to have a sender and recipient collision
+                  if (((isDeployment == 1) || !(skip == 1))
+                      && senderRecipientCollision(collision)) {
+                    continue;
+                  }
+
+                  // there is no point as we skip the tx
+                  if ((skip == 1)
+                      && (List.of(warming1, warming2, warming3)
+                          .contains(WarmingScenario.WARMING_TO_BE_DEPLOYED_STORAGE))) {
+                    continue;
+                  }
+
+                  arguments.add(
+                      Arguments.of(
+                          senderAccount,
+                          skip == 1,
+                          collision,
+                          isDeployment == 1,
+                          warming1,
+                          warming2,
+                          warming3));
+                }
               }
             }
           }
@@ -112,25 +134,16 @@ public class AddressCollisionWarmingAndDeploymentTests extends TracerTestBase {
   @ParameterizedTest
   @MethodSource("inputs")
   void addressCollisionWarmingAndDeployment(
+      ToyAccount senderAccount,
       boolean skip,
       AddressCollisions collision,
       boolean deployment,
-      WarmingScenarii warming1,
-      WarmingScenarii warming2,
-      WarmingScenarii warming3,
+      WarmingScenario warming1,
+      WarmingScenario warming2,
+      WarmingScenario warming3,
       TestInfo testInfo) {
 
-    // not possible to have a sender and recipient collision
-    if ((deployment || !skip) && senderRecipientCollision(collision)) {
-      return;
-    }
-
-    // there is no point as we skip the tx
-    if (skip
-        && (List.of(warming1, warming2, warming3)
-            .contains(WarmingScenarii.WARMING_TO_BE_DEPLOYED_STORAGE))) {
-      return;
-    }
+    Address senderAddress = senderAccount.getAddress();
 
     final ToyAccount recipientAccount =
         senderRecipientCollision(collision)
@@ -195,18 +208,18 @@ public class AddressCollisionWarmingAndDeploymentTests extends TracerTestBase {
 
   private void appendAccessListEntry(
       List<AccessListEntry> accessList,
-      WarmingScenarii warming1,
-      WarmingScenarii warming2,
-      WarmingScenarii warming3,
+      WarmingScenario warming1,
+      WarmingScenario warming2,
+      WarmingScenario warming3,
       Address senderAddress,
       Address effectiveToAddress,
       Address coinbaseAddress,
       Address recipientAddress,
       boolean isDeployment) {
 
-    final List<WarmingScenarii> scenarii = List.of(warming1, warming2, warming3);
+    final List<WarmingScenario> scenarii = List.of(warming1, warming2, warming3);
 
-    for (WarmingScenarii scenario : scenarii) {
+    for (WarmingScenario scenario : scenarii) {
 
       switch (scenario) {
         case NO_WARMING -> {}

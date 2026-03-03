@@ -13,7 +13,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.consensys.linea.zktracer;
+package net.consensys.linea.zktracer.utilities;
 
 import static net.consensys.linea.reporting.TracerTestBase.chainConfig;
 import static net.consensys.linea.testing.BytecodeCompiler.newProgram;

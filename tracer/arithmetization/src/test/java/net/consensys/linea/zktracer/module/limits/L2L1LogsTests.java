@@ -16,8 +16,8 @@
 package net.consensys.linea.zktracer.module.limits;
 
 import static net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration.TEST_DEFAULT;
-import static net.consensys.linea.zktracer.Utils.call;
-import static net.consensys.linea.zktracer.Utils.delegateCall;
+import static net.consensys.linea.zktracer.utilities.Utils.call;
+import static net.consensys.linea.zktracer.utilities.Utils.delegateCall;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;

@@ -16,7 +16,7 @@
 package net.consensys.linea.zktracer.module.mmu;
 
 import static net.consensys.linea.testing.BytecodeCompiler.newProgram;
-import static net.consensys.linea.zktracer.Utils.*;
+import static net.consensys.linea.zktracer.utilities.Utils.*;
 
 import java.util.List;
 import net.consensys.linea.reporting.TracerTestBase;
