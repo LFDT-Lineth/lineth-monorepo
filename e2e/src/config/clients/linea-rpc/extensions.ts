@@ -11,6 +11,11 @@ import {
   type SaveRejectedTransactionV1Rpc,
 } from "./linea-save-rejected-transaction-v1";
 import { lineaSendBundle, type LineaSendBundleParameters, type LineaSendBundleRpc } from "./linea-send-bundle";
+import {
+  pluginsReloadPluginConfig,
+  type PluginsReloadPluginConfigParameters,
+  type PluginsReloadPluginConfigRpc,
+} from "./plugins-reload-plugin-config";
 import { getZkEVMBlockNumber, type GetZkEVMBlockNumberRpc } from "./rollup-get-zkevm-block-number";
 import {
   rollupGetZkEVMStateMerkleProofV0,
@@ -44,6 +49,8 @@ export function createSequencerExtension() {
   return (client: Client) => ({
     lineaCancelBundle: (args: LineaCancelBundleParameters) =>
       lineaCancelBundle(client as RpcClient<LineaCancelBundleRpc>, args),
+    pluginsReloadPluginConfig: (args: PluginsReloadPluginConfigParameters) =>
+      pluginsReloadPluginConfig(client as RpcClient<PluginsReloadPluginConfigRpc>, args),
   });
 }
 

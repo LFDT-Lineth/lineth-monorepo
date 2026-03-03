@@ -1,5 +1,6 @@
 // Random
 export { generateRandomUUIDv4 } from "./random";
+export { toLowercaseLines } from "./string";
 
 // Polling / waiting
 export { awaitUntil, AwaitUntilTimeoutError } from "./wait";
@@ -24,7 +25,7 @@ export { sendTransactionsToGenerateTrafficWithInterval } from "./traffic";
 export { execDockerCommand, getDockerImageTag } from "./docker";
 
 // Transaction
-export { getRawTransactionHex, getTransactionHash } from "./transaction";
+export { expectSuccessfulTransaction, getRawTransactionHex, getTransactionHash } from "./transaction";
 
 // Retry
 export { sendTransactionWithRetry } from "./retry";

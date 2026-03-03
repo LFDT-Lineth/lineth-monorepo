@@ -15,3 +15,23 @@ export async function getTransactionHash<chain extends Chain | undefined, accoun
   const signedTransaction = await getRawTransactionHex(client, params);
   return keccak256(signedTransaction);
 }
+
+type WaitForTransactionReceiptResult = {
+  status: string;
+};
+
+type TransactionReceiptWaitClient = {
+  waitForTransactionReceipt: (params: { hash: Hash }) => Promise<WaitForTransactionReceiptResult>;
+};
+
+export async function expectSuccessfulTransaction(
+  client: TransactionReceiptWaitClient,
+  sendTransactionPromise: Promise<Hash>,
+): Promise<void> {
+  const txHash = await sendTransactionPromise;
+  const txReceipt = await client.waitForTransactionReceipt({ hash: txHash });
+
+  if (txReceipt.status !== "success") {
+    throw new Error(`Expected successful transaction receipt, got status "${txReceipt.status}" for hash ${txHash}`);
+  }
+}
