@@ -39,7 +39,7 @@ export function Submit({ isDestinationAddressOpen, setIsDestinationAddressOpen }
 
   const resetForm = useFormStore((state) => state.resetForm);
 
-  const { bridge, transactionType, isPending, isConfirming, isConfirmed, refetchAllowance } = useBridge();
+  const { bridge, transactionType, adapterId, isPending, isConfirming, isConfirmed, refetchAllowance } = useBridge();
 
   const chainId = useChainId();
   const { mutate: switchChain, isPending: isSwitchingChain } = useSwitchChain();
@@ -49,8 +49,17 @@ export function Submit({ isDestinationAddressOpen, setIsDestinationAddressOpen }
   const disabled = useMemo(() => {
     if (needChainSwitch) return false;
     const originChainBalanceTooLow = amount && balance < amount;
-    return originChainBalanceTooLow || !amount || amount <= 0n || isPending || isConfirming || isSwitchingChain;
-  }, [amount, balance, isConfirming, isPending, isSwitchingChain, needChainSwitch]);
+    const isPreparingTransaction = !!amount && amount > 0n && !bridge;
+    return (
+      originChainBalanceTooLow ||
+      !amount ||
+      amount <= 0n ||
+      isPreparingTransaction ||
+      isPending ||
+      isConfirming ||
+      isSwitchingChain
+    );
+  }, [amount, balance, bridge, isConfirming, isPending, isSwitchingChain, needChainSwitch]);
 
   const buttonText = useMemo(() => {
     // Do not prompt user for action when in a loading state
@@ -75,13 +84,26 @@ export function Submit({ isDestinationAddressOpen, setIsDestinationAddressOpen }
     if (originChainBalanceTooLow) {
       return "Insufficient funds";
     }
+    if (!bridge) {
+      return "Preparing transaction...";
+    }
 
     if (transactionType === "approve") {
       return "Approve Token";
     }
 
     return "Bridge";
-  }, [amount, balance, fromChain.name, isConfirming, isPending, isSwitchingChain, transactionType, needChainSwitch]);
+  }, [
+    amount,
+    balance,
+    bridge,
+    fromChain.name,
+    isConfirming,
+    isPending,
+    isSwitchingChain,
+    transactionType,
+    needChainSwitch,
+  ]);
 
   useEffect(() => {
     if (isConfirmed) {
@@ -136,6 +158,7 @@ export function Submit({ isDestinationAddressOpen, setIsDestinationAddressOpen }
         <TransactionConfirmed
           isModalOpen={showTransactionConfirmedModal}
           transactionType={transactionType}
+          adapterId={adapterId}
           onCloseModal={() => {
             if (transactionType !== "approve") {
               resetForm();

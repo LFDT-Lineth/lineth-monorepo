@@ -1,7 +1,7 @@
 import { MessageProof } from "@consensys/linea-sdk-viem";
 import { Address } from "viem";
 
-import { Chain, Token, TransactionStatus, CCTPMode } from "@/types";
+import { Chain, Token, TransactionStatus } from "@/types";
 
 export type NativeBridgeMessage = {
   from: Address;
@@ -23,11 +23,9 @@ export type CctpV2BridgeMessage = {
   nonce: `0x${string}`;
 };
 
-export enum BridgeTransactionType {
-  ETH = "ETH",
-  ERC20 = "ERC20",
-  USDC = "USDC",
-}
+export type BridgeMessage = NativeBridgeMessage | CctpV2BridgeMessage;
+
+export type AdapterModeId = string;
 
 export enum ClaimType {
   // Only for L1 -> L2, sponsored by the Postman
@@ -40,14 +38,14 @@ export enum ClaimType {
 
 // BridgeTransaction object that is populated when user opens "TransactionHistory" component, and is passed to child components.
 export interface BridgeTransaction {
-  type: BridgeTransactionType;
+  adapterId: string;
   status: TransactionStatus;
   timestamp: bigint;
   fromChain: Chain;
   toChain: Chain;
   token: Token;
-  message: NativeBridgeMessage | CctpV2BridgeMessage;
+  message: BridgeMessage;
   bridgingTx: string;
   claimingTx?: string;
-  cctpMode?: CCTPMode;
+  mode?: AdapterModeId;
 }

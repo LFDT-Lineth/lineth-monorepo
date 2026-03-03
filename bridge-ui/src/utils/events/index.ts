@@ -1,1 +1,0 @@
-export { getNativeBridgeMessageClaimedTxHash } from "./getNativeBridgeMessageClaimedTxHash";

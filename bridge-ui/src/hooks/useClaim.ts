@@ -1,33 +1,49 @@
-import { useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
+import { useMemo } from "react";
 
-import { BridgeTransactionType, CctpV2BridgeMessage, Chain, NativeBridgeMessage, TransactionStatus } from "@/types";
+import { useConnection } from "wagmi";
 
-import useClaimTxArgs from "./transaction-args/useClaimTransactionTxArgs";
+import { type TransactionRequest, getAdapterById } from "@/adapters";
+import { BridgeMessage, Chain, TransactionStatus } from "@/types";
+import { isUndefined, isUndefinedOrEmptyString } from "@/utils/misc";
+
+import useTransactionSender from "./useTransactionSender";
 
 type UseClaimProps = {
   status?: TransactionStatus;
-  type?: BridgeTransactionType;
+  adapterId?: string;
   fromChain?: Chain;
   toChain?: Chain;
-  args?: NativeBridgeMessage | CctpV2BridgeMessage;
+  args?: BridgeMessage;
 };
 
-const useClaim = (props: UseClaimProps) => {
-  const transactionArgs = useClaimTxArgs(props);
-  const { data: hash, mutate: sendTransaction, isPending, error, isSuccess } = useSendTransaction();
+const useClaim = ({ status, adapterId, fromChain, toChain, args }: UseClaimProps) => {
+  const { address } = useConnection();
 
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
-    hash,
-  });
+  const claimTx = useMemo((): TransactionRequest | undefined => {
+    if (
+      isUndefinedOrEmptyString(address) ||
+      isUndefined(status) ||
+      isUndefined(adapterId) ||
+      isUndefined(fromChain) ||
+      isUndefined(toChain) ||
+      isUndefined(args)
+    )
+      return;
+
+    if (status !== TransactionStatus.READY_TO_CLAIM) return;
+
+    const adapter = getAdapterById(adapterId);
+    if (!adapter) return;
+
+    return adapter.buildClaimTx({ message: args, fromChain, toChain }) ?? undefined;
+  }, [address, status, adapterId, fromChain, toChain, args]);
+
+  const { send, ...txState } = useTransactionSender(claimTx);
 
   return {
-    transactionType: "claim",
-    claim: transactionArgs ? () => sendTransaction(transactionArgs.args) : undefined,
-    isPending: isPending,
-    isConfirming,
-    isConfirmed,
-    error,
-    isSuccess,
+    transactionType: "claim" as const,
+    claim: send,
+    ...txState,
   };
 };
 

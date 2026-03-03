@@ -2,17 +2,22 @@ import React from "react";
 
 import Image from "next/image";
 
-import CctpModeDropdown from "@/components/bridge/cctp-mode-dropdown";
+import { getAdapter } from "@/adapters";
+import BridgeModeDropdown from "@/components/bridge/bridge-mode-dropdown";
+import { useChainStore } from "@/stores/chainStore";
 import { useFormStore } from "@/stores/formStoreProvider";
-import { isCctp } from "@/utils/tokens";
 
 import styles from "./bridge-mode.module.scss";
 
 export default function BridgeMode() {
   const token = useFormStore((state) => state.token);
+  const fromChain = useChainStore.useFromChain();
+  const toChain = useChainStore.useToChain();
 
-  if (isCctp(token)) {
-    return <CctpModeDropdown />;
+  const adapter = getAdapter(token, fromChain, toChain);
+
+  if (adapter?.modes?.length) {
+    return <BridgeModeDropdown modes={adapter.modes} defaultMode={adapter.defaultMode ?? adapter.modes[0].id} />;
   }
 
   return (
@@ -23,9 +28,9 @@ export default function BridgeMode() {
             src={`${process.env.NEXT_PUBLIC_BASE_PATH}/images/logo/linea-rounded.svg`}
             width={16}
             height={16}
-            alt="Native Bridge"
+            alt={adapter?.name ?? "Bridge"}
           />
-          <span>Native Bridge</span>
+          <span>{adapter?.name ?? "Native Bridge"}</span>
         </div>
       </div>
     </div>

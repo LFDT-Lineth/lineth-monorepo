@@ -1,13 +1,14 @@
 import { Address, maxUint256 } from "viem";
 import { useEstimateGas } from "wagmi";
 
+import { getAdapter } from "@/adapters";
 import { DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER } from "@/constants/general";
+import { useChainStore } from "@/stores/chainStore";
 import { Chain, Token } from "@/types";
 import { isUndefined } from "@/utils/misc";
-import { isCctp, isEth } from "@/utils/tokens";
 
 import useFeeData from "./useFeeData";
-import useTransactionArgs from "../transaction-args/useTransactionArgs";
+import useTransactionSteps from "../transaction-args/useTransactionSteps";
 
 type UseGasFeesProps = {
   token: Token;
@@ -17,31 +18,16 @@ type UseGasFeesProps = {
   isConnected: boolean;
 };
 
-const BRIDGE_TOKEN_GAS_LIMIT = 133_000n;
-const DEPOSIT_FOR_BURN_GAS_LIMIT = 112_409n;
-
-function computeGasFees(token: Token, isConnected: boolean, estimatedGas?: bigint, feeData?: bigint) {
-  if (isUndefined(feeData)) return null;
-
-  if (isConnected) {
-    return estimatedGas ? estimatedGas * feeData : null;
-  }
-
-  if (isEth(token)) {
-    return estimatedGas ? estimatedGas * feeData : null;
-  }
-
-  const gasLimit = isCctp(token) ? DEPOSIT_FOR_BURN_GAS_LIMIT : BRIDGE_TOKEN_GAS_LIMIT;
-  return gasLimit * feeData;
-}
-
 const useGasFees = ({ address, amount, fromChain, isConnected, token }: UseGasFeesProps) => {
+  const toChain = useChainStore.useToChain();
   const { feeData } = useFeeData(fromChain.id);
-  const transactionArgs = useTransactionArgs();
+  const transactionArgs = useTransactionSteps();
+
+  const adapter = getAdapter(token, fromChain, toChain);
+  const fallbackGasLimit = adapter?.getFallbackGasLimit?.(token);
 
   const fromAddress = isConnected ? address : DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER;
-
-  const isEnabled = isConnected || isEth(token);
+  const canEstimateDisconnected = fallbackGasLimit === undefined;
 
   const {
     data: estimatedGas,
@@ -56,7 +42,7 @@ const useGasFees = ({ address, amount, fromChain, isConnected, token }: UseGasFe
     data: transactionArgs?.args.data,
     ...(!isConnected ? { stateOverride: [{ address: fromAddress!, balance: maxUint256 }] } : {}),
     query: {
-      enabled: !!transactionArgs && amount > 0n && !!fromAddress && !!isEnabled,
+      enabled: !!transactionArgs && amount > 0n && !!fromAddress && (isConnected || canEstimateDisconnected),
     },
   });
 
@@ -64,8 +50,17 @@ const useGasFees = ({ address, amount, fromChain, isConnected, token }: UseGasFe
     return null;
   }
 
+  let gasFees: bigint | null = null;
+  if (!isUndefined(feeData)) {
+    if (estimatedGas) {
+      gasFees = estimatedGas * feeData;
+    } else if (!isConnected && fallbackGasLimit) {
+      gasFees = fallbackGasLimit * feeData;
+    }
+  }
+
   return {
-    gasFees: computeGasFees(token, isConnected, estimatedGas, feeData),
+    gasFees,
     isError: isConnected && isError,
     isLoading,
     refetch,

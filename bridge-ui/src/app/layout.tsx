@@ -10,8 +10,8 @@ import { Providers } from "@/components/layouts/Providers";
 import FirstVisitModal from "@/components/modal/first-time-visit";
 import TosModal from "@/components/modal/tos-modal";
 import { ModalBase } from "@/components/modal-base";
+import { getNavData } from "@/lib/nav-data";
 import { gtmScript, gtmNoScript } from "@/scripts/gtm";
-import { getNavData } from "@/services";
 
 import "../scss/app.scss";
 

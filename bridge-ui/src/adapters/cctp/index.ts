@@ -1,0 +1,1 @@
+export { cctpAdapter } from "./adapter";

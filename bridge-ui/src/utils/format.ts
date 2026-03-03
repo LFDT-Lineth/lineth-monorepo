@@ -2,6 +2,7 @@ import { formatDate } from "date-fns/format";
 import { fromUnixTime } from "date-fns/fromUnixTime";
 import { Address, getAddress } from "viem";
 
+import type { EstimatedTime } from "@/adapters";
 import { isUndefinedOrEmptyString } from "@/utils/misc";
 
 /**
@@ -74,3 +75,24 @@ export const shortenAddress = (string: string | undefined, startLength = 6, endL
 
   return string.slice(0, startLength) + "..." + string.slice(-endLength);
 };
+
+const UNIT_LABELS: Record<string, { full: string; short: string }> = {
+  second: { full: "second", short: "s" },
+  minute: { full: "minute", short: "mins" },
+  hour: { full: "hour", short: "hrs" },
+};
+
+export function formatEstimatedTime(
+  time: EstimatedTime,
+  opts: { abbreviated?: boolean; spacedHyphen?: boolean } = {},
+): string {
+  const { abbreviated = false, spacedHyphen = false } = opts;
+  const label = UNIT_LABELS[time.unit];
+  const unit = abbreviated ? label.short : label.full;
+  const sep = spacedHyphen ? " - " : "-";
+
+  if (time.min === time.max) {
+    return `${time.min} ${unit}`;
+  }
+  return `${time.min}${sep}${time.max} ${unit}`;
+}

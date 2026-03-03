@@ -1,13 +1,9 @@
 import { Address } from "viem";
 import { Config } from "wagmi";
 
-import { config } from "@/config";
+import { getAllAdapters } from "@/adapters";
 import { type HistoryActionsForCompleteTxCaching } from "@/stores/historyStore";
 import { BridgeTransaction, Chain, Token } from "@/types";
-
-import { fetchCctpBridgeEvents } from "./fetchCctpBridgeEvents";
-import { fetchERC20BridgeEvents } from "./fetchERC20BridgeEvents";
-import { fetchETHBridgeEvents } from "./fetchETHBridgeEvents";
 
 type TransactionHistoryParams = {
   historyStoreActions: HistoryActionsForCompleteTxCaching;
@@ -41,14 +37,11 @@ async function fetchBridgeEvents(
   historyStoreActions: HistoryActionsForCompleteTxCaching,
   wagmiConfig: Config,
 ): Promise<BridgeTransaction[]> {
-  const [ethEvents, erc20Events, cctpEvents] = await Promise.all([
-    fetchETHBridgeEvents(historyStoreActions, address, fromChain, toChain, tokens, wagmiConfig),
-    fetchERC20BridgeEvents(historyStoreActions, address, fromChain, toChain, tokens, wagmiConfig),
-    // Feature toggle for CCTP, will filter out USDC transactions if isCctpEnabled == false
-    config.isCctpEnabled
-      ? fetchCctpBridgeEvents(historyStoreActions, address, fromChain, toChain, tokens, wagmiConfig)
-      : [],
-  ]);
-
-  return [...ethEvents, ...erc20Events, ...cctpEvents];
+  const adapters = getAllAdapters();
+  const results = await Promise.all(
+    adapters.map((adapter) =>
+      adapter.fetchHistory({ historyStoreActions, address, fromChain, toChain, tokens, wagmiConfig }),
+    ),
+  );
+  return results.flat();
 }

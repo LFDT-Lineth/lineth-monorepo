@@ -47,6 +47,19 @@
   margin: 1rem 0;
 }
 
+.estimate {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-family: var(--font-atyp-text);
+
+  svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+}
+
 .bottom {
   font-family: var(--font-atyp-text);
   font-size: 0.75rem;

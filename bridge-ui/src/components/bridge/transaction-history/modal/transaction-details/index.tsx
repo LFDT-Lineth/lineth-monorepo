@@ -37,7 +37,7 @@ export default function TransactionDetails({ transaction, isModalOpen, onCloseMo
 
   const { claim, isConfirming, isPending, isConfirmed } = useClaim({
     status: transaction?.status,
-    type: transaction?.type,
+    adapterId: transaction?.adapterId,
     fromChain: transaction?.fromChain,
     toChain: transaction?.toChain,
     args: transaction?.message,
