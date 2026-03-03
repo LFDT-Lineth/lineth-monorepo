@@ -102,6 +102,8 @@ func newConfigFromFile(path string, withValidation bool) (*Config, error) {
 	cfg.PublicInputInterconnection.CoinBase = cfg.Layer2.CoinBase
 	cfg.PublicInputInterconnection.L2MsgServiceAddr = cfg.Layer2.MsgSvcContract
 
+	cfg.TracesLimits.normalizeToLowercase()
+	cfg.TracesLimits.sortReverseAlphabetical()
 	return &cfg, nil
 }
 
@@ -158,8 +160,7 @@ type Config struct {
 		CoinBase    common.Address `mapstructure:"-"`
 	}
 
-	TracesLimits      TracesLimits `mapstructure:"traces_limits" validate:"required"`
-	TracesLimitsLarge TracesLimits `mapstructure:"traces_limits_large" validate:"required"`
+	TracesLimits TracesLimits `mapstructure:"traces_limits" validate:"required"`
 }
 
 func (cfg *Config) Logger() *logrus.Logger {

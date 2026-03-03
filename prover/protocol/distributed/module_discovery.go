@@ -47,7 +47,8 @@ const (
 //   - If the expression contains variables that are from different modules,
 //     (excluding [AnyModule]), the function returns [NoModuleFound].
 func ModuleOfExpr(disc *StandardModuleDiscoverer, expr *symbolic.Expression) ModuleName {
-	metadata := expr.BoardListVariableMetadata()
+	board := expr.Board()
+	metadata := board.ListVariableMetadata()
 	return ModuleOfList(disc, metadata...)
 }
 
@@ -55,7 +56,8 @@ func ModuleOfExpr(disc *StandardModuleDiscoverer, expr *symbolic.Expression) Mod
 // size of the columns in the expression. The function returns 0 if the expression
 // does not have any size-resolvable item.
 func NewSizeOfExpr(disc *StandardModuleDiscoverer, expr *symbolic.Expression) int {
-	metadata := expr.BoardListVariableMetadata()
+	board := expr.Board()
+	metadata := board.ListVariableMetadata()
 	newSize := 0
 
 	for _, m := range metadata {
@@ -198,35 +200,55 @@ func ModuleOfList[T any](disc *StandardModuleDiscoverer, items ...T) ModuleName 
 }
 
 // NewSizeOfList returns the new size of the provided list of items.
-// The function asserts that all provided items have the same new size
-// without which the
+// The function asserts that all provided items have the same new size. If all
+// provided columns are verifiercol, the function will return zero.
 func NewSizeOfList[T any](disc *StandardModuleDiscoverer, items ...T) int {
 
-	res := 0
+	var (
+		cols = []ifaces.Column{}
+	)
 
+	if len(items) == 0 {
+		utils.Panic("expected at least one item")
+	}
+
+	// handle the edge case when one of the column in the items is a precomputed or verifying key,
+	// in this case the newSize will be the size of the precomputed or verifying key column
+	// irrespective of the discover's advice
+
+	// first collect all the columns
 	for _, item_ := range items {
-
-		sizeOfItem := 0
-
 		switch item := any(item_).(type) {
 		case ifaces.Column:
-			sizeOfItem = NewSizeOfColumn(disc, item)
+			cols = append(cols, item)
 		case *symbolic.Expression:
-			sizeOfItem = NewSizeOfExpr(disc, item)
-		default:
-			utils.Panic("unexpected type %T", item)
-		}
-
-		if res == 0 {
-			res = sizeOfItem
-		}
-
-		if res != sizeOfItem {
-			utils.Panic("inconsistent sizes %v != %v", res, sizeOfItem)
+			cols = append(cols, column.ColumnsOfExpression(item)...)
 		}
 	}
 
-	return res
+	var (
+		qbm  *QueryBasedModule
+		size int
+	)
+
+	for _, col := range cols {
+		col, isNatural := column.RootParents(col).(column.Natural)
+		if !isNatural {
+			continue
+		}
+
+		newQbm, newSize := disc.QbmOf(col)
+
+		if newQbm != nil {
+			if qbm != nil && newQbm.ModuleName != qbm.ModuleName {
+				utils.Panic("could not resolve module for the list, got conflicting QBMs for the provided columns: %v, %v", newQbm.ModuleName, qbm.ModuleName)
+			}
+			qbm = newQbm
+			size = newSize // this is updated only once
+		}
+	}
+
+	return size
 }
 
 // MustBeResolved checks that a module name is neither [AnyModule] or [NoModuleFound]

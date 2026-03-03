@@ -7,7 +7,7 @@ require (
 	github.com/consensys/compress v0.2.5
 	github.com/consensys/gnark v0.14.1-0.20251125185647-9873a5606794
 	github.com/consensys/gnark-crypto v0.19.3-0.20251115174214-022ec58e8c19
-	github.com/consensys/go-corset v1.1.28
+	github.com/consensys/go-corset v1.2.4
 	github.com/crate-crypto/go-kzg-4844 v1.1.0
 	github.com/dlclark/regexp2 v1.7.0
 	github.com/dnlo/struct2csv v0.0.0-20190928115744-2f584471b24e

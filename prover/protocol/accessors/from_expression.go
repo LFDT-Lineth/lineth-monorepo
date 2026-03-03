@@ -113,6 +113,51 @@ func (e *FromExprAccessor) GetVal(run ifaces.Runtime) field.Element {
 	return e.Boarded.Evaluate(inputs).Get(0)
 }
 
+func EvaluateExpression(run ifaces.Runtime, e *symbolic.Expression) field.Element {
+
+	board := e.Board()
+	// expression is over field extensions
+	metadata := board.ListVariableMetadata()
+	inputs := make([]smartvectors.SmartVector, len(metadata))
+
+	for i, m := range metadata {
+		switch castedMetadata := m.(type) {
+		case ifaces.Accessor:
+			x := castedMetadata.GetVal(run)
+			inputs[i] = smartvectors.NewConstant(x, 1)
+		case coin.Info:
+			// this is always fine because all coins are public
+			x := run.GetRandomCoinField(castedMetadata.Name)
+			inputs[i] = smartvectors.NewConstant(x, 1)
+		default:
+			utils.Panic("unsupported type %T", m)
+		}
+	}
+
+	return board.Evaluate(inputs).Get(0)
+}
+
+func EvaluateExpressionGnark(api frontend.API, run ifaces.GnarkRuntime, e *symbolic.Expression) frontend.Variable {
+
+	board := e.Board()
+	metadata := board.ListVariableMetadata()
+	inputs := make([]frontend.Variable, len(metadata))
+
+	for i, m := range metadata {
+		switch m := m.(type) {
+		case ifaces.Accessor:
+			inputs[i] = m.GetFrontendVariable(api, run)
+
+		case coin.Info:
+			inputs[i] = run.GetRandomCoinField(m.Name)
+		default:
+			utils.Panic("unsupported type %T", m)
+		}
+	}
+
+	return board.GnarkEval(api, inputs)
+}
+
 // GetFrontendVariable implements [ifaces.Accessor]
 func (e *FromExprAccessor) GetFrontendVariable(api frontend.API, circ ifaces.GnarkRuntime) frontend.Variable {
 

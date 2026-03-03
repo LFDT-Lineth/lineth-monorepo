@@ -108,7 +108,7 @@ func NewPublicInputZkEVM(comp *wizard.CompiledIOP, settings *Settings, ss *state
 				AbsTxNum:        getCol("txndata.USER_TXN_NUMBER"),
 				AbsTxNumMax:     getCol("txndata.prover___USER_TXN_NUMBER_MAX"),
 				Ct:              getCol("txndata.CT"),
-				FromHi:          getCol("txndata.hubFROM_ADDRESS_HI_xor_rlpCHAIN_ID"),
+				FromHi:          getCol("txndata.hubFROM_ADDRESS_HI_xor_rlpNUMBER_OF_NONZERO_BYTES"),
 				FromLo:          getCol("txndata.computationARG_1_LO_xor_hubFROM_ADDRESS_LO_xor_rlpTO_ADDRESS_LO"),
 				IsLastTxOfBlock: getCol("txndata.prover___IS_LAST_USER_TXN_OF_BLOCK"),
 				RelBlock:        getCol("txndata.BLK_NUMBER"),
@@ -126,8 +126,9 @@ func NewPublicInputZkEVM(comp *wizard.CompiledIOP, settings *Settings, ss *state
 				Limb:           getCol("rlptxn.cmpLIMB"),
 				NBytes:         getCol("rlptxn.cmpLIMB_SIZE"),
 				TxnPerspective: getCol("rlptxn.TXN"),
-				ChainID:        getCol("rlptxn.txnCHAIN_ID"),
+				ChainID:        getCol("rlptxn.cmpAUX_CCC_2_xor_txnCHAIN_ID"),
 			},
+
 			LogCols: logs.LogColumns{
 				IsLog0:       getCol("loginfo.IS_LOG_X_0"),
 				IsLog1:       getCol("loginfo.IS_LOG_X_1"),

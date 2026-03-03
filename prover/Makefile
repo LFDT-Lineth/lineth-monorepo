@@ -3,8 +3,8 @@ SHELL := /usr/bin/env bash
 
 VERSION := $(shell git rev-parse --short=7 HEAD)
 
-CONSTRAINTS_COMMIT_HASH := b88da9e199b6b7c8a413902f6035dd2774c43def
-GO_CORSET_VERSION := v1.1.28
+CONSTRAINTS_COMMIT_HASH := 14a017033784a05195c85fc1d8e719ad994c68c2
+GO_CORSET_VERSION := v1.2.4
 
 CONSTRAINTS_TEMP_FOLDER := build/tmp/deps
 # Find where Go installs binaries

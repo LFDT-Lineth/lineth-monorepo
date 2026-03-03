@@ -37,8 +37,14 @@ type ManuallyShifted struct {
 // [ManuallyShifted] for more details.
 func ManuallyShift(comp *wizard.CompiledIOP, root ifaces.Column, offset int, name string) *ManuallyShifted {
 
+	colName_ := ifaces.ColID(name) + "_COL"
+	alreadyExists := len(name) > 0 && comp.Columns.Exists(colName_)
+
 	if len(name) == 0 {
 		name = fmt.Sprintf("ManualShift/%v", len(comp.Columns.AllKeys()))
+	}
+	if alreadyExists {
+		name = fmt.Sprintf("%v/%v", name, len(comp.Columns.AllKeys()))
 	}
 
 	var (
@@ -90,7 +96,7 @@ func (m ManuallyShifted) Assign(run *wizard.ProverRuntime) {
 		res = smartvectors.NewRegular(shiftedVal)
 	}
 
-	run.AssignColumn(m.Natural.ID, res)
+	run.AssignColumn(m.Natural.ID, res, wizard.DisableAssignmentSizeReduction)
 }
 
 // GetColAssignment overrides the main [Natural.GetColAssignment] by

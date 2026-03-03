@@ -52,7 +52,7 @@ func Allocate(zkevm *zkevm.ZkEvm) CircuitExecution {
 		FuncInputs: FunctionalPublicInputSnark{
 			FunctionalPublicInputQSnark: FunctionalPublicInputQSnark{
 				L2MessageHashes: L2MessageHashes{
-					Values: make([][32]frontend.Variable, zkevm.Limits().BlockL2L1Logs),
+					Values: make([][32]frontend.Variable, zkevm.Limits().BlockL2L1Logs()),
 					Length: nil,
 				},
 			},
@@ -75,7 +75,7 @@ func assign(
 			FuncInputs: FunctionalPublicInputSnark{
 				FunctionalPublicInputQSnark: FunctionalPublicInputQSnark{
 					L2MessageHashes: L2MessageHashes{
-						Values: make([][32]frontend.Variable, limits.BlockL2L1Logs),
+						Values: make([][32]frontend.Variable, limits.BlockL2L1Logs()),
 					},
 				},
 			},

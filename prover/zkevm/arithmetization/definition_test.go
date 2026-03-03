@@ -1,7 +1,6 @@
 package arithmetization
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/consensys/go-corset/pkg/ir/mir"
@@ -25,15 +24,10 @@ func TestDefine(t *testing.T) {
 			Precomputed:     collection.NewMapping[ifaces.ColID, ifaces.ColAssignment](),
 		}
 		binf, _, errBin = ReadZkevmBin()
-		limits          = &config.TracesLimits{}
-		limitRefl       = reflect.ValueOf(limits).Elem()
+		limits          = config.GetTestTracesLimits()
 	)
 	// Compile binary file into an air.Schema
 	schema, _ := CompileZkevmBin(binf, &mir.DEFAULT_OPTIMISATION_LEVEL)
-	//
-	for i := 0; i < limitRefl.NumField(); i++ {
-		limitRefl.Field(i).SetInt(1 << 10)
-	}
 
 	require.NoError(t, errBin)
 	Define(comp, schema, limits)

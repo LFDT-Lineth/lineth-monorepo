@@ -34,7 +34,7 @@ func CraftProverOutput(
 			BlocksData:           make([]BlockData, len(blocks)),
 			ChainID:              cfg.Layer2.ChainID,
 			L2BridgeAddress:      types.EthAddress(cfg.Layer2.MsgSvcContract),
-			MaxNbL2MessageHashes: cfg.TracesLimits.BlockL2L1Logs,
+			MaxNbL2MessageHashes: cfg.TracesLimits.BlockL2L1Logs(),
 		}
 		// execution prover performance metadta accumulators
 		totalTxs     uint64

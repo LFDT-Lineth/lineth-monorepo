@@ -19,13 +19,12 @@ import (
 
 // ReadExpandedTraces parses the provided trace file, expands it and returns the
 // corset object holding the expanded traces.
-func AssignFromLtTraces(run *wizard.ProverRuntime, schema *air.Schema[bls12_377.Element], expTraces trace.Trace[bls12_377.Element], limits *config.TracesLimits) {
+func AssignFromLtTraces(run *wizard.ProverRuntime, schema *air.Schema[bls12_377.Element], expTraces trace.Trace[bls12_377.Element], moduleLimits *config.TracesLimits) {
 
 	// This loops checks the module assignment to see if we have created a 77
 	// error.
 	var (
 		modules           = expTraces.Modules().Collect()
-		moduleLimits      = mapModuleLimits(limits)
 		err77             error
 		maxRatio          = float64(0)
 		argMaxRatioLimit  = 0
@@ -35,8 +34,8 @@ func AssignFromLtTraces(run *wizard.ProverRuntime, schema *air.Schema[bls12_377.
 	for _, module := range modules {
 
 		var (
-			name   = module.Name()
-			limit  = moduleLimits[module.Name()]
+			name   = module.Name().String()
+			limit  = moduleLimits.GetLimit(name)
 			height = module.Height()
 			ratio  = float64(height) / float64(limit)
 			level  = logrus.InfoLevel
@@ -75,7 +74,7 @@ func AssignFromLtTraces(run *wizard.ProverRuntime, schema *air.Schema[bls12_377.
 
 				var (
 					col     = trMod.Column(uint(id))
-					name    = ifaces.ColID(wizardName(trMod.Name(), col.Name()))
+					name    = ifaces.ColID(wizardName(trMod.Name().String(), col.Name()))
 					wCol    = run.Spec.Columns.GetHandle(name)
 					padding = col.Padding()
 					data    = col.Data()

@@ -50,7 +50,7 @@ func getEcdataArithmetization(comp *wizard.CompiledIOP) *ecDataSource {
 
 func getTxnDataArithmetization(comp *wizard.CompiledIOP) *txnData {
 	td := &txnData{
-		FromHi:   comp.Columns.GetHandle("txndata.hubFROM_ADDRESS_HI_xor_rlpCHAIN_ID"),
+		FromHi:   comp.Columns.GetHandle("txndata.hubFROM_ADDRESS_HI_xor_rlpNUMBER_OF_NONZERO_BYTES"),
 		FromLo:   comp.Columns.GetHandle("txndata.computationARG_1_LO_xor_hubFROM_ADDRESS_LO_xor_rlpTO_ADDRESS_LO"),
 		Ct:       comp.Columns.GetHandle("txndata.CT"),
 		User:     comp.Columns.GetHandle("txndata.USER"),

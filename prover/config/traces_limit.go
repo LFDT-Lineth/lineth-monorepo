@@ -3,196 +3,132 @@ package config
 import (
 	"bytes"
 	"encoding/json"
+	"slices"
+	"strings"
 
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
-// The trace limits define the maximum trace size per module that the prover can handle.
-// Raising these limits increases the prover's memory needs and simultaneously decreases the number
-// of transactions it can prove in a single go. These traces are vital for the setup generator, so
-// any changes in trace limits mean we'll need to run a new setup and update the verifier contracts
-// before deploying.
+// These are modules that are internal to the prover and for which we have a
+// hard requirement that they are defined.
+var (
+	modulePrecompileEcrecoverEffectiveCalls    = "PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS"
+	modulePrecompileSha2Blocks                 = "PRECOMPILE_SHA2_BLOCKS"
+	modulePrecompileRipemdBlocks               = "PRECOMPILE_RIPEMD_BLOCKS"
+	modulePrecompileModexpEffectiveCalls       = "PRECOMPILE_MODEXP_EFFECTIVE_CALLS"
+	modulePrecompileModexpEffectiveCallsLarge  = "PRECOMPILE_MODEXP_EFFECTIVE_CALLS_4096"
+	modulePrecompileEcaddEffectiveCalls        = "PRECOMPILE_ECADD_EFFECTIVE_CALLS"
+	modulePrecompileEcmulEffectiveCalls        = "PRECOMPILE_ECMUL_EFFECTIVE_CALLS"
+	modulePrecompileEcpairingEffectiveCalls    = "PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS"
+	modulePrecompileEcpairingMillerLoops       = "PRECOMPILE_ECPAIRING_MILLER_LOOPS"
+	modulePrecompileEcpairingG2MembershipCalls = "PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS"
+	modulePrecompileBlakeEffectiveCalls        = "PRECOMPILE_BLAKE_EFFECTIVE_CALLS"
+	modulePrecompileBlakeRounds                = "PRECOMPILE_BLAKE_ROUNDS"
+	moduleBlockKeccak                          = "BLOCK_KECCAK"
+	moduleBlockL1Size                          = "BLOCK_L1_SIZE"
+	moduleBlockL2L1Logs                        = "BLOCK_L2_L1_LOGS"
+	moduleBlockTransactions                    = "BLOCK_TRANSACTIONS"
+	moduleShomeiMerkleProofs                   = "SHOMEI_MERKLE_PROOFS"
+
+	modulePrecompileBlsG1AddEffectiveCalls               = "PRECOMPILE_BLS_G1_ADD_EFFECTIVE_CALLS"
+	modulePrecompileBlsG2AddEffectiveCalls               = "PRECOMPILE_BLS_G2_ADD_EFFECTIVE_CALLS"
+	modulePrecompileBlsG1MsmEffectiveCalls               = "PRECOMPILE_BLS_G1_MSM_EFFECTIVE_CALLS"
+	modulePrecompileBlsG2MsmEffectiveCalls               = "PRECOMPILE_BLS_G2_MSM_EFFECTIVE_CALLS"
+	modulePrecompileBlsPairingCheckMillerLoops           = "PRECOMPILE_BLS_PAIRING_CHECK_MILLER_LOOPS"
+	modulePrecompileBlsFinalExponentiations              = "PRECOMPILE_BLS_FINAL_EXPONENTIATIONS"
+	modulePrecompileBlsG1MembershipCalls                 = "PRECOMPILE_BLS_G1_MEMBERSHIP_CALLS"
+	modulePrecompileBlsG2MembershipCalls                 = "PRECOMPILE_BLS_G2_MEMBERSHIP_CALLS"
+	modulePrecompileBlsMapFpToG1EffectiveCalls           = "PRECOMPILE_BLS_MAP_FP_TO_G1_EFFECTIVE_CALLS"
+	modulePrecompileBlsMapFp2ToG2EffectiveCalls          = "PRECOMPILE_BLS_MAP_FP2_TO_G2_EFFECTIVE_CALLS"
+	modulePrecompileBlsC1MembershipCalls                 = "PRECOMPILE_BLS_C1_MEMBERSHIP_CALLS"
+	modulePrecompileBlsC2MembershipCalls                 = "PRECOMPILE_BLS_C2_MEMBERSHIP_CALLS"
+	modulePrecompileBlsPointEvaluationEffectiveCalls     = "PRECOMPILE_BLS_POINT_EVALUATION_EFFECTIVE_CALLS"
+	modulePrecompilePointEvaluationFailureEffectiveCalls = "PRECOMPILE_POINT_EVALUATION_FAILURE_EFFECTIVE_CALLS"
+	modulePrecompileP256VerifyEffectiveCalls             = "PRECOMPILE_P256_VERIFY_EFFECTIVE_CALLS"
+)
+
+// TracesLimits defines the limits for each module. The way limit work is by
+// letting the user specifies prefixes of modules and the size to map to the
+// module. The modules are sorted in reverse alphabetical order. When the user
+// provides a module name (string), the string is checked against the prefixes
+// in reverse alphabetical order.
+//
+// For instance, the limit map the followings:
+//
+// log2			= 1000, 2000
+// log2_u256 	= 100, 	200
+// log2_u160	= 5, 	10
+// log2_u32		= 12, 	24
+//
+// If the user provides the string "log2_u32", the limit will be 12. And if the
+// user provides log2_u16 (for which u160 is NOT a prefix) the limit will be
+// 1000 because it will match "log2".
+//
+// Passing a module whose name is the empty string will be used as the default
+// module.
+//
+// At runtime, the user may switch the trace limit file in "Large" mode by
+// calling [SetLargeMode].
 type TracesLimits struct {
-	Add               int `mapstructure:"ADD" validate:"power_of_2" corset:"add"`
-	Bin               int `mapstructure:"BIN" validate:"power_of_2" corset:"bin"`
-	Blake2Fmodexpdata int `mapstructure:"BLAKE_MODEXP_DATA" validate:"power_of_2" corset:"blake2fmodexpdata"`
-	Blockdata         int `mapstructure:"BLOCK_DATA" corset:"blockdata"`
-	Blockhash         int `mapstructure:"BLOCK_HASH" validate:"power_of_2" corset:"blockhash"`
-	Ecdata            int `mapstructure:"EC_DATA" validate:"power_of_2" corset:"ecdata"`
-	Euc               int `mapstructure:"EUC" validate:"power_of_2" corset:"euc"`
-	Exp               int `mapstructure:"EXP" validate:"power_of_2" corset:"exp"`
-	Ext               int `mapstructure:"EXT" validate:"power_of_2" corset:"ext"`
-	Gas               int `mapstructure:"GAS" validate:"power_of_2" corset:"gas"`
-	Hub               int `mapstructure:"HUB" validate:"power_of_2" corset:"hub"`
-	Logdata           int `mapstructure:"LOG_DATA" validate:"power_of_2" corset:"logdata"`
-	Loginfo           int `mapstructure:"LOG_INFO" validate:"power_of_2" corset:"loginfo"`
-	Mmio              int `mapstructure:"MMIO" validate:"power_of_2" corset:"mmio"`
-	Mmu               int `mapstructure:"MMU" validate:"power_of_2" corset:"mmu"`
-	Mod               int `mapstructure:"MOD" validate:"power_of_2" corset:"mod"`
-	Mul               int `mapstructure:"MUL" validate:"power_of_2" corset:"mul"`
-	Mxp               int `mapstructure:"MXP" validate:"power_of_2" corset:"mxp"`
-	Oob               int `mapstructure:"OOB" validate:"power_of_2" corset:"oob"`
-	Rlpaddr           int `mapstructure:"RLP_ADDR" validate:"power_of_2" corset:"rlpaddr"`
-	Rlptxn            int `mapstructure:"RLP_TXN" validate:"power_of_2" corset:"rlptxn"`
-	Rlptxrcpt         int `mapstructure:"RLP_TXN_RCPT" validate:"power_of_2" corset:"rlptxrcpt"`
-	Rom               int `mapstructure:"ROM" validate:"power_of_2" corset:"rom"`
-	Romlex            int `mapstructure:"ROM_LEX" validate:"power_of_2" corset:"romlex"`
-	Shakiradata       int `mapstructure:"SHAKIRA_DATA" validate:"power_of_2" corset:"shakiradata"`
-	Shf               int `mapstructure:"SHF" validate:"power_of_2" corset:"shf"`
-	Stp               int `mapstructure:"STP" validate:"power_of_2" corset:"stp"`
-	Trm               int `mapstructure:"TRM" validate:"power_of_2" corset:"trm"`
-	Txndata           int `mapstructure:"TXN_DATA" validate:"power_of_2" corset:"txndata"`
-	Wcp               int `mapstructure:"WCP" validate:"power_of_2" corset:"wcp"`
-	// internal modules
-	BitShl256        int `mapstructure:"BIT_SHL256" validate:"power_of_2" corset:"bit_shl256"`
-	BitShl256U7      int `mapstructure:"BIT_SHL256_U7" validate:"power_of_2" corset:"bit_shl256_u7"`
-	BitShl256U6      int `mapstructure:"BIT_SHL256_U6" validate:"power_of_2" corset:"bit_shl256_u6"`
-	BitShl256U5      int `mapstructure:"BIT_SHL256_U5" validate:"power_of_2" corset:"bit_shl256_u5"`
-	BitShl256U4      int `mapstructure:"BIT_SHL256_U4" validate:"power_of_2" corset:"bit_shl256_u4"`
-	BitShl256U3      int `mapstructure:"BIT_SHL256_U3" validate:"power_of_2" corset:"bit_shl256_u3"`
-	BitShl256U2      int `mapstructure:"BIT_SHL256_U2" validate:"power_of_2" corset:"bit_shl256_u2"`
-	BitShl256U1      int `mapstructure:"BIT_SHL256_U1" validate:"power_of_2" corset:"bit_shl256_u1"`
-	BitShr256        int `mapstructure:"BIT_SHR256" validate:"power_of_2" corset:"bit_shr256"`
-	BitShr256U7      int `mapstructure:"BIT_SHR256_U7" validate:"power_of_2" corset:"bit_shr256_u7"`
-	BitShr256U6      int `mapstructure:"BIT_SHR256_U6" validate:"power_of_2" corset:"bit_shr256_u6"`
-	BitShr256U5      int `mapstructure:"BIT_SHR256_U5" validate:"power_of_2" corset:"bit_shr256_u5"`
-	BitShr256U4      int `mapstructure:"BIT_SHR256_U4" validate:"power_of_2" corset:"bit_shr256_u4"`
-	BitShr256U3      int `mapstructure:"BIT_SHR256_U3" validate:"power_of_2" corset:"bit_shr256_u3"`
-	BitShr256U2      int `mapstructure:"BIT_SHR256_U2" validate:"power_of_2" corset:"bit_shr256_u2"`
-	BitShr256U1      int `mapstructure:"BIT_SHR256_U1" validate:"power_of_2" corset:"bit_shr256_u1"`
-	BitSar256        int `mapstructure:"BIT_SAR256" validate:"power_of_2" corset:"bit_sar256"`
-	BitSar256U7      int `mapstructure:"BIT_SAR256_U7" validate:"power_of_2" corset:"bit_sar256_u7"`
-	BitSar256U6      int `mapstructure:"BIT_SAR256_U6" validate:"power_of_2" corset:"bit_sar256_u6"`
-	BitSar256U5      int `mapstructure:"BIT_SAR256_U5" validate:"power_of_2" corset:"bit_sar256_u5"`
-	BitSar256U4      int `mapstructure:"BIT_SAR256_U4" validate:"power_of_2" corset:"bit_sar256_u4"`
-	BitSar256U3      int `mapstructure:"BIT_SAR256_U3" validate:"power_of_2" corset:"bit_sar256_u3"`
-	BitSar256U2      int `mapstructure:"BIT_SAR256_U2" validate:"power_of_2" corset:"bit_sar256_u2"`
-	BitSar256U1      int `mapstructure:"BIT_SAR256_U1" validate:"power_of_2" corset:"bit_sar256_u1"`
-	CallGasExtra     int `mapstructure:"CALL_GAS_EXTRA" validate:"power_of_2" corset:"call_gas_extra"`
-	FillBytesBetween int `mapstructure:"FILL_BYTES_BETWEEN" validate:"power_of_2" corset:"fill_bytes_between"`
-	GasOutOfPocket   int `mapstructure:"GAS_OUT_OF_POCKET" validate:"power_of_2" corset:"gas_out_of_pocket"`
-	Log2             int `mapstructure:"LOG2" validate:"power_of_2" corset:"log2"`
-	Log2U128         int `mapstructure:"LOG2_U128" validate:"power_of_2" corset:"log2_u128"`
-	Log2U64          int `mapstructure:"LOG2_U64" validate:"power_of_2" corset:"log2_u64"`
-	Log2U32          int `mapstructure:"LOG2_U32" validate:"power_of_2" corset:"log2_u32"`
-	Log2U16          int `mapstructure:"LOG2_U16" validate:"power_of_2" corset:"log2_u16"`
-	Log2U8           int `mapstructure:"LOG2_U8" validate:"power_of_2" corset:"log2_u8"`
-	Log2U4           int `mapstructure:"LOG2_U4" validate:"power_of_2" corset:"log2_u4"`
-	Log2U2           int `mapstructure:"LOG2_U2" validate:"power_of_2" corset:"log2_u2"`
-	Log256           int `mapstructure:"LOG256" validate:"power_of_2" corset:"log256"`
-	Log256U128       int `mapstructure:"LOG256_U128" validate:"power_of_2" corset:"log256_u128"`
-	Log256U64        int `mapstructure:"LOG256_U64" validate:"power_of_2" corset:"log256_u64"`
-	Log256U32        int `mapstructure:"LOG256_U32" validate:"power_of_2" corset:"log256_u32"`
-	Log256U16        int `mapstructure:"LOG256_U16" validate:"power_of_2" corset:"log256_u16"`
-	Min25664         int `mapstructure:"MIN256_64" validate:"power_of_2" corset:"min256_64"`
-	SetByte256       int `mapstructure:"SET_BYTE256" validate:"power_of_2" corset:"set_byte256"`
-	SetByte128       int `mapstructure:"SET_BYTE128" validate:"power_of_2" corset:"set_byte128"`
-	SetByte64        int `mapstructure:"SET_BYTE64" validate:"power_of_2" corset:"set_byte64"`
-	SetByte32        int `mapstructure:"SET_BYTE32" validate:"power_of_2" corset:"set_byte32"`
-	SetByte16        int `mapstructure:"SET_BYTE16" validate:"power_of_2" corset:"set_byte16"`
-	// limitless typing modules
-	U128 int `mapstructure:"U128" validate:"power_of_2" corset:"u128"`
-	U127 int `mapstructure:"U127" validate:"power_of_2" corset:"u127"`
-	U126 int `mapstructure:"U126" validate:"power_of_2" corset:"u126"`
-	U125 int `mapstructure:"U125" validate:"power_of_2" corset:"u125"`
-	U124 int `mapstructure:"U124" validate:"power_of_2" corset:"u124"`
-	U123 int `mapstructure:"U123" validate:"power_of_2" corset:"u123"`
-	U120 int `mapstructure:"U120" validate:"power_of_2" corset:"u120"`
-	U119 int `mapstructure:"U119" validate:"power_of_2" corset:"u119"`
-	U112 int `mapstructure:"U112" validate:"power_of_2" corset:"u112"`
-	U111 int `mapstructure:"U111" validate:"power_of_2" corset:"u111"`
-	U96  int `mapstructure:"U96" validate:"power_of_2" corset:"u96"`
-	U95  int `mapstructure:"U95" validate:"power_of_2" corset:"u95"`
-	U64  int `mapstructure:"U64" validate:"power_of_2" corset:"u64"`
-	U63  int `mapstructure:"U63" validate:"power_of_2" corset:"u63"`
-	U62  int `mapstructure:"U62" validate:"power_of_2" corset:"u62"`
-	U61  int `mapstructure:"U61" validate:"power_of_2" corset:"u61"`
-	U60  int `mapstructure:"U60" validate:"power_of_2" corset:"u60"`
-	U59  int `mapstructure:"U59" validate:"power_of_2" corset:"u59"`
-	U58  int `mapstructure:"U58" validate:"power_of_2" corset:"u58"`
-	U56  int `mapstructure:"U56" validate:"power_of_2" corset:"u56"`
-	U55  int `mapstructure:"U55" validate:"power_of_2" corset:"u55"`
-	U48  int `mapstructure:"U48" validate:"power_of_2" corset:"u48"`
-	U47  int `mapstructure:"U47" validate:"power_of_2" corset:"u47"`
-	U36  int `mapstructure:"U36" validate:"power_of_2" corset:"u36"`
-	U32  int `mapstructure:"U32" validate:"power_of_2" corset:"u32"`
-	U31  int `mapstructure:"U31" validate:"power_of_2" corset:"u31"`
-	U30  int `mapstructure:"U30" validate:"power_of_2" corset:"u30"`
-	U29  int `mapstructure:"U29" validate:"power_of_2" corset:"u29"`
-	U28  int `mapstructure:"U28" validate:"power_of_2" corset:"u28"`
-	U27  int `mapstructure:"U27" validate:"power_of_2" corset:"u27"`
-	U26  int `mapstructure:"U26" validate:"power_of_2" corset:"u26"`
-	U24  int `mapstructure:"U24" validate:"power_of_2" corset:"u24"`
-	U23  int `mapstructure:"U23" validate:"power_of_2" corset:"u23"`
-	U20  int `mapstructure:"U20" validate:"power_of_2" corset:"u20"`
-
-	// reference tables
-	Binreftable int `mapstructure:"BIN_REFERENCE_TABLE" validate:"power_of_2" corset:"binreftable"`
-	Instdecoder int `mapstructure:"INSTRUCTION_DECODER" validate:"power_of_2" corset:"instdecoder"`
-
-	PrecompileEcrecoverEffectiveCalls    int `mapstructure:"PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS"`
-	PrecompileSha2Blocks                 int `mapstructure:"PRECOMPILE_SHA2_BLOCKS"`
-	PrecompileRipemdBlocks               int `mapstructure:"PRECOMPILE_RIPEMD_BLOCKS"`
-	PrecompileModexpEffectiveCalls       int `mapstructure:"PRECOMPILE_MODEXP_EFFECTIVE_CALLS"`
-	PrecompileModexpEffectiveCalls4096   int `mapstructure:"PRECOMPILE_MODEXP_EFFECTIVE_CALLS_4096"`
-	PrecompileEcaddEffectiveCalls        int `mapstructure:"PRECOMPILE_ECADD_EFFECTIVE_CALLS"`
-	PrecompileEcmulEffectiveCalls        int `mapstructure:"PRECOMPILE_ECMUL_EFFECTIVE_CALLS"`
-	PrecompileEcpairingEffectiveCalls    int `mapstructure:"PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS"`
-	PrecompileEcpairingMillerLoops       int `mapstructure:"PRECOMPILE_ECPAIRING_MILLER_LOOPS"`
-	PrecompileEcpairingG2MembershipCalls int `mapstructure:"PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS"`
-	PrecompileBlakeEffectiveCalls        int `mapstructure:"PRECOMPILE_BLAKE_EFFECTIVE_CALLS"`
-	PrecompileBlakeRounds                int `mapstructure:"PRECOMPILE_BLAKE_ROUNDS"`
-
-	BlockKeccak       int `mapstructure:"BLOCK_KECCAK"`
-	BlockL1Size       int `mapstructure:"BLOCK_L1_SIZE"`
-	BlockL2L1Logs     int `mapstructure:"BLOCK_L2_L1_LOGS"`
-	BlockTransactions int `mapstructure:"BLOCK_TRANSACTIONS"`
-
-	ShomeiMerkleProofs int `mapstructure:"SHOMEI_MERKLE_PROOFS"`
-
-	// beta v4.0
-	PrecompileBlsPointEvaluationEffectiveCalls     int `mapstructure:"PRECOMPILE_BLS_POINT_EVALUATION_EFFECTIVE_CALLS"`
-	PrecompilePointEvaluationFailureEffectiveCalls int `mapstructure:"PRECOMPILE_POINT_EVALUATION_FAILURE_EFFECTIVE_CALLS"`
-	PrecompileBlsG1AddEffectiveCalls               int `mapstructure:"PRECOMPILE_BLS_G1_ADD_EFFECTIVE_CALLS"`
-	PrecompileBlsG1MsmEffectiveCalls               int `mapstructure:"PRECOMPILE_BLS_G1_MSM_EFFECTIVE_CALLS"`
-	PrecompileBlsG2AddEffectiveCalls               int `mapstructure:"PRECOMPILE_BLS_G2_ADD_EFFECTIVE_CALLS"`
-	PrecompileBlsG2MsmEffectiveCalls               int `mapstructure:"PRECOMPILE_BLS_G2_MSM_EFFECTIVE_CALLS"`
-	PrecompileBlsPairingCheckMillerLoops           int `mapstructure:"PRECOMPILE_BLS_PAIRING_CHECK_MILLER_LOOPS"`
-	PrecompileBlsFinalExponentiations              int `mapstructure:"PRECOMPILE_BLS_FINAL_EXPONENTIATIONS"`
-	PrecompileBlsMapFpToG1EffectiveCalls           int `mapstructure:"PRECOMPILE_BLS_MAP_FP_TO_G1_EFFECTIVE_CALLS"`
-	PrecompileBlsMapFp2ToG2EffectiveCalls          int `mapstructure:"PRECOMPILE_BLS_MAP_FP2_TO_G2_EFFECTIVE_CALLS"`
-	PrecompileBlsC1MembershipCalls                 int `mapstructure:"PRECOMPILE_BLS_C1_MEMBERSHIP_CALLS"`
-	PrecompileBlsC2MembershipCalls                 int `mapstructure:"PRECOMPILE_BLS_C2_MEMBERSHIP_CALLS"`
-	PrecompileBlsG1MembershipCalls                 int `mapstructure:"PRECOMPILE_BLS_G1_MEMBERSHIP_CALLS"`
-	PrecompileBlsG2MembershipCalls                 int `mapstructure:"PRECOMPILE_BLS_G2_MEMBERSHIP_CALLS"`
-	BlsData                                        int `mapstructure:"BLS_DATA" validate:"power_of_2" corset:"blsdata"`
-	RlpUtils                                       int `mapstructure:"RLP_UTILS" validate:"power_of_2" corset:"rlputils"`
-	PowerReferenceTable                            int `mapstructure:"POWER_REFERENCE_TABLE" validate:"power_of_2" corset:"power"`
-	BlsReferenceTable                              int `mapstructure:"BLS_REFERENCE_TABLE" validate:"power_of_2" corset:"blsreftable"`
-
-	// Start of new Osaka modules
-	PrecompileP256VerifyEffectiveCalls int `mapstructure:"PRECOMPILE_P256_VERIFY_EFFECTIVE_CALLS"`
-
-	BIT_XOAN_U2   int `mapstructure:"BIT_XOAN_U2" validate:"power_of_2" corset:"bit_xoan_u2"`
-	BIT_XOAN_U4   int `mapstructure:"BIT_XOAN_U4" validate:"power_of_2" corset:"bit_xoan_u4"`
-	BIT_XOAN_U8   int `mapstructure:"BIT_XOAN_U8" validate:"power_of_2" corset:"bit_xoan_u8"`
-	BIT_XOAN_U16  int `mapstructure:"BIT_XOAN_U16" validate:"power_of_2" corset:"bit_xoan_u16"`
-	BIT_XOAN_U32  int `mapstructure:"BIT_XOAN_U32" validate:"power_of_2" corset:"bit_xoan_u32"`
-	BIT_XOAN_U64  int `mapstructure:"BIT_XOAN_U64" validate:"power_of_2" corset:"bit_xoan_u64"`
-	BIT_XOAN_U128 int `mapstructure:"BIT_XOAN_U128" validate:"power_of_2" corset:"bit_xoan_u128"`
-	BIT_XOAN_U256 int `mapstructure:"BIT_XOAN_U256" validate:"power_of_2" corset:"bit_xoan_u256"`
-	BYTE_16       int `mapstructure:"BYTE_16" validate:"power_of_2" corset:"byte16"`
-	BYTE_32       int `mapstructure:"BYTE_32" validate:"power_of_2" corset:"byte32"`
-	BYTE_64       int `mapstructure:"BYTE_64" validate:"power_of_2" corset:"byte64"`
-	BYTE_128      int `mapstructure:"BYTE_128" validate:"power_of_2" corset:"byte128"`
-	BYTE_256      int `mapstructure:"BYTE_256" validate:"power_of_2" corset:"byte256"`
-	SIGNEXTEND    int `mapstructure:"SIGNEXTEND" validate:"power_of_2" corset:"signextend"`
-	MAX3_U128     int `mapstructure:"MAX3_U128" validate:"power_of_2" corset:"max3_u128"`
-	MAXLOG        int `mapstructure:"MAXLOG" validate:"power_of_2" corset:"maxlog"`
-	// End of new Osaka modules
+	// ToLargeMode is a flag telling the current struct to return LimitLarge
+	// values instead of Limit when a module is requested.
+	ToLargeMode bool
+	// ScalingFactor is the factor used to scale the limit when a module is
+	// requested. This is useful for the limitless prover when it needs to retry
+	// with a larger limit. If the value is 0, this is equivalent to 1.
+	ScalingFactor int
+	// Modules is the list of modules and their limits
+	Modules []ModuleLimit `mapstructure:"modules" validate:"required"`
 }
 
+// ModuleLimit defines the limit for each module.
+type ModuleLimit struct {
+	Module     string `mapstructure:"module" validate:"required"`
+	Limit      int    `mapstructure:"limit" validate:"required,power_of_2"`
+	LimitLarge int    `mapstructure:"limit_large" validate:"required,power_of_2"`
+	// IsNotScalable indicates that the module limit should never be scaled up.
+	// This can be used for "MAX_L2_BLOCK_SIZE" or "L2L1Logs" whose size is
+	// fixed for the proof system.
+	IsNotScalable bool `mapstructure:"is_not_scalable"`
+}
+
+// normalizeToLowercase normalizes the modules to lowercase
+// normalizeToLowercase returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) normalizeToLowercase() {
+	for i := range tl.Modules {
+		tl.Modules[i].Module = strings.ToLower(tl.Modules[i].Module)
+	}
+}
+
+// sortReverseAlphabetical sorts the modules in reverse alphabetical order
+// sortReverseAlphabetical returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) sortReverseAlphabetical() {
+	slices.SortStableFunc(tl.Modules, func(a, b ModuleLimit) int {
+		switch {
+		case a.Module < b.Module:
+			return 1
+		case a.Module > b.Module:
+			return -1
+		default:
+			utils.Panic("module %++v is not unique, also have module %++v", a, b)
+		}
+		return 0 // unreachable
+	})
+}
+
+// SetLargeMode the TracesLimits to use the large mode
+// SetLargeMode returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) SetLargeMode() {
+	tl.ToLargeMode = true
+}
+
+// CheckSum returns the checksum of the TraceLimits. Checksum returns the limits
+// corresponding to the name of the method. (auto-generated)
 func (tl *TracesLimits) Checksum() string {
+
 	// encode the struct to json, then hash it
 	encoded, err := json.Marshal(tl)
 	if err != nil {
@@ -207,346 +143,355 @@ func (tl *TracesLimits) Checksum() string {
 	return digest
 }
 
-func (tl *TracesLimits) ScaleUp(by int) {
-
-	tl.Add *= by
-	tl.Bin *= by
-	tl.Blake2Fmodexpdata *= by
-	tl.Blockdata *= by
-	tl.Blockhash *= by
-	tl.Ecdata *= by
-	tl.Euc *= by
-	tl.Exp *= by
-	tl.Ext *= by
-	tl.Gas *= by
-	tl.Hub *= by
-	tl.Logdata *= by
-	tl.Loginfo *= by
-	tl.Mmio *= by
-	tl.Mmu *= by
-	tl.Mod *= by
-	tl.Mul *= by
-	tl.Mxp *= by
-	tl.Oob *= by
-	tl.Rlpaddr *= by
-	tl.Rlptxn *= by
-	tl.Rlptxrcpt *= by
-	tl.Rom *= by
-	tl.Romlex *= by
-	tl.Shakiradata *= by
-	tl.Shf *= by
-	tl.Stp *= by
-	tl.Trm *= by
-	tl.Txndata *= by
-	tl.Wcp *= by
-	tl.PrecompileEcrecoverEffectiveCalls *= by
-	tl.PrecompileSha2Blocks *= by
-	tl.PrecompileModexpEffectiveCalls *= by
-	tl.PrecompileModexpEffectiveCalls4096 *= by
-	tl.PrecompileEcaddEffectiveCalls *= by
-	tl.PrecompileEcmulEffectiveCalls *= by
-	tl.PrecompileEcpairingEffectiveCalls *= by
-	tl.PrecompileEcpairingMillerLoops *= by
-	tl.PrecompileEcpairingG2MembershipCalls *= by
-	tl.BlockKeccak *= by
-	tl.BlockTransactions *= by
-	tl.ShomeiMerkleProofs *= by
-
-	// Beta 4.0 internal modules
-	tl.BitShl256 *= by
-	tl.BitShl256U7 *= by
-	tl.BitShl256U6 *= by
-	tl.BitShl256U5 *= by
-	tl.BitShl256U4 *= by
-	tl.BitShl256U3 *= by
-	tl.BitShl256U2 *= by
-	tl.BitShl256U1 *= by
-	tl.BitShr256 *= by
-	tl.BitShr256U7 *= by
-	tl.BitShr256U6 *= by
-	tl.BitShr256U5 *= by
-	tl.BitShr256U4 *= by
-	tl.BitShr256U3 *= by
-	tl.BitShr256U2 *= by
-	tl.BitShr256U1 *= by
-	tl.BitSar256 *= by
-	tl.BitSar256U7 *= by
-	tl.BitSar256U6 *= by
-	tl.BitSar256U5 *= by
-	tl.BitSar256U4 *= by
-	tl.BitSar256U3 *= by
-	tl.BitSar256U2 *= by
-	tl.BitSar256U1 *= by
-	tl.CallGasExtra *= by
-	tl.FillBytesBetween *= by
-	tl.GasOutOfPocket *= by
-	tl.Log2 *= by
-	tl.Log2U128 *= by
-	tl.Log2U64 *= by
-	tl.Log2U32 *= by
-	tl.Log2U16 *= by
-	tl.Log2U8 *= by
-	tl.Log2U4 *= by
-	tl.Log2U2 *= by
-	tl.Log256 *= by
-	tl.Log256U128 *= by
-	tl.Log256U64 *= by
-	tl.Log256U32 *= by
-	tl.Log256U16 *= by
-	tl.Min25664 *= by
-	tl.SetByte256 *= by
-	tl.SetByte128 *= by
-	tl.SetByte64 *= by
-	tl.SetByte32 *= by
-	tl.SetByte16 *= by
-	tl.U128 *= by
-	tl.U127 *= by
-	tl.U126 *= by
-	tl.U125 *= by
-	tl.U124 *= by
-	tl.U123 *= by
-	tl.U120 *= by
-	tl.U119 *= by
-	tl.U112 *= by
-	tl.U111 *= by
-	tl.U96 *= by
-	tl.U95 *= by
-	tl.U64 *= by
-	tl.U63 *= by
-	tl.U62 *= by
-	tl.U61 *= by
-	tl.U60 *= by
-	tl.U59 *= by
-	tl.U58 *= by
-	tl.U56 *= by
-	tl.U55 *= by
-	tl.U48 *= by
-	tl.U47 *= by
-	tl.U36 *= by
-	tl.U32 *= by
-	tl.U31 *= by
-	tl.U30 *= by
-	tl.U29 *= by
-	tl.U28 *= by
-	tl.U27 *= by
-	tl.U26 *= by
-	tl.U24 *= by
-	tl.U23 *= by
-	tl.U20 *= by
-	// beta v4.0
-	tl.PrecompileBlsPointEvaluationEffectiveCalls *= by
-	tl.PrecompilePointEvaluationFailureEffectiveCalls *= by
-	tl.PrecompileBlsG1AddEffectiveCalls *= by
-	tl.PrecompileBlsG1MsmEffectiveCalls *= by
-	tl.PrecompileBlsG2AddEffectiveCalls *= by
-	tl.PrecompileBlsG2MsmEffectiveCalls *= by
-	tl.PrecompileBlsPairingCheckMillerLoops *= by
-	tl.PrecompileBlsFinalExponentiations *= by
-	tl.PrecompileBlsMapFpToG1EffectiveCalls *= by
-	tl.PrecompileBlsMapFp2ToG2EffectiveCalls *= by
-	tl.PrecompileBlsC1MembershipCalls *= by
-	tl.PrecompileBlsC2MembershipCalls *= by
-	tl.PrecompileBlsG1MembershipCalls *= by
-	tl.PrecompileBlsG2MembershipCalls *= by
-	tl.BlsData *= by
-	tl.RlpUtils *= by
-
-	// Start of new Osaka modules
-	tl.PrecompileP256VerifyEffectiveCalls *= by
-
-	tl.BIT_XOAN_U2 *= by
-	tl.BIT_XOAN_U4 *= by
-	tl.BIT_XOAN_U8 *= by
-	tl.BIT_XOAN_U16 *= by
-	tl.BIT_XOAN_U32 *= by
-	tl.BIT_XOAN_U64 *= by
-	tl.BIT_XOAN_U128 *= by
-	tl.BIT_XOAN_U256 *= by
-	tl.BYTE_16 *= by
-	tl.BYTE_32 *= by
-	tl.BYTE_64 *= by
-	tl.BYTE_128 *= by
-	tl.BYTE_256 *= by
-	tl.SIGNEXTEND *= by
-	tl.MAX3_U128 *= by
-	tl.MAXLOG *= by
-	// End of new Osaka modules
+// findModuleLimits returns the limits for a module or panics.
+// mustFindModuleLimits returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) mustFindModuleLimits(module string) ModuleLimit {
+	moduleLower := strings.ToLower(module)
+	for _, m := range tl.Modules {
+		if strings.HasPrefix(moduleLower, m.Module) {
+			return m
+		}
+	}
+	utils.Panic("found no module limits for module %q", module)
+	return ModuleLimit{}
 }
 
+// ScaleUp increases the scaling factor
+func (tl *TracesLimits) ScaleUp(by int) {
+	if tl.ScalingFactor == 0 {
+		tl.ScalingFactor = 1
+	}
+	tl.ScalingFactor *= by
+}
+
+// GetLimit returns the limits of a module
+func (tl *TracesLimits) GetLimit(module string) int {
+
+	var (
+		ml  = tl.mustFindModuleLimits(module)
+		res = ml.Limit
+	)
+
+	if tl.ToLargeMode {
+		res = ml.LimitLarge
+	}
+
+	scalingFactor := tl.ScalingFactor
+	if scalingFactor == 0 {
+		scalingFactor = 1
+	}
+
+	if !ml.IsNotScalable {
+		res *= scalingFactor
+	}
+
+	return res
+}
+
+// PrecompileEcrecoverEffectiveCalls returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileEcrecoverEffectiveCalls() int {
+	name := modulePrecompileEcrecoverEffectiveCalls
+	return tl.GetLimit(name)
+}
+
+// PrecompileSha2Blocks returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileSha2Blocks() int {
+	name := modulePrecompileSha2Blocks
+	return tl.GetLimit(name)
+}
+
+// PrecompileRipemdBlocks returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileRipemdBlocks() int {
+	name := modulePrecompileRipemdBlocks
+	return tl.GetLimit(name)
+}
+
+// PrecompileModexpEffectiveCalls returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileModexpEffectiveCalls() int {
+	name := modulePrecompileModexpEffectiveCalls
+	return tl.GetLimit(name)
+}
+
+// PrecompileModexpEffectiveCalls8192 returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileModexpEffectiveCallsLarge() int {
+	name := modulePrecompileModexpEffectiveCallsLarge
+	return tl.GetLimit(name)
+}
+
+// PrecompileEcaddEffectiveCalls returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileEcaddEffectiveCalls() int {
+	name := modulePrecompileEcaddEffectiveCalls
+	return tl.GetLimit(name)
+}
+
+// PrecompileEcmulEffectiveCalls returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileEcmulEffectiveCalls() int {
+	name := modulePrecompileEcmulEffectiveCalls
+	return tl.GetLimit(name)
+}
+
+// PrecompileEcpairingEffectiveCalls returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileEcpairingEffectiveCalls() int {
+	name := modulePrecompileEcpairingEffectiveCalls
+	return tl.GetLimit(name)
+}
+
+// PrecompileEcpairingMillerLoops returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileEcpairingMillerLoops() int {
+	name := modulePrecompileEcpairingMillerLoops
+	return tl.GetLimit(name)
+}
+
+// PrecompileEcpairingG2MembershipCalls returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileEcpairingG2MembershipCalls() int {
+	name := modulePrecompileEcpairingG2MembershipCalls
+	return tl.GetLimit(name)
+}
+
+// PrecompileBlakeEffectiveCalls returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileBlakeEffectiveCalls() int {
+	name := modulePrecompileBlakeEffectiveCalls
+	return tl.GetLimit(name)
+}
+
+// PrecompileBlakeRounds returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileBlakeRounds() int {
+	name := modulePrecompileBlakeRounds
+	return tl.GetLimit(name)
+}
+
+// BlockKeccak returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) BlockKeccak() int {
+	name := moduleBlockKeccak
+	return tl.GetLimit(name)
+}
+
+// BlockL1Size returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) BlockL1Size() int {
+	name := moduleBlockL1Size
+	return tl.GetLimit(name)
+}
+
+// BlockL2L1Logs returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) BlockL2L1Logs() int {
+	name := moduleBlockL2L1Logs
+	return tl.GetLimit(name)
+}
+
+// BlockTransactions returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) BlockTransactions() int {
+	name := moduleBlockTransactions
+	return tl.GetLimit(name)
+}
+
+// ShomeiMerkleProofs returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) ShomeiMerkleProofs() int {
+	name := moduleShomeiMerkleProofs
+	return tl.GetLimit(name)
+}
+
+// PrecompileBlsG1AddEffectiveCalls returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileBlsG1AddEffectiveCalls() int {
+	name := modulePrecompileBlsG1AddEffectiveCalls
+	return tl.GetLimit(name)
+}
+
+// PrecompileBlsG2AddEffectiveCalls returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileBlsG2AddEffectiveCalls() int {
+	name := modulePrecompileBlsG2AddEffectiveCalls
+	return tl.GetLimit(name)
+}
+
+// PrecompileBlsG1MsmEffectiveCalls returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileBlsG1MsmEffectiveCalls() int {
+	name := modulePrecompileBlsG1MsmEffectiveCalls
+	return tl.GetLimit(name)
+}
+
+// PrecompileBlsG2MsmEffectiveCalls returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileBlsG2MsmEffectiveCalls() int {
+	name := modulePrecompileBlsG2MsmEffectiveCalls
+	return tl.GetLimit(name)
+}
+
+// PrecompileBlsPairingCheckMillerLoops returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileBlsPairingCheckMillerLoops() int {
+	name := modulePrecompileBlsPairingCheckMillerLoops
+	return tl.GetLimit(name)
+}
+
+// PrecompileBlsFinalExponentiations returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileBlsFinalExponentiations() int {
+	name := modulePrecompileBlsFinalExponentiations
+	return tl.GetLimit(name)
+}
+
+// PrecompileBlsG1MembershipCalls returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileBlsG1MembershipCalls() int {
+	name := modulePrecompileBlsG1MembershipCalls
+	return tl.GetLimit(name)
+}
+
+// PrecompileBlsG2MembershipCalls returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileBlsG2MembershipCalls() int {
+	name := modulePrecompileBlsG2MembershipCalls
+	return tl.GetLimit(name)
+}
+
+// PrecompileBlsMapFpToG1EffectiveCalls returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileBlsMapFpToG1EffectiveCalls() int {
+	name := modulePrecompileBlsMapFpToG1EffectiveCalls
+	return tl.GetLimit(name)
+}
+
+// PrecompileBlsMapFp2ToG2EffectiveCalls returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileBlsMapFp2ToG2EffectiveCalls() int {
+	name := modulePrecompileBlsMapFp2ToG2EffectiveCalls
+	return tl.GetLimit(name)
+}
+
+// PrecompileBlsC1MembershipCalls returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileBlsC1MembershipCalls() int {
+	name := modulePrecompileBlsC1MembershipCalls
+	return tl.GetLimit(name)
+}
+
+// PrecompileBlsC2MembershipCalls returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileBlsC2MembershipCalls() int {
+	name := modulePrecompileBlsC2MembershipCalls
+	return tl.GetLimit(name)
+}
+
+// PrecompileBlsPointEvaluationEffectiveCalls returns the limits corresponding
+// to the name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileBlsPointEvaluationEffectiveCalls() int {
+	name := modulePrecompileBlsPointEvaluationEffectiveCalls
+	return tl.GetLimit(name)
+}
+
+// PrecompilePointEvaluationFailureEffectiveCalls returns the limits
+// corresponding to the name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompilePointEvaluationFailureEffectiveCalls() int {
+	name := modulePrecompilePointEvaluationFailureEffectiveCalls
+	return tl.GetLimit(name)
+}
+
+// PrecompileP256VerifyEffectiveCalls returns the limits corresponding to the
+// name of the method. (auto-generated)
+func (tl *TracesLimits) PrecompileP256VerifyEffectiveCalls() int {
+	name := modulePrecompileP256VerifyEffectiveCalls
+	return tl.GetLimit(name)
+}
+
+// GetTestTracesLimits returns a sample of the trace limits.
 func GetTestTracesLimits() *TracesLimits {
 
-	// This are the config trace-limits from sepolia.
+	// These are the config trace-limits from sepolia updated with latest precompile values.
 	traceLimits := &TracesLimits{
-		Add:                                  262144,
-		Bin:                                  262144,
-		Blake2Fmodexpdata:                    16384,
-		Blockdata:                            4096,
-		Blockhash:                            4096,
-		Ecdata:                               65536,
-		Euc:                                  65536,
-		Exp:                                  65536,
-		Ext:                                  524288,
-		Gas:                                  65536,
-		Hub:                                  2097152,
-		Logdata:                              65536,
-		Loginfo:                              4096,
-		Mmio:                                 2097152,
-		Mmu:                                  1048576,
-		Mod:                                  131072,
-		Mul:                                  65536,
-		Mxp:                                  524288,
-		Oob:                                  262144,
-		Rlpaddr:                              4096,
-		Rlptxn:                               131072,
-		Rlptxrcpt:                            65536,
-		Rom:                                  8388608,
-		Romlex:                               1024,
-		Shakiradata:                          65536,
-		Shf:                                  262144,
-		Stp:                                  16384,
-		Trm:                                  32768,
-		Txndata:                              8192,
-		Wcp:                                  262144,
-		Binreftable:                          262144,
-		Instdecoder:                          512,
-		PrecompileEcrecoverEffectiveCalls:    128,
-		PrecompileSha2Blocks:                 200,
-		PrecompileRipemdBlocks:               0,
-		PrecompileModexpEffectiveCalls:       32,
-		PrecompileModexpEffectiveCalls4096:   1,
-		PrecompileEcaddEffectiveCalls:        256,
-		PrecompileEcmulEffectiveCalls:        40,
-		PrecompileEcpairingEffectiveCalls:    16,
-		PrecompileEcpairingMillerLoops:       64,
-		PrecompileEcpairingG2MembershipCalls: 64,
-		PrecompileBlakeEffectiveCalls:        0,
-		PrecompileBlakeRounds:                0,
-		BlockKeccak:                          8192,
-		BlockL1Size:                          1000000,
-		BlockL2L1Logs:                        16,
-		BlockTransactions:                    300,
-		ShomeiMerkleProofs:                   16384,
-		// Beta 4.0 internal modules
-		BitShl256:        262144,
-		BitShl256U7:      262144,
-		BitShl256U6:      262144,
-		BitShl256U5:      262144,
-		BitShl256U4:      262144,
-		BitShl256U3:      262144,
-		BitShl256U2:      262144,
-		BitShl256U1:      262144,
-		BitShr256:        262144,
-		BitShr256U7:      262144,
-		BitShr256U6:      262144,
-		BitShr256U5:      262144,
-		BitShr256U4:      262144,
-		BitShr256U3:      262144,
-		BitShr256U2:      262144,
-		BitShr256U1:      262144,
-		BitSar256:        262144,
-		BitSar256U7:      262144,
-		BitSar256U6:      262144,
-		BitSar256U5:      262144,
-		BitSar256U4:      262144,
-		BitSar256U3:      262144,
-		BitSar256U2:      262144,
-		BitSar256U1:      262144,
-		CallGasExtra:     262144,
-		FillBytesBetween: 262144,
-		GasOutOfPocket:   262144,
-		Log2:             262144,
-		Log2U128:         262144,
-		Log2U64:          262144,
-		Log2U32:          262144,
-		Log2U16:          262144,
-		Log2U8:           262144,
-		Log2U4:           262144,
-		Log2U2:           262144,
-		Log256:           262144,
-		Log256U128:       262144,
-		Log256U64:        262144,
-		Log256U32:        262144,
-		Log256U16:        262144,
-		SetByte256:       262144,
-		SetByte128:       262144,
-		SetByte64:        262144,
-		SetByte32:        262144,
-		SetByte16:        262144,
-		Min25664:         262144,
-		U128:             262144,
-		U127:             262144,
-		U126:             262144,
-		U125:             262144,
-		U124:             262144,
-		U123:             262144,
-		U120:             262144,
-		U119:             262144,
-		U112:             262144,
-		U111:             262144,
-		U96:              262144,
-		U95:              262144,
-		U64:              262144,
-		U63:              262144,
-		U62:              262144,
-		U61:              262144,
-		U60:              262144,
-		U59:              262144,
-		U58:              262144,
-		U56:              262144,
-		U55:              262144,
-		U48:              262144,
-		U47:              262144,
-		U36:              262144,
-		U32:              262144,
-		U31:              262144,
-		U30:              262144,
-		U29:              262144,
-		U28:              262144,
-		U27:              262144,
-		U26:              262144,
-		U24:              262144,
-		U23:              262144,
-		U20:              262144,
-		// beta v4.0
-		PrecompileBlsPointEvaluationEffectiveCalls:     1,
-		PrecompilePointEvaluationFailureEffectiveCalls: 2,
-		PrecompileBlsG1AddEffectiveCalls:               8,
-		PrecompileBlsG1MsmEffectiveCalls:               4,
-		PrecompileBlsG2AddEffectiveCalls:               8,
-		PrecompileBlsG2MsmEffectiveCalls:               4,
-		PrecompileBlsPairingCheckMillerLoops:           8,
-		PrecompileBlsFinalExponentiations:              2,
-		PrecompileBlsMapFpToG1EffectiveCalls:           4,
-		PrecompileBlsMapFp2ToG2EffectiveCalls:          4,
-		PrecompileBlsC1MembershipCalls:                 8,
-		PrecompileBlsC2MembershipCalls:                 8,
-		PrecompileBlsG1MembershipCalls:                 8,
-		PrecompileBlsG2MembershipCalls:                 8,
-		BlsData:                                        65536,
-		RlpUtils:                                       131072,
-		PowerReferenceTable:                            32,
-		BlsReferenceTable:                              512,
-
-		// Start of new Osaka modules
-		PrecompileP256VerifyEffectiveCalls: 128,
-
-		BIT_XOAN_U2:   262144,
-		BIT_XOAN_U4:   262144,
-		BIT_XOAN_U8:   262144,
-		BIT_XOAN_U16:  262144,
-		BIT_XOAN_U32:  262144,
-		BIT_XOAN_U64:  262144,
-		BIT_XOAN_U128: 262144,
-		BIT_XOAN_U256: 262144,
-		BYTE_16:       262144,
-		BYTE_32:       262144,
-		BYTE_64:       262144,
-		BYTE_128:      262144,
-		BYTE_256:      262144,
-		SIGNEXTEND:    262144,
-		MAX3_U128:     262144,
-		MAXLOG:        262144,
-		// End of new Osaka modules
+		Modules: []ModuleLimit{
+			{Module: "add", Limit: 262144, LimitLarge: 524288},
+			{Module: "bin", Limit: 262144, LimitLarge: 524288},
+			{Module: "blake_modexp_data", Limit: 16384, LimitLarge: 32768},
+			{Module: "block_data", Limit: 4096, LimitLarge: 8192},
+			{Module: "block_hash", Limit: 2048, LimitLarge: 4096},
+			{Module: "ec_data", Limit: 65536, LimitLarge: 131072},
+			{Module: "euc", Limit: 65536, LimitLarge: 131072},
+			{Module: "exp", Limit: 65536, LimitLarge: 131072},
+			{Module: "ext", Limit: 524288, LimitLarge: 1048576},
+			{Module: "gas", Limit: 65536, LimitLarge: 131072},
+			{Module: "hub", Limit: 2097152, LimitLarge: 4194304},
+			{Module: "log_data", Limit: 65536, LimitLarge: 131072},
+			{Module: "log_info", Limit: 4096, LimitLarge: 8192},
+			{Module: "mmio", Limit: 2097152, LimitLarge: 4194304},
+			{Module: "mmu", Limit: 1048576, LimitLarge: 2097152},
+			{Module: "mod", Limit: 131072, LimitLarge: 262144},
+			{Module: "mul", Limit: 65536, LimitLarge: 131072},
+			{Module: "mxp", Limit: 524288, LimitLarge: 1048576},
+			{Module: "oob", Limit: 262144, LimitLarge: 524288},
+			{Module: "rlp_addr", Limit: 4096, LimitLarge: 8192},
+			{Module: "rlp_txn", Limit: 131072, LimitLarge: 262144},
+			{Module: "rlp_txn_rcpt", Limit: 65536, LimitLarge: 131072},
+			{Module: "rlp_auth", Limit: 16384, LimitLarge: 32768},
+			{Module: "rom", Limit: 8388608, LimitLarge: 8388608},
+			{Module: "rom_lex", Limit: 1024, LimitLarge: 2048},
+			{Module: "shakira_data", Limit: 65536, LimitLarge: 65536},
+			{Module: "shf", Limit: 262144, LimitLarge: 524288},
+			{Module: "stp", Limit: 16384, LimitLarge: 32768},
+			{Module: "trm", Limit: 32768, LimitLarge: 65536},
+			{Module: "txn_data", Limit: 8192, LimitLarge: 16384},
+			{Module: "wcp", Limit: 262144, LimitLarge: 524288},
+			{Module: "bin_reference_table", Limit: 262144, LimitLarge: 262144, IsNotScalable: true},
+			{Module: "shf_reference_table", Limit: 4096, LimitLarge: 4096, IsNotScalable: true},
+			{Module: "instruction_decoder", Limit: 512, LimitLarge: 512, IsNotScalable: true},
+			{Module: "precompile_ecrecover_effective_calls", Limit: 128, LimitLarge: 256},
+			{Module: "precompile_sha2_blocks", Limit: 200, LimitLarge: 400},
+			{Module: "precompile_ripemd_blocks", Limit: 0, LimitLarge: 0},
+			{Module: "precompile_modexp_effective_calls", Limit: 32, LimitLarge: 64},
+			{Module: "precompile_modexp_effective_calls_4096", Limit: 1, LimitLarge: 1},
+			{Module: "precompile_ecadd_effective_calls", Limit: 256, LimitLarge: 512},
+			{Module: "precompile_ecmul_effective_calls", Limit: 40, LimitLarge: 80},
+			{Module: "precompile_ecpairing_final_exponentiations", Limit: 16, LimitLarge: 32},
+			{Module: "precompile_ecpairing_miller_loops", Limit: 64, LimitLarge: 128},
+			{Module: "precompile_ecpairing_g2_membership_calls", Limit: 64, LimitLarge: 128},
+			{Module: "precompile_blake_effective_calls", Limit: 0, LimitLarge: 0},
+			{Module: "precompile_blake_rounds", Limit: 0, LimitLarge: 0},
+			{Module: "block_keccak", Limit: 8192, LimitLarge: 8192},
+			{Module: "block_l1_size", Limit: 1000000, LimitLarge: 1000000, IsNotScalable: true},
+			{Module: "block_l2_l1_logs", Limit: 16, LimitLarge: 16, IsNotScalable: true},
+			{Module: "block_transactions", Limit: 300, LimitLarge: 300},
+			{Module: "shomei_merkle_proofs", Limit: 8192, LimitLarge: 16384},
+			{Module: "precompile_bls_g1_add_effective_calls", Limit: 256, LimitLarge: 512},
+			{Module: "precompile_bls_g2_add_effective_calls", Limit: 16, LimitLarge: 32},
+			{Module: "precompile_bls_g1_msm_effective_calls", Limit: 32, LimitLarge: 64},
+			{Module: "precompile_bls_g2_msm_effective_calls", Limit: 16, LimitLarge: 32},
+			{Module: "precompile_bls_pairing_check_miller_loops", Limit: 64, LimitLarge: 128},
+			{Module: "precompile_bls_final_exponentiations", Limit: 16, LimitLarge: 32},
+			{Module: "precompile_bls_g1_membership_calls", Limit: 64, LimitLarge: 128},
+			{Module: "precompile_bls_g2_membership_calls", Limit: 64, LimitLarge: 128},
+			{Module: "precompile_bls_map_fp_to_g1_effective_calls", Limit: 64, LimitLarge: 128},
+			{Module: "precompile_bls_map_fp2_to_g2_effective_calls", Limit: 64, LimitLarge: 128},
+			{Module: "precompile_bls_c1_membership_calls", Limit: 64, LimitLarge: 128},
+			{Module: "precompile_bls_c2_membership_calls", Limit: 64, LimitLarge: 128},
+			{Module: "precompile_bls_point_evaluation_effective_calls", Limit: 16, LimitLarge: 32},
+			{Module: "precompile_point_evaluation_failure_effective_calls", Limit: 4, LimitLarge: 8},
+			{Module: "precompile_p256_verify_effective_calls", Limit: 128, LimitLarge: 256},
+			{Module: "u128", Limit: 131072, LimitLarge: 262144},
+			{Module: "u20", Limit: 131072, LimitLarge: 262144},
+			{Module: "u32", Limit: 131072, LimitLarge: 262144},
+			{Module: "u36", Limit: 131072, LimitLarge: 262144},
+			{Module: "u64", Limit: 131072, LimitLarge: 262144},
+			{Module: "", Limit: 131072, LimitLarge: 262144},
+		},
 	}
 
 	return traceLimits

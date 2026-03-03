@@ -62,7 +62,16 @@ func (mt *ModuleTranslator) InsertPrecomputed(col column.Natural, data smartvect
 	}
 
 	if mt.Wiop.Columns.Exists(col.ID) {
-		return mt.Wiop.Columns.GetHandle(col.ID)
+		res := mt.Wiop.Columns.GetHandle(col.ID)
+
+		if res.Size() != data.Len() {
+			utils.Panic("inconsistent sizes %v != %v", res.Size(), data.Len())
+		}
+		return res
+	}
+
+	if mt.Disc.NewSizeOf(col) != data.Len() {
+		utils.Panic("inconsistent sizes %v != %v", mt.Disc.NewSizeOf(col), data.Len())
 	}
 
 	mt.Wiop.Precomputed.InsertNew(col.ID, data)

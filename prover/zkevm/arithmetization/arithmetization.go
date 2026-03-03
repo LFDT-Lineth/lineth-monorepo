@@ -10,7 +10,7 @@ import (
 	"github.com/consensys/go-corset/pkg/ir"
 	"github.com/consensys/go-corset/pkg/ir/air"
 	"github.com/consensys/go-corset/pkg/ir/mir"
-	"github.com/consensys/go-corset/pkg/schema"
+	"github.com/consensys/go-corset/pkg/schema/module"
 	"github.com/consensys/go-corset/pkg/util/collection/typed"
 	"github.com/consensys/go-corset/pkg/util/field/bls12_377"
 	"github.com/consensys/linea-monorepo/prover/config"
@@ -53,7 +53,7 @@ type Arithmetization struct {
 	// Maps each column in the raw trace file into one (or more) columns in the
 	// expanded trace file.  In particular, columns which are too large for the
 	// given field are split into multiple "limbs".
-	LimbMapping schema.LimbsMap `serde:"omit"`
+	LimbMapping module.LimbsMap `serde:"omit"`
 	// Metadata embedded in the zkevm.bin file, as needed to check
 	// compatibility.  Guaranteed non-nil.
 	Metadata typed.Map `serde:"omit"`

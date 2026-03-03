@@ -1,5 +1,5 @@
 environment = "sepolia"
-version = "6.1.3"                              # TODO @gbotrel hunt all version definitions.
+version = "6.1.4"                              # TODO @gbotrel hunt all version definitions.
 assets_dir = "./prover-assets"
 log_level = 4                                  # TODO @gbotrel will be refactored with new logger.
 
@@ -7,21 +7,21 @@ log_level = 4                                  # TODO @gbotrel will be refactore
 retry_delays = [0, 1]
 
 [execution]
-prover_mode = "limitless"
-conflated_traces_dir = "/home/ubuntu"
-requests_root_dir = "/home/ubuntu/mainnet-beta-v2-5.1.3/prover-execution"
+prover_mode = "partial"
+conflated_traces_dir = "/home/ubuntu/test_sepolia/traces/conflated"
+requests_root_dir = "/home/ubuntu/test_sepolia/prover-execution"
 limitless_with_debug = false
-ignore_compatibility_check = false
+ignore_compatibility_check = true
 keep_traces_until_block = 0
 
 [blob_decompression]
 prover_mode = "full"
-requests_root_dir = "/home/ubuntu/mainnet-beta-v2-5.1.3/prover-compression"
+requests_root_dir = "/home/ubuntu/test_sepolia/prover-compression"
 dict_paths = ["lib/compressor/compressor_dict.bin", "lib/compressor/dict/25-04-21.bin"]
 
 [aggregation]
 prover_mode = "full"
-requests_root_dir = "/home/ubuntu/mainnet-beta-v2-5.1.3/prover-aggregation"
+requests_root_dir = "/home/ubuntu/test_sepolia/prover-aggregation"
 num_proofs = [10, 20, 50, 100, 200, 400]
 allowed_inputs = ["execution-dummy", "execution", "execution-large", "execution-limitless", "blob-decompression-dummy", "blob-decompression-v0", "blob-decompression-v1"]
 verifier_id = 1
@@ -41,347 +41,77 @@ coin_base = "0xA27342f1b74c0cfB2cda74bac1628d0C1A9752f2"
 message_service_contract = "0x971e727e956690b9957be6d51Ec16E73AcAC83A7"
 
 [traces_limits]
-ADD = 262144
-BIN = 262144
-BLAKE_MODEXP_DATA = 16384
-BLOCK_DATA = 4096
-BLOCK_HASH = 4096
-EC_DATA = 65536
-EUC = 65536
-EXP = 65536
-EXT = 524288
-GAS = 65536
-HUB = 2097152
-LOG_DATA = 65536
-LOG_INFO = 4096
-MMIO = 2097152
-MMU = 1048576
-MOD = 131072
-MUL = 65536
-MXP = 524288
-OOB = 262144
-RLP_ADDR = 4096
-RLP_TXN = 131072
-RLP_TXN_RCPT = 65536
-ROM = 8388608
-ROM_LEX = 1024
-SHAKIRA_DATA = 65536
-SHF = 262144
-STP = 16384
-TRM = 32768
-TXN_DATA = 8192
-WCP = 262144
-PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS = 128
-PRECOMPILE_SHA2_BLOCKS = 200
-PRECOMPILE_RIPEMD_BLOCKS = 0
-PRECOMPILE_MODEXP_EFFECTIVE_CALLS = 32
-PRECOMPILE_MODEXP_EFFECTIVE_CALLS_4096 = 1
-PRECOMPILE_ECADD_EFFECTIVE_CALLS = 256
-PRECOMPILE_ECMUL_EFFECTIVE_CALLS = 40
-PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS = 16
-PRECOMPILE_ECPAIRING_MILLER_LOOPS = 64
-PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS = 64
-PRECOMPILE_BLAKE_EFFECTIVE_CALLS = 0
-PRECOMPILE_BLAKE_ROUNDS = 0
-BLOCK_KECCAK = 8192
-BLOCK_L1_SIZE = 1000000
-BLOCK_L2_L1_LOGS = 16
-BLOCK_TRANSACTIONS = 300
-BIN_REFERENCE_TABLE = 262144
-INSTRUCTION_DECODER = 512
-
-BIT_SHL256 = 262144
-BIT_SHL256_U7 = 262144
-BIT_SHL256_U6 = 262144
-BIT_SHL256_U5 = 262144
-BIT_SHL256_U4 = 262144
-BIT_SHL256_U3 = 262144
-BIT_SHL256_U2 = 262144
-BIT_SHL256_U1 = 262144
-BIT_SHR256 = 262144
-BIT_SHR256_U7 = 262144
-BIT_SHR256_U6 = 262144
-BIT_SHR256_U5 = 262144
-BIT_SHR256_U4 = 262144
-BIT_SHR256_U3 = 262144
-BIT_SHR256_U2 = 262144
-BIT_SHR256_U1 = 262144
-BIT_SAR256 = 262144
-BIT_SAR256_U7 = 262144
-BIT_SAR256_U6 = 262144
-BIT_SAR256_U5 = 262144
-BIT_SAR256_U4 = 262144
-BIT_SAR256_U3 = 262144
-BIT_SAR256_U2 = 262144
-BIT_SAR256_U1 = 262144
-CALL_GAS_EXTRA = 262144
-FILL_BYTES_BETWEEN = 262144
-GAS_OUT_OF_POCKET = 262144
-LOG2 = 262144
-LOG2_U128 = 262144
-LOG2_U64 = 262144
-LOG2_U32 = 262144
-LOG2_U16 = 262144
-LOG2_U8 = 262144
-LOG2_U4 = 262144
-LOG2_U2 = 262144
-LOG256 = 262144
-LOG256_U128 = 262144
-LOG256_U64 = 262144
-LOG256_U32 = 262144
-LOG256_U16 = 262144
-MIN256_64 = 262144
-SET_BYTE256 = 262144
-SET_BYTE128 = 262144
-SET_BYTE64 = 262144
-SET_BYTE32 = 262144
-SET_BYTE16 = 262144
-
-U128 = 262144
-U127 = 262144
-U126 = 262144
-U125 = 262144
-U124 = 262144
-U123 = 262144
-U120 = 262144
-U119 = 262144
-U112 = 262144
-U111 = 262144
-U96 = 262144
-U95 = 262144
-U64 = 262144
-U63 = 262144
-U62 = 262144
-U61 = 262144
-U60 = 262144
-U59 = 262144
-U58 = 262144
-U56 = 262144
-U55 = 262144
-U48 = 262144
-U47 = 262144
-U36 = 262144
-U32 = 262144
-U31 = 262144
-U30 = 262144
-U29 = 262144
-U28 = 262144
-U27 = 262144
-U26 = 262144
-U24 = 262144
-U23 = 262144
-U20 = 262144
-
-PRECOMPILE_BLS_POINT_EVALUATION_EFFECTIVE_CALLS     = 1
-PRECOMPILE_POINT_EVALUATION_FAILURE_EFFECTIVE_CALLS = 2
-PRECOMPILE_BLS_G1_ADD_EFFECTIVE_CALLS               = 8
-PRECOMPILE_BLS_G1_MSM_EFFECTIVE_CALLS               = 4
-PRECOMPILE_BLS_G2_ADD_EFFECTIVE_CALLS               = 8
-PRECOMPILE_BLS_G2_MSM_EFFECTIVE_CALLS               = 4
-PRECOMPILE_BLS_PAIRING_CHECK_MILLER_LOOPS           = 8
-PRECOMPILE_BLS_FINAL_EXPONENTIATIONS                = 2
-PRECOMPILE_BLS_MAP_FP_TO_G1_EFFECTIVE_CALLS         = 4
-PRECOMPILE_BLS_MAP_FP2_TO_G2_EFFECTIVE_CALLS        = 4
-PRECOMPILE_BLS_C1_MEMBERSHIP_CALLS                  = 8
-PRECOMPILE_BLS_C2_MEMBERSHIP_CALLS                  = 8
-PRECOMPILE_BLS_G1_MEMBERSHIP_CALLS                  = 8
-PRECOMPILE_BLS_G2_MEMBERSHIP_CALLS                  = 8
-
-BLS_DATA                = 65536
-RLP_UTILS               = 131072
-POWER_REFERENCE_TABLE   = 32
-BLS_REFERENCE_TABLE     = 512
-
-# Start of new Osaka modules
-PRECOMPILE_P256_VERIFY_EFFECTIVE_CALLS = 128
-
-BIT_XOAN_U2   = 262144
-BIT_XOAN_U4   = 262144
-BIT_XOAN_U8   = 262144
-BIT_XOAN_U16  = 262144
-BIT_XOAN_U32  = 262144
-BIT_XOAN_U64  = 262144
-BIT_XOAN_U128 = 262144
-BIT_XOAN_U256 = 262144
-BYTE_16       = 262144
-BYTE_32       = 262144
-BYTE_64       = 262144
-BYTE_128      = 262144
-BYTE_256      = 262144
-SIGNEXTEND    = 262144
-MAX3_U128     = 262144
-MAXLOG        = 262144
-# End of new Osaka modules
-
-[traces_limits_large]
-ADD = 524288
-BIN = 524288
-BLAKE_MODEXP_DATA = 32768
-BLOCK_DATA = 8192
-BLOCK_HASH = 8192
-EC_DATA = 131072
-EUC = 131072
-EXP = 131072
-EXT = 1048576
-GAS = 131072
-HUB = 4194304
-LOG_DATA = 131072
-LOG_INFO = 8192
-MMIO = 4194304
-MMU = 2097152
-MOD = 262144
-MUL = 131072
-MXP = 1048576
-OOB = 524288
-RLP_ADDR = 8192
-RLP_TXN = 262144
-RLP_TXN_RCPT = 131072
-ROM = 8388608
-ROM_LEX = 2048
-SHAKIRA_DATA = 65536
-SHF = 524288
-STP = 32768
-TRM = 65536
-TXN_DATA = 16384
-WCP = 524288
-PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS = 256
-PRECOMPILE_SHA2_BLOCKS = 400
-PRECOMPILE_RIPEMD_BLOCKS = 0
-PRECOMPILE_MODEXP_EFFECTIVE_CALLS = 64
-PRECOMPILE_MODEXP_EFFECTIVE_CALLS_4096 = 1
-PRECOMPILE_ECADD_EFFECTIVE_CALLS = 512
-PRECOMPILE_ECMUL_EFFECTIVE_CALLS = 80
-PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS = 32
-PRECOMPILE_ECPAIRING_MILLER_LOOPS = 128
-PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS = 128
-PRECOMPILE_BLAKE_EFFECTIVE_CALLS = 0
-PRECOMPILE_BLAKE_ROUNDS = 0
-BLOCK_KECCAK = 8192
-BLOCK_L1_SIZE = 1000000
-BLOCK_L2_L1_LOGS = 16
-BLOCK_TRANSACTIONS = 300
-BIN_REFERENCE_TABLE = 262144
-INSTRUCTION_DECODER = 512
-
-BIT_SHL256 = 524288
-BIT_SHL256_U7 = 524288
-BIT_SHL256_U6 = 524288
-BIT_SHL256_U5 = 524288
-BIT_SHL256_U4 = 524288
-BIT_SHL256_U3 = 524288
-BIT_SHL256_U2 = 524288
-BIT_SHL256_U1 = 524288
-BIT_SHR256 = 524288
-BIT_SHR256_U7 = 524288
-BIT_SHR256_U6 = 524288
-BIT_SHR256_U5 = 524288
-BIT_SHR256_U4 = 524288
-BIT_SHR256_U3 = 524288
-BIT_SHR256_U2 = 524288
-BIT_SHR256_U1 = 524288
-BIT_SAR256 = 524288
-BIT_SAR256_U7 = 524288
-BIT_SAR256_U6 = 524288
-BIT_SAR256_U5 = 524288
-BIT_SAR256_U4 = 524288
-BIT_SAR256_U3 = 524288
-BIT_SAR256_U2 = 524288
-BIT_SAR256_U1 = 524288
-CALL_GAS_EXTRA = 524288
-FILL_BYTES_BETWEEN = 524288
-GAS_OUT_OF_POCKET = 524288
-LOG2 = 524288
-LOG2_U128 = 524288
-LOG2_U64 = 524288
-LOG2_U32 = 524288
-LOG2_U16 = 524288
-LOG2_U8 = 524288
-LOG2_U4 = 524288
-LOG2_U2 = 524288
-LOG256 = 524288
-LOG256_U128 = 524288
-LOG256_U64 = 524288
-LOG256_U32 = 524288
-LOG256_U16 = 524288
-MIN256_64 = 524288
-SET_BYTE256 = 524288
-SET_BYTE128 = 524288
-SET_BYTE64 = 524288
-SET_BYTE32 = 524288
-SET_BYTE16 = 524288
-
-U128 = 524288
-U127 = 524288
-U126 = 524288
-U125 = 524288
-U124 = 524288
-U123 = 524288
-U120 = 524288
-U119 = 524288
-U112 = 524288
-U111 = 524288
-U96 = 524288
-U95 = 524288
-U64 = 524288
-U63 = 524288
-U62 = 524288
-U61 = 524288
-U60 = 524288
-U59 = 524288
-U58 = 524288
-U56 = 524288
-U55 = 524288
-U48 = 524288
-U47 = 524288
-U36 = 524288
-U32 = 524288
-U31 = 524288
-U30 = 524288
-U29 = 524288
-U28 = 524288
-U27 = 524288
-U26 = 524288
-U24 = 524288
-U23 = 524288
-U20 = 524288
-
-PRECOMPILE_BLS_POINT_EVALUATION_EFFECTIVE_CALLS     = 2
-PRECOMPILE_POINT_EVALUATION_FAILURE_EFFECTIVE_CALLS = 4
-PRECOMPILE_BLS_G1_ADD_EFFECTIVE_CALLS               = 16
-PRECOMPILE_BLS_G1_MSM_EFFECTIVE_CALLS               = 8
-PRECOMPILE_BLS_G2_ADD_EFFECTIVE_CALLS               = 16
-PRECOMPILE_BLS_G2_MSM_EFFECTIVE_CALLS               = 8
-PRECOMPILE_BLS_PAIRING_CHECK_MILLER_LOOPS           = 16
-PRECOMPILE_BLS_FINAL_EXPONENTIATIONS                = 4
-PRECOMPILE_BLS_MAP_FP_TO_G1_EFFECTIVE_CALLS         = 8
-PRECOMPILE_BLS_MAP_FP2_TO_G2_EFFECTIVE_CALLS        = 8
-PRECOMPILE_BLS_C1_MEMBERSHIP_CALLS                  = 16
-PRECOMPILE_BLS_C2_MEMBERSHIP_CALLS                  = 16
-PRECOMPILE_BLS_G1_MEMBERSHIP_CALLS                  = 16
-PRECOMPILE_BLS_G2_MEMBERSHIP_CALLS                  = 16
-
-BLS_DATA                = 131072
-RLP_UTILS               = 262144
-POWER_REFERENCE_TABLE   = 32
-BLS_REFERENCE_TABLE     = 512
-
-# Start of new Osaka modules
-PRECOMPILE_P256_VERIFY_EFFECTIVE_CALLS = 256
-
-BIT_XOAN_U2   = 524288
-BIT_XOAN_U4   = 524288
-BIT_XOAN_U8   = 524288
-BIT_XOAN_U16  = 524288
-BIT_XOAN_U32  = 524288
-BIT_XOAN_U64  = 524288
-BIT_XOAN_U128 = 524288
-BIT_XOAN_U256 = 524288
-BYTE_16       = 524288
-BYTE_32       = 524288
-BYTE_64       = 524288
-BYTE_128      = 524288
-BYTE_256      = 524288
-SIGNEXTEND    = 524288
-MAX3_U128     = 524288
-MAXLOG        = 524288
-# End of new Osaka modules
+modules = [
+    {module = "", limit = 131072, limit_large = 262144}, # default module limit
+    {module = "ADD", limit = 262144, limit_large = 524288},
+    {module = "BIN", limit = 262144, limit_large = 524288},
+    {module = "BLAKE_MODEXP_DATA", limit = 16384, limit_large = 32768},
+    {module = "BLOCK_DATA", limit = 4096, limit_large = 8192},
+    {module = "BLOCK_HASH", limit = 2048, limit_large = 4096},
+    {module = "EC_DATA", limit = 65536, limit_large = 131072},
+    {module = "EUC", limit = 65536, limit_large = 131072},
+    {module = "EXP", limit = 65536, limit_large = 131072},
+    {module = "EXT", limit = 524288, limit_large = 1048576},
+    {module = "GAS", limit = 65536, limit_large = 131072},
+    {module = "HUB", limit = 2097152, limit_large = 4194304},
+    {module = "LOG_DATA", limit = 65536, limit_large = 131072},
+    {module = "LOG_INFO", limit = 4096, limit_large = 8192},
+    {module = "MMIO", limit = 2097152, limit_large = 4194304},
+    {module = "MMU", limit = 1048576, limit_large = 2097152},
+    {module = "MOD", limit = 131072, limit_large = 262144},
+    {module = "MUL", limit = 65536, limit_large = 131072},
+    {module = "MXP", limit = 524288, limit_large = 1048576},
+    {module = "OOB", limit = 262144, limit_large = 524288},
+    {module = "RLP_ADDR", limit = 4096, limit_large = 8192},
+    {module = "RLP_TXN", limit = 131072, limit_large = 262144},
+    {module = "RLP_TXN_RCPT", limit = 65536, limit_large = 131072},
+    {module = "RLP_AUTH", limit = 16384, limit_large = 32768},
+    {module = "ROM", limit = 8388608, limit_large = 8388608},
+    {module = "ROMLEX", limit = 1024, limit_large = 2048},
+    {module = "SHAKIRA_DATA", limit = 65536, limit_large = 65536},
+    {module = "SHF", limit = 262144, limit_large = 524288},
+    {module = "STP", limit = 16384, limit_large = 32768},
+    {module = "TRM", limit = 32768, limit_large = 65536},
+    {module = "TXN_DATA", limit = 8192, limit_large = 16384},
+    {module = "WCP", limit = 262144, limit_large = 524288},
+    {module = "PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS", limit = 128, limit_large = 256},
+    {module = "PRECOMPILE_SHA2_BLOCKS", limit = 200, limit_large = 400},
+    {module = "PRECOMPILE_RIPEMD_BLOCKS", limit = 0, limit_large = 0},
+    {module = "PRECOMPILE_MODEXP_EFFECTIVE_CALLS", limit = 32, limit_large = 64},
+    {module = "PRECOMPILE_MODEXP_EFFECTIVE_CALLS_4096", limit = 1, limit_large = 1},
+    {module = "PRECOMPILE_ECADD_EFFECTIVE_CALLS", limit = 256, limit_large = 512},
+    {module = "PRECOMPILE_ECMUL_EFFECTIVE_CALLS", limit = 40, limit_large = 80},
+    {module = "PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS", limit = 16, limit_large = 32},
+    {module = "PRECOMPILE_ECPAIRING_MILLER_LOOPS", limit = 64, limit_large = 128},
+    {module = "PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS", limit = 64, limit_large = 128},
+    {module = "PRECOMPILE_BLAKE_EFFECTIVE_CALLS", limit = 0, limit_large = 0},
+    {module = "PRECOMPILE_BLAKE_ROUNDS", limit = 0, limit_large = 0},
+    {module = "BLOCK_KECCAK", limit = 8192, limit_large = 8192},
+    {module = "BLOCK_L1_SIZE", limit = 1000000, limit_large = 1000000, is_not_scalable = true},
+    {module = "BLOCK_L2_L1_LOGS", limit = 16, limit_large = 16, is_not_scalable = true},
+    {module = "BLOCK_TRANSACTIONS", limit = 300, limit_large = 300},
+    {module = "BIN_REFERENCE_TABLE", limit = 262144, limit_large = 262144, is_not_scalable = true},
+    {module = "SHF_REFERENCE_TABLE", limit = 4096, limit_large = 4096, is_not_scalable = true},
+    {module = "INSTRUCTION_DECODER", limit = 512, limit_large = 512, is_not_scalable = true},
+    {module = "U20", limit = 131072, limit_large = 262144},
+    {module = "U32", limit = 131072, limit_large = 262144},
+    {module = "U36", limit = 131072, limit_large = 262144},
+    {module = "U64", limit = 131072, limit_large = 262144},
+    {module = "U128", limit = 131072, limit_large = 262144},
+    {module = "SHOMEI_MERKLE_PROOFS", limit = 8192, limit_large = 16384},
+    {module = "PRECOMPILE_BLS_G1_ADD_EFFECTIVE_CALLS", limit = 256, limit_large = 512},
+    {module = "PRECOMPILE_BLS_G2_ADD_EFFECTIVE_CALLS", limit = 16, limit_large = 32},
+    {module = "PRECOMPILE_BLS_G1_MSM_EFFECTIVE_CALLS", limit = 32, limit_large = 64},
+    {module = "PRECOMPILE_BLS_G2_MSM_EFFECTIVE_CALLS", limit = 16, limit_large = 32},
+    {module = "PRECOMPILE_BLS_PAIRING_CHECK_MILLER_LOOPS", limit = 64, limit_large = 128},
+    {module = "PRECOMPILE_BLS_FINAL_EXPONENTIATIONS", limit = 16, limit_large = 32},
+    {module = "PRECOMPILE_BLS_G1_MEMBERSHIP_CALLS", limit = 64, limit_large = 128},
+    {module = "PRECOMPILE_BLS_G2_MEMBERSHIP_CALLS", limit = 64, limit_large = 128},
+    {module = "PRECOMPILE_BLS_MAP_FP_TO_G1_EFFECTIVE_CALLS", limit = 64, limit_large = 128},
+    {module = "PRECOMPILE_BLS_MAP_FP2_TO_G2_EFFECTIVE_CALLS", limit = 64, limit_large = 128},
+    {module = "PRECOMPILE_BLS_C1_MEMBERSHIP_CALLS", limit = 64, limit_large = 128},
+    {module = "PRECOMPILE_BLS_C2_MEMBERSHIP_CALLS", limit = 64, limit_large = 128},
+    {module = "PRECOMPILE_BLS_POINT_EVALUATION_EFFECTIVE_CALLS", limit = 16, limit_large = 32},
+    {module = "PRECOMPILE_POINT_EVALUATION_FAILURE_EFFECTIVE_CALLS", limit = 4, limit_large = 8},
+    {module = "PRECOMPILE_P256_VERIFY_EFFECTIVE_CALLS", limit = 128, limit_large = 256},
+]

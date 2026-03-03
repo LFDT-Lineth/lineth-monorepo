@@ -84,7 +84,7 @@ func mustProveAndPass(
 
 	traces := &cfg.TracesLimits
 	if large {
-		traces = &cfg.TracesLimitsLarge
+		traces.SetLargeMode()
 	}
 
 	switch cfg.Execution.ProverMode {

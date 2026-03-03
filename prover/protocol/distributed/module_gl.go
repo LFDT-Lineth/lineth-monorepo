@@ -94,6 +94,11 @@ type ModuleGL struct {
 
 	// PublicInputs contains the public inputs of the module.
 	PublicInputs LimitlessPublicInput[wizard.PublicInput]
+
+	// ExplicitlyVerifiedGlobalCsCompletion is a list of expressions containing
+	// no columns (and thus can't be used to generate local-constraints) whose
+	// cancellation are checked by a verifier action.
+	ExplicitlyVerifiedGlobalCsCompletion []*sym.Expression
 }
 
 // ModuleGLAssignSendReceiveGlobal is an implementation of the [wizard.ProverRuntime]
@@ -457,8 +462,14 @@ func (m *ModuleGL) CompleteGlobalCs(newGlobal query.GlobalConstraint) {
 			},
 		)
 
-		// TODO @alex: we actually need a cancellator criterion for the local
-		// constraints.
+		// This check that expression actually contains columns (it might not)
+		// and if it does, it will tell verifier to explicitly check the
+		// expression but will not register a local constraint.
+		if cols := column.ColumnsOfExpression(localExpr); len(cols) == 0 {
+			m.ExplicitlyVerifiedGlobalCsCompletion = append(m.ExplicitlyVerifiedGlobalCsCompletion, localExpr)
+			continue
+		}
+
 		localExpr = sym.Mul(localExpr, sym.Sub(1, accessors.NewFromPublicColumn(m.IsFirst, 0)))
 		m.Wiop.InsertLocal(
 			newExprRound,
@@ -670,6 +681,13 @@ func (a *ModuleGLCheckSendReceiveGlobal) Run(run wizard.Runtime) error {
 
 	a.ModuleGL.checkMultiSetHash(run)
 
+	for i := range a.ExplicitlyVerifiedGlobalCsCompletion {
+		res := accessors.EvaluateExpression(run, a.ExplicitlyVerifiedGlobalCsCompletion[i])
+		if !res.IsZero() {
+			return fmt.Errorf("not zero: %v", res)
+		}
+	}
+
 	return nil
 }
 
@@ -709,6 +727,11 @@ func (a *ModuleGLCheckSendReceiveGlobal) RunGnark(api frontend.API, run wizard.G
 	}
 
 	api.AssertIsEqual(hsh.Sum(), rcvGlobalHash)
+
+	for i := range a.ExplicitlyVerifiedGlobalCsCompletion {
+		res := accessors.EvaluateExpressionGnark(api, run, a.ExplicitlyVerifiedGlobalCsCompletion[i])
+		api.AssertIsEqual(res, 0)
+	}
 
 	a.ModuleGL.checkGnarkMultiSetHash(api, run)
 }
