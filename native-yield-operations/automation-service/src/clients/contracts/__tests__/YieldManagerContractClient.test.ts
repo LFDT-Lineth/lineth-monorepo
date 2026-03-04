@@ -93,13 +93,17 @@ describe("YieldManagerContractClient", () => {
     ...overrides,
   });
 
-  const createTransactionReceipt = (logs: Array<{ address: string; data: string; topics: string[] }>): TransactionReceipt =>
+  const createTransactionReceipt = (
+    logs: Array<{ address: string; data: string; topics: string[] }>,
+  ): TransactionReceipt =>
     ({
       logs,
     }) as unknown as TransactionReceipt;
 
   const createDefaultQuotaService = (): IRebalanceQuotaService => ({
-    getRebalanceAmountAfterQuota: jest.fn((_vaultAddress, _totalSystemBalance, reBalanceAmountWei) => reBalanceAmountWei),
+    getRebalanceAmountAfterQuota: jest.fn(
+      (_vaultAddress, _totalSystemBalance, reBalanceAmountWei) => reBalanceAmountWei,
+    ),
     getStakingDirection: jest.fn(() => RebalanceDirection.STAKE),
   });
 
@@ -1469,7 +1473,9 @@ describe("YieldManagerContractClient", () => {
 
     // Assert
     expect(report).toBeUndefined();
-    expect(logger.debug).toHaveBeenCalledWith("getYieldReportFromTxReceipt - NativeYieldReported event not found in receipt");
+    expect(logger.debug).toHaveBeenCalledWith(
+      "getYieldReportFromTxReceipt - NativeYieldReported event not found in receipt",
+    );
   });
 
   it("ignores yield report logs from other contracts", () => {

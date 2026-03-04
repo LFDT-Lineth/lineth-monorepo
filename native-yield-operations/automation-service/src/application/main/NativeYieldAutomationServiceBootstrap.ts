@@ -201,6 +201,21 @@ export class NativeYieldAutomationServiceBootstrap {
       this.exponentialBackoffRetryService,
       config.dataSources.beaconChainRpcUrl,
     );
+
+    const referenceBeaconNodeApiClient = config.dataSources.referenceBeaconChainRpcUrl
+      ? new BeaconNodeApiClient(
+          new WinstonLogger("ReferenceBeaconNodeApiClient", config.loggerOptions),
+          this.exponentialBackoffRetryService,
+          config.dataSources.referenceBeaconChainRpcUrl,
+        )
+      : undefined;
+
+    if (referenceBeaconNodeApiClient) {
+      this.logger.info("Reference beacon node configured for epoch drift detection");
+    } else {
+      this.logger.info("Reference beacon node not configured - epoch drift detection disabled");
+    }
+
     this.oAuth2TokenClient = new OAuth2TokenClient(
       new WinstonLogger(OAuth2TokenClient.name, config.loggerOptions),
       this.exponentialBackoffRetryService,
@@ -293,6 +308,7 @@ export class NativeYieldAutomationServiceBootstrap {
       this.beaconNodeApiClient,
       config.timing.gaugeMetricsPollIntervalMs,
       this.stethContractClient,
+      referenceBeaconNodeApiClient,
     );
 
     this.operationModeSelector = new OperationModeSelector(

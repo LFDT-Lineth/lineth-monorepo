@@ -144,4 +144,3 @@ describe("STETHContractClient", () => {
     });
   });
 });
-

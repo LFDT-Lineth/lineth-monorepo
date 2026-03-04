@@ -37,6 +37,9 @@ export const configSchema = z
     // Beacon chain API endpoint URL for Ethereum 2.0 consensus layer.
     // See API documentation - https://ethereum.github.io/beacon-APIs/
     BEACON_CHAIN_RPC_URL: z.string().url(),
+    // Optional reference beacon chain API endpoint for staleness detection.
+    // When set, the service compares epoch from this node against the primary to detect drift.
+    REFERENCE_BEACON_CHAIN_RPC_URL: z.string().url().optional(),
     // GraphQL endpoint URL for Consensys Staking API. Expected to require OAuth2 token.
     STAKING_GRAPHQL_URL: z.string().url(),
     // IPFS gateway base URL for retrieving Lido StakingVault report data.

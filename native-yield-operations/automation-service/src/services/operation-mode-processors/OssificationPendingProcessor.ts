@@ -107,10 +107,10 @@ export class OssificationPendingProcessor implements IOperationModeProcessor {
     }
 
     await this.operationModeMetricsRecorder.recordProgressOssificationMetrics(this.yieldProvider, ossificationResult);
-    this.logger.info("_process - Ossification completed, performing max safe withdrawal");
 
     // Max withdraw if ossified
     if (await this.yieldManagerContractClient.isOssified(this.yieldProvider)) {
+      this.logger.info("_process - Ossification completed, performing max safe withdrawal");
       const withdrawalResult = await attempt(
         this.logger,
         () => this.yieldManagerContractClient.safeMaxAddToWithdrawalReserve(this.yieldProvider),

@@ -48,4 +48,5 @@ export const createMetricsUpdaterMock = (): jest.Mocked<INativeYieldAutomationMe
   setActualRebalanceRequirement: jest.fn(),
   setReportedRebalanceRequirement: jest.fn(),
   incrementContractEstimateGasError: jest.fn(),
+  setBeaconChainEpochDrift: jest.fn(),
 });

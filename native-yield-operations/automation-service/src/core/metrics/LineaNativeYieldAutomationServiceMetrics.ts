@@ -143,6 +143,10 @@ export enum LineaNativeYieldAutomationServiceMetrics {
   // ii.) `rawRevertData` - The raw revert data (hex string)
   // iii.) `errorName` - The decoded error name (if available, otherwise "unknown")
   ContractEstimateGasError = "linea_native_yield_automation_service_contract_estimate_gas_error",
+
+  // Gauge representing the absolute epoch difference between primary and reference beacon chain RPCs.
+  // Value is -1 when either RPC call fails. Not emitted when reference is not configured.
+  BeaconChainEpochDrift = "linea_native_yield_automation_service_beacon_chain_epoch_drift",
 }
 
 export enum OperationTrigger {

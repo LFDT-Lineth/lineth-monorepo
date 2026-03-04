@@ -38,6 +38,7 @@ export class GaugeMetricsPoller implements IGaugeMetricsPoller, IOperationLoop {
    * @param {IBeaconNodeAPIClient} beaconNodeApiClient - Client for retrieving pending partial withdrawals from beacon chain.
    * @param {number} pollIntervalMs - Polling interval in milliseconds between gauge metrics updates.
    * @param {ISTETH} stethContractClient - Client for reading STETH contract data.
+   * @param {IBeaconNodeAPIClient} [referenceBeaconNodeApiClient] - Optional reference beacon client for epoch drift detection.
    */
   constructor(
     private readonly logger: ILogger,
@@ -49,6 +50,7 @@ export class GaugeMetricsPoller implements IGaugeMetricsPoller, IOperationLoop {
     private readonly beaconNodeApiClient: IBeaconNodeAPIClient,
     private readonly pollIntervalMs: number,
     private readonly stethContractClient: ISTETH,
+    private readonly referenceBeaconNodeApiClient?: IBeaconNodeAPIClient,
   ) {}
 
   /**
@@ -103,6 +105,26 @@ export class GaugeMetricsPoller implements IGaugeMetricsPoller, IOperationLoop {
     }
     if (fetchResults[6].status === "rejected") {
       this.logger.error("Failed to fetch yield provider data", { error: fetchResults[6].reason });
+    }
+
+    // Beacon chain epoch drift detection (only if reference client is configured)
+    if (this.referenceBeaconNodeApiClient !== undefined) {
+      const epochResults = await Promise.allSettled([
+        this.beaconNodeApiClient.getCurrentEpoch(),
+        this.referenceBeaconNodeApiClient.getCurrentEpoch(),
+      ]);
+
+      const primaryEpoch = epochResults[0].status === "fulfilled" ? epochResults[0].value : undefined;
+      const referenceEpoch = epochResults[1].status === "fulfilled" ? epochResults[1].value : undefined;
+
+      if (epochResults[0].status === "rejected") {
+        this.logger.warn("Failed to fetch primary beacon epoch for drift check", { error: epochResults[0].reason });
+      }
+      if (epochResults[1].status === "rejected") {
+        this.logger.warn("Failed to fetch reference beacon epoch for drift check", { error: epochResults[1].reason });
+      }
+
+      this._updateBeaconChainEpochDriftGauge(primaryEpoch, referenceEpoch);
     }
 
     // Update metrics in parallel for efficiency
@@ -518,5 +540,30 @@ export class GaugeMetricsPoller implements IGaugeMetricsPoller, IOperationLoop {
       return;
     }
     this.metricsUpdater.setLastTotalPendingFullWithdrawalGwei(Number(totalPendingFullWithdrawalGwei));
+  }
+
+  /**
+   * Updates the beacon chain epoch drift gauge metric.
+   * Compares epochs from the primary and reference beacon chain RPCs.
+   *
+   * @param {number | undefined} primaryEpoch - The epoch from the primary beacon RPC.
+   * @param {number | undefined} referenceEpoch - The epoch from the reference beacon RPC.
+   */
+  private _updateBeaconChainEpochDriftGauge(
+    primaryEpoch: number | undefined,
+    referenceEpoch: number | undefined,
+  ): void {
+    if (primaryEpoch === undefined || referenceEpoch === undefined) {
+      this.logger.warn("Beacon chain epoch drift check failed: one or both epoch values unavailable", {
+        primaryEpoch,
+        referenceEpoch,
+      });
+      this.metricsUpdater.setBeaconChainEpochDrift(-1);
+      return;
+    }
+
+    const drift = Math.abs(primaryEpoch - referenceEpoch);
+    this.logger.info("Beacon chain epoch drift check complete", { primaryEpoch, referenceEpoch, drift });
+    this.metricsUpdater.setBeaconChainEpochDrift(drift);
   }
 }

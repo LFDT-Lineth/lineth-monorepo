@@ -45,16 +45,16 @@ const createRetryService = (): jest.Mocked<IRetryService> => {
   return { retry: retryMock } as unknown as jest.Mocked<IRetryService>;
 };
 
-const createApolloClient = (): ApolloClient & { query: jest.MockedFunction<() => Promise<{ data?: unknown; error?: unknown }>> } => {
+const createApolloClient = (): ApolloClient & {
+  query: jest.MockedFunction<() => Promise<{ data?: unknown; error?: unknown }>>;
+} => {
   return {
     query: jest.fn<() => Promise<{ data?: unknown; error?: unknown }>>(),
   } as unknown as ApolloClient & { query: jest.MockedFunction<() => Promise<{ data?: unknown; error?: unknown }>> };
 };
 
 const createBeaconNodeApiClient = (): jest.Mocked<IBeaconNodeAPIClient> => {
-  const pendingWithdrawalsMock = jest.fn() as jest.MockedFunction<
-    IBeaconNodeAPIClient["getPendingPartialWithdrawals"]
-  >;
+  const pendingWithdrawalsMock = jest.fn() as jest.MockedFunction<IBeaconNodeAPIClient["getPendingPartialWithdrawals"]>;
   const getCurrentEpochMock = jest.fn() as jest.MockedFunction<IBeaconNodeAPIClient["getCurrentEpoch"]>;
   return {
     getPendingPartialWithdrawals: pendingWithdrawalsMock,
@@ -360,7 +360,11 @@ describe("ConsensysStakingApiClient", () => {
       const client = new ConsensysStakingApiClient(logger, retryService, apolloClient, beaconNodeApiClient);
       const graphqlResponse = [
         createGraphQLExitedValidatorResponse({ balance: "0", validatorIndex: "10", publicKey: "validator-zero" }),
-        createGraphQLExitedValidatorResponse({ balance: "35000000000", validatorIndex: "20", publicKey: "validator-nonzero" }),
+        createGraphQLExitedValidatorResponse({
+          balance: "35000000000",
+          validatorIndex: "20",
+          publicKey: "validator-nonzero",
+        }),
       ];
       apolloClient.query.mockResolvedValue({
         data: { allHeadValidators: { nodes: graphqlResponse } },
@@ -478,13 +482,16 @@ describe("ConsensysStakingApiClient", () => {
         withdrawableAmount: safeSub(safeSub(validatorB.balance, WITHDRAWAL_1_ETH), VALIDATOR_32_ETH),
       };
       expect(result).toEqual([expectedValidatorB, expectedValidatorA]);
-      expect(logger.debug).toHaveBeenCalledWith("joinValidatorsWithPendingWithdrawals - aggregated pending withdrawals", {
-        uniqueValidatorIndices: 2,
-        pendingByValidator: expect.arrayContaining([
-          { validator_index: 1, totalAmount: WITHDRAWAL_5_ETH.toString() },
-          { validator_index: 2, totalAmount: WITHDRAWAL_1_ETH.toString() },
-        ]),
-      });
+      expect(logger.debug).toHaveBeenCalledWith(
+        "joinValidatorsWithPendingWithdrawals - aggregated pending withdrawals",
+        {
+          uniqueValidatorIndices: 2,
+          pendingByValidator: expect.arrayContaining([
+            { validator_index: 1, totalAmount: WITHDRAWAL_5_ETH.toString() },
+            { validator_index: 2, totalAmount: WITHDRAWAL_1_ETH.toString() },
+          ]),
+        },
+      );
     });
 
     it("handles validators with no pending withdrawals", () => {
@@ -506,10 +513,13 @@ describe("ConsensysStakingApiClient", () => {
         withdrawableAmount: safeSub(safeSub(validator.balance, 0n), VALIDATOR_32_ETH),
       };
       expect(result).toEqual([expected]);
-      expect(logger.debug).toHaveBeenCalledWith("joinValidatorsWithPendingWithdrawals - aggregated pending withdrawals", {
-        uniqueValidatorIndices: 0,
-        pendingByValidator: [],
-      });
+      expect(logger.debug).toHaveBeenCalledWith(
+        "joinValidatorsWithPendingWithdrawals - aggregated pending withdrawals",
+        {
+          uniqueValidatorIndices: 0,
+          pendingByValidator: [],
+        },
+      );
     });
 
     it("returns empty array when validators array is empty", () => {
@@ -688,7 +698,9 @@ describe("ConsensysStakingApiClient", () => {
         withdrawableAmount: safeSub(safeSub(eligibleValidator.balance, 0n), VALIDATOR_32_ETH),
       };
       expect(result).toEqual([expectedEligible]);
-      expect(logger.info).toHaveBeenCalledWith("getValidatorsForWithdrawalRequestsAscending succeeded, validatorCount=1");
+      expect(logger.info).toHaveBeenCalledWith(
+        "getValidatorsForWithdrawalRequestsAscending succeeded, validatorCount=1",
+      );
     });
 
     it("includes validators at exact shard committee period boundary", async () => {
@@ -709,7 +721,9 @@ describe("ConsensysStakingApiClient", () => {
       // Assert
       expect(result).toBeDefined();
       expect(result).toHaveLength(1);
-      expect(logger.info).toHaveBeenCalledWith("getValidatorsForWithdrawalRequestsAscending succeeded, validatorCount=1");
+      expect(logger.info).toHaveBeenCalledWith(
+        "getValidatorsForWithdrawalRequestsAscending succeeded, validatorCount=1",
+      );
     });
   });
 
@@ -829,7 +843,9 @@ describe("ConsensysStakingApiClient", () => {
         ]),
       );
       expect(result).toHaveLength(3);
-      expect(logger.info).toHaveBeenCalledWith("getFilteredAndAggregatedPendingWithdrawals succeeded, aggregatedCount=3");
+      expect(logger.info).toHaveBeenCalledWith(
+        "getFilteredAndAggregatedPendingWithdrawals succeeded, aggregatedCount=3",
+      );
     });
 
     it("returns empty array when validators array is empty", () => {
@@ -846,7 +862,9 @@ describe("ConsensysStakingApiClient", () => {
 
       // Assert
       expect(result).toEqual([]);
-      expect(logger.info).toHaveBeenCalledWith("getFilteredAndAggregatedPendingWithdrawals succeeded, aggregatedCount=0");
+      expect(logger.info).toHaveBeenCalledWith(
+        "getFilteredAndAggregatedPendingWithdrawals succeeded, aggregatedCount=0",
+      );
     });
   });
 
@@ -1005,7 +1023,9 @@ describe("ConsensysStakingApiClient", () => {
 
       // Assert
       expect(result).toBeUndefined();
-      expect(logger.warn).toHaveBeenCalledWith("getNonSlashedAndExitingValidators - invalid input: validators is undefined");
+      expect(logger.warn).toHaveBeenCalledWith(
+        "getNonSlashedAndExitingValidators - invalid input: validators is undefined",
+      );
     });
 
     it("returns empty array when input is empty array", () => {
@@ -1061,9 +1081,12 @@ describe("ConsensysStakingApiClient", () => {
 
       // Assert
       expect(result).toBeUndefined();
-      expect(logger.warn).toHaveBeenCalledWith("getTotalBalanceOfExitingValidators - invalid input: validators is undefined", {
-        validators: true,
-      });
+      expect(logger.warn).toHaveBeenCalledWith(
+        "getTotalBalanceOfExitingValidators - invalid input: validators is undefined",
+        {
+          validators: true,
+        },
+      );
     });
 
     it("returns 0n when input is empty array", () => {
@@ -1118,9 +1141,12 @@ describe("ConsensysStakingApiClient", () => {
 
       // Assert
       expect(result).toBeUndefined();
-      expect(logger.warn).toHaveBeenCalledWith("getTotalBalanceOfExitedValidators - invalid input: validators is undefined", {
-        validators: true,
-      });
+      expect(logger.warn).toHaveBeenCalledWith(
+        "getTotalBalanceOfExitedValidators - invalid input: validators is undefined",
+        {
+          validators: true,
+        },
+      );
     });
 
     it("returns 0n when input is empty array", () => {

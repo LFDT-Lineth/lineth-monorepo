@@ -38,9 +38,10 @@ describe("LineaRollupYieldExtensionContractClient", () => {
   const contractStub = { abi: LineaRollupYieldExtensionABI } as any;
 
   // Factory function for transaction receipt
-  const createTransactionReceipt = (transactionHash: string): TransactionReceipt => ({
-    transactionHash,
-  }) as unknown as TransactionReceipt;
+  const createTransactionReceipt = (transactionHash: string): TransactionReceipt =>
+    ({
+      transactionHash,
+    }) as unknown as TransactionReceipt;
 
   beforeEach(() => {
     jest.clearAllMocks();

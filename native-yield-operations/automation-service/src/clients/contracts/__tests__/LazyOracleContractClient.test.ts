@@ -49,11 +49,12 @@ describe("LazyOracleContractClient", () => {
   let contractStub: any;
 
   // Factory functions
-  const createMockBlockchainClient = (): jest.Mocked<IBlockchainClient<PublicClient, TransactionReceipt>> => ({
-    getBlockchainClient: jest.fn(),
-    getBalance: jest.fn(),
-    sendSignedTransaction: jest.fn(),
-  } as any);
+  const createMockBlockchainClient = (): jest.Mocked<IBlockchainClient<PublicClient, TransactionReceipt>> =>
+    ({
+      getBlockchainClient: jest.fn(),
+      getBalance: jest.fn(),
+      sendSignedTransaction: jest.fn(),
+    }) as any;
 
   const createMockContract = () => ({
     abi: LazyOracleCombinedABI,
@@ -72,7 +73,9 @@ describe("LazyOracleContractClient", () => {
     reportCid: string = SAMPLE_REPORT_CID,
   ) => [timestamp, refSlot, treeRoot, reportCid] as const;
 
-  const createUpdateVaultDataParams = (overrides?: Partial<Parameters<typeof LazyOracleContractClient.prototype.updateVaultData>[0]>) => ({
+  const createUpdateVaultDataParams = (
+    overrides?: Partial<Parameters<typeof LazyOracleContractClient.prototype.updateVaultData>[0]>,
+  ) => ({
     vault: VAULT_ADDRESS,
     totalValue: 1n,
     cumulativeLidoFees: 2n,

@@ -91,6 +91,7 @@ describe("OperationModeSelector", () => {
       setActualRebalanceRequirement: jest.fn(),
       setReportedRebalanceRequirement: jest.fn(),
       incrementContractEstimateGasError: jest.fn(),
+      setBeaconChainEpochDrift: jest.fn(),
     } as jest.Mocked<INativeYieldAutomationMetricsUpdater>;
     yieldManager = {
       isOssificationInitiated: jest.fn(),
@@ -228,10 +229,9 @@ describe("OperationModeSelector", () => {
     await selector.start();
 
     // Assert
-    expect(logger.error).toHaveBeenCalledWith(
-      `selectOperationModeLoop error, retrying in ${CUSTOM_RETRY_TIME_MS}ms`,
-      { error: contractError },
-    );
+    expect(logger.error).toHaveBeenCalledWith(`selectOperationModeLoop error, retrying in ${CUSTOM_RETRY_TIME_MS}ms`, {
+      error: contractError,
+    });
     expect(waitMock).toHaveBeenCalledWith(CUSTOM_RETRY_TIME_MS);
     expect(yieldReportingProcessor.process).toHaveBeenCalledTimes(1);
     expect(metricsUpdater.incrementOperationModeExecution).toHaveBeenCalledWith(

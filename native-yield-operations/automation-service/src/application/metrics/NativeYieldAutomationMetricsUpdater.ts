@@ -235,6 +235,14 @@ export class NativeYieldAutomationMetricsUpdater implements INativeYieldAutomati
       "Total number of contract estimateGas errors",
       ["contract_address", "rawRevertData", "errorName"],
     );
+
+    this.metricsService.createGauge(
+      LineaNativeYieldAutomationServiceMetrics.BeaconChainEpochDrift,
+      "Absolute epoch difference between primary and reference beacon chain RPCs",
+      [],
+    );
+    // Initialize to -1 ("unable to compare") so unconfigured state is distinguishable from healthy (0)
+    this.metricsService.setGauge(LineaNativeYieldAutomationServiceMetrics.BeaconChainEpochDrift, {}, -1);
   }
 
   /**
@@ -720,6 +728,17 @@ export class NativeYieldAutomationMetricsUpdater implements INativeYieldAutomati
       rawRevertData: rawRevertData,
       errorName: errorName ?? "unknown",
     });
+  }
+
+  /**
+   * Sets the beacon chain epoch drift gauge.
+   * Represents the absolute epoch difference between primary and reference beacon RPCs.
+   * A value of -1 indicates that one or both RPC calls failed.
+   *
+   * @param {number} drift - The epoch drift value. -1 for failure, 0+ for actual drift.
+   */
+  public setBeaconChainEpochDrift(drift: number): void {
+    this.metricsService.setGauge(LineaNativeYieldAutomationServiceMetrics.BeaconChainEpochDrift, {}, drift);
   }
 
   /**

@@ -31,19 +31,22 @@ describe("submitVaultReportIfNotFresh", () => {
   let lidoReportClient: jest.Mocked<ILidoAccountingReportClient>;
   let metricsUpdater: jest.Mocked<INativeYieldAutomationMetricsUpdater>;
 
-  const createVaultHubClientMock = (): jest.Mocked<IVaultHub<TransactionReceipt>> => ({
-    isVaultConnected: jest.fn(),
-    isReportFresh: jest.fn(),
-  }) as unknown as jest.Mocked<IVaultHub<TransactionReceipt>>;
+  const createVaultHubClientMock = (): jest.Mocked<IVaultHub<TransactionReceipt>> =>
+    ({
+      isVaultConnected: jest.fn(),
+      isReportFresh: jest.fn(),
+    }) as unknown as jest.Mocked<IVaultHub<TransactionReceipt>>;
 
-  const createLidoReportClientMock = (): jest.Mocked<ILidoAccountingReportClient> => ({
-    getLatestSubmitVaultReportParams: jest.fn(),
-    submitLatestVaultReport: jest.fn(),
-  }) as unknown as jest.Mocked<ILidoAccountingReportClient>;
+  const createLidoReportClientMock = (): jest.Mocked<ILidoAccountingReportClient> =>
+    ({
+      getLatestSubmitVaultReportParams: jest.fn(),
+      submitLatestVaultReport: jest.fn(),
+    }) as unknown as jest.Mocked<ILidoAccountingReportClient>;
 
-  const createMetricsUpdaterMock = (): jest.Mocked<INativeYieldAutomationMetricsUpdater> => ({
-    incrementLidoVaultAccountingReport: jest.fn(),
-  }) as unknown as jest.Mocked<INativeYieldAutomationMetricsUpdater>;
+  const createMetricsUpdaterMock = (): jest.Mocked<INativeYieldAutomationMetricsUpdater> =>
+    ({
+      incrementLidoVaultAccountingReport: jest.fn(),
+    }) as unknown as jest.Mocked<INativeYieldAutomationMetricsUpdater>;
 
   const createVaultReportParams = () => ({
     vault: VAULT_ADDRESS,
@@ -68,10 +71,8 @@ describe("submitVaultReportIfNotFresh", () => {
     vaultHubClient.isReportFresh.mockResolvedValue(false);
     lidoReportClient.getLatestSubmitVaultReportParams.mockResolvedValue(createVaultReportParams());
     lidoReportClient.submitLatestVaultReport.mockResolvedValue(undefined);
-    attemptMock.mockImplementation(
-      ((loggerArg: ILogger, fn: () => unknown | Promise<unknown>) =>
-        ResultAsync.fromPromise((async () => fn())(), (error) => error as Error)) as typeof attempt,
-    );
+    attemptMock.mockImplementation(((loggerArg: ILogger, fn: () => unknown | Promise<unknown>) =>
+      ResultAsync.fromPromise((async () => fn())(), (error) => error as Error)) as typeof attempt);
   });
 
   it("skips submission when flag is disabled", async () => {
@@ -121,7 +122,9 @@ describe("submitVaultReportIfNotFresh", () => {
     expect(lidoReportClient.getLatestSubmitVaultReportParams).not.toHaveBeenCalled();
     expect(lidoReportClient.submitLatestVaultReport).not.toHaveBeenCalled();
     expect(metricsUpdater.incrementLidoVaultAccountingReport).not.toHaveBeenCalled();
-    expect(logger.info).toHaveBeenCalledWith(`${LOG_PREFIX} - Skipping vault report submission (vault is not connected)`);
+    expect(logger.info).toHaveBeenCalledWith(
+      `${LOG_PREFIX} - Skipping vault report submission (vault is not connected)`,
+    );
   });
 
   it("proceeds with submission when vault connection check fails", async () => {
@@ -267,4 +270,3 @@ describe("submitVaultReportIfNotFresh", () => {
     expect(logger.info).not.toHaveBeenCalledWith(`${LOG_PREFIX} - Vault report submission succeeded`);
   });
 });
-

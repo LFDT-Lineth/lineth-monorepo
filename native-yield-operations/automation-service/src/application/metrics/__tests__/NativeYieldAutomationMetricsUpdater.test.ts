@@ -18,7 +18,8 @@ const SAMPLE_AMOUNT_GWEI = 1000;
 const SAMPLE_EPOCH = 60001;
 const SAMPLE_SLOT = 123456;
 const SAMPLE_TIMESTAMP = 1704067200;
-const RAW_REVERT_DATA = "0xf2ed496c000000000000000000000000000000000000000000000025dffc6dedca6c668800000000000000000000000000000000000000000000000ac3b0cfe3a6daf2d1";
+const RAW_REVERT_DATA =
+  "0xf2ed496c000000000000000000000000000000000000000000000025dffc6dedca6c668800000000000000000000000000000000000000000000000ac3b0cfe3a6daf2d1";
 const ERROR_NAME = "ExceedsWithdrawable";
 
 // Factory functions
@@ -1037,7 +1038,11 @@ describe("NativeYieldAutomationMetricsUpdater", () => {
       jest.clearAllMocks();
 
       // Act
-      updater.setPendingPartialWithdrawalQueueAmountGwei(VALIDATOR_PUBKEY, SAMPLE_EPOCH, STANDARD_VALIDATOR_AMOUNT_GWEI);
+      updater.setPendingPartialWithdrawalQueueAmountGwei(
+        VALIDATOR_PUBKEY,
+        SAMPLE_EPOCH,
+        STANDARD_VALIDATOR_AMOUNT_GWEI,
+      );
 
       // Assert
       expect(metricsService.setGauge).toHaveBeenCalledWith(
@@ -1393,7 +1398,12 @@ describe("NativeYieldAutomationMetricsUpdater", () => {
       jest.clearAllMocks();
 
       // Act
-      updater.setPendingFullWithdrawalQueueAmountGwei(VALIDATOR_PUBKEY, SAMPLE_EPOCH, STANDARD_VALIDATOR_AMOUNT_GWEI, false);
+      updater.setPendingFullWithdrawalQueueAmountGwei(
+        VALIDATOR_PUBKEY,
+        SAMPLE_EPOCH,
+        STANDARD_VALIDATOR_AMOUNT_GWEI,
+        false,
+      );
 
       // Assert
       expect(metricsService.setGauge).toHaveBeenCalledWith(
