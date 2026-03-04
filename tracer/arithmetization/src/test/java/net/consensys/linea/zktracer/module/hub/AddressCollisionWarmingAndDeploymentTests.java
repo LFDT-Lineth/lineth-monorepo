@@ -41,6 +41,7 @@ import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.*;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -89,8 +90,6 @@ public class AddressCollisionWarmingAndDeploymentTests extends TracerTestBase {
     final List<Arguments> arguments = new ArrayList<>();
 
     for (AccountDelegationType delegationType : AccountDelegationType.values()) {
-      ToyAccount senderAccount =
-          getAccountForDelegationTypeWithKeyPair(senderKeyPair, delegationType);
       for (int skip = 0; skip <= 1; skip++) {
         for (AddressCollisions collision : AddressCollisions.values()) {
           for (int isDeployment = 0; isDeployment <= 1; isDeployment++) {
@@ -113,7 +112,7 @@ public class AddressCollisionWarmingAndDeploymentTests extends TracerTestBase {
 
                   arguments.add(
                       Arguments.of(
-                          senderAccount,
+                          delegationType,
                           skip == 1,
                           collision,
                           isDeployment == 1,
@@ -130,11 +129,8 @@ public class AddressCollisionWarmingAndDeploymentTests extends TracerTestBase {
     return arguments.stream();
   }
 
-  @Tag("weekly")
-  @ParameterizedTest
-  @MethodSource("inputs")
-  void addressCollisionWarmingAndDeployment(
-      ToyAccount senderAccount,
+  void runWithParameters(
+      AccountDelegationType delegationType,
       boolean skip,
       AddressCollisions collision,
       boolean deployment,
@@ -142,6 +138,9 @@ public class AddressCollisionWarmingAndDeploymentTests extends TracerTestBase {
       WarmingScenario warming2,
       WarmingScenario warming3,
       TestInfo testInfo) {
+
+    ToyAccount senderAccount =
+        getAccountForDelegationTypeWithKeyPair(senderKeyPair, delegationType);
 
     Address senderAddress = senderAccount.getAddress();
 
@@ -204,6 +203,38 @@ public class AddressCollisionWarmingAndDeploymentTests extends TracerTestBase {
         .zkTracerValidator(zkTracer -> {})
         .build()
         .run();
+  }
+
+  @Tag("weekly")
+  @ParameterizedTest
+  @MethodSource("inputs")
+  void addressCollisionWarmingAndDeploymentTest(
+      AccountDelegationType delegationType,
+      boolean skip,
+      AddressCollisions collision,
+      boolean deployment,
+      WarmingScenario warming1,
+      WarmingScenario warming2,
+      WarmingScenario warming3,
+      TestInfo testInfo) {
+
+    runWithParameters(
+        delegationType, skip, collision, deployment, warming1, warming2, warming3, testInfo);
+  }
+
+  @Test
+  void targetedTest(TestInfo testInfo) {
+    for (AccountDelegationType delegationType : AccountDelegationType.values()) {
+      runWithParameters(
+          delegationType,
+          true,
+          SENDER_IS_RECIPIENT,
+          false,
+          WarmingScenario.NO_WARMING,
+          WarmingScenario.NO_WARMING,
+          WarmingScenario.NO_WARMING,
+          testInfo);
+    }
   }
 
   private void appendAccessListEntry(
