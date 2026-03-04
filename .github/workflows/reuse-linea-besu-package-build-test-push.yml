@@ -26,6 +26,11 @@ on:
       with_besu_fleet_plugin:
         required: true
         type: boolean
+    outputs:
+      linea_besu_package_tag:
+        value: ${{ jobs.build-and-upload-artifact.outputs.linea_besu_package_tag }}
+      linea_besu_package_release_tag:
+        value: ${{ jobs.build-and-upload-artifact.outputs.linea_besu_package_release_tag }}
     secrets:
       DOCKERHUB_USERNAME:
         required: false

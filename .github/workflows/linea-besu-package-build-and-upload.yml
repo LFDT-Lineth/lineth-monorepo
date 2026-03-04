@@ -17,6 +17,8 @@ on:
     outputs:
       linea_besu_package_tag:
         value: ${{ jobs.build-and-upload-artifact.outputs.linea_besu_package_tag }}
+      linea_besu_package_release_tag:
+        value: ${{ jobs.build-and-upload-artifact.outputs.linea_besu_package_release_tag }}
       expected_traces_api_version:
         value: ${{ jobs.build-and-upload-artifact.outputs.expected_traces_api_version }}
       dockerimage:
@@ -36,6 +38,7 @@ jobs:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     outputs:
       linea_besu_package_tag: ${{ steps.build-plugins-and-assemble.outputs.dockertag }}
+      linea_besu_package_release_tag: ${{ steps.build-plugins-and-assemble.outputs.releasetag }}
       expected_traces_api_version: ${{ steps.build-plugins-and-assemble.outputs.arithmetization_version }}
       dockerimage: ${{ steps.build-plugins-and-assemble.outputs.dockerimage }}
     steps:

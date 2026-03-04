@@ -46,3 +46,42 @@ jobs:
       expected_traces_api_version_override: ${{ inputs.expected_traces_api_version_override }}
       with_besu_fleet_plugin: ${{ inputs.without_besu_fleet_plugin != 'true' }}
     secrets: inherit
+
+  summarize-release:
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    needs: [ build-test-push ]
+    steps:
+      - name: Write release summary
+        shell: bash
+        env:
+          DOCKER_TAG: ${{ needs.build-test-push.outputs.linea_besu_package_tag }}
+          RELEASE_TAG: ${{ needs.build-test-push.outputs.linea_besu_package_release_tag }}
+          IMAGE_PUSHED: ${{ inputs.skip_push_image != 'true' }}
+        run: |
+          set -euo pipefail
+
+          docker_tag="$DOCKER_TAG"
+          release_tag="$RELEASE_TAG"
+          if [[ -z "$docker_tag" ]]; then
+            echo "linea_besu_package_tag output is empty"
+            exit 1
+          fi
+          if [[ -z "$release_tag" ]]; then
+            echo "linea_besu_package_release_tag output is empty"
+            exit 1
+          fi
+
+          image_ref="consensys/linea-besu-package:${docker_tag}"
+          release_url="https://github.com/Consensys/linea-monorepo/releases/tag/linea-besu-package-${release_tag}"
+          image_pushed="$IMAGE_PUSHED"
+
+          {
+            echo "## Linea Besu Package Release Summary"
+            echo
+            if [[ "$image_pushed" == "true" ]]; then
+              echo "- Released image: \`$image_ref\`"
+            else
+              echo "- Image push skipped: \`$image_ref\` was not pushed"
+            fi
+            echo "- Release page: $release_url"
+          } >> "$GITHUB_STEP_SUMMARY"
