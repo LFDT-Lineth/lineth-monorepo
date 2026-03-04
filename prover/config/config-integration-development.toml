@@ -24,8 +24,6 @@ verifier_id = 0
 
 [layer2]
 chain_id = 1337
-base_fee = 7
-coin_base = "0x8F81e2E3F8b46467523463835F965fFE476E1c9E"
 message_service_contract = "0xe537D669CA013d86EBeF1D64e40fC74CADC91987"
 
 [traces_limits]

@@ -77,14 +77,6 @@ func ScanBlockByteLen(b []byte) (int, error) {
 		// encoding the block-hash and the timestamp. They are are stored ahead
 		// of the transaction
 		preTxBufSize = 32 + 4
-
-		// heuristicMaxNbTxs corresponds to a tacit maximal value that we can
-		// expect to be contained in the currently scanned block. The theoretical
-		// max value is 2**16 but a value higher than heuristic value is
-		// considered "odd" and triggers an error. The check can be easily remove
-		// in the future if we decide to make large blocks. This is used as an
-		// early fail mechanism.
-		heuristicMaxNbTxs = 1 << 10
 	)
 
 	var (
@@ -96,10 +88,6 @@ func ScanBlockByteLen(b []byte) (int, error) {
 
 	if err := binary.Read(r, binary.BigEndian, &decNumTxs); err != nil {
 		return -1, fmt.Errorf("could not decode nb txs: %w", err)
-	}
-
-	if decNumTxs > heuristicMaxNbTxs {
-		return -1, fmt.Errorf("invalid block: the decoded nb tx is %v > %v", decNumTxs, heuristicMaxNbTxs)
 	}
 
 	r.Seek(preTxBufSize, io.SeekCurrent)

@@ -83,27 +83,19 @@ func newConfigFromFile(path string, withValidation bool) (*Config, error) {
 	}
 	cfg.Layer2.MsgSvcContract = addr.Address()
 
-	// Extract the coinbase address from the string
-	addr, err = common.NewMixedcaseAddressFromString(cfg.Layer2.CoinBaseStr)
-	if withValidation && err != nil {
-		return nil, fmt.Errorf("failed to extract Layer2.CoinBase address: %w", err)
-	}
-	cfg.Layer2.CoinBase = addr.Address()
-
 	// ensure that asset dir / kzgsrs exists using os.Stat
 	srsDir := cfg.PathForSRS()
 	if _, err := os.Stat(srsDir); withValidation && os.IsNotExist(err) {
 		return nil, fmt.Errorf("kzgsrs directory (%s) does not exist: %w", srsDir, err)
 	}
 
-	// Note: ChainID and BaseFee are typed as uint, which is at most 64 bits.
+	// duplicate L2 hardcoded values for PI
 	cfg.PublicInputInterconnection.ChainID = uint64(cfg.Layer2.ChainID)
-	cfg.PublicInputInterconnection.BaseFee = uint64(cfg.Layer2.BaseFee)
-	cfg.PublicInputInterconnection.CoinBase = cfg.Layer2.CoinBase
 	cfg.PublicInputInterconnection.L2MsgServiceAddr = cfg.Layer2.MsgSvcContract
 
 	cfg.TracesLimits.normalizeToLowercase()
 	cfg.TracesLimits.sortReverseAlphabetical()
+
 	return &cfg, nil
 }
 
@@ -144,7 +136,6 @@ type Config struct {
 	Layer2 struct {
 		// ChainID stores the ID of the Linea L2 network to consider.
 		ChainID uint `mapstructure:"chain_id" validate:"required"`
-		BaseFee uint `mapstructure:"base_fee" validate:"required"`
 
 		// MsgSvcContractStr stores the unique ID of the Service Contract (SC), that is, it's
 		// address, as a string. The Service Contract (SC) is a smart contract that the L2
@@ -154,10 +145,6 @@ type Config struct {
 
 		// MsgSvcContract stores the unique ID of the Service Contract (SC), as a common.Address.
 		MsgSvcContract common.Address `mapstructure:"-"`
-
-		// CoinBaseStr stores the coinbase address of Linea as a string.
-		CoinBaseStr string         `mapstructure:"coin_base" validate:"required,eth_addr"`
-		CoinBase    common.Address `mapstructure:"-"`
 	}
 
 	TracesLimits TracesLimits `mapstructure:"traces_limits" validate:"required"`
@@ -325,8 +312,6 @@ type PublicInput struct {
 
 	MockKeccakWizard bool           // for testing purposes only
 	ChainID          uint64         // duplicate from Config
-	BaseFee          uint64         // duplicate from Config
-	CoinBase         common.Address // duplicate from Config
 	L2MsgServiceAddr common.Address // duplicate from Config
 }
 

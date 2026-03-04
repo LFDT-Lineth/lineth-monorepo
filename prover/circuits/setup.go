@@ -35,7 +35,7 @@ import (
 const (
 	// solidityPragmaVersion is the version of the Solidity compiler to target.
 	// it is used for generating the verifier contract from the PLONK verifying key.
-	solidityPragmaVersion = "0.8.26"
+	solidityPragmaVersion = "0.8.33"
 )
 
 // Setup contains the proving and verifying keys of a circuit, as well as the constraint system.

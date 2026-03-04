@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"hash"
-	"math/big"
 
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/dictionary"
 
@@ -366,6 +365,7 @@ func (c *Compiled) Assign(r Request, dictStore dictionary.Store) (a Circuit, err
 	}
 
 	aggregationPI := r.Aggregation.Sum(&hshK)
+
 	a.AggregationPublicInput[0] = aggregationPI[:16]
 	a.AggregationPublicInput[1] = aggregationPI[16:]
 
@@ -376,11 +376,8 @@ func (c *Compiled) Assign(r Request, dictStore dictionary.Store) (a Circuit, err
 	// This assignment is then redundant, but it helps with debugging in the test engine
 	// TODO @Tabaie when we remove the hard-coding, this will still run correctly
 	// but would be doubly redundant. We can remove it then.
-
-	a.ChainConfigurationFPISnark.ChainID = r.Aggregation.ChainID
-	a.ChainConfigurationFPISnark.BaseFee = r.Aggregation.BaseFee
-	a.ChainConfigurationFPISnark.CoinBase = new(big.Int).SetBytes(r.Aggregation.CoinBase[:])
-	a.ChainConfigurationFPISnark.L2MessageServiceAddress = new(big.Int).SetBytes(r.Aggregation.L2MessageServiceAddr[:])
+	a.ChainID = r.Aggregation.ChainID
+	a.L2MessageServiceAddr = r.Aggregation.L2MessageServiceAddr
 
 	return
 }

@@ -1,5 +1,9 @@
 package main
 
+// DCC (Dynamic Chain Configuration) version of the testcase generator.
+// This is a temporary tool to support contract CI with DCC-enabled verifier contracts.
+// Revert this change before the DCC release.
+
 import (
 	"encoding/json"
 	"fmt"
@@ -18,14 +22,13 @@ import (
 	"github.com/consensys/linea-monorepo/prover/circuits"
 	"github.com/consensys/linea-monorepo/prover/circuits/dummy"
 	"github.com/consensys/linea-monorepo/prover/config"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 )
 
 // Main command of the CLI tool
 var rootCmd = &cobra.Command{
-	Use:   "generate",
-	Short: "Generates a sequence of testcases samples for decompression proof",
+	Use:   "generate-dcc",
+	Short: "Generates testcase samples with DCC (Dynamic Chain Configuration) support",
 	Run:   genFiles,
 }
 
@@ -43,13 +46,11 @@ var cfg = &config.Config{
 		ProverMode: config.ProverModeDev,
 		VerifierID: 1,
 	},
-	AssetsDir: "./prover-assets", // TODO @gbotrel untested
-	// Layer2 fields will be populated from the DCC spec in aggregation spec files
+	AssetsDir: "./prover-assets",
+	// Layer2 fields will be populated from the DCC spec
 }
 
 func init() {
-	// Initialize the flags
-
 	rootCmd.Flags().StringArrayVar(
 		&specFiles, "spec", nil,
 		"JSON spec file to use to generate a sequence of blobs",
@@ -71,19 +72,12 @@ func genFiles(cmd *cobra.Command, args []string) {
 	validateParameters(cmd, args)
 
 	var (
-		// Create a reproducible RNG
 		// #nosec G404 --we don't need a cryptographic RNG for testing purpose
-		rng = rand.New(rand.NewSource(seed))
-		// Running spec object that accumulate all the intermediate results
-		runningSpec = &AggregationSpec{}
-		// List of the generated blob submission responses
+		rng                     = rand.New(rand.NewSource(seed))
+		runningSpec             = &AggregationSpec{}
 		blobSubmissionResponses = []*blobsubmission.Response{}
-		// Note: there can be at most one aggregation response per sample
-		// generation.
-		aggregationResponses *aggregation.Response
+		aggregationResponses    *DCCAggregationResponse
 
-		// Empty spec, handy for testing if a spec is for aggregation or blob
-		// submission.
 		emptyBlobSubmissionSpec BlobSubmissionSpec
 		emptyAggSpec            AggregationSpec
 	)
@@ -96,7 +90,6 @@ func genFiles(cmd *cobra.Command, args []string) {
 		hasAggregation := !reflect.DeepEqual(spec.AggregationSpec, emptyAggSpec)
 
 		switch {
-		// It's a blob submission spec
 		case hasBlobSubmission && !hasAggregation:
 			resp := ProcessBlobSubmissionSpec(
 				rng, runningSpec, blobSubmissionResponses,
@@ -104,21 +97,18 @@ func genFiles(cmd *cobra.Command, args []string) {
 			)
 			blobSubmissionResponses = append(blobSubmissionResponses, resp)
 
-		// It's an aggregation spec
 		case hasAggregation && !hasBlobSubmission:
-
 			if len(blobSubmissionResponses) == 0 {
 				printlnAndExit("provided aggregation spec without any blob submission spec before")
 			}
-
 			if aggregationResponses != nil {
 				printlnAndExit("more than one aggregation spec is not allowed")
 			}
 
-			// Apply DCC from the aggregation spec to the global config
+			// Apply DCC from the aggregation spec
 			applyDCCToConfig(&spec.DynamicChainConfigurationSpec)
 
-			resp := ProcessAggregationSpec(
+			resp := ProcessAggregationSpecDCC(
 				rng,
 				blobSubmissionResponses[0],
 				runningSpec,
@@ -126,9 +116,7 @@ func genFiles(cmd *cobra.Command, args []string) {
 			)
 			aggregationResponses = resp
 
-		// It's both, in that case, we do first the submission then the aggregation
 		case hasAggregation && hasBlobSubmission:
-
 			if aggregationResponses != nil {
 				printlnAndExit("more than one aggregation spec is not allowed")
 			}
@@ -139,10 +127,10 @@ func genFiles(cmd *cobra.Command, args []string) {
 			)
 			blobSubmissionResponses = append(blobSubmissionResponses, respA)
 
-			// Apply DCC from the aggregation spec to the global config
+			// Apply DCC from the aggregation spec
 			applyDCCToConfig(&spec.DynamicChainConfigurationSpec)
 
-			resp := ProcessAggregationSpec(
+			resp := ProcessAggregationSpecDCC(
 				rng,
 				blobSubmissionResponses[0],
 				runningSpec,
@@ -155,12 +143,11 @@ func genFiles(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Then write the files
+	// Write blob submission files
 	for i, resp := range blobSubmissionResponses {
 		p := path.Join(odir, blobSubmissionRespFileName(resp))
 		f, err := os.Create(p)
 		if err != nil {
-			// It should not be possible due to the above check
 			printlnAndExit("Unexpected error creating output file: %v", err)
 		}
 
@@ -173,20 +160,20 @@ func genFiles(cmd *cobra.Command, args []string) {
 		if err != nil {
 			printlnAndExit("Unexpected error writing output file: %v", err)
 		}
-
 		f.Close()
 	}
 
-	// and for the aggregation
+	// Write aggregation file with DCC fields
 	if aggregationResponses != nil {
 		p := path.Join(odir, aggregationRespFileName(blobSubmissionResponses))
 		f, err := os.Create(p)
 		if err != nil {
-			// It should not be possible due to the above check
 			printlnAndExit("Unexpected error creating output file: %v", err)
 		}
 
-		serialized, err := json.MarshalIndent(aggregationResponses, "", "\t")
+		// Create the DCC response structure for JSON output
+		dccResp := createDCCResponseJSON(aggregationResponses)
+		serialized, err := json.MarshalIndent(dccResp, "", "\t")
 		if err != nil {
 			printlnAndExit("Unexpected error writing output file: %v", err)
 		}
@@ -195,32 +182,63 @@ func genFiles(cmd *cobra.Command, args []string) {
 		if err != nil {
 			printlnAndExit("Unexpected error writing output file: %v", err)
 		}
-
 		f.Close()
 
-		// and dump the circuit id
 		dumpVerifierContract(odir, circuits.MockCircuitIDEmulation)
 	}
 }
 
-// applyDCCToConfig applies the Dynamic Chain Configuration (DCC) from the aggregation spec
-// to the global config. DCC contains chain-specific parameters (chainID, baseFee, coinBase,
-// L2MessageServiceAddr) that are used when computing the aggregation public input hash.
-// These values must match between the prover and the on-chain verifier contract.
-func applyDCCToConfig(dccSpec *DynamicChainConfigurationSpec) {
-	if dccSpec == nil {
-		printlnAndExit("aggregation spec must include dynamicChainConfigurationSpec")
+// DCCResponseJSON is the JSON structure for the DCC aggregation response
+// Field order matches the expected output from main branch
+type DCCResponseJSON struct {
+	FinalShnarf                             string   `json:"finalShnarf"`
+	ParentAggregationFinalShnarf            string   `json:"parentAggregationFinalShnarf"`
+	AggregatedProof                         string   `json:"aggregatedProof"`
+	AggregatedProverVersion                 string   `json:"aggregatedProverVersion"`
+	AggregatedVerifierIndex                 int      `json:"aggregatedVerifierIndex"`
+	AggregatedProofPublicInput              string   `json:"aggregatedProofPublicInput"`
+	DataHashes                              []string `json:"dataHashes"`
+	DataParentHash                          string   `json:"dataParentHash"`
+	ParentStateRootHash                     string   `json:"parentStateRootHash"`
+	ParentAggregationLastBlockTimestamp     uint     `json:"parentAggregationLastBlockTimestamp"`
+	LastFinalizedBlockNumber                uint     `json:"lastFinalizedBlockNumber"`
+	FinalTimestamp                          uint     `json:"finalTimestamp"`
+	FinalBlockNumber                        uint     `json:"finalBlockNumber"`
+	LastFinalizedL1RollingHash              string   `json:"lastFinalizedL1RollingHash"`
+	L1RollingHash                           string   `json:"l1RollingHash"`
+	LastFinalizedL1RollingHashMessageNumber uint     `json:"lastFinalizedL1RollingHashMessageNumber"`
+	L1RollingHashMessageNumber              uint     `json:"l1RollingHashMessageNumber"`
+	L2MerkleRoots                           []string `json:"l2MerkleRoots"`
+	L2MerkleTreesDepth                      uint     `json:"l2MerkleTreesDepth"`
+	L2MessagingBlocksOffsets                string   `json:"l2MessagingBlocksOffsets"`
+}
+
+func createDCCResponseJSON(resp *DCCAggregationResponse) *DCCResponseJSON {
+	return &DCCResponseJSON{
+		FinalShnarf:                             resp.FinalShnarf,
+		ParentAggregationFinalShnarf:            resp.ParentAggregationFinalShnarf,
+		AggregatedProof:                         resp.AggregatedProof,
+		AggregatedProverVersion:                 resp.AggregatedProverVersion,
+		AggregatedVerifierIndex:                 resp.AggregatedVerifierIndex,
+		AggregatedProofPublicInput:              resp.AggregatedProofPublicInput,
+		DataHashes:                              resp.DataHashes,
+		DataParentHash:                          resp.DataParentHash,
+		ParentStateRootHash:                     resp.ParentStateRootHash,
+		ParentAggregationLastBlockTimestamp:     resp.ParentAggregationLastBlockTimestamp,
+		LastFinalizedBlockNumber:                resp.LastFinalizedBlockNumber,
+		FinalTimestamp:                          resp.FinalTimestamp,
+		FinalBlockNumber:                        resp.FinalBlockNumber,
+		LastFinalizedL1RollingHash:              resp.LastFinalizedL1RollingHash,
+		L1RollingHash:                           resp.L1RollingHash,
+		LastFinalizedL1RollingHashMessageNumber: resp.LastFinalizedL1RollingHashMessageNumber,
+		L1RollingHashMessageNumber:              resp.L1RollingHashMessageNumber,
+		L2MerkleRoots:                           resp.L2MerkleRoots,
+		L2MerkleTreesDepth:                      resp.L2MsgTreesDepth,
+		L2MessagingBlocksOffsets:                resp.L2MessagingBlocksOffsets,
 	}
-	cfg.Layer2.ChainID = uint(dccSpec.ChainID)
-	cfg.Layer2.BaseFee = uint(dccSpec.BaseFee)
-	cfg.Layer2.CoinBaseStr = dccSpec.CoinBase
-	cfg.Layer2.CoinBase = common.HexToAddress(dccSpec.CoinBase)
-	cfg.Layer2.MsgSvcContractStr = dccSpec.L2MessageServiceAddr
-	cfg.Layer2.MsgSvcContract = common.HexToAddress(dccSpec.L2MessageServiceAddr)
 }
 
 func printlnAndExit(msg string, args ...any) {
-	// Ensures the new line
 	if !strings.HasSuffix(msg, "\n") {
 		msg += "\n"
 	}
@@ -228,17 +246,13 @@ func printlnAndExit(msg string, args ...any) {
 	os.Exit(1)
 }
 
-// Validates the parameters and exit the program if this is unsuccessful.
 func validateParameters(cmd *cobra.Command, _ []string) {
-
 	if len(specFiles) == 0 {
 		cmd.Usage()
 		printlnAndExit("No spec files provided")
 	}
 
 	fi, err := os.Lstat(odir)
-
-	// Try to create the directory if it doesn't exist
 	if os.IsNotExist(err) {
 		err = os.MkdirAll(odir, 0755)
 		if err != nil {
@@ -256,9 +270,7 @@ func validateParameters(cmd *cobra.Command, _ []string) {
 	}
 }
 
-// Parse a spec file from a file name and a dir. Exit if an error occurs.
 func parseSpecFile(file string) RandGenSpec {
-
 	spec := RandGenSpec{}
 	f, err := os.Open(file)
 	if err != nil {
@@ -272,21 +284,14 @@ func parseSpecFile(file string) RandGenSpec {
 	return spec
 }
 
-// Process a blob submission spec file
 func ProcessBlobSubmissionSpec(
 	rng *rand.Rand,
 	runningSpec *AggregationSpec,
 	prevBlobSubs []*blobsubmission.Response,
 	spec BlobSubmissionSpec,
-) (
-	resp *blobsubmission.Response,
-) {
+) (resp *blobsubmission.Response) {
 
-	// Override the relevant fields using the previously generated response
-	// so that we create a sequence.
 	if len(prevBlobSubs) > 0 && !spec.IgnoreBefore {
-
-		// Start on top of the previous response
 		prevBlobSubmissionResp := prevBlobSubs[len(prevBlobSubs)-1]
 		upBs := prevBlobSubmissionResp.ConflationOrder.UpperBoundaries
 		spec.StartFromL2Block = upBs[len(upBs)-1] + 1
@@ -301,13 +306,9 @@ func ProcessBlobSubmissionSpec(
 		printlnAndExit("Could not craft blob submission response : %s", err)
 	}
 
-	// Collect the elements of the response that can be used later if we build
-	// an aggregation response sample.
 	runningSpec.DataHashes = append(runningSpec.DataHashes, resp.DataHash)
-	// overrides everytime to get the last value at the end
 	runningSpec.FinalShnarf = resp.ExpectedShnarf
 
-	// only for the first blob submission
 	if len(prevBlobSubs) > 0 {
 		runningSpec.ParentStateRootHash = resp.ParentStateRootHash
 		runningSpec.DataParentHash = resp.DataParentHash
@@ -319,18 +320,14 @@ func ProcessBlobSubmissionSpec(
 	return resp
 }
 
-// Process an aggregation spec file
-func ProcessAggregationSpec(
+// ProcessAggregationSpecDCC processes aggregation spec with DCC support
+func ProcessAggregationSpecDCC(
 	rng *rand.Rand,
 	firstBlobSub *blobsubmission.Response,
 	runningSpec *AggregationSpec,
 	spec AggregationSpec,
-) (
-	resp *aggregation.Response,
-) {
+) (resp *DCCAggregationResponse) {
 
-	// Applies the fields that were collected earlier while processing the
-	// blob submissions. So that the aggregation job is consecutive to them.
 	if !spec.IgnoreBefore {
 		spec.DataParentHash = firstBlobSub.DataParentHash
 		spec.DataHashes = runningSpec.DataHashes
@@ -340,7 +337,6 @@ func ProcessAggregationSpec(
 		spec.FinalBlockNumber = runningSpec.FinalBlockNumber
 		spec.ParentAggregationFinalShnarf = firstBlobSub.PrevShnarf
 
-		// Not for the first aggregation that we generate in a row
 		if len(runningSpec.LastFinalizedL1RollingHash) > 0 {
 			spec.LastFinalizedL1RollingHashMessageNumber = runningSpec.L1RollingHashMessageNumber
 			spec.LastFinalizedL1RollingHash = runningSpec.L1RollingHash
@@ -349,33 +345,41 @@ func ProcessAggregationSpec(
 
 	collectedFields := RandAggregation(rng, spec)
 
-	resp, err := aggregation.CraftResponse(cfg, collectedFields)
+	// Call the standard CraftResponse
+	baseResp, err := aggregation.CraftResponse(cfg, collectedFields)
 	if err != nil {
 		printlnAndExit("Could not craft aggregation response : %s", err)
 	}
 
-	// Post-processing, stores the L1ROllingHash data
+	// Wrap with DCC fields
+	resp = wrapResponseWithDCC(
+		baseResp,
+		collectedFields.LastFinalizedL1RollingHash,
+		collectedFields.LastFinalizedL1RollingHashMessageNumber,
+	)
+
+	// Recalculate public input hash with DCC (includes chain config hash)
+	// and regenerate the proof for that public input
+	recalculateDCCPublicInputAndProof(resp)
+
+	// Post-processing
 	runningSpec.LastFinalizedL1RollingHash = resp.L1RollingHash
 	runningSpec.LastFinalizedL1RollingHashMessageNumber = resp.L1RollingHashMessageNumber
 
 	return resp
 }
 
-// returns the filename of a blob compression spec file
 func blobSubmissionRespFileName(resp *blobsubmission.Response) string {
 	start, end := resp.ConflationOrder.Range()
 	return fmt.Sprintf("./blocks-%v-%v.json", start, end)
 }
 
-// returns the filename of an aggregation spec file, the name is derived from
-// the first and the last name of the blob compression spec files.
 func aggregationRespFileName(resp []*blobsubmission.Response) string {
 	start, _ := resp[0].ConflationOrder.Range()
 	_, end := resp[len(resp)-1].ConflationOrder.Range()
 	return fmt.Sprintf("./aggregatedProof-%v-%v.json", start, end)
 }
 
-// dump the verifier contract in odir
 func dumpVerifierContract(odir string, circID circuits.MockCircuitID) {
 	filepath := filepath.Join(odir, fmt.Sprintf("Verifier%v.sol", circID))
 	f := files.MustOverwrite(filepath)

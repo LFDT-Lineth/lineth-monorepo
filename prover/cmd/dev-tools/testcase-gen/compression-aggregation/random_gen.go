@@ -106,7 +106,7 @@ type AggregationSpec struct {
 	// contracts
 	L2MsgTreeDepth uint `json:"treeDepth"`
 
-	// Bytes array indicating which L2 blocks have “MessageSent” events. The
+	// Bytes array indicating which L2 blocks have "MessageSent" events. The
 	// index starting from 1 + currentL2BlockNumber. If the value contains 1,
 	// it means that that block has events
 	L2MessagingBlocksOffsets string `json:"l2MessagingBlocksOffsets"`
