@@ -19,7 +19,10 @@ authority_ecrecover_success u1, authority_nonce u64, authority_has_empty_code_or
     var not_padding_selector u1
     var rlpauth_into_hub_lookup_selector u1 ;; this selector needs to be set at the end of the computation
     var invalid_step u3  
-
+    var chain_id_eq_network_id, chain_id_eq_zero u1
+    ;; precalc for chain_id checks
+    chain_id_eq_zero = chain_id == 0 ? 1 : 0
+    chain_id_eq_network_id = chain_id == network_chain_id ? 1 : 0
     ;; this is to avoid triggering lookups during padding rows
     var hub_stamp_minus_3 u32
     var hub_stamp_is_smaller_than_3 u1
@@ -42,8 +45,8 @@ authority_ecrecover_success u1, authority_nonce u64, authority_has_empty_code_or
         b, id = hub_stamp + 1 ;; id for lookups to ECDATA and SHAKIRA
     step_1:
         ;; verify that chain_id is 0 or the ID of the current chain
-        if chain_id == 0 goto step_2
-        if chain_id == network_chain_id goto step_2
+        if chain_id_eq_zero == 1 goto step_2
+        if chain_id_eq_network_id == 1 goto step_2
         invalid_step = 1
         goto exit_invalid
     step_2:
