@@ -31,22 +31,24 @@ public class ForwardBundlesPlugin extends AbstractLineaRequiredPlugin {
   public void doStart() {
     final var config = bundleConfiguration();
     final var forwardUrls = config.forwardUrls();
-    if (!forwardUrls.isEmpty()) {
-      final var rpcClient = createRpcClient(config.timeoutMillis());
-      final var retryScheduler = createRetryScheduler();
-      forwardUrls.stream()
-          .map(
-              url ->
-                  new BundleForwarder(
-                      config,
-                      createExecutor(url),
-                      retryScheduler,
-                      blockchainService,
-                      rpcClient,
-                      url))
-          .peek(bundlePoolService::subscribeTransactionBundleAdded)
-          .toList();
+    if (forwardUrls.isEmpty()) {
+      throw new IllegalArgumentException(
+          "ForwardBundlesPlugin requires at least one forward URL to be configured via --plugin-linea-bundles-forward-urls");
     }
+    final var rpcClient = createRpcClient(config.timeoutMillis());
+    final var retryScheduler = createRetryScheduler();
+    forwardUrls.stream()
+        .map(
+            url ->
+                new BundleForwarder(
+                    config,
+                    createExecutor(url),
+                    retryScheduler,
+                    blockchainService,
+                    rpcClient,
+                    url))
+        .peek(bundlePoolService::subscribeTransactionBundleAdded)
+        .toList();
   }
 
   private OkHttpClient createRpcClient(final int timeoutMillis) {

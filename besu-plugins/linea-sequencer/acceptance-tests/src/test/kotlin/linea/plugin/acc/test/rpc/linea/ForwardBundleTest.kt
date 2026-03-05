@@ -39,6 +39,10 @@ import java.util.concurrent.TimeUnit.SECONDS
 @WireMockTest
 class ForwardBundleTest : AbstractSendBundleTest() {
 
+  override fun getRequestedPlugins(): List<String> {
+    return DEFAULT_REQUESTED_PLUGINS + listOf("ForwardBundlesPlugin")
+  }
+
   override fun getTestCliOptions(): List<String> {
     return TestCommandLineOptionsBuilder()
       .set("--plugin-linea-bundles-forward-urls=", wireMockRuntimeInfo!!.httpBaseUrl)
