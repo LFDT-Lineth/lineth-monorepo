@@ -1,6 +1,7 @@
 export enum SupportedChainIds {
   MAINNET = 1,
   SEPOLIA = 11155111,
+  HOODI = 560048,
   LINEA_DEVNET = 59139,
   LINEA_TESTNET = 59140,
   LINEA_SEPOLIA = 59141,

@@ -76,6 +76,11 @@ const config: HardhatUserConfig = {
       accounts: [process.env.DEPLOYER_PRIVATE_KEY || EMPTY_HASH],
       url: "https://sepolia.infura.io/v3/" + process.env.INFURA_API_KEY,
     },
+    hoodi: {
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY || EMPTY_HASH],
+      url: "https://hoodi.infura.io/v3/" + process.env.INFURA_API_KEY,
+      chainId: SupportedChainIds.HOODI,
+    },
     linea_mainnet: {
       accounts: [process.env.DEPLOYER_PRIVATE_KEY || EMPTY_HASH],
       url: "https://linea-mainnet.infura.io/v3/" + process.env.INFURA_API_KEY,
@@ -128,6 +133,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: `https://api.etherscan.io/v2/api?chainid=${SupportedChainIds.LINEA}`,
           browserURL: "https://lineascan.build/",
+        },
+      },
+      {
+        network: "hoodi",
+        chainId: SupportedChainIds.HOODI,
+        urls: {
+          apiURL: `https://api.etherscan.io/v2/api?chainid=${SupportedChainIds.HOODI}`,
+          browserURL: "https://hoodi.etherscan.io/",
         },
       },
     ],
