@@ -83,8 +83,9 @@ describe("ProposalProcessor", () => {
       attemptUpdateState: jest.fn(),
       saveAnalysis: jest.fn(),
       incrementAnalysisAttempt: jest.fn(),
-      incrementNotifyAttempt: jest.fn(),
       markNotified: jest.fn(),
+      markNotifyFailed: jest.fn(),
+      attemptMarkNotifyFailed: jest.fn(),
       findLatestSourceIdBySource: jest.fn(),
     } as jest.Mocked<IProposalRepository>;
 

@@ -51,8 +51,7 @@ export class NotificationService implements INotificationService {
       // Validate assessment exists
       if (!proposal.assessmentJson) {
         this.logger.error("Proposal missing assessment data", { proposalId: proposal.id });
-        await this.proposalRepository.incrementNotifyAttempt(proposal.id);
-        await this.proposalRepository.updateState(proposal.id, ProposalState.NOTIFY_FAILED);
+        await this.proposalRepository.markNotifyFailed(proposal.id);
         return;
       }
 
@@ -62,8 +61,7 @@ export class NotificationService implements INotificationService {
           proposalId: proposal.id,
           errors: parseResult.error.errors,
         });
-        await this.proposalRepository.incrementNotifyAttempt(proposal.id);
-        await this.proposalRepository.updateState(proposal.id, ProposalState.NOTIFY_FAILED);
+        await this.proposalRepository.markNotifyFailed(proposal.id);
         return;
       }
       const assessment = parseResult.data;
@@ -90,9 +88,6 @@ export class NotificationService implements INotificationService {
         return;
       }
 
-      // Increment attempt count before notification
-      const updated = await this.proposalRepository.incrementNotifyAttempt(proposal.id);
-
       // Send Slack notification
       const result = await this.slackClient.sendProposalAlert(proposal, assessment);
 
@@ -102,8 +97,8 @@ export class NotificationService implements INotificationService {
           proposalId: proposal.id,
         });
       } else {
-        // Notification failed - transition to NOTIFY_FAILED for retry
-        await this.proposalRepository.updateState(proposal.id, ProposalState.NOTIFY_FAILED);
+        // Notification failed - atomically increment attempt and transition to NOTIFY_FAILED
+        const updated = await this.proposalRepository.markNotifyFailed(proposal.id);
         this.logger.warn("Slack notification failed, will retry", {
           proposalId: proposal.id,
           attempt: updated.notifyAttemptCount,
@@ -113,8 +108,8 @@ export class NotificationService implements INotificationService {
       }
     } catch (error) {
       // Best-effort transition so the proposal doesn't silently drop out of the
-      // notification pipeline when notifyAttemptCount was already incremented above.
-      await this.proposalRepository.attemptUpdateState(proposal.id, ProposalState.NOTIFY_FAILED);
+      // notification pipeline.
+      await this.proposalRepository.attemptMarkNotifyFailed(proposal.id);
       this.logger.critical("Error notifying proposal", { proposalId: proposal.id, error });
     }
   }

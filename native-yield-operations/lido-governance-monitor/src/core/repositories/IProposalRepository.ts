@@ -20,7 +20,8 @@ export interface IProposalRepository {
     promptVersion: string,
   ): Promise<Proposal>;
   incrementAnalysisAttempt(id: string): Promise<Proposal>;
-  incrementNotifyAttempt(id: string): Promise<Proposal>;
   markNotified(id: string): Promise<Proposal>;
+  markNotifyFailed(id: string): Promise<Proposal>;
+  attemptMarkNotifyFailed(id: string): Promise<Proposal | null>;
   findLatestSourceIdBySource(source: ProposalSource): Promise<string | null>;
 }

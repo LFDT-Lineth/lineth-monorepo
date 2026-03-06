@@ -110,13 +110,6 @@ export class ProposalRepository implements IProposalRepository {
     }) as Promise<Proposal>;
   }
 
-  async incrementNotifyAttempt(id: string): Promise<Proposal> {
-    return this.prisma.proposal.update({
-      where: { id },
-      data: { notifyAttemptCount: { increment: 1 } },
-    }) as Promise<Proposal>;
-  }
-
   // Orders by sourceCreatedAt (not sourceId) because sourceId is a string type
   // and may not sort numerically. If two proposals share the same timestamp, the
   // returned sourceId may not be the numerically highest, but this is acceptable -
@@ -137,7 +130,28 @@ export class ProposalRepository implements IProposalRepository {
         state: ProposalState.NOTIFIED,
         stateUpdatedAt: new Date(),
         notifiedAt: new Date(),
+        notifyAttemptCount: { increment: 1 },
       },
     }) as Promise<Proposal>;
+  }
+
+  async markNotifyFailed(id: string): Promise<Proposal> {
+    return this.prisma.proposal.update({
+      where: { id },
+      data: {
+        state: ProposalState.NOTIFY_FAILED,
+        stateUpdatedAt: new Date(),
+        notifyAttemptCount: { increment: 1 },
+      },
+    }) as Promise<Proposal>;
+  }
+
+  async attemptMarkNotifyFailed(id: string): Promise<Proposal | null> {
+    try {
+      return await this.markNotifyFailed(id);
+    } catch (error) {
+      this.logger.critical("attemptMarkNotifyFailed failed", { id, error });
+      return null;
+    }
   }
 }

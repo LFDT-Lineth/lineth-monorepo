@@ -86,8 +86,10 @@ describe("Proposal Lifecycle Integration", () => {
       updateState: jest.fn(),
       saveAnalysis: jest.fn(),
       incrementAnalysisAttempt: jest.fn(),
-      incrementNotifyAttempt: jest.fn(),
       markNotified: jest.fn(),
+      markNotifyFailed: jest.fn(),
+      attemptMarkNotifyFailed: jest.fn(),
+      findLatestSourceIdBySource: jest.fn(),
     } as jest.Mocked<IProposalRepository>;
 
     processor = new ProposalProcessor(
@@ -138,7 +140,6 @@ describe("Proposal Lifecycle Integration", () => {
       proposalRepository.findByStateForNotification
         .mockResolvedValueOnce([analyzedProposal]) // ANALYZED
         .mockResolvedValueOnce([]); // NOTIFY_FAILED
-      proposalRepository.incrementNotifyAttempt.mockResolvedValue({ ...analyzedProposal, notifyAttemptCount: 1 });
       slackClient.sendProposalAlert.mockResolvedValue({ success: true });
       proposalRepository.markNotified.mockResolvedValue(notifiedProposal);
 
@@ -266,22 +267,20 @@ describe("Proposal Lifecycle Integration", () => {
         .mockResolvedValueOnce([analyzedProposal]) // ANALYZED
         .mockResolvedValueOnce([]); // NOTIFY_FAILED
       slackClient.sendAuditLog.mockResolvedValue({ success: true });
-      proposalRepository.incrementNotifyAttempt.mockResolvedValue({ ...analyzedProposal, notifyAttemptCount: 1 });
       slackClient.sendProposalAlert.mockResolvedValue({ success: false, error: "Webhook failed" });
-      proposalRepository.updateState.mockResolvedValue(failedProposal);
+      proposalRepository.markNotifyFailed.mockResolvedValue(failedProposal);
 
       // Act - First cycle
       await notificationService.notifyOnce();
 
       // Assert - Should transition to NOTIFY_FAILED
-      expect(proposalRepository.updateState).toHaveBeenCalledWith(analyzedProposal.id, ProposalState.NOTIFY_FAILED);
+      expect(proposalRepository.markNotifyFailed).toHaveBeenCalledWith(analyzedProposal.id);
 
       // Second cycle: Slack succeeds
       proposalRepository.findByStateForNotification
         .mockResolvedValueOnce([]) // ANALYZED
         .mockResolvedValueOnce([failedProposal]); // NOTIFY_FAILED
       slackClient.sendAuditLog.mockResolvedValue({ success: true });
-      proposalRepository.incrementNotifyAttempt.mockResolvedValue({ ...failedProposal, notifyAttemptCount: 2 });
       slackClient.sendProposalAlert.mockResolvedValue({ success: true });
       proposalRepository.markNotified.mockResolvedValue(notifiedProposal);
 
@@ -303,7 +302,6 @@ describe("Proposal Lifecycle Integration", () => {
         .mockResolvedValueOnce([]) // ANALYZED
         .mockResolvedValueOnce([failedProposal]); // NOTIFY_FAILED
       slackClient.sendProposalAlert.mockResolvedValue({ success: true });
-      proposalRepository.incrementNotifyAttempt.mockResolvedValue({ ...failedProposal, notifyAttemptCount: 4 });
       proposalRepository.markNotified.mockResolvedValue({ ...failedProposal, state: ProposalState.NOTIFIED });
 
       // Act
