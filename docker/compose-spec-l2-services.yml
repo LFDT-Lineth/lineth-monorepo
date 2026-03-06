@@ -343,7 +343,7 @@ services:
       - linea
 
   postgres:
-    image: postgres:16.0
+    image: postgres:18.3
     hostname: postgres
     container_name: postgres
     profiles: [ "l2", "debug", "external-to-monorepo", "staterecovery" ]
