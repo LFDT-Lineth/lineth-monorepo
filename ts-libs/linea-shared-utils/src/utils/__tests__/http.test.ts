@@ -57,9 +57,7 @@ describe("fetchWithTimeout", () => {
     fetchMock.mockRejectedValue(abortError);
 
     // Act & Assert
-    await expect(fetchWithTimeout("https://example.com/api", {}, 1000)).rejects.toThrow(
-      "Request timeout after 1000ms"
-    );
+    await expect(fetchWithTimeout("https://example.com/api", {}, 1000)).rejects.toThrow("Request timeout after 1000ms");
   });
 
   it("propagates non-timeout errors from fetch", async () => {

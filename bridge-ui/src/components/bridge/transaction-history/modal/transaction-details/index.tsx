@@ -9,6 +9,7 @@ import ArrowRightIcon from "@/assets/icons/arrow-right.svg";
 import Modal from "@/components/modal";
 import Button from "@/components/ui/button";
 import { useClaim, useClaimingTx, useBridgeTransactionMessage } from "@/hooks";
+import { buildExplorerUrl } from "@/lib/urls";
 import { BridgeTransaction, TransactionStatus } from "@/types";
 import { formatBalance, formatHex, formatTimestamp } from "@/utils/format";
 
@@ -133,6 +134,13 @@ export default function TransactionDetails({ transaction, isModalOpen, onCloseMo
     }
   };
 
+  const bridgingTxUrl = transaction?.bridgingTx
+    ? buildExplorerUrl(transaction.fromChain.blockExplorers?.default.url, "tx", transaction.bridgingTx)
+    : undefined;
+  const claimingTxUrl = transaction?.claimingTx
+    ? buildExplorerUrl(transaction.toChain.blockExplorers?.default.url, "tx", transaction.claimingTx)
+    : undefined;
+
   return (
     <Modal title="Transaction details" isOpen={isModalOpen} onClose={onCloseModal}>
       <div className={styles["modal-inner"]}>
@@ -147,13 +155,13 @@ export default function TransactionDetails({ transaction, isModalOpen, onCloseMo
           <li>
             <span>{transaction?.fromChain.name} Tx hash</span>
             <div className={styles.hash}>
-              <Link
-                href={`${transaction?.fromChain.blockExplorers?.default.url}/tx/${transaction?.bridgingTx}`}
-                target="_blank"
-                rel="noopenner noreferrer"
-              >
-                {formatHex(transaction?.bridgingTx)}
-              </Link>
+              {bridgingTxUrl ? (
+                <Link href={bridgingTxUrl} target="_blank" rel="noopener noreferrer">
+                  {formatHex(transaction?.bridgingTx)}
+                </Link>
+              ) : (
+                <span>{formatHex(transaction?.bridgingTx)}</span>
+              )}
               <ArrowRightIcon />
             </div>
           </li>
@@ -161,13 +169,13 @@ export default function TransactionDetails({ transaction, isModalOpen, onCloseMo
             <span>{transaction?.toChain.name} Tx hash</span>
             <div className={styles.hash}>
               {transaction?.claimingTx ? (
-                <Link
-                  href={`${transaction?.toChain.blockExplorers?.default.url}/tx/${transaction.claimingTx}`}
-                  target="_blank"
-                  rel="noopenner noreferrer"
-                >
-                  {formatHex(transaction.claimingTx)}
-                </Link>
+                claimingTxUrl ? (
+                  <Link href={claimingTxUrl} target="_blank" rel="noopener noreferrer">
+                    {formatHex(transaction.claimingTx)}
+                  </Link>
+                ) : (
+                  <span>{formatHex(transaction.claimingTx)}</span>
+                )
               ) : (
                 <span>Pending</span>
               )}

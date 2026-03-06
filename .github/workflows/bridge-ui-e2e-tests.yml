@@ -53,7 +53,7 @@ jobs:
           pnpm-install-options: '--frozen-lockfile --prefer-offline'
 
       - name: Install Playwright
-        run: pnpm dlx playwright@1.53.2 install --with-deps chromium
+        run: pnpm -F bridge-ui exec playwright install --with-deps chromium
 
       - name: Build Bridge UI
         run: |

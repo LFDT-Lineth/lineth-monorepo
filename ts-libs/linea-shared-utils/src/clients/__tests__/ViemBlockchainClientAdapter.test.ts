@@ -19,7 +19,7 @@ import {
 } from "viem";
 import { sendRawTransaction, waitForTransactionReceipt } from "viem/actions";
 
-import { createLoggerMock } from "../../__tests__/helpers/factories";
+import { createLoggerMock } from "../../__tests__/helpers";
 import { IContractSignerClient } from "../../core/client/IContractSignerClient";
 import { IEstimateGasErrorReporter } from "../../core/services/IEstimateGasErrorReporter";
 import { ILogger } from "../../logging/ILogger";
@@ -112,10 +112,10 @@ describe("ViemBlockchainClientAdapter", () => {
     adapter = new ViemBlockchainClientAdapter(
       logger,
       contractSignerClient,
-        chain,
-        RPC_URL,
-        undefined,
-        undefined,
+      chain,
+      RPC_URL,
+      undefined,
+      undefined,
       DEFAULT_MAX_RETRIES,
       DEFAULT_GAS_RETRY_BUMP_BPS,
       DEFAULT_ATTEMPT_TIMEOUT_MS,
@@ -778,7 +778,9 @@ describe("ViemBlockchainClientAdapter", () => {
       publicClientMock.estimateGas.mockRejectedValue(estimateGasError);
 
       // Act & Assert
-      await expect(adapterWithReporter.sendSignedTransaction(CONTRACT_ADDRESS, CALLDATA, 0n, mockABI)).rejects.toThrow();
+      await expect(
+        adapterWithReporter.sendSignedTransaction(CONTRACT_ADDRESS, CALLDATA, 0n, mockABI),
+      ).rejects.toThrow();
 
       expect(errorReporter.recordContractError).toHaveBeenCalledWith(
         CONTRACT_ADDRESS,
@@ -2592,8 +2594,8 @@ describe("ViemBlockchainClientAdapter", () => {
           logger,
           contractSignerClient,
           chain,
-        RPC_URL,
-        undefined,
+          RPC_URL,
+          undefined,
           undefined,
           maxRetries,
           DEFAULT_GAS_RETRY_BUMP_BPS,
@@ -2634,8 +2636,8 @@ describe("ViemBlockchainClientAdapter", () => {
           logger,
           contractSignerClient,
           chain,
-        RPC_URL,
-        undefined,
+          RPC_URL,
+          undefined,
           undefined,
           maxRetries,
           DEFAULT_GAS_RETRY_BUMP_BPS,
@@ -2676,8 +2678,8 @@ describe("ViemBlockchainClientAdapter", () => {
           logger,
           contractSignerClient,
           chain,
-        RPC_URL,
-        undefined,
+          RPC_URL,
+          undefined,
           undefined,
           maxRetries,
           DEFAULT_GAS_RETRY_BUMP_BPS,
@@ -2720,8 +2722,8 @@ describe("ViemBlockchainClientAdapter", () => {
           logger,
           contractSignerClient,
           chain,
-        RPC_URL,
-        undefined,
+          RPC_URL,
+          undefined,
           undefined,
           maxRetries,
           DEFAULT_GAS_RETRY_BUMP_BPS,

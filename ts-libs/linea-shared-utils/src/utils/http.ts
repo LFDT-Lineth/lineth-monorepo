@@ -19,11 +19,7 @@
  * );
  * ```
  */
-export async function fetchWithTimeout(
-  url: string,
-  options: RequestInit = {},
-  timeoutMs: number
-): Promise<Response> {
+export async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs: number): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 

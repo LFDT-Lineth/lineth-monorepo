@@ -7,6 +7,7 @@ import { useConnection } from "wagmi";
 
 import ArrowRightIcon from "@/assets/icons/arrow-right.svg";
 import XCircleIcon from "@/assets/icons/x-circle.svg";
+import { buildExplorerUrl } from "@/lib/urls";
 import { useChainStore } from "@/stores/chainStore";
 import { useFormStore } from "@/stores/formStoreProvider";
 import { ChainLayer } from "@/types";
@@ -42,6 +43,7 @@ export function DestinationAddress() {
   const setRecipient = useFormStore((state) => state.setRecipient);
   const [inputValue, setInputValue] = useState(recipient);
   const [error, setError] = useState<string | null>(null);
+  const destinationAddressUrl = buildExplorerUrl(toChain.blockExplorers?.default.url, "address", inputValue);
 
   useEffect(() => {
     if ((!recipient || recipient === "0x") && address && isConnected) {
@@ -96,12 +98,8 @@ export function DestinationAddress() {
     <div className={styles["destination-address"]}>
       <div className={styles["headline"]}>
         <p className={styles.title}>Send to wallet</p>
-        {address !== inputValue && !error && isAddress(inputValue) && (
-          <Link
-            href={`${toChain.blockExplorers?.default.url ?? ""}/address/${inputValue}`}
-            target="_blank"
-            rel="noopenner noreferrer"
-          >
+        {address !== inputValue && !error && isAddress(inputValue) && destinationAddressUrl && (
+          <Link href={destinationAddressUrl} target="_blank" rel="noopener noreferrer">
             VIEW ON {toChain.layer === ChainLayer.L1 ? "ETHERSCAN" : "LINEASCAN"}
             <ArrowRightIcon />
           </Link>

@@ -1,10 +1,10 @@
 import axios from "axios";
 
+import { createLoggerMock, createRetryServiceMock } from "../../__tests__/helpers";
 import { IRetryService } from "../../core/services/IRetryService";
 import { ILogger } from "../../logging/ILogger";
 import { getCurrentUnixTimestampSeconds } from "../../utils/time";
 import { OAuth2TokenClient } from "../OAuth2TokenClient";
-import { createLoggerMock, createRetryServiceMock } from "../../__tests__/helpers/factories";
 
 jest.mock("axios");
 jest.mock("../../utils/time", () => ({

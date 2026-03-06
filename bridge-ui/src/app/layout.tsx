@@ -11,7 +11,7 @@ import FirstVisitModal from "@/components/modal/first-time-visit";
 import TosModal from "@/components/modal/tos-modal";
 import { ModalBase } from "@/components/modal-base";
 import { getNavData } from "@/lib/nav-data";
-import { gtmScript, gtmNoScript } from "@/scripts/gtm";
+import { gtmScript } from "@/scripts/gtm";
 
 import "../scss/app.scss";
 
@@ -33,7 +33,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <meta name="description" content={metadata.description?.toString()} key="desc" />
 
       <body>
-        <noscript dangerouslySetInnerHTML={{ __html: gtmNoScript }} />
+        <noscript>
+          <iframe
+            src="https://www.googletagmanager.com/ns.html?id=GTM-PPCSK62D"
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+            title="Google Tag Manager"
+          />
+        </noscript>
 
         <Providers>
           <Layout navData={navData}>

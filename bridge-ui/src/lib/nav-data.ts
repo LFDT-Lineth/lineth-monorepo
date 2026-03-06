@@ -1,13 +1,24 @@
+import { sanitizeAbsoluteHttpUrl } from "@/lib/urls";
 import { LinkBlock } from "@/types";
 
-function formatNavData(data: LinkBlock[]) {
+function sanitizeNavUrl(url?: string): string | undefined {
+  if (!url) {
+    return undefined;
+  }
+
+  if (url.startsWith("/")) {
+    return `https://linea.build${url}`;
+  }
+
+  return sanitizeAbsoluteHttpUrl(url);
+}
+
+export function formatNavData(data: LinkBlock[]) {
   const transform = (items: LinkBlock[]) =>
     items.reduce((acc: LinkBlock[], item: LinkBlock) => {
-      const updatedUrl = item.url?.startsWith("/") ? `https://linea.build${item.url}` : item.url;
-
       const newItem = {
         ...item,
-        url: updatedUrl,
+        url: sanitizeNavUrl(item.url),
         active: item.__id === "26O3hVvXLdQwEueLMdQ6Xj",
         ...(item.submenusLeft && {
           submenusLeft: transform(item.submenusLeft),
