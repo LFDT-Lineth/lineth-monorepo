@@ -7,7 +7,7 @@ log_level = 4                                  # TODO @gbotrel will be refactore
 retry_delays = [0, 1]
 
 [execution]
-prover_mode = "partial"
+prover_mode = "limitless"
 conflated_traces_dir = "/home/ubuntu/test_sepolia/traces/conflated"
 requests_root_dir = "/home/ubuntu/test_sepolia/prover-execution"
 limitless_with_debug = false

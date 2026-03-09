@@ -45,15 +45,15 @@ func getOrCreateManuallyShifted(comp *wizard.CompiledIOP, col ifaces.Column, off
 }
 
 /*
-compileManualShifter creates a small compiler job iterating on every queries that are not ignored.
+CompileManualShifter creates a small compiler job iterating on every queries that are not ignored.
 - for lookup, permutation, projection: whenever we meet a shifted column, we mark the query as ignored
 - we create a replacement column for every problematic columns involved in the query, i.e., a shifted column
 - we create a new equivalent query, replacing the shifted columns by the manually shifted ones
 - we schedule the assignment of the manually shifted columns for the right round
 */
-func compileManualShifter(comp *wizard.CompiledIOP) {
-	logrus.Info("compiling manual shifter")
-	defer logrus.Info("finished compiling manual shifter")
+func CompileManualShifter(comp *wizard.CompiledIOP) {
+	logrus.Info("Compiling manual shifter")
+	defer logrus.Info("Finished compiling manual shifter")
 
 	cache := make(map[shiftCacheKey]*dedicated.ManuallyShifted)
 
