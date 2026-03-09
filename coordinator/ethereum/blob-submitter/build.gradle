@@ -10,7 +10,6 @@ dependencies {
   implementation(project(":coordinator:clients:smart-contract-client"))
   implementation(project(':coordinator:ethereum:common'))
   implementation(project(':coordinator:ethereum:gas-pricing'))
-  implementation(project(':coordinator:ethereum:test-utils'))
   implementation(project(":coordinator:persistence:blob"))
   implementation("com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}")
   implementation("com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}")
@@ -22,6 +21,7 @@ dependencies {
   }
 
   testImplementation(project(":jvm-libs:linea:testing:l1-blob-and-proof-submission"))
+  testImplementation(project(':coordinator:ethereum:test-utils'))
   testImplementation(project(":coordinator:persistence:aggregation"))
   testImplementation(project(":coordinator:persistence:db-common"))
   testImplementation(testFixtures(project(":coordinator:ethereum:gas-pricing")))
