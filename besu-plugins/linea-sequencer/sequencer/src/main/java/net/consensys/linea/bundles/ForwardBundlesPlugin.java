@@ -41,12 +41,7 @@ public class ForwardBundlesPlugin extends AbstractLineaRequiredPlugin {
         .map(
             url ->
                 new BundleForwarder(
-                    config,
-                    createExecutor(url),
-                    retryScheduler,
-                    blockchainService,
-                    rpcClient,
-                    url))
+                    config, createExecutor(url), retryScheduler, blockchainService, rpcClient, url))
         .peek(bundlePoolService::subscribeTransactionBundleAdded)
         .toList();
   }
