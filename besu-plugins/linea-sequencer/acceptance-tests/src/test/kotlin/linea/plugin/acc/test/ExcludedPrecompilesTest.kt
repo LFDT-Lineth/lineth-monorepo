@@ -73,7 +73,9 @@ class ExcludedPrecompilesTest : LineaPluginPoSTestBase() {
       ),
     )
 
-    val invalidTxHashes = invalidCalls.map { invalidCall ->
+    stopBackgroundBlockBuilding()
+
+    invalidCalls.forEach { invalidCall ->
       // this tx must not be accepted but not mined
       val txInvalid = RawTransaction.createTransaction(
         CHAIN_ID,
@@ -94,17 +96,16 @@ class ExcludedPrecompilesTest : LineaPluginPoSTestBase() {
       val signedTxInvalidResp = web3j.ethSendRawTransaction(Numeric.toHexString(signedTxInvalid)).send()
 
       assertThat(signedTxInvalidResp.hasError()).isFalse()
-      signedTxInvalidResp.transactionHash
     }
 
-    assertThat(getTxPoolContent()).hasSize(invalidTxHashes.size)
+    assertThat(getTxPoolContent()).hasSize(invalidCalls.size)
 
-    // transfer used as sentry to ensure a new block is mined without the invalid txs
+    // submit sentry transfer, then manually build one block to mine it and trace the invalid txs
     val transferTxHash1 = accountTransactions
       .createTransfer(recipient, accounts.secondaryBenefactor, 1)
       .execute(minerNode.nodeRequests())
+    buildNewBlockAndWait()
 
-    // first sentry is mined and no tx of the bundle is mined
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash1.toHexString()))
     invalidCalls.forEach { invalidCall ->
       minerNode.verify(

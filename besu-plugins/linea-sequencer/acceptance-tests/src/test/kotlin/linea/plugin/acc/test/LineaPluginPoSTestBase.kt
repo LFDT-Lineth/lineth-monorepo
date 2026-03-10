@@ -162,6 +162,12 @@ abstract class LineaPluginPoSTestBase : LineaPluginTestBase() {
       .orElse(genesis)
   }
 
+  protected fun stopBackgroundBlockBuilding() {
+    buildBlocksInBackground = false
+    consensusScheduler.shutdown()
+    consensusScheduler.awaitTermination(blockTimeSeconds!! * 2, TimeUnit.SECONDS)
+  }
+
   protected fun buildNewBlocksInBackground() {
     consensusScheduler.scheduleAtFixedRate(
       {
