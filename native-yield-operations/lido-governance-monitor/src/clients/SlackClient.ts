@@ -3,7 +3,18 @@ import { fetchWithTimeout } from "@consensys/linea-shared-utils";
 import { ISlackClient, SlackNotificationResult } from "../core/clients/ISlackClient.js";
 import { Assessment, RiskLevel } from "../core/entities/Assessment.js";
 import { ProposalWithoutText } from "../core/entities/Proposal.js";
+import { computeEffectiveRisk } from "../utils/effectiveRisk.js";
 import { ILidoGovernanceMonitorLogger } from "../utils/logging/index.js";
+
+const SLACK_LIMITS = {
+  HEADER_TEXT_MAX_LENGTH: 150,
+  SECTION_TEXT_MAX_LENGTH: 3000,
+} as const;
+
+const SHARED_SECTION_TITLE = {
+  WHAT_CHANGED: "What Changed:",
+  IMPACT_ON_NATIVE_YIELD: "What Is The Impact On Native Yield?",
+} as const;
 
 export class SlackClient implements ISlackClient {
   constructor(
@@ -30,6 +41,11 @@ export class SlackClient implements ISlackClient {
 
       if (!response.ok) {
         const errorText = await response.text();
+        this.logger.debug("Slack notification payload dump", {
+          proposalId: proposal.id,
+          title: proposal.title,
+          payload: this.stringifyPayload(payload),
+        });
         this.logger.critical("Slack webhook failed", { status: response.status, error: errorText });
         return { success: false, error: errorText };
       }
@@ -64,6 +80,11 @@ export class SlackClient implements ISlackClient {
 
       if (!response.ok) {
         const errorText = await response.text();
+        this.logger.debug("Slack audit payload dump", {
+          proposalId: proposal.id,
+          title: proposal.title,
+          payload: this.stringifyPayload(payload),
+        });
         this.logger.critical("Audit webhook failed", { status: response.status, error: errorText });
         return { success: false, error: errorText };
       }
@@ -75,6 +96,10 @@ export class SlackClient implements ISlackClient {
       this.logger.critical("Audit log error", { error: errorMessage });
       return { success: false, error: errorMessage };
     }
+  }
+
+  private deriveEffectiveRisk(assessment: Assessment): number {
+    return computeEffectiveRisk(assessment.riskScore, assessment.confidence, assessment.effectiveRisk);
   }
 
   private getRiskEmoji(riskLevel: RiskLevel): string {
@@ -109,7 +134,8 @@ export class SlackClient implements ISlackClient {
   }
 
   private buildAuditPayload(proposal: ProposalWithoutText, assessment: Assessment): object {
-    const wouldAlert = assessment.riskScore >= this.riskThreshold;
+    const effectiveRisk = this.deriveEffectiveRisk(assessment);
+    const wouldAlert = effectiveRisk >= this.riskThreshold;
 
     return {
       blocks: [
@@ -126,7 +152,7 @@ export class SlackClient implements ISlackClient {
           elements: [
             {
               type: "mrkdwn",
-              text: `*Assessment logged for manual review* • Risk: ${assessment.riskScore}/100 • ${wouldAlert ? "⚠️ Would trigger alert" : "ℹ️ Below alert threshold"}`,
+              text: `*Assessment logged for manual review* • Effective Risk: ${effectiveRisk}/100 • ${wouldAlert ? "⚠️ Would trigger alert" : "ℹ️ Below alert threshold"}`,
             },
           ],
         },
@@ -138,9 +164,8 @@ export class SlackClient implements ISlackClient {
   // Slack Block Kit header text has a 150-character limit.
   // Truncate with ellipsis to prevent webhook failures on long proposal titles.
   private truncateHeaderText(text: string): string {
-    const SLACK_HEADER_MAX_LENGTH = 150;
-    if (text.length <= SLACK_HEADER_MAX_LENGTH) return text;
-    return text.slice(0, SLACK_HEADER_MAX_LENGTH - 1) + "…";
+    if (text.length <= SLACK_LIMITS.HEADER_TEXT_MAX_LENGTH) return text;
+    return text.slice(0, SLACK_LIMITS.HEADER_TEXT_MAX_LENGTH - 1) + "…";
   }
 
   // Escapes characters that Slack mrkdwn interprets as links (<url|text>),
@@ -150,16 +175,57 @@ export class SlackClient implements ISlackClient {
     return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
+  private stringifyPayload(payload: object): string {
+    try {
+      return JSON.stringify(payload);
+    } catch {
+      return "[unserializable_payload]";
+    }
+  }
+
+  private buildTitledSectionBlocks(title: string, body: string): object[] {
+    const titlePrefix = `*${title}*\n`;
+    const firstChunkMaxLength = SLACK_LIMITS.SECTION_TEXT_MAX_LENGTH - titlePrefix.length;
+
+    if (titlePrefix.length + body.length <= SLACK_LIMITS.SECTION_TEXT_MAX_LENGTH) {
+      return [
+        {
+          type: "section",
+          text: { type: "mrkdwn", text: `${titlePrefix}${body}` },
+        },
+      ];
+    }
+
+    const chunks: string[] = [];
+    chunks.push(body.slice(0, firstChunkMaxLength));
+    let offset = firstChunkMaxLength;
+    while (offset < body.length) {
+      chunks.push(body.slice(offset, offset + SLACK_LIMITS.SECTION_TEXT_MAX_LENGTH));
+      offset += SLACK_LIMITS.SECTION_TEXT_MAX_LENGTH;
+    }
+
+    return chunks.map((chunk, index) => ({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: index === 0 ? `${titlePrefix}${chunk}` : chunk,
+      },
+    }));
+  }
+
   // Builds the 7 Slack Block Kit blocks shared between alert and audit payloads.
   // Extracted to prevent formatting drift when either payload is updated.
   private buildSharedBlocks(proposal: ProposalWithoutText, assessment: Assessment): object[] {
+    const effectiveRisk = this.deriveEffectiveRisk(assessment);
+    const whatChanged = this.escapeSlackMrkdwn(assessment.whatChanged);
+    const nativeYieldImpact = assessment.nativeYieldImpact.map((i) => `- ${this.escapeSlackMrkdwn(i)}`).join("\n");
+
     return [
       {
         type: "section",
         fields: [
-          { type: "mrkdwn", text: `*Risk Score:* ${assessment.riskScore}/100` },
+          { type: "mrkdwn", text: `*Effective Risk:* ${effectiveRisk}/100` },
           { type: "mrkdwn", text: `*Risk Level:* ${assessment.riskLevel.toUpperCase()}` },
-          { type: "mrkdwn", text: `*Confidence:* ${assessment.confidence}%` },
           { type: "mrkdwn", text: `*Urgency:* ${assessment.urgency.replace("_", " ")}` },
         ],
       },
@@ -184,17 +250,8 @@ export class SlackClient implements ISlackClient {
           text: `*Invariants at Risk:*\n${assessment.nativeYieldInvariantsAtRisk.map((i) => `• ${i}`).join("\n")}`,
         },
       },
-      {
-        type: "section",
-        text: { type: "mrkdwn", text: `*What Changed:*\n${this.escapeSlackMrkdwn(assessment.whatChanged)}` },
-      },
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*What Is The Impact On Native Yield?*\n${assessment.nativeYieldImpact.map((i) => `- ${this.escapeSlackMrkdwn(i)}`).join("\n")}`,
-        },
-      },
+      ...this.buildTitledSectionBlocks(SHARED_SECTION_TITLE.WHAT_CHANGED, whatChanged),
+      ...this.buildTitledSectionBlocks(SHARED_SECTION_TITLE.IMPACT_ON_NATIVE_YIELD, nativeYieldImpact),
       {
         type: "actions",
         elements: [

@@ -14,7 +14,6 @@ export interface IProposalRepository {
   saveAnalysis(
     id: string,
     assessment: Assessment,
-    riskScore: number,
     llmModel: string,
     riskThreshold: number,
     promptVersion: string,

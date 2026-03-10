@@ -25,7 +25,6 @@ CREATE TABLE "proposals" (
     "assessment_prompt_version" TEXT,
     "analyzed_at" TIMESTAMP(3),
     "assessment_json" JSONB,
-    "risk_score" INTEGER,
     "notify_attempt_count" INTEGER NOT NULL DEFAULT 0,
     "notified_at" TIMESTAMP(3),
 

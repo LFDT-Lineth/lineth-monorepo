@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { jest, describe, it, expect, beforeEach } from "@jest/globals";
 
-import { NativeYieldInvariant } from "../../core/entities/Assessment.js";
+import { AffectedComponent, NativeYieldInvariant } from "../../core/entities/Assessment.js";
 import { ILidoGovernanceMonitorLogger } from "../../utils/logging/index.js";
 import { ClaudeAIClient } from "../ClaudeAIClient.js";
 
@@ -72,11 +72,35 @@ describe("ClaudeAIClient", () => {
       // Assert
       expect(result).toEqual({
         ...llmOutput,
+        effectiveRisk: 64,
         riskLevel: "high",
-        recommendedAction: "escalate",
-        urgency: "urgent",
+        recommendedAction: "comment",
+        urgency: "routine",
       });
       expect(logger.debug).toHaveBeenCalledWith("AI analysis completed", expect.any(Object));
+    });
+
+    const newlyTrackedAffectedComponents = [
+      AffectedComponent.ACCOUNTING,
+      AffectedComponent.ORACLE_REPORT_SANITY_CHECKER,
+      AffectedComponent.HASH_CONSENSUS,
+      AffectedComponent.VAULT_FACTORY,
+      AffectedComponent.ST_ETH,
+    ] as const;
+
+    it.each(newlyTrackedAffectedComponents)("accepts %s in affectedComponents", async (affectedComponent) => {
+      // Arrange
+      const llmOutput = createLLMOutput({ affectedComponents: [affectedComponent] as const });
+      mockAnthropicClient.messages.create.mockResolvedValue({
+        content: [{ type: "text", text: JSON.stringify(llmOutput) }],
+      });
+
+      // Act
+      const result = await client.analyzeProposal(createAnalysisRequest());
+
+      // Assert
+      expect(result).toBeDefined();
+      expect(result?.affectedComponents).toEqual([affectedComponent]);
     });
 
     it("extracts JSON from response with surrounding text", async () => {
@@ -99,6 +123,7 @@ describe("ClaudeAIClient", () => {
       // Assert
       expect(result).toEqual({
         ...llmOutput,
+        effectiveRisk: 35,
         riskLevel: "medium",
         recommendedAction: "monitor",
         urgency: "none",
@@ -244,7 +269,6 @@ describe("ClaudeAIClient", () => {
         // Assert
         expect(resultMin).toBeDefined();
         expect(resultMin?.confidence).toBe(0);
-
         // Arrange - Test maximum value
         const mockResponseMax = createMockAIResponse({ confidence: 100 });
         mockAnthropicClient.messages.create.mockResolvedValue(mockResponseMax);
@@ -302,42 +326,90 @@ describe("ClaudeAIClient", () => {
       });
     });
 
-    describe("derived fields from riskScore", () => {
-      const testDerivation = async (
-        riskScore: number,
-        expected: { riskLevel: string; recommendedAction: string; urgency: string },
-      ) => {
-        const keyUnknowns = riskScore < 80 ? ["Some unknown"] : [];
-        const confidence = riskScore < 80 ? 70 : 85;
-        const llmOutput = createLLMOutput({ riskScore, confidence, keyUnknowns });
+    describe("derived fields from effectiveRisk", () => {
+      it("returns low risk assessment when effective risk is well below alert threshold", async () => {
+        // Arrange
+        const llmOutput = createLLMOutput({ riskScore: 15, confidence: 50, keyUnknowns: ["Some unknown"] });
         mockAnthropicClient.messages.create.mockResolvedValue({
           content: [{ type: "text", text: JSON.stringify(llmOutput) }],
         });
+
+        // Act
         const result = await client.analyzeProposal(createAnalysisRequest());
+
+        // Assert
         expect(result).toBeDefined();
-        expect(result?.riskLevel).toBe(expected.riskLevel);
-        expect(result?.recommendedAction).toBe(expected.recommendedAction);
-        expect(result?.urgency).toBe(expected.urgency);
-      };
-
-      it("riskScore 15 -> low / no-action / none", async () => {
-        await testDerivation(15, { riskLevel: "low", recommendedAction: "no-action", urgency: "none" });
+        expect(result?.riskLevel).toBe("low");
+        expect(result?.recommendedAction).toBe("no-action");
+        expect(result?.urgency).toBe("none");
       });
 
-      it("riskScore 45 -> medium / monitor / none", async () => {
-        await testDerivation(45, { riskLevel: "medium", recommendedAction: "monitor", urgency: "none" });
+      it("returns high risk assessment when high-confidence score crosses alert threshold", async () => {
+        // Arrange
+        const llmOutput = createLLMOutput({ riskScore: 75, confidence: 85 });
+        mockAnthropicClient.messages.create.mockResolvedValue({
+          content: [{ type: "text", text: JSON.stringify(llmOutput) }],
+        });
+
+        // Act
+        const result = await client.analyzeProposal(createAnalysisRequest());
+
+        // Assert
+        expect(result).toBeDefined();
+        expect(result?.riskLevel).toBe("high");
+        expect(result?.recommendedAction).toBe("comment");
+        expect(result?.urgency).toBe("routine");
       });
 
-      it("riskScore 65 -> high / comment / routine", async () => {
-        await testDerivation(65, { riskLevel: "high", recommendedAction: "comment", urgency: "routine" });
+      it("returns critical risk assessment when very high confidence confirms severe risk", async () => {
+        // Arrange
+        const llmOutput = createLLMOutput({ riskScore: 90, confidence: 95 });
+        mockAnthropicClient.messages.create.mockResolvedValue({
+          content: [{ type: "text", text: JSON.stringify(llmOutput) }],
+        });
+
+        // Act
+        const result = await client.analyzeProposal(createAnalysisRequest());
+
+        // Assert
+        expect(result).toBeDefined();
+        expect(result?.riskLevel).toBe("critical");
+        expect(result?.recommendedAction).toBe("escalate");
+        expect(result?.urgency).toBe("critical");
       });
 
-      it("riskScore 75 -> high / escalate / urgent", async () => {
-        await testDerivation(75, { riskLevel: "high", recommendedAction: "escalate", urgency: "urgent" });
+      it("returns medium risk assessment when low confidence dampens a high raw risk score", async () => {
+        // Arrange
+        const llmOutput = createLLMOutput({ riskScore: 95, confidence: 45, keyUnknowns: ["Some unknown"] });
+        mockAnthropicClient.messages.create.mockResolvedValue({
+          content: [{ type: "text", text: JSON.stringify(llmOutput) }],
+        });
+
+        // Act
+        const result = await client.analyzeProposal(createAnalysisRequest());
+
+        // Assert
+        expect(result).toBeDefined();
+        expect(result?.riskLevel).toBe("medium");
+        expect(result?.recommendedAction).toBe("monitor");
+        expect(result?.urgency).toBe("none");
       });
 
-      it("riskScore 90 -> critical / escalate / critical", async () => {
-        await testDerivation(90, { riskLevel: "critical", recommendedAction: "escalate", urgency: "critical" });
+      it("returns high risk assessment when moderate confidence still yields effective risk above threshold", async () => {
+        // Arrange
+        const llmOutput = createLLMOutput({ riskScore: 85, confidence: 75, keyUnknowns: ["Some unknown"] });
+        mockAnthropicClient.messages.create.mockResolvedValue({
+          content: [{ type: "text", text: JSON.stringify(llmOutput) }],
+        });
+
+        // Act
+        const result = await client.analyzeProposal(createAnalysisRequest());
+
+        // Assert
+        expect(result).toBeDefined();
+        expect(result?.riskLevel).toBe("high");
+        expect(result?.recommendedAction).toBe("comment");
+        expect(result?.urgency).toBe("routine");
       });
     });
 

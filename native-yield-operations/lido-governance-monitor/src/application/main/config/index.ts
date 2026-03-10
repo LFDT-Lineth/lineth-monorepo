@@ -91,7 +91,7 @@ export function loadConfigFromEnv(env: Record<string, string | undefined>): Conf
     },
     riskAssessment: {
       threshold: parseInt(env.RISK_THRESHOLD ?? "60", 10),
-      promptVersion: env.PROMPT_VERSION ?? "v1.0",
+      promptVersion: env.PROMPT_VERSION ?? "v2.0",
       ...(env.MAX_ANALYSIS_ATTEMPTS ? { maxAnalysisAttempts: parseInt(env.MAX_ANALYSIS_ATTEMPTS, 10) } : {}),
       ...(env.MAX_NOTIFY_ATTEMPTS ? { maxNotifyAttempts: parseInt(env.MAX_NOTIFY_ATTEMPTS, 10) } : {}),
     },

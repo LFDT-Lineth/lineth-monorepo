@@ -44,7 +44,6 @@ describe("ProposalProcessor", () => {
     assessmentPromptVersion: null,
     analyzedAt: null,
     assessmentJson: null,
-    riskScore: null,
     notifyAttemptCount: 0,
     notifiedAt: null,
     ...overrides,
@@ -154,7 +153,6 @@ describe("ProposalProcessor", () => {
       expect(proposalRepository.saveAnalysis).toHaveBeenCalledWith(
         proposal.id,
         assessment,
-        75,
         "claude-sonnet-4",
         60,
         "v1.0",

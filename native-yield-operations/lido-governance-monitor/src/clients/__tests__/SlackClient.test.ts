@@ -40,7 +40,6 @@ describe("SlackClient", () => {
     assessmentPromptVersion: "v1.0",
     analyzedAt: new Date(),
     assessmentJson: null,
-    riskScore: 75,
     notifyAttemptCount: 0,
     notifiedAt: null,
     ...overrides,
@@ -48,6 +47,7 @@ describe("SlackClient", () => {
 
   const createMockAssessment = (overrides: Partial<Assessment> = {}): Assessment => ({
     riskScore: 75,
+    effectiveRisk: 64,
     riskLevel: "high",
     confidence: 85,
     proposalType: "discourse",
@@ -146,6 +146,14 @@ describe("SlackClient", () => {
       expect(result.success).toBe(false);
       expect(result.error).toBe("internal_error");
       expect(logger.critical).toHaveBeenCalled();
+      expect(logger.debug).toHaveBeenCalledWith(
+        "Slack notification payload dump",
+        expect.objectContaining({
+          proposalId: mockProposal.id,
+          title: mockProposal.title,
+          payload: expect.any(String),
+        }),
+      );
     });
 
     it("returns failure on network error", async () => {
@@ -258,8 +266,8 @@ describe("SlackClient", () => {
 
     it("includes threshold context for high-risk proposals", async () => {
       // Arrange
-      const mockProposal = createMockProposal({ riskScore: 75 });
-      const mockAssessment = createMockAssessment({ riskScore: 75 });
+      const mockProposal = createMockProposal();
+      const mockAssessment = createMockAssessment({ effectiveRisk: 75 });
       fetchMock.mockResolvedValue({ ok: true, text: () => Promise.resolve("ok") });
 
       // Act
@@ -273,8 +281,8 @@ describe("SlackClient", () => {
 
     it("includes threshold context for low-risk proposals", async () => {
       // Arrange
-      const mockProposal = createMockProposal({ riskScore: 30 });
-      const mockAssessment = createMockAssessment({ riskScore: 30 });
+      const mockProposal = createMockProposal();
+      const mockAssessment = createMockAssessment({ effectiveRisk: 30 });
       fetchMock.mockResolvedValue({ ok: true, text: () => Promise.resolve("ok") });
 
       // Act
@@ -314,6 +322,14 @@ describe("SlackClient", () => {
       expect(result.success).toBe(false);
       expect(result.error).toBe("internal_error");
       expect(logger.critical).toHaveBeenCalled();
+      expect(logger.debug).toHaveBeenCalledWith(
+        "Slack audit payload dump",
+        expect.objectContaining({
+          proposalId: mockProposal.id,
+          title: mockProposal.title,
+          payload: expect.any(String),
+        }),
+      );
     });
 
     it("returns failure on audit network error", async () => {
@@ -355,8 +371,8 @@ describe("SlackClient", () => {
         15000,
         "https://hooks.slack.com/services/yyy",
       );
-      const proposalBelowThreshold = createMockProposal({ riskScore: 70 });
-      const assessmentBelowThreshold = createMockAssessment({ riskScore: 70 });
+      const proposalBelowThreshold = createMockProposal();
+      const assessmentBelowThreshold = createMockAssessment({ effectiveRisk: 70 });
       fetchMock.mockResolvedValue({ ok: true, text: () => Promise.resolve("ok") });
 
       // Act
@@ -378,8 +394,8 @@ describe("SlackClient", () => {
         15000,
         "https://hooks.slack.com/services/yyy",
       );
-      const proposalAtThreshold = createMockProposal({ riskScore: 70 });
-      const assessmentAtThreshold = createMockAssessment({ riskScore: 70 });
+      const proposalAtThreshold = createMockProposal();
+      const assessmentAtThreshold = createMockAssessment({ effectiveRisk: 70 });
       fetchMock.mockResolvedValue({ ok: true, text: () => Promise.resolve("ok") });
 
       // Act
@@ -509,6 +525,91 @@ describe("SlackClient", () => {
       expect(impactBlock.text.text).toContain("&lt;@U12345&gt;");
       expect(impactBlock.text.text).not.toContain("<@U12345>");
       expect(impactBlock.text.text).toContain("Normal impact text");
+    });
+
+    it("splits long whatChanged text into multiple Slack sections under 3000 chars", async () => {
+      // Arrange
+      const longWhatChanged = "A".repeat(3400);
+      const mockProposal = createMockProposal();
+      const mockAssessment = createMockAssessment({
+        whatChanged: longWhatChanged,
+      });
+      fetchMock.mockResolvedValue({ ok: true, text: () => Promise.resolve("ok") });
+
+      // Act
+      await client.sendProposalAlert(mockProposal, mockAssessment);
+
+      // Assert
+      const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      const sectionBlocks = callBody.blocks.filter(
+        (block: { type?: string; text?: { type?: string; text?: string } }) =>
+          block.type === "section" && block.text?.type === "mrkdwn" && typeof block.text?.text === "string",
+      );
+      const whatChangedStartIndex = sectionBlocks.findIndex((block: { text: { text: string } }) =>
+        block.text.text.startsWith("*What Changed:*"),
+      );
+
+      expect(whatChangedStartIndex).toBeGreaterThan(-1);
+
+      const whatChangedBlocks: Array<{ text: { text: string } }> = [];
+      for (let index = whatChangedStartIndex; index < sectionBlocks.length; index += 1) {
+        const block = sectionBlocks[index];
+        if (index > whatChangedStartIndex && block.text.text.startsWith("*What Is The Impact On Native Yield?*")) {
+          break;
+        }
+        whatChangedBlocks.push(block);
+      }
+
+      expect(whatChangedBlocks.length).toBeGreaterThan(1);
+      expect(whatChangedBlocks.every((block) => block.text.text.length <= 3000)).toBe(true);
+
+      const combinedWhatChanged = whatChangedBlocks
+        .map((block, index) => (index === 0 ? block.text.text.replace("*What Changed:*\n", "") : block.text.text))
+        .join("");
+
+      expect(combinedWhatChanged).toBe(longWhatChanged);
+    });
+
+    it("splits long nativeYieldImpact text into multiple Slack sections under 3000 chars", async () => {
+      // Arrange
+      const longImpactEntry = "B".repeat(1100);
+      const mockProposal = createMockProposal();
+      const mockAssessment = createMockAssessment({
+        nativeYieldImpact: [longImpactEntry, longImpactEntry, longImpactEntry],
+      });
+      fetchMock.mockResolvedValue({ ok: true, text: () => Promise.resolve("ok") });
+
+      // Act
+      await client.sendProposalAlert(mockProposal, mockAssessment);
+
+      // Assert
+      const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      const sectionBlocks = callBody.blocks.filter(
+        (block: { type?: string; text?: { type?: string; text?: string } }) =>
+          block.type === "section" && block.text?.type === "mrkdwn" && typeof block.text?.text === "string",
+      );
+      const impactStartIndex = sectionBlocks.findIndex((block: { text: { text: string } }) =>
+        block.text.text.startsWith("*What Is The Impact On Native Yield?*"),
+      );
+
+      expect(impactStartIndex).toBeGreaterThan(-1);
+
+      const impactBlocks: Array<{ text: { text: string } }> = [];
+      for (let index = impactStartIndex; index < sectionBlocks.length; index += 1) {
+        impactBlocks.push(sectionBlocks[index]);
+      }
+
+      expect(impactBlocks.length).toBeGreaterThan(1);
+      expect(impactBlocks.every((block) => block.text.text.length <= 3000)).toBe(true);
+
+      const combinedImpact = impactBlocks
+        .map((block, index) =>
+          index === 0 ? block.text.text.replace("*What Is The Impact On Native Yield?*\n", "") : block.text.text,
+        )
+        .join("");
+
+      const expectedImpact = `- ${longImpactEntry}\n- ${longImpactEntry}\n- ${longImpactEntry}`;
+      expect(combinedImpact).toBe(expectedImpact);
     });
   });
 

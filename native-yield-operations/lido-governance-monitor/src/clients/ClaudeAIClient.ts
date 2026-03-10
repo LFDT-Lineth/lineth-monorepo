@@ -3,12 +3,14 @@ import { z } from "zod";
 
 import { IAIClient, AIAnalysisRequest } from "../core/clients/IAIClient.js";
 import {
+  AffectedComponentValues,
   Assessment,
   NativeYieldInvariant,
   RiskLevel,
   RecommendedAction,
   Urgency,
 } from "../core/entities/Assessment.js";
+import { computeEffectiveRisk } from "../utils/effectiveRisk.js";
 import { ILidoGovernanceMonitorLogger } from "../utils/logging/index.js";
 
 const LLMOutputSchema = z
@@ -17,9 +19,7 @@ const LLMOutputSchema = z
     confidence: z.number().int().min(0).max(100),
     proposalType: z.enum(["discourse", "snapshot", "onchain_vote"]),
     impactTypes: z.array(z.enum(["economic", "technical", "operational", "governance-process"])),
-    affectedComponents: z.array(
-      z.enum(["StakingVault", "VaultHub", "LazyOracle", "OperatorGrid", "PredepositGuarantee", "Dashboard", "Other"]),
-    ),
+    affectedComponents: z.array(z.enum(AffectedComponentValues)),
     whatChanged: z.string().min(1),
     nativeYieldInvariantsAtRisk: z.array(
       z.enum([
@@ -135,11 +135,13 @@ export class ClaudeAIClient implements IAIClient {
         return undefined;
       }
       const llmOutput = result.data;
+      const effectiveRisk = computeEffectiveRisk(llmOutput.riskScore, llmOutput.confidence);
       return {
         ...llmOutput,
-        riskLevel: deriveRiskLevel(llmOutput.riskScore),
-        recommendedAction: deriveRecommendedAction(llmOutput.riskScore),
-        urgency: deriveUrgency(llmOutput.riskScore),
+        effectiveRisk,
+        riskLevel: deriveRiskLevel(effectiveRisk),
+        recommendedAction: deriveRecommendedAction(effectiveRisk),
+        urgency: deriveUrgency(effectiveRisk),
       };
     } catch (error) {
       this.logger.error("Failed to parse AI response as JSON", { error });

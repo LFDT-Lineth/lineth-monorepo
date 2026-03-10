@@ -43,14 +43,25 @@ ENV NODE_ENV=production
 
 WORKDIR /usr/src/app
 
-USER node
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openssl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /usr/src/app/prod/native-yield-operations/lido-governance-monitor ./native-yield-operations/lido-governance-monitor
+COPY --from=builder --chown=node:node /usr/src/app/prod/native-yield-operations/lido-governance-monitor ./native-yield-operations/lido-governance-monitor
 
 # Copy prompts directory (not included in dist)
-COPY --from=builder /usr/src/app/native-yield-operations/lido-governance-monitor/src/prompts ./native-yield-operations/lido-governance-monitor/src/prompts
+COPY --from=builder --chown=node:node /usr/src/app/native-yield-operations/lido-governance-monitor/src/prompts ./native-yield-operations/lido-governance-monitor/src/prompts
 
 # Copy prisma migrations for runtime migrate deploy
-COPY --from=builder /usr/src/app/native-yield-operations/lido-governance-monitor/prisma ./native-yield-operations/lido-governance-monitor/prisma
+COPY --from=builder --chown=node:node /usr/src/app/native-yield-operations/lido-governance-monitor/prisma ./native-yield-operations/lido-governance-monitor/prisma
+COPY --from=builder --chown=node:node /usr/src/app/native-yield-operations/lido-governance-monitor/prisma.config.ts ./native-yield-operations/lido-governance-monitor/prisma.config.ts
 
-CMD [ "node", "./native-yield-operations/lido-governance-monitor/dist/run.js" ]
+RUN mkdir -p /home/node/.cache/prisma \
+    && chown -R node:node /home/node/.cache
+
+WORKDIR /usr/src/app/native-yield-operations/lido-governance-monitor
+
+USER node
+
+CMD [ "node", "./dist/run.js" ]

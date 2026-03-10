@@ -1,9 +1,10 @@
 import { ISlackClient } from "../core/clients/ISlackClient.js";
-import { AssessmentSchema } from "../core/entities/Assessment.js";
+import { Assessment, AssessmentSchema } from "../core/entities/Assessment.js";
 import { ProposalWithoutText } from "../core/entities/Proposal.js";
 import { ProposalState } from "../core/entities/ProposalState.js";
 import { IProposalRepository } from "../core/repositories/IProposalRepository.js";
 import { INotificationService } from "../core/services/INotificationService.js";
+import { computeEffectiveRisk } from "../utils/effectiveRisk.js";
 import { ILidoGovernanceMonitorLogger } from "../utils/logging/index.js";
 
 export class NotificationService implements INotificationService {
@@ -46,6 +47,17 @@ export class NotificationService implements INotificationService {
     }
   }
 
+  private deriveEffectiveRisk(assessment: Assessment): number {
+    return computeEffectiveRisk(assessment.riskScore, assessment.confidence, assessment.effectiveRisk);
+  }
+
+  private withEffectiveRisk(assessment: Assessment): Assessment & { effectiveRisk: number } {
+    return {
+      ...assessment,
+      effectiveRisk: this.deriveEffectiveRisk(assessment),
+    } as Assessment & { effectiveRisk: number };
+  }
+
   private async notifyProposalInternal(proposal: ProposalWithoutText): Promise<void> {
     try {
       // Validate assessment exists
@@ -65,9 +77,11 @@ export class NotificationService implements INotificationService {
         return;
       }
       const assessment = parseResult.data;
+      const assessmentWithEffectiveRisk = this.withEffectiveRisk(assessment);
+      const effectiveRisk = assessmentWithEffectiveRisk.effectiveRisk;
 
       // Send to audit channel unconditionally
-      const auditResult = await this.slackClient.sendAuditLog(proposal, assessment);
+      const auditResult = await this.slackClient.sendAuditLog(proposal, assessmentWithEffectiveRisk);
       if (!auditResult.success) {
         // Log but don't fail - audit is best-effort
         this.logger.critical("Audit log failed, continuing", {
@@ -77,19 +91,19 @@ export class NotificationService implements INotificationService {
       }
 
       // Check risk threshold BEFORE attempting notification
-      if (proposal.riskScore === null || proposal.riskScore < this.riskThreshold) {
+      if (effectiveRisk < this.riskThreshold) {
         // Below threshold - mark as NOT_NOTIFIED without sending notification
         await this.proposalRepository.updateState(proposal.id, ProposalState.NOT_NOTIFIED);
         this.logger.info("Proposal below notification threshold, skipped", {
           proposalId: proposal.id,
-          riskScore: proposal.riskScore,
+          effectiveRisk,
           threshold: this.riskThreshold,
         });
         return;
       }
 
       // Send Slack notification
-      const result = await this.slackClient.sendProposalAlert(proposal, assessment);
+      const result = await this.slackClient.sendProposalAlert(proposal, assessmentWithEffectiveRisk);
 
       if (result.success) {
         await this.proposalRepository.markNotified(proposal.id);

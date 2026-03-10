@@ -29,6 +29,7 @@ describe("Proposal Lifecycle Integration", () => {
 
   const createMockAssessment = (riskScore: number): Assessment => ({
     riskScore,
+    effectiveRisk: Math.round((riskScore * 85) / 100),
     riskLevel: riskScore >= 61 ? "high" : riskScore >= 31 ? "medium" : "low",
     confidence: 85,
     proposalType: "discourse",
@@ -63,7 +64,6 @@ describe("Proposal Lifecycle Integration", () => {
     assessmentPromptVersion: assessment ? "v1.0" : null,
     analyzedAt: assessment ? new Date() : null,
     assessmentJson: assessment ?? null,
-    riskScore: assessment?.riskScore ?? null,
     notifyAttemptCount: 0,
     notifiedAt: null,
   });
@@ -110,7 +110,6 @@ describe("Proposal Lifecycle Integration", () => {
       const highRiskAssessment = createMockAssessment(75);
       const newProposal = createMockProposal(ProposalState.NEW);
       const analyzedProposal = createMockProposal(ProposalState.ANALYZED, highRiskAssessment);
-      analyzedProposal.riskScore = 75; // Ensure riskScore is set
       const notifiedProposal = createMockProposal(ProposalState.NOTIFIED, highRiskAssessment);
 
       // Phase 1: Process NEW proposal
@@ -129,7 +128,6 @@ describe("Proposal Lifecycle Integration", () => {
       expect(proposalRepository.saveAnalysis).toHaveBeenCalledWith(
         newProposal.id,
         highRiskAssessment,
-        75,
         "claude-sonnet-4",
         60,
         "v1.0",
@@ -158,7 +156,6 @@ describe("Proposal Lifecycle Integration", () => {
       const lowRiskAssessment = createMockAssessment(30);
       const newProposal = createMockProposal(ProposalState.NEW);
       const analyzedProposal = createMockProposal(ProposalState.ANALYZED, lowRiskAssessment);
-      analyzedProposal.riskScore = 30;
       const notNotifiedProposal = { ...analyzedProposal, state: ProposalState.NOT_NOTIFIED };
 
       proposalRepository.findByStateForAnalysis
@@ -223,7 +220,6 @@ describe("Proposal Lifecycle Integration", () => {
       expect(proposalRepository.saveAnalysis).toHaveBeenCalledWith(
         failedProposal.id,
         highRiskAssessment,
-        75,
         "claude-sonnet-4",
         60,
         "v1.0",

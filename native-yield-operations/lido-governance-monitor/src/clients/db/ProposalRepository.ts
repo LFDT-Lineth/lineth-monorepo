@@ -83,7 +83,6 @@ export class ProposalRepository implements IProposalRepository {
   async saveAnalysis(
     id: string,
     assessment: Assessment,
-    riskScore: number,
     llmModel: string,
     riskThreshold: number,
     promptVersion: string,
@@ -94,7 +93,6 @@ export class ProposalRepository implements IProposalRepository {
         state: ProposalState.ANALYZED,
         stateUpdatedAt: new Date(),
         assessmentJson: assessment as object,
-        riskScore,
         llmModel,
         riskThreshold,
         assessmentPromptVersion: promptVersion,

@@ -22,7 +22,6 @@ export interface Proposal {
   assessmentPromptVersion: string | null;
   analyzedAt: Date | null;
   assessmentJson: Assessment | null;
-  riskScore: number | null;
   notifyAttemptCount: number;
   notifiedAt: Date | null;
 }

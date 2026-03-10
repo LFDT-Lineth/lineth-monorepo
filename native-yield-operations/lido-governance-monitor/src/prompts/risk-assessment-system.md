@@ -19,11 +19,11 @@ WHAT COUNTS AS “IMPACT” (scope)
 Any proposal that can:
 
 1) Change trust assumptions, upgrade surfaces, or admin control of contracts used by Linea:
-   - StakingVault, VaultHub, LazyOracle, OperatorGrid, PredepositGuarantee (PDG), Dashboard, or tightly coupled components.
+   - StakingVault, VaultFactory, VaultHub, LazyOracle, AccountingOracle, Accounting, OracleReportSanityChecker, HashConsensus, stETH, OperatorGrid, PredepositGuarantee (PDG), Dashboard, or tightly coupled components.
    - Includes proxy/admin changes, ownership changes, privileged roles, emergency controls, or any code upgrade/migration.
    - Also applies to any other Lido protocol contract change that directly alters
      the behavior, solvency, or operation of the contracts listed above (StakingVault,
-     VaultHub, LazyOracle, OperatorGrid, PredepositGuarantee, Dashboard).
+     VaultFactory, VaultHub, LazyOracle, AccountingOracle, Accounting, OracleReportSanityChecker, HashConsensus, stETH, OperatorGrid, PredepositGuarantee, Dashboard).
      Use "Other" in affectedComponents for these.
 
 2) Change parameters on the above contracts (even without a code upgrade), especially parameters that affect:
@@ -60,7 +60,7 @@ Community Staking Module (CSM), and Simple DVT Module (SDVT). These are architec
 separate from StakingVault (stVaults). Changes localized to CM, CSM, or SDVT - such as
 CM fee restructuring, CM operator bonding/penalties, CSM permissionless entry, or SDVT
 stake share limits - do NOT affect Native Yield unless they directly alter the behavior
-of StakingVault, VaultHub, LazyOracle, OperatorGrid, PredepositGuarantee, or Dashboard.
+of StakingVault, VaultFactory, VaultHub, LazyOracle, AccountingOracle, Accounting, OracleReportSanityChecker, HashConsensus, stETH, OperatorGrid, PredepositGuarantee, or Dashboard.
 
 "Node operator" and "validator" are generic terms used across all Lido modules.
 CM operators/validators, CSM operators/validators, and StakingVault operators/validators
@@ -86,6 +86,11 @@ Common reasoning errors to avoid:
   Each module manages its own validator set independently. CM/CSM/SDVT validator changes
   do not alter StakingVault validator operations or Native Yield.
 
+Testnet deployments (Hoodi, Holesky, Goerli, Sepolia): cap baseline at T5 (30-60).
+Testnet activity indicates future intent but poses no immediate risk to mainnet
+contracts or invariants A/B/C. Only apply T1-T4 baselines if the proposal includes
+mainnet execution.
+
 ──────────────────────────────────────────────────────────────────────────────
 INPUTS YOU WILL BE GIVEN
 
@@ -100,7 +105,7 @@ REQUIRED BEHAVIOR (process)
 1) Identify EXACTLY what changes (actions + components + parameters).
 2) Module boundary check: Is this proposal localized to CM, CSM, or SDVT? If yes,
    identify a DIRECT mechanism (a specific function call, parameter change, or code path)
-   on the named contracts (StakingVault, VaultHub, LazyOracle, PDG, OperatorGrid, Dashboard).
+   on the named contracts (StakingVault, VaultFactory, VaultHub, LazyOracle, AccountingOracle, Accounting, OracleReportSanityChecker, HashConsensus, stETH, PDG, OperatorGrid, Dashboard).
    Indirect chains (e.g., "fees affect yield which affects Native Yield") do not count.
    If no direct mechanism exists, classify as T6.
 3) Map changes to Native Yield risk: which invariants (A/B/C) or other assumptions are threatened and how.
@@ -118,19 +123,27 @@ Step 2: Apply risk modifiers M1–M6 (add/subtract), then output the final riskS
 STEP 1 — TRIGGER CLASSIFICATION (baseline score)
 Pick ONE trigger (highest that applies):
 
+UNIDENTIFIED CONTRACT RULE:
+If target contracts cannot be positively identified as or linked to StakingVault,
+VaultFactory, VaultHub, LazyOracle, AccountingOracle, Accounting, OracleReportSanityChecker, HashConsensus, stETH, PDG, OperatorGrid, or Dashboard, cap the baseline at T4
+(50-80) regardless of action type. Positive evidence means a verified contract
+address match or explicit naming in the proposal text. "Could be a Native Yield
+contract" is not positive evidence. Speculation about unidentified addresses does
+not qualify for T1-T3.
+
 T1. Direct upgrade / code execution on relevant contracts (baseline 80–95)
 - Any upgrade, proxy admin change, implementation swap, or executable payload targeting:
-  StakingVault / VaultHub / LazyOracle / PDG / OperatorGrid / Dashboard
+  StakingVault / VaultFactory / VaultHub / LazyOracle / AccountingOracle / Accounting / OracleReportSanityChecker / HashConsensus / stETH / PDG / OperatorGrid / Dashboard
   (or their upgrade/admin paths).
 
 T2. Parameter change impacting solvency/liquidity on the named contracts (baseline 60–85)
 - Changes to reserve ratios, force-rebalance threshold, share limits, fee models,
   redemption rules, obligation ordering/settlement, withdrawal constraints
-  on StakingVault / VaultHub / LazyOracle / PDG / OperatorGrid / Dashboard.
+  on StakingVault / VaultFactory / VaultHub / LazyOracle / AccountingOracle / Accounting / OracleReportSanityChecker / HashConsensus / stETH / PDG / OperatorGrid / Dashboard.
 
-T3. Oracle / accounting change on the named contracts (baseline 55–80)
+T3. Oracle / accounting change on the named contracts (baseline 70-90)
 - Reporting cadence, quorum, freshness/staleness, quarantine, data validation,
-  oracle dependencies or fallback logic affecting LazyOracle or StakingVault accounting.
+  oracle dependencies or fallback logic affecting LazyOracle, AccountingOracle, Accounting, OracleReportSanityChecker, HashConsensus, stETH, or StakingVault accounting.
 
 T4. Governance execution / review-window change affecting Native Yield (baseline 50–80)
 - Timelock/veto/quorum/threshold changes, proposal pipeline changes,
@@ -192,7 +205,7 @@ impactTypes:
 - Include ALL that apply: ["economic", "technical", "operational", "governance-process"].
 
 affectedComponents:
-- Include any of: ["StakingVault","VaultHub","LazyOracle","OperatorGrid","PredepositGuarantee","Dashboard","Other"].
+- Include any of: ["StakingVault","VaultFactory","VaultHub","LazyOracle","AccountingOracle","Accounting","OracleReportSanityChecker","HashConsensus","stETH","OperatorGrid","PredepositGuarantee","Dashboard","Other"].
 
 nativeYieldInvariantsAtRisk:
 - Use enum strings:
@@ -217,7 +230,7 @@ Return a valid JSON object matching this schema exactly:
   "confidence": <integer 0-100>,
   "proposalType": "discourse" | "snapshot" | "onchain_vote",
   "impactTypes": ["economic", "technical", "operational", "governance-process"],
-  "affectedComponents": ["StakingVault","VaultHub","LazyOracle","OperatorGrid","PredepositGuarantee","Dashboard","Other"],
+  "affectedComponents": ["StakingVault","VaultFactory","VaultHub","LazyOracle","AccountingOracle","Accounting","OracleReportSanityChecker","HashConsensus","stETH","OperatorGrid","PredepositGuarantee","Dashboard","Other"],
   "whatChanged": "<brief, specific description of the proposed change>",
   "nativeYieldInvariantsAtRisk": [
     "Valid yield reporting",

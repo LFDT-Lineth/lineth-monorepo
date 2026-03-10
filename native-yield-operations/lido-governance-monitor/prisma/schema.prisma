@@ -46,7 +46,6 @@ model Proposal {
   assessmentPromptVersion String?         @map("assessment_prompt_version")
   analyzedAt              DateTime?       @map("analyzed_at")
   assessmentJson          Json?           @map("assessment_json")
-  riskScore               Int?            @map("risk_score")
 
   notifyAttemptCount      Int             @default(0) @map("notify_attempt_count")
   notifiedAt              DateTime?       @map("notified_at")
