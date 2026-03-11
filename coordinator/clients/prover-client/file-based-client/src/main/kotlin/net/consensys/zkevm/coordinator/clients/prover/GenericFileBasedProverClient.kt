@@ -27,7 +27,7 @@ open class GenericFileBasedProverClient<Request, Response, RequestDto, ResponseD
   private val fileReader: FileReader<ResponseDto>,
   private val requestFileNameProvider: ProverFileNameProvider<TProofIndex>,
   private val responseFileNameProvider: ProverFileNameProvider<TProofIndex>,
-  private val fileMonitor: FileMonitor = FileMonitor(
+  open val fileMonitor: FileMonitor = FileMonitor(
     vertx,
     FileMonitor.Config(config.pollingInterval, config.pollingTimeout),
   ),

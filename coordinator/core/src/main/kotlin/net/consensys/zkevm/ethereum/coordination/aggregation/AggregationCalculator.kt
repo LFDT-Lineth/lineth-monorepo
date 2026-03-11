@@ -27,6 +27,13 @@ enum class AggregationTriggerType {
    * When a hard fork is detected, any pending aggregation should be finalized.
    */
   HARD_FORK,
+
+  /**
+   * Aggregation trigger for forced transaction invalidity proof generation.
+   * When a forced transaction is detected, create an aggregation boundary at the FTX execution block
+   * to isolate the FTX for invalidity proof generation.
+   */
+  FORCED_TRANSACTION,
 }
 
 data class AggregationTrigger(

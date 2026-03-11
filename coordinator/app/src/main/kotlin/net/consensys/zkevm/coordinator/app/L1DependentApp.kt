@@ -14,6 +14,7 @@ import linea.domain.BlockNumberAndHash
 import linea.domain.RetryConfig
 import linea.ethapi.EthApiClient
 import linea.kotlin.toKWeiUInt
+import linea.persistence.ftx.ForcedTransactionsDao
 import linea.web3j.SmartContractErrors
 import linea.web3j.createWeb3jHttpClient
 import linea.web3j.ethapi.createEthApiClient
@@ -77,10 +78,12 @@ class L1DependentApp(
   private val httpJsonRpcClientFactory: VertxHttpJsonRpcClientFactory,
   private val batchesRepository: BatchesRepository,
   private val blobsRepository: BlobsRepository,
+  private val forcedTransactionsDao: ForcedTransactionsDao,
   private val aggregationsRepository: AggregationsRepository,
   private val sqlClient: SqlClient,
   private val smartContractErrors: SmartContractErrors,
   private val metricsFacade: MetricsFacade,
+  private val clock: Clock,
 ) : LongRunningService {
   private val log = LogManager.getLogger(this::class.java)
 
@@ -163,14 +166,21 @@ class L1DependentApp(
     )
   }
 
-  val lineaRollupClientForFinalizationMonitor: LineaRollupSmartContractClientReadOnly =
+  val lineaRollupClientForFinalizationMonitor: LineaRollupSmartContractClientReadOnly = run {
+    val web3j = createWeb3jHttpClient(
+      rpcUrl = configs.l1FinalizationMonitor.l1Endpoint.toString(),
+      log = LogManager.getLogger("clients.l1.eth.finalization-monitor"),
+    )
     Web3JLineaRollupSmartContractClientReadOnly(
       contractAddress = configs.protocol.l1.contractAddress,
-      web3j = createWeb3jHttpClient(
-        rpcUrl = configs.l1FinalizationMonitor.l1Endpoint.toString(),
-        log = LogManager.getLogger("clients.l1.eth.finalization-monitor"),
+      web3j = web3j,
+      ethLogsClient = createEthApiClient(
+        web3jClient = web3j,
+        requestRetryConfig = configs.l1FinalizationMonitor.l1RequestRetries,
+        vertx = vertx,
       ),
     )
+  }
 
   private val l1FinalizationMonitor = run {
     FinalizationMonitorImpl(
@@ -496,9 +506,11 @@ class L1DependentApp(
     batchesRepository = batchesRepository,
     blobsRepository = blobsRepository,
     aggregationsRepository = aggregationsRepository,
+    forcedTransactionsDao = forcedTransactionsDao,
     lastFinalizedBlock = lastFinalizedBlock,
     metricsFacade = metricsFacade,
     httpJsonRpcClientFactory = httpJsonRpcClientFactory,
+    clock = clock,
   )
 
   private val l2NetworkGasPricingService: L2NetworkGasPricingService? =

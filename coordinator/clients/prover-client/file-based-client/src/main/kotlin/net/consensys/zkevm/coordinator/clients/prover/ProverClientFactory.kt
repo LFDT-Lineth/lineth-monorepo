@@ -6,6 +6,7 @@ import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.GaugeAggregator
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProverClientV2
 import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
+import net.consensys.zkevm.coordinator.clients.InvalidityProverClientV1
 import net.consensys.zkevm.coordinator.clients.ProofAggregationProverClientV2
 import net.consensys.zkevm.coordinator.clients.ProverClient
 import net.consensys.zkevm.domain.ProofIndex
@@ -19,6 +20,7 @@ class ProverClientFactory(
   private val executionWaitingResponsesMetric = GaugeAggregator()
   private val blobWaitingResponsesMetric = GaugeAggregator()
   private val aggregationWaitingResponsesMetric = GaugeAggregator()
+  private val invalidityWaitingResponsesMetric = GaugeAggregator()
 
   init {
     metricsFacade.createGauge(
@@ -39,6 +41,12 @@ class ProverClientFactory(
       name = "prover.waiting",
       description = "Number of aggregation proof waiting responses",
       measurementSupplier = aggregationWaitingResponsesMetric,
+    )
+    metricsFacade.createGauge(
+      category = LineaMetricsCategory.FORCED_TRANSACTION,
+      name = "prover.waiting",
+      description = "Number of invalidity proof waiting responses",
+      measurementSupplier = invalidityWaitingResponsesMetric,
     )
   }
 
@@ -77,12 +85,13 @@ class ProverClientFactory(
     log: Logger = FileBasedProofAggregationClientV2.LOG,
   ): ProofAggregationProverClientV2 {
     return createClient(
-      proverAConfig = config.proverA.proofAggregation,
-      proverBConfig = config.proverB?.proofAggregation,
+      proverAConfig = config.proverA,
+      proverBConfig = config.proverB,
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
     ) { proverConfig ->
       FileBasedProofAggregationClientV2(
-        config = proverConfig,
+        config = proverConfig.proofAggregation,
+        invalidityProverConfig = proverConfig.invalidity,
         vertx = vertx,
         log = log,
       )
@@ -90,11 +99,29 @@ class ProverClientFactory(
     }
   }
 
-  private fun <ProofRequest, ProofResponse, TProofIndex> createClient(
-    proverAConfig: FileBasedProverConfig,
-    proverBConfig: FileBasedProverConfig?,
+  fun createInvalidityProofClient(): InvalidityProverClientV1 {
+    if (config.proverA.invalidity == null) {
+      throw IllegalStateException("Invalidity prover config is not configured")
+    }
+
+    return createClient(
+      proverAConfig = config.proverA,
+      proverBConfig = config.proverB,
+      switchBlockNumberInclusive = config.switchBlockNumberInclusive,
+    ) { proverConfig ->
+      FileBasedInvalidityProverClient(
+        config = proverConfig.invalidity!!,
+        vertx = vertx,
+      )
+        .also { invalidityWaitingResponsesMetric.addReporter(it) }
+    }
+  }
+
+  private fun <TProverConfig, ProofRequest, ProofResponse, TProofIndex> createClient(
+    proverAConfig: TProverConfig,
+    proverBConfig: TProverConfig?,
     switchBlockNumberInclusive: ULong?,
-    clientBuilder: (FileBasedProverConfig) -> ProverClient<ProofRequest, ProofResponse, TProofIndex>,
+    clientBuilder: (TProverConfig) -> ProverClient<ProofRequest, ProofResponse, TProofIndex>,
   ): ProverClient<ProofRequest, ProofResponse, TProofIndex>
     where ProofRequest : Any, TProofIndex : ProofIndex {
     return if (switchBlockNumberInclusive != null) {

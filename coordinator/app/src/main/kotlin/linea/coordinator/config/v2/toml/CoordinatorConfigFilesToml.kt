@@ -73,13 +73,7 @@ data class CoordinatorConfigToml(
           ?: emptyMap(),
       ),
       forcedTransactions =
-      this.configs.forcedTransactions?.reified(
-        l1DefaultEndpoint = this.configs.defaults.l1Endpoint,
-        l1DefaultRequestRetries = this.configs.defaults.l1RequestRetries,
-      ) ?: ForcedTransactionsConfigToml().reified(
-        l1DefaultEndpoint = this.configs.defaults.l1Endpoint,
-        l1DefaultRequestRetries = this.configs.defaults.l1RequestRetries,
-      ),
+      this.configs.forcedTransactions?.reified(defaults = this.configs.defaults),
       messageAnchoring =
       this.configs.messageAnchoring.reified(
         l1DefaultEndpoint = this.configs.defaults.l1Endpoint,

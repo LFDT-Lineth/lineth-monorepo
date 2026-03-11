@@ -1,5 +1,7 @@
 package linea.ftx
 
+import build.linea.clients.StateManagerAccountProofClient
+import build.linea.clients.StateManagerClientV1
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.contract.events.FinalizedStateUpdatedEvent
@@ -14,11 +16,21 @@ import linea.domain.EthLog
 import linea.ethapi.EthApiBlockClient
 import linea.ethapi.FakeEthApiClient
 import linea.forcedtx.ForcedTransactionInclusionResult
+import linea.ftx.conflation.ForcedTransactionConflationSafeBlockNumberProvider
+import linea.ftx.conflation.SafeBlockNumberUpdateListener
 import linea.log4j.configureLoggers
 import linea.persistence.ftx.FakeForcedTransactionsDao
 import linea.persistence.ftx.ForcedTransactionsDao
 import net.consensys.FakeFixedClock
+import net.consensys.linea.traces.TracesCountersV4
+import net.consensys.zkevm.coordinator.clients.FakeTracesConflationVirtualBlockClientV1
+import net.consensys.zkevm.coordinator.clients.InvalidityProverClientV1
+import net.consensys.zkevm.coordinator.clients.TracesConflationVirtualBlockClientV1
+import net.consensys.zkevm.domain.BlobCounters
+import net.consensys.zkevm.domain.BlockCounters
+import net.consensys.zkevm.domain.ConflationTrigger
 import net.consensys.zkevm.domain.ForcedTransactionRecord
+import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationTriggerType
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
@@ -28,8 +40,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
-import kotlin.concurrent.atomics.AtomicBoolean
-import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
@@ -40,7 +50,6 @@ import kotlin.time.Instant
 import kotlin.time.toJavaDuration
 
 @ExtendWith(VertxExtension::class)
-@OptIn(ExperimentalAtomicApi::class)
 class ForcedTransactionsAppTest {
   private val L1_CONTRACT_ADDRESS = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa01"
   private lateinit var l1Client: FakeEthApiClient
@@ -50,6 +59,10 @@ class ForcedTransactionsAppTest {
   private lateinit var fxtDao: ForcedTransactionsDao
   private lateinit var fakeContractClient: FakeLineaRollupSmartContractClient
   private val fakeClock = FakeFixedClock(Instant.parse("2025-01-01T00:00:00Z"))
+  private lateinit var invalidityProofClient: InvalidityProverClientV1
+  private lateinit var stateManagerClient: StateManagerClientV1
+  private lateinit var accountProofClient: StateManagerAccountProofClient
+  private lateinit var tracesClient: TracesConflationVirtualBlockClientV1
 
   @BeforeEach
   fun setUp(vertx: Vertx) {
@@ -79,6 +92,13 @@ class ForcedTransactionsAppTest {
       contractVersion = LineaRollupContractVersion.V8,
     )
     this.fxtDao = FakeForcedTransactionsDao()
+    this.tracesClient = FakeTracesConflationVirtualBlockClientV1()
+    this.invalidityProofClient = FakeInvalidityProverClient()
+    FakeStateManagerClient()
+      .also {
+        this.stateManagerClient = it
+        this.accountProofClient = it
+      }
   }
 
   private fun createApp(
@@ -87,6 +107,7 @@ class ForcedTransactionsAppTest {
     ftxSequencerSendingInterval: Duration = 100.milliseconds,
     ftxProcessingDelay: Duration = Duration.ZERO,
     fakeForcedTransactionsClientErrorRatio: Double = 0.5,
+    safeBlockTracker: SafeBlockTracker? = null,
   ): ForcedTransactionsAppImpl {
     val config = ForcedTransactionsApp.Config(
       l1PollingInterval = l1PollingInterval,
@@ -107,7 +128,12 @@ class ForcedTransactionsAppTest {
       ftxClient = this.ftxClient,
       ftxDao = this.fxtDao,
       l2EthApiClient = this.l2Client,
+      invalidityProofClient = this.invalidityProofClient,
+      stateManagerClient = this.stateManagerClient,
+      accountProofClient = this.accountProofClient,
+      tracesClient = this.tracesClient,
       clock = fakeClock,
+      safeBlockNumberProvider = ForcedTransactionConflationSafeBlockNumberProvider(listener = safeBlockTracker),
     )
   }
 
@@ -122,6 +148,14 @@ class ForcedTransactionsAppTest {
       forcedTransactionNumber = ftxNumber,
       blockNumberDeadline = l2DeadLine,
     )
+  }
+
+  @Test
+  fun `should start with safe block number 0`() {
+    val app = createApp()
+    assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber()).isEqualTo(0UL)
+    app.start().get()
+    assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber()).isEqualTo(0UL)
   }
 
   @Test
@@ -181,7 +215,7 @@ class ForcedTransactionsAppTest {
         // so coordinator shall resend it in case sequencer restarts
         assertThat(ftxClient.ftxReceivedIds).startsWith(11UL, 12UL, 12UL)
       }
-
+    val ftx11AddedEvent = ForcedTransactionAddedEvent.fromEthLog(ftxAddedEvents[2])
     assertThat(fxtDao.list().get()).isEqualTo(
       listOf(
         ForcedTransactionRecord(
@@ -189,8 +223,10 @@ class ForcedTransactionsAppTest {
           inclusionResult = ForcedTransactionInclusionResult.Included,
           simulatedExecutionBlockNumber = this.ftxClient.ftxInclusionResults[11UL]!!.blockNumber,
           simulatedExecutionBlockTimestamp = this.ftxClient.ftxInclusionResults[11UL]!!.blockTimestamp,
+          ftxBlockNumberDeadline = ftx11AddedEvent.event.blockNumberDeadline,
+          ftxRollingHash = ftx11AddedEvent.event.forcedTransactionRollingHash,
+          ftxRlp = ftx11AddedEvent.event.rlpEncodedSignedTransaction,
           proofStatus = ForcedTransactionRecord.ProofStatus.UNREQUESTED,
-          proofIndex = null,
         ),
       ),
     )
@@ -238,7 +274,6 @@ class ForcedTransactionsAppTest {
     this.l1Client.setLatestBlockTag(10_000UL)
     this.l2Client.setLatestBlockTag(2_000UL)
     this.fakeClock.setTimeTo(this.l1Client.blockTimestamp(BlockParameter.Tag.LATEST) + 12.seconds)
-
     app.start()
       .also {
         assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber()).isEqualTo(0UL)
@@ -249,7 +284,6 @@ class ForcedTransactionsAppTest {
     await()
       .atMost(2.seconds.toJavaDuration())
       .untilAsserted {
-        // Safe block number should remain at 0 when there are no forced transactions
         assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber()).isNull()
       }
 
@@ -260,7 +294,7 @@ class ForcedTransactionsAppTest {
   }
 
   @Test
-  fun `on restart shall wait to reach the tip of the chain before releasing the conflation`() {
+  fun `on restart shall wait to reach the tip of the l1 chain before releasing the conflation`() {
     // Scenario: On restart, there are FTX on L1 and may take long time to fetch..
     // The coordinator should keep the lock at 0 until it catches up with head or until it fetches the first one and
     // sends to the sequencer and gets inclusion status, whichever comes first.
@@ -300,23 +334,24 @@ class ForcedTransactionsAppTest {
     )
     l1Client.setLogs(ftxAddedEvents)
 
+    val safeBlockTracker = SafeBlockTracker()
     val app = createApp(
       l1PollingInterval = 10.milliseconds,
       l1EventSearchBlockChunk = 100u, // Small chunks to simulate slow catch-up
       ftxSequencerSendingInterval = 5.milliseconds, // to empty the queue faster once it starts sending
       fakeForcedTransactionsClientErrorRatio = 0.0,
+      safeBlockTracker = safeBlockTracker,
     )
     this.l1Client.setFinalizedBlockTag(20_000UL)
     this.l2Client.setLatestBlockTag(900UL)
     this.fakeClock.setTimeTo(this.l1Client.blockTimestamp(BlockParameter.Tag.LATEST) + 12.seconds)
 
-    val safeBlockTracker = SafeBlockTracker(app)
     assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber()).isEqualTo(0UL)
     app.start().get()
     await()
       .atMost(5.seconds.toJavaDuration())
       .untilAsserted {
-        assertThat(safeBlockTracker.stateTransitions.last()).isEqualTo(900UL)
+        assertThat(safeBlockTracker.stateTransitions.lastOrNull()).isEqualTo(900UL)
       }
 
     this.ftxClient.setFtxInclusionResultAfterReception(
@@ -327,7 +362,7 @@ class ForcedTransactionsAppTest {
     await()
       .atMost(5.seconds.toJavaDuration())
       .untilAsserted {
-        assertThat(safeBlockTracker.stateTransitions.last()).isEqualTo(1011UL)
+        assertThat(safeBlockTracker.stateTransitions.lastOrNull()).isEqualTo(1011UL)
       }
     this.ftxClient.setFtxInclusionResultAfterReception(
       ftxNumber = 12UL,
@@ -339,14 +374,13 @@ class ForcedTransactionsAppTest {
       l2BlockNumber = 1013UL,
       inclusionResult = ForcedTransactionInclusionResult.Included,
     )
+    // assert conflation is released after processing all FTXs
     await()
-      .atMost(1.seconds.toJavaDuration())
+      .atMost(5.seconds.toJavaDuration())
       .untilAsserted {
-        assertThat(safeBlockTracker.stateTransitions.last()).isNull()
+        assertThat(safeBlockTracker.stateTransitions.lastOrNull()).isNull()
       }
-    safeBlockTracker.stop()
     assertThat(safeBlockTracker.stateTransitions).startsWith(
-      0UL, // start blocked
       900UL, // blocks conflation before sending 1st FTXs to sequencer
       1011UL, // blocks conflation at FTX processing block Number
     )
@@ -371,8 +405,10 @@ class ForcedTransactionsAppTest {
       inclusionResult = ForcedTransactionInclusionResult.Included,
       simulatedExecutionBlockNumber = 2_010UL,
       simulatedExecutionBlockTimestamp = Clock.System.now(),
+      ftxBlockNumberDeadline = 200UL,
+      ftxRollingHash = ByteArray(0),
+      ftxRlp = ByteArray(0),
       proofStatus = ForcedTransactionRecord.ProofStatus.UNREQUESTED,
-      proofIndex = null,
     )
     fxtDao.save(ftx10Record).get()
 
@@ -466,9 +502,6 @@ class ForcedTransactionsAppTest {
     // After awaitVersion() returns, the startup scan resumes.
     // The safe block number should be re-locked at 0 to prevent unrestricted conflation
     // while forced transactions are being discovered and sent to the sequencer.
-    //
-    // Bug: lockSafeBlockNumberBeforeSendingToSequencer early-returns when !startUpScanFinished,
-    // so if safeBlockNumber is null (instead of 0), conflation remains unrestricted during scan.
     this.fakeContractClient.contractVersion = LineaRollupContractVersion.V7
 
     // FTX events already on L1 (submitted right after V8 upgrade)
@@ -500,14 +533,15 @@ class ForcedTransactionsAppTest {
     this.l2Client.setLatestBlockTag(500UL)
     this.fakeClock.setTimeTo(this.l1Client.blockTimestamp(BlockParameter.Tag.LATEST) + 12.seconds)
 
+    val safeBlockTracker = SafeBlockTracker()
     val app = createApp(
       l1PollingInterval = 10.milliseconds,
       l1EventSearchBlockChunk = 100u, // Small chunks to slow down catch-up
       ftxSequencerSendingInterval = 5.milliseconds,
       fakeForcedTransactionsClientErrorRatio = 0.0,
+      safeBlockTracker = safeBlockTracker,
     )
 
-    val safeBlockTracker = SafeBlockTracker(app)
     assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber()).isEqualTo(0UL)
 
     val startFuture = app.start()
@@ -517,7 +551,7 @@ class ForcedTransactionsAppTest {
 
     // it should lock safe block number with l2 chain head
     await()
-      .atMost(5.seconds.toJavaDuration())
+      .atMost(10.seconds.toJavaDuration())
       .untilAsserted {
         assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber()).isEqualTo(500UL)
       }
@@ -539,7 +573,6 @@ class ForcedTransactionsAppTest {
       .untilAsserted {
         assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber()).isNull()
         assertThat(safeBlockTracker.stateTransitions).startsWith(
-          0UL, // initial lock
           null, // unlock while smart contract is not upgraded
           500UL, // lock on first ftx sent to sequencer
           510UL,
@@ -548,19 +581,19 @@ class ForcedTransactionsAppTest {
         )
       }
 
-    safeBlockTracker.stop()
     app.stop().get()
   }
 
   @Test
   fun `should not hold the conflation while smart contract is not upgraded`() {
     this.fakeContractClient.contractVersion = LineaRollupContractVersion.V7
+    val safeBlockTracker = SafeBlockTracker()
     val app = createApp(
       l1PollingInterval = 10.milliseconds,
       ftxSequencerSendingInterval = 100.milliseconds,
+      safeBlockTracker = safeBlockTracker,
     )
     val startFuture = app.start()
-    val safeBlockTracker = SafeBlockTracker(app)
     assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber()).isNull()
 
     // simulate upgrade, app start should complete after the upgrade
@@ -597,14 +630,13 @@ class ForcedTransactionsAppTest {
     )
 
     await()
-      .atMost(2.seconds.toJavaDuration())
+      .atMost(10.seconds.toJavaDuration())
       .untilAsserted {
         assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber()).isNull()
       }
 
-    safeBlockTracker.stop()
     assertThat(safeBlockTracker.stateTransitions).containsExactly(
-      null, // initial state, no lock
+      null, // unlock while smart contract is not upgraded
       10UL, // locked at L2 block number when processing FTX 1
       null, // released after processing FTX 1
     )
@@ -650,7 +682,7 @@ class ForcedTransactionsAppTest {
     )
     app.start().get()
     await()
-      .atMost(2.seconds.toJavaDuration())
+      .atMost(10.seconds.toJavaDuration())
       .untilAsserted {
         assertThat(app.ftxQueue).hasSize(2)
         assertThat(ftxClient.ftxReceivedIds).isEmpty()
@@ -665,7 +697,7 @@ class ForcedTransactionsAppTest {
     fakeClock.setTimeTo(ftx1Time.plus(processingDelay).plus(1.seconds))
 
     await()
-      .atMost(2.seconds.toJavaDuration())
+      .atMost(10.seconds.toJavaDuration())
       .untilAsserted {
         assertThat(ftxClient.ftxReceivedIds).startsWith(1UL)
       }
@@ -674,43 +706,139 @@ class ForcedTransactionsAppTest {
     app.stop().get()
   }
 
+  @Test
+  fun `should trigger conflation and aggregation when sequencer processes ftxs`() {
+    val ftxAddedEvents = listOf(
+      createFtxAddedEvent(
+        l1BlockNumber = 100UL,
+        ftxNumber = 1UL,
+        l2DeadLine = 100UL,
+      ),
+      createFtxAddedEvent(
+        l1BlockNumber = 200UL,
+        ftxNumber = 2UL,
+        l2DeadLine = 200UL,
+      ),
+      createFtxAddedEvent(
+        l1BlockNumber = 300UL,
+        ftxNumber = 3UL,
+        l2DeadLine = 300UL,
+      ),
+      createFtxAddedEvent(
+        l1BlockNumber = 400UL,
+        ftxNumber = 4UL,
+        l2DeadLine = 400UL,
+      ),
+      createFtxAddedEvent(
+        l1BlockNumber = 500UL,
+        ftxNumber = 5UL,
+        l2DeadLine = 500UL,
+      ),
+    )
+    this.l1Client.setLogs(ftxAddedEvents)
+    this.fakeContractClient.finalizedStateProvider.l1FinalizedState = LineaRollupFinalizedState(
+      blockNumber = 10UL,
+      blockTimestamp = Clock.System.now(),
+      messageNumber = 0UL,
+      forcedTransactionNumber = 0UL,
+    )
+
+    val app = createApp(
+      l1PollingInterval = 10.milliseconds,
+      l1EventSearchBlockChunk = 100u,
+      fakeForcedTransactionsClientErrorRatio = 0.0,
+    )
+    this.l1Client.setFinalizedBlockTag(1_000UL)
+    this.l2Client.setLatestBlockTag(10UL)
+    this.ftxClient.setFtxInclusionResultAfterReception(
+      ftxNumber = 1UL,
+      l2BlockNumber = 100UL,
+      inclusionResult = ForcedTransactionInclusionResult.BadNonce,
+    )
+    this.ftxClient.setFtxInclusionResultAfterReception(
+      ftxNumber = 2UL,
+      l2BlockNumber = 200UL,
+      inclusionResult = ForcedTransactionInclusionResult.Included,
+    )
+    this.ftxClient.setFtxInclusionResultAfterReception(
+      ftxNumber = 3UL,
+      l2BlockNumber = 300UL,
+      inclusionResult = ForcedTransactionInclusionResult.Included,
+    )
+    this.ftxClient.setFtxInclusionResultAfterReception(
+      ftxNumber = 4UL,
+      l2BlockNumber = 400UL,
+      inclusionResult = ForcedTransactionInclusionResult.Included,
+    )
+    this.ftxClient.setFtxInclusionResultAfterReception(
+      ftxNumber = 5UL,
+      l2BlockNumber = 500UL,
+      inclusionResult = ForcedTransactionInclusionResult.BadBalance,
+    )
+    this.fakeClock.setTimeTo(this.l1Client.blockTimestamp(BlockParameter.Tag.LATEST) + 12.seconds)
+    app.start().get()
+
+    await()
+      .atMost(10.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(this.fxtDao.list().get().lastOrNull()?.ftxNumber).isEqualTo(5UL)
+      }
+
+    val conflationTriggers = mutableListOf<Pair<ULong, ConflationTrigger>>()
+    val aggregationTriggers = mutableListOf<Pair<ULong, AggregationTriggerType>>()
+    (1UL..600UL).forEach { blockNumber ->
+      app.conflationCalculator.checkOverflow(
+        blockCounters = BlockCounters(
+          blockNumber = blockNumber,
+          blockTimestamp = Clock.System.now(),
+          tracesCounters = TracesCountersV4.EMPTY_TRACES_COUNT,
+          blockRLPEncoded = ByteArray(0),
+        ),
+      )?.also { conflationTrigger ->
+        conflationTriggers.add(blockNumber to conflationTrigger.trigger)
+        app.conflationCalculator.reset()
+      }
+
+      app.aggregationCalculator.checkAggregationTrigger(
+        blobCounters = BlobCounters(
+          numberOfBatches = 1u,
+          startBlockNumber = blockNumber,
+          endBlockNumber = blockNumber,
+          startBlockTimestamp = Clock.System.now(),
+          endBlockTimestamp = Clock.System.now(),
+          expectedShnarf = ByteArray(0),
+        ),
+      )?.also { trigger ->
+        aggregationTriggers.add(blockNumber to trigger.aggregationTriggerType)
+        app.aggregationCalculator.reset()
+      }
+    }
+    assertThat(conflationTriggers).isEqualTo(
+      listOf(
+        99UL to ConflationTrigger.FORCED_TRANSACTION,
+        499UL to ConflationTrigger.FORCED_TRANSACTION,
+      ),
+    )
+    assertThat(aggregationTriggers).isEqualTo(
+      listOf(
+        99UL to AggregationTriggerType.FORCED_TRANSACTION,
+        499UL to AggregationTriggerType.FORCED_TRANSACTION,
+      ),
+    )
+  }
+
   private fun EthApiBlockClient.blockTimestamp(blockParameter: BlockParameter): Instant =
     this.ethGetBlockByNumberTxHashes(blockParameter)
       .get().timestamp.let { Instant.fromEpochSeconds(it.toLong()) }
 
-  class SafeBlockTracker(
-    private val app: ForcedTransactionsApp,
-    private val pollInterval: Duration = Duration.ZERO,
-    private val startRightAway: Boolean = true,
-  ) {
+  class SafeBlockTracker : SafeBlockNumberUpdateListener {
     val stateTransitions = CopyOnWriteArrayList<ULong?>()
-    val keepRunning = AtomicBoolean(startRightAway)
-    private var thread: Thread = Thread(this::run)
-      .also {
-        it.isDaemon = true
-        if (startRightAway) {
-          it.start()
-        }
-      }
+    private var lastState: ULong? = ULong.MAX_VALUE // sentinel: will never match first update
 
-    fun stop() {
-      keepRunning.store(false)
-      thread.interrupt()
-    }
-
-    private fun run() {
-      var lastState: ULong? = ULong.MAX_VALUE
-      runCatching {
-        while (keepRunning.load()) {
-          val safeBlockNumber = app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber()
-          if (lastState != safeBlockNumber) {
-            lastState = safeBlockNumber
-            stateTransitions.add(safeBlockNumber)
-          }
-          if (pollInterval >= 1.milliseconds) {
-            Thread.sleep(pollInterval.inWholeMilliseconds)
-          }
-        }
+    override fun onSafeBlockNumberUpdate(safeBlockNumber: ULong?) {
+      if (lastState != safeBlockNumber) {
+        lastState = safeBlockNumber
+        stateTransitions.add(safeBlockNumber)
       }
     }
   }

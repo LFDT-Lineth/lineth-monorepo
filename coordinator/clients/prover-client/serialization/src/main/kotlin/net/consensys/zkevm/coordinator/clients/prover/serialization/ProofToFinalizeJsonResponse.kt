@@ -2,6 +2,8 @@ package net.consensys.zkevm.coordinator.clients.prover.serialization
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import linea.kotlin.byteArrayListEquals
+import linea.kotlin.byteArrayListHashCode
 import net.consensys.zkevm.domain.ProofToFinalize
 import kotlin.time.Instant
 
@@ -37,6 +39,17 @@ data class ProofToFinalizeJsonResponse(
   @JsonSerialize(using = ByteArraySerializer::class)
   @JsonDeserialize(using = ByteArrayDeserializer::class)
   val l2MessagingBlocksOffsets: ByteArray,
+  val parentAggregationFtxNumber: Long = 0,
+  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonDeserialize(using = ByteArrayDeserializer::class)
+  val parentAggregationFtxRollingHash: ByteArray = ByteArray(32),
+  val finalFtxNumber: Long = 0,
+  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonDeserialize(using = ByteArrayDeserializer::class)
+  val finalFtxRollingHash: ByteArray = ByteArray(32),
+  @JsonSerialize(contentUsing = ByteArraySerializer::class)
+  @JsonDeserialize(contentUsing = ByteArrayDeserializer::class)
+  val filteredAddresses: List<ByteArray> = emptyList(),
 ) {
 
   fun toDomainObject(): ProofToFinalize {
@@ -56,6 +69,11 @@ data class ProofToFinalizeJsonResponse(
       l2MerkleRoots = l2MerkleRoots,
       l2MerkleTreesDepth = l2MerkleTreesDepth,
       l2MessagingBlocksOffsets = l2MessagingBlocksOffsets,
+      parentAggregationFtxNumber = parentAggregationFtxNumber.toULong(),
+      parentAggregationFtxRollingHash = parentAggregationFtxRollingHash,
+      finalFtxNumber = finalFtxNumber.toULong(),
+      finalFtxRollingHash = finalFtxRollingHash,
+      filteredAddresses = filteredAddresses,
     )
   }
 
@@ -69,51 +87,63 @@ data class ProofToFinalizeJsonResponse(
 
     other as ProofToFinalizeJsonResponse
 
-    if (!aggregatedProof.contentEquals(other.aggregatedProof)) return false
-    if (!parentStateRootHash.contentEquals(other.parentStateRootHash)) return false
     if (aggregatedVerifierIndex != other.aggregatedVerifierIndex) return false
-    if (!aggregatedProofPublicInput.contentEquals(other.aggregatedProofPublicInput)) return false
-    dataHashes.forEachIndexed { index, bytes ->
-      if (!bytes.contentEquals(other.dataHashes[index])) return false
-    }
-    if (!dataParentHash.contentEquals(other.dataParentHash)) return false
     if (lastFinalizedBlockNumber != other.lastFinalizedBlockNumber) return false
     if (finalBlockNumber != other.finalBlockNumber) return false
     if (parentAggregationLastBlockTimestamp != other.parentAggregationLastBlockTimestamp) return false
     if (finalTimestamp != other.finalTimestamp) return false
-    if (!l1RollingHash.contentEquals(other.l1RollingHash)) return false
-    if (l1RollingHashMessageNumber != other.l1RollingHashMessageNumber) {
-      return false
-    }
-    l2MerkleRoots.forEachIndexed { index, bytes ->
-      if (!bytes.contentEquals(other.l2MerkleRoots[index])) return false
-    }
+    if (l1RollingHashMessageNumber != other.l1RollingHashMessageNumber) return false
     if (l2MerkleTreesDepth != other.l2MerkleTreesDepth) return false
-    return l2MessagingBlocksOffsets.contentEquals(other.l2MessagingBlocksOffsets)
+    if (parentAggregationFtxNumber != other.parentAggregationFtxNumber) return false
+    if (finalFtxNumber != other.finalFtxNumber) return false
+    if (!aggregatedProof.contentEquals(other.aggregatedProof)) return false
+    if (!parentStateRootHash.contentEquals(other.parentStateRootHash)) return false
+    if (!aggregatedProofPublicInput.contentEquals(other.aggregatedProofPublicInput)) return false
+    if (!dataHashes.byteArrayListEquals(other.dataHashes)) return false
+    if (!dataParentHash.contentEquals(other.dataParentHash)) return false
+    if (!l1RollingHash.contentEquals(other.l1RollingHash)) return false
+    if (!l2MerkleRoots.byteArrayListEquals(other.l2MerkleRoots)) return false
+    if (!l2MessagingBlocksOffsets.contentEquals(other.l2MessagingBlocksOffsets)) return false
+    if (!parentAggregationFtxRollingHash.contentEquals(other.parentAggregationFtxRollingHash)) return false
+    if (!finalFtxRollingHash.contentEquals(other.finalFtxRollingHash)) return false
+    if (!filteredAddresses.byteArrayListEquals(other.filteredAddresses)) return false
+
+    return true
   }
 
   override fun hashCode(): Int {
-    var result = aggregatedProof.contentHashCode()
-    result = 31 * result + parentStateRootHash.contentHashCode()
-    result = 31 * result + aggregatedVerifierIndex
-    result = 31 * result + aggregatedProofPublicInput.contentHashCode()
-    result = 31 * result + dataHashes.hashCode()
-    result = 31 * result + dataParentHash.contentHashCode()
+    var result = aggregatedVerifierIndex
     result = 31 * result + lastFinalizedBlockNumber.hashCode()
     result = 31 * result + finalBlockNumber.hashCode()
     result = 31 * result + parentAggregationLastBlockTimestamp.hashCode()
     result = 31 * result + finalTimestamp.hashCode()
-    result = 31 * result + l1RollingHash.contentHashCode()
     result = 31 * result + l1RollingHashMessageNumber.hashCode()
-    result = 31 * result + l2MerkleRoots.hashCode()
     result = 31 * result + l2MerkleTreesDepth
+    result = 31 * result + parentAggregationFtxNumber.hashCode()
+    result = 31 * result + finalFtxNumber.hashCode()
+    result = 31 * result + aggregatedProof.contentHashCode()
+    result = 31 * result + parentStateRootHash.contentHashCode()
+    result = 31 * result + aggregatedProofPublicInput.contentHashCode()
+    result = 31 * result + dataHashes.byteArrayListHashCode()
+    result = 31 * result + dataParentHash.contentHashCode()
+    result = 31 * result + l1RollingHash.contentHashCode()
+    result = 31 * result + l2MerkleRoots.byteArrayListHashCode()
     result = 31 * result + l2MessagingBlocksOffsets.contentHashCode()
+    result = 31 * result + parentAggregationFtxRollingHash.contentHashCode()
+    result = 31 * result + finalFtxRollingHash.contentHashCode()
+    result = 31 * result + filteredAddresses.byteArrayListHashCode()
     return result
   }
 
   companion object {
 
-    val PROPERTIES_NOT_INCLUDED = setOf("aggregatedProverVersion")
+    val optionalFields = setOf(
+      "parentAggregationFtxNumber",
+      "parentAggregationFtxRollingHash",
+      "finalFtxNumber",
+      "finalFtxRollingHash",
+      "filteredAddresses",
+    )
 
     fun fromJsonString(jsonString: String): ProofToFinalizeJsonResponse {
       return JsonSerialization.proofResponseMapperV1.readValue(
@@ -139,6 +169,11 @@ data class ProofToFinalizeJsonResponse(
         l2MerkleRoots = proofToFinalize.l2MerkleRoots,
         l2MerkleTreesDepth = proofToFinalize.l2MerkleTreesDepth,
         l2MessagingBlocksOffsets = proofToFinalize.l2MessagingBlocksOffsets,
+        parentAggregationFtxNumber = proofToFinalize.parentAggregationFtxNumber.toLong(),
+        parentAggregationFtxRollingHash = proofToFinalize.parentAggregationFtxRollingHash,
+        finalFtxNumber = proofToFinalize.finalFtxNumber.toLong(),
+        finalFtxRollingHash = proofToFinalize.finalFtxRollingHash,
+        filteredAddresses = proofToFinalize.filteredAddresses,
       )
     }
   }

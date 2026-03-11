@@ -1,8 +1,10 @@
 package net.consensys.zkevm.coordinator.clients.prover
 
 import build.linea.clients.LineaAccountProof
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.vertx.core.Vertx
 import linea.kotlin.encodeHex
 import net.consensys.zkevm.coordinator.clients.InvalidityProofRequest
@@ -12,7 +14,6 @@ import net.consensys.zkevm.coordinator.clients.prover.serialization.JsonSerializ
 import net.consensys.zkevm.domain.InvalidityProofIndex
 import net.consensys.zkevm.fileio.FileReader
 import net.consensys.zkevm.fileio.FileWriter
-import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.nio.file.Path
 
@@ -23,8 +24,8 @@ data class InvalidityProofRequestDto(
   val ftxBlockNumberDeadline: Long,
   val invalidityType: String,
   val zkParentStateRootHash: String,
-  val conflatedExecutionTracesFile: String,
-  val accountProof: AccountProofDto?,
+  val conflatedExecutionTracesFile: String?,
+  val accountMerkleProof: AccountProofDto?,
   val zkStateMerkleProof: ArrayNode?,
   val simulatedExecutionBlockNumber: Long,
   val simulatedExecutionBlockTimestamp: Long,
@@ -38,10 +39,8 @@ data class InvalidityProofRequestDto(
         ftxBlockNumberDeadline = invalidityProofRequest.ftxBlockNumberDeadline.toLong(),
         invalidityType = invalidityProofRequest.invalidityReason.name,
         zkParentStateRootHash = invalidityProofRequest.zkParentStateRootHash.encodeHex(),
-        conflatedExecutionTracesFile = invalidityProofRequest.tracesResponse.tracesFileName,
-        accountProof = invalidityProofRequest.accountProof?.let {
-          AccountProofDto.fromDomainObject(it)
-        },
+        conflatedExecutionTracesFile = invalidityProofRequest.tracesResponse,
+        accountMerkleProof = AccountProofDto.fromDomainObject(invalidityProofRequest.accountProof),
         zkStateMerkleProof = invalidityProofRequest.zkStateMerkleProof?.zkStateMerkleProof,
         simulatedExecutionBlockNumber = invalidityProofRequest.simulatedExecutionBlockNumber.toLong(),
         simulatedExecutionBlockTimestamp = invalidityProofRequest.simulatedExecutionBlockTimestamp.epochSeconds,
@@ -50,12 +49,14 @@ data class InvalidityProofRequestDto(
   }
 }
 
-data class AccountProofDto(val accountProof: String) {
+data class AccountProofDto(val accountProof: JsonNode) {
   companion object {
-    fun fromDomainObject(lineaAccountProof: LineaAccountProof): AccountProofDto {
-      return AccountProofDto(
-        accountProof = lineaAccountProof.accountProof.encodeHex(),
-      )
+    fun fromDomainObject(lineaAccountProof: LineaAccountProof?): AccountProofDto? {
+      return lineaAccountProof
+        ?.accountProof
+        ?.let {
+          AccountProofDto(accountProof = jacksonObjectMapper().readTree(it))
+        }
     }
   }
 }
@@ -83,15 +84,13 @@ class FileBasedInvalidityProverClient(
     requestFileNameProvider = InvalidityProofFileNameProvider,
     responseFileNameProvider = InvalidityProofFileNameProvider,
     proofIndexProvider = FileBasedInvalidityProverClient::invalidityProofIndex,
-    requestMapper = {
-        invalidityProofRequest ->
+    requestMapper = { invalidityProofRequest ->
       SafeFuture.completedFuture(
         InvalidityProofRequestDto.fromDomainObject(invalidityProofRequest),
       )
     },
     responseMapper = { throw UnsupportedOperationException("Invalidity proof response will not be parsed!") },
     proofTypeLabel = "invalidity",
-    log = LogManager.getLogger(FileBasedInvalidityProverClient::class.java),
   ),
   InvalidityProverClientV1 {
   override fun parseResponse(

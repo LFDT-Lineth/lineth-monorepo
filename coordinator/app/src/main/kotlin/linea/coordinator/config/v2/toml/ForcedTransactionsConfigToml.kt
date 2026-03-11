@@ -13,9 +13,12 @@ data class ForcedTransactionsConfigToml(
   val l1Endpoint: URL? = null, // shall default to L1 endpoint
   val l1RequestRetries: RequestRetriesToml? = null,
   val l1HighestBlockTag: BlockParameter = BlockParameter.Tag.FINALIZED,
+  val sequencerEndpoint: URL,
+  val sequencerRequestRetries: RequestRetriesToml? = null,
   val processingTickInterval: Duration = 2.minutes,
   val processingDelay: Duration = Duration.ZERO,
   val processingBatchSize: UInt = 10u,
+  val invalidityProofCheckInterval: Duration = 2.minutes,
   val l1EventScraping: L1EventScraping = L1EventScraping(),
 ) {
   init {
@@ -50,17 +53,19 @@ data class ForcedTransactionsConfigToml(
   }
 
   fun reified(
-    l1DefaultEndpoint: URL?,
-    l1DefaultRequestRetries: RequestRetriesToml,
+    defaults: DefaultsToml,
   ): ForcedTransactionsConfig {
     return ForcedTransactionsConfig(
       disabled = disabled,
-      l1Endpoint = l1Endpoint ?: l1DefaultEndpoint ?: throw AssertionError("l1Endpoint must be set"),
+      l1Endpoint = l1Endpoint ?: defaults.l1Endpoint ?: throw AssertionError("l1Endpoint must be set"),
       l1HighestBlockTag = l1HighestBlockTag,
-      l1RequestRetries = l1RequestRetries?.asDomain ?: l1DefaultRequestRetries.asDomain,
+      l1RequestRetries = l1RequestRetries?.asDomain ?: defaults.l1RequestRetries.asDomain,
+      sequencerEndpoint = sequencerEndpoint,
+      sequencerRequestRetries = sequencerRequestRetries?.asDomain ?: defaults.l2RequestRetries.asDomain,
       processingTickInterval = processingTickInterval,
       processingDelay = processingDelay,
       processingBatchSize = processingBatchSize,
+      invalidityProofCheckInterval = invalidityProofCheckInterval,
       l1EventScraping = ForcedTransactionsConfig.L1EventScraping(
         pollingInterval = l1EventScraping.pollingInterval,
         pollingTimeout = l1EventScraping.pollingTimeout,

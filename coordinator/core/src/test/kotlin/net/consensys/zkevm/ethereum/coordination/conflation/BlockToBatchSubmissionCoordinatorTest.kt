@@ -7,6 +7,7 @@ import linea.domain.createBlock
 import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.zkevm.coordinator.clients.GetTracesCountersResponse
 import net.consensys.zkevm.coordinator.clients.TracesCountersClientV2
+import net.consensys.zkevm.ethereum.coordination.blockcreation.AlwaysSafeBlockNumberProvider
 import net.consensys.zkevm.ethereum.coordination.blockcreation.BlockCreated
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -28,7 +29,11 @@ import kotlin.time.toJavaDuration
 @ExtendWith(VertxExtension::class)
 class BlockToBatchSubmissionCoordinatorTest {
   companion object {
-    private val defaultConflationService = ConflationServiceImpl(mock(), mock())
+    private val defaultConflationService = ConflationServiceImpl(
+      calculator = mock(),
+      metricsFacade = mock(),
+      safeBlockNumberProvider = AlwaysSafeBlockNumberProvider(),
+    )
     private val randomBlock = createBlock(number = 100UL)
     private val baseBlock = BlockCreated(randomBlock)
     private val blockRlpEncoded = ByteArray(0)

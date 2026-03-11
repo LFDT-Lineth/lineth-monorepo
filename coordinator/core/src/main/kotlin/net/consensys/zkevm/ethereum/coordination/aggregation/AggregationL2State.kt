@@ -6,6 +6,8 @@ data class AggregationL2State(
   val parentAggregationLastBlockTimestamp: Instant,
   val parentAggregationLastL1RollingHashMessageNumber: ULong,
   val parentAggregationLastL1RollingHash: ByteArray,
+  val parentAggregationLastFtxNumber: ULong,
+  val parentAggregationLastFtxRollingHash: ByteArray,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true

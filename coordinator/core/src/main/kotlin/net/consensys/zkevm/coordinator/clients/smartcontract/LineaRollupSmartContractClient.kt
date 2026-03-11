@@ -73,8 +73,3 @@ interface LineaValidiumSmartContractClient :
    */
   fun acceptShnarfData(blobs: List<BlobRecord>, gasPriceCaps: GasPriceCaps?): SafeFuture<String>
 }
-
-interface LineaGenesisStateProvider {
-  val stateRootHash: ByteArray
-  val shnarf: ByteArray
-}

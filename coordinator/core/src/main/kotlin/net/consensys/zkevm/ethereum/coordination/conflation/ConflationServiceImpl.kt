@@ -6,6 +6,7 @@ import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.domain.BlocksConflation
 import net.consensys.zkevm.domain.ConflationCalculationResult
+import net.consensys.zkevm.ethereum.coordination.blockcreation.ConflationSafeBlockNumberProvider
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -14,6 +15,7 @@ import java.util.concurrent.TimeUnit
 
 class ConflationServiceImpl(
   private val calculator: TracesConflationCalculator,
+  private val safeBlockNumberProvider: ConflationSafeBlockNumberProvider,
   metricsFacade: MetricsFacade,
   private val log: Logger = LogManager.getLogger(ConflationServiceImpl::class.java),
 ) :
@@ -113,6 +115,15 @@ class ConflationServiceImpl(
     var nextAvailableBlock = blocksToConflate.peek()
 
     while (nextAvailableBlock?.block?.number == nextBlockNumberToConflate) {
+      // Check if block is safe to conflate (FTX safe block number check)
+      if (!safeBlockNumberProvider.isBlockSafeToConflate(nextBlockNumberToConflate)) {
+        log.info(
+          "conflation temporarily paused: blockNumber={} (likely paused by forced transactions)",
+          nextBlockNumberToConflate,
+        )
+        break
+      }
+
       nextAvailableBlock = blocksToConflate.poll(100, TimeUnit.MILLISECONDS)
       log.trace(
         "block {} removed from conflation queue and sent to calculator",

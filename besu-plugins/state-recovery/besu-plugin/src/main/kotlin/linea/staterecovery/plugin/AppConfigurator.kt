@@ -98,15 +98,6 @@ fun createAppClients(
   stateManagerRequestRetry: RetryConfig = RetryConfig(backoffDelay = 1.seconds),
   zkStateManagerVersion: String = "2.3.0",
 ): AppClients {
-  val lineaContractClient =
-    Web3JLineaRollupSmartContractClientReadOnly(
-      contractAddress = smartContractAddress,
-      web3j =
-      createWeb3jHttpClient(
-        rpcUrl = l1RpcEndpoint.toString(),
-        log = LogManager.getLogger("linea.plugin.staterecovery.clients.l1.smart-contract"),
-      ),
-    )
   val ethLogsSearcher =
     run {
       val log = LogManager.getLogger("linea.plugin.staterecovery.clients.l1.logs-searcher")
@@ -127,6 +118,16 @@ fun createAppClients(
         log = log,
       )
     }
+  val lineaContractClient =
+    Web3JLineaRollupSmartContractClientReadOnly(
+      contractAddress = smartContractAddress,
+      web3j =
+      createWeb3jHttpClient(
+        rpcUrl = l1RpcEndpoint.toString(),
+        log = LogManager.getLogger("linea.plugin.staterecovery.clients.l1.smart-contract"),
+      ),
+      ethLogsClient = ethLogsSearcher,
+    )
   val blobScanClient =
     BlobScanClient.create(
       vertx = vertx,

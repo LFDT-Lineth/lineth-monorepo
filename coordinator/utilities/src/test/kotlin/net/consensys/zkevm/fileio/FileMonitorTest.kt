@@ -153,7 +153,7 @@ class FileMonitorTest {
     vertx.setTimer(500) {
       tempFilePath2.toFile().createNewFile()
     }
-    val result = fileMonitor.monitorFiles(listOf(tempFilePath1, tempFilePath2)).get()
+    val result = fileMonitor.awaitForAnyOfFiles(listOf(tempFilePath1, tempFilePath2)).get()
     Assertions.assertTrue(result is Ok)
     Assertions.assertEquals(
       tempFilePath2,

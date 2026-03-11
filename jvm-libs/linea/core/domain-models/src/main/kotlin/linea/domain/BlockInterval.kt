@@ -15,6 +15,9 @@ interface BlockInterval {
 
   fun intervalString(): String = CommonDomainFunctions.blockIntervalString(startBlockNumber, endBlockNumber)
   fun contains(blockNumber: ULong): Boolean = blockNumber >= startBlockNumber && blockNumber <= endBlockNumber
+  fun contains(
+    other: BlockInterval,
+  ): Boolean = other.startBlockNumber >= startBlockNumber && other.endBlockNumber <= endBlockNumber
 
   companion object {
     operator fun invoke(startBlockNumber: ULong, endBlockNumber: ULong): BlockInterval {

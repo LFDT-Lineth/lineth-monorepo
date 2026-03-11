@@ -166,9 +166,9 @@ internal class ForcedTransactionsL1EventsFetcher(
   }
 
   private fun onSearchStateUpdated(prevState: EthLogsFilterState, newState: EthLogsFilterState) {
-    log.info("l1 events search state updated: prevState={} newState={}", prevState, newState)
+    log.debug("l1 events search state updated: prevState={} newState={}", prevState, newState)
     if (newState is EthLogsFilterState.CaughtUp) {
-      log.info("caught up with l1 events, releasing safe block number lock")
+      log.debug("caught up with l1 events, releasing safe block number lock")
       safeBlockNumberManager.caughtUpWithChainHeadAfterStartUp()
     }
   }

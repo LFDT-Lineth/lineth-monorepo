@@ -1,6 +1,7 @@
 package linea.ftx
 
 import linea.contract.events.ForcedTransactionAddedEvent
+import linea.forcedtx.ForcedTransactionInclusionStatus
 import linea.forcedtx.ForcedTransactionsClient
 import linea.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
 import linea.persistence.ftx.ForcedTransactionsDao
@@ -25,6 +26,7 @@ internal class ForcedTransactionsStatusUpdater(
   private val ftxClient: ForcedTransactionsClient,
   private val safeBlockNumberManager: ForcedTransactionsSafeBlockNumberManager,
   private val ftxQueue: Queue<ForcedTransactionWithTimestamp>,
+  private val ftxProcessedQueue: Queue<ForcedTransactionInclusionStatus>,
   lastProcessedFtxNumber: ULong,
   private val ftxProcessingDelay: Duration = Duration.ZERO,
   private val clock: Clock,
@@ -178,8 +180,10 @@ internal class ForcedTransactionsStatusUpdater(
             inclusionResult = ftxStatus.inclusionResult,
             simulatedExecutionBlockNumber = ftxStatus.blockNumber,
             simulatedExecutionBlockTimestamp = ftxStatus.blockTimestamp,
+            ftxBlockNumberDeadline = ftx.blockNumberDeadline,
+            ftxRollingHash = ftx.forcedTransactionRollingHash,
+            ftxRlp = ftx.rlpEncodedSignedTransaction,
             proofStatus = ForcedTransactionRecord.ProofStatus.UNREQUESTED,
-            proofIndex = null,
           )
           dao
             .save(record)
@@ -188,6 +192,7 @@ internal class ForcedTransactionsStatusUpdater(
                 ftxNumber = record.ftxNumber,
                 simulatedExecutionBlockNumber = record.simulatedExecutionBlockNumber,
               )
+              ftxProcessedQueue.add(ftxStatus)
               true
             }
         }

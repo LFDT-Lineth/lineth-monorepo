@@ -12,6 +12,7 @@ data class ProversConfig(
 
 data class ProverConfig(
   val execution: FileBasedProverConfig,
+  val invalidity: FileBasedProverConfig? = null,
   val blobCompression: FileBasedProverConfig,
   val proofAggregation: FileBasedProverConfig,
 )

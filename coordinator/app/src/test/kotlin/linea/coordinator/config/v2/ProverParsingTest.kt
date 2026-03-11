@@ -22,6 +22,9 @@ class ProverParsingTest {
       [prover.blob-compression]
       fs-requests-directory = "/data/prover/v2/compression/requests"
       fs-responses-directory = "/data/prover/v2/compression/responses"
+      [prover.invalidity]
+      fs-requests-directory = "/data/prover/v2/invalidity/requests"
+      fs-responses-directory = "/data/prover/v2/invalidity/responses"
       [prover.proof-aggregation]
       fs-requests-directory = "/data/prover/v2/aggregation/requests"
       fs-responses-directory = "/data/prover/v2/aggregation/responses"
@@ -34,6 +37,9 @@ class ProverParsingTest {
       [prover.new.blob-compression]
       fs-requests-directory = "/data/prover/v3/compression/requests"
       fs-responses-directory = "/data/prover/v3/compression/responses"
+      [prover.new.invalidity]
+      fs-requests-directory = "/data/prover/v3/invalidity/requests"
+      fs-responses-directory = "/data/prover/v3/invalidity/responses"
       [prover.new.proof-aggregation]
       fs-requests-directory = "/data/prover/v3/aggregation/requests"
       fs-responses-directory = "/data/prover/v3/aggregation/responses"
@@ -70,6 +76,11 @@ class ProverParsingTest {
           fsRequestsDirectory = "/data/prover/v2/compression/requests",
           fsResponsesDirectory = "/data/prover/v2/compression/responses",
         ),
+        invalidity =
+        ProverToml.ProverDirectoriesToml(
+          fsRequestsDirectory = "/data/prover/v2/invalidity/requests",
+          fsResponsesDirectory = "/data/prover/v2/invalidity/responses",
+        ),
         proofAggregation =
         ProverToml.ProverDirectoriesToml(
           fsRequestsDirectory = "/data/prover/v2/aggregation/requests",
@@ -87,6 +98,11 @@ class ProverParsingTest {
           ProverToml.ProverDirectoriesToml(
             fsRequestsDirectory = "/data/prover/v3/compression/requests",
             fsResponsesDirectory = "/data/prover/v3/compression/responses",
+          ),
+          invalidity =
+          ProverToml.ProverDirectoriesToml(
+            fsRequestsDirectory = "/data/prover/v3/invalidity/requests",
+            fsResponsesDirectory = "/data/prover/v3/invalidity/responses",
           ),
           proofAggregation =
           ProverToml.ProverDirectoriesToml(
@@ -124,6 +140,7 @@ class ProverParsingTest {
           fsRequestsDirectory = "/data/prover/v2/compression/requests",
           fsResponsesDirectory = "/data/prover/v2/compression/responses",
         ),
+        invalidity = null,
         proofAggregation =
         ProverToml.ProverDirectoriesToml(
           fsRequestsDirectory = "/data/prover/v2/aggregation/requests",

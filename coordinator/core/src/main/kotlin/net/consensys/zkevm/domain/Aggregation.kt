@@ -2,6 +2,9 @@ package net.consensys.zkevm.domain
 
 import linea.domain.BlockInterval
 import linea.domain.BlockIntervals
+import linea.kotlin.byteArrayListEquals
+import linea.kotlin.byteArrayListHashCode
+import linea.kotlin.encodeHex
 import kotlin.time.Instant
 
 typealias BlobsToAggregate = BlockInterval
@@ -13,10 +16,12 @@ typealias BlobsToAggregate = BlockInterval
 data class ProofsToAggregate(
   val compressionProofIndexes: List<CompressionProofIndex>,
   val executionProofs: BlockIntervals,
-  val invalidityProofs: List<InvalidityProofIndex> = emptyList(),
+  val invalidityProofs: List<InvalidityProofIndex>,
   val parentAggregationLastBlockTimestamp: Instant,
   val parentAggregationLastL1RollingHashMessageNumber: ULong,
   val parentAggregationLastL1RollingHash: ByteArray,
+  val parentAggregationLastFtxNumber: ULong,
+  val parentAggregationLastFtxRollingHash: ByteArray,
 ) : BlockInterval {
   override val startBlockNumber = compressionProofIndexes.first().startBlockNumber
   override val endBlockNumber = compressionProofIndexes.last().endBlockNumber
@@ -34,6 +39,10 @@ data class ProofsToAggregate(
       return false
     }
     if (!parentAggregationLastL1RollingHash.contentEquals(other.parentAggregationLastL1RollingHash)) return false
+    if (parentAggregationLastFtxNumber != other.parentAggregationLastFtxNumber) return false
+    if (!parentAggregationLastFtxRollingHash.contentEquals(other.parentAggregationLastFtxRollingHash)) return false
+    if (startBlockNumber != other.startBlockNumber) return false
+    if (endBlockNumber != other.endBlockNumber) return false
 
     return true
   }
@@ -45,7 +54,25 @@ data class ProofsToAggregate(
     result = 31 * result + parentAggregationLastBlockTimestamp.hashCode()
     result = 31 * result + parentAggregationLastL1RollingHashMessageNumber.hashCode()
     result = 31 * result + parentAggregationLastL1RollingHash.contentHashCode()
+    result = 31 * result + parentAggregationLastFtxNumber.hashCode()
+    result = 31 * result + parentAggregationLastFtxRollingHash.contentHashCode()
+    result = 31 * result + startBlockNumber.hashCode()
+    result = 31 * result + endBlockNumber.hashCode()
     return result
+  }
+
+  override fun toString(): String {
+    return "ProofsToAggregate(" +
+      "startBlockNumber=$startBlockNumber, " +
+      "endBlockNumber=$endBlockNumber, " +
+      "compressionProofIndexes=$compressionProofIndexes, " +
+      "executionProofs=$executionProofs, " +
+      "invalidityProofs=$invalidityProofs, " +
+      "parentAggregationLastBlockTimestamp=$parentAggregationLastBlockTimestamp, " +
+      "parentAggregationLastL1RollingHashMessageNumber=$parentAggregationLastL1RollingHashMessageNumber, " +
+      "parentAggregationLastL1RollingHash=${parentAggregationLastL1RollingHash.encodeHex()}, " +
+      "parentAggregationLastFtxNumber=$parentAggregationLastFtxNumber, " +
+      "parentAggregationLastFtxRollingHash=${parentAggregationLastFtxRollingHash.encodeHex()})"
   }
 }
 
@@ -65,6 +92,11 @@ data class ProofToFinalize(
   val l2MerkleRoots: List<ByteArray>,
   val l2MerkleTreesDepth: Int,
   val l2MessagingBlocksOffsets: ByteArray,
+  val parentAggregationFtxNumber: ULong,
+  val parentAggregationFtxRollingHash: ByteArray,
+  val finalFtxNumber: ULong,
+  val finalFtxRollingHash: ByteArray,
+  val filteredAddresses: List<ByteArray>,
 ) : BlockInterval {
   override val startBlockNumber: ULong = firstBlockNumber.toULong()
   override val endBlockNumber: ULong = finalBlockNumber.toULong()
@@ -75,45 +107,55 @@ data class ProofToFinalize(
 
     other as ProofToFinalize
 
-    if (!aggregatedProof.contentEquals(other.aggregatedProof)) return false
-    if (!parentStateRootHash.contentEquals(other.parentStateRootHash)) return false
     if (aggregatedVerifierIndex != other.aggregatedVerifierIndex) return false
-    if (!aggregatedProofPublicInput.contentEquals(other.aggregatedProofPublicInput)) return false
-    dataHashes.forEachIndexed { index, bytes ->
-      if (!bytes.contentEquals(other.dataHashes[index])) return false
-    }
-    if (!dataParentHash.contentEquals(other.dataParentHash)) return false
     if (firstBlockNumber != other.firstBlockNumber) return false
     if (finalBlockNumber != other.finalBlockNumber) return false
+    if (l1RollingHashMessageNumber != other.l1RollingHashMessageNumber) return false
+    if (l2MerkleTreesDepth != other.l2MerkleTreesDepth) return false
+    if (!aggregatedProof.contentEquals(other.aggregatedProof)) return false
+    if (!parentStateRootHash.contentEquals(other.parentStateRootHash)) return false
+    if (!aggregatedProofPublicInput.contentEquals(other.aggregatedProofPublicInput)) return false
+    if (!dataHashes.byteArrayListEquals(other.dataHashes)) return false
+    if (!dataParentHash.contentEquals(other.dataParentHash)) return false
     if (parentAggregationLastBlockTimestamp != other.parentAggregationLastBlockTimestamp) return false
     if (finalTimestamp != other.finalTimestamp) return false
     if (!l1RollingHash.contentEquals(other.l1RollingHash)) return false
-    if (l1RollingHashMessageNumber != other.l1RollingHashMessageNumber) {
-      return false
-    }
-    l2MerkleRoots.forEachIndexed { index, bytes ->
-      if (!bytes.contentEquals(other.l2MerkleRoots[index])) return false
-    }
-    if (l2MerkleTreesDepth != other.l2MerkleTreesDepth) return false
-    return l2MessagingBlocksOffsets.contentEquals(other.l2MessagingBlocksOffsets)
+    if (!l2MerkleRoots.byteArrayListEquals(other.l2MerkleRoots)) return false
+    if (!l2MessagingBlocksOffsets.contentEquals(other.l2MessagingBlocksOffsets)) return false
+    if (parentAggregationFtxNumber != other.parentAggregationFtxNumber) return false
+    if (!parentAggregationFtxRollingHash.contentEquals(other.parentAggregationFtxRollingHash)) return false
+    if (finalFtxNumber != other.finalFtxNumber) return false
+    if (!finalFtxRollingHash.contentEquals(other.finalFtxRollingHash)) return false
+    if (!filteredAddresses.byteArrayListEquals(other.filteredAddresses)) return false
+    if (startBlockNumber != other.startBlockNumber) return false
+    if (endBlockNumber != other.endBlockNumber) return false
+
+    return true
   }
 
   override fun hashCode(): Int {
-    var result = aggregatedProof.contentHashCode()
-    result = 31 * result + parentStateRootHash.contentHashCode()
-    result = 31 * result + aggregatedVerifierIndex
-    result = 31 * result + aggregatedProofPublicInput.contentHashCode()
-    result = 31 * result + dataHashes.hashCode()
-    result = 31 * result + dataParentHash.contentHashCode()
+    var result = aggregatedVerifierIndex
     result = 31 * result + firstBlockNumber.hashCode()
     result = 31 * result + finalBlockNumber.hashCode()
+    result = 31 * result + l1RollingHashMessageNumber.hashCode()
+    result = 31 * result + l2MerkleTreesDepth
+    result = 31 * result + aggregatedProof.contentHashCode()
+    result = 31 * result + parentStateRootHash.contentHashCode()
+    result = 31 * result + aggregatedProofPublicInput.contentHashCode()
+    result = 31 * result + dataHashes.byteArrayListHashCode()
+    result = 31 * result + dataParentHash.contentHashCode()
     result = 31 * result + parentAggregationLastBlockTimestamp.hashCode()
     result = 31 * result + finalTimestamp.hashCode()
     result = 31 * result + l1RollingHash.contentHashCode()
-    result = 31 * result + l1RollingHashMessageNumber.hashCode()
-    result = 31 * result + l2MerkleRoots.hashCode()
-    result = 31 * result + l2MerkleTreesDepth
+    result = 31 * result + l2MerkleRoots.byteArrayListHashCode()
     result = 31 * result + l2MessagingBlocksOffsets.contentHashCode()
+    result = 31 * result + parentAggregationFtxNumber.hashCode()
+    result = 31 * result + parentAggregationFtxRollingHash.contentHashCode()
+    result = 31 * result + finalFtxNumber.hashCode()
+    result = 31 * result + finalFtxRollingHash.contentHashCode()
+    result = 31 * result + filteredAddresses.byteArrayListHashCode()
+    result = 31 * result + startBlockNumber.hashCode()
+    result = 31 * result + endBlockNumber.hashCode()
     return result
   }
 }

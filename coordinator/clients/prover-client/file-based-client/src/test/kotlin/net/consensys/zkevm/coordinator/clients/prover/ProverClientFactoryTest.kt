@@ -81,9 +81,12 @@ class ProverClientFactoryTest {
       ),
     ),
     executionProofs = BlockIntervals(startingBlockNumber = 1uL, listOf(9uL)),
+    invalidityProofs = emptyList(),
     parentAggregationLastBlockTimestamp = Clock.System.now(),
     parentAggregationLastL1RollingHashMessageNumber = 0uL,
     parentAggregationLastL1RollingHash = ByteArrayExt.random32(),
+    parentAggregationLastFtxNumber = 0uL,
+    parentAggregationLastFtxRollingHash = ByteArrayExt.random32(),
   )
   private val request2 = ProofsToAggregate(
     compressionProofIndexes = listOf(
@@ -93,10 +96,13 @@ class ProverClientFactoryTest {
         hash = Random.nextBytes(32),
       ),
     ),
+    invalidityProofs = emptyList(),
     executionProofs = BlockIntervals(startingBlockNumber = 10uL, listOf(19uL)),
     parentAggregationLastBlockTimestamp = Clock.System.now(),
     parentAggregationLastL1RollingHashMessageNumber = 9uL,
     parentAggregationLastL1RollingHash = ByteArrayExt.random32(),
+    parentAggregationLastFtxNumber = 0uL,
+    parentAggregationLastFtxRollingHash = ByteArrayExt.random32(),
   )
   private val request3 = ProofsToAggregate(
     compressionProofIndexes = listOf(
@@ -107,9 +113,12 @@ class ProverClientFactoryTest {
       ),
     ),
     executionProofs = BlockIntervals(startingBlockNumber = 300uL, listOf(319uL)),
+    invalidityProofs = emptyList(),
     parentAggregationLastBlockTimestamp = Clock.System.now(),
     parentAggregationLastL1RollingHashMessageNumber = 299uL,
     parentAggregationLastL1RollingHash = ByteArrayExt.random32(),
+    parentAggregationLastFtxNumber = 0uL,
+    parentAggregationLastFtxRollingHash = ByteArrayExt.random32(),
   )
 
   @BeforeEach

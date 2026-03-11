@@ -15,8 +15,8 @@ import linea.kotlin.encodeHex
 import linea.kotlin.toULong
 import linea.web3j.EthFeeHistoryBlobExtended
 import linea.web3j.domain.toDomain
-import linea.web3j.domain.toLineaDomain
 import linea.web3j.domain.toWeb3j
+import linea.web3j.getWeb3jService
 import linea.web3j.mappers.mapToDomainWithTxHashes
 import linea.web3j.mappers.toDomain
 import linea.web3j.mappers.toWeb3j
@@ -37,7 +37,7 @@ import kotlin.jvm.optionals.getOrNull
  */
 class Web3jEthApiClient(
   val web3jClient: Web3j,
-  val web3jService: Web3jService,
+  val web3jService: Web3jService = web3jClient.getWeb3jService(),
 ) : EthApiClient {
   override fun getLogs(
     fromBlock: BlockParameter,

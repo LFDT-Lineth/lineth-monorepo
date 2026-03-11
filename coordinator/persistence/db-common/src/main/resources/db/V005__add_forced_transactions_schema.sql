@@ -8,6 +8,9 @@ CREATE TABLE forced_transactions (
     inclusion_result SMALLINT NOT NULL,
     simulated_execution_block_number BIGINT NOT NULL,
     simulated_execution_block_timestamp BIGINT NOT NULL,
+    ftx_block_number_deadline BIGINT NOT NULL,
+    ftx_rolling_hash BYTEA NOT NULL,
+    ftx_rlp BYTEA NOT NULL,
     proof_status SMALLINT NOT NULL
 );
 
@@ -24,4 +27,7 @@ COMMENT ON COLUMN forced_transactions.ftx_number IS 'Forced transaction number (
 COMMENT ON COLUMN forced_transactions.inclusion_result IS 'Result of forced transaction inclusion attempt (1=Included, 2=BadNonce, 3=BadBalance, 4=BadPrecompile, 5=TooManyLogs, 6=FilteredAddressFrom, 7=FilteredAddressTo, 8=Phylax)';
 COMMENT ON COLUMN forced_transactions.simulated_execution_block_number IS 'Block number where FTX was simulated for execution';
 COMMENT ON COLUMN forced_transactions.simulated_execution_block_timestamp IS 'Timestamp (epoch millis) of simulated execution block';
+COMMENT ON COLUMN forced_transactions.ftx_block_number_deadline IS 'Block number deadline for the forced transaction';
+COMMENT ON COLUMN forced_transactions.ftx_rolling_hash IS 'Rolling hash of the forced transaction';
+COMMENT ON COLUMN forced_transactions.ftx_rlp IS 'RLP-encoded forced transaction data';
 COMMENT ON COLUMN forced_transactions.proof_status IS 'Status of the invalidity proof (1=UNREQUESTED, 2=REQUESTED, 3=PROVEN)';

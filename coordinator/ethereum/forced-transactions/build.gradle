@@ -8,10 +8,12 @@ dependencies {
   api project(":jvm-libs:linea:clients:linea-contract-clients")
   api project(":jvm-libs:linea:clients:interfaces")
   api project(":jvm-libs:linea:clients:eth-logs-searcher")
+  api project(":jvm-libs:linea:besu-libs")
 
 
   testImplementation project(":jvm-libs:generic:logging")
   testImplementation project(":coordinator:ethereum:test-utils")
+  testImplementation testFixtures(project(":coordinator:core"))
   testImplementation testFixtures(project(":jvm-libs:generic:extensions:kotlin"))
   testImplementation testFixtures(project(":jvm-libs:linea:core:domain-models"))
   testImplementation testFixtures(project(":jvm-libs:linea:clients:interfaces"))

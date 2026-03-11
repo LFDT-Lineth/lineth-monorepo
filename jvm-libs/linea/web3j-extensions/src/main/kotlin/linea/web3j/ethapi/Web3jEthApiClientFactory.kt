@@ -5,6 +5,7 @@ import linea.domain.RetryConfig
 import linea.ethapi.EthApiClient
 import linea.web3j.createWeb3jHttpClient
 import linea.web3j.createWeb3jHttpService
+import linea.web3j.getWeb3jService
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -26,7 +27,7 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 fun createEthApiClient(
   web3jClient: Web3j,
-  web3jService: Web3jService,
+  web3jService: Web3jService = web3jClient.getWeb3jService(),
   requestRetryConfig: RetryConfig? = null,
   vertx: Vertx? = null,
   stopRetriesOnErrorPredicate: Predicate<Throwable> = Predicate { _ -> false },

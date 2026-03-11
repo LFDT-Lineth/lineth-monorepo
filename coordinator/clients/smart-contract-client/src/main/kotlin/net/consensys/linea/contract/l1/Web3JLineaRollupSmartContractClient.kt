@@ -4,8 +4,10 @@ import build.linea.contract.LineaRollupV6
 import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.gas.GasPriceCaps
+import linea.ethapi.EthLogsClient
 import linea.kotlin.toULong
 import linea.web3j.SmartContractErrors
+import linea.web3j.ethapi.createEthApiClient
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.Web3JContractAsyncHelper
 import net.consensys.zkevm.coordinator.clients.smartcontract.BlockAndNonce
@@ -27,10 +29,12 @@ class Web3JLineaRollupSmartContractClient internal constructor(
   private val transactionManager: AsyncFriendlyTransactionManager,
   private val web3jContractHelper: Web3JContractAsyncHelper,
   private val web3jLineaClient: LineaRollupV6,
+  ethLogsClient: EthLogsClient = createEthApiClient(web3j),
   private val log: Logger = LogManager.getLogger(Web3JLineaRollupSmartContractClient::class.java),
 ) : Web3JLineaRollupSmartContractClientReadOnly(
   contractAddress = contractAddress,
   web3j = web3j,
+  ethLogsClient = ethLogsClient,
   log = log,
 ),
   LineaRollupSmartContractClient {

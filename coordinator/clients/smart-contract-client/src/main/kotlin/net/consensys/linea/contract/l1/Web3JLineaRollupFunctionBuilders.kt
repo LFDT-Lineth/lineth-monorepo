@@ -3,6 +3,7 @@ package net.consensys.linea.contract.l1
 import build.linea.contract.LineaRollupV6
 import linea.contract.l1.LineaRollupContractVersion
 import linea.kotlin.toBigInteger
+import net.consensys.linea.contract.l1.FunctionBuildersV8.buildFinalizeBlocksFunctionV8
 import net.consensys.zkevm.domain.BlobRecord
 import net.consensys.zkevm.domain.ProofToFinalize
 import org.web3j.abi.TypeReference
@@ -80,7 +81,12 @@ internal object Web3JLineaRollupFunctionBuilders {
         )
       }
 
-      LineaRollupContractVersion.V8 -> TODO("Contract version=$version not supported for FinalizeBlocks!")
+      LineaRollupContractVersion.V8 -> buildFinalizeBlocksFunctionV8(
+        aggregationProof,
+        aggregationLastBlob,
+        parentL1RollingHash,
+        parentL1RollingHashMessageNumber,
+      )
     }
   }
 

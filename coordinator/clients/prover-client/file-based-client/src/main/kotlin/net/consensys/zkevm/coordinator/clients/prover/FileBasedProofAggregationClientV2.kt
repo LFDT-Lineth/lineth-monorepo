@@ -9,6 +9,7 @@ import net.consensys.zkevm.coordinator.clients.prover.serialization.ProofToFinal
 import net.consensys.zkevm.domain.AggregationProofIndex
 import net.consensys.zkevm.domain.CompressionProofIndex
 import net.consensys.zkevm.domain.ExecutionProofIndex
+import net.consensys.zkevm.domain.InvalidityProofIndex
 import net.consensys.zkevm.domain.ProofToFinalize
 import net.consensys.zkevm.domain.ProofsToAggregate
 import net.consensys.zkevm.ethereum.crypto.HashFunction
@@ -22,15 +23,19 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 data class AggregationProofRequestDto(
   val executionProofs: List<String>,
   val compressionProofs: List<String>,
+  val invalidityProofs: List<String>,
   val parentAggregationLastBlockTimestamp: Long,
   val parentAggregationLastL1RollingHashMessageNumber: Long,
   val parentAggregationLastL1RollingHash: String,
+  val parentAggregationLastFtxNumber: Long,
+  val parentAggregationLastFtxRollingHash: String,
 ) {
   companion object {
     fun fromDomainObject(
       proofsToAggregate: ProofsToAggregate,
       executionProofResponseFileNameProvider: ProverFileNameProvider<ExecutionProofIndex>,
       compressionProofResponseFileNameProvider: ProverFileNameProvider<CompressionProofIndex>,
+      invalidityProofResponseFileNameProvider: ProverFileNameProvider<InvalidityProofIndex>,
     ): AggregationProofRequestDto {
       val executionProofsResponseFiles = proofsToAggregate.executionProofs
         .toIntervalList()
@@ -54,13 +59,19 @@ data class AggregationProofRequestDto(
           )
         }
 
+      val invalidityProofsResponsesFiles =
+        proofsToAggregate.invalidityProofs.map(invalidityProofResponseFileNameProvider::getFileName)
+
       return AggregationProofRequestDto(
         executionProofs = executionProofsResponseFiles,
         compressionProofs = compressionProofsResponsesFiles,
+        invalidityProofs = invalidityProofsResponsesFiles,
         parentAggregationLastBlockTimestamp = proofsToAggregate.parentAggregationLastBlockTimestamp.epochSeconds,
         parentAggregationLastL1RollingHashMessageNumber =
         proofsToAggregate.parentAggregationLastL1RollingHashMessageNumber.toLong(),
         parentAggregationLastL1RollingHash = proofsToAggregate.parentAggregationLastL1RollingHash.encodeHex(),
+        parentAggregationLastFtxNumber = proofsToAggregate.parentAggregationLastFtxNumber.toLong(),
+        parentAggregationLastFtxRollingHash = proofsToAggregate.parentAggregationLastFtxRollingHash.encodeHex(),
       )
     }
   }
@@ -69,6 +80,7 @@ data class AggregationProofRequestDto(
 internal class AggregationRequestDtoMapper(
   private val executionProofResponseFileNameProvider: ProverFileNameProvider<ExecutionProofIndex>,
   private val compressionProofResponseFileNameProvider: ProverFileNameProvider<CompressionProofIndex>,
+  private val invalidityProofResponseFileNameProvider: ProverFileNameProvider<InvalidityProofIndex>,
 ) : (ProofsToAggregate) -> SafeFuture<AggregationProofRequestDto> {
   override fun invoke(proofsToAggregate: ProofsToAggregate): SafeFuture<AggregationProofRequestDto> {
     return SafeFuture.completedFuture(
@@ -76,6 +88,7 @@ internal class AggregationRequestDtoMapper(
         proofsToAggregate,
         executionProofResponseFileNameProvider,
         compressionProofResponseFileNameProvider,
+        invalidityProofResponseFileNameProvider,
       ),
     )
   }
@@ -94,7 +107,8 @@ internal class AggregationRequestDtoMapper(
  */
 class FileBasedProofAggregationClientV2(
   vertx: Vertx,
-  config: FileBasedProverConfig,
+  val config: FileBasedProverConfig,
+  val invalidityProverConfig: FileBasedProverConfig? = null,
   hashFunction: HashFunction = Sha256HashFunction(),
   executionProofResponseFileNameProvider: ProverFileNameProvider<ExecutionProofIndex> =
     ExecutionProofFileNameProvider,
@@ -124,12 +138,38 @@ class FileBasedProofAggregationClientV2(
     requestMapper = AggregationRequestDtoMapper(
       executionProofResponseFileNameProvider = executionProofResponseFileNameProvider,
       compressionProofResponseFileNameProvider = compressionProofResponseFileNameProvider,
+      invalidityProofResponseFileNameProvider = InvalidityProofFileNameProvider,
     ),
     responseMapper = ProofToFinalizeJsonResponse::toDomainObject,
     proofTypeLabel = "aggregation",
     log = log,
   ),
   ProofAggregationProverClientV2 {
+
+  override fun createProofRequest(proofRequest: ProofsToAggregate): SafeFuture<AggregationProofIndex> {
+    return awaitInvalidityProofResponses(proofRequest).thenCompose {
+      super.createProofRequest(proofRequest)
+    }
+  }
+
+  private fun awaitInvalidityProofResponses(
+    proofRequest: ProofsToAggregate,
+  ): SafeFuture<Unit> {
+    if (proofRequest.invalidityProofs.isEmpty()) {
+      return SafeFuture.completedFuture(Unit)
+    }
+    if (invalidityProverConfig == null) {
+      throw IllegalStateException("Proof request contains invalidity proofs but invalidity Prover is not configured")
+    }
+
+    val responseNames = proofRequest.invalidityProofs.map { invalidityProofIndex ->
+      val responseFileName = InvalidityProofFileNameProvider.getFileName(invalidityProofIndex)
+      invalidityProverConfig.responsesDirectory.resolve(responseFileName)
+    }
+    return fileMonitor
+      .awaitForAllFiles(responseNames)
+      .thenApply { null }
+  }
 
   companion object {
     val LOG: Logger = LogManager.getLogger(FileBasedProofAggregationClientV2::class.java)
@@ -147,6 +187,7 @@ class FileBasedProofAggregationClientV2(
           proofsToAggregate = request,
           executionProofResponseFileNameProvider = executionProofResponseFileNameProvider,
           compressionProofResponseFileNameProvider = compressionProofResponseFileNameProvider,
+          invalidityProofResponseFileNameProvider = InvalidityProofFileNameProvider,
         )
         val hash = hashRequest(hashFunction, requestDto)
         AggregationProofIndex(

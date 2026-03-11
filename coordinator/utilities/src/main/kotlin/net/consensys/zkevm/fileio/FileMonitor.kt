@@ -31,11 +31,11 @@ class FileMonitor(
     TIMED_OUT,
   }
 
-  /**
-   * Monitors a list of files and completes when the first file is available on the file system
-   */
-  fun monitorFiles(filePaths: List<Path>): SafeFuture<Result<Path, ErrorType>> {
-    return asyncRetryer.retry(stopRetriesPredicate = { filePathsFound -> filePathsFound.contains(true) }) {
+  private fun awaitForFiles(
+    filePaths: List<Path>,
+    untilPredicate: (List<Boolean>) -> Boolean,
+  ): SafeFuture<Result<Path, ErrorType>> {
+    return asyncRetryer.retry(stopRetriesPredicate = untilPredicate) {
       val filePathsExist = filePaths.map { filePath -> fileExists(filePath) }.stream()
       SafeFuture.collectAll(filePathsExist)
     }.handle { filesFound, t ->
@@ -53,8 +53,22 @@ class FileMonitor(
     }
   }
 
+  /**
+   * Monitors a list of files and completes as soon as any of the files is found on the file system
+   */
+  fun awaitForAnyOfFiles(filePaths: List<Path>): SafeFuture<Result<Path, ErrorType>> {
+    return awaitForFiles(filePaths) { filePathsFound -> filePathsFound.contains(true) }
+  }
+
+  /**
+   * Monitors a list of files and completes when all the files are found on the file system
+   */
+  fun awaitForAllFiles(filePaths: List<Path>): SafeFuture<Result<Path, ErrorType>> {
+    return awaitForFiles(filePaths) { filePathsFound -> filePathsFound.none { fileFound -> !fileFound } }
+  }
+
   fun monitor(filePath: Path): SafeFuture<Result<Path, ErrorType>> {
-    return monitorFiles(listOf(filePath))
+    return awaitForAnyOfFiles(listOf(filePath))
   }
 
   fun fileExists(filePath: Path): SafeFuture<Boolean> {

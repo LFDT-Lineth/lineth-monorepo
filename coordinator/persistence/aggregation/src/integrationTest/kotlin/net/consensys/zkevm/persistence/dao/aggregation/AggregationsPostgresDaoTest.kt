@@ -3,8 +3,8 @@ package net.consensys.zkevm.persistence.dao.aggregation
 import io.vertx.junit5.VertxExtension
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.RowSet
+import io.vertx.sqlclient.Tuple
 import linea.domain.BlockIntervals
-import linea.kotlin.trimToSecondPrecision
 import net.consensys.FakeFixedClock
 import net.consensys.linea.async.get
 import net.consensys.zkevm.domain.Aggregation
@@ -32,7 +32,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
-import kotlin.time.Clock
+import kotlin.ByteArray
 import kotlin.time.Instant
 
 @ExtendWith(VertxExtension::class)
@@ -44,24 +44,10 @@ class AggregationsPostgresDaoTest : CleanDbTestSuiteParallel() {
   override val databaseName = DbHelper.generateUniqueDbName("coordinator-tests-aggregations-dao")
 
   private val maxBlobReturnLimit = 10u
-  private val sampleResponse = ProofToFinalize(
-    aggregatedProof = "mock_aggregatedProof".toByteArray(),
-    aggregatedVerifierIndex = 1,
-    aggregatedProofPublicInput = "mock_aggregatedProofPublicInput".toByteArray(),
-    dataHashes = listOf("mock_dataHashes_1".toByteArray()),
-    dataParentHash = "mock_dataParentHash".toByteArray(),
-    parentStateRootHash = "mock_parentStateRootHash".toByteArray(),
-    parentAggregationLastBlockTimestamp = Clock.System.now().trimToSecondPrecision(),
-    finalTimestamp = Clock.System.now().trimToSecondPrecision(),
+  private val sampleResponse = createProofToFinalize(
     firstBlockNumber = 1,
     finalBlockNumber = 23,
-    l1RollingHash = "mock_l1RollingHash".toByteArray(),
-    l1RollingHashMessageNumber = 4,
-    l2MerkleRoots = listOf("mock_l2MerkleRoots".toByteArray()),
-    l2MerkleTreesDepth = 5,
-    l2MessagingBlocksOffsets = "mock_l2MessagingBlocksOffsets".toByteArray(),
   )
-
   private var fakeClockTime = Instant.parse("2023-12-11T00:00:00.000Z")
   private var fakeClock = FakeFixedClock(fakeClockTime)
 
@@ -707,6 +693,57 @@ class AggregationsPostgresDaoTest : CleanDbTestSuiteParallel() {
     assertThat(aggregationsPostgresDaoImpl.findAggregationProofByEndBlockNumber(11))
       .succeedsWithin(1, TimeUnit.SECONDS)
       .isEqualTo(null)
+  }
+
+  @Test
+  fun `getProofsToFinalize deserializes record without ftx fields using defaults`() {
+    // Simulates a legacy DB record that was persisted before finalFtxNumber,
+    // finalFtxRollingHash, and filteredAddresses were added to the proof JSON.
+    val oldFormatProofJson = """
+      {
+        "aggregatedProof": "0x0000000000000000000000000000000000000000000000000000000000000001",
+        "parentStateRootHash": "0x0000000000000000000000000000000000000000000000000000000000000002",
+        "aggregatedVerifierIndex": 0,
+        "aggregatedProofPublicInput": "0x0000000000000000000000000000000000000000000000000000000000000003",
+        "dataHashes": ["0x0000000000000000000000000000000000000000000000000000000000000004"],
+        "dataParentHash": "0x0000000000000000000000000000000000000000000000000000000000000005",
+        "lastFinalizedBlockNumber": 0,
+        "finalBlockNumber": 10,
+        "parentAggregationLastBlockTimestamp": 0,
+        "finalTimestamp": 1714312800,
+        "l1RollingHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "l1RollingHashMessageNumber": 0,
+        "l2MerkleRoots": ["0x0000000000000000000000000000000000000000000000000000000000000006"],
+        "l2MerkleTreesDepth": 0,
+        "l2MessagingBlocksOffsets": "0x0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    """.trimIndent()
+
+    val insertQuery = sqlClient.preparedQuery(
+      """
+        insert into ${DbQueries.aggregationsTable}
+        (start_block_number, end_block_number, status, start_block_timestamp, batch_count, aggregation_proof)
+        VALUES ($1, $2, $3, $4, $5, CAST($6::text as jsonb))
+      """.trimIndent(),
+    )
+    insertQuery.execute(
+      Tuple.of(1L, 10L, 1, fakeClockTime.toEpochMilliseconds(), 5L, oldFormatProofJson),
+    ).toCompletionStage().toCompletableFuture().get()
+
+    aggregationsPostgresDaoImpl.getProofsToFinalize(
+      1L,
+      Instant.fromEpochSeconds(1714312800),
+      1,
+    ).get().also { proofs ->
+      assertThat(proofs).hasSize(1)
+      val proof = proofs.first()
+      assertThat(proof.firstBlockNumber).isEqualTo(1L)
+      assertThat(proof.finalBlockNumber).isEqualTo(10L)
+      // Verify the new fields default to safe values when not present in the JSON
+      assertThat(proof.finalFtxNumber).isEqualTo(0UL)
+      assertThat(proof.finalFtxRollingHash).isEqualTo(ByteArray(32))
+      assertThat(proof.filteredAddresses).isEmpty()
+    }
   }
 
   private fun performInsertTest(aggregation: Aggregation): RowSet<Row>? {

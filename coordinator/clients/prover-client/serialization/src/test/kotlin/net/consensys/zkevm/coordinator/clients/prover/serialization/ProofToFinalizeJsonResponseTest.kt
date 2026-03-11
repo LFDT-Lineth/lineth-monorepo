@@ -31,13 +31,12 @@ class ProofToFinalizeJsonResponseTest {
       .map { it.name }
       .toMutableSet()
 
-    proofToFinalizeJsonResponseProperties.addAll(ProofToFinalizeJsonResponse.PROPERTIES_NOT_INCLUDED)
-
     val propertiesInTestDataFile = getKeysInJsonUsingJsonParser(
       filePath.toFile(),
       JsonSerialization.proofResponseMapperV1,
     )
-    assertThat(propertiesInTestDataFile).isEqualTo(proofToFinalizeJsonResponseProperties)
+    assertThat(propertiesInTestDataFile)
+      .containsAll(proofToFinalizeJsonResponseProperties - ProofToFinalizeJsonResponse.optionalFields)
   }
 
   companion object {

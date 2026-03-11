@@ -9,6 +9,9 @@ fs-responses-directory = "tmp/local/prover/v3/execution/responses"
 [prover.blob-compression]
 fs-requests-directory = "tmp/local/prover/v3/compression/requests"
 fs-responses-directory = "tmp/local/prover/v3/compression/responses"
+[prover.invalidity]
+fs-requests-directory = "tmp/local/prover/v3/invalidity/requests"
+fs-responses-directory = "tmp/local/prover/v3/invalidity/responses"
 [prover.proof-aggregation]
 fs-requests-directory = "tmp/local/prover/v3/aggregation/requests"
 fs-responses-directory = "tmp/local/prover/v3/aggregation/responses"
@@ -41,6 +44,25 @@ l1-highest-block-tag="LATEST"
 l2-highest-block-tag="LATEST"
 anchoring-tick-interval = "PT1S"
 
+[forced-transactions]
+disabled = false
+l1-highest-block-tag = "LATEST"
+processing-tick-interval = "PT5S"
+processing-delay = "PT0S"
+processing-batch-size = 10
+sequencer-endpoint = "http://127.0.0.1:8545/"
+
+[forced-transactions.l1-request-retries]
+backoff-delay = "PT1S"
+timeout = "PT6S"
+failures-warning-threshold = 1
+
+[forced-transactions.l1-event-scraping]
+polling-interval = "PT0.2S"
+polling-timeout = "PT10S"
+eth-logs-search-success-backoff-delay = "PT0.5S"
+eth-logs-search-block-chunk-size = 1000
+
 [message-anchoring.l1-event-scraping]
 polling-interval = "PT1S"
 
@@ -54,6 +76,7 @@ extra-data-update-endpoint = "http://127.0.0.1:8545/"
 [database]
 hostname = "127.0.0.1"
 port = "5432"
+schema-version = 5
 
 [api]
 observability_port = 9545

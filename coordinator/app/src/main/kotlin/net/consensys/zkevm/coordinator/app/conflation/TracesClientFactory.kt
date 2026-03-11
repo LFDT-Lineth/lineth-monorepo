@@ -22,7 +22,7 @@ object TracesClientFactory {
     ignoreTracesGeneratorErrors: Boolean,
     expectedTracesApiVersion: String,
     fallBackTracesCounters: TracesCounters,
-    logger: org.apache.logging.log4j.Logger,
+    logger: Logger,
   ): TracesGeneratorJsonRpcClientV2 {
     return TracesGeneratorJsonRpcClientV2(
       vertx = vertx,

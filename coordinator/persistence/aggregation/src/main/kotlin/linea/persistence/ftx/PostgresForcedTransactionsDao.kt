@@ -76,6 +76,9 @@ class PostgresForcedTransactionsDao(
       val simulatedExecutionBlockTimestamp = Instant.fromEpochMilliseconds(
         row.getLong("simulated_execution_block_timestamp"),
       )
+      val ftxBlockNumberDeadline = row.getLong("ftx_block_number_deadline").toULong()
+      val ftxRollingHash = row.getBuffer("ftx_rolling_hash").bytes
+      val ftxRlp = row.getBuffer("ftx_rlp").bytes
       val proofStatus = dbValueToProofStatus(row.getShort("proof_status"))
 
       return ForcedTransactionRecord(
@@ -83,8 +86,10 @@ class PostgresForcedTransactionsDao(
         inclusionResult = inclusionResult,
         simulatedExecutionBlockNumber = simulatedExecutionBlockNumber,
         simulatedExecutionBlockTimestamp = simulatedExecutionBlockTimestamp,
+        ftxBlockNumberDeadline = ftxBlockNumberDeadline,
+        ftxRollingHash = ftxRollingHash,
+        ftxRlp = ftxRlp,
         proofStatus = proofStatus,
-        proofIndex = null,
       )
     }
   }
@@ -93,14 +98,18 @@ class PostgresForcedTransactionsDao(
     """
       insert into forced_transactions
       (created_epoch_milli, updated_epoch_milli, ftx_number, inclusion_result,
-       simulated_execution_block_number, simulated_execution_block_timestamp, proof_status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+       simulated_execution_block_number, simulated_execution_block_timestamp,
+       ftx_block_number_deadline, ftx_rolling_hash, ftx_rlp, proof_status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       ON CONFLICT (ftx_number)
       DO UPDATE SET
         updated_epoch_milli = EXCLUDED.updated_epoch_milli,
         inclusion_result = EXCLUDED.inclusion_result,
         simulated_execution_block_number = EXCLUDED.simulated_execution_block_number,
         simulated_execution_block_timestamp = EXCLUDED.simulated_execution_block_timestamp,
+        ftx_block_number_deadline = EXCLUDED.ftx_block_number_deadline,
+        ftx_rolling_hash = EXCLUDED.ftx_rolling_hash,
+        ftx_rlp = EXCLUDED.ftx_rlp,
         proof_status = EXCLUDED.proof_status
     """.trimIndent()
 
@@ -109,7 +118,8 @@ class PostgresForcedTransactionsDao(
   private val selectByNumberSql =
     """
       select ftx_number, inclusion_result, simulated_execution_block_number,
-             simulated_execution_block_timestamp, proof_status
+             simulated_execution_block_timestamp, ftx_block_number_deadline,
+             ftx_rolling_hash, ftx_rlp, proof_status
       from forced_transactions
       where ftx_number = $1
     """.trimIndent()
@@ -119,7 +129,8 @@ class PostgresForcedTransactionsDao(
   private val selectAllSql =
     """
       select ftx_number, inclusion_result, simulated_execution_block_number,
-             simulated_execution_block_timestamp, proof_status
+             simulated_execution_block_timestamp, ftx_block_number_deadline,
+             ftx_rolling_hash, ftx_rlp, proof_status
       from forced_transactions
       order by ftx_number
     """.trimIndent()
@@ -143,6 +154,9 @@ class PostgresForcedTransactionsDao(
       inclusionResultToDbValue(ftx.inclusionResult),
       ftx.simulatedExecutionBlockNumber.toLong(),
       ftx.simulatedExecutionBlockTimestamp.toEpochMilliseconds(),
+      ftx.ftxBlockNumberDeadline.toLong(),
+      ftx.ftxRollingHash,
+      ftx.ftxRlp,
       proofStatusToDbValue(ftx.proofStatus),
     )
     queryLog.log(Level.TRACE, upsertSql, params)

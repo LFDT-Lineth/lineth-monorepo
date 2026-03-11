@@ -7,6 +7,7 @@ import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.domain.BlocksConflation
 import net.consensys.zkevm.domain.ConflationCalculationResult
 import net.consensys.zkevm.domain.ConflationTrigger
+import net.consensys.zkevm.ethereum.coordination.blockcreation.AlwaysSafeBlockNumberProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.awaitility.Awaitility
@@ -39,7 +40,11 @@ class ConflationServiceImplTest {
         deferredTriggerConflationCalculators = emptyList(),
         emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
       )
-    conflationService = ConflationServiceImpl(conflationCalculator, mock(defaultAnswer = RETURNS_DEEP_STUBS))
+    conflationService = ConflationServiceImpl(
+      calculator = conflationCalculator,
+      safeBlockNumberProvider = AlwaysSafeBlockNumberProvider(),
+      metricsFacade = mock(defaultAnswer = RETURNS_DEEP_STUBS),
+    )
   }
 
   @Test
@@ -155,7 +160,11 @@ class ConflationServiceImplTest {
     val expectedException = RuntimeException("Calculator failed!")
     val failingConflationCalculator: TracesConflationCalculator = mock()
     whenever(failingConflationCalculator.newBlock(any())).thenThrow(expectedException)
-    conflationService = ConflationServiceImpl(failingConflationCalculator, mock(defaultAnswer = RETURNS_DEEP_STUBS))
+    conflationService = ConflationServiceImpl(
+      calculator = failingConflationCalculator,
+      safeBlockNumberProvider = AlwaysSafeBlockNumberProvider(),
+      metricsFacade = mock(defaultAnswer = RETURNS_DEEP_STUBS),
+    )
     val block = createBlock(number = 1UL, gasLimit = 20_000_000UL)
 
     assertThatThrownBy {

@@ -6,6 +6,8 @@ import kotlin.time.Instant
 
 enum class ForcedTransactionInclusionResult {
   Included,
+
+  // Non-inclusion results
   BadNonce,
   BadBalance,
   BadPrecompile,

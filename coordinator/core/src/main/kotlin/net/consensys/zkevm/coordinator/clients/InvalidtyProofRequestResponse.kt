@@ -5,11 +5,12 @@ import build.linea.clients.LineaAccountProof
 import kotlin.time.Instant
 
 enum class InvalidityReason {
-  BadNonce,
+  BadNonce, // included transactions also have this invalidity reason
   BadBalance,
   BadPrecompile,
   TooManyLogs,
-  FilteredAddresses,
+  FilteredAddressesFrom,
+  FilteredAddressesTo,
 }
 
 data class InvalidityProofRequest(
@@ -18,12 +19,13 @@ data class InvalidityProofRequest(
   val simulatedExecutionBlockTimestamp: Instant,
   val ftxNumber: ULong,
   val ftxBlockNumberDeadline: ULong,
-  val ftxHash: ByteArray,
   val ftxRlp: ByteArray,
   val prevFtxRollingHash: ByteArray,
-  val parentBlockHash: ByteArray,
   val zkParentStateRootHash: ByteArray,
-  val tracesResponse: GenerateTracesResponse,
+  /**
+   * defined when invalidityReason is one of {BadPrecompile, TooManyLogs}, null otherwise
+   */
+  val tracesResponse: String? = null,
   /**
    * Account MerkleProof is defined when
    * invalidityReason = BadNonce, BadBalance, null otherwise
@@ -46,10 +48,8 @@ data class InvalidityProofRequest(
     if (simulatedExecutionBlockTimestamp != other.simulatedExecutionBlockTimestamp) return false
     if (ftxNumber != other.ftxNumber) return false
     if (ftxBlockNumberDeadline != other.ftxBlockNumberDeadline) return false
-    if (!ftxHash.contentEquals(other.ftxHash)) return false
     if (!ftxRlp.contentEquals(other.ftxRlp)) return false
     if (!prevFtxRollingHash.contentEquals(other.prevFtxRollingHash)) return false
-    if (!parentBlockHash.contentEquals(other.parentBlockHash)) return false
     if (!zkParentStateRootHash.contentEquals(other.zkParentStateRootHash)) return false
     if (tracesResponse != other.tracesResponse) return false
     if (accountProof != other.accountProof) return false
@@ -64,10 +64,8 @@ data class InvalidityProofRequest(
     result = 31 * result + simulatedExecutionBlockTimestamp.hashCode()
     result = 31 * result + ftxNumber.hashCode()
     result = 31 * result + ftxBlockNumberDeadline.hashCode()
-    result = 31 * result + ftxHash.contentHashCode()
     result = 31 * result + ftxRlp.contentHashCode()
     result = 31 * result + prevFtxRollingHash.contentHashCode()
-    result = 31 * result + parentBlockHash.contentHashCode()
     result = 31 * result + zkParentStateRootHash.contentHashCode()
     result = 31 * result + tracesResponse.hashCode()
     result = 31 * result + (accountProof?.hashCode() ?: 0)
@@ -84,7 +82,6 @@ data class InvalidityProofRequest(
       "ftxBlockNumberDeadline=$ftxBlockNumberDeadline, " +
       "ftxRlp=${ftxRlp.contentToString()}, " +
       "prevFtxRollingHash=${prevFtxRollingHash.contentToString()}, " +
-      "parentBlockHash=${parentBlockHash.contentToString()}, " +
       "zkParentStateRootHash=${zkParentStateRootHash.contentToString()}, " +
       "tracesResponse=$tracesResponse, " +
       "accountProof=$accountProof, " +

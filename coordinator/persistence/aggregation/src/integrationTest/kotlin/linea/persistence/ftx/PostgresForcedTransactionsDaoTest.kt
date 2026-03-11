@@ -56,6 +56,9 @@ class PostgresForcedTransactionsDaoTest : CleanDbTestSuiteParallel() {
     inclusionResult: ForcedTransactionInclusionResult = ForcedTransactionInclusionResult.BadNonce,
     simulatedExecutionBlockNumber: ULong = 1000UL,
     simulatedExecutionBlockTimestamp: Instant = Instant.fromEpochMilliseconds(1705276800000),
+    ftxBlockNumberDeadline: ULong = 2000UL,
+    ftxRollingHash: ByteArray = ByteArray(32) { it.toByte() },
+    ftxRlp: ByteArray = ByteArray(64) { it.toByte() },
     proofStatus: ForcedTransactionRecord.ProofStatus = ForcedTransactionRecord.ProofStatus.UNREQUESTED,
   ): ForcedTransactionRecord {
     return ForcedTransactionRecord(
@@ -63,16 +66,23 @@ class PostgresForcedTransactionsDaoTest : CleanDbTestSuiteParallel() {
       inclusionResult = inclusionResult,
       simulatedExecutionBlockNumber = simulatedExecutionBlockNumber,
       simulatedExecutionBlockTimestamp = simulatedExecutionBlockTimestamp,
+      ftxBlockNumberDeadline = ftxBlockNumberDeadline,
+      ftxRollingHash = ftxRollingHash,
+      ftxRlp = ftxRlp,
       proofStatus = proofStatus,
-      proofIndex = null,
     )
   }
 
   @Test
   fun `save inserts a new forced transaction record to the database`() {
+    val ftxRollingHash = ByteArray(32) { it.toByte() }
+    val ftxRlp = ByteArray(64) { it.toByte() }
     val ftx1 = createForcedTransactionRecord(
       ftxNumber = 123UL,
       inclusionResult = ForcedTransactionInclusionResult.BadNonce,
+      ftxBlockNumberDeadline = 2500UL,
+      ftxRollingHash = ftxRollingHash,
+      ftxRlp = ftxRlp,
       proofStatus = ForcedTransactionRecord.ProofStatus.UNREQUESTED,
     )
 
@@ -88,6 +98,9 @@ class PostgresForcedTransactionsDaoTest : CleanDbTestSuiteParallel() {
     assertThat(row.getShort("inclusion_result"))
       .isEqualTo(inclusionResultToDbValue(ForcedTransactionInclusionResult.BadNonce).toShort())
     assertThat(row.getLong("simulated_execution_block_number")).isEqualTo(ftx1.simulatedExecutionBlockNumber.toLong())
+    assertThat(row.getLong("ftx_block_number_deadline")).isEqualTo(ftx1.ftxBlockNumberDeadline.toLong())
+    assertThat(row.getBuffer("ftx_rolling_hash").bytes).isEqualTo(ftxRollingHash)
+    assertThat(row.getBuffer("ftx_rlp").bytes).isEqualTo(ftxRlp)
     assertThat(row.getShort("proof_status"))
       .isEqualTo(proofStatusToDbValue(ForcedTransactionRecord.ProofStatus.UNREQUESTED).toShort())
   }
@@ -120,6 +133,8 @@ class PostgresForcedTransactionsDaoTest : CleanDbTestSuiteParallel() {
     assertThat(row.getLong("ftx_number")).isEqualTo(ftx1Updated.ftxNumber.toLong())
     assertThat(row.getShort("inclusion_result"))
       .isEqualTo(inclusionResultToDbValue(ForcedTransactionInclusionResult.BadBalance).toShort())
+    assertThat(row.getLong("simulated_execution_block_number"))
+      .isEqualTo(ftx1Updated.simulatedExecutionBlockNumber.toLong())
     assertThat(row.getLong("simulated_execution_block_number"))
       .isEqualTo(ftx1Updated.simulatedExecutionBlockNumber.toLong())
     assertThat(row.getShort("proof_status"))
@@ -180,7 +195,7 @@ class PostgresForcedTransactionsDaoTest : CleanDbTestSuiteParallel() {
 
     dbContent.sortedBy { it.getLong("ftx_number") }.forEachIndexed { index, row ->
       assertThat(row.getShort("proof_status"))
-        .isEqualTo(PostgresForcedTransactionsDao.proofStatusToDbValue(proofStatuses[index]).toShort())
+        .isEqualTo(proofStatusToDbValue(proofStatuses[index]).toShort())
     }
   }
 
@@ -192,22 +207,22 @@ class PostgresForcedTransactionsDaoTest : CleanDbTestSuiteParallel() {
 
   @Test
   fun `findByNumber returns the correct record when it exists`() {
+    val ftxRollingHash = ByteArray(32) { (it * 2).toByte() }
+    val ftxRlp = ByteArray(64) { (it * 3).toByte() }
     val ftx = createForcedTransactionRecord(
       ftxNumber = 789UL,
       inclusionResult = ForcedTransactionInclusionResult.TooManyLogs,
       proofStatus = ForcedTransactionRecord.ProofStatus.REQUESTED,
       simulatedExecutionBlockNumber = 5000UL,
+      ftxBlockNumberDeadline = 6000UL,
+      ftxRollingHash = ftxRollingHash,
+      ftxRlp = ftxRlp,
     )
 
     forcedTransactionsDao.save(ftx).get()
 
-    val result = forcedTransactionsDao.findByNumber(789UL).get()
-    assertThat(result).isNotNull
-    assertThat(result!!.ftxNumber).isEqualTo(789UL)
-    assertThat(result.inclusionResult).isEqualTo(ForcedTransactionInclusionResult.TooManyLogs)
-    assertThat(result.proofStatus).isEqualTo(ForcedTransactionRecord.ProofStatus.REQUESTED)
-    assertThat(result.simulatedExecutionBlockNumber).isEqualTo(5000UL)
-    assertThat(result.proofIndex).isNull()
+    assertThat(forcedTransactionsDao.findByNumber(789UL).get())
+      .isEqualTo(ftx)
   }
 
   @Test

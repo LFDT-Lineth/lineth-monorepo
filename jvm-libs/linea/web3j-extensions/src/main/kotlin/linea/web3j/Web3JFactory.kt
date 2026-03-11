@@ -4,11 +4,27 @@ import linea.web3j.okhttp.okHttpClientBuilder
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.Logger
 import org.web3j.protocol.Web3j
+import org.web3j.protocol.Web3jService
+import org.web3j.protocol.core.JsonRpc2_0Web3j
 import org.web3j.protocol.http.HttpService
 import org.web3j.utils.Async
 import java.util.concurrent.ScheduledExecutorService
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+
+internal fun Web3j.getWeb3jService(): Web3jService {
+  return when (this) {
+    is JsonRpc2_0Web3j -> {
+      // Access the protected web3jService field using reflection
+      val field = JsonRpc2_0Web3j::class.java.getDeclaredField("web3jService")
+      field.isAccessible = true
+      field.get(this) as Web3jService
+    }
+    else -> {
+      throw IllegalStateException("Web3j of type ${this::class.simpleName} is not supported yet")
+    }
+  }
+}
 
 fun createWeb3jHttpClient(
   rpcUrl: String,
