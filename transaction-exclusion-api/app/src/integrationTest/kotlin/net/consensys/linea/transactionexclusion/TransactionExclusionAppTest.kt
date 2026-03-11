@@ -64,7 +64,7 @@ class TransactionExclusionAppTest : CleanDbTestSuiteParallel() {
   private lateinit var requestSpecification: RequestSpecification
   private lateinit var app: TransactionExclusionApp
 
-  @BeforeEach()
+  @BeforeEach
   fun beforeEach() {
     app = TransactionExclusionApp(
       config = AppConfig(

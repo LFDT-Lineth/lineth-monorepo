@@ -61,10 +61,6 @@ class JsonRpcMessageProcessor(
     override val name: String = "jsonrpc"
   },
 ) : JsonRpcMessageHandler {
-  init {
-    DatabindCodec.mapper().registerKotlinModule()
-  }
-
   override fun invoke(user: User?, messageJsonStr: String): Future<String> =
     handleAndMeasureRequestProcessing(user, messageJsonStr)
 
@@ -278,9 +274,10 @@ class JsonRpcMessageProcessor(
   }
 
   companion object {
-    // init {
-    //   DatabindCodec.mapper().enable(SerializationFeature.INDENT_OUTPUT)
-    // }
+    init {
+      DatabindCodec.mapper().registerKotlinModule()
+    }
+
     fun parseRequest(json: Any): Result<Pair<JsonRpcRequest, JsonObject>, JsonRpcErrorResponse> {
       try {
         json as JsonObject
