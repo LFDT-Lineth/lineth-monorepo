@@ -7,7 +7,7 @@ import { getAdapter } from "@/adapters";
 import SettingIcon from "@/assets/icons/setting.svg";
 import BridgeTwoLogo from "@/components/bridge/bridge-two-logo";
 import Skeleton from "@/components/bridge/claiming/skeleton";
-import useBridgeFees from "@/hooks/fees/useBridgeFees";
+import useFees from "@/hooks/fees/useFees";
 import { useChainStore } from "@/stores/chainStore";
 import { useFormStore } from "@/stores/formStoreProvider";
 import { useUiStore } from "@/stores/uiStore";
@@ -33,13 +33,10 @@ export default function Claiming() {
   const [showAdvancedSettingsModal, setShowAdvancedSettingsModal] = useState<boolean>(false);
 
   const amount = useFormStore((state) => state.amount);
-  const balance = useFormStore((state) => state.balance);
   const token = useFormStore((state) => state.token);
   const selectedMode = useFormStore((state) => state.selectedMode);
-  const claim = useFormStore((state) => state.claim);
-  const { resolvedClaimType } = useBridgeFees();
-  const effectiveClaimType = resolvedClaimType ?? claim;
-  const originChainBalanceTooLow = amount && balance < amount;
+
+  const { hasInsufficientFunds, isLoading: isFeesLoading, effectiveClaimType } = useFees();
 
   const adapter = getAdapter(token, fromChain, toChain);
   const setHideNoFeesPill = useUiStore((s) => s.setHideNoFeesPill);
@@ -68,7 +65,7 @@ export default function Claiming() {
   }, [fromChain, adapter, loading]);
 
   if (!amount || amount <= 0n) return null;
-  if (isConnected && originChainBalanceTooLow) return null;
+  if (isConnected && hasInsufficientFunds) return null;
 
   return (
     <div className={styles["wrapper"]}>
@@ -84,7 +81,7 @@ export default function Claiming() {
         </div>
       </div>
 
-      {loading ? (
+      {loading || isFeesLoading ? (
         <Skeleton />
       ) : (
         <div className={styles.content}>

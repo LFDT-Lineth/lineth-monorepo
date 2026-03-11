@@ -35,6 +35,11 @@ const nextConfig: NextConfig = {
         hostname: "images.ctfassets.net",
         pathname: `/${process.env.CONTENTFUL_SPACE_ID}/**`,
       },
+      {
+        protocol: "https",
+        hostname: "static.cx.metamask.io",
+        pathname: "/api/v2/tokenIcons/assets/**/*.png",
+      },
     ],
   },
   serverExternalPackages: ["pino-pretty", "lokijs", "encoding"],

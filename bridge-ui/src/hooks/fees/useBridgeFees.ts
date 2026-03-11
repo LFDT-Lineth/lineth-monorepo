@@ -63,6 +63,7 @@ export default function useBridgeFees() {
   const fees = data ?? DEFAULT_FEES;
   const hasValidFeeData = !hasPositiveAmount || (!!adapter?.getFees && !!data && !isError);
   const resolvedClaimType = !isFetching && data ? data.claimType : undefined;
+  const bridgingFeeLabel = adapter?.bridgingFeeLabel;
 
-  return { fees, isLoading, hasValidFeeData, resolvedClaimType };
+  return { fees, isLoading, hasValidFeeData, resolvedClaimType, bridgingFeeLabel };
 }

@@ -1,10 +1,8 @@
 import { useMemo } from "react";
 
-import { config } from "@/config";
-import { USDC_SYMBOL } from "@/constants/tokens";
 import { useChainStore } from "@/stores/chainStore";
 import { useTokenStore } from "@/stores/tokenStoreProvider";
-import { ChainLayer, Token } from "@/types";
+import { Token } from "@/types";
 import { isUndefined } from "@/utils/misc";
 
 const useTokens = (): Token[] => {
@@ -14,26 +12,7 @@ const useTokens = (): Token[] => {
   return useMemo(() => {
     if (isUndefined(fromChain)) return [];
 
-    if (fromChain.testnet) {
-      if (fromChain.layer !== ChainLayer.L2) {
-        return tokensList.SEPOLIA.filter(
-          (token) => !token.type.includes("native") && (config.isCctpEnabled || token.symbol !== USDC_SYMBOL),
-        );
-      }
-      return config.isCctpEnabled
-        ? tokensList.SEPOLIA
-        : tokensList.SEPOLIA.filter((token) => token.symbol !== USDC_SYMBOL);
-    }
-
-    if (fromChain.layer !== ChainLayer.L2) {
-      return tokensList.MAINNET.filter(
-        (token) => !token.type.includes("native") && (config.isCctpEnabled || token.symbol !== USDC_SYMBOL),
-      );
-    }
-
-    return config.isCctpEnabled
-      ? tokensList.MAINNET
-      : tokensList.MAINNET.filter((token) => token.symbol !== USDC_SYMBOL);
+    return fromChain.testnet ? tokensList.SEPOLIA : tokensList.MAINNET;
   }, [fromChain, tokensList.MAINNET, tokensList.SEPOLIA]);
 };
 

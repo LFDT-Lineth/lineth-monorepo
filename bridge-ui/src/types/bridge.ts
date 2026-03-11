@@ -23,7 +23,15 @@ export type CctpV2BridgeMessage = {
   nonce: `0x${string}`;
 };
 
-export type BridgeMessage = NativeBridgeMessage | CctpV2BridgeMessage;
+export type HyperlaneBridgeMessage = {
+  messageId: `0x${string}`;
+  amountSent: bigint;
+  transferIndex: bigint;
+  sender: `0x${string}`;
+  recipient: `0x${string}`;
+};
+
+export type BridgeMessage = NativeBridgeMessage | CctpV2BridgeMessage | HyperlaneBridgeMessage;
 
 export type AdapterModeId = string;
 

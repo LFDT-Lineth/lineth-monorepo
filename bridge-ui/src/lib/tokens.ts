@@ -3,8 +3,9 @@ import { cache } from "react";
 import log from "loglevel";
 import { Address } from "viem";
 
+import { allAdapters } from "@/adapters";
 import { config } from "@/config";
-import { PRIORITY_SYMBOLS, USDC_SYMBOL } from "@/constants/tokens";
+import { PRIORITY_SYMBOLS } from "@/constants/tokens";
 import { type SupportedCurrencies } from "@/stores/configStore";
 import { defaultTokensConfig } from "@/stores/tokenStore";
 import { BridgeProvider, GithubTokenListToken, NetworkTokens, Token } from "@/types";
@@ -13,6 +14,15 @@ import { isUndefined } from "@/utils/misc";
 enum NetworkTypes {
   MAINNET = "MAINNET",
   SEPOLIA = "SEPOLIA",
+}
+
+function resolveBridgeProvider(token: GithubTokenListToken): BridgeProvider {
+  return allAdapters.find((adapter) => adapter.matchesToken(token))?.provider ?? BridgeProvider.NATIVE;
+}
+
+function isBridgeProviderEnabled(token: Token): boolean {
+  const adapter = allAdapters.find((registeredAdapter) => registeredAdapter.provider === token.bridgeProvider);
+  return adapter?.isEnabled() ?? false;
 }
 
 export async function getTokens(networkTypes: NetworkTypes): Promise<GithubTokenListToken[]> {
@@ -26,12 +36,12 @@ export async function getTokens(networkTypes: NetworkTypes): Promise<GithubToken
     const data = await response.json();
     const tokens = data.tokens as GithubTokenListToken[];
 
-    return tokens.filter(
-      (token: GithubTokenListToken) =>
-        token.tokenType.includes("canonical-bridge") ||
-        (token.tokenType.includes("native") && token.extension?.rootAddress !== undefined) ||
-        token.symbol === USDC_SYMBOL,
-    );
+    return tokens.filter((token: GithubTokenListToken) => {
+      const hasRootAddress = !isUndefined(token.extension?.rootAddress);
+      const isBridgeToken = token.tokenType.includes("canonical-bridge") || token.tokenType.includes("native");
+      const isAdapterToken = allAdapters.some((adapter) => adapter.matchesToken(token));
+      return hasRootAddress && (isBridgeToken || isAdapterToken);
+    });
   } catch (error) {
     log.error("Error getTokens", { error });
     return [];
@@ -70,8 +80,8 @@ export async function validateTokenURI(url: string): Promise<string> {
   }
 }
 
-export async function formatToken(token: GithubTokenListToken): Promise<Token> {
-  const bridgeProvider = token.symbol === USDC_SYMBOL ? BridgeProvider.CCTP : BridgeProvider.NATIVE;
+export async function formatToken(token: GithubTokenListToken): Promise<Token | undefined> {
+  const bridgeProvider = resolveBridgeProvider(token);
 
   const logoURI = await validateTokenURI(token.logoURI);
 
@@ -123,8 +133,6 @@ export const getTokenConfig = cache(async (): Promise<NetworkTokens> => {
   }
   const updatedTokensConfig = { ...defaultTokensConfig };
 
-  const filterOutUSDCWhenCctpNotEnabled = (token: Token) => config.isCctpEnabled || token.symbol !== USDC_SYMBOL;
-
   const sortPriorityTokensFirst = (tokens: Token[]): Token[] => {
     const priority: Token[] = [];
     const rest: Token[] = [];
@@ -144,7 +152,8 @@ export const getTokenConfig = cache(async (): Promise<NetworkTokens> => {
 
   const enrichTokens = async (tokens: GithubTokenListToken[], defaultList: Token[]): Promise<Token[]> => {
     const formatted = await Promise.all(tokens.map(formatToken));
-    const allTokens = [...defaultList, ...formatted.filter(filterOutUSDCWhenCctpNotEnabled)];
+    const nonNullableTokens = formatted.filter((token): token is Token => !isUndefined(token));
+    const allTokens = [...defaultList, ...nonNullableTokens.filter(isBridgeProviderEnabled)];
     return sortPriorityTokensFirst(allTokens);
   };
 

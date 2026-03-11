@@ -36,5 +36,7 @@ export type Chain = {
   cctpDomain: number;
   cctpTokenMessengerV2Address: Address;
   cctpMessageTransmitterV2Address: Address;
+  hyperlanePortalLiteAddress?: Address;
+  hyperlaneMailboxAddress?: Address;
   localNetwork?: boolean; // Optional field for local networks
 };

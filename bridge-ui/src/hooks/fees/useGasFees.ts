@@ -29,10 +29,12 @@ const useGasFees = ({ address, amount, fromChain, isConnected, token }: UseGasFe
   const fromAddress = isConnected ? address : DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER;
   const canEstimateDisconnected = fallbackGasLimit === undefined;
 
+  const enabled = !!transactionArgs && amount > 0n && !!fromAddress && (isConnected || canEstimateDisconnected);
+
   const {
     data: estimatedGas,
     isError,
-    isLoading,
+    isLoading: isEstimating,
     refetch,
   } = useEstimateGas({
     chainId: transactionArgs?.args.chainId,
@@ -41,14 +43,8 @@ const useGasFees = ({ address, amount, fromChain, isConnected, token }: UseGasFe
     to: transactionArgs?.args.to,
     data: transactionArgs?.args.data,
     ...(!isConnected ? { stateOverride: [{ address: fromAddress!, balance: maxUint256 }] } : {}),
-    query: {
-      enabled: !!transactionArgs && amount > 0n && !!fromAddress && (isConnected || canEstimateDisconnected),
-    },
+    query: { enabled },
   });
-
-  if (isLoading) {
-    return null;
-  }
 
   let gasFees: bigint | null = null;
   if (!isUndefined(feeData)) {
@@ -61,8 +57,10 @@ const useGasFees = ({ address, amount, fromChain, isConnected, token }: UseGasFe
 
   return {
     gasFees,
+    // Loading when actively estimating OR when we expect a result but don't have one yet
+    // (e.g. waiting for bridge fees → tx args → gas estimate, or waiting for feeData)
+    isLoading: isEstimating || (amount > 0n && gasFees === null && !isError),
     isError: isConnected && isError,
-    isLoading,
     refetch,
   };
 };

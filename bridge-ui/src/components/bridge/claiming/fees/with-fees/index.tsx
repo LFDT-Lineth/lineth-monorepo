@@ -4,8 +4,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import { formatUnits } from "viem";
 
-import { useFees } from "@/hooks";
-import useBridgeFees from "@/hooks/fees/useBridgeFees";
+import useFees from "@/hooks/fees/useFees";
 import { useFormattedDigit } from "@/hooks/useFormattedDigit";
 import { useConfigStore } from "@/stores/configStore";
 import { useFormStore } from "@/stores/formStoreProvider";
@@ -24,9 +23,8 @@ export default function WithFees({ iconPath }: Props) {
   const [showGasFeesModal, setShowGasFeesModal] = useState<boolean>(false);
   const currency = useConfigStore.useCurrency();
 
-  const { total, fees, isLoading } = useFees();
+  const { total, fees, isLoading, bridgeFees } = useFees();
   const token = useFormStore((state) => state.token);
-  const { fees: bridgeFees } = useBridgeFees();
 
   const formattedFees = useFormattedDigit(total.fees, 18);
   const formattedProtocolFee = bridgeFees.protocolFee ? formatUnits(bridgeFees.protocolFee, token.decimals) : "";

@@ -24,12 +24,7 @@ export default function BridgeMode() {
     <div className={styles.container}>
       <div className={styles.button}>
         <div className={styles["selected-label"]}>
-          <Image
-            src={`${process.env.NEXT_PUBLIC_BASE_PATH}/images/logo/linea-rounded.svg`}
-            width={16}
-            height={16}
-            alt={adapter?.name ?? "Bridge"}
-          />
+          {adapter?.logoSrc && <Image src={adapter.logoSrc} width={16} height={16} alt={adapter.name} />}
           <span>{adapter?.name ?? "Native Bridge"}</span>
         </div>
       </div>

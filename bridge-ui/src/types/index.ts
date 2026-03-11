@@ -8,6 +8,7 @@ export {
   type BridgeMessage,
   type NativeBridgeMessage,
   type CctpV2BridgeMessage,
+  type HyperlaneBridgeMessage,
   type BridgeTransaction,
   ClaimType,
 } from "./bridge";

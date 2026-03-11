@@ -1,4 +1,5 @@
 export const USDC_SYMBOL = "USDC";
+export const MUSD_SYMBOL = "mUSD";
 export const ETH_SYMBOL = "ETH";
 export const USDT_SYMBOL = "USDT";
 

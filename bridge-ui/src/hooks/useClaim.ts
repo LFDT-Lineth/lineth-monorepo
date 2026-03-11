@@ -35,7 +35,7 @@ const useClaim = ({ status, adapterId, fromChain, toChain, args }: UseClaimProps
     const adapter = getAdapterById(adapterId);
     if (!adapter) return;
 
-    return adapter.buildClaimTx({ message: args, fromChain, toChain }) ?? undefined;
+    return adapter.buildClaimTx?.({ message: args, fromChain, toChain }) ?? undefined;
   }, [address, status, adapterId, fromChain, toChain, args]);
 
   const { send, ...txState } = useTransactionSender(claimTx);

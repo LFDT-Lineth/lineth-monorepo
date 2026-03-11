@@ -17,6 +17,8 @@ export const config: Config = {
       cctpDomain: 0,
       cctpTokenMessengerV2Address: getAddress("0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d"),
       cctpMessageTransmitterV2Address: getAddress("0x81D40F21F12A8F0E3252Bccb954D722d4c464B64"),
+      hyperlanePortalLiteAddress: getAddress("0x36f586A30502AE3afb555b8aA4dCc05d233c2ecE"),
+      hyperlaneMailboxAddress: getAddress("0xc005dc82818d67AF737725bD4bf75435d065D239"),
     },
     59144: {
       iconPath: `${process.env.NEXT_PUBLIC_BASE_PATH}/images/logo/linea-rounded.svg`,
@@ -31,6 +33,8 @@ export const config: Config = {
       cctpDomain: 11,
       cctpTokenMessengerV2Address: getAddress("0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d"),
       cctpMessageTransmitterV2Address: getAddress("0x81D40F21F12A8F0E3252Bccb954D722d4c464B64"),
+      hyperlanePortalLiteAddress: getAddress("0x36f586A30502AE3afb555b8aA4dCc05d233c2ecE"),
+      hyperlaneMailboxAddress: getAddress("0x02d16BC51af6BfD153d67CA61754cF912E82C4d9"),
     },
     11155111: {
       iconPath: `${process.env.NEXT_PUBLIC_BASE_PATH}/images/logo/ethereum-rounded.svg`,
@@ -92,6 +96,7 @@ export const config: Config = {
     minVersion: process.env.NEXT_PUBLIC_STORAGE_MIN_VERSION ? parseInt(process.env.NEXT_PUBLIC_STORAGE_MIN_VERSION) : 1,
   },
   isCctpEnabled: process.env.NEXT_PUBLIC_IS_CCTP_ENABLED === "true",
+  isHyperlaneEnabled: process.env.NEXT_PUBLIC_IS_HYPERLANE_ENABLED === "true",
   infuraApiKey: process.env.NEXT_PUBLIC_INFURA_ID ?? "",
   alchemyApiKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY ?? "",
   quickNodeApiKey: process.env.NEXT_PUBLIC_QUICKNODE_ID ?? "",

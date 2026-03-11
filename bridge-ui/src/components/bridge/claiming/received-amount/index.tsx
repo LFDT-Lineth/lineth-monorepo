@@ -4,7 +4,7 @@ import { formatUnits } from "viem";
 
 import { getAdapter } from "@/adapters";
 import { useTokenPrices } from "@/hooks";
-import useBridgeFees from "@/hooks/fees/useBridgeFees";
+import useFees from "@/hooks/fees/useFees";
 import { useChainStore } from "@/stores/chainStore";
 import { useConfigStore } from "@/stores/configStore";
 import { useFormStore } from "@/stores/formStoreProvider";
@@ -18,7 +18,7 @@ export default function ReceivedAmount() {
   const currency = useConfigStore.useCurrency();
   const amount = useFormStore((state) => state.amount);
   const token = useFormStore((state) => state.token);
-  const { fees } = useBridgeFees();
+  const { bridgeFees } = useFees();
 
   const adapter = getAdapter(token, fromChain, toChain);
   const { data: tokenPrices } = useTokenPrices([token[fromChain.layer]], fromChain.id);
@@ -29,11 +29,11 @@ export default function ReceivedAmount() {
         amount: amount || 0n,
         token,
         fromChainLayer: fromChain.layer,
-        fees,
+        fees: bridgeFees,
       }) ??
       (amount || 0n);
     return formatUnits(raw, token.decimals);
-  }, [adapter, amount, token, fromChain.layer, fees]);
+  }, [adapter, amount, token, fromChain.layer, bridgeFees]);
 
   return (
     <div className={styles.value}>

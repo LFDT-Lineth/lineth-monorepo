@@ -2,7 +2,8 @@ import { getPublicClient } from "@wagmi/core";
 import { Address, encodeFunctionData, padHex, zeroHash } from "viem";
 
 import { config } from "@/config";
-import { ChainLayer, ClaimType } from "@/types";
+import { USDC_SYMBOL } from "@/constants/tokens";
+import { BridgeProvider, ChainLayer, ClaimType } from "@/types";
 import { ceilDiv, isUndefined, isUndefinedOrEmptyString } from "@/utils/misc";
 import { isCctp } from "@/utils/tokens";
 
@@ -37,11 +38,17 @@ export type CctpModeId = (typeof CCTP_MODES)[number]["id"];
 export const cctpAdapter: BridgeAdapter = {
   id: "cctp",
   name: "Circle CCTP",
+  provider: BridgeProvider.CCTP,
+  logoSrc: CCTP_LOGO,
   modes: CCTP_MODES,
   defaultMode: "STANDARD",
 
   isEnabled() {
     return config.isCctpEnabled;
+  },
+
+  matchesToken(token) {
+    return token.symbol === USDC_SYMBOL;
   },
 
   canHandle(token, fromChain) {
