@@ -46,6 +46,14 @@ jobs:
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
 
+      - name: Cache Hardhat compiler
+        uses: actions/cache@v4.2.0
+        with:
+          path: ~/.cache/hardhat-nodejs
+          key: ${{ runner.os }}-hardhat-compilers-${{ hashFiles('contracts/hardhat.config.ts', 'contracts/hardhat_overrides.ts') }}
+          restore-keys: |
+            ${{ runner.os }}-hardhat-compilers-
+
       - name: Check JS formatting
         run: pnpm -F contracts run lint:ts
 
@@ -55,6 +63,9 @@ jobs:
 
       - name: Compile kzg.node
         run: npx node-gyp --directory=contracts/node_modules/c-kzg rebuild # explicitly running rebuild to get the .node file
+
+      - name: Pre-compile contracts to cache solc
+        run: pnpm -F contracts run build
 
       - name: Run smart contracts tests and generate coverage report
         run: pnpm -F contracts run coverage

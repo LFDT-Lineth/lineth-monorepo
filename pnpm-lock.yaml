@@ -110,7 +110,7 @@ overrides:
   tar@<7.5.8: '>=7.5.8'
   tmp@<=0.2.3: '>=0.2.4'
   tsup@<=8.3.4: '>=8.5.1'
-  undici@<6.23.0: '>=6.23.0'
+  undici: '>=6.23.0 <7.0.0'
   valibot@>=0.31.0 <1.2.0: '>=1.2.0'
   validator@<13.15.22: '>=13.15.22'
   ws@>=7.0.0 <7.5.10: '>=7.5.10'
@@ -13564,9 +13564,9 @@ packages:
   undici-types@7.18.2:
     resolution: {integrity: sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==}
 
-  undici@7.22.0:
-    resolution: {integrity: sha512-RqslV2Us5BrllB+JeiZnK4peryVTndy9Dnqq62S3yYRRTj0tFQCwEniUy2167skdGOy3vqRzEvl1Dm4sV2ReDg==}
-    engines: {node: '>=20.18.1'}
+  undici@6.23.0:
+    resolution: {integrity: sha512-VfQPToRA5FZs/qJxLIinmU59u0r7LXqoJkCzinq3ckNJp3vKEh7jTWN589YQ5+aoAC/TGRLyJLCPKcLQbM8r9g==}
+    engines: {node: '>=18.17'}
 
   unfetch@3.1.2:
     resolution: {integrity: sha512-L0qrK7ZeAudGiKYw6nzFjnJ2D5WHblUBwmHIqtPS6oKUd+Hcpk7/hKsSmcHsTlpd1TbTNsiRBUKRq3bHLNIqIw==}
@@ -19766,7 +19766,7 @@ snapshots:
       picocolors: 1.1.1
       semver: 6.3.1
       table: 6.8.2
-      undici: 7.22.0
+      undici: 6.23.0
     transitivePeerDependencies:
       - supports-color
 
@@ -19960,7 +19960,7 @@ snapshots:
       ethers: 6.14.3(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       hardhat: 2.28.3(bufferutil@4.0.8)(ts-node@10.9.2(@types/node@25.3.2)(typescript@5.9.3))(typescript@5.9.3)(utf-8-validate@5.0.10)
       proper-lockfile: 4.1.2
-      undici: 7.22.0
+      undici: 6.23.0
     optionalDependencies:
       '@nomicfoundation/hardhat-verify': 2.1.1(hardhat@2.28.3(bufferutil@4.0.8)(ts-node@10.9.2(@types/node@25.3.2)(typescript@5.9.3))(typescript@5.9.3)(utf-8-validate@5.0.10))
     transitivePeerDependencies:
@@ -28060,7 +28060,7 @@ snapshots:
       stacktrace-parser: 0.1.10
       tinyglobby: 0.2.14
       tsort: 0.0.1
-      undici: 7.22.0
+      undici: 6.23.0
       uuid: 8.3.2
       ws: 7.5.10(bufferutil@4.0.8)(utf-8-validate@5.0.10)
     optionalDependencies:
@@ -33069,7 +33069,7 @@ snapshots:
 
   undici-types@7.18.2: {}
 
-  undici@7.22.0: {}
+  undici@6.23.0: {}
 
   unfetch@3.1.2: {}
 
