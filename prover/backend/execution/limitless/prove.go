@@ -310,6 +310,10 @@ func RunBootstrapper(cfg *config.Config, zkevmWitness *zkevm.Witness, merkleTree
 		utils.Panic("could not load zkevm: %v", err)
 	}
 
+	// Override the compatibility check setting from the runtime config, since
+	// the serialized asset may have been built with a different value.
+	assets.Zkevm.Arithmetization.Settings.IgnoreCompatibilityCheck = &cfg.Execution.IgnoreCompatibilityCheck
+
 	if err := assets.LoadDisc(cfg); err != nil || assets.DistWizard.Disc == nil {
 		utils.Panic("could not load disc: %v", err)
 	}
