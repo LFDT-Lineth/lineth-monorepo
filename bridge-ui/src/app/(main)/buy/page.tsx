@@ -1,6 +1,6 @@
 "use client";
 
-import FaqHelp from "@/components/bridge/faq-help";
+import PageFooter from "@/components/bridge/page-footer";
 import OnRamperWidget from "@/components/onramper";
 
 import styles from "./page.module.scss";
@@ -11,7 +11,7 @@ export default function Page() {
       <section className={styles["content-wrapper"]}>
         <OnRamperWidget />
       </section>
-      <FaqHelp />
+      <PageFooter />
     </>
   );
 }

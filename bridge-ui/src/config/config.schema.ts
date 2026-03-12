@@ -30,6 +30,10 @@ const chainConfigSchema = z.object({
     .refine((val) => val === undefined || isAddress(val), {
       message: "Invalid Ethereum address",
     }),
+  yieldProviderAddress: z
+    .string()
+    .refine((val) => isAddress(val), { message: "Invalid Ethereum address" })
+    .optional(),
 });
 
 export const configSchema = z

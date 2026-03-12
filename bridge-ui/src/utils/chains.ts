@@ -47,7 +47,9 @@ export const generateChain = (chain: ViemChain): Chain => {
     ...(config.chains[chain.id].hyperlaneMailboxAddress
       ? { hyperlaneMailboxAddress: config.chains[chain.id].hyperlaneMailboxAddress as Address }
       : {}),
-    // Optional field for local networks for testing purposes
+    ...(config.chains[chain.id].yieldProviderAddress
+      ? { yieldProviderAddress: config.chains[chain.id].yieldProviderAddress as Address }
+      : {}),
     ...(chain.custom?.localNetwork ? { localNetwork: true } : {}),
   };
 };
@@ -57,7 +59,6 @@ export const generateChains = (chains: ViemChain[]): Chain[] => {
 };
 
 export const getChainNetworkLayer = (chainId: number) => {
-  // For non-local networks, we can safely assume the layer based on the chain ID
   switch (chainId) {
     case linea.id:
     case lineaSepolia.id:

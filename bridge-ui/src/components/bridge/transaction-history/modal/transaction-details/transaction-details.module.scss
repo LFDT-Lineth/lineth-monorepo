@@ -1,3 +1,5 @@
+@use "mixins" as *;
+
 .modal-inner {
   padding: 0 1rem 1rem 1rem;
 }
@@ -33,12 +35,7 @@
       gap: 0.5rem;
 
       a {
-        text-decoration: none;
-        color: var(--color-indigo);
-
-        &:hover {
-          text-decoration: underline;
-        }
+        @include link-indigo;
       }
 
       svg {
@@ -51,6 +48,43 @@
 
     &:not(:last-child) {
       border-bottom: 1px solid var(--color-silver);
+    }
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.action {
+  flex: 1;
+}
+
+.error-text {
+  color: var(--color-red, #d32f2f);
+  font-family: var(--font-atyp-text);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+
+.claim-messages {
+  color: var(--color-darker-gray);
+  font-family: var(--font-atyp-text);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  text-align: center;
+
+  .helper-text {
+    margin-bottom: 0.75rem;
+  }
+
+  .terms-text {
+    a {
+      @include link-indigo;
     }
   }
 }

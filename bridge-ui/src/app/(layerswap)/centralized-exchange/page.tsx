@@ -1,4 +1,4 @@
-import FaqHelp from "@/components/bridge/faq-help";
+import PageFooter from "@/components/bridge/page-footer";
 import { Widget } from "@/components/layerswap/widget";
 
 import styles from "./page.module.scss";
@@ -11,7 +11,7 @@ export default function Page() {
           <Widget />
         </div>
       </section>
-      <FaqHelp />
+      <PageFooter />
     </>
   );
 }

@@ -1,0 +1,13 @@
+@use "mixins" as *;
+
+.page-footer {
+  color: var(--color-text-secondary);
+  text-align: center;
+  font-size: 0.875rem;
+  margin: 1.5rem 0;
+  font-family: var(--font-atyp-text);
+
+  a {
+    @include link-indigo;
+  }
+}

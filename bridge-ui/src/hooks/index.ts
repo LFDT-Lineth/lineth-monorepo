@@ -9,7 +9,6 @@ export { default as useTransactionSteps } from "./transaction-args/useTransactio
 
 export { default as useAllowance } from "./useAllowance";
 export { default as useBridge } from "./useBridge";
-export { default as useBridgeTransactionMessage } from "./useBridgeTransactionMessage";
 export { default as useChains } from "./useChains";
 export { default as useClaim } from "./useClaim";
 export { default as useClaimingTx } from "./useClaimingTx";

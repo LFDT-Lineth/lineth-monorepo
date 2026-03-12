@@ -169,8 +169,7 @@ describe("L2 > L1 via Native Bridge", () => {
       await waitForNewTxAdditionToTxList(txnsLengthBefore);
     });
 
-    // TODO: fix claim button action issue on first render
-    test.skip("should be able to claim if available READY_TO_CLAIM transactions", async ({
+    test("should be able to claim if available READY_TO_CLAIM transactions", async ({
       page,
       connectMetamaskToDapp,
       clickNativeBridgeButton,

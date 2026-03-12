@@ -1,5 +1,7 @@
 export type {
   AdapterMode,
+  ClaimContext,
+  DepositWarning,
   BridgeAdapter,
   BridgeFees,
   BridgeOptions,

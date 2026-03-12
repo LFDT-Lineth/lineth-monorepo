@@ -1,4 +1,4 @@
-import { getAddress, zeroAddress } from "viem";
+import { getAddress, isAddress, zeroAddress } from "viem";
 
 import { configSchema, Config } from "./config.schema";
 
@@ -19,6 +19,10 @@ export const config: Config = {
       cctpMessageTransmitterV2Address: getAddress("0x81D40F21F12A8F0E3252Bccb954D722d4c464B64"),
       hyperlanePortalLiteAddress: getAddress("0x36f586A30502AE3afb555b8aA4dCc05d233c2ecE"),
       hyperlaneMailboxAddress: getAddress("0xc005dc82818d67AF737725bD4bf75435d065D239"),
+      ...(process.env.NEXT_PUBLIC_MAINNET_L1_YIELD_PROVIDER &&
+      isAddress(process.env.NEXT_PUBLIC_MAINNET_L1_YIELD_PROVIDER)
+        ? { yieldProviderAddress: getAddress(process.env.NEXT_PUBLIC_MAINNET_L1_YIELD_PROVIDER) }
+        : {}),
     },
     59144: {
       iconPath: `${process.env.NEXT_PUBLIC_BASE_PATH}/images/logo/linea-rounded.svg`,

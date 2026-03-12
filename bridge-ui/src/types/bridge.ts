@@ -36,11 +36,11 @@ export type BridgeMessage = NativeBridgeMessage | CctpV2BridgeMessage | Hyperlan
 export type AdapterModeId = string;
 
 export enum ClaimType {
-  // Only for L1 -> L2, sponsored by the Postman
+  /** Destination-chain claim is sponsored (no extra fee). Used by the native bridge for L1→L2 when gas is below the Postman threshold. */
   AUTO_SPONSORED = "AUTO_SPONSORED",
-  // Only for L1 -> L2, practically this will only be available when the L2 token contract does not exist (costing ~460K gas to claimMessage on L2).
+  /** Destination-chain claim fee is paid upfront by the sender. Used by the native bridge for expensive L1→L2 claims and by Hyperlane for all directions. */
   AUTO_PAID = "AUTO_PAID",
-  // L2 -> L1 must be MANUAL
+  /** User must manually claim on the destination chain. Required for native bridge L2→L1 withdrawals. */
   MANUAL = "MANUAL",
 }
 

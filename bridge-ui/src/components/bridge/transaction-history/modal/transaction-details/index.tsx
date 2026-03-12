@@ -1,18 +1,17 @@
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 
-import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { formatEther } from "viem";
-import { useConnection, useSwitchChain, useTransactionReceipt } from "wagmi";
+import { useTransactionReceipt } from "wagmi";
 
 import ArrowRightIcon from "@/assets/icons/arrow-right.svg";
 import Modal from "@/components/modal";
-import Button from "@/components/ui/button";
-import { useClaim, useClaimingTx, useBridgeTransactionMessage } from "@/hooks";
+import { useClaimingTx } from "@/hooks";
 import { buildExplorerUrl } from "@/lib/urls";
 import { BridgeTransaction, TransactionStatus } from "@/types";
 import { formatBalance, formatHex, formatTimestamp } from "@/utils/format";
 
+import ClaimActions from "./claim-actions";
 import styles from "./transaction-details.module.scss";
 
 type Props = {
@@ -22,36 +21,12 @@ type Props = {
 };
 
 export default function TransactionDetails({ transaction, isModalOpen, onCloseModal }: Props) {
-  const { chain } = useConnection();
-  const { mutate: switchChain, isPending: isSwitchingChain } = useSwitchChain();
-
   const formattedDate = transaction?.timestamp ? formatTimestamp(Number(transaction.timestamp), "MMM, dd, yyyy") : "";
   const formattedTime = transaction?.timestamp ? formatTimestamp(Number(transaction.timestamp), "ppp") : "";
 
-  // Hydrate BridgeTransaction.message with params required for claim tx
-  const { message, isLoading: isLoadingClaimTxParams } = useBridgeTransactionMessage(transaction);
-  if (transaction && message) transaction.message = message;
-
-  // Hydrate BridgeTransaction.claimingTx
   const claimingTx = useClaimingTx(transaction);
-  if (transaction && claimingTx && !transaction?.claimingTx) transaction.claimingTx = claimingTx;
 
-  const { claim, isConfirming, isPending, isConfirmed } = useClaim({
-    status: transaction?.status,
-    adapterId: transaction?.adapterId,
-    fromChain: transaction?.fromChain,
-    toChain: transaction?.toChain,
-    args: transaction?.message,
-  });
-
-  const queryClient = useQueryClient();
-  useEffect(() => {
-    if (isConfirmed) {
-      queryClient.invalidateQueries({ queryKey: ["transactionHistory"], exact: false });
-      onCloseModal();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConfirmed]);
+  const displayClaimingTx = claimingTx || transaction?.claimingTx;
 
   const { data: initialTransactionReceipt } = useTransactionReceipt({
     hash: transaction?.bridgingTx as `0x${string}`,
@@ -64,10 +39,10 @@ export default function TransactionDetails({ transaction, isModalOpen, onCloseMo
   });
 
   const { data: claimingTransactionReceipt } = useTransactionReceipt({
-    hash: transaction?.claimingTx as `0x${string}`,
+    hash: displayClaimingTx as `0x${string}`,
     chainId: transaction?.toChain.id,
     query: {
-      enabled: !!transaction?.claimingTx && transaction?.status === TransactionStatus.COMPLETED,
+      enabled: !!displayClaimingTx && transaction?.status === TransactionStatus.COMPLETED,
       staleTime: 1000 * 60 * 5,
       refetchOnMount: false,
     },
@@ -95,50 +70,11 @@ export default function TransactionDetails({ transaction, isModalOpen, onCloseMo
     return initialTransactionFee + claimingTransactionFee;
   }, [initialTransactionReceipt, claimingTransactionReceipt]);
 
-  const buttonText = useMemo(() => {
-    if (isLoadingClaimTxParams) {
-      return "Loading Claim Data...";
-    }
-
-    if (isPending || isConfirming) {
-      return "Waiting for confirmation...";
-    }
-
-    if (isSwitchingChain) {
-      return "Switching chain...";
-    }
-
-    if (chain?.id !== transaction?.toChain.id) {
-      return `Switch to ${transaction?.toChain.name}`;
-    }
-
-    return "Claim";
-  }, [
-    isPending,
-    isConfirming,
-    isSwitchingChain,
-    isLoadingClaimTxParams,
-    chain?.id,
-    transaction?.toChain.id,
-    transaction?.toChain.name,
-  ]);
-
-  const handleClaim = () => {
-    if (transaction?.toChain.id && chain?.id && chain.id !== transaction?.toChain.id) {
-      switchChain({ chainId: transaction.toChain.id });
-      return;
-    }
-
-    if (claim) {
-      claim();
-    }
-  };
-
   const bridgingTxUrl = transaction?.bridgingTx
     ? buildExplorerUrl(transaction.fromChain.blockExplorers?.default.url, "tx", transaction.bridgingTx)
     : undefined;
-  const claimingTxUrl = transaction?.claimingTx
-    ? buildExplorerUrl(transaction.toChain.blockExplorers?.default.url, "tx", transaction.claimingTx)
+  const claimingTxUrl = displayClaimingTx
+    ? buildExplorerUrl(transaction?.toChain.blockExplorers?.default.url, "tx", displayClaimingTx)
     : undefined;
 
   return (
@@ -168,13 +104,13 @@ export default function TransactionDetails({ transaction, isModalOpen, onCloseMo
           <li>
             <span>{transaction?.toChain.name} Tx hash</span>
             <div className={styles.hash}>
-              {transaction?.claimingTx ? (
+              {displayClaimingTx ? (
                 claimingTxUrl ? (
                   <Link href={claimingTxUrl} target="_blank" rel="noopener noreferrer">
-                    {formatHex(transaction.claimingTx)}
+                    {formatHex(displayClaimingTx)}
                   </Link>
                 ) : (
-                  <span>{formatHex(transaction.claimingTx)}</span>
+                  <span>{formatHex(displayClaimingTx)}</span>
                 )
               ) : (
                 <span>Pending</span>
@@ -191,13 +127,7 @@ export default function TransactionDetails({ transaction, isModalOpen, onCloseMo
           )}
         </ul>
         {transaction?.status === TransactionStatus.READY_TO_CLAIM && (
-          <Button
-            disabled={isLoadingClaimTxParams || isPending || isConfirming || isSwitchingChain}
-            onClick={handleClaim}
-            fullWidth
-          >
-            {buttonText}
-          </Button>
+          <ClaimActions transaction={transaction} onCloseModal={onCloseModal} />
         )}
       </div>
     </Modal>

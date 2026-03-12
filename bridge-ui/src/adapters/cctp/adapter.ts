@@ -99,7 +99,7 @@ export const cctpAdapter: BridgeAdapter = {
     };
   },
 
-  buildClaimTx({ message, toChain }: ClaimParams): TransactionRequest | undefined {
+  async buildClaimTx({ message, toChain }: ClaimParams) {
     if (
       !isCctpV2BridgeMessage(message) ||
       isUndefinedOrEmptyString(message.attestation) ||

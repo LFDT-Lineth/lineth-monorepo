@@ -1,6 +1,6 @@
 "use client";
 
-import FaqHelp from "@/components/bridge/faq-help";
+import PageFooter from "@/components/bridge/page-footer";
 import { navList } from "@/components/internal-nav";
 import NavItem from "@/components/internal-nav/item";
 
@@ -17,7 +17,7 @@ export default function Page() {
           ))}
         </ul>
       </section>
-      <FaqHelp />
+      <PageFooter />
     </>
   );
 }

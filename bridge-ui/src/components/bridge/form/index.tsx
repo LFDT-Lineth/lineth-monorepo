@@ -4,8 +4,8 @@ import { useConnection } from "wagmi";
 
 import { Amount } from "@/components/bridge/amount";
 import Claiming from "@/components/bridge/claiming";
-import FaqHelp from "@/components/bridge/faq-help";
 import FromChain from "@/components/bridge/from-chain";
+import PageFooter from "@/components/bridge/page-footer";
 import { Submit } from "@/components/bridge/submit";
 import SwapChain from "@/components/bridge/swap-chain";
 import ToChain from "@/components/bridge/to-chain";
@@ -110,7 +110,7 @@ export default function BridgeForm() {
           </div>
         </div>
       </div>
-      <FaqHelp />
+      <PageFooter showYieldBoost />
     </>
   );
 }

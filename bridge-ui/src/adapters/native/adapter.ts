@@ -1,17 +1,19 @@
 import { getMessageProof } from "@consensys/linea-sdk-viem";
 import { estimateFeesPerGas, getPublicClient, readContract } from "@wagmi/core";
-import { Address, Client, Hex, encodeFunctionData, zeroAddress } from "viem";
+import { Address, Client, Hex, encodeFunctionData } from "viem";
 
 import { config } from "@/config";
 import { BridgeProvider, ChainLayer, ClaimType } from "@/types";
-import { isUndefined, isUndefinedOrEmptyString, isZero } from "@/utils/misc";
+import { isUndefinedOrEmptyString, isZero } from "@/utils/misc";
 import { isEth } from "@/utils/tokens";
 
-import { MESSAGE_SERVICE_ABI, TOKEN_BRIDGE_ABI } from "./abis";
+import { MESSAGE_SERVICE_ABI, MINIMUM_FEE_ABI, TOKEN_BRIDGE_ABI } from "./abis";
+import { buildStEthClaimMessages, encodeL1ClaimData, encodeL2ClaimData, isValidClaimMessage } from "./claim";
 import { MessageClaimedABIEvent } from "./events";
 import { estimateERC20BridgingGasUsed, estimateEthBridgingGasUsed } from "./fees";
 import { fetchERC20BridgeEvents } from "./history/fetchERC20BridgeEvents";
 import { fetchETHBridgeEvents } from "./history/fetchETHBridgeEvents";
+import { fetchMessageServiceBalance, isL2ToL1EthWithYieldProvider } from "./liquidity";
 import { isNativeBridgeMessage } from "./message";
 
 import type {
@@ -26,7 +28,6 @@ import type {
 } from "../types";
 
 const MAX_POSTMAN_SPONSOR_GAS_LIMIT = 250000n;
-
 const NATIVE_LOGO = `${process.env.NEXT_PUBLIC_BASE_PATH}/images/logo/linea-rounded.svg`;
 
 export const nativeAdapter: BridgeAdapter = {
@@ -49,8 +50,7 @@ export const nativeAdapter: BridgeAdapter = {
   },
 
   getEstimatedTime(fromChainLayer: ChainLayer): EstimatedTime {
-    const isFromL1 = fromChainLayer === ChainLayer.L1;
-    return isFromL1 ? { min: 20, max: 20, unit: "minute" } : { min: 2, max: 12, unit: "hour" };
+    return fromChainLayer === ChainLayer.L1 ? { min: 20, max: 20, unit: "minute" } : { min: 2, max: 12, unit: "hour" };
   },
 
   buildDepositTx({ token, amount, recipient, fromChain, fees }: DepositParams): TransactionRequest | undefined {
@@ -90,97 +90,92 @@ export const nativeAdapter: BridgeAdapter = {
     };
   },
 
-  async prepareClaimMessage({ message, fromChain, toChain, wagmiConfig }) {
-    if (
-      !isNativeBridgeMessage(message) ||
-      toChain.layer !== ChainLayer.L1 ||
-      isUndefinedOrEmptyString(message.messageHash)
-    ) {
-      return;
+  async buildClaimTx({ message, fromChain, toChain, options, wagmiConfig }: ClaimParams) {
+    if (!isNativeBridgeMessage(message)) return;
+
+    let claimMessage = message;
+
+    if (toChain.layer === ChainLayer.L1 && !message.proof) {
+      if (isUndefinedOrEmptyString(message.messageHash)) return;
+
+      const originLayerClient = getPublicClient(wagmiConfig, { chainId: fromChain.id });
+      const destinationLayerClient = getPublicClient(wagmiConfig, { chainId: toChain.id });
+
+      const proof = await getMessageProof(destinationLayerClient as Client, {
+        messageHash: message.messageHash as Hex,
+        l2Client: originLayerClient as Client,
+        ...(config.e2eTestMode
+          ? {
+              lineaRollupAddress: config.chains[toChain.id].messageServiceAddress as Address,
+              l2MessageServiceAddress: config.chains[fromChain.id].messageServiceAddress as Address,
+            }
+          : {}),
+      });
+
+      claimMessage = { ...message, proof };
     }
 
-    const originLayerClient = getPublicClient(wagmiConfig, { chainId: fromChain.id });
-    const destinationLayerClient = getPublicClient(wagmiConfig, { chainId: toChain.id });
-
-    message.proof = await getMessageProof(destinationLayerClient as Client, {
-      messageHash: message.messageHash as Hex,
-      l2Client: originLayerClient as Client,
-      ...(config.e2eTestMode
-        ? {
-            lineaRollupAddress: config.chains[toChain.id].messageServiceAddress as Address,
-            l2MessageServiceAddress: config.chains[fromChain.id].messageServiceAddress as Address,
-          }
-        : {}),
-    });
-  },
-
-  buildClaimTx({ message, toChain }: ClaimParams): TransactionRequest | undefined {
-    if (
-      !isNativeBridgeMessage(message) ||
-      isUndefinedOrEmptyString(message.from) ||
-      isUndefinedOrEmptyString(message.to) ||
-      isUndefined(message.fee) ||
-      isUndefined(message.value) ||
-      isUndefined(message.nonce) ||
-      message.nonce === 0n ||
-      isUndefinedOrEmptyString(message.calldata) ||
-      isUndefinedOrEmptyString(message.messageHash) ||
-      (isUndefined(message.proof) && toChain.layer === ChainLayer.L1)
-    ) {
-      return;
-    }
+    if (!isValidClaimMessage(claimMessage, toChain)) return;
 
     const data =
       toChain.layer === ChainLayer.L1
-        ? encodeFunctionData({
-            abi: MESSAGE_SERVICE_ABI,
-            functionName: "claimMessageWithProof",
-            args: [
-              {
-                data: message.calldata as `0x{string}`,
-                fee: message.fee,
-                feeRecipient: zeroAddress,
-                from: message.from,
-                to: message.to,
-                leafIndex: message.proof?.leafIndex as number,
-                merkleRoot: message.proof?.root as `0x{string}`,
-                messageNumber: message.nonce,
-                proof: message.proof?.proof as `0x{string}`[],
-                value: message.value,
-              },
-            ],
-          })
-        : encodeFunctionData({
-            abi: MESSAGE_SERVICE_ABI,
-            functionName: "claimMessage",
-            args: [
-              message.from,
-              message.to,
-              message.fee,
-              message.value,
-              zeroAddress,
-              message.calldata as `0x{string}`,
-              message.nonce,
-            ],
-          });
+        ? encodeL1ClaimData(claimMessage, toChain, options)
+        : encodeL2ClaimData(claimMessage);
+    if (!data) return;
+
+    return { to: toChain.messageServiceAddress, data, value: 0n, chainId: toChain.id };
+  },
+
+  async getDepositWarnings({ token, fromChain, toChain, amount, wagmiConfig }) {
+    if (!isL2ToL1EthWithYieldProvider(token, fromChain, toChain) || amount <= 0n) return undefined;
+
+    try {
+      const balance = await fetchMessageServiceBalance(wagmiConfig, toChain);
+      if (amount > balance) {
+        return [
+          {
+            text: "The bridge is currently congested.",
+            link: { url: "https://docs.linea.build/network/overview/yield-boost", label: "Learn more." },
+          },
+        ];
+      }
+    } catch {
+      // RPC failure — skip warning
+    }
+    return undefined;
+  },
+
+  async getClaimContext({ transaction, connectedAddress, wagmiConfig }) {
+    const { fromChain, toChain, token, message } = transaction;
+    if (!isNativeBridgeMessage(message) || !isL2ToL1EthWithYieldProvider(token, fromChain, toChain)) return undefined;
+
+    let isLowLiquidity = false;
+    try {
+      if (message.amountSent > 0n) {
+        const balance = await fetchMessageServiceBalance(wagmiConfig, toChain);
+        isLowLiquidity = message.amountSent > balance;
+      }
+    } catch {
+      // RPC failure — default to false so standard claim proceeds
+    }
+
+    if (!isLowLiquidity) return undefined;
+
+    const isRecipient = !!connectedAddress && message.to.toLowerCase() === connectedAddress.toLowerCase();
 
     return {
-      to: toChain.messageServiceAddress,
-      data,
-      value: 0n,
-      chainId: toChain.id,
+      label: "Claim stETH",
+      errorMessage:
+        "stETH claiming is currently unavailable. Please wait until stETH or ETH claiming becomes available.",
+      messages: buildStEthClaimMessages(isRecipient),
+      ...(isRecipient ? { claimOptions: { useAlternativeClaim: true } } : {}),
     };
   },
 
   computeReceivedAmount({ amount, token, fromChainLayer, fees }: ReceivedAmountParams): bigint {
     if (!isEth(token)) return amount;
-    if (fromChainLayer === ChainLayer.L1 && fees.claimType !== ClaimType.MANUAL) {
-      return amount - fees.bridgingFee;
-    }
-    if (fromChainLayer === ChainLayer.L2) {
-      return amount - fees.bridgingFee;
-    }
-    return amount;
+    if (fromChainLayer === ChainLayer.L1 && fees.claimType === ClaimType.MANUAL) return amount;
+    return amount - fees.bridgingFee;
   },
 
   getApprovalTarget(token, fromChain): Address | undefined {
@@ -219,19 +214,10 @@ export const nativeAdapter: BridgeAdapter = {
     if (fromChain.layer === ChainLayer.L2) {
       const minimumFee = await readContract(wagmiConfig, {
         address: fromChain.messageServiceAddress,
-        abi: [
-          {
-            inputs: [],
-            name: "minimumFeeInWei",
-            outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-            stateMutability: "view",
-            type: "function",
-          },
-        ],
+        abi: MINIMUM_FEE_ABI,
         functionName: "minimumFeeInWei",
         chainId: fromChain.id,
       });
-
       return { protocolFee: null, bridgingFee: minimumFee, claimType: ClaimType.MANUAL };
     }
 

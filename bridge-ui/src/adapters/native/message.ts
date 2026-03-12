@@ -1,4 +1,4 @@
-import { keccak256, encodeAbiParameters, Address } from "viem";
+import { keccak256, encodeAbiParameters, Address, zeroAddress } from "viem";
 
 import { BridgeMessage, NativeBridgeMessage } from "@/types";
 
@@ -48,4 +48,33 @@ export function isNativeBridgeMessage(msg: BridgeMessage): msg is NativeBridgeMe
     typeof (msg as NativeBridgeMessage).calldata === "string" &&
     typeof (msg as NativeBridgeMessage).messageHash === "string"
   );
+}
+
+export type ClaimWithProofParams = {
+  proof: `0x${string}`[];
+  messageNumber: bigint;
+  leafIndex: number;
+  from: Address;
+  to: Address;
+  fee: bigint;
+  value: bigint;
+  feeRecipient: Address;
+  merkleRoot: `0x${string}`;
+  data: `0x${string}`;
+};
+
+export function buildClaimWithProofParams(msg: NativeBridgeMessage): ClaimWithProofParams | undefined {
+  if (!msg.proof) return undefined;
+  return {
+    proof: msg.proof.proof as `0x${string}`[],
+    messageNumber: msg.nonce,
+    leafIndex: msg.proof.leafIndex as number,
+    from: msg.from,
+    to: msg.to,
+    fee: msg.fee,
+    value: msg.value,
+    feeRecipient: zeroAddress,
+    merkleRoot: msg.proof.root as `0x${string}`,
+    data: msg.calldata as `0x${string}`,
+  };
 }

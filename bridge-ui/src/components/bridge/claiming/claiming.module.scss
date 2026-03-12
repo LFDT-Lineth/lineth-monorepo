@@ -1,3 +1,5 @@
+@use "mixins" as *;
+
 .wrapper {
   margin-top: 1rem;
   background-color: var(--color-smoke);
@@ -73,5 +75,17 @@
     &:hover {
       text-decoration: underline;
     }
+  }
+}
+
+.warning {
+  color: var(--color-text-secondary);
+  font-family: var(--font-atyp-text);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  margin-top: 0.75rem;
+
+  a {
+    @include link-indigo;
   }
 }
