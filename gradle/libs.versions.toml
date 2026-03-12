@@ -58,6 +58,7 @@ tuweni = "2.7.1"
 vertx = "4.5.14"
 web3j = "5.0.2"
 web3jPlugin = "4.14.0"
+secp = "1.4.2"
 
 # Other
 googleJavaFormat = "1.27.0"

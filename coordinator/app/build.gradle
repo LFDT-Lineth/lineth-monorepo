@@ -71,6 +71,7 @@ dependencies {
   testImplementation testFixtures(project(':jvm-libs:generic:json-rpc'))
   testImplementation project(':coordinator:ethereum:test-utils')
   testImplementation "io.vertx:vertx-junit5"
+  runtimeOnly "org.hyperledger.besu:secp256k1:${libs.versions.secp.get()}"
 }
 
 application {
