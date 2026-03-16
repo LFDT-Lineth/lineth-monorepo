@@ -89,7 +89,7 @@ jobs:
           push_image: ${{ env.PUSH_IMAGE }}
           dockerfile_path: ./postman/Dockerfile
           build_args: |
-            NATIVE_LIBS_RELEASE_TAG=blob-libs-v1.2.0
+            NATIVE_LIBS_RELEASE_TAG=blob-libs-v3.0.1
             NODE_VERSION=${{ steps.get-node-version.outputs.node-version }}
           save_artifact: ${{ env.PUSH_IMAGE == 'false' }}
           artifact_name: linea-postman

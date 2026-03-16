@@ -12,9 +12,6 @@ Besu blockchain client plugins for Linea: the sequencer plugin (transaction orde
 # Build sequencer plugin
 ./gradlew :besu-plugins:linea-sequencer:build
 
-# Build distribution ZIP
-./gradlew :besu-plugins:linea-sequencer:distZip
-
 # Unit tests
 ./gradlew :besu-plugins:linea-sequencer:test
 

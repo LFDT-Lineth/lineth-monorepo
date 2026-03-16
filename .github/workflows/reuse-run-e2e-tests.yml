@@ -35,10 +35,6 @@ on:
         required: false
         type: string
         default: ""
-      expected_traces_api_version:
-        required: false
-        type: string
-        default: ""
       e2e-tests-with-ssh:
         description: Run end to end tests with ability to ssh into environment
         required: false
@@ -72,7 +68,6 @@ jobs:
     if: ${{ inputs.has-changes-requiring-e2e-testing == 'true' }}
     env:
       BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
-      EXPECTED_TRACES_API_VERSION: ${{ inputs.expected_traces_api_version }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     outputs:
@@ -157,14 +152,6 @@ jobs:
         run: |
           gunzip -c $GITHUB_WORKSPACE/tmp/artifacts/linea-besu-package-image.tar.gz | docker load
         shell: bash
-      - name: Replace expected traces api version in coordinator config file
-        if: ${{ inputs.expected_traces_api_version != '' }}
-        shell: bash
-        run: |
-          sed -i 's/^\(expected-traces-api-version[ ]*=[ ]*\).*/\1"${{ env.EXPECTED_TRACES_API_VERSION }}"/' config/coordinator/coordinator-config-v2.toml
-          echo "EXPECTED_TRACES_API_VERSION=${{ env.EXPECTED_TRACES_API_VERSION }}"
-          echo "BESU_PACKAGE_TAG=${{ env.BESU_PACKAGE_TAG }}"
-          echo "$(grep expected-traces-api-version config/coordinator/coordinator-config-v2.toml)"
       - name: Spin up fresh environment with retry
         uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
         with:

@@ -36,7 +36,7 @@ on:
       transaction_exclusion_api_changed:
         required: true
         type: string
-      build_linea_besu_package_from_source:
+      build_linea_besu_package:
         required: true
         type: string
       coordinator_image_tagged:
@@ -60,8 +60,6 @@ on:
     outputs:
       linea_besu_package_tag:
         value: ${{ jobs.linea_besu_package_build_and_upload.outputs.linea_besu_package_tag }}
-      expected_traces_api_version:
-        value: ${{ jobs.linea_besu_package_build_and_upload.outputs.expected_traces_api_version }}
     secrets:
       DOCKERHUB_USERNAME:
         required: false
@@ -131,35 +129,16 @@ jobs:
 
   linea_besu_package_build_and_upload:
     uses: ./.github/workflows/linea-besu-package-build-and-upload.yml
-    if: ${{ always() && inputs.build_linea_besu_package_from_source == 'true' && !inputs.push_image }}
+    if: ${{ always() && inputs.build_linea_besu_package == 'true' && !inputs.push_image }}
     with:
+      release_tag_prefix: 'dev'
       with_besu_fleet_plugin: false
-      build_from_source: true
     secrets: inherit
-
-  linea_besu_package_build_and_publish:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
-    if: ${{ always() && inputs.build_linea_besu_package_from_source == 'true' && inputs.push_image && github.ref == 'refs/heads/main' }}
-    permissions:
-      actions: write  # required for gh workflow run (workflow_dispatch)
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-      - name: Trigger Linea Besu Package Release
-        run: |
-          echo "Triggering linea-besu-package-release"
-          gh workflow run "linea-besu-package-release.yml" \
-            --ref ${{ github.head_ref || github.ref_name }} \
-            -f skip_e2e_test="true"
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   
   # If all jobs are skipped, the workflow will still succeed.
   always_succeed:
     runs-on: ubuntu-24.04
-    needs: [coordinator, postman, prover, transaction_exclusion_api, native_yield_automation_service, linea_besu_package_build_and_upload, linea_besu_package_build_and_publish]
+    needs: [coordinator, postman, prover, transaction_exclusion_api, native_yield_automation_service, linea_besu_package_build_and_upload]
     if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'success') && !contains(needs.*.result, 'cancelled') }}
     steps:
       - name: Ensure Workflow Success

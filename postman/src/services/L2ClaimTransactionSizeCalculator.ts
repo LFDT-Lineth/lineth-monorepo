@@ -61,6 +61,7 @@ export class L2ClaimTransactionSizeCalculator implements IL2ClaimTransactionSize
       }
 
       const transaction = Transaction.from({
+        chainId: 1, // hardcoded as non-zero as 0 would be complained by compressor
         to: destinationAddress,
         value: 0n,
         data: transactionData,

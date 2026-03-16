@@ -2,8 +2,7 @@
 buildscript {
   ext {
     besuPluginDir = File.createTempDir("plugins")
-    targetReleaseVersion = "${releases.versions.arithmetization.get()}"
-    releaseVersion = findProperty('releaseVersion') ?: targetReleaseVersion
+    releaseVersion = project.findProperty('releaseVersion') ?: 'SNAPSHOT'
     distributionIdentifier = "linea-tracer"
     distibutionBaseName = "linea-arithmetization"
   }
@@ -76,14 +75,18 @@ sonar {
   }
 }
 
-version = project.hasProperty('releaseVersion') ? project.getProperty('releaseVersion') : 'snapshot'
+version = project.findProperty('releaseVersion') ?: "SNAPSHOT"
+
+apply from: file("gradle/java.gradle")
 
 jar {
   archiveBaseName = distibutionBaseName
+  version = calculateVersion()
 }
 
 distributions {
   main {
     distributionBaseName = distibutionBaseName
+    version = calculateVersion()
   }
 }

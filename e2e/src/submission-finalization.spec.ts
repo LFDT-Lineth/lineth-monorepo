@@ -1,4 +1,3 @@
-import { etherToWei } from "@consensys/linea-shared-utils";
 import { describe, expect, it } from "@jest/globals";
 
 import { waitForEvents, awaitUntil, getBlockByNumberOrBlockTag } from "./common/utils";

@@ -1,0 +1,84 @@
+name: Build and Publish Linea Besu
+
+permissions:
+  contents: write  # required to push libs.versions.toml update to the PR branch
+  actions: read
+  packages: write
+
+on:
+  workflow_call:
+    secrets:
+      CLOUDSMITH_USER:
+        required: false
+      CLOUDSMITH_API_KEY:
+        required: false
+
+jobs:
+  build:
+    environment: publish
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java and Gradle
+        uses: ./.github/actions/setup-java-and-gradle
+        with:
+          java-version: '21'
+      
+      - name: Build besu from source and publish to maven including Cloudsmith
+        run: ./gradlew buildAndUpdateBesuVersionInLibsVersions -PpublishToMaven=true
+        env:
+          JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
+          ORG_GRADLE_PROJECT_cloudsmithUser: ${{ secrets.CLOUDSMITH_USER }}
+          ORG_GRADLE_PROJECT_cloudsmithApiKey: ${{ secrets.CLOUDSMITH_API_KEY }}
+      
+      - name: Parse besu version from lib.versions.toml
+        id: release_versions
+        uses: ./.github/actions/parse-release-versions
+
+      - name: Check besu distribution exists
+        id: check_besu_dist
+        run: |
+          BESU_DIST="tmp/besu-eth/build/distributions/besu-${{ steps.release_versions.outputs.besu_version }}.tar.gz"
+          if [ -f "$BESU_DIST" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping Cloudsmith publish: $BESU_DIST not found"
+          fi
+
+      - name: Publish besu distribution artifact to Cloudsmith
+        if: steps.check_besu_dist.outputs.exists == 'true'
+        run: |
+          sudo apt update
+          sudo apt install -y python3 python3-pip python3-venv
+          python3 -m venv tmp/cloudsmith-env
+          source tmp/cloudsmith-env/bin/activate
+          python3 -m pip install --upgrade cloudsmith-cli
+          cloudsmith push raw consensys/linea-besu tmp/besu-eth/build/distributions/besu-${LINEA_BESU_VERSION}.tar.gz \
+            --republish \
+            --name 'linea-besu.tar.gz' \
+            --version "${LINEA_BESU_VERSION}" \
+            --summary "Linea Besu ${LINEA_BESU_VERSION} binary distribution" \
+            --description "Binary distribution of Linea Besu ${LINEA_BESU_VERSION}." \
+            --content-type 'application/tar+gzip'
+        env:
+          CLOUDSMITH_USER: ${{ secrets.CLOUDSMITH_USER }}
+          CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
+          LINEA_BESU_VERSION: ${{ steps.release_versions.outputs.besu_version }}
+
+      - name: Commit and push gradle/libs.versions.toml besu version update to PR
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          git fetch origin "$BRANCH"
+          git checkout "$BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet gradle/libs.versions.toml; then
+            echo "No changes to libs.versions.toml, skipping commit"
+          else
+            git add gradle/libs.versions.toml
+            git commit -m "chore: update besu version in libs.versions.toml after building linea-besu from source"
+            git push origin "$BRANCH"
+          fi

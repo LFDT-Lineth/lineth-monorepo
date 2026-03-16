@@ -40,21 +40,21 @@ tasks.withType(JavaCompile) {
 
 def lineaSequencerProject = project(lineaSequencerProjectPath)
 
-// Takes the version, and if -SNAPSHOT is part of it replaces SNAPSHOT
+// Takes the version, and if it equals "SNAPSHOT" or the suffix is "-SNAPSHOT" replaces SNAPSHOT
 // with the git commit version.
 ext.calculateVersion = { ->
   // First try to get releaseVersion from project properties (for -P overrides),
   // otherwise fallback to the parent project's releaseVersion
-  String version = project.hasProperty('releaseVersion') ? 
-    project.releaseVersion : lineaSequencerProject.releaseVersion
-  if (version.endsWith("-SNAPSHOT")) {
-    version = version.replace("-SNAPSHOT", "-dev-${getCheckedOutGitCommitHash()}")
+  String version = project.findProperty('releaseVersion') ?: "SNAPSHOT"
+  if (version.equals("SNAPSHOT") || version.endsWith("-SNAPSHOT")) {
+    def lastSnapshot = version.lastIndexOf("SNAPSHOT")
+    version = version.substring(0, lastSnapshot) + "dev-${getCheckedOutGitCommitHash()}"
   }
 
   return version
 }
 
 static def getCheckedOutGitCommitHash() {
-  def hashLength = 8
+  def hashLength = 7
   "git rev-parse HEAD".execute().text.take(hashLength)
 }

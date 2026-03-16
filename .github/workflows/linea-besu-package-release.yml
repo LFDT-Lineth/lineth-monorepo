@@ -3,18 +3,23 @@ name: linea-besu-package-release
 on:
   workflow_dispatch:
     inputs:
-      download_tracer_sequencer_artifacts:
-        description: 'Type "true" to download tracer and sequencer artifacts with versions from linea-besu-package/versions.env'
+      release_tag_prefix:
+        description: 'Custom release tag prefix, i.e. docker image tag would be [prefix]-[YYYYMMDDHHMMSS]-[commit], if not given, would be dev-[YYYYMMDDHHMMSS]-[commit]'
         required: false
         type: string
         default: ''
+      draft_release:
+        description: 'Draft Release'
+        required: false
+        default: false
+        type: boolean
+      pre_release:
+        description: 'Pre Release'
+        required: false
+        default: false
+        type: boolean
       without_besu_fleet_plugin:
         description: 'Type "true" to exclude besu-fleet-plugin in the release'
-        required: false
-        type: string
-        default: ''
-      expected_traces_api_version_override:
-        description: '(For Debug) If given, this will override the expected traces api version in coordinator config'
         required: false
         type: string
         default: ''
@@ -39,11 +44,12 @@ jobs:
   build-test-push:
     uses: ./.github/workflows/reuse-linea-besu-package-build-test-push.yml
     with:
-      build_from_source: ${{ inputs.download_tracer_sequencer_artifacts != 'true' }}
+      release_tag_prefix: ${{ inputs.release_tag_prefix != '' && inputs.release_tag_prefix || 'dev' }}
       run_test: true
       run_e2e_test: ${{ inputs.skip_e2e_test != 'true' }}
       push_image: ${{ inputs.skip_push_image != 'true' }}
-      expected_traces_api_version_override: ${{ inputs.expected_traces_api_version_override }}
+      draft_release: ${{ inputs.draft_release }}
+      pre_release: ${{ inputs.pre_release }}
       with_besu_fleet_plugin: ${{ inputs.without_besu_fleet_plugin != 'true' }}
     secrets: inherit
 

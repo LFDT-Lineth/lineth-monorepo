@@ -1,7 +1,7 @@
 # Linea tracer (zkEVM)
 
 This folder hosts a Linea tracing implementation for
-[Besu](https://github.com/hyperledger/besu) based on an
+[Besu](https://github.com/besu-eth/besu) based on an
 implementation in Go.
 
 Tracing refers to the process of extracting data from the execution of an EVM client in order to construct large matrices known as execution traces. Execution traces are subject to the constraint system specified in the [linea-specification](https://github.com/Consensys/linea-specification) repo and implemented in the [tracer-constraints](../tracer-constraints) folder.
@@ -30,7 +30,7 @@ Linea's stack is made up of multiple components, these include:
 > This repository contains the elements of the Linea stack responsible for this process.
 
 - [linea-monorepo](https://github.com/Consensys/linea-monorepo): The main repository for the Linea stack & network in which this folder lives
-- [besu](https://github.com/hyperledger/besu): Besu client
+- [besu](https://github.com/besu-eth/besu): Besu client
 - [linea-sequencer](https://github.com/Consensys/linea-sequencer): A set of Linea-Besu plugins for the sequencer and RPC nodes
 - [tracer-constraints](../tracer-constraints) folder: Implementation of the constraint system from the specification
 - [linea-specification](https://github.com/Consensys/linea-specification): Specification of the constraint system defining Linea's zkEVM

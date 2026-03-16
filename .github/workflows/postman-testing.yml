@@ -24,7 +24,7 @@ jobs:
 
       - name: Run tests and generate coverage report
         env:
-          NATIVE_LIBS_RELEASE_TAG: blob-libs-v1.2.0
+          NATIVE_LIBS_RELEASE_TAG: blob-libs-v3.0.1
         run: |
           pnpm run -F ./ts-libs/linea-native-libs build;
           pnpm run -F linea-shared-utils build;

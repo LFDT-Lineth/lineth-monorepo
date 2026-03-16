@@ -22,8 +22,6 @@ jobs:
   build:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     outputs:
-      createTag: ${{ steps.upload-assets.outputs.CREATE_TAG }}
-      releaseTag: ${{ steps.config.outputs.RELEASE_TAG }}
       versionTag: ${{ steps.config.outputs.VERSION_TAG }}
     steps:
       - name: Configure Tag
@@ -35,7 +33,6 @@ jobs:
             exit 1
           fi
           echo "VERSION_TAG=${tag_name#linea-tracer-}" >> $GITHUB_OUTPUT
-          echo "RELEASE_TAG=${tag_name}" >> $GITHUB_OUTPUT
         env:
           tag_name: ${{ inputs.release_tag }}
 
@@ -54,16 +51,6 @@ jobs:
         env:
           JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
 
-      - name: Upload assets
-        id: upload-assets
-        run: |
-          echo "CREATE_TAG=$(gh release create "${{ steps.config.outputs.RELEASE_TAG }}" $jar_asset --target "${{ github.ref }}" 2>&1)" >> $GITHUB_OUTPUT
-          gh release upload ${{ steps.config.outputs.RELEASE_TAG }} $zip_asset
-        env:
-          jar_asset: ./tracer/plugins/build/libs/linea-tracer-${{ steps.config.outputs.VERSION_TAG }}.jar
-          zip_asset: ./tracer/plugins/build/distributions/linea-tracer-${{ steps.config.outputs.VERSION_TAG }}.zip
-          GH_TOKEN: ${{ github.token }}
-
       - name: Set up GCC
         uses: egor-tensin/setup-gcc@a2861a8b8538f49cf2850980acccf6b05a1b2ae4 #v2.0
 
@@ -80,26 +67,6 @@ jobs:
 
       - name: Run spotless
         run: ./gradlew --no-daemon --parallel :tracer:clean :tracer:spotlessCheck
-
-  # ==================================================================
-  # Delete created tag on build failure
-  # ==================================================================
-
-  delete-tag-on-failure:
-    needs: [ build ]
-    if: always() && needs.build.result == 'failure'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Delete tag created without release
-        run: |
-          if [[ "${{ needs.build.outputs.createTag }}" != "a release with the same tag name already exists:"* ]]; then
-            delete_output=$(gh release delete "${{needs.build.outputs.releaseTag}}" --repo "${{ github.repository }}" --cleanup-tag --yes 2>&1) || [[ "${delete_output}" == "release not found" ]]
-            echo "Deleted tag and release: ${{ needs.build.outputs.releaseTag }}";
-          else
-            echo "${{ needs.build.outputs.createTag }}";
-          fi
-        env:
-          GH_TOKEN: ${{ github.token }}
 
   # ==================================================================
   # Unit Tests

@@ -8,7 +8,7 @@ inputs:
   target_file_path:
     description: 'The target file path relative to the repo root'
     required: false
-    default: 'gradle/releases.versions.toml'
+    default: 'gradle/libs.versions.toml'
 outputs:
   version_changed:
     description: 'Whether the target lib version has changed: true (changed) and false (unchanged)'

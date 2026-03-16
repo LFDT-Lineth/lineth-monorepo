@@ -39,18 +39,6 @@ dependencies {
 
 apply from: lineaSequencerProject.file("gradle/dist.gradle")
 
-distZip {
-  archiveBaseName = 'linea-sequencer'
-  exclude '**/arithmetization-*.jar'
-}
-
-// Simple artifacts task that runs jar and distPlugin
-task artifacts {
-  group = 'Build'
-  description = 'Creates all build artifacts (JAR and distribution ZIP)'
-  dependsOn 'jar', 'distZip'
-}
-
 test {
   useJUnitPlatform()
   // Disable parallel execution for this module due to WireMock test interference

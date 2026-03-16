@@ -8,7 +8,15 @@ permissions:
 on:
   workflow_call:
     inputs:
-      build_from_source:
+      release_tag_prefix:
+        required: true
+        type: string
+      draft_release:
+        description: 'Draft Release'
+        required: true
+        type: boolean
+      pre_release:
+        description: 'Pre Release'
         required: true
         type: boolean
       run_test:
@@ -20,9 +28,6 @@ on:
       push_image:
         required: true
         type: boolean
-      expected_traces_api_version_override:
-        required: true
-        type: string
       with_besu_fleet_plugin:
         required: true
         type: boolean
@@ -46,8 +51,8 @@ jobs:
     uses: ./.github/workflows/linea-besu-package-build-and-upload.yml
     if: ${{ inputs.run_test || inputs.run_e2e_test }}
     with:
+      release_tag_prefix: ${{ inputs.release_tag_prefix }}
       with_besu_fleet_plugin: ${{ inputs.with_besu_fleet_plugin }}
-      build_from_source: ${{ inputs.build_from_source }}
     secrets: inherit
 
   run-test:
@@ -55,7 +60,7 @@ jobs:
     if: ${{ inputs.run_test }}
     concurrency:
       group: run-test-${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: ${{ github.ref != 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
     uses: ./.github/workflows/reuse-linea-besu-package-run-test.yml
     with:
       dockerimage: ${{ needs.build-and-upload-artifact.outputs.dockerimage }}
@@ -65,11 +70,10 @@ jobs:
     if: ${{ inputs.run_e2e_test }}
     concurrency:
       group: run-e2e-tests-${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: ${{ github.ref != 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
     uses: ./.github/workflows/reuse-linea-besu-package-run-e2e-tests.yml
     with:
       linea_besu_package_tag: ${{ needs.build-and-upload-artifact.outputs.linea_besu_package_tag }}
-      expected_traces_api_version: ${{ inputs.expected_traces_api_version_override || needs.build-and-upload-artifact.outputs.expected_traces_api_version }}
       e2e-tests-logs-dump: true
       e2e-tests-with-besu-fleet: ${{ inputs.with_besu_fleet_plugin }}
     secrets: inherit
@@ -90,7 +94,7 @@ jobs:
         id: build-plugins-and-assemble
         uses: ./.github/actions/linea-besu-package/build-plugins-and-assemble
         with:
-          build_from_source: ${{ inputs.build_from_source }}
+          release_tag_prefix: ${{ inputs.release_tag_prefix }}
           with_besu_fleet_plugin: ${{ inputs.with_besu_fleet_plugin }}
           fleet_github_app_id: ${{ secrets.FLEET_GITHUB_APP_ID }}
           fleet_github_app_private_key: ${{ secrets.FLEET_GITHUB_APP_PRIVATE_KEY }}
@@ -181,7 +185,7 @@ jobs:
           echo "### Besu and Plugin Details" >> output.md
           echo "| Module | Version | SHA-256 |" >> output.md
           echo "|--------|---------|--------------|" >> output.md
-          echo "| linea-besu | ${{ steps.build-plugins-and-assemble.outputs.besu_version }} | $(sha256sum ../linea-besu-package/tmp/${{ steps.build-plugins-and-assemble.outputs.besu_filename_prefix }}-${{ steps.build-plugins-and-assemble.outputs.besu_version }}.tar.gz | awk '{ print $1 }' ) |" >> output.md
+          echo "| linea-besu | ${{ steps.build-plugins-and-assemble.outputs.besu_version }} | $(sha256sum ../linea-besu-package/tmp/besu-${{ steps.build-plugins-and-assemble.outputs.besu_version }}.tar.gz | awk '{ print $1 }' ) |" >> output.md
           echo "| linea-sequencer-plugin | ${{ steps.build-plugins-and-assemble.outputs.sequencer_plugin_version }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/linea-sequencer-${{steps.build-plugins-and-assemble.outputs.sequencer_plugin_version }}.jar | awk '{ print $1 }' ) |" >> output.md    
           echo "| linea-tracer-plugin | ${{ steps.build-plugins-and-assemble.outputs.tracer_plugin_version }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/linea-tracer-${{ steps.build-plugins-and-assemble.outputs.tracer_plugin_version }}.jar | awk '{ print $1 }' ) |" >> output.md    
           echo "| linea-staterecovery-plugin | ${{ steps.build-plugins-and-assemble.outputs.staterecovery_version }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/linea-staterecovery-besu-plugin-v${{ steps.build-plugins-and-assemble.outputs.staterecovery_version }}.jar | awk '{ print $1 }' ) |" >> output.md    
@@ -215,7 +219,6 @@ jobs:
           fi
 
       - name: Conventional Changelog Action
-        if: ${{ github.event_name == 'workflow_dispatch' }}
         id: change_log
         uses: TriPSs/conventional-changelog-action@3c4970b6573374889b897403d2f1278c395ea0df #v5.4.0
         with:
@@ -224,7 +227,6 @@ jobs:
           output-file: "false"
 
       - name: Append Changelog Action to release note
-        if: ${{ github.event_name == 'workflow_dispatch' }}
         id: append_change_log
         shell: bash
         run: |
@@ -240,7 +242,8 @@ jobs:
           name: Linea Besu Package ${{ steps.build-plugins-and-assemble.outputs.releasetag }}
           tag_name: linea-besu-package-${{ steps.build-plugins-and-assemble.outputs.releasetag }}
           body_path: release/output.md
-          prerelease: ${{  github.event_name != 'workflow_dispatch' }}
+          draft: ${{ inputs.draft_release }}
+          prerelease: ${{ inputs.pre_release }}
           generate_release_notes: false
           target_commitish: ${{ github.sha }}
           fail_on_unmatched_files: true

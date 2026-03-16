@@ -18,7 +18,7 @@ object BlsMapFpToG1OverflowSetup {
 
   /**
    * Test cases from
-   * https://github.com/hyperledger/besu/blob/main/evm/src/test/resources/org/hyperledger/besu/evm/precompile/fp_to_g1.csv
+   * https://github.com/besu-eth/besu/blob/main/evm/src/test/resources/org/hyperledger/besu/evm/precompile/fp_to_g1.csv
    * One call to BLS12_MAP_FP_TO_G1 with any of these inputs triggers PRECOMPILE_BLS_MAP_FP_TO_G1_EFFECTIVE_CALLS=1.
    */
   val invalidInputs: Array<Bytes> =
