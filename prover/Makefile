@@ -5,7 +5,7 @@ VERSION := $(shell git rev-parse --short=7 HEAD)
 
 # beta-v5.0-rc5
 CONSTRAINTS_COMMIT_HASH := 4d1eea0c4b78c7742b292764319fb4ae3b9ac83b
-GO_CORSET_VERSION := v1.2.6
+GO_CORSET_VERSION := v1.2.7
 
 CONSTRAINTS_TEMP_FOLDER := build/tmp/deps
 # Find where Go installs binaries

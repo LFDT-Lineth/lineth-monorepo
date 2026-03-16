@@ -153,6 +153,7 @@ func NewModule(comp *wizard.CompiledIOP, name string, ss *statesummary.Module, m
 		ifaces.QueryID(name+"_STATE_SUM_STAY_SAME"),
 		sym.Mul(
 			column.Shift(ch.StateSumOngoing, 1),
+			ch.StateSumMiMC, // For delegation account, the state-summary may be zero and that's ok
 			sym.Sub(
 				column.Shift(ch.StateSumIsConst, 1),
 				sym.Mul(
