@@ -343,6 +343,6 @@ public class Utilities {
     // Randomly shuffle the items
     Collections.shuffle(items, rng);
     //
-    return items.subList(0, n);
+    return items.subList(0, Math.min(n, items.size()));
   }
 }

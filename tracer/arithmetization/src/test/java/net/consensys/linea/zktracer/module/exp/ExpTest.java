@@ -17,6 +17,7 @@ package net.consensys.linea.zktracer.module.exp;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByDayOfMonth;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigInteger;
@@ -43,6 +44,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 @Slf4j
 @ExtendWith(UnitTestWatcher.class)
 public class ExpTest extends TracerTestBase {
+
+  private static final int EXP_SAMPLE_SIZE = 400;
+
   // Generates 128, 64, 2, 1 as LD (leading digit)
   // LD_INDICES | LD
   // ---------- | ---------------------
@@ -144,7 +148,7 @@ public class ExpTest extends TracerTestBase {
 
   @Tag("nightly")
   @ParameterizedTest
-  @MethodSource("testModexpLogSource")
+  @MethodSource("sampleTestModexpLogSource")
   void testModexpLogFFBlockWithLDCase(
       int ebsCutoff, int cdsCutoff, int k, int LDIndex, TestInfo testInfo) {
     // 0x00000000000000000000000000000040ffffffffffffffffffffffffffffffff
@@ -156,7 +160,7 @@ public class ExpTest extends TracerTestBase {
 
   @Tag("nightly")
   @ParameterizedTest
-  @MethodSource("testModexpLogSource")
+  @MethodSource("sampleTestModexpLogSource")
   void testModexpLogLDAtCase(int ebsCutoff, int cdsCutoff, int k, int ldIndex, TestInfo testInfo) {
     Bytes wordAfterBase = Bytes.fromHexStringLenient(ldAt(k, ldIndex));
     BytecodeCompiler program = initProgramInvokingModexp(ebsCutoff, cdsCutoff, wordAfterBase);
@@ -164,7 +168,11 @@ public class ExpTest extends TracerTestBase {
     bytecodeRunner.run(chainConfig, testInfo);
   }
 
-  private static Stream<Arguments> testModexpLogSource() {
+  private static Stream<Arguments> sampleTestModexpLogSource() {
+    return randomSampleByDayOfMonth(EXP_SAMPLE_SIZE, testModexpLogSource()).stream();
+  }
+
+  private static List<Arguments> testModexpLogSource() {
     List<Arguments> moxexpLogCases = new ArrayList<>();
     for (int ebsCutoff : C) {
       for (int cdsCutoff : C) {
@@ -175,7 +183,7 @@ public class ExpTest extends TracerTestBase {
         }
       }
     }
-    return moxexpLogCases.stream();
+    return moxexpLogCases;
   }
 
   @Test

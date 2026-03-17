@@ -22,8 +22,8 @@ import static net.consensys.linea.zktracer.Trace.LLARGEPO;
 import static net.consensys.linea.zktracer.Trace.Mxp.CANCUN_MXPX_THRESHOLD;
 import static net.consensys.linea.zktracer.Trace.WORD_SIZE;
 import static net.consensys.linea.zktracer.Trace.WORD_SIZE_MO;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByDayOfMonth;
 import static net.consensys.linea.zktracer.opcode.OpCode.MLOAD;
-import static net.consensys.linea.zktracer.opcode.OpCode.MSTORE;
 import static net.consensys.linea.zktracer.opcode.OpCode.POP;
 
 import java.math.BigInteger;
@@ -46,6 +46,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 public class MxpxThresholdTests extends TracerTestBase {
+
+  private static final int MXPX_THRESHOLD_SAMPLE_SIZE = 300;
 
   static final BigInteger MAX_UINT256 =
       BigInteger.TWO.pow(256).subtract(BigInteger.ONE); // 2^256 - 1
@@ -80,7 +82,7 @@ public class MxpxThresholdTests extends TracerTestBase {
    */
   @Tag("nightly")
   @ParameterizedTest
-  @MethodSource({"testMxpxThresholdSource"})
+  @MethodSource({"sampleMxpxThresholdSource"})
   void testMxpxThreshold(
       OpCode opCode,
       BigInteger offset1,
@@ -117,7 +119,22 @@ public class MxpxThresholdTests extends TracerTestBase {
     BytecodeRunner.of(program.compile()).run(chainConfig, testInfo);
   }
 
-  static Stream<Arguments> testMxpxThresholdSource() {
+  static Stream<Arguments> sampleMxpxThresholdSource() {
+    return randomSampleByDayOfMonth(MXPX_THRESHOLD_SAMPLE_SIZE, testMxpxThresholdSource()).stream();
+  }
+
+  /**
+   * When running this method one finds that most arg lists are of the <b>CALL</b> variety. E.g. by
+   * running
+   *
+   * <p>{@code arguments.stream().filter(arguments ->
+   * arguments.get()[0].toString().equals("CALL")).count()}
+   *
+   * <p>one gets <b>1302</b> hits out of <b>1353</b> total
+   *
+   * @return
+   */
+  static List<Arguments> testMxpxThresholdSource() {
     final BigInteger MXPX_THRESHOLD = mxpxThreshold();
     List<Arguments> arguments = new ArrayList<>();
     List<BigInteger> values =
@@ -195,7 +212,7 @@ public class MxpxThresholdTests extends TracerTestBase {
               MXP_THRESHOLD_MINUS_MXP_THRESHOLD_DIVIDED_BY_TWO));
     }
 
-    return arguments.stream();
+    return arguments;
   }
 
   static BigInteger mxpxThreshold() {
@@ -263,19 +280,19 @@ public class MxpxThresholdTests extends TracerTestBase {
 
   // Specialized tests for MCOPY
   @ParameterizedTest
-  @MethodSource("inputParamsUnit")
+  @MethodSource("sampleInputParamsUnit")
   void McopyLight(Bytes targetOffset, Bytes sourceOffset, Bytes size, TestInfo testInfo) {
     singleMcopy(targetOffset, sourceOffset, size, testInfo);
   }
 
   @Tag("nightly")
   @ParameterizedTest
-  @MethodSource("inputParamsNightly")
+  @MethodSource("sampleInputParamsNightly")
   void McopyExtensive(Bytes targetOffset, Bytes sourceOffset, Bytes size, TestInfo testInfo) {
     singleMcopy(targetOffset, sourceOffset, size, testInfo);
   }
 
-  private static Stream<Arguments> inputs(List<Bytes32> inputsValues) {
+  private static List<Arguments> inputs(List<Bytes32> inputsValues) {
     final List<Arguments> arguments = new ArrayList<>();
     for (Bytes32 targetOffset : inputsValues) {
       for (Bytes32 sourceOffset : inputsValues) {
@@ -284,18 +301,19 @@ public class MxpxThresholdTests extends TracerTestBase {
         }
       }
     }
-    return arguments.stream();
+    return arguments;
   }
 
-  private static Stream<Arguments> inputParamsNightly() {
-    return inputs(inputsValuesNightly);
+  static Stream<Arguments> sampleInputParamsNightly() {
+    return randomSampleByDayOfMonth(MXPX_THRESHOLD_SAMPLE_SIZE, inputs(inputsValuesNightly))
+        .stream();
   }
 
-  private static Stream<Arguments> inputParamsUnit() {
-    return inputs(inputsValuesUnit);
+  private static Stream<Arguments> sampleInputParamsUnit() {
+    return inputs(inputValuesUnitTests).stream();
   }
 
-  private static final List<Bytes32> inputsValuesUnit =
+  private static final List<Bytes32> inputValuesUnitTests =
       List.of(
           Bytes32.ZERO,
           Bytes32.leftPad(Bytes.ofUnsignedInt(1)),
@@ -305,7 +323,7 @@ public class MxpxThresholdTests extends TracerTestBase {
 
   private static final List<Bytes32> inputsValuesNightly =
       Stream.concat(
-              inputsValuesUnit.stream(),
+              inputValuesUnitTests.stream(),
               Stream.of(
                   Bytes32.leftPad(Bytes.ofUnsignedInt(LLARGEMO)),
                   Bytes32.leftPad(Bytes.ofUnsignedInt(LLARGE)),

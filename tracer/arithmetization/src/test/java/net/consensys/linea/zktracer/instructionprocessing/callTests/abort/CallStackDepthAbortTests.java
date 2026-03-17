@@ -36,7 +36,7 @@ public class CallStackDepthAbortTests extends TracerTestBase {
   @ParameterizedTest
   @EnumSource(
       value = OpCode.class,
-      names = {"CALL", "CALLCODE", "DELEGATECALL", "STATICCALL"})
+      names = {"CALL", "CALLCODE", "STATICCALL", "DELEGATECALL"})
   void attemptAtCallStackDepthAbortWillRevert(OpCode callOpCode, TestInfo testInfo) {
 
     BytecodeCompiler program = BytecodeCompiler.newProgram(chainConfig);
@@ -49,7 +49,7 @@ public class CallStackDepthAbortTests extends TracerTestBase {
   @ParameterizedTest
   @EnumSource(
       value = OpCode.class,
-      names = {"CALL", "CALLCODE", "DELEGATECALL", "STATICCALL"})
+      names = {"CALL", "CALLCODE", "STATICCALL", "DELEGATECALL"})
   void attemptAtCallStackDepthAbort(OpCode callOpCode, TestInfo testInfo) {
 
     BytecodeCompiler program = BytecodeCompiler.newProgram(chainConfig);
