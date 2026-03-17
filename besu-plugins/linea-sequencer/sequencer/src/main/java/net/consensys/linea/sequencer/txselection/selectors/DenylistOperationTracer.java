@@ -24,8 +24,7 @@ import org.hyperledger.besu.evm.worldstate.WorldView;
  */
 public class DenylistOperationTracer implements OperationTracer {
 
-  private final ThreadLocal<Set<Address>> calledAddresses =
-      ThreadLocal.withInitial(HashSet::new);
+  private final ThreadLocal<Set<Address>> calledAddresses = ThreadLocal.withInitial(HashSet::new);
 
   @Override
   public void traceStartTransaction(final WorldView worldView, final Transaction transaction) {

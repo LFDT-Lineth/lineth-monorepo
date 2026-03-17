@@ -69,7 +69,8 @@ class DenylistOperationTracerTest {
     tracer.traceContextEnter(mockFrame(ADDRESS_2, ADDRESS_2));
     tracer.traceContextEnter(mockFrame(ADDRESS_3, ADDRESS_3));
 
-    assertThat(tracer.getCalledAddresses()).containsExactlyInAnyOrder(ADDRESS_1, ADDRESS_2, ADDRESS_3);
+    assertThat(tracer.getCalledAddresses())
+        .containsExactlyInAnyOrder(ADDRESS_1, ADDRESS_2, ADDRESS_3);
   }
 
   @Test

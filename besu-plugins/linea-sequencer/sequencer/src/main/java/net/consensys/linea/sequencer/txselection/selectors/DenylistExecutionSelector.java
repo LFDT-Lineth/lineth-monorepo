@@ -31,7 +31,8 @@ public class DenylistExecutionSelector implements PluginTransactionSelector {
   private final AtomicReference<Set<Address>> denied;
   private final DenylistOperationTracer tracer;
 
-  public DenylistExecutionSelector(final AtomicReference<Set<Address>> denied, final DenylistOperationTracer tracer) {
+  public DenylistExecutionSelector(
+      final AtomicReference<Set<Address>> denied, final DenylistOperationTracer tracer) {
     this.denied = denied;
     this.tracer = tracer;
   }
@@ -51,8 +52,7 @@ public class DenylistExecutionSelector implements PluginTransactionSelector {
       if (denyList.contains(calledAddress)) {
         log.atInfo()
             .setMessage("action=reject_filtered_address_called txHash={} calledAddress={}")
-            .addArgument(
-                () -> evaluationContext.getPendingTransaction().getTransaction().getHash())
+            .addArgument(() -> evaluationContext.getPendingTransaction().getTransaction().getHash())
             .addArgument(calledAddress)
             .log();
         return TX_FILTERED_ADDRESS_CALLED;

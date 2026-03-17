@@ -24,17 +24,17 @@ jobs:
         with:
           enable-ssh: false
 
+      - name: Build besu from source 
+        shell: bash
+        run: ./gradlew buildAndUpdateBesuVersionInLibsVersions -PskipDownloadBesuDist=true
+        env:
+          JAVA_OPTS: -Xmx2g
+
       - name: spotless
         run: ./gradlew --parallel besu-plugins:linea-sequencer:spotlessCheck
 
       - name: Build
         run: ./gradlew besu-plugins:linea-sequencer:build
-
-      - name: Upload distribution artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: distributions
-          path: besu-plugins/linea-sequencer/sequencer/build/libs
 
       - name: Run unit tests
         run: ./gradlew besu-plugins:linea-sequencer:sequencer:test
@@ -65,6 +65,12 @@ jobs:
         uses: ./.github/actions/setup-tracer-environment
         with:
           enable-ssh: false
+
+      - name: Build besu from source 
+        shell: bash
+        run: ./gradlew buildAndUpdateBesuVersionInLibsVersions -PskipDownloadBesuDist=true
+        env:
+          JAVA_OPTS: -Xmx2g
 
       - name: Run acceptance tests
         run: ./gradlew besu-plugins:linea-sequencer:acceptance-tests:acceptanceTests

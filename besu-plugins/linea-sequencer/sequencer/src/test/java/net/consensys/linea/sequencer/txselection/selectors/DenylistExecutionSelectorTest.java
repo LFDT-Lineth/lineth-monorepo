@@ -61,7 +61,8 @@ class DenylistExecutionSelectorTest {
     tracer.traceContextEnter(mockFrame(CLEAN_ADDRESS));
 
     final var result =
-        selector.evaluateTransactionPostProcessing(mockContext(), mock(TransactionProcessingResult.class));
+        selector.evaluateTransactionPostProcessing(
+            mockContext(), mock(TransactionProcessingResult.class));
 
     assertThat(result).isEqualTo(SELECTED);
   }
@@ -74,7 +75,8 @@ class DenylistExecutionSelectorTest {
     tracer.traceContextEnter(mockFrame(DENIED_ADDRESS));
 
     final var result =
-        selector.evaluateTransactionPostProcessing(mockContext(), mock(TransactionProcessingResult.class));
+        selector.evaluateTransactionPostProcessing(
+            mockContext(), mock(TransactionProcessingResult.class));
 
     assertThat(result).isEqualTo(TX_FILTERED_ADDRESS_CALLED);
   }
@@ -85,7 +87,8 @@ class DenylistExecutionSelectorTest {
     tracer.traceStartTransaction(null, null);
 
     final var result =
-        selector.evaluateTransactionPostProcessing(mockContext(), mock(TransactionProcessingResult.class));
+        selector.evaluateTransactionPostProcessing(
+            mockContext(), mock(TransactionProcessingResult.class));
 
     assertThat(result).isEqualTo(SELECTED);
   }
@@ -97,19 +100,22 @@ class DenylistExecutionSelectorTest {
 
     // Initially not denied
     var result =
-        selector.evaluateTransactionPostProcessing(mockContext(), mock(TransactionProcessingResult.class));
+        selector.evaluateTransactionPostProcessing(
+            mockContext(), mock(TransactionProcessingResult.class));
     assertThat(result).isEqualTo(SELECTED);
 
     // Update denylist
     deniedAddresses.set(Set.of(DENIED_ADDRESS));
     result =
-        selector.evaluateTransactionPostProcessing(mockContext(), mock(TransactionProcessingResult.class));
+        selector.evaluateTransactionPostProcessing(
+            mockContext(), mock(TransactionProcessingResult.class));
     assertThat(result).isEqualTo(TX_FILTERED_ADDRESS_CALLED);
 
     // Clear denylist
     deniedAddresses.set(Set.of());
     result =
-        selector.evaluateTransactionPostProcessing(mockContext(), mock(TransactionProcessingResult.class));
+        selector.evaluateTransactionPostProcessing(
+            mockContext(), mock(TransactionProcessingResult.class));
     assertThat(result).isEqualTo(SELECTED);
   }
 

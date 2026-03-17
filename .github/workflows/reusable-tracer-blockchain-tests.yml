@@ -61,13 +61,9 @@ jobs:
 
       - name: Download execution spec fixtures
         run: ./gradlew :tracer:reference-tests:downloadExecutionSpecFixtures
-        env:
-          JAVA_OPTS: -Dorg.gradle.daemon=false
 
       - name: Generate execution spec blockchain reference tests
         run: ./gradlew :tracer:reference-tests:generateExecutionSpecBlockchainTests -Dorg.gradle.caching=true
-        env:
-          JAVA_OPTS: -Dorg.gradle.daemon=false
 
       - name: Download artifact
         uses: dawidd6/action-download-artifact@ac66b43f0e6a346234dd65d4d0c8fbb31cb316e5 # v11
@@ -88,7 +84,6 @@ jobs:
         timeout-minutes: 360
         env:
           JUNIT_TESTS_PARALLELISM: 2
-          JAVA_OPTS: -Dorg.gradle.daemon=false
           GOCORSET_FLAGS: -b1024 -v --ansi-escapes=false --report --air
           FAILED_TEST_JSON_DIRECTORY: ${{ github.workspace }}/tmp/${{ steps.extract_branch.outputs.branch }}/
           FAILED_MODULE: ${{ inputs.failed_module || '' }}

@@ -47,6 +47,7 @@ class LineaBesuPlugin implements Plugin<Project> {
 
       def publishToMaven = project.hasProperty('publishToMaven') ? project.publishToMaven.toBoolean() : false
       def publishGradleTaskName = publishToMaven ? "publish" : "publishToMavenLocal"
+      def skipDownloadBesuDist = project.hasProperty('skipDownloadBesuDist') ? project.skipDownloadBesuDist.toBoolean() : false
 
       dependsOn 'checkoutAndResolveVersion'
 
@@ -59,8 +60,11 @@ class LineaBesuPlugin implements Plugin<Project> {
         } else {
           if (isBesuAndDistributionAvailableInMavenLocal(project, resolvedBesuVer)) {
             shouldSkip = true
-          } else if (isBesuAvailableInMaven(project, resolvedBesuVer) &&
-              downloadBesuDistributionFromMaven(project, resolvedBesuVer)) {
+          } else if (isBesuAvailableInMaven(project, resolvedBesuVer) && 
+              (skipDownloadBesuDist || downloadBesuDistributionFromMaven(project, resolvedBesuVer))) {
+            if (skipDownloadBesuDist) {
+              project.logger.lifecycle("Skipping download besu distribution from maven as skipDownloadBesuDist=${skipDownloadBesuDist}")
+            }
             shouldSkip = true
           }
         }
@@ -99,9 +103,10 @@ class LineaBesuPlugin implements Plugin<Project> {
     if (!version) return false
     def mavenLocalBase = System.getProperty('maven.repo.local') ?: "${System.getProperty('user.home')}/.m2/repository"
     def mavenLocalPom = new File(mavenLocalBase, "org/hyperledger/besu/bom/${version}/bom-${version}.pom")
-     def pomExists = mavenLocalPom.exists()
+    def pomExists = mavenLocalPom.exists()
     if (!pomExists) {
       project.logger.lifecycle("isBesuAndDistributionAvailableInMavenLocal: besu:${version} is not in maven local")
+      return false
     } else {
       project.logger.lifecycle("isBesuAndDistributionAvailableInMavenLocal: Besu ${version} was found in maven local")
     }
