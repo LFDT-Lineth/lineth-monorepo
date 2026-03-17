@@ -283,6 +283,11 @@ func unmarshalArithmetization(des *Deserializer, val any, _ reflect.Type) (refle
 		return reflect.Value{}, newSerdeErrorf("could not unmarshal arithmetization: %w", err)
 	}
 	arith := res.Interface().(arithmetization.Arithmetization)
+	// Additional safety check: Override the serialized zkevm-wiop.bin with the freshly embedded one from
+	// the current binary. This ensures the compatibility check uses the
+	// current constraints commit, not the one baked into static assets
+	// which might have been built with different but although compatibile commits.
+	arith.ZkEVMBin = arithmetization.EmbeddedZkEVMBin()
 	// Parse binary file
 	arith.BinaryFile, arith.Metadata, errA = arithmetization.UnmarshalZkEVMBin(arith.ZkEVMBin)
 	if errA != nil {

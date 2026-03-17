@@ -30,6 +30,11 @@ import (
 //go:embed zkevm.bin
 var zkevmStr string
 
+// EmbeddedZkEVMBin returns the raw bytes of the embedded zkevm.bin file.
+func EmbeddedZkEVMBin() []byte {
+	return []byte(zkevmStr)
+}
+
 // UnmarshalZkEVMBin parses and compiles a "zkevm.bin" buffered file into a
 // BinaryFile.  This additionally extracts the metadata map from the zkevm.bin
 // file.  This contains information which can be used to cross-check the
