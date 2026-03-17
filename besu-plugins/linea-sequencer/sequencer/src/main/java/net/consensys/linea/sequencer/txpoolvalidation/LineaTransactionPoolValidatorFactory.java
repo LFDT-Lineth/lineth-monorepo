@@ -80,13 +80,6 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
     this.transactionProfitabilityCalculator = transactionProfitabilityCalculator;
 
     this.deniedAddresses = new AtomicReference<>(txPoolValidatorConf.deniedAddresses());
-
-    if (txPoolValidatorConf.maxTxCalldataSize() != null) {
-      log.warn(
-          "DEPRECATION: --plugin-linea-max-tx-calldata-size is deprecated and will be removed "
-              + "in a future release. Use --plugin-linea-blob-size-limit instead for "
-              + "compression-aware block building.");
-    }
   }
 
   /**

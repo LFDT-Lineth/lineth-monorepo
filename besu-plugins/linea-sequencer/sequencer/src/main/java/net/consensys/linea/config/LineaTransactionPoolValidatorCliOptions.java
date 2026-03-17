@@ -36,7 +36,6 @@ public class LineaTransactionPoolValidatorCliOptions implements LineaCliOptions 
   public static final int DEFAULT_MAX_TRANSACTION_GAS_LIMIT = 30_000_000;
 
   public static final String MAX_TX_CALLDATA_SIZE = "--plugin-linea-max-tx-calldata-size";
-  public static final int DEFAULT_MAX_TX_CALLDATA_SIZE = 60_000;
 
   public static final String TX_POOL_ENABLE_SIMULATION_CHECK_API =
       "--plugin-linea-tx-pool-simulation-check-api-enabled";
