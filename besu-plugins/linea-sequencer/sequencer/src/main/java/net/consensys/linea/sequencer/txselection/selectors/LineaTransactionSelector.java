@@ -26,10 +26,12 @@ import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.jsonrpc.JsonRpcRequestBuilder;
 import net.consensys.linea.metrics.HistogramMetrics;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
+import net.consensys.linea.sequencer.TracerAggregator;
 import net.consensys.linea.sequencer.txselection.InvalidTransactionByLineCountCache;
 import net.consensys.linea.utils.TransactionCompressor;
 import net.consensys.linea.zktracer.LineCountingTracer;
 import org.hyperledger.besu.datatypes.Address;
+import org.hyperledger.besu.plugin.services.tracer.BlockAwareOperationTracer;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.BlockchainService;
@@ -45,6 +47,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       Set.of("TX_MODULE_LINE_COUNT_OVERFLOW", "TX_MODULE_LINE_COUNT_OVERFLOW_CACHED");
 
   private TraceLineLimitTransactionSelector traceLineLimitTransactionSelector;
+  private TracerAggregator tracerAggregator;
   private final List<PluginTransactionSelector> selectors;
   private final Optional<JsonRpcManager> rejectedTxJsonRpcManager;
 
@@ -122,8 +125,15 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
             tracerConfiguration,
             invalidTransactionByLineCountCache);
 
+    final DenylistOperationTracer denylistOperationTracer = new DenylistOperationTracer();
+
+    tracerAggregator =
+        TracerAggregator.create(
+            traceLineLimitTransactionSelector.getOperationTracer(), denylistOperationTracer);
+
     final List<PluginTransactionSelector> selectorsList = new ArrayList<>();
     selectorsList.add(new AllowedAddressTransactionSelector(deniedAddresses));
+    selectorsList.add(new DenylistExecutionSelector(deniedAddresses, denylistOperationTracer));
 
     if (txSelectorConfiguration.maxBlockCallDataSize() != null) {
       selectorsList.add(
@@ -214,7 +224,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
 
     // if pending tx is not from a bundle, then we need to commit now
     if (!(evaluationContext.getPendingTransaction() instanceof TransactionBundle.PendingBundleTx)) {
-      getOperationTracer().commitTransactionBundle();
+      getLineCountingTracer().commitTransactionBundle();
     }
 
     selectors.forEach(
@@ -234,7 +244,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
 
     // if pending tx is not from a bundle, then we need to rollback now
     if (!(evaluationContext.getPendingTransaction() instanceof TransactionBundle.PendingBundleTx)) {
-      getOperationTracer().popTransactionBundle();
+      getLineCountingTracer().popTransactionBundle();
     }
 
     selectors.forEach(
@@ -258,12 +268,23 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
   }
 
   /**
-   * Returns the operation tracer to be used while processing the transactions for the block.
+   * Returns the operation tracer to be used while processing the transactions for the block. This
+   * returns a {@link TracerAggregator} that delegates to both the line counting tracer and the
+   * denylist operation tracer.
    *
    * @return the operation tracer
    */
   @Override
-  public LineCountingTracer getOperationTracer() {
+  public BlockAwareOperationTracer getOperationTracer() {
+    return tracerAggregator;
+  }
+
+  /**
+   * Returns the line counting tracer for commit/rollback operations on transaction bundles.
+   *
+   * @return the line counting tracer
+   */
+  public LineCountingTracer getLineCountingTracer() {
     return traceLineLimitTransactionSelector.getOperationTracer();
   }
 
