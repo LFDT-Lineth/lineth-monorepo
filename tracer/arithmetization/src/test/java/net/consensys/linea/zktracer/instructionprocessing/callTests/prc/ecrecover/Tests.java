@@ -14,7 +14,7 @@
  */
 package net.consensys.linea.zktracer.instructionprocessing.callTests.prc.ecrecover;
 
-import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByDayOfMonth;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 
 import java.util.stream.Stream;
 import net.consensys.linea.zktracer.instructionprocessing.callTests.prc.framework.PrecompileCallTests;
@@ -29,7 +29,7 @@ public class Tests extends PrecompileCallTests<CallParameters> {
 
   public static Stream<Arguments> parameterGeneration() {
     System.out.println("ECRECOVER TESTS=" + ParameterGeneration.parameterGeneration().size());
-    return randomSampleByDayOfMonth(
+    return randomSampleByCurrentCommitHash(
         ECRECOVER_SAMPLE_SIZE, ParameterGeneration.parameterGeneration())
         .stream();
   }

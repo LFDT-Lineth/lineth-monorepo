@@ -14,7 +14,7 @@
  */
 package net.consensys.linea.zktracer.instructionprocessing.callTests.prc.ecadd;
 
-import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByDayOfMonth;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.instructionprocessing.callTests.prc.CodeExecutionMethods.*;
 import static net.consensys.linea.zktracer.instructionprocessing.callTests.prc.GasParameter.COST_MO;
 import static net.consensys.linea.zktracer.instructionprocessing.callTests.prc.ecadd.MemoryContents.WELL_FORMED_POINTS;
@@ -36,7 +36,8 @@ public class Tests extends PrecompileCallTests<CallParameters> {
       Integer.parseInt(System.getenv().getOrDefault("PRC_CALLTESTS_SAMPLE_SIZE", "1000"));
 
   public static Stream<Arguments> parameterGeneration() {
-    return randomSampleByDayOfMonth(ECADD_SAMPLE_SIZE, ParameterGeneration.parameterGeneration())
+    return randomSampleByCurrentCommitHash(
+        ECADD_SAMPLE_SIZE, ParameterGeneration.parameterGeneration())
         .stream();
   }
 

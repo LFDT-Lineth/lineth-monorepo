@@ -17,7 +17,7 @@ package net.consensys.linea.zktracer.module.exp;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByDayOfMonth;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigInteger;
@@ -169,7 +169,7 @@ public class ExpTest extends TracerTestBase {
   }
 
   private static Stream<Arguments> sampleTestModexpLogSource() {
-    return randomSampleByDayOfMonth(EXP_SAMPLE_SIZE, testModexpLogSource()).stream();
+    return randomSampleByCurrentCommitHash(EXP_SAMPLE_SIZE, testModexpLogSource()).stream();
   }
 
   private static List<Arguments> testModexpLogSource() {

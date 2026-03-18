@@ -16,7 +16,6 @@
 package net.consensys.linea.zktracer.module.limits.precompileLimits;
 
 import static net.consensys.linea.testing.BytecodeRunner.MAX_GAS_LIMIT;
-import static net.consensys.linea.zktracer.Fork.forkPredatesOsaka;
 import static net.consensys.linea.zktracer.module.ModuleName.PRECOMPILE_MODEXP_EFFECTIVE_CALLS;
 import static net.consensys.linea.zktracer.module.hub.precompiles.ModexpMetadata.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -115,8 +114,7 @@ public class ModexpLimitsTests extends TracerTestBase {
 
     // check MODEXP limits:
     final int legalModexpComponentByteSize = 1024;
-    final int numberOfEffectiveModexpCallsForInvalidInputs =
-        forkPredatesOsaka(fork) ? Integer.MAX_VALUE : 0;
+    final int numberOfEffectiveModexpCallsForInvalidInputs = 0;
     final int actualCount = lineCountMap.get(PRECOMPILE_MODEXP_EFFECTIVE_CALLS.toString());
     final boolean validByteSizes =
         (bbs <= legalModexpComponentByteSize
@@ -126,13 +124,12 @@ public class ModexpLimitsTests extends TracerTestBase {
     {
       final long maxMbsBbs = Math.max(mbs, bbs);
       final long maxOver8 = Math.ceilDiv(maxMbsBbs, 8);
-      final long multiplier = forkPredatesOsaka(fork) ? 8 : 16;
+      final long multiplier = 16;
       final long leadLogCost = Math.max(1, multiplier * (ebs - 32));
       roughOsakaModexpCost = 2 * maxOver8 * maxOver8 * leadLogCost;
     }
     final boolean sufficientGasForOsaka = gasArgument >= roughOsakaModexpCost;
-    final boolean successExpected =
-        (forkPredatesOsaka(fork)) ? validByteSizes : validByteSizes && sufficientGasForOsaka;
+    final boolean successExpected = validByteSizes && sufficientGasForOsaka;
     final int expectedCount = successExpected ? 1 : numberOfEffectiveModexpCallsForInvalidInputs;
     assertEquals(
         expectedCount,

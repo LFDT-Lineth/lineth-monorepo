@@ -14,7 +14,7 @@
  */
 package net.consensys.linea.zktracer.instructionprocessing.callTests.prc.ecpairing;
 
-import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByDayOfMonth;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 
 import java.util.stream.Stream;
 import net.consensys.linea.zktracer.instructionprocessing.callTests.prc.framework.PrecompileCallTests;
@@ -28,7 +28,7 @@ public class Tests extends PrecompileCallTests<CallParameters> {
       Integer.parseInt(System.getenv().getOrDefault("PRC_CALLTESTS_SAMPLE_SIZE", "7500"));
 
   public static Stream<Arguments> parameterGeneration() {
-    return randomSampleByDayOfMonth(
+    return randomSampleByCurrentCommitHash(
         ECPAIRING_SAMPLE_SIZE, ParameterGeneration.parameterGeneration())
         .stream();
   }

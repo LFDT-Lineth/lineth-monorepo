@@ -37,7 +37,8 @@ public class Tests extends PrecompileCallTests<CallParameters> {
       Integer.parseInt(System.getenv().getOrDefault("PRC_CALLTESTS_SAMPLE_SIZE", "700"));
 
   public static Stream<Arguments> parameterGeneration() {
-    return randomSampleByDayOfMonth(ECMUL_SAMPLE_SIZE, ParameterGeneration.parameterGeneration())
+    return randomSampleByCurrentCommitHash(
+        ECMUL_SAMPLE_SIZE, ParameterGeneration.parameterGeneration())
         .stream();
   }
 

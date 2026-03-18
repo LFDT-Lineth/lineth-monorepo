@@ -14,7 +14,6 @@
  */
 package net.consensys.linea.zktracer.precompiles.modexp;
 
-import static net.consensys.linea.zktracer.Fork.forkPredatesOsaka;
 import static net.consensys.linea.zktracer.Trace.WORD_SIZE;
 import static net.consensys.linea.zktracer.instructionprocessing.utilities.MonoOpCodeSmcs.keyPair;
 import static net.consensys.linea.zktracer.instructionprocessing.utilities.MonoOpCodeSmcs.userAccount;
@@ -463,10 +462,7 @@ public class ModexpTests extends TracerTestBase {
         throw e;
       }
     }
-    if (forkPredatesOsaka(fork)) {
-      assertEquals(Integer.MAX_VALUE, bytecodeRunner.getHub().modexpEffectiveCall().lineCount());
-    } else {
-      assertEquals(1, bytecodeRunner.getHub().modexpEffectiveCall().lineCount());
-    }
+
+    assertEquals(1, bytecodeRunner.getHub().modexpEffectiveCall().lineCount());
   }
 }

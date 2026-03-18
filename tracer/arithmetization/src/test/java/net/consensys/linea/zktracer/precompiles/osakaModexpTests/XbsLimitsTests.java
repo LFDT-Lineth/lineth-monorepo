@@ -14,14 +14,12 @@
  */
 package net.consensys.linea.zktracer.precompiles.osakaModexpTests;
 
-import static net.consensys.linea.zktracer.Fork.forkPredatesOsaka;
 import static net.consensys.linea.zktracer.TraceOsaka.EIP_7823_MODEXP_UPPER_BYTE_SIZE_BOUND;
-import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByDayOfMonth;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.opcode.OpCode.*;
 import static net.consensys.linea.zktracer.precompiles.osakaModexpTests.XbsValueType.GIBBERISH;
 import static net.consensys.linea.zktracer.precompiles.osakaModexpTests.XbsValueType.getListOfInputs;
 
-import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -83,11 +81,10 @@ public class XbsLimitsTests extends TracerTestBase {
           .address(Address.fromHexString("11223344aaaaffff000000000000000000000001"));
 
   @ParameterizedTest
-  @MethodSource("modexpXbsLimitTestsSource")
+  @MethodSource("sampleModexpXbsLimitTestsSource")
   public void modexpXbsLimitTests(
       XbsValueType.BbsEbsMbsScenario scenario, String bbsEbsMbsString, TestInfo testInfo) {
 
-    if (forkPredatesOsaka(fork)) return;
     body(scenario, bbsEbsMbsString, testInfo);
   }
 
@@ -97,7 +94,6 @@ public class XbsLimitsTests extends TracerTestBase {
   public void modexpXbsLimitTestsNightly(
       XbsValueType.BbsEbsMbsScenario scenario, String bbsEbsMbsString, TestInfo testInfo) {
 
-    if (forkPredatesOsaka(fork)) return;
     body(scenario, bbsEbsMbsString, testInfo);
   }
 
@@ -143,11 +139,11 @@ public class XbsLimitsTests extends TracerTestBase {
           .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
   static Stream<Arguments> sampleModexpXbsLimitsTestsNightlySource() {
-    return randomSampleByDayOfMonth(XBS_LIMIT_TEST_SAMPLE_SIZE, modexpXbsLimitsTestsNighlySource())
+    return randomSampleByCurrentCommitHash(XBS_LIMIT_TEST_SAMPLE_SIZE, modexpXbsLimitsTestsSource())
         .stream();
   }
 
-  static List<Arguments> modexpXbsLimitsTestsNighlySource() {
+  static List<Arguments> modexpXbsLimitsTestsSource() {
 
     List<Arguments> arguments = new ArrayList<>();
     for (Map.Entry<XbsValueType.BbsEbsMbsScenario, List<String>> entry : allParameters.entrySet()) {
@@ -162,10 +158,10 @@ public class XbsLimitsTests extends TracerTestBase {
     return arguments;
   }
 
-  static Stream<Arguments> modexpXbsLimitTestsSource() {
-    List<Arguments> arguments = new ArrayList<>(modexpXbsLimitsTestsNighlySource());
-    Collections.shuffle(arguments, new Random(LocalDate.now().toEpochDay()));
-    return arguments.stream().limit(arguments.size() / 40); // Execute 2.5 % of the tests
+  static Stream<Arguments> sampleModexpXbsLimitTestsSource() {
+    final List<Arguments> arguments = new ArrayList<>(modexpXbsLimitsTestsSource());
+    return randomSampleByCurrentCommitHash(arguments.size() / 40, arguments)
+        .stream(); // Execute 2.5 % of the tests
   }
 
   static List<String> getParameters(XbsValueType.BbsEbsMbsScenario bbsEbsMbsScenario) {

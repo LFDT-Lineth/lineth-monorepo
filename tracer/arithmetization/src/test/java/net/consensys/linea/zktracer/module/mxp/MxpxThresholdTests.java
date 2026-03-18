@@ -22,7 +22,7 @@ import static net.consensys.linea.zktracer.Trace.LLARGEPO;
 import static net.consensys.linea.zktracer.Trace.Mxp.CANCUN_MXPX_THRESHOLD;
 import static net.consensys.linea.zktracer.Trace.WORD_SIZE;
 import static net.consensys.linea.zktracer.Trace.WORD_SIZE_MO;
-import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByDayOfMonth;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.opcode.OpCode.MLOAD;
 import static net.consensys.linea.zktracer.opcode.OpCode.POP;
 
@@ -120,7 +120,8 @@ public class MxpxThresholdTests extends TracerTestBase {
   }
 
   static Stream<Arguments> sampleMxpxThresholdSource() {
-    return randomSampleByDayOfMonth(MXPX_THRESHOLD_SAMPLE_SIZE, testMxpxThresholdSource()).stream();
+    return randomSampleByCurrentCommitHash(MXPX_THRESHOLD_SAMPLE_SIZE, testMxpxThresholdSource())
+        .stream();
   }
 
   /**
@@ -305,7 +306,7 @@ public class MxpxThresholdTests extends TracerTestBase {
   }
 
   static Stream<Arguments> sampleInputParamsNightly() {
-    return randomSampleByDayOfMonth(MXPX_THRESHOLD_SAMPLE_SIZE, inputs(inputsValuesNightly))
+    return randomSampleByCurrentCommitHash(MXPX_THRESHOLD_SAMPLE_SIZE, inputs(inputsValuesNightly))
         .stream();
   }
 

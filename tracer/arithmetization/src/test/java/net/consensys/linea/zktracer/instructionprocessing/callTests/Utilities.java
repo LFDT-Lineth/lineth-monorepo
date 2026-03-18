@@ -18,7 +18,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static net.consensys.linea.zktracer.Trace.WORD_SIZE;
 import static net.consensys.linea.zktracer.opcode.OpCode.*;
 
-import java.util.Calendar;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.InputStreamReader;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -26,6 +28,7 @@ import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.testing.BytecodeCompiler;
 import net.consensys.linea.zktracer.opcode.OpCode;
 import net.consensys.linea.zktracer.opcode.OpCodeData;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Address;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -326,23 +329,57 @@ public class Utilities {
   /**
    * Sample exactly n items at random from a given input list. If that list has fewer than n items,
    * then the list is returned unchanged. The Random Number Generated (RNG) is seeded with the
-   * day-of-the-month. The idea here is that we benefit from different seeds (i.e. by testing
-   * different inputs), but should a failure occur we can (in principle) recreate it (provided we
-   * know what day of the month it failed on).
+   * current commit hash. The idea here is that we benefit from different seeds (i.e. by testing
+   * different inputs), but should a failure occur we can (in principle) recreate it.
    *
    * @param n Number of items to sample
    * @param items Source of items to sample from
    * @param <T>
    * @return
    */
-  public static <T> List<T> randomSampleByDayOfMonth(int n, List<T> items) {
-    // Determine day of month
-    int dayOfMonth = Calendar.getInstance().get(Calendar.DAY_OF_MONTH);
-    // Seed rng with day of month.
-    Random rng = new Random(dayOfMonth);
-    // Randomly shuffle the items
-    Collections.shuffle(items, rng);
-    //
-    return items.subList(0, Math.min(n, items.size()));
+  public static <T> List<T> randomSampleByCurrentCommitHash(int n, List<T> items) {
+    // If the sampling is bigger than the original list, just return the list
+    if (n >= items.size()) {
+      return items;
+    }
+    try {
+      // Determine current commit hash
+      final String hash = getCurrentCommitHash();
+      // Seed rng with day of month.
+      final Random rng = new Random(Bytes.fromHexString(hash).slice(0, 8).toLong());
+      // Randomly shuffle the items
+      Collections.shuffle(items, rng);
+      //
+      return items.subList(0, n);
+    } catch (Exception e) {
+      throw new RuntimeException("Unable to retrieve current hash:", e);
+    }
+  }
+
+  private static String getGitExecutable() {
+    String configuredGit = System.getenv("GIT_EXECUTABLE");
+    if (configuredGit != null && !configuredGit.isEmpty()) {
+      // Use the configured git executable if it looks like an absolute path.
+      if (configuredGit.startsWith("/") || configuredGit.matches("^[A-Za-z]:\\\\.*")) {
+        return configuredGit;
+      }
+    }
+    // Fallback to relying on PATH for git resolution.
+    return "git";
+  }
+
+  public static String getCurrentCommitHash() throws Exception {
+    ProcessBuilder pb = new ProcessBuilder(getGitExecutable(), "rev-parse", "HEAD");
+    pb.directory(new File("."));
+    Process process = pb.start();
+
+    String hash;
+    try (BufferedReader reader =
+        new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+      hash = reader.readLine();
+    }
+    process.waitFor();
+
+    return hash;
   }
 }

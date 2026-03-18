@@ -14,7 +14,7 @@
  */
 package net.consensys.linea.zktracer.instructionprocessing.callTests.prc.modexp;
 
-import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByDayOfMonth;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.instructionprocessing.callTests.prc.CodeExecutionMethods.*;
 import static net.consensys.linea.zktracer.instructionprocessing.callTests.prc.modexp.ByteSizeParameter.*;
 import static net.consensys.linea.zktracer.opcode.OpCode.*;
@@ -36,7 +36,8 @@ public class Tests extends PrecompileCallTests<CallParameters> {
       Integer.parseInt(System.getenv().getOrDefault("PRC_CALLTESTS_SAMPLE_SIZE", "700"));
 
   public static Stream<Arguments> parameterGeneration() {
-    return randomSampleByDayOfMonth(MODEXP_SAMPLE_SIZE, ParameterGeneration.parameterGeneration())
+    return randomSampleByCurrentCommitHash(
+        MODEXP_SAMPLE_SIZE, ParameterGeneration.parameterGeneration())
         .stream();
   }
 
