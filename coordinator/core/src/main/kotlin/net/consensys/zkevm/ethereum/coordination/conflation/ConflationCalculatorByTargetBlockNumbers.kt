@@ -5,9 +5,8 @@ import net.consensys.zkevm.domain.ConflationTrigger
 
 class ConflationCalculatorByTargetBlockNumbers(
   private val targetEndBlockNumbers: Set<ULong>,
+  override val id: String = ConflationTrigger.TARGET_BLOCK_NUMBER.name,
 ) : ConflationCalculator {
-  override val id: String = ConflationTrigger.TARGET_BLOCK_NUMBER.name
-
   override fun checkOverflow(blockCounters: BlockCounters): ConflationCalculator.OverflowTrigger? {
     return if (targetEndBlockNumbers.contains(blockCounters.blockNumber - 1uL)) {
       ConflationCalculator.OverflowTrigger(ConflationTrigger.TARGET_BLOCK_NUMBER, false)

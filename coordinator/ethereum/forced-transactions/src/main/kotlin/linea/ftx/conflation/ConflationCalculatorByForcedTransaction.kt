@@ -35,7 +35,7 @@ class ConflationCalculatorByForcedTransaction(
   private val processedFtxQueue: Queue<ForcedTransactionInclusionStatus>,
   private val log: Logger = LogManager.getLogger(ConflationCalculatorByForcedTransaction::class.java),
 ) : ConflationCalculator {
-  override val id: String = "FTX_INVALIDITY_PROOF_CONFLATION"
+  override val id: String = ConflationTrigger.FORCED_TRANSACTION.name
 
   // Track pending trigger blocks (blockNumber - 1) for non-included FTXs
   private val pendingTriggerBlocks = mutableSetOf<ULong>()

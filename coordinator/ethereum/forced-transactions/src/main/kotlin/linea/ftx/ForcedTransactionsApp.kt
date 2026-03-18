@@ -24,6 +24,7 @@ import linea.ftx.conflation.InvalidityProofAssembler
 import linea.persistence.ftx.ForcedTransactionsDao
 import net.consensys.zkevm.coordinator.clients.InvalidityProverClientV1
 import net.consensys.zkevm.coordinator.clients.TracesConflationVirtualBlockClientV1
+import net.consensys.zkevm.domain.ConflationTrigger
 import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationTriggerCalculatorByTargetBlockNumbers
 import net.consensys.zkevm.ethereum.coordination.aggregation.SyncAggregationTriggerCalculator
 import net.consensys.zkevm.ethereum.coordination.blockcreation.AlwaysSafeBlockNumberProvider
@@ -102,7 +103,10 @@ internal class DisabledForcedTransactionsApp() : ForcedTransactionsApp,
   DisabledService("forced transactions") {
   private val safeBlockNumberProvider = AlwaysSafeBlockNumberProvider()
   override val conflationSafeBlockNumberProvider: ConflationSafeBlockNumberProvider = safeBlockNumberProvider
-  override val conflationCalculator: ConflationCalculator = ConflationCalculatorByTargetBlockNumbers(emptySet())
+  override val conflationCalculator: ConflationCalculator = ConflationCalculatorByTargetBlockNumbers(
+    targetEndBlockNumbers = emptySet(),
+    id = ConflationTrigger.FORCED_TRANSACTION.name,
+  )
   override val aggregationCalculator: SyncAggregationTriggerCalculator =
     AggregationTriggerCalculatorByTargetBlockNumbers(
       targetEndBlockNumbers = emptyList(),
