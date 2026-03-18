@@ -43,8 +43,6 @@ jobs:
 
       - name: Setup Tracer Environment
         uses: ./.github/actions/setup-tracer-environment
-        with:
-          enable-ssh: false
 
       - name: Set up GCC
         uses: egor-tensin/setup-gcc@a2861a8b8538f49cf2850980acccf6b05a1b2ae4 #v2.0
@@ -82,8 +80,6 @@ jobs:
 
       - name: Setup Tracer Environment
         uses: ./.github/actions/setup-tracer-environment
-        with:
-          enable-ssh: false
 
       - name: Run replay tests
         run: GOMEMLIMIT=26GiB ./gradlew :tracer:arithmetization:fastReplayTests

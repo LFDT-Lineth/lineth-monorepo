@@ -14,21 +14,13 @@ concurrency:
 jobs:
   run-linea-sequencer-plugins-unit-tests:
     name: "Sequencer Plugin Unit Tests"
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-large
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Tracer Environment # configures Go, Java, Gradle, and gets submodules
+      - name: Setup Tracer Environment # configures Go, Java, and Gradle
         uses: ./.github/actions/setup-tracer-environment
-        with:
-          enable-ssh: false
-
-      - name: Build besu from source 
-        shell: bash
-        run: ./gradlew buildAndUpdateBesuVersionInLibsVersions -PskipDownloadBesuDist=true
-        env:
-          JAVA_OPTS: -Xmx2g
 
       - name: spotless
         run: ./gradlew --parallel besu-plugins:linea-sequencer:spotlessCheck
@@ -63,14 +55,6 @@ jobs:
 
       - name: Setup Tracer Environment
         uses: ./.github/actions/setup-tracer-environment
-        with:
-          enable-ssh: false
-
-      - name: Build besu from source 
-        shell: bash
-        run: ./gradlew buildAndUpdateBesuVersionInLibsVersions -PskipDownloadBesuDist=true
-        env:
-          JAVA_OPTS: -Xmx2g
 
       - name: Run acceptance tests
         run: ./gradlew besu-plugins:linea-sequencer:acceptance-tests:acceptanceTests

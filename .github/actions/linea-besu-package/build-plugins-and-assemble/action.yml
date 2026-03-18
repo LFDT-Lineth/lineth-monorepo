@@ -70,13 +70,7 @@ runs:
     - name: Setup Tracer Environment
       uses: ./.github/actions/setup-tracer-environment
       with:
-        enable-ssh: false
-    
-    - name: Build besu from source 
-      shell: bash
-      run: ./gradlew buildAndUpdateBesuVersionInLibsVersions
-      env:
-        JAVA_OPTS: -Xmx2g
+        skip-download-besu-dist: false
 
     - name: Compute linea-besu-package metadata
       id: metadata
