@@ -22,14 +22,14 @@ docker buildx build --file coordinator/Dockerfile \
   --tag consensys/linea-coordinator:local .
 
 # Run as part of full stack
-make start-env-with-tracing-v2
+make start-env-with-tracing-v2 COORDINATOR_TAG=local
 ```
 
 ### Test
 
 ```bash
 # Unit tests
-./gradlew :coordinator:app:test
+./gradlew :coordinator:app:testAllNeeded
 
 # Integration tests (requires PostgreSQL via Docker)
 ./gradlew :coordinator:app:integrationTest
