@@ -24,6 +24,7 @@ import java.io.StringReader;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import net.consensys.linea.zktracer.ChainConfig;
 import net.consensys.linea.zktracer.Fork;
 import net.consensys.linea.zktracer.opcode.OpCode;
@@ -112,6 +113,21 @@ public class BytecodeCompiler {
   }
 
   /**
+   * Conditionally add an {@link OpCode} to the bytecode sequence.
+   *
+   * @param condition whether to add the opcode or not
+   * @param opCode opcode to be conditionally added
+   * @return current instance
+   */
+  public BytecodeCompiler op(final boolean condition, final OpCode opCode) {
+    if (condition) {
+      return this.op(opCode);
+    } else {
+      return this;
+    }
+  }
+
+  /**
    * Add an {@link OpCode} to the bytecode sequence for a {@code reps} number of times.
    *
    * @param opCode opcode to be added
@@ -152,13 +168,35 @@ public class BytecodeCompiler {
    */
   public BytecodeCompiler immediate(final byte[] bs) {
     this.byteCode.add(Bytes.wrap(bs));
-
     return this;
+  }
+
+  /**
+   * Conditionally add a byte array as is to the bytecode sequence.
+   *
+   * @param condition whether to add the byte array or not
+   * @param bs byte array to be added
+   * @return current instance
+   */
+  public BytecodeCompiler immediate(final boolean condition, final byte[] bs) {
+    if (condition) {
+      return this.immediate(bs);
+    } else {
+      return this;
+    }
   }
 
   public BytecodeCompiler immediate(final byte b) {
     this.byteCode.add(Bytes.of(b));
     return this;
+  }
+
+  public BytecodeCompiler immediate(final boolean condition, final byte b) {
+    if (condition) {
+      return this.immediate(b);
+    } else {
+      return this;
+    }
   }
 
   /**
@@ -172,6 +210,21 @@ public class BytecodeCompiler {
   }
 
   /**
+   * Conditionally add a {@link Bytes} instance as is to the bytecode sequence.
+   *
+   * @param condition whether to add the {@link Bytes} instance or not
+   * @param bytes {@link Bytes} to be added
+   * @return current instance
+   */
+  public BytecodeCompiler immediate(final boolean condition, final Bytes bytes) {
+    if (condition) {
+      return this.immediate(bytes);
+    } else {
+      return this;
+    }
+  }
+
+  /**
    * Add an int as is to the bytecode sequence.
    *
    * @param x integer number to be added
@@ -182,6 +235,18 @@ public class BytecodeCompiler {
   }
 
   /**
+   * Conditionally add an int as is to the bytecode sequence.
+   *
+   * @param condition whether to add the integer or not
+   * @param x integer number to be added
+   * @return current instance
+   */
+  public BytecodeCompiler immediate(final boolean condition, final int x) {
+    if (condition) return this.immediate(x);
+    else return this;
+  }
+
+  /**
    * Add a {@link UInt256} number as is to the bytecode sequence.
    *
    * @param x {@link UInt256} number to be added
@@ -189,8 +254,22 @@ public class BytecodeCompiler {
    */
   public BytecodeCompiler immediate(final UInt256 x) {
     this.byteCode.add(x);
-
     return this;
+  }
+
+  /**
+   * Conditionally add a {@link UInt256} number as is to the bytecode sequence.
+   *
+   * @param condition whether to add the {@link UInt256} number or not
+   * @param x {@link UInt256} number to be added
+   * @return current instance
+   */
+  public BytecodeCompiler immediate(final boolean condition, final UInt256 x) {
+    if (condition) {
+      return this.immediate(x);
+    } else {
+      return this;
+    }
   }
 
   /**
@@ -211,6 +290,21 @@ public class BytecodeCompiler {
   }
 
   /**
+   * Conditionally add a {@link OpCode#PUSH1} and byte array arguments.
+   *
+   * @param condition whether to add the PUSH operation or not
+   * @param xs byte array arguments
+   * @return current instance
+   */
+  public BytecodeCompiler push(final boolean condition, final Bytes xs) {
+    if (condition) {
+      return this.push(xs);
+    } else {
+      return this;
+    }
+  }
+
+  /**
    * Add a {@link OpCode#PUSH1} and a {@link BigInteger} argument.
    *
    * @param xs BigInteger argument
@@ -218,6 +312,21 @@ public class BytecodeCompiler {
    */
   public BytecodeCompiler push(final BigInteger xs) {
     return this.push(bigIntegerToBytes(xs));
+  }
+
+  /**
+   * Conditionally add a {@link OpCode#PUSH1} and a {@link BigInteger} argument.
+   *
+   * @param condition whether to add the PUSH operation or not
+   * @param xs BigInteger argument
+   * @return current instance
+   */
+  public BytecodeCompiler push(final boolean condition, final BigInteger xs) {
+    if (condition) {
+      return this.push(xs);
+    } else {
+      return this;
+    }
   }
 
   /**
@@ -231,6 +340,22 @@ public class BytecodeCompiler {
   }
 
   /**
+   * Conditionally add a {@link OpCode#PUSH1} and a {@link String} argument representing a hex
+   * number.
+   *
+   * @param condition whether to add the PUSH operation or not
+   * @param x String argument representing a hex number
+   * @return current instance
+   */
+  public BytecodeCompiler push(final boolean condition, final String x) {
+    if (condition) {
+      return this.push(x);
+    } else {
+      return this;
+    }
+  }
+
+  /**
    * Add a {@link OpCode#PUSH1} and int number argument.
    *
    * @param x int number argument
@@ -238,6 +363,21 @@ public class BytecodeCompiler {
    */
   public BytecodeCompiler push(final int x) {
     return this.push(Bytes.minimalBytes(x));
+  }
+
+  /**
+   * Conditionally add a {@link OpCode#PUSH1} and int number argument.
+   *
+   * @param condition whether to add the PUSH operation or not
+   * @param x int number argument
+   * @return current instance
+   */
+  public BytecodeCompiler push(final boolean condition, final int x) {
+    if (condition) {
+      return this.push(x);
+    } else {
+      return this;
+    }
   }
 
   /**
@@ -261,6 +401,22 @@ public class BytecodeCompiler {
   }
 
   /**
+   * Conditionally add a PUSH operation of the given width and its (padded) argument
+   *
+   * @param condition whether to add the PUSH operation or not
+   * @param w the width to push (in [[1; 32]])
+   * @param bs byte array to be added
+   * @return current instance
+   */
+  public BytecodeCompiler push(final boolean condition, final int w, final byte[] bs) {
+    if (condition) {
+      return this.push(w, bs);
+    } else {
+      return this;
+    }
+  }
+
+  /**
    * Add a PUSH operation of the given width and its (padded) argument
    *
    * @param w the width to push (in [[1; 32]])
@@ -268,8 +424,23 @@ public class BytecodeCompiler {
    * @return current instance
    */
   public BytecodeCompiler push(final int w, final Bytes bytes) {
-
     return this.push(w, bytes.toArray());
+  }
+
+  /**
+   * Conditionally add a PUSH operation of the given width and its (padded) argument
+   *
+   * @param condition whether to add the PUSH operation or not
+   * @param w the width to push (in [[1; 32]])
+   * @param bytes {@link Bytes} to be added
+   * @return current instance
+   */
+  public BytecodeCompiler push(final boolean condition, final int w, final Bytes bytes) {
+    if (condition) {
+      return this.push(w, bytes);
+    } else {
+      return this;
+    }
   }
 
   /**
@@ -284,6 +455,22 @@ public class BytecodeCompiler {
   }
 
   /**
+   * Conditionally add an int as is to the bytecode sequence.
+   *
+   * @param condition whether to add the PUSH operation or not
+   * @param w the width to push (in [[1; 32]])
+   * @param x integer number to be added
+   * @return current instance
+   */
+  public BytecodeCompiler push(final boolean condition, final int w, final int x) {
+    if (condition) {
+      return this.push(w, x);
+    } else {
+      return this;
+    }
+  }
+
+  /**
    * Add a PUSH operation of the given width and its (padded) argument
    *
    * @param w the width to push (in [[1; 32]])
@@ -292,6 +479,22 @@ public class BytecodeCompiler {
    */
   public BytecodeCompiler push(final int w, final UInt256 x) {
     return this.push(w, x.toArray());
+  }
+
+  /**
+   * Conditionally add a PUSH operation of the given width and its (padded) argument
+   *
+   * @param condition whether to add the PUSH operation or not
+   * @param w the width to push (in [[1; 32]])
+   * @param x {@link UInt256} number to be added
+   * @return current instance
+   */
+  public BytecodeCompiler push(final boolean condition, final int w, final UInt256 x) {
+    if (condition) {
+      return this.push(w, x);
+    } else {
+      return this;
+    }
   }
 
   /**
@@ -330,5 +533,46 @@ public class BytecodeCompiler {
   public BytecodeCompiler incompletePush(final int w, String x) {
     return this.incompletePush(
         w, bigIntegerToBytes(new BigInteger(x.isEmpty() ? "0" : x, 16)).toArray());
+  }
+
+  /**
+   * Apply a function to this compiler instance.
+   *
+   * @param function the function to apply to this BytecodeCompiler
+   * @return current instance after applying the function
+   */
+  public BytecodeCompiler apply(final Function<BytecodeCompiler, BytecodeCompiler> function) {
+    return function.apply(this);
+  }
+
+  /**
+   * Apply a function to this compiler instance for a given number of repetitions.
+   *
+   * @param function the function to apply to this BytecodeCompiler
+   * @param reps the number of times to apply the function
+   * @return current instance after applying the function for the given number of repetitions
+   */
+  public BytecodeCompiler apply(Function<BytecodeCompiler, BytecodeCompiler> function, int reps) {
+    BytecodeCompiler result = this;
+    for (int i = 0; i < reps; i++) {
+      result = function.apply(result);
+    }
+    return result;
+  }
+
+  /**
+   * Conditionally apply a function to this compiler instance.
+   *
+   * @param condition whether to apply the function or not
+   * @param function the function to apply to this BytecodeCompiler
+   * @return current instance
+   */
+  public BytecodeCompiler apply(
+      final boolean condition, final Function<BytecodeCompiler, BytecodeCompiler> function) {
+    if (condition) {
+      return function.apply(this);
+    } else {
+      return this;
+    }
   }
 }

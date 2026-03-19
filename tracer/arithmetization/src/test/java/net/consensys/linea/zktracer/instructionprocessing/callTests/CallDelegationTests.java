@@ -15,10 +15,12 @@
 
 package net.consensys.linea.zktracer.instructionprocessing.callTests;
 
+import static net.consensys.linea.zktracer.instructionprocessing.utilities.Calls.appendFullGasCall;
+
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BiFunction;
 import java.util.stream.Stream;
+import kotlin.jvm.functions.Function3;
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;
@@ -57,10 +59,10 @@ public class CallDelegationTests extends TracerTestBase {
                                                SMC1                                SMC2
    */
 
-  static final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
-  static final Address senderAddress =
+  final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
+  final Address senderAddress =
       Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
-  static final ToyAccount senderAccount =
+  final ToyAccount senderAccount =
       ToyAccount.builder()
           .balance(Wei.fromEth(10))
           .nonce(42)
@@ -68,52 +70,57 @@ public class CallDelegationTests extends TracerTestBase {
           .keyPair(senderKeyPair)
           .build();
 
-  static final ToyAccount rootAccount =
+  final ToyAccount rootAccount =
       ToyAccount.builder()
           .balance(Wei.fromEth(2))
           .nonce(67)
-          .address(Address.fromHexString("0x40010000"))
+          .address(Address.fromHexString("0x40070000"))
           .build();
 
-  static final ToyAccount callerAccount =
+  final ToyAccount callerAccount =
       ToyAccount.builder()
           .balance(Wei.fromEth(3))
           .nonce(69)
-          .address(Address.fromHexString("0xCA77E400"))
+          .address(Address.fromHexString("0xCA11E400"))
           .build();
 
-  static final ToyAccount calleeAccount =
+  final ToyAccount calleeAccount =
       ToyAccount.builder()
           .balance(Wei.fromEth(4))
           .nonce(90)
-          .address(Address.fromHexString("0xCA77EE00"))
+          .address(Address.fromHexString("0xCA11EE00"))
           .build();
 
-  static final ToyAccount smcAccount1 =
+  final ToyAccount smcAccount1 =
       ToyAccount.builder()
           .balance(Wei.fromEth(5))
           .nonce(101)
-          .address(Address.fromHexString("0xDDCA77E4"))
+          .address(Address.fromHexString("0xDE1E0FCA11E4"))
           .build();
 
-  static final ToyAccount smcAccount2 =
+  final ToyAccount smcAccount2 =
       ToyAccount.builder()
           .balance(Wei.fromEth(6))
           .nonce(666)
-          .address(Address.fromHexString("0xDDCA77EE"))
+          .address(Address.fromHexString("0xDE1E0FCA11EE"))
           .build();
 
-  BiFunction<ToyAccount, RevertType, BytecodeCompiler> conditionalCallProgram =
-      (targetAccount, revertType) ->
+  Function3<ToyAccount, LoopType, RevertType, BytecodeCompiler> callProgram =
+      (targetAccount, loopType, revertType) ->
           BytecodeCompiler.newProgram(chainConfig)
-              .push(0)
-              .op(OpCode.SLOAD) // LOOP_DEPTH_CURRENT
-              .push(3) // LOOP_DEPTH_MAX
-              .op(OpCode.GT) // LOOP_DEPTH_MAX > LOOP_DEPTH_CURRENT
-              .push(10)
-              .op(OpCode.JUMPI) // if LOOP_DEPTH_CURRENT < LOOP_DEPTH_MAX jump to JUMPDEST else STOP
-              .op(OpCode.STOP)
-              .op(OpCode.JUMPDEST) // PC = 10
+              .immediate(
+                  loopType == LoopType.BOUNDED_LOOP,
+                  BytecodeCompiler.newProgram(chainConfig)
+                      .push(0)
+                      .op(OpCode.SLOAD) // LOOP_DEPTH_CURRENT
+                      .push(3) // LOOP_DEPTH_MAX
+                      .op(OpCode.GT) // LOOP_DEPTH_MAX > LOOP_DEPTH_CURRENT
+                      .push(10)
+                      .op(OpCode.JUMPI) // if LOOP_DEPTH_CURRENT < LOOP_DEPTH_MAX jump to JUMPDEST
+                      // else STOP
+                      .op(OpCode.STOP)
+                      .op(OpCode.JUMPDEST) // PC = 10
+                      .compile())
               .push(0)
               .op(OpCode.SLOAD)
               .push(1)
@@ -121,37 +128,10 @@ public class CallDelegationTests extends TracerTestBase {
               .push(0)
               .op(OpCode.SSTORE) // increment LOOP_DEPTH_CURRENT by 1
               // execute the call
-              .push(0) // return at capacity
-              .push(0) // return at offset
-              .push(0) // call data size
-              .push(0) // call data offset
-              .push(0) // value
-              .push(targetAccount.getAddress()) // address
-              .op(OpCode.GAS)
-              .op(OpCode.CALL)
-              // preparing for a potential revert
-              .push(0)
-              .push(0)
-              .op(revertType == RevertType.TERMINATES_ON_REVERT ? OpCode.REVERT : OpCode.STOP);
-
-  BiFunction<ToyAccount, RevertType, BytecodeCompiler> callProgram =
-      (targetAccount, revertType) ->
-          BytecodeCompiler.newProgram(chainConfig)
-              .push(0)
-              .op(OpCode.SLOAD)
-              .push(1)
-              .op(OpCode.ADD)
-              .push(0)
-              .op(OpCode.SSTORE) // increment LOOP_DEPTH_CURRENT by 1
-              // execute the call
-              .push(0) // return at capacity
-              .push(0) // return at offset
-              .push(0) // call data size
-              .push(0) // call data offset
-              .push(0) // value
-              .push(targetAccount.getAddress()) // address
-              .op(OpCode.GAS)
-              .op(OpCode.CALL)
+              .apply(
+                  program ->
+                      appendFullGasCall(
+                          program, OpCode.CALL, targetAccount.getAddress(), 0, 0, 0, 0, 0))
               // preparing for a potential revert
               .push(0)
               .push(0)
@@ -159,7 +139,7 @@ public class CallDelegationTests extends TracerTestBase {
 
   public enum CallerType {
     DELEGATED,
-    SMC // already tested
+    SMC
   }
 
   public enum CalleeType {
@@ -168,11 +148,10 @@ public class CallDelegationTests extends TracerTestBase {
     // DELEGATED_TO_EMPTY_CODE_ACCOUNT,
     // DELEGATED_TO_PRC,
     // DELEGATED_TO_SELF,
-    // most relevant cases
     DELEGATED_TO_ROOT,
     DELEGATED_TO_CALLER,
     DELEGATED_TO_SMC,
-    SMC // already tested
+    SMC
   }
 
   // this should apply per smart contract
@@ -184,11 +163,11 @@ public class CallDelegationTests extends TracerTestBase {
   // this should apply uniformly to all smart contracts
   public enum LoopType {
     INFINITE_LOOP,
-    EXIT_EARLY;
+    BOUNDED_LOOP;
   }
 
   @ParameterizedTest
-  @MethodSource("callaDelegationTestSource")
+  @MethodSource("callDelegationTestSource")
   public void callDelegationTest(
       CallerType callerType,
       CalleeType calleeType,
@@ -197,19 +176,17 @@ public class CallDelegationTests extends TracerTestBase {
       RevertType calleeCodeRevertType,
       LoopType loopType,
       TestInfo testInfo) {
-    BiFunction<ToyAccount, RevertType, BytecodeCompiler> actualCallProgram =
-        loopType == LoopType.EXIT_EARLY ? conditionalCallProgram : callProgram;
-
-    rootAccount.setCode(actualCallProgram.apply(callerAccount, rootCodeRevertType).compile());
+    rootAccount.setCode(callProgram.invoke(callerAccount, loopType, rootCodeRevertType).compile());
 
     switch (callerType) {
       case DELEGATED -> {
         callerAccount.delegateTo(smcAccount1);
-        smcAccount1.setCode(actualCallProgram.apply(calleeAccount, callerCodeRevertType).compile());
+        smcAccount1.setCode(
+            callProgram.invoke(calleeAccount, loopType, callerCodeRevertType).compile());
       }
       case SMC ->
           callerAccount.setCode(
-              actualCallProgram.apply(calleeAccount, callerCodeRevertType).compile());
+              callProgram.invoke(calleeAccount, loopType, callerCodeRevertType).compile());
     }
 
     switch (calleeType) {
@@ -218,14 +195,14 @@ public class CallDelegationTests extends TracerTestBase {
       case DELEGATED_TO_SMC -> {
         calleeAccount.delegateTo(smcAccount2);
         smcAccount2.setCode(
-            actualCallProgram
-                .apply(callerAccount, calleeCodeRevertType)
+            callProgram
+                .invoke(callerAccount, loopType, calleeCodeRevertType)
                 .compile()); // This could be a call to anything
       }
       case SMC ->
           calleeAccount.setCode(
-              actualCallProgram
-                  .apply(callerAccount, calleeCodeRevertType)
+              callProgram
+                  .invoke(callerAccount, loopType, calleeCodeRevertType)
                   .compile()); // This could be a call to anything
     }
 
@@ -252,7 +229,7 @@ public class CallDelegationTests extends TracerTestBase {
     toyExecutionEnvironmentV2.run();
   }
 
-  static Stream<Arguments> callaDelegationTestSource() {
+  static Stream<Arguments> callDelegationTestSource() {
     List<Arguments> arguments = new ArrayList<>();
     for (CallerType callerType : CallerType.values()) {
       for (CalleeType calleeType : CalleeType.values()) {

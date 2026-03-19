@@ -37,36 +37,47 @@ public class Calls {
   public static Bytes32 randCdo =
       Bytes32.fromHexString("1a3b88fc78471a5d0ce2df8a5799299b7eefd8e6bfd6d6afb0e437e0a6311878");
 
-  public static void appendFullGasCall(
+  public static BytecodeCompiler appendFullGasCall(
       BytecodeCompiler program,
-      OpCodeData callOpcode,
+      OpCode callOpcode,
       Address to,
       int value,
       int cdo,
       int cds,
       int rao,
       int rac) {
-    program.push(rac).push(rao).push(cds).push(cdo);
-    if (callOpcode.callHasValueArgument()) {
-      program.push(value);
-    }
-    program.push(to).op(GAS).op(callOpcode.mnemonic());
+    program
+        .push(rac)
+        .push(rao)
+        .push(cds)
+        .push(cdo)
+        .push(program.opCodeData(callOpcode).callHasValueArgument(), value)
+        .push(to)
+        .op(GAS)
+        .op(callOpcode);
+    return program;
   }
 
-  public static void fullBalanceCall(
+  public static BytecodeCompiler fullBalanceCall(
       BytecodeCompiler program, OpCode callOpcode, Address to, int cdo, int cds, int rao, int rac) {
-    program.push(rac).push(rao).push(cds).push(cdo);
-    if (program.opCodeData(callOpcode).callHasValueArgument()) {
-      program.op(BALANCE);
-    }
-    program.push(to).op(GAS).op(callOpcode);
+    program
+        .push(rac)
+        .push(rao)
+        .push(cds)
+        .push(cdo)
+        .op(program.opCodeData(callOpcode).callHasValueArgument(), SELFBALANCE)
+        .push(to)
+        .op(GAS)
+        .op(callOpcode);
+    return program;
   }
 
-  public static void appendRevert(BytecodeCompiler program, int rdo, int rds) {
+  public static BytecodeCompiler appendRevert(BytecodeCompiler program, int rdo, int rds) {
     program.push(rds).push(rdo).op(REVERT);
+    return program;
   }
 
-  public static void appendCall(
+  public static BytecodeCompiler appendCall(
       BytecodeCompiler program,
       OpCode callOpcode,
       int gas,
@@ -76,14 +87,19 @@ public class Calls {
       int cds,
       int rao,
       int rac) {
-    program.push(rac).push(rao).push(cds).push(cdo);
-    if (program.opCodeData(callOpcode).callHasValueArgument()) {
-      program.push(value);
-    }
-    program.push(to).push(gas).op(callOpcode);
+    program
+        .push(rac)
+        .push(rao)
+        .push(cds)
+        .push(cdo)
+        .push(program.opCodeData(callOpcode).callHasValueArgument(), value)
+        .push(to)
+        .push(gas)
+        .op(callOpcode);
+    return program;
   }
 
-  public static void appendExtremalCall(
+  public static BytecodeCompiler appendExtremalCall(
       BytecodeCompiler program,
       OpCode callOpcode,
       int gas,
@@ -106,13 +122,13 @@ public class Calls {
       program.push(258).push(259);
     }
 
-    if (program.opCodeData(callOpcode).callHasValueArgument()) {
-      program.push(value);
-    }
+    program.push(program.opCodeData(callOpcode).callHasValueArgument(), value);
+
     program.push(toAccount.getAddress()).push(gas).op(callOpcode);
+    return program;
   }
 
-  public static void appendInsufficientBalanceCall(
+  public static BytecodeCompiler appendInsufficientBalanceCall(
       BytecodeCompiler program,
       OpCode callOpcode,
       int gas,
@@ -128,15 +144,35 @@ public class Calls {
         .push(rao)
         .push(cds)
         .push(cdo)
-        .op(BALANCE)
+        .op(SELFBALANCE)
         .push(1)
         .op(ADD) // puts balance + 1 on the stack
         .push(to)
         .push(gas)
         .op(callOpcode);
+    return program;
   }
 
-  public static void appendRecursiveSelfCall(BytecodeCompiler program, OpCode callOpCode) {
+  public static BytecodeCompiler appendInsufficientBalanceCall(
+      BytecodeCompiler program, OpCode callOpcode, Address to, int cdo, int cds, int rao, int rac) {
+    OpCodeData callInfo = program.opCodeData(callOpcode);
+    checkArgument(callInfo.callHasValueArgument());
+    program
+        .push(rac)
+        .push(rao)
+        .push(cds)
+        .push(cdo)
+        .op(SELFBALANCE)
+        .push(1)
+        .op(ADD) // puts balance + 1 on the stack
+        .push(to)
+        .op(OpCode.GAS)
+        .op(callOpcode);
+    return program;
+  }
+
+  public static BytecodeCompiler appendRecursiveSelfCall(
+      BytecodeCompiler program, OpCode callOpCode) {
     OpCodeData callInfo = program.opCodeData(callOpCode);
     checkArgument(callInfo.isCall());
     program.push(0).push(0).push(0).push(0);
@@ -147,6 +183,7 @@ public class Calls {
         .op(ADDRESS) // current address
         .op(GAS) // providing all available gas
         .op(callOpCode); // self-call
+    return program;
   }
 
   /**
@@ -154,7 +191,7 @@ public class Calls {
    *
    * @param program
    */
-  public static void validEcrecoverData(BytecodeCompiler program) {
+  public static BytecodeCompiler validEcrecoverData(BytecodeCompiler program) {
     program
         .push("279d94621558f755796898fc4bd36b6d407cae77537865afe523b79c74cc680b")
         .push(0)
@@ -168,15 +205,17 @@ public class Calls {
         .push("1feecd50adc6273fdd5d11c6da18c8cfe14e2787f5a90af7c7c1328e7d0a2c42")
         .push(96)
         .op(MSTORE);
+    return program;
   }
 
-  public static void appendGibberishReturn(BytecodeCompiler program) {
+  public static BytecodeCompiler appendGibberishReturn(BytecodeCompiler program) {
     program.op(CALLER).op(EXTCODEHASH).op(DUP1);
     program.push(1).push(0).op(SUB); // writes 0xffff...ff onto the stack
     program.op(XOR);
     program.push(11).op(MSTORE);
     program.push(50).op(MSTORE);
     program.push(77).push(3).op(RETURN); // returning some of that with zeros at the start
+    return program;
   }
 
   public static class ProgramIncrement {
