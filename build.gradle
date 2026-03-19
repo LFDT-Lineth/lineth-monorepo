@@ -128,7 +128,7 @@ allprojects {
         // spotless check applied to build.gradle (groovy) files
         groovyGradle {
           target '*.gradle'
-          greclipse("4.32")
+          greclipse("4.35")
           leadingTabsToSpaces(2)
           endWithNewline()
         }
