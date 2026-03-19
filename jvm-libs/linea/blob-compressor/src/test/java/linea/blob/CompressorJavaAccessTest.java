@@ -12,5 +12,6 @@ public class CompressorJavaAccessTest {
     var compressedSize = compressor.compressedSize(new byte[1000]);
 
     assertThat(compressedSize).isBetween(0, 1000);
+    assertThat(compressor.getVersion()).isEqualTo(BlobCompressorVersion.V3);
   }
 }

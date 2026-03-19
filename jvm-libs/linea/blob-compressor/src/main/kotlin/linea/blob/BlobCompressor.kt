@@ -7,6 +7,8 @@ class BlobCompressionException(message: String) : RuntimeException(message)
 
 interface BlobCompressor {
 
+  val version: BlobCompressorVersion
+
   /**
    * @Throws(BlobCompressionException::class) when blockRLPEncoded is invalid
    */
@@ -40,6 +42,7 @@ interface BlobCompressor {
 
 class GoBackedBlobCompressor private constructor(
   internal val goNativeBlobCompressor: GoNativeBlobCompressor,
+  override val version: BlobCompressorVersion,
 ) : BlobCompressor {
 
   companion object {
@@ -55,7 +58,7 @@ class GoBackedBlobCompressor private constructor(
       if (!initialized) {
         throw InstantiationException(goNativeBlobCompressor.Error())
       }
-      return GoBackedBlobCompressor(goNativeBlobCompressor)
+      return GoBackedBlobCompressor(goNativeBlobCompressor, compressorVersion)
     }
   }
 
