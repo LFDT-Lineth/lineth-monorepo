@@ -29,3 +29,12 @@
 .submit-button {
   line-height: 1.5rem !important;
 }
+
+.error-text {
+  color: var(--color-red);
+  font-family: var(--font-atyp-text);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  text-align: center;
+  margin-top: 0.5rem;
+}
