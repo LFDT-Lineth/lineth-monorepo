@@ -2,18 +2,46 @@ name: Claude Code Review
 
 on:
   pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+    types: [opened, edited, synchronize, ready_for_review, reopened]
+    paths:
+      - "**/*.js"
+      - "**/*.jsx"
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.java"
+      - "**/*.kt"
+      - "**/*.go"
+      - "**/*.py"
+      - "**/*.rs"
+      - "**/*.sol"
+      - "**/*.zkasm"
+      - "**/*.lisp"
+      - "**/Makefile"
+      - "**/*.mk"
+      - "**/Dockerfile"
+      - "**/Dockerfile.*"
+      - "**/*.dockerfile"
+      - "**/*.sh"
+      - "**/*.bash"
+      - "**/*.gradle"
+      - "**/*.gradle.kts"
+      - "**/gradlew"
+      - "**/gradle.properties"
+      - "**/settings.gradle"
+      - "**/settings.gradle.kts"
 
 jobs:
   claude-review:
-    # Only run on PRs from the same repo (team members), not forks
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    # Only run when '@claude-review' is present in the PR description
+    # and the author is a repo owner, member, or collaborator (i.e. team member)
+    if: |
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.body, '@claude-review') &&
+      (
+        github.event.pull_request.author_association == 'OWNER' ||
+        github.event.pull_request.author_association == 'MEMBER' ||
+        github.event.pull_request.author_association == 'COLLABORATOR'
+      )
 
     runs-on: ubuntu-latest
     permissions:
@@ -33,9 +61,21 @@ jobs:
         uses: anthropics/claude-code-action@5d0cc745cd0cce4c0e9e0b3511de26c3bc285eb5 #v1.0.71
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
+          # use_sticky_comment: false
+          direct_prompt: |
+            You are a senior software engineer performing a thorough code review on PR #${{ github.event.pull_request.number }} in ${{ github.repository }}.
 
+            Review ONLY changed files with the following extensions or names:
+            .js .jsx .ts .tsx .java .kt .go .py .rs .sol .sh .bash .gradle .gradle.kts .mk .dockerfile .zkasm .lisp
+            Makefile gradlew gradle.properties settings.gradle settings.gradle.kts Dockerfile Dockerfile.*
+
+            For each issue you find, post an inline pull request review comment on the exact file and line where the problem occurs.
+
+            Focus on:
+            - Bugs and logic errors
+            - Security vulnerabilities (injection, unsafe deserialization, improper auth, etc.)
+            - Performance problems
+            - Code quality, readability, and maintainability issues
+            - Incorrect or missing error handling
+
+            Be specific, actionable, and constructive. Do NOT post a general top-level PR summary comment.
