@@ -218,6 +218,18 @@ class CompressionAwareBlockBuildingTest : LineaPluginPoSTestBase() {
     return TransactionEncoder.signMessage(rawTx, sender.web3jCredentialsOrThrow()).encodeHex()
   }
 
+  private fun getRejectionReason(txHash: String): String? {
+    val response = org.web3j.protocol.core.Request(
+      "test_getRejectionReason",
+      listOf(txHash),
+      minerNode.nodeRequests().web3jService,
+      TestRejectionResponse::class.java,
+    ).send()
+    return response.result
+  }
+
+  class TestRejectionResponse : org.web3j.protocol.core.Response<String>()
+
   private fun getTransactionReceiptIfExists(txHash: String): TransactionReceipt? {
     return ethTransactions.getTransactionReceipt(txHash).execute(minerNode.nodeRequests()).getOrNull()
   }

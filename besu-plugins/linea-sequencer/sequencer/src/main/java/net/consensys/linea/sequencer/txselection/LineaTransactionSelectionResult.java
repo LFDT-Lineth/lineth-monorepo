@@ -27,8 +27,7 @@ public class LineaTransactionSelectionResult extends TransactionSelectionResult 
     DENIED_LOG_TOPIC(false, true, true),
     TX_FILTERED_ADDRESS_FROM(false, true, true),
     TX_FILTERED_ADDRESS_TO(false, true, true),
-    TX_FILTERED_ADDRESS_AUTHORIZATION(false, true, true),
-    TX_FILTERED_ADDRESS_CALLED(false, true, true);
+    TX_FILTERED_ADDRESS_AUTHORIZATION(false, true, true);
 
     private final boolean stop;
     private final boolean discard;
@@ -108,6 +107,4 @@ public class LineaTransactionSelectionResult extends TransactionSelectionResult 
       new LineaTransactionSelectionResult(LineaStatus.TX_FILTERED_ADDRESS_TO);
   public static final TransactionSelectionResult TX_FILTERED_ADDRESS_AUTHORIZATION =
       new LineaTransactionSelectionResult(LineaStatus.TX_FILTERED_ADDRESS_AUTHORIZATION);
-  public static final TransactionSelectionResult TX_FILTERED_ADDRESS_CALLED =
-      new LineaTransactionSelectionResult(LineaStatus.TX_FILTERED_ADDRESS_CALLED);
 }

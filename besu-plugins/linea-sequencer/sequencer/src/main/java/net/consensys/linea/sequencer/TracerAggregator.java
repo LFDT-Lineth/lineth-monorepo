@@ -21,17 +21,13 @@ import org.hyperledger.besu.evm.log.Log;
 import org.hyperledger.besu.evm.operation.Operation;
 import org.hyperledger.besu.evm.tracing.OperationTracer;
 import org.hyperledger.besu.evm.worldstate.WorldView;
-import org.hyperledger.besu.plugin.data.BlockBody;
-import org.hyperledger.besu.plugin.data.BlockHeader;
-import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
-import org.hyperledger.besu.plugin.services.tracer.BlockAwareOperationTracer;
 
 /**
  * Aggregates multiple {@link OperationTracer} instances, allowing them to be treated as a single
  * tracer. This class facilitates the registration and delegation of tracing operations to multiple
  * tracers.
  */
-public class TracerAggregator implements BlockAwareOperationTracer {
+public class TracerAggregator implements OperationTracer {
   private final List<OperationTracer> tracers = new ArrayList<>();
 
   /**
@@ -154,39 +150,5 @@ public class TracerAggregator implements BlockAwareOperationTracer {
       }
     }
     return false;
-  }
-
-  @Override
-  public void traceStartBlock(
-      final WorldView worldView,
-      final BlockHeader blockHeader,
-      final BlockBody blockBody,
-      final Address miningBeneficiary) {
-    for (OperationTracer tracer : tracers) {
-      if (tracer instanceof BlockAwareOperationTracer blockAware) {
-        blockAware.traceStartBlock(worldView, blockHeader, blockBody, miningBeneficiary);
-      }
-    }
-  }
-
-  @Override
-  public void traceEndBlock(final BlockHeader blockHeader, final BlockBody blockBody) {
-    for (OperationTracer tracer : tracers) {
-      if (tracer instanceof BlockAwareOperationTracer blockAware) {
-        blockAware.traceEndBlock(blockHeader, blockBody);
-      }
-    }
-  }
-
-  @Override
-  public void traceStartBlock(
-      final WorldView worldView,
-      final ProcessableBlockHeader processableBlockHeader,
-      final Address miningBeneficiary) {
-    for (OperationTracer tracer : tracers) {
-      if (tracer instanceof BlockAwareOperationTracer blockAware) {
-        blockAware.traceStartBlock(worldView, processableBlockHeader, miningBeneficiary);
-      }
-    }
   }
 }
