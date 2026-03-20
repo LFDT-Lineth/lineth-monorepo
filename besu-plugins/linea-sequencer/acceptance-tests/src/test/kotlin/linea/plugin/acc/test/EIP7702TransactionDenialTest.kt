@@ -21,12 +21,18 @@ import org.web3j.protocol.Web3j
 
 /**
  * Tests that verify the LineaTransactionValidationPlugin correctly rejects EIP7702 DELEGATE_CODE
- * transactions from being executed
+ * transactions from being executed when explicitly disabled via CLI option
  */
 class EIP7702TransactionDenialTest : LineaPluginPoSTestBase() {
   private lateinit var web3j: Web3j
   private lateinit var credentials: Credentials
   private lateinit var recipient: String
+
+  override fun getTestCliOptions(): List<String> {
+    return TestCommandLineOptionsBuilder()
+      .set("--plugin-linea-delegate-code-tx-enabled=", "false")
+      .build()
+  }
 
   @BeforeEach
   override fun setup() {

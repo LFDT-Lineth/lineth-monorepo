@@ -104,7 +104,23 @@ public class LineaTransactionValidatorPluginTest {
   }
 
   @Test
-  public void shouldRejectEIP7702TransactionsByDefault() {
+  public void shouldPermitEIP7702TransactionsByDefault() {
+    // Arrange
+    when(lineaTransactionValidatorConfiguration.delegateCodeTxEnabled()).thenReturn(true);
+    plugin.doRegister(serviceManager);
+    plugin.beforeExternalServices();
+    final TransactionValidationRule validatorRule = this.getTransactionValidatorRule();
+
+    // Act - EIP7702 transaction
+    when(transaction.getType()).thenReturn(TransactionType.DELEGATE_CODE);
+    Optional<String> result = validatorRule.validate(transaction);
+
+    // Assert
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  public void shouldRejectEIP7702TransactionsWhenDisabled() {
     // Arrange
     when(lineaTransactionValidatorConfiguration.delegateCodeTxEnabled()).thenReturn(false);
     plugin.doRegister(serviceManager);
@@ -176,22 +192,6 @@ public class LineaTransactionValidatorPluginTest {
 
     // Act - BLOB transaction
     when(transaction.getType()).thenReturn(TransactionType.BLOB);
-    Optional<String> result = validatorRule.validate(transaction);
-
-    // Assert
-    assertThat(result).isEmpty();
-  }
-
-  @Test
-  public void shouldPermitEIP7702TransactionsWhenEnabled() {
-    // Arrange
-    when(lineaTransactionValidatorConfiguration.delegateCodeTxEnabled()).thenReturn(true);
-    plugin.doRegister(serviceManager);
-    plugin.beforeExternalServices();
-    final TransactionValidationRule validatorRule = this.getTransactionValidatorRule();
-
-    // Act - DELEGATE_CODE transaction
-    when(transaction.getType()).thenReturn(TransactionType.DELEGATE_CODE);
     Optional<String> result = validatorRule.validate(transaction);
 
     // Assert

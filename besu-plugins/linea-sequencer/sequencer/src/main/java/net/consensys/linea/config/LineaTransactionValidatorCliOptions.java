@@ -20,7 +20,7 @@ public class LineaTransactionValidatorCliOptions implements LineaCliOptions {
   public static final boolean DEFAULT_BLOB_TX_ENABLED = false;
 
   public static final String DELEGATE_CODE_TX_ENABLED = "--plugin-linea-delegate-code-tx-enabled";
-  public static final boolean DEFAULT_DELEGATE_CODE_TX_ENABLED = false;
+  public static final boolean DEFAULT_DELEGATE_CODE_TX_ENABLED = true;
 
   @CommandLine.Option(
       names = {BLOB_TX_ENABLED},

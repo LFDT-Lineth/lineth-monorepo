@@ -119,7 +119,7 @@ The plugin implements transaction filtering for blob transactions (EIP-4844) and
 | Command Line Argument                     | Default Value |
 |-------------------------------------------|---------------|
 | `--plugin-linea-blob-tx-enabled`          | false         |
-| `--plugin-linea-delegate-code-tx-enabled` | false         |
+| `--plugin-linea-delegate-code-tx-enabled` | true          |
 
 ### Reporting rejected transactions
 The transaction selection and validation plugins can report rejected transactions as JSON-RPC calls to an external
