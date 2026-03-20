@@ -38,10 +38,12 @@ async function fetchBridgeEvents(
   wagmiConfig: Config,
 ): Promise<BridgeTransaction[]> {
   const adapters = getAllAdapters();
-  const results = await Promise.all(
+  const results = await Promise.allSettled(
     adapters.map((adapter) =>
       adapter.fetchHistory({ historyStoreActions, address, fromChain, toChain, tokens, wagmiConfig }),
     ),
   );
-  return results.flat();
+  return results
+    .filter((result): result is PromiseFulfilledResult<BridgeTransaction[]> => result.status === "fulfilled")
+    .flatMap((result) => result.value);
 }

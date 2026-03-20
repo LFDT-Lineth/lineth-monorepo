@@ -74,86 +74,90 @@ export async function fetchERC20BridgeEvents(
 
   await Promise.all(
     Array.from(uniqueLogsMap.values()).map(async (log) => {
-      const transactionHash = log.transactionHash;
+      try {
+        const transactionHash = log.transactionHash;
 
-      if (
-        restoreFromTransactionCache(
-          historyStoreActions,
-          fromChain.id,
+        if (
+          restoreFromTransactionCache(
+            historyStoreActions,
+            fromChain.id,
+            transactionHash,
+            transactionsMap,
+            transactionHash,
+          )
+        ) {
+          return;
+        }
+
+        const block = await originLayerClient.getBlock({ blockNumber: log.blockNumber, includeTransactions: false });
+        if (isBlockTooOld(block)) return;
+
+        const message = await getMessagesByTransactionHash(originLayerClient as Client, {
           transactionHash,
-          transactionsMap,
-          transactionHash,
-        )
-      ) {
-        return;
+          ...(config.e2eTestMode
+            ? { messageServiceAddress: config.chains[fromChain.id].messageServiceAddress as Address }
+            : {}),
+        });
+
+        if (isUndefinedOrNull(message) || message.length === 0) {
+          return;
+        }
+
+        const messageStatus =
+          fromChain.layer === ChainLayer.L1
+            ? await getL1ToL2MessageStatus(destinationLayerClient as Client, {
+                messageHash: message[0].messageHash,
+                ...(config.e2eTestMode
+                  ? { l2MessageServiceAddress: config.chains[toChain.id].messageServiceAddress as Address }
+                  : {}),
+              })
+            : await getL2ToL1MessageStatus(destinationLayerClient as Client, {
+                messageHash: message[0].messageHash,
+                l2Client: originLayerClient as Client,
+                ...(config.e2eTestMode
+                  ? {
+                      lineaRollupAddress: config.chains[toChain.id].messageServiceAddress as Address,
+                      l2MessageServiceAddress: config.chains[fromChain.id].messageServiceAddress as Address,
+                    }
+                  : {}),
+              });
+
+        const token = tokens.find(
+          (token) =>
+            token.L1?.toLowerCase() === log.args.token.toLowerCase() ||
+            token.L2?.toLowerCase() === log.args.token.toLowerCase(),
+        );
+
+        if (isUndefined(token)) {
+          return;
+        }
+
+        const [amount] = decodeAbiParameters([{ type: "uint256", name: "amount" }], log.data);
+        const tx = {
+          adapterId: "native",
+          status: formatOnChainMessageStatus(messageStatus),
+          token,
+          fromChain,
+          toChain,
+          timestamp: block.timestamp,
+          bridgingTx: log.transactionHash,
+          message: {
+            from: message[0].from as Address,
+            to: message[0].to as Address,
+            fee: message[0].fee,
+            value: message[0].value,
+            nonce: message[0].nonce,
+            calldata: message[0].calldata,
+            messageHash: message[0].messageHash,
+            amountSent: amount,
+          },
+        };
+
+        saveToTransactionCache(historyStoreActions, tx);
+        transactionsMap.set(transactionHash, tx);
+      } catch (error) {
+        console.error(`Failed to process native ERC20 transaction ${log.transactionHash}:`, error);
       }
-
-      const block = await originLayerClient.getBlock({ blockNumber: log.blockNumber, includeTransactions: false });
-      if (isBlockTooOld(block)) return;
-
-      const message = await getMessagesByTransactionHash(originLayerClient as Client, {
-        transactionHash,
-        ...(config.e2eTestMode
-          ? { messageServiceAddress: config.chains[fromChain.id].messageServiceAddress as Address }
-          : {}),
-      });
-
-      if (isUndefinedOrNull(message) || message.length === 0) {
-        return;
-      }
-
-      const messageStatus =
-        fromChain.layer === ChainLayer.L1
-          ? await getL1ToL2MessageStatus(destinationLayerClient as Client, {
-              messageHash: message[0].messageHash,
-              ...(config.e2eTestMode
-                ? { l2MessageServiceAddress: config.chains[toChain.id].messageServiceAddress as Address }
-                : {}),
-            })
-          : await getL2ToL1MessageStatus(destinationLayerClient as Client, {
-              messageHash: message[0].messageHash,
-              l2Client: originLayerClient as Client,
-              ...(config.e2eTestMode
-                ? {
-                    lineaRollupAddress: config.chains[toChain.id].messageServiceAddress as Address,
-                    l2MessageServiceAddress: config.chains[fromChain.id].messageServiceAddress as Address,
-                  }
-                : {}),
-            });
-
-      const token = tokens.find(
-        (token) =>
-          token.L1?.toLowerCase() === log.args.token.toLowerCase() ||
-          token.L2?.toLowerCase() === log.args.token.toLowerCase(),
-      );
-
-      if (isUndefined(token)) {
-        return;
-      }
-
-      const [amount] = decodeAbiParameters([{ type: "uint256", name: "amount" }], log.data);
-      const tx = {
-        adapterId: "native",
-        status: formatOnChainMessageStatus(messageStatus),
-        token,
-        fromChain,
-        toChain,
-        timestamp: block.timestamp,
-        bridgingTx: log.transactionHash,
-        message: {
-          from: message[0].from as Address,
-          to: message[0].to as Address,
-          fee: message[0].fee,
-          value: message[0].value,
-          nonce: message[0].nonce,
-          calldata: message[0].calldata,
-          messageHash: message[0].messageHash,
-          amountSent: amount,
-        },
-      };
-
-      saveToTransactionCache(historyStoreActions, tx);
-      transactionsMap.set(transactionHash, tx);
     }),
   );
 

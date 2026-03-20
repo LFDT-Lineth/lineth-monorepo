@@ -22,9 +22,10 @@ export function restoreFromTransactionCache(
   if (cachedCompletedTx) {
     if (isTimestampTooOld(cachedCompletedTx.timestamp)) {
       historyStoreActions.deleteCompleteTx(cacheKey);
+      return false;
     }
     transactionsMap.set(mapKey, cachedCompletedTx);
-    return true; // Found valid cached transaction, skip processing
+    return true;
   }
 
   return false; // No cache hit, continue processing

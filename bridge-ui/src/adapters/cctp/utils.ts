@@ -2,7 +2,7 @@ import { getPublicClient, GetPublicClientReturnType } from "@wagmi/core";
 import { Config } from "wagmi";
 
 import { Chain, TransactionStatus } from "@/types";
-import { isUndefined } from "@/utils/misc";
+import { isUndefined, isUndefinedOrNull } from "@/utils/misc";
 
 import { MESSAGE_TRANSMITTER_V2_ABI } from "./abis";
 import {
@@ -55,7 +55,7 @@ export const getCctpTransactionStatus = async (
     chainId: toChain.id,
   });
   if (isUndefined(toChainClient)) return TransactionStatus.PENDING;
-  // Attestation/message not yet available
+  if (isUndefinedOrNull(cctpAttestationMessage.message)) return TransactionStatus.PENDING;
   if (cctpAttestationMessage.message.length < CCTP_V2_MESSAGE_HEADER_LENGTH) return TransactionStatus.PENDING;
   const isNonceUsed = await isCctpNonceUsed(toChainClient, nonce, toChain.cctpMessageTransmitterV2Address);
   if (isNonceUsed) return TransactionStatus.COMPLETED;
@@ -75,7 +75,11 @@ export const getCctpTransactionStatus = async (
       : TransactionStatus.READY_TO_CLAIM;
 
   // Message has expired, must reattest
-  await reattestCctpV2PreFinalityMessage(nonce, toChain.testnet);
+  try {
+    await reattestCctpV2PreFinalityMessage(nonce, toChain.testnet);
+  } catch (error) {
+    console.error(`Failed to reattest CCTP message with nonce ${nonce}:`, error);
+  }
 
   /**
    * We will not re-query to get a new message/attestation set here:

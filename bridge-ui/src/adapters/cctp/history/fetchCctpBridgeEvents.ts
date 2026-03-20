@@ -3,7 +3,7 @@ import { Address } from "viem";
 import { Config } from "wagmi";
 
 import { type HistoryActionsForCompleteTxCaching } from "@/stores/historyStore";
-import { BridgeTransaction, Chain, Token } from "@/types";
+import { BridgeTransaction, Chain, Token, TransactionStatus } from "@/types";
 import { isBlockTooOld } from "@/utils/history/isBlockTooOld";
 import { restoreFromTransactionCache } from "@/utils/history/restoreFromTransactionCache";
 import { saveToTransactionCache } from "@/utils/history/saveToTransactionCache";
@@ -44,50 +44,87 @@ export async function fetchCctpBridgeEvents(
 
   await Promise.all(
     filteredUSDCLogs.map(async (log) => {
-      const transactionHash = log.transactionHash;
+      try {
+        const transactionHash = log.transactionHash;
 
-      if (
-        restoreFromTransactionCache(
-          historyStoreActions,
-          fromChain.id,
+        if (
+          restoreFromTransactionCache(
+            historyStoreActions,
+            fromChain.id,
+            transactionHash,
+            transactionsMap,
+            transactionHash,
+          )
+        ) {
+          return;
+        }
+
+        const fromBlock = await fromChainClient.getBlock({
+          blockNumber: log.blockNumber,
+          includeTransactions: false,
+        });
+        if (isBlockTooOld(fromBlock)) return;
+
+        const token = tokens.find((token) => isCctp(token));
+        if (isUndefined(token)) return;
+
+        const cctpMessage = await getCctpMessageByTxHash(
           transactionHash,
-          transactionsMap,
-          transactionHash,
-        )
-      ) {
-        return;
+          fromChain.cctpDomain,
+          fromChain.testnet,
+        ).catch((error) => {
+          console.warn(`Failed to fetch CCTP message for ${transactionHash}:`, error);
+          return undefined;
+        });
+
+        if (isUndefined(cctpMessage)) {
+          // Incomplete payload: do not cache (avoids persisting bad data; each refresh retries the API).
+          transactionsMap.set(transactionHash, {
+            adapterId: "cctp",
+            status: TransactionStatus.PENDING,
+            token,
+            fromChain,
+            toChain,
+            timestamp: fromBlock.timestamp,
+            bridgingTx: log.transactionHash,
+            message: {
+              amountSent: BigInt(log.args.amount),
+              // Placeholder nonce — claim is prevented by missing attestation/message fields (see CCTP adapter claim checks).
+              nonce: "0x" as `0x${string}`,
+            },
+            mode: getCctpModeFromFinalityThreshold(log.args.minFinalityThreshold),
+          });
+          return;
+        }
+
+        const nonce = cctpMessage.eventNonce;
+        const status = await getCctpTransactionStatus(toChain, cctpMessage, nonce, wagmiConfig).catch((error) => {
+          console.warn(`Failed to resolve CCTP transaction status for ${transactionHash}:`, error);
+          return TransactionStatus.PENDING;
+        });
+
+        const tx: BridgeTransaction = {
+          adapterId: "cctp",
+          status,
+          token,
+          fromChain,
+          toChain,
+          timestamp: fromBlock.timestamp,
+          bridgingTx: log.transactionHash,
+          message: {
+            amountSent: BigInt(log.args.amount),
+            nonce: nonce,
+            attestation: cctpMessage.attestation,
+            message: cctpMessage.message,
+          },
+          mode: getCctpModeFromFinalityThreshold(log.args.minFinalityThreshold),
+        };
+
+        saveToTransactionCache(historyStoreActions, tx);
+        transactionsMap.set(transactionHash, tx);
+      } catch (error) {
+        console.error(`Failed to process CCTP transaction ${log.transactionHash}:`, error);
       }
-
-      const fromBlock = await fromChainClient.getBlock({ blockNumber: log.blockNumber, includeTransactions: false });
-      if (isBlockTooOld(fromBlock)) return;
-
-      const token = tokens.find((token) => isCctp(token));
-      if (isUndefined(token)) return;
-
-      const cctpMessage = await getCctpMessageByTxHash(transactionHash, fromChain.cctpDomain, fromChain.testnet);
-      if (isUndefined(cctpMessage)) return;
-      const nonce = cctpMessage.eventNonce;
-      const status = await getCctpTransactionStatus(toChain, cctpMessage, nonce, wagmiConfig);
-
-      const tx: BridgeTransaction = {
-        adapterId: "cctp",
-        status,
-        token,
-        fromChain,
-        toChain,
-        timestamp: fromBlock.timestamp,
-        bridgingTx: log.transactionHash,
-        message: {
-          amountSent: BigInt(log.args.amount),
-          nonce: nonce,
-          attestation: cctpMessage.attestation,
-          message: cctpMessage.message,
-        },
-        mode: getCctpModeFromFinalityThreshold(log.args.minFinalityThreshold),
-      };
-
-      saveToTransactionCache(historyStoreActions, tx);
-      transactionsMap.set(transactionHash, tx);
     }),
   );
 

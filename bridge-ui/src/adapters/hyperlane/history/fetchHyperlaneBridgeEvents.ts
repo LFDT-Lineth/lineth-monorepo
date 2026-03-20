@@ -80,45 +80,49 @@ export async function fetchHyperlaneBridgeEvents(
 
   await Promise.all(
     allLogs.map(async (log) => {
-      const transactionHash = log.transactionHash;
+      try {
+        const transactionHash = log.transactionHash;
 
-      if (
-        restoreFromTransactionCache(
-          historyStoreActions,
-          fromChain.id,
-          transactionHash,
-          transactionsMap,
-          transactionHash,
-        )
-      ) {
-        return;
+        if (
+          restoreFromTransactionCache(
+            historyStoreActions,
+            fromChain.id,
+            transactionHash,
+            transactionsMap,
+            transactionHash,
+          )
+        ) {
+          return;
+        }
+
+        const fromBlock = await fromChainClient.getBlock({ blockNumber: log.blockNumber, includeTransactions: false });
+        if (isBlockTooOld(fromBlock)) return;
+
+        const messageId = log.args.messageId;
+        const status = await getHyperlaneTransactionStatus(messageId, toChain, wagmiConfig);
+
+        const tx: BridgeTransaction = {
+          adapterId: "hyperlane",
+          status,
+          token,
+          fromChain,
+          toChain,
+          timestamp: fromBlock.timestamp,
+          bridgingTx: transactionHash,
+          message: {
+            messageId,
+            amountSent: log.args.amount,
+            transferIndex: log.args.index,
+            sender: log.args.sender,
+            recipient: log.args.recipient,
+          },
+        };
+
+        saveToTransactionCache(historyStoreActions, tx);
+        transactionsMap.set(transactionHash, tx);
+      } catch (error) {
+        console.error(`Failed to process Hyperlane transaction ${log.transactionHash}:`, error);
       }
-
-      const fromBlock = await fromChainClient.getBlock({ blockNumber: log.blockNumber, includeTransactions: false });
-      if (isBlockTooOld(fromBlock)) return;
-
-      const messageId = log.args.messageId;
-      const status = await getHyperlaneTransactionStatus(messageId, toChain, wagmiConfig);
-
-      const tx: BridgeTransaction = {
-        adapterId: "hyperlane",
-        status,
-        token,
-        fromChain,
-        toChain,
-        timestamp: fromBlock.timestamp,
-        bridgingTx: transactionHash,
-        message: {
-          messageId,
-          amountSent: log.args.amount,
-          transferIndex: log.args.index,
-          sender: log.args.sender,
-          recipient: log.args.recipient,
-        },
-      };
-
-      saveToTransactionCache(historyStoreActions, tx);
-      transactionsMap.set(transactionHash, tx);
     }),
   );
 

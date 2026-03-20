@@ -110,7 +110,7 @@ export default function BridgeForm() {
           </div>
         </div>
       </div>
-      <PageFooter showYieldBoost />
+      <PageFooter />
     </>
   );
 }

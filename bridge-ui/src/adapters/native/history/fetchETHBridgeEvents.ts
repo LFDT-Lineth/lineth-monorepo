@@ -70,62 +70,72 @@ export async function fetchETHBridgeEvents(
 
   await Promise.all(
     Array.from(uniqueLogsMap.values()).map(async (log) => {
-      const uniqueKey = `${log.args._from}-${log.args._to}-${log.transactionHash}`;
+      try {
+        const uniqueKey = `${log.args._from}-${log.args._to}-${log.transactionHash}`;
 
-      if (
-        restoreFromTransactionCache(historyStoreActions, fromChain.id, log.transactionHash, transactionsMap, uniqueKey)
-      ) {
-        return;
+        if (
+          restoreFromTransactionCache(
+            historyStoreActions,
+            fromChain.id,
+            log.transactionHash,
+            transactionsMap,
+            uniqueKey,
+          )
+        ) {
+          return;
+        }
+
+        const messageHash = log.args._messageHash as Hex;
+
+        const block = await originLayerClient.getBlock({ blockNumber: log.blockNumber, includeTransactions: false });
+        if (isBlockTooOld(block)) return;
+
+        const messageStatus =
+          fromChain.layer === ChainLayer.L1
+            ? await getL1ToL2MessageStatus(destinationLayerClient as Client, {
+                messageHash,
+                ...(config.e2eTestMode
+                  ? { l2MessageServiceAddress: config.chains[toChain.id].messageServiceAddress as Address }
+                  : {}),
+              })
+            : await getL2ToL1MessageStatus(destinationLayerClient as Client, {
+                messageHash,
+                l2Client: originLayerClient as Client,
+                ...(config.e2eTestMode
+                  ? {
+                      lineaRollupAddress: config.chains[toChain.id].messageServiceAddress as Address,
+                      l2MessageServiceAddress: config.chains[fromChain.id].messageServiceAddress as Address,
+                    }
+                  : {}),
+              });
+
+        const token = tokens.find((token) => token.type.includes("eth"));
+
+        const tx = {
+          adapterId: "native",
+          status: formatOnChainMessageStatus(messageStatus),
+          token: token || defaultTokensConfig.MAINNET[0],
+          fromChain,
+          toChain,
+          timestamp: block.timestamp,
+          bridgingTx: log.transactionHash,
+          message: {
+            from: log.args._from,
+            to: log.args._to,
+            fee: log.args._fee,
+            value: log.args._value,
+            nonce: log.args._nonce,
+            calldata: log.args._calldata,
+            messageHash: log.args._messageHash,
+            amountSent: log.args._value,
+          },
+        };
+
+        saveToTransactionCache(historyStoreActions, tx);
+        transactionsMap.set(uniqueKey, tx);
+      } catch (error) {
+        console.error(`Failed to process native ETH transaction ${log.transactionHash}:`, error);
       }
-
-      const messageHash = log.args._messageHash as Hex;
-
-      const block = await originLayerClient.getBlock({ blockNumber: log.blockNumber, includeTransactions: false });
-      if (isBlockTooOld(block)) return;
-
-      const messageStatus =
-        fromChain.layer === ChainLayer.L1
-          ? await getL1ToL2MessageStatus(destinationLayerClient as Client, {
-              messageHash,
-              ...(config.e2eTestMode
-                ? { l2MessageServiceAddress: config.chains[toChain.id].messageServiceAddress as Address }
-                : {}),
-            })
-          : await getL2ToL1MessageStatus(destinationLayerClient as Client, {
-              messageHash,
-              l2Client: originLayerClient as Client,
-              ...(config.e2eTestMode
-                ? {
-                    lineaRollupAddress: config.chains[toChain.id].messageServiceAddress as Address,
-                    l2MessageServiceAddress: config.chains[fromChain.id].messageServiceAddress as Address,
-                  }
-                : {}),
-            });
-
-      const token = tokens.find((token) => token.type.includes("eth"));
-
-      const tx = {
-        adapterId: "native",
-        status: formatOnChainMessageStatus(messageStatus),
-        token: token || defaultTokensConfig.MAINNET[0],
-        fromChain,
-        toChain,
-        timestamp: block.timestamp,
-        bridgingTx: log.transactionHash,
-        message: {
-          from: log.args._from,
-          to: log.args._to,
-          fee: log.args._fee,
-          value: log.args._value,
-          nonce: log.args._nonce,
-          calldata: log.args._calldata,
-          messageHash: log.args._messageHash,
-          amountSent: log.args._value,
-        },
-      };
-
-      saveToTransactionCache(historyStoreActions, tx);
-      transactionsMap.set(uniqueKey, tx);
     }),
   );
 
