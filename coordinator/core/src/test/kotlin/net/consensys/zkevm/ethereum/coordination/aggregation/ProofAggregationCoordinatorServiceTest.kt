@@ -4,7 +4,6 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervals
-import linea.persistence.ftx.ForcedTransactionsDao
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.zkevm.coordinator.clients.ProofAggregationProverClientV2
@@ -13,7 +12,6 @@ import net.consensys.zkevm.domain.BlobAndBatchCounters
 import net.consensys.zkevm.domain.BlobCounters
 import net.consensys.zkevm.domain.BlobsToAggregate
 import net.consensys.zkevm.domain.CompressionProofIndex
-import net.consensys.zkevm.domain.ForcedTransactionRecordFactory.createForcedTransactionRecord
 import net.consensys.zkevm.domain.InvalidityProofIndex
 import net.consensys.zkevm.domain.ProofsToAggregate
 import net.consensys.zkevm.domain.createProofToFinalize
@@ -30,8 +28,6 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.function.Consumer
-import java.util.function.Supplier
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -73,8 +69,7 @@ class ProofAggregationCoordinatorServiceTest {
     val mockAggregationsRepository = mock<AggregationsRepository>()
     val mockProofAggregationClient = mock<ProofAggregationProverClientV2>()
     val mockAggregationL2StateProvider = mock<AggregationL2StateProvider>()
-    val mockLastFinalizedBlockNumberSupplier = mock<Supplier<ULong>>()
-    val mockForcedTransactionsDao = mock<ForcedTransactionsDao>()
+    val mockInvalidityProofProvider = mock<InvalidityProofProvider>()
     val meterRegistry = SimpleMeterRegistry()
     val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry)
 
@@ -86,25 +81,22 @@ class ProofAggregationCoordinatorServiceTest {
       )
 
     var provenAggregation = 0UL
-    var provenConsecutiveAggregation = 0UL
 
-    val provenAggregationEndBlockNumberConsumer = Consumer<ULong> { provenAggregation = it }
-    val provenConsecutiveAggregationEndBlockNumberConsumer = Consumer<ULong> { provenConsecutiveAggregation = it }
     val proofAggregationCoordinatorService =
       ProofAggregationCoordinatorService(
         vertx = vertx,
         config = config,
         nextBlockNumberToPoll = 10L,
         aggregationCalculator = mockAggregationCalculator,
-        aggregationsRepository = mockAggregationsRepository,
+        aggregationProofHandler = { aggregation ->
+          provenAggregation = aggregation.endBlockNumber
+          mockAggregationsRepository.saveNewAggregation(aggregation)
+        },
         consecutiveProvenBlobsProvider = mockAggregationsRepository::findConsecutiveProvenBlobs,
         proofAggregationClient = mockProofAggregationClient,
         aggregationL2StateProvider = mockAggregationL2StateProvider,
         metricsFacade = metricsFacade,
-        provenAggregationEndBlockNumberConsumer = provenAggregationEndBlockNumberConsumer,
-        provenConsecutiveAggregationEndBlockNumberConsumer = provenConsecutiveAggregationEndBlockNumberConsumer,
-        lastFinalizedBlockNumberSupplier = { mockLastFinalizedBlockNumberSupplier.get() },
-        forcedTransactionsDao = mockForcedTransactionsDao,
+        invalidityProofProvider = mockInvalidityProofProvider,
       )
     verify(mockAggregationCalculator).onAggregation(proofAggregationCoordinatorService)
 
@@ -192,21 +184,15 @@ class ProofAggregationCoordinatorServiceTest {
       }
 
     val agg1StartBlockNumber = compressionBlobs1.first().blobCounters.startBlockNumber
-    val ftxRecord = createForcedTransactionRecord(
-      ftxNumber = 1UL,
-      simulatedExecutionBlockNumber = agg1StartBlockNumber - 1UL,
+    val expectedInvalidityProofs = listOf(
+      InvalidityProofIndex(
+        ftxNumber = 1UL,
+        simulatedExecutionBlockNumber = agg1StartBlockNumber - 1UL,
+      ),
     )
 
-    whenever(mockForcedTransactionsDao.findByStartingNumber(any(), any()))
-      .thenReturn(SafeFuture.completedFuture(listOf(ftxRecord)))
-
-    val expectedInvalidityProofs =
-      listOf(
-        InvalidityProofIndex(
-          ftxNumber = ftxRecord.ftxNumber,
-          simulatedExecutionBlockNumber = ftxRecord.simulatedExecutionBlockNumber,
-        ),
-      )
+    whenever(mockInvalidityProofProvider.getInvalidityProofs(any(), any()))
+      .thenReturn(SafeFuture.completedFuture(expectedInvalidityProofs))
 
     val proofsToAggregate1 =
       ProofsToAggregate(
@@ -276,14 +262,6 @@ class ProofAggregationCoordinatorServiceTest {
         }
       }
 
-    whenever(mockLastFinalizedBlockNumberSupplier.get())
-      .thenAnswer {
-        aggregation1.startBlockNumber - 1UL
-      }
-      .thenAnswer {
-        aggregation2.startBlockNumber - 1UL
-      }
-
     whenever(
       mockAggregationsRepository.findHighestConsecutiveEndBlockNumber(
         aggregation1.startBlockNumber.toLong(),
@@ -326,7 +304,6 @@ class ProofAggregationCoordinatorServiceTest {
         verify(mockProofAggregationClient).requestProof(proofsToAggregate1)
         verify(mockAggregationsRepository).saveNewAggregation(aggregation1)
         assertThat(provenAggregation).isEqualTo(aggregation1.endBlockNumber)
-        assertThat(provenConsecutiveAggregation).isEqualTo(aggregation1.endBlockNumber)
       }
 
     // Second aggregation should Trigger
@@ -345,7 +322,6 @@ class ProofAggregationCoordinatorServiceTest {
         verify(mockProofAggregationClient).requestProof(proofsToAggregate2)
         verify(mockAggregationsRepository).saveNewAggregation(aggregation2)
         assertThat(provenAggregation).isEqualTo(aggregation2.endBlockNumber)
-        assertThat(provenConsecutiveAggregation).isEqualTo(aggregation2.endBlockNumber)
       }
   }
 }

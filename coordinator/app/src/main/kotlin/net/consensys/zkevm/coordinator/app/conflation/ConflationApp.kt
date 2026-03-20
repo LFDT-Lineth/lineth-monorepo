@@ -37,7 +37,10 @@ import net.consensys.zkevm.ethereum.coordination.HighestProvenBlobTracker
 import net.consensys.zkevm.ethereum.coordination.HighestULongTracker
 import net.consensys.zkevm.ethereum.coordination.HighestUnprovenBlobTracker
 import net.consensys.zkevm.ethereum.coordination.SimpleCompositeSafeFutureHandler
+import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationL2StateProviderImpl
+import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationProofHandlerImpl
 import net.consensys.zkevm.ethereum.coordination.aggregation.ConsecutiveProvenBlobsProviderWithLastEndBlockNumberTracker
+import net.consensys.zkevm.ethereum.coordination.aggregation.InvalidityProofProviderImpl
 import net.consensys.zkevm.ethereum.coordination.aggregation.ProofAggregationCoordinatorService
 import net.consensys.zkevm.ethereum.coordination.blob.BlobCompressionProofCoordinator
 import net.consensys.zkevm.ethereum.coordination.blob.BlobZkStateProviderImpl
@@ -336,6 +339,18 @@ class ConflationApp(
       measurementSupplier = highestConsecutiveAggregationTracker,
     )
     log.info("Resuming aggregation from block={} inclusive", lastConsecutiveAggregatedBlockNumber + 1u)
+
+    val l2MessageService = Web3JL2MessageServiceSmartContractClient.createReadOnly(
+      web3jClient = createWeb3jHttpClient(
+        rpcUrl = configs.conflation.l2Endpoint.toString(),
+        log = LogManager.getLogger("clients.l2.eth.conflation"),
+      ),
+      ethApiClient = l2EthClient,
+      contractAddress = configs.protocol.l2.contractAddress,
+      smartContractErrors = configs.smartContractErrors,
+      smartContractDeploymentBlockNumber = configs.protocol.l2.contractDeploymentBlockNumber?.getNumber(),
+    )
+
     ProofAggregationCoordinatorService
       .create(
         vertx = vertx,
@@ -349,30 +364,32 @@ class ConflationApp(
         maxProofsPerAggregation = configs.conflation.proofAggregation.proofsLimit,
         maxBlobsPerAggregation = configs.conflation.proofAggregation.blobsLimit,
         startBlockNumberInclusive = lastConsecutiveAggregatedBlockNumber + 1u,
-        aggregationsRepository = aggregationsRepository,
-        forcedTransactionsDao = forcedTransactionsDao,
+        aggregationProofHandler = AggregationProofHandlerImpl(
+          aggregationsRepository = aggregationsRepository,
+          provenAggregationEndBlockNumberConsumer = { aggEndBlockNumber ->
+            highestAggregationTracker(
+              aggEndBlockNumber,
+            )
+          },
+          provenConsecutiveAggregationEndBlockNumberConsumer =
+          { aggEndBlockNumber -> highestConsecutiveAggregationTracker(aggEndBlockNumber) },
+          lastFinalizedBlockNumberSupplier = { lastProvenBlockNumberProvider.getLatestL1FinalizedBlock().toULong() },
+        ),
+        invalidityProofProvider = InvalidityProofProviderImpl(forcedTransactionsDao),
+        aggregationL2StateProvider = AggregationL2StateProviderImpl(
+          ethApiClient = l2EthClient,
+          messageService = l2MessageService,
+          forcedTransactionsDao = forcedTransactionsDao,
+        ),
         consecutiveProvenBlobsProvider = maxBlobEndBlockNumberTracker,
         proofAggregationClient = proverClientFactory.proofAggregationProverClient(),
         l2EthApiClient = l2EthClient,
-        l2MessageService = Web3JL2MessageServiceSmartContractClient.createReadOnly(
-          web3jClient = createWeb3jHttpClient(
-            rpcUrl = configs.conflation.l2Endpoint.toString(),
-            log = LogManager.getLogger("clients.l2.eth.conflation"),
-          ),
-          ethApiClient = l2EthClient,
-          contractAddress = configs.protocol.l2.contractAddress,
-          smartContractErrors = configs.smartContractErrors,
-          smartContractDeploymentBlockNumber = configs.protocol.l2.contractDeploymentBlockNumber?.getNumber(),
-        ),
+        l2MessageService = l2MessageService,
         noL2ActivityTimeout = configs.conflation.conflationDeadlineLastBlockConfirmationDelay,
         waitForNoL2ActivityToTriggerAggregation =
         configs.conflation.proofAggregation.waitForNoL2ActivityToTriggerAggregation,
         targetEndBlockNumbers = configs.conflation.proofAggregation.targetEndBlocks ?: emptyList(),
         metricsFacade = metricsFacade,
-        provenAggregationEndBlockNumberConsumer = { aggEndBlockNumber -> highestAggregationTracker(aggEndBlockNumber) },
-        provenConsecutiveAggregationEndBlockNumberConsumer =
-        { aggEndBlockNumber -> highestConsecutiveAggregationTracker(aggEndBlockNumber) },
-        lastFinalizedBlockNumberSupplier = { lastProvenBlockNumberProvider.getLatestL1FinalizedBlock().toULong() },
         aggregationSizeMultipleOf = configs.conflation.proofAggregation.aggregationSizeMultipleOf,
         hardForkTimestamps = configs.conflation.proofAggregation.timestampBasedHardForks,
         initialTimestamp = lastProcessedTimestamp,
