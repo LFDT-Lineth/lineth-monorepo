@@ -59,6 +59,25 @@ jobs:
           echo "Building docker tag: ${{ steps.build-plugins-and-assemble.outputs.dockertag }}"
           echo "Building docker image: ${{ steps.build-plugins-and-assemble.outputs.dockerimage }}"
 
+      - name: compute docker tags
+        id: docker-tags
+        run: |
+          TAGS="consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag }}"
+          SAVE_TAGS="$TAGS"
+          if [[ "${{ inputs.with_besu_fleet_plugin }}" == "true" ]]; then
+            FLEET_TAG="consensys/linea-besu-package-with-fleet:${{ steps.build-plugins-and-assemble.outputs.dockertag }}"
+            TAGS="${TAGS}${NEWLINE}${FLEET_TAG}"
+            SAVE_TAGS="${SAVE_TAGS} ${FLEET_TAG}"
+          fi
+          {
+            echo "tags<<EOF"
+            echo "$TAGS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "save_tags=$SAVE_TAGS" >> "$GITHUB_OUTPUT"
+        env:
+          NEWLINE: "\n"
+
       - name: build the combined manifest
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
         env:
@@ -73,18 +92,17 @@ jobs:
             BUILD_DATE=${{ steps.build-plugins-and-assemble.outputs.build_date }}
           load: true
           push: false
-          tags: |
-            consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag }}
+          tags: ${{ steps.docker-tags.outputs.tags }}
 
       - name: Save Docker image as artifact
         run: |
           docker images
-          docker save consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag }} | gzip > linea-besu-package-image.tar.gz
+          docker save ${{ steps.docker-tags.outputs.save_tags }} | gzip > linea-besu-package-images.tar.gz
         shell: bash
 
       - name: Upload Docker image artifact
         uses: actions/upload-artifact@v4
         with:
           name: linea-besu-package
-          path: linea-besu-package-image.tar.gz
+          path: linea-besu-package-images.tar.gz
           retention-days: 1

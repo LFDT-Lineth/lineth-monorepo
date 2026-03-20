@@ -9,17 +9,18 @@
     <!-- edit the package name/level below to add more logging to specific classes -->
     <!-- no need to restart Besu as it will detect changes every 2s -->
     <Logger name="org.hyperledger.besu" level="WARN" />
+    <Logger name="net.consensys.shomei.trielog" level="DEBUG" />
     <!-- to avoid annoying message "INFO ... No sync target, waiting for peers. Current peers: 0" change to WARN-->
     <Logger name="org.hyperledger.besu.ethereum.eth.sync.fullsync.FullSyncTargetManager" level="INFO" />
     <Logger name="org.hyperledger.besu.ethereum.blockcreation" level="INFO" />
     <Logger name="org.hyperledger.besu.consensus.merge.blockcreation" level="INFO" />
-    <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc" level="TRACE" />
+    <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc" level="DEBUG" />
     <Logger name="io.opentelemetry" level="WARN" />
     <Logger name="org.hyperledger.besu.ethereum.eth.transactions.TransactionPool" level="TRACE" />
 
     <!-- log the request and response of RPC calls -->
-    <Logger name="org.hyperledger.besu.ethereum.api.handlers.AbstractJsonRpcExecutor" level="TRACE" />
-    <Logger name="org.hyperledger.besu.ethereum.api.handlers.JsonRpcArrayExecutor" level="TRACE" />
+    <Logger name="org.hyperledger.besu.ethereum.api.handlers.AbstractJsonRpcExecutor" level="DEBUG" />
+    <Logger name="org.hyperledger.besu.ethereum.api.handlers.JsonRpcArrayExecutor" level="DEBUG" />
 
     <Logger name="net.consensys.linea.rpc.methods.LineaEstimateGas" level="TRACE" />
 

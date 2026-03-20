@@ -24,6 +24,7 @@ export const BaseL2ConfigSchema = BaseConfigSchema.extend({
   l2MessageServiceAddress: addressSchema,
   l2TestContractAddress: addressSchema.optional(),
   besuNodeRpcUrl: urlSchema.optional(),
+  besuLeaderNodeRpcUrl: urlSchema.optional(),
   besuFollowerNodeRpcUrl: urlSchema.optional(),
   tokenBridgeAddress: addressSchema,
   l2TokenAddress: addressSchema,

@@ -279,8 +279,8 @@ Linea is a zkEVM Layer 2 rollup that inherits Ethereum's security through zero-k
 │  │  (Teku)                 │          │  (Maru Engine)             │   │
 │  │  :4003 REST             │          │  :8080                     │   │
 │  │                         │          │                            │   │
-│  │  blobscan-api .203      │          │  traces-node    .115       │   │
-│  │  :4001                  │          │  :8745 HTTP                │   │
+│  │  blobscan-api .203      │          │  l2-node-besu   .119       │   │
+│  │  :4001                  │          │  :9045 HTTP                │   │
 │  │                         │          │                            │   │
 │  │  coordinator  .106      │◄────────▶│  coordinator    .106       │   │
 │  │  (connected to both)    │          │  :9545                     │   │
@@ -293,12 +293,6 @@ Linea is a zkEVM Layer 2 rollup that inherits Ethereum's security through zero-k
 │                                       │                            │   │
 │                                       │  shomei         .114       │   │
 │                                       │  :8998                     │   │
-│                                       │                            │   │
-│                                       │  zkbesu-shomei  .113       │   │
-│                                       │  :8945 HTTP                │   │
-│                                       │                            │   │
-│                                       │  l2-node-besu   .119       │   │
-│                                       │  :9045 HTTP                │   │
 │                                       │                            │   │
 │                                       └────────────────────────────┘   │
 │                                                                        │

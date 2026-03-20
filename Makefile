@@ -12,8 +12,8 @@ clean-testnet-folders:
 		rm -rf tmp/testnet/* || true # ignore failure if folders do not exist already
 
 clean-environment:
-		docker compose -f docker/compose-tracing-v2-ci-extension.yml -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery kill -s 9 || true;
-		docker compose -f docker/compose-tracing-v2-ci-extension.yml -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery down || true;
+		docker compose -f docker/compose-tracing-v2-ci-fleet-extension.yml -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery kill -s 9 || true;
+		docker compose -f docker/compose-tracing-v2-ci-fleet-extension.yml -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery down || true;
 		make clean-local-folders;
 		docker volume rm linea-local-dev linea-logs || true; # ignore failure if volumes do not exist already
 		docker system prune -f || true;
@@ -81,8 +81,8 @@ start-env-with-validium-and-tracing-v2-ci:
 	make start-env-with-validium COMPOSE_FILE=docker/compose-tracing-v2-ci-extension.yml LINEA_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=false LINEA_COORDINATOR_SIGNER_TYPE=web3signer
 
 ## Enable Fleet leader and follower besu nodes
-start-env-with-tracing-v2-fleet-ci:
-	make start-env COMPOSE_FILE=docker/compose-tracing-v2-fleet-ci-extension.yml LINEA_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=false LINEA_COORDINATOR_SIGNER_TYPE=web3signer
+start-env-with-tracing-v2-ci-fleet:
+	make start-env COMPOSE_FILE=docker/compose-tracing-v2-ci-fleet-extension.yml LINEA_USE_MARU_OVERRIDE_CONFIG=true LINEA_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=false LINEA_COORDINATOR_SIGNER_TYPE=web3signer
 
 start-env-with-staterecovery: COMPOSE_PROFILES:=l1,l2,staterecovery
 start-env-with-staterecovery: L1_CONTRACT_VERSION:=6

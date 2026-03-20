@@ -1,0 +1,13 @@
+include:
+  - compose-tracing-v2-ci-extension.yml
+
+services:
+  l2-node-besu-leader:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: l2-node-besu-leader
+
+  l2-node-besu-follower:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: l2-node-besu-follower

@@ -17,6 +17,7 @@ export enum L2RpcEndpoint {
   Default = "default",
   Sequencer = "sequencer",
   BesuNode = "besuNode",
+  BesuLeader = "besuLeader",
   BesuFollower = "besuFollower",
   Shomei = "shomei",
   ShomeiFrontend = "shomeiFrontend",
@@ -109,6 +110,7 @@ export class L2Client {
     const endpointMap: Record<string, URL | undefined> = {
       [L2RpcEndpoint.Sequencer]: this.local?.sequencerEndpoint ?? this.config.sequencerEndpoint,
       [L2RpcEndpoint.BesuNode]: this.local?.besuNodeRpcUrl ?? this.config.besuNodeRpcUrl,
+      [L2RpcEndpoint.BesuLeader]: this.local?.besuLeaderNodeRpcUrl ?? this.config.besuLeaderNodeRpcUrl,
       [L2RpcEndpoint.BesuFollower]: this.local?.besuFollowerNodeRpcUrl ?? this.config.besuFollowerNodeRpcUrl,
       [L2RpcEndpoint.Shomei]: this.local?.shomeiEndpoint ?? this.config.shomeiEndpoint,
       [L2RpcEndpoint.ShomeiFrontend]: this.local?.shomeiFrontendEndpoint ?? this.config.shomeiFrontendEndpoint,

@@ -59,7 +59,7 @@ make start-l2-blockchain-only
 make start-env-with-tracing-v2-ci
 
 # With fleet (leader + follower nodes)
-make start-env-with-tracing-v2-fleet-ci
+make start-env-with-tracing-v2-ci-fleet
 
 # With state recovery services
 make start-env-with-staterecovery

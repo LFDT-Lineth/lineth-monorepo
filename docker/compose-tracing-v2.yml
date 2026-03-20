@@ -51,10 +51,10 @@ services:
       file: compose-spec-l2-services.yml
       service: sequencer
 
-  traces-node:
+  l2-node-besu:
     extends:
       file: compose-spec-l2-services.yml
-      service: traces-node
+      service: l2-node-besu
 
   prover-v3:
     extends:
@@ -75,11 +75,6 @@ services:
     extends:
       file: compose-spec-l2-services.yml
       service: postgres
-
-  zkbesu-shomei:
-    extends:
-      file: compose-spec-l2-services.yml
-      service: zkbesu-shomei
 
   shomei:
     extends:

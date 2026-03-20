@@ -137,6 +137,8 @@ jobs:
           push: true
           tags: |
             consensys/linea-besu-package-with-fleet:${{ steps.build-plugins-and-assemble.outputs.dockertag }}
+            ${{ github.ref == 'refs/heads/main' && 'consensys/linea-besu-package-with-fleet:develop' || '' }}
+            ${{ github.event_name == 'workflow_dispatch' && 'consensys/linea-besu-package-with-fleet:latest' || '' }}
 
       - name: Calculate the checksum of Besu fleet plugin
         id: besu-fleet-plugin-checksum

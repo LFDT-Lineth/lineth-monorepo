@@ -12,7 +12,7 @@ const l2AccountManager = context.getL2AccountManager();
 
 describe("Linea besu fleet test suite", () => {
   const lineaRollupV6 = context.l1Contracts.lineaRollup(context.l1PublicClient());
-  const gasLeaderClient = context.l2PublicClient({ type: L2RpcEndpoint.BesuNode });
+  const gasLeaderClient = context.l2PublicClient({ type: L2RpcEndpoint.BesuLeader });
   const gasFollowerClient = context.l2PublicClient({ type: L2RpcEndpoint.BesuFollower });
 
   it.concurrent("Responses from leader and follower should match", async () => {

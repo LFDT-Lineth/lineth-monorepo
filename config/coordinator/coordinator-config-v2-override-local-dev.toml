@@ -18,9 +18,9 @@ fs-responses-directory = "tmp/local/prover/v3/aggregation/responses"
 
 [traces]
 [traces.counters]
-endpoints = ["http://127.0.0.1:8745/"]
+endpoints = ["http://127.0.0.1:9045/"]
 [traces.conflation]
-endpoints = ["http://127.0.0.1:8745/"]
+endpoints = ["http://127.0.0.1:9045/"]
 
 [state-manager]
 endpoints = ["http://127.0.0.1:8998/"]

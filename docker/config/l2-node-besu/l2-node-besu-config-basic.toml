@@ -1,6 +1,3 @@
-# This besu config file contains configurations from l2-node-besu-config-basic.toml 
-# plus those for tracer and shomei features
-
 data-path="/opt/besu/data"
 host-allowlist=["*"]
 sync-mode="FULL"
@@ -18,7 +15,7 @@ rpc-http-enabled=true
 rpc-http-host="0.0.0.0"
 rpc-http-port=8545
 rpc-http-cors-origins=["*"]
-rpc-http-api=["ADMIN","DEBUG","NET","ETH","ENGINE","WEB3","PLUGINS","LINEA","MINER","SHOMEI"]
+rpc-http-api=["ADMIN","DEBUG","NET","ETH","ENGINE","WEB3","PLUGINS","LINEA","MINER"]
 rpc-http-max-active-connections=200
 
 # ws
@@ -40,19 +37,7 @@ metrics-port=9545
 data-storage-format="BONSAI"
 
 # plugins
-plugins=[
-  "LineaEstimateGasEndpointPlugin",
-  "LineaExtraDataPlugin",
-  "LineaTransactionPoolValidatorPlugin",
-  "LineaBundleEndpointsPlugin",
-  "ForwardBundlesPlugin",
-  "TracerReadinessPlugin",                  # for tracer feature/role
-  "TracesEndpointServicePlugin",            # for tracer feature/role
-  "LineCountsEndpointServicePlugin",        # for tracer feature/role
-  "CaptureEndpointServicePlugin",           # for tracer feature/role
-  "BesuShomeiRpcPlugin",                    # for shomei feature
-  "ZkTrieLogPlugin"                         # for shomei feature
-]
+plugins=["LineaEstimateGasEndpointPlugin","LineaExtraDataPlugin","LineaTransactionPoolValidatorPlugin","LineaBundleEndpointsPlugin","ForwardBundlesPlugin"]
 plugin-linea-module-limit-file-path="/var/lib/besu/traces-limits.toml"
 plugin-linea-deny-list-path="/var/lib/besu/deny-list.txt"
 plugin-linea-l1l2-bridge-contract="0xe537D669CA013d86EBeF1D64e40fC74CADC91987"
@@ -74,19 +59,6 @@ plugin-linea-bundles-forward-urls=["http://sequencer:8545"]
 plugin-linea-bundles-forward-retry-delay=1000
 plugin-linea-bundles-forward-timeout=5000
 plugin-linea-limitless-enabled=false
-
-# for shomei feature
-plugin-shomei-http-host="11.11.11.114"
-plugin-shomei-http-port=8888
-plugin-shomei-zktrace-comparison-mode=31
-plugin-shomei-enable-zktracer=true
-
-# for tracer feature/role
-plugin-linea-conflated-trace-generation-traces-output-path="/data/traces/v2/conflated"
-plugin-linea-rpc-concurrent-requests-limit=2
-plugin-linea-tracer-readiness-server-host="0.0.0.0"
-plugin-linea-tracer-readiness-server-port=8548
-plugin-linea-tracer-readiness-max-blocks-behind=5
 
 Xin-process-rpc-enabled=true
 Xin-process-rpc-apis=["ETH", "MINER"]

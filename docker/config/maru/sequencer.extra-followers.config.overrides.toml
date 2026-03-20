@@ -1,0 +1,3 @@
+[follower-engine-apis]
+follower-besu = { endpoint = "http://l2-node-besu:8550" }
+follower-besu-leader = { endpoint = "http://l2-node-besu-leader:8550" }

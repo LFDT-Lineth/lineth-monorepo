@@ -19,17 +19,17 @@ if [ -z "$BESU_VERSION" ]; then
 fi
 
 if [ -z "$LOCAL_BESU_ZIP_PATH" ] || [ ! -f "$LOCAL_BESU_ZIP_PATH" ]; then
-  echo "Please provide an valid file path for the besu distribution tar gzip file in env LOCAL_BESU_ZIP_PATH"
+  echo "Please provide a valid file path for the besu distribution tar gzip file in env LOCAL_BESU_ZIP_PATH"
   exit 1
 fi
 
 if [ -z "$LOCAL_SEQUENCER_DIST_FOLDER" ]; then
-  echo "Please provide an valid path for the sequencer plugin distribution folder in env LOCAL_SEQUENCER_DIST_FOLDER"
+  echo "Please provide a valid path for the sequencer plugin distribution folder in env LOCAL_SEQUENCER_DIST_FOLDER"
   exit 1
 fi
 
 if [ -z "$LOCAL_TRACER_DIST_FOLDER" ]; then
-  echo "Please provide an valid path for the tracer plugin distribution folder in env LOCAL_TRACER_DIST_FOLDER"
+  echo "Please provide a valid path for the tracer plugin distribution folder in env LOCAL_TRACER_DIST_FOLDER"
   exit 1
 fi
 

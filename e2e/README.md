@@ -23,7 +23,7 @@ make start-env-with-tracing-v2-ci
 For **fleet** tests, use the fleet-specific target instead:
 
 ```bash
-make start-env-with-tracing-v2-fleet-ci
+make start-env-with-tracing-v2-ci-fleet
 ```
 
 4. For remote environments (devnet / sepolia), copy `.env.template` to `.env` and fill in the required values.
