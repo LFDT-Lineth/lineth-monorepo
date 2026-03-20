@@ -56,6 +56,8 @@ lido-governance-monitor/
 
 All environment variables, defaults, and validation rules are defined in the [configuration schema](./src/application/main/config/index.ts). Copy `.env.sample` to `.env` and fill in the required values.
 
+The Discourse fetcher waits 250ms between proposal detail requests by default. Override it with `DISCOURSE_PROPOSAL_DETAILS_DELAY_MS` when you need a different pacing.
+
 ## Development
 
 ### Prerequisites
@@ -104,6 +106,7 @@ Run the full pipeline locally against the test database and live APIs:
    DATABASE_URL="postgresql://testuser:testpass@localhost:5433/lido_governance_monitor_test" \
    INITIAL_LDO_VOTING_CONTRACT_VOTEID="150" \
    DISCOURSE_PROPOSALS_URL="https://research.lido.fi/c/proposals/9/l/latest.json" \
+   DISCOURSE_PROPOSAL_DETAILS_DELAY_MS="250" \
    ANTHROPIC_API_KEY="your-key" \
    SLACK_WEBHOOK_URL="https://hooks.slack.com/services/xxx" \
    ETHEREUM_RPC_URL="https://mainnet.infura.io/v3/xxx" \

@@ -32,3 +32,7 @@ export class WinstonLogger implements ILogger {
 export const fetchWithTimeout = jest.fn().mockImplementation((url: string, options: RequestInit) => {
   return fetch(url, options);
 });
+
+// DiscourseFetcher defaults sleepFn to `wait` from this package; the real `wait` is not re-exported here,
+// so without this mock default constructors that rely on `wait` get `undefined` and throw at runtime.
+export const wait = jest.fn().mockResolvedValue(undefined);

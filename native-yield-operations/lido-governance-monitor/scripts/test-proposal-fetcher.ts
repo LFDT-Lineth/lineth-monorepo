@@ -10,6 +10,7 @@
  * 2. Run the test:
  *    DATABASE_URL=postgresql://testuser:testpass@localhost:5433/lido_governance_monitor_test \
  *    DISCOURSE_PROPOSALS_URL=https://research.lido.fi/c/proposals/9/l/latest.json \
+ *    DISCOURSE_PROPOSAL_DETAILS_DELAY_MS=250 \
  *    pnpm exec tsx scripts/test-proposal-fetcher.ts
  *
  * 3. Clean up:
@@ -17,6 +18,8 @@
  *
  * Optional env vars:
  *   MAX_PROPOSALS=3       # Limit number of proposals to process (default: 3)
+ *   DISCOURSE_PROPOSAL_DETAILS_DELAY_MS=250
+ *                         # Delay between detail requests (default: 250)
  *   CLEANUP=true          # Delete created proposals after test (default: false)
  */
 
@@ -49,6 +52,9 @@ async function main() {
   const databaseUrl = process.env.DATABASE_URL as string;
   const discourseProposalsUrl = process.env.DISCOURSE_PROPOSALS_URL as string;
   const maxProposals = process.env.MAX_PROPOSALS ? Number.parseInt(process.env.MAX_PROPOSALS, 10) : 3;
+  const discourseProposalDetailsDelayMs = process.env.DISCOURSE_PROPOSAL_DETAILS_DELAY_MS
+    ? Number.parseInt(process.env.DISCOURSE_PROPOSAL_DETAILS_DELAY_MS, 10)
+    : 250;
   const shouldCleanup = process.env.CLEANUP === "true";
 
   const logger = new WinstonLogger("ProposalFetcher.integration");
@@ -74,7 +80,14 @@ async function main() {
     console.log(`Base URL: ${discourseClient.getBaseUrl()}`);
 
     // Create fetcher
-    const discourseFetcher = new DiscourseFetcher(logger, discourseClient, normalizationService, proposalRepository, maxProposals);
+    const discourseFetcher = new DiscourseFetcher(
+      logger,
+      discourseClient,
+      normalizationService,
+      proposalRepository,
+      maxProposals,
+      discourseProposalDetailsDelayMs,
+    );
     const fetcher = new ProposalFetcher(
       logger,
       [discourseFetcher],

@@ -81,6 +81,7 @@ export class LidoGovernanceMonitorBootstrap {
       normalizationService,
       proposalRepository,
       config.discourse.maxTopicsPerPoll,
+      config.discourse.proposalDetailsDelayMs,
     );
 
     const ethereumClient = createPublicClient({

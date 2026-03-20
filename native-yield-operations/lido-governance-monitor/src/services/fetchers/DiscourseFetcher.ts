@@ -1,3 +1,5 @@
+import { wait } from "@consensys/linea-shared-utils";
+
 import { IDiscourseClient } from "../../core/clients/IDiscourseClient.js";
 import { CreateProposalInput } from "../../core/entities/Proposal.js";
 import { IProposalRepository } from "../../core/repositories/IProposalRepository.js";
@@ -12,6 +14,7 @@ export class DiscourseFetcher implements IProposalFetcher {
     private readonly normalizationService: INormalizationService,
     private readonly proposalRepository: IProposalRepository,
     private readonly maxTopicsPerPoll: number = 20,
+    private readonly proposalDetailsDelayMs: number = 250,
   ) {}
 
   async getLatestProposals(): Promise<CreateProposalInput[]> {
@@ -28,10 +31,15 @@ export class DiscourseFetcher implements IProposalFetcher {
 
     const results: CreateProposalInput[] = [];
 
-    for (const topic of topics) {
+    for (const [index, topic] of topics.entries()) {
       const result = await this.processTopic(topic.id);
       if (result) {
         results.push(result);
+      }
+
+      if (index < topics.length - 1 && this.proposalDetailsDelayMs > 0) {
+        // Throttle Discourse topic detail requests because the endpoint returned 429s in production.
+        await wait(this.proposalDetailsDelayMs);
       }
     }
 
