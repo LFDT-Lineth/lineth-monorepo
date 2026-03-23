@@ -3,12 +3,12 @@ package net.consensys.linea.ethereum.gaspricing.staticcap
 import io.vertx.core.Vertx
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
-import io.vertx.junit5.VertxTestContext
 import linea.domain.FeeHistory
 import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesFetcher
 import net.consensys.linea.ethereum.gaspricing.GasPriceUpdater
+import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.extension.ExtendWith
@@ -23,6 +23,8 @@ import org.mockito.kotlin.verify
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 @ExtendWith(VertxExtension::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -48,7 +50,7 @@ class MinMineableFeesPricerServiceTest {
 
   @Test
   @Timeout(10, timeUnit = TimeUnit.SECONDS)
-  fun start_startsPollingProcess(vertx: Vertx, testContext: VertxTestContext) {
+  fun start_startsPollingProcess(vertx: Vertx) {
     val pollingInterval = 10.milliseconds
     val gasPriceUpperBound = 9000000000000.0
     val gasPriceLowerBound = 1000000.0
@@ -81,18 +83,18 @@ class MinMineableFeesPricerServiceTest {
         feesCalculator = boundableFeeCalculator,
         gasPriceUpdater = mockGasPriceUpdater,
       )
-    monitor.start().thenApply {
-      vertx.setTimer(100) {
-        testContext
-          .verify {
-            monitor.stop()
-            verify(mockFeesFetcher, atLeastOnce()).getL1EthGasPriceData()
-            verify(mockFeesCalculator, atLeastOnce()).calculateFees(feeHistory)
-            verify(mockGasPriceUpdater, atLeastOnce()).updateMinerGasPrice(expectedGasPrice.toULong())
-          }
-          .completeNow()
-      }
-    }
+    monitor.start().get()
+    runCatching {
+      await()
+        .atMost(5.seconds.toJavaDuration())
+        .untilAsserted {
+          verify(mockFeesFetcher, atLeastOnce()).getL1EthGasPriceData()
+          verify(mockFeesCalculator, atLeastOnce()).calculateFees(feeHistory)
+          verify(mockGasPriceUpdater, atLeastOnce()).updateMinerGasPrice(expectedGasPrice.toULong())
+        }
+    }.also {
+      monitor.stop()
+    }.getOrThrow()
   }
 
   @Test
