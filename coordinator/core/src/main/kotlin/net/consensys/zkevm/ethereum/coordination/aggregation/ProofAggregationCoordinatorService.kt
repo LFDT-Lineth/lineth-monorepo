@@ -2,10 +2,8 @@ package net.consensys.zkevm.ethereum.coordination.aggregation
 
 import io.vertx.core.Vertx
 import linea.LongRunningService
-import linea.contract.l2.L2MessageServiceSmartContractClientReadOnly
 import linea.domain.BlockIntervals
 import linea.domain.toBlockIntervalsString
-import linea.ethapi.EthApiClient
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
 import net.consensys.linea.async.AsyncRetryer
@@ -13,10 +11,10 @@ import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.zkevm.coordinator.clients.ProofAggregationProverClientV2
 import net.consensys.zkevm.domain.Aggregation
+import net.consensys.zkevm.domain.AggregationProofIndex
 import net.consensys.zkevm.domain.BlobAndBatchCounters
 import net.consensys.zkevm.domain.BlobsToAggregate
 import net.consensys.zkevm.domain.CompressionProofIndex
-import net.consensys.zkevm.domain.ProofToFinalize
 import net.consensys.zkevm.domain.ProofsToAggregate
 import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
 import org.apache.logging.log4j.LogManager
@@ -51,6 +49,13 @@ class ProofAggregationCoordinatorService(
     val pollingInterval: Duration,
     val proofsLimit: UInt,
     val proofGenerationRetryBackoffDelay: Duration,
+  )
+
+  internal val aggregationProofPoller: AggregationProofPoller = AggregationProofPoller(
+    aggregationProofClient = proofAggregationClient,
+    aggregationProofHandler = aggregationProofHandler,
+    log = log,
+    vertx = vertx,
   )
 
   private val pendingBlobs = ConcurrentLinkedQueue<BlobAndBatchCounters>()
@@ -186,28 +191,25 @@ class ProofAggregationCoordinatorService(
         )
       },
     ) {
-      log.debug("requesting aggregation proof: aggregation={}", blobsToAggregate.intervalString())
+      log.debug("creating aggregation proof request: aggregation={}", blobsToAggregate.intervalString())
       aggregationProofCreation(blockIntervals, compressionProofIndexes)
     }
-      .thenPeek {
-        log.info("aggregation proof generated: aggregation={}", blobsToAggregate.intervalString())
-      }
-      .thenCompose { aggregationProof ->
-        val aggregation =
+      .thenApply { aggregationProofIndex ->
+        val unProvenAggregation =
           Aggregation(
             startBlockNumber = blobsToAggregate.startBlockNumber,
             endBlockNumber = blobsToAggregate.endBlockNumber,
             batchCount = batchCount.toULong(),
-            aggregationProof = aggregationProof,
+            aggregationProof = null,
           )
-        aggregationProofHandler.acceptNewAggregation(aggregation)
+        aggregationProofPoller.addProofRequestsInProgressForPolling(aggregationProofIndex, unProvenAggregation)
       }
   }
 
   private fun aggregationProofCreation(
     executionProofsIndexes: BlockIntervals,
     compressionProofIndexes: List<CompressionProofIndex>,
-  ): SafeFuture<ProofToFinalize> {
+  ): SafeFuture<AggregationProofIndex> {
     val blobsToAggregate = executionProofsIndexes.toBlockInterval()
     return aggregationL2StateProvider
       .getAggregationL2State(blockNumber = blobsToAggregate.startBlockNumber.toLong() - 1)
@@ -236,10 +238,10 @@ class ProofAggregationCoordinatorService(
             parentAggregationLastFtxRollingHash = rollingInfo.parentAggregationLastFtxRollingHash,
           )
         }
-          .thenCompose(proofAggregationClient::requestProof)
+          .thenCompose(proofAggregationClient::createProofRequest)
           .whenException {
             log.debug(
-              "Error getting aggregation proof: aggregation={} errorMessage={}",
+              "Error creating aggregation proof request: aggregation={} errorMessage={}",
               executionProofsIndexes.toBlockInterval().intervalString(),
               it.message,
               it,
@@ -263,8 +265,6 @@ class ProofAggregationCoordinatorService(
       aggregationL2StateProvider: AggregationL2StateProvider,
       consecutiveProvenBlobsProvider: ConsecutiveProvenBlobsProvider,
       proofAggregationClient: ProofAggregationProverClientV2,
-      l2EthApiClient: EthApiClient,
-      l2MessageService: L2MessageServiceSmartContractClientReadOnly,
       noL2ActivityTimeout: Duration,
       waitForNoL2ActivityToTriggerAggregation: Boolean,
       targetEndBlockNumbers: List<ULong>,
@@ -351,5 +351,17 @@ class ProofAggregationCoordinatorService(
 
   override fun handleError(error: Throwable) {
     log.error("Error polling blobs for aggregation: errorMessage={}", error.message, error)
+  }
+
+  override fun start(): SafeFuture<Unit> {
+    return aggregationProofPoller.start().thenCompose {
+      super.start()
+    }
+  }
+
+  override fun stop(): SafeFuture<Unit> {
+    return super.stop().thenCompose {
+      aggregationProofPoller.stop()
+    }
   }
 }

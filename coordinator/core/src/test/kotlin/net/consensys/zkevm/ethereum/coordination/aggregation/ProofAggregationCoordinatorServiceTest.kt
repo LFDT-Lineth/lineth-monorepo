@@ -8,6 +8,7 @@ import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.zkevm.coordinator.clients.ProofAggregationProverClientV2
 import net.consensys.zkevm.domain.Aggregation
+import net.consensys.zkevm.domain.AggregationProofIndex
 import net.consensys.zkevm.domain.BlobAndBatchCounters
 import net.consensys.zkevm.domain.BlobCounters
 import net.consensys.zkevm.domain.BlobsToAggregate
@@ -98,6 +99,8 @@ class ProofAggregationCoordinatorServiceTest {
         metricsFacade = metricsFacade,
         invalidityProofProvider = mockInvalidityProofProvider,
       )
+    proofAggregationCoordinatorService.aggregationProofPoller.start()
+
     verify(mockAggregationCalculator).onAggregation(proofAggregationCoordinatorService)
 
     val blob1 = listOf(createBlob(11u, 19u), createBlob(20u, 33u), createBlob(34u, 41u))
@@ -242,6 +245,11 @@ class ProofAggregationCoordinatorServiceTest {
         batchCount = compressionBlobs1.sumOf { it.blobCounters.numberOfBatches }.toULong(),
         aggregationProof = aggregationProof1,
       )
+    val aggregation1ProofIndex = AggregationProofIndex(
+      startBlockNumber = aggregation1.startBlockNumber,
+      endBlockNumber = aggregation1.endBlockNumber,
+      hash = Random.nextBytes(32),
+    )
 
     val aggregation2 =
       Aggregation(
@@ -250,15 +258,30 @@ class ProofAggregationCoordinatorServiceTest {
         batchCount = compressionBlobs2.sumOf { it.blobCounters.numberOfBatches }.toULong(),
         aggregationProof = aggregationProof2,
       )
+    val aggregation2ProofIndex = AggregationProofIndex(
+      startBlockNumber = aggregation2.startBlockNumber,
+      endBlockNumber = aggregation2.endBlockNumber,
+      hash = Random.nextBytes(32),
+    )
 
-    whenever(mockProofAggregationClient.requestProof(any()))
+    whenever(mockProofAggregationClient.createProofRequest(any()))
       .thenAnswer {
         if (it.getArgument<ProofsToAggregate>(0) == proofsToAggregate1) {
-          SafeFuture.completedFuture(aggregationProof1)
+          SafeFuture.completedFuture(aggregation1ProofIndex)
         } else if (it.getArgument<ProofsToAggregate>(0) == proofsToAggregate2) {
-          SafeFuture.completedFuture(aggregationProof2)
+          SafeFuture.completedFuture(aggregation2ProofIndex)
         } else {
           throw IllegalStateException()
+        }
+      }
+
+    whenever(mockProofAggregationClient.findProofResponse(any<AggregationProofIndex>()))
+      .thenAnswer {
+        val proofIndex = it.getArgument<AggregationProofIndex>(0)
+        when (proofIndex) {
+          aggregation1ProofIndex -> SafeFuture.completedFuture(aggregationProof1)
+          aggregation2ProofIndex -> SafeFuture.completedFuture(aggregationProof2)
+          else -> SafeFuture.completedFuture(null)
         }
       }
 
@@ -301,7 +324,8 @@ class ProofAggregationCoordinatorServiceTest {
         assertThat(meterRegistry.summary("aggregation.blocks.size").max()).isEqualTo(23.0)
         assertThat(meterRegistry.summary("aggregation.batches.size").max()).isEqualTo(6.0)
         assertThat(meterRegistry.summary("aggregation.blobs.size").max()).isEqualTo(2.0)
-        verify(mockProofAggregationClient).requestProof(proofsToAggregate1)
+        verify(mockProofAggregationClient).createProofRequest(proofsToAggregate1)
+        verify(mockProofAggregationClient).findProofResponse(aggregation1ProofIndex)
         verify(mockAggregationsRepository).saveNewAggregation(aggregation1)
         assertThat(provenAggregation).isEqualTo(aggregation1.endBlockNumber)
       }
@@ -319,7 +343,8 @@ class ProofAggregationCoordinatorServiceTest {
         assertThat(meterRegistry.summary("aggregation.blocks.size").max()).isEqualTo(27.0)
         assertThat(meterRegistry.summary("aggregation.batches.size").max()).isEqualTo(6.0)
         assertThat(meterRegistry.summary("aggregation.blobs.size").max()).isEqualTo(2.0)
-        verify(mockProofAggregationClient).requestProof(proofsToAggregate2)
+        verify(mockProofAggregationClient).createProofRequest(proofsToAggregate2)
+        verify(mockProofAggregationClient).findProofResponse(aggregation2ProofIndex)
         verify(mockAggregationsRepository).saveNewAggregation(aggregation2)
         assertThat(provenAggregation).isEqualTo(aggregation2.endBlockNumber)
       }

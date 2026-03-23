@@ -383,8 +383,6 @@ class ConflationApp(
         ),
         consecutiveProvenBlobsProvider = maxBlobEndBlockNumberTracker,
         proofAggregationClient = proverClientFactory.proofAggregationProverClient(),
-        l2EthApiClient = l2EthClient,
-        l2MessageService = l2MessageService,
         noL2ActivityTimeout = configs.conflation.conflationDeadlineLastBlockConfirmationDelay,
         waitForNoL2ActivityToTriggerAggregation =
         configs.conflation.proofAggregation.waitForNoL2ActivityToTriggerAggregation,
