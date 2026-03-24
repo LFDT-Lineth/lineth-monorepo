@@ -21,7 +21,9 @@ const BooleanFromString = z.preprocess(
     }
     return val; // Trigger validation error
   },
-  z.boolean({ errorMap: () => ({ message: 'Expected "true", "false", "1", "0", or boolean.' }) }),
+  z.boolean({
+    message: 'Expected "true", "false", "1", "0", or boolean.',
+  }),
 );
 
 export const configSchema = z
@@ -177,7 +179,7 @@ export const configSchema = z
      */
     LOG_LEVEL: z
       .enum(["error", "warn", "info", "verbose", "debug", "silly"], {
-        errorMap: () => ({ message: "LOG_LEVEL must be one of: error, warn, info, verbose, debug, silly" }),
+        message: "LOG_LEVEL must be one of: error, warn, info, verbose, debug, silly",
       })
       .optional(),
   })

@@ -156,6 +156,7 @@ export const generateTransactionResponse = (overrides?: Partial<TransactionRespo
       )}000000000000000000000000000000000000000000000000002386f26fc1000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000000`,
       chainId: 59140n,
       ...overrides,
+      authorizationList: overrides?.authorizationList ?? null,
     },
     getTestProvider(),
   );

@@ -1,5 +1,7 @@
 import { type ReactNode } from "react";
+
 import clsx from "clsx";
+
 import styles from "./card.module.scss";
 
 interface CardProps {

@@ -98,7 +98,7 @@ describe("DiscourseClient", () => {
       expect(result).toBeUndefined();
       expect(logger.error).toHaveBeenCalledWith(
         "Discourse API response failed schema validation",
-        expect.objectContaining({ errors: expect.any(Array) }),
+        expect.objectContaining({ issues: expect.any(Array) }),
       );
     });
 

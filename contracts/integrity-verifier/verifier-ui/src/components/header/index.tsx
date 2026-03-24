@@ -1,8 +1,10 @@
 "use client";
 
 import { RadioGroup } from "@headlessui/react";
+
 import { useVerifierStore } from "@/stores/verifier";
 import type { AdapterType } from "@/types";
+
 import styles from "./header.module.scss";
 
 const adapters: { value: AdapterType; label: string }[] = [

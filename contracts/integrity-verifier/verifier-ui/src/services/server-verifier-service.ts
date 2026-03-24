@@ -10,10 +10,12 @@
  * 2. Set NEXT_PUBLIC_STORAGE_MODE=server in environment
  */
 
-import type { VerificationSummary } from "@consensys/linea-contract-integrity-verifier";
 import type { ParsedConfig, VerificationOptions, FileRef, AdapterType } from "@/types";
-import type { VerifierService, StoredSession, StoredFile } from "./types";
+
 import { VerifierServiceError, ServiceErrorCodes } from "./types";
+
+import type { VerifierService, StoredSession, StoredFile } from "./types";
+import type { VerificationSummary } from "@consensys/linea-contract-integrity-verifier";
 
 /**
  * Server-side verifier service using API routes.

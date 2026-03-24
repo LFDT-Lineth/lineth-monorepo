@@ -17,9 +17,9 @@ import {
   type StorageSchema,
 } from "@consensys/linea-contract-integrity-verifier/browser";
 import { ViemAdapter } from "@consensys/linea-contract-integrity-verifier-viem";
-import type { ParsedConfig, VerificationOptions, FileRef, AdapterType } from "@/types";
-import type { VerifierService, StoredSession, StoredFile } from "./types";
-import { VerifierServiceError, ServiceErrorCodes } from "./types";
+
+import { parseConfig, interpolateEnvVarsInContent, parseMarkdownConfig } from "@/lib/config-parser";
+import { DEFAULT_VERIFICATION_TIMEOUT_MS } from "@/lib/constants";
 import {
   saveSession as dbSaveSession,
   getSession as dbGetSession,
@@ -27,8 +27,11 @@ import {
   generateUUID,
   isIndexedDBAvailable,
 } from "@/lib/indexed-db";
-import { parseConfig, interpolateEnvVarsInContent, parseMarkdownConfig } from "@/lib/config-parser";
-import { DEFAULT_VERIFICATION_TIMEOUT_MS } from "@/lib/constants";
+import type { ParsedConfig, VerificationOptions, FileRef, AdapterType } from "@/types";
+
+import { VerifierServiceError, ServiceErrorCodes } from "./types";
+
+import type { VerifierService, StoredSession, StoredFile } from "./types";
 
 // ============================================================================
 // Constants

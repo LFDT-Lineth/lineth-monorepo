@@ -1,9 +1,10 @@
 "use client";
 
-import { useVerifierStore } from "@/stores/verifier";
 import { Card } from "@/components/ui/card";
-import { Toggle } from "@/components/ui/toggle";
 import { Input } from "@/components/ui/input";
+import { Toggle } from "@/components/ui/toggle";
+import { useVerifierStore } from "@/stores/verifier";
+
 import styles from "./options-section.module.scss";
 
 export function OptionsSection() {

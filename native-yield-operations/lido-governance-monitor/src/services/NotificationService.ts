@@ -71,7 +71,7 @@ export class NotificationService implements INotificationService {
       if (!parseResult.success) {
         this.logger.error("Proposal assessmentJson failed schema validation", {
           proposalId: proposal.id,
-          errors: parseResult.error.errors,
+          issues: parseResult.error.issues,
         });
         await this.proposalRepository.markNotifyFailed(proposal.id);
         return;

@@ -1,5 +1,7 @@
 import { type InputHTMLAttributes, forwardRef } from "react";
+
 import clsx from "clsx";
+
 import styles from "./input.module.scss";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {

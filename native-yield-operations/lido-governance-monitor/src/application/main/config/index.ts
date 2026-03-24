@@ -30,11 +30,7 @@ export const ConfigSchema = z.object({
     // Lido Discourse forum API endpoint for fetching governance proposals
     proposalsUrl: NonEmptyUrl("Invalid Discourse proposals URL"),
     // Delay before requesting proposal details from Discourse
-    proposalDetailsDelayMs: z
-      .number()
-      .int()
-      .positive("Discourse proposal details delay must be positive")
-      .default(250),
+    proposalDetailsDelayMs: z.number().int().positive("Discourse proposal details delay must be positive").default(250),
     // Maximum number of Discourse topics to process per polling cycle
     maxTopicsPerPoll: z.number().int().positive("Max topics per poll must be positive"),
   }),
@@ -125,7 +121,7 @@ export function loadConfigFromEnv(env: Record<string, string | undefined>): Conf
 
   const result = ConfigSchema.safeParse(rawConfig);
   if (!result.success) {
-    const errors = result.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ");
+    const errors = result.error.issues.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ");
     throw new Error(`Configuration validation failed: ${errors}`);
   }
 

@@ -1,9 +1,10 @@
 "use client";
 
-import { useVerifierStore } from "@/stores/verifier";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { MAX_ENV_VAR_VALUE_LENGTH } from "@/lib/constants";
+import { useVerifierStore } from "@/stores/verifier";
+
 import styles from "./env-vars-section.module.scss";
 
 export function EnvVarsSection() {

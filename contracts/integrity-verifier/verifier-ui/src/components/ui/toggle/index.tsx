@@ -2,6 +2,7 @@
 
 import { Switch } from "@headlessui/react";
 import clsx from "clsx";
+
 import styles from "./toggle.module.scss";
 
 interface ToggleProps {

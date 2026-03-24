@@ -19,7 +19,8 @@ const nextConfig = {
   output: isStaticExport ? "export" : "standalone",
   reactStrictMode: true,
   sassOptions: {
-    prependData: `@use 'sass:math'; @use 'src/scss/breakpoints' as *;`,
+    loadPaths: ["src/scss"],
+    prependData: `@use 'sass:math'; @use 'breakpoints' as *;`,
   },
   // Transpile workspace packages
   transpilePackages: [

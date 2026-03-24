@@ -248,10 +248,10 @@ describe("ClaudeAIClient", () => {
         expect(logger.error).toHaveBeenCalledWith(
           "AI response failed schema validation",
           expect.objectContaining({
-            errors: expect.arrayContaining([
+            issues: expect.arrayContaining([
               expect.objectContaining({
                 path: ["confidence"],
-                message: expect.stringContaining("Expected integer"),
+                message: expect.stringMatching(/int|integer/i),
               }),
             ]),
           }),
@@ -316,7 +316,7 @@ describe("ClaudeAIClient", () => {
         expect(logger.error).toHaveBeenCalledWith(
           "AI response failed schema validation",
           expect.objectContaining({
-            errors: expect.arrayContaining([
+            issues: expect.arrayContaining([
               expect.objectContaining({
                 path: ["confidence"],
               }),
@@ -474,7 +474,7 @@ describe("ClaudeAIClient", () => {
         expect(logger.error).toHaveBeenCalledWith(
           "Invalid analysis request",
           expect.objectContaining({
-            errors: expect.arrayContaining([expect.objectContaining({ path: ["proposalUrl"] })]),
+            issues: expect.arrayContaining([expect.objectContaining({ path: ["proposalUrl"] })]),
           }),
         );
         expect(mockAnthropicClient.messages.create).not.toHaveBeenCalled();
@@ -494,7 +494,7 @@ describe("ClaudeAIClient", () => {
         expect(logger.error).toHaveBeenCalledWith(
           "Invalid analysis request",
           expect.objectContaining({
-            errors: expect.arrayContaining([expect.objectContaining({ path: ["proposalTitle"] })]),
+            issues: expect.arrayContaining([expect.objectContaining({ path: ["proposalTitle"] })]),
           }),
         );
       });

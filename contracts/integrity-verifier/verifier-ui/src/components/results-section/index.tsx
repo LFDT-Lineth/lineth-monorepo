@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+
 import { Disclosure } from "@headlessui/react";
-import { useVerifierStore } from "@/stores/verifier";
-import { Card } from "@/components/ui/card";
-import type { ContractVerificationResult, VerificationStatus } from "@consensys/linea-contract-integrity-verifier";
-import styles from "./results-section.module.scss";
 import clsx from "clsx";
+
+import { Card } from "@/components/ui/card";
+import { useVerifierStore } from "@/stores/verifier";
+
+import styles from "./results-section.module.scss";
+
+import type { ContractVerificationResult, VerificationStatus } from "@consensys/linea-contract-integrity-verifier";
 
 // ============================================================================
 // Info Icon with Tooltip
@@ -147,7 +151,6 @@ function extractCommentsFromConfig(contractName: string, rawContent: string, for
 
   // Extract view call comments
   if (Array.isArray(sv.viewCalls)) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     for (const vc of sv.viewCalls) {
       if (vc.$comment && vc.function) {
         comments.viewCalls.push({
@@ -161,7 +164,6 @@ function extractCommentsFromConfig(contractName: string, rawContent: string, for
 
   // Extract slot comments
   if (Array.isArray(sv.slots)) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     for (const slot of sv.slots) {
       if (slot.$comment && slot.slot) {
         comments.slots.set(slot.slot, slot.$comment);
@@ -171,7 +173,6 @@ function extractCommentsFromConfig(contractName: string, rawContent: string, for
 
   // Extract storage path comments
   if (Array.isArray(sv.storagePaths)) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     for (const sp of sv.storagePaths) {
       if (sp.$comment && sp.path) {
         comments.storagePaths.set(sp.path, sp.$comment);
@@ -293,12 +294,16 @@ function ContractResultCard({ result, verbose, comments }: ContractResultCardPro
                             </td>
                             <td>
                               <code className={immResult.status === "fail" ? styles.mismatchValue : undefined}>
-                                {immResult.expected ? `${immResult.expected.slice(0, 10)}...${immResult.expected.slice(-8)}` : "-"}
+                                {immResult.expected
+                                  ? `${immResult.expected.slice(0, 10)}...${immResult.expected.slice(-8)}`
+                                  : "-"}
                               </code>
                             </td>
                             <td>
                               <code className={immResult.status === "fail" ? styles.mismatchValue : undefined}>
-                                {immResult.actual ? `${immResult.actual.slice(0, 10)}...${immResult.actual.slice(-8)}` : "not found"}
+                                {immResult.actual
+                                  ? `${immResult.actual.slice(0, 10)}...${immResult.actual.slice(-8)}`
+                                  : "not found"}
                               </code>
                             </td>
                             <td>

@@ -7,6 +7,7 @@ import type {
   AdapterType,
   VerificationOptions,
 } from "@/types";
+
 import { API_SESSION, API_UPLOAD, API_VERIFY } from "./constants";
 
 // ============================================================================

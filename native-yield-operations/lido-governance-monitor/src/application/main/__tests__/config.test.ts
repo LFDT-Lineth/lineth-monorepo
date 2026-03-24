@@ -126,7 +126,7 @@ describe("ConfigSchema", () => {
         // Assert
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.errors[0].message).toContain("Database URL is required");
+          expect(result.error.issues[0].message).toContain("Database URL is required");
         }
       });
 
@@ -187,7 +187,7 @@ describe("ConfigSchema", () => {
         // Assert
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.errors[0].message).toContain("Anthropic API key is required");
+          expect(result.error.issues[0].message).toContain("Anthropic API key is required");
         }
       });
 

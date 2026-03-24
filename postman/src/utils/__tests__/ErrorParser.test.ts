@@ -1,6 +1,6 @@
 import { makeBaseError } from "@consensys/linea-sdk";
 import { describe, it, expect } from "@jest/globals";
-import { ErrorCode, makeError } from "ethers";
+import { ErrorCode, makeError, version as ethersVersion } from "ethers";
 
 import { DatabaseErrorType, DatabaseRepoName } from "../../core/enums";
 import { DatabaseAccessError } from "../../core/errors";
@@ -39,7 +39,7 @@ describe("ErrorParser", () => {
       const error = makeError("any reason", "NETWORK_ERROR");
 
       expect(ErrorParser.parseEthersError(error)).toStrictEqual({
-        errorMessage: "any reason (code=NETWORK_ERROR, version=6.13.7)",
+        errorMessage: `any reason (code=NETWORK_ERROR, version=${ethersVersion})`,
         errorCode: "NETWORK_ERROR",
         mitigation: {
           shouldRetry: true,
@@ -51,7 +51,7 @@ describe("ErrorParser", () => {
       const error = makeError("any reason", "SERVER_ERROR");
 
       expect(ErrorParser.parseEthersError(error)).toStrictEqual({
-        errorMessage: "any reason (code=SERVER_ERROR, version=6.13.7)",
+        errorMessage: `any reason (code=SERVER_ERROR, version=${ethersVersion})`,
         errorCode: "SERVER_ERROR",
         mitigation: {
           shouldRetry: true,
@@ -63,7 +63,7 @@ describe("ErrorParser", () => {
       const error = makeError("any reason", "TIMEOUT");
 
       expect(ErrorParser.parseEthersError(error)).toStrictEqual({
-        errorMessage: "any reason (code=TIMEOUT, version=6.13.7)",
+        errorMessage: `any reason (code=TIMEOUT, version=${ethersVersion})`,
         errorCode: "TIMEOUT",
         mitigation: {
           shouldRetry: true,
@@ -75,7 +75,7 @@ describe("ErrorParser", () => {
       const error = makeError("any reason", "INSUFFICIENT_FUNDS");
 
       expect(ErrorParser.parseEthersError(error)).toStrictEqual({
-        errorMessage: "any reason (code=INSUFFICIENT_FUNDS, version=6.13.7)",
+        errorMessage: `any reason (code=INSUFFICIENT_FUNDS, version=${ethersVersion})`,
         errorCode: "INSUFFICIENT_FUNDS",
         mitigation: {
           shouldRetry: true,
@@ -87,7 +87,7 @@ describe("ErrorParser", () => {
       const error = makeError("any reason", "REPLACEMENT_UNDERPRICED");
 
       expect(ErrorParser.parseEthersError(error)).toStrictEqual({
-        errorMessage: "any reason (code=REPLACEMENT_UNDERPRICED, version=6.13.7)",
+        errorMessage: `any reason (code=REPLACEMENT_UNDERPRICED, version=${ethersVersion})`,
         errorCode: "REPLACEMENT_UNDERPRICED",
         mitigation: {
           shouldRetry: true,
@@ -99,7 +99,7 @@ describe("ErrorParser", () => {
       const error = makeError("any reason", "NONCE_EXPIRED");
 
       expect(ErrorParser.parseEthersError(error)).toStrictEqual({
-        errorMessage: "any reason (code=NONCE_EXPIRED, version=6.13.7)",
+        errorMessage: `any reason (code=NONCE_EXPIRED, version=${ethersVersion})`,
         errorCode: "NONCE_EXPIRED",
         mitigation: {
           shouldRetry: true,

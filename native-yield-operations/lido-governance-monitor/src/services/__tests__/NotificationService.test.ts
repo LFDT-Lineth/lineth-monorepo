@@ -439,7 +439,7 @@ describe("NotificationService", () => {
         "Proposal assessmentJson failed schema validation",
         expect.objectContaining({
           proposalId: malformedProposal.id,
-          errors: expect.arrayContaining([expect.objectContaining({ path: expect.any(Array) })]),
+          issues: expect.arrayContaining([expect.objectContaining({ path: expect.any(Array) })]),
         }),
       );
     });

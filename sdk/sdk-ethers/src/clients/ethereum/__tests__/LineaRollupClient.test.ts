@@ -90,7 +90,7 @@ describe("TestLineaRollupClient", () => {
             TEST_CONTRACT_ADDRESS_2,
             "read-write",
           ).lineaRollupClient,
-      ).toThrowError(new BaseError("Please provide a signer."));
+      ).toThrow(new BaseError("Please provide a signer."));
     });
   });
 
@@ -469,7 +469,7 @@ describe("TestLineaRollupClient", () => {
         .mockResolvedValue([testL2MessagingBlockAnchoredEvent]);
       jest.spyOn(providerMock, "getTransactionReceipt").mockResolvedValue(transactionReceipt);
 
-      await expect(lineaRollupClient.estimateClaimGas(message)).rejects.toThrowError();
+      await expect(lineaRollupClient.estimateClaimGas(message)).rejects.toThrow();
     });
 
     it("should return estimated gas limit if all the relevant event logs were found", async () => {

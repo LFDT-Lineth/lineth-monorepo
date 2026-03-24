@@ -1,10 +1,11 @@
 "use client";
 
-import { useVerifierStore } from "@/stores/verifier";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dropzone } from "@/components/ui/dropzone";
-import { Button } from "@/components/ui/button";
 import { ALLOWED_CONFIG_EXTENSIONS } from "@/lib/constants";
+import { useVerifierStore } from "@/stores/verifier";
+
 import styles from "./config-section.module.scss";
 
 export function ConfigSection() {

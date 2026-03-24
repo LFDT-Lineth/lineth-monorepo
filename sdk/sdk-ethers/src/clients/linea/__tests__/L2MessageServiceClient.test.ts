@@ -55,7 +55,7 @@ describe("TestL2MessageServiceClient", () => {
 
   describe("constructor", () => {
     it("should throw an error when mode = 'read-write' and this.signer is undefined", async () => {
-      expect(() => generateL2MessageServiceClient(providerMock, TEST_CONTRACT_ADDRESS_1, "read-write")).toThrowError(
+      expect(() => generateL2MessageServiceClient(providerMock, TEST_CONTRACT_ADDRESS_1, "read-write")).toThrow(
         new BaseError("Please provide a signer."),
       );
     });

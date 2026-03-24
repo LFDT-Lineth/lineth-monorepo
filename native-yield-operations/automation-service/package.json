@@ -15,13 +15,13 @@
     "test": "npx jest --bail --detectOpenHandles --forceExit"
   },
   "dependencies": {
-    "@apollo/client": "4.0.7",
+    "@apollo/client": "4.1.6",
     "@consensys/linea-shared-utils": "workspace:*",
-    "@lidofinance/lsv-cli": "1.0.0-alpha.62",
+    "@lidofinance/lsv-cli": "1.6.0",
     "dotenv": "catalog:",
     "neverthrow": "catalog:",
-    "winston": "catalog:",
     "viem": "catalog:",
+    "winston": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

@@ -5,8 +5,9 @@
  * client-side (IndexedDB) and server-side (API routes) implementations.
  */
 
-import type { VerificationSummary } from "@consensys/linea-contract-integrity-verifier";
 import type { ParsedConfig, VerificationOptions, FileRef, AdapterType } from "@/types";
+
+import type { VerificationSummary } from "@consensys/linea-contract-integrity-verifier";
 
 // ============================================================================
 // Stored Data Types

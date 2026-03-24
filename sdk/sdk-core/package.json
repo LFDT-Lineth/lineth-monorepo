@@ -30,6 +30,6 @@
     "viem": "catalog:"
   },
   "dependencies": {
-    "abitype": "^1.0.8"
+    "abitype": "1.2.3"
   }
 }

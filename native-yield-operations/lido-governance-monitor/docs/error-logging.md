@@ -139,7 +139,7 @@ try {
 const result = schema.safeParse(data);
 if (!result.success) {
   logger.error("Schema validation failed", {
-    errors: result.error.errors,
+    issues: result.error.issues,
   });
   return undefined;
 }

@@ -39,7 +39,7 @@ export class DiscourseClient implements IDiscourseClient {
       const validationResult = RawDiscourseProposalListSchema.safeParse(data);
       if (!validationResult.success) {
         this.logger.error("Discourse API response failed schema validation", {
-          errors: validationResult.error.errors,
+          issues: validationResult.error.issues,
         });
         return undefined;
       }
@@ -74,7 +74,7 @@ export class DiscourseClient implements IDiscourseClient {
       if (!validationResult.success) {
         this.logger.error("Discourse API response failed schema validation", {
           proposalId,
-          errors: validationResult.error.errors,
+          issues: validationResult.error.issues,
         });
         return undefined;
       }

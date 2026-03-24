@@ -14,6 +14,7 @@
 export const dynamic = "force-static";
 
 import { NextResponse } from "next/server";
+
 import { createSession, getSession } from "@/lib/session";
 import type { ApiError, SessionResponse } from "@/types";
 

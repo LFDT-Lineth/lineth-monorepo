@@ -38,9 +38,9 @@
     "ts-jest": "catalog:",
     "tsup": "catalog:",
     "unzipper": "0.12.3",
-    "viem": "2.29.1"
+    "viem": "2.47.5"
   },
   "dependencies": {
-    "koffi": "2.11.0"
+    "koffi": "2.15.2"
   }
 }

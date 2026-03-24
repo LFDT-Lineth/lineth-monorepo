@@ -169,7 +169,7 @@ describe("L1ClaimingService", () => {
     it("should throw an error when the message hash is not found in the message hashes array", async () => {
       expect(() =>
         l1ClaimingService.getMessageSiblings(generateHexString(32), [TEST_MESSAGE_HASH, TEST_MESSAGE_HASH_2], 5),
-      ).toThrowError("Message hash not found in messages.");
+      ).toThrow("Message hash not found in messages.");
     });
 
     it.each([
@@ -273,7 +273,7 @@ describe("L1ClaimingService", () => {
     it("should throw an error when there is no MessageSent event on L2 for the message hash", async () => {
       jest.spyOn(l1ClientL2MessageServiceLogClient, "getMessageSentEventsByMessageHash").mockResolvedValueOnce([]);
 
-      await expect(l1ClaimingService.getMessageProof(TEST_MESSAGE_HASH)).rejects.toThrowError(
+      await expect(l1ClaimingService.getMessageProof(TEST_MESSAGE_HASH)).rejects.toThrow(
         `Message hash does not exist on L2. Message hash: ${TEST_MESSAGE_HASH}`,
       );
     });
@@ -284,7 +284,7 @@ describe("L1ClaimingService", () => {
         .mockResolvedValueOnce([testMessageSentEvent]);
       jest.spyOn(l1LogClient, "getL2MessagingBlockAnchoredEvents").mockResolvedValueOnce([]);
 
-      await expect(l1ClaimingService.getMessageProof(TEST_MESSAGE_HASH)).rejects.toThrowError(
+      await expect(l1ClaimingService.getMessageProof(TEST_MESSAGE_HASH)).rejects.toThrow(
         `L2 block number ${testMessageSentEvent.blockNumber} has not been finalized on L1.`,
       );
     });
@@ -320,9 +320,7 @@ describe("L1ClaimingService", () => {
           ],
         }),
       );
-      await expect(l1ClaimingService.getMessageProof(TEST_MESSAGE_HASH)).rejects.toThrowError(
-        "Merkle tree build failed.",
-      );
+      await expect(l1ClaimingService.getMessageProof(TEST_MESSAGE_HASH)).rejects.toThrow("Merkle tree build failed.");
     });
 
     it("should return the message proof", async () => {

@@ -1,10 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useVerifierStore } from "@/stores/verifier";
-import { Card } from "@/components/ui/card";
+
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { ALLOWED_SCHEMA_EXTENSIONS, ALLOWED_ARTIFACT_EXTENSIONS } from "@/lib/constants";
+import { useVerifierStore } from "@/stores/verifier";
+
 import styles from "./files-section.module.scss";
 
 export function FilesSection() {

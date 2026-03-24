@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "ethers": "catalog:",
-    "lru-cache": "11.0.2"
+    "lru-cache": "11.2.7"
   },
   "devDependencies": {
     "@consensys/eslint-config": "workspace:*",

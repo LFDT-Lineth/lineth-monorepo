@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect } from "react";
-import { useVerifierStore } from "@/stores/verifier";
-import { Header } from "@/components/header";
-import { ConfigSection } from "@/components/config-section";
-import { FilesSection } from "@/components/files-section";
-import { EnvVarsSection } from "@/components/env-vars-section";
-import { OptionsSection } from "@/components/options-section";
+
 import { ActionBar } from "@/components/action-bar";
+import { ConfigSection } from "@/components/config-section";
+import { EnvVarsSection } from "@/components/env-vars-section";
+import { FilesSection } from "@/components/files-section";
+import { Header } from "@/components/header";
+import { OptionsSection } from "@/components/options-section";
 import { ResultsSection } from "@/components/results-section";
+import { useVerifierStore } from "@/stores/verifier";
+
 import styles from "./page.module.scss";
 
 export default function Home() {

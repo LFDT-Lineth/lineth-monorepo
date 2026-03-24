@@ -302,7 +302,9 @@ export function generateUUID(): string {
     );
   }
 
-  throw new Error("Secure UUID generation is not available: crypto.getRandomValues is not supported in this environment.");
+  throw new Error(
+    "Secure UUID generation is not available: crypto.getRandomValues is not supported in this environment.",
+  );
 }
 
 /**

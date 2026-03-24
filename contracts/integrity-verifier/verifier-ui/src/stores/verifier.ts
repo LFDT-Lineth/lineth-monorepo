@@ -2,6 +2,9 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+
+import { generateFormFields } from "@/lib/config-parser";
+import { getVerifierService, VerifierServiceError } from "@/services";
 import type {
   AdapterType,
   ParsedConfig,
@@ -11,10 +14,9 @@ import type {
   VerifyStatus,
   FormField,
 } from "@/types";
-import type { VerificationSummary } from "@consensys/linea-contract-integrity-verifier";
-import { getVerifierService, VerifierServiceError } from "@/services";
-import { generateFormFields } from "@/lib/config-parser";
 import { defaultVerificationOptions } from "@/types";
+
+import type { VerificationSummary } from "@consensys/linea-contract-integrity-verifier";
 
 // ============================================================================
 // State Interface

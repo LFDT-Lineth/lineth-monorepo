@@ -80,7 +80,7 @@ export class ClaudeAIClient implements IAIClient {
     const validationResult = AIAnalysisRequestSchema.safeParse(request);
     if (!validationResult.success) {
       this.logger.error("Invalid analysis request", {
-        errors: validationResult.error.errors,
+        issues: validationResult.error.issues,
       });
       return undefined;
     }
@@ -131,7 +131,7 @@ export class ClaudeAIClient implements IAIClient {
       const parsed = JSON.parse(jsonMatch[0]);
       const result = LLMOutputSchema.safeParse(parsed);
       if (!result.success) {
-        this.logger.error("AI response failed schema validation", { errors: result.error.errors });
+        this.logger.error("AI response failed schema validation", { issues: result.error.issues });
         return undefined;
       }
       const llmOutput = result.data;

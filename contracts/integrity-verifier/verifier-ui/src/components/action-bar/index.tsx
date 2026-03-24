@@ -1,7 +1,8 @@
 "use client";
 
-import { useVerifierStore } from "@/stores/verifier";
 import { Button } from "@/components/ui/button";
+import { useVerifierStore } from "@/stores/verifier";
+
 import styles from "./action-bar.module.scss";
 
 export function ActionBar() {
