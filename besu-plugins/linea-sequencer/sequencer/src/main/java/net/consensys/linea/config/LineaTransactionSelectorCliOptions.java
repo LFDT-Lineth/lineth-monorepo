@@ -9,18 +9,24 @@
 
 package net.consensys.linea.config;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import jakarta.validation.constraints.Positive;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
+import kotlin.time.Instant;
+import linea.blob.BlobCompressorVersion;
 import net.consensys.linea.plugins.LineaCliOptions;
 import net.consensys.linea.sequencer.txselection.selectors.TransactionEventFilter;
 import org.apache.tuweni.bytes.Bytes32;
@@ -52,6 +58,10 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
   public static final String EVENTS_DENY_LIST_PATH = "--plugin-linea-events-deny-list-path";
   public static final String EVENTS_BUNDLE_DENY_LIST_PATH =
       "--plugin-linea-events-bundle-deny-list-path";
+  public static final String BLOB_COMPRESSOR_VERSION_TIMESTAMPS =
+      "--plugin-linea-blob-compressor-version-timestamps";
+  public static final String BLOB_COMPRESSOR_VERSION_TIMESTAMPS_DEFAULT =
+      String.format("%s=%s", BlobCompressorVersion.V2.name(), Instant.Companion.getDISTANT_PAST());
 
   @Positive
   @CommandLine.Option(
@@ -132,7 +142,24 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
       description = "Path to the file containing the events deny list for bundles")
   private String eventsBundleDenyListPath;
 
-  private LineaTransactionSelectorCliOptions() {}
+  private static final class BlobCompressorVersionCandidates implements Iterable<String> {
+    @Override
+    public Iterator<String> iterator() {
+      return Arrays.stream(BlobCompressorVersion.values()).map(Enum::name).iterator();
+    }
+  }
+
+  @CommandLine.Option(
+      names = {BLOB_COMPRESSOR_VERSION_TIMESTAMPS},
+      hidden = true,
+      paramLabel = "<MAP>",
+      completionCandidates = BlobCompressorVersionCandidates.class,
+      description =
+          "Comma-separated map of BlobCompressorVersion to Instant, "
+              + "e.g. V1_2=2025-01-01T00:00:00Z,V2=2026-01-01T00:00:00Z ."
+              + "Available versions: ${COMPLETION-CANDIDATES} . "
+              + "(default: ${DEFAULT-VALUE})")
+  private String blobCompressorVersionTimestampsRaw = BLOB_COMPRESSOR_VERSION_TIMESTAMPS_DEFAULT;
 
   /**
    * Create Linea cli options.
@@ -181,6 +208,7 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
         .eventsDenyList(parseTransactionEventDenyList(eventsDenyListPath))
         .eventsBundleDenyListPath(eventsBundleDenyListPath)
         .eventsBundleDenyList(parseTransactionEventDenyList(eventsBundleDenyListPath))
+        .blobCompressorVersionActivationTimes(getBlobCompressorVersionTimestamps())
         .build();
   }
 
@@ -196,6 +224,7 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
         .add(MAX_BUNDLE_POOL_SIZE_BYTES, maxBundlePoolSizeBytes)
         .add(EVENTS_DENY_LIST_PATH, eventsDenyListPath)
         .add(EVENTS_BUNDLE_DENY_LIST_PATH, eventsBundleDenyListPath)
+        .add(BLOB_COMPRESSOR_VERSION_TIMESTAMPS, blobCompressorVersionTimestampsRaw)
         .toString();
   }
 
@@ -232,5 +261,25 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @VisibleForTesting
+  Map<BlobCompressorVersion, Instant> parseBlobCompressorVersionTimestamps(String input) {
+    Map<BlobCompressorVersion, Instant> result = new HashMap<>();
+    String[] pairs = input.split(",");
+    for (String pair : pairs) {
+      String[] kv = pair.split("=");
+      if (kv.length != 2) {
+        throw new IllegalArgumentException("Invalid BlobCompressorVersion=Instant pair: " + pair);
+      }
+      BlobCompressorVersion version = BlobCompressorVersion.valueOf(kv[0]);
+      Instant instant = Instant.Companion.parse(kv[1]);
+      result.put(version, instant);
+    }
+    return result;
+  }
+
+  public Map<BlobCompressorVersion, Instant> getBlobCompressorVersionTimestamps() {
+    return parseBlobCompressorVersionTimestamps(blobCompressorVersionTimestampsRaw);
   }
 }

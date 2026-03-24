@@ -21,7 +21,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import linea.blob.BlobCompressor;
+import linea.blob.BlobCompressorSelectorByTimestamp;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.bundles.BundlePoolService;
@@ -73,7 +73,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   private final AtomicBoolean isSelectionInterrupted = new AtomicBoolean(false);
   private final TransactionProfitabilityCalculator transactionProfitabilityCalculator;
   private final TransactionCompressor transactionCompressor;
-  private final BlobCompressor blobCompressor;
+  private final BlobCompressorSelectorByTimestamp blobCompressorSelectorByTimestamp;
 
   public LineaTransactionSelectorFactory(
       final BlockchainService blockchainService,
@@ -92,7 +92,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
       final AtomicReference<Set<Address>> deniedAddresses,
       final TransactionProfitabilityCalculator transactionProfitabilityCalculator,
       final TransactionCompressor transactionCompressor,
-      final BlobCompressor blobCompressor) {
+      final BlobCompressorSelectorByTimestamp blobCompressorSelectorByTimestamp) {
     this.blockchainService = blockchainService;
     this.txSelectorConfiguration = txSelectorConfiguration;
     this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
@@ -109,7 +109,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
     this.deniedAddresses = deniedAddresses;
     this.transactionProfitabilityCalculator = transactionProfitabilityCalculator;
     this.transactionCompressor = transactionCompressor;
-    this.blobCompressor = blobCompressor;
+    this.blobCompressorSelectorByTimestamp = blobCompressorSelectorByTimestamp;
 
     if (txSelectorConfiguration.maxBlockCallDataSize() != null) {
       log.warn(
@@ -137,7 +137,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
             deniedAddresses,
             transactionProfitabilityCalculator,
             transactionCompressor,
-            blobCompressor);
+            blobCompressorSelectorByTimestamp);
     currSelector.set(selector);
     return selector;
   }

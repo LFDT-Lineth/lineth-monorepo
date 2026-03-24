@@ -11,6 +11,8 @@ package net.consensys.linea.config;
 
 import java.util.Map;
 import java.util.Set;
+import kotlin.time.Instant;
+import linea.blob.BlobCompressorVersion;
 import lombok.Builder;
 import net.consensys.linea.plugins.LineaOptionsConfiguration;
 import net.consensys.linea.sequencer.txselection.selectors.TransactionEventFilter;
@@ -29,5 +31,6 @@ public record LineaTransactionSelectorConfiguration(
     String eventsDenyListPath,
     Map<Address, Set<TransactionEventFilter>> eventsDenyList,
     String eventsBundleDenyListPath,
-    Map<Address, Set<TransactionEventFilter>> eventsBundleDenyList)
+    Map<Address, Set<TransactionEventFilter>> eventsBundleDenyList,
+    Map<BlobCompressorVersion, Instant> blobCompressorVersionActivationTimes)
     implements LineaOptionsConfiguration {}

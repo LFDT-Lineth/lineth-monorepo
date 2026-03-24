@@ -17,9 +17,11 @@ import static org.mockito.Mockito.when;
 
 import java.math.BigInteger;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import kotlin.time.Instant;
+import linea.blob.BlobCompressorSelectorByTimestamp;
 import linea.blob.BlobCompressorVersion;
-import linea.blob.GoBackedBlobCompressor;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityCliOptions;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
@@ -89,7 +91,8 @@ public class ProfitableTransactionSelectorTest {
     when(blockchainService.getNextBlockBaseFee()).thenReturn(Optional.of(BASE_FEE));
     final var transactionCompressor =
         new CachingTransactionCompressor(
-            GoBackedBlobCompressor.getInstance(BlobCompressorVersion.V2, 128 * 1024));
+            new BlobCompressorSelectorByTimestamp(
+                Map.of(BlobCompressorVersion.V2, Instant.Companion.getDISTANT_PAST()), 128 * 1024));
     final var transactionProfitabilityCalculator =
         new TransactionProfitabilityCalculator(profitabilityConf, transactionCompressor);
     return new ProfitableTransactionSelector(

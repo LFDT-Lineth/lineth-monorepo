@@ -33,4 +33,12 @@ jar {
       'Implementation-Version': calculateVersion()
     )
   }
+
+  // Explicitly include Kotlin stdlib in the JAR to ensure kotlin.time.Instant and other
+  // Kotlin standard library classes are available at runtime when the plugin is loaded by Besu
+  from {
+    configurations.runtimeClasspath
+      .filter { it.name.startsWith('kotlin-stdlib') }
+      .collect { zipTree(it) }
+  }
 }

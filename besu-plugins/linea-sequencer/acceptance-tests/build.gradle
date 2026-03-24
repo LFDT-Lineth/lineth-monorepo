@@ -80,8 +80,9 @@ dependencies {
   kapt("org.apache.logging.log4j:log4j-core:${libs.versions.log4j.get()}")
   annotationProcessor "org.apache.logging.log4j:log4j-core:${libs.versions.log4j.get()}"
   implementation "org.apache.logging.log4j:log4j-core:${libs.versions.log4j.get()}"
-
   implementation project("${lineaSequencerProjectPath}:sequencer")
+  implementation "org.jetbrains.kotlin:kotlin-stdlib:${libs.versions.kotlin.get()}"
+
   testImplementation "build.linea:blob-compressor:${libs.versions.blobCompressor.get()}"
   testImplementation project(":tracer:arithmetization")
   testImplementation project(":jvm-libs:generic:serialization:jackson")

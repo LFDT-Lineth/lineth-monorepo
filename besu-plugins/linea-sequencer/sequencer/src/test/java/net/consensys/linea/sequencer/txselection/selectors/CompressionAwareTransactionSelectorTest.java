@@ -17,9 +17,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Map;
+import kotlin.time.Instant;
 import linea.blob.BlobCompressor;
+import linea.blob.BlobCompressorSelectorByTimestamp;
 import linea.blob.BlobCompressorVersion;
-import linea.blob.GoBackedBlobCompressor;
 import net.consensys.linea.utils.CachingTransactionCompressor;
 import net.consensys.linea.utils.TestTransactionFactory;
 import net.consensys.linea.utils.TransactionCompressor;
@@ -48,7 +50,8 @@ class CompressionAwareTransactionSelectorTest {
 
   private static final TransactionCompressor TX_COMPRESSOR =
       new CachingTransactionCompressor(
-          GoBackedBlobCompressor.getInstance(BlobCompressorVersion.V2, 128 * 1024));
+          new BlobCompressorSelectorByTimestamp(
+              Map.of(BlobCompressorVersion.V2, Instant.Companion.getDISTANT_PAST()), 128 * 1024));
 
   private SelectorsStateManager selectorsStateManager;
   private TestTransactionFactory txFactory;
@@ -64,8 +67,10 @@ class CompressionAwareTransactionSelectorTest {
    * new limit re-runs {@code Init} on the underlying native singleton and returns a wrapper that
    * uses it.
    */
-  private static GoBackedBlobCompressor compressorWithLimit(final int dataLimit) {
-    return GoBackedBlobCompressor.getInstance(BlobCompressorVersion.V2, dataLimit);
+  private static BlobCompressorSelectorByTimestamp compressorSelectorWithLimit(
+      final int dataLimit) {
+    return new BlobCompressorSelectorByTimestamp(
+        Map.of(BlobCompressorVersion.V2, Instant.Companion.getDISTANT_PAST()), dataLimit);
   }
 
   @Test
@@ -239,6 +244,9 @@ class CompressionAwareTransactionSelectorTest {
 
     final TransactionCompressor mockTxCompressor = mock(TransactionCompressor.class);
     final BlobCompressor mockBlobCompressor = mock(BlobCompressor.class);
+    final BlobCompressorSelectorByTimestamp mockBlobCompressorSelector =
+        mock(BlobCompressorSelectorByTimestamp.class);
+    when(mockBlobCompressorSelector.getBlobCompressor(any())).thenReturn(mockBlobCompressor);
 
     // appendBlock reports that the block fits with a compressed size well below
     // fastExecutionPathLimit.
@@ -253,27 +261,30 @@ class CompressionAwareTransactionSelectorTest {
             blobSizeLimit,
             headerOverhead,
             mockTxCompressor,
-            mockBlobCompressor);
+            mockBlobCompressorSelector);
     selectorsStateManager.blockSelectionStarted();
 
     // tx1: just below fastExecutionPathLimit → fast execution path; cumulative =
     // fastExecutionPathLimit - 1.
+    final Instant timestamp =
+        Instant.Companion.fromEpochSeconds(mockBlockHeader().getTimestamp(), 0L);
     final var tx1 = txFactory.createTransaction();
-    when(mockTxCompressor.getCompressedSize(tx1)).thenReturn(fastExecutionPathLimit - 1);
+    when(mockTxCompressor.getCompressedSize(tx1, timestamp)).thenReturn(fastExecutionPathLimit - 1);
     assertThat(evaluateTx(selector, wrapTx(tx1))).isEqualTo(SELECTED);
 
     // tx2: size 2 pushes conservative cumulative above fastExecutionPathLimit → slow execution
     // path.
     // appendBlock returns compressedSizeAfter = fastExecutionPathLimit / 2.
     final var tx2 = txFactory.createTransaction();
-    when(mockTxCompressor.getCompressedSize(tx2)).thenReturn(2);
+    when(mockTxCompressor.getCompressedSize(tx2, timestamp)).thenReturn(2);
     assertThat(evaluateTx(selector, wrapTx(tx2))).isEqualTo(SELECTED);
 
     // tx3: compressedSizeAfter + tx3Size <= fastExecutionPathLimit, so it fits on the fast
     // execution path.
     // With the fix, no slow-execution-path check is needed.
     final var tx3 = txFactory.createTransaction();
-    when(mockTxCompressor.getCompressedSize(tx3)).thenReturn(fastExecutionPathLimit / 2 - 1);
+    when(mockTxCompressor.getCompressedSize(tx3, timestamp))
+        .thenReturn(fastExecutionPathLimit / 2 - 1);
     assertThat(evaluateTx(selector, wrapTx(tx3))).isEqualTo(SELECTED);
 
     // Only tx2 should have triggered a slow-execution-path compression check.
@@ -290,11 +301,15 @@ class CompressionAwareTransactionSelectorTest {
 
   private CompressionAwareTransactionSelector createSelector(
       final int blobSizeLimit, final int headerOverhead) {
-    final var compressor = compressorWithLimit(blobSizeLimit);
+    final var compressorSelectorWithLimit = compressorSelectorWithLimit(blobSizeLimit);
     selectorsStateManager = new SelectorsStateManager();
     final var selector =
         new CompressionAwareTransactionSelector(
-            selectorsStateManager, blobSizeLimit, headerOverhead, TX_COMPRESSOR, compressor);
+            selectorsStateManager,
+            blobSizeLimit,
+            headerOverhead,
+            TX_COMPRESSOR,
+            compressorSelectorWithLimit);
     selectorsStateManager.blockSelectionStarted();
     return selector;
   }

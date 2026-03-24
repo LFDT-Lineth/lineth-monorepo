@@ -17,8 +17,8 @@ import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.ObjectReader
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import linea.blob.BlobCompressorSelectorByTimestamp
 import linea.blob.BlobCompressorVersion
-import linea.blob.GoBackedBlobCompressor
 import linea.plugin.acc.test.LineaPluginPoSTestBase
 import linea.plugin.acc.test.TestCommandLineOptionsBuilder
 import net.consensys.linea.bl.TransactionProfitabilityCalculator
@@ -47,6 +47,7 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
+import kotlin.time.Instant
 
 open class EstimateGasTest : LineaPluginPoSTestBase() {
   protected lateinit var profitabilityCalculator: TransactionProfitabilityCalculator
@@ -79,7 +80,12 @@ open class EstimateGasTest : LineaPluginPoSTestBase() {
         .build()
     profitabilityCalculator = TransactionProfitabilityCalculator(
       profitabilityConf,
-      CachingTransactionCompressor(GoBackedBlobCompressor.getInstance(BlobCompressorVersion.V2, 128 * 1024)),
+      CachingTransactionCompressor(
+        BlobCompressorSelectorByTimestamp(
+          mapOf(BlobCompressorVersion.V2 to Instant.DISTANT_PAST),
+          128 * 1024,
+        ),
+      ),
     )
   }
 

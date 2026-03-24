@@ -13,9 +13,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import java.math.BigInteger;
+import java.util.Map;
 import java.util.Optional;
+import kotlin.time.Instant;
+import linea.blob.BlobCompressorSelectorByTimestamp;
 import linea.blob.BlobCompressorVersion;
-import linea.blob.GoBackedBlobCompressor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
@@ -78,7 +80,8 @@ public class ProfitabilityValidatorTest {
             .txPoolMinMargin(TX_POOL_MIN_MARGIN);
     final var transactionCompressor =
         new CachingTransactionCompressor(
-            GoBackedBlobCompressor.getInstance(BlobCompressorVersion.V2, 128 * 1024));
+            new BlobCompressorSelectorByTimestamp(
+                Map.of(BlobCompressorVersion.V2, Instant.Companion.getDISTANT_PAST()), 128 * 1024));
 
     final var profitabilityCalculatorAlways =
         new TransactionProfitabilityCalculator(

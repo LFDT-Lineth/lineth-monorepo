@@ -12,9 +12,7 @@ package net.consensys.linea;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-import linea.blob.BlobCompressor;
-import linea.blob.BlobCompressorVersion;
-import linea.blob.GoBackedBlobCompressor;
+import linea.blob.BlobCompressorSelectorByTimestamp;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.bundles.BundlePoolService;
@@ -84,7 +82,7 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
   protected static MetricCategoryRegistry metricCategoryRegistry;
   protected static RpcEndpointService rpcEndpointService;
   protected static InvalidTransactionByLineCountCache invalidTransactionByLineCountCache;
-  protected static BlobCompressor blobCompressor;
+  protected static BlobCompressorSelectorByTimestamp blobCompressorSelectorByTimestamp;
   protected static TransactionCompressor transactionCompressor;
   protected static TransactionProfitabilityCalculator transactionProfitabilityCalculator;
 
@@ -300,13 +298,15 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
         transactionSelectorConfiguration().blobSizeLimit() != null
             ? transactionSelectorConfiguration().blobSizeLimit()
             : DEFAULT_COMPRESSED_SIZE_LIMIT;
-    blobCompressor =
-        GoBackedBlobCompressor.getInstance(BlobCompressorVersion.V2, effectiveBlobLimit);
+    blobCompressorSelectorByTimestamp =
+        new BlobCompressorSelectorByTimestamp(
+            transactionSelectorConfiguration().blobCompressorVersionActivationTimes(),
+            effectiveBlobLimit);
 
     final LineaProfitabilityConfiguration profitabilityConfiguration = profitabilityConfiguration();
     transactionCompressor =
         new CachingTransactionCompressor(
-            profitabilityConfiguration.compressedTxCacheSize(), blobCompressor);
+            profitabilityConfiguration.compressedTxCacheSize(), blobCompressorSelectorByTimestamp);
     transactionProfitabilityCalculator =
         new TransactionProfitabilityCalculator(profitabilityConfiguration, transactionCompressor);
   }
@@ -318,6 +318,6 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
     sharedStartTasksDone.set(false);
     blockchainService = null;
     metricsSystem = null;
-    blobCompressor = null;
+    blobCompressorSelectorByTimestamp = null;
   }
 }

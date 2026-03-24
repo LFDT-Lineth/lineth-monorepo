@@ -19,7 +19,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import kotlin.time.Instant;
 import linea.blob.BlobCompressor;
+import linea.blob.BlobCompressorSelectorByTimestamp;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.utils.TransactionCompressor;
 import org.apache.tuweni.bytes.Bytes;
@@ -105,7 +107,7 @@ public class CompressionAwareTransactionSelector
 
   private final long fastExecutionPathLimit;
   private final TransactionCompressor transactionCompressor;
-  private final BlobCompressor blobCompressor;
+  private final BlobCompressorSelectorByTimestamp blobCompressorSelectorByTimestamp;
 
   /**
    * Shared single-threaded executor for slow-execution-path compression. Declared static so that
@@ -143,7 +145,7 @@ public class CompressionAwareTransactionSelector
       final int blobSizeLimit,
       final int compressedBlockHeaderOverhead,
       final TransactionCompressor transactionCompressor,
-      final BlobCompressor blobCompressor) {
+      final BlobCompressorSelectorByTimestamp blobCompressorSelectorByTimestamp) {
     super(
         selectorsStateManager,
         new CompressionState(0L, new ArrayList<>()),
@@ -154,7 +156,7 @@ public class CompressionAwareTransactionSelector
           "fastExecutionPathLimit must be positive, got " + fastExecutionPathLimit);
     }
     this.transactionCompressor = transactionCompressor;
-    this.blobCompressor = blobCompressor;
+    this.blobCompressorSelectorByTimestamp = blobCompressorSelectorByTimestamp;
   }
 
   @Override
@@ -163,8 +165,11 @@ public class CompressionAwareTransactionSelector
     final Transaction transaction =
         (Transaction) evaluationContext.getPendingTransaction().getTransaction();
     final CompressionState state = getWorkingState();
-
-    final int txCompressedSize = transactionCompressor.getCompressedSize(transaction);
+    final ProcessableBlockHeader pendingHeader = evaluationContext.getPendingBlockHeader();
+    final Instant timestamp = Instant.Companion.fromEpochSeconds(pendingHeader.getTimestamp(), 0L);
+    final BlobCompressor blobCompressor =
+        blobCompressorSelectorByTimestamp.getBlobCompressor(timestamp);
+    final int txCompressedSize = transactionCompressor.getCompressedSize(transaction, timestamp);
     long newConservativeCumulative = state.cumulativeCompressedSize() + txCompressedSize;
 
     // Fast execution path: sum of per-tx compressed sizes is at or below the effective limit (blob
@@ -187,7 +192,6 @@ public class CompressionAwareTransactionSelector
     // Slow execution path: conservative estimate exceeded the limit.
     // Build the block RLP on this thread (cheap, CPU-only), then submit the native
     // reset+appendBlock to the background executor so it can overlap with EVM execution.
-    final ProcessableBlockHeader pendingHeader = evaluationContext.getPendingBlockHeader();
     final List<Transaction> tentativeTxs = new ArrayList<>(state.selectedTransactions());
     tentativeTxs.add(transaction);
     final byte[] blockRlp = buildBlockRlp(pendingHeader, tentativeTxs);
