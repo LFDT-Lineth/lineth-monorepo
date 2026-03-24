@@ -78,6 +78,7 @@ jobs:
           if git diff --quiet gradle/libs.versions.toml; then
             echo "No changes to libs.versions.toml, skipping commit"
           else
+            git config --unset core.hooksPath || true
             git add gradle/libs.versions.toml
             git commit -m "chore: update besu version in libs.versions.toml after building linea-besu from source"
             git push origin "$BRANCH"

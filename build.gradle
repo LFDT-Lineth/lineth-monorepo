@@ -15,6 +15,29 @@ task compileAll
 // instead of deleting and re-adding code all the time
 def allowCompilationWarnings = System.getenv('LINEA_DEV_ALLOW_WARNINGS') != null
 
+// Runs during Gradle's configuration phase. Only applies when building from a git checkout;
+// skip for source tarballs, Docker contexts without .git, or when git is unavailable — otherwise
+// this would break all Gradle invocations (including help/tasks).
+if (file('.git').exists()) {
+  try {
+    def hooksPathResult = exec {
+      commandLine 'git', 'config', 'core.hooksPath', '.githooks'
+      ignoreExitValue = true
+    }
+    if (hooksPathResult.exitValue != 0) {
+      logger.warn(
+          "Could not set git core.hooksPath to .githooks (git exited with {}). Local hooks under .githooks may not run.",
+          hooksPathResult.exitValue,
+          )
+    }
+  } catch (Exception e) {
+    logger.warn(
+        "Could not run git config to set core.hooksPath to .githooks: {}. Local hooks under .githooks may not run.",
+        e.message ?: e.toString(),
+        )
+  }
+}
+
 allprojects {
   repositories {
     mavenCentral()
