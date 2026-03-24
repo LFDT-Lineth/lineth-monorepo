@@ -1,3 +1,5 @@
+"use client";
+
 import PageFooter from "@/components/bridge/page-footer";
 import { Widget } from "@/components/layerswap/widget";
 
