@@ -20,14 +20,17 @@ def allowCompilationWarnings = System.getenv('LINEA_DEV_ALLOW_WARNINGS') != null
 // this would break all Gradle invocations (including help/tasks).
 if (file('.git').exists()) {
   try {
-    def hooksPathResult = exec {
-      commandLine 'git', 'config', 'core.hooksPath', '.githooks'
-      ignoreExitValue = true
-    }
-    if (hooksPathResult.exitValue != 0) {
+    def proc = [
+      'git',
+      'config',
+      'core.hooksPath',
+      '.githooks'
+    ].execute()
+    proc.waitFor()
+    if (proc.exitValue() != 0) {
       logger.warn(
           "Could not set git core.hooksPath to .githooks (git exited with {}). Local hooks under .githooks may not run.",
-          hooksPathResult.exitValue,
+          proc.exitValue(),
           )
     }
   } catch (Exception e) {
