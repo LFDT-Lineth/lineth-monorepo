@@ -41,8 +41,8 @@
     "ts-jest": "29.4.6"
   },
   "engines": {
-    "node": ">=22.22.0",
-    "pnpm": ">=10.28.0"
+    "node": ">=22.22.2",
+    "pnpm": ">=10.32.1"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

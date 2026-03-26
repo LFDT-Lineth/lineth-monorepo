@@ -29,8 +29,8 @@ Goal: run against public Linea endpoints with your own API keys.
 ## Local development
 
 ### Requirements
-- Node.js >= 22.22.0
-- pnpm >= 10.28.0
+- Node.js >= 22.22.2
+- pnpm >= 10.32.1
 
 ### Setup
 1) Create a local env file:

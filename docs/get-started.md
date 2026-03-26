@@ -2,12 +2,12 @@
 
 ### Requirements:
 
-- Node.js >= 22.22.0 (see `.nvmrc`)
+- Node.js >= 22.22.2 (see `.nvmrc`)
 - Docker v24 or higher
   - Docker should ideally have ~16 GB of Memory and 4+ CPUs to run the entire stack.
 - Docker Compose version v2.19+
 - Make v3.81+
-- Pnpm >= 10.28.0 (https://pnpm.io/installation)
+- Pnpm >= 10.32.1 (https://pnpm.io/installation)
 
 ### Run stack locally
 

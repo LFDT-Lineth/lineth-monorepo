@@ -50,8 +50,8 @@ Linea zkEVM monorepo — the principal repository for [Linea](https://linea.buil
 
 | Tool | Version | Notes |
 |------|---------|-------|
-| Node.js | >= 22.22.0 | See `.nvmrc` |
-| pnpm | >= 10.28.0 | Enforced via `preinstall` |
+| Node.js | >= 22.22.2 | See `.nvmrc` |
+| pnpm | >= 10.32.1 | Enforced via `preinstall` |
 | JDK | 21 | Coordinator, Besu plugins, transaction-exclusion-api |
 | Gradle | 8.5+ | JVM service builds |
 | Go | 1.24.6 | Prover |
