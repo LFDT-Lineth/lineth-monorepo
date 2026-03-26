@@ -1,0 +1,118 @@
+name: Review Coordinator
+
+on:
+  schedule:
+    - cron: '0 0 * * 1' # Every Monday at 12:00am UTC on main
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to review. Defaults to main.'
+        required: false
+        default: 'main'
+
+jobs:
+  claude-coordinator-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || 'main' }}
+          fetch-depth: 1
+
+      - name: Run Claude Coordinator Review
+        id: review
+        uses: anthropics/claude-code-action@5d0cc745cd0cce4c0e9e0b3511de26c3bc285eb5 #v1.0.71
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: --model claude-opus-4-6
+          direct_prompt: |
+            You are reviewing the full Kotlin/JVM codebase in the `coordinator/` and
+            `jvm-libs/` modules of the Linea monorepo.
+
+            The coordinator is the central orchestration service for the Linea rollup — it
+            conflates L2 blocks into batches, requests ZK proofs from the prover, submits
+            EIP-4844 blobs to L1, and finalizes batches with aggregated proofs.
+            The jvm-libs/ modules provide shared libraries used by the coordinator and other
+            JVM services in this monorepo.
+
+            Read and analyse the source files under `coordinator/` and `jvm-libs/` directly.
+
+            Focus exclusively on the following categories. For each finding, cite the file
+            and line number, explain the issue, and suggest a concrete fix.
+
+            ## 1. Dead Code
+            - Unused classes, functions, properties, or parameters
+            - Unreachable branches or expressions (e.g. conditions that are always true/false)
+            - Imports or dependencies that are never referenced
+
+            ## 2. Duplicated / Similar Code
+            - Copy-pasted logic that could be extracted into a shared function or class
+            - Near-duplicate implementations across coordinators (e.g. BlobSubmission vs
+              AggregationFinalization coordinators share structural patterns)
+            - Repeated inline configuration or constant values that should be named constants
+
+            ## 3. Anti-patterns and Code Smells
+            - Kotlin-specific: Java-style null checks instead of `?.`/`?:`, mutable `var`
+              where `val` suffices, raw platform types, using `!!` without justification
+            - OOP: God classes, feature envy, inappropriate intimacy between components
+            - Coordinator-specific: business logic leaking into config/mapper classes,
+              side effects inside data classes or constructors
+            - Exception handling: swallowing exceptions silently, catching `Throwable`/
+              `Exception` too broadly, ignoring `SafeFuture` completion errors
+
+            ## 4. Concurrency Issues
+            - Race conditions on shared mutable state across coroutines or futures
+            - Missing or incorrect use of `synchronized`, `@Volatile`, or atomic types
+            - `SafeFuture` / `CompletableFuture` chains that lose errors (missing
+              `whenException` / `exceptionally` handlers)
+            - Blocking calls (`Thread.sleep`, `.get()`, `.join()`) on async threads
+            - Incorrect assumption about which thread a callback executes on
+
+            Do not report style nits, missing docs, or issues outside these four categories.
+            If no issues are found in a category, write "No issues found." without a checkbox.
+
+            ## Output Format
+
+            Write your complete review to the file `/tmp/coordinator-review.md`.
+
+            Format the file as a GitHub issue body. Prefix EACH individual finding with
+            `- [ ]` (an unchecked checkbox) so team members can tick them off as addressed.
+
+            Example format:
+
+            ## Dead Code
+            - [ ] `coordinator/src/.../Foo.kt:42` — `unusedParam` is never read. Remove the parameter and update all call sites.
+
+            ## Duplicated / Similar Code
+            No issues found.
+
+            ## Anti-patterns and Code Smells
+            - [ ] `coordinator/src/.../Bar.kt:17` — Uses `!!` on a nullable result from `findOrNull` with no justification. Replace with `?: error("...")` or a safe alternative.
+
+            ## Concurrency Issues
+            - [ ] `coordinator/src/.../Baz.kt:88` — `.get()` called on a `CompletableFuture` on the event-loop thread, which will block it. Use `.thenApply` instead.
+
+      - name: Create GitHub Issue with findings
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_BRANCH: ${{ github.event.inputs.branch || 'main' }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          BRANCH="${INPUT_BRANCH}"
+          COMMIT=$(git rev-parse --short=7 HEAD)
+          TITLE="Coordinator review ${DATE} ${BRANCH} ${COMMIT}"
+
+          if [ ! -f /tmp/coordinator-review.md ]; then
+            echo "No review file found — Claude may not have produced output." > /tmp/coordinator-review.md
+          fi
+
+          gh issue create \
+            --title "${TITLE}" \
+            --body-file /tmp/coordinator-review.md \
+            --repo "${{ github.repository }}"
