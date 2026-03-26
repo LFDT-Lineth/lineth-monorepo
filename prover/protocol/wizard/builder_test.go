@@ -11,9 +11,9 @@ import (
 func TestRound(t *testing.T) {
 	define := func(b *wizard.Builder) {
 		_ = b.RegisterCommit("P", 16)
-		x := b.RegisterRandomCoin("X", coin.Field)
+		x := b.RegisterRandomCoin("X", coin.FieldExt)
 		require.Equal(t, 1, x.Round)
-		y := b.RegisterRandomCoin("Y", coin.Field)
+		y := b.RegisterRandomCoin("Y", coin.FieldExt)
 		require.Equal(t, 1, y.Round)
 	}
 

@@ -1,14 +1,15 @@
 package selfrecursion_test
 
 import (
+	"math/rand/v2"
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
-	"github.com/consensys/linea-monorepo/prover/protocol/compiler/mimc"
+	"github.com/consensys/linea-monorepo/prover/protocol/compiler/poseidon2"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/selfrecursion"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/vortex"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -17,6 +18,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
+
+var rng = rand.New(utils.NewRandSource(0)) // #nosec G404
 
 type testCase = struct {
 	Explainer string
@@ -28,7 +31,7 @@ func testCaseGenerator() []testCase {
 	var (
 		numTests = 7
 		polSize  = 1 << 4
-		nPols    = 16
+		nPols    = 1 << 4
 		rows     = make([]ifaces.Column, nPols)
 		// variables for multi-round
 		nPolsMultiRound = []int{14, 8, 9, 16}
@@ -54,17 +57,17 @@ func testCaseGenerator() []testCase {
 			b.UnivariateEval("EVAL", rows...)
 		},
 		Prove: func(pr *wizard.ProverRuntime) {
-			ys := make([]field.Element, len(rows))
-			x := field.NewElement(57) // the evaluation point
+			ys := make([]fext.Element, len(rows))
+			x := fext.PseudoRand(rng)
 
 			// assign the rows with random polynomials and collect the ys
 			for i, row := range rows {
 				p := smartvectors.Rand(polSize)
-				ys[i] = smartvectors.Interpolate(p, x)
+				ys[i] = smartvectors.EvaluateBasePolyLagrange(p, x)
 				pr.AssignColumn(row.GetColID(), p)
 			}
 
-			pr.AssignUnivariate("EVAL", x, ys...)
+			pr.AssignUnivariateExt("EVAL", x, ys...)
 		},
 	})
 	tc = append(tc, testCase{
@@ -74,7 +77,7 @@ func testCaseGenerator() []testCase {
 				var offsetIndex = 0
 				// trigger the creation of a new round by declaring a dummy coin
 				if round != 0 {
-					_ = b.RegisterRandomCoin(coin.Namef("COIN_%v", round), coin.Field)
+					_ = b.RegisterRandomCoin(coin.Namef("COIN_%v", round), coin.FieldExt)
 					// Compute the offsetIndex
 					for i := 0; i < round; i++ {
 						offsetIndex += nPolsMultiRound[i]
@@ -95,8 +98,8 @@ func testCaseGenerator() []testCase {
 			for i := range nPolsMultiRound {
 				numPolys += nPolsMultiRound[i]
 			}
-			ys := make([]field.Element, numPolys)
-			x := field.NewElement(57) // the evaluation point
+			ys := make([]fext.Element, numPolys)
+			x := fext.PseudoRand(rng)
 
 			// assign the rows with random polynomials and collect the ys
 			for round := range rowsMultiRound {
@@ -104,7 +107,7 @@ func testCaseGenerator() []testCase {
 				if round != 0 {
 					// let the prover know that it is free to go to the next
 					// round by sampling the coin.
-					_ = pr.GetRandomCoinField(coin.Namef("COIN_%v", round))
+					_ = pr.GetRandomCoinFieldExt(coin.Namef("COIN_%v", round))
 					// Compute the offsetIndex
 					for i := 0; i < round; i++ {
 						offsetIndex += nPolsMultiRound[i]
@@ -113,12 +116,12 @@ func testCaseGenerator() []testCase {
 
 				for i, row := range rowsMultiRound[round] {
 					p := smartvectors.Rand(polSize)
-					ys[offsetIndex+i] = smartvectors.Interpolate(p, x)
+					ys[offsetIndex+i] = smartvectors.EvaluateBasePolyLagrange(p, x)
 					pr.AssignColumn(row.GetColID(), p)
 				}
 			}
 
-			pr.AssignUnivariate("EVAL", x, ys...)
+			pr.AssignUnivariateExt("EVAL", x, ys...)
 		},
 	})
 	tc = append(tc, testCase{
@@ -128,7 +131,7 @@ func testCaseGenerator() []testCase {
 				var offsetIndex = 0
 				// trigger the creation of a new round by declaring a dummy coin
 				if round != 0 {
-					_ = b.RegisterRandomCoin(coin.Namef("COIN_%v", round), coin.Field)
+					_ = b.RegisterRandomCoin(coin.Namef("COIN_%v", round), coin.FieldExt)
 					// Compute the offsetIndex
 					for i := 0; i < round; i++ {
 						offsetIndex += nPolsMultiRound[i]
@@ -159,8 +162,8 @@ func testCaseGenerator() []testCase {
 			for i := range nPolsMultiRound {
 				numPolys += nPolsMultiRound[i]
 			}
-			ys := make([]field.Element, numPolys)
-			x := field.NewElement(57) // the evaluation point
+			ys := make([]fext.Element, numPolys)
+			x := fext.PseudoRand(rng)
 
 			// assign the rows with random polynomials and collect the ys
 			for round := range rowsMultiRound {
@@ -168,7 +171,7 @@ func testCaseGenerator() []testCase {
 				if round != 0 {
 					// let the prover know that it is free to go to the next
 					// round by sampling the coin.
-					_ = pr.GetRandomCoinField(coin.Namef("COIN_%v", round))
+					_ = pr.GetRandomCoinFieldExt(coin.Namef("COIN_%v", round))
 					// Compute the offsetIndex
 					for i := 0; i < round; i++ {
 						offsetIndex += nPolsMultiRound[i]
@@ -180,16 +183,16 @@ func testCaseGenerator() []testCase {
 					// assigned in the define phase
 					if i < numPrecomputedsNoSIS && round == 0 {
 						p := pr.Spec.Precomputed.MustGet(row.GetColID())
-						ys[i] = smartvectors.Interpolate(p, x)
+						ys[i] = smartvectors.EvaluateBasePolyLagrange(p, x)
 						continue
 					}
 					p := smartvectors.Rand(polSize)
-					ys[offsetIndex+i] = smartvectors.Interpolate(p, x)
+					ys[offsetIndex+i] = smartvectors.EvaluateBasePolyLagrange(p, x)
 					pr.AssignColumn(row.GetColID(), p)
 				}
 			}
 
-			pr.AssignUnivariate("EVAL", x, ys...)
+			pr.AssignUnivariateExt("EVAL", x, ys...)
 		},
 	})
 	tc = append(tc, testCase{
@@ -199,7 +202,7 @@ func testCaseGenerator() []testCase {
 				var offsetIndex = 0
 				// trigger the creation of a new round by declaring a dummy coin
 				if round != 0 {
-					_ = b.RegisterRandomCoin(coin.Namef("COIN_%v", round), coin.Field)
+					_ = b.RegisterRandomCoin(coin.Namef("COIN_%v", round), coin.FieldExt)
 					// Compute the offsetIndex
 					for i := 0; i < round; i++ {
 						offsetIndex += nPolsMultiRound[i]
@@ -230,8 +233,8 @@ func testCaseGenerator() []testCase {
 			for i := range nPolsMultiRound {
 				numPolys += nPolsMultiRound[i]
 			}
-			ys := make([]field.Element, numPolys)
-			x := field.NewElement(57) // the evaluation point
+			ys := make([]fext.Element, numPolys)
+			x := fext.PseudoRand(rng)
 
 			// assign the rows with random polynomials and collect the ys
 			for round := range rowsMultiRound {
@@ -239,7 +242,7 @@ func testCaseGenerator() []testCase {
 				if round != 0 {
 					// let the prover know that it is free to go to the next
 					// round by sampling the coin.
-					_ = pr.GetRandomCoinField(coin.Namef("COIN_%v", round))
+					_ = pr.GetRandomCoinFieldExt(coin.Namef("COIN_%v", round))
 					// Compute the offsetIndex
 					for i := 0; i < round; i++ {
 						offsetIndex += nPolsMultiRound[i]
@@ -251,16 +254,16 @@ func testCaseGenerator() []testCase {
 					// assigned in the define phase
 					if i < numPrecomputedsSIS && round == 0 {
 						p := pr.Spec.Precomputed.MustGet(row.GetColID())
-						ys[i] = smartvectors.Interpolate(p, x)
+						ys[i] = smartvectors.EvaluateBasePolyLagrange(p, x)
 						continue
 					}
 					p := smartvectors.Rand(polSize)
-					ys[offsetIndex+i] = smartvectors.Interpolate(p, x)
+					ys[offsetIndex+i] = smartvectors.EvaluateBasePolyLagrange(p, x)
 					pr.AssignColumn(row.GetColID(), p)
 				}
 			}
 
-			pr.AssignUnivariate("EVAL", x, ys...)
+			pr.AssignUnivariateExt("EVAL", x, ys...)
 		},
 	})
 	tc = append(tc, testCase{
@@ -270,7 +273,7 @@ func testCaseGenerator() []testCase {
 				var offsetIndex = 0
 				// trigger the creation of a new round by declaring a dummy coin
 				if round != 0 {
-					_ = b.RegisterRandomCoin(coin.Namef("COIN_%v", round), coin.Field)
+					_ = b.RegisterRandomCoin(coin.Namef("COIN_%v", round), coin.FieldExt)
 					// Compute the offsetIndex
 					for i := 0; i < round; i++ {
 						offsetIndex += nPolsMultiRoundNoSIS[i]
@@ -301,8 +304,8 @@ func testCaseGenerator() []testCase {
 			for i := range nPolsMultiRoundNoSIS {
 				numPolys += nPolsMultiRoundNoSIS[i]
 			}
-			ys := make([]field.Element, numPolys)
-			x := field.NewElement(57) // the evaluation point
+			ys := make([]fext.Element, numPolys)
+			x := fext.PseudoRand(rng)
 
 			// assign the rows with random polynomials and collect the ys
 			for round := range rowsMultiRound {
@@ -310,7 +313,7 @@ func testCaseGenerator() []testCase {
 				if round != 0 {
 					// let the prover know that it is free to go to the next
 					// round by sampling the coin.
-					_ = pr.GetRandomCoinField(coin.Namef("COIN_%v", round))
+					_ = pr.GetRandomCoinFieldExt(coin.Namef("COIN_%v", round))
 					// Compute the offsetIndex
 					for i := 0; i < round; i++ {
 						offsetIndex += nPolsMultiRoundNoSIS[i]
@@ -322,16 +325,16 @@ func testCaseGenerator() []testCase {
 					// assigned in the define phase
 					if i < numPrecomputedsNoSIS && round == 0 {
 						p := pr.Spec.Precomputed.MustGet(row.GetColID())
-						ys[i] = smartvectors.Interpolate(p, x)
+						ys[i] = smartvectors.EvaluateBasePolyLagrange(p, x)
 						continue
 					}
 					p := smartvectors.Rand(polSize)
-					ys[offsetIndex+i] = smartvectors.Interpolate(p, x)
+					ys[offsetIndex+i] = smartvectors.EvaluateBasePolyLagrange(p, x)
 					pr.AssignColumn(row.GetColID(), p)
 				}
 			}
 
-			pr.AssignUnivariate("EVAL", x, ys...)
+			pr.AssignUnivariateExt("EVAL", x, ys...)
 		},
 	})
 	tc = append(tc, testCase{
@@ -341,7 +344,7 @@ func testCaseGenerator() []testCase {
 				var offsetIndex = 0
 				// trigger the creation of a new round by declaring a dummy coin
 				if round != 0 {
-					_ = b.RegisterRandomCoin(coin.Namef("COIN_%v", round), coin.Field)
+					_ = b.RegisterRandomCoin(coin.Namef("COIN_%v", round), coin.FieldExt)
 					// Compute the offsetIndex
 					for i := 0; i < round; i++ {
 						offsetIndex += nPolsMultiRoundSIS[i]
@@ -372,8 +375,8 @@ func testCaseGenerator() []testCase {
 			for i := range nPolsMultiRoundSIS {
 				numPolys += nPolsMultiRoundSIS[i]
 			}
-			ys := make([]field.Element, numPolys)
-			x := field.NewElement(57) // the evaluation point
+			ys := make([]fext.Element, numPolys)
+			x := fext.PseudoRand(rng)
 
 			// assign the rows with random polynomials and collect the ys
 			for round := range rowsMultiRound {
@@ -381,7 +384,7 @@ func testCaseGenerator() []testCase {
 				if round != 0 {
 					// let the prover know that it is free to go to the next
 					// round by sampling the coin.
-					_ = pr.GetRandomCoinField(coin.Namef("COIN_%v", round))
+					_ = pr.GetRandomCoinFieldExt(coin.Namef("COIN_%v", round))
 					// Compute the offsetIndex
 					for i := 0; i < round; i++ {
 						offsetIndex += nPolsMultiRoundSIS[i]
@@ -393,16 +396,16 @@ func testCaseGenerator() []testCase {
 					// assigned in the define phase
 					if i < numPrecomputedsSIS && round == 0 {
 						p := pr.Spec.Precomputed.MustGet(row.GetColID())
-						ys[i] = smartvectors.Interpolate(p, x)
+						ys[i] = smartvectors.EvaluateBasePolyLagrange(p, x)
 						continue
 					}
 					p := smartvectors.Rand(polSize)
-					ys[offsetIndex+i] = smartvectors.Interpolate(p, x)
+					ys[offsetIndex+i] = smartvectors.EvaluateBasePolyLagrange(p, x)
 					pr.AssignColumn(row.GetColID(), p)
 				}
 			}
 
-			pr.AssignUnivariate("EVAL", x, ys...)
+			pr.AssignUnivariateExt("EVAL", x, ys...)
 		},
 	})
 	tc = append(tc, testCase{
@@ -412,7 +415,7 @@ func testCaseGenerator() []testCase {
 				var offsetIndex = 0
 				// trigger the creation of a new round by declaring a dummy coin
 				if round != 0 {
-					_ = b.RegisterRandomCoin(coin.Namef("COIN_%v", round), coin.Field)
+					_ = b.RegisterRandomCoin(coin.Namef("COIN_%v", round), coin.FieldExt)
 					// Compute the offsetIndex
 					for i := 0; i < round; i++ {
 						offsetIndex += nPolsMultiRoundEmpty[i]
@@ -443,8 +446,8 @@ func testCaseGenerator() []testCase {
 			for i := range nPolsMultiRoundEmpty {
 				numPolys += nPolsMultiRoundEmpty[i]
 			}
-			ys := make([]field.Element, numPolys)
-			x := field.NewElement(57) // the evaluation point
+			ys := make([]fext.Element, numPolys)
+			x := fext.PseudoRand(rng)
 
 			// assign the rows with random polynomials and collect the ys
 			for round := range rowsMultiRound {
@@ -452,7 +455,7 @@ func testCaseGenerator() []testCase {
 				if round != 0 {
 					// let the prover know that it is free to go to the next
 					// round by sampling the coin.
-					_ = pr.GetRandomCoinField(coin.Namef("COIN_%v", round))
+					_ = pr.GetRandomCoinFieldExt(coin.Namef("COIN_%v", round))
 					// Compute the offsetIndex
 					for i := 0; i < round; i++ {
 						offsetIndex += nPolsMultiRoundEmpty[i]
@@ -464,16 +467,16 @@ func testCaseGenerator() []testCase {
 					// assigned in the define phase
 					if i < numPrecomputedsNoSIS && round == 0 {
 						p := pr.Spec.Precomputed.MustGet(row.GetColID())
-						ys[i] = smartvectors.Interpolate(p, x)
+						ys[i] = smartvectors.EvaluateBasePolyLagrange(p, x)
 						continue
 					}
 					p := smartvectors.Rand(polSize)
-					ys[offsetIndex+i] = smartvectors.Interpolate(p, x)
+					ys[offsetIndex+i] = smartvectors.EvaluateBasePolyLagrange(p, x)
 					pr.AssignColumn(row.GetColID(), p)
 				}
 			}
 
-			pr.AssignUnivariate("EVAL", x, ys...)
+			pr.AssignUnivariateExt("EVAL", x, ys...)
 		},
 	})
 	return tc
@@ -489,7 +492,8 @@ func TestSelfRecursionOpsSisSingleLayered(t *testing.T) {
 			compiled := wizard.Compile(tc.Define,
 				vortex.Compile(
 					2,
-					vortex.ForceNumOpenedColumns(10),
+					false,
+					vortex.ForceNumOpenedColumns(8),
 					vortex.WithOptionalSISHashingThreshold(10),
 				),
 				selfrecursion.SelfRecurse,
@@ -515,25 +519,28 @@ func TestSelfRecursionOpsSisMultiLayered(t *testing.T) {
 				tc.Define,
 				vortex.Compile(
 					2,
+					false,
 					vortex.ForceNumOpenedColumns(10),
 					vortex.WithOptionalSISHashingThreshold(10),
 				),
 				selfrecursion.SelfRecurse,
-				mimc.CompileMiMC,
+				poseidon2.CompilePoseidon2,
 				compiler.Arcane(
 					compiler.WithTargetColSize(1<<10)),
 				vortex.Compile(
 					2,
+					false,
 					vortex.ForceNumOpenedColumns(10),
 					vortex.WithOptionalSISHashingThreshold(10),
 				),
 				selfrecursion.SelfRecurse,
-				mimc.CompileMiMC,
+				poseidon2.CompilePoseidon2,
 				compiler.Arcane(
 					compiler.WithTargetColSize(1<<13)),
 				vortex.Compile(
 					2,
-					vortex.ForceNumOpenedColumns(8),
+					false,
+					vortex.ForceNumOpenedColumns(10),
 					vortex.WithOptionalSISHashingThreshold(10),
 				),
 				dummy.Compile,

@@ -1,0 +1,4 @@
+Serialization Size Profile
+==========================
+
+[smartvectors.Regular]: 1.02 KB (100.0%)

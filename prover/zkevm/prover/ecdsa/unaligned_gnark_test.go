@@ -4,6 +4,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
+
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils/csvtraces"
@@ -27,34 +29,41 @@ func TestUnalignedGnarkDataAssign(t *testing.T) {
 			IsPushing:  ct.GetCommit(build, "IS_PUSHING"),
 			IsFetching: ct.GetCommit(build, "IS_FETCHING"),
 			IsActive:   ct.GetCommit(build, "IS_ACTIVE"),
-			Limb:       ct.GetCommit(build, "LIMB"),
 			SuccessBit: ct.GetCommit(build, "SUCCESS_BIT"),
 			IsData:     ct.GetCommit(build, "IS_DATA"),
 			IsRes:      ct.GetCommit(build, "IS_RES"),
-			TxHashHi:   ct.GetCommit(build, "TX_HASH_HI"),
-			TxHashLo:   ct.GetCommit(build, "TX_HASH_LO"),
+			Limb:       ct.GetLimbsLe(build, "LIMB", common.NbLimbU128).AssertUint128(),
+			TxHashHi:   ct.GetLimbsLe(build, "TX_HASH_HI", common.NbLimbU128).AssertUint128(),
+			TxHashLo:   ct.GetLimbsLe(build, "TX_HASH_LO", common.NbLimbU128).AssertUint128(),
 		}
+
 		uag = newUnalignedGnarkData(build.CompiledIOP, ct.LenPadded(), uagSrc)
 	}, dummy.Compile)
+
 	proof := wizard.Prove(cmp, func(run *wizard.ProverRuntime) {
+
 		ct.Assign(run,
-			"SOURCE",
-			"IS_ACTIVE",
-			"IS_PUSHING",
-			"IS_FETCHING",
-			"LIMB",
-			"SUCCESS_BIT",
-			"IS_DATA",
-			"IS_RES",
-			"TX_HASH_HI",
-			"TX_HASH_LO")
+			uagSrc.Source,
+			uagSrc.IsActive,
+			uagSrc.IsFetching,
+			uagSrc.IsPushing,
+			uagSrc.Limb,
+			uagSrc.SuccessBit,
+			uagSrc.IsData,
+			uagSrc.IsRes,
+			uagSrc.TxHashHi,
+			uagSrc.TxHashLo,
+		)
+
 		uag.Assign(run, uagSrc, dummyTxSignatureGetter)
+
 		ct.CheckAssignment(run,
-			// TODO: add also auxiliary columns
-			string(uag.IsPublicKey.GetColID()),
-			string(uag.GnarkIndex.GetColID()),
-			string(uag.GnarkData.GetColID()))
+			uag.IsPublicKey,
+			uag.GnarkIndex,
+			uag.GnarkData,
+		)
 	})
+
 	if err := wizard.Verify(cmp, proof); err != nil {
 		t.Fatal("proof failed", err)
 	}

@@ -129,7 +129,7 @@ func (g *RandGen) PopulateBlockData(
 	pbi.L2ToL1MsgHashes = g.L2L1MsgHashes()
 	pbi.RlpEncodedTransactions, pbi.BatchReceptionIndices = g.TxRlp(g.Params.SupTxPerBlock)
 	pbi.FromAddresses = g.FromAddresses(g.Params.SupTxPerBlock)
-	pbi.RootHash = types.Bytes32FromHex(g.HexStringForNBytes(32))
+	pbi.RootHash = types.BytesToKoalaOctupletLoose(g.Bytes(32))
 	pbi.TimeStamp = prevTimeStamp + uint64(g.PositiveInt(24))
 	return pbi.TimeStamp
 }

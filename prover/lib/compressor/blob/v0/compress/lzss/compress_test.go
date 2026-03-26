@@ -242,7 +242,7 @@ func Test300ZerosAfterNonzero(t *testing.T) { // probably won't happen in our ca
 	testCompressionRoundTrip(t, append([]byte{'h', 'i'}, make([]byte, 300)...))
 }
 
-func TestRepeatedNonzero(t *testing.T) {
+func TestConstantedNonzero(t *testing.T) {
 	testCompressionRoundTrip(t, []byte{'h', 'i', 'h', 'i', 'h', 'i'})
 }
 
@@ -570,7 +570,7 @@ func BenchmarkCompressNomial100kB(b *testing.B) {
 	}
 }
 
-func BenchmarkCompressRepeated100kB(b *testing.B) {
+func BenchmarkCompressConstanted100kB(b *testing.B) {
 	// 100kB of zeroes.
 	data := make([]byte, 100*1024)
 

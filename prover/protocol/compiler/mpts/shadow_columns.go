@@ -24,7 +24,7 @@ func (a *ShadowRowProverAction) Run(run *wizard.ProverRuntime) {
 func autoAssignedShadowRow(comp *wizard.CompiledIOP, size, round, id int) ifaces.Column {
 
 	name := ifaces.ColIDf("MPTS_%v_SHADOW_ROUND_%v_ID_%v", comp.SelfRecursionCount, round, id)
-	col := comp.InsertCommit(round, name, size)
+	col := comp.InsertCommit(round, name, size, true)
 
 	comp.RegisterProverAction(round, &ShadowRowProverAction{
 		Name: name,

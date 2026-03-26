@@ -19,6 +19,7 @@
 *.png binary
 *.cbor binary
 
+prover/zkevm/arithmetization/zkevm.bin binary
 prover/symbolic/testdata/**/*.cbor binary
 prover/prover-assets/**/**/**/*.bin binary
 prover/prover-assets/**/**/**/**/*.bin binary

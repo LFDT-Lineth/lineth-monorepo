@@ -30,6 +30,12 @@ type Projection struct {
 	uuid  uuid.UUID `serde:"omit"`
 }
 
+// DebugOption is a function type that can be provided to a [Projection] query
+// in order to print all the rows into csv files and get detailed information
+// about the failures when the query check fails.
+// the failures are printed in CSV files
+type DebugOption func(*Projection, ifaces.Runtime)
+
 // ProjectionInput is a collection of parameters to provide to a [Projection]
 // query. It corresponds to the case where the projection query is "unary".
 type ProjectionInput struct {
@@ -38,6 +44,9 @@ type ProjectionInput struct {
 	ColumnA, ColumnB []ifaces.Column
 	// FilterA and FilterB are the filters of the ColumnA and ColumnB
 	FilterA, FilterB ifaces.Column
+	// if Option is not nil, debug information will be printed on failure
+	// the failures are printed in CSV files
+	Option DebugOption `serde:"omit"`
 }
 
 // ProjectionMultiAryInput is a collection of parameters to provide to a
@@ -49,6 +58,9 @@ type ProjectionMultiAryInput struct {
 	ColumnsA, ColumnsB [][]ifaces.Column
 	// FiltersA and FiltersB are the filters of the left-to-right side.
 	FiltersA, FiltersB []ifaces.Column
+	// if Option is not nil, debug information will be printed on failure
+	// the failures are printed in CSV files
+	Option DebugOption `serde:"omit"`
 }
 
 // NewProjection constructs a projection. Will panic if it is mal-formed
@@ -58,6 +70,7 @@ func NewProjection(round int, id ifaces.QueryID, inp ProjectionInput) Projection
 		ColumnsB: [][]ifaces.Column{inp.ColumnB},
 		FiltersA: []ifaces.Column{inp.FilterA},
 		FiltersB: []ifaces.Column{inp.FilterB},
+		Option:   inp.Option,
 	})
 }
 
@@ -138,6 +151,28 @@ func (p Projection) Name() ifaces.QueryID {
 
 // Check implements the [ifaces.Query] interface
 func (p Projection) Check(run ifaces.Runtime) error {
+
+	// First, verify that all filter columns are binary (0 or 1 only).
+	// Non-binary selectors cause panics in the Horner compilation step,
+	// so catching them here gives a much clearer error message.
+	for partIdx, f := range p.Inp.FiltersA {
+		for row := 0; row < f.Size(); row++ {
+			v := f.GetColAssignmentAt(run, row)
+			if !v.IsZero() && !v.IsOne() {
+				return fmt.Errorf("projection %v: FilterA[%d] is non-binary at row %d: value=%v (col=%v)",
+					p.ID, partIdx, row, v.String(), f.GetColID())
+			}
+		}
+	}
+	for partIdx, f := range p.Inp.FiltersB {
+		for row := 0; row < f.Size(); row++ {
+			v := f.GetColAssignmentAt(run, row)
+			if !v.IsZero() && !v.IsOne() {
+				return fmt.Errorf("projection %v: FilterB[%d] is non-binary at row %d: value=%v (col=%v)",
+					p.ID, partIdx, row, v.String(), f.GetColID())
+			}
+		}
+	}
 
 	// The function is implemented by creating two iterator functions and
 	// checking that they yield the same values.
@@ -223,20 +258,27 @@ mainLoop:
 		}
 
 		if aOk != bOk {
-			err = fmt.Errorf("a and b must yield the same number of rows, a %v b %v", aOk, bOk)
-			break mainLoop
+			if p.Inp.Option != nil {
+				p.Inp.Option(&p, run)
+			}
+			return fmt.Errorf("a and b must yield the same number of rows, a %v b %v", aOk, bOk)
 		}
 
 		if len(a) != len(b) {
 			// Note: this is redundant with the constructor's check, this should
 			// not be a runtime error.
+			if p.Inp.Option != nil {
+				p.Inp.Option(&p, run)
+			}
 			panic("A and B must yield the same number of columns")
 		}
 
 		for i := range a {
 			if !a[i].Equal(&b[i]) {
-				err = fmt.Errorf("a and b must yield the same values, a=%v b=%v", vector.Prettify(a), vector.Prettify(b))
-				break mainLoop
+				if p.Inp.Option != nil {
+					p.Inp.Option(&p, run)
+				}
+				return fmt.Errorf("a and b must yield the same values, a=%v b=%v, at indices aindex=%d, bindex=%d", vector.PrettifyHex(a), vector.PrettifyHex(b), aCurrRow, bCurrRow)
 			}
 		}
 	}

@@ -5,7 +5,8 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 	"github.com/consensys/linea-monorepo/prover/protocol/accessors"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -24,15 +25,15 @@ type FoldProverAction struct {
 
 func (a *FoldProverAction) Run(assi *wizard.ProverRuntime) {
 	h := a.H.GetColAssignment(assi)
-	x := a.X.GetVal(assi)
+	x := a.X.GetValExt(assi)
 
-	foldedVal := make([]field.Element, a.FoldedSize)
+	foldedVal := make([]fext.Element, a.FoldedSize)
 	for i := range foldedVal {
 		subH := h.SubVector(i*a.InnerDegree, (i+1)*a.InnerDegree)
-		foldedVal[i] = smartvectors.EvalCoeff(subH, x)
+		foldedVal[i] = smartvectors.EvalCoeffExt(subH, x)
 	}
 
-	assi.AssignColumn(a.FoldedName, smartvectors.NewRegular(foldedVal))
+	assi.AssignColumn(a.FoldedName, smartvectors.NewRegularExt(foldedVal))
 }
 
 type FoldVerifierAction struct {
@@ -42,16 +43,18 @@ type FoldVerifierAction struct {
 }
 
 func (a *FoldVerifierAction) Run(run wizard.Runtime) error {
-	if a.FoldedEvalAcc.GetVal(run) != a.HEvalAcc.GetVal(run) {
+	if a.FoldedEvalAcc.GetValExt(run) != a.HEvalAcc.GetValExt(run) {
 		return fmt.Errorf("verifier of folding failed %v", a.FoldedName)
 	}
 	return nil
 }
 
 func (a *FoldVerifierAction) RunGnark(api frontend.API, wvc wizard.GnarkRuntime) {
-	c := a.FoldedEvalAcc.GetFrontendVariable(api, wvc)
-	c_ := a.HEvalAcc.GetFrontendVariable(api, wvc)
-	api.AssertIsEqual(c, c_)
+	koalaAPI := koalagnark.NewAPI(api)
+
+	c := a.FoldedEvalAcc.GetFrontendVariableExt(api, wvc)
+	c_ := a.HEvalAcc.GetFrontendVariableExt(api, wvc)
+	koalaAPI.AssertIsEqualExt(c, c_)
 }
 
 func Fold(comp *wizard.CompiledIOP, h ifaces.Column, x ifaces.Accessor, innerDegree int) ifaces.Column {
@@ -60,7 +63,7 @@ func Fold(comp *wizard.CompiledIOP, h ifaces.Column, x ifaces.Accessor, innerDeg
 
 	foldedSize := h.Size() / innerDegree
 	foldedName := ifaces.ColIDf("FOLDED_%v_%v_%v", h.GetColID(), x.Name(), innerDegree)
-	folded := comp.InsertCommit(round, foldedName, foldedSize)
+	folded := comp.InsertCommit(round, foldedName, foldedSize, false)
 
 	if x.Round() <= h.Round() {
 		logrus.Debugf("Unsafe, the coin is before the commitment : %v", foldedName)
@@ -75,7 +78,7 @@ func Fold(comp *wizard.CompiledIOP, h ifaces.Column, x ifaces.Accessor, innerDeg
 	})
 
 	outerCoinName := coin.Namef("OUTER_COIN_%v", folded.GetColID())
-	outerCoin := comp.InsertCoin(round+1, outerCoinName, coin.Field)
+	outerCoin := comp.InsertCoin(round+1, outerCoinName, coin.FieldExt)
 	outerCoinAcc := accessors.NewFromCoin(outerCoin)
 
 	foldedEvalAcc := CoeffEval(comp, folded.String(), outerCoin, folded)

@@ -5,12 +5,15 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
+	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/expr_handle"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/plonk"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/limbs"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/zkevm/arithmetization"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
 	"github.com/sirupsen/logrus"
 )
@@ -24,23 +27,23 @@ type BlsMsmDataSource struct {
 	ID           ifaces.Column
 	CsMul        ifaces.Column
 	CsMembership ifaces.Column
-	Limb         ifaces.Column
+	Limb         limbs.Uint128Le
 	Index        ifaces.Column
 	Counter      ifaces.Column
 	IsData       ifaces.Column
 	IsRes        ifaces.Column
 }
 
-func newMsmDataSource(comp *wizard.CompiledIOP, g Group) *BlsMsmDataSource {
+func newMsmDataSource(comp *wizard.CompiledIOP, g Group, arith *arithmetization.Arithmetization) *BlsMsmDataSource {
 	return &BlsMsmDataSource{
-		ID:           comp.Columns.GetHandle(colNameFn("ID")),
-		CsMul:        comp.Columns.GetHandle(colNameFn("CIRCUIT_SELECTOR_BLS_" + g.String() + "_MSM")),
-		CsMembership: comp.Columns.GetHandle(colNameFn("CIRCUIT_SELECTOR_" + g.String() + "_MEMBERSHIP")),
-		Limb:         comp.Columns.GetHandle(colNameFn("LIMB")),
-		Index:        comp.Columns.GetHandle(colNameFn("INDEX")),
-		Counter:      comp.Columns.GetHandle(colNameFn("CT")),
-		IsData:       comp.Columns.GetHandle(colNameFn("DATA_BLS_" + g.String() + "_MSM_FLAG")),
-		IsRes:        comp.Columns.GetHandle(colNameFn("RSLT_BLS_" + g.String() + "_MSM_FLAG")),
+		ID:           arith.MashedColumnOf(comp, moduleName, "ID"),
+		CsMul:        arith.ColumnOf(comp, moduleName, "CIRCUIT_SELECTOR_BLS_"+g.String()+"_MSM"),
+		CsMembership: arith.ColumnOf(comp, moduleName, "CIRCUIT_SELECTOR_"+g.String()+"_MEMBERSHIP"),
+		Limb:         arith.GetLimbsOfU128Le(comp, moduleName, "LIMB"),
+		Index:        arith.ColumnOf(comp, moduleName, "INDEX"),
+		Counter:      arith.ColumnOf(comp, moduleName, "CT"),
+		IsData:       arith.ColumnOf(comp, moduleName, "DATA_BLS_"+g.String()+"_MSM_FLAG"),
+		IsRes:        arith.ColumnOf(comp, moduleName, "RSLT_BLS_"+g.String()+"_MSM_FLAG"),
 	}
 }
 
@@ -49,19 +52,25 @@ type BlsMsm struct {
 	*UnalignedMsmData
 	AlignedGnarkMsmData             *plonk.Alignment
 	AlignedGnarkGroupMembershipData *plonk.Alignment
+	FlattenLimbsGroupMembership     *common.FlattenColumn
 	*Limits
 	Group
 }
 
 func newMsm(comp *wizard.CompiledIOP, g Group, limits *Limits, src *BlsMsmDataSource) *BlsMsm {
 	umsm := newUnalignedMsmData(comp, g, limits, src)
+	flattenLimbsGroupMembership := common.NewFlattenColumn(comp, src.Limb.AsDynSize(), umsm.IsMsmInstanceAndMembership)
 
-	return &BlsMsm{
-		BlsMsmDataSource: src,
-		UnalignedMsmData: umsm,
-		Limits:           limits,
-		Group:            g,
+	res := &BlsMsm{
+		BlsMsmDataSource:            src,
+		UnalignedMsmData:            umsm,
+		Limits:                      limits,
+		Group:                       g,
+		FlattenLimbsGroupMembership: flattenLimbsGroupMembership,
 	}
+
+	flattenLimbsGroupMembership.CsFlattenProjection(comp)
+	return res
 }
 
 func (bm *BlsMsm) WithMsmCircuit(comp *wizard.CompiledIOP, options ...query.PlonkOption) *BlsMsm {
@@ -88,7 +97,7 @@ func (bm *BlsMsm) WithMsmCircuit(comp *wizard.CompiledIOP, options ...query.Plon
 func (bm *BlsMsm) WithGroupMembershipCircuit(comp *wizard.CompiledIOP, options ...query.PlonkOption) *BlsMsm {
 	// compute the bound on the number of circuits we need. First we estimate a bound on the number of possible
 	// maximum number of G1/G2 points which could go to the membership circuit.
-	nbMaxInstancesInputs := utils.DivCeil(bm.BlsMsmDataSource.CsMembership.Size(), nbLimbs(bm.Group))
+	nbMaxInstancesInputs := utils.DivCeil(bm.FlattenLimbsGroupMembership.Mask.Size(), nbLimbs(bm.Group))
 	nbMaxInstancesLimit := bm.limitGroupMembershipCalls(bm.Group)
 	switch nbMaxInstancesLimit {
 	case 0:
@@ -105,8 +114,8 @@ func (bm *BlsMsm) WithGroupMembershipCircuit(comp *wizard.CompiledIOP, options .
 	toAlignMembership := &plonk.CircuitAlignmentInput{
 		Name:               fmt.Sprintf("%s_%s_GROUP_MEMBERSHIP", NAME_BLS_MSM, bm.Group.String()),
 		Round:              ROUND_NR,
-		DataToCircuitMask:  bm.UnalignedMsmData.IsMsmInstanceAndMembership,
-		DataToCircuit:      bm.BlsMsmDataSource.Limb,
+		DataToCircuitMask:  bm.FlattenLimbsGroupMembership.Mask,
+		DataToCircuit:      bm.FlattenLimbsGroupMembership.Limbs,
 		Circuit:            newCheckCircuit(bm.Group, GROUP, bm.Limits),
 		NbCircuitInstances: nbCircuits,
 		InputFillerKey:     membershipInputFillerKey(bm.Group, GROUP),
@@ -119,6 +128,7 @@ func (bm *BlsMsm) WithGroupMembershipCircuit(comp *wizard.CompiledIOP, options .
 
 func (bm *BlsMsm) Assign(run *wizard.ProverRuntime) {
 	bm.UnalignedMsmData.Assign(run)
+	bm.FlattenLimbsGroupMembership.Run(run)
 	if bm.AlignedGnarkMsmData != nil {
 		bm.AlignedGnarkMsmData.Assign(run)
 	}
@@ -155,7 +165,7 @@ func newUnalignedMsmData(comp *wizard.CompiledIOP, g Group, limits *Limits, src 
 	// assuming the worst case where there is single long MSM. Then we have
 	// group element and scalar for every input. And we add one to avoid edge
 	// case with 0 size.
-	maxNbMsmInstancesInputs := utils.DivCeil(src.CsMul.Size(), (nbLimbs(g) + nbFrLimbs))
+	maxNbMsmInstancesInputs := utils.DivCeil(src.CsMul.Size(), (nbLimbs128(g) + nbFrLimbs128))
 	maxNbInstancesLimit := limits.limitMulCalls(g)
 	if maxNbInstancesLimit == -1 {
 		// if limit is -1, then we take all the inputs
@@ -169,9 +179,9 @@ func newUnalignedMsmData(comp *wizard.CompiledIOP, g Group, limits *Limits, src 
 	createCol2 := createColFn(comp, fmt.Sprintf("UNALIGNED_%s_BLS_MSM", g.String()), utils.NextPowerOfTwo(maxNbRowsAligned))
 	res := &UnalignedMsmData{
 		BlsMsmDataSource:           src,
-		IsMsmInstanceAndMembership: comp.InsertCommit(ROUND_NR, ifaces.ColIDf("UNALIGNED_%s_BLS_MSM_IS_MSM_AND_MEMBERSHIP", g.String()), maxNbRows),
-		IsDataAndCsMul:             comp.InsertCommit(ROUND_NR, ifaces.ColIDf("UNALIGNED_%s_BLS_MSM_SRC_IS_DATA_AND_CS_MSM", g.String()), maxNbRows),
-		IsResultAndCsMul:           comp.InsertCommit(ROUND_NR, ifaces.ColIDf("UNALIGNED_%s_BLS_MSM_SRC_IS_RESULT_AND_CS_MSM", g.String()), maxNbRows),
+		IsMsmInstanceAndMembership: comp.InsertCommit(ROUND_NR, ifaces.ColIDf("UNALIGNED_%s_BLS_MSM_IS_MSM_AND_MEMBERSHIP", g.String()), maxNbRows, true),
+		IsDataAndCsMul:             comp.InsertCommit(ROUND_NR, ifaces.ColIDf("UNALIGNED_%s_BLS_MSM_SRC_IS_DATA_AND_CS_MSM", g.String()), maxNbRows, true),
+		IsResultAndCsMul:           comp.InsertCommit(ROUND_NR, ifaces.ColIDf("UNALIGNED_%s_BLS_MSM_SRC_IS_RESULT_AND_CS_MSM", g.String()), maxNbRows, true),
 		IsActive:                   createCol1("IS_ACTIVE"),
 		Point:                      make([]ifaces.Column, nbLimbs(g)),
 		CurrentAccumulator:         make([]ifaces.Column, nbLimbs(g)),
@@ -202,6 +212,8 @@ func newUnalignedMsmData(comp *wizard.CompiledIOP, g Group, limits *Limits, src 
 	res.csProjectionData(comp)
 	// result projection
 	res.csProjectionResult(comp)
+	// gnark data projection
+	res.csProjectionGnarkData(comp)
 	// first line accumulator zero
 	res.csAccumulatorInit(comp)
 	// accumulator consistency
@@ -222,21 +234,45 @@ func (d *UnalignedMsmData) csProjectionData(comp *wizard.CompiledIOP) {
 	// ensures that the data limbs from source are projected into columns of the
 	// unaligned module properly. It additionally constraints IsActive to
 	// correspond to the number of lines in the source.
+	//
+	// The source has multiple limb columns per row (obtained via Limbs()), and we need to
+	// project multiple rows into a single row of destination columns (Point and Scalar).
+	// Both sides must have the same number of columns per table.
+	//
+	// The projection reads left-to-right then top-to-bottom. With the source having
+	// nbLimbsPerRow columns, we read all columns in a row, then move to the next row.
+	// For each MSM input, we have nbRowsPerInput source rows that map to 1 destination row.
+	//
+	// The source limbs are stored in little-endian order, but the destination (Point/Scalar)
+	// expects big-endian order within each 128-bit chunk. So we convert to big-endian.
 	nbL := nbLimbs(d.Group)
-	filtersB := make([]ifaces.Column, nbL+nbFrLimbs)
-	columnsB := make([][]ifaces.Column, nbL+nbFrLimbs)
-	for i := range nbL {
+	srcLimbs := d.BlsMsmDataSource.Limb.ToBigEndianUint().GetLimbs()
+	nbLimbsPerRow := len(srcLimbs)
+
+	// ColumnsA: single table with nbLimbsPerRow columns, reads left-to-right then top-to-bottom
+	// For each destination row, we read nbRowsPerInput source rows
+	filtersA := []ifaces.Column{d.IsDataAndCsMul}
+	columnsA := [][]ifaces.Column{srcLimbs}
+
+	// ColumnsB: single table with nbLimbsPerRow columns
+	// But we have nbL+nbFrLimbs destination columns total, so we need multiple tables
+	// Each table corresponds to one "row" of source data mapped to part of the destination
+	nbRowsPerInput := (nbL + nbFrLimbs) / nbLimbsPerRow
+	allDstCols := make([]ifaces.Column, nbL+nbFrLimbs)
+	copy(allDstCols[:nbL], d.Point)
+	copy(allDstCols[nbL:], d.Scalar[:])
+
+	filtersB := make([]ifaces.Column, nbRowsPerInput)
+	columnsB := make([][]ifaces.Column, nbRowsPerInput)
+	for i := range nbRowsPerInput {
 		filtersB[i] = d.IsActive
-		columnsB[i] = []ifaces.Column{d.Point[i]}
+		columnsB[i] = allDstCols[i*nbLimbsPerRow : (i+1)*nbLimbsPerRow]
 	}
-	for i := range nbFrLimbs {
-		filtersB[nbL+i] = d.IsActive
-		columnsB[nbL+i] = []ifaces.Column{d.Scalar[i]}
-	}
+
 	prj := query.ProjectionMultiAryInput{
-		FiltersA: []ifaces.Column{d.IsDataAndCsMul},
+		FiltersA: filtersA,
 		FiltersB: filtersB,
-		ColumnsA: [][]ifaces.Column{{d.BlsMsmDataSource.Limb}},
+		ColumnsA: columnsA,
 		ColumnsB: columnsB,
 	}
 	comp.InsertProjection(ifaces.QueryIDf("%s_%s_PROJECTION_DATA", NAME_UNALIGNED_MSM, d.Group.String()), prj)
@@ -244,20 +280,86 @@ func (d *UnalignedMsmData) csProjectionData(comp *wizard.CompiledIOP) {
 
 func (d *UnalignedMsmData) csProjectionResult(comp *wizard.CompiledIOP) {
 	nbL := nbLimbs(d.Group)
+	srcLimbs := d.BlsMsmDataSource.Limb.ToBigEndianUint().GetLimbs()
+	nbLimbsPerRow := len(srcLimbs)
+	nbRowsPerResult := nbL / nbLimbsPerRow
 
-	filtersB := make([]ifaces.Column, nbL)
-	columnsB := make([][]ifaces.Column, nbL)
-	for i := range nbL {
+	// ColumnsA: single table with nbLimbsPerRow columns
+	filtersA := []ifaces.Column{d.IsResultAndCsMul}
+	columnsA := [][]ifaces.Column{srcLimbs}
+
+	// ColumnsB: multiple tables, each with nbLimbsPerRow columns
+	filtersB := make([]ifaces.Column, nbRowsPerResult)
+	columnsB := make([][]ifaces.Column, nbRowsPerResult)
+	for i := range nbRowsPerResult {
 		filtersB[i] = d.IsLastLine
-		columnsB[i] = []ifaces.Column{d.NextAccumulator[i]}
+		columnsB[i] = d.NextAccumulator[i*nbLimbsPerRow : (i+1)*nbLimbsPerRow]
 	}
+
 	prj := query.ProjectionMultiAryInput{
-		FiltersA: []ifaces.Column{d.IsResultAndCsMul},
+		FiltersA: filtersA,
 		FiltersB: filtersB,
-		ColumnsA: [][]ifaces.Column{{d.BlsMsmDataSource.Limb}},
+		ColumnsA: columnsA,
 		ColumnsB: columnsB,
 	}
 	comp.InsertProjection(ifaces.QueryIDf("%s_%s_PROJECTION_RESULT", NAME_UNALIGNED_MSM, d.Group.String()), prj)
+}
+
+func (d *UnalignedMsmData) csProjectionGnarkData(comp *wizard.CompiledIOP) {
+	// Projects from row-format columns (CurrentAccumulator, Scalar, Point, NextAccumulator)
+	// to the single GnarkDataMsm column. The order matches assignGnarkData:
+	// CurrentAccumulator, Scalar, Point, NextAccumulator
+	// Within each 128-bit chunk (8 limbs), we reverse the order to convert from
+	// little-endian (source) to big-endian (gnark circuit expects).
+	nbL := nbLimbs(d.Group)
+	totalCols := nbL + nbFrLimbs + nbL + nbL // CurrentAccumulator + Scalar + Point + NextAccumulator
+
+	filtersA := make([]ifaces.Column, totalCols)
+	columnsA := make([][]ifaces.Column, totalCols)
+
+	// Helper to reverse endianness within each 128-bit chunk
+	reversedIdx := func(j int) int {
+		chunkIdx := j / limbs.NbLimbU128
+		withinChunk := j % limbs.NbLimbU128
+		reversedWithinChunk := limbs.NbLimbU128 - 1 - withinChunk
+		return chunkIdx*limbs.NbLimbU128 + reversedWithinChunk
+	}
+
+	offset := 0
+	// CurrentAccumulator - reverse within each 128-bit chunk
+	for i := range nbL {
+		filtersA[offset+i] = d.IsActive
+		columnsA[offset+i] = []ifaces.Column{d.CurrentAccumulator[reversedIdx(i)]}
+	}
+	offset += nbL
+
+	// Scalar - reverse within each 128-bit chunk
+	for i := range nbFrLimbs {
+		filtersA[offset+i] = d.IsActive
+		columnsA[offset+i] = []ifaces.Column{d.Scalar[reversedIdx(i)]}
+	}
+	offset += nbFrLimbs
+
+	// Point - reverse within each 128-bit chunk
+	for i := range nbL {
+		filtersA[offset+i] = d.IsActive
+		columnsA[offset+i] = []ifaces.Column{d.Point[reversedIdx(i)]}
+	}
+	offset += nbL
+
+	// NextAccumulator - reverse within each 128-bit chunk
+	for i := range nbL {
+		filtersA[offset+i] = d.IsActive
+		columnsA[offset+i] = []ifaces.Column{d.NextAccumulator[reversedIdx(i)]}
+	}
+
+	prj := query.ProjectionMultiAryInput{
+		FiltersA: filtersA,
+		FiltersB: []ifaces.Column{d.GnarkIsActiveMsm},
+		ColumnsA: columnsA,
+		ColumnsB: [][]ifaces.Column{{d.GnarkDataMsm}},
+	}
+	comp.InsertProjection(ifaces.QueryIDf("%s_%s_PROJECTION_GNARK_DATA", NAME_UNALIGNED_MSM, d.Group.String()), prj)
 }
 
 func (d *UnalignedMsmData) csAccumulatorInit(comp *wizard.CompiledIOP) {
@@ -292,7 +394,7 @@ func (d *UnalignedMsmData) Assign(run *wizard.ProverRuntime) {
 
 func (d *UnalignedMsmData) assignMasks(run *wizard.ProverRuntime) {
 	var (
-		srcLimb         = d.Limb.GetColAssignment(run).IntoRegVecSaveAlloc()
+		nbRows          = d.Limb.NumRow()
 		srcIsData       = d.IsData.GetColAssignment(run).IntoRegVecSaveAlloc()
 		srcCsMul        = d.CsMul.GetColAssignment(run).IntoRegVecSaveAlloc()
 		srcIsRes        = d.IsRes.GetColAssignment(run).IntoRegVecSaveAlloc()
@@ -304,7 +406,7 @@ func (d *UnalignedMsmData) assignMasks(run *wizard.ProverRuntime) {
 		dstIsResultAndCs      = common.NewVectorBuilder(d.IsResultAndCsMul)
 	)
 	// compute the IS_DATA && CS_MUL column which is used for projection
-	for ptr := range srcLimb {
+	for ptr := range nbRows {
 		dstDataAndCs.PushBoolean(srcIsData[ptr].IsOne() && srcCsMul[ptr].IsOne())
 		dstIsResultAndCs.PushBoolean(srcIsRes[ptr].IsOne() && srcCsMul[ptr].IsOne())
 		dstIsMsmAndMembership.PushBoolean(srcIsMembership[ptr].IsOne() && srcIsData[ptr].IsOne())
@@ -316,8 +418,9 @@ func (d *UnalignedMsmData) assignMasks(run *wizard.ProverRuntime) {
 
 func (d *UnalignedMsmData) assignUnaligned(run *wizard.ProverRuntime) {
 	var (
-		srcID      = d.ID.GetColAssignment(run).IntoRegVecSaveAlloc()
-		srcLimb    = d.Limb.GetColAssignment(run).IntoRegVecSaveAlloc()
+		srcID      = expr_handle.GetExprHandleAssignment(run, d.ID).IntoRegVecSaveAlloc()
+		srcLimb    = d.Limb.GetAssignment(run)
+		nbRows     = d.Limb.NumRow()
 		srcIndex   = d.Index.GetColAssignment(run).IntoRegVecSaveAlloc()
 		srcCounter = d.Counter.GetColAssignment(run).IntoRegVecSaveAlloc()
 		srcCsMul   = d.CsMul.GetColAssignment(run).IntoRegVecSaveAlloc()
@@ -326,6 +429,7 @@ func (d *UnalignedMsmData) assignUnaligned(run *wizard.ProverRuntime) {
 	)
 
 	nbL := nbLimbs(d.Group)
+	nbL128 := nbL / limbs.NbLimbU128
 	var (
 		dstIsActive = common.NewVectorBuilder(d.IsActive)
 
@@ -346,8 +450,10 @@ func (d *UnalignedMsmData) assignUnaligned(run *wizard.ProverRuntime) {
 	}
 
 	var ptr int
+	pointLimbs := make([]field.Element, nbL)
+	scalarLimbs := make([]field.Element, nbFrLimbs)
 
-	for ptr < len(srcLimb) {
+	for ptr < nbRows {
 		// first detect if it is a new MSM instance.
 		// We normally would only check is IsData=1 && Index=0 && Counter=0, but we also don't want to "open"
 		// new instance here if the circuit selector to MSM is not set as it indicates MSM with invalid inputs, in which
@@ -376,15 +482,21 @@ func (d *UnalignedMsmData) assignUnaligned(run *wizard.ProverRuntime) {
 			case srcIsData[ptr].IsOne():
 				// copy the point limbs
 				for i := range nbL {
-					dstPoint[i].PushField(srcLimb[ptr+i])
+					limbIndex := i / limbs.NbLimbU128
+					subLimbIndex := (limbs.NbLimbU128 - 1) - (i % limbs.NbLimbU128)
+					pointLimbs[i].Set(&srcLimb[ptr+limbIndex].T[subLimbIndex])
+					dstPoint[i].PushField(pointLimbs[i])
 				}
 				// copy the scalar limbs
 				for i := range nbFrLimbs {
-					dstScalar[i].PushField(srcLimb[ptr+nbL+i])
+					limbIndex := i / limbs.NbLimbU128
+					subLimbIndex := (limbs.NbLimbU128 - 1) - (i % limbs.NbLimbU128)
+					scalarLimbs[i].Set(&srcLimb[ptr+nbL128+limbIndex].T[subLimbIndex])
+					dstScalar[i].PushField(scalarLimbs[i])
 				}
 				dstIsLastLine.PushZero()
 				// compute the next accumulator
-				nextAccumulator = nativeScalarMulAndSum(d.Group, currAccumulator, srcLimb[ptr:ptr+nbL], srcLimb[ptr+nbL:ptr+nbL+nbFrLimbs])
+				nextAccumulator = nativeScalarMulAndSum(d.Group, currAccumulator, pointLimbs, scalarLimbs)
 				for i := range nbL {
 					// copy the next accumulator limbs
 					dstNextAccumulator[i].PushField(nextAccumulator[i])
@@ -392,7 +504,7 @@ func (d *UnalignedMsmData) assignUnaligned(run *wizard.ProverRuntime) {
 					dstCurrentAccumulator[i].PushField(currAccumulator[i])
 				}
 				currAccumulator = nextAccumulator
-				ptr += nbL + nbFrLimbs
+				ptr += nbL128 + nbFrLimbs128
 				dstIsActive.PushOne()
 				if idx == 0 {
 					dstIsFirstLine.PushOne()
@@ -405,7 +517,7 @@ func (d *UnalignedMsmData) assignUnaligned(run *wizard.ProverRuntime) {
 				// its consistency will be checked by gnark circuit and projection queries.
 				dstIsLastLine.Pop()
 				dstIsLastLine.PushOne()
-				ptr += nbL
+				ptr += nbL128
 			default:
 				utils.Panic("unexpected state in BlsMsm assignUnaligned")
 			}
@@ -451,24 +563,36 @@ func (d *UnalignedMsmData) assignGnarkData(run *wizard.ProverRuntime) {
 		dstDataMsm         = common.NewVectorBuilder(d.GnarkDataMsm)
 		dstDataIsActiveMsm = common.NewVectorBuilder(d.GnarkIsActiveMsm)
 	)
+	// Helper to reverse endianness within each 128-bit chunk
+	reversedIdx := func(j int) int {
+		chunkIdx := j / limbs.NbLimbU128
+		withinChunk := j % limbs.NbLimbU128
+		reversedWithinChunk := limbs.NbLimbU128 - 1 - withinChunk
+		return chunkIdx*limbs.NbLimbU128 + reversedWithinChunk
+	}
+
 	for i := range srcIsActive {
 		if !srcIsActive[i].IsOne() {
 			continue
 		}
+		// CurrentAccumulator - reverse within each 128-bit chunk
 		for j := range nbL {
-			dstDataMsm.PushField(srcCurrentAccumulator[j][i])
+			dstDataMsm.PushField(srcCurrentAccumulator[reversedIdx(j)][i])
 			dstDataIsActiveMsm.PushOne()
 		}
+		// Scalar - reverse within each 128-bit chunk
 		for j := range nbFrLimbs {
-			dstDataMsm.PushField(srcScalar[j][i])
+			dstDataMsm.PushField(srcScalar[reversedIdx(j)][i])
 			dstDataIsActiveMsm.PushOne()
 		}
+		// Point - reverse within each 128-bit chunk
 		for j := range nbL {
-			dstDataMsm.PushField(srcPoint[j][i])
+			dstDataMsm.PushField(srcPoint[reversedIdx(j)][i])
 			dstDataIsActiveMsm.PushOne()
 		}
+		// NextAccumulator - reverse within each 128-bit chunk
 		for j := range nbL {
-			dstDataMsm.PushField(srcNextAccumulator[j][i])
+			dstDataMsm.PushField(srcNextAccumulator[reversedIdx(j)][i])
 			dstDataIsActiveMsm.PushOne()
 		}
 	}

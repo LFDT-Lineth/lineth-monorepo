@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/google/uuid"
 )
@@ -89,24 +89,24 @@ func (r FixedPermutation) Check(run ifaces.Runtime) error {
 func checkFixedPermutation(a, b []ifaces.ColAssignment, s []ifaces.ColAssignment) error {
 
 	var (
-		a_ = make([]field.Element, 0)
-		s_ = make([]field.Element, 0)
-		b_ = make([]field.Element, 0)
+		a_ = make([]fext.Element, 0)
+		s_ = make([]fext.Element, 0)
+		b_ = make([]fext.Element, 0)
 	)
 
 	for i := range a {
-		a_ = append(a_, a[i].IntoRegVecSaveAlloc()...)
+		a_ = append(a_, a[i].IntoRegVecSaveAllocExt()...)
 
 	}
 
 	for i := range b {
-		s_ = append(s_, s[i].IntoRegVecSaveAlloc()...)
-		b_ = append(b_, b[i].IntoRegVecSaveAlloc()...)
+		s_ = append(s_, s[i].IntoRegVecSaveAllocExt()...)
+		b_ = append(b_, b[i].IntoRegVecSaveAllocExt()...)
 	}
 
 	for i := range b_ {
 
-		k := int(s_[i].Uint64())
+		k := int(s_[i].B0.A0.Uint64())
 		x := b_[i]
 		y := a_[k]
 		if x != y {

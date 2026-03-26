@@ -6,7 +6,9 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
+	"github.com/consensys/linea-monorepo/prover/maths/common/vectorext"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
@@ -18,11 +20,52 @@ func RandomVec(size int) smartvectors.SmartVector {
 	return smartvectors.PseudoRand(rng, size)
 }
 
+// RandomOctupletVec returns 8 random vectors of size "size".
+func RandomOctupletVec(size int) [8]smartvectors.SmartVector {
+	var res [8]smartvectors.SmartVector
+
+	for i := range res {
+		res[i] = smartvectors.PseudoRand(rng, size)
+	}
+
+	return res
+}
+
+// ZeroOctupletVec returns 8 random zero vectors of size "size".
+func ZeroOctupletVec(size int) [8]smartvectors.SmartVector {
+	var res [8]smartvectors.SmartVector
+
+	for i := range res {
+		res[i] = smartvectors.NewConstant(field.Zero(), size)
+	}
+
+	return res
+}
+
+// RandomVecFext returns a random vector of size "size" defined over the
+// extension field
+func RandomVecFext(size int) smartvectors.SmartVector {
+	return smartvectors.PseudoRandExt(rng, size)
+}
+
 // RandomVecPadded returns a random vector of size "size" such that the
 // last "size-density" are zero.
 func RandomVecPadded(density, size int) smartvectors.SmartVector {
 	v := vector.PseudoRand(rng, density)
 	return smartvectors.RightZeroPadded(v, size)
+}
+
+// RandomOctupletVecPadded returns a random vector of size "size" such that the
+// last "size-density" are zero.
+func RandomOctupletVecPadded(density, size int) [8]smartvectors.SmartVector {
+	var res [8]smartvectors.SmartVector
+
+	for i := range res {
+		v := vector.PseudoRand(rng, density)
+		res[i] = smartvectors.RightZeroPadded(v, size)
+	}
+
+	return res
 }
 
 // RandomMatrix returns a random matrix of size "rows x cols" as a list
@@ -54,6 +97,25 @@ func RandomFromSeed(size int, seed int64) smartvectors.SmartVector {
 	// #nosec G404 --we don't need a cryptographic RNG for testing purpose
 	rng := rand.New(utils.NewRandSource(seed))
 	return smartvectors.PseudoRand(rng, size)
+}
+
+// Reverse returns a smartvector with reverted entries. It expects a Regular
+// or RegularExt smartvector.
+func Reverse(v smartvectors.SmartVector) smartvectors.SmartVector {
+	switch w := v.(type) {
+	case *smartvectors.Regular:
+		u := []field.Element(*w)
+		u = vector.DeepCopy(u)
+		vector.Reverse(u)
+		return smartvectors.NewRegular(u)
+	case *smartvectors.RegularExt:
+		u := []fext.Element(*w)
+		u = vectorext.DeepCopy(u)
+		vectorext.Reverse(u)
+		return smartvectors.NewRegularExt(u)
+	default:
+		panic(fmt.Sprintf("unexpected type %T", v))
+	}
 }
 
 // OnesAt returns a vector of size "size" with ones at the positions

@@ -6,6 +6,7 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/backend/ethereum"
 	"github.com/consensys/linea-monorepo/prover/backend/execution/statemanager"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -24,9 +25,18 @@ type Witness struct {
 	TxSignatures []ethereum.Signature
 	// TxHashes lists the hash of the transactions in the order found in the
 	// block.
-	TxHashes        [][32]byte
-	L2BridgeAddress common.Address
+	TxHashes [][32]byte
+	// ExecDataSchwarzZipfelX is the x coordinate of the execution data
+	// point.
+	ExecDataSchwarzZipfelX fext.Element
+	// ExecData are the bytes of the execution data.
+	ExecData []byte
+
 	ChainID         uint
+	BaseFee         uint
+	CoinBase        types.EthAddress
+	L2BridgeAddress common.Address
+
 	// BlockHashList is the list of the block-hashes of the proven blocks
 	BlockHashList []types.FullBytes32
 }

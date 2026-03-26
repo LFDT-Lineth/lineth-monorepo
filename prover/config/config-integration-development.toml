@@ -1,29 +1,38 @@
 environment = "integration-development"
 version = "4.0.0"
 assets_dir = "/opt/linea/prover/prover-assets"
-log_level = 4                                  # TODO @gbotrel will be refactored with new logger. 
+log_level = 4                                  # TODO @gbotrel will be refactored with new logger.
 
 [controller]
 retry_delays = [0, 1]
 
 [execution]
 prover_mode = "dev"
+serialization = false
 
-[blob_decompression]
+[data_availability]
 prover_mode = "dev"
 
 [aggregation]
 prover_mode = "dev"
 num_proofs = [10]
-allowed_inputs = [
-    "execution-dummy",
-    "blob-decompression-dummy",
-    "blob-decompression-v0",
-]
 verifier_id = 0
+# allowed_inputs = [ "execution-dummy", "data-availability-dummy", "data-availability-v2" ]
+# Conversion to is_allowed_circuit_id bitmask:
+#   execution-dummy (ID 0, bit 0) = 1 → ALLOWED
+#   data-availability-dummy (ID 1, bit 1) = 1 → ALLOWED
+#   execution (ID 2, bit 2) = 0 → DISALLOWED
+#   execution-large (ID 3, bit 3) = 0 → DISALLOWED
+#   execution-limitless (ID 4, bit 4) = 0 → DISALLOWED
+#   data-availability-v2 (ID 5, bit 5) = 1 → ALLOWED
+# To customize, edit and run: go test -v -run TestCalculateCustomBitmask ./circuits/
+# Binary: 0b100011 = 35 (decimal)
+is_allowed_circuit_id = 35
 
 [layer2]
 chain_id = 1337
+base_fee = 7
+coin_base = "0x0000000000000000000000000000000000000000"
 message_service_contract = "0xe537D669CA013d86EBeF1D64e40fC74CADC91987"
 
 [traces_limits]
@@ -33,29 +42,29 @@ modules = [
     {module = "BIN", limit = 262144, limit_large = 524288},
     {module = "BLAKE_MODEXP_DATA", limit = 16384, limit_large = 32768},
     {module = "BLOCK_DATA", limit = 4096, limit_large = 8192},
-    {module = "BLOCK_HASH", limit = 4096, limit_large = 8192},
+    {module = "BLOCK_HASH", limit = 2048, limit_large = 4096},
     {module = "EC_DATA", limit = 65536, limit_large = 131072},
     {module = "EUC", limit = 65536, limit_large = 131072},
     {module = "EXP", limit = 65536, limit_large = 131072},
     {module = "EXT", limit = 524288, limit_large = 1048576},
     {module = "GAS", limit = 65536, limit_large = 131072},
     {module = "HUB", limit = 2097152, limit_large = 4194304},
-    {module = "HUBx4", limit = 8388608, limit_large = 16777216},
+    {module = "HUB×4", limit = 8388608, limit_large = 16777216},
     {module = "LOG_DATA", limit = 65536, limit_large = 131072},
     {module = "LOG_INFO", limit = 4096, limit_large = 8192},
     {module = "MMIO", limit = 2097152, limit_large = 4194304},
-    {module = "MMIOx3", limit = 8388608, limit_large = 16777216},
+    {module = "MMIO×3", limit = 8388608, limit_large = 16777216},
     {module = "MMU", limit = 1048576, limit_large = 2097152},
     {module = "MOD", limit = 131072, limit_large = 262144},
     {module = "MUL", limit = 65536, limit_large = 131072},
-    {module = "MXP", limit = 524288, limit_large = 1048576},
+    {module = "MXP", limit = 1048576, limit_large = 2097152},
     {module = "OOB", limit = 262144, limit_large = 524288},
     {module = "RLP_ADDR", limit = 4096, limit_large = 8192},
     {module = "RLP_TXN", limit = 131072, limit_large = 262144},
     {module = "RLP_TXN_RCPT", limit = 65536, limit_large = 131072},
     {module = "RLP_AUTH", limit = 16384, limit_large = 32768},
     {module = "ROM", limit = 8388608, limit_large = 8388608},
-    {module = "ROMLEX", limit = 1024, limit_large = 2048},
+    {module = "ROM_LEX", limit = 1024, limit_large = 2048},
     {module = "SHAKIRA_DATA", limit = 65536, limit_large = 65536},
     {module = "SHF", limit = 262144, limit_large = 524288},
     {module = "STP", limit = 16384, limit_large = 32768},
@@ -81,11 +90,11 @@ modules = [
     {module = "BIN_REFERENCE_TABLE", limit = 262144, limit_large = 262144, is_not_scalable = true},
     {module = "SHF_REFERENCE_TABLE", limit = 4096, limit_large = 4096, is_not_scalable = true},
     {module = "INSTRUCTION_DECODER", limit = 512, limit_large = 512, is_not_scalable = true},
-    {module = "U20", limit = 131072, limit_large = 262144},
-    {module = "U32", limit = 131072, limit_large = 262144},
-    {module = "U36", limit = 131072, limit_large = 262144},
-    {module = "U64", limit = 131072, limit_large = 262144},
-    {module = "U128", limit = 131072, limit_large = 262144},
+    {module = "U20", limit = 4194304, limit_large = 8388608},
+    {module = "U32", limit = 4194304, limit_large = 8388608},
+    {module = "U36", limit = 4194304, limit_large = 8388608},
+    {module = "U64", limit = 4194304, limit_large = 8388608},
+    {module = "U128", limit = 4194304, limit_large = 8388608},
     {module = "SHOMEI_MERKLE_PROOFS", limit = 8192, limit_large = 16384},
     {module = "PRECOMPILE_BLS_G1_ADD_EFFECTIVE_CALLS", limit = 256, limit_large = 512},
     {module = "PRECOMPILE_BLS_G2_ADD_EFFECTIVE_CALLS", limit = 16, limit_large = 32},

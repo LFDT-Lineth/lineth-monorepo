@@ -315,15 +315,6 @@ func PrettyPrintHashes(in string, out io.Writer) {
 		panic(err)
 	}
 }
-
-func PrettyPrintHashesToFile(in, out string) {
-	var t FakeTestingT
-	f, err := os.OpenFile(out, os.O_CREATE|os.O_WRONLY, 0600)
-	require.NoError(t, err)
-	PrettyPrintHashes(in, f)
-	require.NoError(t, err)
-}
-
 func spaceOutFromRight(s string) string {
 	n := len(s) + (len(s)+15)/16 - 1
 	if n < 0 {

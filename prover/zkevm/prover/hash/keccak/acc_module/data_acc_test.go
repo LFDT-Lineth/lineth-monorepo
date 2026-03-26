@@ -23,7 +23,7 @@ func makeTestCaseDataModule(c []makeTestCase) (
 	define = func(build *wizard.Builder) {
 		comp := build.CompiledIOP
 		for i := range gdms {
-			gdms[i] = testdata.CreateGenDataModule(comp, c[i].Name, c[i].Size)
+			gdms[i] = testdata.CreateGenDataModule(comp, c[i].Name, c[i].Size, 1)
 		}
 
 		inp := GenericAccumulatorInputs{

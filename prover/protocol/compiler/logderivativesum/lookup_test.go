@@ -484,6 +484,7 @@ func TestExhaustive(t *testing.T) {
 									0,
 									ifaces.ColIDf("TAB_%v_FRAG_%v_COL_%v", tabID, frag, col),
 									sizeT,
+									true,
 								)
 							}
 
@@ -492,6 +493,7 @@ func TestExhaustive(t *testing.T) {
 									0,
 									ifaces.ColIDf("TAB_%v_FRAG_%v_COND", tabID, frag),
 									sizeT,
+									true,
 								)
 							}
 						}
@@ -525,6 +527,7 @@ func TestExhaustive(t *testing.T) {
 									0,
 									ifaces.ColIDf("TAB_%v_SUB_%v_COND", tabID, incID),
 									sizeS,
+									true,
 								)
 							}
 

@@ -5,7 +5,6 @@ package v0
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -17,13 +16,12 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/dictionary"
 	encodeTesting "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode/test_utils"
+	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/internal/rlpblocks"
 	"github.com/consensys/linea-monorepo/prover/utils"
 
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v0/compress/lzss"
 
 	"github.com/consensys/linea-monorepo/prover/backend/ethereum"
-	"github.com/consensys/linea-monorepo/prover/backend/execution"
-	"github.com/consensys/linea-monorepo/prover/backend/files"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/stretchr/testify/assert"
@@ -49,6 +47,7 @@ func TestCompressorNoBatches(t *testing.T) {
 
 	// Compress blocks
 	cptBlock := 0
+	testBlocks := rlpblocks.Get()
 	for i, block := range testBlocks {
 	reprocessBlock:
 		appended, err := bm.Write(block, false)
@@ -69,7 +68,7 @@ func TestCompressorNoBatches(t *testing.T) {
 		assert.Equal(1, len(batches), "number of batches should match")
 		assert.Equal(cptBlock, len(batches[0]), "number of blocks should match")
 
-		assertBatchesConsistent(t, testBlocks[:cptBlock], batches[0])
+		assertBatchesConsistent(t, rlpblocks.Get()[:cptBlock], batches[0])
 
 		cptBlock = 0
 
@@ -83,7 +82,7 @@ func TestCompressorNoBatches(t *testing.T) {
 func TestEncodeBlockForCompression(t *testing.T) {
 	var encoded bytes.Buffer
 
-	for _, blockRaw := range testBlocks {
+	for _, blockRaw := range rlpblocks.Get() {
 		encoded.Reset()
 		var block types.Block
 		assert.NoError(t, rlp.Decode(bytes.NewReader(blockRaw), &block))
@@ -193,6 +192,7 @@ func TestCanWrite(t *testing.T) {
 	var blobs [][]byte
 	var nbBlocksPerBatch []uint16 // tracking number of blocks, no batch in this test.
 	cptBlock := 0
+	testBlocks := rlpblocks.Get()
 	for i, block := range testBlocks {
 		// get a random from 1 to 5
 		bSize := rand.IntN(3) + 1 // #nosec G404 -- false positive
@@ -277,6 +277,7 @@ func TestCompressorWithBatches(t *testing.T) {
 	var blobs [][]byte
 	var nbBlocksPerBatch []uint16 // tracking number of blocks, no batch in this test.
 	cptBlock := 0
+	testBlocks := rlpblocks.Get()
 	for i, block := range testBlocks {
 		t.Logf("processing block %d over %d", i, len(testBlocks))
 		// get a random from 1 to 5
@@ -506,7 +507,7 @@ func TestCompressedSizeEstimation(t *testing.T) {
 	bm, err := NewBlobMaker(120*1024, testDictPath)
 	assert.NoError(err, "init should succeed")
 
-	for _, block := range testBlocks {
+	for _, block := range rlpblocks.Get() {
 
 		// Write the block to the blob maker and get the effective compressed size
 		bm.Reset()
@@ -544,49 +545,13 @@ func BenchmarkWrite(b *testing.B) {
 		b.Fatal("init should succeed", err.Error())
 	}
 
+	testBlocks := rlpblocks.Get()
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		for j := 0; j < 49; j++ {
 			bm.Write(testBlocks[j], false)
 		}
 	}
-}
-
-// testBlocks is a slice of RLP encoded blocks
-var testBlocks [][]byte
-
-func init() {
-	const testDataDir = "../../../../../testdata/prover-v2/prover-execution/requests"
-	const rlpBlockBinDestination = "../../../../../jvm-libs/blob-compressor/src/test/resources/net/consensys/linea/nativecompressor/rlp_blocks.bin"
-
-	jsons, err := utils.ReadAllJsonFiles(testDataDir)
-	if err != nil {
-		panic(err)
-	}
-
-	for _, jsonString := range jsons {
-		var proverInput execution.Request
-		if err = json.Unmarshal(jsonString, &proverInput); err != nil {
-			panic(err)
-		}
-
-		for _, block := range proverInput.Blocks() {
-			var bb bytes.Buffer
-			if err = block.EncodeRLP(&bb); err != nil {
-				panic(err)
-			}
-			testBlocks = append(testBlocks, bb.Bytes())
-		}
-	}
-
-	// writes the rlp_block.bin
-	f := files.MustOverwrite(rlpBlockBinDestination)
-	binary.Write(f, binary.LittleEndian, uint32(len(testBlocks)))
-	for i := range testBlocks {
-		binary.Write(f, binary.LittleEndian, uint32(len(testBlocks[i])))
-		f.Write(testBlocks[i])
-	}
-	f.Close()
 }
 
 func decompressBlob(b []byte) ([][][]byte, error) {
@@ -755,7 +720,7 @@ func TestPack(t *testing.T) {
 
 func TestEncode(t *testing.T) {
 	var block types.Block
-	assert.NoError(t, rlp.DecodeBytes(testBlocks[0], &block))
+	assert.NoError(t, rlp.DecodeBytes(rlpblocks.Get()[0], &block))
 	tx := block.Transactions()[0]
 	var bb bytes.Buffer
 	assert.NoError(t, EncodeTxForCompression(tx, &bb))

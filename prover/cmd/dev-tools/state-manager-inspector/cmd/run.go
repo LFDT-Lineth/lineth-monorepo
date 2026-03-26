@@ -54,7 +54,11 @@ func fetchAndInspect(cmd *cobra.Command, args []string) error {
 
 	// Defer only after we made sure the files was successfully open, otherwise
 	// it will panic in the defer.
-	defer reportFile.Close()
+	defer func() {
+		if err := reportFile.Close(); err != nil {
+			logrus.Errorf("failed to close report file: %v", err)
+		}
+	}()
 
 	var (
 		numBlocksArg               = stopArg - startArg
@@ -83,7 +87,7 @@ func fetchAndInspect(cmd *cobra.Command, args []string) error {
 			blockOffset         = rangeID * blockRange
 			start               = startArg + blockOffset
 			stop                = start + blockRange - 1 // NB: shomei takes inclusive ranges
-			emptyParentRootHash = types.Bytes32{}
+			emptyParentRootHash = types.KoalaOctuplet{}
 		)
 
 		shomeiResp, err := shomei.fetchStateTransitionProofs(
@@ -118,10 +122,10 @@ func fetchAndInspect(cmd *cobra.Command, args []string) error {
 // the previous parent claimed in the state manager response should match the one
 // we have. In that case, the prev root input is ignored.
 func inspectTrace(
-	prevRoot types.Bytes32,
+	prevRoot types.KoalaOctuplet,
 	serialized []byte,
 	ignoreParent bool,
-) (newRoot types.Bytes32, errs []error) {
+) (newRoot types.KoalaOctuplet, errs []error) {
 
 	// The current code can panic. If it does, then we append the panic message
 	// wrapped in an error and return as it was a soft failure (which it is).
@@ -135,7 +139,7 @@ func inspectTrace(
 	if err := json.Unmarshal(serialized, shomeiOut); err != nil {
 		// At this point, if we have an error, there is no point moving forward.
 		// Because it means we failed to read the alleged traces.
-		return types.Bytes32{}, append(errs, fmt.Errorf("could not unmarshal shomei output: %w", err))
+		return types.KoalaOctuplet{}, append(errs, fmt.Errorf("could not unmarshal shomei output: %w", err))
 	}
 
 	var (
@@ -152,7 +156,7 @@ func inspectTrace(
 
 	if len(traces) == 0 {
 		errs = append(errs, errors.New("trace parser returned nil or found no traces"))
-		return types.Bytes32{}, errs
+		return types.KoalaOctuplet{}, errs
 	}
 
 	// We keep track of the oldest root hash

@@ -54,34 +54,34 @@ func TestSpaghettify(t *testing.T) {
 	proof := wizard.Prove(comp, func(run *wizard.ProverRuntime) {
 
 		inpCt.Assign(run,
-			"FILTER_A",
-			"FILTER_B",
-			"FILTER_C",
-			"A_0",
-			"A_1",
-			"A_2",
-			"B_0",
-			"B_1",
-			"B_2",
-			"C_0",
-			"C_1",
-			"C_2",
+			inp.Filter[0],
+			inp.Filter[1],
+			inp.Filter[2],
+			inp.ContentMatrix[0][0],
+			inp.ContentMatrix[0][1],
+			inp.ContentMatrix[0][2],
+			inp.ContentMatrix[1][0],
+			inp.ContentMatrix[1][1],
+			inp.ContentMatrix[1][2],
+			inp.ContentMatrix[2][0],
+			inp.ContentMatrix[2][1],
+			inp.ContentMatrix[2][2],
 		)
 
 		mod.Run(run)
 
 		inpCt.CheckAssignment(run,
-			"TESTING_TAGS_0",
-			"TESTING_TAGS_1",
-			"TESTING_TAGS_2",
+			mod.Tags[0],
+			mod.Tags[1],
+			mod.Tags[2],
 		)
 
 		modCt.CheckAssignment(run,
-			"TESTING_CONTENT_SPAGHETTI_0",
-			"TESTING_CONTENT_SPAGHETTI_1",
-			"TESTING_CONTENT_SPAGHETTI_2",
-			"TESTING_FILTERS_SPAGHETTI",
-			"TESTING_TAGS_SPAGHETTI",
+			mod.ContentSpaghetti[0],
+			mod.ContentSpaghetti[1],
+			mod.ContentSpaghetti[2],
+			mod.FilterSpaghetti,
+			mod.TagSpaghetti,
 		)
 	})
 

@@ -1,10 +1,11 @@
 package fetchers_arithmetization
 
 import (
+	"math/big"
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
+	"github.com/consensys/linea-monorepo/prover/protocol/limbs"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	arith "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/arith_struct"
 	util "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/utilities"
@@ -31,11 +32,20 @@ func TestChainIDFetcher(t *testing.T) {
 	}, dummy.Compile)
 	proof := wizard.Prove(cmp, func(run *wizard.ProverRuntime) {
 		// assign the CSV columns
-		arith.AssignTestingArithModules(run, ctBlockData, nil, nil)
+		arith.AssignTestingArithModules(run, ctBlockData, nil, nil, bdc, nil, nil)
 		// assign the timestamp fetcher
 		AssignChainIDFetcher(run, &fetcher, bdc)
 		// two simple sanity checks based on the mock test data
-		assert.Equal(t, fetcher.ChainID.GetColAssignmentAt(run, 0), field.NewFromString("0xfefc0000000000000000000000000000"), "ChainID value is incorrect.")
+		chainID := limbs.NewLimbsFromRawUnsafe[limbs.BigEndian]("CHAIN_ID", fetcher.ChainID[:]).GetRowAsBigInt(run, 0)
+		expectedChainID, ok := new(big.Int).SetString("fefc", 16)
+		if !ok {
+			t.Fatalf("error converting string to big.Int")
+		}
+
+		// This removes the padding zeroes
+		chainID.Rsh(chainID, 112)
+
+		assert.Equal(t, chainID.Text(16), expectedChainID.Text(16), "ChainID value is incorrect")
 	})
 	if err := wizard.Verify(cmp, proof); err != nil {
 		t.Fatal("proof failed", err)

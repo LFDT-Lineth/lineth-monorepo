@@ -78,7 +78,8 @@ func (p *PaddedCircularWindow) GetBase(n int) (field.Element, error) {
 
 func (p *PaddedCircularWindow) GetExt(n int) fext.Element {
 	elem, _ := p.GetBase(n)
-	return *new(fext.Element).SetFromBase(&elem)
+	return fext.Lift(elem)
+
 }
 
 func (r *PaddedCircularWindow) Get(n int) field.Element {
@@ -136,8 +137,8 @@ func (p *PaddedCircularWindow) SubVector(start, stop int) SmartVector {
 
 	n := p.Len()
 	b := stop - start
-	c := normalize(p.Interval().Start(), start, n)
-	d := normalize(p.Interval().Stop(), start, n)
+	c := normalize(p.interval().Start(), start, n)
+	d := normalize(p.interval().Stop(), start, n)
 
 	// Case 1 : return a constant vector
 	if b <= c && c < d {
@@ -215,7 +216,7 @@ func (p *PaddedCircularWindow) WriteInSliceExt(buff []fext.Element) {
 	p.WriteInSlice(temp)
 	for i := 0; i < len(buff); i++ {
 		elem := temp[i]
-		buff[i].SetFromBase(&elem)
+		fext.SetFromBase(&buff[i], &elem)
 	}
 
 }
@@ -258,7 +259,7 @@ func (p *PaddedCircularWindow) IterateSkipPadding() iter.Seq[field.Element] {
 	return slices.Values(p.Window_)
 }
 
-func (p *PaddedCircularWindow) Interval() CircularInterval {
+func (p *PaddedCircularWindow) interval() CircularInterval {
 	return IvalWithStartLen(p.Offset_, len(p.Window_), p.TotLen_)
 }
 
@@ -292,7 +293,7 @@ func processWindowedOnly(op operator, svecs []SmartVector, coeffs_ []int) (res S
 	for i, svec := range svecs {
 		if pcw, ok := svec.(*PaddedCircularWindow); ok {
 			windows = append(windows, *pcw)
-			intervals = append(intervals, pcw.Interval())
+			intervals = append(intervals, pcw.interval())
 			coeffs = append(coeffs, coeffs_[i]) // collect the coeffs related to each window
 			// Sanity-check : all vectors must have the same length
 			assertHasLength(svec.Len(), length)
@@ -399,7 +400,7 @@ func (w *PaddedCircularWindow) DeepCopy() SmartVector {
 func (w *PaddedCircularWindow) IntoRegVecSaveAlloc() []field.Element {
 	res, err := w.IntoRegVecSaveAllocBase()
 	if err != nil {
-		panic(conversionError)
+		panic(errConversion)
 	}
 	return res
 
@@ -414,7 +415,7 @@ func (w *PaddedCircularWindow) IntoRegVecSaveAllocExt() []fext.Element {
 	res := make([]fext.Element, len(temp))
 	for i := 0; i < len(temp); i++ {
 		elem := temp[i]
-		res[i].SetFromBase(&elem)
+		fext.SetFromBase(&res[i], &elem)
 	}
 	return res
 }

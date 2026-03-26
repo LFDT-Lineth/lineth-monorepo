@@ -66,6 +66,7 @@ func CompileManualShifter(comp *wizard.CompiledIOP) {
 
 			switch q := q.(type) {
 			case query.Inclusion:
+				// @arijit: avoid calling len(q.GetShiftedRelatedColumns()) twice
 				if len(q.GetShiftedRelatedColumns()) > 0 {
 					replayQueryWithManualShiftInclusion(comp, qName, len(q.GetShiftedRelatedColumns()), cache)
 					continue

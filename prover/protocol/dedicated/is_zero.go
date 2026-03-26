@@ -90,7 +90,7 @@ func IsZeroMask(comp *wizard.CompiledIOP, c, mask any) *IsZeroCtx {
 	ctx.Round = max(roundMask, ctx.Round)
 
 	if sizeMask != size {
-		utils.Panic("the size of the mask if %v but the column's size is %v", sizeMask, size)
+		utils.Panic("the size of the mask is %v but the column's size is %v", sizeMask, size)
 	}
 
 	ctx.Mask = m
@@ -108,12 +108,14 @@ func compileIsZeroWithSize(comp *wizard.CompiledIOP, ctx *IsZeroCtx) {
 		ctx.Round,
 		ifaces.ColIDf("IS_ZERO_%v_RES_%v", ctx.CtxID, ctx.Round),
 		size,
+		true,
 	)
 
 	ctx.InvOrZero = comp.InsertCommit(
 		ctx.Round,
 		ifaces.ColIDf("IS_ZERO_%v_INVERSE_OR_ZERO_%v", ctx.CtxID, ctx.Round),
 		size,
+		ctx.C.IsBase,
 	)
 
 	var mask = any(1)
@@ -122,20 +124,19 @@ func compileIsZeroWithSize(comp *wizard.CompiledIOP, ctx *IsZeroCtx) {
 	}
 
 	comp.InsertGlobal(
-		0,
+		ctx.Round,
 		ifaces.QueryIDf("IS_ZERO_%v_RES_IS_ONE_IF_C_ISZERO", ctx.CtxID),
 		sym.Add(ctx.IsZero, sym.Mul(ctx.InvOrZero, ctx.C), sym.Neg(mask)),
 	)
-
 	comp.InsertGlobal(
-		0,
+		ctx.Round,
 		ifaces.QueryIDf("IS_ZERO_%v_RES_IS_ZERO_IF_C_ISNONZERO", ctx.CtxID),
 		sym.Mul(ctx.IsZero, ctx.C),
 	)
 
 	if ctx.Mask != nil {
 		comp.InsertGlobal(
-			0,
+			ctx.Round,
 			ifaces.QueryIDf("IS_ZERO_%v_RES_IS_MASKED", ctx.CtxID),
 			sym.Sub(ctx.IsZero, sym.Mul(mask, ctx.IsZero)),
 		)
@@ -147,7 +148,7 @@ func (ctx *IsZeroCtx) Run(run *wizard.ProverRuntime) {
 
 	var (
 		c                    = column.EvalExprColumn(run, ctx.C.Board()).IntoRegVecSaveAlloc()
-		offsetRange          = query.MinMaxOffset(ctx.C)
+		offsetRange          = query.MinMaxOffsetOfExpression(ctx.C)
 		minOffset, maxOffset = offsetRange.Min, offsetRange.Max
 	)
 

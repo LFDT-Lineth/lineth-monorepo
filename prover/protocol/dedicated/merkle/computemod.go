@@ -1,9 +1,10 @@
 package merkle
 
 import (
+	"fmt"
 	"strings"
 
-	"github.com/consensys/linea-monorepo/prover/crypto/mimc"
+	"github.com/consensys/gnark-crypto/field/koalabear/vortex"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
@@ -51,27 +52,27 @@ type ComputeMod struct {
 		// field contains the computed root.
 		IsEndOfProof *dedicated.HeartBeatColumn
 		// Root that contains the leaf of the current proof
-		Root ifaces.Column
+		Root [blockSize]ifaces.Column
 		// Curr contains the current node to be hashes
-		Curr ifaces.Column
+		Curr [blockSize]ifaces.Column
 		// Columns containing the Merkle proof
-		Proof ifaces.Column
+		Proof [blockSize]ifaces.Column
 		// PosBit, indicates whether the current nodes is left
 		// or right
 		PosBit ifaces.Column
 		// PosAcc recomputes the leaf position from the pos-bits
 		PosAcc ifaces.Column
 		// Zero is a dummy column containing the constant zero
-		Zero ifaces.Column
+		Zero [blockSize]ifaces.Column
 		// Left contains the leftmost node of the current level
-		Left ifaces.Column
+		Left [blockSize]ifaces.Column
 		// Right contains the rightmost node of the current level
-		Right ifaces.Column
+		Right [blockSize]ifaces.Column
 		// Interm contains the intermediate hasher state after
 		// hashing Left and before hashing Right.
-		Interm ifaces.Column
+		Interm [blockSize]ifaces.Column
 		// NodeHash contains the hash of the parent node.
-		NodeHash ifaces.Column
+		NodeHash [blockSize]ifaces.Column
 		// UseNextMerkleProof has a special structure when we want to reuse the next Merkle proof
 		// and check if two contiguous Merkle proofs are from the same Merkle tree. It is alternatively 1 or 0
 		// in a particular segment strating from 1.
@@ -103,8 +104,10 @@ type ComputeMod struct {
 func (cm *ComputeMod) Define(comp *wizard.CompiledIOP, round int, name string, numProofs, depth int) {
 
 	// Sanity-check that proof has been assigned
-	if cm.Cols.Proof == nil {
-		panic("proof must be assigned")
+	for i := 0; i < blockSize; i++ {
+		if cm.Cols.Proof[i] == nil {
+			panic("proof must be assigned")
+		}
 	}
 
 	// Optional sanity-check that UseNextMerkleProof column has been assigned
@@ -118,7 +121,7 @@ func (cm *ComputeMod) Define(comp *wizard.CompiledIOP, round int, name string, n
 	}
 
 	// Sanity-check the value of NumRows
-	numRows := cm.Cols.Proof.Size()
+	numRows := cm.Cols.Proof[0].Size()
 	if numRows != utils.NextPowerOfTwo(numProofs*depth) {
 		utils.Panic("numRows %v but numProofs %v and depth %v", numRows, numProofs, depth)
 	}
@@ -135,18 +138,20 @@ func (cm *ComputeMod) Define(comp *wizard.CompiledIOP, round int, name string, n
 	cm.defineIsInactive()
 	cm.defineZero()
 
-	cm.Cols.Root = comp.InsertCommit(cm.Round, cm.colname("ROOT"), cm.NumRows)
-	cm.Cols.Curr = comp.InsertCommit(cm.Round, cm.colname("CURR"), cm.NumRows)
-	cm.Cols.PosBit = comp.InsertCommit(cm.Round, cm.colname("POSBIT"), cm.NumRows)
-	cm.Cols.PosAcc = comp.InsertCommit(cm.Round, cm.colname("POSACC"), cm.NumRows)
-	cm.Cols.Left = comp.InsertCommit(cm.Round, cm.colname("LEFT"), cm.NumRows)
-	cm.Cols.Interm = comp.InsertCommit(cm.Round, cm.colname("INTERM_STATE"), cm.NumRows)
-	cm.Cols.Right = comp.InsertCommit(cm.Round, cm.colname("RIGHT"), cm.NumRows)
-	cm.Cols.NodeHash = comp.InsertCommit(cm.Round, cm.colname("NODE_HASH"), cm.NumRows)
+	cm.Cols.PosBit = comp.InsertCommit(cm.Round, cm.colname("POSBIT"), cm.NumRows, true)
+	cm.Cols.PosAcc = comp.InsertCommit(cm.Round, cm.colname("POSACC"), cm.NumRows, true)
+	for i := 0; i < blockSize; i++ {
+		cm.Cols.Root[i] = comp.InsertCommit(cm.Round, cm.colname("ROOT_%v", i), cm.NumRows, true)
+		cm.Cols.Curr[i] = comp.InsertCommit(cm.Round, cm.colname("CURR_%v", i), cm.NumRows, true)
+		cm.Cols.Left[i] = comp.InsertCommit(cm.Round, cm.colname("LEFT_%v", i), cm.NumRows, true)
+		cm.Cols.Interm[i] = comp.InsertCommit(cm.Round, cm.colname("INTERM_STATE_%v", i), cm.NumRows, true)
+		cm.Cols.Right[i] = comp.InsertCommit(cm.Round, cm.colname("RIGHT_%v", i), cm.NumRows, true)
+		cm.Cols.NodeHash[i] = comp.InsertCommit(cm.Round, cm.colname("NODE_HASH_%v", i), cm.NumRows, true)
+	}
 	if cm.WithOptProofReuseCheck {
-		cm.Cols.UseNextMerkleProofExpanded = comp.InsertCommit(cm.Round, cm.colname("USE_NEXT_MERKLE_PROOF_EXPANDED"), cm.NumRows)
-		cm.Cols.IsActiveExpanded = comp.InsertCommit(cm.Round, cm.colname("IS_ACTIVE_ACCUMULATOR_EXPANDED"), cm.NumRows)
-		cm.Cols.SegmentCounter = comp.InsertCommit(cm.Round, cm.colname("SEGMENT_COUNTER"), cm.NumRows)
+		cm.Cols.UseNextMerkleProofExpanded = comp.InsertCommit(cm.Round, cm.colname("USE_NEXT_MERKLE_PROOF_EXPANDED"), cm.NumRows, true)
+		cm.Cols.IsActiveExpanded = comp.InsertCommit(cm.Round, cm.colname("IS_ACTIVE_ACCUMULATOR_EXPANDED"), cm.NumRows, true)
+		cm.Cols.SegmentCounter = comp.InsertCommit(cm.Round, cm.colname("SEGMENT_COUNTER"), cm.NumRows, true)
 	}
 
 	// Initializes all the sugar, we will use for the
@@ -162,7 +167,7 @@ func (cm *ComputeMod) Define(comp *wizard.CompiledIOP, round int, name string, n
 	cm.selectLeft()
 	cm.selectRight()
 	cm.currIsNextNodeHash()
-	cm.checkMiMCCompressions()
+	cm.checkPoseidon2Compressions()
 
 	// The below means the column size is not a power of two
 	// and there is zero padding at the right of all columns
@@ -225,7 +230,9 @@ func (cm *ComputeMod) defineNewProofAndProofEnd() {
 
 // Defines the precomputed column ZERO (always zero)
 func (cm *ComputeMod) defineZero() {
-	cm.Cols.Zero = verifiercol.NewConstantCol(field.Zero(), cm.NumRows, "")
+	for i := 0; i < blockSize; i++ {
+		cm.Cols.Zero[i] = verifiercol.NewConstantCol(field.Zero(), cm.NumRows, "")
+	}
 }
 
 // Defines all the variables that we will need for the constraints
@@ -265,10 +272,12 @@ func (cm *ComputeMod) createSugarVar() {
 func (cm *ComputeMod) rootConsistency() {
 	sug := cm.SugarVar
 	cols := cm.Cols
-	expr := symbolic.Mul(sug.NotNewProof,
-		symbolic.Sub(symbolic.Mul(sug.IsActive, ifaces.ColumnAsVariable(column.Shift(cols.Root, 1))),
-			cols.Root))
-	cm.Comp.InsertGlobal(cm.Round, cm.qname("ROOT_CONSISTENCY"), expr, true)
+	for i := 0; i < blockSize; i++ {
+		expr := symbolic.Mul(sug.NotNewProof,
+			symbolic.Sub(symbolic.Mul(sug.IsActive, ifaces.ColumnAsVariable(column.Shift(cols.Root[i], 1))),
+				cols.Root[i]))
+		cm.Comp.InsertGlobal(cm.Round, cm.qname("ROOT_CONSISTENCY_%v", i), expr, true)
+	}
 }
 
 // Ensures that the roots column equals the last nodehash of a segment
@@ -276,10 +285,12 @@ func (cm *ComputeMod) rootConsistency() {
 func (cm *ComputeMod) rootIsLastNodeHash() {
 	sug := cm.SugarVar
 	cols := cm.Cols
-	expr := symbolic.Mul(sug.EndOfProof,
-		sug.IsActive,
-		symbolic.Sub(cols.Root, cols.NodeHash))
-	cm.Comp.InsertGlobal(cm.Round, cm.qname("ROOT_IS_LAST_NODEHASH"), expr, true)
+	for i := 0; i < blockSize; i++ {
+		expr := symbolic.Mul(sug.EndOfProof,
+			sug.IsActive,
+			symbolic.Sub(cols.Root[i], cols.NodeHash[i]))
+		cm.Comp.InsertGlobal(cm.Round, cm.qname("ROOT_IS_LAST_NODEHASH_%v", i), expr, true)
+	}
 }
 
 // Define the query responsible for ensuring that posbits are boolean
@@ -315,10 +326,12 @@ func (cm *ComputeMod) posAccConstraint() {
 // Left[i] - (PosBit[i]*Proof[i]) - (1 - PosBit[i])*Curr[i] = 0
 func (cm *ComputeMod) selectLeft() {
 	cols := cm.Cols
-	expr := symbolic.Sub(cols.Left,
-		symbolic.Mul(cols.PosBit, cols.Proof),
-		symbolic.Mul(symbolic.Sub(1, cols.PosBit), cols.Curr))
-	cm.Comp.InsertGlobal(cm.Round, cm.qname("SELECT_LEFT"), expr)
+	for i := 0; i < blockSize; i++ {
+		expr := symbolic.Sub(cols.Left[i],
+			symbolic.Mul(cols.PosBit, cols.Proof[i]),
+			symbolic.Mul(symbolic.Sub(1, cols.PosBit), cols.Curr[i]))
+		cm.Comp.InsertGlobal(cm.Round, cm.qname("SELECT_LEFT_%v", i), expr)
+	}
 }
 
 // Defines the global constraint responsible for ensuring that right was
@@ -326,10 +339,12 @@ func (cm *ComputeMod) selectLeft() {
 // Right[i] - (PosBit[i]*Curr[i]) - (1 - PosBit[i])*Proof[i] = 0
 func (cm *ComputeMod) selectRight() {
 	cols := cm.Cols
-	expr := symbolic.Sub(cols.Right,
-		symbolic.Mul(cols.PosBit, cols.Curr),
-		symbolic.Mul(symbolic.Sub(1, cols.PosBit), cols.Proof))
-	cm.Comp.InsertGlobal(cm.Round, cm.qname("SELECT_RIGHT"), expr)
+	for i := 0; i < blockSize; i++ {
+		expr := symbolic.Sub(cols.Right[i],
+			symbolic.Mul(cols.PosBit, cols.Curr[i]),
+			symbolic.Mul(symbolic.Sub(1, cols.PosBit), cols.Proof[i]))
+		cm.Comp.InsertGlobal(cm.Round, cm.qname("SELECT_RIGHT_%v", i), expr)
+	}
 
 }
 
@@ -338,14 +353,18 @@ func (cm *ComputeMod) colZeroWhenInactive() {
 	cols := cm.Cols
 	// Skipping NewProof and IsEndOfProof, as they are precomputed columns e.g.,
 	// they are computed before the active area is known
-	cm.colZeroAtInactive(cols.Root, "ROOT_ZERO_AT_INACTIVE")
-	cm.colZeroAtInactive(cols.Curr, "CURR_ZERO_AT_INACTIVE")
-	cm.colZeroAtInactive(cols.Proof, "PROOF_ZERO_AT_INACTIVE")
+	// Skipping Zero as it is a verifier defined column
+
+	for i := 0; i < blockSize; i++ {
+		cm.colZeroAtInactive(cols.Root[i], fmt.Sprintf("ROOT_%v_ZERO_AT_INACTIVE", i))
+		cm.colZeroAtInactive(cols.Curr[i], fmt.Sprintf("CURR_%v_ZERO_AT_INACTIVE", i))
+		cm.colZeroAtInactive(cols.Proof[i], fmt.Sprintf("PROOF_%v_ZERO_AT_INACTIVE", i))
+		cm.colZeroAtInactive(cols.Left[i], fmt.Sprintf("LEFT_%v_ZERO_AT_INACTIVE", i))
+		cm.colZeroAtInactive(cols.Right[i], fmt.Sprintf("RIGHT_%v_ZERO_AT_INACTIVE", i))
+	}
 	cm.colZeroAtInactive(cols.PosBit, "POS_BIT_ZERO_AT_INACTIVE")
 	cm.colZeroAtInactive(cols.PosAcc, "POS_ACC_ZERO_AT_INACTIVE")
-	// Skipping Zero as it is a verifier defined column
-	cm.colZeroAtInactive(cols.Left, "LEFT_ZERO_AT_INACTIVE")
-	cm.colZeroAtInactive(cols.Right, "RIGHT_ZERO_AT_INACTIVE")
+
 	// Skipping Interm and NodeHash as they contain zero hashes.
 	// Also optional columns for reuse of Merkle proof are treated
 	// separately
@@ -369,18 +388,20 @@ func (cm *ComputeMod) reuseMerkleColZeroWhenInactive() {
 func (cm *ComputeMod) currIsNextNodeHash() {
 	sug := cm.SugarVar
 	cols := cm.Cols
-	expr := symbolic.Mul(sug.NotNewProof,
-		symbolic.Sub(symbolic.Mul(sug.IsActive, ifaces.ColumnAsVariable(column.Shift(cols.NodeHash, 1))),
-			cols.Curr))
-	cm.Comp.InsertGlobal(cm.Round, cm.qname("CURR_IS_NEXT_NODE_HASH"), expr, true)
+	for i := 0; i < blockSize; i++ {
+		expr := symbolic.Mul(sug.NotNewProof,
+			symbolic.Sub(symbolic.Mul(sug.IsActive, ifaces.ColumnAsVariable(column.Shift(cols.NodeHash[i], 1))),
+				cols.Curr[i]))
+		cm.Comp.InsertGlobal(cm.Round, cm.qname("CURR_IS_NEXT_NODE_HASH_%v", i), expr, true)
+	}
 }
 
 // Ensures that the triplets (LEFT, ZERO, INTERM) and (RIGHT, INTERM, NODEHASH)
-// are valid MiMC triplets.
-func (cm *ComputeMod) checkMiMCCompressions() {
+// are valid Poseidon2 triplets.
+func (cm *ComputeMod) checkPoseidon2Compressions() {
 	cols := cm.Cols
-	cm.Comp.InsertMiMC(cm.Round, cm.qname("MIMC_LEFT"), cols.Left, cols.Zero, cols.Interm, nil)
-	cm.Comp.InsertMiMC(cm.Round, cm.qname("MIMC_RIGHT"), cols.Right, cols.Interm, cols.NodeHash, nil)
+	cm.Comp.InsertPoseidon2(cm.Round, cm.qname("Poseidon2_LEFT"), cols.Left, cols.Zero, cols.Interm, nil)
+	cm.Comp.InsertPoseidon2(cm.Round, cm.qname("Poseidon2_RIGHT"), cols.Right, cols.Interm, cols.NodeHash, nil)
 }
 
 // Optional constraints checking reuse of Merkle proofs e.g., all the position
@@ -388,13 +409,14 @@ func (cm *ComputeMod) checkMiMCCompressions() {
 func (cm *ComputeMod) checkReuseMerkleProofs() {
 	cols := cm.Cols
 	// UseNextMerkleProofExpanded[i] * IsActiveExpanded[i] * (Proof[i] * (SegmentCounter[i] + 1) - Proof[i+depth] * SegmentCounter[i+depth]) = 0, two consecutive proofs are equal when UseNextMerkleProofExpanded is 1, it is in the active area. It also verify that SegmentCounter is consistent with the Proof column
-	expr1 := symbolic.Mul(cols.UseNextMerkleProofExpanded,
-		cols.IsActiveExpanded,
-		symbolic.Sub(symbolic.Mul(cols.Proof, symbolic.Add(cols.SegmentCounter, 1)),
-			symbolic.Mul(ifaces.ColumnAsVariable(column.Shift(cols.Proof, cm.Depth)),
-				ifaces.ColumnAsVariable(column.Shift(cols.SegmentCounter, cm.Depth)))))
-	cm.Comp.InsertGlobal(cm.Round, cm.qname("CONSECUTIVE_PROOFS_EQUAL"), expr1)
-
+	for i := 0; i < blockSize; i++ {
+		expr1 := symbolic.Mul(cols.UseNextMerkleProofExpanded,
+			cols.IsActiveExpanded,
+			symbolic.Sub(symbolic.Mul(cols.Proof[i], symbolic.Add(cols.SegmentCounter, 1)),
+				symbolic.Mul(ifaces.ColumnAsVariable(column.Shift(cols.Proof[i], cm.Depth)),
+					ifaces.ColumnAsVariable(column.Shift(cols.SegmentCounter, cm.Depth)))))
+		cm.Comp.InsertGlobal(cm.Round, cm.qname("CONSECUTIVE_PROOFS_EQUAL_%v", i), expr1)
+	}
 	// UseNextMerkleProofExpanded[i] * IsActiveExpanded[i] * (PosBit[i] * (SegmentCounter[i] + 1) - PosBit[i+depth] * SegmentCounter[i+depth]) = 0, two consecutive PosBits are equal when UseNextMerkleProofExpanded is 1 and it is in the active area. It also verify that SegmentCounter is consistent with the PosBit column
 	expr2 := symbolic.Mul(cols.UseNextMerkleProofExpanded,
 		cols.IsActiveExpanded,
@@ -437,15 +459,15 @@ func (cm *ComputeMod) colname(name string, args ...any) ifaces.ColID {
 	return ifaces.ColIDf("%v_%v", cm.Name, cm.Comp.SelfRecursionCount) + "_" + ifaces.ColIDf(name, args...)
 }
 
-func (cm *ComputeMod) qname(name string) ifaces.QueryID {
-	return ifaces.QueryIDf("%s_%d", cm.Name, cm.Comp.SelfRecursionCount) + "_" + ifaces.QueryID(name)
+func (cm *ComputeMod) qname(name string, args ...any) ifaces.QueryID {
+	return ifaces.QueryIDf("%v_%v", cm.Name, cm.Comp.SelfRecursionCount) + "_" + ifaces.QueryIDf(name, args...)
 }
 
 // Function inserting a query that col is zero when IsActive is zero
 func (cm *ComputeMod) colZeroAtInactive(col ifaces.Column, name string) {
 	// col zero at inactive area, e.g., IsInactive[i]) * col[i] = 0
 	sug := cm.SugarVar
-	cm.Comp.InsertGlobal(cm.Round, cm.qname(name),
+	cm.Comp.InsertGlobal(cm.Round, cm.qname("%s", name),
 		symbolic.Mul(sug.IsInactive, col))
 }
 
@@ -453,7 +475,8 @@ func (cm *ComputeMod) colZeroAtInactive(col ifaces.Column, name string) {
 // roots and leaves
 func (cm *ComputeMod) assign(
 	run *wizard.ProverRuntime,
-	leaves, pos smartvectors.SmartVector,
+	pos smartvectors.SmartVector,
+	leaves [blockSize]smartvectors.SmartVector,
 ) {
 
 	// Function responsible for post-padding with zeroes
@@ -471,15 +494,15 @@ func (cm *ComputeMod) assign(
 
 	// List of columns to assign
 	var (
-		roots    = make([]field.Element, numActiveRows)
-		curr     = make([]field.Element, numActiveRows)
-		proof    = cm.Cols.Proof.GetColAssignment(run)
+		roots    = make([]field.Octuplet, numActiveRows)
+		curr     = make([]field.Octuplet, numActiveRows)
+		proof    [8]smartvectors.SmartVector
 		posbit   = make([]field.Element, numActiveRows)
 		posacc   = make([]field.Element, numActiveRows)
-		left     = make([]field.Element, numActiveRows)
-		right    = make([]field.Element, numActiveRows)
-		interm   = make([]field.Element, numActiveRows)
-		nodehash = make([]field.Element, numActiveRows)
+		left     = make([]field.Octuplet, numActiveRows)
+		right    = make([]field.Octuplet, numActiveRows)
+		interm   = make([]field.Octuplet, numActiveRows)
+		nodehash = make([]field.Octuplet, numActiveRows)
 		// optional columns coming from the Accumulator module
 		useNextMerkleProof = func() smartvectors.SmartVector {
 			if cm.WithOptProofReuseCheck {
@@ -502,6 +525,9 @@ func (cm *ComputeMod) assign(
 		segmentCounter = make([]field.Element, numActiveRows)
 	)
 
+	for i := 0; i < blockSize; i++ {
+		proof[i] = cm.Cols.Proof[i].GetColAssignment(run)
+	}
 	bitAt := func(x field.Element, i int) uint64 {
 		xint := x.Uint64()
 		return (xint >> i) & 1
@@ -527,12 +553,13 @@ func (cm *ComputeMod) assign(
 		numProofs = proofCounter
 	}
 
+	var zeroBlock field.Octuplet
 	// Assigns everything in parallel proof per proof
 	parallel.Execute(numProofs, func(start, stop int) {
 		for proofNo := start; proofNo < stop; proofNo++ {
 
 			// placeholder for the root of the current proof
-			var root field.Element
+			var root field.Octuplet
 
 			// recall that we fill the trace bottom up for every proof
 			for level := 0; level < cm.Depth; level++ {
@@ -540,7 +567,9 @@ func (cm *ComputeMod) assign(
 
 				// assign curr
 				if level == 0 {
-					curr[row] = leaves.Get(proofNo)
+					for i := 0; i < blockSize; i++ {
+						curr[row][i] = leaves[i].Get(proofNo)
+					}
 				} else {
 					curr[row] = nodehash[row+1]
 				}
@@ -553,17 +582,21 @@ func (cm *ComputeMod) assign(
 				switch posbitUint {
 				case 0:
 					left[row] = curr[row]
-					right[row] = proof.Get(row)
+					for i := 0; i < blockSize; i++ {
+						right[row][i] = proof[i].Get(row)
+					}
 				case 1:
-					left[row] = proof.Get(row)
+					for i := 0; i < blockSize; i++ {
+						left[row][i] = proof[i].Get(row)
+					}
 					right[row] = curr[row]
 				default:
 					utils.Panic("not a bit")
 				}
 
-				// And run the mimc compression function
-				interm[row] = mimc.BlockCompression(field.Zero(), left[row])
-				nodehash[row] = mimc.BlockCompression(interm[row], right[row])
+				// And run the poseidon2 compression function
+				interm[row] = vortex.CompressPoseidon2(zeroBlock, left[row])
+				nodehash[row] = vortex.CompressPoseidon2(interm[row], right[row])
 			}
 
 			root = nodehash[proofNo*cm.Depth]
@@ -590,28 +623,38 @@ func (cm *ComputeMod) assign(
 		}
 	})
 
-	intermPadding := mimc.BlockCompression(field.Zero(), field.Zero())
+	intermPadding := vortex.CompressPoseidon2(zeroBlock, zeroBlock)
 	// Assign zero blocks in the inactive area when the actual number of proofs and maximum number of proofs
 	// are different
 	if cm.WithOptProofReuseCheck {
 		for i := numProofs * cm.Depth; i < numActiveRows; i++ {
 			interm[i] = intermPadding
-			nodehash[i] = mimc.BlockCompression(intermPadding, field.Zero())
+			nodehash[i] = vortex.CompressPoseidon2(intermPadding, zeroBlock)
 		}
 	}
 
-	nodeHashPadding := mimc.BlockCompression(intermPadding, field.Zero())
+	nodeHashPadding := vortex.CompressPoseidon2(intermPadding, zeroBlock)
 
 	// and assign the freshly computed columns
 	cols := cm.Cols
-	run.AssignColumn(cols.Root.GetColID(), pad(roots))
-	run.AssignColumn(cols.Curr.GetColID(), pad(curr))
 	run.AssignColumn(cols.PosBit.GetColID(), pad(posbit))
 	run.AssignColumn(cols.PosAcc.GetColID(), pad(posacc))
-	run.AssignColumn(cols.Left.GetColID(), pad(left))
-	run.AssignColumn(cols.Right.GetColID(), pad(right))
-	run.AssignColumn(cols.Interm.GetColID(), pad(interm, intermPadding))
-	run.AssignColumn(cols.NodeHash.GetColID(), pad(nodehash, nodeHashPadding))
+
+	trRoot := Transpose(roots)
+	trCurr := Transpose(curr)
+	trLeft := Transpose(left)
+	trRight := Transpose(right)
+	trInterm := Transpose(interm)
+	trNodehash := Transpose(nodehash)
+
+	for i := 0; i < blockSize; i++ {
+		run.AssignColumn(cols.Root[i].GetColID(), pad(trRoot[i]))
+		run.AssignColumn(cols.Curr[i].GetColID(), pad(trCurr[i]))
+		run.AssignColumn(cols.Left[i].GetColID(), pad(trLeft[i]))
+		run.AssignColumn(cols.Right[i].GetColID(), pad(trRight[i]))
+		run.AssignColumn(cols.Interm[i].GetColID(), pad(trInterm[i], intermPadding[i]))
+		run.AssignColumn(cols.NodeHash[i].GetColID(), pad(trNodehash[i], nodeHashPadding[i]))
+	}
 	if cm.WithOptProofReuseCheck {
 		run.AssignColumn(cols.UseNextMerkleProofExpanded.GetColID(), pad(useNextMerkleProofExpanded))
 		run.AssignColumn(cols.IsActiveExpanded.GetColID(), pad(isActiveExpanded))

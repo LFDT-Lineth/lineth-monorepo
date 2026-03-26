@@ -6,6 +6,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/accessors"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
@@ -324,7 +325,7 @@ func globalWithProofCols(size int) func() (wizard.DefineFunc, wizard.MainProverS
 
 		builder := func(build *wizard.Builder) {
 			P1 := build.RegisterCommit(P1, size)
-			P2 := build.CompiledIOP.InsertProof(0, P2, size)
+			P2 := build.CompiledIOP.InsertProof(0, P2, size, true)
 			P3 := build.RegisterCommit(P3, size) // overshadows P1
 			_ = build.GlobalConstraint(GLOBAL1, sym.Mul(P1, P2, P3))
 		}
@@ -380,8 +381,8 @@ func globalWithVerifColAndPeriodic(size, period, offset int) func() (wizard.Defi
 
 		builder := func(build *wizard.Builder) {
 			P1 := build.RegisterCommit(P1, size)
-			verifcol1 := verifiercol.NewFromAccessors(genAccessors(0, size), field.Zero(), size)
-			verifcol2 := verifiercol.NewFromAccessors(genAccessors(2, size), field.Zero(), size)
+			verifcol1 := verifiercol.NewFromAccessors(genAccessors(0, size), fext.Zero(), size)
+			verifcol2 := verifiercol.NewFromAccessors(genAccessors(2, size), fext.Zero(), size)
 			_ = build.GlobalConstraint(LOCAL1,
 				sym.Sub(
 

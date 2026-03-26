@@ -7,7 +7,7 @@ import (
 	fr381 "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
-	"github.com/consensys/linea-monorepo/prover/circuits/internal"
+	"github.com/consensys/linea-monorepo/prover/utils/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,11 +18,12 @@ func TestFr377EncodedFr381ToBytes(t *testing.T) {
 		var x fr381.Element
 		_, err := x.SetRandom()
 		assert.NoError(t, err)
-		encoded, err := internal.Bls12381ScalarToBls12377Scalars(&x)
+		xBytes := x.Bytes()
+		encoded := types.AsBls12377Fr(xBytes[:])
 		assert.NoError(t, err)
 
 		assignment := fr377EncodedFr381ToBytesCircuit{
-			Encoded: [2]frontend.Variable{encoded[0], encoded[1]}, // #nosec G602 -- the slice is an array and not a slice
+			Encoded: [2]frontend.Variable{encoded[:16], encoded[16:]},
 		}
 
 		b := x.Bytes()

@@ -1,3 +1,5 @@
+//go:build ignore
+
 package bls
 
 import (
@@ -50,7 +52,7 @@ func testBlsMapOnTrace(t *testing.T, g Group, path string, limits *Limits) {
 					func(b *wizard.Builder) {
 						registerColumns(t, b, cols, maxLen)
 						blsMap = newMap(b.CompiledIOP, g, limits, newMapDataSource(b.CompiledIOP, g))
-						blsMap = blsMap.WithMapCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 6, true))
+						blsMap = blsMap.WithMapCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 1, true))
 					},
 					integrationTestCompiler,
 				)

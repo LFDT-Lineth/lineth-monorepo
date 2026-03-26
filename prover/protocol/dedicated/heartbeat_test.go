@@ -1,4 +1,4 @@
-package dedicated
+package dedicated_test
 
 import (
 	"testing"
@@ -6,13 +6,14 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
+	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/internal/testtools"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 )
 
 // HeartBeatColumnTestcase is an implementation of the [testtools.Testcase]
-// interface and represents a wizard protocol using [HeartBeatColumn].
+// interface and represents a wizard protocol using [dedicated.HeartBeatColumn].
 type HeartBeatColumnTestcase struct {
 	name     string
 	Period   int
@@ -20,7 +21,7 @@ type HeartBeatColumnTestcase struct {
 	Offset   int
 	Activity int
 	isActive ifaces.Column
-	hb       *HeartBeatColumn
+	hb       *dedicated.HeartBeatColumn
 }
 
 // ListOfHeartBeatTestcase lists all the relevant testcases for the heart
@@ -90,9 +91,10 @@ func (hbtc *HeartBeatColumnTestcase) Define(comp *wizard.CompiledIOP) {
 		0,
 		ifaces.ColID(hbtc.name)+"/isactive",
 		hbtc.Size,
+		true,
 	)
 
-	hbtc.hb = CreateHeartBeat(comp, 0, hbtc.Period, hbtc.Offset, hbtc.isActive)
+	hbtc.hb = dedicated.CreateHeartBeat(comp, 0, hbtc.Period, hbtc.Offset, hbtc.isActive)
 }
 
 func (hbtc *HeartBeatColumnTestcase) Assign(run *wizard.ProverRuntime) {

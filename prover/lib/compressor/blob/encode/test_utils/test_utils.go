@@ -1,12 +1,13 @@
 package test_utils
 
 import (
+	"testing"
+
 	"github.com/consensys/linea-monorepo/prover/backend/ethereum"
 	typesLinea "github.com/consensys/linea-monorepo/prover/utils/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 // CheckSameTx checks if the most essential fields in two transactions are equal

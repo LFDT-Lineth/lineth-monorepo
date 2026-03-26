@@ -30,7 +30,7 @@ func TestCompiler(t *testing.T) {
 		// Sample a random alpha
 		// Evaluates P in alpha (evaluation point not yet specified)
 		P := build.RegisterCommit(P, SIZE) // Overshadows P with something not of the same type
-		build.RegisterRandomCoin(COIN, coin.Field)
+		build.RegisterRandomCoin(COIN, coin.FieldExt)
 		build.UnivariateEval(U, P)
 	}
 
@@ -49,20 +49,30 @@ func TestCompiler(t *testing.T) {
 	prover := func(run *wizard.ProverRuntime) {
 		p := smartvectors.ForTest(1, 2, 3, 3)
 		run.AssignColumn(P, p)
-		u := run.GetRandomCoinField(COIN)
-		y := smartvectors.Interpolate(p, u)
-		run.AssignUnivariate(U, u, y)
+		u := run.GetRandomCoinFieldExt(COIN)
+		y := smartvectors.EvaluateBasePolyLagrange(p, u)
+		run.AssignUnivariateExt(U, u, y)
 	}
 
-	proof := wizard.Prove(compiled, prover)
-	err := wizard.Verify(compiled, proof)
-	require.NoError(t, err)
+	{
+		// Test Koala proof
+		proof := wizard.Prove(compiled, prover, false)
+		err := wizard.Verify(compiled, proof, false)
+		require.NoError(t, err)
+	}
+
+	{
+		// Test BLS proof
+		proof := wizard.Prove(compiled, prover, true)
+		err := wizard.Verify(compiled, proof, true)
+		require.NoError(t, err)
+	}
 }
 
 func TestChangingColumnStatus(t *testing.T) {
 
 	comp := wizard.NewCompiledIOP()
-	comp.InsertCommit(0, "P", 4)
+	comp.InsertCommit(0, "P", 4, true)
 
 	p := comp.Columns.GetHandle("P").(column.Natural)
 	require.Equal(t, column.Committed, p.Status())

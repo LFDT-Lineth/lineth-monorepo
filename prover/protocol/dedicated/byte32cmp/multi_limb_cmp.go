@@ -73,6 +73,10 @@ func CmpMultiLimbs(comp *wizard.CompiledIOP, a, b LimbColumns) (isGreater, isEqu
 		utils.Panic("a and b cannot have zero limbs %v %v", len(a.Limbs), len(b.Limbs))
 	}
 
+	if len(a.Limbs) > 31 || len(b.Limbs) > 31 {
+		utils.Panic("a and b cannot have more than 31 limbs, the syndrom will overflow. a has %v limbs and b has %v limbs", len(a.Limbs), len(b.Limbs))
+	}
+
 	if a.LimbBitSize != b.LimbBitSize {
 		utils.Panic("a and b don't use the same limb-bit-size: %v %v", a.LimbBitSize, b.LimbBitSize)
 	}
@@ -85,7 +89,7 @@ func CmpMultiLimbs(comp *wizard.CompiledIOP, a, b LimbColumns) (isGreater, isEqu
 		nRows   = ifaces.AssertSameLength(a.Limbs...)
 		nRowsB  = ifaces.AssertSameLength(b.Limbs...)
 		ctxName = func(subName string) string {
-			return fmt.Sprintf("CMP_MULTI_LIMB_%v_%v", len(comp.Columns.AllKeys()), subName)
+			return fmt.Sprintf("CMP_MULTI_LIMB_%v_%v", comp.Columns.NumEntriesTotal(), subName)
 		}
 	)
 
@@ -100,9 +104,9 @@ func CmpMultiLimbs(comp *wizard.CompiledIOP, a, b LimbColumns) (isGreater, isEqu
 		numLimbs        = len(a.Limbs)
 		numBitsPerLimbs = a.LimbBitSize
 		ctx             = &MultiLimbCmp{
-			IsGreater:          comp.InsertCommit(round, ifaces.ColID(ctxName("IS_GREATER")), nRows),
-			IsLower:            comp.InsertCommit(round, ifaces.ColID(ctxName("IS_LOWER")), nRows),
-			NonNegativeSyndrom: comp.InsertCommit(round, ifaces.ColID(ctxName("MUST_BE_POSITIVE")), nRows),
+			IsGreater:          comp.InsertCommit(round, ifaces.ColIDf("%s", ctxName("IS_GREATER")), nRows, true),
+			IsLower:            comp.InsertCommit(round, ifaces.ColIDf("%s", ctxName("IS_LOWER")), nRows, true),
+			NonNegativeSyndrom: comp.InsertCommit(round, ifaces.ColIDf("%s", ctxName("MUST_BE_POSITIVE")), nRows, true),
 		}
 
 		syndromExpression = sym.NewConstant(0)
@@ -145,7 +149,7 @@ func CmpMultiLimbs(comp *wizard.CompiledIOP, a, b LimbColumns) (isGreater, isEqu
 
 	comp.InsertGlobal(
 		round,
-		ifaces.QueryID(ctxName("FLAGS_MUTUALLY_EXCLUSIVE")),
+		ifaces.QueryIDf("%s", ctxName("FLAGS_MUTUALLY_EXCLUSIVE")),
 		sym.Sub(1, ctx.IsGreater, isEqual, ctx.IsLower),
 	)
 
@@ -204,15 +208,20 @@ func (mCmp *MultiLimbCmp) Run(run *wizard.ProverRuntime) {
 			sF = syndrom.Get(i)
 		)
 
-		if sF.IsUint64() && !sF.IsZero() {
+		// sf is positive
+		if !sF.LexicographicallyLargest() && !sF.IsZero() {
+
 			isGreater[i] = field.One()
 			nnSyndrom[i] = sF
 		}
 
-		if !sF.IsUint64() {
+		// sf is negitive
+		if sF.LexicographicallyLargest() {
+
 			isLower[i] = field.One()
 			nnSyndrom[i].Neg(&sF)
 		}
+
 	}
 
 	run.AssignColumn(mCmp.IsGreater.GetColID(), smartvectors.NewRegular(isGreater))

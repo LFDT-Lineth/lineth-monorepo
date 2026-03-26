@@ -7,12 +7,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/gnark/std/hash/mimc"
 	snarkTestUtils "github.com/consensys/linea-monorepo/prover/circuits/internal/test_utils"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 func TestPIConsistency(t *testing.T) {
+
 	pi := public_input.Execution{
 		L2MessageHashes:              make([][32]byte, 2),
 		FinalBlockNumber:             4,
@@ -22,15 +22,20 @@ func TestPIConsistency(t *testing.T) {
 		InitialBlockTimestamp:        2,
 		FirstRollingHashUpdateNumber: 3,
 		ChainID:                      7,
+		BaseFee:                      3,
 	}
 
-	utils.FillRange(pi.DataChecksum[:], 10)
+	pi.DataChecksum.Length = 8
+
+	utils.FillRange(pi.DataChecksum.PartialHash[:], 9)
+	utils.FillRange(pi.DataChecksum.Hash[:], 10)
 	utils.FillRange(pi.L2MessageHashes[0][:], 50)
 	utils.FillRange(pi.L2MessageHashes[1][:], 90)
 	utils.FillRange(pi.InitialStateRootHash[:], 130)
 	utils.FillRange(pi.InitialRollingHashUpdate[:], 170)
 	utils.FillRange(pi.FinalStateRootHash[:], 210)
 	utils.FillRange(pi.LastRollingHashUpdate[:], 250)
+	utils.FillRange(pi.CoinBase[:], 20)
 	utils.FillRange(pi.L2MessageServiceAddr[:], 40)
 
 	// state root hashes are field elements
@@ -39,17 +44,13 @@ func TestPIConsistency(t *testing.T) {
 
 	snarkPi := FunctionalPublicInputSnark{
 		FunctionalPublicInputQSnark: FunctionalPublicInputQSnark{
-			L2MessageHashes: L2MessageHashes{Values: make([][32]frontend.Variable, 3)},
+			L2MessageHashes: L2MessageHashes{Values: make([][32]frontend.Variable, 2)},
 		},
 	}
 	require.NoError(t, snarkPi.Assign(&pi))
-	piSum := pi.Sum(nil)
+	piSum := pi.Sum()
 
 	snarkTestUtils.SnarkFunctionTest(func(api frontend.API) []frontend.Variable {
-		hsh, err := mimc.NewMiMC(api)
-		if err != nil {
-			panic(err)
-		}
-		return []frontend.Variable{snarkPi.Sum(api, &hsh)}
+		return []frontend.Variable{snarkPi.Sum(api)}
 	}, piSum)(t)
 }

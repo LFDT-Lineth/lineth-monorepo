@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
+	"github.com/consensys/linea-monorepo/prover/protocol/limbs"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils/csvtraces"
@@ -13,8 +14,8 @@ import (
 
 func testPointEval(t *testing.T, withCircuit bool) {
 	limits := &Limits{
-		NbPointEvalInputInstances:        2,
-		NbPointEvalFailureInputInstances: 2,
+		NbPointEvalInputInstances:        1,
+		NbPointEvalFailureInputInstances: 1,
 		LimitPointEvalCalls:              50,
 		LimitPointEvalFailureCalls:       50,
 	}
@@ -31,6 +32,7 @@ func testPointEval(t *testing.T, withCircuit bool) {
 	// we test all files found
 	var cmp *wizard.CompiledIOP
 	var bp *BlsPointEval
+	var pointEvalSource *BlsPointEvalDataSource
 	for _, file := range files {
 		t.Run(file, func(t *testing.T) {
 			f, err := os.Open(file)
@@ -42,32 +44,39 @@ func testPointEval(t *testing.T, withCircuit bool) {
 			if err != nil {
 				t.Fatal("failed to create csv trace", err)
 			}
-			if cmp == nil {
-				cmp = wizard.Compile(
-					func(b *wizard.Builder) {
-						pointEvalSource := &BlsPointEvalDataSource{
-							ID:                 ct.GetCommit(b, "ID"),
-							CsPointEval:        ct.GetCommit(b, "CIRCUIT_SELECTOR_POINT_EVALUATION"),
-							CsPointEvalInvalid: ct.GetCommit(b, "CIRCUIT_SELECTOR_POINT_EVALUATION_FAILURE"),
-							Limb:               ct.GetCommit(b, "LIMB"),
-							Index:              ct.GetCommit(b, "INDEX"),
-							Counter:            ct.GetCommit(b, "CT"),
-							IsData:             ct.GetCommit(b, "DATA_POINT_EVALUATION"),
-							IsRes:              ct.GetCommit(b, "RSLT_POINT_EVALUATION"),
-						}
-						bp = newPointEval(b.CompiledIOP, limits, pointEvalSource)
-						if withCircuit {
-							bp = bp.WithPointEvalCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 6, true))
-							bp = bp.WithPointEvalFailureCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 6, true))
-						}
-					},
-					dummy.Compile,
-				)
-			}
+			cmp = wizard.Compile(
+				func(b *wizard.Builder) {
+					pointEvalSource = &BlsPointEvalDataSource{
+						ID:                 ct.GetCommit(b, "ID"),
+						CsPointEval:        ct.GetCommit(b, "CIRCUIT_SELECTOR_POINT_EVALUATION"),
+						CsPointEvalInvalid: ct.GetCommit(b, "CIRCUIT_SELECTOR_POINT_EVALUATION_FAILURE"),
+						Limb:               ct.GetLimbsLe(b, "LIMB", limbs.NbLimbU128).AssertUint128(),
+						Index:              ct.GetCommit(b, "INDEX"),
+						Counter:            ct.GetCommit(b, "CT"),
+						IsData:             ct.GetCommit(b, "DATA_POINT_EVALUATION"),
+						IsRes:              ct.GetCommit(b, "RSLT_POINT_EVALUATION"),
+					}
+					bp = newPointEval(b.CompiledIOP, limits, pointEvalSource)
+					if withCircuit {
+						bp = bp.WithPointEvalCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 1, true))
+						bp = bp.WithPointEvalFailureCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 1, true))
+					}
+				},
+				dummy.Compile,
+			)
 
 			proof := wizard.Prove(cmp,
 				func(run *wizard.ProverRuntime) {
-					ct.Assign(run, "ID", "CIRCUIT_SELECTOR_POINT_EVALUATION", "CIRCUIT_SELECTOR_POINT_EVALUATION_FAILURE", "INDEX", "CT", "LIMB", "DATA_POINT_EVALUATION", "RSLT_POINT_EVALUATION")
+					ct.Assign(run,
+						pointEvalSource.ID,
+						pointEvalSource.CsPointEval,
+						pointEvalSource.CsPointEvalInvalid,
+						pointEvalSource.Limb,
+						pointEvalSource.Index,
+						pointEvalSource.Counter,
+						pointEvalSource.IsData,
+						pointEvalSource.IsRes,
+					)
 					bp.Assign(run)
 				})
 
@@ -84,5 +93,6 @@ func TestPointEvalNoCircuit(t *testing.T) {
 }
 
 func TestPointEvalWithCircuit(t *testing.T) {
+	skipIfRace(t)
 	testPointEval(t, true)
 }

@@ -3,8 +3,9 @@ package blobsubmission
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"golang.org/x/crypto/sha3"
 

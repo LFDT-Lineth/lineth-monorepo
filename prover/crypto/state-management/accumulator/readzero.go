@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/consensys/linea-monorepo/prover/crypto/state-management/smt"
+	"github.com/consensys/linea-monorepo/prover/crypto/state-management/smt_koalabear"
+	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/utils"
 
 	//lint:ignore ST1001 -- the package contains a list of standard types for this repo
@@ -14,15 +15,15 @@ import (
 
 // Trace that allows checking a read zero operation: e.g. proof of non-membership
 type ReadZeroTrace[K, V io.WriterTo] struct {
-	Type         int         `json:"type"`
-	Location     string      `json:"location"`
-	Key          K           `json:"key"`
-	SubRoot      Bytes32     `json:"subRoot"`
-	NextFreeNode int         `json:"nextFreeNode"`
-	OpeningMinus LeafOpening `json:"leftLeaf"`
-	OpeningPlus  LeafOpening `json:"rightLeaf"`
-	ProofMinus   smt.Proof   `json:"leftProof"`
-	ProofPlus    smt.Proof   `json:"rightProof"`
+	Type         int                 `json:"type"`
+	Location     string              `json:"location"`
+	Key          K                   `json:"key"`
+	SubRoot      KoalaOctuplet       `json:"subRoot"`
+	NextFreeNode int                 `json:"nextFreeNode"`
+	OpeningMinus LeafOpening         `json:"leftLeaf"`
+	OpeningPlus  LeafOpening         `json:"rightLeaf"`
+	ProofMinus   smt_koalabear.Proof `json:"leftProof"`
+	ProofPlus    smt_koalabear.Proof `json:"rightProof"`
 }
 
 // ReadZeroAndProve performs a read-zero on the accumulator. Panics if the
@@ -63,7 +64,7 @@ func (v *VerifierState[K, V]) ReadZeroVerify(trace ReadZeroTrace[K, V]) error {
 
 	// Check that verifier's root is the same as the one in the traces
 	if v.SubTreeRoot != trace.SubRoot {
-		return fmt.Errorf("inconsistent root %v != %v", v.SubTreeRoot, trace.SubRoot)
+		return fmt.Errorf("inconsistent root %v != %v", v.SubTreeRoot.Hex(), trace.SubRoot.Hex())
 	}
 
 	iMinus, iPlus := int64(trace.ProofMinus.Path), int64(trace.ProofPlus.Path)
@@ -78,8 +79,8 @@ func (v *VerifierState[K, V]) ReadZeroVerify(trace ReadZeroTrace[K, V]) error {
 	}
 
 	// Check that the opening's hkeys make a correct sandwich
-	hkey := hash(v.Config, trace.Key)
-	if Bytes32Cmp(hkey, trace.OpeningMinus.HKey) < 1 || Bytes32Cmp(hkey, trace.OpeningPlus.HKey) > -1 {
+	hkey := hash(trace.Key)
+	if hkey.Cmp(trace.OpeningMinus.HKey) < 1 || hkey.Cmp(trace.OpeningPlus.HKey) > -1 {
 		return fmt.Errorf(
 			"sandwich is incorrect expected %x < %x < %x",
 			trace.OpeningMinus.HKey, hkey, trace.OpeningPlus.HKey,
@@ -87,14 +88,14 @@ func (v *VerifierState[K, V]) ReadZeroVerify(trace ReadZeroTrace[K, V]) error {
 	}
 
 	// Test membership of leaf minus
-	leafMinus := hash(v.Config, &trace.OpeningMinus)
-	if !trace.ProofMinus.Verify(v.Config, leafMinus, trace.SubRoot) {
+	leafMinus := hash(&trace.OpeningMinus)
+	if smt_koalabear.Verify(&trace.ProofMinus, field.Octuplet(leafMinus), field.Octuplet(trace.SubRoot)) != nil {
 		return fmt.Errorf("merkle proof verification failed : minus")
 	}
 
 	// Test membership of leaf plus
-	leafPlus := hash(v.Config, &trace.OpeningPlus)
-	if !trace.ProofPlus.Verify(v.Config, leafPlus, trace.SubRoot) {
+	leafPlus := hash(&trace.OpeningPlus)
+	if smt_koalabear.Verify(&trace.ProofPlus, field.Octuplet(leafPlus), field.Octuplet(trace.SubRoot)) != nil {
 		return fmt.Errorf("merkle proof verification failed : plus")
 	}
 
@@ -108,22 +109,30 @@ func (v *VerifierState[K, V]) ReadZeroVerify(trace ReadZeroTrace[K, V]) error {
 
 // DeferMerkleChecks implements the [Trace] interface.
 func (trace ReadZeroTrace[K, V]) DeferMerkleChecks(
-	config *smt.Config,
-	appendTo []smt.ProvedClaim,
-) []smt.ProvedClaim {
+	appendTo []smt_koalabear.ProvedClaim,
+) []smt_koalabear.ProvedClaim {
 
 	// Test membership of leaf minus
-	leafMinus := hash(config, &trace.OpeningMinus)
+	leafMinus := hash(&trace.OpeningMinus)
 
 	// Test membership of leaf plus
-	leafPlus := hash(config, &trace.OpeningPlus)
+	leafPlus := hash(&trace.OpeningPlus)
 
-	appendTo = append(appendTo, smt.ProvedClaim{Proof: trace.ProofMinus, Root: trace.SubRoot, Leaf: leafMinus})
-	return append(appendTo, smt.ProvedClaim{Proof: trace.ProofPlus, Root: trace.SubRoot, Leaf: leafPlus})
+	appendTo = append(appendTo, smt_koalabear.ProvedClaim{
+		Proof: trace.ProofMinus,
+		Root:  field.Octuplet(trace.SubRoot),
+		Leaf:  field.Octuplet(leafMinus),
+	})
+
+	return append(appendTo, smt_koalabear.ProvedClaim{
+		Proof: trace.ProofPlus,
+		Root:  field.Octuplet(trace.SubRoot),
+		Leaf:  field.Octuplet(leafPlus),
+	})
 }
 
-func (trace ReadZeroTrace[K, V]) HKey(cfg *smt.Config) Bytes32 {
-	return hash(cfg, trace.Key)
+func (trace ReadZeroTrace[K, V]) HKey() KoalaOctuplet {
+	return hash(trace.Key)
 }
 
 func (trace ReadZeroTrace[K, V]) RWInt() int {

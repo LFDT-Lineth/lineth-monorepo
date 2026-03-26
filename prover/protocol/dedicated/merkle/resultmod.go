@@ -29,9 +29,9 @@ type ResultMod struct {
 	Depth int
 
 	// Leaf contains the alleged leaves
-	Leaf ifaces.Column
+	Leaf [blockSize]ifaces.Column
 	// Roots contains the Merkle roots
-	Roots ifaces.Column
+	Roots [blockSize]ifaces.Column
 	// Pos contains the positions of the alleged leaves
 	Pos ifaces.Column
 	// Use for looking up and selecting only the
@@ -50,7 +50,12 @@ type ResultMod struct {
 func (rm *ResultMod) Define(comp *wizard.CompiledIOP, round int, name string, numProofs int, depth int, useNextMerkleProof ifaces.Column, isActive ifaces.Column, counter ifaces.Column) {
 
 	// Sanity check that the columns have been passed
-	if rm.Roots == nil || rm.Pos == nil || rm.Leaf == nil {
+	for i := 0; i < blockSize; i++ {
+		if rm.Leaf[i] == nil || rm.Roots[i] == nil {
+			panic("please set all the required columns before calling define")
+		}
+	}
+	if rm.Pos == nil {
 		panic("please set all the required columns before calling define")
 	}
 
@@ -60,12 +65,14 @@ func (rm *ResultMod) Define(comp *wizard.CompiledIOP, round int, name string, nu
 	}
 
 	// Sanity check that they all have the same size
-	if rm.Roots.Size() != rm.Pos.Size() || rm.Roots.Size() != rm.Leaf.Size() {
-		utils.Panic("the sizes of the passed columns should be consistent %v, %v, and %v", rm.Roots.Size(), rm.Pos.Size(), rm.Leaf.Size())
+	for i := 0; i < blockSize; i++ {
+		if rm.Leaf[i].Size() != rm.Roots[i].Size() || rm.Leaf[i].Size() != rm.Pos.Size() {
+			utils.Panic("the sizes of the passed columns should be consistent %v, %v, and %v", rm.Leaf[i].Size(), rm.Roots[i].Size(), rm.Pos.Size())
+		}
 	}
 
 	// Sanity-check the value of NumRows
-	numRows := rm.Roots.Size()
+	numRows := rm.Roots[0].Size()
 	if numRows != utils.NextPowerOfTwo(numProofs) {
 		utils.Panic("numRows %v but numProofs %v", numRows, numProofs)
 	}

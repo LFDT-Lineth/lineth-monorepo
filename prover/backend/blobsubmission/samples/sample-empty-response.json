@@ -1,1 +1,25 @@
-{"eip4844Enabled":true,"dataHash":"0x010657f37554c781402a22917dee2f75def7ab966d7b770905398eba3c444014","compressedData":"","commitment":"0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","kzgProofContract":"0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","kzgProofSidecar":"0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","expectedX":"0x9a7a8f21028e4664722f0741f2d60192e51043ada918c57e27fecc195ac6531a","expectedY":"0x0000000000000000000000000000000000000000000000000000000000000000","snarkHash":"0x0cf6e0a877a477eb09fe0586fb7c5817a04a98b55464f91b0a257c94f170019a","conflationOrder":{"startingBlockNumber":0,"upperBoundaries":[10,20,30,40]},"parentStateRootHash":"0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","finalStateRootHash":"0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","parentDataHash":"0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd","expectedShnarf":"0xf8cf3c235db7731b4f871a1f7b5d7f2561b09a5cd38346ea4f2825a77883ff64","prevShnarf":"0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
+{
+    "eip4844Enabled": true,
+    "dataHash": "0x010657f37554c781402a22917dee2f75def7ab966d7b770905398eba3c444014",
+    "compressedData": "",
+    "commitment": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "kzgProofContract": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "kzgProofSidecar": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "expectedX": "0x58e5b0befea71978f3b60f8f2a90aba3f9260171c910c966d94ff13e28a7b338",
+    "expectedY": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "snarkHash": "0x0c0ec30231634df2807c2d3adbaf622ddbc586307480e46ff457ac5f954d2fa8",
+    "conflationOrder": {
+        "startingBlockNumber": 0,
+        "upperBoundaries": [
+            10,
+            20,
+            30,
+            40
+        ]
+    },
+    "parentStateRootHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "finalStateRootHash": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "parentDataHash": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "expectedShnarf": "0xe3b9b77e5c207bea59e738fd95275dae27f55cfa2699e9ebc5bce1754ee83635",
+    "prevShnarf": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+}

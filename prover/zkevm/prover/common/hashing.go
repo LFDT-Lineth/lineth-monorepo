@@ -3,7 +3,7 @@ package common
 import (
 	"strconv"
 
-	"github.com/consensys/linea-monorepo/prover/crypto/mimc"
+	"github.com/consensys/linea-monorepo/prover/crypto/poseidon2_koalabear"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
@@ -20,36 +20,51 @@ import (
 type HashingCtx struct {
 	// InputCols is the list of columns forming a table for which the current
 	// context is computing the rows.
-	InputCols []ifaces.Column
+	InputCols [][NbElemPerHash]ifaces.Column
 	// IntermediateHashes stores the intermediate values of the hasher.
-	IntermediateHashes []ifaces.Column
+	IntermediateHashes [][NbElemPerHash]ifaces.Column
 }
 
 // HashOf returns an [ifaces.Column] object containing the hash of the inputs
 // columns and a [wizard.ProverAction] object responsible for assigning all
 // the column taking part in justifying the returned column as well as the
 // returned column itself.
-func HashOf(comp *wizard.CompiledIOP, inputCols []ifaces.Column) (ifaces.Column, wizard.ProverAction) {
+func HashOf(comp *wizard.CompiledIOP, inputCols [][NbElemPerHash]ifaces.Column) ([NbElemPerHash]ifaces.Column, wizard.ProverAction) {
 
 	var (
 		ctx = &HashingCtx{
 			InputCols:          inputCols,
-			IntermediateHashes: make([]ifaces.Column, len(inputCols)),
+			IntermediateHashes: make([][NbElemPerHash]ifaces.Column, len(inputCols)),
 		}
-		round     = column.MaxRound(inputCols...)
+		round     = column.MaxRound(inputCols[0][:]...)
 		ctxID     = len(comp.ListCommitments())
-		numRows   = ifaces.AssertSameLength(inputCols...)
-		prevState = verifiercol.NewConstantCol(field.Zero(), numRows, "hash-of-"+strconv.Itoa(ctxID))
+		numRows   = ifaces.AssertSameLength(inputCols[0][:]...)
+		prevState [NbElemPerHash]ifaces.Column
 	)
 
-	for i := range ctx.IntermediateHashes {
-		ctx.IntermediateHashes[i] = comp.InsertCommit(
-			round,
-			ifaces.ColIDf("HASHING_%v_%v", ctxID, i),
-			numRows,
-		)
+	for i := range inputCols {
+		round = max(round, column.MaxRound(inputCols[i][:]...))
+		if numRows != ifaces.AssertSameLength(inputCols[i][:]...) {
+			utils.Panic("all input columns must have the same length")
+		}
+	}
 
-		comp.InsertMiMC(
+	for i := range prevState {
+		prevState[i] = verifiercol.NewConstantCol(field.Zero(), numRows, "hash-of-"+strconv.Itoa(ctxID))
+	}
+
+	for i := range ctx.IntermediateHashes {
+		for j := range NbElemPerHash {
+
+			ctx.IntermediateHashes[i][j] = comp.InsertCommit(
+				round,
+				ifaces.ColIDf("HASHING_%v_%v_%v", ctxID, i, j),
+				numRows,
+				true,
+			)
+		}
+
+		comp.InsertPoseidon2(
 			round,
 			ifaces.QueryIDf("HASHING_%v_%v", ctxID, i),
 			inputCols[i], prevState, ctx.IntermediateHashes[i],
@@ -66,44 +81,55 @@ func HashOf(comp *wizard.CompiledIOP, inputCols []ifaces.Column) (ifaces.Column,
 func (ctx *HashingCtx) Run(run *wizard.ProverRuntime) {
 
 	var (
-		numRow = ctx.InputCols[0].Size()
-		numCol = len(ctx.InputCols)
-		inputs = make([][]field.Element, numCol)
-		interm = make([][]field.Element, numCol)
+		numRow       = ctx.InputCols[0][0].Size()
+		numCol       = len(ctx.InputCols)
+		inputs       = make([][NbElemPerHash][]field.Element, numCol)
+		interm       = make([][NbElemPerHash][]field.Element, numCol)
+		initialState [NbElemPerHash][]field.Element
 	)
 
-	for i := range interm {
-		inputs[i] = ctx.InputCols[i].GetColAssignment(run).IntoRegVecSaveAlloc()
-		interm[i] = make([]field.Element, numRow)
+	for k := range NbElemPerHash {
+		for i := range interm {
+			inputs[i][k] = ctx.InputCols[i][k].GetColAssignment(run).IntoRegVecSaveAlloc()
+			interm[i][k] = make([]field.Element, numRow)
+		}
+		initialState[k] = make([]field.Element, numRow)
 	}
 
 	parallel.Execute(numRow, func(start, stop int) {
-		prevState := make([]field.Element, stop-start)
+		prevState := initialState
 		for i := range interm {
-			mimcVecCompression(prevState, inputs[i][start:stop], interm[i][start:stop])
-			prevState = interm[i][start:stop]
+			poseidon2VecCompression(prevState, inputs[i], interm[i], start, stop)
+			prevState = interm[i]
 		}
 	})
 
 	for i := range interm {
-		run.AssignColumn(
-			ctx.IntermediateHashes[i].GetColID(),
-			smartvectors.NewRegular(interm[i]),
-		)
+		for k := range NbElemPerHash {
+			run.AssignColumn(
+				ctx.IntermediateHashes[i][k].GetColID(),
+				smartvectors.NewRegular(interm[i][k]),
+			)
+		}
 	}
 }
 
-func mimcVecCompression(oldState, block, newState []field.Element) {
-
-	if len(oldState) != len(block) || len(block) != len(newState) {
-		utils.Panic("the lengths are inconsistent: %v %v %v", len(oldState), len(block), len(newState))
-	}
+func poseidon2VecCompression(oldState, block, newState [NbElemPerHash][]field.Element, from, to int) {
 
 	if len(oldState) == 0 {
 		return
 	}
 
-	for i := range oldState {
-		newState[i] = mimc.BlockCompression(oldState[i], block[i])
+	var rowBlock, rowOldState [NbElemPerHash]field.Element
+
+	for i := from; i < to; i++ {
+		for k := range NbElemPerHash {
+			rowBlock[k] = block[k][i]
+			rowOldState[k] = oldState[k][i]
+		}
+		newStateRow := poseidon2_koalabear.Compress(rowOldState, rowBlock)
+		for k := range NbElemPerHash {
+			newState[k][i] = newStateRow[k]
+		}
 	}
 }

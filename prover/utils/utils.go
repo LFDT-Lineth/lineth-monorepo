@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -17,7 +16,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/consensys/gnark/frontend"
 	"golang.org/x/exp/constraints"
 )
 
@@ -48,7 +46,7 @@ func DivCeil(a, b int) int {
 func DivExact(a, b int) int {
 	res := a / b
 	if res*b != a {
-		panic("inexact division")
+		Panic("inexact division: %v / %v", a, b)
 	}
 	return res
 }
@@ -249,12 +247,6 @@ func ToUint16[T ~int | ~uint](i T) uint16 {
 	return uint16(i) // #nosec G115 -- Checked for overflow
 }
 
-func ToVariableSlice[X any](s []X) []frontend.Variable {
-	res := make([]frontend.Variable, len(s))
-	Copy(res, s)
-	return res
-}
-
 func countInts[I constraints.Integer](s []I) []I {
 	counts := make([]I, Max(s...)+1)
 	for _, x := range s {
@@ -299,28 +291,11 @@ func RangeSlice[T constraints.Integer](length int, startingPoints ...T) []T {
 	return res
 }
 
+// FillRange modifies dst into [start, start+1, ..., start+len(dst)-1]
 func FillRange[T constraints.Integer](dst []T, start T) {
 	for l := range dst {
 		dst[l] = T(l) + start
 	}
-}
-
-func ReadFromJSON(path string, v interface{}) error {
-	f, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	return json.NewDecoder(f).Decode(v)
-}
-
-func WriteToJSON(path string, v interface{}) error {
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0600)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	return json.NewEncoder(f).Encode(v)
 }
 
 func WriterstoEqual(expected, actual io.WriterTo) error {
@@ -462,6 +437,13 @@ func SortedKeysOf[K comparable, V any](m map[K]V, less func(K, K) bool) []K {
 	})
 
 	return keys
+}
+
+// StringKeysOfMap returns a sorted list of the keys of the map
+func StringKeysOfMap[K ~string, V any](m map[K]V) []K {
+	return SortedKeysOf(m, func(a, b K) bool {
+		return a < b
+	})
 }
 
 // MapFunc maps f to every entries of the slice and return an array with the
@@ -629,4 +611,13 @@ func GrowSliceSize[T any](slice []T, size int) []T {
 		slice = append(slice, t)
 	}
 	return slice
+}
+
+// SliceToAnys converts a slice into an []any
+func SliceToAnys[T any](slice []T) []any {
+	res := make([]any, len(slice))
+	for i, v := range slice {
+		res[i] = v
+	}
+	return res
 }

@@ -59,7 +59,8 @@ type storedColumnInfo struct {
 	// Pragmas is a free map that users can use to store whatever they want,
 	// it can be used to store compile-time information.
 	Pragmas map[string]interface{} `cbor:"g,omitempty"`
-
+	// IsBase indicates that the column is a base column
+	IsBase bool `cbor:"b"`
 	// uuid is a unique identifier for the stored column. It is used for
 	// serialization.
 	uuid uuid.UUID `serde:"omit"`
@@ -70,7 +71,7 @@ type storedColumnInfo struct {
 //   - name must not be an empty string
 //   - round must be provided
 //   - name must not have been registered already
-func (s *Store) AddToRound(round int, name ifaces.ColID, size int, status Status) ifaces.Column {
+func (s *Store) AddToRound(round int, name ifaces.ColID, size int, status Status, isBase bool) ifaces.Column {
 
 	if len(name) == 0 {
 		utils.Panic("given an empty name")
@@ -88,7 +89,14 @@ func (s *Store) AddToRound(round int, name ifaces.ColID, size int, status Status
 
 	// Constructing at the beginning does the validation early on
 	nat := newNatural(name, position, s)
-	infos := &storedColumnInfo{Size: size, ID: name, Status: status, uuid: uuid.New(), Pragmas: make(map[string]interface{})}
+	infos := &storedColumnInfo{
+		Size:    size,
+		ID:      name,
+		Status:  status,
+		uuid:    uuid.New(),
+		Pragmas: make(map[string]interface{}),
+		IsBase:  isBase,
+	}
 
 	// Panic if the entry already exist
 	s.indicesByNames.InsertNew(name, position)
@@ -116,6 +124,13 @@ func (r *Store) AllKeysAt(round int) []ifaces.ColID {
 		res[i] = rnd[i].ID
 	}
 	return res
+}
+
+// AllKeysAt returns the list of all keys for a given round. The result follows
+// the insertion order of insertion) (=assignment order)
+func (r *Store) AllKeysLenAt(round int) int {
+	rnd := r.byRounds.GetOrEmpty(round)
+	return len(rnd)
 }
 
 // Returns the list of all the [ifaces.ColID] tagged with the [Committed] status so far
@@ -285,6 +300,17 @@ func (s *Store) info(name ifaces.ColID) *storedColumnInfo {
 	return s.byRounds.MustGet(pos.round)[pos.posInRound]
 }
 
+// All returns the list of all the column in all the rounds. The list is sorted
+// by (1) round (2) by declaration order.
+func (r *Store) All() []ifaces.Column {
+	res := []ifaces.Column{}
+	for round := 0; round < r.NumRounds(); round++ {
+		cols := r.AllHandlesAtRound(round)
+		res = append(res, cols...)
+	}
+	return res
+}
+
 /*
 Returns the list of all the keys ever. The result is returned in
 Deterministic order.
@@ -298,6 +324,18 @@ func (r *Store) AllKeys() []ifaces.ColID {
 	}
 
 	return res
+}
+
+/*
+NumEntriesTotal returns the total number of entries in the store. That is the total number of colums in the system (regardless of their status).
+*/
+func (r *Store) NumEntriesTotal() int {
+	counter := 0
+	for roundID := 0; roundID < r.NumRounds(); roundID++ {
+		counter += r.AllKeysLenAt(roundID)
+	}
+
+	return counter
 }
 
 /*

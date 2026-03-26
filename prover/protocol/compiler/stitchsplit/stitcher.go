@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
+	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
@@ -21,6 +23,10 @@ type StitchingContext struct {
 	// It collects the information about subColumns and their stitchings.
 	// The index of Stitchings is over the rounds.
 	Stitchings []SummerizedAlliances
+	// ExplicitlyVerifiedQueries is a map collecting all the queries spanning over
+	// columns that are too small to be processed by the the stitcher. They are
+	// collected by round number.
+	ExplicitlyVerifiedQueries map[int]*[]ifaces.Query
 }
 
 type StitchSubColumnsProverAction struct {
@@ -59,11 +65,11 @@ func Stitcher(minSize, maxSize int) func(comp *wizard.CompiledIOP) {
 func newStitcher(comp *wizard.CompiledIOP, minSize, maxSize int) StitchingContext {
 	numRounds := comp.NumRounds()
 	res := StitchingContext{
-		Comp:    comp,
-		MinSize: minSize,
-		MaxSize: maxSize,
-		// initialize the stitichings
-		Stitchings: make([]SummerizedAlliances, numRounds),
+		Comp:                      comp,
+		MinSize:                   minSize,
+		MaxSize:                   maxSize,
+		Stitchings:                make([]SummerizedAlliances, numRounds),
+		ExplicitlyVerifiedQueries: make(map[int]*[]ifaces.Query),
 	}
 	// it scans the compiler trace for the eligible columns, creates stitchings from the sub columns and commits to the them.
 	res.ScanStitchCommit()
@@ -108,25 +114,54 @@ func (a *StitchColumnsProverAction) Run(run *wizard.ProverRuntime) {
 			witnesses[i] = subColumns[i].GetColAssignment(run)
 		}
 
-		assignement := smartvectors.
-			AllocateRegular(maxSizeGroup * witnesses[0].Len()).(*smartvectors.Regular)
+		if smartvectors.AreAllBase(witnesses) {
 
-		const tileSize = 128
-		rows := witnesses[0].Len()
-		cols := len(subColumns)
+			newSize := maxSizeGroup * witnesses[0].Len()
+			assignementSlice := make([]field.Element, newSize)
 
-		parallel.Execute(rows, func(start, end int) {
-			for tileStart := start; tileStart < end; tileStart += tileSize {
-				tileEnd := min(tileStart+tileSize, end)
-				for j := tileStart; j < tileEnd; j++ {
-					base := j * maxSizeGroup
-					for i := 0; i < cols; i++ {
-						(*assignement)[base+i] = witnesses[i].Get(j)
+			// Parallelise over the j (row) dimension with tiling for better
+			// cache locality and concurrency. Each (i,j) writes a unique
+			// location so this is safe to run in parallel over j ranges.
+			const tileSize = 128
+			parallel.Execute(witnesses[0].Len(), func(start, stop int) {
+				for tStart := start; tStart < stop; tStart += tileSize {
+					tEnd := tStart + tileSize
+					if tEnd > stop {
+						tEnd = stop
+					}
+					for j := tStart; j < tEnd; j++ {
+						baseIdx := j * maxSizeGroup
+						for i := range subColumns {
+							assignementSlice[i+baseIdx] = witnesses[i].Get(j)
+						}
+					}
+				}
+			})
+
+			run.AssignColumn(idBigCol, smartvectors.NewRegular(assignementSlice))
+			continue
+		}
+
+		newSize := maxSizeGroup * witnesses[0].Len()
+		assignementSliceExt := make([]fext.Element, newSize)
+
+		const tileSizeExt = 128
+		parallel.Execute(witnesses[0].Len(), func(start, stop int) {
+			for tStart := start; tStart < stop; tStart += tileSizeExt {
+				tEnd := tStart + tileSizeExt
+				if tEnd > stop {
+					tEnd = stop
+				}
+				for j := tStart; j < tEnd; j++ {
+					baseIdx := j * maxSizeGroup
+					for i := range subColumns {
+						assignementSliceExt[i+baseIdx] = witnesses[i].GetExt(j)
 					}
 				}
 			}
 		})
-		run.AssignColumn(idBigCol, assignement)
+
+		run.AssignColumn(idBigCol, smartvectors.NewRegularExt(assignementSliceExt))
 	}
 }
 
@@ -329,10 +364,22 @@ func (ctx *StitchingContext) stitchGroup(s Alliance) {
 			groupedName(group),
 			assignement)
 	case column.Committed:
+		// The stitched column should preserve whether the sub-columns are base-field
+		// or extension-field. Ensure we return 'base' only if ALL sub-columns are base.
+		// This prevents accidentally storing extension-field data into a base-field
+		// stitching when groups contain mixed types.
+		isBase := true
+		for _, c := range group {
+			if !c.IsBase() {
+				isBase = false
+				break
+			}
+		}
 		stitchingCol = ctx.Comp.InsertCommit(
 			s.Round,
 			groupedName(s.SubCols),
 			ctx.MaxSize,
+			isBase,
 		)
 
 	default:

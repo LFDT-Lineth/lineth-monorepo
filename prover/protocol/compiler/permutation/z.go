@@ -117,6 +117,7 @@ func (z *ZCtx) Compile(comp *wizard.CompiledIOP) {
 			z.Round,
 			deriveNameGen[ifaces.ColID](comp.SelfRecursionCount, "Z", z.Round, z.Size, "PART", i),
 			z.Size,
+			false,
 		)
 
 		comp.InsertGlobal(

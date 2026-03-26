@@ -3,10 +3,24 @@ package fetchers_arithmetization
 import (
 	"testing"
 
+	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	arith "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/arith_struct"
 	util "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/utilities"
+)
+
+var (
+	testChainIDLimbs = []field.Element{
+		field.NewFromString("0xccc0"),
+		field.NewFromString("0x0000"),
+		field.NewFromString("0x0000"),
+		field.NewFromString("0x0000"),
+		field.NewFromString("0x0000"),
+		field.NewFromString("0x0000"),
+		field.NewFromString("0x0000"),
+		field.NewFromString("0x0000"),
+	}
 )
 
 // TestRlpTxnFetcher tests the fetching of the rlp txn data
@@ -28,7 +42,7 @@ func TestRlpTxnFetcher(t *testing.T) {
 	}, dummy.Compile)
 	proof := wizard.Prove(cmp, func(run *wizard.ProverRuntime) {
 		// assign the CSV columns
-		arith.AssignTestingArithModules(run, nil, nil, ctRlpTxn)
+		arith.AssignTestingArithModules(run, nil, nil, ctRlpTxn, nil, nil, rt)
 		AssignRlpTxnFetcher(run, &fetcher, rt)
 	})
 	if err := wizard.Verify(cmp, proof); err != nil {

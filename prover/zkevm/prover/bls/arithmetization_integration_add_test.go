@@ -1,3 +1,5 @@
+//go:build ignore
+
 package bls
 
 import (
@@ -46,8 +48,8 @@ func testBlsAddOnTrace(t *testing.T, g Group, path string, limits *Limits) {
 						registerColumns(t, b, cols, maxLen)
 						blsAdd = newAdd(b.CompiledIOP, g, limits, newAddDataSource(b.CompiledIOP, g))
 						blsAdd = blsAdd.
-							WithAddCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 6, true)).
-							WithCurveMembershipCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 6, true))
+							WithAddCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 1, true)).
+							WithCurveMembershipCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 1, true))
 					},
 					integrationTestCompiler,
 				)

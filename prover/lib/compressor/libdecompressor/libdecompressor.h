@@ -12,6 +12,8 @@
 
 #ifndef GO_CGO_GOSTRING_TYPEDEF
 typedef struct { const char *p; ptrdiff_t n; } _GoString_;
+extern size_t _GoStringLen(_GoString_ s);
+extern const char *_GoStringPtr(_GoString_ s);
 #endif
 
 #endif
@@ -44,9 +46,15 @@ typedef size_t GoUintptr;
 typedef float GoFloat32;
 typedef double GoFloat64;
 #ifdef _MSC_VER
+#if !defined(__cplusplus) || _MSVC_LANG <= 201402L
 #include <complex.h>
 typedef _Fcomplex GoComplex64;
 typedef _Dcomplex GoComplex128;
+#else
+#include <complex>
+typedef std::complex<float> GoComplex64;
+typedef std::complex<double> GoComplex128;
+#endif
 #else
 typedef float _Complex GoComplex64;
 typedef double _Complex GoComplex128;
@@ -74,32 +82,10 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
-
-// Init initializes the decompressor.
-//
-extern void Init();
-
-// LoadDictionaries loads a number of dictionaries into the decompressor
-// according to colon-separated paths.
-// Returns the number of dictionaries loaded, or -1 if unsuccessful.
-// If -1 is returned, the Error() method will return a string describing the error.
-//
+extern void Init(void);
 extern int LoadDictionaries(char* dictPaths);
-
-// Decompress processes a Linea blob and outputs an RLP encoded list of RLP encoded blocks.
-// Due to information loss during pre-compression encoding, two pieces of information are represented "hackily":
-// The block hash is in the ParentHash field.
-// The transaction from address is in the signature.R field.
-//
-// Returns the number of bytes in out, or -1 in case of failure
-// If -1 is returned, the Error() method will return a string describing the error.
-//
 extern int Decompress(char* blob, int blobLength, char* out, int outMaxLength);
-
-// Error returns the last encountered error.
-// If no error was encountered, returns nil.
-//
-extern char* Error();
+extern char* Error(void);
 
 #ifdef __cplusplus
 }

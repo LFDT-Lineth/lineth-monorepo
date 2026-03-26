@@ -1,7 +1,13 @@
 package stitchsplit
 
 import (
+	"errors"
+	"fmt"
+	"math/big"
+
+	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
@@ -17,6 +23,16 @@ import (
 func (ctx StitchingContext) constraints() {
 	ctx.LocalOpening()
 	ctx.LocalGlobalConstraints()
+
+	// This iteration is undeterministic order but it should not result in
+	// non-determinism in the wizard.CompiledIOP because we append different
+	// rounds.
+	for round, qs := range ctx.ExplicitlyVerifiedQueries {
+		ctx.Comp.RegisterVerifierAction(round, &QueryVerifierAction{
+			Qs: *qs,
+		})
+	}
+
 }
 
 func (ctx StitchingContext) LocalOpening() {
@@ -35,7 +51,7 @@ func (ctx StitchingContext) LocalOpening() {
 			//sanity-check: column should be public
 			verifiercol.AssertIsPublicCol(ctx.Comp, q.Pol)
 			// Ask the verifier to directly check the query
-			insertVerifier(ctx.Comp, q, round)
+			ctx.addExplicitlyVerifiedQuery(round, q)
 			// mark the query as ignored
 			ctx.Comp.QueriesParams.MarkAsIgnored(q.ID)
 
@@ -93,7 +109,7 @@ func (ctx StitchingContext) LocalGlobalConstraints() {
 						verifiercol.AssertIsPublicCol(ctx.Comp, h)
 					}
 				}
-				insertVerifier(ctx.Comp, q, round)
+				ctx.addExplicitlyVerifiedQuery(round, q)
 				// mark the query as ignored
 				ctx.Comp.QueriesNoParams.MarkAsIgnored(qName)
 				continue
@@ -106,20 +122,16 @@ func (ctx StitchingContext) LocalGlobalConstraints() {
 
 			// detect if the expression is eligible;
 			// i.e., it contains columns of proper size with status Precomputed, committed, or verifiercol.
-			isEligible, unSupported := IsExprEligible(isColEligibleStitching, ctx.Stitchings, board, compilerTypeStitch)
-			if !isEligible && !unSupported {
+			isEligible := IsExprEligible(isColEligibleStitching, ctx.Stitchings, board, compilerTypeStitch)
+			if !isEligible {
 				continue
 			}
 
 			// if the associated expression is eligible to the stitching, mark the query, over the sub columns, as ignored.
 			ctx.Comp.QueriesNoParams.MarkAsIgnored(qName)
 
-			if unSupported {
-				continue
-			}
-
 			// adjust the query over the stitching columns
-			ctx.Comp.InsertLocal(round, queryNameStitcher(qName), ctx.adjustExpression(q.Expression, q.DomainSize, false))
+			ctx.Comp.InsertLocal(round, queryNameStitcher(qName), ctx.adjustExpression(q.Expression, q.DomainSize, false, false, nil))
 
 		case query.GlobalConstraint:
 			board = q.Board()
@@ -134,7 +146,7 @@ func (ctx StitchingContext) LocalGlobalConstraints() {
 						verifiercol.AssertIsPublicCol(ctx.Comp, h)
 					}
 				}
-				insertVerifier(ctx.Comp, q, round)
+				ctx.addExplicitlyVerifiedQuery(round, q)
 				// mark the query as ignored
 				ctx.Comp.QueriesNoParams.MarkAsIgnored(qName)
 				continue
@@ -144,22 +156,18 @@ func (ctx StitchingContext) LocalGlobalConstraints() {
 				continue
 			}
 			// detect if the expression is over the eligible columns.
-			isEligible, unSupported := IsExprEligible(isColEligibleStitching, ctx.Stitchings, board, compilerTypeStitch)
-			if !isEligible && !unSupported {
+			isEligible := IsExprEligible(isColEligibleStitching, ctx.Stitchings, board, compilerTypeStitch)
+			if !isEligible {
 				continue
 			}
 
 			// if the associated expression is eligible to the stitching, mark the query, over the sub columns, as ignored.
 			ctx.Comp.QueriesNoParams.MarkAsIgnored(qName)
 
-			if unSupported {
-				continue
-			}
-
 			// adjust the query over the stitching columns
 			ctx.Comp.InsertGlobal(round, queryNameStitcher(qName),
-				ctx.adjustExpression(q.Expression, q.DomainSize, true),
-				q.NoBoundCancel)
+				ctx.adjustExpression(q.Expression, q.DomainSize, true, q.NoBoundCancel, q.OffsetRangeOverrides),
+				true)
 
 		default:
 			utils.Panic("got an uncompilable query %++v", qName)
@@ -185,7 +193,13 @@ func getStitchingCol(ctx StitchingContext, col ifaces.Column, option ...int) ifa
 	case verifiercol.ConstCol:
 		// Sometime, we may want to shift a constant column by a non-zero offset
 		// to cancel the constraint at the first or last positions.
-		res := verifiercol.NewConstantCol(m.F, ctx.MaxSize, m.Name+"_STITCHED")
+		var res ifaces.Column
+		if m.F.IsBase {
+			res = verifiercol.NewConstantCol(m.F.Base, ctx.MaxSize, m.Name+"_STITCHED")
+		} else {
+			// Preserve extension-field constant value when GenericFieldElem holds an extension
+			res = verifiercol.NewConstantColExt(m.F.Ext, ctx.MaxSize, m.Name+"_STITCHED")
+		}
 		if len(option) != 0 {
 			res = column.Shift(res, option[0])
 		}
@@ -194,6 +208,9 @@ func getStitchingCol(ctx StitchingContext, col ifaces.Column, option ...int) ifa
 	// case: verifier columns without shift
 	case verifiercol.VerifierCol:
 		scaling := ctx.MaxSize / col.Size()
+		if scaling < 1 {
+			utils.Panic("cannot expand verifier/proof column %v: size=%v > MaxSize=%v", col.GetColID(), m.Size(), ctx.MaxSize)
+		}
 		stitchingCol = verifiercol.ExpandedProofOrVerifyingKeyColWithZero{
 			Col:       m,
 			Expansion: scaling,
@@ -209,6 +226,9 @@ func getStitchingCol(ctx StitchingContext, col ifaces.Column, option ...int) ifa
 		switch m.Status() {
 		case column.Proof, column.VerifyingKey:
 			scaling := ctx.MaxSize / m.Size()
+			if scaling < 1 {
+				utils.Panic("cannot expand proof/verifying-key column %v: size=%v > MaxSize=%v", m.GetColID(), m.Size(), ctx.MaxSize)
+			}
 			stitchingCol = verifiercol.ExpandedProofOrVerifyingKeyColWithZero{
 				Col:       col,
 				Expansion: scaling,
@@ -261,6 +281,8 @@ func queryNameStitcher(oldQ ifaces.QueryID) ifaces.QueryID {
 func (ctx *StitchingContext) adjustExpression(
 	expr *symbolic.Expression, domainSize int,
 	isGlobalConstraint bool,
+	originalHasNoBoundCancel bool,
+	overrideOffsetRange *utils.Range,
 ) (
 	newExpr *symbolic.Expression,
 ) {
@@ -296,32 +318,113 @@ func (ctx *StitchingContext) adjustExpression(
 
 	newExpr = expr.Replay(replaceMap)
 	if isGlobalConstraint {
+		scaling := ctx.MaxSize / domainSize
 		// for the global constraints, check the constraint only over the subSampeling of the columns.
-		newExpr = symbolic.Mul(newExpr, variables.NewPeriodicSample(ctx.MaxSize/domainSize, 0))
+		newExpr = symbolic.Mul(newExpr, variables.NewPeriodicSample(scaling, 0))
+
+		if !originalHasNoBoundCancel {
+			// add the bound cancelation
+			factorTop, factorBottom := getBoundCancelledExpression(expr, domainSize, scaling, overrideOffsetRange)
+			factors := []any{newExpr}
+			if factorTop != nil {
+				factors = append(factors, factorTop)
+			}
+			if factorBottom != nil {
+				factors = append(factors, factorBottom)
+			}
+			newExpr = symbolic.MulNoSimplify(factors...)
+		}
 	}
 
 	return newExpr
 }
 
 type QueryVerifierAction struct {
-	Q ifaces.Query
+	Qs []ifaces.Query
 }
 
 func (a *QueryVerifierAction) Run(vr wizard.Runtime) error {
-	return a.Q.Check(vr)
+	var mainErr error
+	for i := range a.Qs {
+		if err := a.Qs[i].Check(vr); err != nil {
+			err = fmt.Errorf("queryName=%v - %w", a.Qs[i].Name(), err)
+			mainErr = errors.Join(mainErr, err)
+		}
+	}
+	if mainErr != nil {
+		return fmt.Errorf("stitching.QueryVerifierAction failed: %w", mainErr)
+	}
+	return nil
 }
 
 func (a *QueryVerifierAction) RunGnark(api frontend.API, wvc wizard.GnarkRuntime) {
-	a.Q.CheckGnark(api, wvc)
+	for i := range a.Qs {
+		a.Qs[i].CheckGnark(api, wvc)
+	}
 }
 
-func insertVerifier(
-	comp *wizard.CompiledIOP,
-	q ifaces.Query,
-	round int,
-) {
-	// Register the VerifierAction instead of using a closure
-	comp.RegisterVerifierAction(round, &QueryVerifierAction{
-		Q: q,
-	})
+func (ctx *StitchingContext) addExplicitlyVerifiedQuery(round int, q ifaces.Query) {
+	if ctx.ExplicitlyVerifiedQueries[round] == nil {
+		ctx.ExplicitlyVerifiedQueries[round] = new([]ifaces.Query)
+	}
+	*ctx.ExplicitlyVerifiedQueries[round] = append(*ctx.ExplicitlyVerifiedQueries[round], q)
+}
+
+// getBoundCancelledExpression computes the "bound cancelled expression" for the
+// constraint cs. Namely, the constraints expression is multiplied by terms of the
+// form X-\omega^k to cancel the expression at position "k" if required. If the
+// constraint uses the "noBoundCancel" feature, then the constraint expression is
+// directly returned.
+func getBoundCancelledExpression(originalExpr *symbolic.Expression, originalDomainSize int, scaling int, overrideOffsetRange *utils.Range) (factorTop, factorBottom *symbolic.Expression) {
+
+	var (
+		cancelRange = query.MinMaxOffsetOfExpression(originalExpr)
+		x           = variables.NewXVar()
+		omega, _    = fft.Generator(uint64(originalDomainSize * scaling))
+		// factorTop and factorBottom are used to store the terms of the form
+		// X-\omega^k. They are constructed, disabling simplifications and in
+		// a way that helps the evaluator to regroup shared subexpressions.
+		factorCount = 0
+	)
+
+	if overrideOffsetRange != nil {
+		cancelRange = *overrideOffsetRange
+	}
+
+	if cancelRange.Min < 0 {
+		// Cancels the expression on the range [0, -cancelRange.Min)
+		for i := 0; i < -cancelRange.Min; i++ {
+
+			factorCount++
+			var root field.Element
+			root.Exp(omega, big.NewInt(int64(i*scaling)))
+			term := symbolic.Sub(x, root)
+
+			if factorBottom == nil {
+				factorBottom = term
+			} else {
+				factorBottom = symbolic.MulNoSimplify(factorBottom, term)
+			}
+		}
+	}
+
+	if cancelRange.Max > 0 {
+		// Cancels the expression on the range (N-cancelRange.Max-1, N-1]
+		for i := 0; i < cancelRange.Max; i++ {
+
+			factorCount++
+			var root field.Element
+			point := originalDomainSize - i - 1
+			root.Exp(omega, big.NewInt(int64(point*scaling)))
+			term := symbolic.Sub(x, root)
+
+			if factorTop == nil {
+				factorTop = term
+			} else {
+				factorTop = symbolic.MulNoSimplify(factorTop, term)
+			}
+		}
+	}
+
+	return factorTop, factorBottom
 }

@@ -10,27 +10,23 @@ import (
 // Full bytes32 is a wrapper around bytes32 used to specifically represent
 // a bytes32 that may not fit on a single field element and require 2 words
 // to be hashed with MiMC.
-type FullBytes32 Bytes32
+type FullBytes32 [32]byte
 
 func (f FullBytes32) WriteTo(w io.Writer) (n int64, err error) {
-	buf := [32]byte{}
-	copy(buf[16:], f[16:])
-	w.Write(buf[:])
-	copy(buf[16:], f[:16])
-	w.Write(buf[:])
+	padded := LeftPadded(f[:])
+	w.Write(padded[:])
 	return 64, nil
 }
 
 func (f FullBytes32) Write1Word(w io.Writer) (n int64, err error) {
-	return Bytes32(f).WriteTo(w)
+	n_, err := w.Write(f[:])
+	return int64(n_), err
 }
 
 func (f *FullBytes32) ReadFrom(r io.Reader) (n int64, err error) {
-	buf0, buf1 := [32]byte{}, [32]byte{}
-	r.Read(buf0[:])
-	r.Read(buf1[:])
-	copy((*f)[16:], buf0[16:])
-	copy((*f)[:16], buf1[16:])
+	buf := [64]byte{}
+	r.Read(buf[:])
+	copy((*f)[:], RemovePadding(buf[:]))
 	return 64, nil
 }
 
@@ -40,11 +36,11 @@ func (f *FullBytes32) ReadPacked(r io.Reader) (n int64, err error) {
 }
 
 func (f FullBytes32) Hex() string {
-	return Bytes32(f).Hex()
+	return utils.HexEncodeToString(f[:])
 }
 
 func AsFullBytes32(b []byte) FullBytes32 {
-	return FullBytes32(AsBytes32(b))
+	return FullBytes32([32]byte(b))
 }
 
 // Creates a bytes32 from an hexstring. Panic if it fails. Mostly useful for
@@ -68,7 +64,6 @@ func (f FullBytes32) MarshalJSON() ([]byte, error) {
 // Unmarshal an ethereum address from JSON format. The expected format is an hex
 // string.
 func (f *FullBytes32) UnmarshalJSON(b []byte) error {
-
 	decoded, err := DecodeQuotedHexString(b)
 	if err != nil {
 		return fmt.Errorf(
@@ -101,4 +96,24 @@ func AsByteArrSlice[T ~[32]byte](s []T) [][32]byte {
 		res[i] = [32]byte(s[i])
 	}
 	return res
+}
+
+// LeftPadToFullBytes32 pads a bytes32 element into a Bytes32 by adding zeroes to
+// the left until the slice has 32 bytes
+func LeftPadToFullBytes32(b []byte) FullBytes32 {
+	if len(b) > 32 {
+		utils.Panic("Passed a string of %v element but the max is 32", len(b))
+	}
+	c := append(make([]byte, 32-len(b)), b...)
+	return FullBytes32(c)
+}
+
+// IsZero checks if the FullBytes32 is all zeros
+func (f FullBytes32) IsZero() bool {
+	for i := range f {
+		if f[i] != 0 {
+			return false
+		}
+	}
+	return true
 }

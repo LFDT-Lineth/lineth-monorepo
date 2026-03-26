@@ -59,9 +59,9 @@ type StackedColumn struct {
 	UnpaddedColumnFilter *column.Natural
 	// UnpaddedSize is the size of the non zero portions of the source columns.
 	UnpaddedSize int
-	// IsSourceColsArePadded indicates whether the source columns are padded or not.
+	// AreSourceColsPadded indicates whether the source columns are padded or not.
 	// We assume the padding size is the same for all source columns.
-	IsSourceColsArePadded bool
+	AreSourceColsPadded bool
 }
 
 // Options for the StackedColumn
@@ -76,7 +76,7 @@ func StackColumn(comp *wizard.CompiledIOP, srcs []ifaces.Column, opts ...StackCo
 		s = make([]smartvectors.SmartVector, 0, len(srcs))
 		// count is the total number of elements in the stacked column
 		count = 0
-		name  = fmt.Sprintf("STACKED_COLUMN_%v_%v", len(comp.Columns.AllKeys()), comp.SelfRecursionCount)
+		name  = fmt.Sprintf("STACKED_COLUMN_%v_%v", comp.Columns.NumEntriesTotal(), comp.SelfRecursionCount)
 		round = 0
 		// Variables needed if the number of rows of the
 		// stacked column is not a power of two.
@@ -129,7 +129,7 @@ func StackColumn(comp *wizard.CompiledIOP, srcs []ifaces.Column, opts ...StackCo
 		s_padded = s
 	}
 
-	col := comp.InsertCommit(round, ifaces.ColID(name), count_padded)
+	col := comp.InsertCommit(round, ifaces.ColID(name), count_padded, true)
 
 	comp.InsertFixedPermutation(
 		round,
@@ -148,12 +148,13 @@ func StackColumn(comp *wizard.CompiledIOP, srcs []ifaces.Column, opts ...StackCo
 	}
 
 	// Handle the padding of the source columns
-	if stkCol.IsSourceColsArePadded {
+	if stkCol.AreSourceColsPadded {
 
 		unpaddedColumn := comp.InsertCommit(
 			round,
 			ifaces.ColID(name+"_UNPADDED"),
 			utils.NextPowerOfTwo(stkCol.UnpaddedSize*len(stkCol.Source)),
+			true,
 		).(column.Natural)
 		stkCol.UnpaddedColumn = &unpaddedColumn
 
@@ -161,6 +162,7 @@ func StackColumn(comp *wizard.CompiledIOP, srcs []ifaces.Column, opts ...StackCo
 			round,
 			ifaces.ColID(name+"_COLUMN_FILTER"),
 			stkCol.Column.Size(),
+			true,
 		).(column.Natural)
 		stkCol.ColumnFilter = &columnFilter
 
@@ -168,6 +170,7 @@ func StackColumn(comp *wizard.CompiledIOP, srcs []ifaces.Column, opts ...StackCo
 			round,
 			ifaces.ColID(name+"_UNPADDED_COLUMN_FILTER"),
 			stkCol.UnpaddedColumn.Size(),
+			true,
 		).(column.Natural)
 		stkCol.UnpaddedColumnFilter = &unpaddedColumnFilter
 
@@ -187,9 +190,8 @@ func StackColumn(comp *wizard.CompiledIOP, srcs []ifaces.Column, opts ...StackCo
 		MustBeBinary(comp, *stkCol.ColumnFilter, round)
 		MustBeBinary(comp, *stkCol.UnpaddedColumnFilter, round)
 		return stkCol
-	} else {
-		return stkCol
 	}
+	return stkCol
 }
 
 // Assigns assigns the stack column
@@ -206,7 +208,7 @@ func (s *StackedColumn) Run(run *wizard.ProverRuntime) {
 		filterElemPadding      []field.Element
 	)
 
-	if s.IsSourceColsArePadded {
+	if s.AreSourceColsPadded {
 		// Only declare and use these variables if IsPadded is true
 		filterElemNonPadding = make([]field.Element, 0, s.UnpaddedSize)
 		filterElemPadding = make([]field.Element, 0, s.Source[0].Size()-s.UnpaddedSize)
@@ -224,9 +226,28 @@ func (s *StackedColumn) Run(run *wizard.ProverRuntime) {
 
 	// Assign the columns
 	for i := range s.Source {
-		source_assignment := s.Source[i].GetColAssignment(run).IntoRegVecSaveAlloc()
+		source_sv := s.Source[i].GetColAssignment(run)
+		// Handle both base field and extension smartvectors
+		var source_assignment []field.Element
+		if baseAssignment, err := source_sv.IntoRegVecSaveAllocBase(); err == nil {
+			// This is a base field smartvector
+			source_assignment = baseAssignment
+		} else {
+			// This is a field extension smartvector; use the first coordinate (B0.A0)
+			source_assignment_ext := source_sv.IntoRegVecSaveAllocExt()
+			source_assignment = make([]field.Element, len(source_assignment_ext))
+			for j := range source_assignment_ext {
+				source_assignment[j] = source_assignment_ext[j].B0.A0
+			}
+		}
 		column = append(column, source_assignment...)
-		if s.IsSourceColsArePadded {
+		if s.AreSourceColsPadded {
+			if len(source_assignment) < s.UnpaddedSize {
+				panic(fmt.Sprintf(
+					"StackedColumn.Run: source column %d has length %d, which is less than UnpaddedSize %d",
+					i, len(source_assignment), s.UnpaddedSize,
+				))
+			}
 			source_assignment_unpadded := source_assignment[:s.UnpaddedSize]
 			unpadded_column = append(unpadded_column, source_assignment_unpadded...)
 			column_filter = append(column_filter, filterElemNonPadding...)
@@ -235,7 +256,7 @@ func (s *StackedColumn) Run(run *wizard.ProverRuntime) {
 		}
 	}
 	run.AssignColumn(s.Column.ID, smartvectors.RightZeroPadded(column, s.Column.Size()))
-	if s.IsSourceColsArePadded {
+	if s.AreSourceColsPadded {
 		run.AssignColumn(s.UnpaddedColumn.ID, smartvectors.RightZeroPadded(unpadded_column, s.UnpaddedColumn.Size()))
 		run.AssignColumn(s.ColumnFilter.ID, smartvectors.RightZeroPadded(column_filter, s.Column.Size()))
 		run.AssignColumn(s.UnpaddedColumnFilter.ID, smartvectors.RightZeroPadded(unpadded_column_filter, s.UnpaddedColumnFilter.Size()))
@@ -252,10 +273,10 @@ func HandleSourcePaddedColumns(unpaddedSourceColSize int) StackColumnOp {
 		}
 		// If the unpaddedSourceColSize is already a power of two, we dont need anything special
 		if utils.IsPowerOfTwo(unpaddedSourceColSize) {
-			stkCol.IsSourceColsArePadded = false
+			stkCol.AreSourceColsPadded = false
 		} else {
 			stkCol.UnpaddedSize = unpaddedSourceColSize
-			stkCol.IsSourceColsArePadded = true
+			stkCol.AreSourceColsPadded = true
 		}
 	}
 }

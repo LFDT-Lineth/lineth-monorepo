@@ -6,6 +6,7 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
 	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
@@ -39,6 +40,10 @@ type ModuleSegmentationBlueprint struct {
 	// ReceivedValuesGlobalPosition stores the list of the position of the
 	// [ModuleGL.ReceivedValuesGlobalAccs] for each received value.
 	ReceivedValuesGlobalAccsPositions []int
+	// ReceivedValuesGlobalAccsIsBase stores, for each received value, whether
+	// the corresponding sent value is a base field element (true) or a field
+	// extension element (false). This mirrors [ModuleGL.SentValuesGlobal[i].IsBase()].
+	ReceivedValuesGlobalAccsIsBase []bool
 	// NextN0SelectorRoots stores the list of the selector columns ID for the
 	// Horner queries.
 	NextN0SelectorRoots [][]ifaces.ColID
@@ -54,6 +59,9 @@ type ModuleSegmentationBlueprint struct {
 	// LPPColumnSets stores the list of the columns that are used for the
 	// LPP segments.
 	LPPColumnSets []ifaces.ColID
+	// SplittedPrecomps stores the list of the precomps that are used and bear
+	// the "CompletelyPeriodic" tag.
+	SplittedPrecomps map[ifaces.ColID]smartvectors.SmartVector
 }
 
 // ModuleWitnessGL is a structure collecting the witness of a module. And
@@ -70,11 +78,12 @@ type ModuleWitnessGL struct {
 	// Columns maps the column id to their witness values
 	Columns map[ifaces.ColID]smartvectors.SmartVector
 	// ReceivedValuesGlobal stores the received values (for the global
-	// constraints) of the current segment.
-	ReceivedValuesGlobal []field.Element
+	// constraints) of the current segment. Each entry is a field extension
+	// element; for base-field values the upper three coordinates are zero.
+	ReceivedValuesGlobal []fext.Element
 	// VkMerkleRoot is the merkle root of a merkle tree storing the verification
 	// key.
-	VkMerkleRoot field.Element
+	VkMerkleRoot field.Octuplet
 }
 
 // ModuleWitnessLPP is a structure collecting the witness of a module. The
@@ -92,7 +101,7 @@ type ModuleWitnessLPP struct {
 	SegmentModuleIndex int
 	// InitialFiatShamirState is the initial FiatShamir state to set at
 	// round 1.
-	InitialFiatShamirState field.Element
+	InitialFiatShamirState field.Octuplet
 	// N0 values are the parameters to the Horner queries in the same order
 	// as in the [FilteredModuleInputs.HornerArgs]
 	N0Values []int
@@ -100,7 +109,7 @@ type ModuleWitnessLPP struct {
 	Columns map[ifaces.ColID]smartvectors.SmartVector
 	// VkMerkleRoot is the merkle root of a merkle tree storing the verification
 	// key.
-	VkMerkleRoot field.Element
+	VkMerkleRoot field.Octuplet
 }
 
 // SegmentRuntime scans a [wizard.ProverRuntime] and returns a list of
@@ -110,7 +119,7 @@ func SegmentRuntime(
 	runtime *wizard.ProverRuntime,
 	disc *StandardModuleDiscoverer,
 	blueprintGLs, blueprintLPPs []ModuleSegmentationBlueprint,
-	vkMerkleRoot field.Element,
+	vkMerkleRoot field.Octuplet,
 ) (
 	witnessesGL []*ModuleWitnessGL,
 	witnessesLPP []*ModuleWitnessLPP,
@@ -171,14 +180,14 @@ func segmentModuleGL(
 	disc *StandardModuleDiscoverer,
 	blueprintGL *ModuleSegmentationBlueprint,
 	totalNbSegment []int,
-	vkMerkleRoot field.Element,
+	vkMerkleRoot field.Octuplet,
 ) (witnessesGL []*ModuleWitnessGL) {
 
 	var (
 		moduleName           = blueprintGL.ModuleName
 		cols                 = runtime.Spec.Columns.AllKeys()
 		nbSegmentModule      = totalNbSegment[blueprintGL.ModuleIndex]
-		receivedValuesGlobal = make([]field.Element, len(blueprintGL.ReceivedValuesGlobalAccsRoots))
+		receivedValuesGlobal = make([]fext.Element, len(blueprintGL.ReceivedValuesGlobalAccsRoots))
 	)
 
 	witnessesGL = make([]*ModuleWitnessGL, nbSegmentModule)
@@ -220,7 +229,7 @@ func segmentModuleLPP(
 	disc *StandardModuleDiscoverer,
 	moduleLPP *ModuleSegmentationBlueprint,
 	totalNbSegment []int,
-	vkMerkleProof field.Element,
+	vkMerkleProof field.Octuplet,
 ) (witnessesLPP []*ModuleWitnessLPP) {
 
 	var (
@@ -253,8 +262,8 @@ func segmentModuleLPP(
 
 		for _, col := range moduleLPP.LPPColumnSets {
 			col := runtime.Spec.Columns.GetHandle(col)
-			segment := SegmentOfColumn(runtime, disc, col, segment, nbSegmentModule)
-			moduleWitnessLPP.Columns[col.GetColID()] = segment
+			seg := SegmentOfColumn(runtime, disc, col, segment, nbSegmentModule)
+			moduleWitnessLPP.Columns[col.GetColID()] = seg
 			witnessCols = append(witnessCols, col.GetColID())
 		}
 
@@ -379,8 +388,13 @@ func SegmentOfColumn(runtime *wizard.ProverRuntime, disc *StandardModuleDiscover
 
 		// At this point, we are sure that the correct padding value is the
 		// first value.
-		padding := assignment.Get(0)
-		return smartvectors.NewConstant(padding, newSize)
+		padding := assignment.GetExt(0)
+		if fext.IsBase(&padding) {
+			paddingBase, _ := fext.GetBase(&padding)
+			return smartvectors.NewConstant(paddingBase, newSize)
+		} else {
+			return smartvectors.NewConstantExt(padding, newSize)
+		}
 
 	case start >= col.Size() && end > col.Size():
 		// Otherwise, the padding technique is completely fine.
@@ -397,15 +411,27 @@ func SegmentOfColumn(runtime *wizard.ProverRuntime, disc *StandardModuleDiscover
 
 		// At this point, we are sure that the correct padding value is the
 		// last value (otherwise, we would have no way of guessing it).
-		padding := assignment.Get(col.Size() - 1)
-		return smartvectors.NewConstant(padding, newSize)
+		padding := assignment.GetExt(col.Size() - 1)
+		if fext.IsBase(&padding) {
+			paddingBase, _ := fext.GetBase(&padding)
+			return smartvectors.NewConstant(paddingBase, newSize)
+		} else {
+			return smartvectors.NewConstantExt(padding, newSize)
+		}
 
 	case start == 0 && end > col.Size():
 
 		if isZeroPadded {
-			return smartvectors.RightPadded(
-				assignment.IntoRegVecSaveAlloc(),
-				field.Zero(),
+			if smartvectors.IsBase(assignment) {
+				return smartvectors.RightPadded(
+					assignment.IntoRegVecSaveAlloc(),
+					field.Zero(),
+					newSize,
+				)
+			}
+			return smartvectors.RightPaddedExt(
+				assignment.IntoRegVecSaveAllocExt(),
+				fext.Zero(),
 				newSize,
 			)
 		}
@@ -415,18 +441,33 @@ func SegmentOfColumn(runtime *wizard.ProverRuntime, disc *StandardModuleDiscover
 		// 	"Going to extend the column on the right by repeating the last value but this might fail. You may want to increase the bootstrapper size for this column so that it is always larger than the new size",
 		// 	col.GetColID(), col.Size(), start, end, startSeg, stopSeg)
 
-		return smartvectors.RightPadded(
-			assignment.IntoRegVecSaveAlloc(),
-			assignment.Get(col.Size()-1),
+		if smartvectors.IsBase(assignment) {
+			return smartvectors.RightPadded(
+				assignment.IntoRegVecSaveAlloc(),
+				assignment.Get(col.Size()-1),
+				newSize,
+			)
+		}
+		paddingExt := assignment.GetExt(col.Size() - 1)
+		return smartvectors.RightPaddedExt(
+			assignment.IntoRegVecSaveAllocExt(),
+			paddingExt,
 			newSize,
 		)
 
 	case start < 0 && end == col.Size():
 
 		if isZeroPadded {
-			return smartvectors.LeftPadded(
-				assignment.IntoRegVecSaveAlloc(),
-				field.Zero(),
+			if smartvectors.IsBase(assignment) {
+				return smartvectors.LeftPadded(
+					assignment.IntoRegVecSaveAlloc(),
+					field.Zero(),
+					newSize,
+				)
+			}
+			return smartvectors.LeftPaddedExt(
+				assignment.IntoRegVecSaveAllocExt(),
+				fext.Zero(),
 				newSize,
 			)
 		}
@@ -436,9 +477,17 @@ func SegmentOfColumn(runtime *wizard.ProverRuntime, disc *StandardModuleDiscover
 		// 	"Going to extend the column on the left by repeating the first value but this might fail. You may want to increase the bootstrapper size for this column so that it is always larger than the new size",
 		// 	col.GetColID(), col.Size(), start, end, startSeg, stopSeg)
 
-		return smartvectors.LeftPadded(
-			assignment.IntoRegVecSaveAlloc(),
-			assignment.Get(0),
+		if smartvectors.IsBase(assignment) {
+			return smartvectors.LeftPadded(
+				assignment.IntoRegVecSaveAlloc(),
+				assignment.Get(0),
+				newSize,
+			)
+		}
+		paddingExt := assignment.GetExt(0)
+		return smartvectors.LeftPaddedExt(
+			assignment.IntoRegVecSaveAllocExt(),
+			paddingExt,
 			newSize,
 		)
 
@@ -459,6 +508,7 @@ func (moduleGL *ModuleGL) Blueprint() ModuleSegmentationBlueprint {
 		ModuleName:                        moduleGL.DefinitionInput.ModuleName,
 		ReceivedValuesGlobalAccsRoots:     make([]ifaces.ColID, len(moduleGL.SentValuesGlobal)),
 		ReceivedValuesGlobalAccsPositions: make([]int, len(moduleGL.SentValuesGlobal)),
+		ReceivedValuesGlobalAccsIsBase:    make([]bool, len(moduleGL.SentValuesGlobal)),
 	}
 
 	for i, loc := range moduleGL.SentValuesGlobal {
@@ -471,6 +521,7 @@ func (moduleGL *ModuleGL) Blueprint() ModuleSegmentationBlueprint {
 
 		blueprintGL.ReceivedValuesGlobalAccsRoots[i] = colName
 		blueprintGL.ReceivedValuesGlobalAccsPositions[i] = pos
+		blueprintGL.ReceivedValuesGlobalAccsIsBase[i] = loc.IsBase()
 	}
 
 	return blueprintGL
@@ -497,6 +548,7 @@ func (moduleLPP *ModuleLPP) Blueprint() ModuleSegmentationBlueprint {
 		NextN0SelectorConsts:     make([][]field.Element, numHornerPart),
 		NextN0SelectorConstSizes: make([][]int, numHornerPart),
 		LPPColumnSets:            []ifaces.ColID{},
+		SplittedPrecomps:         make(map[ifaces.ColID]smartvectors.SmartVector),
 	}
 
 	res.LPPColumnSets = make([]ifaces.ColID, len(moduleLPP.DefinitionInput.ColumnsLPP))
@@ -520,11 +572,11 @@ func (moduleLPP *ModuleLPP) Blueprint() ModuleSegmentationBlueprint {
 
 			if constCol, isConstCol := selCol.(verifiercol.ConstCol); isConstCol {
 
-				if !constCol.F.IsZero() || constCol.F.IsOne() {
+				if !constCol.F.IsZero() && !constCol.F.IsOne() {
 					utils.Panic("the selector column has non-binary values: %v", constCol.F.String())
 				}
 
-				res.NextN0SelectorConsts[i][k] = constCol.F
+				res.NextN0SelectorConsts[i][k] = constCol.F.Base
 				res.NextN0SelectorIsConsts[i][k] = true
 				res.NextN0SelectorConstSizes[i][k] = constCol.Size()
 
@@ -533,7 +585,15 @@ func (moduleLPP *ModuleLPP) Blueprint() ModuleSegmentationBlueprint {
 
 			// Expectedly, at this point. The column must be a natural column. We can't support
 			// shifted selector columns.
-			_ = selCol.(column.Natural)
+			nat, ok := selCol.(column.Natural)
+			if !ok {
+				utils.Panic("this is not a column.Natural: %v (%T)", selCol, selCol)
+			}
+
+			if nat.Status().IsOffline() {
+				val := moduleLPP.Wiop.Precomputed.MustGet(nat.GetColID())
+				res.SplittedPrecomps[nat.GetColID()] = val
+			}
 		}
 	}
 
@@ -569,11 +629,20 @@ func (mw *ModuleWitnessLPP) NextN0s(blueprintLPP *ModuleSegmentationBlueprint) [
 					continue
 				}
 
-				utils.Panic("the selector column has non-zero values: %v", selColConst.String())
+				utils.Panic("the selector column has non-binary values: %v", selColConst.String())
 			}
 
-			selSV, ok := mw.Columns[selColID]
-			if !ok {
+			var selSV smartvectors.SmartVector
+
+			if data, ok := blueprintLPP.SplittedPrecomps[selColID]; ok {
+				selSV = data
+			}
+
+			if data, ok := mw.Columns[selColID]; ok {
+				selSV = data
+			}
+
+			if selSV == nil {
 				utils.Panic("selector: %v is missing from witness columns for module: %v index: %v, segment-index: %v", selColID, mw.ModuleName, mw.ModuleIndex, mw.SegmentModuleIndex)
 			}
 
@@ -592,9 +661,9 @@ func (mw *ModuleWitnessLPP) NextN0s(blueprintLPP *ModuleSegmentationBlueprint) [
 
 // NextReceivedValuesGlobal returns the next value of ReceivedValuesGlobal, from
 // the witness of the current module.
-func (mw *ModuleWitnessGL) NextReceivedValuesGlobal(blueprintGL *ModuleSegmentationBlueprint) []field.Element {
+func (mw *ModuleWitnessGL) NextReceivedValuesGlobal(blueprintGL *ModuleSegmentationBlueprint) []fext.Element {
 
-	newReceivedValuesGlobal := make([]field.Element, len(mw.ReceivedValuesGlobal))
+	newReceivedValuesGlobal := make([]fext.Element, len(mw.ReceivedValuesGlobal))
 
 	for i := range blueprintGL.ReceivedValuesGlobalAccsRoots {
 
@@ -602,6 +671,7 @@ func (mw *ModuleWitnessGL) NextReceivedValuesGlobal(blueprintGL *ModuleSegmentat
 			rootName        = blueprintGL.ReceivedValuesGlobalAccsRoots[i]
 			loc             = blueprintGL.ReceivedValuesGlobalAccsPositions[i]
 			smartvec, found = mw.Columns[rootName]
+			isBase          = blueprintGL.ReceivedValuesGlobalAccsIsBase[i]
 		)
 
 		if !found {
@@ -609,7 +679,21 @@ func (mw *ModuleWitnessGL) NextReceivedValuesGlobal(blueprintGL *ModuleSegmentat
 		}
 
 		loc = utils.PositiveMod(loc, smartvec.Len())
-		newReceivedValuesGlobal[i] = smartvec.Get(loc)
+
+		if isBase {
+			// Hard assertion: the smartvec must yield a base field value at
+			// this position. If GetBase returns an error the column is
+			// extension-typed, which would be a programming error.
+			extVal := smartvec.GetExt(loc)
+			baseVal, err := fext.GetBase(&extVal)
+			if err != nil {
+				fmt.Printf("ReceivedValuesGlobalAccsIsBase=%v\n", blueprintGL.ReceivedValuesGlobalAccsIsBase)
+				utils.Panic("sent value at index %d is declared base-field but column %v returned an extension element at position %d: %v, value=%v", i, rootName, loc, err, extVal.String())
+			}
+			newReceivedValuesGlobal[i] = fext.Lift(baseVal)
+		} else {
+			newReceivedValuesGlobal[i] = smartvec.GetExt(loc)
+		}
 	}
 
 	return newReceivedValuesGlobal

@@ -22,9 +22,9 @@ func makeTestCasePIP() (
 	define = func(build *wizard.Builder) {
 		comp := build.CompiledIOP
 		// commit to the colA,colB,partition,ipTracker
-		colA = comp.InsertCommit(round, ifaces.ColIDf("ColA"), size)
-		colB = comp.InsertCommit(round, ifaces.ColIDf("ColB"), size)
-		partition = comp.InsertCommit(round, ifaces.ColIDf("Partition"), size)
+		colA = comp.InsertCommit(round, ifaces.ColIDf("ColA"), size, true)
+		colB = comp.InsertCommit(round, ifaces.ColIDf("ColB"), size, true)
+		partition = comp.InsertCommit(round, ifaces.ColIDf("Partition"), size, true)
 		InsertPartitionedIP(comp, "PIP", colA, colB, partition)
 
 	}

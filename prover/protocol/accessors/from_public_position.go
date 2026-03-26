@@ -3,6 +3,9 @@ package accessors
 import (
 	"fmt"
 
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
+
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
@@ -14,7 +17,7 @@ import (
 // asFromAccessors is an ad-hoc interface that serves to identify [verifiercol.FromAccessors]
 // without creating a cyclic dependency.
 type asFromAccessors interface {
-	GetFromAccessorsFields() (accs []ifaces.Accessor, padding field.Element)
+	GetFromAccessorsFields() (accs []ifaces.Accessor, padding fext.Element)
 }
 
 // FromPublicColumn refers to a position of a public column
@@ -23,6 +26,26 @@ type FromPublicColumn struct {
 	Col column.Natural
 	// Pos indexes the pointed position in the coin.
 	Pos int
+}
+
+func (c *FromPublicColumn) IsBase() bool {
+	return c.Col.IsBase()
+}
+
+func (c *FromPublicColumn) GetValBase(run ifaces.Runtime) (field.Element, error) {
+	return run.GetColumnAtBase(c.Col.ID, c.Pos)
+}
+
+func (c *FromPublicColumn) GetValExt(run ifaces.Runtime) fext.Element {
+	return run.GetColumnAtExt(c.Col.ID, c.Pos)
+}
+
+func (c *FromPublicColumn) GetFrontendVariableBase(_ frontend.API, circ ifaces.GnarkRuntime) (koalagnark.Element, error) {
+	return circ.GetColumnAtBase(c.Col.ID, c.Pos)
+}
+
+func (c *FromPublicColumn) GetFrontendVariableExt(_ frontend.API, circ ifaces.GnarkRuntime) koalagnark.Ext {
+	return circ.GetColumnAtExt(c.Col.ID, c.Pos)
 }
 
 // NewFromPublicColumn constructs an [ifaces.Accessor] refering to the row #pos
@@ -39,7 +62,7 @@ func NewFromPublicColumn(col ifaces.Column, pos int) ifaces.Accessor {
 		accs, pad := faccs.GetFromAccessorsFields()
 
 		if pos >= len(accs) {
-			return NewConstant(pad)
+			return NewConstantExt(pad)
 		}
 		return accs[pos]
 	}
@@ -50,7 +73,7 @@ func NewFromPublicColumn(col ifaces.Column, pos int) ifaces.Accessor {
 	}
 
 	if !nat.Status().IsPublic() {
-		panic("expected a public column")
+		utils.Panic("expected a public column: %q", nat.GetColID())
 	}
 	if nat.Size() <= pos {
 		utils.Panic("the column has size %v, but requested position %v", nat.Size(), pos)
@@ -77,7 +100,7 @@ func (c *FromPublicColumn) GetVal(run ifaces.Runtime) field.Element {
 }
 
 // GetFrontendVariable implements [ifaces.Accessor]
-func (c *FromPublicColumn) GetFrontendVariable(_ frontend.API, circ ifaces.GnarkRuntime) frontend.Variable {
+func (c *FromPublicColumn) GetFrontendVariable(_ frontend.API, circ ifaces.GnarkRuntime) koalagnark.Element {
 	return circ.GetColumnAt(c.Col.ID, c.Pos)
 }
 

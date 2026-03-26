@@ -15,6 +15,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils/collection"
 	"github.com/consensys/linea-monorepo/prover/utils/exit"
 	"github.com/consensys/linea-monorepo/prover/utils/gnarkutil"
 	"golang.org/x/net/context"
@@ -288,9 +289,9 @@ func DefineAlignment(comp *wizard.CompiledIOP, toAlign *CircuitAlignmentInput) *
 
 	var (
 		totalColumnSize = utils.NextPowerOfTwo(nbPublicInputs) * utils.NextPowerOfTwo(toAlign.NbCircuitInstances)
-		isActive        = comp.InsertCommit(toAlign.Round, ifaces.ColIDf("%v_IS_ACTIVE", toAlign.Name), totalColumnSize)
-		actualMask      = dedicated.NewRepeatedPattern(comp, toAlign.Round, getCircuitMaskValuePattern(nbPublicInputs), isActive, "REPEATED_PATTERN_"+toAlign.Name)
-		alignedData     = comp.InsertCommit(toAlign.Round, ifaces.ColIDf("%v_PI", toAlign.Name), totalColumnSize)
+		isActive        = comp.InsertCommit(toAlign.Round, ifaces.ColIDf("%v_IS_ACTIVE", toAlign.Name), totalColumnSize, true)
+		actualMask      = dedicated.NewRepeatedPattern(comp, toAlign.Round, getCircuitMaskValuePattern(nbPublicInputs), isActive, "PLONK_"+toAlign.Name)
+		alignedData     = comp.InsertCommit(toAlign.Round, ifaces.ColIDf("%v_PI", toAlign.Name), totalColumnSize, true)
 
 		// This has to be the first thing we declare as this runs [frontend.Compile]
 		// internally.
@@ -324,7 +325,14 @@ func DefineAlignment(comp *wizard.CompiledIOP, toAlign *CircuitAlignmentInput) *
 // csProjection ensures the data in the [Alignment.Data] column is the same as
 // the data provided by the [Alignment.CircuitInput].
 func (a *Alignment) csProjection(comp *wizard.CompiledIOP) {
-	comp.InsertProjection(ifaces.QueryIDf("%v_PROJECTION", a.Name), query.ProjectionInput{ColumnA: []ifaces.Column{a.DataToCircuit}, ColumnB: []ifaces.Column{a.CircuitInput}, FilterA: a.DataToCircuitMask, FilterB: a.ActualCircuitInputMask.Natural})
+	comp.InsertProjection(
+		ifaces.QueryIDf("%v_PROJECTION", a.Name),
+		query.ProjectionInput{
+			ColumnA: []ifaces.Column{a.DataToCircuit},
+			ColumnB: []ifaces.Column{a.CircuitInput},
+			FilterA: a.DataToCircuitMask,
+			FilterB: a.ActualCircuitInputMask.Natural,
+		})
 }
 
 // Assign assigns the colums in the Alignment structure at runtime.
@@ -389,60 +397,60 @@ func (a *Alignment) assignCircData(run *wizard.ProverRuntime) {
 		nbInput           = a.PlonkQuery.GetNbPublicInputs()
 		nbInputsPadded    = utils.NextPowerOfTwo(nbInput)
 		maxNbInstances    = a.PlonkQuery.GetMaxNbCircuitInstances()
+		maxNbData         = maxNbInstances * nbInput
+		circDataSize      = maxNbInstances * nbInputsPadded
 		res               = make([]field.Element, nbInputsPadded*maxNbInstances)
-		dataChan          = make(chan field.Element, nbInputsPadded*maxNbInstances)
-		nbActualData      = 0
+		dataFifo          = collection.NewFifo[field.Element]()
 	)
 
 	for i := range unalignedInputs {
-
 		if unalignedSelector[i].IsOne() {
-
-			if nbActualData >= nbInputsPadded*maxNbInstances {
-				exit.OnLimitOverflow(
-					nbInputsPadded*maxNbInstances,
-					nbActualData+1,
-					fmt.Errorf("max number of instances exceeded for circuit: %v", a.Name),
-				)
-			}
-
-			dataChan <- unalignedInputs[i]
-			nbActualData++
+			dataFifo.Push(unalignedInputs[i])
 		}
 	}
 
 	var (
+		nbActualData       = dataFifo.Len()
 		lastEffInstance    = nbActualData / nbInput
 		nbDataLastInstance = nbActualData % nbInput
 		inputFiller        = retrieveInputFiler(a.InputFillerKey)
 	)
 
+	if nbActualData > maxNbData {
+		exit.OnLimitOverflow(
+			maxNbData, nbActualData,
+			fmt.Errorf(
+				"too many actual data to align: %v, max=%v, nbData/circ=%v, maxNbCirc=%v, name=%v",
+				nbActualData, maxNbData, nbInput, maxNbInstances, a.Name,
+			),
+		)
+	}
+
 	if nbDataLastInstance > 0 {
 		for i := nbDataLastInstance; i < nbInput; i++ {
-			dataChan <- inputFiller(lastEffInstance, i)
+			x := inputFiller(lastEffInstance, i)
+			dataFifo.Push(x)
 		}
 	}
 
-	close(dataChan)
+	for i := 0; i < circDataSize; i += nbInputsPadded {
 
-assignmentLoop:
-	for i := 0; i < maxNbInstances*nbInputsPadded; i += nbInputsPadded {
+		if dataFifo.IsEmpty() {
+			break
+		}
+
 		for k := 0; k < nbInput; k++ {
-			x, ok := <-dataChan
+			x, ok := dataFifo.TryPop()
 
-			// if the channel is closed on the first position, then
-			// we stop right here and do not start a new instance.
-			if !ok && k == 0 {
-				res = res[:i+k]
-				break assignmentLoop
+			if !ok {
+				utils.Panic("the assignment loop breaks in the middle of an instance")
 			}
 
 			res[i+k] = x
 		}
 	}
 
-	run.AssignColumn(a.CircuitInput.GetColID(), smartvectors.RightZeroPadded(res, nbInputsPadded*maxNbInstances))
-
+	run.AssignColumn(a.CircuitInput.GetColID(), smartvectors.RightZeroPadded(res, circDataSize))
 }
 
 // assignCircMaskOpenings assigns the openings queries over the actualCircMaskAssignment

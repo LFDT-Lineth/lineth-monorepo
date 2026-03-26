@@ -1,0 +1,5 @@
+Serialization Size Profile
+==========================
+
+[serde_test.withPointer]: 24 B (100.0%)
+    └─ Val [serde_test.inner]: 16 B (66.7%)

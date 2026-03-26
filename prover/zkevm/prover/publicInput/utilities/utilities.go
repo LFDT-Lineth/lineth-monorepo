@@ -9,6 +9,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
+	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/csvtraces"
 	"github.com/ethereum/go-ethereum/core/vm"
 )
@@ -19,6 +20,7 @@ func CreateCol(name, subName string, size int, comp *wizard.CompiledIOP) ifaces.
 		0,
 		ifaces.ColIDf("%s_%s", name, subName),
 		size,
+		true,
 	)
 }
 
@@ -30,13 +32,25 @@ func Ternary(cond, if1, if0 any) *sym.Expression {
 	)
 }
 
-// GetTimestampField returns a field element that contains the hardcoded INST value for a timestamp
+// GetTimestampField returns a field element that contains the hardcoded INST
+// value for a timestamp
 func GetTimestampField() field.Element {
-	var timestampField field.Element
-	stampCode := byte(vm.TIMESTAMP)
-	hardcoded := [...]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, stampCode}
-	timestampField.SetBytes(hardcoded[:])
-	return timestampField
+	timestampCode := uint64(vm.TIMESTAMP)
+	return field.NewElement(timestampCode)
+}
+
+// GetCoinBaseField returns a field element containing the EVM opcode value for
+// the instruction COINBASE
+func GetCoinBaseField() field.Element {
+	coinBaseCode := uint64(vm.COINBASE)
+	return field.NewElement(coinBaseCode)
+}
+
+// GetBaseFeeField returns a field element containing the EVM opcode value for
+// the instruction BASEFEE
+func GetBaseFeeField() field.Element {
+	baseFeeCode := uint64(vm.BASEFEE)
+	return field.NewElement(baseFeeCode)
 }
 
 // InitializeCsv is used to initialize a CsvTrace based on a path
@@ -90,4 +104,34 @@ func CheckLastELemConsistency(comp *wizard.CompiledIOP, isActive ifaces.Column, 
 			),
 		),
 	)
+}
+
+// Multi16bitLimbAdd adds a uint64 to a multi-limb number represented as a slice of 16-bit field.Element.
+func Multi16bitLimbAdd(a []field.Element, carry uint64) []field.Element {
+	if len(a) == 0 {
+		utils.Panic("Multi16bitLimbAdd: zero limbs")
+	}
+
+	const (
+		bits = 16
+		mask = (1 << bits) - 1
+	)
+
+	res := make([]field.Element, len(a))
+	for i := len(a) - 1; i >= 0; i-- {
+		v := a[i].Uint64()
+		if v > mask {
+			utils.Panic("Multi16bitLimbAdd: a[%d]=%d exceeds %d bits", i, v, bits)
+		}
+
+		sum := v + carry
+		res[i].SetUint64(sum & mask)
+		carry = sum >> bits
+	}
+
+	if carry != 0 {
+		utils.Panic("Multi16bitLimbAdd: overflow adding %d to %v", carry, a)
+	}
+
+	return res
 }

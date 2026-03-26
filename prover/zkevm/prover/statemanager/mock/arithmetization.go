@@ -4,6 +4,8 @@ import (
 	"math/big"
 	"sort"
 
+	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
+
 	eth "github.com/consensys/linea-monorepo/prover/backend/execution/statemanager"
 	"github.com/consensys/linea-monorepo/prover/crypto/keccak"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
@@ -17,18 +19,19 @@ import (
 type StateManagerVectors struct {
 	// account data
 	Address                                              []eth.Address // helper column
-	AddressHI, AddressLO                                 []field.Element
-	Nonce, NonceNew                                      []field.Element
-	MimcCodeHash, MimcCodeHashNew                        []field.Element
-	CodeHashHI, CodeHashLO, CodeHashHINew, CodeHashLONew []field.Element
-	CodeSizeOld, CodeSizeNew                             []field.Element
-	BalanceOld, BalanceNew                               []field.Element
+	AddressHI                                            [][common.NbLimbU32]field.Element
+	AddressLO                                            [][common.NbLimbU128]field.Element
+	Nonce, NonceNew                                      [][common.NbLimbU64]field.Element
+	MimcCodeHash, MimcCodeHashNew                        [][common.NbLimbU256]field.Element
+	CodeHashHI, CodeHashLO, CodeHashHINew, CodeHashLONew [][common.NbLimbU128]field.Element
+	CodeSizeOld, CodeSizeNew                             [][common.NbLimbU64]field.Element
+	BalanceOld, BalanceNew                               [][common.NbLimbU256]field.Element
 	// storage data
-	KeyHI, KeyLO                                       []field.Element
-	ValueHICurr, ValueLOCurr, ValueHINext, ValueLONext []field.Element
+	KeyHI, KeyLO                                       [][common.NbLimbU128]field.Element
+	ValueHICurr, ValueLOCurr, ValueHINext, ValueLONext [][common.NbLimbU128]field.Element
 	// helper numbers
-	DeploymentNumber, DeploymentNumberInf []field.Element
-	BlockNumber                           []field.Element
+	DeploymentNumber, DeploymentNumberInf [][common.NbLimbU32]field.Element
+	BlockNumber                           [][common.NbLimbU64]field.Element
 	// helper columns
 	Exists, ExistsNew []field.Element
 	PeekAtAccount     []field.Element
@@ -39,7 +42,7 @@ type StateManagerVectors struct {
 	// block markers
 	FirstAOCBlock, LastAOCBlock            []field.Element
 	FirstKOCBlock, LastKOCBlock            []field.Element
-	MinDeploymentBlock, MaxDeploymentBlock []field.Element
+	MinDeploymentBlock, MaxDeploymentBlock [][common.NbLimbU64]field.Element
 }
 
 func (smv *StateManagerVectors) Size() int {
@@ -51,31 +54,31 @@ func NewStateManagerVectors() *StateManagerVectors {
 	return &StateManagerVectors{
 		// account info
 		Address:         []eth.Address{},
-		AddressHI:       []field.Element{},
-		AddressLO:       []field.Element{},
-		Nonce:           []field.Element{},
-		NonceNew:        []field.Element{},
-		MimcCodeHash:    []field.Element{},
-		MimcCodeHashNew: []field.Element{},
-		CodeHashHI:      []field.Element{},
-		CodeHashLO:      []field.Element{},
-		CodeHashHINew:   []field.Element{},
-		CodeHashLONew:   []field.Element{},
-		CodeSizeOld:     []field.Element{},
-		CodeSizeNew:     []field.Element{},
-		BalanceOld:      []field.Element{},
-		BalanceNew:      []field.Element{},
+		AddressHI:       [][common.NbLimbU32]field.Element{},
+		AddressLO:       [][common.NbLimbU128]field.Element{},
+		Nonce:           [][common.NbLimbU64]field.Element{},
+		NonceNew:        [][common.NbLimbU64]field.Element{},
+		MimcCodeHash:    [][common.NbLimbU256]field.Element{},
+		MimcCodeHashNew: [][common.NbLimbU256]field.Element{},
+		CodeHashHI:      [][common.NbLimbU128]field.Element{},
+		CodeHashLO:      [][common.NbLimbU128]field.Element{},
+		CodeHashHINew:   [][common.NbLimbU128]field.Element{},
+		CodeHashLONew:   [][common.NbLimbU128]field.Element{},
+		CodeSizeOld:     [][common.NbLimbU64]field.Element{},
+		CodeSizeNew:     [][common.NbLimbU64]field.Element{},
+		BalanceOld:      [][common.NbLimbU256]field.Element{},
+		BalanceNew:      [][common.NbLimbU256]field.Element{},
 		// storage data
-		KeyHI:       []field.Element{},
-		KeyLO:       []field.Element{},
-		ValueHICurr: []field.Element{},
-		ValueLOCurr: []field.Element{},
-		ValueHINext: []field.Element{},
-		ValueLONext: []field.Element{},
+		KeyHI:       [][common.NbLimbU128]field.Element{},
+		KeyLO:       [][common.NbLimbU128]field.Element{},
+		ValueHICurr: [][common.NbLimbU128]field.Element{},
+		ValueLOCurr: [][common.NbLimbU128]field.Element{},
+		ValueHINext: [][common.NbLimbU128]field.Element{},
+		ValueLONext: [][common.NbLimbU128]field.Element{},
 		// helper numbers
-		DeploymentNumber:    []field.Element{},
-		DeploymentNumberInf: []field.Element{},
-		BlockNumber:         []field.Element{},
+		DeploymentNumber:    [][common.NbLimbU32]field.Element{},
+		DeploymentNumberInf: [][common.NbLimbU32]field.Element{},
+		BlockNumber:         [][common.NbLimbU64]field.Element{},
 		// helper columns
 		Exists:        []field.Element{},
 		ExistsNew:     []field.Element{},
@@ -91,8 +94,8 @@ func NewStateManagerVectors() *StateManagerVectors {
 		LastAOCBlock:       []field.Element{},
 		FirstKOCBlock:      []field.Element{},
 		LastKOCBlock:       []field.Element{},
-		MinDeploymentBlock: []field.Element{},
-		MaxDeploymentBlock: []field.Element{},
+		MinDeploymentBlock: [][common.NbLimbU64]field.Element{},
+		MaxDeploymentBlock: [][common.NbLimbU64]field.Element{},
 	}
 }
 
@@ -100,15 +103,16 @@ func NewStateManagerVectors() *StateManagerVectors {
 // the data is kept as field elements, and will be stitched together
 // to form the columns of a StateManagerAccountColumns struct
 type AccountHistory struct {
-	address                                              []eth.Address   // helper column
-	addressHI, addressLO                                 []field.Element // these two vectors will contain the same element
-	nonce, nonceNew                                      []field.Element
-	mimcCodeHash, mimcCodeHashNew                        []field.Element
-	codeHashHI, codeHashLO, codeHashHINew, codeHashLONew []field.Element
-	codeSizeOld, codeSizeNew                             []field.Element
-	balanceOld, balanceNew                               []field.Element
-	deploymentNumber, deploymentNumberInf                []field.Element
-	blockNumber                                          []field.Element
+	address                                              []eth.Address // helper column
+	addressHI                                            [][common.NbLimbU32]field.Element
+	addressLO                                            [][common.NbLimbU128]field.Element // these two vectors will contain the same element
+	nonce, nonceNew                                      [][common.NbLimbU64]field.Element
+	mimcCodeHash, mimcCodeHashNew                        [][common.NbLimbU256]field.Element
+	codeHashHI, codeHashLO, codeHashHINew, codeHashLONew [][common.NbLimbU128]field.Element
+	codeSizeOld, codeSizeNew                             [][common.NbLimbU64]field.Element
+	balanceOld, balanceNew                               [][common.NbLimbU256]field.Element
+	deploymentNumber, deploymentNumberInf                [][common.NbLimbU32]field.Element
+	blockNumber                                          [][common.NbLimbU64]field.Element
 	currentDeploymentNo                                  int
 	exists, existsNew                                    []field.Element
 	currentExistence                                     int // it is a bool but we model it as int for ease of field conversions
@@ -121,12 +125,13 @@ type AccountHistory struct {
 // the KeyHI, KeyLO values are always the same and will be used for stitching
 type StorageHistory struct {
 	address                               []eth.Address
-	addressHI, addressLO                  []field.Element // these two vectors will contain the same element
-	keyHI, keyLO                          []field.Element // this column will contain the same value of the key everywhere
-	valueHICurr, valueLOCurr              []field.Element
-	valueHINext, valueLONext              []field.Element
-	deploymentNumber, deploymentNumberInf []field.Element
-	blockNumber                           []field.Element
+	addressHI                             [][common.NbLimbU32]field.Element
+	addressLO                             [][common.NbLimbU128]field.Element // these two vectors will contain the same element
+	keyHI, keyLO                          [][common.NbLimbU128]field.Element // this column will contain the same value of the key everywhere
+	valueHICurr, valueLOCurr              [][common.NbLimbU128]field.Element
+	valueHINext, valueLONext              [][common.NbLimbU128]field.Element
+	deploymentNumber, deploymentNumberInf [][common.NbLimbU32]field.Element
+	blockNumber                           [][common.NbLimbU64]field.Element
 	exists, existsNew                     []field.Element
 }
 
@@ -160,23 +165,23 @@ type Stitcher struct {
 func NewAccountHistory() *AccountHistory {
 	return &AccountHistory{
 		address:             []eth.Address{},
-		addressHI:           []field.Element{},
-		addressLO:           []field.Element{},
-		nonce:               []field.Element{},
-		nonceNew:            []field.Element{},
-		mimcCodeHash:        []field.Element{},
-		mimcCodeHashNew:     []field.Element{},
-		codeHashHI:          []field.Element{},
-		codeHashLO:          []field.Element{},
-		codeHashHINew:       []field.Element{},
-		codeHashLONew:       []field.Element{},
-		codeSizeOld:         []field.Element{},
-		codeSizeNew:         []field.Element{},
-		balanceOld:          []field.Element{},
-		balanceNew:          []field.Element{},
-		deploymentNumber:    []field.Element{},
-		deploymentNumberInf: []field.Element{},
-		blockNumber:         []field.Element{},
+		addressHI:           [][common.NbLimbU32]field.Element{},
+		addressLO:           [][common.NbLimbU128]field.Element{},
+		nonce:               [][common.NbLimbU64]field.Element{},
+		nonceNew:            [][common.NbLimbU64]field.Element{},
+		mimcCodeHash:        [][common.NbLimbU256]field.Element{},
+		mimcCodeHashNew:     [][common.NbLimbU256]field.Element{},
+		codeHashHI:          [][common.NbLimbU128]field.Element{},
+		codeHashLO:          [][common.NbLimbU128]field.Element{},
+		codeHashHINew:       [][common.NbLimbU128]field.Element{},
+		codeHashLONew:       [][common.NbLimbU128]field.Element{},
+		codeSizeOld:         [][common.NbLimbU64]field.Element{},
+		codeSizeNew:         [][common.NbLimbU64]field.Element{},
+		balanceOld:          [][common.NbLimbU256]field.Element{},
+		balanceNew:          [][common.NbLimbU256]field.Element{},
+		deploymentNumber:    [][common.NbLimbU32]field.Element{},
+		deploymentNumberInf: [][common.NbLimbU32]field.Element{},
+		blockNumber:         [][common.NbLimbU64]field.Element{},
 		exists:              []field.Element{},
 		existsNew:           []field.Element{},
 		currentDeploymentNo: 0,
@@ -191,17 +196,17 @@ func NewAccountHistory() *AccountHistory {
 func NewStorageHistory() *StorageHistory {
 	return &StorageHistory{
 		address:             []eth.Address{},
-		addressHI:           []field.Element{},
-		addressLO:           []field.Element{},
-		keyHI:               []field.Element{},
-		keyLO:               []field.Element{},
-		valueHICurr:         []field.Element{},
-		valueLOCurr:         []field.Element{},
-		valueHINext:         []field.Element{},
-		valueLONext:         []field.Element{},
-		deploymentNumber:    []field.Element{},
-		deploymentNumberInf: []field.Element{},
-		blockNumber:         []field.Element{},
+		addressHI:           [][common.NbLimbU32]field.Element{},
+		addressLO:           [][common.NbLimbU128]field.Element{},
+		keyHI:               [][common.NbLimbU128]field.Element{},
+		keyLO:               [][common.NbLimbU128]field.Element{},
+		valueHICurr:         [][common.NbLimbU128]field.Element{},
+		valueLOCurr:         [][common.NbLimbU128]field.Element{},
+		valueHINext:         [][common.NbLimbU128]field.Element{},
+		valueLONext:         [][common.NbLimbU128]field.Element{},
+		deploymentNumber:    [][common.NbLimbU32]field.Element{},
+		deploymentNumberInf: [][common.NbLimbU32]field.Element{},
+		blockNumber:         [][common.NbLimbU64]field.Element{},
 		exists:              []field.Element{},
 		existsNew:           []field.Element{},
 	}
@@ -213,7 +218,14 @@ func NewStorageHistory() *StorageHistory {
 // so we will duplicate and only make the changes for the few cells that must be changed
 func (accHistory *AccountHistory) InitializeNewRow(currentBlock int, initialState *State, address eth.Address) *AccountHistory {
 	var prevAddress eth.Address
-	var prevAddressHI, prevAddressLO, prevNonce, prevMimcCodeHash, prevCodeHashHI, prevCodeHashLO, prevCodeSize, prevBalance, prevDeploymentNumber field.Element
+	var prevAddressHI [common.NbLimbU32]field.Element
+	var prevAddressLO [common.NbLimbU128]field.Element
+	var prevNonce [common.NbLimbU64]field.Element
+	var prevMimcCodeHash [common.NbLimbU256]field.Element
+	var prevCodeHashHI, prevCodeHashLO [common.NbLimbU128]field.Element
+	var prevCodeSize [common.NbLimbU64]field.Element
+	var prevBalance [common.NbLimbU256]field.Element
+	var prevDeploymentNumber [common.NbLimbU32]field.Element
 
 	if len(accHistory.addressLO) > 0 {
 		// store the information from the previous row in the following values
@@ -231,21 +243,43 @@ func (accHistory *AccountHistory) InitializeNewRow(currentBlock int, initialStat
 		prevDeploymentNumber = accHistory.deploymentNumber[lastIndex]
 		// prevBlockNumber = (*accHistory.BlockNumber)[lastIndex] // use previous block number
 	} else {
+		addressLimbs := common.SplitBytes(address[:])
+
 		// search whether the previous values can be found in the initial state
 		_, isPresent := (*initialState)[address]
 		if !isPresent {
 			// when the previous values do not exist yet in the initial state, initialize them with 0s
 			prevAddress = address
-			prevAddressHI.SetBytes(address[:4])
-			prevAddressLO.SetBytes(address[4:])
-			prevNonce.SetZero()
-			prevMimcCodeHash.SetZero()
+
+			for i, limbBytes := range addressLimbs[:2] {
+				prevAddressHI[i].SetBytes(limbBytes)
+			}
+
+			for i, limbBytes := range addressLimbs[2:] {
+				prevAddressLO[i].SetBytes(limbBytes)
+			}
+
+			for i := range common.NbLimbU64 {
+				prevNonce[i].SetZero()
+				prevCodeSize[i].SetZero()
+			}
+
+			for i := range common.NbLimbU256 {
+				prevBalance[i].SetZero()
+				prevMimcCodeHash[i].SetZero()
+			}
+
 			codeHashEmpty := keccak.Hash([]byte{})
-			prevCodeHashHI.SetBytes(codeHashEmpty[:16])
-			prevCodeHashLO.SetBytes(codeHashEmpty[16:])
-			prevCodeSize.SetZero()
-			prevBalance.SetZero()
-			prevDeploymentNumber.SetZero() // when the state is initialized, we start with DeploymentNumber = 0 MISTAKE HERE
+			codeHashEmptyLimbs := common.SplitBytes(codeHashEmpty[:])
+			for i := range common.NbLimbU128 {
+				prevCodeHashHI[i].SetBytes(codeHashEmptyLimbs[i])
+				prevCodeHashLO[i].SetBytes(codeHashEmptyLimbs[common.NbLimbU128+i])
+			}
+
+			for i := range common.NbLimbU32 {
+				prevDeploymentNumber[i].SetZero() // when the state is initialized, we start with DeploymentNumber = 0 MISTAKE HERE
+			}
+
 			// prevBlockNumber.SetInt64(int64(currentBlock))
 		} else {
 			// initialize them with values from the state
@@ -253,19 +287,53 @@ func (accHistory *AccountHistory) InitializeNewRow(currentBlock int, initialStat
 			accHistory.currentExistence = 1           // when we initialize from state we will assume that the account Exists
 			// account information
 			prevAddress = address
-			prevAddressHI.SetBytes(address[:4])
-			prevAddressLO.SetBytes(address[4:20])
-			prevNonce.SetInt64(initialState.GetNonce(address))
-			// hashes
-			stateMimcHash := initialState.GetMimcCodeHash(address)
-			prevMimcCodeHash.SetBytes(stateMimcHash[:])
-			stateCodeHash := initialState.GetCodeHash(address)
-			prevCodeHashHI.SetBytes(stateCodeHash[:16])
-			prevCodeHashLO.SetBytes(stateCodeHash[16:])
-			prevCodeSize.SetInt64(initialState.GetCodeSize(address))
+			for i, limbBytes := range addressLimbs[:2] {
+				prevAddressHI[i].SetBytes(limbBytes)
+			}
 
-			prevBalance.SetBigInt(initialState.GetBalance(address))
-			prevDeploymentNumber.SetZero() // correct here, initialized from state
+			for i, limbBytes := range addressLimbs[2:10] {
+				prevAddressLO[i].SetBytes(limbBytes)
+			}
+
+			prevNonceLimbs := common.SplitBigEndianUint64(uint64(initialState.GetNonce(address)))
+			for i, limbBytes := range prevNonceLimbs {
+				prevNonce[i].SetBytes(limbBytes)
+			}
+
+			// hashes
+			statePoseidon2Hash := initialState.GetPoseidon2CodeHash(address)
+
+			limbBytes := common.SplitBytes(statePoseidon2Hash.ToBytes())
+			for i := range common.NbLimbU256 {
+				prevMimcCodeHash[i].SetBytes(limbBytes[i])
+			}
+
+			stateCodeHash := initialState.GetCodeHash(address)
+			stateCodeHashLimbs := common.SplitBytes(stateCodeHash[:])
+			for i := range common.NbLimbU128 {
+				prevCodeHashHI[i].SetBytes(stateCodeHashLimbs[i])
+				prevCodeHashLO[i].SetBytes(stateCodeHashLimbs[common.NbLimbU128+i])
+			}
+
+			// addressBalanceBytes := initialState.GetBalance(address).Bytes()
+			// // We make a length check here because Bytes() method on big.Int(0) returns empty slice.
+			// if len(addressBalanceBytes) == 0 {
+			// 	addressBalanceBytes = make([]byte, common.NbLimbU64*common.LimbBytes)
+			// }
+
+			balanceBytes := common.LeftPadToBytes(initialState.GetBalance(address).Bytes(), common.NbLimbU256*common.LimbBytes)
+			balanceLimbs := common.SplitBytes(balanceBytes)
+			codeSizeLimbs := common.SplitBigEndianUint64(uint64(initialState.GetCodeSize(address)))
+			for i := range common.NbLimbU256 {
+				prevBalance[i].SetBytes(balanceLimbs[i])
+			}
+			for i := range common.NbLimbU64 {
+				prevCodeSize[i].SetBytes(codeSizeLimbs[i])
+			}
+
+			for i := range common.NbLimbU32 {
+				prevDeploymentNumber[i].SetZero() // when the state is initialized, we start with DeploymentNumber = 0 MISTAKE HERE
+			}
 		}
 
 	}
@@ -289,9 +357,14 @@ func (accHistory *AccountHistory) InitializeNewRow(currentBlock int, initialStat
 	// deployment number
 	accHistory.deploymentNumber = append(accHistory.deploymentNumber, prevDeploymentNumber)
 
-	// block number
-	var prevBlockNumber field.Element
-	accHistory.blockNumber = append(accHistory.blockNumber, *prevBlockNumber.SetInt64(int64(currentBlock)))
+	// block number (+1 to harmonize with HUB block numbering, which starts from 1)
+	currentBlockLimbs := common.SplitBigEndianUint64(uint64(currentBlock + 1))
+	var prevBlockNumber [common.NbLimbU64]field.Element
+	for i := range common.NbLimbU64 {
+		prevBlockNumber[i].SetBytes(currentBlockLimbs[i])
+	}
+
+	accHistory.blockNumber = append(accHistory.blockNumber, prevBlockNumber)
 
 	// exist and existNew columns
 	var existsElem, existsNewElem field.Element
@@ -421,15 +494,16 @@ func (stitcher *Stitcher) Finalize(sampleType int) *StateManagerVectors {
 				stateManagerVectors.ExistsNew = append(stateManagerVectors.ExistsNew, accHist.existsNew...)
 
 				// add dummy rows
-				dummyVector := make([]field.Element, len(accHist.addressHI))
-				stateManagerVectors.KeyHI = append(stateManagerVectors.KeyHI, dummyVector...)
-				stateManagerVectors.KeyLO = append(stateManagerVectors.KeyLO, dummyVector...)
-				stateManagerVectors.ValueHICurr = append(stateManagerVectors.ValueHICurr, dummyVector...)
-				stateManagerVectors.ValueLOCurr = append(stateManagerVectors.ValueLOCurr, dummyVector...)
-				stateManagerVectors.ValueHINext = append(stateManagerVectors.ValueHINext, dummyVector...)
-				stateManagerVectors.ValueLONext = append(stateManagerVectors.ValueLONext, dummyVector...)
+				dummyU128Vector := make([][common.NbLimbU128]field.Element, len(accHist.addressHI))
+				stateManagerVectors.KeyHI = append(stateManagerVectors.KeyHI, dummyU128Vector...)
+				stateManagerVectors.KeyLO = append(stateManagerVectors.KeyLO, dummyU128Vector...)
+				stateManagerVectors.ValueHICurr = append(stateManagerVectors.ValueHICurr, dummyU128Vector...)
+				stateManagerVectors.ValueLOCurr = append(stateManagerVectors.ValueLOCurr, dummyU128Vector...)
+				stateManagerVectors.ValueHINext = append(stateManagerVectors.ValueHINext, dummyU128Vector...)
+				stateManagerVectors.ValueLONext = append(stateManagerVectors.ValueLONext, dummyU128Vector...)
 
 				// add dummy helper column, all zeros
+				dummyVector := make([]field.Element, len(accHist.addressHI))
 				stateManagerVectors.PeekAtStorage = append(stateManagerVectors.PeekAtStorage, dummyVector...)
 
 				// initialize the peek at account column and then add it
@@ -452,16 +526,26 @@ func (stitcher *Stitcher) Finalize(sampleType int) *StateManagerVectors {
 				stateManagerVectors.LastKOC = append(stateManagerVectors.LastKOC, dummyVector...)
 
 				// deployment Number Infinity
-				deploymentInfFragment := make([]field.Element, len(accHist.addressHI))
+				deploymentInfFragment := make([][common.NbLimbU32]field.Element, len(accHist.addressHI))
+				currentDeploymentLimbs := common.SplitBigEndianUint64(uint64(accHist.currentDeploymentNo))[2:]
 				for index := range deploymentInfFragment {
-					deploymentInfFragment[index].SetInt64(int64(accHist.currentDeploymentNo))
+					for i := range currentDeploymentLimbs {
+						deploymentInfFragment[index][i].SetBytes(currentDeploymentLimbs[i])
+					}
 				}
 				stateManagerVectors.DeploymentNumberInf = append(stateManagerVectors.DeploymentNumberInf, deploymentInfFragment...)
 				// FirstAOCBlock
 				firstAOCBlockFragment := make([]field.Element, len(accHist.addressHI))
 				firstAOCBlockFragment[0].SetOne()
 				for index := 1; index < len(firstAOCBlockFragment); index++ {
-					if !accHist.blockNumber[index].Equal(&accHist.blockNumber[index-1]) {
+					equalCounter := 0
+					for i := range common.NbLimbU64 {
+						if !accHist.blockNumber[index][i].Equal(&accHist.blockNumber[index-1][i]) {
+							equalCounter++
+						}
+					}
+
+					if equalCounter == common.NbLimbU64 {
 						firstAOCBlockFragment[index].SetOne()
 					}
 				}
@@ -470,16 +554,24 @@ func (stitcher *Stitcher) Finalize(sampleType int) *StateManagerVectors {
 				lastAOCBlockFragment := make([]field.Element, len(accHist.addressHI))
 				lastAOCBlockFragment[len(lastAOCBlockFragment)-1].SetOne()
 				for index := 1; index < len(lastAOCBlockFragment); index++ {
-					if !accHist.blockNumber[index].Equal(&accHist.blockNumber[index-1]) {
-						lastAOCBlockFragment[index-1].SetOne()
+					equalCounter := 0
+					for i := range common.NbLimbU64 {
+						if !accHist.blockNumber[index][i].Equal(&accHist.blockNumber[index-1][i]) {
+							equalCounter++
+						}
+					}
+
+					if equalCounter == common.NbLimbU64 {
+						firstAOCBlockFragment[index].SetOne()
 					}
 				}
 				stateManagerVectors.LastAOCBlock = append(stateManagerVectors.LastAOCBlock, lastAOCBlockFragment...)
 				// FirstKOCBlock, LastKOCBlock and MinDeploymentBlock and MaxDeploymentBlock, all zeros.
 				stateManagerVectors.FirstKOCBlock = append(stateManagerVectors.FirstKOCBlock, dummyVector...)
 				stateManagerVectors.LastKOCBlock = append(stateManagerVectors.LastKOCBlock, dummyVector...)
-				stateManagerVectors.MinDeploymentBlock = append(stateManagerVectors.MinDeploymentBlock, dummyVector...)
-				stateManagerVectors.MaxDeploymentBlock = append(stateManagerVectors.MaxDeploymentBlock, dummyVector...)
+				dummyU64Vector := make([][common.NbLimbU64]field.Element, len(accHist.addressHI))
+				stateManagerVectors.MinDeploymentBlock = append(stateManagerVectors.MinDeploymentBlock, dummyU64Vector...)
+				stateManagerVectors.MaxDeploymentBlock = append(stateManagerVectors.MaxDeploymentBlock, dummyU64Vector...)
 			}
 		}
 	}
@@ -515,25 +607,30 @@ func (stitcher *Stitcher) Finalize(sampleType int) *StateManagerVectors {
 					stateManagerVectors.ValueHINext = append(stateManagerVectors.ValueHINext, stoHist.valueHINext...)
 					stateManagerVectors.ValueLONext = append(stateManagerVectors.ValueLONext, stoHist.valueLONext...)
 					// add dummy rows
+					dummyNonceVector := make([][common.NbLimbU64]field.Element, len(stoHist.addressHI))
+					stateManagerVectors.Nonce = append(stateManagerVectors.Nonce, dummyNonceVector...)
+					stateManagerVectors.NonceNew = append(stateManagerVectors.NonceNew, dummyNonceVector...)
+
+					dummyMimcCodeHashVector := make([][common.NbLimbU256]field.Element, len(stoHist.addressHI))
+					stateManagerVectors.MimcCodeHash = append(stateManagerVectors.MimcCodeHash, dummyMimcCodeHashVector...)
+					stateManagerVectors.MimcCodeHashNew = append(stateManagerVectors.MimcCodeHashNew, dummyMimcCodeHashVector...)
+
+					dummyCodeHashVector := make([][common.NbLimbU128]field.Element, len(stoHist.addressHI))
+					stateManagerVectors.CodeHashHI = append(stateManagerVectors.CodeHashHI, dummyCodeHashVector...)
+					stateManagerVectors.CodeHashLO = append(stateManagerVectors.CodeHashLO, dummyCodeHashVector...)
+
+					stateManagerVectors.CodeHashHINew = append(stateManagerVectors.CodeHashHINew, dummyCodeHashVector...)
+					stateManagerVectors.CodeHashLONew = append(stateManagerVectors.CodeHashLONew, dummyCodeHashVector...)
+
+					dummyCodeSizeVector := make([][common.NbLimbU64]field.Element, len(stoHist.addressHI))
+					stateManagerVectors.CodeSizeOld = append(stateManagerVectors.CodeSizeOld, dummyCodeSizeVector...)
+					stateManagerVectors.CodeSizeNew = append(stateManagerVectors.CodeSizeNew, dummyCodeSizeVector...)
+
+					stateManagerDummyVectors := make([][common.NbLimbU256]field.Element, len(stoHist.addressHI))
+					stateManagerVectors.BalanceOld = append(stateManagerVectors.BalanceOld, stateManagerDummyVectors...)
+					stateManagerVectors.BalanceNew = append(stateManagerVectors.BalanceNew, stateManagerDummyVectors...)
+
 					dummyVector := make([]field.Element, len(stoHist.addressHI))
-					stateManagerVectors.Nonce = append(stateManagerVectors.Nonce, dummyVector...)
-					stateManagerVectors.NonceNew = append(stateManagerVectors.NonceNew, dummyVector...)
-
-					stateManagerVectors.MimcCodeHash = append(stateManagerVectors.MimcCodeHash, dummyVector...)
-					stateManagerVectors.MimcCodeHashNew = append(stateManagerVectors.MimcCodeHashNew, dummyVector...)
-
-					stateManagerVectors.CodeHashHI = append(stateManagerVectors.CodeHashHI, dummyVector...)
-					stateManagerVectors.CodeHashLO = append(stateManagerVectors.CodeHashLO, dummyVector...)
-
-					stateManagerVectors.CodeHashHINew = append(stateManagerVectors.CodeHashHINew, dummyVector...)
-					stateManagerVectors.CodeHashLONew = append(stateManagerVectors.CodeHashLONew, dummyVector...)
-
-					stateManagerVectors.CodeSizeOld = append(stateManagerVectors.CodeSizeOld, dummyVector...)
-					stateManagerVectors.CodeSizeNew = append(stateManagerVectors.CodeSizeNew, dummyVector...)
-
-					stateManagerVectors.BalanceOld = append(stateManagerVectors.BalanceOld, dummyVector...)
-					stateManagerVectors.BalanceNew = append(stateManagerVectors.BalanceNew, dummyVector...)
-
 					// add dummy helper column, all zeros
 					stateManagerVectors.PeekAtAccount = append(stateManagerVectors.PeekAtAccount, dummyVector...)
 
@@ -557,17 +654,28 @@ func (stitcher *Stitcher) Finalize(sampleType int) *StateManagerVectors {
 					stateManagerVectors.LastKOC = append(stateManagerVectors.LastKOC, lastKOCFragment...)
 
 					// deployment Number Infinity
-					deploymentInfFragment := make([]field.Element, len(stoHist.addressHI))
+					deploymentInfFragment := make([][common.NbLimbU32]field.Element, len(stoHist.addressHI))
+					currentDeploymentLimbs := common.SplitBigEndianUint64(uint64(accHist.currentDeploymentNo))[2:]
 					for index := range deploymentInfFragment {
-						deploymentInfFragment[index].SetInt64(int64(accHist.currentDeploymentNo))
+						for i := range currentDeploymentLimbs {
+							deploymentInfFragment[index][i].SetBytes(currentDeploymentLimbs[i])
+						}
 					}
+
 					stateManagerVectors.DeploymentNumberInf = append(stateManagerVectors.DeploymentNumberInf, deploymentInfFragment...)
 
 					// FirstKOCBlock
 					firstKOCBlockFragment := make([]field.Element, len(stoHist.addressHI))
 					firstKOCBlockFragment[0].SetOne()
 					for index := 1; index < len(firstKOCBlockFragment); index++ {
-						if !stoHist.blockNumber[index].Equal(&stoHist.blockNumber[index-1]) {
+						equalCounter := 0
+						for i := range common.NbLimbU64 {
+							if !stoHist.blockNumber[index][i].Equal(&stoHist.blockNumber[index-1][i]) {
+								equalCounter++
+							}
+						}
+
+						if equalCounter == common.NbLimbU64 {
 							firstKOCBlockFragment[index].SetOne()
 						}
 					}
@@ -576,23 +684,34 @@ func (stitcher *Stitcher) Finalize(sampleType int) *StateManagerVectors {
 					lastKOCBlockFragment := make([]field.Element, len(stoHist.addressHI))
 					lastKOCBlockFragment[len(lastKOCBlockFragment)-1].SetOne()
 					for index := 1; index < len(lastKOCBlockFragment); index++ {
-						if !stoHist.blockNumber[index].Equal(&stoHist.blockNumber[index-1]) {
-							lastKOCBlockFragment[index-1].SetOne()
+						equalCounter := 0
+						for i := range common.NbLimbU64 {
+							if !stoHist.blockNumber[index][i].Equal(&stoHist.blockNumber[index-1][i]) {
+								equalCounter++
+							}
+						}
+
+						if equalCounter == common.NbLimbU64 {
+							firstKOCBlockFragment[index].SetOne()
 						}
 					}
 					stateManagerVectors.LastKOCBlock = append(stateManagerVectors.LastKOCBlock, lastKOCBlockFragment...)
 					// FirstAOCBlock, LastAOCBlock and MinDeploymentBlock and MaxDeploymentBlock, all zeros.
 					stateManagerVectors.FirstAOCBlock = append(stateManagerVectors.FirstAOCBlock, dummyVector...)
 					stateManagerVectors.LastAOCBlock = append(stateManagerVectors.LastAOCBlock, dummyVector...)
-					minDeplBlockFragment := make([]field.Element, len(stoHist.addressHI))
+					minDeplBlockFragment := make([][common.NbLimbU64]field.Element, len(stoHist.addressHI))
 					for index := range minDeplBlockFragment {
-						minDeplBlock := accHist.minDeplBlock[field.ToInt(&stoHist.blockNumber[index])]
-						minDeplBlockFragment[index].SetInt64(int64(minDeplBlock))
+						for i := range common.NbLimbU64 {
+							minDeplBlock := accHist.minDeplBlock[field.ToInt(&stoHist.blockNumber[index][i])]
+							minDeplBlockFragment[index][i].SetInt64(int64(minDeplBlock))
+						}
 					}
 					stateManagerVectors.MinDeploymentBlock = append(stateManagerVectors.MinDeploymentBlock, minDeplBlockFragment...)
-					maxDeplBlockFragment := make([]field.Element, len(stoHist.addressHI))
+					maxDeplBlockFragment := make([][common.NbLimbU64]field.Element, len(stoHist.addressHI))
 					for index := range maxDeplBlockFragment {
-						maxDeplBlockFragment[index].SetInt64(int64(accHist.maxDeplBlock[field.ToInt(&stoHist.blockNumber[index])]))
+						for i := range common.NbLimbU64 {
+							maxDeplBlockFragment[index][i].SetInt64(int64(accHist.maxDeplBlock[field.ToInt(&stoHist.blockNumber[index][i])]))
+						}
 					}
 					stateManagerVectors.MaxDeploymentBlock = append(stateManagerVectors.MaxDeploymentBlock, maxDeplBlockFragment...)
 				}
@@ -619,8 +738,15 @@ func (accHistory *AccountHistory) AddFrame(frame StateAccessLog, initialState *S
 	accHistory.InitializeNewRow(frame.Block, initialState, address) // this sets the block number as well
 	lastIndex := len(accHistory.addressHI) - 1
 	accHistory.address[lastIndex] = frame.Address
-	accHistory.addressHI[lastIndex].SetBytes(frame.Address[:4])
-	accHistory.addressLO[lastIndex].SetBytes(frame.Address[4:])
+
+	addressLimbs := common.SplitBytes(frame.Address[:])
+	for i, limbBytes := range addressLimbs[:2] {
+		accHistory.addressHI[lastIndex][i].SetBytes(limbBytes)
+	}
+
+	for i, limbBytes := range addressLimbs[2:] {
+		accHistory.addressLO[lastIndex][i].SetBytes(limbBytes)
+	}
 
 	/*
 		the following line writes maxDeplBlock even when the account might not exist
@@ -643,16 +769,30 @@ func (accHistory *AccountHistory) AddFrame(frame StateAccessLog, initialState *S
 		}
 		stoHist.AddFrame(frame, accHistory.currentDeploymentNo, accHistory.currentExistence)
 	case Nonce:
-		accHistory.nonceNew[lastIndex].SetInt64((frame.Value).(int64))
+		nonceLimbBytes := common.SplitBigEndianUint64(uint64((frame.Value).(int64)))
+		for i := range common.NbLimbU64 {
+			accHistory.nonceNew[lastIndex][i].SetBytes(nonceLimbBytes[i])
+		}
 	case Balance:
-		accHistory.balanceNew[lastIndex].SetBigInt((frame.Value).(*big.Int))
+		addressBalanceBytes := common.LeftPadToBytes((frame.Value).(*big.Int).Bytes(), common.NbLimbU256*common.LimbBytes)
+
+		balanceLimbs := common.SplitBytes(addressBalanceBytes)
+		for i := range common.NbLimbU256 {
+			accHistory.balanceNew[lastIndex][i].SetBytes(balanceLimbs[i])
+		}
 	case Codesize: // only for reads
-		accHistory.codeSizeNew[lastIndex].SetInt64((frame.Value).(int64))
+		codeSizeLimbs := common.SplitBigEndianUint64(uint64((frame.Value).(int64)))
+		for i := range common.NbLimbU64 {
+			accHistory.codeSizeNew[lastIndex][i].SetBytes(codeSizeLimbs[i])
+		}
 	case Codehash:
 		// this should also update the MIMC code hash, but the frame does not contain this value
 		codeHash := frame.Value.(types.FullBytes32)
-		accHistory.codeHashHINew[lastIndex].SetBytes(codeHash[:16])
-		accHistory.codeHashLONew[lastIndex].SetBytes(codeHash[16:])
+		codeHashLimbs := common.SplitBytes(codeHash[:])
+		for i := range common.NbLimbU128 {
+			accHistory.codeHashHINew[lastIndex][i].SetBytes(codeHashLimbs[i])
+			accHistory.codeHashLONew[lastIndex][i].SetBytes(codeHashLimbs[common.NbLimbU128+i])
+		}
 	case AccountErasal:
 		// we do not delete the storage history, as it remains persistent over multiple deployments
 		if accHistory.currentExistence == 0 {
@@ -661,35 +801,66 @@ func (accHistory *AccountHistory) AddFrame(frame StateAccessLog, initialState *S
 		accHistory.currentExistence = 0
 		accHistory.exists[lastIndex] = field.One()     // it Exists when delete is invoked
 		accHistory.existsNew[lastIndex] = field.Zero() // it does not exist afterward
-		accHistory.nonceNew[lastIndex].SetZero()
-		accHistory.balanceNew[lastIndex].SetZero()
-		accHistory.codeSizeNew[lastIndex].SetZero()
+
+		for i := range common.NbLimbU64 {
+			accHistory.nonceNew[lastIndex][i].SetZero()
+			accHistory.codeSizeNew[lastIndex][i].SetZero()
+		}
+
+		for i := range common.NbLimbU256 {
+			accHistory.balanceNew[lastIndex][i].SetZero()
+		}
+
 		codeHashEmpty := keccak.Hash([]byte{})
-		accHistory.codeHashHINew[lastIndex].SetBytes(codeHashEmpty[:16])
-		accHistory.codeHashLONew[lastIndex].SetBytes(codeHashEmpty[16:])
+		codeHashLimbs := common.SplitBytes(codeHashEmpty[:])
+		for i := range common.NbLimbU128 {
+			accHistory.codeHashHINew[lastIndex][i].SetBytes(codeHashLimbs[i])
+			accHistory.codeHashLONew[lastIndex][i].SetBytes(codeHashLimbs[common.NbLimbU128+i])
+		}
 	case AccountInit:
 		if accHistory.currentExistence == 1 {
 			panic("Attempted to initialize an account which already Exists.")
 		}
 		accHistory.currentDeploymentNo++
 		accHistory.currentExistence = 1
-		accHistory.deploymentNumber[lastIndex].SetUint64(uint64(accHistory.currentDeploymentNo))
+
+		deploymentNumberLimbs := common.SplitBigEndianUint64(uint64(accHistory.currentDeploymentNo))[2:]
+		for i := range common.NbLimbU32 {
+			accHistory.deploymentNumber[lastIndex][i].SetBytes(deploymentNumberLimbs[i])
+		}
+
 		accHistory.exists[lastIndex] = field.Zero()   // it does not exist when create is invoked
 		accHistory.existsNew[lastIndex] = field.One() // it Exists afterwards
 		frameValues := frame.Value.([]any)
-		accHistory.codeSizeNew[lastIndex].SetUint64(uint64(frameValues[0].(int64)))
+
+		codeSizeLimbs := common.SplitBigEndianUint64(uint64(frameValues[0].(int64)))
+		for i := range common.NbLimbU64 {
+			accHistory.codeSizeNew[lastIndex][i].SetBytes(codeSizeLimbs[i])
+		}
 
 		// previous codeHash is emptu before init
 		codeHashEmpty := keccak.Hash([]byte{})
-		accHistory.codeHashHI[lastIndex].SetBytes(codeHashEmpty[:16])
-		accHistory.codeHashLO[lastIndex].SetBytes(codeHashEmpty[16:])
+		codeHashLimbs := common.SplitBytes(codeHashEmpty[:])
+		for i := range common.NbLimbU128 {
+			accHistory.codeHashHINew[lastIndex][i].SetBytes(codeHashLimbs[i])
+			accHistory.codeHashLONew[lastIndex][i].SetBytes(codeHashLimbs[common.NbLimbU128+i])
+		}
 
 		// initialize new codehash with the corresponding values inside the account
 		codeHashBytes := frameValues[1].(types.FullBytes32)
-		accHistory.codeHashHINew[lastIndex].SetBytes(codeHashBytes[:16])
-		accHistory.codeHashLONew[lastIndex].SetBytes(codeHashBytes[16:])
-		accHistory.nonceNew[lastIndex].SetZero()
-		accHistory.balanceNew[lastIndex].SetZero()
+		codeHashBytesLimbs := common.SplitBytes(codeHashBytes[:])
+		for i := range common.NbLimbU128 {
+			accHistory.codeHashHINew[lastIndex][i].SetBytes(codeHashBytesLimbs[i])
+			accHistory.codeHashLONew[lastIndex][i].SetBytes(codeHashBytesLimbs[common.NbLimbU128+i])
+		}
+
+		for i := range common.NbLimbU256 {
+			accHistory.balanceNew[lastIndex][i].SetZero()
+		}
+
+		for i := range common.NbLimbU64 {
+			accHistory.nonceNew[lastIndex][i].SetZero()
+		}
 
 		_, exists := accHistory.minDeplBlock[frame.Block]
 		if !exists {
@@ -706,11 +877,30 @@ func (accHistory *AccountHistory) AddFrame(frame StateAccessLog, initialState *S
 func (stoHistory *StorageHistory) AddFrame(frame StateAccessLog, currentDeploymentNo int, currentExistence int) *StorageHistory {
 
 	stoHistory.address = append(stoHistory.address, frame.Address)
-	stoHistory.addressHI = append(stoHistory.addressHI, *(&field.Element{}).SetBytes(frame.Address[:4]))
-	stoHistory.addressLO = append(stoHistory.addressLO, *(&field.Element{}).SetBytes(frame.Address[4:]))
 
-	stoHistory.keyHI = append(stoHistory.keyHI, *(&field.Element{}).SetBytes(frame.Key[:16]))
-	stoHistory.keyLO = append(stoHistory.keyLO, *(&field.Element{}).SetBytes(frame.Key[16:]))
+	addressLimbs := common.SplitBytes(frame.Address[:])
+	var addressHi [common.NbLimbU32]field.Element
+	for i, limbBytes := range addressLimbs[:2] {
+		addressHi[i].SetBytes(limbBytes)
+	}
+
+	var addressLo [common.NbLimbU128]field.Element
+	for i, limbBytes := range addressLimbs[2:] {
+		addressLo[i].SetBytes(limbBytes)
+	}
+	stoHistory.addressHI = append(stoHistory.addressHI, addressHi)
+	stoHistory.addressLO = append(stoHistory.addressLO, addressLo)
+
+	keyLimbs := common.SplitBytes(frame.Key[:])
+	var keyHI [common.NbLimbU128]field.Element
+	var keyLO [common.NbLimbU128]field.Element
+	for i := range common.NbLimbU128 {
+		keyHI[i].SetBytes(keyLimbs[i])
+		keyLO[i].SetBytes(keyLimbs[common.NbLimbU128+i])
+	}
+
+	stoHistory.keyHI = append(stoHistory.keyHI, keyHI)
+	stoHistory.keyLO = append(stoHistory.keyLO, keyLO)
 
 	var oldValue types.FullBytes32
 	if frame.IsWrite {
@@ -720,14 +910,44 @@ func (stoHistory *StorageHistory) AddFrame(frame StateAccessLog, currentDeployme
 		oldValue = frame.Value.(types.FullBytes32)
 	}
 
-	stoHistory.valueHICurr = append(stoHistory.valueHICurr, *(&field.Element{}).SetBytes(oldValue[:16]))
-	stoHistory.valueLOCurr = append(stoHistory.valueLOCurr, *(&field.Element{}).SetBytes(oldValue[16:]))
+	oldValueLimbs := common.SplitBytes(oldValue[:])
+	var oldValueHI [common.NbLimbU128]field.Element
+	var oldValueLO [common.NbLimbU128]field.Element
+	for i := range common.NbLimbU128 {
+		oldValueHI[i].SetBytes(oldValueLimbs[i])
+		oldValueLO[i].SetBytes(oldValueLimbs[common.NbLimbU128+i])
+	}
+
+	stoHistory.valueHICurr = append(stoHistory.valueHICurr, oldValueHI)
+	stoHistory.valueLOCurr = append(stoHistory.valueLOCurr, oldValueLO)
 
 	nextValue := frame.Value.(types.FullBytes32)
-	stoHistory.valueHINext = append(stoHistory.valueHINext, *(&field.Element{}).SetBytes(nextValue[:16]))
-	stoHistory.valueLONext = append(stoHistory.valueLONext, *(&field.Element{}).SetBytes(nextValue[16:]))
-	stoHistory.deploymentNumber = append(stoHistory.deploymentNumber, field.NewElement(uint64(currentDeploymentNo)))
-	stoHistory.blockNumber = append(stoHistory.blockNumber, field.NewElement(uint64(frame.Block)))
+	nextValueLimbs := common.SplitBytes(nextValue[:])
+	var nextValueHI [common.NbLimbU128]field.Element
+	var nextValueLO [common.NbLimbU128]field.Element
+	for i := range common.NbLimbU128 {
+		nextValueHI[i].SetBytes(nextValueLimbs[i])
+		nextValueLO[i].SetBytes(nextValueLimbs[common.NbLimbU128+i])
+	}
+
+	stoHistory.valueHINext = append(stoHistory.valueHINext, nextValueHI)
+	stoHistory.valueLONext = append(stoHistory.valueLONext, nextValueLO)
+
+	deploymentNumberLimbs := common.SplitBigEndianUint64(uint64(currentDeploymentNo))[2:]
+	var deploymentNumber [common.LimbBytes]field.Element
+	for i := range common.NbLimbU32 {
+		deploymentNumber[i].SetBytes(deploymentNumberLimbs[i])
+	}
+
+	stoHistory.deploymentNumber = append(stoHistory.deploymentNumber, deploymentNumber)
+	// +1 to harmonize with HUB block numbering, which starts from 1
+	blockNumber := common.SplitBigEndianUint64(uint64(frame.Block + 1))
+	var blockNumberLimbs [common.NbLimbU64]field.Element
+	for i := range common.NbLimbU64 {
+		blockNumberLimbs[i].SetBytes(blockNumber[i])
+	}
+
+	stoHistory.blockNumber = append(stoHistory.blockNumber, blockNumberLimbs)
 
 	stoHistory.exists = append(stoHistory.exists, field.NewElement(uint64(currentExistence)))
 	stoHistory.existsNew = append(stoHistory.existsNew, field.NewElement(uint64(currentExistence)))

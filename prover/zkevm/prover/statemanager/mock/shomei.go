@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/backend/execution/statemanager"
-	"github.com/consensys/linea-monorepo/prover/crypto/mimc"
+	poseidon2 "github.com/consensys/linea-monorepo/prover/crypto/poseidon2_koalabear"
 	"github.com/consensys/linea-monorepo/prover/crypto/state-management/accumulator"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/types"
@@ -55,7 +55,7 @@ const (
 func InitShomeiState(state State) *statemanager.WorldState {
 
 	var (
-		shomeiState = statemanager.NewWorldState(statemanager.MIMC_CONFIG)
+		shomeiState = statemanager.NewWorldState()
 		addresses   = sortedKeysOf(state)
 	)
 
@@ -63,7 +63,7 @@ func InitShomeiState(state State) *statemanager.WorldState {
 
 		var (
 			acc         = state[address]
-			storageTrie = statemanager.NewStorageTrie(statemanager.MIMC_CONFIG, address)
+			storageTrie = statemanager.NewStorageTrie(address)
 			stoKeys     = sortedKeysOf(acc.Storage)
 		)
 
@@ -75,12 +75,12 @@ func InitShomeiState(state State) *statemanager.WorldState {
 			Nonce:          acc.Nonce,
 			Balance:        acc.Balance,
 			StorageRoot:    storageTrie.TopRoot(),
-			MimcCodeHash:   acc.MimcCodeHash,
+			LineaCodeHash:  acc.LineaCodeHash,
 			KeccakCodeHash: acc.KeccakCodeHash,
 			CodeSize:       acc.CodeSize,
 		}
 
-		shomeiState.AccountTrie.InsertAndProve(address, account)
+		shomeiState.AccountTrie.InsertAndProve(address, account.WrappedForShomeiTraces())
 		shomeiState.StorageTries.InsertNew(address, storageTrie)
 	}
 
@@ -145,10 +145,9 @@ func splitInAccountSegment(logs []StateAccessLog) [][]StateAccessLog {
 
 	// 3. Reorder the account segment by hkey
 	slices.SortFunc(accountSegments, func(a, b []StateAccessLog) int {
-		return types.Bytes32Cmp(
-			mimcHash(a[0].Address),
-			mimcHash(b[0].Address),
-		)
+		a_ := poseidon2Hash(a[0].Address)
+		b_ := poseidon2Hash(b[0].Address)
+		return a_.Cmp(b_)
 	})
 
 	return accountSegments
@@ -165,7 +164,7 @@ func applyAccountSegmentToShomei(shomeiState *statemanager.WorldState, accSegmen
 	)
 
 	if pos, found := shomeiState.AccountTrie.FindKey(address); found {
-		initAccountValue = shomeiState.AccountTrie.Data.MustGet(pos).Value
+		initAccountValue = shomeiState.AccountTrie.Data.MustGet(pos).Value.Account
 	}
 
 	asp := identifyAccountSegment(initAccountValue, accSegment)
@@ -184,7 +183,7 @@ func applyAccountSegmentToShomei(shomeiState *statemanager.WorldState, accSegmen
 		var (
 			accPos, _          = shomeiState.AccountTrie.FindKey(address)
 			initAcc            = shomeiState.AccountTrie.Data.MustGet(accPos).Value
-			squashedAccSegment = squashSubSegmentForShomei(initAcc, subSegments[0])
+			squashedAccSegment = squashSubSegmentForShomei(initAcc.Account, subSegments[0])
 		)
 
 		// Since the acount segment is read-only, we can assume that all the
@@ -206,7 +205,7 @@ func applyAccountSegmentToShomei(shomeiState *statemanager.WorldState, accSegmen
 		var (
 			accPos, _          = shomeiState.AccountTrie.FindKey(address)
 			initAcc            = shomeiState.AccountTrie.Data.MustGet(accPos).Value
-			squashedAccSegment = squashSubSegmentForShomei(initAcc, subSegments[0])
+			squashedAccSegment = squashSubSegmentForShomei(initAcc.Account, subSegments[0])
 		)
 
 		sortByHKeyStable(squashedAccSegment)
@@ -220,7 +219,7 @@ func applyAccountSegmentToShomei(shomeiState *statemanager.WorldState, accSegmen
 				newAccount := log.Value.(types.Account)
 				newStorageRoot := shomeiState.StorageTries.MustGet(address).TopRoot()
 				newAccount.StorageRoot = newStorageRoot
-				trace := shomeiState.AccountTrie.UpdateAndProve(address, newAccount)
+				trace := shomeiState.AccountTrie.UpdateAndProve(address, newAccount.WrappedForShomeiTraces())
 				return append(blockTrace, asDecodedTrace("0x", trace))
 			}
 		}
@@ -237,7 +236,7 @@ func applyAccountSegmentToShomei(shomeiState *statemanager.WorldState, accSegmen
 			relevSubSegment    = subSegments[0]
 			accPos, _          = shomeiState.AccountTrie.FindKey(address)
 			initAcc            = shomeiState.AccountTrie.Data.MustGet(accPos).Value
-			squashedAccSegment = squashSubSegmentForShomei(initAcc, relevSubSegment)
+			squashedAccSegment = squashSubSegmentForShomei(initAcc.Account, relevSubSegment)
 		)
 
 		// Since the storage traces will all be read-only due to the fact that
@@ -266,7 +265,7 @@ func applyAccountSegmentToShomei(shomeiState *statemanager.WorldState, accSegmen
 		// function `applySquashedStorageLog` because it will attempt to access
 		// the storage trie. And in this case, the storage trie does not
 		// pre-exists
-		storageTrie := statemanager.NewStorageTrie(statemanager.MIMC_CONFIG, address)
+		storageTrie := statemanager.NewStorageTrie(address)
 		shomeiState.StorageTries.InsertNew(address, storageTrie)
 
 		// The relevant storage sub-segment is always the last one. Assertedly,
@@ -291,7 +290,7 @@ func applyAccountSegmentToShomei(shomeiState *statemanager.WorldState, accSegmen
 				newAccount := log.Value.(types.Account)
 				newStorageRoot := shomeiState.StorageTries.MustGet(address).TopRoot()
 				newAccount.StorageRoot = newStorageRoot
-				trace := shomeiState.AccountTrie.InsertAndProve(address, newAccount)
+				trace := shomeiState.AccountTrie.InsertAndProve(address, newAccount.WrappedForShomeiTraces())
 				blockTrace = append(blockTrace, asDecodedTrace("0x", trace))
 			}
 		}
@@ -488,7 +487,7 @@ func squashSubSegmentForShomei(initialAccountValue types.Account, logs []StateAc
 				vals := log.Value.([]any)
 				currAccountValue.CodeSize = vals[0].(int64)
 				currAccountValue.KeccakCodeHash = vals[1].(types.FullBytes32)
-				currAccountValue.MimcCodeHash = vals[2].(types.Bytes32)
+				currAccountValue.LineaCodeHash = vals[2].(types.KoalaOctuplet)
 				if currAccountValue.Balance == nil {
 					// we give it a non-nil value because this is used to infer
 					// the existence of the account in the `statesummary` module
@@ -670,11 +669,11 @@ func AssertShomeiAgree(t *testing.T, state State, traces [][]StateAccessLog) {
 	}
 }
 
-func mimcHash(m io.WriterTo) types.Bytes32 {
-	h := mimc.NewMiMC()
+func poseidon2Hash(m io.WriterTo) types.KoalaOctuplet {
+	h := poseidon2.NewMDHasher()
 	m.WriteTo(h)
 	d := h.Sum(nil)
-	return types.AsBytes32(d)
+	return types.MustBytesToKoalaOctuplet(d)
 }
 
 func sortByHKeyStable(subSegment []StateAccessLog) {
@@ -682,9 +681,9 @@ func sortByHKeyStable(subSegment []StateAccessLog) {
 		subSegment[:len(subSegment)-1], // The last entry will be the account-level log which we don't want to sort
 		func(a, b StateAccessLog) int {
 			switch {
-			case mimcHash(a.Key).Hex() < mimcHash(b.Key).Hex():
+			case poseidon2Hash(a.Key).Hex() < poseidon2Hash(b.Key).Hex():
 				return -1
-			case mimcHash(a.Key).Hex() > mimcHash(b.Key).Hex():
+			case poseidon2Hash(a.Key).Hex() > poseidon2Hash(b.Key).Hex():
 				return 1
 			default:
 				return 0

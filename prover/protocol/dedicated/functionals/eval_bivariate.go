@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
+
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/accessors"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -34,15 +37,15 @@ type EvalBivariateProverAction struct {
 }
 
 func (a *EvalBivariateProverAction) Run(assi *wizard.ProverRuntime) {
-	xVal := a.X.GetVal(assi)
-	yxPow1mkVal := a.YXPow1mk.GetVal(assi)
+	xVal := a.X.GetValExt(assi)
+	yxPow1mkVal := a.YXPow1mk.GetValExt(assi)
 	p := a.PCom.GetColAssignment(assi)
 
-	h := make([]field.Element, a.Length)
-	h[a.Length-1] = p.Get(a.Length - 1)
+	h := make([]fext.Element, a.Length)
+	h[a.Length-1] = p.GetExt(a.Length - 1)
 
 	for i := a.Length - 2; i >= 0; i-- {
-		pi := p.Get(i)
+		pi := p.GetExt(i)
 		if (i+1)%a.NPowX == 0 {
 			h[i].Mul(&h[i+1], &yxPow1mkVal).Add(&h[i], &pi)
 			continue
@@ -50,8 +53,8 @@ func (a *EvalBivariateProverAction) Run(assi *wizard.ProverRuntime) {
 		h[i].Mul(&h[i+1], &xVal).Add(&h[i], &pi)
 	}
 
-	assi.AssignColumn(ifaces.ColIDf("%v_%v", a.Name, EVAL_BIVARIATE_POLY), smartvectors.NewRegular(h))
-	assi.AssignLocalPoint(ifaces.QueryIDf("%v_%v", a.Name, EVAL_BIVARIATE_FIXED_POINT_BEGIN), h[0])
+	assi.AssignColumn(ifaces.ColIDf("%v_%v", a.Name, EVAL_BIVARIATE_POLY), smartvectors.NewRegularExt(h))
+	assi.AssignLocalPointExt(ifaces.QueryIDf("%v_%v", a.Name, EVAL_BIVARIATE_FIXED_POINT_BEGIN), h[0])
 }
 
 /*
@@ -89,6 +92,7 @@ func EvalCoeffBivariate(
 		maxRound,
 		ifaces.ColIDf("%v_%v", name, EVAL_BIVARIATE_POLY),
 		length,
+		false,
 	)
 
 	/*
@@ -149,6 +153,9 @@ func EvalCoeffBivariate(
 	return accessors.NewLocalOpeningAccessor(finalLocalOpening, maxRound)
 }
 
+// Ensure XYPow1MinNAccessor implements the [ifaces.Accessor] interface
+var _ ifaces.Accessor = &XYPow1MinNAccessor{}
+
 // xYPower1MinAccessor implements [ifaces.Accessor] and computes X^(1-N) * Y
 // where x and y are input accessors. It is exported so that the [wizard.CompiledIOP]
 // serializer can access it.
@@ -159,6 +166,65 @@ type XYPow1MinNAccessor struct {
 	N int
 	// AccessName is used to derive a unique name to the accessor.s
 	AccessName string
+}
+
+func (a *XYPow1MinNAccessor) GetValBase(run ifaces.Runtime) (field.Element, error) {
+	x, errX := a.X.GetValBase(run)
+	if errX != nil {
+		return field.Zero(), errX
+	}
+	y, errY := a.Y.GetValBase(run)
+	if errY != nil {
+		return field.Zero(), errY
+	}
+	var res field.Element
+	res.Exp(x, big.NewInt(int64(1-a.N)))
+	res.Mul(&res, &y)
+	return res, nil
+}
+
+func (a *XYPow1MinNAccessor) GetValExt(run ifaces.Runtime) fext.Element {
+	x := a.X.GetValExt(run)
+	y := a.Y.GetValExt(run)
+	var res fext.Element
+	res.Exp(x, big.NewInt(int64(1-a.N)))
+	res.Mul(&res, &y)
+	return res
+}
+
+func (a *XYPow1MinNAccessor) GetFrontendVariableBase(api frontend.API, run ifaces.GnarkRuntime) (koalagnark.Element, error) {
+	x, errX := a.X.GetFrontendVariableBase(api, run)
+	if errX != nil {
+		return koalagnark.NewElement(0), errX
+	}
+	y, errY := a.Y.GetFrontendVariableBase(api, run)
+	if errY != nil {
+		return koalagnark.NewElement(0), errY
+	}
+
+	koalaAPI := koalagnark.NewAPI(api)
+	res := gnarkutil.Exp(api, x, 1-a.N)
+	res = koalaAPI.Mul(res, y)
+	return res, nil
+}
+
+func (a *XYPow1MinNAccessor) GetFrontendVariableExt(api frontend.API, run ifaces.GnarkRuntime) koalagnark.Ext {
+	x := a.X.GetFrontendVariableExt(api, run)
+	y := a.Y.GetFrontendVariableExt(api, run)
+	temp := gnarkutil.ExpExt(api, x, 1-a.N)
+
+	koalaAPI := koalagnark.NewAPI(api)
+
+	res := koalaAPI.MulExt(temp, y)
+	// res := temp.Mul(api, temp, y)
+	return res
+}
+
+func (a *XYPow1MinNAccessor) IsBase() bool {
+	if a.X.IsBase() && a.Y.IsBase() {
+		return true
+	}
+	return false
 }
 
 // String implements [symbolic.Metadata] and thus [ifaces.Accessor].
@@ -182,11 +248,12 @@ func (a *XYPow1MinNAccessor) GetVal(run ifaces.Runtime) field.Element {
 }
 
 // GetFrontendVariable implements the [ifaces.Accessor] interface.
-func (a *XYPow1MinNAccessor) GetFrontendVariable(api frontend.API, run ifaces.GnarkRuntime) frontend.Variable {
+func (a *XYPow1MinNAccessor) GetFrontendVariable(api frontend.API, run ifaces.GnarkRuntime) koalagnark.Element {
 	x := a.X.GetFrontendVariable(api, run)
 	y := a.Y.GetFrontendVariable(api, run)
 	res := gnarkutil.Exp(api, x, 1-a.N)
-	res = api.Mul(res, y)
+	koalaAPI := koalagnark.NewAPI(api)
+	res = koalaAPI.Mul(res, y)
 	return res
 }
 

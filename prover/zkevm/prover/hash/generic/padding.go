@@ -1,19 +1,16 @@
 package generic
 
+import (
+	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/poseidon2"
+)
+
 var (
 
 	// UnspecifiedHashingUsecase is the zero value for the packing use-case and
 	// it should not be used unless for testing that the caller of some function
 	// does not pass it.
 	UnspecifiedHashingUsecase = HashingUsecase{}
-
-	// MiMCUsecase represents using MiMC with the Miyaguchi-Preneel construction
-	// over a single field.
-	MiMCUsecase = HashingUsecase{
-		PaddingStrat:       zeroPadding,
-		LaneSizeBytes_:     31,
-		NbOfLanesPerBlock_: 1,
-	}
 
 	// KeccakUsecase represents using the Keccak hash function as in Ethereum
 	KeccakUsecase = HashingUsecase{
@@ -27,6 +24,12 @@ var (
 		PaddingStrat:       sha2Padding,
 		LaneSizeBytes_:     4,
 		NbOfLanesPerBlock_: 16,
+	}
+
+	Poseidon2UseCase = HashingUsecase{
+		PaddingStrat:       zeroPadding,
+		LaneSizeBytes_:     poseidon2.BlockSize * field.Bytes,
+		NbOfLanesPerBlock_: 1,
 	}
 )
 

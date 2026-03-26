@@ -111,11 +111,11 @@ func TestConstructor(t *testing.T) {
 	for i := range testCases {
 
 		t.Run(testCases[i].Explainer, func(t *testing.T) {
-			// This checks that the expression is well-formed and that the ESHash
+			// This checks that the expression is well-formed and that the GenericFieldELem
 			// is correctly computed.
 			assert.NoError(t, testCases[i].Actual.Validate(), "the expression is not well-formed")
 			assert.Equal(t, testCases[i].ExpectedOperator, testCases[i].Actual.Operator, "the operator does not match")
-			assert.Equal(t, testCases[i].ExpectedParent, testCases[i].ExpectedParent, "the expected parents do not match")
+			//assert.Equal(t, testCases[i].ExpectedParent, testCases[i].ExpectedParent, "the expected parents do not match")
 		})
 	}
 

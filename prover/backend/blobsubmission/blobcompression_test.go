@@ -270,7 +270,7 @@ func TestKZGWithPoint(t *testing.T) {
 	}
 
 	// Compute all the prover fields
-	snarkHash, err := encode.MiMCChecksumPackedData(blobBytes[:], fr381.Bits-1, encode.NoTerminalSymbol())
+	snarkHash, err := encode.Poseidon2ChecksumPackedData(blobBytes[:], fr381.Bits-1, encode.NoTerminalSymbol())
 	assert.NoError(t, err)
 
 	xUnreduced := evaluationChallenge(snarkHash, blobHash[:])

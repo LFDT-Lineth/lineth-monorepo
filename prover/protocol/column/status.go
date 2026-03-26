@@ -100,6 +100,16 @@ func (s Status) IsPublic() bool {
 	}
 }
 
+// IsOffline returns true if the column is defined offline
+func (s Status) IsOffline() bool {
+	switch s {
+	case Precomputed, VerifyingKey:
+		return true
+	default:
+		return false
+	}
+}
+
 // MarshalJSON implements [json.Marshaler] directly returning the Itoa of the
 // integer.
 func (t Status) MarshalJSON() ([]byte, error) {
@@ -114,8 +124,8 @@ func (t *Status) UnmarshalJSON(b []byte) error {
 		return fmt.Errorf("could not parse Status as integer: %w, got `%v`", err, string(b))
 	}
 
-	if n < 0 || Status(n) > VerifierDefined {
-		return fmt.Errorf("could not parse the integer `%v` as Status, must be in range [0, 1]", n)
+	if n < 0 || n > int64(VerifierDefined) {
+		return fmt.Errorf("could not parse the integer `%v` as Status, must be in range [0, %d]", n, VerifierDefined)
 	}
 
 	*t = Status(n)

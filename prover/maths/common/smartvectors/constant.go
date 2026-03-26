@@ -31,8 +31,11 @@ func (c *Constant) Len() int { return c.Length }
 // Returns an entry of the constant
 func (c *Constant) GetBase(int) (field.Element, error) { return c.Value, nil }
 
-func (c *Constant) GetExt(int) fext.Element { return *new(fext.Element).SetFromBase(&c.Value) }
-
+func (c *Constant) GetExt(int) fext.Element {
+	var res fext.Element
+	fext.SetFromBase(&res, &c.Value)
+	return res
+}
 func (r *Constant) Get(n int) field.Element {
 	res, err := r.GetBase(n)
 	if err != nil {
@@ -74,7 +77,7 @@ func (c *Constant) WriteInSlice(s []field.Element) {
 
 func (c *Constant) WriteInSliceExt(s []fext.Element) {
 	for i := 0; i < len(s); i++ {
-		s[i].SetFromBase(&c.Value)
+		fext.SetFromBase(&s[i], &c.Value)
 	}
 }
 
@@ -93,7 +96,7 @@ func (c *Constant) DeepCopy() SmartVector {
 func (c *Constant) IntoRegVecSaveAlloc() []field.Element {
 	res, err := c.IntoRegVecSaveAllocBase()
 	if err != nil {
-		panic(conversionError)
+		panic(errConversion)
 	}
 	return res
 }
@@ -108,7 +111,7 @@ func (c *Constant) IntoRegVecSaveAllocExt() []fext.Element {
 	res := make([]fext.Element, len(temp))
 	for i := 0; i < len(temp); i++ {
 		elem := temp[i]
-		res[i].SetFromBase(&elem)
+		fext.SetFromBase(&res[i], &elem)
 	}
 	return res
 }

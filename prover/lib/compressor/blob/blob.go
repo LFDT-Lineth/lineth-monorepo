@@ -9,6 +9,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode"
 	v0 "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v0"
 	v1 "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1"
+	v2 "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v2"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -17,9 +18,11 @@ func GetVersion(blob []byte) uint16 {
 		return 0
 	}
 
-	if blob[0] == 0x3f && blob[1] == 0xff && blob[2]&0xc0 == 0xc0 {
-		return 1
+	// packed two bytes into 254 usable bits of an BLS12-381 scalar
+	if blob[0] == 0x3f && blob[1] == 0xff { // upper 14 bits suggest a "small" version
+		return 4 - uint16(blob[2]>>6) // the remaining two bits determine the version (1 through 4 are possible)
 	}
+
 	return 0
 }
 
@@ -44,6 +47,11 @@ func DecompressBlob(blob []byte, dictStore dictionary.Store) ([]byte, error) {
 		blockDecoder = v0.DecodeBlockFromUncompressed
 	case 1:
 		r, _err := v1.DecompressBlob(blob, dictStore)
+		blocks = r.Blocks
+		err = _err
+		blockDecoder = v1.DecodeBlockFromUncompressed
+	case 2:
+		r, _err := v2.DecompressBlob(blob, dictStore)
 		blocks = r.Blocks
 		err = _err
 		blockDecoder = v1.DecodeBlockFromUncompressed

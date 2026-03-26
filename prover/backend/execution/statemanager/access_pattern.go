@@ -3,8 +3,6 @@ package statemanager
 import (
 	"errors"
 	"fmt"
-
-	"github.com/consensys/linea-monorepo/prover/utils/types"
 )
 
 /*
@@ -377,8 +375,8 @@ func checkStorageTraceOrder(traces []DecodedTrace) (err error) {
 			next     = traces[i+1].Underlying
 			currRW   = curr.RWInt()
 			nextRW   = next.RWInt()
-			currHKey = curr.HKey(MIMC_CONFIG)
-			nextHKey = next.HKey(MIMC_CONFIG)
+			currHKey = curr.HKey()
+			nextHKey = next.HKey()
 		)
 
 		if currRW > nextRW {
@@ -388,7 +386,7 @@ func checkStorageTraceOrder(traces []DecodedTrace) (err error) {
 			)
 		}
 
-		if currRW == nextRW && types.Bytes32Cmp(currHKey, nextHKey) >= 0 {
+		if currRW == nextRW && currHKey.Cmp(nextHKey) >= 0 {
 			fmt.Printf("currRW=%v nextRW=%v currT=%T nextT=%T\n", currRW, nextRW, curr, next)
 			err = errors.Join(
 				err,

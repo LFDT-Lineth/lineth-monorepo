@@ -8,6 +8,7 @@ import (
 	"unsafe"
 
 	blob_v1 "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1"
+	blob_v2 "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v2"
 )
 
 //go:generate go build -tags nocorset -ldflags "-s -w" -buildmode=c-shared -o libcompressor.so libcompressor.go
@@ -33,7 +34,7 @@ func Init(dataLimit int, dictPath *C.char) bool {
 func initGo(dataLimit int, dictPath string) bool {
 	lock.Lock()
 	defer lock.Unlock()
-	compressor, lastError = blob_v1.NewBlobMaker(dataLimit, dictPath)
+	compressor, lastError = blob_v2.NewBlobMaker(dataLimit, dictPath)
 
 	return lastError == nil
 }

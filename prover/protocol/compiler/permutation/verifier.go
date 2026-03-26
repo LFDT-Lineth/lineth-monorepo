@@ -6,6 +6,8 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
@@ -29,7 +31,7 @@ func (v *VerifierCtx) Run(run wizard.Runtime) error {
 
 	for _, zCtx := range v.Ctxs {
 		for _, opening := range zCtx.ZOpenings {
-			y := run.GetLocalPointEvalParams(opening.ID).Y
+			y := run.GetLocalPointEvalParams(opening.ID).BaseY
 			mustBeOne.Mul(&mustBeOne, &y)
 		}
 	}
@@ -44,17 +46,18 @@ func (v *VerifierCtx) Run(run wizard.Runtime) error {
 // Run implements the [wizard.VerifierAction] interface and is as
 // [VerifierCtx.Run] but in the context of a gnark circuit.
 func (v *VerifierCtx) RunGnark(api frontend.API, run wizard.GnarkRuntime) {
+	mustBeOne := koalagnark.NewElement(1)
 
-	mustBeOne := frontend.Variable(1)
+	koalaAPI := koalagnark.NewAPI(api)
 
 	for _, zCtx := range v.Ctxs {
 		for _, opening := range zCtx.ZOpenings {
-			y := run.GetLocalPointEvalParams(opening.ID).Y
-			mustBeOne = api.Mul(mustBeOne, y)
+			y := run.GetLocalPointEvalParams(opening.ID).BaseY
+			mustBeOne = koalaAPI.Mul(mustBeOne, y)
 		}
 	}
 
-	api.AssertIsEqual(mustBeOne, frontend.Variable(1))
+	api.AssertIsEqual(mustBeOne, koalagnark.NewElement(1))
 }
 
 func (v *VerifierCtx) Skip() {
@@ -77,15 +80,15 @@ type CheckGrandProductIsOne struct {
 func (c *CheckGrandProductIsOne) Run(run wizard.Runtime) error {
 
 	var (
-		y = run.GetGrandProductParams(c.Query.ID).Y
-		d = field.One()
+		y = run.GetGrandProductParams(c.Query.ID).ExtY
+		d = fext.One()
 	)
 
 	for _, e := range c.ExplicitNum {
 
 		var (
-			col = column.EvalExprColumn(run, e.Board()).IntoRegVecSaveAlloc()
-			tmp = field.One()
+			col = column.EvalExprColumn(run, e.Board()).IntoRegVecSaveAllocExt()
+			tmp = fext.One()
 		)
 
 		for i := range col {
@@ -98,8 +101,8 @@ func (c *CheckGrandProductIsOne) Run(run wizard.Runtime) error {
 	for _, e := range c.ExplicitDen {
 
 		var (
-			col = column.EvalExprColumn(run, e.Board()).IntoRegVecSaveAlloc()
-			tmp = field.One()
+			col = column.EvalExprColumn(run, e.Board()).IntoRegVecSaveAllocExt()
+			tmp = fext.One()
 		)
 
 		for i := range col {
@@ -118,43 +121,38 @@ func (c *CheckGrandProductIsOne) Run(run wizard.Runtime) error {
 }
 
 func (c *CheckGrandProductIsOne) RunGnark(api frontend.API, run wizard.GnarkRuntime) {
+	y := run.GetGrandProductParams(c.Query.ID).Prod
 
-	var (
-		y = run.GetGrandProductParams(c.Query.ID).Prod
-		d = frontend.Variable(1)
-	)
-
+	koalaAPI := koalagnark.NewAPI(api)
+	d := koalaAPI.OneExt()
 	for _, e := range c.ExplicitNum {
 
-		var (
-			col = column.GnarkEvalExprColumn(api, run, e.Board())
-			tmp = frontend.Variable(1)
-		)
+		col := column.GnarkEvalExprColumn(api, run, e.Board())
+		tmp := koalaAPI.OneExt()
 
 		for i := range col {
-			tmp = api.Mul(tmp, col[i])
+			tmp = koalaAPI.MulExt(tmp, col[i])
 		}
 
-		y = api.Mul(y, tmp)
+		y = koalaAPI.MulExt(y, tmp)
 	}
 
 	for _, e := range c.ExplicitDen {
 
-		var (
-			col = column.GnarkEvalExprColumn(api, run, e.Board())
-			tmp = frontend.Variable(1)
-		)
+		col := column.GnarkEvalExprColumn(api, run, e.Board())
+		tmp := koalaAPI.OneExt()
 
 		for i := range col {
-			tmp = api.Mul(tmp, col[i])
+			tmp = koalaAPI.MulExt(tmp, col[i])
 		}
 
-		d = api.Mul(d, tmp)
+		d = koalaAPI.MulExt(d, tmp)
 	}
 
-	y = api.Div(y, d)
+	y = koalaAPI.DivExt(y, d)
 
-	api.AssertIsEqual(y, frontend.Variable(1))
+	e := koalaAPI.OneExt()
+	koalaAPI.AssertIsEqualExt(y, e)
 }
 
 func (c *CheckGrandProductIsOne) Skip() {
@@ -184,20 +182,20 @@ func (f *FinalProductCheck) Run(run wizard.Runtime) error {
 
 	// zProd stores the product of the ending values of the zs as queried
 	// in the protocol via the local opening queries.
-	zProd := field.One()
+	zProd := fext.One()
 	for k := range f.ZOpenings {
-		temp := run.GetLocalPointEvalParams(f.ZOpenings[k].ID).Y
+		temp := run.GetLocalPointEvalParams(f.ZOpenings[k].ID).ExtY
 		zProd.Mul(&zProd, &temp)
 	}
 
 	for _, e := range f.ToExplicitlyEvaluate {
-		c := column.EvalExprColumn(run, e.Board()).IntoRegVecSaveAlloc()
+		c := column.EvalExprColumn(run, e.Board()).IntoRegVecSaveAllocExt()
 		for i := range c {
 			zProd.Mul(&zProd, &c[i])
 		}
 	}
 
-	claimedProd := run.GetGrandProductParams(f.GrandProductID).Y
+	claimedProd := run.GetGrandProductParams(f.GrandProductID).ExtY
 	if zProd != claimedProd {
 		return fmt.Errorf("grand product: the final evaluation check failed for %v\n"+
 			"given %v but calculated %v,",
@@ -209,17 +207,18 @@ func (f *FinalProductCheck) Run(run wizard.Runtime) error {
 
 // RunGnark implements the [wizard.VerifierAction]
 func (f *FinalProductCheck) RunGnark(api frontend.API, run wizard.GnarkRuntime) {
-
 	claimedProd := run.GetGrandProductParams(f.GrandProductID).Prod
 
+	koalaAPI := koalagnark.NewAPI(api)
+
 	// zProd stores the product of the ending values of the z columns
-	zProd := frontend.Variable(field.One())
+	zProd := koalaAPI.OneExt()
 	for k := range f.ZOpenings {
-		temp := run.GetLocalPointEvalParams(f.ZOpenings[k].ID).Y
-		zProd = api.Mul(zProd, temp)
+		temp := run.GetLocalPointEvalParams(f.ZOpenings[k].ID).ExtY
+		zProd = koalaAPI.MulExt(zProd, temp)
 	}
 
-	api.AssertIsEqual(zProd, claimedProd)
+	koalaAPI.AssertIsEqualExt(zProd, claimedProd)
 }
 
 func (f *FinalProductCheck) Skip() {

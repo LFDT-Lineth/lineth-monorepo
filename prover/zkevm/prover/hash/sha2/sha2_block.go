@@ -1,7 +1,8 @@
 package sha2
 
 import (
-	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
+	"fmt"
+
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
@@ -16,17 +17,52 @@ import (
 )
 
 const (
-	// number of rows taken by a single instance of Sha2-block. 16 for the block
-	// 2 * uint128 for the initial hash and 2 * uint128 for the final hash.
-	numRowPerInstance = 16 + 2 + 2
+	// numLimbBytes each limb is 16 bits, so 2 bytes.
+	numLimbBytes = 2
+	// limbBytesStart is the start index in the Bytes representation of the
+	// field.Element that corresponds to the limb data.
+	limbBytesStart = field.Bytes - numLimbBytes
+	// stateSizeBytes is SHA2 state size in bytes.
+	stateSizeBytes = 32
+	// blockSizeBytes is SHA2 block size in bytes.
+	blockSizeBytes = 64
+	// numLimbsPerState is the number of limbs to represent a single hash value - 256
+	// bits are represented as 16 uint16.
+	numLimbsPerState = stateSizeBytes / numLimbBytes
+	// numLimbsPerBlock is the number of rows to represent a single block - 512 bits
+	// are represented as 32 uint16.
+	numLimbsPerBlock = blockSizeBytes / numLimbBytes
+	// number of rows taken by a single instance of Sha2-block: 32 for the block
+	// lanes, as the lane (256 bit) is packed in 32 uint16, 16 uint16 (256 bits
+	// in total) for the initial hash and 16 uint16 (256 bits in total) for the
+	// final hash.
+	numRowPerInstance = numLimbsPerBlock + numLimbsPerState + numLimbsPerState
 )
 
 var (
 	// initializationVector encodes the initialization vector of SHA2 in 2 field
 	// elements storing each 128 bytes of the IV in big endian order.
-	initializationVector = [2]field.Element{
-		field.NewFromString("0x6A09E667BB67AE853C6EF372A54FF53A"),
-		field.NewFromString("0x510E527F9B05688C1F83D9AB5BE0CD19"),
+	//
+	// 0x6A09E667BB67AE853C6EF372A54FF53A510E527F9B05688C1F83D9AB5BE0CD19
+	initializationVector = [16]field.Element{
+		// 0x6A09E667BB67AE853C6EF372A54FF53A
+		field.NewFromString("0x6a09"),
+		field.NewFromString("0xe667"),
+		field.NewFromString("0xbb67"),
+		field.NewFromString("0xae85"),
+		field.NewFromString("0x3c6e"),
+		field.NewFromString("0xf372"),
+		field.NewFromString("0xa54f"),
+		field.NewFromString("0xf53a"),
+		// 0x510E527F9B05688C1F83D9AB5BE0CD19
+		field.NewFromString("0x510e"),
+		field.NewFromString("0x527f"),
+		field.NewFromString("0x9b05"),
+		field.NewFromString("0x688c"),
+		field.NewFromString("0x1f83"),
+		field.NewFromString("0xd9ab"),
+		field.NewFromString("0x5be0"),
+		field.NewFromString("0xcd19"),
 	}
 )
 
@@ -43,9 +79,9 @@ type sha2BlocksInputs struct {
 	MaxNbBlockPerCirc int
 	MaxNbCircuit      int
 
-	// PackedUint32 contains the blocks given to the Sha2 hasher as sequences of
-	// uint32.
-	PackedUint32 ifaces.Column
+	// PackedUint16 contains the blocks given to the Sha2 hasher as sequences of
+	// uint16.
+	PackedUint16 ifaces.Column
 
 	// Selector is a binary indicator column indicating which rows are to be
 	// considered by the sha2 block module.
@@ -93,9 +129,9 @@ type sha2BlockModule struct {
 	// constraints setting the values of the old state of the hasher.
 	IsEffFirstLaneOfNewHash ifaces.Column
 
-	// IsEffFirstLaneOfNewHashShiftMin2 is a manually shifted version of the
-	// [IsFirstLaneOfNewHash] column with an offset of -2.
-	IsEffFirstLaneOfNewHashShiftMin2 *dedicated.ManuallyShifted
+	// IsEffFirstLaneOfNewHashShiftMin16 is a manually shifted version of the
+	// [IsEffFirstLaneOfNewHash] column with an offset of -[numLimbsPerState].
+	IsEffFirstLaneOfNewHashShiftMin16 *dedicated.ManuallyShifted
 
 	// IsEffLastLaneOfCurrHash is a binary indicator column indicating with a 1
 	// the last row of every hash. It is used to ensure that HashHi and HashLo
@@ -108,12 +144,12 @@ type sha2BlockModule struct {
 	// Limb stores the inputs to send to the circuit
 	Limbs ifaces.Column
 
-	// HashHi and HashLo store respectively the HI and the LO part. The columns
-	// are constants in the span of a hash.
-	HashHi, HashLo ifaces.Column
+	// Hash stores parts of the hashing result. The columns are constants in the
+	// span of a hash.
+	Hash [numLimbsPerState]ifaces.Column
 
-	HashHiIsZero, HashLoIsZero ifaces.Column
-	ProverActions              []wizard.ProverAction
+	HashIsZero    [numLimbsPerState]ifaces.Column
+	ProverActions []wizard.ProverAction
 
 	// GnarkCircuitConnector is the result of the Plonk alignement module. It
 	// handles all the Plonk logic responsible for verifying the correctness of
@@ -138,6 +174,7 @@ func newSha2BlockModule(comp *wizard.CompiledIOP, inp *sha2BlocksInputs) *sha2Bl
 				0,
 				ifaces.ColID(inp.Name+"_"+s),
 				colSize,
+				true,
 			)
 		}
 
@@ -147,13 +184,14 @@ func newSha2BlockModule(comp *wizard.CompiledIOP, inp *sha2BlocksInputs) *sha2Bl
 			IsEffBlock:              declareCommit("IS_EFF_BLOCK"),
 			IsEffFirstLaneOfNewHash: declareCommit("IS_EFF_FIRST_LANE_OF_NEW_HASH"),
 			IsEffLastLaneOfCurrHash: declareCommit("IS_EFF_LAST_LANE_OF_CURR_HASH"),
-			HashHi:                  declareCommit("HASH_HI"),
-			HashLo:                  declareCommit("HASH_LO"),
 			Limbs:                   declareCommit("LIMBS"),
 		}
 	)
 
 	pragmas.MarkRightPadded(res.IsActive)
+	for i := range numLimbsPerState {
+		res.Hash[i] = declareCommit(fmt.Sprintf("HASH_%d", i))
+	}
 
 	res.CanBeBeginningOfInstance = dedicated.CreateHeartBeat(
 		comp,
@@ -174,12 +212,12 @@ func newSha2BlockModule(comp *wizard.CompiledIOP, inp *sha2BlocksInputs) *sha2Bl
 	res.CanBeBlockOfInstance = dedicated.NewRepeatedPattern(
 		comp,
 		0,
-		vector.ForTest(0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0),
+		canBeBlockOfInstancePattern(),
 		res.IsActive,
-		"SHA2_BLOCK_OF_INSTANCE_SELECTION",
+		"SHA2_BLOCK",
 	)
 
-	res.IsEffFirstLaneOfNewHashShiftMin2 = dedicated.ManuallyShift(comp, res.IsEffFirstLaneOfNewHash, -2, "IS_EFF_FIRST_LANE_OF_NEW_HASH_SHIFT_MIN_2")
+	res.IsEffFirstLaneOfNewHashShiftMin16 = dedicated.ManuallyShift(comp, res.IsEffFirstLaneOfNewHash, -numLimbsPerState, "_IS_EFF_FIRST_LANE_OF_NEW_HASH_SHIFT_MIN_16")
 
 	commonconstraints.MustBeActivationColumns(comp, res.IsActive)
 
@@ -209,9 +247,7 @@ func newSha2BlockModule(comp *wizard.CompiledIOP, inp *sha2BlocksInputs) *sha2Bl
 	commonconstraints.MustZeroWhenInactive(
 		comp,
 		res.IsActive,
-		res.HashHi,
-		res.HashLo,
-		res.Limbs,
+		append(res.Hash[:], res.Limbs)...,
 	)
 
 	// res.IsEffLastLaneOfCurrHash == 1 IFF EITHER
@@ -237,84 +273,61 @@ func newSha2BlockModule(comp *wizard.CompiledIOP, inp *sha2BlocksInputs) *sha2Bl
 	// limb of the old state.
 	//
 
-	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%v_SET_IV_0_FOR_OLD_STATE", inp.Name),
-		sym.Mul(
-			res.IsEffFirstLaneOfNewHash,
-			sym.Sub(res.Limbs, initializationVector[0]),
-		),
-	)
-
-	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%v_SET_IV_1_FOR_OLD_STATE", inp.Name),
-		sym.Mul(
-			res.IsEffFirstLaneOfNewHash,
-			sym.Sub(column.Shift(res.Limbs, 1), initializationVector[1]),
-		),
-	)
+	for i := range initializationVector {
+		comp.InsertGlobal(0,
+			ifaces.QueryIDf("%v_SET_IV_FOR_OLD_STATE_%d", inp.Name, i),
+			sym.Mul(
+				res.IsEffFirstLaneOfNewHash,
+				sym.Sub(column.Shift(res.Limbs, i), initializationVector[i]),
+			),
+			true,
+		)
+	}
 
 	// If we are not at the beginning of a new hash but are still at the beginning
 	// of an instance, then the "oldState" value should be equal to the "newState"
-	// value of the previous instance. This is done in two constraints.
+	// value of the previous instance.
 	//
 
-	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%v_REUSING_PREV_HASHING_STATE_0", inp.Name),
-		sym.Mul(
-			sym.Sub(1, res.IsEffFirstLaneOfNewHash),
-			sym.Mul(res.CanBeBeginningOfInstance.Natural, res.IsActive),
-			sym.Sub(res.Limbs, column.Shift(res.Limbs, -2)),
-		),
-	)
-
-	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%v_REUSING_PREV_HASHING_STATE_1", inp.Name),
-		sym.Mul(
-			sym.Sub(1, res.IsEffFirstLaneOfNewHash),
-			sym.Mul(res.CanBeBeginningOfInstance.Natural, res.IsActive),
-			sym.Sub(column.Shift(res.Limbs, 1), column.Shift(res.Limbs, -1)),
-		),
-	)
+	for i := range numLimbsPerState {
+		comp.InsertGlobal(0,
+			ifaces.QueryIDf("%v_REUSING_PREV_HASHING_STATE_%d", inp.Name, i),
+			sym.Mul(
+				sym.Sub(1, res.IsEffFirstLaneOfNewHash),
+				sym.Mul(res.CanBeBeginningOfInstance.Natural, res.IsActive),
+				sym.Sub(column.Shift(res.Limbs, i), column.Shift(res.Limbs, i-numLimbsPerState)),
+			),
+			true,
+		)
+	}
 
 	// If we are at the end of the current hash, then the newState value must
-	// be equals to HASH_HI, HASH_LO
+	// be equals to HASH.
 	//
 
-	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%v_SET_HASH_HI", inp.Name),
-		sym.Mul(
-			res.IsEffLastLaneOfCurrHash,
-			sym.Sub(res.HashHi, column.Shift(res.Limbs, -1)),
-		),
-	)
-
-	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%v_SET_HASH_LO", inp.Name),
-		sym.Mul(
-			res.IsEffLastLaneOfCurrHash,
-			sym.Sub(res.HashLo, res.Limbs),
-		),
-	)
+	for i := range numLimbsPerState {
+		comp.InsertGlobal(0,
+			ifaces.QueryIDf("%v_SET_HASH_%d", inp.Name, i),
+			sym.Mul(
+				res.IsEffLastLaneOfCurrHash,
+				sym.Sub(res.Hash[i], column.Shift(res.Limbs, -numLimbsPerState+i+1)),
+			),
+		)
+	}
 
 	// Unless the current row correspond to the end of the current hash, the
-	// values of HASH_HI/LO should be equal to those of the next row.
+	// values of HASH should be equal to those of the next row.
 	//
 
-	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%v_KEEP_HASH_HI", inp.Name),
-		sym.Mul(
-			sym.Sub(1, res.IsEffLastLaneOfCurrHash),
-			sym.Sub(column.Shift(res.HashHi, 1), res.HashHi),
-		),
-	)
-
-	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%v_KEEP_HASH_LO", inp.Name),
-		sym.Mul(
-			sym.Sub(1, res.IsEffLastLaneOfCurrHash),
-			sym.Sub(column.Shift(res.HashLo, 1), res.HashLo),
-		),
-	)
+	for i := range numLimbsPerState {
+		comp.InsertGlobal(0,
+			ifaces.QueryIDf("%v_KEEP_HASH_%d", inp.Name, i),
+			sym.Mul(
+				sym.Sub(1, res.IsEffLastLaneOfCurrHash),
+				sym.Sub(column.Shift(res.Hash[i], 1), res.Hash[i]),
+			),
+		)
+	}
 
 	// The following query ensures that the data in limbs corresponding to
 	// limbs are exactly those provided by the input module.
@@ -324,29 +337,32 @@ func newSha2BlockModule(comp *wizard.CompiledIOP, inp *sha2BlocksInputs) *sha2Bl
 		query.ProjectionInput{
 			ColumnA: []ifaces.Column{
 				res.Inputs.IsFirstLaneOfNewHash,
-				res.Inputs.PackedUint32,
+				res.Inputs.PackedUint16,
 			},
 			ColumnB: []ifaces.Column{
-				res.IsEffFirstLaneOfNewHashShiftMin2.Natural,
+				res.IsEffFirstLaneOfNewHashShiftMin16.Natural,
 				res.Limbs,
 			},
 			FilterA: res.Inputs.Selector,
-			FilterB: res.IsEffBlock})
+			FilterB: res.IsEffBlock,
+		},
+	)
 
 	// As per the padding technique we use, the HashHi and HashLo should not
 	// be zero when isActive.
-	var ctxLo, ctxHi wizard.ProverAction
+	var ctxHash [numLimbsPerState]wizard.ProverAction
 
-	res.HashHiIsZero, ctxHi = dedicated.IsZero(comp, res.HashHi).GetColumnAndProverAction()
-	res.HashLoIsZero, ctxLo = dedicated.IsZero(comp, res.HashLo).GetColumnAndProverAction()
-	res.ProverActions = append(res.ProverActions, ctxHi, ctxLo)
+	sumHash := sym.NewConstant(0)
+	for i := range numLimbsPerState {
+		res.HashIsZero[i], ctxHash[i] = dedicated.IsZero(comp, res.Hash[i]).GetColumnAndProverAction()
+		sumHash = sym.Add(sumHash, res.HashIsZero[i])
+	}
+
+	res.ProverActions = append(res.ProverActions, ctxHash[:]...)
 
 	comp.InsertGlobal(0,
 		ifaces.QueryIDf("%v_HASH_CANT_BE_BOTH_ZERO", inp.Name),
-		sym.Mul(
-			res.IsActive,
-			sym.Add(res.HashHiIsZero, res.HashLoIsZero),
-		),
+		sym.Mul(res.IsActive, sumHash),
 	)
 
 	return res
@@ -369,4 +385,24 @@ func (sbh *sha2BlockModule) WithCircuit(comp *wizard.CompiledIOP, options ...que
 	)
 
 	return sbh
+}
+
+func canBeBlockOfInstancePattern() []field.Element {
+	pattern := make([]field.Element, numRowPerInstance)
+
+	for i := range numLimbsPerState {
+		pattern[i] = field.Zero()
+	}
+
+	offset := numLimbsPerState
+	for i := range numLimbsPerBlock {
+		pattern[offset+i] = field.One()
+	}
+
+	offset += numLimbsPerBlock
+	for i := range numLimbsPerState {
+		pattern[offset+i] = field.Zero()
+	}
+
+	return pattern
 }

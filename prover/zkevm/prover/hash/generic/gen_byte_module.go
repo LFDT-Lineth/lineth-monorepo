@@ -4,15 +4,20 @@ import (
 	"bytes"
 
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/expr_handle"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/limbs"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 )
 
-// GenericByteModule encodes the limbs with a left alignment approach
-const GEN_LEFT_ALIGNMENT = 16
+const (
+	// TotalLimbSize is the total size of a limb in bytes.
+	TotalLimbSize = 16
+)
 
-// Generic byte module as specified by the arithmetization. It contains two set
-// of columns, Data and Info. This module can be used for various concrete
+// GenericByteModule encodes the limbs with a left alignment approach as
+// specified by the arithmetization. It contains two set of columns,
+// Data and Info. This module can be used for various concrete
 // arithmetization modules that call the hash module.
 type GenericByteModule struct {
 	// Data module summarizing the information about the data to hash.
@@ -24,33 +29,33 @@ type GenericByteModule struct {
 // GenDataModule collects the columns summarizing the information about the
 // data to hash.
 type GenDataModule struct {
-	HashNum ifaces.Column // identifier for the hash
-	Index   ifaces.Column // identifier for the current limb
-	Limb    ifaces.Column // the content of the limb to hash
-	NBytes  ifaces.Column // indicates the size of the current limb
+	HashNum ifaces.Column   // identifier for the hash
+	Index   ifaces.Column   // identifier for the current limb
+	Limbs   limbs.Uint128Be // the content of the limbs to hash
+	NBytes  ifaces.Column   // indicates the total number of bytes to use from limbs cols
 	ToHash  ifaces.Column
 }
 
 // GenInfoModule collects the columns summarizing information about the result of the hash
 type GenInfoModule struct {
-	HashNum  ifaces.Column // Identifier for the hash. Allows joining with the data module
-	HashLo   ifaces.Column // The Low part of the hash result
-	HashHi   ifaces.Column // The Hi part of the hash result
-	IsHashLo ifaces.Column // indicating the location of HashHi
-	IsHashHi ifaces.Column // indicting the location od HashLo
+	HashNum  ifaces.Column   // Identifier for the hash. Allows joining with the data module
+	HashHi   limbs.Uint128Be // The hash result
+	HashLo   limbs.Uint128Be // The hash result
+	IsHashHi ifaces.Column   // indicating the location of Hash
+	IsHashLo ifaces.Column   // indicating the location of Hash
 }
 
-// ScanStream scans the receiver GenDataModule's assignment and returns the list
+// ScanStreams scans the receiver GenDataModule's assignment and returns the list
 // of the byte stream encoded in the assignment.
 func (gdm *GenDataModule) ScanStreams(run *wizard.ProverRuntime) [][]byte {
 
 	var (
-		numRow      = gdm.Limb.Size()
-		index       = gdm.Index.GetColAssignment(run).IntoRegVecSaveAlloc()
-		limbs       = gdm.Limb.GetColAssignment(run).IntoRegVecSaveAlloc()
+		numRow      = gdm.Limbs.NumRow()
+		index       = expr_handle.GetExprHandleAssignment(run, gdm.Index).IntoRegVecSaveAlloc()
 		toHash      = gdm.ToHash.GetColAssignment(run).IntoRegVecSaveAlloc()
 		hashNum     = gdm.HashNum.GetColAssignment(run).IntoRegVecSaveAlloc()
 		nByte       = gdm.NBytes.GetColAssignment(run).IntoRegVecSaveAlloc()
+		limbs       = gdm.Limbs.GetAssignmentAsByte16Exact(run)
 		streams     = [][]byte(nil)
 		buffer      = &bytes.Buffer{}
 		currHashNum field.Element
@@ -62,6 +67,8 @@ func (gdm *GenDataModule) ScanStreams(run *wizard.ProverRuntime) [][]byte {
 			continue
 		}
 
+		// Index = 0; indicates the start of a new hash. We flush the current
+		// buffer and return the current hash.
 		if index[row].IsZero() {
 			if !currHashNum.IsZero() {
 				streams = append(streams, buffer.Bytes())
@@ -70,13 +77,8 @@ func (gdm *GenDataModule) ScanStreams(run *wizard.ProverRuntime) [][]byte {
 			currHashNum = hashNum[row]
 		}
 
-		var (
-			currLimbLA  = limbs[row].Bytes() // LA = left-aligned on the 16-th byte
-			currNbBytes = nByte[row].Uint64()
-			currLimb    = currLimbLA[16 : 16+currNbBytes]
-		)
-
-		buffer.Write(currLimb)
+		currNbBytes := nByte[row].Uint64()
+		buffer.Write(limbs[row][:currNbBytes])
 	}
 
 	streams = append(streams, buffer.Bytes())

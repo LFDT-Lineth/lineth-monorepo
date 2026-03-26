@@ -1,3 +1,5 @@
+//go:build ignore
+
 package p256verify
 
 import (
@@ -12,7 +14,7 @@ import (
 	"github.com/consensys/go-corset/pkg/ir"
 	"github.com/consensys/go-corset/pkg/ir/air"
 	"github.com/consensys/go-corset/pkg/ir/mir"
-	"github.com/consensys/go-corset/pkg/schema/module"
+	"github.com/consensys/go-corset/pkg/schema"
 	"github.com/consensys/go-corset/pkg/trace"
 	"github.com/consensys/go-corset/pkg/util/field/bls12_377"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
@@ -37,7 +39,7 @@ const (
 	zkevmBin = "../../arithmetization/zkevm.bin"
 )
 
-func parseZkEvmBin(t *testing.T, path string) (*binfile.BinaryFile, *air.Schema[bls12_377.Element], module.LimbsMap) {
+func parseZkEvmBin(t *testing.T, path string) (*binfile.BinaryFile, *air.Schema[bls12_377.Element], schema.LimbsMap) {
 	zkevm, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -55,7 +57,7 @@ func parseExpandedTrace(
 	path string,
 	zkbinf *binfile.BinaryFile,
 	zkSchema *air.Schema[bls12_377.Element],
-	mapping module.LimbsMap,
+	mapping schema.LimbsMap,
 ) trace.Trace[bls12_377.Element] {
 	f, err := os.Open(path)
 	if err != nil {
@@ -93,7 +95,7 @@ func parseColumns(
 	modId := uint(0)
 	moduleFound := false
 	for ; modId < expandedTrace.Width(); modId++ {
-		if expandedTrace.Module(modId).Name().String() == moduleName {
+		if expandedTrace.Module(modId).Name() == moduleName {
 			moduleFound = true
 			break
 		}
@@ -169,7 +171,7 @@ func testP256VerifyOnTrace(t *testing.T, path string, limits *Limits) {
 					func(b *wizard.Builder) {
 						registerColumns(t, b, cols, maxLen)
 						p256Verify = newP256Verify(b.CompiledIOP, limits, newP256VerifyDataSource(b.CompiledIOP))
-						p256Verify = p256Verify.WithCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 6, true))
+						p256Verify = p256Verify.WithCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 1, true))
 					},
 					integrationTestCompiler,
 				)

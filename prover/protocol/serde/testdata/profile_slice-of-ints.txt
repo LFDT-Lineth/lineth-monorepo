@@ -1,0 +1,4 @@
+Serialization Size Profile
+==========================
+
+[[]int]: 64 B (100.0%)

@@ -1,1 +1,25 @@
-{"eip4844Enabled":false,"dataHash":"0x23688a6b047d34cd5b3bdf627353e34bb3cb99ea2277d1f2b5293505f928a082","compressedData":"AJT9wvov/MBB0/8SBFtzyG5P+V/2YqXu6Cq99EotC3UAGA2vSKee4LENOUZRhQ/UoXiJLuKF7OFRFFV4CHXWTgDT0NDea/j5tEzoX/BExrH4O46IO7+FequZxbJSx0KcAPOorree+Fb2WcGPDc7Md8deeoG/3idfZ8/iQs88w1QA7eLWvsxOo65eiFJqn0pXi8ue8tSmUxR2jW0pl2HqngBapq7D/HjGquCBrIEgxyDvzWzqhLaSXmB74GNxb5bdANAddQRcPwAPinlrzmxRLDgBqsru361bUGZk6MDkp3EA4Li3wZZdkYElG3ycnKUgWvwWojai783S0S0qedB0qAAK6UOesNauyggjrgLWfYZqwsT+SnJQU9oRm51PUVFAANcjnEC0WsOVDZQfxP4cDLlq0yLWIoIpX7/hHiakMwcAtcFETDo00ypcSn/76NGB9+07jP6QT5P48G0pvNnthAAYLgRkEPRLxLDz8DoNBoIKMPJX+BFBMGeKwEWGwePJACyLgFXEZtiGRB0lmQbWms2JS5aK6fDrnZZc5qRpPE4AiBUBt9mEa2brArV+XNp7bLpokdYWvWhsN7g0YTrIugAsAI/+aINSc0rk4/Ehes1fgycIFDAYZ7XQZxGyOAAcAFeydxnOPzGI3+V97r9vgllaEPe7ViygTVw9J5QpWMY=","commitment":"0x","kzgProofContract":"0x","kzgProofSidecar":"0x","expectedX":"0x6cdbcaeb03b668aa4d0a4defc3c6f952ad5564ab9aeb7433c421c5c7e89a880f","expectedY":"0x0a20ade21d071b0399e84f87db971e7c9f52523b2330165984ae12b760f77fde","snarkHash":"0x106f270391c95f209b860b578b4b1e45ca7f210b79a8557d33d7f2354559b8fc","conflationOrder":{"startingBlockNumber":0,"upperBoundaries":[10,20,30,40]},"parentStateRootHash":"0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","finalStateRootHash":"0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","parentDataHash":"0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd","expectedShnarf":"0xad24bec330775d9aaec871e45ea54cfee266dc57589e4c469071c49953006e1a","prevShnarf":"0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
+{
+    "eip4844Enabled": false,
+    "dataHash": "0x23688a6b047d34cd5b3bdf627353e34bb3cb99ea2277d1f2b5293505f928a082",
+    "compressedData": "AJT9wvov/MBB0/8SBFtzyG5P+V/2YqXu6Cq99EotC3UAGA2vSKee4LENOUZRhQ/UoXiJLuKF7OFRFFV4CHXWTgDT0NDea/j5tEzoX/BExrH4O46IO7+FequZxbJSx0KcAPOorree+Fb2WcGPDc7Md8deeoG/3idfZ8/iQs88w1QA7eLWvsxOo65eiFJqn0pXi8ue8tSmUxR2jW0pl2HqngBapq7D/HjGquCBrIEgxyDvzWzqhLaSXmB74GNxb5bdANAddQRcPwAPinlrzmxRLDgBqsru361bUGZk6MDkp3EA4Li3wZZdkYElG3ycnKUgWvwWojai783S0S0qedB0qAAK6UOesNauyggjrgLWfYZqwsT+SnJQU9oRm51PUVFAANcjnEC0WsOVDZQfxP4cDLlq0yLWIoIpX7/hHiakMwcAtcFETDo00ypcSn/76NGB9+07jP6QT5P48G0pvNnthAAYLgRkEPRLxLDz8DoNBoIKMPJX+BFBMGeKwEWGwePJACyLgFXEZtiGRB0lmQbWms2JS5aK6fDrnZZc5qRpPE4AiBUBt9mEa2brArV+XNp7bLpokdYWvWhsN7g0YTrIugAsAI/+aINSc0rk4/Ehes1fgycIFDAYZ7XQZxGyOAAcAFeydxnOPzGI3+V97r9vgllaEPe7ViygTVw9J5QpWMY=",
+    "commitment": "0x",
+    "kzgProofContract": "0x",
+    "kzgProofSidecar": "0x",
+    "expectedX": "0x969d5182aa55eb6ab7cb0b92223b339e1824251ef6f7bea1510c03622b2139bf",
+    "expectedY": "0x0f6a5e7b1574bc8efc716af537b63067e5ea7cfb7e2fe6d3f738815334b8c946",
+    "snarkHash": "0x0ba7a59720d896640575191c7268224a30162c9db819cc2b9aae582e90e71470",
+    "conflationOrder": {
+        "startingBlockNumber": 0,
+        "upperBoundaries": [
+            10,
+            20,
+            30,
+            40
+        ]
+    },
+    "parentStateRootHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "finalStateRootHash": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "parentDataHash": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "expectedShnarf": "0xe4c0cda2ae0c3b3a1470fe9b52c0feee52d04d667208dd79b836d5c6e5b0b4b6",
+    "prevShnarf": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+}

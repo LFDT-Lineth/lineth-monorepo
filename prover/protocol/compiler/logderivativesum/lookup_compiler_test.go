@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -245,14 +245,14 @@ func TestLogDerivativeLookupRandomLinComb(t *testing.T) {
 		col2 = b.RegisterPrecomputed("P2", smartvectors.ForTest(12, 6, 8, 0, 3, 12, 13, 23, 17, 9, 8, 7, 6, 5, 4, 3))
 		colI := b.RegisterPrecomputed("I", smartvectors.ForTest(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15))
 
-		_ = b.RegisterRandomCoin("COIN", coin.Field)
+		_ = b.RegisterRandomCoin("COIN", coin.FieldExt)
 
-		uCol := b.InsertProof(1, "LC", sizeA)
+		uCol := b.InsertProof(1, "LC", sizeA, false)
 
-		_ = b.RegisterRandomCoin("COIN1", coin.Field)
+		_ = b.RegisterRandomCoin("COIN1", coin.FieldExt)
 
 		colQ := b.RegisterCommit("Q", sizeB)
-		uChosen := b.RegisterCommit("UChosen", sizeB)
+		uChosen := b.RegisterCommitExt("UChosen", sizeB)
 
 		// multi-col query
 		b.Inclusion("LOOKUP", []ifaces.Column{colI, uCol}, []ifaces.Column{colQ, uChosen})
@@ -261,25 +261,25 @@ func TestLogDerivativeLookupRandomLinComb(t *testing.T) {
 	prover := func(run *wizard.ProverRuntime) {
 		// assign a and b
 
-		coin := run.GetRandomCoinField("COIN")
+		coin := run.GetRandomCoinFieldExt("COIN")
 
 		a := col1.GetColAssignment(run)
 		b := col2.GetColAssignment(run)
-		lc := smartvectors.PolyEval([]smartvectors.SmartVector{a, b}, coin)
+		lc := smartvectors.LinearCombinationExt([]smartvectors.SmartVector{a, b}, coin)
 
 		run.AssignColumn("LC", lc)
 
-		run.GetRandomCoinField("COIN1")
+		run.GetRandomCoinFieldExt("COIN1")
 
 		colQ := smartvectors.ForTest(0, 1, 2, 3, 4, 5, 6, 7)
 		run.AssignColumn("Q", colQ)
 
 		colQFr := colQ.IntoRegVecSaveAlloc()
-		var t []field.Element
+		var t []fext.Element
 		for _, q := range colQFr {
-			t = append(t, lc.Get(int(q.Uint64())))
+			t = append(t, lc.GetExt(int(q.Uint64())))
 		}
-		run.AssignColumn("UChosen", smartvectors.NewRegular(t))
+		run.AssignColumn("UChosen", smartvectors.NewRegularExt(t))
 	}
 
 	comp := wizard.Compile(define, CompileLookups, dummy.Compile)

@@ -19,8 +19,9 @@ import (
 	"github.com/consensys/go-corset/pkg/trace/lt"
 	"github.com/consensys/go-corset/pkg/util/collection/typed"
 	"github.com/consensys/go-corset/pkg/util/field"
-	"github.com/consensys/go-corset/pkg/util/field/bls12_377"
+	"github.com/consensys/go-corset/pkg/util/field/koalabear"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils/exit"
 	"github.com/sirupsen/logrus"
 )
 
@@ -29,11 +30,6 @@ import (
 //
 //go:embed zkevm.bin
 var zkevmStr string
-
-// EmbeddedZkEVMBin returns the raw bytes of the embedded zkevm.bin file.
-func EmbeddedZkEVMBin() []byte {
-	return []byte(zkevmStr)
-}
 
 // UnmarshalZkEVMBin parses and compiles a "zkevm.bin" buffered file into a
 // BinaryFile.  This additionally extracts the metadata map from the zkevm.bin
@@ -84,18 +80,18 @@ func UnmarshalZkEVMBin(buf []byte) (*binfile.BinaryFile, typed.Map, error) {
 // DEFAULT_OPTIMISATION_LEVEL is the recommended level to use in general, whilst
 // others are intended for testing purposes (i.e. to try out new optimisations
 // to see whether they help or hinder, etc).
-func CompileZkevmBin(binf *binfile.BinaryFile, optConfig *mir.OptimisationConfig) (*air.Schema[bls12_377.Element], module.LimbsMap) {
+func CompileZkevmBin(binf *binfile.BinaryFile, optConfig *mir.OptimisationConfig) (*air.Schema[koalabear.Element], module.LimbsMap) {
 	// There are no useful choices for the assembly config. We must always
 	// vectorize, and there is only one choice of field (within the prover).
-	asmConfig := asm.LoweringConfig{Field: field.BLS12_377, Vectorize: true}
+	asmConfig := asm.LoweringConfig{Field: field.KOALABEAR_16, Vectorize: true}
 	// Lower to mixed micro schema
 	uasmSchema := asm.LowerMixedMacroProgram(asmConfig.Vectorize, binf.Schema)
 	// Apply register splitting for field agnosticity
-	nasmSchema, mapping := asm.Concretize[bls12_377.Element](asmConfig.Field, uasmSchema)
+	nasmSchema, mapping := asm.Concretize[koalabear.Element](asmConfig.Field, uasmSchema)
 	// Compile
 	mirSchema := asm.Compile(nasmSchema)
 	// Lower to AIR
-	airSchema := mir.LowerToAir(mirSchema, asmConfig.Field.BandWidth, *optConfig)
+	airSchema := mir.LowerToAir(mirSchema, 30, *optConfig)
 	// This performs the corset compilation
 	return &airSchema, mapping
 }
@@ -123,6 +119,9 @@ func readTraceFile(path string) io.ReadCloser {
 	if !strings.HasSuffix(path, ".gz") {
 		f, err := os.Open(path)
 		if err != nil {
+			if os.IsNotExist(err) {
+				exit.OnMissingTraceFile(path)
+			}
 			utils.Panic("failed opening trace file %q: %s", path, err)
 		}
 		return f
@@ -131,6 +130,9 @@ func readTraceFile(path string) io.ReadCloser {
 	// Case 2: gzipped file
 	f, err := os.Open(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			exit.OnMissingTraceFile(path)
+		}
 		utils.Panic("unable to open gzipped trace file %q: %s", path, err)
 	}
 
@@ -170,10 +172,10 @@ func ReadLtTraces(f io.ReadCloser) (rawTrace lt.TraceFile, metadata typed.Map, e
 	} else if err = traceFile.UnmarshalBinary(readBytes); err != nil {
 		return traceFile, metadata, fmt.Errorf("failed parsing the bytes of the raw trace '.lt' file: %w", err)
 	}
-	// Attempt to extract metadata from trace file, and sanity check the
-	// constraints commit information is present.
 	// Extract trace file header
 	header := traceFile.Header()
+	// Attempt to extract metadata from trace file, and sanity check the
+	// constraints commit information is present.
 	if metadata, err = header.GetMetaData(); metadata.IsEmpty() {
 		return traceFile, metadata, errors.New("missing metatdata from '.lt' file")
 	} else if metadata, ok = metadata.Map("constraints"); !ok {

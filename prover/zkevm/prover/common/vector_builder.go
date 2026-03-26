@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
+	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
@@ -57,6 +58,16 @@ func (vb *VectorBuilder) PushZero() {
 	vb.slice = append(vb.slice, field.Zero())
 }
 
+// PushManyZero pushes `n` zeros onto `vb`
+func (vb *VectorBuilder) PushSeqOfZeroes(n int) {
+	vb.slice = append(vb.slice, make([]field.Element, n)...)
+}
+
+// PushRepeat pushes "n" times the field value v
+func (vb *VectorBuilder) PushRepeat(v field.Element, n int) {
+	vb.slice = append(vb.slice, vector.Repeat(v, n)...)
+}
+
 // PushOne pushes 1 onto `vb`
 func (vb *VectorBuilder) PushOne() {
 	vb.slice = append(vb.slice, field.One())
@@ -65,6 +76,11 @@ func (vb *VectorBuilder) PushOne() {
 // PushField pushes `f` onto `vb`
 func (vb *VectorBuilder) PushField(f field.Element) {
 	vb.slice = append(vb.slice, f)
+}
+
+// PushMany pushes an array of field elements onto `vb`
+func (vb *VectorBuilder) PushMany(f []field.Element) {
+	vb.slice = append(vb.slice, f...)
 }
 
 // PushInt pushes `x` onto `vb`.
@@ -87,21 +103,17 @@ func (vb *VectorBuilder) PushLo(fb types.FullBytes32) {
 	vb.PushField(f)
 }
 
-// PushBytes32 pushes a [types.Bytes32] as a single value onto `vb`. It panics
+// PushBytes pushes a []byte as a single value onto `vb`. It panics
 // if the value overflows a field element.
-func (vb *VectorBuilder) PushBytes32(b32 types.Bytes32) {
+func (vb *VectorBuilder) PushBytes(b []byte) {
 	var f field.Element
-	if err := f.SetBytesCanonical(b32[:]); err != nil {
-		panic(err)
+	if len(b) < field.Bytes {
+		// pad b to field.Bytes
+		padded := make([]byte, field.Bytes)
+		copy(padded[field.Bytes-len(b):], b)
+		b = padded
 	}
-	vb.PushField(f)
-}
-
-// PushBytes32 pushes a [types.Bytes32] as a single value onto `vb`. It panics
-// if the value overflows a field element.
-func (vb *VectorBuilder) PushBytes(b32 []byte) {
-	var f field.Element
-	if err := f.SetBytesCanonical(b32[:]); err != nil {
+	if err := f.SetBytesCanonical(b[:]); err != nil {
 		panic(err)
 	}
 	vb.PushField(f)
@@ -179,6 +191,21 @@ func (vb *VectorBuilder) PadAndAssign(run *wizard.ProverRuntime, v ...field.Elem
 	)
 }
 
+// PadLeftAndAssign pads and assign the column built by `vb` using `v` as padding
+// value and assigning into `run`.
+func (vb *VectorBuilder) PadLeftAndAssign(run *wizard.ProverRuntime, v ...field.Element) {
+
+	paddingValue := field.Zero()
+	if len(v) > 0 {
+		paddingValue = v[0]
+	}
+
+	run.AssignColumn(
+		vb.column.GetColID(),
+		smartvectors.LeftPadded(vb.slice, paddingValue, vb.column.Size()),
+	)
+}
+
 // Height returns the total number of elements that have been pushed on this
 // builder.
 func (vb *VectorBuilder) Height() int {
@@ -204,4 +231,9 @@ func (vb *VectorBuilder) OverWriteInt(n int) {
 // Does not mutate the receiver.
 func (vb *VectorBuilder) Last() field.Element {
 	return vb.slice[len(vb.slice)-1]
+}
+
+// Column returns the column of the VectorBuilder
+func (vb *VectorBuilder) Column() ifaces.Column {
+	return vb.column
 }

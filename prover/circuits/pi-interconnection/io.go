@@ -4,28 +4,19 @@ import (
 	"math/big"
 	"slices"
 
-	fr377 "github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
 	fr381 "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/compress"
-	"github.com/consensys/gnark/std/math/uints"
 	"github.com/consensys/linea-monorepo/prover/circuits/internal"
 )
-
-func assertBytesEqual(api frontend.API, a, b []uints.U8) {
-	api.AssertIsEqual(len(a), len(b))
-	for i := range a {
-		api.AssertIsEqual(a[i].Val, b[i].Val)
-	}
-}
 
 // the resulting bytes will have been range-checked
 func fr377EncodedFr381ToBytes(api frontend.API, x [2]frontend.Variable) [32]frontend.Variable {
 	const (
-		bits371    = fr377.Bits - 1
-		hiBits381  = fr381.Bits - bits371
+		loNbBits   = 128
+		hiBits381  = fr381.Bits - 128
 		hiNbCrumbs = (hiBits381 + 1) / 2
-		loNbCrumbs = bits371 / 2
+		loNbCrumbs = loNbBits / 2
 	)
 	hi := api.ToBinary(x[0], hiBits381)
 	lo := internal.ToCrumbs(api, x[1], loNbCrumbs)

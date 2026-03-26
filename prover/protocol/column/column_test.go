@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/utils/collection"
@@ -13,7 +13,7 @@ import (
 
 func TestVariableMetaData(t *testing.T) {
 	store := column.NewStore()
-	V := store.AddToRound(0, ifaces.ColIDf("V"), 4, column.Committed)
+	V := store.AddToRound(0, ifaces.ColIDf("V"), 4, column.Committed, false)
 	v := ifaces.ColumnAsVariable(V)
 	vBoard := v.Board()
 
@@ -30,18 +30,18 @@ func TestVariableMetaData(t *testing.T) {
 func TestReprAndDerivation(t *testing.T) {
 
 	store := column.NewStore()
-	V := store.AddToRound(0, ifaces.ColID("V"), 4, column.Committed)
+	V := store.AddToRound(0, ifaces.ColID("V"), 4, column.Committed, false)
 	v := smartvectors.ForTest(1, 2, 3, 4)
-	x := field.NewElement(546)
+	x := fext.RandomElement()
 
 	// Test for shifting
 	{
 		shifted1 := smartvectors.ForTest(2, 3, 4, 1)
 		Shifted1 := column.Shift(V, 1)
 
-		expectedY := smartvectors.Interpolate(shifted1, x)
+		expectedY := smartvectors.EvaluateBasePolyLagrange(shifted1, x)
 
-		cachedXs := collection.NewMapping[string, field.Element]()
+		cachedXs := collection.NewMapping[string, fext.Element]()
 		cachedXs.InsertNew("", x)
 
 		var (
@@ -54,9 +54,9 @@ func TestReprAndDerivation(t *testing.T) {
 		require.Equal(t, x_, cachedXs.MustGet(dsBranch))
 
 		// Evaluate the derived claim : should equal the expected Y
-		derivedY := smartvectors.Interpolate(v, x_)
+		derivedY := smartvectors.EvaluateBasePolyLagrange(v, x_)
 
-		finalYs := collection.NewMapping[string, field.Element]()
+		finalYs := collection.NewMapping[string, fext.Element]()
 		finalYs.InsertNew(column.DerivedYRepr(dsBranch, V), derivedY)
 
 		// Test that we recovered

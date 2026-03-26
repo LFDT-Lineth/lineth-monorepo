@@ -1,20 +1,82 @@
-//go:build !fuzzlight
-
-package keccakf
+package keccakfkoalabear
 
 import (
 	"math/rand/v2"
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/crypto/keccak"
+	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
+	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/keccak/keccakf/common"
 	"github.com/stretchr/testify/assert"
 )
 
-// a module definition method specifically for testing the theta submodule
+func TestTheta(t *testing.T) {
+
+	const numCases int = 30
+	maxKeccaf := 10
+
+	// #nosec G404 --we don't need a cryptographic RNG for testing purpose
+	rnd := rand.New(rand.NewChaCha8([32]byte{}))
+
+	// Every time the prover function is called, the traces will be updated.
+	// Likewise, run will be set by the prover.
+	var run *wizard.ProverRuntime
+
+	// Parametrizes the wizard and the input generator.
+	builder, prover, mod := thetaTestingModule(maxKeccaf)
+
+	comp := wizard.Compile(builder, dummy.Compile)
+
+	for i := 0; i < numCases; i++ {
+
+		// Generate new traces
+		traces := genKeccakfTrace(rnd, maxKeccaf)
+
+		// Recall that this will set the values of `traces` and ``
+		proof := wizard.Prove(comp, prover(traces, &run))
+		assert.NoErrorf(t, wizard.Verify(comp, proof), "verifier failed")
+
+		effNumKeccak := len(traces.KeccakFInps)
+
+		for permId := 0; permId < effNumKeccak; permId++ {
+
+			// Copy the corresponding input state and apply the rho
+			// transformation.
+			state := traces.KeccakFInps[permId]
+			state.Theta()
+
+			// Reconstruct the same state from the assignment of the prover
+			reconstructed := keccak.State{}
+			recomposed := [64]field.Element{}
+			for x := 0; x < 5; x++ {
+				for y := 0; y < 5; y++ {
+					for z := 0; z < 64; z++ {
+						// Recompose the slice into a complete base 2 representation
+						recomposed[z] = mod.Theta.StateNext[x][y][z].GetColAssignmentAt(run,
+							permId*keccak.NumRound)
+
+					}
+					reconstructed[x][y] = reconstructU64(recomposed)
+				}
+			}
+
+			assert.Equal(t, state, reconstructed,
+				"could not reconstruct the state. permutation %v", permId)
+
+			// Exiting on the first failed case to not spam the test logs
+			if t.Failed() {
+				t.Fatalf("stopping here as we encountered errors")
+			}
+		}
+	}
+}
+
+// a module definition method specifically for testing the rho submodule
 func thetaTestingModule(
 	// parameters for the wizard
 	maxNumKeccakf int,
@@ -29,8 +91,11 @@ func thetaTestingModule(
 
 	// The module is only used a placeholder to let us the `assignInput`
 	// function
-	mod := &Module{}
-	round := 0 // The round is always zero
+	var (
+		mod       = &Module{}
+		size      = int(utils.NextPowerOfTwo(uint64(maxNumKeccakf) * common.NumRounds))
+		stateCurr = state{} // input to the theta module base 4
+	)
 
 	/*
 		Initializes the builder function
@@ -38,14 +103,16 @@ func thetaTestingModule(
 	builder := func(b *wizard.Builder) {
 		comp := b.CompiledIOP
 
-		mod.declareColumns(comp, round, maxNumKeccakf)
+		// Initializes the input current state
+		for x := 0; x < 5; x++ {
+			for y := 0; y < 5; y++ {
+				for z := 0; z < 8; z++ {
+					stateCurr[x][y][z] = comp.InsertCommit(0, ifaces.ColIDf("THETA_STATE_CURR_%v_%v_%v", x, y, z), size, true)
+				}
+			}
+		}
 
-		// Initializes the lookup columns
-		mod.Lookups = newLookUpTables(comp, maxNumKeccakf)
-
-		// Then initializes the submodules : declare the colums and all the
-		// constraints.
-		mod.Theta = newTheta(comp, round, maxNumKeccakf, mod.State, mod.Lookups)
+		mod.Theta = newTheta(comp, size, stateCurr)
 	}
 
 	prover := func(
@@ -58,9 +125,6 @@ func thetaTestingModule(
 		return func(run *wizard.ProverRuntime) {
 			*runRet = run
 
-			mod.Lookups.RC.Assign(run)
-			mod.Lookups.DontUsePrevAIota.Assign(run)
-
 			// Number of permutation used for the current instance
 			numKeccakf := len(traces.KeccakFInps)
 
@@ -70,121 +134,66 @@ func thetaTestingModule(
 				utils.Panic("Too many keccakf %v > %v", numKeccakf, maxNumKeccakf)
 			}
 
-			// Then assigns all the columns
-			mod.assignStateAndBlocks(run, traces, numKeccakf)
-			mod.Theta.assign(run, mod.State, mod.Lookups, numKeccakf)
+			// Initializes the input columns
+			stateCurrWit := [5][5][8][]field.Element{}
+			for permId := 0; permId < numKeccakf; permId++ {
+				state := traces.KeccakFInps[permId]
+
+				for rnd := 0; rnd < keccak.NumRound; rnd++ {
+					// Convert the state in sliced from in base 2
+					for x := 0; x < 5; x++ {
+						for y := 0; y < 5; y++ {
+							a := stateBase4(state[x][y])
+							for k := 0; k < 8; k++ {
+								// If the column is not already assigned, then
+								// allocate it with the proper length.
+								if stateCurrWit[x][y][k] == nil {
+									stateCurrWit[x][y][k] = make(
+										[]field.Element,
+										size,
+									)
+								}
+
+								r := keccak.NumRound*permId + rnd
+								stateCurrWit[x][y][k][r] = field.NewElement(uint64(a[k]))
+							}
+						}
+					}
+				}
+			}
+
+			for x := 0; x < 5; x++ {
+				for y := 0; y < 5; y++ {
+					for k := 0; k < 8; k++ {
+						run.AssignColumn(
+							stateCurr[x][y][k].GetColID(),
+							smartvectors.RightZeroPadded(
+								stateCurrWit[x][y][k],
+								size,
+							),
+						)
+					}
+				}
+			}
+
+			// Then assign all the columns of the theta module
+			mod.Theta.assignTheta(run, stateCurr)
 		}
 	}
 
 	return builder, prover, mod
 }
 
-// Input provider for the tests. Return traces corresponding to random hashes
-func testInputProvider(rnd *rand.Rand, maxNumKeccakf int) InputWitnessProvider {
-
-	return func() keccak.PermTraces {
-		res := keccak.PermTraces{}
-		// The number of effective permutation is a random fraction of the
-		// max number of keccakf.
-		effNumKeccak := rnd.Int() % maxNumKeccakf
-		for effNumKeccak == 0 {
-			effNumKeccak = rnd.Int() % maxNumKeccakf
+// in convert uint64 to base 4 representation stored in 8 uint32
+func stateBase4(in uint64) [8]uint32 {
+	var res [8]uint32
+	for i := 0; i < 8; i++ {
+		var v uint32
+		for k := 0; k < 8; k++ {
+			bit := (in >> (8*i + k)) & 1
+			v += uint32(bit) << (2 * k) // multiply by 4^k = 2^(2k)
 		}
-
-		for len(res.Blocks) < effNumKeccak {
-			// Each hash is for a random string taking at most 3 permutations
-			streamLen := rnd.IntN(3*keccak.Rate-1) + 1
-			stream := make([]byte, streamLen)
-			utils.ReadPseudoRand(rnd, stream)
-
-			for i := 0; i < effNumKeccak; i++ {
-				keccak.Hash(stream, &res)
-			}
-		}
-
-		// And trim a posteriori the excess permutation so that we have exactly
-		// effNumKeccak. This will not be very realistic for the last permutation
-		// since this will ignore the padding. Fortunately, the padding is out
-		// of scope for this module. So, this should not matter in practice.
-		res.Blocks = res.Blocks[:effNumKeccak]
-		res.IsNewHash = res.IsNewHash[:effNumKeccak]
-		res.KeccakFInps = res.KeccakFInps[:effNumKeccak]
-		res.KeccakFOuts = res.KeccakFOuts[:effNumKeccak]
-
-		return res
+		res[i] = v
 	}
-}
-
-// Test the correctness of the theta wizard function
-func TestTheta(t *testing.T) {
-
-	const numCases int = 30
-	maxKeccaf := 10
-
-	// #nosec G404 --we don't need a cryptographic RNG for testing purpose
-	rnd := rand.New(rand.NewChaCha8([32]byte{}))
-
-	// Every time the prover function is called, the traces will be updated.
-	// Likewise, run will be set by the prover.
-	var run *wizard.ProverRuntime
-
-	// Parametrizes the wizard and the input generator.
-	provider := testInputProvider(rnd, maxKeccaf)
-	builder, prover, mod := thetaTestingModule(maxKeccaf)
-
-	comp := wizard.Compile(builder, dummy.Compile)
-
-	for i := 0; i < numCases; i++ {
-
-		// Generate new traces
-		traces := provider()
-
-		// Recall that this will set the values of `traces` and ``
-		proof := wizard.Prove(comp, prover(traces, &run))
-		assert.NoErrorf(t, wizard.Verify(comp, proof), "verifier failed")
-
-		// When we extract the slices representing aTheta in base 2, we should
-		// recover the state after aTheta.
-		effNumKeccak := len(traces.KeccakFInps)
-		base2Pow4 := field.NewElement(uint64(BaseB * BaseB * BaseB * BaseB))
-		base2 := field.NewElement(uint64(BaseB))
-
-		for permId := 0; permId < effNumKeccak; permId++ {
-
-			// Copy the corresponding input state and apply the theta
-			// transformation.
-			expectedATheta := traces.KeccakFInps[permId]
-			expectedATheta.Theta()
-
-			// Reconstruct the same state from the assignment of the prover
-			reconstructed := keccak.State{}
-			for x := 0; x < 5; x++ {
-				for y := 0; y < 5; y++ {
-
-					// Extract the slices
-					slice := [numSlice]field.Element{}
-					pos := permId * keccak.NumRound
-					for k := 0; k < numSlice; k++ {
-						colid := mod.Theta.AThetaSlicedBaseB[x][y][k].GetColID()
-						slice[k] = run.GetColumnAt(colid, pos)
-					}
-
-					// Recompose the slice into a complete base 2 representation
-					// of aTheta[x][y] in base 2
-					recomposed := BaseRecompose(slice[:], &base2Pow4)
-
-					// And cast it back to a u64
-					reconstructed[x][y] = BaseXToU64(recomposed, &base2)
-				}
-			}
-
-			assert.Equal(t, expectedATheta, reconstructed,
-				"could not reconstruct the state. permutation %v", permId)
-		}
-
-		// Exiting on the first failed case to not spam the test logs
-		if t.Failed() {
-			t.Fatalf("stopping here as we encountered errors")
-		}
-	}
+	return res
 }

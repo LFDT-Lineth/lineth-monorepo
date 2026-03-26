@@ -6,13 +6,13 @@ package config
 type logLevel uint8
 
 const (
-	_logPanic logLevel = iota // 0
-	_logFatal                 // 1
-	_logError                 // 2
-	_logWarn                  // 3
-	_logInfo                  // 4
-	_logDebug                 // 5
-	_logTrace                 // 6
+	// Possible levels of logging.
+	_logTrace logLevel = iota + 1
+	_logDebug
+	_logInfo
+	_logWarn
+	_logError
+	_logFatal
 )
 
 type ProverMode string

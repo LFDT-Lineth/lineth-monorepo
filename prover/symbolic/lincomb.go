@@ -2,11 +2,14 @@ package symbolic
 
 import (
 	"fmt"
+	"math/big"
 	"reflect"
 
 	"github.com/consensys/gnark/frontend"
 	sv "github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
+	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors_mixed"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
@@ -40,49 +43,37 @@ func NewLinComb(items []*Expression, coeffs []int) *Expression {
 		panic("unmatching lengths")
 	}
 
-	coeffs, items = expandTerms(&LinComb{}, coeffs, items)
-	coeffs, items, constCoeffs, constVal := regroupTerms(coeffs, items)
-
-	// This regroups all the constants into a global constant with a coefficient
-	// of 1.
-	var c, t field.Element
-	for i := range constCoeffs {
-		t.SetInt64(int64(constCoeffs[i]))
-		t.Mul(&constVal[i], &t)
-		c.Add(&c, &t)
-	}
-
-	if !c.IsZero() {
-		coeffs = append(coeffs, 1)
-		items = append(items, NewConstant(c))
-	}
-
-	coeffs, items = removeZeroCoeffs(coeffs, items)
+	items, coeffs = simplifyLinComb(items, coeffs)
 
 	if len(items) == 0 {
 		return NewConstant(0)
 	}
 
-	// The LinComb is just a single-term: more efficient to unwrap it
+	// The LinCombExt is just a single-term: more efficient to unwrap it
 	if len(items) == 1 && coeffs[0] == 1 {
 		return items[0]
 	}
 
+	return newLinCombNoSimplify(items, coeffs)
+}
+
+// newLinCombNoSimplify is the same as NewLinComb but does not perform any
+// optimization.
+func newLinCombNoSimplify(items []*Expression, coeffs []int) *Expression {
 	e := &Expression{
 		Operator: LinComb{Coeffs: coeffs},
 		Children: items,
+		IsBase:   computeIsBaseFromChildren(items),
 	}
 
 	// Now we need to assign the ESH
-	eshashes := make([]sv.SmartVector, len(e.Children))
-	for i := range e.Children {
-		eshashes[i] = sv.NewConstant(e.Children[i].ESHash, 1)
-	}
+	var esh esHash
+	var coeff field.Element
 
-	if len(items) > 0 {
-		// The cast back to sv.Constant is not functionally important but is an easy
-		// sanity check.
-		e.ESHash = e.Operator.Evaluate(eshashes).(*sv.Constant).Get(0)
+	for i := range e.Children {
+		coeff.SetInt64(int64(coeffs[i]))
+		esh.MulByElement(&e.Children[i].ESHash, &coeff)
+		e.ESHash.Add(&e.ESHash, &esh)
 	}
 
 	return e
@@ -99,6 +90,14 @@ func (lc LinComb) Evaluate(inputs []sv.SmartVector) sv.SmartVector {
 	return sv.LinComb(lc.Coeffs, inputs)
 }
 
+func (lc LinComb) EvaluateExt(inputs []sv.SmartVector) sv.SmartVector {
+	return sv.LinCombExt(lc.Coeffs, inputs)
+}
+
+func (lc LinComb) EvaluateMixed(inputs []sv.SmartVector) sv.SmartVector {
+	return smartvectors_mixed.LinCombMixed(lc.Coeffs, inputs)
+}
+
 // Validate implements the [Operator] interface
 func (lc LinComb) Validate(expr *Expression) error {
 	if !reflect.DeepEqual(lc, expr.Operator) {
@@ -113,21 +112,79 @@ func (lc LinComb) Validate(expr *Expression) error {
 }
 
 // GnarkEval implements the [GnarkEval] interface
-func (lc LinComb) GnarkEval(api frontend.API, inputs []frontend.Variable) frontend.Variable {
+func (lc LinComb) GnarkEval(api frontend.API, inputs []koalagnark.Element) koalagnark.Element {
 
-	res := frontend.Variable(0)
+	koalaAPI := koalagnark.NewAPI(api)
 
-	// There should be as many inputs as there are coeffs
+	res := koalagnark.NewElement(0)
+
 	if len(inputs) != len(lc.Coeffs) {
 		utils.Panic("%v inputs but %v coeffs", len(inputs), len(lc.Coeffs))
 	}
 
-	/*
-		Accumulate the scalars
-	*/
 	for i, input := range inputs {
-		coeff := frontend.Variable(lc.Coeffs[i])
-		res = api.Add(res, api.Mul(coeff, input))
+		coeff := koalagnark.NewElement(lc.Coeffs[i])
+		tmp := koalaAPI.Mul(coeff, input)
+		res = koalaAPI.Add(res, tmp)
+	}
+
+	return res
+}
+
+// GnarkEval implements the [GnarkEvalExt] interface
+func (lc LinComb) GnarkEvalExt(api frontend.API, inputs []any) koalagnark.Ext {
+
+	koalaAPI := koalagnark.NewAPI(api)
+	res := koalaAPI.ZeroExt()
+	resBase := koalaAPI.Zero()
+	countBase := 0
+
+	if len(inputs) != len(lc.Coeffs) {
+		utils.Panic("%v inputs but %v coeffs", len(inputs), len(lc.Coeffs))
+	}
+
+	// Optimization: use MulByFp instead of full E4 Mul since coeffs are base field elements
+	c := big.NewInt(0)
+	for i, input := range inputs {
+
+		switch input := input.(type) {
+
+		case koalagnark.Ext:
+			switch coeff := lc.Coeffs[i]; coeff {
+			case 0:
+				// skip
+			case 1:
+				res = koalaAPI.AddExt(res, input)
+			case -1:
+				res = koalaAPI.SubExt(res, input)
+			default:
+				c.SetInt64(int64(coeff))
+				tmp := koalaAPI.MulConstExt(input, c)
+				res = koalaAPI.AddExt(tmp, res)
+			}
+
+		case koalagnark.Element:
+			countBase++
+			switch coeff := lc.Coeffs[i]; coeff {
+			case 0:
+				// skip
+			case 1:
+				resBase = koalaAPI.Add(resBase, input)
+			case -1:
+				resBase = koalaAPI.Sub(resBase, input)
+			default:
+				c.SetInt64(int64(coeff))
+				tmp := koalaAPI.MulConst(input, c)
+				resBase = koalaAPI.Add(tmp, resBase)
+			}
+
+		default:
+			panic("unknown input type " + reflect.TypeOf(input).String())
+		}
+	}
+
+	if countBase > 0 {
+		res = koalaAPI.AddByBaseExt(res, resBase)
 	}
 
 	return res

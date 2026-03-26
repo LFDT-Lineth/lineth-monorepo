@@ -7,37 +7,32 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
+	"github.com/consensys/linea-monorepo/prover/protocol/wizardutils"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
-	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // MustZeroWhenInactive constraints the column to cancel when inactive.
 func MustZeroWhenInactive(comp *wizard.CompiledIOP, isActive any, cs ...ifaces.Column) {
 
+	round := 0
 	if e, isE := isActive.(*sym.Expression); isE {
 		if v, isV := e.Operator.(sym.Variable); isV {
 			isActive = v.Metadata
+			round = wizardutils.LastRoundToEval(e)
 		}
 	}
 
 	if ccol, isc := isActive.(verifiercol.ConstCol); isc {
-
 		if ccol.F.IsOne() {
 			// The constraint is meaningless in that situation
 			return
 		}
-
-		if !ccol.F.IsZero() {
-			utils.Panic("activator column is not boolean: is const-col with value=%v", ccol.F.String())
-		}
-
-		// expectedly, the only possibility
-		isActive = sym.NewConstant(ccol.F)
 	}
 
 	for _, c := range cs {
+		round := max(round, c.Round())
 		comp.InsertGlobal(
-			0,
+			round,
 			ifaces.QueryIDf("%v_IS_ZERO_WHEN_INACTIVE", c.GetColID()),
 			sym.Sub(c, sym.Mul(c, isActive)),
 		)

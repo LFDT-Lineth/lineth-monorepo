@@ -22,13 +22,13 @@ func TestDefineAndAssignmentExecutionDataCollector(t *testing.T) {
 	var (
 		edc              *ExecutionDataCollector
 		btm              fetch.BlockTxnMetadata
-		timestampFetcher *fetch.TimestampFetcher
+		blockDataFetcher *fetch.BlockDataFetcher
 		txnDataFetcher   fetch.TxnDataFetcher
 		rlpTxnFetcher    fetch.RlpTxnFetcher
-		chainIDFetcher   fetch.ChainIDFetcher
 		txd              *arith.TxnData
 		bdc              *arith.BlockDataCols
 		rt               *arith.RlpTxn
+		chainIDFetcher   fetch.ChainIDFetcher
 	)
 
 	define := func(b *wizard.Builder) {
@@ -38,9 +38,9 @@ func TestDefineAndAssignmentExecutionDataCollector(t *testing.T) {
 		btm = fetch.NewBlockTxnMetadata(b.CompiledIOP, "BLOCK_TX_METADATA", txd)
 		fetch.DefineBlockTxnMetaData(b.CompiledIOP, &btm, "BLOCK_TX_METADATA", txd)
 		// create a new timestamp fetcher
-		timestampFetcher = fetch.NewTimestampFetcher(b.CompiledIOP, "TIMESTAMP_FETCHER_FROM_ARITH", bdc)
+		blockDataFetcher = fetch.NewBlockDataFetcher(b.CompiledIOP, "TIMESTAMP_FETCHER_FROM_ARITH", bdc)
 		// constrain the timestamp fetcher
-		fetch.DefineTimestampFetcher(b.CompiledIOP, timestampFetcher, "TIMESTAMP_FETCHER_FROM_ARITH", bdc)
+		fetch.DefineBlockDataFetcher(b.CompiledIOP, blockDataFetcher, "TIMESTAMP_FETCHER_FROM_ARITH", bdc)
 		txnDataFetcher = fetch.NewTxnDataFetcher(b.CompiledIOP, "TXN_DATA_FETCHER_FROM_ARITH", txd)
 		fetch.DefineTxnDataFetcher(b.CompiledIOP, &txnDataFetcher, "TXN_DATA_FETCHER_FROM_ARITH", txd)
 
@@ -54,17 +54,17 @@ func TestDefineAndAssignmentExecutionDataCollector(t *testing.T) {
 
 		limbColSize := GetSummarySize(txd, rt)
 		edc = NewExecutionDataCollector(b.CompiledIOP, "EXECUTION_DATA_COLLECTOR", limbColSize)
-		DefineExecutionDataCollector(b.CompiledIOP, edc, "EXECUTION_DATA_COLLECTOR", timestampFetcher, btm, txnDataFetcher, rlpTxnFetcher)
+		DefineExecutionDataCollector(b.CompiledIOP, edc, "EXECUTION_DATA_COLLECTOR", blockDataFetcher, btm, txnDataFetcher, rlpTxnFetcher)
 	}
 
 	prove := func(run *wizard.ProverRuntime) {
-		arith.AssignTestingArithModules(run, ctBlockData, ctTxnData, ctRlpTxn)
-		fetch.AssignTimestampFetcher(run, timestampFetcher, bdc)
+		arith.AssignTestingArithModules(run, ctBlockData, ctTxnData, ctRlpTxn, bdc, txd, rt)
+		fetch.AssignBlockDataFetcher(run, blockDataFetcher, bdc)
 		fetch.AssignBlockTxnMetadata(run, btm, txd)
 		fetch.AssignTxnDataFetcher(run, txnDataFetcher, txd)
 		fetch.AssignRlpTxnFetcher(run, &rlpTxnFetcher, rt)
 		fetch.AssignChainIDFetcher(run, &chainIDFetcher, bdc)
-		AssignExecutionDataCollector(run, edc, timestampFetcher, btm, txnDataFetcher, rlpTxnFetcher, blockHashList[:])
+		AssignExecutionDataCollector(run, edc, blockDataFetcher, btm, txnDataFetcher, rlpTxnFetcher, blockHashList[:])
 	}
 
 	comp := wizard.Compile(define, dummy.Compile)

@@ -6,16 +6,16 @@ import (
 	"iter"
 	"math/rand/v2"
 
+	"github.com/consensys/linea-monorepo/prover/maths/common/vectorext"
 	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
-	"github.com/consensys/linea-monorepo/prover/utils/exit"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 
-	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
-const conversionError = "smartvector holds field extensions, but a base element was requested"
+var errConversion = errors.New("smartvector holds field extensions, but a base element was requested")
 
 // SmartVector is an abstraction over vectors of field elements that can be
 // optimized for structured vectors. For instance, if we have a vector of
@@ -88,17 +88,29 @@ func AllocateRegular(n int) SmartVector {
 	return NewRegular(make([]field.Element, n))
 }
 
+// AllocateRegularExt returns a newly allocated smart-vector
+func AllocateRegularExt(n int) SmartVector {
+	return NewRegularExt(make([]fext.Element, n))
+}
+
 // Copy into a smart-vector, will panic if into is not a regular
 // Mainly used as a sugar for refactoring
 func Copy(into *SmartVector, x SmartVector) {
 	*into = x.DeepCopy()
 }
 
-// Rand creates a vector with random entries. Used for testing. Should not be
+// Rand creates a base vector with random entries. Used for testing. Should not be
 // used to generate secrets. Not reproducible.
 func Rand(n int) SmartVector {
 	v := vector.Rand(n)
 	return NewRegular(v)
+}
+
+// Rand creates an extension vector with random entries. Used for testing. Should not be
+// used to generate secrets. Not reproducible.
+func RandExt(n int) SmartVector {
+	v := vectorext.Rand(n)
+	return NewRegularExt(v)
 }
 
 // Rand creates a vector with random entries. Used for testing. Should not be
@@ -108,18 +120,46 @@ func PseudoRand(rng *rand.Rand, n int) SmartVector {
 	return NewRegular(vector.PseudoRand(rng, n))
 }
 
+// PseudoRandExt creates a vector with random entries. Used for testing. Should
+// not be used to generate secrets. Takes a math.Rand as input for reproducibility.
+func PseudoRandExt(rng *rand.Rand, n int) SmartVector {
+	return NewRegularExt(vectorext.PseudoRand(rng, n))
+}
+
 // ForTest returns a witness from a explicit litteral assignement
 func ForTest(xs ...int) SmartVector {
 	return NewRegular(vector.ForTest(xs...))
+}
+
+// ForTest returns a witness from a explicit litteral assignement
+func ForExtTest(xs ...int) SmartVector {
+	return NewRegularExt(vectorext.ForTestFromQuads(xs...))
 }
 
 // IntoRegVec converts a smart-vector into a normal vec. The resulting vector
 // is always reallocated and can be safely mutated without side-effects
 // on s.
 func IntoRegVec(s SmartVector) []field.Element {
-	res := make([]field.Element, s.Len())
-	s.WriteInSlice(res)
-	return res
+	if IsBase(s) {
+		res := make([]field.Element, s.Len())
+		s.WriteInSlice(res)
+		return res
+	} else {
+
+		resExt := make([]fext.Element, s.Len())
+		res := make([]field.Element, 0, s.Len())
+		s.WriteInSliceExt(resExt)
+
+		// Iterate through the extended elements and filter non-zero entries
+		for _, extElem := range resExt {
+			if fext.IsBase(&extElem) {
+				res = append(res, extElem.B0.A0)
+			} else {
+				panic(errConversion)
+			}
+		}
+		return res
+	}
 }
 
 func IntoRegVecExt(s SmartVector) []fext.Element {
@@ -129,32 +169,60 @@ func IntoRegVecExt(s SmartVector) []fext.Element {
 }
 
 // IntoGnarkAssignment converts a smart-vector into a gnark assignment
-func IntoGnarkAssignment(sv SmartVector) []frontend.Variable {
-	res := make([]frontend.Variable, sv.Len())
+func IntoGnarkAssignment(sv SmartVector) []koalagnark.Element {
+	res := make([]koalagnark.Element, sv.Len())
 	_, err := sv.GetBase(0)
 	if err == nil {
 		for i := range res {
 			elem, _ := sv.GetBase(i)
-			res[i] = elem
+			res[i] = koalagnark.NewElementFromKoala(elem)
 		}
 	} else {
 		for i := range res {
 			elem := sv.GetExt(i)
-			res[i] = elem
+			res[i] = koalagnark.NewElement(elem.String())
 		}
 	}
 	return res
+}
+
+// IntoGnarkAssignment converts an extension smart-vector into a gnark assignment
+func IntoGnarkAssignmentExt(sv SmartVector) []koalagnark.Ext {
+	res := make([]koalagnark.Ext, sv.Len())
+	_, err := sv.GetBase(0)
+	if err == nil {
+		for i := range res {
+			elem, _ := sv.GetBase(i)
+			res[i] = koalagnark.NewFromBaseExt(elem.String())
+		}
+	} else {
+		for i := range res {
+			elem := sv.GetExt(i)
+			res[i] = koalagnark.NewExt(elem)
+		}
+	}
+	return res
+}
+func PaddingValGeneric(v SmartVector) (val fext.GenericFieldElem, hasPadding bool) {
+	switch w := v.(type) {
+	case *Constant:
+		return fext.NewGenFieldFromBase(w.Value), true
+	case *PaddedCircularWindow:
+		return fext.NewGenFieldFromBase(w.PaddingVal_), true
+	case *ConstantExt:
+		return fext.NewGenFieldFromExt(w.Value), true
+	case *PaddedCircularWindowExt:
+		return fext.NewGenFieldFromExt(w.PaddingVal_), true
+	default:
+		return fext.GenericFieldZero(), false
+	}
 }
 
 // LeftPadded creates a new padded vector (padded on the left)
 func LeftPadded(v []field.Element, padding field.Element, targetLen int) SmartVector {
 
 	if len(v) > targetLen {
-		exit.OnLimitOverflow(
-			targetLen,
-			len(v),
-			fmt.Errorf("unpadded vector (length=%v) must be smaller than the target length (%v)", len(v), targetLen),
-		)
+		utils.Panic("unpadded vector (length=%v) must be smaller than the target length (%v)", len(v), targetLen)
 	}
 
 	if len(v) == targetLen {
@@ -172,11 +240,7 @@ func LeftPadded(v []field.Element, padding field.Element, targetLen int) SmartVe
 func RightPadded(v []field.Element, padding field.Element, targetLen int) SmartVector {
 
 	if len(v) > targetLen {
-		exit.OnLimitOverflow(
-			targetLen,
-			len(v),
-			fmt.Errorf("unpadded vector (length=%v) must be smaller than the target length (%v)", len(v), targetLen),
-		)
+		utils.Panic("unpadded vector (length=%v) must be smaller than the target length (%v)", len(v), targetLen)
 	}
 
 	if len(v) == targetLen {
@@ -212,9 +276,15 @@ func Density(v SmartVector) int {
 	case *Regular:
 		return len(*w)
 	case *Rotated:
-		return len(w.v.Regular)
-	case *Pooled:
-		return len(w.Regular)
+		return len(w.v)
+	case *ConstantExt:
+		return 0
+	case *PaddedCircularWindowExt:
+		return len(w.Window_)
+	case *RegularExt:
+		return len(*w)
+	case *RotatedExt:
+		return len(w.v)
 	default:
 		panic(fmt.Sprintf("unexpected type %T", v))
 	}
@@ -248,7 +318,7 @@ func PaddingOrientationOf(v SmartVector) (int, error) {
 func Window(v SmartVector) []field.Element {
 	res, err := WindowBase(v)
 	if err != nil {
-		panic(conversionError)
+		panic(errConversion)
 	}
 	return res
 }
@@ -276,17 +346,26 @@ func WindowExt(v SmartVector) []fext.Element {
 		temp := make([]fext.Element, len(w.Window_))
 		for i := 0; i < len(w.Window_); i++ {
 			elem := w.Window_[i]
-			temp[i].SetFromBase(&elem)
+			fext.SetFromBase(&temp[i], &elem)
 		}
 		return temp
 	case *Regular:
 		temp := make([]fext.Element, len(*w))
 		for i := 0; i < len(*w); i++ {
 			elem, _ := w.GetBase(i)
-			temp[i].SetFromBase(&elem)
+			fext.SetFromBase(&temp[i], &elem)
 		}
 		return temp
 	case *Rotated:
+		return w.IntoRegVecSaveAllocExt()
+		// below, we now consider extension vectors
+	case *ConstantExt:
+		return w.IntoRegVecSaveAllocExt()
+	case *PaddedCircularWindowExt:
+		return w.Window_
+	case *RegularExt:
+		return *w
+	case *RotatedExt:
 		return w.IntoRegVecSaveAllocExt()
 	default:
 		panic(fmt.Sprintf("unexpected type %T", v))
@@ -308,12 +387,24 @@ func PaddingVal(v SmartVector) (val field.Element, hasPadding bool) {
 	}
 }
 
+func PaddingValExt(v SmartVector) (val fext.Element, hasPadding bool) {
+	switch w := v.(type) {
+	case *ConstantExt:
+		return w.Value, true
+	case *PaddedCircularWindowExt:
+		return w.PaddingVal_, true
+	default:
+		return fext.Element{}, false
+	}
+}
+
 // TryReduceSizeRight detects if the input smart-vector can be reduced to a constant
 // smart-vector. It will only apply over the following types: [Regular].
 func TryReduceSizeRight(v SmartVector) (new SmartVector, totalSaving int) {
 
 	switch w := v.(type) {
-	case *Constant, *Rotated, *Pooled, *PaddedCircularWindow:
+	case *Constant, *Rotated, *PaddedCircularWindow, *ConstantExt,
+		*RotatedExt, *PaddedCircularWindowExt:
 		return v, 0
 	case *Regular:
 
@@ -326,7 +417,17 @@ func TryReduceSizeRight(v SmartVector) (new SmartVector, totalSaving int) {
 		}
 
 		return v, 0
+	case *RegularExt:
 
+		if res, ok := tryIntoConstantExt(*w); ok {
+			return res, len(*w)
+		}
+
+		if res, ok := tryIntoRightPaddedExt(*w); ok {
+			return res, len(*w) - len(res.Window_)
+		}
+
+		return v, 0
 	default:
 		panic(fmt.Sprintf("unexpected type %T", v))
 	}
@@ -334,11 +435,14 @@ func TryReduceSizeRight(v SmartVector) (new SmartVector, totalSaving int) {
 
 // TryReduceSizeLeft detects if the input smart-vector can be reduced to a
 // left-padded smart-vector. It will only apply over the following types:
-// [Regular].
+// [Regular]. Extension field types are supported but not optimized.
 func TryReduceSizeLeft(v SmartVector) (new SmartVector, totalSaving int) {
 
 	switch w := v.(type) {
-	case *Constant, *Rotated, *Pooled, *PaddedCircularWindow:
+	case *Constant, *Rotated, *PaddedCircularWindow:
+		return v, 0
+	// Extension field types - no reduction optimization implemented yet
+	case *ConstantExt, *RotatedExt, *PaddedCircularWindowExt, *RegularExt:
 		return v, 0
 	case *Regular:
 
@@ -355,69 +459,6 @@ func TryReduceSizeLeft(v SmartVector) (new SmartVector, totalSaving int) {
 	default:
 		panic(fmt.Sprintf("unexpected type %T", v))
 	}
-}
-
-// tryIntoConstant attemps to rewrite the smart-vector into a constant smart-vector.
-func tryIntoConstant(w Regular) (*Constant, bool) {
-
-	// to detect if a regular vector can be reduced to a constant, we need to
-	// check if all the values are equals. That's an expensive, so we instead
-	// by comparing values that would be likely to be unequal if it was not a
-	// constant. Also, we need to rule out the case where len(*w) because it
-	// is irrelevant to reducing the size.
-	if len(w) <= 1 {
-		return nil, false
-	}
-
-	if w[0] != w[1] {
-		return nil, false
-	}
-
-	if w[0] != w[len(w)-1] {
-		return nil, false
-	}
-
-	if w[0] != w[len(w)/2] {
-		return nil, false
-	}
-
-	// This is expensive check where we check all the values in the vector
-	// to see if they are all equal. This is not the most efficient way to
-	// detect if a vector is a constant but the only reliable one.
-	for i := range w {
-		if w[i] != w[0] {
-			return nil, false
-		}
-	}
-
-	return NewConstant(w[0], len(w)), true
-}
-
-// tryIntoRightPadded scans the smartvector and attempts to rewrite it into a
-// a more space-efficient right padded circular windows.
-func tryIntoRightPadded(v Regular) (*PaddedCircularWindow, bool) {
-
-	var (
-		bestPos = len(v) - 1
-		last    = v[len(v)-1]
-	)
-
-	for i := len(v) - 2; i >= 0; i-- {
-		if v[i] != last {
-			break
-		}
-		bestPos = i
-	}
-
-	if bestPos == len(v)-1 {
-		return nil, false
-	}
-
-	if bestPos == 0 {
-		utils.Panic("passed a constant vector to tryIntoRightPadded, it should have been handled by tryIntoConstant")
-	}
-
-	return RightPadded(v[:bestPos], last, len(v)).(*PaddedCircularWindow), true
 }
 
 // tryIntoLeftPadded scans the smartvector and attempts to rewrite it into a
@@ -504,6 +545,125 @@ func FromCompactWithShape(v SmartVector, compact []field.Element) SmartVector {
 	default:
 		panic(fmt.Sprintf("unexpected type %T", v))
 	}
+}
+
+func tryIntoConstantExt(w RegularExt) (*ConstantExt, bool) {
+
+	// to detect if a regular vector can be reduced to a constant, we need to
+	// check if all the values are equals. That's an expensive, so we instead
+	// by comparing values that would be likely to be unequal if it was not a
+	// constant. Also, we need to rule out the case where len(*w) because it
+	// is irrelevant to reducing the size.
+	if len(w) <= 1 {
+		return nil, false
+	}
+
+	if w[0] != w[1] {
+		return nil, false
+	}
+
+	if w[0] != w[len(w)-1] {
+		return nil, false
+	}
+
+	if w[0] != w[len(w)/2] {
+		return nil, false
+	}
+
+	// This is expensive check where we check all the values in the vector
+	// to see if they are all equal. This is not the most efficient way to
+	// detect if a vector is a constant but the only reliable one.
+	for i := range w {
+		if w[i] != w[0] {
+			return nil, false
+		}
+	}
+
+	return NewConstantExt(w[0], len(w)), true
+}
+
+func tryIntoRightPaddedExt(v RegularExt) (*PaddedCircularWindowExt, bool) {
+
+	var (
+		bestPos = len(v) - 1
+		last    = v[len(v)-1]
+	)
+
+	for i := len(v) - 2; i >= 0; i-- {
+		if v[i] != last {
+			bestPos = i + 1
+			break
+		}
+	}
+
+	// 1000 is arbitrary value but is justified by the fact that saving less
+	// than 1000 field element is not interesting performance-wise.
+	if len(v)-bestPos < 1000 {
+		return nil, false
+	}
+
+	return RightPaddedExt(v[:bestPos], last, len(v)).(*PaddedCircularWindowExt), true
+}
+
+// tryIntoConstant attemps to rewrite the smart-vector into a constant smart-vector.
+func tryIntoConstant(w Regular) (*Constant, bool) {
+
+	// to detect if a regular vector can be reduced to a constant, we need to
+	// check if all the values are equals. That's an expensive, so we instead
+	// by comparing values that would be likely to be unequal if it was not a
+	// constant. Also, we need to rule out the case where len(*w) because it
+	// is irrelevant to reducing the size.
+	if len(w) <= 1 {
+		return nil, false
+	}
+
+	if w[0] != w[1] {
+		return nil, false
+	}
+
+	if w[0] != w[len(w)-1] {
+		return nil, false
+	}
+
+	if w[0] != w[len(w)/2] {
+		return nil, false
+	}
+
+	// This is expensive check where we check all the values in the vector
+	// to see if they are all equal. This is not the most efficient way to
+	// detect if a vector is a constant but the only reliable one.
+	for i := range w {
+		if w[i] != w[0] {
+			return nil, false
+		}
+	}
+
+	return NewConstant(w[0], len(w)), true
+}
+
+// tryIntoRightPadded scans the smartvector and attempts to rewrite it into a
+// a more space-efficient right padded circular windows.
+func tryIntoRightPadded(v Regular) (*PaddedCircularWindow, bool) {
+
+	var (
+		bestPos = len(v) - 1
+		last    = v[len(v)-1]
+	)
+
+	for i := len(v) - 2; i >= 0; i-- {
+		if v[i] != last {
+			bestPos = i + 1
+			break
+		}
+	}
+
+	// 1000 is arbitrary value but is justified by the fact that saving less
+	// than 1000 field element is not interesting performance-wise.
+	if len(v)-bestPos < 1000 {
+		return nil, false
+	}
+
+	return RightPadded(v[:bestPos], last, len(v)).(*PaddedCircularWindow), true
 }
 
 // CoWindowRange scans the windows range of all the provided smartvectors

@@ -11,7 +11,7 @@ import (
 type TestContext struct {
 	addresses                                  []types.EthAddress
 	storageKeys, storageVals, keccakCodeHashes []types.FullBytes32
-	mimcCodeHashes                             []types.Bytes32
+	poseidon2CodeHashes                        []types.KoalaOctuplet
 	blockNumber                                int
 	state                                      State
 	// tMessages are test messages for the tFunc functions
@@ -77,28 +77,28 @@ func InitializeContext() *TestContext {
 			types.DummyFullByte(5002),
 			types.DummyFullByte(5003),
 		}
-		mimcCodeHashes = []types.Bytes32{
-			types.DummyBytes32(6000),
-			types.DummyBytes32(6001),
-			types.DummyBytes32(6002),
-			types.DummyBytes32(6003),
+		poseidon2CodeHashes = []types.KoalaOctuplet{
+			types.DummyKoalaOctuplet(6000),
+			types.DummyKoalaOctuplet(6001),
+			types.DummyKoalaOctuplet(6002),
+			types.DummyKoalaOctuplet(6003),
 		}
 	)
 	state := State{}
 	state.InsertEOA(addresses[0], 3, big.NewInt(500))
-	state.InsertContract(addresses[1], mimcCodeHashes[1], keccakCodeHashes[1], 1001)
+	state.InsertContract(addresses[1], poseidon2CodeHashes[1], keccakCodeHashes[1], 1001)
 	state.SetStorage(addresses[1], storageKeys[0], storageVals[0])
 	state.SetStorage(addresses[1], storageKeys[1], storageVals[1])
 	return &TestContext{
-		addresses:        addresses,
-		storageKeys:      storageKeys,
-		storageVals:      storageVals,
-		keccakCodeHashes: keccakCodeHashes,
-		mimcCodeHashes:   mimcCodeHashes,
-		state:            state,
-		blockNumber:      1002,
-		tMessages:        tMessages,
-		tFunc:            tFunc,
+		addresses:           addresses,
+		storageKeys:         storageKeys,
+		storageVals:         storageVals,
+		keccakCodeHashes:    keccakCodeHashes,
+		poseidon2CodeHashes: poseidon2CodeHashes,
+		state:               state,
+		blockNumber:         1002,
+		tMessages:           tMessages,
+		tFunc:               tFunc,
 	}
 }
 
@@ -188,7 +188,7 @@ func TestingReadingOverMissingAccount(t *testing.T, tContext *TestContext) [][]S
 func TestingDeployingANewContract(t *testing.T, tContext *TestContext) [][]StateAccessLog {
 	builder := NewStateLogBuilder(tContext.blockNumber, tContext.state)
 	builder.WithAddress(tContext.addresses[2]).
-		InitContract(31, tContext.keccakCodeHashes[2], tContext.mimcCodeHashes[2]).
+		InitContract(31, tContext.keccakCodeHashes[2], tContext.poseidon2CodeHashes[2]).
 		WriteStorage(tContext.storageKeys[0], tContext.storageVals[0]).
 		WriteStorage(tContext.storageKeys[0], tContext.storageVals[3]).
 		WriteStorage(tContext.storageKeys[1], tContext.storageVals[0]).
@@ -207,7 +207,7 @@ func TestingReadBeforeDeployingNewContract(t *testing.T, tContext *TestContext) 
 	builder := NewStateLogBuilder(tContext.blockNumber, tContext.state)
 	builder.WithAddress(tContext.addresses[2]).
 		ReadBalance().
-		InitContract(31, tContext.keccakCodeHashes[2], tContext.mimcCodeHashes[2]).
+		InitContract(31, tContext.keccakCodeHashes[2], tContext.poseidon2CodeHashes[2]).
 		WriteStorage(tContext.storageKeys[0], tContext.storageVals[0]).
 		ReadBalance()
 
@@ -235,7 +235,7 @@ func TestingEphemeral(t *testing.T, tContext *TestContext) [][]StateAccessLog {
 
 	builder := NewStateLogBuilder(tContext.blockNumber, tContext.state)
 	builder.WithAddress(tContext.addresses[2]).
-		InitContract(31, tContext.keccakCodeHashes[2], tContext.mimcCodeHashes[2]).
+		InitContract(31, tContext.keccakCodeHashes[2], tContext.poseidon2CodeHashes[2]).
 		WriteStorage(tContext.storageKeys[0], tContext.storageVals[0]).
 		EraseAccount()
 
@@ -250,11 +250,11 @@ func TestingFarFetchedEphemeral(t *testing.T, tContext *TestContext) [][]StateAc
 	builder := NewStateLogBuilder(tContext.blockNumber, tContext.state)
 	builder.WithAddress(tContext.addresses[2]).
 		ReadBalance().
-		InitContract(31, tContext.keccakCodeHashes[2], tContext.mimcCodeHashes[2]).
+		InitContract(31, tContext.keccakCodeHashes[2], tContext.poseidon2CodeHashes[2]).
 		WriteStorage(tContext.storageKeys[0], tContext.storageVals[0]).
 		EraseAccount().
 		ReadNonce().
-		InitContract(31, tContext.keccakCodeHashes[2], tContext.mimcCodeHashes[2]).
+		InitContract(31, tContext.keccakCodeHashes[2], tContext.poseidon2CodeHashes[2]).
 		WriteStorage(tContext.storageKeys[0], tContext.storageVals[0]).
 		EraseAccount()
 
@@ -295,7 +295,7 @@ func TestingRedeploy(t *testing.T, tContext *TestContext) [][]StateAccessLog {
 		ReadStorage(tContext.storageKeys[2]).
 		EraseAccount().
 		ReadBalance().
-		InitContract(100, tContext.keccakCodeHashes[3], tContext.mimcCodeHashes[3]).
+		InitContract(100, tContext.keccakCodeHashes[3], tContext.poseidon2CodeHashes[3]).
 		ReadStorage(tContext.storageKeys[0]).
 		WriteStorage(tContext.storageKeys[1], tContext.storageVals[3])
 

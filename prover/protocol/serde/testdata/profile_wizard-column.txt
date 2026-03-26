@@ -1,0 +1,12 @@
+Serialization Size Profile
+==========================
+
+[column.Natural]: 272 B (100.0%)
+    └─ [column.PackedNatural]: 272 B (100.0%)
+        └─ Store [column.Store]: 240 B (88.2%)
+            └─ [column.PackedStore]: 240 B (88.2%)
+                └─ [0] [[]*column.storedColumnInfo]: 208 B (76.5%)
+                    ├─ [0] [column.storedColumnInfo]: 84 B (30.9%)
+                    │   └─ Pragmas [map[string]interface {}]: 24 B (8.8%)
+                    └─ [1] [column.storedColumnInfo]: 84 B (30.9%)
+                        └─ Pragmas [map[string]interface {}]: 24 B (8.8%)

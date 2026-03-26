@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/consensys/linea-monorepo/prover/backend/files"
+	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 )
 
@@ -15,7 +16,7 @@ import (
 func generateImportation(run *wizard.ProverRuntime, mod Importation, path string) {
 
 	var (
-		limbs      = mod.Limbs.GetColAssignment(run).IntoRegVecSaveAlloc()
+		limbs      = make([][]field.Element, len(mod.Limbs))
 		nbytes     = mod.NBytes.GetColAssignment(run).IntoRegVecSaveAlloc()
 		hashNum    = mod.HashNum.GetColAssignment(run).IntoRegVecSaveAlloc()
 		index      = mod.Index.GetColAssignment(run).IntoRegVecSaveAlloc()
@@ -27,30 +28,42 @@ func generateImportation(run *wizard.ProverRuntime, mod Importation, path string
 		oF         = files.MustOverwrite(path)
 	)
 
-	fmt.Fprintf(oF, "%v,%v,%v,%v,%v,%v,%v,%v,%v\n",
+	for i := range mod.Limbs {
+		limbs[i] = mod.Limbs[i].GetColAssignment(run).IntoRegVecSaveAlloc()
+	}
+
+	fmt.Fprintf(oF, "%v,%v,%v,%v,%v,%v,%v,%v",
 		string(mod.HashNum.GetColID()),
 		string(mod.Index.GetColID()),
 		string(mod.IsActive.GetColID()),
 		string(mod.IsInserted.GetColID()),
 		string(mod.IsPadded.GetColID()),
 		string(mod.IsNewHash.GetColID()),
-		string(mod.Limbs.GetColID()),
 		string(mod.NBytes.GetColID()),
 		string(mod.AccPaddedBytes.GetColID()),
 	)
-
 	for i := range limbs {
-		fmt.Fprintf(oF, "%v,%v,%v,%v,%v,%v,0x%v,%v,%v\n",
+		fmt.Fprintf(oF, ",%v", string(mod.Limbs[i].GetColID()))
+	}
+	fmt.Fprintln(oF)
+
+	for i := range index {
+		fmt.Fprintf(oF, "%v,%v,%v,%v,%v,%v,%v,%v",
 			hashNum[i].String(),
 			index[i].String(),
 			isActive[i].String(),
 			isInserted[i].String(),
 			isPadded[i].String(),
 			isNewHash[i].String(),
-			limbs[i].Text(16),
 			nbytes[i].String(),
 			acc[i].String(),
 		)
+
+		for j := range limbs {
+			fmt.Fprintf(oF, ",0x%v", limbs[j][i].Text(16))
+		}
+
+		fmt.Fprintln(oF)
 	}
 
 	oF.Close()

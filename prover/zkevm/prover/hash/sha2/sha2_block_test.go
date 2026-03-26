@@ -48,7 +48,7 @@ func runTestSha2(t *testing.T, tc testCaseFile) {
 
 		inp = sha2BlocksInputs{
 			Name:                 "TESTING",
-			PackedUint32:         inpCt.GetCommit(build, "PACKED_DATA"),
+			PackedUint16:         inpCt.GetCommit(build, "PACKED_DATA"),
 			Selector:             inpCt.GetCommit(build, "SELECTOR"),
 			IsFirstLaneOfNewHash: inpCt.GetCommit(build, "IS_FIRST_LANE_OF_NEW_HASH"),
 			MaxNbBlockPerCirc:    tc.NbBlockLimit, // 1 more than in the csv
@@ -58,7 +58,7 @@ func runTestSha2(t *testing.T, tc testCaseFile) {
 		mod = newSha2BlockModule(build.CompiledIOP, &inp)
 
 		if tc.WithCircuit {
-			mod.WithCircuit(build.CompiledIOP, query.PlonkRangeCheckOption(16, 6, false))
+			mod.WithCircuit(build.CompiledIOP, query.PlonkRangeCheckOption(16, 1, false))
 		}
 
 	}, dummy.Compile)
@@ -66,21 +66,21 @@ func runTestSha2(t *testing.T, tc testCaseFile) {
 	proof := wizard.Prove(comp, func(run *wizard.ProverRuntime) {
 
 		inpCt.Assign(run,
-			"PACKED_DATA",
-			"SELECTOR",
-			"IS_FIRST_LANE_OF_NEW_HASH",
+			inp.PackedUint16,
+			inp.Selector,
+			inp.IsFirstLaneOfNewHash,
 		)
 
 		mod.Run(run)
 
 		modCt.CheckAssignment(run,
-			"TESTING_IS_ACTIVE",
-			"TESTING_IS_EFF_BLOCK",
-			"TESTING_IS_EFF_FIRST_LANE_OF_NEW_HASH",
-			"TESTING_IS_EFF_LAST_LANE_OF_CURR_HASH",
-			"TESTING_HASH_HI",
-			"TESTING_HASH_LO",
-			"TESTING_LIMBS",
+			mod.IsActive,
+			mod.IsEffBlock,
+			mod.IsEffFirstLaneOfNewHash,
+			mod.IsEffLastLaneOfCurrHash,
+			mod.Limbs,
+		).CheckAssignmentCols(run,
+			mod.Hash[:]...,
 		)
 	})
 

@@ -2,14 +2,14 @@ package statemanager
 
 import (
 	"github.com/consensys/linea-monorepo/prover/backend/execution/statemanager"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/types"
+	"github.com/consensys/linea-monorepo/prover/zkevm/arithmetization"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager/accumulator"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager/accumulatorsummary"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager/codehashconsistency"
-	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager/mimccodehash"
+	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager/lineacodehash"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager/statesummary"
 )
 
@@ -20,7 +20,7 @@ type StateManager struct {
 	Accumulator                 accumulator.Module
 	AccumulatorSummaryConnector accumulatorsummary.Module
 	StateSummary                statesummary.Module // exported because needed by the public input module
-	MimcCodeHash                mimccodehash.Module
+	LineaCodeHash               lineacodehash.Module
 	CodeHashConsistency         codehashconsistency.Module
 }
 
@@ -28,19 +28,19 @@ type StateManager struct {
 // the [NewStateManager] function. All the settings of the submodules are
 // constructed based on this structure
 type Settings struct {
-	AccSettings      accumulator.Settings
-	MiMCCodeHashSize int
+	AccSettings       accumulator.Settings
+	LineaCodeHashSize int
 }
 
 // NewStateManager instantiate the [StateManager] module
-func NewStateManager(comp *wizard.CompiledIOP, settings Settings) *StateManager {
+func NewStateManager(comp *wizard.CompiledIOP, settings Settings, arith *arithmetization.Arithmetization) *StateManager {
 
 	sm := &StateManager{
 		StateSummary: statesummary.NewModule(comp, settings.stateSummarySize()),
 		Accumulator:  accumulator.NewModule(comp, settings.AccSettings),
-		MimcCodeHash: mimccodehash.NewModule(comp, mimccodehash.Inputs{
-			Name: "MiMCCodeHash",
-			Size: settings.MiMCCodeHashSize,
+		LineaCodeHash: lineacodehash.NewModule(comp, lineacodehash.Inputs{
+			Name: "LineaCodeHash",
+			Size: settings.LineaCodeHashSize,
 		}),
 	}
 
@@ -53,24 +53,23 @@ func NewStateManager(comp *wizard.CompiledIOP, settings Settings) *StateManager 
 	)
 
 	sm.AccumulatorSummaryConnector.ConnectToStateSummary(comp, &sm.StateSummary)
-	sm.MimcCodeHash.ConnectToRom(comp, rom(comp), romLex(comp))
-	sm.StateSummary.ConnectToHub(comp, acp(comp), scp(comp))
-	sm.CodeHashConsistency = codehashconsistency.NewModule(comp, "CODEHASHCONSISTENCY", &sm.StateSummary, &sm.MimcCodeHash)
+	sm.LineaCodeHash.ConnectToRom(comp, rom(comp, arith), romLex(comp, arith))
+	sm.StateSummary.ConnectToHub(comp, acp(comp, arith), scp(comp, arith))
+	sm.CodeHashConsistency = codehashconsistency.NewModule(comp, "CODEHASHCONSISTENCY", &sm.StateSummary, &sm.LineaCodeHash)
 
 	return sm
 }
 
 // Assign assignes the submodules of the state-manager. It requires the
 // arithmetization columns to be assigned first.
-func (sm *StateManager) Assign(run *wizard.ProverRuntime, shomeiTraces [][]statemanager.DecodedTrace) {
+func (sm *StateManager) Assign(run *wizard.ProverRuntime, arith *arithmetization.Arithmetization, shomeiTraces [][]statemanager.DecodedTrace) {
 
-	assignHubAddresses(run)
 	addSkipFlags(&shomeiTraces)
 	shomeiTraces = removeSystemTransactions(shomeiTraces)
 	sm.StateSummary.Assign(run, shomeiTraces)
 	sm.Accumulator.Assign(run, utils.Join(shomeiTraces...))
 	sm.AccumulatorSummaryConnector.Assign(run)
-	sm.MimcCodeHash.Assign(run)
+	sm.LineaCodeHash.Assign(run)
 	sm.CodeHashConsistency.Assign(run)
 }
 
@@ -107,9 +106,10 @@ func addSkipFlags(shomeiTraces *[][]statemanager.DecodedTrace) {
 	// AddressAndKey is a struct used as a key in order to identify skippable traces
 	// in our maps
 	type AddressAndKey struct {
-		address    types.Bytes32
-		storageKey types.Bytes32
+		address    types.FullBytes32
+		storageKey types.FullBytes32
 	}
+
 	// iterate over all the Shomei blocks
 	for blockNo, vec := range *shomeiTraces {
 		var (
@@ -126,14 +126,14 @@ func addSkipFlags(shomeiTraces *[][]statemanager.DecodedTrace) {
 			if err != nil {
 				panic(err)
 			}
-			x := *(&field.Element{}).SetBytes(curAddress[:])
+			b32 := types.LeftPadToFullBytes32(curAddress[:])
 
 			if trace.Location != statemanager.WS_LOCATION {
 				// we have a STORAGE trace
 				// prepare the search key
 				searchKey := AddressAndKey{
-					address:    x.Bytes(),
-					storageKey: trace.Underlying.HKey(statemanager.MIMC_CONFIG),
+					address:    b32,
+					storageKey: trace.Underlying.HKey().ToBytes32(),
 				}
 				previousIndex, isFound := traceMap[searchKey]
 				if isFound {

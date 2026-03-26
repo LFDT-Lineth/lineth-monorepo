@@ -12,23 +12,20 @@ import (
 )
 
 type builder struct {
-	maxNbProofs   int
-	vKeys         []plonk.VerifyingKey
-	allowedInputs []string
-	pi            circuits.Setup
+	maxNbProofs int
+	vKeys       []plonk.VerifyingKey
+	pi          circuits.Setup
 }
 
 func NewBuilder(
 	maxNbProofs int,
-	allowedInputs []string,
 	pi circuits.Setup,
 	vKeys []plonk.VerifyingKey,
 ) *builder {
 	return &builder{
-		pi:            pi,
-		allowedInputs: allowedInputs,
-		maxNbProofs:   maxNbProofs,
-		vKeys:         vKeys,
+		pi:          pi,
+		maxNbProofs: maxNbProofs,
+		vKeys:       vKeys,
 	}
 }
 

@@ -77,8 +77,8 @@ func TestStateSummaryReadNonZeroShomei(t *testing.T) {
 	)
 
 	state := mock.State{}
-	state.InsertContract(addresses[2], types.DummyBytes32(67), types.DummyFullByte(56), 100)
-	state.InsertContract(addresses[3], types.DummyBytes32(76), types.DummyFullByte(57), 102)
+	state.InsertContract(addresses[2], types.DummyKoalaOctuplet(67), types.DummyFullByte(56), 100)
+	state.InsertContract(addresses[3], types.DummyKoalaOctuplet(76), types.DummyFullByte(57), 102)
 	state.SetStorage(addresses[2], storageKeys[0], storageValues[0])
 	state.SetStorage(addresses[2], storageKeys[1], storageValues[1])
 	state.SetStorage(addresses[3], storageKeys[2], storageValues[2])

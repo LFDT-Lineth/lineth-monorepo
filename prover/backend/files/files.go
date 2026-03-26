@@ -12,6 +12,7 @@ import (
 // CheckFilePath checks whether the provided filePath points to an existing file.
 func CheckFilePath(filePath string) error {
 	// Use os.Stat to get information about the file
+	// #nosec G703 -- path traversal are not a concern as this is not meant to be run in a browser.
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
 		// this error is either a os.ErrNotExist or something else if the Stat function failed.

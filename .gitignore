@@ -151,7 +151,8 @@ __pycache__/
 !operations/bin/
 # Authorize the kzg srs folder
 !prover/prover-assets/kzgsrs/**
-!prover/symbolic/testdata/**/*.csv
+!prover/**/testdata/**/*.csv
+!prover/**/testdata/**/*.json
 !prover/symbolic/testdata/**/*.tar.gz
 # except for single-round bin
 !prover/**/single_round/bin/
@@ -162,6 +163,14 @@ __pycache__/
 !/sdk/src/lib/compressor/bin
 # Allow BLS glue testdata generators
 !prover/zkevm/prover/bls/testdata/*.go
+# Prover serde testdata
+!prover/protocol/serde/testdata/*.txt
+# Usually the profiling pdfs
+prover/*.pdf
+# Usually request/response files
+prover/*.json 
+# Usually helper shell scripts to run the prover
+prover/*.sh
 
 .claude/settings.local.json
 contracts/.claude/settings.local.json

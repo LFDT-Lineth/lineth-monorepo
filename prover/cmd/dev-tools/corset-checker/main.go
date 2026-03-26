@@ -9,7 +9,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/cleanup"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
-	"github.com/consensys/linea-monorepo/prover/protocol/compiler/mimc"
+	"github.com/consensys/linea-monorepo/prover/protocol/compiler/poseidon2"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/selfrecursion"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/vortex"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
@@ -55,40 +55,40 @@ func fullSuite() []func(*wizard.CompiledIOP) {
 	sisInstance := ringsis.Params{LogTwoBound: 16, LogTwoDegree: 6}
 
 	return []func(*wizard.CompiledIOP){
-		mimc.CompileMiMC,
+		poseidon2.CompilePoseidon2,
 		compiler.Arcane(compiler.WithTargetColSize(1 << 19)),
 		vortex.Compile(
-			2,
+			2, false,
 			vortex.ForceNumOpenedColumns(256),
 			vortex.WithSISParams(&sisInstance),
 		),
 
 		selfrecursion.SelfRecurse,
 		cleanup.CleanUp,
-		mimc.CompileMiMC,
+		poseidon2.CompilePoseidon2,
 		compiler.Arcane(compiler.WithTargetColSize(1 << 18)),
 		vortex.Compile(
-			2,
+			2, false,
 			vortex.ForceNumOpenedColumns(256),
 			vortex.WithSISParams(&sisInstance),
 		),
 
 		selfrecursion.SelfRecurse,
 		cleanup.CleanUp,
-		mimc.CompileMiMC,
+		poseidon2.CompilePoseidon2,
 		compiler.Arcane(compiler.WithTargetColSize(1 << 16)),
 		vortex.Compile(
-			8,
+			8, false,
 			vortex.ForceNumOpenedColumns(64),
 			vortex.WithSISParams(&sisInstance),
 		),
 
 		selfrecursion.SelfRecurse,
 		cleanup.CleanUp,
-		mimc.CompileMiMC,
+		poseidon2.CompilePoseidon2,
 		compiler.Arcane(compiler.WithTargetColSize(1 << 13)),
 		vortex.Compile(
-			8,
+			8, true,
 			vortex.ForceNumOpenedColumns(64),
 		),
 	}

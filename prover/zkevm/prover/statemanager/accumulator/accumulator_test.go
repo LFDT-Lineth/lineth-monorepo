@@ -1,16 +1,14 @@
 package accumulator
 
 import (
-	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/backend/execution/statemanager"
-	"github.com/consensys/linea-monorepo/prover/backend/files"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
+	"github.com/consensys/linea-monorepo/prover/utils/types"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func accumulatorTestingModule(maxNumProofs int) (
@@ -42,35 +40,58 @@ func accumulatorTestingModule(maxNumProofs int) (
 	return define, prover
 }
 
-func TestShomeiFiles(t *testing.T) {
-	filenames := []string{
-		"../../../../backend/execution/statemanager/testdata/block-20000-20002.json",
-		"../../../../backend/execution/statemanager/testdata/delete-account.json",
-		"../../../../backend/execution/statemanager/testdata/insert-1-account.json",
-		"../../../../backend/execution/statemanager/testdata/insert-2-accounts.json",
-		"../../../../backend/execution/statemanager/testdata/insert-account-and-contract.json",
-		"../../../../backend/execution/statemanager/testdata/read-account.json",
-		"../../../../backend/execution/statemanager/testdata/read-zero.json",
+func TestShomei(t *testing.T) {
+	// Generate trace file for insert
+	decodedTrace := make([]statemanager.DecodedTrace, 0, 10)
+	acc := statemanager.NewStorageTrie(types.EthAddress{})
+	traceInsert := acc.InsertAndProve(types.FullBytes32FromHex("0x32"), types.FullBytes32FromHex("0x12"))
+	insertDecodedTrace := statemanager.DecodedTrace{
+		Location:   "this is the first trace",
+		Type:       2,
+		Underlying: traceInsert,
+		IsSkipped:  false,
 	}
-	for _, fname := range filenames {
-		t.Run(fmt.Sprintf("file-%v", fname), func(t *testing.T) {
-			trace := []statemanager.DecodedTrace{}
-			f := files.MustRead(fname)
-			var parsed statemanager.ShomeiOutput
-			err := json.NewDecoder(f).Decode(&parsed)
-
-			require.NoErrorf(t, err, "failed to decode the JSON file (%v)", fname)
-			f.Close()
-
-			t.Logf("file has %v traces", len(parsed.Result.ZkStateMerkleProof))
-			for _, blockTraces := range parsed.Result.ZkStateMerkleProof {
-				trace = append(trace, blockTraces...)
-			}
-			definer, prover := accumulatorTestingModule(1024)
-			comp := wizard.Compile(definer, dummy.Compile)
-			proof := wizard.Prove(comp, prover(trace))
-			assert.NoErrorf(t, wizard.Verify(comp, proof), "invalid accumulator proof")
-		})
-
+	decodedTrace = append(decodedTrace, insertDecodedTrace)
+	// Generate a trace file for update
+	traceUpdate := acc.UpdateAndProve(types.FullBytes32FromHex("0x32"), types.FullBytes32FromHex("0x34"))
+	updateDecodedTrace := statemanager.DecodedTrace{
+		Location:   "this is the second trace",
+		Type:       3,
+		Underlying: traceUpdate,
+		IsSkipped:  false,
 	}
+	decodedTrace = append(decodedTrace, updateDecodedTrace)
+	// Generate a trace file for delete
+	acc.InsertAndProve(types.FullBytes32FromHex("0x43"), types.FullBytes32FromHex("0x12"))
+	traceDelete := acc.DeleteAndProve(types.FullBytes32FromHex("0x43"))
+	deleteDecodedTrace := statemanager.DecodedTrace{
+		Location:   "this is the third trace",
+		Type:       4,
+		Underlying: traceDelete,
+		IsSkipped:  false,
+	}
+	decodedTrace = append(decodedTrace, deleteDecodedTrace)
+	//  Generate a trace file for read zero
+	traceReadZero := acc.ReadZeroAndProve(types.FullBytes32FromHex("0x93"))
+	readZeroDecodedTrace := statemanager.DecodedTrace{
+		Location:   "this is the fourth trace",
+		Type:       1,
+		Underlying: traceReadZero,
+		IsSkipped:  false,
+	}
+	decodedTrace = append(decodedTrace, readZeroDecodedTrace)
+	// Generate a trace file for read non zero
+	traceReadNonZero := acc.ReadNonZeroAndProve(types.FullBytes32FromHex("0x32"))
+	readNonZeroDecodedTrace := statemanager.DecodedTrace{
+		Location:   "this is the fifth trace",
+		Type:       0,
+		Underlying: traceReadNonZero,
+		IsSkipped:  false,
+	}
+	decodedTrace = append(decodedTrace, readNonZeroDecodedTrace)
+	logrus.Infof("decoded trace length: %d", len(decodedTrace))
+	definer, prover := accumulatorTestingModule(1024)
+	comp := wizard.Compile(definer, dummy.Compile)
+	proof := wizard.Prove(comp, prover(decodedTrace))
+	assert.NoErrorf(t, wizard.Verify(comp, proof), "invalid accumulator proof")
 }

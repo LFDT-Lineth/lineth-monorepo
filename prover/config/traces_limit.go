@@ -16,7 +16,7 @@ var (
 	modulePrecompileSha2Blocks                 = "PRECOMPILE_SHA2_BLOCKS"
 	modulePrecompileRipemdBlocks               = "PRECOMPILE_RIPEMD_BLOCKS"
 	modulePrecompileModexpEffectiveCalls       = "PRECOMPILE_MODEXP_EFFECTIVE_CALLS"
-	modulePrecompileModexpEffectiveCallsLarge  = "PRECOMPILE_MODEXP_EFFECTIVE_CALLS_4096"
+	modulePrecompileModexpEffectiveCalls8192   = "PRECOMPILE_MODEXP_EFFECTIVE_CALLS_4096"
 	modulePrecompileEcaddEffectiveCalls        = "PRECOMPILE_ECADD_EFFECTIVE_CALLS"
 	modulePrecompileEcmulEffectiveCalls        = "PRECOMPILE_ECMUL_EFFECTIVE_CALLS"
 	modulePrecompileEcpairingEffectiveCalls    = "PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS"
@@ -159,10 +159,11 @@ func (tl *TracesLimits) mustFindModuleLimits(module string) ModuleLimit {
 
 // ScaleUp increases the scaling factor
 func (tl *TracesLimits) ScaleUp(by int) {
-	if tl.ScalingFactor == 0 {
-		tl.ScalingFactor = 1
+	if tl.ScalingFactor <= 1 {
+		tl.ScalingFactor = by
+	} else {
+		tl.ScalingFactor *= by
 	}
-	tl.ScalingFactor *= by
 }
 
 // GetLimit returns the limits of a module
@@ -177,13 +178,8 @@ func (tl *TracesLimits) GetLimit(module string) int {
 		res = ml.LimitLarge
 	}
 
-	scalingFactor := tl.ScalingFactor
-	if scalingFactor == 0 {
-		scalingFactor = 1
-	}
-
-	if !ml.IsNotScalable {
-		res *= scalingFactor
+	if !ml.IsNotScalable && tl.ScalingFactor > 1 {
+		res *= tl.ScalingFactor
 	}
 
 	return res
@@ -219,8 +215,8 @@ func (tl *TracesLimits) PrecompileModexpEffectiveCalls() int {
 
 // PrecompileModexpEffectiveCalls8192 returns the limits corresponding to the
 // name of the method. (auto-generated)
-func (tl *TracesLimits) PrecompileModexpEffectiveCallsLarge() int {
-	name := modulePrecompileModexpEffectiveCallsLarge
+func (tl *TracesLimits) PrecompileModexpEffectiveCalls8192() int {
+	name := modulePrecompileModexpEffectiveCalls8192
 	return tl.GetLimit(name)
 }
 
@@ -419,6 +415,7 @@ func GetTestTracesLimits() *TracesLimits {
 	// These are the config trace-limits from sepolia updated with latest precompile values.
 	traceLimits := &TracesLimits{
 		Modules: []ModuleLimit{
+			{Module: "", Limit: 131072, LimitLarge: 262144},
 			{Module: "add", Limit: 262144, LimitLarge: 524288},
 			{Module: "bin", Limit: 262144, LimitLarge: 524288},
 			{Module: "blake_modexp_data", Limit: 16384, LimitLarge: 32768},
@@ -430,13 +427,15 @@ func GetTestTracesLimits() *TracesLimits {
 			{Module: "ext", Limit: 524288, LimitLarge: 1048576},
 			{Module: "gas", Limit: 65536, LimitLarge: 131072},
 			{Module: "hub", Limit: 2097152, LimitLarge: 4194304},
+			{Module: "hub×4", Limit: 8388608, LimitLarge: 16777216},
 			{Module: "log_data", Limit: 65536, LimitLarge: 131072},
 			{Module: "log_info", Limit: 4096, LimitLarge: 8192},
 			{Module: "mmio", Limit: 2097152, LimitLarge: 4194304},
+			{Module: "mmio×3", Limit: 8388608, LimitLarge: 16777216},
 			{Module: "mmu", Limit: 1048576, LimitLarge: 2097152},
 			{Module: "mod", Limit: 131072, LimitLarge: 262144},
 			{Module: "mul", Limit: 65536, LimitLarge: 131072},
-			{Module: "mxp", Limit: 524288, LimitLarge: 1048576},
+			{Module: "mxp", Limit: 1048576, LimitLarge: 2097152},
 			{Module: "oob", Limit: 262144, LimitLarge: 524288},
 			{Module: "rlp_addr", Limit: 4096, LimitLarge: 8192},
 			{Module: "rlp_txn", Limit: 131072, LimitLarge: 262144},
@@ -450,9 +449,6 @@ func GetTestTracesLimits() *TracesLimits {
 			{Module: "trm", Limit: 32768, LimitLarge: 65536},
 			{Module: "txn_data", Limit: 8192, LimitLarge: 16384},
 			{Module: "wcp", Limit: 262144, LimitLarge: 524288},
-			{Module: "bin_reference_table", Limit: 262144, LimitLarge: 262144, IsNotScalable: true},
-			{Module: "shf_reference_table", Limit: 4096, LimitLarge: 4096, IsNotScalable: true},
-			{Module: "instruction_decoder", Limit: 512, LimitLarge: 512, IsNotScalable: true},
 			{Module: "precompile_ecrecover_effective_calls", Limit: 128, LimitLarge: 256},
 			{Module: "precompile_sha2_blocks", Limit: 200, LimitLarge: 400},
 			{Module: "precompile_ripemd_blocks", Limit: 0, LimitLarge: 0},
@@ -469,6 +465,14 @@ func GetTestTracesLimits() *TracesLimits {
 			{Module: "block_l1_size", Limit: 1000000, LimitLarge: 1000000, IsNotScalable: true},
 			{Module: "block_l2_l1_logs", Limit: 16, LimitLarge: 16, IsNotScalable: true},
 			{Module: "block_transactions", Limit: 300, LimitLarge: 300},
+			{Module: "bin_reference_table", Limit: 262144, LimitLarge: 262144, IsNotScalable: true},
+			{Module: "shf_reference_table", Limit: 4096, LimitLarge: 4096, IsNotScalable: true},
+			{Module: "instruction_decoder", Limit: 512, LimitLarge: 512, IsNotScalable: true},
+			{Module: "u20", Limit: 4194304, LimitLarge: 8388608},
+			{Module: "u32", Limit: 4194304, LimitLarge: 8388608},
+			{Module: "u36", Limit: 4194304, LimitLarge: 8388608},
+			{Module: "u64", Limit: 4194304, LimitLarge: 8388608},
+			{Module: "u128", Limit: 4194304, LimitLarge: 8388608},
 			{Module: "shomei_merkle_proofs", Limit: 8192, LimitLarge: 16384},
 			{Module: "precompile_bls_g1_add_effective_calls", Limit: 256, LimitLarge: 512},
 			{Module: "precompile_bls_g2_add_effective_calls", Limit: 16, LimitLarge: 32},
@@ -485,12 +489,6 @@ func GetTestTracesLimits() *TracesLimits {
 			{Module: "precompile_bls_point_evaluation_effective_calls", Limit: 16, LimitLarge: 32},
 			{Module: "precompile_point_evaluation_failure_effective_calls", Limit: 4, LimitLarge: 8},
 			{Module: "precompile_p256_verify_effective_calls", Limit: 128, LimitLarge: 256},
-			{Module: "u128", Limit: 131072, LimitLarge: 262144},
-			{Module: "u20", Limit: 131072, LimitLarge: 262144},
-			{Module: "u32", Limit: 131072, LimitLarge: 262144},
-			{Module: "u36", Limit: 131072, LimitLarge: 262144},
-			{Module: "u64", Limit: 131072, LimitLarge: 262144},
-			{Module: "", Limit: 131072, LimitLarge: 262144},
 		},
 	}
 

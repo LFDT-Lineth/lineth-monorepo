@@ -38,22 +38,25 @@ type laneRepacking struct {
 	Coeff ifaces.Column
 	// it is 1 on the effective part of lane module.
 	IsLaneActive ifaces.Column
-	// It is 1 if the lane is the first lane of the new hash.
-	IsFirstLaneOfNewHash ifaces.Column
+	// It indicate where on the lane-column the new hash begins. 1 if it is the beginning of a new hash.
+	IsBeginningOfNewHash ifaces.Column
 	// the size of the columns in this submodule.
 	Size int
+	// As MAXNBYTE=2 we can't use one row for each lane. So this value
+	// is equal to number of rows per one lane.
+	RowsPerLane int
 }
 
 // It imposes all the constraints for correct repacking of decompsedLimbs into lanes.
 func newLane(comp *wizard.CompiledIOP, spaghetti spaghettiCtx, pckInp PackingInput) laneRepacking {
 	var (
-		size                  = utils.NextPowerOfTwo(pckInp.PackingParam.NbOfLanesPerBlock() * pckInp.MaxNumBlocks)
+		rowsPerLane           = (pckInp.PackingParam.LaneSizeBytes() + MAXNBYTE - 1) / MAXNBYTE
+		size                  = utils.NextPowerOfTwo(pckInp.PackingParam.NbOfLanesPerBlock() * pckInp.MaxNumBlocks * rowsPerLane)
 		createCol             = common.CreateColFn(comp, LANE+"_"+pckInp.Name, size, pragmas.RightPadded)
 		isFirstSliceOfNewHash = spaghetti.NewHashSp
-		maxValue              = pckInp.PackingParam.LaneSizeBytes()
 		decomposedLenSp       = spaghetti.DecLenSp
-		pa                    = dedicated.AccumulateUpToMax(comp, maxValue, decomposedLenSp, spaghetti.FilterSpaghetti)
 		spaghettiSize         = spaghetti.SpaghettiSize
+		pa                    = dedicated.AccumulateUpToMax(comp, MAXNBYTE, decomposedLenSp, spaghetti.FilterSpaghetti)
 	)
 
 	l := laneRepacking{
@@ -63,13 +66,14 @@ func newLane(comp *wizard.CompiledIOP, spaghetti spaghettiCtx, pckInp PackingInp
 		},
 
 		Lanes:                createCol("Lane"),
-		IsFirstLaneOfNewHash: createCol("IsFirstLaneOfNewHash"),
+		IsBeginningOfNewHash: createCol("IsFirstLaneOfNewHash"),
 		IsLaneActive:         createCol("IsLaneActive"),
-		Coeff:                comp.InsertCommit(0, ifaces.ColID("Coefficient_"+pckInp.Name), spaghettiSize),
+		Coeff:                comp.InsertCommit(0, ifaces.ColID("Coefficient_"+pckInp.Name), spaghettiSize, true),
 
 		PAAccUpToMax:   pa,
 		IsLaneComplete: pa.IsMax,
 		Size:           size,
+		RowsPerLane:    rowsPerLane,
 	}
 
 	// Declare the constraints
@@ -87,7 +91,7 @@ func newLane(comp *wizard.CompiledIOP, spaghetti spaghettiCtx, pckInp PackingInp
 	// Project the isFirstLaneOfNewHash from isFirstSliceOfNewHash
 	comp.InsertProjection(ifaces.QueryID("Project_IsFirstLaneOfHash_"+pckInp.Name),
 		query.ProjectionInput{ColumnA: []ifaces.Column{isFirstSliceOfNewHash},
-			ColumnB: []ifaces.Column{l.IsFirstLaneOfNewHash},
+			ColumnB: []ifaces.Column{l.IsBeginningOfNewHash},
 			FilterA: l.IsLaneComplete,
 			FilterB: l.IsLaneActive})
 	return l
@@ -133,7 +137,7 @@ func (l *laneRepacking) csRecomposeToLanes(comp *wizard.CompiledIOP, s spaghetti
 	//ipTaker[i] = (decomposedLimbs[i] * coeff[i]) + ipTracker[i+1]* (1- isLaneComplete[i+1])
 	// Constraints on the Partitioned Inner-Products
 	ipTracker := dedicated.InsertPartitionedIP(comp, l.Inputs.PckInp.Name+"_PIP_For_LaneRePacking",
-		s.DecLimbSp,
+		s.CleanLimbSp,
 		l.Coeff,
 		l.IsLaneComplete,
 	)
@@ -199,9 +203,9 @@ func (l *laneRepacking) assignLane(run *wizard.ProverRuntime) {
 	var (
 		lane                 = common.NewVectorBuilder(l.Lanes)
 		param                = l.Inputs.PckInp.PackingParam
-		isFirstLaneofNewHash = common.NewVectorBuilder(l.IsFirstLaneOfNewHash)
+		isFirstLaneofNewHash = common.NewVectorBuilder(l.IsBeginningOfNewHash)
 		isActive             = common.NewVectorBuilder(l.IsLaneActive)
-		laneBytes            = param.LaneSizeBytes()
+		nbLaneBytes          = param.LaneSizeBytes()
 		blocks, flag         = l.getBlocks(run, l.Inputs.PckInp)
 	)
 	var f field.Element
@@ -215,15 +219,24 @@ func (l *laneRepacking) assignLane(run *wizard.ProverRuntime) {
 			utils.Panic("blocks should be of size %v, but it is of size %v", param.BlockSizeBytes(), len(block))
 		}
 		for j := 0; j < param.NbOfLanesPerBlock(); j++ {
-			laneBytes := block[j*laneBytes : j*laneBytes+laneBytes]
-			f.SetBytes(laneBytes)
-			lane.PushField(f)
-			if flag[k] == 1 && j == 0 {
-				isFirstLaneofNewHash.PushInt(1)
-			} else {
-				isFirstLaneofNewHash.PushInt(0)
+			laneBytes := block[j*nbLaneBytes : j*nbLaneBytes+nbLaneBytes]
+
+			leftLaneBytes := nbLaneBytes
+			for i := range l.RowsPerLane {
+				offset := min(leftLaneBytes, MAXNBYTE)
+
+				laneBytesPerRow := laneBytes[i*MAXNBYTE : i*MAXNBYTE+offset]
+				f.SetBytes(laneBytesPerRow)
+				leftLaneBytes -= offset
+
+				lane.PushField(f)
+				if flag[k] == 1 && j == 0 && i == 0 {
+					isFirstLaneofNewHash.PushInt(1)
+				} else {
+					isFirstLaneofNewHash.PushInt(0)
+				}
+				isActive.PushInt(1)
 			}
-			isActive.PushInt(1)
 		}
 
 	}
@@ -240,27 +253,38 @@ func (l *laneRepacking) getBlocks(run *wizard.ProverRuntime, inp PackingInput) (
 	var (
 		s = 0
 		// counter for the number of blocks
-		ctr       = 0
-		blockSize = inp.PackingParam.BlockSizeBytes()
-		imported  = inp.Imported
-		limbs     = smartvectors.Window(imported.Limb.GetColAssignment(run))
-		nBytes    = smartvectors.Window(imported.NByte.GetColAssignment(run))
-		isNewHash = smartvectors.Window(imported.IsNewHash.GetColAssignment(run))
+		ctr              = 0
+		blockSize        = inp.PackingParam.BlockSizeBytes()
+		imported         = inp.Imported
+		limbs            = make([][]field.Element, len(imported.Limb))
+		nBytes           = smartvectors.Window(imported.NByte.GetColAssignment(run))
+		decomposedNBytes = decomposeNByte(nBytes)
+		isNewHash        = smartvectors.Window(imported.IsNewHash.GetColAssignment(run))
 	)
+	for i := range common.NbLimbU128 {
+		limbs[i] = smartvectors.Window(imported.Limb[i].GetColAssignment(run))
+	}
+	nbRows := len(limbs[0])
 
-	limbSerialized := [32]byte{}
 	var stream []byte
 	var block [][]byte
 	var isFirstBlockOfHash []int
 	isFirstBlockOfHash = append(isFirstBlockOfHash, 1)
-	for pos := 0; pos < len(limbs); pos++ {
+	for pos := 0; pos < nbRows; pos++ {
 		nbyte := field.ToInt(&nBytes[pos])
 		s = s + nbyte
 
-		// Extract the limb, which is left aligned to the 16-th byte
-		limbSerialized = limbs[pos].Bytes()
+		// Serialize the limb value from 8 left-aligned 2-byte values into one "nbyte" byte array
+		var usefulByte []byte
+		for i := range limbs {
+			limbNByte := decomposedNBytes[i][pos]
+			limbBytes := limbs[i][pos].Bytes()
+			usefulByte = append(usefulByte, limbBytes[LEFT_ALIGNMENT:LEFT_ALIGNMENT+limbNByte]...)
+		}
 
-		usefulByte := limbSerialized[LEFT_ALIGNMENT : LEFT_ALIGNMENT+nbyte]
+		// SANITY CHECK
+		utils.Require(len(usefulByte) == nbyte, "invalid length of usefulByte %d != %d", len(usefulByte), nbyte)
+
 		if s > blockSize || s == blockSize {
 			// extra part that should be moved to the next block
 			s = s - blockSize
@@ -270,10 +294,10 @@ func (l *laneRepacking) getBlocks(run *wizard.ProverRuntime, inp PackingInput) (
 				utils.Panic("could not extract the new Block")
 			}
 			block = append(block, newBlock)
-			if pos+1 != len(limbs) && isNewHash[pos+1].IsOne() {
+			if pos+1 != nbRows && isNewHash[pos+1].IsOne() {
 				// the next block is the first block of hash
 				isFirstBlockOfHash = append(isFirstBlockOfHash, 1)
-			} else if pos+1 != len(limbs) {
+			} else if pos+1 != nbRows {
 				isFirstBlockOfHash = append(isFirstBlockOfHash, 0)
 			}
 			stream = make([]byte, s)
@@ -285,7 +309,7 @@ func (l *laneRepacking) getBlocks(run *wizard.ProverRuntime, inp PackingInput) (
 		// If we are on the last limb or if it is a new hash
 		// the steam should be empty,
 		// unless \sum_i NByte_i does not divide the blockSize (for i from the same hash)
-		if pos+1 == len(limbs) || isNewHash[pos+1].Uint64() == 1 {
+		if pos+1 == nbRows || isNewHash[pos+1].Uint64() == 1 {
 			if len(stream) != 0 {
 				utils.Panic("The stream-length should be zero before launching a new hash/batch len(stream) = %v", len(stream))
 			}

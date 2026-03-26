@@ -15,15 +15,14 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/plonk"
-	"github.com/consensys/linea-monorepo/prover/backend/blobdecompression"
+	dataavailability "github.com/consensys/linea-monorepo/prover/backend/dataavailability"
 	"github.com/consensys/linea-monorepo/prover/backend/execution"
 	"github.com/consensys/linea-monorepo/prover/backend/execution/bridge"
 	"github.com/consensys/linea-monorepo/prover/backend/files"
 	"github.com/consensys/linea-monorepo/prover/circuits/aggregation"
 	"github.com/consensys/linea-monorepo/prover/config"
-	"github.com/consensys/linea-monorepo/prover/crypto/mimc"
-	"github.com/consensys/linea-monorepo/prover/crypto/state-management/hashtypes"
-	"github.com/consensys/linea-monorepo/prover/crypto/state-management/smt"
+	hashtypes "github.com/consensys/linea-monorepo/prover/crypto/state-management/hashtypes_legacy"
+	smt "github.com/consensys/linea-monorepo/prover/crypto/state-management/smt_mimcbls12377"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/types"
 	"github.com/sirupsen/logrus"
@@ -47,13 +46,12 @@ func collectFields(cfg *config.Config, req *Request) (*CollectedFields, error) {
 			ParentAggregationLastBlockTimestamp:     uint(req.ParentAggregationLastBlockTimestamp),
 			LastFinalizedL1RollingHash:              req.ParentAggregationLastL1RollingHash,
 			LastFinalizedL1RollingHashMessageNumber: uint(req.ParentAggregationLastL1RollingHashMessageNumber),
+			ParentStateRootHashContract:             req.ParentAggregationStateRootHashContract,
 		}
 	)
 
 	cf.ExecutionPI = make([]public_input.Execution, 0, len(req.ExecutionProofs))
 	cf.InnerCircuitTypes = make([]pi_interconnection.InnerCircuitType, 0, len(req.ExecutionProofs)+len(req.DecompressionProofs))
-
-	hshM := mimc.NewMiMC()
 
 	for i, execReqFPath := range req.ExecutionProofs {
 
@@ -70,7 +68,17 @@ func collectFields(cfg *config.Config, req *Request) (*CollectedFields, error) {
 
 		if i == 0 {
 			cf.LastFinalizedBlockNumber = uint(po.FirstBlockNumber) - 1
-			cf.ParentStateRootHash = po.ParentStateRootHash
+			// If the user does not pass the value (which will be the case 99%
+			// of the time), we assume the parent state root hash is the same
+			// as the first block's state root hash.
+			if cf.ParentStateRootHashContract.IsZero() {
+				cf.ParentStateRootHashContract = po.ParentStateRootHash.ToBytes32()
+			} else if !isKoalaBearHash(cf.ParentStateRootHashContract) {
+				logrus.WithFields(logrus.Fields{
+					"parentStateRootHashContract": cf.ParentStateRootHashContract.Hex(),
+					"firstExecutionParentHash":    po.ParentStateRootHash.Hex(),
+				}).Warn("BLS-to-KoalaBear transition detected: parentStateRootHashContract is a BLS hash, circuit will fall back to first execution's initial state root hash")
+			}
 		}
 
 		if po.ProverMode == config.ProverModeProofless {
@@ -130,18 +138,27 @@ func collectFields(cfg *config.Config, req *Request) (*CollectedFields, error) {
 				return nil, fmt.Errorf("could not parse the proof claim for `%v` : %w", fpath, err)
 			}
 			cf.ProofClaims = append(cf.ProofClaims, *pClaim)
+			cf.ProofClaimSources = append(cf.ProofClaimSources, execReqFPath)
 
 			pi := po.FuncInput()
 
-			if pi.L2MessageServiceAddr != types.EthAddress(cfg.Layer2.MsgSvcContract) {
-				return nil, fmt.Errorf("execution #%d: expected L2 msg service addr %x, encountered %x", i, cfg.Layer2.MsgSvcContract, pi.L2MessageServiceAddr)
-			}
 			if po.ChainID != cfg.Layer2.ChainID {
-				return nil, fmt.Errorf("execution #%d: expected chain ID %x, encountered %x", i, cfg.Layer2.ChainID, po.ChainID)
+				return nil, fmt.Errorf("execution #%d: dynamic chain config mismatch: Chain ID from config (layer2.chain_id) is %d (0x%x), but execution proof has %d (0x%x)", i, cfg.Layer2.ChainID, cfg.Layer2.ChainID, po.ChainID, po.ChainID)
+			}
+			if po.BaseFee != cfg.Layer2.BaseFee {
+				return nil, fmt.Errorf("execution #%d: dynamic chain config mismatch: Base Fee from config (layer2.base_fee) is %d (0x%x), but execution proof has %d (0x%x)", i, cfg.Layer2.BaseFee, cfg.Layer2.BaseFee, po.BaseFee, po.BaseFee)
+			}
+
+			if pi.CoinBase != types.EthAddress(cfg.Layer2.CoinBase) {
+				return nil, fmt.Errorf("execution #%d: dynamic chain config mismatch: CoinBase from config (layer2.coin_base) is 0x%x, but execution proof has 0x%x", i, cfg.Layer2.CoinBase, pi.CoinBase)
+			}
+
+			if pi.L2MessageServiceAddr != types.EthAddress(cfg.Layer2.MsgSvcContract) {
+				return nil, fmt.Errorf("execution #%d: dynamic chain config mismatch: L2 Message Service from config (layer2.message_service_contract) is 0x%x, but execution proof has 0x%x", i, cfg.Layer2.MsgSvcContract, pi.L2MessageServiceAddr)
 			}
 
 			// make sure public input and collected values match
-			if pi := po.FuncInput().Sum(hshM); !bytes.Equal(pi, po.PublicInput[:]) {
+			if pi := po.FuncInput().Sum(); !bytes.Equal(pi, po.PublicInput[:]) {
 				return nil, fmt.Errorf("execution #%d: public input mismatch: given %x, computed %x", i, po.PublicInput, pi)
 			}
 
@@ -154,8 +171,8 @@ func collectFields(cfg *config.Config, req *Request) (*CollectedFields, error) {
 	cf.DecompressionPI = make([]blobsubmission.Response, 0, len(req.DecompressionProofs))
 
 	for i, decompReqFPath := range req.DecompressionProofs {
-		dp := &blobdecompression.Response{}
-		fpath := path.Join(cfg.BlobDecompression.DirTo(), decompReqFPath)
+		dp := &dataavailability.Response{}
+		fpath := path.Join(cfg.DataAvailability.DirTo(), decompReqFPath)
 		f := files.MustRead(fpath)
 
 		if err := json.NewDecoder(f).Decode(dp); err != nil {
@@ -180,6 +197,7 @@ func collectFields(cfg *config.Config, req *Request) (*CollectedFields, error) {
 				return nil, fmt.Errorf("could not parse the proof claim for `%v` : %w", fpath, err)
 			}
 			cf.ProofClaims = append(cf.ProofClaims, *pClaim)
+			cf.ProofClaimSources = append(cf.ProofClaimSources, decompReqFPath)
 			cf.DecompressionPI = append(cf.DecompressionPI, dp.Request)
 		}
 	}
@@ -195,7 +213,6 @@ func collectFields(cfg *config.Config, req *Request) (*CollectedFields, error) {
 	cf.L2MsgRootHashes = PackInMiniTrees(allL2MessageHashes)
 
 	return cf, nil
-
 }
 
 // Prepare the response without running the actual proof
@@ -207,20 +224,22 @@ func CraftResponse(cfg *config.Config, cf *CollectedFields) (resp *Response, err
 	}
 
 	resp = &Response{
-		DataHashes:                          cf.DataHashes,
-		DataParentHash:                      cf.DataParentHash,
-		ParentStateRootHash:                 cf.ParentStateRootHash,
-		ParentAggregationLastBlockTimestamp: cf.ParentAggregationLastBlockTimestamp,
-		FinalTimestamp:                      cf.FinalTimestamp,
-		L1RollingHash:                       cf.L1RollingHash,
-		L1RollingHashMessageNumber:          cf.L1RollingHashMessageNumber,
-		L2MerkleRoots:                       cf.L2MsgRootHashes,
-		L2MsgTreesDepth:                     cf.L2MsgTreeDepth,
-		L2MessagingBlocksOffsets:            cf.L2MessagingBlocksOffsets,
-		LastFinalizedBlockNumber:            cf.LastFinalizedBlockNumber,
-		FinalBlockNumber:                    cf.FinalBlockNumber,
-		ParentAggregationFinalShnarf:        cf.ParentAggregationFinalShnarf,
-		FinalShnarf:                         cf.FinalShnarf,
+		DataHashes:                              cf.DataHashes,
+		DataParentHash:                          cf.DataParentHash,
+		ParentStateRootHash:                     cf.ParentStateRootHashContract.Hex(),
+		ParentAggregationLastBlockTimestamp:     cf.ParentAggregationLastBlockTimestamp,
+		FinalTimestamp:                          cf.FinalTimestamp,
+		LastFinalizedL1RollingHash:              cf.LastFinalizedL1RollingHash,
+		L1RollingHash:                           cf.L1RollingHash,
+		LastFinalizedL1RollingHashMessageNumber: cf.LastFinalizedL1RollingHashMessageNumber,
+		L1RollingHashMessageNumber:              cf.L1RollingHashMessageNumber,
+		L2MerkleRoots:                           cf.L2MsgRootHashes,
+		L2MsgTreesDepth:                         cf.L2MsgTreeDepth,
+		L2MessagingBlocksOffsets:                cf.L2MessagingBlocksOffsets,
+		LastFinalizedBlockNumber:                cf.LastFinalizedBlockNumber,
+		FinalBlockNumber:                        cf.FinalBlockNumber,
+		ParentAggregationFinalShnarf:            cf.ParentAggregationFinalShnarf,
+		FinalShnarf:                             cf.FinalShnarf,
 	}
 
 	// @alex: proofless jobs are triggered once during the migration introducing
@@ -232,7 +251,7 @@ func CraftResponse(cfg *config.Config, cf *CollectedFields) (resp *Response, err
 	pubInputParts := public_input.Aggregation{
 		FinalShnarf:                             cf.FinalShnarf,
 		ParentAggregationFinalShnarf:            cf.ParentAggregationFinalShnarf,
-		ParentStateRootHash:                     cf.ParentStateRootHash,
+		ParentStateRootHash:                     cf.ParentStateRootHashContract.Hex(),
 		ParentAggregationLastBlockTimestamp:     cf.ParentAggregationLastBlockTimestamp,
 		FinalTimestamp:                          cf.FinalTimestamp,
 		LastFinalizedBlockNumber:                cf.LastFinalizedBlockNumber,
@@ -243,6 +262,13 @@ func CraftResponse(cfg *config.Config, cf *CollectedFields) (resp *Response, err
 		L1RollingHashMessageNumber:              resp.L1RollingHashMessageNumber,
 		L2MsgRootHashes:                         cf.L2MsgRootHashes,
 		L2MsgMerkleTreeDepth:                    l2MsgMerkleTreeDepth,
+
+		// dynamic chain configuration
+		ChainID:              uint64(cfg.Layer2.ChainID),
+		BaseFee:              uint64(cfg.Layer2.BaseFee),
+		CoinBase:             types.EthAddress(cfg.Layer2.CoinBase),
+		L2MessageServiceAddr: types.EthAddress(cfg.Layer2.MsgSvcContract),
+		IsAllowedCircuitID:   uint64(cfg.Aggregation.IsAllowedCircuitID),
 	}
 
 	resp.AggregatedProofPublicInput = pubInputParts.GetPublicInputHex()
@@ -271,7 +297,7 @@ func CraftResponse(cfg *config.Config, cf *CollectedFields) (resp *Response, err
 func validate(cf *CollectedFields) (err error) {
 
 	utils.ValidateHexString(&err, cf.FinalShnarf, "FinalizedShnarf : %w", 32)
-	utils.ValidateHexString(&err, cf.ParentStateRootHash, "ParentStateRootHash : %w", 32)
+	utils.ValidateHexString(&err, cf.ParentStateRootHashContract.Hex(), "ParentStateRootHash : %w", 32)
 	utils.ValidateHexString(&err, cf.L1RollingHash, "L1RollingHash : %w", 32)
 	utils.ValidateHexString(&err, cf.L2MessagingBlocksOffsets, "L2MessagingBlocksOffsets : %w", -1)
 	utils.ValidateTimestamps(&err, cf.ParentAggregationLastBlockTimestamp, cf.FinalTimestamp)
@@ -288,6 +314,19 @@ func validate(cf *CollectedFields) (err error) {
 	}
 
 	return err
+}
+
+// isKoalaBearHash checks whether a FullBytes32 represents a valid koalabear
+// octuplet (8 x 32-bit limbs, each < 0x7f000001). Returns false for BLS hashes.
+func isKoalaBearHash(h types.FullBytes32) bool {
+	const koalaMod = 0x7f000001
+	for i := 0; i < 8; i++ {
+		limb := binary.BigEndian.Uint32(h[4*i : 4*i+4])
+		if limb >= koalaMod {
+			return false
+		}
+	}
+	return true
 }
 
 // Pack an array of boolean into an offset list. The offset list encodes the
@@ -321,7 +360,7 @@ func PackInMiniTrees(l2MsgHashes []string) []string {
 
 	for i := 0; i < paddedLen; i += l2MsgMerkleTreeMaxLeaves {
 
-		digests := make([]types.Bytes32, l2MsgMerkleTreeMaxLeaves)
+		digests := make([]types.Bls12377Fr, l2MsgMerkleTreeMaxLeaves)
 
 		// Convert the leaves into digests that can be processed by the smt
 		// package.

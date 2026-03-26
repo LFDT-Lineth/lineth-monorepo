@@ -1,5 +1,5 @@
 environment = "sepolia"
-version = "6.1.7"                              # TODO @gbotrel hunt all version definitions.
+version = "6.2.1"                            # TODO @gbotrel hunt all version definitions.
 assets_dir = "./prover-assets"
 log_level = 4                                  # TODO @gbotrel will be refactored with new logger.
 
@@ -7,27 +7,39 @@ log_level = 4                                  # TODO @gbotrel will be refactore
 retry_delays = [0, 1]
 
 [execution]
-prover_mode = "limitless"
-conflated_traces_dir = "/home/ubuntu/test_sepolia/traces/conflated"
-requests_root_dir = "/home/ubuntu/test_sepolia/prover-execution"
-limitless_with_debug = false
-ignore_compatibility_check = false 
-keep_traces_until_block = 0
-
-[blob_decompression]
 prover_mode = "full"
-requests_root_dir = "/home/ubuntu/test_sepolia/prover-compression"
+conflated_traces_dir = "./"
+requests_root_dir = "./"
+limitless_with_debug = false
+ignore_compatibility_check = false
+keep_traces_until_block = 0
+serialization = false
+
+[data_availability]
+prover_mode = "full"
+requests_root_dir = "./"
 dict_paths = ["lib/compressor/compressor_dict.bin", "lib/compressor/dict/25-04-21.bin"]
 
 [aggregation]
 prover_mode = "full"
-requests_root_dir = "/home/ubuntu/test_sepolia/prover-aggregation"
+requests_root_dir = "./"
 num_proofs = [10, 20, 50, 100, 200, 400]
-allowed_inputs = ["execution-dummy", "execution", "execution-large", "execution-limitless", "blob-decompression-dummy", "blob-decompression-v0", "blob-decompression-v1"]
 verifier_id = 1
+# allowed_inputs = ["execution-dummy", "execution", "execution-large", "execution-limitless", "data-availability-dummy", "data-availability-v2"]
+# Conversion to is_allowed_circuit_id bitmask (TESTNET/SEPOLIA - includes dummy circuits):
+#   execution-dummy (ID 0, bit 0) = 1 → ALLOWED
+#   data-availability-dummy (ID 1, bit 1) = 1 → ALLOWED
+#   execution (ID 2, bit 2) = 1 → ALLOWED
+#   execution-large (ID 3, bit 3) = 1 → ALLOWED
+#   execution-limitless (ID 4, bit 4) = 1 → ALLOWED
+#   data-availability-v2 (ID 5, bit 5) = 1 → ALLOWED
+# To customize, edit and run: go test -v -run TestCalculateCustomBitmask ./circuits/
+# Binary: 0b111111 = 63 (decimal)
+is_allowed_circuit_id = 63
+
 
 [public_input_interconnection]
-max_nb_decompression = 400
+max_nb_data_availability = 400
 max_nb_execution = 400
 max_nb_circuits = 400
 execution_max_nb_msg = 16
@@ -36,6 +48,8 @@ l2_msg_max_nb_merkle = 200
 
 [layer2]
 chain_id = 59141
+base_fee = 7
+coin_base = "0xA27342f1b74c0cfB2cda74bac1628d0C1A9752f2"
 message_service_contract = "0x971e727e956690b9957be6d51Ec16E73AcAC83A7"
 
 [traces_limits]
@@ -52,15 +66,15 @@ modules = [
     {module = "EXT", limit = 524288, limit_large = 1048576},
     {module = "GAS", limit = 65536, limit_large = 131072},
     {module = "HUB", limit = 2097152, limit_large = 4194304},
-    {module = "HUBx4", limit = 8388608, limit_large = 16777216},
+    {module = "HUB×4", limit = 8388608, limit_large = 16777216},
     {module = "LOG_DATA", limit = 65536, limit_large = 131072},
     {module = "LOG_INFO", limit = 4096, limit_large = 8192},
     {module = "MMIO", limit = 2097152, limit_large = 4194304},
-    {module = "MMIOx3", limit = 8388608, limit_large = 16777216},
+    {module = "MMIO×3", limit = 8388608, limit_large = 16777216},
     {module = "MMU", limit = 1048576, limit_large = 2097152},
     {module = "MOD", limit = 131072, limit_large = 262144},
     {module = "MUL", limit = 65536, limit_large = 131072},
-    {module = "MXP", limit = 524288, limit_large = 1048576},
+    {module = "MXP", limit = 1048576, limit_large = 2097152},
     {module = "OOB", limit = 262144, limit_large = 524288},
     {module = "RLP_ADDR", limit = 4096, limit_large = 8192},
     {module = "RLP_TXN", limit = 131072, limit_large = 262144},
@@ -93,11 +107,11 @@ modules = [
     {module = "BIN_REFERENCE_TABLE", limit = 262144, limit_large = 262144, is_not_scalable = true},
     {module = "SHF_REFERENCE_TABLE", limit = 4096, limit_large = 4096, is_not_scalable = true},
     {module = "INSTRUCTION_DECODER", limit = 512, limit_large = 512, is_not_scalable = true},
-    {module = "U20", limit = 2097152, limit_large = 4194304},
-    {module = "U32", limit = 2097152, limit_large = 4194304},
-    {module = "U36", limit = 2097152, limit_large = 4194304},
-    {module = "U64", limit = 2097152, limit_large = 4194304},
-    {module = "U128", limit = 2097152, limit_large = 4194304},
+    {module = "U20", limit = 4194304, limit_large = 8388608},
+    {module = "U32", limit = 4194304, limit_large = 8388608},
+    {module = "U36", limit = 4194304, limit_large = 8388608},
+    {module = "U64", limit = 4194304, limit_large = 8388608},
+    {module = "U128", limit = 4194304, limit_large = 8388608},
     {module = "SHOMEI_MERKLE_PROOFS", limit = 8192, limit_large = 16384},
     {module = "PRECOMPILE_BLS_G1_ADD_EFFECTIVE_CALLS", limit = 256, limit_large = 512},
     {module = "PRECOMPILE_BLS_G2_ADD_EFFECTIVE_CALLS", limit = 16, limit_large = 32},

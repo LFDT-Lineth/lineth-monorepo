@@ -241,6 +241,7 @@ func (p *PermutationTestcase) Define(comp *wizard.CompiledIOP) {
 				0,
 				formatName[ifaces.ColID]("Permutation", p.NameStr, "A", i, j),
 				p.A[i][j].Len(),
+				smartvectors.IsBase(p.A[i][j]),
 			)
 
 			if i < len(p.AIsProof) && p.AIsProof[i] {
@@ -256,6 +257,7 @@ func (p *PermutationTestcase) Define(comp *wizard.CompiledIOP) {
 				0,
 				formatName[ifaces.ColID]("Permutation", p.NameStr, "B", i, j),
 				p.B[i][j].Len(),
+				smartvectors.IsBase(p.B[i][j]),
 			)
 
 			if i < len(p.BIsProof) && p.BIsProof[i] {

@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 	"github.com/consensys/gnark/frontend"
 	sv "github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
-	"github.com/consensys/linea-monorepo/prover/maths/fft"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 	"github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils"
-	"github.com/consensys/linea-monorepo/prover/utils/gnarkutil"
 	"github.com/consensys/linea-monorepo/prover/utils/parallel"
 	"github.com/sirupsen/logrus"
 )
@@ -77,7 +78,8 @@ func (t PeriodicSample) EvalAtOutOfDomain(size int, x field.Element) field.Eleme
 	// If there is an offset in the sample we also adjust here
 	if t.Offset > 0 {
 		var shift field.Element
-		evalPoint.Mul(&evalPoint, shift.Exp(fft.GetOmega(n), big.NewInt(int64(-t.Offset))))
+		omegaN, _ := fft.Generator(uint64(size))
+		evalPoint.Mul(&evalPoint, shift.Exp(omegaN, big.NewInt(int64(-t.Offset))))
 	}
 
 	var denominator, numerator field.Element
@@ -97,40 +99,94 @@ func (t PeriodicSample) EvalAtOutOfDomain(size int, x field.Element) field.Eleme
 	return res
 }
 
-// Evaluate a particular position on the domain
-func (t PeriodicSample) GnarkEvalAtOnDomain(api frontend.API, pos int) frontend.Variable {
-	return t.GnarkEvalNoCoset(t.T)[pos%t.T]
-}
-
-func (t PeriodicSample) GnarkEvalAtOutOfDomain(api frontend.API, size int, x frontend.Variable) frontend.Variable {
+// Evaluates the expression outside of the domain
+func (t PeriodicSample) EvalAtOutOfDomainExt(size int, x fext.Element) fext.Element {
 	n := size
 	l := n / t.T
-	one := field.One()
-	lField := field.NewElement(uint64(l))
-	nField := field.NewElement(uint64(n))
+	one := fext.One()
+	var lField, nField fext.Element
+	nField.B0.A0.SetUint64(uint64(n))
+	lField.B0.A0.SetUint64(uint64(l))
 
 	// If there is an offset in the sample we also adjust here
 	if t.Offset > 0 {
-		x = api.Mul(x, gnarkutil.Exp(api, fft.GetOmega(n), -t.Offset))
+		var shift field.Element
+		omegaN, err := fft.Generator(uint64(size))
+		if err != nil {
+			panic(err)
+		}
+		x.MulByElement(&x, shift.Exp(omegaN, big.NewInt(int64(-t.Offset))))
 	}
 
-	denominator := gnarkutil.Exp(api, x, l)
-	denominator = api.Sub(denominator, one)
-	denominator = api.Mul(denominator, nField)
-	numerator := gnarkutil.Exp(api, x, n)
-	numerator = api.Sub(numerator, &one)
-	numerator = api.Mul(numerator, &lField)
+	var denominator, numerator fext.Element
+	denominator.Exp(x, big.NewInt(int64(l)))
+	denominator.Sub(&denominator, &one)
+	denominator.Mul(&denominator, &nField)
+	numerator.Exp(x, big.NewInt(int64(size)))
+	numerator.Sub(&numerator, &one)
+	numerator.Mul(&numerator, &lField)
 
-	return api.Div(numerator, denominator)
+	if denominator.IsZero() {
+		panic("denominator was zero")
+	}
+
+	var res fext.Element
+	res.Div(&numerator, &denominator)
+	return res
+}
+
+// Evaluate a particular position on the domain
+func (t PeriodicSample) GnarkEvalAtOnDomain(api frontend.API, pos int) koalagnark.Element {
+	return t.GnarkEvalNoCoset(t.T)[pos%t.T]
+}
+
+func (t PeriodicSample) GnarkEvalAtOutOfDomain(api frontend.API, size int, x koalagnark.Ext) koalagnark.Ext {
+
+	koalaAPI := koalagnark.NewAPI(api)
+
+	n := size
+	l := n / t.T
+	nField := field.NewElement(uint64(n))
+	lField := field.NewElement(uint64(l))
+
+	// If there is an offset in the sample we also adjust here
+	if t.Offset > 0 {
+		omegaN, err := fft.Generator(uint64(n))
+		if err != nil {
+			panic(err)
+		}
+		omegaN.ExpInt64(omegaN, int64(-t.Offset))
+		wOmegaN := big.NewInt(0).SetUint64(omegaN.Uint64())
+		x = koalaAPI.MulConstExt(x, wOmegaN)
+	}
+
+	// Optimization: compute x^l and x^n efficiently
+	// x^n = (x^l)^(n/l) = (x^l)^T where T = t.T
+	xPowL := koalaAPI.ExpExt(x, big.NewInt(int64(l)))
+
+	wnField := big.NewInt(0).SetUint64(nField.Uint64())
+	wlField := big.NewInt(0).SetUint64(lField.Uint64())
+	extEOne := koalaAPI.OneExt()
+
+	denominator := koalaAPI.SubExt(xPowL, extEOne)
+	denominator = koalaAPI.MulConstExt(denominator, wnField)
+
+	// x^n = (x^l)^T - reuse xPowL instead of computing x^n from scratch
+	numerator := koalaAPI.ExpExt(xPowL, big.NewInt(int64(t.T)))
+	numerator = koalaAPI.SubExt(numerator, extEOne)
+	numerator = koalaAPI.MulConstExt(numerator, wlField)
+
+	return koalaAPI.DivExt(numerator, denominator)
 }
 
 // Returns the result in gnark form. This returns a vector of constant
-// on the form of frontend.Variables.
-func (t PeriodicSample) GnarkEvalNoCoset(size int) []frontend.Variable {
+// on the form of circuit.Vars.
+func (t PeriodicSample) GnarkEvalNoCoset(size int) []koalagnark.Element {
 	res_ := t.EvalCoset(size, 0, 1, false)
-	res := make([]frontend.Variable, res_.Len())
+	res := make([]koalagnark.Element, res_.Len())
 	for i := range res {
-		res[i] = res_.Get(i)
+		val := res_.Get(i)
+		res[i] = koalagnark.NewElementFromKoala(val)
 	}
 	return res
 }
@@ -176,14 +232,20 @@ func (t PeriodicSample) EvalCoset(size, cosetId, cosetRatio int, shiftGen bool) 
 
 	// Skip if there is no coset ratio
 	if cosetRatio > 0 {
-		omegaN := fft.GetOmega(n * cosetRatio)
+		omegaN, err := fft.Generator(uint64(n * cosetRatio))
+		if err != nil {
+			panic(err)
+		}
 		omegaN.Exp(omegaN, big.NewInt(int64(cosetId)))
 		a.Mul(&a, &omegaN)
 	}
 
 	// If there is an offset in the sample we also adjust here
 	if t.Offset > 0 {
-		omegalInv := fft.GetOmega(n)
+		omegalInv, err := fft.Generator(uint64(n))
+		if err != nil {
+			panic(err)
+		}
 		omegalInv.Exp(omegalInv, big.NewInt(int64(-t.Offset)))
 		a.Mul(&a, &omegalInv)
 	}
@@ -192,7 +254,10 @@ func (t PeriodicSample) EvalCoset(size, cosetId, cosetRatio int, shiftGen bool) 
 	var al, an field.Element
 	al.Exp(a, big.NewInt(int64(l)))
 	an.Exp(a, big.NewInt(int64(n)))
-	omegal := fft.GetOmega(t.T) // It's the canonical t-root of unity
+	omegal, err := fft.Generator(uint64(t.T)) // It's the canonical t-root of unity
+	if err != nil {
+		panic(err)
+	}
 
 	// Denominator
 	denominator := make([]field.Element, t.T, n)
@@ -229,4 +294,9 @@ func (t PeriodicSample) EvalCoset(size, cosetId, cosetRatio int, shiftGen bool) 
 	}
 
 	return sv.NewRegular(res)
+}
+
+func (t PeriodicSample) IsBase() bool {
+
+	return true
 }

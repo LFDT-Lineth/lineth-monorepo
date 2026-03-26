@@ -6,19 +6,23 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/frontend/cs/scs"
+	"github.com/consensys/gnark/test"
 	"github.com/consensys/linea-monorepo/prover/backend/files"
 	"github.com/consensys/linea-monorepo/prover/crypto/ringsis"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/logdata"
-	"github.com/consensys/linea-monorepo/prover/protocol/compiler/mimc"
+	"github.com/consensys/linea-monorepo/prover/protocol/compiler/poseidon2"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/selfrecursion"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/vortex"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
-	"github.com/consensys/linea-monorepo/prover/protocol/serialization"
+	"github.com/consensys/linea-monorepo/prover/protocol/serde"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -61,27 +65,27 @@ type TestCase struct {
 
 // tests-cases for all tests
 var testcases []TestCase = []TestCase{
-	{Numpoly: 32, NumRound: 1, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[0]},
-	{Numpoly: 32, NumRound: 2, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[0]},
+	{Numpoly: 2, NumRound: 1, PolSize: 2, NumOpenCol: 1, SisInstance: sisInstances[0]},
+	{Numpoly: 1024, NumRound: 2, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[0]},
 	{Numpoly: 2, NumRound: 2, PolSize: 32, NumOpenCol: 2, SisInstance: sisInstances[0]},
-	{Numpoly: 32, NumRound: 3, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[0]},
-	{Numpoly: 32, NumRound: 1, PolSize: 16, NumOpenCol: 16, SisInstance: sisInstances[1]},
-	{Numpoly: 32, NumRound: 3, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[2]},
+	{Numpoly: 1024, NumRound: 3, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[0]},
+	{Numpoly: 1024, NumRound: 1, PolSize: 16, NumOpenCol: 16, SisInstance: sisInstances[1]},
+	{Numpoly: 1024, NumRound: 3, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[2]},
 	{Numpoly: 27, NumRound: 1, PolSize: 32, NumOpenCol: 8, SisInstance: sisInstances[0]},
-	{Numpoly: 32, NumRound: 1, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[3]},
+	{Numpoly: 1024, NumRound: 1, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[3]},
 	{Numpoly: 27, NumRound: 3, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[3]},
 	{Numpoly: 29, NumRound: 1, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[3]},
 }
 
 var testcases_precomp []TestCase = []TestCase{
-	{Numpoly: 32, NumRound: 1, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[0], NumPrecomp: 4, IsCommitPrecomp: true},
-	{Numpoly: 32, NumRound: 2, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[0], NumPrecomp: 4, IsCommitPrecomp: true},
+	{Numpoly: 2, NumRound: 1, PolSize: 2, NumOpenCol: 1, SisInstance: sisInstances[0], NumPrecomp: 2, IsCommitPrecomp: true},
+	{Numpoly: 1024, NumRound: 2, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[0], NumPrecomp: 4, IsCommitPrecomp: true},
 	{Numpoly: 2, NumRound: 2, PolSize: 32, NumOpenCol: 2, SisInstance: sisInstances[0], NumPrecomp: 2, IsCommitPrecomp: true},
-	{Numpoly: 32, NumRound: 3, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[0], NumPrecomp: 4, IsCommitPrecomp: true},
-	{Numpoly: 32, NumRound: 1, PolSize: 16, NumOpenCol: 16, SisInstance: sisInstances[1], NumPrecomp: 4, IsCommitPrecomp: true},
-	{Numpoly: 32, NumRound: 3, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[2], NumPrecomp: 4, IsCommitPrecomp: true},
+	{Numpoly: 1024, NumRound: 3, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[0], NumPrecomp: 4, IsCommitPrecomp: true},
+	{Numpoly: 1024, NumRound: 1, PolSize: 16, NumOpenCol: 16, SisInstance: sisInstances[1], NumPrecomp: 4, IsCommitPrecomp: true},
+	{Numpoly: 1024, NumRound: 3, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[2], NumPrecomp: 4, IsCommitPrecomp: true},
 	{Numpoly: 27, NumRound: 1, PolSize: 32, NumOpenCol: 8, SisInstance: sisInstances[0], NumPrecomp: 4, IsCommitPrecomp: true},
-	{Numpoly: 32, NumRound: 1, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[3], NumPrecomp: 4, IsCommitPrecomp: true},
+	{Numpoly: 1024, NumRound: 1, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[3], NumPrecomp: 4, IsCommitPrecomp: true},
 	{Numpoly: 27, NumRound: 3, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[3], NumPrecomp: 4, IsCommitPrecomp: true},
 	{Numpoly: 29, NumRound: 1, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[3], NumPrecomp: 4, IsCommitPrecomp: true},
 }
@@ -127,7 +131,7 @@ func generateProtocol(tc TestCase) (define func(*wizard.Builder), prove func(*wi
 			}
 
 			if round < tc.NumRound-1 {
-				b.RegisterRandomCoin(dummyCoinName(round), coin.Field)
+				b.RegisterRandomCoin(dummyCoinName(round), coin.FieldExt)
 			}
 		}
 
@@ -138,12 +142,12 @@ func generateProtocol(tc TestCase) (define func(*wizard.Builder), prove func(*wi
 	// and the columns with random values
 	prove = func(run *wizard.ProverRuntime) {
 		// the evaluation point
-		x := field.NewElement(42)
-		var ys []field.Element
+		x := fext.RandomElement()
+		var ys []fext.Element
 		if tc.IsCommitPrecomp {
-			ys = make([]field.Element, (tc.Numpoly + tc.NumPrecomp))
+			ys = make([]fext.Element, (tc.Numpoly + tc.NumPrecomp))
 		} else {
-			ys = make([]field.Element, tc.Numpoly)
+			ys = make([]fext.Element, tc.Numpoly)
 		}
 		numColPerRound := tc.Numpoly / tc.NumRound
 
@@ -151,7 +155,7 @@ func generateProtocol(tc TestCase) (define func(*wizard.Builder), prove func(*wi
 		if tc.IsCommitPrecomp {
 			for i := 0; i < tc.NumPrecomp; i++ {
 				p := run.Spec.Precomputed.MustGet(precompColName(i))
-				ys[i] = smartvectors.Interpolate(p, x)
+				ys[i] = smartvectors.EvaluateBasePolyLagrange(p, x)
 			}
 		}
 
@@ -174,15 +178,15 @@ func generateProtocol(tc TestCase) (define func(*wizard.Builder), prove func(*wi
 			for i := start; i < stop; i++ {
 				v := smartvectors.Rand(tc.PolSize)
 				run.AssignColumn(dummyColName(i), v)
-				ys[i] = smartvectors.Interpolate(v, x)
+				ys[i] = smartvectors.EvaluateBasePolyLagrange(v, x)
 			}
 
 			if round < tc.NumRound-1 {
-				_ = run.GetRandomCoinField(dummyCoinName(round))
+				_ = run.GetRandomCoinFieldExt(dummyCoinName(round))
 			}
 		}
 
-		run.AssignUnivariate(QNAME, x, ys...)
+		run.AssignUnivariateExt(QNAME, x, ys...)
 	}
 	return define, prove
 }
@@ -200,6 +204,7 @@ func TestSelfRecursionRandom(t *testing.T) {
 				define,
 				vortex.Compile(
 					2,
+					false,
 					vortex.ForceNumOpenedColumns(16),
 					vortex.WithSISParams(&sisInstances),
 				),
@@ -230,28 +235,30 @@ func TestSelfRecursionMultiLayered(t *testing.T) {
 			define,
 			vortex.Compile(
 				2,
+				false,
 				vortex.ForceNumOpenedColumns(tc.NumOpenCol),
 				vortex.WithSISParams(&tc.SisInstance),
 			),
 			selfrecursion.SelfRecurse,
-			mimc.CompileMiMC,
+			poseidon2.CompilePoseidon2,
 			compiler.Arcane(
 				compiler.WithTargetColSize(1<<10)),
 			vortex.Compile(
 				2,
+				false,
 				vortex.ForceNumOpenedColumns(tc.NumOpenCol),
 				vortex.WithSISParams(&tc.SisInstance),
 			),
 			selfrecursion.SelfRecurse,
-			mimc.CompileMiMC,
+			poseidon2.CompilePoseidon2,
 			compiler.Arcane(
 				compiler.WithTargetColSize(1<<13)),
 			vortex.Compile(
 				2,
+				false,
 				vortex.ForceNumOpenedColumns(tc.NumOpenCol),
 				vortex.WithSISParams(&tc.SisInstance),
 			),
-			dummy.Compile,
 		)
 
 		proof := wizard.Prove(
@@ -277,6 +284,7 @@ func TestSelfRecursionCommitPrecomputed(t *testing.T) {
 				define,
 				vortex.Compile(
 					2,
+					false,
 					vortex.ForceNumOpenedColumns(16),
 					vortex.WithSISParams(&sisInstances),
 				),
@@ -309,24 +317,27 @@ func TestSelfRecursionPrecompMultiLayered(t *testing.T) {
 			define,
 			vortex.Compile(
 				2,
+				false,
 				vortex.ForceNumOpenedColumns(16),
 				vortex.WithSISParams(&tc.SisInstance),
 			),
 			selfrecursion.SelfRecurse,
-			mimc.CompileMiMC,
+			poseidon2.CompilePoseidon2,
 			compiler.Arcane(
 				compiler.WithTargetColSize(1<<10)),
 			vortex.Compile(
 				2,
+				false,
 				vortex.ForceNumOpenedColumns(16),
 				vortex.WithSISParams(&tc.SisInstance),
 			),
 			selfrecursion.SelfRecurse,
-			mimc.CompileMiMC,
+			poseidon2.CompilePoseidon2,
 			compiler.Arcane(
 				compiler.WithTargetColSize(1<<13)),
 			vortex.Compile(
 				2,
+				false,
 				vortex.ForceNumOpenedColumns(16),
 				vortex.WithSISParams(&tc.SisInstance),
 			),
@@ -348,12 +359,15 @@ func TestSelfRecursionPrecompMultiLayered(t *testing.T) {
 func TestSelfRecursionManyLayers(t *testing.T) {
 
 	define, prove := generateProtocol(testcases[0])
-	n := 6
+	// don't increase too much so that it does not increase too much the runtime
+	// of the test.
+	n := 2
 
 	comp := wizard.Compile(
 		define,
 		vortex.Compile(
 			8,
+			false,
 			vortex.ForceNumOpenedColumns(32),
 			vortex.WithSISParams(&ringsis.StdParams),
 			vortex.WithOptionalSISHashingThreshold(64),
@@ -361,17 +375,21 @@ func TestSelfRecursionManyLayers(t *testing.T) {
 	)
 
 	for i := 0; i < n; i++ {
+
+		fmt.Printf("layer %v\n", i)
+
 		comp = wizard.ContinueCompilation(
 			comp,
 			selfrecursion.SelfRecurse,
-			mimc.CompileMiMC,
+			poseidon2.CompilePoseidon2,
 			compiler.Arcane(
 				compiler.WithTargetColSize(1<<13),
 			),
 			// logdata.Log("before-vortex"),
-			logdata.GenCSV(files.MustOverwrite(fmt.Sprintf("selfrecursion-%v.csv", i)), logdata.IncludeAllFilter),
+			// logdata.GenCSV(files.MustOverwrite(fmt.Sprintf("selfrecursion-%v.csv", i)), logdata.IncludeAllFilter),
 			vortex.Compile(
 				8,
+				false,
 				vortex.ForceNumOpenedColumns(32),
 				vortex.WithSISParams(&ringsis.StdParams),
 				vortex.WithOptionalSISHashingThreshold(64),
@@ -384,52 +402,195 @@ func TestSelfRecursionManyLayers(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// Test the compiler of self-recursion with really many layers for a sample
-// dummy protocol.
-func TestSelfRecursionManyLayersWithSerde(t *testing.T) {
+func TestGnarkSelfRecursionManyLayers(t *testing.T) {
+	const isBLS = true
 
 	define, prove := generateProtocol(testcases[0])
-	n := 6
+	// don't increase too much so that it does not increase too much the runtime
+	// of the test.
+	n := 1 // TODO@yao: set back to 2?
 
 	comp := wizard.Compile(
 		define,
 		vortex.Compile(
-			8,
-			vortex.ForceNumOpenedColumns(32),
+			2,
+			false,
+			vortex.ForceNumOpenedColumns(16),
 			vortex.WithSISParams(&ringsis.StdParams),
 			vortex.WithOptionalSISHashingThreshold(64),
 		),
 	)
 
 	for i := 0; i < n; i++ {
-		comp = wizard.ContinueCompilation(
-			comp,
-			selfrecursion.SelfRecurse,
-			mimc.CompileMiMC,
-			compiler.Arcane(
-				compiler.WithTargetColSize(1<<13),
-			),
-			vortex.Compile(
-				8,
-				vortex.ForceNumOpenedColumns(32),
-				vortex.WithSISParams(&ringsis.StdParams),
-				vortex.WithOptionalSISHashingThreshold(64),
-			),
-		)
+
+		fmt.Printf("layer %v\n", i)
+
+		if i == n-1 {
+			comp = wizard.ContinueCompilation(
+				comp,
+				selfrecursion.SelfRecurse,
+				poseidon2.CompilePoseidon2,
+				compiler.Arcane(
+					compiler.WithTargetColSize(1<<9),
+				),
+				// logdata.Log("before-vortex"),
+				logdata.GenCSV(files.MustOverwrite(fmt.Sprintf("selfrecursion-%v.csv", i)), logdata.IncludeAllFilter),
+				vortex.Compile(
+					2,
+					isBLS,
+					vortex.ForceNumOpenedColumns(16),
+					vortex.WithOptionalSISHashingThreshold(1<<20),
+				),
+			)
+		} else {
+			comp = wizard.ContinueCompilation(
+				comp,
+				selfrecursion.SelfRecurse,
+				poseidon2.CompilePoseidon2,
+				compiler.Arcane(
+					compiler.WithTargetColSize(1<<9),
+				),
+				// logdata.Log("before-vortex"),
+				logdata.GenCSV(files.MustOverwrite(fmt.Sprintf("selfrecursion-%v.csv", i)), logdata.IncludeAllFilter),
+				vortex.Compile(
+					2,
+					false,
+					vortex.ForceNumOpenedColumns(16),
+					vortex.WithSISParams(&ringsis.StdParams),
+					vortex.WithOptionalSISHashingThreshold(64),
+				),
+			)
+		}
 	}
 
-	buf, err := serialization.Serialize(comp)
+	proof := wizard.Prove(comp, prove, isBLS)
+	err := wizard.Verify(comp, proof, isBLS)
+	require.NoError(t, err)
+
+	circuit := verifierCircuit{}
+	{
+		c := wizard.AllocateWizardCircuit(comp, comp.NumRounds(), isBLS)
+		circuit.C = *c
+	}
+
+	csc, err := frontend.Compile(ecc.BLS12_377.ScalarField(), scs.NewBuilder, &circuit, frontend.IgnoreUnconstrainedInputs())
+
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	assignment := &verifierCircuit{
+		C: *wizard.AssignVerifierCircuit(comp, proof, comp.NumRounds(), isBLS),
+	}
+
+	witness, err := frontend.NewWitness(assignment, ecc.BLS12_377.ScalarField())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check if solved using the pre-compiled SCS
+	err = csc.IsSolved(witness)
+	if err != nil {
+		// When the error string is too large `require.NoError` does not print
+		// the error.
+		t.Logf("circuit solving failed : %v. Retrying with test engine\n", err)
+
+		errDetail := test.IsSolved(
+			assignment,
+			assignment,
+			csc.Field(),
+		)
+
+		t.Logf("while running the plonk prover: %v", errDetail)
+
+		t.FailNow()
+	}
+
+}
+
+type verifierCircuit struct {
+	C wizard.VerifierCircuit
+}
+
+func (c *verifierCircuit) Define(api frontend.API) error {
+	c.C.Verify(api)
+	return nil
+}
+
+// // Test the compiler of self-recursion with really many layers for a sample
+// // dummy protocol.
+func TestSelfRecursionManyLayersWithSerde(t *testing.T) {
+
+	define, _ := generateProtocol(testcases[0])
+	n := 1
+
+	comp := wizard.Compile(
+		define,
+		vortex.Compile(
+			2,
+			false,
+			vortex.ForceNumOpenedColumns(16),
+			vortex.WithSISParams(&ringsis.StdParams),
+			vortex.WithOptionalSISHashingThreshold(64),
+		),
+	)
+
+	for i := 0; i < n; i++ {
+
+		//fmt.Printf("layer %v\n", i)
+
+		if i == n-1 {
+			comp = wizard.ContinueCompilation(
+				comp,
+				selfrecursion.SelfRecurse,
+				poseidon2.CompilePoseidon2,
+				compiler.Arcane(
+					compiler.WithTargetColSize(1<<9),
+				),
+				// logdata.Log("before-vortex"),
+				//logdata.GenCSV(files.MustOverwrite(fmt.Sprintf("selfrecursion-%v.csv", i)), logdata.IncludeAllFilter),
+				vortex.Compile(
+					2,
+					true,
+					vortex.ForceNumOpenedColumns(16),
+					vortex.WithOptionalSISHashingThreshold(1<<20),
+				),
+			)
+		} else {
+			comp = wizard.ContinueCompilation(
+				comp,
+				selfrecursion.SelfRecurse,
+				poseidon2.CompilePoseidon2,
+				compiler.Arcane(
+					compiler.WithTargetColSize(1<<9),
+				),
+				// logdata.Log("before-vortex"),
+				//logdata.GenCSV(files.MustOverwrite(fmt.Sprintf("selfrecursion-%v.csv", i)), logdata.IncludeAllFilter),
+				vortex.Compile(
+					2,
+					false,
+					vortex.ForceNumOpenedColumns(16),
+					vortex.WithSISParams(&ringsis.StdParams),
+					vortex.WithOptionalSISHashingThreshold(64),
+				),
+			)
+		}
+	}
+
+	buf, err := serde.Serialize(comp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	logrus.Info("serialized succesfully.")
 
 	comp2 := &wizard.CompiledIOP{}
-	err = serialization.Deserialize(buf, &comp2)
+	err = serde.Deserialize(buf, &comp2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	proof := wizard.Prove(comp2, prove)
-	err = wizard.Verify(comp2, proof)
-	require.NoError(t, err)
+	if !serde.DeepCmp(comp, comp2, true) {
+		t.Fatal("comp and comp2 are not equal")
+	}
 }

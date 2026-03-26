@@ -3,6 +3,8 @@ package smartvectors
 import (
 	"math/big"
 
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 )
@@ -75,6 +77,57 @@ type operator interface {
 	//
 	// res += term or res *= term
 	constTermIntoVec(res []field.Element, term *field.Element)
+
+	// Same functions for extension vectors
+	// constExtIntoConstExt applies the operator over `res` and `(c, coeff)` and sets
+	// the result into res. This is specialized for the case where both res and
+	// x are scalars.
+	//
+	// 		res += x * coeff or res *= x^coeff
+	constExtIntoConstExt(res, x *fext.Element, coeff int)
+	// vecExtIntoVecExt applies the operator over `res` and `(c, coeff)` and sets
+	// the result into res. This is specialized for the case where both res and
+	// x are vectors.
+	//
+	// 		res += x * coeff or res *= x^coeff
+	vecExtIntoVecExt(res, x []fext.Element, coeff int)
+	// VecIntoVec applies the operator over `res` and `(c, coeff)` and sets
+	// the result into res. This is specialized for the case where res is a
+	// vector and c is a constant.
+	//
+	// 		res += x * coeff or res *= x^coeff
+	constExtIntoVecExt(res []fext.Element, x *fext.Element, coeff int)
+	// constExtIntoTermExt evaluates the operator over (x, coeff) and sets the result
+	// into `res`, overwriting it.
+	// It is specialized for the case where x and res are both scalars.
+	//
+	// 		res = x * coeff or res = x^coeff
+	constExtIntoTermExt(res, x *fext.Element, coeff int)
+	// vecExtIntoTermExt evaluates the operator over (x, coeff) and sets the result
+	// into `res`, overwriting it.
+	// It is specialized for the case where x and res are both vectors.
+	//
+	// 		res = x * coeff or res = x^coeff where x is a vector
+	vecExtIntoTermExt(res, x []fext.Element, coeff int)
+	// constTermIntoConst updates applies the operator over res and term and
+	// sets the result into res.
+	// This function is specialized for the case where the term and res are
+	// scalar.
+	//
+	// res += term or res *= term for constants
+	constTermExtIntoConstExt(res, term *fext.Element)
+	// vecTermExtIntoVecExt updates applies the operator over res and term and
+	// sets the result into res.
+	// This function is specialized for the case where the term and res are
+	// vector.
+	//
+	// res += term or res *= term
+	vecTermExtIntoVecExt(res, term []fext.Element)
+	// constTermExtIntoVecExt updates a vector `res` by applying the operator over
+	// it
+	//
+	// res += term or res *= term
+	constTermExtIntoVecExt(res []fext.Element, term *fext.Element)
 }
 
 // linCompOp is an implementation of the [operator] interface. It represents a
@@ -102,18 +155,19 @@ func (linCombOp) constIntoConst(res, x *field.Element, coeff int) {
 func (linCombOp) vecIntoVec(res, x []field.Element, coeff int) {
 	// Sanity-check
 	assertHasLength(len(res), len(x))
-	vRes := field.Vector(res)
 	switch coeff {
 	case 1:
-		vRes.Add(vRes, x)
+		vector.Add(res, res, x)
 	case -1:
-		vRes.Sub(vRes, x)
+		vector.Sub(res, res, x)
 	case 2:
-		vRes.Add(vRes, x)
-		vRes.Add(vRes, x)
+		for i := range res {
+			res[i].Add(&res[i], &x[i]).Add(&res[i], &x[i])
+		}
 	case -2:
-		vRes.Sub(vRes, x)
-		vRes.Sub(vRes, x)
+		for i := range res {
+			res[i].Sub(&res[i], &x[i]).Sub(&res[i], &x[i])
+		}
 	default:
 		var c, tmp field.Element
 		c.SetInt64(int64(coeff))
@@ -219,14 +273,16 @@ func (productOp) vecIntoVec(res, x []field.Element, coeff int) {
 	case 1:
 		vector.MulElementWise(res, res, x)
 	case 2:
-		vRes := field.Vector(res)
-		vRes.Mul(vRes, x)
-		vRes.Mul(vRes, x)
+		for i := range res {
+			res[i].Mul(&res[i], &x[i]).Mul(&res[i], &x[i])
+		}
 	case 3:
-		vRes := field.Vector(res)
-		vRes.Mul(vRes, x)
-		vRes.Mul(vRes, x)
-		vRes.Mul(vRes, x)
+		for i := range res {
+			var tmp field.Element
+			tmp.Square(&x[i])
+			tmp.Mul(&tmp, &x[i])
+			res[i].Mul(&res[i], &tmp)
+		}
 	default:
 		var tmp field.Element
 		for i := range res {
@@ -268,8 +324,20 @@ func (productOp) vecIntoTerm(res, x []field.Element, coeff int) {
 		vector.Fill(res, field.One())
 	case 1:
 		copy(res, x)
+	case 2:
+		vector.MulElementWise(res, x, x)
+	case 3:
+		for i := range res {
+			// Creating a new variable for the case where res and x are the same variable
+			var tmp field.Element
+			tmp.Square(&x[i])
+			res[i].Mul(&tmp, &x[i])
+		}
 	default:
-		field.ExpVec(res, x, int64(coeff))
+		c := big.NewInt(int64(coeff))
+		for i := range res {
+			res[i].Exp(x[i], c)
+		}
 	}
 }
 

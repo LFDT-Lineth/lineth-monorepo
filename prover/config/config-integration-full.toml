@@ -8,18 +8,32 @@ retry_delays = [0, 1]
 
 [execution]
 prover_mode = "full"
+serialization = false
 
-[blob_decompression]
+[data_availability]
 prover_mode = "dev"
 
 [aggregation]
 prover_mode = "full"
 num_proofs = [10]
-allowed_inputs = ["execution-dummy", "execution", "blob-decompression-dummy"]
 verifier_id = 1
+# allowed_inputs = ["execution-dummy", "execution", "data-availability-dummy"]
+# Conversion to is_allowed_circuit_id bitmask:
+#   execution-dummy (ID 0, bit 0) = 1 → ALLOWED
+#   data-availability-dummy (ID 1, bit 1) = 1 → ALLOWED
+#   execution (ID 2, bit 2) = 1 → ALLOWED
+#   execution-large (ID 3, bit 3) = 0 → DISALLOWED
+#   execution-limitless (ID 4, bit 4) = 0 → DISALLOWED
+#   data-availability-v2 (ID 5, bit 5) = 0 → DISALLOWED
+# To customize, edit and run: go test -v -run TestCalculateCustomBitmask ./circuits/
+# Binary: 0b000111 = 7 (decimal)
+is_allowed_circuit_id = 7
+
 
 [layer2]
 chain_id = 59144
+base_fee = 7
+coin_base = "0x8F81e2E3F8b46467523463835F965fFE476E1c9E"
 message_service_contract = "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec"
 
 [traces_limits]
@@ -29,29 +43,29 @@ modules = [
     {module = "BIN", limit = 262144, limit_large = 524288},
     {module = "BLAKE_MODEXP_DATA", limit = 16384, limit_large = 32768},
     {module = "BLOCK_DATA", limit = 4096, limit_large = 8192},
-    {module = "BLOCK_HASH", limit = 4096, limit_large = 8192},
+    {module = "BLOCK_HASH", limit = 2048, limit_large = 4096},
     {module = "EC_DATA", limit = 65536, limit_large = 131072},
     {module = "EUC", limit = 65536, limit_large = 131072},
     {module = "EXP", limit = 65536, limit_large = 131072},
     {module = "EXT", limit = 524288, limit_large = 1048576},
     {module = "GAS", limit = 65536, limit_large = 131072},
     {module = "HUB", limit = 2097152, limit_large = 4194304},
-    {module = "HUBx4", limit = 8388608, limit_large = 16777216},
+    {module = "HUB×4", limit = 8388608, limit_large = 16777216},
     {module = "LOG_DATA", limit = 65536, limit_large = 131072},
     {module = "LOG_INFO", limit = 4096, limit_large = 8192},
     {module = "MMIO", limit = 2097152, limit_large = 4194304},
-    {module = "MMIOx3", limit = 8388608, limit_large = 16777216},
+    {module = "MMIO×3", limit = 8388608, limit_large = 16777216},
     {module = "MMU", limit = 1048576, limit_large = 2097152},
     {module = "MOD", limit = 131072, limit_large = 262144},
     {module = "MUL", limit = 65536, limit_large = 131072},
-    {module = "MXP", limit = 524288, limit_large = 1048576},
+    {module = "MXP", limit = 1048576, limit_large = 2097152},
     {module = "OOB", limit = 262144, limit_large = 524288},
     {module = "RLP_ADDR", limit = 4096, limit_large = 8192},
     {module = "RLP_TXN", limit = 131072, limit_large = 262144},
     {module = "RLP_TXN_RCPT", limit = 65536, limit_large = 131072},
     {module = "RLP_AUTH", limit = 16384, limit_large = 32768},
     {module = "ROM", limit = 8388608, limit_large = 8388608},
-    {module = "ROMLEX", limit = 1024, limit_large = 2048},
+    {module = "ROM_LEX", limit = 1024, limit_large = 2048},
     {module = "SHAKIRA_DATA", limit = 65536, limit_large = 65536},
     {module = "SHF", limit = 262144, limit_large = 524288},
     {module = "STP", limit = 16384, limit_large = 32768},
@@ -77,11 +91,11 @@ modules = [
     {module = "BIN_REFERENCE_TABLE", limit = 262144, limit_large = 262144, is_not_scalable = true},
     {module = "SHF_REFERENCE_TABLE", limit = 4096, limit_large = 4096, is_not_scalable = true},
     {module = "INSTRUCTION_DECODER", limit = 512, limit_large = 512, is_not_scalable = true},
-    {module = "U20", limit = 131072, limit_large = 262144},
-    {module = "U32", limit = 131072, limit_large = 262144},
-    {module = "U36", limit = 131072, limit_large = 262144},
-    {module = "U64", limit = 131072, limit_large = 262144},
-    {module = "U128", limit = 131072, limit_large = 262144},
+    {module = "U20", limit = 4194304, limit_large = 8388608},
+    {module = "U32", limit = 4194304, limit_large = 8388608},
+    {module = "U36", limit = 4194304, limit_large = 8388608},
+    {module = "U64", limit = 4194304, limit_large = 8388608},
+    {module = "U128", limit = 4194304, limit_large = 8388608},
     {module = "SHOMEI_MERKLE_PROOFS", limit = 8192, limit_large = 16384},
     {module = "PRECOMPILE_BLS_G1_ADD_EFFECTIVE_CALLS", limit = 256, limit_large = 512},
     {module = "PRECOMPILE_BLS_G2_ADD_EFFECTIVE_CALLS", limit = 16, limit_large = 32},

@@ -25,7 +25,7 @@ docker build -f prover/Dockerfile -t consensys/linea-prover:local .
 
 ## Go-Specific Conventions
 
-- **Go version:** 1.24.6 (see `go.mod`)
+- **Go version:** 1.25.7 (see `go.mod`)
 - **Formatting:** `gofmt` (standard Go formatting, tabs)
 - **Linting:** `golangci-lint`
 - **Indentation:** tabs (per `.editorconfig` Go section)

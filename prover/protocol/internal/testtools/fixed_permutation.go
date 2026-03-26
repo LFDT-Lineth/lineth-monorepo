@@ -122,6 +122,7 @@ func (f *FixedPermutationTestcase) Define(comp *wizard.CompiledIOP) {
 			0,
 			formatName[ifaces.ColID]("FixedPermutation", f.NameStr, "A", i),
 			f.A[i].Len(),
+			true,
 		)
 
 		if i < len(f.AIsProof) && f.AIsProof[i] {
@@ -134,6 +135,7 @@ func (f *FixedPermutationTestcase) Define(comp *wizard.CompiledIOP) {
 			0,
 			formatName[ifaces.ColID]("FixedPermutation", f.NameStr, "B", i),
 			f.B[i].Len(),
+			true,
 		)
 	}
 

@@ -14,10 +14,12 @@ import (
 )
 
 const (
-	MAXNBYTE       = 16
-	LEFT_ALIGNMENT = 16
+	// Max value of NByte column
+	MAXNBYTE       = 2
+	LEFT_ALIGNMENT = field.Bytes - MAXNBYTE
 
-	POWER8 = 1 << 8
+	POWER8  = 1 << 8
+	POWER16 = 1 << 16
 )
 
 const (
@@ -32,9 +34,9 @@ const (
 
 // Importaion implements the set of required columns for launching the Packing module.
 type Importation struct {
-	// The set of the limbs that are subject to Packing (i.e., should be  pushed into the pack).
-	// Limbs are 16 bytes, left aligned.
-	Limb ifaces.Column
+	// The set of the limbs that are subject to Packing (i.e., should be pushed into the pack).
+	// Limbs are 2 bytes, left aligned. Columns from this slice represent 128 bit limbs if concatenated.
+	Limb []ifaces.Column
 	// It is 1 if the associated limb is the first limb of the new hash.
 	IsNewHash ifaces.Column
 	// NByte is the meaningful length of limbs in byte.
@@ -64,8 +66,6 @@ type Packing struct {
 	Inputs PackingInput
 
 	// submodules
-	Cleaning   cleaningCtx
-	LookUps    lookUpTables
 	Decomposed decomposition
 	// it stores the result of the Packing
 	// limbs are repacked in Lane column.
@@ -88,20 +88,16 @@ func NewPack(comp *wizard.CompiledIOP, inp PackingInput) *Packing {
 	var (
 		isNewHash  = inp.Imported.IsNewHash
 		lookup     = NewLookupTables(comp)
-		cleaning   = NewClean(comp, newCleaningInputs(inp.Imported, lookup, inp.Name))
-		decomposed = newDecomposition(comp, getDecompositionInputs(cleaning, inp))
+		decomposed = newDecomposition(comp, getDecompositionInputs(inp, lookup))
 		spaghetti  = spaghettiMaker(comp, decomposed, isNewHash)
 		lanes      = newLane(comp, spaghetti, inp)
-		block      = newBlock(comp, getBlockInputs(lanes, inp.PackingParam))
 	)
 
 	return &Packing{
 		Inputs:     inp,
-		Cleaning:   cleaning,
 		Decomposed: decomposed,
 		Repacked:   lanes,
-		Block:      block,
-		LookUps:    lookup,
+		Block:      newBlock(comp, getBlockInputs(lanes, inp.PackingParam)),
 	}
 }
 
@@ -109,7 +105,6 @@ func NewPack(comp *wizard.CompiledIOP, inp PackingInput) *Packing {
 func (pck *Packing) Run(run *wizard.ProverRuntime) {
 
 	// assign subModules
-	pck.Cleaning.Assign(run)
 	pck.Decomposed.Assign(run)
 	pck.Repacked.Assign(run)
 	pck.Block.Assign(run)
@@ -118,8 +113,10 @@ func (pck *Packing) Run(run *wizard.ProverRuntime) {
 // it stores the inputs /outputs of spaghettifier used in the Packing module.
 type spaghettiCtx struct {
 	// ContentSpaghetti
-	DecLimbSp, DecLenSp, DecLenPowerSp ifaces.Column
-	NewHashSp                          ifaces.Column
+	CleanLimbSp, DecLenSp, DecLenPowerSp, ShiftSp ifaces.Column
+	NewHashSp                                     ifaces.Column
+	// keep columns from decomposed step
+	DecomposedLen []ifaces.Column
 	// FilterSpaghetti
 	FilterSpaghetti ifaces.Column
 	PA              *spaghettifier.Spaghettification
@@ -136,7 +133,7 @@ func spaghettiMaker(comp *wizard.CompiledIOP, decomposed decomposition, isNewHas
 
 	// build isNewHash
 	isNewHashTable = append(isNewHashTable, isNewHash)
-	for i := 1; i < decomposed.NbSlices; i++ {
+	for i := 1; i < nbDecomposedLen; i++ {
 		isNewHashTable = append(isNewHashTable, zeroCol)
 	}
 
@@ -157,13 +154,18 @@ func spaghettiMaker(comp *wizard.CompiledIOP, decomposed decomposition, isNewHas
 
 	s := spaghettiCtx{
 		PA:              pa,
-		DecLimbSp:       pa.ContentSpaghetti[0],
+		CleanLimbSp:     pa.ContentSpaghetti[0],
 		DecLenSp:        pa.ContentSpaghetti[1],
 		DecLenPowerSp:   pa.ContentSpaghetti[2],
 		NewHashSp:       pa.ContentSpaghetti[3],
+		DecomposedLen:   decomposed.DecomposedLen,
 		SpaghettiSize:   decomposed.Size,
 		FilterSpaghetti: pa.FilterSpaghetti,
 	}
 
 	return s
+}
+
+func NbRowsPerLane(laneByteSize int) int {
+	return (laneByteSize + MAXNBYTE - 1) / MAXNBYTE
 }

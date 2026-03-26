@@ -75,6 +75,10 @@ func (comp *CompiledIOP) checkReflectValueInStore(x reflect.Value) {
 // find.
 func (comp *CompiledIOP) checkColumnInStore(col ifaces.Column) {
 
+	if col == nil {
+		utils.Panic("column is nil")
+	}
+
 	if !comp.WithStorePointerChecks {
 		return
 	}
@@ -95,7 +99,10 @@ func (comp *CompiledIOP) checkExpressionInStore(expr *symbolic.Expression) {
 		return
 	}
 
-	meta := expr.BoardListVariableMetadata()
+	var (
+		board = expr.Board()
+		meta  = board.ListVariableMetadata()
+	)
 
 	for _, m := range meta {
 		if col, ok := m.(ifaces.Column); ok {

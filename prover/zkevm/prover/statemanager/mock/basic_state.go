@@ -20,7 +20,7 @@ type AccountState struct {
 	Nonce            int64
 	Balance          *big.Int
 	KeccakCodeHash   types.FullBytes32
-	MimcCodeHash     types.Bytes32
+	LineaCodeHash    types.KoalaOctuplet // Poseidon2 code hash
 	CodeSize         int64
 	Storage          map[types.FullBytes32]types.FullBytes32
 	DeploymentNumber int64
@@ -50,7 +50,7 @@ func (s State) InsertEOA(a types.EthAddress, nonce int64, balance *big.Int) {
 	s[a] = &AccountState{
 		Nonce:          nonce,
 		Balance:        balance,
-		MimcCodeHash:   statemanager.EmptyCodeHash(statemanager.MIMC_CONFIG),
+		LineaCodeHash:  statemanager.EmptyCodeHash(),
 		KeccakCodeHash: types.AsFullBytes32(statemanager.LEGACY_KECCAK_EMPTY_CODEHASH),
 		CodeSize:       0,
 	}
@@ -58,7 +58,7 @@ func (s State) InsertEOA(a types.EthAddress, nonce int64, balance *big.Int) {
 
 // InsertContract inserts an empty contract into the account. The contract has
 // empty storage and no balance
-func (s State) InsertContract(a types.EthAddress, mimcCodeHash types.Bytes32, keccakCodeHash types.FullBytes32, codeSize int64) {
+func (s State) InsertContract(a types.EthAddress, lineaCodeHash types.KoalaOctuplet, keccakCodeHash types.FullBytes32, codeSize int64) {
 	if _, ok := s[a]; ok {
 		panic("account already exists for the address")
 	}
@@ -66,7 +66,7 @@ func (s State) InsertContract(a types.EthAddress, mimcCodeHash types.Bytes32, ke
 	s[a] = &AccountState{
 		Nonce:          0,
 		Balance:        &big.Int{},
-		MimcCodeHash:   mimcCodeHash,
+		LineaCodeHash:  lineaCodeHash,
 		KeccakCodeHash: keccakCodeHash,
 		CodeSize:       codeSize,
 		Storage:        map[types.FullBytes32]types.FullBytes32{},
@@ -94,11 +94,11 @@ func (s State) SetCodeHash(a types.EthAddress, codeHash types.FullBytes32) {
 	s[a].KeccakCodeHash = codeHash
 }
 
-// SetMimcCodeHash initializes the mimc code hash of an account and initializes
+// SetPoseidon2CodeHash initializes the Poseidon2 code hash of an account and initializes
 // an empty account with the value. If the account does not already exist.
-func (s State) SetMimcCodeHash(a types.EthAddress, codeHash types.Bytes32) {
+func (s State) SetPoseidon2CodeHash(a types.EthAddress, codeHash types.KoalaOctuplet) {
 	s.initAccountIfNil(a)
-	s[a].MimcCodeHash = codeHash
+	s[a].LineaCodeHash = codeHash
 }
 
 // SetCodeSize initializes the code size of an account and initializes the
@@ -138,9 +138,9 @@ func (s State) GetCodeHash(a types.EthAddress) types.FullBytes32 {
 
 // GetMimcCodeHash returns the Mimc code hash of an account and zero if the account does
 // not exist.
-func (s State) GetMimcCodeHash(a types.EthAddress) types.Bytes32 {
+func (s State) GetPoseidon2CodeHash(a types.EthAddress) types.KoalaOctuplet {
 	s.initAccountIfNil(a)
-	return s[a].MimcCodeHash
+	return s[a].LineaCodeHash
 }
 
 // SetCodeSize returns the code size of an account and initializes the

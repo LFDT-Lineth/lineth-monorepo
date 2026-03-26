@@ -1,0 +1,4 @@
+Serialization Size Profile
+==========================
+
+[serde_test.withString]: 45 B (100.0%)

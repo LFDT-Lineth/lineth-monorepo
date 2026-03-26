@@ -3,6 +3,7 @@ package compiler
 import (
 	"github.com/consensys/linea-monorepo/prover/backend/files"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/cleanup"
+	"github.com/consensys/linea-monorepo/prover/protocol/compiler/degreereduction"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/globalcs"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/horner"
@@ -33,15 +34,6 @@ type arcaneParamSet struct {
 	genCSVAfterExpansion     string
 }
 
-// MaybeWith allows conditionally activating an option if the condition is true.
-func MaybeWith(condition bool, option ArcaneParams) ArcaneParams {
-	return func(set *arcaneParamSet) {
-		if condition {
-			option(set)
-		}
-	}
-}
-
 // WithStitcherMinSize sets the minimum size for the stitcher. All columns
 // under this size are moved to public columns.
 func WithStitcherMinSize(minStickSize int) ArcaneParams {
@@ -68,6 +60,15 @@ func WithLogs() ArcaneParams {
 func WithoutMpts() ArcaneParams {
 	return func(set *arcaneParamSet) {
 		set.WithoutMpts = true
+	}
+}
+
+// MaybeWith allows conditionally activating an option if the condition is true.
+func MaybeWith(condition bool, option ArcaneParams) ArcaneParams {
+	return func(set *arcaneParamSet) {
+		if condition {
+			option(set)
+		}
 	}
 }
 
@@ -123,22 +124,22 @@ func Arcane(options ...ArcaneParams) func(comp *wizard.CompiledIOP) {
 
 		specialqueries.CompileFixedPermutations(comp)
 		if params.debugMode {
-			dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "fixed-permutations"))(comp)
+			dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "-fixed-permutations"))(comp)
 		}
 
 		permutation.CompileViaGrandProduct(comp)
 		if params.debugMode {
-			dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "grand-product"))(comp)
+			dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "-grand-product"))(comp)
 		}
 
 		logderivativesum.CompileLookups(comp)
 		if params.debugMode {
-			dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "lookups"))(comp)
+			dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "-lookups"))(comp)
 		}
 
 		horner.CompileProjection(comp)
 		if params.debugMode {
-			dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "projection"))(comp)
+			dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "-projection"))(comp)
 		}
 
 		// Note: when the option is not passed to Arcane, the value of the
@@ -146,7 +147,7 @@ func Arcane(options ...ArcaneParams) func(comp *wizard.CompiledIOP) {
 		// the option at all to the inner-product compiler.
 		innerproduct.Compile(innerproduct.WithMinimalRound(params.innerProductMinimalRound))(comp)
 		if params.debugMode {
-			dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "innerproduct"))(comp)
+			dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "-innerproduct"))(comp)
 		}
 
 		if params.withLogs {
@@ -157,10 +158,15 @@ func Arcane(options ...ArcaneParams) func(comp *wizard.CompiledIOP) {
 			logdata.GenCSV(files.MustOverwrite(params.genCSVAfterExpansion), logdata.IncludeAllFilter)(comp)
 		}
 
+		degreereduction.DegreeReduce(4)(comp)
+		if params.debugMode {
+			dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "-degree-reduction"))(comp)
+		}
+
 		stitchsplit.Stitcher(params.minStickSize, params.targetColSize)(comp)
 		stitchsplit.Splitter(params.targetColSize)(comp)
 		if params.debugMode {
-			dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "stitch-split"))(comp)
+			dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "-stitch-split"))(comp)
 		}
 
 		if params.withLogs {
@@ -170,23 +176,23 @@ func Arcane(options ...ArcaneParams) func(comp *wizard.CompiledIOP) {
 		cleanup.CleanUp(comp)
 		localcs.Compile(comp)
 		if params.debugMode {
-			dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "localcs"))(comp)
+			dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "-localcs"))(comp)
 		}
 
 		globalcs.Compile(comp)
 		if params.debugMode {
-			dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "globalcs"))(comp)
+			dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "-globalcs"))(comp)
 		}
 
 		univariates.Naturalize(comp)
 		if params.debugMode {
-			dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "naturalize"))(comp)
+			dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "-naturalize"))(comp)
 		}
 
 		if !params.WithoutMpts {
 			mpts.Compile()(comp)
 			if params.debugMode {
-				dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "mpts"))(comp)
+				dummy.CompileAtProverLvl(dummy.WithMsg(params.name + "-mpts/split-extensions"))(comp)
 			}
 		}
 

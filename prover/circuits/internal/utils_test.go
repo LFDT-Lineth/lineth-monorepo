@@ -8,32 +8,17 @@ import (
 	fr377 "github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
 	fr381 "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	bn254fr "github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	gchash "github.com/consensys/gnark-crypto/hash"
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/gnark/std/hash/mimc"
 	"github.com/consensys/gnark/std/math/emulated"
+	poseidon2permutation "github.com/consensys/gnark/std/permutation/poseidon2/gkr-poseidon2"
 	"github.com/consensys/linea-monorepo/prover/circuits/internal"
 	snarkTestUtils "github.com/consensys/linea-monorepo/prover/circuits/internal/test_utils"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/test_utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
-
-func TestChecksumSlice(t *testing.T) {
-	sum := internal.ChecksumSlice([][]byte{{0}, {1}, {2}})
-	snarkTestUtils.SnarkFunctionTest(func(api frontend.API) []frontend.Variable {
-		s := internal.VarSlice{
-			Values: []frontend.Variable{0, 1, 2, 3},
-			Length: 3,
-		}
-
-		if hsh, err := mimc.NewMiMC(api); err != nil {
-			panic(err)
-		} else {
-			return []frontend.Variable{s.Checksum(api, &hsh)}
-		}
-
-	}, sum)(t)
-}
 
 func TestChecksumSubSlices(t *testing.T) {
 	testChecksumSubSlices(t, 2, 1, 1)
@@ -50,29 +35,36 @@ func testChecksumSubSlices(t *testing.T, bigSliceLength, lengthsSliceLength int,
 	assert.LessOrEqual(t, endPoints[len(endPoints)-1], bigSliceLength)
 	assert.LessOrEqual(t, len(lengths), lengthsSliceLength)
 
-	sums := make([]frontend.Variable, len(lengths))
+	hsh := gchash.POSEIDON2_BLS12_377.New()
+	sums := make([]frontend.Variable, lengthsSliceLength)
 	start := 0
-	for i := range sums {
-		sums[i] = internal.ChecksumSlice(internal.MapSlice(func(x [32]byte) []byte { return x[:] }, bigSliceBytes[start:endPoints[i]]...))
+	for i := range lengths {
+		hsh.Reset()
+		for j := start; j < endPoints[i]; j++ {
+			hsh.Write(bigSliceBytes[j][:])
+		}
+		sums[i] = hsh.Sum(nil)
 		start = endPoints[i]
 	}
 
 	endPointsSnark := make([]frontend.Variable, lengthsSliceLength)
-	for n := utils.Copy(endPointsSnark, internal.PartialSumsInt(lengths)); n < lengthsSliceLength; n++ {
-		endPointsSnark[n] = n * 234
+	for n := utils.Copy(endPointsSnark, endPoints); n < lengthsSliceLength; n++ {
+		endPointsSnark[n] = n - len(lengths) + 1
+		sums[n] = n
 	}
 
 	t.Run(fmt.Sprintf("%d,%d,%v", bigSliceLength, lengthsSliceLength, lengths), snarkTestUtils.SnarkFunctionTest(func(api frontend.API) []frontend.Variable {
-		hsh, err := mimc.NewMiMC(api)
+		compressor, err := poseidon2permutation.NewCompressor(api)
 		if err != nil {
 			panic(err)
 		}
-		return internal.ChecksumSubSlices(api, &hsh, utils.ToVariableSlice(bigSliceInts),
+		require.NoError(t, internal.MerkleDamgardChecksumSubSlices(api, compressor, 0, utils.ToVariableSlice(bigSliceInts),
 			internal.VarSlice{
 				Values: endPointsSnark,
 				Length: len(lengths),
-			})[:len(lengths)]
-	}, sums...))
+			}, sums))
+		return nil
+	}))
 }
 
 func TestConcat(t *testing.T) {

@@ -19,12 +19,6 @@ func NewMapping[K comparable, V any]() Mapping[K, V] {
 	}
 }
 
-func NewMappingWithCapacity[K comparable, V any](capacity int) Mapping[K, V] {
-	return Mapping[K, V]{
-		InnerMap: make(map[K]V, capacity),
-	}
-}
-
 // Attempts to retrieve a value from a given key. Panics
 // if it fails
 func (kv *Mapping[K, V]) MustGet(key K) V {
@@ -144,4 +138,13 @@ func (kv *Mapping[K, V]) TryDel(k K) bool {
 
 func (kv *Mapping[K, V]) Len() int {
 	return len(kv.ListAllKeys())
+}
+
+// Iterates over all keys in the map in non-deterministic order
+func (kv *Mapping[K, V]) Clone() Mapping[K, V] {
+	res := NewMapping[K, V]()
+	for k, v := range kv.InnerMap {
+		res.InsertNew(k, v)
+	}
+	return res
 }

@@ -209,3 +209,16 @@ func (r *ByRoundRegister[ID, DATA]) IsSkippedFromProverTranscript(id ID) bool {
 	r.Mapping.MustExists(id)
 	return r.SkippedFromProverTranscript.Exists(id)
 }
+
+// Returns all the keys that are not marked as ignored in the structure
+func (s *ByRoundRegister[ID, DATA]) AllKeysUnignoredAtRound(round int) []ID {
+	res := []ID{}
+	allKeys := s.AllKeysAt(round)
+	for _, k := range allKeys {
+		if s.IsIgnored(k) {
+			continue
+		}
+		res = append(res, k)
+	}
+	return res
+}

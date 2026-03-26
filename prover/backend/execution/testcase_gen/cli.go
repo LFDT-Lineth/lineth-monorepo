@@ -168,18 +168,17 @@ func MaxTxByteSize() int {
 	return *maxTxByteSize
 }
 
-func StartFromRootHash() string {
+func StartFromRootHash() types.KoalaOctuplet {
 	// empty string means the address was not sent
 	if *startFromRootHash == "" {
 		utils.Panic("l2 bridge address is required")
 	}
 
-	// check that the address is correctly formatted
-	if b, err := hexutil.Decode(*startFromRootHash); err != nil || len(b) != 32 {
-		utils.Panic("start-from-root-hash is invalid")
+	r, err := types.HexToKoalabearOctuplet(*startFromRootHash)
+	if err != nil {
+		utils.Panic("the address should be an 0x prefixed string with 64 hexes, got %v", startFromRootHash)
 	}
-
-	return *startFromRootHash
+	return r
 }
 
 func StartFromTimeStamp() uint64 {
@@ -210,6 +209,6 @@ func StartFromBlock() int {
 	return *startFromBlock
 }
 
-func EndWithRootHash() types.Bytes32 {
-	return types.Bytes32FromHex(*endWithRootHash)
+func EndWithRootHash() types.KoalaOctuplet {
+	return types.MustHexToKoalabearOctuplet(*endWithRootHash)
 }

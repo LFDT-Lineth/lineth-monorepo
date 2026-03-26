@@ -26,7 +26,7 @@ func TestWizarldutils(t *testing.T) {
 			col5 = b.RegisterPrecomputed("P3", smartvectors.ForTest(1, 0, 1, 1))
 			col6 = verifiercol.NewConstantCol(field.NewElement(3), size, "")
 
-			coin = b.RegisterRandomCoin(coin.Namef("Coin"), coin.Field)
+			coin = b.RegisterRandomCoin(coin.Namef("Coin"), coin.FieldExt)
 		)
 
 		// PolyEval over columns
@@ -47,18 +47,18 @@ func TestWizarldutils(t *testing.T) {
 		run.AssignColumn("P1", col1)
 		run.AssignColumn("P2", col2)
 
-		run.GetRandomCoinField(coin.Namef("Coin"))
+		run.GetRandomCoinFieldExt(coin.Namef("Coin"))
 
-		res1Wit := column.EvalExprColumn(run, res1.Board()).IntoRegVecSaveAlloc()
-		res11Wit := column.EvalExprColumn(run, res11.Board()).IntoRegVecSaveAlloc()
+		res1Wit := column.EvalExprColumn(run, res1.Board()).IntoRegVecSaveAllocExt()
+		res11Wit := column.EvalExprColumn(run, res11.Board()).IntoRegVecSaveAllocExt()
 		for i := range res11Wit {
 			if res1Wit[i].Cmp(&res11Wit[i]) != 0 {
 				panic("err")
 			}
 		}
 
-		res2Wit := column.EvalExprColumn(run, res2.Board()).IntoRegVecSaveAlloc()
-		res22Wit := column.EvalExprColumn(run, res22.Board()).IntoRegVecSaveAlloc()
+		res2Wit := column.EvalExprColumn(run, res2.Board()).IntoRegVecSaveAllocExt()
+		res22Wit := column.EvalExprColumn(run, res22.Board()).IntoRegVecSaveAllocExt()
 		for i := range res11Wit {
 			if res2Wit[i].Cmp(&res22Wit[i]) != 0 {
 				panic("err")
@@ -68,8 +68,8 @@ func TestWizarldutils(t *testing.T) {
 	}
 
 	comp := wizard.Compile(define, dummy.Compile)
-	proof := wizard.Prove(comp, prover)
-	assert.NoErrorf(t, wizard.Verify(comp, proof), "invalid proof")
+	proof := wizard.Prove(comp, prover, false)
+	assert.NoErrorf(t, wizard.Verify(comp, proof, false), "invalid proof")
 }
 
 func linCom(x *symbolic.Expression, coeff []*symbolic.Expression) *symbolic.Expression {

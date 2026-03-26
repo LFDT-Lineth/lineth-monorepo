@@ -3,12 +3,13 @@ package symbolic
 import (
 	"errors"
 	"fmt"
-	"math/big"
 	"reflect"
 
 	"github.com/consensys/gnark/frontend"
 	sv "github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors_mixed"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/gnarkutil"
 )
@@ -52,36 +53,7 @@ func NewProduct(items []*Expression, exponents []int) *Expression {
 		panic("unmatching lengths")
 	}
 
-	for i := range exponents {
-		if exponents[i] < 0 {
-			panic("negative exponents are not allowed")
-		}
-	}
-
-	for i := range items {
-		if items[i].ESHash.IsZero() && exponents[i] != 0 {
-			return NewConstant(0)
-		}
-	}
-
-	exponents, items = expandTerms(&Product{}, exponents, items)
-	exponents, items, constExponents, constVal := regroupTerms(exponents, items)
-
-	// This regroups all the constants into a global constant with a coefficient
-	// of 1.
-	var c, t field.Element
-	c.SetOne()
-	for i := range constExponents {
-		t.Exp(constVal[i], big.NewInt(int64(constExponents[i])))
-		c.Mul(&c, &t)
-	}
-
-	if !c.IsOne() {
-		exponents = append(exponents, 1)
-		items = append(items, NewConstant(c))
-	}
-
-	exponents, items = removeZeroCoeffs(exponents, items)
+	items, exponents = simplifyProduct(items, exponents)
 
 	if len(items) == 0 {
 		return NewConstant(1)
@@ -91,33 +63,23 @@ func NewProduct(items []*Expression, exponents []int) *Expression {
 		return items[0]
 	}
 
+	return newProductNoSimplify(items, exponents)
+}
+
+// newProductNoSimplify is the same as NewProduct but does not perform any
+// optimization.
+func newProductNoSimplify(items []*Expression, exponents []int) *Expression {
 	e := &Expression{
 		Operator: Product{Exponents: exponents},
 		Children: items,
-		ESHash:   field.One(),
+		ESHash:   fext.One(),
+		IsBase:   computeIsBaseFromChildren(items),
 	}
 
+	var tmp fext.Element
 	for i := range e.Children {
-		var tmp field.Element
-		switch {
-		case exponents[i] == 1:
-			e.ESHash.Mul(&e.ESHash, &e.Children[i].ESHash)
-		case exponents[i] == 2:
-			tmp.Square(&e.Children[i].ESHash)
-			e.ESHash.Mul(&e.ESHash, &tmp)
-		case exponents[i] == 3:
-			tmp.Square(&e.Children[i].ESHash)
-			tmp.Mul(&tmp, &e.Children[i].ESHash)
-			e.ESHash.Mul(&e.ESHash, &tmp)
-		case exponents[i] == 4:
-			tmp.Square(&e.Children[i].ESHash)
-			tmp.Square(&tmp)
-			e.ESHash.Mul(&e.ESHash, &tmp)
-		default:
-			exponent := big.NewInt(int64(exponents[i]))
-			tmp.Exp(e.Children[i].ESHash, exponent)
-			e.ESHash.Mul(&e.ESHash, &tmp)
-		}
+		tmp.ExpInt64(e.Children[i].ESHash, int64(exponents[i]))
+		e.ESHash.Mul(&e.ESHash, &tmp)
 	}
 
 	return e
@@ -159,22 +121,107 @@ func (prod Product) Validate(expr *Expression) error {
 }
 
 // GnarkEval implements the [Operator] interface.
-func (prod Product) GnarkEval(api frontend.API, inputs []frontend.Variable) frontend.Variable {
+func (prod Product) GnarkEval(api frontend.API, inputs []koalagnark.Element) koalagnark.Element {
 
-	res := frontend.Variable(1)
+	res := koalagnark.NewElement(1)
 
-	// There should be as many inputs as there are coeffs
+	koalaAPI := koalagnark.NewAPI(api)
+
 	if len(inputs) != len(prod.Exponents) {
 		utils.Panic("%v inputs but %v coeffs", len(inputs), len(prod.Exponents))
 	}
 
-	/*
-		Accumulate the scalars
-	*/
 	for i, input := range inputs {
-		term := gnarkutil.Exp(api, input, prod.Exponents[i])
-		res = api.Mul(res, term)
+		exp := prod.Exponents[i]
+		var term koalagnark.Element
+
+		// Optimization: handle common exponents directly to avoid Exp overhead
+		switch exp {
+		case 0:
+			// x^0 = 1, skip multiplication
+			continue
+		case 1:
+			term = input
+		case 2:
+			term = koalaAPI.Mul(input, input)
+		default:
+			term = gnarkutil.Exp(api, input, exp)
+		}
+		res = koalaAPI.Mul(res, term)
 	}
 
 	return res
+}
+
+// GnarkEvalExt implements the [Operator] interface.
+func (prod Product) GnarkEvalExt(api frontend.API, inputs []any) koalagnark.Ext {
+
+	koalaAPI := koalagnark.NewAPI(api)
+
+	var (
+		res       = koalaAPI.OneExt()
+		resBase   = koalaAPI.One()
+		countBase = 0
+	)
+
+	if len(inputs) != len(prod.Exponents) {
+		utils.Panic("%v inputs but %v coeffs", len(inputs), len(prod.Exponents))
+	}
+
+	for i, input := range inputs {
+
+		switch input := input.(type) {
+		case koalagnark.Ext:
+			// nothing to do
+			exp := prod.Exponents[i]
+			var term koalagnark.Ext
+			// Optimization: handle common exponents directly to avoid ExpExt overhead
+			switch exp {
+			case 0:
+				continue // x^0 = 1, skip multiplication
+			case 1:
+				term = input // mostly this case
+			case 2:
+				term = koalaAPI.SquareExt(input)
+			default:
+				term = gnarkutil.ExpExt(api, input, exp)
+			}
+			res = koalaAPI.MulExt(res, term)
+
+		case koalagnark.Element:
+			// nothing to do
+			countBase++
+			exp := prod.Exponents[i]
+			var term koalagnark.Element
+			// Optimization: handle common exponents directly to avoid ExpExt overhead
+			switch exp {
+			case 0:
+				continue // x^0 = 1, skip multiplication
+			case 1:
+				term = input // mostly this case
+			case 2:
+				term = koalaAPI.Mul(input, input)
+			default:
+				term = gnarkutil.Exp(api, input, exp)
+			}
+			resBase = koalaAPI.Mul(resBase, term)
+
+		default:
+			panic("unknown input type " + reflect.TypeOf(input).String())
+		}
+	}
+
+	if countBase > 0 {
+		res = koalaAPI.MulByFpExt(res, resBase)
+	}
+
+	return res
+}
+
+func (prod Product) EvaluateExt(inputs []sv.SmartVector) sv.SmartVector {
+	return sv.ProductExt(prod.Exponents, inputs)
+}
+
+func (prod Product) EvaluateMixed(inputs []sv.SmartVector) sv.SmartVector {
+	return smartvectors_mixed.ProductMixed(prod.Exponents, inputs)
 }

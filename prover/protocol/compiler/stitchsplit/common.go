@@ -88,7 +88,7 @@ func IsExprEligible(
 	stitchings MultiSummary,
 	board symbolic.ExpressionBoard,
 	compType compilerType,
-) (isEligible bool, isUnsupported bool) {
+) (isEligible bool) {
 
 	var (
 		metadata              = board.ListVariableMetadata()
@@ -152,5 +152,5 @@ func IsExprEligible(
 		panic("all the columns in the expression are verifierCols, unsupported by the compiler")
 	}
 
-	return hasAtLeastOneEligible, false
+	return hasAtLeastOneEligible
 }

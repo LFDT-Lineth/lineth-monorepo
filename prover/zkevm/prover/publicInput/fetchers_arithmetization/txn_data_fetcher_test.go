@@ -29,7 +29,7 @@ func TestTxnDataFetcher(t *testing.T) {
 	}, dummy.Compile)
 	proof := wizard.Prove(cmp, func(run *wizard.ProverRuntime) {
 		// assign the CSV columns
-		arith.AssignTestingArithModules(run, nil, ctTxnData, nil)
+		arith.AssignTestingArithModules(run, nil, ctTxnData, nil, nil, txd, nil)
 		// assign the txn data fetcher
 		AssignTxnDataFetcher(run, fetcher, txd)
 	})

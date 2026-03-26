@@ -41,8 +41,8 @@ func TestAlignment(t *testing.T) {
 		toAlign = &CircuitAlignmentInput{
 			Name:               "ALIGNMENT_TEST",
 			Circuit:            &DummyAlignmentCircuit{Instances: make([]DummyAlignmentCircuitInstance, nbInputInstances)},
-			DataToCircuit:      ct.GetCommit(build, "DATA"),
-			DataToCircuitMask:  ct.GetCommit(build, "DATA_MASK"),
+			DataToCircuit:      ct.GetCommit(build, "ALIGNMENT_TEST_DATA"),
+			DataToCircuitMask:  ct.GetCommit(build, "ALIGNMENT_TEST_DATA_MASK"),
 			NbCircuitInstances: nbCircuitInstances,
 			InputFillerKey:     inputFillerKey,
 		}
@@ -50,13 +50,16 @@ func TestAlignment(t *testing.T) {
 	}, dummy.Compile)
 	proof := wizard.Prove(cmp, func(run *wizard.ProverRuntime) {
 		runLeaked = run
-		ct.Assign(run, "DATA", "DATA_MASK")
+		ct.Assign(run, toAlign.DataToCircuit, toAlign.DataToCircuitMask)
 		alignment.Assign(run)
 	})
 
-	ct.CheckAssignmentColumn(runLeaked, "IS_ACTIVE", alignment.IsActive)
-	ct.CheckAssignmentColumn(runLeaked, "CIRCUIT_INPUT", alignment.CircuitInput)
-	ct.CheckAssignmentColumn(runLeaked, "ACTUAL_CIRCUIT_INPUT_MASK", alignment.ActualCircuitInputMask.Natural)
+	ct.CheckAssignmentCols(runLeaked,
+		alignment.IsActive,
+		alignment.CircuitInput,
+		alignment.ActualCircuitInputMask.Natural,
+	)
+
 	if err := wizard.Verify(cmp, proof); err != nil {
 		t.Fatal("proof failed", err)
 	}

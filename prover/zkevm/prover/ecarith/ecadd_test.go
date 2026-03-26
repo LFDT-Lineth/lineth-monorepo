@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
+	"github.com/consensys/linea-monorepo/prover/protocol/limbs"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils/csvtraces"
@@ -21,19 +22,26 @@ func TestEcAddIntegration(t *testing.T) {
 		func(b *wizard.Builder) {
 			ecAddSource = &EcDataAddSource{
 				CsEcAdd: ct.GetCommit(b, "CS_ADD"),
-				Limb:    ct.GetCommit(b, "LIMB"),
 				Index:   ct.GetCommit(b, "INDEX"),
 				IsData:  ct.GetCommit(b, "IS_DATA"),
 				IsRes:   ct.GetCommit(b, "IS_RES"),
+				Limbs:   ct.GetLimbsLe(b, "LIMB", limbs.NbLimbU128).AssertUint128(),
 			}
-			ecAdd = newEcAdd(b.CompiledIOP, limits, ecAddSource, []query.PlonkOption{query.PlonkRangeCheckOption(16, 6, true)})
+
+			ecAdd = newEcAdd(b.CompiledIOP, limits, ecAddSource, []query.PlonkOption{query.PlonkRangeCheckOption(16, 1, true)})
 		},
 		dummy.Compile,
 	)
 
 	proof := wizard.Prove(cmp,
 		func(run *wizard.ProverRuntime) {
-			ct.Assign(run, "CS_ADD", "LIMB", "INDEX", "IS_DATA", "IS_RES")
+			ct.Assign(run,
+				ecAddSource.CsEcAdd,
+				ecAddSource.Limbs,
+				ecAddSource.Index,
+				ecAddSource.IsData,
+				ecAddSource.IsRes,
+			)
 			ecAdd.Assign(run)
 		})
 

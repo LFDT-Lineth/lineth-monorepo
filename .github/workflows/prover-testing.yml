@@ -25,7 +25,7 @@ jobs:
     - name: install Go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.24.6
+        go-version: 1.25.7
         cache-dependency-path: |
               prover/go.sum
     - uses: actions/cache@v4.2.0
@@ -41,9 +41,9 @@ jobs:
       working-directory: prover
       run: if [[ -n $(gofmt -l .) ]]; then echo "please run gofmt"; exit 1; fi
     - name: golangci-lint
-      uses: golangci/golangci-lint-action@55c2c1448f86e01eaae002a5a3a9624417608d84 #v6.5.2
+      uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 #v8
       with:
-          version: v1.64.3
+          version: v2.11.3
           working-directory: prover
           args: --timeout=5m
     - name: generated files should not be modified
@@ -57,9 +57,9 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.24.x]
+        go-version: [1.25.7]
     # ~1 min saved vs large
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xl
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xxl
     name: Prover testing
     needs:
       - staticcheck
@@ -88,9 +88,10 @@ jobs:
     - name: Test
       working-directory: prover
       run: |
-        go test -p=1 -tags=nocorset,fuzzlight -timeout=30m ./...
-    - name: Test (32 bits & race)
-      working-directory: prover
-      if: matrix.go-version == '1.20.x'
-      run: |
-          go test -p=1 -tags=nocorset,fuzzlight -timeout=30m -short -race  ./...
+        go test -p=1 -short -tags=nocorset,fuzzlight -timeout=120m ./...
+    # disabled as it takes many hours to run on the runner
+        # - name: Test (32 bits & race)
+    #   working-directory: prover
+    #   if: matrix.go-version == '1.25.7'
+    #   run: |
+    #       go test -p=1 -tags=nocorset,fuzzlight -timeout=120m -short -race  ./...

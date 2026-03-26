@@ -3,6 +3,10 @@ package accessors
 import (
 	"fmt"
 
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
+	"github.com/consensys/linea-monorepo/prover/utils"
+
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -18,6 +22,39 @@ type FromLocalOpeningYAccessor struct {
 	Q query.LocalOpening
 	// QRound is the declaration round of the query
 	QRound int
+}
+
+func (l *FromLocalOpeningYAccessor) IsBase() bool {
+	return l.Q.Pol.IsBase()
+}
+
+func (l *FromLocalOpeningYAccessor) GetValBase(run ifaces.Runtime) (field.Element, error) {
+	params := run.GetParams(l.Q.ID).(query.LocalOpeningParams)
+	if !l.IsBase() {
+		panic("not base")
+	}
+	return params.BaseY, nil
+}
+
+func (l *FromLocalOpeningYAccessor) GetValExt(run ifaces.Runtime) fext.Element {
+	params := run.GetParams(l.Q.ID).(query.LocalOpeningParams)
+	return params.ExtY
+}
+
+func (l *FromLocalOpeningYAccessor) GetFrontendVariableBase(api frontend.API, c ifaces.GnarkRuntime) (koalagnark.Element, error) {
+	p := c.GetParams(l.Q.ID).(query.GnarkLocalOpeningParams)
+	if !l.IsBase() {
+		panic("not base")
+	}
+	return p.BaseY, nil
+}
+
+func (l *FromLocalOpeningYAccessor) GetFrontendVariableExt(api frontend.API, c ifaces.GnarkRuntime) koalagnark.Ext {
+	p := c.GetParams(l.Q.ID).(query.GnarkLocalOpeningParams)
+	if p.IsBase {
+		return koalagnark.FromBaseVar(p.BaseY)
+	}
+	return p.ExtY
 }
 
 // NewLocalOpeningAccessor creates an [ifaces.Accessor] returning the opening
@@ -39,13 +76,16 @@ func (l *FromLocalOpeningYAccessor) String() string {
 // GetVal implements [ifaces.Accessor]
 func (l *FromLocalOpeningYAccessor) GetVal(run ifaces.Runtime) field.Element {
 	params := run.GetParams(l.Q.ID).(query.LocalOpeningParams)
-	return params.Y
+	return params.BaseY
 }
 
 // GetFrontendVariable implements [ifaces.Accessor]
-func (l *FromLocalOpeningYAccessor) GetFrontendVariable(_ frontend.API, circ ifaces.GnarkRuntime) frontend.Variable {
+func (l *FromLocalOpeningYAccessor) GetFrontendVariable(_ frontend.API, circ ifaces.GnarkRuntime) koalagnark.Element {
 	params := circ.GetParams(l.Q.ID).(query.GnarkLocalOpeningParams)
-	return params.Y
+	if !l.IsBase() {
+		utils.Panic("not base: %v", l.Q.ID)
+	}
+	return params.BaseY
 }
 
 // AsVariable implements the [ifaces.Accessor] interface

@@ -9,6 +9,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
+	pcommon "github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
 	commonconstraints "github.com/consensys/linea-monorepo/prover/zkevm/prover/common/common_constraints"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -25,7 +26,7 @@ const (
 // GetOffset returns relevant offsets depending on the data we want to fetch from the arithmetization
 // Case 1: L2L1 log, we want to extract the keccak-hashed messages.
 // The first topic can be found 3 rows before, and the bridge address 4 rows before.
-// Case 2: Rolling Hash Log: we extract either the message number or the Rolling hash itself
+// Case 2: Rolling HashFirst Log: we extract either the message number or the Rolling hash itself
 // the offsets for the first topic/bridgeAddress are -1/-2 and -2/-3
 func GetOffset(logType, offsetType int) int {
 	switch logType {
@@ -75,23 +76,13 @@ func IsLogType(columns LogColumns, logType int) ifaces.Column {
 	}
 }
 
-// GetSelectorFirstTopicHi returns the appropriate selector column for L2L1 or RollingHash logs
-func GetSelectorFirstTopicHi(sel Selectors, logType int) ifaces.Column {
+// GetSelectorFirstTopic returns the appropriate selector column for L2L1 or RollingHash logs
+func GetSelectorFirstTopic(sel Selectors, logType int) [pcommon.NbLimbU256]ifaces.Column {
 	switch logType {
 	case L2L1:
-		return sel.SelectFirstTopicL2L1Hi
+		return sel.SelectFirstTopicL2L1
 	default: // RollingMsgNo or RollingHash
-		return sel.SelectFirstTopicRollingHi
-	}
-}
-
-// GetSelectorFirstTopicLo returns the appropriate selector column for L2L1 or RollingHash logs
-func GetSelectorFirstTopicLo(sel Selectors, logType int) ifaces.Column {
-	switch logType {
-	case L2L1:
-		return sel.SelectFirstTopicL2L1Lo
-	default: // RollingMsgNo or RollingHash
-		return sel.SelectFirstTopicRollingLo
+		return sel.SelectFirstTopicRolling
 	}
 }
 
@@ -143,18 +134,18 @@ type Selectors struct {
 	SelectorCounter0, SelectorCounter1, SelectorCounter3, SelectorCounter4, SelectorCounter5                                    ifaces.Column
 	ComputeSelectorCounter0, ComputeSelectorCounter1, ComputeSelectorCounter3, ComputeSelectorCounter4, ComputeSelectorCounter5 wizard.ProverAction
 	// SelectFirstTopicL2L1Hi/Lo is 1 on rows where the first topic has the shape expected from L2L1 logs
-	SelectFirstTopicL2L1Hi, SelectFirstTopicL2L1Lo               ifaces.Column
-	ComputeSelectFirstTopicL2L1Hi, ComputeSelectFirstTopicL2L1Lo wizard.ProverAction
+	SelectFirstTopicL2L1        [pcommon.NbLimbU256]ifaces.Column
+	ComputeSelectFirstTopicL2L1 [pcommon.NbLimbU256]wizard.ProverAction
 	// SelectFirstTopicRollingHi/Lo is 1 on rows where the first topic has the shape expected from L2L1 logs
-	SelectFirstTopicRollingHi, SelectFirstTopicRollingLo               ifaces.Column
-	ComputeSelectFirstTopicRollingHi, ComputeSelectFirstTopicRollingLo wizard.ProverAction
+	SelectFirstTopicRolling        [pcommon.NbLimbU256]ifaces.Column
+	ComputeSelectFirstTopicRolling [pcommon.NbLimbU256]wizard.ProverAction
 
 	// columns containing the hi and lo parts of l2BridgeAddress
-	L2BridgeAddressColHI, L2BridgeAddressColLo ifaces.Column
+	L2BridgeAddressCol [pcommon.NbLimbEthAddress]ifaces.Column
 	// SelectorL2BridgeAddressHi/Lo is 1 on rows where the OutgoingHi/Lo columns contain the bridge address,
 	// as expected from L2L1 logs
-	SelectorL2BridgeAddressHi, SelectorL2BridgeAddressLo               ifaces.Column
-	ComputeSelectorL2BridgeAddressHi, ComputeSelectorL2BridgeAddressLo wizard.ProverAction
+	SelectorL2BridgeAddress        [pcommon.NbLimbU256]ifaces.Column
+	ComputeSelectorL2BridgeAddress [pcommon.NbLimbU256]wizard.ProverAction
 }
 
 /*
@@ -187,55 +178,58 @@ func NewSelectorColumns(comp *wizard.CompiledIOP, lc LogColumns) Selectors {
 	).GetColumnAndProverAction()
 
 	// compute the expected data in the first topic of a L2L1 log
-	var firstTopicL2L1Hi, firstTopicL2L1Lo field.Element
+	var firstTopicL2L1 [pcommon.NbLimbU256]field.Element
 	firstTopicBytes := bridge.L2L1Topic0() // fixed expected value for the topic on the first topic row
-	firstTopicL2L1Hi.SetBytes(firstTopicBytes[:16])
-	firstTopicL2L1Lo.SetBytes(firstTopicBytes[16:])
+	for i := range firstTopicL2L1 {
+		firstTopicL2L1[i].SetBytes(firstTopicBytes[i*2 : (i+1)*2])
+	}
 
 	// selectors that light up when OutgoingHi/OutgoingLo contain the expected first topic data
-	SelectFirstTopicL2L1Hi, ComputeSelectFirstTopicL2L1Hi := dedicated.IsZero(
-		comp,
-		sym.Sub(lc.DataHi, firstTopicL2L1Hi),
-	).GetColumnAndProverAction()
-
-	SelectFirstTopicL2L1Lo, ComputeSelectFirstTopicL2L1Lo := dedicated.IsZero(
-		comp,
-		sym.Sub(lc.DataLo, firstTopicL2L1Lo),
-	).GetColumnAndProverAction()
+	var SelectFirstTopicL2L1 [pcommon.NbLimbU256]ifaces.Column
+	var ComputeSelectFirstTopicL2L1 [pcommon.NbLimbU256]wizard.ProverAction
+	for i := range SelectFirstTopicL2L1 {
+		SelectFirstTopicL2L1[i], ComputeSelectFirstTopicL2L1[i] = dedicated.IsZero(
+			comp,
+			sym.Sub(lc.Data[i], firstTopicL2L1[i]),
+		).GetColumnAndProverAction()
+	}
 
 	// compute the expected data in the first topic of a rolling hash log
-	var firstTopicRollingHi, firstTopicRollingLo field.Element
+	var firstTopicRolling [pcommon.NbLimbU256]field.Element
 	firstTopicRollingBytes := bridge.GetRollingHashUpdateTopic0() // fixed expected value for the topic on the first topic row
-	firstTopicRollingHi.SetBytes(firstTopicRollingBytes[:16])
-	firstTopicRollingLo.SetBytes(firstTopicRollingBytes[16:])
+	for i := range firstTopicRolling {
+		firstTopicRolling[i].SetBytes(firstTopicRollingBytes[i*2 : (i+1)*2])
+	}
 
 	// selectors that light up when OutgoingHi/OutgoingLo contain the expected first topic data
-	SelectFirstTopicRollingHi, ComputeSelectFirstTopicRollingHi := dedicated.IsZero(
-		comp,
-		sym.Sub(lc.DataHi, firstTopicRollingHi),
-	).GetColumnAndProverAction()
+	var SelectFirstTopicRolling [pcommon.NbLimbU256]ifaces.Column
+	var ComputeSelectFirstTopicRolling [pcommon.NbLimbU256]wizard.ProverAction
+	for i := range SelectFirstTopicRolling {
+		SelectFirstTopicRolling[i], ComputeSelectFirstTopicRolling[i] = dedicated.IsZero(
+			comp,
+			sym.Sub(lc.Data[i], firstTopicRolling[i]),
+		).GetColumnAndProverAction()
+	}
 
-	SelectFirstTopicRollingLo, ComputeSelectFirstTopicRollingLo := dedicated.IsZero(
-		comp,
-		sym.Sub(lc.DataLo, firstTopicRollingLo),
-	).GetColumnAndProverAction()
-
-	bridgeAddrColHi := comp.InsertCommit(0, ifaces.ColIDf("LOGS_FETCHER_BRIDGE_ADDRESS_HI"), lc.DataHi.Size())
-	bridgeAddrColLo := comp.InsertCommit(0, ifaces.ColIDf("LOGS_FETCHER_BRIDGE_ADDRESS_LO"), lc.DataLo.Size())
-
-	commonconstraints.MustBeConstant(comp, bridgeAddrColHi)
-	commonconstraints.MustBeConstant(comp, bridgeAddrColLo)
-
+	var bridgeAddrCol [pcommon.NbLimbEthAddress]ifaces.Column
 	// selectors that light up when OutgoingHi/OutgoingLo contain the Hi/Lo parts of the l2BridgeAddress
-	SelectorL2BridgeAddressHi, ComputeSelectorL2BridgeAddressHi := dedicated.IsZero(
-		comp,
-		sym.Sub(lc.DataHi, bridgeAddrColHi),
-	).GetColumnAndProverAction()
+	var SelectorL2BridgeAddress [pcommon.NbLimbU256]ifaces.Column
+	var ComputeSelectorL2BridgeAddress [pcommon.NbLimbU256]wizard.ProverAction
 
-	SelectorL2BridgeAddressLo, ComputeSelectorL2BridgeAddressLo := dedicated.IsZero(
-		comp,
-		sym.Sub(lc.DataLo, bridgeAddrColLo),
-	).GetColumnAndProverAction()
+	offset := pcommon.NbLimbU256 - pcommon.NbLimbEthAddress
+	for i := range bridgeAddrCol {
+		bridgeAddrCol[i] = comp.InsertCommit(0, ifaces.ColIDf("LOGS_FETCHER_BRIDGE_ADDRESS_%d", i), lc.Data[i].Size(), true)
+		commonconstraints.MustBeConstant(comp, bridgeAddrCol[i])
+
+		iOffset := i + offset
+		SelectorL2BridgeAddress[iOffset], ComputeSelectorL2BridgeAddress[iOffset] =
+			dedicated.IsZero(comp, sym.Sub(lc.Data[iOffset], bridgeAddrCol[i])).GetColumnAndProverAction()
+	}
+
+	// first limbs are zeroes as the address is 20 bytes long, while the data can be up to 32 bytes long
+	for i := 0; i < offset; i++ {
+		SelectorL2BridgeAddress[i], ComputeSelectorL2BridgeAddress[i] = dedicated.IsZero(comp, lc.Data[i]).GetColumnAndProverAction()
+	}
 
 	// generate the final selector object
 	res := Selectors{
@@ -252,23 +246,16 @@ func NewSelectorColumns(comp *wizard.CompiledIOP, lc LogColumns) Selectors {
 		ComputeSelectorCounter4: ComputeSelectorCounter4,
 		ComputeSelectorCounter5: ComputeSelectorCounter5,
 		// selectors that light up on rows that contain the expected first topic for L2L1 logs
-		SelectFirstTopicL2L1Hi:        SelectFirstTopicL2L1Hi,
-		ComputeSelectFirstTopicL2L1Hi: ComputeSelectFirstTopicL2L1Hi,
-		SelectFirstTopicL2L1Lo:        SelectFirstTopicL2L1Lo,
-		ComputeSelectFirstTopicL2L1Lo: ComputeSelectFirstTopicL2L1Lo,
+		SelectFirstTopicL2L1:        SelectFirstTopicL2L1,
+		ComputeSelectFirstTopicL2L1: ComputeSelectFirstTopicL2L1,
 		// selectors that light up on rows that contain the expected first topic for Rolling hashes
-		SelectFirstTopicRollingHi:        SelectFirstTopicRollingHi,
-		ComputeSelectFirstTopicRollingHi: ComputeSelectFirstTopicRollingHi,
-		SelectFirstTopicRollingLo:        SelectFirstTopicRollingLo,
-		ComputeSelectFirstTopicRollingLo: ComputeSelectFirstTopicRollingLo,
+		SelectFirstTopicRolling:        SelectFirstTopicRolling,
+		ComputeSelectFirstTopicRolling: ComputeSelectFirstTopicRolling,
 		// columns and a helper field which contain the l2bridgeAddress
-		L2BridgeAddressColHI: bridgeAddrColHi,
-		L2BridgeAddressColLo: bridgeAddrColLo,
+		L2BridgeAddressCol: bridgeAddrCol,
 		// selectors that light up on rows that contain the expected l2bridgeAddress
-		SelectorL2BridgeAddressHi:        SelectorL2BridgeAddressHi,
-		ComputeSelectorL2BridgeAddressHi: ComputeSelectorL2BridgeAddressHi,
-		SelectorL2BridgeAddressLo:        SelectorL2BridgeAddressLo,
-		ComputeSelectorL2BridgeAddressLo: ComputeSelectorL2BridgeAddressLo,
+		SelectorL2BridgeAddress:        SelectorL2BridgeAddress,
+		ComputeSelectorL2BridgeAddress: ComputeSelectorL2BridgeAddress,
 	}
 	return res
 }
@@ -276,12 +263,13 @@ func NewSelectorColumns(comp *wizard.CompiledIOP, lc LogColumns) Selectors {
 // Assign values for the selectors
 func (sel Selectors) Assign(run *wizard.ProverRuntime, l2BridgeAddress common.Address) {
 
-	addrHi, addrLo := ConvertAddress(statemanager.Address(l2BridgeAddress))
-	size := sel.L2BridgeAddressColHI.Size()
+	addr := ConvertAddress(statemanager.Address(l2BridgeAddress))
+	size := sel.L2BridgeAddressCol[0].Size()
 
 	// assign the columns that contain the l2 bridge address
-	run.AssignColumn(sel.L2BridgeAddressColHI.GetColID(), smartvectors.NewConstant(addrHi, size))
-	run.AssignColumn(sel.L2BridgeAddressColLo.GetColID(), smartvectors.NewConstant(addrLo, size))
+	for i := range addr {
+		run.AssignColumn(sel.L2BridgeAddressCol[i].GetColID(), smartvectors.NewConstant(addr[i], size))
+	}
 
 	// now we assign the dedicated selectors for counters
 	sel.ComputeSelectorCounter0.Run(run)
@@ -291,12 +279,13 @@ func (sel Selectors) Assign(run *wizard.ProverRuntime, l2BridgeAddress common.Ad
 	sel.ComputeSelectorCounter5.Run(run)
 
 	// now we assign the dedicated selectors for the two type of first topic
-	sel.ComputeSelectFirstTopicL2L1Hi.Run(run)
-	sel.ComputeSelectFirstTopicL2L1Lo.Run(run)
-	sel.ComputeSelectFirstTopicRollingHi.Run(run)
-	sel.ComputeSelectFirstTopicRollingLo.Run(run)
+	for i := range sel.SelectFirstTopicL2L1 {
+		sel.ComputeSelectFirstTopicL2L1[i].Run(run)
+		sel.ComputeSelectFirstTopicRolling[i].Run(run)
+	}
 
 	// now we assign the dedicated selectors for the bridge address
-	sel.ComputeSelectorL2BridgeAddressHi.Run(run)
-	sel.ComputeSelectorL2BridgeAddressLo.Run(run)
+	for i := range sel.SelectorL2BridgeAddress {
+		sel.ComputeSelectorL2BridgeAddress[i].Run(run)
+	}
 }

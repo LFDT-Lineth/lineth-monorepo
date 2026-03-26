@@ -1,203 +1,103 @@
 package symbolic
 
 import (
-	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"math/big"
+
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 )
 
-// regroupTerms takes a list of expressions and magnitudes and regroups the
-// childrens sharing the same ESH, adding their magnitudes. This is meant for
-// expression simplification. It also returns separately the constants
-// term's values and their magnitudes if any are found. The function does not
-// attempt to regroup the constants it finds.
-//
-// The function requires that all the provided children have their ESH set
-// correctly. Without it will fall in undetermined behaviors. When, the function
-// encounters two children sharing the same ESH but not the same structure, it
-// keeps the first one in the list.
-func regroupTerms(magnitudes []int, children []*Expression) (
-	regroupedMagnitudes []int,
-	regroupedChildren []*Expression,
-	constantMagnitudes []int,
-	constantValues []field.Element,
-) {
-
-	if len(magnitudes) != len(children) {
-		panic("magnitudes and children don't have the same length")
+// simplifyLinComb simplifies a linear combination by expanding nested LinCombs,
+// grouping terms with the same hash, and accumulating constants.
+func simplifyLinComb(items []*Expression, coeffs []int) ([]*Expression, []int) {
+	if len(items) != len(coeffs) {
+		panic("unmatching lengths")
 	}
 
-	numChildren := len(children)
-	foundExpressions := make(map[field.Element]int, numChildren)
-	regroupedChildren = make([]*Expression, 0, numChildren)
-	regroupedMagnitudes = make([]int, 0, numChildren)
-	constantValues = make([]field.Element, 0, numChildren)
-	constantMagnitudes = make([]int, 0, numChildren)
+	// Accumulator for the constant term
+	constantAcc := fext.GenericFieldZero()
 
-	for i := 0; i < numChildren; i++ {
-
-		var (
-			c       *Constant
-			isConst bool
-		)
-
-		switch o := children[i].Operator.(type) {
-		case Constant:
-			c = &o
-			isConst = true
-		case *Constant:
-			c = o
-			isConst = true
-		}
-
-		if isConst {
-			constantMagnitudes = append(constantMagnitudes, magnitudes[i])
-			constantValues = append(constantValues, c.Val)
-			continue
-		}
-
-		if pos, found := foundExpressions[children[i].ESHash]; found {
-			regroupedMagnitudes[pos] += magnitudes[i]
-			continue
-		}
-
-		// The current term cannot be regrouped, we appended to the list of
-		// matchable expressions
-		newPos := len(regroupedChildren)
-		regroupedChildren = append(regroupedChildren, children[i])
-		regroupedMagnitudes = append(regroupedMagnitudes, magnitudes[i])
-		foundExpressions[children[i].ESHash] = newPos
-	}
-
-	return regroupedMagnitudes,
-		regroupedChildren,
-		constantMagnitudes,
-		constantValues
-
-}
-
-// removeZeroCoeffs "cleans" by removing the zero coefficients parents terms in
-// the linear combination. This function is used both for simplifying [LinComb]
-// expressions and for simplifying [Product]. "magnitude" denotes either the
-// coefficient for LinComb or exponents for Product.
-//
-// The function takes ownership of the provided slices.
-func removeZeroCoeffs(magnitudes []int, children []*Expression) (cleanMagnitudes []int, cleanChildren []*Expression) {
-
-	if len(magnitudes) != len(children) {
-		panic("magnitudes and children don't have the same length")
-	}
-
-	// cleanChildren and cleanMagnitudes are initialized lazily to
-	// avoid unnecessarily allocating memory. The underlying assumption
-	// is that the application will 99% of time never pass zero as a
-	// magnitude.
-	for i, c := range magnitudes {
-
-		if c == 0 && cleanChildren == nil {
-			cleanChildren = make([]*Expression, i, len(children))
-			cleanMagnitudes = make([]int, i, len(children))
-			copy(cleanChildren, children[:i])
-			copy(cleanMagnitudes, magnitudes[:i])
-		}
-
-		if c != 0 && cleanChildren != nil {
-			cleanMagnitudes = append(cleanMagnitudes, magnitudes[i])
-			cleanChildren = append(cleanChildren, children[i])
-		}
-	}
-
-	if cleanChildren == nil {
-		cleanChildren = children
-		cleanMagnitudes = magnitudes
-	}
-
-	return cleanMagnitudes, cleanChildren
-}
-
-// expandLinComb takes a list of inputs [Expression] and magnitudes destined
-// to serve as parameter to build either a [LinComb] or a [Product]. It returns
-// an expanded list of inputs that builds the same expression "without the
-// parenthesis". This is meant to enable later simplifications.
-//
-// Here, the name "magnitude" is coined to denote either the coefficients of
-// a linear combinations or the exponents in a product.
-//
-// The caller passes a target operator which may be any value of type either
-// [LinComb] or [Product]. Any other type yields a panic error.
-func expandTerms(op Operator, magnitudes []int, children []*Expression) (
-	[]int,
-	[]*Expression,
-) {
+	// We use a map for larger sets of items to ensure O(N) complexity
+	// For small sets, we use a slice and linear scan
+	const linearThreshold = 16
 
 	var (
-		opIsProd        bool
-		opIsLinC        bool
-		numChildren     = len(children)
-		totalReturnSize = 0
-		needExpand      = false
+		newItems  []*Expression
+		newCoeffs []int
 	)
 
-	switch op.(type) {
-	case LinComb, *LinComb:
-		opIsLinC = true
-	case Product, *Product:
-		opIsProd = true
-	}
+	// Map for fast lookup when we have many items
+	var itemMap map[esHash]int // maps ESHash to index in newItems
 
-	if !(opIsProd || opIsLinC) {
-		panic("wrong operator type")
-	}
+	// Helper to add a term
+	addTerm := func(item *Expression, coeff int) {
+		if coeff == 0 {
+			return
+		}
 
-	if len(magnitudes) != numChildren {
-		panic("incompatible number of children and magnitudes")
-	}
+		// Handle Constant
+		if c, ok := item.Operator.(Constant); ok {
+			var t fext.GenericFieldElem
+			t.SetInt64(int64(coeff))
+			t.Mul(&c.Val)
+			constantAcc.Add(&t)
+			return
+		}
+		if c, ok := item.Operator.(*Constant); ok {
+			var t fext.GenericFieldElem
+			t.SetInt64(int64(coeff))
+			t.Mul(&c.Val)
+			constantAcc.Add(&t)
+			return
+		}
 
-	// This loops performs a first scan of the children to compute the total
-	// number of elements to allocate.
-	for i, child := range children {
-
-		switch child.Operator.(type) {
-		case Product, *Product:
-			if opIsProd {
-				needExpand = true
-				totalReturnSize += len(children[i].Children)
-				continue
-			}
-		case LinComb, *LinComb:
-			if opIsLinC {
-				needExpand = true
-				totalReturnSize += len(children[i].Children)
-				continue
+		// Handle Variable/Other
+		// Check if we should switch to map
+		if itemMap == nil && len(newItems) >= linearThreshold {
+			itemMap = make(map[esHash]int, len(newItems))
+			for i, it := range newItems {
+				itemMap[it.ESHash] = i
 			}
 		}
 
-		totalReturnSize++
+		if itemMap != nil {
+			if idx, found := itemMap[item.ESHash]; found {
+				newCoeffs[idx] += coeff
+			} else {
+				idx = len(newItems)
+				newItems = append(newItems, item)
+				newCoeffs = append(newCoeffs, coeff)
+				itemMap[item.ESHash] = idx
+			}
+		} else {
+			// Linear scan
+			found := false
+			for i := range newItems {
+				if newItems[i].ESHash == item.ESHash {
+					newCoeffs[i] += coeff
+					found = true
+					break
+				}
+			}
+			if !found {
+				newItems = append(newItems, item)
+				newCoeffs = append(newCoeffs, coeff)
+			}
+		}
 	}
 
-	if !needExpand {
-		return magnitudes, children
-	}
-
-	expandedMagnitudes := make([]int, 0, totalReturnSize)
-	expandedExpression := make([]*Expression, 0, totalReturnSize)
-
-	for i := 0; i < numChildren; i++ {
+	// Process items
+	for i, item := range items {
+		coeff := coeffs[i]
+		if coeff == 0 {
+			continue
+		}
 
 		var (
-			child     = children[i]
-			magnitude = magnitudes[i]
-			cProd     *Product
-			cLinC     *LinComb
-			cIsProd   bool
-			cIsLinC   bool
+			cLinC   *LinComb
+			cIsLinC bool
 		)
 
-		switch o := child.Operator.(type) {
-		case Product:
-			cIsProd = true
-			cProd = &o
-		case *Product:
-			cIsProd = true
-			cProd = o
+		switch o := item.Operator.(type) {
 		case LinComb:
 			cIsLinC = true
 			cLinC = &o
@@ -206,25 +106,160 @@ func expandTerms(op Operator, magnitudes []int, children []*Expression) (
 			cLinC = o
 		}
 
-		if cIsProd && opIsProd {
-			for k := range child.Children {
-				expandedExpression = append(expandedExpression, child.Children[k])
-				expandedMagnitudes = append(expandedMagnitudes, magnitude*cProd.Exponents[k])
+		if cIsLinC {
+			for k, grandChild := range item.Children {
+				addTerm(grandChild, coeff*cLinC.Coeffs[k])
 			}
-			continue
+		} else {
+			addTerm(item, coeff)
 		}
-
-		if cIsLinC && opIsLinC {
-			for k := range child.Children {
-				expandedExpression = append(expandedExpression, child.Children[k])
-				expandedMagnitudes = append(expandedMagnitudes, magnitude*cLinC.Coeffs[k])
-			}
-			continue
-		}
-
-		expandedExpression = append(expandedExpression, child)
-		expandedMagnitudes = append(expandedMagnitudes, magnitude)
 	}
 
-	return expandedMagnitudes, expandedExpression
+	// Add constant term if non-zero
+	if !constantAcc.IsZero() {
+		cExpr := NewConstant(constantAcc)
+		newItems = append(newItems, cExpr)
+		newCoeffs = append(newCoeffs, 1)
+	}
+
+	// Filter out zero coefficients
+	n := 0
+	for i, c := range newCoeffs {
+		if c != 0 {
+			newItems[n] = newItems[i]
+			newCoeffs[n] = c
+			n++
+		}
+	}
+	newItems = newItems[:n]
+	newCoeffs = newCoeffs[:n]
+
+	return newItems, newCoeffs
+}
+
+// simplifyProduct simplifies a product by expanding nested Products,
+// grouping terms with the same hash, and accumulating constants.
+func simplifyProduct(items []*Expression, exponents []int) ([]*Expression, []int) {
+	if len(items) != len(exponents) {
+		panic("unmatching lengths")
+	}
+
+	// Accumulator for the constant term
+	constantAcc := fext.GenericFieldOne()
+
+	const linearThreshold = 16
+
+	var (
+		newItems     []*Expression
+		newExponents []int
+	)
+
+	var itemMap map[esHash]int
+
+	addTerm := func(item *Expression, exponent int) {
+		if exponent == 0 {
+			return
+		}
+
+		// Handle Constant
+		if c, ok := item.Operator.(Constant); ok {
+			var t fext.GenericFieldElem
+			t.Exp(&c.Val, big.NewInt(int64(exponent)))
+			constantAcc.Mul(&t)
+			return
+		}
+		if c, ok := item.Operator.(*Constant); ok {
+			var t fext.GenericFieldElem
+			t.Exp(&c.Val, big.NewInt(int64(exponent)))
+			constantAcc.Mul(&t)
+			return
+		}
+
+		if itemMap == nil && len(newItems) >= linearThreshold {
+			itemMap = make(map[esHash]int, len(newItems))
+			for i, it := range newItems {
+				itemMap[it.ESHash] = i
+			}
+		}
+
+		if itemMap != nil {
+			if idx, found := itemMap[item.ESHash]; found {
+				newExponents[idx] += exponent
+			} else {
+				idx = len(newItems)
+				newItems = append(newItems, item)
+				newExponents = append(newExponents, exponent)
+				itemMap[item.ESHash] = idx
+			}
+		} else {
+			found := false
+			for i := range newItems {
+				if newItems[i].ESHash == item.ESHash {
+					newExponents[i] += exponent
+					found = true
+					break
+				}
+			}
+			if !found {
+				newItems = append(newItems, item)
+				newExponents = append(newExponents, exponent)
+			}
+		}
+	}
+
+	for i, item := range items {
+		exponent := exponents[i]
+		if exponent == 0 {
+			continue
+		}
+
+		if exponent < 0 {
+			panic("negative exponents are not allowed")
+		}
+
+		if item.ESHash.IsZero() {
+			return []*Expression{NewConstant(0)}, []int{1}
+		}
+
+		var (
+			cProd   *Product
+			cIsProd bool
+		)
+
+		switch o := item.Operator.(type) {
+		case Product:
+			cIsProd = true
+			cProd = &o
+		case *Product:
+			cIsProd = true
+			cProd = o
+		}
+
+		if cIsProd {
+			for k, grandChild := range item.Children {
+				addTerm(grandChild, exponent*cProd.Exponents[k])
+			}
+		} else {
+			addTerm(item, exponent)
+		}
+	}
+
+	if !constantAcc.IsOne() {
+		cExpr := NewConstant(constantAcc)
+		newItems = append(newItems, cExpr)
+		newExponents = append(newExponents, 1)
+	}
+
+	n := 0
+	for i, e := range newExponents {
+		if e != 0 {
+			newItems[n] = newItems[i]
+			newExponents[n] = e
+			n++
+		}
+	}
+	newItems = newItems[:n]
+	newExponents = newExponents[:n]
+
+	return newItems, newExponents
 }

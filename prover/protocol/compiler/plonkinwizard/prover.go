@@ -1,8 +1,8 @@
 package plonkinwizard
 
 import (
-	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/witness"
+	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
@@ -32,7 +32,7 @@ func (a CircAssignment) getWitnesses(run *wizard.ProverRuntime) []witness.Witnes
 
 		var (
 			locPubInputs  = data[i : i+nbPublic]
-			witness, _    = witness.New(ecc.BLS12_377.ScalarField())
+			witness, _    = witness.New(field.Modulus())
 			witnessFiller = make(chan any, nbPublic)
 		)
 
@@ -44,7 +44,7 @@ func (a CircAssignment) getWitnesses(run *wizard.ProverRuntime) []witness.Witnes
 		// also to let the witness "know" it is complete.
 		close(witnessFiller)
 		if err := witness.Fill(nbPublic, 0, witnessFiller); err != nil {
-			utils.Panic("[witness.Fill] failed %v", err.Error())
+			utils.Panic("[witness.Fill] : %v", err.Error())
 		}
 
 		witnesses = append(witnesses, witness)

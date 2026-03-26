@@ -1,23 +1,46 @@
-//go:build !fuzzlight
-
-package keccakf
+package keccakfkoalabear
 
 import (
-	"fmt"
+	"encoding/binary"
 	"math/rand/v2"
-	"sync"
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/crypto/keccak"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
-	"github.com/consensys/linea-monorepo/prover/protocol/compiler/innerproduct"
-	"github.com/consensys/linea-monorepo/prover/protocol/compiler/logderivativesum"
-	"github.com/consensys/linea-monorepo/prover/protocol/compiler/permutation"
-	"github.com/consensys/linea-monorepo/prover/protocol/compiler/specialqueries"
+	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	kcommon "github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/keccak/keccakf/common"
+	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/keccak/keccakf/iokeccakf"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestKeccakf(t *testing.T) {
+
+	// #nosec G404 --we don't need a cryptographic RNG for testing purpose
+	rng := rand.New(rand.NewChaCha8([32]byte{}))
+	numCases := 30
+	maxNumKeccakf := 2
+	// The -1 is here to prevent the generation of a padding block
+	maxInputBytes := maxNumKeccakf*keccak.Rate - 1
+
+	definer, prover := keccakfTestingModule(maxNumKeccakf)
+	comp := wizard.Compile(definer, dummy.Compile)
+
+	for i := 0; i < numCases; i++ {
+		// Generate a random piece of data
+		dataSize := rng.IntN(maxInputBytes + 1)
+		data := make([]byte, dataSize)
+		utils.ReadPseudoRand(rng, data)
+
+		// Generate permutation traces for the data
+		traces := keccak.PermTraces{}
+		keccak.Hash(data, &traces)
+
+		proof := wizard.Prove(comp, prover(t, traces))
+		assert.NoErrorf(t, wizard.Verify(comp, proof), "invalid proof")
+	}
+}
 
 func keccakfTestingModule(
 	maxNumKeccakf int,
@@ -26,13 +49,30 @@ func keccakfTestingModule(
 	prover func(t *testing.T, traces keccak.PermTraces) wizard.MainProverStep,
 ) {
 
-	mod := &Module{}
-	round := 0 // The round is always 0
+	var (
+		mod    = &Module{}
+		size   = NumRows(maxNumKeccakf)
+		blocks = make([][kcommon.NumSlices]ifaces.Column, kcommon.NumLanesInBlock)
+	)
 
 	// The testing wizard uniquely calls the keccakf module
 	define = func(b *wizard.Builder) {
-		// This declares all the columns of the keccakf module
-		*mod = NewModule(b.CompiledIOP, round, maxNumKeccakf)
+
+		comp := b.CompiledIOP
+		for m := 0; m < kcommon.NumLanesInBlock; m++ {
+			for z := 0; z < kcommon.NumSlices; z++ {
+				blocks[m][z] = comp.InsertCommit(0, ifaces.ColIDf("BLOCK_%v_%v", m, z), size, true)
+			}
+		}
+
+		mod = NewModule(b.CompiledIOP, KeccakfInputs{
+			Blocks:       blocks,
+			IsBlock:      comp.InsertCommit(0, "IS_BLOCK", size, true),
+			IsFirstBlock: comp.InsertCommit(0, "IS_FIRST_BLOCK", size, true),
+			IsBlockBaseB: comp.InsertCommit(0, "IS_BLOCK_BASEB", size, true),
+			IsActive:     comp.InsertCommit(0, "IS_ACTIVE", size, true),
+			KeccakfSize:  size,
+		})
 	}
 
 	// And the prover (instanciated for traces) is called
@@ -41,6 +81,21 @@ func keccakfTestingModule(
 		traces keccak.PermTraces,
 	) wizard.MainProverStep {
 		return func(run *wizard.ProverRuntime) {
+			// assign the input columns
+			var (
+				keccakfBlocks = iokeccakf.KeccakFBlocks{
+					Blocks:        mod.Inputs.Blocks,
+					IsBlockActive: mod.Inputs.IsActive,
+					IsBlock:       mod.Inputs.IsBlock,
+					IsFirstBlock:  mod.Inputs.IsFirstBlock,
+					IsBlockBaseB:  mod.Inputs.IsBlockBaseB,
+					KeccakfSize:   mod.Inputs.KeccakfSize,
+				}
+			)
+
+			keccakfBlocks.AssignBlocks(run, traces)
+			keccakfBlocks.AssignBlockFlags(run, traces)
+
 			// Assigns the module
 			mod.Assign(run, traces)
 
@@ -55,11 +110,12 @@ func keccakfTestingModule(
 			extractedState := keccak.State{}
 			for x := 0; x < 5; x++ {
 				for y := 0; y < 5; y++ {
-					z := mod.
-						PiChiIota.
-						AIotaBaseB[x][y].
-						GetColAssignmentAt(run, pos)
-					extractedState[x][y] = BaseXToU64(z, &BaseBFr, 1)
+					var a [8]uint8
+					for z := 0; z < kcommon.NumSlices; z++ {
+						v := mod.BackToThetaOrOutput.StateNext[x][y][z].GetColAssignmentAt(run, pos)
+						a[z] = uint8(v.Uint64())
+					}
+					extractedState[x][y] = binary.LittleEndian.Uint64(a[:])
 				}
 			}
 
@@ -68,85 +124,4 @@ func keccakfTestingModule(
 	}
 
 	return define, prover
-}
-
-func TestKeccakf(t *testing.T) {
-
-	// #nosec G404 --we don't need a cryptographic RNG for testing purpose
-	rng := rand.New(rand.NewChaCha8([32]byte{}))
-	numCases := 15
-	maxNumKeccakf := 5
-	// The -1 is here to prevent the generation of a padding block
-	maxInputSize := maxNumKeccakf*keccak.Rate - 1
-
-	definer, prover := keccakfTestingModule(maxNumKeccakf)
-	comp := wizard.Compile(definer, dummy.Compile)
-
-	for i := 0; i < numCases; i++ {
-		// Generate a random piece of data
-		dataSize := rng.IntN(maxInputSize + 1)
-		data := make([]byte, dataSize)
-		utils.ReadPseudoRand(rng, data)
-
-		// Generate permutation traces for the data
-		traces := keccak.PermTraces{}
-		keccak.Hash(data, &traces)
-
-		proof := wizard.Prove(comp, prover(t, traces))
-		assert.NoErrorf(t, wizard.Verify(comp, proof), "invalid proof")
-	}
-}
-
-func BenchmarkDataTransferModule(b *testing.B) {
-	b.Skip()
-	maxNumKeccakF := []int{
-		1 << 13,
-		// 1 << 16,
-		// 1 << 18,
-		// 1 << 20,
-	}
-	once := &sync.Once{}
-
-	for _, numKeccakF := range maxNumKeccakF {
-
-		b.Run(fmt.Sprintf("%v-numKeccakF", numKeccakF), func(b *testing.B) {
-
-			define := func(build *wizard.Builder) {
-				comp := build.CompiledIOP
-				mod := &Module{}
-				*mod = NewModule(comp, 0, numKeccakF)
-			}
-
-			var (
-				compiled = wizard.Compile(
-					define,
-					specialqueries.RangeProof,
-					specialqueries.CompileFixedPermutations,
-					permutation.CompileViaGrandProduct,
-					logderivativesum.CompileLookups,
-					innerproduct.Compile(),
-				)
-				numCells = 0
-				numCols  = 0
-			)
-
-			for _, colID := range compiled.Columns.AllKeys() {
-				numCells += compiled.Columns.GetSize(colID)
-				numCols += 1
-			}
-
-			b.ReportMetric(float64(numCells), "#cells")
-			b.ReportMetric(float64(numCols), "#columns")
-
-			once.Do(func() {
-
-				for _, colID := range compiled.Columns.AllKeys() {
-					fmt.Printf("%v, %v\n", colID, compiled.Columns.GetSize(colID))
-				}
-
-			})
-
-		})
-
-	}
 }

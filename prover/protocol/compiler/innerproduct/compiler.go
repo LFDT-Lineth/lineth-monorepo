@@ -95,20 +95,20 @@ func compile(comp *wizard.CompiledIOP, options ...Option) {
 		ctx := compileForSize(comp, round, queryMap[size])
 		switch ctx.Round {
 		case round:
-			proverTaskNoCollaps = append(proverTaskNoCollaps, ctx)
+			proverTaskNoCollaps.Contexts = append(proverTaskNoCollaps.Contexts, ctx)
 		case round + 1:
-			proverTaskCollpas = append(proverTaskCollpas, ctx)
+			proverTaskCollpas.Contexts = append(proverTaskCollpas.Contexts, ctx)
 		default:
 			utils.Panic("round before compilation was  %v and after compilation %v", round, ctx.Round)
 		}
 
 	}
 	// run the prover of the relevant round
-	if len(proverTaskNoCollaps) >= 1 {
+	if len(proverTaskNoCollaps.Contexts) >= 1 {
 		comp.RegisterProverAction(round, proverTaskNoCollaps)
 	}
 
-	if len(proverTaskCollpas) >= 1 {
+	if len(proverTaskCollpas.Contexts) >= 1 {
 		comp.RegisterProverAction(round+1, proverTaskCollpas)
 	}
 

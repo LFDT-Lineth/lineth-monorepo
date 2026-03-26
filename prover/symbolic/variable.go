@@ -6,7 +6,8 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	sv "github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"golang.org/x/crypto/blake2b"
 )
@@ -15,10 +16,11 @@ import (
 // used to instantiate a [Variable] with them.
 type Metadata interface {
 	/*
-		Strings allows adressing a map by variable 2 instances for which
+		Strings allows addressing a map by variable 2 instances for which
 		String() returns the same result are treated as equal.
 	*/
 	String() string
+	IsBase() bool
 }
 
 // Variable implements the [Operator] interface and implements a variable; i.e.
@@ -37,8 +39,22 @@ func (v Variable) Evaluate([]sv.SmartVector) sv.SmartVector {
 	panic("we never call it for variables")
 }
 
+// EvaluateExt implements the [Operator] interface. Yet, this panics if this is called.
+func (v Variable) EvaluateExt([]sv.SmartVector) sv.SmartVector {
+	panic("we never call it for variables")
+}
+
+func (v Variable) EvaluateMixed([]sv.SmartVector) sv.SmartVector {
+	panic("we never call it for variables")
+}
+
 // GnarkEval implements the [Operator] interface. Yet, this panics if this is called.
-func (v Variable) GnarkEval(api frontend.API, inputs []frontend.Variable) frontend.Variable {
+func (v Variable) GnarkEval(api frontend.API, inputs []koalagnark.Element) koalagnark.Element {
+	panic("we never call it for variables")
+}
+
+// GnarkEval implements the [Operator] interface. Yet, this panics if this is called.
+func (v Variable) GnarkEvalExt(api frontend.API, inputs []any) koalagnark.Ext {
 	panic("we never call it for variables")
 }
 
@@ -49,19 +65,24 @@ func NewVariable(metadata Metadata) *Expression {
 		Children: []*Expression{},
 		ESHash:   metadataToESH(metadata),
 		Operator: Variable{Metadata: metadata},
+		IsBase:   metadata.IsBase(),
 	}
 }
 
 // metadataToESH gets the ESH from a metadata. It is obtained by hashing
 // the string representation of the metadata.
-func metadataToESH(m Metadata) field.Element {
-	var esh field.Element
+func metadataToESH(m Metadata) esHash {
+	// since we use bloack2b to hash the string, it is enough to do that on a base field element esh
 	sigSeed := []byte(m.String())
 	hasher, _ := blake2b.New256(nil)
 	hasher.Write(sigSeed)
-	sigBytes := hasher.Sum(nil)
-	esh.SetBytes(sigBytes)
-	return esh
+	h := hasher.Sum(nil)
+	r := fext.Element{}
+	r.B0.A0.SetBytes(h[0:4])
+	r.B0.A1.SetBytes(h[4:8])
+	r.B1.A0.SetBytes(h[8:12])
+	r.B1.A1.SetBytes(h[12:16])
+	return r
 }
 
 /*
@@ -91,3 +112,26 @@ func (v Variable) Validate(expr *Expression) error {
 
 	return nil
 }
+
+/*
+IsBase is always true for the StringVar testing struct
+*/
+func (s StringVar) IsBase() bool { return true }
+
+/*
+StringVarExt is an implementation of [Metadata] aimed toward testing, but
+StringVarExt will be over field extensions.
+*/
+type StringVarExt string
+
+func NewDummyVarExt(s string) *Expression {
+	return NewVariable(StringVarExt(s))
+}
+
+func (s StringVarExt) String() string { return string(s) }
+
+/*
+IsBase is always false for the StringVarExt testing struct,
+as it is considered over field extensions
+*/
+func (s StringVarExt) IsBase() bool { return false }

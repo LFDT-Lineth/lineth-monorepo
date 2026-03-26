@@ -22,20 +22,19 @@ func ReduceLocalConstraint(comp *wizard.CompiledIOP, q query.LocalConstraint, ro
 	*/
 	comp.QueriesNoParams.MarkAsIgnored(q.ID)
 
-	var (
-		domainSize = 0
-		board      = q.Board()
-	)
+	domainSize := 0
 
-	for _, metadataInterface := range board.ListVariableMetadata() {
-		if metadata, ok := metadataInterface.(ifaces.Column); ok {
+	metadata := q.ListBoardVariableMetadata()
+
+	for _, m := range metadata {
+		if metadata, ok := m.(ifaces.Column); ok {
 			domainSize = metadata.Size()
 			break
 		}
 	}
 
 	var (
-		min      = query.MinMaxOffset(q.Expression).Min
+		min      = query.MinMaxOffsetOfExpression(q.Expression).Min
 		lagrange = variables.Lagrange(domainSize, min)
 		newExpr  = symbolic.Mul(
 			column.ShiftExpr(q.Expression, -min),

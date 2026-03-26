@@ -5,9 +5,9 @@
 	"commitment": "0x",
 	"kzgProofContract": "0x",
 	"kzgProofSidecar": "0x",
-	"expectedX": "0x3efd274dd05dbe8f40270bd6fdc96f686b84a57c6d9e6378064a588e561fae46",
-	"expectedY": "0x5d54911b42eb21389c3b7386c6b3658ad2db012746dd2db1bfc582dae556078b",
-	"snarkHash": "0x0736732173d46a2ce78ed3c40e669c73e45cc31e79d1ad51ff9eb2f54c8f5cd3",
+	"expectedX": "0xeed8b0083c7e4dbf34c4208e38e0817923e75d2f0afa48c4719ee63b0c5af9f0",
+	"expectedY": "0x46dbe68e646fac67ba100cf60074a400fbd717765579a8fdd86b521731d8f5df",
+	"snarkHash": "0x0846007279cc1f4c51436759b3104f945bda04a49c9a80044ba2018f51c046c5",
 	"conflationOrder": {
 		"startingBlockNumber": 82,
 		"upperBoundaries": [
@@ -21,6 +21,6 @@
 	"parentStateRootHash": "0xf0f26782f7afb93f926cacb145f55530714f20b1356725e3971dc99e0ef8b591",
 	"finalStateRootHash": "0xc09cb8054d47366fbdcc9284f19d41a9485fbd9678d18e3c612863bcbbb4aab4",
 	"parentDataHash": "0x82694a9670032c50548d42dbf6f0d9d09febc4f2454796997ec9a4edc7f87106",
-	"expectedShnarf": "0x8ed52241e732f2a4cfb1e75af20337cef673355e1870b9ce2b9825ad421484fd",
-	"prevShnarf": "0x6d2b3535e06f4778e03c8439145dd9b8e4ae312953b9ccc154ef73b8a00c26c1"
+	"expectedShnarf": "0xb9b6c9df698aa6905ed89ee58601bb154ef35ec75aa195602f5b6f771180b3cb",
+	"prevShnarf": "0x54b2ec6779f73b1a6ed616e0e2c32a9276b7cce5368425a4de0bfbfe6df65382"
 }

@@ -15,13 +15,13 @@ type ProverAction interface {
 	Run(*ProverRuntime)
 }
 
-// proverStepWrapper adapts a MainProverStep to the ProverAction interface.
-type proverStepWrapper struct {
+// mainProverStepWrapper adapts a  MainProverStep to the ProverAction interface.
+type mainProverStepWrapper struct {
 	step func(*ProverRuntime)
 }
 
 // Run implements the ProverAction interface for MainProverStep.
-func (w proverStepWrapper) Run(run *ProverRuntime) {
+func (w mainProverStepWrapper) Run(run *ProverRuntime) {
 	w.step(run)
 }
 
@@ -78,14 +78,14 @@ func (p PrintingVerifierAction) Run(run Runtime) error {
 }
 
 // RunGnark implements the VerifierAction interface for PrintingVerifierAction.
-func (p PrintingVerifierAction) RunGnark(api frontend.API, run GnarkRuntime) {
+// func (p PrintingVerifierAction) RunGnark(api frontend.API, run GnarkRuntime) {
 
-	name := p.Column.GetColID()
-	if len(p.NameReplacement) > 0 {
-		name = ifaces.ColID(p.NameReplacement)
-	}
+// 	name := p.Column.GetColID()
+// 	if len(p.NameReplacement) > 0 {
+// 		name = ifaces.ColID(p.NameReplacement)
+// 	}
 
-	c := p.Column.GetColAssignmentGnark(run)
-	names := fmt.Sprintf("name=%v message=%v value=\n", name, p.Message)
-	api.Println(append([]frontend.Variable{names}, c...)...)
-}
+// 	c := p.Column.GetColAssignmentGnark(run)
+// 	names := fmt.Sprintf("name=%v message=%v value=\n", name, p.Message)
+// 	api.Println(append([]koalagnark.Var{names}, c...)...)
+// }

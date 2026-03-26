@@ -3,26 +3,30 @@ package merkle_test
 import (
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover/crypto/state-management/hashtypes"
-	"github.com/consensys/linea-monorepo/prover/crypto/state-management/smt"
+	"github.com/consensys/gnark-crypto/field/koalabear/vortex"
+	"github.com/consensys/linea-monorepo/prover/crypto/state-management/smt_koalabear"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/merkle"
+	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
-	"github.com/consensys/linea-monorepo/prover/utils/types"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	blockSize = 8
 )
 
 // merkleTestBuilder is used to build the assignment of merkle proofs
 // and is implemented like a writer.
 type merkleTestBuilder struct {
-	proofs             []smt.Proof
+	proofs             []smt_koalabear.Proof
 	pos                []field.Element
-	roots              []field.Element
-	leaves             []field.Element
+	roots              []field.Octuplet
+	leaves             []field.Octuplet
 	useNextMerkleProof []field.Element
 	isActive           []field.Element
 	counter            []field.Element
@@ -31,10 +35,10 @@ type merkleTestBuilder struct {
 // newMerkleTestBuilder returns an empty builder
 func newMerkleTestBuilder(numProofs int) *merkleTestBuilder {
 	return &merkleTestBuilder{
-		proofs:             make([]smt.Proof, 0, numProofs),
+		proofs:             make([]smt_koalabear.Proof, 0, numProofs),
 		pos:                make([]field.Element, 0, numProofs),
-		roots:              make([]field.Element, 0, numProofs),
-		leaves:             make([]field.Element, 0, numProofs),
+		roots:              make([]field.Octuplet, 0, numProofs),
+		leaves:             make([]field.Octuplet, 0, numProofs),
 		useNextMerkleProof: make([]field.Element, 0, numProofs),
 		isActive:           make([]field.Element, 0, numProofs),
 		counter:            make([]field.Element, 0, numProofs),
@@ -44,30 +48,30 @@ func newMerkleTestBuilder(numProofs int) *merkleTestBuilder {
 // assignProofs is a low level function to be used by each test to assign values to
 // the various columns for testing
 func (b *merkleTestBuilder) assignProofs(numProofs, depth int, isReuse bool, reusePos, numNonReUseProofs int) {
-	leaves := make([]types.Bytes32, 1<<depth)
+	leaves := make([]field.Octuplet, 1<<depth)
 	for i := range leaves {
 		// #nosec G404 -- no need for a cryptographically strong PRNG for testing purposes
-		var x field.Element
-		x.SetRandom()
-		leaves[i] = x.Bytes()
+		var x vortex.Hash
+		for j := 0; j < 8; j++ {
+			x[j].SetRandom()
+		}
+		leaves[i] = x
 	}
-	tree := smt.BuildComplete(leaves, hashtypes.MiMC)
+	tree := smt_koalabear.NewTree(leaves)
 	root := tree.Root
 	if !isReuse {
+
 		for i := 0; i < numProofs; i++ {
 			proof := tree.MustProve(i)
 			b.proofs = append(b.proofs, proof)
-			var le, ro, po field.Element
-			if err := le.SetBytesCanonical(leaves[i][:]); err != nil {
-				panic(err)
-			}
-			if err := ro.SetBytesCanonical(root[:]); err != nil {
-				panic(err)
-			}
+			var po field.Element
+			le := leaves[i]
+			ro := root
 			po.SetUint64(uint64(i))
 			b.leaves = append(b.leaves, le)
-			b.pos = append(b.pos, po)
 			b.roots = append(b.roots, ro)
+			b.pos = append(b.pos, po)
+
 		}
 	} else {
 		// We first assign the counter column
@@ -83,37 +87,32 @@ func (b *merkleTestBuilder) assignProofs(numProofs, depth int, isReuse bool, reu
 				root_old := tree.Root
 				b.proofs = append(b.proofs, proof_old)
 
-				var le, ro, po field.Element
-				if err := le.SetBytesCanonical(leaves[j][:]); err != nil {
-					panic(err)
-				}
-				if err := ro.SetBytesCanonical(root_old[:]); err != nil {
-					panic(err)
-				}
+				var po field.Element
+				le := leaves[j]
+				ro := root_old
 				po.SetUint64(uint64(j))
 				b.leaves = append(b.leaves, le)
-				b.pos = append(b.pos, po)
 				b.roots = append(b.roots, ro)
+				b.pos = append(b.pos, po)
 				// At the starting row for Update useNextMerkleProof is one
 				b.useNextMerkleProof = append(b.useNextMerkleProof, field.One())
 				b.isActive = append(b.isActive, field.One())
 
 				// Update the tree by changing the leaf value at position j
-				var newVal field.Element
-				newVal.SetRandom()
-				tree.Update(j, newVal.Bytes())
-				leaves[j] = newVal.Bytes()
+				var newVal [8]field.Element
+				for i := 0; i < 8; i++ {
+					newVal[i].SetRandom()
+				}
+
+				tree.Update(j, newVal)
+				leaves[j] = newVal
 				proof_new := tree.MustProve(j)
 				root_new := tree.Root
 				b.proofs = append(b.proofs, proof_new)
 
-				var le_2, ro_2, po_2 field.Element
-				if err := le_2.SetBytesCanonical(leaves[j][:]); err != nil {
-					panic(err)
-				}
-				if err := ro_2.SetBytesCanonical(root_new[:]); err != nil {
-					panic(err)
-				}
+				var po_2 field.Element
+				le_2 := leaves[j]
+				ro_2 := root_new
 				po_2.SetUint64(uint64(j))
 				b.leaves = append(b.leaves, le_2)
 				b.pos = append(b.pos, po_2)
@@ -129,17 +128,15 @@ func (b *merkleTestBuilder) assignProofs(numProofs, depth int, isReuse bool, reu
 			for i := (numProofs - numNonReUseProofs); i < numProofs; i++ {
 				proof := tree.MustProve(i)
 				b.proofs = append(b.proofs, proof)
-				var le, ro, po field.Element
-				if err := le.SetBytesCanonical(leaves[i][:]); err != nil {
-					panic(err)
-				}
-				if err := ro.SetBytesCanonical(root[:]); err != nil {
-					panic(err)
-				}
+
+				var po field.Element
+				le := leaves[i]
+				ro := root
 				po.SetUint64(uint64(i))
 				b.leaves = append(b.leaves, le)
-				b.pos = append(b.pos, po)
 				b.roots = append(b.roots, ro)
+				b.pos = append(b.pos, po)
+
 				b.useNextMerkleProof = append(b.useNextMerkleProof, field.Zero())
 				b.isActive = append(b.isActive, field.One())
 			}
@@ -151,17 +148,15 @@ func (b *merkleTestBuilder) assignProofs(numProofs, depth int, isReuse bool, reu
 			for i := 0; i < numNonReUseProofs; i++ {
 				proof := tree.MustProve(i)
 				b.proofs = append(b.proofs, proof)
-				var le, ro, po field.Element
-				if err := le.SetBytesCanonical(leaves[i][:]); err != nil {
-					panic(err)
-				}
-				if err := ro.SetBytesCanonical(root[:]); err != nil {
-					panic(err)
-				}
+
+				var po field.Element
+				le := leaves[i]
+				ro := root
 				po.SetUint64(uint64(i))
 				b.leaves = append(b.leaves, le)
-				b.pos = append(b.pos, po)
 				b.roots = append(b.roots, ro)
+				b.pos = append(b.pos, po)
+
 				b.useNextMerkleProof = append(b.useNextMerkleProof, field.Zero())
 				b.isActive = append(b.isActive, field.One())
 			}
@@ -172,41 +167,37 @@ func (b *merkleTestBuilder) assignProofs(numProofs, depth int, isReuse bool, reu
 				root_old := tree.Root
 				b.proofs = append(b.proofs, proof_old)
 
-				var le, ro, po field.Element
-				if err := le.SetBytesCanonical(leaves[j][:]); err != nil {
-					panic(err)
-				}
-				if err := ro.SetBytesCanonical(root_old[:]); err != nil {
-					panic(err)
-				}
+				var po field.Element
+				le := leaves[j]
+				ro := root_old
 				po.SetUint64(uint64(j))
 				b.leaves = append(b.leaves, le)
-				b.pos = append(b.pos, po)
 				b.roots = append(b.roots, ro)
+				b.pos = append(b.pos, po)
+
 				// At the starting row for Update useNextMerkleProof is one
 				b.useNextMerkleProof = append(b.useNextMerkleProof, field.One())
 				b.isActive = append(b.isActive, field.One())
 
 				// Update the tree by changing the leaf value at position j
-				var newVal field.Element
-				newVal.SetRandom()
-				tree.Update(j, newVal.Bytes())
-				leaves[j] = newVal.Bytes()
+				var newVal [8]field.Element
+				for i := 0; i < 8; i++ {
+					newVal[i].SetRandom()
+				}
+
+				tree.Update(j, newVal)
+				leaves[j] = newVal
 				proof_new := tree.MustProve(j)
 				root_new := tree.Root
 				b.proofs = append(b.proofs, proof_new)
 
-				var le_2, ro_2, po_2 field.Element
-				if err := le_2.SetBytesCanonical(leaves[j][:]); err != nil {
-					panic(err)
-				}
-				if err := ro_2.SetBytesCanonical(root_new[:]); err != nil {
-					panic(err)
-				}
+				var po_2 field.Element
+				le_2 := leaves[j]
+				ro_2 := root_new
 				po_2.SetUint64(uint64(j))
 				b.leaves = append(b.leaves, le_2)
-				b.pos = append(b.pos, po_2)
 				b.roots = append(b.roots, ro_2)
+				b.pos = append(b.pos, po_2)
 
 				// At the updation row useNextMerkleProof is zero
 				b.useNextMerkleProof = append(b.useNextMerkleProof, field.Zero())
@@ -221,41 +212,37 @@ func (b *merkleTestBuilder) assignProofs(numProofs, depth int, isReuse bool, reu
 				root_old := tree.Root
 				b.proofs = append(b.proofs, proof_old)
 
-				var le, ro, po field.Element
-				if err := le.SetBytesCanonical(leaves[j][:]); err != nil {
-					panic(err)
-				}
-				if err := ro.SetBytesCanonical(root_old[:]); err != nil {
-					panic(err)
-				}
+				var po field.Element
+				le := leaves[j]
+				ro := root_old
 				po.SetUint64(uint64(j))
 				b.leaves = append(b.leaves, le)
-				b.pos = append(b.pos, po)
 				b.roots = append(b.roots, ro)
+				b.pos = append(b.pos, po)
+
 				// At the starting row for Update useNextMerkleProof is one
 				b.useNextMerkleProof = append(b.useNextMerkleProof, field.One())
 				b.isActive = append(b.isActive, field.One())
 
 				// Update the tree by changing the leaf value at position j
-				var newVal field.Element
-				newVal.SetRandom()
-				tree.Update(j, newVal.Bytes())
-				leaves[j] = newVal.Bytes()
+				var newVal [8]field.Element
+				for i := 0; i < 8; i++ {
+					newVal[i].SetRandom()
+				}
+
+				tree.Update(j, newVal)
+				leaves[j] = newVal
 				proof_new := tree.MustProve(j)
 				root_new := tree.Root
 				b.proofs = append(b.proofs, proof_new)
 
-				var le_2, ro_2, po_2 field.Element
-				if err := le_2.SetBytesCanonical(leaves[j][:]); err != nil {
-					panic(err)
-				}
-				if err := ro_2.SetBytesCanonical(root_new[:]); err != nil {
-					panic(err)
-				}
+				var po_2 field.Element
+				le_2 := leaves[j]
+				ro_2 := root_new
 				po_2.SetUint64(uint64(j))
 				b.leaves = append(b.leaves, le_2)
-				b.pos = append(b.pos, po_2)
 				b.roots = append(b.roots, ro_2)
+				b.pos = append(b.pos, po_2)
 
 				// At the updation row useNextMerkleProof is zero
 				b.useNextMerkleProof = append(b.useNextMerkleProof, field.Zero())
@@ -267,17 +254,15 @@ func (b *merkleTestBuilder) assignProofs(numProofs, depth int, isReuse bool, reu
 			for i := 2; i < 2+numNonReUseProofs; i++ {
 				proof := tree.MustProve(i)
 				b.proofs = append(b.proofs, proof)
-				var le, ro, po field.Element
-				if err := le.SetBytesCanonical(leaves[i][:]); err != nil {
-					panic(err)
-				}
-				if err := ro.SetBytesCanonical(root[:]); err != nil {
-					panic(err)
-				}
+
+				var po field.Element
+				le := leaves[i]
+				ro := root
 				po.SetUint64(uint64(i))
 				b.leaves = append(b.leaves, le)
-				b.pos = append(b.pos, po)
 				b.roots = append(b.roots, ro)
+				b.pos = append(b.pos, po)
+
 				b.useNextMerkleProof = append(b.useNextMerkleProof, field.Zero())
 				b.isActive = append(b.isActive, field.One())
 			}
@@ -288,41 +273,37 @@ func (b *merkleTestBuilder) assignProofs(numProofs, depth int, isReuse bool, reu
 				root_old := tree.Root
 				b.proofs = append(b.proofs, proof_old)
 
-				var le, ro, po field.Element
-				if err := le.SetBytesCanonical(leaves[j][:]); err != nil {
-					panic(err)
-				}
-				if err := ro.SetBytesCanonical(root_old[:]); err != nil {
-					panic(err)
-				}
+				var po field.Element
+				le := leaves[j]
+				ro := root_old
 				po.SetUint64(uint64(j))
 				b.leaves = append(b.leaves, le)
-				b.pos = append(b.pos, po)
 				b.roots = append(b.roots, ro)
+				b.pos = append(b.pos, po)
+
 				// At the starting row for Update useNextMerkleProof is one
 				b.useNextMerkleProof = append(b.useNextMerkleProof, field.One())
 				b.isActive = append(b.isActive, field.One())
 
 				// Update the tree by changing the leaf value at position j
-				var newVal field.Element
-				newVal.SetRandom()
-				tree.Update(j, newVal.Bytes())
-				leaves[j] = newVal.Bytes()
+				var newVal [8]field.Element
+				for i := 0; i < 8; i++ {
+					newVal[i].SetRandom()
+				}
+
+				tree.Update(j, newVal)
+				leaves[j] = newVal
 				proof_new := tree.MustProve(j)
 				root_new := tree.Root
 				b.proofs = append(b.proofs, proof_new)
 
-				var le_2, ro_2, po_2 field.Element
-				if err := le_2.SetBytesCanonical(leaves[j][:]); err != nil {
-					panic(err)
-				}
-				if err := ro_2.SetBytesCanonical(root_new[:]); err != nil {
-					panic(err)
-				}
+				var po_2 field.Element
+				le_2 := leaves[j]
+				ro_2 := root_new
 				po_2.SetUint64(uint64(j))
 				b.leaves = append(b.leaves, le_2)
-				b.pos = append(b.pos, po_2)
 				b.roots = append(b.roots, ro_2)
+				b.pos = append(b.pos, po_2)
 
 				// At the updation row useNextMerkleProof is zero
 				b.useNextMerkleProof = append(b.useNextMerkleProof, field.Zero())
@@ -343,19 +324,28 @@ func TestMerklePow2(t *testing.T) {
 	builder.assignProofs(numProofs, depth, false, 0, 0)
 
 	define := func(b *wizard.Builder) {
-		proofcol := b.RegisterCommit("PROOF", depth*numProofs)
-		rootscol := b.RegisterCommit("ROOTS", numProofs)
-		leavescol := b.RegisterCommit("LEAVES", numProofs)
+		var proofcol, rootscol, leavescol [blockSize]ifaces.Column
+
+		for i := 0; i < blockSize; i++ {
+			proofcol[i] = b.RegisterCommit(ifaces.ColIDf("PROOF_%v", i), depth*numProofs)
+			rootscol[i] = b.RegisterCommit(ifaces.ColIDf("ROOTS_%v", i), numProofs)
+			leavescol[i] = b.RegisterCommit(ifaces.ColIDf("LEAVES_%v", i), numProofs)
+		}
 		poscol := b.RegisterCommit("POS", numProofs)
 
-		merkle.MerkleProofCheck(b.CompiledIOP, "TEST", depth, numProofs, proofcol, rootscol, leavescol, poscol)
+		merkle.MerkleProofCheck(b.CompiledIOP, "TEST", depth, numProofs, poscol, proofcol, rootscol, leavescol)
 	}
 
 	prove := func(run *wizard.ProverRuntime) {
 		proofAssignment := merkle.PackMerkleProofs(builder.proofs)
-		run.AssignColumn("PROOF", proofAssignment)
-		run.AssignColumn("ROOTS", smartvectors.NewRegular(builder.roots))
-		run.AssignColumn("LEAVES", smartvectors.NewRegular(builder.leaves))
+		trRoot := merkle.Transpose(builder.roots)
+		trLeaves := merkle.Transpose(builder.leaves)
+
+		for i := 0; i < blockSize; i++ {
+			run.AssignColumn(ifaces.ColIDf("PROOF_%v", i), proofAssignment[i])
+			run.AssignColumn(ifaces.ColIDf("ROOTS_%v", i), smartvectors.NewRegular(trRoot[i]))
+			run.AssignColumn(ifaces.ColIDf("LEAVES_%v", i), smartvectors.NewRegular(trLeaves[i]))
+		}
 		run.AssignColumn("POS", smartvectors.NewRegular(builder.pos))
 	}
 
@@ -380,19 +370,28 @@ func TestMerkleNotPow2(t *testing.T) {
 	builder.assignProofs(numProofs, depth, false, 0, 0)
 
 	define := func(b *wizard.Builder) {
-		proofcol := b.RegisterCommit("PROOF", largeSize)
-		rootscol := b.RegisterCommit("ROOTS", smallSize)
-		leavescol := b.RegisterCommit("LEAVES", smallSize)
+		var proofcol, rootscol, leavescol [blockSize]ifaces.Column
+
+		for i := 0; i < blockSize; i++ {
+			proofcol[i] = b.RegisterCommit(ifaces.ColIDf("PROOF_%v", i), largeSize)
+			rootscol[i] = b.RegisterCommit(ifaces.ColIDf("ROOTS_%v", i), smallSize)
+			leavescol[i] = b.RegisterCommit(ifaces.ColIDf("LEAVES_%v", i), smallSize)
+		}
 		poscol := b.RegisterCommit("POS", smallSize)
 
-		merkle.MerkleProofCheck(b.CompiledIOP, "TEST", depth, numProofs, proofcol, rootscol, leavescol, poscol)
+		merkle.MerkleProofCheck(b.CompiledIOP, "TEST", depth, numProofs, poscol, proofcol, rootscol, leavescol)
 	}
 
 	prove := func(run *wizard.ProverRuntime) {
 		proofAssignment := merkle.PackMerkleProofs(builder.proofs)
-		run.AssignColumn("PROOF", proofAssignment)
-		run.AssignColumn("ROOTS", padWithLast(builder.roots))
-		run.AssignColumn("LEAVES", padWithLast(builder.leaves))
+		trRoot := merkle.Transpose(builder.roots)
+		trLeaves := merkle.Transpose(builder.leaves)
+
+		for i := 0; i < blockSize; i++ {
+			run.AssignColumn(ifaces.ColIDf("PROOF_%v", i), proofAssignment[i])
+			run.AssignColumn(ifaces.ColIDf("ROOTS_%v", i), smartvectors.NewRegular(trRoot[i]))
+			run.AssignColumn(ifaces.ColIDf("LEAVES_%v", i), smartvectors.NewRegular(trLeaves[i]))
+		}
 		run.AssignColumn("POS", padWithLast(builder.pos))
 	}
 
@@ -429,19 +428,30 @@ func TestMerkleManySizes(t *testing.T) {
 		builder.assignProofs(numProofs, depth, false, 0, 0)
 
 		define := func(b *wizard.Builder) {
-			proofcol := b.RegisterCommit("PROOF", largeSize)
-			rootscol := b.RegisterCommit("ROOTS", smallSize)
-			leavescol := b.RegisterCommit("LEAVES", smallSize)
+			var proofcol, rootscol, leavescol [blockSize]ifaces.Column
+
+			for i := 0; i < blockSize; i++ {
+				proofcol[i] = b.RegisterCommit(ifaces.ColIDf("PROOF_%v", i), largeSize)
+				rootscol[i] = b.RegisterCommit(ifaces.ColIDf("ROOTS_%v", i), smallSize)
+				leavescol[i] = b.RegisterCommit(ifaces.ColIDf("LEAVES_%v", i), smallSize)
+			}
 			poscol := b.RegisterCommit("POS", smallSize)
 
-			merkle.MerkleProofCheck(b.CompiledIOP, "TEST", depth, numProofs, proofcol, rootscol, leavescol, poscol)
+			merkle.MerkleProofCheck(b.CompiledIOP, "TEST", depth, numProofs, poscol, proofcol, rootscol, leavescol)
 		}
 
 		prove := func(run *wizard.ProverRuntime) {
 			proofAssignment := merkle.PackMerkleProofs(builder.proofs)
-			run.AssignColumn("PROOF", proofAssignment)
-			run.AssignColumn("ROOTS", smartvectors.RightZeroPadded(builder.roots, smallSize))
-			run.AssignColumn("LEAVES", smartvectors.RightZeroPadded(builder.leaves, smallSize))
+
+			trRoot := merkle.Transpose(builder.roots)
+			trLeaves := merkle.Transpose(builder.leaves)
+
+			for i := 0; i < blockSize; i++ {
+				run.AssignColumn(ifaces.ColIDf("PROOF_%v", i), proofAssignment[i])
+				run.AssignColumn(ifaces.ColIDf("ROOTS_%v", i), smartvectors.RightZeroPadded(trRoot[i], smallSize))
+				run.AssignColumn(ifaces.ColIDf("LEAVES_%v", i), smartvectors.RightZeroPadded(trLeaves[i], smallSize))
+			}
+
 			run.AssignColumn("POS", smartvectors.RightZeroPadded(builder.pos, smallSize))
 		}
 
@@ -459,7 +469,6 @@ func TestMerkleManySizes(t *testing.T) {
 }
 
 // Tests for reuse of Merkle trees
-
 func TestMerklePow2ReuseMerkle(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 	testOps := map[int]string{
@@ -487,22 +496,32 @@ func TestMerklePow2ReuseMerkle(t *testing.T) {
 		}
 
 		define := func(b *wizard.Builder) {
-			proofcol := b.RegisterCommit("PROOF", depth*numProofs)
-			rootscol := b.RegisterCommit("ROOTS", numProofs)
-			leavescol := b.RegisterCommit("LEAVES", numProofs)
+			var proofcol, rootscol, leavescol [blockSize]ifaces.Column
+
+			for i := 0; i < blockSize; i++ {
+				proofcol[i] = b.RegisterCommit(ifaces.ColIDf("PROOF_%v", i), depth*numProofs)
+				rootscol[i] = b.RegisterCommit(ifaces.ColIDf("ROOTS_%v", i), numProofs)
+				leavescol[i] = b.RegisterCommit(ifaces.ColIDf("LEAVES_%v", i), numProofs)
+			}
 			poscol := b.RegisterCommit("POS", numProofs)
 			useNextMerkleProofCol := b.RegisterCommit("REUSE_NEXT_PROOF", numProofs)
 			isActiveCol := b.RegisterCommit("IS_ACTIVE", numProofs)
 			counterCol := b.RegisterCommit("COUNTER", numProofs)
 
-			merkle.MerkleProofCheckWithReuse(b.CompiledIOP, "TEST", depth, numProofs, proofcol, rootscol, leavescol, poscol, useNextMerkleProofCol, isActiveCol, counterCol)
+			merkle.MerkleProofCheckWithReuse(b.CompiledIOP, "TEST", depth, numProofs, poscol, proofcol, rootscol, leavescol, useNextMerkleProofCol, isActiveCol, counterCol)
 		}
 
 		prove := func(run *wizard.ProverRuntime) {
 			proofAssignment := merkle.PackMerkleProofs(builder.proofs)
-			run.AssignColumn("PROOF", proofAssignment)
-			run.AssignColumn("ROOTS", smartvectors.NewRegular(builder.roots))
-			run.AssignColumn("LEAVES", smartvectors.NewRegular(builder.leaves))
+
+			trRoot := merkle.Transpose(builder.roots)
+			trLeaves := merkle.Transpose(builder.leaves)
+
+			for i := 0; i < blockSize; i++ {
+				run.AssignColumn(ifaces.ColIDf("PROOF_%v", i), proofAssignment[i])
+				run.AssignColumn(ifaces.ColIDf("ROOTS_%v", i), smartvectors.NewRegular(trRoot[i]))
+				run.AssignColumn(ifaces.ColIDf("LEAVES_%v", i), smartvectors.NewRegular(trLeaves[i]))
+			}
 			run.AssignColumn("POS", smartvectors.NewRegular(builder.pos))
 			run.AssignColumn("REUSE_NEXT_PROOF", smartvectors.NewRegular(builder.useNextMerkleProof))
 			run.AssignColumn("IS_ACTIVE", smartvectors.NewRegular(builder.isActive))
@@ -552,22 +571,31 @@ func TestMerkleNotPow2ReuseMerkle(t *testing.T) {
 		}
 
 		define := func(b *wizard.Builder) {
-			proofcol := b.RegisterCommit("PROOF", largeSize)
-			rootscol := b.RegisterCommit("ROOTS", smallSize)
-			leavescol := b.RegisterCommit("LEAVES", smallSize)
+			var proofcol, rootscol, leavescol [blockSize]ifaces.Column
+
+			for i := 0; i < blockSize; i++ {
+				proofcol[i] = b.RegisterCommit(ifaces.ColIDf("PROOF_%v", i), largeSize)
+				rootscol[i] = b.RegisterCommit(ifaces.ColIDf("ROOTS_%v", i), smallSize)
+				leavescol[i] = b.RegisterCommit(ifaces.ColIDf("LEAVES_%v", i), smallSize)
+			}
 			poscol := b.RegisterCommit("POS", smallSize)
 			useNextMerkleProofCol := b.RegisterCommit("REUSE_NEXT_PROOF", smallSize)
 			isActiveCol := b.RegisterCommit("IS_ACTIVE", smallSize)
 			counterCol := b.RegisterCommit("COUNTER", smallSize)
 
-			merkle.MerkleProofCheckWithReuse(b.CompiledIOP, "TEST", depth, numProofs, proofcol, rootscol, leavescol, poscol, useNextMerkleProofCol, isActiveCol, counterCol)
+			merkle.MerkleProofCheckWithReuse(b.CompiledIOP, "TEST", depth, numProofs, poscol, proofcol, rootscol, leavescol, useNextMerkleProofCol, isActiveCol, counterCol)
 		}
 
 		prove := func(run *wizard.ProverRuntime) {
 			proofAssignment := merkle.PackMerkleProofs(builder.proofs)
-			run.AssignColumn("PROOF", proofAssignment)
-			run.AssignColumn("ROOTS", padWithLast(builder.roots))
-			run.AssignColumn("LEAVES", padWithLast(builder.leaves))
+			trRoot := merkle.Transpose(builder.roots)
+			trLeaves := merkle.Transpose(builder.leaves)
+
+			for i := 0; i < blockSize; i++ {
+				run.AssignColumn(ifaces.ColIDf("PROOF_%v", i), proofAssignment[i])
+				run.AssignColumn(ifaces.ColIDf("ROOTS_%v", i), padWithLast(trRoot[i]))
+				run.AssignColumn(ifaces.ColIDf("LEAVES_%v", i), padWithLast(trLeaves[i]))
+			}
 			run.AssignColumn("POS", padWithLast(builder.pos))
 			run.AssignColumn("REUSE_NEXT_PROOF", smartvectors.NewRegular(builder.useNextMerkleProof))
 			run.AssignColumn("IS_ACTIVE", smartvectors.NewRegular(builder.isActive))
@@ -614,22 +642,31 @@ func TestMerkleManySizesReuseMerkle(t *testing.T) {
 		builder := newMerkleTestBuilder(numProofs)
 		builder.assignProofs(numProofs, depth, true, disablePos, numNonReUseProofs)
 		define := func(b *wizard.Builder) {
-			proofcol := b.RegisterCommit("PROOF", largeSize)
-			rootscol := b.RegisterCommit("ROOTS", smallSize)
-			leavescol := b.RegisterCommit("LEAVES", smallSize)
+			var proofcol, rootscol, leavescol [blockSize]ifaces.Column
+
+			for i := 0; i < blockSize; i++ {
+				proofcol[i] = b.RegisterCommit(ifaces.ColIDf("PROOF_%v", i), largeSize)
+				rootscol[i] = b.RegisterCommit(ifaces.ColIDf("ROOTS_%v", i), smallSize)
+				leavescol[i] = b.RegisterCommit(ifaces.ColIDf("LEAVES_%v", i), smallSize)
+			}
 			poscol := b.RegisterCommit("POS", smallSize)
 			useNextMerkleProofCol := b.RegisterCommit("REUSE_NEXT_PROOF", smallSize)
 			isActiveCol := b.RegisterCommit("IS_ACTIVE", smallSize)
 			counterCol := b.RegisterCommit("COUNTER", smallSize)
 
-			merkle.MerkleProofCheckWithReuse(b.CompiledIOP, "TEST", depth, numProofs, proofcol, rootscol, leavescol, poscol, useNextMerkleProofCol, isActiveCol, counterCol)
+			merkle.MerkleProofCheckWithReuse(b.CompiledIOP, "TEST", depth, numProofs, poscol, proofcol, rootscol, leavescol, useNextMerkleProofCol, isActiveCol, counterCol)
 		}
 
 		prove := func(run *wizard.ProverRuntime) {
 			proofAssignment := merkle.PackMerkleProofs(builder.proofs)
-			run.AssignColumn("PROOF", proofAssignment)
-			run.AssignColumn("ROOTS", smartvectors.RightZeroPadded(builder.roots, smallSize))
-			run.AssignColumn("LEAVES", smartvectors.RightZeroPadded(builder.leaves, smallSize))
+			trRoot := merkle.Transpose(builder.roots)
+			trLeaves := merkle.Transpose(builder.leaves)
+
+			for i := 0; i < blockSize; i++ {
+				run.AssignColumn(ifaces.ColIDf("PROOF_%v", i), proofAssignment[i])
+				run.AssignColumn(ifaces.ColIDf("ROOTS_%v", i), smartvectors.RightZeroPadded(trRoot[i], smallSize))
+				run.AssignColumn(ifaces.ColIDf("LEAVES_%v", i), smartvectors.RightZeroPadded(trLeaves[i], smallSize))
+			}
 			run.AssignColumn("POS", smartvectors.RightZeroPadded(builder.pos, smallSize))
 			run.AssignColumn("REUSE_NEXT_PROOF", smartvectors.RightZeroPadded(builder.useNextMerkleProof, smallSize))
 			run.AssignColumn("IS_ACTIVE", smartvectors.RightZeroPadded(builder.isActive, smallSize))
@@ -663,24 +700,34 @@ func TestDifferentNumProofMaxProof(t *testing.T) {
 	// We assign only numProofs (< maxNumProofs) number of proofs
 	builder.assignProofs(numProofs, depth, true, 0, numNonReUseProofs)
 	define := func(b *wizard.Builder) {
-		proofcol := b.RegisterCommit("PROOF", largeSize)
-		rootscol := b.RegisterCommit("ROOTS", smallSize)
-		leavescol := b.RegisterCommit("LEAVES", smallSize)
+		var proofcol, rootscol, leavescol [blockSize]ifaces.Column
+
+		for i := 0; i < blockSize; i++ {
+			proofcol[i] = b.RegisterCommit(ifaces.ColIDf("PROOF_%v", i), largeSize)
+			rootscol[i] = b.RegisterCommit(ifaces.ColIDf("ROOTS_%v", i), smallSize)
+			leavescol[i] = b.RegisterCommit(ifaces.ColIDf("LEAVES_%v", i), smallSize)
+		}
 		poscol := b.RegisterCommit("POS", smallSize)
 		useNextMerkleProofCol := b.RegisterCommit("REUSE_NEXT_PROOF", smallSize)
 		isActiveCol := b.RegisterCommit("IS_ACTIVE", smallSize)
 		counterCol := b.RegisterCommit("COUNTER", smallSize)
 
-		merkle.MerkleProofCheckWithReuse(b.CompiledIOP, "TEST", depth, maxNumProofs, proofcol, rootscol, leavescol, poscol, useNextMerkleProofCol, isActiveCol, counterCol)
+		merkle.MerkleProofCheckWithReuse(b.CompiledIOP, "TEST", depth, maxNumProofs, poscol, proofcol, rootscol, leavescol, useNextMerkleProofCol, isActiveCol, counterCol)
 	}
 
 	prove := func(run *wizard.ProverRuntime) {
 		proofs_ := merkle.PackMerkleProofs(builder.proofs)
-		proofsReg := smartvectors.IntoRegVec(proofs_)
-		proofPadded := smartvectors.RightZeroPadded(proofsReg, largeSize)
-		run.AssignColumn("PROOF", proofPadded)
-		run.AssignColumn("ROOTS", smartvectors.RightZeroPadded(builder.roots, smallSize))
-		run.AssignColumn("LEAVES", smartvectors.RightZeroPadded(builder.leaves, smallSize))
+		var proofsReg [blockSize][]field.Element
+		var proofPadded [blockSize]smartvectors.SmartVector
+		trRoot := merkle.Transpose(builder.roots)
+		trLeaves := merkle.Transpose(builder.leaves)
+		for i := 0; i < blockSize; i++ {
+			proofsReg[i] = smartvectors.IntoRegVec(proofs_[i])
+			proofPadded[i] = smartvectors.RightZeroPadded(proofsReg[i], largeSize)
+			run.AssignColumn(ifaces.ColIDf("PROOF_%v", i), proofPadded[i])
+			run.AssignColumn(ifaces.ColIDf("ROOTS_%v", i), smartvectors.RightZeroPadded(trRoot[i], smallSize))
+			run.AssignColumn(ifaces.ColIDf("LEAVES_%v", i), smartvectors.RightZeroPadded(trLeaves[i], smallSize))
+		}
 		run.AssignColumn("POS", smartvectors.RightZeroPadded(builder.pos, smallSize))
 		run.AssignColumn("REUSE_NEXT_PROOF", smartvectors.RightZeroPadded(builder.useNextMerkleProof, smallSize))
 		run.AssignColumn("IS_ACTIVE", smartvectors.RightZeroPadded(builder.isActive, smallSize))

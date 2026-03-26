@@ -1,4 +1,4 @@
-package dedicated
+package dedicated_test
 
 import (
 	"testing"
@@ -7,13 +7,14 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
+	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/internal/testtools"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 )
 
 // CyclicCounterTestcase is an implementation of the [testtools.Testcase]
-// interface and represents a wizard protocol using [CyclicCounter].
+// interface and represents a wizard protocol using [dedicated.CyclicCounter].
 type CyclicCounterTestcase struct {
 	// name is the name of the testcase
 	name string
@@ -23,7 +24,7 @@ type CyclicCounterTestcase struct {
 	IsActive any
 	// cc is the generated cyclic counter column. It is set by the
 	// [Define] function.
-	cc *CyclicCounter
+	cc *dedicated.CyclicCounter
 }
 
 // ListOfCyclicCounterTestcase lists the testcases for [CyclicCounter]
@@ -56,14 +57,14 @@ func (c *CyclicCounterTestcase) Define(comp *wizard.CompiledIOP) {
 
 	switch act := c.IsActive.(type) {
 	case smartvectors.SmartVector:
-		isActive = comp.InsertCommit(0, ifaces.ColID(c.name)+"_ACTIVE", act.Len())
+		isActive = comp.InsertCommit(0, ifaces.ColID(c.name)+"_ACTIVE", act.Len(), true)
 	case verifiercol.ConstCol:
 		isActive = act
 	default:
 		panic("unexpected type")
 	}
 
-	c.cc = NewCyclicCounter(comp, 0, c.Period, isActive)
+	c.cc = dedicated.NewCyclicCounter(comp, 0, c.Period, isActive)
 }
 
 func (c *CyclicCounterTestcase) Assign(run *wizard.ProverRuntime) {

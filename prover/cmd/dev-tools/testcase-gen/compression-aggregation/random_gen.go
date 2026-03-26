@@ -8,6 +8,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/backend/aggregation"
 	"github.com/consensys/linea-monorepo/prover/backend/blobsubmission"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils/types"
 )
 
 // RandDataGen generates random data for the smart-contract
@@ -106,7 +107,7 @@ type AggregationSpec struct {
 	// contracts
 	L2MsgTreeDepth uint `json:"treeDepth"`
 
-	// Bytes array indicating which L2 blocks have "MessageSent" events. The
+	// Bytes array indicating which L2 blocks have “MessageSent” events. The
 	// index starting from 1 + currentL2BlockNumber. If the value contains 1,
 	// it means that that block has events
 	L2MessagingBlocksOffsets string `json:"l2MessagingBlocksOffsets"`
@@ -146,7 +147,7 @@ func RandAggregation(rng *rand.Rand, spec AggregationSpec) *aggregation.Collecte
 	cf := &aggregation.CollectedFields{
 		ParentAggregationFinalShnarf:            spec.ParentAggregationFinalShnarf,
 		FinalShnarf:                             spec.FinalShnarf,
-		ParentStateRootHash:                     spec.ParentStateRootHash,
+		ParentStateRootHashContract:             types.FullBytes32FromHex(spec.ParentStateRootHash),
 		DataHashes:                              spec.DataHashes,
 		DataParentHash:                          spec.DataParentHash,
 		ParentAggregationLastBlockTimestamp:     spec.LastFinalizedTimestamp,

@@ -11,7 +11,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
-	"github.com/consensys/linea-monorepo/prover/protocol/compiler/vortex"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/sirupsen/logrus"
@@ -168,7 +167,6 @@ func TestFromIntVecWithPadding(t *testing.T) {
 						compiler.WithTargetColSize(16),
 						compiler.WithStitcherMinSize(16),
 					),
-					vortex.Compile(2),
 					dummy.Compile,
 				)
 

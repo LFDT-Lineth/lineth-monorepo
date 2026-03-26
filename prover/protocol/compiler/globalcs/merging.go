@@ -2,9 +2,8 @@ package globalcs
 
 import (
 	"math/big"
-	"reflect"
 
-	"github.com/consensys/linea-monorepo/prover/maths/fft"
+	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
@@ -50,46 +49,20 @@ type mergingCtx struct {
 	Ratios []int
 }
 
-// accumulateConstraints scans comp to collect uncompiled global constraints and
-// aggregate them into unified global constraints per "ratio".
-//
-// See [mergingCtx.Ratios] for an explanation for "ratio".
-func accumulateConstraints(comp *wizard.CompiledIOP) (mergingCtx, bool) {
+// accumulateFromDegreeReducer accumulates the constraints from the degree reducer
+func accumulateFromDegreeReducer(degreeReducer *DegreeReductionStep) (mergingCtx, bool) {
+
+	if len(degreeReducer.DegreeReducedExpression) == 0 {
+		return mergingCtx{}, false
+	}
 
 	ctx := mergingCtx{
 		RatioBuckets: make(map[int][]*symbolic.Expression),
+		DomainSize:   degreeReducer.DomainSize,
 	}
 
-	for _, qName := range comp.QueriesNoParams.AllUnignoredKeys() {
-		// Filter only the global constraints
-		cs, ok := comp.QueriesNoParams.Data(qName).(query.GlobalConstraint)
-		if !ok {
-			// Not a global constraint
-			continue
-		}
-
-		// For the first iteration, the domain size is unset so we need to initialize
-		// it. This works because the domain size of a constraint cannot legally
-		// be 0.
-		if ctx.DomainSize == 0 {
-			ctx.DomainSize = cs.DomainSize
-		}
-
-		// This enforces the precondition that all the global constraint must
-		// share the same domain.
-		if cs.DomainSize != ctx.DomainSize {
-			utils.Panic("At this point in the compilation process, we expect all constraints to have the same domain, cs.DomainSize=%d, ctx.DomainSize=%d, cs.Name=%v", cs.DomainSize, ctx.DomainSize, cs.Name())
-		}
-
-		// Mark the constraint as ignored, so that it does not get compiled a
-		// second time by a sub-sequent round of compilation.
-		comp.QueriesNoParams.MarkAsIgnored(qName)
-		ctx.registerCs(cs)
-	}
-
-	if ctx.DomainSize == 0 {
-		// There is no global constraint to compile
-		return mergingCtx{}, false
+	for i := range degreeReducer.DegreeReducedExpression {
+		ctx.registerExpression(degreeReducer.DegreeReducedExpression[i])
 	}
 
 	return ctx, true
@@ -101,7 +74,7 @@ func (ctx *mergingCtx) aggregateConstraints(comp *wizard.CompiledIOP) []*symboli
 	var (
 		aggregateExpressions = make([]*symbolic.Expression, len(ctx.Ratios))
 		initialRound         = comp.NumRounds()
-		mergingCoin          = comp.InsertCoin(initialRound, coin.Name(deriveName(comp, DEGREE_RANDOMNESS)), coin.Field)
+		mergingCoin          = comp.InsertCoin(initialRound, coin.Name(deriveName(comp, DEGREE_RANDOMNESS)), coin.FieldExt)
 	)
 
 	for i, ratio := range ctx.Ratios {
@@ -111,14 +84,11 @@ func (ctx *mergingCtx) aggregateConstraints(comp *wizard.CompiledIOP) []*symboli
 	return aggregateExpressions
 }
 
-// registerCs determines the ratio of a constraint and appends it to the corresponding
-// bucket.
-func (ctx *mergingCtx) registerCs(cs query.GlobalConstraint) {
+// registerExpression registers an (already bound-constrained) expression in the
+// contexte.
+func (ctx *mergingCtx) registerExpression(expr *symbolic.Expression) {
 
-	var (
-		bndCancelledExpr = getBoundCancelledExpression(cs)
-		ratio            = getExprRatio(bndCancelledExpr)
-	)
+	ratio := getExprRatio(expr)
 
 	// Initialize the outer-maps / slices if the entries are not already allocated
 	if _, ok := ctx.RatioBuckets[ratio]; !ok {
@@ -126,7 +96,7 @@ func (ctx *mergingCtx) registerCs(cs query.GlobalConstraint) {
 		ctx.Ratios = append(ctx.Ratios, ratio)
 	}
 
-	ctx.RatioBuckets[ratio] = append(ctx.RatioBuckets[ratio], bndCancelledExpr)
+	ctx.RatioBuckets[ratio] = append(ctx.RatioBuckets[ratio], expr)
 }
 
 // getBoundCancelledExpression computes the "bound cancelled expression" for the
@@ -141,52 +111,68 @@ func getBoundCancelledExpression(cs query.GlobalConstraint) *symbolic.Expression
 	}
 
 	var (
-		cancelRange = query.MinMaxOffset(cs.Expression)
+		cancelRange = query.MinMaxOffset(&cs)
 		res         = cs.Expression
 		domainSize  = cs.DomainSize
 		x           = variables.NewXVar()
-		omega       = fft.GetOmega(domainSize)
-		// factors is a list of expression to multiply to obtain the return expression. It
-		// is initialized with "only" the initial expression and we iteratively add the
-		// terms (X-i) to it. At the end, we call [sym.Mul] a single time. This structure
-		// is important because it [sym.Mul] operates a sequence of optimization routines
-		// that are everytime we call it. In an earlier version, we were calling [sym.Mul]
-		// for every factor and this were making the function have a quadratic/cubic runtime.
-		factors = make([]any, 0, utils.Abs(cancelRange.Max)+utils.Abs(cancelRange.Min)+1)
+		omega, _    = fft.Generator(uint64(domainSize))
+		// factorTop and factorBottom are used to store the terms of the form
+		// X-\omega^k. They are constructed, disabling simplifications and in
+		// a way that helps the evaluator to regroup shared subexpressions.
+		factorTop    *symbolic.Expression
+		factorBottom *symbolic.Expression
+		factorCount  = 0
 	)
-
-	factors = append(factors, res)
-
-	// appendFactor appends an expressions representing $X-\rho^i$ to [factors]
-	appendFactor := func(i int) {
-		var root field.Element
-		root.Exp(omega, big.NewInt(int64(i)))
-		factors = append(factors, symbolic.Sub(x, root))
-	}
 
 	if cancelRange.Min < 0 {
 		// Cancels the expression on the range [0, -cancelRange.Min)
 		for i := 0; i < -cancelRange.Min; i++ {
-			appendFactor(i)
+
+			factorCount++
+			var root field.Element
+			root.Exp(omega, big.NewInt(int64(i)))
+			term := symbolic.Sub(x, root)
+
+			if factorBottom == nil {
+				factorBottom = term
+			} else {
+				factorBottom = symbolic.MulNoSimplify(factorBottom, term)
+			}
 		}
 	}
 
 	if cancelRange.Max > 0 {
 		// Cancels the expression on the range (N-cancelRange.Max-1, N-1]
 		for i := 0; i < cancelRange.Max; i++ {
-			point := domainSize - i - 1 // point at which we want to cancel the constraint
-			appendFactor(point)
+
+			factorCount++
+			var root field.Element
+			point := domainSize - i - 1
+			root.Exp(omega, big.NewInt(int64(point)))
+			term := symbolic.Sub(x, root)
+
+			if factorTop == nil {
+				factorTop = term
+			} else {
+				factorTop = symbolic.MulNoSimplify(factorTop, term)
+			}
 		}
 	}
 
-	// When factors is of length 1, it means the expression does not need to be
-	// bound-cancelled and we can directly return the original expression
-	// without calling [sym.Mul].
-	if len(factors) == 1 {
-		return res
+	if factorCount > 10000 {
+		utils.Panic("too many terms to cancel: %v + %v = %v", -cancelRange.Min, cancelRange.Max, factorCount)
 	}
 
-	return symbolic.Mul(factors...)
+	switch {
+	case factorTop != nil && factorBottom != nil:
+		return symbolic.MulNoSimplify(factorTop, factorBottom, res)
+	case factorTop != nil:
+		return symbolic.MulNoSimplify(factorTop, res)
+	case factorBottom != nil:
+		return symbolic.MulNoSimplify(factorBottom, res)
+	default:
+		return res
+	}
 }
 
 // getExprRatio computes the ratio of the expression and ceil to the next power
@@ -200,12 +186,6 @@ func getExprRatio(expr *symbolic.Expression) int {
 		ratio        = utils.DivCeil(quotientSize, domainSize)
 	)
 	return utils.NextPowerOfTwo(max(1, ratio))
-}
-
-func getDegreeSimple() func(any) int {
-	return func(any) int {
-		return 1
-	}
 }
 
 // GetDegree is a generator returning a DegreeGetter that can be passed to
@@ -231,8 +211,9 @@ func GetDegree(size int) func(iface interface{}) int {
 		case variables.PeriodicSample:
 			return size - size/v.T
 		default:
-			utils.Panic("Unknown type %v\n", reflect.TypeOf(v))
+			// Otherwise, it might be an internal replacement for column in
+			// in the case intermediate columns.
+			return size - 1
 		}
-		panic("unreachable")
 	}
 }

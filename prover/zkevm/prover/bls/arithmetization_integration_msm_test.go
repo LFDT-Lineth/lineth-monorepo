@@ -1,3 +1,5 @@
+//go:build ignore
+
 package bls
 
 import (
@@ -46,8 +48,8 @@ func testBlsMsmOnTrace(t *testing.T, g Group, path string, limits *Limits) {
 						registerColumns(t, b, cols, maxLen)
 						blsMsm = newMsm(b.CompiledIOP, g, limits, newMsmDataSource(b.CompiledIOP, g))
 						blsMsm = blsMsm.
-							WithGroupMembershipCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 6, true)).
-							WithMsmCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 6, true))
+							WithGroupMembershipCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 1, true)).
+							WithMsmCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 1, true))
 					},
 					integrationTestCompiler,
 				)

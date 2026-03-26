@@ -5,9 +5,12 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/plonk"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/limbs"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/zkevm/arithmetization"
+	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,14 +21,14 @@ const (
 type BlsMapDataSource struct {
 	ID      ifaces.Column
 	CsMap   ifaces.Column
-	Limb    ifaces.Column
+	Limb    limbs.Uint128Le
 	Index   ifaces.Column
 	Counter ifaces.Column
 	IsData  ifaces.Column
 	IsRes   ifaces.Column
 }
 
-func newMapDataSource(comp *wizard.CompiledIOP, g Group) *BlsMapDataSource {
+func newMapDataSource(comp *wizard.CompiledIOP, g Group, arith *arithmetization.Arithmetization) *BlsMapDataSource {
 	var mapString string
 	if g == G1 {
 		mapString = "MAP_FP_TO_G1"
@@ -33,36 +36,40 @@ func newMapDataSource(comp *wizard.CompiledIOP, g Group) *BlsMapDataSource {
 		mapString = "MAP_FP2_TO_G2"
 	}
 	return &BlsMapDataSource{
-		ID:      comp.Columns.GetHandle(colNameFn("ID")),
-		CsMap:   comp.Columns.GetHandle(colNameFn("CIRCUIT_SELECTOR_BLS_" + mapString)),
-		Index:   comp.Columns.GetHandle(colNameFn("INDEX")),
-		Counter: comp.Columns.GetHandle(colNameFn("CT")),
-		Limb:    comp.Columns.GetHandle(colNameFn("LIMB")),
-		IsData:  comp.Columns.GetHandle(colNameFn("DATA_BLS_" + mapString + "_FLAG")),
-		IsRes:   comp.Columns.GetHandle(colNameFn("RSLT_BLS_" + mapString + "_FLAG")),
+		ID:      arith.MashedColumnOf(comp, moduleName, "ID"),
+		CsMap:   arith.ColumnOf(comp, moduleName, "CIRCUIT_SELECTOR_BLS_"+mapString),
+		Index:   arith.ColumnOf(comp, moduleName, "INDEX"),
+		Counter: arith.ColumnOf(comp, moduleName, "CT"),
+		Limb:    arith.GetLimbsOfU128Le(comp, moduleName, "LIMB"),
+		IsData:  arith.ColumnOf(comp, moduleName, "DATA_BLS_"+mapString+"_FLAG"),
+		IsRes:   arith.ColumnOf(comp, moduleName, "RSLT_BLS_"+mapString+"_FLAG"),
 	}
 }
 
 type BlsMap struct {
 	*BlsMapDataSource
 	AlignedGnarkData *plonk.Alignment
+	FlattenLimbs     *common.FlattenColumn
 	*Limits
 	Group
 }
 
-func newMap(_ *wizard.CompiledIOP, g Group, limits *Limits, src *BlsMapDataSource) *BlsMap {
+func newMap(comp *wizard.CompiledIOP, g Group, limits *Limits, src *BlsMapDataSource) *BlsMap {
+	flattenLimbs := common.NewFlattenColumn(comp, src.Limb.AsDynSize(), src.CsMap)
 	res := &BlsMap{
 		BlsMapDataSource: src,
 		Limits:           limits,
 		Group:            g,
+		FlattenLimbs:     flattenLimbs,
 	}
+	flattenLimbs.CsFlattenProjection(comp)
 	return res
 }
 
 func (bm *BlsMap) WithMapCircuit(comp *wizard.CompiledIOP, options ...query.PlonkOption) *BlsMap {
 	// gnark circuits takes the inputs as is. To get the bound on the number of circuits we need
 	// to divide the maximum number of inputs instances with the number of instances per circuit
-	maxNbInstancesInputs := utils.DivCeil(bm.BlsMapDataSource.CsMap.Size(), nbRowsPerMap(bm.Group))
+	maxNbInstancesInputs := utils.DivCeil(bm.FlattenLimbs.Mask.Size(), nbRowsPerMap(bm.Group))
 	maxNbInstancesLimit := bm.limitMapCalls(bm.Group)
 	switch maxNbInstancesLimit {
 	case 0:
@@ -78,8 +85,8 @@ func (bm *BlsMap) WithMapCircuit(comp *wizard.CompiledIOP, options ...query.Plon
 	toAlign := &plonk.CircuitAlignmentInput{
 		Name:               fmt.Sprintf("%s_%s_ALIGNMENT", NAME_BLS_MAP, bm.Group.String()),
 		Round:              ROUND_NR,
-		DataToCircuitMask:  bm.BlsMapDataSource.CsMap,
-		DataToCircuit:      bm.BlsMapDataSource.Limb,
+		DataToCircuitMask:  bm.FlattenLimbs.Mask,
+		DataToCircuit:      bm.FlattenLimbs.Limbs,
 		Circuit:            NewMapCircuit(bm.Group, bm.Limits),
 		NbCircuitInstances: maxNbCircuits,
 		InputFillerKey:     mapToGroupInputFillerKey(bm.Group),
@@ -90,6 +97,7 @@ func (bm *BlsMap) WithMapCircuit(comp *wizard.CompiledIOP, options ...query.Plon
 }
 
 func (bm *BlsMap) Assign(run *wizard.ProverRuntime) {
+	bm.FlattenLimbs.Run(run)
 	if bm.AlignedGnarkData != nil {
 		bm.AlignedGnarkData.Assign(run)
 	}

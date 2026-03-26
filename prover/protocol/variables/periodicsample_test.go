@@ -4,13 +4,16 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/fft"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
+	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/variables"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
-	sym "github.com/consensys/linea-monorepo/prover/symbolic"
+	"github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,8 +26,8 @@ func TestPeriodicSampleGlobalConstraint(t *testing.T) {
 		n := 1 << 3
 		P := build.RegisterCommit("P", n) // overshadows P
 
-		// P * PeriodicSample(4, 1) = 0
-		expr := sym.Mul(P, variables.NewPeriodicSample(4, 1))
+		// P(X) = P(X/w) + P(X/w^2)
+		expr := ifaces.ColumnAsVariable(P).Mul(variables.NewPeriodicSample(4, 1))
 
 		_ = build.GlobalConstraint("Q", expr)
 	}
@@ -38,8 +41,8 @@ func TestPeriodicSampleGlobalConstraint(t *testing.T) {
 		run.AssignColumn("P", smartvectors.ForTest(1, 0, 4, 8, 16, 0, 64, 128))
 	}
 
-	proof := wizard.Prove(comp, prover)
-	err := wizard.Verify(comp, proof)
+	proof := wizard.Prove(comp, prover, false)
+	err := wizard.Verify(comp, proof, false)
 	require.NoError(t, err)
 
 }
@@ -52,8 +55,8 @@ func TestPeriodicSampleAsLagrange(t *testing.T) {
 		n := 1 << 3
 		P := build.RegisterCommit("P", n) // overshadows P
 
-		// P * PeriodicSample(8, 0) = 0
-		expr := sym.Mul(P, variables.NewPeriodicSample(8, 0))
+		// P(X) = P(X/w) + P(X/w^2)
+		expr := ifaces.ColumnAsVariable(P).Mul(variables.NewPeriodicSample(8, 0))
 		_ = build.GlobalConstraint("Q", expr)
 	}
 
@@ -66,8 +69,8 @@ func TestPeriodicSampleAsLagrange(t *testing.T) {
 		run.AssignColumn("P", smartvectors.ForTest(0, 2, 4, 8, 16, 32, 64, 128))
 	}
 
-	proof := wizard.Prove(comp, prover)
-	err := wizard.Verify(comp, proof)
+	proof := wizard.Prove(comp, prover, false)
+	err := wizard.Verify(comp, proof, false)
 	require.NoError(t, err)
 
 }
@@ -79,8 +82,8 @@ func TestPeriodicSampleShouldFail(t *testing.T) {
 		n := 1 << 3
 		P := build.RegisterCommit("P", n) // overshadows P
 
-		// P * PeriodicSample(8, 0) = 0
-		expr := sym.Mul(P, variables.NewPeriodicSample(8, 0))
+		// P(X) = P(X/w) + P(X/w^2)
+		expr := ifaces.ColumnAsVariable(P).Mul(variables.NewPeriodicSample(8, 0))
 
 		_ = build.GlobalConstraint("Q", expr)
 	}
@@ -95,8 +98,8 @@ func TestPeriodicSampleShouldFail(t *testing.T) {
 		run.AssignColumn("P", smartvectors.ForTest(14, 2, 4, 8, 16, 32, 64, 128))
 	}
 
-	proof := wizard.Prove(comp, prover)
-	err := wizard.Verify(comp, proof)
+	proof := wizard.Prove(comp, prover, false)
+	err := wizard.Verify(comp, proof, false)
 	require.Error(t, err)
 }
 
@@ -111,7 +114,7 @@ func TestPeriodicSampleVanillaEval(t *testing.T) {
 				// We need to do a bunch of unwrapping to get to the real PeriodicSampling that
 				// we want to test
 				sampling := variables.NewPeriodicSample(period, offset).
-					Operator.(sym.Variable).
+					Operator.(symbolic.Variable).
 					Metadata.(variables.PeriodicSample)
 
 				vanillaEval := sampling.EvalCoset(domain, 0, 1, false)
@@ -145,7 +148,7 @@ func TestPeriodicSampleCoset(t *testing.T) {
 				// We need to do a bunch of unwrapping to get to the real PeriodicSampling that
 				// we want to test
 				sampling := variables.NewPeriodicSample(period, offset).
-					Operator.(sym.Variable).
+					Operator.(symbolic.Variable).
 					Metadata.(variables.PeriodicSample)
 
 				vanillaEval := sampling.EvalCoset(domain, 0, 1, false)
@@ -153,10 +156,12 @@ func TestPeriodicSampleCoset(t *testing.T) {
 				// Test EvalOnCoset
 				for _, ratio := range ratios {
 					for cosetID := 0; cosetID < ratio; cosetID++ {
-
 						testEval := sampling.EvalCoset(domain, cosetID, ratio, true)
-						testEval = smartvectors.FFTInverse(testEval, fft.DIF, true, ratio, cosetID, nil)
-						testEval = smartvectors.FFT(testEval, fft.DIT, true, 0, 0, nil)
+
+						d := fft.NewDomain(uint64(testEval.Len()), fft.WithShift(computeShift(uint64(testEval.Len()), ratio, cosetID)), fft.WithCache())
+						v := testEval.(*smartvectors.Regular)
+						d.FFTInverse(*v, fft.DIF, fft.OnCoset())
+						d.FFT(*v, fft.DIT)
 
 						require.Equal(t, vanillaEval.Pretty(), testEval.Pretty(),
 							"domain %v, period %v, offset %v, ratio %v, cosetID %v",
@@ -171,6 +176,16 @@ func TestPeriodicSampleCoset(t *testing.T) {
 
 }
 
+func computeShift(n uint64, cosetRatio int, cosetID int) field.Element {
+	var shift field.Element
+	cardinality := ecc.NextPowerOfTwo(uint64(n))
+	frMulGen := fft.GeneratorFullMultiplicativeGroup()
+	omega, _ := fft.Generator(cardinality * uint64(cosetRatio))
+	omega.Exp(omega, big.NewInt(int64(cosetID)))
+	shift.Mul(&frMulGen, &omega)
+	return shift
+}
+
 func TestPeriodicSampleEvalAtConsistentWithEval(t *testing.T) {
 
 	domains := []int{16, 32, 64, 128}
@@ -182,14 +197,14 @@ func TestPeriodicSampleEvalAtConsistentWithEval(t *testing.T) {
 				// We need to do a bunch of unwrapping to get to the real PeriodicSampling that
 				// we want to test
 				sampling := variables.NewPeriodicSample(period, offset).
-					Operator.(sym.Variable).
+					Operator.(symbolic.Variable).
 					Metadata.(variables.PeriodicSample)
 
 				vanillaEval := sampling.EvalCoset(domain, 0, 1, false)
 
-				x := field.NewElement(420691966156)
-				yExpected := smartvectors.Interpolate(vanillaEval, x)
-				yActual := sampling.EvalAtOutOfDomain(domain, x)
+				x := fext.NewFromUintBase(420691966156)
+				yExpected := smartvectors.EvaluateBasePolyLagrange(vanillaEval, x)
+				yActual := sampling.EvalAtOutOfDomainExt(domain, x)
 
 				require.Equal(t, yExpected.String(), yActual.String())
 
@@ -208,7 +223,7 @@ func TestPeriodicSampleEvalAtOnDomain(t *testing.T) {
 				// We need to do a bunch of unwrapping to get to the real PeriodicSampling that
 				// we want to test
 				sampling := variables.NewPeriodicSample(period, offset).
-					Operator.(sym.Variable).
+					Operator.(symbolic.Variable).
 					Metadata.(variables.PeriodicSample)
 
 				for pos := 0; pos < period; pos++ {
@@ -216,11 +231,16 @@ func TestPeriodicSampleEvalAtOnDomain(t *testing.T) {
 					// Eval at should not work
 					if pos == offset {
 						require.Panics(t, func() {
-							x := fft.GetOmega(domain)
+							_x, err := fft.Generator(uint64(domain))
+							if err != nil {
+								panic(err)
+							}
+							var x fext.Element
+							fext.SetFromBase(&x, &_x)
 							x.Exp(x, big.NewInt(int64(pos)))
 
 							// This should equates 0/1
-							_ = sampling.EvalAtOutOfDomain(domain, x)
+							_ = sampling.EvalAtOutOfDomainExt(domain, x)
 						}, "domain %v, pos %v, offset %v", domain, pos, offset)
 					}
 

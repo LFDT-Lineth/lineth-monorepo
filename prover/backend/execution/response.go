@@ -3,6 +3,7 @@ package execution
 import (
 	"github.com/consensys/linea-monorepo/prover/backend/execution/bridge"
 	"github.com/consensys/linea-monorepo/prover/config"
+	public_input "github.com/consensys/linea-monorepo/prover/public-input"
 	"github.com/consensys/linea-monorepo/prover/utils/types"
 )
 
@@ -32,7 +33,7 @@ type Response struct {
 	BlocksData []BlockData `json:"blocksData"`
 
 	// Initial root hash before executing the conflated block
-	ParentStateRootHash string `json:"parentStateRootHash"`
+	ParentStateRootHash types.KoalaOctuplet `json:"parentStateRootHash"`
 
 	// Boolean flag indicating whether the parent root hash mismatches what we
 	// found in the shomei proof for the first block. This field is only set
@@ -46,16 +47,27 @@ type Response struct {
 	// First block number
 	FirstBlockNumber int `json:"firstBlockNumber"`
 
-	// ExecDataChecksum stores the mimc hash of the execution data. It is also
-	// part of the public inputs of the related compression proof.
-	ExecDataChecksum types.Bytes32 `json:"execDataChecksum"`
+	// ExecDataChecksum checksums and fingerprints for the execution data.
+	ExecDataChecksum public_input.ExecDataChecksum `json:"execDataChecksum"`
+
+	// execDataMultiCommitment stores the multi-commitment data that are used
+	// to instantiate the prover.
+	execDataMultiCommitment public_input.ExecDataMultiCommitment `json:"-"`
+
 	// ChainID indicates which ChainID was used during the execution.
 	ChainID uint `json:"chainID"`
-	// L2BridgeAddress indicates which ChainID was used during the execution.
+	// L2BridgeAddress indicates the address of the L2 bridge was used during
+	// the execution.
 	L2BridgeAddress types.EthAddress `json:"l2BridgeAddress"`
 	// MaxNbL2MessageHashes indicates the max number of L2 Message hashes that
 	// can be processed by the execution prover at once in the config.
 	MaxNbL2MessageHashes int `json:"maxNbL2MessageHashes"`
+	// CoinBase indicates the coinbase of the L2 network that was used during
+	// the proof generation
+	CoinBase types.EthAddress `json:"coinBase"`
+	// BaseFee indicates the base fee of the L2 network that was used during
+	// the proof generation
+	BaseFee uint `json:"baseFee"`
 
 	// AllRollingHash stores the collection of all the rolling hash events
 	// occurring during the execution frame.
@@ -66,7 +78,7 @@ type Response struct {
 	// PublicInput is the final value public input of the current proof. This
 	// field is used for debugging in case one of the proofs don't pass at the
 	// aggregation level.
-	PublicInput types.Bytes32 `json:"publicInput"`
+	PublicInput types.Bls12377Fr `json:"publicInput"`
 }
 
 type BlockData struct {
@@ -89,7 +101,7 @@ type BlockData struct {
 	// execution of the first block in the conflated batch
 	// and the last one is the final root hash of the state
 	// after execution of the last block in the conflated batch.
-	RootHash types.Bytes32 `json:"rootHash"`
+	RootHash types.KoalaOctuplet `json:"rootHash"`
 
 	// The from addresses of the transactions in the block all concatenated
 	// in a single hex string.

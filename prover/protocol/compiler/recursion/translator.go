@@ -32,7 +32,7 @@ func (comp *compTranslator) AddPrecomputed(srcComp *wizard.CompiledIOP, col ifac
 		nat          = col.(column.Natural)
 		prefixedName = addPrefixToID(comp.Prefix, col.GetColID())
 		ass          = srcComp.Precomputed.MustGet(nat.ID)
-		newCol       = comp.Target.InsertColumn(0, prefixedName, col.Size(), nat.Status())
+		newCol       = comp.Target.InsertColumn(0, prefixedName, col.Size(), nat.Status(), nat.IsBase())
 	)
 
 	comp.Target.Precomputed.InsertNew(prefixedName, ass)
@@ -83,7 +83,7 @@ func (comp *compTranslator) AddColumnAtRound(col ifaces.Column, fake bool, round
 		return comp.Target.Columns.GetHandle(prefixedName)
 	}
 
-	return comp.Target.InsertColumn(round, prefixedName, col.Size(), col.(column.Natural).Status())
+	return comp.Target.InsertColumn(round, prefixedName, col.Size(), col.(column.Natural).Status(), col.IsBase())
 }
 
 // AddColumnVecVec translates a collection of columns
@@ -129,7 +129,7 @@ func (comp *compTranslator) AddCoinAtRound(info coin.Info, round int) coin.Info 
 	switch info.Type {
 	case coin.IntegerVec:
 		return comp.Target.InsertCoin(round, name, info.Type, info.Size, info.UpperBound)
-	case coin.Field:
+	case coin.FieldExt:
 		return comp.Target.InsertCoin(round, name, info.Type)
 	default:
 		panic("unknown coin type")

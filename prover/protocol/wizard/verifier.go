@@ -4,6 +4,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/crypto/fiatshamir"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/accessors"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
@@ -41,7 +42,7 @@ type Proof struct {
 type Runtime interface {
 	ifaces.Runtime
 	GetSpec() *CompiledIOP
-	GetPublicInput(name string) field.Element
+	GetPublicInput(name string) fext.GenericFieldElem
 	GetGrandProductParams(name ifaces.QueryID) query.GrandProductParams
 	GetHornerParams(name ifaces.QueryID) query.HornerParams
 	GetLogDerivSumParams(name ifaces.QueryID) query.LogDerivSumParams
@@ -50,7 +51,7 @@ type Runtime interface {
 	GetUnivariateEval(name ifaces.QueryID) query.UnivariateEval
 	GetUnivariateParams(name ifaces.QueryID) query.UnivariateEvalParams
 	GetQuery(name ifaces.QueryID) ifaces.Query
-	Fs() *fiatshamir.State
+	Fs() fiatshamir.FS
 	InsertCoin(name coin.Name, value any)
 	GetState(name string) (any, bool)
 	SetState(name string, value any)
@@ -85,12 +86,14 @@ type VerifierRuntime struct {
 	// verifier.
 	QueriesParams collection.Mapping[ifaces.QueryID, ifaces.QueryParams]
 
-	// FS stores the Fiat-Shamir State, you probably don't want to use it
+	// KoalaFS stores the Fiat-Shamir State, you probably don't want to use it
 	// directly unless you know what you are doing. Just know that if you use
-	// it to update the FS hash, this can potentially result in the prover and
+	// it to update the KoalaFS hash, this can potentially result in the prover and
 	// the verifer end up having different state or the same message being
 	// included a second time. Use it externally at your own risks.
-	FS *fiatshamir.State
+	KoalaFS fiatshamir.FS
+	BLSFS   fiatshamir.FS
+	IsBLS   bool
 
 	// State stores arbitrary data that can be used by the verifier. This
 	// can be used to communicate values between verifier states.
@@ -101,20 +104,24 @@ type VerifierRuntime struct {
 // describes the protocol to run and a proof to verify. The function returns
 // `nil` to indicate that the proof passed and an error to indicate the proof
 // was invalid.
-func Verify(c *CompiledIOP, proof Proof) error {
-	_, err := VerifyWithRuntime(c, proof)
+func Verify(c *CompiledIOP, proof Proof, IsBLS ...bool) error {
+	isBLSValue := false
+	if IsBLS != nil {
+		isBLSValue = IsBLS[0]
+	}
+	_, err := VerifyWithRuntime(c, proof, isBLSValue)
 	return err
 }
 
 // VerifyWithRuntime runs the verifier of the protocol and returns the result
 // and the runtime of the verifier.
-func VerifyWithRuntime(c *CompiledIOP, proof Proof) (*VerifierRuntime, error) {
-	return verifyWithRuntimeUntilRound(c, proof, c.NumRounds())
+func VerifyWithRuntime(c *CompiledIOP, proof Proof, IsBLS bool) (*VerifierRuntime, error) {
+	return verifyWithRuntimeUntilRound(c, proof, c.NumRounds(), IsBLS)
 }
 
 // VerifyUntilRound runs the verifier up to a specified round
-func VerifyUntilRound(c *CompiledIOP, proof Proof, stopRound int) error {
-	_, err := verifyWithRuntimeUntilRound(c, proof, stopRound)
+func VerifyUntilRound(c *CompiledIOP, proof Proof, stopRound int, IsBLS bool) error {
+	_, err := verifyWithRuntimeUntilRound(c, proof, stopRound, IsBLS)
 	return err
 }
 
@@ -122,10 +129,10 @@ func VerifyUntilRound(c *CompiledIOP, proof Proof, stopRound int) error {
 // the provided round "stopRound". By "excluding", we mean that the function
 // won't run the round "stopRound". If stopRound is higher than the number of
 // rounds in comp, the function runs the whole protocol.
-func verifyWithRuntimeUntilRound(comp *CompiledIOP, proof Proof, stopRound int) (run *VerifierRuntime, err error) {
+func verifyWithRuntimeUntilRound(comp *CompiledIOP, proof Proof, stopRound int, IsBLS bool) (run *VerifierRuntime, err error) {
 
 	var (
-		runtime = comp.createVerifier(proof)
+		runtime = comp.createVerifier(proof, IsBLS)
 		errs    = []error{}
 	)
 
@@ -155,7 +162,7 @@ func verifyWithRuntimeUntilRound(comp *CompiledIOP, proof Proof, stopRound int) 
 // with the one that are in the proof. It also populates its verifier steps from
 // the `VerifierFuncGen` in the `c`. The user also passes the list of prover
 // messages. It is internally called by the [Verify] function.
-func (c *CompiledIOP) createVerifier(proof Proof) VerifierRuntime {
+func (c *CompiledIOP) createVerifier(proof Proof, IsBLS bool) VerifierRuntime {
 
 	/*
 		Instantiate an empty assigment for the verifier
@@ -163,13 +170,22 @@ func (c *CompiledIOP) createVerifier(proof Proof) VerifierRuntime {
 	runtime := VerifierRuntime{
 		Spec:          c,
 		Coins:         collection.NewMapping[coin.Name, interface{}](),
-		Columns:       proof.Messages,
-		QueriesParams: proof.QueriesParams,
-		FS:            fiatshamir.NewMiMCFiatShamir(),
+		Columns:       proof.Messages.Clone(),
+		IsBLS:         IsBLS,
+		QueriesParams: proof.QueriesParams.Clone(),
 		State:         make(map[string]interface{}),
 	}
 
-	runtime.FS.Update(c.FiatShamirSetup)
+	// Create a new fresh FS state and bootstrap it
+	if IsBLS {
+		fs := fiatshamir.NewFSBls12377()
+		runtime.BLSFS = fs
+		runtime.BLSFS.Update(c.FiatShamirSetup[:]...)
+	} else {
+		fs := fiatshamir.NewFSKoalabear()
+		runtime.KoalaFS = fs
+		runtime.KoalaFS.Update(c.FiatShamirSetup[:]...)
+	}
 
 	/*
 		Insert the verifying key into the messages
@@ -183,19 +199,23 @@ func (c *CompiledIOP) createVerifier(proof Proof) VerifierRuntime {
 }
 
 // GetPublicInput extracts the value of a public input from the proof.
-func (proof Proof) GetPublicInput(comp *CompiledIOP, name string) field.Element {
+func (proof Proof) GetPublicInput(comp *CompiledIOP, name string, IsBLS bool) fext.GenericFieldElem {
 
 	publicInputsAccessor := comp.GetPublicInputAccessor(name)
 
 	switch a := publicInputsAccessor.(type) {
 	case *accessors.FromConstAccessor:
-		return a.F
+		if a.IsBase() {
+			return fext.GenericFieldElem{Base: a.Base, IsBase: true}
+		} else {
+			panic("Requested a base element from a public input that is a field extension")
+		}
 	case *accessors.FromPublicColumn:
 		if a.Col.Status() == column.Proof {
-			return proof.Messages.MustGet(a.Col.ID).Get(a.Pos)
+			return fext.GenericFieldElem{Base: proof.Messages.MustGet(a.Col.ID).Get(a.Pos), IsBase: true}
 		}
 	case *accessors.FromLocalOpeningYAccessor:
-		return proof.QueriesParams.MustGet(a.Q.ID).(query.LocalOpeningParams).Y
+		return fext.GenericFieldElem{Base: proof.QueriesParams.MustGet(a.Q.ID).(query.LocalOpeningParams).BaseY, IsBase: true}
 	}
 
 	// This generically returns the value of a public input by extracting
@@ -205,9 +225,8 @@ func (proof Proof) GetPublicInput(comp *CompiledIOP, name string) field.Element 
 	//
 	// These are not directly visible from the proof. Thus we need to
 	// run the verifier and extract them from the runtime.
-	verifierRuntime, _ := VerifyWithRuntime(comp, proof)
+	verifierRuntime, _ := VerifyWithRuntime(comp, proof, IsBLS)
 	return verifierRuntime.GetPublicInput(name)
-
 }
 
 // GenerateCoinsFromRound generates all the random coins for the given round.
@@ -215,38 +234,47 @@ func (proof Proof) GetPublicInput(comp *CompiledIOP, name string) field.Element 
 // and then generating all the coins for the current round.
 func (run *VerifierRuntime) GenerateCoinsFromRound(currRound int) {
 
-	if currRound > 0 {
+	if currRound > 0 && !run.Spec.DummyCompiled {
 
-		if !run.Spec.DummyCompiled {
+		/*
+			Make sure that all messages have been written and use them
+			to update the FS state.  Note that we do not need to update
+			FS using the last round of the prover because he is always
+			the last one to "talk" in the protocol.
+		*/
+		msgsToFS := run.Spec.Columns.AllKeysProofAt(currRound - 1)
+		for _, msgName := range msgsToFS {
 
-			/*
-				Make sure that all messages have been written and use them
-				to update the FS state.  Note that we do not need to update
-				FS using the last round of the prover because he is always
-				the last one to "talk" in the protocol.
-			*/
-			msgsToFS := run.Spec.Columns.AllKeysProofAt(currRound - 1)
-			for _, msgName := range msgsToFS {
-
-				if run.Spec.Columns.IsExplicitlyExcludedFromProverFS(msgName) {
-					continue
-				}
-
-				instance := run.GetColumn(msgName)
-				run.FS.UpdateSV(instance)
+			if run.Spec.Columns.IsExplicitlyExcludedFromProverFS(msgName) {
+				continue
 			}
 
-			/*
-				Also include the prover's allegations for all evaluations
-			*/
-			queries := run.Spec.QueriesParams.AllKeysAt(currRound - 1)
-			for _, qName := range queries {
-				if run.Spec.QueriesParams.IsSkippedFromVerifierTranscript(qName) {
-					continue
-				}
+			if run.Spec.Precomputed.Exists(msgName) {
+				continue
+			}
 
-				params := run.QueriesParams.MustGet(qName)
-				params.UpdateFS(run.FS)
+			instance := run.GetColumn(msgName)
+			if run.IsBLS {
+				run.BLSFS.UpdateSV(instance)
+			} else {
+				run.KoalaFS.UpdateSV(instance)
+			}
+		}
+
+		/*
+			Also include the prover's allegations for all evaluations
+		*/
+		queries := run.Spec.QueriesParams.AllKeysAt(currRound - 1)
+		for _, qName := range queries {
+			if run.Spec.QueriesParams.IsSkippedFromVerifierTranscript(qName) {
+				continue
+			}
+
+			params := run.QueriesParams.MustGet(qName)
+			if run.IsBLS {
+				params.UpdateFS(run.BLSFS)
+			} else {
+				params.UpdateFS(run.KoalaFS)
 			}
 		}
 	}
@@ -254,15 +282,16 @@ func (run *VerifierRuntime) GenerateCoinsFromRound(currRound int) {
 	if run.Spec.FiatShamirHooksPreSampling.Len() > currRound {
 		fsHooks := run.Spec.FiatShamirHooksPreSampling.MustGet(currRound)
 		for i := range fsHooks {
-			// if fsHooks[i].IsSkipped() {
-			// 	continue
-			// }
-
 			fsHooks[i].Run(run)
 		}
 	}
 
-	seed := run.FS.State()[0]
+	var seed field.Octuplet
+	if run.IsBLS {
+		seed = run.BLSFS.State()
+	} else {
+		seed = run.KoalaFS.State()
+	}
 
 	/*
 		Then assigns the coins for the new round. As the round incrementation
@@ -275,41 +304,28 @@ func (run *VerifierRuntime) GenerateCoinsFromRound(currRound int) {
 		}
 
 		info := run.Spec.Coins.Data(myCoin)
-		value := info.Sample(run.FS, seed)
+		var value interface{}
+		if run.IsBLS {
+			value = info.Sample(run.BLSFS, seed)
+		} else {
+			value = info.Sample(run.KoalaFS, seed)
+		}
 		run.Coins.InsertNew(myCoin, value)
 	}
 }
 
-// GetRandomCoinField returns a field element random. The coin should be issued
+// GetRandomCoinField returns a field random element. The coin should be issued
 // at the same round as it was registered. The same coin can't be retrieved more
 // than once. The coin should also have been registered as a field element
 // before doing this call. Will also trigger the "goNextRound" logic if
 // appropriate.
-func (run *VerifierRuntime) GetRandomCoinField(name coin.Name) field.Element {
-	/*
-		Early check, ensures the coin has been registered at all
-		and that it has the correct type
-	*/
+func (run *VerifierRuntime) GetRandomCoinFieldExt(name coin.Name) fext.Element {
 	infos := run.Spec.Coins.Data(name)
-	if infos.Type != coin.Field && infos.Type != coin.FieldFromSeed {
-		utils.Panic("Coin %v was registered with type %v but got %v", name, infos.Type, coin.Field)
+	if infos.Type != coin.FieldExt && infos.Type != coin.FieldFromSeed {
+		utils.Panic("Coin was registered as %v but got %v", infos.Type, coin.FieldExt)
 	}
 	// If this panics, it means we generates the coins wrongly
-	return run.Coins.MustGet(name).(field.Element)
-}
-
-// GetRandomCoinFromSeed returns a field element random based on the seed.
-func (run *VerifierRuntime) GetRandomCoinFromSeed(name coin.Name) field.Element {
-	/*
-		Early check, ensures the coin has been registered at all
-		and that it has the correct type
-	*/
-	infos := run.Spec.Coins.Data(name)
-	if infos.Type != coin.FieldFromSeed {
-		utils.Panic("Coin was registered as %v but expected %v", infos.Type, coin.FieldFromSeed)
-	}
-	// If this panics, it means we generates the coins wrongly
-	return run.Coins.MustGet(name).(field.Element)
+	return run.Coins.MustGet(name).(fext.Element)
 }
 
 // GetRandomCoinIntegerVec returns a pre-sampled integer vec random coin. The
@@ -453,6 +469,31 @@ func (run VerifierRuntime) GetColumnAt(name ifaces.ColID, pos int) field.Element
 	return wit.Get(pos)
 }
 
+func (run *VerifierRuntime) GetColumnAtBase(name ifaces.ColID, pos int) (field.Element, error) {
+	run.Spec.Columns.MustHaveName(name)
+	wit := run.Columns.MustGet(name)
+
+	if pos >= wit.Len() || pos < 0 {
+		utils.Panic("asked pos %v for vector of size %v", pos, wit)
+	}
+
+	if _, err := wit.GetBase(0); err == nil {
+		return wit.GetBase(pos)
+	} else {
+		return field.Zero(), err
+	}
+
+}
+func (run *VerifierRuntime) GetColumnAtExt(name ifaces.ColID, pos int) fext.Element {
+	run.Spec.Columns.MustHaveName(name)
+	wit := run.Columns.MustGet(name)
+
+	if pos >= wit.Len() || pos < 0 {
+		utils.Panic("asked pos %v for vector of size %v", pos, wit)
+	}
+	return wit.GetExt(pos)
+}
+
 // GetParams extracts the parameters of a query. Will panic if no
 // parameters are found
 //
@@ -463,20 +504,35 @@ func (run *VerifierRuntime) GetParams(name ifaces.QueryID) ifaces.QueryParams {
 }
 
 // GetPublicInput returns a public input from its name
-func (run *VerifierRuntime) GetPublicInput(name string) field.Element {
+func (run *VerifierRuntime) GetPublicInput(name string) (res fext.GenericFieldElem) {
 	allPubs := run.Spec.PublicInputs
 	for i := range allPubs {
 		if allPubs[i].Name == name {
-			return allPubs[i].Acc.GetVal(run)
+			if allPubs[i].Acc.IsBase() {
+				field, err := allPubs[i].Acc.GetValBase(run)
+				if err != nil {
+					utils.Panic("error getting public input %v: %v", name, err)
+				}
+				res.Base = field
+				res.IsBase = true
+			} else {
+				res.Ext = allPubs[i].Acc.GetValExt(run)
+				res.IsBase = false
+			}
+			return res
 		}
 	}
 	utils.Panic("could not find public input nb %v", name)
-	return field.Element{}
+	return fext.GenericFieldElem{}
 }
 
 // Fs returns the Fiat-Shamir state
-func (run *VerifierRuntime) Fs() *fiatshamir.State {
-	return run.FS
+func (run *VerifierRuntime) Fs() fiatshamir.FS {
+	if run.IsBLS {
+		return run.BLSFS
+	} else {
+		return run.KoalaFS
+	}
 }
 
 // GetSpec returns the compiled IOP

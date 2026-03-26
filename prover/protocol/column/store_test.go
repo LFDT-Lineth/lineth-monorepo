@@ -16,7 +16,7 @@ func TestStore(t *testing.T) {
 		store.IsIgnored("a")
 	})
 
-	store.AddToRound(0, "a", 4, column.Committed)
+	store.AddToRound(0, "a", 4, column.Committed, true)
 
 	assert.Len(t, store.AllKeys(), 1)
 	assert.True(t, store.Exists("a"))

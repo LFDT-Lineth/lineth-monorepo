@@ -2,6 +2,7 @@ package symbolic
 
 import (
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
@@ -63,6 +64,19 @@ func Mul(inputs ...any) *Expression {
 	}
 
 	return NewProduct(exprInputs, magnitudes)
+}
+
+// MulNoSimplify is as [Mul] but does not do any simplification.
+func MulNoSimplify(inputs ...any) *Expression {
+
+	exprInputs := intoExprSlice(inputs...)
+
+	magnitudes := make([]int, len(exprInputs))
+	for i := range exprInputs {
+		magnitudes[i] = 1
+	}
+
+	return newProductNoSimplify(exprInputs, magnitudes)
 }
 
 // Sub returns a symbolic expression representing the subtraction of `a` by all
@@ -175,7 +189,7 @@ func intoExpr(input any) *Expression {
 		return inp
 	case Metadata:
 		return NewVariable(inp)
-	case int, uint, int64, uint64, int32, uint32, string, field.Element:
+	case int, uint, int64, uint64, int32, uint32, string, field.Element, fext.Element:
 		return NewConstant(inp)
 	default:
 		utils.Panic("expected either a *Expression or a Metadata, but got %T", inp)

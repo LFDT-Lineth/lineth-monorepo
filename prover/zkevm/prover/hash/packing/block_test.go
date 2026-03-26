@@ -23,11 +23,14 @@ func makeTestCaseBlockModule(uc generic.HashingUsecase) (
 	var (
 		// max number of blocks that can be extracted from limbs
 		// if the number of blocks passes the max, newPack() would panic.
-		maxNumBlock = 103
+		maxNumBlock = 2
+		MAXNBYTE    = 2
 		// if the blockSize is not consistent with PackingParam, newPack() would panic.
-		nbOfLanesPerBlock = uc.BlockSizeBytes()
-		size              = utils.NextPowerOfTwo(maxNumBlock * nbOfLanesPerBlock)
-		effectiveSize     = maxNumBlock * nbOfLanesPerBlock
+		nbOfLanesPerBlock = uc.NbOfLanesPerBlock()
+		RowsPerLane       = (uc.LaneSizeBytes() + MAXNBYTE - 1) / MAXNBYTE
+		nbRowsPerBlock    = nbOfLanesPerBlock * RowsPerLane
+		effectiveSize     = maxNumBlock * nbRowsPerBlock
+		size              = utils.NextPowerOfTwo(effectiveSize)
 	)
 
 	block := block{}
@@ -37,17 +40,18 @@ func makeTestCaseBlockModule(uc generic.HashingUsecase) (
 		comp := build.CompiledIOP
 
 		// commit to isActive
-		isActive = comp.InsertCommit(0, "IsActive", size)
-		isFirstLaneOfHash = comp.InsertCommit(0, "IsFirstLaneOfHash", size)
+		isActive = comp.InsertCommit(0, "IsActive", size, true)
+		isFirstLaneOfHash = comp.InsertCommit(0, "IsFirstLaneOfHash", size, true)
 
 		inp := blockInput{
 			Lanes: laneRepacking{
 				IsLaneActive:         isActive,
 				Size:                 size,
-				IsFirstLaneOfNewHash: isFirstLaneOfHash,
+				IsBeginningOfNewHash: isFirstLaneOfHash,
 				Inputs: &laneRepackingInputs{
 					PckInp: PackingInput{Name: "TEST"},
 				},
+				RowsPerLane: RowsPerLane,
 			},
 			Param: uc,
 		}
@@ -64,7 +68,7 @@ func makeTestCaseBlockModule(uc generic.HashingUsecase) (
 		// assign isFirstLaneOfHash
 		isFirst := common.NewVectorBuilder(isFirstLaneOfHash)
 		for i := 0; i < effectiveSize; i++ {
-			if i%nbOfLanesPerBlock == 0 && i/nbOfLanesPerBlock == 2 {
+			if i%nbRowsPerBlock == 0 && i/nbRowsPerBlock == 2 {
 				isFirst.PushInt(1)
 			} else {
 				isFirst.PushInt(0)

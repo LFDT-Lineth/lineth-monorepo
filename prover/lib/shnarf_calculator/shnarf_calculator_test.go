@@ -44,10 +44,10 @@ func TestShnarfCalculatorEIP4844(t *testing.T) {
 			shnarfCalculatorReq := blobsubmission.Request{
 				Eip4844Enabled:      true,
 				CompressedData:      base64.StdEncoding.EncodeToString(compressedData),
-				DataParentHash:      types.Bytes32([32]byte{}).Hex(),
-				ParentStateRootHash: types.Bytes32([32]byte{}).Hex(),
-				FinalStateRootHash:  types.Bytes32([32]byte{}).Hex(),
-				PrevShnarf:          types.Bytes32([32]byte{}).Hex(),
+				DataParentHash:      types.FullBytes32([32]byte{}).Hex(),
+				ParentStateRootHash: types.FullBytes32([32]byte{}).Hex(),
+				FinalStateRootHash:  types.FullBytes32([32]byte{}).Hex(),
+				PrevShnarf:          types.FullBytes32([32]byte{}).Hex(),
 				ConflationOrder: blobsubmission.ConflationOrder{
 					StartingBlockNumber: 0,
 					UpperBoundaries:     []int{10, 20},
@@ -87,10 +87,10 @@ func TestShnarfCalculatorCalldata(t *testing.T) {
 			shnarfCalculatorReq := blobsubmission.Request{
 				Eip4844Enabled:      false,
 				CompressedData:      base64.StdEncoding.EncodeToString(compressedData),
-				DataParentHash:      types.Bytes32([32]byte{}).Hex(),
-				ParentStateRootHash: types.Bytes32([32]byte{}).Hex(),
-				FinalStateRootHash:  types.Bytes32([32]byte{}).Hex(),
-				PrevShnarf:          types.Bytes32([32]byte{}).Hex(),
+				DataParentHash:      types.FullBytes32([32]byte{}).Hex(),
+				ParentStateRootHash: types.FullBytes32([32]byte{}).Hex(),
+				FinalStateRootHash:  types.FullBytes32([32]byte{}).Hex(),
+				PrevShnarf:          types.FullBytes32([32]byte{}).Hex(),
 				ConflationOrder: blobsubmission.ConflationOrder{
 					StartingBlockNumber: 0,
 					UpperBoundaries:     []int{10, 20},

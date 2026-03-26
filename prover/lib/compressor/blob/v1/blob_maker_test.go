@@ -5,25 +5,21 @@ package v1_test
 import (
 	"bytes"
 	cRand "crypto/rand"
-	"encoding/binary"
 	"encoding/hex"
 	"math/big"
 	"math/rand/v2"
 	"os"
-	"path/filepath"
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover/utils/test_utils"
+	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/internal/rlpblocks"
 
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/dictionary"
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode"
 
 	v1 "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1"
-	v1Testing "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1/test_utils"
 
 	fr381 "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 
-	"github.com/consensys/linea-monorepo/prover/backend/files"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/stretchr/testify/assert"
@@ -37,11 +33,11 @@ import (
 )
 
 func TestCompressorOneBlock(t *testing.T) { // most basic test just to see if block encoding/decoding works
-	testCompressorSingleSmallBatch(t, testBlocks[1:2])
+	testCompressorSingleSmallBatch(t, rlpblocks.Get()[1:2])
 }
 
 func TestCompressorTwoBlocks(t *testing.T) { // most basic test just to see if block encoding/decoding works
-	testCompressorSingleSmallBatch(t, testBlocks[:2])
+	testCompressorSingleSmallBatch(t, rlpblocks.Get()[:2])
 }
 
 func testCompressorSingleSmallBatch(t *testing.T, blocks [][]byte) {
@@ -71,6 +67,7 @@ func TestCompressorNoBatches(t *testing.T) {
 	assert.NoError(err, "init should succeed")
 
 	// Compress blocks
+	testBlocks := rlpblocks.Get()
 	cptBlock := 0
 	for i, block := range testBlocks {
 	reprocessBlock:
@@ -92,7 +89,7 @@ func TestCompressorNoBatches(t *testing.T) {
 		assert.Equal(1, len(batches), "number of batches should match")
 		assert.Equal(cptBlock, len(batches[0]), "number of blocks should match")
 
-		assertBatchesConsistent(t, testBlocks[:cptBlock], batches[0])
+		assertBatchesConsistent(t, rlpblocks.Get()[:cptBlock], batches[0])
 
 		cptBlock = 0
 
@@ -106,7 +103,7 @@ func TestCompressorNoBatches(t *testing.T) {
 func TestEncodeBlockForCompression(t *testing.T) {
 	var encoded bytes.Buffer
 
-	for _, blockRaw := range testBlocks {
+	for _, blockRaw := range rlpblocks.Get() {
 		encoded.Reset()
 		var block types.Block
 		assert.NoError(t, rlp.Decode(bytes.NewReader(blockRaw), &block))
@@ -151,6 +148,7 @@ func TestCanWrite(t *testing.T) {
 	var blobs [][]byte
 	var nbBlocksPerBatch []uint16 // tracking number of blocks, no batch in this test.
 	cptBlock := 0
+	testBlocks := rlpblocks.Get()
 	for i, block := range testBlocks {
 		// get a random from 1 to 5
 		bSize := rand.IntN(3) + 1 // #nosec G404 -- false positive
@@ -235,6 +233,7 @@ func TestCompressorWithBatches(t *testing.T) {
 	var blobs [][]byte
 	var nbBlocksPerBatch []uint16 // tracking number of blocks, no batch in this test.
 	cptBlock := 0
+	testBlocks := rlpblocks.Get()
 	for i, block := range testBlocks {
 		t.Logf("processing block %d over %d", i, len(testBlocks))
 		// get a random from 1 to 5
@@ -339,7 +338,7 @@ func TestCompressorWithExpandingTx(t *testing.T) {
 	var buf bytes.Buffer
 
 	// get the uncompressed size of the malicious block
-	if err := v1.EncodeBlockForCompression(maliciousBlock, &buf); err != nil {
+	if err = v1.EncodeBlockForCompression(maliciousBlock, &buf); err != nil {
 		t.Fatal(err)
 	}
 	rawLen := buf.Len()
@@ -469,35 +468,13 @@ func BenchmarkWrite(b *testing.B) {
 		b.Fatal("init should succeed", err.Error())
 	}
 
+	testBlocks := rlpblocks.Get()
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		for j := 0; j < len(testBlocks); j++ {
-			bm.Write(testBlocks[j], false)
+	for b.Loop() {
+		for _, testBlock := range testBlocks {
+			bm.Write(testBlock, false)
 		}
 	}
-}
-
-// testBlocks is a slice of RLP encoded blocks
-var testBlocks [][]byte
-
-func init() {
-	rootPath, err := test_utils.GetRepoRootPath()
-	if err != nil {
-		panic(err)
-	}
-
-	if testBlocks, err = v1Testing.LoadTestBlocks(filepath.Join(rootPath, "testdata/prover-v2/prover-execution/requests")); err != nil {
-		panic(err)
-	}
-
-	// writes the rlp_blocks.bin
-	f := files.MustOverwrite(filepath.Join(rootPath, "jvm-libs/blob-compressor/src/test/resources/net/consensys/linea/nativecompressor/rlp_blocks.bin"))
-	binary.Write(f, binary.LittleEndian, uint32(len(testBlocks)))
-	for i := range testBlocks {
-		binary.Write(f, binary.LittleEndian, uint32(len(testBlocks[i])))
-		f.Write(testBlocks[i])
-	}
-	f.Close()
 }
 
 func signTxFake(tx **types.Transaction) {

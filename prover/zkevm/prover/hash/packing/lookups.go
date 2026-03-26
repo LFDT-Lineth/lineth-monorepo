@@ -11,7 +11,7 @@ import (
 )
 
 type lookUpTables struct {
-	//ColNumber:=(1,,..,16) and colPowers:=(2^(8*1),...,2^(8*16))
+	//colNumber:=(0,1,2) and colPowers:=(1, 2^(8*1), 2^(8*2))
 	ColNumber ifaces.Column
 	ColPowers ifaces.Column
 }

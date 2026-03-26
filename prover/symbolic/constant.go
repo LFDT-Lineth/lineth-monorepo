@@ -2,17 +2,18 @@ package symbolic
 
 import (
 	"fmt"
-	"math/big"
 	"reflect"
 
 	"github.com/consensys/gnark/frontend"
 	sv "github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 )
 
 // Constant is an implementation of [Operator] which represents a constant value
 type Constant struct {
-	Val field.Element
+	// TODO @gbotrel separate constant ext and no-ext
+	Val fext.GenericFieldElem
 }
 
 // Degree implements the [Operator] interface
@@ -25,28 +26,40 @@ func (c Constant) Evaluate([]sv.SmartVector) sv.SmartVector {
 	panic("we never call it for a constant")
 }
 
+func (c Constant) EvaluateExt([]sv.SmartVector) sv.SmartVector {
+	panic("we never call EvaluateExt for a constant")
+}
+
+func (c Constant) EvaluateMixed([]sv.SmartVector) sv.SmartVector {
+	panic("we never call EvaluateMixed for a constant")
+}
+
 // GnarkEval implements the [Operator] interface.
-func (c Constant) GnarkEval(api frontend.API, inputs []frontend.Variable) frontend.Variable {
+func (c Constant) GnarkEval(api frontend.API, inputs []koalagnark.Element) koalagnark.Element {
+	panic("we never call it for a constant")
+}
+
+// GnarkEvalExt implements the [Operator] interface.
+func (c Constant) GnarkEvalExt(api frontend.API, inputs []any) koalagnark.Ext {
 	panic("we never call it for a constant")
 }
 
 // NewConstant creates a new [Constant]. The function admits any input types
 // that is either: field.Element, int, uint or decimal string.
 func NewConstant(val interface{}) *Expression {
-	var x field.Element
-	if _, err := x.SetInterface(val); err != nil {
+	var x fext.Element
+	if _, err := fext.SetInterface(&x, val); err != nil {
 		panic(err)
 	}
 
+	newHash := fext.NewMinimalESHashFromExt(&x)
+	//Create the expression
 	res := &Expression{
-		Operator: Constant{Val: x},
+		Operator: Constant{Val: *newHash},
 		Children: []*Expression{},
 		ESHash:   x,
+		IsBase:   fext.IsBase(&x),
 	}
-
-	// Pass the string and not the field.Element itself
-	var sig big.Int
-	res.ESHash.SetBigInt(x.BigInt(&sig))
 	return res
 }
 

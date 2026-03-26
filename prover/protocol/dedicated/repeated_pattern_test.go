@@ -1,4 +1,4 @@
-package dedicated
+package dedicated_test
 
 import (
 	"testing"
@@ -6,18 +6,21 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
+	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/internal/testtools"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
+	"github.com/stretchr/testify/assert"
 )
 
-// RepeatedPatternTestcase represents a test case for [RepeatedPattern].
+// RepeatedPatternTestcase represents a test case for [dedicated.RepeatedPattern].
 type RepeatedPatternTestcase struct {
 	name     string
 	IsActive smartvectors.SmartVector
 	Pattern  []field.Element
-	rp       *RepeatedPattern
+	rp       *dedicated.RepeatedPattern
 }
 
 // ListOfRepeatedPatternTestcase is a list of [RepeatedPatternTestcase].
@@ -50,8 +53,8 @@ var ListOfRepeatedPatternTestcase = []*RepeatedPatternTestcase{
 }
 
 func (rp *RepeatedPatternTestcase) Define(comp *wizard.CompiledIOP) {
-	isActive := comp.InsertCommit(0, ifaces.ColID(rp.name)+"_ACTIVE", rp.IsActive.Len())
-	rp.rp = NewRepeatedPattern(comp, 0, rp.Pattern, isActive, "TESTING")
+	isActive := comp.InsertCommit(0, ifaces.ColID(rp.name)+"_ACTIVE", rp.IsActive.Len(), true)
+	rp.rp = dedicated.NewRepeatedPattern(comp, 0, rp.Pattern, isActive, "TEST")
 }
 
 func (rp *RepeatedPatternTestcase) Assign(run *wizard.ProverRuntime) {
@@ -77,4 +80,20 @@ func TestRepeatedPattern(t *testing.T) {
 			)
 		})
 	}
+}
+
+func TestRepeatedPatWithVerifCol(t *testing.T) {
+
+	var rp *dedicated.RepeatedPattern
+	define := func(b *wizard.Builder) {
+		pattern := vector.ForTest(1, 2, 3)
+		rp = dedicated.NewRepeatedPattern(b.CompiledIOP, 0, pattern, verifiercol.NewConstantCol(field.One(), 32, "active"), "TEST")
+	}
+	prove := func(run *wizard.ProverRuntime) {
+		rp.Assign(run)
+	}
+	compiled := wizard.Compile(define, dummy.Compile)
+	proof := wizard.Prove(compiled, prove)
+	assert.NoError(t, wizard.Verify(compiled, proof))
+
 }

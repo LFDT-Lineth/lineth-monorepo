@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -51,17 +51,18 @@ func TestNaturalize(t *testing.T) {
 		assi.AssignColumn(P3, p3)
 		assi.AssignColumn(P4, p4)
 
-		x := field.NewElement(5)
+		x := fext.RandomElement()
 
-		y1 := smartvectors.Interpolate(p1, x)
-		y2 := smartvectors.Interpolate(p2, x)
-		y3 := smartvectors.Interpolate(p3, x)
-		y4 := smartvectors.Interpolate(p4, x)
+		y1 := smartvectors.EvaluateBasePolyLagrange(p1, x)
+		y2 := smartvectors.EvaluateBasePolyLagrange(p2, x)
+		y3 := smartvectors.EvaluateBasePolyLagrange(p3, x)
+		y4 := smartvectors.EvaluateBasePolyLagrange(p4, x)
 
-		p1s2 := P1S2.GetColAssignment(assi)
+		p1s2Regular := P1S2.GetColAssignment(assi).IntoRegVecSaveAlloc()
+		p1s2 := smartvectors.NewRegular(p1s2Regular)
 
-		require.Equal(t, p1s2.Pretty(), p2.Pretty())
-		assi.AssignUnivariate(EVAL, x, y1, y2, y2, y3, y4)
+		require.Equal(t, p2.Pretty(), p1s2.Pretty())
+		assi.AssignUnivariateExt(EVAL, x, y1, y2, y2, y3, y4)
 	}
 
 	proof := wizard.Prove(comp, hLProver)

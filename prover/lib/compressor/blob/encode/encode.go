@@ -191,9 +191,9 @@ func PackAlign(w io.Writer, a []byte, packingSize int, options ...packAlignOptio
 	return int64(n1), nil
 }
 
-// MiMCChecksumPackedData re-packs the data tightly into bls12-377 elements and computes the MiMC checksum.
+// PackData re-packs the data tightly into bls12-377 elements. Useful for minimizing the number of hash permutations.
 // only supporting packing without a terminal symbol. Input with a terminal symbol will be interpreted in full padded length.
-func MiMCChecksumPackedData(data []byte, inputPackingSize int, hashPackingOptions ...packAlignOption) ([]byte, error) {
+func PackData(data []byte, inputPackingSize int, hashPackingOptions ...packAlignOption) ([]byte, error) {
 	dataNbBits := len(data) * 8
 	if inputPackingSize%8 != 0 {
 		inputBytesPerElem := (inputPackingSize + 7) / 8
@@ -213,13 +213,29 @@ func MiMCChecksumPackedData(data []byte, inputPackingSize int, hashPackingOption
 	packingOptions := make([]packAlignOption, len(hashPackingOptions)+1)
 	copy(packingOptions, hashPackingOptions)
 	packingOptions[len(packingOptions)-1] = WithLastByteNbUnusedBits(uint8(lastByteNbUnusedBits))
-	if _, err := PackAlign(&bb, data, fr.Bits-1, packingOptions...); err != nil {
-		return nil, err
-	}
+	_, err := PackAlign(&bb, data, fr.Bits-1, packingOptions...)
+
+	return bb.Bytes(), err
+}
+
+// MiMCChecksumPackedData re-packs the data tightly into bls12-377 elements and computes the MiMC checksum.
+// only supporting packing without a terminal symbol. Input with a terminal symbol will be interpreted in full padded length.
+func MiMCChecksumPackedData(data []byte, inputPackingSize int, hashPackingOptions ...packAlignOption) ([]byte, error) {
+	b, err := PackData(data, inputPackingSize, hashPackingOptions...)
 
 	hsh := hash.MIMC_BLS12_377.New()
-	hsh.Write(bb.Bytes())
-	return hsh.Sum(nil), nil
+	hsh.Write(b)
+	return hsh.Sum(nil), err
+}
+
+// Poseidon2ChecksumPackedData re-packs the data tightly into bls12-377 elements and computes the MiMC checksum.
+// only supporting packing without a terminal symbol. Input with a terminal symbol will be interpreted in full padded length.
+func Poseidon2ChecksumPackedData(data []byte, inputPackingSize int, hashPackingOptions ...packAlignOption) ([]byte, error) {
+	b, err := PackData(data, inputPackingSize, hashPackingOptions...)
+
+	hsh := hash.POSEIDON2_BLS12_377.New()
+	hsh.Write(b)
+	return hsh.Sum(nil), err
 }
 
 // DecodedBlockData is a wrapper struct storing the different fields of a block

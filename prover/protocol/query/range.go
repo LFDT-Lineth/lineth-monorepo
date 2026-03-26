@@ -5,6 +5,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/google/uuid"
@@ -59,7 +60,24 @@ func (r Range) Check(run ifaces.Runtime) error {
 
 	wit := r.Handle.GetColAssignment(run)
 	for i := 0; i < wit.Len(); i++ {
-		v := wit.Get(i)
+
+		var (
+			v   field.Element
+			err error
+		)
+
+		if v, err = wit.GetBase(i); err == nil {
+			// Nothing to do as the check also assigned the value of v
+
+		} else if v4 := wit.GetExt(i); fext.IsBase(&v4) {
+			v, err = fext.GetBase(&v4)
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			return fmt.Errorf("could not get base value for %v : %w", v4.String(), err)
+		}
+
 		if v.Cmp(&b) >= 0 {
 			return fmt.Errorf("range check failed %v (bound %v on %v)", r.ID, r.B, r.Handle.GetColID())
 		}

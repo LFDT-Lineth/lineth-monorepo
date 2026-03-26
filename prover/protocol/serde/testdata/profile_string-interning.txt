@@ -1,0 +1,4 @@
+Serialization Size Profile
+==========================
+
+[struct { ID1 ifaces.ColID; ID2 ifaces.ColID }]: 49 B (100.0%)

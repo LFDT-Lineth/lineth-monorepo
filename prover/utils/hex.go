@@ -71,6 +71,14 @@ func HexDecodeString(s string) ([]byte, error) {
 	return hex.DecodeString(s)
 }
 
+func HexMustDecodeString(s string) []byte {
+	b, err := HexDecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
 func HexEncodeToString(b []byte) string {
 	return "0x" + hex.EncodeToString(b)
 }

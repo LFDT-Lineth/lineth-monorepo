@@ -12,7 +12,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/dictionary"
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode"
 	v0 "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v0"
-	blobv1testing "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1/test_utils"
+	blobv2testing "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v2/test_utils"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/stretchr/testify/assert"
@@ -20,8 +20,8 @@ import (
 )
 
 func TestGetVersion(t *testing.T) {
-	_blob := blobv1testing.GenTestBlob(t, 1)
-	assert.Equal(t, uint32(0x10000), uint32(0xffff)+uint32(blob.GetVersion(_blob)), "version should match the current one")
+	_blob := blobv2testing.GenTestBlob(t, 1)
+	assert.Equal(t, uint32(0x10000), uint32(0xfffe)+uint32(blob.GetVersion(_blob)), "version should match the current one")
 }
 
 const dictPath = "../compressor_dict.bin"

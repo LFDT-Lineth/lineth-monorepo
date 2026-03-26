@@ -47,12 +47,19 @@ type Response struct {
 	FinalTimestamp                      uint `json:"finalTimestamp"`
 	FinalBlockNumber                    uint `json:"finalBlockNumber"`
 
+	// Rolling hash of the L1 messages received on L2 so far for the state to be
+	// currently finalized. In 0x prefixed Hexstring
 	// L1RollingHash stores the last rolling hash found in a rolling hash event
 	// during the execution.
-	L1RollingHash string `json:"l1RollingHash"`
+	LastFinalizedL1RollingHash string `json:"lastFinalizedL1RollingHash"`
+	L1RollingHash              string `json:"l1RollingHash"`
+
+	// Number of L1 messages received on L2 so far for the state to be currently
+	// finalized. Messaging Feedback loop messaging number - part of public input
 	// L1RollingHashNumber stores the number of the last rolling hash event
 	// occuring in the frame of the current aggregation.
-	L1RollingHashMessageNumber uint `json:"l1RollingHashMessageNumber"`
+	LastFinalizedL1RollingHashMessageNumber uint `json:"lastFinalizedL1RollingHashMessageNumber"`
+	L1RollingHashMessageNumber              uint `json:"l1RollingHashMessageNumber"`
 
 	// L2 messages related messages. L2MerkleRoots stores a sequences of Merkle
 	// roots containing the hashes of the messages emitted on layer 2.

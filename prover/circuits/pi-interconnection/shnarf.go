@@ -11,7 +11,7 @@ type ShnarfIteration struct {
 	EvaluationPointBytes, EvaluationClaimBytes [32]frontend.Variable
 }
 
-// ComputeShnarfs DOES NOT check nbShnarfs ≤ len(s.Iterations)
+// ComputeShnarfs DOES NOT check nbShnarfs ≤ len(s.iterations)
 func ComputeShnarfs(h keccak.BlockHasher, parent [32]frontend.Variable, iterations []ShnarfIteration) (result [][32]frontend.Variable) {
 	result = make([][32]frontend.Variable, len(iterations))
 	prevShnarf := parent

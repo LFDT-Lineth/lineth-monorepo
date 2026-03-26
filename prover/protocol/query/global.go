@@ -7,8 +7,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	sv "github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/fft"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -46,6 +45,10 @@ type GlobalConstraint struct {
 	*/
 	NoBoundCancel bool
 
+	// OffsetRangeOverrides is an optional parameter telling the global
+	// constraint to cancel itself out-of-bound.
+	OffsetRangeOverrides *utils.Range
+
 	uuid uuid.UUID `serde:"omit"`
 }
 
@@ -79,9 +82,20 @@ func NewGlobalConstraint(id ifaces.QueryID, expr *symbolic.Expression, noBoundCa
 		res.NoBoundCancel = noBoundCancel[0]
 	}
 
-	// performs validation for the
 	res.DomainSize = res.validatedDomainSize()
 	return res
+}
+
+// NewGlobalConstraintOverrideOffset introduce a new global constraint, manually
+// setting the offset.
+func NewGlobalConstraintOverrideOffset(id ifaces.QueryID, expr *symbolic.Expression, offsetRange utils.Range) GlobalConstraint {
+	q := NewGlobalConstraint(id, expr)
+	q.OffsetRangeOverrides = &offsetRange
+	return q
+}
+
+func (cs GlobalConstraint) HasOverridenOffsetRange() bool {
+	return cs.OffsetRangeOverrides != nil
 }
 
 // Name implements the [ifaces.Query] interface
@@ -121,21 +135,6 @@ func (cs GlobalConstraint) Check(run ifaces.Runtime) error {
 	evalInputs := make([]sv.SmartVector, len(metadatas))
 
 	/*
-		Omega is a root of unity which generates the domain of evaluation
-		of the constraint. Its size coincide with the size of the domain
-		of evaluation. For each value of `i`, X will evaluate to omega^i.
-	*/
-	omega := fft.GetOmega(cs.DomainSize)
-	omegaI := field.One()
-
-	// precomputations of the powers of omega, can be optimized if useful
-	omegas := make([]field.Element, cs.DomainSize)
-	for i := 0; i < cs.DomainSize; i++ {
-		omegas[i] = omegaI
-		omegaI.Mul(&omegaI, &omega)
-	}
-
-	/*
 		Collect the relevants inputs for evaluating the constraint
 	*/
 	for k, metadataInterface := range metadatas {
@@ -144,13 +143,24 @@ func (cs GlobalConstraint) Check(run ifaces.Runtime) error {
 			w := meta.GetColAssignment(run)
 			evalInputs[k] = w
 		case coin.Info:
-			evalInputs[k] = sv.NewConstant(run.GetRandomCoinField(meta.Name), cs.DomainSize)
+			if meta.IsBase() {
+				utils.Panic("unsupported, coins are always over field extensions")
+
+			} else {
+				evalInputs[k] = sv.NewConstantExt(run.GetRandomCoinFieldExt(meta.Name), cs.DomainSize)
+			}
 		case variables.X:
 			evalInputs[k] = meta.EvalCoset(cs.DomainSize, 0, 1, false)
 		case variables.PeriodicSample:
 			evalInputs[k] = meta.EvalCoset(cs.DomainSize, 0, 1, false)
 		case ifaces.Accessor:
-			evalInputs[k] = sv.NewConstant(meta.GetVal(run), cs.DomainSize)
+			if meta.IsBase() {
+				baseElem, _ := meta.GetValBase(run)
+				evalInputs[k] = sv.NewConstant(baseElem, cs.DomainSize)
+			} else {
+				evalInputs[k] = sv.NewConstantExt(meta.GetValExt(run), cs.DomainSize)
+			}
+
 		default:
 			utils.Panic("Not a variable type %v in query %v", reflect.TypeOf(metadataInterface), cs.ID)
 		}
@@ -159,7 +169,7 @@ func (cs GlobalConstraint) Check(run ifaces.Runtime) error {
 	// This panics if the global constraints doesn't use any commitment
 	res := boarded.Evaluate(evalInputs)
 
-	offsetRange := MinMaxOffset(cs.Expression)
+	offsetRange := MinMaxOffset(&cs)
 
 	start, stop := 0, res.Len()
 	if !cs.NoBoundCancel {
@@ -171,8 +181,7 @@ func (cs GlobalConstraint) Check(run ifaces.Runtime) error {
 	stop = min(stop, cs.DomainSize)
 
 	for i := start; i < stop; i++ {
-
-		resx := res.Get(i)
+		resx := sv.GetGenericElemOfSmartvector(res, i)
 		// The proper test
 		if !resx.IsZero() {
 			s := ""
@@ -180,8 +189,13 @@ func (cs GlobalConstraint) Check(run ifaces.Runtime) error {
 			for j := utils.Max(start, i-15); j < utils.Min(stop, i+15); j++ {
 				debugMap := make(map[string]string)
 				for k, metadataInterface := range metadatas {
-					inpx := evalInputs[k].Get(j)
-					debugMap[string(metadataInterface.String())] = fmt.Sprintf("%v", inpx.String())
+					if sv.IsBase(evalInputs[k]) {
+						inpx, _ := evalInputs[k].GetBase(j)
+						debugMap[string(metadataInterface.String())] = fmt.Sprintf("%v", inpx.String())
+					} else {
+						inpx := evalInputs[k].GetExt(j)
+						debugMap[string(metadataInterface.String())] = fmt.Sprintf("%v", inpx.String())
+					}
 				}
 				if j == i {
 					s += "\n"
@@ -195,9 +209,6 @@ func (cs GlobalConstraint) Check(run ifaces.Runtime) error {
 			return fmt.Errorf("the global constraint check failed at row %v \n\tinput details : %v \n\tres: %v\n\t", i, s, resx.String())
 		}
 	}
-
-	// Update the value of omega^i
-	omegaI.Mul(&omegaI, &omega)
 
 	// Nil indicate the test passes
 	return nil
@@ -220,16 +231,29 @@ func (cs *GlobalConstraint) validatedDomainSize() int {
 		// panic.
 		foundAny   = false
 		domainSize = 0
+		// numCol and numConstCol are the number of columns and the number of constant columns in the expression
+		numCol      = 0
+		numConstCol = 0
+
 		// firstColumnFound stores the name of the first column found in the
 		// expression. This will be used to print more detailled error message
 		// by showing the first column found and the first one that does not
 		// have the same size in the expression.
 		firstColumnFound ifaces.ColID
 	)
-
+	// we use an anonymous interface to detect constant columns, without creating a dependency
+	// cycle between query and verifiercol package. This is a bit hacky but it allows us to keep the code clean
+	// without creating a new package for this interface that would be only used for this check.
+	type constCol interface {
+		UnimplementedForInterfaceOnlyForConstCol()
+	}
 	// From the min/max offset
 	for _, metadataInterface := range metadatas {
 		if handle, ok := metadataInterface.(ifaces.Column); ok {
+			numCol++
+			if _, ok := handle.(constCol); ok {
+				numConstCol++
+			}
 			// All domains should be the same length
 			if !foundAny {
 				foundAny = true
@@ -255,20 +279,32 @@ func (cs *GlobalConstraint) validatedDomainSize() int {
 	if !foundAny {
 		utils.Panic("query %v - Could not find any commitment in the metadatas: %v", cs.ID, metadatas)
 	}
+	// if all cols are const col, then global constraint is not necessary
+	if numConstCol == numCol {
+		utils.Panic("there is only conscol in the query, numConstCol = %v, numCol = %v, queryId = %v",
+			numConstCol, numCol, cs.ID)
+	}
 
 	return domainSize
 }
 
 // Returns the min and max offset happening in the expression
-func MinMaxOffset(expr *symbolic.Expression) utils.Range {
+func MinMaxOffset(cs *GlobalConstraint) utils.Range {
+
+	if cs.OffsetRangeOverrides != nil {
+		return *cs.OffsetRangeOverrides
+	}
+
+	return MinMaxOffsetOfExpression(cs.Expression)
+}
+
+func MinMaxOffsetOfExpression(expr *symbolic.Expression) utils.Range {
 
 	minOffset := math.MaxInt
 	maxOffset := math.MinInt
 
-	/*
-		Flag detecting if we indeed found at least one correct metadata
-		There for sanity-checks
-	*/
+	// Flag detecting if we indeed found at least one correct metadata
+	// There for sanity-checks
 	foundAny := false
 
 	exprBoard := expr.Board()
@@ -292,20 +328,17 @@ func MinMaxOffset(expr *symbolic.Expression) utils.Range {
 	return res
 }
 
-/*
-Test a polynomial identity relation
-*/
+// Test a polynomial identity relation
 func (cs GlobalConstraint) CheckGnark(api frontend.API, run ifaces.GnarkRuntime) {
+	koalaAPI := koalagnark.NewAPI(api)
 	boarded := cs.Board()
 	metadatas := boarded.ListVariableMetadata()
 
-	/*
-		Sanity-check : All witnesses should have a size at least
-		larger than end.
-	*/
+	// Sanity-check : All witnesses should have a size at least
+	// larger than end.
 	for _, metadataInterface := range metadatas {
 		if handle, ok := metadataInterface.(ifaces.Column); ok {
-			witness := handle.GetColAssignmentGnark(run)
+			witness := handle.GetColAssignmentGnarkExt(run)
 			if len(witness) != cs.DomainSize {
 				utils.Panic(
 					"Query %v - Witness of %v has size %v which is below %v",
@@ -315,48 +348,51 @@ func (cs GlobalConstraint) CheckGnark(api frontend.API, run ifaces.GnarkRuntime)
 		}
 	}
 
-	/*
-		Collects the relevant datas into a slice for the evaluation
-	*/
-	evalInputs := make([][]frontend.Variable, len(metadatas))
+	// Collects the relevant datas into a slice for the evaluation
+	evalInputs := make([][]koalagnark.Ext, len(metadatas))
 
-	/*
-		Omega is a root of unity which generates the domain of evaluation
-		of the constraint. Its size coincide with the size of the domain
-		of evaluation. For each value of `i`, X will evaluate to omega^i.
-	*/
-	omega := fft.GetOmega(cs.DomainSize)
-	omegaI := field.One()
-
-	// precomputations of the powers of omega, can be optimized if useful
-	omegas := make([]frontend.Variable, cs.DomainSize)
-	for i := 0; i < cs.DomainSize; i++ {
-		omegas[i] = omegaI
-		omegaI.Mul(&omegaI, &omega)
-	}
-
-	/*
-		Collect the relevants inputs for evaluating the constraint
-	*/
+	// Collect the relevants inputs for evaluating the constraint
 	for k, metadataInterface := range metadatas {
 		switch meta := metadataInterface.(type) {
 		case ifaces.Column:
-			w := meta.GetColAssignmentGnark(run)
+			w := meta.GetColAssignmentGnarkExt(run)
 			evalInputs[k] = w
 		case coin.Info:
-			evalInputs[k] = gnarkutil.RepeatedVariable(run.GetRandomCoinField(meta.Name), cs.DomainSize)
+			if meta.IsBase() {
+				utils.Panic("unsupported, coins are always over field extensions")
+
+			} else {
+				evalInputs[k] = gnarkutil.RepeatedVariableExt(run.GetRandomCoinFieldExt(meta.Name), cs.DomainSize)
+			}
 		case variables.X:
-			evalInputs[k] = meta.GnarkEvalNoCoset(cs.DomainSize)
+			base := meta.GnarkEvalNoCoset(cs.DomainSize)
+			evalInputs[k] = make([]koalagnark.Ext, cs.DomainSize)
+			for i := range base {
+				evalInputs[k][i] = koalagnark.FromBaseVar(base[i])
+			}
 		case variables.PeriodicSample:
-			evalInputs[k] = meta.GnarkEvalNoCoset(cs.DomainSize)
+			base := meta.GnarkEvalNoCoset(cs.DomainSize)
+			evalInputs[k] = make([]koalagnark.Ext, cs.DomainSize)
+			for i := range base {
+				evalInputs[k][i] = koalagnark.FromBaseVar(base[i])
+			}
 		case ifaces.Accessor:
-			evalInputs[k] = gnarkutil.RepeatedVariable(meta.GetFrontendVariable(api, run), cs.DomainSize)
+			var x koalagnark.Ext
+			if meta.IsBase() {
+				base := meta.GetFrontendVariable(api, run)
+				x = koalagnark.FromBaseVar(base)
+			} else {
+				x = meta.GetFrontendVariableExt(api, run)
+			}
+
+			evalInputs[k] = gnarkutil.RepeatedVariableExt(x, cs.DomainSize)
+
 		default:
 			utils.Panic("Not a variable type %v in query %v", reflect.TypeOf(metadataInterface), cs.ID)
 		}
 	}
 
-	offsetRange := MinMaxOffset(cs.Expression)
+	offsetRange := MinMaxOffset(&cs)
 
 	start, stop := 0, cs.DomainSize
 	if !cs.NoBoundCancel {
@@ -366,16 +402,14 @@ func (cs GlobalConstraint) CheckGnark(api frontend.API, run ifaces.GnarkRuntime)
 
 	for i := start; i < stop; i++ {
 		// This panics if the global constraints doesn't use any commitment
-		inputs := make([]frontend.Variable, len(evalInputs))
+		inputs := make([]any, len(evalInputs))
 		for j := range inputs {
 			inputs[j] = evalInputs[j][i]
 		}
-		res := boarded.GnarkEval(api, inputs)
-		api.AssertIsEqual(res, 0)
+		res := boarded.GnarkEvalExt(api, inputs)
+		zero := koalaAPI.ZeroExt()
+		koalaAPI.AssertIsEqualExt(res, zero)
 	}
-
-	// Update the value of omega^i
-	omegaI.Mul(&omegaI, &omega)
 }
 
 func (cs GlobalConstraint) UUID() uuid.UUID {

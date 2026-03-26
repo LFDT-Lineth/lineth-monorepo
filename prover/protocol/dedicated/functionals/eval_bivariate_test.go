@@ -3,6 +3,8 @@ package functionals_test
 import (
 	"testing"
 
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/accessors"
@@ -43,8 +45,8 @@ func TestEvalBivariateSimple(t *testing.T) {
 
 	proof := wizard.Prove(compiled, prover)
 
-	accY := acc.GetVal(savedRuntime)
-	expectedY := field.NewElement(376)
+	accY := acc.GetValExt(savedRuntime)
+	expectedY := fext.NewFromUintBase(376)
 
 	require.Equal(t, accY, expectedY)
 
@@ -59,8 +61,8 @@ func TestEvalBivariateWithCoin(t *testing.T) {
 
 	definer := func(b *wizard.Builder) {
 		p := b.RegisterCommit("P", wp.Len())
-		x := accessors.NewFromCoin(b.RegisterRandomCoin("X", coin.Field))
-		y := accessors.NewFromCoin(b.RegisterRandomCoin("Y", coin.Field))
+		x := accessors.NewFromCoin(b.RegisterRandomCoin("X", coin.FieldExt))
+		y := accessors.NewFromCoin(b.RegisterRandomCoin("Y", coin.FieldExt))
 		_ = functionals.EvalCoeffBivariate(b.CompiledIOP, "EVAL_BIVARIATE", p, x, y, 4, 8)
 	}
 

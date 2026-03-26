@@ -211,14 +211,14 @@ func (compressor *Compressor) write(w writer, d []byte, startIndex int, inputInd
 		return bLong, bLong.savings()
 	}
 
-	const minRepeatingBytes = 160
+	const minConstantingBytes = 160
 	for i := startIndex; i < len(d); {
 		// if we have a series of repeating bytes, we can do "RLE" using a short backref
 		count := 0
 		for i+count < len(d) && count < shortBackRefType.maxLength && d[i] == d[i+count] {
 			count++
 		}
-		if count >= minRepeatingBytes {
+		if count >= minConstantingBytes {
 			// we have a series of repeating bytes which would make a reasonable backref
 			// let's use this path for perf reasons.
 

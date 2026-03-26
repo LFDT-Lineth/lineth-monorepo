@@ -1,21 +1,22 @@
-package dedicated
+package dedicated_test
 
 import (
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
+	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/internal/testtools"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 )
 
-// ManuallyShiftedTestcase represents a test case for [ManuallyShifted].
+// ManuallyShiftedTestcase represents a test case for [dedicated.ManuallyShifted].
 type ManuallyShiftedTestcase struct {
 	name   string
 	Root   smartvectors.SmartVector
 	Offset int
-	m      *ManuallyShifted
+	m      *dedicated.ManuallyShifted
 }
 
 var ListOfManuallyShiftedTestcase = []*ManuallyShiftedTestcase{
@@ -37,8 +38,8 @@ var ListOfManuallyShiftedTestcase = []*ManuallyShiftedTestcase{
 }
 
 func (m *ManuallyShiftedTestcase) Define(comp *wizard.CompiledIOP) {
-	root := comp.InsertCommit(0, ifaces.ColID(m.name)+"_ROOT", m.Root.Len())
-	m.m = ManuallyShift(comp, root, m.Offset, "")
+	root := comp.InsertCommit(0, ifaces.ColID(m.name)+"_ROOT", m.Root.Len(), smartvectors.IsBase(m.Root))
+	m.m = dedicated.ManuallyShift(comp, root, m.Offset, "")
 }
 
 func (m *ManuallyShiftedTestcase) Assign(run *wizard.ProverRuntime) {

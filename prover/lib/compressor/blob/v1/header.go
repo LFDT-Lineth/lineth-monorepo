@@ -11,14 +11,13 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
 )
 
-const version uint16 = 0xffff
-
 // A Header is a list of batches of blocks of len(blocks)
 // len(BatchSizes) == nb of batches in the blob
 type Header struct {
 	BatchSizes         []int // BatchSizes[i] == byte size of the i-th batch
 	CurrBatchBlocksLen []int // CurrBatchBlocksLen[i] == byte size of the i-th block in the current batch
 	DictChecksum       [fr.Bytes]byte
+	Version            uint16
 }
 
 func (s *Header) Equals(other *Header) bool {
@@ -87,7 +86,7 @@ func (s *Header) resetTable() {
 func (s *Header) WriteTo(w io.Writer) (int64, error) {
 	var written int64
 
-	if err := binary.Write(w, binary.BigEndian, version); err != nil {
+	if err := binary.Write(w, binary.BigEndian, 0xffff-s.Version+1); err != nil {
 		return written, err
 	}
 	written += 2
@@ -145,7 +144,7 @@ func (s *Header) ReadFrom(r io.Reader) (int64, error) {
 		return read, err
 	}
 	read += 2
-	if givenVersion != version {
+	if givenVersion+s.Version != 0 {
 		return read, fmt.Errorf("unsupported blob version %d", givenVersion)
 	}
 

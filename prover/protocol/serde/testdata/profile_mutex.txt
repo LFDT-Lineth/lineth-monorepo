@@ -1,0 +1,4 @@
+Serialization Size Profile
+==========================
+
+[serde_test.withMutex]: 17 B (100.0%)

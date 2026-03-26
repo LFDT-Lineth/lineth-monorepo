@@ -36,9 +36,7 @@ func TestExp(t *testing.T) {
 		board := expr.Board()
 		deg := board.Degree(getdeg)
 		require.Len(t, board.Nodes, 2)
-		require.Len(t, board.Nodes[0], 1)
-		require.Len(t, board.Nodes[1], 1)
-		require.Len(t, board.Nodes[1][0].Children, 1)
+		require.Len(t, board.Nodes[1].Children, 1)
 		require.Equal(t, deg, 2)
 	})
 

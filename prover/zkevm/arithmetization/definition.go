@@ -10,7 +10,7 @@ import (
 	"github.com/consensys/go-corset/pkg/ir/air"
 	"github.com/consensys/go-corset/pkg/schema"
 	"github.com/consensys/go-corset/pkg/schema/register"
-	"github.com/consensys/go-corset/pkg/util/field/bls12_377"
+	"github.com/consensys/go-corset/pkg/util/field/koalabear"
 	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
@@ -30,14 +30,14 @@ const DefaultLimit = 1 << 17
 type schemaScanner struct {
 	LimitMap           *config.TracesLimits
 	Comp               *wizard.CompiledIOP
-	Schema             *air.Schema[bls12_377.Element]
-	Modules            []schema.Module[bls12_377.Element]
-	InterleavedColumns map[string]air.InterleavingConstraint[bls12_377.Element]
+	Schema             *air.Schema[koalabear.Element]
+	Modules            []schema.Module[koalabear.Element]
+	InterleavedColumns map[string]air.InterleavingConstraint[koalabear.Element]
 }
 
 // Define registers the arithmetization from a corset air.Schema and trace limits
 // from config.
-func Define(comp *wizard.CompiledIOP, schema *air.Schema[bls12_377.Element], limits *config.TracesLimits) {
+func Define(comp *wizard.CompiledIOP, schema *air.Schema[koalabear.Element], limits *config.TracesLimits) {
 
 	// Collect modules and sort them by name to ensure deterministic processing order
 	modules := schema.Modules().Collect()
@@ -50,7 +50,7 @@ func Define(comp *wizard.CompiledIOP, schema *air.Schema[bls12_377.Element], lim
 		Comp:               comp,
 		Schema:             schema,
 		Modules:            modules,
-		InterleavedColumns: map[string]air.InterleavingConstraint[bls12_377.Element]{},
+		InterleavedColumns: map[string]air.InterleavingConstraint[koalabear.Element]{},
 	}
 
 	scanner.scanColumns()
@@ -97,7 +97,8 @@ func (s *schemaScanner) scanColumns() {
 			// Construct corresponding register name
 			var name = wizardName(modDecl.Name().String(), colDecl.Name())
 			//
-			col := s.Comp.InsertCommit(0, ifaces.ColID(name), size)
+			col := s.Comp.InsertCommit(0, ifaces.ColID(name), size, true)
+			pragmas.AddModuleRef(col, modDecl.Name().String())
 			pragmas.MarkLeftPadded(col)
 		}
 	}
@@ -136,11 +137,11 @@ func (s *schemaScanner) scanConstraints() {
 }
 
 // addCsInComp adds a corset constraint into the [wizard.CompiledIOP]
-func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constraint[bls12_377.Element]) {
+func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constraint[koalabear.Element]) {
 
 	switch cs := corsetCS.(type) {
 
-	case air.InterleavingConstraint[bls12_377.Element]:
+	case air.InterleavingConstraint[koalabear.Element]:
 		// Identify all interleaved columns
 		var (
 			ic = cs.Unwrap()
@@ -154,7 +155,7 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 		// Record interleaving constraint
 		s.InterleavedColumns[wName] = cs
 
-	case air.LookupConstraint[bls12_377.Element]:
+	case air.LookupConstraint[koalabear.Element]:
 		var (
 			cSource  = cs.Unwrap().Sources[0]
 			cTarget  = cs.Unwrap().Targets[0]
@@ -198,7 +199,7 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 			s.Comp.InsertInclusionDoubleConditional(0, ifaces.QueryID(name), wTargets, wSources, selectorTarget, selectorSource)
 		}
 
-	case air.PermutationConstraint[bls12_377.Element]:
+	case air.PermutationConstraint[koalabear.Element]:
 
 		var (
 			pc       = cs.Unwrap()
@@ -217,12 +218,12 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 
 		s.Comp.InsertPermutation(0, ifaces.QueryID(name), wTargets, wSources)
 
-	case air.VanishingConstraint[bls12_377.Element]:
+	case air.VanishingConstraint[koalabear.Element]:
 
 		var (
 			vc    = cs.Unwrap()
 			wExpr = s.castExpression(vc.Context, vc.Constraint.Term)
-			wMeta = wExpr.BoardListVariableMetadata()
+			wMeta = wExpr.ListBoardVariableMetadata()
 		)
 
 		if len(wMeta) == 0 {
@@ -257,14 +258,16 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 
 		s.Comp.InsertLocal(0, ifaces.QueryID(name), wExpr)
 
-	case air.RangeConstraint[bls12_377.Element]:
+	case air.RangeConstraint[koalabear.Element]:
 		rc := cs.Unwrap()
+
 		// Sanity check:  If a RangeConstraint ever has more than one source/bitwidth, the second iteration will panic
 		// because the first iteration already registered that QueryID in the CompiledIOP. In practice
 		// the len is always expected to be either 0 (no-op) or 1 (single pass).
 		if len(rc.Bitwidths) > 1 {
 			utils.Panic("multiple bitwidths for range constraints not supported")
 		}
+
 		for i, bitwidth := range rc.Bitwidths {
 			// Determine bound for this range constraint
 			bound := field.NewElement(2)
@@ -273,7 +276,7 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 			s.Comp.InsertRange(0, ifaces.QueryID(name), s.compColumnByCorsetID(rc.Context, rc.Sources[i].Register()), int(bound.Uint64()))
 		}
 
-	case air.Assertion[bls12_377.Element]:
+	case air.Assertion[koalabear.Element]:
 		// Property assertions can be ignored, as they are a debugging tool and
 		// not part of the constraints proper.
 	default:
@@ -283,11 +286,11 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 
 // castExpression turns a corset expression into a [symbolic.Expression] whose
 // variables are [wizard.CompiledIOP] components.
-func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[bls12_377.Element]) *symbolic.Expression {
+func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[koalabear.Element]) *symbolic.Expression {
 
 	switch e := expr.(type) {
 
-	case *air.Add[bls12_377.Element]:
+	case *air.Add[koalabear.Element]:
 
 		args := make([]any, len(e.Args))
 		for i := range args {
@@ -295,7 +298,7 @@ func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[bl
 		}
 		return symbolic.Add(args...)
 
-	case *air.Sub[bls12_377.Element]:
+	case *air.Sub[koalabear.Element]:
 
 		args := make([]any, len(e.Args))
 		for i := range args {
@@ -303,7 +306,7 @@ func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[bl
 		}
 		return symbolic.Sub(args[0], args[1:]...)
 
-	case *air.Mul[bls12_377.Element]:
+	case *air.Mul[koalabear.Element]:
 
 		args := make([]any, len(e.Args))
 		for i := range args {
@@ -311,12 +314,12 @@ func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[bl
 		}
 		return symbolic.Mul(args...)
 
-	case *air.Constant[bls12_377.Element]:
+	case *air.Constant[koalabear.Element]:
 		var val field.Element
 		//
 		return symbolic.NewConstant(val.SetBytes(e.Value.Bytes()))
 
-	case *air.ColumnAccess[bls12_377.Element]:
+	case *air.ColumnAccess[koalabear.Element]:
 
 		c := s.compColumnByCorsetID(context, e.Register())
 		if e.RelativeShift() != 0 {
@@ -339,7 +342,7 @@ func wizardName(moduleName, objectName string) string {
 // compColumnByCorsetID returns an [ifaces.Column] that has already been
 // registered inside of the [wizard.CompiledIOP] from its index in the corset
 // [air.Schema].
-func (s *schemaScanner) compColumnByCorsetColumnAccess(modId schema.ModuleId, colAccess *air.ColumnAccess[bls12_377.Element]) ifaces.Column {
+func (s *schemaScanner) compColumnByCorsetColumnAccess(modId schema.ModuleId, colAccess *air.ColumnAccess[koalabear.Element]) ifaces.Column {
 	var (
 		regId = colAccess.Register()
 		// construct register reference which uniquely identifies the column

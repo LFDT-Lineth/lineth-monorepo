@@ -4,12 +4,12 @@ import (
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/logdata"
-	"github.com/consensys/linea-monorepo/prover/protocol/compiler/mimc"
+	"github.com/consensys/linea-monorepo/prover/protocol/compiler/poseidon2"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/selfrecursion"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/vortex"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -43,7 +43,7 @@ func testCasePerfGenerator() []testCasePerf {
 					var offsetIndex = 0
 					// trigger the creation of a new round by declaring a dummy coin
 					if round != 0 {
-						_ = b.RegisterRandomCoin(coin.Namef("COIN_%v", round), coin.Field)
+						_ = b.RegisterRandomCoin(coin.Namef("COIN_%v", round), coin.FieldExt)
 						// Compute the offsetIndex
 						for i := 0; i < round; i++ {
 							offsetIndex += nPolsMultiRound[i]
@@ -74,8 +74,8 @@ func testCasePerfGenerator() []testCasePerf {
 				for i := range nPolsMultiRound {
 					numPolys += nPolsMultiRound[i]
 				}
-				ys := make([]field.Element, numPolys)
-				x := field.NewElement(57) // the evaluation point
+				ys := make([]fext.Element, numPolys)
+				x := fext.NewFromInt(57, 43, 23, 19) // the evaluation point
 
 				// assign the rows with random polynomials and collect the ys
 				for round := range rowsMultiRound {
@@ -83,7 +83,7 @@ func testCasePerfGenerator() []testCasePerf {
 					if round != 0 {
 						// let the prover know that it is free to go to the next
 						// round by sampling the coin.
-						_ = pr.GetRandomCoinField(coin.Namef("COIN_%v", round))
+						_ = pr.GetRandomCoinFieldExt(coin.Namef("COIN_%v", round))
 						// Compute the offsetIndex
 						for i := 0; i < round; i++ {
 							offsetIndex += nPolsMultiRound[i]
@@ -95,16 +95,16 @@ func testCasePerfGenerator() []testCasePerf {
 						// assigned in the define phase
 						if i < numPrecomputed && round == 0 {
 							p := pr.Spec.Precomputed.MustGet(row.GetColID())
-							ys[i] = smartvectors.Interpolate(p, x)
+							ys[i] = smartvectors.EvaluateBasePolyLagrange(p, x)
 							continue
 						}
 						p := smartvectors.Rand(polSize)
-						ys[offsetIndex+i] = smartvectors.Interpolate(p, x)
+						ys[offsetIndex+i] = smartvectors.EvaluateBasePolyLagrange(p, x)
 						pr.AssignColumn(row.GetColID(), p)
 					}
 				}
 
-				pr.AssignUnivariate("EVAL", x, ys...)
+				pr.AssignUnivariateExt("EVAL", x, ys...)
 			},
 		},
 	}
@@ -135,36 +135,40 @@ func TestOptionalSISHashingPerfVarOpenedCols(t *testing.T) {
 				logdata.Log("Initially before Vortex: "),
 				vortex.Compile(
 					rate1,
+					false,
 					vortex.ForceNumOpenedColumns(forcedNumOpenedColumns1),
 					vortex.WithOptionalSISHashingThreshold(sisThreshold),
 				),
 				selfrecursion.SelfRecurse,
-				mimc.CompileMiMC,
+				poseidon2.CompilePoseidon2,
 				compiler.Arcane(
 					compiler.WithTargetColSize(targetColSize)),
 				logdata.Log("After 1st round of self recursion, MiMC, and Arcane, before Vortex: "),
 				vortex.Compile(
 					rate2,
+					false,
 					vortex.ForceNumOpenedColumns(forcedNumOpenedColumns2),
 					vortex.WithOptionalSISHashingThreshold(sisThreshold),
 				),
 				selfrecursion.SelfRecurse,
-				mimc.CompileMiMC,
+				poseidon2.CompilePoseidon2,
 				compiler.Arcane(
 					compiler.WithTargetColSize(targetColSize)),
 				logdata.Log("After 2nd round of self recursion, MiMC, and Arcane, before Vortex: "),
 				vortex.Compile(
 					rate2,
+					false,
 					vortex.ForceNumOpenedColumns(forcedNumOpenedColumns2),
 					vortex.WithOptionalSISHashingThreshold(sisThreshold),
 				),
 				selfrecursion.SelfRecurse,
-				mimc.CompileMiMC,
+				poseidon2.CompilePoseidon2,
 				compiler.Arcane(
 					compiler.WithTargetColSize(targetColSize)),
 				logdata.Log("After 3rd round of self recursion, MiMC, and Arcane, before Vortex: "),
 				vortex.Compile(
 					rate2,
+					false,
 					vortex.ForceNumOpenedColumns(forcedNumOpenedColumns1),
 					vortex.WithOptionalSISHashingThreshold(sisThreshold),
 				),

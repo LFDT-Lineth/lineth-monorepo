@@ -1,0 +1,5 @@
+Serialization Size Profile
+==========================
+
+[serde_test.nestedInline]: 24 B (100.0%)
+    └─ Header [serde_test.inner]: 0 B (0.0%)

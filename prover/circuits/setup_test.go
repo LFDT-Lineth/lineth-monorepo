@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"testing"
+
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/kzg"
 	"github.com/consensys/gnark/backend/plonk"
@@ -12,9 +16,6 @@ import (
 	"github.com/consensys/gnark/test/unsafekzg"
 	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/stretchr/testify/require"
-	"os"
-	"path/filepath"
-	"testing"
 )
 
 func TestLoadSetup(t *testing.T) {

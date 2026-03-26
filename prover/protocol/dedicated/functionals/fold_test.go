@@ -5,6 +5,7 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/accessors"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/functionals"
@@ -55,7 +56,7 @@ func TestFolding(t *testing.T) {
 	proof := wizard.Prove(compiled, prover)
 
 	// Computes the expected value
-	expected := make([]field.Element, size/innerDegree)
+	expected := make([]fext.Element, size/innerDegree)
 	for i := range expected {
 		v := 0
 		for j := 0; j < innerDegree; j++ {
@@ -64,10 +65,10 @@ func TestFolding(t *testing.T) {
 			// 		- 2^j = 1 << j
 			v += (i*innerDegree + j) * (1 << j)
 		}
-		expected[i].SetUint64(uint64(v))
+		expected[i] = fext.Lift(field.NewElement(uint64(v)))
 	}
 
-	actual := smartvectors.IntoRegVec(savedRuntime.GetColumn(folded.GetColID()))
+	actual := smartvectors.IntoRegVecExt(savedRuntime.GetColumn(folded.GetColID()))
 	for i := range expected {
 		assert.Equal(t, expected[i], actual[i], "folded does not match")
 	}

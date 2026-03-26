@@ -1,11 +1,6 @@
 package symbolic
 
-import (
-	"sort"
-
-	"github.com/consensys/linea-monorepo/prover/maths/field"
-	"github.com/consensys/linea-monorepo/prover/utils"
-)
+import "github.com/consensys/linea-monorepo/prover/maths/field/fext"
 
 /*
 ExpressionBoard is a shared space for defining expressions. Several expressions
@@ -16,32 +11,68 @@ anchored expressions where the sub-expressions are de-duplicated.
 */
 type ExpressionBoard struct {
 	// Topologically sorted list of (deduplicated) nodes
-	// The nodes are sorted by level : e.g the first entry corresponds to
-	// the leaves and the last one (which should be unique). To the root.
-	Nodes [][]Node
-	// Maps nodes to their level in the DAG structure. The 32 MSB bits
-	// of the ID indicates the level and the LSB bits indicates the position
-	// in the level.
-	EsHashesToPos map[field.Element]nodeID
+	// The nodes are sorted by dependency: a node at index i only depends on nodes at indices j < i.
+	Nodes []Node
+	// Maps nodes to their index in the Nodes slice.
+	ESHashesToPos map[esHash]nodeID
+
+	// Compiled program
+	Bytecode          []int
+	Constants         []fext.Element
+	NumSlots          int
+	ResultSlot        int
+	ProgramNodesCount int
+}
+
+// BytecodeStats holds counts of each opcode kind in a compiled board.
+type BytecodeStats struct {
+	Const, Input, Mul, LinComb, PolyEval int
+}
+
+// BytecodeStats walks the compiled bytecode and returns per-opcode counts.
+// Panics if the board has not been compiled yet.
+func (b *ExpressionBoard) BytecodeStats() BytecodeStats {
+	var s BytecodeStats
+	pc := 0
+	for pc < len(b.Bytecode) {
+		switch opCode(b.Bytecode[pc]) {
+		case opLoadConst:
+			s.Const++
+			pc += 3
+		case opLoadInput:
+			s.Input++
+			pc += 3
+		case opMul:
+			n := b.Bytecode[pc+2]
+			s.Mul++
+			pc += 3 + n*2
+		case opLinComb:
+			n := b.Bytecode[pc+2]
+			s.LinComb++
+			pc += 3 + n*2
+		case opPolyEval:
+			n := b.Bytecode[pc+2]
+			s.PolyEval++
+			pc += 3 + n
+		default:
+			panic("unknown opcode in bytecode")
+		}
+	}
+	return s
 }
 
 // emptyBoard initializes a board with no Node in it.
 func emptyBoard() ExpressionBoard {
 	return ExpressionBoard{
-		Nodes:         [][]Node{},
-		EsHashesToPos: map[field.Element]nodeID{},
+		Nodes:         []Node{},
+		ESHashesToPos: map[esHash]nodeID{},
 	}
 }
 
 /*
-nodeID represents the position of a Node in the ExpressionBoard. It consists of
-two subIDs:
-  - the 32 MSB represents the level of the node in the DAG
-  - the 32 LSB represents the index of the node in its level
-
-The two together gives the position of the node = expression.Nodes[level][pos]
+nodeID represents the position of a Node in the ExpressionBoard.
 */
-type nodeID uint64
+type nodeID uint32
 
 /*
 Node consists of an operator and a list of operands and is meant to be stored
@@ -63,74 +94,4 @@ type Node struct {
 
 	// Operator contains the logic to evaluate an expression
 	Operator Operator
-}
-
-// posInLevel returns the position in the level from a NodeID
-func (i nodeID) posInLevel() int {
-	res := i & ((1 << 32) - 1)
-	return utils.ToInt(res)
-}
-
-// level returns the level from a NodeID
-func (i nodeID) level() int {
-	return utils.ToInt(i >> 32)
-}
-
-// newNodeID returns the node id given its level and its position in a level
-func newNodeID(level, posInLevel int) nodeID {
-	if level >= 1<<32 {
-		utils.Panic("Level is too large %v", level)
-	}
-	if posInLevel >= 1<<32 {
-		utils.Panic("Pos in level is too large %v", posInLevel)
-	}
-	return nodeID(uint64(level)<<32 | uint64(posInLevel))
-}
-
-// SortExpression the children list of every node by increasing ESHash and goes
-// recursively.
-func SortChildren(e *Expression) {
-
-	// Recursively call the function for the children if applicable
-	for i := range e.Children {
-		SortChildren(e.Children[i])
-	}
-
-	if len(e.Children) < 2 {
-		return
-	}
-
-	switch op := e.Operator.(type) {
-	case LinComb:
-
-		sorter := utils.GenSorter{
-			LenFn: func() int { return len(e.Children) },
-			SwapFn: func(i, j int) {
-				e.Children[i], e.Children[j] = e.Children[j], e.Children[i]
-				op.Coeffs[i], op.Coeffs[j] = op.Coeffs[j], op.Coeffs[i]
-			},
-			LessFn: func(i, j int) bool {
-				return e.Children[i].ESHash.Cmp(&e.Children[j].ESHash) < 0
-			},
-		}
-
-		sort.Sort(sorter)
-		return
-
-	case Product:
-
-		sorter := utils.GenSorter{
-			LenFn: func() int { return len(e.Children) },
-			SwapFn: func(i, j int) {
-				e.Children[i], e.Children[j] = e.Children[j], e.Children[i]
-				op.Exponents[i], op.Exponents[j] = op.Exponents[j], op.Exponents[i]
-			},
-			LessFn: func(i, j int) bool {
-				return e.Children[i].ESHash.Cmp(&e.Children[j].ESHash) < 0
-			},
-		}
-
-		sort.Sort(sorter)
-		return
-	}
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	stmCommon "github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager/common"
@@ -38,25 +37,24 @@ func TestRootHashFetcher(t *testing.T) {
 			prove := func(run *wizard.ProverRuntime) {
 
 				var (
-					initState      = tContext.State
-					shomeiState    = mock.InitShomeiState(initState)
-					initRootBytes  = shomeiState.AccountTrie.TopRoot()
-					stateLogs      = tCase.StateLogsGens(initState)
-					shomeiTraces   = mock.StateLogsToShomeiTraces(shomeiState, stateLogs)
-					finalRootBytes = shomeiState.AccountTrie.TopRoot()
-					initRoot       field.Element
-					finalRoot      field.Element
+					initState    = tContext.State
+					shomeiState  = mock.InitShomeiState(initState)
+					initRoot     = shomeiState.AccountTrie.TopRoot()
+					stateLogs    = tCase.StateLogsGens(initState)
+					shomeiTraces = mock.StateLogsToShomeiTraces(shomeiState, stateLogs)
+					finalRoot    = shomeiState.AccountTrie.TopRoot()
 				)
+
 				// nil for the scp because we do not need to ensure consistency with SCP values for this test
 				ss.Assign(run, shomeiTraces)
 				// assign the RootHashFetcher
 				AssignRootHashFetcher(run, fetcher, ss)
-				// compute two field elements that correspond to the Shomei initial and final root hash in the account tries
-				initRoot.SetBytes(initRootBytes[:])
-				finalRoot.SetBytes(finalRootBytes[:])
-				// check that the fetcher works properly
-				assert.Equal(t, initRoot, fetcher.First.GetColAssignmentAt(run, 0), "Initial root value is incorrect")
-				assert.Equal(t, finalRoot, fetcher.Last.GetColAssignmentAt(run, 0), "Final root value is incorrect")
+
+				for j := range initRoot {
+					// check that the fetcher works properly
+					assert.Equal(t, initRoot[j], fetcher.First[j].GetColAssignmentAt(run, 0), "Initial root value is incorrect")
+					assert.Equal(t, finalRoot[j], fetcher.Last[j].GetColAssignmentAt(run, 0), "Final root value is incorrect")
+				}
 			}
 
 			comp := wizard.Compile(define, dummy.Compile)

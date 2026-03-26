@@ -15,7 +15,7 @@ import (
 )
 
 type Request struct {
-	ZkParentStateRootHash        types.Bytes32                 `json:"zkParentStateRootHash"`
+	ZkParentStateRootHash        types.KoalaOctuplet           `json:"zkParentStateRootHash"`
 	ConflatedExecutionTracesFile string                        `json:"conflatedExecutionTracesFile"`
 	TracesEngineVersion          string                        `json:"tracesEngineVersion"`
 	Type2StateManagerVersion     string                        `json:"type2StateManagerVersion"`

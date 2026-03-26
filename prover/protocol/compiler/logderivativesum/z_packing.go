@@ -85,6 +85,7 @@ func (z *ZCtx) Compile(comp *wizard.CompiledIOP) {
 			z.Round,
 			DeriveName[ifaces.ColID]("Z", comp.SelfRecursionCount, z.Round, z.Size, i),
 			z.Size,
+			false,
 		)
 
 		// initial condition

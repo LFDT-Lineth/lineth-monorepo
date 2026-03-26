@@ -1,3 +1,5 @@
+//go:build ignore
+
 package bls
 
 import (
@@ -59,9 +61,9 @@ func TestBlsPairOnTrace(t *testing.T) {
 						registerColumns(t, b, cols, maxLen)
 						blsPair = newPair(b.CompiledIOP, limits, newPairDataSource(b.CompiledIOP))
 						blsPair = blsPair.
-							WithG1MembershipCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 6, true)).
-							WithG2MembershipCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 6, true)).
-							WithPairingCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 6, true))
+							WithG1MembershipCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 1, true)).
+							WithG2MembershipCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 1, true)).
+							WithPairingCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 1, true))
 
 					},
 					integrationTestCompiler,

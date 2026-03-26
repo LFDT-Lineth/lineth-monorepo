@@ -4,7 +4,7 @@
         "numConflation": 5,
         "blockPerConflation": 12,
         "compressedDataSize": 103000,
-        "parentShnarf": "0xfd910670a8da6aaaf2431ce7345a605dc15dc41298b9410065d2f7bb1ba99fea",
+        "parentShnarf": "0x911e13584bfba0ac23638f2db6e522dfeb8a7741360901fd06fb842291b362fb",
         "parentZkStateRootHash": "0xf0f26782f7afb93f926cacb145f55530714f20b1356725e3971dc99e0ef8b591",
         "parentDataHash": "0x01a142b35ad91719145a4e3bf1d5402e6a73818db67312ade7a73ad5130ac618",
         "eip4844Enabled": true

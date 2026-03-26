@@ -1,8 +1,9 @@
 package column
 
 import (
-	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 )
 
@@ -33,6 +34,22 @@ func (fc *FakeColumn) GetColAssignmentAt(run ifaces.Runtime, pos int) field.Elem
 	panic("unimplemented")
 }
 
+func (fc *FakeColumn) GetColAssignmentBase(run ifaces.Runtime) ifaces.ColAssignment {
+	panic("unimplemented")
+}
+
+func (fc *FakeColumn) GetColAssignmentAtBase(run ifaces.Runtime, pos int) (field.Element, error) {
+	panic("unimplemented")
+}
+
+func (fc *FakeColumn) GetColAssignmentExt(run ifaces.Runtime) ifaces.ColAssignment {
+	panic("unimplemented")
+}
+
+func (fc *FakeColumn) GetColAssignmentAtExt(run ifaces.Runtime, pos int) fext.Element {
+	panic("unimplemented")
+}
+
 func (fc *FakeColumn) Round() int {
 	panic("unimplemented")
 }
@@ -45,15 +62,35 @@ func (fc *FakeColumn) MustExists() {
 	panic("unimplemented")
 }
 
-func (fc *FakeColumn) GetColAssignmentGnark(run ifaces.GnarkRuntime) []frontend.Variable {
+func (fc *FakeColumn) GetColAssignmentGnark(run ifaces.GnarkRuntime) []koalagnark.Element {
 	panic("unimplemented")
 }
 
-func (fc *FakeColumn) GetColAssignmentGnarkAt(run ifaces.GnarkRuntime, pos int) frontend.Variable {
+func (fc *FakeColumn) GetColAssignmentGnarkAt(run ifaces.GnarkRuntime, pos int) koalagnark.Element {
+	panic("unimplemented")
+}
+
+func (fc *FakeColumn) GetColAssignmentGnarkBase(run ifaces.GnarkRuntime) ([]koalagnark.Element, error) {
+	panic("unimplemented")
+}
+
+func (fc *FakeColumn) GetColAssignmentGnarkAtBase(run ifaces.GnarkRuntime, pos int) (koalagnark.Element, error) {
+	panic("unimplemented")
+}
+
+func (fc *FakeColumn) GetColAssignmentGnarkExt(run ifaces.GnarkRuntime) []koalagnark.Ext {
+	panic("unimplemented")
+}
+
+func (fc *FakeColumn) GetColAssignmentGnarkAtExt(run ifaces.GnarkRuntime, pos int) koalagnark.Ext {
 	panic("unimplemented")
 }
 
 // The fake column is interpreted as composite column so that
 func (fc *FakeColumn) IsComposite() bool {
 	return true
+}
+
+func (fc *FakeColumn) IsBase() bool {
+	panic("unimplemented")
 }

@@ -133,7 +133,8 @@ func (ctx *SplitterContext) ScanSplitCommit() {
 				for i := 0; i < len(subSlices); i++ {
 					subSliceName := nameHandleSlice(col, i, numSubSlices)
 					if !comp.Columns.Exists(subSliceName) {
-						subSlices[i] = comp.InsertCommit(round, subSliceName, ctx.Size)
+						// preserve whether the parent column is base or extension
+						subSlices[i] = comp.InsertCommit(round, subSliceName, ctx.Size, col.IsBase())
 					} else {
 						subSlices[i] = comp.Columns.GetHandle(subSliceName)
 						logrus.Infof("Reusing existing subsliced column: %v", subSliceName)

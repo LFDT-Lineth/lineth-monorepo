@@ -2,6 +2,7 @@ package verifiercol
 
 import (
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/accessors"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -41,10 +42,10 @@ func NewFromIntVecCoin(comp *wizard.CompiledIOP, info coin.Info, ops ...FivcOp) 
 	}
 
 	if settings.padding.IsPadded {
-		return NewFromAccessors(access, field.Zero(), utils.NextPowerOfTwo(len(access)))
+		return NewFromAccessors(access, fext.Zero(), utils.NextPowerOfTwo(len(access)))
 	}
 
-	return NewFromAccessors(access, field.Zero(), len(access))
+	return NewFromAccessors(access, fext.Zero(), len(access))
 }
 
 // Passes a padding value to the Fivc

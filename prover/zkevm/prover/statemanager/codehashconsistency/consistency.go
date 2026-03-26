@@ -4,6 +4,9 @@
 package codehashconsistency
 
 import (
+	"slices"
+
+	poseidon2 "github.com/consensys/linea-monorepo/prover/crypto/poseidon2_koalabear"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/byte32cmp"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -11,7 +14,7 @@ import (
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
 	commonconstraints "github.com/consensys/linea-monorepo/prover/zkevm/prover/common/common_constraints"
-	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager/mimccodehash"
+	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager/lineacodehash"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager/statesummary"
 )
 
@@ -25,24 +28,24 @@ import (
 // ensures that code exposed in the ROM module is the same as what is in the
 // state.
 type Module struct {
-	StateSummaryInput *statesummary.Module
-	MimcCodeHashInput *mimccodehash.Module
+	StateSummaryModule  *statesummary.Module
+	LineaCodeHashModule *lineacodehash.Module
 
-	IsActive        ifaces.Column
-	StateSumKeccak  common.HiLoColumns
-	StateSumMiMC    ifaces.Column
-	StateSumOngoing ifaces.Column
-	RomKeccak       common.HiLoColumns
-	RomMiMC         ifaces.Column
-	RomOngoing      ifaces.Column
+	IsActive          ifaces.Column
+	StateSumKeccak    common.HiLoColumns
+	StateSumLineaHash [poseidon2.BlockSize]ifaces.Column // Poseidon2 code hash
+	StateSumOngoing   ifaces.Column
+	RomKeccak         common.HiLoColumns
+	RomLineaHash      [poseidon2.BlockSize]ifaces.Column // Poseidon2 code hash
+	RomOngoing        ifaces.Column
 
 	StateSumKeccakLimbs byte32cmp.LimbColumns
 	RomKeccakLimbs      byte32cmp.LimbColumns
 
-	CptStateSumKeccakLimbsHi wizard.ProverAction
-	CptStateSumKeccakLimbsLo wizard.ProverAction
-	CptRomKeccakLimbsHi      wizard.ProverAction
-	CptRomKeccakLimbsLo      wizard.ProverAction
+	CptStateSumKeccakLimbsHi [common.NbLimbU128]wizard.ProverAction
+	CptStateSumKeccakLimbsLo [common.NbLimbU128]wizard.ProverAction
+	CptRomKeccakLimbsHi      [common.NbLimbU128]wizard.ProverAction
+	CptRomKeccakLimbsLo      [common.NbLimbU128]wizard.ProverAction
 	CmpStateSumLimbs         wizard.ProverAction
 	CmpRomLimbs              wizard.ProverAction
 	CmpRomVsStateSumLimbs    wizard.ProverAction
@@ -54,49 +57,76 @@ type Module struct {
 
 // NewModule returns a constrained [Module] connecting `ss` with `mch`. `name`
 // is used as a prefix for the name of all the generated columns and constraints.
-func NewModule(comp *wizard.CompiledIOP, name string, ss *statesummary.Module, mch *mimccodehash.Module) Module {
+func NewModule(comp *wizard.CompiledIOP, name string, ss *statesummary.Module, chm *lineacodehash.Module) Module {
 
 	name = name + "_CODEHASH_CONSISTENCY"
 	size := 1 << 16
 
 	ch := Module{
-		StateSummaryInput: ss,
-		MimcCodeHashInput: mch,
-		IsActive:          comp.InsertCommit(0, ifaces.ColID(name+"_IS_ACTIVE"), size),
-		StateSumKeccak:    common.NewHiLoColumns(comp, size, name+"_STATE_SUMMARY_KECCAK"),
-		RomKeccak:         common.NewHiLoColumns(comp, size, name+"_ROM_KECCAK"),
-		StateSumMiMC:      comp.InsertCommit(0, ifaces.ColID(name+"_STATE_SUMMARY_MIMC"), size),
-		RomMiMC:           comp.InsertCommit(0, ifaces.ColID(name+"_ROM_MIMC"), size),
-		RomOngoing:        comp.InsertCommit(0, ifaces.ColID(name+"_ROM_ONGOING"), size),
-		StateSumOngoing:   comp.InsertCommit(0, ifaces.ColID(name+"_STATE_SUM_ONGOING"), size),
+		StateSummaryModule:  ss,
+		LineaCodeHashModule: chm,
+		IsActive:            comp.InsertCommit(0, ifaces.ColID(name+"_IS_ACTIVE"), size, true),
+		StateSumKeccak:      common.NewHiLoColumns(comp, size, name+"_STATE_SUMMARY_KECCAK"),
+		RomKeccak:           common.NewHiLoColumns(comp, size, name+"_ROM_KECCAK"),
+		RomOngoing:          comp.InsertCommit(0, ifaces.ColID(name+"_ROM_ONGOING"), size, true),
+		StateSumOngoing:     comp.InsertCommit(0, ifaces.ColID(name+"_STATE_SUM_ONGOING"), size, true),
+	}
+
+	for i := range poseidon2.BlockSize {
+		ch.StateSumLineaHash[i] = comp.InsertCommit(0, ifaces.ColIDf("%v_STATE_SUMMARY_POSEIDON_%v", name, i), size, true)
+		ch.RomLineaHash[i] = comp.InsertCommit(0, ifaces.ColIDf("%v_ROM_POSEIDON_%v", name, i), size, true)
 	}
 
 	commonconstraints.MustBeActivationColumns(comp, ch.IsActive)
 	commonconstraints.MustBeActivationColumns(comp, ch.RomOngoing)
 	commonconstraints.MustBeActivationColumns(comp, ch.StateSumOngoing)
 
-	commonconstraints.MustZeroWhenInactive(comp, ch.IsActive,
-		ch.StateSumKeccak.Hi,
-		ch.StateSumKeccak.Lo,
-		ch.StateSumMiMC,
+	chCols := []ifaces.Column{
 		ch.StateSumOngoing,
-		ch.RomKeccak.Hi,
-		ch.RomKeccak.Lo,
-		ch.RomMiMC,
 		ch.RomOngoing,
-	)
+	}
+	chCols = append(chCols, ch.StateSumKeccak.Hi[:]...)
+	chCols = append(chCols, ch.StateSumKeccak.Lo[:]...)
+	chCols = append(chCols, ch.StateSumLineaHash[:]...)
+	chCols = append(chCols, ch.RomKeccak.Hi[:]...)
+	chCols = append(chCols, ch.RomKeccak.Lo[:]...)
+	chCols = append(chCols, ch.RomLineaHash[:]...)
+
+	commonconstraints.MustZeroWhenInactive(comp, ch.IsActive, chCols...)
 
 	var (
-		romDecreased                     ifaces.Column
-		stateSumDecreased                ifaces.Column
-		romLimbsHi, romLimbsLo           byte32cmp.LimbColumns
-		stateSumLimbsHi, stateSumLimbsLo byte32cmp.LimbColumns
+		romDecreased      ifaces.Column
+		stateSumDecreased ifaces.Column
+		romLimbsHi        = byte32cmp.LimbColumns{LimbBitSize: 16, IsBigEndian: false}
+		romLimbsLo        = byte32cmp.LimbColumns{LimbBitSize: 16, IsBigEndian: false}
+		stateSumLimbsHi   = byte32cmp.LimbColumns{LimbBitSize: 16, IsBigEndian: false}
+		stateSumLimbsLo   = byte32cmp.LimbColumns{LimbBitSize: 16, IsBigEndian: false}
 	)
 
-	romLimbsHi, ch.CptRomKeccakLimbsHi = byte32cmp.Decompose(comp, ch.RomKeccak.Hi, 8, 16)
-	romLimbsLo, ch.CptRomKeccakLimbsLo = byte32cmp.Decompose(comp, ch.RomKeccak.Lo, 8, 16)
-	stateSumLimbsHi, ch.CptStateSumKeccakLimbsHi = byte32cmp.Decompose(comp, ch.StateSumKeccak.Hi, 8, 16)
-	stateSumLimbsLo, ch.CptStateSumKeccakLimbsLo = byte32cmp.Decompose(comp, ch.StateSumKeccak.Lo, 8, 16)
+	romLimbsLo.Limbs = make([]ifaces.Column, common.NbLimbU128)
+	romLimbsHi.Limbs = make([]ifaces.Column, common.NbLimbU128)
+	stateSumLimbsHi.Limbs = make([]ifaces.Column, common.NbLimbU128)
+	stateSumLimbsLo.Limbs = make([]ifaces.Column, common.NbLimbU128)
+	for i := range common.NbLimbU128 {
+		ind := common.NbLimbU128 - 1 - i
+
+		romLimbHi, cptRomKeccakLimbsHi := byte32cmp.Decompose(comp, ch.RomKeccak.Hi[i], 1, 16)
+		romLimbsHi.Limbs[ind] = romLimbHi.Limbs[0]
+		ch.CptRomKeccakLimbsHi[i] = cptRomKeccakLimbsHi
+
+		romLimbLo, cptRomKeccakLimbsLo := byte32cmp.Decompose(comp, ch.RomKeccak.Lo[i], 1, 16)
+		romLimbsLo.Limbs[ind] = romLimbLo.Limbs[0]
+		ch.CptRomKeccakLimbsLo[i] = cptRomKeccakLimbsLo
+
+		stateSumLimbHi, cptStateSumKeccakLimbsHi := byte32cmp.Decompose(comp, ch.StateSumKeccak.Hi[i], 1, 16)
+		stateSumLimbsHi.Limbs[ind] = stateSumLimbHi.Limbs[0]
+		ch.CptStateSumKeccakLimbsHi[i] = cptStateSumKeccakLimbsHi
+
+		stateSumLimbLo, cptStateSumKeccakLimbsLo := byte32cmp.Decompose(comp, ch.StateSumKeccak.Lo[i], 1, 16)
+		stateSumLimbsLo.Limbs[ind] = stateSumLimbLo.Limbs[0]
+		ch.CptStateSumKeccakLimbsLo[i] = cptStateSumKeccakLimbsLo
+	}
+
 	ch.RomKeccakLimbs = byte32cmp.FuseLimbs(romLimbsLo, romLimbsHi)
 	ch.StateSumKeccakLimbs = byte32cmp.FuseLimbs(stateSumLimbsLo, stateSumLimbsHi)
 
@@ -146,14 +176,14 @@ func NewModule(comp *wizard.CompiledIOP, name string, ss *statesummary.Module, m
 	// 	else:
 	// 		assert ssMustBeConstant == 0
 	// 	}
-	//
+
 	// The reciproqual constraint is enforced over the ROM module.
 	comp.InsertGlobal(
 		0,
 		ifaces.QueryID(name+"_STATE_SUM_STAY_SAME"),
 		sym.Mul(
 			column.Shift(ch.StateSumOngoing, 1),
-			ch.StateSumMiMC, // For delegation account, the state-summary may be zero and that's ok
+			ch.StateSumLineaHash[0], // For delegation account, the state-summary may be zero and that's ok
 			sym.Sub(
 				column.Shift(ch.StateSumIsConst, 1),
 				sym.Mul(
@@ -170,6 +200,7 @@ func NewModule(comp *wizard.CompiledIOP, name string, ss *statesummary.Module, m
 		0,
 		ifaces.QueryID(name+"_ROM_STAY_SAME"),
 		sym.Mul(
+			ch.StateSumKeccakLimbs.Limbs[0],
 			column.Shift(ch.RomOngoing, 1),
 			sym.Sub(
 				column.Shift(ch.RomIsConst, 1),
@@ -183,35 +214,45 @@ func NewModule(comp *wizard.CompiledIOP, name string, ss *statesummary.Module, m
 		),
 	)
 
-	comp.InsertGlobal(
-		0,
-		ifaces.QueryID(name+"_MIMC_CONSISTENCY"),
-		sym.Mul(
-			ch.StateSumIsEqRom,
-			sym.Sub(ch.RomMiMC, ch.StateSumMiMC),
-		),
+	for i := range poseidon2.BlockSize {
+		comp.InsertGlobal(
+			0,
+			ifaces.QueryIDf("%s_LINEA_CODE_HASH_CONSISTENCY_%d", name, i),
+			sym.Mul(
+				ch.StateSumIsEqRom,
+				sym.Sub(ch.RomLineaHash[i], ch.StateSumLineaHash[i]),
+			),
+		)
+	}
+
+	var (
+		accInitialHashColumns = slices.Concat(
+			ss.Account.Initial.LineaCodeHash[:],
+			ss.Account.Initial.KeccakCodeHash.Hi[:],
+			ss.Account.Initial.KeccakCodeHash.Lo[:],
+		)
+
+		accFinalHashColumns = slices.Concat(
+			ss.Account.Final.LineaCodeHash[:],
+			ss.Account.Final.KeccakCodeHash.Hi[:],
+			ss.Account.Final.KeccakCodeHash.Lo[:],
+		)
+
+		stateSumHashColumns = slices.Concat(
+			ch.StateSumLineaHash[:],
+			ch.StateSumKeccak.Hi[:],
+			ch.StateSumKeccak.Lo[:],
+		)
 	)
 
 	comp.GenericFragmentedConditionalInclusion(
 		0,
 		ifaces.QueryID(name+"_IMPORT_STATE_SUMMARY_BACK"),
 		[][]ifaces.Column{
-			{
-				ss.Account.Initial.MiMCCodeHash,
-				ss.Account.Initial.KeccakCodeHash.Hi,
-				ss.Account.Initial.KeccakCodeHash.Lo,
-			},
-			{
-				ss.Account.Final.MiMCCodeHash,
-				ss.Account.Final.KeccakCodeHash.Hi,
-				ss.Account.Final.KeccakCodeHash.Lo,
-			},
+			accInitialHashColumns,
+			accFinalHashColumns,
 		},
-		[]ifaces.Column{
-			ch.StateSumMiMC,
-			ch.StateSumKeccak.Hi,
-			ch.StateSumKeccak.Lo,
-		},
+		stateSumHashColumns,
 		[]ifaces.Column{
 			ss.Account.Initial.Exists,
 			ss.Account.Final.Exists,
@@ -222,16 +263,8 @@ func NewModule(comp *wizard.CompiledIOP, name string, ss *statesummary.Module, m
 	comp.InsertInclusionDoubleConditional(
 		0,
 		ifaces.QueryID(name+"_IMPORT_STATE_SUMMARY_FORTH_INITIAL"),
-		[]ifaces.Column{
-			ch.StateSumMiMC,
-			ch.StateSumKeccak.Hi,
-			ch.StateSumKeccak.Lo,
-		},
-		[]ifaces.Column{
-			ss.Account.Initial.MiMCCodeHash,
-			ss.Account.Initial.KeccakCodeHash.Hi,
-			ss.Account.Initial.KeccakCodeHash.Lo,
-		},
+		stateSumHashColumns,
+		accInitialHashColumns,
 		ch.StateSumOngoing,
 		ss.Account.Initial.Exists,
 	)
@@ -239,51 +272,36 @@ func NewModule(comp *wizard.CompiledIOP, name string, ss *statesummary.Module, m
 	comp.InsertInclusionDoubleConditional(
 		0,
 		ifaces.QueryID(name+"_IMPORT_STATE_SUMMARY_FORTH_FINAL"),
-		[]ifaces.Column{
-			ch.StateSumMiMC,
-			ch.StateSumKeccak.Hi,
-			ch.StateSumKeccak.Lo,
-		},
-		[]ifaces.Column{
-			ss.Account.Final.MiMCCodeHash,
-			ss.Account.Final.KeccakCodeHash.Hi,
-			ss.Account.Final.KeccakCodeHash.Lo,
-		},
+		stateSumHashColumns,
+		accFinalHashColumns,
 		ch.StateSumOngoing,
 		ss.Account.Final.Exists,
 	)
 
+	var chHashColumns []ifaces.Column
+	chHashColumns = append(chHashColumns, ch.RomLineaHash[:]...)
+	chHashColumns = append(chHashColumns, ch.RomKeccak.Hi[:]...)
+	chHashColumns = append(chHashColumns, ch.RomKeccak.Lo[:]...)
+
+	var mchHashColumns []ifaces.Column
+	mchHashColumns = append(mchHashColumns, chm.NewState[:]...)
+	mchHashColumns = append(mchHashColumns, chm.CodeHash[:]...)
+
 	comp.InsertInclusionDoubleConditional(
 		0,
-		ifaces.QueryID(name+"_IMPORT_MIMC_CODE_HASH_FORTH"),
-		[]ifaces.Column{
-			ch.RomMiMC,
-			ch.RomKeccak.Hi,
-			ch.RomKeccak.Lo,
-		},
-		[]ifaces.Column{
-			mch.NewState,
-			mch.CodeHashHi,
-			mch.CodeHashLo,
-		},
+		ifaces.QueryID(name+"_IMPORT_POSEIDON_CODE_HASH_FORTH"),
+		chHashColumns,
+		mchHashColumns,
 		ch.RomOngoing,
-		mch.IsForConsistency,
+		chm.IsForConsistency,
 	)
 
 	comp.InsertInclusionDoubleConditional(
 		0,
-		ifaces.QueryID(name+"_IMPORT_MIMC_CODE_HASH_BACK"),
-		[]ifaces.Column{
-			mch.NewState,
-			mch.CodeHashHi,
-			mch.CodeHashLo,
-		},
-		[]ifaces.Column{
-			ch.RomMiMC,
-			ch.RomKeccak.Hi,
-			ch.RomKeccak.Lo,
-		},
-		mch.IsForConsistency,
+		ifaces.QueryID(name+"_IMPORT_POSEIDON_CODE_HASH_BACK"),
+		mchHashColumns,
+		chHashColumns,
+		chm.IsForConsistency,
 		ch.RomOngoing,
 	)
 

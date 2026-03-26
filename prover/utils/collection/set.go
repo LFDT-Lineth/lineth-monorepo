@@ -2,8 +2,7 @@ package collection
 
 import (
 	"iter"
-
-	"github.com/consensys/linea-monorepo/prover/utils"
+	"sort"
 )
 
 // A set is an unordered collection addressed by keys, which supports
@@ -67,10 +66,26 @@ func (kv *Set[T]) Clear() {
 
 // SortKeysBy returns sorted keys of the set using the given less function.
 func (kv Set[T]) SortKeysBy(less func(T, T) bool) []T {
-	return utils.SortedKeysOf(kv.Inner, less)
+	return sortedKeysOf(kv.Inner, less)
 }
 
 // Size returns the numbers of keys stored in the set
 func (kv Set[T]) Size() int {
 	return len(kv.Inner)
+}
+
+// sortedKeysOf is a local copy of the utils.SortedKeysOf function to avoid circular import
+func sortedKeysOf[K comparable, V any](m map[K]V, less func(K, K) bool) []K {
+	keys := make([]K, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+
+	// Since the keys of a map are all unique, we don't have to worry
+	// about the duplicates and thus, we don't need a stable sort.
+	sort.Slice(keys, func(i, j int) bool {
+		return less(keys[i], keys[j])
+	})
+
+	return keys
 }

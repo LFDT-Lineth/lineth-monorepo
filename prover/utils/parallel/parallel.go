@@ -10,14 +10,28 @@ import (
 
 // Execute process in parallel the work function
 func Execute(nbIterations int, work func(int, int), maxCpus ...int) {
-
 	nbTasks := runtime.GOMAXPROCS(0)
+
 	if len(maxCpus) == 1 {
 		nbTasks = maxCpus[0]
 		if nbTasks < 1 {
 			nbTasks = 1
 		}
 	}
+
+	// heuristic to avoid creating too many goroutines (experimental, may change)
+	// nbGoRoutines := runtime.NumGoroutine()
+	// nbCpus := runtime.GOMAXPROCS(0) * 4
+	// for nbTasks+nbGoRoutines > nbCpus && nbTasks > 1 {
+	// 	nbTasks--
+	// }
+	nbTasks = max(1, nbTasks)
+
+	if nbTasks == 1 {
+		work(0, nbIterations)
+		return
+	}
+
 	nbIterationsPerCpus := nbIterations / nbTasks
 
 	// more CPUs than tasks: a CPU will work on exactly one iteration
@@ -48,6 +62,8 @@ func Execute(nbIterations int, work func(int, int), maxCpus ...int) {
 		}
 
 		go func() {
+			// runtime.LockOSThread()
+			// defer runtime.UnlockOSThread()
 			// In case the subtask panics, we recover so that we can repanic in
 			// the main goroutine. Simplifying the process of tracing back the
 			// error and allowing to test the panics.

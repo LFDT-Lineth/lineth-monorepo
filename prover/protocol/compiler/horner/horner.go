@@ -1,13 +1,15 @@
 package horner
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
+	"sync"
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -15,7 +17,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils"
-	"github.com/consensys/linea-monorepo/prover/utils/gnarkutil"
+	"github.com/consensys/linea-monorepo/prover/utils/parallel"
 )
 
 // HornerCtx is a compilation artefact generated during the execution of the
@@ -103,6 +105,7 @@ func compileHornerQuery(comp *wizard.CompiledIOP, q *query.Horner) {
 				round,
 				ifaces.ColIDf("HORNER_%v_PART_%v_COLUMN_%v", q.ID, i, j),
 				part.Size(),
+				false,
 			)
 		}
 
@@ -179,69 +182,81 @@ func (a AssignHornerCtx) Run(run *wizard.ProverRuntime) {
 
 	var (
 		params = run.GetHornerParams(a.Q.ID)
-		res    = field.Zero()
+		res    = fext.Zero()
+		lock   sync.Mutex
 	)
 
-	for i, part := range a.Q.Parts {
+	parallel.Execute(len(a.Q.Parts), func(start, end int) {
+		// for i, part := range a.Q.Parts {
+		for i := start; i < end; i++ {
 
-		var (
-			arity        = len(part.Selectors)
-			datas        = make([]smartvectors.SmartVector, arity)
-			selectors    = make([]smartvectors.SmartVector, arity)
-			x            = part.X.GetVal(run)
-			n0           = params.Parts[i].N0
-			count        = 0
-			numRow       = part.Size()
-			acc          = field.Zero()
-			accumulators = make([][]field.Element, arity)
-		)
+			part := a.Q.Parts[i]
 
-		for k := 0; k < arity; k++ {
-			board := part.Coefficients[k].Board()
-			datas[k] = column.EvalExprColumn(run, board)
-			selectors[k] = part.Selectors[k].GetColAssignment(run)
-			accumulators[k] = make([]field.Element, numRow)
-		}
+			var (
+				arity        = len(part.Selectors)
+				datas        = make([]smartvectors.SmartVector, arity)
+				selectors    = make([]smartvectors.SmartVector, arity)
+				x            = part.X.GetValExt(run)
+				n0           = params.Parts[i].N0
+				count        = 0
+				numRow       = part.Size()
+				acc          = fext.Zero()
+				accumulators = make([][]fext.Element, arity)
+			)
 
-		for row := numRow - 1; row >= 0; row-- {
 			for k := 0; k < arity; k++ {
-
-				sel := selectors[k].Get(row)
-				if !(sel.IsZero() || sel.IsOne()) {
-					utils.Panic("selector %v is not binary: %v", part.Selectors[k].GetColID(), sel.String())
-				}
-				if sel.IsOne() {
-					count++
-				}
-
-				acc = computeMicroAccumulate(selectors[k].Get(row), acc, x, datas[k].Get(row))
-				accumulators[k][row] = acc
+				board := part.Coefficients[k].Board()
+				datas[k] = column.EvalExprColumn(run, board)
+				selectors[k] = part.Selectors[k].GetColAssignment(run)
+				accumulators[k] = make([]fext.Element, numRow)
 			}
+
+			for row := numRow - 1; row >= 0; row-- {
+				for k := 0; k < arity; k++ {
+					sel := selectors[k].Get(row)
+
+					if sel.IsOne() {
+						count++
+						p := datas[k].GetExt(row)
+						acc.Mul(&x, &acc)
+						acc.Add(&acc, &p)
+						accumulators[k][row] = acc
+					} else if sel.IsZero() {
+						accumulators[k][row] = acc
+					} else {
+						panic(fmt.Sprintf("selector is non-binary: part=%v selector[%d] row=%d value=%v", part.Name, k, row, sel.String()))
+					}
+				}
+			}
+
+			if n0+count != params.Parts[i].N1 {
+				// To update once we merge with the "code 78" branch as it means that a constraint is not satisfied.
+				utils.Panic("the counting of the 1s in the filter does not match the one in the local-opening: (%v-%v) != %v, part=%v", params.Parts[i].N1, n0, count, part.Name)
+			}
+
+			for k := 0; k < arity; k++ {
+				run.AssignColumn(a.AccumulatingCols[i][k].GetColID(), smartvectors.NewRegularExt(accumulators[k]))
+			}
+
+			tmp := accumulators[arity-1][0]
+			run.AssignLocalPointExt(a.LocOpenings[i].ID, tmp)
+
+			if n0 > 0 {
+				xN0 := new(fext.Element).Exp(x, big.NewInt(int64(n0)))
+				tmp.Mul(&tmp, xN0)
+			}
+
+			if a.Q.Parts[i].SignNegative {
+				tmp.Neg(&tmp)
+			}
+
+			lock.Lock()
+			res.Add(&res, &tmp)
+			lock.Unlock()
 		}
+	})
 
-		if n0+count != params.Parts[i].N1 {
-			// To update once we merge with the "code 78" branch as it means that a constraint is not satisfied.
-			utils.Panic("the counting of the 1s in the filter does not match the one in the local-opening: (%v-%v) != %v, part=%v", params.Parts[i].N1, n0, count, part.Name)
-		}
-
-		for k := 0; k < arity; k++ {
-			run.AssignColumn(a.AccumulatingCols[i][k].GetColID(), smartvectors.NewRegular(accumulators[k]))
-		}
-
-		tmp := accumulators[arity-1][0]
-		run.AssignLocalPoint(a.LocOpenings[i].ID, tmp)
-
-		if n0 > 0 {
-			xN0 := new(field.Element).Exp(x, big.NewInt(int64(n0)))
-			tmp.Mul(&tmp, xN0)
-		}
-
-		if a.Q.Parts[i].SignNegative {
-			tmp.Neg(&tmp)
-		}
-
-		res.Add(&res, &tmp)
-	}
+	// }
 
 	if res != params.FinalResult {
 		utils.Panic("the horner query %v is assigned a final result of %v but we recomputed %v\n", a.Q.ID, res.String(), params.FinalResult.String())
@@ -255,14 +270,22 @@ func (a AssignHornerIP) Run(run *wizard.ProverRuntime) {
 		var (
 			ip        = a.CountingInnerProducts[i]
 			selectors = a.Q.Parts[i].Selectors
-			res       = make([]field.Element, len(selectors))
+			res       = make([]fext.Element, len(selectors))
 		)
 
-		for i, selector := range selectors {
-			sel := selector.GetColAssignment(run).IntoRegVecSaveAlloc()
-			for j := range sel {
-				res[i].Add(&res[i], &sel[j])
+		for j, selector := range selectors {
+			sv := selector.GetColAssignment(run)
+			switch sv := sv.(type) {
+			case *smartvectors.Constant:
+				// we just multiply the constant by the size
+				size := field.NewElement(uint64(sv.Len()))
+				cst := sv.Get(0)
+				res[j].B0.A0.Mul(&cst, &size)
+				continue
 			}
+			sel := sv.IntoRegVecSaveAlloc()
+			vs := field.Vector(sel)
+			res[j].B0.A0 = vs.Sum()
 		}
 
 		run.AssignInnerProduct(ip.ID, res...)
@@ -275,7 +298,7 @@ func (c *CheckHornerResult) Run(run wizard.Runtime) error {
 	var (
 		hornerQuery  = c.Q
 		hornerParams = run.GetHornerParams(hornerQuery.ID)
-		res          = field.Zero()
+		res          = fext.Zero()
 	)
 
 	for i := range c.Q.Parts {
@@ -287,18 +310,11 @@ func (c *CheckHornerResult) Run(run wizard.Runtime) error {
 		)
 
 		for k := range ipQuery.Bs {
-
-			// Note: this check is not purely necessary from the verifier viewpoint. If
-			// the result is not a uint64, then it means the query was malformed: the
-			// result of the inner-product is the inner-product of two binary vectors
-			// and there is no way they are big enough to overflow the 2**64.
-			//
-			// Still, it is useful information as it indicates the protocol is malformed.
-			if !ipParams.Ys[k].IsUint64() {
-				return errors.New("ip result does not fit on a uint64")
+			y := ipParams.Ys[k]
+			if !fext.IsBase(&y) {
+				return fmt.Errorf("the y of the inner product %v is not a base element", ipQuery.ID)
 			}
-
-			ipCount += int(ipParams.Ys[k].Uint64())
+			ipCount += int(y.B0.A0.Uint64())
 		}
 
 		if hornerParams.Parts[i].N0+ipCount != hornerParams.Parts[i].N1 {
@@ -311,13 +327,13 @@ func (c *CheckHornerResult) Run(run wizard.Runtime) error {
 	for i, lo := range c.LocOpenings {
 
 		var (
-			tmp = run.GetLocalPointEvalParams(lo.ID).Y
+			tmp = run.GetLocalPointEvalParams(lo.ID).ExtY
 			n0  = hornerParams.Parts[i].N0
-			x   = hornerQuery.Parts[i].X.GetVal(run)
+			x   = hornerQuery.Parts[i].X.GetValExt(run)
 		)
 
 		if n0 > 0 {
-			xN0 := new(field.Element).Exp(x, big.NewInt(int64(n0)))
+			xN0 := new(fext.Element).Exp(x, big.NewInt(int64(n0)))
 			tmp.Mul(&tmp, xN0)
 		}
 
@@ -336,49 +352,48 @@ func (c *CheckHornerResult) Run(run wizard.Runtime) error {
 }
 
 func (c *CheckHornerResult) RunGnark(api frontend.API, run wizard.GnarkRuntime) {
+	hornerQuery := c.Q
+	hornerParams := run.GetHornerParams(hornerQuery.ID)
 
-	var (
-		hornerQuery  = c.Q
-		hornerParams = run.GetHornerParams(hornerQuery.ID)
-		res          = frontend.Variable(0)
-	)
+	koalaAPI := koalagnark.NewAPI(api)
+	res := koalaAPI.ZeroExt()
 
 	for i := range c.Q.Parts {
 
-		var (
-			ipQuery  = c.CountingInnerProducts[i]
-			ipParams = run.GetInnerProductParams(c.CountingInnerProducts[i].ID)
-			ipCount  = frontend.Variable(0)
-		)
+		ipQuery := c.CountingInnerProducts[i]
+		ipParams := run.GetInnerProductParams(c.CountingInnerProducts[i].ID)
+		ipCount := koalaAPI.ZeroExt()
 
 		for k := range ipQuery.Bs {
-			ipCount = api.Add(ipCount, ipParams.Ys[k])
+			ipCount = koalaAPI.AddExt(ipCount, ipParams.Ys[k])
 		}
 
-		api.AssertIsEqual(api.Add(hornerParams.Parts[i].N0, ipCount), hornerParams.Parts[i].N1)
+		// api.AssertIsEqual(api.Add(hornerParams.Parts[i].N0, ipCount), hornerParams.Parts[i].N1)
+		// TODO @thomas fixme (ext vs base)
+		extN0 := koalagnark.NewExtFromFrontendVar(hornerParams.Parts[i].N0)
+		extN0 = koalaAPI.AddExt(extN0, ipCount)
+		extN1 := koalagnark.NewExtFromFrontendVar(hornerParams.Parts[i].N1)
+		koalaAPI.AssertIsEqualExt(extN0, extN1)
 	}
 
 	// This loop is responsible for checking that the final result is correctly
 	// computed by inspecting the local openings.
 	for i, lo := range c.LocOpenings {
 
-		var (
-			tmp = run.GetLocalPointEvalParams(lo.ID).Y
-			n0  = hornerParams.Parts[i].N0
-			x   = hornerQuery.Parts[i].X.GetFrontendVariable(api, run)
-		)
+		tmp := run.GetLocalPointEvalParams(lo.ID).ExtY
+		n0 := hornerParams.Parts[i].N0
+		x := hornerQuery.Parts[i].X.GetFrontendVariableExt(api, run)
 
-		xN0 := gnarkutil.ExpVariableExponent(api, x, n0, 64)
-		tmp = api.Mul(tmp, xN0)
+		xN0 := koalaAPI.ExpVariableExponentExt(x, n0, 64)
+		tmp = koalaAPI.MulExt(tmp, xN0)
 
 		if hornerQuery.Parts[i].SignNegative {
-			tmp = api.Neg(tmp)
+			tmp = koalaAPI.NegExt(tmp)
 		}
 
-		res = api.Add(res, tmp)
+		res = koalaAPI.AddExt(res, tmp)
 	}
-
-	api.AssertIsEqual(res, hornerParams.FinalResult)
+	koalaAPI.AssertIsEqualExt(res, hornerParams.FinalResult)
 }
 
 func (c *CheckHornerResult) Skip() {
@@ -412,14 +427,14 @@ func microAccumulate(sel, acc, x, p any) *sym.Expression {
 	)
 }
 
-func computeMicroAccumulate(sel, acc, x, p field.Element) field.Element {
+func computeMicroAccumulate(sel field.Element, acc, x, p fext.Element) fext.Element {
 
 	if sel.IsZero() {
 		return acc
 	}
 
 	if sel.IsOne() {
-		var tmp field.Element
+		var tmp fext.Element
 		tmp.Mul(&x, &acc)
 		tmp.Add(&tmp, &p)
 		return tmp

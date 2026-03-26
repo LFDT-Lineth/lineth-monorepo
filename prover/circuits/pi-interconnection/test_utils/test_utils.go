@@ -8,7 +8,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/circuits/internal"
 	"github.com/consensys/linea-monorepo/prover/circuits/internal/test_utils"
 	pi_interconnection "github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection"
-	blobtesting "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1/test_utils"
+	blobtesting "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v2/test_utils"
 
 	public_input "github.com/consensys/linea-monorepo/prover/public-input"
 	"github.com/consensys/linea-monorepo/prover/utils"
@@ -48,8 +48,8 @@ func AssignSingleBlockBlob(t require.TestingT) pi_interconnection.Request {
 	merkleRoots := aggregation.PackInMiniTrees(test_utils.BlocksToHex(execReq.L2MessageHashes))
 
 	return pi_interconnection.Request{
-		Decompressions: []blobsubmission.Response{*blobResp},
-		Executions:     []public_input.Execution{execReq},
+		DataAvailabilities: []blobsubmission.Response{*blobResp},
+		Executions:         []public_input.Execution{execReq},
 		Aggregation: public_input.Aggregation{
 			FinalShnarf:                             blobResp.ExpectedShnarf,
 			ParentAggregationFinalShnarf:            blobReq.PrevShnarf,

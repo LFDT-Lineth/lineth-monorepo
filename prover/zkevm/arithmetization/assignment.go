@@ -6,7 +6,7 @@ import (
 
 	"github.com/consensys/go-corset/pkg/ir/air"
 	"github.com/consensys/go-corset/pkg/trace"
-	"github.com/consensys/go-corset/pkg/util/field/bls12_377"
+	"github.com/consensys/go-corset/pkg/util/field/koalabear"
 	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
@@ -19,7 +19,7 @@ import (
 
 // ReadExpandedTraces parses the provided trace file, expands it and returns the
 // corset object holding the expanded traces.
-func AssignFromLtTraces(run *wizard.ProverRuntime, schema *air.Schema[bls12_377.Element], expTraces trace.Trace[bls12_377.Element], moduleLimits *config.TracesLimits) {
+func AssignFromLtTraces(run *wizard.ProverRuntime, schema *air.Schema[koalabear.Element], expTraces trace.Trace[koalabear.Element], moduleLimits *config.TracesLimits) {
 
 	// This loops checks the module assignment to see if we have created a 77
 	// error.
@@ -68,7 +68,6 @@ func AssignFromLtTraces(run *wizard.ProverRuntime, schema *air.Schema[bls12_377.
 	for modId := range expTraces.Width() {
 		var trMod = expTraces.Module(modId)
 		// Iterate each column in module
-
 		parallel.Execute(int(trMod.Width()), func(start, stop int) {
 			for id := start; id < stop; id++ {
 
@@ -76,7 +75,7 @@ func AssignFromLtTraces(run *wizard.ProverRuntime, schema *air.Schema[bls12_377.
 					col     = trMod.Column(uint(id))
 					name    = ifaces.ColID(wizardName(trMod.Name().String(), col.Name()))
 					wCol    = run.Spec.Columns.GetHandle(name)
-					padding = col.Padding()
+					padding field.Element
 					data    = col.Data()
 				)
 
@@ -86,10 +85,13 @@ func AssignFromLtTraces(run *wizard.ProverRuntime, schema *air.Schema[bls12_377.
 
 				plain := make([]field.Element, data.Len())
 				for i := range plain {
-					plain[i] = data.Get(uint(i)).Element
+					var ith field.Element
+					plain[i] = *ith.SetBytes(data.Get(uint(i)).Bytes())
 				}
-
-				run.AssignColumn(ifaces.ColID(name), smartvectors.LeftPadded(plain, padding.Element, wCol.Size()))
+				// Configure padding value
+				padding.SetBytes(col.Padding().Bytes())
+				// Done
+				run.AssignColumn(ifaces.ColID(name), smartvectors.LeftPadded(plain, padding, wCol.Size()))
 			}
 		})
 	}

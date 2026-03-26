@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/crypto/fiatshamir"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/google/uuid"
 )
@@ -72,8 +72,9 @@ type info struct {
 type Type int
 
 const (
-	Field Type = iota
+	_ Type = iota
 	IntegerVec
+	FieldExt
 	FieldFromSeed
 )
 
@@ -91,8 +92,8 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 		return fmt.Errorf("could not parse Type as integer: %w, got `%v`", err, string(b))
 	}
 
-	if n < 0 || Type(n) > IntegerVec {
-		return fmt.Errorf("could not parse the integer `%v` as Type, must be in range [0, 1]", n)
+	if n < 0 || n > int64(IntegerVec) {
+		return fmt.Errorf("could not parse the integer `%v` as Type, must be in range [0, %d]", n, IntegerVec)
 	}
 
 	*t = Type(n)
@@ -102,28 +103,36 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 /*
 Sample a random coin, according to its `spec`
 */
-func (info *Info) Sample(fs *fiatshamir.State, seed field.Element) interface{} {
+func (info *Info) Sample(fs fiatshamir.FS, seed field.Octuplet) interface{} {
 	switch info.Type {
-	case Field:
-		return fs.RandomField()
 	case IntegerVec:
 		return fs.RandomManyIntegers(info.Size, info.UpperBound)
+	case FieldExt:
+		return fs.RandomFext()
 	case FieldFromSeed:
 		return fs.RandomFieldFromSeed(seed, string(info.Name))
+
 	}
 	panic("Unreachable")
 }
 
 // SampleGnark samples a random coin in a gnark circuit. The seed can optionally be
 // passed by the caller is used for [FieldFromSeed] coins. The function returns
-func (info *Info) SampleGnark(fs *fiatshamir.GnarkFiatShamir, seed frontend.Variable) interface{} {
+func (info *Info) SampleGnark(fs fiatshamir.GnarkFS, seed koalagnark.Octuplet) interface{} {
 	switch info.Type {
-	case Field:
-		return fs.RandomField()
+
 	case IntegerVec:
 		return fs.RandomManyIntegers(info.Size, info.UpperBound)
+
+	case FieldExt:
+		// TODO@yao: the seed is used to allow we sampling the same randomness in different segments, we will need it when we integrate the work from distrubuted prover
+		return fs.RandomFieldExt()
+
 	case FieldFromSeed:
+		// FieldFromSeed behaves like FieldExt in gnark circuits
+		// GnarkFS doesn't support RandomFieldFromSeed, so we use RandomFieldExt instead
 		return fs.RandomFieldFromSeed(seed, string(info.Name))
+
 	}
 	panic("Unreachable")
 }
@@ -143,13 +152,14 @@ func NewInfo(name Name, type_ Type, round int, size ...int) Info {
 		}
 		infos.Size = size[0]
 		infos.UpperBound = size[1]
-	case Field:
-		if len(size) > 0 {
-			utils.Panic("size for Field")
-		}
 	case FieldFromSeed:
 		if len(size) > 0 {
 			utils.Panic("size for Field")
+		}
+
+	case FieldExt:
+		if len(size) > 0 {
+			utils.Panic("size for FieldExt")
 		}
 	default:
 		panic("unreachable")

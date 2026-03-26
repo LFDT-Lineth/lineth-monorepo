@@ -28,7 +28,7 @@ func TestCoinRounds(t *testing.T) {
 
 	define := func(b *wizard.Builder) {
 		_ = b.RegisterCommit("p", 64)
-		c = b.RegisterRandomCoin("c", coin.Field)
+		c = b.RegisterRandomCoin("c", coin.FieldExt)
 		a = accessors.NewFromCoin(c)
 	}
 

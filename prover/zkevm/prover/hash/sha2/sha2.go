@@ -9,6 +9,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/zkevm/arithmetization"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/generic"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/importpad"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/packing"
@@ -17,19 +18,19 @@ import (
 type Settings struct {
 	MaxNumSha2F                    int
 	NbInstancesPerCircuitSha2Block int
+	IsHashLoAssigner               *dedicated.ManuallyShifted
 }
 
 // Sha2SingleProviderInput stores the inputs for [newSha2SingleProvider]
 type Sha2SingleProviderInput struct {
 	Settings
-	Provider         generic.GenericByteModule
-	IsHashLoAssigner *dedicated.ManuallyShifted
+	Provider generic.GenericByteModule
 }
 
 // Sha2SingleProvider stores the hash result and [wizard.ProverAction] of the submodules.
 type Sha2SingleProvider struct {
-	Inputs         *Sha2SingleProviderInput
-	HashHi, HashLo ifaces.Column
+	Inputs *Sha2SingleProviderInput
+	Hash   [numLimbsPerState]ifaces.Column
 	// indicates the active part of HashHi/HashLo
 	IsActive    ifaces.Column
 	MaxNumSha2F int
@@ -41,26 +42,26 @@ type Sha2SingleProvider struct {
 }
 
 // NewSha2ZkEvm constructs the Sha2 module as used in Linea's zkEVM.
-func NewSha2ZkEvm(comp *wizard.CompiledIOP, s Settings) *Sha2SingleProvider {
+func NewSha2ZkEvm(comp *wizard.CompiledIOP, s Settings, arith *arithmetization.Arithmetization) *Sha2SingleProvider {
 
 	sha2ProviderInput := Sha2SingleProviderInput{
 		Settings: s,
 		Provider: generic.GenericByteModule{
 			Data: generic.GenDataModule{
-				HashNum: comp.Columns.GetHandle("shakiradata.ID"),
-				Index:   comp.Columns.GetHandle("shakiradata.INDEX"),
-				Limb:    comp.Columns.GetHandle("shakiradata.LIMB"),
-				NBytes:  comp.Columns.GetHandle("shakiradata.nBYTES"),
-				ToHash:  comp.Columns.GetHandle("shakiradata.IS_SHA2_DATA"),
+				HashNum: arith.MashedColumnOf(comp, "shakiradata", "ID"),
+				Index:   arith.MashedColumnOf(comp, "shakiradata", "INDEX"),
+				Limbs:   arith.GetLimbsOfU128Be(comp, "shakiradata", "LIMB"),
+				NBytes:  arith.ColumnOf(comp, "shakiradata", "nBYTES"),
+				ToHash:  arith.ColumnOf(comp, "shakiradata", "IS_SHA2_DATA"),
 			},
 			Info: generic.GenInfoModule{
-				HashNum: comp.Columns.GetHandle("shakiradata.ID"),
-				HashLo:  comp.Columns.GetHandle("shakiradata.LIMB"),
-				HashHi:  comp.Columns.GetHandle("shakiradata.LIMB"),
-				// Before, we usse to pass column.Shift(IsHashHi, -1) but this does
+				HashNum: arith.MashedColumnOf(comp, "shakiradata", "ID"),
+				HashHi:  arith.GetLimbsOfU128Be(comp, "shakiradata", "LIMB"),
+				HashLo:  arith.GetLimbsOfU128Be(comp, "shakiradata", "LIMB"),
+				// Before, we usse to pass column.Shift(IsHash, -1) but this does
 				// not work with the prover distribution as the column is used as
 				// a filter for a projection query.
-				IsHashHi: comp.Columns.GetHandle("shakiradata.SELECTOR_SHA2_RES_HI"),
+				IsHashHi: arith.ColumnOf(comp, "shakiradata", "SELECTOR_SHA2_RES_HI"),
 			},
 		},
 	}
@@ -115,37 +116,41 @@ func newSha2SingleProvider(comp *wizard.CompiledIOP, inp Sha2SingleProviderInput
 			Name:                 "SHA2_OVER_BLOCK",
 			MaxNbBlockPerCirc:    inp.NbInstancesPerCircuitSha2Block,
 			MaxNbCircuit:         utils.DivCeil(maxNumSha2F, inp.NbInstancesPerCircuitSha2Block),
-			PackedUint32:         packing.Repacked.Lanes,
+			PackedUint16:         packing.Repacked.Lanes,
 			Selector:             packing.Repacked.IsLaneActive,
-			IsFirstLaneOfNewHash: packing.Repacked.IsFirstLaneOfNewHash,
+			IsFirstLaneOfNewHash: packing.Repacked.IsBeginningOfNewHash,
 		}
-		cSha2 = newSha2BlockModule(comp, cSha2Inp).WithCircuit(comp)
+		cSha2 = newSha2BlockModule(comp, cSha2Inp).WithCircuit(comp, query.PlonkRangeCheckOption(16, 1, true))
 	)
 
 	comp.InsertProjection("SHA2_RES_HI",
-		query.ProjectionInput{ColumnA: []ifaces.Column{cSha2.HashHi},
-			ColumnB: []ifaces.Column{inp.Provider.Info.HashHi},
+		query.ProjectionInput{
+			ColumnA: cSha2.Hash[:numLimbsPerState/2],
+			ColumnB: inp.Provider.Info.HashHi.GetLimbs(),
 			FilterA: cSha2.IsEffFirstLaneOfNewHash,
-			FilterB: inp.Provider.Info.IsHashHi})
+			FilterB: inp.Provider.Info.IsHashHi,
+		},
+	)
 
 	comp.InsertProjection("SHA2_RES_LO",
-		query.ProjectionInput{ColumnA: []ifaces.Column{cSha2.HashLo},
-			ColumnB: []ifaces.Column{inp.Provider.Info.HashLo},
+		query.ProjectionInput{
+			ColumnA: cSha2.Hash[numLimbsPerState/2:],
+			ColumnB: inp.Provider.Info.HashLo.GetLimbs(),
 			FilterA: cSha2.IsEffFirstLaneOfNewHash,
-			FilterB: inp.Provider.Info.IsHashLo})
+			FilterB: inp.Provider.Info.IsHashLo,
+		},
+	)
 
 	// set the module
 	m := &Sha2SingleProvider{
 		Inputs:       &inp,
 		MaxNumSha2F:  maxNumSha2F,
-		HashHi:       cSha2.HashHi,
-		HashLo:       cSha2.HashLo,
+		Hash:         cSha2.Hash,
 		IsActive:     cSha2.IsActive,
 		Pa_importPad: imported,
 		Pa_packing:   packing,
 		Pa_cSha2:     cSha2,
 	}
-
 	return m
 }
 
@@ -153,7 +158,6 @@ func newSha2SingleProvider(comp *wizard.CompiledIOP, inp Sha2SingleProviderInput
 func (m *Sha2SingleProvider) Run(run *wizard.ProverRuntime) {
 
 	m.Inputs.IsHashLoAssigner.Assign(run)
-
 	// assign ImportAndPad module
 	m.Pa_importPad.Run(run)
 	// assign packing module

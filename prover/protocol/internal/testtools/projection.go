@@ -166,6 +166,7 @@ func (tc *ProjectionTestcase) Define(comp *wizard.CompiledIOP) {
 			0,
 			formatName[ifaces.ColID]("Projection", tc.Name, "filterA", i),
 			tc.FilterA[i].Len(),
+			true,
 		))
 
 		columnsA := make([]ifaces.Column, len(tc.As[i]))
@@ -174,6 +175,7 @@ func (tc *ProjectionTestcase) Define(comp *wizard.CompiledIOP) {
 				0,
 				formatName[ifaces.ColID]("Projection", tc.Name, "A", i, j),
 				tc.As[i][j].Len(),
+				smartvectors.IsBase(tc.As[i][j]),
 			)
 		}
 
@@ -186,6 +188,7 @@ func (tc *ProjectionTestcase) Define(comp *wizard.CompiledIOP) {
 			0,
 			formatName[ifaces.ColID]("Projection", tc.Name, "filterB", i),
 			tc.FilterB[i].Len(),
+			true,
 		))
 
 		columnsB := make([]ifaces.Column, len(tc.Bs[i]))
@@ -194,6 +197,7 @@ func (tc *ProjectionTestcase) Define(comp *wizard.CompiledIOP) {
 				0,
 				formatName[ifaces.ColID]("Projection", tc.Name, "B", i, j),
 				tc.Bs[i][j].Len(),
+				smartvectors.IsBase(tc.Bs[i][j]),
 			)
 		}
 

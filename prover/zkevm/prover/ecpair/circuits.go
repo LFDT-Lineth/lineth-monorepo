@@ -8,9 +8,10 @@ import (
 	"github.com/consensys/gnark/std/algebra/emulated/fields_bn254"
 	"github.com/consensys/gnark/std/algebra/emulated/sw_bn254"
 	"github.com/consensys/gnark/std/evmprecompiles"
-	"github.com/consensys/gnark/std/math/bitslice"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/emulated/emparams"
+	"github.com/consensys/linea-monorepo/prover/utils/gnarkutil"
+	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
 )
 
 var fpParams sw_bn254.BaseField
@@ -20,132 +21,74 @@ type (
 	fpElement = emulated.Element[emparams.BN254Fp]
 )
 
-// G1ElementWizard represents G1 element as Wizard limbs (2 limbs of 128 bits)
+// G1ElementWizard represents G1 element as Wizard limbs (8 columns, 2 limbs of 128 bits)
 type G1ElementWizard struct {
-	P [nbG1Limbs]frontend.Variable
+	PxHi, PxLo [common.NbLimbU128]frontend.Variable
+	PyHi, PyLo [common.NbLimbU128]frontend.Variable
 }
 
 // ToG1Element converts G1ElementWizard to G1Affine used in circuit
 func (c *G1ElementWizard) ToG1Element(api frontend.API, fp *emulated.Field[sw_bn254.BaseField]) sw_bn254.G1Affine {
-	PXlimbs := make([]frontend.Variable, fpParams.NbLimbs())
-	PYlimbs := make([]frontend.Variable, fpParams.NbLimbs())
-	PXlimbs[2], PXlimbs[3] = bitslice.Partition(api, c.P[0], 64, bitslice.WithNbDigits(128))
-	PXlimbs[0], PXlimbs[1] = bitslice.Partition(api, c.P[1], 64, bitslice.WithNbDigits(128))
-	PYlimbs[2], PYlimbs[3] = bitslice.Partition(api, c.P[2], 64, bitslice.WithNbDigits(128))
-	PYlimbs[0], PYlimbs[1] = bitslice.Partition(api, c.P[3], 64, bitslice.WithNbDigits(128))
-	PX := fp.NewElement(PXlimbs)
-	PY := fp.NewElement(PYlimbs)
+	Px := gnarkutil.EmulatedFromHiLo(api, fp, c.PxHi[:], c.PxLo[:], 16)
+	Py := gnarkutil.EmulatedFromHiLo(api, fp, c.PyHi[:], c.PyLo[:], 16)
 	P := sw_bn254.G1Affine{
-		X: *PX,
-		Y: *PY,
+		X: *Px,
+		Y: *Py,
 	}
 	return P
 }
 
-// G2ElementWizard represents G2 element as Wizard limbs (4 limbs of 128 bits)
+// G2ElementWizard represents G2 element as Wizard limbs (8 columns, 4 limbs of 16 bits)
 type G2ElementWizard struct {
-	Q [nbG2Limbs]frontend.Variable
+	QxBHi, QxBLo [common.NbLimbU128]frontend.Variable
+	QxAHi, QxALo [common.NbLimbU128]frontend.Variable
+	QyBHi, QyBLo [common.NbLimbU128]frontend.Variable
+	QyAHi, QyALo [common.NbLimbU128]frontend.Variable
 }
 
 // ToG2Element converts G2ElementWizard to G2Affine used in circuit
 func (c *G2ElementWizard) ToG2Element(api frontend.API, fp *emulated.Field[sw_bn254.BaseField]) sw_bn254.G2Affine {
-	QXAlimbs := make([]frontend.Variable, fpParams.NbLimbs())
-	QXBlimbs := make([]frontend.Variable, fpParams.NbLimbs())
-	QYAlimbs := make([]frontend.Variable, fpParams.NbLimbs())
-	QYBlimbs := make([]frontend.Variable, fpParams.NbLimbs())
 
-	// arithmetization provides G2 coordinates in the following order:
-	//   X_Im, X_Re, Y_Im, Y_Re
-	// but in gnark we expect
-	//   X_Re, X_Im, Y_Re, Y_Im
-	// so we need to swap the limbs.
-	QXBlimbs[2], QXBlimbs[3] = bitslice.Partition(api, c.Q[0], 64, bitslice.WithNbDigits(128))
-	QXBlimbs[0], QXBlimbs[1] = bitslice.Partition(api, c.Q[1], 64, bitslice.WithNbDigits(128))
-	QXAlimbs[2], QXAlimbs[3] = bitslice.Partition(api, c.Q[2], 64, bitslice.WithNbDigits(128))
-	QXAlimbs[0], QXAlimbs[1] = bitslice.Partition(api, c.Q[3], 64, bitslice.WithNbDigits(128))
-	QYBlimbs[2], QYBlimbs[3] = bitslice.Partition(api, c.Q[4], 64, bitslice.WithNbDigits(128))
-	QYBlimbs[0], QYBlimbs[1] = bitslice.Partition(api, c.Q[5], 64, bitslice.WithNbDigits(128))
-	QYAlimbs[2], QYAlimbs[3] = bitslice.Partition(api, c.Q[6], 64, bitslice.WithNbDigits(128))
-	QYAlimbs[0], QYAlimbs[1] = bitslice.Partition(api, c.Q[7], 64, bitslice.WithNbDigits(128))
-
-	QXA := fp.NewElement(QXAlimbs)
-	QXB := fp.NewElement(QXBlimbs)
-	QX := fields_bn254.E2{
-		A0: *QXA,
-		A1: *QXB,
+	Qx := fields_bn254.E2{
+		A0: *gnarkutil.EmulatedFromHiLo(api, fp, c.QxAHi[:], c.QxALo[:], 16),
+		A1: *gnarkutil.EmulatedFromHiLo(api, fp, c.QxBHi[:], c.QxBLo[:], 16),
 	}
-	QYA := fp.NewElement(QYAlimbs)
-	QYB := fp.NewElement(QYBlimbs)
-	QY := fields_bn254.E2{
-		A0: *QYA,
-		A1: *QYB,
+
+	Qy := fields_bn254.E2{
+		A0: *gnarkutil.EmulatedFromHiLo(api, fp, c.QyAHi[:], c.QyALo[:], 16),
+		A1: *gnarkutil.EmulatedFromHiLo(api, fp, c.QyBHi[:], c.QyBLo[:], 16),
 	}
 
 	var Q sw_bn254.G2Affine
-	Q.P.X = QX
-	Q.P.Y = QY
+	Q.P.X = Qx
+	Q.P.Y = Qy
 
 	return Q
 }
 
 // GtElementWizard represents Gt element as Wizard limbs (24 limbs of 128 bits)
 type GtElementWizard struct {
-	T [nbGtLimbs]frontend.Variable
+	// T represents the coordinates of the Gt element. They match the coordinates
+	// of the Gt element on Ethereum but not on gnark.
+	T [nbGtLimbs][common.NbLimbU128]frontend.Variable
 }
 
 // ToGtElement converts GtElementWizard to target group element used in circuit
 func (c *GtElementWizard) ToGtElement(api frontend.API, fp *emulated.Field[sw_bn254.BaseField]) sw_bn254.GTEl {
-	C0B0XLimbs := make([]frontend.Variable, fpParams.NbLimbs())
-	C0B0YLimbs := make([]frontend.Variable, fpParams.NbLimbs())
-	C0B1XLimbs := make([]frontend.Variable, fpParams.NbLimbs())
-	C0B1YLimbs := make([]frontend.Variable, fpParams.NbLimbs())
-	C0B2XLimbs := make([]frontend.Variable, fpParams.NbLimbs())
-	C0B2YLimbs := make([]frontend.Variable, fpParams.NbLimbs())
-	C1B0XLimbs := make([]frontend.Variable, fpParams.NbLimbs())
-	C1B0YLimbs := make([]frontend.Variable, fpParams.NbLimbs())
-	C1B1XLimbs := make([]frontend.Variable, fpParams.NbLimbs())
-	C1B1YLimbs := make([]frontend.Variable, fpParams.NbLimbs())
-	C1B2XLimbs := make([]frontend.Variable, fpParams.NbLimbs())
-	C1B2YLimbs := make([]frontend.Variable, fpParams.NbLimbs())
-
-	C0B0XLimbs[2], C0B0XLimbs[3] = bitslice.Partition(api, c.T[0], 64, bitslice.WithNbDigits(128))
-	C0B0XLimbs[0], C0B0XLimbs[1] = bitslice.Partition(api, c.T[1], 64, bitslice.WithNbDigits(128))
-	C0B0YLimbs[2], C0B0YLimbs[3] = bitslice.Partition(api, c.T[2], 64, bitslice.WithNbDigits(128))
-	C0B0YLimbs[0], C0B0YLimbs[1] = bitslice.Partition(api, c.T[3], 64, bitslice.WithNbDigits(128))
-	C0B1XLimbs[2], C0B1XLimbs[3] = bitslice.Partition(api, c.T[4], 64, bitslice.WithNbDigits(128))
-	C0B1XLimbs[0], C0B1XLimbs[1] = bitslice.Partition(api, c.T[5], 64, bitslice.WithNbDigits(128))
-	C0B1YLimbs[2], C0B1YLimbs[3] = bitslice.Partition(api, c.T[6], 64, bitslice.WithNbDigits(128))
-	C0B1YLimbs[0], C0B1YLimbs[1] = bitslice.Partition(api, c.T[7], 64, bitslice.WithNbDigits(128))
-	C0B2XLimbs[2], C0B2XLimbs[3] = bitslice.Partition(api, c.T[8], 64, bitslice.WithNbDigits(128))
-	C0B2XLimbs[0], C0B2XLimbs[1] = bitslice.Partition(api, c.T[9], 64, bitslice.WithNbDigits(128))
-	C0B2YLimbs[2], C0B2YLimbs[3] = bitslice.Partition(api, c.T[10], 64, bitslice.WithNbDigits(128))
-	C0B2YLimbs[0], C0B2YLimbs[1] = bitslice.Partition(api, c.T[11], 64, bitslice.WithNbDigits(128))
-	C1B0XLimbs[2], C1B0XLimbs[3] = bitslice.Partition(api, c.T[12], 64, bitslice.WithNbDigits(128))
-	C1B0XLimbs[0], C1B0XLimbs[1] = bitslice.Partition(api, c.T[13], 64, bitslice.WithNbDigits(128))
-	C1B0YLimbs[2], C1B0YLimbs[3] = bitslice.Partition(api, c.T[14], 64, bitslice.WithNbDigits(128))
-	C1B0YLimbs[0], C1B0YLimbs[1] = bitslice.Partition(api, c.T[15], 64, bitslice.WithNbDigits(128))
-	C1B1XLimbs[2], C1B1XLimbs[3] = bitslice.Partition(api, c.T[16], 64, bitslice.WithNbDigits(128))
-	C1B1XLimbs[0], C1B1XLimbs[1] = bitslice.Partition(api, c.T[17], 64, bitslice.WithNbDigits(128))
-	C1B1YLimbs[2], C1B1YLimbs[3] = bitslice.Partition(api, c.T[18], 64, bitslice.WithNbDigits(128))
-	C1B1YLimbs[0], C1B1YLimbs[1] = bitslice.Partition(api, c.T[19], 64, bitslice.WithNbDigits(128))
-	C1B2XLimbs[2], C1B2XLimbs[3] = bitslice.Partition(api, c.T[20], 64, bitslice.WithNbDigits(128))
-	C1B2XLimbs[0], C1B2XLimbs[1] = bitslice.Partition(api, c.T[21], 64, bitslice.WithNbDigits(128))
-	C1B2YLimbs[2], C1B2YLimbs[3] = bitslice.Partition(api, c.T[22], 64, bitslice.WithNbDigits(128))
-	C1B2YLimbs[0], C1B2YLimbs[1] = bitslice.Partition(api, c.T[23], 64, bitslice.WithNbDigits(128))
 
 	e12Tower := [12]*fpElement{
-		fp.NewElement(C0B0XLimbs),
-		fp.NewElement(C0B0YLimbs),
-		fp.NewElement(C0B1XLimbs),
-		fp.NewElement(C0B1YLimbs),
-		fp.NewElement(C0B2XLimbs),
-		fp.NewElement(C0B2YLimbs),
-		fp.NewElement(C1B0XLimbs),
-		fp.NewElement(C1B0YLimbs),
-		fp.NewElement(C1B1XLimbs),
-		fp.NewElement(C1B1YLimbs),
-		fp.NewElement(C1B2XLimbs),
-		fp.NewElement(C1B2YLimbs),
+		gnarkutil.EmulatedFromHiLo(api, fp, c.T[0][:], c.T[1][:], 16),
+		gnarkutil.EmulatedFromHiLo(api, fp, c.T[2][:], c.T[3][:], 16),
+		gnarkutil.EmulatedFromHiLo(api, fp, c.T[4][:], c.T[5][:], 16),
+		gnarkutil.EmulatedFromHiLo(api, fp, c.T[6][:], c.T[7][:], 16),
+		gnarkutil.EmulatedFromHiLo(api, fp, c.T[8][:], c.T[9][:], 16),
+		gnarkutil.EmulatedFromHiLo(api, fp, c.T[10][:], c.T[11][:], 16),
+		gnarkutil.EmulatedFromHiLo(api, fp, c.T[12][:], c.T[13][:], 16),
+		gnarkutil.EmulatedFromHiLo(api, fp, c.T[14][:], c.T[15][:], 16),
+		gnarkutil.EmulatedFromHiLo(api, fp, c.T[16][:], c.T[17][:], 16),
+		gnarkutil.EmulatedFromHiLo(api, fp, c.T[18][:], c.T[19][:], 16),
+		gnarkutil.EmulatedFromHiLo(api, fp, c.T[20][:], c.T[21][:], 16),
+		gnarkutil.EmulatedFromHiLo(api, fp, c.T[22][:], c.T[23][:], 16),
 	}
 
 	return intoGtNoTower(fp, e12Tower)
@@ -183,18 +126,23 @@ func (c *MultiG2GroupcheckCircuit) Define(api frontend.API) error {
 
 // G2GroupCheckInstance is a single instance of G2 group check.
 type G2GroupCheckInstance struct {
-	Q         G2ElementWizard
-	IsSuccess frontend.Variable
+	Q G2ElementWizard
+	// IsSuccess is true if the point is on G2. It is formatted either as
+	// [1, 0, 0, 0, 0, 0, 0, 0] or [0, 0, 0, 0, 0, 0, 0, 0] as it is in LE
+	// limb format.
+	IsSuccess [common.NbLimbU128]frontend.Variable
 }
 
 func (c *G2GroupCheckInstance) Check(api frontend.API, fp *emulated.Field[sw_bn254.BaseField], pairing *sw_bn254.Pairing) error {
 	Q := c.Q.ToG2Element(api, fp)
-
-	evmprecompiles.ECPairIsOnG2(api, &Q, c.IsSuccess)
+	evmprecompiles.ECPairIsOnG2(api, &Q, c.IsSuccess[0])
+	for i := 1; i < common.NbLimbU128; i++ {
+		api.AssertIsEqual(c.IsSuccess[i], 0)
+	}
 	return nil
 }
 
-// MultiG1GroupcheckCircuit is a circuit that checks multiple Miller loop
+// MultiMillerLoopMulCircuit is a circuit that checks multiple Miller loop
 // computation correctness. Use [newMultiMillerLoopMulCircuit] to create a new
 // instance with bounded number of allowed checks.
 type MultiMillerLoopMulCircuit struct {
@@ -274,19 +222,29 @@ func (c *MultiMillerLoopFinalExpCircuit) Define(api frontend.API) error {
 // MillerLoopFinalExpInstance is a single instance of Miller loop and final
 // exponentiation check.
 type MillerLoopFinalExpInstance struct {
-	Prev     GtElementWizard
-	P        G1ElementWizard
-	Q        G2ElementWizard
-	Expected [2]frontend.Variable
+	Prev GtElementWizard
+	P    G1ElementWizard
+	Q    G2ElementWizard
+	// Expected is the expected result of the final exponentiation. The result
+	// is over two limbs of 128 bits but it stores only a binary value.
+	ExpectedHi, ExpectedLo [common.NbLimbU128]frontend.Variable
 }
 
 func (c *MillerLoopFinalExpInstance) Check(api frontend.API, fp *emulated.Field[sw_bn254.BaseField], pairing *sw_bn254.Pairing) error {
 	P := c.P.ToG1Element(api, fp)
 	Q := c.Q.ToG2Element(api, fp)
 	prev := c.Prev.ToGtElement(api, fp)
-	api.AssertIsEqual(c.Expected[0], 0)
 
-	return evmprecompiles.ECPairMillerLoopAndFinalExpCheck(api, &prev, &P, &Q, c.Expected[1])
+	for _, l := range c.ExpectedHi[:] {
+		api.AssertIsEqual(l, 0)
+	}
+
+	// Only the first limb corresponds to the success bit
+	for _, l := range c.ExpectedLo[1:] {
+		api.AssertIsEqual(l, 0)
+	}
+
+	return evmprecompiles.ECPairMillerLoopAndFinalExpCheck(api, &prev, &P, &Q, c.ExpectedLo[0])
 }
 
 // intoGtNoTower converts an E12 element as in the outputs of the pairing

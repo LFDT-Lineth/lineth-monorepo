@@ -3,7 +3,6 @@ package common
 import (
 	"math/big"
 
-	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/utils/types"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager/mock"
 )
@@ -21,8 +20,8 @@ type TestContext struct {
 }
 
 func InitializeContext(initialBlock int) *TestContext {
-	fieldOne := field.One()
-	oneBytes := fieldOne.Bytes()
+	// fieldOne := field.One()
+	// oneBytes := fieldOne.Bytes()
 	var (
 		addresses = []types.EthAddress{
 			types.DummyAddress(32),
@@ -43,15 +42,15 @@ func InitializeContext(initialBlock int) *TestContext {
 			types.DummyFullByte(2002),
 			types.DummyFullByte(2012),
 			types.DummyFullByte(2023),
-			oneBytes,
+			types.DummyFullByte(1),
 		}
 	)
 
 	state := mock.State{}
 	state.InsertEOA(addresses[0], 0, big.NewInt(400))
 	state.InsertEOA(addresses[1], 0, big.NewInt(200))
-	state.InsertContract(addresses[2], types.DummyBytes32(67), types.DummyFullByte(56), 100)
-	state.InsertContract(addresses[3], types.DummyBytes32(76), types.DummyFullByte(57), 102)
+	state.InsertContract(addresses[2], types.DummyKoalaOctuplet(67), types.DummyFullByte(56), 100)
+	state.InsertContract(addresses[3], types.DummyKoalaOctuplet(76), types.DummyFullByte(57), 102)
 	state.SetStorage(addresses[2], storageKeys[0], storageValues[0])
 	state.SetStorage(addresses[2], storageKeys[1], storageValues[1])
 	state.SetStorage(addresses[3], storageKeys[2], storageValues[2])
@@ -81,13 +80,15 @@ func InitializeContext(initialBlock int) *TestContext {
 		{
 			Explainer: "Reading two contracts",
 			StateLogsGens: func(initState mock.State) [][]mock.StateAccessLog {
+				// Note: addresses are ordered by their Poseidon2 hash (not raw value)
+				// addresses[3] hash < addresses[2] hash in Poseidon2
 				return mock.NewStateLogBuilder(initialBlock, initState).
-					WithAddress(addresses[2]).
+					WithAddress(addresses[3]).
 					ReadStorage(storageKeys[0]).
 					ReadStorage(storageKeys[1]).
 					ReadStorage(storageKeys[2]).
 					ReadStorage(storageKeys[3]).
-					WithAddress(addresses[3]).
+					WithAddress(addresses[2]).
 					ReadStorage(storageKeys[0]).
 					ReadStorage(storageKeys[1]).
 					ReadStorage(storageKeys[2]).
@@ -133,7 +134,7 @@ func InitializeContext(initialBlock int) *TestContext {
 					WriteStorage(storageKeys[0], types.FullBytes32{}).
 					ReadStorage(storageKeys[3]).
 					EraseAccount().
-					InitContract(45, types.DummyFullByte(5679), types.DummyBytes32(346)).
+					InitContract(45, types.DummyFullByte(5679), types.DummyKoalaOctuplet(346)).
 					WriteStorage(storageKeys[2], storageValues[1]).
 					ReadStorage(storageKeys[0]).
 					Done()
@@ -151,7 +152,7 @@ func InitializeContext(initialBlock int) *TestContext {
 					EraseAccount().
 					GoNextBlock().
 					WithAddress(addresses[2]).
-					InitContract(45, types.DummyFullByte(5679), types.DummyBytes32(346)).
+					InitContract(45, types.DummyFullByte(5679), types.DummyKoalaOctuplet(346)).
 					WriteStorage(storageKeys[2], storageValues[1]).
 					ReadStorage(storageKeys[0]).
 					Done()
@@ -178,7 +179,7 @@ func InitializeContext(initialBlock int) *TestContext {
 					WriteStorage(storageKeys[0], types.FullBytes32{}).
 					ReadStorage(storageKeys[3]).
 					EraseAccount().
-					InitContract(45, types.DummyFullByte(5679), types.DummyBytes32(346)). // deployment number should now be 1
+					InitContract(45, types.DummyFullByte(5679), types.DummyKoalaOctuplet(346)). // deployment number should now be 1
 					WriteStorage(storageKeys[2], storageValues[1]).
 					ReadStorage(storageKeys[0]). // storageKeys[0] will appear on a row with deployment number 1. minDeplBlock will be 0, and will not be equal to 1 here (meaning that this row might be filtered out depending on the filter)
 					GoNextBlock().
@@ -205,15 +206,15 @@ func InitializeContext(initialBlock int) *TestContext {
 					ReadStorage(storageKeys[3]).
 					EraseAccount(). // Erase account 2
 					GoNextBlock().
-					WithAddress(addresses[2]).                                            // block 2
-					InitContract(45, types.DummyFullByte(5679), types.DummyBytes32(346)). // redeploy at address 2 deplNo 1
+					WithAddress(addresses[2]).                                                  // block 2
+					InitContract(45, types.DummyFullByte(5679), types.DummyKoalaOctuplet(346)). // redeploy at address 2 deplNo 1
 					WriteStorage(storageKeys[2], storageValues[1]).
 					ReadStorage(storageKeys[0]).
 					GoNextBlock().
 					WithAddress(addresses[2]). // block 3, account 2
 					ReadStorage(storageKeys[3]).
-					EraseAccount().                                                       //delete account 2
-					InitContract(45, types.DummyFullByte(5679), types.DummyBytes32(346)). // redeploy 2 deplNo 2
+					EraseAccount().                                                             //delete account 2
+					InitContract(45, types.DummyFullByte(5679), types.DummyKoalaOctuplet(346)). // redeploy 2 deplNo 2
 					WriteStorage(storageKeys[2], storageValues[1]).
 					ReadStorage(storageKeys[0]).
 					Done()
@@ -230,7 +231,7 @@ func InitializeContext(initialBlock int) *TestContext {
 					EraseAccount().
 					GoNextBlock().
 					WithAddress(addresses[2]).
-					InitContract(45, types.DummyFullByte(5679), types.DummyBytes32(346)).
+					InitContract(45, types.DummyFullByte(5679), types.DummyKoalaOctuplet(346)).
 					WriteStorage(storageKeys[2], storageValues[1]).
 					ReadStorage(storageKeys[0]).
 					WithAddress(addresses[3]). // switch to another account
@@ -264,7 +265,7 @@ func InitializeContext(initialBlock int) *TestContext {
 					WriteStorage(storageKeys[1], storageValues[3]).
 					ReadStorage(storageKeys[3]).
 					EraseAccount().
-					InitContract(45, types.DummyFullByte(5679), types.DummyBytes32(346)). // redeploy 2
+					InitContract(45, types.DummyFullByte(5679), types.DummyKoalaOctuplet(346)). // redeploy 2
 					Done()
 			},
 		},
@@ -273,10 +274,10 @@ func InitializeContext(initialBlock int) *TestContext {
 			StateLogsGens: func(initState mock.State) [][]mock.StateAccessLog {
 				return mock.NewStateLogBuilder(initialBlock, initState).
 					WithAddress(addresses[2]).
-					EraseAccount().                                                       // Erase account 2
-					GoNextBlock().                                                        // block 1
-					WithAddress(addresses[2]).                                            // switch to account 2
-					InitContract(45, types.DummyFullByte(5679), types.DummyBytes32(346)). // deploy at address 2
+					EraseAccount().                                                             // Erase account 2
+					GoNextBlock().                                                              // block 1
+					WithAddress(addresses[2]).                                                  // switch to account 2
+					InitContract(45, types.DummyFullByte(5679), types.DummyKoalaOctuplet(346)). // deploy at address 2
 					WriteStorage(storageKeys[2], storageValues[1]).
 					ReadStorage(storageKeys[0]).
 					GoNextBlock().               // block 2
@@ -300,10 +301,10 @@ func InitializeContext(initialBlock int) *TestContext {
 					ReadStorage(storageKeys[3]).
 					GoNextBlock(). // block 1
 					WithAddress(addresses[2]).
-					EraseAccount().                                                       // Erase account 2
-					GoNextBlock().                                                        // block 2
-					WithAddress(addresses[2]).                                            // switch to account 2
-					InitContract(45, types.DummyFullByte(5679), types.DummyBytes32(346)). // deploy at address 2
+					EraseAccount().                                                             // Erase account 2
+					GoNextBlock().                                                              // block 2
+					WithAddress(addresses[2]).                                                  // switch to account 2
+					InitContract(45, types.DummyFullByte(5679), types.DummyKoalaOctuplet(346)). // deploy at address 2
 					WriteStorage(storageKeys[2], storageValues[1]).
 					ReadStorage(storageKeys[0]).
 					ReadStorage(storageKeys[3]).
@@ -318,8 +319,8 @@ func InitializeContext(initialBlock int) *TestContext {
 					WithAddress(addresses[2]).   // switch to account 2
 					WriteStorage(storageKeys[1], storageValues[3]).
 					ReadStorage(storageKeys[3]).
-					EraseAccount().                                                       // erase account 2
-					InitContract(45, types.DummyFullByte(5679), types.DummyBytes32(346)). // redeploy 2
+					EraseAccount().                                                             // erase account 2
+					InitContract(45, types.DummyFullByte(5679), types.DummyKoalaOctuplet(346)). // redeploy 2
 					WriteStorage(storageKeys[2], storageValues[1]).
 					ReadStorage(storageKeys[0]).
 					Done()
@@ -344,10 +345,10 @@ func InitializeContext(initialBlock int) *TestContext {
 					WithAddress(addresses[2]).
 					ReadStorage(storageKeys[0]).
 					WithAddress(addresses[0]).
-					InitContract(45, types.DummyFullByte(5679), types.DummyBytes32(346)).
+					InitContract(45, types.DummyFullByte(5679), types.DummyKoalaOctuplet(346)).
 					WriteStorage(storageKeys[2], storageValues[1]).
 					EraseAccount().
-					InitContract(15, types.DummyFullByte(9111), types.DummyBytes32(555)).
+					InitContract(15, types.DummyFullByte(9111), types.DummyKoalaOctuplet(555)).
 					WriteStorage(storageKeys[2], storageValues[2]).
 					GoNextBlock(). // block number 2
 					WithAddress(addresses[3]).
@@ -373,7 +374,7 @@ func InitializeContext(initialBlock int) *TestContext {
 					WithAddress(addresses[1]).
 					EraseAccount().
 					WithAddress(addresses[2]).
-					InitContract(45, types.DummyFullByte(5679), types.DummyBytes32(346)).
+					InitContract(45, types.DummyFullByte(5679), types.DummyKoalaOctuplet(346)).
 					WriteStorage(storageKeys[2], storageValues[1]).
 					ReadStorage(storageKeys[0]).
 					WithAddress(types.DummyAddress(1)).
@@ -384,7 +385,7 @@ func InitializeContext(initialBlock int) *TestContext {
 					ReadNonce().
 					GoNextBlock().
 					WithAddress(addresses[1]).
-					InitContract(5, types.DummyFullByte(9), types.DummyBytes32(6111)).
+					InitContract(5, types.DummyFullByte(9), types.DummyKoalaOctuplet(6111)).
 					WriteStorage(storageKeys[2], storageValues[1]).
 					WithAddress(addresses[2]).
 					EraseAccount().

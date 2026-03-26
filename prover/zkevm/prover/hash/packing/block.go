@@ -36,11 +36,11 @@ type block struct {
 func newBlock(comp *wizard.CompiledIOP, inp blockInput) block {
 
 	var (
-		name            = inp.Lanes.Inputs.PckInp.Name
-		size            = inp.Lanes.Size
-		createCol       = common.CreateColFn(comp, BLOCK+"_"+name, size, pragmas.RightPadded)
-		isLaneActive    = inp.Lanes.IsLaneActive
-		nbLanesPerBlock = inp.Param.NbOfLanesPerBlock()
+		name           = inp.Lanes.Inputs.PckInp.Name
+		size           = inp.Lanes.Size
+		createCol      = common.CreateColFn(comp, BLOCK+"_"+name, size, pragmas.RightPadded)
+		isLaneActive   = inp.Lanes.IsLaneActive
+		nbRowsPerBlock = inp.Param.NbOfLanesPerBlock() * inp.Lanes.RowsPerLane
 	)
 
 	b := block{
@@ -50,7 +50,7 @@ func newBlock(comp *wizard.CompiledIOP, inp blockInput) block {
 		AccNumLane: createCol("AccNumLane"),
 	}
 
-	b.IsBlockComplete, b.PA = dedicated.IsZero(comp, sym.Sub(b.AccNumLane, nbLanesPerBlock)).GetColumnAndProverAction()
+	b.IsBlockComplete, b.PA = dedicated.IsZero(comp, sym.Sub(b.AccNumLane, nbRowsPerBlock)).GetColumnAndProverAction()
 
 	// constraints over accNumLanes (accumulate backward)
 	comp.InsertLocal(0, ifaces.QueryID(name+"_AccNumLane_Last"),
@@ -87,7 +87,7 @@ func newBlock(comp *wizard.CompiledIOP, inp blockInput) block {
 	// if isFirstLaneOfNewHash = 1 then isBlockComplete = 1.
 	comp.InsertGlobal(0, ifaces.QueryID(name+"_EACH_HASH_HAS_COMPLETE_BLOCKS"),
 		sym.Mul(
-			inp.Lanes.IsFirstLaneOfNewHash,
+			inp.Lanes.IsBeginningOfNewHash,
 			sym.Sub(1, b.IsBlockComplete),
 		),
 	)
@@ -98,15 +98,15 @@ func newBlock(comp *wizard.CompiledIOP, inp blockInput) block {
 func (b *block) Assign(run *wizard.ProverRuntime) {
 
 	var (
-		size              = b.Size
-		accNumLane        = make([]field.Element, size)
-		isActive          = b.Inputs.Lanes.IsLaneActive.GetColAssignment(run).IntoRegVecSaveAlloc()
-		nbOfLanesPerBlock = b.Inputs.Param.NbOfLanesPerBlock()
+		size             = b.Size
+		accNumLane       = make([]field.Element, size)
+		isActive         = b.Inputs.Lanes.IsLaneActive.GetColAssignment(run).IntoRegVecSaveAlloc()
+		nbOfRowsPerBlock = b.Inputs.Param.NbOfLanesPerBlock() * b.Inputs.Lanes.RowsPerLane
 	)
 	accNumLane[size-1] = isActive[size-1]
 	// accNumLanes[i] = accNumLane[i+1]*(1-isBlockComplete[i+1]) + isLaneActive[i]
 	for row := size - 2; row >= 0; row-- {
-		if field.ToInt(&accNumLane[row+1]) == nbOfLanesPerBlock {
+		if field.ToInt(&accNumLane[row+1]) == nbOfRowsPerBlock {
 			accNumLane[row] = field.One()
 		} else {
 			accNumLane[row].Add(&isActive[row], &accNumLane[row+1])

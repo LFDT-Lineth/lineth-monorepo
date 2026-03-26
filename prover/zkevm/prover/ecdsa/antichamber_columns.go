@@ -16,41 +16,38 @@ func (ac *antichamber) cols(withActive bool) []ifaces.Column {
 }
 
 func (ec *EcRecover) cols() []ifaces.Column {
-	return []ifaces.Column{
-		ec.EcRecoverID,
-		ec.Limb,
-		ec.SuccessBit,
-		ec.EcRecoverIndex,
-		ec.EcRecoverIsData,
-		ec.EcRecoverIsRes,
-	}
+	return append(
+		[]ifaces.Column{ec.EcRecoverID, ec.AuxProjectionMask},
+		append(
+			ec.Limb.GetLimbs(),
+			ec.SuccessBit, ec.EcRecoverIndex, ec.EcRecoverIsData, ec.EcRecoverIsRes,
+		)...,
+	)
 }
 
 func (ad *Addresses) cols() []ifaces.Column {
-	return []ifaces.Column{
-		ad.AddressHiUntrimmed,
-		ad.AddressHi,
-		ad.AddressLo,
-	}
+	return append(ad.AddressLo.GetLimbs(), ad.AddressHiUntrimmed.GetLimbs()...)
 }
 
 func (ts *TxSignature) cols() []ifaces.Column {
-	return []ifaces.Column{
-		ts.IsTxHash,
-		ts.TxHashHi,
-		ts.TxHashLo,
-	}
+	return append([]ifaces.Column{ts.IsTxHash}, ts.TxHash.GetLimbs()...)
 }
 
 func (ugd *UnalignedGnarkData) cols() []ifaces.Column {
-	return []ifaces.Column{
-		ugd.IsPublicKey,
-		ugd.GnarkIndex,
-		ugd.GnarkData,
-	}
+	return append(
+		[]ifaces.Column{
+			ugd.IsPublicKey,
+			ugd.GnarkIndex,
+			ugd.GnarkPublicKeyIndex,
+			ugd.IsEcrecoverAndFetching,
+			ugd.IsNotPublicKeyAndPushing,
+		},
+		ugd.GnarkData.GetLimbs()...,
+	)
 }
 
 func (ac *antichamber) unalignedGnarkDataSource() *unalignedGnarkDataSource {
+	txHashHi, txHashLo := ac.TxHash.SplitOnBit(128)
 	return &unalignedGnarkDataSource{
 		IsActive:   ac.IsActive,
 		IsPushing:  ac.IsPushing,
@@ -60,7 +57,7 @@ func (ac *antichamber) unalignedGnarkDataSource() *unalignedGnarkDataSource {
 		SuccessBit: ac.EcRecover.SuccessBit,
 		IsData:     ac.EcRecover.EcRecoverIsData,
 		IsRes:      ac.EcRecover.EcRecoverIsRes,
-		TxHashHi:   ac.TxSignature.TxHashHi,
-		TxHashLo:   ac.TxSignature.TxHashLo,
+		TxHashHi:   txHashHi.AssertUint128(),
+		TxHashLo:   txHashLo.AssertUint128(),
 	}
 }

@@ -25,7 +25,7 @@ func TestEvalCoeff(t *testing.T) {
 
 	definer := func(b *wizard.Builder) {
 		p = b.RegisterCommit("P", wp.Len())
-		x = b.RegisterRandomCoin("X", coin.Field)
+		x = b.RegisterRandomCoin("X", coin.FieldExt)
 		acc = functionals.CoeffEval(b.CompiledIOP, "EVAL", x, p)
 
 	}
@@ -42,9 +42,9 @@ func TestEvalCoeff(t *testing.T) {
 
 	proof := wizard.Prove(compiled, prover)
 
-	xVal := savedRuntime.GetRandomCoinField(x.Name)
-	accY := acc.GetVal(savedRuntime)
-	expectedY := smartvectors.EvalCoeff(wp, xVal)
+	xVal := savedRuntime.GetRandomCoinFieldExt(x.Name)
+	accY := acc.GetValExt(savedRuntime)
+	expectedY := smartvectors.EvalCoeffExt(wp, xVal)
 
 	require.Equal(t, accY, expectedY)
 

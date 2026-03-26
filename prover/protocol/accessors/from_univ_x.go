@@ -3,6 +3,9 @@ package accessors
 import (
 	"fmt"
 
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
+
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -19,6 +22,30 @@ type FromUnivXAccessor struct {
 	Q query.UnivariateEval
 	// Round is the declaration round of Q
 	QRound int
+}
+
+// IsBase returns false as this accessor does not refer to a base value.
+func (u *FromUnivXAccessor) IsBase() bool {
+	return false
+}
+
+func (u *FromUnivXAccessor) GetValBase(run ifaces.Runtime) (field.Element, error) {
+	panic("called GetValBase on a FromUnivXAccessor; GetValExt should be used instead")
+}
+
+func (u *FromUnivXAccessor) GetValExt(run ifaces.Runtime) fext.Element {
+	params := run.GetParams(u.Q.QueryID).(query.UnivariateEvalParams)
+	return params.ExtX
+}
+
+func (u *FromUnivXAccessor) GetFrontendVariableBase(api frontend.API, c ifaces.GnarkRuntime) (koalagnark.Element, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (u *FromUnivXAccessor) GetFrontendVariableExt(api frontend.API, c ifaces.GnarkRuntime) koalagnark.Ext {
+	params := c.GetParams(u.Q.QueryID).(query.GnarkUnivariateEvalParams)
+	return params.ExtX
 }
 
 // NewUnivariateX returns an [ifaces.Accessor] object symbolizing the evaluation
@@ -43,14 +70,14 @@ func (u *FromUnivXAccessor) String() string {
 
 // GetVal implements [ifaces.Accessor]
 func (u *FromUnivXAccessor) GetVal(run ifaces.Runtime) field.Element {
-	params := run.GetParams(u.Q.QueryID).(query.UnivariateEvalParams)
-	return params.X
+	//TODO implement me
+	panic("implement me")
 }
 
 // GetFrontendVariable implements [ifaces.Accessor]
-func (u *FromUnivXAccessor) GetFrontendVariable(_ frontend.API, circ ifaces.GnarkRuntime) frontend.Variable {
-	params := circ.GetParams(u.Q.QueryID).(query.GnarkUnivariateEvalParams)
-	return params.X
+func (u *FromUnivXAccessor) GetFrontendVariable(_ frontend.API, circ ifaces.GnarkRuntime) koalagnark.Element {
+	//TODO implement me
+	panic("implement me")
 }
 
 // AsVariable implements the [ifaces.Accessor] interface

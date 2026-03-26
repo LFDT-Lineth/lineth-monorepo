@@ -52,10 +52,10 @@ func (ctx *Ctx) SisHashName(round int) string {
 	return ctx.RunStateNamePrefix + "." + name
 }
 
-// MIMCHashName returns a preformatted message representing the MiMC hash digests
+// NoSisHashName returns a preformatted message representing the no sis column hashes
 // for each round that we store in the state.
-func (ctx *Ctx) MIMCHashName(round int) string {
-	name := fmt.Sprintf("VORTEX_%v_MIMC_HASH_%v", ctx.SelfRecursionCount, round)
+func (ctx *Ctx) NoSisHashName(round int) string {
+	name := fmt.Sprintf("VORTEX_%v_NOSIS_COLUMN_HASH_%v", ctx.SelfRecursionCount, round)
 	if len(ctx.RunStateNamePrefix) == 0 {
 		return name
 	}
@@ -90,13 +90,13 @@ func (ctx *Ctx) MerkleTreeName(round int) string {
 }
 
 // returns the name of the vector containing all the Merkle proofs
-func (ctx *Ctx) MerkleProofName() ifaces.ColID {
-	return ifaces.ColIDf("VORTEX_%v_MERKLEPROOF", ctx.SelfRecursionCount)
+func (ctx *Ctx) MerkleProofName(i int) ifaces.ColID {
+	return ifaces.ColIDf("VORTEX_%v_MERKLEPROOF_%v", ctx.SelfRecursionCount, i)
 }
 
 // returns the name of the vector containing all the Merkle proofs
-func (ctx *Ctx) MerkleRootName(round int) ifaces.ColID {
-	return ifaces.ColIDf("VORTEX_%v_MERKLEROOT_%v", ctx.SelfRecursionCount, round-ctx.startingRound())
+func (ctx *Ctx) MerkleRootName(round int, index int) ifaces.ColID {
+	return ifaces.ColIDf("VORTEX_%v_MERKLEROOT_%v_%v", ctx.SelfRecursionCount, round-ctx.startingRound(), index)
 }
 
 // returns the name of the precomputed commitment when Merkle is not applied
@@ -110,6 +110,11 @@ func (ctx *Ctx) PrecomputedSisDigestNameWithMerkle() ifaces.ColID {
 }
 
 // returns the name of the precomputed Merkle root when Merkle is applied
-func (ctx *Ctx) PrecomputedMerkleRootName() ifaces.ColID {
-	return ifaces.ColIDf("VORTEX_PRECOMPUTED_MERKLE_ROOT_%d", ctx.SelfRecursionCount)
+func (ctx *Ctx) PrecomputedMerkleRootName(index int) ifaces.ColID {
+	return ifaces.ColIDf("VORTEX_PRECOMPUTED_MERKLE_ROOT_%d_%d", ctx.SelfRecursionCount, index)
+}
+
+// returns the name of the precomputed Gnark Merkle root when Merkle is applied
+func (ctx *Ctx) PrecomputedBLSMerkleRootName(index int) ifaces.ColID {
+	return ifaces.ColIDf("VORTEX_PRECOMPUTED_BLS_MERKLE_ROOT_%d_%d", ctx.SelfRecursionCount, index)
 }

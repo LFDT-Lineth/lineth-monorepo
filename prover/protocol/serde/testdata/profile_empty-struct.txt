@@ -1,0 +1,4 @@
+Serialization Size Profile
+==========================
+
+[struct {}]: 0 B (0.0%)

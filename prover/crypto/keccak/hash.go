@@ -3,7 +3,9 @@
 // we are developping by exposing all the underlying functions.
 package keccak
 
-import "bytes"
+import (
+	"bytes"
+)
 
 const (
 	//rate in byte

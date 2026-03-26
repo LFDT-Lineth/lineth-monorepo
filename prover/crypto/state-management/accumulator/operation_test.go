@@ -3,9 +3,10 @@ package accumulator_test
 import (
 	"testing"
 
+	"github.com/consensys/linea-monorepo/prover/maths/field"
+
 	"github.com/consensys/linea-monorepo/prover/crypto/state-management/accumulator"
-	"github.com/consensys/linea-monorepo/prover/crypto/state-management/hashtypes"
-	"github.com/consensys/linea-monorepo/prover/crypto/state-management/smt"
+	"github.com/consensys/linea-monorepo/prover/crypto/state-management/smt_koalabear"
 
 	. "github.com/consensys/linea-monorepo/prover/utils/types"
 	"github.com/stretchr/testify/assert"
@@ -16,30 +17,29 @@ import (
 const numRepetion = 255
 
 // Dummy hashable type that we can use for the accumulator
-type DummyKey = Bytes32
-type DummyVal = Bytes32
+type DummyKey = KoalaOctuplet
+type DummyVal = KoalaOctuplet
 
-const locationTesting = "location"
+const locationTesting = "0x"
 
 func dumkey(i int) DummyKey {
-	return DummyBytes32(i)
+	x := field.NewElement(uint64(i))
+	return KoalaOctuplet{x, x, x, x, x, x, x, x}
 }
 
 func dumval(i int) DummyVal {
-	return DummyBytes32(i)
+	x := field.NewElement(uint64(i))
+	return KoalaOctuplet{x, x, x, x, x, x, x, x}
 }
 
-func newTestAccumulatorKeccak() *accumulator.ProverState[DummyKey, DummyVal] {
-	config := &smt.Config{
-		HashFunc: hashtypes.Keccak,
-		Depth:    40,
-	}
-	return accumulator.InitializeProverState[DummyKey, DummyVal](config, locationTesting)
+func newTestAccumulatorPoseidon2DummyVal() *accumulator.ProverState[DummyKey, DummyVal] {
+
+	return accumulator.InitializeProverState[DummyKey, DummyVal](locationTesting)
 }
 
 func TestInitialization(t *testing.T) {
 	// Just check that the code returns
-	acc := newTestAccumulatorKeccak()
+	acc := newTestAccumulatorPoseidon2DummyVal()
 	ver := acc.VerifierState()
 
 	// The next free nodes are well initialized
@@ -49,25 +49,25 @@ func TestInitialization(t *testing.T) {
 	// The roots are consistent
 	assert.Equal(t, acc.SubTreeRoot(), ver.SubTreeRoot, "inconsistent roots")
 
-	headHash := accumulator.Head().Hash(acc.Config())
-	tailHash := accumulator.Head().Hash(acc.Config())
+	headHash := accumulator.Head().Hash() // Updated to remove acc.Config()
+	tailHash := accumulator.Tail().Hash() // Updated to remove acc.Config()
 
 	// First leaf is head
-	assert.Equal(t, acc.Tree.MustGetLeaf(0), accumulator.Head().Hash(acc.Config()))
-	assert.Equal(t, acc.Tree.MustGetLeaf(1), accumulator.Tail(acc.Config()).Hash(acc.Config()))
+	assert.Equal(t, acc.Tree.MustGetLeaf(0), accumulator.Head().Hash().ToOctuplet())
+	assert.Equal(t, acc.Tree.MustGetLeaf(1), accumulator.Tail().Hash().ToOctuplet())
 
 	// Can we prover membership of the leaf
 	proofHead := acc.Tree.MustProve(0)
-	proofHead.Verify(acc.Config(), headHash, acc.SubTreeRoot())
+	smt_koalabear.Verify(&proofHead, headHash, acc.SubTreeRoot())
 
 	proofTail := acc.Tree.MustProve(1)
-	proofTail.Verify(acc.Config(), tailHash, acc.SubTreeRoot())
+	smt_koalabear.Verify(&proofTail, tailHash, acc.SubTreeRoot())
 }
 
 func TestInsertion(t *testing.T) {
 
 	// Performs an insertion
-	acc := newTestAccumulatorKeccak()
+	acc := newTestAccumulatorPoseidon2DummyVal()
 	ver := acc.VerifierState()
 
 	for i := 0; i < numRepetion; i++ {
@@ -84,7 +84,7 @@ func TestInsertion(t *testing.T) {
 func TestReadZero(t *testing.T) {
 
 	// Performs an insertion
-	acc := newTestAccumulatorKeccak()
+	acc := newTestAccumulatorPoseidon2DummyVal()
 	ver := acc.VerifierState()
 
 	for i := 0; i < numRepetion; i++ {
@@ -102,7 +102,7 @@ func TestReadZero(t *testing.T) {
 func TestReadNonZero(t *testing.T) {
 
 	// Performs an insertion
-	acc := newTestAccumulatorKeccak()
+	acc := newTestAccumulatorPoseidon2DummyVal()
 
 	// Fill the tree
 	for i := 0; i < numRepetion; i++ {
@@ -126,7 +126,7 @@ func TestReadNonZero(t *testing.T) {
 
 func TestUpdate(t *testing.T) {
 	// Performs an insertion
-	acc := newTestAccumulatorKeccak()
+	acc := newTestAccumulatorPoseidon2DummyVal()
 
 	// Fill the tree
 	for i := 0; i < numRepetion; i++ {
@@ -149,7 +149,7 @@ func TestUpdate(t *testing.T) {
 
 func TestDeletion(t *testing.T) {
 	// Performs an insertion
-	acc := newTestAccumulatorKeccak()
+	acc := newTestAccumulatorPoseidon2DummyVal()
 
 	// Fill the tree
 	for i := 0; i < numRepetion; i++ {

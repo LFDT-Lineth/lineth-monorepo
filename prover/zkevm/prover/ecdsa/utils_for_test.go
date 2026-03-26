@@ -6,27 +6,28 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/limbs"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/generic"
-
 	"golang.org/x/crypto/sha3"
 )
 
 func commitEcRecTxnData(comp *wizard.CompiledIOP, size1 int, size int, ac *antichamber) (td *txnData, ecRec *EcRecover) {
 	td = &txnData{
-		FromHi:   comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromHi"), size1),
-		FromLo:   comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromLo"), size1),
-		Ct:       comp.InsertCommit(0, ifaces.ColIDf("txn_data.CT"), size1),
-		User:     comp.InsertCommit(0, ifaces.ColIDf("txn_data.USER"), size1),
-		Selector: comp.InsertCommit(0, ifaces.ColIDf("txn_data.SELECTOR"), size1),
+		Ct:       comp.InsertCommit(0, ifaces.ColIDf("txn_data.CT"), size1, true),
+		User:     comp.InsertCommit(0, ifaces.ColIDf("txn_data.USER"), size1, true),
+		Selector: comp.InsertCommit(0, ifaces.ColIDf("txn_data.SELECTOR"), size1, true),
+		From:     limbs.NewUint256Le(comp, "txn_data.From", size1),
 	}
 
 	ecRec = &EcRecover{
-		Limb:           comp.InsertCommit(0, ifaces.ColIDf("ECRECOVER_LIMB"), size),
-		EcRecoverIsRes: comp.InsertCommit(0, ifaces.ColIDf("ECRECOVER_ISRES"), size),
+		EcRecoverIsRes: comp.InsertCommit(0, ifaces.ColIDf("ECRECOVER_ISRES"), size, true),
+		Limb:           limbs.NewUint128Le(comp, "ECRECOVER_LIMB", size),
 	}
-	ac.IsActive = comp.InsertCommit(0, ifaces.ColID("AntiChamber_IsActive"), size)
+
+	ac.IsActive = comp.InsertCommit(0, "AntiChamber_IsActive", size, true)
 	return td, ecRec
 }
 
@@ -39,64 +40,61 @@ func AssignEcRecTxnData(
 	ac *antichamber,
 ) {
 
-	permTrace := keccak.GenerateTrace(gbm.ScanStreams(run))
+	var (
+		nbRowsPerTxInTxnData = 9
 
-	// now assign ecRecover.Limb and txn_data.From from the permutation trace.
-	isEcRecRes := make([]field.Element, nbEcRec*nbRowsPerEcRec)
-	ecRecLimb := make([]field.Element, nbEcRec*nbRowsPerEcRec)
+		streams   = gbm.ScanStreams(run)
+		permTrace = keccak.GenerateTrace(streams)
 
-	nbRowsPerTxInTxnData := 9
-	var ctWit []field.Element
-	var userWit []field.Element
-	var selectorWit []field.Element
-	for i := 0; i < nbTxS; i++ {
-		for j := 0; j < nbRowsPerTxInTxnData; j++ {
-			if j == 0 {
-				// First row: ct=0, User=1, Selector=1 (for isFrom condition)
-				ctWit = append(ctWit, field.Zero())
-				userWit = append(userWit, field.One())
-				selectorWit = append(selectorWit, field.One())
-			} else {
-				// Other rows: ct=j, User=1, Selector=1
-				ctWit = append(ctWit, field.NewElement(uint64(j)))
-				userWit = append(userWit, field.One())
-				selectorWit = append(selectorWit, field.One())
-			}
-		}
-	}
-
-	fromHi := make([]field.Element, nbTxS*nbRowsPerTxInTxnData)
-	fromLo := make([]field.Element, nbTxS*nbRowsPerTxInTxnData)
-	offSetEcRec := 0
+		isEcRecRes  = common.NewVectorBuilder(ecRec.EcRecoverIsRes)
+		ecRecLimb   = limbs.NewVectorBuilder(ecRec.Limb.AsDynSize())
+		txnCt       = common.NewVectorBuilder(td.Ct)
+		txnUser     = common.NewVectorBuilder(td.User)
+		txnSelector = common.NewVectorBuilder(td.Selector)
+		txnFrom     = limbs.NewVectorBuilder(td.From.AsDynSize())
+	)
 
 	if nbEcRec+nbTxS != len(permTrace.HashOutPut) {
 		utils.Panic("the number of generated hash %v should be %v + %v", len(permTrace.HashOutPut), nbEcRec, nbTxS)
 	}
-	for i, hashRes := range permTrace.HashOutPut {
 
-		if i < nbEcRec {
-			isEcRecRes[i*nbRowsPerEcRec+offSetEcRec] = field.One()
-			isEcRecRes[i*nbRowsPerEcRec+offSetEcRec+1] = field.One()
-
-			ecRecLimb[i*nbRowsPerEcRec+offSetEcRec].SetBytes(hashRes[halfDigest-trimmingSize : halfDigest])
-			ecRecLimb[i*nbRowsPerEcRec+offSetEcRec+1].SetBytes(hashRes[halfDigest:])
-		} else {
-			j := i - nbEcRec
-
-			fromHi[j*nbRowsPerTxInTxnData].SetBytes(hashRes[halfDigest-trimmingSize : halfDigest])
-			fromLo[j*nbRowsPerTxInTxnData].SetBytes(hashRes[halfDigest:])
+	for i := 0; i < nbTxS; i++ {
+		for j := 0; j < nbRowsPerTxInTxnData; j++ {
+			txnCt.PushInt(j)
+			txnUser.PushOne()
+			txnSelector.PushOne()
+			txnFrom.PushBytes(permTrace.HashOutPut[nbEcRec+i][:])
 		}
 	}
 
-	run.AssignColumn(ecRec.EcRecoverIsRes.GetColID(), smartvectors.RightZeroPadded(isEcRecRes, size))
-	run.AssignColumn(ecRec.Limb.GetColID(), smartvectors.RightZeroPadded(ecRecLimb, size))
+	for i := 0; i < nbEcRec; i++ {
 
-	// they are arithmetization columns, so LeftZeroPad
-	run.AssignColumn(td.FromHi.GetColID(), smartvectors.LeftZeroPadded(fromHi, sizeTxnData))
-	run.AssignColumn(td.FromLo.GetColID(), smartvectors.LeftZeroPadded(fromLo, sizeTxnData))
-	run.AssignColumn(td.Ct.GetColID(), smartvectors.LeftZeroPadded(ctWit, sizeTxnData))
-	run.AssignColumn(td.User.GetColID(), smartvectors.LeftZeroPadded(userWit, sizeTxnData))
-	run.AssignColumn(td.Selector.GetColID(), smartvectors.LeftZeroPadded(selectorWit, sizeTxnData))
+		hashRes := permTrace.HashOutPut[i]
+
+		// Sanity-check that the heights of the builder is the expected one
+		if currHeight := i * nbRowsPerEcRec; isEcRecRes.Height() != currHeight || ecRecLimb.Height() != currHeight {
+			utils.Panic("isEcRecRes.Height() || ecRecLimb.Height() != %v, %v", isEcRecRes.Height(), ecRecLimb.Height())
+		}
+
+		// Pushing the hi part
+		isEcRecRes.PushOne()
+		ecRecLimb.PushLeftPaddedBytes(hashRes[12:16])
+
+		// Pushing the lo part
+		isEcRecRes.PushOne()
+		ecRecLimb.PushBytes(hashRes[16:])
+
+		// Fill the rest of the frame with zeroes
+		isEcRecRes.PushSeqOfZeroes(nbRowsPerEcRec - 2)
+		ecRecLimb.PushSeqOfZeroes(nbRowsPerEcRec - 2)
+	}
+
+	ecRecLimb.PadAndAssignZero(run)
+	isEcRecRes.PadAndAssign(run)
+	txnCt.PadAndAssign(run)
+	txnUser.PadAndAssign(run)
+	txnSelector.PadAndAssign(run)
+	txnFrom.PadAndAssignZero(run)
 
 	effectiveSize := nbEcRec*nbRowsPerEcRec + nbTxS*nbRowsPerTxSign
 	isActive := vector.Repeat(field.One(), effectiveSize)
@@ -119,72 +117,59 @@ func (td *txnData) assignTxnDataFromPK(
 	rlpTxnHashes [][32]byte,
 	nbRowsPerTxInTxnData int,
 ) {
+
 	var (
-		hasher  = sha3.NewLegacyKeccak256()
-		maxNbTx = ac.Inputs.Settings.MaxNbTx
+		hasher      = sha3.NewLegacyKeccak256()
+		maxNbTx     = ac.Inputs.Settings.MaxNbTx
+		txnCt       = common.NewVectorBuilder(td.Ct)
+		txnUser     = common.NewVectorBuilder(td.User)
+		txnSelector = common.NewVectorBuilder(td.Selector)
+		txnFrom     = limbs.NewVectorBuilder(td.From.AsDynSize())
 	)
+
 	// compute the hash of public keys
-	pkHash := make([][]byte, 0, len(rlpTxnHashes))
+	pkHash := make([][32]byte, 0, len(rlpTxnHashes))
 	for i := range rlpTxnHashes {
 		pk, _, _, _, err := generateDeterministicSignature(rlpTxnHashes[i][:])
 		if err != nil {
 			utils.Panic("error generating signature")
 		}
 		buf := pk.A.RawBytes()
+
 		hasher.Write(buf[:])
 		res := hasher.Sum(nil)
 		hasher.Reset()
-		pkHash = append(pkHash, res)
+		pkHash = append(pkHash, [32]byte(res))
 	}
 
 	// now assign  txn_data from the hash results.
 	// populate the CT, User, and Selector columns
-	var ctWit []field.Element
-	var userWit []field.Element
-	var selectorWit []field.Element
 	for i := 0; i < maxNbTx; i++ {
 		for j := 0; j < nbRowsPerTxInTxnData; j++ {
-			if j == 0 {
-				// First row: ct=0, User=1, Selector=1 (for isFrom condition)
-				ctWit = append(ctWit, field.Zero())
-				userWit = append(userWit, field.One())
-				selectorWit = append(selectorWit, field.One())
+			txnCt.PushInt(j)
+			txnUser.PushOne()
+			txnSelector.PushOne()
+			if i < len(pkHash) {
+				txnFrom.PushBytes(pkHash[i][:])
 			} else {
-				// Other rows: ct=j, User=1, Selector=1
-				ctWit = append(ctWit, field.NewElement(uint64(j)))
-				userWit = append(userWit, field.One())
-				selectorWit = append(selectorWit, field.One())
+				txnFrom.PushZero()
 			}
 		}
 	}
 
-	// populate the columns FromHi and FromLo
-	fromHi := make([]field.Element, maxNbTx*nbRowsPerTxInTxnData)
-	fromLo := make([]field.Element, maxNbTx*nbRowsPerTxInTxnData)
-
-	for i := 0; i < len(pkHash); i++ {
-		fromHi[i*nbRowsPerTxInTxnData].SetBytes(pkHash[i][halfDigest-trimmingSize : halfDigest])
-		fromLo[i*nbRowsPerTxInTxnData].SetBytes(pkHash[i][halfDigest:])
-
-	}
-
-	// these are arithmetization columns, so LeftZeroPad
-	run.AssignColumn(td.FromHi.GetColID(), smartvectors.LeftZeroPadded(fromHi, ac.Inputs.Settings.sizeTxnData(nbRowsPerTxInTxnData)))
-	run.AssignColumn(td.FromLo.GetColID(), smartvectors.LeftZeroPadded(fromLo, ac.Inputs.Settings.sizeTxnData(nbRowsPerTxInTxnData)))
-	run.AssignColumn(td.Ct.GetColID(), smartvectors.LeftZeroPadded(ctWit, ac.Inputs.Settings.sizeTxnData(nbRowsPerTxInTxnData)))
-	run.AssignColumn(td.User.GetColID(), smartvectors.LeftZeroPadded(userWit, ac.Inputs.Settings.sizeTxnData(nbRowsPerTxInTxnData)))
-	run.AssignColumn(td.Selector.GetColID(), smartvectors.LeftZeroPadded(selectorWit, ac.Inputs.Settings.sizeTxnData(nbRowsPerTxInTxnData)))
+	txnCt.PadAndAssign(run)
+	txnUser.PadAndAssign(run)
+	txnSelector.PadAndAssign(run)
+	txnFrom.PadAndAssignZero(run)
 }
 
 // it commits to the txn_data
 func commitTxnData(comp *wizard.CompiledIOP, limits *Settings, nbRowsPerTxInTxnData int) (td *txnData) {
 	size := limits.sizeTxnData(nbRowsPerTxInTxnData)
-	td = &txnData{
-		FromHi:   comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromHi"), size),
-		FromLo:   comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromLo"), size),
-		Ct:       comp.InsertCommit(0, ifaces.ColIDf("txn_data.CT"), size),
-		User:     comp.InsertCommit(0, ifaces.ColIDf("txn_data.USER"), size),
-		Selector: comp.InsertCommit(0, ifaces.ColIDf("txn_data.SELECTOR"), size),
+	return &txnData{
+		Ct:       comp.InsertCommit(0, ifaces.ColIDf("txn_data.CT"), size, true),
+		User:     comp.InsertCommit(0, ifaces.ColIDf("txn_data.USER"), size, true),
+		Selector: comp.InsertCommit(0, ifaces.ColIDf("txn_data.SELECTOR"), size, true),
+		From:     limbs.NewUint256Le(comp, "txn_data.From", size),
 	}
-	return td
 }

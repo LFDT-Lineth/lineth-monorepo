@@ -33,7 +33,7 @@ func GenCSV(w io.Writer, filter CSVFilterOptions) func(comp *wizard.CompiledIOP)
 
 	return func(comp *wizard.CompiledIOP) {
 
-		io.WriteString(w, "name; size; status; round; type\n")
+		io.WriteString(w, "name; type; status; round; size; val; isBase; extra\n")
 
 		if filter&IncludeColumnCSVFilter > 0 {
 
@@ -49,6 +49,7 @@ func GenCSV(w io.Writer, filter CSVFilterOptions) func(comp *wizard.CompiledIOP)
 						status: status.String(),
 						typ:    "Column",
 						id:     col.String(),
+						isbase: col.IsBase(),
 					}
 				)
 
@@ -151,6 +152,7 @@ func GenCSV(w io.Writer, filter CSVFilterOptions) func(comp *wizard.CompiledIOP)
 				status: "-",
 				typ:    "PublicInput",
 				size:   0,
+				isbase: pubInputs.Acc.IsBase(),
 				extra:  []string{pubInputs.Acc.Name()},
 			}
 
@@ -167,6 +169,7 @@ type csvRow struct {
 	round  int
 	typ    string
 	val    string
+	isbase bool
 	extra  []string
 }
 
@@ -177,21 +180,27 @@ func (r *csvRow) SetQuery(q ifaces.Query) {
 	switch q_ := q.(type) {
 	case query.LogDerivativeSum:
 		r.size = 1
+		r.isbase = false
 	case query.GrandProduct:
 		r.size = 1
+		r.isbase = false
 	case query.LocalOpening:
 		r.size = 1
+		r.isbase = q_.IsBase()
 	case query.UnivariateEval:
 		r.size = len(q_.Pols)
 		extras := make([]string, len(q_.Pols))
 		r.extra = extras
+		r.isbase = false
 	case query.InnerProduct:
 		r.size = len(q_.Bs)
+		r.isbase = false
 	case *query.Horner:
 		r.size = 1 + 2*len(q_.Parts)
+		r.isbase = false
 	}
 }
 
 func (r *csvRow) Write(w io.Writer) {
-	fmt.Fprintln(w, r.id, ";", r.typ, ";", r.status, ";", r.round, ";", r.size, ";", r.val, ";", r.extra)
+	fmt.Fprintln(w, r.id, ";", r.typ, ";", r.status, ";", r.round, ";", r.size, ";", r.val, ";", r.isbase, ";", r.extra)
 }

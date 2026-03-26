@@ -1,6 +1,8 @@
 package execution_data_collector
 
 import (
+	"fmt"
+
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
@@ -10,6 +12,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils/types"
+	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
 	commonconstraints "github.com/consensys/linea-monorepo/prover/zkevm/prover/common/common_constraints"
 	arith "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/arith_struct"
 	fetch "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/fetchers_arithmetization"
@@ -28,9 +31,9 @@ The number of transactions in the block (2 bytes), the block timestamp (4 bytes)
 and then for each transaction tx_i, the sender address (20 bytes) and the transaction RLP.
 We then continue analogously for each block.
 
-Due to design choices in the arithmetization and other submodules, we can only load at most 16 bytes
-at a time. For this reason, blockhash is divided into two columns: BlockHashHi (16 bytes) and BlockHashLo (16 bytes).
-Similarly, the sender address is divided into AddrHi (4 bytes) and AddrLo (16 bytes).
+Due to design choices in the arithmetization and other submodules, we can only load at most 2 bytes
+at a time. For this reason, blockhash is divided into 16 columns: [16]BlockHash (32 bytes in total).
+Similarly, the sender address is divided into 10 columns: [10]Addr (20 bytes in total).
 
 
 Finally, the RLP data for each transaction is stored in the RLPTXN module. We use an intermediary fetcher
@@ -130,25 +133,16 @@ the row after SelectorEndOfAllTx = 1 will have AbsTxId = 0 (enforce this)
 */
 
 const (
-	loadNoTxn        = 0
-	loadTimestamp    = 1
-	loadBlockHashHi  = 2
-	loadBlockHashLo  = 3
-	loadSenderAddrHi = 4
-	loadSenderAddrLo = 5
-	loadRlp          = 6
-
 	noBytesNoTxn        = 2
 	noBytesTimestamp    = 4
 	noBytesBlockHash    = 16
 	noBytesSenderAddrHi = 4
 	noBytesSenderAddrLo = 16
 
-	powBytesNoTxn   = "5192296858534827628530496329220096" // 2 bytes when loading NO_TX, 2^(128-2*8)
-	powTimestamp    = "79228162514264337593543950336"      // 4 bytes when loading TIMESTAMP, 2^(128-4*8)
-	powBlockHash    = "1"                                  // 16 bytes when loading BlockHash, 2^(128-16*8)
-	powSenderAddrHi = "79228162514264337593543950336"      // 4 bytes when loading SENDER ADDR HI, 2^(128-4*8)
-	powSenderAddrLo = "1"                                  // 16 bytes bytes when loading SenderAddrLo, 2^(128-16*8)
+	// The number of meaningfull limbs of timestamp.
+	nbTimestamplLimbs = common.NbLimbU32
+	// The number of empty limbs of timestamp.
+	nbTimestampEmpty = common.NbLimbU128 - nbTimestamplLimbs
 
 	hashNum = 1 // the constant hashNum value needed as an input for padding and packing
 )
@@ -161,12 +155,10 @@ type ExecutionDataCollector struct {
 	// and also starts from 1.
 	// AbsTxIDMax is the ID of the last transaction in the conflated batch.
 	BlockID, AbsTxID, AbsTxIDMax ifaces.Column
-	// The Limb data and the number of bytes in the limb.
-	Limb, NoBytes ifaces.Column
-	// UnalignedLimb contains the raw data from the corresponding arithmetization fetcher.
-	// AlignedPow is the power that is used to multiply UnalignedLimb in order to obtain the Limb.
-	// which is done to ensure consistent formatting.
-	UnalignedLimb, AlignedPow ifaces.Column
+	// The Limbs data.
+	Limbs [common.NbLimbU128]ifaces.Column
+	// The number of bytes in the limbs.
+	NoBytes ifaces.Column
 	// the total number of transactions inside the current block.
 	TotalNoTxBlock ifaces.Column
 	// indicator column, specifying when the module contains useful data
@@ -214,16 +206,13 @@ type ExecutionDataCollector struct {
 
 // NewExecutionDataCollector instantiates an ExecutionDataCollector with unconstrained columns.
 func NewExecutionDataCollector(comp *wizard.CompiledIOP, name string, size int) *ExecutionDataCollector {
-	return &ExecutionDataCollector{
+	res := &ExecutionDataCollector{
 		BlockID:                util.CreateCol(name, "BLOCK_ID", size, comp),
 		AbsTxID:                util.CreateCol(name, "ABS_TX_ID", size, comp),
 		AbsTxIDMax:             util.CreateCol(name, "ABS_TX_ID_MAX", size, comp),
 		FirstAbsTxIDBlock:      util.CreateCol(name, "FIRST_ABS_TX_ID_BLOCK", size, comp),
 		LastAbsTxIDBlock:       util.CreateCol(name, "LAST_ABS_TX_ID_BLOCK", size, comp),
-		Limb:                   util.CreateCol(name, "LIMB", size, comp),
 		NoBytes:                util.CreateCol(name, "NO_BYTES", size, comp),
-		UnalignedLimb:          util.CreateCol(name, "UNALIGNED_LIMB", size, comp),
-		AlignedPow:             util.CreateCol(name, "ALIGNED_POW", size, comp),
 		TotalNoTxBlock:         util.CreateCol(name, "TOTAL_NO_TX_BLOCK", size, comp),
 		IsActive:               util.CreateCol(name, "IS_ACTIVE", size, comp),
 		IsNoTx:                 util.CreateCol(name, "IS_NO_TX", size, comp),
@@ -239,6 +228,12 @@ func NewExecutionDataCollector(comp *wizard.CompiledIOP, name string, size int) 
 		TotalBytesCounter:      util.CreateCol(name, "TOTAL_BYTES_COUNTER", size, comp),
 		FinalTotalBytesCounter: util.CreateCol(name, "FINAL_TOTAL_BYTES_COUNTER", size, comp),
 	}
+
+	for i := range res.Limbs {
+		res.Limbs[i] = util.CreateCol(name, fmt.Sprintf("LIMB_%d", i), size, comp)
+	}
+
+	return res
 }
 
 // GetSummarySize estimates a necessary upper bound on the ExecutionDataCollector columns
@@ -246,8 +241,8 @@ func NewExecutionDataCollector(comp *wizard.CompiledIOP, name string, size int) 
 func GetSummarySize(td *arith.TxnData, rt *arith.RlpTxn) int {
 	// number of transactions, block timestamp, blockhash + for every transaction, sender address + transaction RLP limbs
 	size := td.Ct.Size()
-	if size < rt.Limb.Size() {
-		size = rt.Limb.Size()
+	if size < rt.Limbs[0].Size() {
+		size = rt.Limbs[0].Size()
 	}
 	return size
 }
@@ -675,84 +670,6 @@ func DefineIndicatorExclusion(comp *wizard.CompiledIOP, edc *ExecutionDataCollec
 	)
 }
 
-// DefineAlignmentPowers enforces the correct aligment exponent values for each value/row type.
-func DefineAlignmentPowers(comp *wizard.CompiledIOP, edc *ExecutionDataCollector, name string) {
-	// Value of the alignment exponent, isNoTx
-	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%s_IS_NO_TX_ALIGNMENT_EXPONENT_VALUE", name),
-		sym.Mul(
-			edc.IsNoTx,
-			sym.Sub(
-				edc.AlignedPow,
-				field.NewFromString(powBytesNoTxn), // 2 bytes when loading NO_TX, 2^(128-2*8)
-			),
-		),
-	)
-
-	// Value of the alignment exponent, IS_TIMESTAMP
-	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%s_IS_TIMESTAMP_ALIGNMENT_EXPONENT_VALUE", name),
-		sym.Mul(
-			edc.IsTimestamp,
-			sym.Sub(
-				edc.AlignedPow,
-				field.NewFromString(powTimestamp), // 6 bytes when loading TIMESTAMP, 2^(128-6*8)
-			),
-		),
-	)
-
-	// Value of the alignment exponent, IS_BLOCKHASH_HI
-	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%s_IS_BLOCKHASH_HI_ALIGNMENT_EXPONENT_VALUE", name),
-		sym.Mul(
-			edc.IsBlockHashHi,
-			sym.Sub(
-				edc.AlignedPow,
-				field.NewFromString(powBlockHash),
-			),
-		),
-	)
-
-	// Value of the alignment exponent, IS_BLOCKHASH_LO
-	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%s_IS_BLOCKHASH_LO_ALIGNMENT_EXPONENT_VALUE", name),
-		sym.Mul(
-			edc.IsBlockHashLo,
-			sym.Sub(
-				edc.AlignedPow,
-				field.NewFromString(powBlockHash),
-			),
-		),
-	)
-
-	// Value of the alignment exponent, IS_SENDER_HI
-	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%s_IS_SENDER_HI_ALIGNMENT_EXPONENT_VALUE", name),
-		sym.Mul(
-			edc.IsAddrHi,
-			sym.Sub(
-				edc.AlignedPow,
-				field.NewFromString(powSenderAddrHi),
-			),
-		),
-	)
-
-	// Value of the alignment exponent, IS_SENDER_LO
-	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%s_IS_SENDER_LO_ALIGNMENT_EXPONENT_VALUE", name),
-		sym.Mul(
-			edc.IsAddrLo,
-			sym.Sub(
-				edc.AlignedPow,
-				field.NewFromString(powSenderAddrLo),
-			),
-		),
-	)
-
-	// We skip a constraint for the value of the alignment exponent when IS_TX_RLP=1
-	// the unaligned limb does not matter in that case.
-}
-
 // DefineNumberOfBytesConstraints defines the number of bytes loaded for each operation type.
 // The RLP bytes are checked separately, in the ProjectionQueries function.
 func DefineNumberOfBytesConstraints(comp *wizard.CompiledIOP, edc *ExecutionDataCollector, name string) {
@@ -831,12 +748,13 @@ func DefineNumberOfBytesConstraints(comp *wizard.CompiledIOP, edc *ExecutionData
 	// and this will be checked with a projection query in the ProjectionQueries function.
 }
 
+// To do: To be synchronized with Bogdan/Alex before we merge
 // ProjectionQueries computes projection queries to each arithmetization fetcher:
-// fetch.TimestampFetcher, fetch.BlockTxnMetadata, fetch.TxnDataFetcher and fetch.RlpTxnFetcher.
+// fetch.BlockDataFetcher, fetch.BlockTxnMetadata, fetch.TxnDataFetcher and fetch.RlpTxnFetcher.
 func ProjectionQueries(comp *wizard.CompiledIOP,
 	edc *ExecutionDataCollector,
 	name string,
-	timestamps *fetch.TimestampFetcher,
+	timestamps *fetch.BlockDataFetcher,
 	metadata fetch.BlockTxnMetadata,
 	txnData fetch.TxnDataFetcher,
 	rlp fetch.RlpTxnFetcher) {
@@ -857,105 +775,125 @@ func ProjectionQueries(comp *wizard.CompiledIOP,
 		edc.LastAbsTxIDBlock,
 	}
 
-	comp.InsertProjection(
-		ifaces.QueryIDf("%s_BLOCK_METADATA_PROJECTION", name),
-		query.ProjectionInput{ColumnA: edcMetadataTable,
+	comp.InsertProjection(ifaces.QueryIDf("%s_BLOCK_METADATA_PROJECTION", name),
+		query.ProjectionInput{
+			ColumnA: edcMetadataTable,
 			ColumnB: metadataTable,
 			FilterA: edc.IsNoTx, // We filter on rows where the blockdata is loaded.
-			FilterB: metadata.FilterFetched})
+			FilterB: metadata.FilterFetched,
+		},
+	)
 	// Because we filtered on edc.IsNoTx=1, we also ensure that FirstAbsTxIDBlock and LastAbsTxIDBlock
 	// remain constant in the DefineConstantConstraints function.
 	// we do not need to also check the constancy of TotalNoTxBlock, as it is only used when IsNoTx=1
 
 	// Prepare the projection query to the BlockData fetcher, but concerning timestamps
 	// compute the fetcher table, directly tied to the arithmetization.
-	timestampTable := []ifaces.Column{
-		timestamps.RelBlock,
-		timestamps.Data,
-	}
+	timestampTable := make([]ifaces.Column, 0, nbTimestamplLimbs+1)
+	timestampTable = append(timestampTable, timestamps.Data[nbTimestampEmpty:]...) // Only the last 32 bits stores the timestamp.
+	timestampTable = append(timestampTable, timestamps.RelBlock)
 
 	// compute the ExecutionDataCollector table.
-	edcTimestamps := []ifaces.Column{
-		edc.BlockID,
-		edc.UnalignedLimb,
-	}
+	edcTimestamps := make([]ifaces.Column, 0, nbTimestamplLimbs+1)
+	edcTimestamps = append(edcTimestamps, edc.Limbs[:nbTimestamplLimbs]...) // Only the first 32 bits stores the timestamp.
+	edcTimestamps = append(edcTimestamps, edc.BlockID)
 
-	comp.InsertProjection(
-		ifaces.QueryIDf("%s_TIMESTAMP_PROJECTION", name),
-		query.ProjectionInput{ColumnA: edcTimestamps,
+	comp.InsertProjection(ifaces.QueryIDf("%s_TIMESTAMP_PROJECTION", name),
+		query.ProjectionInput{
+			ColumnA: edcTimestamps,
 			ColumnB: timestampTable,
 			FilterA: edc.IsTimestamp, // filter on IsTimestamp=1
-			FilterB: timestamps.FilterFetched})
+			FilterB: timestamps.FilterFetched,
+		},
+	)
+
+	// Check that timestamp's unsused limbs are zeroes.
+	for i := 0; i < nbTimestampEmpty; i++ {
+		comp.InsertGlobal(0, ifaces.QueryIDf("%s_TIMESTAMP_FETCHER_LIMBS_ZEROES_%d", name, i),
+			sym.Mul(timestamps.FilterFetched, timestamps.Data[i]),
+		)
+
+		comp.InsertGlobal(0, ifaces.QueryIDf("%s_TIMESTAMP_LIMBS_ZEROES_%d", name, i),
+			sym.Mul(edc.IsTimestamp, edc.Limbs[nbTimestamplLimbs+i]),
+		)
+	}
 
 	// Prepare a projection query to the TxnData fetcher, to check the Hi part of the sender address.
 	// compute the fetcher table, directly tied to the arithmetization.
-	txnDataTableHi := []ifaces.Column{
-		txnData.RelBlock,
-		txnData.AbsTxNum,
-		txnData.FromHi, // checks that the Hi part of the sender address is fetched correctly.
-	}
-	// compute the ExecutionDataCollector table.
-	edcTxnSenderAddressTableHi := []ifaces.Column{
-		edc.BlockID,
-		edc.AbsTxID,
-		edc.UnalignedLimb,
-	}
+	txnDataTableHi := make([]ifaces.Column, 0, common.NbLimbU32+2)
+	txnDataTableHi = append(txnDataTableHi, txnData.From[:common.NbLimbU32]...) // checks that the Hi part of the sender address is fetched correctly.
+	txnDataTableHi = append(txnDataTableHi, txnData.RelBlock, txnData.AbsTxNum)
 
-	comp.InsertProjection(
-		ifaces.QueryIDf("%s_SENDER_ADDRESS_HI_PROJECTION", name),
-		query.ProjectionInput{ColumnA: edcTxnSenderAddressTableHi,
+	// compute the ExecutionDataCollector table.
+	edcTxnSenderAddressTableHi := make([]ifaces.Column, 0, common.NbLimbU32+2)
+	edcTxnSenderAddressTableHi = append(edcTxnSenderAddressTableHi, edc.Limbs[:common.NbLimbU32]...)
+	edcTxnSenderAddressTableHi = append(edcTxnSenderAddressTableHi, edc.BlockID, edc.AbsTxID)
+
+	comp.InsertProjection(ifaces.QueryIDf("%s_SENDER_ADDRESS_HI_PROJECTION", name),
+		query.ProjectionInput{
+			ColumnA: edcTxnSenderAddressTableHi,
 			ColumnB: txnDataTableHi,
 			FilterA: edc.IsAddrHi, // filter on IsAddrHi=1
-			FilterB: txnData.FilterFetched})
+			FilterB: txnData.FilterFetched,
+		},
+	)
+
+	// Check that the unused limbs of the sender address are zeroes.
+	for i := common.NbLimbU32; i < common.NbLimbU128; i++ {
+		comp.InsertGlobal(0, ifaces.QueryIDf("%s_SENDER_ADDRESS_HI_LIMBS_ZEROES_%d", name, i),
+			sym.Mul(edc.IsAddrHi, edc.Limbs[i]),
+		)
+	}
 
 	// Prepare the projection query to the TxnData fetcher, to check the Lo part of the sender address.
 	// compute the fetcher table, directly tied to the arithmetization.
-	txnDataTableLo := []ifaces.Column{
-		txnData.RelBlock,
-		txnData.AbsTxNum,
-		txnData.FromLo,
-	}
-	// compute the ExecutionDataCollector table.
-	edcTxnSenderAddressTableLo := []ifaces.Column{
-		edc.BlockID,
-		edc.AbsTxID,
-		edc.UnalignedLimb,
-	}
+	txnDataTableLo := make([]ifaces.Column, 0, common.NbLimbU128+2)
+	txnDataTableLo = append(txnDataTableLo, txnData.From[common.NbLimbU32:]...) // checks that the Lo part of the sender address is fetched correctly.
+	txnDataTableLo = append(txnDataTableLo, txnData.RelBlock, txnData.AbsTxNum)
 
-	comp.InsertProjection(
-		ifaces.QueryIDf("%s_SENDER_ADDRESS_LO_PROJECTION", name),
-		query.ProjectionInput{ColumnA: edcTxnSenderAddressTableLo,
+	// compute the ExecutionDataCollector table.
+	edcTxnSenderAddressTableLo := make([]ifaces.Column, 0, common.NbLimbU128+2)
+	edcTxnSenderAddressTableLo = append(edcTxnSenderAddressTableLo, edc.Limbs[:]...)
+	edcTxnSenderAddressTableLo = append(edcTxnSenderAddressTableLo, edc.BlockID, edc.AbsTxID)
+
+	comp.InsertProjection(ifaces.QueryIDf("%s_SENDER_ADDRESS_LO_PROJECTION", name),
+		query.ProjectionInput{
+			ColumnA: edcTxnSenderAddressTableLo,
 			ColumnB: txnDataTableLo,
 			FilterA: edc.IsAddrLo, // filter on IsAddrLo=1
-			FilterB: txnData.FilterFetched})
+			FilterB: txnData.FilterFetched,
+		},
+	)
 
 	// Prepare the projection query to the RlpTxn fetcher, to check:
 	// AbsTxNum, AbsTxNumMax, Limb, NBytes and EndOfRlpSegment.
 	// first compute the fetcher table, directly tied to the arithmetization.
-	rlpDataTable := []ifaces.Column{
+	rlpDataTable := append(
+		rlp.Limbs[:],
 		rlp.AbsTxNum,
 		rlp.AbsTxNumMax,
-		rlp.Limb,
 		rlp.NBytes,
 		rlp.EndOfRlpSegment,
-	}
+	)
 	// compute the ExecutionDataCollector table.
-	edcRlpDataTable := []ifaces.Column{
+	edcRlpDataTable := append(
+		edc.Limbs[:],        // Check correctness of the limbs.
 		edc.AbsTxID,         // Check correctness of the AbsTxID.
 		edc.AbsTxIDMax,      // The fact that it is constant is enforced in DefineConstantConstraints.
-		edc.Limb,            // Check correctness of the limbs.
 		edc.NoBytes,         // Check correctness of the number of bytes.
 		edc.EndOfRlpSegment, // This constrains EndOfRlpSegment on edc.IsTx.RLP = 1, but we still need to constrain it elsewhere
 		// EndOfRlpSegment is also constrained in DefineSelectorConstraints, which requires that EndOfRlpSegment=0 when AbsTxID is constant.
 		// EndOfRlpSegment is also constrained in DefineZeroizationConstraints, with respect to IsActive.
-	}
+	)
 
-	comp.InsertProjection(
-		ifaces.QueryIDf("%s_RLP_LIMB_DATA_PROJECTION", name),
-		query.ProjectionInput{ColumnA: edcRlpDataTable,
+	comp.InsertProjection(ifaces.QueryIDf("%s_RLP_LIMB_DATA_PROJECTION", name),
+		query.ProjectionInput{
+			ColumnA: edcRlpDataTable,
 			ColumnB: rlpDataTable,
 			FilterA: edc.IsTxRLP, // filter on IsTxRLP=1
-			FilterB: rlp.FilterFetched})
+			FilterB: rlp.FilterFetched,
+		},
+	)
 }
 
 // LookupQueries computes lookup queries to the BlockTxnMetadata arithmetization fetcher:
@@ -1111,7 +1049,8 @@ func DefineCounterConstraints(comp *wizard.CompiledIOP, edc *ExecutionDataCollec
 // DefineZeroizationConstraints enforces that multiple columns are zero when the IsActive filter is zero.
 func DefineZeroizationConstraints(comp *wizard.CompiledIOP, edc *ExecutionDataCollector, name string) {
 	// enforce zero fields when isActive is not set to 1
-	var emptyWhenInactive = [...]ifaces.Column{
+	var emptyWhenInactive = append(
+		edc.Limbs[:],
 		edc.BlockID,
 		edc.AbsTxID,
 		edc.AbsTxIDMax,
@@ -1127,13 +1066,10 @@ func DefineZeroizationConstraints(comp *wizard.CompiledIOP, edc *ExecutionDataCo
 		edc.FirstAbsTxIDBlock,
 		edc.LastAbsTxIDBlock,
 		edc.EndOfRlpSegment,
-		edc.Limb,
 		edc.NoBytes,
-		edc.UnalignedLimb,
-		edc.AlignedPow,
 		edc.TotalBytesCounter,
 		// exclude edc.HashNum, as it is a fully constant column
-	}
+	)
 
 	for _, col := range emptyWhenInactive {
 		// if isActive = 0 then the column becomes 0
@@ -1194,33 +1130,27 @@ func DefineConstantConstraints(comp *wizard.CompiledIOP, edc *ExecutionDataColle
 	)
 }
 
-// DefineLimbAlignmentConstraints constrains that Limb=UnalignedLimb*AlignedPow.
-func DefineLimbAlignmentConstraints(comp *wizard.CompiledIOP, edc *ExecutionDataCollector, name string) {
-	// unaligned limb --- aligned limb constraints
-	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%s_UNALIGNED_LIMB_AND_ALIGNED_LIMB_CONSTRAINT", name),
-		sym.Sub(
-			edc.Limb,
-			sym.Mul(
-				edc.UnalignedLimb,
-				edc.AlignedPow,
-			),
-		),
-	)
-}
-
 // DefineLimbConsistencyConstraints makes sure that limb values are correct for the total number of transactions.
 func DefineLimbConsistencyConstraints(comp *wizard.CompiledIOP, edc *ExecutionDataCollector, name string) {
+	// The values is contained in the first limb - left aligned 16 bits.
 	comp.InsertGlobal(0,
 		ifaces.QueryIDf("%s_UNALIGNED_LIMB_AND_TOTAL_NO_TX", name),
 		sym.Mul(
 			edc.IsNoTx,
 			sym.Sub(
-				edc.UnalignedLimb,
+				edc.Limbs[0],
 				edc.TotalNoTxBlock,
 			),
 		),
 	)
+
+	// The rest of the limbs are empty - zeroes.
+	for i := 1; i < len(edc.Limbs); i++ {
+		comp.InsertGlobal(0,
+			ifaces.QueryIDf("%s_UNALIGNED_LIMB_AND_TOTAL_NO_TX_ZEROES_%d", name, i),
+			sym.Mul(edc.IsNoTx, edc.Limbs[i]),
+		)
+	}
 }
 
 // DefineIsActiveConstraints requires that IsActive has the proper shape, never transitioning from 0 to 1.
@@ -1245,7 +1175,7 @@ func DefineIsActiveConstraints(comp *wizard.CompiledIOP, edc *ExecutionDataColle
 func DefineExecutionDataCollector(comp *wizard.CompiledIOP,
 	edc *ExecutionDataCollector,
 	name string,
-	timestamps *fetch.TimestampFetcher,
+	timestamps *fetch.BlockDataFetcher,
 	metadata fetch.BlockTxnMetadata,
 	txnData fetch.TxnDataFetcher,
 	rlp fetch.RlpTxnFetcher) {
@@ -1265,8 +1195,6 @@ func DefineExecutionDataCollector(comp *wizard.CompiledIOP,
 
 	// constraints that concern the limbs, unaligned limbs, the alignment powers
 	// and the number of bytes
-	DefineAlignmentPowers(comp, edc, name)
-	DefineLimbAlignmentConstraints(comp, edc, name)
 	DefineNumberOfBytesConstraints(comp, edc, name)
 	DefineLimbConsistencyConstraints(comp, edc, name)
 
@@ -1290,17 +1218,17 @@ func DefineExecutionDataCollector(comp *wizard.CompiledIOP,
 }
 
 // AssignExecutionDataCollector assigns the data in the ExecutionDataCollector, using
-// the arithmetizationfetchers fetch.TimestampFetcher, fetch.BlockTxnMetadata,
+// the arithmetizationfetchers fetch.BlockDataFetcher, fetch.BlockTxnMetadata,
 // fetch.TxnDataFetcher, and fetch.RlpTxnFetcher.
 func AssignExecutionDataCollector(run *wizard.ProverRuntime,
 	edc *ExecutionDataCollector,
-	timestamps *fetch.TimestampFetcher,
+	timestamps *fetch.BlockDataFetcher,
 	metadata fetch.BlockTxnMetadata,
 	txnData fetch.TxnDataFetcher,
 	rlp fetch.RlpTxnFetcher,
 	blockHashList []types.FullBytes32,
 ) {
-	size := edc.Limb.Size()
+	size := edc.Limbs[0].Size()
 	// generate a helper struct that instantiates field element vectors for all our columns
 	vect := NewExecutionDataCollectorVectors(size)
 
@@ -1311,7 +1239,7 @@ func AssignExecutionDataCollector(run *wizard.ProverRuntime,
 	rlpCt := 0
 	totalCt := 0
 
-	for blockCt := 0; blockCt < timestamps.Data.Size(); blockCt++ {
+	for blockCt := 0; blockCt < timestamps.Data[0].Size(); blockCt++ {
 		isBlockPresent := metadata.FilterFetched.GetColAssignmentAt(run, blockCt)
 		if isBlockPresent.IsOne() {
 			// block-wide information
@@ -1325,41 +1253,60 @@ func AssignExecutionDataCollector(run *wizard.ProverRuntime,
 			// that is computed in a similar way in each type of row.
 			// opType is the type of row, and the field element value is the unaligned
 			// limb value
-			genericLoadFunction := func(opType int, value field.Element) {
+			genericLoadFunction := func(value []field.Element) {
 				vect.IsActive[totalCt].SetOne()
-				vect.SetLimbAndUnalignedLimb(totalCt, value, opType)
 				vect.SetCounters(totalCt, blockCt, absTxCt, absTxIdMax)
 				vect.SetBlockMetadata(totalCt, totalTxBlockField, firstAbsTxIDBlock, lastAbsTxIDBlock)
+				// set limbs left aligned, the rest of the limbs are zeroes
+				for i := range value {
+					vect.Limbs[i][totalCt] = value[i]
+				}
 			}
 
 			// row 0, load the number of transactions
 			vect.IsNoTx[totalCt].SetOne()
 			vect.NoBytes[totalCt].SetInt64(noBytesNoTxn)
-			genericLoadFunction(loadNoTxn, fetchNoTx)
+			genericLoadFunction([]field.Element{fetchNoTx})
 			totalCt++
 
-			// row 1, load the timestamp
-			fetchedTimestamp := timestamps.Data.GetColAssignmentAt(run, blockCt)
+			// row 1, fetch the timestamp
+			var fetchedTimestamp [common.NbLimbU128]field.Element
+			for i := range fetchedTimestamp {
+				// Fetch the 64 bits of timestamp and store it left aligned in the first limbs, the rest of the limbs are zeroes.
+				fetchedTimestamp[i] = timestamps.Data[i].GetColAssignmentAt(run, blockCt)
+			}
+			// row 1, plug in the timestamp
 			vect.IsTimestamp[totalCt].SetOne()
 			vect.NoBytes[totalCt].SetInt64(noBytesTimestamp)
-			genericLoadFunction(loadTimestamp, fetchedTimestamp)
+			genericLoadFunction(fetchedTimestamp[nbTimestampEmpty:])
 			totalCt++
 
-			// row 2, load the Hi part of the blockhash
-			var fetchedBlockhashHi field.Element
-			fetchedBlockhashHi.SetBytes(blockHashList[blockCt][:16])
+			// row 2, fetch the Hi part of the blockhash
+			var fetchedBlockhashHi [common.NbLimbU128]field.Element
+			for i := range fetchedBlockhashHi {
+				fetchedBlockhashHi[i].SetBytes(blockHashList[blockCt][i*2 : (i+1)*2])
+			}
+
+			// row 2, plug in the Hi part of the blockhash
 			vect.IsBlockHashHi[totalCt].SetOne()
 			vect.NoBytes[totalCt].SetInt64(noBytesBlockHash)
-			genericLoadFunction(loadBlockHashHi, fetchedBlockhashHi)
+			genericLoadFunction(fetchedBlockhashHi[:])
 			vect.AbsTxIDMax[totalCt].Set(&fetchedAbsTxIdMax)
 			totalCt++
 
-			// row 3, load the Lo part of the blockhash
-			var fetchedBlockhashLo field.Element
-			fetchedBlockhashLo.SetBytes(blockHashList[blockCt][16:])
+			// row 3, fetch the Lo part of the blockhash
+			// NbLimbU128 is the number of 16-bit limbs (8), so the byte offset
+			// for the second half of the 32-byte hash is 2*NbLimbU128 = 16.
+			var fetchedBlockhashLo [common.NbLimbU128]field.Element
+			const blockHashLoByteOffset = 2 * common.NbLimbU128 // = 16 bytes
+			for i := range fetchedBlockhashLo {
+				fetchedBlockhashLo[i].SetBytes(blockHashList[blockCt][blockHashLoByteOffset+i*2 : blockHashLoByteOffset+(i+1)*2])
+			}
+
+			// row 3, plug in the Lo part of the blockhash
 			vect.IsBlockHashLo[totalCt].SetOne()
 			vect.NoBytes[totalCt].SetInt64(noBytesBlockHash)
-			genericLoadFunction(loadBlockHashLo, fetchedBlockhashLo)
+			genericLoadFunction(fetchedBlockhashLo[:])
 			totalCt++
 
 			if fetchNoTx.IsZero() {
@@ -1369,19 +1316,28 @@ func AssignExecutionDataCollector(run *wizard.ProverRuntime,
 			} else {
 				// iterate through transactions
 				for txIdInBlock := uint64(1); txIdInBlock <= totalTxBlock; txIdInBlock++ {
+					// fetch the sender address Hi
+					var fetchedAddrHi [common.NbLimbU32]field.Element
 
-					// load the sender address Hi
-					fetchedAddrHi := txnData.FromHi.GetColAssignmentAt(run, absTxCt-1)
+					for i := range common.NbLimbU32 {
+						fetchedAddrHi[i] = txnData.From[i].GetColAssignmentAt(run, absTxCt-1)
+					}
+
+					// plug in the sender address Hi
 					vect.IsAddrHi[totalCt].SetOne()
 					vect.NoBytes[totalCt].SetInt64(noBytesSenderAddrHi)
-					genericLoadFunction(loadSenderAddrHi, fetchedAddrHi)
+					genericLoadFunction(fetchedAddrHi[:])
 					totalCt++
 
+					// fetch the sender address Lo
+					var fetchedAddrLo [common.NbLimbU128]field.Element
+					for i := range common.NbLimbU128 {
+						fetchedAddrLo[i] = txnData.From[common.NbLimbU32+i].GetColAssignmentAt(run, absTxCt-1)
+					}
 					// load the sender address Lo
-					fetchedAddrLo := txnData.FromLo.GetColAssignmentAt(run, absTxCt-1)
 					vect.IsAddrLo[totalCt].SetOne()
 					vect.NoBytes[totalCt].SetInt64(noBytesSenderAddrLo)
-					genericLoadFunction(loadSenderAddrLo, fetchedAddrLo)
+					genericLoadFunction(fetchedAddrLo[:])
 					totalCt++
 
 					// load the RLP limbs
@@ -1390,11 +1346,16 @@ func AssignExecutionDataCollector(run *wizard.ProverRuntime,
 					// add RLP limbs (multiple limbs)
 					for currentAbsTxId.Equal(&rlpPointerAbsTxId) {
 						// while currentAbsTxId is equal to rlpPointerAbsTxId, namely we are parsing the limbs for the same AbsTxID
-						rlpLimb := rlp.Limb.GetColAssignmentAt(run, rlpCt)
+						// first fetch the limb data
+						var rlpLimbs [common.NbLimbU128]field.Element
+						for i := range rlpLimbs {
+							rlpLimbs[i] = rlp.Limbs[i].GetColAssignmentAt(run, rlpCt)
+						}
+						// now load the RLP limb data
 						rlpNBytes := rlp.NBytes.GetColAssignmentAt(run, rlpCt)
 						vect.IsTxRLP[totalCt].SetOne()
 						vect.NoBytes[totalCt].Set(&rlpNBytes)
-						genericLoadFunction(loadRlp, rlpLimb)
+						genericLoadFunction(rlpLimbs[:])
 						totalCt++
 
 						rlpCt++
@@ -1414,7 +1375,7 @@ func AssignExecutionDataCollector(run *wizard.ProverRuntime,
 			vect.FinalTotalBytesCounter = vect.TotalBytesCounter[totalCt-1]
 			break
 		}
-	} // end of the block for loop
+	}
 
 	// assign the columns to the ExecutionDataCollector
 	AssignExecutionDataColumns(run, edc, vect)
@@ -1431,10 +1392,10 @@ func AssignExecutionDataCollector(run *wizard.ProverRuntime,
 func AssignExecutionDataColumns(run *wizard.ProverRuntime, edc *ExecutionDataCollector, vect *ExecutionDataCollectorVectors) {
 	run.AssignColumn(edc.BlockID.GetColID(), smartvectors.NewRegular(vect.BlockID))
 	run.AssignColumn(edc.AbsTxID.GetColID(), smartvectors.NewRegular(vect.AbsTxID))
-	run.AssignColumn(edc.Limb.GetColID(), smartvectors.NewRegular(vect.Limb))
+	for i := range edc.Limbs {
+		run.AssignColumn(edc.Limbs[i].GetColID(), smartvectors.NewRegular(vect.Limbs[i]))
+	}
 	run.AssignColumn(edc.NoBytes.GetColID(), smartvectors.NewRegular(vect.NoBytes))
-	run.AssignColumn(edc.UnalignedLimb.GetColID(), smartvectors.NewRegular(vect.UnalignedLimb))
-	run.AssignColumn(edc.AlignedPow.GetColID(), smartvectors.NewRegular(vect.AlignedPow))
 	run.AssignColumn(edc.TotalNoTxBlock.GetColID(), smartvectors.NewRegular(vect.TotalNoTxBlock))
 	run.AssignColumn(edc.IsActive.GetColID(), smartvectors.NewRegular(vect.IsActive))
 	run.AssignColumn(edc.IsNoTx.GetColID(), smartvectors.NewRegular(vect.IsNoTx))

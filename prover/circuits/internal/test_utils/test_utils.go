@@ -6,11 +6,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/consensys/gnark/std/compress"
 	"math/big"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/consensys/gnark/std/compress"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"

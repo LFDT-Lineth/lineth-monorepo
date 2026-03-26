@@ -8,6 +8,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
+	"github.com/consensys/linea-monorepo/prover/protocol/compiler/splitextension"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
@@ -20,7 +21,6 @@ import (
 // evaluations are done at the same points for all the polynomials. This
 // ensures that Vortex can be applied on top.
 type MultipointToSinglepointCompilation struct {
-
 	// Queries lists all the compiled evaluation queries that are relevant
 	// to the compilation step.
 	Queries []query.UnivariateEval
@@ -50,6 +50,11 @@ type MultipointToSinglepointCompilation struct {
 	// PolysOfEvalPoint lists, for each entry in [Queries], the entries of
 	// [Polys] corresponding to polynomials evaluated at the same point.
 	PolysOfEvalPoint [][]int
+
+	// PolyPositionInQuery lists, for each entry in [Queries], the position
+	// of the polynomial in the query. This is used to speed up the evaluation
+	// of the quotient.
+	PolyPositionInQuery [][]int
 
 	// NumColumnProfileOpt is an optional compilation parameter that can be
 	// set to control the number of column in every round of the compilation.
@@ -95,16 +100,24 @@ type MultipointToSinglepointCompilation struct {
 // Compile applies the multipoint to singlepoint compilation pass over `comp`.
 func Compile(options ...Option) func(*wizard.CompiledIOP) {
 	return func(comp *wizard.CompiledIOP) {
-		compileMultipointToSinglepoint(comp, options)
+		if ctx := compileMultipointToSinglepoint(comp, options); ctx == nil {
+			return
+		}
+		// adding the split-extension pass right after MPTS
+		// and before Vortex
+		splitextension.CompileSplitExtToBase(comp)
 	}
 }
 
 // compileMultipointToSinglepoint takes all the uncompiled multipoint to
 // singlepoint queries and compile them using a quotient accumulation technique.
 func compileMultipointToSinglepoint(comp *wizard.CompiledIOP, options []Option) *MultipointToSinglepointCompilation {
-
 	ctx := &MultipointToSinglepointCompilation{
 		Queries: getAndMarkAsCompiledQueries(comp),
+	}
+
+	if len(ctx.Queries) == 0 {
+		return nil
 	}
 
 	for _, op := range options {
@@ -117,9 +130,7 @@ func compileMultipointToSinglepoint(comp *wizard.CompiledIOP, options []Option) 
 		append(polysByRound, polyPrecomputed, direct)...),
 	)
 
-	var (
-		err, errLocal error
-	)
+	var err, errLocal error
 
 	if ctx.NumColumnProfileOpt != nil {
 
@@ -171,37 +182,49 @@ func compileMultipointToSinglepoint(comp *wizard.CompiledIOP, options []Option) 
 	ctx.Polys = slices.Concat(append([][]ifaces.Column{polyPrecomputed, direct}, polysByRound...)...)
 	ctx.ExplicitlyEvaluated = direct
 
+	// This is used to disambiguate column names in such a way that the same
+	// the column names are compatible with conglomeration. This counts the
+	// total number of elements in the polys slice, each extension element
+	// counts for 4.
+	numMPTSColumns := len(ctx.Polys)
+	for i := range ctx.Polys {
+		if !ctx.Polys[i].IsBase() {
+			numMPTSColumns += 3
+		}
+	}
+
 	ctx.LinCombCoeffLambda = comp.InsertCoin(
 		ctx.getNumRound(comp),
-		coin.Namef("MPTS_LINCOMB_COEFF_LAMBDA_%v", comp.SelfRecursionCount),
-		coin.Field,
+		coin.Namef("MPTS_LINCOMB_COEFF_LAMBDA_%v_%v", comp.SelfRecursionCount, numMPTSColumns),
+		coin.FieldExt,
 	)
 
 	ctx.LinCombCoeffRho = comp.InsertCoin(
 		ctx.getNumRound(comp),
-		coin.Namef("MPTS_LINCOMB_COEFF_RHO_%v", comp.SelfRecursionCount),
-		coin.Field,
+		coin.Namef("MPTS_LINCOMB_COEFF_RHO_%v_%v", comp.SelfRecursionCount, numMPTSColumns),
+		coin.FieldExt,
 	)
 
 	ctx.Quotient = comp.InsertCommit(
 		ctx.getNumRound(comp),
-		ifaces.ColIDf("MPTS_QUOTIENT_%v", comp.SelfRecursionCount),
+		ifaces.ColIDf("MPTS_QUOTIENT_%v_%v", comp.SelfRecursionCount, numMPTSColumns),
 		ctx.NumRow,
+		false,
 	)
 
 	ctx.EvaluationPoint = comp.InsertCoin(
 		ctx.getNumRound(comp)+1,
-		coin.Namef("MPTS_EVALUATION_POINT_%v", comp.SelfRecursionCount),
-		coin.Field,
+		coin.Namef("MPTS_EVALUATION_POINT_%v_%v", comp.SelfRecursionCount, numMPTSColumns),
+		coin.FieldExt,
 	)
 
 	ctx.NewQuery = comp.InsertUnivariate(
 		ctx.getNumRound(comp)+1,
-		ifaces.QueryIDf("MPTS_NEW_QUERY_%v", comp.SelfRecursionCount),
+		ifaces.QueryIDf("MPTS_NEW_QUERY_%v_%v", comp.SelfRecursionCount, numMPTSColumns),
 		append(slices.Concat(append([][]ifaces.Column{polyPrecomputed}, polysByRound...)...), ctx.Quotient),
 	)
 
-	ctx.EvalPointOfPolys, ctx.PolysOfEvalPoint = indexPolysAndPoints(ctx.Polys, ctx.Queries)
+	ctx.EvalPointOfPolys, ctx.PolysOfEvalPoint, ctx.PolyPositionInQuery = indexPolysAndPoints(ctx.Polys, ctx.Queries)
 
 	comp.RegisterProverAction(ctx.getNumRound(comp), QuotientAccumulation{ctx})
 	comp.RegisterProverAction(ctx.getNumRound(comp)+1, RandomPointEvaluation{ctx})
@@ -213,7 +236,6 @@ func compileMultipointToSinglepoint(comp *wizard.CompiledIOP, options []Option) 
 // setMaxNumberOfRowsOf scans the list of columns and returns the largest size.
 // and set it in the context. The function returns an error if the list is empty.
 func (ctx *MultipointToSinglepointCompilation) setMaxNumberOfRowsOf(columns []ifaces.Column) int {
-
 	if len(columns) == 0 {
 		return 0
 	}
@@ -241,7 +263,6 @@ func (ctx *MultipointToSinglepointCompilation) getNumRow() int {
 //
 // The function assumes that the number of queries to compile is not 0.
 func (ctx *MultipointToSinglepointCompilation) getNumRound(comp *wizard.CompiledIOP) int {
-
 	maxRound := -1
 	for i := range ctx.Queries {
 		round := comp.QueriesParams.Round(ctx.Queries[i].Name())
@@ -262,7 +283,6 @@ func (ctx *MultipointToSinglepointCompilation) getNumRound(comp *wizard.Compiled
 // getAndMarkAsCompiledQueries returns all the queries that are relevant
 // to the multipoint to singlepoint compilation and mark them as ignored.
 func getAndMarkAsCompiledQueries(comp *wizard.CompiledIOP) []query.UnivariateEval {
-
 	var (
 		selectedQueries = []query.UnivariateEval{}
 		allQueries      = comp.QueriesParams.AllUnignoredKeys()
@@ -291,7 +311,6 @@ func getAndMarkAsCompiledQueries(comp *wizard.CompiledIOP) []query.UnivariateEva
 // the unconstrained columns, it will only add the columns with the
 // [column.Committed] status.
 func sortPolynomialsByRoundAndName(comp *wizard.CompiledIOP, queries []query.UnivariateEval, addUnconstrainedColumn bool) (compiledByRound [][]ifaces.Column, precomputed []ifaces.Column, direct []ifaces.Column) {
-
 	compiledByRound = make([][]ifaces.Column, 0)
 	precomputed = make([]ifaces.Column, 0)
 	direct = make([]ifaces.Column, 0)
@@ -372,7 +391,6 @@ func sortPolynomialsByRoundAndName(comp *wizard.CompiledIOP, queries []query.Uni
 // to match a given profile. The profile corresponds to a target number of columns
 // to meet in "p". The function will ignore the verifiercol from the count.
 func extendPWithShadowColumns(comp *wizard.CompiledIOP, round int, numRow int, p []ifaces.Column, profile int, precomputed bool) ([]ifaces.Column, error) {
-
 	if len(p) > profile {
 		return nil, fmt.Errorf("the profile is too small for the given polynomials list, round=%v len(p)=%v profile=%v", round, len(p), profile)
 	}
@@ -386,6 +404,16 @@ func extendPWithShadowColumns(comp *wizard.CompiledIOP, round int, numRow int, p
 		if isVcol {
 			numP--
 		}
+		// if p[i] is an extension column, then it will be
+		// split into 4 base columns, so we count it as 3 extra columns.
+		if !p[i].IsBase() {
+			numP = numP + 3
+		}
+	}
+
+	// We check the same sanity as above just to be safe.
+	if numP > profile {
+		return nil, fmt.Errorf("the profile is too small for the given polynomials list, round=%v len(p)=%v profile=%v", round, numP, profile)
 	}
 
 	for i := numP; i < profile; i++ {
@@ -410,7 +438,6 @@ func extendPWithShadowColumns(comp *wizard.CompiledIOP, round int, numRow int, p
 // The function will ignore the first round if it only contains precomputed
 // columns. The function also ignores [VerifierCol].
 func getStartingRound(comp *wizard.CompiledIOP, s [][]ifaces.Column) int {
-
 	if len(s) == 0 {
 		panic("empty list")
 	}
@@ -443,21 +470,27 @@ func getStartingRound(comp *wizard.CompiledIOP, s [][]ifaces.Column) int {
 //
 // The returns are two lists of lists of integers referencing the positions
 // in the inputs [polys] and [points].
-func indexPolysAndPoints(polys []ifaces.Column, points []query.UnivariateEval) (evalPointOfPolys, polysOfEvalPoint [][]int) {
-
+func indexPolysAndPoints(polys []ifaces.Column, points []query.UnivariateEval) (evalPointOfPolys, polysOfEvalPoint, polyPositionInQuery [][]int) {
 	evalPointOfPolys = make([][]int, len(polys))
 	polysOfEvalPoint = make([][]int, len(points))
+	polyPositionInQuery = make([][]int, len(points))
 	polyNameToIndex := make(map[ifaces.ColID]int)
 
 	for i := range polys {
 		polyNameToIndex[polys[i].GetColID()] = i
 	}
 
+	type polyInfo struct {
+		polyID int
+		pos    int
+	}
+	tempPolysOfEvalPoint := make([][]polyInfo, len(points))
+
 	for queryID, q := range points {
-		for _, poly := range q.Pols {
+		for pos, poly := range q.Pols {
 			polyID := polyNameToIndex[poly.GetColID()]
 			evalPointOfPolys[polyID] = append(evalPointOfPolys[polyID], queryID)
-			polysOfEvalPoint[queryID] = append(polysOfEvalPoint[queryID], polyID)
+			tempPolysOfEvalPoint[queryID] = append(tempPolysOfEvalPoint[queryID], polyInfo{polyID, pos})
 		}
 	}
 
@@ -466,9 +499,15 @@ func indexPolysAndPoints(polys []ifaces.Column, points []query.UnivariateEval) (
 	// can assume that the entries of evalPointOfPolys are sorted in
 	// order. But this is not the case for polysOfEvalPoint as nothing
 	// indicate they are sorted in [query.Pols] field.
-	for i := range polysOfEvalPoint {
-		slices.Sort(polysOfEvalPoint[i])
+	for i := range tempPolysOfEvalPoint {
+		slices.SortFunc(tempPolysOfEvalPoint[i], func(a, b polyInfo) int {
+			return a.polyID - b.polyID
+		})
+		for _, info := range tempPolysOfEvalPoint[i] {
+			polysOfEvalPoint[i] = append(polysOfEvalPoint[i], info.polyID)
+			polyPositionInQuery[i] = append(polyPositionInQuery[i], info.pos)
+		}
 	}
 
-	return evalPointOfPolys, polysOfEvalPoint
+	return evalPointOfPolys, polysOfEvalPoint, polyPositionInQuery
 }

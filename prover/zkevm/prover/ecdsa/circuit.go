@@ -7,21 +7,22 @@ import (
 	"github.com/consensys/gnark/std/algebra"
 	"github.com/consensys/gnark/std/algebra/emulated/sw_emulated"
 	"github.com/consensys/gnark/std/evmprecompiles"
-	"github.com/consensys/gnark/std/math/bitslice"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/emulated/emparams"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/plonk"
+	"github.com/consensys/linea-monorepo/prover/utils/gnarkutil"
+	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
 )
 
 type EcRecoverInstance struct {
-	PKXHi, PKXLo, PKYHi, PKYLo frontend.Variable `gnark:",public"`
-	HHi, HLo                   frontend.Variable `gnark:",public"`
-	VHi, VLo                   frontend.Variable `gnark:",public"`
-	RHi, RLo                   frontend.Variable `gnark:",public"`
-	SHi, SLo                   frontend.Variable `gnark:",public"`
-	SUCCESS_BIT                frontend.Variable `gnark:",public"`
-	ECRECOVERBIT               frontend.Variable `gnark:",public"`
+	PKXHi, PKXLo, PKYHi, PKYLo [common.NbLimbU128]frontend.Variable `gnark:",public"`
+	HHi, HLo                   [common.NbLimbU128]frontend.Variable `gnark:",public"`
+	VHi, VLo                   [common.NbLimbU128]frontend.Variable `gnark:",public"`
+	RHi, RLo                   [common.NbLimbU128]frontend.Variable `gnark:",public"`
+	SHi, SLo                   [common.NbLimbU128]frontend.Variable `gnark:",public"`
+	SUCCESS_BIT                [common.NbLimbU128]frontend.Variable `gnark:",public"`
+	ECRECOVERBIT               [common.NbLimbU128]frontend.Variable `gnark:",public"`
 }
 
 type MultiEcRecoverCircuit struct {
@@ -61,51 +62,40 @@ func (c *EcRecoverInstance) splitInputs(api frontend.API) (PK *sw_emulated.Affin
 		err = fmt.Errorf("field emulation: %w", err2)
 		return
 	}
-	// gnark circuit works with 64 bits values, we need to split the 128 bits
-	// values into high and low parts.
-	// we leave the result unconstrained as field emulation constraints automatically
-	msgLimbs := make([]frontend.Variable, 4)
-	msgLimbs[2], msgLimbs[3] = bitslice.Partition(api, c.HHi, 64, bitslice.WithNbDigits(128))
-	msgLimbs[0], msgLimbs[1] = bitslice.Partition(api, c.HLo, 64, bitslice.WithNbDigits(128))
-	msg = fr.NewElement(msgLimbs)
-
-	PXlimbs := make([]frontend.Variable, 4)
-	PXlimbs[2], PXlimbs[3] = bitslice.Partition(api, c.PKXHi, 64, bitslice.WithNbDigits(128))
-	PXlimbs[0], PXlimbs[1] = bitslice.Partition(api, c.PKXLo, 64, bitslice.WithNbDigits(128))
-	PX := fp.NewElement(PXlimbs)
-
-	PYlimbs := make([]frontend.Variable, 4)
-	PYlimbs[2], PYlimbs[3] = bitslice.Partition(api, c.PKYHi, 64, bitslice.WithNbDigits(128))
-	PYlimbs[0], PYlimbs[1] = bitslice.Partition(api, c.PKYLo, 64, bitslice.WithNbDigits(128))
-	PY := fp.NewElement(PYlimbs)
+	// Convert big-endian 16×16-bit limbs to little-endian 26×10-bit limbs
+	// for gnark's emulated field over KoalaBear
+	msg = gnarkutil.EmulatedFromHiLo(api, fr, c.HHi[:], c.HLo[:], 16)
 	PK = &sw_emulated.AffinePoint[emparams.Secp256k1Fp]{
-		X: *PX,
-		Y: *PY,
+		X: *gnarkutil.EmulatedFromHiLo(api, fp, c.PKXHi[:], c.PKXLo[:], 16),
+		Y: *gnarkutil.EmulatedFromHiLo(api, fp, c.PKYHi[:], c.PKYLo[:], 16),
 	}
 
-	// v is 27 or 28 in EVM, but arithmetization gives on two limbs. Ensure that the high limb is zero and use only the low limb.
-	api.AssertIsEqual(c.VHi, 0)
-	v = c.VLo
+	// v is 27 or 28 in EVM, but arithmetization gives on two limbs. Ensure that all high limbs are zero.
+	for i := 0; i < common.NbLimbU128; i++ {
+		api.AssertIsEqual(c.VHi[i], 0)
+	}
+	// Also assert all but the last low limb are zero (v fits in ~5 bits)
+	for i := 1; i < common.NbLimbU128; i++ {
+		api.AssertIsEqual(c.VLo[i], 0)
+	}
+	v = c.VLo[0] // last limb since v is small (27 or 28).
 
-	// similarly, we split r and s into limbs compatible with gnark. But we work
-	// over a different field (scalar field vs base field for PK).
-	rLimbs := make([]frontend.Variable, 4)
-	rLimbs[2], rLimbs[3] = bitslice.Partition(api, c.RHi, 64, bitslice.WithNbDigits(128))
-	rLimbs[0], rLimbs[1] = bitslice.Partition(api, c.RLo, 64, bitslice.WithNbDigits(128))
-	r = fr.NewElement(rLimbs)
+	// Convert r and s similarly
+	r = gnarkutil.EmulatedFromHiLo(api, fr, c.RHi[:], c.RLo[:], 16)
+	s = gnarkutil.EmulatedFromHiLo(api, fr, c.SHi[:], c.SLo[:], 16)
 
-	sLimbs := make([]frontend.Variable, 4)
-	sLimbs[2], sLimbs[3] = bitslice.Partition(api, c.SHi, 64, bitslice.WithNbDigits(128))
-	sLimbs[0], sLimbs[1] = bitslice.Partition(api, c.SLo, 64, bitslice.WithNbDigits(128))
-	s = fr.NewElement(sLimbs)
+	for i := 1; i < common.NbLimbU128; i++ {
+		api.AssertIsEqual(c.SUCCESS_BIT[i], 0)
+		api.AssertIsEqual(c.ECRECOVERBIT[i], 0)
+	}
 
 	// SUCCESS_BIT indicates if the input is a valid signature (1 for valid, 0
 	// for invalid). Recall that we also allow to verify invalid signatures (for
 	// the ECRECOVER precompile call).
-	isFailure = api.Sub(1, c.SUCCESS_BIT)
+	isFailure = api.Sub(1, c.SUCCESS_BIT[0])
 	// ECRECOVERBIT indicates if the input comes from the ECRECOVER precompile
 	// or not (1 for ECRECOVER, 0 for TX).
-	strictRange = api.Sub(1, c.ECRECOVERBIT)
+	strictRange = api.Sub(1, c.ECRECOVERBIT[0])
 
 	return
 }
@@ -118,58 +108,52 @@ func init() {
 	plonk.RegisterInputFiller(plonkInputFillerKey, PlonkInputFiller)
 }
 
+// nbInputsPerInstance is the total number of public inputs per EcRecoverInstance.
+// Layout: PKXHi[8], PKXLo[8], PKYHi[8], PKYLo[8], HHi[8], HLo[8], VHi[8], VLo[8],
+//
+//	RHi[8], RLo[8], SHi[8], SLo[8], SuccessBitUnused[7], SUCCESS_BIT, EcrecoverBitUnused[7], ECRECOVERBIT
+//
+// Total: 12 * 8 + 7 + 1 + 7 + 1 = 112 inputs
+const nbInputsPerInstance = 14 * common.NbLimbU128
+
 // PlonkInputFiller is the input-filler that we use to assign the public inputs
 // of incomplete circuits. This function must be registered via the
 // [plonk.RegisterInputFiller] via the [init] function. But this has to be done
 // manually if the package is not imported.
 func PlonkInputFiller(circuitInstance, inputIndex int) field.Element {
-	// every instance has 14 inputs.
-	// pubkey xHi, pubkey xLo, pubkey yHi, pubkey yLo, hHi, hLo, vHi, vLo, rHi, rLo, sHi, sLo, successBit, ecrecoverBit
 
-	// public key 1*G
-	placeholderPubkey := [64]byte{0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac, 0x55, 0xa0, 0x62, 0x95, 0xce, 0x87, 0xb, 0x7, 0x2, 0x9b, 0xfc, 0xdb, 0x2d, 0xce, 0x28, 0xd9, 0x59, 0xf2, 0x81, 0x5b, 0x16, 0xf8, 0x17, 0x98, 0x48, 0x3a, 0xda, 0x77, 0x26, 0xa3, 0xc4, 0x65, 0x5d, 0xa4, 0xfb, 0xfc, 0xe, 0x11, 0x8, 0xa8, 0xfd, 0x17, 0xb4, 0x48, 0xa6, 0x85, 0x54, 0x19, 0x9c, 0x47, 0xd0, 0x8f, 0xfb, 0x10, 0xd4, 0xb8}
-	// 1000000...0000
-	placeholderTxHash := [32]byte{0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
-	// valid signature for secret key 1 and tx hash 1 with random nonce
-	// valid signature for secret key 1 and tx hash 1 with nonce 2
-	placeholderSignature := [66]byte{
-		// r part of signature
-		0xc6, 0x4, 0x7f, 0x94, 0x41, 0xed, 0x7d, 0x6d, 0x30, 0x45, 0x40, 0x6e, 0x95, 0xc0, 0x7c, 0xd8, 0x5c, 0x77, 0x8e, 0x4b, 0x8c, 0xef, 0x3c, 0xa7, 0xab, 0xac, 0x9, 0xb9, 0x5c, 0x70, 0x9e, 0xe5,
-		// s part of signature
-		0xe3, 0x82, 0x3f, 0xca, 0x20, 0xf6, 0xbe, 0xb6, 0x98, 0x22, 0xa0, 0x37, 0x4a, 0xe0, 0x3e, 0x6b, 0x8b, 0x93, 0x35, 0x99, 0x1e, 0x1b, 0xee, 0x71, 0xb5, 0xbf, 0x34, 0x23, 0x16, 0x53, 0x70, 0x13,
-		// v part of signature (in EVM format, 27 is added to the recovery id)
-		0x0, 0x1b,
+	fillingData := []uint32{
+		// public key: 1*G
+		0x0b07, 0xce87, 0x6295, 0x55a0, 0xbbac, 0xf9dc, 0x667e, 0x79be,
+		0x1798, 0x16f8, 0x815b, 0x59f2, 0x28d9, 0x2dce, 0xfcdb, 0x029b,
+		0x08a8, 0x0e11, 0xfbfc, 0x5da4, 0xc465, 0x26a3, 0xda77, 0x483a,
+		0xd4b8, 0xfb10, 0xd08f, 0x9c47, 0x5419, 0xa685, 0xb448, 0xfd17,
+
+		// tx hash: 1000000...0000
+		0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0100,
+		0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+
+		// VHI / VLO - valid signature for secret key 1 and tx hash 1 with nonce 2
+		0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+		0x001b, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+
+		// RHI / RLO - 	valid signature for secret key 1 and tx hash 1 with nonce 2
+		0x7cd8, 0x95c0, 0x406e, 0x3045, 0x7d6d, 0x41ed, 0x7f94, 0xc604,
+		0x9ee5, 0x5c70, 0x09b9, 0xabac, 0x3ca7, 0x8cef, 0x8e4b, 0x5c77,
+
+		// SHI / SLO - valid signature for secret key 1 and tx hash 1 with nonce 2
+		0x3e6b, 0x4ae0, 0xa037, 0x9822, 0xbeb6, 0x20f6, 0x3fca, 0xe382,
+		0x7013, 0x1653, 0x3423, 0xb5bf, 0xee71, 0x1e1b, 0x3599, 0x8b93,
+
+		// SuccessBit / EcRecoverBit - valid signature for secret key 1 and tx hash 1 with nonce 2
+		0x0001, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+		0x0001, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	}
-	var ret field.Element
-	switch inputIndex % 14 {
-	case 0: // PK X HI
-		ret.SetBytes(placeholderPubkey[0:16])
-	case 1: // PK X LO
-		ret.SetBytes(placeholderPubkey[16:32])
-	case 2: // PK Y HI
-		ret.SetBytes(placeholderPubkey[32:48])
-	case 3: // PK Y LO
-		ret.SetBytes(placeholderPubkey[48:64])
-	case 4: // MSG HI
-		ret.SetBytes(placeholderTxHash[0:16])
-	case 5: // MSH LO
-		ret.SetBytes(placeholderTxHash[16:32])
-	case 6: // v HI
-		ret.SetUint64(0)
-	case 7: // v LO
-		ret.SetUint64(0x1b)
-	case 8: // r HI
-		ret.SetBytes(placeholderSignature[0:16])
-	case 9: // r LO
-		ret.SetBytes(placeholderSignature[16:32])
-	case 10: // s HI
-		ret.SetBytes(placeholderSignature[32:48])
-	case 11: // s LO
-		ret.SetBytes(placeholderSignature[48:64])
-	case 12: // success bit
-		ret.SetUint64(1)
-	case 13: // ecrecover bit
-		ret.SetUint64(1)
-	}
-	return ret
+
+	var (
+		k = inputIndex % len(fillingData)
+		x = uint64(fillingData[k])
+	)
+
+	return field.NewElement(x)
 }

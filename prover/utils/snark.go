@@ -2,13 +2,20 @@ package utils
 
 import (
 	"errors"
+	"math/big"
+
 	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
 	"github.com/consensys/gnark/constraint/solver"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/rangecheck"
-	"math/big"
 )
+
+func ToVariableSlice[X any](s []X) []frontend.Variable {
+	res := make([]frontend.Variable, len(s))
+	Copy(res, s)
+	return res
+}
 
 func Copy[T any](dst []frontend.Variable, src []T) (n int) {
 	n = min(len(dst), len(src))

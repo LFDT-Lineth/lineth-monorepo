@@ -3,14 +3,20 @@ package query
 import (
 	"fmt"
 	"math/big"
+	"sync"
+
+	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/crypto/fiatshamir"
+	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils/parallel"
 	"github.com/google/uuid"
 )
 
@@ -87,7 +93,7 @@ type HornerParamsPart struct {
 type HornerParams struct {
 	// Final result is the result of summing the Horner parts for every
 	// queries.
-	FinalResult field.Element
+	FinalResult fext.Element
 	// Parts are the parameters of the Horner parts
 	Parts []HornerParamsPart
 }
@@ -160,11 +166,11 @@ func (p *HornerParams) SetResult(run ifaces.Runtime, q Horner) *HornerParams {
 // from the (possibly incomplete) [HornerParams]. The function returns
 // the list of the N1 values and the final result of the Horner evaluation
 // query.
-func (p *HornerParams) GetResult(run ifaces.Runtime, q Horner) (n1s []int, finalResult field.Element) {
+func (p *HornerParams) GetResult(run ifaces.Runtime, q Horner) (n1s []int, finalResult fext.Element) {
 
 	// note: this is ineffective as the final result is already allocated
 	// and assigned with 0. The line is here for clarity.
-	finalResult = field.Zero()
+	finalResult = fext.Zero()
 	n1s = make([]int, len(p.Parts))
 
 	if len(q.Parts) != len(p.Parts) {
@@ -176,8 +182,8 @@ func (p *HornerParams) GetResult(run ifaces.Runtime, q Horner) (n1s []int, final
 		var (
 			n0         = p.Parts[i].N0
 			res, count = getResultOfParts(run, &part)
-			x          = part.X.GetVal(run)
-			xN0        = new(field.Element).Exp(x, big.NewInt(int64(n0)))
+			x          = part.X.GetValExt(run)
+			xN0        = new(fext.Element).Exp(x, big.NewInt(int64(n0)))
 		)
 
 		res.Mul(&res, xN0)
@@ -193,50 +199,111 @@ func (p *HornerParams) GetResult(run ifaces.Runtime, q Horner) (n1s []int, final
 	return n1s, finalResult
 }
 
-// getResultOfParts computes the result of a part i of the [HornerQuery]. It
-// returns the result of the evaluation and the selector count.
-func getResultOfParts(run ifaces.Runtime, q *HornerPart) (field.Element, int) {
+// HornerPartResult holds per-part diagnostic data from a Horner evaluation.
+type HornerPartResult struct {
+	Name         string
+	SignNegative bool
+	RawResult    fext.Element
+	Count        int
+	N0           int
+	N1           int
+	Contribution fext.Element
+	DataSize     int
+}
 
-	var (
-		datas     = [][]field.Element{}
-		selectors = [][]field.Element{}
-		count     = 0
-		x         = q.X.GetVal(run)
-		acc       = field.Zero()
-		size      = 0
-	)
+// GetPerPartResults computes per-part Horner results without aggregating them. This is used for debugging purposes.
+func (p *HornerParams) GetPerPartResults(run ifaces.Runtime, q Horner) []HornerPartResult {
+	results := make([]HornerPartResult, len(q.Parts))
+	for i, part := range q.Parts {
+		res, count := getResultOfParts(run, &part)
 
-	for coor := range q.Coefficients {
+		n0 := p.Parts[i].N0
+		x := part.X.GetValExt(run)
+		xN0 := new(fext.Element).Exp(x, big.NewInt(int64(n0)))
 
-		var (
-			board    = q.Coefficients[coor].Board()
-			data     = column.EvalExprColumn(run, board).IntoRegVecSaveAlloc()
-			selector = q.Selectors[coor].GetColAssignment(run).IntoRegVecSaveAlloc()
-		)
-
-		datas = append(datas, data)
-		selectors = append(selectors, selector)
-
-		if coor == 0 {
-			size = len(data)
+		contribution := res
+		contribution.Mul(&contribution, xN0)
+		if part.SignNegative {
+			contribution.Neg(&contribution)
 		}
 
-		if size != len(data) {
-			// Note, this is already check at the constructor level.
-			utils.Panic("All data must have the same size, part=%v", q.Name)
+		results[i] = HornerPartResult{
+			Name:         part.Name,
+			SignNegative: part.SignNegative,
+			RawResult:    res,
+			Count:        count,
+			N0:           n0,
+			N1:           n0 + count,
+			Contribution: contribution,
+			DataSize:     part.Size(),
+		}
+	}
+	return results
+}
+
+// getResultOfParts computes the result of a part i of the [HornerQuery]. It
+// returns the result of the evaluation and the selector count.
+func getResultOfParts(run ifaces.Runtime, q *HornerPart) (fext.Element, int) {
+
+	datas := make([]smartvectors.SmartVector, len(q.Coefficients))
+	selectors := make([]smartvectors.SmartVector, len(q.Coefficients))
+
+	for i := 0; i < len(q.Coefficients); i++ {
+		selector := q.Selectors[i].GetColAssignment(run)
+
+		board := q.Coefficients[i].Board()
+		data := column.EvalExprColumn(run, board)
+
+		datas[i] = data
+		selectors[i] = selector
+
+	}
+
+	// fast path when there is only one coefficient and the selector is all-ones
+	// TODO @gbotrel not sure we should keep that, makes code not readable and gain is about 5%
+	if len(datas) == 1 {
+		if _, ok := selectors[0].(*smartvectors.Constant); ok && selectors[0].GetPtr(0).IsOne() {
+			if d, ok := datas[0].(*smartvectors.RegularExt); ok {
+
+				size := datas[0].Len()
+				count := size
+				acc := fext.Zero()
+				x := q.X.GetValExt(run)
+				vx := make(extensions.Vector, size)
+				var lock sync.Mutex
+				parallel.Execute(size, func(start, stop int) {
+					vxl := vx[start:stop]
+					vxl[0].ExpInt64(x, int64(start))
+					for i := 1; i < (stop - start); i++ {
+						vxl[i].Mul(&vxl[i-1], &x)
+					}
+					vd := extensions.Vector((*d)[start:stop])
+					localAcc := vxl.InnerProduct(vd)
+					lock.Lock()
+					acc.Add(&acc, &localAcc)
+					lock.Unlock()
+				})
+
+				return acc, count
+			}
 		}
 	}
 
+	size := datas[0].Len()
+	count := 0
+	acc := fext.Zero()
+	x := q.X.GetValExt(run)
 	for row := size - 1; row >= 0; row-- {
-		for coor := 0; coor < len(datas); coor++ {
+		for i := 0; i < len(datas); i++ {
 
-			if selectors[coor][row].IsZero() {
+			if selectors[i].GetPtr(row).IsZero() {
 				continue
 			}
 
 			count++
 			acc.Mul(&acc, &x)
-			acc.Add(&acc, &datas[coor][row])
+			other := datas[i].GetExt(row)
+			acc.Add(&acc, &other)
 		}
 	}
 
@@ -250,9 +317,9 @@ func (h *Horner) Name() ifaces.QueryID {
 
 // UpdateFS implements the [ifaces.QueryParams] interface. It updates
 // FS with the parameters of the query.
-func (h HornerParams) UpdateFS(fs *fiatshamir.State) {
+func (h HornerParams) UpdateFS(fs fiatshamir.FS) {
 
-	fs.Update(h.FinalResult)
+	fs.UpdateExt(h.FinalResult)
 
 	for _, part := range h.Parts {
 		fs.Update(

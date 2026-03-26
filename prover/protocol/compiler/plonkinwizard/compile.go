@@ -4,7 +4,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
-	plonkinternal "github.com/consensys/linea-monorepo/prover/protocol/internal/plonkinternal"
+	plonkinternal "github.com/consensys/linea-monorepo/prover/protocol/plonkinternal"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
@@ -89,8 +89,6 @@ func compileQuery(comp *wizard.CompiledIOP, q *query.PlonkInWizard, minimalRound
 
 	plonkOptions := make([]plonkinternal.Option, len(q.PlonkOptions))
 	for i := range plonkOptions {
-		// Note: today, there is only one type of PlonkOption but in the
-		// the future we might have more.
 		plonkOptions[i] = plonkinternal.WithRangecheck(
 			q.PlonkOptions[i].RangeCheckNbBits,
 			q.PlonkOptions[i].RangeCheckNbLimbs,

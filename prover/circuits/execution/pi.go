@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"github.com/consensys/gnark/frontend"
-	gnarkHash "github.com/consensys/gnark/std/hash"
+	gkrposeidon2 "github.com/consensys/gnark/std/hash/poseidon2/gkr-poseidon2"
+	poseidon2permutation "github.com/consensys/gnark/std/permutation/poseidon2/gkr-poseidon2"
 	"github.com/consensys/gnark/std/rangecheck"
 	"github.com/consensys/linea-monorepo/prover/circuits/internal"
-	"github.com/consensys/linea-monorepo/prover/crypto/mimc"
 	public_input "github.com/consensys/linea-monorepo/prover/public-input"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
@@ -15,10 +15,10 @@ import (
 // FunctionalPublicInputQSnark the information on this execution that cannot be
 // extracted from other input in the same aggregation batch
 type FunctionalPublicInputQSnark struct {
-	DataChecksum                 frontend.Variable
+	DataChecksum                 DataChecksumSnark
 	L2MessageHashes              L2MessageHashes
 	InitialBlockTimestamp        frontend.Variable
-	FinalStateRootHash           frontend.Variable
+	FinalStateRootHash           [2]frontend.Variable
 	FinalBlockNumber             frontend.Variable
 	FinalBlockTimestamp          frontend.Variable
 	InitialRollingHashUpdate     [32]frontend.Variable
@@ -27,7 +27,7 @@ type FunctionalPublicInputQSnark struct {
 	LastRollingHashUpdateNumber  frontend.Variable
 }
 
-// L2MessageHashes is a wrapper for [Var32Slice] it is use to instantiate the
+// L2MessageHashes is a wrapper for [Var32Slice] it is used to instantiate the
 // sequence of L2MessageHash that we extract from the arithmetization. The
 // reason we need a wrapper here is that we hash the L2MessageHashes in a
 // specific way.
@@ -52,7 +52,7 @@ func (s *L2MessageHashes) RangeCheck(api frontend.API) {
 	api.AssertIsLessOrEqual(s.Length, uint64(len(s.Values)))
 }
 
-// CheckSumMiMC returns the hash of the [L2MessageHashes]. The encoding is done as
+// CheckSumPoseidon2 returns the hash of the [L2MessageHashes]. The encoding is done as
 // follows:
 //
 //   - each L2 hash is decomposed in a hi and lo part: each over 16 bytes
@@ -64,11 +64,7 @@ func (s *L2MessageHashes) RangeCheck(api frontend.API) {
 // struct. The function returns zero if the slice encodes zero message hashes
 // (this is what happens if no L2 message events are emitted during the present
 // execution frame).
-//
-// @alex: it would be nice to make that function compatible with the GKR hasher
-// factory though in practice this function will only create 32 calls to the
-// MiMC permutation which makes it a non-issue.
-func (s *L2MessageHashes) CheckSumMiMC(api frontend.API) frontend.Variable {
+func (s *L2MessageHashes) CheckSumPoseidon2(api frontend.API) frontend.Variable {
 
 	var (
 		// sumIsUsed is used to count the number of non-zero hashes that we
@@ -76,6 +72,11 @@ func (s *L2MessageHashes) CheckSumMiMC(api frontend.API) frontend.Variable {
 		sumIsUsed = frontend.Variable(0)
 		res       = frontend.Variable(0)
 	)
+
+	compressor, err := poseidon2permutation.NewCompressor(api)
+	if err != nil {
+		panic(err)
+	}
 
 	for i := range s.Values {
 		var (
@@ -90,8 +91,8 @@ func (s *L2MessageHashes) CheckSumMiMC(api frontend.API) frontend.Variable {
 			)
 		)
 
-		tmpRes := mimc.GnarkBlockCompression(api, res, hi)
-		tmpRes = mimc.GnarkBlockCompression(api, tmpRes, lo)
+		tmpRes := compressor.Compress(res, hi)
+		tmpRes = compressor.Compress(tmpRes, lo)
 
 		res = api.Select(isUsed, tmpRes, res)
 		sumIsUsed = api.Add(sumIsUsed, isUsed)
@@ -103,13 +104,15 @@ func (s *L2MessageHashes) CheckSumMiMC(api frontend.API) frontend.Variable {
 
 type FunctionalPublicInputSnark struct {
 	FunctionalPublicInputQSnark
-	InitialStateRootHash frontend.Variable
+	InitialStateRootHash [2]frontend.Variable
 	InitialBlockNumber   frontend.Variable
 	ChainID              frontend.Variable
+	BaseFee              frontend.Variable
+	CoinBase             frontend.Variable
 	L2MessageServiceAddr frontend.Variable
 }
 
-// RangeCheck checks that values are within range
+// RangeCheck checks that values are within range.
 func (spiq *FunctionalPublicInputQSnark) RangeCheck(api frontend.API) {
 	// the length of the l2msg slice is range checked in Concat; no need to do it here; TODO do it here instead
 	rc := rangecheck.New(api)
@@ -130,38 +133,63 @@ func (spiq *FunctionalPublicInputQSnark) RangeCheck(api frontend.API) {
 	spiq.L2MessageHashes.RangeCheck(api)
 }
 
-func (spi *FunctionalPublicInputSnark) Sum(api frontend.API, hsh gnarkHash.FieldHasher) frontend.Variable {
+func (spi *FunctionalPublicInputSnark) Sum(api frontend.API) frontend.Variable {
 
 	var (
 		finalRollingHash   = internal.CombineBytesIntoElements(api, spi.FinalRollingHashUpdate)
 		initialRollingHash = internal.CombineBytesIntoElements(api, spi.InitialRollingHashUpdate)
-		l2MessagesSum      = spi.L2MessageHashes.CheckSumMiMC(api)
+		l2MessagesSum      = spi.L2MessageHashes.CheckSumPoseidon2(api)
 	)
 
-	hsh.Reset()
-	hsh.Write(spi.DataChecksum, l2MessagesSum,
-		spi.FinalStateRootHash, spi.FinalBlockNumber, spi.FinalBlockTimestamp, finalRollingHash[0], finalRollingHash[1], spi.LastRollingHashUpdateNumber,
-		spi.InitialStateRootHash, spi.InitialBlockNumber, spi.InitialBlockTimestamp, initialRollingHash[0], initialRollingHash[1], spi.FirstRollingHashUpdateNumber,
-		spi.ChainID, spi.L2MessageServiceAddr)
+	hsh, err := gkrposeidon2.New(api)
+	if err != nil {
+		panic(err)
+	}
+
+	hsh.Write(
+		spi.DataChecksum.Hash,
+		l2MessagesSum,
+		spi.FinalStateRootHash[0],
+		spi.FinalStateRootHash[1],
+		spi.FinalBlockNumber,
+		spi.FinalBlockTimestamp,
+		finalRollingHash[0],
+		finalRollingHash[1],
+		spi.LastRollingHashUpdateNumber,
+		spi.InitialStateRootHash[0],
+		spi.InitialStateRootHash[1],
+		spi.InitialBlockNumber,
+		spi.InitialBlockTimestamp,
+		initialRollingHash[0],
+		initialRollingHash[1],
+		spi.FirstRollingHashUpdateNumber,
+		spi.ChainID,
+		spi.BaseFee,
+		spi.CoinBase,
+		spi.L2MessageServiceAddr,
+	)
 
 	return hsh.Sum()
 }
 
 func (spi *FunctionalPublicInputSnark) Assign(pi *public_input.Execution) error {
 
-	spi.InitialStateRootHash = pi.InitialStateRootHash[:]
+	spi.InitialStateRootHash[0] = pi.InitialStateRootHash[:16]
+	spi.InitialStateRootHash[1] = pi.InitialStateRootHash[16:]
 	spi.InitialBlockNumber = pi.InitialBlockNumber
 	spi.ChainID = pi.ChainID
+	spi.BaseFee = pi.BaseFee
+	spi.CoinBase = pi.CoinBase[:]
 	spi.L2MessageServiceAddr = pi.L2MessageServiceAddr[:]
-
 	return spi.FunctionalPublicInputQSnark.Assign(pi)
 }
 
 func (spiq *FunctionalPublicInputQSnark) Assign(pi *public_input.Execution) error {
 
-	spiq.DataChecksum = pi.DataChecksum[:]
+	spiq.DataChecksum.Assign(&pi.DataChecksum)
 	spiq.InitialBlockTimestamp = pi.InitialBlockTimestamp
-	spiq.FinalStateRootHash = pi.FinalStateRootHash[:]
+	spiq.FinalStateRootHash[0] = pi.FinalStateRootHash[:16]
+	spiq.FinalStateRootHash[1] = pi.FinalStateRootHash[16:]
 	spiq.FinalBlockNumber = pi.FinalBlockNumber
 	spiq.FinalBlockTimestamp = pi.FinalBlockTimestamp
 	spiq.FirstRollingHashUpdateNumber = pi.FirstRollingHashUpdateNumber
@@ -171,4 +199,31 @@ func (spiq *FunctionalPublicInputQSnark) Assign(pi *public_input.Execution) erro
 	utils.Copy(spiq.InitialRollingHashUpdate[:], pi.InitialRollingHashUpdate[:])
 
 	return spiq.L2MessageHashes.Assign(pi.L2MessageHashes)
+}
+
+// DataChecksumSnark represents the SNARK-friendly version of public_input.ExecDataChecksum
+// meant to be used in a BLS12-377 circuit.
+type DataChecksumSnark struct {
+	Length      frontend.Variable
+	PartialHash frontend.Variable
+	Hash        frontend.Variable
+}
+
+func (ds *DataChecksumSnark) Assign(pi *public_input.ExecDataChecksum) {
+	ds.Hash = pi.Hash[:]
+	ds.PartialHash = pi.PartialHash[:]
+	ds.Length = pi.Length
+}
+
+// Check consistency between the data, assuming the correctness of
+// Length, PartialHash, PartialEvaluation, and KoalaBearHash.
+func (ds *DataChecksumSnark) Check(api frontend.API) error {
+	compressor, err := poseidon2permutation.NewCompressor(api)
+	if err != nil {
+		return err
+	}
+
+	api.AssertIsEqual(compressor.Compress(ds.PartialHash, ds.Length), ds.Hash)
+
+	return nil
 }

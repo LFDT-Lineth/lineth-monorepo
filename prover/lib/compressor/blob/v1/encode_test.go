@@ -16,7 +16,7 @@ import (
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
-	"github.com/consensys/linea-monorepo/prover/backend/blobdecompression"
+	"github.com/consensys/linea-monorepo/prover/backend/dataavailability"
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/dictionary"
 	v1 "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1"
 	"github.com/ethereum/go-ethereum/common"
@@ -230,7 +230,7 @@ func TestEncodeDecodeFromResponse(t *testing.T) {
 
 			require.NoErrorf(t, err, "could not open the test file path=%v err=%v", filePath, err)
 
-			var response = &blobdecompression.Response{}
+			var response = &dataavailability.Response{}
 			if err = json.NewDecoder(f).Decode(response); err != nil {
 				t.Fatalf("could not deserialize testfile path=%v err=%v", filePath, err)
 			}

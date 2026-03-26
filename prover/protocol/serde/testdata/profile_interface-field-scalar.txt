@@ -1,0 +1,5 @@
+Serialization Size Profile
+==========================
+
+[serde_test.withInterface]: 32 B (100.0%)
+    └─ Data [interface {}]: 24 B (75.0%)

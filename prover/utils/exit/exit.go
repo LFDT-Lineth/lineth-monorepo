@@ -20,11 +20,15 @@ const (
 	// unsatisfiedConstraintExitCode is the exit code used to tell the parent
 	// process know that a constraint is not satisfied.
 	unsatisfiedConstraintsExitCode = 78
+	// missingTraceFileExitCode is the exit code used to tell the parent process
+	// that a required trace file does not exist.
+	missingTraceFileExitCode = 79
 )
 
 const (
 	ExitOnUnsatisfiedConstraint issueHandlingMode = 1 << iota
 	ExitOnLimitOverflow
+	ExitOnMissingTraceFile
 	ExitAlways = math.MaxUint64
 )
 
@@ -96,4 +100,29 @@ func OnUnsatisfiedConstraints(err error) {
 	}
 
 	panic(UnsatisfiedConstraintError{err})
+}
+
+// MissingTraceFileError is a wrapper around an error to recognize errors
+// coming from missing trace files.
+type MissingTraceFileError struct {
+	Path string
+}
+
+func (e MissingTraceFileError) Error() string {
+	return "missing trace file: " + e.Path
+}
+
+// OnMissingTraceFile reports that a required trace file does not exist.
+func OnMissingTraceFile(path string) {
+
+	logrus.Errorf("[MISSING TRACE FILE] The trace file does not exist: %v", path)
+
+	if currentIssueHandlingMode&ExitOnMissingTraceFile > 0 {
+		// The print stack is really useful to help locating where the problem
+		// originates from.
+		debug.PrintStack()
+		os.Exit(missingTraceFileExitCode)
+	}
+
+	panic(MissingTraceFileError{Path: path})
 }

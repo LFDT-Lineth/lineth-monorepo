@@ -5,7 +5,6 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
-	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
@@ -21,18 +20,17 @@ func makeTestCaseLaneRepacking(uc generic.HashingUsecase) (
 	var (
 		// max number of blocks that can be extracted from limbs
 		// if the number of blocks passes the max, newPack() would panic.
-		maxNumBlock = 103
+		maxNumBlock = 5
 		// if the blockSize is not consistent with PackingParam, newPack() would panic.
 		blockSize = uc.BlockSizeBytes()
 		// for testing; used to populate the importation columns
 		// since we have at least one block per hash, the umber of hashes should be less than maxNumBlocks
 		// max number of limbs
-		numHash = 72
+		numHash = 2
 		size    = utils.NextPowerOfTwo(maxNumBlock * blockSize)
 	)
 
 	imported := Importation{}
-	cleaning := cleaningCtx{}
 	decomposed := decomposition{}
 	spaghetti := spaghettiCtx{}
 	l := laneRepacking{}
@@ -48,22 +46,15 @@ func makeTestCaseLaneRepacking(uc generic.HashingUsecase) (
 			Imported:     imported,
 		}
 
-		createCol := common.CreateColFn(comp, "TEST_SPAGHETTI", size, pragmas.RightPadded)
-		cleaning = cleaningCtx{
-			CleanLimb: createCol("CleanLimb"),
-			Inputs:    &cleaningInputs{Imported: imported},
-		}
-
 		inp := &decompositionInputs{
-			Param:       pckInp.PackingParam,
-			CleaningCtx: cleaning,
+			Param:    pckInp.PackingParam,
+			Imported: imported,
+			Name:     "TEST_SPAGHETTI",
 		}
 
 		decomposed = decomposition{
-			Inputs:   inp,
-			Size:     size,
-			NbSlices: maxLanesFromLimbs(inp.Param.LaneSizeBytes()),
-			MaxLen:   inp.Param.LaneSizeBytes(),
+			Inputs: inp,
+			Size:   size,
 		}
 
 		// commit to decomposition Columns; no constraint
@@ -79,7 +70,6 @@ func makeTestCaseLaneRepacking(uc generic.HashingUsecase) (
 
 		// assign importation columns
 		assignImportationColumns(run, &imported, numHash, blockSize, size)
-		cleaning.assignCleanLimbs(run)
 		decomposed.assignMainColumns(run)
 		// assign filter
 		assignFilter(run, decomposed)
@@ -102,7 +92,7 @@ func TestLaneRepacking(t *testing.T) {
 func assignFilter(run *wizard.ProverRuntime, decomposed decomposition) {
 	var (
 		size   = decomposed.Size
-		filter = make([]*common.VectorBuilder, decomposed.NbSlices)
+		filter = make([]*common.VectorBuilder, nbDecomposedLen)
 	)
 	for j := range decomposed.DecomposedLen {
 		filter[j] = common.NewVectorBuilder(decomposed.Filter[j])

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
+	"github.com/consensys/linea-monorepo/prover/protocol/limbs"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils/csvtraces"
@@ -25,11 +26,12 @@ func testBlsAdd(t *testing.T, withCircuit bool, g Group, path string, limits *Li
 		t.Fatal("failed to create csv trace", err)
 	}
 	var blsAdd *BlsAdd
+	var blsAddSource *BlsAddDataSource
 	cmp := wizard.Compile(
 		func(b *wizard.Builder) {
-			blsAddSource := &BlsAddDataSource{
+			blsAddSource = &BlsAddDataSource{
 				CsAdd:             ct.GetCommit(b, "CIRCUIT_SELECTOR_"+g.String()+"_ADD"),
-				Limb:              ct.GetCommit(b, "LIMB"),
+				Limb:              ct.GetLimbsLe(b, "LIMB", limbs.NbLimbU128).AssertUint128(),
 				Index:             ct.GetCommit(b, "INDEX"),
 				Counter:           ct.GetCommit(b, "CT"),
 				CsCurveMembership: ct.GetCommit(b, "CIRCUIT_SELECTOR_"+g.StringCurve()+"_MEMBERSHIP"),
@@ -39,8 +41,8 @@ func testBlsAdd(t *testing.T, withCircuit bool, g Group, path string, limits *Li
 			blsAdd = newAdd(b.CompiledIOP, g, limits, blsAddSource)
 			if withCircuit {
 				blsAdd = blsAdd.
-					WithAddCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 6, true)).
-					WithCurveMembershipCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 6, true))
+					WithAddCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 2, true)).
+					WithCurveMembershipCircuit(b.CompiledIOP, query.PlonkRangeCheckOption(16, 2, true))
 			}
 		},
 		dummy.Compile,
@@ -48,7 +50,15 @@ func testBlsAdd(t *testing.T, withCircuit bool, g Group, path string, limits *Li
 
 	proof := wizard.Prove(cmp,
 		func(run *wizard.ProverRuntime) {
-			ct.Assign(run, "CIRCUIT_SELECTOR_"+g.String()+"_ADD", "LIMB", "INDEX", "CT", "CIRCUIT_SELECTOR_"+g.StringCurve()+"_MEMBERSHIP", "DATA_"+g.String()+"_ADD", "RSLT_"+g.String()+"_ADD")
+			ct.Assign(run,
+				blsAdd.BlsAddDataSource.CsAdd,
+				blsAdd.BlsAddDataSource.Limb,
+				blsAdd.BlsAddDataSource.Index,
+				blsAdd.BlsAddDataSource.Counter,
+				blsAdd.BlsAddDataSource.CsCurveMembership,
+				blsAdd.BlsAddDataSource.IsData,
+				blsAdd.BlsAddDataSource.IsRes,
+			)
 			blsAdd.Assign(run)
 		})
 

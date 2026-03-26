@@ -119,7 +119,7 @@ type CompiledIOP struct {
 	// a description of all the columns and all the queries etc...
 	//
 	// For efficiency reasons, the FiatShamirSetup is derived using SHA2.
-	FiatShamirSetup field.Element
+	FiatShamirSetup [8]field.Element
 
 	// FunctionalPublic inputs lists the queries representing a public inputs
 	// and their identifiers
@@ -155,8 +155,8 @@ func (c *CompiledIOP) ListCommitments() []ifaces.ColID {
 // round and returns the corresponding [ifaces.Column] object which summarizes
 // the metadata of the column. The user should provide a unique identifier `name`
 // and specify a size for the column.
-func (c *CompiledIOP) InsertCommit(round int, name ifaces.ColID, size int) ifaces.Column {
-	return c.InsertColumn(round, name, size, column.Committed)
+func (c *CompiledIOP) InsertCommit(round int, name ifaces.ColID, size int, isBase bool) ifaces.Column {
+	return c.InsertColumn(round, name, size, column.Committed, isBase)
 }
 
 // InsertColumn registers a new column in the protocol at a given
@@ -175,7 +175,7 @@ func (c *CompiledIOP) InsertCommit(round int, name ifaces.ColID, size int) iface
 //   - if the name is the empty string
 //   - if the size of the column is not a power of 2
 //   - if a column using the same name has already been registered
-func (c *CompiledIOP) InsertColumn(round int, name ifaces.ColID, size int, status column.Status) ifaces.Column {
+func (c *CompiledIOP) InsertColumn(round int, name ifaces.ColID, size int, status column.Status, isBase bool) ifaces.Column {
 	// Panic if the size is not a power of 2
 	if !utils.IsPowerOfTwo(size) {
 		utils.Panic("Registering column %v with a non power of two size = %v", name, size)
@@ -183,7 +183,7 @@ func (c *CompiledIOP) InsertColumn(round int, name ifaces.ColID, size int, statu
 	// @alex: this has actually caught a few typos. When wrongly setting an
 	// incorrect but very large size here, it will generate a disproportionate
 	// wizard
-	if size > 1<<40 {
+	if size > 1<<31 {
 		utils.Panic("column %v has size %v", name, size)
 	}
 
@@ -192,7 +192,7 @@ func (c *CompiledIOP) InsertColumn(round int, name ifaces.ColID, size int, statu
 	}
 
 	// This performs all the checks
-	return c.Columns.AddToRound(round, name, size, status)
+	return c.Columns.AddToRound(round, name, size, status, isBase)
 }
 
 /*
@@ -236,15 +236,58 @@ func (c *CompiledIOP) InsertGlobal(round int, name ifaces.QueryID, expr *symboli
 	// The constructor of the global constraint is assumed to perform all the
 	// well-formation checks of the constraint.
 	cs := query.NewGlobalConstraint(name, expr, noBoundCancel...)
-	metadatas := cs.BoardListVariableMetadata()
+	metadatas := cs.ListBoardVariableMetadata()
 
 	// Test the existence of all variable in the instance
 	for _, metadataInterface := range metadatas {
 		switch metadata := metadataInterface.(type) {
 		case ifaces.Column:
-			// The handle mecanism prevents this.
+			metadata.MustExists()
+			if metadata.Round() > round {
+				utils.Panic("inconsistent round, column=%v column-round=%v query=%v query-round=%v", metadata.GetColID(), metadata.Round(), cs.ID, round)
+			}
 		case coin.Info:
 			c.Coins.MustExists(metadata.Name)
+			if metadata.Round > round {
+				utils.Panic("inconsistent round, column=%v column-round=%v query=%v query-round=%v", metadata.Name, metadata.Round, cs.ID, round)
+			}
+		case variables.X, variables.PeriodicSample, ifaces.Accessor:
+			// Pass
+		default:
+			utils.Panic("Not a variable type %T in query %v", metadataInterface, cs.ID)
+		}
+	}
+
+	// Finally registers the query
+	c.QueriesNoParams.AddToRound(round, name, cs)
+
+	return cs
+}
+
+// InsertGlobalOverrideOffset takes a global constraint and manually set its
+// offset.
+func (c *CompiledIOP) InsertGlobalOverrideOffset(round int, name ifaces.QueryID, expr *symbolic.Expression, offsetRange utils.Range) query.GlobalConstraint {
+
+	c.checkExpressionInStore(expr)
+
+	// The constructor of the global constraint is assumed to perform all the
+	// well-formation checks of the constraint.
+	cs := query.NewGlobalConstraintOverrideOffset(name, expr, offsetRange)
+	metadatas := cs.ListBoardVariableMetadata()
+
+	// Test the existence of all variable in the instance
+	for _, metadataInterface := range metadatas {
+		switch metadata := metadataInterface.(type) {
+		case ifaces.Column:
+			metadata.MustExists()
+			if metadata.Round() > round {
+				utils.Panic("inconsistent round, column=%v column-round=%v query=%v query-round=%v", metadata.GetColID(), metadata.Round(), cs.ID, round)
+			}
+		case coin.Info:
+			c.Coins.MustExists(metadata.Name)
+			if metadata.Round > round {
+				utils.Panic("inconsistent round, column=%v column-round=%v query=%v query-round=%v", metadata.Name, metadata.Round, cs.ID, round)
+			}
 		case variables.X, variables.PeriodicSample, ifaces.Accessor:
 			// Pass
 		default:
@@ -277,7 +320,7 @@ func (c *CompiledIOP) InsertLocal(round int, name ifaces.QueryID, cs_ *symbolic.
 	c.checkExpressionInStore(cs_)
 
 	cs := query.NewLocalConstraint(name, cs_)
-	metadatas := cs.BoardListVariableMetadata()
+	metadatas := cs.ListBoardVariableMetadata()
 
 	// Test the existence of all variable in the instance
 	for _, metadataInterface := range metadatas {
@@ -429,7 +472,9 @@ func (c *CompiledIOP) GenericFragmentedConditionalInclusion(
 	c.checkAnyInStore(including)
 	c.checkAnyInStore(included)
 	c.checkAnyInStore(includingFilter)
-	c.checkColumnInStore(includedFilter)
+	if includedFilter != nil {
+		c.checkColumnInStore(includedFilter)
+	}
 
 	query := query.NewInclusion(name, included, including, includedFilter, includingFilter)
 	c.QueriesNoParams.AddToRound(round, name, query)
@@ -459,11 +504,27 @@ func (c *CompiledIOP) InsertPrecomputed(name ifaces.ColID, v smartvectors.SmartV
 	// not have the same content but the same name, then we will end up with
 	// a very messed up bug that is hard to track.
 	if c.Columns.Exists(name) {
+		if c.Columns.GetHandle(name).Size() != v.Len() {
+			utils.Panic("Precomputed column %v is registered twice with different sizes (%v and %v)", name, c.Columns.GetHandle(name).Size(), v.Len())
+		}
 		return c.Columns.GetHandle(name)
 	}
 
 	c.Precomputed.InsertNew(name, v)
-	return c.Columns.AddToRound(0, name, v.Len(), column.Precomputed)
+	return c.Columns.AddToRound(0, name, v.Len(), column.Precomputed, true)
+}
+
+// InsertVerifyingKey registers a new column with a verifying key status. The
+// column is statically assigned and visible to the verifier. The name must be
+// non-empty and unique and the size must be a power of 2.
+//
+// The caller must provide a uniquely identifying string name which can be used
+// to provide context about the purpose of the column. The caller should also
+// provide an explicit assignment to the column.
+func (c *CompiledIOP) InsertVerifyingKey(name ifaces.ColID, v smartvectors.SmartVector) (msg ifaces.Column) {
+	msg = c.InsertPrecomputed(name, v)
+	c.Columns.SetStatus(name, column.VerifyingKey)
+	return msg
 }
 
 // InsertProof registers a proof message by specifying its size and providing
@@ -473,14 +534,14 @@ func (c *CompiledIOP) InsertPrecomputed(name ifaces.ColID, v smartvectors.SmartV
 // end of the current prover's round.
 //
 // The name must be non-empty and unique and the size must be a power of 2.
-func (c *CompiledIOP) InsertProof(round int, name ifaces.ColID, size int) (msg ifaces.Column) {
+func (c *CompiledIOP) InsertProof(round int, name ifaces.ColID, size int, isBase bool) (msg ifaces.Column) {
 
 	// Common : No zero length
 	if size == 0 {
 		utils.Panic("when registering %v, VecType with length zero", name)
 	}
 
-	return c.Columns.AddToRound(round, name, size, column.Proof)
+	return c.Columns.AddToRound(round, name, size, column.Proof, isBase)
 }
 
 // InsertRange registers [query.Range] in the CompiledIOP. Namely, it ensures
@@ -600,28 +661,19 @@ func (c *CompiledIOP) InsertLogDerivativeSum(lastRound int, id ifaces.QueryID, i
 	return q
 }
 
-// InsertMiMC declares a MiMC constraints query; a constraint that all the
-// entries of new are obtained by running the compression function of MiMC over
-// the entries of block and old, row-by-row.
-//
-// The function returns the registered [query.MiMC] object and will panic if
-//   - the columns do not share the same size
-//   - the declaration round is anterior to the declaration round of the
-//     provided input columns.
-//
-// The caller may provide a (potentially nil) column as a selector. The selector
-// disables the query on rows where the selector is 0.
-func (c *CompiledIOP) InsertMiMC(round int, id ifaces.QueryID, block, old, new ifaces.Column, selector ifaces.Column) query.MiMC {
+func (c *CompiledIOP) InsertPoseidon2(round int, id ifaces.QueryID, block, old, new [8]ifaces.Column, selector ifaces.Column) query.Poseidon2 {
 
-	c.checkColumnInStore(block)
-	c.checkColumnInStore(old)
-	c.checkColumnInStore(new)
+	for i := 0; i < 8; i++ {
+		c.checkColumnInStore(block[i])
+		c.checkColumnInStore(old[i])
+		c.checkColumnInStore(new[i])
+	}
 
 	if selector != nil {
 		c.checkColumnInStore(selector)
 	}
 
-	q := query.NewMiMC(id, block, old, new, selector)
+	q := query.NewPoseidon2(id, block, old, new, selector)
 	c.QueriesNoParams.AddToRound(round, id, q)
 	return q
 }
@@ -629,13 +681,13 @@ func (c *CompiledIOP) InsertMiMC(round int, id ifaces.QueryID, block, old, new i
 // RegistersVerifyingKey registers a column as part of the verifying key of the
 // protocol; meaning a column whose assignment is static and which is visible
 // to the verifier.
-func (c *CompiledIOP) RegisterVerifyingKey(name ifaces.ColID, witness ifaces.ColAssignment) ifaces.Column {
+func (c *CompiledIOP) RegisterVerifyingKey(name ifaces.ColID, witness ifaces.ColAssignment, isBase bool) ifaces.Column {
 	size := witness.Len()
 	if size == 0 {
 		utils.Panic("when registering %v, VecType with length zero", name)
 	}
 	c.Precomputed.InsertNew(name, witness)
-	return c.InsertColumn(0, name, size, column.VerifyingKey)
+	return c.InsertColumn(0, name, size, column.VerifyingKey, isBase)
 }
 
 // RegisterProverAction registers an action to be accomplished by the prover
@@ -770,6 +822,16 @@ func (c *CompiledIOP) GetPublicInput(name string) PublicInput {
 // success.
 func (c *CompiledIOP) GetPublicInputAccessor(name string) ifaces.Accessor {
 	return c.GetPublicInput(name).Acc
+}
+
+// HasPublicInput tells if a public input with the provided name exists.
+func (c *CompiledIOP) HasPublicInput(name string) bool {
+	for _, pi := range c.PublicInputs {
+		if pi.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 // InsertPlonkInWizard inserts a [query.PlonkInWizard] in the current compilation

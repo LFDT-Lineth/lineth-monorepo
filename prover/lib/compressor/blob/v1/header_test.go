@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	v1 "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1"
-	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1/test_utils"
+	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v2/test_utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,6 +27,7 @@ func TestHeaderByteSize(t *testing.T) {
 		header := v1.Header{
 			BatchSizes:         batchSizes,
 			CurrBatchBlocksLen: currBatchBlocksLen,
+			Version:            1,
 		}
 
 		bb.Reset()

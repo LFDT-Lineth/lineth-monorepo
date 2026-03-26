@@ -1,10 +1,11 @@
 package aggregation
 
 import (
-	"github.com/consensys/linea-monorepo/prover/backend/blobdecompression"
+	"github.com/consensys/linea-monorepo/prover/backend/dataavailability"
 	"github.com/consensys/linea-monorepo/prover/circuits/aggregation"
 	pi_interconnection "github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection"
 	public_input "github.com/consensys/linea-monorepo/prover/public-input"
+	"github.com/consensys/linea-monorepo/prover/utils/types"
 )
 
 // Request collects all the fields used to perform an aggregation request.
@@ -33,6 +34,15 @@ type Request struct {
 	// this field.
 	ParentAggregationLastL1RollingHash              string `json:"parentAggregationLastL1RollingHash"`
 	ParentAggregationLastL1RollingHashMessageNumber int    `json:"parentAggregationLastL1RollingHashMessageNumber"`
+
+	// Parent zk root hash of the state over which we want to finalize. In 0x
+	// prefixed hexstring. If nothing (or zero) is set, we will pass the
+	// initial state root hash of the first execution circuit.
+	//
+	// It can be either a KoalaOctuplet or a Bls12377Fr thus, we use
+	// FullBytes32 to represent either. This is needed only for the koalabear
+	// migration, afterward it will be simplifiable to only Koalabear.
+	ParentAggregationStateRootHashContract types.FullBytes32 `json:"parentAggregationStateRootHashContract"`
 }
 
 // This struct contains a collection of fields that are to be extracted from the
@@ -50,8 +60,12 @@ type CollectedFields struct {
 	DataParentHash string
 
 	// Parent zk root hash of the state over which we want to finalize. In 0x
-	// prefixed hexstring.
-	ParentStateRootHash string
+	// prefixed hexstring. If nothing (or zero) is set, we will pass the
+	// initial state root hash of the first execution circuit.
+	//
+	// This field can be either a KoalaOctuplet or a Bls12377Fr thus, we use
+	// FullBytes32 to represent either.
+	ParentStateRootHashContract types.FullBytes32
 
 	// Timestamp of the last already finalized L2 block
 	ParentAggregationLastBlockTimestamp uint
@@ -100,7 +114,11 @@ type CollectedFields struct {
 	// The proof claims for the execution prover
 	ProofClaims []aggregation.ProofClaimAssignment
 
+	// ProofClaimSources tracks the source file path for each entry in ProofClaims,
+	// in the same order. Used for diagnostic logging.
+	ProofClaimSources []string
+
 	ExecutionPI       []public_input.Execution
-	DecompressionPI   []blobdecompression.Request
+	DecompressionPI   []dataavailability.Request
 	InnerCircuitTypes []pi_interconnection.InnerCircuitType // a hint to the aggregation circuit detailing which public input correspond to which actual public input
 }

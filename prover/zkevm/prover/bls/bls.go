@@ -1,8 +1,6 @@
 package bls
 
 import (
-	"fmt"
-
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 )
@@ -62,10 +60,6 @@ func (g Group) StringMap() string {
 
 func createColFn(comp *wizard.CompiledIOP, rootName string, size int) func(name string) ifaces.Column {
 	return func(name string) ifaces.Column {
-		return comp.InsertCommit(ROUND_NR, ifaces.ColIDf("%s_%s", rootName, name), size)
+		return comp.InsertCommit(ROUND_NR, ifaces.ColIDf("%s_%s", rootName, name), size, true)
 	}
-}
-
-func colNameFn(colName string) ifaces.ColID {
-	return ifaces.ColID(fmt.Sprintf("%s.%s", moduleName, colName))
 }

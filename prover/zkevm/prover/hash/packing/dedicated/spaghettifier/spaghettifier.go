@@ -72,11 +72,13 @@ func Spaghettify(comp *wizard.CompiledIOP, inputs SpaghettificationInput) *Spagh
 			FilterSpaghetti: comp.InsertCommit(0,
 				ifaces.ColIDf("%v_%v", inputs.Name, "FILTERS_SPAGHETTI"),
 				inputs.SpaghettiSize,
+				true,
 			),
 			ContentSpaghetti: make([]ifaces.Column, numTables),
 			TagSpaghetti: comp.InsertCommit(0,
 				ifaces.ColIDf("%v_%v", inputs.Name, "TAGS_SPAGHETTI"),
 				inputs.SpaghettiSize,
+				true,
 			),
 		}
 	)
@@ -86,6 +88,7 @@ func Spaghettify(comp *wizard.CompiledIOP, inputs SpaghettificationInput) *Spagh
 		spaghetti.Tags[pieceID] = comp.InsertCommit(0,
 			ifaces.ColIDf("%v_%v_%v", inputs.Name, "TAGS", pieceID),
 			pieceSize,
+			true,
 		)
 	}
 
@@ -94,6 +97,7 @@ func Spaghettify(comp *wizard.CompiledIOP, inputs SpaghettificationInput) *Spagh
 		spaghetti.ContentSpaghetti[table] = comp.InsertCommit(0,
 			ifaces.ColIDf("%v_%v_%v", inputs.Name, "CONTENT_SPAGHETTI", table),
 			inputs.SpaghettiSize,
+			true,
 		)
 	}
 

@@ -7,16 +7,21 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
+	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	TotalMaxNByte = common.NbLimbU128 * MAXNBYTE
+)
+
 // It represents the importation struct for testing.
 type dataTraceImported struct {
 	isNewHash, nByte []int
-	limb             [][]byte
+	limb             [common.NbLimbU128][][MAXNBYTE]byte
 }
 
 // It generates data to fill up the importation columns.
@@ -25,7 +30,7 @@ func table(t *dataTraceImported, numHash, blockSize, size int) [][]byte {
 	// choose the limbs for each hash
 	// we set the limbs to less than maxNBytes  and then pad them to get maxNByte.
 	var (
-		limbs     = make([][][]byte, numHash)
+		limbs     = make([][common.NbLimbU128][][MAXNBYTE]byte, numHash)
 		nByte     = make([][]int, numHash)
 		isNewHash = make([][]int, numHash)
 		rand      = rand.New(utils.NewRandSource(0)) // nolint
@@ -47,7 +52,7 @@ func table(t *dataTraceImported, numHash, blockSize, size int) [][]byte {
 		for j := 0; j < nlimb; j++ {
 			// generate random bytes
 			// choose a random length for the slice
-			length := rand.IntN(MAXNBYTE) + 1 //nolint
+			length := rand.IntN(TotalMaxNByte) + 1 //nolint
 
 			// generate random bytes
 			slice := make([]byte, length)
@@ -58,8 +63,10 @@ func table(t *dataTraceImported, numHash, blockSize, size int) [][]byte {
 
 			stream[i] = append(stream[i], slice...)
 			// pad the limb to get maxNByte.
-			r := toByte16(slice)
-			limbs[i] = append(limbs[i], r[:])
+			r := toByte16Limbs(slice)
+			for limbIdx := range r {
+				limbs[i][limbIdx] = append(limbs[i][limbIdx], r[limbIdx])
+			}
 			nByte[i] = append(nByte[i], len(slice))
 			if j == 0 {
 				isNewHash[i] = append(isNewHash[i], 1)
@@ -76,22 +83,24 @@ func table(t *dataTraceImported, numHash, blockSize, size int) [][]byte {
 	for k := 0; k < numHash; k++ {
 		if s[k]%blockSize != 0 {
 			n := (blockSize - s[k]%blockSize)
-			for n > MAXNBYTE {
+			for n > TotalMaxNByte {
 				// generate random bytes
-				slice := make([]byte, MAXNBYTE)
+				slice := make([]byte, TotalMaxNByte)
 				_, err := utils.ReadPseudoRand(rand, slice)
 				if err != nil {
 					logrus.Fatalf("error while generating random bytes: %s", err)
 				}
 
 				stream[k] = append(stream[k], slice...)
-				r := toByte16(slice)
-				limbs[k] = append(limbs[k], r[:])
+				r := toByte16Limbs(slice)
+				for limbIdx := range r {
+					limbs[k][limbIdx] = append(limbs[k][limbIdx], r[limbIdx])
+				}
 				nByte[k] = append(nByte[k], len(slice))
 				isNewHash[k] = append(isNewHash[k], 0)
 
-				n = n - MAXNBYTE
-				s[k] = s[k] + MAXNBYTE
+				n = n - TotalMaxNByte
+				s[k] = s[k] + TotalMaxNByte
 			}
 			// generate random bytes
 			slice := make([]byte, n)
@@ -102,10 +111,11 @@ func table(t *dataTraceImported, numHash, blockSize, size int) [][]byte {
 			s[k] = s[k] + n
 
 			stream[k] = append(stream[k], slice...)
-			r := toByte16(slice)
-			limbs[k] = append(limbs[k], r[:])
+			r := toByte16Limbs(slice)
+			for limbIdx := range r {
+				limbs[k][limbIdx] = append(limbs[k][limbIdx], r[limbIdx])
+			}
 			nByte[k] = append(nByte[k], len(slice))
-
 			isNewHash[k] = append(isNewHash[k], 0)
 		}
 
@@ -116,10 +126,12 @@ func table(t *dataTraceImported, numHash, blockSize, size int) [][]byte {
 	}
 
 	// accumulate the tables from different hashes in a single table.
-	var limbT [][]byte
+	var limbT [common.NbLimbU128][][MAXNBYTE]byte
 	var nByteT, isNewHashT []int
 	for k := 0; k < numHash; k++ {
-		limbT = append(limbT, limbs[k]...)
+		for i := range limbs[k] {
+			limbT[i] = append(limbT[i], limbs[k][i]...)
+		}
 		nByteT = append(nByteT, nByte[k]...)
 		isNewHashT = append(isNewHashT, isNewHash[k]...)
 	}
@@ -141,16 +153,25 @@ func table(t *dataTraceImported, numHash, blockSize, size int) [][]byte {
 }
 
 // It extends a short slice to [16]bytes.
-func toByte16(b []byte) [16]byte {
-	if len(b) > MAXNBYTE {
+func toByte16Limbs(b []byte) [common.NbLimbU128][MAXNBYTE]byte {
+	if len(b) > TotalMaxNByte {
 		utils.Panic("the length of input should not be greater than %v", MAXNBYTE)
 	}
-	n := MAXNBYTE - len(b)
-	a := make([]byte, n)
-	var c [MAXNBYTE]byte
-	b = append(b, a...)
-	copy(c[:], b)
-	return c
+
+	// decompose b into limbs, it's zero padded as well
+	var limbs [common.NbLimbU128][MAXNBYTE]byte
+	leftBytes := len(b)
+	for i := range common.NbLimbU128 {
+		if leftBytes > MAXNBYTE {
+			copy(limbs[i][:], b[i*MAXNBYTE:(i+1)*MAXNBYTE])
+			leftBytes -= MAXNBYTE
+		} else {
+			copy(limbs[i][:leftBytes], b[i*MAXNBYTE:])
+			break
+		}
+	}
+
+	return limbs
 }
 
 const (
@@ -160,10 +181,14 @@ const (
 // It creates the importation columns
 func createImportationColumns(comp *wizard.CompiledIOP, size int) Importation {
 	createCol := common.CreateColFn(comp, TEST_IMPRTATION_COLUMN, size, pragmas.RightPadded)
+	limbs := make([]ifaces.Column, common.NbLimbU128)
+	for i := range limbs {
+		limbs[i] = createCol("Limb_%d", i)
+	}
 	res := Importation{
 		IsNewHash: createCol("IsNewHash"),
 		IsActive:  createCol("IsActive"),
-		Limb:      createCol("Limb"),
+		Limb:      limbs,
 		NByte:     createCol("Nbyte"),
 	}
 	return res
@@ -174,9 +199,13 @@ func assignImportationColumns(run *wizard.ProverRuntime, imported *Importation, 
 	var t dataTraceImported
 	_ = table(&t, numHash, blockSize, targetSize)
 
-	u := make([]field.Element, len(t.limb))
-	for i := range t.limb {
-		u[i].SetBytes(t.limb[i][:])
+	u := make([][]field.Element, len(t.limb))
+	for i := range common.NbLimbU128 {
+		u[i] = make([]field.Element, len(t.limb[i]))
+
+		for j, limbBytes := range t.limb[i] {
+			u[i][j].SetBytes(limbBytes[:])
+		}
 	}
 	a := smartvectors.ForTest(t.isNewHash...)
 	aa := smartvectors.RightZeroPadded(smartvectors.IntoRegVec(a), targetSize)
@@ -186,9 +215,10 @@ func assignImportationColumns(run *wizard.ProverRuntime, imported *Importation, 
 	cc := smartvectors.RightZeroPadded(smartvectors.IntoRegVec(c), targetSize)
 	run.AssignColumn(imported.NByte.GetColID(), cc)
 
-	run.AssignColumn(imported.Limb.GetColID(), smartvectors.RightZeroPadded(u, targetSize))
+	for i := range u {
+		run.AssignColumn(imported.Limb[i].GetColID(), smartvectors.RightZeroPadded(u[i], targetSize))
+	}
 
 	run.AssignColumn(imported.IsActive.GetColID(),
-		smartvectors.RightZeroPadded(vector.Repeat(field.One(), len(t.limb)), targetSize))
-
+		smartvectors.RightZeroPadded(vector.Repeat(field.One(), len(t.nByte)), targetSize))
 }

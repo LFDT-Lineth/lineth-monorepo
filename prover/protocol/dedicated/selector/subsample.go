@@ -5,7 +5,8 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -38,13 +39,13 @@ func (a *SubsampleProverAction) Run(run *wizard.ProverRuntime) {
 		for i := 1; i < len(a.Large); i++ {
 			largeWit[i] = a.Large[i].GetColAssignment(run)
 		}
-		gamma := run.GetRandomCoinField(a.Gamma.Name)
-		r = smartvectors.PolyEval(largeWit, gamma)
+		gamma := run.GetRandomCoinFieldExt(a.Gamma.Name)
+		r = smartvectors.LinearCombinationExt(largeWit, gamma)
 	}
 
-	prev := field.Zero()
-	accLargeWit := make([]field.Element, a.Period*a.LenSmall)
-	alpha_ := run.GetRandomCoinField(a.Alpha.Name)
+	prev := fext.Zero()
+	accLargeWit := make([]fext.Element, a.Period*a.LenSmall)
+	alpha_ := run.GetRandomCoinFieldExt(a.Alpha.Name)
 
 	for hashID := 0; hashID < a.LenSmall; hashID++ {
 		for i := 0; i < a.Period; i++ {
@@ -53,15 +54,14 @@ func (a *SubsampleProverAction) Run(run *wizard.ProverRuntime) {
 				accLargeWit[pos] = prev
 				continue
 			}
-			currentNewState := r.Get(pos)
+			currentNewState := r.GetExt(pos)
 			accLargeWit[pos].Mul(&alpha_, &prev)
 			accLargeWit[pos].Add(&accLargeWit[pos], &currentNewState)
 			prev = accLargeWit[pos]
 		}
 	}
-
-	run.AssignColumn(a.AccLarge.GetColID(), smartvectors.NewRegular(accLargeWit))
-	run.AssignLocalPoint(a.AccLargeLast, prev)
+	run.AssignColumn(a.AccLarge.GetColID(), smartvectors.NewRegularExt(accLargeWit))
+	run.AssignLocalPointExt(a.AccLargeLast, prev)
 
 	rPrime := a.Small[0].GetColAssignment(run)
 	if a.NeedGamma {
@@ -70,22 +70,22 @@ func (a *SubsampleProverAction) Run(run *wizard.ProverRuntime) {
 		for i := 1; i < len(a.Small); i++ {
 			smallWit[i] = a.Small[i].GetColAssignment(run)
 		}
-		gamma := run.GetRandomCoinField(a.Gamma.Name)
-		rPrime = smartvectors.PolyEval(smallWit, gamma)
+		gamma := run.GetRandomCoinFieldExt(a.Gamma.Name)
+		rPrime = smartvectors.LinearCombinationExt(smallWit, gamma)
 	}
 
-	accSmallWit := make([]field.Element, a.LenSmall)
-	prev = field.Zero()
+	accSmallWit := make([]fext.Element, a.LenSmall)
+	prev = fext.Zero()
 
 	for hashID := 0; hashID < a.LenSmall; hashID++ {
-		currExpectedHash := rPrime.Get(hashID)
+		currExpectedHash := rPrime.GetExt(hashID)
 		accSmallWit[hashID].Mul(&alpha_, &prev)
 		accSmallWit[hashID].Add(&accSmallWit[hashID], &currExpectedHash)
 		prev = accSmallWit[hashID]
 	}
 
-	run.AssignColumn(a.AccSmall.GetColID(), smartvectors.NewRegular(accSmallWit))
-	run.AssignLocalPoint(a.AccSmallLast, prev)
+	run.AssignColumn(a.AccSmall.GetColID(), smartvectors.NewRegularExt(accSmallWit))
+	run.AssignLocalPointExt(a.AccSmallLast, prev)
 }
 
 type SubsampleVerifierAction struct {
@@ -96,16 +96,17 @@ type SubsampleVerifierAction struct {
 func (a *SubsampleVerifierAction) Run(run wizard.Runtime) error {
 	resAccLast := run.GetLocalPointEvalParams(a.AccLargeLast)
 	expectedResAccLast := run.GetLocalPointEvalParams(a.AccSmallLast)
-	if resAccLast.Y != expectedResAccLast.Y {
-		return fmt.Errorf("linear hashing failed : the ResAcc and ExpectedResAcc do not match on their last inputs %v, %v", resAccLast.Y.String(), expectedResAccLast.Y.String())
+	if resAccLast.ExtY != expectedResAccLast.ExtY {
+		return fmt.Errorf("linear hashing failed : the ResAcc and ExpectedResAcc do not match on their last inputs %v, %v", resAccLast.ExtY.String(), expectedResAccLast.ExtY.String())
 	}
 	return nil
 }
 
-func (a *SubsampleVerifierAction) RunGnark(frontend frontend.API, run wizard.GnarkRuntime) {
+func (a *SubsampleVerifierAction) RunGnark(api frontend.API, run wizard.GnarkRuntime) {
+	koalaAPI := koalagnark.NewAPI(api)
 	resAccLast := run.GetLocalPointEvalParams(a.AccLargeLast)
 	expectedResAccLast := run.GetLocalPointEvalParams(a.AccSmallLast)
-	frontend.AssertIsEqual(resAccLast.Y, expectedResAccLast.Y)
+	koalaAPI.AssertIsEqualExt(resAccLast.ExtY, expectedResAccLast.ExtY)
 }
 
 // Tests that a small table is obtained from subsampling a larger column with a given offset
@@ -148,22 +149,24 @@ func CheckSubsample(comp *wizard.CompiledIOP, name string, large, small []ifaces
 	var gamma coin.Info
 
 	if needGamma {
-		gamma = comp.InsertCoin(round+1, coin.Namef("%v_GAMMA", name), coin.Field)
+		gamma = comp.InsertCoin(round+1, coin.Namef("%v_GAMMA", name), coin.FieldExt)
 	}
 
-	alpha := comp.InsertCoin(round+1, coin.Namef("%v_ALPHA", name), coin.Field)
+	alpha := comp.InsertCoin(round+1, coin.Namef("%v_ALPHA", name), coin.FieldExt)
 
 	// Registers the two accumulators
 	accSmall := comp.InsertCommit(
 		round+1,
 		ifaces.ColIDf("%v_ACCUMULATOR_SMALL", name),
 		lenSmall,
+		false,
 	)
 
 	accLarge := comp.InsertCommit(
 		round+1,
 		ifaces.ColIDf("%v_ACCUMULATOR_LARGE", name),
 		lenLarge,
+		false,
 	)
 
 	// Also declares the queries on ResAcc and ExpectedResAcc

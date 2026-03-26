@@ -12,8 +12,6 @@ import (
 const (
 	nbRowsPerC1Membership = nbG1Limbs // point
 	nbRowsPerC2Membership = nbG2Limbs // point
-	nbRowsPerG1Membership = nbG1Limbs // point
-	nbRowsPerG2Membership = nbG2Limbs // point
 )
 
 func nbRowsPerCurveMembership(g Group) int {
@@ -24,17 +22,6 @@ func nbRowsPerCurveMembership(g Group) int {
 		return nbRowsPerC2Membership
 	default:
 		panic("unknown group for nbRowsPerCurveMembership")
-	}
-}
-
-func nbRowsPerGroupMembership(g Group) int {
-	switch g {
-	case G1:
-		return nbRowsPerG1Membership
-	case G2:
-		return nbRowsPerG2Membership
-	default:
-		panic("unknown group for nbRowsPerGroupMembership")
 	}
 }
 

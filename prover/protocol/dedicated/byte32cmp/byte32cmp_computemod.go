@@ -113,6 +113,7 @@ func (bcp *BytesCmpCtx) defineColumns() {
 			bcp.Round,
 			ifaces.ColIDf("BYTE32CMP_COLUMN_A_%v_LIMB_%v", bcp.Name, i),
 			bcp.Size(),
+			true,
 		)
 		// Enforces the range over the limbs of columnA
 		bcp.Comp.InsertRange(
@@ -126,6 +127,7 @@ func (bcp *BytesCmpCtx) defineColumns() {
 			bcp.Round,
 			ifaces.ColIDf("BYTE32CMP_COLUMN_B_%v_LIMB_%v", bcp.Name, i),
 			bcp.Size(),
+			true,
 		)
 		// Enforces the range over the limbs of columnB
 		bcp.Comp.InsertRange(
@@ -167,6 +169,7 @@ func (bcp *BytesCmpCtx) defineFlags() {
 			bcp.Round,
 			ifaces.ColIDf("BYTE32CMP_G_MOD_COL_A_%v_LIMB_%v", bcp.Name, i),
 			bcp.Size(),
+			true,
 		)
 
 		// Declare lCmpModulusColA
@@ -174,6 +177,7 @@ func (bcp *BytesCmpCtx) defineFlags() {
 			bcp.Round,
 			ifaces.ColIDf("BYTE32CMP_L_MOD_COL_A_%v_LIMB_%v", bcp.Name, i),
 			bcp.Size(),
+			true,
 		)
 
 		// Declare eCmpModulusColA
@@ -181,6 +185,7 @@ func (bcp *BytesCmpCtx) defineFlags() {
 			bcp.Round,
 			ifaces.ColIDf("BYTE32CMP_E_MOD_COL_A_%v_LIMB_%v", bcp.Name, i),
 			bcp.Size(),
+			true,
 		)
 
 		// Declare gCmpColAColB
@@ -188,6 +193,7 @@ func (bcp *BytesCmpCtx) defineFlags() {
 			bcp.Round,
 			ifaces.ColIDf("BYTE32CMP_G_COL_A_COL_B_%v_LIMB_%v", bcp.Name, i),
 			bcp.Size(),
+			true,
 		)
 
 		// Declare lCmpColAColB
@@ -195,6 +201,7 @@ func (bcp *BytesCmpCtx) defineFlags() {
 			bcp.Round,
 			ifaces.ColIDf("BYTE32CMP_L_COL_A_COL_B_%v_LIMB_%v", bcp.Name, i),
 			bcp.Size(),
+			true,
 		)
 
 		// Declare eCmpColAColB
@@ -202,6 +209,7 @@ func (bcp *BytesCmpCtx) defineFlags() {
 			bcp.Round,
 			ifaces.ColIDf("BYTE32CMP_COL_A_COL_B_%v_LIMB_%v", bcp.Name, i),
 			bcp.Size(),
+			true,
 		)
 	}
 }

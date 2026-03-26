@@ -7,6 +7,7 @@ import (
 	"github.com/consensys/gnark/frontend"
 	sv "github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/variables"
@@ -43,7 +44,8 @@ func NewLocalConstraint(id ifaces.QueryID, expr *symbolic.Expression) LocalConst
 		Upon construct, checks that all the offsets are compatible with
 		the domain size and sizes
 	*/
-	metadatas := expr.BoardListVariableMetadata()
+	board := expr.Board()
+	metadatas := board.ListVariableMetadata()
 	var firstColumn ifaces.Column
 	for _, metadataInterface := range metadatas {
 		if metadata, ok := metadataInterface.(ifaces.Column); ok {
@@ -62,7 +64,7 @@ func NewLocalConstraint(id ifaces.QueryID, expr *symbolic.Expression) LocalConst
 	}
 
 	if !foundAny {
-		utils.Panic("No commitment found in the local constraint")
+		utils.Panic("No commitment found in the local constraint, query id %v", id)
 	}
 
 	if domainSize == 0 {
@@ -81,7 +83,7 @@ func (r LocalConstraint) Name() ifaces.QueryID {
 // Test the polynomial identity
 func (cs LocalConstraint) Check(run ifaces.Runtime) error {
 	board := cs.Board()
-	metadatas := cs.BoardListVariableMetadata()
+	metadatas := board.ListVariableMetadata()
 	/*
 		Collects the relevant datas into a slice for the evaluation
 	*/
@@ -94,10 +96,20 @@ func (cs LocalConstraint) Check(run ifaces.Runtime) error {
 					- should be between 0 and N-1 (included)
 						where N is the size of the polynomials
 			*/
-			val := metadata.GetColAssignmentAt(run, 0)
-			inputs[i] = sv.NewConstant(val, 1)
+			if metadata.IsBase() {
+				val, _ := metadata.GetColAssignmentAtBase(run, 0)
+				inputs[i] = sv.NewConstant(val, 1)
+			} else {
+				val := metadata.GetColAssignmentAtExt(run, 0)
+				inputs[i] = sv.NewConstantExt(val, 1)
+			}
 		case coin.Info:
-			inputs[i] = sv.NewConstant(run.GetRandomCoinField(metadata.Name), 1)
+			if metadata.IsBase() {
+				utils.Panic("unsupported, coins are always over field extensions")
+
+			} else {
+				inputs[i] = sv.NewConstantExt(run.GetRandomCoinFieldExt(metadata.Name), 1)
+			}
 		case variables.PeriodicSample:
 			v := field.One()
 			if metadata.Offset != 0 {
@@ -107,7 +119,13 @@ func (cs LocalConstraint) Check(run ifaces.Runtime) error {
 		case variables.X:
 			utils.Panic("In local constraint %v, Local constraints using X are not handled so far", cs.ID)
 		case ifaces.Accessor:
-			inputs[i] = sv.NewConstant(metadata.GetVal(run), 1)
+			if metadata.IsBase() {
+				val, _ := metadata.GetValBase(run)
+				inputs[i] = sv.NewConstant(val, 1)
+			} else {
+				inputs[i] = sv.NewConstantExt(metadata.GetValExt(run), 1)
+			}
+
 		default:
 			utils.Panic("Unknown variable type %v in local constraint %v", reflect.TypeOf(metadataInterface), cs.ID)
 		}
@@ -116,7 +134,8 @@ func (cs LocalConstraint) Check(run ifaces.Runtime) error {
 		Sanity-check : n (the number of element used for the evaluation)
 		should be equal to the length of metadata
 	*/
-	res := board.Evaluate(inputs).(*sv.Constant).Val()
+	evalRes := board.Evaluate(inputs)
+	res := sv.GetGenericElemOfSmartvector(evalRes, 0)
 	/*
 		If the query is satisfied, the result should be zero. In
 		this case, we pretty print an error.
@@ -125,7 +144,7 @@ func (cs LocalConstraint) Check(run ifaces.Runtime) error {
 		debugMap := make(map[string]string)
 
 		for k, metadataInterface := range metadatas {
-			inpx := inputs[k].Get(0)
+			inpx := sv.GetGenericElemOfSmartvector(inputs[k], 0)
 			debugMap[string(metadataInterface.String())] = fmt.Sprintf("%v", inpx.String())
 		}
 
@@ -139,12 +158,13 @@ func (cs LocalConstraint) Check(run ifaces.Runtime) error {
 
 // Test the polynomial identity in a circuit setting
 func (cs LocalConstraint) CheckGnark(api frontend.API, run ifaces.GnarkRuntime) {
+	koalaAPI := koalagnark.NewAPI(api)
 	board := cs.Board()
 	metadatas := board.ListVariableMetadata()
 	/*
 		Collects the relevant datas into a slice for the evaluation
 	*/
-	inputs := make([]frontend.Variable, len(metadatas))
+	inputs := make([]any, len(metadatas))
 	for i, metadataInterface := range metadatas {
 		switch metadata := metadataInterface.(type) {
 		case ifaces.Column:
@@ -153,14 +173,19 @@ func (cs LocalConstraint) CheckGnark(api frontend.API, run ifaces.GnarkRuntime) 
 					- should be between 0 and N-1 (included)
 						where N is the size of the polynomials
 			*/
-			val := metadata.GetColAssignmentGnarkAt(run, 0)
+			val := metadata.GetColAssignmentGnarkAtExt(run, 0)
 			inputs[i] = val
 		case coin.Info:
-			inputs[i] = run.GetRandomCoinField(metadata.Name)
+			if metadata.IsBase() {
+				utils.Panic("unsupported, coins are always over field extensions")
+			} else {
+				// TODO @thomas fixme
+				inputs[i] = run.GetRandomCoinFieldExt(metadata.Name)
+			}
 		case variables.X, variables.PeriodicSample:
 			utils.Panic("In local constraint %v, Local constraints using X are not handled so far", cs.ID)
 		case ifaces.Accessor:
-			inputs[i] = metadata.GetFrontendVariable(api, run)
+			inputs[i] = metadata.GetFrontendVariableExt(api, run)
 		default:
 			utils.Panic("Unknown variable type %v in local constraint %v", reflect.TypeOf(metadataInterface), cs.ID)
 		}
@@ -169,8 +194,10 @@ func (cs LocalConstraint) CheckGnark(api frontend.API, run ifaces.GnarkRuntime) 
 		Sanity-check : n (the number of element used for the evaluation)
 		should be equal to the length of metadata
 	*/
-	res := board.GnarkEval(api, inputs)
-	api.AssertIsEqual(res, 0)
+	res := board.GnarkEvalExt(api, inputs)
+	zero := koalaAPI.ZeroExt()
+	koalaAPI.AssertIsEqualExt(res, zero)
+
 }
 
 func (cs LocalConstraint) UUID() uuid.UUID {

@@ -8,7 +8,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/generic/testdata"
-	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/keccak"
+	keccak "github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/keccak/glue"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,7 +36,7 @@ func TestTxnSignature(t *testing.T) {
 					Size:       size,
 					Inputs:     &antichamberInput{Settings: settings},
 				},
-				RlpTxn: testdata.CreateGenDataModule(comp, "RLP_TXN", 128),
+				RlpTxn: testdata.CreateGenDataModule(comp, "RLP_TXN", 128, common.NbLimbU128),
 			}
 		)
 

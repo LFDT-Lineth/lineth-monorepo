@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 )
 
@@ -18,7 +19,7 @@ func (c *CheckActivatorAndMask) Run(run wizard.Runtime) error {
 	for i := range c.SelOpenings {
 		var (
 			localOpening = run.GetLocalPointEvalParams(c.SelOpenings[i].ID)
-			valOpened    = localOpening.Y
+			valOpened    = localOpening.BaseY
 			valActiv     = c.Activators[i].GetColAssignment(run).Get(0)
 		)
 
@@ -34,13 +35,15 @@ func (c *CheckActivatorAndMask) Run(run wizard.Runtime) error {
 }
 
 func (c *CheckActivatorAndMask) RunGnark(api frontend.API, run wizard.GnarkRuntime) {
+
+	koalaApi := koalagnark.NewAPI(api)
+
 	for i := range c.SelOpenings {
 		var (
-			valOpened = run.GetLocalPointEvalParams(c.SelOpenings[i].ID).Y
+			valOpened = run.GetLocalPointEvalParams(c.SelOpenings[i].ID).BaseY
 			valActiv  = c.Activators[i].GetColAssignmentGnarkAt(run, 0)
 		)
-
-		api.AssertIsEqual(valOpened, valActiv)
+		koalaApi.AssertIsEqual(valOpened, valActiv)
 	}
 }
 

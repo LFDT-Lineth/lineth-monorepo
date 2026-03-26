@@ -3,6 +3,9 @@ package accessors
 import (
 	"fmt"
 
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
+
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -22,6 +25,33 @@ type FromGrandProductAccessor struct {
 	Q query.GrandProduct
 }
 
+// IsBase implements [ifaces.Accessor] and always returns false as grand-product
+// always returns an extension field as they depends on randomness in a sound
+// setting. For testing it is always possible to mock the FS to return base
+// fields to make debugging easier but by default this is not possible.
+func (l *FromGrandProductAccessor) IsBase() bool {
+	return false
+}
+
+func (l *FromGrandProductAccessor) GetValBase(run ifaces.Runtime) (field.Element, error) {
+	panic(fmt.Sprintf("Called GetValBase on a FromGrandProductAccessor, %v", l.Name()))
+
+}
+
+func (l *FromGrandProductAccessor) GetValExt(run ifaces.Runtime) fext.Element {
+	return run.GetParams(l.Q.ID).(query.GrandProductParams).ExtY
+}
+
+func (l *FromGrandProductAccessor) GetFrontendVariableBase(api frontend.API, c ifaces.GnarkRuntime) (koalagnark.Element, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (l *FromGrandProductAccessor) GetFrontendVariable(api frontend.API, c ifaces.GnarkRuntime) koalagnark.Element {
+	//TODO implement me
+	panic("implement me")
+}
+
 // NewGrandProductAccessor creates an [ifaces.Accessor] returning the opening
 // point of a [query.GrandProduct].
 func NewGrandProductAccessor(q query.GrandProduct) ifaces.Accessor {
@@ -38,14 +68,14 @@ func (l *FromGrandProductAccessor) String() string {
 	return l.Name()
 }
 
-// GetVal implements [ifaces.Accessor]
+// GetVal implements [ifaces.Accessor] and returns the opening point of a
+// grand product opening.
 func (l *FromGrandProductAccessor) GetVal(run ifaces.Runtime) field.Element {
-	params := run.GetParams(l.Q.ID).(query.GrandProductParams)
-	return params.Y
+	panic(fmt.Sprintf("Called GetVal on a FromGrandProductAccessor, %v", l.Name()))
 }
 
 // GetFrontendVariable implements [ifaces.Accessor]
-func (l *FromGrandProductAccessor) GetFrontendVariable(_ frontend.API, circ ifaces.GnarkRuntime) frontend.Variable {
+func (l *FromGrandProductAccessor) GetFrontendVariableExt(_ frontend.API, circ ifaces.GnarkRuntime) koalagnark.Ext {
 	params := circ.GetParams(l.Q.ID).(query.GnarkGrandProductParams)
 	return params.Prod
 }

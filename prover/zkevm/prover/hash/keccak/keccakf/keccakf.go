@@ -1,289 +1,204 @@
-// The keccakf package implements to keccakf module. It provides Module as a
-// main abstraction that can be used as a submodule of a larger Wizard in
-// order to prove iterations of the Keccakf sponge function.
-package keccakf
+package keccakfkoalabear
 
 import (
-	"fmt"
-
 	"github.com/consensys/linea-monorepo/prover/crypto/keccak"
-	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
+	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils"
-	"github.com/consensys/linea-monorepo/prover/utils/exit"
-	"github.com/consensys/linea-monorepo/prover/utils/parallel"
+	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
+	kcommon "github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/keccak/keccakf/common"
 )
 
-const (
-	// We use BaseA representation of bit slices for the theta phase and BaseB
-	// representation for the chi-iota phase.
-	BaseA = 12
-	BaseB = 11
-	// nBitsKeccakLane denotes the number of bits within a Keccakf lane. And
-	// numRounds (=24) indicates the number of rounds required to make up a full
-	// run of the keccakf permutation function.
-	nBitsKeccakLane = 64
-	numRounds       = keccak.NumRound // number of rounds in keccakf
-	// In order to convert between Base1 (theta) and Base2 (chi-iota), we split
-	// the 64 bits representative slices into slices representing 4 bits and we
-	// need 16 of them to represent an entire u64. The reason for this choice of
-	// 4 and 16 is that it allows us to limit the size of the corresponding
-	// lookup tables.
-	numSlice      = 16
-	numChunkBaseX = nBitsKeccakLane / numSlice
-	// The integer version of baseX ^ 4. Usefull for limb decomposition/recompo-
-	// sition.
-	BaseAPow4 = BaseA * BaseA * BaseA * BaseA
-	BaseBPow4 = BaseB * BaseB * BaseB * BaseB
-	// Number of 64bits lanes in a keccak block
-	numLanesInBlock = 17
-)
-
-var (
-	// The field version of BaseA / BaseB
-	BaseAFr = field.NewElement(BaseA)
-	BaseBFr = field.NewElement(BaseB)
-	// The field version
-	BaseAPow4Fr = field.NewElement(BaseAPow4)
-	BaseBPow4Fr = field.NewElement(BaseBPow4)
-)
-
-// InputWitnessProvider is a returning a succession of keccak.State when it will
-// be time to prove. One restriction is that it should never return more
-// permutations than what is actually specified when declaring the module.
-type InputWitnessProvider = func() keccak.PermTraces
+type KeccakfInputs struct {
+	Blocks       [][kcommon.NumSlices]ifaces.Column // the blocks of the message to be absorbed. first blocks of messages are located in positions 0 mod 24 and are represented in base clean 12, other blocks of message are located in positions 23 mod 24 and are represented in base clean 11. otherwise the blocks are zero.
+	IsBlock      ifaces.Column                      // indicates whether the row corresponds to a block
+	IsFirstBlock ifaces.Column
+	IsBlockBaseB ifaces.Column
+	IsActive     ifaces.Column // active part of the blocks (technicaly it is the active part of the keccakf module).
+	KeccakfSize  int           // number of keccakf permutations to be proved.
+}
 
 // Wizard module responsible for proving a sequence of keccakf permutation
 type Module struct {
-	// Maximal number of Keccakf permutation that the module can handle
-	MaxNumKeccakf int
-
-	// The State of the keccakf before starting a new round.
-	// Note : unlike the original keccakf where the initial State is zero,
-	// the initial State here is the first block of the message.
-	State [5][5]ifaces.Column
-
-	// Columns representing the messages blocks hashed with keccak. More
-	// Given our implementation it is more efficient to do the
-	// xoring in base B (so at the end of the function) and the "initial" XOR
-	// cannot be done at this moment. Fortunately, the initial XOR operation is
-	// straightforward to handle as an edge-case since it is done against a
-	// zero-state. Thus,  the entries of position 23 mod 24 are in Base B
-	// and they are zero of the corresponding round is the last round of the
-	// last call to the sponge function for a given hash (i.e. there are no more
-	// blocks to XORIN and what remains is only to recover the result of the
-	// hash). The first block are in Base A located at positions 0 mod 24.
-	// At any other position block is zero.
-	//  The Keccakf module trusts these columns to be well-formed.
-	Blocks [numLanesInBlock]ifaces.Column
-
-	// It is 1 over the effective part of the module
-	// (indicating the rows of the module occupied by the witness).
-	IsActive ifaces.Column
-
-	// Submodules used to declare the successive steps of the keccak round
-	// permutation function.
-	IO        InputOutput
-	Theta     theta
-	Rho       rho
-	PiChiIota piChiIota
-	// Collection of the lookup tables
-	Lookups lookUpTables
+	Inputs KeccakfInputs
+	// initial state before applying the keccakf rounds.
+	InitialState kcommon.State
+	// Theta module, responsible for updating the state in the Theta step of keccakf
+	Theta *theta
+	// rho pi module, responsible for updating the state in the rho and pi steps of keccakf
+	RhoPi *rhoPi
+	// chi module, responsible for updating the state in the chi step of keccakf
+	ChiIota *chiIota
+	// module to prepare the state to go  back to theta or output the hash result.
+	BackToThetaOrOutput *BackToThetaOrOutput
 }
 
-// Calls the Keccak module
-func NewModule(
-	comp *wizard.CompiledIOP,
-	round, maxNumKeccakf int,
-) (mod Module) {
+// NewModule creates a new keccakf module, declares the columns and constraints and returns its pointer
+func NewModule(comp *wizard.CompiledIOP, in KeccakfInputs) *Module {
 
-	mod.MaxNumKeccakf = maxNumKeccakf
-	// declare the columns
-	mod.declareColumns(comp, round, maxNumKeccakf)
-
-	// Initializes the lookup columns
-	mod.Lookups = newLookUpTables(comp, maxNumKeccakf)
-
-	// Then initializes the submodules : declare the columns and all the
-	// constraints per submodule.
-	mod.IO.newInput(comp, maxNumKeccakf, mod)
-	mod.Theta = newTheta(comp, round, maxNumKeccakf, mod.State, mod.Lookups)
-	mod.Rho = newRho(comp, round, maxNumKeccakf, mod.Theta.AThetaSlicedBaseB)
-	mod.PiChiIota = newPiChiIota(comp, round, maxNumKeccakf, mod)
-	mod.IO.newOutput(comp, maxNumKeccakf, mod)
-
-	return mod
-}
-
-// Registers the prover steps per submodule.
-func (mod *Module) Assign(
-	run *wizard.ProverRuntime,
-	traces keccak.PermTraces,
-) {
-
-	// Number of permutation used for the current instance
-	numKeccakf := len(traces.KeccakFInps)
-
-	// If the number of keccakf constraints is larger than what the module
-	// is sized for, then, we cannot prove everything.
-	if numKeccakf > mod.MaxNumKeccakf {
-		exit.OnLimitOverflow(
-			mod.MaxNumKeccakf,
-			numKeccakf,
-			fmt.Errorf("too many keccakf %v > %v", numKeccakf, mod.MaxNumKeccakf),
-		)
-	}
-
-	lu := mod.Lookups
-	lu.DontUsePrevAIota.Assign(run)
-	mod.assignStateAndBlocks(run, traces, numKeccakf)
-	mod.IO.assignBlockFlags(run, traces)
-	mod.Theta.assign(run, mod.State, lu, numKeccakf)
-	mod.Rho.assign(run, mod.Theta.AThetaSlicedBaseB, numKeccakf)
-	mod.PiChiIota.assign(run, numKeccakf, lu, mod.Rho.ARho,
-		mod.Blocks, mod.IO.IsBlockBaseB)
-	mod.IO.assignHashOutPut(run, mod.IsActive)
-
-}
-
-// Assigns the state of the module using the keccak traces.
-func (mod *Module) assignStateAndBlocks(
-	run *wizard.ProverRuntime,
-	traces keccak.PermTraces,
-	numKeccakF int,
-) {
-	colSize := mod.State[0][0].Size()
-	unpaddedSize := numKeccakF * keccak.NumRound
-
-	run.AssignColumn(
-		mod.IsActive.GetColID(),
-		smartvectors.RightZeroPadded(
-			vector.Repeat(field.One(), unpaddedSize),
-			colSize,
-		),
+	var (
+		initialState kcommon.State
 	)
 
-	// Assign the state from the traces
-	inputsVal := [5][5][]field.Element{}
+	// create the initial state, before applying a kevccakf round.
 	for x := 0; x < 5; x++ {
 		for y := 0; y < 5; y++ {
-			inputsVal[x][y] = make(
-				[]field.Element,
-				unpaddedSize,
-			)
+			for z := 0; z < kcommon.NumSlices; z++ {
+				initialState[x][y][z] = comp.InsertCommit(0, ifaces.ColIDf("INITIAL_STATE_%v_%v_%v", x, y, z), in.KeccakfSize, true)
+			}
 		}
 	}
 
-	// Assign the block in BaseB.  The Xoring with the state
-	// is done at the end of the previous call of the sponge function (at its
-	// last operation during the iota phase).
-	blocksVal := [numLanesInBlock][]field.Element{}
-	for m := range blocksVal {
-		blocksVal[m] = make([]field.Element, unpaddedSize)
-	}
-
-	parallel.Execute(numKeccakF, func(start, stop int) {
-
-		for nperm := start; nperm < stop; nperm++ {
-			// Fetch the current's permutation actual input state. Observe
-			// that keccak.State is not a pointer to the data, so this is
-			// actually a deep-copy operation. And the later mutations of
-			// currInp have no side-effects on the traces.
-			currInp := traces.KeccakFInps[nperm]
-			currOut := traces.KeccakFOuts[nperm]
-			currBlock := traces.Blocks[nperm]
-
-			for r := 0; r < keccak.NumRound; r++ {
-				// Current row that we are assigning
-				currRow := nperm*keccak.NumRound + r
-
-				// Assign the state to the input columns
-				for x := 0; x < 5; x++ {
-					for y := 0; y < 5; y++ {
-						inputsVal[x][y][currRow] = U64ToBaseX(currInp[x][y], &BaseAFr)
-					}
+	// assign the first blocks of the message to the initialState
+	for x := 0; x < 5; x++ {
+		for y := 0; y < 5; y++ {
+			m := 5*y + x
+			if m < kcommon.NumLanesInBlock {
+				for z := 0; z < kcommon.NumSlices; z++ {
+					// if it is the first block of the message, assign it to the state
+					comp.InsertGlobal(0, ifaces.QueryIDf("STATE_IS_SET_TO_FIRST_BLOCK_%v_%v_%v", x, y, z),
+						sym.Mul(in.IsFirstBlock,
+							sym.Sub(initialState[x][y][z], in.Blocks[m][z]),
+						),
+					)
 				}
-
-				// Retro-actively assign the block in BaseB if we are not on
-				// the first row. The condition over nperm is to ensure that we
-				// do not underflow although in practice isNewHash[0] will
-				// always be true because this is the first perm of the first
-				// hash by definition.
-				if r == 0 && nperm > 0 && !traces.IsNewHash[nperm] {
-					for m := 0; m < numLanesInBlock; m++ {
-						blocksVal[m][currRow-1] = U64ToBaseX(currBlock[m], &BaseBFr)
-					}
-				}
-				//assign the firstBlock in BaseA
-				if r == 0 && traces.IsNewHash[nperm] {
-					for m := 0; m < numLanesInBlock; m++ {
-						blocksVal[m][currRow] = U64ToBaseX(currBlock[m], &BaseAFr)
-					}
-				}
-
-				// Applies one round to mutate currInp into the input
-				// corresponding to the next round. That way, next iteration
-				// directly accesses the input of the next round.
-				currInp.ApplyKeccakfRound(r)
-
-				// At the last round, if everything goes well, we should have
-				// the value of keccakfOups
-				if r == keccak.NumRound-1 && currInp != currOut {
-					utils.Panic(
-						"assigned values are inconsistent with the traces\n"+
-							"\t%+x\n\t%+v\n",
-						currOut, currInp,
+			} else {
+				for z := 0; z < kcommon.NumSlices; z++ {
+					//  the remaining columns of the state are set to zero
+					comp.InsertGlobal(0, ifaces.QueryIDf("STATE_IS_SET_TO_ZERO_%v_%v_%v", x, y, z),
+						sym.Mul(in.IsFirstBlock, initialState[x][y][z]),
 					)
 				}
 			}
 		}
+	}
+
+	// create the theta module with the initial state as input
+	theta := newTheta(comp, in.KeccakfSize, initialState)
+	// create the rho module with the state after theta
+	rhoPi := newRho(comp, theta.StateNext)
+	// create the chi iota module with the state after rhoPi
+	chiIota := newChi(comp, chiInputs{
+		StateCurr:    *rhoPi.StateNext,
+		Blocks:       block(in.Blocks),
+		IsBlockOther: in.IsBlockBaseB,
+		KeccakfSize:  in.KeccakfSize,
 	})
 
-	for m := 0; m < numLanesInBlock; m++ {
-		run.AssignColumn(
-			mod.Blocks[m].GetColID(),
-			smartvectors.RightZeroPadded(blocksVal[m], colSize),
-		)
-	}
+	// prepare the state to back to theta or output the hash result.
+	thetaOrOutput := newBackToThetaOrOutput(comp, chiIota.StateNext, in.IsActive, in.IsFirstBlock)
 
+	// get the the final state
+	finalState := thetaOrOutput.StateNext
+
+	// initialState is set to the previous final state.
 	for x := 0; x < 5; x++ {
 		for y := 0; y < 5; y++ {
-			run.AssignColumn(
-				mod.State[x][y].GetColID(),
-				smartvectors.RightZeroPadded(inputsVal[x][y], colSize),
-			)
+			for z := 0; z < kcommon.NumSlices; z++ {
+				comp.InsertGlobal(0, ifaces.QueryIDf("STATE_IS_CARRIED_OVER_%v_%v_%v", x, y, z),
+					sym.Mul(in.IsActive,
+						sym.Sub(1, in.IsFirstBlock),
+						sym.Sub(initialState[x][y][z], column.Shift(finalState[x][y][z], -1))),
+				)
+			}
 		}
 	}
 
+	return &Module{
+		Inputs:              in,
+		InitialState:        initialState,
+		Theta:               theta,
+		RhoPi:               rhoPi,
+		ChiIota:             chiIota,
+		BackToThetaOrOutput: thetaOrOutput,
+	}
 }
 
-// declare the columns of the state and the message.
-func (mod *Module) declareColumns(comp *wizard.CompiledIOP, round, maxNumKeccakF int) {
-	size := numRows(maxNumKeccakF)
+// Assign the values to the columns of the keccakf module.
+func (m *Module) Assign(run *wizard.ProverRuntime, traces keccak.PermTraces) {
 
-	// Initialize the column isActive
-	mod.IsActive = comp.InsertCommit(round, deriveName("IS_ACTIVE"), size)
+	m.assignState(run, traces)                   // assign the initial state
+	m.Theta.assignTheta(run, m.InitialState)     // assign the theta module with the state
+	m.RhoPi.assignRho(run, m.Theta.StateNext)    // assign the rho pi module with the state after theta
+	m.ChiIota.assignChi(run, *m.RhoPi.StateNext) // assign the chi iota module with the state after rho pi
+	m.BackToThetaOrOutput.Run(run)               // assign the
+}
 
-	// Initializes the state columns
+// Returns the number of rows required to prove `numKeccakf` calls to the
+// permutation function. The result is padded to the next power of 2 in order to
+// satisfy the requirements of the Wizard to have only powers of 2.
+func NumRows(numKeccakf int) int {
+	return utils.NextPowerOfTwo(numKeccakf * kcommon.NumRounds)
+}
+
+// Assigns the state of the module using the keccak traces.
+func (mod *Module) assignState(
+	run *wizard.ProverRuntime,
+	traces keccak.PermTraces,
+) {
+
+	var (
+		state      = [5][5][kcommon.NumSlices]*common.VectorBuilder{}
+		numKeccakF = len(traces.KeccakFInps)
+	)
+
 	for x := 0; x < 5; x++ {
 		for y := 0; y < 5; y++ {
-			mod.State[x][y] = comp.InsertCommit(
-				round,
-				deriveName("A_INPUT", x, y),
-				size,
-			)
+			for z := 0; z < kcommon.NumSlices; z++ {
+				state[x][y][z] = common.NewVectorBuilder(mod.InitialState[x][y][z])
+			}
 		}
 	}
 
-	// Initializes the columns of the message
-	for m := 0; m < numLanesInBlock; m++ {
-		mod.Blocks[m] = comp.InsertCommit(
-			round,
-			deriveName("BLOCK_BASE_2", m),
-			size,
-		)
+	for nperm := 0; nperm < numKeccakF; nperm++ {
+		// Fetch the current's permutation actual input state. Observe
+		// that keccak.State is not a pointer to the data, so this is
+		// actually a deep-copy operation. And the later mutations of
+		// currInp have no side-effects on the traces.
+		currInp := traces.KeccakFInps[nperm]
+		currOut := traces.KeccakFOuts[nperm]
+
+		for r := 0; r < keccak.NumRound; r++ {
+			// Assign the state to the input columns
+			for x := 0; x < 5; x++ {
+				for y := 0; y < 5; y++ {
+
+					lanebytes := [kcommon.NumSlices]uint8{}
+					for j := 0; j < kcommon.NumSlices; j++ {
+						lanebytes[j] = uint8((currInp[x][y] >> (kcommon.NumSlices * j)) & 0xff)
+					}
+					// convert each byte to clean base common.common.BaseTheta
+					for j := 0; j < kcommon.NumSlices; j++ {
+						state[x][y][j].PushField(kcommon.U64ToBaseX(uint64(lanebytes[j]), &kcommon.BaseThetaFr))
+					}
+				}
+			}
+
+			// Applies one round to mutate currInp into the input
+			// corresponding to the next round. That way, next iteration
+			// directly accesses the input of the next round.
+			currInp.ApplyKeccakfRound(r)
+
+			// At the last round, if everything goes well, we should have
+			// the value of keccakfOups
+			if r == keccak.NumRound-1 && currInp != currOut {
+				utils.Panic(
+					"assigned values are inconsistent with the traces\n"+
+						"\t%+x\n\t%+v\n",
+					currOut, currInp,
+				)
+			}
+		}
 	}
+	// assign the values to the state columns
+	for x := 0; x < 5; x++ {
+		for y := 0; y < 5; y++ {
+			for z := 0; z < kcommon.NumSlices; z++ {
+				state[x][y][z].PadAndAssign(run)
+			}
+		}
+	}
+
 }

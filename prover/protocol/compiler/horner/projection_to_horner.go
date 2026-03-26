@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 	"github.com/consensys/linea-monorepo/prover/protocol/accessors"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -65,13 +67,13 @@ func ProjectionToHorner(comp *wizard.CompiledIOP) {
 			selectorsA = make([]ifaces.Column, widthA)
 			selectorsB = make([]ifaces.Column, widthB)
 			gamma      coin.Info
-			alpha      = comp.InsertCoin(qRound+1, coin.Name(qName+"_COIN_ALPHA"), coin.Field)
+			alpha      = comp.InsertCoin(qRound+1, coin.Name(qName+"_COIN_ALPHA"), coin.FieldExt)
 		)
 
 		round = max(round, qRound+1)
 
 		if numCols > 1 {
-			gamma = comp.InsertCoin(qRound+1, coin.Name(qName+"_COIN_GAMMA"), coin.Field)
+			gamma = comp.InsertCoin(qRound+1, coin.Name(qName+"_COIN_GAMMA"), coin.FieldExt)
 		}
 
 		for i := 0; i < widthA; i++ {
@@ -165,7 +167,10 @@ func (c *CheckHornerQuery) Run(run wizard.Runtime) error {
 
 func (c *CheckHornerQuery) RunGnark(api frontend.API, run wizard.GnarkRuntime) {
 	params := run.GetHornerParams(c.Query.ID)
-	api.AssertIsEqual(params.FinalResult, 0)
+	koalaAPI := koalagnark.NewAPI(api)
+
+	zero := koalagnark.NewExt(fext.Zero())
+	koalaAPI.AssertIsEqualExt(params.FinalResult, zero)
 
 	for _, p := range params.Parts {
 		api.AssertIsEqual(p.N0, 0)

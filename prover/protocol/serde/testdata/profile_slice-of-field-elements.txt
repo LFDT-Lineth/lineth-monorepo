@@ -1,0 +1,5 @@
+Serialization Size Profile
+==========================
+
+[serde_test.withPODSlice]: 64 B (100.0%)
+    └─ Elems [[]koalabear.Element]: 56 B (87.5%)

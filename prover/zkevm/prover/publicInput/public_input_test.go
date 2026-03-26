@@ -2,8 +2,10 @@ package publicInput
 
 import (
 	"fmt"
+	"math/rand/v2"
 	"testing"
 
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
@@ -34,6 +36,8 @@ func TestPublicInputDefineAndAssign(t *testing.T) {
 	logFullSize := logs.ComputeSize(testLogs[:])
 	logColSize := utils.NextPowerOfTwo(logFullSize)
 	blockHashList := [1 << 10]types.FullBytes32{} // if the test does more than 1 << 10 block-hash it will panic. It can be solved by adding more capacity here
+	rng := rand.New(utils.NewRandSource(0))       // #nosec G404 -- test only
+	execDataSchwarzZipfelX := fext.PseudoRand(rng)
 
 	define := func(b *wizard.Builder) {
 		// Define BlockData, TxnData and RlpTxn
@@ -53,7 +57,7 @@ func TestPublicInputDefineAndAssign(t *testing.T) {
 
 	prove := func(run *wizard.ProverRuntime) {
 		// Assign BlockData, TxnData and RlpTxn
-		arith.AssignTestingArithModules(run, ctBlockData, ctTxnData, ctRlpTxn)
+		arith.AssignTestingArithModules(run, ctBlockData, ctTxnData, ctRlpTxn, inp.BlockData, inp.TxnData, inp.RlpTxn)
 		var (
 			initState    = stateSummaryContext.State
 			shomeiState  = mock.InitShomeiState(initState)
@@ -64,7 +68,7 @@ func TestPublicInputDefineAndAssign(t *testing.T) {
 		inp.StateSummary.Assign(run, shomeiTraces)
 		// Assign the Logs
 		logs.LogColumnsAssign(run, &inp.LogCols, testLogs[:])
-		pub.Assign(run, common.Address(bridgeAddress), blockHashList[:])
+		pub.Assign(run, common.Address(bridgeAddress), blockHashList[:], execDataSchwarzZipfelX)
 
 	}
 

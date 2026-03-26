@@ -1,0 +1,8 @@
+Serialization Size Profile
+==========================
+
+[serde_test.withSliceOfInterfaces]: 128 B (100.0%)
+    └─ Items [[]interface {}]: 120 B (93.8%)
+        ├─ [0] [interface {}]: 24 B (18.8%)
+        ├─ [1] [interface {}]: 24 B (18.8%)
+        └─ [2] [interface {}]: 24 B (18.8%)

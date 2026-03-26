@@ -10,31 +10,37 @@ import (
 	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/consensys/linea-monorepo/prover/protocol/distributed"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
+	"github.com/consensys/linea-monorepo/prover/utils/signal"
 	"github.com/consensys/linea-monorepo/prover/utils/test_utils"
 	"github.com/consensys/linea-monorepo/prover/zkevm"
 	"github.com/sirupsen/logrus"
 )
 
-// TestConglomerationBasic generates a conglomeration proof and checks if it is valid
-func TestConglomerationBasic(t *testing.T) {
-	t.Skipf("the test is a development/debug/integration test. It is not needed for CI")
+// runConglomerationWizardTest runs a full conglomeration pipeline for a single
+// DistributedTestCase: distribution, segment compilation, conglomeration, proving
+// and proof aggregation.
+//
+// numRow must match the numRow embedded in tc; it is used to derive the
+// discoverer target weight so that at least two segments are created (required
+// for the conglomeration binary tree to have something to aggregate).
+func runConglomerationWizardTest(t *testing.T, tc DistributedTestCase, numRow int) {
+	t.Helper()
+
 	var (
-		numRow = 1 << 10
-		tc     = DistributeTestCase{numRow: numRow}
-		disc   = &distributed.StandardModuleDiscoverer{
-			TargetWeight: 3 * numRow / 2,
-			Predivision:  1,
-		}
 		comp = wizard.Compile(func(build *wizard.Builder) {
 			tc.Define(build.CompiledIOP)
 		})
 
-		// This tests the compilation of the compiled-IOP
-		distWizard = distributed.DistributeWizard(comp, disc).
-				CompileSegments(zkevm.LimitlessCompilationParams).
-				Conglomerate(zkevm.LimitlessCompilationParams)
+		disc = &distributed.StandardModuleDiscoverer{
+			TargetWeight: 3 * numRow / 2,
+			Advices:      tc.Advices(),
+		}
 
-		runtimeBoot             = wizard.RunProver(distWizard.Bootstrapper, tc.Assign)
+		distWizard = distributed.DistributeWizard(comp, disc).
+				CompileSegments(testCompilationParams).
+				Conglomerate(testCompilationParams)
+
+		runtimeBoot             = wizard.RunProver(distWizard.Bootstrapper, tc.Assign, false)
 		witnessGLs, witnessLPPs = distributed.SegmentRuntime(
 			runtimeBoot,
 			distWizard.Disc,
@@ -42,17 +48,41 @@ func TestConglomerationBasic(t *testing.T) {
 			distWizard.BlueprintLPPs,
 			distWizard.VerificationKeyMerkleTree.GetRoot(),
 		)
+
 		glProofs         = runProverGLs(t, distWizard, witnessGLs)
 		sharedRandomness = distributed.GetSharedRandomnessFromSegmentProofs(glProofs)
-		runLPPs          = runProverLPPs(t, distWizard, sharedRandomness, witnessLPPs)
+		lppProofs        = runProverLPPs(t, distWizard, sharedRandomness, witnessLPPs)
 	)
 
 	runConglomerationProver(
 		&distWizard.VerificationKeyMerkleTree,
 		distWizard.CompiledConglomeration,
 		glProofs,
-		runLPPs,
+		lppProofs,
 	)
+}
+
+// TestConglomerationBasic generates a conglomeration proof for each of the
+// standard DistributedTestCase types and checks that the proof is valid.
+func TestConglomerationBasic(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping heavy test in short mode")
+	}
+	signal.RegisterStackTraceDumpHandler()
+
+	const numRow = 1 << 5
+
+	testCases := []DistributedTestCase{
+		&LookupTestCase{numRow: numRow},
+		&ProjectionTestCase{numRow: numRow},
+		&PermutationTestCase{numRow: numRow},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name(), func(t *testing.T) {
+			runConglomerationWizardTest(t, tc, numRow)
+		})
+	}
 }
 
 // TestConglomerationProverDebug
@@ -77,7 +107,6 @@ func TestConglomerationProverDebug(t *testing.T) {
 	}
 
 	limitlessZkEVM.RunDebug(cfg, witness)
-
 }
 
 // TestConglomeration generates a conglomeration proof and checks if it is valid
@@ -108,7 +137,7 @@ func TestConglomerationProverFile(t *testing.T) {
 
 	var (
 		_, witness  = test_utils.GetZkevmWitness(req, cfg)
-		runtimeBoot = wizard.RunProver(distWizard.Bootstrapper, z.GetMainProverStep(witness))
+		runtimeBoot = wizard.RunProver(distWizard.Bootstrapper, z.GetMainProverStep(witness), false)
 	)
 
 	t.Logf("[%v] done running the bootstrapper\n", time.Now())
@@ -134,66 +163,19 @@ func TestConglomerationProverFile(t *testing.T) {
 	)
 }
 
-// This function runs a prover for a conglomerator compilation. It takes in a
-// ConglomeratorCompilation object and two slices of ProverRuntime objects,
-// runGLs and runLPPs. It extracts witnesses from these runtimes, then uses the
-// ConglomeratorCompilation object to prove the conglomerator, logging the start
-// and end times of the proof process.
-func runConglomerationProver(
-	mt *distributed.VerificationKeyMerkleTree,
-	cong *distributed.RecursedSegmentCompilation,
-	runGLs, runLPPs []*distributed.SegmentProof,
-) *distributed.SegmentProof {
+func TestConglomerationProverSmallField(t *testing.T) {
 
-	// The channel is used as a FIFO queue to store the remaining proofs to be
-	// aggregated.
-	var (
-		remainingProofs = make(chan *distributed.SegmentProof, len(runGLs)+len(runLPPs))
-	)
+	t.Skipf("the test is a development/debug/integration test. It is not needed for CI")
 
-	// This populates the queue
-	for i := range runGLs {
-		remainingProofs <- runGLs[i]
+	cfgFilePath := "../../config/config-mainnet-limitless.toml"
+	cfg, cfgErr := config.NewConfigFromFileUnchecked(cfgFilePath)
+
+	if cfgErr != nil {
+		t.Fatalf("could not read the config file: err=%v", cfgErr)
 	}
 
-	for i := range runLPPs {
-		remainingProofs <- runLPPs[i]
-	}
+	t.Logf("loaded config: %++v", cfg)
 
-	// TryPopQueue attempts to consume a proof from the queue or return false
-	// if the queue is empty.
-	tryPopQueue := func() (*distributed.SegmentProof, bool) {
-		select {
-		case proof := <-remainingProofs:
-			return proof, true
-		default:
-			return nil, false
-		}
-	}
-
-	// This is the actual proof aggregation loop.
-	for {
-		a, ok := tryPopQueue()
-		if !ok {
-			panic("the queue cannot be empty here")
-		}
-
-		// If b cannot be found, it means that the queue contained only a single
-		// proof to aggregate which means it was the result of the function.
-		b, ok := tryPopQueue()
-		if !ok {
-			return a
-		}
-
-		logrus.Infof("AGGREGATING PROOF, remaining %v\n", len(remainingProofs))
-
-		new := cong.ProveSegment(&distributed.ModuleWitnessConglo{
-			SegmentProofs:             []distributed.SegmentProof{*a, *b},
-			VerificationKeyMerkleTree: *mt,
-		})
-
-		logrus.Infof("AGGREGATED PROOFS\n")
-
-		remainingProofs <- new
-	}
+	limitlessZkEVM := zkevm.NewLimitlessZkEVM(cfg)
+	logrus.Printf("ZkEVM loaded: %++v", limitlessZkEVM)
 }

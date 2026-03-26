@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"hash"
 
-	"github.com/consensys/linea-monorepo/prover/crypto/mimc"
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode"
 
 	fr381 "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
@@ -72,7 +71,7 @@ func CraftResponseCalldata(req *Request) (*Response, error) {
 	}
 
 	// Compute all the prover fields
-	snarkHash, err := encode.MiMCChecksumPackedData(compressedStream, fr381.Bits-1, encode.NoTerminalSymbol())
+	snarkHash, err := encode.Poseidon2ChecksumPackedData(compressedStream, fr381.Bits-1, encode.NoTerminalSymbol())
 	if err != nil {
 		return nil, fmt.Errorf("crafting response: could not compute snark hash: %w", err)
 	}
@@ -103,30 +102,6 @@ func CraftResponseCalldata(req *Request) (*Response, error) {
 	resp.ExpectedShnarf = utils.HexEncodeToString(newShnarf)
 
 	return resp, nil
-}
-
-// TODO @gbotrel this is not used? confirm with @Tabaie / @AlexandreBelling
-// Computes the SNARK hash of a stream of byte. Returns the hex string. The hash
-// can fail if the input stream does not have the right format.
-func snarkHashV0(stream []byte) ([]byte, error) {
-	h := mimc.NewMiMC()
-
-	const blobBytes = 4096 * 32
-
-	if len(stream) > blobBytes {
-		return nil, fmt.Errorf("the compressed blob is too large : %v bytes, the limit is %v bytes", len(stream), blobBytes)
-	}
-
-	if _, err := h.Write(stream); err != nil {
-		return nil, fmt.Errorf("cannot generate Snarkhash of the string `%x`, MiMC failed : %w", stream, err)
-	}
-
-	// @alex: for consistency with the circuit, we need to hash the whole input
-	// stream padded.
-	if len(stream) < blobBytes {
-		h.Write(make([]byte, blobBytes-len(stream)))
-	}
-	return h.Sum(nil), nil
 }
 
 // Returns an evaluation challenge point from a SNARK hash and a blob hash. The

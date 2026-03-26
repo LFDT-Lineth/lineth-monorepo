@@ -5,9 +5,9 @@
 	"commitment": "0x",
 	"kzgProofContract": "0x",
 	"kzgProofSidecar": "0x",
-	"expectedX": "0xe72c871b646706539d6b259f1dc65493a019669b42127b74a883afe489612154",
-	"expectedY": "0x4987c2c58091e1c7b6c3e9aee1c6ff77e5af85a314660beedea81c20882ec714",
-	"snarkHash": "0x0888d2221d164a0040913814109c3c08aa43110c5564b48b2b01af05f9355174",
+	"expectedX": "0x3817b548c1c652e4324353d5e45eba6714fc07f072e2a5335c9aad976345e298",
+	"expectedY": "0x1929126870db39b9be08b6cbceff375d6a446914876e019e983a552f8e0600cd",
+	"snarkHash": "0x02f4170f344733e0132848a7ac0e362e753211f297842b3b830a8a4872d3cb34",
 	"conflationOrder": {
 		"startingBlockNumber": 1,
 		"upperBoundaries": [
@@ -21,6 +21,6 @@
 	"parentStateRootHash": "0x072ead6777750dc20232d1cee8dc9a395c2d350df4bbaa5096c6f59b214dcecd",
 	"finalStateRootHash": "0xea09456033a79b5f8b369a95cce74d3dbe34fdd6415bff1a417ff8a8fa0cffd3",
 	"parentDataHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-	"expectedShnarf": "0x9562fa89830a0ba0063a636ca96e52ce2f032b855336c95dd788321f4e193419",
+	"expectedShnarf": "0x6f19a5c3028ba90d326cd4e590c586b254386522b9628ed6f7939d214b1c8cea",
 	"prevShnarf": "0x47452a1b9ebadfe02bdd02f580fa1eba17680d57eec968a591644d05d78ee84f"
 }

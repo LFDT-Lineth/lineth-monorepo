@@ -33,7 +33,7 @@ func CompileGrandProduct(comp *wizard.CompiledIOP) {
 		for _, zctx := range zctxs {
 			zctx.Compile(comp)
 			verAction.ZOpenings = append(verAction.ZOpenings, zctx.ZOpenings...)
-			allProverActions = append(allProverActions, zctx)
+			allProverActions.Zs = append(allProverActions.Zs, zctx)
 		}
 
 		comp.RegisterVerifierAction(round, &verAction)

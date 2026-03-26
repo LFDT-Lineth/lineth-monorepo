@@ -6,6 +6,7 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/variables"
@@ -142,7 +143,6 @@ func EvalExprColumn(run ifaces.Runtime, board symbolic.ExpressionBoard) smartvec
 		metadata = board.ListVariableMetadata()
 		inputs   = make([]smartvectors.SmartVector, len(metadata))
 		length   = ExprIsOnSameLengthHandles(&board)
-		v        field.Element
 	)
 
 	// Attempt to recover the size of the
@@ -151,11 +151,22 @@ func EvalExprColumn(run ifaces.Runtime, board symbolic.ExpressionBoard) smartvec
 		case ifaces.Column:
 			inputs[i] = m.GetColAssignment(run)
 		case coin.Info:
-			v = run.GetRandomCoinField(m.Name)
-			inputs[i] = smartvectors.NewConstant(v, length)
+			if m.IsBase() {
+				utils.Panic("unsupported, coins are always over field extensions")
+			} else {
+				vExt := run.GetRandomCoinFieldExt(m.Name)
+				inputs[i] = smartvectors.NewConstantExt(vExt, length)
+			}
+
 		case ifaces.Accessor:
-			v := m.GetVal(run)
-			inputs[i] = smartvectors.NewConstant(v, length)
+			if m.IsBase() {
+				v, _ := m.GetValBase(run)
+				inputs[i] = smartvectors.NewConstant(v, length)
+			} else {
+				v := m.GetValExt(run)
+				inputs[i] = smartvectors.NewConstantExt(v, length)
+			}
+
 		case variables.PeriodicSample:
 			v := m.EvalCoset(length, 0, 1, false)
 			inputs[i] = v
@@ -169,28 +180,41 @@ func EvalExprColumn(run ifaces.Runtime, board symbolic.ExpressionBoard) smartvec
 }
 
 // GnarkEvalExprColumn evaluates an expression in a gnark circuit setting
-func GnarkEvalExprColumn(api frontend.API, run ifaces.GnarkRuntime, board symbolic.ExpressionBoard) []frontend.Variable {
+func GnarkEvalExprColumn(api frontend.API, run ifaces.GnarkRuntime, board symbolic.ExpressionBoard) []koalagnark.Ext {
 
 	var (
 		metadata = board.ListVariableMetadata()
 		length   = ExprIsOnSameLengthHandles(&board)
-		res      = make([]frontend.Variable, length)
+		res      = make([]koalagnark.Ext, length)
 	)
 
 	for k := 0; k < length; k++ {
 
-		inputs := make([]frontend.Variable, len(metadata))
+		inputs := make([]any, len(metadata))
 
 		for i := range inputs {
 			switch m := metadata[i].(type) {
 			case ifaces.Column:
-				inputs[i] = m.GetColAssignmentGnarkAt(run, k)
+				if m.IsBase() {
+					inputs[i] = m.GetColAssignmentGnarkAt(run, k)
+				} else {
+					inputs[i] = m.GetColAssignmentGnarkAtExt(run, k)
+				}
 			case coin.Info:
-				inputs[i] = run.GetRandomCoinField(m.Name)
+				if m.IsBase() {
+					utils.Panic("unsupported, coins are always over field extensions")
+				} else {
+					inputs[i] = run.GetRandomCoinFieldExt(m.Name)
+				}
 			case ifaces.Accessor:
-				inputs[i] = m.GetFrontendVariable(api, run)
+				if m.IsBase() {
+					inputs[i] = m.GetFrontendVariable(api, run)
+				} else {
+					inputs[i] = m.GetFrontendVariableExt(api, run)
+				}
 			case variables.PeriodicSample:
-				inputs[i] = m.EvalAtOnDomain(k)
+				tmp := m.EvalAtOnDomain(k)
+				inputs[i] = koalagnark.NewElementFromKoala(tmp)
 			case variables.X:
 				// there is no theoritical problem with this but there are
 				// no cases known where this happens so we just don't
@@ -199,7 +223,7 @@ func GnarkEvalExprColumn(api frontend.API, run ifaces.GnarkRuntime, board symbol
 			}
 		}
 
-		res[k] = board.GnarkEval(api, inputs)
+		res[k] = board.GnarkEvalExt(api, inputs)
 	}
 
 	return res
@@ -228,7 +252,7 @@ func ExprIsOnSameLengthHandles(board *symbolic.ExpressionBoard) int {
 				utils.Panic("Inconsistent length for %v (has size %v, but expected %v)", metadata.GetColID(), metadata.Size(), length)
 			}
 		// The expression can involve random coins
-		case coin.Info, variables.X, variables.PeriodicSample, ifaces.Accessor:
+		case coin.Info, variables.X, variables.PeriodicSample, ifaces.Accessor, symbolic.EliminatedVarMetadata:
 			// Do nothing
 		default:
 			utils.Panic("unknown type %T", metadata)
@@ -309,7 +333,7 @@ func StatusOf(c ifaces.Column) Status {
 func IsPublicExpression(expr *symbolic.Expression) bool {
 
 	var (
-		meta         = expr.BoardListVariableMetadata()
+		meta         = expr.ListBoardVariableMetadata()
 		numPublic    = 0
 		numNonPublic = 0
 		statusMap    = map[ifaces.ColID]string{}
@@ -339,7 +363,7 @@ func IsPublicExpression(expr *symbolic.Expression) bool {
 func ColumnsOfExpression(expr *symbolic.Expression) []ifaces.Column {
 
 	var (
-		metadata = expr.BoardListVariableMetadata()
+		metadata = expr.ListBoardVariableMetadata()
 		res      []ifaces.Column
 	)
 
@@ -350,4 +374,42 @@ func ColumnsOfExpression(expr *symbolic.Expression) []ifaces.Column {
 	}
 
 	return res
+}
+
+// GetColAssignmentOctuplet returns the assignment of the column as an octuplet.
+func GetColAssignmentOctuplet(col ifaces.Column, run ifaces.Runtime) field.Octuplet {
+	assignment := col.GetColAssignment(run)
+	if assignment.Len() < 8 {
+		panic("column size must be at least 8 for Octuplet")
+	}
+	var result field.Octuplet
+	for i := 0; i < 8; i++ {
+		result[i] = assignment.Get(i)
+	}
+	return result
+}
+
+func GetColAssignmentGnarkOctuplet(col ifaces.Column, run ifaces.GnarkRuntime) koalagnark.Octuplet {
+	assignment := col.GetColAssignmentGnark(run)
+	if len(assignment) < 8 {
+		panic("column size must be at least 8 for Octuplet")
+	}
+	var result koalagnark.Octuplet
+	for i := 0; i < 8; i++ {
+		result[i] = assignment[i]
+	}
+	return result
+}
+
+// GetColAssignmentBase retrieves the base assignment of a column. This is specially used when the column is over field extensions while it is storing the base elements.
+func GetColAssignmentBase(run ifaces.Runtime, col ifaces.Column) (res []field.Element, err error) {
+	res = make([]field.Element, col.Size())
+	for i := 0; i < col.Size(); i++ {
+		base, err := col.GetColAssignmentAtBase(run, i)
+		if err != nil {
+			return nil, err
+		}
+		res[i] = base
+	}
+	return res, nil
 }

@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 )
@@ -12,20 +12,26 @@ import (
 // ProverTask implements the [wizard.ProverAction] interface and as such
 // implements the prover work of the compilation step. It works by calling
 // in parallel the prover tasks of the sub-compilation steps.
-type ProverTask []*ContextForSize
+//
+// The reason we need a wrapping structure (and not just `type X []*Y“) is
+// because the serializer will recognize it as an `[]*Y` and not as an `X` and
+// thus not as a valid interface implementation for [wizard.ProverAction].
+type ProverTask struct {
+	Contexts []*ContextForSize
+}
 
 // Run implements the [wizard.ProverAction] interface.
 func (p ProverTask) Run(run *wizard.ProverRuntime) {
 
 	wg := &sync.WaitGroup{}
-	wg.Add(len(p))
+	wg.Add(len(p.Contexts))
 
-	for i := range p {
+	for i := range p.Contexts {
 		// Passing the loop index ensures each go routine is storing the value
 		// of i in a different variable so that there is no race condition over
 		// i.
 		go func(i int) {
-			p[i].run(run)
+			p.Contexts[i].run(run)
 			wg.Done()
 		}(i)
 	}
@@ -39,16 +45,15 @@ func (ctx *ContextForSize) run(run *wizard.ProverRuntime) {
 
 	var (
 		size      = ctx.Summation.Size()
-		collapsed = column.EvalExprColumn(run, ctx.CollapsedBoard).IntoRegVecSaveAlloc()
-		summation = make([]field.Element, size)
+		collapsed = column.EvalExprColumn(run, ctx.CollapsedBoard).IntoRegVecSaveAllocExt()
+		summation = make([]fext.Element, size)
 	)
 
 	summation[0] = collapsed[0]
-
 	for i := 0; i+1 < size; i++ {
 		summation[i+1].Add(&summation[i], &collapsed[i+1])
 	}
 
-	run.AssignColumn(ctx.Summation.GetColID(), smartvectors.NewRegular(summation))
-	run.AssignLocalPoint(ctx.SummationOpening.ID, summation[len(summation)-1])
+	run.AssignColumn(ctx.Summation.GetColID(), smartvectors.NewRegularExt(summation))
+	run.AssignLocalPointExt(ctx.SummationOpening.ID, summation[len(summation)-1])
 }

@@ -86,11 +86,11 @@ type Query interface {
 // should update the Fiat-Shamir state.
 type QueryParams interface {
 	// Update fiat-shamir with the query parameters
-	UpdateFS(*fiatshamir.State)
+	UpdateFS(fiatshamir.FS)
 }
 
 // GnarkQueryParams mirrors exactly [QueryParams], but in a gnark circuit.
 type GnarkQueryParams interface {
 	// Update fiat-shamir with the query parameters in a circuit
-	UpdateFS(*fiatshamir.GnarkFiatShamir)
+	UpdateFS(fiatshamir.GnarkFS)
 }

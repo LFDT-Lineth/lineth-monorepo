@@ -14,7 +14,7 @@ import (
 
 // Parse the metadata of an expression and returns the first round where this function can be evaluated
 func LastRoundToEval(expr *symbolic.Expression) int {
-	metadatas := expr.BoardListVariableMetadata()
+	metadatas := expr.ListBoardVariableMetadata()
 
 	maxRound := 0
 

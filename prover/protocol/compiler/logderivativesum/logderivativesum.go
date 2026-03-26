@@ -2,11 +2,14 @@ package logderivativesum
 
 import (
 	"fmt"
+
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
+
 	"slices"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
+
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
@@ -102,23 +105,27 @@ type FinalEvaluationCheck struct {
 // Run implements the [wizard.VerifierAction]
 func (f *FinalEvaluationCheck) Run(run wizard.Runtime) error {
 
-	tmps := make([]field.Element, 0)
+	tmps := make([]fext.GenericFieldElem, 0)
 
 	// zSum stores the sum of the ending values of the zs as queried
 	// in the protocol via the local opening queries.
-	zSum := field.Zero()
+	zSum := fext.GenericFieldZero()
+
 	for k := range f.ZOpenings {
-		temp := run.GetLocalPointEvalParams(f.ZOpenings[k].ID).Y
+		zOpening := run.GetLocalPointEvalParams(f.ZOpenings[k].ID)
+		temp := zOpening.ToGenericGroupElement()
 		tmps = append(tmps, temp)
-		zSum.Add(&zSum, &temp)
+		zSum.Add(&temp)
 	}
 
-	claimedSum := run.GetLogDerivSumParams(f.LogDerivSumID).Sum
-	if zSum != claimedSum {
+	logDerivSumParam := run.GetLogDerivSumParams(f.LogDerivSumID)
+	claimedSum := logDerivSumParam.Sum
+
+	if !zSum.IsEqual(&claimedSum) {
 		return fmt.Errorf("log-derivate-sum; the final evaluation check failed for %v\n"+
 			"given %v but calculated %v\n"+
 			"partial-sums=(len %v) %v",
-			f.LogDerivSumID, claimedSum.String(), zSum.String(), len(tmps), vector.Prettify(tmps),
+			f.LogDerivSumID, claimedSum.String(), zSum.String(), len(tmps), fext.PrettifyGeneric(tmps),
 		)
 	}
 
@@ -127,17 +134,18 @@ func (f *FinalEvaluationCheck) Run(run wizard.Runtime) error {
 
 // RunGnark implements the [wizard.VerifierAction]
 func (f *FinalEvaluationCheck) RunGnark(api frontend.API, run wizard.GnarkRuntime) {
+	koalaAPI := koalagnark.NewAPI(api)
 
 	claimedSum := run.GetLogDerivSumParams(f.LogDerivSumID).Sum
 	// SigmaSKSum stores the sum of the ending values of the SigmaSs as queried
 	// in the protocol via the
-	zSum := frontend.Variable(field.Zero())
+	zSum := koalaAPI.ZeroExt()
 	for k := range f.ZOpenings {
-		temp := run.GetLocalPointEvalParams(f.ZOpenings[k].ID).Y
-		zSum = api.Add(zSum, temp)
+		temp := run.GetLocalPointEvalParams(f.ZOpenings[k].ID).ExtY
+		zSum = koalaAPI.AddExt(zSum, temp)
 	}
 
-	api.AssertIsEqual(zSum, claimedSum)
+	koalaAPI.AssertIsEqualExt(zSum, claimedSum)
 }
 
 func (f *FinalEvaluationCheck) Skip() {

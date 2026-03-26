@@ -17,13 +17,13 @@ func TestWriteBigInt(t *testing.T) {
 	b := big.NewInt(10)
 
 	buffer := &bytes.Buffer{}
-	types.WriteBigIntOn32Bytes(buffer, b)
+	types.WriteBigIntOn64Bytes(buffer, b)
 
 	// Converts to hex to simplify the reading
 	hex := hex.EncodeToString(buffer.Bytes())
 	assert.Equal(
 		t,
-		"000000000000000000000000000000000000000000000000000000000000000a",
+		"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a",
 		hex,
 	)
 }
@@ -36,18 +36,18 @@ func TestWriteInt64(t *testing.T) {
 	}{
 		{
 			N:        10,
-			Expected: "000000000000000000000000000000000000000000000000000000000000000a",
+			Expected: "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a",
 		},
 		{
 			N:        7987979,
-			Expected: "000000000000000000000000000000000000000000000000000000000079e30b",
+			Expected: "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000790000e30b",
 		},
 	}
 
 	for _, tc := range tcases {
 		n := int64(tc.N)
 		buffer := &bytes.Buffer{}
-		types.WriteInt64On32Bytes(buffer, n)
+		types.WriteInt64On64Bytes(buffer, n)
 
 		// Converts to hex to simplify the reading
 		hex := hex.EncodeToString(buffer.Bytes())
@@ -69,8 +69,8 @@ func TestReadWriteInt64(t *testing.T) {
 	for _i := 0; _i < nIterations; _i++ {
 		n := rng.Int64()
 		buffer := &bytes.Buffer{}
-		types.WriteInt64On32Bytes(buffer, n)
-		n2, _, err := types.ReadInt64On32Bytes(buffer)
+		types.WriteInt64On64Bytes(buffer, n)
+		n2, _, err := types.ReadInt64On64Bytes(buffer)
 		require.NoError(t, err)
 		assert.Equal(t, n, n2)
 	}
@@ -86,8 +86,8 @@ func TestReadWriteBigInt(t *testing.T) {
 	for _i := 0; _i < nIterations; _i++ {
 		n := big.NewInt(rng.Int64())
 		buffer := &bytes.Buffer{}
-		types.WriteBigIntOn32Bytes(buffer, n)
-		n2, err := types.ReadBigIntOn32Bytes(buffer)
+		types.WriteBigIntOn64Bytes(buffer, n)
+		n2, err := types.ReadBigIntOn64Bytes(buffer)
 		require.NoError(t, err)
 		assert.Equal(t, n, n2)
 	}
@@ -95,8 +95,8 @@ func TestReadWriteBigInt(t *testing.T) {
 	// case where the big int is zero
 	n := big.NewInt(0)
 	buffer := &bytes.Buffer{}
-	types.WriteBigIntOn32Bytes(buffer, n)
-	n2, err := types.ReadBigIntOn32Bytes(buffer)
+	types.WriteBigIntOn64Bytes(buffer, n)
+	n2, err := types.ReadBigIntOn64Bytes(buffer)
 	require.NoError(t, err)
 	assert.Equal(t, n, n2)
 }

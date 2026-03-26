@@ -36,6 +36,7 @@ type BlobMaker struct {
 	compressor *lzss.Compressor // compressor used to compress the blob body
 	dict       []byte           // dictionary used for compression
 	dictStore  dictionary.Store // dictionary store comprising only dict, used for decompression sanity checks
+	version    uint16
 
 	header Header
 
@@ -50,12 +51,14 @@ type BlobMaker struct {
 	packBuffer bytes.Buffer
 }
 
-// NewBlobMaker returns a new bm.
-func NewBlobMaker(dataLimit int, dictPath string) (*BlobMaker, error) {
+func NewVersionedBlobMaker(version uint16, dataLimit int, dictPath string) (*BlobMaker, error) {
 	blobMaker := BlobMaker{
-		Limit: dataLimit,
+		Limit:   dataLimit,
+		version: version,
 	}
 	blobMaker.buf.Grow(1 << 17)
+
+	blobMaker.header.Version = version
 
 	// initialize compressor
 	dict, err := os.ReadFile(dictPath)
@@ -64,11 +67,11 @@ func NewBlobMaker(dataLimit int, dictPath string) (*BlobMaker, error) {
 	}
 	dict = lzss.AugmentDict(dict)
 	blobMaker.dict = dict
-	if blobMaker.dictStore, err = dictionary.SingletonStore(dict, 1); err != nil {
+	if blobMaker.dictStore, err = dictionary.SingletonStore(dict, version); err != nil {
 		return nil, err
 	}
 
-	dictChecksum, err := encode.MiMCChecksumPackedData(dict, 8)
+	dictChecksum, err := dictionary.Checksum(dict, version)
 	if err != nil {
 		return nil, err
 	}
@@ -83,6 +86,11 @@ func NewBlobMaker(dataLimit int, dictPath string) (*BlobMaker, error) {
 	blobMaker.StartNewBatch()
 
 	return &blobMaker, nil
+}
+
+// NewBlobMaker returns a new bm.
+func NewBlobMaker(dataLimit int, dictPath string) (*BlobMaker, error) {
+	return NewVersionedBlobMaker(1, dataLimit, dictPath)
 }
 
 // StartNewBatch starts a new batch of blocks.
@@ -115,7 +123,7 @@ func (bm *BlobMaker) Written() int {
 func (bm *BlobMaker) Bytes() []byte {
 	if bm.currentBlobLength > 0 {
 		// sanity check that we can always decompress.
-		resp, err := DecompressBlob(bm.currentBlob[:bm.currentBlobLength], bm.dictStore)
+		resp, err := DecompressBlobVersioned(bm.version, bm.currentBlob[:bm.currentBlobLength], bm.dictStore)
 		if err != nil {
 			var sbb strings.Builder
 			fmt.Fprintf(&sbb, "invalid blob: %v\n", err)
@@ -308,8 +316,13 @@ type BlobDecompressionResponse struct {
 	Dict       []byte
 }
 
-// DecompressBlob decompresses a blob and returns the header and the blocks as they were compressed.
+// DecompressBlob decompresses a v1 blob and returns the header and the blocks as they were compressed.
 func DecompressBlob(b []byte, dictStore dictionary.Store) (resp BlobDecompressionResponse, err error) {
+	return DecompressBlobVersioned(1, b, dictStore)
+}
+
+// DecompressBlobVersioned decompresses a v1 or v2 blob, returning the header and the blocks as they were compressed.
+func DecompressBlobVersioned(version uint16, b []byte, dictStore dictionary.Store) (resp BlobDecompressionResponse, err error) {
 	// UnpackAlign the blob
 	b, err = encode.UnpackAlign(b, fr381.Bits-1, false)
 	if err != nil {
@@ -317,14 +330,14 @@ func DecompressBlob(b []byte, dictStore dictionary.Store) (resp BlobDecompressio
 	}
 
 	// read the header
-	resp.Header = new(Header)
+	resp.Header = &Header{Version: version}
 	read, err := resp.Header.ReadFrom(bytes.NewReader(b))
 	if err != nil {
 		err = fmt.Errorf("failed to read blob header: %w", err)
 		return
 	}
 	// retrieve dictionary
-	if resp.Dict, err = dictStore.Get(resp.Header.DictChecksum[:], 1); err != nil {
+	if resp.Dict, err = dictStore.Get(resp.Header.DictChecksum[:], version); err != nil {
 		return
 	}
 

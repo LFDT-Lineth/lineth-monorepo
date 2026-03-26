@@ -3,6 +3,9 @@ package distributed
 import (
 	"fmt"
 
+	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+	"github.com/consensys/linea-monorepo/prover/protocol/accessors"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
@@ -80,7 +83,7 @@ type FilteredModuleInputs struct {
 	// compiled-IOP. The vector is a list of accessor and has one
 	// entry for EVERY public-input of the input module. However, the
 	// positions corresponding to public-inputs that are not related
-	// to the said module are replaced with 'nil'.
+	// to the said module are replaced with fake constant-zero public-inputs.
 	PublicInputs []wizard.PublicInput
 
 	// Disc is the module discoverer used to determine the module's
@@ -279,7 +282,11 @@ func (mf moduleFilter) FilterCompiledIOP(comp *wizard.CompiledIOP) FilteredModul
 		}
 
 		if resolvedModule != mf.Module {
-			newPublicInputs.Acc = nil
+			if originalPublicInput.Acc.IsBase() {
+				newPublicInputs.Acc = accessors.NewConstant(field.Zero())
+			} else {
+				newPublicInputs.Acc = accessors.NewConstantExt(fext.Zero())
+			}
 		}
 
 		fmi.PublicInputs = append(fmi.PublicInputs, newPublicInputs)
@@ -332,7 +339,7 @@ func (m *FilteredModuleInputs) addColumnLPP(col ifaces.Column) bool {
 		return true
 	}
 
-	m.ColumnsLPP = append(m.Columns, &nat)
+	m.ColumnsLPP = append(m.ColumnsLPP, &nat)
 	m.ColumnsLPPSet[col.GetColID()] = struct{}{}
 	return false
 }

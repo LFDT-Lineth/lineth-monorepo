@@ -23,6 +23,9 @@ func (b *builder) Compile() (constraint.ConstraintSystem, error) {
 // Makes the constraint system for the execution circuit
 func makeCS(z *zkevm.ZkEvm) constraint.ConstraintSystem {
 
+	// p := profile.Start(profile.WithPath("execution-circuit.pprof"))
+	// defer p.Stop()
+
 	circuit := Allocate(z)
 	scs, err := frontend.Compile(fr.Modulus(), scs.NewBuilder, &circuit, frontend.WithCapacity(1<<24))
 	if err != nil {

@@ -62,15 +62,15 @@ func main() {
 	maxNC := utils.Max(ncs...)
 
 	piConfig := config.PublicInput{
-		MaxNbDecompression: maxNC,
-		MaxNbExecution:     maxNC,
+		MaxNbDataAvailability: maxNC,
+		MaxNbExecution:        maxNC,
 	}
 
 	piCircuit := pi_interconnection.DummyCircuit{
 		ExecutionPublicInput:     make([]frontend.Variable, piConfig.MaxNbExecution),
 		ExecutionFPI:             make([]frontend.Variable, piConfig.MaxNbExecution),
-		DecompressionPublicInput: make([]frontend.Variable, piConfig.MaxNbDecompression),
-		DecompressionFPI:         make([]frontend.Variable, piConfig.MaxNbDecompression),
+		DecompressionPublicInput: make([]frontend.Variable, piConfig.MaxNbDataAvailability),
+		DecompressionFPI:         make([]frontend.Variable, piConfig.MaxNbDataAvailability),
 	}
 
 	piCs, err := frontend.Compile(ecc.BLS12_377.ScalarField(), scs.NewBuilder, &piCircuit)

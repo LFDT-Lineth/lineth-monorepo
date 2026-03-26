@@ -297,7 +297,7 @@ describe("Linea Rollup contract: EIP-4844 Blob submission tests", () => {
     // TODO: Make the failure shnarf dynamic and computed
     await expectRevertWithCustomError(lineaRollup, ethers.provider.broadcastTransaction(signedTx), "FinalShnarfWrong", [
       finalShnarf,
-      "0x22f8fb954df8328627fe9c48b60192f4d970a92891417aaadea39300ca244d36",
+      "0x4337f604948e810af24274096031ee2bbf4d6bc87919c72dd87ede2c091803e1",
     ]);
   });
 

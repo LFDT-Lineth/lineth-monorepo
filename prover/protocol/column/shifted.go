@@ -1,8 +1,11 @@
 package column
 
 import (
-	"github.com/consensys/gnark/frontend"
+	"fmt"
+
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/sirupsen/logrus"
@@ -110,9 +113,33 @@ func (s Shifted) GetColAssignment(run ifaces.Runtime) ifaces.ColAssignment {
 
 // GetColAssignmentGnark implements [ifaces.Column] and works like
 // GetColAssignment.
-func (s Shifted) GetColAssignmentGnark(run ifaces.GnarkRuntime) []frontend.Variable {
+func (s Shifted) GetColAssignmentGnark(run ifaces.GnarkRuntime) []koalagnark.Element {
 	parent := s.Parent.GetColAssignmentGnark(run) // [a b c d e f g h]
-	res := make([]frontend.Variable, len(parent))
+	res := make([]koalagnark.Element, len(parent))
+	for i := range res {
+		posParent := utils.PositiveMod(i+s.Offset, len(parent))
+		res[i] = parent[posParent]
+	}
+	return res
+}
+
+func (s Shifted) GetColAssignmentGnarkBase(run ifaces.GnarkRuntime) ([]koalagnark.Element, error) {
+	if s.IsBase() {
+		parent := s.Parent.GetColAssignmentGnark(run) // [a b c d e f g h]
+		res := make([]koalagnark.Element, len(parent))
+		for i := range res {
+			posParent := utils.PositiveMod(i+s.Offset, len(parent))
+			res[i] = parent[posParent]
+		}
+		return res, nil
+	} else {
+		return nil, fmt.Errorf("requested base elements but column is defined over the extension")
+	}
+}
+
+func (s Shifted) GetColAssignmentGnarkExt(run ifaces.GnarkRuntime) []koalagnark.Ext {
+	parent := s.Parent.GetColAssignmentGnarkExt(run) // [a b c d e f g h]
+	res := make([]koalagnark.Ext, len(parent))
 	for i := range res {
 		posParent := utils.PositiveMod(i+s.Offset, len(parent))
 		res[i] = parent[posParent]
@@ -127,10 +154,26 @@ func (s Shifted) GetColAssignmentAt(run ifaces.Runtime, pos int) field.Element {
 	return s.Parent.GetColAssignmentAt(run, utils.PositiveMod(pos+s.Offset, s.Parent.Size()))
 }
 
+func (s Shifted) GetColAssignmentAtBase(run ifaces.Runtime, pos int) (field.Element, error) {
+	return s.Parent.GetColAssignmentAtBase(run, utils.PositiveMod(pos+s.Offset, s.Parent.Size()))
+}
+
+func (s Shifted) GetColAssignmentAtExt(run ifaces.Runtime, pos int) fext.Element {
+	return s.Parent.GetColAssignmentAtExt(run, utils.PositiveMod(pos+s.Offset, s.Parent.Size()))
+}
+
 // GetColAssignmentGnarkAt gets the witness from the parent and performs a shift in the gnark circuit
 // setting. The method implements the [ifaces.Column] interface.
-func (s Shifted) GetColAssignmentGnarkAt(run ifaces.GnarkRuntime, pos int) frontend.Variable {
+func (s Shifted) GetColAssignmentGnarkAt(run ifaces.GnarkRuntime, pos int) koalagnark.Element {
 	return s.Parent.GetColAssignmentGnarkAt(run, utils.PositiveMod(pos+s.Offset, s.Parent.Size()))
+}
+
+func (s Shifted) GetColAssignmentGnarkAtBase(run ifaces.GnarkRuntime, pos int) (koalagnark.Element, error) {
+	return s.Parent.GetColAssignmentGnarkAtBase(run, utils.PositiveMod(pos+s.Offset, s.Parent.Size()))
+}
+
+func (s Shifted) GetColAssignmentGnarkAtExt(run ifaces.GnarkRuntime, pos int) koalagnark.Ext {
+	return s.Parent.GetColAssignmentGnarkAtExt(run, utils.PositiveMod(pos+s.Offset, s.Parent.Size()))
 }
 
 // String returns the ID of the column as a string and implements [ifaces.Column]
@@ -138,4 +181,8 @@ func (s Shifted) GetColAssignmentGnarkAt(run ifaces.GnarkRuntime, pos int) front
 // (required by Metadata).
 func (s Shifted) String() string {
 	return string(s.GetColID())
+}
+
+func (s Shifted) IsBase() bool {
+	return s.Parent.IsBase()
 }

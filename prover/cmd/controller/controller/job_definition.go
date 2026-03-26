@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	jobNameExecution         = "execution"
-	jobNameBlobDecompression = "compression"
-	jobNameAggregation       = "aggregation"
+	jobNameExecution        = "execution"
+	jobNameDataAvailability = "compression"
+	jobNameAggregation      = "aggregation"
 )
 
 // JobDefinition represents a collection of static parameters allowing to define
@@ -130,10 +130,10 @@ func ExecutionDefinition(conf *config.Config) JobDefinition {
 func CompressionDefinition(conf *config.Config) JobDefinition {
 
 	return JobDefinition{
-		RequestsRootDir: conf.BlobDecompression.RequestsRootDir,
+		RequestsRootDir: conf.DataAvailability.RequestsRootDir,
 
 		// Name of the job
-		Name: jobNameBlobDecompression,
+		Name: jobNameDataAvailability,
 
 		// This will panic at startup if the regexp is invalid
 		InputFileRegexp: regexp2.MustCompile(

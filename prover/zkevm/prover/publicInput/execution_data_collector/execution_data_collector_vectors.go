@@ -2,13 +2,14 @@ package execution_data_collector
 
 import (
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
 )
 
 // ExecutionDataCollectorVectors is a helper struct used to instantiate the ExecutionDataCollector's columns
 type ExecutionDataCollectorVectors struct {
 	BlockID, AbsTxID, AbsTxIDMax []field.Element
-	Limb, NoBytes                []field.Element
-	UnalignedLimb, AlignedPow    []field.Element
+	Limbs                        [common.NbLimbU128][]field.Element
+	NoBytes                      []field.Element
 	TotalNoTxBlock               []field.Element
 
 	IsActive                                                                       []field.Element
@@ -29,10 +30,7 @@ func NewExecutionDataCollectorVectors(size int) *ExecutionDataCollectorVectors {
 		BlockID:                make([]field.Element, size),
 		AbsTxID:                make([]field.Element, size),
 		AbsTxIDMax:             make([]field.Element, size),
-		Limb:                   make([]field.Element, size),
 		NoBytes:                make([]field.Element, size),
-		UnalignedLimb:          make([]field.Element, size),
-		AlignedPow:             make([]field.Element, size),
 		TotalNoTxBlock:         make([]field.Element, size),
 		IsActive:               make([]field.Element, size),
 		IsNoTx:                 make([]field.Element, size),
@@ -49,35 +47,12 @@ func NewExecutionDataCollectorVectors(size int) *ExecutionDataCollectorVectors {
 		TotalBytesCounter:      make([]field.Element, size),
 		FinalTotalBytesCounter: field.Zero(),
 	}
-	return res
-}
 
-// SetLimbAndUnalignedLimb assigns appropriate power values which depend on the opType,
-// the unaligned limb to be equal to the value parameter, and the limb to satisfy:
-// Limb=UnalignedLimb*AlignedPow.
-func (vect *ExecutionDataCollectorVectors) SetLimbAndUnalignedLimb(totalCt int, value field.Element, opType int) {
-	var powField, limbValue field.Element
-	switch opType {
-	case loadNoTxn:
-		powField = field.NewFromString(powBytesNoTxn)
-	case loadTimestamp:
-		powField = field.NewFromString(powTimestamp)
-	case loadBlockHashHi:
-		powField = field.NewFromString(powBlockHash)
-	case loadBlockHashLo:
-		powField = field.NewFromString(powBlockHash)
-	case loadSenderAddrHi:
-		powField = field.NewFromString(powSenderAddrHi)
-	case loadSenderAddrLo:
-		powField = field.NewFromString(powSenderAddrLo)
-	case loadRlp:
-		powField = field.One()
+	for i := range res.Limbs {
+		res.Limbs[i] = make([]field.Element, size)
 	}
-	vect.AlignedPow[totalCt].Set(&powField)
-	limbValue.Set(&value)
-	limbValue.Mul(&limbValue, &powField)
-	vect.Limb[totalCt].Set(&limbValue)
-	vect.UnalignedLimb[totalCt].Set(&value)
+
+	return res
 }
 
 // SetCounters assigns the counter values
@@ -93,7 +68,6 @@ func (vect *ExecutionDataCollectorVectors) SetCounters(totalCt, blockCt, absTxCt
 		// or if we are at the beginning, initialize the current bytes as the bytes that are loaded.
 		vect.TotalBytesCounter[totalCt].Set(&vect.NoBytes[totalCt])
 	}
-
 }
 
 // SetBlockMetadata assigns block metadata values. This function will be called in a manner

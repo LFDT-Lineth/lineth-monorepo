@@ -36,11 +36,30 @@ type (
 // The Circuit is used to aggregate multiple execution proofs and
 // aggregation proofs together.
 type Circuit struct {
-
 	// The list of claims to be provided to the circuit.
 	ProofClaims []proofClaim `gnark:",secret"`
-	// List of available verifying keys that are available to the circuit. This
-	// is treated as a constant by the circuit.
+
+	// List of ALL available payload verifying keys (from GlobalCircuitIDMapping, IDs 0-5).
+	// This is treated as a constant by the circuit - all payload verifying keys are always
+	// included regardless of configuration. The IsAllowedCircuitID bitmask from the
+	// PI circuit's public input controls which circuits are actually allowed at runtime.
+	//
+	// The bitmask uses LSb to MSb encoding where each bit position corresponds to a
+	// circuit ID from GlobalCircuitIDMapping:
+	//   - Bit 0 (LSb): execution-dummy (ID 0)
+	//   - Bit 1: data-availability-dummy (ID 1)
+	//   - Bit 2: execution (ID 2)
+	//   - Bit 3: execution-large (ID 3)
+	//   - Bit 4: execution-limitless (ID 4)
+	//   - Bit 5: data-availability-v2 (ID 5)
+	//
+	// Examples:
+	//   Mainnet (IsAllowedCircuitID = 60 = 0b111100):
+	//     - Bits 0-1 are 0 → dummy circuits (IDs 0-1) are DISALLOWED
+	//     - Bits 2-5 are 1 → production circuits (IDs 2-5) are ALLOWED
+	//
+	//   Testnet (IsAllowedCircuitID = 63 = 0b111111):
+	//     - All bits 0-5 are 1 → all circuits including dummies are ALLOWED
 	verifyingKeys []emVkey `gnark:"-"`
 
 	publicInputVerifyingKey        emVkey              `gnark:"-"`
@@ -61,16 +80,75 @@ func (c *Circuit) Define(api frontend.API) error {
 
 	// match general PI input with that of the interconnection circuit
 	piBits := api.ToBinary(c.PublicInput, frBn254.Bits)
-
 	assertSlicesEqualZEXT(api, piBits[:16*8], field.ToBitsCanonical(&c.PublicInputWitness.Public[1]))
 	assertSlicesEqualZEXT(api, piBits[16*8:], field.ToBitsCanonical(&c.PublicInputWitness.Public[0]))
+
 	api.AssertIsDifferent(c.PublicInput, 0) // making sure at least one element of the PI circuit's public input is nonzero to justify using incomplete arithmetic
 
+	// Prepare the list of all verifying keys including the PI circuit's VK
 	vks := append(slices.Clone(c.verifyingKeys), c.publicInputVerifyingKey)
 	piVkIndex := len(vks) - 1
 
+	// Extract the IsAllowedCircuitID bitmask from the PI circuit's public inputs.
+	// This is the LAST public input of the PI circuit and encodes which circuit IDs
+	// are allowed in this proof.
+	//
+	// The mask is an emulated field element, so we use field.ToBitsCanonical() to
+	// convert it to bits instead of api.ToBinary().
+	mask := c.PublicInputWitness.Public[len(c.PublicInputWitness.Public)-1]
+	maskBits := field.ToBitsCanonical(&mask)
+
+	// Convert the bitmask to a boolean array where isCircuitAllowed[i] indicates
+	// whether circuit ID i is allowed.
+	//
+	// We only need len(c.verifyingKeys) bits for the circuit allowlist (payload circuits).
+	// The maskBits from ToBitsCanonical may have more bits than needed, so we truncate.
+	// If maskBits has fewer bits (shouldn't happen), we pad with zeros.
+	//
+	// Example: If mask = 60 = 0b111100, then:
+	//   isCircuitAllowed[0] = 0 (execution-dummy NOT allowed)
+	//   isCircuitAllowed[1] = 0 (data-availability-dummy NOT allowed)
+	//   isCircuitAllowed[2] = 1 (execution ALLOWED)
+	//   isCircuitAllowed[3] = 1 (execution-large ALLOWED)
+	//   isCircuitAllowed[4] = 1 (execution-limitless ALLOWED)
+	//   isCircuitAllowed[5] = 1 (data-availability-v2 ALLOWED)
+	isCircuitAllowed := make([]frontend.Variable, len(c.verifyingKeys))
+	for i := range isCircuitAllowed {
+		if i < len(maskBits) {
+			isCircuitAllowed[i] = maskBits[i]
+		} else {
+			isCircuitAllowed[i] = 0
+		}
+	}
+
+	// For each proof claim, verify that its circuit ID is allowed by the bitmask
 	for i := range c.ProofClaims {
-		api.AssertIsDifferent(c.ProofClaims[i].CircuitID, piVkIndex) // TODO @Tabaie is this necessary? can't think of an attack if this is removed
+		// TODO @Tabaie is this necessary? can't think of an attack if this is removed
+		api.AssertIsDifferent(c.ProofClaims[i].CircuitID, piVkIndex)
+
+		// Check if the circuit ID of this proof claim is allowed.
+		// We iterate through all possible circuit IDs and check if this claim's
+		// circuit ID matches any of them. If it matches circuit ID j, we check
+		// if isCircuitAllowed[j] is 1.
+		//
+		// Example: Suppose we have a proof claim with CircuitID = 4 (execution-limitless)
+		// and mask = 60 = 0b111100:
+		//   - When j = 4: isGoodPod = 1 (circuit ID matches)
+		//                 isAllowed = isCircuitAllowed[4] = 1 (bit 4 is set)
+		//   - For all other j: isGoodPod = 0, isAllowed remains unchanged
+		//   - Final assertion: isAllowed must equal 1
+		//
+		// If the circuit was NOT allowed (e.g., CircuitID = 0 with mask = 60):
+		//   - When j = 0: isGoodPod = 1, isAllowed = isCircuitAllowed[0] = 0
+		//   - Final assertion would FAIL since isAllowed = 0 ≠ 1
+		isAllowed := frontend.Variable(0)
+		for j := range isCircuitAllowed {
+			isGoodPod := api.IsZero(api.Sub(c.ProofClaims[i].CircuitID, j))
+			isAllowed = api.Select(isGoodPod, isCircuitAllowed[j], isAllowed)
+		}
+
+		// Assert that the circuit ID is allowed (its bit in the bitmask is 1)
+		api.AssertIsEqual(isAllowed, frontend.Variable(1))
 	}
 
 	// create a lookup table of actual public inputs
@@ -78,6 +156,7 @@ func (c *Circuit) Define(api frontend.API) error {
 	for i := range actualPI {
 		actualPI[i] = logderivlookup.New(api)
 	}
+
 	for _, claim := range c.ProofClaims {
 		if len(claim.PublicInput.Public) != 1 {
 			return errors.New("expected 1 public input per decompression/execution circuit")
@@ -88,8 +167,16 @@ func (c *Circuit) Define(api frontend.API) error {
 		}
 	}
 
-	if len(c.PublicInputWitnessClaimIndexes)+2 != len(c.PublicInputWitness.Public) {
-		return errors.New("expected the number of public inputs to match the number of public input witness claim indexes")
+	// The PI circuit's public inputs structure:
+	// [0]: First half of aggregation public input (AggregationPublicInput[0])
+	// [1]: Second half of aggregation public input (AggregationPublicInput[1])
+	// [2..N+M+1]: Public inputs from execution and DA circuits (N+M total)
+	// [N+M+2]: IsAllowedCircuitID bitmask
+	//
+	// PublicInputWitnessClaimIndexes has length N+M (from GetMaxNbCircuitsSum)
+	// Therefore: len(Public) = len(PublicInputWitnessClaimIndexes) + 3
+	if len(c.PublicInputWitnessClaimIndexes)+3 != len(c.PublicInputWitness.Public) {
+		return errors.New("expected the number of public inputs to match the number of public input witness claim indexes (plus 3 for aggregation PI and IsAllowedCircuitID)")
 	}
 
 	// verify that every valid input to the PI circuit is accounted for
@@ -151,7 +238,6 @@ func AllocateCircuit(nbProofs int, pi circuits.Setup, verifyingKeys []plonk.Veri
 		PublicInputWitness:             emPlonk.PlaceholderWitness[emFr](pi.Circuit),
 		PublicInputWitnessClaimIndexes: make([]frontend.Variable, pi_interconnection.GetMaxNbCircuitsSum(pi.Circuit)),
 	}, nil
-
 }
 
 func verifyClaimBatch(api frontend.API, vks []emVkey, claims []proofClaim) error {
@@ -218,7 +304,6 @@ func assertSlicesEqualZEXT(api frontend.API, a, b []frontend.Variable) {
 
 // assertBaseKeyEquals is very aggressive in equality testing between emulated elements. The representations have to be exactly equal, not only equal modulo the group size
 func assertBaseKeyEquals(api frontend.API, a, b emPlonk.BaseVerifyingKey[emFr, emG1, emG2]) {
-
 	internal.AssertSliceEquals(api, a.CosetShift.Limbs, b.CosetShift.Limbs)
 
 	assertG2AffEquals := func(a, b sw_bls12377.G2Affine) {
@@ -232,7 +317,6 @@ func assertBaseKeyEquals(api frontend.API, a, b emPlonk.BaseVerifyingKey[emFr, e
 	api.AssertIsEqual(a.Kzg.G1.Y, b.Kzg.G1.Y)
 	assertG2AffEquals(a.Kzg.G2[0], b.Kzg.G2[0])
 	assertG2AffEquals(a.Kzg.G2[1], b.Kzg.G2[1])
-
 	// NOT CHECKING THE LINE EVALUATIONS
 
 	api.AssertIsEqual(a.NbPublicVariables, b.NbPublicVariables)

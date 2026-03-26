@@ -8,11 +8,12 @@ import (
 	"strings"
 
 	"github.com/consensys/linea-monorepo/prover/backend/aggregation"
-	"github.com/consensys/linea-monorepo/prover/backend/blobdecompression"
+	"github.com/consensys/linea-monorepo/prover/backend/dataavailability"
 	"github.com/consensys/linea-monorepo/prover/backend/execution"
 	"github.com/consensys/linea-monorepo/prover/backend/execution/limitless"
 	"github.com/consensys/linea-monorepo/prover/backend/files"
 	"github.com/consensys/linea-monorepo/prover/config"
+	"github.com/consensys/linea-monorepo/prover/utils/signal"
 )
 
 type ProverArgs struct {
@@ -25,6 +26,10 @@ type ProverArgs struct {
 // Prove orchestrates the proving process based on the job type
 func Prove(args ProverArgs) error {
 
+	// This allows the user to dump stacktraces by sending a SIGUSR1 to the
+	// current process.
+	signal.RegisterStackTraceDumpHandler()
+
 	// TODO @gbotrel with a specific flag, we could compile the circuit and compare with the checksum of the
 	// asset we deserialize, to make sure we are using the circuit associated with the compiled
 	// binary and the setup.
@@ -33,22 +38,22 @@ func Prove(args ProverArgs) error {
 	// Read config
 	cfg, err := config.NewConfigFromFile(args.ConfigFile)
 	if err != nil {
-		return fmt.Errorf("%s failed to read config file: %w", cmdName, err)
+		return fmt.Errorf("%s failed to read config file at %v: %w", cmdName, args.ConfigFile, err)
 	}
 
 	// Determine job type from input file name
 	var (
-		jobExecution         = strings.Contains(args.Input, "getZkProof")
-		jobBlobDecompression = strings.Contains(args.Input, "getZkBlobCompressionProof")
-		jobAggregation       = strings.Contains(args.Input, "getZkAggregatedProof")
+		jobExecution        = strings.Contains(args.Input, "getZkProof")
+		jobDataAvailability = strings.Contains(args.Input, "getZkBlobCompressionProof")
+		jobAggregation      = strings.Contains(args.Input, "getZkAggregatedProof")
 	)
 
 	// Handle job type
 	switch {
 	case jobExecution:
 		return handleExecutionJob(cfg, args)
-	case jobBlobDecompression:
-		return handleBlobDecompressionJob(cfg, args)
+	case jobDataAvailability:
+		return handleDataAvailabilityJob(cfg, args)
 	case jobAggregation:
 		return handleAggregationJob(cfg, args)
 	default:
@@ -84,16 +89,16 @@ func handleExecutionJob(cfg *config.Config, args ProverArgs) error {
 	return writeResponse(args.Output, resp)
 }
 
-// handleBlobDecompressionJob processes a blob decompression job
-func handleBlobDecompressionJob(cfg *config.Config, args ProverArgs) error {
-	req := &blobdecompression.Request{}
+// handleDataAvailabilityJob processes a data availability proof job
+func handleDataAvailabilityJob(cfg *config.Config, args ProverArgs) error {
+	req := &dataavailability.Request{}
 	if err := readRequest(args.Input, req); err != nil {
 		return fmt.Errorf("could not read the input file (%v): %w", args.Input, err)
 	}
 
-	resp, err := blobdecompression.Prove(cfg, req)
+	resp, err := dataavailability.Prove(cfg, req)
 	if err != nil {
-		return fmt.Errorf("could not prove the blob decompression: %w", err)
+		return fmt.Errorf("could not prove the data availability: %w", err)
 	}
 
 	return writeResponse(args.Output, resp)

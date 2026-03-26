@@ -48,7 +48,7 @@ func TestConditionalLogDerivativeDebug(t *testing.T) {
 
 func TestConditionalLogDerivativeLookupSimple(t *testing.T) {
 
-	var sizeA, sizeB int = 16, 8
+	var sizeA, sizeB int = 4, 2
 
 	define := func(b *wizard.Builder) {
 		cola := b.RegisterCommit("A", sizeA)
@@ -61,10 +61,10 @@ func TestConditionalLogDerivativeLookupSimple(t *testing.T) {
 
 	prover := func(run *wizard.ProverRuntime) {
 		// assign a and b
-		cola := smartvectors.ForTest(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
-		colb := smartvectors.ForTest(0, 1, 2, 3, 4, 5, 6, 7)
-		filterA := smartvectors.ForTest(0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0)
-		filterB := smartvectors.ForTest(0, 0, 1, 1, 1, 1, 1, 1)
+		cola := smartvectors.ForTest(0, 1, 2, 3)
+		colb := smartvectors.ForTest(0, 1)
+		filterA := smartvectors.ForTest(0, 1, 1, 1)
+		filterB := smartvectors.ForTest(0, 1)
 
 		run.AssignColumn("A", cola)
 		run.AssignColumn("B", colb)

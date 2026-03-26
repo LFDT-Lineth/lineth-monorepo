@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInterpolate(t *testing.T) {
+func TestEvaluateLagrangeMixed(t *testing.T) {
 
 	var (
 		x            ifaces.Accessor
@@ -54,9 +54,9 @@ func TestInterpolate(t *testing.T) {
 
 	proof := wizard.Prove(compiled, prover)
 
-	xVal := x.GetVal(savedRuntime)
-	accY := acc.GetVal(savedRuntime)
-	expectedY := smartvectors.Interpolate(wp, xVal)
+	xVal := x.GetValExt(savedRuntime)
+	accY := acc.GetValExt(savedRuntime)
+	expectedY := smartvectors.EvaluateBasePolyLagrange(wp, xVal)
 
 	require.Equal(t, accY, expectedY)
 

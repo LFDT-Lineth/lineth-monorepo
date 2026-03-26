@@ -3,11 +3,10 @@ package internal
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math/big"
 	"slices"
 
-	fr377 "github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
-	fr381 "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/consensys/gnark-crypto/hash"
 	hint "github.com/consensys/gnark/constraint/solver"
 	"github.com/consensys/gnark/frontend"
@@ -16,7 +15,7 @@ import (
 	"github.com/consensys/gnark/std/hash/mimc"
 	"github.com/consensys/gnark/std/lookup/logderivlookup"
 	"github.com/consensys/gnark/std/math/emulated"
-	"github.com/consensys/linea-monorepo/prover/circuits/internal/plonk"
+	"github.com/consensys/linea-monorepo/prover/utils"
 	"golang.org/x/exp/constraints"
 )
 
@@ -326,56 +325,6 @@ func concatHint(_ *big.Int, ins, outs []*big.Int) error {
 	return nil
 }
 
-// SubSlice DOES NOT range check start and length, but it does end := start + length
-func SubSlice(api frontend.API, slice Slice[frontend.Variable], start, length frontend.Variable, maxLength int) Slice[frontend.Variable] {
-	if maxLength < 0 || maxLength > len(slice.Values) {
-		panic("invalid maxLength")
-	}
-	res := make([]frontend.Variable, maxLength)
-	t := SliceToTable(api, slice.Values)
-	/*for i := 0; i < maxLength; i++ {	TODO make sure padding is unnecessary
-		t.Insert(0)
-	}*/
-
-	end := api.Add(start, length)
-	api.AssertIsLessOrEqual(end, slice.Length)
-
-	r := NewRange(api, length, maxLength)
-	for i := range res {
-		res[i] = api.Mul(r.InRange[i], t.Lookup(api.Add(start, i))[0])
-	}
-
-	return Slice[frontend.Variable]{res, length}
-}
-
-// ChecksumSlice returns H(len(slice), partial) where partial is slice[0] if length is 1, and hsh(slice[0], slice[1], ..., slice[len(slice)-1]) otherwise
-// Proof of collision resistance: By the collision resistance of H, we may assume that f(a_1, ..., a_n) = f(b_1, ..., b_m) implies
-// m=1 and f(a_1,...,a_n) = f(b) = b. If n = 1, then f(a) = a and thus a = b.
-// Otherwise, n ≠ 1 implies H(n, f(a_1,...,a_n)) ≠ H(1, b).
-func ChecksumSlice(slice [][]byte) []byte {
-	if len(slice) == 0 {
-		panic("empty slice not supported")
-	}
-
-	partial := slice[0]
-	hsh := hash.MIMC_BLS12_377.New()
-	for i := 1; i < len(slice); i++ {
-		hsh.Reset()
-		hsh.Write(partial)
-		hsh.Write(slice[i])
-		partial = hsh.Sum(nil)
-	}
-
-	hsh.Reset()
-	n := Uint64To32Bytes(uint64(len(slice)))
-	hsh.Write(n[:])
-	hsh.Write(partial)
-
-	return hsh.Sum(nil)
-}
-
-// TODO test that ChecksumSliceSnark matches ChecksumSubSlices
-
 type VarSlice Slice[frontend.Variable]
 type Var32Slice Slice[[32]frontend.Variable]
 
@@ -403,64 +352,45 @@ func (s VarSlice) Checksum(api frontend.API, hsh snarkHash.FieldHasher) frontend
 	return hsh.Sum()
 }
 
-// ChecksumSubSlices returns the hash of consecutive sub-slices, compatible with ChecksumSliceSnark
-// the endpoints are not range checked and are assumed to be strictly increasing, and that endpoint[0] ≠ 0 and endpoint[endpoints.Length-1] \leq len(slice)
-// due to its hint, it only works with MiMC in BLS12-377
-func ChecksumSubSlices(api frontend.API, hsh snarkHash.FieldHasher, slice []frontend.Variable, subEndPoints VarSlice) []frontend.Variable {
-	lastElems := make([]frontend.Variable, len(subEndPoints.Values))
-	endpointsR := subEndPoints.Range(api)
-	for i, e := range subEndPoints.Values {
-		// inRange ? e - 1 : l  = l + inRange * (e- 1 -l) = inRange * e - (1+l) * inRange + l
-		lastElems[i] =
-			plonk.EvaluateExpression(api, e, endpointsR.InRange[i], 0, -1-len(slice), 1, len(slice))
+// MerkleDamgardChecksumSubSlices checks the correctness of given Merkle-Damgard hashes of consecutive sub-slices.
+// NB! User must ensure that no sub-slice is empty.
+// NB! The subEndPoints values must be outside reachable range past subEndPoints.Length.
+func MerkleDamgardChecksumSubSlices(api frontend.API, compressor snarkHash.Compressor, initialState frontend.Variable, slice []frontend.Variable, subEndPoints VarSlice, checksums []frontend.Variable) error {
+	if len(subEndPoints.Values) != len(checksums) {
+		return fmt.Errorf("length mismatch: %d sub-slices and %d claimed checksums", len(subEndPoints.Values), len(checksums))
 	}
-	var lastElemsT logderivlookup.Table
-	if len(slice) > 1 {
-		lastElemsT = SliceToTable(api, lastElems)
-		lastElemsT.Insert(len(slice)) // in case subEndPoints is tight
-	}
+	sumsT := SliceToTable(api, checksums)
+	endsT := SliceToTable(api, subEndPoints.Values)
 
-	hintIn := make([]frontend.Variable, len(lastElems)+len(slice))
-	copy(hintIn, lastElems)
-	copy(hintIn[len(lastElems):], slice)
-	res, err := api.Compiler().NewHint(checksumSubSlicesHint, len(subEndPoints.Values), hintIn...)
-	if err != nil {
-		panic(err)
-	}
-	resT := SliceToTable(api, res)
-	resT.Insert(0) // in case subEndPoints is tight
+	// dummy final values to make the final iteration work
+	sumsT.Insert(0)
+	endsT.Insert(len(slice) + 1)
 
-	var subI, workingHash, incrementI frontend.Variable
-	subI, workingHash, incrementI = 0, slice[0], api.IsZero(api.Sub(subEndPoints.Values[0], 1))
+	workingHash := initialState
+	curSubSliceI := frontend.Variable(0)
 
-	for i := 1; i < len(slice); i++ {
+	// Note on perf: This function would benefit from multi-lookups
 
-		// if we are done with this hash, check it
-		AssertEqualIf(api, incrementI, workingHash, resT.Lookup(subI)[0])
-		subI = api.Add(subI, incrementI)
+	// extra iteration in case the slice was fully utilized.
+	for i := range len(slice) + 1 {
+		prevEnds := api.IsZero(api.Sub(endsT.Lookup(curSubSliceI)[0], i))
 
-		hsh.Reset()
-		hsh.Write(workingHash, slice[i])
-		workingHash = api.Select(incrementI, slice[i], hsh.Sum()) // if this is a new checksum, we will just take the raw value
+		// if the previous one ends here, check that the final hash is correct,
+		// reset the working hash to IV, and advance the current sub-slice index
+		AssertEqualIf(api, prevEnds, workingHash, sumsT.Lookup(curSubSliceI)[0])
+		curSubSliceI = api.Add(curSubSliceI, prevEnds)
 
-		incrementI = api.IsZero(api.Sub(i, lastElemsT.Lookup(subI)[0]))
+		// advance the hash chain
+		if i < len(slice) {
+			workingHash = api.Select(prevEnds, initialState, workingHash)
+			workingHash = compressor.Compress(workingHash, slice[i])
+		}
 	}
 
-	// if we are done with this hash, check it (needed in case subEndPoints is tight)
-	AssertEqualIf(api, incrementI, workingHash, resT.Lookup(subI)[0])
-	subI = api.Add(subI, incrementI)
+	// assert that we went through all sub-slices
+	api.AssertIsEqual(curSubSliceI, subEndPoints.Length)
 
-	api.AssertIsEqual(subI, subEndPoints.Length)
-
-	lengths := Differences(api, subEndPoints.Values)
-
-	for i := range res {
-		hsh.Reset()
-		hsh.Write(lengths[i], res[i])
-		res[i] = hsh.Sum()
-	}
-
-	return res
+	return nil
 }
 
 // the in has the format [subEndPoints..., slice...]
@@ -604,23 +534,24 @@ func CombineBytesIntoElements(api frontend.API, b [32]frontend.Variable) [2]fron
 	}
 }
 
-// Bls12381ScalarToBls12377Scalars interprets its input as a BLS12-381 scalar, with a modular reduction if necessary, returning two BLS12-377 scalars
-// r[1] is the lower 252 bits. r[0] is the higher 3 bits.
-// useful in circuit "assign" functions
-func Bls12381ScalarToBls12377Scalars(v interface{}) (r [2][]byte, err error) {
-	var x fr381.Element
-	if _, err = x.SetInterface(v); err != nil {
-		return
+// CombineByteIntoWords combines an array of bytes into an array of 16-bits words
+func CombineByteIntoWords(api frontend.API, vs []frontend.Variable) []frontend.Variable {
+	r := big.NewInt(256)
+	if len(vs)%2 != 0 {
+		utils.Panic("odd number of bytes")
 	}
 
-	b := x.Bytes()
+	res := make([]frontend.Variable, len(vs)/2)
+	for i := range res {
+		res[i] = api.Add(api.Mul(vs[2*i], r), vs[2*i+1])
+	}
+	return res
+}
 
-	r[0] = make([]byte, fr377.Bytes)
-	r[0][fr381.Bytes-1] = b[0] >> 4
-
-	b[0] &= 0x0f
-	r[1] = b[:]
-	return
+// CombineWordsIntoElements takes an array of 8 16-bit words and returns a 128
+// bit element
+func CombineWordsIntoElements(api frontend.API, vs []frontend.Variable) frontend.Variable {
+	return compress.ReadNum(api, vs, big.NewInt(65536))
 }
 
 // PartialSums returns s[0], s[0]+s[1], ..., s[0]+s[1]+...+s[len(s)-1]
@@ -699,12 +630,6 @@ func RotateLeft(api frontend.API, v []frontend.Variable, n frontend.Variable) (r
 		res[i] = t.Lookup(api.Add(i, n))[0]
 	}
 	return
-}
-
-func CloneSlice[T any](s []T, cap ...int) []T {
-	res := make([]T, len(s), max(len(s), Sum(cap...)))
-	copy(res, s)
-	return res
 }
 
 // PartitionSlice populates sub-slices subs[0], ... where subs[i] contains the elements s[j] with selectors[j] = i

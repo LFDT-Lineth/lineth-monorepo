@@ -90,14 +90,26 @@ func ParseL2L1Log(log ethtypes.Log) L2L1Log {
 	var tmpBig big.Int
 
 	// the fees
-	buf.Read(res.fees[:])
+	_, err := buf.Read(res.fees[:])
+	if err != nil {
+		utils.Panic("Unable to read the fees from the log data : %v", err)
+	}
 	// value
-	buf.Read(res.value[:])
+	_, err = buf.Read(res.value[:])
+	if err != nil {
+		utils.Panic("Unable to read the value from the log data : %v", err)
+	}
 	// salt
-	buf.Read(res.salt[:])
+	_, err = buf.Read(res.salt[:])
+	if err != nil {
+		utils.Panic("Unable to read the salt from the log data : %v", err)
+	}
 
 	// offset for calldata. we are expecting a fixed value here
-	buf.Read(tmp)
+	_, err = buf.Read(tmp)
+	if err != nil {
+		utils.Panic("Unable to read the calldata offset from the log data : %v", err)
+	}
 	offset := tmpBig.SetBytes(tmp).Int64()
 	if offset != 4*32 { // 7th field and each field takes 32 bytes
 		utils.Panic("Bad offset. expected %v but got %v", 4*32, offset)

@@ -17,13 +17,21 @@ import (
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/packing/dedicated"
 )
 
+const (
+	// Number of columns in decomposedLen and decomposedLenPowers values.
+	// This is the number of slices that the NByte is decomposed into, but +1
+	// is added for lane repacking stage.
+	nbDecomposedLen = common.NbLimbU128 + 1
+)
+
 // It stores the inputs for [newDecomposition] function.
 type decompositionInputs struct {
 	// parameters for decomposition,
 	// the are used to determine the number of slices and their lengths.
-	Param       generic.HashingUsecase
-	CleaningCtx cleaningCtx
-	Name        string
+	Param    generic.HashingUsecase
+	Name     string
+	Lookup   lookUpTables
+	Imported Importation
 }
 
 // Decomposition struct stores all the intermediate columns required to constraint correct decomposition.
@@ -34,15 +42,17 @@ type decompositionInputs struct {
 //	min (laneSizeBytes, remaining bytes from the limb)
 type decomposition struct {
 	Inputs *decompositionInputs
-	// slices of cleanLimbs
+	// DecomposedLimbs is the "decomposition" of input Limbs.
 	DecomposedLimbs []ifaces.Column
-	//  the length associated with decomposedLimbs
-	DecomposedLen []ifaces.Column
-	// DecomposedLenPowers = 2^(8*decomposedLen)
-	DecomposedLenPowers []ifaces.Column
 	// prover action for lengthConsistency;
 	// it checks that decomposedLimb is of length decomposedLen.
 	PA wizard.ProverAction
+	// the length associated with decomposedLimbs
+	DecomposedLen []ifaces.Column
+	// DecomposedLenPowers = 2^(8*decomposedLen)
+	DecomposedLenPowers []ifaces.Column
+	// Carry is used to carry the remainder during decomposition
+	Carry []ifaces.Column
 	// it indicates the active part of the decomposition module
 	IsActive ifaces.Column
 	// The Filter is obtained from decomposedLen.
@@ -53,11 +63,6 @@ type decomposition struct {
 	PaIsZero  []wizard.ProverAction
 	// Size of the module
 	Size int
-	// number of slices from the decomposition;
-	// it equals the number of  columns in decomposedLimbs.
-	NbSlices int
-	// max length in the decomposition
-	MaxLen int
 }
 
 /*
@@ -70,41 +75,37 @@ newDecomposition defines the columns and constraints asserting to the following 
 func newDecomposition(comp *wizard.CompiledIOP, inp decompositionInputs) decomposition {
 
 	var (
-		size  = inp.CleaningCtx.CleanLimb.Size()
-		nbCld = maxLanesFromLimbs(inp.Param.LaneSizeBytes())
+		size = inp.Imported.Limb[0].Size()
 	)
 
 	decomposed := decomposition{
-		Inputs:   &inp,
-		Size:     size,
-		NbSlices: nbCld,
-		MaxLen:   inp.Param.LaneSizeBytes(),
+		Inputs: &inp,
+		Size:   size,
 		// the next assignment guarantees that isActive is from the Activation form.
-		IsActive: inp.CleaningCtx.Inputs.Imported.IsActive,
+		IsActive: inp.Imported.IsActive,
 	}
 
 	// Declare the columns
 	decomposed.insertCommit(comp)
 
-	for j := 0; j < decomposed.NbSlices; j++ {
+	for j := range nbDecomposedLen {
 		// since they are later used for building the  decomposed.filter.
 		commonconstraints.MustZeroWhenInactive(comp, decomposed.IsActive, decomposed.DecomposedLen[j])
 		// this guarantees that filter and decompodedLimbs full fill the same constrains.
 	}
 
 	// Declare the constraints
-	decomposed.csFilter(comp)
-	decomposed.csDecomposLen(comp, inp.CleaningCtx.Inputs.Imported)
-	decomposed.csDecomposition(comp, inp.CleaningCtx.CleanLimb)
-
 	// check the length consistency between decomposedLimbs and decomposedLen
 	lcInputs := dedicated.LcInputs{
 		Table:    decomposed.DecomposedLimbs,
 		TableLen: decomposed.DecomposedLen,
-		MaxLen:   inp.Param.LaneSizeBytes(),
+		MaxLen:   MAXNBYTE,
 		Name:     inp.Name,
 	}
 	decomposed.PA = dedicated.LengthConsistency(comp, lcInputs)
+	decomposed.csFilter(comp)
+	decomposed.csDecomposLen(comp, inp.Imported)
+	decomposed.csDecomposedLimbs(comp, inp.Imported)
 
 	return decomposed
 }
@@ -113,16 +114,21 @@ func newDecomposition(comp *wizard.CompiledIOP, inp decompositionInputs) decompo
 func (decomposed *decomposition) insertCommit(comp *wizard.CompiledIOP) {
 
 	createCol := common.CreateColFn(comp, DECOMPOSITION+"_"+decomposed.Inputs.Name, decomposed.Size, pragmas.RightPadded)
-	for x := 0; x < decomposed.NbSlices; x++ {
+	for x := range nbDecomposedLen {
 		decomposed.DecomposedLimbs = append(decomposed.DecomposedLimbs, createCol("Decomposed_Limbs_%v", x))
 		decomposed.DecomposedLen = append(decomposed.DecomposedLen, createCol("Decomposed_Len_%v", x))
 		decomposed.DecomposedLenPowers = append(decomposed.DecomposedLenPowers, createCol("Decomposed_Len_Powers_%v", x))
 	}
 
-	decomposed.PaIsZero = make([]wizard.ProverAction, decomposed.NbSlices)
-	decomposed.ResIsZero = make([]ifaces.Column, decomposed.NbSlices)
-	decomposed.Filter = make([]ifaces.Column, decomposed.NbSlices)
-	for j := 0; j < decomposed.NbSlices; j++ {
+	// carry has less columns than decomposedLimbs (see decomposition implementation).
+	for x := range nbDecomposedLen - 1 {
+		decomposed.Carry = append(decomposed.Carry, createCol("Carry_%v", x))
+	}
+
+	decomposed.PaIsZero = make([]wizard.ProverAction, nbDecomposedLen)
+	decomposed.ResIsZero = make([]ifaces.Column, nbDecomposedLen)
+	decomposed.Filter = make([]ifaces.Column, nbDecomposedLen)
+	for j := range nbDecomposedLen {
 		decomposed.Filter[j] = createCol("Filter_%v", j)
 	}
 
@@ -136,7 +142,7 @@ func (decomposed *decomposition) csDecomposLen(
 	imported Importation,
 ) {
 
-	lu := decomposed.Inputs.CleaningCtx.Inputs.Lookup
+	lu := decomposed.Inputs.Lookup
 	// The rows of decomposedLen adds up to NByte; \sum_i decomposedLen[i]=NByte
 	s := sym.NewConstant(0)
 	for j := range decomposed.DecomposedLimbs {
@@ -149,27 +155,103 @@ func (decomposed *decomposition) csDecomposLen(
 	}
 	// \sum_i decomposedLen[i]=NByte
 	comp.InsertGlobal(0, ifaces.QueryIDf("%v_DecomposedLen_IsNByte", decomposed.Inputs.Name), sym.Sub(s, imported.NByte))
-
 }
 
-// decomposedLimbs is the the decomposition of cleanLimbs
-func (decomposed *decomposition) csDecomposition(
-	comp *wizard.CompiledIOP, cleanLimbs ifaces.Column) {
+// Constraints over the form of decomposedLimbs;
+//
+// - (decomposedLimbs[0] * 2^8 + carry[0] - Limbs[0]) * decompositionHappened[i] == 0 // base case
+// - (decomposedLimbs[i] * 2^8 + carry[i] - Limbs[i] - carry[i-1] * decomposedLenPowers[i]) * decompositionHappened[i] == 0 // for i > 0
+// - (decomposedLimbs[last] - carry[last-1]) * decompositionHappened[last] == 0
+//
+// For all cases, where decomposition didn't happen, we have:
+// - (decomposedLimbs[i] - Limbs[i]) * (2 - decompositionHappened[i]) == 0 // for 0 < i < last-1
+//
+// and for last case we check that it's zero:
+// - (decomposedLimbs[last]) * (2 - decompositionHappened[last]) == 0
+func (decomposed decomposition) csDecomposedLimbs(
+	comp *wizard.CompiledIOP,
+	imported Importation,
+) {
+	var (
+		decompositionHappened = decompositionHappened(decomposed.DecomposedLen)
+		decomposedLimbs       = decomposed.DecomposedLimbs
+		carry                 = decomposed.Carry
+		limbs                 = imported.Limb
+		last                  = nbDecomposedLen - 1
+	)
 
-	// recomposition of decomposedLimbs into cleanLimbs.
-	cleanLimb := ifaces.ColumnAsVariable(decomposed.DecomposedLimbs[0])
-	for k := 1; k < decomposed.NbSlices; k++ {
-		cleanLimb = sym.Add(sym.Mul(cleanLimb, decomposed.DecomposedLenPowers[k]), decomposed.DecomposedLimbs[k])
+	// Base case
+	comp.InsertGlobal(0, ifaces.QueryIDf("%v_DecomposedLimbs_0", decomposed.Inputs.Name),
+		sym.Mul(
+			sym.Sub(
+				sym.Add(
+					sym.Mul(decomposedLimbs[0], sym.NewConstant(POWER8)),
+					carry[0],
+				), limbs[0]),
+			decompositionHappened,
+		))
+
+	// For columns 1 to last-1
+	for i := 1; i < last-1; i++ {
+		comp.InsertGlobal(0, ifaces.QueryIDf("%v_DecomposedLimbs_%v", decomposed.Inputs.Name, i),
+			sym.Mul(
+				sym.Sub(
+					sym.Add(
+						sym.Mul(decomposedLimbs[i], sym.NewConstant(POWER8)),
+						carry[i],
+					),
+					limbs[i],
+					sym.Mul(carry[i-1], decomposed.DecomposedLenPowers[i]),
+				),
+				decompositionHappened,
+			))
 	}
 
-	comp.InsertGlobal(0, ifaces.QueryIDf("Decompose_CleanLimbs_%v", decomposed.Inputs.Name), sym.Sub(cleanLimb, cleanLimbs))
+	// Last column
+	comp.InsertGlobal(0, ifaces.QueryIDf("%v_DecomposedLimbs_Last", decomposed.Inputs.Name),
+		sym.Mul(
+			sym.Sub(
+				decomposedLimbs[last],
+				carry[last-1],
+			),
+			decompositionHappened,
+		),
+	)
+
+	// range checks
+	for i := range decomposedLimbs {
+		comp.InsertRange(0, ifaces.QueryIDf("%v_DecomposedLimbs_RangeCheck_%v", decomposed.Inputs.Name, i),
+			decomposedLimbs[i], POWER16)
+	}
+	for i := range carry {
+		comp.InsertRange(0, ifaces.QueryIDf("%v_Carry_RangeCheck_%v", decomposed.Inputs.Name, i),
+			carry[i], POWER8)
+	}
+
+	// Checks where decomposition didn't happen
+	for i := range limbs {
+		comp.InsertGlobal(0, ifaces.QueryIDf("%v_DecomposedLimbs_NoDecomp_%v", decomposed.Inputs.Name, i),
+			sym.Mul(
+				sym.Sub(
+					sym.Mul(decomposedLimbs[i], decomposeLenToShift(decomposed.DecomposedLen[i])),
+					limbs[i],
+				),
+				sym.Sub(2, decompositionHappened),
+			))
+	}
+	// Last column check
+	comp.InsertGlobal(0, ifaces.QueryIDf("%v_DecomposedLimbs_NoDecomp_Last", decomposed.Inputs.Name),
+		sym.Mul(
+			decomposedLimbs[last],
+			sym.Sub(2, decompositionHappened),
+		))
 }
 
 // /  Constraints over the form of filter and decomposedLen;
 //   - filter = 1 iff decomposedLen != 0
 func (decomposed decomposition) csFilter(comp *wizard.CompiledIOP) {
 	// filtre = 1 iff decomposedLen !=0
-	for j := 0; j < decomposed.NbSlices; j++ {
+	for j := range nbDecomposedLen {
 		// s.resIsZero = 1 iff decomposedLen = 0
 		decomposed.ResIsZero[j], decomposed.PaIsZero[j] = iszero.IsZero(comp, decomposed.DecomposedLen[j]).GetColumnAndProverAction()
 		// s.filter = (1 - s.resIsZero), this enforces filters to be binary.
@@ -193,7 +275,7 @@ func (decomposed *decomposition) Assign(run *wizard.ProverRuntime) {
 	decomposed.assignMainColumns(run)
 
 	// assign s.filter
-	for j := 0; j < decomposed.NbSlices; j++ {
+	for j := range nbDecomposedLen {
 		decomposed.PaIsZero[j].Run(run)
 
 		var (
@@ -216,21 +298,13 @@ func (decomposed *decomposition) Assign(run *wizard.ProverRuntime) {
 	decomposed.PA.Run(run)
 }
 
-// get number of slices for the decomposition
-func maxLanesFromLimbs(laneBytes int) int {
-	if laneBytes > MAXNBYTE {
-		return 2
-	} else {
-		return (MAXNBYTE / laneBytes) + 1
-	}
-}
-
 // it builds the inputs for [newDecomposition]
-func getDecompositionInputs(cleaning cleaningCtx, pckParam PackingInput) decompositionInputs {
+func getDecompositionInputs(pckParam PackingInput, lookup lookUpTables) decompositionInputs {
 	decInp := decompositionInputs{
-		CleaningCtx: cleaning,
-		Param:       pckParam.PackingParam,
-		Name:        pckParam.Name,
+		Param:    pckParam.PackingParam,
+		Name:     pckParam.Name,
+		Imported: pckParam.Imported,
+		Lookup:   lookup,
 	}
 	return decInp
 }
@@ -238,70 +312,65 @@ func getDecompositionInputs(cleaning cleaningCtx, pckParam PackingInput) decompo
 // it assigns the main columns (not generated via an inner ProverAction)
 func (decomposed *decomposition) assignMainColumns(run *wizard.ProverRuntime) {
 	var (
-		imported   = decomposed.Inputs.CleaningCtx.Inputs.Imported
-		cleanLimbs = decomposed.Inputs.CleaningCtx.CleanLimb.GetColAssignment(run)
-		nByte      = imported.NByte.GetColAssignment(run)
+		imported = decomposed.Inputs.Imported
+		nByte    = imported.NByte.GetColAssignment(run)
 
 		// Assign the columns decomposedLimbs and decomposedLen
-		decomposedLen   [][]field.Element
-		decomposedLimbs = make([][]field.Element, decomposed.NbSlices)
+		decomposedLen [][]field.Element
+		// Assign decomposed decomposedLimbs, carru
+		decomposedLimbs, carry [][]field.Element
+		// Construct decomposedNByte for later use
+		decomposedNByte = decomposeNByte(nByte.IntoRegVecSaveAlloc())
+		limbs           = make([][]field.Element, len(imported.Limb))
 
 		// These are needed for sanity-checking the implementation which
 		// crucially relies on the fact that the input vectors are post-padded.
-		cleanLimbsStartRange, _ = smartvectors.CoWindowRange(cleanLimbs)
-		nByteStartRange, _      = smartvectors.CoWindowRange(nByte)
+		nByteStartRange, _ = smartvectors.CoWindowRange(nByte)
 	)
 
-	if cleanLimbsStartRange > 0 || nByteStartRange > 0 {
-		utils.Panic("the implementation relies on the fact that the input vectors are post-padded, but their range start after 0, range-start:[%v %v]", cleanLimbsStartRange, nByteStartRange)
+	if nByteStartRange > 0 {
+		utils.Panic("the implementation relies on the fact that the input vectors are post-padded, but their range start after 0, range-start:[%v]", nByteStartRange)
+	}
+
+	for i, limb := range imported.Limb {
+		limbs[i] = limb.GetColAssignment(run).IntoRegVecSaveAlloc()
 	}
 
 	// assign row-by-row
-	decomposedLen = cutUpToMax(nByte, decomposed.NbSlices, decomposed.MaxLen)
+	decomposedLen = cutUpToMax(nByte, nbDecomposedLen, MAXNBYTE)
 
-	for j := range decomposedLimbs {
-		decomposedLimbs[j] = make([]field.Element, len(decomposedLen[0]))
-	}
-
-	for i := 0; i < len(decomposedLen[0]); i++ {
-
-		cleanLimb := cleanLimbs.Get(i)
-		nByte := nByte.Get(i)
-
-		// i-th row of DecomposedLen
-		var lenRow []int
-		for j := 0; j < decomposed.NbSlices; j++ {
-			lenRow = append(lenRow, utils.ToInt(decomposedLen[j][i].Uint64()))
-		}
-
-		// populate DecomposedLimb
-		decomposedLimb := decomposeByLength(cleanLimb, field.ToInt(&nByte), lenRow)
-
-		for j := 0; j < decomposed.NbSlices; j++ {
-			decomposedLimbs[j][i] = decomposedLimb[j]
-		}
-	}
-
-	for j := 0; j < decomposed.NbSlices; j++ {
-		run.AssignColumn(decomposed.DecomposedLimbs[j].GetColID(), smartvectors.RightZeroPadded(decomposedLimbs[j], decomposed.Size))
+	for j := range decomposedLen {
 		run.AssignColumn(decomposed.DecomposedLen[j].GetColID(), smartvectors.RightZeroPadded(decomposedLen[j], decomposed.Size))
 	}
 
-	// powersOf256 stores the successive powers of 256. This is used to compute
-	// the decomposedLenPowers.
-	powersOf256 := make([]field.Element, decomposed.MaxLen+1)
+	// powersOf256 stores the successive powers of 2^8=256. This is used to compute
+	// the decomposedLenPowers = 2^(8*i).
+	powersOf256 := make([]field.Element, MAXNBYTE+1)
 	for i := range powersOf256 {
-		powersOf256[i].Exp(field.NewElement(256), big.NewInt(int64(i)))
+		powersOf256[i].Exp(field.NewElement(POWER8), big.NewInt(int64(i)))
 	}
 
 	// assign decomposedLenPowers
 	for j := range decomposedLen {
 		decomposedLenPowers := make([]field.Element, len(decomposedLen[j]))
-		for i := range decomposedLen[0] {
+		for i := range decomposedLen[j] {
 			decomLen := field.ToInt(&decomposedLen[j][i])
 			decomposedLenPowers[i] = powersOf256[decomLen]
 		}
-		run.AssignColumn(decomposed.DecomposedLenPowers[j].GetColID(), smartvectors.RightPadded(decomposedLenPowers, field.One(), decomposed.Size))
+
+		run.AssignColumn(decomposed.DecomposedLenPowers[j].GetColID(),
+			smartvectors.RightPadded(decomposedLenPowers, field.One(), decomposed.Size))
+	}
+
+	// asign decomposedLimbs and carry
+	decomposedLimbs, carry = decomposeLimbsAndCarry(limbs, decomposedLen, decomposedNByte)
+	for i := range decomposedLimbs {
+		run.AssignColumn(decomposed.DecomposedLimbs[i].GetColID(),
+			smartvectors.RightZeroPadded(decomposedLimbs[i], decomposed.Size))
+	}
+	for i := range carry {
+		run.AssignColumn(decomposed.Carry[i].GetColID(),
+			smartvectors.RightZeroPadded(carry[i], decomposed.Size))
 	}
 }
 
@@ -351,31 +420,149 @@ func cutUpToMax(nByte smartvectors.SmartVector, nbChunk, max int) [][]field.Elem
 	return b
 }
 
-// It receives the length of the slices and decompose the element to the slices with the given lengths.
-func decomposeByLength(cleanLimb field.Element, nBytes int, givenLen []int) (slices []field.Element) {
-
-	//sanity check
-	s := 0
-	for i := range givenLen {
-		s = s + givenLen[i]
+// decomposeNByte decomposes a number of meaningful bytes into array of meaningful
+// bytes per each limb.
+//
+// Assumption here, that all bytes to the left from the current one are filled, until
+// zero one is found.
+func decomposeNByte(nbytes []field.Element) [][]int {
+	decomposed := make([][]int, common.NbLimbU128)
+	for i := range decomposed {
+		decomposed[i] = make([]int, len(nbytes))
 	}
-	if s != nBytes {
-		utils.Panic("input can not be decomposed to the given lengths s=%v nBytes=%v", s, nBytes)
-	}
 
-	b := cleanLimb.Bytes()
-	bytes := b[32-nBytes:]
-	slices = make([]field.Element, len(givenLen))
-	for i := range givenLen {
-		if givenLen[i] == 0 {
-			slices[i] = field.Zero()
-		} else {
-			b := bytes[:givenLen[i]]
-			slices[i].SetBytes(b)
-			bytes = bytes[givenLen[i]:]
+	for i, nbyte := range nbytes {
+		leftBytes := nbyte.Uint64()
+
+		for j := range common.NbLimbU128 {
+			if leftBytes > MAXNBYTE {
+				decomposed[j][i] = int(MAXNBYTE)
+				leftBytes -= MAXNBYTE
+			} else {
+				decomposed[j][i] = int(leftBytes)
+				break
+			}
 		}
 	}
 
-	return slices
+	return decomposed
+}
 
+// decomposeHappened returns an expression that indicates whether the decomposition happened in this row.
+//
+// We assume that decomposition happened whenether the first column of number meaningful bytes is 1
+// and second one is not zero.
+//
+// f(x) = x (2 - x) ==> f(x) = 1 iff x = 1 as x \in [0, 2].
+// g(y) = y (3 - y) ==> g(1) = 2, g(2) = 2, g(0) = 0
+//
+// z(x, y) = f(x) * g(y) = x (2 - x) * y (3 - y)
+func decompositionHappened(decomposedLen []ifaces.Column) *sym.Expression {
+	if len(decomposedLen) == 0 {
+		utils.Panic("decompositionHappened expects at least one decomposedLen column")
+	}
+
+	x := decomposedLen[0]
+	y := decomposedLen[1]
+
+	f := sym.Mul(
+		x,
+		sym.Sub(
+			sym.NewConstant(2),
+			x,
+		),
+	)
+	g := sym.Mul(
+		y,
+		sym.Sub(
+			sym.NewConstant(3),
+			y,
+		),
+	)
+	z := sym.Mul(f, g)
+	return z
+}
+
+// decomposeLimbsAndCarry constructs decomposed limbs and carry from original limbs.
+//
+// For example, assume we have a limbs: [0x0000a1c1, 0x0000a2c2, 0x0000a3c3],
+// nbyte = 6 (nbytes here is [2, 2, 2]), but decomposedLen = [1, 2, 2, 1], so we
+// need to shift it and create a carry column:
+//
+// [0x000000a1, 0x0000c1a2, 0x0000c2a3, 0x000000c3] (a.k.a decomposedLimbs)
+// [1         , 2          , 2        , 1] (a.k.a decomposedLimbs)
+// [0x000000c1, 0x000000c2, 0x000000c3] (a.k.a carry)
+// [0x0000a1c1, 0x0000a2c2, 0x0000a3c3] (a.k.a Limbs)
+func decomposeLimbsAndCarry(limbs, decomposedLen [][]field.Element, nbytes [][]int) (decomposedLimbs, carry [][]field.Element) {
+	nbRows := len(decomposedLen[0])
+
+	// Initialize decomposedLimbs and carry
+	decomposedLimbs = make([][]field.Element, nbDecomposedLen)
+	carry = make([][]field.Element, nbDecomposedLen-1)
+
+	for i := range nbDecomposedLen {
+		decomposedLimbs[i] = make([]field.Element, nbRows)
+		if i < nbDecomposedLen-1 {
+			carry[i] = make([]field.Element, nbRows)
+		}
+	}
+
+	for row := range nbRows {
+		decompositionHappened := decomposedLen[0][row].Uint64() == 1 && decomposedLen[1][row].Uint64() != 0
+		// don't need to decompose, just copy from original limb with last one as zero
+		if !decompositionHappened {
+			for i := range common.NbLimbU128 {
+				meaningful := meaningfulBytes(nbytes, limbs, row, i)
+				decomposedLimbs[i][row].SetBytes(meaningful)
+				// carry is already set as zeros
+			}
+			continue
+		}
+
+		// Collect all meaningful bytes in a row, so it's easier to take what we need.
+		allMeaningfullBytes := make([]byte, 0, nbDecomposedLen*MAXNBYTE)
+		for i := range common.NbLimbU128 {
+			meaningful := meaningfulBytes(nbytes, limbs, row, i)
+			allMeaningfullBytes = append(allMeaningfullBytes, meaningful...)
+
+			// carry is always the last byte of the original limb if nbyte is 2
+			if nbytes[i][row] == 2 {
+				carry[i][row].SetBytes([]byte{meaningful[len(meaningful)-1]})
+			}
+		}
+
+		// Decompose the collected bytes into meaningful bytes for each decomposed limb.
+		var taken uint64 = 0
+		for i := range nbDecomposedLen {
+			bytes := decomposedLen[i][row].Uint64()
+			decomposedLimbs[i][row].SetBytes(allMeaningfullBytes[taken : taken+bytes])
+			taken += bytes
+		}
+	}
+	return decomposedLimbs, carry
+}
+
+// meaningfulBytes returns the meaningful bytes of a field elemen by index
+func meaningfulBytes(nbytes [][]int, limbs [][]field.Element, row, i int) []byte {
+	nbyte := nbytes[i][row]
+	limbSerialized := limbs[i][row].Bytes()
+	meaningful := limbSerialized[LEFT_ALIGNMENT : LEFT_ALIGNMENT+nbyte]
+	return meaningful
+}
+
+// / We need this to prove that a[i] = b[i] * shift, where shift = 2^8.
+// only when decomposedLen[i] == 1, otherwise it is zero.
+//
+// That's using Lagrange interpolation we found formula for this shift
+// as:
+//
+// f(x) = 510 * x + 1 - 255 * x^2
+func decomposeLenToShift(decomposeLen ifaces.Column) *sym.Expression {
+	return sym.Sub(
+		sym.Add(
+			sym.Mul(sym.NewConstant(510), decomposeLen),
+			sym.NewConstant(1),
+		),
+		sym.Mul(sym.NewConstant(255), sym.Pow(decomposeLen, 2)),
+	)
 }

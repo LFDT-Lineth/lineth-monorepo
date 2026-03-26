@@ -265,6 +265,7 @@ func (t *InclusionTestcase) Define(comp *wizard.CompiledIOP) {
 			0,
 			formatName[ifaces.ColID]("Inclusion", t.Name, "TableFilter", i),
 			t.TableFilter[i].Len(),
+			true,
 		)
 
 		table[i] = make([]ifaces.Column, len(t.Table[i]))
@@ -273,6 +274,7 @@ func (t *InclusionTestcase) Define(comp *wizard.CompiledIOP) {
 				0,
 				formatName[ifaces.ColID]("Inclusion", t.Name, "Table", i, j),
 				t.Table[i][j].Len(),
+				smartvectors.IsBase(t.Table[i][j]),
 			)
 		}
 	}
@@ -283,6 +285,7 @@ func (t *InclusionTestcase) Define(comp *wizard.CompiledIOP) {
 			0,
 			formatName[ifaces.ColID]("Inclusion", t.Name, "SFilters", i),
 			t.SFilters[i].Len(),
+			true,
 		)
 
 		s[i] = make([]ifaces.Column, len(t.S[i]))
@@ -291,6 +294,7 @@ func (t *InclusionTestcase) Define(comp *wizard.CompiledIOP) {
 				0,
 				formatName[ifaces.ColID]("Inclusion", t.Name, "S", i, j),
 				t.S[i][j].Len(),
+				smartvectors.IsBase(t.S[i][j]),
 			)
 		}
 	}

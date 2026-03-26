@@ -41,31 +41,35 @@ func NewModule(comp *wizard.CompiledIOP, inputs Inputs) *Module {
 // lookup constraints tying it to the
 func (as *Module) ConnectToStateSummary(comp *wizard.CompiledIOP, ss *statesummary.Module) *Module {
 
-	accSummaryTable := []ifaces.Column{
-		as.InitialRoot,
-		as.FinalRoot,
-		as.HKey,
-		as.InitialHVal,
-		as.FinalHVal,
+	var accSummaryTable []ifaces.Column
+	accSummaryTable = append(accSummaryTable, as.InitialRoot[:]...)
+	accSummaryTable = append(accSummaryTable, as.FinalRoot[:]...)
+	accSummaryTable = append(accSummaryTable, as.HKey[:]...)
+	accSummaryTable = append(accSummaryTable, as.InitialHVal[:]...)
+	accSummaryTable = append(accSummaryTable, as.FinalHVal[:]...)
+	accSummaryTable = append(
+		accSummaryTable,
 		as.Inputs.Accumulator.Cols.IsReadNonZero,
 		as.Inputs.Accumulator.Cols.IsReadZero,
 		as.Inputs.Accumulator.Cols.IsInsert,
 		as.Inputs.Accumulator.Cols.IsUpdate,
 		as.Inputs.Accumulator.Cols.IsDelete,
-	}
+	)
 
-	stateSummaryTable := []ifaces.Column{
-		ss.AccumulatorStatement.StateDiff.InitialRoot,
-		ss.AccumulatorStatement.StateDiff.FinalRoot,
-		ss.AccumulatorStatement.StateDiff.HKey,
-		ss.AccumulatorStatement.StateDiff.InitialHVal,
-		ss.AccumulatorStatement.StateDiff.FinalHVal,
+	var stateSummaryTable []ifaces.Column
+	stateSummaryTable = append(stateSummaryTable, ss.AccumulatorStatement.StateDiff.InitialRoot[:]...)
+	stateSummaryTable = append(stateSummaryTable, ss.AccumulatorStatement.StateDiff.FinalRoot[:]...)
+	stateSummaryTable = append(stateSummaryTable, ss.AccumulatorStatement.StateDiff.HKey[:]...)
+	stateSummaryTable = append(stateSummaryTable, ss.AccumulatorStatement.StateDiff.InitialHVal[:]...)
+	stateSummaryTable = append(stateSummaryTable, ss.AccumulatorStatement.StateDiff.FinalHVal[:]...)
+	stateSummaryTable = append(
+		stateSummaryTable,
 		ss.AccumulatorStatement.IsReadNonZero,
 		ss.AccumulatorStatement.IsReadZero,
 		ss.AccumulatorStatement.IsInsert,
 		ss.AccumulatorStatement.IsUpdate,
 		ss.AccumulatorStatement.IsDelete,
-	}
+	)
 
 	comp.InsertInclusion(0, "LOOKUP_STATE_MGR_ACCUMULATOR_SUMMARY_TO_STATE_SUMMARY", stateSummaryTable, accSummaryTable)
 	// Perform the reverse check as well to make sure that some traces are not excluded

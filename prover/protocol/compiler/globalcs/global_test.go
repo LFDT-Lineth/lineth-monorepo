@@ -50,6 +50,44 @@ func TestPocNewGlobalTest(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestPocNewGlobalTestExt(t *testing.T) {
+	var (
+		P ifaces.ColID   = "P"
+		Q ifaces.QueryID = "FIBONNACCI"
+	)
+
+	definer := func(build *wizard.Builder) {
+
+		// Number of rows
+		n := 1 << 2
+		P := build.RegisterCommitExt(P, n) // overshadows P
+
+		// P(X) = P(X/w) + P(X/w^2)
+
+		expr := symbolic.Sub(P, symbolic.Add(column.Shift(P, -1), column.Shift(P, -2)))
+		_ = build.GlobalConstraint(Q, expr)
+	}
+
+	comp := wizard.Compile(
+		definer,
+		globalcs.Compile,
+		dummy.Compile,
+	)
+
+	hLProver := func(assi *wizard.ProverRuntime) {
+		x := smartvectors.ForTestFromQuads(
+			1, 2, 5, 13,
+			1, 3, 8, 21,
+			2, 5, 13, 34,
+			3, 8, 21, 55)
+		assi.AssignColumn(P, x)
+	}
+
+	proof := wizard.Prove(comp, hLProver)
+	err := wizard.Verify(comp, proof)
+	require.NoError(t, err)
+}
+
 func TestGlobalWithAccessor(t *testing.T) {
 
 	constant := accessors.NewConstant(field.NewElement(2))

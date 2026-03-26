@@ -7,6 +7,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
+
 	"github.com/consensys/gnark-crypto/ecc/secp256k1/ecdsa"
 	fr_secp256k1 "github.com/consensys/gnark-crypto/ecc/secp256k1/fr"
 	"github.com/consensys/linea-monorepo/prover/crypto/keccak"
@@ -49,7 +51,7 @@ func TestAntichamber(t *testing.T) {
 		func(b *wizard.Builder) {
 			comp := b.CompiledIOP
 			// declare rlp_txn module
-			rlpTxn = testdata.CreateGenDataModule(comp, "TXN_RLP", 32)
+			rlpTxn = testdata.CreateGenDataModule(comp, "TXN_RLP", 32, common.NbLimbU128)
 
 			// declar txn_data module
 			txSrc = commitTxnData(comp, limits, nbRowsPerTxInTxnData)
@@ -58,11 +60,11 @@ func TestAntichamber(t *testing.T) {
 			ecSrc = &ecDataSource{
 				CsEcrecover: ct.GetCommit(b, "EC_DATA_CS_ECRECOVER"),
 				ID:          ct.GetCommit(b, "EC_DATA_ID"),
-				Limb:        ct.GetCommit(b, "EC_DATA_LIMB"),
 				SuccessBit:  ct.GetCommit(b, "EC_DATA_SUCCESS_BIT"),
 				Index:       ct.GetCommit(b, "EC_DATA_INDEX"),
 				IsData:      ct.GetCommit(b, "EC_DATA_IS_DATA"),
 				IsRes:       ct.GetCommit(b, "EC_DATA_IS_RES"),
+				Limb:        ct.GetLimbsLe(b, "EC_DATA_LIMB", common.NbLimbU128).AssertUint128(),
 			}
 
 			ac = newAntichamber(
@@ -71,8 +73,9 @@ func TestAntichamber(t *testing.T) {
 					EcSource:     ecSrc,
 					TxSource:     txSrc,
 					RlpTxn:       rlpTxn,
-					PlonkOptions: []query.PlonkOption{query.PlonkRangeCheckOption(16, 6, true)},
+					PlonkOptions: []query.PlonkOption{query.PlonkRangeCheckOption(16, 1, true)},
 					Settings:     limits,
+					WithCircuit:  true,
 				},
 			)
 		},
@@ -89,7 +92,13 @@ func TestAntichamber(t *testing.T) {
 			txSrc.assignTxnDataFromPK(run, ac, trace.HashOutPut, nbRowsPerTxInTxnData)
 
 			ct.Assign(run,
-				"EC_DATA_CS_ECRECOVER", "EC_DATA_ID", "EC_DATA_LIMB", "EC_DATA_SUCCESS_BIT", "EC_DATA_INDEX", "EC_DATA_IS_DATA", "EC_DATA_IS_RES",
+				ecSrc.CsEcrecover,
+				ecSrc.ID,
+				ecSrc.Limb,
+				ecSrc.SuccessBit,
+				ecSrc.Index,
+				ecSrc.IsData,
+				ecSrc.IsRes,
 			)
 			ac.assign(run, dummyTxSignatureGetter, limits.MaxNbTx)
 		})

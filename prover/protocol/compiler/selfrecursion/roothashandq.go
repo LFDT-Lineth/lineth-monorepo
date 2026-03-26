@@ -3,6 +3,7 @@ package selfrecursion
 import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/vortex"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
@@ -17,13 +18,13 @@ func (ctx *SelfRecursionCtx) RootHashGlue() {
 	// Get the list of the root hashes (without the non-appended ones)
 	// Insert precomputed roots
 	var (
-		rootHashSis     []ifaces.Column
-		rootHashNonsis  []ifaces.Column
-		rootHashesClean []ifaces.Column
+		rootHashSis     [][blockSize]ifaces.Column
+		rootHashNonsis  [][blockSize]ifaces.Column
+		rootHashesClean [][blockSize]ifaces.Column
 	)
 	if ctx.VortexCtx.IsNonEmptyPrecomputed() {
 		precompRoots := ctx.Columns.PrecompRoot
-		if precompRoots == nil {
+		if precompRoots[0] == nil {
 			utils.Panic("Precomputed root should not be nil! That's because, we are in commit to precomputed mode.")
 		}
 		if ctx.VortexCtx.IsSISAppliedToPrecomputed() {
@@ -36,7 +37,7 @@ func (ctx *SelfRecursionCtx) RootHashGlue() {
 	for round, rh := range ctx.Columns.Rooth {
 		if ctx.VortexCtx.RoundStatus[round] == vortex.IsSISApplied {
 			rootHashSis = append(rootHashSis, rh)
-		} else if ctx.VortexCtx.RoundStatus[round] == vortex.IsOnlyMiMCApplied {
+		} else if ctx.VortexCtx.RoundStatus[round] == vortex.IsNoSis {
 			rootHashNonsis = append(rootHashNonsis, rh)
 		} else if ctx.VortexCtx.RoundStatus[round] == vortex.IsEmpty {
 			continue
@@ -64,12 +65,16 @@ func (ctx *SelfRecursionCtx) RootHashGlue() {
 	nbOpenCol := ctx.VortexCtx.NbColsToOpen()
 	numActiveRoot := nbOpenCol * numCommittedRound
 	// Length of MerkleRoots = numActiveRoot + padding
-	totalRoots := ctx.Columns.MerkleRoots.Size()
+	totalRoots := ctx.Columns.MerkleRoots[0].Size()
 
+	var padded [blockSize]ifaces.Column
+	for i := 0; i < blockSize; i++ {
+		padded[i] = verifiercol.NewConstantCol(field.Zero(), 1, "")
+	}
 	rootHashVecParts := utils.RightPadWith(
 		rootHashesClean,
 		utils.NextPowerOfTwo(len(rootHashesClean)),
-		verifiercol.NewConstantCol(field.Zero(), 1, ""),
+		padded,
 	)
 
 	numRootsPadded := len(rootHashVecParts)
@@ -79,15 +84,23 @@ func (ctx *SelfRecursionCtx) RootHashGlue() {
 		totalRoots/len(rootHashVecParts),
 	)
 
-	rootHashVec := verifiercol.NewConcatTinyColumns(
-		ctx.Comp,
-		len(rootHashVecParts),
-		field.Element{}, // note: that this will be ditched by the function
-		rootHashVecParts...,
-	)
+	var rootHashVec [blockSize]ifaces.Column
+	for i := 0; i < blockSize; i++ {
+		var padded []ifaces.Column
+		for j := 0; j < len(rootHashVecParts); j++ {
+			padded = append(padded, rootHashVecParts[j][i])
+		}
 
-	if rootHashVec.Size() != ctx.Columns.MerkleRoots.Size() {
-		utils.Panic("unexpected lengths %v expected %v", rootHashVec.Size(), ctx.Columns.MerkleRoots.Size())
+		rootHashVec[i] = verifiercol.NewConcatTinyColumns(
+			ctx.Comp,
+			len(rootHashVecParts),
+			fext.Element{}, // note: that this will be ditched by the function
+			padded...,
+		)
+
+		if rootHashVec[i].Size() != ctx.Columns.MerkleRoots[i].Size() {
+			utils.Panic("unexpected lengths %v expected %v", rootHashVec[i].Size(), ctx.Columns.MerkleRoots[i].Size())
+		}
 	}
 
 	// If MerkleRoots is correct, then there is a permutation we can
@@ -130,22 +143,24 @@ func (ctx *SelfRecursionCtx) RootHashGlue() {
 
 	// And from that, we get s1 and s2 and declare the corresponding
 	// copy constraint.
-	ctx.Comp.InsertFixedPermutation(
-		ctx.Columns.MerkleRoots.Round(),
-		ctx.rootHasGlue(),
-		[]smartvectors.SmartVector{
-			smartvectors.NewRegular(s[:totalRoots]),
-			smartvectors.NewRegular(s[totalRoots:]),
-		},
-		[]ifaces.Column{
-			rootHashVec,
-			ctx.Columns.MerkleRoots,
-		},
-		[]ifaces.Column{
-			rootHashVec,
-			ctx.Columns.MerkleRoots,
-		},
-	)
+	for i := 0; i < blockSize; i++ {
+		ctx.Comp.InsertFixedPermutation(
+			ctx.Columns.MerkleRoots[i].Round(),
+			ctx.rootHasGlue(i),
+			[]smartvectors.SmartVector{
+				smartvectors.NewRegular(s[:totalRoots]),
+				smartvectors.NewRegular(s[totalRoots:]),
+			},
+			[]ifaces.Column{
+				rootHashVec[i],
+				ctx.Columns.MerkleRoots[i],
+			},
+			[]ifaces.Column{
+				rootHashVec[i],
+				ctx.Columns.MerkleRoots[i],
+			},
+		)
+	}
 }
 
 // GluePositions using stackColumn
@@ -178,17 +193,17 @@ func (ctx SelfRecursionCtx) GluePositionsStacked() {
 		dedicated.HandleSourcePaddedColumns(ctx.VortexCtx.NbColsToOpen()),
 	)
 	// Register the prover action for the stacked columns
-	if stackedPosCols.IsSourceColsArePadded {
+	if stackedPosCols.AreSourceColsPadded {
 		ctx.Comp.RegisterProverAction(
 			round,
 			&dedicated.StackedColumn{
-				Column:                stackedPosCols.Column,
-				Source:                cleanPosCols,
-				UnpaddedColumn:        stackedPosCols.UnpaddedColumn,
-				ColumnFilter:          stackedPosCols.ColumnFilter,
-				UnpaddedColumnFilter:  stackedPosCols.UnpaddedColumnFilter,
-				UnpaddedSize:          stackedPosCols.UnpaddedSize,
-				IsSourceColsArePadded: stackedPosCols.IsSourceColsArePadded,
+				Column:               stackedPosCols.Column,
+				Source:               cleanPosCols,
+				UnpaddedColumn:       stackedPosCols.UnpaddedColumn,
+				ColumnFilter:         stackedPosCols.ColumnFilter,
+				UnpaddedColumnFilter: stackedPosCols.UnpaddedColumnFilter,
+				UnpaddedSize:         stackedPosCols.UnpaddedSize,
+				AreSourceColsPadded:  stackedPosCols.AreSourceColsPadded,
 			},
 		)
 	} else {
@@ -202,7 +217,7 @@ func (ctx SelfRecursionCtx) GluePositionsStacked() {
 	}
 	// Next we compute the identity permutation
 	s := make([]field.Element, stackedPosCols.Column.Size())
-	if stackedPosCols.IsSourceColsArePadded {
+	if stackedPosCols.AreSourceColsPadded {
 		s = make([]field.Element, stackedPosCols.UnpaddedColumn.Size())
 	}
 	for i := range s {
@@ -210,7 +225,7 @@ func (ctx SelfRecursionCtx) GluePositionsStacked() {
 	}
 	s_smart := smartvectors.NewRegular(s)
 	// Insert the fixed permutation constraint.
-	if stackedPosCols.IsSourceColsArePadded {
+	if stackedPosCols.AreSourceColsPadded {
 		ctx.Comp.InsertFixedPermutation(
 			round,
 			ctx.positionGlue(),

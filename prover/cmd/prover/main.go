@@ -65,8 +65,6 @@ func init() {
 	rootCmd.AddCommand(setupCmd)
 	setupCmd.Flags().BoolVar(&setupArgs.Force, "force", false, "overwrites existing files")
 	setupCmd.Flags().StringVar(&setupArgs.Circuits, "circuits", strings.Join(allCircuitList(), ","), "comma separated list of circuits to setup")
-	setupCmd.Flags().StringVar(&setupArgs.DictPath, "dict", "", "path to the dictionary file used in blob (de)compression (for v0 only)")
-	setupCmd.Flags().IntVar(&setupArgs.DictSize, "dict-size", 65536, "size in bytes of the dictionary used in blob (de)compression")
 	setupCmd.Flags().StringVar(&setupArgs.AssetsDir, "assets-dir", "", "path to the directory where the assets are stored (override conf)")
 
 	viper.BindPFlag("assets_dir", setupCmd.Flags().Lookup("assets-dir"))

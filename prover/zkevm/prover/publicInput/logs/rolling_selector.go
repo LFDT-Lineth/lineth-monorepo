@@ -1,11 +1,14 @@
 package logs
 
 import (
+	"fmt"
+
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
+	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
 	commonconstraints "github.com/consensys/linea-monorepo/prover/zkevm/prover/common/common_constraints"
 	util "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/utilities"
 )
@@ -14,26 +17,30 @@ import (
 type RollingSelector struct {
 	// Exists contains a 1 if there exists at least one rolling hash log
 	ExistsHash, ExistsMsg ifaces.Column
-	// the Hi/Lo part of the first Rolling Hash found in the logs
-	FirstHi, FirstLo ifaces.Column
-	// the Hi/Lo part of the last Rolling Hash found in the logs
-	LastHi, LastLo ifaces.Column
+	// the first/last Rolling HashFirst found in the logs
+	First, Last [common.NbLimbU256]ifaces.Column
 	// the first/last message number of the last Rolling hash log
-	FirstMessageNo, LastMessageNo ifaces.Column
+	FirstMessageNo, LastMessageNo [common.NbLimbU128]ifaces.Column
 }
 
 // NewRollingSelector returns a new RollingSelector with initialized columns that are not constrained.
-func NewRollingSelector(comp *wizard.CompiledIOP, name string, sizeHash, sizeMsg int) *RollingSelector {
-	return &RollingSelector{
-		ExistsHash:     util.CreateCol(name, "EXISTS_HASH", sizeHash, comp),
-		ExistsMsg:      util.CreateCol(name, "EXISTS_MSG", sizeMsg, comp),
-		FirstHi:        util.CreateCol(name, "FIRST_HI", sizeHash, comp),
-		FirstLo:        util.CreateCol(name, "FIRST_LO", sizeHash, comp),
-		LastHi:         util.CreateCol(name, "LAST_HI", sizeHash, comp),
-		LastLo:         util.CreateCol(name, "LAST_LO", sizeHash, comp),
-		FirstMessageNo: util.CreateCol(name, "FIRST_MESSAGE_NO", sizeMsg, comp),
-		LastMessageNo:  util.CreateCol(name, "LAST_MESSAGE_NO", sizeMsg, comp),
+func NewRollingSelector(comp *wizard.CompiledIOP, name string, size int) *RollingSelector {
+	res := &RollingSelector{
+		ExistsHash: util.CreateCol(name, "EXISTS_HASH", size, comp),
+		ExistsMsg:  util.CreateCol(name, "EXISTS_MSG", size, comp),
 	}
+
+	for i := range res.First {
+		res.First[i] = util.CreateCol(name, fmt.Sprintf("FIRST_%d", i), size, comp)
+		res.Last[i] = util.CreateCol(name, fmt.Sprintf("LAST_%d", i), size, comp)
+	}
+
+	for i := range res.FirstMessageNo {
+		res.FirstMessageNo[i] = util.CreateCol(name, fmt.Sprintf("FIRST_MESSAGE_NO_%d", i), size, comp)
+		res.LastMessageNo[i] = util.CreateCol(name, fmt.Sprintf("LAST_MESSAGE_NO_%d", i), size, comp)
+	}
+
+	return res
 }
 
 // DefineRollingSelector specifies the constraints of the RollingSelector with respect to the ExtractedData fetched from the arithmetization
@@ -46,13 +53,11 @@ func DefineRollingSelector(comp *wizard.CompiledIOP, sel *RollingSelector, name 
 	var allCols = []ifaces.Column{
 		sel.ExistsHash,
 		sel.ExistsMsg,
-		sel.FirstHi,
-		sel.FirstLo,
-		sel.LastHi,
-		sel.LastLo,
-		sel.FirstMessageNo,
-		sel.LastMessageNo,
 	}
+	allCols = append(allCols, sel.First[:]...)
+	allCols = append(allCols, sel.Last[:]...)
+	allCols = append(allCols, sel.FirstMessageNo[:]...)
+	allCols = append(allCols, sel.LastMessageNo[:]...)
 
 	for _, col := range allCols {
 		commonconstraints.MustBeConstant(comp, col)
@@ -66,60 +71,74 @@ func DefineRollingSelector(comp *wizard.CompiledIOP, sel *RollingSelector, name 
 		),
 	)
 	// local openings for the first values
-	comp.InsertLocal(0, ifaces.QueryIDf("%s_%s", name, "FIRST_HI"),
-		sym.Sub(
-			fetchedHash.Hi,
-			sel.FirstHi,
-		),
-	)
-	comp.InsertLocal(0, ifaces.QueryIDf("%s_%s", name, "FIRST_LO"),
-		sym.Sub(
-			fetchedHash.Lo,
-			sel.FirstLo,
-		),
-	)
-	comp.InsertLocal(0, ifaces.QueryIDf("%s_%s", name, "FIRST_MSG_NO"),
-		sym.Sub(
-			fetchedMsg.Lo,
-			sel.FirstMessageNo,
-		),
-	)
+	for i := range sel.First {
+		comp.InsertLocal(0, ifaces.QueryIDf("%s_FIRST_%d", name, i),
+			sym.Sub(
+				fetchedHash.Data[i],
+				sel.First[i],
+			),
+		)
+	}
+	for i := range sel.FirstMessageNo {
+		comp.InsertLocal(0, ifaces.QueryIDf("%s_FIRST_MSG_NO_%d", name, i),
+			sym.Sub(
+				fetchedMsg.Data[common.NbLimbU128+i],
+				sel.FirstMessageNo[i],
+			),
+		)
+	}
 
 	// define the consistency constraints
-	util.CheckLastELemConsistency(comp, isActiveHash, fetchedHash.Hi, sel.LastHi, name)
-	util.CheckLastELemConsistency(comp, isActiveHash, fetchedHash.Lo, sel.LastLo, name)
-	util.CheckLastELemConsistency(comp, isActiveMsg, fetchedMsg.Lo, sel.LastMessageNo, name)
+	for i := range sel.Last {
+		util.CheckLastELemConsistency(comp, isActiveHash, fetchedHash.Data[i], sel.Last[i], name)
+	}
+	for i := range sel.LastMessageNo {
+		util.CheckLastELemConsistency(comp, isActiveMsg, fetchedMsg.Data[i], sel.LastMessageNo[i], name)
+	}
 }
 
 // AssignRollingSelector assigns the data in the RollingSelector using the ExtractedData fetched from the arithmetization
 func AssignRollingSelector(run *wizard.ProverRuntime, selector *RollingSelector, fetchedHash, fetchedMsg ExtractedData) {
-	sizeHash := fetchedHash.Hi.Size()
-	sizeMsg := fetchedMsg.Hi.Size()
+	sizeHash := fetchedHash.Data[0].Size()
+	sizeMsg := fetchedMsg.Data[0].Size()
 
 	exists := run.GetColumnAt(fetchedHash.FilterFetched.GetColID(), 0)
-	var lastHi, lastLo, lastMsg field.Element
+	var last, first [common.NbLimbU256]field.Element
+	// contains messageNo which is stores in the Lo part of the message
+	var lastMsg, firstMsg [common.NbLimbU128]field.Element
 	for i := 0; i < sizeHash; i++ {
 		isActive := run.GetColumnAt(fetchedHash.FilterFetched.GetColID(), i)
-		if isActive.IsOne() {
-			lastHi = run.GetColumnAt(fetchedHash.Hi.GetColID(), i)
-			lastLo = run.GetColumnAt(fetchedHash.Lo.GetColID(), i)
-			lastMsg = run.GetColumnAt(fetchedMsg.Lo.GetColID(), i)
-		} else {
+		if isActive.IsZero() {
 			break
 		}
+
+		for j := range last {
+			last[j] = run.GetColumnAt(fetchedHash.Data[j].GetColID(), i)
+		}
+		for j := range lastMsg {
+			lastMsg[j] = run.GetColumnAt(fetchedMsg.Data[j].GetColID(), i)
+		}
 	}
+
 	// compute first values
-	firstHi := run.GetColumnAt(fetchedHash.Hi.GetColID(), 0)
-	firstLo := run.GetColumnAt(fetchedHash.Lo.GetColID(), 0)
-	firstMsg := run.GetColumnAt(fetchedMsg.Lo.GetColID(), 0)
+	for j := range first {
+		first[j] = run.GetColumnAt(fetchedHash.Data[j].GetColID(), 0)
+	}
+	for j := range firstMsg {
+		firstMsg[j] = run.GetColumnAt(fetchedMsg.Data[common.NbLimbU128+j].GetColID(), 0)
+	}
 
 	// assign the RollingSelector columns
 	run.AssignColumn(selector.ExistsHash.GetColID(), smartvectors.NewConstant(exists, sizeHash))
 	run.AssignColumn(selector.ExistsMsg.GetColID(), smartvectors.NewConstant(exists, sizeMsg))
-	run.AssignColumn(selector.FirstHi.GetColID(), smartvectors.NewConstant(firstHi, sizeHash))
-	run.AssignColumn(selector.FirstLo.GetColID(), smartvectors.NewConstant(firstLo, sizeHash))
-	run.AssignColumn(selector.FirstMessageNo.GetColID(), smartvectors.NewConstant(firstMsg, sizeMsg))
-	run.AssignColumn(selector.LastHi.GetColID(), smartvectors.NewConstant(lastHi, sizeHash))
-	run.AssignColumn(selector.LastLo.GetColID(), smartvectors.NewConstant(lastLo, sizeHash))
-	run.AssignColumn(selector.LastMessageNo.GetColID(), smartvectors.NewConstant(lastMsg, sizeMsg))
+
+	for i := range first {
+		run.AssignColumn(selector.First[i].GetColID(), smartvectors.NewConstant(first[i], sizeHash))
+		run.AssignColumn(selector.Last[i].GetColID(), smartvectors.NewConstant(last[i], sizeHash))
+	}
+
+	for i := range firstMsg {
+		run.AssignColumn(selector.FirstMessageNo[i].GetColID(), smartvectors.NewConstant(firstMsg[i], sizeMsg))
+		run.AssignColumn(selector.LastMessageNo[i].GetColID(), smartvectors.NewConstant(lastMsg[i], sizeMsg))
+	}
 }

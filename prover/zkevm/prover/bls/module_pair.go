@@ -5,12 +5,15 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
+	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/expr_handle"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/plonk"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/limbs"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/zkevm/arithmetization"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
 	"github.com/sirupsen/logrus"
 )
@@ -29,22 +32,22 @@ type BlsPairDataSource struct {
 	IsRes          ifaces.Column
 	Index          ifaces.Column
 	Counter        ifaces.Column
-	Limb           ifaces.Column
+	Limb           limbs.Uint128Le
 	SuccessBit     ifaces.Column
 }
 
-func newPairDataSource(comp *wizard.CompiledIOP) *BlsPairDataSource {
+func newPairDataSource(comp *wizard.CompiledIOP, arith *arithmetization.Arithmetization) *BlsPairDataSource {
 	return &BlsPairDataSource{
-		ID:             comp.Columns.GetHandle(colNameFn("ID")),
-		CsPair:         comp.Columns.GetHandle(colNameFn("CIRCUIT_SELECTOR_BLS_PAIRING_CHECK")),
-		CsG1Membership: comp.Columns.GetHandle(colNameFn("CIRCUIT_SELECTOR_G1_MEMBERSHIP")),
-		CsG2Membership: comp.Columns.GetHandle(colNameFn("CIRCUIT_SELECTOR_G2_MEMBERSHIP")),
-		Limb:           comp.Columns.GetHandle(colNameFn("LIMB")),
-		Index:          comp.Columns.GetHandle(colNameFn("INDEX")),
-		Counter:        comp.Columns.GetHandle(colNameFn("CT")),
-		IsData:         comp.Columns.GetHandle(colNameFn("DATA_BLS_PAIRING_CHECK_FLAG")),
-		IsRes:          comp.Columns.GetHandle(colNameFn("RSLT_BLS_PAIRING_CHECK_FLAG")),
-		SuccessBit:     comp.Columns.GetHandle(colNameFn("SUCCESS_BIT")),
+		ID:             arith.MashedColumnOf(comp, moduleName, "ID"),
+		CsPair:         arith.ColumnOf(comp, moduleName, "CIRCUIT_SELECTOR_BLS_PAIRING_CHECK"),
+		CsG1Membership: arith.ColumnOf(comp, moduleName, "CIRCUIT_SELECTOR_G1_MEMBERSHIP"),
+		CsG2Membership: arith.ColumnOf(comp, moduleName, "CIRCUIT_SELECTOR_G2_MEMBERSHIP"),
+		Limb:           arith.GetLimbsOfU128Le(comp, moduleName, "LIMB"),
+		Index:          arith.ColumnOf(comp, moduleName, "INDEX"),
+		Counter:        arith.ColumnOf(comp, moduleName, "CT"),
+		IsData:         arith.ColumnOf(comp, moduleName, "DATA_BLS_PAIRING_CHECK_FLAG"),
+		IsRes:          arith.ColumnOf(comp, moduleName, "RSLT_BLS_PAIRING_CHECK_FLAG"),
+		SuccessBit:     arith.ColumnOf(comp, moduleName, "SUCCESS_BIT"),
 	}
 }
 
@@ -55,18 +58,27 @@ type BlsPair struct {
 	AlignedFinalExpData          *plonk.Alignment
 	AlignedG1MembershipGnarkData *plonk.Alignment
 	AlignedG2MembershipGnarkData *plonk.Alignment
+
+	FlattenLimbsG1Membership *common.FlattenColumn
+	FlattenLimbsG2Membership *common.FlattenColumn
 	*Limits
 }
 
 func newPair(comp *wizard.CompiledIOP, limits *Limits, src *BlsPairDataSource) *BlsPair {
 	ucmd := newUnalignedPairData(comp, src)
+	flattenLimbsG1Membership := common.NewFlattenColumn(comp, src.Limb.AsDynSize(), ucmd.GnarkIsActiveG1Membership)
+	flattenLimbsG2Membership := common.NewFlattenColumn(comp, src.Limb.AsDynSize(), ucmd.GnarkIsActiveG2Membership)
 
 	res := &BlsPair{
-		BlsPairDataSource: src,
-		UnalignedPairData: ucmd,
-		Limits:            limits,
+		BlsPairDataSource:        src,
+		UnalignedPairData:        ucmd,
+		Limits:                   limits,
+		FlattenLimbsG1Membership: flattenLimbsG1Membership,
+		FlattenLimbsG2Membership: flattenLimbsG2Membership,
 	}
 
+	flattenLimbsG1Membership.CsFlattenProjection(comp)
+	flattenLimbsG2Membership.CsFlattenProjection(comp)
 	return res
 }
 
@@ -123,7 +135,7 @@ func (bp *BlsPair) WithPairingCircuit(comp *wizard.CompiledIOP, options ...query
 }
 
 func (bp *BlsPair) WithG1MembershipCircuit(comp *wizard.CompiledIOP, options ...query.PlonkOption) *BlsPair {
-	maxNbInstancesInputs := utils.DivCeil(bp.UnalignedPairData.GnarkIsActiveG1Membership.Size(), nbG1Limbs)
+	maxNbInstancesInputs := utils.DivCeil(bp.FlattenLimbsG1Membership.Mask.Size(), nbG1Limbs)
 	maxNbInstancesLimit := bp.limitGroupMembershipCalls(G1)
 	switch maxNbInstancesLimit {
 	case 0:
@@ -139,8 +151,8 @@ func (bp *BlsPair) WithG1MembershipCircuit(comp *wizard.CompiledIOP, options ...
 	toAlignG1Ms := &plonk.CircuitAlignmentInput{
 		Name:               fmt.Sprintf("%s_G1_MEMBERSHIP", NAME_BLS_PAIR),
 		Round:              ROUND_NR,
-		DataToCircuitMask:  bp.UnalignedPairData.GnarkIsActiveG1Membership,
-		DataToCircuit:      bp.BlsPairDataSource.Limb,
+		DataToCircuitMask:  bp.FlattenLimbsG1Membership.Mask,
+		DataToCircuit:      bp.FlattenLimbsG1Membership.Limbs,
 		Circuit:            newCheckCircuit(G1, GROUP, bp.Limits),
 		NbCircuitInstances: maxNbCircuits,
 		InputFillerKey:     membershipInputFillerKey(G1, GROUP),
@@ -151,7 +163,7 @@ func (bp *BlsPair) WithG1MembershipCircuit(comp *wizard.CompiledIOP, options ...
 }
 
 func (bp *BlsPair) WithG2MembershipCircuit(comp *wizard.CompiledIOP, options ...query.PlonkOption) *BlsPair {
-	maxNbInstancesInputs := utils.DivCeil(bp.UnalignedPairData.GnarkIsActiveG2Membership.Size(), nbG2Limbs)
+	maxNbInstancesInputs := utils.DivCeil(bp.FlattenLimbsG2Membership.Mask.Size(), nbG2Limbs)
 	maxNbInstancesLimit := bp.limitGroupMembershipCalls(G2)
 	switch maxNbInstancesLimit {
 	case 0:
@@ -167,8 +179,8 @@ func (bp *BlsPair) WithG2MembershipCircuit(comp *wizard.CompiledIOP, options ...
 	toAlignG2Ms := &plonk.CircuitAlignmentInput{
 		Name:               fmt.Sprintf("%s_G2_MEMBERSHIP", NAME_BLS_PAIR),
 		Round:              ROUND_NR,
-		DataToCircuitMask:  bp.UnalignedPairData.GnarkIsActiveG2Membership,
-		DataToCircuit:      bp.BlsPairDataSource.Limb,
+		DataToCircuitMask:  bp.FlattenLimbsG2Membership.Mask,
+		DataToCircuit:      bp.FlattenLimbsG2Membership.Limbs,
 		Circuit:            newCheckCircuit(G2, GROUP, bp.Limits),
 		NbCircuitInstances: maxNbCircuits,
 		InputFillerKey:     membershipInputFillerKey(G2, GROUP),
@@ -180,6 +192,8 @@ func (bp *BlsPair) WithG2MembershipCircuit(comp *wizard.CompiledIOP, options ...
 
 func (bp *BlsPair) Assign(run *wizard.ProverRuntime) {
 	bp.UnalignedPairData.Assign(run)
+	bp.FlattenLimbsG1Membership.Run(run)
+	bp.FlattenLimbsG2Membership.Run(run)
 	if bp.AlignedMillerLoopData != nil {
 		bp.AlignedMillerLoopData.Assign(run)
 	}
@@ -206,7 +220,7 @@ type UnalignedPairData struct {
 	PointG2             [nbG2Limbs]ifaces.Column
 	PrevAccumulator     [nbGtLimbs]ifaces.Column
 	CurrentAccumulator  [nbGtLimbs]ifaces.Column
-	ExpectedResult      [2]ifaces.Column
+	ExpectedResult      [2 * limbs.NbLimbU128]ifaces.Column // 2 x 128-bit limbs split into 16 x 16-bit sublimbs
 
 	GnarkIsActiveG1Membership ifaces.Column
 	GnarkIsActiveG2Membership ifaces.Column
@@ -224,7 +238,7 @@ type UnalignedPairData struct {
 func newUnalignedPairData(comp *wizard.CompiledIOP, src *BlsPairDataSource) *UnalignedPairData {
 	// for bounding the size of the alignment, we assume the worst case inputs where we have many pairing checks with
 	// a single input. A single pairing check input is G1 and G2 element
-	maxNbPairInputs := src.CsPair.Size()/(nbG1Limbs+nbG2Limbs) + 1
+	maxNbPairInputs := utils.DivCeil(src.CsPair.Size(), nbG1Limbs128+nbG2Limbs128)
 
 	createColFnUa := createColFn(comp, NAME_UNALIGNED_PAIR, utils.NextPowerOfTwo(maxNbPairInputs))
 	createColFnMl := createColFn(comp, NAME_UNALIGNED_PAIR, utils.NextPowerOfTwo(maxNbPairInputs*nbRowsPerMillerLoop))
@@ -239,10 +253,10 @@ func newUnalignedPairData(comp *wizard.CompiledIOP, src *BlsPairDataSource) *Una
 		GnarkDataMillerLoop:       createColFnMl("GNARK_DATA_ML"),
 		GnarkIsActiveFinalExp:     createColFnFe("GNARK_IS_ACTIVE_FE"),
 		GnarkDataFinalExp:         createColFnFe("GNARK_DATA_FE"),
-		IsPairingInstance:         comp.InsertCommit(ROUND_NR, ifaces.ColIDf("%s_%s", NAME_BLS_PAIR, "IS_PAIRING_INSTANCE"), max(src.IsData.Size(), src.IsRes.Size())),
-		IsPairingAndSuccess:       comp.InsertCommit(ROUND_NR, ifaces.ColIDf("%s_%s", NAME_BLS_PAIR, "IS_PAIRING_AND_SUCCESS"), max(src.IsData.Size(), src.IsRes.Size(), src.SuccessBit.Size())),
-		GnarkIsActiveG1Membership: comp.InsertCommit(ROUND_NR, ifaces.ColIDf("%s_%s", NAME_BLS_PAIR, "GNARK_IS_ACTIVE_G1_MEMBERSHIP"), max(src.SuccessBit.Size(), src.CsG1Membership.Size())),
-		GnarkIsActiveG2Membership: comp.InsertCommit(ROUND_NR, ifaces.ColIDf("%s_%s", NAME_BLS_PAIR, "GNARK_IS_ACTIVE_G2_MEMBERSHIP"), max(src.SuccessBit.Size(), src.CsG2Membership.Size())),
+		IsPairingInstance:         comp.InsertCommit(ROUND_NR, ifaces.ColIDf("%s_%s", NAME_BLS_PAIR, "IS_PAIRING_INSTANCE"), max(src.IsData.Size(), src.IsRes.Size()), true),
+		IsPairingAndSuccess:       comp.InsertCommit(ROUND_NR, ifaces.ColIDf("%s_%s", NAME_BLS_PAIR, "IS_PAIRING_AND_SUCCESS"), max(src.IsData.Size(), src.IsRes.Size(), src.SuccessBit.Size()), true),
+		GnarkIsActiveG1Membership: comp.InsertCommit(ROUND_NR, ifaces.ColIDf("%s_%s", NAME_BLS_PAIR, "GNARK_IS_ACTIVE_G1_MEMBERSHIP"), max(src.SuccessBit.Size(), src.CsG1Membership.Size()), true),
+		GnarkIsActiveG2Membership: comp.InsertCommit(ROUND_NR, ifaces.ColIDf("%s_%s", NAME_BLS_PAIR, "GNARK_IS_ACTIVE_G2_MEMBERSHIP"), max(src.SuccessBit.Size(), src.CsG2Membership.Size()), true),
 		MaxNbPairInputs:           maxNbPairInputs,
 	}
 
@@ -269,6 +283,7 @@ func newUnalignedPairData(comp *wizard.CompiledIOP, src *BlsPairDataSource) *Una
 	ucmd.csInputMask(comp)
 	// projection from source to unaligned
 	ucmd.csProjectionUnaligned(comp)
+	// projection from unaligned to gnark data
 	ucmd.csProjectionGnarkDataMillerLoop(comp)
 	ucmd.csProjectionGnarkDataFinalExp(comp)
 	// first line is correct
@@ -327,24 +342,57 @@ func (d *UnalignedPairData) csInputMask(comp *wizard.CompiledIOP) {
 }
 
 func (d *UnalignedPairData) csProjectionUnaligned(comp *wizard.CompiledIOP) {
-	filtersB := make([]ifaces.Column, nbG1Limbs+nbG2Limbs+2)
-	columnsB := make([][]ifaces.Column, nbG1Limbs+nbG2Limbs+2)
-	for i := range nbG1Limbs {
+	// The source has multiple limb columns per row (obtained via Limbs()), and we need to
+	// project multiple rows into destination columns (PointG1, PointG2, ExpectedResult).
+	// Both sides must have the same number of columns per table.
+	//
+	// The source limbs are stored in little-endian order, but the destination expects
+	// big-endian order within each 128-bit chunk. So we convert to big-endian.
+	srcLimbs := d.BlsPairDataSource.Limb.ToBigEndianUint().GetLimbs()
+	nbLimbsPerRow := len(srcLimbs)
+
+	// ColumnsA: single table with nbLimbsPerRow columns, reads left-to-right then top-to-bottom
+	filtersA := []ifaces.Column{d.IsPairingAndSuccess}
+	columnsA := [][]ifaces.Column{srcLimbs}
+
+	// ColumnsB: multiple tables, each with nbLimbsPerRow columns
+	// Data part: PointG1 (nbG1Limbs) + PointG2 (nbG2Limbs)
+	// Result part: ExpectedResult (2)
+	// Total source rows per pairing input = (nbG1Limbs + nbG2Limbs) / nbLimbsPerRow
+	// Result rows = 2 / nbLimbsPerRow (but 2 < nbLimbsPerRow, so needs special handling)
+	nbDataRowsPerInput := (nbG1Limbs + nbG2Limbs) / nbLimbsPerRow
+	allDataCols := make([]ifaces.Column, nbG1Limbs+nbG2Limbs)
+	copy(allDataCols[:nbG1Limbs], d.PointG1[:])
+	copy(allDataCols[nbG1Limbs:], d.PointG2[:])
+
+	// For the result (nbFrLimbs = 16 sublimbs = 2 x 128-bit chunks), we need 2 rows of nbLimbsPerRow columns.
+	// First row: ExpectedResult[0:8] (first 128-bit chunk)
+	// Second row: ExpectedResult[8:16] (second 128-bit chunk)
+	resultCols1 := make([]ifaces.Column, nbLimbsPerRow)
+	resultCols2 := make([]ifaces.Column, nbLimbsPerRow)
+	for i := range nbLimbsPerRow {
+		resultCols1[i] = d.ExpectedResult[i]
+		resultCols2[i] = d.ExpectedResult[limbs.NbLimbU128+i]
+	}
+
+	// Build destination tables
+	// nbDataRowsPerInput for G1+G2 data, plus 2 rows for ExpectedResult (16 sublimbs = 2 x 8)
+	filtersB := make([]ifaces.Column, nbDataRowsPerInput+2)
+	columnsB := make([][]ifaces.Column, nbDataRowsPerInput+2)
+	for i := range nbDataRowsPerInput {
 		filtersB[i] = d.IsActive
-		columnsB[i] = []ifaces.Column{d.PointG1[i]}
+		columnsB[i] = allDataCols[i*nbLimbsPerRow : (i+1)*nbLimbsPerRow]
 	}
-	for i := range nbG2Limbs {
-		filtersB[nbG1Limbs+i] = d.IsActive
-		columnsB[nbG1Limbs+i] = []ifaces.Column{d.PointG2[i]}
-	}
-	for i := range 2 {
-		filtersB[nbG1Limbs+nbG2Limbs+i] = d.IsLastLine
-		columnsB[nbG1Limbs+nbG2Limbs+i] = []ifaces.Column{d.ExpectedResult[i]}
-	}
+	// Last 2 tables are for result (IsLastLine filter) - one row per 128-bit chunk
+	filtersB[nbDataRowsPerInput] = d.IsLastLine
+	columnsB[nbDataRowsPerInput] = resultCols1
+	filtersB[nbDataRowsPerInput+1] = d.IsLastLine
+	columnsB[nbDataRowsPerInput+1] = resultCols2
+
 	prj := query.ProjectionMultiAryInput{
-		FiltersA: []ifaces.Column{d.IsPairingAndSuccess},
+		FiltersA: filtersA,
 		FiltersB: filtersB,
-		ColumnsA: [][]ifaces.Column{{d.BlsPairDataSource.Limb}},
+		ColumnsA: columnsA,
 		ColumnsB: columnsB,
 	}
 	comp.InsertProjection(ifaces.QueryIDf("%s_PROJECTION_DATA", NAME_UNALIGNED_PAIR), prj)
@@ -359,24 +407,51 @@ func (d *UnalignedPairData) csProjectionGnarkDataMillerLoop(comp *wizard.Compile
 			sym.Sub(1, d.IsLastLine, d.IsNotLastLine)),
 	)
 
-	filtersA := make([]ifaces.Column, nbG1Limbs+nbG2Limbs+2*nbGtLimbs)
-	columnsA := make([][]ifaces.Column, nbG1Limbs+nbG2Limbs+2*nbGtLimbs)
-	for i := range nbGtLimbs {
-		filtersA[i] = d.IsNotLastLine
-		columnsA[i] = []ifaces.Column{d.PrevAccumulator[i]}
+	// Projects from row-format columns (PrevAccumulator, PointG1, PointG2, CurrentAccumulator)
+	// to the single GnarkDataMillerLoop column.
+	// Within each 128-bit chunk (8 limbs), we reverse the order to convert from
+	// little-endian (source) to big-endian (gnark circuit expects).
+	totalCols := nbGtLimbs + nbG1Limbs + nbG2Limbs + nbGtLimbs
+
+	filtersA := make([]ifaces.Column, totalCols)
+	columnsA := make([][]ifaces.Column, totalCols)
+
+	// Helper to reverse endianness within each 128-bit chunk
+	reversedIdx := func(j int) int {
+		chunkIdx := j / limbs.NbLimbU128
+		withinChunk := j % limbs.NbLimbU128
+		reversedWithinChunk := limbs.NbLimbU128 - 1 - withinChunk
+		return chunkIdx*limbs.NbLimbU128 + reversedWithinChunk
 	}
+
+	offset := 0
+	// PrevAccumulator - reverse within each 128-bit chunk
+	for i := range nbGtLimbs {
+		filtersA[offset+i] = d.IsNotLastLine
+		columnsA[offset+i] = []ifaces.Column{d.PrevAccumulator[reversedIdx(i)]}
+	}
+	offset += nbGtLimbs
+
+	// PointG1 - reverse within each 128-bit chunk
 	for i := range nbG1Limbs {
-		filtersA[nbGtLimbs+i] = d.IsNotLastLine
-		columnsA[nbGtLimbs+i] = []ifaces.Column{d.PointG1[i]}
+		filtersA[offset+i] = d.IsNotLastLine
+		columnsA[offset+i] = []ifaces.Column{d.PointG1[reversedIdx(i)]}
 	}
+	offset += nbG1Limbs
+
+	// PointG2 - reverse within each 128-bit chunk
 	for i := range nbG2Limbs {
-		filtersA[nbGtLimbs+nbG1Limbs+i] = d.IsNotLastLine
-		columnsA[nbGtLimbs+nbG1Limbs+i] = []ifaces.Column{d.PointG2[i]}
+		filtersA[offset+i] = d.IsNotLastLine
+		columnsA[offset+i] = []ifaces.Column{d.PointG2[reversedIdx(i)]}
 	}
+	offset += nbG2Limbs
+
+	// CurrentAccumulator - reverse within each 128-bit chunk
 	for i := range nbGtLimbs {
-		filtersA[nbGtLimbs+nbG1Limbs+nbG2Limbs+i] = d.IsNotLastLine
-		columnsA[nbGtLimbs+nbG1Limbs+nbG2Limbs+i] = []ifaces.Column{d.CurrentAccumulator[i]}
+		filtersA[offset+i] = d.IsNotLastLine
+		columnsA[offset+i] = []ifaces.Column{d.CurrentAccumulator[reversedIdx(i)]}
 	}
+
 	prj := query.ProjectionMultiAryInput{
 		FiltersA: filtersA,
 		FiltersB: []ifaces.Column{d.GnarkIsActiveMillerLoop},
@@ -387,24 +462,57 @@ func (d *UnalignedPairData) csProjectionGnarkDataMillerLoop(comp *wizard.Compile
 }
 
 func (d *UnalignedPairData) csProjectionGnarkDataFinalExp(comp *wizard.CompiledIOP) {
-	filtersA := make([]ifaces.Column, nbGtLimbs+nbG1Limbs+nbG2Limbs+2)
-	columnsA := make([][]ifaces.Column, nbGtLimbs+nbG1Limbs+nbG2Limbs+2)
+	// Projects from row-format columns (PrevAccumulator, PointG1, PointG2, ExpectedResult)
+	// to the single GnarkDataFinalExp column.
+	// Within each 128-bit chunk (8 limbs), we reverse the order to convert from
+	// little-endian (source) to big-endian (gnark circuit expects).
+	//
+	// ExpectedResult is nbFrLimbs = 16 sublimbs (2 x 128-bit chunks), but for the gnark circuit
+	// we only need ExpectedResult[0] and ExpectedResult[limbs.NbLimbU128] (the actual 0/1 values).
+	totalCols := nbGtLimbs + nbG1Limbs + nbG2Limbs + 2
+
+	filtersA := make([]ifaces.Column, totalCols)
+	columnsA := make([][]ifaces.Column, totalCols)
+
+	// Helper to reverse endianness within each 128-bit chunk
+	reversedIdx := func(j int) int {
+		chunkIdx := j / limbs.NbLimbU128
+		withinChunk := j % limbs.NbLimbU128
+		reversedWithinChunk := limbs.NbLimbU128 - 1 - withinChunk
+		return chunkIdx*limbs.NbLimbU128 + reversedWithinChunk
+	}
+
+	offset := 0
+	// PrevAccumulator - reverse within each 128-bit chunk
 	for i := range nbGtLimbs {
-		filtersA[i] = d.IsLastLine
-		columnsA[i] = []ifaces.Column{d.PrevAccumulator[i]}
+		filtersA[offset+i] = d.IsLastLine
+		columnsA[offset+i] = []ifaces.Column{d.PrevAccumulator[reversedIdx(i)]}
 	}
+	offset += nbGtLimbs
+
+	// PointG1 - reverse within each 128-bit chunk
 	for i := range nbG1Limbs {
-		filtersA[nbGtLimbs+i] = d.IsLastLine
-		columnsA[nbGtLimbs+i] = []ifaces.Column{d.PointG1[i]}
+		filtersA[offset+i] = d.IsLastLine
+		columnsA[offset+i] = []ifaces.Column{d.PointG1[reversedIdx(i)]}
 	}
+	offset += nbG1Limbs
+
+	// PointG2 - reverse within each 128-bit chunk
 	for i := range nbG2Limbs {
-		filtersA[nbGtLimbs+nbG1Limbs+i] = d.IsLastLine
-		columnsA[nbGtLimbs+nbG1Limbs+i] = []ifaces.Column{d.PointG2[i]}
+		filtersA[offset+i] = d.IsLastLine
+		columnsA[offset+i] = []ifaces.Column{d.PointG2[reversedIdx(i)]}
 	}
-	for i := range 2 {
-		filtersA[nbGtLimbs+nbG1Limbs+nbG2Limbs+i] = d.IsLastLine
-		columnsA[nbGtLimbs+nbG1Limbs+nbG2Limbs+i] = []ifaces.Column{d.ExpectedResult[i]}
-	}
+	offset += nbG2Limbs
+
+	// ExpectedResult - the gnark circuit expects only 2 values (the actual 0/1 result)
+	// These are at positions 0 and limbs.NbLimbU128 (first sublimb of each 128-bit chunk).
+	// After endianness reversal, these become positions limbs.NbLimbU128-1 and 2*limbs.NbLimbU128-1.
+	// We reverse to match gnark's expected order.
+	filtersA[offset] = d.IsLastLine
+	columnsA[offset] = []ifaces.Column{d.ExpectedResult[limbs.NbLimbU128-1]} // first chunk value (always 0)
+	filtersA[offset+1] = d.IsLastLine
+	columnsA[offset+1] = []ifaces.Column{d.ExpectedResult[2*limbs.NbLimbU128-1]} // second chunk's value (0 or 1)
+
 	prj := query.ProjectionMultiAryInput{
 		FiltersA: filtersA,
 		FiltersB: []ifaces.Column{d.GnarkIsActiveFinalExp},
@@ -417,7 +525,7 @@ func (d *UnalignedPairData) csProjectionGnarkDataFinalExp(comp *wizard.CompiledI
 func (d *UnalignedPairData) csAccumulatorInit(comp *wizard.CompiledIOP) {
 	// ensures that the first line accumulator is zero in Gt
 	for i := range nbGtLimbs {
-		if i == 3 {
+		if i == nbFpLimbs-1 {
 			// the first line accumulator is zero in Gt
 			comp.InsertGlobal(ROUND_NR, ifaces.QueryIDf("%s_ACCUMULATOR_INIT_%d_ONE", NAME_UNALIGNED_PAIR, i),
 				sym.Mul(sym.Sub(1, d.PrevAccumulator[i]), d.IsFirstLine))
@@ -490,9 +598,10 @@ func (d *UnalignedPairData) assignMembershipMask(run *wizard.ProverRuntime) {
 
 func (d *UnalignedPairData) assignUnaligned(run *wizard.ProverRuntime) {
 	var (
-		srcID         = d.ID.GetColAssignment(run).IntoRegVecSaveAlloc()
+		srcID         = expr_handle.GetExprHandleAssignment(run, d.ID).IntoRegVecSaveAlloc()
 		srcSuccessBit = d.SuccessBit.GetColAssignment(run).IntoRegVecSaveAlloc()
-		srcLimb       = d.Limb.GetColAssignment(run).IntoRegVecSaveAlloc()
+		srcLimb       = d.Limb.GetAssignment(run)
+		nbRows        = d.Limb.NumRow()
 		srcIndex      = d.Index.GetColAssignment(run).IntoRegVecSaveAlloc()
 		srcCounter    = d.Counter.GetColAssignment(run).IntoRegVecSaveAlloc()
 		srcIsData     = d.IsData.GetColAssignment(run).IntoRegVecSaveAlloc()
@@ -510,7 +619,7 @@ func (d *UnalignedPairData) assignUnaligned(run *wizard.ProverRuntime) {
 	var dstPointG2 [nbG2Limbs]*common.VectorBuilder
 	var dstPrevAccumulator [nbGtLimbs]*common.VectorBuilder
 	var dstCurrentAccumulator [nbGtLimbs]*common.VectorBuilder
-	var dstExpectedResult [2]*common.VectorBuilder
+	var dstExpectedResult [2 * limbs.NbLimbU128]*common.VectorBuilder
 
 	for i := range d.PointG1 {
 		dstPointG1[i] = common.NewVectorBuilder(d.PointG1[i])
@@ -530,7 +639,25 @@ func (d *UnalignedPairData) assignUnaligned(run *wizard.ProverRuntime) {
 
 	var ptr int
 
-	for ptr < len(srcLimb) {
+	// Helper to extract limb at a given position with endianness reversal within each 128-bit chunk.
+	// Position i refers to the i-th 16-bit limb in the source.
+	// The source rows each contain limbs.NbLimbU128 (8) 16-bit sublimbs.
+	extractLimb := func(basePtr, i int) field.Element {
+		limbIndex := i / limbs.NbLimbU128
+		subLimbIndex := (limbs.NbLimbU128 - 1) - (i % limbs.NbLimbU128)
+		return srcLimb[basePtr+limbIndex].T[subLimbIndex]
+	}
+
+	// Helper to extract multiple limbs into a slice
+	extractLimbs := func(basePtr, count int) []field.Element {
+		result := make([]field.Element, count)
+		for i := range count {
+			result[i] = extractLimb(basePtr, i)
+		}
+		return result
+	}
+
+	for ptr < nbRows {
 		// we detect if we're in a new pairing check instance
 		if !(srcIsData[ptr].IsOne() && srcIndex[ptr].IsZero() && srcCounter[ptr].IsZero()) {
 			ptr++
@@ -561,7 +688,7 @@ func (d *UnalignedPairData) assignUnaligned(run *wizard.ProverRuntime) {
 			if srcSuccessBit[ptr].IsZero() {
 				switch {
 				case srcIsData[ptr].IsOne():
-					ptr += nbG1Limbs + nbG2Limbs
+					ptr += nbG1Limbs128 + nbG2Limbs128
 				case srcIsRes[ptr].IsOne():
 					ptr += 2
 				default:
@@ -574,23 +701,27 @@ func (d *UnalignedPairData) assignUnaligned(run *wizard.ProverRuntime) {
 			// now, the success_bit is 1. If we are in the data part, then we copy the point limbs,
 			// otherwise we copy the expected result limbs.
 			if srcIsData[ptr].IsOne() {
+				// extract G1 point limbs
+				pointG1Limbs := extractLimbs(ptr, nbG1Limbs)
 				for i := range nbG1Limbs {
-					dstPointG1[i].PushField(srcLimb[ptr+i])
+					dstPointG1[i].PushField(pointG1Limbs[i])
 				}
+				// extract G2 point limbs
+				pointG2Limbs := extractLimbs(ptr+nbG1Limbs128, nbG2Limbs)
 				for i := range nbG2Limbs {
-					dstPointG2[i].PushField(srcLimb[ptr+nbG1Limbs+i])
+					dstPointG2[i].PushField(pointG2Limbs[i])
 				}
 				dstIsLastLine.PushZero()
 				dstIsNotLastLine.PushOne()
 				// compute the next accumulator
-				currentAccumulator = nativeMillerLoopAndSum(prevAccumulator, srcLimb[ptr:ptr+nbG1Limbs], srcLimb[ptr+nbG1Limbs:ptr+nbG1Limbs+nbG2Limbs])
+				currentAccumulator = nativeMillerLoopAndSum(prevAccumulator, pointG1Limbs, pointG2Limbs)
 				// copy the accumulator limbs
 				for i := range nbGtLimbs {
 					dstPrevAccumulator[i].PushField(prevAccumulator[i])
 					dstCurrentAccumulator[i].PushField(currentAccumulator[i])
 				}
 				prevAccumulator = currentAccumulator
-				for i := range 2 {
+				for i := range 2 * limbs.NbLimbU128 {
 					dstExpectedResult[i].PushZero()
 				}
 				dstIsActive.PushOne()
@@ -600,7 +731,7 @@ func (d *UnalignedPairData) assignUnaligned(run *wizard.ProverRuntime) {
 					dstIsFirstLine.PushZero()
 				}
 				idx++
-				ptr += nbG1Limbs + nbG2Limbs
+				ptr += nbG1Limbs128 + nbG2Limbs128
 			} else if srcIsRes[ptr].IsOne() {
 				// we are in the result part. However, we don't add new line but reuse the last last line.
 				// thus we need to pop the data before pushing the expected result limbs.
@@ -608,16 +739,17 @@ func (d *UnalignedPairData) assignUnaligned(run *wizard.ProverRuntime) {
 				dstIsLastLine.PushOne()
 				dstIsNotLastLine.Pop()
 				dstIsNotLastLine.PushZero()
-				for i := range 2 {
+				// extract expected result limbs (nbFrLimbs = 16 sublimbs = 2 x 128-bit chunks)
+				for i := range 2 * limbs.NbLimbU128 {
 					dstExpectedResult[i].Pop()
-					dstExpectedResult[i].PushField(srcLimb[ptr+i])
+					dstExpectedResult[i].PushField(extractLimb(ptr, i))
 				}
 				// additionally, we have pushed the current accumulator in the data part, but we don't need it here. So we pop it.
 				for i := range nbGtLimbs {
 					dstCurrentAccumulator[i].Pop()
 					dstCurrentAccumulator[i].PushZero()
 				}
-				ptr += 2
+				ptr += 2 // 16 limbs need 2 rows (8 limbs per row)
 			} else {
 				utils.Panic("unexpected state in BlsPair assignUnaligned")
 			}
@@ -652,7 +784,9 @@ func (d *UnalignedPairData) assignGnarkData(run *wizard.ProverRuntime) {
 		srcPointG2    = make([][]field.Element, nbG2Limbs)
 		srcPrev       = make([][]field.Element, nbGtLimbs)
 		srcCurrent    = make([][]field.Element, nbGtLimbs)
-		srcExpected   = make([][]field.Element, 2)
+		// ExpectedResult has 2 * limbs.NbLimbU128 columns, but we only need positions 0 and limbs.NbLimbU128
+		srcExpected0 []field.Element
+		srcExpected1 []field.Element
 	)
 
 	for i := range nbG1Limbs {
@@ -665,9 +799,9 @@ func (d *UnalignedPairData) assignGnarkData(run *wizard.ProverRuntime) {
 		srcPrev[i] = d.PrevAccumulator[i].GetColAssignment(run).IntoRegVecSaveAlloc()
 		srcCurrent[i] = d.CurrentAccumulator[i].GetColAssignment(run).IntoRegVecSaveAlloc()
 	}
-	for i := range 2 {
-		srcExpected[i] = d.ExpectedResult[i].GetColAssignment(run).IntoRegVecSaveAlloc()
-	}
+	// Read only the meaningful expected result values (first sublimb of each 128-bit chunk)
+	srcExpected0 = d.ExpectedResult[limbs.NbLimbU128-1].GetColAssignment(run).IntoRegVecSaveAlloc()
+	srcExpected1 = d.ExpectedResult[2*limbs.NbLimbU128-1].GetColAssignment(run).IntoRegVecSaveAlloc()
 
 	var (
 		dstGnarkIsActiveMillerLoop = common.NewVectorBuilder(d.GnarkIsActiveMillerLoop)
@@ -676,46 +810,63 @@ func (d *UnalignedPairData) assignGnarkData(run *wizard.ProverRuntime) {
 		dstGnarkDataFinalExp       = common.NewVectorBuilder(d.GnarkDataFinalExp)
 	)
 
+	// Helper to reverse endianness within each 128-bit chunk
+	reversedIdx := func(j int) int {
+		chunkIdx := j / limbs.NbLimbU128
+		withinChunk := j % limbs.NbLimbU128
+		reversedWithinChunk := limbs.NbLimbU128 - 1 - withinChunk
+		return chunkIdx*limbs.NbLimbU128 + reversedWithinChunk
+	}
+
 	for i := range srcIsActive {
 		if !srcIsActive[i].IsOne() {
 			continue
 		}
 		if srcIsLastLine[i].IsZero() {
 			// we need to pass data to the Miller loop circuit
+			// PrevAccumulator - reverse within each 128-bit chunk
 			for j := range nbGtLimbs {
-				dstGnarkDataMillerLoop.PushField(srcPrev[j][i])
+				dstGnarkDataMillerLoop.PushField(srcPrev[reversedIdx(j)][i])
 				dstGnarkIsActiveMillerLoop.PushOne()
 			}
+			// PointG1 - reverse within each 128-bit chunk
 			for j := range nbG1Limbs {
-				dstGnarkDataMillerLoop.PushField(srcPointG1[j][i])
+				dstGnarkDataMillerLoop.PushField(srcPointG1[reversedIdx(j)][i])
 				dstGnarkIsActiveMillerLoop.PushOne()
 			}
+			// PointG2 - reverse within each 128-bit chunk
 			for j := range nbG2Limbs {
-				dstGnarkDataMillerLoop.PushField(srcPointG2[j][i])
+				dstGnarkDataMillerLoop.PushField(srcPointG2[reversedIdx(j)][i])
 				dstGnarkIsActiveMillerLoop.PushOne()
 			}
+			// CurrentAccumulator - reverse within each 128-bit chunk
 			for j := range nbGtLimbs {
-				dstGnarkDataMillerLoop.PushField(srcCurrent[j][i])
+				dstGnarkDataMillerLoop.PushField(srcCurrent[reversedIdx(j)][i])
 				dstGnarkIsActiveMillerLoop.PushOne()
 			}
 		} else {
 			// we need to pass data to the final exponentiation circuit
+			// PrevAccumulator - reverse within each 128-bit chunk
 			for j := range nbGtLimbs {
-				dstGnarkDataFinalExp.PushField(srcPrev[j][i])
+				dstGnarkDataFinalExp.PushField(srcPrev[reversedIdx(j)][i])
 				dstGnarkIsActiveFinalExp.PushOne()
 			}
+			// PointG1 - reverse within each 128-bit chunk
 			for j := range nbG1Limbs {
-				dstGnarkDataFinalExp.PushField(srcPointG1[j][i])
+				dstGnarkDataFinalExp.PushField(srcPointG1[reversedIdx(j)][i])
 				dstGnarkIsActiveFinalExp.PushOne()
 			}
+			// PointG2 - reverse within each 128-bit chunk
 			for j := range nbG2Limbs {
-				dstGnarkDataFinalExp.PushField(srcPointG2[j][i])
+				dstGnarkDataFinalExp.PushField(srcPointG2[reversedIdx(j)][i])
 				dstGnarkIsActiveFinalExp.PushOne()
 			}
-			for j := range 2 {
-				dstGnarkDataFinalExp.PushField(srcExpected[j][i])
-				dstGnarkIsActiveFinalExp.PushOne()
-			}
+			// ExpectedResult - only 2 values: positions 0 and limbs.NbLimbU128
+			// We push in reverse order to match gnark's expected format
+			dstGnarkDataFinalExp.PushField(srcExpected0[i]) // first chunk value (always)
+			dstGnarkIsActiveFinalExp.PushOne()
+			dstGnarkDataFinalExp.PushField(srcExpected1[i]) // second chunk's value (0 or 1)
+			dstGnarkIsActiveFinalExp.PushOne()
 		}
 	}
 

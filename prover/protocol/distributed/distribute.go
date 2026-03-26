@@ -4,17 +4,17 @@ import (
 	"errors"
 	"fmt"
 
-	cmimc "github.com/consensys/linea-monorepo/prover/crypto/mimc"
+	multsethashing "github.com/consensys/linea-monorepo/prover/crypto/multisethashing_koalabear"
+	"github.com/consensys/linea-monorepo/prover/crypto/poseidon2_koalabear"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/horner"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/logderivativesum"
-	"github.com/consensys/linea-monorepo/prover/protocol/compiler/mimc"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/permutation"
+	"github.com/consensys/linea-monorepo/prover/protocol/compiler/poseidon2"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
-	"github.com/consensys/linea-monorepo/prover/protocol/serialization"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/sirupsen/logrus"
@@ -72,26 +72,13 @@ type DistributedWizard struct {
 	VerificationKeyMerkleTree VerificationKeyMerkleTree
 }
 
-func init() {
-
-	serialization.RegisterImplementation(AssignLPPQueries{})
-	serialization.RegisterImplementation(SetInitialFSHash{})
-	serialization.RegisterImplementation(CheckNxHash{})
-	serialization.RegisterImplementation(StandardModuleDiscoverer{})
-	serialization.RegisterImplementation(LppWitnessAssignment{})
-	serialization.RegisterImplementation(ModuleGLAssignGL{})
-	serialization.RegisterImplementation(ModuleGLAssignSendReceiveGlobal{})
-	serialization.RegisterImplementation(ModuleGLCheckSendReceiveGlobal{})
-	serialization.RegisterImplementation(LPPSegmentBoundaryCalculator{})
-	serialization.RegisterImplementation(ConglomerationHierarchicalVerifierAction{})
-	serialization.RegisterImplementation(AssignManualShifts{})
-}
-
 // DistributeWizard returns a [DistributedWizard] from a [wizard.CompiledIOP]. It
 // takes ownership of the input [wizard.CompiledIOP]. And uses disc to design
 // the scope of each module.
 func DistributeWizard(comp *wizard.CompiledIOP, disc *StandardModuleDiscoverer) *DistributedWizard {
 
+	// We complie the comp object to manually shift all the columns that need to be shifted. This is due to the
+	// fact that distributed wizard does not support shifted columns.
 	CompileManualShifter(comp)
 	if err := auditInitialWizard(comp); err != nil {
 		utils.Panic("improper initial wizard for distribution: %v", err)
@@ -224,28 +211,31 @@ func (dist *DistributedWizard) CompileSegments(params CompilationParams) *Distri
 //
 // The result of this function is to be used as the shared randomness for
 // the LPP provers.
-func GetSharedRandomnessFromSegmentProofs(gLWitnesses []*SegmentProof) field.Element {
+func GetSharedRandomnessFromSegmentProofs(gLWitnesses []*SegmentProof) field.Octuplet {
 
-	mset := cmimc.MSetHash{}
+	mset := multsethashing.MSetHash{}
 
 	for i := range gLWitnesses {
 
 		var (
-			moduleIndex, _  = new(field.Element).SetInterface(gLWitnesses[i].ModuleIndex)
-			segmentIndex, _ = new(field.Element).SetInterface(gLWitnesses[i].SegmentIndex)
-			lppCommitment   = gLWitnesses[i].LppCommitment
+			moduleIndex   = field.NewElement(uint64(gLWitnesses[i].ModuleIndex))
+			segmentIndex  = field.NewElement(uint64(gLWitnesses[i].SegmentIndex))
+			lppCommitment = gLWitnesses[i].LppCommitment
 		)
 
-		mset.Insert(*moduleIndex, *segmentIndex, lppCommitment)
+		mset.Insert(append([]field.Element{moduleIndex, segmentIndex}, lppCommitment[:]...)...)
 	}
 
-	return cmimc.HashVec(mset[:])
+	return poseidon2_koalabear.HashVec(mset[:]...)
 }
 
 // getLppCommitmentFromRuntime returns the LPP commitment from the runtime
-func getLppCommitmentFromRuntime(runtime *wizard.ProverRuntime) field.Element {
-	name := fmt.Sprintf("%v_%v", lppMerkleRootPublicInput, 0)
-	return runtime.GetPublicInput(name)
+func getLppCommitmentFromRuntime(runtime *wizard.ProverRuntime) field.Octuplet {
+	merkleRoot := field.Octuplet{}
+	for i := range merkleRoot {
+		merkleRoot[i] = runtime.GetPublicInput(fmt.Sprintf("%v_%v_%v", lppMerkleRootPublicInput, 0, i)).Base // index 0 stands for the round index.
+	}
+	return merkleRoot
 }
 
 // PrecompileInitialWizard pre-compiles the initial wizard protocol by applying all the
@@ -256,7 +246,7 @@ func PrecompileInitialWizard(comp *wizard.CompiledIOP, disc *StandardModuleDisco
 
 	return wizard.ContinueCompilation(
 		comp,
-		mimc.CompileMiMC,
+		poseidon2.CompilePoseidon2,
 		logderivativesum.LookupIntoLogDerivativeSumWithSegmenter(
 			&LPPSegmentBoundaryCalculator{
 				Disc: disc,
@@ -280,14 +270,11 @@ func auditInitialWizard(comp *wizard.CompiledIOP) error {
 
 	var err error
 
-	allQueriesNoParams := comp.QueriesNoParams.AllKeys()
+	allQueriesNoParams := comp.QueriesNoParams.AllUnignoredKeys()
 	for _, qname := range allQueriesNoParams {
 
-		if comp.QueriesNoParams.IsIgnored(qname) {
-			continue
-		}
-
 		q := comp.QueriesNoParams.Data(qname)
+
 		if glob, isGlob := q.(query.GlobalConstraint); isGlob {
 			var (
 				cols     = column.ColumnsOfExpression(glob.Expression)
@@ -317,7 +304,7 @@ func auditInitialWizard(comp *wizard.CompiledIOP) error {
 			for i := range perm.B {
 				for j := range perm.B[i] {
 					if perm.B[i][j].Size() != size {
-						err = errors.Join(err, fmt.Errorf("incompatible permutation sizes: %v, column %v has the wrong size", perm, perm.A[i][j].GetColID()))
+						err = errors.Join(err, fmt.Errorf("incompatible permutation sizes: %v, column %v has the wrong size", perm, perm.B[i][j].GetColID()))
 					}
 				}
 			}
@@ -331,8 +318,6 @@ func auditInitialWizard(comp *wizard.CompiledIOP) error {
 				err = errors.Join(err, fmt.Errorf("inclusion query %v with shifted selectors %v", qname, shfted))
 			}
 		}
-
-		err = errors.Join(err)
 	}
 
 	return err

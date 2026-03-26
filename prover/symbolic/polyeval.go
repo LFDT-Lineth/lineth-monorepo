@@ -4,9 +4,8 @@ import (
 	"fmt"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/linea-monorepo/prover/maths/common/poly"
 	sv "github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
@@ -37,16 +36,17 @@ func NewPolyEval(x *Expression, coeffs []*Expression) *Expression {
 		return coeffs[0]
 	}
 
-	eshashes := []field.Element{}
-	for i := range coeffs {
-		eshashes = append(eshashes, coeffs[i].ESHash)
+	esh := esHash{}
+	for i := len(coeffs) - 1; i >= 0; i-- {
+		esh.Mul(&esh, &x.ESHash)
+		esh.Add(&esh, &coeffs[i].ESHash)
 	}
 
-	esh := poly.EvalUnivariate(eshashes, x.ESHash)
+	children := append([]*Expression{x}, coeffs...)
 
 	return &Expression{
 		Operator: PolyEval{},
-		Children: append([]*Expression{x}, coeffs...),
+		Children: children,
 		ESHash:   esh,
 	}
 }
@@ -66,7 +66,7 @@ func (PolyEval) Evaluate(inputs []sv.SmartVector) sv.SmartVector {
 	// Get the constant value. We use Get(0) to get the value, but any integer would
 	// also work provided it is also in range. 0 ensures that.
 	x := inputs[0].(*sv.Constant).Get(0)
-	return sv.PolyEval(inputs[1:], x)
+	return sv.LinearCombination(inputs[1:], x)
 }
 
 /*
@@ -79,22 +79,80 @@ func (PolyEval) Validate(expr *Expression) error {
 	return nil
 }
 
-/*
-Evaluate the expression in a gnark circuit
-Does not support vector evaluation
-*/
-func (PolyEval) GnarkEval(api frontend.API, inputs []frontend.Variable) frontend.Variable {
-	/*
-		We use the Horner method
-	*/
+// GnarkEval evaluates the expression in a gnark circuit
+// Does not support vector evaluation
+func (PolyEval) GnarkEval(api frontend.API, inputs []koalagnark.Element) koalagnark.Element {
+
+	koalaAPI := koalagnark.NewAPI(api)
+
 	x := inputs[0]
 	res := inputs[len(inputs)-1]
 
 	for i := len(inputs) - 2; i >= 1; i-- {
-		res = api.Mul(res, x)
-		c := inputs[i]
-		res = api.Add(res, c)
+		res = koalaAPI.Mul(res, x)
+		res = koalaAPI.Add(res, inputs[i])
 	}
 
 	return res
+}
+
+// EvaluateExt the expression in a gnark circuit
+// Does not support vector evaluation
+func (PolyEval) GnarkEvalExt(api frontend.API, inputs []any) koalagnark.Ext {
+
+	koalaAPI := koalagnark.NewAPI(api)
+
+	var (
+		x   koalagnark.Ext
+		res koalagnark.Ext
+	)
+
+	switch y := inputs[0].(type) {
+	case koalagnark.Ext:
+		x = y
+	case koalagnark.Element:
+		x = koalaAPI.FromBaseExt(y)
+	default:
+		utils.Panic("unexpected type: %T", y)
+	}
+
+	switch r := inputs[len(inputs)-1].(type) {
+	case koalagnark.Ext:
+		res = r
+	case koalagnark.Element:
+		res = koalaAPI.FromBaseExt(r)
+	default:
+		utils.Panic("expected koalagnark.Ext or koalagnark.Element, was %T", inputs[len(inputs)-1])
+	}
+
+	for i := len(inputs) - 2; i >= 1; i-- {
+		res = koalaAPI.MulExt(res, x)
+
+		switch inp := inputs[i].(type) {
+		case koalagnark.Ext:
+			res = koalaAPI.AddExt(res, inp)
+		case koalagnark.Element:
+			res = koalaAPI.AddByBaseExt(res, inp)
+		default:
+			utils.Panic("expected koalagnark.Ext or koalagnark.Element, was %T", inputs[i])
+		}
+	}
+
+	return res
+}
+
+func (PolyEval) EvaluateExt(inputs []sv.SmartVector) sv.SmartVector {
+	// We assume that the first element is always a scalar
+	// Get the constant value. We use Get(0) to get the value, but any integer would
+	// also work provided it is also in range. 0 ensures that.
+	x := inputs[0].(*sv.ConstantExt).GetExt(0) // to ensure we panic if the input is not a constant
+	return sv.LinearCombinationExt(inputs[1:], x)
+}
+
+func (PolyEval) EvaluateMixed(inputs []sv.SmartVector) sv.SmartVector {
+	if sv.AreAllBase(inputs) {
+		return PolyEval{}.Evaluate(inputs)
+	} else {
+		return PolyEval{}.EvaluateExt(inputs)
+	}
 }

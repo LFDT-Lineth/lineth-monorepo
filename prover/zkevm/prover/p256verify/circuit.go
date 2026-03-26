@@ -5,18 +5,17 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/evmprecompiles"
-	"github.com/consensys/gnark/std/math/bitslice"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/emulated/emparams"
+	"github.com/consensys/linea-monorepo/prover/utils/gnarkutil"
 )
 
 const (
-	nbBits  = 128 // for large-field we use 128-bit limbs both for base and scalar fields
-	nbBytes = nbBits / 8
+	nbBits = 16 // for large-field we use 128-bit limbs both for base and scalar fields
 
-	nbFrLimbs  = 2 // P-256 scalar field represented with 2 limbs of 128 bits
-	nbFpLimbs  = 2 // P-256 base field represented with 2 limbs of 128 bits
-	nbResLimbs = 2
+	nbFrLimbs  = 16 // P-256 scalar field represented with 16 limbs of 16 bits
+	nbFpLimbs  = 16 // P-256 base field represented with 16 limbs of 16 bits
+	nbResLimbs = 16 // it is a boolean result represented with 16 limbs of 16 bits.
 
 	nbG1Limbs = 2 * nbFpLimbs // (Ax, Ay)
 
@@ -26,18 +25,15 @@ const (
 type scalarfield = emparams.P256Fr
 type basefield = emparams.P256Fp
 
-var fpParams basefield
-var frParams scalarfield
-
 type scalarElementWizard struct {
 	S [nbFrLimbs]frontend.Variable
 }
 
 func (c scalarElementWizard) ToElement(api frontend.API, fr *emulated.Field[scalarfield]) *emulated.Element[scalarfield] {
-	Slimbs := make([]frontend.Variable, frParams.NbLimbs())
-	Slimbs[2], Slimbs[3] = bitslice.Partition(api, c.S[0], 64, bitslice.WithNbDigits(128))
-	Slimbs[0], Slimbs[1] = bitslice.Partition(api, c.S[1], 64, bitslice.WithNbDigits(128))
-	return fr.NewElement(Slimbs)
+	S16 := make([]frontend.Variable, nbFrLimbs)
+	copy(S16[0:8], c.S[8:16])
+	copy(S16[8:16], c.S[0:8])
+	return gnarkutil.EmulatedFromLimbSlice(api, fr, S16, nbBits)
 }
 
 type baseElementWizard struct {
@@ -45,10 +41,10 @@ type baseElementWizard struct {
 }
 
 func (c baseElementWizard) ToElement(api frontend.API, fp *emulated.Field[basefield]) *emulated.Element[basefield] {
-	Plimbs := make([]frontend.Variable, fpParams.NbLimbs())
-	Plimbs[2], Plimbs[3] = bitslice.Partition(api, c.P[0], 64, bitslice.WithNbDigits(128))
-	Plimbs[0], Plimbs[1] = bitslice.Partition(api, c.P[1], 64, bitslice.WithNbDigits(128))
-	return fp.NewElement(Plimbs)
+	P16 := make([]frontend.Variable, nbFpLimbs)
+	copy(P16[0:8], c.P[8:16])
+	copy(P16[8:16], c.P[0:8])
+	return gnarkutil.EmulatedFromLimbSlice(api, fp, P16, nbBits)
 }
 
 type P256VerifyInstance struct {
@@ -81,10 +77,16 @@ func (c *multiP256VerifyInstanceCircuit) Define(api frontend.API) error {
 		s := c.Instances[i].S.ToElement(api, scalarApi)
 		qx := c.Instances[i].Qx.ToElement(api, baseApi)
 		qy := c.Instances[i].Qy.ToElement(api, baseApi)
-		// the high limb of the result is always zero
-		api.AssertIsEqual(c.Instances[i].Expected[0], 0)
+		// the high limb of the result is always zero. It is represented as 8 limbs of 16 bits.
+		for j := range nbResLimbs / 2 {
+			api.AssertIsEqual(c.Instances[i].Expected[j], 0)
+		}
+		// and low limb is LSB boolean
+		for j := range nbResLimbs/2 - 1 {
+			api.AssertIsEqual(c.Instances[i].Expected[nbResLimbs/2+j+1], 0)
+		}
 		// the expected result should be boolean
-		expected := c.Instances[i].Expected[1]
+		expected := c.Instances[i].Expected[nbResLimbs/2]
 		api.AssertIsBoolean(expected)
 		res := evmprecompiles.P256Verify(api, h, r, s, qx, qy)
 		api.AssertIsEqual(res, expected)

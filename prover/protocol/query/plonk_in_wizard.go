@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark-crypto/field/koalabear"
+
 	"github.com/consensys/gnark/backend/witness"
+	"github.com/consensys/gnark/constraint"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/scs"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
@@ -71,9 +73,8 @@ type PlonkInWizard struct {
 	// nbPublicInputs loaded is a flag indicating whether we need to compute the
 	// number of public input. It is not using [sync.Once] that way we don't need
 	// to initialize the value.
-	nbPublicInputsLoaded bool `serde:"omit"`
-
-	uuid uuid.UUID `serde:"omit"`
+	nbPublicInputsLoaded bool      `serde:"omit"`
+	uuid                 uuid.UUID `serde:"omit"`
 }
 
 func NewPlonkInWizard(
@@ -123,9 +124,20 @@ func (piw *PlonkInWizard) Name() ifaces.QueryID {
 func (piw *PlonkInWizard) Check(run ifaces.Runtime) error {
 
 	var (
-		data                = piw.Data.GetColAssignment(run).IntoRegVecSaveAlloc()
-		sel                 = piw.Selector.GetColAssignment(run).IntoRegVecSaveAlloc()
-		ccs, compErr        = frontend.Compile(ecc.BLS12_377.ScalarField(), scs.NewBuilder, piw.Circuit)
+		data, errData = piw.Data.GetColAssignment(run).IntoRegVecSaveAllocBase()
+		sel, errSel   = piw.Selector.GetColAssignment(run).IntoRegVecSaveAllocBase()
+	)
+
+	if errData != nil {
+		return fmt.Errorf("Error while getting the data %v", errData)
+	}
+
+	if errSel != nil {
+		return fmt.Errorf("Error while getting the selector %v", errSel)
+	}
+	var (
+		builder             = gnarkutil.NewMockBuilder(scs.NewBuilder[constraint.U32])
+		ccs, compErr        = frontend.CompileU32(koalabear.Modulus(), builder, piw.Circuit)
 		numEffInstances int = 0
 	)
 
@@ -167,7 +179,7 @@ func (piw *PlonkInWizard) Check(run ifaces.Runtime) error {
 			var (
 				locPubInputs  = data[i : i+nbPublicPadded]
 				locSelector   = sel[i : i+nbPublicPadded]
-				witness, _    = witness.New(ecc.BLS12_377.ScalarField())
+				witness, _    = witness.New(koalabear.Modulus())
 				witnessFiller = make(chan any, nbPublic)
 			)
 

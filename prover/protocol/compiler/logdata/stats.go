@@ -74,20 +74,29 @@ func GetWizardStats(comp *wizard.CompiledIOP) *WizardStats {
 			size   = col.Size()
 		)
 
+		// Normalizes everything to base-cell units
+		// Base columns: 1 KoalaBear element = 1 base cell (32 bits)
+		// Extension columns: 1 ext element = 4 base cells (128 bits for degree-4 extension)
+		weight := size
+		if !col.IsBase() {
+			weight = 4 * size
+		}
+
 		switch status {
 		case column.Committed:
-			cellCount.NumCellsCommitted += size
+			cellCount.NumCellsCommitted += weight
 			cellCount.NumColumnsCommitted++
 		case column.Proof:
-			cellCount.NumCellsProof += size
+			cellCount.NumCellsProof += weight
 			cellCount.NumColumnsProof++
 		case column.Precomputed:
-			cellCount.NumCellsPrecomputed += size
+			cellCount.NumCellsPrecomputed += weight
 			cellCount.NumColumnsPrecomputed++
 		case column.VerifyingKey:
-			cellCount.NumCellsVerificationKeys += size
+			cellCount.NumCellsVerificationKeys += weight
 			cellCount.NumColumnsVerificationKeys++
 		}
+
 	}
 
 	for _, qName := range listOfQueries {
@@ -179,7 +188,7 @@ func GetWizardStats(comp *wizard.CompiledIOP) *WizardStats {
 			}
 
 			info := comp.Coins.Data(myCoin)
-			if info.Type == coin.Field || info.Type == coin.FieldFromSeed {
+			if info.Type == coin.FieldExt {
 				tr.NumFieldSampled++
 			} else {
 

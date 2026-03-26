@@ -1,1 +1,25 @@
-{"eip4844Enabled":true,"dataHash":"0x018049c88a6f941dc87cc91a06ee75d2b2504e5e9f79f2b1c194e29dbec485d8","compressedData":"AJT9wvov/MBB0/8SBFtzyG5P+V/2YqXu6Cq99EotC3UAGA2vSKee4LENOUZRhQ/UoXiJLuKF7OFRFFV4CHXWTgDT0NDea/j5tEzoX/BExrH4O46IO7+FequZxbJSx0KcAPOorree+Fb2WcGPDc7Md8deeoG/3idfZ8/iQs88w1QA7eLWvsxOo65eiFJqn0pXi8ue8tSmUxR2jW0pl2HqngBapq7D/HjGquCBrIEgxyDvzWzqhLaSXmB74GNxb5bdANAddQRcPwAPinlrzmxRLDgBqsru361bUGZk6MDkp3EA4Li3wZZdkYElG3ycnKUgWvwWojai783S0S0qedB0qAAK6UOesNauyggjrgLWfYZqwsT+SnJQU9oRm51PUVFAANcjnEC0WsOVDZQfxP4cDLlq0yLWIoIpX7/hHiakMwcAtcFETDo00ypcSn/76NGB9+07jP6QT5P48G0pvNnthAAYLgRkEPRLxLDz8DoNBoIKMPJX+BFBMGeKwEWGwePJACyLgFXEZtiGRB0lmQbWms2JS5aK6fDrnZZc5qRpPE4AiBUBt9mEa2brArV+XNp7bLpokdYWvWhsN7g0YTrIugAsAI/+aINSc0rk4/Ehes1fgycIFDAYZ7XQZxGyOAAcAFeydxnOPzGI3+V97r9vgllaEPe7ViygTVw9J5QpWMY=","commitment":"0x8e8685661e4b91cfc0a3b8c8e87677a9fc87422387bd119fae89884b93a70397352e13698b601fd8d6c8277a68e96972","kzgProofContract":"0xb60a349519f27f838040dff8600ddba047b5fd68bd579b88ed8ada478675821d07811664547f1e265f12bee58188a51a","kzgProofSidecar":"0x863a2190cfed0c4b0effa45c578f780f2ca8de50a1ff27add596cb408ba02b2d42f868158c6def1a2298862e84715394","expectedX":"0x3d442e9b69dbd80e8054568fa6a61bb284045b665f80f2a5b11a1817298860ba","expectedY":"0x014dc2a7a960eec9237be9e35ab760a539f7d2d361a1485388eb4711be3b515e","snarkHash":"0x032184be95490fb93a97335f02426bde35308c4ebb311814f689093a8ff0c42c","conflationOrder":{"startingBlockNumber":0,"upperBoundaries":[10,20,30,40]},"parentStateRootHash":"0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","finalStateRootHash":"0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","parentDataHash":"0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd","expectedShnarf":"0x478c1d23bfa1b75a336023481c5efc41d5c7b099fe881b7ac577c4cd888a9c95","prevShnarf":"0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
+{
+    "eip4844Enabled": true,
+    "dataHash": "0x018049c88a6f941dc87cc91a06ee75d2b2504e5e9f79f2b1c194e29dbec485d8",
+    "compressedData": "AJT9wvov/MBB0/8SBFtzyG5P+V/2YqXu6Cq99EotC3UAGA2vSKee4LENOUZRhQ/UoXiJLuKF7OFRFFV4CHXWTgDT0NDea/j5tEzoX/BExrH4O46IO7+FequZxbJSx0KcAPOorree+Fb2WcGPDc7Md8deeoG/3idfZ8/iQs88w1QA7eLWvsxOo65eiFJqn0pXi8ue8tSmUxR2jW0pl2HqngBapq7D/HjGquCBrIEgxyDvzWzqhLaSXmB74GNxb5bdANAddQRcPwAPinlrzmxRLDgBqsru361bUGZk6MDkp3EA4Li3wZZdkYElG3ycnKUgWvwWojai783S0S0qedB0qAAK6UOesNauyggjrgLWfYZqwsT+SnJQU9oRm51PUVFAANcjnEC0WsOVDZQfxP4cDLlq0yLWIoIpX7/hHiakMwcAtcFETDo00ypcSn/76NGB9+07jP6QT5P48G0pvNnthAAYLgRkEPRLxLDz8DoNBoIKMPJX+BFBMGeKwEWGwePJACyLgFXEZtiGRB0lmQbWms2JS5aK6fDrnZZc5qRpPE4AiBUBt9mEa2brArV+XNp7bLpokdYWvWhsN7g0YTrIugAsAI/+aINSc0rk4/Ehes1fgycIFDAYZ7XQZxGyOAAcAFeydxnOPzGI3+V97r9vgllaEPe7ViygTVw9J5QpWMY=",
+    "commitment": "0x8e8685661e4b91cfc0a3b8c8e87677a9fc87422387bd119fae89884b93a70397352e13698b601fd8d6c8277a68e96972",
+    "kzgProofContract": "0xa1bc05567eaf016a2ede922aad9ed40d09ec100b37dd99458aa656b11ae613ca60e3ca1aad5536cc0f828a35deaaf6a7",
+    "kzgProofSidecar": "0x863a2190cfed0c4b0effa45c578f780f2ca8de50a1ff27add596cb408ba02b2d42f868158c6def1a2298862e84715394",
+    "expectedX": "0xc29e6f05c539351850feeeef2f02578ab3247ac7a63e9c977c53728b15215953",
+    "expectedY": "0x0705e5ba76a509695a92c22f35c93ad20393bb0ccf94e2f43c3ffa8897688d30",
+    "snarkHash": "0x01c8d2aec83b6d9057b6b939e428bd9dc674caeb56967d288a5cebf45e22b4f6",
+    "conflationOrder": {
+        "startingBlockNumber": 0,
+        "upperBoundaries": [
+            10,
+            20,
+            30,
+            40
+        ]
+    },
+    "parentStateRootHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "finalStateRootHash": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "parentDataHash": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "expectedShnarf": "0x685c6cc64b44ca893d4f21b242c648fe1b77edd383cdb434384c6aea0708c3aa",
+    "prevShnarf": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+}

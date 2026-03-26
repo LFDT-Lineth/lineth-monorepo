@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/consensys/linea-monorepo/prover/utils"
-	"github.com/consensys/linea-monorepo/prover/utils/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -53,8 +52,8 @@ func checkProofsForAccount(traces []DecodedTrace) error {
 					panic("read zero but there are ST accesses")
 				case InsertionTraceWS:
 					// The initial value should be the empty tree
-					if old != MIMC_EMPTY_STORAGE {
-						return fmt.Errorf("sequence of storage access followed by an insertion, but the old (%v) was not the empty storage root (%v)", old.Hex(), MIMC_EMPTY_STORAGE.Hex())
+					if old != ZKHASH_EMPTY_STORAGE {
+						return fmt.Errorf("sequence of storage access followed by an insertion, but the old (%v) was not the empty storage root (%v)", old.Hex(), ZKHASH_EMPTY_STORAGE.Hex())
 					}
 					// The recovered new root hash should be consistent with the one
 					// inserted
@@ -79,7 +78,7 @@ func checkProofsForAccount(traces []DecodedTrace) error {
 					// account itself. As a consequence, we cannot check that the deleted
 					// account had a consistent storage trie compared to what is recovered
 					// in the traces (old).
-					if (t.DeletedValue != types.Account{}) {
+					if (t.DeletedValue != Account{}) {
 						if t.DeletedValue.StorageRoot != old {
 							return fmt.Errorf("deletion : but the deleted account storage hash does not match the old value")
 						}
@@ -119,11 +118,11 @@ func checkProofsWorldState(traces []DecodedTrace) (oldRootHash, newRootHash Dige
 		if i < len(traces)-1 {
 
 			var (
-				currHKey = traces[i].Underlying.HKey(MIMC_CONFIG)
-				nextHKey = traces[i+1].Underlying.HKey(MIMC_CONFIG)
+				currHKey = traces[i].Underlying.HKey()
+				nextHKey = traces[i+1].Underlying.HKey()
 			)
 
-			if types.Bytes32Cmp(currHKey, nextHKey) > 0 {
+			if currHKey.Cmp(nextHKey) > 0 {
 				err = errors.Join(
 					err,
 					fmt.Errorf("the account segment are not well-ordered `%x` >= `%x`", currHKey, nextHKey),
@@ -135,28 +134,30 @@ func checkProofsWorldState(traces []DecodedTrace) (oldRootHash, newRootHash Dige
 		case ReadNonZeroTraceWS:
 			// this update the storage verifier if this passes
 			if errA := vs.ReadNonZeroVerify(t); errA != nil {
-				errors.Join(err, fmt.Errorf("error verifying ws trace %v: %w", i, errA))
+				err = errors.Join(err, fmt.Errorf("error verifying ws trace %v: %w", i, errA))
 			}
 		case ReadZeroTraceWS:
 			// this update the storage verifier if this passes
 			if errA := vs.ReadZeroVerify(t); errA != nil {
-				errors.Join(err, fmt.Errorf("error verifying ws trace %v: %w", i, errA))
+				err = errors.Join(err, fmt.Errorf("error verifying ws trace %v: %w", i, errA))
 			}
 		case InsertionTraceWS:
 			// this updates the storage verifier if this passes
 			if errA := vs.VerifyInsertion(t); errA != nil {
-				errors.Join(err, fmt.Errorf("error verifying ws trace %v: %w", i, errA))
+				err = errors.Join(err, fmt.Errorf("error verifying ws trace %v: %w", i, errA))
 			}
 		case UpdateTraceWS:
 			// this updates the storage verifier if this passes
 			if errA := vs.UpdateVerify(t); errA != nil {
-				errors.Join(err, fmt.Errorf("error verifying ws trace %v: %w", i, errA))
+				err = errors.Join(err, fmt.Errorf("error verifying ws trace %v: %w", i, errA))
 			}
 		case DeletionTraceWS:
 			// this updates the storage verifier if this passes
 			if errA := vs.VerifyDeletion(t); errA != nil {
-				errors.Join(err, fmt.Errorf("error verifying ws trace %v: %w", i, errA))
+				err = errors.Join(err, fmt.Errorf("error verifying ws trace %v: %w", i, errA))
 			}
+		default:
+			utils.Panic("unexpected trace type: %T", trace.Underlying)
 		}
 	}
 
@@ -210,6 +211,8 @@ func checkSpliceST(traces []DecodedTrace) (oldRootHash, newRootHash Digest, err 
 			if err := vs.VerifyDeletion(t); err != nil {
 				return digestErr, digestErr, err
 			}
+		default:
+			utils.Panic("unexpected trace type: %T", trace.Underlying)
 		}
 	}
 
@@ -221,7 +224,6 @@ func bootstrapVerifierStateFromST(trace DecodedTrace) (vs StorageVerifier) {
 
 	vs = StorageVerifier{
 		Location: trace.Location,
-		Config:   MIMC_CONFIG,
 	}
 
 	switch t := trace.Underlying.(type) {
@@ -252,7 +254,6 @@ func bootstrapVerifierStateFromWS(trace DecodedTrace) (vs AccountVerifier) {
 
 	vs = AccountVerifier{
 		Location: trace.Location,
-		Config:   MIMC_CONFIG,
 	}
 
 	switch t := trace.Underlying.(type) {

@@ -41,7 +41,7 @@ func InsertPartitionedIP(
 	partition ifaces.Column,
 ) ifaces.Column {
 
-	ipTracker := comp.InsertCommit(0, ifaces.ColIDf("%v_%v", name, "IPTracker"), colA.Size())
+	ipTracker := comp.InsertCommit(0, ifaces.ColIDf("%v_%v", name, "IPTracker"), colA.Size(), true)
 
 	// Compute the partitioned inner-product
 	// iptaker[i] = (colA[i] * colB[i]) + ipTracker[i+1]* (1-partition[i+1]).

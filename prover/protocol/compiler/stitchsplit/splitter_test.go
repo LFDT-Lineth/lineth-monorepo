@@ -49,7 +49,7 @@ func TestSplitterLocalWithPeriodicSample(t *testing.T) {
 func fixedPointOpening() (wizard.DefineFunc, wizard.MainProverStep) {
 	n := 1 << 6
 	definer := func(build *wizard.Builder) {
-		P1 := build.RegisterCommit(P1, n)
+		P1 := build.RegisterCommitExt(P1, n)
 		_ = build.LocalOpening("O1", P1)
 		_ = build.LocalOpening("O2", column.Shift(P1, 3))
 		_ = build.LocalOpening("O3", column.Shift(P1, 4))
@@ -63,10 +63,10 @@ func fixedPointOpening() (wizard.DefineFunc, wizard.MainProverStep) {
 		}
 		p1 := smartvectors.NewRegular(p1_)
 		run.AssignColumn(P1, p1)
-		run.AssignLocalPoint("O1", p1.Get(0))
-		run.AssignLocalPoint("O2", p1.Get(3))
-		run.AssignLocalPoint("O3", p1.Get(4))
-		run.AssignLocalPoint("O4", p1.Get(n-1))
+		run.AssignLocalPointExt("O1", p1.GetExt(0))
+		run.AssignLocalPointExt("O2", p1.GetExt(3))
+		run.AssignLocalPointExt("O3", p1.GetExt(4))
+		run.AssignLocalPointExt("O4", p1.GetExt(n-1))
 	}
 
 	return definer, prover
