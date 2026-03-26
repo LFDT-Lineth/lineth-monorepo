@@ -322,7 +322,7 @@ public class CallSection extends TraceSection
             .makeWithTrm(
                 delegtFirst,
                 delegtFirstNew,
-                delegtFirst.address(),
+                delegtFirst.address().getBytes(),
                 DomSubStampsSubFragment.standardDomSubStamps(
                     this.hubStamp(), unifiedDomSubOffset()),
                 TransactionProcessingType.USER)
@@ -338,7 +338,7 @@ public class CallSection extends TraceSection
     callerFirstNew = callerFirst.deepCopy();
     calleeFirstNew = calleeFirst.deepCopy().turnOnWarmth();
 
-    if (delegtFirst.address().equals(calleeAddress)) {
+    if (delegtFirst.address().getBytes().equals(calleeAddress.getBytes())) {
       // we must account for potential warmth changes
       delegtFirst = calleeFirstNew.deepCopy();
       delegtFirstNew = delegtFirst.deepCopy();
@@ -377,7 +377,7 @@ public class CallSection extends TraceSection
             .makeWithTrm(
                 delegtFirst,
                 delegtFirstNew,
-                delegtFirst.address(),
+                delegtFirst.address().getBytes(),
                 DomSubStampsSubFragment.standardDomSubStamps(
                     this.hubStamp(), unifiedDomSubOffset()),
                 TransactionProcessingType.USER)
@@ -519,10 +519,10 @@ public class CallSection extends TraceSection
     }
 
     // the most recent state update is that of the callee, so we start there
-    if (delegtFirst.address().equals(calleeAddress)) {
+    if (delegtFirst.address().getBytes().equals(calleeAddress.getBytes())) {
       delegtFirst = calleeFirstNew.deepCopy();
       delegtFirstNew = delegtFirst.deepCopy();
-    } else if (delegtFirst.address().equals(callerAddress)) {
+    } else if (delegtFirst.address().getBytes().equals(callerAddress.getBytes())) {
       delegtFirst = callerFirstNew.deepCopy();
     }
     delegtFirstNew = delegtFirst.deepCopy().turnOnWarmth();
@@ -556,7 +556,7 @@ public class CallSection extends TraceSection
             .makeWithTrm(
                 delegtFirst,
                 delegtFirstNew,
-                delegtFirst.address(),
+                delegtFirst.address().getBytes(),
                 DomSubStampsSubFragment.standardDomSubStamps(
                     this.hubStamp(), unifiedDomSubOffset()),
                 TransactionProcessingType.USER)
@@ -850,11 +850,12 @@ public class CallSection extends TraceSection
      */
     delegtThird = delegtSecondNew.deepCopy().setDeploymentNumber(hub);
     delegtThirdNew = delegtFirst.deepCopy().setDeploymentNumber(hub);
-    if (delegtAddress.isEmpty() || delegtAddress.get().equals(calleeAddress)) {
+    if (delegtAddress.isEmpty()
+        || delegtAddress.get().getBytes().equals(calleeAddress.getBytes())) {
       final Wei correctFinalBalance = calleeThird.balance();
       delegtThird.balance(correctFinalBalance);
       delegtThirdNew.balance(correctFinalBalance);
-    } else if (delegtAddress.get().equals(callerAddress)) {
+    } else if (delegtAddress.get().getBytes().equals(callerAddress.getBytes())) {
       final Wei correctFinalBalance = callerFirst.balance();
       delegtThird.balance(correctFinalBalance);
       delegtThirdNew.balance(correctFinalBalance);
@@ -956,10 +957,10 @@ public class CallSection extends TraceSection
     calleeFirstNew = canonical(hub, calleeAddress);
     delegtFirstNew = canonical(hub, delegtFirst.address());
 
-    if (delegtFirst.address().equals(calleeAddress)) {
+    if (delegtFirst.address().getBytes().equals(calleeAddress.getBytes())) {
       delegtFirst = calleeFirstNew.deepCopy();
     } else {
-      if (delegtFirst.address().equals(callerAddress)) {
+      if (delegtFirst.address().getBytes().equals(callerAddress.getBytes())) {
         delegtFirst = callerFirstNew.deepCopy();
       }
     }
@@ -993,7 +994,7 @@ public class CallSection extends TraceSection
             .makeWithTrm(
                 delegtFirst,
                 delegtFirstNew,
-                delegtFirst.address(),
+                delegtFirst.address().getBytes(),
                 DomSubStampsSubFragment.standardDomSubStamps(
                     this.hubStamp(), unifiedDomSubOffset()),
                 TransactionProcessingType.USER)
@@ -1017,7 +1018,7 @@ public class CallSection extends TraceSection
     checkState(
         scenarioFragment.getScenario().isIndefiniteSmcCallScenario(),
         "self-calls only make sense for SMC call scenarios");
-    return calleeAddress.equals(callerAddress);
+    return calleeAddress.getBytes().equals(callerAddress.getBytes());
   }
 
   private boolean isNonzeroValueSelfCall() {

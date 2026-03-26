@@ -62,7 +62,7 @@ public class ModexpTests extends TracerTestBase {
             .push(0)
             .push(0)
             .push(0)
-            .push(Address.MODEXP) // address
+            .push(Address.MODEXP.getBytes()) // address
             .push(0xffff) // gas
             .op(OpCode.CALL)
             .op(OpCode.POP)
@@ -252,7 +252,7 @@ public class ModexpTests extends TracerTestBase {
         .push(Bytes.fromHexString("0100")) // r@o
         .push(callDataSize) // cds
         .push(Bytes.fromHexString("")) // cdo
-        .push(Address.MODEXP) // address (here: MODEXP)
+        .push(Address.MODEXP.getBytes()) // address (here: MODEXP)
         .push(Bytes.fromHexString("ffff")) // gas
         .op(OpCode.DELEGATECALL)
         .op(OpCode.POP);
@@ -390,7 +390,7 @@ public class ModexpTests extends TracerTestBase {
             .push(98) // cds = 96 + bbs => trigger a MMU Call where the sourceOffset = referenceSize
             .push(0) // cdo
             .push(0) // value
-            .push(Address.MODEXP) // address
+            .push(Address.MODEXP.getBytes()) // address
             .push(0xffff) // gas
             .op(OpCode.CALL)
             .op(OpCode.POP)
@@ -448,7 +448,7 @@ public class ModexpTests extends TracerTestBase {
                     + mbs) // cds = 96 + bbs => trigger a MMU Call where the sourceOffset =
             .push(0) // cdo
             .push(0) // value
-            .push(Address.MODEXP) // address
+            .push(Address.MODEXP.getBytes()) // address
             .push(0xffffffff) // gas
             .op(OpCode.CALL)
             .op(OpCode.POP)

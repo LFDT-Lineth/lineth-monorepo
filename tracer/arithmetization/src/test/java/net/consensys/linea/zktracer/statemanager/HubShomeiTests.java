@@ -70,8 +70,7 @@ public class HubShomeiTests extends TracerTestBase {
   void sandwichPrewarming(OpCode opcode, TestInfo testInfo) {
 
     final KeyPair keyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(keyPair.getPublicKey());
     final ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.of(100000000)).address(senderAddress).build();
 
@@ -142,8 +141,7 @@ public class HubShomeiTests extends TracerTestBase {
   @MethodSource("opcodeProvider")
   void uselessPrewarming(OpCode opcode, TestInfo testInfo) {
     final KeyPair keyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(keyPair.getPublicKey());
     final ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.of(100000000)).address(senderAddress).build();
 

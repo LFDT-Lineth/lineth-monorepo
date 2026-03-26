@@ -37,7 +37,7 @@ public class BlakeTests extends TracerTestBase {
             .push(0)
             .push(0)
             .push(0)
-            .push(Address.BLAKE2B_F_COMPRESSION) // address
+            .push(Address.BLAKE2B_F_COMPRESSION.getBytes()) // address
             .push(0xffff) // gas
             .op(OpCode.CALL)
             .op(OpCode.POP)
@@ -68,7 +68,7 @@ public class BlakeTests extends TracerTestBase {
             .push(213) // size
             .push(0) // offset
             .push(0) // value
-            .push(Address.BLAKE2B_F_COMPRESSION) // address
+            .push(Address.BLAKE2B_F_COMPRESSION.getBytes()) // address
             .push(0xffff) // gas
             .op(OpCode.CALL)
             .op(OpCode.POP)
@@ -101,7 +101,7 @@ public class BlakeTests extends TracerTestBase {
             .push(213) // size
             .push(0) // offset
             .push(0) // value
-            .push(Address.BLAKE2B_F_COMPRESSION) // address
+            .push(Address.BLAKE2B_F_COMPRESSION.getBytes()) // address
             .push(0xffff) // gas
             .op(OpCode.CALL)
             .op(OpCode.POP)
@@ -130,7 +130,7 @@ public class BlakeTests extends TracerTestBase {
             .push(213) // size
             .push(0) // offset
             .push(0) // value
-            .push(Address.BLAKE2B_F_COMPRESSION) // address
+            .push(Address.BLAKE2B_F_COMPRESSION.getBytes()) // address
             .push(0xffff) // gas
             .op(OpCode.CALL)
             .op(OpCode.POP)

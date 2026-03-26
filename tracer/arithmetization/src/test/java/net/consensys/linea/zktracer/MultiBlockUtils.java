@@ -27,7 +27,6 @@ import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.junit.jupiter.api.TestInfo;
@@ -51,14 +50,12 @@ public class MultiBlockUtils extends TracerTestBase {
     for (int i = 0; i < programs.size(); i++) {
       Bytes program = programs.get(i);
       keyPairs.add(new SECP256K1().generateKeyPair());
-      senderAddresses.add(
-          Address.extract(
-              Hash.hash(keyPairs.get(keyPairs.size() - 1).getPublicKey().getEncodedBytes())));
+      senderAddresses.add(Address.extract(keyPairs.getLast().getPublicKey()));
       senderAccounts.add(
           ToyAccount.builder()
               .balance(Wei.fromEth(1 + i))
               .nonce(3 + i)
-              .address(senderAddresses.get(senderAddresses.size() - 1))
+              .address(senderAddresses.getLast())
               .build());
       receiverAccounts.add(
           ToyAccount.builder()
@@ -69,9 +66,9 @@ public class MultiBlockUtils extends TracerTestBase {
               .build());
       transactions.add(
           ToyTransaction.builder()
-              .sender(senderAccounts.get(senderAccounts.size() - 1))
-              .to(receiverAccounts.get(receiverAccounts.size() - 1))
-              .keyPair(keyPairs.get(keyPairs.size() - 1))
+              .sender(senderAccounts.getLast())
+              .to(receiverAccounts.getLast())
+              .keyPair(keyPairs.getLast())
               .build());
     }
 

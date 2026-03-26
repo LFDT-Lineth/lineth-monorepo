@@ -31,7 +31,6 @@ import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.junit.jupiter.api.Test;
@@ -42,8 +41,7 @@ public class WarmingCoinbaseTests extends TracerTestBase {
   @Test
   void coinbaseIsPrecompile(TestInfo testInfo) {
     final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(senderKeyPair.getPublicKey());
     final ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(0xffff)).nonce(128).address(senderAddress).build();
 
@@ -74,8 +72,7 @@ public class WarmingCoinbaseTests extends TracerTestBase {
   @Test
   void coinbaseIsSmcAndIsCalledDuringExecution(TestInfo testInfo) {
     final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(senderKeyPair.getPublicKey());
     final ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(0xffff)).nonce(56).address(senderAddress).build();
 
@@ -102,7 +99,7 @@ public class WarmingCoinbaseTests extends TracerTestBase {
                     .push(0) // arg size
                     .push(0) // arg offset
                     .push(0) // value
-                    .push(DEFAULT_COINBASE_ADDRESS) // address
+                    .push(DEFAULT_COINBASE_ADDRESS.getBytes()) // address
                     .push(10000) // gas
                     .op(OpCode.CALL)
                     .compile())
@@ -140,8 +137,7 @@ public class WarmingCoinbaseTests extends TracerTestBase {
   @Test
   void coinbaseIsDeployedAddress(TestInfo testInfo) {
     final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(senderKeyPair.getPublicKey());
     final ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(0xffff)).nonce(128).address(senderAddress).build();
 
@@ -169,8 +165,7 @@ public class WarmingCoinbaseTests extends TracerTestBase {
   @Test
   void coinbaseIsDeployedByCreate(TestInfo testInfo) {
     final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(senderKeyPair.getPublicKey());
     final ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(0xffff)).nonce(128).address(senderAddress).build();
 
@@ -214,8 +209,7 @@ public class WarmingCoinbaseTests extends TracerTestBase {
   @Test
   void coinbaseIsDeployedByCreate2(TestInfo testInfo) {
     final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(senderKeyPair.getPublicKey());
     final ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(0xffff)).nonce(128).address(senderAddress).build();
 
@@ -241,7 +235,8 @@ public class WarmingCoinbaseTests extends TracerTestBase {
     final Bytes32 initCodeHash = keccak256(INIT_CODE);
     final Bytes32 hash =
         keccak256(
-            Bytes.concatenate(CREATE2_SHIFT, recipientAccount.getAddress(), SALT, initCodeHash));
+            Bytes.concatenate(
+                CREATE2_SHIFT, recipientAccount.getAddress().getBytes(), SALT, initCodeHash));
     final Address deployedAddress = Address.extract(hash);
 
     final Transaction tx =

@@ -31,17 +31,17 @@ mockitoKotlin = "5.4.0"
 restassured = "5.3.0"
 wiremock = "3.13.2"
 logcaptor = "2.11.0"
-shomei = "2.4-develop"
-besuShomeiPluginVersion = "v0.8.4"
+shomei = "3.0.5"
+besuShomeiPluginVersion = "v1.0.0"
 undercouchDownload = "5.6.0"
 
 # Runtime
 # Besu commit hash from https://github.com/besu-eth/besu
-# when updates it, for testing locally, should run "gradlew buildAndUpdateBesuVersionInLibsVersions"
-# to checkout and build Besu from source, and it will auto-update the "besu" version below
-besuCommit = "d68679d6887abf8c407f99456cf2502004fa2bad"
+# when updates it, should run "gradlew buildAndUpdateBesuVersionInLibsVersions" to
+# checkout and build Besu from source, and will auto-update the "besu" version below
+besuCommit = "e19f9a90cbf9536b8a33a16601eaeaca91d54b8e"
 
-besu = "25.12.0-d68679d"
+besu = "26.2.0-RC1-e19f9a9"
 blobCompressor = "3.0.2"
 blobShnarfCalculator = "3.0.1"
 bouncycastle = "1.79"

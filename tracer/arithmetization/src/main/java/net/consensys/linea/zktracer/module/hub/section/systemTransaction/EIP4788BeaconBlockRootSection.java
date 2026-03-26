@@ -79,7 +79,7 @@ public class EIP4788BeaconBlockRootSection extends TraceSection {
             .makeWithTrm(
                 beaconrootAccount,
                 beaconrootAccount,
-                EIP4788_BEACONROOT_ADDRESS,
+                EIP4788_BEACONROOT_ADDRESS.getBytes(),
                 DomSubStampsSubFragment.standardDomSubStamps(hubStamp(), 1),
                 SYSI);
     fragments().add(accountFragment);

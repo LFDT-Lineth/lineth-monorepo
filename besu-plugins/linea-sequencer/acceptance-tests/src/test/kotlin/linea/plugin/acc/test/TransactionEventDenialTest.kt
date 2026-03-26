@@ -71,7 +71,7 @@ class TransactionEventDenialTest : LineaPluginPoSTestBase() {
       .execute(minerNode.nodeRequests())
 
     // Canary should be mined
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
 
     // Denied transaction should not be mined
     minerNode.verify(eth.expectNoTransactionReceipt(transaction.transactionHash))
@@ -133,7 +133,7 @@ class TransactionEventDenialTest : LineaPluginPoSTestBase() {
       .execute(minerNode.nodeRequests())
 
     // Canary should be mined
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
 
     // Denied transaction should not be mined
     minerNode.verify(eth.expectNoTransactionReceipt(transaction.transactionHash))

@@ -91,7 +91,6 @@ plugin-linea-liveness-gas-limit=1000000
 plugin-linea-liveness-gas-price=7
 
 Xplugin-rocksdb-high-spec-enabled=true
-Xsynchronizer-fast-sync-full-validation-rate=0.000001
 tx-pool-priority-senders=["0xfe3b557e8fb62b89f4916b721be55ceb828dbd73",
   "0xd42e308fc964b71e18126df469c21b0d7bcb86cc",
   "0x1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0",

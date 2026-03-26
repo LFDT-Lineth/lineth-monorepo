@@ -119,7 +119,7 @@ public class AddressUtils {
         RLP.encode(
             (out) -> {
               out.startList();
-              out.writeBytes(senderAddress);
+              out.writeBytes(senderAddress.getBytes());
               out.writeLongScalar(nonce);
               out.endList();
             }));
@@ -140,7 +140,7 @@ public class AddressUtils {
 
   public static Bytes32 getCreate2RawAddress(
       final Address sender, final Bytes32 salt, final Bytes32 hash) {
-    return Hash.keccak256(Bytes.concatenate(CREATE2_PREFIX, sender, salt, hash));
+    return Hash.keccak256(Bytes.concatenate(CREATE2_PREFIX, sender.getBytes(), salt, hash));
   }
 
   public static Address getCreate2Address(final MessageFrame frame, OpCodeData opCode) {
@@ -165,11 +165,11 @@ public class AddressUtils {
   }
 
   public static long hiPart(Address address) {
-    return address.slice(0, 4).toLong();
+    return address.getBytes().slice(0, 4).toLong();
   }
 
   public static Bytes loPart(Address address) {
-    return address.slice(4, LLARGE);
+    return address.getBytes().slice(4, LLARGE);
   }
 
   public static boolean isAddressWarm(

@@ -36,7 +36,7 @@ public record StorageSnapshot(String address, String key, String value) {
       // Accounts exists, so create snapshot.
       return Optional.of(
           new StorageSnapshot(
-              address.toHexString(),
+              address.getBytes().toHexString(),
               key.toHexString(),
               account.getStorageValue(key).toHexString()));
     } else {

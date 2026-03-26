@@ -31,7 +31,7 @@ import net.consensys.linea.plugins.LineaCliOptions;
 import net.consensys.linea.sequencer.txselection.selectors.TransactionEventFilter;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.evm.log.LogTopic;
+import org.hyperledger.besu.datatypes.LogTopic;
 import picocli.CommandLine;
 
 /** The Linea Transaction Selector CLI options. */

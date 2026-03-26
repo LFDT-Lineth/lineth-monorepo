@@ -25,6 +25,7 @@ import net.consensys.linea.testing.ToyAccount;
 import net.consensys.linea.testing.ToyExecutionEnvironmentV2;
 import net.consensys.linea.testing.ToyTransaction;
 import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.Address;
@@ -43,7 +44,8 @@ public class SimpleDelegationTest extends TracerTestBase {
   void simpleDelegationTest(TestInfo testInfo) {
     final KeyPair keyPair = new SECP256K1().generateKeyPair();
     final Address senderAddress =
-        Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+        Address.extract(
+            Bytes32.wrap(Hash.hash(keyPair.getPublicKey().getEncodedBytes()).getBytes()));
     final ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(1789)).nonce(0).address(senderAddress).build();
 

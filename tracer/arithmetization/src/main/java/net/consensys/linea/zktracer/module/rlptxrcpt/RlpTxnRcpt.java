@@ -44,9 +44,9 @@ import net.consensys.linea.zktracer.types.BitDecOutput;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import net.consensys.linea.zktracer.types.UnsignedByte;
 import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.datatypes.Log;
+import org.hyperledger.besu.datatypes.LogsBloomFilter;
 import org.hyperledger.besu.datatypes.TransactionType;
-import org.hyperledger.besu.evm.log.Log;
-import org.hyperledger.besu.evm.log.LogsBloomFilter;
 
 @Accessors(fluent = true)
 @RequiredArgsConstructor
@@ -150,10 +150,10 @@ public class RlpTxnRcpt implements OperationListModule<RlpTxrcptOperation> {
   }
 
   public static void insertLog(LogsBloomFilter.Builder bloomBuilder, final Log log) {
-    bloomBuilder.insertBytes(log.getLogger());
+    bloomBuilder.insertBytes(log.getLogger().getBytes());
 
     for (var topic : log.getTopics()) {
-      bloomBuilder.insertBytes(topic);
+      bloomBuilder.insertBytes(topic.getBytes());
     }
   }
 
@@ -177,13 +177,14 @@ public class RlpTxnRcpt implements OperationListModule<RlpTxrcptOperation> {
       insertLog(bloomFilterBuilder, log);
     }
     final LogsBloomFilter bloomFilter = bloomFilterBuilder.build();
+    final Bytes bloomFilterBytes = bloomFilter.getBytes();
     for (int i = 0; i < 4; i++) {
       traceValue.partialReset(phase, LLARGE);
 
-      traceValue.input1 = bloomFilter.slice(64 * i, LLARGE);
-      traceValue.input2 = bloomFilter.slice(64 * i + LLARGE, LLARGE);
-      traceValue.input3 = bloomFilter.slice(64 * i + 2 * LLARGE, LLARGE);
-      traceValue.input4 = bloomFilter.slice(64 * i + 3 * LLARGE, LLARGE);
+      traceValue.input1 = bloomFilterBytes.slice(64 * i, LLARGE);
+      traceValue.input2 = bloomFilterBytes.slice(64 * i + LLARGE, LLARGE);
+      traceValue.input3 = bloomFilterBytes.slice(64 * i + 2 * LLARGE, LLARGE);
+      traceValue.input4 = bloomFilterBytes.slice(64 * i + 3 * LLARGE, LLARGE);
 
       for (int ct = 0; ct < LLARGE; ct++) {
         traceValue.counter = ct;
@@ -285,8 +286,8 @@ public class RlpTxnRcpt implements OperationListModule<RlpTxrcptOperation> {
         // Common values for CT=0 tp CT=2
         traceValue.partialReset(phase, 3);
         traceValue.depth1 = true;
-        traceValue.input1 = logList.get(i).getLogger().slice(0, 4);
-        traceValue.input2 = logList.get(i).getLogger().slice(4, LLARGE);
+        traceValue.input1 = logList.get(i).getLogger().getBytes().slice(0, 4);
+        traceValue.input2 = logList.get(i).getLogger().getBytes().slice(4, LLARGE);
         traceValue.limbConstructed = true;
 
         traceValue.counter = 0;
@@ -335,8 +336,8 @@ public class RlpTxnRcpt implements OperationListModule<RlpTxrcptOperation> {
             traceValue.depth1 = true;
             traceValue.isTopic = true;
             traceValue.indexLocal += 1;
-            traceValue.input1 = logList.get(i).getTopics().get(j).slice(0, LLARGE);
-            traceValue.input2 = logList.get(i).getTopics().get(j).slice(LLARGE, LLARGE);
+            traceValue.input1 = logList.get(i).getTopics().get(j).getBytes().slice(0, LLARGE);
+            traceValue.input2 = logList.get(i).getTopics().get(j).getBytes().slice(LLARGE, LLARGE);
             traceValue.limbConstructed = true;
 
             traceValue.counter = 0;

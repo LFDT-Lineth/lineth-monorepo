@@ -180,7 +180,8 @@ public class MxpTestUtils {
       case CODECOPY, CALLDATACOPY ->
           appendOpCodeCall(List.of(size1, offset2, offset1), opCode, program);
       case EXTCODECOPY ->
-          appendOpCodeCall(List.of(size1, offset2, offset1, EWord.of(address)), opCode, program);
+          appendOpCodeCall(
+              List.of(size1, offset2, offset1, EWord.of(address.getBytes())), opCode, program);
       case CREATE, CREATE2 -> {
         if (opCode == OpCode.CREATE) {
           // CREATE
@@ -191,10 +192,13 @@ public class MxpTestUtils {
         }
       }
       case STATICCALL, DELEGATECALL ->
-          appendOpCodeCall(List.of(size2, offset2, size1, offset1, address, gas), opCode, program);
+          appendOpCodeCall(
+              List.of(size2, offset2, size1, offset1, address.getBytes(), gas), opCode, program);
       case CALL, CALLCODE ->
           appendOpCodeCall(
-              List.of(size2, offset2, size1, offset1, value, address, gas), opCode, program);
+              List.of(size2, offset2, size1, offset1, value, address.getBytes(), gas),
+              opCode,
+              program);
       default -> {}
     }
   }

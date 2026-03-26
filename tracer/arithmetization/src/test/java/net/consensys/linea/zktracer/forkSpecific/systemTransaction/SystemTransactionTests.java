@@ -43,7 +43,6 @@ import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.TransactionType;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.core.Transaction;
@@ -58,12 +57,12 @@ public class SystemTransactionTests extends TracerTestBase {
   // random funder account
   private static final KeyPair funderOfDeployerOf2935KeyPair = new SECP256K1().generateKeyPair();
   private static final Address funderOfDeployerOf2935Address =
-      Address.extract(Hash.hash(funderOfDeployerOf2935KeyPair.getPublicKey().getEncodedBytes()));
+      Address.extract(funderOfDeployerOf2935KeyPair.getPublicKey());
 
   // random funder account
   private static final KeyPair funderOfDeployerOf4788KeyPair = new SECP256K1().generateKeyPair();
   private static final Address funderOfDeployerOf4788Address =
-      Address.extract(Hash.hash(funderOfDeployerOf4788KeyPair.getPublicKey().getEncodedBytes()));
+      Address.extract(funderOfDeployerOf4788KeyPair.getPublicKey());
 
   private final Address deployerOf2935address =
       Address.fromHexString("0x3462413Af4609098e1E27A490f554f260213D685");
@@ -153,8 +152,7 @@ public class SystemTransactionTests extends TracerTestBase {
 
   // random sender account that will send a tx to system account
   private static final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
-  private static final Address senderAddress =
-      Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
+  private static final Address senderAddress = Address.extract(senderKeyPair.getPublicKey());
 
   // f1d7 ⇔ f(un)d(er)
   private static final ToyAccount funderOf2935deployer =

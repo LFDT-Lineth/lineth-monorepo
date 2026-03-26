@@ -133,7 +133,7 @@ public final class AccountFragment
       TransactionProcessingType txProcessingType,
       boolean txAuthAccountFragment) {
     checkArgument(
-        oldState.address().equals(newState.address()),
+        oldState.address().getBytes().equals(newState.address().getBytes()),
         "AccountFragment: address mismatch in constructor");
     fork = hub.fork;
     transactionProcessingMetadata = txProcessingType == USER ? hub.txStack().current() : null;

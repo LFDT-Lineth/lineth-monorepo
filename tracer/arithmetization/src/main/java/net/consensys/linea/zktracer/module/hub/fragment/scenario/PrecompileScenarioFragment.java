@@ -148,7 +148,7 @@ public class PrecompileScenarioFragment implements TraceFragment {
     public static PrecompileFlag addressToPrecompileFlag(Address precompileAddress) {
       if (!ADDRESS_TO_FLAG_MAP.containsKey(precompileAddress)) {
         throw new IllegalArgumentException(
-            "Not valid precompile address: " + precompileAddress.toString());
+            "Not valid precompile address: " + precompileAddress.getBytes().toHexString());
       }
       return ADDRESS_TO_FLAG_MAP.get(precompileAddress);
     }

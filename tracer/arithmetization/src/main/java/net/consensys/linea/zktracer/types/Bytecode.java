@@ -142,7 +142,7 @@ public final class Bytecode {
 
     final Address delegateAddress = Address.wrap(bytecode.slice(3, Address.SIZE));
 
-    if (delegateAddress.equals(Address.ZERO)) {
+    if (delegateAddress.getBytes().equals(Address.ZERO.getBytes())) {
       Logger logger = Logger.getLogger(Bytecode.class.getName());
       logger.info("[INFO] Bytecode of the form 0x ef 01 00 <ZERO address>");
     }

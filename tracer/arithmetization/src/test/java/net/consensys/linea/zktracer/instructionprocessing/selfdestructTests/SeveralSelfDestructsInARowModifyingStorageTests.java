@@ -32,8 +32,7 @@ public class SeveralSelfDestructsInARowModifyingStorageTests extends TracerTestB
   Address multipleCallsAddress = Address.fromHexString("ca11e7");
 
   public static KeyPair keyPair = new SECP256K1().generateKeyPair();
-  public static Address userAddress =
-      Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+  public static Address userAddress = Address.extract(keyPair.getPublicKey());
   public static ToyAccount userAccount =
       ToyAccount.builder().balance(Wei.fromEth(10)).nonce(99).address(userAddress).build();
 

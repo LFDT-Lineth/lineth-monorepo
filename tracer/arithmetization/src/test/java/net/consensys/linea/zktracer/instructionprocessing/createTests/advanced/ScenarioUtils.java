@@ -66,7 +66,7 @@ public class ScenarioUtils {
   // Compute expected address for ContractC with Create2
   // address = keccak256(0xff + sender_address + salt + keccak256(initialisation_code))[12:]
   public static final String senderAddNoOx =
-      customCreate2Account.getAddress().toHexString().substring(2);
+      customCreate2Account.getAddress().getBytes().toHexString().substring(2);
   public static final String saltNoOx = salt.substring(2);
   public static final String hashInitCodeCNo0x =
       Hash.keccak256(Bytes.fromHexString(initCodeC)).toHexString().substring(2);

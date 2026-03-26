@@ -46,7 +46,7 @@ public class GenesisConfigBuilder {
     GenesisAccount genesisAccount = toyAccount.toGenesisAccount();
 
     final ObjectNode accountNode =
-        allocNode.withObjectProperty(genesisAccount.address().toHexString());
+        allocNode.withObjectProperty(genesisAccount.address().getBytes().toHexString());
     accountNode.put("nonce", Long.toHexString(genesisAccount.nonce()));
     accountNode.put("balance", genesisAccount.balance().toHexString());
     accountNode.put("code", genesisAccount.code().toHexString());
@@ -80,7 +80,7 @@ public class GenesisConfigBuilder {
   }
 
   public GenesisConfigBuilder setCoinbase(Address coinbase) {
-    genesisRoot.put("coinbase", coinbase.toHexString());
+    genesisRoot.put("coinbase", coinbase.getBytes().toHexString());
     return this;
   }
 

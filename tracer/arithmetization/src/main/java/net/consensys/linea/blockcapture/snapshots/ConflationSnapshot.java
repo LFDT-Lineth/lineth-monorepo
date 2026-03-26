@@ -54,7 +54,7 @@ public record ConflationSnapshot(
     final Map<Long, byte[]> bbFees = new HashMap<>();
     //
     for (Map.Entry<Long, Hash> e : blockHashes.entrySet()) {
-      String h = e.getValue().toHexString();
+      String h = e.getValue().getBytes().toHexString();
       blockHashSnapshots.add(new BlockHashSnapshot(e.getKey(), h));
     }
     // Encoding blob base fee

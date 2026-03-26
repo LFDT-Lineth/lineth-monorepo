@@ -35,7 +35,7 @@ public final class TxEncodingUtils {
    * @return sender address bytes
    */
   private static byte[] getSenderBytes(final Transaction transaction) {
-    return transaction.getSender().toArray();
+    return transaction.getSender().getBytes().toArray();
   }
 
   /**
@@ -86,7 +86,7 @@ public final class TxEncodingUtils {
     rlpOutput.writeLongScalar(transaction.getNonce());
     rlpOutput.writeUInt256Scalar(toUInt256(transaction.getGasPrice().orElseThrow()));
     rlpOutput.writeLongScalar(transaction.getGasLimit());
-    rlpOutput.writeBytes(getTo(transaction));
+    rlpOutput.writeBytes(getTo(transaction).getBytes());
     rlpOutput.writeUInt256Scalar(toUInt256(transaction.getValue()));
     rlpOutput.writeBytes(transaction.getPayload());
     if (transaction.getChainId().isPresent()) {
@@ -106,7 +106,7 @@ public final class TxEncodingUtils {
     rlpOutput.writeLongScalar(transaction.getNonce());
     rlpOutput.writeUInt256Scalar(toUInt256(transaction.getGasPrice().orElseThrow()));
     rlpOutput.writeLongScalar(transaction.getGasLimit());
-    rlpOutput.writeBytes(getTo(transaction));
+    rlpOutput.writeBytes(getTo(transaction).getBytes());
     rlpOutput.writeUInt256Scalar(toUInt256(transaction.getValue()));
     rlpOutput.writeBytes(transaction.getPayload());
     writeAccessList(rlpOutput, transaction);
@@ -122,7 +122,7 @@ public final class TxEncodingUtils {
     rlpOutput.writeUInt256Scalar(toUInt256(transaction.getMaxPriorityFeePerGas().orElseThrow()));
     rlpOutput.writeUInt256Scalar(toUInt256(transaction.getMaxFeePerGas().orElseThrow()));
     rlpOutput.writeLongScalar(transaction.getGasLimit());
-    rlpOutput.writeBytes(getTo(transaction));
+    rlpOutput.writeBytes(getTo(transaction).getBytes());
     rlpOutput.writeUInt256Scalar(toUInt256(transaction.getValue()));
     rlpOutput.writeBytes(transaction.getPayload());
     writeAccessList(rlpOutput, transaction);
@@ -138,7 +138,7 @@ public final class TxEncodingUtils {
     rlpOutput.writeUInt256Scalar(toUInt256(transaction.getMaxPriorityFeePerGas().orElseThrow()));
     rlpOutput.writeUInt256Scalar(toUInt256(transaction.getMaxFeePerGas().orElseThrow()));
     rlpOutput.writeLongScalar(transaction.getGasLimit());
-    rlpOutput.writeBytes(getTo(transaction));
+    rlpOutput.writeBytes(getTo(transaction).getBytes());
     rlpOutput.writeUInt256Scalar(toUInt256(transaction.getValue()));
     rlpOutput.writeBytes(transaction.getPayload());
     writeAccessList(rlpOutput, transaction);
@@ -153,7 +153,7 @@ public final class TxEncodingUtils {
   private static Address getTo(final Transaction transaction) {
     return transaction
         .getTo()
-        .map(addr -> Address.wrap(Bytes.wrap(addr.toArrayUnsafe())))
+        .map(addr -> Address.wrap(Bytes.wrap(addr.getBytes())))
         .orElse(Address.ZERO);
   }
 
@@ -167,7 +167,7 @@ public final class TxEncodingUtils {
                   accessList.forEach(
                       entry -> {
                         rlpOutput.startList();
-                        rlpOutput.writeBytes(entry.address());
+                        rlpOutput.writeBytes(entry.address().getBytes());
                         rlpOutput.startList();
                         entry.storageKeys().forEach(rlpOutput::writeBytes);
                         rlpOutput.endList();
@@ -189,7 +189,7 @@ public final class TxEncodingUtils {
                       delegation -> {
                         rlpOutput.startList();
                         rlpOutput.writeBigIntegerScalar(delegation.chainId());
-                        rlpOutput.writeBytes(delegation.address());
+                        rlpOutput.writeBytes(delegation.address().getBytes());
                         rlpOutput.writeLongScalar(delegation.nonce());
                         rlpOutput.writeIntScalar(delegation.v());
                         rlpOutput.writeBigIntegerScalar(delegation.r());

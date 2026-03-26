@@ -25,6 +25,6 @@ import org.hyperledger.besu.datatypes.Hash;
  */
 public record BlockHashSnapshot(long blockNumber, String blockHash) {
   public static BlockHashSnapshot of(final long blockNumber, final Hash blockHash) {
-    return new BlockHashSnapshot(blockNumber, blockHash.toHexString());
+    return new BlockHashSnapshot(blockNumber, blockHash.getBytes().toHexString());
   }
 }

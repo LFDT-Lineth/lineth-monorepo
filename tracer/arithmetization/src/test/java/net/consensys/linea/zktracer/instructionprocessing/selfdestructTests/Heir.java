@@ -53,7 +53,7 @@ public enum Heir {
       case HEIR_IS_EOA:
         program.push(eoaAddress);
       case HEIR_IS_ECREC:
-        program.push(Address.ECREC);
+        program.push(Address.ECREC.getBytes());
       case HEIR_IS_COMPUTED:
         createValueFromContextParameters(program);
     }

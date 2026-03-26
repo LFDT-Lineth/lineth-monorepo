@@ -99,7 +99,7 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
                       log.atTrace()
                           .setMessage("Dropping transaction bundle {}:{} due to {}")
                           .addArgument(bundle::blockNumber)
-                          .addArgument(() -> bundle.bundleIdentifier().toHexString())
+                          .addArgument(() -> bundle.bundleIdentifier().getBytes().toHexString())
                           .addArgument(cause::name)
                           .log();
                       removeFromBlockIndex(bundle);

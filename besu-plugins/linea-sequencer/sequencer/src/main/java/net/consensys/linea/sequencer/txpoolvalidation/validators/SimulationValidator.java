@@ -29,6 +29,7 @@ import net.consensys.linea.zktracer.Fork;
 import net.consensys.linea.zktracer.LineCountingTracer;
 import net.consensys.linea.zktracer.ZkCounter;
 import net.consensys.linea.zktracer.ZkTracer;
+import net.consensys.linea.zktracer.exceptions.TracingExceptions;
 import org.hyperledger.besu.datatypes.HardforkId;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
@@ -100,8 +101,15 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
               lineCountingTracer,
               EnumSet.of(ALLOW_FUTURE_NONCE));
 
-      ModuleLimitsValidationResult moduleLimitResult =
-          moduleLineCountValidator.validate(lineCountingTracer.getModulesLineCount());
+      ModuleLimitsValidationResult moduleLimitResult;
+      try {
+        moduleLimitResult =
+            moduleLineCountValidator.validate(lineCountingTracer.getModulesLineCount());
+      } catch (TracingExceptions e) {
+        log.warn(
+            "Tracer failed during simulation of tx {}: {}", transaction.getHash(), e.getMessage());
+        return Optional.of("Tracer error during simulation: " + e.getMessage());
+      }
 
       logSimulationResult(
           transaction, isLocal, hasPriority, maybeSimulationResults, moduleLimitResult);

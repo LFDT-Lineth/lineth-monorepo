@@ -27,7 +27,7 @@ import kotlin.time.Instant
 class BlobDecompressorAndDeserializerV1Test {
   private lateinit var compressor: BlobCompressor
   private val blockStaticFields = BlockHeaderStaticFields(
-    coinbase = Address.ZERO.toArray(),
+    coinbase = Address.ZERO.bytes.toArray(),
     gasLimit = 30_000_000UL,
     difficulty = 0UL,
   )
@@ -76,7 +76,7 @@ class BlobDecompressorAndDeserializerV1Test {
   private fun assertBlockData(uncompressed: BlockFromL1RecoveredData, original: Block) {
     try {
       assertThat(uncompressed.header.blockNumber).isEqualTo(original.header.number.toULong())
-      assertThat(uncompressed.header.blockHash.encodeHex()).isEqualTo(original.header.hash.toArray().encodeHex())
+      assertThat(uncompressed.header.blockHash.encodeHex()).isEqualTo(original.header.hash.bytes.toArray().encodeHex())
       assertThat(uncompressed.header.coinbase).isEqualTo(blockStaticFields.coinbase)
       assertThat(uncompressed.header.blockTimestamp).isEqualTo(Instant.fromEpochSeconds(original.header.timestamp))
       assertThat(uncompressed.header.gasLimit).isEqualTo(blockStaticFields.gasLimit)
@@ -96,9 +96,9 @@ class BlobDecompressorAndDeserializerV1Test {
 
   private fun assertTransactionData(uncompressed: TransactionFromL1RecoveredData, original: Transaction) {
     assertThat(uncompressed.type).isEqualTo(original.type.serializedType.toUByte())
-    assertThat(uncompressed.from).isEqualTo(original.sender.toArray())
+    assertThat(uncompressed.from).isEqualTo(original.sender.bytes.toArray())
     assertThat(uncompressed.nonce).isEqualTo(original.nonce.toULong())
-    assertThat(uncompressed.to).isEqualTo(original.to.getOrNull()?.toArray())
+    assertThat(uncompressed.to).isEqualTo(original.to.getOrNull()?.bytes?.toArray())
     assertThat(uncompressed.gasLimit).isEqualTo(original.gasLimit.toULong())
     assertThat(uncompressed.maxFeePerGas).isEqualTo(original.maxFeePerGas.getOrNull()?.asBigInteger)
     assertThat(uncompressed.maxPriorityFeePerGas).isEqualTo(original.maxPriorityFeePerGas.getOrNull()?.asBigInteger)
@@ -109,7 +109,7 @@ class BlobDecompressorAndDeserializerV1Test {
       assertThat(uncompressed.accessList).isEqualTo(original.accessList.getOrNull())
     } else {
       uncompressed.accessList?.zip(original.accessList.getOrNull()!!) { a, b ->
-        assertThat(a.address).isEqualTo(b.address.toArray())
+        assertThat(a.address).isEqualTo(b.address.bytes.toArray())
         assertThat(a.storageKeys.map { Bytes32.wrap(it) }).isEqualTo(b.storageKeys)
       }
     }

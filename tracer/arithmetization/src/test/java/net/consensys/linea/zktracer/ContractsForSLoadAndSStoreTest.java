@@ -24,7 +24,6 @@ import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.TransactionType;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.core.Transaction;
@@ -49,7 +48,7 @@ public class ContractsForSLoadAndSStoreTest extends TracerTestBase {
 
     // User address
     KeyPair keyPair = new SECP256K1().generateKeyPair();
-    Address userAddress = Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+    Address userAddress = Address.extract(keyPair.getPublicKey());
     ToyAccount userAccount =
         ToyAccount.builder().balance(Wei.fromEth(100)).nonce(1).address(userAddress).build();
 
@@ -103,7 +102,7 @@ public class ContractsForSLoadAndSStoreTest extends TracerTestBase {
 
     // User address
     KeyPair keyPair = new SECP256K1().generateKeyPair();
-    Address userAddress = Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+    Address userAddress = Address.extract(keyPair.getPublicKey());
     ToyAccount userAccount =
         ToyAccount.builder().balance(Wei.fromEth(100)).nonce(1).address(userAddress).build();
 
@@ -159,7 +158,8 @@ public class ContractsForSLoadAndSStoreTest extends TracerTestBase {
             .to(contractAccountA)
             .payload(
                 Bytes.fromHexString(
-                    "0x60a394a5000000000000000000000000" + addressB.toString().substring(2)))
+                    "0x60a394a5000000000000000000000000"
+                        + addressB.getBytes().toHexString().substring(2)))
             .transactionType(TransactionType.FRONTIER)
             .value(Wei.ZERO)
             .keyPair(keyPair)
@@ -172,7 +172,8 @@ public class ContractsForSLoadAndSStoreTest extends TracerTestBase {
             .to(contractAccountB)
             .payload(
                 Bytes.fromHexString(
-                    "0x60a394a5000000000000000000000000" + addressC.toString().substring(2)))
+                    "0x60a394a5000000000000000000000000"
+                        + addressC.getBytes().toHexString().substring(2)))
             .transactionType(TransactionType.FRONTIER)
             .value(Wei.ZERO)
             .keyPair(keyPair)
@@ -185,7 +186,8 @@ public class ContractsForSLoadAndSStoreTest extends TracerTestBase {
             .to(contractAccountC)
             .payload(
                 Bytes.fromHexString(
-                    "0x60a394a5000000000000000000000000" + addressD.toString().substring(2)))
+                    "0x60a394a5000000000000000000000000"
+                        + addressD.getBytes().toHexString().substring(2)))
             .transactionType(TransactionType.FRONTIER)
             .value(Wei.ZERO)
             .keyPair(keyPair)
@@ -198,7 +200,8 @@ public class ContractsForSLoadAndSStoreTest extends TracerTestBase {
             .to(contractAccountD)
             .payload(
                 Bytes.fromHexString(
-                    "0x60a394a5000000000000000000000000" + addressE.toString().substring(2)))
+                    "0x60a394a5000000000000000000000000"
+                        + addressE.getBytes().toHexString().substring(2)))
             .transactionType(TransactionType.FRONTIER)
             .value(Wei.ZERO)
             .keyPair(keyPair)

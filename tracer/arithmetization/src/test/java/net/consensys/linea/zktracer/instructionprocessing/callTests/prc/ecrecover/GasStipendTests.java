@@ -48,16 +48,7 @@ public class GasStipendTests extends TracerTestBase {
   void zeroValueEcRecoverCallTest(OpCode callOpCode, TestInfo testInfo) {
     BytecodeCompiler program = BytecodeCompiler.newProgram(chainConfig);
     validEcrecoverData(program);
-    appendCall(
-        program,
-        callOpCode,
-        3000,
-        Address.fromHexString(Address.ECREC.toHexString()),
-        0,
-        0,
-        0,
-        0,
-        0);
+    appendCall(program, callOpCode, 3000, Address.ECREC, 0, 0, 0, 0, 0);
 
     BytecodeRunner.of(program.compile()).run(chainConfig, testInfo);
   }
@@ -69,16 +60,7 @@ public class GasStipendTests extends TracerTestBase {
   void nonzeroValueEcRecoverCallTest(OpCode callOpCode, TestInfo testInfo) {
     BytecodeCompiler program = BytecodeCompiler.newProgram(chainConfig);
     validEcrecoverData(program);
-    appendCall(
-        program,
-        callOpCode,
-        3000,
-        Address.fromHexString(Address.ECREC.toHexString()),
-        1,
-        0,
-        0,
-        0,
-        0);
+    appendCall(program, callOpCode, 3000, Address.ECREC, 1, 0, 0, 0, 0);
 
     BytecodeRunner.of(program.compile()).run(chainConfig, testInfo);
   }
@@ -90,16 +72,7 @@ public class GasStipendTests extends TracerTestBase {
   void nonzeroValueEcRecoverCallWillRevertTest(OpCode callOpCode, TestInfo testInfo) {
     BytecodeCompiler program = BytecodeCompiler.newProgram(chainConfig);
     validEcrecoverData(program);
-    appendCall(
-        program,
-        callOpCode,
-        3000,
-        Address.fromHexString(Address.ECREC.toHexString()),
-        1,
-        0,
-        0,
-        0,
-        32);
+    appendCall(program, callOpCode, 3000, Address.ECREC, 1, 0, 0, 0, 32);
     appendRevert(program, 0, 32);
 
     BytecodeRunner.of(program.compile()).run(chainConfig, testInfo);
@@ -112,16 +85,7 @@ public class GasStipendTests extends TracerTestBase {
   void stipendCompletesGasEcRecoverCallTest(OpCode callOpCode, TestInfo testInfo) {
     BytecodeCompiler program = BytecodeCompiler.newProgram(chainConfig);
     validEcrecoverData(program);
-    appendCall(
-        program,
-        callOpCode,
-        700,
-        Address.fromHexString(Address.ECREC.toHexString()),
-        1,
-        0,
-        0,
-        0,
-        0);
+    appendCall(program, callOpCode, 700, Address.ECREC, 1, 0, 0, 0, 0);
 
     BytecodeRunner.of(program.compile()).run(chainConfig, testInfo);
   }
@@ -134,16 +98,7 @@ public class GasStipendTests extends TracerTestBase {
   void gasFallsShortForEcRecoverTest(OpCode callOpCode, TestInfo testInfo) {
     BytecodeCompiler program = BytecodeCompiler.newProgram(chainConfig);
     validEcrecoverData(program);
-    appendCall(
-        program,
-        callOpCode,
-        2999,
-        Address.fromHexString(Address.ECREC.toHexString()),
-        0,
-        0,
-        0,
-        0,
-        0);
+    appendCall(program, callOpCode, 2999, Address.ECREC, 0, 0, 0, 0, 0);
 
     BytecodeRunner.of(program.compile()).run(chainConfig, testInfo);
   }
@@ -161,7 +116,7 @@ public class GasStipendTests extends TracerTestBase {
         callOpCode,
         699, // value transfer adds G_stipend = 2_300 to this, falling short of the 3_000 required
         // gas
-        Address.fromHexString(Address.ECREC.toHexString()),
+        Address.ECREC,
         1,
         0,
         0,

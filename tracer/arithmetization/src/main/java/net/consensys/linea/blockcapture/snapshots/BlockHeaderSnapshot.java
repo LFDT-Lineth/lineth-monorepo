@@ -20,13 +20,13 @@ import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.datatypes.LogsBloomFilter;
 import org.hyperledger.besu.datatypes.Quantity;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.BlockHeaderBuilder;
 import org.hyperledger.besu.ethereum.core.Difficulty;
 import org.hyperledger.besu.ethereum.mainnet.MainnetBlockHeaderFunctions;
-import org.hyperledger.besu.evm.log.LogsBloomFilter;
 
 public record BlockHeaderSnapshot(
     String parentHash,
@@ -48,13 +48,13 @@ public record BlockHeaderSnapshot(
     Optional<String> parentBeaconBlockRoot) {
   public static BlockHeaderSnapshot from(BlockHeader header) {
     return new BlockHeaderSnapshot(
-        header.getParentHash().toHexString(),
-        header.getOmmersHash().toHexString(),
-        header.getCoinbase().toHexString(),
-        header.getStateRoot().toHexString(),
-        header.getTransactionsRoot().toHexString(),
-        header.getReceiptsRoot().toHexString(),
-        header.getLogsBloom().toHexString(),
+        header.getParentHash().getBytes().toHexString(),
+        header.getOmmersHash().getBytes().toHexString(),
+        header.getCoinbase().getBytes().toHexString(),
+        header.getStateRoot().getBytes().toHexString(),
+        header.getTransactionsRoot().getBytes().toHexString(),
+        header.getReceiptsRoot().getBytes().toHexString(),
+        header.getLogsBloom().getBytes().toHexString(),
         header.getDifficulty().toHexString(),
         header.getNumber(),
         header.getGasLimit(),

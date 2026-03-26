@@ -9,7 +9,7 @@
 package net.consensys.linea.sequencer.txselection.selectors;
 
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.evm.log.LogTopic;
+import org.hyperledger.besu.datatypes.LogTopic;
 
 public record TransactionEventFilter(
     Address contractAddress, LogTopic topic0, LogTopic topic1, LogTopic topic2, LogTopic topic3) {
@@ -22,10 +22,14 @@ public record TransactionEventFilter(
    *     TransactionEventFilter, false otherwise
    */
   public boolean matches(final Address contractAddress, final LogTopic... topics) {
-    return contractAddress.equals(this.contractAddress)
-        && (topic0 == null || (topics.length >= 1 && topics[0].equals(topic0)))
-        && (topic1 == null || (topics.length >= 2 && topics[1].equals(topic1)))
-        && (topic2 == null || (topics.length >= 3 && topics[2].equals(topic2)))
-        && (topic3 == null || (topics.length >= 4 && topics[3].equals(topic3)));
+    return contractAddress.getBytes().equals(this.contractAddress.getBytes())
+        && (topic0 == null
+            || (topics.length >= 1 && topics[0].getBytes().equals(topic0.getBytes())))
+        && (topic1 == null
+            || (topics.length >= 2 && topics[1].getBytes().equals(topic1.getBytes())))
+        && (topic2 == null
+            || (topics.length >= 3 && topics[2].getBytes().equals(topic2.getBytes())))
+        && (topic3 == null
+            || (topics.length >= 4 && topics[3].getBytes().equals(topic3.getBytes())));
   }
 }

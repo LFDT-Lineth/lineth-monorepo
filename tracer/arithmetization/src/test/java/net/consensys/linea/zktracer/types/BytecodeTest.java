@@ -31,7 +31,7 @@ class BytecodeTest extends TracerTestBase {
     Bytecode byteCode = new Bytecode(Bytes.wrap("VV".getBytes()));
     assertEquals(
         "0x0f06f483858ae915c1a98ada06b7d12403b2dd45a554eb235555eedfb864e302",
-        byteCode.getCodeHash().toString());
+        byteCode.getCodeHash().getBytes().toHexString());
   }
 
   @Test
@@ -39,6 +39,6 @@ class BytecodeTest extends TracerTestBase {
     Bytecode byteCode = new Bytecode((Bytes) null);
     assertEquals(
         "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
-        byteCode.getCodeHash().toString());
+        byteCode.getCodeHash().getBytes().toHexString());
   }
 }

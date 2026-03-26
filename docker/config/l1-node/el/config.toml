@@ -10,7 +10,7 @@ target-gas-limit=30000000
 min-gas-price=1000000
 tx-pool-min-gas-price=0
 max-peers=10
-fast-sync-min-peers=0
+sync-min-peers=0
 
 # engine
 engine-rpc-enabled=true
@@ -46,8 +46,6 @@ graphql-http-enabled=false
 metrics-enabled=true
 metrics-host="0.0.0.0"
 metrics-port=9001
-
-Xsynchronizer-fast-sync-full-validation-rate=0.000001
 
 node-private-key-file="/config/keys/besu.key"
 

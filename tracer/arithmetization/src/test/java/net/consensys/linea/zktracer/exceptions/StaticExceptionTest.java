@@ -57,7 +57,7 @@ public class StaticExceptionTest extends TracerTestBase {
         .push(0) // call data size
         .push(0) // call data offset
         .push(value) // value
-        .push(Address.ZERO) // address
+        .push(Address.ZERO.getBytes()) // address
         .op(GAS)
         .op(OpCode.CALL);
 

@@ -27,9 +27,9 @@ import net.consensys.linea.testing.Web3jUtils;
 import net.consensys.linea.testing.generated.FrameworkEntrypoint;
 import net.consensys.linea.testing.generated.StateManagerEvents;
 import net.consensys.linea.testing.generated.TestSnippet_Events;
+import org.hyperledger.besu.datatypes.Log;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
-import org.hyperledger.besu.evm.log.Log;
 import org.web3j.abi.EventEncoder;
 
 @RequiredArgsConstructor
@@ -57,7 +57,7 @@ public class StateManagerTestValidator implements TransactionProcessingResultVal
       String createdEventSignature = EventEncoder.encode(FrameworkEntrypoint.CONTRACTCREATED_EVENT);
       String sentETHEventSignature = EventEncoder.encode(StateManagerEvents.PAYETH_EVENT);
       String recETHEventSignature = EventEncoder.encode(StateManagerEvents.RECETH_EVENT);
-      String logTopic = currentLog.getTopics().getFirst().toHexString();
+      String logTopic = currentLog.getTopics().getFirst().getBytes().toHexString();
       if (EventEncoder.encode(TestSnippet_Events.DATANOINDEXES_EVENT).equals(logTopic)) {
         TestSnippet_Events.DataNoIndexesEventResponse response =
             TestSnippet_Events.getDataNoIndexesEventFromLog(Web3jUtils.fromBesuLog(currentLog));
@@ -71,6 +71,7 @@ public class StateManagerTestValidator implements TransactionProcessingResultVal
                 .get(i - 1)
                 .getTopics()
                 .getFirst()
+                .getBytes()
                 .toHexString()
                 .equals(callEventSignature)) {
           // when the number of logs is 1, in our tests we will have an operation
@@ -78,7 +79,9 @@ public class StateManagerTestValidator implements TransactionProcessingResultVal
           assertTrue(response.isSuccess);
         }
         if (logTopic.equals(createdEventSignature)) {
-          assertEquals(response.destination, frameworkEntryPointAccount.getAddress().toHexString());
+          assertEquals(
+              response.destination,
+              frameworkEntryPointAccount.getAddress().getBytes().toHexString());
         } else {
           // assertEquals(response.destination,
           // this.testContext.initialAccounts[0].getAddress().toHexString());

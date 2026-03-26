@@ -107,7 +107,7 @@ public final class StackFragment implements TraceFragment {
             throw new UnsupportedOperationException(
                 "Hash was attempted by the following opcode: " + this.opCode().toString());
       }
-      this.hashInfoKeccak = EWord.of(Hash.hash(memorySegmentToHash));
+      this.hashInfoKeccak = EWord.of(Hash.hash(memorySegmentToHash).getBytes());
     }
 
     this.staticGas = gp.staticGas();

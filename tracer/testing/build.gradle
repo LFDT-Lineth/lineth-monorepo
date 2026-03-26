@@ -23,9 +23,11 @@ dependencies {
 
   implementation "io.consensys.protocols.shomei:shomei:${shomeiVersion}"
   implementation "io.consensys.protocols.shomei:shomei-server:${shomeiVersion}"
+  implementation "io.consensys.protocols.shomei:shomei-crypto:${shomeiVersion}"
   implementation 'io.micrometer:micrometer-registry-prometheus:1.11.1'
   implementation 'org.assertj:assertj-core'
   implementation 'org.junit.jupiter:junit-jupiter-api'
+  implementation "org.awaitility:awaitility:${libs.versions.awaitility.get()}"
 }
 
 node {

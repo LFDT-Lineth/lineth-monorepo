@@ -307,7 +307,12 @@ public final class SelfdestructSection extends TraceSection
       // in particular this will get the coinbase address post gas reward.
       final AccountSnapshot accountWiping =
           transactionProcessingMetadata.getDestructedAccountsSnapshot().stream()
-              .filter(accountSnapshot -> accountSnapshot.address().equals(selfdestructor.address()))
+              .filter(
+                  accountSnapshot ->
+                      accountSnapshot
+                          .address()
+                          .getBytes()
+                          .equals(selfdestructor.address().getBytes()))
               .findFirst()
               .orElseThrow(() -> new IllegalStateException("Account not found"));
 
@@ -361,6 +366,6 @@ public final class SelfdestructSection extends TraceSection
   }
 
   private boolean selfdestructTargetsItself() {
-    return selfdestructor.address().equals(recipientAddress);
+    return selfdestructor.address().getBytes().equals(recipientAddress.getBytes());
   }
 }

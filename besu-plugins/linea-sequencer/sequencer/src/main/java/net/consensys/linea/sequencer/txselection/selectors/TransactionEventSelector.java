@@ -17,10 +17,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bundles.TransactionBundle;
-import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.evm.log.Log;
-import org.hyperledger.besu.evm.log.LogTopic;
+import org.hyperledger.besu.datatypes.Log;
+import org.hyperledger.besu.datatypes.LogTopic;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
@@ -51,10 +50,7 @@ public class TransactionEventSelector implements PluginTransactionSelector {
       Set<TransactionEventFilter> deniedEventsForTransaction =
           deniedEventsByAddress.get(contractAddress);
       if (deniedEventsForTransaction != null) {
-        List<LogTopic> logTopics =
-            resultLog.getTopics().stream()
-                .map((logTopic) -> LogTopic.wrap(Bytes32.leftPad(logTopic)))
-                .toList();
+        List<LogTopic> logTopics = resultLog.getTopics();
         for (TransactionEventFilter deniedEvent : deniedEventsForTransaction) {
           if (deniedEvent.matches(contractAddress, logTopics.toArray(new LogTopic[] {}))) {
             log.atDebug()

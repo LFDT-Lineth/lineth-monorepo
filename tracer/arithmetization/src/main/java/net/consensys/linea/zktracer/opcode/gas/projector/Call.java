@@ -99,7 +99,7 @@ public class Call extends GasProjection {
 
     // beyond this point: to address is delegated
     final Address delegateAddress = targetCode.getDelegateAddress().orElseThrow();
-    final boolean isSelfDelegated = delegateAddress.equals(to);
+    final boolean isSelfDelegated = delegateAddress.getBytes().equals(to.getBytes());
     if (isSelfDelegated) {
       return (currentTargetWarmth ? GAS_CONST_G_WARM_ACCESS : GAS_CONST_G_COLD_ACCOUNT_ACCESS)
           + GAS_CONST_G_WARM_ACCESS;

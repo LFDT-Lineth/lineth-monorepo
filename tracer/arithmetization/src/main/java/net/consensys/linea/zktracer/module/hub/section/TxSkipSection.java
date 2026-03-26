@@ -202,10 +202,10 @@ public final class TxSkipSection extends TraceSection implements EndTransactionD
       }
     }
 
-    if (recipientAddress.equals(delegateAddress)) {
+    if (recipientAddress.getBytes().equals(delegateAddress.getBytes())) {
       delegate = recipientNew.deepCopy();
       delegateNew = delegate;
-    } else if (senderAddress.equals(delegateAddress)) {
+    } else if (senderAddress.getBytes().equals(delegateAddress.getBytes())) {
       delegate = senderNew.deepCopy();
       delegateNew = delegate;
     }
@@ -221,7 +221,7 @@ public final class TxSkipSection extends TraceSection implements EndTransactionD
             .makeWithTrm(
                 sender,
                 senderNew,
-                senderAddress,
+                senderAddress.getBytes(),
                 DomSubStampsSubFragment.standardDomSubStamps(hub.stamp(), 1),
                 TransactionProcessingType.USER);
 
@@ -232,7 +232,7 @@ public final class TxSkipSection extends TraceSection implements EndTransactionD
             .makeWithTrm(
                 recipient,
                 recipientNew,
-                recipientAddress,
+                recipientAddress.getBytes(),
                 DomSubStampsSubFragment.standardDomSubStamps(hub.stamp(), 2),
                 TransactionProcessingType.USER)
             .checkForDelegationIfAccountHasCode(hub);
@@ -244,7 +244,7 @@ public final class TxSkipSection extends TraceSection implements EndTransactionD
             .makeWithTrm(
                 delegate,
                 delegateNew,
-                delegateAddress,
+                delegateAddress.getBytes(),
                 DomSubStampsSubFragment.standardDomSubStamps(hub.stamp(), 3),
                 TransactionProcessingType.USER)
             .checkForDelegationIfAccountHasCode(hub);
@@ -256,7 +256,7 @@ public final class TxSkipSection extends TraceSection implements EndTransactionD
             .makeWithTrm(
                 coinbase,
                 coinbaseNew,
-                coinbaseAddress,
+                coinbaseAddress.getBytes(),
                 DomSubStampsSubFragment.standardDomSubStamps(hub.stamp(), 4),
                 TransactionProcessingType.USER);
 

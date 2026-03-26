@@ -37,11 +37,10 @@ import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.datatypes.Log;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
-import org.hyperledger.besu.evm.log.Log;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -57,7 +56,7 @@ public class ExampleSolidityTest extends TracerTestBase {
   @Test
   void testWithFrameworkEntrypoint(TestInfo testInfo) {
     KeyPair keyPair = new SECP256K1().generateKeyPair();
-    Address senderAddress = Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+    Address senderAddress = Address.extract(keyPair.getPublicKey());
 
     ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(1)).nonce(5).address(senderAddress).build();
@@ -86,7 +85,7 @@ public class ExampleSolidityTest extends TracerTestBase {
 
     FrameworkEntrypoint.ContractCall snippetContractCall =
         new FrameworkEntrypoint.ContractCall(
-            /*Address*/ snippetAccount.getAddress().toHexString(),
+            /*Address*/ snippetAccount.getAddress().getBytes().toHexString(),
             /*calldata*/ Bytes.fromHexStringLenient(FunctionEncoder.encode(snippetFunction))
                 .toArray(),
             /*gasLimit*/ BigInteger.ZERO,
@@ -117,7 +116,7 @@ public class ExampleSolidityTest extends TracerTestBase {
           // One event from the framework entrypoint about contract call
           assertEquals(result.getLogs().size(), 2);
           for (Log log : result.getLogs()) {
-            String logTopic = log.getTopics().getFirst().toHexString();
+            String logTopic = log.getTopics().getFirst().getBytes().toHexString();
             if (EventEncoder.encode(TestSnippet_Events.DATANOINDEXES_EVENT).equals(logTopic)) {
               TestSnippet_Events.DataNoIndexesEventResponse response =
                   TestSnippet_Events.getDataNoIndexesEventFromLog(Web3jUtils.fromBesuLog(log));
@@ -127,7 +126,8 @@ public class ExampleSolidityTest extends TracerTestBase {
               FrameworkEntrypoint.CallExecutedEventResponse response =
                   FrameworkEntrypoint.getCallExecutedEventFromLog(Web3jUtils.fromBesuLog(log));
               assertTrue(response.isSuccess);
-              assertEquals(response.destination, snippetAccount.getAddress().toHexString());
+              assertEquals(
+                  response.destination, snippetAccount.getAddress().getBytes().toHexString());
             } else {
               fail();
             }
@@ -145,7 +145,7 @@ public class ExampleSolidityTest extends TracerTestBase {
   @Test
   void testSnippetIndependently(TestInfo testInfo) {
     KeyPair keyPair = new SECP256K1().generateKeyPair();
-    Address senderAddress = Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+    Address senderAddress = Address.extract(keyPair.getPublicKey());
 
     ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(1)).nonce(5).address(senderAddress).build();
@@ -194,8 +194,7 @@ public class ExampleSolidityTest extends TracerTestBase {
   @Test
   void testContractNotRelatedToTestingFramework(TestInfo testInfo) {
     KeyPair senderkeyPair = new SECP256K1().generateKeyPair();
-    Address senderAddress =
-        Address.extract(Hash.hash(senderkeyPair.getPublicKey().getEncodedBytes()));
+    Address senderAddress = Address.extract(senderkeyPair.getPublicKey());
 
     ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(1)).nonce(5).address(senderAddress).build();
@@ -233,8 +232,7 @@ public class ExampleSolidityTest extends TracerTestBase {
   @Test
   void testYul(TestInfo testInfo) {
     KeyPair senderkeyPair = new SECP256K1().generateKeyPair();
-    Address senderAddress =
-        Address.extract(Hash.hash(senderkeyPair.getPublicKey().getEncodedBytes()));
+    Address senderAddress = Address.extract(senderkeyPair.getPublicKey());
 
     ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(1)).nonce(5).address(senderAddress).build();
@@ -261,7 +259,7 @@ public class ExampleSolidityTest extends TracerTestBase {
 
     FrameworkEntrypoint.ContractCall yulContractCall =
         new FrameworkEntrypoint.ContractCall(
-            /*Address*/ yulAccount.getAddress().toHexString(),
+            /*Address*/ yulAccount.getAddress().getBytes().toHexString(),
             /*calldata*/ Bytes.fromHexStringLenient(encodedContractCall).toArray(),
             /*gasLimit*/ BigInteger.ZERO,
             /*value*/ BigInteger.ZERO,
@@ -281,12 +279,12 @@ public class ExampleSolidityTest extends TracerTestBase {
         (Transaction transaction, TransactionProcessingResult result) -> {
           assertEquals(result.getLogs().size(), 1);
           for (Log log : result.getLogs()) {
-            String logTopic = log.getTopics().getFirst().toHexString();
+            String logTopic = log.getTopics().getFirst().getBytes().toHexString();
             if (EventEncoder.encode(FrameworkEntrypoint.CALLEXECUTED_EVENT).equals(logTopic)) {
               FrameworkEntrypoint.CallExecutedEventResponse response =
                   FrameworkEntrypoint.getCallExecutedEventFromLog(Web3jUtils.fromBesuLog(log));
               assertTrue(response.isSuccess);
-              assertEquals(response.destination, yulAccount.getAddress().toHexString());
+              assertEquals(response.destination, yulAccount.getAddress().getBytes().toHexString());
             } else {
               fail();
             }

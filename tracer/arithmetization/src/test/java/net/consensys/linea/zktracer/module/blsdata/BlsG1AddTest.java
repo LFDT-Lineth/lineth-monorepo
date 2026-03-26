@@ -65,11 +65,11 @@ public class BlsG1AddTest extends TracerTestBase {
     // First place the parameters in memory
     // Copy to targetOffset the code of codeOwnerAccount
     program
-        .push(codeOwnerAddress)
+        .push(codeOwnerAddress.getBytes())
         .op(OpCode.EXTCODESIZE) // size
         .push(0) // offset
         .push(0) // targetOffset
-        .push(codeOwnerAddress) // address
+        .push(codeOwnerAddress.getBytes()) // address
         .op(OpCode.EXTCODECOPY);
 
     // Do the call
@@ -78,7 +78,7 @@ public class BlsG1AddTest extends TracerTestBase {
         .push(input.size()) // retOffset
         .push(input.size()) // argSize
         .push(0) // argOffset
-        .push(Address.BLS12_G1ADD) // address
+        .push(Address.BLS12_G1ADD.getBytes()) // address
         .push(Bytes.fromHexStringLenient("0xFFFFFFFF")) // gas
         .op(OpCode.STATICCALL);
     BytecodeRunner bytecodeRunner = BytecodeRunner.of(program.compile());

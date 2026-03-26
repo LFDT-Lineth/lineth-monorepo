@@ -140,7 +140,7 @@ class InvalidityProofAssembler(
       TransactionDecoder.decodeOpaqueBytes(
         Bytes.wrap(ftx.ftxRlp),
         EncodingContext.POOLED_TRANSACTION,
-      ).sender.toArray()
+      ).sender.bytes.toArray()
     if (invalidityReason == InvalidityReason.BadNonce || invalidityReason == InvalidityReason.BadBalance) {
       accountProofFuture = fetchAccountProof(from, ftx.simulatedExecutionBlockNumber)
         .thenApply { it }

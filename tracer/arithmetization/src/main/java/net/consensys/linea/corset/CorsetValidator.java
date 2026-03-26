@@ -267,7 +267,8 @@ public class CorsetValidator extends AbstractExecutable {
       // section can be null if there was no recorded data for the given target ir.
       if (section != null) {
         // Iterate over the fields of the section
-        for (Iterator<Map.Entry<String, JsonNode>> it = section.fields(); it.hasNext(); ) {
+        for (Iterator<Map.Entry<String, JsonNode>> it = section.properties().iterator();
+            it.hasNext(); ) {
           Map.Entry<String, JsonNode> field = it.next();
           HashSet<Integer> fieldData = data.get(field.getKey());
           // Initialise field data if necessary

@@ -35,7 +35,6 @@ import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.AccessListEntry;
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.TransactionType;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.core.Transaction;
@@ -137,8 +136,7 @@ public class StpTest extends TracerTestBase {
 
     // Create the sender account
     final KeyPair keyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(keyPair.getPublicKey());
     final ToyAccount senderAccount =
         ToyAccount.builder().balance(balance).nonce(1).address(senderAddress).build();
     world.add(senderAccount);
@@ -187,7 +185,7 @@ public class StpTest extends TracerTestBase {
               .push(Bytes.minimalBytes(4)) // argsLength
               .push(Bytes.minimalBytes(3)) // argsOffset
               .push(bigIntegerToBytes(value)) // value
-              .push(calleeAddress) // address
+              .push(calleeAddress.getBytes()) // address
               .push(longToBytes(gasCall)) // gas
               .op(opcode)
               .compile();
@@ -197,7 +195,7 @@ public class StpTest extends TracerTestBase {
               .push(Bytes.minimalBytes(4)) // terOffset
               .push(Bytes.minimalBytes(3)) // argsLength
               .push(Bytes.minimalBytes(2)) // argsOffset
-              .push(calleeAddress) // address
+              .push(calleeAddress.getBytes()) // address
               .push(longToBytes(gasCall)) // gas
               .op(opcode)
               .compile();
@@ -209,8 +207,7 @@ public class StpTest extends TracerTestBase {
   final Transaction txCreate(List<ToyAccount> world) {
     // create sender account
     final KeyPair keyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(keyPair.getPublicKey());
     final long value = RAND.nextLong();
     final ToyAccount senderAccount =
         ToyAccount.builder()
@@ -251,8 +248,7 @@ public class StpTest extends TracerTestBase {
   final Transaction txCreate2(List<ToyAccount> world) {
     // create senderAccount
     final KeyPair keyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(keyPair.getPublicKey());
     final long value = RAND.nextLong();
     final ToyAccount senderAccount =
         ToyAccount.builder()

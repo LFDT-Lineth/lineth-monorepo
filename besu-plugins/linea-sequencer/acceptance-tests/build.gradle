@@ -70,6 +70,9 @@ tasks.register('acceptanceTests', Test) {
     includeTags("AcceptanceTest")
   }
 
+  // A directory hopefully without plugin jar-s. All plugins are already on classpath as project dependencies
+  systemProperty 'besu.plugins.dir', project.buildDir
+
   // Configure resource limits
   boolean isCiServer = System.getenv().containsKey("CI")
   maxParallelForks = isCiServer ? Runtime.runtime.availableProcessors() : Math.max(1, Runtime.runtime.availableProcessors() - 2)

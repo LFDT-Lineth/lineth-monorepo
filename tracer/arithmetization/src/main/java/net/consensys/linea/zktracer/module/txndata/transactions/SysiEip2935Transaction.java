@@ -80,6 +80,6 @@ public class SysiEip2935Transaction extends TxnDataOperation {
   }
 
   private Bytes previousBlockHash() {
-    return currentBlockIsGenesisBlock() ? Bytes.EMPTY : blockHeader.getParentHash();
+    return currentBlockIsGenesisBlock() ? Bytes.EMPTY : blockHeader.getParentHash().getBytes();
   }
 }

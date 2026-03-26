@@ -54,7 +54,7 @@ public class Utilities {
     if (program.opCodeData(callOpcode).callHasValueArgument()) {
       program.push(value);
     }
-    program.push(to).op(GAS).op(callOpcode).op(POP);
+    program.push(to.getBytes()).op(GAS).op(callOpcode).op(POP);
   }
 
   public static void simpleCall(
@@ -71,7 +71,7 @@ public class Utilities {
     if (program.opCodeData(callOpcode).callHasValueArgument()) {
       program.push(value);
     }
-    program.push(to).push(gas).op(callOpcode);
+    program.push(to.getBytes()).push(gas).op(callOpcode);
   }
 
   public static void simpleCallAndReturnDataSize(
@@ -122,7 +122,7 @@ public class Utilities {
         .op(SELFBALANCE)
         .push(1)
         .op(ADD) // puts balance + 1 on the stack
-        .push(to)
+        .push(to.getBytes())
         .push(gas)
         .op(callOpcode);
   }
@@ -269,7 +269,7 @@ public class Utilities {
     if (callInfo.callHasValueArgument()) {
       program.push(256); // value
     }
-    program.push(address).op(GAS).op(callOpCode);
+    program.push(address.getBytes()).op(GAS).op(callOpCode);
   }
 
   /**
@@ -281,9 +281,9 @@ public class Utilities {
   public static void copyForeignCodeAndRunItAsInitCode(
       BytecodeCompiler program, Address foreignAddress) {
 
-    program.push(foreignAddress).op(EXTCODESIZE); // ] EXTCS ]
+    program.push(foreignAddress.getBytes()).op(EXTCODESIZE); // ] EXTCS ]
     pushSeveral(program, 0, 0);
-    program.push(foreignAddress); // ] EXTCS | 0 | 0 | foreignAddress ]
+    program.push(foreignAddress.getBytes()); // ] EXTCS | 0 | 0 | foreignAddress ]
     program.op(EXTCODECOPY);
     program.op(MSIZE);
     pushSeveral(program, 0, 0); // ] MSIZE | 0 | 0 ]
@@ -302,9 +302,9 @@ public class Utilities {
   }
 
   public static void copyForeignCodeToRam(BytecodeCompiler program, Address foreignAddress) {
-    program.push(foreignAddress).op(EXTCODESIZE); // ] EXTCS ]
+    program.push(foreignAddress.getBytes()).op(EXTCODESIZE); // ] EXTCS ]
     pushSeveral(program, 0, 0);
-    program.push(foreignAddress); // ] EXTCS | 0 | 0 | foreignAddress ]
+    program.push(foreignAddress.getBytes()); // ] EXTCS | 0 | 0 | foreignAddress ]
     program.op(EXTCODECOPY); // full copy of foreign code
   }
 

@@ -165,9 +165,9 @@ public class LineaGetForcedTransactionInclusionStatus {
       this.forcedTransactionNumber = status.forcedTransactionNumber();
       this.blockNumber = "0x" + Long.toHexString(status.blockNumber());
       this.blockTimestamp = status.blockTimestamp();
-      this.from = status.from().toHexString();
+      this.from = status.from().getBytes().toHexString();
       this.inclusionResult = status.inclusionResult().name();
-      this.transactionHash = status.transactionHash().toHexString();
+      this.transactionHash = status.transactionHash().getBytes().toHexString();
     }
   }
 

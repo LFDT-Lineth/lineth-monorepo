@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import io.netty.util.internal.ConcurrentSet;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
@@ -35,7 +34,9 @@ import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.corset.CorsetValidator;
 import net.consensys.linea.plugins.rpc.tracegeneration.TraceFile;
@@ -49,6 +50,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import org.awaitility.Awaitility;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.net.NetConditions;
@@ -180,11 +182,36 @@ public class BesuExecutionTools {
           !transactions.isEmpty(), "At least one transaction (including null) is required");
 
       shomeiThread.start();
-      besuCluster.start(besuNode);
+
+      // Run besuCluster.start() on a separate thread with a timeout so we fail fast
+      // instead of hanging forever inside Runner.waitForServiceToStart().
+      AtomicReference<Throwable> startError = new AtomicReference<>();
+      Thread besuStartThread =
+          new Thread(
+              () -> {
+                try {
+                  besuCluster.start(besuNode);
+                } catch (Throwable t) {
+                  startError.set(t);
+                }
+              },
+              "besu-start-thread");
+      besuStartThread.start();
+      int startupTimeoutSeconds = 180;
+      besuStartThread.join(startupTimeoutSeconds * 1000L);
+      if (besuStartThread.isAlive()) {
+        besuStartThread.interrupt();
+        throw new IllegalStateException(
+            "besuCluster.start() did not complete within " + startupTimeoutSeconds + "s");
+      }
+      if (startError.get() != null) {
+        throw new RuntimeException(
+            "besuCluster.start() failed: " + startError.get().getMessage(), startError.get());
+      }
 
       EthTransactions ethTransactions = new EthTransactions();
       Map<String, Boolean> txReceiptProcessed = new HashMap<>();
-      ConcurrentSet<Long> blockNumbers = new ConcurrentSet<>();
+      Set<Long> blockNumbers = Collections.newSetFromMap(new ConcurrentHashMap<>());
       List<String> txHashes = new ArrayList<>();
       Fork nextFork = null;
       Fork currentFork = nextFork;
@@ -380,8 +407,6 @@ public class BesuExecutionTools {
   /// // /////////////////////////
 
   private Fork nextBlockFork(Block block) {
-    var nextTotalDifficulty =
-        block.getTotalDifficulty().add(BigInteger.TWO); /* Clique increments by 2 */
     var nextBlockTimestamp = block.getTimestamp().longValue() + 1L;
 
     var TTD = genesisConfigBuilder.getTTD();
@@ -395,20 +420,33 @@ public class BesuExecutionTools {
       return Fork.LONDON;
     }
 
-    var terminalTotalDifficulty = new BigInteger(TTD);
+    // Determine if we're post-merge.
+    // Besu 26.2.0+ may return null/empty totalDifficulty for post-merge chains.
+    // When totalDifficulty is absent, assume post-merge if TTD is configured.
+    boolean postMerge;
+    var totalDifficulty = block.getTotalDifficultyRaw();
+    if (totalDifficulty == null || totalDifficulty.isEmpty() || "0x".equals(totalDifficulty)) {
+      // totalDifficulty not available — post-merge chain (Besu 26.2.0+)
+      postMerge = (TTD != null);
+    } else {
+      var nextTotalDifficulty =
+          org.web3j.utils.Numeric.decodeQuantity(totalDifficulty).add(BigInteger.TWO);
+      var terminalTotalDifficulty = new BigInteger(TTD);
+      postMerge = nextTotalDifficulty.compareTo(terminalTotalDifficulty) >= 0;
+    }
 
-    // Fork from Paris specified
-    if (nextTotalDifficulty.compareTo(terminalTotalDifficulty) > 0) {
+    if (postMerge) {
+      // Use timestamp-based fork detection (newest fork first)
+      if (osakaTime != null && (nextBlockTimestamp >= parseLong(osakaTime))) {
+        return OSAKA;
+      }
+      if (pragueTime != null && (nextBlockTimestamp >= parseLong(pragueTime))) {
+        return Fork.PRAGUE;
+      }
+      if (cancunTime != null && (nextBlockTimestamp >= parseLong(cancunTime))) {
+        return Fork.CANCUN;
+      }
       if (shanghaiTime != null && (nextBlockTimestamp >= parseLong(shanghaiTime))) {
-        if (cancunTime != null && (nextBlockTimestamp >= parseLong(cancunTime))) {
-          if (pragueTime != null && (nextBlockTimestamp >= parseLong(pragueTime))) {
-            if (osakaTime != null && (nextBlockTimestamp >= parseLong(osakaTime))) {
-              return OSAKA;
-            }
-            return Fork.PRAGUE;
-          }
-          return Fork.CANCUN;
-        }
         return Fork.SHANGHAI;
       }
       return Fork.PARIS;
@@ -424,7 +462,7 @@ public class BesuExecutionTools {
     txReceiptProcessed.clear();
   }
 
-  private void resetBlockNumbers(ConcurrentSet<Long> blockNumbers) {
+  private void resetBlockNumbers(Set<Long> blockNumbers) {
     blockNumbers.clear();
   }
 
@@ -455,7 +493,7 @@ public class BesuExecutionTools {
       EthTransactions ethTransactions,
       List<String> txHashes,
       Map<String, Boolean> txReceiptProcessed,
-      ConcurrentSet<Long> blockNumbers) {
+      Set<Long> blockNumbers) {
     waitFor(
         100,
         () -> {
@@ -522,8 +560,16 @@ public class BesuExecutionTools {
                 ethTransactions.block(
                     DefaultBlockParameter.valueOf(BigInteger.valueOf(startBlockNumber - 1))))
             .getStateRoot();
-    MerkelProofResponse merkelProofResponse =
-        rollupGetZkEVMStateMerkleProofV0(startBlockNumber, endBlockNumber);
+    final MerkelProofResponse[] merkelProofHolder = new MerkelProofResponse[1];
+    Awaitility.await("Shomei syncs block range " + startBlockNumber + "-" + endBlockNumber)
+        .ignoreExceptionsInstanceOf(AssertionError.class)
+        .atMost(60, TimeUnit.SECONDS)
+        .pollInterval(500, TimeUnit.MILLISECONDS)
+        .untilAsserted(
+            () ->
+                merkelProofHolder[0] =
+                    rollupGetZkEVMStateMerkleProofV0(startBlockNumber, endBlockNumber));
+    MerkelProofResponse merkelProofResponse = merkelProofHolder[0];
     log.info("rollupGetZkEVMStateMerkleProofV0={}", merkelProofResponse);
     ExecutionProof.BatchExecutionProofRequestDto executionProofRequestDto =
         new ExecutionProof.BatchExecutionProofRequestDto(

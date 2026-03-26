@@ -209,12 +209,12 @@ abstract class AcceptanceTestBase {
 
       val decodedTx = DomainObjectDecodeUtils.decodeRawTransaction(tx.signedTransactionData())
       val nodeTxHash = tx.execute(minerNode.nodeRequests())
-      assertThat(decodedTx.sender.toString()).isEqualTo(senderAccount.address)
+      assertThat(decodedTx.sender.bytes.toHexString()).isEqualTo(senderAccount.address)
       nodeTxHash
     }
 
     transfers.forEach { txHash ->
-      minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHash.toString()))
+      minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHash.bytes.toHexString()))
     }
 
     newAccounts.forEach { account ->

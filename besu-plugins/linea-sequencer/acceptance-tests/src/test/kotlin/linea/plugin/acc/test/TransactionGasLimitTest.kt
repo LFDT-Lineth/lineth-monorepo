@@ -120,7 +120,7 @@ class TransactionGasLimitTest : LineaPluginPoSTestBase() {
       .isEqualTo("Gas limit of transaction is greater than the allowed max of 9000000")
 
     expectedConfirmedTxs
-      .map { it.toHexString() }
+      .map { it.bytes.toHexString() }
       .forEach { hash -> minerNode.verify(eth.expectSuccessfulTransactionReceipt(hash)) }
   }
 

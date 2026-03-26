@@ -29,6 +29,7 @@ import net.consensys.linea.testing.ToyTransaction;
 import net.consensys.linea.zktracer.opcode.OpCode;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.Address;
@@ -47,13 +48,15 @@ public class DelegationAndRequiresEvmTests extends TracerTestBase {
   void delegationAndRequiresEvmTests(TestInfo testInfo) {
     final KeyPair keyPair = new SECP256K1().generateKeyPair();
     final Address senderAddress =
-        Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+        Address.extract(
+            Bytes32.wrap(Hash.hash(keyPair.getPublicKey().getEncodedBytes()).getBytes()));
     final ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(1789)).nonce(0).address(senderAddress).build();
 
     final KeyPair recipientKeyPair = new SECP256K1().generateKeyPair();
     final Address recipientAddress =
-        Address.extract(Hash.hash(recipientKeyPair.getPublicKey().getEncodedBytes()));
+        Address.extract(
+            Bytes32.wrap(Hash.hash(recipientKeyPair.getPublicKey().getEncodedBytes()).getBytes()));
     final ToyAccount recipientAccount =
         ToyAccount.builder().balance(Wei.fromEth(1)).nonce(0).address(recipientAddress).build();
 
@@ -85,7 +88,9 @@ public class DelegationAndRequiresEvmTests extends TracerTestBase {
             .balance(Wei.fromEth(1))
             .nonce(0)
             .address(Address.fromHexString("0xde7e6a7ed0de7e6a7ed0de7e6a7ed0de7e6a7ed0"))
-            .code(Bytes.concatenate(EIP_7702_DELEGATION_INDICATOR_BYTES, smcAccount.getAddress()))
+            .code(
+                Bytes.concatenate(
+                    EIP_7702_DELEGATION_INDICATOR_BYTES, smcAccount.getAddress().getBytes()))
             .build();
 
     checkArgument(

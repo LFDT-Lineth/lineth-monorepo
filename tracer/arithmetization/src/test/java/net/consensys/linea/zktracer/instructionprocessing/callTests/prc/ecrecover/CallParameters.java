@@ -87,7 +87,7 @@ public class CallParameters implements PrecompileCallParameters {
       program.push(0x0600);
     }
 
-    program.push(Address.ECREC);
+    program.push(Address.ECREC.getBytes());
 
     // push gas onto the stack
     int callStipend = callInfo.callHasValueArgument() ? 2_300 : 0;

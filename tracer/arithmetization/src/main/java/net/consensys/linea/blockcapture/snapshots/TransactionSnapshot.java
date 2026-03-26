@@ -25,7 +25,6 @@ import java.util.Optional;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.DelegatingBytes;
 import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
 import org.hyperledger.besu.datatypes.AccessListEntry;
 import org.hyperledger.besu.datatypes.Address;
@@ -68,8 +67,8 @@ public class TransactionSnapshot {
             ? tx.getV().toString(16)
             : tx.getYParity().toString(16);
     this.type = tx.getType();
-    this.sender = tx.getSender().toHexString();
-    this.to = tx.getTo().map(DelegatingBytes::toHexString);
+    this.sender = tx.getSender().getBytes().toHexString();
+    this.to = tx.getTo().map((it) -> it.getBytes().toHexString());
     this.nonce = tx.getNonce();
     this.value = tx.getValue().toHexString();
     this.payload = tx.getPayload().toHexString();

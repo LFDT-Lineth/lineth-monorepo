@@ -78,11 +78,11 @@ public class PostCancunPrecompileSizeTest extends TracerTestBase {
     // First place the parameters in memory
     // Copy to targetOffset the code of codeOwnerAccount
     program
-        .push(codeOwnerAddress)
+        .push(codeOwnerAddress.getBytes())
         .op(OpCode.EXTCODESIZE) // size
         .push(0) // offset
         .push(0) // targetOffset
-        .push(codeOwnerAddress) // address
+        .push(codeOwnerAddress.getBytes()) // address
         .op(OpCode.EXTCODECOPY);
 
     // Do the call
@@ -91,7 +91,7 @@ public class PostCancunPrecompileSizeTest extends TracerTestBase {
         .push(0) // retOffset, note that we are really interested in the return data
         .push(size) // argSize
         .push(0) // argOffset
-        .push(precompileFlag.getAddress()) // address
+        .push(precompileFlag.getAddress().getBytes()) // address
         .push(Bytes.fromHexStringLenient("0xFFFFFFFF")) // gas
         .op(OpCode.STATICCALL);
     BytecodeRunner bytecodeRunner = BytecodeRunner.of(program.compile());

@@ -251,7 +251,7 @@ public final class CreateSection extends TraceSection
         accountFragmentFactory.makeWithTrm(
             firstCreatee,
             firstCreateeNew,
-            createeAddress.trimLeadingZeros(),
+            createeAddress.getBytes().trimLeadingZeros(),
             DomSubStampsSubFragment.standardDomSubStamps(this.hubStamp(), 1),
             TransactionProcessingType.USER);
 
@@ -298,7 +298,7 @@ public final class CreateSection extends TraceSection
             accountFragmentFactory.makeWithTrm(
                 firstCreatee,
                 firstCreateeNew,
-                createeAddress.trimLeadingZeros(),
+                createeAddress.getBytes().trimLeadingZeros(),
                 DomSubStampsSubFragment.standardDomSubStamps(this.hubStamp(), 1),
                 TransactionProcessingType.USER);
 

@@ -75,11 +75,11 @@ class LineaGetForcedTransactionInclusionStatusTest {
 
     assertThat(result).isNotNull();
     assertThat(result.forcedTransactionNumber).isEqualTo(ftx.forcedTransactionNumber());
-    assertThat(result.transactionHash).isEqualTo(ftx.txHash().toHexString());
+    assertThat(result.transactionHash).isEqualTo(ftx.txHash().getBytes().toHexString());
     assertThat(result.inclusionResult).isEqualTo("Included");
     assertThat(result.blockNumber).isEqualTo("0x64"); // 100 in hex
     assertThat(result.blockTimestamp).isEqualTo(TEST_TIMESTAMP);
-    assertThat(result.from).isEqualTo(ftx.transaction().getSender().toHexString());
+    assertThat(result.from).isEqualTo(ftx.transaction().getSender().getBytes().toHexString());
   }
 
   @Test

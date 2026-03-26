@@ -27,7 +27,6 @@ import static net.consensys.linea.zktracer.module.hub.HubProcessingPhase.*;
 import static net.consensys.linea.zktracer.module.hub.TransactionProcessingType.*;
 import static net.consensys.linea.zktracer.module.hub.signals.TracedException.*;
 import static net.consensys.linea.zktracer.opcode.OpCode.*;
-import static net.consensys.linea.zktracer.types.AddressUtils.effectiveToAddress;
 import static net.consensys.linea.zktracer.types.AddressUtils.isPrecompile;
 import static org.hyperledger.besu.evm.frame.MessageFrame.Type.*;
 
@@ -128,13 +127,13 @@ import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Address;
+import org.hyperledger.besu.datatypes.Log;
+import org.hyperledger.besu.datatypes.LogTopic;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.evm.account.AccountState;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
-import org.hyperledger.besu.evm.log.Log;
-import org.hyperledger.besu.evm.log.LogTopic;
 import org.hyperledger.besu.evm.operation.Operation;
 import org.hyperledger.besu.evm.worldstate.WorldView;
 import org.hyperledger.besu.plugin.data.BlockBody;
@@ -466,7 +465,7 @@ public final class Hub implements Module {
     checkState(chain.id.signum() >= 0, "Hub constructor: chain id must be non-negative");
     final Address l2l1ContractAddress = chain.bridgeConfiguration.contract();
     final Bytes32 l2l1Topic = chain.bridgeConfiguration.topic();
-    if (l2l1ContractAddress.equals(TEST_DEFAULT.contract())) {
+    if (l2l1ContractAddress.getBytes().equals(TEST_DEFAULT.contract().getBytes())) {
       log.info("[ZkTracer] Using default testing L2L1 contract address");
     }
     l2L1Logs = new IncrementingModule(BLOCK_L2_L1_LOGS);
@@ -760,10 +759,11 @@ public final class Hub implements Module {
       final Transaction tx = currentTransaction.getBesuTransaction();
 
       checkArgument(
-          recipientAddress.equals(effectiveToAddress(tx)),
+          recipientAddress.getBytes().equals(currentTransaction.getEffectiveRecipient().getBytes()),
           "Mismatch between frame and transaction recipient");
       checkArgument(
-          senderAddress.equals(tx.getSender()), "Mismatch between frame and transaction sender");
+          senderAddress.getBytes().equals(tx.getSender().getBytes()),
+          "Mismatch between frame and transaction sender");
       checkArgument(
           isDeployment == tx.getTo().isEmpty(),
           "Mismatch between frame and transaction deployment info");

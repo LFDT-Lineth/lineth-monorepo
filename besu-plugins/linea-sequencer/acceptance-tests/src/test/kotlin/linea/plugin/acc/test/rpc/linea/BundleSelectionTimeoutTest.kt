@@ -98,7 +98,7 @@ class BundleSelectionTimeoutTest : AbstractSendBundleTest() {
       .execute(minerNode.nodeRequests())
 
     buildNewBlockAndWait()
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
 
     // none of the big bundle txs must be included in a block
     callsBigBundle
@@ -112,7 +112,7 @@ class BundleSelectionTimeoutTest : AbstractSendBundleTest() {
       .execute(minerNode.nodeRequests())
 
     buildNewBlockAndWait()
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transfer2TxHash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transfer2TxHash.bytes.toHexString()))
     // all tx in small bundle where included in a block
     callsSmallBundle
       .map { it.txHash }
@@ -170,8 +170,8 @@ class BundleSelectionTimeoutTest : AbstractSendBundleTest() {
     sendBundleResponseBig1.assertSuccessResponse()
     followingBundleResponses.forEach { resp -> resp.assertSuccessResponse() }
 
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()))
-    val transferReceipt = ethTransactions.getTransactionReceipt(transferTxHash.toHexString())
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
+    val transferReceipt = ethTransactions.getTransactionReceipt(transferTxHash.bytes.toHexString())
     assertThat(transferReceipt.execute(minerNode.nodeRequests()))
       .isPresent
       .map(TransactionReceipt::getBlockNumber)

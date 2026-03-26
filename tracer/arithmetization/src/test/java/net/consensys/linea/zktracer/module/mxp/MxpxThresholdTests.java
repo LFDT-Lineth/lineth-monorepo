@@ -356,11 +356,11 @@ public class MxpxThresholdTests extends TracerTestBase {
     // Copy to targetOffset the code of codeOwnerAccount
     final Bytes FILL_MEMORY =
         BytecodeCompiler.newProgram(chainConfig)
-            .push(codeOwnerAddress)
+            .push(codeOwnerAddress.getBytes())
             .op(OpCode.EXTCODESIZE) // size
             .push(0) // offset
             .push(0) // targetOffset
-            .push(codeOwnerAddress) // address
+            .push(codeOwnerAddress.getBytes()) // address
             .op(OpCode.EXTCODECOPY)
             .compile();
 

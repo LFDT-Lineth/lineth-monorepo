@@ -218,7 +218,7 @@ public final class TxInitializationSection extends TraceSection implements EndTr
             .makeWithTrm(
                 coinbase,
                 coinbaseNew,
-                coinbaseAddress,
+                coinbaseAddress.getBytes(),
                 DomSubStampsSubFragment.standardDomSubStamps(getHubStamp(), domSubOffset()),
                 TransactionProcessingType.USER)
             .dontCheckForDelegation(hub);
@@ -228,7 +228,7 @@ public final class TxInitializationSection extends TraceSection implements EndTr
             .makeWithTrm(
                 senderGasPayment,
                 senderGasPaymentNew,
-                senderGasPayment.address(),
+                senderGasPayment.address().getBytes(),
                 DomSubStampsSubFragment.standardDomSubStamps(hubStamp, domSubOffset()),
                 TransactionProcessingType.USER)
             .checkForDelegationIfAccountHasCode(hub);
@@ -247,7 +247,7 @@ public final class TxInitializationSection extends TraceSection implements EndTr
             .makeWithTrm(
                 recipientValueReception,
                 recipientValueReceptionNew,
-                recipientValueReception.address(),
+                recipientValueReception.address().getBytes(),
                 DomSubStampsSubFragment.standardDomSubStamps(hubStamp, domSubOffset()),
                 TransactionProcessingType.USER)
             .checkForDelegationIfAccountHasCode(hub);
@@ -257,7 +257,7 @@ public final class TxInitializationSection extends TraceSection implements EndTr
             .makeWithTrm(
                 delegateOrRecipient,
                 delegateOrRecipientNew,
-                delegateOrRecipient.address(),
+                delegateOrRecipient.address().getBytes(),
                 DomSubStampsSubFragment.standardDomSubStamps(hubStamp, domSubOffset()),
                 TransactionProcessingType.USER)
             .requiresRomlex(true)

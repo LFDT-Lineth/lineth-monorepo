@@ -85,7 +85,7 @@ public class LineaL1L2BridgeSharedCliOptions implements LineaCliOptions {
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
-        .add(L1L2_BRIDGE_CONTRACT, l1l2BridgeContract.toHexString())
+        .add(L1L2_BRIDGE_CONTRACT, l1l2BridgeContract.getBytes().toHexString())
         .add(L1L2_BRIDGE_TOPIC, l1l2BridgeTopic.toHexString())
         .toString();
   }

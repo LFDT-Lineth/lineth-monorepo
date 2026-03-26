@@ -119,7 +119,7 @@ class TransactionCallDataSizeLimitTest : LineaPluginPoSTestBase() {
       .isEqualTo("Calldata of transaction is greater than the allowed max of 1188")
 
     expectedConfirmedTxs
-      .map { it.toHexString() }
+      .map { it.bytes.toHexString() }
       .forEach { hash -> minerNode.verify(eth.expectSuccessfulTransactionReceipt(hash)) }
   }
 

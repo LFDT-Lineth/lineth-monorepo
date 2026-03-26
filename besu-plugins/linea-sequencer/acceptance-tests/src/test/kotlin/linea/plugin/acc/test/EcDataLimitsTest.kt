@@ -32,11 +32,11 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
   }
 
   override fun getCliqueOptions(): GenesisConfigurationFactory.CliqueOptions {
-    // adding 1 more second to the block period, in order to avoid flakiness on the CI
+    // adding 2 more seconds to the block period, in order to avoid flakiness on the CI
     // due to EcParing sometime taking all the selection time before all pending txs
     // have been evaluated
     return GenesisConfigurationFactory.CliqueOptions(
-      BLOCK_PERIOD_SECONDS + 1,
+      BLOCK_PERIOD_SECONDS + 2,
       GenesisConfigurationFactory.CliqueOptions.DEFAULT.epochLength(),
       false,
     )
@@ -69,7 +69,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     val fundTxHash = accountTransactions
       .createTransfer(accounts.secondaryBenefactor, ecPairingSender, 1, BigInteger.ZERO)
       .execute(minerNode.nodeRequests())
-      .toHexString()
+      .bytes.toHexString()
     // Verify that the transaction for transferring funds was successful
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash))
 
@@ -106,7 +106,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       )
       .execute(minerNode.nodeRequests())
     // Wait for the sentry to be mined
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
 
     // Assert that all the transactions involving the EcPairing precompile, but the last one, were
     // included in the same block
@@ -167,7 +167,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     val fundTxHash = accountTransactions
       .createTransfer(accounts.secondaryBenefactor, ecAddSender, 1, BigInteger.ZERO)
       .execute(minerNode.nodeRequests())
-      .toHexString()
+      .bytes.toHexString()
     // Verify that the transaction for transferring funds was successful
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash))
 
@@ -199,7 +199,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       )
       .execute(minerNode.nodeRequests())
     // Wait for the sentry to be mined
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
 
     // Assert that all the transactions involving the EcPairing precompile, but the last one, were
     // included in the same block
@@ -255,7 +255,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     val fundTxHash = accountTransactions
       .createTransfer(accounts.secondaryBenefactor, ecMulSender, 1, BigInteger.ZERO)
       .execute(minerNode.nodeRequests())
-      .toHexString()
+      .bytes.toHexString()
     // Verify that the transaction for transferring funds was successful
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash))
 
@@ -287,7 +287,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       )
       .execute(minerNode.nodeRequests())
     // Wait for the sentry to be mined
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
 
     // Assert that all the transactions involving the EcPairing precompile, but the last one, were
     // included in the same block
@@ -345,7 +345,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     val fundTxHash = accountTransactions
       .createTransfer(accounts.secondaryBenefactor, ecRecoverSender, 1, BigInteger.ZERO)
       .execute(minerNode.nodeRequests())
-      .toHexString()
+      .bytes.toHexString()
     // Verify that the transaction for transferring funds was successful
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash))
     // send first tx (nonce=0) last one, so they will stay ready in the pool,
@@ -377,7 +377,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       )
       .execute(minerNode.nodeRequests())
     // Wait for the sentry to be mined
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
 
     // Assert that all the transactions involving the EcPairing precompile, but the last one, were
     // included in the same block

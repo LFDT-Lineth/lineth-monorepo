@@ -333,8 +333,8 @@ public class RomLex implements OperationSetModule<RomOperation>, ContextEntryDef
         .tailDelegationBytes(potentiallyAddressLo)
         .delegationAddressHi(actuallyDelegationCode ? potentiallyAddressHi : 0)
         .delegationAddressLo(actuallyDelegationCode ? potentiallyAddressLo : Bytes.EMPTY)
-        .codeHashHi(codeHash.slice(0, LLARGE))
-        .codeHashLo(codeHash.slice(LLARGE, LLARGE))
+        .codeHashHi(codeHash.getBytes().slice(0, LLARGE))
+        .codeHashLo(codeHash.getBytes().slice(LLARGE, LLARGE))
         .validateRow();
   }
 

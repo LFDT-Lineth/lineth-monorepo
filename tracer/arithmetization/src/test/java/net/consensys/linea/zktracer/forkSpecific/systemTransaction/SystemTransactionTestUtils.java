@@ -43,7 +43,7 @@ public class SystemTransactionTestUtils {
         .push(32) // argSize
         .push(0) // argOffset
         .push(0) // value
-        .push(systemContractAddress) // address
+        .push(systemContractAddress.getBytes()) // address
         .push(757575) // gas
         .op(OpCode.CALL)
         .op(OpCode.POP) // clean stack

@@ -35,7 +35,7 @@ import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import net.consensys.linea.zktracer.types.UnsignedByte;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
-import org.hyperledger.besu.evm.log.Log;
+import org.hyperledger.besu.datatypes.Log;
 
 @RequiredArgsConstructor
 public class LogInfo implements Module {
@@ -157,10 +157,14 @@ public class LogInfo implements Module {
       Trace.Loginfo trace) {
     final int ctMax = ctMax(log);
     final int nbTopic = log.getTopics().size();
-    final Bytes32 topic1 = nbTopic >= 1 ? log.getTopics().get(0) : Bytes32.ZERO;
-    final Bytes32 topic2 = nbTopic >= 2 ? log.getTopics().get(1) : Bytes32.ZERO;
-    final Bytes32 topic3 = nbTopic >= 3 ? log.getTopics().get(2) : Bytes32.ZERO;
-    final Bytes32 topic4 = nbTopic >= 4 ? log.getTopics().get(3) : Bytes32.ZERO;
+    final Bytes32 topic1 =
+        nbTopic >= 1 ? Bytes32.wrap(log.getTopics().get(0).getBytes()) : Bytes32.ZERO;
+    final Bytes32 topic2 =
+        nbTopic >= 2 ? Bytes32.wrap(log.getTopics().get(1).getBytes()) : Bytes32.ZERO;
+    final Bytes32 topic3 =
+        nbTopic >= 3 ? Bytes32.wrap(log.getTopics().get(2).getBytes()) : Bytes32.ZERO;
+    final Bytes32 topic4 =
+        nbTopic >= 4 ? Bytes32.wrap(log.getTopics().get(3).getBytes()) : Bytes32.ZERO;
     for (int ct = 0; ct < ctMax + 1; ct++) {
       trace
           .absTxnNumMax(this.rlpTxnRcpt.operations().size())
@@ -170,8 +174,8 @@ public class LogInfo implements Module {
           .absLogNum(absLogNum)
           .ctMax(UnsignedByte.of(ctMax))
           .ct(UnsignedByte.of(ct))
-          .addrHi(log.getLogger().slice(0, 4).toLong())
-          .addrLo(log.getLogger().slice(4, 16))
+          .addrHi(log.getLogger().getBytes().slice(0, 4).toLong())
+          .addrLo(log.getLogger().getBytes().slice(4, 16))
           .topicHi1(topic1.slice(0, 16))
           .topicLo1(topic1.slice(16, 16))
           .topicHi2(topic2.slice(0, 16))
@@ -199,8 +203,8 @@ public class LogInfo implements Module {
         case 1 -> {
           trace
               .phase(RLP_RCPT_SUBPHASE_ID_ADDR)
-              .dataHi(log.getLogger().slice(0, 4))
-              .dataLo(log.getLogger().slice(4, 16))
+              .dataHi(log.getLogger().getBytes().slice(0, 4))
+              .dataLo(log.getLogger().getBytes().slice(4, 16))
               .validateRow();
         }
         case 2 -> {

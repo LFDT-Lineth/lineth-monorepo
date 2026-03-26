@@ -141,7 +141,7 @@ public class LineaForcedTransactionPool
       log.atDebug()
           .setMessage("action=add_forced_tx forcedTxNumber={} txHash={} deadlineBlockNumber={}")
           .addArgument(tx::forcedTransactionNumber)
-          .addArgument(tx.txHash()::toHexString)
+          .addArgument(() -> tx.txHash().getBytes().toHexString())
           .addArgument(tx::deadlineBlockNumber)
           .log();
     }
@@ -183,7 +183,7 @@ public class LineaForcedTransactionPool
           .setMessage(
               "action=evaluate_forced_tx forcedTxNumber={} txHash={} index={} blockNumber={}")
           .addArgument(ftx::forcedTransactionNumber)
-          .addArgument(ftx.txHash()::toHexString)
+          .addArgument(() -> ftx.txHash().getBytes().toHexString())
           .addArgument(index)
           .addArgument(blockNumber)
           .log();
@@ -201,7 +201,7 @@ public class LineaForcedTransactionPool
             .setMessage(
                 "action=forced_tx_tentatively_selected forcedTxNumber={} txHash={} blockNumber={} index={}")
             .addArgument(ftx::forcedTransactionNumber)
-            .addArgument(ftx.txHash()::toHexString)
+            .addArgument(() -> ftx.txHash().getBytes().toHexString())
             .addArgument(blockNumber)
             .addArgument(index)
             .log();
@@ -219,7 +219,7 @@ public class LineaForcedTransactionPool
               .setMessage(
                   "action=forced_tx_tentatively_rejected forcedTxNumber={} txHash={} blockNumber={} inclusionResult={}")
               .addArgument(ftx::forcedTransactionNumber)
-              .addArgument(ftx.txHash()::toHexString)
+              .addArgument(() -> ftx.txHash().getBytes().toHexString())
               .addArgument(blockNumber)
               .addArgument(inclusionResult)
               .log();
@@ -230,7 +230,7 @@ public class LineaForcedTransactionPool
               .setMessage(
                   "action=forced_tx_retry_scheduled forcedTxNumber={} txHash={} blockNumber={} index={} inclusionResult={}")
               .addArgument(ftx::forcedTransactionNumber)
-              .addArgument(ftx.txHash()::toHexString)
+              .addArgument(() -> ftx.txHash().getBytes().toHexString())
               .addArgument(blockNumber)
               .addArgument(index)
               .addArgument(inclusionResult)
@@ -278,7 +278,7 @@ public class LineaForcedTransactionPool
         log.atInfo()
             .setMessage("action=forced_tx_included forcedTxNumber={} txHash={} blockNumber={}")
             .addArgument(ftx::forcedTransactionNumber)
-            .addArgument(ftx.txHash()::toHexString)
+            .addArgument(() -> ftx.txHash().getBytes().toHexString())
             .addArgument(blockNumber)
             .log();
       } else {
@@ -292,7 +292,7 @@ public class LineaForcedTransactionPool
               .setMessage(
                   "action=forced_tx_rejected forcedTxNumber={} txHash={} blockNumber={} inclusionResult={}")
               .addArgument(ftx::forcedTransactionNumber)
-              .addArgument(ftx.txHash()::toHexString)
+              .addArgument(() -> ftx.txHash().getBytes().toHexString())
               .addArgument(blockNumber)
               .addArgument(rejection::inclusionResult)
               .log();

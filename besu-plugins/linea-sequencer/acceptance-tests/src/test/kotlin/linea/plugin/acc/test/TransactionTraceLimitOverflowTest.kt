@@ -71,7 +71,7 @@ class TransactionTraceLimitOverflowTest : LineaPluginPoSTestBase() {
     )
 
     expectedConfirmedTxs
-      .map { it.toHexString() }
+      .map { it.bytes.toHexString() }
       .forEach { hash -> minerNode.verify(eth.expectSuccessfulTransactionReceipt(hash)) }
 
     // assert that tx over line count limit is not confirmed and is removed from the pool

@@ -20,14 +20,12 @@ import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.Wei;
 
 public class MonoOpCodeSmcs {
 
   public static KeyPair keyPair = new SECP256K1().generateKeyPair();
-  public static Address userAddress =
-      Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+  public static Address userAddress = Address.extract(keyPair.getPublicKey());
   public static ToyAccount userAccount =
       ToyAccount.builder().balance(Wei.fromEth(10)).nonce(99).address(userAddress).build();
 

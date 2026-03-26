@@ -43,13 +43,13 @@ class TransactionSelectorDenyListReloadTest : LineaPluginPoSTestBase() {
     val fundTxHash = accountTransactions
       .createTransfer(accounts.primaryBenefactor, sender, 100)
       .execute(minerNode.nodeRequests())
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash.bytes.toHexString()))
 
     // First verify sender is allowed
     val tx1Hash = accountTransactions
       .createTransfer(sender, recipient, 1)
       .execute(minerNode.nodeRequests())
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(tx1Hash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(tx1Hash.bytes.toHexString()))
 
     // to get more control over the test and avoid flacky failures
     buildBlocksInBackground = false
@@ -68,8 +68,8 @@ class TransactionSelectorDenyListReloadTest : LineaPluginPoSTestBase() {
     val canary1TxHash = accountTransactions
       .createTransfer(accounts.secondaryBenefactor, accounts.secondaryBenefactor, 1)
       .execute(minerNode.nodeRequests())
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(canary1TxHash.toHexString()))
-    minerNode.verify(eth.expectNoTransactionReceipt(tx2Hash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(canary1TxHash.bytes.toHexString()))
+    minerNode.verify(eth.expectNoTransactionReceipt(tx2Hash.bytes.toHexString()))
 
     emptyDenyList()
     reloadSelectorPluginOnly()
@@ -79,7 +79,7 @@ class TransactionSelectorDenyListReloadTest : LineaPluginPoSTestBase() {
       .createTransfer(sender, recipient, 1, BigInteger.ONE)
       .execute(minerNode.nodeRequests())
 
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(tx2Hash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(tx2Hash.bytes.toHexString()))
   }
 
   private fun addAddressToDenyList(address: String) {

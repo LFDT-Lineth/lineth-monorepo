@@ -138,8 +138,8 @@ public class RlpAddr implements OperationSetModule<RlpAddrOperation> {
           .rawAddrHi(rawAddressHi)
           .depAddrHi(depAddressHi)
           .depAddrLo(depAddressLo)
-          .addrHi(chunk.address().slice(0, 4).toLong())
-          .addrLo(chunk.address().slice(4, LLARGE))
+          .addrHi(chunk.address().getBytes().slice(0, 4).toLong())
+          .addrLo(chunk.address().getBytes().slice(4, LLARGE))
           .saltHi(chunk.salt().slice(0, LLARGE))
           .saltLo(chunk.salt().slice(LLARGE, LLARGE))
           .kecHi(chunk.keccak().slice(0, LLARGE))
@@ -152,12 +152,14 @@ public class RlpAddr implements OperationSetModule<RlpAddrOperation> {
       switch (ct) {
         case 0 -> {
           trace.limb(
-              rightPadTo(Bytes.concatenate(CREATE2_SHIFT, chunk.address().slice(0, 4)), LLARGE));
+              rightPadTo(
+                  Bytes.concatenate(CREATE2_SHIFT, chunk.address().getBytes().slice(0, 4)),
+                  LLARGE));
           trace.nBytes(UnsignedByte.of(5)).selectorKeccakRes(true);
         }
         case 1 ->
             trace
-                .limb(chunk.address().slice(4, LLARGE))
+                .limb(chunk.address().getBytes().slice(4, LLARGE))
                 .nBytes(BYTES_LLARGE)
                 .selectorKeccakRes(false);
         case 2 ->
@@ -236,8 +238,8 @@ public class RlpAddr implements OperationSetModule<RlpAddrOperation> {
           .recipe(UnsignedByte.of(RLP_ADDR_RECIPE_1))
           .recipe1(true)
           .recipe2(false)
-          .addrHi(chunk.address().slice(0, 4).toLong())
-          .addrLo(chunk.address().slice(4, LLARGE))
+          .addrHi(chunk.address().getBytes().slice(0, 4).toLong())
+          .addrLo(chunk.address().getBytes().slice(4, LLARGE))
           .rawAddrHi(rawAddressHi)
           .depAddrHi(depAddressHi)
           .depAddrLo(depAddressLo)
@@ -280,7 +282,7 @@ public class RlpAddr implements OperationSetModule<RlpAddrOperation> {
                     rightPadTo(
                         Bytes.concatenate(
                             bigIntegerToBytes(BigInteger.valueOf(148)),
-                            chunk.address().slice(0, 4)),
+                            chunk.address().getBytes().slice(0, 4)),
                         LLARGE))
                 .nBytes(UnsignedByte.of(5))
                 .index(UnsignedByte.of(1))
@@ -288,7 +290,7 @@ public class RlpAddr implements OperationSetModule<RlpAddrOperation> {
         case 6 ->
             trace
                 .lc(true)
-                .limb(chunk.address().slice(4, LLARGE))
+                .limb(chunk.address().getBytes().slice(4, LLARGE))
                 .nBytes(UnsignedByte.of(LLARGE))
                 .index(UnsignedByte.of(2))
                 .selectorKeccakRes(false);

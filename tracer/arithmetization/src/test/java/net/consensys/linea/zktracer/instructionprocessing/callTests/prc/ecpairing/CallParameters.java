@@ -90,7 +90,7 @@ public class CallParameters implements PrecompileCallParameters {
       program.push(0x0a00);
     }
 
-    program.push(Address.ALTBN128_MUL);
+    program.push(Address.ALTBN128_MUL.getBytes());
 
     // push gas onto the stack
     int callStipend = callInfo.callHasValueArgument() ? 2_300 : 0;

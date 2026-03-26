@@ -149,7 +149,7 @@ public class TraceLineLimitCacheIntegrationTest {
     assertThat(poolValidationResult).isPresent();
     assertThat(poolValidationResult.get())
         .contains("was already identified to go over line count limit");
-    assertThat(poolValidationResult.get()).contains(transactionHash.toString());
+    assertThat(poolValidationResult.get()).contains(transactionHash.getBytes().toHexString());
 
     // Additional verification: Try different transaction parameters to ensure rejection is
     // consistent
@@ -199,7 +199,7 @@ public class TraceLineLimitCacheIntegrationTest {
     // Verify the reason for rejection
     assertThat(finalPoolValidation.get())
         .contains("was already identified to go over line count limit")
-        .contains(transactionHash.toString());
+        .contains(transactionHash.getBytes().toHexString());
   }
 
   @Test

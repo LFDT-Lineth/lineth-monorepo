@@ -176,7 +176,7 @@ public class MultiBlockExecutionEnvironment {
             .map(
                 toyAccount ->
                     new AccountSnapshot(
-                        toyAccount.getAddress().toHexString(),
+                        toyAccount.getAddress().getBytes().toHexString(),
                         toyAccount.getNonce(),
                         toyAccount.getBalance().toHexString(),
                         toyAccount.getCode().toHexString()))
@@ -190,7 +190,7 @@ public class MultiBlockExecutionEnvironment {
                         .map(
                             storageEntry ->
                                 new StorageSnapshot(
-                                    account.getAddress().toHexString(),
+                                    account.getAddress().getBytes().toHexString(),
                                     storageEntry.getKey().toHexString(),
                                     storageEntry.getValue().toHexString())))
             .toList();

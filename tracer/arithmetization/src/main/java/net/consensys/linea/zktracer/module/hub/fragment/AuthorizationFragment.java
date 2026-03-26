@@ -111,7 +111,7 @@ public class AuthorizationFragment implements TraceFragment {
   }
 
   public Bytecode getBytecode() {
-    if (delegation.address().equals(Address.ZERO)) {
+    if (delegation.address().getBytes().equals(Address.ZERO.getBytes())) {
       return Bytecode.EMPTY;
     }
 
@@ -120,7 +120,7 @@ public class AuthorizationFragment implements TraceFragment {
                 .trimLeadingZeros()
                 .toHexString()
                 .substring(2)
-            + delegation.address().toHexString().substring(2);
+            + delegation.address().getBytes().toHexString().substring(2);
 
     checkState(
         bytecodeHexString.length() == 2 * EOA_DELEGATED_CODE_LENGTH,
@@ -141,15 +141,16 @@ public class AuthorizationFragment implements TraceFragment {
         .pAuthSenderIsAuthority(tracedSenderIsAuthority())
         .pAuthSenderIsAuthorityAcc(
             validSenderIsAuthorityAcc) // this column is always present in hub.auth/
-        .pAuthAuthorityAddressHi(tracedAuthorityAddress().slice(0, 4).toLong())
-        .pAuthAuthorityAddressLo(tracedAuthorityAddress().slice(4, LLARGE))
+        .pAuthAuthorityAddressHi(tracedAuthorityAddress().getBytes().slice(0, 4).toLong())
+        .pAuthAuthorityAddressLo(tracedAuthorityAddress().getBytes().slice(4, LLARGE))
         .pAuthAuthorityNonce(Bytes.ofUnsignedLong(tracedAuthorityNonce()))
         .pAuthAuthorityHasEmptyCodeOrIsDelegated(
             tracedAuthorityHasEmptyCodeOrIsDelegated()) // don't simplify
         .pAuthAuthorizationTupleIsValid(authorizationTupleIsValid)
-        .pAuthDelegationAddressHi(delegation.address().slice(0, 4).toLong())
-        .pAuthDelegationAddressLo(delegation.address().slice(4, LLARGE))
-        .pAuthDelegationAddressIsZero(delegation.address().equals(Address.ZERO));
+        .pAuthDelegationAddressHi(delegation.address().getBytes().slice(0, 4).toLong())
+        .pAuthDelegationAddressLo(delegation.address().getBytes().slice(4, LLARGE))
+        .pAuthDelegationAddressIsZero(
+            delegation.address().getBytes().equals(Address.ZERO.getBytes()));
   }
 
   private boolean traceAccountData() {

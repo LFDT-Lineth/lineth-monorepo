@@ -60,7 +60,7 @@ public class TraceLineLimitValidatorTest {
     // Then: transaction should be rejected with appropriate error message
     assertThat(result).isPresent();
     assertThat(result.get()).contains("was already identified to go over line count limit");
-    assertThat(result.get()).contains(transactionHash.toString());
+    assertThat(result.get()).contains(transactionHash.getBytes().toHexString());
   }
 
   @Test

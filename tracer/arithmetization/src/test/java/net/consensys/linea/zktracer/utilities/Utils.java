@@ -47,7 +47,7 @@ public class Utils {
         .op(OpCode.MSIZE) // arg size
         .push(0) // argOffset
         .push(1) // value
-        .push(address) // address
+        .push(address.getBytes()) // address
         .push(100000) // gas
         .op(staticCall ? OpCode.STATICCALL : OpCode.CALL)
         .compile();
@@ -61,7 +61,7 @@ public class Utils {
         .op(OpCode.MSIZE) // arg size
         .push(0) // argOffset
         .push(1) // value
-        .push(address) // address
+        .push(address.getBytes()) // address
         .push(100000) // gas
         .op(OpCode.DELEGATECALL)
         .compile();
@@ -73,7 +73,8 @@ public class Utils {
   }
 
   public static String addDelegationPrefixToAddress(Address address) {
-    return Integer.toHexString(EIP_7702_DELEGATION_INDICATOR) + address.toHexString().substring(2);
+    return Integer.toHexString(EIP_7702_DELEGATION_INDICATOR)
+        + address.getBytes().toHexString().substring(2);
   }
 
   public static Optional<Address> getDelegationAddress(ToyAccount account) {

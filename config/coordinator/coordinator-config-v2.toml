@@ -97,7 +97,7 @@ backoff-delay = "PT1S"
 failures-warning-threshold = 10
 
 [state-manager]
-version = "3.0.0"
+version = "3.0.5"
 endpoints = ["http://shomei:8888/"]
 request-limit-per-endpoint = 3
 [state-manager.request-retries]

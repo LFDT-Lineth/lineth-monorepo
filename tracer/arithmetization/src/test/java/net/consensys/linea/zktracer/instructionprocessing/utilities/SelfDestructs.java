@@ -65,7 +65,7 @@ public class SelfDestructs {
   public static int recipientIsPrecompileSelfDestruct(BytecodeCompiler program) {
     Calls.ProgramIncrement increment = new Calls.ProgramIncrement(program);
     program
-        .push(ECREC) // precompiles are warm by default
+        .push(ECREC.getBytes()) // precompiles are warm by default
         .op(OpCode.SELFDESTRUCT);
     return increment.sizeDelta();
   }

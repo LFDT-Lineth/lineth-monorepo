@@ -119,7 +119,7 @@ class BlockImporter(
         .gasLimit(blockFromBlob.header.gasLimit.toLong())
         .timestamp(blockFromBlob.header.blockTimestamp.epochSeconds)
         .difficulty(blockFromBlob.header.difficulty.toBigInteger())
-        .mixHashOrPrevRandao(Hash.ZERO)
+        .mixHashOrPrevRandao(Bytes32.ZERO)
         .blockHashLookup(blockHashLookup)
         .build()
     }
@@ -135,7 +135,7 @@ class BlockImporter(
         .timestamp(blockHeader.timestamp)
         .difficulty(blockHeader.difficulty.asBigInteger)
         .stateRoot(blockHeader.stateRoot)
-        .mixHashOrPrevRandao(Hash.ZERO)
+        .mixHashOrPrevRandao(Bytes32.ZERO)
         .blockHashLookup(blockHashLookup)
         .build()
     }

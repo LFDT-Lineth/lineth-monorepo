@@ -198,12 +198,12 @@ public class EngineAPIService {
     if (maybeTimeStamp.isPresent()) {
       ObjectNode payloadAttributes = mapper.createObjectNode();
       payloadAttributes.put("timestamp", blockTimestamp);
-      payloadAttributes.put("prevRandao", Hash.ZERO.toString());
-      payloadAttributes.put("suggestedFeeRecipient", Address.ZERO.toString());
+      payloadAttributes.put("prevRandao", Hash.ZERO.getBytes().toHexString());
+      payloadAttributes.put("suggestedFeeRecipient", Address.ZERO.getBytes().toHexString());
       // post Shanghai
       payloadAttributes.set("withdrawals", mapper.createArrayNode());
       // post Cancun
-      payloadAttributes.put("parentBeaconBlockRoot", Hash.ZERO.toString());
+      payloadAttributes.put("parentBeaconBlockRoot", Hash.ZERO.getBytes().toHexString());
       params.add(payloadAttributes);
     }
     return params;

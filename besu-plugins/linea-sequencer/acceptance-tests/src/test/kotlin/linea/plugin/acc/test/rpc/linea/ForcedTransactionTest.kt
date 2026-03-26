@@ -203,13 +203,13 @@ class ForcedTransactionTest : AbstractForcedTransactionTest() {
     assertThat(sendResponse.hasError()).isFalse()
 
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(forcedTxHash))
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(regularTxHash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(regularTxHash.bytes.toHexString()))
 
     // Check the block numbers - forced tx should be in an earlier or same block
     val forcedReceipt = ethTransactions.getTransactionReceipt(forcedTxHash)
       .execute(minerNode.nodeRequests())
       .orElseThrow()
-    val regularReceipt = ethTransactions.getTransactionReceipt(regularTxHash.toHexString())
+    val regularReceipt = ethTransactions.getTransactionReceipt(regularTxHash.bytes.toHexString())
       .execute(minerNode.nodeRequests())
       .orElseThrow()
 

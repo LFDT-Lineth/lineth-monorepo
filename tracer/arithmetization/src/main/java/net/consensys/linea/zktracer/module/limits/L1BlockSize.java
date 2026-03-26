@@ -29,9 +29,9 @@ import net.consensys.linea.zktracer.module.ModuleName;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.datatypes.Log;
+import org.hyperledger.besu.datatypes.LogTopic;
 import org.hyperledger.besu.datatypes.Transaction;
-import org.hyperledger.besu.evm.log.Log;
-import org.hyperledger.besu.evm.log.LogTopic;
 import org.hyperledger.besu.evm.worldstate.WorldView;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 
@@ -85,7 +85,8 @@ public class L1BlockSize implements Module {
         + blockTransactions.lineCount() * Address.SIZE
 
         // Calculates the data size related to the block
-        + nbBlock * (TIMESTAMP_BYTESIZE + Hash.SIZE + NB_TX_IN_BLOCK_BYTESIZE);
+        // TODO: remove the Hash.EMPTY workaround
+        + nbBlock * (TIMESTAMP_BYTESIZE + Hash.EMPTY.getBytes().size() + NB_TX_IN_BLOCK_BYTESIZE);
   }
 
   @Override
@@ -137,8 +138,8 @@ public class L1BlockSize implements Module {
   }
 
   private boolean isL2L1Log(Log log) {
-    return log.getLogger().equals(l2l1Address)
+    return log.getLogger().getBytes().equals(l2l1Address.getBytes())
         && !log.getTopics().isEmpty()
-        && log.getTopics().getFirst().equals(l2l1Topic);
+        && log.getTopics().getFirst().getBytes().equals(l2l1Topic.getBytes());
   }
 }

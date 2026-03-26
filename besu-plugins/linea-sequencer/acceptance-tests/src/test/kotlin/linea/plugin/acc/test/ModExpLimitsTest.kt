@@ -64,7 +64,7 @@ class ModExpLimitsTest : LineaPluginPoSTestBase() {
     val fundTxHash = accountTransactions
       .createTransfer(accounts.secondaryBenefactor, modExpSender, 1, BigInteger.ZERO)
       .execute(minerNode.nodeRequests())
-      .toHexString()
+      .bytes.toHexString()
     // Verify that the transaction for transferring funds was successful
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash))
 
@@ -96,7 +96,7 @@ class ModExpLimitsTest : LineaPluginPoSTestBase() {
       )
       .execute(minerNode.nodeRequests())
     // Wait for the sentry to be mined
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
 
     // Assert that all the transactions involving the EcPairing precompile, but the last one, were
     // included in the same block

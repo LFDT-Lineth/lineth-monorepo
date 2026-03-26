@@ -85,8 +85,8 @@ public abstract class BlockDataInstruction {
           .ctMax(nbRows - 1)
           .ct(ct)
           .inst(opCode.unsignedByteValue()) // not fork dependant
-          .coinbaseHi(hub.coinbaseAddressOfRelativeBlock(relBlock).slice(0, 4).toLong())
-          .coinbaseLo(hub.coinbaseAddressOfRelativeBlock(relBlock).slice(4, LLARGE))
+          .coinbaseHi(hub.coinbaseAddressOfRelativeBlock(relBlock).getBytes().slice(0, 4).toLong())
+          .coinbaseLo(hub.coinbaseAddressOfRelativeBlock(relBlock).getBytes().slice(4, LLARGE))
           .blockGasLimit(Bytes.ofUnsignedLong(blockHeader.getGasLimit()))
           .basefee(bigIntegerToBytes(blockHeader.getBaseFee().get().getAsBigInteger()))
           .firstBlockNumber(firstBlockNumber)

@@ -26,6 +26,7 @@ import net.consensys.linea.testing.ToyAccount;
 import net.consensys.linea.testing.ToyExecutionEnvironmentV2;
 import net.consensys.linea.testing.ToyTransaction;
 import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.*;
@@ -249,7 +250,9 @@ public class DelegationsMakingAccountsExecutableAndViceVersaTests extends Tracer
 
   private ToyAccount toAccount(KeyPair keyPair, AuthorityDelegationStatus initialStatus) {
 
-    final Address toAddress = Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+    final Address toAddress =
+        Address.extract(
+            Bytes32.wrap(Hash.hash(keyPair.getPublicKey().getEncodedBytes()).getBytes()));
 
     if (initialStatus == AuthorityDelegationStatus.AUTHORITY_DOES_NOT_EXIST) {
       return ToyAccount.builder()

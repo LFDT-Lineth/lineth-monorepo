@@ -28,7 +28,6 @@ import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.AccessListEntry;
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.TransactionType;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.core.Transaction;
@@ -43,20 +42,17 @@ public class SimpleStorageConsistency extends TracerTestBase {
       Address.fromHexString("0x00000bad0000000000000000000000000000b077");
 
   final KeyPair senderKeyPair1 = new SECP256K1().generateKeyPair();
-  final Address senderAddress1 =
-      Address.extract(Hash.hash(senderKeyPair1.getPublicKey().getEncodedBytes()));
+  final Address senderAddress1 = Address.extract(senderKeyPair1.getPublicKey());
   final ToyAccount senderAccount1 =
       ToyAccount.builder().balance(Wei.fromEth(123)).nonce(5).address(senderAddress1).build();
 
   final KeyPair senderKeyPair2 = new SECP256K1().generateKeyPair();
-  final Address senderAddress2 =
-      Address.extract(Hash.hash(senderKeyPair2.getPublicKey().getEncodedBytes()));
+  final Address senderAddress2 = Address.extract(senderKeyPair2.getPublicKey());
   final ToyAccount senderAccount2 =
       ToyAccount.builder().balance(Wei.fromEth(1231)).nonce(15).address(senderAddress2).build();
 
   final KeyPair senderKeyPair3 = new SECP256K1().generateKeyPair();
-  final Address senderAddress3 =
-      Address.extract(Hash.hash(senderKeyPair3.getPublicKey().getEncodedBytes()));
+  final Address senderAddress3 = Address.extract(senderKeyPair3.getPublicKey());
   final ToyAccount senderAccount3 =
       ToyAccount.builder().balance(Wei.fromEth(1231)).nonce(15).address(senderAddress3).build();
 

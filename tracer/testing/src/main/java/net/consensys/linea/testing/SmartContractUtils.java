@@ -18,7 +18,6 @@ package net.consensys.linea.testing;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URL;
-import java.util.Iterator;
 import java.util.Map;
 import org.apache.tuweni.bytes.Bytes;
 import org.web3j.tx.Contract;
@@ -42,9 +41,7 @@ public class SmartContractUtils {
     URL contractResourceURL = classLoader.getResource(contractResourcePath);
     try {
       JsonNode jsonRoot = objectMapper.readTree(contractResourceURL);
-      Iterator<Map.Entry<String, JsonNode>> contracts = jsonRoot.get("contracts").fields();
-      while (contracts.hasNext()) {
-        Map.Entry<String, JsonNode> contract = contracts.next();
+      for (Map.Entry<String, JsonNode> contract : jsonRoot.get("contracts").properties()) {
         String contractName = contract.getKey().split(":")[1];
         if (contractName.equals(contractClass.getSimpleName())) {
           return Bytes.fromHexStringLenient(contract.getValue().get("bin-runtime").asText());
@@ -65,9 +62,7 @@ public class SmartContractUtils {
     URL contractResourceURL = classLoader.getResource(contractResourcePath);
     try {
       JsonNode jsonRoot = objectMapper.readTree(contractResourceURL);
-      Iterator<Map.Entry<String, JsonNode>> contracts = jsonRoot.get("contracts").fields();
-      while (contracts.hasNext()) {
-        Map.Entry<String, JsonNode> contract = contracts.next();
+      for (Map.Entry<String, JsonNode> contract : jsonRoot.get("contracts").properties()) {
         if (contract.getKey().contains(contractClass.getSimpleName())) {
           return Bytes.fromHexStringLenient(contract.getValue().get("bin").asText());
         }

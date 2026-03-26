@@ -25,7 +25,6 @@ import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.junit.jupiter.api.Disabled;
@@ -46,8 +45,7 @@ public class ForkTracingAndSwitchingBesuTest extends TracerTestBase {
   @Test
   void testPerFork(TestInfo testInfo) {
     final KeyPair keyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(keyPair.getPublicKey());
 
     final ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(1)).nonce(5).address(senderAddress).build();
@@ -83,7 +81,7 @@ public class ForkTracingAndSwitchingBesuTest extends TracerTestBase {
   @Test
   void testForkSwitchPragueToOsaka(TestInfo testInfo) {
     KeyPair keyPair = new SECP256K1().generateKeyPair();
-    Address senderAddress = Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+    Address senderAddress = Address.extract(keyPair.getPublicKey());
 
     ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(1)).nonce(5).address(senderAddress).build();

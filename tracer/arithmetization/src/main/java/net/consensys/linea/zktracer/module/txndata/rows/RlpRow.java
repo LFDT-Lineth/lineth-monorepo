@@ -42,9 +42,11 @@ public class RlpRow extends TxnDataRow {
         .pRlpType3(txn.type() == 3)
         .pRlpType4(txn.type() == 4)
         .pRlpToAddressHi(
-            txn.isMessageCall() ? txn.getEffectiveRecipient().slice(0, 4).toLong() : 0L)
+            txn.isMessageCall() ? txn.getEffectiveRecipient().getBytes().slice(0, 4).toLong() : 0L)
         .pRlpToAddressLo(
-            txn.isMessageCall() ? txn.getEffectiveRecipient().slice(4, LLARGE) : Bytes.EMPTY)
+            txn.isMessageCall()
+                ? txn.getEffectiveRecipient().getBytes().slice(4, LLARGE)
+                : Bytes.EMPTY)
         .pRlpNonce(Bytes.ofUnsignedLong(besuTxn.getNonce()))
         .pRlpIsDeployment(txn.isDeployment())
         .pRlpValue(bigIntegerToBytes(besuTxn.getValue().getAsBigInteger()))

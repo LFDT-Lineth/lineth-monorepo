@@ -207,11 +207,11 @@ public class PrecompileUtils extends TracerTestBase {
       Address codeOwnerAddress, int targetOffset, BytecodeCompiler program) {
     // Copy to targetOffset the code of codeOwnerAccount
     program
-        .push(codeOwnerAddress)
+        .push(codeOwnerAddress.getBytes())
         .op(OpCode.EXTCODESIZE) // size
         .push(0) // offset
         .push(targetOffset) // targetOffset
-        .push(codeOwnerAddress) // address
+        .push(codeOwnerAddress.getBytes()) // address
         .op(OpCode.EXTCODECOPY);
   }
 

@@ -93,7 +93,7 @@ public class ShomeiNode extends Runner implements AutoCloseable, Runnable {
           syncOptionBuilder.build(),
           new MetricsOption.Builder().setEnableMetrics(false).build(),
           new HashFunctionOption.Builder()
-              .setHashFunction(HashFunctionOption.HashFunction.MIMC_BLS12_377)
+              .setHashFunction(HashFunctionOption.DEFAULT_HASH_FUNCTION)
               .build());
     }
   }

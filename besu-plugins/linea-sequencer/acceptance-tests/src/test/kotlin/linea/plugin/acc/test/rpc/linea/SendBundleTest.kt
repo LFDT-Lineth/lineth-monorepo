@@ -264,7 +264,7 @@ class SendBundleTest : AbstractSendBundleTest() {
       .createTransfer(accounts.secondaryBenefactor, accounts.primaryBenefactor, 1)
       .execute(minerNode.nodeRequests())
 
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
     minerNode.verify(eth.expectNoTransactionReceipt(invalidTxHash))
 
     // make sure the bundle is not select for the right reason
@@ -306,7 +306,7 @@ class SendBundleTest : AbstractSendBundleTest() {
       .execute(minerNode.nodeRequests())
 
     // first sentry is mined and no tx of the bundle is mined
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
     minerNode.verify(eth.expectNoTransactionReceipt(invalidTxHash))
     minerNode.verify(eth.expectNoTransactionReceipt(inBundleTransferTx.transactionHash()))
 
@@ -348,7 +348,7 @@ class SendBundleTest : AbstractSendBundleTest() {
       .execute(minerNode.nodeRequests())
 
     // second sentry is mined and no tx of the bundle is mined
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
     minerNode.verify(eth.expectNoTransactionReceipt(invalidTxHash))
     minerNode.verify(eth.expectNoTransactionReceipt(inBundleTransferTx.transactionHash()))
 
@@ -433,7 +433,7 @@ class SendBundleTest : AbstractSendBundleTest() {
     val txHashFundRecipient = accountTransactions
       .createTransfer(accounts.primaryBenefactor, recipient, 10, BigInteger.valueOf(1))
       .execute(minerNode.nodeRequests())
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHashFundRecipient.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHashFundRecipient.bytes.toHexString()))
 
     // create a tx that reverts
     val contractAddress = revertExample.contractAddress
@@ -481,7 +481,7 @@ class SendBundleTest : AbstractSendBundleTest() {
       .execute(minerNode.nodeRequests())
 
     // first sentry is mined and no tx of the bundle is mined
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash1.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash1.bytes.toHexString()))
     minerNode.verify(eth.expectNoTransactionReceipt(txThatRevertsHash))
     minerNode.verify(eth.expectNoTransactionReceipt(inBundleTransferTx.transactionHash()))
 
@@ -502,7 +502,7 @@ class SendBundleTest : AbstractSendBundleTest() {
       .execute(minerNode.nodeRequests())
 
     // second sentry is mined and no tx of the bundle is mined
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash2.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash2.bytes.toHexString()))
     minerNode.verify(eth.expectNoTransactionReceipt(txThatRevertsHash))
     minerNode.verify(eth.expectNoTransactionReceipt(inBundleTransferTx.transactionHash()))
   }

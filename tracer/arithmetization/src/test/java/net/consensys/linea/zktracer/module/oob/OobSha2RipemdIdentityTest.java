@@ -256,7 +256,7 @@ public class OobSha2RipemdIdentityTest extends TracerTestBase {
         . // argSize
         push(argOffset)
         . // argOffset
-        push(address)
+        push(address.getBytes())
         . // address
         push("FFFFFFFF")
         . // gas

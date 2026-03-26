@@ -119,7 +119,7 @@ public class CallParameters implements PrecompileCallParameters {
     }
 
     // push address
-    program.push(prc.getAddress());
+    program.push(prc.getAddress().getBytes());
 
     // push gas parameter
     int cost = prc.cost(callDataSize);

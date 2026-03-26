@@ -81,7 +81,7 @@ public record ExecutionType(
     checkState(account.delegationAddress().isPresent(), "Account snapshot should be delegated");
     final AccountSnapshot delegateAccount = delegate.get();
     checkState(
-        account.delegationAddress().get().equals(delegateAccount.address()),
+        account.delegationAddress().get().getBytes().equals(delegateAccount.address().getBytes()),
         "Inconsistent delegate addresses:"
             + "\n\taccount              address: "
             + account.address()

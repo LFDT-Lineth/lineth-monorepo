@@ -413,7 +413,8 @@ public class LineaEstimateGas {
             sender -> {
               final var resp =
                   rpcEndpointService.call(
-                      "eth_getTransactionCount", new Object[] {sender.toHexString(), "latest"});
+                      "eth_getTransactionCount",
+                      new Object[] {sender.getBytes().toHexString(), "latest"});
 
               if (!resp.getType().equals(RpcResponseType.SUCCESS)) {
                 throw new PluginRpcEndpointException(

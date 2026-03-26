@@ -105,8 +105,8 @@ public class BlockhashOperation extends ModuleOperation {
         .pMacroBlockhashValLo(blockhashVal.slice(LLARGE, LLARGE))
         .pMacroBlockhashArgHi(blockhashArg.slice(0, LLARGE))
         .pMacroBlockhashArgLo(blockhashArg.slice(LLARGE, LLARGE))
-        .pMacroBlockhashResHi(blockhashRes.slice(0, LLARGE))
-        .pMacroBlockhashResLo(blockhashRes.slice(LLARGE, LLARGE))
+        .pMacroBlockhashResHi(blockhashRes.getBytes().slice(0, LLARGE))
+        .pMacroBlockhashResLo(blockhashRes.getBytes().slice(LLARGE, LLARGE))
         .fillAndValidateRow();
   }
 

@@ -87,11 +87,11 @@ class EthSendRawTransactionSimulationCheckTest : LineaPluginPoSTestBase() {
     val txPoolContentByHash = getTxPoolContent().map { it["hash"] }
     assertThat(txPoolContentByHash)
       .containsExactlyInAnyOrderElementsOf(
-        expectedConfirmedTxs.map { it.toHexString() },
+        expectedConfirmedTxs.map { it.bytes.toHexString() },
       )
 
     expectedConfirmedTxs
-      .map { it.toHexString() }
+      .map { it.bytes.toHexString() }
       .forEach { hash -> minerNode.verify(eth.expectSuccessfulTransactionReceipt(hash)) }
   }
 

@@ -125,11 +125,11 @@ public class ModexpEIP7883Tests extends TracerTestBase {
     // First place the parameters in memory
     // Copy to targetOffset the code of codeOwnerAccount
     program
-        .push(callDataAsBytecodeAddress)
+        .push(callDataAsBytecodeAddress.getBytes())
         .op(OpCode.EXTCODESIZE) // size
         .push(0) // offset
         .push(0) // targetOffset
-        .push(callDataAsBytecodeAddress) // address
+        .push(callDataAsBytecodeAddress.getBytes()) // address
         .op(OpCode.EXTCODECOPY);
 
     // Do the call
@@ -138,7 +138,7 @@ public class ModexpEIP7883Tests extends TracerTestBase {
         .push(cds) // retOffset
         .push(cds) // argSize
         .push(0) // argOffset
-        .push(Address.MODEXP) // address
+        .push(Address.MODEXP.getBytes()) // address
         .push(Bytes.fromHexStringLenient("0xFFFFFFFF")) // gas
         .op(OpCode.STATICCALL)
         .op(OpCode.RETURNDATASIZE)

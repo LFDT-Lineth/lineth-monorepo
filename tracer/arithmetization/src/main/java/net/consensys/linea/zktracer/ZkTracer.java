@@ -46,9 +46,9 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Address;
+import org.hyperledger.besu.datatypes.Log;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.evm.frame.MessageFrame;
-import org.hyperledger.besu.evm.log.Log;
 import org.hyperledger.besu.evm.operation.Operation;
 import org.hyperledger.besu.evm.worldstate.WorldView;
 import org.hyperledger.besu.plugin.data.BlockBody;
@@ -186,7 +186,8 @@ public class ZkTracer implements LineCountingTracer {
     metadata.put("releaseVersion", ZkTracer.class.getPackage().getSpecificationVersion());
     metadata.put("chainId", this.chain.id.toString());
     metadata.put("fork", this.chain.fork.toString());
-    metadata.put("l2L1LogSmcAddress", this.chain.bridgeConfiguration.contract().toString());
+    metadata.put(
+        "l2L1LogSmcAddress", this.chain.bridgeConfiguration.contract().getBytes().toHexString());
     metadata.put("l2L1LogTopic", this.chain.bridgeConfiguration.topic().toString());
     // include block range
     final Map<String, String> range = new HashMap<>();

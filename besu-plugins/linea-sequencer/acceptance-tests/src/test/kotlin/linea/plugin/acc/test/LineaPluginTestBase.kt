@@ -36,7 +36,6 @@ import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
 import org.apache.tuweni.units.bigints.UInt32
 import org.assertj.core.api.Assertions.assertThat
-import org.hyperledger.besu.datatypes.Address
 import org.hyperledger.besu.datatypes.Hash
 import org.hyperledger.besu.ethereum.core.ImmutableMiningConfiguration
 import org.hyperledger.besu.ethereum.eth.transactions.ImmutableTransactionPoolConfiguration
@@ -459,7 +458,7 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
     web3j: Web3j,
     num: Int,
   ): String {
-    val to = Address.fromHexString("fe3b557e8fb62b89f4916b721be55ceb828dbd73").toString()
+    val to = "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"
     val txManager = RawTransactionManager(web3j, Credentials.create(account))
 
     return txManager.sendTransaction(

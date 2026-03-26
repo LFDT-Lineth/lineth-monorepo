@@ -29,7 +29,6 @@ import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.AccessListEntry;
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.TransactionType;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.core.Transaction;
@@ -57,44 +56,37 @@ public class TxSkipTests extends TracerTestBase {
             .build();
 
     final KeyPair senderKeyPair1 = new SECP256K1().generateKeyPair();
-    final Address senderAddress1 =
-        Address.extract(Hash.hash(senderKeyPair1.getPublicKey().getEncodedBytes()));
+    final Address senderAddress1 = Address.extract(senderKeyPair1.getPublicKey());
     final ToyAccount senderAccount1 =
         ToyAccount.builder().balance(Wei.fromEth(123)).nonce(5).address(senderAddress1).build();
 
     final KeyPair senderKeyPair2 = new SECP256K1().generateKeyPair();
-    final Address senderAddress2 =
-        Address.extract(Hash.hash(senderKeyPair2.getPublicKey().getEncodedBytes()));
+    final Address senderAddress2 = Address.extract(senderKeyPair2.getPublicKey());
     final ToyAccount senderAccount2 =
         ToyAccount.builder().balance(Wei.fromEth(1231)).nonce(15).address(senderAddress2).build();
 
     final KeyPair senderKeyPair3 = new SECP256K1().generateKeyPair();
-    final Address senderAddress3 =
-        Address.extract(Hash.hash(senderKeyPair3.getPublicKey().getEncodedBytes()));
+    final Address senderAddress3 = Address.extract(senderKeyPair3.getPublicKey());
     final ToyAccount senderAccount3 =
         ToyAccount.builder().balance(Wei.fromEth(1231)).nonce(15).address(senderAddress3).build();
 
     final KeyPair senderKeyPair4 = new SECP256K1().generateKeyPair();
-    final Address senderAddress4 =
-        Address.extract(Hash.hash(senderKeyPair4.getPublicKey().getEncodedBytes()));
+    final Address senderAddress4 = Address.extract(senderKeyPair4.getPublicKey());
     final ToyAccount senderAccount4 =
         ToyAccount.builder().balance(Wei.fromEth(11)).nonce(115).address(senderAddress4).build();
 
     final KeyPair senderKeyPair5 = new SECP256K1().generateKeyPair();
-    final Address senderAddress5 =
-        Address.extract(Hash.hash(senderKeyPair5.getPublicKey().getEncodedBytes()));
+    final Address senderAddress5 = Address.extract(senderKeyPair5.getPublicKey());
     final ToyAccount senderAccount5 =
         ToyAccount.builder().balance(Wei.fromEth(12)).nonce(0).address(senderAddress5).build();
 
     final KeyPair senderKeyPair6 = new SECP256K1().generateKeyPair();
-    final Address senderAddress6 =
-        Address.extract(Hash.hash(senderKeyPair6.getPublicKey().getEncodedBytes()));
+    final Address senderAddress6 = Address.extract(senderKeyPair6.getPublicKey());
     final ToyAccount senderAccount6 =
         ToyAccount.builder().balance(Wei.fromEth(12)).nonce(6).address(senderAddress6).build();
 
     final KeyPair senderKeyPair7 = new SECP256K1().generateKeyPair();
-    final Address senderAddress7 =
-        Address.extract(Hash.hash(senderKeyPair7.getPublicKey().getEncodedBytes()));
+    final Address senderAddress7 = Address.extract(senderKeyPair7.getPublicKey());
     final ToyAccount senderAccount7 =
         ToyAccount.builder().balance(Wei.fromEth(231)).nonce(21).address(senderAddress7).build();
 
@@ -209,8 +201,7 @@ public class TxSkipTests extends TracerTestBase {
   void receiverIsCoinbase(TestInfo testInfo) {
 
     final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(senderKeyPair.getPublicKey());
     final ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(123)).nonce(5).address(senderAddress).build();
 
@@ -243,8 +234,7 @@ public class TxSkipTests extends TracerTestBase {
   void receiverIsSender(TestInfo testInfo) {
 
     final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(senderKeyPair.getPublicKey());
     final ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(123)).nonce(5).address(senderAddress).build();
 
@@ -268,8 +258,7 @@ public class TxSkipTests extends TracerTestBase {
   void senderIsCoinbase(TestInfo testInfo) {
 
     final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(senderKeyPair.getPublicKey());
     final ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(123)).nonce(5).address(senderAddress).build();
 
@@ -301,8 +290,7 @@ public class TxSkipTests extends TracerTestBase {
   void senderIsCoinbaseIsReceiver(TestInfo testInfo) {
 
     final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(senderKeyPair.getPublicKey());
     final ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(123)).nonce(5).address(senderAddress).build();
 
@@ -326,8 +314,7 @@ public class TxSkipTests extends TracerTestBase {
   @Test
   void skipMessageCallCoinbaseIsPrecompile(TestInfo testInfo) {
     final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(senderKeyPair.getPublicKey());
     final ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(0xffff)).nonce(128).address(senderAddress).build();
 
@@ -361,8 +348,7 @@ public class TxSkipTests extends TracerTestBase {
   @Test
   void skippedDepSenderIsCoinbase(TestInfo testInfo) {
     final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(senderKeyPair.getPublicKey());
     final ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(0xffff)).nonce(128).address(senderAddress).build();
 
@@ -386,8 +372,7 @@ public class TxSkipTests extends TracerTestBase {
   @Test
   void skippedDepDeploymentAddressIsCoinbase(TestInfo testInfo) {
     final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(senderKeyPair.getPublicKey());
     final int nonce = 632;
     final ToyAccount senderAccount =
         ToyAccount.builder()
@@ -419,8 +404,7 @@ public class TxSkipTests extends TracerTestBase {
   @Test
   void skippedDepCoinbaseIsPrecompile(TestInfo testInfo) {
     final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(senderKeyPair.getPublicKey());
     final ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(0xffff)).nonce(128).address(senderAddress).build();
 
@@ -444,8 +428,7 @@ public class TxSkipTests extends TracerTestBase {
   @Test
   void txSkipValueIsZero(TestInfo testInfo) {
     final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(senderKeyPair.getPublicKey());
     final ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(0xffff)).nonce(127).address(senderAddress).build();
 

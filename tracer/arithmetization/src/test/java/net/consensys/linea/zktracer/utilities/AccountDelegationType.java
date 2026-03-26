@@ -20,6 +20,7 @@ import static net.consensys.linea.zktracer.utilities.Utils.addDelegationPrefixTo
 
 import net.consensys.linea.testing.ToyAccount;
 import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.Address;
@@ -50,7 +51,9 @@ public enum AccountDelegationType {
 
   public static ToyAccount getAccountForDelegationTypeWithKeyPair(
       KeyPair keyPair, final AccountDelegationType delegationType) {
-    Address accountAddress = Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+    Address accountAddress =
+        Address.extract(
+            Bytes32.wrap(Hash.hash(keyPair.getPublicKey().getEncodedBytes()).getBytes()));
     ToyAccount.ToyAccountBuilder eoaBuilder =
         ToyAccount.builder().address(accountAddress).balance(Wei.fromEth(123)).nonce(12);
     switch (delegationType) {

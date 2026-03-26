@@ -181,7 +181,7 @@ public class LineaLivenessTxBuilder implements LivenessTxBuilder {
         chainId.longValue(),
         BigInteger.valueOf(nonce),
         BigInteger.valueOf(gasLimit),
-        Address.fromHexString(livenessContractAddress).toString(),
+        Address.fromHexString(livenessContractAddress).getBytes().toHexString(),
         ZERO_TRANSACTION_VALUE,
         callData.toHexString(),
         gasPrice.getAsBigInteger(),

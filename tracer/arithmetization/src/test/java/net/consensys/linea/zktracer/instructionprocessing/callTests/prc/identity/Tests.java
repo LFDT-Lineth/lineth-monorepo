@@ -105,11 +105,11 @@ public class Tests extends TracerTestBase {
   public static void fullCodeCopyOf(BytecodeCompiler program, ToyAccount account) {
     final Address address = account.getAddress();
     program
-        .push(address)
+        .push(address.getBytes())
         .op(EXTCODESIZE) // puts the code size on the stack
         .push(0)
         .push(0)
-        .push(address)
+        .push(address.getBytes())
         .op(EXTCODECOPY); // copies the entire code to RAM
   }
 }

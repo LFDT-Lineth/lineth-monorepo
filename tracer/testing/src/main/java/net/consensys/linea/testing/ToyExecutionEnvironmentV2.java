@@ -44,6 +44,10 @@ import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
 import org.hyperledger.besu.ethereum.referencetests.GeneralStateTestCaseEipSpec;
 import org.hyperledger.besu.ethereum.referencetests.ReferenceTestWorldState;
+import org.hyperledger.besu.ethereum.worldstate.DataStorageConfiguration;
+import org.hyperledger.besu.ethereum.worldstate.ImmutableDataStorageConfiguration;
+import org.hyperledger.besu.ethereum.worldstate.ImmutablePathBasedExtraStorageConfiguration;
+import org.hyperledger.besu.plugin.services.storage.DataStorageFormat;
 import org.junit.jupiter.api.TestInfo;
 
 @Builder
@@ -217,10 +221,19 @@ public class ToyExecutionEnvironmentV2 {
         accounts.stream()
             .collect(
                 Collectors.toMap(
-                    toyAccount -> toyAccount.getAddress().toHexString(),
+                    toyAccount -> toyAccount.getAddress().getBytes().toHexString(),
                     ToyAccount::toAccountMock));
+    final DataStorageConfiguration dataStorageConfiguration =
+        ImmutableDataStorageConfiguration.builder()
+            .dataStorageFormat(DataStorageFormat.BONSAI)
+            .pathBasedExtraStorageConfiguration(
+                ImmutablePathBasedExtraStorageConfiguration.builder()
+                    .parallelStateRootComputationEnabled(false)
+                    .build())
+            .build();
     final ReferenceTestWorldState referenceTestWorldState =
-        ReferenceTestWorldState.create(accountMockMap, protocolSpec.getEvm().getEvmConfiguration());
+        LineaBonsaiReferenceTestWorldState.create(
+            accountMockMap, protocolSpec.getEvm().getEvmConfiguration(), dataStorageConfiguration);
     final BlockHeader blockHeader =
         ExecutionEnvironment.getLineaBlockHeaderBuilder(Optional.empty())
             .number(firstBlockNumber)

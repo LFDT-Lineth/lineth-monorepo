@@ -303,7 +303,8 @@ class BundleForwarderTest extends AbstractBundleTest {
                               },
                               "id": <reqId>
                             }"""
-                            .replace("<bundleHash>", bundle.bundleIdentifier().toHexString())
+                            .replace(
+                                "<bundleHash>", bundle.bundleIdentifier().getBytes().toHexString())
                             .replace("<reqId>", String.valueOf(reqId)))));
   }
 
@@ -390,7 +391,7 @@ class BundleForwarderTest extends AbstractBundleTest {
       assertTrue(response.response().isSuccessful());
       assertThat(getReqId(response)).isEqualTo(reqId);
       assertThat(getBundleHash(response))
-          .isEqualTo(response.bundle().bundleIdentifier().toHexString());
+          .isEqualTo(response.bundle().bundleIdentifier().getBytes().toHexString());
     }
 
     public void assertFailedResponse(

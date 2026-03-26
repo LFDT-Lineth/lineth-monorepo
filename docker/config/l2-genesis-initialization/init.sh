@@ -11,4 +11,5 @@ echo "Fork Timestamp: $fork_timestamp"
 sed -i "s/%FORK_TIME%/$fork_timestamp/g" genesis-maru.json
 sed -i "s/%FORK_TIME%/$fork_timestamp/g" genesis-besu.json
 
-sed -i'' "s/^\(timestamp-based-hard-forks[ ]*=[ ]*\).*/\1[${fork_timestamp}]/" coordinator-config-v2-hardforks.toml
+# Right now only Osaka is supported by the tracer, so no need to override forks
+#sed -i'' "s/^\(timestamp-based-hard-forks[ ]*=[ ]*\).*/\1[${fork_timestamp}]/" coordinator-config-v2-hardforks.toml

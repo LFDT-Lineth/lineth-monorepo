@@ -131,7 +131,7 @@ public class EcRecoverTest extends TracerTestBase {
             .push(0x80) // retOffset
             .push(0x80) // argSize
             .push(0) // argOffset
-            .push(Address.ECREC) // address
+            .push(Address.ECREC.getBytes()) // address
             .push(Bytes.fromHexStringLenient("0xFFFFFFFF")) // gas
             .op(OpCode.STATICCALL);
 

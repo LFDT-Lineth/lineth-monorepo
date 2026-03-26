@@ -37,10 +37,10 @@ public class HubRowForUserTransactions extends HubRow {
 
     trace
         // BTC columns are traced indiscriminately for all HubRow's in the parent class
-        .pHubToAddressHi(txn.getEffectiveRecipient().slice(0, 4).toLong())
-        .pHubToAddressLo(txn.getEffectiveRecipient().slice(4, LLARGE))
-        .pHubFromAddressHi(txn.getSender().slice(0, 4).toLong())
-        .pHubFromAddressLo(txn.getSender().slice(4, LLARGE))
+        .pHubToAddressHi(txn.getEffectiveRecipient().getBytes().slice(0, 4).toLong())
+        .pHubToAddressLo(txn.getEffectiveRecipient().getBytes().slice(4, LLARGE))
+        .pHubFromAddressHi(txn.getSender().getBytes().slice(0, 4).toLong())
+        .pHubFromAddressLo(txn.getSender().getBytes().slice(4, LLARGE))
         .pHubIsDeployment(txn.isDeployment())
         .pHubNonce(Bytes.ofUnsignedLong(txn.getBesuTransaction().getNonce()))
         .pHubValue(bigIntegerToBytes(txn.getBesuTransaction().getValue().getAsBigInteger()))

@@ -70,15 +70,17 @@ class ForwardBundleTest : AbstractSendBundleTest() {
 
   @Test
   fun bundleIsForwarded() {
-    val bundleParams = sendBundle(1)
+    val bundleParams = prepareBundleParams(1)
     stubSuccessResponseFor(bundleParams, 0)
+    sendBundleToNode(bundleParams)
     verifyRequestForwarded(bundleParams)
   }
 
   @Test
   fun forwardIsRetriedAfterTimeout() {
-    val bundleParams = sendBundle(2)
+    val bundleParams = prepareBundleParams(2)
     stubSuccessResponseFor(bundleParams, 0, Duration.ofSeconds(2))
+    sendBundleToNode(bundleParams)
 
     verifyResponseSent(bundleParams)
 
@@ -87,9 +89,10 @@ class ForwardBundleTest : AbstractSendBundleTest() {
 
   @Test
   fun forwardIsRetriedAfterNetworkFailure() {
-    val bundleParams = sendBundle(3)
+    val bundleParams = prepareBundleParams(3)
     stubFailureFor(bundleParams)
     stubSuccessResponseFor(bundleParams, 1)
+    sendBundleToNode(bundleParams)
 
     verifyRequestForwarded(bundleParams)
     verifyRequestForwarded(bundleParams, 1)
@@ -158,24 +161,24 @@ class ForwardBundleTest : AbstractSendBundleTest() {
     }
   }
 
-  private fun sendBundle(blockNumber: Int): BundleParams {
+  /**
+   * Prepares a BundleParams (creates and signs the transaction) without sending it to the node.
+   * Use this to set up WireMock stubs BEFORE the bundle is submitted, avoiding the race condition
+   * where the bundle forwarder dispatches the request before stubs are configured.
+   */
+  private fun prepareBundleParams(blockNumber: Int): BundleParams {
     val sender = accounts.secondaryBenefactor
     val recipient = accounts.primaryBenefactor
-
     val tx = accountTransactions.createTransfer(sender, recipient, 1)
+    return BundleParams(arrayOf(tx.signedTransactionData()), Integer.toHexString(blockNumber))
+  }
 
-    val bundleRawTx = tx.signedTransactionData()
-
-    val bundleParams =
-      BundleParams(arrayOf(bundleRawTx), Integer.toHexString(blockNumber))
-
+  /** Submits a previously prepared bundle to the node via RPC. */
+  private fun sendBundleToNode(bundleParams: BundleParams) {
     val sendBundleRequest = SendBundleRequest(bundleParams)
     val sendBundleResponse = sendBundleRequest.execute(minerNode.nodeRequests())
-
     assertThat(sendBundleResponse.hasError()).isFalse()
     assertThat(sendBundleResponse.result.bundleHash).isNotBlank()
-
-    return bundleParams
   }
 
   companion object {

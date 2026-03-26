@@ -69,8 +69,7 @@ public class RlptxnTests extends TracerTestBase {
       TestInfo testInfo) {
 
     final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(senderKeyPair.getPublicKey());
     final ToyAccount senderAccount =
         ToyAccount.builder()
             .balance(Wei.wrap(Bytes.random(14, SEED)))

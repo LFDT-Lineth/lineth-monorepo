@@ -48,7 +48,7 @@ public class RipTests extends TracerTestBase {
             .push(size) // size
             .push(1) // offset
             .push(0) // value
-            .push(Address.RIPEMD160) // address
+            .push(Address.RIPEMD160.getBytes()) // address
             .push(0xffff) // gas
             .op(OpCode.CALL)
             .op(OpCode.POP)

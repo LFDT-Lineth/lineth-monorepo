@@ -60,7 +60,7 @@ public class ToyAccount implements MutableAccount {
     ToyAccount copy =
         ToyAccount.builder()
             .mutable(this.mutable)
-            .address(Address.wrap(this.address.copy()))
+            .address(Address.wrap(this.address.getBytes().copy()))
             .nonce(this.nonce)
             .balance(Wei.of(this.balance.toLong()))
             .code(Bytes.wrap(this.code.toArray()))
@@ -213,7 +213,7 @@ public class ToyAccount implements MutableAccount {
     this.code =
         Bytes.fromHexString(
             Integer.toHexString(EIP_7702_DELEGATION_INDICATOR)
-                + address.toHexString().substring(2));
+                + address.getBytes().toHexString().substring(2));
     return this;
   }
 

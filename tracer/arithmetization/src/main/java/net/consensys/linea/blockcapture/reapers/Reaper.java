@@ -34,8 +34,8 @@ import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt256;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.datatypes.Log;
 import org.hyperledger.besu.datatypes.Transaction;
-import org.hyperledger.besu.evm.log.Log;
 import org.hyperledger.besu.evm.worldstate.WorldUpdater;
 import org.hyperledger.besu.evm.worldstate.WorldView;
 import org.hyperledger.besu.plugin.data.BlockBody;
@@ -145,7 +145,8 @@ public class Reaper {
     // Convert logs into hex strings
     List<String> logStrings = logs.stream().map(l -> l.getData().toHexString()).toList();
     // Convert destructed account addresses into hex strings
-    List<String> destructStrings = selfDestructs.stream().map(Address::toHexString).toList();
+    List<String> destructStrings =
+        selfDestructs.stream().map((it) -> it.getBytes().toHexString()).toList();
     // Collapse accounts
     final List<AccountSnapshot> accounts = this.txAddresses.collapse(world);
     // Collapse storage
@@ -173,11 +174,12 @@ public class Reaper {
   }
 
   public void touchBlockHash(final long blockNumber, Hash blockHash) {
-    if (!conflationHashes.containsKey(blockNumber) || conflationHashes.get(blockNumber).isEmpty()) {
+    if (!conflationHashes.containsKey(blockNumber)
+        || conflationHashes.get(blockNumber).getBytes().isEmpty()) {
       conflationHashes.put(blockNumber, blockHash);
     } else {
       checkArgument(
-          conflationHashes.get(blockNumber).equals(blockHash),
+          conflationHashes.get(blockNumber).getBytes().equals(blockHash.getBytes()),
           "Block hash mismatch for block number %s: existing %s, new %s",
           blockNumber,
           conflationHashes.get(blockNumber),

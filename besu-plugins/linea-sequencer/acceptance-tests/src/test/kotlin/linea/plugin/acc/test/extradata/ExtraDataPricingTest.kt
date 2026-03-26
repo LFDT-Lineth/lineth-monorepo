@@ -60,7 +60,7 @@ open class ExtraDataPricingTest : LineaPluginPoSTestBase() {
     val transferTx = accountTransactions.createTransfer(sender, recipient, 1)
     val txHash = minerNode.execute(transferTx)
 
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHash.bytes.toHexString()))
 
     assertThat(minerNode.miningParameters.minTransactionGasPrice)
       .isEqualTo(doubleMinGasPrice)
@@ -89,7 +89,7 @@ open class ExtraDataPricingTest : LineaPluginPoSTestBase() {
       accountTransactions.createTransfer(sender, recipient, 1)
     val profitableTxHash = minerNode.execute(profitableTx)
 
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(profitableTxHash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(profitableTxHash.bytes.toHexString()))
 
     // this tx will be evaluated with the previously set extra data pricing to be unprofitable
     val unprofitableTx =

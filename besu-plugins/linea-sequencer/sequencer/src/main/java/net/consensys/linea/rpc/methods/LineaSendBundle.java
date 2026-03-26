@@ -106,7 +106,7 @@ public class LineaSendBundle {
                         bundleParams.revertingTxHashes(),
                         optBundleUUID,
                         false));
-                return new BundleResponse(bundleHash.toHexString());
+                return new BundleResponse(bundleHash.getBytes().toHexString());
               })
           .orElseThrow(
               () ->

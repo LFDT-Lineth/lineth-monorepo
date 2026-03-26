@@ -26,6 +26,10 @@ import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.ethereum.api.jsonrpc.JsonRpcConfiguration;
 import org.hyperledger.besu.ethereum.core.MiningConfiguration;
 import org.hyperledger.besu.ethereum.worldstate.DataStorageConfiguration;
+import org.hyperledger.besu.ethereum.worldstate.ImmutableDataStorageConfiguration;
+import org.hyperledger.besu.ethereum.worldstate.ImmutablePathBasedExtraStorageConfiguration;
+import org.hyperledger.besu.ethereum.worldstate.PathBasedExtraStorageConfiguration;
+import org.hyperledger.besu.plugin.services.storage.DataStorageFormat;
 import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode;
 import org.hyperledger.besu.tests.acceptance.dsl.node.RunnableNode;
 import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.BesuNodeConfigurationBuilder;
@@ -52,10 +56,19 @@ public class BesuNodeBuilder {
     JsonRpcConfiguration jsonRpcConfiguration =
         node.createJsonRpcWithRpcApiEnabledConfig("LINEA", "SHOMEI");
     jsonRpcConfiguration.setPort(jsonRpcPort);
+    DataStorageConfiguration dataStorageConfiguration =
+        ImmutableDataStorageConfiguration.builder()
+            .dataStorageFormat(DataStorageFormat.BONSAI)
+            .pathBasedExtraStorageConfiguration(
+                ImmutablePathBasedExtraStorageConfiguration.builder()
+                    .unstable(PathBasedExtraStorageConfiguration.PathBasedUnstable.PARTIAL_MODE)
+                    .parallelStateRootComputationEnabled(false)
+                    .build())
+            .build();
     BesuNodeConfigurationBuilder besuNodeConfigurationBuilder =
         new BesuNodeConfigurationBuilder()
             .name(nodeName)
-            .dataStorageConfiguration(DataStorageConfiguration.DEFAULT_BONSAI_PARTIAL_DB_CONFIG)
+            .dataStorageConfiguration(dataStorageConfiguration)
             .genesisConfigProvider(
                 (nodes) -> {
                   final List<Address> addresses =
@@ -71,7 +84,6 @@ public class BesuNodeBuilder {
             .miningConfiguration(
                 MiningConfiguration.newDefault().setTargetGasLimit(LINEA_BLOCK_GAS_LIMIT))
             .engineRpcEnabled(true)
-            //
             .jsonRpcEnabled()
             .jsonRpcConfiguration(jsonRpcConfiguration)
             .requestedPlugins(
@@ -94,7 +106,7 @@ public class BesuNodeBuilder {
                     "--plugin-linea-rpc-concurrent-requests-limit=1",
                     String.format(
                         "--plugin-linea-l1l2-bridge-contract=%s",
-                        bridgeConfiguration.contract().toHexString()),
+                        bridgeConfiguration.contract().getBytes().toHexString()),
                     String.format(
                         "--plugin-linea-l1l2-bridge-topic=%s",
                         bridgeConfiguration.topic().toHexString())

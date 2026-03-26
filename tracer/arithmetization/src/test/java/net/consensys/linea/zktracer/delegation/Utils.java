@@ -24,6 +24,7 @@ import net.consensys.linea.testing.ToyAccount;
 import net.consensys.linea.testing.ToyTransaction;
 import net.consensys.linea.zktracer.opcode.OpCode;
 import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.Address;
@@ -36,7 +37,8 @@ public class Utils extends TracerTestBase {
   // sender account
   public static final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
   public static final Address senderAddress =
-      Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
+      Address.extract(
+          Bytes32.wrap(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()).getBytes()));
   public static int senderNonce = 0x77;
 
   public static final ToyAccount senderAccount() {
@@ -70,7 +72,8 @@ public class Utils extends TracerTestBase {
   // authority
   public static final KeyPair authorityKeyPair = new SECP256K1().generateKeyPair();
   public static final Address authorityAddress =
-      Address.extract(Hash.hash(authorityKeyPair.getPublicKey().getEncodedBytes()));
+      Address.extract(
+          Bytes32.wrap(Hash.hash(authorityKeyPair.getPublicKey().getEncodedBytes()).getBytes()));
   public static final long authNonce = 0xfee1beefL;
 
   public static final ToyAccount authorityAccount() {
@@ -219,9 +222,11 @@ public class Utils extends TracerTestBase {
 
     if (touchAuthority == TouchAuthority.EXECUTION_TOUCHES_AUTHORITY) {
       switch (touchMethod) {
-        case EXTCODESIZE -> program.push(authorityAddress).op(OpCode.EXTCODESIZE).op(OpCode.POP);
-        case EXTCODEHASH -> program.push(authorityAddress).op(OpCode.EXTCODEHASH).op(OpCode.POP);
-        case BALANCE -> program.push(authorityAddress).op(OpCode.BALANCE).op(OpCode.POP);
+        case EXTCODESIZE ->
+            program.push(authorityAddress.getBytes()).op(OpCode.EXTCODESIZE).op(OpCode.POP);
+        case EXTCODEHASH ->
+            program.push(authorityAddress.getBytes()).op(OpCode.EXTCODEHASH).op(OpCode.POP);
+        case BALANCE -> program.push(authorityAddress.getBytes()).op(OpCode.BALANCE).op(OpCode.POP);
       }
     }
 
@@ -263,6 +268,7 @@ public class Utils extends TracerTestBase {
 
   public static Bytes delegationCodeFromAddress(Address address) {
     return Bytes.fromHexString(
-        Integer.toHexString(EIP_7702_DELEGATION_INDICATOR) + address.toHexString().substring(2));
+        Integer.toHexString(EIP_7702_DELEGATION_INDICATOR)
+            + address.getBytes().toHexString().substring(2));
   }
 }

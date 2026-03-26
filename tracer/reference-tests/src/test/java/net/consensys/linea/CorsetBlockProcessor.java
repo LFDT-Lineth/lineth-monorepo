@@ -140,8 +140,8 @@ public class CorsetBlockProcessor extends MainnetBlockProcessor {
             MessageFormat.format(
                 "Block processing error: transaction invalid {0}. Block {1} Transaction {2}",
                 result.getValidationResult().getErrorMessage(),
-                blockHeader.getHash().toHexString(),
-                transaction.getHash().toHexString());
+                blockHeader.getHash().getBytes().toHexString(),
+                transaction.getHash().getBytes().toHexString());
         log.info(errorMessage);
         if (worldState instanceof BonsaiWorldState) {
           ((BonsaiWorldStateUpdateAccumulator) worldStateUpdater).reset();

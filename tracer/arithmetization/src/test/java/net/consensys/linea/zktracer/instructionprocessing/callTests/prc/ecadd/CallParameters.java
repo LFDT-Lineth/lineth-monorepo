@@ -96,7 +96,7 @@ public class CallParameters implements PrecompileCallParameters {
       program.push(willRevert ? 0x0200 : 0);
     }
 
-    program.push(Address.ALTBN128_ADD);
+    program.push(Address.ALTBN128_ADD.getBytes());
 
     // push gas onto the stack
     switch (gas) {

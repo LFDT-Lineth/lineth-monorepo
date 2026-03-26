@@ -39,9 +39,9 @@ object ArgumentParser {
         EncodingContext.BLOCK_BODY,
       ).run {
         TransactionInfo(
-          hash = this.hash.toArray(),
-          to = if (this.to.isPresent) this.to.get().toArray() else null,
-          from = this.sender.toArray(),
+          hash = this.hash.bytes.toArray(),
+          to = if (this.to.isPresent) this.to.get().bytes.toArray() else null,
+          from = this.sender.bytes.toArray(),
           nonce = this.nonce.toULong(),
         )
       }

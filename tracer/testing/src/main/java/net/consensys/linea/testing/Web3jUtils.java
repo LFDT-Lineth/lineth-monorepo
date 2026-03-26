@@ -15,7 +15,6 @@
 
 package net.consensys.linea.testing;
 
-import org.hyperledger.besu.evm.log.LogTopic;
 import org.web3j.protocol.core.methods.response.Log;
 
 public class Web3jUtils {
@@ -26,7 +25,7 @@ public class Web3jUtils {
    * @param log The besu log object
    * @return The web3j log object
    */
-  public static Log fromBesuLog(org.hyperledger.besu.evm.log.Log log) {
+  public static Log fromBesuLog(org.hyperledger.besu.datatypes.Log log) {
     return new Log(
         false,
         "",
@@ -34,9 +33,9 @@ public class Web3jUtils {
         "",
         "",
         "",
-        log.getLogger().toHexString(),
+        log.getLogger().getBytes().toHexString(),
         log.getData().toHexString(),
         "",
-        log.getTopics().stream().map(LogTopic::toHexString).toList());
+        log.getTopics().stream().map(it -> it.getBytes().toHexString()).toList());
   }
 }

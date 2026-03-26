@@ -115,7 +115,7 @@ public class AccessListPhaseSection extends PhaseSection {
       address = entry.address();
       // Note: add the address to the set of address to trim, only useful for SKIP transactions with
       // access list (no warming section in the HUB)
-      trm.callTrimming(address);
+      trm.callTrimming(address.getBytes());
 
       final InstructionByteStringPrefix keysRlpPrefixCall =
           new InstructionByteStringPrefix(33 * entry.storageKeys().size(), (byte) 0x00, true);
@@ -169,7 +169,7 @@ public class AccessListPhaseSection extends PhaseSection {
           .isAccessListAddress(true)
           .ctMax(RLP_TXN_CT_MAX_ADDRESS)
           .pCmpTrmFlag(true)
-          .pCmpExoData1(address.slice(0, 4))
+          .pCmpExoData1(address.getBytes().slice(0, 4))
           .pCmpExoData2(loPart(address))
           .limbConstructed(true)
           .lt(true)
@@ -192,7 +192,7 @@ public class AccessListPhaseSection extends PhaseSection {
           .limbConstructed(true)
           .lt(true)
           .lx(true)
-          .pCmpLimb(rightPadToBytes16(address.slice(0, 4)))
+          .pCmpLimb(rightPadToBytes16(address.getBytes().slice(0, 4)))
           .pCmpLimbSize(4);
       phaseSize -= 4;
       tupleSize -= 4;

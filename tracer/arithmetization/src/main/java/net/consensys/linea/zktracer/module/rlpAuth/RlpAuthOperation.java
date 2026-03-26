@@ -71,7 +71,7 @@ public class RlpAuthOperation extends ModuleOperation {
             Bytes32.leftPad(Bytes.ofUnsignedLong(UnsignedByte.of(delegation.v()).toInteger() + 27)),
             Bytes32.leftPad(bigIntegerToBytes(delegation.r())),
             Bytes32.leftPad(bigIntegerToBytes(delegation.s()))),
-        Bytes32.leftPad(delegation.authorizer().orElse(Address.ZERO)));
+        Bytes32.leftPad(delegation.authorizer().orElse(Address.ZERO).getBytes()));
   }
 
   protected void trace(Trace.Rlpauth trace) {
@@ -80,11 +80,11 @@ public class RlpAuthOperation extends ModuleOperation {
         .blkNumber(txMetadata.getRelativeBlockNumber())
         .networkChainId(bigIntegerToBytes(authorizationFragment.networkChainId()))
         .userTxnNumber(txMetadata.getUserTransactionNumber())
-        .txnFromAddress(txMetadata.getSender())
+        .txnFromAddress(txMetadata.getSender().getBytes())
         .hubStamp(authorizationFragment.hubStamp())
         // tuple data
         .chainId(bigIntegerToBytes(delegation.chainId()))
-        .delegationAddress(delegation.address())
+        .delegationAddress(delegation.address().getBytes())
         .nonce(Bytes.ofUnsignedLong((delegation.nonce())))
         .yParity(UnsignedByte.of(delegation.v()).toInteger())
         .r(bigIntegerToBytes(delegation.r()))
@@ -96,7 +96,9 @@ public class RlpAuthOperation extends ModuleOperation {
         // senderIsAuthority is computed
         .senderIsAuthorityAcc(authorizationFragment.validSenderIsAuthorityAcc())
         .authorityAddress(
-            authorizationFragment.tracedAuthorityAddress()) // predicted output from ecRecover
+            authorizationFragment
+                .tracedAuthorityAddress()
+                .getBytes()) // predicted output from ecRecover
         .authorityNonce(Bytes.ofUnsignedLong(authorizationFragment.tracedAuthorityNonce()))
         .authorityHasEmptyCodeOrIsDelegated(
             authorizationFragment.tracedAuthorityHasEmptyCodeOrIsDelegated())
@@ -114,7 +116,7 @@ public class RlpAuthOperation extends ModuleOperation {
     final BytesValueRLPOutput listRlp = new BytesValueRLPOutput();
     listRlp.startList();
     listRlp.writeBigIntegerScalar(chainId);
-    listRlp.writeBytes(address);
+    listRlp.writeBytes(address.getBytes());
     listRlp.writeLongScalar(nonce);
     listRlp.endList();
     final Bytes rlpOfListWithChainIdAddressNonce = listRlp.encoded();

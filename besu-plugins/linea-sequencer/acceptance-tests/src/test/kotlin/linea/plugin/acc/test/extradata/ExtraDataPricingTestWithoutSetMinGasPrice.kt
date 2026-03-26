@@ -52,7 +52,7 @@ class ExtraDataPricingTestWithoutSetMinGasPrice : ExtraDataPricingTest() {
     val transferTx = accountTransactions.createTransfer(sender, recipient, 1)
     val txHash = minerNode.execute(transferTx)
 
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHash.bytes.toHexString()))
 
     assertThat(minerNode.miningParameters.minTransactionGasPrice)
       .isEqualTo(MIN_GAS_PRICE)

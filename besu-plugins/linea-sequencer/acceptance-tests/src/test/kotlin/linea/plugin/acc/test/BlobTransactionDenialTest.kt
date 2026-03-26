@@ -116,9 +116,9 @@ class BlobTransactionDenialTest : LineaPluginPoSTestBase() {
       BlockParams.EXCESS_BLOB_GAS to "0x0",
       BlockParams.BLOB_GAS_USED to "0x20000",
       BlockParams.BLOCK_NUMBER to "0x1",
-      BlockParams.FEE_RECIPIENT to Address.ZERO.toHexString(),
-      BlockParams.PREV_RANDAO to Hash.ZERO.toHexString(),
-      BlockParams.PARENT_BEACON_BLOCK_ROOT to Hash.ZERO.toHexString(),
+      BlockParams.FEE_RECIPIENT to Address.ZERO.bytes.toHexString(),
+      BlockParams.PREV_RANDAO to Hash.ZERO.bytes.toHexString(),
+      BlockParams.PARENT_BEACON_BLOCK_ROOT to Hash.ZERO.bytes.toHexString(),
     )
     // Seems that the genesis block hash change with each run, despite a constant genesis file
     val genesisBlockHash = getLatestBlockHash()

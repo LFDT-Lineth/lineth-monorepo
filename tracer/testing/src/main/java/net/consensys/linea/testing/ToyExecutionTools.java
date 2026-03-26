@@ -30,6 +30,7 @@ import net.consensys.linea.zktracer.*;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.*;
+import org.hyperledger.besu.datatypes.Log;
 import org.hyperledger.besu.ethereum.core.*;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.mainnet.MainnetTransactionProcessor;
@@ -47,7 +48,6 @@ import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.account.Account;
 import org.hyperledger.besu.evm.fluent.SimpleBlockValues;
 import org.hyperledger.besu.evm.frame.MessageFrame;
-import org.hyperledger.besu.evm.log.Log;
 import org.hyperledger.besu.evm.worldstate.WorldUpdater;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.TestInfo;
@@ -230,6 +230,7 @@ public class ToyExecutionTools {
             specBlockHeader.getParentBeaconBlockRoot().orElse(DEFAULT_PARENT_BEACON_BLOCK_ROOT),
             specBlockHeader.getRequestsHash().orElse(Hash.ZERO),
             specBlockHeader.getBalHash().orElse(Hash.ZERO),
+            specBlockHeader.getSlotNumber(),
             protocolSpec.getBlockHeaderFunctions());
     return blockHeader;
   }

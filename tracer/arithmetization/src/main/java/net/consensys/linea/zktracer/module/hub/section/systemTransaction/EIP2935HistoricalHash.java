@@ -64,7 +64,7 @@ public class EIP2935HistoricalHash extends TraceSection {
         !currentBlockIsGenesis && !blockhashHistoryAccount.code().isEmpty();
 
     final Bytes32 previousBlockhashOrZero =
-        currentBlockIsGenesis ? Bytes32.ZERO : blockHeader.getParentHash();
+        currentBlockIsGenesis ? Bytes32.ZERO : Bytes32.wrap(blockHeader.getParentHash().getBytes());
 
     final EIP2935TransactionFragment transactionFragment =
         new EIP2935TransactionFragment(
@@ -81,7 +81,7 @@ public class EIP2935HistoricalHash extends TraceSection {
             .makeWithTrm(
                 blockhashHistoryAccount,
                 blockhashHistoryAccount,
-                EIP2935_HISTORY_STORAGE_ADDRESS,
+                EIP2935_HISTORY_STORAGE_ADDRESS.getBytes(),
                 DomSubStampsSubFragment.standardDomSubStamps(hubStamp(), 1),
                 SYSI);
     fragments().add(accountFragment);

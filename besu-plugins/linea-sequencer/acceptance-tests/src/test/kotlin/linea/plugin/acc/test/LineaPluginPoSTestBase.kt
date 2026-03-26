@@ -30,6 +30,7 @@ import org.hyperledger.besu.datatypes.TransactionType
 import org.hyperledger.besu.datatypes.Wei
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.EnginePayloadParameter
 import org.hyperledger.besu.ethereum.core.BlockHeader
+import org.hyperledger.besu.ethereum.core.BlockHeaderBuilder
 import org.hyperledger.besu.ethereum.core.Difficulty
 import org.hyperledger.besu.ethereum.core.Request
 import org.hyperledger.besu.ethereum.core.Transaction
@@ -551,31 +552,30 @@ abstract class LineaPluginPoSTestBase : LineaPluginTestBase() {
     )
     val maybeRequests = Optional.of(listOf(executionRequest))
 
-    return BlockHeader(
-      blockParam.parentHash,
-      Hash.EMPTY_LIST_HASH, // OMMERS_HASH_CONSTANT
-      blockParam.feeRecipient,
-      blockParam.stateRoot,
-      transactionsRoot,
-      blockParam.receiptsRoot,
-      blockParam.logsBloom,
-      Difficulty.ZERO,
-      blockParam.blockNumber,
-      blockParam.gasLimit,
-      blockParam.gasUsed,
-      blockParam.timestamp,
-      Bytes.fromHexString(blockParam.extraData),
-      blockParam.baseFeePerGas,
-      blockParam.prevRandao,
-      0, // Nonce
-      withdrawalsRoot,
-      blockParam.blobGasUsed,
-      BlobGas.fromHexString(blockParam.excessBlobGas),
-      Bytes32.fromHexString(blockParams[BlockParams.PARENT_BEACON_BLOCK_ROOT]!!),
-      maybeRequests.map { BodyValidation.requestsHash(it) }.orElse(null),
-      null, // BAL hash
-      MainnetBlockHeaderFunctions(),
-    )
+    return BlockHeaderBuilder.create()
+      .parentHash(blockParam.parentHash)
+      .ommersHash(Hash.EMPTY_LIST_HASH)
+      .coinbase(blockParam.feeRecipient)
+      .stateRoot(blockParam.stateRoot)
+      .transactionsRoot(transactionsRoot)
+      .receiptsRoot(blockParam.receiptsRoot)
+      .logsBloom(blockParam.logsBloom)
+      .difficulty(Difficulty.ZERO)
+      .number(blockParam.blockNumber)
+      .gasLimit(blockParam.gasLimit)
+      .gasUsed(blockParam.gasUsed)
+      .timestamp(blockParam.timestamp)
+      .extraData(Bytes.fromHexString(blockParam.extraData))
+      .baseFee(blockParam.baseFeePerGas)
+      .prevRandao(blockParam.prevRandao)
+      .nonce(0)
+      .withdrawalsRoot(withdrawalsRoot)
+      .blobGasUsed(blockParam.blobGasUsed)
+      .excessBlobGas(BlobGas.fromHexString(blockParam.excessBlobGas))
+      .parentBeaconBlockRoot(Bytes32.fromHexString(blockParams[BlockParams.PARENT_BEACON_BLOCK_ROOT]!!))
+      .requestsHash(maybeRequests.map { BodyValidation.requestsHash(it) }.orElse(null))
+      .blockHeaderFunctions(MainnetBlockHeaderFunctions())
+      .buildBlockHeader()
   }
 
   /**
@@ -588,7 +588,7 @@ abstract class LineaPluginPoSTestBase : LineaPluginTestBase() {
     executionPayload: ObjectNode,
     blockHeader: BlockHeader,
   ) {
-    executionPayload.put("blockHash", blockHeader.blockHash.toHexString())
+    executionPayload.put("blockHash", blockHeader.blockHash.bytes.toHexString())
   }
 
   /**

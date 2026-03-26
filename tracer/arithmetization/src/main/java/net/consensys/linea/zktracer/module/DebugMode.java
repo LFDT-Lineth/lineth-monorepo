@@ -21,12 +21,11 @@ import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.opcode.OpCode;
 import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.DelegatingBytes;
 import org.hyperledger.besu.datatypes.Address;
+import org.hyperledger.besu.datatypes.Log;
 import org.hyperledger.besu.datatypes.Quantity;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.evm.frame.MessageFrame;
-import org.hyperledger.besu.evm.log.Log;
 import org.hyperledger.besu.evm.operation.Operation;
 import org.hyperledger.besu.evm.worldstate.WorldView;
 import org.hyperledger.besu.plugin.data.BlockBody;
@@ -192,7 +191,7 @@ public class DebugMode {
     log.info(" -- General --");
     log.info("  nonce: {}", tx.getNonce());
     log.info("  from:  {}", tx.getSender());
-    log.info("  to:    {}", tx.getTo().map(DelegatingBytes::toString).orElse("NONE"));
+    log.info("  to:    {}", tx.getTo().map(it -> it.getBytes().toHexString()).orElse("NONE"));
     log.info("  type:  {}", tx.getType());
     log.info("  value: {}", tx.getValue().toHexString());
     log.info("  data:  {}B", tx.getPayload().size());
@@ -230,7 +229,7 @@ public class DebugMode {
         hub.currentFrame().id(),
         hub.currentFrame().contextNumber(),
         hub.currentFrame().type(),
-        hub.currentFrame().byteCodeAddress().toUnprefixedHexString());
+        hub.currentFrame().byteCodeAddress().getBytes().toUnprefixedHexString());
   }
 
   public void traceContextReEnter(final MessageFrame frame) {
@@ -242,7 +241,7 @@ public class DebugMode {
         hub.currentFrame().id(),
         hub.currentFrame().contextNumber(),
         hub.currentFrame().type(),
-        hub.currentFrame().byteCodeAddress().toUnprefixedHexString());
+        hub.currentFrame().byteCodeAddress().getBytes().toUnprefixedHexString());
   }
 
   public void traceContextExit(final MessageFrame frame) {
@@ -254,7 +253,7 @@ public class DebugMode {
         hub.currentFrame().id(),
         hub.currentFrame().contextNumber(),
         hub.currentFrame().type(),
-        hub.currentFrame().byteCodeAddress().toUnprefixedHexString());
+        hub.currentFrame().byteCodeAddress().getBytes().toUnprefixedHexString());
   }
 
   public void tracePreOpcode(final MessageFrame frame) {

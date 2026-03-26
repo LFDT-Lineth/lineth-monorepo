@@ -35,6 +35,7 @@ import net.consensys.linea.zktracer.delegation.Utils.*;
 import net.consensys.linea.zktracer.module.hub.section.TupleAnalysis;
 import net.consensys.linea.zktracer.utilities.Utils;
 import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.Address;
@@ -58,7 +59,8 @@ public class RlpAuthTest extends TracerTestBase {
 
   final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
   final Address senderAddress =
-      Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
+      Address.extract(
+          Bytes32.wrap(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()).getBytes()));
   final ToyAccount senderAccount =
       ToyAccount.builder()
           .balance(Wei.fromEth(1))
@@ -68,7 +70,8 @@ public class RlpAuthTest extends TracerTestBase {
 
   final KeyPair authorityKeyPair = new SECP256K1().generateKeyPair();
   final Address authorityAddress =
-      Address.extract(Hash.hash(authorityKeyPair.getPublicKey().getEncodedBytes()));
+      Address.extract(
+          Bytes32.wrap(Hash.hash(authorityKeyPair.getPublicKey().getEncodedBytes()).getBytes()));
   final ToyAccount authorityAccount =
       ToyAccount.builder()
           .balance(Wei.fromEth(2))
@@ -78,7 +81,8 @@ public class RlpAuthTest extends TracerTestBase {
 
   static final KeyPair delegationKeyPair = new SECP256K1().generateKeyPair();
   static final Address delegationAddress =
-      Address.extract(Hash.hash(delegationKeyPair.getPublicKey().getEncodedBytes()));
+      Address.extract(
+          Bytes32.wrap(Hash.hash(delegationKeyPair.getPublicKey().getEncodedBytes()).getBytes()));
   final ToyAccount delegationAccount =
       ToyAccount.builder()
           .balance(Wei.fromEth(3))
@@ -88,7 +92,8 @@ public class RlpAuthTest extends TracerTestBase {
 
   final KeyPair recipientSmcKeyPair = new SECP256K1().generateKeyPair();
   final Address recipientSmcAddress =
-      Address.extract(Hash.hash(recipientSmcKeyPair.getPublicKey().getEncodedBytes()));
+      Address.extract(
+          Bytes32.wrap(Hash.hash(recipientSmcKeyPair.getPublicKey().getEncodedBytes()).getBytes()));
   final ToyAccount recipientAccount =
       ToyAccount.builder()
           .balance(Wei.fromEth(4))

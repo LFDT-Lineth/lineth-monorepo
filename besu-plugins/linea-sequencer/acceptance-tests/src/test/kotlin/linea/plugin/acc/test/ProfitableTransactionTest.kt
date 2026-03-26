@@ -65,7 +65,7 @@ class ProfitableTransactionTest : LineaPluginPoSTestBase() {
     val transferTx = accountTransactions.createTransfer(sender, recipient, 1)
     val txHash = minerNode.execute(transferTx)
 
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHash.bytes.toHexString()))
 
     // assert that tx below margin is not confirmed
     minerNode.verify(eth.expectNoTransactionReceipt(txUnprofitable.transactionHash))
@@ -84,6 +84,6 @@ class ProfitableTransactionTest : LineaPluginPoSTestBase() {
     val transferTx = accountTransactions.createTransfer(sender, recipient, 1)
     val txHash = minerNode.execute(transferTx)
 
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHash.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHash.bytes.toHexString()))
   }
 }

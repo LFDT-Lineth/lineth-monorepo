@@ -17,7 +17,7 @@ package net.consensys.linea.zktracer.module.hub.section;
 
 import static com.google.common.base.Preconditions.*;
 import static net.consensys.linea.zktracer.module.hub.fragment.storage.StorageFragmentPurpose.PRE_WARMING;
-import static net.consensys.linea.zktracer.types.AddressUtils.*;
+import static net.consensys.linea.zktracer.types.AddressUtils.precompileAddressOsaka;
 
 import java.util.*;
 import net.consensys.linea.zktracer.module.hub.AccountSnapshot;
@@ -89,7 +89,7 @@ public class TxPreWarmingMacroSection {
               .makeWithTrm(
                   preWarmingAccountSnapshot,
                   postWarmingAccountSnapshot,
-                  address,
+                  address.getBytes(),
                   domSubStampsSubFragment,
                   TransactionProcessingType.USER));
 
@@ -126,7 +126,7 @@ public class TxPreWarmingMacroSection {
 
     final Transaction besuTx = txMetadata.getBesuTransaction();
     final Address senderAddress = besuTx.getSender();
-    final Address recipientAddress = effectiveToAddress(besuTx);
+    final Address recipientAddress = txMetadata.getEffectiveRecipient();
     txMetadata.isSenderPreWarmed(latestAccountSnapshots.get(senderAddress).isWarm());
     txMetadata.isRecipientPreWarmed(latestAccountSnapshots.get(recipientAddress).isWarm());
     txMetadata.isCoinbasePreWarmed(latestAccountSnapshots.get(hub.coinbaseAddress()).isWarm());

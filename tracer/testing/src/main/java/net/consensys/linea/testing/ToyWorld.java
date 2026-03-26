@@ -216,7 +216,9 @@ public class ToyWorld implements WorldUpdater {
       // Create account
       MutableAccount acc =
           world.createAccount(
-              Words.toAddress(addr), account.nonce(), Wei.fromHexString(account.balance()));
+              Words.toAddress(addr.getBytes()),
+              account.nonce(),
+              Wei.fromHexString(account.balance()));
       // Update code
       acc.setCode(Bytes.fromHexString(account.code()));
     }

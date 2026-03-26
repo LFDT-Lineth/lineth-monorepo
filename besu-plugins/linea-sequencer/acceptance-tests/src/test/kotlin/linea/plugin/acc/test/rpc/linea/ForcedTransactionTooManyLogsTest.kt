@@ -39,7 +39,7 @@ class ForcedTransactionTooManyLogsTest : AbstractForcedTransactionTest() {
       )
       .set("--plugin-linea-limitless-enabled=", "true")
       .set("--plugin-linea-deny-list-path=", getResourcePath("/defaultDenyList.txt"))
-      .set("--plugin-linea-l1l2-bridge-contract=", LOG_EMITTER_ADDRESS.toHexString())
+      .set("--plugin-linea-l1l2-bridge-contract=", LOG_EMITTER_ADDRESS.bytes.toHexString())
       .set("--plugin-linea-l1l2-bridge-topic=", BRIDGE_TOPIC)
       .build()
   }
@@ -62,9 +62,9 @@ class ForcedTransactionTooManyLogsTest : AbstractForcedTransactionTest() {
       .withFailMessage(
         "LogEmitter deployed at %s but expected %s",
         logEmitter.contractAddress,
-        LOG_EMITTER_ADDRESS.toHexString(),
+        LOG_EMITTER_ADDRESS.bytes.toHexString(),
       )
-      .isEqualTo(LOG_EMITTER_ADDRESS.toHexString().lowercase())
+      .isEqualTo(LOG_EMITTER_ADDRESS.bytes.toHexString().lowercase())
 
     val sender = accounts.secondaryBenefactor
 

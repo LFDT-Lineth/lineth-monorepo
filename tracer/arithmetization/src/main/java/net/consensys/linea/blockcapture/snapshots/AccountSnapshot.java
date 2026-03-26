@@ -25,7 +25,7 @@ public record AccountSnapshot(String address, long nonce, String balance, String
         .map(
             account ->
                 new AccountSnapshot(
-                    address.toHexString(),
+                    address.getBytes().toHexString(),
                     account.getNonce(),
                     account.getBalance().toHexString(),
                     account.getCode().toHexString()));

@@ -157,14 +157,14 @@ public class LineaSendForcedRawTransaction {
                 param.forcedTransactionNumber, tx.getHash(), tx, deadlineBlockNumber));
         responses.add(
             ForcedTransactionResponse.success(
-                param.forcedTransactionNumber, tx.getHash().toHexString()));
+                param.forcedTransactionNumber, tx.getHash().getBytes().toHexString()));
 
         log.atDebug()
             .setMessage(
                 "action=parse_forced_tx logId={} forcedTxNumber={} txHash={} deadlineBlockNumber={}")
             .addArgument(logId)
             .addArgument(param.forcedTransactionNumber)
-            .addArgument(tx.getHash()::toHexString)
+            .addArgument(() -> tx.getHash().getBytes().toHexString())
             .addArgument(deadlineBlockNumber)
             .log();
       }

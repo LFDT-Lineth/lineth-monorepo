@@ -40,7 +40,9 @@ public class CoinbaseInstruction extends BlockDataInstruction {
   }
 
   public void handle() {
-    data = EWord.ofHexString(this.hub.coinbaseAddressOfRelativeBlock(this.relBlock).toHexString());
+    data =
+        EWord.ofHexString(
+            this.hub.coinbaseAddressOfRelativeBlock(this.relBlock).getBytes().toHexString());
     // row i
     exoCalls[0] = BlockDataExoCall.callToLT(this.wcp, data, POWER_256_20);
   }

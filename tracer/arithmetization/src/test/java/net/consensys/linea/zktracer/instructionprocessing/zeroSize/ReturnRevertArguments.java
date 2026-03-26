@@ -24,6 +24,7 @@ import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.*;
 import net.consensys.linea.zktracer.opcode.OpCode;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.core.Transaction;
@@ -108,6 +109,7 @@ public class ReturnRevertArguments extends TracerTestBase {
     checkArgument(opCode.isAnyOf(RETURN, REVERT));
 
     Address calleeAccountAddress = Address.fromHexString("ca11eec0def3fd");
+    Bytes calleeAccountAddressBytes = calleeAccountAddress.getBytes();
     BytecodeCompiler calleeAccountCode = BytecodeCompiler.newProgram(chainConfig);
     zeroSizeReturnOrRevert(calleeAccountCode, opCode);
 
@@ -127,11 +129,11 @@ public class ReturnRevertArguments extends TracerTestBase {
         .op(CALLDATASIZE) // cds
         .push(0) // cdo
         .push(255) // 0xff value
-        .push(calleeAccountAddress)
+        .push(calleeAccountAddressBytes)
         .push(100_000) // gas
         .op(CALL)
         // then we check balances for good measure
-        .push(calleeAccountAddress)
+        .push(calleeAccountAddressBytes)
         .op(BALANCE)
         .op(SELFBALANCE);
 

@@ -105,7 +105,7 @@ public class ShakiraInputsExtensiveTests extends TracerTestBase {
               .push(size)
               .push(offset)
               .push(0)
-              .push(Address.SHA256)
+              .push(Address.SHA256.getBytes())
               .push(1000000)
               .op(instruction)
               .compile();
@@ -117,7 +117,7 @@ public class ShakiraInputsExtensiveTests extends TracerTestBase {
               .push(0)
               .push(size)
               .push(offset)
-              .push(Address.SHA256)
+              .push(Address.SHA256.getBytes())
               .push(1000000)
               .op(instruction)
               .compile();

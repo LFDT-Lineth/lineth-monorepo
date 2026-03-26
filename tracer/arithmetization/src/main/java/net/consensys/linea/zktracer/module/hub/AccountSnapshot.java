@@ -352,7 +352,7 @@ public class AccountSnapshot {
   }
 
   public EWord tracedCodeHash() {
-    return EWord.of(this.deploymentStatus() ? Hash.EMPTY : this.code().getCodeHash());
+    return EWord.of((this.deploymentStatus() ? Hash.EMPTY : this.code().getCodeHash()).getBytes());
   }
 
   public boolean tracedHasCode() {

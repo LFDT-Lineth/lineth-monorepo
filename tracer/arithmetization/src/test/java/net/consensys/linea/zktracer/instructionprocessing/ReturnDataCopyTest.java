@@ -41,7 +41,7 @@ public class ReturnDataCopyTest extends TracerTestBase {
                 .push(5) // r@o, deliberately overlaps with call data
                 .push(18) // cds
                 .push(2) // cdo
-                .push(Address.SHA256) // address
+                .push(Address.SHA256.getBytes()) // address
                 .op(OpCode.GAS) // gas
                 .op(OpCode.STATICCALL)
                 .push(5)

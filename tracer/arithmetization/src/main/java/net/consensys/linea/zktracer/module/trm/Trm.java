@@ -51,7 +51,7 @@ public class Trm implements OperationSetModule<TrmOperation> {
     // in order to have a single address compound constrain, the RLP_TXN does call TRM
     if (tx.requiresAuthorizationPhase()) {
       for (CodeDelegation delegation : tx.getBesuTransaction().getCodeDelegationList().get()) {
-        callTrimming(delegation.address());
+        callTrimming(delegation.address().getBytes());
       }
     }
   }

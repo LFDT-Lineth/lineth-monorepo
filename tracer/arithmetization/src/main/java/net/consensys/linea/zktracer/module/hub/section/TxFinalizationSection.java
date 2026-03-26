@@ -86,7 +86,7 @@ public final class TxFinalizationSection extends TraceSection implements EndTran
             .makeWithTrm(
                 coinbaseGasRefund,
                 coinbaseGasRefundNew,
-                coinbaseGasRefund.address(),
+                coinbaseGasRefund.address().getBytes(),
                 DomSubStampsSubFragment.standardDomSubStamps(hub.stamp(), 1),
                 TransactionProcessingType.USER);
 

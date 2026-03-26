@@ -23,9 +23,9 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import net.consensys.linea.testing.TransactionProcessingResultValidator;
 import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.datatypes.LogTopic;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
-import org.hyperledger.besu.evm.log.LogTopic;
 
 @RequiredArgsConstructor
 public class SmartContractTestValidator implements TransactionProcessingResultValidator {
@@ -59,7 +59,7 @@ public class SmartContractTestValidator implements TransactionProcessingResultVa
         for (int i = 0; i < result.getLogs().size(); i++) {
           List<LogTopic> txLogsTopics = result.getLogs().get(i).getTopics();
           for (int j = 0; j < txLogsTopics.size(); j++) {
-            String txLogsTopic = txLogsTopics.get(j).toString();
+            String txLogsTopic = txLogsTopics.get(j).getBytes().toHexString();
             if (logsMapTopic.toString().equals(txLogsTopic)) {
               logsMaplogCount--;
               if ((logsDataMap.get(txLogsTopic) != null)

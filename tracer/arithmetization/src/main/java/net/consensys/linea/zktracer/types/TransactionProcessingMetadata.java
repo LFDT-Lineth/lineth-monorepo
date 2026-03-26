@@ -20,7 +20,6 @@ import static net.consensys.linea.zktracer.Trace.*;
 import static net.consensys.linea.zktracer.module.Util.getTxTypeAsInt;
 import static net.consensys.linea.zktracer.module.hub.AccountSnapshot.canonical;
 import static net.consensys.linea.zktracer.module.hub.AccountSnapshot.canonicalWithoutFrame;
-import static net.consensys.linea.zktracer.types.AddressUtils.effectiveToAddress;
 import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBoolean;
 import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 import static net.consensys.linea.zktracer.types.TransactionUtils.transactionHasEip1559GasSemantics;
@@ -41,8 +40,8 @@ import net.consensys.linea.zktracer.module.hub.section.halt.AttemptedSelfDestruc
 import net.consensys.linea.zktracer.module.hub.section.halt.EphemeralAccount;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.*;
+import org.hyperledger.besu.datatypes.Log;
 import org.hyperledger.besu.evm.account.Account;
-import org.hyperledger.besu.evm.log.Log;
 import org.hyperledger.besu.evm.worldstate.WorldView;
 
 @Getter
@@ -236,7 +235,17 @@ public class TransactionProcessingMetadata {
     floorCostPrague = GAS_CONST_G_TRANSACTION + this.weightedByteCount() * FLOOR_TOKEN_COST;
     initiallyAvailableGas = getInitiallyAvailableGas();
 
-    effectiveRecipient = effectiveToAddress(besuTransaction);
+    // For deployments, use the sender's current account nonce (not tx.getNonce()), so the computed
+    // contract address matches what Besu's EVM will use. During simulation with ALLOW_FUTURE_NONCE,
+    // tx.getNonce() may exceed the actual account nonce, causing a mismatch otherwise.
+    effectiveRecipient =
+        isDeployment
+            ? Address.contractAddress(
+                besuTransaction.getSender(),
+                Optional.ofNullable(world.get(besuTransaction.getSender()))
+                    .map(Account::getNonce)
+                    .orElse(0L))
+            : besuTransaction.getTo().map(x -> (Address) x).orElseThrow();
 
     effectiveGasPrice = computeEffectiveGasPrice();
 
@@ -523,15 +532,15 @@ public class TransactionProcessingMetadata {
   }
 
   public boolean senderIsCoinbase() {
-    return getSender().equals(coinbaseAddress);
+    return getSender().getBytes().equals(coinbaseAddress.getBytes());
   }
 
   public boolean recipientIsCoinbase() {
-    return effectiveRecipient.equals(coinbaseAddress);
+    return effectiveRecipient.getBytes().equals(coinbaseAddress.getBytes());
   }
 
   public boolean senderIsRecipient() {
-    return getSender().equals(effectiveRecipient);
+    return getSender().getBytes().equals(effectiveRecipient.getBytes());
   }
 
   public boolean senderAddressCollision() {

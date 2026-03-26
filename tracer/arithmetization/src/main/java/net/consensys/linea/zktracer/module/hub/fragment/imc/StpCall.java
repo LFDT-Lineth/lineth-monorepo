@@ -107,7 +107,7 @@ public class StpCall implements TraceSubFragment {
           "STP: delegated callee should have a delegation address");
       this.isDelegated = true;
       final Address delegateAddress = callee.delegationAddress().get();
-      this.isDelegatedToSelf = delegateAddress.equals(calleeAddress);
+      this.isDelegatedToSelf = delegateAddress.getBytes().equals(calleeAddress.getBytes());
       // if the instruction raises an exception then we keep the same warmth
       // otherwise we have to use the updated value of the delegate's warmth
       // at this point the only account that may have changed warmth is the callee,

@@ -128,7 +128,7 @@ public class EcPairingTest extends TracerTestBase {
             .push(0) // retOffset
             .push(192) // argSize
             .push(0) // argOffset
-            .push(Address.ALTBN128_PAIRING) // address
+            .push(Address.ALTBN128_PAIRING.getBytes()) // address
             .push(Bytes.fromHexStringLenient("0xFFFFFFFF")) // gas
             .op(OpCode.STATICCALL);
 

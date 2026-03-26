@@ -74,7 +74,7 @@ class ExecutionLayerInProcessClient(
         SafeFuture.completedFuture(
           BlockNumberAndHash(
             it.number.toULong(),
-            it.blockHash.toArray(),
+            it.blockHash.bytes.toArray(),
           ),
         )
       }

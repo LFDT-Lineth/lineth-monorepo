@@ -46,7 +46,7 @@ class ExcludedPrecompilesLimitlessTest : LineaPluginPoSTestBase() {
     val txHashFundRecipient = accountTransactions
       .createTransfer(accounts.primaryBenefactor, recipient, 10, BigInteger.valueOf(1))
       .execute(minerNode.nodeRequests())
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHashFundRecipient.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHashFundRecipient.bytes.toHexString()))
 
     data class InvalidCall(
       val senderPrivateKey: String,
@@ -105,7 +105,7 @@ class ExcludedPrecompilesLimitlessTest : LineaPluginPoSTestBase() {
       .execute(minerNode.nodeRequests())
     buildNewBlockAndWait()
 
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash1.toHexString()))
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash1.bytes.toHexString()))
     invalidCalls.forEach { invalidCall ->
       minerNode.verify(
         eth.expectNoTransactionReceipt(Hash.sha3(invalidCall.encodedContractCall)),

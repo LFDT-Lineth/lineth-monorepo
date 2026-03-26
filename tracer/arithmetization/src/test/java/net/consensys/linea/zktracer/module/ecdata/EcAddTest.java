@@ -103,7 +103,7 @@ public class EcAddTest extends TracerTestBase {
             .push(0x80) // retOffset
             .push(0x80) // argSize
             .push(0) // argOffset
-            .push(Address.ALTBN128_ADD) // address
+            .push(Address.ALTBN128_ADD.getBytes()) // address
             .push(Bytes.fromHexStringLenient("0xFFFFFFFF")) // gas
             .op(OpCode.STATICCALL);
 
@@ -135,7 +135,7 @@ public class EcAddTest extends TracerTestBase {
             .push(0x80) // retOffset
             .push(0x80) // argSize
             .push(0) // argOffset
-            .push(Address.ALTBN128_ADD) // address
+            .push(Address.ALTBN128_ADD.getBytes()) // address
             .push(Bytes.fromHexStringLenient("0xFFFFFFFF")) // gas
             .op(OpCode.STATICCALL);
 

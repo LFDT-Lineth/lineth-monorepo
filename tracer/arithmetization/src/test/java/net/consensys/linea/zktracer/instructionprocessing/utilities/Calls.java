@@ -52,7 +52,7 @@ public class Calls {
         .push(cds)
         .push(cdo)
         .push(program.opCodeData(callOpcode).callHasValueArgument(), value)
-        .push(to)
+        .push(to.getBytes())
         .op(GAS)
         .op(callOpcode);
     return program;
@@ -66,7 +66,7 @@ public class Calls {
         .push(cds)
         .push(cdo)
         .op(program.opCodeData(callOpcode).callHasValueArgument(), SELFBALANCE)
-        .push(to)
+        .push(to.getBytes())
         .op(GAS)
         .op(callOpcode);
     return program;
@@ -93,7 +93,7 @@ public class Calls {
         .push(cds)
         .push(cdo)
         .push(program.opCodeData(callOpcode).callHasValueArgument(), value)
-        .push(to)
+        .push(to.getBytes())
         .push(gas)
         .op(callOpcode);
     return program;
@@ -124,7 +124,7 @@ public class Calls {
 
     program.push(program.opCodeData(callOpcode).callHasValueArgument(), value);
 
-    program.push(toAccount.getAddress()).push(gas).op(callOpcode);
+    program.push(toAccount.getAddress().getBytes()).push(gas).op(callOpcode);
     return program;
   }
 
@@ -147,7 +147,7 @@ public class Calls {
         .op(SELFBALANCE)
         .push(1)
         .op(ADD) // puts balance + 1 on the stack
-        .push(to)
+        .push(to.getBytes())
         .push(gas)
         .op(callOpcode);
     return program;
@@ -165,7 +165,7 @@ public class Calls {
         .op(SELFBALANCE)
         .push(1)
         .op(ADD) // puts balance + 1 on the stack
-        .push(to)
+        .push(to.getBytes())
         .op(OpCode.GAS)
         .op(callOpcode);
     return program;

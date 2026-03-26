@@ -41,7 +41,7 @@ public abstract class HubRow extends TxnDataRow {
         .pHubBtcBasefee(
             Bytes.ofUnsignedLong(header.getBaseFee().get().getAsBigInteger().longValueExact()))
         .pHubBtcTimestamp(Bytes.ofUnsignedLong(header.getTimestamp()))
-        .pHubBtcCoinbaseAddressHi(coinbase.slice(0, 4).toLong())
-        .pHubBtcCoinbaseAddressLo(coinbase.slice(4, LLARGE));
+        .pHubBtcCoinbaseAddressHi(coinbase.getBytes().slice(0, 4).toLong())
+        .pHubBtcCoinbaseAddressLo(coinbase.getBytes().slice(4, LLARGE));
   }
 }

@@ -161,7 +161,7 @@ public class TransactionBundle {
     public void serialize(
         final Hash value, final JsonGenerator gen, final SerializerProvider provider)
         throws IOException {
-      gen.writeString(value.toHexString());
+      gen.writeString(value.getBytes().toHexString());
     }
   }
 

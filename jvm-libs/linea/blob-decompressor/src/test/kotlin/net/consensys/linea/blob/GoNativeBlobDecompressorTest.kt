@@ -135,19 +135,19 @@ class GoNativeBlobDecompressorTest {
     val decompressedTx2 = decodedBlock.body.transactions[2]
 
     assertThat(decompressedTx0.type).isEqualTo(tx0.type.toBesu())
-    assertThat(decompressedTx0.sender.toArray()).isEqualTo(tx0.toBesu().sender.toArray())
+    assertThat(decompressedTx0.sender.bytes.toArray()).isEqualTo(tx0.toBesu().sender.bytes.toArray())
     assertThat(decompressedTx0.nonce.toULong()).isEqualTo(tx0.nonce)
     assertThat(decompressedTx0.gasLimit.toULong()).isEqualTo(tx0.gasLimit)
     assertThat(decompressedTx0.maxFeePerGas.getOrNull()).isNull()
     assertThat(decompressedTx0.maxPriorityFeePerGas.getOrNull()).isNull()
     assertThat(decompressedTx0.gasPrice.getOrNull()?.asBigInteger).isEqualTo(tx0.gasPrice!!.toBigInteger())
-    assertThat(decompressedTx0.to.getOrNull()?.toArray()).isEqualTo(tx0.to)
+    assertThat(decompressedTx0.to.getOrNull()?.bytes?.toArray()).isEqualTo(tx0.to)
     assertThat(decompressedTx0.value.asBigInteger).isEqualTo(tx0.value)
     assertThat(decompressedTx0.payload.toArray()).isEqualTo(tx0.input)
     assertThat(decompressedTx0.accessList.getOrNull()).isNull()
 
     assertThat(decompressedTx1.type).isEqualTo(tx1.type.toBesu())
-    assertThat(decompressedTx1.sender.toArray()).isEqualTo(tx1.toBesu().sender.toArray())
+    assertThat(decompressedTx1.sender.bytes.toArray()).isEqualTo(tx1.toBesu().sender.bytes.toArray())
     assertThat(decompressedTx1.nonce.toULong()).isEqualTo(tx1.nonce)
     assertThat(decompressedTx1.gasLimit.toULong()).isEqualTo(tx1.gasLimit)
     assertThat(decompressedTx1.maxFeePerGas.getOrNull()?.asBigInteger)
@@ -155,20 +155,20 @@ class GoNativeBlobDecompressorTest {
     assertThat(decompressedTx1.maxPriorityFeePerGas.getOrNull()?.asBigInteger)
       .isEqualTo(tx1.maxPriorityFeePerGas?.toBigInteger())
     assertThat(decompressedTx1.gasPrice.getOrNull()).isNull()
-    assertThat(decompressedTx1.to.getOrNull()?.toArray()).isEqualTo(tx1.to)
+    assertThat(decompressedTx1.to.getOrNull()?.bytes?.toArray()).isEqualTo(tx1.to)
     assertThat(decompressedTx1.value.asBigInteger).isEqualTo(tx1.value)
     assertThat(decompressedTx1.payload.toArray()).isEqualTo(tx1.input)
     assertThat(decompressedTx1.accessList.getOrNull()).isNotNull
     decompressedTx1.accessList.getOrNull()!!.also { decompressedAccList ->
       assertThat(decompressedAccList).hasSize(2)
-      assertThat(decompressedAccList[0]!!.address.toArray())
+      assertThat(decompressedAccList[0]!!.address.bytes.toArray())
         .isEqualTo(tx1.accessList!![0].address)
       assertThat(decompressedAccList[0]!!.storageKeys[0].toArray())
         .isEqualTo(tx1.accessList!![0].storageKeys[0])
       assertThat(decompressedAccList[0]!!.storageKeys[1].toArray())
         .isEqualTo(tx1.accessList!![0].storageKeys[1])
 
-      assertThat(decompressedAccList[1]!!.address.toArray())
+      assertThat(decompressedAccList[1]!!.address.bytes.toArray())
         .isEqualTo(tx1.accessList!![1].address)
       assertThat(decompressedAccList[1]!!.storageKeys[0].toArray())
         .isEqualTo(tx1.accessList!![1].storageKeys[0])
@@ -177,7 +177,7 @@ class GoNativeBlobDecompressorTest {
     }
 
     assertThat(decompressedTx2.type).isEqualTo(tx2.type.toBesu())
-    assertThat(decompressedTx2.sender.toArray()).isEqualTo(tx2.toBesu().sender.toArray())
+    assertThat(decompressedTx2.sender.bytes.toArray()).isEqualTo(tx2.toBesu().sender.bytes.toArray())
     assertThat(decompressedTx2.nonce.toULong()).isEqualTo(tx2.nonce)
     assertThat(decompressedTx2.gasLimit.toULong()).isEqualTo(tx2.gasLimit)
     assertThat(decompressedTx2.maxFeePerGas.getOrNull()?.asBigInteger)
@@ -185,7 +185,7 @@ class GoNativeBlobDecompressorTest {
     assertThat(decompressedTx2.maxPriorityFeePerGas.getOrNull()?.asBigInteger)
       .isEqualTo(tx2.maxPriorityFeePerGas?.toBigInteger())
     assertThat(decompressedTx2.gasPrice.getOrNull()).isNull()
-    assertThat(decompressedTx2.to.getOrNull()?.toArray()).isEqualTo(tx2.to)
+    assertThat(decompressedTx2.to.getOrNull()?.bytes?.toArray()).isEqualTo(tx2.to)
     assertThat(decompressedTx2.value.asBigInteger).isEqualTo(tx2.value)
     assertThat(decompressedTx2.payload.toArray()).isEqualTo(tx2.input)
     assertThat(decompressedTx2.accessList.getOrNull()).isEmpty()
@@ -196,7 +196,7 @@ class GoNativeBlobDecompressorTest {
   fun CodeDelegation.toLinaDomain(): AuthorizationTuple {
     // Besu does CodeDelegation class not implement equals/hashcode so we convert to Linea Domain model to compare
     return AuthorizationTuple(
-      address = this.address().toArray(),
+      address = this.address().bytes.toArray(),
       chainId = this.chainId().toULong(),
       nonce = this.nonce().toULong(),
       v = this.signature().recId,

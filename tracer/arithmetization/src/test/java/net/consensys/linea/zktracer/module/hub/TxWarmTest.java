@@ -45,8 +45,7 @@ public class TxWarmTest extends TracerTestBase {
 
   // sender account
   private static final KeyPair senderKeyPair = new SECP256K1().generateKeyPair();
-  private static final Address senderAddress =
-      Address.extract(Hash.hash(senderKeyPair.getPublicKey().getEncodedBytes()));
+  private static final Address senderAddress = Address.extract(senderKeyPair.getPublicKey());
   private static final ToyAccount senderAccount =
       ToyAccount.builder().balance(Wei.fromEth(123)).nonce(12).address(senderAddress).build();
 

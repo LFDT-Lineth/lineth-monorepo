@@ -27,7 +27,6 @@ import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.web3j.abi.FunctionEncoder;
@@ -66,7 +65,7 @@ public class TestContext {
     // generate externally owned accounts
     for (int i = 0; i < numberOfEOA; i++) {
       KeyPair keyPair = new SECP256K1().generateKeyPair();
-      Address senderAddress = Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+      Address senderAddress = Address.extract(keyPair.getPublicKey());
       externallyOwnedAccounts[i] =
           ToyAccount.builder().balance(Wei.fromEth(1)).nonce(5).address(senderAddress).build();
       keyPairs[i] = keyPair;
@@ -146,7 +145,7 @@ public class TestContext {
     var encoding = FunctionEncoder.encode(yulFunction);
     FrameworkEntrypoint.ContractCall snippetContractCall =
         new FrameworkEntrypoint.ContractCall(
-            /*Address*/ destination.toHexString(),
+            /*Address*/ destination.getBytes().toHexString(),
             /*calldata*/ Bytes.fromHexStringLenient(encoding).toArray(),
             /*gasLimit*/ BigInteger.ZERO,
             /*value*/ BigInteger.ZERO,
@@ -186,7 +185,7 @@ public class TestContext {
     var encoding = FunctionEncoder.encode(yulFunction);
     FrameworkEntrypoint.ContractCall snippetContractCall =
         new FrameworkEntrypoint.ContractCall(
-            /*Address*/ destination.toHexString(),
+            /*Address*/ destination.getBytes().toHexString(),
             /*calldata*/ Bytes.fromHexStringLenient(encoding).toArray(),
             /*gasLimit*/ BigInteger.ZERO,
             /*value*/ BigInteger.ZERO,
@@ -226,7 +225,7 @@ public class TestContext {
   // destination must be our .yul smart contract
   FrameworkEntrypoint.ContractCall selfDestructCall(
       Address destination, Address recipient, boolean revertFlag, BigInteger callType) {
-    String recipientAddressString = recipient.toHexString();
+    String recipientAddressString = recipient.getBytes().toHexString();
     Function yulFunction =
         new Function(
             "selfDestruct",
@@ -238,7 +237,7 @@ public class TestContext {
     var encoding = FunctionEncoder.encode(yulFunction);
     FrameworkEntrypoint.ContractCall snippetContractCall =
         new FrameworkEntrypoint.ContractCall(
-            /*Address*/ destination.toHexString(),
+            /*Address*/ destination.getBytes().toHexString(),
             /*calldata*/ Bytes.fromHexStringLenient(encoding).toArray(),
             /*gasLimit*/ BigInteger.ZERO,
             /*value*/ BigInteger.ZERO,
@@ -268,7 +267,7 @@ public class TestContext {
       long amount,
       boolean revertFlag,
       BigInteger callType) {
-    String recipientAddressString = recipient.toHexString();
+    String recipientAddressString = recipient.getBytes().toHexString();
     Function yulFunction =
         new Function(
             "transferTo",
@@ -281,7 +280,7 @@ public class TestContext {
     var encoding = FunctionEncoder.encode(yulFunction);
     FrameworkEntrypoint.ContractCall snippetContractCall =
         new FrameworkEntrypoint.ContractCall(
-            /*Address*/ destination.toHexString(),
+            /*Address*/ destination.getBytes().toHexString(),
             /*calldata*/ Bytes.fromHexStringLenient(encoding).toArray(),
             /*gasLimit*/ BigInteger.ZERO,
             /*value*/ BigInteger.ZERO,
@@ -324,7 +323,7 @@ public class TestContext {
 
     FrameworkEntrypoint.ContractCall snippetContractCall =
         new FrameworkEntrypoint.ContractCall(
-            /*Address*/ destination.toHexString(),
+            /*Address*/ destination.getBytes().toHexString(),
             /*calldata*/ Bytes.fromHexStringLenient(encoding).toArray(),
             /*gasLimit*/ BigInteger.ZERO,
             /*value*/ BigInteger.ZERO,

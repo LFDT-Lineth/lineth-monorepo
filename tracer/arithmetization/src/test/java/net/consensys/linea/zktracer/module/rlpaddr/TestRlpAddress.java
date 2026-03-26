@@ -30,7 +30,6 @@ import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.TransactionType;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.core.Transaction;
@@ -46,8 +45,7 @@ public class TestRlpAddress extends TracerTestBase {
   @Test
   void randDeployment(TestInfo testInfo) {
     final KeyPair keyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(keyPair.getPublicKey());
     final ToyAccount senderAccount =
         ToyAccount.builder()
             .balance(Wei.of(100000000))
@@ -79,8 +77,7 @@ public class TestRlpAddress extends TracerTestBase {
   @Test
   void failingCreateTest(TestInfo testInfo) {
     final KeyPair keyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(keyPair.getPublicKey());
 
     final ToyAccount senderAccount =
         ToyAccount.builder()
@@ -113,7 +110,7 @@ public class TestRlpAddress extends TracerTestBase {
 
     final Bytes initCodeReturnContractCode =
         BytecodeCompiler.newProgram(chainConfig)
-            .push(contractAddress)
+            .push(contractAddress.getBytes())
             .op(OpCode.EXTCODESIZE)
             .op(OpCode.DUP1)
             .push(0)
@@ -146,8 +143,7 @@ public class TestRlpAddress extends TracerTestBase {
   @Test
   void improvedCreateTest(TestInfo testInfo) {
     final KeyPair keyPair = new SECP256K1().generateKeyPair();
-    final Address senderAddress =
-        Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+    final Address senderAddress = Address.extract(keyPair.getPublicKey());
 
     final ToyAccount senderAccount =
         ToyAccount.builder()
@@ -202,11 +198,11 @@ public class TestRlpAddress extends TracerTestBase {
 
   public static void fullCopyOfForeignByteCode(BytecodeCompiler program, Address foreignAddress) {
     program
-        .push(foreignAddress)
+        .push(foreignAddress.getBytes())
         .op(OpCode.EXTCODESIZE) // foreign address code size
         .push(0) // source offset
         .push(0) // target offset
-        .push(foreignAddress) // foreign address
+        .push(foreignAddress.getBytes()) // foreign address
         .op(OpCode.EXTCODECOPY) // copy
     ;
   }

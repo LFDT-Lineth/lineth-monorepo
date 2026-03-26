@@ -101,11 +101,11 @@ public class P256VerifyTest extends TracerTestBase {
     // First place the parameters in memory
     // Copy to targetOffset the code of codeOwnerAccount
     program
-        .push(codeOwnerAddress)
+        .push(codeOwnerAddress.getBytes())
         .op(OpCode.EXTCODESIZE) // size
         .push(0) // offset
         .push(0) // targetOffset
-        .push(codeOwnerAddress) // address
+        .push(codeOwnerAddress.getBytes()) // address
         .op(OpCode.EXTCODECOPY);
 
     // Do the call
@@ -114,7 +114,7 @@ public class P256VerifyTest extends TracerTestBase {
         .push(input.size()) // retOffset
         .push(input.size()) // argSize
         .push(0) // argOffset
-        .push(Address.P256_VERIFY) // address
+        .push(Address.P256_VERIFY.getBytes()) // address
         .push(EIP_7825_TRANSACTION_GAS_LIMIT_CAP) // gas
         .op(OpCode.STATICCALL);
     if (!trailingProgram.isEmpty()) {
