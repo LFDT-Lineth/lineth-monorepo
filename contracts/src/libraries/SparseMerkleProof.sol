@@ -113,6 +113,23 @@ library SparseMerkleProof {
   }
 
   /**
+   * @notice Hashes an account key (address) using the Poseidon2 hash function.
+   * @dev Matches gnark-crypto's left-padding of partial Merkle-Damgard blocks.
+   * @param _addr The address to be hashed as the account key.
+   * @return Account key hash as bytes32.
+   */
+  function hashAccountKey(address _addr) external pure returns (bytes32) {
+    bytes memory padded = Poseidon2.padBytes32(bytes32(bytes20(_addr)));
+    bytes32 word1;
+    bytes32 word2;
+    assembly {
+      word1 := mload(add(padded, 0x20))
+      word2 := mload(add(padded, 0x40))
+    }
+    return Poseidon2.hash(abi.encodePacked(word1, bytes32(uint256(word2) >> 192)));
+  }
+
+  /**
    * @notice Hash account value.
    * @param _value Encoded account value bytes (nonce, balance, storageRoot, snarkCodeHash, keccakCodeHash, codeSize).
    * @return bytes32 Account value hash.
@@ -169,6 +186,7 @@ library SparseMerkleProof {
   /**
    * @notice Format proof.
    * @param _rawProof Non formatted proof array.
+   * @return nextFreeNode Next free node.
    * @return formattedNodes bytes32[2] NextFreeNode.
    * @return leafHash Leaf hash extracted from the proof.
    * @return proof Formatted proof array.

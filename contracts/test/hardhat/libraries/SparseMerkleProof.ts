@@ -3,6 +3,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { Poseidon2, SparseMerkleProof } from "../../../typechain-types";
 import merkleProofTestData from "../_testData/merkle-proof-data-poseidon2.json";
+import accountKeyTestVectors from "../_testData/account-key-test-vectors.json";
 import { deployFromFactory } from "../common/deployment";
 import { expectRevertWithCustomError } from "../common/helpers";
 import { dataSlice } from "ethers";
@@ -12,6 +13,10 @@ describe("SparseMerkleProof", () => {
 
   const STATE_ROOT = "0x1aae3e0a143c0ac31b469af05096c1000a64836f05c250ad0857d0a1496f0c71";
   const STORAGE_ROOT = "0x07bd72a3216f334e18eb7cb3388a4ab4758d0b10486f08ae22e9834c7a0210d3";
+  const ACCOUNT_KEY_HASH = "0x1b8d67463ebc5079420e3cd81eb80d3634377dea65f2372117425fb411526f7c";
+  const ACCOUNT_VALUE_HASH = "0x5f5e38d86509c3451e2ffcc402d8e0d577ca6c60084c17923ed803f30d6ab1c6";
+  const STORAGE_KEY_HASH = "0x3e59e46d51db286e504cbdf15ee428501786c73a574a96d06cc0f84b527c0954";
+  const STORAGE_VALUE_HASH = "0x454eebb36976d82c78601ad67bd131797dd516b36b6b62b2457fcdd443662bc6";
 
   async function deploySparseMerkleProofFixture() {
     const poseidon2 = (await deployFromFactory("Poseidon2")) as Poseidon2;
@@ -280,7 +285,7 @@ describe("SparseMerkleProof", () => {
       } = merkleProofTestData;
 
       const hVal = await sparseMerkleProof.hashAccountValue(value);
-      expect(hVal).to.be.equal("0x5f5e38d86509c3451e2ffcc402d8e0d577ca6c60084c17923ed803f30d6ab1c6");
+      expect(hVal).to.be.equal(ACCOUNT_VALUE_HASH);
     });
 
     it("Should error if less than 192 length", async () => {
@@ -317,7 +322,25 @@ describe("SparseMerkleProof", () => {
         ],
       } = merkleProofTestData;
       const hVal = await sparseMerkleProof.hashStorageValue(value);
-      expect(hVal).to.be.equal("0x454eebb36976d82c78601ad67bd131797dd516b36b6b62b2457fcdd443662bc6");
+      expect(hVal).to.be.equal(STORAGE_VALUE_HASH);
+    });
+  });
+
+  describe("hashAccountKey", () => {
+    it("Should return account key hash", async () => {
+      const {
+        accountProof: { key },
+      } = merkleProofTestData;
+
+      const hKey = await sparseMerkleProof.hashAccountKey(key);
+      expect(hKey).to.be.equal(ACCOUNT_KEY_HASH);
+    });
+
+    it("Should return account key hash from test vectors", async () => {
+      for (const { input, output } of accountKeyTestVectors) {
+        const hKey = await sparseMerkleProof.hashAccountKey(input);
+        expect(hKey).to.be.equal(output);
+      }
     });
   });
 
@@ -354,18 +377,23 @@ describe("SparseMerkleProof", () => {
       it("Should return parsed leaf", async () => {
         const {
           accountProof: {
-            proof: { proofRelatedNodes },
+            key,
+            proof: { value, proofRelatedNodes },
           },
         } = merkleProofTestData;
 
         const leaf = await sparseMerkleProof.getLeaf(proofRelatedNodes[proofRelatedNodes.length - 1]);
+        const expectedHKey = await sparseMerkleProof.hashAccountKey(key);
+        const expectedHValue = await sparseMerkleProof.hashAccountValue(value);
 
         expect(leaf.prev[0]).to.be.equal(0n);
         expect(leaf.prev[1]).to.be.equal(0n);
         expect(leaf.next[0]).to.be.equal(0n);
         expect(leaf.next[1]).to.be.equal(2n);
-        expect(leaf.hKey).to.be.equal("0x1b8d67463ebc5079420e3cd81eb80d3634377dea65f2372117425fb411526f7c");
-        expect(leaf.hValue).to.be.equal("0x5f5e38d86509c3451e2ffcc402d8e0d577ca6c60084c17923ed803f30d6ab1c6");
+        expect(leaf.hKey).to.be.equal(expectedHKey);
+        expect(leaf.hValue).to.be.equal(expectedHValue);
+        expect(leaf.hKey).to.be.equal(ACCOUNT_KEY_HASH);
+        expect(leaf.hValue).to.be.equal(ACCOUNT_VALUE_HASH);
       });
     });
 
@@ -390,19 +418,24 @@ describe("SparseMerkleProof", () => {
         const {
           storageProofs: [
             {
-              proof: { proofRelatedNodes },
+              key,
+              proof: { value, proofRelatedNodes },
             },
           ],
         } = merkleProofTestData;
 
         const leaf = await sparseMerkleProof.getLeaf(proofRelatedNodes[proofRelatedNodes.length - 1]);
+        const expectedHKey = await sparseMerkleProof.hashStorageValue(key);
+        const expectedHValue = await sparseMerkleProof.hashStorageValue(value);
 
         expect(leaf.prev[0]).to.be.equal(0n);
         expect(leaf.prev[1]).to.be.equal(0n);
         expect(leaf.next[0]).to.be.equal(0n);
         expect(leaf.next[1]).to.be.equal(1n);
-        expect(leaf.hKey).to.be.equal("0x3e59e46d51db286e504cbdf15ee428501786c73a574a96d06cc0f84b527c0954");
-        expect(leaf.hValue).to.be.equal("0x454eebb36976d82c78601ad67bd131797dd516b36b6b62b2457fcdd443662bc6");
+        expect(leaf.hKey).to.be.equal(expectedHKey);
+        expect(leaf.hValue).to.be.equal(expectedHValue);
+        expect(leaf.hKey).to.be.equal(STORAGE_KEY_HASH);
+        expect(leaf.hValue).to.be.equal(STORAGE_VALUE_HASH);
       });
     });
   });
