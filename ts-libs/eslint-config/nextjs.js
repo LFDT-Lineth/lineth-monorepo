@@ -5,7 +5,6 @@ import node from "./node.js";
 
 export const nextjs = defineConfig([
   globalIgnores([
-    ".cache-synpress",
     ".next/**",
     "out/**",
     "build/**",

@@ -39,7 +39,6 @@ const chainConfigSchema = z.object({
 export const configSchema = z
   .object({
     chains: z.record(z.string().regex(/^\d+$/), chainConfigSchema),
-    e2eTestMode: z.boolean().default(false),
     walletConnectId: z.string().nonempty(),
     storage: z.object({
       minVersion: z.number().positive().int(),

@@ -139,10 +139,6 @@ bridge-ui/
 │   └── utils/                 # Utility functions
 │       ├── events/            # Event parsing utilities
 │       └── history/           # Transaction history utilities
-├── test/
-│   ├── e2e/                   # Playwright E2E tests
-│   ├── utils/                 # Test utilities
-│   └── wallet-setup/          # MetaMask test fixtures
 ├── .env.template              # Environment variable template
 ├── .env.production            # Production configuration
 ├── Dockerfile                 # Container build configuration
@@ -452,8 +448,6 @@ This application does not expose APIs for other monorepo components. It is a sta
 
 5. **CCTP Feature Flag**: USDC transactions are filtered out when `NEXT_PUBLIC_IS_CCTP_ENABLED` is false.
 
-6. **E2E Test Mode**: `NEXT_PUBLIC_E2E_TEST_MODE=true` enables local chain configurations. Do not enable in production.
-
 ### Confusing Areas
 
 - **Multiple ABIs**: `TokenBridge` for ERC-20, `MessageService` for ETH. USDC uses `USDCBridge` and `MessageTransmitterV2`.
@@ -466,45 +460,15 @@ This application does not expose APIs for other monorepo components. It is a sta
 
 ## Testing
 
-### Test Location
+Unit tests use the Playwright test runner and live next to source files as `src/**/*.spec.ts` (for example `urls.spec.ts`, `cctp/utils.spec.ts`, `history/*.spec.ts`).
 
-```
-test/
-├── e2e/                       # Playwright E2E tests
-│   ├── bridge-l1-l2.spec.ts   # L1→L2 bridging tests
-│   ├── bridge-l2-l1.spec.ts   # L2→L1 bridging tests
-│   └── general.spec.ts        # General UI tests
-├── utils/                     # Test helpers
-├── wallet-setup/              # MetaMask setup via Synpress
-└── global.setup.ts            # Global test setup
-```
-
-Unit tests are colocated with source files (e.g., `cctp.spec.ts`, `isBlockTooOld.spec.ts`).
-
-### Running Tests
+### Running tests
 
 ```bash
-# Build wallet cache (required for E2E)
-pnpm run build:cache
-
-# Run E2E tests (headful)
-pnpm run test:e2e:headful
-
-# Run E2E tests (headless)
-pnpm run test:e2e:headless
-
-# Run unit tests
 pnpm run test:unit
 ```
 
-### E2E Test Requirements
-
-1. Set `NEXT_PUBLIC_E2E_TEST_MODE=true` in `.env`
-2. Build the application: `pnpm run build`
-3. Start the local docker stack from monorepo root: `make start-env-with-tracing-v2-ci`
-4. Run tests
-
-E2E tests use Synpress for MetaMask automation with Playwright.
+(from the monorepo root: `pnpm -F bridge-ui run test:unit`)
 
 ## Related Documentation
 

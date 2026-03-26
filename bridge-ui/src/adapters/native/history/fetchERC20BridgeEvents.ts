@@ -7,7 +7,6 @@ import { getPublicClient } from "@wagmi/core";
 import { Address, Client, decodeAbiParameters } from "viem";
 import { Config } from "wagmi";
 
-import { config } from "@/config";
 import { type HistoryActionsForCompleteTxCaching } from "@/stores/historyStore";
 import { BridgeTransaction, Chain, ChainLayer, Token } from "@/types";
 import { isBlockTooOld } from "@/utils/history/isBlockTooOld";
@@ -94,9 +93,6 @@ export async function fetchERC20BridgeEvents(
 
         const message = await getMessagesByTransactionHash(originLayerClient as Client, {
           transactionHash,
-          ...(config.e2eTestMode
-            ? { messageServiceAddress: config.chains[fromChain.id].messageServiceAddress as Address }
-            : {}),
         });
 
         if (isUndefinedOrNull(message) || message.length === 0) {
@@ -107,19 +103,10 @@ export async function fetchERC20BridgeEvents(
           fromChain.layer === ChainLayer.L1
             ? await getL1ToL2MessageStatus(destinationLayerClient as Client, {
                 messageHash: message[0].messageHash,
-                ...(config.e2eTestMode
-                  ? { l2MessageServiceAddress: config.chains[toChain.id].messageServiceAddress as Address }
-                  : {}),
               })
             : await getL2ToL1MessageStatus(destinationLayerClient as Client, {
                 messageHash: message[0].messageHash,
                 l2Client: originLayerClient as Client,
-                ...(config.e2eTestMode
-                  ? {
-                      lineaRollupAddress: config.chains[toChain.id].messageServiceAddress as Address,
-                      l2MessageServiceAddress: config.chains[fromChain.id].messageServiceAddress as Address,
-                    }
-                  : {}),
               });
 
         const token = tokens.find(

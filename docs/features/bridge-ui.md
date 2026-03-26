@@ -16,7 +16,7 @@ The Bridge UI is a production web application for asset transfers between Ethere
 | Zustand | State management |
 | Web3Auth | Social login and wallet aggregation |
 | `@consensys/linea-sdk-viem` | Linea SDK integration |
-| Playwright + Synpress | E2E testing with MetaMask automation |
+| Playwright | Unit tests (`src/**/*.spec.ts`) |
 
 ## Bridging Paths
 
@@ -77,10 +77,7 @@ Zustand stores manage application state:
 
 | Test File | Runner | Validates |
 |-----------|--------|-----------|
-| `bridge-ui/test/e2e/bridge-l1-l2.spec.ts` | Playwright/Synpress | L1→L2 bridge flow in browser |
-| `bridge-ui/test/e2e/bridge-l2-l1.spec.ts` | Playwright/Synpress | L2→L1 bridge flow in browser |
-| `bridge-ui/test/e2e/general.spec.ts` | Playwright/Synpress | General UI behavior |
-| Colocated unit tests (`*.spec.ts`) | Playwright | CCTP logic, utility functions |
+| Colocated unit tests (`src/**/*.spec.ts`) | Playwright | CCTP logic, URL helpers, navigation data, history utilities |
 
 ## Deployment
 

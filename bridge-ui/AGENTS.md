@@ -4,7 +4,7 @@
 
 ## Package Overview
 
-Next.js 16 frontend application for the Linea token bridge. Uses React 19, Wagmi/Viem for wallet interactions, Zustand for state management, and Playwright for testing.
+Next.js 16 frontend application for the Linea token bridge. Uses React 19, Wagmi/Viem for wallet interactions, Zustand for state management, and Playwright as the test runner for unit tests in `src/**/*.spec.ts`.
 
 ## How to Run
 
@@ -27,16 +27,6 @@ pnpm -F bridge-ui run lint:fix
 
 # Unit tests
 pnpm -F bridge-ui run test:unit
-
-# E2E tests (requires Playwright browsers)
-pnpm -F bridge-ui run install:playwright
-pnpm -F bridge-ui run test:e2e:headless
-
-# E2E with UI mode
-pnpm -F bridge-ui run test:e2e:headless:ui
-
-# Build Synpress cache (Metamask fixture)
-pnpm -F bridge-ui run build:cache
 ```
 
 ## Frontend-Specific Conventions
@@ -73,10 +63,8 @@ Allowed domains configured in `next.config.ts`: CoinMarketCap, CoinGecko, Linea,
 
 ## Testing
 
-- **Unit tests:** Playwright with `UNIT=true` flag — `test:unit`
-- **E2E tests:** Playwright with Synpress for Metamask interactions — `test:e2e:headless`
-- **Browser:** Chromium project only
-- **CI workflow:** `.github/workflows/bridge-ui-e2e-tests.yml` triggers on `bridge-ui/**` changes
+- **Unit tests:** Playwright test runner, specs colocated under `src/**/*.spec.ts` — `test:unit`
+- **CI workflow:** `.github/workflows/bridge-ui-tests.yml` triggers on `bridge-ui/**` changes
 
 ## Agent Rules (Overrides)
 

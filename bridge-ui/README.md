@@ -102,22 +102,12 @@ Open: http://localhost:3000
 ```
 Example: `f3afe33-1705598198-bridge-ui-0.5.3`
 
-## End-to-end tests
-E2E tests run in CI and can also be run locally.
+## Unit tests
 
-### Run locally (from repo root)
-1) In your `.env`, set: `NEXT_PUBLIC_E2E_TEST_MODE=true`
-2) Build the app:
+From the repository root:
+
 ```sh
-pnpm run build
-```
-3) From the repository root, start the local docker stack:
-```sh
-make start-env-with-tracing-v2-ci
-```
-4) Run the tests (still from repo root):
-```sh
-pnpm run test:e2e:headful
+pnpm -F bridge-ui run test:unit
 ```
 
 ## Deployment (internal ops)

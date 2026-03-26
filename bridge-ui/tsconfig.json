@@ -30,5 +30,5 @@
   ],
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["**/node_modules", "**/.*/"],
-  "files": ["environment.d.ts"]
+  "files": ["environment.d.ts", "svg.d.ts"]
 }

@@ -6,20 +6,13 @@
   "type": "module",
   "scripts": {
     "build": "next build",
-    "build:cache": "synpress",
-    "build:cache:force": "synpress --force",
-    "build:cache:headless": "synpress --headless",
     "check-types": "tsc --noEmit",
     "clean": "rimraf node_modules .next .next-env.d.ts",
     "dev": "next dev",
-    "install:playwright": "playwright install --with-deps",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "start": "next start",
-    "test:e2e:headful": "playwright test --project=chromium",
-    "test:e2e:headless": "HEADLESS=true playwright test --project=chromium",
-    "test:e2e:headless:ui": "HEADLESS=true playwright test --project=chromium --ui",
-    "test:unit": "HEADLESS=true UNIT=true playwright test --project=unit"
+    "test:unit": "playwright test --project=unit"
   },
   "dependencies": {
     "@consensys/linea-sdk-viem": "workspace:*",
@@ -55,15 +48,11 @@
     "@consensys/eslint-config": "workspace:*",
     "@playwright/test": "1.53.2",
     "@svgr/webpack": "8.1.0",
-    "@synthetixio/synpress": "4.1.0",
-    "@types/fs-extra": "11.0.4",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "autoprefixer": "10.4.23",
-    "dotenv": "catalog:",
     "eslint": "catalog:",
     "nock": "14.0.10",
-    "playwright-core": "1.53.2",
     "postcss": "8.5.6",
     "sass": "1.97.3"
   }

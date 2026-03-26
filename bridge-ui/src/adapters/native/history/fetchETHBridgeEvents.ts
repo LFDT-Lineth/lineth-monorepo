@@ -3,7 +3,6 @@ import { getPublicClient } from "@wagmi/core";
 import { Address, Client, Hex } from "viem";
 import { Config } from "wagmi";
 
-import { config } from "@/config";
 import { type HistoryActionsForCompleteTxCaching } from "@/stores/historyStore";
 import { defaultTokensConfig } from "@/stores/tokenStore";
 import { BridgeTransaction, Chain, ChainLayer, Token } from "@/types";
@@ -94,19 +93,10 @@ export async function fetchETHBridgeEvents(
           fromChain.layer === ChainLayer.L1
             ? await getL1ToL2MessageStatus(destinationLayerClient as Client, {
                 messageHash,
-                ...(config.e2eTestMode
-                  ? { l2MessageServiceAddress: config.chains[toChain.id].messageServiceAddress as Address }
-                  : {}),
               })
             : await getL2ToL1MessageStatus(destinationLayerClient as Client, {
                 messageHash,
                 l2Client: originLayerClient as Client,
-                ...(config.e2eTestMode
-                  ? {
-                      lineaRollupAddress: config.chains[toChain.id].messageServiceAddress as Address,
-                      l2MessageServiceAddress: config.chains[fromChain.id].messageServiceAddress as Address,
-                    }
-                  : {}),
               });
 
         const token = tokens.find((token) => token.type.includes("eth"));

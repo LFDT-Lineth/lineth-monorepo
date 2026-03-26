@@ -2,7 +2,6 @@ import { Address } from "viem";
 import { linea, mainnet, Chain as ViemChain, sepolia, lineaSepolia } from "viem/chains";
 
 import { config } from "@/config";
-import { localL1Network, localL2Network } from "@/constants/chains";
 import { Chain, ChainLayer, SupportedChainIds } from "@/types";
 
 const getChainName = (chainId: number) => {
@@ -15,10 +14,6 @@ const getChainName = (chainId: number) => {
       return "Ethereum";
     case sepolia.id:
       return "Sepolia";
-    case localL1Network.id:
-      return "Local L1 Network";
-    case localL2Network.id:
-      return "Local L2 Network";
     default:
       return "";
   }
@@ -50,7 +45,6 @@ export const generateChain = (chain: ViemChain): Chain => {
     ...(config.chains[chain.id].yieldProviderAddress
       ? { yieldProviderAddress: config.chains[chain.id].yieldProviderAddress as Address }
       : {}),
-    ...(chain.custom?.localNetwork ? { localNetwork: true } : {}),
   };
 };
 
@@ -66,10 +60,6 @@ export const getChainNetworkLayer = (chainId: number) => {
     case mainnet.id:
     case sepolia.id:
       return ChainLayer.L1;
-    case localL1Network.id:
-      return ChainLayer.L1;
-    case localL2Network.id:
-      return ChainLayer.L2;
     default:
       throw new Error(`Unsupported chain id: ${chainId}`);
   }
@@ -85,10 +75,6 @@ export const getDestinationChainId = (chainId: number): SupportedChainIds => {
       return linea.id;
     case sepolia.id:
       return lineaSepolia.id;
-    case localL1Network.id:
-      return localL2Network.id;
-    case localL2Network.id:
-      return localL1Network.id;
     default:
       throw new Error(`Unsupported chain id: ${chainId}`);
   }
@@ -103,10 +89,6 @@ export const getChainLogoPath = (chainId: number) => {
     case mainnet.id:
     case sepolia.id:
       return config.chains[mainnet.id].iconPath;
-    case localL1Network.id:
-      return config.chains[localL1Network.id].iconPath;
-    case localL2Network.id:
-      return config.chains[localL2Network.id].iconPath;
     default:
       return "";
   }

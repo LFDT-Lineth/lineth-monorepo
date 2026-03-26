@@ -12,9 +12,6 @@ packages:
 
 overrides:
   "@hono/node-server@<1.19.10": ">=1.19.10"
-  "@synthetixio/synpress-cache>zod": "3.25.76"
-  "@synthetixio/synpress-metamask>zod": "3.25.76"
-  "@synthetixio/synpress-phantom>zod": "3.25.76"
   axios@<0.30.0: ">=0.30.0"
   axios@<=0.30.2: ">=0.30.3"
   axios@>=0.8.1 <0.28.0: ">=0.28.0"

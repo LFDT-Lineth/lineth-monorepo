@@ -6,7 +6,6 @@ import clsx from "clsx";
 import SettingIcon from "@/assets/icons/setting.svg";
 import CurrencyDropdown from "@/components/bridge/currency-dropdown";
 import ToggleSwitch from "@/components/ui/toggle-switch";
-import { config } from "@/config";
 import { useChains } from "@/hooks";
 import { useChainStore } from "@/stores/chainStore";
 import { useConfigStore } from "@/stores/configStore";
@@ -47,10 +46,7 @@ export default function Setting(props: SettingProps) {
   };
 
   useEffect(() => {
-    if (config.e2eTestMode) {
-      setFromChain(chains.find((c) => c.localNetwork && c.layer === ChainLayer.L1));
-      setToChain(chains.find((c) => c.localNetwork && c.layer === ChainLayer.L2));
-    } else if (!showTestnet) {
+    if (!showTestnet) {
       setFromChain(chains.find((c) => !c.testnet && c.layer === ChainLayer.L1));
       setToChain(chains.find((c) => !c.testnet && c.layer === ChainLayer.L2));
     } else {

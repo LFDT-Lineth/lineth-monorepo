@@ -108,7 +108,6 @@ pnpm -F bridge-ui run build
 | Postman | `pnpm -F @consensys/linea-postman run test` |
 | E2E (requires local stack) | `pnpm -F e2e run test:local` |
 | Bridge UI unit | `pnpm -F bridge-ui run test:unit` |
-| Bridge UI E2E | `pnpm -F bridge-ui run test:e2e:headless` |
 | Coordinator (Kotlin) | `./gradlew :coordinator:app:test` |
 | Prover (Go) | `cd prover && go test ./... -tags nocorset,fuzzlight -timeout 30m` |
 | Native libs | `pnpm -F @consensys/linea-native-libs run test` |
@@ -185,7 +184,6 @@ Prettier config: `prettier.config.mjs`. Formatting is integrated into `lint:fix`
 | Contracts (Foundry) | Forge | `test/foundry/*` |
 | TypeScript packages | Jest 29.7.0 + ts-jest | `pnpm -F <pkg> run test` |
 | Bridge UI unit | Playwright | `pnpm -F bridge-ui run test:unit` |
-| Bridge UI E2E | Playwright + Synpress | `pnpm -F bridge-ui run test:e2e:headless` |
 | Coordinator | JUnit 5 + Mockito + WireMock | `./gradlew :coordinator:app:test` |
 | Prover | Go test | `go test ./... -tags nocorset,fuzzlight` |
 | E2E (protocol) | Jest | `pnpm -F e2e run test:local` |

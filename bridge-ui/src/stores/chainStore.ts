@@ -2,8 +2,6 @@ import { createSelectorHooks, ZustandHookSelectors } from "auto-zustand-selector
 import { linea, lineaSepolia, mainnet, sepolia } from "viem/chains";
 import { create } from "zustand";
 
-import { config } from "@/config";
-import { localL1Network, localL2Network } from "@/constants/chains";
 import { Chain } from "@/types";
 import { generateChain, generateChains } from "@/utils/chains";
 
@@ -22,11 +20,9 @@ export type ChainActions = {
 export type ChainStore = ChainState & ChainActions;
 
 export const defaultInitState: ChainState = {
-  chains: generateChains([
-    ...(config.e2eTestMode ? [localL1Network, localL2Network] : [mainnet, sepolia, linea, lineaSepolia]),
-  ]),
-  fromChain: generateChain(config.e2eTestMode ? localL1Network : mainnet),
-  toChain: generateChain(config.e2eTestMode ? localL2Network : linea),
+  chains: generateChains([mainnet, sepolia, linea, lineaSepolia]),
+  fromChain: generateChain(mainnet),
+  toChain: generateChain(linea),
 };
 
 const useChainStoreBase = create<ChainStore>()((set, get) => ({

@@ -48,6 +48,4 @@ export type Chain = {
 
   /** @group Native adapter — L1 yield provider for LST claiming (e.g. stETH) */
   yieldProviderAddress?: Address;
-
-  localNetwork?: boolean;
 };

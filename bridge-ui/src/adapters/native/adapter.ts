@@ -2,7 +2,6 @@ import { getMessageProof } from "@consensys/linea-sdk-viem";
 import { estimateFeesPerGas, getPublicClient, readContract } from "@wagmi/core";
 import { Address, Client, Hex, encodeFunctionData } from "viem";
 
-import { config } from "@/config";
 import { BridgeProvider, ChainLayer, ClaimType } from "@/types";
 import { isUndefinedOrEmptyString, isZero } from "@/utils/misc";
 import { isEth } from "@/utils/tokens";
@@ -104,12 +103,6 @@ export const nativeAdapter: BridgeAdapter = {
       const proof = await getMessageProof(destinationLayerClient as Client, {
         messageHash: message.messageHash as Hex,
         l2Client: originLayerClient as Client,
-        ...(config.e2eTestMode
-          ? {
-              lineaRollupAddress: config.chains[toChain.id].messageServiceAddress as Address,
-              l2MessageServiceAddress: config.chains[fromChain.id].messageServiceAddress as Address,
-            }
-          : {}),
       });
 
       claimMessage = { ...message, proof };
