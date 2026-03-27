@@ -22,17 +22,6 @@
 * [Kudelski Security - October 2022 - gnark-crypto (contracted by Algorand Foundation)](https://github.com/Consensys/gnark/blob/53ce9b74e7ab372aa7358f1eac7fe3d689743f5f/audits/2022-10%20-%20Kudelski%20-%20gnark-crypto.pdf)
 
 ---
-## Yield Boost Smart Contract Audits
-**Diligence**
-- Linea Yield Manager - [https://diligence.security/audits/2025/12/linea-yield-manager/](https://diligence.security/audits/2025/12/linea-yield-manager/)
-
-**OpenZeppelin**
-- Linea Yield Manager - [https://www.openzeppelin.com/news/linea-yield-manager-audit](https://www.openzeppelin.com/news/linea-yield-manager-audit)
-
-**Cyfrin**
-- Linea Yield Manager - [https://github.com/Cyfrin/cyfrin-audit-reports/blob/d0f4523388a964891a17cb04c6b3cc26da8c788a/reports/2026-02-12-cyfrin-linea-yield-manager-v2.0.pdf](https://github.com/Cyfrin/cyfrin-audit-reports/blob/d0f4523388a964891a17cb04c6b3cc26da8c788a/reports/2026-02-12-cyfrin-linea-yield-manager-v2.0.pdf)
-
----
 
 ## Linea Burn Mechanism Smart Contract Audits
 **Diligence**
@@ -59,7 +48,27 @@
 ---
 
 ## Linea Rollup, L2MessageService and TokenBridge Smart Contract Audits
-### Fifth Audit Round (latest)
+### Seventh Audit Round
+#### Modularization, Pause Cooldown and Dynamic Chain Configuration
+**Diligence**
+- Linea Mixed Upgrade - [https://diligence.security/audits/2026/02/linea-rollup-update/](https://diligence.security/audits/2026/02/linea-rollup-update/)
+
+**Cyfrin**
+- Linea Mixed Upgrade - [https://github.com/Cyfrin/cyfrin-audit-reports/blob/37c82603d92e097c60811ba63ebb6484574be56f/reports/2026-03-27-cyfrin-linea-mixed-upgrade-v2.0.pdf](https://github.com/Cyfrin/cyfrin-audit-reports/blob/37c82603d92e097c60811ba63ebb6484574be56f/reports/2026-03-27-cyfrin-linea-mixed-upgrade-v2.0.pdf)
+
+### Sixth Audit Round
+#### Yield Boost Smart Contract Audits
+
+**Diligence**
+- Linea Yield Manager - [https://diligence.security/audits/2025/12/linea-yield-manager/](https://diligence.security/audits/2025/12/linea-yield-manager/)
+
+**OpenZeppelin**
+- Linea Yield Manager - [https://www.openzeppelin.com/news/linea-yield-manager-audit](https://www.openzeppelin.com/news/linea-yield-manager-audit)
+
+**Cyfrin**
+- Linea Yield Manager - [https://github.com/Cyfrin/cyfrin-audit-reports/blob/d0f4523388a964891a17cb04c6b3cc26da8c788a/reports/2026-02-12-cyfrin-linea-yield-manager-v2.0.pdf](https://github.com/Cyfrin/cyfrin-audit-reports/blob/d0f4523388a964891a17cb04c6b3cc26da8c788a/reports/2026-02-12-cyfrin-linea-yield-manager-v2.0.pdf)
+
+### Fifth Audit Round 
 
 **Diligence**
 - LineaRollup, L2MessageService and TokenBridge Granular Role Updates: [https://diligence.consensys.io/audits/2024/12/linea-rollup-update/](https://diligence.consensys.io/audits/2024/12/linea-rollup-update/)
