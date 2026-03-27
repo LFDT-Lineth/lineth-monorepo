@@ -70,6 +70,8 @@ class MicrometerMetricsFacade(
     tags: List<Tag>,
     isRatio: Boolean,
     baseUnit: String?,
+    publishPercentileHistogram: Boolean,
+    percentileBuckets: List<Double>?,
   ): Histogram {
     category.toValidMicrometerName().requireValidMicrometerName()
     name.requireValidMicrometerName()
@@ -78,6 +80,14 @@ class MicrometerMetricsFacade(
     val distributionSummaryBuilder = DistributionSummary.builder(metricHandle(category, name))
       .description(description)
       .baseUnit(baseUnit)
+      .also {
+        if (publishPercentileHistogram) {
+          it.publishPercentileHistogram()
+        }
+        if (percentileBuckets != null) {
+          it.publishPercentiles(*percentileBuckets.toDoubleArray())
+        }
+      }
       .tags(allMetricsCommonMicrometerTags)
       .tags(tags.toMicrometerTags())
     if (isRatio) {
@@ -101,7 +111,7 @@ class MicrometerMetricsFacade(
     category.toValidMicrometerName().requireValidMicrometerName()
     name.requireValidMicrometerName()
     commonTags.forEach { it.requireValidMicrometerName() }
-    return DynamicTagTimerImpl<T>(
+    return DynamicTagTimerImpl(
       meterRegistry = registry,
       name = metricHandle(category, name),
       description = description,

@@ -85,6 +85,8 @@ class GlobalBlobAwareConflationCalculatorTest {
         any(),
         any(),
         anyOrNull(),
+        any(),
+        anyOrNull(),
       )
     doReturn(FakeHistogram().also { fakeCompressedDataSizeInBlobHistogram = it })
       .whenever(metricsFacade).createHistogram(
@@ -92,6 +94,8 @@ class GlobalBlobAwareConflationCalculatorTest {
         eq("compressed.data.size"),
         any(),
         any(),
+        any(),
+        anyOrNull(),
         any(),
         anyOrNull(),
       )
@@ -105,6 +109,8 @@ class GlobalBlobAwareConflationCalculatorTest {
         any(),
         any(),
         anyOrNull(),
+        any(),
+        anyOrNull(),
       )
     doReturn(FakeHistogram().also { fakeGasUsedInBatchHistogram = it })
       .whenever(
@@ -114,6 +120,8 @@ class GlobalBlobAwareConflationCalculatorTest {
         eq("gas"),
         any(),
         any(),
+        any(),
+        anyOrNull(),
         any(),
         anyOrNull(),
       )
@@ -127,6 +135,8 @@ class GlobalBlobAwareConflationCalculatorTest {
         any(),
         any(),
         anyOrNull(),
+        any(),
+        anyOrNull(),
       )
     doReturn(FakeHistogram().also { fakeUncompressedDataSizeInBatchHistogram = it })
       .whenever(
@@ -136,6 +146,8 @@ class GlobalBlobAwareConflationCalculatorTest {
         eq("uncompressed.data.size"),
         any(),
         any(),
+        any(),
+        anyOrNull(),
         any(),
         anyOrNull(),
       )
@@ -149,6 +161,8 @@ class GlobalBlobAwareConflationCalculatorTest {
         any(),
         any(),
         anyOrNull(),
+        any(),
+        anyOrNull(),
       )
     doReturn(FakeHistogram().also { fakeAvgUncompressedTxDataSizeInBatchHistogram = it })
       .whenever(
@@ -158,6 +172,8 @@ class GlobalBlobAwareConflationCalculatorTest {
         eq("avg.uncompressed.tx.data.size"),
         any(),
         any(),
+        any(),
+        anyOrNull(),
         any(),
         anyOrNull(),
       )
