@@ -17,7 +17,7 @@
   "dependencies": {
     "@apollo/client": "4.1.6",
     "@consensys/linea-shared-utils": "workspace:*",
-    "@lidofinance/lsv-cli": "1.6.0",
+    "@lidofinance/lsv-cli": "1.5.1",
     "dotenv": "catalog:",
     "neverthrow": "catalog:",
     "viem": "catalog:",
