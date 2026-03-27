@@ -97,8 +97,14 @@ class Request(val id: Int, val name: String, val calls: List<ScenarioDefinition>
       }
     }
 
-    private fun createContract(contract: net.consensys.zkevm.load.swagger.CreateContract) =
-      CreateContract(contract.name ?: "null", contract.byteCode, contract.gasLimit)
+    private fun createContract(contract: net.consensys.zkevm.load.swagger.CreateContract): CreateContract {
+      val gasLimit =
+        contract.gasLimit
+          ?: throw IllegalArgumentException(
+            "CreateContract `${contract.name ?: "null"}` is missing required gasLimit.",
+          )
+      return CreateContract(contract.name ?: "null", contract.byteCode, gasLimit)
+    }
 
     private fun translate(methodAndParams: net.consensys.zkevm.load.swagger.MethodAndParameter): MethodAndParameter {
       return when (methodAndParams.type) {

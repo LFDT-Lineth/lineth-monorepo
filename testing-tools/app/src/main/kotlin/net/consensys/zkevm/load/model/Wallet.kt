@@ -6,8 +6,8 @@ import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicReference
 
 data class Wallet(
-  val privateKey: String,
-  val credentials: Credentials,
+  @Transient val privateKey: String,
+  @Transient val credentials: Credentials,
   val id: Int,
   @Transient val theoreticalNonce: AtomicReference<BigInteger>,
   var initialNonce: BigInteger?,
@@ -32,5 +32,9 @@ data class Wallet(
 
   fun incrementTheoreticalNonce() {
     theoreticalNonce.set(theoreticalNonce.get()!!.add(BigInteger.ONE))
+  }
+
+  override fun toString(): String {
+    return "Wallet(address=$address, id=$id, theoreticalNonce=$theoreticalNonceValue, initialNonce=$initialNonce)"
   }
 }

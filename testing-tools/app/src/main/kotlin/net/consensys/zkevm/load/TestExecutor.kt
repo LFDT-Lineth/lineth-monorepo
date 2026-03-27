@@ -1,6 +1,7 @@
 package net.consensys.zkevm.load
 
 import net.consensys.zkevm.load.model.CreateWallets.createWallets
+import net.consensys.zkevm.load.model.EthConnection
 import net.consensys.zkevm.load.model.EthConnectionImpl
 import net.consensys.zkevm.load.model.ExecutionDetails
 import net.consensys.zkevm.load.model.JSON
@@ -41,19 +42,24 @@ import java.security.SecureRandom
 import java.text.SimpleDateFormat
 import java.util.stream.LongStream
 
-class TestExecutor(request: String, pk: String) {
+class TestExecutor @JvmOverloads constructor(
+  request: String,
+  pk: String,
+  // Allows tests to inject deterministic chain state without hitting a live RPC.
+  ethConnectionOverride: EthConnection? = null,
+) {
   private val walletsFunding: WalletsFunding
   private val smartContractCalls: SmartContractCalls
   private val sourceWallet: Wallet
   private val test: Request
   private val executionDetails: ExecutionDetails
-  private val ethConnection: EthConnectionImpl
+  private val ethConnection: EthConnection
   private val numberGenerator = SecureRandom()
 
   init {
     test = getRequest(request)
     executionDetails = ExecutionDetails(test)
-    ethConnection = EthConnectionImpl(test.context.url)
+    ethConnection = ethConnectionOverride ?: EthConnectionImpl(test.context.url)
     sourceWallet = Wallet(pk, -1, ethConnection.getNonce(Credentials.create(pk).address))
 
     walletsFunding = WalletsFunding(ethConnection, sourceWallet)
@@ -99,6 +105,8 @@ class TestExecutor(request: String, pk: String) {
   fun test(i: Int) {
     val formater = SimpleDateFormat("dd/MM/yyyy hh:mm:ss")
     logger.info("[TIME] System time:{}, test run:{}", formater.format(System.currentTimeMillis()), i)
+    // Each execution reuses the same source wallet, so start from the chain nonce before any estimation or deployment.
+    syncSourceWalletNonceFromChain()
     val calls = expand(test.calls)
     val contractAddresses: MutableMap<String, String> = HashMap()
     // deploy contracts that can be referenced in the test.
@@ -110,8 +118,9 @@ class TestExecutor(request: String, pk: String) {
       walletsForCalls.add(prepareWallets(call, test.context.chainId))
     }
 
-    // set nonce to wallet that was used for fund initialization
-    sourceWallet.theoreticalNonce.set(ethConnection.getNonce(sourceWallet.address))
+    // Wallet funding fetches and consumes fresh chain nonces internally, so the local source-wallet nonce must be
+    // resynced before we estimate or build any later source-wallet transactions.
+    syncSourceWalletNonceFromChain()
 
     // generate the transactions
     val txs: MutableMap<Wallet, List<TransactionDetail>> = HashMap()
@@ -146,6 +155,10 @@ class TestExecutor(request: String, pk: String) {
 
     executionDetails.mapToBlocks(txHashToBlockId)
     println(JSON.createGson().create().toJson(executionDetails))
+  }
+
+  private fun syncSourceWalletNonceFromChain() {
+    sourceWallet.theoreticalNonce.set(ethConnection.getNonce(sourceWallet.encodedAddress()))
   }
 
   private fun expand(calls: List<ScenarioDefinition>?): List<Scenario> {
