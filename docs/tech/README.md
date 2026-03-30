@@ -111,7 +111,7 @@ linea-monorepo/
 ## Quick Start
 
 ```bash
-# Prerequisites: Node.js v22+, Docker v24+, pnpm v10+, Make, JDK 21
+# Prerequisites: Node.js >= 22.22.2 (see `.nvmrc`), Docker v24+, pnpm v10+, Make, JDK 21
 
 # 1. Install dependencies
 make pnpm-install
