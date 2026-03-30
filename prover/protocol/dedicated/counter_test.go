@@ -64,7 +64,7 @@ func (c *CyclicCounterTestcase) Define(comp *wizard.CompiledIOP) {
 		panic("unexpected type")
 	}
 
-	c.cc = dedicated.NewCyclicCounter(comp, 0, c.Period, isActive)
+	c.cc = dedicated.NewCyclicCounter(comp, 0, c.Period, isActive, "TEST")
 }
 
 func (c *CyclicCounterTestcase) Assign(run *wizard.ProverRuntime) {

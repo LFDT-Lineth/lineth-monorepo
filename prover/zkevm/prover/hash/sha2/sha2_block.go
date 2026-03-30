@@ -199,6 +199,7 @@ func newSha2BlockModule(comp *wizard.CompiledIOP, inp *sha2BlocksInputs) *sha2Bl
 		numRowPerInstance,
 		0,
 		res.IsActive,
+		"SHA2_BEGINNING",
 	)
 
 	res.CanBeEndOfInstance = dedicated.CreateHeartBeat(
@@ -207,6 +208,7 @@ func newSha2BlockModule(comp *wizard.CompiledIOP, inp *sha2BlocksInputs) *sha2Bl
 		numRowPerInstance,
 		numRowPerInstance-1,
 		res.IsActive,
+		"SHA2_END",
 	)
 
 	res.CanBeBlockOfInstance = dedicated.NewRepeatedPattern(

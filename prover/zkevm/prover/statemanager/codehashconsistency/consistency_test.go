@@ -10,6 +10,7 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/backend/files"
 	poseidon2 "github.com/consensys/linea-monorepo/prover/crypto/poseidon2_koalabear"
+	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -36,6 +37,14 @@ func TestConsistency(t *testing.T) {
 	})
 	t.Run("empty-state-summary", func(t *testing.T) {
 		runTestcase(t, "testdata/mimc-codehash.csv", "testdata/state-summary-empty.csv")
+	})
+	// Regression test for CREATE2 OOG revert: the ROM module can contain code
+	// hashes for contracts whose deployment was rolled back (OOG), so they are
+	// present in ROM but absent from the state summary. The merge cursor in
+	// Assign must not advance the SS cursor in the same row that it exhausts
+	// ROM on such a phantom entry, or STATE_SUM_STAY_SAME panics.
+	t.Run("oog-create2-phantom-rom-entries", func(t *testing.T) {
+		runTestcaseWithPhantomRomEntries(t)
 	})
 }
 
@@ -123,6 +132,119 @@ func runTestcase(t *testing.T, poseidonCodeHashCsvPath, stateSummaryCsvPath stri
 	comp := wizard.Compile(define, dummy.CompileAtProverLvl())
 	_ = wizard.Prove(comp, prover)
 
+}
+
+// runTestcaseWithPhantomRomEntries builds a minimal scenario where the ROM
+// (lineacodehash) module has one extra entry with IsForConsistency=1 that has
+// no counterpart in the state summary. This simulates an OOG-reverted CREATE2:
+// the tracer emits the child contract's code hash into ROM, but the deployment
+// is rolled back so the account never appears in the state trie.
+//
+// Before the fix this caused STATE_SUM_STAY_SAME to be violated at the row
+// where ROM was exhausted on the phantom entry while SS was still ahead.
+func runTestcaseWithPhantomRomEntries(t *testing.T) {
+	t.Helper()
+
+	const (
+		sizeStateSummary   = 128
+		sizeCodeHashModule = 256
+	)
+
+	var (
+		stateSummary        *statesummary.Module
+		lineaCodeHashModule *lineacodehash.Module
+		consistency         Module
+	)
+
+	// sharedKeccak is a code hash present in both ROM and SS (the normal case).
+	sharedKeccak := GenerateRandomLimbs(common.NbLimbU256, rand.New(utils.NewRandSource(42)))     //nolint:gosec
+	sharedPoseidon := GenerateRandomLimbs(poseidon2.BlockSize, rand.New(utils.NewRandSource(43))) //nolint:gosec
+
+	// phantomKeccak is only in ROM — no SS entry — simulating an OOG reverted CREATE2.
+	phantomKeccak := GenerateRandomLimbs(common.NbLimbU256, rand.New(utils.NewRandSource(44)))     //nolint:gosec
+	phantomPoseidon := GenerateRandomLimbs(poseidon2.BlockSize, rand.New(utils.NewRandSource(45))) //nolint:gosec
+
+	// Ensure phantom keccak > shared keccak so phantom sorts after shared.
+	// That puts SS (pointing at shared) ahead of ROM (pointing at phantom)
+	// when ROM reaches the phantom — the exact configuration that triggered
+	// the original STATE_SUM_STAY_SAME violation.
+	if CmpLimbs(sharedKeccak, phantomKeccak) > 0 {
+		sharedKeccak, phantomKeccak = phantomKeccak, sharedKeccak
+		sharedPoseidon, phantomPoseidon = phantomPoseidon, sharedPoseidon
+	}
+
+	define := func(b *wizard.Builder) {
+		stateSummary = &statesummary.Module{
+			IsActive:  b.InsertCommit(0, "SS_IS_ACTIVE", sizeStateSummary, true),
+			IsStorage: b.InsertCommit(0, "SS_IS_STORAGE", sizeStateSummary, true),
+			Account: statesummary.AccountPeek{
+				Initial: statesummary.Account{
+					KeccakCodeHash: common.NewHiLoColumns(b.CompiledIOP, sizeStateSummary, "SS_INITIAL_KECCAK"),
+					Exists:         b.InsertCommit(0, "SS_INITIAL_EXISTS", sizeStateSummary, true),
+				},
+				Final: statesummary.Account{
+					KeccakCodeHash: common.NewHiLoColumns(b.CompiledIOP, sizeStateSummary, "SS_FINAL_KECCAK"),
+					Exists:         b.InsertCommit(0, "SS_FINAL_EXISTS", sizeStateSummary, true),
+				},
+			},
+		}
+		lineaCodeHashModule = &lineacodehash.Module{
+			IsActive:         b.InsertCommit(0, "MCH_IS_ACTIVE", sizeCodeHashModule, true),
+			IsHashEnd:        b.InsertCommit(0, "MCH_IS_HASH_END", sizeCodeHashModule, true),
+			IsForConsistency: b.InsertCommit(0, "MCH_IS_FOR_CONSISTENCY", sizeCodeHashModule, true),
+		}
+		for i := range poseidon2.BlockSize {
+			stateSummary.Account.Initial.LineaCodeHash[i] = b.InsertCommit(0, ifaces.ColIDf("SS_INITIAL_POSEIDON2_%v", i), sizeStateSummary, true)
+			stateSummary.Account.Final.LineaCodeHash[i] = b.InsertCommit(0, ifaces.ColIDf("SS_FINAL_POSEIDON2_%v", i), sizeStateSummary, true)
+			lineaCodeHashModule.NewState[i] = b.InsertCommit(0, ifaces.ColIDf("MCH_NEW_STATE_%v", i), sizeCodeHashModule, true)
+		}
+		for i := range common.NbLimbU256 {
+			lineaCodeHashModule.CodeHash[i] = b.InsertCommit(0, ifaces.ColIDf("MCH_KECCAK_%v", i), sizeCodeHashModule, true)
+		}
+		consistency = NewModule(b.CompiledIOP, "CONSISTENCY", stateSummary, lineaCodeHashModule)
+	}
+
+	prover := func(run *wizard.ProverRuntime) {
+		colOf := func(vals []field.Element, size int) smartvectors.SmartVector {
+			out := make([]field.Element, size)
+			copy(out, vals)
+			return smartvectors.NewRegular(out)
+		}
+		one := field.One()
+		zero := field.Zero()
+
+		// SS: one account row (shared keccak, exists=1 for both initial and final).
+		run.AssignColumn(stateSummary.IsActive.GetColID(), colOf([]field.Element{one}, sizeStateSummary))
+		run.AssignColumn(stateSummary.IsStorage.GetColID(), colOf([]field.Element{zero}, sizeStateSummary))
+		run.AssignColumn(stateSummary.Account.Initial.Exists.GetColID(), colOf([]field.Element{one}, sizeStateSummary))
+		run.AssignColumn(stateSummary.Account.Final.Exists.GetColID(), colOf([]field.Element{one}, sizeStateSummary))
+		for i := range poseidon2.BlockSize {
+			run.AssignColumn(stateSummary.Account.Initial.LineaCodeHash[i].GetColID(), colOf([]field.Element{sharedPoseidon[i]}, sizeStateSummary))
+			run.AssignColumn(stateSummary.Account.Final.LineaCodeHash[i].GetColID(), colOf([]field.Element{sharedPoseidon[i]}, sizeStateSummary))
+		}
+		for i := range common.NbLimbU128 {
+			run.AssignColumn(stateSummary.Account.Initial.KeccakCodeHash.Hi[i].GetColID(), colOf([]field.Element{sharedKeccak[i]}, sizeStateSummary))
+			run.AssignColumn(stateSummary.Account.Initial.KeccakCodeHash.Lo[i].GetColID(), colOf([]field.Element{sharedKeccak[common.NbLimbU128+i]}, sizeStateSummary))
+			run.AssignColumn(stateSummary.Account.Final.KeccakCodeHash.Hi[i].GetColID(), colOf([]field.Element{sharedKeccak[i]}, sizeStateSummary))
+			run.AssignColumn(stateSummary.Account.Final.KeccakCodeHash.Lo[i].GetColID(), colOf([]field.Element{sharedKeccak[common.NbLimbU128+i]}, sizeStateSummary))
+		}
+
+		// ROM: row 0 = shared contract (normal), row 1 = phantom OOG CREATE2 child.
+		run.AssignColumn(lineaCodeHashModule.IsActive.GetColID(), colOf([]field.Element{one, one}, sizeCodeHashModule))
+		run.AssignColumn(lineaCodeHashModule.IsHashEnd.GetColID(), colOf([]field.Element{one, one}, sizeCodeHashModule))
+		run.AssignColumn(lineaCodeHashModule.IsForConsistency.GetColID(), colOf([]field.Element{one, one}, sizeCodeHashModule))
+		for i := range poseidon2.BlockSize {
+			run.AssignColumn(lineaCodeHashModule.NewState[i].GetColID(), colOf([]field.Element{sharedPoseidon[i], phantomPoseidon[i]}, sizeCodeHashModule))
+		}
+		for i := range common.NbLimbU256 {
+			run.AssignColumn(lineaCodeHashModule.CodeHash[i].GetColID(), colOf([]field.Element{sharedKeccak[i], phantomKeccak[i]}, sizeCodeHashModule))
+		}
+
+		consistency.Assign(run)
+	}
+
+	comp := wizard.Compile(define, dummy.CompileAtProverLvl())
+	_ = wizard.Prove(comp, prover)
 }
 
 var isForConsistencyMocked = []uint64{1, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0,

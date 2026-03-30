@@ -20,7 +20,7 @@ func NewRepeatedPattern(comp *wizard.CompiledIOP, round int, pattern []field.Ele
 	var (
 		size              = isActive.Size()
 		period            = len(pattern)
-		name              = fmt.Sprintf("REPEATED_PATTERN_%v_%v_%v", moduleName, comp.Columns.NumEntriesTotal(), period)
+		name              = fmt.Sprintf("REPEATED_PATTERN_%v", moduleName)
 		patternSizePadded = utils.NextPowerOfTwo(period)
 		patternPos        = make([]field.Element, period)
 	)
@@ -40,7 +40,7 @@ func NewRepeatedPattern(comp *wizard.CompiledIOP, round int, pattern []field.Ele
 			ifaces.ColID(name)+"_PATTERNPOS",
 			smartvectors.RightPadded(patternPos, field.NewFromString("-1"), patternSizePadded),
 		),
-		Counter: *NewCyclicCounter(comp, round, period, isActive),
+		Counter: *NewCyclicCounter(comp, round, period, isActive, moduleName),
 	}
 
 	// advice for the repeated pattern for module discoverer

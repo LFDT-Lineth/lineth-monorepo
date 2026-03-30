@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/consensys/gnark-crypto/ecc"
-	"github.com/consensys/gnark/backend/solidity"
 	"github.com/consensys/linea-monorepo/prover/backend/aggregation"
 	"github.com/consensys/linea-monorepo/prover/backend/blobsubmission"
 	"github.com/consensys/linea-monorepo/prover/backend/files"
@@ -391,7 +390,7 @@ func dumpVerifierContract(odir string, circID circuits.MockCircuitID) {
 		printlnAndExit("could not create public parameters: %v", err)
 	}
 
-	if err := pp.VerifyingKey.ExportSolidity(f, solidity.WithPragmaVersion("0.8.33")); err != nil {
+	if err := pp.VerifyingKey.ExportSolidity(f, circuits.LineaVerifierExportOptions()...); err != nil {
 		printlnAndExit("could not export verifying key to solidity: %v", err)
 	}
 }

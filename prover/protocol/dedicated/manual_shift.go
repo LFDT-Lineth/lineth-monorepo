@@ -38,11 +38,11 @@ type ManuallyShifted struct {
 // [ManuallyShifted] for more details.
 func ManuallyShift(comp *wizard.CompiledIOP, root ifaces.Column, offset int, name string) *ManuallyShifted {
 
-	colName_ := ifaces.ColID(fmt.Sprintf("%v_%v_%v", name, offset, root.Size())) + "_COL"
+	colName_ := ifaces.ColID(fmt.Sprintf("%v_%v", name, offset)) + "_COL"
 	alreadyExists := len(name) > 0 && comp.Columns.Exists(colName_)
 
 	if len(name) == 0 {
-		name = fmt.Sprintf("ManualShift/%v", comp.Columns.NumEntriesTotal())
+		name = fmt.Sprintf("ManualShift/%v", root.GetColID())
 	}
 
 	if alreadyExists {
@@ -50,7 +50,7 @@ func ManuallyShift(comp *wizard.CompiledIOP, root ifaces.Column, offset int, nam
 	}
 
 	var (
-		colName = ifaces.ColID(fmt.Sprintf("%v_%v_%v", name, offset, root.Size())) + "_COL"
+		colName = ifaces.ColID(fmt.Sprintf("%v_%v", name, offset)) + "_COL"
 		size    = root.Size()
 		res     = ManuallyShifted{
 			Natural: comp.InsertCommit(root.Round(), colName, size, root.IsBase()).(column.Natural),
@@ -61,7 +61,7 @@ func ManuallyShift(comp *wizard.CompiledIOP, root ifaces.Column, offset int, nam
 
 	comp.InsertGlobal(
 		root.Round(),
-		ifaces.QueryID(fmt.Sprintf("%v_%v_%v", name, offset, root.Size()))+"_CONSTRAINT",
+		ifaces.QueryID(fmt.Sprintf("%v_%v", name, offset))+"_CONSTRAINT",
 		symbolic.Sub(
 			res.Natural,
 			column.Shift(root, offset),

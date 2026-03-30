@@ -59,6 +59,11 @@ var (
 	conglomerationFile            = "dw-compiled-conglomeration.bin"
 	executionLimitlessPath        = "execution-limitless"
 	verificationKeyMerkleTreeFile = "verification-key-merkle-tree.bin"
+
+	// Chunked variants (directory names without .bin extension)
+	compileLppChunkedTemplate = "dw-compiled-lpp-%v"
+	compileGlChunkedTemplate  = "dw-compiled-gl-%v"
+	conglomerationChunkedFile = "dw-compiled-conglomeration"
 )
 
 var LimitlessCompilationParams = distributed.CompilationParams{
@@ -116,7 +121,8 @@ func DiscoveryAdvices(zkevm *ZkEvm) []*distributed.ModuleDiscoveryAdvice {
 
 		// ARITH-OPS
 		//
-		{BaseSize: 16384, Cluster: ArithOpsModuleName, Regexp: `^exp\.`},
+		// BaseSize increased to match limit_large=131072 to guarantee 1 segment worst case.
+		{BaseSize: 131072, Cluster: ArithOpsModuleName, Regexp: `^exp\.`},
 		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^bit_(sar|shr|ror|shl|xoan)[0-9]+(_u[0-9]+)?\.`},
 		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^byte_(sar|shr|ror|shl|xoan)[0-9]+(_u[0-9]+)?\.`},
 		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^byte_slice_u[0-9]+\.`},
@@ -132,18 +138,21 @@ func DiscoveryAdvices(zkevm *ZkEvm) []*distributed.ModuleDiscoveryAdvice {
 		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^log[0-9]+(_u[0-9]+)?\.`},
 		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^set_byte[0-9]+\.`},
 		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^bit_xoan_u[0-9]+\.`},
-		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^mul\.`},
-		{BaseSize: 65536, Cluster: ArithOpsModuleName, Regexp: `^add\.`},
-		{BaseSize: 65536, Cluster: ArithOpsModuleName, Regexp: `^mod\.`},
+		// BaseSize increased to match limit_large to guarantee 1 segment worst case.
+		{BaseSize: 131072, Cluster: ArithOpsModuleName, Regexp: `^mul\.`},
+		{BaseSize: 524288, Cluster: ArithOpsModuleName, Regexp: `^add\.`},
+		{BaseSize: 262144, Cluster: ArithOpsModuleName, Regexp: `^mod\.`},
 		{BaseSize: 65536, Cluster: ArithOpsModuleName, Regexp: `^min256_64\.`},
-		{BaseSize: 131072, Cluster: ArithOpsModuleName, Regexp: `^shf\.`},
-		{BaseSize: 131072, Cluster: ArithOpsModuleName, Regexp: `^bin\.`},
+		// BaseSize increased to match limit_large=524288 to guarantee 1 segment worst case.
+		{BaseSize: 524288, Cluster: ArithOpsModuleName, Regexp: `^shf\.`},
+		{BaseSize: 524288, Cluster: ArithOpsModuleName, Regexp: `^bin\.`},
 		{BaseSize: 1048576, Cluster: ArithOpsModuleName, ModuleRef: "POSEIDON2_COMPILER"},
 		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^byte[0-9]+\.`},
 		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^signextend\.`},
 		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^max3_u[0-9]+\.`},
 		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^maxlog\.`},
-		{BaseSize: 262144, Cluster: ArithOpsModuleName, Regexp: `^wcp\.`},
+		// BaseSize increased to match limit_large=524288 to guarantee 1 segment worst case.
+		{BaseSize: 524288, Cluster: ArithOpsModuleName, Regexp: `^wcp\.`},
 		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^counts_nz_[0-9]+\.`},
 		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^divide\.`},
 		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^max_u[0-9]+\.`},
@@ -159,7 +168,8 @@ func DiscoveryAdvices(zkevm *ZkEvm) []*distributed.ModuleDiscoveryAdvice {
 		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^switch_endian_8_args\.`},
 		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^cap32\.`},
 		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^ceil_div\.`},
-		{BaseSize: 65536, Cluster: ArithOpsModuleName, Regexp: `^euc\.`},
+		// BaseSize increased to match limit_large=131072 to guarantee 1 segment worst case.
+		{BaseSize: 131072, Cluster: ArithOpsModuleName, Regexp: `^euc\.`},
 		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^limb_u[0-9]+\.`},
 		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^modulus_u[0-9]+\.`},
 		{BaseSize: 32768, Cluster: ArithOpsModuleName, Regexp: `^modulus_u[0-9]_u[0-9]+\.`},
@@ -234,15 +244,21 @@ func DiscoveryAdvices(zkevm *ZkEvm) []*distributed.ModuleDiscoveryAdvice {
 		// TINY-STUFFS
 		//
 		{BaseSize: 1, Cluster: TinyStuffsModuleName, Column: zkevm.PublicInput.ExecDataSchwarzZipfelX},
-		{BaseSize: 512, Cluster: TinyStuffsModuleName, Regexp: `^romlex\.`},
+		// BaseSize increased to match limit_large=2048 to guarantee 1 segment worst case.
+		{BaseSize: 2048, Cluster: TinyStuffsModuleName, Regexp: `^romlex\.`},
 		{BaseSize: 512, Cluster: TinyStuffsModuleName, Column: zkevm.StateManager.CodeHashConsistency.RomKeccak.Hi[0]},
-		{BaseSize: 2048, Cluster: TinyStuffsModuleName, Regexp: `^loginfo\.`},
-		{BaseSize: 2048, Cluster: TinyStuffsModuleName, Regexp: `^trm\.`},
+		// BaseSize set to 131072 to handle loginfo's Corset perspective expansion.
+		// loginfo columns live in hub's shared register space via XOR overlays,
+		// so the QBM column height equals the shared register size (~130K in
+		// block 29944798), NOT loginfo's own trace limit (4096/8192).
+		{BaseSize: 131072, Cluster: TinyStuffsModuleName, Regexp: `^loginfo\.`},
+		{BaseSize: 65536, Cluster: TinyStuffsModuleName, Regexp: `^trm\.`},
 		// BaseSize increased from 2048 to 4096 to fit ~2.1K rows in 1 segment.
 		{BaseSize: 4096, Cluster: TinyStuffsModuleName, Regexp: `^blockhash\.`},
-		{BaseSize: 4096, Cluster: TinyStuffsModuleName, Regexp: `^logdata\.`},
-		{BaseSize: 4096, Cluster: TinyStuffsModuleName, Regexp: `^rlpaddr\.`},
-		{BaseSize: 4096, Cluster: TinyStuffsModuleName, Regexp: `^blockdata\.`},
+		// BaseSize increased to match limit_large to guarantee 1 segment worst case.
+		{BaseSize: 131072, Cluster: TinyStuffsModuleName, Regexp: `^logdata\.`},
+		{BaseSize: 8192, Cluster: TinyStuffsModuleName, Regexp: `^rlpaddr\.`},
+		{BaseSize: 8192, Cluster: TinyStuffsModuleName, Regexp: `^blockdata\.`},
 		{BaseSize: 4096, Cluster: TinyStuffsModuleName, Column: zkevm.PublicInput.BlockDataFetcher.LastTimestamp[0]},
 		{BaseSize: 4096, Cluster: TinyStuffsModuleName, Column: zkevm.PublicInput.Aux.FetchedL2L1.Data[0]},
 		{BaseSize: 4096, Cluster: TinyStuffsModuleName, Column: zkevm.PublicInput.Aux.FetchedRollingHash.Data[0]},
@@ -251,8 +267,9 @@ func DiscoveryAdvices(zkevm *ZkEvm) []*distributed.ModuleDiscoveryAdvice {
 		{BaseSize: 4096, Cluster: TinyStuffsModuleName, Column: zkevm.PublicInput.Aux.BlockTxnMetadata.BlockID},
 		{BaseSize: 4096, Cluster: TinyStuffsModuleName, Column: zkevm.PublicInput.Aux.TxnDataFetcher.AbsTxNum},
 		{BaseSize: 16384, Cluster: TinyStuffsModuleName, Column: zkevm.StateManager.StateSummary.WorldStateRoot[0]},
-		{BaseSize: 32768, Cluster: TinyStuffsModuleName, Regexp: `^rlptxrcpt\.`},
-		{BaseSize: 16384, Cluster: TinyStuffsModuleName, Regexp: `^rlpauth\.`},
+		// BaseSize increased to match limit_large to guarantee 1 segment worst case.
+		{BaseSize: 131072, Cluster: TinyStuffsModuleName, Regexp: `^rlptxrcpt\.`},
+		{BaseSize: 32768, Cluster: TinyStuffsModuleName, Regexp: `^rlpauth\.`},
 		{BaseSize: 32768, Cluster: TinyStuffsModuleName, Regexp: `^rlputils\.`},
 		{BaseSize: 32768, Cluster: TinyStuffsModuleName, Regexp: `^compute_rlp_integer_u256\.`},
 		{BaseSize: 32768, Cluster: TinyStuffsModuleName, Regexp: `^compute_rlp\.`},
@@ -512,7 +529,9 @@ func NewLimitlessDebugZkEVM(cfg *config.Config) *LimitlessZkEVM {
 }
 
 // GetScaledUpBootstrapper returns a bootstrapper where all the limits have
-// been increased.
+// been increased. Column names are size-independent (after the naming fix),
+// so the existing disc's column-to-module mappings remain valid — only the
+// sizes need scaling.
 func GetScaledUpBootstrapper(cfg *config.Config, disc *distributed.StandardModuleDiscoverer, scalingFactor int) (*wizard.CompiledIOP, *ZkEvm) {
 
 	traceLimits := cfg.TracesLimits
@@ -520,7 +539,10 @@ func GetScaledUpBootstrapper(cfg *config.Config, disc *distributed.StandardModul
 
 	zkevm := FullZKEVMWithSuite(&traceLimits, cfg, CompilationSuite{}, nil)
 	distributed.CompileManualShifter(zkevm.InitialCompiledIOP)
-	return distributed.PrecompileInitialWizard(zkevm.InitialCompiledIOP, disc), zkevm
+
+	bootstrapper := distributed.PrecompileInitialWizard(zkevm.InitialCompiledIOP, disc)
+
+	return bootstrapper, zkevm
 }
 
 // RunStatRecords runs only the bootstrapper and returns a list of stat records
@@ -1161,13 +1183,29 @@ func (lz *LimitlessZkEVM) Store(cfg *config.Config) error {
 
 	for _, asset := range assets {
 		logrus.Infof("writing %s to disk", asset.Name)
-		if err := serde.StoreToDisk(assetDir+"/"+asset.Name, asset.Object, true); err != nil {
-			return err
+		if isChunkedAssetName(asset.Name) {
+			// Large compiled circuits use chunked lz4 for parallel I/O
+			chunkedDir := path.Join(assetDir, strings.TrimSuffix(asset.Name, ".bin"))
+			if err := serde.StoreChunked(chunkedDir, asset.Object); err != nil {
+				return err
+			}
+		} else {
+			if err := serde.StoreToDisk(assetDir+"/"+asset.Name, asset.Object, true); err != nil {
+				return err
+			}
 		}
 	}
 
 	logrus.Info("limitless prover assets written to disk")
 	return nil
+}
+
+// isChunkedAssetName returns true for compiled-gl, compiled-lpp, and
+// conglomeration assets that benefit from chunked parallel I/O.
+func isChunkedAssetName(name string) bool {
+	return strings.HasPrefix(name, "dw-compiled-gl-") ||
+		strings.HasPrefix(name, "dw-compiled-lpp-") ||
+		name == conglomerationFile
 }
 
 // LoadBootstrapperAsync loads the bootstrapper from disk.
@@ -1324,12 +1362,22 @@ func LoadCompiledLPP(cfg *config.Config, moduleNames distributed.ModuleName) (*d
 func LoadCompiledGLMmap(cfg *config.Config, moduleName distributed.ModuleName) (*distributed.RecursedSegmentCompilation, *serde.MmapBackedBuffer, error) {
 
 	var (
-		assetDir = cfg.PathForSetup(executionLimitlessPath)
-		filePath = path.Join(assetDir, fmt.Sprintf(compileGlTemplate, moduleName))
-		res      = &distributed.RecursedSegmentCompilation{}
+		assetDir   = cfg.PathForSetup(executionLimitlessPath)
+		chunkedDir = path.Join(assetDir, fmt.Sprintf(compileGlChunkedTemplate, moduleName))
+		res        = &distributed.RecursedSegmentCompilation{}
 	)
 
-	buf, err := serde.LoadFromDiskMmapBacked(filePath, res)
+	if serde.HasChunkedAsset(chunkedDir) {
+		buf, err := serde.LoadChunkedMmapBacked(chunkedDir, res)
+		if err != nil {
+			return nil, nil, err
+		}
+		return res, buf, nil
+	}
+
+	// Fallback to flat .bin file for backward compatibility
+	flatPath := path.Join(assetDir, fmt.Sprintf(compileGlTemplate, moduleName))
+	buf, err := serde.LoadFromDiskMmapBacked(flatPath, res)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1342,12 +1390,22 @@ func LoadCompiledGLMmap(cfg *config.Config, moduleName distributed.ModuleName) (
 func LoadCompiledLPPMmap(cfg *config.Config, moduleNames distributed.ModuleName) (*distributed.RecursedSegmentCompilation, *serde.MmapBackedBuffer, error) {
 
 	var (
-		assetDir = cfg.PathForSetup(executionLimitlessPath)
-		filePath = path.Join(assetDir, fmt.Sprintf(compileLppTemplate, moduleNames))
-		res      = &distributed.RecursedSegmentCompilation{}
+		assetDir   = cfg.PathForSetup(executionLimitlessPath)
+		chunkedDir = path.Join(assetDir, fmt.Sprintf(compileLppChunkedTemplate, moduleNames))
+		res        = &distributed.RecursedSegmentCompilation{}
 	)
 
-	buf, err := serde.LoadFromDiskMmapBacked(filePath, res)
+	if serde.HasChunkedAsset(chunkedDir) {
+		buf, err := serde.LoadChunkedMmapBacked(chunkedDir, res)
+		if err != nil {
+			return nil, nil, err
+		}
+		return res, buf, nil
+	}
+
+	// Fallback to flat .bin file for backward compatibility
+	flatPath := path.Join(assetDir, fmt.Sprintf(compileLppTemplate, moduleNames))
+	buf, err := serde.LoadFromDiskMmapBacked(flatPath, res)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1414,12 +1472,22 @@ func LoadCompiledConglomeration(cfg *config.Config) (*distributed.RecursedSegmen
 func LoadCompiledConglomerationMmap(cfg *config.Config) (*distributed.RecursedSegmentCompilation, *serde.MmapBackedBuffer, error) {
 
 	var (
-		assetDir = cfg.PathForSetup(executionLimitlessPath)
-		filePath = path.Join(assetDir, conglomerationFile)
-		conglo   = &distributed.RecursedSegmentCompilation{}
+		assetDir   = cfg.PathForSetup(executionLimitlessPath)
+		chunkedDir = path.Join(assetDir, conglomerationChunkedFile)
+		conglo     = &distributed.RecursedSegmentCompilation{}
 	)
 
-	buf, err := serde.LoadFromDiskMmapBacked(filePath, conglo)
+	if serde.HasChunkedAsset(chunkedDir) {
+		buf, err := serde.LoadChunkedMmapBacked(chunkedDir, conglo)
+		if err != nil {
+			return nil, nil, err
+		}
+		return conglo, buf, nil
+	}
+
+	// Fallback to flat .bin file for backward compatibility
+	flatPath := path.Join(assetDir, conglomerationFile)
+	buf, err := serde.LoadFromDiskMmapBacked(flatPath, conglo)
 	if err != nil {
 		return nil, nil, err
 	}

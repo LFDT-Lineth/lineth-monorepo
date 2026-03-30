@@ -224,8 +224,8 @@ func (cm *ComputeMod) defineNewProofAndProofEnd() {
 		panic("none of the three above cases was matched")
 	}
 
-	cm.Cols.NewProof = dedicated.CreateHeartBeat(cm.Comp, cm.Round, cm.Depth, cm.Depth-1, isActive)
-	cm.Cols.IsEndOfProof = dedicated.CreateHeartBeat(cm.Comp, cm.Round, cm.Depth, 0, isActive)
+	cm.Cols.NewProof = dedicated.CreateHeartBeat(cm.Comp, cm.Round, cm.Depth, cm.Depth-1, isActive, cm.Name+"_NEW_PROOF")
+	cm.Cols.IsEndOfProof = dedicated.CreateHeartBeat(cm.Comp, cm.Round, cm.Depth, 0, isActive, cm.Name+"_END_OF_PROOF")
 }
 
 // Defines the precomputed column ZERO (always zero)

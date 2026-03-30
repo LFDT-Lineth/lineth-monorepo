@@ -468,6 +468,11 @@ func RunBootstrapper(cfg *config.Config, zkevmWitness *zkevm.Witness, merkleTree
 				cfg, assets.DistWizard.Disc, scalingFactor,
 			)
 
+			// The disc's segment sizes (NewSizes, ColumnsToSize) must stay at
+			// x1 so that each segment still fits the x1-compiled GL/LPP
+			// blueprints. The segment count naturally doubles because the
+			// runtime columns are 2x but each segment remains x1-sized.
+
 			runtimeBoot = wizard.RunProver(
 				scaledUpBootstrapper,
 				scaledUpZkEVM.GetMainProverStep(zkevmWitness),
