@@ -183,6 +183,15 @@ export class SlackClient implements ISlackClient {
     }
   }
 
+  private formatProposalDate(sourceCreatedAt: Date): string {
+    return sourceCreatedAt.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+  }
+
   private buildTitledSectionBlocks(title: string, body: string): object[] {
     const titlePrefix = `*${title}*\n`;
     const firstChunkMaxLength = SLACK_LIMITS.SECTION_TEXT_MAX_LENGTH - titlePrefix.length;
@@ -217,6 +226,7 @@ export class SlackClient implements ISlackClient {
   // Extracted to prevent formatting drift when either payload is updated.
   private buildSharedBlocks(proposal: ProposalWithoutText, assessment: Assessment): object[] {
     const effectiveRisk = this.deriveEffectiveRisk(assessment);
+    const proposalDate = this.formatProposalDate(proposal.sourceCreatedAt);
     const whatChanged = this.escapeSlackMrkdwn(assessment.whatChanged);
     const nativeYieldImpact = assessment.nativeYieldImpact.map((i) => `- ${this.escapeSlackMrkdwn(i)}`).join("\n");
 
@@ -227,6 +237,7 @@ export class SlackClient implements ISlackClient {
           { type: "mrkdwn", text: `*Effective Risk:* ${effectiveRisk}/100` },
           { type: "mrkdwn", text: `*Risk Level:* ${assessment.riskLevel.toUpperCase()}` },
           { type: "mrkdwn", text: `*Urgency:* ${assessment.urgency.replace("_", " ")}` },
+          { type: "mrkdwn", text: `*Proposal Date:* ${proposalDate}` },
         ],
       },
       {

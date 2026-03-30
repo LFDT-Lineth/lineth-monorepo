@@ -227,6 +227,27 @@ describe("SlackClient", () => {
       const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
       expect(callBody.blocks[0].text.text).toContain(":information_source:");
     });
+
+    it("includes the proposal date from sourceCreatedAt in the shared fields", async () => {
+      // Arrange
+      const mockProposal = createMockProposal({
+        sourceCreatedAt: new Date("2024-01-15T00:30:00Z"),
+        createdAt: new Date("2025-02-20T12:00:00Z"),
+        analyzedAt: new Date("2026-03-26T12:00:00Z"),
+      });
+      const mockAssessment = createMockAssessment();
+      fetchMock.mockResolvedValue({ ok: true, text: () => Promise.resolve("ok") });
+
+      // Act
+      await client.sendProposalAlert(mockProposal, mockAssessment);
+
+      // Assert
+      const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      const sharedFields = callBody.blocks[1].fields.map((field: { text: string }) => field.text);
+      expect(sharedFields).toContain("*Proposal Date:* Jan 15, 2024");
+      expect(sharedFields).not.toContain("*Proposal Date:* Feb 20, 2025");
+      expect(sharedFields).not.toContain("*Proposal Date:* Mar 26, 2026");
+    });
   });
 
   describe("sendAuditLog", () => {
@@ -405,6 +426,27 @@ describe("SlackClient", () => {
       const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
       const bodyString = JSON.stringify(callBody);
       expect(bodyString).toContain("Would trigger alert");
+    });
+
+    it("includes the proposal date from sourceCreatedAt in the shared fields", async () => {
+      // Arrange
+      const mockProposal = createMockProposal({
+        sourceCreatedAt: new Date("2024-01-15T00:30:00Z"),
+        createdAt: new Date("2025-02-20T12:00:00Z"),
+        analyzedAt: new Date("2026-03-26T12:00:00Z"),
+      });
+      const mockAssessment = createMockAssessment();
+      fetchMock.mockResolvedValue({ ok: true, text: () => Promise.resolve("ok") });
+
+      // Act
+      await client.sendAuditLog(mockProposal, mockAssessment);
+
+      // Assert
+      const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      const sharedFields = callBody.blocks[2].fields.map((field: { text: string }) => field.text);
+      expect(sharedFields).toContain("*Proposal Date:* Jan 15, 2024");
+      expect(sharedFields).not.toContain("*Proposal Date:* Feb 20, 2025");
+      expect(sharedFields).not.toContain("*Proposal Date:* Mar 26, 2026");
     });
   });
 
