@@ -128,8 +128,7 @@ export const nativeAdapter: BridgeAdapter = {
         return [
           {
             text: "The bridge is currently congested.",
-            // TODO: uncomment this once Yield boost doc is ready.
-            // link: { url: "https://docs.linea.build/network/overview/yield-boost", label: "Learn more." },
+            link: { url: "https://docs.linea.build/network/overview/yield-boost", label: "Learn more." },
           },
         ];
       }
