@@ -16,10 +16,6 @@ To modify the behavior of the rollup mechanism itself (e.g. blob submission for 
 
 The `MessageService` contract handles L1 ↔ L2 message passing. If you want to adjust how messages are sent or verified (e.g. adding rules, changing fee logic), you can override its virtual functions.
 
-See [`InheritingLineaRollup.sol`](../src/_testing/unit/rollup/InheritingLineaRollup.sol) for an example where `MessageService` functionality is customized within the rollup context.
-
-The example provided prevents fee and value from being directly sent to the message service, but instead relies on the samples for the generic Ether bridge - sample are found links below.
-
 ## 🔁 Overriding Token Bridge Behavior
 
 To implement custom behavior for token bridging (e.g., additional validation, whitelisting, alternative transfer mechanisms), override functions in the `TokenBridge` contract.

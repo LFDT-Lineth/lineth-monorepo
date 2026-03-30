@@ -24,7 +24,7 @@ The coordinator is a Java-based service that orchestrates the Linea protocol's o
 If you haven't already, clone the repository and navigate to the project directory:
 
 ```bash
-git clone https://github.com/ConsenSys/linea-monorepo.git
+git clone https://github.com/Consensys/linea-monorepo.git
 cd linea-monorepo
 ```
 

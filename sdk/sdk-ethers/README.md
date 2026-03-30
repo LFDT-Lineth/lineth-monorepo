@@ -230,4 +230,4 @@ const tx = await l2Contract.claim(message);
 
 ## License
 
-This package is licensed under the [Apache 2.0](../LICENSE-APACHE) and the [MIT](../LICENSE-MIT) licenses.
+This package is licensed under the [Apache 2.0](../../LICENSE-APACHE) and the [MIT](../../LICENSE-MIT) licenses.

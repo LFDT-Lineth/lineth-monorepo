@@ -59,7 +59,7 @@ Please keep in mind that we do not accept non-code contributions like fixing com
 
 > Include the issue number in the pull request description and (optionally) in the branch name.
 
-Consider starting with a ["good first issue"](https://github.com/ConsenSys/linea-tracer/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+Consider starting with a ["good first issue"](https://github.com/Consensys/linea-tracer/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
 Before contributing, ensure you're familiar with:
 
@@ -73,8 +73,7 @@ Before contributing, ensure you're familiar with:
 - [Linea docs](https://docs.linea.build)
 - [Linea blog](https://linea.mirror.xyz)
 - [Support](https://support.linea.build)
-- [Discord](https://discord.gg/linea)
-- [Twitter](https://twitter.com/LineaBuild)
+- [X](https://x.com/LineaBuild)
 
 ### Update reference tests
 

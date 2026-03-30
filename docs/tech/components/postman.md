@@ -280,7 +280,7 @@ Tests are colocated with implementations in `__tests__/` subdirectories, using `
 
 ## Configuration
 
-See the [README.md](../../postman/README.md) for complete environment variable documentation.
+See the [README.md](../../../postman/README.md) for complete environment variable documentation.
 
 | Category | Key Variables |
 |----------|---------------|

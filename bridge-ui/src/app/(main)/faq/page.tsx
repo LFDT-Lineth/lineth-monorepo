@@ -170,8 +170,7 @@ const faqList = [
     content: (
       <p>
         Head to the <ExternalLink href="https://support.linea.build/">Linea help center</ExternalLink> and click the
-        &ldquo;Contact&rdquo; button on the homepage, or the chat icon in the bottom right. You can also get advice and
-        support on our moderated <ExternalLink href="https://discord.gg/linea">Discord</ExternalLink>.
+        &ldquo;Contact&rdquo; button on the homepage, or the chat icon in the bottom right for advice and support.
       </p>
     ),
   },

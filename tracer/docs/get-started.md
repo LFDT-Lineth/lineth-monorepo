@@ -22,10 +22,10 @@ echo "net.git-fetch-with-cli=true" >> .cargo/config.toml
 #### Step 4: Install Corset
 
 ```shell
-cargo install --git ssh://git@github.com/ConsenSys/corset --locked --force
+cargo install --git ssh://git@github.com/Consensys/corset --locked --force
 ```
 
-#### Step 5: Update constraints [submodule](https://github.com/Consensys/linea-constraints/)
+#### Step 5: Update constraints [submodule](https://github.com/Consensys/linea-constraints)
 
 ```shell
 git submodule update --init --recursive
@@ -43,7 +43,7 @@ brew install pre-commit
 ```
 
 Then run `pre-commit install` to set up git hook scripts.
-Used hooks can be found [here](.pre-commit-config.yaml).
+Used hooks can be found [here](../.pre-commit-config.yaml).
 
 ______________________________________________________________________
 

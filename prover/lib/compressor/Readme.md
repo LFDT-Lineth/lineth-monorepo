@@ -9,6 +9,6 @@ go build -ldflags "-s -w" -buildmode=c-shared -o libcompressor.so libcompressor.
 
 * The Java (Kotlin) part
 
-See [jvm-libs/blob-compressor/src/main/kotlin/net/consensys/linea/nativecompressor/GoNativeBlobCompressor.kt](jvm-libs/blob-compressor/src/main/kotlin/net/consensys/linea/nativecompressor/GoNativeBlobCompressor.kt).
+See [jvm-libs/linea/blob-compressor/src/main/kotlin/linea/blob/GoNativeBlobCompressor.kt](../../../jvm-libs/linea/blob-compressor/src/main/kotlin/linea/blob/GoNativeBlobCompressor.kt).
 
 * [How to update the dictionary](dictionary-update-guide.md)

@@ -113,7 +113,7 @@ cp .env.sample .env
 pnpm run start
 ```
 
-> **Configuration**: See the [automation-service README](../../native-yield-operations/automation-service/README.md#configuration) for environment variable details.
+> **Configuration**: See the [automation-service README](../../../native-yield-operations/automation-service/README.md#configuration) for environment variable details.
 
 ## Contract Verification
 

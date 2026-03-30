@@ -89,4 +89,4 @@ This builds tracer and sequencer from source (and besu if needed), assembles the
 
 ## 6. Related documentations
 
-- [Linea-besu-package README](./linea-besu-package/README.md)
+- [Linea-besu-package README](../linea-besu-package/README.md)

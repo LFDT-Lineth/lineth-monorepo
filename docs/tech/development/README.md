@@ -459,9 +459,8 @@ pnpm clean
 
 ### Getting Help
 
-- Check [existing documentation](../docs/)
+- Check [existing documentation](../README.md) in the tech documentation index
 - Review [GitHub issues](https://github.com/Consensys/linea-monorepo/issues)
-- Join [Discord](https://discord.gg/linea)
 
 ## IDE Setup
 

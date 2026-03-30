@@ -2,8 +2,7 @@
 
 This repository hosts the implementation of the sequencer, the component of the Linea stack responsible for ordering transactions and building blocks, as well as executing them. It provides a set of [Besu](https://github.com/besu-eth/besu):Linea plugins. 
 
-It serves developers by making the Linea tech stack open source under 
-the [Apache 2.0 license](LICENSE).
+It serves developers by making the Linea tech stack open source under the [Apache 2.0](../../LICENSE-APACHE) and the [MIT](../../LICENSE-MIT) licenses.
 
 ## What is Linea?
 
@@ -46,7 +45,7 @@ Please keep in mind that we do not accept non-code contributions like fixing com
 2. Submit the update as a pull request from your [fork of this repo](https://github.com/Consensys/linea-monorepo/fork), and tag us for review. 
 > Include the issue number in the pull request description and (optionally) in the branch name.
 
-Consider starting with a ["good first issue"](https://github.com/ConsenSys/linea-monorepo/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+Consider starting with a ["good first issue"](https://github.com/Consensys/linea-monorepo/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
 Before contributing, ensure you're familiar with:
 
@@ -61,5 +60,4 @@ Before contributing, ensure you're familiar with:
 - [Linea docs](https://docs.linea.build)
 - [Linea blog](https://linea.mirror.xyz)
 - [Support](https://support.linea.build)
-- [Discord](https://discord.gg/linea)
 - [X](https://x.com/LineaBuild)

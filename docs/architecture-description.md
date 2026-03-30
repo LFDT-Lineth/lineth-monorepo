@@ -464,7 +464,7 @@ The prover encapsulates two processes:
 
 The long running process monitor triggers and monitors the short running process. It allows capturing unexpected issues occurring during the proving.
 
-The short running process is further made up of two internal logic components: the traces expander (aka Corset) and the prover itself. Corset is responsible for expanding the execution traces into a format the prover can use before building the proof. The prover relies on the [gnark](https://github.com/ConsenSys/gnark) library for zk-SNARKs implementation.
+The short running process is further made up of two internal logic components: the traces expander (aka Corset) and the prover itself. Corset is responsible for expanding the execution traces into a format the prover can use before building the proof. The prover relies on the [gnark](https://github.com/Consensys/gnark) library for zk-SNARKs implementation.
 
 Corset is hosted inside the same process as the short-running component of the prover. Traces are expanded by Corset in memory and ingested by the prover directly, without the need for intermediate files to be sent over the network. This was motivated by the following reasons:
 
