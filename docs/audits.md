@@ -23,6 +23,12 @@
 
 ---
 
+## Linea Poseidon2 Audit
+**Diligence**
+- Linea Poseidon2 - [https://diligence.security/audits/2026/01/linea-poseidon2/](https://diligence.security/audits/2026/01/linea-poseidon2/)
+
+---
+
 ## Linea Burn Mechanism Smart Contract Audits
 **Diligence**
 - Linea Burn Mechanism - [https://diligence.consensys.io/audits/2025/10/linea-burn-mechanism/](https://diligence.consensys.io/audits/2025/10/linea-burn-mechanism/)
