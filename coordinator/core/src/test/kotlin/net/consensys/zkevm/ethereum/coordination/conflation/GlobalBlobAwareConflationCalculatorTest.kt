@@ -14,6 +14,7 @@ import net.consensys.zkevm.domain.Blob
 import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.domain.ConflationCalculationResult
 import net.consensys.zkevm.domain.ConflationTrigger
+import net.consensys.zkevm.ethereum.coordination.DynamicBlockNumberSet
 import net.consensys.zkevm.ethereum.coordination.blob.BlobCompressor
 import net.consensys.zkevm.ethereum.coordination.blob.FakeBlobCompressor
 import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
@@ -43,6 +44,8 @@ class GlobalBlobAwareConflationCalculatorTest {
   private lateinit var globalCalculator: GlobalBlockConflationCalculator
   private lateinit var calculator: GlobalBlobAwareConflationCalculator
   private lateinit var calculatorByTargetBlockNumber: ConflationCalculatorByTargetBlockNumbers
+  private lateinit var calculatorByTimestampHardFork: TimestampHardForkConflationCalculator
+  private lateinit var dynamicBlockNumberSet: DynamicBlockNumberSet
   private val lastBlockNumber: ULong = 0uL
   private lateinit var safeBlockProvider: SafeBlockProvider
   private lateinit var fakeClock: FakeFixedClock
@@ -52,6 +55,7 @@ class GlobalBlobAwareConflationCalculatorTest {
   private lateinit var blobs: MutableList<Blob>
   private val defaultBatchesLimit = 2U
   private val conflationTargetEndBlockNumbers: MutableSet<ULong> = mutableSetOf()
+  private val conflationTargetHardForkTimestamps: MutableList<Instant> = mutableListOf()
   private lateinit var metricsFacade: MetricsFacade
 
   // histogram metrics mocks
@@ -203,20 +207,30 @@ class GlobalBlobAwareConflationCalculatorTest {
       ConflationCalculatorByTargetBlockNumbers(
         targetEndBlockNumbers = conflationTargetEndBlockNumbers,
       )
+    conflationTargetHardForkTimestamps.clear()
+    conflationTargetHardForkTimestamps.add(Instant.DISTANT_FUTURE)
+    calculatorByTimestampHardFork = TimestampHardForkConflationCalculator(
+      hardForkTimestamps = conflationTargetHardForkTimestamps,
+      initialTimestamp = fakeClockTime,
+    )
 
     globalCalculator =
       GlobalBlockConflationCalculator(
         lastBlockNumber = lastBlockNumber,
-        syncCalculators = listOf(calculatorByTraces, calculatorByDataCompressed, calculatorByTargetBlockNumber),
+        syncCalculators = listOf(
+          calculatorByTraces, calculatorByDataCompressed, calculatorByTargetBlockNumber, calculatorByTimestampHardFork,
+        ),
         deferredTriggerConflationCalculators = listOf(calculatorByDealine),
         emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
       )
+    dynamicBlockNumberSet = DynamicBlockNumberSet()
     calculator =
       GlobalBlobAwareConflationCalculator(
         conflationCalculator = globalCalculator,
         blobCalculator = calculatorByDataCompressed,
         batchesLimit = defaultBatchesLimit,
         metricsFacade = metricsFacade,
+        dynamicBlockNumberSet = dynamicBlockNumberSet,
       )
     conflations = mutableListOf()
     blobs = mutableListOf()
@@ -228,6 +242,47 @@ class GlobalBlobAwareConflationCalculatorTest {
       blobs.add(blob)
       SafeFuture.completedFuture(Unit)
     }
+  }
+
+  @Test
+  fun `conflation, blob and aggregation boundary when conflation by hard fork timestamp set`() {
+    conflationTargetHardForkTimestamps.clear()
+    /*
+     * Set hard fork timestamp so that it triggers at block 5. So block 4 is the boundary that should be included
+     * in the last conflation, blob and aggregation pre fork.
+     */
+    conflationTargetHardForkTimestamps.add(fakeClockTime.plus(blockTime.times(5)))
+
+    val blockCounters =
+      (1uL..11uL).map {
+        BlockCounters(
+          blockNumber = it,
+          blockTimestamp = fakeClockTime.plus(blockTime.times(it.toInt())),
+          tracesCounters = fakeTracesCountersV2(1u),
+          blockRLPEncoded = ByteArray(11),
+          numOfTransactions = 1u,
+          gasUsed = 10uL,
+        )
+      }
+    blockCounters.forEach {
+      calculator.newBlock(it)
+    }
+    assertThat(conflations).isEqualTo(
+      listOf(
+        ConflationCalculationResult(
+          startBlockNumber = 1uL,
+          endBlockNumber = 4uL,
+          conflationTrigger = ConflationTrigger.HARD_FORK,
+          tracesCounters = fakeTracesCountersV2(4u),
+        ),
+      ),
+    )
+    assertThat(blobs).hasSize(1)
+    assertThat(blobs[0].conflations).isEqualTo(conflations)
+    assertThat(blobs[0].startBlockTime).isEqualTo(blockCounters[0].blockTimestamp)
+    assertThat(blobs[0].endBlockTime).isEqualTo(blockCounters[3].blockTimestamp)
+
+    assertThat(dynamicBlockNumberSet).containsExactly(4uL)
   }
 
   @Test

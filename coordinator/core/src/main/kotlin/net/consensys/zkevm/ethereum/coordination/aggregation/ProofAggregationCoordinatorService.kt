@@ -267,7 +267,7 @@ class ProofAggregationCoordinatorService(
       proofAggregationClient: ProofAggregationProverClientV2,
       noL2ActivityTimeout: Duration,
       waitForNoL2ActivityToTriggerAggregation: Boolean,
-      targetEndBlockNumbers: List<ULong>,
+      targetEndBlockNumbers: Set<ULong>,
       metricsFacade: MetricsFacade,
       aggregationSizeMultipleOf: UInt,
       hardForkTimestamps: List<Instant> = emptyList(),
@@ -288,11 +288,10 @@ class ProofAggregationCoordinatorService(
       val syncAggregationTriggerCalculators = mutableListOf<SyncAggregationTriggerCalculator>(
         forcedTransactionTriggerAggCalculator,
         AggregationTriggerCalculatorByProofLimit(maxProofsPerAggregation = maxProofsPerAggregation),
+        AggregationTriggerCalculatorByTargetBlockNumbers(
+          targetEndBlockNumbers = targetEndBlockNumbers,
+        ),
       )
-      if (targetEndBlockNumbers.isNotEmpty()) {
-        syncAggregationTriggerCalculators
-          .add(AggregationTriggerCalculatorByTargetBlockNumbers(targetEndBlockNumbers = targetEndBlockNumbers))
-      }
       if (maxBlobsPerAggregation != null) {
         syncAggregationTriggerCalculators
           .add(AggregationTriggerCalculatorByBlobLimit(maxBlobsPerAggregation = maxBlobsPerAggregation))

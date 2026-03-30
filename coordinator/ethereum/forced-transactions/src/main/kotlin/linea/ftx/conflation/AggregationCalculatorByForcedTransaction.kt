@@ -3,6 +3,7 @@ package linea.ftx.conflation
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.forcedtx.ForcedTransactionInclusionStatus
 import net.consensys.zkevm.domain.BlobCounters
+import net.consensys.zkevm.ethereum.coordination.DynamicBlockNumberSet
 import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationTrigger
 import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationTriggerCalculatorByTargetBlockNumbers
 import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationTriggerType
@@ -38,11 +39,11 @@ class AggregationCalculatorByForcedTransaction(
 ) : SyncAggregationTriggerCalculator {
 
   // Track pending trigger blocks (blockNumber - 1) for non-included FTXs
-  private val pendingTriggerBlocks = mutableSetOf<ULong>()
+  private val pendingTriggerBlocks = DynamicBlockNumberSet()
 
   // Delegate to AggregationTriggerCalculatorByTargetBlockNumbers for actual triggering logic
   private val delegateCalculator = AggregationTriggerCalculatorByTargetBlockNumbers(
-    targetEndBlockNumbersProvider = { pendingTriggerBlocks.toList() },
+    targetEndBlockNumbers = pendingTriggerBlocks,
     triggerType = AggregationTriggerType.FORCED_TRANSACTION,
     log = log,
   )
@@ -74,7 +75,7 @@ class AggregationCalculatorByForcedTransaction(
       }
       .toSet()
 
-    pendingTriggerBlocks.addAll(newTriggerBlocks)
+    pendingTriggerBlocks.addBlockNumbers(newTriggerBlocks)
     logFtxPendingAggregation(processedFtxs, newTriggerBlocks)
   }
 
@@ -116,7 +117,7 @@ class AggregationCalculatorByForcedTransaction(
         blobCounters.endBlockNumber + 1UL,
       )
       // Remove the trigger block after it's been used
-      pendingTriggerBlocks.remove(blobCounters.endBlockNumber)
+      pendingTriggerBlocks.removeBlockNumber(blobCounters.endBlockNumber)
     }
 
     return trigger

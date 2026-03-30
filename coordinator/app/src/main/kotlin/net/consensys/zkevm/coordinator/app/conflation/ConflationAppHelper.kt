@@ -5,6 +5,7 @@ import linea.coordinator.config.v2.isDisabled
 import linea.ethapi.EthApiClient
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.zkevm.coordinator.blockcreation.FixedLaggingHeadSafeBlockProvider
+import net.consensys.zkevm.ethereum.coordination.DynamicBlockNumberSet
 import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculator
 import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculatorByBlockLimit
 import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculatorByDataCompressed
@@ -82,19 +83,6 @@ object ConflationAppHelper {
     }
   }
 
-  fun addTargetEndBlockConflationCalculatorIfDefined(
-    configs: CoordinatorConfig,
-    calculators: MutableList<ConflationCalculator>,
-  ) {
-    if (configs.conflation.proofAggregation.targetEndBlocks?.isNotEmpty() ?: false) {
-      calculators.add(
-        ConflationCalculatorByTargetBlockNumbers(
-          targetEndBlockNumbers = configs.conflation.proofAggregation.targetEndBlocks.toSet(),
-        ),
-      )
-    }
-  }
-
   fun addTimestampHardForkCalculatorIfDefined(
     configs: CoordinatorConfig,
     lastProcessedTimestamp: Instant,
@@ -114,6 +102,7 @@ object ConflationAppHelper {
     configs: CoordinatorConfig,
     compressedBlobCalculator: ConflationCalculatorByDataCompressed,
     lastProcessedTimestamp: Instant,
+    dynamicTargetEndBlockNumberSet: DynamicBlockNumberSet,
     logger: Logger,
     metricsFacade: MetricsFacade,
   ): List<ConflationCalculator> {
@@ -125,10 +114,10 @@ object ConflationAppHelper {
           metricsFacade = metricsFacade,
           log = logger,
         ),
+        ConflationCalculatorByTargetBlockNumbers(targetEndBlockNumbers = dynamicTargetEndBlockNumberSet),
         compressedBlobCalculator,
       )
     addBlocksLimitCalculatorIfDefined(configs = configs, calculators = calculators)
-    addTargetEndBlockConflationCalculatorIfDefined(configs = configs, calculators = calculators)
     addTimestampHardForkCalculatorIfDefined(
       configs = configs,
       calculators = calculators,

@@ -31,6 +31,7 @@ import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
 import net.consensys.zkevm.coordinator.clients.prover.ProverClientFactory
 import net.consensys.zkevm.domain.BlobRecord
 import net.consensys.zkevm.domain.BlocksConflation
+import net.consensys.zkevm.ethereum.coordination.DynamicBlockNumberSet
 import net.consensys.zkevm.ethereum.coordination.HighestConflationTracker
 import net.consensys.zkevm.ethereum.coordination.HighestProvenBatchTracker
 import net.consensys.zkevm.ethereum.coordination.HighestProvenBlobTracker
@@ -191,6 +192,11 @@ class ConflationApp(
   ).get()
   private val lastProcessedTimestamp = Instant.fromEpochSeconds(lastProcessedBlock!!.timestamp.toLong())
 
+  private val dynamicTargetEndBlockNumberSet =
+    DynamicBlockNumberSet(
+      initialBlockNumbers = configs.conflation.proofAggregation.targetEndBlocks ?: emptyList(),
+    )
+
   private val deadlineConflationCalculatorRunner = createDeadlineConflationCalculatorRunner(
     configs = configs,
     lastProcessedBlockNumber = lastProcessedBlockNumber,
@@ -218,6 +224,7 @@ class ConflationApp(
       configs = configs,
       compressedBlobCalculator = compressedBlobCalculator,
       lastProcessedTimestamp = lastProcessedTimestamp,
+      dynamicTargetEndBlockNumberSet = dynamicTargetEndBlockNumberSet,
       logger = logger,
       metricsFacade = metricsFacade,
     ).also {
@@ -244,6 +251,7 @@ class ConflationApp(
       blobCalculator = compressedBlobCalculator,
       metricsFacade = metricsFacade,
       batchesLimit = batchesLimit,
+      dynamicBlockNumberSet = dynamicTargetEndBlockNumberSet,
     )
   }
 
@@ -386,7 +394,7 @@ class ConflationApp(
         noL2ActivityTimeout = configs.conflation.conflationDeadlineLastBlockConfirmationDelay,
         waitForNoL2ActivityToTriggerAggregation =
         configs.conflation.proofAggregation.waitForNoL2ActivityToTriggerAggregation,
-        targetEndBlockNumbers = configs.conflation.proofAggregation.targetEndBlocks ?: emptyList(),
+        targetEndBlockNumbers = dynamicTargetEndBlockNumberSet,
         metricsFacade = metricsFacade,
         aggregationSizeMultipleOf = configs.conflation.proofAggregation.aggregationSizeMultipleOf,
         hardForkTimestamps = configs.conflation.proofAggregation.timestampBasedHardForks,

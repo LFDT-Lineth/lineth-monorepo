@@ -67,7 +67,7 @@ class GlobalAggregationCalculatorTest {
         proofLimit?.also { add(AggregationTriggerCalculatorByProofLimit(maxProofsPerAggregation = it)) }
         blobLimit?.also { add(AggregationTriggerCalculatorByBlobLimit(maxBlobsPerAggregation = it)) }
         targetBlockNumbers?.also {
-          add(AggregationTriggerCalculatorByTargetBlockNumbers(targetBlockNumbers.map { it.toULong() }))
+          add(AggregationTriggerCalculatorByTargetBlockNumbers(targetBlockNumbers.map { it.toULong() }.toSet()))
         }
         hardForkTimestamps?.also {
           aggregationTriggerCalculatorByTimestampHardFork = AggregationTriggerCalculatorByTimestampHardFork(

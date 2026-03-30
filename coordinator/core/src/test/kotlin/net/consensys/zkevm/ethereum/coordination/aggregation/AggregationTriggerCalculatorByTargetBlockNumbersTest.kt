@@ -18,14 +18,14 @@ class AggregationTriggerCalculatorByTargetBlockNumbersTest {
     log = mock<Logger>()
     calculator =
       AggregationTriggerCalculatorByTargetBlockNumbers(
-        targetEndBlockNumbers = listOf(10uL, 20uL, 30uL),
+        targetEndBlockNumbers = setOf(10uL, 20uL, 30uL),
         log = log,
       )
   }
 
   @Test
   fun `when endBlockNumbers is empty then returns null`() {
-    val calculator = AggregationTriggerCalculatorByTargetBlockNumbers(targetEndBlockNumbers = emptyList())
+    val calculator = AggregationTriggerCalculatorByTargetBlockNumbers(targetEndBlockNumbers = emptySet())
     assertThat(calculator.checkAggregationTrigger(blob = blobCounters(startBlockNumber = 1uL, endBlockNumber = 10uL)))
       .isNull()
   }

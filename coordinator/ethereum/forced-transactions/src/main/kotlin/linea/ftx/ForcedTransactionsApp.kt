@@ -109,7 +109,7 @@ internal class DisabledForcedTransactionsApp() : ForcedTransactionsApp,
   )
   override val aggregationCalculator: SyncAggregationTriggerCalculator =
     AggregationTriggerCalculatorByTargetBlockNumbers(
-      targetEndBlockNumbers = emptyList(),
+      targetEndBlockNumbers = emptySet(),
     )
 }
 
