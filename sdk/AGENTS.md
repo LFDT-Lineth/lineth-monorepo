@@ -61,6 +61,61 @@ sdk/
 └── sdk-viem/       Viem integration
 ```
 
+## npm Publication
+
+### Published Packages
+
+| Package | npm | Scope |
+|---------|-----|-------|
+| `sdk-core` | `@consensys/linea-sdk-core` | public |
+| `sdk-viem` | `@consensys/linea-sdk-viem` | public |
+
+`sdk-ethers` is **not** published to npm (out of scope).
+
+### Versioning and Changelog
+
+- Independent versioning — each package has its own version in `package.json`.
+- Both packages start at `1.0.0`.
+- Each package maintains a `CHANGELOG.md` auto-generated from git commits scoped to its directory.
+
+### How to Release
+
+Two workflows handle the full release cycle:
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `sdk-release.yml` | Manual dispatch | Creates a release PR (version bump + changelog) |
+| `sdk-publish.yml` | Manual dispatch | Builds, tests, publishes to npm |
+
+**Step 1 — Create a release PR:**
+
+Go to **Actions → sdk-release → Run workflow**, pick the package and bump type. The workflow creates a PR with the version bumped in `package.json` and a changelog entry auto-generated from git commits since the last release.
+
+**Step 2 — Review and merge:**
+
+Review the PR (changelog, version). Merge to `main`.
+
+**Step 3 — Publish:**
+
+Go to **Actions → sdk-publish → Run workflow**, select the package. CI builds, tests, lints, and publishes to npm.
+
+**Dependency order:** When releasing both packages, release and publish `sdk-core` first — `sdk-viem` depends on it. The publish workflow enforces this ordering.
+
+### workspace:* Protocol
+
+`sdk-viem` declares `"@consensys/linea-sdk-core": "workspace:*"` in `dependencies`. `pnpm publish` automatically resolves `workspace:*` to the actual version at publish time. Do not change this to a pinned version in source.
+
+### CI
+
+- **PR guard:** `.github/workflows/sdk-testing.yml` runs build, test, and lint on PRs touching `sdk/**`.
+- **Release:** `.github/workflows/sdk-release.yml` creates a release PR (version bump + auto-changelog) via manual dispatch.
+- **Publish:** `.github/workflows/sdk-publish.yml` builds, tests, and publishes to npm via manual dispatch.
+
+### Prerequisites for Publishing
+
+- The `@consensys` npm scope must exist and the publishing account must have write access.
+- An `NPM_TOKEN` secret must be configured in the GitHub repository settings.
+
 ## Agent Rules (Overrides)
 
 - Changes to `sdk-core` affect both `sdk-ethers` and `sdk-viem` — test downstream packages

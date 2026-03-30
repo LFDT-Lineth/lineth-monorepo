@@ -1,0 +1,170 @@
+name: sdk-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "Package to release"
+        required: true
+        type: choice
+        options:
+          - sdk-core
+          - sdk-viem
+      bump:
+        description: "Version bump type"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  guard:
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    steps:
+      - name: Ensure running on main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::sdk-release must be triggered from the main branch, got ${{ github.ref }}"
+          exit 1
+
+  create-release-pr:
+    needs: guard
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve package directory
+        id: pkg
+        env:
+          PACKAGE: ${{ inputs.package }}
+        run: |
+          case "$PACKAGE" in
+            sdk-core) echo "dir=sdk/sdk-core" >> "$GITHUB_OUTPUT" ;;
+            sdk-viem) echo "dir=sdk/sdk-viem" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Compute next version
+        id: version
+        env:
+          PKG_DIR: ${{ steps.pkg.outputs.dir }}
+          BUMP: ${{ inputs.bump }}
+          PACKAGE: ${{ inputs.package }}
+        run: |
+          CURRENT=$(node -p "require('./$PKG_DIR/package.json').version")
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+
+          case "$BUMP" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+
+          NEXT="${MAJOR}.${MINOR}.${PATCH}"
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "next=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "Bumping $PACKAGE from $CURRENT to $NEXT ($BUMP)"
+
+      - name: Check version is not already released
+        env:
+          PACKAGE: ${{ inputs.package }}
+          NEXT_VERSION: ${{ steps.version.outputs.next }}
+        run: |
+          TAG="${PACKAGE}-v${NEXT_VERSION}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag $TAG already exists. Version $NEXT_VERSION has already been released."
+            exit 1
+          fi
+
+          NPM_NAME="@consensys/linea-${PACKAGE}"
+          if npm view "${NPM_NAME}@${NEXT_VERSION}" version 2>/dev/null; then
+            echo "::error::${NPM_NAME}@${NEXT_VERSION} is already published on npm."
+            exit 1
+          fi
+
+      - name: Bump version in package.json
+        env:
+          PKG_DIR: ${{ steps.pkg.outputs.dir }}
+          NEXT_VERSION: ${{ steps.version.outputs.next }}
+        run: |
+          node -e "
+            const fs = require('fs');
+            const p = './' + process.env.PKG_DIR + '/package.json';
+            const pkg = JSON.parse(fs.readFileSync(p, 'utf8'));
+            pkg.version = process.env.NEXT_VERSION;
+            fs.writeFileSync(p, JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+      - name: Generate changelog entry
+        id: changelog
+        env:
+          PKG_DIR: ${{ steps.pkg.outputs.dir }}
+          PACKAGE: ${{ inputs.package }}
+          NEXT_VERSION: ${{ steps.version.outputs.next }}
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          CHANGELOG="$PKG_DIR/CHANGELOG.md"
+
+          PREV_TAG=$(git tag --list "${PACKAGE}-v*" --sort=-v:refname | head -n1)
+
+          if [[ -n "$PREV_TAG" ]]; then
+            COMMITS=$(git log "${PREV_TAG}..HEAD" --pretty=format:"- %s (%h)" -- "$PKG_DIR")
+          else
+            COMMITS=$(git log --pretty=format:"- %s (%h)" -- "$PKG_DIR")
+          fi
+
+          if [[ -z "$COMMITS" ]]; then
+            COMMITS="- No notable changes"
+          fi
+
+          HEADER=$(head -n1 "$CHANGELOG" 2>/dev/null || echo "# @consensys/linea-${PACKAGE}")
+          BODY=$(tail -n+2 "$CHANGELOG" 2>/dev/null || echo "")
+
+          {
+            echo "$HEADER"
+            echo ""
+            echo "## $NEXT_VERSION ($DATE)"
+            echo ""
+            echo "$COMMITS"
+            echo ""
+            echo "$BODY"
+          } > "$CHANGELOG"
+
+          DELIMITER="COMMITS_$(openssl rand -hex 8)"
+          {
+            echo "commits<<${DELIMITER}"
+            echo "$COMMITS"
+            echo "$DELIMITER"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create release PR
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8
+        with:
+          base: main
+          branch: release/${{ inputs.package }}-v${{ steps.version.outputs.next }}
+          commit-message: "release(${{ inputs.package }}): v${{ steps.version.outputs.next }}"
+          title: "release(${{ inputs.package }}): v${{ steps.version.outputs.next }}"
+          body: |
+            ## Release `@consensys/linea-${{ inputs.package }}` v${{ steps.version.outputs.next }}
+
+            **Bump type:** ${{ inputs.bump }}
+            **Previous version:** ${{ steps.version.outputs.current }}
+
+            ### Changes
+
+            ${{ steps.changelog.outputs.commits }}
+
+            ### After merging
+
+            1. Note the **merge commit SHA** from this PR (visible on the merged PR page or via `git log main -1`)
+            2. Go to **Actions → sdk-publish → Run workflow**
+            3. Select `${{ inputs.package }}`, paste the merge commit SHA, and run
+          labels: release
