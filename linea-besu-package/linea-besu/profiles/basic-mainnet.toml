@@ -48,8 +48,7 @@ graphql-http-cors-origins=["all"]
 
 # p2p
 p2p-port=30303
-fast-sync-min-peers=1
-
+sync-min-peers=1
 
 # metrics
 metrics-enabled=true

@@ -46,7 +46,7 @@ graphql-http-cors-origins=["all"]
 discovery-enabled=true
 p2p-host="0.0.0.0"
 p2p-port=30303
-fast-sync-min-peers=3
+sync-min-peers=3
 max-peers=50
 
 # metrics
