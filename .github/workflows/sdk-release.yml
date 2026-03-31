@@ -181,22 +181,22 @@ jobs:
           fi
 
           BODY_FILE=$(mktemp)
-          cat > "$BODY_FILE" <<PREOF
-## Release @consensys/linea-${PACKAGE} v${NEXT_VERSION}
-
-**Bump type:** ${BUMP}
-**Previous version:** ${CURRENT_VERSION}
-
-### Changes
-
-${COMMITS}
-
-### After merging
-
-1. Note the **commit SHA** from this merged PR (visible on the merged PR page or via git log main -1)
-2. Go to **Actions → sdk-publish → Run workflow**
-3. Select ${PACKAGE}, paste the commit SHA, and run
-PREOF
+          {
+            echo "## Release @consensys/linea-${PACKAGE} v${NEXT_VERSION}"
+            echo ""
+            echo "**Bump type:** ${BUMP}"
+            echo "**Previous version:** ${CURRENT_VERSION}"
+            echo ""
+            echo "### Changes"
+            echo ""
+            echo "${COMMITS}"
+            echo ""
+            echo "### After merging"
+            echo ""
+            echo "1. Note the **commit SHA** from this merged PR (visible on the merged PR page or via git log main -1)"
+            echo "2. Go to **Actions → sdk-publish → Run workflow**"
+            echo "3. Select ${PACKAGE}, paste the commit SHA, and run"
+          } > "$BODY_FILE"
 
           gh pr create \
             --base main \
