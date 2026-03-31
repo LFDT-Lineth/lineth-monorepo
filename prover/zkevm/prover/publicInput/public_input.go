@@ -152,8 +152,11 @@ func NewPublicInputZkEVM(comp *wizard.CompiledIOP, settings *Settings, ss *state
 				AbsLogNum:    a.MashedColumnOf(comp, "loginfo", "ABS_LOG_NUM"),
 				AbsLogNumMax: a.MashedColumnOf(comp, "loginfo", "ABS_LOG_NUM_MAX"),
 				Ct:           a.ColumnOf(comp, "loginfo", "CT"),
-				Data:         a.GetLimbsOfU128Be(comp, "loginfo", "DATA_LO").ZeroExtendToSize(16).LimbsArr16(),
-				TxEmitsLogs:  a.ColumnOf(comp, "loginfo", "TXN_EMITS_LOGS"),
+				Data: limbs.FuseLimbs(
+					a.GetLimbsOfU128Be(comp, "loginfo", "DATA_HI").AsDynSize(),
+					a.GetLimbsOfU128Be(comp, "loginfo", "DATA_LO").AsDynSize(),
+				).LimbsArr16(),
+				TxEmitsLogs: a.ColumnOf(comp, "loginfo", "TXN_EMITS_LOGS"),
 			},
 			StateSummary: ss,
 		},
