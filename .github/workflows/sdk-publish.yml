@@ -12,7 +12,7 @@ on:
           - sdk-viem
           - both
       release_commit_sha:
-        description: "Merge commit SHA from the release PR (must be on main)"
+        description: "Commit SHA from the merged release PR (must be on main)"
         required: true
         type: string
       dry_run:
@@ -34,8 +34,10 @@ jobs:
     steps:
       - name: Ensure running on main
         if: github.ref != 'refs/heads/main'
+        env:
+          REF: ${{ github.ref }}
         run: |
-          echo "::error::sdk-publish must be triggered from the main branch, got ${{ github.ref }}"
+          echo "::error::sdk-publish must be triggered from the main branch, got $REF"
           exit 1
 
       - name: Checkout
@@ -70,15 +72,15 @@ jobs:
         uses: ./.github/actions/setup-nodejs
         with:
           pnpm-install-options: "--frozen-lockfile --prefer-offline"
+  
+      - name: Lint sdk-core
+        run: pnpm -F @consensys/linea-sdk-core run lint
 
       - name: Build sdk-core
         run: pnpm -F @consensys/linea-sdk-core run build
 
       - name: Test sdk-core
         run: pnpm -F @consensys/linea-sdk-core run test
-
-      - name: Lint sdk-core
-        run: pnpm -F @consensys/linea-sdk-core run lint
 
       - name: Check if version already published
         id: check
@@ -148,18 +150,15 @@ jobs:
             echo "::error::@consensys/linea-sdk-core@${CORE_VERSION} is not published on npm. Publish sdk-core first or select 'both'."
             exit 1
           fi
-
-      - name: Build sdk-core (dependency)
-        run: pnpm -F @consensys/linea-sdk-core run build
+      
+      - name: Lint sdk-viem
+        run: pnpm -F @consensys/linea-sdk-viem run lint
 
       - name: Build sdk-viem
-        run: pnpm -F @consensys/linea-sdk-viem run build
+        run: pnpm -F "@consensys/linea-sdk-viem..." run build
 
       - name: Test sdk-viem
         run: pnpm -F @consensys/linea-sdk-viem run test
-
-      - name: Lint sdk-viem
-        run: pnpm -F @consensys/linea-sdk-viem run lint
 
       - name: Check if version already published
         id: check
