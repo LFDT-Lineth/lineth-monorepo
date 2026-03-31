@@ -44,6 +44,7 @@ class ProofGeneratingConflationHandlerImpl(
   data class Config(
     val conflationAndProofGenerationRetryBackoffDelay: Duration,
     val executionProofPollingInterval: Duration,
+    val executionProofPollsPerTick: Int = 200,
   )
 
   private val proofRequestsInProgress = ConcurrentLinkedDeque<ExecutionProofIndex>()
@@ -57,26 +58,34 @@ class ProofGeneratingConflationHandlerImpl(
     )
   }
 
-  override fun action(): SafeFuture<*> {
-    return if (proofRequestsInProgress.isNotEmpty()) {
-      val proofIndex = proofRequestsInProgress.peekFirst()
-      zkProofProductionCoordinator.isZkProofRequestProven(proofIndex).thenCompose { proven ->
-        if (proven) {
-          val batch = Batch(
-            startBlockNumber = proofIndex.startBlockNumber,
-            endBlockNumber = proofIndex.endBlockNumber,
-          )
-          log.info("execution proof generated: batch={}", batch)
-          batchProofHandler.acceptNewBatch(batch).thenApply {
-            proofRequestsInProgress.remove(proofIndex)
-          }
-        } else {
-          SafeFuture.completedFuture(Unit)
+  private fun pollProofIndex(proofIndex: ExecutionProofIndex): SafeFuture<*> {
+    return zkProofProductionCoordinator.isZkProofRequestProven(proofIndex).thenCompose { proven ->
+      if (proven) {
+        val batch = Batch(
+          startBlockNumber = proofIndex.startBlockNumber,
+          endBlockNumber = proofIndex.endBlockNumber,
+        )
+        log.info("execution proof generated: batch={}", batch)
+        batchProofHandler.acceptNewBatch(batch).thenApply {
+          proofRequestsInProgress.remove(proofIndex)
         }
+      } else {
+        SafeFuture.completedFuture(Unit)
       }
-    } else {
-      SafeFuture.completedFuture(Unit)
     }
+  }
+
+  override fun action(): SafeFuture<*> {
+    if (proofRequestsInProgress.isEmpty()) {
+      return SafeFuture.completedFuture(Unit)
+    }
+    val iterator = proofRequestsInProgress.iterator()
+    val proofIndicesToPoll = mutableListOf<ExecutionProofIndex>()
+    while (iterator.hasNext() && proofIndicesToPoll.size < config.executionProofPollsPerTick) {
+      proofIndicesToPoll.add(iterator.next())
+    }
+    val proofsPollFutures = proofIndicesToPoll.map { pollProofIndex(it) }
+    return SafeFuture.allOf(proofsPollFutures.stream())
   }
 
   override fun handleConflatedBatch(conflation: BlocksConflation): SafeFuture<*> {
