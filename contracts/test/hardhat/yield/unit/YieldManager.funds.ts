@@ -3,11 +3,9 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
+import { MockLineaRollup, TestYieldManager } from "contracts/typechain-types";
 import { ethers } from "hardhat";
 
-import { MockLineaRollup, TestYieldManager } from "contracts/typechain-types";
-import { deployYieldManagerForUnitTest } from "../helpers/deploy";
-import { addMockYieldProvider } from "../helpers/mocks";
 import {
   ONE_THOUSAND_ETHER,
   ONE_ETHER,
@@ -28,6 +26,8 @@ import {
   setWithdrawalReserveToTarget,
   YieldManagerInitializationData,
 } from "../helpers";
+import { deployYieldManagerForUnitTest } from "../helpers/deploy";
+import { addMockYieldProvider } from "../helpers/mocks";
 
 describe("YieldManager contract - ETH transfer operations", () => {
   let yieldManager: TestYieldManager;

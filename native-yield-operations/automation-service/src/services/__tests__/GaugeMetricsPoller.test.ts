@@ -1,21 +1,23 @@
-import type { ILogger, IBeaconNodeAPIClient } from "@consensys/linea-shared-utils";
-import type { IValidatorDataClient } from "../../core/clients/IValidatorDataClient.js";
-import type { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
-import type { IYieldManager } from "../../core/clients/contracts/IYieldManager.js";
-import type { IVaultHub } from "../../core/clients/contracts/IVaultHub.js";
+import { ONE_GWEI } from "@consensys/linea-shared-utils";
+
+import { createLoggerMock } from "../../__tests__/helpers/index.js";
+import { DashboardContractClient } from "../../clients/contracts/DashboardContractClient.js";
+import { YieldProviderData } from "../../core/clients/contracts/IYieldManager.js";
+import { GaugeMetricsPoller } from "../GaugeMetricsPoller.js";
+
 import type { ISTETH } from "../../core/clients/contracts/ISTETH.js";
+import type { IVaultHub } from "../../core/clients/contracts/IVaultHub.js";
+import type { IYieldManager } from "../../core/clients/contracts/IYieldManager.js";
+import type { IValidatorDataClient } from "../../core/clients/IValidatorDataClient.js";
 import type {
   ExitedValidator,
   ExitingValidator,
   ValidatorBalanceWithPendingWithdrawal,
   ValidatorBalance,
 } from "../../core/entities/Validator.js";
+import type { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
+import type { ILogger, IBeaconNodeAPIClient } from "@consensys/linea-shared-utils";
 import type { TransactionReceipt, Address } from "viem";
-import { ONE_GWEI } from "@consensys/linea-shared-utils";
-import { GaugeMetricsPoller } from "../GaugeMetricsPoller.js";
-import { YieldProviderData } from "../../core/clients/contracts/IYieldManager.js";
-import { DashboardContractClient } from "../../clients/contracts/DashboardContractClient.js";
-import { createLoggerMock } from "../../__tests__/helpers/index.js";
 
 jest.mock("../../clients/contracts/DashboardContractClient.js", () => ({
   DashboardContractClient: {

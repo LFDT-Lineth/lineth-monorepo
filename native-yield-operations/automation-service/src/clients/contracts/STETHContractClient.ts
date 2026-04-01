@@ -1,7 +1,8 @@
 import { IBlockchainClient, ILogger } from "@consensys/linea-shared-utils";
 import { Address, getContract, GetContractReturnType, PublicClient, TransactionReceipt } from "viem";
-import { ISTETH } from "../../core/clients/contracts/ISTETH.js";
+
 import { STETHABI } from "../../core/abis/STETH.js";
+import { ISTETH } from "../../core/clients/contracts/ISTETH.js";
 
 /**
  * Client for interacting with STETH smart contracts.

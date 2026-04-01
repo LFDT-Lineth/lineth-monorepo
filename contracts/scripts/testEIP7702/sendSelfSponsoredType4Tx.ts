@@ -1,6 +1,7 @@
-import { ethers } from "ethers";
-import { requireEnv, checkDelegation, getAccountInfo, createAuthorization, estimateGasFees } from "../utils";
 import * as dotenv from "dotenv";
+import { ethers } from "ethers";
+
+import { requireEnv, checkDelegation, getAccountInfo, createAuthorization, estimateGasFees } from "../utils";
 
 // Self-sponsored EIP-7702 transaction: the same wallet signs the authorization AND sends the transaction.
 // Prerequisite - Deploy a contract with NON-VIEW initialize() function, e.g. TestEIP7702Delegation

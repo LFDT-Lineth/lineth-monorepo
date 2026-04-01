@@ -1,5 +1,6 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
+
 import { TestL1MessageManager } from "../../../../typechain-types";
 import { INBOX_STATUS_UNKNOWN } from "../../common/constants";
 import { deployFromFactory } from "../../common/deployment";

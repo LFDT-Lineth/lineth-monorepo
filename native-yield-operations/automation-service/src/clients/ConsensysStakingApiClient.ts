@@ -9,6 +9,7 @@ import {
   safeSub,
   SHARD_COMMITTEE_PERIOD,
 } from "@consensys/linea-shared-utils";
+
 import { IValidatorDataClient } from "../core/clients/IValidatorDataClient.js";
 import { ALL_VALIDATORS_BY_LARGEST_BALANCE_QUERY } from "../core/entities/graphql/ActiveValidatorsByLargestBalance.js";
 import { EXITED_VALIDATORS_QUERY } from "../core/entities/graphql/ExitedValidator.js";

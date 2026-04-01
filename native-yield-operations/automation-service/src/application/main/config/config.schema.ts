@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { isAddress, getAddress, isHex } from "viem";
+import { z } from "zod";
 
 /** Reusable EVM address schema: validates then normalizes to checksummed form */
 const Address = z

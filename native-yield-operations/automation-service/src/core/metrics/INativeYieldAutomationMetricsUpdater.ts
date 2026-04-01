@@ -1,7 +1,8 @@
 import { Address, Hex } from "viem";
+
+import { OperationModeExecutionStatus } from "./LineaNativeYieldAutomationServiceMetrics.js";
 import { RebalanceDirection } from "../entities/RebalanceRequirement.js";
 import { OperationMode } from "../enums/OperationModeEnums.js";
-import { OperationModeExecutionStatus } from "./LineaNativeYieldAutomationServiceMetrics.js";
 
 export interface INativeYieldAutomationMetricsUpdater {
   recordRebalance(direction: RebalanceDirection, amountGwei: number): void;

@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+
 import { encodeData } from "./encoding";
 
 export const generateKeccak256Hash = (str: string) => generateKeccak256(["string"], [str], true);

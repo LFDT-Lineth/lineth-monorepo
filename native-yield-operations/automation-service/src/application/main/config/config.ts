@@ -1,6 +1,7 @@
 import { Hex } from "viem";
-import { FlattenedConfigSchema } from "./config.schema.js";
 import { transports } from "winston";
+
+import { FlattenedConfigSchema } from "./config.schema.js";
 
 /**
  * Converts a flattened configuration schema to a client configuration object.

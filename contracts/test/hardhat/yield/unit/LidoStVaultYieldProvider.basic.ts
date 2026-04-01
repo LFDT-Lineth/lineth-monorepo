@@ -1,4 +1,33 @@
+import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { expect } from "chai";
+import {
+  MockVaultHub,
+  MockVaultFactory,
+  MockSTETH,
+  MockLineaRollup,
+  TestYieldManager,
+  MockDashboard,
+  MockStakingVault,
+  TestLidoStVaultYieldProvider,
+  ValidatorContainerProofVerifier,
+  SSZMerkleTree,
+  TestValidatorContainerProofVerifier,
+} from "contracts/typechain-types";
+import { ZeroAddress } from "ethers";
+import { ethers } from "hardhat";
+
+import { randomBytes32 } from "../../../../common/helpers/encoding";
+import {
+  ONE_ETHER,
+  ZERO_VALUE,
+  EMPTY_CALLDATA,
+  ONE_GWEI,
+  ProgressOssificationResult,
+  YieldProviderVendor,
+  OperationType,
+  BEACON_PROOF_WITNESS_TYPE,
+} from "../../common/constants";
 import { expectRevertWithCustomError, getAccountsFixture } from "../../common/helpers";
 import {
   buildVendorExitData,
@@ -13,35 +42,7 @@ import {
   setBalance,
   setWithdrawalReserveToMinimum,
 } from "../helpers";
-import {
-  MockVaultHub,
-  MockVaultFactory,
-  MockSTETH,
-  MockLineaRollup,
-  TestYieldManager,
-  MockDashboard,
-  MockStakingVault,
-  TestLidoStVaultYieldProvider,
-  ValidatorContainerProofVerifier,
-  SSZMerkleTree,
-  TestValidatorContainerProofVerifier,
-} from "contracts/typechain-types";
-import { expect } from "chai";
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { ethers } from "hardhat";
-import { ZeroAddress } from "ethers";
-import {
-  ONE_ETHER,
-  ZERO_VALUE,
-  EMPTY_CALLDATA,
-  ONE_GWEI,
-  ProgressOssificationResult,
-  YieldProviderVendor,
-  OperationType,
-  BEACON_PROOF_WITNESS_TYPE,
-} from "../../common/constants";
 import { generateLidoUnstakePermissionlessWitness } from "../helpers/proof";
-import { randomBytes32 } from "../../../../common/helpers/encoding";
 
 describe("LidoStVaultYieldProvider contract - basic operations", () => {
   let yieldProvider: TestLidoStVaultYieldProvider;

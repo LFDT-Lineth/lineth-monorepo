@@ -1,6 +1,7 @@
-import { ethers, upgrades } from "hardhat";
-import { requireEnv } from "../hardhat/utils";
 import fs from "fs";
+import { ethers, upgrades } from "hardhat";
+
+import { requireEnv } from "../hardhat/utils";
 
 const OPENZEPPELIN_DIRECTORY = `${__dirname}/../../.openzeppelin`;
 

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "@jest/globals";
+
 import { SlidingWindowAccumulator } from "../SlidingWindowAccumulator.js";
 
 describe("SlidingWindowAccumulator", () => {

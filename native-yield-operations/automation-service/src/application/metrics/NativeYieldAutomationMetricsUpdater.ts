@@ -1,12 +1,13 @@
 import { IMetricsService } from "@consensys/linea-shared-utils";
+import { Address, Hex } from "viem";
+
+import { RebalanceDirection } from "../../core/entities/RebalanceRequirement.js";
+import { OperationMode } from "../../core/enums/OperationModeEnums.js";
+import { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
 import {
   LineaNativeYieldAutomationServiceMetrics,
   OperationModeExecutionStatus,
 } from "../../core/metrics/LineaNativeYieldAutomationServiceMetrics.js";
-import { RebalanceDirection } from "../../core/entities/RebalanceRequirement.js";
-import { Address, Hex } from "viem";
-import { OperationMode } from "../../core/enums/OperationModeEnums.js";
-import { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
 
 /**
  * Maps RebalanceDirection enum to staking direction label string for metrics.

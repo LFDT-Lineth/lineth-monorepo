@@ -1,7 +1,8 @@
 import { IBlockchainClient, ILogger } from "@consensys/linea-shared-utils";
 import { Address, getContract, GetContractReturnType, parseEventLogs, PublicClient, TransactionReceipt } from "viem";
-import { IVaultHub } from "../../core/clients/contracts/IVaultHub.js";
+
 import { VaultHubABI } from "../../core/abis/VaultHub.js";
+import { IVaultHub } from "../../core/clients/contracts/IVaultHub.js";
 
 /**
  * Client for interacting with VaultHub smart contracts.

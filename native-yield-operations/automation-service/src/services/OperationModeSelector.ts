@@ -1,11 +1,12 @@
 import { ILogger, wait } from "@consensys/linea-shared-utils";
-import { IYieldManager } from "../core/clients/contracts/IYieldManager.js";
 import { Address, TransactionReceipt } from "viem";
+
 import { IOperationLoop } from "./IOperationLoop.js";
-import { IOperationModeProcessor } from "../core/services/operation-mode/IOperationModeProcessor.js";
-import { INativeYieldAutomationMetricsUpdater } from "../core/metrics/INativeYieldAutomationMetricsUpdater.js";
+import { IYieldManager } from "../core/clients/contracts/IYieldManager.js";
 import { OperationMode } from "../core/enums/OperationModeEnums.js";
+import { INativeYieldAutomationMetricsUpdater } from "../core/metrics/INativeYieldAutomationMetricsUpdater.js";
 import { OperationModeExecutionStatus } from "../core/metrics/LineaNativeYieldAutomationServiceMetrics.js";
+import { IOperationModeProcessor } from "../core/services/operation-mode/IOperationModeProcessor.js";
 
 /**
  * Selects and executes the appropriate operation mode based on the yield provider's ossification state.

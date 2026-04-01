@@ -1,6 +1,6 @@
+import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { expectRevertWithCustomError, getAccountsFixture } from "../../common/helpers";
-import { deployLidoStVaultYieldProviderFactory } from "../helpers";
+import { expect } from "chai";
 import {
   LidoStVaultYieldProviderFactory,
   MockLineaRollup,
@@ -10,10 +10,11 @@ import {
   TestYieldManager,
   ValidatorContainerProofVerifier,
 } from "contracts/typechain-types";
-import { expect } from "chai";
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { ethers } from "hardhat";
 import { ZeroAddress } from "ethers";
+import { ethers } from "hardhat";
+
+import { expectRevertWithCustomError, getAccountsFixture } from "../../common/helpers";
+import { deployLidoStVaultYieldProviderFactory } from "../helpers";
 
 describe("LidoStVaultYieldProviderFactory", () => {
   let lidoStVaultYieldProviderFactory: LidoStVaultYieldProviderFactory;

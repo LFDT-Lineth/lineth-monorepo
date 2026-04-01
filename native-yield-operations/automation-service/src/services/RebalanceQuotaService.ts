@@ -1,8 +1,9 @@
 import { ILogger } from "@consensys/linea-shared-utils";
 import { Address } from "viem";
+
 import { RebalanceDirection } from "../core/entities/RebalanceRequirement.js";
-import { IRebalanceQuotaService } from "../core/services/IRebalanceQuotaService.js";
 import { INativeYieldAutomationMetricsUpdater } from "../core/metrics/INativeYieldAutomationMetricsUpdater.js";
+import { IRebalanceQuotaService } from "../core/services/IRebalanceQuotaService.js";
 import { SlidingWindowAccumulator } from "../utils/SlidingWindowAccumulator.js";
 
 /**

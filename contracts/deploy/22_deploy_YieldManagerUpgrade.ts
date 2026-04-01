@@ -1,7 +1,8 @@
-import { DeployFunction } from "hardhat-deploy/types";
 import { ethers } from "hardhat";
-import { deployFromFactory } from "../scripts/hardhat/utils";
+import { DeployFunction } from "hardhat-deploy/types";
+
 import { getRequiredEnvVar, LogContractDeployment, tryVerifyContractWithConstructorArgs } from "../common/helpers";
+import { deployFromFactory } from "../scripts/hardhat/utils";
 
 const func: DeployFunction = async function () {
   const lineaRollupAddress = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS");

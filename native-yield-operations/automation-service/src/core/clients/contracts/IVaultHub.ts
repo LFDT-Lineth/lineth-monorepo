@@ -1,5 +1,5 @@
-import { Address } from "viem";
 import { IBaseContractClient } from "@consensys/linea-shared-utils";
+import { Address } from "viem";
 
 export interface IVaultHub<TTransactionReceipt> extends IBaseContractClient {
   getLiabilityPaymentFromTxReceipt(txReceipt: TTransactionReceipt): bigint;

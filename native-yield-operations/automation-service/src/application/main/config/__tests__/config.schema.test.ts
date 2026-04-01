@@ -1,5 +1,6 @@
-import { configSchema } from "../config.schema.js";
 import { getAddress } from "viem";
+
+import { configSchema } from "../config.schema.js";
 
 const VALID_CHAIN_ID = "11155111";
 const INVALID_ETH_ADDRESS = "0xinvalid";

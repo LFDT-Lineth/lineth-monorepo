@@ -1,8 +1,8 @@
 import "colors";
-import fs from "fs";
-import path from "path";
-import { artifacts } from "hardhat";
 import Diff from "diff";
+import fs from "fs";
+import { artifacts } from "hardhat";
+import path from "path";
 
 const UNCHANGED_COLOR = "grey";
 const MAX_UNCHANGED_PART_LEN = 100;

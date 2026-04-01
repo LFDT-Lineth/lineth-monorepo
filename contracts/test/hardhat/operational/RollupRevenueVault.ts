@@ -1,8 +1,12 @@
-import { ethers, network } from "hardhat";
-import { expect } from "chai";
 import { toChecksumAddress } from "@ethereumjs/util";
-import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
+import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
+import { expect } from "chai";
+import { ethers, network } from "hardhat";
+
+import { ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE } from "./constants";
+import { getRollupRevenueVaultAccountsFixture } from "./helpers/before";
+import { deployRollupRevenueVaultFixture } from "./helpers/deploy";
 import {
   L2MessageService,
   RollupRevenueVault,
@@ -11,9 +15,8 @@ import {
   TestDexSwapAdapter,
   TestDexSwapAdapter__factory,
 } from "../../../typechain-types";
-import { getRollupRevenueVaultAccountsFixture } from "./helpers/before";
-import { deployRollupRevenueVaultFixture } from "./helpers/deploy";
 import { ADDRESS_ZERO, EMPTY_CALLDATA, ONE_DAY_IN_SECONDS } from "../common/constants";
+import { deployUpgradableFromFactory } from "../common/deployment";
 import {
   expectEvent,
   expectNoEvent,
@@ -21,8 +24,6 @@ import {
   expectRevertWithReason,
   generateRandomBytes,
 } from "../common/helpers";
-import { deployUpgradableFromFactory } from "../common/deployment";
-import { ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE } from "./constants";
 
 describe("RollupRevenueVault", () => {
   let rollupRevenueVault: RollupRevenueVault;

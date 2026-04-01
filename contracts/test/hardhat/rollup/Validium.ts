@@ -1,17 +1,16 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-
-import firstCompressedDataContent from "../_testData/compressedData/blocks-1-46.json";
-import secondCompressedDataContent from "../_testData/compressedData/blocks-47-81.json";
-
 import {
   VALIDIUM_PAUSE_TYPES_ROLES,
   VALIDIUM_UNPAUSE_TYPES_ROLES,
   STATE_DATA_SUBMISSION_PAUSE_TYPE,
 } from "contracts/common/constants";
 import { TestValidium } from "contracts/typechain-types";
+
 import { deployValidiumFixture, getAccountsFixture, getValidiumRoleAddressesFixture } from "./helpers";
+import firstCompressedDataContent from "../_testData/compressedData/blocks-1-46.json";
+import secondCompressedDataContent from "../_testData/compressedData/blocks-47-81.json";
 import {
   ADDRESS_ZERO,
   GENERAL_PAUSE_TYPE,

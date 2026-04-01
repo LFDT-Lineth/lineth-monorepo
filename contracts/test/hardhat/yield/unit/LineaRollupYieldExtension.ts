@@ -2,9 +2,10 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
+import { MockYieldManager__factory, TestLineaRollup } from "contracts/typechain-types";
 import { ethers } from "hardhat";
 
-import { MockYieldManager__factory, TestLineaRollup } from "contracts/typechain-types";
+import { encodeSendMessage } from "../../../../common/helpers/encoding";
 import {
   ADDRESS_ZERO,
   EMPTY_CALLDATA,
@@ -26,7 +27,6 @@ import {
   calculateRollingHash,
   getAccountsFixture,
 } from "../../common/helpers";
-import { encodeSendMessage } from "../../../../common/helpers/encoding";
 import { deployLineaRollupFixture } from "../../rollup/helpers/deploy";
 
 describe("Linea Rollup Yield Extension", () => {

@@ -1,14 +1,15 @@
+import { Mimc } from "contracts/typechain-types";
+import { toBeHex } from "ethers";
 import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
-import { deployFromFactory, deployFromFactoryWithOpts } from "../scripts/hardhat/utils";
+
 import {
   getRequiredEnvVar,
   LogContractDeployment,
   tryVerifyContract,
   tryVerifyContractWithConstructorArgs,
 } from "../common/helpers";
-import { toBeHex } from "ethers";
-import { Mimc } from "contracts/typechain-types";
+import { deployFromFactory, deployFromFactoryWithOpts } from "../scripts/hardhat/utils";
 
 const func: DeployFunction = async function () {
   const contractName = getRequiredEnvVar("VERIFIER_CONTRACT_NAME");

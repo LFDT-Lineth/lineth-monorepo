@@ -9,9 +9,10 @@
  */
 
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { ethers } from "hardhat";
 import { LINEA_ROLLUP_V8_ROLES, VALIDIUM_ROLES } from "contracts/common/constants";
 import { generateRoleAssignments } from "contracts/common/helpers";
+import { ethers } from "hardhat";
+
 import { OPERATOR_ROLE } from "../../common/constants";
 
 // Use in `loadFixture(getAccountsFixture))` and not as a standalone function.

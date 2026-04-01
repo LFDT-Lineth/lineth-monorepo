@@ -1,9 +1,10 @@
+import { IBaseContractClient } from "@consensys/linea-shared-utils";
 import { Address } from "viem";
+
 import { WithdrawalRequests } from "../../entities/LidoStakingVaultWithdrawalParams.js";
 import { RebalanceRequirement } from "../../entities/RebalanceRequirement.js";
-import { IBaseContractClient } from "@consensys/linea-shared-utils";
-import { YieldReport } from "../../entities/YieldReport.js";
 import { WithdrawalEvent } from "../../entities/WithdrawalEvent.js";
+import { YieldReport } from "../../entities/YieldReport.js";
 
 export interface IYieldManager<TTransactionReceipt> extends IBaseContractClient {
   // View calls

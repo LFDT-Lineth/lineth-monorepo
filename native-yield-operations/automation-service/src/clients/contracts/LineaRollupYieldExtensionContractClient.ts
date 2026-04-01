@@ -7,6 +7,7 @@ import {
   PublicClient,
   TransactionReceipt,
 } from "viem";
+
 import { LineaRollupYieldExtensionABI } from "../../core/abis/LineaRollupYieldExtension.js";
 import { ILineaRollupYieldExtension } from "../../core/clients/contracts/ILineaRollupYieldExtension.js";
 

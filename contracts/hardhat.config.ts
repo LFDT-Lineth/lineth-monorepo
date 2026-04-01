@@ -1,14 +1,16 @@
+import "@nomicfoundation/hardhat-foundry";
 import "@nomicfoundation/hardhat-toolbox";
-import "@nomicfoundation/hardhat-foundry";
 import "@openzeppelin/hardhat-upgrades";
-import "@nomicfoundation/hardhat-foundry";
 import * as dotenv from "dotenv";
 import "hardhat-deploy";
 import "hardhat-storage-layout";
 // import "hardhat-tracer"; // This plugin does not work with the latest hardhat version
 import { HardhatUserConfig } from "hardhat/config";
+import "solidity-docgen";
+
 import { getBlockchainNode, getL2BlockchainNode } from "./common";
 import { SupportedChainIds } from "./common/supportedNetworks";
+import { overrides } from "./hardhat_overrides";
 import "./scripts/operational/tasks/getCurrentFinalizedBlockNumberTask";
 import "./scripts/operational/tasks/grantContractRolesTask";
 import "./scripts/operational/tasks/renounceContractRolesTask";
@@ -20,9 +22,6 @@ import "./scripts/operational/yieldBoost/prepareInitiateOssification";
 import "./scripts/operational/yieldBoost/testing/addAndClaimMessage";
 import "./scripts/operational/yieldBoost/testing/addAndClaimMessageForLST";
 import "./scripts/operational/yieldBoost/testing/unstakePermissionless";
-
-import "solidity-docgen";
-import { overrides } from "./hardhat_overrides";
 
 dotenv.config();
 

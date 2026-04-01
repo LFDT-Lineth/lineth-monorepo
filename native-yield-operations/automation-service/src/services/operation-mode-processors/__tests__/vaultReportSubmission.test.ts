@@ -1,13 +1,15 @@
-import { ILogger } from "@consensys/linea-shared-utils";
+import { attempt } from "@consensys/linea-shared-utils";
 import { jest, describe, it, expect, beforeEach } from "@jest/globals";
 import { ResultAsync, ok, err } from "neverthrow";
-import type { Address, TransactionReceipt } from "viem";
 
 import { createLoggerMock } from "../../../__tests__/helpers/index.js";
-import type { INativeYieldAutomationMetricsUpdater } from "../../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
-import type { ILidoAccountingReportClient } from "../../../core/clients/ILidoAccountingReportClient.js";
-import type { IVaultHub } from "../../../core/clients/contracts/IVaultHub.js";
 import { submitVaultReportIfNotFresh } from "../vaultReportSubmission.js";
+
+import type { IVaultHub } from "../../../core/clients/contracts/IVaultHub.js";
+import type { ILidoAccountingReportClient } from "../../../core/clients/ILidoAccountingReportClient.js";
+import type { INativeYieldAutomationMetricsUpdater } from "../../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
+import type { ILogger } from "@consensys/linea-shared-utils";
+import type { Address, TransactionReceipt } from "viem";
 
 jest.mock("@consensys/linea-shared-utils", () => {
   const actual = jest.requireActual("@consensys/linea-shared-utils") as typeof import("@consensys/linea-shared-utils");
@@ -16,8 +18,6 @@ jest.mock("@consensys/linea-shared-utils", () => {
     attempt: jest.fn(),
   };
 });
-
-import { attempt } from "@consensys/linea-shared-utils";
 
 const attemptMock = attempt as jest.MockedFunction<typeof attempt>;
 

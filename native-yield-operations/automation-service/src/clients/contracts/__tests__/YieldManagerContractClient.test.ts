@@ -1,17 +1,22 @@
-import { mock, MockProxy } from "jest-mock-extended";
-import type { ILogger, IBlockchainClient } from "@consensys/linea-shared-utils";
 import { absDiff, ONE_ETHER, weiToGweiNumber } from "@consensys/linea-shared-utils";
-import type { Address, Hex, PublicClient, TransactionReceipt } from "viem";
-import { YieldManagerABI } from "../../../core/abis/YieldManager.js";
-import { StakingVaultABI } from "../../../core/abis/StakingVault.js";
+import { mock, MockProxy } from "jest-mock-extended";
+import { concat, encodeAbiParameters, encodeFunctionData, getContract, parseEventLogs } from "viem";
+
 import { DashboardErrorsABI } from "../../../core/abis/errors/DashboardErrors.js";
 import { LidoStVaultYieldProviderErrorsABI } from "../../../core/abis/errors/LidoStVaultYieldProviderErrors.js";
 import { StakingVaultErrorsABI } from "../../../core/abis/errors/StakingVaultErrors.js";
 import { VaultHubErrorsABI } from "../../../core/abis/errors/VaultHubErrors.js";
+import { StakingVaultABI } from "../../../core/abis/StakingVault.js";
+import { YieldManagerABI } from "../../../core/abis/YieldManager.js";
 import { RebalanceDirection } from "../../../core/entities/RebalanceRequirement.js";
+import { DashboardContractClient } from "../DashboardContractClient.js";
+import { YieldManagerContractClient } from "../YieldManagerContractClient.js";
+
 import type { WithdrawalRequests } from "../../../core/entities/LidoStakingVaultWithdrawalParams.js";
 import type { INativeYieldAutomationMetricsUpdater } from "../../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
 import type { IRebalanceQuotaService } from "../../../core/services/IRebalanceQuotaService.js";
+import type { ILogger, IBlockchainClient } from "@consensys/linea-shared-utils";
+import type { Address, Hex, PublicClient, TransactionReceipt } from "viem";
 
 const YieldManagerCombinedABI = [
   ...YieldManagerABI,
@@ -32,16 +37,12 @@ jest.mock("viem", () => {
   };
 });
 
-import { concat, getContract, encodeFunctionData, parseEventLogs, encodeAbiParameters } from "viem";
-
 jest.mock("../DashboardContractClient.js", () => ({
   DashboardContractClient: {
     getOrCreate: jest.fn(),
     initialize: jest.fn(),
   },
 }));
-
-import { DashboardContractClient } from "../DashboardContractClient.js";
 
 const mockedGetContract = getContract as jest.MockedFunction<typeof getContract>;
 const mockedEncodeFunctionData = encodeFunctionData as jest.MockedFunction<typeof encodeFunctionData>;
@@ -50,12 +51,6 @@ const mockedEncodeAbiParameters = encodeAbiParameters as jest.MockedFunction<typ
 const mockedDashboardContractClientGetOrCreate = DashboardContractClient.getOrCreate as jest.MockedFunction<
   typeof DashboardContractClient.getOrCreate
 >;
-
-let YieldManagerContractClient: typeof import("../YieldManagerContractClient.js").YieldManagerContractClient;
-
-beforeAll(async () => {
-  ({ YieldManagerContractClient } = await import("../YieldManagerContractClient.js"));
-});
 
 describe("YieldManagerContractClient", () => {
   // Semantic constants

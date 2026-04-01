@@ -1,25 +1,5 @@
+import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { ethers, upgrades } from "hardhat";
-
-import {
-  YIELD_MANAGER_PAUSE_TYPES_ROLES,
-  YIELD_MANAGER_UNPAUSE_TYPES_ROLES,
-  YIELD_MANAGER_OPERATOR_ROLES,
-  YIELD_MANAGER_SECURITY_COUNCIL_ROLES,
-  YIELD_MANAGER_INITIALIZE_SIGNATURE,
-} from "../../../../common/constants";
-import {
-  MINIMUM_WITHDRAWAL_RESERVE_PERCENTAGE_BPS,
-  TARGET_WITHDRAWAL_RESERVE_PERCENTAGE_BPS,
-  MINIMUM_WITHDRAWAL_RESERVE_AMOUNT,
-  TARGET_WITHDRAWAL_RESERVE_AMOUNT,
-  GI_FIRST_VALIDATOR,
-  GI_PENDING_PARTIAL_WITHDRAWALS_ROOT,
-  YIELD_PROVIDER_STAKING_ROLE,
-  ONE_ETHER,
-} from "../../common/constants";
-import { generateRoleAssignments } from "../../../../common/helpers";
-import { deployUpgradableWithConstructorArgs } from "../../common/deployment";
 import {
   TestYieldManager,
   MockLineaRollup,
@@ -36,13 +16,32 @@ import {
   SSZMerkleTree,
   TestLidoStVaultYieldProviderFactory,
 } from "contracts/typechain-types";
-import { YieldManagerInitializationData } from "./types";
+import { ethers, upgrades } from "hardhat";
 
-import { getAccountsFixture } from "../../common/helpers";
-import { deployLineaRollupFixture } from "../../rollup/helpers/deploy";
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { buildVendorInitializationData } from "./mocks";
 import { incrementBalance } from "./setup";
+import { YieldManagerInitializationData } from "./types";
+import {
+  YIELD_MANAGER_PAUSE_TYPES_ROLES,
+  YIELD_MANAGER_UNPAUSE_TYPES_ROLES,
+  YIELD_MANAGER_OPERATOR_ROLES,
+  YIELD_MANAGER_SECURITY_COUNCIL_ROLES,
+  YIELD_MANAGER_INITIALIZE_SIGNATURE,
+} from "../../../../common/constants";
+import { generateRoleAssignments } from "../../../../common/helpers";
+import {
+  MINIMUM_WITHDRAWAL_RESERVE_PERCENTAGE_BPS,
+  TARGET_WITHDRAWAL_RESERVE_PERCENTAGE_BPS,
+  MINIMUM_WITHDRAWAL_RESERVE_AMOUNT,
+  TARGET_WITHDRAWAL_RESERVE_AMOUNT,
+  GI_FIRST_VALIDATOR,
+  GI_PENDING_PARTIAL_WITHDRAWALS_ROOT,
+  YIELD_PROVIDER_STAKING_ROLE,
+  ONE_ETHER,
+} from "../../common/constants";
+import { deployUpgradableWithConstructorArgs } from "../../common/deployment";
+import { getAccountsFixture } from "../../common/helpers";
+import { deployLineaRollupFixture } from "../../rollup/helpers/deploy";
 
 async function getYieldManagerRoleAddressesFixture(): Promise<
   {

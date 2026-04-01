@@ -1,9 +1,9 @@
+import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
+import { TestLineaRollup } from "contracts/typechain-types";
 import { BaseContract, Contract, Transaction } from "ethers";
 import { ethers } from "hardhat";
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { TestLineaRollup } from "contracts/typechain-types";
 import { getWalletForIndex } from "./";
 import { HASH_ZERO, TEST_PUBLIC_VERIFIER_INDEX } from "../../common/constants";
 import {

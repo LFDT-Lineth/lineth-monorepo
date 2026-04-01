@@ -1,5 +1,6 @@
-import { Address } from "viem";
 import { IEstimateGasErrorReporter } from "@consensys/linea-shared-utils";
+import { Address } from "viem";
+
 import { INativeYieldAutomationMetricsUpdater } from "../metrics/INativeYieldAutomationMetricsUpdater.js";
 
 /**

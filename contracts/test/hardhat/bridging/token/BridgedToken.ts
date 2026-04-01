@@ -1,6 +1,7 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
+
 import { BridgedToken, UpgradedBridgedToken } from "../../../../typechain-types";
 
 const initialUserBalance = 10000;

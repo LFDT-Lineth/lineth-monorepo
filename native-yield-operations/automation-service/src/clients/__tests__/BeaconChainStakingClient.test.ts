@@ -1,19 +1,20 @@
-import { jest } from "@jest/globals";
 import { MINIMUM_0X02_VALIDATOR_EFFECTIVE_BALANCE, ONE_GWEI } from "@consensys/linea-shared-utils";
-import type { Address, Hex, TransactionReceipt } from "viem";
+import { jest } from "@jest/globals";
 
-import { BeaconChainStakingClient } from "../BeaconChainStakingClient.js";
 import { createLoggerMock, createMetricsUpdaterMock } from "../../__tests__/helpers/index.js";
-import type { IValidatorDataClient } from "../../core/clients/IValidatorDataClient.js";
+import { BeaconChainStakingClient } from "../BeaconChainStakingClient.js";
+
 import type { IYieldManager } from "../../core/clients/contracts/IYieldManager.js";
+import type { IValidatorDataClient } from "../../core/clients/IValidatorDataClient.js";
+import type { WithdrawalRequests } from "../../core/entities/LidoStakingVaultWithdrawalParams.js";
 import type {
   ExitedValidator,
   ExitingValidator,
   ValidatorBalance,
   ValidatorBalanceWithPendingWithdrawal,
 } from "../../core/entities/Validator.js";
-import type { WithdrawalRequests } from "../../core/entities/LidoStakingVaultWithdrawalParams.js";
 import type { PendingPartialWithdrawal } from "@consensys/linea-shared-utils";
+import type { Address, Hex, TransactionReceipt } from "viem";
 
 // Test constants
 const YIELD_PROVIDER = "0xyieldprovider" as Address;

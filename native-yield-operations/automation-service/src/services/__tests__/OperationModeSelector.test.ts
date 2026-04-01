@@ -1,12 +1,15 @@
+import { wait } from "@consensys/linea-shared-utils";
 import { jest, describe, it, expect, beforeEach } from "@jest/globals";
-import type { ILogger } from "@consensys/linea-shared-utils";
-import type { Address, TransactionReceipt } from "viem";
 
-import type { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
-import type { IYieldManager } from "../../core/clients/contracts/IYieldManager.js";
-import type { IOperationModeProcessor } from "../../core/services/operation-mode/IOperationModeProcessor.js";
 import { OperationMode } from "../../core/enums/OperationModeEnums.js";
 import { OperationModeExecutionStatus } from "../../core/metrics/LineaNativeYieldAutomationServiceMetrics.js";
+import { OperationModeSelector } from "../OperationModeSelector.js";
+
+import type { IYieldManager } from "../../core/clients/contracts/IYieldManager.js";
+import type { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
+import type { IOperationModeProcessor } from "../../core/services/operation-mode/IOperationModeProcessor.js";
+import type { ILogger } from "@consensys/linea-shared-utils";
+import type { Address, TransactionReceipt } from "viem";
 
 jest.mock("@consensys/linea-shared-utils", () => {
   const actual = jest.requireActual<typeof import("@consensys/linea-shared-utils")>("@consensys/linea-shared-utils");
@@ -16,8 +19,7 @@ jest.mock("@consensys/linea-shared-utils", () => {
   };
 });
 
-import { wait } from "@consensys/linea-shared-utils";
-import { OperationModeSelector } from "../OperationModeSelector.js";
+const waitMock = wait as jest.MockedFunction<typeof wait>;
 
 const createLoggerMock = (): jest.Mocked<ILogger> => ({
   name: "test-logger",
@@ -33,16 +35,15 @@ describe("OperationModeSelector", () => {
   const TEST_RETRY_TIME_MS = 123;
   const CUSTOM_RETRY_TIME_MS = 321;
 
-  let selector: OperationModeSelector;
   let logger: jest.Mocked<ILogger>;
   let metricsUpdater: jest.Mocked<INativeYieldAutomationMetricsUpdater>;
   let yieldManager: jest.Mocked<IYieldManager<TransactionReceipt>>;
   let yieldReportingProcessor: jest.Mocked<IOperationModeProcessor>;
   let ossificationPendingProcessor: jest.Mocked<IOperationModeProcessor>;
   let ossificationCompleteProcessor: jest.Mocked<IOperationModeProcessor>;
-  let waitMock: jest.MockedFunction<typeof wait>;
+  let selector: InstanceType<typeof OperationModeSelector>;
 
-  const createSelector = (retryTime: number = TEST_RETRY_TIME_MS): OperationModeSelector =>
+  const createSelector = (retryTime: number = TEST_RETRY_TIME_MS): InstanceType<typeof OperationModeSelector> =>
     new OperationModeSelector(
       logger,
       metricsUpdater,
@@ -106,8 +107,6 @@ describe("OperationModeSelector", () => {
     ossificationCompleteProcessor = {
       process: jest.fn(),
     } as jest.Mocked<IOperationModeProcessor>;
-
-    waitMock = wait as jest.MockedFunction<typeof wait>;
     waitMock.mockResolvedValue(undefined);
   });
 

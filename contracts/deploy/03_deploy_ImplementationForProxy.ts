@@ -1,5 +1,6 @@
 import { ethers, upgrades } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
+
 import { getRequiredEnvVar, tryVerifyContract } from "../common/helpers";
 
 const func: DeployFunction = async function () {

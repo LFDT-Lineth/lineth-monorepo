@@ -1,10 +1,9 @@
-import { ethers, network } from "hardhat";
-import { expect } from "chai";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { deployFromFactory, deployUpgradableFromFactory } from "../common/deployment";
+import { expect } from "chai";
+import { ethers, network } from "hardhat";
+
 import { L1LineaTokenBurner, MockL1LineaToken, TestL1MessageServiceMerkleProof } from "../../../typechain-types";
-import { expectEvent, expectRevertWithCustomError } from "../common/helpers";
 import {
   ADDRESS_ZERO,
   EMPTY_CALLDATA,
@@ -15,6 +14,8 @@ import {
   unpauseTypeRoles,
   VALID_MERKLE_PROOF_WITH_ZERO_FEE,
 } from "../common/constants";
+import { deployFromFactory, deployUpgradableFromFactory } from "../common/deployment";
+import { expectEvent, expectRevertWithCustomError } from "../common/helpers";
 
 // TODO: Dynamically generate a valid merkle proof for testing instead of using a hardcoded one.
 // Should trigger a call to the token bridge to mint tokens on L1 to the burner address as part of the test setup.

@@ -1,5 +1,5 @@
-import { configSchema } from "./config.schema.js";
 import { toClientConfig } from "./config.js";
+import { configSchema } from "./config.schema.js";
 
 /**
  * Loads and validates configuration from environment variables.

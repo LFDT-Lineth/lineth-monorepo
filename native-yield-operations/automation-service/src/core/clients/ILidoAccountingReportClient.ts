@@ -1,4 +1,5 @@
 import { Address } from "viem";
+
 import { UpdateVaultDataParams } from "./contracts/ILazyOracle.js";
 
 export interface ILidoAccountingReportClient {

@@ -1,14 +1,15 @@
 // Take operation results and record the relevant figures into metrics
 
-import { Address, TransactionReceipt } from "viem";
-import { Result } from "neverthrow";
-import { IOperationModeMetricsRecorder } from "../../core/metrics/IOperationModeMetricsRecorder.js";
-import { IYieldManager } from "../../core/clients/contracts/IYieldManager.js";
 import { ILogger, weiToGweiNumber } from "@consensys/linea-shared-utils";
-import { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
-import { IVaultHub } from "../../core/clients/contracts/IVaultHub.js";
+import { Result } from "neverthrow";
+import { Address, TransactionReceipt } from "viem";
+
 import { DashboardContractClient } from "../../clients/contracts/DashboardContractClient.js";
+import { IVaultHub } from "../../core/clients/contracts/IVaultHub.js";
+import { IYieldManager } from "../../core/clients/contracts/IYieldManager.js";
 import { RebalanceDirection } from "../../core/entities/RebalanceRequirement.js";
+import { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
+import { IOperationModeMetricsRecorder } from "../../core/metrics/IOperationModeMetricsRecorder.js";
 
 /**
  * Take operation results and record the relevant figures into metrics.

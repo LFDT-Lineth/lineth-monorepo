@@ -1,3 +1,4 @@
+import { ApolloClient } from "@apollo/client";
 import {
   ExponentialBackoffRetryService,
   ExpressApiApplication,
@@ -7,9 +8,6 @@ import {
   IRetryService,
   WinstonLogger,
 } from "@consensys/linea-shared-utils";
-import { NativeYieldAutomationServiceBootstrapConfig } from "./config/config.js";
-import { IOperationLoop } from "../../services/IOperationLoop.js";
-import { OperationModeSelector } from "../../services/OperationModeSelector.js";
 import {
   IBlockchainClient,
   ViemBlockchainClientAdapter,
@@ -21,41 +19,44 @@ import {
   OAuth2TokenClient,
 } from "@consensys/linea-shared-utils";
 import { Chain, PublicClient, TransactionReceipt } from "viem";
-import { YieldManagerContractClient } from "../../clients/contracts/YieldManagerContractClient.js";
-import { IYieldManager } from "../../core/clients/contracts/IYieldManager.js";
-import { YieldReportingProcessor } from "../../services/operation-mode-processors/YieldReportingProcessor.js";
-import { LazyOracleContractClient } from "../../clients/contracts/LazyOracleContractClient.js";
-import { ILazyOracle } from "../../core/clients/contracts/ILazyOracle.js";
-import { ApolloClient } from "@apollo/client";
-import { ILineaRollupYieldExtension } from "../../core/clients/contracts/ILineaRollupYieldExtension.js";
-import { LineaRollupYieldExtensionContractClient } from "../../clients/contracts/LineaRollupYieldExtensionContractClient.js";
-import { IOperationModeProcessor } from "../../core/services/operation-mode/IOperationModeProcessor.js";
-import { ILidoAccountingReportClient } from "../../core/clients/ILidoAccountingReportClient.js";
-import { IBeaconChainStakingClient } from "../../core/clients/IBeaconChainStakingClient.js";
-import { IValidatorDataClient } from "../../core/clients/IValidatorDataClient.js";
-import { ConsensysStakingApiClient } from "../../clients/ConsensysStakingApiClient.js";
-import { LidoAccountingReportClient } from "../../clients/LidoAccountingReportClient.js";
-import { BeaconChainStakingClient } from "../../clients/BeaconChainStakingClient.js";
-import { OssificationCompleteProcessor } from "../../services/operation-mode-processors/OssificationCompleteProcessor.js";
-import { OssificationPendingProcessor } from "../../services/operation-mode-processors/OssificationPendingProcessor.js";
 import { mainnet, hoodi } from "viem/chains";
-import { createApolloClient } from "../../utils/createApolloClient.js";
-import { LineaNativeYieldAutomationServiceMetrics } from "../../core/metrics/LineaNativeYieldAutomationServiceMetrics.js";
-import { NativeYieldAutomationMetricsService } from "../metrics/NativeYieldAutomationMetricsService.js";
-import { NativeYieldAutomationMetricsUpdater } from "../metrics/NativeYieldAutomationMetricsUpdater.js";
-import { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
-import { IVaultHub } from "../../core/clients/contracts/IVaultHub.js";
-import { VaultHubContractClient } from "../../clients/contracts/VaultHubContractClient.js";
-import { IOperationModeMetricsRecorder } from "../../core/metrics/IOperationModeMetricsRecorder.js";
-import { OperationModeMetricsRecorder } from "../metrics/OperationModeMetricsRecorder.js";
+
+import { NativeYieldAutomationServiceBootstrapConfig } from "./config/config.js";
+import { BeaconChainStakingClient } from "../../clients/BeaconChainStakingClient.js";
+import { ConsensysStakingApiClient } from "../../clients/ConsensysStakingApiClient.js";
 import { DashboardContractClient } from "../../clients/contracts/DashboardContractClient.js";
+import { LazyOracleContractClient } from "../../clients/contracts/LazyOracleContractClient.js";
+import { LineaRollupYieldExtensionContractClient } from "../../clients/contracts/LineaRollupYieldExtensionContractClient.js";
 import { StakingVaultContractClient } from "../../clients/contracts/StakingVaultContractClient.js";
 import { STETHContractClient } from "../../clients/contracts/STETHContractClient.js";
+import { VaultHubContractClient } from "../../clients/contracts/VaultHubContractClient.js";
+import { YieldManagerContractClient } from "../../clients/contracts/YieldManagerContractClient.js";
+import { LidoAccountingReportClient } from "../../clients/LidoAccountingReportClient.js";
+import { ILazyOracle } from "../../core/clients/contracts/ILazyOracle.js";
+import { ILineaRollupYieldExtension } from "../../core/clients/contracts/ILineaRollupYieldExtension.js";
 import { ISTETH } from "../../core/clients/contracts/ISTETH.js";
-import { GaugeMetricsPoller } from "../../services/GaugeMetricsPoller.js";
-import { EstimateGasErrorReporter } from "../../core/services/EstimateGasErrorReporter.js";
-import { RebalanceQuotaService } from "../../services/RebalanceQuotaService.js";
+import { IVaultHub } from "../../core/clients/contracts/IVaultHub.js";
+import { IYieldManager } from "../../core/clients/contracts/IYieldManager.js";
+import { IBeaconChainStakingClient } from "../../core/clients/IBeaconChainStakingClient.js";
+import { ILidoAccountingReportClient } from "../../core/clients/ILidoAccountingReportClient.js";
+import { IValidatorDataClient } from "../../core/clients/IValidatorDataClient.js";
 import { RebalanceDirection } from "../../core/entities/RebalanceRequirement.js";
+import { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
+import { IOperationModeMetricsRecorder } from "../../core/metrics/IOperationModeMetricsRecorder.js";
+import { LineaNativeYieldAutomationServiceMetrics } from "../../core/metrics/LineaNativeYieldAutomationServiceMetrics.js";
+import { EstimateGasErrorReporter } from "../../core/services/EstimateGasErrorReporter.js";
+import { IOperationModeProcessor } from "../../core/services/operation-mode/IOperationModeProcessor.js";
+import { GaugeMetricsPoller } from "../../services/GaugeMetricsPoller.js";
+import { IOperationLoop } from "../../services/IOperationLoop.js";
+import { OssificationCompleteProcessor } from "../../services/operation-mode-processors/OssificationCompleteProcessor.js";
+import { OssificationPendingProcessor } from "../../services/operation-mode-processors/OssificationPendingProcessor.js";
+import { YieldReportingProcessor } from "../../services/operation-mode-processors/YieldReportingProcessor.js";
+import { OperationModeSelector } from "../../services/OperationModeSelector.js";
+import { RebalanceQuotaService } from "../../services/RebalanceQuotaService.js";
+import { createApolloClient } from "../../utils/createApolloClient.js";
+import { NativeYieldAutomationMetricsService } from "../metrics/NativeYieldAutomationMetricsService.js";
+import { NativeYieldAutomationMetricsUpdater } from "../metrics/NativeYieldAutomationMetricsUpdater.js";
+import { OperationModeMetricsRecorder } from "../metrics/OperationModeMetricsRecorder.js";
 
 /**
  * Bootstrap class for the Native Yield Automation Service.

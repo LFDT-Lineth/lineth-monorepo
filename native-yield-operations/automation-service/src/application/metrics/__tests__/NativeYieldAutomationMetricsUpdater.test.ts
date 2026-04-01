@@ -1,13 +1,14 @@
-import { jest } from "@jest/globals";
 import { IMetricsService } from "@consensys/linea-shared-utils";
-import { NativeYieldAutomationMetricsUpdater } from "../NativeYieldAutomationMetricsUpdater.js";
+import { jest } from "@jest/globals";
+import { Address, Hex } from "viem";
+
+import { RebalanceDirection } from "../../../core/entities/RebalanceRequirement.js";
+import { OperationMode } from "../../../core/enums/OperationModeEnums.js";
 import {
   LineaNativeYieldAutomationServiceMetrics,
   OperationModeExecutionStatus,
 } from "../../../core/metrics/LineaNativeYieldAutomationServiceMetrics.js";
-import { RebalanceDirection } from "../../../core/entities/RebalanceRequirement.js";
-import { OperationMode } from "../../../core/enums/OperationModeEnums.js";
-import { Address, Hex } from "viem";
+import { NativeYieldAutomationMetricsUpdater } from "../NativeYieldAutomationMetricsUpdater.js";
 
 // Test data constants
 const VALIDATOR_PUBKEY = "0xvalidator" as Hex;

@@ -1,6 +1,7 @@
-import { ethers } from "ethers";
-import { requireEnv, checkDelegation, getAccountInfo, createAuthorization, estimateGasFees } from "../utils";
 import * as dotenv from "dotenv";
+import { ethers } from "ethers";
+
+import { requireEnv, checkDelegation, getAccountInfo, createAuthorization, estimateGasFees } from "../utils";
 
 // Sponsored EIP-7702 transaction: one wallet (authority) signs the authorization,
 // a different wallet (sponsor) sends and pays for the transaction.

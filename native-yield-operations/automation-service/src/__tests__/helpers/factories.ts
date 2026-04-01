@@ -1,5 +1,5 @@
-import type { ILogger } from "@consensys/linea-shared-utils";
 import type { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
+import type { ILogger } from "@consensys/linea-shared-utils";
 
 /**
  * Creates a mock logger for testing.

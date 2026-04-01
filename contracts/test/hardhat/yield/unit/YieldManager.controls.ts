@@ -1,11 +1,9 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
+import { TestYieldManager } from "contracts/typechain-types";
 import { ethers } from "hardhat";
 
-import { TestYieldManager } from "contracts/typechain-types";
-import { deployYieldManagerForUnitTest } from "../helpers/deploy";
-import { addMockYieldProvider } from "../helpers/mocks";
 import {
   GENERAL_PAUSE_TYPE,
   NATIVE_YIELD_STAKING_PAUSE_TYPE,
@@ -14,8 +12,10 @@ import {
   NATIVE_YIELD_REPORTING_PAUSE_TYPE,
   ProgressOssificationResult,
 } from "../../common/constants";
-import { setWithdrawalReserveBalance, setWithdrawalReserveToMinimum } from "../helpers/setup";
 import { buildAccessErrorMessage, expectRevertWithCustomError, getAccountsFixture } from "../../common/helpers";
+import { deployYieldManagerForUnitTest } from "../helpers/deploy";
+import { addMockYieldProvider } from "../helpers/mocks";
+import { setWithdrawalReserveBalance, setWithdrawalReserveToMinimum } from "../helpers/setup";
 
 describe("YieldManager contract - control operations", () => {
   let yieldManager: TestYieldManager;

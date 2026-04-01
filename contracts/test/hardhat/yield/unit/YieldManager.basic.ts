@@ -1,20 +1,20 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
+import { MockLineaRollup, TestYieldManager } from "contracts/typechain-types";
+import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import { MockLineaRollup, TestYieldManager } from "contracts/typechain-types";
+import { MINIMUM_FEE, EMPTY_CALLDATA, ONE_THOUSAND_ETHER, MAX_BPS, ZERO_VALUE } from "../../common/constants";
+import { buildAccessErrorMessage, expectRevertWithCustomError, getAccountsFixture } from "../../common/helpers";
+import { buildSetWithdrawalReserveParams } from "../helpers";
 import {
   deployMockYieldProvider,
   deployYieldManagerForUnitTest,
   deployYieldManagerForUnitTestWithMutatedInitData,
 } from "../helpers/deploy";
 import { addMockYieldProvider, buildMockYieldProviderRegistration } from "../helpers/mocks";
-import { MINIMUM_FEE, EMPTY_CALLDATA, ONE_THOUSAND_ETHER, MAX_BPS, ZERO_VALUE } from "../../common/constants";
-import { buildAccessErrorMessage, expectRevertWithCustomError, getAccountsFixture } from "../../common/helpers";
 import { YieldManagerInitializationData } from "../helpers/types";
-import { ZeroAddress } from "ethers";
-import { buildSetWithdrawalReserveParams } from "../helpers";
 
 describe("YieldManager contract - basic operations", () => {
   let yieldManager: TestYieldManager;

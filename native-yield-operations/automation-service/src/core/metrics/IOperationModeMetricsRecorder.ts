@@ -1,5 +1,5 @@
-import { Address, TransactionReceipt } from "viem";
 import { Result } from "neverthrow";
+import { Address, TransactionReceipt } from "viem";
 
 export interface IOperationModeMetricsRecorder {
   recordProgressOssificationMetrics(

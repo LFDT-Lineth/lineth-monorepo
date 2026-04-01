@@ -1,4 +1,5 @@
 import { gql, TypedDocumentNode } from "@apollo/client";
+
 import { ValidatorBalance } from "../Validator.js";
 // https://www.apollographql.com/docs/react/data/typescript#using-operation-types
 

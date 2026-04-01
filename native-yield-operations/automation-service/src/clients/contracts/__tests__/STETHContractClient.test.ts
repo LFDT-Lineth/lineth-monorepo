@@ -1,8 +1,11 @@
 import { mock, MockProxy } from "jest-mock-extended";
-import type { IBlockchainClient, ILogger } from "@consensys/linea-shared-utils";
-import type { PublicClient, TransactionReceipt, Address } from "viem";
+import { getContract } from "viem";
 
 import { STETHABI } from "../../../core/abis/STETH.js";
+import { STETHContractClient } from "../STETHContractClient.js";
+
+import type { IBlockchainClient, ILogger } from "@consensys/linea-shared-utils";
+import type { PublicClient, TransactionReceipt, Address } from "viem";
 
 jest.mock("viem", () => {
   const actual = jest.requireActual("viem");
@@ -12,16 +15,7 @@ jest.mock("viem", () => {
   };
 });
 
-import { getContract } from "viem";
-
 const mockedGetContract = getContract as jest.MockedFunction<typeof getContract>;
-
-let STETHContractClient: typeof import("../STETHContractClient.js").STETHContractClient;
-
-beforeAll(async () => {
-  ({ STETHContractClient } = await import("../STETHContractClient.js"));
-});
-
 // Semantic constants
 const TEST_CONTRACT_ADDRESS = "0x1111111111111111111111111111111111111111" as Address;
 const ONE_ETH_IN_WEI = 1_000_000_000_000_000_000n;

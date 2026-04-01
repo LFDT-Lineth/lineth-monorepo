@@ -21,10 +21,11 @@ import {
   ViemWalletSignerClientAdapter,
   WinstonLogger,
 } from "@consensys/linea-shared-utils";
-import { LidoAccountingReportClient } from "../src/clients/LidoAccountingReportClient.js";
-import { LazyOracleContractClient } from "../src/clients/contracts/LazyOracleContractClient.js";
 import { Address, Hex } from "viem";
 import { hoodi } from "viem/chains";
+
+import { LazyOracleContractClient } from "../src/clients/contracts/LazyOracleContractClient.js";
+import { LidoAccountingReportClient } from "../src/clients/LidoAccountingReportClient.js";
 
 async function main() {
   const requiredEnvVars = ["RPC_URL", "PRIVATE_KEY", "LAZY_ORACLE_ADDRESS", "LIDO_VAULT_ADDRESS", "IPFS_BASE_URL"];

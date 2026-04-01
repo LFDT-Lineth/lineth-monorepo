@@ -1,6 +1,7 @@
 import { task } from "hardhat/config";
-import { delay } from "../../../../common/helpers/general";
+
 import { prepareAndAddMessageMerkleRoot } from "./addAndClaimMessageHelper";
+import { delay } from "../../../../common/helpers/general";
 
 /*
   *******************************************************************************************

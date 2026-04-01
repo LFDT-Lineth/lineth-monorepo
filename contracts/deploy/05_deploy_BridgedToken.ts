@@ -1,8 +1,9 @@
 import { ethers, upgrades } from "hardhat";
-import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { BridgedToken } from "../typechain-types";
+import { DeployFunction } from "hardhat-deploy/types";
+
 import { tryVerifyContract } from "../common/helpers";
+import { BridgedToken } from "../typechain-types";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const contractName = "BridgedToken";

@@ -1,8 +1,10 @@
 import {
-  contractName as ProxyAdminContractName,
-  abi as ProxyAdminAbi,
-  bytecode as ProxyAdminBytecode,
-} from "./static-artifacts/ProxyAdmin.json";
+  TOKEN_BRIDGE_PAUSE_TYPES_ROLES,
+  TOKEN_BRIDGE_ROLES,
+  TOKEN_BRIDGE_UNPAUSE_TYPES_ROLES,
+} from "contracts/common/constants";
+import { ethers } from "ethers";
+
 import {
   contractName as BridgedTokenContractName,
   abi as BridgedTokenAbi,
@@ -14,24 +16,22 @@ import {
   bytecode as TokenBridgeBytecode,
 } from "./dynamic-artifacts/TokenBridgeV1_1.json";
 import {
-  contractName as UpgradeableBeaconContractName,
-  abi as UpgradeableBeaconAbi,
-  bytecode as UpgradeableBeaconBytecode,
-} from "./static-artifacts/UpgradeableBeacon.json";
-
+  contractName as ProxyAdminContractName,
+  abi as ProxyAdminAbi,
+  bytecode as ProxyAdminBytecode,
+} from "./static-artifacts/ProxyAdmin.json";
 import {
   abi as TransparentUpgradeableProxyAbi,
   bytecode as TransparentUpgradeableProxyBytecode,
 } from "./static-artifacts/TransparentUpgradeableProxy.json";
+import {
+  contractName as UpgradeableBeaconContractName,
+  abi as UpgradeableBeaconAbi,
+  bytecode as UpgradeableBeaconBytecode,
+} from "./static-artifacts/UpgradeableBeacon.json";
+import { deployContractFromArtifacts, getInitializerData } from "../common/helpers/deployments";
 import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
 import { generateRoleAssignments } from "../common/helpers/roles";
-import {
-  TOKEN_BRIDGE_PAUSE_TYPES_ROLES,
-  TOKEN_BRIDGE_ROLES,
-  TOKEN_BRIDGE_UNPAUSE_TYPES_ROLES,
-} from "contracts/common/constants";
-import { ethers } from "ethers";
-import { deployContractFromArtifacts, getInitializerData } from "../common/helpers/deployments";
 
 async function main() {
   const ORDERED_NONCE_POST_L2MESSAGESERVICE = 3;

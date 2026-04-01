@@ -1,4 +1,5 @@
 import { ethers, upgrades } from "hardhat";
+
 import { getPermitData } from "../../../test/hardhat/bridging/token/helpers/permitHelper";
 import { BridgedToken, MockTokenBridge } from "../../../typechain-types";
 import { deployBridgedTokenBeacon } from "../test/deployBridgedTokenBeacon";

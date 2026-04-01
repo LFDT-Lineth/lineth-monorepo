@@ -1,13 +1,7 @@
-import { DeployFunction } from "hardhat-deploy/types";
+import { YieldManager } from "contracts/typechain-types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { deployFromFactory, deployUpgradableFromFactoryWithConstructorArgs } from "../scripts/hardhat/utils";
-import {
-  generateRoleAssignments,
-  getEnvVarOrDefault,
-  getRequiredEnvVar,
-  LogContractDeployment,
-  tryVerifyContractWithConstructorArgs,
-} from "../common/helpers";
+import { DeployFunction } from "hardhat-deploy/types";
+
 import {
   YIELD_MANAGER_INITIALIZE_SIGNATURE,
   YIELD_MANAGER_OPERATOR_ROLES,
@@ -15,9 +9,16 @@ import {
   YIELD_MANAGER_SECURITY_COUNCIL_ROLES,
   YIELD_MANAGER_UNPAUSE_TYPES_ROLES,
 } from "../common/constants";
-import { YieldManagerInitializationData } from "../test/hardhat/yield/helpers/types";
-import { YieldManager } from "contracts/typechain-types";
+import {
+  generateRoleAssignments,
+  getEnvVarOrDefault,
+  getRequiredEnvVar,
+  LogContractDeployment,
+  tryVerifyContractWithConstructorArgs,
+} from "../common/helpers";
+import { deployFromFactory, deployUpgradableFromFactoryWithConstructorArgs } from "../scripts/hardhat/utils";
 import { GI_FIRST_VALIDATOR, GI_PENDING_PARTIAL_WITHDRAWALS_ROOT } from "../test/hardhat/common/constants";
+import { YieldManagerInitializationData } from "../test/hardhat/yield/helpers/types";
 
 // Deploys YieldManager, ValidatorContainerProofVerifier and LidoStVaultYieldProviderFactory
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {

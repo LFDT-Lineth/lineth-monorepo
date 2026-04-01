@@ -1,8 +1,9 @@
-import { Address, TransactionReceipt } from "viem";
-import { ILidoAccountingReportClient } from "../core/clients/ILidoAccountingReportClient.js";
-import { ILazyOracle, UpdateVaultDataParams } from "../core/clients/contracts/ILazyOracle.js";
-import { getReportProofByVault } from "@lidofinance/lsv-cli/dist/utils/report/report-proof.js";
 import { ILogger, IRetryService, bigintReplacer } from "@consensys/linea-shared-utils";
+import { getReportProofByVault } from "@lidofinance/lsv-cli/dist/utils/report/report-proof.js";
+import { Address, TransactionReceipt } from "viem";
+
+import { ILazyOracle, UpdateVaultDataParams } from "../core/clients/contracts/ILazyOracle.js";
+import { ILidoAccountingReportClient } from "../core/clients/ILidoAccountingReportClient.js";
 
 /**
  * Client for submitting Lido accounting reports to the LazyOracle contract.

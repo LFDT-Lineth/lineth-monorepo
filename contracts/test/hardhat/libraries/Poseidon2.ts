@@ -1,5 +1,6 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
+
 import { Poseidon2 } from "../../../typechain-types";
 import poseidon2TestData from "../_testData/poseidon2-test-data.json";
 import { deployFromFactory } from "../common/deployment";

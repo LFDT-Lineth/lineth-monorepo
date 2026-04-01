@@ -1,15 +1,16 @@
-import { Address, TransactionReceipt } from "viem";
-import { IYieldManager } from "../../core/clients/contracts/IYieldManager.js";
-import { IOperationModeProcessor } from "../../core/services/operation-mode/IOperationModeProcessor.js";
 import { ILogger, attempt, msToSeconds } from "@consensys/linea-shared-utils";
-import { ILazyOracle } from "../../core/clients/contracts/ILazyOracle.js";
-import { ILidoAccountingReportClient } from "../../core/clients/ILidoAccountingReportClient.js";
-import { IBeaconChainStakingClient } from "../../core/clients/IBeaconChainStakingClient.js";
-import { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
-import { OperationMode } from "../../core/enums/OperationModeEnums.js";
-import { IOperationModeMetricsRecorder } from "../../core/metrics/IOperationModeMetricsRecorder.js";
-import { IVaultHub } from "../../core/clients/contracts/IVaultHub.js";
+import { Address, TransactionReceipt } from "viem";
+
 import { submitVaultReportIfNotFresh } from "./vaultReportSubmission.js";
+import { ILazyOracle } from "../../core/clients/contracts/ILazyOracle.js";
+import { IVaultHub } from "../../core/clients/contracts/IVaultHub.js";
+import { IYieldManager } from "../../core/clients/contracts/IYieldManager.js";
+import { IBeaconChainStakingClient } from "../../core/clients/IBeaconChainStakingClient.js";
+import { ILidoAccountingReportClient } from "../../core/clients/ILidoAccountingReportClient.js";
+import { OperationMode } from "../../core/enums/OperationModeEnums.js";
+import { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
+import { IOperationModeMetricsRecorder } from "../../core/metrics/IOperationModeMetricsRecorder.js";
+import { IOperationModeProcessor } from "../../core/services/operation-mode/IOperationModeProcessor.js";
 
 /**
  * Processor for OSSIFICATION_PENDING_MODE operations.

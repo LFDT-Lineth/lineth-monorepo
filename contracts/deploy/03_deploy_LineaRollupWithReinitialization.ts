@@ -1,13 +1,14 @@
-import { ethers, upgrades } from "hardhat";
-import { DeployFunction } from "hardhat-deploy/types";
-import { tryVerifyContract, getRequiredEnvVar } from "../common/helpers";
-import { LineaRollup__factory } from "contracts/typechain-types";
 import {
   PAUSE_STATE_DATA_SUBMISSION_ROLE,
   UNPAUSE_STATE_DATA_SUBMISSION_ROLE,
   STATE_DATA_SUBMISSION_PAUSE_TYPE,
   SECURITY_COUNCIL_ROLE,
 } from "contracts/common/constants";
+import { LineaRollup__factory } from "contracts/typechain-types";
+import { ethers, upgrades } from "hardhat";
+import { DeployFunction } from "hardhat-deploy/types";
+
+import { tryVerifyContract, getRequiredEnvVar } from "../common/helpers";
 
 const func: DeployFunction = async function () {
   let upgradePauseTypeRoles = [];

@@ -1,16 +1,16 @@
 import { describe, it, expect, beforeEach, jest } from "@jest/globals";
-import type { IRetryService } from "@consensys/linea-shared-utils";
-import type { Address, Hex, TransactionReceipt } from "viem";
+import { getReportProofByVault } from "@lidofinance/lsv-cli/dist/utils/report/report-proof.js";
 
 import { createLoggerMock } from "../../__tests__/helpers/index.js";
-import type { ILazyOracle } from "../../core/clients/contracts/ILazyOracle.js";
 import { LidoAccountingReportClient } from "../LidoAccountingReportClient.js";
+
+import type { ILazyOracle } from "../../core/clients/contracts/ILazyOracle.js";
+import type { IRetryService } from "@consensys/linea-shared-utils";
+import type { Address, Hex, TransactionReceipt } from "viem";
 
 jest.mock("@lidofinance/lsv-cli/dist/utils/report/report-proof.js", () => ({
   getReportProofByVault: jest.fn(),
 }));
-
-import { getReportProofByVault } from "@lidofinance/lsv-cli/dist/utils/report/report-proof.js";
 
 const mockedGetReportProofByVault = getReportProofByVault as jest.MockedFunction<typeof getReportProofByVault>;
 
@@ -42,7 +42,7 @@ describe("LidoAccountingReportClient", () => {
   let retryService: jest.Mocked<IRetryService>;
   let retryMock: jest.Mock;
   let lazyOracle: LazyOracleMock;
-  let client: LidoAccountingReportClient;
+  let client: InstanceType<typeof LidoAccountingReportClient>;
 
   const createMockLatestReportData = () => ({
     timestamp: 1n,

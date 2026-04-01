@@ -1,5 +1,6 @@
-import { Address, Hex } from "viem";
 import { IBaseContractClient } from "@consensys/linea-shared-utils";
+import { Address, Hex } from "viem";
+
 import { OperationTrigger } from "../../metrics/LineaNativeYieldAutomationServiceMetrics.js";
 
 export interface ILazyOracle<TransactionReceipt> extends IBaseContractClient {

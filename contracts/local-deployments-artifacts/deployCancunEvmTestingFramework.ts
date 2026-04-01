@@ -1,14 +1,15 @@
 import { ethers } from "ethers";
-import {
-  contractName as shanghaiEvmYulName,
-  abi as shanghaiEvmYulAbi,
-  bytecode as shanghaiEvmYulBytecode,
-} from "./static-artifacts/ShanghaiEvmCodes.json";
+
 import {
   contractName as opcodeTesterName,
   abi as opcodeTesterAbi,
   bytecode as opcodeTesterBytecode,
 } from "./static-artifacts/OpcodeTester.json";
+import {
+  contractName as shanghaiEvmYulName,
+  abi as shanghaiEvmYulAbi,
+  bytecode as shanghaiEvmYulBytecode,
+} from "./static-artifacts/ShanghaiEvmCodes.json";
 import { deployContractFromArtifacts } from "../common/helpers/deployments";
 
 async function main() {

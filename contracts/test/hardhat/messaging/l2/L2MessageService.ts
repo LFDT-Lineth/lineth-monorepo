@@ -2,6 +2,14 @@ import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
+
+import {
+  L2_MESSAGE_SERVICE_PAUSE_TYPES_ROLES,
+  L2_MESSAGE_SERVICE_ROLES,
+  L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES,
+} from "../../../../common/constants";
+import { generateRoleAssignments } from "../../../../common/helpers";
+import { encodeSendMessage } from "../../../../common/helpers/encoding";
 import { TestL2MessageService, TestReceivingContract } from "../../../../typechain-types";
 import {
   ADDRESS_ZERO,
@@ -36,13 +44,6 @@ import {
   expectRevertWithReason,
   generateKeccak256Hash,
 } from "../../common/helpers";
-import { encodeSendMessage } from "../../../../common/helpers/encoding";
-import { generateRoleAssignments } from "../../../../common/helpers";
-import {
-  L2_MESSAGE_SERVICE_PAUSE_TYPES_ROLES,
-  L2_MESSAGE_SERVICE_ROLES,
-  L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES,
-} from "../../../../common/constants";
 
 describe("L2MessageService", () => {
   let l2MessageService: TestL2MessageService;

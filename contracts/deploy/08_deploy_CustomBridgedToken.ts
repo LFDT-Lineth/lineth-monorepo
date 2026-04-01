@@ -1,7 +1,8 @@
 import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
-import { deployUpgradableFromFactory } from "../scripts/hardhat/utils";
+
 import { tryVerifyContract, getRequiredEnvVar } from "../common/helpers";
+import { deployUpgradableFromFactory } from "../scripts/hardhat/utils";
 
 const func: DeployFunction = async function () {
   const contractName = "CustomBridgedToken";

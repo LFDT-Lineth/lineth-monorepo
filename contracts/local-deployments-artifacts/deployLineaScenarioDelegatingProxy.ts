@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+
 import {
   contractName as lineaScenarioDelegatingProxyName,
   abi as lineaScenarioDelegatingProxyAbi,

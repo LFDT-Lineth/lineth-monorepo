@@ -1,19 +1,21 @@
+import { attempt, msToSeconds } from "@consensys/linea-shared-utils";
 import { jest } from "@jest/globals";
-import type { TransactionReceipt, Address } from "viem";
 import { ResultAsync } from "neverthrow";
 
-import type { ILogger } from "@consensys/linea-shared-utils";
-import type { INativeYieldAutomationMetricsUpdater } from "../../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
-import type { IOperationModeMetricsRecorder } from "../../../core/metrics/IOperationModeMetricsRecorder.js";
-import type { IYieldManager } from "../../../core/clients/contracts/IYieldManager.js";
-import type { ILazyOracle } from "../../../core/clients/contracts/ILazyOracle.js";
-import type { ILidoAccountingReportClient } from "../../../core/clients/ILidoAccountingReportClient.js";
-import type { IBeaconChainStakingClient } from "../../../core/clients/IBeaconChainStakingClient.js";
-import type { IVaultHub } from "../../../core/clients/contracts/IVaultHub.js";
+import { createLoggerMock, createMetricsUpdaterMock } from "../../../__tests__/helpers/index.js";
 import { OperationMode } from "../../../core/enums/OperationModeEnums.js";
 import { OperationTrigger } from "../../../core/metrics/LineaNativeYieldAutomationServiceMetrics.js";
 import { OssificationPendingProcessor } from "../OssificationPendingProcessor.js";
-import { createLoggerMock, createMetricsUpdaterMock } from "../../../__tests__/helpers/index.js";
+
+import type { ILazyOracle } from "../../../core/clients/contracts/ILazyOracle.js";
+import type { IVaultHub } from "../../../core/clients/contracts/IVaultHub.js";
+import type { IYieldManager } from "../../../core/clients/contracts/IYieldManager.js";
+import type { IBeaconChainStakingClient } from "../../../core/clients/IBeaconChainStakingClient.js";
+import type { ILidoAccountingReportClient } from "../../../core/clients/ILidoAccountingReportClient.js";
+import type { INativeYieldAutomationMetricsUpdater } from "../../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
+import type { IOperationModeMetricsRecorder } from "../../../core/metrics/IOperationModeMetricsRecorder.js";
+import type { ILogger } from "@consensys/linea-shared-utils";
+import type { TransactionReceipt, Address } from "viem";
 
 jest.mock("@consensys/linea-shared-utils", () => {
   const actual = jest.requireActual("@consensys/linea-shared-utils") as typeof import("@consensys/linea-shared-utils");
@@ -24,7 +26,8 @@ jest.mock("@consensys/linea-shared-utils", () => {
   };
 });
 
-import { attempt, msToSeconds } from "@consensys/linea-shared-utils";
+const attemptMock = attempt as jest.MockedFunction<typeof attempt>;
+const msToSecondsMock = msToSeconds as jest.MockedFunction<typeof msToSeconds>;
 
 // Semantic constants
 const YIELD_PROVIDER_ADDRESS = "0x1111111111111111111111111111111111111111" as Address;
@@ -110,8 +113,6 @@ describe("OssificationPendingProcessor", () => {
   let lidoReportClient: jest.Mocked<ILidoAccountingReportClient>;
   let beaconClient: jest.Mocked<IBeaconChainStakingClient>;
   let vaultHubClient: jest.Mocked<IVaultHub<TransactionReceipt>>;
-  const attemptMock = attempt as jest.MockedFunction<typeof attempt>;
-  const msToSecondsMock = msToSeconds as jest.MockedFunction<typeof msToSeconds>;
 
   const createProcessor = (shouldSubmitVaultReport: boolean = true) =>
     new OssificationPendingProcessor(

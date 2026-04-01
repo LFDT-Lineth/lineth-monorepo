@@ -9,9 +9,9 @@ import {
   TransactionReceipt,
   WatchContractEventReturnType,
 } from "viem";
-import { LazyOracleABI } from "../../core/abis/LazyOracle.js";
-import { LazyOracleErrorsABI } from "../../core/abis/errors/LazyOracleErrors.js";
 
+import { LazyOracleErrorsABI } from "../../core/abis/errors/LazyOracleErrors.js";
+import { LazyOracleABI } from "../../core/abis/LazyOracle.js";
 import {
   ILazyOracle,
   UpdateVaultDataParams,

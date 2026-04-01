@@ -1,15 +1,16 @@
-import { ethers } from "ethers";
 import * as dotenv from "dotenv";
-import {
-  contractName as ConsolidationQueueContractName,
-  abi as ConsolidationQueueAbi,
-  bytecode as ConsolidationQueueBytecode,
-} from "./dynamic-artifacts/UpgradeableConsolidationQueuePredeployV1.json";
+import { ethers } from "ethers";
+
 import {
   contractName as BeaconChainDepositContractName,
   abi as BeaconChainDepositAbi,
   bytecode as BeaconChainDepositBytecode,
 } from "./dynamic-artifacts/UpgradeableBeaconChainDepositPredeployV1.json";
+import {
+  contractName as ConsolidationQueueContractName,
+  abi as ConsolidationQueueAbi,
+  bytecode as ConsolidationQueueBytecode,
+} from "./dynamic-artifacts/UpgradeableConsolidationQueuePredeployV1.json";
 import {
   contractName as WithdrawalQueueContractName,
   abi as WithdrawalQueueAbi,

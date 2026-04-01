@@ -20,8 +20,15 @@
 //   YIELD_MANAGER_PAUSE_TYPES_ROLES
 //   YIELD_MANAGER_UNPAUSE_TYPES_ROLES
 
-import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
+import { DeployFunction } from "hardhat-deploy/types";
+
+import {
+  YIELD_MANAGER_OPERATOR_ROLES,
+  YIELD_MANAGER_PAUSE_TYPES_ROLES,
+  YIELD_MANAGER_SECURITY_COUNCIL_ROLES,
+  YIELD_MANAGER_UNPAUSE_TYPES_ROLES,
+} from "../common/constants";
 import {
   deployContractFromArtifacts,
   deployProxyAdminAndProxy,
@@ -30,14 +37,6 @@ import {
   getInitializerData,
   getRequiredEnvVar,
 } from "../common/helpers";
-import {
-  YIELD_MANAGER_OPERATOR_ROLES,
-  YIELD_MANAGER_PAUSE_TYPES_ROLES,
-  YIELD_MANAGER_SECURITY_COUNCIL_ROLES,
-  YIELD_MANAGER_UNPAUSE_TYPES_ROLES,
-} from "../common/constants";
-import { YieldManagerInitializationData } from "../test/hardhat/yield/helpers/types";
-import { GI_FIRST_VALIDATOR, GI_PENDING_PARTIAL_WITHDRAWALS_ROOT } from "../test/hardhat/common/constants";
 import {
   contractName as LidoStVaultYieldProviderFactoryContractName,
   abi as LidoStVaultYieldProviderFactoryAbi,
@@ -53,6 +52,8 @@ import {
   abi as YieldManagerAbi,
   bytecode as YieldManagerBytecode,
 } from "../deployments/bytecode/2026-01-14/YieldManager.json";
+import { GI_FIRST_VALIDATOR, GI_PENDING_PARTIAL_WITHDRAWALS_ROOT } from "../test/hardhat/common/constants";
+import { YieldManagerInitializationData } from "../test/hardhat/yield/helpers/types";
 
 // Deploys YieldManager, ValidatorContainerProofVerifier and LidoStVaultYieldProviderFactory
 // Must verify contracts from git tag "contract-audit-2026-01-14" or commit 25e323d055dec40ef167a190c71c30aa9bf92c23

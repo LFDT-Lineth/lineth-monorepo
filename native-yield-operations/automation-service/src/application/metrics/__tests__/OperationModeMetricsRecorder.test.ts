@@ -1,13 +1,15 @@
 import { jest, describe, it, expect, beforeEach } from "@jest/globals";
 import { ok, err } from "neverthrow";
-import type { TransactionReceipt, Address, PublicClient } from "viem";
-import type { IBlockchainClient } from "@consensys/linea-shared-utils";
-import type { IYieldManager } from "../../../core/clients/contracts/IYieldManager.js";
-import type { IVaultHub } from "../../../core/clients/contracts/IVaultHub.js";
+
 import { createLoggerMock, createMetricsUpdaterMock } from "../../../__tests__/helpers/index.js";
-import { RebalanceDirection } from "../../../core/entities/RebalanceRequirement.js";
 import { DashboardContractClient } from "../../../clients/contracts/DashboardContractClient.js";
+import { RebalanceDirection } from "../../../core/entities/RebalanceRequirement.js";
 import { OperationModeMetricsRecorder } from "../OperationModeMetricsRecorder.js";
+
+import type { IVaultHub } from "../../../core/clients/contracts/IVaultHub.js";
+import type { IYieldManager } from "../../../core/clients/contracts/IYieldManager.js";
+import type { IBlockchainClient } from "@consensys/linea-shared-utils";
+import type { TransactionReceipt, Address, PublicClient } from "viem";
 
 const ONE_GWEI = 1_000_000_000n;
 

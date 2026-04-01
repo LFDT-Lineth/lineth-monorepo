@@ -1,7 +1,7 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { NativeYieldAutomationMetricsService } from "../NativeYieldAutomationMetricsService.js";
 import { LineaNativeYieldAutomationServiceMetrics } from "../../../core/metrics/LineaNativeYieldAutomationServiceMetrics.js";
+import { NativeYieldAutomationMetricsService } from "../NativeYieldAutomationMetricsService.js";
 
 // Test constants
 const DEFAULT_APP_LABEL = 'app="native-yield-automation-service"';

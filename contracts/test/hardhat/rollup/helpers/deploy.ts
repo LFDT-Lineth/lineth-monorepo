@@ -1,8 +1,4 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { ethers } from "hardhat";
-
-import firstCompressedDataContent from "../../_testData/compressedData/blocks-1-46.json";
-
 import {
   LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES,
   LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
@@ -10,7 +6,11 @@ import {
   VALIDIUM_UNPAUSE_TYPES_ROLES,
 } from "contracts/common/constants";
 import { CallForwardingProxy, Mimc, TestLineaRollup, TestValidium } from "contracts/typechain-types";
+import { toBeHex } from "ethers";
+import { ethers } from "hardhat";
+
 import { getAccountsFixture, getRoleAddressesFixture, getValidiumRoleAddressesFixture } from "./";
+import firstCompressedDataContent from "../../_testData/compressedData/blocks-1-46.json";
 import {
   ADDRESS_ZERO,
   DEFAULT_LAST_FINALIZED_TIMESTAMP,
@@ -21,7 +21,6 @@ import {
   VALIDIUM_INITIALIZE_SIGNATURE,
 } from "../../common/constants";
 import { deployUpgradableFromFactory, deployFromFactory } from "../../common/deployment";
-import { toBeHex } from "ethers";
 
 export async function deployRevertingVerifier(scenario: bigint): Promise<string> {
   const revertingVerifierFactory = await ethers.getContractFactory("RevertingVerifier");

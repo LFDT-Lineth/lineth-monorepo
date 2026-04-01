@@ -17,6 +17,7 @@ import {
   OAuth2TokenClient,
   ExponentialBackoffRetryService,
 } from "@consensys/linea-shared-utils";
+
 import { ConsensysStakingApiClient } from "../src/clients/ConsensysStakingApiClient.js";
 import { createApolloClient } from "../src/utils/createApolloClient.js";
 

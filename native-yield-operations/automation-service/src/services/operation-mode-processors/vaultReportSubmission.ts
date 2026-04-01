@@ -1,8 +1,9 @@
-import { Address, TransactionReceipt } from "viem";
 import { ILogger, attempt } from "@consensys/linea-shared-utils";
+import { Address, TransactionReceipt } from "viem";
+
+import { IVaultHub } from "../../core/clients/contracts/IVaultHub.js";
 import { ILidoAccountingReportClient } from "../../core/clients/ILidoAccountingReportClient.js";
 import { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
-import { IVaultHub } from "../../core/clients/contracts/IVaultHub.js";
 
 /**
  * Submits the latest vault report if enabled and the report is not fresh.

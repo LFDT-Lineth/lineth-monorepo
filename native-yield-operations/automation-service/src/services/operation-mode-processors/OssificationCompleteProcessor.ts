@@ -1,11 +1,12 @@
-import { Address, TransactionReceipt } from "viem";
 import { ILogger, attempt, msToSeconds, wait } from "@consensys/linea-shared-utils";
+import { Address, TransactionReceipt } from "viem";
+
 import { IYieldManager } from "../../core/clients/contracts/IYieldManager.js";
-import { IOperationModeProcessor } from "../../core/services/operation-mode/IOperationModeProcessor.js";
 import { IBeaconChainStakingClient } from "../../core/clients/IBeaconChainStakingClient.js";
-import { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
 import { OperationMode } from "../../core/enums/OperationModeEnums.js";
+import { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
 import { IOperationModeMetricsRecorder } from "../../core/metrics/IOperationModeMetricsRecorder.js";
+import { IOperationModeProcessor } from "../../core/services/operation-mode/IOperationModeProcessor.js";
 
 /**
  * Processor for OSSIFICATION_COMPLETE_MODE operations.

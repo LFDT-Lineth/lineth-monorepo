@@ -1,7 +1,8 @@
+import { TokenBridge__factory } from "contracts/typechain-types";
 import { ethers, upgrades } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
+
 import { tryVerifyContract, getRequiredEnvVar } from "../common/helpers";
-import { TokenBridge__factory } from "contracts/typechain-types";
 
 const func: DeployFunction = async function () {
   const contractName = "TokenBridge";

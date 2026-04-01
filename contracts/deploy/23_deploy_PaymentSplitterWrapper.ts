@@ -1,6 +1,7 @@
-import { ethers } from "hardhat";
 import { isAddress } from "ethers";
+import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
+
 import { getRequiredEnvVar, LogContractDeployment, tryVerifyContractWithConstructorArgs } from "../common/helpers";
 import { deployFromFactory } from "../scripts/hardhat/utils";
 

@@ -13,7 +13,12 @@ import {
   MockSTETH,
   MockVaultHub,
 } from "contracts/typechain-types";
+import { BaseContract } from "ethers";
 import { ethers } from "hardhat";
+
+import { generateLidoUnstakePermissionlessWitness } from "./proof";
+import { ClaimMessageWithProofParams, YieldManagerInitializationData } from "./types";
+import { encodeSendMessage, randomBytes32 } from "../../../../common/helpers/encoding";
 import {
   ADDRESS_ZERO,
   BEACON_PROOF_WITNESS_TYPE,
@@ -21,10 +26,6 @@ import {
   MAX_0X2_VALIDATOR_EFFECTIVE_BALANCE_GWEI,
   ONE_ETHER,
 } from "../../common/constants";
-import { ClaimMessageWithProofParams, YieldManagerInitializationData } from "./types";
-import { generateLidoUnstakePermissionlessWitness } from "./proof";
-import { encodeSendMessage, randomBytes32 } from "../../../../common/helpers/encoding";
-import { BaseContract } from "ethers";
 
 // TODO - Existence of this setup function means that YieldManager has invariants that withdraw cannot underflow for userFunds and userFundsInYieldProvidersTotal
 // Caution - assumes it will only be used once, will not work for consecutive uses in its current form

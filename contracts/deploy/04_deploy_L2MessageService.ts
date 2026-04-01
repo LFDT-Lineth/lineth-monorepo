@@ -1,12 +1,5 @@
 import { DeployFunction } from "hardhat-deploy/types";
-import { deployUpgradableFromFactory } from "../scripts/hardhat/utils";
-import {
-  generateRoleAssignments,
-  getEnvVarOrDefault,
-  getRequiredEnvVar,
-  tryVerifyContract,
-  LogContractDeployment,
-} from "../common/helpers";
+
 import {
   L1_L2_MESSAGE_SETTER_ROLE,
   L2_MESSAGE_SERVICE_INITIALIZE_SIGNATURE,
@@ -14,6 +7,14 @@ import {
   L2_MESSAGE_SERVICE_ROLES,
   L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES,
 } from "../common/constants";
+import {
+  generateRoleAssignments,
+  getEnvVarOrDefault,
+  getRequiredEnvVar,
+  tryVerifyContract,
+  LogContractDeployment,
+} from "../common/helpers";
+import { deployUpgradableFromFactory } from "../scripts/hardhat/utils";
 
 const func: DeployFunction = async function () {
   const contractName = "L2MessageService";

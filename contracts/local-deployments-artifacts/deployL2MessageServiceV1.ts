@@ -1,5 +1,6 @@
-import { ethers } from "ethers";
 import * as dotenv from "dotenv";
+import { ethers } from "ethers";
+
 import {
   contractName as L2MessageServiceContractName,
   abi as L2MessageServiceAbi,
@@ -14,15 +15,15 @@ import {
   abi as TransparentUpgradeableProxyAbi,
   bytecode as TransparentUpgradeableProxyBytecode,
 } from "./static-artifacts/TransparentUpgradeableProxy.json";
-import { getEnvVarOrDefault } from "../common/helpers/environment";
 import {
   L1_L2_MESSAGE_SETTER_ROLE,
   L2_MESSAGE_SERVICE_PAUSE_TYPES_ROLES,
   L2_MESSAGE_SERVICE_ROLES,
   L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES,
 } from "../common/constants";
-import { generateRoleAssignments } from "../common/helpers/roles";
 import { deployContractFromArtifacts, getInitializerData } from "../common/helpers/deployments";
+import { getEnvVarOrDefault } from "../common/helpers/environment";
+import { generateRoleAssignments } from "../common/helpers/roles";
 
 dotenv.config();
 

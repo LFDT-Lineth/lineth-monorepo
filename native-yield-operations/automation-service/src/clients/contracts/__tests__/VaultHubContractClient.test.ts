@@ -1,8 +1,12 @@
 import { mock, MockProxy } from "jest-mock-extended";
+import { getContract, parseEventLogs } from "viem";
+
+import { createLoggerMock } from "../../../__tests__/helpers/index.js";
+import { VaultHubABI } from "../../../core/abis/VaultHub.js";
+import { VaultHubContractClient } from "../VaultHubContractClient.js";
+
 import type { IBlockchainClient, ILogger } from "@consensys/linea-shared-utils";
 import type { PublicClient, TransactionReceipt, Address } from "viem";
-import { VaultHubABI } from "../../../core/abis/VaultHub.js";
-import { createLoggerMock } from "../../../__tests__/helpers/index.js";
 
 jest.mock("viem", () => {
   const actual = jest.requireActual("viem");
@@ -13,17 +17,8 @@ jest.mock("viem", () => {
   };
 });
 
-import { getContract, parseEventLogs } from "viem";
-
 const mockedGetContract = getContract as jest.MockedFunction<typeof getContract>;
 const mockedParseEventLogs = parseEventLogs as jest.MockedFunction<typeof parseEventLogs>;
-
-let VaultHubContractClient: typeof import("../VaultHubContractClient.js").VaultHubContractClient;
-
-beforeAll(async () => {
-  ({ VaultHubContractClient } = await import("../VaultHubContractClient.js"));
-});
-
 describe("VaultHubContractClient", () => {
   // Test constants
   const VAULT_HUB_ADDRESS = "0x1111111111111111111111111111111111111111" as Address;

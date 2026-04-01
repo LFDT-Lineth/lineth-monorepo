@@ -1,7 +1,25 @@
 // Test scenarios with LineaRollup + YieldManager + LidoStVaultYieldProvider
+import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
-import { expectRevertWithCustomError, getAccountsFixture } from "../../common/helpers";
+import { expect } from "chai";
+import {
+  TestYieldManager,
+  TestLineaRollup,
+  TestLidoStVaultYieldProvider,
+  MockDashboard,
+  MockStakingVault,
+  TestLidoStVaultYieldProviderFactory,
+  SSZMerkleTree,
+  TestValidatorContainerProofVerifier,
+  MockSTETH,
+  MockVaultHub,
+  MockVaultFactory,
+} from "contracts/typechain-types";
+import { ethers } from "hardhat";
+
 import { encodeSendMessage } from "../../../../common/helpers/encoding";
+import { EMPTY_CALLDATA, ONE_ETHER, ZERO_VALUE, CONNECT_DEPOSIT } from "../../common/constants";
+import { expectRevertWithCustomError, getAccountsFixture } from "../../common/helpers";
 import {
   decrementBalance,
   deployAndAddAdditionalLidoStVaultYieldProvider,
@@ -23,23 +41,6 @@ import {
   buildSetWithdrawalReserveParams,
   YieldManagerInitializationData,
 } from "../helpers";
-import {
-  TestYieldManager,
-  TestLineaRollup,
-  TestLidoStVaultYieldProvider,
-  MockDashboard,
-  MockStakingVault,
-  TestLidoStVaultYieldProviderFactory,
-  SSZMerkleTree,
-  TestValidatorContainerProofVerifier,
-  MockSTETH,
-  MockVaultHub,
-  MockVaultFactory,
-} from "contracts/typechain-types";
-import { expect } from "chai";
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { ethers } from "hardhat";
-import { EMPTY_CALLDATA, ONE_ETHER, ZERO_VALUE, CONNECT_DEPOSIT } from "../../common/constants";
 
 describe("Integration tests with LineaRollup, YieldManager and LidoStVaultYieldProvider", () => {
   let nativeYieldOperator: SignerWithAddress;

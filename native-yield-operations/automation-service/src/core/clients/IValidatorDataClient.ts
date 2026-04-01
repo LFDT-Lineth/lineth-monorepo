@@ -1,4 +1,5 @@
 import { PendingPartialWithdrawal } from "@consensys/linea-shared-utils";
+
 import {
   AggregatedPendingWithdrawal,
   ExitedValidator,

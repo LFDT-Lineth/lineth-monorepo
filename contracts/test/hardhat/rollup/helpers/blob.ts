@@ -1,10 +1,10 @@
 import * as kzg from "c-kzg";
+import { TestLineaRollup } from "contracts/typechain-types";
 import { BaseContract, Contract, Transaction } from "ethers";
 import * as fs from "fs";
 import { ethers } from "hardhat";
 import path from "path";
 
-import { TestLineaRollup } from "contracts/typechain-types";
 import { getWalletForIndex } from "./";
 import {
   expectEventDirectFromReceiptData,

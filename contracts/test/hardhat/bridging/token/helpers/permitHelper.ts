@@ -1,5 +1,6 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { ethers } from "ethers";
+
 import { BridgedToken } from "../../../../../typechain-types";
 
 const Permit = [

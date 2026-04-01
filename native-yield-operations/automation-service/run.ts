@@ -1,4 +1,5 @@
 import * as dotenv from "dotenv";
+
 import { loadConfigFromEnv } from "./src/application/main/config/loadConfigFromEnv.js";
 import { NativeYieldAutomationServiceBootstrap } from "./src/application/main/NativeYieldAutomationServiceBootstrap.js";
 

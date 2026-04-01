@@ -1,7 +1,8 @@
 import { DeployFunction } from "hardhat-deploy/types";
-import { deployUpgradableFromFactory } from "../scripts/hardhat/utils";
-import { tryVerifyContract, LogContractDeployment, getRequiredEnvVar } from "../common/helpers";
+
 import { ROLLUP_REVENUE_VAULT_INITIALIZE_SIGNATURE } from "../common/constants";
+import { tryVerifyContract, LogContractDeployment, getRequiredEnvVar } from "../common/helpers";
+import { deployUpgradableFromFactory } from "../scripts/hardhat/utils";
 
 const func: DeployFunction = async function () {
   const contractName = "RollupRevenueVault";

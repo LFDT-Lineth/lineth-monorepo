@@ -31,8 +31,9 @@
  *   --l2-from-block <number> --l2-to-block <number>
  */
 
-import { writeFileSync } from "node:fs";
 import { ethers, Contract, Interface, JsonRpcProvider, EventLog, Log, ZeroAddress } from "ethers";
+import { writeFileSync } from "node:fs";
+
 import { encodeSendMessage } from "../../common/helpers/encoding";
 import { getRequiredEnvVar } from "../../common/helpers/environment";
 import { getCliOrEnvValue } from "../../common/helpers/environmentHelper";

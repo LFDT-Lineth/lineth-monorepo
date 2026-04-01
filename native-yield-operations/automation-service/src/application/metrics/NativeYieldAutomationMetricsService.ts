@@ -1,4 +1,5 @@
 import { SingletonMetricsService } from "@consensys/linea-shared-utils";
+
 import { LineaNativeYieldAutomationServiceMetrics } from "../../core/metrics/LineaNativeYieldAutomationServiceMetrics.js";
 
 /**

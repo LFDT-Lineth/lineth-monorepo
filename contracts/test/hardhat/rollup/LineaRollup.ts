@@ -2,13 +2,6 @@ import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture, time as networkTime } from "@nomicfoundation/hardhat-network-helpers";
 import * as kzg from "c-kzg";
 import { expect } from "chai";
-import { ethers, upgrades } from "hardhat";
-
-import blobAggregatedProof1To155 from "../_testData/compressedDataEip4844/aggregatedProof-1-155.json";
-import firstCompressedDataContent from "../_testData/compressedData/blocks-1-46.json";
-import secondCompressedDataContent from "../_testData/compressedData/blocks-47-81.json";
-import fourthCompressedDataContent from "../_testData/compressedData/blocks-115-155.json";
-
 import {
   LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES,
   LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
@@ -16,6 +9,11 @@ import {
   STATE_DATA_SUBMISSION_PAUSE_TYPE,
 } from "contracts/common/constants";
 import { CallForwardingProxy, TestLineaRollup } from "contracts/typechain-types";
+import { IPauseManager } from "contracts/typechain-types/src/_testing/unit/rollup/TestLineaRollup";
+import { IPermissionsManager } from "contracts/typechain-types/src/rollup/LineaRollup";
+import { Typed } from "ethers";
+import { ethers, upgrades } from "hardhat";
+
 import {
   deployCallForwardingProxy,
   deployLineaRollupFixture,
@@ -24,6 +22,10 @@ import {
   getRoleAddressesFixture,
   sendBlobTransactionViaCallForwarder,
 } from "./helpers";
+import firstCompressedDataContent from "../_testData/compressedData/blocks-1-46.json";
+import fourthCompressedDataContent from "../_testData/compressedData/blocks-115-155.json";
+import secondCompressedDataContent from "../_testData/compressedData/blocks-47-81.json";
+import blobAggregatedProof1To155 from "../_testData/compressedDataEip4844/aggregatedProof-1-155.json";
 import {
   ADDRESS_ZERO,
   FALLBACK_OPERATOR_ADDRESS,
@@ -62,9 +64,6 @@ import {
   expectNoEvent,
 } from "../common/helpers";
 import { CalldataSubmissionData } from "../common/types";
-import { IPauseManager } from "contracts/typechain-types/src/_testing/unit/rollup/TestLineaRollup";
-import { Typed } from "ethers";
-import { IPermissionsManager } from "contracts/typechain-types/src/rollup/LineaRollup";
 
 kzg.loadTrustedSetup(0, `${__dirname}/../_testData/trusted_setup.txt`);
 

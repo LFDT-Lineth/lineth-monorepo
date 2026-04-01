@@ -17,11 +17,12 @@ import {
   ViemWalletSignerClientAdapter,
   WinstonLogger,
 } from "@consensys/linea-shared-utils";
-import { YieldManagerContractClient } from "../src/clients/contracts/YieldManagerContractClient.js";
 import { Address, Hex } from "viem";
 import { hoodi } from "viem/chains";
-import { IRebalanceQuotaService } from "../src/core/services/IRebalanceQuotaService.js";
+
+import { YieldManagerContractClient } from "../src/clients/contracts/YieldManagerContractClient.js";
 import { RebalanceDirection } from "../src/core/entities/RebalanceRequirement.js";
+import { IRebalanceQuotaService } from "../src/core/services/IRebalanceQuotaService.js";
 
 async function main() {
   const requiredEnvVars = ["RPC_URL", "PRIVATE_KEY", "YIELD_MANAGER_ADDRESS"];

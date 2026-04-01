@@ -7,16 +7,17 @@ import {
   get0x02WithdrawalCredentials,
   wait,
 } from "@consensys/linea-shared-utils";
-import { IValidatorDataClient } from "../core/clients/IValidatorDataClient.js";
-import { INativeYieldAutomationMetricsUpdater } from "../core/metrics/INativeYieldAutomationMetricsUpdater.js";
-import { IYieldManager, YieldProviderData } from "../core/clients/contracts/IYieldManager.js";
-import { IVaultHub } from "../core/clients/contracts/IVaultHub.js";
-import { ISTETH } from "../core/clients/contracts/ISTETH.js";
-import { ExitedValidator, ExitingValidator, ValidatorBalance } from "../core/entities/Validator.js";
 import { Address, Hex, TransactionReceipt } from "viem";
-import { IGaugeMetricsPoller } from "../core/services/IGaugeMetricsPoller.js";
+
 import { IOperationLoop } from "./IOperationLoop.js";
 import { DashboardContractClient } from "../clients/contracts/DashboardContractClient.js";
+import { ISTETH } from "../core/clients/contracts/ISTETH.js";
+import { IVaultHub } from "../core/clients/contracts/IVaultHub.js";
+import { IYieldManager, YieldProviderData } from "../core/clients/contracts/IYieldManager.js";
+import { IValidatorDataClient } from "../core/clients/IValidatorDataClient.js";
+import { ExitedValidator, ExitingValidator, ValidatorBalance } from "../core/entities/Validator.js";
+import { INativeYieldAutomationMetricsUpdater } from "../core/metrics/INativeYieldAutomationMetricsUpdater.js";
+import { IGaugeMetricsPoller } from "../core/services/IGaugeMetricsPoller.js";
 
 /**
  * Polls various data sources and updates gauge metrics.

@@ -2,6 +2,8 @@ import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture, setNonce } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers, network } from "hardhat";
+
+import { encodeSendMessage } from "../../../../common/helpers/encoding";
 import {
   TestClaimingCaller,
   TestL1MessageService,
@@ -47,7 +49,6 @@ import {
   expectRevertWithReason,
   generateKeccak256Hash,
 } from "../../common/helpers";
-import { encodeSendMessage } from "../../../../common/helpers/encoding";
 
 describe("L1MessageService", () => {
   let l1MessageService: TestL1MessageService;

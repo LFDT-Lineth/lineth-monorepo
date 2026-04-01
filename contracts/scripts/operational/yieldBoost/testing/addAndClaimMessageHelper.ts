@@ -1,7 +1,8 @@
-import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { Contract } from "ethers";
-import { getTaskCliOrEnvValue } from "../../../../common/helpers/environmentHelper";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
+
 import { encodeSendMessage, randomBytes32 } from "../../../../common/helpers/encoding";
+import { getTaskCliOrEnvValue } from "../../../../common/helpers/environmentHelper";
 
 export interface ClaimParams {
   proof: string[];

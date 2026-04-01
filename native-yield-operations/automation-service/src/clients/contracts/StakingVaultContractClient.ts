@@ -1,7 +1,8 @@
 import { IBlockchainClient, ILogger } from "@consensys/linea-shared-utils";
 import { Address, getContract, GetContractReturnType, PublicClient, TransactionReceipt } from "viem";
-import { IStakingVault } from "../../core/clients/contracts/IStakingVault.js";
+
 import { StakingVaultABI } from "../../core/abis/StakingVault.js";
+import { IStakingVault } from "../../core/clients/contracts/IStakingVault.js";
 
 /**
  * Client for interacting with StakingVault smart contracts.

@@ -1,7 +1,8 @@
 import { IBlockchainClient, ILogger } from "@consensys/linea-shared-utils";
 import { Address, getContract, GetContractReturnType, parseEventLogs, PublicClient, TransactionReceipt } from "viem";
-import { IDashboard } from "../../core/clients/contracts/IDashboard.js";
+
 import { DashboardABI } from "../../core/abis/Dashboard.js";
+import { IDashboard } from "../../core/clients/contracts/IDashboard.js";
 
 /**
  * Client for interacting with Dashboard smart contracts.

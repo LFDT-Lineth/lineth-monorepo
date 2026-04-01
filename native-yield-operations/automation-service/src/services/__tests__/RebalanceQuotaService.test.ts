@@ -1,7 +1,7 @@
 import { Address } from "viem";
 
-import { RebalanceDirection } from "../../core/entities/RebalanceRequirement.js";
 import { createLoggerMock, createMetricsUpdaterMock } from "../../__tests__/helpers/index.js";
+import { RebalanceDirection } from "../../core/entities/RebalanceRequirement.js";
 import { RebalanceQuotaService } from "../RebalanceQuotaService.js";
 
 describe("RebalanceQuotaService", () => {

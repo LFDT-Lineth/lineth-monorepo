@@ -1,25 +1,19 @@
-import { jest, describe, it, expect, beforeEach, beforeAll } from "@jest/globals";
+import { jest, describe, it, expect, beforeEach } from "@jest/globals";
 import { mock, MockProxy } from "jest-mock-extended";
-import type { IBlockchainClient, ILogger } from "@consensys/linea-shared-utils";
-import type { PublicClient, TransactionReceipt, Address } from "viem";
+import { getContract } from "viem";
 
 import { StakingVaultABI } from "../../../core/abis/StakingVault.js";
+import { StakingVaultContractClient } from "../StakingVaultContractClient.js";
+
+import type { IBlockchainClient, ILogger } from "@consensys/linea-shared-utils";
+import type { PublicClient, TransactionReceipt, Address } from "viem";
 
 jest.mock("viem", () => ({
   ...jest.requireActual<typeof import("viem")>("viem"),
   getContract: jest.fn(),
 }));
 
-import { getContract } from "viem";
-
 const mockedGetContract = getContract as jest.MockedFunction<typeof getContract>;
-
-let StakingVaultContractClient: typeof import("../StakingVaultContractClient.js").StakingVaultContractClient;
-
-beforeAll(async () => {
-  ({ StakingVaultContractClient } = await import("../StakingVaultContractClient.js"));
-});
-
 describe("StakingVaultContractClient", () => {
   let blockchainClient: MockProxy<IBlockchainClient<PublicClient, TransactionReceipt>>;
   let logger: MockProxy<ILogger>;

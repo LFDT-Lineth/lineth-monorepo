@@ -1,6 +1,7 @@
-import { ethers } from "hardhat";
-import { toBeHex } from "ethers";
 import { expect } from "chai";
+import { toBeHex } from "ethers";
+import { ethers } from "hardhat";
+
 import { IPlonkVerifier, Mimc, PlonkVerifierForDataAggregation__factory } from "../../../typechain-types";
 import { deployFromFactory } from "../common/deployment";
 import { expectEventDirectFromReceiptData, expectRevertWithCustomError } from "../common/helpers";

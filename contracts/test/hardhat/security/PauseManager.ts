@@ -2,6 +2,7 @@ import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
+
 import { TestPauseManager } from "../../../typechain-types";
 import {
   DEFAULT_ADMIN_ROLE,

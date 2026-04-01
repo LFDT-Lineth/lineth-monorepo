@@ -1,5 +1,3 @@
-import { jest } from "@jest/globals";
-import type { ApolloClient } from "@apollo/client";
 import {
   IBeaconNodeAPIClient,
   IRetryService,
@@ -8,17 +6,20 @@ import {
   safeSub,
   SHARD_COMMITTEE_PERIOD,
 } from "@consensys/linea-shared-utils";
+import { jest } from "@jest/globals";
 
 import { createLoggerMock } from "../../__tests__/helpers/index.js";
-import { ConsensysStakingApiClient } from "../ConsensysStakingApiClient.js";
 import { ALL_VALIDATORS_BY_LARGEST_BALANCE_QUERY } from "../../core/entities/graphql/ActiveValidatorsByLargestBalance.js";
 import { EXITING_VALIDATORS_QUERY } from "../../core/entities/graphql/ExitingValidators.js";
+import { ConsensysStakingApiClient } from "../ConsensysStakingApiClient.js";
+
 import type {
   ExitedValidator,
   ExitingValidator,
   ValidatorBalance,
   ValidatorBalanceWithPendingWithdrawal,
 } from "../../core/entities/Validator.js";
+import type { ApolloClient } from "@apollo/client";
 
 // Semantic constants
 const VALIDATOR_32_ETH = 32n * ONE_GWEI;

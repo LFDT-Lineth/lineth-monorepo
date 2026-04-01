@@ -1,7 +1,8 @@
 import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
-import { deployFromFactory } from "../scripts/hardhat/utils";
+
 import { tryVerifyContractWithConstructorArgs, getRequiredEnvVar, LogContractDeployment } from "../common/helpers";
+import { deployFromFactory } from "../scripts/hardhat/utils";
 
 const func: DeployFunction = async function () {
   const contractName = "LineaSequencerUptimeFeed";

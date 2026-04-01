@@ -1,8 +1,8 @@
 import { jest, describe, it, expect, beforeEach, afterEach } from "@jest/globals";
 
-import { loadConfigFromEnv } from "../loadConfigFromEnv.js";
-import { configSchema } from "../config.schema.js";
 import * as configModule from "../config.js";
+import { configSchema } from "../config.schema.js";
+import { loadConfigFromEnv } from "../loadConfigFromEnv.js";
 
 // Semantic constants
 const VALID_CHAIN_ID = "11155111";

@@ -1,16 +1,16 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture, time as networkTime } from "@nomicfoundation/hardhat-network-helpers";
+import { expect } from "chai";
+import { LineaRollup__factory, TestLineaRollup } from "contracts/typechain-types";
 import { ethers } from "hardhat";
 
+import { expectSuccessfulFinalize, getAccountsFixture, deployLineaRollupFixture } from "./../helpers";
+import calldataAggregatedProof1To155 from "../../_testData/compressedData/aggregatedProof-1-155.json";
+import fourthCompressedDataContent from "../../_testData/compressedData/blocks-115-155.json";
+import secondCompressedDataContent from "../../_testData/compressedData/blocks-47-81.json";
 import aggregatedProof1To81 from "../../_testData/compressedData/multipleProofs/aggregatedProof-1-81.json";
 import aggregatedProof82To153 from "../../_testData/compressedData/multipleProofs/aggregatedProof-82-153.json";
-import calldataAggregatedProof1To155 from "../../_testData/compressedData/aggregatedProof-1-155.json";
-import secondCompressedDataContent from "../../_testData/compressedData/blocks-47-81.json";
-import fourthCompressedDataContent from "../../_testData/compressedData/blocks-115-155.json";
 import fourthMultipleCompressedDataContent from "../../_testData/compressedData/multipleProofs/blocks-120-153.json";
-
-import { LineaRollup__factory, TestLineaRollup } from "contracts/typechain-types";
-import { expectSuccessfulFinalize, getAccountsFixture, deployLineaRollupFixture } from "./../helpers";
 import {
   GENERAL_PAUSE_TYPE,
   HASH_ZERO,
@@ -35,7 +35,6 @@ import {
   generateParentAndExpectedShnarfForMulitpleIndex,
   generateParentShnarfData,
 } from "../../common/helpers";
-import { expect } from "chai";
 
 describe("Linea Rollup contract: Finalization", () => {
   let lineaRollup: TestLineaRollup;

@@ -1,7 +1,8 @@
+import * as dotenv from "dotenv";
 import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
-import * as dotenv from "dotenv";
+
 import { abi as LineaRollupV7Abi, bytecode as LineaRollupV7Bytecode } from "./dynamic-artifacts/LineaRollupV7.json";
 import {
   contractName as ProxyAdminContractName,
@@ -12,9 +13,6 @@ import {
   abi as TransparentUpgradeableProxyAbi,
   bytecode as TransparentUpgradeableProxyBytecode,
 } from "./static-artifacts/TransparentUpgradeableProxy.json";
-import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
-import { deployContractFromArtifacts, getInitializerData } from "../common/helpers/deployments";
-import { generateRoleAssignments } from "../common/helpers/roles";
 import {
   LINEA_ROLLUP_V7_PAUSE_TYPES_ROLES,
   LINEA_ROLLUP_V7_UNPAUSE_TYPES_ROLES,
@@ -22,6 +20,9 @@ import {
   OPERATOR_ROLE,
   YIELD_PROVIDER_STAKING_ROLE,
 } from "../common/constants";
+import { deployContractFromArtifacts, getInitializerData } from "../common/helpers/deployments";
+import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
+import { generateRoleAssignments } from "../common/helpers/roles";
 import { get1559Fees } from "../scripts/utils";
 
 dotenv.config();

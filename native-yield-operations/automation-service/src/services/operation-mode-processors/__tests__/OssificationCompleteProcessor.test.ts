@@ -1,14 +1,17 @@
-import { ILogger } from "@consensys/linea-shared-utils";
+import { attempt, msToSeconds, wait } from "@consensys/linea-shared-utils";
 import { jest, describe, it, expect, beforeEach } from "@jest/globals";
-import type { INativeYieldAutomationMetricsUpdater } from "../../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
-import type { IOperationModeMetricsRecorder } from "../../../core/metrics/IOperationModeMetricsRecorder.js";
-import type { IYieldManager } from "../../../core/clients/contracts/IYieldManager.js";
-import type { TransactionReceipt, Address } from "viem";
-import type { IBeaconChainStakingClient } from "../../../core/clients/IBeaconChainStakingClient.js";
+import { ResultAsync } from "neverthrow";
+
+import { createLoggerMock, createMetricsUpdaterMock } from "../../../__tests__/helpers/index.js";
 import { OperationMode } from "../../../core/enums/OperationModeEnums.js";
 import { OssificationCompleteProcessor } from "../OssificationCompleteProcessor.js";
-import { ResultAsync } from "neverthrow";
-import { createLoggerMock, createMetricsUpdaterMock } from "../../../__tests__/helpers/index.js";
+
+import type { IYieldManager } from "../../../core/clients/contracts/IYieldManager.js";
+import type { IBeaconChainStakingClient } from "../../../core/clients/IBeaconChainStakingClient.js";
+import type { INativeYieldAutomationMetricsUpdater } from "../../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
+import type { IOperationModeMetricsRecorder } from "../../../core/metrics/IOperationModeMetricsRecorder.js";
+import type { ILogger } from "@consensys/linea-shared-utils";
+import type { TransactionReceipt, Address } from "viem";
 
 jest.mock("@consensys/linea-shared-utils", () => {
   const actual = jest.requireActual("@consensys/linea-shared-utils") as typeof import("@consensys/linea-shared-utils");
@@ -20,7 +23,9 @@ jest.mock("@consensys/linea-shared-utils", () => {
   };
 });
 
-import { wait, attempt, msToSeconds } from "@consensys/linea-shared-utils";
+const waitMock = wait as jest.MockedFunction<typeof wait>;
+const attemptMock = attempt as jest.MockedFunction<typeof attempt>;
+const msToSecondsMock = msToSeconds as jest.MockedFunction<typeof msToSeconds>;
 
 const YIELD_PROVIDER_ADDRESS = "0x1111111111111111111111111111111111111111" as Address;
 const MAX_INACTION_MS = 5_000;
@@ -44,16 +49,12 @@ const createBeaconClientMock = () => ({
 });
 
 describe("OssificationCompleteProcessor", () => {
-  let processor: OssificationCompleteProcessor;
+  let processor: InstanceType<typeof OssificationCompleteProcessor>;
   let logger: jest.Mocked<ILogger>;
   let metricsUpdater: jest.Mocked<INativeYieldAutomationMetricsUpdater>;
   let metricsRecorder: jest.Mocked<IOperationModeMetricsRecorder>;
   let yieldManager: jest.Mocked<IYieldManager<TransactionReceipt>>;
   let beaconClient: jest.Mocked<IBeaconChainStakingClient>;
-
-  const waitMock = wait as jest.MockedFunction<typeof wait>;
-  const attemptMock = attempt as jest.MockedFunction<typeof attempt>;
-  const msToSecondsMock = msToSeconds as jest.MockedFunction<typeof msToSeconds>;
 
   beforeEach(() => {
     jest.clearAllMocks();
