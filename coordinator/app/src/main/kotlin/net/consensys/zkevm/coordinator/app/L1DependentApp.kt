@@ -275,32 +275,30 @@ class L1DependentApp(
       null
     }
 
-  private val gasPriceCapProviderForDataSubmission = if (configs.l1Submission!!.dynamicGasPriceCap.isEnabled()) {
-    GasPriceCapProviderForDataSubmission(
-      config = GasPriceCapProviderForDataSubmission.Config(
-        maxPriorityFeePerGasCap = configs.l1Submission.blob.gas.maxPriorityFeePerGasCap,
-        maxFeePerGasCap = configs.l1Submission.blob.gas.maxFeePerGasCap,
-        maxFeePerBlobGasCap = configs.l1Submission.blob.gas.maxFeePerBlobGasCap,
-      ),
-      gasPriceCapProvider = gasPriceCapProvider!!,
-      metricsFacade = metricsFacade,
-    )
-  } else {
-    null
-  }
+  private val gasPriceCapProviderForDataSubmission =
+    gasPriceCapProvider?.let { provider ->
+      GasPriceCapProviderForDataSubmission(
+        config = GasPriceCapProviderForDataSubmission.Config(
+          maxPriorityFeePerGasCap = configs.l1Submission!!.blob.gas.maxPriorityFeePerGasCap,
+          maxFeePerGasCap = configs.l1Submission.blob.gas.maxFeePerGasCap,
+          maxFeePerBlobGasCap = configs.l1Submission.blob.gas.maxFeePerBlobGasCap,
+        ),
+        gasPriceCapProvider = provider,
+        metricsFacade = metricsFacade,
+      )
+    }
 
-  private val gasPriceCapProviderForFinalization = if (configs.l1Submission!!.dynamicGasPriceCap.isEnabled()) {
-    GasPriceCapProviderForFinalization(
-      config = GasPriceCapProviderForFinalization.Config(
-        maxPriorityFeePerGasCap = configs.l1Submission.aggregation.gas.maxPriorityFeePerGasCap,
-        maxFeePerGasCap = configs.l1Submission.aggregation.gas.maxFeePerGasCap,
-      ),
-      gasPriceCapProvider = gasPriceCapProvider!!,
-      metricsFacade = metricsFacade,
-    )
-  } else {
-    null
-  }
+  private val gasPriceCapProviderForFinalization =
+    gasPriceCapProvider?.let { provider ->
+      GasPriceCapProviderForFinalization(
+        config = GasPriceCapProviderForFinalization.Config(
+          maxPriorityFeePerGasCap = configs.l1Submission!!.aggregation.gas.maxPriorityFeePerGasCap,
+          maxFeePerGasCap = configs.l1Submission.aggregation.gas.maxFeePerGasCap,
+        ),
+        gasPriceCapProvider = provider,
+        metricsFacade = metricsFacade,
+      )
+    }
 
   private val lastFinalizedBlock = lastFinalizedBlock().get()
   private val lastProcessedBlockNumber = resumeConflationFrom(
