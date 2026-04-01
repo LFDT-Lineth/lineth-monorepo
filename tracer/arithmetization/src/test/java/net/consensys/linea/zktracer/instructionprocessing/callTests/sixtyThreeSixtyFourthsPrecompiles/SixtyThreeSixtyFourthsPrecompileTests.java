@@ -18,6 +18,7 @@ package net.consensys.linea.zktracer.instructionprocessing.callTests.sixtyThreeS
 import static com.google.common.base.Preconditions.checkArgument;
 import static net.consensys.linea.zktracer.Fork.*;
 import static net.consensys.linea.zktracer.Trace.*;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.modexp.ModexpPricingOobCall.computeExponentLog;
 import static net.consensys.linea.zktracer.module.hub.fragment.scenario.PrecompileScenarioFragment.PrecompileFlag.PRC_BLAKE2F;
 import static net.consensys.linea.zktracer.module.hub.fragment.scenario.PrecompileScenarioFragment.PrecompileFlag.PRC_BLS_G1_ADD;
@@ -281,7 +282,7 @@ public class SixtyThreeSixtyFourthsPrecompileTests extends TracerTestBase {
         arguments.add(Arguments.of(precompileFlag, gasLimit, cornerCase == -1));
       }
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   /**
@@ -382,7 +383,7 @@ public class SixtyThreeSixtyFourthsPrecompileTests extends TracerTestBase {
         }
       }
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   // Support methods

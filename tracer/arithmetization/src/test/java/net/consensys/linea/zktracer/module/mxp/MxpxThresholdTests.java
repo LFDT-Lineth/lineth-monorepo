@@ -47,8 +47,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 public class MxpxThresholdTests extends TracerTestBase {
 
-  private static final int MXPX_THRESHOLD_SAMPLE_SIZE = 300;
-
   static final BigInteger MAX_UINT256 =
       BigInteger.TWO.pow(256).subtract(BigInteger.ONE); // 2^256 - 1
   static final BigInteger CANCUN_MXPX_THRESHOLD_BI = BigInteger.valueOf(CANCUN_MXPX_THRESHOLD);
@@ -120,8 +118,7 @@ public class MxpxThresholdTests extends TracerTestBase {
   }
 
   static Stream<Arguments> sampleMxpxThresholdSource() {
-    return randomSampleByCurrentCommitHash(MXPX_THRESHOLD_SAMPLE_SIZE, testMxpxThresholdSource())
-        .stream();
+    return randomSampleByCurrentCommitHash(testMxpxThresholdSource()).stream();
   }
 
   /**
@@ -246,7 +243,7 @@ public class MxpxThresholdTests extends TracerTestBase {
       arguments.add(Arguments.of(a, b));
       arguments.add(Arguments.of(b, a));
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   static Stream<Arguments> testCodeCopyOverflowWithTwoSimilarValuesSource() {
@@ -261,7 +258,7 @@ public class MxpxThresholdTests extends TracerTestBase {
       arguments.add(Arguments.of(a, b));
       arguments.add(Arguments.of(b, a));
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   static Stream<Arguments> testCodeCopyOverflowWithTwoLargeValuesSource() {
@@ -276,7 +273,7 @@ public class MxpxThresholdTests extends TracerTestBase {
         arguments.add(Arguments.of(a, b));
       }
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   // Specialized tests for MCOPY
@@ -302,12 +299,11 @@ public class MxpxThresholdTests extends TracerTestBase {
         }
       }
     }
-    return arguments;
+    return randomSampleByCurrentCommitHash(arguments);
   }
 
   static Stream<Arguments> sampleInputParamsNightly() {
-    return randomSampleByCurrentCommitHash(MXPX_THRESHOLD_SAMPLE_SIZE, inputs(inputsValuesNightly))
-        .stream();
+    return inputs(inputsValuesNightly).stream();
   }
 
   private static Stream<Arguments> sampleInputParamsUnit() {

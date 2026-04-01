@@ -31,16 +31,12 @@ import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.core.Transaction;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 public class XbsLimitsTests extends TracerTestBase {
-
-  static final int XBS_LIMIT_TEST_SAMPLE_SIZE = 600;
-
   final KeyPair keyPair = new SECP256K1().generateKeyPair();
   final Address senderAddress = Address.extract(keyPair.getPublicKey());
 
@@ -81,15 +77,6 @@ public class XbsLimitsTests extends TracerTestBase {
   @ParameterizedTest
   @MethodSource("sampleModexpXbsLimitTestsSource")
   public void modexpXbsLimitTests(
-      XbsValueType.BbsEbsMbsScenario scenario, String bbsEbsMbsString, TestInfo testInfo) {
-
-    body(scenario, bbsEbsMbsString, testInfo);
-  }
-
-  @Tag("nightly")
-  @ParameterizedTest
-  @MethodSource("sampleModexpXbsLimitsTestsNightlySource")
-  public void modexpXbsLimitTestsNightly(
       XbsValueType.BbsEbsMbsScenario scenario, String bbsEbsMbsString, TestInfo testInfo) {
 
     body(scenario, bbsEbsMbsString, testInfo);
@@ -136,13 +123,12 @@ public class XbsLimitsTests extends TracerTestBase {
                                                       bbsType, ebsType, mbsType))))))
           .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-  static Stream<Arguments> sampleModexpXbsLimitsTestsNightlySource() {
-    return randomSampleByCurrentCommitHash(XBS_LIMIT_TEST_SAMPLE_SIZE, modexpXbsLimitsTestsSource())
-        .stream();
+  static Stream<Arguments> sampleModexpXbsLimitTestsSource() {
+    List<Arguments> arguments = modexpXbsLimitsTestsSource();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   static List<Arguments> modexpXbsLimitsTestsSource() {
-
     List<Arguments> arguments = new ArrayList<>();
     for (Map.Entry<XbsValueType.BbsEbsMbsScenario, List<String>> entry : allParameters.entrySet()) {
       XbsValueType.BbsEbsMbsScenario scenario = entry.getKey();
@@ -154,12 +140,6 @@ public class XbsLimitsTests extends TracerTestBase {
     }
 
     return arguments;
-  }
-
-  static Stream<Arguments> sampleModexpXbsLimitTestsSource() {
-    final List<Arguments> arguments = new ArrayList<>(modexpXbsLimitsTestsSource());
-    return randomSampleByCurrentCommitHash(arguments.size() / 40, arguments)
-        .stream(); // Execute 2.5 % of the tests
   }
 
   static List<String> getParameters(XbsValueType.BbsEbsMbsScenario bbsEbsMbsScenario) {

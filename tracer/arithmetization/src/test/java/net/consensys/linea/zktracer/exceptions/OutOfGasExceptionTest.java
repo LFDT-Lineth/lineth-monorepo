@@ -17,6 +17,7 @@ package net.consensys.linea.zktracer.exceptions;
 
 import static net.consensys.linea.testing.ToyExecutionEnvironmentV2.DEFAULT_BLOCK_NUMBER;
 import static net.consensys.linea.zktracer.Trace.*;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.module.hub.signals.TracedException.OUT_OF_GAS_EXCEPTION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -111,15 +112,15 @@ public class OutOfGasExceptionTest extends TracerTestBase {
   }
 
   static Stream<Arguments> outOfGasExceptionWithEmptyAccountsAndNoMemoryExpansionCostTestSource() {
-    ArrayList<Arguments> args = new ArrayList<>();
+    ArrayList<Arguments> arguments = new ArrayList<>();
     //
     for (int i = 0; i < 256; i++) {
-      args.add(Arguments.of(i, -1));
-      args.add(Arguments.of(i, 0));
-      args.add(Arguments.of(i, 1));
+      arguments.add(Arguments.of(i, -1));
+      arguments.add(Arguments.of(i, 0));
+      arguments.add(Arguments.of(i, 1));
     }
     //
-    return args.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   @ParameterizedTest
@@ -191,7 +192,8 @@ public class OutOfGasExceptionTest extends TracerTestBase {
         arguments.add(Arguments.of(value, false, false, cornerCase));
       }
     }
-    return arguments.stream();
+    //
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   /**

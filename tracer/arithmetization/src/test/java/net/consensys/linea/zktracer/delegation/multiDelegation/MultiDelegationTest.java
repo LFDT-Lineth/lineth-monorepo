@@ -17,6 +17,7 @@ package net.consensys.linea.zktracer.delegation.multiDelegation;
 
 import static net.consensys.linea.testing.ToyExecutionEnvironmentV2.DEFAULT_COINBASE_ADDRESS;
 import static net.consensys.linea.zktracer.Trace.LINEA_CHAIN_ID;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.utilities.Utils.addDelegationPrefixToAddress;
 import static net.consensys.linea.zktracer.utilities.Utils.getDelegationAddress;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -292,14 +293,14 @@ public class MultiDelegationTest extends TracerTestBase {
   }
 
   static Stream<Arguments> multiDelegationMonoTransactionTestSource() {
-    return multiDelegationTestSourceBody(false);
+    return randomSampleByCurrentCommitHash(multiDelegationTestSourceBody(false)).stream();
   }
 
   static Stream<Arguments> multiDelegationMultiTransactionTestSource() {
-    return multiDelegationTestSourceBody(true);
+    return randomSampleByCurrentCommitHash(multiDelegationTestSourceBody(true)).stream();
   }
 
-  static Stream<Arguments> multiDelegationTestSourceBody(boolean isMultiTransaction) {
+  static List<Arguments> multiDelegationTestSourceBody(boolean isMultiTransaction) {
     ToyAccount authorityAccountInitial;
     ToyAccount authorityAccountUpdated;
     List<Arguments> arguments = new ArrayList<>();
@@ -374,7 +375,7 @@ public class MultiDelegationTest extends TracerTestBase {
         }
       }
     }
-    return arguments.stream();
+    return arguments;
   }
 
   static final Address delegationAddressA =

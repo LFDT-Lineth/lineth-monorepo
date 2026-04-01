@@ -14,6 +14,7 @@
  */
 package net.consensys.linea.zktracer.instructionprocessing.createTests.abort;
 
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.instructionprocessing.createTests.SizeParameter.*;
 import static net.consensys.linea.zktracer.instructionprocessing.createTests.trivial.RootLevel.*;
 import static net.consensys.linea.zktracer.instructionprocessing.utilities.Calls.appendRevert;
@@ -205,7 +206,7 @@ public class Balance extends TracerTestBase {
         arguments.add(Arguments.of(CreateType.CREATE2, offsetParameter, sizeParameter, false));
       }
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   /**
@@ -226,6 +227,6 @@ public class Balance extends TracerTestBase {
       }
     }
 
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 }

@@ -15,6 +15,7 @@
 
 package net.consensys.linea.zktracer.module.ecdata.ecpairing;
 
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.module.ecdata.ecpairing.EcPairingTestSupport.argumentsListToPairingsAsString;
 import static net.consensys.linea.zktracer.module.ecdata.ecpairing.EcPairingTestSupport.csvToArgumentsList;
 import static net.consensys.linea.zktracer.module.ecdata.ecpairing.EcPairingTestSupport.info;
@@ -25,11 +26,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.consensys.linea.UnitTestWatcher;
@@ -186,14 +184,6 @@ public class EcPairingTest extends TracerTestBase {
     testEcPairingSingleForScenarioBody(Ax, Ay, BxIm, BxRe, ByIm, ByRe, testInfo);
   }
 
-  @Tag("nightly")
-  @ParameterizedTest
-  @MethodSource("ecPairingSingleSourceNightly")
-  void testEcPairingSingleForScenarioUsingMethodSourceNightly(
-      String Ax, String Ay, String BxIm, String BxRe, String ByIm, String ByRe, TestInfo testInfo) {
-    testEcPairingSingleForScenarioBody(Ax, Ay, BxIm, BxRe, ByIm, ByRe, testInfo);
-  }
-
   @Disabled // Useful only to test specific test cases in a CSV file
   @ParameterizedTest
   @CsvFileSource(
@@ -251,21 +241,14 @@ public class EcPairingTest extends TracerTestBase {
         .setArguments(Ax + "," + Ay + "," + BxIm + "," + BxRe + "," + ByIm + "," + ByRe);
   }
 
-  // Method source of testEcPairingSingleForScenarioUsingMethodSource
   private static Stream<Arguments> ecPairingSingleSource() {
-    List<Arguments> arguments = new ArrayList<>(ecPairingSingleSourceNightly().toList());
-    Collections.shuffle(arguments, new Random(LocalDate.now().toEpochDay()));
-    return arguments.stream().limit(arguments.size() / 20); // Execute 5 % of the tests
-  }
-
-  private static Stream<Arguments> ecPairingSingleSourceNightly() {
     List<Arguments> arguments = new ArrayList<>();
     for (Arguments smallPoint : smallPoints) {
       for (Arguments largePoint : largePoints) {
         arguments.add(pair(smallPoint, largePoint));
       }
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   @ParameterizedTest
@@ -364,12 +347,11 @@ public class EcPairingTest extends TracerTestBase {
 
   // Method source of testEcPairingGenericForScenarioUsingMethodSource
   private static Stream<Arguments> ecPairingGenericSource() {
-    List<Arguments> arguments = new ArrayList<>(ecPairingGenericSourceNightly().toList());
-    Collections.shuffle(arguments, new Random(LocalDate.now().toEpochDay()));
-    return arguments.stream().limit(arguments.size() / 20); // Execute 5 % of the tests
+    List<Arguments> arguments = ecPairingGenericSourceNightly();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
-  private static Stream<Arguments> ecPairingGenericSourceNightly() {
+  private static List<Arguments> ecPairingGenericSourceNightly() {
     List<Arguments> allPairings = new ArrayList<>();
     EcPairingTestSupport util = new EcPairingTestSupport();
 
@@ -560,7 +542,7 @@ public class EcPairingTest extends TracerTestBase {
                 List.of(largePointInfinity)));
       }
     }
-    return allPairings.stream();
+    return allPairings;
   }
 
   // Method source of testEcPairingGenericForScenarioUsingMethodSource

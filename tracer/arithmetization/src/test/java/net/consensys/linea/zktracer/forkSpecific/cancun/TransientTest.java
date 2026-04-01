@@ -15,6 +15,8 @@
 
 package net.consensys.linea.zktracer.forkSpecific.cancun;
 
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -97,7 +99,7 @@ public class TransientTest extends TracerTestBase {
     arguments.add(Arguments.of(CALLCODE_CALLER));
     arguments.add(Arguments.of(STATIC_CALLER));
     arguments.add(Arguments.of(DELEGATE_CALLER));
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   @Test

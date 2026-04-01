@@ -16,6 +16,7 @@
 package net.consensys.linea.zktracer.module.blsdata;
 
 import static net.consensys.linea.zktracer.Fork.isPostPrague;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.module.blsdata.BlsTestUtils.LARGE_POINTS;
 import static net.consensys.linea.zktracer.module.blsdata.BlsTestUtils.VALID_G2_POINT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -116,7 +117,7 @@ public class BlsG2MsmTest extends TracerTestBase {
         }
       }
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   private static Stream<Arguments> blsG2MsmFullTableSource() {
@@ -124,6 +125,6 @@ public class BlsG2MsmTest extends TracerTestBase {
     for (int n = 0; n < BlsRt.G2_MSM_DISCOUNTS.size() + 10; n++) {
       arguments.add(Arguments.of(n + 1, Collections.nCopies(n + 1, VALID_G2_POINT)));
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 }

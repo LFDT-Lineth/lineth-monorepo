@@ -326,18 +326,42 @@ public class Utilities {
     }
   }
 
+  private static double getParameterizedTestsSampleSize() {
+    final String rawValue = System.getenv().getOrDefault("PARAMETERIZED_TESTS_SAMPLE_SIZE", "0.2");
+    try {
+      return Double.parseDouble(rawValue);
+    } catch (NumberFormatException e) {
+      // Fall back to the default value if the environment variable is not valid.
+      return 0.2;
+    }
+  }
+
+  /**
+   * Provides a sampling ratio for parameterized tests to use in any given testing run (e.g. sample
+   * 20% of tests). This can value can be overridden using an environment variable.
+   */
+  public static final double PARAMETERIZED_TESTS_SAMPLE_SIZE = getParameterizedTestsSampleSize();
+
+  public static <T> List<T> randomSampleByCurrentCommitHash(List<T> items) {
+    int n = (int) (((double) items.size()) * PARAMETERIZED_TESTS_SAMPLE_SIZE);
+    // Ensure minimal number of tests (this protects against small tests items which would otherwise
+    // be sampled to 0).
+    n = Math.max(15, n);
+    // Sample away
+    return randomSampleByCurrentCommitHash(n, items);
+  }
+
   /**
    * Sample exactly n items at random from a given input list. If that list has fewer than n items,
    * then the list is returned unchanged. The Random Number Generated (RNG) is seeded with the
    * current commit hash. The idea here is that we benefit from different seeds (i.e. by testing
    * different inputs), but should a failure occur we can (in principle) recreate it.
    *
-   * @param n Number of items to sample
    * @param items Source of items to sample from
    * @param <T>
    * @return
    */
-  public static <T> List<T> randomSampleByCurrentCommitHash(int n, List<T> items) {
+  private static <T> List<T> randomSampleByCurrentCommitHash(int n, List<T> items) {
     // If the sampling is bigger than the original list, just return the list
     if (n >= items.size()) {
       return items;

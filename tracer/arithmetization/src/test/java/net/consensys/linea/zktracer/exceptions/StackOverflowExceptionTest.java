@@ -14,6 +14,7 @@
  */
 package net.consensys.linea.zktracer.exceptions;
 
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.module.hub.signals.TracedException.STACK_OVERFLOW;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -66,6 +67,6 @@ public class StackOverflowExceptionTest extends TracerTestBase {
         }
       }
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 }

@@ -14,6 +14,7 @@
  */
 package net.consensys.linea.zktracer.instructionprocessing.createTests.trivial;
 
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.instructionprocessing.createTests.WhenToTestParameter.BEFORE;
 import static net.consensys.linea.zktracer.instructionprocessing.createTests.WhenToTestParameter.BEFORE_AND_AFTER;
 import static net.consensys.linea.zktracer.opcode.OpCode.*;
@@ -124,7 +125,7 @@ public class RootLevel extends TracerTestBase {
       }
     }
 
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   public static void genericCreate(

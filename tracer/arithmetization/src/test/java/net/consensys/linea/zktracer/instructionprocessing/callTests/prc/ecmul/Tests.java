@@ -32,14 +32,9 @@ import org.junit.jupiter.params.provider.Arguments;
 
 @Tag("prc-calltests")
 public class Tests extends PrecompileCallTests<CallParameters> {
-  // Set sample size with potential for override.
-  private static final int ECMUL_SAMPLE_SIZE =
-      Integer.parseInt(System.getenv().getOrDefault("PRC_CALLTESTS_SAMPLE_SIZE", "700"));
 
   public static Stream<Arguments> parameterGeneration() {
-    return randomSampleByCurrentCommitHash(
-        ECMUL_SAMPLE_SIZE, ParameterGeneration.parameterGeneration())
-        .stream();
+    return randomSampleByCurrentCommitHash(ParameterGeneration.parameterGeneration()).stream();
   }
 
   /** Non-parametric test to make sure things are working as expected. */

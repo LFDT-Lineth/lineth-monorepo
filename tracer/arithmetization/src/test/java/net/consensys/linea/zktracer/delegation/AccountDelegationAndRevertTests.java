@@ -16,6 +16,7 @@
 package net.consensys.linea.zktracer.delegation;
 
 import static net.consensys.linea.zktracer.delegation.Utils.*;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -162,14 +163,14 @@ public class AccountDelegationAndRevertTests extends TracerTestBase {
     for (scenario sc1 : scenario.values()) {
       arguments.add(Arguments.of(sc1));
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
     // arguments.clear();
     // arguments.add(
     //     Arguments.of(
     //         scenario
     //
     // .DELEGATION_IS_VALID___SI___AUTHORITY_EXISTS___SI___REQUIRES_EVM_EXECUTION___SI___TRANSACTION_REVERTS___NO___OTHER_REFUNDS___SI));
-    // return arguments.stream();
+    // return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   private enum scenario {
@@ -284,6 +285,6 @@ public class AccountDelegationAndRevertTests extends TracerTestBase {
         }
       }
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 }

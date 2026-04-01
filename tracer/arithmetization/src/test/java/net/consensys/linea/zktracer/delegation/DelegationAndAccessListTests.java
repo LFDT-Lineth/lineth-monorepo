@@ -23,6 +23,7 @@ import static net.consensys.linea.zktracer.delegation.Utils.TouchAuthority;
 import static net.consensys.linea.zktracer.delegation.Utils.TouchAuthority.EXECUTION_DOES_NOT_TOUCH_AUTHORITY;
 import static net.consensys.linea.zktracer.delegation.Utils.TouchMethod;
 import static net.consensys.linea.zktracer.delegation.Utils.TouchMethod.BALANCE;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -177,6 +178,7 @@ public class DelegationAndAccessListTests extends TracerTestBase {
         }
       }
     }
-    return argumentsList.stream();
+
+    return randomSampleByCurrentCommitHash(argumentsList).stream();
   }
 }

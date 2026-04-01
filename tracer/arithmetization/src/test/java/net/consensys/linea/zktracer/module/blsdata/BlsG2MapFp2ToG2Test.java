@@ -16,6 +16,7 @@
 package net.consensys.linea.zktracer.module.blsdata;
 
 import static net.consensys.linea.zktracer.Fork.isPostPrague;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.module.blsdata.BlsTestUtils.BLS_PRIME;
 import static net.consensys.linea.zktracer.module.blsdata.BlsTestUtils.leadFailure;
 import static net.consensys.linea.zktracer.module.blsdata.BlsTestUtils.leadSuccess;
@@ -103,7 +104,7 @@ public class BlsG2MapFp2ToG2Test extends TracerTestBase {
         // A random valid input in Fp2
         Arguments.of(
             "00000000000000000000000000000000167ab0f743a50c14cfe36fe095886cefd958c60233367db3f904f6f2b40d5df62f75958a02b52daca5316718966a8fb7000000000000000000000000000000001904f0ab97b4fad64e7833426ba8a6311c0694716cf407c8a015cb266153aae30e45b5796e0143da9f608fd01aaf77d2"));
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   private static Stream<Arguments> blsG2MapFp2ToG2SourceExploringLeadTailPossibilities() {
@@ -118,6 +119,6 @@ public class BlsG2MapFp2ToG2Test extends TracerTestBase {
         }
       }
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 }

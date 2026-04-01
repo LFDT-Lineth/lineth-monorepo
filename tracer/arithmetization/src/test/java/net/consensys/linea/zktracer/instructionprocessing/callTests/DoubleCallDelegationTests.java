@@ -16,6 +16,7 @@
 package net.consensys.linea.zktracer.instructionprocessing.callTests;
 
 import static net.consensys.linea.testing.BytecodeRunner.MAX_GAS_LIMIT;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.instructionprocessing.utilities.Calls.appendCall;
 import static net.consensys.linea.zktracer.instructionprocessing.utilities.Calls.appendFullGasCall;
 import static net.consensys.linea.zktracer.instructionprocessing.utilities.Calls.appendInsufficientBalanceCall;
@@ -519,7 +520,7 @@ public class DoubleCallDelegationTests extends TracerTestBase {
             LoopType.BOUNDED_LOOP));
     */
 
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   private static boolean skipTest(

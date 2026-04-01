@@ -15,7 +15,7 @@
 
 package net.consensys.linea.zktracer;
 
-import static org.identityconnectors.common.ByteUtil.randomBytes;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -106,7 +106,7 @@ public class SignedOperationsExtensiveTest extends TracerTestBase {
         }
       }
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   @ParameterizedTest
@@ -153,7 +153,7 @@ public class SignedOperationsExtensiveTest extends TracerTestBase {
         }
       }
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   // Support method

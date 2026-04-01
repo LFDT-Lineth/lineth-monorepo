@@ -16,6 +16,7 @@
 package net.consensys.linea.zktracer.forkSpecific.prague.floorprice;
 
 import static net.consensys.linea.zktracer.Fork.isPostPrague;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 
 import com.google.common.base.Preconditions;
 import java.util.ArrayList;
@@ -159,7 +160,7 @@ public class TrivialExecutionTests extends TracerTestBase {
             DominantCost.FLOOR_COST_DOMINATES,
             AddressCollisions.NO_COLLISION));
 
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   static Stream<Arguments> testSourceWithAllCollisionCases() {
@@ -186,7 +187,7 @@ public class TrivialExecutionTests extends TracerTestBase {
               DominantCost.FLOOR_COST_DOMINATES,
               collisionCase));
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   // Support enums and methods

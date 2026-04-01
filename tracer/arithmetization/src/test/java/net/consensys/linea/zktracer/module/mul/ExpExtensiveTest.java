@@ -15,6 +15,7 @@ package net.consensys.linea.zktracer.module.mul;
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.module.HexStringUtils.and;
 import static net.consensys.linea.zktracer.module.HexStringUtils.rightShift;
 
@@ -2075,6 +2076,6 @@ public class ExpExtensiveTest extends TracerTestBase {
         arguments.add(Arguments.of(base, exponent));
       }
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 }

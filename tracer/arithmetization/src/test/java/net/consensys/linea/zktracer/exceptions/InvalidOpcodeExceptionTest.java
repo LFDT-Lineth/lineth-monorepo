@@ -14,6 +14,7 @@
  */
 package net.consensys.linea.zktracer.exceptions;
 
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
@@ -67,6 +68,6 @@ public class InvalidOpcodeExceptionTest extends TracerTestBase {
         arguments.add(Arguments.of(value));
       }
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 }

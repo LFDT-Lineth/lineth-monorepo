@@ -16,6 +16,7 @@
 package net.consensys.linea.zktracer.forkSpecific.prague.floorprice;
 
 import static net.consensys.linea.zktracer.Fork.isPostPrague;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 
 import com.google.common.base.Preconditions;
 import java.util.ArrayList;
@@ -84,7 +85,7 @@ public class NontrivialExecutionTests extends TracerTestBase {
             false,
             UserTransaction.DominantCost.EXECUTION_COST_DOMINATES));
 
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   /**
@@ -135,7 +136,7 @@ public class NontrivialExecutionTests extends TracerTestBase {
                 UserTransaction.DominantCost.EXECUTION_COST_DOMINATES),
             UserTransaction.DominantCost.EXECUTION_COST_DOMINATES));
 
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   // Support enums and methods

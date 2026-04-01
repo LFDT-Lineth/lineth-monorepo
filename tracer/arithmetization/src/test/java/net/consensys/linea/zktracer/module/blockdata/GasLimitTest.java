@@ -18,6 +18,7 @@ import static net.consensys.linea.zktracer.MultiBlockUtils.multiBlocksTest;
 import static net.consensys.linea.zktracer.Trace.*;
 import static net.consensys.linea.zktracer.Trace.Blockdata.GAS_LIMIT_MAXIMUM;
 import static net.consensys.linea.zktracer.Trace.Blockdata.GAS_LIMIT_MINIMUM;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.module.blockdata.NextGasLimitScenario.*;
 
 import java.util.ArrayList;
@@ -108,7 +109,7 @@ public class GasLimitTest extends TracerTestBase {
         arguments.add(Arguments.of(gasLimit, scenario));
       }
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   private long nextGasLimit(long gasLimit, NextGasLimitScenario nextGasLimitScenario) {

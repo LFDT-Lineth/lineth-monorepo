@@ -45,8 +45,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 @ExtendWith(UnitTestWatcher.class)
 public class ExpTest extends TracerTestBase {
 
-  private static final int EXP_SAMPLE_SIZE = 400;
-
   // Generates 128, 64, 2, 1 as LD (leading digit)
   // LD_INDICES | LD
   // ---------- | ---------------------
@@ -169,7 +167,7 @@ public class ExpTest extends TracerTestBase {
   }
 
   private static Stream<Arguments> sampleTestModexpLogSource() {
-    return randomSampleByCurrentCommitHash(EXP_SAMPLE_SIZE, testModexpLogSource()).stream();
+    return randomSampleByCurrentCommitHash(testModexpLogSource()).stream();
   }
 
   private static List<Arguments> testModexpLogSource() {

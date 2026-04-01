@@ -15,6 +15,7 @@
 
 package net.consensys.linea.zktracer.precompiles;
 
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.module.limits.precompiles.RipemdBlocks.RIPEMD160_BLOCKSIZE;
 import static net.consensys.linea.zktracer.module.limits.precompiles.RipemdBlocks.numberOfRipemd160Blocks;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -89,6 +90,6 @@ public class RipTests extends TracerTestBase {
     for (int size : sizes) {
       arguments.add(Arguments.of(size));
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 }

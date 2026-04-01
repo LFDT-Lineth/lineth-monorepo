@@ -143,5 +143,4 @@ tasks.register('buildAllTracers', Exec) {
     traceJava.parentFile.mkdirs()
   }
   commandLine 'go-corset', 'generate', '-p', TRACE_PKG, '-i', traceJava,
-    '-o', traceOsakaJava, zkevmOsakaBin
-}
+    '-o', traceOsakaJava, zkevmOsakaBin }

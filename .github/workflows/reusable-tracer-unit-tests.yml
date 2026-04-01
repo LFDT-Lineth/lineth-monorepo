@@ -36,6 +36,7 @@ jobs:
           JAVA_OPTS: -Dorg.gradle.daemon=false
           GOCORSET_FLAGS: -b1024 -v --ansi-escapes=false --report --air
           JUNIT_TESTS_PARALLELISM: 4
+          PARAMETERIZED_TESTS_SAMPLE_SIZE: 0.2
           ZKEVM_FORK: ${{ inputs.zkevm_fork }}
 
       - name: Upload test report

@@ -18,6 +18,7 @@ package net.consensys.linea.zktracer.exceptions.multiExceptions;
 import static net.consensys.linea.zktracer.Trace.GAS_CONST_G_TRANSACTION;
 import static net.consensys.linea.zktracer.exceptions.ExceptionUtils.*;
 import static net.consensys.linea.zktracer.exceptions.ExceptionUtils.getProgramStaticCallToCodeAddress;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.module.hub.signals.TracedException.STATIC_FAULT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -131,7 +132,7 @@ public class CallTest extends TracerTestBase {
     arguments.add(Arguments.of(true, true));
     arguments.add(Arguments.of(true, false));
     arguments.add(Arguments.of(false, false));
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   @Test

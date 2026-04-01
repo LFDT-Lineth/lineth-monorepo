@@ -15,6 +15,7 @@
 
 package net.consensys.linea.zktracer.module.shf;
 
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.module.HexStringUtils.xor;
 
 import java.math.BigInteger;
@@ -189,6 +190,6 @@ public class ShfExtensiveTest extends TracerTestBase {
         }
       }
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 }

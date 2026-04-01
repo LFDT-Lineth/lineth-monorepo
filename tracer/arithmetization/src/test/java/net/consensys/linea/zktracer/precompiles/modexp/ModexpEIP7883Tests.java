@@ -155,12 +155,11 @@ public class ModexpEIP7883Tests extends TracerTestBase {
   }
 
   static Stream<Arguments> modexpEIP7883TestSource() {
-    final List<Arguments> arguments = new ArrayList<>(modexpEIP7883TestSourceNightly().toList());
-    return randomSampleByCurrentCommitHash(arguments.size() / 40, arguments)
-        .stream(); // Execute 2.5 % of the tests
+    List<Arguments> arguments = modexpEIP7883TestSourceNightly();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
-  static Stream<Arguments> modexpEIP7883TestSourceNightly() {
+  static List<Arguments> modexpEIP7883TestSourceNightly() {
     List<Arguments> arguments = new ArrayList<>();
     for (Pair<Integer, Integer> bbsMbs : bbsMbsPairOfValues) {
       Integer bbs = bbsMbs.getFirst();
@@ -175,6 +174,6 @@ public class ModexpEIP7883Tests extends TracerTestBase {
         }
       }
     }
-    return arguments.stream();
+    return arguments;
   }
 }

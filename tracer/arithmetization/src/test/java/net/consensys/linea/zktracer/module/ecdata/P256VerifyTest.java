@@ -18,6 +18,7 @@ package net.consensys.linea.zktracer.module.ecdata;
 import static net.consensys.linea.zktracer.Fork.isPostOsaka;
 import static net.consensys.linea.zktracer.Trace.EIP_7825_TRANSACTION_GAS_LIMIT_CAP;
 import static net.consensys.linea.zktracer.Trace.PRECOMPILE_RETURN_DATA_SIZE___P256_VERIFY;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.module.ecdata.EcDataOperation.P_R1;
 import static net.consensys.linea.zktracer.module.ecdata.EcDataOperation.SECP256R1N;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,11 +29,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
-import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 import java.util.stream.Stream;
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
@@ -126,12 +124,11 @@ public class P256VerifyTest extends TracerTestBase {
   }
 
   private static Stream<Arguments> p256VerifySource() throws IOException {
-    List<Arguments> arguments = new ArrayList<>(p256VerifySourceNightly().toList());
-    Collections.shuffle(arguments, new Random(LocalDate.now().toEpochDay()));
-    return arguments.stream().limit(arguments.size() / 20); // Execute 5 % of the tests
+    List<Arguments> arguments = p256VerifySourceNightly();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
-  private static Stream<Arguments> p256VerifySourceNightly() throws IOException {
+  private static List<Arguments> p256VerifySourceNightly() throws IOException {
     // Read json
     // Test vector comes from https://eips.ethereum.org/assets/eip-7951/test-vectors.json
     InputStream inputStream =
@@ -145,7 +142,7 @@ public class P256VerifyTest extends TracerTestBase {
       String expected = node.get("Expected").asText();
       arguments.add(Arguments.of(input, expected));
     }
-    return arguments.stream();
+    return arguments;
   }
 
   final String h = "00".repeat(32);
@@ -177,7 +174,7 @@ public class P256VerifyTest extends TracerTestBase {
         }
       }
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   // Edge cases with checks over return data

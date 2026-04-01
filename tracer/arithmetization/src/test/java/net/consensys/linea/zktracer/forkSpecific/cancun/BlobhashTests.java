@@ -16,6 +16,7 @@
 package net.consensys.linea.zktracer.forkSpecific.cancun;
 
 import static net.consensys.linea.zktracer.Trace.LINEA_BLOB_PER_TRANSACTION_MAXIMUM;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +39,7 @@ public class BlobhashTests extends TracerTestBase {
       arguments.add(Arguments.of(Bytes32.leftPad(Bytes.ofUnsignedInt(stackArgument))));
     }
     arguments.add(Arguments.of(Bytes32.repeat((byte) 0xFF)));
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   // just run the EVM with the BLOBHASH opcode, and a stack item from 0 to

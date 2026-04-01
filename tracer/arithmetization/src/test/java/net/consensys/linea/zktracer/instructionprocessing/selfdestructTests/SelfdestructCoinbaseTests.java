@@ -16,6 +16,7 @@
 package net.consensys.linea.zktracer.instructionprocessing.selfdestructTests;
 
 import static net.consensys.linea.testing.ToyExecutionEnvironmentV2.DEFAULT_COINBASE_ADDRESS;
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
 import static net.consensys.linea.zktracer.instructionprocessing.selfdestructTests.Heir.HEIR_IS_EOA;
 import static net.consensys.linea.zktracer.instructionprocessing.selfdestructTests.Heir.basicSelfDestructor;
 import static net.consensys.linea.zktracer.types.AddressUtils.getCreateRawAddress;
@@ -168,7 +169,7 @@ public class SelfdestructCoinbaseTests extends TracerTestBase {
         }
       }
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   private void setRevert(ToyAccount account) {

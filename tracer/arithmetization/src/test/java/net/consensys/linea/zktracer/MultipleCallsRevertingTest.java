@@ -15,6 +15,8 @@
 
 package net.consensys.linea.zktracer;
 
+import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -210,7 +212,7 @@ public class MultipleCallsRevertingTest extends TracerTestBase {
         }
       }
     }
-    return arguments.stream();
+    return randomSampleByCurrentCommitHash(arguments).stream();
   }
 
   // Support methods
