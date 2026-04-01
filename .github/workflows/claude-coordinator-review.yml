@@ -5,10 +5,11 @@ on:
     - cron: '0 0 * * 1' # Every Monday at 12:00am UTC on main
   workflow_dispatch:
     inputs:
-      branch:
-        description: 'Branch to review. Defaults to main.'
+      save_review_file:
+        description: 'save coordinator-review.md as a workflow artifact.'
         required: false
-        default: 'main'
+        type: boolean
+        default: false
 
 jobs:
   claude-coordinator-review:
@@ -22,12 +23,11 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.branch || 'main' }}
           fetch-depth: 1
 
       - name: Run Claude Coordinator Review
         id: review
-        uses: anthropics/claude-code-action@5d0cc745cd0cce4c0e9e0b3511de26c3bc285eb5 #v1.0.71
+        uses: anthropics/claude-code-action@bee87b3258c251f9279e5371b0cc3660f37f3f77 #v1.0.83
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_args: --model claude-opus-4-6
@@ -79,9 +79,7 @@ jobs:
 
             ## Output Format
 
-            Write your complete review to the file `/tmp/coordinator-review.md`.
-
-            Format the file as a GitHub issue body. Prefix EACH individual finding with
+            Format your response as a GitHub issue body. Prefix EACH individual finding with
             `- [ ]` (an unchecked checkbox) so team members can tick them off as addressed.
 
             Example format:
@@ -98,21 +96,33 @@ jobs:
             ## Concurrency Issues
             - [ ] `coordinator/src/.../Baz.kt:88` — `.get()` called on a `CompletableFuture` on the event-loop thread, which will block it. Use `.thenApply` instead.
 
+            Output ONLY the review content, nothing else.
+
       - name: Create GitHub Issue with findings
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          INPUT_BRANCH: ${{ github.event.inputs.branch || 'main' }}
+          INPUT_BRANCH: ${{ github.ref_name }}
+          REVIEW_BODY: ${{ steps.review.outputs.result }}
         run: |
           DATE=$(date -u +%Y-%m-%d)
           BRANCH="${INPUT_BRANCH}"
           COMMIT=$(git rev-parse --short=7 HEAD)
           TITLE="Coordinator review ${DATE} ${BRANCH} ${COMMIT}"
 
-          if [ ! -f /tmp/coordinator-review.md ]; then
-            echo "No review file found — Claude may not have produced output." > /tmp/coordinator-review.md
+          if [ -z "${REVIEW_BODY}" ]; then
+            REVIEW_BODY="No review output — Claude may not have produced output."
           fi
+
+          printf '%s' "${REVIEW_BODY}" > /tmp/coordinator-review.md
 
           gh issue create \
             --title "${TITLE}" \
             --body-file /tmp/coordinator-review.md \
             --repo "${{ github.repository }}"
+
+      - name: Upload review file
+        if: ${{ github.event.inputs.save_review_file == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coordinator-review
+          path: /tmp/coordinator-review.md
