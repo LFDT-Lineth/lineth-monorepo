@@ -147,6 +147,26 @@ jobs:
             echo "$DELIMITER"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Setup nodejs environment
+        uses: ./.github/actions/setup-nodejs
+        with:
+          pnpm-install-options: "--frozen-lockfile --prefer-offline"
+
+      - name: Lint
+        env:
+          PACKAGE: ${{ inputs.package }}
+        run: pnpm -F "@consensys/linea-${PACKAGE}" run lint
+
+      - name: Build
+        env:
+          PACKAGE: ${{ inputs.package }}
+        run: pnpm -F "@consensys/linea-${PACKAGE}..." run build
+
+      - name: Test
+        env:
+          PACKAGE: ${{ inputs.package }}
+        run: pnpm -F "@consensys/linea-${PACKAGE}" run test
+
       - name: Configure git identity
         run: |
           git config user.name "github-actions[bot]"
@@ -157,7 +177,7 @@ jobs:
           PACKAGE: ${{ inputs.package }}
           NEXT_VERSION: ${{ steps.version.outputs.next }}
         run: |
-          BRANCH="release/${PACKAGE}-v${NEXT_VERSION}"
+          BRANCH="release-${PACKAGE}-v${NEXT_VERSION}"
           git checkout -B "$BRANCH"
           git add -A
           git commit -m "release(${PACKAGE}): v${NEXT_VERSION}"
@@ -172,7 +192,7 @@ jobs:
           BUMP: ${{ inputs.bump }}
           COMMITS: ${{ steps.changelog.outputs.commits }}
         run: |
-          BRANCH="release/${PACKAGE}-v${NEXT_VERSION}"
+          BRANCH="release-${PACKAGE}-v${NEXT_VERSION}"
 
           EXISTING=$(gh pr list --head "$BRANCH" --base main --json number --jq '.[0].number' 2>/dev/null || true)
           if [[ -n "$EXISTING" ]]; then
