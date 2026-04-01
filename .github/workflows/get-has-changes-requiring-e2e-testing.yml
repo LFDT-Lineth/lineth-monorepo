@@ -60,6 +60,8 @@ jobs:
           E2E_PATHS_MATCHED: ${{ steps.filter.outputs.e2e-paths }}
           E2E_PATHS_FILES: ${{ steps.filter.outputs.e2e-paths_files }}
         run: |
+          set -euo pipefail
+
           if [[ "$E2E_PATHS_MATCHED" != "true" ]]; then
             echo "No e2e-relevant paths matched"
             echo "result=false" >> $GITHUB_OUTPUT
@@ -84,6 +86,15 @@ jobs:
             if [[ "$file" =~ _test\.go$ ]]; then
               continue
             fi
+
+            # Skip tracer and sequencer acceptance test support paths that should not trigger protocol e2e by themselves.
+            if [[ "$file" =~ ^tracer/reference-tests/ ]] || [[ "$file" =~ ^tracer/testing/ ]]; then
+              continue
+            fi
+
+            if [[ "$file" =~ ^besu-plugins/linea-sequencer/acceptance-tests/ ]]; then
+              continue
+            fi
             
             # Skip doc files
             if [[ "$file" =~ \.(md|mdx)$ ]]; then
@@ -95,5 +106,5 @@ jobs:
             exit 0
           done
           
-          echo "Only test/doc files changed"
+          echo "Only excluded e2e paths, test files, or doc files changed"
           echo "result=false" >> $GITHUB_OUTPUT
