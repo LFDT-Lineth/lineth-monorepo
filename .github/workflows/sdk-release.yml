@@ -222,5 +222,4 @@ jobs:
             --base main \
             --head "$BRANCH" \
             --title "release(${PACKAGE}): v${NEXT_VERSION}" \
-            --label release \
             --body-file "$BODY_FILE"
