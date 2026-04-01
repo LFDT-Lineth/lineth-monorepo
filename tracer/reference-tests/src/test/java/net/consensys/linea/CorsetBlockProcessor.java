@@ -35,6 +35,7 @@ import org.hyperledger.besu.ethereum.core.MutableWorldState;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.TransactionReceipt;
 import org.hyperledger.besu.ethereum.mainnet.*;
+import org.hyperledger.besu.ethereum.mainnet.block.access.list.BlockAccessList;
 import org.hyperledger.besu.ethereum.mainnet.systemcall.BlockProcessingContext;
 import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.worldview.BonsaiWorldState;
@@ -75,7 +76,7 @@ public class CorsetBlockProcessor extends MainnetBlockProcessor {
       final Blockchain blockchain,
       final MutableWorldState worldState,
       final Block block,
-      final PreprocessingFunction preprocessingBlockFunction) {
+      final Optional<BlockAccessList> blockAccessList) {
 
     var blockHeader = block.getHeader();
     var blockBody = block.getBody();
