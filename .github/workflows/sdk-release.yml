@@ -185,7 +185,7 @@ jobs:
 
       - name: Create pull request
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets._GITHUB_TOKEN_RELEASE_ACCESS }}
           PACKAGE: ${{ inputs.package }}
           NEXT_VERSION: ${{ steps.version.outputs.next }}
           CURRENT_VERSION: ${{ steps.version.outputs.current }}
