@@ -1,0 +1,51 @@
+[
+  {
+    "chainId": 1,
+    "chainName": "Ethereum Mainnet",
+    "rpcUrls": ["https://mainnet.infura.io/v3"],
+    "blockExplorerUrls": ["https://etherscan.io"],
+    "nativeCurrency": { "name": "Ether", "symbol": "ETH", "decimals": 18 }
+  },
+  {
+    "chainId": 11155111,
+    "chainName": "Sepolia",
+    "rpcUrls": ["https://sepolia.infura.io/v3"],
+    "blockExplorerUrls": ["https://sepolia.etherscan.io"],
+    "nativeCurrency": { "name": "Sepolia Ether", "symbol": "SEP", "decimals": 18 }
+  },
+  {
+    "chainId": 560048,
+    "chainName": "Hoodi",
+    "rpcUrls": ["https://hoodi.infura.io/v3"],
+    "blockExplorerUrls": ["https://hoodi.etherscan.io"],
+    "nativeCurrency": { "name": "Ether", "symbol": "ETH", "decimals": 18 }
+  },
+  {
+    "chainId": 31648428,
+    "chainName": "Linea Local L1 (Docker)",
+    "rpcUrls": ["http://127.0.0.1:8445"],
+    "blockExplorerUrls": [],
+    "nativeCurrency": { "name": "Ether", "symbol": "ETH", "decimals": 18 }
+  },
+  {
+    "chainId": 59139,
+    "chainName": "Linea Devnet (hosted)",
+    "rpcUrls": ["https://rpc.devnet.linea.build"],
+    "blockExplorerUrls": [],
+    "nativeCurrency": { "name": "Ether", "symbol": "ETH", "decimals": 18 }
+  },
+  {
+    "chainId": 59141,
+    "chainName": "Linea Sepolia",
+    "rpcUrls": ["https://linea-sepolia.infura.io/v3"],
+    "blockExplorerUrls": ["https://sepolia.lineascan.build"],
+    "nativeCurrency": { "name": "Ether", "symbol": "ETH", "decimals": 18 }
+  },
+  {
+    "chainId": 59144,
+    "chainName": "Linea Mainnet",
+    "rpcUrls": ["https://linea-mainnet.infura.io/v3"],
+    "blockExplorerUrls": ["https://lineascan.build"],
+    "nativeCurrency": { "name": "Ether", "symbol": "ETH", "decimals": 18 }
+  }
+]

@@ -1,29 +1,32 @@
-import { ethers } from "hardhat";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
 import { LogContractDeployment, getRequiredEnvVar, tryVerifyContractWithConstructorArgs } from "../common/helpers";
+import { getUiSigner, withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
 import { deployFromFactory } from "../scripts/hardhat/utils";
 
-const func: DeployFunction = async function () {
-  const contractName = "CallForwardingProxy";
+const func: DeployFunction = withSignerUiSession(
+  "12_deploy_CallForwardingProxy.ts",
+  async function (hre: HardhatRuntimeEnvironment) {
+    const contractName = "CallForwardingProxy";
+    const signer = await getUiSigner(hre);
 
-  const provider = ethers.provider;
+    // This should be the LineaRollup
+    const targetAddress = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS");
 
-  // This should be the LineaRollup
-  const targetAddress = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS");
+    const contract = await deployFromFactory(contractName, signer, targetAddress);
 
-  const contract = await deployFromFactory(contractName, provider, targetAddress);
+    await LogContractDeployment(contractName, contract);
+    const contractAddress = await contract.getAddress();
 
-  await LogContractDeployment(contractName, contract);
-  const contractAddress = await contract.getAddress();
+    const args = [targetAddress];
 
-  const args = [targetAddress];
-
-  await tryVerifyContractWithConstructorArgs(
-    contractAddress,
-    "contracts/lib/CallForwardingProxy.sol:CallForwardingProxy",
-    args,
-  );
-};
+    await tryVerifyContractWithConstructorArgs(
+      contractAddress,
+      "contracts/lib/CallForwardingProxy.sol:CallForwardingProxy",
+      args,
+    );
+  },
+);
 export default func;
 func.tags = ["CallForwardingProxy"];

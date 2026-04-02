@@ -15,9 +15,10 @@ import {
   tryVerifyContract,
   LogContractDeployment,
 } from "../common/helpers";
+import { withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
 import { deployUpgradableFromFactory } from "../scripts/hardhat/utils";
 
-const func: DeployFunction = async function () {
+const func: DeployFunction = withSignerUiSession("03_deploy_Validium.ts", async function () {
   const contractName = "Validium";
 
   // Validium DEPLOYED AS UPGRADEABLE PROXY
@@ -64,7 +65,7 @@ const func: DeployFunction = async function () {
   const contractAddress = await contract.getAddress();
 
   await tryVerifyContract(contractAddress);
-};
+});
 
 export default func;
 func.tags = ["Validium"];

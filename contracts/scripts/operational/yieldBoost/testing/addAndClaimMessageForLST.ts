@@ -2,6 +2,7 @@ import { task } from "hardhat/config";
 
 import { prepareAndAddMessageMerkleRoot } from "./addAndClaimMessageHelper";
 import { delay } from "../../../../common/helpers/general";
+import { runWithSignerUiSession } from "../../../../scripts/hardhat/signer-ui-bridge";
 
 /*
   *******************************************************************************************
@@ -38,33 +39,35 @@ task(
   .addOptionalParam("data")
   .addOptionalParam("yieldProvider")
   .setAction(async (taskArgs, hre) => {
-    const { claimParams, lineaRollup } = await prepareAndAddMessageMerkleRoot(taskArgs, hre, true);
+    return runWithSignerUiSession(hre, "task:addAndClaimMessageForLST", async () => {
+      const { claimParams, lineaRollup } = await prepareAndAddMessageMerkleRoot(taskArgs, hre, true);
 
-    if (!claimParams.yieldProvider) {
-      throw new Error("yieldProvider is required but was not provided");
-    }
+      if (!claimParams.yieldProvider) {
+        throw new Error("yieldProvider is required but was not provided");
+      }
 
-    {
-      console.log("Waiting for 10 seconds...");
-      await delay(10000);
-      console.log("Claiming message with LST withdrawal...");
-      const tx = await lineaRollup.claimMessageWithProofAndWithdrawLST(
-        {
-          proof: claimParams.proof,
-          messageNumber: claimParams.messageNumber,
-          leafIndex: claimParams.leafIndex,
-          from: claimParams.from,
-          to: claimParams.to,
-          fee: claimParams.fee,
-          value: claimParams.value,
-          feeRecipient: claimParams.feeRecipient,
-          merkleRoot: claimParams.merkleRoot,
-          data: claimParams.data,
-        },
-        claimParams.yieldProvider,
-      );
-      console.log("  Transaction hash:", tx.hash);
-      const receipt = await tx.wait();
-      console.log("  Transaction confirmed in block:", receipt?.blockNumber);
-    }
+      {
+        console.log("Waiting for 10 seconds...");
+        await delay(10000);
+        console.log("Claiming message with LST withdrawal...");
+        const tx = await lineaRollup.claimMessageWithProofAndWithdrawLST(
+          {
+            proof: claimParams.proof,
+            messageNumber: claimParams.messageNumber,
+            leafIndex: claimParams.leafIndex,
+            from: claimParams.from,
+            to: claimParams.to,
+            fee: claimParams.fee,
+            value: claimParams.value,
+            feeRecipient: claimParams.feeRecipient,
+            merkleRoot: claimParams.merkleRoot,
+            data: claimParams.data,
+          },
+          claimParams.yieldProvider,
+        );
+        console.log("  Transaction hash:", tx.hash);
+        const receipt = await tx.wait();
+        console.log("  Transaction confirmed in block:", receipt?.blockNumber);
+      }
+    });
   });

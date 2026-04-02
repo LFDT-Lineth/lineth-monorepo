@@ -2,9 +2,10 @@ import { DeployFunction } from "hardhat-deploy/types";
 
 import { EMPTY_INITIALIZE_SIGNATURE } from "../common/constants";
 import { tryVerifyContract, LogContractDeployment } from "../common/helpers";
+import { withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
 import { deployUpgradableFromFactory } from "../scripts/hardhat/utils";
 
-const func: DeployFunction = async function () {
+const func: DeployFunction = withSignerUiSession("14_deploy_UpgradeableWithdrawalQueuePredeploy.ts", async function () {
   const contractName = "UpgradeableWithdrawalQueuePredeploy";
 
   const contract = await deployUpgradableFromFactory("UpgradeableWithdrawalQueuePredeploy", [], {
@@ -19,7 +20,7 @@ const func: DeployFunction = async function () {
     contractAddress,
     "src/predeploy/UpgradeableWithdrawalQueuePredeploy.sol:UpgradeableWithdrawalQueuePredeploy",
   );
-};
+});
 
 export default func;
 func.tags = ["UpgradeableWithdrawalQueuePredeploy"];

@@ -8,6 +8,8 @@ Running the script with an .env file set, you will need to make sure that the co
 Running the script without an .env file will require you to place the variables as command-line arguments.
 The command-line arguments will create or replace existing .env (only in memory) environment variables. If the variables are provided in the terminal as command-line arguments, they will have priority over the same variables if they are defined in the .env file. These need not exist in the .env file.
 
+Selected operational Hardhat tasks also support browser-wallet signing with `HARDHAT_SIGNER_UI=true`. `HARDHAT_SIGNER_UI=true` and `DEPLOYER_PRIVATE_KEY` are mutually exclusive; Hardhat errors immediately if both are set.
+
 <br />
 
 ## Network specific variables

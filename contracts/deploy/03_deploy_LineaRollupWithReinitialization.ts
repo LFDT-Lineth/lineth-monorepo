@@ -6,77 +6,85 @@ import {
 } from "contracts/common/constants";
 import { LineaRollup__factory } from "contracts/typechain-types";
 import { ethers, upgrades } from "hardhat";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
 import { tryVerifyContract, getRequiredEnvVar } from "../common/helpers";
+import { getUiSigner, withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
 
-const func: DeployFunction = async function () {
-  let upgradePauseTypeRoles = [];
-  let upgradeUnpauseTypeRoles = [];
-  let upgradeRoleAddresses = [];
+const func: DeployFunction = withSignerUiSession(
+  "03_deploy_LineaRollupWithReinitialization.ts",
+  async function (hre: HardhatRuntimeEnvironment) {
+    const signer = await getUiSigner(hre);
+    let upgradePauseTypeRoles = [];
+    let upgradeUnpauseTypeRoles = [];
+    let upgradeRoleAddresses = [];
 
-  const securityCouncilAddress = getRequiredEnvVar("L1_SECURITY_COUNCIL");
-  const proxyAddress = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS");
+    const securityCouncilAddress = getRequiredEnvVar("L1_SECURITY_COUNCIL");
+    const proxyAddress = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS");
 
-  upgradeRoleAddresses = [
-    {
-      addressWithRole: securityCouncilAddress,
-      role: SECURITY_COUNCIL_ROLE,
-    },
-    {
-      addressWithRole: securityCouncilAddress,
-      role: PAUSE_STATE_DATA_SUBMISSION_ROLE,
-    },
-    {
-      addressWithRole: securityCouncilAddress,
-      role: UNPAUSE_STATE_DATA_SUBMISSION_ROLE,
-    },
-  ];
+    upgradeRoleAddresses = [
+      {
+        addressWithRole: securityCouncilAddress,
+        role: SECURITY_COUNCIL_ROLE,
+      },
+      {
+        addressWithRole: securityCouncilAddress,
+        role: PAUSE_STATE_DATA_SUBMISSION_ROLE,
+      },
+      {
+        addressWithRole: securityCouncilAddress,
+        role: UNPAUSE_STATE_DATA_SUBMISSION_ROLE,
+      },
+    ];
 
-  upgradePauseTypeRoles = [{ pauseType: STATE_DATA_SUBMISSION_PAUSE_TYPE, role: PAUSE_STATE_DATA_SUBMISSION_ROLE }];
-  upgradeUnpauseTypeRoles = [{ pauseType: STATE_DATA_SUBMISSION_PAUSE_TYPE, role: UNPAUSE_STATE_DATA_SUBMISSION_ROLE }];
+    upgradePauseTypeRoles = [{ pauseType: STATE_DATA_SUBMISSION_PAUSE_TYPE, role: PAUSE_STATE_DATA_SUBMISSION_ROLE }];
+    upgradeUnpauseTypeRoles = [
+      { pauseType: STATE_DATA_SUBMISSION_PAUSE_TYPE, role: UNPAUSE_STATE_DATA_SUBMISSION_ROLE },
+    ];
 
-  const contractName = "LineaRollup";
+    const contractName = "LineaRollup";
 
-  const factory = await ethers.getContractFactory(contractName);
+    const factory = await ethers.getContractFactory(contractName, signer);
 
-  console.log("Deploying Contract...");
-  const newContract = await upgrades.deployImplementation(factory, {
-    kind: "transparent",
-  });
+    console.log("Deploying Contract...");
+    const newContract = await upgrades.deployImplementation(factory, {
+      kind: "transparent",
+    });
 
-  const contract = newContract.toString();
+    const contract = newContract.toString();
 
-  console.log(`Contract deployed at ${contract}`);
+    console.log(`Contract deployed at ${contract}`);
 
-  // The encoding should be used through the safe.
-  // THIS IS JUST A SAMPLE AND WILL BE ADJUSTED WHEN NEEDED FOR GENERATING THE CALLDATA FOR THE UPGRADE CALL
-  // https://www.4byte.directory/signatures/?bytes4_signature=0x9623609d
-  const upgradeCallWithReinitializationUsingSecurityCouncil = ethers.concat([
-    "0x9623609d",
-    ethers.AbiCoder.defaultAbiCoder().encode(
-      ["address", "address", "bytes"],
-      [
-        proxyAddress,
-        newContract,
-        LineaRollup__factory.createInterface().encodeFunctionData("reinitializeV8", [
-          upgradeRoleAddresses,
-          upgradePauseTypeRoles,
-          upgradeUnpauseTypeRoles,
-        ]),
-      ],
-    ),
-  ]);
+    // The encoding should be used through the safe.
+    // THIS IS JUST A SAMPLE AND WILL BE ADJUSTED WHEN NEEDED FOR GENERATING THE CALLDATA FOR THE UPGRADE CALL
+    // https://www.4byte.directory/signatures/?bytes4_signature=0x9623609d
+    const upgradeCallWithReinitializationUsingSecurityCouncil = ethers.concat([
+      "0x9623609d",
+      ethers.AbiCoder.defaultAbiCoder().encode(
+        ["address", "address", "bytes"],
+        [
+          proxyAddress,
+          newContract,
+          LineaRollup__factory.createInterface().encodeFunctionData("reinitializeV8", [
+            upgradeRoleAddresses,
+            upgradePauseTypeRoles,
+            upgradeUnpauseTypeRoles,
+          ]),
+        ],
+      ),
+    ]);
 
-  console.log(
-    "Encoded Tx Upgrade with Reinitialization from Security Council:",
-    "\n",
-    upgradeCallWithReinitializationUsingSecurityCouncil,
-  );
-  console.log("\n");
+    console.log(
+      "Encoded Tx Upgrade with Reinitialization from Security Council:",
+      "\n",
+      upgradeCallWithReinitializationUsingSecurityCouncil,
+    );
+    console.log("\n");
 
-  await tryVerifyContract(contract);
-};
+    await tryVerifyContract(contract);
+  },
+);
 
 export default func;
 func.tags = ["LineaRollupWithReinitialization"];

@@ -1,0 +1,33 @@
+{
+  "name": "@consensys/linea-contract-signer-ui",
+  "version": "1.0.0",
+  "private": true,
+  "license": "(MIT OR Apache-2.0)",
+  "type": "module",
+  "scripts": {
+    "build": "next build",
+    "check-types": "tsc --noEmit",
+    "clean": "rimraf node_modules .next .next-env.d.ts",
+    "dev": "next dev",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "test": "node --test --experimental-strip-types ./test/*.test.ts",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.91.2",
+    "next": "16.2.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "viem": "catalog:",
+    "wagmi": "3.5.0"
+  },
+  "devDependencies": {
+    "@consensys/eslint-config": "workspace:*",
+    "@types/node": "22.19.15",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "eslint": "catalog:",
+    "typescript": "5.9.3"
+  }
+}

@@ -3,6 +3,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { encodeSendMessage, randomBytes32 } from "../../../../common/helpers/encoding";
 import { getTaskCliOrEnvValue } from "../../../../common/helpers/environmentHelper";
+import { getUiSigner } from "../../../../scripts/hardhat/signer-ui-bridge";
 
 export interface ClaimParams {
   proof: string[];
@@ -38,13 +39,13 @@ export async function prepareAndAddMessageMerkleRoot(
   hre: HardhatRuntimeEnvironment,
   requireYieldProvider: boolean = false,
 ): Promise<PrepareMessageResult> {
-  const { ethers, getNamedAccounts } = hre;
-  const { deployer } = await getNamedAccounts();
-  const signer = await ethers.getSigner(deployer);
+  const { ethers } = hre;
+  const signer = await getUiSigner(hre);
+  const signerAddress = await signer.getAddress();
 
   // --- Resolve inputs from CLI or ENV (with sensible fallbacks to deployments) ---
   const lineaRollupAddress = getTaskCliOrEnvValue(taskArgs, "lineaRollupAddress", "LINEA_ROLLUP_ADDRESS");
-  const fromAddress = getTaskCliOrEnvValue(taskArgs, "from", "FROM_ADDRESS") || signer.address;
+  const fromAddress = getTaskCliOrEnvValue(taskArgs, "from", "FROM_ADDRESS") || signerAddress;
   const toAddress = getTaskCliOrEnvValue(taskArgs, "to", "TO_ADDRESS");
   const valueRaw = getTaskCliOrEnvValue(taskArgs, "value", "VALUE");
   const data = getTaskCliOrEnvValue(taskArgs, "data", "DATA") || "0x";

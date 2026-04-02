@@ -1,5 +1,6 @@
 import { ethers, AbstractSigner, Interface, InterfaceAbi, BaseContract } from "ethers";
 
+import { clearSignerUiWorkflowStatus, setSignerUiWorkflowStatus } from "./signerUiWorkflowStatus";
 import {
   contractName as ProxyAdminContractName,
   abi as ProxyAdminAbi,
@@ -39,13 +40,34 @@ export async function deployContractFromArtifacts(
 }
 
 export async function LogContractDeployment(contractName: string, contract: BaseContract) {
-  const txReceipt = await contract.deploymentTransaction()?.wait();
+  const deploymentTx = contract.deploymentTransaction();
+  if (!deploymentTx) {
+    throw new Error("Deployment transaction not found.");
+  }
+
+  const receiptPending = deploymentTx.blockNumber === null || deploymentTx.blockNumber === undefined;
+  if (receiptPending) {
+    await setSignerUiWorkflowStatus(
+      "waiting_for_transaction_receipt",
+      `Waiting for transaction receipt for ${contractName}.`,
+    );
+  }
+
+  let txReceipt;
+  try {
+    txReceipt = await deploymentTx.wait();
+  } finally {
+    if (receiptPending) {
+      await clearSignerUiWorkflowStatus();
+    }
+  }
+
   if (!txReceipt) {
-    throw "Deployment transaction not found.";
+    throw new Error("Deployment transaction not found.");
   }
 
   const contractAddress = await contract.getAddress();
-  const chainId = (await contract.deploymentTransaction()!.provider.getNetwork()).chainId;
+  const chainId = (await deploymentTx.provider.getNetwork()).chainId;
   console.log(
     `contract=${contractName} deployed: address=${contractAddress} blockNumber=${txReceipt.blockNumber} chainId=${chainId}`,
   );

@@ -1,6 +1,7 @@
 import { task } from "hardhat/config";
 
 import { getTaskCliOrEnvValue } from "../../../common/helpers/environmentHelper";
+import { getUiSigner, runWithSignerUiSession } from "../../../scripts/hardhat/signer-ui-bridge";
 
 /*
     *******************************************************************************************
@@ -25,40 +26,49 @@ task("setRateLimit", "Sets the rate limit on a Message Service contract")
   .addOptionalParam("messageServiceType")
   .addOptionalParam("withdrawLimit")
   .setAction(async (taskArgs, hre) => {
-    const ethers = hre.ethers;
+    return runWithSignerUiSession(hre, "task:setRateLimit", async () => {
+      const ethers = hre.ethers;
 
-    const { deployments } = hre;
-    const { get } = deployments;
+      const { deployments } = hre;
+      const { get } = deployments;
 
-    const messageServiceContractType = getTaskCliOrEnvValue(taskArgs, "messageServiceType", "MESSAGE_SERVICE_TYPE");
-    let messageServiceAddress = getTaskCliOrEnvValue(taskArgs, "messageServiceAddress", "MESSAGE_SERVICE_ADDRESS");
+      const messageServiceContractType = getTaskCliOrEnvValue(taskArgs, "messageServiceType", "MESSAGE_SERVICE_TYPE");
+      let messageServiceAddress = getTaskCliOrEnvValue(taskArgs, "messageServiceAddress", "MESSAGE_SERVICE_ADDRESS");
 
-    if (messageServiceContractType === undefined) {
-      throw "Please specify a Message Service name e.g: --message-service-type LineaRollup or MESSAGE_SERVICE_TYPE=LineaRollup";
-    }
+      if (messageServiceContractType === undefined) {
+        throw "Please specify a Message Service name e.g: --message-service-type LineaRollup or MESSAGE_SERVICE_TYPE=LineaRollup";
+      }
 
-    if (messageServiceAddress === undefined) {
-      messageServiceAddress = (await get(messageServiceContractType)).address;
-    }
+      if (messageServiceAddress === undefined) {
+        messageServiceAddress = (await get(messageServiceContractType)).address;
+      }
 
-    const withdrawLimitInWei = getTaskCliOrEnvValue(taskArgs, "withdrawlimit", "WITHDRAW_LIMIT_IN_WEI");
+      const withdrawLimitRaw = getTaskCliOrEnvValue(taskArgs, "withdrawLimit", "WITHDRAW_LIMIT_IN_WEI");
+      if (withdrawLimitRaw === undefined || String(withdrawLimitRaw).trim() === "") {
+        throw new Error(
+          "Missing withdraw limit. Pass --withdraw-limit <wei> or set WITHDRAW_LIMIT_IN_WEI (Hardhat exposes this as withdrawLimit on the task).",
+        );
+      }
+      const withdrawLimitInWei = BigInt(String(withdrawLimitRaw).trim());
 
-    const messageService = await ethers.getContractAt(messageServiceContractType, messageServiceAddress);
+      const signer = await getUiSigner(hre);
+      const messageService = await ethers.getContractAt(messageServiceContractType, messageServiceAddress, signer);
 
-    // get existing limit
-    const limitInWei = await messageService.limitInWei();
-    console.log(
-      `Starting with rate limit in wei of ${limitInWei} at ${messageServiceAddress} of type ${messageServiceContractType}`,
-    );
+      // get existing limit
+      const limitInWei = await messageService.limitInWei();
+      console.log(
+        `Starting with rate limit in wei of ${limitInWei} at ${messageServiceAddress} of type ${messageServiceContractType}`,
+      );
 
-    // set limit
+      // set limit
 
-    const updateTx = await messageService.resetRateLimitAmount(withdrawLimitInWei);
-    await updateTx.wait();
+      const updateTx = await messageService.resetRateLimitAmount(withdrawLimitInWei);
+      await updateTx.wait();
 
-    console.log(`Changed rate limit in wei to ${withdrawLimitInWei} at ${messageServiceAddress}`);
+      console.log(`Changed rate limit in wei to ${withdrawLimitInWei} at ${messageServiceAddress}`);
 
-    // get new updated limited
-    const newLimitInWei = await messageService.limitInWei();
-    console.log(`Validated rate limit in wei of ${newLimitInWei} at ${messageServiceAddress}`);
+      // get new updated limited
+      const newLimitInWei = await messageService.limitInWei();
+      console.log(`Validated rate limit in wei of ${newLimitInWei} at ${messageServiceAddress}`);
+    });
   });

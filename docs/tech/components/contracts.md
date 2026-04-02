@@ -318,6 +318,10 @@ interface IPlonkVerifier {
 
 ## Deployment
 
+Hardhat scripts live under `contracts/deploy/`. The canonical parameter and tag reference is **[contracts/docs/deployment/README.md](../../../contracts/docs/deployment/README.md)** in this repository.
+
+**Optional browser signing:** set `HARDHAT_SIGNER_UI=true` to approve transactions in a local Next.js UI instead of putting `DEPLOYER_PRIVATE_KEY` in the environment. See [contracts/signer-ui/README.md](../../../contracts/signer-ui/README.md) and the “Browser wallet signing” section in the deployment README. To remove that stack entirely, see [contracts/docs/deployment/signer-ui-removal.md](../../../contracts/docs/deployment/signer-ui-removal.md).
+
 ### Local Development
 
 ```bash

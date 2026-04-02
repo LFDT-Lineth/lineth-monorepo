@@ -5,12 +5,15 @@ import * as dotenv from "dotenv";
 import "hardhat-deploy";
 import "hardhat-storage-layout";
 // import "hardhat-tracer"; // This plugin does not work with the latest hardhat version
-import { HardhatUserConfig } from "hardhat/config";
+import { HardhatUserConfig, subtask } from "hardhat/config";
+import { TASK_DEPLOY_RUN_DEPLOY } from "hardhat-deploy";
+import { createRequire } from "node:module";
 import "solidity-docgen";
 
 import { getBlockchainNode, getL2BlockchainNode } from "./common";
 import { SupportedChainIds } from "./common/supportedNetworks";
 import { overrides } from "./hardhat_overrides";
+import { resolveDeployerAccounts } from "./scripts/hardhat/deployer-accounts";
 import "./scripts/operational/tasks/getCurrentFinalizedBlockNumberTask";
 import "./scripts/operational/tasks/grantContractRolesTask";
 import "./scripts/operational/tasks/renounceContractRolesTask";
@@ -25,8 +28,28 @@ import "./scripts/operational/yieldBoost/testing/unstakePermissionless";
 
 dotenv.config();
 
+const requireFromConfig = createRequire(__filename);
+
+/** Lazy `require` avoids HH9 (signer-ui-bridge pulls in `hardhat`) and avoids native `import()` of `.ts`, which uses Node ESM resolution (directory `common/` vs `common.ts`, CJS `hardhat`, type-only `ethers` exports). */
+subtask(TASK_DEPLOY_RUN_DEPLOY).setAction(async (args, hre, runSuper) => {
+  const { signerUiHardhatDeployRunSubtaskAction } = requireFromConfig(
+    "./scripts/hardhat/signer-ui-bridge.ts",
+  ) as typeof import("./scripts/hardhat/signer-ui-bridge");
+  return signerUiHardhatDeployRunSubtaskAction(args, hre, runSuper);
+});
+
 const BLOCKCHAIN_TIMEOUT = parseInt(process.env.BLOCKCHAIN_TIMEOUT_MS ?? "300000");
-const EMPTY_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
+
+/**
+ * `HARDHAT_SIGNER_UI=true` → no local keys (browser wallet via signer-ui bridge).
+ * If `DEPLOYER_PRIVATE_KEY` is unset → `[]` so `hardhat compile`, `clean`, etc. work without secrets
+ * (same as typical Hardhat: RPC-only until you sign). Deploy/sign on a live network then needs a key
+ * or `HARDHAT_SIGNER_UI=true`. If a key *is* set, it must be valid non-zero hex (all-zero breaks
+ * LocalAccountsProvider / @ethereumjs/util).
+ */
+function deployerAccounts(): string[] {
+  return resolveDeployerAccounts();
+}
 
 const blockchainNode = getBlockchainNode();
 const l2BlockchainNode = getL2BlockchainNode();
@@ -68,42 +91,46 @@ const config: HardhatUserConfig = {
       allowUnlimitedContractSize: true,
     },
     mainnet: {
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY || EMPTY_HASH],
+      accounts: deployerAccounts(),
       url: "https://mainnet.infura.io/v3/" + process.env.INFURA_API_KEY,
     },
     sepolia: {
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY || EMPTY_HASH],
+      accounts: deployerAccounts(),
       url: "https://sepolia.infura.io/v3/" + process.env.INFURA_API_KEY,
     },
     hoodi: {
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY || EMPTY_HASH],
+      accounts: deployerAccounts(),
       url: "https://hoodi.infura.io/v3/" + process.env.INFURA_API_KEY,
       chainId: SupportedChainIds.HOODI,
     },
     linea_mainnet: {
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY || EMPTY_HASH],
+      accounts: deployerAccounts(),
       url: "https://linea-mainnet.infura.io/v3/" + process.env.INFURA_API_KEY,
       chainId: 59144,
     },
     linea_sepolia: {
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY || EMPTY_HASH],
+      accounts: deployerAccounts(),
       url: "https://linea-sepolia.infura.io/v3/" + process.env.INFURA_API_KEY,
       chainId: SupportedChainIds.LINEA_SEPOLIA,
     },
     custom: {
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY || EMPTY_HASH],
+      accounts: deployerAccounts(),
       url: process.env.CUSTOM_RPC_URL ? process.env.CUSTOM_RPC_URL : "",
     },
     zkevm_dev: {
       gasPrice: 1322222229,
       url: blockchainNode,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY || EMPTY_HASH],
+      accounts: deployerAccounts(),
       timeout: BLOCKCHAIN_TIMEOUT,
-      chainId: SupportedChainIds.LINEA_DEVNET,
+      // docker L1 is 31648428 (docker/config/l1-node/el/genesis.json);
+      // hosted devnet (e.g. rpc.devnet.linea.build) uses 59139.
+      // Set ZKEVM_DEV_CHAIN_ID to enforce chain-ID validation and prevent wrong-chain deployments.
+      // Omitting it disables validation (Hardhat HH101) and preserves flexibility across environments.
+      ...(process.env.ZKEVM_DEV_CHAIN_ID ? { chainId: parseInt(process.env.ZKEVM_DEV_CHAIN_ID, 10) } : {}),
     },
     l2: {
       url: l2BlockchainNode ?? "",
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY || EMPTY_HASH],
+      accounts: deployerAccounts(),
       allowUnlimitedContractSize: true,
     },
   },

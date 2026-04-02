@@ -107,6 +107,8 @@ __pycache__/
 /contracts/**/cache
 /contracts/deployments/zkevm_dev
 /contracts/lib/forge-std/
+/contracts/signer-ui/.next/
+/contracts/signer-ui/node_modules/
 
 /jvm-libs/**/linux-aarch64
 /jvm-libs/**/linux-x86-64

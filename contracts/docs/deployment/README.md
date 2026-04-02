@@ -64,6 +64,56 @@ Dependent on which network you are using, the corresponding API Key or RPC URL m
 
 <br />
 
+## Browser wallet signing (`HARDHAT_SIGNER_UI`)
+
+The default flow continues to use **`DEPLOYER_PRIVATE_KEY`** (or the configured named account). No UI is involved unless you opt in.
+
+`HARDHAT_SIGNER_UI=true` and `DEPLOYER_PRIVATE_KEY` are **mutually exclusive**. If both are set, Hardhat errors immediately instead of guessing which signer to use.
+
+The signer UI under `contracts/signer-ui/` is local operator tooling launched by Hardhat. It is not a published package or an importable library.
+
+To sign and send transactions from a **browser wallet** (MetaMask, Rabby, etc.) instead of putting a private key in the environment:
+
+```shell
+HARDHAT_SIGNER_UI=true npx hardhat deploy --network sepolia --tags <contract tags, comma delimited list>
+```
+
+Selected **operational Hardhat tasks** (under `scripts/operational/`) also support the same flag via `runWithSignerUiSession` + `getUiSigner`.
+
+### Behaviour summary
+
+| Topic | Details |
+|-------|---------|
+| **Opt-in** | Only `HARDHAT_SIGNER_UI=true` enables the UI. Any other value or unset → normal private-key / named-account flow. |
+| **Exclusive signer mode** | `HARDHAT_SIGNER_UI=true` and `DEPLOYER_PRIVATE_KEY` cannot be set together. Hardhat fails fast when both are present. |
+| **Chained `--tags`** | One **Hardhat deploy run** uses **one** browser session for the whole tag list: local HTTP bridge + Next.js app, sequential deploy scripts, session ends when the run finishes (not per-file restarts). |
+| **Accounts in config** | With UI mode, `hardhat.config.ts` passes an empty `accounts` array for the network so Hardhat does not load `DEPLOYER_PRIVATE_KEY`; the wallet you connect in the browser is the signer. |
+| **Security** | The bridge requires a per-run session token (embedded in the UI URL). Transactions are checked against the pending request before Hardhat continues. |
+| **After the run** | After **`hardhat deploy`**, Hardhat **stops Next.js by default** with the bridge; the tab remains open with history in session storage. Set `HARDHAT_SIGNER_UI_LEAVE_NEXT_DEV_AFTER_DEPLOY=true` to keep Next running. For **non-deploy** UI sessions, use `HARDHAT_SIGNER_UI_SHUTDOWN_NEXT_DEV=true` to stop Next when the bridge closes. Optional: `HARDHAT_SIGNER_UI_SHUTDOWN_DRAIN_MS`, `HARDHAT_SIGNER_UI_SHUTDOWN_GRACE_MS`. |
+| **Verification** | Unchanged: `VERIFY_CONTRACT` and explorer keys behave as for private-key deploys. |
+| **Limitations** | Scripts that broadcast **fixed pre-signed** transactions (e.g. some L2 predeploy / system-contract paths) do not use the browser signer. OpenZeppelin upgradeable deploys may reuse implementation/ProxyAdmin from `.openzeppelin/`, so you may see fewer wallet prompts than “implementation + admin + proxy”. |
+
+### Environment variables (UI)
+
+| Variable | Effect |
+|----------|--------|
+| `HARDHAT_SIGNER_UI=true` | Enable browser signing. Must not be combined with `DEPLOYER_PRIVATE_KEY`. |
+| `HARDHAT_SIGNER_UI_OPEN_BROWSER=false` | Print the UI URL only; do not open a tab automatically. |
+| `HARDHAT_SIGNER_UI_DEBUG=true` | Forward `next dev` logs to the terminal. |
+| `HARDHAT_SIGNER_UI_LEAVE_NEXT_DEV_AFTER_DEPLOY=true` | After `hardhat deploy`, keep the Next.js dev server when the bridge closes (default is to stop it). |
+| `HARDHAT_SIGNER_UI_SHUTDOWN_NEXT_DEV=true` | For non-deploy signer UI sessions, stop Next.js when the HTTP bridge closes. |
+| `HARDHAT_SIGNER_UI_SHUTDOWN_DRAIN_MS` | Optional. Milliseconds for the UI to read terminal session state before the bridge closes after deploy (default `1500`). |
+| `HARDHAT_SIGNER_UI_SHUTDOWN_GRACE_MS` | Optional. Milliseconds after the bridge closes before stopping Next (default `2000`). |
+| `EXPECTED_SIGNER_ADDRESS=0x...` | Optional safety guard. If set, deploy/sign flows fail fast unless the resolved signer address exactly matches this address. |
+
+### Further reading
+
+- **Operator guide** (ports, `zkevm_dev`, `TestERC20` example): [signer-ui/README.md](../../signer-ui/README.md)
+- **Chained tag runs**: [chained-deployments.md](chained-deployments.md)
+- **Removing this feature** (repo maintainers): [signer-ui-removal.md](signer-ui-removal.md)
+
+<br />
+
 ## Order of Precedence
 
  When deploying, if required variables such as deployed contract addresses are not defined in the .env or provided as CLI arguments, the script will look and check if it can use the addresses stored in the deployments/<network_name>/ folder. 
@@ -117,3 +167,7 @@ Dependent on which network you are using, the corresponding API Key or RPC URL m
 ### Chained Deployments
 
 Multi-contract deployment sequences: [chained-deployments.md](chained-deployments.md)
+
+### Optional deploy UI maintenance
+
+How to fully remove the browser-signing stack from the repo: [signer-ui-removal.md](signer-ui-removal.md)
