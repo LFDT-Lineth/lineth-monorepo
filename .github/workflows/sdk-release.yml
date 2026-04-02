@@ -167,40 +167,16 @@ jobs:
           PACKAGE: ${{ inputs.package }}
         run: pnpm -F "@consensys/linea-${PACKAGE}" run test
 
-      - name: Configure git identity
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Commit and push release branch
+      - name: Write pull request body
+        id: pr_body
         env:
-          PACKAGE: ${{ inputs.package }}
-          NEXT_VERSION: ${{ steps.version.outputs.next }}
-        run: |
-          BRANCH="release-${PACKAGE}-v${NEXT_VERSION}"
-          git checkout -B "$BRANCH"
-          git add -A
-          git commit -m "release(${PACKAGE}): v${NEXT_VERSION}"
-          git push --force-with-lease origin "$BRANCH"
-
-      - name: Create pull request
-        env:
-          GH_TOKEN: ${{ secrets._GITHUB_TOKEN_RELEASE_ACCESS }}
           PACKAGE: ${{ inputs.package }}
           NEXT_VERSION: ${{ steps.version.outputs.next }}
           CURRENT_VERSION: ${{ steps.version.outputs.current }}
           BUMP: ${{ inputs.bump }}
           COMMITS: ${{ steps.changelog.outputs.commits }}
         run: |
-          BRANCH="release-${PACKAGE}-v${NEXT_VERSION}"
-
-          EXISTING=$(gh pr list --head "$BRANCH" --base main --json number --jq '.[0].number' 2>/dev/null || true)
-          if [[ -n "$EXISTING" ]]; then
-            echo "::notice::PR #$EXISTING already exists for $BRANCH, skipping creation"
-            exit 0
-          fi
-
-          BODY_FILE=$(mktemp)
+          BODY_FILE="${RUNNER_TEMP}/sdk-release-pr-body.md"
           {
             echo "## Release @consensys/linea-${PACKAGE} v${NEXT_VERSION}"
             echo ""
@@ -217,9 +193,14 @@ jobs:
             echo "2. Go to **Actions → sdk-publish → Run workflow**"
             echo "3. Select ${PACKAGE}, paste the commit SHA, and run"
           } > "$BODY_FILE"
+          echo "path=${BODY_FILE}" >> "$GITHUB_OUTPUT"
 
-          gh pr create \
-            --base main \
-            --head "$BRANCH" \
-            --title "release(${PACKAGE}): v${NEXT_VERSION}" \
-            --body-file "$BODY_FILE"
+      - name: Create pull request
+        id: cpr
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0
+        with:
+          commit-message: "release(${{ inputs.package }}): v${{ steps.version.outputs.next }}"
+          branch: release-${{ inputs.package }}-v${{ steps.version.outputs.next }}
+          base: main
+          title: "release(${{ inputs.package }}): v${{ steps.version.outputs.next }}"
+          body-path: ${{ steps.pr_body.outputs.path }}
