@@ -171,6 +171,8 @@ export default class EthTransfer extends Command {
       return;
     }
 
+    this.log(`Sender: address=${senderAddress} balance=${formatEther(senderBalance)} ETH nonce=${nonce.toString()}`);
+
     const rewards = calculateRewards(senderBalance);
 
     if (rewards === 0n) {
@@ -208,6 +210,7 @@ export default class EthTransfer extends Command {
       gas: gasLimit,
       maxFeePerGas: baseFeePerGas + priorityFeePerGas,
       maxPriorityFeePerGas: priorityFeePerGas,
+      nonce,
     };
 
     const signature = await this.signTransaction(
