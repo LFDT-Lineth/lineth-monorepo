@@ -1,5 +1,4 @@
-import { Direction } from "@consensys/linea-sdk";
-
+import { Direction } from "../enums";
 import { MessageStatus } from "../enums";
 
 export type MessagesMetricsAttributes = {

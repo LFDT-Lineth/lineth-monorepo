@@ -1,4 +1,6 @@
-import { Direction } from "@consensys/linea-sdk";
+import { Direction } from "../../enums";
+
+import type { Address } from "../../types/primitives";
 
 export interface IL2ClaimMessageTransactionSizeProcessor {
   process(): Promise<void>;
@@ -6,5 +8,5 @@ export interface IL2ClaimMessageTransactionSizeProcessor {
 
 export type L2ClaimMessageTransactionSizeProcessorConfig = {
   direction: Direction;
-  originContractAddress: string;
+  originContractAddress: Address;
 };

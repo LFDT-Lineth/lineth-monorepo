@@ -1,47 +1,33 @@
-import {
-  ContractTransactionResponse,
-  ErrorDescription,
-  Overrides,
-  Signer,
-  TransactionReceipt,
-  TransactionResponse,
-} from "ethers";
+import { ILogger } from "@consensys/linea-shared-utils";
 
 import { IL2MessageServiceClient } from "../../core/clients/blockchain/linea/IL2MessageServiceClient";
 import { Message } from "../../core/entities/Message";
 import { MessageStatus } from "../../core/enums";
-import { IMessageDBService } from "../../core/persistence/IMessageDBService";
+import { IErrorParser } from "../../core/errors/IErrorParser";
+import { IMessageRepository } from "../../core/persistence/IMessageRepository";
 import {
   IL2ClaimMessageTransactionSizeProcessor,
   L2ClaimMessageTransactionSizeProcessorConfig,
 } from "../../core/services/processors/IL2ClaimMessageTransactionSizeProcessor";
 import { IL2ClaimTransactionSizeCalculator } from "../../core/services/processors/IL2ClaimTransactionSizeCalculator";
-import { ErrorParser } from "../../utils/ErrorParser";
-import { IPostmanLogger } from "../../utils/IPostmanLogger";
 
 export class L2ClaimMessageTransactionSizeProcessor implements IL2ClaimMessageTransactionSizeProcessor {
   /**
    * Constructs a new instance of the `L2ClaimMessageTransactionSizeProcessor`.
    *
-   * @param {IMessageDBService} databaseService - The database service for interacting with message data.
+   * @param {IMessageRepository} messageRepository - The message repository for interacting with message data.
    * @param {IL2MessageServiceClient} l2MessageServiceClient - The L2 message service client for estimating gas fees.
    * @param {IL2ClaimTransactionSizeCalculator} transactionSizeCalculator - The calculator for determining the transaction size.
    * @param {L2ClaimMessageTransactionSizeProcessorConfig} config - Configuration settings for the processor, including the direction and origin contract address.
-   * @param {IPostmanLogger} logger - The logger for logging information and errors.
+   * @param {ILogger} logger - The logger for logging information and errors.
    */
   constructor(
-    private readonly databaseService: IMessageDBService<ContractTransactionResponse>,
-    private readonly l2MessageServiceClient: IL2MessageServiceClient<
-      Overrides,
-      TransactionReceipt,
-      TransactionResponse,
-      ContractTransactionResponse,
-      Signer,
-      ErrorDescription
-    >,
+    private readonly messageRepository: IMessageRepository,
+    private readonly l2MessageServiceClient: IL2MessageServiceClient,
     private readonly transactionSizeCalculator: IL2ClaimTransactionSizeCalculator,
     private readonly config: L2ClaimMessageTransactionSizeProcessorConfig,
-    private readonly logger: IPostmanLogger,
+    private readonly logger: ILogger,
+    private readonly errorParser: IErrorParser,
   ) {}
 
   /**
@@ -54,7 +40,7 @@ export class L2ClaimMessageTransactionSizeProcessor implements IL2ClaimMessageTr
     let message: Message | null = null;
 
     try {
-      const messages = await this.databaseService.getNFirstMessagesByStatus(
+      const messages = await this.messageRepository.getNFirstMessagesByStatus(
         MessageStatus.ANCHORED,
         this.config.direction,
         1,
@@ -62,11 +48,13 @@ export class L2ClaimMessageTransactionSizeProcessor implements IL2ClaimMessageTr
       );
 
       if (messages.length === 0) {
-        this.logger.info("No anchored messages found to compute transaction size.");
+        this.logger.debug("No anchored messages found to compute transaction size.");
         return;
       }
 
       message = messages[0];
+
+      this.logger.debug("Computing transaction size.", { messageHash: message.messageHash });
 
       const { gasLimit, maxPriorityFeePerGas, maxFeePerGas } =
         await this.l2MessageServiceClient.estimateClaimGasFees(message);
@@ -83,14 +71,13 @@ export class L2ClaimMessageTransactionSizeProcessor implements IL2ClaimMessageTr
         status: MessageStatus.TRANSACTION_SIZE_COMPUTED,
       });
 
-      await this.databaseService.updateMessage(message);
+      await this.messageRepository.updateMessage(message);
 
-      this.logger.info(
-        "Message transaction size and gas limit have been computed: messageHash=%s transactionSize=%s gasLimit=%s",
-        message.messageHash,
+      this.logger.info("Message transaction size and gas limit have been computed.", {
+        messageHash: message.messageHash,
         transactionSize,
-        gasLimit,
-      );
+        gasLimit: gasLimit.toString(),
+      });
     } catch (e) {
       await this.handleProcessingError(e, message);
     }
@@ -104,12 +91,12 @@ export class L2ClaimMessageTransactionSizeProcessor implements IL2ClaimMessageTr
    * @returns {Promise<void>} A promise that resolves when the error has been handled.
    */
   private async handleProcessingError(e: unknown, message: Message | null): Promise<void> {
-    const parsedError = ErrorParser.parseErrorWithMitigation(e);
+    const parsedError = this.errorParser.parse(e);
 
-    if (parsedError?.mitigation && !parsedError.mitigation.shouldRetry && message) {
+    if (!parsedError.retryable && message) {
       message.edit({ status: MessageStatus.NON_EXECUTABLE });
-      await this.databaseService.updateMessage(message);
-      this.logger.warnOrError("Error occurred while processing message transaction size.", {
+      await this.messageRepository.updateMessage(message);
+      this.logger.error("Non-retryable error computing transaction size.", {
         error: e,
         parsedError,
         messageHash: message.messageHash,
@@ -117,7 +104,7 @@ export class L2ClaimMessageTransactionSizeProcessor implements IL2ClaimMessageTr
       return;
     }
 
-    this.logger.warnOrError("Error occurred while processing message transaction size.", {
+    this.logger.error("Error computing transaction size.", {
       error: e,
       parsedError,
     });

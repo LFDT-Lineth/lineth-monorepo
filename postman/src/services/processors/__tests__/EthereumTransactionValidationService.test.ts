@@ -1,64 +1,28 @@
-import { DefaultGasProvider, LineaProvider, Provider, testingHelpers } from "@consensys/linea-sdk";
 import { describe, it, beforeEach } from "@jest/globals";
-import {
-  ContractTransactionResponse,
-  ErrorDescription,
-  Overrides,
-  TransactionReceipt,
-  TransactionResponse,
-  Wallet,
-} from "ethers";
 import { mock } from "jest-mock-extended";
 
 import { TestLogger } from "../../../../src/utils/testing/helpers";
 import { ILineaRollupClient } from "../../../core/clients/blockchain/ethereum/ILineaRollupClient";
+import { IEthereumGasProvider } from "../../../core/clients/blockchain/IGasProvider";
 import {
   DEFAULT_ENABLE_POSTMAN_SPONSORING,
-  DEFAULT_GAS_ESTIMATION_PERCENTILE,
   DEFAULT_MAX_CLAIM_GAS_LIMIT,
-  DEFAULT_MAX_FEE_PER_GAS_CAP,
   DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
   DEFAULT_PROFIT_MARGIN,
 } from "../../../core/constants";
-import {
-  DEFAULT_MAX_FEE_PER_GAS,
-  TEST_CONTRACT_ADDRESS_1,
-  TEST_CONTRACT_ADDRESS_2,
-  TEST_L1_SIGNER_PRIVATE_KEY,
-  testMessage,
-} from "../../../utils/testing/constants";
+import { DEFAULT_MAX_FEE_PER_GAS, testMessage } from "../../../utils/testing/constants";
 import { EthereumTransactionValidationService } from "../../EthereumTransactionValidationService";
 
 describe("EthereumTransactionValidationService", () => {
   let lineaTransactionValidationService: EthereumTransactionValidationService;
-  let gasProvider: DefaultGasProvider;
-
-  let lineaRollupClient: ILineaRollupClient<
-    Overrides,
-    TransactionReceipt,
-    TransactionResponse,
-    ContractTransactionResponse,
-    ErrorDescription
-  >;
+  let lineaRollupClient: ILineaRollupClient;
+  let gasProvider: IEthereumGasProvider;
 
   const logger = new TestLogger(EthereumTransactionValidationService.name);
 
   beforeEach(() => {
-    const clients = testingHelpers.generateLineaRollupClient(
-      mock<Provider>(),
-      mock<LineaProvider>(),
-      TEST_CONTRACT_ADDRESS_1,
-      TEST_CONTRACT_ADDRESS_2,
-      "read-write",
-      new Wallet(TEST_L1_SIGNER_PRIVATE_KEY),
-      {
-        gasEstimationPercentile: DEFAULT_GAS_ESTIMATION_PERCENTILE,
-        maxFeePerGasCap: DEFAULT_MAX_FEE_PER_GAS_CAP,
-        enforceMaxGasFee: false,
-      },
-    );
-    lineaRollupClient = clients.lineaRollupClient;
-    gasProvider = clients.gasProvider;
+    lineaRollupClient = mock<ILineaRollupClient>();
+    gasProvider = mock<IEthereumGasProvider>();
 
     lineaTransactionValidationService = new EthereumTransactionValidationService(
       lineaRollupClient,
@@ -194,6 +158,10 @@ describe("EthereumTransactionValidationService", () => {
 
     describe("isPostmanSponsorshipEnabled is true", () => {
       beforeEach(() => {
+        jest.spyOn(gasProvider, "getGasFees").mockResolvedValueOnce({
+          maxPriorityFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
+          maxFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
+        });
         lineaTransactionValidationService = new EthereumTransactionValidationService(
           lineaRollupClient,
           gasProvider,

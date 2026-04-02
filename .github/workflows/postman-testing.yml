@@ -26,8 +26,6 @@ jobs:
         env:
           NATIVE_LIBS_RELEASE_TAG: blob-libs-v3.0.1
         run: |
-          pnpm run -F ./ts-libs/linea-native-libs build;
-          pnpm run -F linea-shared-utils build;
-          pnpm run -F ./sdk/sdk-ethers build;
+          pnpm run -F "@consensys/linea-postman^..." build
           pnpm run -F ./postman test;
-          pnpm run -F ./sdk/sdk-ethers test;
+          pnpm run -F ./sdk/sdk-viem test;

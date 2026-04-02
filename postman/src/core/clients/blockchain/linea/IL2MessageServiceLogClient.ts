@@ -1,31 +1,6 @@
-import { MessageSent, ServiceVersionMigrated } from "@consensys/linea-sdk";
+import { IMessageSentEventLogClient } from "../ILogClient";
 
-export type MessageSentEventFilters = {
-  from?: string;
-  to?: string;
-  messageHash?: string;
-};
+export type { MessageSentEventFilters, GetMessageSentEventsParams } from "../ILogClient";
 
-export interface IL2MessageServiceLogClient {
-  getMessageSentEvents(params: {
-    filters?: MessageSentEventFilters;
-    fromBlock?: number;
-    toBlock?: string | number;
-    fromBlockLogIndex?: number;
-  }): Promise<MessageSent[]>;
-
-  getMessageSentEventsByMessageHash(params: {
-    messageHash: string;
-    fromBlock?: number;
-    toBlock?: string | number;
-    fromBlockLogIndex?: number;
-  }): Promise<MessageSent[]>;
-
-  getMessageSentEventsByBlockRange(fromBlock: number, toBlock: number): Promise<MessageSent[]>;
-
-  getServiceVersionMigratedEvents(param?: {
-    fromBlock?: number;
-    toBlock?: string | number;
-    fromBlockLogIndex?: number;
-  }): Promise<ServiceVersionMigrated[]>;
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface IL2MessageServiceLogClient extends IMessageSentEventLogClient {}

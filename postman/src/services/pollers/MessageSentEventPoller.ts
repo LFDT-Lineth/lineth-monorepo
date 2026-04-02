@@ -1,27 +1,20 @@
-import { Direction, wait } from "@consensys/linea-sdk";
-import {
-  Block,
-  ContractTransactionResponse,
-  JsonRpcProvider,
-  TransactionReceipt,
-  TransactionRequest,
-  TransactionResponse,
-} from "ethers";
+import { ILogger } from "@consensys/linea-shared-utils";
 
-import { IProvider } from "../../core/clients/blockchain/IProvider";
+import { IBlockProvider } from "../../core/clients/blockchain/IProvider";
 import { DEFAULT_INITIAL_FROM_BLOCK } from "../../core/constants";
 import { Message } from "../../core/entities/Message";
+import { Direction } from "../../core/enums";
 import { DatabaseAccessError } from "../../core/errors/DatabaseErrors";
-import { IMessageDBService } from "../../core/persistence/IMessageDBService";
+import { IMessageRepository } from "../../core/persistence/IMessageRepository";
 import { IPoller } from "../../core/services/pollers/IPoller";
 import { IMessageSentEventProcessor } from "../../core/services/processors/IMessageSentEventProcessor";
-import { IPostmanLogger } from "../../utils/IPostmanLogger";
+import { wait } from "../../core/utils/shared";
 
 type MessageSentEventPollerConfig = {
   direction: Direction;
   pollingInterval: number;
   initialFromBlock: number;
-  originContractAddress: string;
+  originContractAddress: `0x${string}`;
 };
 
 export class MessageSentEventPoller implements IPoller {
@@ -32,22 +25,16 @@ export class MessageSentEventPoller implements IPoller {
    *
    * @param {IMessageSentEventProcessor} eventProcessor - An instance of a class implementing the `IMessageSentEventProcessor` interface, responsible for processing message sent events.
    * @param {IProvider} provider - An instance of a class implementing the `IProvider` interface, used to query blockchain data.
-   * @param {IMessageDBService} databaseService - An instance of a class implementing the `IMessageDBService` interface, used for storing and retrieving message data.
+   * @param {IMessageRepository} messageRepository - An instance of a class implementing the `IMessageRepository` interface, used for storing and retrieving message data.
    * @param {MessageSentEventPollerConfig} config - Configuration settings for the poller, including the direction of message flow, the polling interval, and the initial block number to start listening from.
-   * @param {IPostmanLogger} logger - An instance of a class implementing the `IPostmanLogger` interface, used for logging messages related to the polling process.
+   * @param {ILogger} logger - An instance of a class implementing the `ILogger` interface, used for logging messages related to the polling process.
    */
   constructor(
     private readonly eventProcessor: IMessageSentEventProcessor,
-    private readonly provider: IProvider<
-      TransactionReceipt,
-      Block,
-      TransactionRequest,
-      TransactionResponse,
-      JsonRpcProvider
-    >,
-    private readonly databaseService: IMessageDBService<ContractTransactionResponse>,
+    private readonly provider: IBlockProvider,
+    private readonly messageRepository: IMessageRepository,
     private readonly config: MessageSentEventPollerConfig,
-    private readonly logger: IPostmanLogger,
+    private readonly logger: ILogger,
   ) {}
 
   /**
@@ -58,11 +45,11 @@ export class MessageSentEventPoller implements IPoller {
    */
   public async start(): Promise<void> {
     if (this.isPolling) {
-      this.logger.warn("%s has already started.", this.logger.name);
+      this.logger.warn("Poller has already started.", { name: this.logger.name });
       return;
     }
 
-    this.logger.info("Starting %s %s...", this.config.direction, this.logger.name);
+    this.logger.info("Starting poller.", { direction: this.config.direction, name: this.logger.name });
 
     this.isPolling = true;
     this.startProcessingEvents();
@@ -73,9 +60,9 @@ export class MessageSentEventPoller implements IPoller {
    * Logs information about the stopping process.
    */
   public stop() {
-    this.logger.info("Stopping %s %s...", this.config.direction, this.logger.name);
+    this.logger.info("Stopping poller.", { direction: this.config.direction, name: this.logger.name });
     this.isPolling = false;
-    this.logger.info("%s %s stopped.", this.config.direction, this.logger.name);
+    this.logger.info("Poller stopped.", { direction: this.config.direction, name: this.logger.name });
   }
 
   /**
@@ -88,7 +75,7 @@ export class MessageSentEventPoller implements IPoller {
       const { fromBlock, fromBlockLogIndex } = await this.getInitialFromBlock();
       this.processEvents(fromBlock, fromBlockLogIndex);
     } catch (e) {
-      this.logger.error(e);
+      this.logger.error("Failed to get initial block number.", { error: e, direction: this.config.direction });
       await wait(this.config.pollingInterval);
       this.startProcessingEvents();
     }
@@ -111,16 +98,15 @@ export class MessageSentEventPoller implements IPoller {
       fromBlockLogIndex = nextFromBlockLogIndex;
     } catch (e) {
       if (e instanceof DatabaseAccessError) {
-        fromBlock = (e.rejectedMessage as Message & { logIndex: number }).sentBlockNumber;
-        fromBlockLogIndex = (e.rejectedMessage as Message & { logIndex: number }).logIndex;
-        this.logger.warn(
-          "Something went wrong with database access. Restarting fromBlockNum=%s and fromLogIndex=%s and errorMessage=%s",
-          fromBlock,
-          fromBlockLogIndex,
-          e.message,
-        );
+        fromBlock = (e.rejectedEntity as Message & { logIndex: number }).sentBlockNumber;
+        fromBlockLogIndex = (e.rejectedEntity as Message & { logIndex: number }).logIndex;
+        this.logger.warn("Something went wrong with database access. Restarting.", {
+          fromBlockNum: fromBlock,
+          fromLogIndex: fromBlockLogIndex,
+          errorMessage: e.message,
+        });
       } else {
-        this.logger.warnOrError(e);
+        this.logger.error("Unexpected error processing events.", { error: e, direction: this.config.direction });
       }
     } finally {
       await wait(this.config.pollingInterval);
@@ -160,7 +146,7 @@ export class MessageSentEventPoller implements IPoller {
    * @returns {Promise<number | null>} The block number of the latest message sent event, or null if no such event has been processed.
    */
   private async getLatestMessageSentBlockNumber(direction: Direction): Promise<number | null> {
-    const lastMessageSent = await this.databaseService.getLatestMessageSent(
+    const lastMessageSent = await this.messageRepository.getLatestMessageSent(
       direction,
       this.config.originContractAddress,
     );

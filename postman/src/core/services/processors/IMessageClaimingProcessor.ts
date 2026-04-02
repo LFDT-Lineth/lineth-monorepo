@@ -1,17 +1,18 @@
-import { Direction } from "@consensys/linea-sdk";
+import { Direction } from "../../enums";
+
+import type { Address } from "../../types/primitives";
 
 export interface IMessageClaimingProcessor {
   process(): Promise<void>;
 }
 
 export type MessageClaimingProcessorConfig = {
-  maxNonceDiff: number;
-  feeRecipientAddress?: string;
+  feeRecipientAddress?: Address;
   profitMargin: number;
   maxNumberOfRetries: number;
   retryDelayInSeconds: number;
   maxClaimGasLimit: bigint;
   direction: Direction;
-  originContractAddress: string;
-  claimViaAddress?: string;
+  originContractAddress: Address;
+  claimViaAddress?: Address;
 };

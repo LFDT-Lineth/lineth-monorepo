@@ -1,4 +1,4 @@
-import { Direction } from "@consensys/linea-sdk";
+import { Direction } from "../enums";
 
 export interface ISponsorshipMetricsUpdater {
   getSponsoredMessagesTotal(direction: Direction): Promise<number>;

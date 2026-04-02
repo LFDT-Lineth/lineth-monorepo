@@ -1,27 +1,18 @@
-import { serialize, isEmptyBytes, MessageSent } from "@consensys/linea-sdk";
 import { ILogger } from "@consensys/linea-shared-utils";
-import {
-  Block,
-  ContractTransactionResponse,
-  dataSlice,
-  Interface,
-  JsonRpcProvider,
-  TransactionReceipt,
-  TransactionRequest,
-  TransactionResponse,
-} from "ethers";
 import { compileExpression, useDotAccessOperator } from "filtrex";
 
-import { ILineaRollupLogClient } from "../../core/clients/blockchain/ethereum/ILineaRollupLogClient";
-import { IProvider } from "../../core/clients/blockchain/IProvider";
-import { IL2MessageServiceLogClient } from "../../core/clients/blockchain/linea/IL2MessageServiceLogClient";
-import { MessageFactory } from "../../core/entities/MessageFactory";
+import { IMessageSentEventLogClient } from "../../core/clients/blockchain/ILogClient";
+import { IBlockProvider } from "../../core/clients/blockchain/IProvider";
+import { Message } from "../../core/entities/Message";
 import { MessageStatus } from "../../core/enums";
-import { IMessageDBService } from "../../core/persistence/IMessageDBService";
+import { IMessageRepository } from "../../core/persistence/IMessageRepository";
+import { ICalldataDecoder } from "../../core/services/ICalldataDecoder";
 import {
   IMessageSentEventProcessor,
   MessageSentEventProcessorConfig,
 } from "../../core/services/processors/IMessageSentEventProcessor";
+import { MessageSent } from "../../core/types";
+import { isEmptyBytes, serialize } from "../../core/utils/shared";
 
 export class MessageSentEventProcessor implements IMessageSentEventProcessor {
   private readonly maxBlocksToFetchLogs: number;
@@ -29,22 +20,18 @@ export class MessageSentEventProcessor implements IMessageSentEventProcessor {
   /**
    * Initializes a new instance of the `MessageSentEventProcessor`.
    *
-   * @param {IMessageDBService} databaseService - An instance of a class implementing the `IMessageDBService` interface, used for storing and retrieving message data.
-   * @param {ILineaRollupLogClient | IL2MessageServiceLogClient} logClient - An instance of a class implementing the `ILineaRollupLogClient` or the `IL2MessageServiceLogClient` interface for fetching message sent events from the blockchain.
-   * @param {IProvider} provider - An instance of a class implementing the `IProvider` interface, used to query blockchain data.
-   * @param {MessageSentEventProcessorConfig} config - Configuration for network-specific settings, including listener parameters and feature flags.
-   * @param {ILogger} logger - An instance of a class implementing the `ILogger` interface, used for logging messages.
+   * @param {IMessageRepository} messageRepository - Used for storing and retrieving message data.
+   * @param {IMessageSentEventLogClient} logClient - For fetching message sent events from the blockchain.
+   * @param {IProvider} provider - Used to query blockchain data.
+   * @param {ICalldataDecoder} calldataDecoder - Decodes function calldata for filter evaluation.
+   * @param {MessageSentEventProcessorConfig} config - Network-specific settings including listener parameters and feature flags.
+   * @param {ILogger} logger - Used for logging messages.
    */
   constructor(
-    private readonly databaseService: IMessageDBService<ContractTransactionResponse>,
-    private readonly logClient: ILineaRollupLogClient | IL2MessageServiceLogClient,
-    private readonly provider: IProvider<
-      TransactionReceipt,
-      Block,
-      TransactionRequest,
-      TransactionResponse,
-      JsonRpcProvider
-    >,
+    private readonly messageRepository: IMessageRepository,
+    private readonly logClient: IMessageSentEventLogClient,
+    private readonly provider: IBlockProvider,
+    private readonly calldataDecoder: ICalldataDecoder,
     protected readonly config: MessageSentEventProcessorConfig,
     private readonly logger: ILogger,
   ) {
@@ -53,10 +40,6 @@ export class MessageSentEventProcessor implements IMessageSentEventProcessor {
 
   /**
    * Calculates the starting block number for fetching events, ensuring it is within the valid range.
-   *
-   * @param {number} fromBlockNumber - The proposed starting block number.
-   * @param {number} toBlockNumber - The ending block number for the query range.
-   * @returns {number} The adjusted starting block number.
    */
   private calculateFromBlockNumber(fromBlockNumber: number, toBlockNumber: number): number {
     if (fromBlockNumber > toBlockNumber) {
@@ -67,10 +50,6 @@ export class MessageSentEventProcessor implements IMessageSentEventProcessor {
 
   /**
    * Fetches `MessageSent` events from the blockchain within a specified block range and stores them in the database.
-   *
-   * @param {number} fromBlock - The starting block number for fetching events.
-   * @param {number} fromBlockLogIndex - The log index within the starting block to begin processing events from.
-   * @returns {Promise<{ nextFromBlock: number; nextFromBlockLogIndex: number }>} The block number and log index to start fetching events from in the next iteration.
    */
   public async process(
     fromBlock: number,
@@ -81,19 +60,19 @@ export class MessageSentEventProcessor implements IMessageSentEventProcessor {
 
     fromBlock = this.calculateFromBlockNumber(fromBlock, toBlock);
 
-    this.logger.info("Getting events fromBlock=%s toBlock=%s", fromBlock, toBlock);
+    this.logger.info("Fetching events.", { fromBlock, toBlock });
 
     const events = await this.logClient.getMessageSentEvents({
       filters: {
         from: this.config.eventFilters?.fromAddressFilter,
         to: this.config.eventFilters?.toAddressFilter,
       },
-      fromBlock,
-      toBlock,
+      fromBlock: BigInt(fromBlock),
+      toBlock: BigInt(toBlock),
       fromBlockLogIndex,
     });
 
-    this.logger.info("Number of fetched MessageSent events: %s", events.length);
+    this.logger.info("Number of fetched MessageSent events.", { count: events.length });
 
     for (const event of events) {
       const shouldBeProcessed = this.shouldProcessMessage(
@@ -103,27 +82,24 @@ export class MessageSentEventProcessor implements IMessageSentEventProcessor {
       );
       const messageStatusToInsert = shouldBeProcessed ? MessageStatus.SENT : MessageStatus.EXCLUDED;
 
-      const message = MessageFactory.createMessage({
+      const message = new Message({
         ...event,
         sentBlockNumber: event.blockNumber,
         direction: this.config.direction,
         status: messageStatusToInsert,
         claimNumberOfRetry: 0,
+        claimCycleCount: 0,
       });
 
-      await this.databaseService.insertMessage(message);
+      await this.messageRepository.insertMessage(message);
     }
-    this.logger.info(`Messages hashes found: messageHashes=%s`, serialize(events.map((event) => event.messageHash)));
+    this.logger.info("Messages hashes found.", { messageHashes: serialize(events.map((event) => event.messageHash)) });
 
     return { nextFromBlock: toBlock + 1, nextFromBlockLogIndex: 0 };
   }
 
   /**
    * Determines whether a message should be processed based on its calldata and the configuration.
-   *
-   * @param {string} event - The message event.
-   * @param {string} messageHash - The hash of the message.
-   * @returns {boolean} `true` if the message should be processed, `false` otherwise.
    */
   protected shouldProcessMessage(
     event: MessageSent,
@@ -143,10 +119,9 @@ export class MessageSentEventProcessor implements IMessageSentEventProcessor {
     }
 
     if (!basicProcess) {
-      this.logger.debug(
-        "Message has been excluded because target address is not an EOA or calldata is not empty: messageHash=%s",
+      this.logger.debug("Message has been excluded because target address is not an EOA or calldata is not empty.", {
         messageHash,
-      );
+      });
       return false;
     }
 
@@ -165,25 +140,22 @@ export class MessageSentEventProcessor implements IMessageSentEventProcessor {
       return true;
     }
 
-    const iface = new Interface([filters.calldataFunctionInterface]);
-    const decodedCalldata = iface.decodeFunctionData(filters.calldataFunctionInterface, event.calldata);
-
+    const decodedCalldata = this.calldataDecoder.decode(filters.calldataFunctionInterface, event.calldata);
     const context = {
       calldata: {
-        funcSignature: dataSlice(event.calldata, 0, 4),
-        ...this.convertBigInts(decodedCalldata.toObject(true)),
+        funcSignature: event.calldata.slice(0, 10),
+        ...this.convertBigInts(decodedCalldata),
       },
     };
 
     const passesFilter = this.evaluateExpression(filters.criteriaExpression, context);
 
     if (!passesFilter) {
-      this.logger.debug(
-        "Message has been excluded because it does not match the criteria: criteria=%s messageHash=%s transactionHash=%s",
-        filters.criteriaExpression,
-        event.messageHash,
-        event.transactionHash,
-      );
+      this.logger.debug("Message has been excluded because it does not match the criteria.", {
+        criteria: filters.criteriaExpression,
+        messageHash: event.messageHash,
+        transactionHash: event.transactionHash,
+      });
       return false;
     }
 

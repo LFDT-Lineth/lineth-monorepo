@@ -1,17 +1,37 @@
-import { L2MessageService, L2MessageService__factory } from "@consensys/linea-sdk";
 import { config } from "dotenv";
-import { ContractTransactionReceipt, Overrides, JsonRpcProvider, Wallet } from "ethers";
+import { Address, Hex, SendTransactionParameters, WalletClient, encodeFunctionData } from "viem";
+import { getTransactionCount } from "viem/actions";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 
 import { sanitizeAddress, sanitizePrivKey } from "./cli";
-import { SendMessageArgs } from "./types";
+import { createChainContext } from "./helpers";
+
+type SendMessageArgs = {
+  to: Address;
+  fee: bigint;
+  calldata: Hex;
+};
 
 config();
 
+const SEND_MESSAGE_ABI = [
+  {
+    inputs: [
+      { internalType: "address", name: "_to", type: "address" },
+      { internalType: "uint256", name: "_fee", type: "uint256" },
+      { internalType: "bytes", name: "_calldata", type: "bytes" },
+    ],
+    name: "sendMessage",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+] as const;
+
 const argv = yargs(hideBin(process.argv))
   .option("rpc-url", {
-    describe: "Rpc url",
+    describe: "L2 RPC URL",
     type: "string",
     demandOption: true,
   })
@@ -22,7 +42,7 @@ const argv = yargs(hideBin(process.argv))
     coerce: sanitizePrivKey("priv-key"),
   })
   .option("contract-address", {
-    describe: "Smart contract address",
+    describe: "L2MessageService contract address",
     type: "string",
     demandOption: true,
     coerce: sanitizeAddress("smc-address"),
@@ -34,12 +54,14 @@ const argv = yargs(hideBin(process.argv))
     coerce: sanitizeAddress("to"),
   })
   .option("fee", {
-    describe: "Fee passed to send message function",
+    describe: "Fee passed to send message function (in wei)",
     type: "string",
+    demandOption: true,
   })
   .option("value", {
-    describe: "Value passed to send message function",
+    describe: "Value (ETH in wei) sent with the transaction",
     type: "string",
+    demandOption: true,
   })
   .option("calldata", {
     describe: "Encoded message calldata",
@@ -53,53 +75,53 @@ const argv = yargs(hideBin(process.argv))
   })
   .parseSync();
 
-const sendMessage = async (
-  contract: L2MessageService,
+async function sendMessages(
+  client: WalletClient,
+  contractAddress: Address,
   args: SendMessageArgs,
-  overrides: Overrides = {},
-): Promise<ContractTransactionReceipt | null> => {
-  const tx = await contract.sendMessage(args.to, args.fee, args.calldata, overrides);
-  return await tx.wait();
-};
+  count: number,
+  value: bigint,
+) {
+  let nonce = await getTransactionCount(client, { address: client.account!.address, blockTag: "latest" });
 
-const sendMessages = async (
-  contract: L2MessageService,
-  signer: Wallet,
-  numberOfMessages: number,
-  args: SendMessageArgs,
-  overrides?: Overrides,
-) => {
-  let nonce = await signer.getNonce();
-  const sendMessagePromises: Promise<ContractTransactionReceipt | null>[] = [];
+  const txData = encodeFunctionData({
+    abi: SEND_MESSAGE_ABI,
+    functionName: "sendMessage",
+    args: [args.to, args.fee, args.calldata],
+  });
 
-  for (let i = 0; i < numberOfMessages; i++) {
-    sendMessagePromises.push(
-      sendMessage(contract, args, {
-        ...overrides,
-        nonce,
-      }),
-    );
+  const promises = Array.from({ length: count }, () => {
+    const tx = client.sendTransaction({
+      account: client.account!,
+      to: contractAddress,
+      data: txData,
+      value,
+      nonce,
+    } as SendTransactionParameters);
     nonce++;
-  }
+    return tx;
+  });
 
-  await Promise.all(sendMessagePromises);
-};
+  await Promise.all(promises);
+}
 
-const main = async (args: typeof argv) => {
-  const provider = new JsonRpcProvider(args.rpcUrl);
-  const signer = new Wallet(args.privKey, provider);
+async function main(args: typeof argv) {
+  const { walletClient } = await createChainContext(args.rpcUrl, args.privKey as Hex);
 
-  const functionArgs: SendMessageArgs & Overrides = {
-    to: args.to,
-    fee: BigInt(args.fee!),
-    calldata: args.calldata,
-    value: args.value,
+  const messageArgs: SendMessageArgs = {
+    to: args.to as Address,
+    fee: BigInt(args.fee),
+    calldata: args.calldata as Hex,
   };
 
-  const l2MessageService = L2MessageService__factory.connect(args.contractAddress, signer) as L2MessageService;
-
-  await sendMessages(l2MessageService, signer, args.numberOfMessage, functionArgs, { value: args.value });
-};
+  await sendMessages(
+    walletClient,
+    args.contractAddress as Address,
+    messageArgs,
+    args.numberOfMessage,
+    BigInt(args.value),
+  );
+}
 
 main(argv)
   .then(() => process.exit(0))

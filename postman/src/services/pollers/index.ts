@@ -1,6 +1,2 @@
-export { DatabaseCleaningPoller } from "./DatabaseCleaningPoller";
-export { L2ClaimMessageTransactionSizePoller } from "./L2ClaimMessageTransactionSizePoller";
-export { MessageAnchoringPoller } from "./MessageAnchoringPoller";
-export { MessageClaimingPoller } from "./MessageClaimingPoller";
-export { MessagePersistingPoller } from "./MessagePersistingPoller";
+export { IntervalPoller } from "./IntervalPoller";
 export { MessageSentEventPoller } from "./MessageSentEventPoller";

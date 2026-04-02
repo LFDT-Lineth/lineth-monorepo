@@ -1,17 +1,20 @@
-import { Direction } from "@consensys/linea-sdk";
-
 import { Message } from "../entities/Message";
+import { Direction } from "../enums";
 import { MessageStatus } from "../enums";
+import { Address, Hash } from "../types";
 
-export interface IMessageRepository<ContractTransactionResponse> {
+export interface IMessageWriter {
   insertMessage(message: Message): Promise<void>;
   updateMessage(message: Message): Promise<void>;
-  updateMessageByTransactionHash(transactionHash: string, direction: Direction, message: Message): Promise<void>;
+  updateMessageByTransactionHash(transactionHash: Hash, direction: Direction, message: Message): Promise<void>;
   saveMessages(messages: Message[]): Promise<void>;
   deleteMessages(msBeforeNowToDelete: number): Promise<number>;
+}
+
+export interface IMessageReader {
   getFirstMessageToClaimOnL1(
     direction: Direction,
-    contractAddress: string,
+    contractAddress: Address,
     currentGasPrice: bigint,
     gasEstimationMargin: number,
     maxRetry: number,
@@ -19,24 +22,21 @@ export interface IMessageRepository<ContractTransactionResponse> {
   ): Promise<Message | null>;
   getFirstMessageToClaimOnL2(
     direction: Direction,
-    contractAddress: string,
+    contractAddress: Address,
     messageStatuses: MessageStatus[],
     maxRetry: number,
     retryDelay: number,
   ): Promise<Message | null>;
-  getLatestMessageSent(direction: Direction, contractAddress: string): Promise<Message | null>;
+  getLatestMessageSent(direction: Direction, contractAddress: Address): Promise<Message | null>;
   getNFirstMessagesByStatus(
     status: MessageStatus,
     direction: Direction,
     limit: number,
-    contractAddress: string,
+    contractAddress: Address,
   ): Promise<Message[]>;
-  getMessageSent(direction: Direction, contractAddress: string): Promise<Message | null>;
-  getLastClaimTxNonce(direction: Direction): Promise<number | null>;
+  getMessageSent(direction: Direction, contractAddress: Address): Promise<Message | null>;
   getFirstPendingMessage(direction: Direction): Promise<Message | null>;
-  updateMessageWithClaimTxAtomic(
-    message: Message,
-    nonce: number,
-    claimTxFn: () => Promise<ContractTransactionResponse>,
-  ): Promise<void>;
+  getMaxPendingNonce(direction: Direction): Promise<number | null>;
 }
+
+export interface IMessageRepository extends IMessageWriter, IMessageReader {}

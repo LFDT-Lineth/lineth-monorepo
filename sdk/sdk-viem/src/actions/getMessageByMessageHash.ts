@@ -30,6 +30,7 @@ export type GetMessageByMessageHashReturnType = {
   messageHash: Hex;
   transactionHash: Hex;
   blockNumber: bigint;
+  logIndex: number;
 };
 
 export type GetMessageByMessageHashErrorType =
@@ -108,5 +109,6 @@ export async function getMessageByMessageHash<chain extends Chain | undefined, a
     messageHash: event.args._messageHash!,
     transactionHash: event.transactionHash,
     blockNumber: event.blockNumber,
+    logIndex: event.logIndex,
   };
 }

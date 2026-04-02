@@ -1,31 +1,29 @@
-import { OnChainMessageStatus, MessageSent } from "@consensys/linea-sdk";
-
 import { MessageProps } from "../../entities/Message";
+import { OnChainMessageStatus } from "../../enums";
+import { Address, Hash, ErrorDescription, MessageSent, Overrides, TransactionSubmission } from "../../types";
 
-export interface IMessageServiceContract<
-  Overrides,
-  TransactionReceipt,
-  TransactionResponse,
-  ContractTransactionResponse,
-  ErrorDescription,
-> {
-  getMessageStatus(params: {
-    messageHash: string;
-    messageBlockNumber?: number;
-    overrides?: Overrides;
-  }): Promise<OnChainMessageStatus>;
-  getMessageByMessageHash(messageHash: string): Promise<MessageSent | null>;
-  getMessagesByTransactionHash(transactionHash: string): Promise<MessageSent[] | null>;
-  getTransactionReceiptByMessageHash(messageHash: string): Promise<TransactionReceipt | null>;
+export interface IMessageStatusReader {
+  getMessageStatus(params: { messageHash: Hash; messageBlockNumber?: number }): Promise<OnChainMessageStatus>;
+}
+
+export interface IMessageClaimer {
   claim(
-    message: (MessageSent | MessageProps) & { feeRecipient?: string; messageBlockNumber?: number },
+    message: (MessageSent | MessageProps) & { feeRecipient?: Address; messageBlockNumber?: number },
     opts?: {
-      claimViaAddress?: string;
+      claimViaAddress?: Address;
       overrides?: Overrides;
     },
-  ): Promise<ContractTransactionResponse>;
-  retryTransactionWithHigherFee(transactionHash: string, priceBumpPercent?: number): Promise<TransactionResponse>;
-  isRateLimitExceeded(messageFee: bigint, messageValue: bigint): Promise<boolean>;
-  isRateLimitExceededError(transactionHash: string): Promise<boolean>;
-  parseTransactionError(transactionHash: string): Promise<ErrorDescription | string>;
+  ): Promise<TransactionSubmission>;
 }
+
+export interface IRateLimitChecker {
+  isRateLimitExceeded(messageFee: bigint, messageValue: bigint): Promise<boolean>;
+  isRateLimitExceededError(transactionHash: Hash, blockNumber?: bigint): Promise<boolean>;
+}
+
+export interface IContractTransactionErrorParser {
+  parseTransactionError(transactionHash: Hash, blockNumber?: bigint): Promise<ErrorDescription | string>;
+}
+
+export interface IMessageServiceContract
+  extends IMessageStatusReader, IMessageClaimer, IRateLimitChecker, IContractTransactionErrorParser {}

@@ -16,10 +16,10 @@ import {
 import { getContractEvents } from "viem/actions";
 
 type EventLogBase = {
-  blockNumber: number;
-  logIndex: number;
-  contractAddress: string;
-  transactionHash: string;
+  blockNumber: bigint | null;
+  logIndex: number | null;
+  contractAddress: Address;
+  transactionHash: Hash | null;
 };
 
 type MessageSent = {

@@ -1,4 +1,4 @@
-import { Direction } from "@consensys/linea-sdk";
+import { Direction } from "../../enums";
 
 export interface IMessageClaimingPersister {
   process(): Promise<void>;
@@ -7,5 +7,6 @@ export interface IMessageClaimingPersister {
 export type MessageClaimingPersisterConfig = {
   direction: Direction;
   messageSubmissionTimeout: number;
-  maxTxRetries: number;
+  maxBumpsPerCycle: number;
+  maxCycles: number;
 };

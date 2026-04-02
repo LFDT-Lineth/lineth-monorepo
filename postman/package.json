@@ -11,25 +11,25 @@
     "lint:fix": "eslint --fix .",
     "clean": "rimraf dist node_modules coverage tsconfig.build.tsbuildinfo",
     "build": "tsc -p tsconfig.build.json",
-    "build:runSdk": "tsc ./scripts/runSdk.ts",
     "test": "npx jest --bail --detectOpenHandles --forceExit",
-    "migration:create": "npx ts-node -P ./tsconfig.json -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:create ./src/application/postman/persistence/migrations/${MIGRATION_NAME}"
+    "migration:create": "npx ts-node -P ./tsconfig.json -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:create ./src/infrastructure/persistence/migrations/${MIGRATION_NAME}"
   },
   "dependencies": {
     "@consensys/linea-native-libs": "workspace:*",
-    "@consensys/linea-sdk": "workspace:*",
+    "@consensys/linea-sdk-core": "workspace:*",
+    "@consensys/linea-sdk-viem": "workspace:*",
     "@consensys/linea-shared-utils": "workspace:*",
-    "better-sqlite3": "12.8.0",
     "class-validator": "0.15.1",
     "dotenv": "catalog:",
-    "ethers": "catalog:",
+    "viem": "catalog:",
     "express": "catalog:",
     "filtrex": "3.1.0",
     "pg": "8.20.0",
     "prom-client": "catalog:",
     "typeorm": "0.3.28",
     "typeorm-naming-strategies": "4.1.0",
-    "winston": "catalog:"
+    "winston": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@consensys/eslint-config": "workspace:*",

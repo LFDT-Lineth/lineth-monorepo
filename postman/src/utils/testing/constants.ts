@@ -1,5 +1,3 @@
-import { Direction, MessageSent } from "@consensys/linea-sdk";
-
 import { L1NetworkConfig, L2NetworkConfig } from "../../application/postman/app/config/config";
 import {
   DEFAULT_ENABLE_POSTMAN_SPONSORING,
@@ -11,28 +9,40 @@ import {
   DEFAULT_MAX_CLAIM_GAS_LIMIT,
   DEFAULT_MAX_NONCE_DIFF,
   DEFAULT_MAX_NUMBER_OF_RETRIES,
-  DEFAULT_MAX_TX_RETRIES,
+  DEFAULT_MAX_BUMPS_PER_CYCLE,
+  DEFAULT_MAX_RETRY_CYCLES,
   DEFAULT_PROFIT_MARGIN,
   DEFAULT_RETRY_DELAY_IN_SECONDS,
   ZERO_ADDRESS,
   ZERO_HASH,
 } from "../../core/constants";
 import { Message, MessageProps } from "../../core/entities/Message";
+import { Direction } from "../../core/enums";
 import { MessageStatus } from "../../core/enums";
+import { MessageSent } from "../../core/types";
 
-export const TEST_L1_SIGNER_PRIVATE_KEY = "0x0000000000000000000000000000000000000000000000000000000000000001";
-export const TEST_L2_SIGNER_PRIVATE_KEY = "0x0000000000000000000000000000000000000000000000000000000000000002";
+import type { Address, Hash } from "../../core/types/primitives";
 
-export const TEST_ADDRESS_1 = "0x0000000000000000000000000000000000000001";
-export const TEST_ADDRESS_2 = "0x0000000000000000000000000000000000000002";
+export const TEST_L1_SIGNER_PRIVATE_KEY: Hash = "0x0000000000000000000000000000000000000000000000000000000000000001";
+export const TEST_L2_SIGNER_PRIVATE_KEY: Hash = "0x0000000000000000000000000000000000000000000000000000000000000002";
 
-export const TEST_CONTRACT_ADDRESS_1 = "0x1000000000000000000000000000000000000000";
-export const TEST_CONTRACT_ADDRESS_2 = "0x2000000000000000000000000000000000000000";
+export const TEST_ADDRESS_1: Address = "0x0000000000000000000000000000000000000001";
+export const TEST_ADDRESS_2: Address = "0x0000000000000000000000000000000000000002";
 
-export const TEST_MESSAGE_HASH = "0x1010101010101010101010101010101010101010101010101010101010101010";
-export const TEST_MESSAGE_HASH_2 = "0x1010101010101010101010101010101010101010101010101010101010101020";
+export const TEST_CONTRACT_ADDRESS_1: Address = "0x1000000000000000000000000000000000000000";
+export const TEST_CONTRACT_ADDRESS_2: Address = "0x2000000000000000000000000000000000000000";
 
-export const TEST_TRANSACTION_HASH = "0x2020202020202020202020202020202020202020202020202020202020202020";
+export const TEST_MESSAGE_HASH: Hash = "0x1010101010101010101010101010101010101010101010101010101010101010";
+export const TEST_MESSAGE_HASH_2: Hash = "0x1010101010101010101010101010101010101010101010101010101010101020";
+
+export const TEST_TRANSACTION_HASH: Hash = "0x2020202020202020202020202020202020202020202020202020202020202020";
+
+export const TEST_SIGNER_ADDRESS: Address = "0x3000000000000000000000000000000000000000";
+export const TEST_FEE_RECIPIENT_ADDRESS: Address = "0x4000000000000000000000000000000000000000";
+export const TEST_CLAIM_VIA_ADDRESS: Address = "0x5000000000000000000000000000000000000000";
+
+export const TEST_MERKLE_ROOT: Hash = "0x3000000000000000000000000000000000000000000000000000000000000000";
+export const TEST_BLOCK_HASH: Hash = "0x3030303030303030303030303030303030303030303030303030303030303030";
 
 export const TEST_RPC_URL = "http://localhost:8545";
 
@@ -51,6 +61,7 @@ export const testMessage = new Message({
   direction: Direction.L1_TO_L2,
   status: MessageStatus.SENT,
   claimNumberOfRetry: 0,
+  claimCycleCount: 0,
   compressedTransactionSize: 100,
 });
 
@@ -67,6 +78,7 @@ export const testAnchoredMessage = new Message({
   direction: Direction.L1_TO_L2,
   status: MessageStatus.ANCHORED,
   claimNumberOfRetry: 0,
+  claimCycleCount: 0,
 });
 
 export const testZeroFeeAnchoredMessage = new Message({
@@ -82,6 +94,7 @@ export const testZeroFeeAnchoredMessage = new Message({
   direction: Direction.L1_TO_L2,
   status: MessageStatus.ANCHORED,
   claimNumberOfRetry: 0,
+  claimCycleCount: 0,
 });
 
 export const testUnderpricedAnchoredMessage = new Message({
@@ -97,6 +110,7 @@ export const testUnderpricedAnchoredMessage = new Message({
   direction: Direction.L1_TO_L2,
   status: MessageStatus.ANCHORED,
   claimNumberOfRetry: 0,
+  claimCycleCount: 0,
 });
 
 export const testPendingMessage = new Message({
@@ -112,6 +126,7 @@ export const testPendingMessage = new Message({
   direction: Direction.L1_TO_L2,
   status: MessageStatus.PENDING,
   claimNumberOfRetry: 0,
+  claimCycleCount: 0,
   claimTxHash: TEST_TRANSACTION_HASH,
   updatedAt: new Date(2024, 1, 1),
 });
@@ -129,6 +144,7 @@ export const testPendingMessage2 = new Message({
   direction: Direction.L1_TO_L2,
   status: MessageStatus.PENDING,
   claimNumberOfRetry: 0,
+  claimCycleCount: 0,
   claimTxHash: TEST_TRANSACTION_HASH,
   updatedAt: new Date(2024, 1, 1),
 });
@@ -146,6 +162,7 @@ export const testClaimedMessage = new Message({
   direction: Direction.L1_TO_L2,
   status: MessageStatus.CLAIMED_SUCCESS,
   claimNumberOfRetry: 0,
+  claimCycleCount: 0,
 });
 
 export const rejectedMessageProps: MessageProps = {
@@ -161,6 +178,7 @@ export const rejectedMessageProps: MessageProps = {
   direction: Direction.L1_TO_L2,
   status: MessageStatus.SENT,
   claimNumberOfRetry: 0,
+  claimCycleCount: 0,
 };
 
 export const testMessageSentEvent: MessageSent = {
@@ -193,7 +211,7 @@ export const testMessageSentEventWithCallData: MessageSent = {
 
 export const testL1NetworkConfig: L1NetworkConfig = {
   claiming: {
-    signerPrivateKey: TEST_L1_SIGNER_PRIVATE_KEY,
+    signer: { type: "private-key" as const, privateKey: TEST_L1_SIGNER_PRIVATE_KEY },
     messageSubmissionTimeout: 300_000,
     maxFeePerGasCap: 100_000_000n,
     gasEstimationPercentile: 15,
@@ -203,7 +221,8 @@ export const testL1NetworkConfig: L1NetworkConfig = {
     maxNumberOfRetries: DEFAULT_MAX_NUMBER_OF_RETRIES,
     retryDelayInSeconds: DEFAULT_RETRY_DELAY_IN_SECONDS,
     maxClaimGasLimit: DEFAULT_MAX_CLAIM_GAS_LIMIT,
-    maxTxRetries: DEFAULT_MAX_TX_RETRIES,
+    maxBumpsPerCycle: DEFAULT_MAX_BUMPS_PER_CYCLE,
+    maxRetryCycles: DEFAULT_MAX_RETRY_CYCLES,
     isPostmanSponsorshipEnabled: DEFAULT_ENABLE_POSTMAN_SPONSORING,
     maxPostmanSponsorGasLimit: DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
   },
@@ -223,7 +242,7 @@ export const testL1NetworkConfig: L1NetworkConfig = {
 
 export const testL2NetworkConfig: L2NetworkConfig = {
   claiming: {
-    signerPrivateKey: TEST_L2_SIGNER_PRIVATE_KEY,
+    signer: { type: "private-key" as const, privateKey: TEST_L2_SIGNER_PRIVATE_KEY },
     messageSubmissionTimeout: 300_000,
     maxFeePerGasCap: 100_000_000n,
     gasEstimationPercentile: 15,
@@ -233,7 +252,8 @@ export const testL2NetworkConfig: L2NetworkConfig = {
     profitMargin: DEFAULT_PROFIT_MARGIN,
     maxNumberOfRetries: DEFAULT_MAX_NUMBER_OF_RETRIES,
     retryDelayInSeconds: DEFAULT_RETRY_DELAY_IN_SECONDS,
-    maxTxRetries: DEFAULT_MAX_TX_RETRIES,
+    maxBumpsPerCycle: DEFAULT_MAX_BUMPS_PER_CYCLE,
+    maxRetryCycles: DEFAULT_MAX_RETRY_CYCLES,
     isPostmanSponsorshipEnabled: DEFAULT_ENABLE_POSTMAN_SPONSORING,
     maxPostmanSponsorGasLimit: DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
   },

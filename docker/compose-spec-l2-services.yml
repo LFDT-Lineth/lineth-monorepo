@@ -293,7 +293,7 @@ services:
     ports:
       - "9090:3000"
     depends_on:
-      sequencer:
+      l2-node-besu:
         condition: service_healthy
       postgres:
         condition: service_healthy

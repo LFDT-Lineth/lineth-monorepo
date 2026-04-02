@@ -1,3 +1,5 @@
+import type { Hash, Hex } from "../../../types/primitives";
+
 export type BlockRange = {
   startingBlock: number;
   endBlock: number;
@@ -5,19 +7,19 @@ export type BlockRange = {
 
 export type FinalizationMessagingInfo = {
   l2MessagingBlocksRange: BlockRange;
-  l2MerkleRoots: string[];
+  l2MerkleRoots: Hash[];
   treeDepth: number;
 };
 
 export type Proof = {
-  proof: string[];
-  root: string;
+  proof: Hex[];
+  root: Hash;
   leafIndex: number;
 };
 
 export interface IMerkleTreeService {
-  getMessageProof(messageHash: string): Promise<Proof>;
-  getFinalizationMessagingInfo(transactionHash: string): Promise<FinalizationMessagingInfo>;
-  getL2MessageHashesInBlockRange(fromBlock: number, toBlock: number): Promise<string[]>;
-  getMessageSiblings(messageHash: string, messageHashes: string[], treeDepth: number): string[];
+  getMessageProof(messageHash: Hash): Promise<Proof>;
+  getFinalizationMessagingInfo(transactionHash: Hash): Promise<FinalizationMessagingInfo>;
+  getL2MessageHashesInBlockRange(fromBlock: number, toBlock: number): Promise<Hash[]>;
+  getMessageSiblings(messageHash: Hash, messageHashes: Hash[], treeDepth: number): Hash[];
 }

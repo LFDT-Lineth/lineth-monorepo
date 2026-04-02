@@ -4,13 +4,13 @@ The Linea Postman service is a component of the Linea blockchain infrastructure 
 
 ## Overview
 
-The Postman service monitors and processes messages between L1 and L2 chains, handling message submission, verification, and claiming. It operates as a Docker container and integrates with both L1 and L2 nodes.
+The Postman service monitors and processes messages between L1 and L2 chains, handling message submission, verification, and claiming. It operates as a Docker container and integrates with both L1 and L2 nodes. Built with TypeScript using [Viem](https://viem.sh/) for blockchain interactions, TypeORM for persistence, and Express for the metrics/health API.
 
 It offers the following key features:
 
 - Feature 1: Listening for message sent events on Ethereum and Linea
 - Feature 2: Listening for message hash anchoring events to check if a message is ready to be claimed
-- Feature 3: Automatic claiming of messages with a configurable retry mechanism
+- Feature 3: Automatic claiming of messages with a configurable retry mechanism (gas bumping and retry cycles)
 - Feature 4: Checking receipt status for each transaction
 
 All messages are stored in a configurable Postgres DB.
@@ -22,7 +22,7 @@ All messages are stored in a configurable Postgres DB.
 #### L1 Configuration
 - `L1_RPC_URL`: Ethereum node RPC endpoint
 - `L1_CONTRACT_ADDRESS`: Address of the LineaRollup contract on L1
-- `L1_SIGNER_PRIVATE_KEY`: Private key for L1 transactions
+- `L1_SIGNER_PRIVATE_KEY`: Private key for L1 transactions (when using `private-key` signer type)
 - `L1_LISTENER_INTERVAL`: Block listening interval (ms)
 - `L1_LISTENER_INITIAL_FROM_BLOCK`: (optional) Starting block for event listening. This configuration option controls from which block the Postman service starts fetching events.
   - **Default behavior**: If not specified or set to `-1` (default), the service will start from the current latest block on the chain or from the latest processed block if there are previously processed messages in the database.
@@ -34,8 +34,10 @@ All messages are stored in a configurable Postgres DB.
     3. Otherwise, start from the current latest block on the chain
   - **⚠️ Performance Note**: Setting this to `0` or a very low block number may result in long initial sync times as the service will process all historical events
 - `L1_LISTENER_BLOCK_CONFIRMATION`: Required block confirmations
+- `L1_LISTENER_RECEIPT_POLLING_INTERVAL`: (optional) Receipt polling interval (ms)
 - `L1_MAX_BLOCKS_TO_FETCH_LOGS`: Maximum blocks to fetch in one request
 - `L1_MAX_GAS_FEE_ENFORCED`: Enable/disable gas fee enforcement
+- `L1_CLAIM_VIA_ADDRESS`: (optional) Address to use for claiming via proxy
 - `L1_EVENT_FILTER_FROM_ADDRESS`: Filter events using a from address
 - `L1_EVENT_FILTER_TO_ADDRESS`: Filter events using a to address
 - `L1_EVENT_FILTER_CALLDATA`: MessageSent event calldata filtering criteria expression. See [Filtrex repo](https://github.com/joewalnes/filtrex/tree/master).
@@ -50,7 +52,7 @@ All messages are stored in a configurable Postgres DB.
 #### L2 Configuration
 - `L2_RPC_URL`: Linea node RPC endpoint
 - `L2_CONTRACT_ADDRESS`: Address of the L2MessageService contract on L2
-- `L2_SIGNER_PRIVATE_KEY`: Private key for L2 transactions
+- `L2_SIGNER_PRIVATE_KEY`: Private key for L2 transactions (when using `private-key` signer type)
 - `L2_LISTENER_INTERVAL`: Block listening interval (ms)
 - `L2_LISTENER_INITIAL_FROM_BLOCK`: (optional) Starting block for event listening. This configuration option controls from which block the Postman service starts fetching events.
   - **Default behavior**: If not specified or set to `-1` (default), the service will start from the current latest block on the chain or from the latest processed block if there are previously processed messages in the database.
@@ -62,9 +64,11 @@ All messages are stored in a configurable Postgres DB.
     3. Otherwise, start from the current latest block on the chain
   - **⚠️ Performance Note**: Setting this to `0` or a very low block number may result in long initial sync times as the service will process all historical events
 - `L2_LISTENER_BLOCK_CONFIRMATION`: Required block confirmations
+- `L2_LISTENER_RECEIPT_POLLING_INTERVAL`: (optional) Receipt polling interval (ms)
 - `L2_MAX_BLOCKS_TO_FETCH_LOGS`: Maximum blocks to fetch in one request
 - `L2_MAX_GAS_FEE_ENFORCED`: Enable/disable gas fee enforcement
 - `L2_MESSAGE_TREE_DEPTH`: Depth of the message Merkle tree
+- `L2_CLAIM_VIA_ADDRESS`: (optional) Address to use for claiming via proxy
 - `L2_EVENT_FILTER_FROM_ADDRESS`: Filter events using a from address
 - `L2_EVENT_FILTER_TO_ADDRESS`: Filter events using a to address
 - `L2_EVENT_FILTER_CALLDATA`: MessageSent event calldata filtering criteria expression. See [Filtrex repo](https://github.com/joewalnes/filtrex/tree/master).
@@ -86,6 +90,8 @@ All messages are stored in a configurable Postgres DB.
 - `MAX_NUMBER_OF_RETRIES`: Maximum retry attempts
 - `RETRY_DELAY_IN_SECONDS`: Delay between retries
 - `MAX_CLAIM_GAS_LIMIT`: Maximum gas limit for claim transactions
+- `MAX_BUMPS_PER_CYCLE`: Maximum gas fee bumps per retry cycle
+- `MAX_RETRY_CYCLES`: Maximum number of retry cycles
 - `MAX_POSTMAN_SPONSOR_GAS_LIMIT`: Maximum gas limit for sponsored Postman claim transactions
 
 #### Feature Flags
@@ -95,12 +101,33 @@ All messages are stored in a configurable Postgres DB.
 - `L2_L1_EOA_ENABLED`: Enable L2->L1 EOA messages
 - `L2_L1_CALLDATA_ENABLED`: Enable L2->L1 calldata messages
 - `L2_L1_AUTO_CLAIM_ENABLED`: Enable auto-claiming for L2->L1 messages
-- `ENABLE_LINEA_ESTIMATE_GAS`: Enable `linea_estimateGas`endpoint usage for L2 chain gas fees estimation
+- `ENABLE_LINEA_ESTIMATE_GAS`: Enable `linea_estimateGas` endpoint usage for L2 chain gas fees estimation
 - `DB_CLEANER_ENABLED`: Enable DB cleaning to delete old claimed messages
 - `L1_L2_ENABLE_POSTMAN_SPONSORING`: Enable L1->L2 Postman sponsoring for claiming messages
 - `L2_L1_ENABLE_POSTMAN_SPONSORING`: Enable L2->L1 Postman sponsoring for claiming messages
 
-#### DB cleaning
+#### Signer Configuration
+
+The Postman supports two signer types for each chain (L1 and L2):
+
+**Private Key (default)**:
+- `<L1|L2>_SIGNER_TYPE`: Set to `private-key` (default if omitted)
+- `<L1|L2>_SIGNER_PRIVATE_KEY`: Hex-encoded private key
+
+**Web3Signer (remote signing)**:
+- `<L1|L2>_SIGNER_TYPE`: Set to `web3signer`
+- `<L1|L2>_WEB3_SIGNER_ENDPOINT`: Web3Signer HTTP(S) endpoint
+- `<L1|L2>_WEB3_SIGNER_PUBLIC_KEY`: Public key of the signing account
+- `<L1|L2>_WEB3_SIGNER_TLS_KEYSTORE_PATH`: (optional) PKCS12 client keystore path for mTLS
+- `<L1|L2>_WEB3_SIGNER_TLS_KEYSTORE_PASSWORD`: (optional) Keystore password
+- `<L1|L2>_WEB3_SIGNER_TLS_TRUSTSTORE_PATH`: (optional) PKCS12 truststore path
+- `<L1|L2>_WEB3_SIGNER_TLS_TRUSTSTORE_PASSWORD`: (optional) Truststore password
+
+#### API Configuration
+- `API_PORT`: Express API port for metrics and health endpoints (default: `3000`)
+- `LOG_LEVEL`: Logging level (default: `info`)
+
+#### DB Cleaning
 - `DB_CLEANING_INTERVAL`: DB cleaning polling interval (ms)
 - `DB_DAYS_BEFORE_NOW_TO_DELETE`: Number of days to retain messages in the database before deletion. Messages older than this number of days will be automatically cleaned up if they are in a final state (CLAIMED_SUCCESS, CLAIMED_REVERTED, EXCLUDED, or ZERO_FEE)
 
@@ -110,6 +137,9 @@ All messages are stored in a configurable Postgres DB.
 - `POSTGRES_USER`: Database user
 - `POSTGRES_PASSWORD`: Database password
 - `POSTGRES_DB`: Database name
+- `POSTGRES_SSL`: Enable SSL for database connection (`true`/`false`)
+- `POSTGRES_SSL_REJECT_UNAUTHORIZED`: Reject unauthorized SSL certificates (`true`/`false`)
+- `POSTGRES_SSL_CA_PATH`: Path to the CA certificate file for SSL
 
 ### Starting Block Configuration Examples
 
@@ -169,7 +199,7 @@ Stop the postman docker container manually.
 
 #### Run the postman locally:
 
-Before the postman can be run and tested locally, we must build the monorepo projects linea-sdk and linea-native-libs
+Before the postman can be run and tested locally, we must build the monorepo dependency projects:
 ```bash
 NATIVE_LIBS_RELEASE_TAG=blob-libs-v1.2.0 pnpm run -F linea-native-libs build && \
 pnpm run -F linea-shared-utils build && \
@@ -183,7 +213,7 @@ From the postman folder run the following commands:
 cp .env.sample .env
 
 # Run the postman
-ts-node scripts/runPostman.ts
+npx ts-node src/main.ts
 ```
 
 ### Building

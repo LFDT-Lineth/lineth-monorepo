@@ -1,13 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Direction } from "@consensys/linea-sdk";
 
-import { TEST_ADDRESS_1, TEST_CONTRACT_ADDRESS_1, TEST_CONTRACT_ADDRESS_2, TEST_MESSAGE_HASH } from "./constants";
-import { MessageEntity } from "../../application/postman/persistence/entities/Message.entity";
+import { ILogger } from "@consensys/linea-shared-utils";
+
+import {
+  TEST_ADDRESS_1,
+  TEST_CONTRACT_ADDRESS_1,
+  TEST_CONTRACT_ADDRESS_2,
+  TEST_MESSAGE_HASH,
+  TEST_TRANSACTION_HASH,
+} from "./constants";
 import { Message, MessageProps } from "../../core/entities/Message";
+import { Direction } from "../../core/enums";
 import { MessageStatus } from "../../core/enums";
-import { IPostmanLogger } from "../IPostmanLogger";
+import { TransactionReceipt, TransactionSubmission } from "../../core/types";
+import { MessageEntity } from "../../infrastructure/persistence/entities/Message.entity";
 
-export class TestLogger implements IPostmanLogger {
+export class TestLogger implements ILogger {
   public readonly name: string;
 
   constructor(loggerName: string) {
@@ -25,10 +33,26 @@ export class TestLogger implements IPostmanLogger {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public debug(error: any): void {}
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public warnOrError(error: any): void {}
 }
+
+export const generateReceipt = (overrides: Partial<TransactionReceipt> = {}): TransactionReceipt => ({
+  hash: TEST_TRANSACTION_HASH,
+  blockNumber: 200,
+  status: "success",
+  gasUsed: 50_000n,
+  gasPrice: 100_000_000_000n,
+  logs: [],
+  ...overrides,
+});
+
+export const generateSubmission = (overrides: Partial<TransactionSubmission> = {}): TransactionSubmission => ({
+  hash: TEST_TRANSACTION_HASH,
+  nonce: 42,
+  gasLimit: 60_000n,
+  maxFeePerGas: 200_000_000_000n,
+  maxPriorityFeePerGas: 2_000_000_000n,
+  ...overrides,
+});
 
 export const generateMessage = (overrides?: Partial<MessageProps>): Message => {
   return new Message({
@@ -45,6 +69,7 @@ export const generateMessage = (overrides?: Partial<MessageProps>): Message => {
     direction: Direction.L1_TO_L2,
     status: MessageStatus.SENT,
     claimNumberOfRetry: 0,
+    claimCycleCount: 0,
     isForSponsorship: false,
     createdAt: new Date("2023-08-04"),
     updatedAt: new Date("2023-08-04"),
@@ -67,9 +92,33 @@ export const generateMessageEntity = (overrides?: Partial<MessageEntity>): Messa
     direction: Direction.L1_TO_L2,
     status: MessageStatus.SENT,
     claimNumberOfRetry: 0,
+    claimCycleCount: 0,
     isForSponsorship: false,
     createdAt: new Date("2023-08-04"),
     updatedAt: new Date("2023-08-04"),
     ...overrides,
   };
 };
+
+/**
+ * Temporarily sets environment variables for the duration of a callback,
+ * then restores the original values (including deleting vars that weren't set before).
+ */
+export async function withEnv(vars: Record<string, string>, fn: () => Promise<void> | void): Promise<void> {
+  const originals: Record<string, string | undefined> = {};
+  for (const key of Object.keys(vars)) {
+    originals[key] = process.env[key];
+    process.env[key] = vars[key];
+  }
+  try {
+    await fn();
+  } finally {
+    for (const key of Object.keys(originals)) {
+      if (originals[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = originals[key];
+      }
+    }
+  }
+}

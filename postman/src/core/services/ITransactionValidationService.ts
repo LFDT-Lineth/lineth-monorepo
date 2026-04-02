@@ -1,20 +1,24 @@
 import { Message } from "../entities/Message";
 
+import type { Address } from "../types/primitives";
+
+export type TransactionEvaluation = {
+  hasZeroFee: boolean;
+  isUnderPriced: boolean;
+  isRateLimitExceeded: boolean;
+  isForSponsorship: boolean;
+  estimatedGasLimit: bigint | null;
+  threshold: number;
+  maxPriorityFeePerGas: bigint;
+  maxFeePerGas: bigint;
+};
+
 export interface ITransactionValidationService {
   evaluateTransaction(
     message: Message,
-    feeRecipient?: string,
-    claimViaAddress?: string,
-  ): Promise<{
-    hasZeroFee: boolean;
-    isUnderPriced: boolean;
-    isRateLimitExceeded: boolean;
-    isForSponsorship: boolean;
-    estimatedGasLimit: bigint | null;
-    threshold: number;
-    maxPriorityFeePerGas: bigint;
-    maxFeePerGas: bigint;
-  }>;
+    feeRecipient?: Address,
+    claimViaAddress?: Address,
+  ): Promise<TransactionEvaluation>;
 }
 
 export type TransactionValidationServiceConfig = {

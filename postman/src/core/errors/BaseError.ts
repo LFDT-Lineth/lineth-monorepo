@@ -1,11 +1,8 @@
 export class BaseError extends Error {
-  reason?: BaseError | Error | string;
-
   override name = "PostmanCoreError";
 
-  constructor(message?: string) {
-    super();
-    this.message = message || "An error occurred.";
+  constructor(message?: string, options?: { cause?: unknown }) {
+    super(message || "An error occurred.", options);
     Error.captureStackTrace(this, this.constructor);
   }
 }

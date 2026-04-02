@@ -1,31 +1,22 @@
-import { MessageSent } from "@consensys/linea-sdk";
-
 import { MessageProps } from "../../../entities/Message";
-import { IMessageServiceContract } from "../../../services/contracts/IMessageServiceContract";
+import {
+  IMessageStatusReader,
+  IMessageClaimer,
+  IRateLimitChecker,
+  IContractTransactionErrorParser,
+} from "../../../services/contracts/IMessageServiceContract";
+import { Address, Hex, MessageSent, Overrides } from "../../../types";
 import { LineaGasFees } from "../IGasProvider";
 
-export interface IL2MessageServiceClient<
-  Overrides,
-  TransactionReceipt,
-  TransactionResponse,
-  ContractTransactionResponse,
-  Signer,
-  ErrorDescription,
-> extends IMessageServiceContract<
-  Overrides,
-  TransactionReceipt,
-  TransactionResponse,
-  ContractTransactionResponse,
-  ErrorDescription
-> {
-  encodeClaimMessageTransactionData(message: MessageProps & { feeRecipient?: string }): string;
+export interface IL2MessageServiceClient
+  extends IMessageStatusReader, IMessageClaimer, IRateLimitChecker, IContractTransactionErrorParser {
+  encodeClaimMessageTransactionData(message: MessageProps & { feeRecipient?: Address }): Hex;
   estimateClaimGasFees(
-    message: (MessageSent | MessageProps) & { feeRecipient?: string },
+    message: (MessageSent | MessageProps) & { feeRecipient?: Address },
     opts?: {
-      claimViaAddress?: string;
+      claimViaAddress?: Address;
       overrides?: Overrides;
     },
   ): Promise<LineaGasFees>;
-  getSigner(): Signer | undefined;
-  getContractAddress(): string;
+  getContractAddress(): Address;
 }

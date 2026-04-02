@@ -1,7 +1,16 @@
-import { Interface, isAddress } from "ethers";
 import { compileExpression, useDotAccessOperator } from "filtrex";
+import { isAddress, parseAbi } from "viem";
+import { ZodError } from "zod";
 
-import { ListenerConfig, PostmanConfig, PostmanOptions } from "./config";
+import {
+  ClaimingConfig,
+  ClaimingOptions,
+  ListenerConfig,
+  ListenerOptions,
+  PostmanConfig,
+  PostmanOptions,
+} from "./config";
+import { postmanOptionsSchema } from "./schema";
 import {
   DEFAULT_CALLDATA_ENABLED,
   DEFAULT_ENABLE_POSTMAN_SPONSORING,
@@ -13,16 +22,50 @@ import {
   DEFAULT_LISTENER_INTERVAL,
   DEFAULT_MAX_BLOCKS_TO_FETCH_LOGS,
   DEFAULT_MAX_CLAIM_GAS_LIMIT,
+  DEFAULT_MAX_BUMPS_PER_CYCLE,
   DEFAULT_MAX_FEE_PER_GAS_CAP,
   DEFAULT_MAX_FETCH_MESSAGES_FROM_DB,
   DEFAULT_MAX_NONCE_DIFF,
   DEFAULT_MAX_NUMBER_OF_RETRIES,
   DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
-  DEFAULT_MAX_TX_RETRIES,
+  DEFAULT_MAX_RETRY_CYCLES,
   DEFAULT_MESSAGE_SUBMISSION_TIMEOUT,
   DEFAULT_PROFIT_MARGIN,
   DEFAULT_RETRY_DELAY_IN_SECONDS,
 } from "../../../../core/constants";
+
+function resolveListenerConfig(opts: ListenerOptions): ListenerConfig {
+  return {
+    pollingInterval: opts.pollingInterval ?? DEFAULT_LISTENER_INTERVAL,
+    receiptPollingInterval: opts.receiptPollingInterval ?? DEFAULT_LISTENER_INTERVAL,
+    maxFetchMessagesFromDb: opts.maxFetchMessagesFromDb ?? DEFAULT_MAX_FETCH_MESSAGES_FROM_DB,
+    maxBlocksToFetchLogs: opts.maxBlocksToFetchLogs ?? DEFAULT_MAX_BLOCKS_TO_FETCH_LOGS,
+    initialFromBlock: opts.initialFromBlock ?? DEFAULT_INITIAL_FROM_BLOCK,
+    blockConfirmation: opts.blockConfirmation ?? DEFAULT_LISTENER_BLOCK_CONFIRMATIONS,
+    ...(opts.eventFilters ? { eventFilters: opts.eventFilters } : {}),
+  };
+}
+
+function resolveClaimingConfig(opts: ClaimingOptions): ClaimingConfig {
+  return {
+    signer: opts.signer,
+    messageSubmissionTimeout: opts.messageSubmissionTimeout ?? DEFAULT_MESSAGE_SUBMISSION_TIMEOUT,
+    feeRecipientAddress: opts.feeRecipientAddress,
+    maxNonceDiff: opts.maxNonceDiff ?? DEFAULT_MAX_NONCE_DIFF,
+    maxFeePerGasCap: opts.maxFeePerGasCap ?? DEFAULT_MAX_FEE_PER_GAS_CAP,
+    gasEstimationPercentile: opts.gasEstimationPercentile ?? DEFAULT_GAS_ESTIMATION_PERCENTILE,
+    isMaxGasFeeEnforced: opts.isMaxGasFeeEnforced ?? false,
+    profitMargin: opts.profitMargin ?? DEFAULT_PROFIT_MARGIN,
+    maxNumberOfRetries: opts.maxNumberOfRetries ?? DEFAULT_MAX_NUMBER_OF_RETRIES,
+    retryDelayInSeconds: opts.retryDelayInSeconds ?? DEFAULT_RETRY_DELAY_IN_SECONDS,
+    maxClaimGasLimit: opts.maxClaimGasLimit ?? DEFAULT_MAX_CLAIM_GAS_LIMIT,
+    maxBumpsPerCycle: opts.maxBumpsPerCycle ?? DEFAULT_MAX_BUMPS_PER_CYCLE,
+    maxRetryCycles: opts.maxRetryCycles ?? DEFAULT_MAX_RETRY_CYCLES,
+    isPostmanSponsorshipEnabled: opts.isPostmanSponsorshipEnabled ?? DEFAULT_ENABLE_POSTMAN_SPONSORING,
+    maxPostmanSponsorGasLimit: opts.maxPostmanSponsorGasLimit ?? DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
+    claimViaAddress: opts.claimViaAddress,
+  };
+}
 
 /**
  * @notice Generates the configuration for the Postman service based on provided options.
@@ -31,6 +74,16 @@ import {
  * @return postmanConfig The complete configuration for the Postman service.
  */
 export function getConfig(postmanOptions: PostmanOptions): PostmanConfig {
+  try {
+    postmanOptionsSchema.parse(postmanOptions);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      const issues = error.issues.map((issue) => `  - ${issue.path.join(".")}: ${issue.message}`).join("\n");
+      throw new Error(`Invalid postman configuration:\n${issues}`);
+    }
+    throw error;
+  }
+
   const {
     l1Options,
     l2Options,
@@ -56,34 +109,8 @@ export function getConfig(postmanOptions: PostmanOptions): PostmanConfig {
       messageServiceContractAddress: l1Options.messageServiceContractAddress,
       isEOAEnabled: l1Options.isEOAEnabled ?? DEFAULT_EOA_ENABLED,
       isCalldataEnabled: l1Options.isCalldataEnabled ?? DEFAULT_CALLDATA_ENABLED,
-      listener: {
-        pollingInterval: l1Options.listener.pollingInterval ?? DEFAULT_LISTENER_INTERVAL,
-        receiptPollingInterval: l1Options.listener.receiptPollingInterval ?? DEFAULT_LISTENER_INTERVAL,
-        maxFetchMessagesFromDb: l1Options.listener.maxFetchMessagesFromDb ?? DEFAULT_MAX_FETCH_MESSAGES_FROM_DB,
-        maxBlocksToFetchLogs: l1Options.listener.maxBlocksToFetchLogs ?? DEFAULT_MAX_BLOCKS_TO_FETCH_LOGS,
-        initialFromBlock: l1Options.listener.initialFromBlock ?? DEFAULT_INITIAL_FROM_BLOCK,
-        blockConfirmation: l1Options.listener.blockConfirmation ?? DEFAULT_LISTENER_BLOCK_CONFIRMATIONS,
-        ...(l1Options.listener.eventFilters ? { eventFilters: l1Options.listener.eventFilters } : {}),
-      },
-      claiming: {
-        signerPrivateKey: l1Options.claiming.signerPrivateKey,
-        messageSubmissionTimeout: l1Options.claiming.messageSubmissionTimeout ?? DEFAULT_MESSAGE_SUBMISSION_TIMEOUT,
-        feeRecipientAddress: l1Options.claiming.feeRecipientAddress,
-        maxNonceDiff: l1Options.claiming.maxNonceDiff ?? DEFAULT_MAX_NONCE_DIFF,
-        maxFeePerGasCap: l1Options.claiming.maxFeePerGasCap ?? DEFAULT_MAX_FEE_PER_GAS_CAP,
-        gasEstimationPercentile: l1Options.claiming.gasEstimationPercentile ?? DEFAULT_GAS_ESTIMATION_PERCENTILE,
-        isMaxGasFeeEnforced: l1Options.claiming.isMaxGasFeeEnforced ?? false,
-        profitMargin: l1Options.claiming.profitMargin ?? DEFAULT_PROFIT_MARGIN,
-        maxNumberOfRetries: l1Options.claiming.maxNumberOfRetries ?? DEFAULT_MAX_NUMBER_OF_RETRIES,
-        retryDelayInSeconds: l1Options.claiming.retryDelayInSeconds ?? DEFAULT_RETRY_DELAY_IN_SECONDS,
-        maxClaimGasLimit: l1Options.claiming.maxClaimGasLimit ?? DEFAULT_MAX_CLAIM_GAS_LIMIT,
-        maxTxRetries: l1Options.claiming.maxTxRetries ?? DEFAULT_MAX_TX_RETRIES,
-        isPostmanSponsorshipEnabled:
-          l1Options.claiming.isPostmanSponsorshipEnabled ?? DEFAULT_ENABLE_POSTMAN_SPONSORING,
-        maxPostmanSponsorGasLimit:
-          l1Options.claiming.maxPostmanSponsorGasLimit ?? DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
-        claimViaAddress: l1Options.claiming.claimViaAddress,
-      },
+      listener: resolveListenerConfig(l1Options.listener),
+      claiming: resolveClaimingConfig(l1Options.claiming),
     },
     l2Config: {
       rpcUrl: l2Options.rpcUrl,
@@ -91,35 +118,9 @@ export function getConfig(postmanOptions: PostmanOptions): PostmanConfig {
       isEOAEnabled: l2Options.isEOAEnabled ?? DEFAULT_EOA_ENABLED,
       isCalldataEnabled: l2Options.isCalldataEnabled ?? DEFAULT_CALLDATA_ENABLED,
       l2MessageTreeDepth: l2Options.l2MessageTreeDepth ?? DEFAULT_L2_MESSAGE_TREE_DEPTH,
-      enableLineaEstimateGas: l2Options.enableLineaEstimateGas ?? false,
-      listener: {
-        pollingInterval: l2Options.listener.pollingInterval ?? DEFAULT_LISTENER_INTERVAL,
-        receiptPollingInterval: l2Options.listener.receiptPollingInterval ?? DEFAULT_LISTENER_INTERVAL,
-        maxFetchMessagesFromDb: l2Options.listener.maxFetchMessagesFromDb ?? DEFAULT_MAX_FETCH_MESSAGES_FROM_DB,
-        maxBlocksToFetchLogs: l2Options.listener.maxBlocksToFetchLogs ?? DEFAULT_MAX_BLOCKS_TO_FETCH_LOGS,
-        initialFromBlock: l2Options.listener.initialFromBlock ?? DEFAULT_INITIAL_FROM_BLOCK,
-        blockConfirmation: l2Options.listener.blockConfirmation ?? DEFAULT_LISTENER_BLOCK_CONFIRMATIONS,
-        ...(l2Options.listener.eventFilters ? { eventFilters: l2Options.listener.eventFilters } : {}),
-      },
-      claiming: {
-        signerPrivateKey: l2Options.claiming.signerPrivateKey,
-        messageSubmissionTimeout: l2Options.claiming.messageSubmissionTimeout ?? DEFAULT_MESSAGE_SUBMISSION_TIMEOUT,
-        feeRecipientAddress: l2Options.claiming.feeRecipientAddress,
-        maxNonceDiff: l2Options.claiming.maxNonceDiff ?? DEFAULT_MAX_NONCE_DIFF,
-        maxFeePerGasCap: l2Options.claiming.maxFeePerGasCap ?? DEFAULT_MAX_FEE_PER_GAS_CAP,
-        gasEstimationPercentile: l2Options.claiming.gasEstimationPercentile ?? DEFAULT_GAS_ESTIMATION_PERCENTILE,
-        isMaxGasFeeEnforced: l2Options.claiming.isMaxGasFeeEnforced ?? false,
-        profitMargin: l2Options.claiming.profitMargin ?? DEFAULT_PROFIT_MARGIN,
-        maxNumberOfRetries: l2Options.claiming.maxNumberOfRetries ?? DEFAULT_MAX_NUMBER_OF_RETRIES,
-        retryDelayInSeconds: l2Options.claiming.retryDelayInSeconds ?? DEFAULT_RETRY_DELAY_IN_SECONDS,
-        maxClaimGasLimit: l2Options.claiming.maxClaimGasLimit ?? DEFAULT_MAX_CLAIM_GAS_LIMIT,
-        maxTxRetries: l2Options.claiming.maxTxRetries ?? DEFAULT_MAX_TX_RETRIES,
-        isPostmanSponsorshipEnabled:
-          l2Options.claiming.isPostmanSponsorshipEnabled ?? DEFAULT_ENABLE_POSTMAN_SPONSORING,
-        maxPostmanSponsorGasLimit:
-          l2Options.claiming.maxPostmanSponsorGasLimit ?? DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
-        claimViaAddress: l2Options.claiming.claimViaAddress,
-      },
+      enableLineaEstimateGas: l2Options.enableLineaEstimateGas ?? true,
+      listener: resolveListenerConfig(l2Options.listener),
+      claiming: resolveClaimingConfig(l2Options.claiming),
     },
     l1L2AutoClaimEnabled,
     l2L1AutoClaimEnabled,
@@ -162,9 +163,8 @@ export function validateEventsFiltersConfig(eventFilters: ListenerConfig["eventF
 
 export function isFunctionInterfaceValid(functionInterface: string): boolean {
   try {
-    const i = new Interface([functionInterface]);
-
-    return i.fragments.length !== 0;
+    const abi = parseAbi([functionInterface] as readonly string[]);
+    return (abi as unknown[]).length !== 0;
   } catch {
     return false;
   }

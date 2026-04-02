@@ -28,7 +28,8 @@ ENV NATIVE_LIBS_RELEASE_TAG=${NATIVE_LIBS_RELEASE_TAG}
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 
 COPY ./postman/package.json ./postman/package.json
-COPY ./sdk/sdk-ethers/package.json ./sdk/sdk-ethers/package.json
+COPY ./sdk/sdk-core/package.json ./sdk/sdk-core/package.json
+COPY ./sdk/sdk-viem/package.json ./sdk/sdk-viem/package.json
 COPY ./ts-libs/linea-native-libs/package.json ./ts-libs/linea-native-libs/package.json
 COPY ./ts-libs/linea-shared-utils/package.json ./ts-libs/linea-shared-utils/package.json
 COPY ./ts-libs/eslint-config/package.json ./ts-libs/eslint-config/package.json
@@ -38,7 +39,8 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 # Copy source code for building
 COPY ./postman ./postman
-COPY ./sdk/sdk-ethers ./sdk/sdk-ethers
+COPY ./sdk/sdk-core ./sdk/sdk-core
+COPY ./sdk/sdk-viem ./sdk/sdk-viem
 COPY ./ts-libs/linea-native-libs ./ts-libs/linea-native-libs
 COPY ./ts-libs/linea-shared-utils ./ts-libs/linea-shared-utils
 COPY ./ts-libs/eslint-config ./ts-libs/eslint-config
@@ -62,4 +64,4 @@ COPY --from=builder --chown=node:node /usr/src/app/prod/postman ./postman
 USER node
 
 # Use exec form for proper signal handling
-CMD ["node", "./postman/dist/scripts/runPostman.js"]
+CMD ["node", "./postman/dist/src/main.js"]

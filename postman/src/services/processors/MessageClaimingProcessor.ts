@@ -1,84 +1,42 @@
-import { OnChainMessageStatus } from "@consensys/linea-sdk";
-import {
-  Overrides,
-  TransactionResponse,
-  ContractTransactionResponse,
-  TransactionReceipt,
-  Signer,
-  ErrorDescription,
-} from "ethers";
+import { ILogger } from "@consensys/linea-shared-utils";
 
 import { Message } from "../../core/entities/Message";
-import { MessageStatus } from "../../core/enums";
-import { IMessageDBService } from "../../core/persistence/IMessageDBService";
-import { IMessageServiceContract } from "../../core/services/contracts/IMessageServiceContract";
+import { OnChainMessageStatus, MessageStatus } from "../../core/enums";
+import { IErrorParser } from "../../core/errors/IErrorParser";
+import { IMessageRepository } from "../../core/persistence/IMessageRepository";
+import { IMessageStatusReader, IMessageClaimer } from "../../core/services/contracts/IMessageServiceContract";
+import { INonceManager } from "../../core/services/INonceManager";
 import { ITransactionValidationService } from "../../core/services/ITransactionValidationService";
 import {
   IMessageClaimingProcessor,
   MessageClaimingProcessorConfig,
 } from "../../core/services/processors/IMessageClaimingProcessor";
-import { ErrorParser } from "../../utils/ErrorParser";
-import { IPostmanLogger } from "../../utils/IPostmanLogger";
 
 export class MessageClaimingProcessor implements IMessageClaimingProcessor {
-  private readonly maxNonceDiff: number;
-
-  /**
-   * Initializes a new instance of the `MessageClaimingProcessor`.
-   *
-   * @param {IMessageServiceContract} messageServiceContract - An instance of a class implementing the `IMessageServiceContract` interface, used to interact with the blockchain contract.
-   * @param {Signer} signer - An instance of a class implementing the `Signer` interface, used to query blockchain data.
-   * @param {IMessageDBService} databaseService - An instance of a class implementing the `IMessageDBService` interface, used for storing and retrieving message data.
-   * @param {ITransactionValidationService} transactionValidationService - An instance of a class implementing the `ITransactionValidationService` interface, used for validating transactions.
-   * @param {MessageClaimingProcessorConfig} config - Configuration for network-specific settings, including transaction submission timeout, maximum transaction retries, and gas limit.
-   * @param {IPostmanLogger} logger - An instance of a class implementing the `IPostmanLogger` interface, used for logging messages.
-   */
   constructor(
-    private readonly messageServiceContract: IMessageServiceContract<
-      Overrides,
-      TransactionReceipt,
-      TransactionResponse,
-      ContractTransactionResponse,
-      ErrorDescription
-    >,
-    private readonly signer: Signer,
-    private readonly databaseService: IMessageDBService<TransactionResponse>,
+    private readonly messageServiceContract: IMessageStatusReader & IMessageClaimer,
+    private readonly nonceManager: INonceManager,
+    private readonly messageRepository: IMessageRepository,
+    private readonly getNextMessageToClaim: () => Promise<Message | null>,
     private readonly transactionValidationService: ITransactionValidationService,
+    private readonly errorParser: IErrorParser,
     private readonly config: MessageClaimingProcessorConfig,
-    private readonly logger: IPostmanLogger,
-  ) {
-    this.maxNonceDiff = Math.max(config.maxNonceDiff, 0);
-  }
+    private readonly logger: ILogger,
+  ) {}
 
-  /**
-   * Identifies the next message eligible for claiming and attempts to execute the claim transaction. It considers various factors such as gas estimation, profit margin, and rate limits to decide whether to proceed with the claim.
-   *
-   * @returns {Promise<void>} A promise that resolves when the processing is complete.
-   */
   public async process(): Promise<void> {
     let nextMessageToClaim: Message | null = null;
+    let nonce: number | null = null;
 
     try {
-      const nonce = await this.getNonce();
-
-      if (!nonce && nonce !== 0) {
-        this.logger.error("Nonce returned from getNonce is an invalid value (e.g. null or undefined)");
-        return;
-      }
-
-      nextMessageToClaim = await this.databaseService.getMessageToClaim(
-        this.config.originContractAddress,
-        this.config.profitMargin,
-        this.config.maxNumberOfRetries,
-        this.config.retryDelayInSeconds,
-      );
+      nextMessageToClaim = await this.getNextMessageToClaim();
 
       if (!nextMessageToClaim) {
-        this.logger.info("No message to claim found");
+        this.logger.debug("No message to claim found.");
         return;
       }
 
-      this.logger.info("Found message to claim: messageHash=%s", nextMessageToClaim.messageHash);
+      this.logger.info("Found message to claim.", { messageHash: nextMessageToClaim.messageHash });
 
       const messageStatus = await this.messageServiceContract.getMessageStatus({
         messageHash: nextMessageToClaim.messageHash,
@@ -86,12 +44,14 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
       });
 
       if (messageStatus === OnChainMessageStatus.CLAIMED) {
-        this.logger.info("Found already claimed message: messageHash=%s", nextMessageToClaim.messageHash);
+        this.logger.info("Found already claimed message.", { messageHash: nextMessageToClaim.messageHash });
 
         nextMessageToClaim.edit({ status: MessageStatus.CLAIMED_SUCCESS });
-        await this.databaseService.updateMessage(nextMessageToClaim);
+        await this.messageRepository.updateMessage(nextMessageToClaim);
         return;
       }
+
+      this.logger.debug("Evaluating transaction.", { messageHash: nextMessageToClaim.messageHash });
 
       const {
         hasZeroFee,
@@ -112,7 +72,7 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
       if (await this.handleNonExecutable(nextMessageToClaim, estimatedGasLimit)) return;
 
       nextMessageToClaim.edit({ claimGasEstimationThreshold: threshold, isForSponsorship });
-      await this.databaseService.updateMessage(nextMessageToClaim);
+      await this.messageRepository.updateMessage(nextMessageToClaim);
 
       if (
         !isForSponsorship &&
@@ -121,6 +81,14 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
         return;
       if (this.handleRateLimitExceeded(nextMessageToClaim, isRateLimitExceeded)) return;
 
+      nonce = await this.nonceManager.acquireNonce();
+
+      this.logger.debug("Executing claim transaction.", {
+        messageHash: nextMessageToClaim.messageHash,
+        nonce,
+        gasLimit: estimatedGasLimit!.toString(),
+      });
+
       await this.executeClaimTransaction(
         nextMessageToClaim,
         nonce,
@@ -128,59 +96,13 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
         claimTxFees.maxPriorityFeePerGas,
         claimTxFees.maxFeePerGas,
       );
+      this.nonceManager.commitNonce(nonce);
     } catch (e) {
+      if (nonce !== null) this.nonceManager.rollbackNonce(nonce);
       await this.handleProcessingError(e, nextMessageToClaim);
     }
   }
 
-  /**
-   * Retrieves the current nonce for the claiming transactions, ensuring it is within an acceptable range compared to the last recorded nonce.
-   *
-   * @returns {Promise<number | null>} The nonce to use for the next transaction, or null if the nonce difference exceeds the configured maximum.
-   */
-  private async getNonce(): Promise<number | null> {
-    const [lastTxNonce, onChainNonce] = await Promise.all([
-      this.databaseService.getLastClaimTxNonce(this.config.direction),
-      this.signer.getNonce(),
-    ]);
-
-    if (lastTxNonce === null) {
-      return onChainNonce;
-    }
-
-    if (lastTxNonce - onChainNonce > this.maxNonceDiff) {
-      this.logger.warn(
-        "Last recorded nonce in db is higher than the latest nonce from blockchain and exceeds the diff limit, paused the claim message process now: nonceInDb=%s nonceOnChain=%s maxAllowedNonceDiff=%s",
-        lastTxNonce,
-        onChainNonce,
-        this.maxNonceDiff,
-      );
-      return null;
-    }
-
-    const computedNonce = Math.max(onChainNonce, lastTxNonce + 1);
-
-    this.logger.debug(
-      "Nonce computation: direction=%s lastTxNonce=%s onChainNonce=%s computedNonce=%s",
-      this.config.direction,
-      lastTxNonce,
-      onChainNonce,
-      computedNonce,
-    );
-
-    return computedNonce;
-  }
-
-  /**
-   * Executes the claim transaction for a message, updating the message repository with transaction details.
-   *
-   * @param {Message} message - The message object to claim.
-   * @param {number} nonce - The nonce to use for the transaction.
-   * @param {bigint} gasLimit - The gas limit for the transaction.
-   * @param {bigint} maxPriorityFeePerGas - The maximum priority fee per gas for the transaction.
-   * @param {bigint} maxFeePerGas - The maximum fee per gas for the transaction.
-   * @returns {Promise<void>} A promise that resolves when the transaction is executed.
-   */
   private async executeClaimTransaction(
     message: Message,
     nonce: number,
@@ -188,73 +110,64 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
     maxPriorityFeePerGas: bigint,
     maxFeePerGas: bigint,
   ): Promise<void> {
-    const claimTxFn = async () =>
-      await this.messageServiceContract.claim(
-        {
-          ...message,
-          feeRecipient: this.config.feeRecipientAddress,
-          messageBlockNumber: message.sentBlockNumber,
-        },
-        {
-          claimViaAddress: this.config.claimViaAddress,
-          overrides: { nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas },
-        },
-      );
-    await this.databaseService.updateMessageWithClaimTxAtomic(message, nonce, claimTxFn);
+    const isRetry = message.status === MessageStatus.FEE_UNDERPRICED;
+
+    // Submit transaction to chain before writing PENDING to DB, so we never expose
+    // a PENDING row without a claimTxHash (avoids race with MessageClaimingPersister).
+    const claimTxCreationDate = new Date();
+    const tx = await this.messageServiceContract.claim(
+      {
+        ...message,
+        feeRecipient: this.config.feeRecipientAddress,
+        messageBlockNumber: message.sentBlockNumber,
+      },
+      {
+        claimViaAddress: this.config.claimViaAddress,
+        overrides: { nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas },
+      },
+    );
+
+    // Single DB write: set PENDING with all tx details atomically
+    message.edit({
+      claimTxCreationDate,
+      claimTxNonce: nonce,
+      status: MessageStatus.PENDING,
+      claimTxGasLimit: Number(tx.gasLimit),
+      claimTxMaxFeePerGas: tx.maxFeePerGas ?? undefined,
+      claimTxMaxPriorityFeePerGas: tx.maxPriorityFeePerGas ?? undefined,
+      claimTxHash: tx.hash,
+      ...(isRetry ? { claimNumberOfRetry: message.claimNumberOfRetry + 1, claimLastRetriedAt: new Date() } : {}),
+    });
+    await this.messageRepository.updateMessage(message);
   }
 
-  /**
-   * Handles messages with zero fee, updating their status and logging a warning.
-   *
-   * @param {boolean} hasZeroFee - Indicates whether the message has zero fee.
-   * @param {Message} message - The message object to handle.
-   * @returns {Promise<boolean>} A promise that resolves to `true` if the message has zero fee, `false` otherwise.
-   */
   private async handleZeroFee(hasZeroFee: boolean, message: Message): Promise<boolean> {
     if (hasZeroFee) {
-      this.logger.warn(
-        "Found message with zero fee. This message will not be processed: messageHash=%s",
-        message.messageHash,
-      );
+      this.logger.warn("Found message with zero fee. This message will not be processed.", {
+        messageHash: message.messageHash,
+      });
       message.edit({ status: MessageStatus.ZERO_FEE });
-      await this.databaseService.updateMessage(message);
+      await this.messageRepository.updateMessage(message);
       return true;
     }
     return false;
   }
 
-  /**
-   * Handles non-executable messages, updating their status and logging a warning.
-   *
-   * @param {Message} message - The message object to handle.
-   * @param {bigint | null} estimatedGasLimit - The estimated gas limit for the transaction.
-   * @returns {Promise<boolean>} A promise that resolves to `true` if the message is non-executable, `false` otherwise.
-   */
   private async handleNonExecutable(message: Message, estimatedGasLimit: bigint | null): Promise<boolean> {
     if (!estimatedGasLimit) {
-      this.logger.warn(
-        "Estimated gas limit is higher than the max allowed gas limit for this message: messageHash=%s messageInfo=%s estimatedGasLimit=%s maxAllowedGasLimit=%s",
-        message.messageHash,
-        message.toString(),
-        // TODO: fix this
-        estimatedGasLimit?.toString(),
-        this.config.maxClaimGasLimit.toString(),
-      );
+      this.logger.warn("Estimated gas limit is higher than the max allowed gas limit for this message.", {
+        messageHash: message.messageHash,
+        messageInfo: message.toString(),
+        estimatedGasLimit: estimatedGasLimit?.toString(),
+        maxAllowedGasLimit: this.config.maxClaimGasLimit.toString(),
+      });
       message.edit({ status: MessageStatus.NON_EXECUTABLE });
-      await this.databaseService.updateMessage(message);
+      await this.messageRepository.updateMessage(message);
       return true;
     }
     return false;
   }
-  /**
-   * Handles underpriced messages, updating their status and logging a warning.
-   *
-   * @param {Message} message - The message object to handle.
-   * @param {boolean} isUnderPriced - Indicates whether the message is underpriced.
-   * @param {bigint | null} estimatedGasLimit - The estimated gas limit for the transaction.
-   * @param {bigint} maxFeePerGas - The maximum fee per gas for the transaction.
-   * @returns {Promise<boolean>} A promise that resolves to `true` if the message is underpriced, `false` otherwise.
-   */
+
   private async handleUnderpriced(
     message: Message,
     isUnderPriced: boolean,
@@ -263,57 +176,42 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
   ): Promise<boolean> {
     if (isUnderPriced) {
       if (message.status !== MessageStatus.FEE_UNDERPRICED) {
-        this.logger.warn(
-          "Fee underpriced found in this message: messageHash=%s messageInfo=%s transactionGasLimit=%s maxFeePerGas=%s",
-          message.messageHash,
-          message.toString(),
-          estimatedGasLimit?.toString(),
-          maxFeePerGas.toString(),
-        );
+        this.logger.warn("Fee underpriced found in this message.", {
+          messageHash: message.messageHash,
+          messageInfo: message.toString(),
+          transactionGasLimit: estimatedGasLimit?.toString(),
+          maxFeePerGas: maxFeePerGas.toString(),
+        });
         message.edit({ status: MessageStatus.FEE_UNDERPRICED });
-        await this.databaseService.updateMessage(message);
+        await this.messageRepository.updateMessage(message);
       } else {
-        this.logger.warn("Message is underpriced, will retry later: messageHash=%s", message.messageHash);
+        this.logger.warn("Message is underpriced, will retry later.", { messageHash: message.messageHash });
       }
       return true;
     }
     return false;
   }
 
-  /**
-   * Handles messages that have exceeded the rate limit, logging a warning.
-   *
-   * @param {Message} message - The message object to handle.
-   * @param {boolean} isRateLimitExceeded - Indicates whether the rate limit has been exceeded.
-   * @returns {boolean} `true` if the rate limit has been exceeded, `false` otherwise.
-   */
   private handleRateLimitExceeded(message: Message, isRateLimitExceeded: boolean): boolean {
     if (isRateLimitExceeded) {
-      this.logger.warn(
-        "Rate limit exceeded for this message. It will be reprocessed later: messageHash=%s",
-        message.messageHash,
-      );
+      this.logger.warn("Rate limit exceeded for this message. It will be reprocessed later.", {
+        messageHash: message.messageHash,
+      });
       return true;
     }
     return false;
   }
 
-  /**
-   * Handles errors that occur during the processing of messages, updating their status if necessary and logging the error.
-   *
-   * @param {unknown} e - The error that occurred.
-   * @param {Message | null} message - The message object being processed when the error occurred.
-   * @returns {Promise<void>} A promise that resolves when the error has been handled.
-   */
   private async handleProcessingError(e: unknown, message: Message | null): Promise<void> {
-    const parsedError = ErrorParser.parseErrorWithMitigation(e);
+    const parsedError = this.errorParser.parse(e);
 
-    if (parsedError?.mitigation && !parsedError.mitigation.shouldRetry && message) {
+    if (!parsedError.retryable && message) {
       message.edit({ status: MessageStatus.NON_EXECUTABLE });
-      await this.databaseService.updateMessage(message);
+      await this.messageRepository.updateMessage(message);
     }
 
-    this.logger.warnOrError(e, {
+    this.logger.error("Error processing message claim.", {
+      error: e,
       parsedError,
       ...(message ? { messageHash: message.messageHash } : {}),
     });

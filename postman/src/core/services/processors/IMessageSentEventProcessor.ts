@@ -1,4 +1,4 @@
-import { Direction } from "@consensys/linea-sdk";
+import { Direction } from "../../enums";
 
 export interface IMessageSentEventProcessor {
   process(
@@ -6,6 +6,8 @@ export interface IMessageSentEventProcessor {
     fromBlockLogIndex: number,
   ): Promise<{ nextFromBlock: number; nextFromBlockLogIndex: number }>;
 }
+import type { Address } from "../../types/primitives";
+
 export type MessageSentEventProcessorConfig = {
   direction: Direction;
   maxBlocksToFetchLogs: number;
@@ -13,8 +15,8 @@ export type MessageSentEventProcessorConfig = {
   isEOAEnabled: boolean;
   isCalldataEnabled: boolean;
   eventFilters?: {
-    fromAddressFilter?: string;
-    toAddressFilter?: string;
+    fromAddressFilter?: Address;
+    toAddressFilter?: Address;
     calldataFilter?: {
       criteriaExpression: string;
       calldataFunctionInterface: string;

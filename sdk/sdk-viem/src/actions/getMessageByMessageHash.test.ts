@@ -59,6 +59,7 @@ describe("getMessageByMessageHash", () => {
       messageHash,
       transactionHash: TEST_TRANSACTION_HASH,
       blockNumber: 100_000n,
+      logIndex: 0,
     });
 
     expect(getContractEvents).toHaveBeenCalledWith(

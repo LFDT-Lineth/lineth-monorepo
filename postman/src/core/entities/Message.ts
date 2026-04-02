@@ -1,17 +1,18 @@
-import { Direction } from "@consensys/linea-sdk";
-
+import { Direction } from "../enums";
 import { MessageStatus } from "../enums";
+
+import type { Address, Hash, Hex } from "../types/primitives";
 
 export type MessageProps = {
   id?: number;
-  messageSender: string;
-  destination: string;
+  messageSender: Address;
+  destination: Address;
   fee: bigint;
   value: bigint;
   messageNonce: bigint;
-  calldata: string;
-  messageHash: string;
-  contractAddress: string;
+  calldata: Hex;
+  messageHash: Hash;
+  contractAddress: Address;
   sentBlockNumber: number;
   direction: Direction;
   status: MessageStatus;
@@ -20,8 +21,9 @@ export type MessageProps = {
   claimTxMaxFeePerGas?: bigint;
   claimTxMaxPriorityFeePerGas?: bigint;
   claimTxNonce?: number;
-  claimTxHash?: string;
+  claimTxHash?: Hash;
   claimNumberOfRetry: number;
+  claimCycleCount: number;
   claimLastRetriedAt?: Date;
   claimGasEstimationThreshold?: number;
   compressedTransactionSize?: number;
@@ -31,9 +33,9 @@ export type MessageProps = {
 };
 
 export type MessageWithProofProps = MessageProps & {
-  proof: string[];
+  proof: Hex[];
   leafIndex: number;
-  merkleRoot: string;
+  merkleRoot: Hash;
 };
 
 type EditableMessageProps = Omit<
@@ -55,14 +57,14 @@ type EditableMessageProps = Omit<
 
 export class Message {
   public id?: number;
-  public messageSender: string;
-  public destination: string;
+  public messageSender: Address;
+  public destination: Address;
   public fee: bigint;
   public value: bigint;
   public messageNonce: bigint;
-  public calldata: string;
-  public messageHash: string;
-  public contractAddress: string;
+  public calldata: Hex;
+  public messageHash: Hash;
+  public contractAddress: Address;
   public sentBlockNumber: number;
   public direction: Direction;
   public status: MessageStatus;
@@ -71,8 +73,9 @@ export class Message {
   public claimTxMaxFeePerGas?: bigint;
   public claimTxMaxPriorityFeePerGas?: bigint;
   public claimTxNonce?: number;
-  public claimTxHash?: string;
+  public claimTxHash?: Hash;
   public claimNumberOfRetry: number;
+  public claimCycleCount: number;
   public claimLastRetriedAt?: Date;
   public claimGasEstimationThreshold?: number;
   public compressedTransactionSize?: number;
@@ -100,6 +103,7 @@ export class Message {
     this.claimTxNonce = props.claimTxNonce;
     this.claimTxHash = props.claimTxHash;
     this.claimNumberOfRetry = props.claimNumberOfRetry;
+    this.claimCycleCount = props.claimCycleCount;
     this.claimLastRetriedAt = props.claimLastRetriedAt;
     this.claimGasEstimationThreshold = props.claimGasEstimationThreshold;
     this.compressedTransactionSize = props.compressedTransactionSize;
@@ -113,19 +117,21 @@ export class Message {
   }
 
   public edit(newMessage: Partial<EditableMessageProps>) {
-    if (newMessage.status) this.status = newMessage.status;
-    if (newMessage.claimTxCreationDate) this.claimTxCreationDate = newMessage.claimTxCreationDate;
-    if (newMessage.claimTxGasLimit) this.claimTxGasLimit = newMessage.claimTxGasLimit;
-    if (newMessage.claimTxMaxFeePerGas) this.claimTxMaxFeePerGas = newMessage.claimTxMaxFeePerGas;
-    if (newMessage.claimTxMaxPriorityFeePerGas)
+    if (newMessage.status !== undefined) this.status = newMessage.status;
+    if (newMessage.claimTxCreationDate !== undefined) this.claimTxCreationDate = newMessage.claimTxCreationDate;
+    if (newMessage.claimTxGasLimit !== undefined) this.claimTxGasLimit = newMessage.claimTxGasLimit;
+    if (newMessage.claimTxMaxFeePerGas !== undefined) this.claimTxMaxFeePerGas = newMessage.claimTxMaxFeePerGas;
+    if (newMessage.claimTxMaxPriorityFeePerGas !== undefined)
       this.claimTxMaxPriorityFeePerGas = newMessage.claimTxMaxPriorityFeePerGas;
-    if (newMessage.claimTxNonce) this.claimTxNonce = newMessage.claimTxNonce;
-    if (newMessage.claimTxHash) this.claimTxHash = newMessage.claimTxHash;
-    if (newMessage.claimNumberOfRetry) this.claimNumberOfRetry = newMessage.claimNumberOfRetry;
-    if (newMessage.claimLastRetriedAt) this.claimLastRetriedAt = newMessage.claimLastRetriedAt;
-    if (newMessage.claimGasEstimationThreshold)
+    if (newMessage.claimTxNonce !== undefined) this.claimTxNonce = newMessage.claimTxNonce;
+    if (newMessage.claimTxHash !== undefined) this.claimTxHash = newMessage.claimTxHash;
+    if (newMessage.claimNumberOfRetry !== undefined) this.claimNumberOfRetry = newMessage.claimNumberOfRetry;
+    if (newMessage.claimCycleCount !== undefined) this.claimCycleCount = newMessage.claimCycleCount;
+    if (newMessage.claimLastRetriedAt !== undefined) this.claimLastRetriedAt = newMessage.claimLastRetriedAt;
+    if (newMessage.claimGasEstimationThreshold !== undefined)
       this.claimGasEstimationThreshold = newMessage.claimGasEstimationThreshold;
-    if (newMessage.compressedTransactionSize) this.compressedTransactionSize = newMessage.compressedTransactionSize;
+    if (newMessage.compressedTransactionSize !== undefined)
+      this.compressedTransactionSize = newMessage.compressedTransactionSize;
     if (newMessage.isForSponsorship !== undefined) this.isForSponsorship = newMessage.isForSponsorship;
 
     this.updatedAt = new Date();
@@ -144,7 +150,7 @@ export class Message {
       this.claimTxMaxPriorityFeePerGas
     }, claimTxNonce=${this.claimTxNonce}, claimTransactionHash=${this.claimTxHash}, claimNumberOfRetry=${
       this.claimNumberOfRetry
-    }, claimLastRetriedAt=${this.claimLastRetriedAt?.toISOString()}, claimGasEstimationThreshold=${
+    }, claimCycleCount=${this.claimCycleCount}, claimLastRetriedAt=${this.claimLastRetriedAt?.toISOString()}, claimGasEstimationThreshold=${
       this.claimGasEstimationThreshold
     }, compressedTransactionSize=${
       this.compressedTransactionSize
