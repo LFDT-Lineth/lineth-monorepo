@@ -4,7 +4,7 @@
 
 | Tool | Version |
 |------|---------|
-| Node.js | >= 22.22.2 (see `.nvmrc`) |
+| Node.js | >= 24.14.1 (see `.nvmrc`) |
 | pnpm | >= 10.32.1 |
 | JDK | 21 (for coordinator, Besu plugins) |
 | Docker | 24+ with 16 GB memory, 4+ CPUs |
@@ -16,7 +16,7 @@
 ```bash
 git clone https://github.com/Consensys/linea-monorepo.git
 cd linea-monorepo
-nvm use          # or install Node 22.22.2
+nvm use          # or install Node 24.14.1
 pnpm install     # installs all workspaces + sets up Husky hooks
 ```
 

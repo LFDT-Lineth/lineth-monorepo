@@ -29,7 +29,7 @@ Goal: run against public Linea endpoints with your own API keys.
 ## Local development
 
 ### Requirements
-- Node.js >= 22.22.2
+- Node.js >= 24.14.1
 - pnpm >= 10.32.1
 
 ### Setup
