@@ -21,7 +21,6 @@ import java.util.Map;
 import java.util.Optional;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
-import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider;
 import org.hyperledger.besu.ethereum.referencetests.BonsaiReferenceTestWorldState;
 import org.hyperledger.besu.ethereum.referencetests.BonsaiReferenceTestWorldStateStorage;
@@ -39,6 +38,7 @@ import org.hyperledger.besu.ethereum.worldstate.DataStorageConfiguration;
 import org.hyperledger.besu.evm.internal.EvmConfiguration;
 import org.hyperledger.besu.evm.worldstate.WorldUpdater;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
+import org.hyperledger.besu.plugin.data.BlockHeader;
 import org.hyperledger.besu.plugin.services.trielogs.TrieLog;
 
 /**
@@ -163,7 +163,7 @@ public class LineaBonsaiReferenceTestWorldState extends BonsaiReferenceTestWorld
         final BlockHeader forBlockHeader,
         final PathBasedWorldState forWorldState) {
       TrieLog trieLog = trieLogFactory.create(localUpdater, forBlockHeader);
-      trieLogCache.put(forBlockHeader.getHash(), trieLogFactory.serialize(trieLog));
+      trieLogCache.put(forBlockHeader.getBlockHash(), trieLogFactory.serialize(trieLog));
       trieLogObservers.forEach(o -> o.onTrieLogAdded(new TrieLogAddedEvent(trieLog)));
     }
 

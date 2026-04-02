@@ -16,6 +16,7 @@ sonarQube = { id = "org.sonarqube", version = "4.3.1.3277" }
 
 [libraries]
 jreleaser = { group = "org.jreleaser", name = "jreleaser-gradle-plugin", version = "1.15.0" }
+commonsIo = { group = "commons-io", name = "commons-io", version.ref = "commonsIo" }
 
 [versions]
 # Build
@@ -39,10 +40,11 @@ undercouchDownload = "5.6.0"
 # Besu commit hash from https://github.com/besu-eth/besu
 # when updates it, should run "gradlew buildAndUpdateBesuVersionInLibsVersions" to
 # checkout and build Besu from source, and will auto-update the "besu" version below
-besuCommit = "e19f9a90cbf9536b8a33a16601eaeaca91d54b8e"
+besuCommit = "4db41c44311288de8c38a2c24bdc32157a536fe8"
 
-besu = "26.2.0-RC1-e19f9a9"
+besu = "26.3.0-RC0-4db41c4"
 blobCompressor = "3.0.2"
+commonsIo = "2.21.0"
 blobShnarfCalculator = "3.0.1"
 bouncycastle = "1.79"
 caffeine = "3.1.6"

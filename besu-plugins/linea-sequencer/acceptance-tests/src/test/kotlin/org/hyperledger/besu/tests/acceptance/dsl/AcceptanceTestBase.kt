@@ -18,7 +18,6 @@ import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Blockchain
 import org.hyperledger.besu.tests.acceptance.dsl.condition.admin.AdminConditions
 import org.hyperledger.besu.tests.acceptance.dsl.condition.bft.BftConditions
-import org.hyperledger.besu.tests.acceptance.dsl.condition.clique.CliqueConditions
 import org.hyperledger.besu.tests.acceptance.dsl.condition.eth.EthConditions
 import org.hyperledger.besu.tests.acceptance.dsl.condition.login.LoginConditions
 import org.hyperledger.besu.tests.acceptance.dsl.condition.net.NetConditions
@@ -34,7 +33,6 @@ import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.permissionin
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.account.AccountTransactions
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.admin.AdminTransactions
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.bft.BftTransactions
-import org.hyperledger.besu.tests.acceptance.dsl.transaction.clique.CliqueTransactions
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.contract.ContractTransactions
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.eth.EthTransactions
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.miner.MinerTransactions
@@ -65,8 +63,6 @@ abstract class AcceptanceTestBase {
   protected val admin: AdminConditions
   protected val adminTransactions: AdminTransactions
   protected val blockchain: Blockchain
-  protected val clique: CliqueConditions
-  protected val cliqueTransactions: CliqueTransactions
   protected val cluster: Cluster
   protected val contractVerifier: ContractVerifier
   protected val contractTransactions: ContractTransactions
@@ -97,7 +93,6 @@ abstract class AcceptanceTestBase {
     ethTransactions = EthTransactions()
     accounts = Accounts(ethTransactions)
     adminTransactions = AdminTransactions()
-    cliqueTransactions = CliqueTransactions()
     bftTransactions = BftTransactions()
     accountTransactions = AccountTransactions(accounts)
     permissioningTransactions = PermissioningTransactions()
@@ -105,7 +100,6 @@ abstract class AcceptanceTestBase {
     minerTransactions = MinerTransactions()
 
     blockchain = Blockchain(ethTransactions)
-    clique = CliqueConditions(ethTransactions, cliqueTransactions)
     eth = EthConditions(ethTransactions)
     bft = BftConditions(bftTransactions)
     login = LoginConditions()

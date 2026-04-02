@@ -26,7 +26,7 @@ import java.util.Optional;
 import java.util.UUID;
 import net.consensys.linea.bundles.BundleParameter;
 import net.consensys.linea.bundles.LineaLimitedBundlePool;
-import org.hyperledger.besu.crypto.SignatureAlgorithmType;
+import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.ethereum.core.Transaction;
@@ -52,22 +52,19 @@ class LineaSendBundleTest {
       new TransactionTestFixture()
           .nonce(1)
           .gasLimit(21000)
-          .createTransaction(
-              SignatureAlgorithmType.DEFAULT_SIGNATURE_ALGORITHM_TYPE.get().generateKeyPair());
+          .createTransaction(SignatureAlgorithmFactory.getInstance().generateKeyPair());
 
   private Transaction mockTX2 =
       new TransactionTestFixture()
           .nonce(1)
           .gasLimit(21000)
-          .createTransaction(
-              SignatureAlgorithmType.DEFAULT_SIGNATURE_ALGORITHM_TYPE.get().generateKeyPair());
+          .createTransaction(SignatureAlgorithmFactory.getInstance().generateKeyPair());
 
   private Transaction mockTX3 =
       new TransactionTestFixture()
           .nonce(1)
           .gasLimit(MAX_GAS_LIMIT_PER_TX + 1)
-          .createTransaction(
-              SignatureAlgorithmType.DEFAULT_SIGNATURE_ALGORITHM_TYPE.get().generateKeyPair());
+          .createTransaction(SignatureAlgorithmFactory.getInstance().generateKeyPair());
 
   @BeforeEach
   void setup() {

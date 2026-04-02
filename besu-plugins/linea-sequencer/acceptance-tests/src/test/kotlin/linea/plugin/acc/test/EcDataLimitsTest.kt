@@ -10,7 +10,6 @@ package linea.plugin.acc.test
 
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator
 import org.apache.tuweni.bytes.Bytes
-import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.genesis.GenesisConfigurationFactory
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -31,16 +30,11 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       .build()
   }
 
-  override fun getCliqueOptions(): GenesisConfigurationFactory.CliqueOptions {
+  override fun getBlockPeriodSeconds(): Int =
     // adding 2 more seconds to the block period, in order to avoid flakiness on the CI
-    // due to EcParing sometime taking all the selection time before all pending txs
+    // due to EcPairing sometimes taking all the selection time before all pending txs
     // have been evaluated
-    return GenesisConfigurationFactory.CliqueOptions(
-      BLOCK_PERIOD_SECONDS + 2,
-      GenesisConfigurationFactory.CliqueOptions.DEFAULT.epochLength(),
-      false,
-    )
-  }
+    BLOCK_PERIOD_SECONDS + 2
 
   /**
    * Tests the EcPairing limits, that are the number of times a certain circuit may be invoked in a

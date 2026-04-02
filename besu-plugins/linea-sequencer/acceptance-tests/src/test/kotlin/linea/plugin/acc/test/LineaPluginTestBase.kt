@@ -36,6 +36,7 @@ import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
 import org.apache.tuweni.units.bigints.UInt32
 import org.assertj.core.api.Assertions.assertThat
+import org.hyperledger.besu.consensus.clique.CliqueExtraData
 import org.hyperledger.besu.datatypes.Hash
 import org.hyperledger.besu.ethereum.core.ImmutableMiningConfiguration
 import org.hyperledger.besu.ethereum.eth.transactions.ImmutableTransactionPoolConfiguration
@@ -51,7 +52,6 @@ import org.hyperledger.besu.tests.acceptance.dsl.node.RunnableNode
 import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.BesuNodeConfigurationBuilder
 import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.NodeConfigurationFactory
 import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.genesis.GenesisConfigurationFactory
-import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.genesis.GenesisConfigurationFactory.CliqueOptions
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.txpool.TxPoolTransactions
 import org.hyperledger.besu.util.number.PositiveNumber
 import org.junit.jupiter.api.AfterEach
@@ -81,11 +81,6 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
     val MAX_TX_GAS_LIMIT: Int = DefaultGasProvider.GAS_LIMIT.toInt()
     const val CHAIN_ID = 1337L
     const val BLOCK_PERIOD_SECONDS = 5
-    val DEFAULT_LINEA_CLIQUE_OPTIONS = CliqueOptions(
-      BLOCK_PERIOD_SECONDS,
-      CliqueOptions.DEFAULT.epochLength(),
-      false,
-    )
     val DEFAULT_REQUESTED_PLUGINS = listOf(
       "LineaExtraDataPlugin",
       "LineaEstimateGasEndpointPlugin",
@@ -107,9 +102,8 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
 
   @BeforeEach
   protected open fun setup() {
-    minerNode = createCliqueNodeWithExtraCliOptionsAndRpcApis(
+    minerNode = createNodeWithExtraCliOptionsAndRpcApis(
       "miner1",
-      getCliqueOptions(),
       getTestCliOptions(),
       setOf("LINEA", "MINER", "PLUGINS"),
       false,
@@ -126,9 +120,7 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
     return TestCommandLineOptionsBuilder().build()
   }
 
-  protected open fun getCliqueOptions(): CliqueOptions {
-    return DEFAULT_LINEA_CLIQUE_OPTIONS
-  }
+  protected open fun getBlockPeriodSeconds(): Int = BLOCK_PERIOD_SECONDS
 
   @AfterEach
   protected open fun stop() {
@@ -141,9 +133,8 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
     return Optional.empty()
   }
 
-  protected fun createCliqueNodeWithExtraCliOptionsAndRpcApis(
+  protected fun createNodeWithExtraCliOptionsAndRpcApis(
     name: String,
-    cliqueOptions: CliqueOptions,
     extraCliOptions: List<String>,
     extraRpcApis: Set<String>,
     isEngineRpcEnabled: Boolean,
@@ -159,7 +150,7 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
         // set plugin max selection time to 5% of slot time
         ImmutableMiningConfiguration.builder()
           .poaBlockTxsSelectionMaxTime(
-            PositiveNumber.fromInt(cliqueOptions.blockPeriodSeconds() * 1000),
+            PositiveNumber.fromInt(getBlockPeriodSeconds() * 1000),
           )
           .pluginBlockTxsSelectionMaxTime(PositiveNumber.fromInt(2))
           .mutableInitValues(
@@ -169,14 +160,14 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
           )
           .build(),
       )
-      .jsonRpcConfiguration(node.createJsonRpcWithCliqueEnabledConfig(extraRpcApis))
+      .jsonRpcConfiguration(node.createJsonRpcWithRpcApiEnabledConfig(*extraRpcApis.toTypedArray()))
       .webSocketConfiguration(node.createWebSocketEnabledConfig())
       .inProcessRpcConfiguration(node.createInProcessRpcConfiguration(extraRpcApis))
       .devMode(false)
       .jsonRpcTxPool()
       .engineRpcEnabled(isEngineRpcEnabled)
       .genesisConfigProvider { validators ->
-        Optional.of(provideGenesisConfig(validators, cliqueOptions))
+        Optional.of(provideGenesisConfig(validators))
       }
       .extraCLIOptions(extraCliOptions)
       .metricsConfiguration(
@@ -199,12 +190,15 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
     return besu.create(nodeConfBuilder.build())
   }
 
-  protected open fun provideGenesisConfig(
-    validators: Collection<RunnableNode>,
-    cliqueOptions: CliqueOptions,
-  ): String {
-    val genesis = GenesisConfigurationFactory.createCliqueGenesisConfig(validators, cliqueOptions).get()
-
+  protected open fun provideGenesisConfig(validators: Collection<RunnableNode>): String {
+    val template = GenesisConfigurationFactory.readGenesisFile("/clique/clique.json.tpl")
+    val addresses = validators.map { it.address }
+    val extraData = CliqueExtraData.createGenesisExtraDataString(addresses)
+    val genesis = template
+      .replace("%blockperiodseconds%", getBlockPeriodSeconds().toString())
+      .replace("%epochlength%", "30000")
+      .replace("%createemptyblocks%", "false")
+      .replace("%extraData%", extraData)
     return maybeCustomGenesisExtraData()
       .map { ed -> setGenesisCustomExtraData(genesis, ed) }
       .orElse(genesis)
@@ -448,8 +442,8 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
   private fun createReceiptProcessor(web3j: Web3j): TransactionReceiptProcessor {
     return PollingTransactionReceiptProcessor(
       web3j,
-      maxOf(1000L, DEFAULT_LINEA_CLIQUE_OPTIONS.blockPeriodSeconds() * 1000L / 5),
-      DEFAULT_LINEA_CLIQUE_OPTIONS.blockPeriodSeconds() * 6,
+      maxOf(1000L, getBlockPeriodSeconds() * 1000L / 5),
+      getBlockPeriodSeconds() * 6,
     )
   }
 

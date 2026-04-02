@@ -103,9 +103,11 @@ class LineaRejectedTxReportingCliOptionsTest {
             "Invalid value for option '--plugin-linea-node-type': expected one of [SEQUENCER, RPC, P2P] (case-sensitive) but was 'INVALID_NODE_TYPE'");
   }
 
+  // picocli's URLConverter does new URI(value).toURL(); on relative URIs (empty string, no
+  // scheme) URI.toURL() throws IllegalArgumentException("URI is not absolute") since Java 20+.
   @ParameterizedTest
-  @ValueSource(strings = {"", "http://localhost:8080:8080", "invalid"})
-  void lineaRejectedTxReportingCliOptionsInvalidEndpointCauseException(final String endpoint) {
+  @ValueSource(strings = {"", "invalid"})
+  void lineaRejectedTxReportingCliOptionsRelativeEndpointCauseException(final String endpoint) {
     assertThatExceptionOfType(CommandLine.ParameterException.class)
         .isThrownBy(
             () ->
@@ -117,6 +119,23 @@ class LineaRejectedTxReportingCliOptionsTest {
         .withMessageContaining(
             "Invalid value for option '--plugin-linea-rejected-tx-endpoint': cannot convert '"
                 + endpoint
-                + "' to URL (java.net.MalformedURLException:");
+                + "' to URL (java.lang.IllegalArgumentException: URI is not absolute)");
+  }
+
+  // picocli's URLConverter does new URI(value).toURL(); a bad port triggers URISyntaxException
+  // at URI construction which picocli wraps and re-throws as MalformedURLException.
+  @Test
+  void lineaRejectedTxReportingCliOptionsBadPortEndpointCauseException() {
+    assertThatExceptionOfType(CommandLine.ParameterException.class)
+        .isThrownBy(
+            () ->
+                commandLine.parseArgs(
+                    "--plugin-linea-rejected-tx-endpoint",
+                    "http://localhost:8080:8080",
+                    "--plugin-linea-node-type",
+                    "SEQUENCER"))
+        .withMessageContaining(
+            "Invalid value for option '--plugin-linea-rejected-tx-endpoint': cannot convert"
+                + " 'http://localhost:8080:8080' to URL (java.net.MalformedURLException:");
   }
 }

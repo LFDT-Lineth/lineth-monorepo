@@ -52,6 +52,7 @@ import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.HardforkId;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.Wei;
+import org.hyperledger.besu.ethereum.core.BlockHeaderBuilder;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
@@ -160,7 +161,8 @@ class LineaTransactionSelectorFactoryTest {
             transactionProfitabilityCalculator,
             transactionCompressor,
             null);
-    factory.create(new SelectorsStateManager());
+    factory.create(
+        BlockHeaderBuilder.createDefault().buildBlockHeader(), new SelectorsStateManager());
   }
 
   @Test
@@ -275,6 +277,7 @@ class LineaTransactionSelectorFactoryTest {
 
   static class FailedTransactionSelectionResultProvider implements ArgumentsProvider {
     @Override
+    @SuppressWarnings("deprecation")
     public Stream<? extends Arguments> provideArguments(
         org.junit.jupiter.api.extension.ExtensionContext context) {
       return Stream.of(
@@ -284,7 +287,6 @@ class LineaTransactionSelectorFactoryTest {
           Arguments.of(TransactionSelectionResult.BLOCK_SELECTION_TIMEOUT_INVALID_TX),
           Arguments.of(TransactionSelectionResult.TX_EVALUATION_TOO_LONG),
           Arguments.of(TransactionSelectionResult.INVALID_TX_EVALUATION_TOO_LONG),
-          Arguments.of(TransactionSelectionResult.BLOCK_OCCUPANCY_ABOVE_THRESHOLD),
           Arguments.of(TransactionSelectionResult.TX_TOO_LARGE_FOR_REMAINING_GAS),
           Arguments.of(TransactionSelectionResult.TX_TOO_LARGE_FOR_REMAINING_BLOB_GAS));
     }

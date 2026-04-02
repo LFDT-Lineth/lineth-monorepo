@@ -17,7 +17,6 @@ import org.hyperledger.besu.datatypes.Wei
 import org.hyperledger.besu.tests.acceptance.dsl.account.Account
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
-import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.genesis.GenesisConfigurationFactory
 import org.junit.jupiter.api.Test
 import org.web3j.crypto.Credentials
 import org.web3j.crypto.Hash.sha3
@@ -43,14 +42,6 @@ class SendBundleTest : AbstractSendBundleTest() {
       // enabled the ZkCounter
       .set("--plugin-linea-limitless-enabled=", "true")
       .build()
-  }
-
-  override fun getCliqueOptions(): GenesisConfigurationFactory.CliqueOptions {
-    return GenesisConfigurationFactory.CliqueOptions(
-      BLOCK_PERIOD_SECONDS,
-      GenesisConfigurationFactory.CliqueOptions.DEFAULT.epochLength(),
-      false,
-    )
   }
 
   @Test

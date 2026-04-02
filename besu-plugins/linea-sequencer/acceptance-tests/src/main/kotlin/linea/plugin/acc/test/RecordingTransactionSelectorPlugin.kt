@@ -11,6 +11,7 @@ package linea.plugin.acc.test
 import org.hyperledger.besu.datatypes.Hash
 import org.hyperledger.besu.plugin.BesuPlugin
 import org.hyperledger.besu.plugin.ServiceManager
+import org.hyperledger.besu.plugin.data.ProcessableBlockHeader
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult
 import org.hyperledger.besu.plugin.services.RpcEndpointService
@@ -63,8 +64,10 @@ class RecordingTransactionSelectorPlugin : BesuPlugin {
   override fun start() {
     transactionSelectionService.registerPluginTransactionSelectorFactory(
       object : PluginTransactionSelectorFactory {
-        override fun create(stateManager: SelectorsStateManager): PluginTransactionSelector =
-          RecordingTransactionSelector()
+        override fun create(
+          pendingBlockHeader: ProcessableBlockHeader,
+          stateManager: SelectorsStateManager,
+        ): PluginTransactionSelector = RecordingTransactionSelector()
       },
     )
   }

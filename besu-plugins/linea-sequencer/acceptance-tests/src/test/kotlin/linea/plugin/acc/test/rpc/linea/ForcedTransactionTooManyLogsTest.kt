@@ -16,7 +16,6 @@ import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.hyperledger.besu.datatypes.Address
-import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.genesis.GenesisConfigurationFactory
 import org.junit.jupiter.api.Test
 import java.math.BigInteger
 import java.util.concurrent.TimeUnit
@@ -42,14 +41,6 @@ class ForcedTransactionTooManyLogsTest : AbstractForcedTransactionTest() {
       .set("--plugin-linea-l1l2-bridge-contract=", LOG_EMITTER_ADDRESS.bytes.toHexString())
       .set("--plugin-linea-l1l2-bridge-topic=", BRIDGE_TOPIC)
       .build()
-  }
-
-  override fun getCliqueOptions(): GenesisConfigurationFactory.CliqueOptions {
-    return GenesisConfigurationFactory.CliqueOptions(
-      BLOCK_PERIOD_SECONDS,
-      GenesisConfigurationFactory.CliqueOptions.DEFAULT.epochLength(),
-      false,
-    )
   }
 
   @Test
