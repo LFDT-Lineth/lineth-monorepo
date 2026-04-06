@@ -111,7 +111,7 @@ func ExprHandleWithoutProverAction(comp *wizard.CompiledIOP, expr *symbolic.Expr
 // expr_handle pragma.
 func GetExprHandleAssignment(run *wizard.ProverRuntime, colI ifaces.Column) sv.SmartVector {
 
-	if r, ok := run.Columns.TryGet(colI.GetColID()); ok {
+	if r, ok := run.TryGetColumn(colI.GetColID()); ok {
 		return r
 	}
 

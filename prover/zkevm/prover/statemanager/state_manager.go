@@ -66,6 +66,7 @@ func (sm *StateManager) Assign(run *wizard.ProverRuntime, arith *arithmetization
 
 	addSkipFlags(&shomeiTraces)
 	shomeiTraces = removeSystemTransactions(shomeiTraces)
+	sm.injectSyntheticReadZeroTraces(run, &shomeiTraces)
 	sm.StateSummary.Assign(run, shomeiTraces)
 	sm.Accumulator.Assign(run, utils.Join(shomeiTraces...))
 	sm.AccumulatorSummaryConnector.Assign(run)

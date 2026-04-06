@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/consensys/go-corset/pkg/asm"
 	"github.com/consensys/go-corset/pkg/binfile"
@@ -13,6 +14,7 @@ import (
 	"github.com/consensys/go-corset/pkg/ir/mir"
 	"github.com/consensys/go-corset/pkg/schema/module"
 	"github.com/consensys/go-corset/pkg/schema/register"
+	"github.com/consensys/go-corset/pkg/trace/lt"
 	"github.com/consensys/go-corset/pkg/util/collection/typed"
 	"github.com/consensys/go-corset/pkg/util/field/koalabear"
 	"github.com/consensys/linea-monorepo/prover/config"
@@ -95,13 +97,35 @@ func NewArithmetization(builder *wizard.Builder, settings Settings) *Arithmetiza
 // computed columns with concrete values, such for determining multiplicative
 // inverses, etc.
 func (a *Arithmetization) Assign(run *wizard.ProverRuntime, traceFile string) {
+	a.AssignWithPreRead(run, PreReadTrace(traceFile))
+}
+
+// PreReadResult holds the result of pre-reading a trace file.
+type PreReadResult struct {
+	RawTrace  lt.TraceFile
+	Metadata  typed.Map
+	Err       error
+	TraceFile string
+}
+
+// PreReadTrace reads and parses a trace file, returning the raw trace data.
+// This can be called early to overlap I/O with other work.
+func PreReadTrace(traceFile string) PreReadResult {
+	traceF := readTraceFile(traceFile)
+	rawTrace, metadata, err := ReadLtTraces(traceF)
+	return PreReadResult{RawTrace: rawTrace, Metadata: metadata, Err: err, TraceFile: traceFile}
+}
+
+// AssignWithPreRead assigns arithmetization columns using a pre-read trace.
+func (a *Arithmetization) AssignWithPreRead(run *wizard.ProverRuntime, preRead PreReadResult) {
+	assignStart := time.Now()
 	var (
-		errs []error
-		//
-		traceF = readTraceFile(traceFile)
-		// Parse trace file and extract raw column data.
-		rawTrace, metadata, errT = ReadLtTraces(traceF)
+		errs     []error
+		rawTrace = preRead.RawTrace
+		metadata = preRead.Metadata
+		errT     = preRead.Err
 	)
+	logrus.Infof("[bootstrapper] trace available (pre-read): %v", time.Since(assignStart))
 
 	// Extract commit metadata from both files
 	zkevmBinCommit, zkevmBinCommitOk := a.Metadata.String("commit")
@@ -142,15 +166,18 @@ func (a *Arithmetization) Assign(run *wizard.ProverRuntime, traceFile string) {
 	}
 
 	if errT != nil {
-		fmt.Printf("error loading the trace fpath=%q err=%v", traceFile, errT.Error())
+		fmt.Printf("error loading the trace fpath=%q err=%v", preRead.TraceFile, errT.Error())
 	}
 	// Perform trace propagation
+	propStart := time.Now()
 	rawTrace, errs = asm.Propagate(a.BinaryFile.Schema, rawTrace)
 	// error check
 	if len(errs) > 0 {
 		logrus.Warnf("corset propagation gave the following errors: %v", errors.Join(errs...).Error())
 	}
+	logrus.Infof("[bootstrapper] propagation: %v", time.Since(propStart))
 	// Perform trace expansion
+	expStart := time.Now()
 	expandedTrace, errs := ir.NewTraceBuilder[koalabear.Element]().
 		WithBatchSize(1024).
 		WithRegisterMapping(a.LimbMapping).
@@ -159,8 +186,12 @@ func (a *Arithmetization) Assign(run *wizard.ProverRuntime, traceFile string) {
 	if len(errs) > 0 {
 		logrus.Warnf("corset expansion gave the following errors: %v", errors.Join(errs...).Error())
 	}
+	logrus.Infof("[bootstrapper] expansion: %v", time.Since(expStart))
 	// Passed
+	copyStart := time.Now()
 	AssignFromLtTraces(run, a.AirSchema, expandedTrace, a.Settings.Limits)
+	logrus.Infof("[bootstrapper] column assignment: %v", time.Since(copyStart))
+	logrus.Infof("[bootstrapper] total Arithmetization.Assign: %v", time.Since(assignStart))
 }
 
 // limbColumnsOf returns the wizard columns corresponding to the limbs for the

@@ -1,11 +1,15 @@
 package zkevm
 
 import (
+	"sync"
+	"time"
+
 	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/recursion"
 	"github.com/consensys/linea-monorepo/prover/protocol/serde"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils/exit"
 	"github.com/consensys/linea-monorepo/prover/zkevm/arithmetization"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/bls"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/ecarith"
@@ -17,6 +21,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/p256verify"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager"
+	"github.com/sirupsen/logrus"
 )
 
 // ZkEvm defines the wizard responsible for proving execution of the zk
@@ -234,8 +239,13 @@ func newZkEVM(b *wizard.Builder, s *Settings) *ZkEvm {
 // Returns a prover function for the zkEVM module. The resulting function is
 // aimed to be passed to the wizard.Prove function.
 func (z *ZkEvm) GetMainProverStep(input *Witness) (prover wizard.MainProverStep) {
+	return z.GetMainProverStepWithPreRead(input, nil)
+}
 
-	// That would happen if the caller forgets to provide a value for it
+// GetMainProverStepWithPreRead returns a prover step that uses a pre-read trace
+// result if provided, otherwise reads the trace inline.
+func (z *ZkEvm) GetMainProverStepWithPreRead(input *Witness, preReadCh <-chan arithmetization.PreReadResult) wizard.MainProverStep {
+
 	if input.ExecDataSchwarzZipfelX.IsZero() {
 		panic("caller forgot to pass Witness.ExecDataSchwarzZipfelX")
 	}
@@ -245,26 +255,98 @@ func (z *ZkEvm) GetMainProverStep(input *Witness) (prover wizard.MainProverStep)
 		// Assigns the arithmetization module. From Corset. Must be done first
 		// because the following modules use the content of these columns to
 		// assign themselves.
-		z.Arithmetization.Assign(run, input.ExecTracesFPath)
+		if preReadCh != nil {
+			logrus.Info("[bootstrapper] waiting for pre-read trace")
+			preRead := <-preReadCh
+			z.Arithmetization.AssignWithPreRead(run, preRead)
+		} else {
+			z.Arithmetization.Assign(run, input.ExecTracesFPath)
+		}
 
-		// Assign the state-manager module
-		z.Ecdsa.Assign(run, input.TxSignatureGetter, len(input.TxSignatures))
-		z.StateManager.Assign(run, z.Arithmetization, input.SMTraces)
-		z.Keccak.Run(run)
-		z.Ecadd.Assign(run)
-		z.Ecmul.Assign(run)
-		z.Ecpair.Assign(run)
-		z.Sha2.Run(run)
-		z.BlsG1Add.Assign(run)
-		z.BlsG2Add.Assign(run)
-		z.BlsG1Msm.Assign(run)
-		z.BlsG2Msm.Assign(run)
-		z.BlsG1Map.Assign(run)
-		z.BlsG2Map.Assign(run)
-		z.BlsPairingCheck.Assign(run)
-		z.PointEval.Assign(run)
-		z.P256Verify.Assign(run)
-		z.PublicInput.Assign(run, input.L2BridgeAddress, input.BlockHashList, input.ExecDataSchwarzZipfelX)
+		// Parallel module assigns. Constraints:
+		//   - Keccak reads ECDSA_ANTICHAMBER columns → must wait for Ecdsa
+		//   - Ecadd/Ecmul/P256 share ecdata FlattenColumn → serialize after Ecdsa
+		//   - Sha2 reads shakiradata ExprHandle → serialize after Keccak
+		//   - BLS modules share blsdata ExprHandle/FlattenColumn → serialize
+		//   - PublicInput reads StateSummary pointer → serialize after SM
+		//
+		// Goroutine A: Ecdsa → close(ecdsaDone) → Ecadd → Ecmul → Ecpair → P256
+		// Goroutine B: <-ecdsaDone → Keccak → Sha2
+		// Goroutine C: BLS_all (sequential)
+		// Goroutine D: StateManager → PublicInput
+		modStart := time.Now()
+
+		var wg sync.WaitGroup
+		ecdsaDone := make(chan struct{})
+
+		var (
+			limitOverflow     interface{}
+			limitOverflowOnce sync.Once
+			ecdsaCloseOnce    sync.Once
+		)
+		closeEcdsa := func() { ecdsaCloseOnce.Do(func() { close(ecdsaDone) }) }
+		recoverOverflow := func() {
+			if r := recover(); r != nil {
+				if _, ok := r.(exit.LimitOverflowReport); ok {
+					limitOverflowOnce.Do(func() { limitOverflow = r })
+					closeEcdsa()
+				} else if limitOverflow != nil {
+					// Another goroutine already captured an overflow
+					// absorb this secondary panic
+				} else {
+					panic(r)
+				}
+			}
+		}
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			defer recoverOverflow()
+			z.Ecdsa.Assign(run, input.TxSignatureGetter, len(input.TxSignatures))
+			closeEcdsa()
+			z.Ecadd.Assign(run)
+			z.Ecmul.Assign(run)
+			z.Ecpair.Assign(run)
+			z.P256Verify.Assign(run)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			defer recoverOverflow()
+			<-ecdsaDone
+			z.Keccak.Run(run)
+			z.Sha2.Run(run)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			defer recoverOverflow()
+			z.BlsG1Add.Assign(run)
+			z.BlsG2Add.Assign(run)
+			z.BlsG1Msm.Assign(run)
+			z.BlsG2Msm.Assign(run)
+			z.BlsG1Map.Assign(run)
+			z.BlsG2Map.Assign(run)
+			z.BlsPairingCheck.Assign(run)
+			z.PointEval.Assign(run)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			defer recoverOverflow()
+			z.StateManager.Assign(run, z.Arithmetization, input.SMTraces)
+			z.PublicInput.Assign(run, input.L2BridgeAddress, input.BlockHashList, input.ExecDataSchwarzZipfelX)
+		}()
+
+		wg.Wait()
+		if limitOverflow != nil {
+			panic(limitOverflow)
+		}
+		logrus.Infof("[bootstrapper] module assigns total: %v", time.Since(modStart))
 	}
 }
 

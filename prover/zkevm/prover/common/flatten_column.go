@@ -251,7 +251,7 @@ func (l *FlattenColumn) initColumns(comp *wizard.CompiledIOP) {
 func (l *FlattenColumn) Run(run *wizard.ProverRuntime) {
 	l.assignMask(run)
 
-	if !run.Columns.Exists(l.Limbs.GetColID()) {
+	if !run.HasColumn(l.Limbs.GetColID()) {
 		l.assignLimbs(run)
 	}
 

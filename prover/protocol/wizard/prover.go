@@ -357,6 +357,14 @@ func (run ProverRuntime) GetColumn(name ifaces.ColID) ifaces.ColAssignment {
 	return res
 }
 
+// TryGetColumn attempts to retrieve a column assignment in a thread-safe way.
+// Returns the assignment and true if found, or zero-value and false otherwise.
+func (run ProverRuntime) TryGetColumn(name ifaces.ColID) (ifaces.ColAssignment, bool) {
+	run.lock.Lock()
+	defer run.lock.Unlock()
+	return run.Columns.TryGet(name)
+}
+
 // HasColumn returns whether the column is assigned. The function panics if the
 // provided column name does not exists
 func (run ProverRuntime) HasColumn(name ifaces.ColID) bool {

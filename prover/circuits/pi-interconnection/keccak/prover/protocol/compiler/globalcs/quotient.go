@@ -197,7 +197,7 @@ func (ctx *QuotientCtx) refineContext(run *wizard.ProverRuntime) computeQuotient
 		roots := ctx.RootsForRatio[j]
 		for _, col := range roots {
 			name := col.GetColID()
-			witness, isNatural := run.Columns.TryGet(name)
+			witness, isNatural := run.TryGetColumn(name)
 			if !isNatural {
 				witness = col.GetColAssignment(run)
 			}
@@ -273,7 +273,7 @@ func (ctx *QuotientCtx) refineContext(run *wizard.ProverRuntime) computeQuotient
 
 				rComputed[name] = struct{}{}
 
-				v, isNatural := run.Columns.TryGet(name)
+				v, isNatural := run.TryGetColumn(name)
 				if !isNatural {
 					v = root.GetColAssignment(run)
 				}
@@ -356,7 +356,7 @@ func (ctx *QuotientCtx) Run(run *wizard.ProverRuntime) {
 				// there shouldn't be any collisions
 				computedReeval.Store(name, nil)
 
-				v, isNatural := run.Columns.TryGet(name)
+				v, isNatural := run.TryGetColumn(name)
 				if !isNatural {
 					v = root.GetColAssignment(run)
 				}

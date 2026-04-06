@@ -66,31 +66,37 @@ func (mh *Module) Assign(run *wizard.ProverRuntime) {
 		romLex = mh.InputModules.RomLexInput
 	)
 
-	if !run.Columns.Exists(rom.CounterIsEqualToNBytesMinusOne.GetColID()) {
+	if !run.HasColumn(rom.CounterIsEqualToNBytesMinusOne.GetColID()) {
 		rom.completeAssign(run)
 	}
 
 	var (
-		filter    = rom.CounterIsEqualToNBytesMinusOne.GetColAssignment(run).IntoRegVecSaveAlloc()
-		codeHash  = common.GetMultiColumnAssignment(run, romLex.CodeHash[:])
-		acc       = common.GetMultiColumnAssignment(run, rom.Acc[:])
-		codeSize  = common.GetMultiColumnAssignment(run, rom.CodeSize[:])
-		cfi       = common.GetMultiColumnAssignment(run, rom.CFI[:])
-		cfiRomLex = common.GetMultiColumnAssignment(run, romLex.CFIRomLex[:])
-		// Since we need to operate on limb slices, we need to transpose limb columns.
-		cfiTransposed       = transposeLimbs(cfi[:])
-		cfiRomLexTransposed = transposeLimbs(cfiRomLex[:])
-		length              = len(cfiTransposed)
-		builder             = newAssignmentBuilder(length)
+		filter   = rom.CounterIsEqualToNBytesMinusOne.GetColAssignment(run).IntoRegVecSaveAlloc()
+		codeHash = common.GetMultiColumnAssignment(run, romLex.CodeHash[:])
+		acc      = common.GetMultiColumnAssignment(run, rom.Acc[:])
+		codeSize = common.GetMultiColumnAssignment(run, rom.CodeSize[:])
+		cfi      = common.GetMultiColumnAssignment(run, rom.CFI[:])
+		length   = len(cfi[0])
+		builder  = newAssignmentBuilder(length)
 	)
+
+	// Build CFI -> romLex row index map
+	cfiRomLex := common.GetMultiColumnAssignment(run, romLex.CFIRomLex[:])
+	cfiMap := make(map[[common.NbLimbU32]field.Element]int, 256)
+	for j := range cfiRomLex[0] {
+		var key [common.NbLimbU32]field.Element
+		for k := range common.NbLimbU32 {
+			key[k] = cfiRomLex[k][j]
+		}
+		if _, exists := cfiMap[key]; !exists {
+			cfiMap[key] = j
+		}
+	}
 
 	for row := 0; row < length; row++ {
 
-		if !areLimbsZero(cfiTransposed[row]) && ((row+1 == length) || areLimbsZero(cfiTransposed[row+1])) {
-			// This is the last row in the active area of the rom input.
-			// We assign one more row to make the assignment of the last row
-			// for other columns below work correctly, we exclude codeHash and
-			// assign it below from the romLex input.
+		if !colLimbsZero(cfi, row) && ((row+1 == length) || colLimbsZero(cfi, row+1)) {
+			// Last row in active area — append inactive marker row.
 			builder.isActive = append(builder.isActive, field.Zero())
 			builder.cfi = append(builder.cfi, [common.NbLimbU32]field.Element{field.Zero(), field.Zero()})
 
@@ -109,12 +115,12 @@ func (mh *Module) Assign(run *wizard.ProverRuntime) {
 			continue
 		}
 
-		// Append 1 to isActive column
 		builder.isActive = append(builder.isActive, field.One())
 
-		// Inject the other incoming columns from the rom input
 		var cfiRow [common.NbLimbU32]field.Element
-		copy(cfiRow[:], cfiTransposed[row])
+		for k := range common.NbLimbU32 {
+			cfiRow[k] = cfi[k][row]
+		}
 		builder.cfi = append(builder.cfi, cfiRow)
 
 		for j := range builder.limb {
@@ -234,51 +240,32 @@ func (mh *Module) Assign(run *wizard.ProverRuntime) {
 
 		}
 
-		// Assign codehash from the romLex input
+		// Assign codehash via O(1) map lookup
 		for i := 0; i < len(builder.cfi); i++ {
-
-			// We do not need to continue if we are in the inactive area
 			if builder.isActive[i].IsZero() {
 				break
 			}
 
-			currCFI := builder.cfi[i]
-
-			// For each currCFI, we look over all the CFIs in the Romlex input,
-			// and append only that codehash for which the cfi matches with currCFI
-			for j := 0; j < len(cfiRomLexTransposed); j++ {
-				areCfiEqual := true
-				for k := range common.NbLimbU32 {
-					if currCFI[k] != cfiRomLexTransposed[j][k] {
-						areCfiEqual = false
-						break
-					}
-				}
-
-				if areCfiEqual {
-
-					currIsNonEmptyKeccakLimbs := true
-					for k := range common.NbLimbU256 {
-						if builder.isHashEnd[i].IsZero() {
-							currIsNonEmptyKeccakLimbs = false
-						}
-
-						if codeHash[k][j] == emptyKeccak[k] {
-							currIsNonEmptyKeccakLimbs = false
-						}
-
-						builder.codeHash[k] = append(builder.codeHash[k], codeHash[k][j])
-					}
-
-					if currIsNonEmptyKeccakLimbs {
-						builder.isNonEmptyKeccak = append(builder.isNonEmptyKeccak, field.One())
-					} else {
-						builder.isNonEmptyKeccak = append(builder.isNonEmptyKeccak, field.Zero())
-					}
-
-					break
-				}
+			j, ok := cfiMap[builder.cfi[i]]
+			if !ok {
 				continue
+			}
+
+			currIsNonEmptyKeccakLimbs := true
+			for k := range common.NbLimbU256 {
+				if builder.isHashEnd[i].IsZero() {
+					currIsNonEmptyKeccakLimbs = false
+				}
+				if codeHash[k][j] == emptyKeccak[k] {
+					currIsNonEmptyKeccakLimbs = false
+				}
+				builder.codeHash[k] = append(builder.codeHash[k], codeHash[k][j])
+			}
+
+			if currIsNonEmptyKeccakLimbs {
+				builder.isNonEmptyKeccak = append(builder.isNonEmptyKeccak, field.One())
+			} else {
+				builder.isNonEmptyKeccak = append(builder.isNonEmptyKeccak, field.Zero())
 			}
 		}
 	}
@@ -344,14 +331,12 @@ func transposeLimbs(inputMatrix [][]field.Element) [][]field.Element {
 	return outputMatrix
 }
 
-// areLimbsZero checks whether the provided value (represented in limbs) is zero.
-// It returns false if some limb is not zero.
-func areLimbsZero(limbs []field.Element) bool {
-	for i := range limbs {
-		if !limbs[i].IsZero() {
+// colLimbsZero checks if the limb columns at a given row are all zero.
+func colLimbsZero(cols [][]field.Element, row int) bool {
+	for k := range cols {
+		if !cols[k][row].IsZero() {
 			return false
 		}
 	}
-
 	return true
 }

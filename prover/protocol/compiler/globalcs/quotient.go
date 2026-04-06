@@ -269,7 +269,7 @@ func (ctx *QuotientCtx) Run(run *wizard.ProverRuntime) {
 			rootName := root.GetColID()
 
 			var witness sv.SmartVector
-			witness, isAssigned := run.Columns.TryGet(rootName)
+			witness, isAssigned := run.TryGetColumn(rootName)
 			if !isAssigned {
 				witness = root.GetColAssignment(run)
 			}
