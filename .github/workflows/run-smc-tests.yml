@@ -33,7 +33,7 @@ jobs:
           cache-dependency-path: |
                 prover/go.sum
 
-      - uses: actions/cache@v4.2.0
+      - uses: actions/cache@v5.0.4
         with:
           path: |
             ~/.cache/go-build
@@ -47,7 +47,7 @@ jobs:
         uses: ./.github/actions/setup-nodejs
 
       - name: Cache Hardhat compiler
-        uses: actions/cache@v4.2.0
+        uses: actions/cache@v5.0.4
         with:
           path: ~/.cache/hardhat-nodejs
           key: ${{ runner.os }}-hardhat-compilers-${{ hashFiles('contracts/hardhat.config.ts', 'contracts/hardhat_overrides.ts') }}
