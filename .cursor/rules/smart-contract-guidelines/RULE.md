@@ -4,7 +4,7 @@ globs: contracts/**/*.sol, contracts/token-generation-event/**/*.sol
 alwaysApply: false
 ---
 
-Reference: [Linea Contract Style Guide](contracts/docs/contract-style-guide.md)
+Reference: [Linea Contract Style Guide](../../../contracts/docs/contract-style-guide.md)
 
 # Linea Smart Contracts - Development Guidelines
 

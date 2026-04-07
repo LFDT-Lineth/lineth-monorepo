@@ -12,7 +12,7 @@ metadata:
 Best practices for developing Solidity smart contracts on Linea blockchain. Contains
 rules covering documentation, naming, structure, and code style.
 
-Reference: [Linea Contract Style Guide](contracts/docs/contract-style-guide.md)
+Reference: [Linea Contract Style Guide](../../../contracts/docs/contract-style-guide.md)
 
 ## When to Apply
 
