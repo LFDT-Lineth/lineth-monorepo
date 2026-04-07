@@ -1,6 +1,6 @@
 plugins {
   id 'net.consensys.zkevm.kotlin-common-minimal-conventions'
-  id 'net.consensys.zkevm.linea-native-libs-helper'
+  id 'linea.download-native-libs'
   id 'java-test-fixtures'
 }
 
@@ -31,16 +31,13 @@ test {
   maxParallelForks = 1
 }
 
-def libsZipDownloadOutputDir = project.parent.layout.buildDirectory.asFile.get().absolutePath
-
-task downloadNativeLibs {
-  doLast {
-    fetchLibFromZip("https://github.com/Consensys/linea-monorepo/releases/download/blob-libs-v1.2.0/linea-blob-libs-v1.2.0.zip", "blob_compressor", libsZipDownloadOutputDir)
-    fetchLibFromZip("https://github.com/Consensys/linea-monorepo/releases/download/blob-libs-v2.1.0-rc1/linea-blob-libs-v2.1.0-rc1.zip", "blob_compressor", libsZipDownloadOutputDir)
-    fetchLibFromZip("https://github.com/Consensys/linea-monorepo/releases/download/blob-libs-v3.0.1/linea-blob-libs-v3.0.1.zip", "blob_compressor", libsZipDownloadOutputDir)
+downloadNativeLibs {
+  fetchLibs {
+    urls = [
+      "https://github.com/Consensys/linea-monorepo/releases/download/blob-libs-v1.2.0/linea-blob-libs-v1.2.0.zip",
+      "https://github.com/Consensys/linea-monorepo/releases/download/blob-libs-v2.1.0-rc1/linea-blob-libs-v2.1.0-rc1.zip",
+      "https://github.com/Consensys/linea-monorepo/releases/download/blob-libs-v3.0.1/linea-blob-libs-v3.0.1.zip",
+    ]
+    libs = ["blob_compressor"]
   }
-}
-
-compileKotlin {
-  dependsOn tasks.downloadNativeLibs
 }

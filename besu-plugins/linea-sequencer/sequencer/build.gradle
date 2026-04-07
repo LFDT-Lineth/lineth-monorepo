@@ -17,7 +17,6 @@ group = 'net.consensys.linea.besu.plugin'
 
 def lineaSequencerProject = project(lineaSequencerProjectPath)
 apply from: lineaSequencerProject.file("gradle/java.gradle")
-apply from: lineaSequencerProject.file("gradle/dependency-management.gradle")
 apply from: lineaSequencerProject.file("gradle/lint.gradle")
 
 // Force a single version of kotlin-stdlib across all transitive dependencies.

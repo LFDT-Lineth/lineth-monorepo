@@ -9,8 +9,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.nanoseconds
@@ -382,14 +384,14 @@ class AsyncRetryerTest {
   @Test
   fun `retry should retry until maxRetries are reached and consumer not being called before delay`(vertx: Vertx) {
     val callCount = AtomicInteger(0)
-    val startTime = kotlin.time.Clock.System.now()
-    val exceptionConsumerCallDelays: MutableList<Duration> = mutableListOf()
+    val startTime = Clock.System.now()
+    val exceptionConsumerCallDelays: MutableList<Duration> = CopyOnWriteArrayList()
     val future =
       AsyncRetryer.retry<Int>(
         vertx = vertx,
         backoffDelay = 20.milliseconds,
         maxRetries = 10,
-        exceptionConsumer = { exceptionConsumerCallDelays.add(kotlin.time.Clock.System.now().minus(startTime)) },
+        exceptionConsumer = { exceptionConsumerCallDelays.add(Clock.System.now().minus(startTime)) },
         ignoreFirstExceptionsUntilTimeElapsed = 100.milliseconds,
       ) {
         throw IndexOutOfBoundsException("Error ${callCount.incrementAndGet()}")

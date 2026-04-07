@@ -34,17 +34,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
       - name: Setup Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
-        with:
-          java-version: '21'
+
       # Install pnpm to compile smart contracts
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
         with:
           pnpm-install-options: '--frozen-lockfile --prefer-offline --filter contracts --ignore-scripts'
-      - name: Build besu from source 
+      - name: Build besu from source
         shell: bash
         run: ./gradlew buildAndUpdateBesuVersionInLibsVersions -PskipDownloadBesuDist=true
         env:

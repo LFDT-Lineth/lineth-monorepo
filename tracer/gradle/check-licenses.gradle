@@ -26,6 +26,10 @@
 // Some parts of this code comes from Zipkin/https://github.com/openzipkin/zipkin/pull/852
 // Zipkin itself is under Apache License.
 
+// Gradle 9 compatibility: ReportingExtension.baseDir was removed; shim it for the hierynomus plugin
+// which accesses it via Groovy dynamic dispatch.
+reporting.ext.baseDir = reporting.baseDirectory.get().asFile
+
 /** spotless handles the adding of the headers */
 license {
   exclude("**/*")

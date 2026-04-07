@@ -13,7 +13,7 @@ javadoc {
   options.encoding = 'UTF-8'
 }
 
-task checkSpdxHeader(type: CheckSpdxHeader) {
+tasks.register("checkSpdxHeader", CheckSpdxHeader) {
   rootPath = "${projectDir}"
   spdxHeader = "* SPDX-License-Identifier: MIT OR Apache-2.0"
   filesRegex = "(.*.java)|(.*.groovy)"
@@ -26,4 +26,6 @@ task checkSpdxHeader(type: CheckSpdxHeader) {
   ].join("|")
 }
 
-tasks.check.dependsOn(checkSpdxHeader)
+tasks.named("check") {
+  dependsOn(tasks.named("checkSpdxHeader"))
+}

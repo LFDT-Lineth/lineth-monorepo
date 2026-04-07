@@ -1,10 +1,10 @@
 plugins {
   id 'net.consensys.zkevm.kotlin-library-conventions'
-  id 'com.gradleup.shadow' version '8.3.5'
+  id 'com.gradleup.shadow' version '9.4.0'
 }
 
 group = 'build.linea.staterecovery'
-archivesBaseName = 'linea-staterecovery-besu-plugin'
+base.archivesName = 'linea-staterecovery-besu-plugin'
 
 dependencies {
   compileOnly("info.picocli:picocli:${libs.versions.picoli.get()}") {

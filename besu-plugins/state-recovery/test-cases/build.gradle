@@ -51,6 +51,8 @@ test {
   systemProperty "vertx.parameter.filename", project.projectDir.toPath()
       .resolve("src/test/resources/vertx-options.json")
       .toAbsolutePath().toString()
+  // test sources contain helper classes only, not runnable tests
+  failOnNoDiscoveredTests = false
 }
 
 task integrationTest(type: Test) { test ->

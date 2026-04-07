@@ -2,6 +2,11 @@ plugins {
   id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
+test {
+  // test sources contain helper classes only, not runnable tests
+  failOnNoDiscoveredTests = false
+}
+
 dependencies {
   implementation project(':jvm-libs:generic:extensions:futures')
   implementation project(':jvm-libs:linea:core:domain-models')

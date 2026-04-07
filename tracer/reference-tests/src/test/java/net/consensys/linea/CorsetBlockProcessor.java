@@ -86,7 +86,6 @@ public class CorsetBlockProcessor extends MainnetBlockProcessor {
 
     final List<TransactionReceipt> receipts = new ArrayList<>();
     long currentGasUsed = 0;
-    long currentStateGasUsed = 0;
 
     final ProtocolSpec protocolSpec = protocolSchedule.getByBlockHeader(blockHeader);
     final var preExecutionProcessor = protocolSpec.getPreExecutionProcessor();
@@ -102,12 +101,14 @@ public class CorsetBlockProcessor extends MainnetBlockProcessor {
     preExecutionProcessor.process(blockProcessingContext, Optional.empty());
 
     for (final Transaction transaction : transactions) {
+      // Address when we support eip-8037 (likely never by this tracer)
+      final long cumulativeStateGasUsed = 0;
       if (!hasAvailableBlockBudget(
           blockHeader,
           transaction,
           currentGasUsed,
-          currentStateGasUsed,
-          protocolSpec.getBlockGasAccountingStrategy())) {
+          cumulativeStateGasUsed,
+          BlockGasAccountingStrategy.FRONTIER)) {
         return new BlockProcessingResult(Optional.empty(), "provided gas insufficient");
       }
 
@@ -158,7 +159,6 @@ public class CorsetBlockProcessor extends MainnetBlockProcessor {
       worldStateUpdater.commit();
 
       currentGasUsed += transaction.getGasLimit() - result.getGasRemaining();
-      currentStateGasUsed += result.getStateGasUsed();
       final TransactionReceipt transactionReceipt =
           transactionReceiptFactory.create(
               transaction.getType(), result, worldState, currentGasUsed);

@@ -28,5 +28,9 @@ gradlePlugin {
       id = "linea.besu-plugin"
       implementationClass = "LineaBesuPlugin"
     }
+    create("DownloadNativeLibsPlugin") {
+      id = "linea.download-native-libs"
+      implementationClass = "DownloadNativeLibsPlugin"
+    }
   }
 }

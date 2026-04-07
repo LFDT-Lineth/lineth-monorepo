@@ -35,6 +35,10 @@ licenseReport {
   filters = [
     new LicenseBundleNormalizer(bundlePath: project.file("gradle/license-normalizer-bundle.json"))
   ]
+
+  // Gradle 9: cross-project configuration resolution is not allowed without exclusive lock.
+  // Scan only configurations owned by this project.
+  projects = [project]
 }
 
 build {

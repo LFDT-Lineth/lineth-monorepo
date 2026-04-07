@@ -20,7 +20,7 @@ plugins {
   alias(libs.plugins.lombok)
 }
 jacoco {
-  toolVersion = '0.8.12'
+  toolVersion = libs.versions.jacoco.get()
 }
 
 def lineaTracerProject = project(lineaTracerProjectPath)
@@ -63,6 +63,10 @@ tasks.register("generateExecutionSpecBlockchainTests", RefTestGenerationTask) {
 }
 
 tasks.register('referenceExecutionSpecBlockchainTests', Test) {
+  // Gradle 9: custom Test tasks must explicitly wire the test source set
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+
   finalizedBy(jacocoReferenceExecutionSpecBlockchainTestsReport)
   description = 'Runs ETH reference blockchain tests.'
   dependsOn generateExecutionSpecBlockchainTests
@@ -98,6 +102,12 @@ tasks.register("jacocoReferenceExecutionSpecBlockchainTestsReport", JacocoReport
 
   sourceSets project(":tracer:arithmetization").sourceSets.main
   executionData(referenceExecutionSpecBlockchainTests)
+}
+
+// Gradle 9: fail if no tests discovered is now the default; disable for this module
+// since tests are generated from fixtures and only run via referenceExecutionSpecBlockchainTests
+tasks.named('test') {
+  failOnNoDiscoveredTests = false
 }
 
 dependencies {

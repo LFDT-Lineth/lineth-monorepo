@@ -66,7 +66,7 @@ class RecordingTransactionSelectorPlugin : BesuPlugin {
       object : PluginTransactionSelectorFactory {
         override fun create(
           pendingBlockHeader: ProcessableBlockHeader,
-          stateManager: SelectorsStateManager,
+          selectorsStateManager: SelectorsStateManager,
         ): PluginTransactionSelector = RecordingTransactionSelector()
       },
     )

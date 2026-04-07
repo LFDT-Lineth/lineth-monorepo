@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="warn">
+  <Appenders>
+    <Console name="console" target="SYSTEM_OUT" immediateFlush="true">
+      <PatternLayout pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{20} - %msg%n"/>
+    </Console>
+    <List name="ListAppender"/>
+  </Appenders>
+  <Loggers>
+    <Logger name="net.consensys.zkevm.persistence.db.PersistenceRetryer" level="warn" additivity="false">
+      <AppenderRef ref="ListAppender"/>
+      <AppenderRef ref="console"/>
+    </Logger>
+    <Root level="warn">
+      <AppenderRef ref="console"/>
+    </Root>
+  </Loggers>
+</Configuration>
+

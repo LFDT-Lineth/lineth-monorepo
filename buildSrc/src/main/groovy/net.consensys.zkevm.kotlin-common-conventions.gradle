@@ -8,7 +8,12 @@ configurations {
     canBeConsumed = false
     canBeResolved = false
   }
-  testFixturesImplementation.extendsFrom testFixturesDeps
+}
+
+plugins.withId('java-test-fixtures') {
+  configurations {
+    testFixturesImplementation.extendsFrom testFixturesDeps
+  }
 }
 
 dependencies {

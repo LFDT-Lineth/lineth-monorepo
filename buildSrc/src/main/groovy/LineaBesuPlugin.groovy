@@ -15,8 +15,17 @@
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.process.ExecOperations
+import javax.inject.Inject
 
 class LineaBesuPlugin implements Plugin<Project> {
+
+  private final ExecOperations execOperations
+
+  @Inject
+  LineaBesuPlugin(ExecOperations execOperations) {
+    this.execOperations = execOperations
+  }
 
   @Override
   void apply(Project project) {
@@ -27,7 +36,7 @@ class LineaBesuPlugin implements Plugin<Project> {
         def besuCommit = project.rootProject.libs.versions.besuCommit.get()
         def rootDir = project.rootProject.layout.projectDirectory.asFile.absolutePath
         def outputStream = new ByteArrayOutputStream()
-        project.exec {
+        execOperations.exec {
           workingDir = project.rootProject.layout.projectDirectory.asFile
           environment 'BESU_DIR', "${rootDir}/tmp/besu-eth"
           environment 'BESU_COMMIT', besuCommit
@@ -73,7 +82,7 @@ class LineaBesuPlugin implements Plugin<Project> {
           return
         }
         def rootDir = project.rootProject.layout.projectDirectory.asFile.absolutePath
-        project.exec {
+        execOperations.exec {
           workingDir = project.rootProject.layout.projectDirectory.asFile
           environment 'BESU_DIR', "${rootDir}/tmp/besu-eth"
           environment 'RESOLVED_BESU_VERSION', resolvedBesuVer

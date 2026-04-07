@@ -15,11 +15,10 @@
 tasks.register('corsetExists') {
   dependsOn('installGoCorset')
   doLast {
-    def result = exec {
-      ignoreExitValue = true
-      commandLine "go-corset", "--version"
-    }
-    if (result.getExitValue() != 0) {
+    def process = ["go-corset", "--version"].execute()
+    process.consumeProcessOutput()
+    def exitCode = process.waitFor()
+    if (exitCode != 0) {
       throw new GradleException('go-corset not found!')
     }
   }

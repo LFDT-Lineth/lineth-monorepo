@@ -22,7 +22,6 @@ plugins {
 
 def lineaSequencerProject = project(lineaSequencerProjectPath)
 apply from: lineaSequencerProject.file("gradle/java.gradle")
-apply from: lineaSequencerProject.file("gradle/dependency-management.gradle")
 apply from: lineaSequencerProject.file("gradle/lint.gradle")
 
 kapt {
@@ -34,7 +33,7 @@ kapt {
 }
 
 compileJava {
-  options.annotationProcessorGeneratedSourcesDirectory = file("$buildDir/generated/sources/annotationProcessor/java/main")
+  options.generatedSourceOutputDirectory = file("$buildDir/generated/sources/annotationProcessor/java/main")
   options.compilerArgs += [
     '-Alog4j.graalvm.groupId=' + project.group,
     '-Alog4j.graalvm.artifactId=' + project.name
@@ -63,6 +62,10 @@ processTestResources.dependsOn("${lineaSequencerProjectPath}:acceptance-tests:ge
 
 tasks.register('acceptanceTests', Test) {
   description = 'Runs acceptance tests.'
+
+  // Gradle 9: custom Test tasks must explicitly wire the test source set
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
 
   inputs.property("integration.date", LocalTime.now()) // so it runs on every invocation
 

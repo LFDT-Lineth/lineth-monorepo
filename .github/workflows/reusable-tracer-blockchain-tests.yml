@@ -49,12 +49,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-        with:
-          submodules: recursive
-      - name: get-branch-name
-        id: extract_branch
-        run: |
-          echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
 
       - name: Setup Tracer Test Environment
         uses: ./.github/actions/setup-tracer-environment
@@ -70,14 +64,14 @@ jobs:
         if: ${{ inputs.failed_module != '' }}
         with:
           name: failedBlockchainReferenceTests.json
-          path: ${{ github.workspace }}/tmp/${{ steps.extract_branch.outputs.branch }}/
+          path: ${{ github.workspace }}/tmp/${{ github.head_ref || github.ref_name }}/
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           commit: ${{ inputs.commit || '' }}
           if_no_artifact_found: ignore
 
       - name: Rename filter input file
         if: ${{ inputs.failed_module != '' }}
-        run: mv ${{ github.workspace }}/tmp/${{ steps.extract_branch.outputs.branch }}/failedBlockchainReferenceTests.json ${{ github.workspace }}/tmp/${{ steps.extract_branch.outputs.branch }}/failedBlockchainReferenceTests-input.json
+        run: mv ${{ github.workspace }}/tmp/${{ github.head_ref || github.ref_name }}/failedBlockchainReferenceTests.json ${{ github.workspace }}/tmp/${{ github.head_ref || github.ref_name }}/failedBlockchainReferenceTests-input.json
 
       - name: Run reference execution spec blockchain tests
         run: GOMAXPROCS=10 GOMEMLIMIT=20GiB ./gradlew :tracer:reference-tests:referenceExecutionSpecBlockchainTests -x spotlessCheck --tests "${{ inputs.test_filter || 'BlockchainReferenceTest_*' }}"
@@ -85,7 +79,7 @@ jobs:
         env:
           JUNIT_TESTS_PARALLELISM: 2
           GOCORSET_FLAGS: -b1024 -v --ansi-escapes=false --report --air
-          FAILED_TEST_JSON_DIRECTORY: ${{ github.workspace }}/tmp/${{ steps.extract_branch.outputs.branch }}/
+          FAILED_TEST_JSON_DIRECTORY: ${{ github.workspace }}/tmp/${{ github.head_ref || github.ref_name }}/
           FAILED_MODULE: ${{ inputs.failed_module || '' }}
           FAILED_CONSTRAINT: ${{ inputs.failed_constraint || '' }}
           REFERENCE_TEST_FILTER_INPUT: failedBlockchainReferenceTests.json
@@ -96,7 +90,7 @@ jobs:
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: failedBlockchainReferenceTests-${{ inputs.zkevm_fork }}.json
-          path: ${{ github.workspace }}/tmp/${{ steps.extract_branch.outputs.branch }}/
+          path: ${{ github.workspace }}/tmp/${{ github.head_ref || github.ref_name }}/
 
       - name: Upload test report
         if: always()
@@ -124,14 +118,14 @@ jobs:
         if: ${{ failure() || cancelled() }}
         run: |
           # Gather metrics
-          SUCCESS_COUNTER=$(cat $JSON_REPORT | sed -e "s/.*\"successCounter\":\([0-9]*\).*/\1/")
-          FAILED_COUNTER=$(cat $JSON_REPORT | sed -e "s/.*\"failedCounter\":\([0-9]*\).*/\1/")
-          ABORTED_COUNTER=$(cat $JSON_REPORT | sed -e "s/.*\"abortedCounter\":\([0-9]*\).*/\1/")
-          DISABLED_COUNTER=$(cat $JSON_REPORT | sed -e "s/.*\"disabledCounter\":\([0-9]*\).*/\1/")
+          SUCCESS_COUNTER=$(jq -r '.successCounter' "$JSON_REPORT")
+          FAILED_COUNTER=$(jq -r '.failedCounter' "$JSON_REPORT")
+          ABORTED_COUNTER=$(jq -r '.abortedCounter' "$JSON_REPORT")
+          DISABLED_COUNTER=$(jq -r '.disabledCounter' "$JSON_REPORT")
           # Set step outputs (used by notify job)
           echo "success=$SUCCESS_COUNTER" >> $GITHUB_OUTPUT
           echo "failed=$FAILED_COUNTER" >> $GITHUB_OUTPUT
           echo "aborted=$ABORTED_COUNTER" >> $GITHUB_OUTPUT
           echo "disabled=$DISABLED_COUNTER" >> $GITHUB_OUTPUT
         env:
-          JSON_REPORT: ${{ github.workspace }}/tmp/${{ steps.extract_branch.outputs.branch }}/BlockchainReferenceTestOutcome.json
+          JSON_REPORT: ${{ github.workspace }}/tmp/${{ github.head_ref || github.ref_name }}/BlockchainReferenceTestOutcome.json

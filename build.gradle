@@ -50,6 +50,22 @@ allprojects {
   apply plugin: 'java' // do not add kotlin plugin here, it will add unnecessary Kotlin runtime dependencies
   apply plugin: 'jacoco'
 
+  // Override JUnit version from Besu BOM to ensure Java 25 compatibility
+  configurations.configureEach {
+    resolutionStrategy.eachDependency { details ->
+      if (details.requested.group in [
+            'org.junit.platform',
+            'org.junit.jupiter',
+            'org.junit'
+          ]) {
+        def junitVersion = details.requested.group == 'org.junit.platform' ?
+            "${libs.versions.junitPlatform.get()}" : "${libs.versions.junit.get()}"
+        details.useVersion(junitVersion)
+        details.because('Java 25 requires JUnit 5.13+ for ASM compatibility')
+      }
+    }
+  }
+
   tasks.withType(KotlinCompile).configureEach {
     compileAll.dependsOn it
     compilerOptions {
@@ -69,20 +85,23 @@ allprojects {
       '-Xlint:finally',
       '-Xlint:static',
       '-Xlint:deprecation',
+      '-Xlint:unchecked',
+      '-Xlint:rawtypes',
+      '-Werror'
     ])
-    if (!allowCompilationWarnings) {
-      options.compilerArgs.addAll(['-Werror'])
+    if (allowCompilationWarnings) {
+      options.compilerArgs.remove('-Werror')
     }
 
-    if (!project.path.contains("testing-tools")) {
+    if (project.path.contains("testing-tools")) {
       // testing tools have 100+ errors because of this
       // skipping them for now
-      options.compilerArgs.addAll(['-Xlint:rawtypes'])
+      options.compilerArgs.remove('-Xlint:rawtypes')
     }
   }
 
   jacoco {
-    toolVersion = '0.8.11'
+    toolVersion = libs.versions.jacoco.get()
     if (project.tasks.findByName('integrationTest')) {
       applyTo integrationTest
     }
@@ -196,7 +215,7 @@ task jacocoRootReport(type: JacocoReport) {
     xml.required = true
     // xml.enabled = true FIXME: deprecated, breaking latest versions of gradle.
     csv.required = true
-    html.destination file("build/reports/jacocoHtml")
+    html.outputLocation = file("build/reports/jacocoHtml")
   }
   onlyIf = { true }
 }

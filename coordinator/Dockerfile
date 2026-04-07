@@ -1,5 +1,5 @@
 # BUILDER image
-FROM eclipse-temurin:21-jdk-noble AS builder
+FROM eclipse-temurin:25-jdk-noble AS builder
 
 RUN mkdir -p /libs
 COPY --from=libs ./** /libs
@@ -26,7 +26,7 @@ RUN bcJar=$(set -- blob-compressor*.jar; echo $1) && \
 RUN rm -rf unpacked-blob-compressor unpacked-blob-shnarf-calculator
 
 # FINAL image
-FROM eclipse-temurin:21-jre-noble
+FROM eclipse-temurin:25-jre-noble
 
 WORKDIR /opt/consensys/linea/coordinator
 

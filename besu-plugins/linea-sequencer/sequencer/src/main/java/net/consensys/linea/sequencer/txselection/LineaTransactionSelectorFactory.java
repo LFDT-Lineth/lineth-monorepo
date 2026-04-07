@@ -121,8 +121,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
 
   @Override
   public PluginTransactionSelector create(
-      final ProcessableBlockHeader pendingBlockHeader,
-      final SelectorsStateManager selectorsStateManager) {
+      ProcessableBlockHeader pendingBlockHeader, SelectorsStateManager selectorsStateManager) {
     final var selector =
         new LineaTransactionSelector(
             selectorsStateManager,

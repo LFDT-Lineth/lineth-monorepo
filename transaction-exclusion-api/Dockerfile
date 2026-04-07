@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-noble
 WORKDIR /opt/consensys/linea/transaction-exclusion-api/
 
 RUN mkdir -p logs

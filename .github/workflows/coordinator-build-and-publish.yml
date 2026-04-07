@@ -78,11 +78,8 @@ jobs:
 
       - name: Set up Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
-        with:
-          distribution: temurin
-          java-version: 21
 
-      - name: Build besu from source 
+      - name: Build besu from source
         shell: bash
         run: ./gradlew buildAndUpdateBesuVersionInLibsVersions -PskipDownloadBesuDist=true
         env:

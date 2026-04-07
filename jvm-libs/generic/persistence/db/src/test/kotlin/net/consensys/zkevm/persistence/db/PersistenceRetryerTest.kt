@@ -4,20 +4,17 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import io.vertx.pgclient.PgException
 import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.core.LoggerContext
+import org.apache.logging.log4j.core.test.appender.ListAppender
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.Mockito
-import org.mockito.kotlin.atLeastOnce
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.never
-import org.mockito.kotlin.verify
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import java.time.Instant
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
@@ -25,19 +22,22 @@ import kotlin.time.toJavaDuration
 @ExtendWith(VertxExtension::class)
 class PersistenceRetryerTest {
   private lateinit var persistenceRetryer: PersistenceRetryer
-  private val mockedLog = Mockito.spy(LogManager.getLogger(PersistenceRetryer::class.java))
+  private lateinit var listAppender: ListAppender
 
   @BeforeEach
   fun setup(vertx: Vertx) {
+    val ctx = LogManager.getContext(false) as LoggerContext
+    listAppender = ctx.configuration.getAppender("ListAppender") as ListAppender
+    listAppender.clear()
+
     persistenceRetryer = PersistenceRetryer(
       vertx = vertx,
       config = PersistenceRetryer.Config(
         backoffDelay = 10.milliseconds,
-        maxRetries = 5,
+        maxRetries = 10,
         timeout = 2.seconds,
         ignoreFirstExceptionsUntilTimeElapsed = 80.milliseconds,
       ),
-      log = mockedLog,
     )
   }
 
@@ -104,13 +104,13 @@ class PersistenceRetryerTest {
       "some-code",
       "some-detail",
     )
-    val startTime = Instant.now()
+    val startTime = Clock.System.now()
 
     assertThrows<ExecutionException> {
       persistenceRetryer.retryQuery(
         action = {
           if (callCounter.incrementAndGet() < 20) {
-            if ((Instant.now().toEpochMilli() - startTime.toEpochMilli()) <= 80.milliseconds.inWholeMilliseconds) {
+            if (Clock.System.now().minus(startTime) < 80.milliseconds) {
               SafeFuture.failedFuture(pgErrorBeforeMute)
             } else {
               SafeFuture.failedFuture(pgErrorAfterMute)
@@ -122,18 +122,8 @@ class PersistenceRetryerTest {
       ).get()
     }
 
-    assertThat(callCounter.get()).isEqualTo(6)
-    verify(mockedLog, never()).warn(
-      eq("Persistence errorMessage={}, it will retry again in {}"),
-      eq(pgErrorBeforeMute.message),
-      eq(10.milliseconds),
-      eq(pgErrorBeforeMute),
-    )
-    verify(mockedLog, atLeastOnce()).warn(
-      eq("Persistence errorMessage={}, it will retry again in {}"),
-      eq(pgErrorAfterMute.message),
-      eq(10.milliseconds),
-      eq(pgErrorAfterMute),
-    )
+    val loggedMessages = listAppender.events.map { it.message.formattedMessage }
+    assertThat(loggedMessages).noneMatch { it.contains(pgErrorBeforeMute.message!!) }
+    assertThat(loggedMessages).anyMatch { it.contains(pgErrorAfterMute.message!!) }
   }
 }

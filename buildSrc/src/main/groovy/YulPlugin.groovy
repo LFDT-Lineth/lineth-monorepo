@@ -46,7 +46,7 @@ class YulExtension {
 }
 
 @CacheableTask
-class YulCompile extends SourceTask {
+abstract class YulCompile extends SourceTask {
     @Input
     String outputDir
 

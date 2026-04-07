@@ -16,6 +16,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
+import com.google.gson.Strictness;
 import com.google.gson.TypeAdapter;
 import com.google.gson.internal.bind.util.ISO8601Utils;
 import com.google.gson.stream.JsonReader;
@@ -409,7 +410,7 @@ public class JSON {
         JsonReader jsonReader = new JsonReader(new StringReader(body));
         // see
         // https://google-gson.googlecode.com/svn/trunk/gson/docs/javadocs/com/google/gson/stream/JsonReader.html#setLenient(boolean)
-        jsonReader.setLenient(true);
+        jsonReader.setStrictness(Strictness.LENIENT);
         return gson.fromJson(jsonReader, returnType);
       } else {
         return gson.fromJson(body, returnType);
