@@ -12,7 +12,7 @@
     "test": "pnpm run -r --if-present test"
   },
   "devDependencies": {
-    "@types/node": "22.19.15",
+    "@types/node": "24.12.2",
     "eslint": "catalog:",
     "husky": "9.1.7",
     "prettier": "catalog:",
