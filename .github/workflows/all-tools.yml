@@ -134,7 +134,7 @@ jobs:
           tags: |
             ${{ env.IMAGE_NAME }}:${{ env.COMMIT_TAG }}
           cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
+          cache-to: ${{ github.actor != 'dependabot[bot]' && format('type=registry,ref={0}:buildcache,mode=max', env.IMAGE_NAME) || '' }}
           build-args: |
             NODE_VERSION=${{ steps.get-node-version.outputs.node-version }}
 
