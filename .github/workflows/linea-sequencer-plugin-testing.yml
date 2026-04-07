@@ -17,7 +17,7 @@ jobs:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-large
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Tracer Environment # configures Go, Java, and Gradle
         uses: ./.github/actions/setup-tracer-environment
@@ -51,7 +51,7 @@ jobs:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-large
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Tracer Environment
         uses: ./.github/actions/setup-tracer-environment

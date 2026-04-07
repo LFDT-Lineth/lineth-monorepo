@@ -30,7 +30,7 @@ jobs:
       develop_tag: ${{ steps.compute-version-tags.outputs.develop_tag}}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Compute version tags
         id: compute-version-tags
         uses: ./.github/actions/compute-version-tags

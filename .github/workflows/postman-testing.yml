@@ -17,7 +17,7 @@ jobs:
     name: Postman & SDK tests
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs

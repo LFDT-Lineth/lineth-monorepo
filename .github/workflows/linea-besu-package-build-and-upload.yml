@@ -40,7 +40,7 @@ jobs:
       dockerimage: ${{ steps.build-plugins-and-assemble.outputs.dockerimage }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build plugins and assemble
         id: build-plugins-and-assemble

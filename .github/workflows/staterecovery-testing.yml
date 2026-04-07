@@ -32,7 +32,7 @@ jobs:
     name: Staterecovery tests
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Setup Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
 

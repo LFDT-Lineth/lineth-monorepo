@@ -77,7 +77,7 @@ jobs:
       develop_tag: ${{ steps.compute-version-tags.outputs.develop_tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Compute version tags
         id: compute-version-tags
@@ -152,7 +152,7 @@ jobs:
       image_tagged_transaction_exclusion_api: ${{ steps.image_tag_push_transaction_exclusion_api.outputs.image_tagged }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1

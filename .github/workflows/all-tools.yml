@@ -29,7 +29,7 @@ jobs:
       all-tools: ${{ steps.filter.outputs['all-tools'] }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Filter commit changes
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2
         id: filter
@@ -53,7 +53,7 @@ jobs:
     if: ${{ needs.changes.outputs['all-tools'] == 'false' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Check image tags exist
         uses: ./.github/actions/check-image-tags-exist
         with:
@@ -69,7 +69,7 @@ jobs:
       image_tagged: ${{ steps.image_tag_push.outputs.image_tagged }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Tag and push image
         id: image_tag_push
         uses: ./.github/actions/image-tag-and-push
@@ -96,7 +96,7 @@ jobs:
     name: All tools build and push
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Login to Docker Hub
         if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}

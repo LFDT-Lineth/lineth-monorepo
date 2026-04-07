@@ -40,7 +40,7 @@ jobs:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 

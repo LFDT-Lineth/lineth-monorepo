@@ -14,7 +14,7 @@ jobs:
       profile-files: ${{ steps.list-profiles.outputs.files }}
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Split and list profiles
         id: list-profiles
@@ -38,7 +38,7 @@ jobs:
       DOCKER_IMAGE: ${{ inputs.dockerimage }}
     steps:
       - name: Check repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download local docker image artifacts
         uses: actions/download-artifact@v7

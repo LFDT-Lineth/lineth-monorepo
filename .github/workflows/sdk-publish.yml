@@ -41,7 +41,7 @@ jobs:
           exit 1
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -64,7 +64,7 @@ jobs:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     steps:
       - name: Checkout release commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.release_commit_sha }}
 
@@ -127,7 +127,7 @@ jobs:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     steps:
       - name: Checkout release commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.release_commit_sha }}
 

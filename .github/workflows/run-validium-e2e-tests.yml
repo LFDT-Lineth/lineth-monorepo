@@ -32,7 +32,7 @@ jobs:
         uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
 

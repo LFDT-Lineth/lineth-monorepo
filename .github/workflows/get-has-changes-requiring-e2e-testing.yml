@@ -16,7 +16,7 @@ jobs:
       has_changes_requiring_e2e_testing: ${{ steps.evaluate.outputs.result }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Filter for e2e-relevant paths
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2
