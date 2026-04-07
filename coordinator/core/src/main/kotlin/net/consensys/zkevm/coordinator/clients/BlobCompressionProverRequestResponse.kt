@@ -3,7 +3,9 @@ package net.consensys.zkevm.coordinator.clients
 import linea.domain.BlockInterval
 import linea.domain.BlockIntervals
 import net.consensys.zkevm.domain.ConflationCalculationResult
+import net.consensys.zkevm.domain.StartBlockTimestampProvider
 import net.consensys.zkevm.ethereum.coordination.blob.ShnarfResult
+import kotlin.time.Instant
 
 data class BlobCompressionProofRequest(
   val compressedData: ByteArray,
@@ -16,7 +18,8 @@ data class BlobCompressionProofRequest(
   val commitment: ByteArray,
   val kzgProofContract: ByteArray,
   val kzgProofSideCar: ByteArray,
-) : BlockInterval {
+  override val startBlockTimestamp: Instant,
+) : BlockInterval, StartBlockTimestampProvider {
   override val startBlockNumber: ULong
     get() = conflations.first().startBlockNumber
   override val endBlockNumber: ULong
@@ -38,6 +41,7 @@ data class BlobCompressionProofRequest(
     if (!commitment.contentEquals(other.commitment)) return false
     if (!kzgProofContract.contentEquals(other.kzgProofContract)) return false
     if (!kzgProofSideCar.contentEquals(other.kzgProofSideCar)) return false
+    if (startBlockTimestamp != other.startBlockTimestamp) return false
 
     return true
   }
@@ -53,6 +57,7 @@ data class BlobCompressionProofRequest(
     result = 31 * result + commitment.contentHashCode()
     result = 31 * result + kzgProofContract.contentHashCode()
     result = 31 * result + kzgProofSideCar.contentHashCode()
+    result = 31 * result + startBlockTimestamp.hashCode()
     return result
   }
 }

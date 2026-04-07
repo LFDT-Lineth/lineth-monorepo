@@ -59,7 +59,13 @@ class InvalidityProofAssembler(
     )
 
     return invalidityProofClient
-      .isProofAlreadyDone(InvalidityProofIndex(ftx.simulatedExecutionBlockNumber, ftx.ftxNumber))
+      .isProofAlreadyDone(
+        InvalidityProofIndex(
+          simulatedExecutionBlockNumber = ftx.simulatedExecutionBlockNumber,
+          ftxNumber = ftx.ftxNumber,
+          startBlockTimestamp = ftx.simulatedExecutionBlockTimestamp,
+        ),
+      )
       .thenCompose { alreadyDone ->
         if (alreadyDone) {
           SafeFuture.completedFuture(InvalidityProofResponse(ftx.ftxNumber))

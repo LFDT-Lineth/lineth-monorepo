@@ -132,6 +132,7 @@ class ProofGeneratingConflationHandlerImpl(
           ExecutionProofIndex(
             startBlockNumber = batch.startBlockNumber,
             endBlockNumber = batch.endBlockNumber,
+            startBlockTimestamp = conflation.blocks.first().headerSummary.timestamp,
           ),
         ).thenCompose { responseAlreadyDone ->
           if (responseAlreadyDone) {

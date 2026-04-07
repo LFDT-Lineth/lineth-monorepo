@@ -126,6 +126,7 @@ class FileBasedExecutionProverClientV2(
       ExecutionProofIndex(
         startBlockNumber = request.startBlockNumber,
         endBlockNumber = request.endBlockNumber,
+        startBlockTimestamp = request.startBlockTimestamp,
       )
     },
     responseMapper = {

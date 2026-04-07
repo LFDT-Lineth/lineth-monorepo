@@ -44,6 +44,7 @@ data class AggregationProofRequestDto(
             ExecutionProofIndex(
               startBlockNumber = blockInterval.startBlockNumber,
               endBlockNumber = blockInterval.endBlockNumber,
+              startBlockTimestamp = proofsToAggregate.startBlockTimestamp,
             ),
           )
         }
@@ -55,6 +56,7 @@ data class AggregationProofRequestDto(
               startBlockNumber = it.startBlockNumber,
               endBlockNumber = it.endBlockNumber,
               hash = it.hash,
+              startBlockTimestamp = it.startBlockTimestamp,
             ),
           )
         }
@@ -194,6 +196,7 @@ class FileBasedProofAggregationClientV2(
           startBlockNumber = request.startBlockNumber,
           endBlockNumber = request.endBlockNumber,
           hash = hash,
+          startBlockTimestamp = request.startBlockTimestamp,
         )
       }
     }

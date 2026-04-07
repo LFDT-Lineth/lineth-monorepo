@@ -65,6 +65,7 @@ class FileBasedBlobCompressionProverClientV2(
         startBlockNumber = request.startBlockNumber,
         endBlockNumber = request.endBlockNumber,
         hash = request.expectedShnarfResult.expectedShnarf,
+        startBlockTimestamp = request.startBlockTimestamp,
       )
     }
 

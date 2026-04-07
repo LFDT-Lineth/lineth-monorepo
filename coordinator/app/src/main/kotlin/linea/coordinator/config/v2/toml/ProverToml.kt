@@ -6,6 +6,7 @@ import net.consensys.zkevm.coordinator.clients.prover.ProversConfig
 import java.nio.file.Path
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 data class ProverToml(
   val fsInprogressRequestWritingSuffix: String = ".inprogress_coordinator_writing",
@@ -17,6 +18,7 @@ data class ProverToml(
   val invalidity: ProverDirectoriesToml? = null,
   val proofAggregation: ProverDirectoriesToml,
   val switchBlockNumberInclusive: ULong? = null,
+  val switchBlockTimestamp: Instant? = null,
   val new: ProverToml? = null,
   val enableRequestFilesCleanup: Boolean = false,
 ) {
@@ -26,6 +28,11 @@ data class ProverToml(
   )
 
   fun reified(): ProversConfig {
+    val mergedSwitchBlockNumberInclusive = switchBlockNumberInclusive ?: new?.switchBlockNumberInclusive
+    val mergedSwitchBlockTimestamp = switchBlockTimestamp ?: new?.switchBlockTimestamp
+    require(!(mergedSwitchBlockNumberInclusive != null && mergedSwitchBlockTimestamp != null)) {
+      "Only one of switchBlockNumberInclusive and switchBlockTimestamp may be set in [prover] config"
+    }
     return ProversConfig(
       proverA =
       ProverConfig(
@@ -67,7 +74,8 @@ data class ProverToml(
           pollingTimeout = this.fsPollingTimeout,
         ),
       ),
-      switchBlockNumberInclusive = this.switchBlockNumberInclusive ?: this.new?.switchBlockNumberInclusive,
+      switchBlockNumberInclusive = mergedSwitchBlockNumberInclusive,
+      switchBlockTimestamp = mergedSwitchBlockTimestamp,
       proverB =
       this.new?.let { newProverConfig ->
         ProverConfig(

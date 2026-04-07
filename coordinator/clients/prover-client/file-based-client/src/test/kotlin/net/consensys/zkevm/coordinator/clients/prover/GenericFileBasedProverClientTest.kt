@@ -19,6 +19,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 import kotlin.time.toJavaDuration
 
 @ExtendWith(VertxExtension::class)
@@ -42,7 +43,11 @@ class GenericFileBasedProverClientTest {
     }
   }
 
-  data class ProofIndexImpl(val startBlockNumber: ULong, val endBlockNumber: ULong) : ProofIndex
+  data class ProofIndexImpl(
+    val startBlockNumber: ULong,
+    val endBlockNumber: ULong,
+    override val startBlockTimestamp: Instant = Instant.fromEpochSeconds(0),
+  ) : ProofIndex
   private val requestFileNameProvider = object : ProverFileNameProvider<ProofIndexImpl> {
     override fun getFileName(proofIndex: ProofIndexImpl): String {
       return "request-${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}-proof-request.json"

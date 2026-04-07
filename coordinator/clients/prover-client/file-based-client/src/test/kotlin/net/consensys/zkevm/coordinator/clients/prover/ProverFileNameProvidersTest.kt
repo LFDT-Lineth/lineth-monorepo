@@ -6,6 +6,7 @@ import net.consensys.zkevm.domain.CompressionProofIndex
 import net.consensys.zkevm.domain.ExecutionProofIndex
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import kotlin.time.Instant
 
 class ProverFileNameProvidersTest {
 
@@ -17,6 +18,7 @@ class ProverFileNameProvidersTest {
         ExecutionProofIndex(
           startBlockNumber = 11u,
           endBlockNumber = 17u,
+          startBlockTimestamp = Instant.fromEpochSeconds(0),
         ),
       ),
     )
@@ -33,6 +35,7 @@ class ProverFileNameProvidersTest {
           startBlockNumber = 11u,
           endBlockNumber = 17u,
           hash = hash,
+          startBlockTimestamp = Instant.fromEpochSeconds(0),
         ),
       ),
     )
@@ -46,6 +49,7 @@ class ProverFileNameProvidersTest {
         startBlockNumber = 1uL,
         endBlockNumber = 11uL,
         hash = requestHash,
+        startBlockTimestamp = Instant.fromEpochSeconds(0),
       ),
     )
 
@@ -65,6 +69,7 @@ class ProverFileNameProvidersTest {
           startBlockNumber = 11u,
           endBlockNumber = 27u,
           hash = hash,
+          startBlockTimestamp = Instant.fromEpochSeconds(0),
         ),
       ),
     )

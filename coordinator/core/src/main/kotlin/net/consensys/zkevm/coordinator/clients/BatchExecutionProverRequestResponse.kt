@@ -4,6 +4,8 @@ import build.linea.clients.GetZkEVMStateMerkleProofResponse
 import linea.domain.Block
 import linea.domain.BlockInterval
 import linea.domain.EthLog
+import net.consensys.zkevm.domain.StartBlockTimestampProvider
+import kotlin.time.Instant
 
 data class BatchExecutionProofRequestV1(
   val blocks: List<Block>,
@@ -11,11 +13,13 @@ data class BatchExecutionProofRequestV1(
   val tracesResponse: GenerateTracesResponse,
   val type2StateData: GetZkEVMStateMerkleProofResponse,
   val keccakParentStateRootHash: ByteArray,
-) : BlockInterval {
+) : BlockInterval, StartBlockTimestampProvider {
   override val startBlockNumber: ULong
     get() = blocks.first().number
   override val endBlockNumber: ULong
     get() = blocks.last().number
+  override val startBlockTimestamp: Instant
+    get() = blocks.first().headerSummary.timestamp
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true

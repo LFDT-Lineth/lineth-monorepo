@@ -89,6 +89,7 @@ class ZkProofCreationCoordinatorImplTest {
           ExecutionProofIndex(
             startBlockNumber = 123UL,
             endBlockNumber = 124UL,
+            startBlockTimestamp = block1.headerSummary.timestamp,
           ),
         ),
       )

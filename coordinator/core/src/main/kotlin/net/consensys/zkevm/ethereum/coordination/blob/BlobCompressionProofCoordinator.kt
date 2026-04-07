@@ -148,6 +148,7 @@ class BlobCompressionProofCoordinator(
         commitment = commitment,
         kzgProofContract = kzgProofContract,
         kzgProofSideCar = kzgProofSideCar,
+        startBlockTimestamp = blobStartBlockTime,
       )
     return blobCompressionProverClient.createProofRequest(proofRequest)
       .thenApply { proofIndex ->

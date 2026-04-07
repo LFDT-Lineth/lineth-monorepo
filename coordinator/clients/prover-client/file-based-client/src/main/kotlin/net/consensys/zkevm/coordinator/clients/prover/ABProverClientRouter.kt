@@ -10,7 +10,9 @@ import net.consensys.zkevm.domain.ExecutionProofIndex
 import net.consensys.zkevm.domain.InvalidityProofIndex
 import net.consensys.zkevm.domain.ProofIndex
 import net.consensys.zkevm.domain.ProofsToAggregate
+import net.consensys.zkevm.domain.StartBlockTimestampProvider
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Instant
 
 class StartBlockNumberBasedSwitchPredicate(
   private val switchStartBlockNumberInclusive: ULong,
@@ -29,6 +31,19 @@ class StartBlockNumberBasedSwitchPredicate(
         throw IllegalArgumentException("Unsupported proof request or index type: ${proofRequestOrIndex::class}")
     }
     return startBlockNumber >= switchStartBlockNumberInclusive
+  }
+}
+
+class StartBlockTimestampBasedSwitchPredicate(
+  private val switchStartBlockTimestampInclusive: Instant,
+) {
+  fun invoke(proofRequestOrIndex: Any): Boolean {
+    val startBlockTimestamp =
+      (proofRequestOrIndex as? StartBlockTimestampProvider)?.startBlockTimestamp
+        ?: throw IllegalArgumentException(
+          "Unsupported proof request or index type: ${proofRequestOrIndex::class}",
+        )
+    return startBlockTimestamp >= switchStartBlockTimestampInclusive
   }
 }
 

@@ -27,6 +27,7 @@ class InvalidityProofProviderImpl(
           InvalidityProofIndex(
             ftxNumber = forcedTransaction.ftxNumber,
             simulatedExecutionBlockNumber = forcedTransaction.simulatedExecutionBlockNumber,
+            startBlockTimestamp = forcedTransaction.simulatedExecutionBlockTimestamp,
           )
         }
       }

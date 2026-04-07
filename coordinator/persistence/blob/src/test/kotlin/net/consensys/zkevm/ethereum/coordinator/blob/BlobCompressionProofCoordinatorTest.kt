@@ -79,6 +79,7 @@ class BlobCompressionProofCoordinatorTest {
             startBlockNumber = request.conflations.first().startBlockNumber,
             endBlockNumber = request.conflations.last().endBlockNumber,
             hash = request.expectedShnarfResult.expectedShnarf,
+            startBlockTimestamp = request.startBlockTimestamp,
           ),
         )
       }
@@ -174,14 +175,16 @@ class BlobCompressionProofCoordinatorTest {
               commitment = shnarfResult.commitment,
               kzgProofContract = shnarfResult.kzgProofContract,
               kzgProofSideCar = shnarfResult.kzgProofSideCar,
+              startBlockTimestamp = startBlockTime,
             ),
           )
         verify(blobCompressionProverClient, times(1))
           .findProofResponse(
             CompressionProofIndex(
-              expectedStartBlock,
-              expectedEndBlock,
-              shnarfResult.expectedShnarf,
+              startBlockNumber = expectedStartBlock,
+              endBlockNumber = expectedEndBlock,
+              hash = shnarfResult.expectedShnarf,
+              startBlockTimestamp = startBlockTime,
             ),
           )
       }
@@ -280,6 +283,7 @@ class BlobCompressionProofCoordinatorTest {
               commitment = shnarfResult.commitment,
               kzgProofContract = shnarfResult.kzgProofContract,
               kzgProofSideCar = shnarfResult.kzgProofSideCar,
+              startBlockTimestamp = blob1.startBlockTime,
             ),
           )
         verify(blobCompressionProverClient, times(1))
@@ -295,23 +299,26 @@ class BlobCompressionProofCoordinatorTest {
               commitment = shnarfResult.commitment,
               kzgProofContract = shnarfResult.kzgProofContract,
               kzgProofSideCar = shnarfResult.kzgProofSideCar,
+              startBlockTimestamp = blob2.startBlockTime,
             ),
           )
 
         verify(blobCompressionProverClient, times(1))
           .findProofResponse(
             CompressionProofIndex(
-              blob1.startBlockNumber,
-              blob1.endBlockNumber,
-              shnarfResult.expectedShnarf,
+              startBlockNumber = blob1.startBlockNumber,
+              endBlockNumber = blob1.endBlockNumber,
+              hash = shnarfResult.expectedShnarf,
+              startBlockTimestamp = blob1.startBlockTime,
             ),
           )
         verify(blobCompressionProverClient, times(1))
           .findProofResponse(
             CompressionProofIndex(
-              blob2.startBlockNumber,
-              blob2.endBlockNumber,
-              shnarfResult.expectedShnarf,
+              startBlockNumber = blob2.startBlockNumber,
+              endBlockNumber = blob2.endBlockNumber,
+              hash = shnarfResult.expectedShnarf,
+              startBlockTimestamp = blob2.startBlockTime,
             ),
           )
       }

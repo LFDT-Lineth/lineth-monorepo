@@ -22,11 +22,19 @@ import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 import kotlin.time.toJavaDuration
 
 @ExtendWith(VertxExtension::class)
 class ProverClientFactoryTest {
-  private fun buildProversConfig(tmpDir: Path, switchBlockNumber: Int? = null): ProversConfig {
+  private fun buildProversConfig(
+    tmpDir: Path,
+    switchBlockNumber: Int? = null,
+    switchBlockTimestamp: Instant? = null,
+  ): ProversConfig {
+    require(!(switchBlockNumber != null && switchBlockTimestamp != null)) {
+      "Only one of switchBlockNumber and switchBlockTimestamp may be set"
+    }
     fun buildProverConfig(proverDir: Path): ProverConfig {
       return ProverConfig(
         execution = FileBasedProverConfig(
@@ -59,8 +67,12 @@ class ProverClientFactoryTest {
     return ProversConfig(
       proverA = buildProverConfig(tmpDir.resolve("prover/v2")),
       switchBlockNumberInclusive = switchBlockNumber?.toULong(),
-      proverB = switchBlockNumber?.let {
+      switchBlockTimestamp = switchBlockTimestamp,
+      proverB =
+      if (switchBlockNumber != null || switchBlockTimestamp != null) {
         buildProverConfig(tmpDir.resolve("prover/v3"))
+      } else {
+        null
       },
       enableRequestFilesCleanup = false,
     )
@@ -78,6 +90,7 @@ class ProverClientFactoryTest {
         startBlockNumber = 1uL,
         endBlockNumber = 9uL,
         hash = Random.nextBytes(32),
+        startBlockTimestamp = Instant.fromEpochSeconds(1),
       ),
     ),
     executionProofs = BlockIntervals(startingBlockNumber = 1uL, listOf(9uL)),
@@ -87,6 +100,7 @@ class ProverClientFactoryTest {
     parentAggregationLastL1RollingHash = ByteArrayExt.random32(),
     parentAggregationLastFtxNumber = 0uL,
     parentAggregationLastFtxRollingHash = ByteArrayExt.random32(),
+    startBlockTimestamp = Instant.fromEpochSeconds(1),
   )
   private val request2 = ProofsToAggregate(
     compressionProofIndexes = listOf(
@@ -94,6 +108,7 @@ class ProverClientFactoryTest {
         startBlockNumber = 10uL,
         endBlockNumber = 19uL,
         hash = Random.nextBytes(32),
+        startBlockTimestamp = Instant.fromEpochSeconds(10),
       ),
     ),
     invalidityProofs = emptyList(),
@@ -103,6 +118,7 @@ class ProverClientFactoryTest {
     parentAggregationLastL1RollingHash = ByteArrayExt.random32(),
     parentAggregationLastFtxNumber = 0uL,
     parentAggregationLastFtxRollingHash = ByteArrayExt.random32(),
+    startBlockTimestamp = Instant.fromEpochSeconds(10),
   )
   private val request3 = ProofsToAggregate(
     compressionProofIndexes = listOf(
@@ -110,6 +126,7 @@ class ProverClientFactoryTest {
         startBlockNumber = 300uL,
         endBlockNumber = 319uL,
         hash = Random.nextBytes(32),
+        startBlockTimestamp = Instant.fromEpochSeconds(300),
       ),
     ),
     executionProofs = BlockIntervals(startingBlockNumber = 300uL, listOf(319uL)),
@@ -119,6 +136,7 @@ class ProverClientFactoryTest {
     parentAggregationLastL1RollingHash = ByteArrayExt.random32(),
     parentAggregationLastFtxNumber = 0uL,
     parentAggregationLastFtxRollingHash = ByteArrayExt.random32(),
+    startBlockTimestamp = Instant.fromEpochSeconds(300),
   )
 
   @BeforeEach
@@ -137,6 +155,33 @@ class ProverClientFactoryTest {
     assertThat(proverClient).isInstanceOf(ABProverClientRouter::class.java)
 
     // swallow timeout exception because responses are not available
+    kotlin.runCatching { proverClient.requestProof(request1).get() }
+    kotlin.runCatching { proverClient.requestProof(request2).get() }
+    kotlin.runCatching { proverClient.requestProof(request3).get() }
+
+    await()
+      .atMost(5.seconds.toJavaDuration())
+      .untilAsserted {
+        Files.list(testTmpDir.resolve("prover/v2/aggregation/requests")).use {
+          assertThat(it.count()).isEqualTo(2)
+        }
+        Files.list(testTmpDir.resolve("prover/v3/aggregation/requests")).use {
+          assertThat(it.count()).isEqualTo(1)
+        }
+      }
+  }
+
+  @Test
+  fun `should create a prover with routing when switchBlockTimestamp is defined`() {
+    val factory =
+      ProverClientFactory(
+        vertx,
+        buildProversConfig(testTmpDir, switchBlockTimestamp = Instant.fromEpochSeconds(50)),
+        metricsFacade,
+      )
+    val proverClient = factory.proofAggregationProverClient()
+    assertThat(proverClient).isInstanceOf(ABProverClientRouter::class.java)
+
     kotlin.runCatching { proverClient.requestProof(request1).get() }
     kotlin.runCatching { proverClient.requestProof(request2).get() }
     kotlin.runCatching { proverClient.requestProof(request3).get() }

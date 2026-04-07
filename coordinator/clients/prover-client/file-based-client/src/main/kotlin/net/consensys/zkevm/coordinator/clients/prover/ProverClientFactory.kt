@@ -11,6 +11,7 @@ import net.consensys.zkevm.coordinator.clients.ProofAggregationProverClientV2
 import net.consensys.zkevm.coordinator.clients.ProverClient
 import net.consensys.zkevm.domain.ProofIndex
 import org.apache.logging.log4j.Logger
+import kotlin.time.Instant
 
 class ProverClientFactory(
   private val vertx: Vertx,
@@ -55,6 +56,7 @@ class ProverClientFactory(
       proverAConfig = config.proverA.execution,
       proverBConfig = config.proverB?.execution,
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
+      switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
       FileBasedExecutionProverClientV2(
         config = proverConfig,
@@ -71,6 +73,7 @@ class ProverClientFactory(
       proverAConfig = config.proverA.blobCompression,
       proverBConfig = config.proverB?.blobCompression,
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
+      switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
       FileBasedBlobCompressionProverClientV2(
         config = proverConfig,
@@ -88,6 +91,7 @@ class ProverClientFactory(
       proverAConfig = config.proverA,
       proverBConfig = config.proverB,
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
+      switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
       FileBasedProofAggregationClientV2(
         config = proverConfig.proofAggregation,
@@ -108,6 +112,7 @@ class ProverClientFactory(
       proverAConfig = config.proverA,
       proverBConfig = config.proverB,
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
+      switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
       FileBasedInvalidityProverClient(
         config = proverConfig.invalidity!!,
@@ -121,18 +126,28 @@ class ProverClientFactory(
     proverAConfig: TProverConfig,
     proverBConfig: TProverConfig?,
     switchBlockNumberInclusive: ULong?,
+    switchBlockTimestamp: Instant?,
     clientBuilder: (TProverConfig) -> ProverClient<ProofRequest, ProofResponse, TProofIndex>,
   ): ProverClient<ProofRequest, ProofResponse, TProofIndex>
     where ProofRequest : Any, TProofIndex : ProofIndex {
-    return if (switchBlockNumberInclusive != null) {
-      val switchPredicate = StartBlockNumberBasedSwitchPredicate(switchBlockNumberInclusive)
-      ABProverClientRouter(
-        proverA = clientBuilder(proverAConfig),
-        proverB = clientBuilder(proverBConfig!!),
-        switchToProverBPredicate = switchPredicate::invoke,
-      )
-    } else {
-      clientBuilder(proverAConfig)
+    return when {
+      switchBlockNumberInclusive != null -> {
+        val switchPredicate = StartBlockNumberBasedSwitchPredicate(switchBlockNumberInclusive)
+        ABProverClientRouter(
+          proverA = clientBuilder(proverAConfig),
+          proverB = clientBuilder(proverBConfig!!),
+          switchToProverBPredicate = switchPredicate::invoke,
+        )
+      }
+      switchBlockTimestamp != null -> {
+        val switchPredicate = StartBlockTimestampBasedSwitchPredicate(switchBlockTimestamp)
+        ABProverClientRouter(
+          proverA = clientBuilder(proverAConfig),
+          proverB = clientBuilder(proverBConfig!!),
+          switchToProverBPredicate = switchPredicate::invoke,
+        )
+      }
+      else -> clientBuilder(proverAConfig)
     }
   }
 }

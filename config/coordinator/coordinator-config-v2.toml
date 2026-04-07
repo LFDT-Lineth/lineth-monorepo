@@ -69,6 +69,8 @@ fs-responses-directory = "/data/prover/v3/aggregation/responses"
 
 #[prover.new]
 #switch-block-number-inclusive=1000
+# Only one of switch-block-number-inclusive and switch-block-timestamp may be set (Instant, e.g. epoch seconds or ISO-8601).
+#switch-block-timestamp = 1700000000
 #[prover.new.execution]
 #fs-requests-directory = "/data/prover/v3/execution/requests"
 #fs-responses-directory = "/data/prover/v3/execution/responses"

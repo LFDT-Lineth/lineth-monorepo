@@ -151,6 +151,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
           startBlockNumber = proofReq.startBlockNumber,
           endBlockNumber = proofReq.conflations.last().endBlockNumber,
           hash = proofReq.expectedShnarfResult.dataHash,
+          startBlockTimestamp = proofReq.startBlockTimestamp,
         )
         proofIndexExpectedProofResponseMap[proofIndex] = expectedBlobCompressionProofResponse!!
         SafeFuture.completedFuture(proofIndex)

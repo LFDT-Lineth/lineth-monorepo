@@ -109,6 +109,7 @@ class FileBasedInvalidityProverClient(
       return InvalidityProofIndex(
         simulatedExecutionBlockNumber = request.simulatedExecutionBlockNumber,
         ftxNumber = request.ftxNumber,
+        startBlockTimestamp = request.startBlockTimestamp,
       )
     }
   }

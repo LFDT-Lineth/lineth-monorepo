@@ -12,6 +12,7 @@ typealias BlobsToAggregate = BlockInterval
 /**
  * Represents an Aggregation request to the Prover
  * @property parentAggregationLastBlockTimestamp The timestamp of the last block of the previous aggregation.
+ * @property startBlockTimestamp L2 time of the first block in this aggregation span (coordinator routing).
  */
 data class ProofsToAggregate(
   val compressionProofIndexes: List<CompressionProofIndex>,
@@ -22,7 +23,8 @@ data class ProofsToAggregate(
   val parentAggregationLastL1RollingHash: ByteArray,
   val parentAggregationLastFtxNumber: ULong,
   val parentAggregationLastFtxRollingHash: ByteArray,
-) : BlockInterval {
+  override val startBlockTimestamp: Instant,
+) : BlockInterval, StartBlockTimestampProvider {
   override val startBlockNumber = compressionProofIndexes.first().startBlockNumber
   override val endBlockNumber = compressionProofIndexes.last().endBlockNumber
   override fun equals(other: Any?): Boolean {
@@ -43,6 +45,7 @@ data class ProofsToAggregate(
     if (!parentAggregationLastFtxRollingHash.contentEquals(other.parentAggregationLastFtxRollingHash)) return false
     if (startBlockNumber != other.startBlockNumber) return false
     if (endBlockNumber != other.endBlockNumber) return false
+    if (startBlockTimestamp != other.startBlockTimestamp) return false
 
     return true
   }
@@ -58,6 +61,7 @@ data class ProofsToAggregate(
     result = 31 * result + parentAggregationLastFtxRollingHash.contentHashCode()
     result = 31 * result + startBlockNumber.hashCode()
     result = 31 * result + endBlockNumber.hashCode()
+    result = 31 * result + startBlockTimestamp.hashCode()
     return result
   }
 
@@ -65,6 +69,7 @@ data class ProofsToAggregate(
     return "ProofsToAggregate(" +
       "startBlockNumber=$startBlockNumber, " +
       "endBlockNumber=$endBlockNumber, " +
+      "startBlockTimestamp=$startBlockTimestamp, " +
       "compressionProofIndexes=$compressionProofIndexes, " +
       "executionProofs=$executionProofs, " +
       "invalidityProofs=$invalidityProofs, " +

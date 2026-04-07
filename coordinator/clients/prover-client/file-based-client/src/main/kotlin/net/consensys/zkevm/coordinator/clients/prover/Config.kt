@@ -2,10 +2,12 @@ package net.consensys.zkevm.coordinator.clients.prover
 
 import java.nio.file.Path
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 data class ProversConfig(
   val proverA: ProverConfig,
   val switchBlockNumberInclusive: ULong?,
+  val switchBlockTimestamp: Instant?,
   val proverB: ProverConfig?,
   val enableRequestFilesCleanup: Boolean = false,
 )

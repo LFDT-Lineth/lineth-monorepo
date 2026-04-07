@@ -2,6 +2,7 @@ package net.consensys.zkevm.coordinator.clients
 
 import build.linea.clients.GetZkEVMStateMerkleProofResponse
 import build.linea.clients.LineaAccountProof
+import net.consensys.zkevm.domain.StartBlockTimestampProvider
 import kotlin.time.Instant
 
 enum class InvalidityReason {
@@ -36,7 +37,10 @@ data class InvalidityProofRequest(
    * invalidityReason is one of {BadPrecompile, TooManyLogs}, null otherwise
    */
   val zkStateMerkleProof: GetZkEVMStateMerkleProofResponse? = null,
-) {
+) : StartBlockTimestampProvider {
+  override val startBlockTimestamp: Instant
+    get() = simulatedExecutionBlockTimestamp
+
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
