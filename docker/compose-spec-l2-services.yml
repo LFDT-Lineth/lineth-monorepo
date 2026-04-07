@@ -51,7 +51,7 @@ services:
   sequencer:
     hostname: sequencer
     container_name: sequencer
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v6-20260331100616-a39d758}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v6-20260407111827-7d56432}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       l2-genesis-initialization:
@@ -126,7 +126,7 @@ services:
   l2-node-besu:
     hostname: l2-node-besu
     container_name: l2-node-besu
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v6-20260331100616-a39d758}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v6-20260407111827-7d56432}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -170,7 +170,7 @@ services:
   l2-node-besu-leader:
     hostname: l2-node-besu-leader
     container_name: l2-node-besu-leader
-    image: consensys/linea-besu-package-with-fleet:${BESU_PACKAGE_TAG:-beta-v6-20260331100616-a39d758}
+    image: consensys/linea-besu-package-with-fleet:${BESU_PACKAGE_TAG:-beta-v6-20260407111827-7d56432}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -214,7 +214,7 @@ services:
   l2-node-besu-follower:
     hostname: l2-node-besu-follower
     container_name: l2-node-besu-follower
-    image: consensys/linea-besu-package-with-fleet:${BESU_PACKAGE_TAG:-beta-v6-20260331100616-a39d758}
+    image: consensys/linea-besu-package-with-fleet:${BESU_PACKAGE_TAG:-beta-v6-20260407111827-7d56432}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -266,7 +266,7 @@ services:
   prover-v3: # prover compatible with the traces from zkbesu
     container_name: prover-v3
     hostname: prover-v3
-    image: consensys/linea-prover:${PROVER_TAG:-2fc4392}
+    image: consensys/linea-prover:${PROVER_TAG:-7d56432}
     platform: linux/amd64
     # to avoid spinning up on CI for now
     profiles: [ "l2" ]
@@ -307,7 +307,7 @@ services:
   coordinator:
     hostname: coordinator
     container_name: coordinator
-    image: consensys/linea-coordinator:${COORDINATOR_TAG:-7247ad0}
+    image: consensys/linea-coordinator:${COORDINATOR_TAG:-7d56432}
     profiles: [ "l2", "debug" ]
     depends_on:
       l2-genesis-initialization:
@@ -336,8 +336,8 @@ services:
       config__override__l1-submission__aggregation__signer__type: ${LINEA_COORDINATOR_SIGNER_TYPE:-web3j}
       config__override__l1-submission__data-availability: ${LINEA_COORDINATOR_DATA_AVAILABILITY:-ROLLUP}
       config__override__message-anchoring__signer__type: ${LINEA_COORDINATOR_SIGNER_TYPE:-web3j}
-      dev_LINEA_COORDINATOR_DISABLED: ${dev_LINEA_COORDINATOR_DISABLED:-}
-    command: [ 'sh', '-c', 'if [ "$dev_LINEA_COORDINATOR_DISABLED" = "true" ]; then echo "Coordinator disabled"; else java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005 -Dvertx.configurationFile=/var/lib/coordinator/vertx-options.json -Dlog4j2.configurationFile=/var/lib/coordinator/log4j2-dev.xml -jar libs/coordinator.jar --traces-limits-v5 config/traces-limits-v5.toml --smart-contract-errors config/smart-contract-errors.toml --gas-price-cap-time-of-day-multipliers config/gas-price-cap-time-of-day-multipliers.toml config/coordinator-config.toml; fi' ]
+      dev_LINEA_COORDINATOR_DISABLED: ${dev_LINEA_COORDINATOR_DISABLED:-false}
+    command: [ 'sh', '-c', 'if [ "$$dev_LINEA_COORDINATOR_DISABLED" = "true" ]; then echo "Coordinator disabled"; else java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005 -Dvertx.configurationFile=/var/lib/coordinator/vertx-options.json -Dlog4j2.configurationFile=/var/lib/coordinator/log4j2-dev.xml -jar libs/coordinator.jar --traces-limits-v5 config/traces-limits-v5.toml --smart-contract-errors config/smart-contract-errors.toml --gas-price-cap-time-of-day-multipliers config/gas-price-cap-time-of-day-multipliers.toml config/coordinator-config.toml; fi' ]
     #command: [ 'echo', 'forced exit' ]
     volumes:
       - ./config/l2-genesis-initialization/coordinator-config-v2-hardforks.toml:/opt/consensys/linea/coordinator/config/coordinator-config.toml:ro
@@ -449,7 +449,7 @@ services:
   #      - ../tmp/local/shomei:/data/shomei/:z
 
   shomei-frontend:
-    image: consensys/linea-shomei:3.0.5
+    image: consensys/linea-shomei:${LINEA_SHOMEI_TAG:-3.0.5}
     hostname: shomei-frontend
     container_name: shomei-frontend
     profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
@@ -493,7 +493,7 @@ services:
   transaction-exclusion-api:
     hostname: transaction-exclusion-api
     container_name: transaction-exclusion-api
-    image: consensys/linea-transaction-exclusion-api:${TRANSACTION_EXCLUSION_API_TAG:-8a0bcc8}
+    image: consensys/linea-transaction-exclusion-api:${TRANSACTION_EXCLUSION_API_TAG:-7d56432}
     profiles: [ "l2", "debug" ]
     restart: on-failure
     depends_on:
@@ -586,7 +586,7 @@ services:
         ipv4_address: 10.10.10.205
 
   zkbesu-shomei-sr:
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v6-20260331100616-a39d758}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v6-20260407111827-7d56432}
     hostname: zkbesu-shomei-sr
     container_name: zkbesu-shomei-sr
     profiles: [ "staterecovery", "external-to-monorepo" ]
@@ -641,7 +641,7 @@ services:
       - ../besu-plugins/state-recovery/besu-plugin/build/libs/linea-staterecovery-besu-plugin-SNAPSHOT.jar:/opt/besu/plugins/linea-staterecovery-besu-plugin-SNAPSHOT.jar
 
   shomei-sr:
-    image: consensys/linea-shomei:3.0.5
+    image: consensys/linea-shomei:${LINEA_SHOMEI_TAG:-3.0.5}
     hostname: shomei-sr
     container_name: shomei-sr
     profiles: [ "staterecovery", "external-to-monorepo" ]
