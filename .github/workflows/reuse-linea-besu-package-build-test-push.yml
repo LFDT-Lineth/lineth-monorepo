@@ -222,7 +222,7 @@ jobs:
 
       - name: Conventional Changelog Action
         id: change_log
-        uses: TriPSs/conventional-changelog-action@3c4970b6573374889b897403d2f1278c395ea0df #v5.4.0
+        uses: TriPSs/conventional-changelog-action@84dadaf2c367cb52af02737cd9c7e888807219e7 #v6.2.0
         with:
           git-path: ./linea-besu-package/
           git-push: false
