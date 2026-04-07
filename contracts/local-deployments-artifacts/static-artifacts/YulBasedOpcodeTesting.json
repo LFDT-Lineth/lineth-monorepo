@@ -1,6 +1,6 @@
 {
-  "contractName": "ShanghaiEvmCodes",
-  "sourceName": "contracts/test-contracts/ShanghaiEvmCodes.yul",
+  "contractName": "YulBasedOpcodeTesting",
+  "sourceName": "contracts/test-contracts/yulBasedOpcodeTesting.yul",
   "abi": [
     {
       "payable": true,

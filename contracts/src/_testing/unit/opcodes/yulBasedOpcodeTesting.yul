@@ -1,6 +1,7 @@
-// This has been compiled on REMIX without the optimization and stored as contracts/local-deployments-artifacts/static-artifacts/LondonEvmCodes.json
+// This has been compiled on REMIX without the optimization and stored as contracts/local-deployments-artifacts/static-artifacts/yulBasedOpcodeTesting.json
+// The reason for this contract historically is to provide access to hard-to-reach calls such as DUPX and PUSHX that the compiler controls.
 // If you copy the bytecode from the verbatim_0i_0o section and open in https://evm.codes you can step through the entire execution.
-// Compiler: 0.8.19, no optimizations and London EVM Version
+// Compiler: Latest supported version by the repository using no optimizations and Latest EVM Version
 
 object "DynamicBytecode" {
     code {
