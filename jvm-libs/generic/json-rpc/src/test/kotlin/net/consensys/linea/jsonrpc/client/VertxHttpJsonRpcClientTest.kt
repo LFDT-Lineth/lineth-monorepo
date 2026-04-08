@@ -17,6 +17,7 @@ import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClientOptions
 import io.vertx.core.http.HttpVersion
+import io.vertx.core.http.PoolOptions
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import linea.kotlin.decodeHex
@@ -58,7 +59,6 @@ class VertxHttpJsonRpcClientTest {
     HttpClientOptions()
       .setKeepAlive(true)
       .setProtocolVersion(HttpVersion.HTTP_1_1)
-      .setMaxPoolSize(10)
   private lateinit var endpoint: URL
 
   @BeforeEach
@@ -69,7 +69,11 @@ class VertxHttpJsonRpcClientTest {
     endpoint = URI(wiremock.baseUrl() + path).toURL()
     meterRegistry = SimpleMeterRegistry()
     metricsFacade = MicrometerMetricsFacade(registry = meterRegistry)
-    client = VertxHttpJsonRpcClient(vertx.createHttpClient(clientOptions), endpoint, metricsFacade)
+    client = VertxHttpJsonRpcClient(
+      vertx.createHttpClient(clientOptions, PoolOptions().setHttp1MaxSize(2)),
+      endpoint,
+      metricsFacade,
+    )
   }
 
   @AfterEach
@@ -355,7 +359,7 @@ class VertxHttpJsonRpcClientTest {
     val requestsFutures = (1..100).map {
       client.makeRequest(JsonRpcRequestListParams("2.0", 1, "randomNumber", emptyList()))
     }
-    Future.all(requestsFutures).get()
+    Future.all<Any>(requestsFutures).get()
 
     val timer =
       meterRegistry.timer(

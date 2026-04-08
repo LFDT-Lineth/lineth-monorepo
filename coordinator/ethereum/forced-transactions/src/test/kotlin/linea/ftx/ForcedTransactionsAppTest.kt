@@ -156,6 +156,7 @@ class ForcedTransactionsAppTest {
     assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber()).isEqualTo(0UL)
     app.start().get()
     assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber()).isEqualTo(0UL)
+    app.stop().get()
   }
 
   @Test
@@ -246,6 +247,7 @@ class ForcedTransactionsAppTest {
       .untilAsserted {
         assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber()).isNull()
       }
+    app.stop().get()
   }
 
   @Test
@@ -291,6 +293,7 @@ class ForcedTransactionsAppTest {
     assertThat(ftxClient.ftxReceivedIds).isEmpty()
     // Verify no ftx records were created
     assertThat(fxtDao.list().get()).isEmpty()
+    app.stop().get()
   }
 
   @Test
@@ -493,6 +496,7 @@ class ForcedTransactionsAppTest {
 
     // Safe block number should be updated to the highest processed FTX block number
     assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber()).isEqualTo(2_030UL)
+    app.stop().get()
   }
 
   @Test
@@ -640,6 +644,7 @@ class ForcedTransactionsAppTest {
       10UL, // locked at L2 block number when processing FTX 1
       null, // released after processing FTX 1
     )
+    app.stop().get()
   }
 
   @Test
@@ -825,6 +830,7 @@ class ForcedTransactionsAppTest {
         499UL to AggregationTriggerType.FORCED_TRANSACTION,
       ),
     )
+    app.stop().get()
   }
 
   private fun EthApiBlockClient.blockTimestamp(blockParameter: BlockParameter): Instant =

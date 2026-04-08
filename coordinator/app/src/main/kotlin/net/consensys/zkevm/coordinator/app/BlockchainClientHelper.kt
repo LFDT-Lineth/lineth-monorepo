@@ -2,6 +2,7 @@ package net.consensys.zkevm.coordinator.app
 
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpVersion
+import io.vertx.core.http.PoolOptions
 import io.vertx.core.net.PfxOptions
 import io.vertx.ext.web.client.WebClientOptions
 import linea.coordinator.config.v2.L1SubmissionConfig
@@ -61,18 +62,18 @@ fun createTransactionManager(
     trustManagerFactory.init(trustStore)
 
     // Initialize SSLContext
-    val sslContext = SSLContext.getInstance("TLS")
-    sslContext.init(keyManagerFactory.keyManagers, trustManagerFactory.trustManagers, null)
+    SSLContext.getInstance("TLS")
+      .init(keyManagerFactory.keyManagers, trustManagerFactory.trustManagers, null)
 
     return webClientOptions
       .setSsl(true)
       .setTrustAll(false)
-      .setPfxKeyCertOptions(
+      .setKeyCertOptions(
         PfxOptions()
           .setPath(clientKeystorePath.toAbsolutePath().toString())
           .setPassword(clientKeystorePassword),
       )
-      .setPfxTrustOptions(
+      .setTrustOptions(
         PfxOptions()
           .setPath(trustStorePath.toAbsolutePath().toString())
           .setPassword(trustStorePassword),
@@ -93,7 +94,6 @@ fun createTransactionManager(
           WebClientOptions()
             .setKeepAlive(web3SignerConfig.keepAlive)
             .setProtocolVersion(HttpVersion.HTTP_1_1)
-            .setMaxPoolSize(web3SignerConfig.maxPoolSize)
             .setDefaultHost(endpoint.host)
             .setDefaultPort(endpoint.port)
             .also {
@@ -107,7 +107,9 @@ fun createTransactionManager(
                 )
               }
             }
-        val httpRestClient = VertxHttpRestClient(webClientOptions, vertx)
+        val poolOptions = PoolOptions()
+          .setHttp1MaxSize(web3SignerConfig.maxPoolSize)
+        val httpRestClient = VertxHttpRestClient(webClientOptions, poolOptions, vertx)
         val signer = Web3SignerRestClient(httpRestClient, signerConfig.web3signer.publicKey.encodeHex())
         val signerAdapter = ECKeypairSignerAdapter(signer, Numeric.toBigInt(signerConfig.web3signer.publicKey))
         val web3SignerCredentials = Credentials.create(signerAdapter)

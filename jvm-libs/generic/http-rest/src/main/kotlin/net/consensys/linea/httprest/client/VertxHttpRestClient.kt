@@ -6,6 +6,7 @@ import com.github.michaelbull.result.Result
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
+import io.vertx.core.http.PoolOptions
 import io.vertx.ext.web.client.HttpResponse
 import io.vertx.ext.web.client.WebClient
 import io.vertx.ext.web.client.WebClientOptions
@@ -18,9 +19,10 @@ import java.net.URI
 
 class VertxHttpRestClient(
   private val webClientOptions: WebClientOptions,
+  poolOptions: PoolOptions = PoolOptions(),
   private val vertx: Vertx,
 ) : HttpRestClient {
-  private var webClient = WebClient.create(vertx, webClientOptions)
+  private var webClient = WebClient.create(vertx, webClientOptions, poolOptions)
   private val log: Logger = LogManager.getLogger(this.javaClass)
 
   override fun get(

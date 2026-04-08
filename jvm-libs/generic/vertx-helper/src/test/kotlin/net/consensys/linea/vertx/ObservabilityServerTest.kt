@@ -113,7 +113,7 @@ class ObservabilityServerTest {
 
   private fun runServerOnARandomPort(vertx: Vertx): Pair<String, Int> {
     val observabilityServer = ObservabilityServer(
-      ObservabilityServer.Config(applicationName = "test"),
+      config = ObservabilityServer.Config(applicationName = "test"),
     )
     val deploymentId = vertx.deployVerticle(observabilityServer).get()
     return deploymentId to observabilityServer.port

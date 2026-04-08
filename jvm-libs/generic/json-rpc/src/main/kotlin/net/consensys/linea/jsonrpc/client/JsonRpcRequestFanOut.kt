@@ -42,7 +42,7 @@ class JsonRpcRequestFanOut(
     resultMapper: (Any?) -> Any? = ::toPrimitiveOrVertxJson,
   ): Future<List<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>> {
     return Future
-      .all(targets.map { it.makeRequest(request, resultMapper) })
+      .all<Any>(targets.map { it.makeRequest(request, resultMapper) })
       .map { it: CompositeFuture -> it.list() }
   }
 }

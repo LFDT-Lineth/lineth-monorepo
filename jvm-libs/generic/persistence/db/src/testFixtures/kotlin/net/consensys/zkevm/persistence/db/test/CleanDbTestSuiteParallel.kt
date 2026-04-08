@@ -49,15 +49,11 @@ abstract class CleanDbTestSuiteParallel {
 
   @AfterEach
   open fun tearDown() {
-    pool.close { ar: io.vertx.core.AsyncResult<Void?> ->
-      if (ar.failed()) {
-        System.err.println("Error closing connection pool: " + ar.cause().message)
-      }
-    }
-    sqlClient.close { ar: io.vertx.core.AsyncResult<Void?> ->
-      if (ar.failed()) {
-        System.err.println("Error closing sqlclient " + ar.cause().message)
-      }
+    pool
+      .close()
+      .onFailure { System.err.println("Error closing connection pool: " + it.message) }
+    sqlClient.close().onFailure {
+      System.err.println("Error closing sqlclient " + it.message)
     }
     DbHelper.resetAllConnections(dataSource, databaseName)
   }

@@ -62,7 +62,6 @@ interface MetricsFacade {
     isRatio: Boolean = false,
     baseUnit: String? = null,
     publishPercentileHistogram: Boolean = false,
-    percentileBuckets: List<Double>? = null,
   ): Histogram
 
   fun createTimer(category: MetricsCategory, name: String, description: String, tags: List<Tag> = emptyList()): Timer

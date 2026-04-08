@@ -9,7 +9,10 @@ plugins {
   alias(libs.plugins.docker)
 }
 
-task compileAll
+tasks.register("compileAll") {
+  group = "build"
+  description = "Compiles all Java and Kotlin sources, including tests, across all projects."
+}
 
 // to allow to have unused vars/imports,etc for faster debugging/prototyping
 // instead of deleting and re-adding code all the time
@@ -42,6 +45,16 @@ if (file('.git').exists()) {
 }
 
 allprojects {
+  // Aggregate every Java/Kotlin compile task (main + tests, all source sets) into root :compileAll.
+  afterEvaluate { proj ->
+    proj.tasks.withType(JavaCompile).all { compileTask ->
+      rootProject.tasks.named("compileAll").configure { dependsOn(compileTask) }
+    }
+    proj.tasks.withType(KotlinCompile).all { compileTask ->
+      rootProject.tasks.named("compileAll").configure { dependsOn(compileTask) }
+    }
+  }
+
   repositories {
     mavenCentral()
     mavenLocal()
@@ -67,14 +80,12 @@ allprojects {
   }
 
   tasks.withType(KotlinCompile).configureEach {
-    compileAll.dependsOn it
     compilerOptions {
       allWarningsAsErrors = !allowCompilationWarnings
     }
   }
 
   tasks.withType(JavaCompile).configureEach {
-    compileAll.dependsOn it
     options.encoding = 'UTF-8'
     options.deprecation = true
     options.compilerArgs.addAll([

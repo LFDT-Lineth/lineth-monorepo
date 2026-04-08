@@ -57,15 +57,12 @@ class DbSchemaUpdatesIntTest {
   @AfterEach
   fun tearDown() {
     DbHelper.resetAllConnections(dataSource, databaseName)
-    pool.close { ar: io.vertx.core.AsyncResult<Void?> ->
-      if (ar.failed()) {
-        System.err.println("Error closing connection pool: " + ar.cause().message)
+    pool.close()
+      .onFailure { th ->
+        System.err.println("Error closing connection pool: " + th.message)
       }
-    }
-    sqlClient.close { ar: io.vertx.core.AsyncResult<Void?> ->
-      if (ar.failed()) {
-        System.err.println("Error closing sqlclient " + ar.cause().message)
-      }
+    sqlClient.close().onFailure { th ->
+      System.err.println("Error closing sqlclient " + th.message)
     }
   }
 

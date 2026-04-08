@@ -137,29 +137,28 @@ class BundleSelectionTimeoutTest : AbstractSendBundleTest() {
       7_000,
       MAX_TX_GAS_LIMIT / 3,
     )
-
-    val rawTxs = calls.map { it.rawTx }.toTypedArray()
+    val bundle1Calls = calls.copyOfRange(0, 1)
+    val bundle2Calls = calls.copyOfRange(1, 10)
 
     val sendBundleRequestSmall = SendBundleRequest(
-      BundleParams(rawTxs.copyOfRange(0, 1), Integer.toHexString(2)),
+      BundleParams(bundle1Calls.map { it.rawTx }.toTypedArray(), Integer.toHexString(2)),
     )
 
     // this bundle is meant to go in timeout during its selection
     val sendBundleRequestBig1 = SendBundleRequest(
-      BundleParams(rawTxs.copyOfRange(1, 10), Integer.toHexString(2)),
+      BundleParams(bundle2Calls.map { it.rawTx }.toTypedArray(), Integer.toHexString(2)),
     )
 
     // second bundle contains one tx only to be fast to execute,
     // and ensure timeout occurs on the 2nd bundle and following are not even considered.
     // We are sending a bunch of bundles instead of just one to reproduce what happened in
-    // production, where each following bundle where not skipped and would take ~200ms
+    // production, where each following bundle were not skipped and would take ~200ms
     // to be not selected, due to the fact the first tx in the bundle was executed.
     val followingBundleCount = 5
-    val followingSendBundleRequests = Array(followingBundleCount) { i ->
-      SendBundleRequest(
-        BundleParams(rawTxs.copyOfRange(1, 2 + i), Integer.toHexString(2)),
-      )
-    }
+    val followingBundlesCalls = (0..followingBundleCount)
+      .map { i -> calls.copyOfRange(1, 2 + i) }
+    val followingSendBundleRequests = followingBundlesCalls
+      .map { SendBundleRequest(BundleParams(it.map { it.rawTx }.toTypedArray(), Integer.toHexString(2))) }
 
     val sendBundleResponseSmall = sendBundleRequestSmall.execute(minerNode.nodeRequests())
     val sendBundleResponseBig1 = sendBundleRequestBig1.execute(minerNode.nodeRequests())
@@ -184,11 +183,6 @@ class BundleSelectionTimeoutTest : AbstractSendBundleTest() {
     // first bundle is successful
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(calls[0].txHash))
 
-    // following bundles are not selected
-    calls
-      .drop(1)
-      .map { it.txHash }
-      .forEach { txHash -> minerNode.verify(eth.expectNoTransactionReceipt(txHash)) }
     val log = getLog()
     assertThat(log)
       .withFailMessage {
@@ -200,5 +194,24 @@ class BundleSelectionTimeoutTest : AbstractSendBundleTest() {
       .contains(
         "Bundle selection interrupted while processing bundle ${sendBundleResponseBig1.result.bundleHash}",
       )
+
+    // following bundles not selected
+    assertBundleTxNotIncluded(bundle2Calls, "big bundle 2")
+    followingBundlesCalls.forEachIndexed { index, bundleRawTxs ->
+      assertBundleTxNotIncluded(bundleRawTxs, "following bundle ${index + 1}")
+    }
+  }
+
+  fun assertBundleTxNotIncluded(
+    bundleCalls: Array<MulmodCall>,
+    bundleLabel: String,
+  ) {
+    bundleCalls
+      .forEachIndexed { index, call ->
+        runCatching { minerNode.verify(eth.expectNoTransactionReceipt(call.txHash)) }
+          .onFailure {
+            throw AssertionError("bundle $bundleLabel, tx $index was included but expected to timeout", it)
+          }
+      }
   }
 }

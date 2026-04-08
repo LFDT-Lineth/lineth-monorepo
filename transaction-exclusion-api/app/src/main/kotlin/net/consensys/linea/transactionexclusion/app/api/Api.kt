@@ -1,5 +1,6 @@
 package net.consensys.linea.transactionexclusion.app.api
 
+import io.vertx.core.Deployable
 import io.vertx.core.DeploymentOptions
 import io.vertx.core.Future
 import io.vertx.core.Vertx
@@ -11,6 +12,7 @@ import net.consensys.linea.jsonrpc.httpserver.HttpJsonRpcServer
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.transactionexclusion.TransactionExclusionServiceV1
 import net.consensys.linea.vertx.ObservabilityServer
+import java.util.function.Supplier
 
 data class ApiConfig(
   val port: Int = 0,
@@ -68,6 +70,7 @@ class Api(
     var httpServer: HttpJsonRpcServer? = null
     return vertx
       .deployVerticle(
+        Supplier<Deployable>
         {
           HttpJsonRpcServer(configs.port.toUInt(), configs.path, HttpRequestHandler(messageHandler))
             .also {

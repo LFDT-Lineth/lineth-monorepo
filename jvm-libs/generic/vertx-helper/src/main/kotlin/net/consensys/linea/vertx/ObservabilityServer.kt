@@ -1,16 +1,14 @@
 package net.consensys.linea.vertx
 
 import io.vertx.core.AbstractVerticle
-import io.vertx.core.AsyncResult
 import io.vertx.core.Handler
 import io.vertx.core.Promise
 import io.vertx.core.http.HttpHeaders
-import io.vertx.core.http.HttpServer
 import io.vertx.core.json.JsonObject
-import io.vertx.ext.healthchecks.HealthCheckHandler
 import io.vertx.ext.healthchecks.Status
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
+import io.vertx.ext.web.healthchecks.HealthCheckHandler
 import io.vertx.micrometer.PrometheusScrapingHandler
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -50,17 +48,16 @@ class ObservabilityServer(private val config: Config) : AbstractVerticle() {
     router.get(config.metricsPath).handler(config.metricsHandler)
     router.get(config.healthPath).handler(healthCheckHandler)
 
-    vertx.createHttpServer().requestHandler(router).listen(config.port) {
-        res: AsyncResult<HttpServer> ->
-      started = res.succeeded()
-      if (started) {
-        actualPort = res.result().actualPort()
+    vertx.createHttpServer()
+      .requestHandler(router)
+      .listen(config.port)
+      .onSuccess { httpServer ->
+        actualPort = httpServer.actualPort()
+        started = true
         log.info("Monitoring Server started and listening on port {}", actualPort)
         startPromise.complete()
-      } else {
-        startPromise.fail(res.cause())
       }
-    }
+      .onFailure { startPromise.fail(it) }
   }
 
   private fun ready(rc: RoutingContext, isReadySupplier: () -> Boolean) {

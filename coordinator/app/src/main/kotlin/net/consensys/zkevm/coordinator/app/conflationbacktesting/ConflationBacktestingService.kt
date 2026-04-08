@@ -1,7 +1,6 @@
 package net.consensys.zkevm.coordinator.app.conflationbacktesting
 
 import io.vertx.core.Vertx
-import io.vertx.core.impl.ConcurrentHashSet
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
@@ -34,7 +33,7 @@ class ConflationBacktestingService(
     COMPLETED,
   }
 
-  private val completedJobs: MutableSet<String> = ConcurrentHashSet()
+  private val completedJobs: MutableSet<String> = ConcurrentHashMap.newKeySet()
   private val conflationBackTestingApps: MutableMap<String, ConflationBacktestingApp> = ConcurrentHashMap()
 
   fun submitConflationBacktestingJob(conflationBacktestingConfig: ConflationBacktestingConfig): String {

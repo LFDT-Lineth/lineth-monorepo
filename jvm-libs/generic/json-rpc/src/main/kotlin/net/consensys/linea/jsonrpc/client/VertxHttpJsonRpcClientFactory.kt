@@ -6,6 +6,7 @@ import com.github.michaelbull.result.Result
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClientOptions
 import io.vertx.core.http.HttpVersion
+import io.vertx.core.http.PoolOptions
 import net.consensys.linea.jsonrpc.JsonRpcRequest
 import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.Level
@@ -59,9 +60,13 @@ class VertxHttpJsonRpcClientFactory(
         .setKeepAlive(true)
         .setDefaultHost(endpoint.host)
         .setDefaultPort(endpoint.port)
-    maxPoolSize?.let(clientOptions::setMaxPoolSize)
+    val poolOptions = PoolOptions()
+    maxPoolSize?.let {
+      poolOptions.setHttp1MaxSize(it)
+      poolOptions.setHttp2MaxSize(it)
+    }
     httpVersion?.let(clientOptions::setProtocolVersion)
-    val httpClient = vertx.createHttpClient(clientOptions)
+    val httpClient = vertx.createHttpClient(clientOptions, poolOptions)
     return VertxHttpJsonRpcClient(
       httpClient,
       endpoint,

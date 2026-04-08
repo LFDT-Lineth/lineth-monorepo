@@ -1,8 +1,8 @@
 package linea.http.vertx
 
+import io.vertx.core.MultiMap
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpVersion
-import io.vertx.core.http.impl.headers.HeadersMultiMap
 import io.vertx.ext.web.client.HttpRequest
 import io.vertx.ext.web.client.HttpResponse
 import io.vertx.ext.web.client.impl.HttpResponseImpl
@@ -26,9 +26,9 @@ fun httpResponse(
     /* statusMessage = */
     statusMessage,
     /* headers = */
-    HeadersMultiMap(),
+    MultiMap.caseInsensitiveMultiMap(),
     /* trailers = */
-    HeadersMultiMap(),
+    MultiMap.caseInsensitiveMultiMap(),
     /* cookies = */
     emptyList<String>(),
     /* body = */

@@ -3,6 +3,7 @@ import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpVersion
+import io.vertx.core.http.PoolOptions
 import io.vertx.ext.web.client.WebClientOptions
 import io.vertx.junit5.VertxExtension
 import net.consensys.linea.httprest.client.VertxHttpRestClient
@@ -39,11 +40,10 @@ class Web3SignerRestClientTest {
       WebClientOptions()
         .setKeepAlive(true)
         .setProtocolVersion(HttpVersion.HTTP_1_1)
-        .setMaxPoolSize(10)
         .setDefaultHost("localhost")
         .setDefaultPort(wiremock.port())
 
-    val vertxHttpRestClient = VertxHttpRestClient(webClientOptions, vertx)
+    val vertxHttpRestClient = VertxHttpRestClient(webClientOptions, PoolOptions().setHttp1MaxSize(10), vertx)
 
     web3SignerClient = Web3SignerRestClient(vertxHttpRestClient, publicKey.toString())
   }

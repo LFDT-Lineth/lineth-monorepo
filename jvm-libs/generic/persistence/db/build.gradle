@@ -9,15 +9,9 @@ dependencies {
   implementation(project(":jvm-libs:generic:extensions:futures"))
   implementation(project(":jvm-libs:generic:extensions:kotlin"))
   api("io.vertx:vertx-pg-client:${libs.versions.vertx.get()}")
-  api("com.ongres.scram:common:2.1") {
-    because("Vertx pg client fails without it")
-  }
-  api("com.ongres.scram:client:2.1") {
-    because("Vertx pg client fails without it")
-  }
-  api("org.postgresql:postgresql:42.7.10")
-  api("org.flywaydb:flyway-core:12.0.3")
-  api("org.flywaydb:flyway-database-postgresql:12.0.3") {
+  api("org.postgresql:postgresql:${libs.versions.postgresql.get()}")
+  api("org.flywaydb:flyway-core:${libs.versions.flywaydb.get()}")
+  api("org.flywaydb:flyway-database-postgresql:${libs.versions.flywaydb.get()}") {
     because("Flyway 10+ keeps PostgreSQL support in a dedicated database module")
   }
   api("org.slf4j:slf4j-api:1.7.30") {

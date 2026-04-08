@@ -1,5 +1,6 @@
 package net.consensys.zkevm.coordinator.api
 
+import io.vertx.core.Deployable
 import io.vertx.core.DeploymentOptions
 import io.vertx.core.Future
 import io.vertx.core.Vertx
@@ -17,6 +18,7 @@ import net.consensys.zkevm.coordinator.api.requesthandlers.ConflationGetJobStatu
 import net.consensys.zkevm.coordinator.app.conflationbacktesting.ConflationBacktestingService
 import org.apache.logging.log4j.LogManager
 import java.util.concurrent.CompletableFuture
+import java.util.function.Supplier
 
 class Api(
   private val configs: Config,
@@ -30,6 +32,7 @@ class Api(
     val jsonRpcPath: String,
     val jsonRpcServerVerticles: Int,
   )
+
   private val log = LogManager.getLogger(Api::class.java)
 
   private var observabilityServerId: String? = null
@@ -64,7 +67,7 @@ class Api(
     }
     return vertx
       .deployVerticle(
-        {
+        Supplier<Deployable> {
           HttpJsonRpcServer(configs.jsonRpcPort, configs.jsonRpcPath, HttpRequestHandler(messageHandler))
             .also {
               httpServer = it

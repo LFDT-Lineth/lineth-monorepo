@@ -3,8 +3,8 @@ package net.consensys.linea.metrics.micrometer
 import io.micrometer.core.instrument.ImmutableTag
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
-import io.micrometer.prometheus.PrometheusConfig
-import io.micrometer.prometheus.PrometheusMeterRegistry
+import io.micrometer.prometheusmetrics.PrometheusConfig
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import net.consensys.linea.metrics.MetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.Tag
@@ -169,32 +169,6 @@ class MicrometerMetricsFacadeTest {
   }
 
   @Test
-  fun `createHistogram with percentileBuckets publishes specified percentiles`() {
-    val percentiles = listOf(0.5, 0.95, 0.99)
-    val histogram = metricsFacade.createHistogram(
-      category = TestCategory.TEST_CATEGORY,
-      name = "some.percentile.metric",
-      description = "Histogram with percentiles",
-      tags = listOf(Tag("key1", "value1")),
-      baseUnit = "seconds",
-      percentileBuckets = percentiles,
-    )
-
-    for (i in 1..100) {
-      histogram.record(i.toDouble())
-    }
-
-    val createdHistogram = meterRegistry.find("linea.test.test.category.some.percentile.metric").summary()
-    assertThat(createdHistogram).isNotNull
-    assertThat(createdHistogram!!.count()).isEqualTo(100L)
-
-    val percentileSnapshots = createdHistogram.takeSnapshot().percentileValues()
-    assertThat(percentileSnapshots).isNotEmpty
-    val reportedPercentiles = percentileSnapshots.map { it.percentile() }
-    assertThat(reportedPercentiles).containsAll(percentiles)
-  }
-
-  @Test
   fun `createHistogram without percentileBuckets does not publish specific percentiles`() {
     val histogram = metricsFacade.createHistogram(
       category = TestCategory.TEST_CATEGORY,
@@ -213,36 +187,6 @@ class MicrometerMetricsFacadeTest {
 
     val percentileSnapshots = createdHistogram.takeSnapshot().percentileValues()
     assertThat(percentileSnapshots).isEmpty()
-  }
-
-  @Test
-  fun `createHistogram with both publishPercentileHistogram and percentileBuckets enables both`() {
-    val prometheusRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
-    val prometheusFacade = MicrometerMetricsFacade(prometheusRegistry, metricsPrefix = "linea.test")
-    val percentiles = listOf(0.5, 0.99)
-    val histogram = prometheusFacade.createHistogram(
-      category = TestCategory.TEST_CATEGORY,
-      name = "both.metric",
-      description = "Histogram with both options",
-      baseUnit = "seconds",
-      publishPercentileHistogram = true,
-      percentileBuckets = percentiles,
-    )
-
-    for (i in 1..100) {
-      histogram.record(i.toDouble())
-    }
-
-    val scrapeOutput = prometheusRegistry.scrape()
-    // Has fine-grained histogram buckets
-    assertThat(scrapeOutput).contains("linea_test_test_category_both_metric_seconds_bucket{le=\"")
-    val bucketLines = scrapeOutput.lines()
-      .filter { it.startsWith("linea_test_test_category_both_metric_seconds_bucket{") }
-    assertThat(bucketLines.size).isGreaterThan(20)
-
-    // Also has client-side percentile quantiles
-    assertThat(scrapeOutput).contains("linea_test_test_category_both_metric_seconds{quantile=\"0.5\"")
-    assertThat(scrapeOutput).contains("linea_test_test_category_both_metric_seconds{quantile=\"0.99\"")
   }
 
   @Test
