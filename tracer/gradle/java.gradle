@@ -1,3 +1,7 @@
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+
 /*
  * Copyright Consensys Software Inc.
  *
@@ -13,50 +17,20 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-apply plugin: 'java-library'
-
-if (!JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_25)) {
-  throw new GradleException("Java 25 or later is required to build Besu.\n" +
-    "  Detected version ${JavaVersion.current()}")
-}
-
-java {
-    sourceCompatibility = 25
-    targetCompatibility = 25
-
-    consistentResolution {
-        useCompileClasspathVersions()
-    }
-}
-
-tasks.withType(JavaCompile) {
-  options.compilerArgs += [
-    '-Xlint:unchecked',
-    '-Xlint:cast',
-    '-Xlint:rawtypes',
-    '-Xlint:overloads',
-    '-Xlint:divzero',
-    '-Xlint:finally',
-    '-Xlint:static',
-  ]
-  options.compilerArgs.remove('-Werror')
-  options.encoding = 'UTF-8'
-}
-
 // Takes the version, and if it equals "SNAPSHOT" or the suffix is "-SNAPSHOT" replaces SNAPSHOT
-// with the git commit version.
+// with an ISO8601 UTC timestamp.
 ext.calculateVersion = { ->
   def lineaTracerProject = project(lineaTracerProjectPath)
   String version = lineaTracerProject.version
   if (version.equals("SNAPSHOT") || version.endsWith("-SNAPSHOT")) {
     def lastSnapshot = version.lastIndexOf("SNAPSHOT")
-    version = version.substring(0, lastSnapshot) + "dev-${getCheckedOutGitCommitHash()}"
+    version = version.substring(0, lastSnapshot) + "dev-${getIso8601Timestamp()}"
   }
 
   return version
 }
 
-static def getCheckedOutGitCommitHash() {
-  def hashLength = 7
-  "git rev-parse HEAD".execute().text.take(hashLength)
+static def getIso8601Timestamp() {
+  OffsetDateTime.now(ZoneOffset.UTC)
+      .format(DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'"))
 }

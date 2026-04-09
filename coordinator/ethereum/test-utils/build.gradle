@@ -21,7 +21,7 @@ dependencies {
   implementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"
   implementation "com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}"
   implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${libs.versions.jackson.get()}"
-  implementation "org.awaitility:awaitility:4.2.0"
+  implementation "org.awaitility:awaitility:${libs.versions.awaitility.get()}"
 }
 
 sourceSets {

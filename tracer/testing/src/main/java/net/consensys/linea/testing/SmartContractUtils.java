@@ -19,7 +19,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import org.apache.tuweni.bytes.Bytes;
 import org.web3j.tx.Contract;
@@ -71,27 +70,7 @@ public class SmartContractUtils {
    * @return The deployed or runtime bytecode for the yul contract
    */
   public static Bytes getYulContractRuntimeByteCode(final String yulFileName) {
-    if (!yulFileName.contains(".yul")) {
-      throw new IllegalArgumentException("Yul file name should contain the suffix: .yul");
-    }
-    String yulFileNameWithoutSuffix = yulFileName.replace(".yul", "");
-    String contractResourcePath = "yul/%s.json".formatted(yulFileNameWithoutSuffix);
-    URL contractResourceURL = classLoader.getResource(contractResourcePath);
-    try {
-      JsonNode jsonRoot = objectMapper.readTree(contractResourceURL);
-      String byteCode =
-          jsonRoot
-              .get("contracts")
-              .get(yulFileName)
-              .get(yulFileNameWithoutSuffix)
-              .get("evm")
-              .get("deployedBytecode")
-              .get("object")
-              .asText();
-      return Bytes.fromHexStringLenient(byteCode);
-    } catch (Exception e) {
-      throw new RuntimeException("Could not find contract bytecode", e);
-    }
+    return readYulArtifact(yulFileName, "deployedBytecode");
   }
 
   /**
@@ -99,21 +78,27 @@ public class SmartContractUtils {
    * @return The compiled bytecode for the yul contract
    */
   public static Bytes getYulContractCompiledByteCode(final String yulFileName) {
+    return readYulArtifact(yulFileName, "bytecode");
+  }
+
+  private static Bytes readYulArtifact(final String yulFileName, final String evmBytecodeKey) {
     if (!yulFileName.contains(".yul")) {
       throw new IllegalArgumentException("Yul file name should contain the suffix: .yul");
     }
     String yulFileNameWithoutSuffix = yulFileName.replace(".yul", "");
     String contractResourcePath = "yul/%s.json".formatted(yulFileNameWithoutSuffix);
-    URL contractResourceURL = classLoader.getResource(contractResourcePath);
-    try {
-      JsonNode jsonRoot = objectMapper.readTree(contractResourceURL);
+    try (InputStream is = classLoader.getResourceAsStream(contractResourcePath)) {
+      if (is == null) {
+        throw new RuntimeException("Could not find contract resource: " + contractResourcePath);
+      }
+      JsonNode jsonRoot = objectMapper.readTree(is);
       String byteCode =
           jsonRoot
               .get("contracts")
               .get(yulFileName)
               .get(yulFileNameWithoutSuffix)
               .get("evm")
-              .get("bytecode")
+              .get(evmBytecodeKey)
               .get("object")
               .asText();
       return Bytes.fromHexStringLenient(byteCode);

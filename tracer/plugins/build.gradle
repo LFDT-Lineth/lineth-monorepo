@@ -15,6 +15,7 @@
 
 plugins {
   id 'java'
+  id 'net.consensys.zkevm.kotlin-common-minimal-conventions'
   alias(libs.plugins.besuPluginDistribution)
   alias(libs.plugins.lombok)
   alias(libs.plugins.hierynomusLicense)
@@ -38,9 +39,9 @@ jar {
   manifest {
     attributes(
         'Specification-Title': archiveBaseName.get(),
-        'Specification-Version': calculateVersion(),
+        'Specification-Version': version,
         'Implementation-Title': archiveBaseName.get(),
-        'Implementation-Version': calculateVersion()
+        'Implementation-Version': version
         )
   }
 }
