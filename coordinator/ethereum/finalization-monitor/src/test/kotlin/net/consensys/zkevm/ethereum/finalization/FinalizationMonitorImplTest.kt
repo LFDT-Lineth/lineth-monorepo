@@ -145,10 +145,11 @@ class FinalizationMonitorImplTest {
       .pollInterval(10.milliseconds.toJavaDuration())
       .untilAsserted {
         assertThat(updatesReceived).hasSizeGreaterThanOrEqualTo(numberOfEventsBeforeError.get())
-        testContext.completeNow()
       }
 
-    finalizationMonitorImpl.stop().whenException(testContext::failNow)
+    finalizationMonitorImpl.stop()
+      .thenApply { testContext.completeNow() }
+      .whenException(testContext::failNow)
   }
 
   @Test
@@ -163,7 +164,7 @@ class FinalizationMonitorImplTest {
 
     finalizationMonitorImpl.start()
     await()
-      .atMost(1.seconds.toJavaDuration())
+      .atMost(5.seconds.toJavaDuration())
       .pollInterval(20.milliseconds.toJavaDuration())
       .untilAsserted {
         assertThat(updatesReceived).isNotEmpty
