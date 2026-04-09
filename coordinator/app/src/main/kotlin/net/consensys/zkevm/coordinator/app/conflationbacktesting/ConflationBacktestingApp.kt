@@ -18,7 +18,7 @@ import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.zkevm.coordinator.app.conflation.ConflationAppHelper
 import net.consensys.zkevm.coordinator.app.conflation.TracesClientFactory
 import net.consensys.zkevm.coordinator.blockcreation.BlockCreationMonitor
-import net.consensys.zkevm.coordinator.blockcreation.LastProvenBlockNumberProviderAsync
+import net.consensys.zkevm.coordinator.blockcreation.LastProvenBlockNumberProviderSync
 import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
 import net.consensys.zkevm.coordinator.clients.prover.ProverClientFactory
 import net.consensys.zkevm.coordinator.clients.prover.ProverConfig
@@ -332,9 +332,9 @@ class ConflationBacktestingApp(
     ethApi = l2EthClient,
     startingBlockNumberExclusive = conflationBacktestingAppConfig.startBlockNumber.toLong() - 1,
     blockCreationListener = blockToBatchSubmissionCoordinator,
-    lastProvenBlockNumberProviderAsync = object : LastProvenBlockNumberProviderAsync {
-      override fun getLastProvenBlockNumber(): SafeFuture<Long> {
-        return SafeFuture.completedFuture(conflationBacktestingAppConfig.startBlockNumber.toLong() - 1)
+    lastProvenBlockNumberProviderSync = object : LastProvenBlockNumberProviderSync {
+      override fun getLastKnownProvenBlockNumber(): Long {
+        return conflationBacktestingAppConfig.startBlockNumber.toLong() - 1
       }
     },
     config = BlockCreationMonitor.Config(
