@@ -1,5 +1,6 @@
 package net.consensys.zkevm.persistence.dao.aggregation
 
+import linea.persistence.ftx.ForcedTransactionsDao
 import net.consensys.zkevm.ethereum.finalization.FinalizationHandler
 import net.consensys.zkevm.ethereum.finalization.FinalizationMonitor
 import net.consensys.zkevm.persistence.AggregationsRepository
@@ -11,6 +12,7 @@ class RecordsCleanupFinalizationHandler(
   private val batchesRepository: BatchesRepository,
   private val blobsRepository: BlobsRepository,
   private val aggregationsRepository: AggregationsRepository,
+  private val forcedTransactionsDao: ForcedTransactionsDao,
 ) : FinalizationHandler {
   override fun handleUpdate(update: FinalizationMonitor.FinalizationUpdate): SafeFuture<*> {
     // We do not need to keep batches, blobs and aggregation objects in the DB that are not needed after finalization.
@@ -45,7 +47,9 @@ class RecordsCleanupFinalizationHandler(
     )
     val aggregationsCleanup = aggregationsRepository
       .deleteAggregationsUpToEndBlockNumber(endBlockNumberInclusive = update.blockNumber.toLong() - 1L)
+    val ftxRecordsCleanup = update.forcedTransactionNumber?.let { forcedTransactionsDao.deleteFtxUpToInclusive(it) }
+      ?: SafeFuture.completedFuture(Unit)
 
-    return SafeFuture.allOf(batchesCleanup, blobsCleanup, aggregationsCleanup)
+    return SafeFuture.allOf(batchesCleanup, blobsCleanup, aggregationsCleanup, ftxRecordsCleanup)
   }
 }

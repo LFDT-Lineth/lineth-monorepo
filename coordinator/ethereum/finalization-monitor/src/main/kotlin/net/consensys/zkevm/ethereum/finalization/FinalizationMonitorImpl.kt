@@ -1,7 +1,7 @@
 package net.consensys.zkevm.ethereum.finalization
 
 import io.vertx.core.Vertx
-import linea.contract.l1.LineaRollupSmartContractClientReadOnly
+import linea.contract.l1.FinalizedStateDataProvider
 import linea.domain.BlockParameter
 import linea.ethapi.EthApiBlockClient
 import linea.timer.TimerSchedule
@@ -17,7 +17,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 class FinalizationMonitorImpl(
   private val config: Config,
-  private val contract: LineaRollupSmartContractClientReadOnly,
+  private val finalizedStateDataProvider: FinalizedStateDataProvider,
   private val l2EthApiClient: EthApiBlockClient,
   private val vertx: Vertx,
   private val log: Logger = LogManager.getLogger(FinalizationMonitor::class.java),
@@ -43,7 +43,7 @@ class FinalizationMonitorImpl(
   }
 
   override fun start(): SafeFuture<Unit> {
-    return getFinalizationState().thenApply {
+    return getFinalizationUpdate(config.l1QueryBlockTag).thenApply {
       lastFinalizationUpdate.set(it)
       super.start()
     }
@@ -51,7 +51,7 @@ class FinalizationMonitorImpl(
 
   override fun action(): SafeFuture<Unit> {
     log.trace("Checking finalization updates")
-    return getFinalizationState().thenCompose { currentState ->
+    return getFinalizationUpdate(config.l1QueryBlockTag).thenCompose { currentState ->
       if (lastFinalizationUpdate.get() != currentState) {
         log.info(
           "finalization update: previousFinalizedBlock={} newFinalizedBlock={}",
@@ -64,21 +64,6 @@ class FinalizationMonitorImpl(
         SafeFuture.completedFuture(Unit)
       }
     }
-  }
-
-  private fun getFinalizationState(): SafeFuture<FinalizationMonitor.FinalizationUpdate> {
-    return contract
-      .finalizedL2BlockNumber(blockParameter = config.l1QueryBlockTag)
-      .thenCompose { lineaFinalizedBlockNumber ->
-        l2EthApiClient
-          .ethGetBlockByNumberTxHashes(BlockParameter.fromNumber(lineaFinalizedBlockNumber))
-          .thenApply { finalizedBlock ->
-            FinalizationMonitor.FinalizationUpdate(
-              lineaFinalizedBlockNumber,
-              Bytes32.wrap(finalizedBlock.hash),
-            )
-          }
-      }
   }
 
   private fun onUpdate(finalizationUpdate: FinalizationMonitor.FinalizationUpdate): SafeFuture<Unit> {
@@ -95,11 +80,33 @@ class FinalizationMonitorImpl(
           finalizationHandler.handleUpdate(finalizationUpdate)
             .thenApply { }
         } catch (th: Throwable) {
-          log.error("Finalization handler={} failed. errorMessage={}", handlerName, th.message, th)
+          log.error(
+            "Finalization handler={} failed. errorMessage={}",
+            handlerName,
+            th.message,
+            th,
+          )
           SafeFuture.completedFuture(Unit)
         }
       }
     }.thenApply {}
+  }
+
+  private fun getFinalizationUpdate(
+    blockParameter: BlockParameter,
+  ): SafeFuture<FinalizationMonitor.FinalizationUpdate> {
+    return finalizedStateDataProvider.getFinalizedStateData(blockParameter)
+      .thenCompose { finalizedStateData ->
+        l2EthApiClient
+          .ethGetBlockByNumberTxHashes(BlockParameter.fromNumber(finalizedStateData.blockNumber))
+          .thenApply { finalizedBlock ->
+            FinalizationMonitor.FinalizationUpdate(
+              blockNumber = finalizedStateData.blockNumber,
+              blockHash = Bytes32.wrap(finalizedBlock.hash),
+              forcedTransactionNumber = finalizedStateData.forcedTransactionNumber,
+            )
+          }
+      }
   }
 
   override fun getLastFinalizationUpdate(): FinalizationMonitor.FinalizationUpdate {

@@ -4,8 +4,11 @@ import io.vertx.junit5.VertxExtension
 import io.vertx.sqlclient.PreparedQuery
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.RowSet
+import linea.persistence.ftx.ForcedTransactionsDao
+import linea.persistence.ftx.PostgresForcedTransactionsDao
 import net.consensys.FakeFixedClock
 import net.consensys.linea.async.get
+import net.consensys.zkevm.domain.ForcedTransactionRecordFactory
 import net.consensys.zkevm.domain.createAggregation
 import net.consensys.zkevm.domain.createBatch
 import net.consensys.zkevm.domain.createBlobRecordFromBatches
@@ -30,7 +33,7 @@ import kotlin.time.Clock
 @ExtendWith(VertxExtension::class)
 class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
   init {
-    target = "4"
+    target = "5"
   }
 
   override val databaseName = DbHelper.generateUniqueDbName("records-cleanup-on-finalization")
@@ -38,6 +41,7 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
   private lateinit var batchesRepository: BatchesRepository
   private lateinit var blobsRepository: BlobsRepository
   private lateinit var aggregationsRepository: AggregationsRepository
+  private lateinit var forcedTransactionsDao: ForcedTransactionsDao
 
   private lateinit var recordsCleanupFinalizationHandler: RecordsCleanupFinalizationHandler
 
@@ -64,10 +68,16 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
       ),
     )
 
+    forcedTransactionsDao = PostgresForcedTransactionsDao(
+      connection = sqlClient,
+      clock = fakeClock,
+    )
+
     recordsCleanupFinalizationHandler = RecordsCleanupFinalizationHandler(
       batchesRepository,
       blobsRepository,
       aggregationsRepository,
+      forcedTransactionsDao,
     )
   }
 
@@ -112,6 +122,13 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
 
   val aggregations = listOf(aggregation1, aggregation2, aggregation3)
 
+  val ftx1 = ForcedTransactionRecordFactory.createForcedTransactionRecord(ftxNumber = 1UL)
+  val ftx2 = ForcedTransactionRecordFactory.createForcedTransactionRecord(ftxNumber = 2UL)
+  val ftx3 = ForcedTransactionRecordFactory.createForcedTransactionRecord(ftxNumber = 3UL)
+  val ftx4 = ForcedTransactionRecordFactory.createForcedTransactionRecord(ftxNumber = 4UL)
+
+  val forcedTransactions = listOf(ftx1, ftx2, ftx3, ftx4)
+
   private fun setup() {
     SafeFuture.allOf(
       batchesRepository.saveNewBatch(batch1),
@@ -126,24 +143,32 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
       aggregationsRepository.saveNewAggregation(aggregation1),
       aggregationsRepository.saveNewAggregation(aggregation2),
       aggregationsRepository.saveNewAggregation(aggregation3),
+
+      forcedTransactionsDao.save(ftx1),
+      forcedTransactionsDao.save(ftx2),
+      forcedTransactionsDao.save(ftx3),
+      forcedTransactionsDao.save(ftx4),
     ).get()
   }
 
   @Test
-  fun `verify that cleanup on block finalization does not delete last blob and aggregation`() {
+  fun `verify that cleanup on block finalization does not delete last blob, aggregation, and ftx`() {
     setup()
     val update = FinalizationMonitor.FinalizationUpdate(
       blockNumber = 21u,
       blockHash = Bytes32.random(),
+      forcedTransactionNumber = 3UL,
     )
 
     val batchesBeforeCleanup = batchesContentQuery().execute().get()
     val blobsBeforeCleanup = blobsContentQuery().execute().get()
-    val aggregationBeforeCleanup = aggregationsContentQuery().execute().get()
+    val aggregationsBeforeCleanup = aggregationsContentQuery().execute().get()
+    val forcedTransactionsBeforeCleanup = forcedTransactionsDao.list().get()
 
     Assertions.assertThat(batchesBeforeCleanup.size()).isEqualTo(batches.size)
     Assertions.assertThat(blobsBeforeCleanup.size()).isEqualTo(blobs.size)
-    Assertions.assertThat(aggregationBeforeCleanup.size()).isEqualTo(aggregations.size)
+    Assertions.assertThat(aggregationsBeforeCleanup.size()).isEqualTo(aggregations.size)
+    Assertions.assertThat(forcedTransactionsBeforeCleanup.size).isEqualTo(forcedTransactions.size)
 
     recordsCleanupFinalizationHandler.handleUpdate(update).get()
 
@@ -160,6 +185,13 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
     Assertions.assertThat(aggregationsAfterCleanup.size()).isEqualTo(1)
     Assertions.assertThat(
       aggregationsRepository.findAggregationProofByEndBlockNumber(aggregation3.endBlockNumber.toLong()).get(),
+    )
+      .isNotNull()
+
+    val forcedTransactionsAfterCleanup = forcedTransactionsDao.list().get()
+    Assertions.assertThat(forcedTransactionsAfterCleanup.size).isEqualTo(1)
+    Assertions.assertThat(
+      forcedTransactionsDao.findByNumber(ftx4.ftxNumber).get(),
     )
       .isNotNull()
   }

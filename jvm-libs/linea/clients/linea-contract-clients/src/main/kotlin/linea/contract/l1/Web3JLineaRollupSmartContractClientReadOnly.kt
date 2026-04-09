@@ -28,9 +28,9 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
   val contractAddress: String,
   private val ethLogsClient: EthLogsClient,
   private val log: Logger = LogManager.getLogger(Web3JLineaRollupSmartContractClientReadOnly::class.java),
-) :
-  LineaRollupSmartContractClientReadOnly,
-  LineaRollupSmartContractClientReadOnlyFinalizedStateProvider {
+) : LineaRollupSmartContractClientReadOnly,
+  LineaRollupSmartContractClientReadOnlyFinalizedStateProvider,
+  FinalizedStateDataProvider {
 
   protected fun contractClientV8AtBlock(blockParameter: BlockParameter): LineaRollupV8 {
     return contractClientAtBlock(blockParameter, LineaRollupV8::class.java)
@@ -178,6 +178,33 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
                 )
               }
           }
+      }
+  }
+
+  override fun getFinalizedStateData(
+    blockParameter: BlockParameter,
+  ): SafeFuture<FinalizedStateDataProvider.FinalizedStateData> {
+    return getVersion()
+      .thenCompose { version ->
+        when (version) {
+          LineaRollupContractVersion.V6,
+          LineaRollupContractVersion.V7,
+          -> finalizedL2BlockNumber(blockParameter)
+            .thenApply { blockNumber ->
+              FinalizedStateDataProvider.FinalizedStateData(
+                blockNumber = blockNumber,
+                forcedTransactionNumber = null,
+              )
+            }
+          LineaRollupContractVersion.V8,
+          -> getLatestFinalizedState(blockParameter)
+            .thenApply { finalizedState ->
+              FinalizedStateDataProvider.FinalizedStateData(
+                blockNumber = finalizedState.blockNumber,
+                forcedTransactionNumber = finalizedState.forcedTransactionNumber,
+              )
+            }
+        }
       }
   }
 

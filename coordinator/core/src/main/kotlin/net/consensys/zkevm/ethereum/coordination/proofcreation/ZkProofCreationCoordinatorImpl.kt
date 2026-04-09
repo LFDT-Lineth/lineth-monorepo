@@ -52,8 +52,6 @@ class ZkProofCreationCoordinatorImpl(
     blocksConflation: BlocksConflation,
     traces: BlocksTracesConflated,
   ): SafeFuture<ExecutionProofIndex> {
-    val startBlockNumber = blocksConflation.blocks.first().number
-    val endBlockNumber = blocksConflation.blocks.last().number
     val blocksConflationInterval = blocksConflation.intervalString()
     val bridgeLogsListFutures =
       blocksConflation.blocks.map { block ->
