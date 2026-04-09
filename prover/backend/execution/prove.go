@@ -105,6 +105,17 @@ func mustProveAndPass(
 			if err := checkOnlyZkEvm.VerifyInner(proof); err != nil {
 				utils.Panic("The prover did not pass: %v", err)
 			}
+
+			// FullZkEVMCheckOnly has no recursion layer, so the proof is from
+			// InitialCompiledIOP. Check that the checkPublicInputs gnark
+			// constraints pass without running the full outer proof.
+			execution.CheckPublicInputConsistency(
+				traces,
+				checkOnlyZkEvm.InitialCompiledIOP,
+				proof,
+				*w.FuncInp,
+				w.ZkEVM.ExecData,
+			)
 		}
 
 		srsProvider, err := circuits.NewSRSStore(cfg.PathForSRS())

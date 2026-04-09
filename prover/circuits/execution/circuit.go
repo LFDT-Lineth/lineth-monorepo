@@ -102,11 +102,13 @@ func AllocateLimitless(congWiop *wizard.CompiledIOP, limits *config.TracesLimits
 func (c *CircuitExecution) Define(api frontend.API) error {
 
 	c.WizardVerifier.BLSFS = fiatshamir.NewGnarkFSBLS12377(api)
+
 	c.WizardVerifier.Verify(api)
 
+	extr := extractPIsFromWVC(api, &c.WizardVerifier)
 	checkPublicInputs(
 		api,
-		&c.WizardVerifier,
+		&extr,
 		c.FuncInputs,
 		c.ExecDataBytes,
 	)
@@ -118,6 +120,7 @@ func (c *CircuitExecution) Define(api frontend.API) error {
 	api.AssertIsEqual(c.PublicInput, c.FuncInputs.Sum(api))
 
 	c.FuncInputs.RangeCheck(api)
+
 	return nil
 }
 
