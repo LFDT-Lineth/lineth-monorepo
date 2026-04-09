@@ -414,7 +414,7 @@ services:
       - l1network
 
   shomei:
-    image: consensys/linea-shomei:${LINEA_SHOMEI_TAG:-3.0.7}
+    image: consensys/linea-shomei:${LINEA_SHOMEI_TAG:-3.1.0}
     hostname: shomei
     container_name: shomei
     profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
@@ -449,7 +449,7 @@ services:
   #      - ../tmp/local/shomei:/data/shomei/:z
 
   shomei-frontend:
-    image: consensys/linea-shomei:${LINEA_SHOMEI_TAG:-3.0.7}
+    image: consensys/linea-shomei:${LINEA_SHOMEI_TAG:-3.1.0}
     hostname: shomei-frontend
     container_name: shomei-frontend
     profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
@@ -641,7 +641,7 @@ services:
       - ../besu-plugins/state-recovery/besu-plugin/build/libs/linea-staterecovery-besu-plugin-SNAPSHOT.jar:/opt/besu/plugins/linea-staterecovery-besu-plugin-SNAPSHOT.jar
 
   shomei-sr:
-    image: consensys/linea-shomei:${LINEA_SHOMEI_TAG:-3.0.7}
+    image: consensys/linea-shomei:${LINEA_SHOMEI_TAG:-3.1.0}
     hostname: shomei-sr
     container_name: shomei-sr
     profiles: [ "staterecovery", "external-to-monorepo" ]

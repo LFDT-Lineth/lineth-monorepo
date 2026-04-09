@@ -132,8 +132,10 @@ jobs:
               - '.github/workflows/lido-governance-monitor-*.yml'
               - '.nvmrc'
             tracer:
+              - 'gradle/**'
               - 'tracer/**'
             tracer-constraints:
+              - 'gradle/**'
               - 'tracer-constraints/**'
               - '.github/workflows/tracer-constraints-*.yml'
               - 'tracer/gradle/corset.gradle'
