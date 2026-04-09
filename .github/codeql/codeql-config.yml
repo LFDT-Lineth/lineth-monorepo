@@ -1,0 +1,12 @@
+name: "linea-monorepo"
+
+paths-ignore:
+  # Gradle build output directories — generated sources, compiled classes, etc.
+  # Note: cannot use **/build/** because src/main/kotlin/build/linea/ is a real package
+  - "**/build/generated/**"
+  - "**/build/classes/**"
+  - "**/build/libs/**"
+  - "**/build/tmp/**"
+  - "**/build/reports/**"
+  # Auto-generated Swagger client for load-testing tools
+  - "testing-tools/app/src/main/java/net/consensys/zkevm/load/swagger/**"
