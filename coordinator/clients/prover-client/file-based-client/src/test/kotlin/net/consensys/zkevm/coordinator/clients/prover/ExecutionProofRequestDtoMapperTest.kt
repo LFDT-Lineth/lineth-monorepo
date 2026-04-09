@@ -2,8 +2,8 @@ package net.consensys.zkevm.coordinator.clients.prover
 
 import build.linea.clients.GetZkEVMStateMerkleProofResponse
 import com.fasterxml.jackson.databind.node.ArrayNode
-import linea.contrat.events.createL2RollingHashUpdatedEthLogV1
-import linea.contrat.events.createMessageSentEthLogV1
+import linea.contract.events.createL2RollingHashUpdatedEthLogV1
+import linea.contract.events.createMessageSentEthLogV1
 import linea.domain.Block
 import linea.domain.EthLog
 import linea.domain.createBlock

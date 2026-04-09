@@ -4,12 +4,12 @@ import build.linea.clients.StateManagerAccountProofClient
 import build.linea.clients.StateManagerClientV1
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
+import linea.contract.events.FactoryForcedTransactionAddedEvent
 import linea.contract.events.FinalizedStateUpdatedEvent
 import linea.contract.events.ForcedTransactionAddedEvent
 import linea.contract.l1.FakeLineaRollupSmartContractClient
 import linea.contract.l1.LineaRollupContractVersion
 import linea.contract.l1.LineaRollupFinalizedState
-import linea.contrat.events.FactoryForcedTransactionAddedEvent
 import linea.domain.BlockParameter
 import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.EthLog

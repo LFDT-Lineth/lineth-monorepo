@@ -1,8 +1,5 @@
-package linea.contrat.events
+package linea.contract.events
 
-import linea.contract.events.L1RollingHashUpdatedEvent
-import linea.contract.events.L2RollingHashUpdatedEvent
-import linea.contract.events.MessageSentEvent
 import linea.domain.EthLog
 import linea.domain.EthLogEvent
 import linea.kotlin.decodeHex

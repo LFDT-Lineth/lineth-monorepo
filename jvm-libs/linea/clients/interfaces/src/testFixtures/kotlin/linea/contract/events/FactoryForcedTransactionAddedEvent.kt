@@ -1,6 +1,5 @@
-package linea.contrat.events
+package linea.contract.events
 
-import linea.contract.events.ForcedTransactionAddedEvent
 import linea.domain.EthLog
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
