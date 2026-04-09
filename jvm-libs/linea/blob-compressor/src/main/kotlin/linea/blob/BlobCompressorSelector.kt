@@ -1,8 +1,9 @@
 package linea.blob
 
+import java.io.Closeable
 import kotlin.time.Instant
 
-interface BlobCompressorSelector<T> {
+interface BlobCompressorSelector<T> : Closeable {
   /**
    * Returns a BlobCompressor instance based on the provided selector.
    */
@@ -24,7 +25,7 @@ class BlobCompressorSelectorByTimestamp(
   }
 
   private val blobCompressors = blobCompressorVersionSwitchTimestampMap.mapValues { (blobCompressorVersion, _) ->
-    GoBackedBlobCompressor.getInstance(blobCompressorVersion, dataLimit)
+    BlobCompressorFactory.getInstance(blobCompressorVersion, dataLimit)
   }
 
   override fun getBlobCompressor(selector: Instant): BlobCompressor {
@@ -35,5 +36,9 @@ class BlobCompressorSelectorByTimestamp(
 
     return blobCompressors[blobCompressorVersion]
       ?: throw IllegalStateException("BlobCompressor for version $blobCompressorVersion not found")
+  }
+
+  override fun close() {
+    blobCompressors.values.forEach(BlobCompressor::close)
   }
 }

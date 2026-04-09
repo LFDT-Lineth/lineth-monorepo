@@ -13,11 +13,9 @@ class GoNativeBlobShnarfCalculatorTest {
   companion object {
     @JvmStatic
     fun enumerateShnarfCalculators(): Stream<Arguments> {
-      val shnarfCalculatorV1 = GoNativeShnarfCalculatorFactory.getInstance(ShnarfCalculatorVersion.V1_2)
       val shnarfCalculatorV3 = GoNativeShnarfCalculatorFactory.getInstance(ShnarfCalculatorVersion.V3)
 
       return Stream.of(
-        Arguments.of(shnarfCalculatorV1),
         Arguments.of(shnarfCalculatorV3),
       )
     }

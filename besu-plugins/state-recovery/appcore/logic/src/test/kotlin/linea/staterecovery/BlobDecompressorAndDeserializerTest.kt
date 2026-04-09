@@ -2,8 +2,8 @@ package linea.staterecovery
 
 import io.vertx.core.Vertx
 import linea.blob.BlobCompressor
+import linea.blob.BlobCompressorFactory
 import linea.blob.BlobCompressorVersion
-import linea.blob.GoBackedBlobCompressor
 import linea.kotlin.encodeHex
 import linea.rlp.RLP
 import net.consensys.linea.blob.BlobDecompressorVersion
@@ -24,7 +24,7 @@ import kotlin.jvm.optionals.getOrNull
 import kotlin.time.Instant
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class BlobDecompressorAndDeserializerV1Test {
+class BlobDecompressorAndDeserializerTest {
   private lateinit var compressor: BlobCompressor
   private val blockStaticFields = BlockHeaderStaticFields(
     coinbase = Address.ZERO.bytes.toArray(),
@@ -37,8 +37,8 @@ class BlobDecompressorAndDeserializerV1Test {
   @BeforeEach
   fun setUp() {
     vertx = Vertx.vertx()
-    compressor = GoBackedBlobCompressor.getInstance(
-      compressorVersion = BlobCompressorVersion.V1_2,
+    compressor = BlobCompressorFactory.getInstance(
+      compressorVersion = BlobCompressorVersion.V2,
       dataLimit = 124 * 1024,
     )
     val decompressor = GoNativeBlobDecompressorFactory.getInstance(BlobDecompressorVersion.V1_2_0)

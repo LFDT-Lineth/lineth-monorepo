@@ -82,17 +82,18 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
-extern GoUint8 Init(GoInt dataLimit, char* dictPath);
-extern void Reset(void);
-extern GoUint8 Write(char* input, int inputLength);
-extern GoUint8 CanWrite(char* input, int inputLength);
-extern char* Error(void);
-extern void StartNewBatch(void);
-extern GoInt Len(void);
-extern void Bytes(char* dataOut);
-extern int WorstCompressedBlockSize(char* input, int inputLength);
-extern int WorstCompressedTxSize(char* input, int inputLength);
-extern int RawCompressedSize(char* input, int inputLength);
+extern int Init(GoInt dataLimit, char* dictPath, char** errOut);
+extern void Free(int handle);
+extern void Reset(int handle);
+extern GoUint8 Write(int handle, char* input, int inputLength);
+extern GoUint8 CanWrite(int handle, char* input, int inputLength);
+extern char* Error(int handle);
+extern void StartNewBatch(int handle);
+extern GoInt Len(int handle);
+extern void Bytes(int handle, char* dataOut);
+extern int WorstCompressedBlockSize(int handle, char* input, int inputLength);
+extern int WorstCompressedTxSize(int handle, char* input, int inputLength);
+extern int RawCompressedSize(int handle, char* input, int inputLength);
 
 #ifdef __cplusplus
 }

@@ -2,8 +2,10 @@ package linea.blob
 
 import com.sun.jna.Library
 import com.sun.jna.Native
+import com.sun.jna.ptr.PointerByReference
 import linea.jvm.ResourcesUtil.copyResourceToTmpDir
 
+/** JVM-facing API of the native blob compressor library. Implemented by both the legacy JNA bindings. */
 interface GoNativeBlobCompressor {
 
   /**
@@ -97,14 +99,41 @@ interface GoNativeBlobCompressor {
   fun RawCompressedSize(data: ByteArray, data_len: Int): Int
 }
 
-interface GoNativeBlobCompressorJnaLib : GoNativeBlobCompressor, Library
-
-enum class BlobCompressorVersion(val version: String) {
-  V1_2("v1.2.0"),
-  V2("v2.1.0"),
-  V3("v3.0.1"),
+/**
+ * JNA binding for the current native compressor library.
+ * [Init] returns an integer handle identifying an independent compressor instance; multiple instances
+ * can coexist within the same process. [Free] must be called when the instance is no longer needed.
+ */
+interface GoNativeBlobCompressorV4 {
+  fun Init(dataLimit: Int, dictPath: String, errOut: PointerByReference): Int
+  fun Free(handle: Int)
+  fun Reset(handle: Int)
+  fun StartNewBatch(handle: Int)
+  fun Write(handle: Int, data: ByteArray, data_len: Int): Boolean
+  fun CanWrite(handle: Int, data: ByteArray, data_len: Int): Boolean
+  fun Error(handle: Int): String?
+  fun Len(handle: Int): Int
+  fun Bytes(handle: Int, out: ByteArray)
+  fun WorstCompressedBlockSize(handle: Int, data: ByteArray, data_len: Int): Int
+  fun WorstCompressedTxSize(handle: Int, data: ByteArray, data_len: Int): Int
+  fun RawCompressedSize(handle: Int, data: ByteArray, data_len: Int): Int
 }
 
+interface GoNativeBlobCompressorLegacyJnaLib : GoNativeBlobCompressor, Library
+
+interface GoNativeBlobCompressorV4JnaLib : GoNativeBlobCompressorV4, Library
+
+enum class BlobCompressorVersion(val version: String) {
+  V2("v2.1.0"),
+  V3("v4.0.0"),
+  V4("v4.0.0"),
+}
+
+/**
+ * Loads and caches the native compressor shared library for each [BlobCompressorVersion].
+ * Versions are cached in [loadedVersions].
+ * The cached object is the raw JNA library binding — it is not an initialised compressor instance.
+ */
 class GoNativeBlobCompressorFactory {
   companion object {
     private const val DICTIONARY_NAME = "compressor-dictionaries/v2025-04-21.bin"
@@ -114,28 +143,45 @@ class GoNativeBlobCompressorFactory {
     private fun getLibFileName(version: String) = "blob_compressor_jna_$version"
 
     @JvmStatic
-    private val loadedVersions = mutableMapOf<BlobCompressorVersion, GoNativeBlobCompressor>()
+    private val loadedVersions = mutableMapOf<BlobCompressorVersion, Library>()
 
     @JvmStatic
-    fun getInstance(version: BlobCompressorVersion): GoNativeBlobCompressor {
-      synchronized(loadedVersions) {
-        return loadedVersions[version]
-          ?: loadLib(version)
+    fun getLegacyInstance(version: BlobCompressorVersion): GoNativeBlobCompressor {
+      require(version == BlobCompressorVersion.V2) {
+        "$version uses the handle-based API; use getInstance() instead"
+      }
+      val lib = synchronized(loadedVersions) {
+        loadedVersions[version]
+          ?: loadLib(version, GoNativeBlobCompressorLegacyJnaLib::class.java)
             .also { loadedVersions[version] = it }
       }
+      return lib as GoNativeBlobCompressor
     }
 
-    private fun loadLib(version: BlobCompressorVersion): GoNativeBlobCompressor {
+    @JvmStatic
+    fun getInstance(version: BlobCompressorVersion): GoNativeBlobCompressorV4 {
+      require(version != BlobCompressorVersion.V2) {
+        "$version uses the legacy API; use getLegacyInstance() instead"
+      }
+      val lib = synchronized(loadedVersions) {
+        loadedVersions[version]
+          ?: loadLib(version, GoNativeBlobCompressorV4JnaLib::class.java)
+            .also { loadedVersions[version] = it }
+      }
+      return lib as GoNativeBlobCompressorV4
+    }
+
+    private fun <T : Library> loadLib(version: BlobCompressorVersion, classOfT: Class<T>): T {
       val extractedLibFile = Native.extractFromResourcePath(
         getLibFileName(version.version),
-        GoNativeBlobCompressorFactory::class.java.classLoader,
+        classOfT.classLoader,
       )
 
       return Native.load(
         /* name = */
         extractedLibFile.toString(),
         /* interfaceClass = */
-        GoNativeBlobCompressorJnaLib::class.java,
+        classOfT,
       )
     }
   }

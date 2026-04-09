@@ -14,41 +14,74 @@ import (
 //go:generate go build -tags nocorset -ldflags "-s -w" -buildmode=c-shared -o libcompressor.so libcompressor.go
 func main() {}
 
-var (
+type instance struct {
 	compressor *blob_v1.BlobMaker
 	lastError  error
-	lock       sync.Mutex // probably unnecessary if coordinator guarantees single-threaded access
-)
-
-// Init initializes the compressor.
-// The dataLimit argument is the maximum size of the compressed data.
-// Returns true if the compressor was initialized, false otherwise.
-// If false is returned, the Error() method will return a string describing the error.
-//
-//export Init
-func Init(dataLimit int, dictPath *C.char) bool {
-	fPath := C.GoString(dictPath)
-	return initGo(dataLimit, fPath)
+	mu         sync.Mutex
 }
 
-func initGo(dataLimit int, dictPath string) bool {
-	lock.Lock()
-	defer lock.Unlock()
-	compressor, lastError = blob_v2.NewBlobMaker(dataLimit, dictPath)
+var (
+	instances        = map[C.int]*instance{}
+	nextHandle C.int = 1
+	registryMu sync.Mutex
+)
 
-	return lastError == nil
+func getInstance(handle C.int) *instance {
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	inst, ok := instances[handle]
+	if !ok {
+		panic("libcompressor: unknown handle")
+	}
+	return inst
+}
+
+// Init initializes a new compressor instance.
+// The dataLimit argument is the maximum size of the compressed data.
+// Returns a positive handle on success, or -1 on failure.
+// On failure, errOut is set to a newly allocated C string describing the error; the caller must free it.
+//
+//export Init
+func Init(dataLimit int, dictPath *C.char, errOut **C.char) C.int {
+	fPath := C.GoString(dictPath)
+
+	blobMaker, err := blob_v2.NewBlobMaker(dataLimit, fPath)
+	if err != nil {
+		*errOut = C.CString(err.Error())
+		return -1
+	}
+
+	inst := &instance{compressor: blobMaker}
+
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	handle := nextHandle
+	nextHandle++
+	instances[handle] = inst
+
+	return handle
+}
+
+// Free releases a compressor instance created by Init.
+// The handle must not be used after this call.
+//
+//export Free
+func Free(handle C.int) {
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	delete(instances, handle)
 }
 
 // Reset resets the compressor. Must be called between each Blob.
 //
 //export Reset
-func Reset() {
-	lock.Lock()
-	defer lock.Unlock()
+func Reset(handle C.int) {
+	inst := getInstance(handle)
+	inst.mu.Lock()
+	defer inst.mu.Unlock()
 
-	lastError = nil
-
-	compressor.Reset()
+	inst.lastError = nil
+	inst.compressor.Reset()
 }
 
 // Write appends the input to the compressed data.
@@ -58,13 +91,14 @@ func Reset() {
 // The input []byte is interpreted as a RLP encoded Block.
 //
 //export Write
-func Write(input *C.char, inputLength C.int) (chunkAppended bool) {
-	lock.Lock()
-	defer lock.Unlock()
+func Write(handle C.int, input *C.char, inputLength C.int) (chunkAppended bool) {
+	inst := getInstance(handle)
+	inst.mu.Lock()
+	defer inst.mu.Unlock()
 	rlpBlock := unsafe.Slice((*byte)(unsafe.Pointer(input)), inputLength)
-	chunkAppended, err := compressor.Write(rlpBlock, false)
+	chunkAppended, err := inst.compressor.Write(rlpBlock, false)
 	if err != nil {
-		lastError = err
+		inst.lastError = err
 		return false
 	}
 
@@ -75,29 +109,31 @@ func Write(input *C.char, inputLength C.int) (chunkAppended bool) {
 // (but return true if it could)
 //
 //export CanWrite
-func CanWrite(input *C.char, inputLength C.int) (chunkAppended bool) {
-	lock.Lock()
-	defer lock.Unlock()
+func CanWrite(handle C.int, input *C.char, inputLength C.int) (chunkAppended bool) {
+	inst := getInstance(handle)
+	inst.mu.Lock()
+	defer inst.mu.Unlock()
 	rlpBlock := unsafe.Slice((*byte)(unsafe.Pointer(input)), inputLength)
-	chunkAppended, err := compressor.Write(rlpBlock, true)
+	chunkAppended, err := inst.compressor.Write(rlpBlock, true)
 	if err != nil {
-		lastError = err
+		inst.lastError = err
 		return false
 	}
 
 	return chunkAppended
 }
 
-// Error returns the last encountered error.
+// Error returns the last encountered error for the given instance.
 // If no error was encountered, returns nil.
 //
 //export Error
-func Error() *C.char {
-	lock.Lock()
-	defer lock.Unlock()
-	if lastError != nil {
+func Error(handle C.int) *C.char {
+	inst := getInstance(handle)
+	inst.mu.Lock()
+	defer inst.mu.Unlock()
+	if inst.lastError != nil {
 		// this leaks memory, but since this represents a fatal error, it's probably ok.
-		return C.CString(lastError.Error())
+		return C.CString(inst.lastError.Error())
 	}
 	return nil
 }
@@ -105,20 +141,22 @@ func Error() *C.char {
 // StartNewBatch starts a new batch; must be called between each batch in the blob.
 //
 //export StartNewBatch
-func StartNewBatch() {
-	lock.Lock()
-	defer lock.Unlock()
+func StartNewBatch(handle C.int) {
+	inst := getInstance(handle)
+	inst.mu.Lock()
+	defer inst.mu.Unlock()
 
-	compressor.StartNewBatch()
+	inst.compressor.StartNewBatch()
 }
 
 // Len returns the length of the compressed data.
 //
 //export Len
-func Len() (length int) {
-	lock.Lock()
-	defer lock.Unlock()
-	return compressor.Len()
+func Len(handle C.int) (length int) {
+	inst := getInstance(handle)
+	inst.mu.Lock()
+	defer inst.mu.Unlock()
+	return inst.compressor.Len()
 }
 
 // Bytes returns the compressed data.
@@ -126,10 +164,11 @@ func Len() (length int) {
 // Length of the output slice must equal the value returned by Len().
 //
 //export Bytes
-func Bytes(dataOut *C.char) {
-	lock.Lock()
-	defer lock.Unlock()
-	compressed := compressor.Bytes()
+func Bytes(handle C.int, dataOut *C.char) {
+	inst := getInstance(handle)
+	inst.mu.Lock()
+	defer inst.mu.Unlock()
+	compressed := inst.compressor.Bytes()
 
 	outSlice := unsafe.Slice((*byte)(unsafe.Pointer(dataOut)), len(compressed))
 	copy(outSlice, compressed)
@@ -143,18 +182,18 @@ func Bytes(dataOut *C.char) {
 // Returns the length of the compressed data, or -1 if an error occurred.
 // User must call Error() to get the error message.
 //
-// This function is thread-safe. Concurrent calls are allowed,
-// but the other functions may not be thread-safe.
+// This function is thread-safe. Concurrent calls with different handles are allowed.
 //
 //export WorstCompressedBlockSize
-func WorstCompressedBlockSize(input *C.char, inputLength C.int) C.int {
+func WorstCompressedBlockSize(handle C.int, input *C.char, inputLength C.int) C.int {
+	inst := getInstance(handle)
 	rlpBlock := C.GoBytes(unsafe.Pointer(input), inputLength)
 
-	_, n, err := compressor.WorstCompressedBlockSize(rlpBlock)
+	_, n, err := inst.compressor.WorstCompressedBlockSize(rlpBlock)
 	if err != nil {
-		lock.Lock()
-		lastError = errors.Join(lastError, err)
-		lock.Unlock()
+		inst.mu.Lock()
+		inst.lastError = errors.Join(inst.lastError, err)
+		inst.mu.Unlock()
 		return -1
 	}
 	return C.int(n)
@@ -168,18 +207,18 @@ func WorstCompressedBlockSize(input *C.char, inputLength C.int) C.int {
 // Returns the length of the compressed data, or -1 if an error occurred.
 // User must call Error() to get the error message.
 //
-// This function is thread-safe. Concurrent calls are allowed,
-// but the other functions may not be thread-safe.
+// This function is thread-safe. Concurrent calls with different handles are allowed.
 //
 //export WorstCompressedTxSize
-func WorstCompressedTxSize(input *C.char, inputLength C.int) C.int {
+func WorstCompressedTxSize(handle C.int, input *C.char, inputLength C.int) C.int {
+	inst := getInstance(handle)
 	rlpTx := C.GoBytes(unsafe.Pointer(input), inputLength)
 
-	n, err := compressor.WorstCompressedTxSize(rlpTx)
+	n, err := inst.compressor.WorstCompressedTxSize(rlpTx)
 	if err != nil {
-		lock.Lock()
-		lastError = errors.Join(lastError, err)
-		lock.Unlock()
+		inst.mu.Lock()
+		inst.lastError = errors.Join(inst.lastError, err)
+		inst.mu.Unlock()
 		return -1
 	}
 	return C.int(n)
@@ -192,18 +231,18 @@ func WorstCompressedTxSize(input *C.char, inputLength C.int) C.int {
 // If an error occurred, returns -1.
 // User must call Error() to get the error message.
 //
-// This function is thread-safe. Concurrent calls are allowed,
-// but the other functions are not thread-safe.
+// This function is thread-safe. Concurrent calls with different handles are allowed.
 //
 //export RawCompressedSize
-func RawCompressedSize(input *C.char, inputLength C.int) C.int {
+func RawCompressedSize(handle C.int, input *C.char, inputLength C.int) C.int {
+	inst := getInstance(handle)
 	inputSlice := C.GoBytes(unsafe.Pointer(input), inputLength)
 
-	n, err := compressor.RawCompressedSize(inputSlice)
+	n, err := inst.compressor.RawCompressedSize(inputSlice)
 	if err != nil {
-		lock.Lock()
-		lastError = errors.Join(lastError, err)
-		lock.Unlock()
+		inst.mu.Lock()
+		inst.lastError = errors.Join(inst.lastError, err)
+		inst.mu.Unlock()
 		return -1
 	}
 	return C.int(n)

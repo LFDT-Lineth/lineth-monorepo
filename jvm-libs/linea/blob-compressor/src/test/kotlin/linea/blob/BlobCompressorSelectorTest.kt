@@ -20,48 +20,51 @@ class BlobCompressorSelectorTest {
 
   @Test
   fun `returns correct BlobCompressor for matching timestamp`() {
-    val v1 = BlobCompressorVersion.V1_2
     val v2 = BlobCompressorVersion.V2
-    val t1 = Instant.parse("2025-01-01T00:00:00Z")
-    val t2 = Instant.parse("2026-01-01T00:00:00Z")
+    val v3 = BlobCompressorVersion.V3
+    val t2 = Instant.parse("2025-01-01T00:00:00Z")
+    val t3 = Instant.parse("2026-01-01T00:00:00Z")
     val dataLimit = 100
     val selector = BlobCompressorSelectorByTimestamp(
-      mapOf(v1 to t1, v2 to t2),
+      mapOf(v3 to t3, v2 to t2),
       dataLimit,
     )
-    // Should select v2 for t2, v1 for t1 and mid-timestamps
+    // Should select v2 for t2, v3 for t3 and mid-timestamps
     val compressorV2 = selector.getBlobCompressor(t2)
-    val compressorV1 = selector.getBlobCompressor(t1)
+    val compressorV3 = selector.getBlobCompressor(t3)
     val compressorMid = selector.getBlobCompressor(Instant.parse("2025-06-01T00:00:00Z"))
     assertNotNull(compressorV2)
-    assertNotNull(compressorV1)
+    assertNotNull(compressorV3)
     assertNotNull(compressorMid)
-    assertEquals(compressorV1, compressorMid)
-    assertTrue(compressorV2 != compressorV1)
+    assertTrue(compressorV2.version == BlobCompressorVersion.V2)
+    assertTrue(compressorV3.version == BlobCompressorVersion.V3)
+    assertTrue(compressorMid.version == BlobCompressorVersion.V2)
+    assertEquals(compressorV2, compressorMid)
+    assertTrue(compressorV2 != compressorV3)
   }
 
   @Test
   fun `returns the same BlobCompressor object`() {
-    val v1 = BlobCompressorVersion.V1_2
-    val t1 = Instant.parse("2025-01-01T00:00:00Z")
+    val version = BlobCompressorVersion.V2
+    val timestamp = Instant.parse("2025-01-01T00:00:00Z")
     val dataLimit = 100
     val selector = BlobCompressorSelectorByTimestamp(
-      mapOf(v1 to t1),
+      mapOf(version to timestamp),
       dataLimit,
     )
-    // Should select v1 for t2, v1 for t1 and mid-timestamps
-    val compressorV1 = selector.getBlobCompressor(t1)
-    assertNotNull(compressorV1)
-    assertEquals(compressorV1, selector.getBlobCompressor(t1))
-    assertEquals(compressorV1, selector.getBlobCompressor(t1.plus(1.days)))
+    val compressor = selector.getBlobCompressor(timestamp)
+    assertNotNull(compressor)
+    assertTrue(compressor.version == version)
+    assertEquals(compressor, selector.getBlobCompressor(timestamp))
+    assertEquals(compressor, selector.getBlobCompressor(timestamp.plus(1.days)))
   }
 
   @Test
   fun `throws if no version matches timestamp`() {
-    val v1 = BlobCompressorVersion.V1_2
+    val version = BlobCompressorVersion.V2
     val t1 = Instant.parse("2025-01-01T00:00:00Z")
     val dataLimit = 100
-    val selector = BlobCompressorSelectorByTimestamp(mapOf(v1 to t1), dataLimit)
+    val selector = BlobCompressorSelectorByTimestamp(mapOf(version to t1), dataLimit)
     val before = Instant.parse("2024-01-01T00:00:00Z")
     assertThrows<IllegalStateException> {
       selector.getBlobCompressor(before)
@@ -161,11 +164,13 @@ class BlobCompressorSelectorTest {
     assertThat(errors).isEmpty()
   }
 
-  fun compressBlocks(compressor: BlobCompressor, blocks: List<ByteArray>): ByteArray {
-    blocks.forEach { block ->
-      compressor.startNewBatch()
-      compressor.appendBlock(block)
+  companion object {
+    fun compressBlocks(compressor: BlobCompressor, blocks: List<ByteArray>): ByteArray {
+      blocks.forEach { block ->
+        compressor.startNewBatch()
+        compressor.appendBlock(block)
+      }
+      return compressor.getCompressedDataAndReset()
     }
-    return compressor.getCompressedDataAndReset()
   }
 }
