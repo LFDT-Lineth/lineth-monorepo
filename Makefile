@@ -1,4 +1,4 @@
-include makefile-contracts.mk
+include contracts/makefile-contracts.mk
 
 docker-pull-images-external-to-monorepo:
 		docker compose -f docker/compose-tracing-v2-ci-extension.yml --profile external-to-monorepo pull

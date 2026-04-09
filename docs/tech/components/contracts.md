@@ -105,10 +105,12 @@ contracts/
 │   │       ├── TokenBridgeBase.sol
 │   │       └── BridgedToken.sol
 │   │
-│   ├── verifiers/              # ZK verifier contracts
-│   │   ├── PlonkVerifierMainnetFull.sol
-│   │   ├── PlonkVerifierSepoliaFull.sol
-│   │   └── PlonkVerifierForDataAggregation.sol
+│   ├── verifiers/              # ZK Plonk verifier contracts (implementations are gnark-generated where noted)
+│   │   ├── interfaces/
+│   │   │   └── IPlonkVerifier.sol
+│   │   ├── PlonkVerifierDev.sol                 # Smaller verifier for local / integration testing
+│   │   ├── PlonkVerifierForDataAggregation.sol # Aggregation proof verification (deployed via VERIFIER_CONTRACT_NAME)
+│   │   └── PlonkVerifierFull.sol                # Full-circuit verifier (generated; do not edit)
 │   │
 │   ├── security/               # Security utilities
 │   │   ├── access/             # Access control
