@@ -2,7 +2,7 @@ name: Codecov coverage report upload for PRs from external forks
 
 on:
   workflow_run:
-    workflows: [main]
+    workflows: [main, sdk-testing]
     types:
       - completed
 
@@ -18,6 +18,7 @@ jobs:
     name: get-commit-tag
     outputs:
       commit-tag: ${{ steps.compute-commit-tag.outputs.COMMIT_TAG }}
+      sdk-commit-tag: ${{ steps.compute-commit-tag.outputs.SDK_COMMIT_TAG }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -28,16 +29,26 @@ jobs:
       - name: Compute commit tag
         shell: bash
         id: compute-commit-tag
-        # COMMIT_TAG will be the commit SHA of the workflow run that triggered this workflow
-        # - For a new commit on a PR branch, COMMIT_TAG = head of PR branch
-        #
-        # Note that we cannot use GITHUB_SHA here because it will always reference the head of main branch
-        # Since we intend for this workflow to run only for PRs from an external fork, we want COMMIT_TAG to match the PR branch head
+        env:
+          TRIGGERING_WORKFLOW: ${{ github.event.workflow_run.name }}
+          WORKFLOW_RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          WORKFLOW_RUN_PR_HEAD_SHA: ${{ github.event.workflow_run.pull_requests[0].head.sha || '' }}
+        # COMMIT_TAG is derived from workflow_run.head_sha and used by workflows that upload artifacts using the shared commit_tag.
+        # SDK_COMMIT_TAG is derived from the PR head SHA for sdk-testing PR runs to match sdk-testing.yml's cov-tag step.
         run: |
-          echo "COMMIT_TAG=$(git rev-parse --short=7 ${{ github.event.workflow_run.head_sha }})" >> $GITHUB_OUTPUT
+          COMMIT_TAG="$(git rev-parse --short=7 "$WORKFLOW_RUN_HEAD_SHA")"
+          SDK_COMMIT_TAG="$COMMIT_TAG"
+
+          if [[ "$TRIGGERING_WORKFLOW" == "sdk-testing" ]] && [[ -n "$WORKFLOW_RUN_PR_HEAD_SHA" ]]; then
+            SDK_COMMIT_TAG="$(git rev-parse --short=7 "$WORKFLOW_RUN_PR_HEAD_SHA")"
+          fi
+
+          echo "COMMIT_TAG=$COMMIT_TAG" >> "$GITHUB_OUTPUT"
+          echo "SDK_COMMIT_TAG=$SDK_COMMIT_TAG" >> "$GITHUB_OUTPUT"
       - name: Show commit tag
         run: |
           echo "COMMIT_TAG: ${{ steps.compute-commit-tag.outputs.COMMIT_TAG }}"
+          echo "SDK_COMMIT_TAG: ${{ steps.compute-commit-tag.outputs.SDK_COMMIT_TAG }}"
 
   # Ideally we would use dorny/paths-filter@v3 to conditionally trigger an upload job based on file changes
   # However there is a limitation in Github Actions where workflows triggered by a `workflow_run` event have no access to metadata on external fork PRs - https://github.com/orgs/community/discussions/25220
@@ -59,7 +70,7 @@ jobs:
         with:
           name: jacocoRootReport-${{ needs.get-commit-tag.outputs.commit-tag }}.xml
           path: |
-            ${{ github.workspace }}
+            ${{ github.workspace }}/ci-coordinator-coverage
           # Required to download artifacts from another workflow run
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # Gets run id of the precedeing workflow that triggered this workflow_run
@@ -68,7 +79,7 @@ jobs:
         if: ${{ steps.coordinator-report-download.outcome == 'success' }}
         with:
           fail_ci_if_error: true
-          files: ${{ github.workspace }}/jacocoRootReport.xml
+          files: ${{ github.workspace }}/ci-coordinator-coverage/**/jacocoRootReport.xml
           flags: kotlin
           os: linux
           name: codecov-coordinator
@@ -89,7 +100,7 @@ jobs:
         with:
           name: smart-contract-coverage-${{ needs.get-commit-tag.outputs.commit-tag }}.json
           path: |
-            ${{ github.workspace }}
+            ${{ github.workspace }}/ci-smart-contract-coverage
           # Required to download artifacts from another workflow run
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # Gets run id of the precedeing workflow that triggered this workflow_run
@@ -98,9 +109,181 @@ jobs:
         if: ${{ steps.smc-report-download.outcome == 'success' }}
         with:
           fail_ci_if_error: true
-          files: ${{ github.workspace }}/coverage-final.json
+          files: ${{ github.workspace }}/ci-smart-contract-coverage/**/coverage-final.json
           flags: hardhat
           os: linux
           name: codecov-contracts
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  upload-codecov-ts:
+    needs: [ get-commit-tag ]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    name: upload-codecov-ts
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    steps:
+      - name: Download TS test coverage reports (from postman-testing.yml)
+        continue-on-error: true
+        uses: actions/download-artifact@v7
+        id: ts-coverage-download
+        with:
+          name: ts-coverage-${{ needs.get-commit-tag.outputs.commit-tag }}
+          path: |
+            ${{ github.workspace }}/ci-ts-coverage
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        if: ${{ steps.ts-coverage-download.outcome == 'success' }}
+        with:
+          fail_ci_if_error: true
+          files: ${{ github.workspace }}/ci-ts-coverage/**/native-libs-lcov.info
+          flags: linea-native-libs
+          os: linux
+          name: codecov-linea-native-libs-fork
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        if: ${{ steps.ts-coverage-download.outcome == 'success' }}
+        with:
+          fail_ci_if_error: true
+          files: ${{ github.workspace }}/ci-ts-coverage/**/postman-lcov.info
+          flags: postman
+          os: linux
+          name: codecov-postman
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        if: ${{ steps.ts-coverage-download.outcome == 'success' }}
+        with:
+          fail_ci_if_error: true
+          files: ${{ github.workspace }}/ci-ts-coverage/**/sdk-viem-lcov.info
+          flags: sdk-viem
+          os: linux
+          name: codecov-sdk-viem
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  upload-codecov-native-yield-ts:
+    needs: [ get-commit-tag ]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    name: upload-codecov-native-yield-ts
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    steps:
+      - name: Download TS coverage (from native-yield-automation-service-testing.yml)
+        continue-on-error: true
+        uses: actions/download-artifact@v7
+        id: native-yield-coverage-download
+        with:
+          name: native-yield-ts-coverage-${{ needs.get-commit-tag.outputs.commit-tag }}
+          path: |
+            ${{ github.workspace }}/ci-native-yield-coverage
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        if: ${{ steps.native-yield-coverage-download.outcome == 'success' }}
+        with:
+          fail_ci_if_error: true
+          files: ${{ github.workspace }}/ci-native-yield-coverage/**/shared-utils-lcov.info
+          flags: linea-shared-utils
+          os: linux
+          name: codecov-linea-shared-utils-native-yield-fork
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        if: ${{ steps.native-yield-coverage-download.outcome == 'success' }}
+        with:
+          fail_ci_if_error: true
+          files: ${{ github.workspace }}/ci-native-yield-coverage/**/automation-service-lcov.info
+          flags: native-yield-automation-service
+          os: linux
+          name: codecov-native-yield-automation-service-fork
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  upload-codecov-lido-ts:
+    needs: [ get-commit-tag ]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    name: upload-codecov-lido-ts
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    steps:
+      - name: Download TS coverage (from lido-governance-monitor-testing.yml)
+        continue-on-error: true
+        uses: actions/download-artifact@v7
+        id: lido-coverage-download
+        with:
+          name: lido-ts-coverage-${{ needs.get-commit-tag.outputs.commit-tag }}
+          path: |
+            ${{ github.workspace }}/ci-lido-coverage
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        if: ${{ steps.lido-coverage-download.outcome == 'success' }}
+        with:
+          fail_ci_if_error: true
+          files: ${{ github.workspace }}/ci-lido-coverage/**/shared-utils-lcov.info
+          flags: linea-shared-utils
+          os: linux
+          name: codecov-linea-shared-utils-lido-fork
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        if: ${{ steps.lido-coverage-download.outcome == 'success' }}
+        with:
+          fail_ci_if_error: true
+          files: ${{ github.workspace }}/ci-lido-coverage/**/lido-governance-monitor-lcov.info
+          flags: lido-governance-monitor
+          os: linux
+          name: codecov-lido-governance-monitor-fork
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  upload-codecov-sdk-ts:
+    needs: [ get-commit-tag ]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    name: upload-codecov-sdk-ts
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    steps:
+      - name: Download TS coverage (from sdk-testing.yml)
+        continue-on-error: true
+        uses: actions/download-artifact@v7
+        id: sdk-coverage-download
+        with:
+          name: sdk-ts-coverage-${{ needs.get-commit-tag.outputs.sdk-commit-tag }}
+          path: |
+            ${{ github.workspace }}/ci-sdk-coverage
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        if: ${{ steps.sdk-coverage-download.outcome == 'success' }}
+        with:
+          fail_ci_if_error: true
+          files: ${{ github.workspace }}/ci-sdk-coverage/**/sdk-core-lcov.info
+          flags: sdk-core
+          os: linux
+          name: codecov-sdk-core-fork
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        if: ${{ steps.sdk-coverage-download.outcome == 'success' }}
+        with:
+          fail_ci_if_error: true
+          files: ${{ github.workspace }}/ci-sdk-coverage/**/sdk-viem-lcov.info
+          flags: sdk-viem
+          os: linux
+          name: codecov-sdk-viem-sdk-testing-fork
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        if: ${{ steps.sdk-coverage-download.outcome == 'success' }}
+        with:
+          fail_ci_if_error: true
+          files: ${{ github.workspace }}/ci-sdk-coverage/**/sdk-ethers-lcov.info
+          flags: sdk-ethers
+          os: linux
+          name: codecov-sdk-ethers-fork
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}

@@ -19,6 +19,8 @@ jobs:
   # ==================================================================
   unit-tests:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xxl
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -59,3 +61,15 @@ jobs:
         with:
           name: jacoco-unit-tests-exec-file-${{ inputs.zkevm_fork }}
           path: tracer/arithmetization/build/jacoco/test.exec
+
+      - name: Upload tracer unit-test coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        with:
+          fail_ci_if_error: true
+          files: tracer/arithmetization/build/reports/jacoco/test/jacocoTestReport.xml
+          flags: tracer
+          os: linux
+          name: codecov-tracer-unit-${{ inputs.zkevm_fork }}
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}

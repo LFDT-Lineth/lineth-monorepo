@@ -6,6 +6,10 @@ permissions:
 
 on:
   workflow_call:
+    inputs:
+      commit_tag:
+        required: true
+        type: string
 
 concurrency:
   group: postman-testing-${{ github.workflow }}-${{ github.ref }}
@@ -15,6 +19,9 @@ jobs:
   run-tests:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-large
     name: Postman & SDK tests
+    env:
+      COMMIT_TAG: ${{ inputs.commit_tag }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -27,5 +34,58 @@ jobs:
           NATIVE_LIBS_RELEASE_TAG: blob-libs-v3.0.1
         run: |
           pnpm run -F "@consensys/linea-postman^..." build
+          pnpm run -F @consensys/linea-native-libs test
           pnpm run -F ./postman test;
           pnpm run -F ./sdk/sdk-viem test;
+
+      # Use a non-hidden directory name: upload-artifact@v4 excludes hidden paths by default
+      # (include-hidden-files=false), so .ci-ts-coverage/ would upload zero files.
+      - name: Stage TS coverage for artifact (fork PR uploads)
+        run: |
+          mkdir -p ci-ts-coverage
+          cp ts-libs/linea-native-libs/coverage/lcov.info ci-ts-coverage/native-libs-lcov.info
+          cp postman/coverage/lcov.info ci-ts-coverage/postman-lcov.info
+          cp sdk/sdk-viem/coverage/lcov.info ci-ts-coverage/sdk-viem-lcov.info
+
+      - name: Upload TS coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ts-coverage-${{ env.COMMIT_TAG }}
+          if-no-files-found: error
+          path: ci-ts-coverage/
+
+      - name: Upload linea-native-libs coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        with:
+          fail_ci_if_error: true
+          files: ./ts-libs/linea-native-libs/coverage/lcov.info
+          flags: linea-native-libs
+          os: linux
+          name: codecov-linea-native-libs
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload postman coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        with:
+          fail_ci_if_error: true
+          files: ./postman/coverage/lcov.info
+          flags: postman
+          os: linux
+          name: codecov-postman
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload sdk-viem coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        with:
+          fail_ci_if_error: true
+          files: ./sdk/sdk-viem/coverage/lcov.info
+          flags: sdk-viem
+          os: linux
+          name: codecov-sdk-viem
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}

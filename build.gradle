@@ -119,6 +119,9 @@ allprojects {
     if (project.tasks.findByName('acceptanceTest')) {
       applyTo acceptanceTest
     }
+    if (project.tasks.findByName('acceptanceTests')) {
+      applyTo acceptanceTests
+    }
   }
 
   jacocoTestReport {

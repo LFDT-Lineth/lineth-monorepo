@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: sdk-testing-${{ github.workflow }}-${{ github.ref }}
@@ -25,6 +26,8 @@ jobs:
   build-and-test:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     name: SDK Build, Test, Lint
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -51,3 +54,74 @@ jobs:
 
       - name: Lint sdk-viem
         run: pnpm -F @consensys/linea-sdk-viem run lint
+
+      - name: Build sdk-ethers (typechain + tsc)
+        run: pnpm -F @consensys/linea-sdk run build
+
+      - name: Test sdk-ethers
+        run: pnpm -F @consensys/linea-sdk run test
+
+      - name: Lint sdk-ethers
+        run: pnpm -F @consensys/linea-sdk run lint
+
+      - name: Compute coverage artifact tag
+        id: cov-tag
+        shell: bash
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "TAG=${PR_HEAD_SHA:0:7}" >> "$GITHUB_OUTPUT"
+          else
+            echo "TAG=$(git rev-parse --short=7 "$GITHUB_SHA")" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Stage TS coverage for artifact (fork PR uploads)
+        run: |
+          mkdir -p ci-sdk-coverage
+          cp sdk/sdk-core/coverage/lcov.info ci-sdk-coverage/sdk-core-lcov.info
+          cp sdk/sdk-viem/coverage/lcov.info ci-sdk-coverage/sdk-viem-lcov.info
+          cp sdk/sdk-ethers/coverage/lcov.info ci-sdk-coverage/sdk-ethers-lcov.info
+
+      - name: Upload TS coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-ts-coverage-${{ steps.cov-tag.outputs.TAG }}
+          if-no-files-found: error
+          path: ci-sdk-coverage/
+
+      - name: Upload sdk-core coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        with:
+          fail_ci_if_error: true
+          files: ./sdk/sdk-core/coverage/lcov.info
+          flags: sdk-core
+          os: linux
+          name: codecov-sdk-core
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload sdk-viem coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        with:
+          fail_ci_if_error: true
+          files: ./sdk/sdk-viem/coverage/lcov.info
+          flags: sdk-viem
+          os: linux
+          name: codecov-sdk-viem-sdk-testing
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload sdk-ethers coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        with:
+          fail_ci_if_error: true
+          files: ./sdk/sdk-ethers/coverage/lcov.info
+          flags: sdk-ethers
+          os: linux
+          name: codecov-sdk-ethers
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}

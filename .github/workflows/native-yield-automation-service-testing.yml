@@ -6,6 +6,10 @@ permissions:
 
 on:
   workflow_call:
+    inputs:
+      commit_tag:
+        required: true
+        type: string
 
 concurrency:
   group: native-yield-automation-service-testing-${{ github.workflow }}-${{ github.ref }}
@@ -15,6 +19,9 @@ jobs:
   run-tests:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     name: native-yield-automation-service-testing
+    env:
+      COMMIT_TAG: ${{ inputs.commit_tag }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -26,8 +33,45 @@ jobs:
         run: |
           pnpm --filter @consensys/linea-shared-utils build
           pnpm --filter @consensys/linea-native-yield-automation-service build
-        
+
       - name: Run tests and generate coverage report
         run: |
           pnpm --filter @consensys/linea-shared-utils test
-          pnpm --filter @consensys/linea-native-yield-automation-service test 
+          pnpm --filter @consensys/linea-native-yield-automation-service test
+
+      - name: Stage TS coverage for artifact (fork PR uploads)
+        run: |
+          mkdir -p ci-native-yield-coverage
+          cp ts-libs/linea-shared-utils/coverage/lcov.info ci-native-yield-coverage/shared-utils-lcov.info
+          cp native-yield-operations/automation-service/coverage/lcov.info ci-native-yield-coverage/automation-service-lcov.info
+
+      - name: Upload TS coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-yield-ts-coverage-${{ env.COMMIT_TAG }}
+          if-no-files-found: error
+          path: ci-native-yield-coverage/
+
+      - name: Upload linea-shared-utils coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        with:
+          fail_ci_if_error: true
+          files: ./ts-libs/linea-shared-utils/coverage/lcov.info
+          flags: linea-shared-utils
+          os: linux
+          name: codecov-linea-shared-utils-native-yield
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload native-yield-automation-service coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        with:
+          fail_ci_if_error: true
+          files: ./native-yield-operations/automation-service/coverage/lcov.info
+          flags: native-yield-automation-service
+          os: linux
+          name: codecov-native-yield-automation-service
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}

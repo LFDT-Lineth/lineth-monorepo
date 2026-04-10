@@ -188,7 +188,7 @@ Prettier config: `prettier.config.mjs`. Formatting is integrated into `lint:fix`
 | Prover | Go test | `go test ./... -tags nocorset,fuzzlight` |
 | E2E (protocol) | Jest | `pnpm -F e2e run test:local` |
 
-- Coverage: Codecov with flags for `hardhat` and `kotlin`
+- Coverage: Codecov with flags for `hardhat`, `kotlin`, `postman`, `sdk-viem`, `sdk-core`, `sdk-ethers`, `linea-shared-utils`, `linea-native-libs`, `native-yield-automation-service`, `lido-governance-monitor`, and `tracer`
 - `linea-shared-utils` enforces strict coverage thresholds (branches: 85.71%, functions: 100%, lines: 95.23%)
 - Protocol E2E tests require a running local stack (`make start-env`)
 
@@ -353,7 +353,7 @@ docs/                    Project documentation
 - **Main workflow:** `.github/workflows/main.yml` — triggers on PR and push to `main`
 - **Path filtering:** `dorny/paths-filter` detects which components changed
 - **Pipeline:** Filter changed paths -> Run component tests -> Build Docker images -> E2E tests -> Publish
-- **Coverage:** Codecov with Jacoco (JVM) and Hardhat coverage (Solidity)
+- **Coverage:** Codecov with Jacoco (JVM), Hardhat (Solidity), Jest LCOV (TS packages), and tracer Jacoco XML (`tracer` flag)
 - **Security:** CodeQL analysis, KICS Dockerfile scanning (weekly)
 - **Runners:** Custom scale-set runners (small, med, large, xl) on Ubuntu 22.04
 - **Concurrency:** Cancel in-progress runs on PRs; serial on `main`

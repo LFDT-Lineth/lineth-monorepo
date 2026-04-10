@@ -121,8 +121,12 @@ test {
 }
 
 tasks.register('integrationTestAllNeeded') {
-  description = "Runs integration tests of all dependencies of coordinator:app"
+  description = "Runs integration tests of coordinator:app and all dependencies"
   group = "verification"
+
+  if (tasks.findByName("integrationTest")) {
+    dependsOn "integrationTest"
+  }
 
   configurations.implementation.getAllDependencies().withType(ProjectDependency).each { dep ->
     def depProject = project(dep.path)

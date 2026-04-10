@@ -34,6 +34,42 @@ flags:
       - coordinator/
       - jvm-libs/
     carryforward: true
+  postman:
+    paths:
+      - postman/
+    carryforward: true
+  sdk-viem:
+    paths:
+      - sdk/sdk-viem/
+    carryforward: true
+  sdk-core:
+    paths:
+      - sdk/sdk-core/
+    carryforward: true
+  linea-shared-utils:
+    paths:
+      - ts-libs/linea-shared-utils/
+    carryforward: true
+  native-yield-automation-service:
+    paths:
+      - native-yield-operations/automation-service/
+    carryforward: true
+  lido-governance-monitor:
+    paths:
+      - native-yield-operations/lido-governance-monitor/
+    carryforward: true
+  linea-native-libs:
+    paths:
+      - ts-libs/linea-native-libs/
+    carryforward: true
+  sdk-ethers:
+    paths:
+      - sdk/sdk-ethers/
+    carryforward: true
+  tracer:
+    paths:
+      - tracer/
+    carryforward: true
 
 github_checks:
   annotations: false

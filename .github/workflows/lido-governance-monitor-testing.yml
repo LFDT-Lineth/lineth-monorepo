@@ -6,6 +6,10 @@ permissions:
 
 on:
   workflow_call:
+    inputs:
+      commit_tag:
+        required: true
+        type: string
 
 concurrency:
   group: lido-governance-monitor-testing-${{ github.workflow }}-${{ github.ref }}
@@ -15,6 +19,9 @@ jobs:
   run-tests:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     name: lido-governance-monitor-testing
+    env:
+      COMMIT_TAG: ${{ inputs.commit_tag }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -32,3 +39,40 @@ jobs:
         run: |
           pnpm --filter @consensys/linea-shared-utils test
           pnpm --filter @consensys/lido-governance-monitor test
+
+      - name: Stage TS coverage for artifact (fork PR uploads)
+        run: |
+          mkdir -p ci-lido-coverage
+          cp ts-libs/linea-shared-utils/coverage/lcov.info ci-lido-coverage/shared-utils-lcov.info
+          cp native-yield-operations/lido-governance-monitor/coverage/lcov.info ci-lido-coverage/lido-governance-monitor-lcov.info
+
+      - name: Upload TS coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: lido-ts-coverage-${{ env.COMMIT_TAG }}
+          if-no-files-found: error
+          path: ci-lido-coverage/
+
+      - name: Upload linea-shared-utils coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        with:
+          fail_ci_if_error: true
+          files: ./ts-libs/linea-shared-utils/coverage/lcov.info
+          flags: linea-shared-utils
+          os: linux
+          name: codecov-linea-shared-utils-lido
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload lido-governance-monitor coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        with:
+          fail_ci_if_error: true
+          files: ./native-yield-operations/lido-governance-monitor/coverage/lcov.info
+          flags: lido-governance-monitor
+          os: linux
+          name: codecov-lido-governance-monitor
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}

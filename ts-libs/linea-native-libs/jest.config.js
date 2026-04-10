@@ -3,7 +3,7 @@ module.exports = {
   collectCoverageFrom: ["./src/**/*.ts"],
   coverageDirectory: "coverage",
   coverageProvider: "babel",
-  coverageReporters: ["html", "json-summary", "text"],
+  coverageReporters: ["html", "json-summary", "text", "lcov"],
   coverageThreshold: {
     global: {
       branches: 91.66,

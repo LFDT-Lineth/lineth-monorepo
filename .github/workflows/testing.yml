@@ -62,16 +62,22 @@ jobs:
   native-yield-automation-service:
     uses: ./.github/workflows/native-yield-automation-service-testing.yml
     if: ${{ inputs.native_yield_automation_service_changed == 'true' }}
+    with:
+      commit_tag: ${{ inputs.commit_tag }}
     secrets: inherit
 
   lido-governance-monitor:
     uses: ./.github/workflows/lido-governance-monitor-testing.yml
     if: ${{ inputs.lido_governance_monitor_changed == 'true' }}
+    with:
+      commit_tag: ${{ inputs.commit_tag }}
     secrets: inherit
 
   postman:
     uses: ./.github/workflows/postman-testing.yml
     if: ${{ inputs.postman_changed == 'true' }}
+    with:
+      commit_tag: ${{ inputs.commit_tag }}
     secrets: inherit
 
   transaction-exclusion-api:

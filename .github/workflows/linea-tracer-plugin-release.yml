@@ -65,6 +65,7 @@ jobs:
     with:
       zkevm_fork: OSAKA
       tests-with-ssh: false
+    secrets: inherit
 
   # ==================================================================
   # Fast Replay Tests
