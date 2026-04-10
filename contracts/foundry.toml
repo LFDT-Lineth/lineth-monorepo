@@ -2,6 +2,7 @@
 src = 'src'
 out = 'out'
 libs = ['node_modules', 'lib']
+remappings = ["forge-std/=node_modules/forge-std/src/"]
 cache_path  = 'cache_forge'
 foundry_version = "stable"
 

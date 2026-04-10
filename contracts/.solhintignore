@@ -1,5 +1,4 @@
 node_modules
-lib/forge-std
 test/foundry
 src/_testing
 src/proxies
