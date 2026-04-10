@@ -125,8 +125,8 @@ interface GoNativeBlobCompressorV4JnaLib : GoNativeBlobCompressorV4, Library
 
 enum class BlobCompressorVersion(val version: String) {
   V2("v2.1.0"),
-  V3("v4.0.0"),
-  V4("v4.0.0"),
+  V3("v4.0.1"),
+  V4("v4.0.1"),
 }
 
 /**

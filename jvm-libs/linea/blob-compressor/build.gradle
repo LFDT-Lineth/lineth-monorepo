@@ -35,7 +35,7 @@ downloadNativeLibs {
   fetchLibs {
     urls = [
       "https://github.com/Consensys/linea-monorepo/releases/download/blob-libs-v2.1.0-rc1/linea-blob-libs-v2.1.0-rc1.zip",
-      "https://github.com/Consensys/linea-monorepo/releases/download/blob-libs-v4.0.0/linea-blob-libs-v4.0.0.zip",
+      "https://github.com/Consensys/linea-monorepo/releases/download/blob-libs-v4.0.1/linea-blob-libs-v4.0.1.zip",
     ]
     libs = ["blob_compressor"]
   }
