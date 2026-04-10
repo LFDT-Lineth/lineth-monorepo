@@ -1,6 +1,6 @@
 {
   "name": "@consensys/linea-sdk-viem",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Viem-based SDK for Linea bridge deposits, withdrawals, claims, and message queries",
   "author": "Consensys Software Inc.",
   "license": "(MIT OR Apache-2.0)",
