@@ -4,7 +4,6 @@
 # Arithmetization module limits
 #
 ADD                 = 524288
-BIN                 = 524288
 BLAKE_MODEXP_DATA   = 32768
 BLOCK_DATA          = 8192
 BLOCK_HASH          = 8192
@@ -24,6 +23,7 @@ MUL                 = 131072
 MXP                 = 1048576
 OOB                 = 524288
 RLP_ADDR            = 8192
+RLP_AUTH            = 16384
 RLP_TXN             = 262144
 RLP_TXN_RCPT        = 131072
 RLP_UTILS           = 262144
@@ -73,4 +73,4 @@ PRECOMPILE_P256_VERIFY_EFFECTIVE_CALLS              = 256
 BLOCK_KECCAK        = 8192
 BLOCK_L1_SIZE       = 120000
 BLOCK_L2_L1_LOGS    = 16
-BLOCK_TRANSACTIONS  = 1000
+BLOCK_TRANSACTIONS  = 300
