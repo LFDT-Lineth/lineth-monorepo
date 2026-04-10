@@ -177,7 +177,7 @@ jobs:
 
   testing:
     needs: [filter-commit-changes, check-and-tag-images]
-    if: ${{ always() && needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' }}
+    if: ${{ always() && needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' && needs.check-and-tag-images.outputs.commit_tag != '' }}
     uses: ./.github/workflows/testing.yml
     with:
       commit_tag: ${{ needs.check-and-tag-images.outputs.commit_tag }}
@@ -271,7 +271,7 @@ jobs:
 
   publish-images-after-run-tests-success-on-main:
     needs: [filter-commit-changes, check-and-tag-images, testing, run-e2e-tests, get-has-changes-requiring-e2e-testing]
-    if: ${{ always() && github.ref == 'refs/heads/main' && needs.testing.result == 'success' && (needs.run-e2e-tests.outputs.tests_outcome == 'success' || needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'false') }}
+    if: ${{ always() && github.ref == 'refs/heads/main' && needs.check-and-tag-images.outputs.commit_tag != '' && needs.testing.result == 'success' && (needs.run-e2e-tests.outputs.tests_outcome == 'success' || needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'false') }}
     uses: ./.github/workflows/build-and-publish.yml
     with:
       push_image: true

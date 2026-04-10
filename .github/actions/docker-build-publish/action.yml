@@ -55,6 +55,14 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Validate inputs
+      shell: bash
+      run: |
+        if [[ -z "${{ inputs.image_tag }}" ]]; then
+          echo "::error::image_tag is empty — this usually means the upstream version-tag job was cancelled or failed. Failing early to avoid an invalid Docker tag."
+          exit 1
+        fi
+
     - name: Set tags
       id: set-tags
       shell: bash

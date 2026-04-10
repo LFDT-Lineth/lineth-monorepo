@@ -84,7 +84,7 @@ jobs:
 
   build-and-publish:
     needs: [changes, store_image_name_and_tags, all-tools-tag-only]
-    if: ${{ always() && (needs.changes.outputs['all-tools'] == 'true' || needs.all-tools-tag-only.result != 'success' || needs.all-tools-tag-only.outputs.image_tagged != 'true') }}
+    if: ${{ always() && needs.store_image_name_and_tags.outputs.commit_tag != '' && (needs.changes.outputs['all-tools'] == 'true' || needs.all-tools-tag-only.result != 'success' || needs.all-tools-tag-only.outputs.image_tagged != 'true') }}
     # ~0.5 mins saved vs small
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     env:
@@ -115,10 +115,13 @@ jobs:
       #     platforms: 'arm64,arm'
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1
-      - name: Show the "version" build argument
+      - name: Validate version tag
         run: |
+          if [[ -z "${{ env.COMMIT_TAG }}" ]]; then
+            echo "::error::COMMIT_TAG is empty — this usually means the upstream version-tag job was cancelled or failed. Failing early to avoid an invalid Docker tag."
+            exit 1
+          fi
           echo "We inject the commit tag in the docker image ${{ env.COMMIT_TAG }}"
-          echo COMMIT_TAG=${{ env.COMMIT_TAG }} >> GITHUB_ENV
       
       - name: "Get Node.js version"
         id: get-node-version
