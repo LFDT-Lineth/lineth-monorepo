@@ -23,7 +23,7 @@ describe("Shomei Linea get proof test suite", () => {
       let targetL2BlockNumber = await awaitUntil(
         async () => {
           try {
-            return await lineaRollupV6.read.currentL2BlockNumber({ blockTag: "finalized" });
+            return await lineaRollupV6.read.currentL2BlockNumber({ blockTag: "latest" });
           } catch (err) {
             if (err instanceof ContractFunctionExecutionError) {
               if (err.shortMessage.includes(`returned no data ("0x")`)) {
@@ -61,7 +61,7 @@ describe("Shomei Linea get proof test suite", () => {
           }
           if (!getProofResponse) {
             const latestFinalizedL2BlockNumber = await lineaRollupV6.read.currentL2BlockNumber({
-              blockTag: "finalized",
+              blockTag: "latest",
             });
             if (!finalizedL2BlockNumbers.includes(latestFinalizedL2BlockNumber)) {
               finalizedL2BlockNumbers.push(latestFinalizedL2BlockNumber);
