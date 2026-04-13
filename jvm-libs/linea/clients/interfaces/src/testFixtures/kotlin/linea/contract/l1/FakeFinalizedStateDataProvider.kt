@@ -21,7 +21,7 @@ class FakeFinalizedStateDataProvider(
     return SafeFuture.completedFuture(
       FinalizedStateDataProvider.FinalizedStateData(
         blockNumber = blockNumber,
-        forcedTransactionNumber = null,
+        forcedTransactionNumber = 0UL,
       ),
     )
   }

@@ -7,7 +7,7 @@ interface FinalizationMonitor {
   data class FinalizationUpdate(
     val blockNumber: ULong,
     val blockHash: Bytes32,
-    val forcedTransactionNumber: ULong? = null, // null means ftx number is not available as contract is still before V8
+    val forcedTransactionNumber: ULong,
   )
 
   fun getLastFinalizationUpdate(): FinalizationUpdate
