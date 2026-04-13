@@ -63,6 +63,7 @@ class MessageAnchoringAppTest {
     l1SuccessBackoffDelay: Duration = 1.milliseconds,
     messageQueueCapacity: UInt = 100u,
     maxMessagesToAnchorPerL2Transaction: UInt = 10u,
+    l1HighestBlockTag: BlockParameter = BlockParameter.Tag.FINALIZED,
   ): MessageAnchoringApp {
     return MessageAnchoringApp(
       vertx = vertx,
@@ -70,7 +71,7 @@ class MessageAnchoringAppTest {
         l1PollingInterval = l1PollingInterval,
         l1SuccessBackoffDelay = l1SuccessBackoffDelay,
         l1ContractAddress = L1_CONTRACT_ADDRESS,
-        l1HighestBlockTag = BlockParameter.Tag.FINALIZED,
+        l1HighestBlockTag = l1HighestBlockTag,
         l2HighestBlockTag = BlockParameter.Tag.LATEST,
         anchoringTickInterval = anchoringTickInterval,
         l1RequestRetryConfig = RetryConfig.noRetries,
@@ -273,6 +274,41 @@ class MessageAnchoringAppTest {
 
     assertThat(l2MessageService.getAnchoredMessageHashes())
       .isEqualTo(ethLogs.map { it.messageSent.event.messageHash })
+
+    anchoringApp.stop().get()
+  }
+
+  @Test
+  fun `should anchor messages when l1HighestBlockTag is LATEST and events are beyond FINALIZED`() {
+    // Regression test: L1MessageSentEventsFetcher.findL1RollingHashUpdatedEvent had a hardcoded
+    // BlockParameter.Tag.FINALIZED instead of using the configurable l1HighestBlock.
+    // When l1HighestBlockTag=LATEST and events exist beyond the FINALIZED block, the hardcoded
+    // FINALIZED would cause the RollingHashUpdated lookup to miss them.
+    val ethLogs = createL1MessageSentV1Logs(
+      l1BlocksWithMessages = listOf(100UL, 200UL, 300UL),
+      numberOfMessagesPerBlock = 1,
+    )
+    addLogsToFakeEthClient(ethLogs)
+    val anchoringApp = createApp(
+      l1HighestBlockTag = BlockParameter.Tag.LATEST,
+      l1EventSearchBlockChunk = 100u,
+      anchoringTickInterval = 50.milliseconds,
+    )
+    anchoringApp.start().get()
+    // FINALIZED is set below the event blocks so that with the bug (hardcoded FINALIZED in
+    // findL1RollingHashUpdatedEvent) the lookup would not find any RollingHashUpdated events.
+    // LATEST is set above all events so the correctly-configured fetcher finds them.
+    l1Client.setLatestBlockTag(ethLogs.last().messageSent.log.blockNumber + 10UL)
+    l1Client.setFinalizedBlockTag(50UL)
+
+    await()
+      .atMost(5.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(l2MessageService.getLastAnchoredL1MessageNumber(block = BlockParameter.Tag.LATEST).get())
+          .isEqualTo(ethLogs.last().l1RollingHashUpdated.event.messageNumber)
+        assertThat(l2MessageService.getLastAnchoredRollingHash())
+          .isEqualTo(ethLogs.last().l1RollingHashUpdated.event.rollingHash)
+      }
 
     anchoringApp.stop().get()
   }

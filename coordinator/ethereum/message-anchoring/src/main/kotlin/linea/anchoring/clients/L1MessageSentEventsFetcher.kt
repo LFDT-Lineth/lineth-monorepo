@@ -90,7 +90,7 @@ internal class L1MessageSentEventsFetcher(
   ): SafeFuture<EthLogEvent<L1RollingHashUpdatedEvent>?> {
     return l1EventsSearcher.getLogs(
       fromBlock = fromBlock.toBlockParameter(),
-      toBlock = BlockParameter.Tag.FINALIZED,
+      toBlock = l1HighestBlock,
       address = l1SmartContractAddress,
       topics = listOf(
         L1RollingHashUpdatedEvent.topic,
