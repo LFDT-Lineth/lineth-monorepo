@@ -281,9 +281,10 @@ These require human approval and follow the release process:
 1. Read existing code in the affected area
 2. Check for existing tests, conventions, and patterns in that package
 3. Plan the minimal change needed
-4. Implement with tests
-5. Run the package-specific lint and test commands
-6. Verify no secrets or credentials are exposed
+4. **Plan review**: Before starting implementation, review the plan using a separate agent with isolated context — give it only the original user request and the plan document, not the planning conversation or exploration history. This ensures the reviewer cannot inherit reasoning errors made during planning.
+5. Implement with tests
+6. Run the package-specific lint and test commands
+7. Verify no secrets or credentials are exposed
 
 ### Limiting Change Surface
 
