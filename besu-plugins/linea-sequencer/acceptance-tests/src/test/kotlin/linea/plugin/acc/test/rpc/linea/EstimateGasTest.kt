@@ -82,7 +82,7 @@ open class EstimateGasTest : LineaPluginPoSTestBase() {
       profitabilityConf,
       CachingTransactionCompressor(
         BlobCompressorSelectorByTimestamp(
-          mapOf(BlobCompressorVersion.V2 to Instant.DISTANT_PAST),
+          mapOf(BlobCompressorVersion.V3 to Instant.DISTANT_PAST),
           128 * 1024,
         ),
       ),

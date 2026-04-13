@@ -1,6 +1,6 @@
 package net.consensys.zkevm.coordination.blob
 
-import net.consensys.zkevm.ethereum.coordination.blob.BlobCompressor
+import linea.blob.BlobCompressor
 import net.consensys.zkevm.ethereum.coordination.blob.FakeBlobCompressor
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy

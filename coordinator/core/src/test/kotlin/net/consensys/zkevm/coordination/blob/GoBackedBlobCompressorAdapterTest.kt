@@ -1,11 +1,11 @@
 package net.consensys.zkevm.coordination.blob
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
+import linea.blob.BlobCompressionException
 import linea.blob.BlobCompressorVersion
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
-import net.consensys.zkevm.ethereum.coordination.blob.BlobCompressionException
-import net.consensys.zkevm.ethereum.coordination.blob.GoBackedBlobCompressor
+import net.consensys.zkevm.ethereum.coordination.blob.GoBackedBlobCompressorAdapter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -16,21 +16,21 @@ import java.nio.ByteOrder
 import kotlin.random.Random
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class GoBackedBlobCompressorTest {
+class GoBackedBlobCompressorAdapterTest {
   companion object {
     private const val DATA_LIMIT = 16 * 1024
     private val TEST_DATA = loadTestData()
     private val meterRegistry = SimpleMeterRegistry()
     private val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
     private val compressor =
-      GoBackedBlobCompressor.getInstance(
-        BlobCompressorVersion.V1_2,
+      GoBackedBlobCompressorAdapter.getInstance(
+        BlobCompressorVersion.V3,
         DATA_LIMIT.toUInt(),
         metricsFacade,
       )
 
     private fun loadTestData(): Array<ByteArray> {
-      val data = GoBackedBlobCompressorTest::class.java.getResourceAsStream("rlp_blocks.bin")!!.readAllBytes()
+      val data = GoBackedBlobCompressorAdapterTest::class.java.getResourceAsStream("rlp_blocks.bin")!!.readAllBytes()
 
       // first 4 bytes are the number of blocks
       val numBlocks = ByteBuffer.wrap(data, 0, 4).order(ByteOrder.LITTLE_ENDIAN).int
@@ -96,21 +96,21 @@ class GoBackedBlobCompressorTest {
   @Test
   fun `test reset`() {
     val blocks = TEST_DATA.iterator()
-    assertThat(compressor.goNativeBlobCompressor.Len()).isZero()
+    assertThat(compressor.goBackedBlobCompressor.getCompressedData().size).isZero()
     var res = compressor.appendBlock(blocks.next())
     assertThat(res.blockAppended).isTrue()
     assertThat(res.compressedSizeBefore).isZero()
     assertThat(res.compressedSizeAfter).isGreaterThan(0)
-    assertThat(res.compressedSizeAfter).isEqualTo(compressor.goNativeBlobCompressor.Len())
+    assertThat(res.compressedSizeAfter).isEqualTo(compressor.goBackedBlobCompressor.getCompressedData().size)
 
     compressor.reset()
 
-    assertThat(compressor.goNativeBlobCompressor.Len()).isZero()
+    assertThat(compressor.goBackedBlobCompressor.getCompressedData().size).isZero()
     res = compressor.appendBlock(blocks.next())
     assertThat(res.blockAppended).isTrue()
     assertThat(res.compressedSizeBefore).isZero()
     assertThat(res.compressedSizeAfter).isGreaterThan(0)
-    assertThat(res.compressedSizeAfter).isEqualTo(compressor.goNativeBlobCompressor.Len())
+    assertThat(res.compressedSizeAfter).isEqualTo(compressor.goBackedBlobCompressor.getCompressedData().size)
   }
 
   @Test

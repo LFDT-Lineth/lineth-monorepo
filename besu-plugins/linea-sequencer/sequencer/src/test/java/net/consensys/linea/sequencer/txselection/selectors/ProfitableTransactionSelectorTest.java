@@ -92,7 +92,7 @@ public class ProfitableTransactionSelectorTest {
     final var transactionCompressor =
         new CachingTransactionCompressor(
             new BlobCompressorSelectorByTimestamp(
-                Map.of(BlobCompressorVersion.V2, Instant.Companion.getDISTANT_PAST()), 128 * 1024));
+                Map.of(BlobCompressorVersion.V3, Instant.Companion.getDISTANT_PAST()), 128 * 1024));
     final var transactionProfitabilityCalculator =
         new TransactionProfitabilityCalculator(profitabilityConf, transactionCompressor);
     return new ProfitableTransactionSelector(

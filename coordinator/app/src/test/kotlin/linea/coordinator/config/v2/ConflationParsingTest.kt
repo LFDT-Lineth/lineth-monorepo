@@ -108,7 +108,7 @@ class ConflationParsingTest {
           blobSizeLimit = 102_400U,
           handlerPollingInterval = 1.seconds,
           batchesLimit = null,
-          blobCompressorVersion = BlobCompressorVersion.V1_2,
+          blobCompressorVersion = BlobCompressorVersion.V3,
         ),
         proofAggregation =
         ConflationToml.ProofAggregationToml(
@@ -134,9 +134,9 @@ class ConflationParsingTest {
 
     @JvmStatic
     fun blobCompressionVersionTestCases(): Stream<Arguments> = Stream.of(
-      Arguments.of(BlobCompressorVersion.V1_2, ShnarfCalculatorVersion.V1_2),
       Arguments.of(BlobCompressorVersion.V2, ShnarfCalculatorVersion.V1_2),
       Arguments.of(BlobCompressorVersion.V3, ShnarfCalculatorVersion.V3),
+      Arguments.of(BlobCompressorVersion.V4, ShnarfCalculatorVersion.V3),
     )
   }
 

@@ -1,8 +1,8 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
+import linea.blob.BlobCompressor
 import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.domain.ConflationTrigger
-import net.consensys.zkevm.ethereum.coordination.blob.BlobCompressor
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 

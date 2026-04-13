@@ -21,19 +21,19 @@ class LineaTransactionSelectorCliOptionsTest {
   @Test
   void parseBlobCompressorVersionTimestamps_validInput() {
     LineaTransactionSelectorCliOptions opts = new LineaTransactionSelectorCliOptions();
-    String input = "V1_2=2025-01-01T00:00:00Z,V2=2026-01-01T00:00:00Z";
+    String input = "V2=2025-01-01T00:00:00Z,V3=2026-01-01T00:00:00Z";
     Map<BlobCompressorVersion, Instant> result = opts.parseBlobCompressorVersionTimestamps(input);
     assertEquals(2, result.size());
     assertEquals(
-        Instant.Companion.parse("2025-01-01T00:00:00Z"), result.get(BlobCompressorVersion.V1_2));
+        Instant.Companion.parse("2025-01-01T00:00:00Z"), result.get(BlobCompressorVersion.V2));
     assertEquals(
-        Instant.Companion.parse("2026-01-01T00:00:00Z"), result.get(BlobCompressorVersion.V2));
+        Instant.Companion.parse("2026-01-01T00:00:00Z"), result.get(BlobCompressorVersion.V3));
   }
 
   @Test
   void parseBlobCompressorVersionTimestamps_invalidInput() {
     LineaTransactionSelectorCliOptions opts = new LineaTransactionSelectorCliOptions();
-    String input = "V1_2=2025-01-01T00:00:00Z,V2";
+    String input = "V2=2025-01-01T00:00:00Z,V3";
     Exception ex =
         assertThrows(
             IllegalArgumentException.class, () -> opts.parseBlobCompressorVersionTimestamps(input));

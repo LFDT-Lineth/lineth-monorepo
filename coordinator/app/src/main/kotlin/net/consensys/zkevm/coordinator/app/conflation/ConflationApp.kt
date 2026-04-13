@@ -47,7 +47,7 @@ import net.consensys.zkevm.ethereum.coordination.aggregation.InvalidityProofProv
 import net.consensys.zkevm.ethereum.coordination.aggregation.ProofAggregationCoordinatorService
 import net.consensys.zkevm.ethereum.coordination.blob.BlobCompressionProofCoordinator
 import net.consensys.zkevm.ethereum.coordination.blob.BlobZkStateProviderImpl
-import net.consensys.zkevm.ethereum.coordination.blob.GoBackedBlobCompressor
+import net.consensys.zkevm.ethereum.coordination.blob.GoBackedBlobCompressorAdapter
 import net.consensys.zkevm.ethereum.coordination.blob.GoBackedBlobShnarfCalculator
 import net.consensys.zkevm.ethereum.coordination.blob.ParentBlobDataProviderImpl
 import net.consensys.zkevm.ethereum.coordination.blob.RollingBlobShnarfCalculator
@@ -213,7 +213,7 @@ class ConflationApp(
     val logger = LogManager.getLogger(GlobalBlockConflationCalculator::class.java)
 
     // To fail faster for JNA reasons
-    val blobCompressor = GoBackedBlobCompressor.getInstance(
+    val blobCompressor = GoBackedBlobCompressorAdapter.getInstance(
       compressorVersion = configs.conflation.blobCompression.blobCompressorVersion,
       dataLimit = configs.conflation.blobCompression.blobSizeLimit,
       metricsFacade = metricsFacade,

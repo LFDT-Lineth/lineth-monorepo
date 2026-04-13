@@ -27,7 +27,7 @@ import net.consensys.zkevm.ethereum.coordination.DynamicBlockNumberSet
 import net.consensys.zkevm.ethereum.coordination.blob.BlobCompressionProofCoordinator
 import net.consensys.zkevm.ethereum.coordination.blob.BlobShnarfMetaData
 import net.consensys.zkevm.ethereum.coordination.blob.BlobZkStateProviderImpl
-import net.consensys.zkevm.ethereum.coordination.blob.GoBackedBlobCompressor
+import net.consensys.zkevm.ethereum.coordination.blob.GoBackedBlobCompressorAdapter
 import net.consensys.zkevm.ethereum.coordination.blob.GoBackedBlobShnarfCalculator
 import net.consensys.zkevm.ethereum.coordination.blob.ParentBlobDataProvider
 import net.consensys.zkevm.ethereum.coordination.blob.RollingBlobShnarfCalculator
@@ -167,7 +167,7 @@ class ConflationBacktestingApp(
 
   private val conflationCalculator: TracesConflationCalculator = run {
     // To fail faster for JNA reasons
-    val blobCompressor = GoBackedBlobCompressor.getInstance(
+    val blobCompressor = GoBackedBlobCompressorAdapter.getInstance(
       compressorVersion = backtestingCoordinatorConfig.conflation.blobCompression.blobCompressorVersion,
       dataLimit = backtestingCoordinatorConfig.conflation.blobCompression.blobSizeLimit,
       metricsFacade = metricsFacade,

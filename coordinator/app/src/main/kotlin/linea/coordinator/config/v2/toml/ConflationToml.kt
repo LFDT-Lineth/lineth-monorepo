@@ -39,7 +39,7 @@ data class ConflationToml(
     val blobSizeLimit: UInt = 102400u,
     val handlerPollingInterval: Duration = 1.seconds,
     val batchesLimit: UInt? = null,
-    val blobCompressorVersion: BlobCompressorVersion = BlobCompressorVersion.V1_2,
+    val blobCompressorVersion: BlobCompressorVersion = BlobCompressorVersion.V3,
   ) {
     fun reified(): ConflationConfig.BlobCompression {
       return ConflationConfig.BlobCompression(

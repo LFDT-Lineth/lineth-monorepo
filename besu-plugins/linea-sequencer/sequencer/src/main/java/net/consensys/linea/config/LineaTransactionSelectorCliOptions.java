@@ -61,7 +61,7 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
   public static final String BLOB_COMPRESSOR_VERSION_TIMESTAMPS =
       "--plugin-linea-blob-compressor-version-timestamps";
   public static final String BLOB_COMPRESSOR_VERSION_TIMESTAMPS_DEFAULT =
-      String.format("%s=%s", BlobCompressorVersion.V2.name(), Instant.Companion.getDISTANT_PAST());
+      String.format("%s=%s", BlobCompressorVersion.V3.name(), Instant.Companion.getDISTANT_PAST());
 
   @Positive
   @CommandLine.Option(
@@ -156,7 +156,7 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
       completionCandidates = BlobCompressorVersionCandidates.class,
       description =
           "Comma-separated map of BlobCompressorVersion to Instant, "
-              + "e.g. V1_2=2025-01-01T00:00:00Z,V2=2026-01-01T00:00:00Z ."
+              + "e.g. V2=2025-01-01T00:00:00Z,V3=2026-01-01T00:00:00Z ."
               + "Available versions: ${COMPLETION-CANDIDATES} . "
               + "(default: ${DEFAULT-VALUE})")
   private String blobCompressorVersionTimestampsRaw = BLOB_COMPRESSOR_VERSION_TIMESTAMPS_DEFAULT;
