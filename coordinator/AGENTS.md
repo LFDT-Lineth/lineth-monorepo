@@ -22,7 +22,7 @@ docker buildx build --file coordinator/Dockerfile \
   --tag consensys/linea-coordinator:local .
 
 # Run as part of full stack
-make start-env-with-tracing-v2 COORDINATOR_TAG=local
+make start-env-with-tracing-v2 LINEA_COORDINATOR_TAG=local
 ```
 
 ### Test

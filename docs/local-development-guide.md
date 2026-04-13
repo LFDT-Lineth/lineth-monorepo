@@ -68,7 +68,7 @@ The recommended way to run the coordinator is as part of the complete Linea stac
 
 ```bash
 # Start the entire stack with tracing v2 using your local coordinator image
-COORDINATOR_TAG=local make start-env-with-tracing-v2
+LINEA_COORDINATOR_TAG=local make start-env-with-tracing-v2
 ```
 
 This command:

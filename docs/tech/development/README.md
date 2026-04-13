@@ -202,7 +202,7 @@ docker buildx build \
   --tag consensys/linea-coordinator:local .
 
 # Use local image
-COORDINATOR_TAG=local make start-env-with-tracing-v2
+LINEA_COORDINATOR_TAG=local make start-env-with-tracing-v2
 ```
 
 ### Pulling Pre-built Images
@@ -303,7 +303,7 @@ Key environment variables for stack customization:
 # Container image versions
 export BESU_PACKAGE_TAG=latest
 export MARU_TAG=latest
-export COORDINATOR_TAG=latest
+export LINEA_COORDINATOR_TAG=latest
 export PROVER_TAG=latest
 export POSTMAN_TAG=latest
 
