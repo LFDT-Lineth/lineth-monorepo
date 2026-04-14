@@ -695,6 +695,10 @@ class L1DependentApp(
       }
   }
 
+  fun signalTargetCheckpointResumeFromApi(): Boolean {
+    return conflationApp.signalTargetCheckpointResumeFromApi()
+  }
+
   override fun stop(): CompletableFuture<Unit> {
     return SafeFuture.allOf(
       conflationApp.stop(),

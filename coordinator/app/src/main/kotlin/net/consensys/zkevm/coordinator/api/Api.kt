@@ -15,6 +15,7 @@ import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.vertx.ObservabilityServer
 import net.consensys.zkevm.coordinator.api.requesthandlers.ConflationCreateProverRequestHandler
 import net.consensys.zkevm.coordinator.api.requesthandlers.ConflationGetJobStatusRequestHandler
+import net.consensys.zkevm.coordinator.api.requesthandlers.ConflationTargetCheckpointResumeRequestHandler
 import net.consensys.zkevm.coordinator.app.conflationbacktesting.ConflationBacktestingService
 import org.apache.logging.log4j.LogManager
 import java.util.concurrent.CompletableFuture
@@ -25,6 +26,7 @@ class Api(
   private val vertx: Vertx,
   private val conflationBacktestingService: ConflationBacktestingService,
   private val metricsFacade: MetricsFacade,
+  private val signalTargetCheckpointResume: () -> Boolean,
 ) : LongRunningService {
   data class Config(
     val observabilityPort: UInt,
@@ -52,6 +54,8 @@ class Api(
         ConflationCreateProverRequestHandler(conflationBacktestingService = conflationBacktestingService),
       ConflationGetJobStatusRequestHandler.METHOD_NAME to
         ConflationGetJobStatusRequestHandler(conflationBacktestingService = conflationBacktestingService),
+      ConflationTargetCheckpointResumeRequestHandler.METHOD_NAME to
+        ConflationTargetCheckpointResumeRequestHandler(signalResume = signalTargetCheckpointResume),
     )
     val messageHandler: JsonRpcMessageHandler =
       JsonRpcMessageProcessor(JsonRpcRequestRouter(requestHandlers), metricsFacade)

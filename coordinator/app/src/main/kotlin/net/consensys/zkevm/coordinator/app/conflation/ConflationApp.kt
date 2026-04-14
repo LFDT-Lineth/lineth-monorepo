@@ -28,6 +28,7 @@ import net.consensys.zkevm.coordinator.app.conflation.ConflationAppHelper.resume
 import net.consensys.zkevm.coordinator.app.conflation.TracesClientFactory.createTracesClients
 import net.consensys.zkevm.coordinator.blockcreation.BatchesRepoBasedLastProvenBlockNumberProvider
 import net.consensys.zkevm.coordinator.blockcreation.BlockCreationMonitor
+import net.consensys.zkevm.coordinator.blockcreation.ConflationTargetCheckpointPauseController
 import net.consensys.zkevm.coordinator.blockcreation.FixedLaggingHeadSafeBlockProvider
 import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
 import net.consensys.zkevm.coordinator.clients.prover.ProverClientFactory
@@ -193,6 +194,33 @@ class ConflationApp(
     lastProcessedBlockNumber.toBlockParameter(),
   ).get()
   private val lastProcessedTimestamp = Instant.fromEpochSeconds(lastProcessedBlock!!.timestamp.toLong())
+
+  private val lastProvenBlockNumberProvider = run {
+    val lastProvenConsecutiveBatchBlockNumberProvider = BatchesRepoBasedLastProvenBlockNumberProvider(
+      lastProcessedBlockNumber.toLong(),
+      lastFinalizedBlock.toLong(),
+      batchesRepository,
+    )
+    metricsFacade.createGauge(
+      category = LineaMetricsCategory.BATCH,
+      name = "proven.highest.consecutive.block.number",
+      description = "Highest proven consecutive execution batch block number",
+      measurementSupplier = { lastProvenConsecutiveBatchBlockNumberProvider.getLastKnownProvenBlockNumber() },
+    )
+    lastProvenConsecutiveBatchBlockNumberProvider
+  }
+
+  private val targetCheckpointPauseController =
+    ConflationTargetCheckpointPauseController(
+      ConflationTargetCheckpointPauseController.Config(
+        initialLastImportedBlockTimestamp = lastProcessedTimestamp,
+        targetEndBlocks = (configs.conflation.proofAggregation.targetEndBlocks ?: emptyList()).toSet(),
+        targetTimestamps = configs.conflation.proofAggregation.timestampBasedHardForks,
+        waitTargetBlockL1Finalization = configs.conflation.proofAggregation.waitTargetBlockL1Finalization,
+        waitApiResumeAfterTargetBlock = configs.conflation.proofAggregation.waitApiResumeAfterTargetBlock,
+      ),
+      latestL1FinalizedBlockProvider = lastProvenBlockNumberProvider,
+    )
 
   private val dynamicTargetEndBlockNumberSet =
     DynamicBlockNumberSet(
@@ -486,21 +514,6 @@ class ConflationApp(
     )
   }
 
-  private val lastProvenBlockNumberProvider = run {
-    val lastProvenConsecutiveBatchBlockNumberProvider = BatchesRepoBasedLastProvenBlockNumberProvider(
-      lastProcessedBlockNumber.toLong(),
-      lastFinalizedBlock.toLong(),
-      batchesRepository,
-    )
-    metricsFacade.createGauge(
-      category = LineaMetricsCategory.BATCH,
-      name = "proven.highest.consecutive.block.number",
-      description = "Highest proven consecutive execution batch block number",
-      measurementSupplier = { lastProvenConsecutiveBatchBlockNumberProvider.getLastKnownProvenBlockNumber() },
-    )
-    lastProvenConsecutiveBatchBlockNumberProvider
-  }
-
   // This object acts as an independent periodic polling service which is responsible
   // for monitoring the highest consecutive proven block number in the batch db
   private val provenBlockNumberMonitor = object : VertxPeriodicPollingService(
@@ -533,6 +546,7 @@ class ConflationApp(
         lastL2BlockNumberToProcessInclusive = configs.conflation.forceStopConflationAtBlockInclusive?.inc(),
         lastL2BlockTimestampToProcessInclusive = configs.conflation.forceStopConflationAtBlockTimestampInclusive,
       ),
+      targetCheckpointPauseController = targetCheckpointPauseController,
     )
     blockCreationMonitor
   }
@@ -573,5 +587,9 @@ class ConflationApp(
 
   fun updateLatestL1FinalizedBlock(blockNumber: Long): SafeFuture<Unit> {
     return lastProvenBlockNumberProvider.updateLatestL1FinalizedBlock(blockNumber)
+  }
+
+  fun signalTargetCheckpointResumeFromApi(): Boolean {
+    return targetCheckpointPauseController.signalResumeFromApi()
   }
 }

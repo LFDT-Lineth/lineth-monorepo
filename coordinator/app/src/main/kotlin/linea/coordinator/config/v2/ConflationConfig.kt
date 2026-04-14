@@ -57,5 +57,9 @@ data class ConflationConfig(
     val aggregationSizeMultipleOf: UInt = 1u,
     val timestampBasedHardForks: List<Instant> = emptyList(),
     val waitForNoL2ActivityToTriggerAggregation: Boolean = false,
+    /** When true with [waitApiResumeAfterTargetBlock], block import pauses until L1 finalizes through the required height. */
+    val waitTargetBlockL1Finalization: Boolean = false,
+    /** When true with [waitTargetBlockL1Finalization], block import pauses until resume JSON-RPC is invoked. */
+    val waitApiResumeAfterTargetBlock: Boolean = false,
   )
 }

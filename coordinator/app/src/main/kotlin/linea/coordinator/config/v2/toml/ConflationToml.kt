@@ -61,6 +61,8 @@ data class ConflationToml(
     val aggregationSizeMultipleOf: UInt = 1u,
     val timestampBasedHardForks: List<Instant> = emptyList(),
     val waitForNoL2ActivityToTriggerAggregation: Boolean = false,
+    val waitTargetBlockL1Finalization: Boolean = false,
+    val waitApiResumeAfterTargetBlock: Boolean = false,
   ) {
     init {
       require(timestampBasedHardForks.toSet().size == timestampBasedHardForks.size) {
@@ -79,6 +81,8 @@ data class ConflationToml(
         aggregationSizeMultipleOf = this.aggregationSizeMultipleOf,
         timestampBasedHardForks = timestampBasedHardForks,
         waitForNoL2ActivityToTriggerAggregation = this.waitForNoL2ActivityToTriggerAggregation,
+        waitTargetBlockL1Finalization = this.waitTargetBlockL1Finalization,
+        waitApiResumeAfterTargetBlock = this.waitApiResumeAfterTargetBlock,
       )
     }
   }

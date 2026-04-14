@@ -87,6 +87,8 @@ class ConflationParsingTest {
             Instant.fromEpochSeconds(1758083127L),
           ),
           waitForNoL2ActivityToTriggerAggregation = true,
+          waitTargetBlockL1Finalization = false,
+          waitApiResumeAfterTargetBlock = false,
         ),
       )
 
@@ -118,6 +120,8 @@ class ConflationParsingTest {
           coordinatorPollingInterval = 3.seconds,
           targetEndBlocks = null,
           timestampBasedHardForks = emptyList(),
+          waitTargetBlockL1Finalization = false,
+          waitApiResumeAfterTargetBlock = false,
         ),
       )
 

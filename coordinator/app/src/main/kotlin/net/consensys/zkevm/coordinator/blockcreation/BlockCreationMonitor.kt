@@ -27,6 +27,7 @@ class BlockCreationMonitor(
   private val blockCreationListener: BlockCreationListener,
   private val lastProvenBlockNumberProviderSync: LastProvenBlockNumberProviderSync,
   private val config: Config,
+  private val targetCheckpointPauseController: TargetCheckpointPauseController,
   private val log: Logger = LogManager.getLogger(BlockCreationMonitor::class.java),
 ) : VertxPeriodicPollingService(
   vertx = vertx,
@@ -100,6 +101,10 @@ class BlockCreationMonitor(
   }
 
   override fun action(): SafeFuture<*> {
+    if (targetCheckpointPauseController.shouldPauseConflation()) {
+      log.trace("target checkpoint pause: skipping tick nexBlockNumberToFetch={}", nexBlockNumberToFetch)
+      return SafeFuture.completedFuture(Unit)
+    }
     log.trace("tick start: nexBlockNumberToFetch={}", nexBlockNumberToFetch)
     return lastProvenBlockNumberProviderSync.getLastKnownProvenBlockNumber()
       .let { lastProvenBlockNumber ->
@@ -149,6 +154,7 @@ class BlockCreationMonitor(
                         _nexBlockNumberToFetch.incrementAndGet(),
                       )
                       expectedParentBlockHash.set(block.hash)
+                      targetCheckpointPauseController.importBlock(block)
                     }
                 } else {
                   reorgDetected.set(true)

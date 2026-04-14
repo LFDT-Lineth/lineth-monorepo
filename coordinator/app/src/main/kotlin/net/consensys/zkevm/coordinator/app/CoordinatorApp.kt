@@ -64,18 +64,6 @@ class CoordinatorApp(
     configs = configs,
     metricsFacade = MicrometerMetricsFacade(NoopBackendRegistry.INSTANCE.meterRegistry, "conflationbacktesting"),
   )
-  private val api =
-    Api(
-      configs = Api.Config(
-        observabilityPort = configs.api.observabilityPort,
-        jsonRpcPort = configs.api.jsonRpcPort,
-        jsonRpcPath = configs.api.jsonRpcPath,
-        jsonRpcServerVerticles = configs.api.jsonRpcServerVerticles,
-      ),
-      vertx = vertx,
-      conflationBacktestingService = conflationBacktestingService,
-      metricsFacade = micrometerMetricsFacade,
-    )
 
   private val persistenceRetryer =
     PersistenceRetryer(
@@ -158,6 +146,20 @@ class CoordinatorApp(
       smartContractErrors = configs.smartContractErrors,
       metricsFacade = micrometerMetricsFacade,
       clock = this.clock,
+    )
+
+  private val api =
+    Api(
+      configs = Api.Config(
+        observabilityPort = configs.api.observabilityPort,
+        jsonRpcPort = configs.api.jsonRpcPort,
+        jsonRpcPath = configs.api.jsonRpcPath,
+        jsonRpcServerVerticles = configs.api.jsonRpcServerVerticles,
+      ),
+      vertx = vertx,
+      conflationBacktestingService = conflationBacktestingService,
+      metricsFacade = micrometerMetricsFacade,
+      signalTargetCheckpointResume = { l1App.signalTargetCheckpointResumeFromApi() },
     )
 
   private val requestFileCleanup =

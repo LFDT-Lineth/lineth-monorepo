@@ -86,6 +86,11 @@ class BlockCreationMonitorTest {
       blockCreationListener = blockCreationListener,
       lastProvenBlockNumberProviderSync = lastProvenBlockNumberProvider,
       config = config,
+      targetCheckpointPauseController = object : TargetCheckpointPauseController {
+        override fun shouldPauseConflation(): Boolean = false
+        override fun importBlock(block: Block) = Unit
+        override fun signalResumeFromApi(): Boolean = false
+      },
     )
   }
 
