@@ -120,6 +120,147 @@ Files use `.inprogress` suffix during processing. Naming pattern: `$startBlock-$
 
 If the coordinator goes down, blocks continue to be produced by the sequencer. On restart, the coordinator resumes from the last persisted state, re-submitting unfinalized blobs and aggregations.
 
+## Conflation Backtesting
+
+Conflation backtesting allows re-running the conflation and proof-request pipeline over a historical block range without affecting the live submission pipeline. It is useful for testing new blob compressor versions, batch sizing strategies, or conflation parameter changes against real historical data.
+
+### How It Works
+
+1. Submit one or more backtesting jobs via `conflation_createProverRequests`, each specifying a block range, blob compressor version, and the traces/state-manager endpoints to use.
+2. Each job spins up an isolated `ConflationBacktestingApp` instance that fetches trace counts from the given Traces API, compresses blobs using the specified compressor version, and writes prover request files to disk — identical in format to the live pipeline.
+3. Poll job status via `conflation_getReconflationJobsStatus` until `COMPLETED`.
+
+
+### JSON-RPC API
+
+#### `conflation_createProverRequests`
+
+Submits one or more backtesting jobs. Each element in `params` is an independent job. Returns a list of job IDs (one per submitted job).
+
+**Blob compressor versions:** `V1_2`, `V2`, `V3`
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "conflation_createProverRequests",
+  "params": [
+    {
+      "startBlockNumber": 1,
+      "endBlockNumber": 2,
+      "blobCompressorVersion": "V3",
+      "batchesFixedSize": null,
+      "parentBlobShnarf": null,
+      "tracesApi": {
+        "endpoint": "http://<traces-node-ip>:8545",
+        "version": "v2",
+        "requestLimitPerEndpoint": 1
+      },
+      "shomeiApi": {
+        "endpoint": "http://shomei:8888",
+        "version": "v0.0.4",
+        "requestLimitPerEndpoint": 1
+      }
+    }
+  ]
+}
+```
+
+**curl:**
+
+> Port `9546` is the coordinator's JSON-RPC API port (`json-rpc-port` under `[api]` in the coordinator config, mapped in `docker/compose-spec-l2-services.yml` as `"9546:9546"`).
+
+```bash
+curl -X POST http://localhost:9546 \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "conflation_createProverRequests",
+    "params": [
+      {
+        "startBlockNumber": 1,
+        "endBlockNumber": 2,
+        "blobCompressorVersion": "V3",
+        "batchesFixedSize": null,
+        "parentBlobShnarf": null,
+        "tracesApi": {
+          "endpoint": "http://<traces-node-ip>:8545",
+          "version": "beta-v5.0-rc6",
+          "requestLimitPerEndpoint": 1
+        },
+        "shomeiApi": {
+          "endpoint": "http://shomei:8888",
+          "version": "3.0.0",
+          "requestLimitPerEndpoint": 1
+        }
+      }
+    ]
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": ["1-2-hash"]
+}
+```
+
+#### `conflation_getReconflationJobsStatus`
+
+Polls the status of one or more jobs by ID. Returns `IN_PROGRESS` or `COMPLETED` for each.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "conflation_getReconflationJobsStatus",
+  "params": ["1-2-hash"]
+}
+```
+
+**curl:**
+
+```bash
+curl -X POST http://localhost:9546 \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "conflation_getReconflationJobsStatus",
+    "params": ["1-2-hash"]
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": ["COMPLETED"]
+}
+```
+
+### Field Reference
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `startBlockNumber` | integer | ✓ | First block of the range to backtest (inclusive) |
+| `endBlockNumber` | integer | ✓ | Last block of the range to backtest (inclusive) |
+| `blobCompressorVersion` | string | ✓ | Compressor version to use: `V1_2`, `V2`, or `V3` |
+| `batchesFixedSize` | integer\|null | | Override batch size; `null` uses calculator-driven batching |
+| `parentBlobShnarf` | string\|null | | Hex-encoded parent shnarf to chain from; `null` starts fresh |
+| `tracesApi.endpoint` | string | ✓ | Traces API URL (typically the backtesting traces node) |
+| `tracesApi.version` | string | ✓ | Traces API version string |
+| `tracesApi.requestLimitPerEndpoint` | integer | ✓ | Max concurrent requests to the traces endpoint |
+| `shomeiApi.endpoint` | string | ✓ | State manager (Shomei) URL |
+| `shomeiApi.version` | string | ✓ | Shomei API version string |
+| `shomeiApi.requestLimitPerEndpoint` | integer | ✓ | Max concurrent requests to Shomei |
+
 ## Test Coverage
 
 | Test File | Runner | Validates |

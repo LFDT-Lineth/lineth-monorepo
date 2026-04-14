@@ -25,6 +25,7 @@ conflation-deadline = "PT6S" # =3*l2_block_time
 conflation-deadline-check-interval = "PT3S"
 conflation-deadline-last-block-confirmation-delay = "PT2S" # recommended: at least 2 * blockInterval
 l2-fetch-blocks-limit = 4000
+backtesting-directory = "/data/conflation-backtesting"
 force-stop-conflation-at-block-inclusive=100_000_000
 #force-stop-conflation-at-block-timestamp-inclusive=2000000000
 
@@ -312,3 +313,4 @@ failures-warning-threshold = 2
 
 [api]
 observability-port = 9545
+json-rpc-port = 9546

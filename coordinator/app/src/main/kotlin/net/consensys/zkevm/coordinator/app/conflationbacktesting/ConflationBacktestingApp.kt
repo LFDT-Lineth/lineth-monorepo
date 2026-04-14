@@ -4,6 +4,8 @@ import build.linea.clients.StateManagerClientV1
 import build.linea.clients.StateManagerV1JsonRpcClient
 import io.vertx.core.Vertx
 import linea.LongRunningService
+import linea.blob.BlobCompressorFactory
+import linea.blob.BlobCompressorVersion
 import linea.coordinator.config.toJsonRpcRetry
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.TracesConfig.ClientApiConfig
@@ -27,7 +29,6 @@ import net.consensys.zkevm.ethereum.coordination.DynamicBlockNumberSet
 import net.consensys.zkevm.ethereum.coordination.blob.BlobCompressionProofCoordinator
 import net.consensys.zkevm.ethereum.coordination.blob.BlobShnarfMetaData
 import net.consensys.zkevm.ethereum.coordination.blob.BlobZkStateProviderImpl
-import net.consensys.zkevm.ethereum.coordination.blob.GoBackedBlobCompressorAdapter
 import net.consensys.zkevm.ethereum.coordination.blob.GoBackedBlobShnarfCalculator
 import net.consensys.zkevm.ethereum.coordination.blob.ParentBlobDataProvider
 import net.consensys.zkevm.ethereum.coordination.blob.RollingBlobShnarfCalculator
@@ -62,6 +63,9 @@ class ConflationBacktestingApp(
   init {
     require(mainCoordinatorConfig.conflation.backtestingDirectory != null) {
       "Backtesting requests parent directory must be set in conflation config"
+    }
+    require(conflationBacktestingAppConfig.blobCompressorVersion != BlobCompressorVersion.V2) {
+      "Blob compressor version 2 is not supported for backtesting"
     }
     mainCoordinatorConfig.traces.common?.endpoints?.contains(conflationBacktestingAppConfig.tracesApi.endpoint)
       ?.let { require(!it) { "Cannot use same traces endpoint for backtesting and main conflation" } }
@@ -128,14 +132,8 @@ class ConflationBacktestingApp(
         endpoints = listOf(conflationBacktestingAppConfig.tracesApi.endpoint),
         requestLimitPerEndpoint = conflationBacktestingAppConfig.tracesApi.requestLimitPerEndpoint,
       ),
-      counters = mainCoordinatorConfig.traces.counters?.copy(
-        endpoints = listOf(conflationBacktestingAppConfig.tracesApi.endpoint),
-        requestLimitPerEndpoint = conflationBacktestingAppConfig.tracesApi.requestLimitPerEndpoint,
-      ),
-      conflation = mainCoordinatorConfig.traces.conflation?.copy(
-        endpoints = listOf(conflationBacktestingAppConfig.tracesApi.endpoint),
-        requestLimitPerEndpoint = conflationBacktestingAppConfig.tracesApi.requestLimitPerEndpoint,
-      ),
+      counters = null,
+      conflation = null,
     ),
     stateManager = mainCoordinatorConfig.stateManager.copy(
       endpoints = listOf(conflationBacktestingAppConfig.shomeiApi.endpoint),
@@ -165,13 +163,13 @@ class ConflationBacktestingApp(
       backtestingCoordinatorConfig.conflation.proofAggregation.targetEndBlocks ?: emptyList(),
     )
 
+  val blobCompressor = BlobCompressorFactory.getInstance(
+    compressorVersion = backtestingCoordinatorConfig.conflation.blobCompression.blobCompressorVersion,
+    dataLimit = backtestingCoordinatorConfig.conflation.blobCompression.blobSizeLimit.toInt(),
+  )
+
   private val conflationCalculator: TracesConflationCalculator = run {
     // To fail faster for JNA reasons
-    val blobCompressor = GoBackedBlobCompressorAdapter.getInstance(
-      compressorVersion = backtestingCoordinatorConfig.conflation.blobCompression.blobCompressorVersion,
-      dataLimit = backtestingCoordinatorConfig.conflation.blobCompression.blobSizeLimit,
-      metricsFacade = metricsFacade,
-    )
 
     val compressedBlobCalculator = ConflationCalculatorByDataCompressed(
       blobCompressor = blobCompressor,
@@ -364,6 +362,11 @@ class ConflationBacktestingApp(
       blobCompressionProofCoordinator.stop(),
       blockCreationMonitor.stop(),
     ).thenApply {
+      try {
+        blobCompressor.close()
+      } catch (_: Throwable) {
+        // Ignored, we want to attempt to close the compressor but it should not prevent the rest of the shutdown
+      }
       log.info("Conflation backtesting stopped successfully")
     }
   }
