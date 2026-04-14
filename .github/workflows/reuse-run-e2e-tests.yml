@@ -124,7 +124,7 @@ jobs:
           timeout_minutes: 10
           command: |
             set -eo pipefail
-            for service in coordinator postman transaction-exclusion-api; do
+            for service in coordinator postman transaction-exclusion-api prover; do
               artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-${service}-docker-image.tar.gz"
               if [ -f "$artifact_path" ]; then
                 echo "Loading ${service} from build artifact..."
@@ -137,7 +137,7 @@ jobs:
       - name: Set Docker image tags
         shell: bash
         run: |
-          for service in coordinator postman transaction-exclusion-api; do
+          for service in coordinator postman transaction-exclusion-api prover; do
             artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-${service}-docker-image.tar.gz"
             env_var="LINEA_$(echo "${service}" | tr '[:lower:]-' '[:upper:]_')_TAG"
             if [ -f "$artifact_path" ]; then
@@ -146,7 +146,6 @@ jobs:
               echo "${env_var}=develop" >> "$GITHUB_ENV"
             fi
           done
-          echo LINEA_PROVER_TAG=2fc4392 >> "$GITHUB_ENV"
       - name: Load linea-besu-package Docker image
         if: ${{ inputs.linea_besu_package_tag != '' }}
         run: |
