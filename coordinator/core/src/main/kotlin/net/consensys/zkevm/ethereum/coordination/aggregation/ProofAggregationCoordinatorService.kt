@@ -33,6 +33,7 @@ class ProofAggregationCoordinatorService(
   private var nextBlockNumberToPoll: Long,
   private val aggregationCalculator: AggregationCalculator,
   private val aggregationProofHandler: AggregationProofHandler,
+  private val aggregationProofRequestHandler: AggregationProofRequestHandler? = null,
   private val invalidityProofProvider: InvalidityProofProvider,
   private val consecutiveProvenBlobsProvider: ConsecutiveProvenBlobsProvider,
   private val proofAggregationClient: ProofAggregationProverClientV2,
@@ -208,7 +209,17 @@ class ProofAggregationCoordinatorService(
             batchCount = batchCount.toULong(),
             aggregationProof = null,
           )
-        aggregationProofPoller.addProofRequestsInProgressForPolling(aggregationProofIndex, unProvenAggregation)
+        try {
+          aggregationProofRequestHandler?.acceptNewAggregationProofRequest(
+            proofIndex = aggregationProofIndex,
+            unProvenAggregation = unProvenAggregation,
+          )
+        } finally {
+          aggregationProofPoller.addProofRequestsInProgressForPolling(
+            aggregationProofIndex,
+            unProvenAggregation,
+          )
+        }
       }
   }
 
@@ -269,6 +280,7 @@ class ProofAggregationCoordinatorService(
       maxBlobsPerAggregation: UInt?,
       startBlockNumberInclusive: ULong,
       aggregationProofHandler: AggregationProofHandler,
+      aggregationProofRequestHandler: AggregationProofRequestHandler? = null,
       invalidityProofProvider: InvalidityProofProvider,
       aggregationL2StateProvider: AggregationL2StateProvider,
       consecutiveProvenBlobsProvider: ConsecutiveProvenBlobsProvider,
@@ -346,6 +358,7 @@ class ProofAggregationCoordinatorService(
           nextBlockNumberToPoll = startBlockNumberInclusive.toLong(),
           aggregationCalculator = globalAggregationCalculator,
           aggregationProofHandler = aggregationProofHandler,
+          aggregationProofRequestHandler = aggregationProofRequestHandler,
           invalidityProofProvider = invalidityProofProvider,
           consecutiveProvenBlobsProvider = consecutiveProvenBlobsProvider,
           proofAggregationClient = proofAggregationClient,

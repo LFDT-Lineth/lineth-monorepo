@@ -82,6 +82,7 @@ class ProofAggregationCoordinatorServiceTest {
       )
 
     var provenAggregation = 0UL
+    val aggregationProofRequestCaptures = mutableListOf<Pair<AggregationProofIndex, Aggregation>>()
 
     val proofAggregationCoordinatorService =
       ProofAggregationCoordinatorService(
@@ -92,6 +93,10 @@ class ProofAggregationCoordinatorServiceTest {
         aggregationProofHandler = { aggregation ->
           provenAggregation = aggregation.endBlockNumber
           mockAggregationsRepository.saveNewAggregation(aggregation)
+        },
+        aggregationProofRequestHandler = { proofIndex, unProvenAggregation ->
+          aggregationProofRequestCaptures.add(proofIndex to unProvenAggregation)
+          SafeFuture.completedFuture(Unit)
         },
         consecutiveProvenBlobsProvider = mockAggregationsRepository::findConsecutiveProvenBlobs,
         proofAggregationClient = mockProofAggregationClient,
@@ -335,6 +340,16 @@ class ProofAggregationCoordinatorServiceTest {
         verify(mockProofAggregationClient).findProofResponse(aggregation1ProofIndex)
         verify(mockAggregationsRepository).saveNewAggregation(aggregation1)
         assertThat(provenAggregation).isEqualTo(aggregation1.endBlockNumber)
+        assertThat(aggregationProofRequestCaptures).hasSize(1)
+        assertThat(aggregationProofRequestCaptures.single().first).isEqualTo(aggregation1ProofIndex)
+        assertThat(aggregationProofRequestCaptures.single().second).isEqualTo(
+          Aggregation(
+            startBlockNumber = blobsToAggregate1.startBlockNumber,
+            endBlockNumber = blobsToAggregate1.endBlockNumber,
+            batchCount = compressionBlobs1.sumOf { it.blobCounters.numberOfBatches }.toULong(),
+            aggregationProof = null,
+          ),
+        )
       }
 
     // Second aggregation should Trigger
@@ -354,6 +369,16 @@ class ProofAggregationCoordinatorServiceTest {
         verify(mockProofAggregationClient).findProofResponse(aggregation2ProofIndex)
         verify(mockAggregationsRepository).saveNewAggregation(aggregation2)
         assertThat(provenAggregation).isEqualTo(aggregation2.endBlockNumber)
+        assertThat(aggregationProofRequestCaptures).hasSize(2)
+        assertThat(aggregationProofRequestCaptures[1].first).isEqualTo(aggregation2ProofIndex)
+        assertThat(aggregationProofRequestCaptures[1].second).isEqualTo(
+          Aggregation(
+            startBlockNumber = blobsToAggregate2.startBlockNumber,
+            endBlockNumber = blobsToAggregate2.endBlockNumber,
+            batchCount = compressionBlobs2.sumOf { it.blobCounters.numberOfBatches }.toULong(),
+            aggregationProof = null,
+          ),
+        )
       }
   }
 }
