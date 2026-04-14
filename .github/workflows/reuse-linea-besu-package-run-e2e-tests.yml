@@ -44,7 +44,7 @@ jobs:
   # Required job
   run-e2e-tests:
     env:
-      BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
+      LINEA_BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     outputs:

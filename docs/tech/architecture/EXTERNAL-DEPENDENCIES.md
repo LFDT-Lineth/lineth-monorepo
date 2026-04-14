@@ -237,6 +237,6 @@ docker exec sequencer besu --version
 
 # Use matching tags
 export MARU_TAG=v1.0.0
-export BESU_PACKAGE_TAG=v24.0.0
+export LINEA_BESU_PACKAGE_TAG=v24.0.0
 make start-env-with-tracing-v2
 ```

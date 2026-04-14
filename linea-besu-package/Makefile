@@ -50,7 +50,7 @@ build-image:
 	fi
 
 run-e2e-test:
-	cd .. && BESU_PACKAGE_TAG=$(TAG) make start-env-with-tracing-v2-ci && pnpm run -F e2e test:local
+	cd .. && LINEA_BESU_PACKAGE_TAG=$(TAG) make start-env-with-tracing-v2-ci && pnpm run -F e2e test:local
 
 run-e2e-test-cleanup:
 	cd .. && make clean-environment

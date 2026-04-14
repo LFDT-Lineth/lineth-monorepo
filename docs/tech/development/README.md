@@ -301,11 +301,11 @@ Key environment variables for stack customization:
 
 ```bash
 # Container image versions
-export BESU_PACKAGE_TAG=latest
+export LINEA_BESU_PACKAGE_TAG=latest
 export MARU_TAG=latest
 export LINEA_COORDINATOR_TAG=latest
-export PROVER_TAG=latest
-export POSTMAN_TAG=latest
+export LINEA_PROVER_TAG=latest
+export LINEA_POSTMAN_TAG=latest
 
 # Coordinator settings
 export LINEA_COORDINATOR_SIGNER_TYPE=web3j  # or web3signer
