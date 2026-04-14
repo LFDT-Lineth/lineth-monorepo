@@ -49,7 +49,7 @@ class RecordsCleanupFinalizationHandler(
       .deleteAggregationsUpToEndBlockNumber(endBlockNumberInclusive = update.blockNumber.toLong() - 1L)
     val ftxRecordsCleanup =
       if (update.forcedTransactionNumber > 0UL) {
-        forcedTransactionsDao.deleteFtxUpToInclusive(update.forcedTransactionNumber)
+        forcedTransactionsDao.deleteFtxUpToInclusive(update.forcedTransactionNumber - 1UL)
       } else {
         SafeFuture.completedFuture(Unit)
       }

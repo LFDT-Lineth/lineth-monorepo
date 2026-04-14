@@ -189,10 +189,7 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
       .isNotNull()
 
     val forcedTransactionsAfterCleanup = forcedTransactionsDao.list().get()
-    Assertions.assertThat(forcedTransactionsAfterCleanup.size).isEqualTo(1)
-    Assertions.assertThat(
-      forcedTransactionsDao.findByNumber(ftx4.ftxNumber).get(),
-    )
-      .isNotNull()
+    Assertions.assertThat(forcedTransactionsAfterCleanup.map { it.ftxNumber })
+      .isEqualTo(listOf(3UL, 4UL))
   }
 }
