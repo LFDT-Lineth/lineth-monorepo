@@ -7,8 +7,11 @@ log_level = 4                                  # TODO @gbotrel will be refactore
 retry_delays = [0, 1]
 
 [execution]
-prover_mode = "dev"
+prover_mode = "partial"
 requests_root_dir = "/data/prover/v3/execution"
+conflated_traces_dir = "/"
+ignore_compatibility_check = true
+serialization = false
 
 [data_availability]
 prover_mode = "dev"
@@ -22,15 +25,23 @@ dict_paths = ["/opt/linea/prover/lib/compressor/compressor_dict.bin", "/opt/line
 
 [aggregation]
 prover_mode = "dev"
-num_proofs = [10]
-#allowed_inputs = [
-#    "execution-dummy",
-#    "blob-decompression-dummy",
-#    "blob-decompression-v0",
-#]
-verifier_id = 0
-is_allowed_circuit_id = 963
 requests_root_dir = "/data/prover/v3/aggregation"
+num_proofs = [10]
+# allowed_inputs = [
+#     "execution-dummy",
+#     "data-availability-dummy",
+#     "data-availability-v2",
+# ]
+# Conversion to is_allowed_circuit_id bitmask:
+#   execution-dummy (ID 0, bit 0) = 1 → ALLOWED
+#   data-availability-dummy (ID 1, bit 1) = 1 → ALLOWED
+#   execution (ID 2, bit 2) = 0 → DISALLOWED
+#   execution-large (ID 3, bit 3) = 0 → DISALLOWED
+#   execution-limitless (ID 4, bit 4) = 0 → DISALLOWED
+#   data-availability-v2 (ID 5, bit 5) = 1 → ALLOWED
+# Binary: 0b100011 = 35 (decimal)
+is_allowed_circuit_id = 35
+verifier_id = 0
 
 [layer2]
 chain_id = 1337

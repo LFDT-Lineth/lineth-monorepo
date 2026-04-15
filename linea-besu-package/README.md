@@ -74,7 +74,7 @@ bin/besu --profile=advanced-mainnet
 
 To build with specific platform (e.g. linux/amd64) and image tag (e.g. xxx), do the following:
 ```
-make clean && PLATFORM=linux/amd64 TAG=xxx make build
+make clean && PLATFORM=linux/amd64 BESU_PACKAGE_TAG=xxx make build
 ```
 
 To run the e2e test locally with the locally-built `linea-besu-package` image (e.g. tagged as xxx):
@@ -90,7 +90,7 @@ pnpm run -F "e2e^..." build
 ```
 To run the test locally:
 ```
-TAG=xxx make run-e2e-test
+BESU_PACKAGE_TAG=xxx make run-e2e-test
 ```
 
 ## How-To Release (with tracer and sequencer plugin changes)

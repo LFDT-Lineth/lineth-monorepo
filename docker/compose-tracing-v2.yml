@@ -60,11 +60,6 @@ services:
     extends:
       file: compose-spec-l2-services.yml
       service: prover-v3
-    volumes:
-      - ../tmp/local/:/data/
-      - logs:/logs
-      - ./config/prover/v3/prover-config.toml:/opt/linea/prover/config.toml:ro
-      - ../prover/prover-assets:/opt/linea/prover/prover-assets:ro
 
   coordinator:
     extends:

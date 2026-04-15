@@ -1,0 +1,142 @@
+name: linea-besu-package-e2e-tests-with-partial-prover
+
+permissions:
+  actions: read
+  contents: read
+  packages: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      linea_besu_package_image_tag:
+        description: 'Target linea-besu-package image tag (i.e. [prefix]-[YYYYMMDDHHMMSS]-[commit]), if not given, would build the linea-besu-package image from source'
+        required: false
+        type: string
+      prover_image_tag:
+        description: 'Target prover image tag, if not given, would build the prover image from source'
+        required: false
+        type: string
+      shomei_image_tag:
+        description: 'Target shomei image tag, if not given, would use the version declared in docker/compose-spec-l2-services.yml'
+        required: false
+        type: string
+
+jobs:
+  build-images-and-run-e2e-tests-with-partial-prover:
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-xxl
+    concurrency:
+      group: run-e2e-tests-${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Tracer Environment (for linea-besu-package build)
+        if: ${{ inputs.linea_besu_package_image_tag == '' }}
+        uses: ./.github/actions/setup-tracer-environment
+
+      - name: Build linea-besu-package from source 
+        if: ${{ inputs.linea_besu_package_image_tag == '' }}
+        shell: bash
+        run: cd linea-besu-package && make build
+        env:
+          JAVA_OPTS: -Xmx2g
+
+      - name: show folder structure
+        if: ${{ inputs.linea_besu_package_image_tag == '' }}
+        shell: bash
+        run: |
+          cd linea-besu-package
+          sudo apt update
+          sudo apt-get install --no-install-recommends --assume-yes tree
+          tree .
+
+      - name: Install Go (for prover build)
+        if: ${{ inputs.linea_besu_package_image_tag != '' &&  inputs.prover_image_tag == '' }}
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.24.6'
+          cache-dependency-path: "**/*.sum"
+
+      - name: Build prover from source 
+        if: ${{ inputs.prover_image_tag == '' }}
+        shell: bash
+        run: cd linea-besu-package && make build-prover
+        env:
+          JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
+
+      - name: Setup nodejs environment (for e2e tests)
+        uses: ./.github/actions/setup-nodejs
+        with:
+          pnpm-install-options: '-F contracts -F "e2e..." --frozen-lockfile --prefer-offline'
+          commands: |
+            pnpm run -F "e2e^..." build
+
+      - name: Create directory for conflated traces
+        run: |
+          mkdir -p tmp/local/traces/v2/conflated
+          chmod -R a+rw tmp/local/
+
+      - name: Spin up fresh environment with besu tracing with retry
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
+        with:
+          max_attempts: 10
+          retry_on: error
+          retry_wait_seconds: 30
+          timeout_minutes: 10
+          # TODO: hardcoded image tags for testing, should be removed 
+          command: |
+            LINEA_BESU_PACKAGE_TAG=${{ inputs.linea_besu_package_image_tag || 'local' }} \
+            LINEA_PROVER_TAG=${{ inputs.prover_image_tag || 'local' }} \
+            LINEA_SHOMEI_TAG=${{ inputs.shomei_image_tag }} \
+            make start-env-with-tracing-v2-partialprover CLEAN_PREVIOUS_ENV=false
+          on_retry_command: |
+            make clean-environment
+
+      - name: List docker containers/images
+        if: always()
+        continue-on-error: true
+        run: |
+          docker ps -la && docker images
+          docker container ls -a
+
+      - name: Run e2e tests with partial prover
+        id: run_e2e_tests
+        timeout-minutes: 30
+        run: |
+          LOG_LEVEL=debug pnpm run -F e2e test:partial-prover:local
+
+      - name: Show e2e tests result
+        if: always()
+        run: |
+          echo "E2E_TESTS_RESULT: ${{ steps.run_e2e_tests.outcome }}"
+
+      - name: Dump logs
+        if: failure()
+        run: |
+          mkdir -p docker_logs
+          find tmp/local/ >> docker_logs/files_in_shared_dir.txt || true
+          docker ps -a >> docker_logs/docker_ps.txt || true
+          docker logs coordinator --since 1h &>> docker_logs/coordinator.txt || true
+          docker logs prover-v3 --since 1h &>> docker_logs/prover-v3.txt || true
+          docker logs shomei --since 1h &>> docker_logs/shomei.txt || true
+          docker logs l2-node-besu --since 1h &>> docker_logs/l2-node-besu.txt || true
+          docker logs sequencer --since 1h &>> docker_logs/sequencer.txt || true
+          docker logs l1-el-node --since 1h &>> docker_logs/l1-el-node.txt || true
+
+      - name: Archive debug logs
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: end-2-end-debug-logs
+          if-no-files-found: error
+          path: |
+            docker_logs/**/*
+      
+      - name: Archive shared folder
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: end-2-end-shared-folder
+          path: |
+            tmp/local/**/*

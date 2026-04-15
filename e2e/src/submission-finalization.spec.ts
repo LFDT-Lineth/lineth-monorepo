@@ -98,5 +98,41 @@ describe("Submission and finalization test suite", () => {
       },
       150_000,
     );
+
+    it.concurrent(
+      "Check latest L2 block number has been finalized on L1",
+      async () => {
+        const sequencerClient = context.l2PublicClient({ type: L2RpcEndpoint.Sequencer });
+        if (!context.isLocal() || process.env.PARTIAL_PROVER != "true") {
+          logger.warn('Skipped the "Check latest L2 block number has been finalized on L1" test');
+          return;
+        }
+
+        const latestL2BlockNumber = (await getBlockByNumberOrBlockTag(sequencerClient, { blockTag: "latest" }))?.number;
+        const targetL2BlockNumnber = latestL2BlockNumber ? parseInt(latestL2BlockNumber.toString()) : -1;
+        logger.debug(`targetL2BlockNumnber=${targetL2BlockNumnber}`);
+
+        const { finalizedL2BlockNumber } = await awaitUntil(
+          async () => {
+            const currentFinalizedL2BlockNumber = (
+              await getBlockByNumberOrBlockTag(sequencerClient, { blockTag: "finalized" })
+            )?.number;
+
+            const finalized = currentFinalizedL2BlockNumber ? parseInt(currentFinalizedL2BlockNumber.toString()) : -1;
+
+            return { finalizedL2BlockNumber: finalized };
+          },
+          ({ finalizedL2BlockNumber }) => finalizedL2BlockNumber >= targetL2BlockNumnber,
+          { pollingIntervalMs: 1_000, timeoutMs: 1800_000 },
+        );
+
+        logger.debug(`finalizedL2BlockNumber=${finalizedL2BlockNumber}`);
+
+        expect(finalizedL2BlockNumber).toBeGreaterThanOrEqual(targetL2BlockNumnber);
+
+        logger.debug(`The target L2 block number ${targetL2BlockNumnber} has been finalized on L1`);
+      },
+      1800_000,
+    );
   });
 });

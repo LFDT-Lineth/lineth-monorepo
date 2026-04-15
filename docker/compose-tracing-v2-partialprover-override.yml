@@ -1,0 +1,26 @@
+services:
+  prover-v3:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: prover-v3
+    environment:
+      GOMAXPROCS: 16
+      CONFIG_FILE: "/opt/linea/prover/config.toml"
+      GOMEMLIMIT: "110GiB"
+      WORKER_ID: prover-i1 # keep this prover- to mimic prod env prover-aggregation-91
+    volumes:
+      - ../tmp/local/:/data/
+      - logs:/logs
+      - ./config/prover/v3/prover-config-partial.toml:/opt/linea/prover/config.toml:ro
+      - ../prover/prover-assets:/opt/linea/prover/prover-assets:ro
+
+  coordinator:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: coordinator
+    environment:
+      config__override__conflation__blocks_limit: 10
+      config__override__conflation__conflation_deadline: PT30M
+      config__override__conflation__blob_compression__batches_limit: 2
+      config__override__conflation__proof_aggregation__deadline: PT30M
+      CONFIG_OVERRIDE_OPTS: ${LINEA_SHOMEI_TAG:+-Dconfig.override.state-manager.version=$LINEA_SHOMEI_TAG}
