@@ -169,7 +169,7 @@ __pycache__/
 # Usually the profiling pdfs
 prover/*.pdf
 # Usually request/response files
-prover/*.json 
+prover/*.json
 # Usually helper shell scripts to run the prover
 prover/*.sh
 

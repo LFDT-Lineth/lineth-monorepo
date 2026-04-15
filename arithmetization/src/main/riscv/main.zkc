@@ -1,0 +1,45 @@
+include "interpreter.zkc"
+include "ram/read.zkc"
+include "ram/write.zkc"
+include "utils/sign_extend.zkc"
+include "utils/constants.zkc"
+include "utils/signed_comparisons.zkc"
+include "utils/absolute_value.zkc"
+include "utils/bit_flip.zkc"
+include "utils/signed_comparisons.zkc"
+include "utils/sign_bit.zkc"
+include "utils/negative.zkc"
+
+pub input riscV_program(address:Address)->(bytes:u8)
+pub input riscV_program_length(rv:u1)->(length:Address)
+pub input in_bytes(address:Address)->(bytes:u8)
+pub input in_bytes_length(pi:u1)->(length:Address)
+memory ram(address:Address)->(bytes:u8)
+memory registers(id:Register)->(value:DoubleWord)
+
+// TODO @Ghost
+fn main<ram, registers>() {
+
+var pc          : Address = ENTRY_POINT
+var opcode      : Opcode
+var instruction : Instruction
+var stop_signal : u1 = 0
+var length : Address = riscV_program_length[0]
+
+// copy public inputs and r5-program into the RAM
+for i:Address=0; i<riscV_program_length[0] as Address; i=i+1 {
+    write_8((PROGRAM_OFFSET + i) as Address, riscV_program[i])
+}
+for j:Address=0; j<in_bytes_length[0]; j=j+1 {
+    write_8((IN_BYTES_OFFSET + j) as Address, in_bytes[j])
+}
+
+printf "program length=%d\n", riscV_program_length[0]
+
+while stop_signal == 0 && pc < length {
+      printf "PC=%x\n", pc      
+      instruction = read_32(pc) as Instruction
+      pc = interpreter(instruction, pc)
+  }
+}
+

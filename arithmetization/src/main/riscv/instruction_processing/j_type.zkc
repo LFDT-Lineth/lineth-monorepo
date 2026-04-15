@@ -1,0 +1,27 @@
+fn process_J_type_instruction<registers>(instruction_parameters:u25, pc:Address) -> (pc_new:Address) {
+
+  // var funct3 : Funct3
+  // var funct7 : Funct7
+  // var rs1    : Register
+  // var rs2    : Register
+    var rd    : Register
+  // var uimm5  : UImm5
+  // var uimm6  : UImm6
+  // var imm12  : Imm12
+  // var imm20  : Imm20
+  // var opcode : Opcode
+
+  var imm20:u1
+  var imm10_1:u10
+  var imm11:u1
+  var imm19_12:u8
+
+  // destructure the input
+  imm20 :: imm10_1 :: imm11 :: imm19_12 :: rd = instruction_parameters
+
+  // restructure and 1 left shift the immediate to get imm21
+  var imm21:u21 = ((imm20 :: imm19_12 :: imm11 :: imm10_1) as u21) << 1
+
+  registers[rd] = (pc + 4) as DoubleWord
+  pc_new = (pc + sgn_extension_u21_u64(imm21)) as Address
+}

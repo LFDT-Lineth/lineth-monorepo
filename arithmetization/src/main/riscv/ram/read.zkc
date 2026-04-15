@@ -1,0 +1,12 @@
+// TODO: clarify the endianness business and uniform these functions, maybe create LE and BE versions
+fn read_32<ram>(address:Address) -> (value : u32) {
+   value = ram[address + 3] :: ram[address + 2] :: ram[address + 1] :: ram[address + 0]
+}
+
+fn read_16<ram>(address:Address) -> (value : u16) {
+   value = ram[address + 1] :: ram[address + 0]
+}
+
+fn read_64<ram>(address:Address) -> (value : u64) {
+   value = ram[ address + 7] :: ram[address + 6] :: ram[address + 5] :: ram[address + 4] :: ram[address + 3] :: ram[address + 2] :: ram[address + 1] :: ram[address + 0]
+}

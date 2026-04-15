@@ -1,0 +1,118 @@
+fn process_I_type_instruction<ram,registers>(opcode:Opcode, instruction_parameters:u25, pc:Address) -> (new_pc:Address) {
+  
+  var funct6 : Funct6
+  var funct7 : Funct7
+  var funct3 : Funct3
+  var uimm6  : UImm6
+  var uimm5  : UImm5
+  var imm12  : Imm12
+  var rs1    : Register
+  var rd     : Register
+
+  imm12 :: rs1 :: funct3 :: rd = instruction_parameters
+
+  // for SLLI, SRLI, SRAI
+  funct6 :: uimm6 = imm12
+
+  // for SLLIW, SRLIW, SRAIW
+  funct7 :: uimm5 = imm12
+
+  var signext_imm12_64: DoubleWord
+  signext_imm12_64 = sgn_extension_u12_u64(imm12)
+
+  var mem_address: Address
+  mem_address = (registers[rs1] + signext_imm12_64) as Address
+
+  new_pc = (pc + 4) as Address //TODO: this is the default case, we will overwrite it for JALR. 
+  // We should handle this differently to avoid a potential second row just to overwrite the value of new_pc?
+
+  // ----- LOAD (opcode LOAD) -----
+  if opcode == LOAD {
+    if funct3 == FUNCT3_LB {
+      registers[rd] = sgn_extension_u8_u64(ram[mem_address])
+    }
+    if funct3 == FUNCT3_LH {
+      registers[rd] = sgn_extension_u16_u64(read_16(mem_address))
+    }
+    if funct3 == FUNCT3_LW {
+      registers[rd] = sgn_extension_u32_u64(read_32(mem_address))
+    }
+    if funct3 == FUNCT3_LBU {
+      registers[rd] = ram[mem_address] as DoubleWord
+    }
+    if funct3 == FUNCT3_LHU {
+      registers[rd] = read_16(mem_address) as DoubleWord
+    }
+    if funct3 == FUNCT3_LWU {
+      registers[rd] = read_32(mem_address) as DoubleWord
+    }
+    if funct3 == FUNCT3_LD {
+      registers[rd] = read_64(mem_address) as DoubleWord
+    }
+  }
+
+  // ----- OP-IMM (opcode OP_IMM) -----
+  else if opcode == OP_IMM {
+
+    if funct3 == FUNCT3_ADDI {
+      registers[rd] = ( registers[rs1] + signext_imm12_64 ) as DoubleWord
+    }
+    else if funct3 == FUNCT3_SLTI {
+      var is_lt:Boolean = signed_LT(registers[rs1], signext_imm12_64)
+      if is_lt == 1 { registers[rd] = 1 } else { registers[rd] = 0 }
+    }
+    else if funct3 == FUNCT3_SLTIU {
+      // Warn: this is an unsigned comparaison (even if imm12 is SGN_EXT)
+      if registers[rs1] < signext_imm12_64 { registers[rd] = 1 } else { registers[rd] = 0 }
+    }
+    else if funct3 == FUNCT3_XORI {
+      registers[rd] = registers[rs1] ^ signext_imm12_64
+    }
+    else if funct3 == FUNCT3_ORI {
+      registers[rd] = registers[rs1] | signext_imm12_64
+    }
+    else if funct3 == FUNCT3_ANDI {
+      registers[rd] = registers[rs1] & signext_imm12_64
+    }
+    else if (funct3 == FUNCT3_SLLI) && (funct6 == FUNCT6_SLLI) {
+      registers[rd] = registers[rs1] << uimm6
+    }
+    else if (funct3 == FUNCT3_SRLI) && (funct6 == FUNCT6_SRLI) {
+      registers[rd] = registers[rs1] >> uimm6
+    }
+    else if (funct3 == FUNCT3_SRAI) && (funct6 == FUNCT6_SRAI) {
+      registers[rd] = _ashr_u64(registers[rs1], uimm6)
+    }
+  }
+
+  // ----- OP-IMM-32 (opcode OP_IMM_32) — RV64 *W -----
+  else if opcode == OP_IMM_32 {
+
+    if funct3 == FUNCT3_ADDIW {
+      registers[rd] = sgn_extension_u32_u64((registers[rs1] as u32) + sgn_extension_u12_u32(imm12))
+    }
+    else if (funct3 == FUNCT3_SLLIW) && (funct7 == FUNCT7_SLLIW) {
+      registers[rd] = sgn_extension_u32_u64((registers[rs1] as u32) << uimm5)
+    }
+    else if (funct3 == FUNCT3_SRLIW) && (funct7 == FUNCT7_SRLIW) {
+      registers[rd] = sgn_extension_u32_u64((registers[rs1] as u32) >> uimm5)
+    }
+    else if (funct3 == FUNCT3_SRAIW) && (funct7 == FUNCT7_SRAIW) {
+      registers[rd] = sgn_extension_u32_u64(_ashr_u32(registers[rs1], uimm5))
+    }
+  }
+
+  else if opcode == JALR  {
+    // only instruction is JALR, no need to switch over funct3
+    new_pc = ((registers[rs1] + signext_imm12_64) & MASK_64_ERASE_LAST_BIT) as Address
+    registers[rd] = (pc + 4) as DoubleWord
+  }
+
+  else if opcode == SYSTEM {
+    // TODO: implement me ...
+    printf "[ERROR] SYSTEM instruction with funct3 %b\n has been triggered, not implemented", funct3
+  }
+
+  // TODO: should never be reached
+  else {fail}
+}

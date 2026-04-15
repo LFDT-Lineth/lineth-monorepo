@@ -1,0 +1,26 @@
+include "type.zkc"
+
+// signed_LT should return true (i.e. 1) iff a < b where a and b are interpreted as signed i64's
+fn signed_LT(a :DoubleWord, b :DoubleWord) -> (comparison :Boolean) {
+
+  var a_sign         :SignBit
+  var b_sign         :SignBit
+  var raw_comparison :Boolean
+
+  a_sign = sign_bit_of_double_word(a)
+  b_sign = sign_bit_of_double_word(b)
+
+  if a_sign != b_sign {
+    // different signs case
+    comparison = a_sign == 1 ? 1 : 0
+    // same signs case
+  } else {
+    // this applies both in the signed case as in the unsigned case, e.g.
+    // ∙  2^31 ≡ 0x80..00
+    // ∙  1    ≡ 0xff..ff
+    // we have both
+    // ∙  2^31 < -1
+    // ∙  0x80..00 < 0xff..ff
+    comparison = a < b ? 1 : 0
+  }
+}

@@ -1,0 +1,91 @@
+include "constants.zkc"
+
+const SGNEXTMASK_U32:u64 = 0xFFFFFFFF_00000000
+
+// Upper 52 bits set; OR with zero-extended u21 when sign (bit 20) is 1.
+const SGNEXTMASK_U21:u64 = 0xFFFFFFFF_FFE00000
+
+// Upper 52 bits set; OR with zero-extended u12 when sign (bit 11) is 1.
+const SGNEXTMASK_U12:u64 = 0xFFFFFFFF_FFFFF000
+
+const SGNEXTMASK_U12_U32:u32 = 0xFFFFF000
+
+// Upper 56 bits set; OR with zero-extended u8 when sign (bit 7) is 1.
+const SGNEXTMASK_U8:u64 = 0xFFFFFFFF_FFFFFF00
+
+// Upper 48 bits set; OR with zero-extended u16 when sign (bit 15) is 1.
+const SGNEXTMASK_U16:u64 = 0xFFFFFFFF_FFFF0000
+
+fn sgn_extension_u32_u64(value:u32) -> (ext_value:u64) {
+   ext_value = value as u64
+
+   // if first bit of int is one, the first 32 bits are 1 as well
+   var sign_bit:u32
+   sign_bit = value >> 31
+   if sign_bit == 1 {ext_value = SGNEXTMASK_U32 | ext_value}
+}
+
+fn sgn_extension_u21_u64(value:u21) -> (ext_value:u64) {
+  ext_value = value as u64
+
+  var sign_bit:u21
+  sign_bit = value >> 20
+  if sign_bit == 1 { ext_value = SGNEXTMASK_U21 | ext_value }
+}
+
+fn sgn_extension_u16_u64(value:u16) -> (ext_value:u64) {
+  ext_value = value as u64
+
+  var sign_bit:u16
+  sign_bit = value >> 15
+  if sign_bit == 1 { ext_value = SGNEXTMASK_U16 | ext_value }
+}
+
+fn sgn_extension_u12_u64(value:u12) -> (ext_value:u64) {
+  ext_value = value as u64
+
+  var sign_bit:u12
+  sign_bit = value >> 11
+  if sign_bit == 1 { ext_value = SGNEXTMASK_U12 | ext_value }
+}
+
+fn sgn_extension_u8_u64(value:u8) -> (ext_value:u64) {
+  ext_value = value as u64
+
+  var sign_bit:u8
+  sign_bit = value >> 7
+  if sign_bit == 1 { ext_value = SGNEXTMASK_U8 | ext_value }
+}
+
+fn sgn_extension_u12_u32(value:u12) -> (ext_value:u32) {
+  ext_value = value as u32
+
+  var sign_bit:u12
+  sign_bit = value >> 11
+  if sign_bit == 1 { ext_value = SGNEXTMASK_U12_U32 | ext_value }
+}
+
+// 64-bit arithmetic right shift
+fn _ashr_u64(value: DoubleWord, shamt: u6) -> (out: DoubleWord) {
+  var sign:SignBit = sign_bit_of_double_word(value)
+  var logical: DoubleWord = value >> shamt
+  if sign == 0 {
+    out = logical
+  } else {
+    var mask: DoubleWord = ~(MAX_UINT_64 >> shamt)
+    out = logical | mask
+  }
+}
+
+// 32-bit arithmetic right shift on low 32 bits of value
+fn _ashr_u32(value: DoubleWord, shamt: u5) -> (out: u32) {
+  var w: u32 = value as u32
+  var sign:SignBit = sign_bit_of_word(w)
+  var logical: u32 = w >> shamt
+  if sign == 0 {
+    out = logical
+  } else {
+    var mask: u32 = ~(MAX_UINT_32 >> shamt)
+    out = logical | mask
+  }
+}

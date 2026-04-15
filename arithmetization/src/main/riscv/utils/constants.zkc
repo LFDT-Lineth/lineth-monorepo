@@ -1,0 +1,290 @@
+include "type.zkc"
+
+// TODO: temporary solution: could be extracted from the linker script,
+// or from the elf header, or passed as a public input along with the
+// program. TBD
+
+const ENTRY_POINT:Address = 0
+const PROGRAM_OFFSET:Address = 0
+const IN_BYTES_OFFSET:Address = 0
+
+const UNDEFINED_TYPE:Type = 0
+const R_TYPE:Type =  1
+const I_TYPE:Type =  2
+const S_TYPE:Type =  3
+const B_TYPE:Type =  4
+const U_TYPE:Type =  5
+const J_TYPE:Type =  6
+
+// ===============
+// decoding types
+// ===============
+
+// TODO: add support for sparse reference tables
+static instruction_type_from_opcode(opcode :Opcode) -> (instruction_type :Type) {
+  UNDEFINED_TYPE, // 0b0000000
+  UNDEFINED_TYPE, // 0b0000001
+  UNDEFINED_TYPE, // 0b0000010
+  I_TYPE,         // 0b0000011
+  UNDEFINED_TYPE, // 0b0000100
+  UNDEFINED_TYPE, // 0b0000101
+  UNDEFINED_TYPE, // 0b0000110
+  UNDEFINED_TYPE, // 0b0000111
+  UNDEFINED_TYPE, // 0b0001000
+  UNDEFINED_TYPE, // 0b0001001
+  UNDEFINED_TYPE, // 0b0001010
+  UNDEFINED_TYPE, // 0b0001011
+  UNDEFINED_TYPE, // 0b0001100
+  UNDEFINED_TYPE, // 0b0001101
+  UNDEFINED_TYPE, // 0b0001110
+  UNDEFINED_TYPE, // 0b0001111
+  UNDEFINED_TYPE, // 0b0010000
+  UNDEFINED_TYPE, // 0b0010001
+  UNDEFINED_TYPE, // 0b0010010
+  I_TYPE,         // 0b0010011
+  UNDEFINED_TYPE, // 0b0010100
+  UNDEFINED_TYPE, // 0b0010101
+  UNDEFINED_TYPE, // 0b0010110
+  U_TYPE,         // 0b0010111
+  UNDEFINED_TYPE, // 0b0011000
+  UNDEFINED_TYPE, // 0b0011001
+  UNDEFINED_TYPE, // 0b0011010
+  I_TYPE,         // 0b0011011
+  UNDEFINED_TYPE, // 0b0011100
+  UNDEFINED_TYPE, // 0b0011101
+  UNDEFINED_TYPE, // 0b0011110
+  UNDEFINED_TYPE, // 0b0011111
+  UNDEFINED_TYPE, // 0b0100000
+  UNDEFINED_TYPE, // 0b0100001
+  UNDEFINED_TYPE, // 0b0100010
+  S_TYPE,         // 0b0100011
+  UNDEFINED_TYPE, // 0b0100100
+  UNDEFINED_TYPE, // 0b0100101
+  UNDEFINED_TYPE, // 0b0100110
+  UNDEFINED_TYPE, // 0b0100111
+  UNDEFINED_TYPE, // 0b0101000
+  UNDEFINED_TYPE, // 0b0101001
+  UNDEFINED_TYPE, // 0b0101010
+  UNDEFINED_TYPE, // 0b0101011
+  UNDEFINED_TYPE, // 0b0101100
+  UNDEFINED_TYPE, // 0b0101101
+  UNDEFINED_TYPE, // 0b0101110
+  UNDEFINED_TYPE, // 0b0101111
+  UNDEFINED_TYPE, // 0b0110000
+  UNDEFINED_TYPE, // 0b0110001
+  UNDEFINED_TYPE, // 0b0110010
+  R_TYPE,         // 0b0110011
+  UNDEFINED_TYPE, // 0b0110100
+  UNDEFINED_TYPE, // 0b0110101
+  UNDEFINED_TYPE, // 0b0110110
+  U_TYPE,         // 0b0110111
+  UNDEFINED_TYPE, // 0b0111000
+  UNDEFINED_TYPE, // 0b0111001
+  UNDEFINED_TYPE, // 0b0111010
+  R_TYPE,         // 0b0111011
+  UNDEFINED_TYPE, // 0b0111100
+  UNDEFINED_TYPE, // 0b0111101
+  UNDEFINED_TYPE, // 0b0111110
+  UNDEFINED_TYPE, // 0b0111111
+  UNDEFINED_TYPE, // 0b1000000
+  UNDEFINED_TYPE, // 0b1000001
+  UNDEFINED_TYPE, // 0b1000010
+  UNDEFINED_TYPE, // 0b1000011
+  UNDEFINED_TYPE, // 0b1000100
+  UNDEFINED_TYPE, // 0b1000101
+  UNDEFINED_TYPE, // 0b1000110
+  UNDEFINED_TYPE, // 0b1000111
+  UNDEFINED_TYPE, // 0b1001000
+  UNDEFINED_TYPE, // 0b1001001
+  UNDEFINED_TYPE, // 0b1001010
+  UNDEFINED_TYPE, // 0b1001011
+  UNDEFINED_TYPE, // 0b1001100
+  UNDEFINED_TYPE, // 0b1001101
+  UNDEFINED_TYPE, // 0b1001110
+  UNDEFINED_TYPE, // 0b1001111
+  UNDEFINED_TYPE, // 0b1010000
+  UNDEFINED_TYPE, // 0b1010001
+  UNDEFINED_TYPE, // 0b1010010
+  UNDEFINED_TYPE, // 0b1010011
+  UNDEFINED_TYPE, // 0b1010100
+  UNDEFINED_TYPE, // 0b1010101
+  UNDEFINED_TYPE, // 0b1010110
+  UNDEFINED_TYPE, // 0b1010111
+  UNDEFINED_TYPE, // 0b1011000
+  UNDEFINED_TYPE, // 0b1011001
+  UNDEFINED_TYPE, // 0b1011010
+  UNDEFINED_TYPE, // 0b1011011
+  UNDEFINED_TYPE, // 0b1011100
+  UNDEFINED_TYPE, // 0b1011101
+  UNDEFINED_TYPE, // 0b1011110
+  UNDEFINED_TYPE, // 0b1011111
+  UNDEFINED_TYPE, // 0b1100000
+  UNDEFINED_TYPE, // 0b1100001
+  UNDEFINED_TYPE, // 0b1100010
+  B_TYPE,         // 0b1100011
+  UNDEFINED_TYPE, // 0b1100100
+  UNDEFINED_TYPE, // 0b1100101
+  UNDEFINED_TYPE, // 0b1100110
+  I_TYPE,         // 0b1100111
+  UNDEFINED_TYPE, // 0b1101000
+  UNDEFINED_TYPE, // 0b1101001
+  UNDEFINED_TYPE, // 0b1101010
+  UNDEFINED_TYPE, // 0b1101011
+  UNDEFINED_TYPE, // 0b1101100
+  UNDEFINED_TYPE, // 0b1101101
+  UNDEFINED_TYPE, // 0b1101110
+  J_TYPE,         // 0b1101111
+  UNDEFINED_TYPE, // 0b1110000
+  UNDEFINED_TYPE, // 0b1110001
+  UNDEFINED_TYPE, // 0b1110010
+  I_TYPE,         // 0b1110011
+  UNDEFINED_TYPE, // 0b1110100
+  UNDEFINED_TYPE, // 0b1110101
+  UNDEFINED_TYPE, // 0b1110110
+  UNDEFINED_TYPE, // 0b1110111
+  UNDEFINED_TYPE, // 0b1111000
+  UNDEFINED_TYPE, // 0b1111001
+  UNDEFINED_TYPE, // 0b1111010
+  UNDEFINED_TYPE, // 0b1111011
+  UNDEFINED_TYPE, // 0b1111100
+  UNDEFINED_TYPE, // 0b1111101
+  UNDEFINED_TYPE, // 0b1111110
+  UNDEFINED_TYPE, // 0b1111111
+}
+
+// R_type
+const OP:Opcode        = 0b0110011 // ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND
+const OP_32:Opcode     = 0b0111011 // ADDW, SUBW, SLLW, SRLW, SRAW (RV64 only)
+
+// I_type
+const LOAD:Opcode      = 0b0000011 // LB, LH, LW, LBU, LHU, LWU, LD
+const OP_IMM:Opcode    = 0b0010011 // ADDI, SLTI, SLTIU, XORI, ORI, ANDI, SLLI, SRLI, SRAI
+const OP_IMM_32:Opcode = 0b0011011 // ADDIW, SLLIW, SRLIW, SRAIW (RV64 only)
+const JALR:Opcode      = 0b1100111 // JALR
+const SYSTEM:Opcode    = 0b1110011 // ECALL, EBREAK, CSR*
+// const MISC_MEM:Opcode  = 0b0001111 // FENCE, FENCE.I We don't support them for now, but we can add them later if needed
+
+//  S_type
+const STORE:Opcode     = 0b0100011 // SB, SH, SW, SD
+
+//  B_type (branches)
+const BRANCH:Opcode    = 0b1100011 // BEQ, BNE, BLT, BGE, BLTU, BGEU
+
+//  U_type
+const LUI:Opcode       = 0b0110111 // LUI
+const AUIPC:Opcode     = 0b0010111 // AUIPC
+
+//  J_type
+const JAL:Opcode       = 0b1101111 // JAL
+
+// ===============
+// decoding funct3
+// ===============
+
+// ===============================
+// R-type funct3 and funct7 values
+// ===============================
+
+// OP (0110011) — R-type register-register arithmetic
+// funct3 values and funct7 values
+const FUNCT3_ADD:Funct3  = 0b000, FUNCT7_ADD:Funct7  = 0b0000000
+const FUNCT3_SUB:Funct3  = 0b000, FUNCT7_SUB:Funct7  = 0b0100000
+const FUNCT3_SLL:Funct3  = 0b001, FUNCT7_SLL:Funct7  = 0b0000000
+const FUNCT3_SLT:Funct3  = 0b010, FUNCT7_SLT:Funct7  = 0b0000000
+const FUNCT3_SLTU:Funct3 = 0b011, FUNCT7_SLTU:Funct7 = 0b0000000
+const FUNCT3_XOR:Funct3  = 0b100, FUNCT7_XOR:Funct7  = 0b0000000
+const FUNCT3_SRL:Funct3  = 0b101, FUNCT7_SRL:Funct7  = 0b0000000
+const FUNCT3_SRA:Funct3  = 0b101, FUNCT7_SRA:Funct7  = 0b0100000
+const FUNCT3_OR:Funct3   = 0b110, FUNCT7_OR:Funct7   = 0b0000000
+const FUNCT3_AND:Funct3  = 0b111, FUNCT7_AND:Funct7  = 0b0000000
+
+// OP-32 (0111011) — R-type 32-bit register-register arithmetic (RV64I)
+const FUNCT3_ADDW:Funct3 = 0b000, FUNCT7_ADDW:Funct7 = 0b0000000
+const FUNCT3_SUBW:Funct3 = 0b000, FUNCT7_SUBW:Funct7 = 0b0100000
+const FUNCT3_SLLW:Funct3 = 0b001, FUNCT7_SLLW:Funct7 = 0b0000000
+const FUNCT3_SRLW:Funct3 = 0b101, FUNCT7_SRLW:Funct7 = 0b0000000
+const FUNCT3_SRAW:Funct3 = 0b101, FUNCT7_SRAW:Funct7 = 0b0100000
+
+// M extension — Integer multiplication and division
+// OP (0110011) + funct7=0000001
+const FUNCT3_MUL:Funct3    = 0b000, FUNCT7_MUL:Funct7    = 0b0000001
+const FUNCT3_MULH:Funct3   = 0b001, FUNCT7_MULH:Funct7   = 0b0000001
+const FUNCT3_MULHSU:Funct3 = 0b010, FUNCT7_MULHSU:Funct7 = 0b0000001
+const FUNCT3_MULHU:Funct3  = 0b011, FUNCT7_MULHU:Funct7  = 0b0000001
+const FUNCT3_DIV:Funct3    = 0b100, FUNCT7_DIV:Funct7    = 0b0000001
+const FUNCT3_DIVU:Funct3   = 0b101, FUNCT7_DIVU:Funct7   = 0b0000001
+const FUNCT3_REM:Funct3    = 0b110, FUNCT7_REM:Funct7    = 0b0000001
+const FUNCT3_REMU:Funct3   = 0b111, FUNCT7_REMU:Funct7   = 0b0000001
+
+// OP-32 (0111011) + funct7=0000001
+const FUNCT3_MULW:Funct3   = 0b000, FUNCT7_MULW:Funct7   = 0b0000001
+const FUNCT3_DIVW:Funct3   = 0b100, FUNCT7_DIVW:Funct7   = 0b0000001
+const FUNCT3_DIVUW:Funct3  = 0b101, FUNCT7_DIVUW:Funct7  = 0b0000001
+const FUNCT3_REMW:Funct3   = 0b110, FUNCT7_REMW:Funct7   = 0b0000001
+const FUNCT3_REMUW:Funct3  = 0b111, FUNCT7_REMUW:Funct7  = 0b0000001
+
+// ======================
+// I-type funct3 values
+// ======================
+// LOAD
+const FUNCT3_LB:Funct3    = 0b000 // Load Byte
+const FUNCT3_LH:Funct3    = 0b001 // Load Halfword
+const FUNCT3_LW:Funct3    = 0b010 // Load Word
+const FUNCT3_LD:Funct3    = 0b011 // Load Doubleword
+const FUNCT3_LBU:Funct3   = 0b100 // Load Byte Unsigned
+const FUNCT3_LHU:Funct3   = 0b101 // Load Halfword Unsigned
+const FUNCT3_LWU:Funct3   = 0b110 // Load Word Unsigned
+
+// OP_IMM
+const FUNCT3_ADDI:Funct3  = 0b000 // Add Immediate
+const FUNCT3_SLTI:Funct3  = 0b010 // Set Less Than Immediate
+const FUNCT3_SLTIU:Funct3 = 0b011 // Set Less Than Immediate Unsigned
+const FUNCT3_XORI:Funct3  = 0b100 // XOR Immediate
+const FUNCT3_ORI:Funct3   = 0b110 // OR Immediate
+const FUNCT3_ANDI:Funct3  = 0b111 // AND Immediate
+const FUNCT3_SLLI:Funct3  = 0b001, FUNCT6_SLLI:Funct6  = 0b000000 // Shift Left Logical Immediate
+const FUNCT3_SRLI:Funct3  = 0b101, FUNCT6_SRLI:Funct6  = 0b000000 // Shift Right Logical Immediate
+const FUNCT3_SRAI:Funct3  = 0b101, FUNCT6_SRAI:Funct6  = 0b010000 // Shift Right Arithmetic Immediate
+
+// OP_IMM_32
+const FUNCT3_ADDIW:Funct3  = 0b000 // Add Immediate Word
+const FUNCT3_SLLIW:Funct3  = 0b001, FUNCT7_SLLIW:Funct7  = 0b0000000 // Shift Left Logical Immediate Word
+const FUNCT3_SRLIW:Funct3  = 0b101, FUNCT7_SRLIW:Funct7  = 0b0000000 // Shift Right Logical Immediate Word
+const FUNCT3_SRAIW:Funct3  = 0b101, FUNCT7_SRAIW:Funct7  = 0b0100000 // Shift Right Arithmetic Immediate Word
+
+// JALR
+const FUNCT3_JALR:Funct3  = 0b000 // JALR
+
+// ======================
+// S-type funct3 values
+// ======================
+
+const FUNCT3_SB:Funct3    = 0b000 // Store Byte
+const FUNCT3_SH:Funct3    = 0b001 // Store Halfword
+const FUNCT3_SW:Funct3    = 0b010 // Store Word
+const FUNCT3_SD:Funct3    = 0b011 // Store Doubleword
+
+// ======================
+// B-type funct3 values
+// ======================
+
+const FUNCT3_BEQ:Funct3  = 0b000
+const FUNCT3_BNE:Funct3  = 0b001
+const FUNCT3_BLT:Funct3  = 0b100
+const FUNCT3_BGE:Funct3  = 0b101
+const FUNCT3_BLTU:Funct3 = 0b110
+const FUNCT3_BGEU:Funct3 = 0b111
+
+
+// Sign extension constants
+// sign extend to a DOUBLE WORD
+const DWORD_SIGN_EXT_PREFIX_52_ONES:u52 = 0b1111111111111111111111111111111111111111111111111111
+const MAX_UINT_64:u64 = 0xffffffffffffffff
+const MAX_UINT_64_AS_U128:u128 = 0xffffffffffffffff
+const MAX_UINT_32:u32 = 0xffffffff
+const U32_FIRST_BIT_MASK:u32 = 0x80000000
+const U64_FIRST_BIT_MASK:u64 = 0x8000000000000000
+
+const OVERFLOW_DIVIDEND:u64 = 0x8000000000000000
+const NEGATIVE_ONE_AS_I64:u64 = 0xffffffffffffffff
+const MASK_64_ERASE_LAST_BIT:u64 = 0xfffffffffffffffe

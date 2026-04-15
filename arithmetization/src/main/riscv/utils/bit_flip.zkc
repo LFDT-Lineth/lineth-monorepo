@@ -1,0 +1,9 @@
+fn bit_flip_double_word(a : DoubleWord) -> (a_bit_flip : DoubleWord) {
+  // a_bit_flip = MAX_UINT_64 ^ a
+  a_bit_flip = MAX_UINT_64 - a
+}
+
+fn bit_flip_word(a : Word) -> (a_bit_flip : Word) {
+  // a_bit_flip = MAX_UINT_64 ^ a
+  a_bit_flip = MAX_UINT_32 - a
+}

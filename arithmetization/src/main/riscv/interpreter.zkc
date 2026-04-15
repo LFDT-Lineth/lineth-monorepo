@@ -1,0 +1,49 @@
+include "instruction_processing/b_type.zkc"
+include "instruction_processing/r_type.zkc"
+include "instruction_processing/i_type.zkc"
+include "instruction_processing/s_type.zkc"
+include "instruction_processing/j_type.zkc"
+include "instruction_processing/u_type.zkc"
+
+fn interpreter<ram,registers>(instruction:u32, pc:Address) -> (new_pc:Address) {
+
+    var instruction_parameters : u25
+    var instruction_type       : Type
+    var opcode                 : Opcode
+    instruction_parameters::opcode  = instruction
+    instruction_type = instruction_type_from_opcode(opcode)
+
+    printf "instruction %b\n", instruction
+    printf "opcode:     %b\n", opcode
+    printf "parameters: %b\n", instruction_parameters
+    printf "parameters: %b\n", instruction_parameters
+
+    // TODO: handle the case where rd = 0: we will handle this in RAM itself, likely by adding an extra read-write pair
+    // to reset the value in registers[rd] to 0
+
+    // TODO: switch
+    if instruction_type == R_TYPE {
+      printf "R-Type instruction\n"
+      process_R_type_instruction(instruction_parameters)
+      new_pc = pc + 4 as Address
+    } else if instruction_type == I_TYPE  {
+      printf "I-Type instruction\n"
+      new_pc = process_I_type_instruction(opcode, instruction_parameters, pc)
+    } else if instruction_type == S_TYPE  {
+      printf "S-Type instruction\n"
+      process_S_type_instruction(instruction_parameters)
+      new_pc = pc + 4 as Address
+    } else if instruction_type == B_TYPE  {
+      printf "B-Type instruction\n"
+      new_pc = process_B_type_instruction(instruction_parameters, pc)
+    } else if instruction_type == U_TYPE  {
+      printf "U-Type instruction\n"
+      process_U_type_instruction(opcode, instruction_parameters, pc)
+      new_pc = pc + 4 as Address
+    } else if instruction_type == J_TYPE  {
+      printf "J-Type instruction\n"
+      new_pc = process_J_type_instruction(instruction_parameters, pc)
+    } else { fail }
+
+    printf "-----------\n"
+   }

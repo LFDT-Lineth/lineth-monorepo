@@ -1,0 +1,23 @@
+fn absolute_value_double_word(a : DoubleWord) -> (abs : UnsignedDoubleWord) {
+  var a_sign : u1
+  a_sign = sign_bit_of_double_word(a)
+
+  if a_sign == 0 {
+    abs = a
+    } else {
+    abs = (MAX_UINT_64 - a) + 1
+  }
+}
+
+
+fn absolute_value_word(a : Word) -> (abs : UnsignedWord) {
+  var a_sign : u1
+  a_sign = sign_bit_of_word(a)
+
+  if a_sign == 0 {
+    abs = a
+    } else {
+    abs = (MAX_UINT_32 - a) + 1
+  }
+}
+

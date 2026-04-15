@@ -1,0 +1,85 @@
+fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address) -> (pc_new:Address) {
+
+  // var funct3 : Funct3
+  // var funct7 : Funct7
+  // var rs1    : Register
+  // var rs2    : Register
+  // var rsd    : Register
+  // var uimm5  : UImm5
+  // var uimm6  : UImm6
+  // var imm12  : Imm12
+  // var imm20  : Imm20
+  // var opcode : Opcode
+
+  var funct3         : Funct3
+  var imm_sign       : SignBit
+  var imm_11         : u1
+  var imm_10_5       : u6
+  var imm_4_1        : u4
+  var rs1            : Register
+  var rs2            : Register
+  var funct7         : Funct7
+  var rd             : Register
+  var imm            : DoubleWord
+  var comparison     : Boolean
+  var raw_comparison : Boolean
+  var reg_val_1      : DoubleWord
+  var reg_val_2      : DoubleWord
+  var rem_1          : u63
+  var rem_2          : u63
+
+  imm_sign :: imm_10_5 :: rs2 :: rs1 :: funct3 :: imm_4_1 :: imm_11 = instruction_parameters
+
+  if imm_sign == 1 {
+    imm = DWORD_SIGN_EXT_PREFIX_52_ONES :: imm_11 :: imm_10_5 :: imm_4_1 :: (0 as u1)
+    } else {
+    imm = (imm_11 :: imm_10_5 :: imm_4_1 :: (0 as u1)) as DoubleWord
+           }
+
+  // TODO: question @david: providing a default value to overwrite later on seems like it would
+  // trigger a second row just to overwrite the original value. Is that correct, and if so
+  // should it be avoided _a priori_ ?
+  //
+  // default case
+  pc_new = pc + 4
+
+  if funct3 == FUNCT3_BEQ  {
+    if registers[rs1] == registers[rs2] {
+           // the branch case
+           pc_new = pc + imm
+           }
+}
+  if funct3 == FUNCT3_BNE  {
+    if registers[rs1] != registers[rs2] {
+           // the branch case
+           pc_new = pc + imm
+           }
+}
+  if funct3 == FUNCT3_BLT  {
+         comparison = signed_LT(registers[rs1], registers[rs2])
+         if comparison == 1 {
+           // the branch case
+           pc_new = pc + imm
+           }
+}
+  if funct3 == FUNCT3_BGE  {
+           comparison = signed_LT(registers[rs1], registers[rs2])
+           if comparison == 0 {
+           // the branch case
+           pc_new = pc + imm
+           }
+}
+  if funct3 == FUNCT3_BLTU {
+           if registers[rs1] < registers[rs2] {
+           // the branch case
+           pc_new = pc + imm
+           }
+}
+  if funct3 == FUNCT3_BGEU {
+      if registers[rs1] >= registers[rs2] {
+           // the branch case
+           pc_new = pc + imm
+           }
+  }
+}
+

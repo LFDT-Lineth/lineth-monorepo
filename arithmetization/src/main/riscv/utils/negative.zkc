@@ -1,0 +1,31 @@
+fn negative_of_double_word(a : DoubleWord) -> (a_neg : DoubleWord) {
+  var a_sign : SignBit
+  a_sign = sign_bit_of_double_word(a)
+  if a == 0 {
+    a_neg = 0
+    } else {
+    if a_sign == 0 {
+    // this syntax is correct: consider a = 1
+    a_neg = MAX_UINT_64 - (a - 1)
+  } else {
+    // this syntax is correct: consider a = -1
+    a_neg = (MAX_UINT_64 - a) + 1
+  }
+  }
+}
+
+fn negative_of_word(a : Word) -> (a_neg : Word) {
+  var a_sign : SignBit
+  a_sign = sign_bit_of_word(a)
+  if a == 0 {
+    a_neg = 0
+    } else {
+    if a_sign == 0 {
+    // this syntax is correct: consider a = 1
+    a_neg = MAX_UINT_32 - (a - 1)
+  } else {
+    // this syntax is correct: consider a = -1
+    a_neg = (MAX_UINT_32 - a) + 1
+  }
+  }
+}
