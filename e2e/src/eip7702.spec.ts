@@ -1,17 +1,11 @@
-import { describe, expect, it } from "@jest/globals";
-import { encodeFunctionData, getAddress, isAddress } from "viem";
+import { describe, it } from "@jest/globals";
+import { PrivateKeyAccount } from "viem";
 
-import {
-  addToDenyList,
-  expectBlockedTransaction,
-  reloadDenyList,
-  removeFromDenyList,
-  withDenyListAddresses,
-} from "./common/test-helpers";
-import { estimateLineaGas, expectSuccessfulTransaction, sendTransactionWithRetry } from "./common/utils";
+import { expectBlockedTransaction, withDenyListAddresses } from "./common/test-helpers";
+import { encodeEip7702InitializeData, deployTestEip7702Delegation } from "./common/test-helpers/eip7702-delegation";
+import { estimateLineaGas, expectSuccessfulTransaction } from "./common/utils";
 import { L2RpcEndpoint } from "./config/clients/l2-client";
 import { createTestContext } from "./config/setup";
-import { TestEIP7702DelegationAbi, TestEIP7702DelegationAbiBytecode } from "./generated";
 
 const context = createTestContext();
 const l2AccountManager = context.getL2AccountManager();
@@ -34,34 +28,11 @@ type CreateDelegationScenarioParams = {
 describe("EIP-7702 test suite", () => {
   const l2PublicClient = context.l2PublicClient({ type: L2RpcEndpoint.BesuNode });
   const sequencerClient = context.l2PublicClient({ type: L2RpcEndpoint.Sequencer });
-  const initializeData = encodeFunctionData({
-    abi: TestEIP7702DelegationAbi,
-    functionName: "initialize",
-  });
+  const initializeData = encodeEip7702InitializeData();
 
-  async function deployDelegationContract(deployer: { address: `0x${string}` }): Promise<`0x${string}`> {
+  async function deployDelegationContract(deployer: PrivateKeyAccount): Promise<`0x${string}`> {
     const deployerWalletClient = context.l2WalletClient({ account: deployer });
-    const deployNonce = await l2PublicClient.getTransactionCount({ address: deployer.address });
-
-    const deployEstimate = await estimateLineaGas(l2PublicClient, {
-      account: deployer,
-      data: TestEIP7702DelegationAbiBytecode,
-    });
-
-    const { receipt: deployReceipt } = await sendTransactionWithRetry(l2PublicClient, (fees) =>
-      deployerWalletClient.sendTransaction({
-        data: TestEIP7702DelegationAbiBytecode,
-        nonce: deployNonce,
-        ...deployEstimate,
-        ...fees,
-      }),
-    );
-
-    expect(deployReceipt.status).toEqual("success");
-    expect(deployReceipt.contractAddress).toBeDefined();
-    expect(isAddress(deployReceipt.contractAddress as `0x${string}`)).toBe(true);
-
-    const deployedContractAddress = getAddress(deployReceipt.contractAddress as `0x${string}`);
+    const deployedContractAddress = await deployTestEip7702Delegation(l2PublicClient, deployerWalletClient, deployer);
     logger.debug(`TestEIP7702Delegation deployed. address=${deployedContractAddress}`);
     return deployedContractAddress;
   }
@@ -199,17 +170,11 @@ describe("EIP-7702 test suite", () => {
         contractAddress,
       });
 
-      try {
-        await expectSuccessfulTransaction(l2PublicClient, scenario.sendDelegatedInitializeTx());
+      await expectSuccessfulTransaction(l2PublicClient, scenario.sendDelegatedInitializeTx());
 
-        addToDenyList([scenario.denyListAddress]);
-        await reloadDenyList(sequencerClient);
-
+      await withDenyListAddresses(sequencerClient, [scenario.denyListAddress], async () => {
         await expectBlockedTransaction(scenario.sendDelegatedInitializeTx());
-      } finally {
-        removeFromDenyList([scenario.denyListAddress]);
-        await reloadDenyList(sequencerClient);
-      }
+      });
     },
     120_000,
   );

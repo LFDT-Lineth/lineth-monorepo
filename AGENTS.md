@@ -280,11 +280,13 @@ These require human approval and follow the release process:
 
 1. Read existing code in the affected area
 2. Check for existing tests, conventions, and patterns in that package
-3. Plan the minimal change needed
-4. **Plan review**: Before starting implementation, review the plan using a separate agent with isolated context — give it only the original user request and the plan document, not the planning conversation or exploration history. This ensures the reviewer cannot inherit reasoning errors made during planning.
-5. Implement with tests
-6. Run the package-specific lint and test commands
-7. Verify no secrets or credentials are exposed
+3. Prefer built-in language, framework, library, and repository helpers over hand-rolled replacements when equivalent functionality already exists
+4. Extend or compose existing helpers before introducing a new utility when that keeps the implementation smaller and clearer
+5. Plan the minimal change needed
+6. **Plan review**: Before starting implementation, review the plan using a separate agent with isolated context — give it only the original user request and the plan document, not the planning conversation or exploration history. This ensures the reviewer cannot inherit reasoning errors made during planning.
+7. Implement with tests
+8. Run the package-specific lint and test commands
+9. Verify no secrets or credentials are exposed
 
 ### Limiting Change Surface
 

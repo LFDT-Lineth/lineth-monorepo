@@ -28,5 +28,11 @@ export { execDockerCommand, getDockerImageTag } from "./docker";
 export { expectSuccessfulTransaction, getRawTransactionHex, getTransactionHash } from "./transaction";
 
 // Retry
-export { sendTransactionWithRetry } from "./retry";
-export type { FeeOverrides, SendTransactionWithRetryOptions, TransactionResult } from "./retry";
+export { sendTransactionWithGasPriceRetry, sendTransactionWithRetry } from "./retry";
+export type {
+  FeeOverrides,
+  GasPriceFeeOverrides,
+  SendTransactionWithGasPriceRetryOptions,
+  SendTransactionWithRetryOptions,
+  TransactionResult,
+} from "./retry";
