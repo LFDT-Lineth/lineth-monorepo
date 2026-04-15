@@ -479,7 +479,7 @@ services:
     ports:
       - "8889:8888"
     healthcheck:
-      test: [ "CMD-SHELL", "bash -c \"[ -f /data/shomei/LOCK ]\"" ]
+      test: [ "CMD-SHELL", "bash -c \"[ -f /data/shomei-frontend/LOCK ]\"" ]
       interval: 1s
       timeout: 1s
       retries: 60
