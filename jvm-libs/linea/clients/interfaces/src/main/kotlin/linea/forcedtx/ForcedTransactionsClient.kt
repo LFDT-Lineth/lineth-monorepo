@@ -56,6 +56,10 @@ data class ForcedTransactionInclusionStatus(
       "blockTimestamp=$blockTimestamp, " +
       "inclusionResult=$inclusionResult, ftxHash=${ftxHash.encodeHex()}, from=${from.encodeHex()})"
   }
+
+  fun toStringShortForLogging(): String {
+    return "ftx=$ftxNumber blockNumber=$blockNumber result=$inclusionResult"
+  }
 }
 
 data class ForcedTransactionRequest(

@@ -37,7 +37,7 @@ class ConflationCalculatorByForcedTransaction(
 ) : ConflationCalculator {
   override val id: String = ConflationTrigger.FORCED_TRANSACTION.name
 
-  // Track pending trigger blocks (blockNumber - 1) for non-included FTXs
+  // Track pending trigger blocks (blockNumber) for non-included FTXs
   private val pendingTriggerBlocks = mutableSetOf<ULong>()
 
   @Volatile
@@ -46,14 +46,20 @@ class ConflationCalculatorByForcedTransaction(
   @Synchronized
   override fun checkOverflow(blockCounters: BlockCounters): ConflationCalculator.OverflowTrigger? {
     // First, read all available processed FTXs from the queue (without consuming)
+    log.debug(
+      "checking ftx conflation trigger: blockNumber={} ftxProcessed={}",
+      blockCounters.blockNumber,
+      processedFtxQueue.toList().map(ForcedTransactionInclusionStatus::toStringShortForLogging),
+    )
+
     readProcessedFtxs()
 
     // Check if this block should trigger conflation
     return if (pendingTriggerBlocks.contains(blockCounters.blockNumber)) {
       log.info(
-        "FTX conflation overflow detected at block {} (will seal before FTX execution block {})",
+        "FTX conflation detected at block={} ftxExecuted={}",
         blockCounters.blockNumber,
-        blockCounters.blockNumber + 1UL,
+        processedFtxQueue.toList().map(ForcedTransactionInclusionStatus::toStringShortForLogging),
       )
       ConflationCalculator.OverflowTrigger(
         trigger = ConflationTrigger.FORCED_TRANSACTION,
@@ -74,22 +80,23 @@ class ConflationCalculatorByForcedTransaction(
     }
 
     // Only add trigger blocks for FTXs that were NOT successfully included
+    val highestPendingTrigger = pendingTriggerBlocks.maxOrNull() ?: 0UL
     val newTriggerBlocks = processedFtxs
       .filter { ftx ->
-        ftx.inclusionResult != ForcedTransactionInclusionResult.Included
+        ftx.inclusionResult != ForcedTransactionInclusionResult.Included &&
+          ftx.blockNumber > highestPendingTrigger
       }
       .map { ftx ->
         // ftx.blockNumber is always greater than 0 (0 is genesis block),
         // In practice, greater than 2 most of the cases because network bootstrapping
         // takes a few blocks to deploy L2 protocol contracts
-        ftx.blockNumber - 1UL
+        ftx.blockNumber
       }
       .toSet()
 
     // Only update if we have new trigger blocks not already tracked
-    val actuallyNewBlocks = newTriggerBlocks - pendingTriggerBlocks
-    pendingTriggerBlocks.addAll(actuallyNewBlocks)
-    logNewFtxConflationTriggers(actuallyNewBlocks, processedFtxs)
+    pendingTriggerBlocks.addAll(newTriggerBlocks)
+    logNewFtxConflationTriggers(newTriggerBlocks, processedFtxs)
   }
 
   fun logNewFtxConflationTriggers(
@@ -97,15 +104,11 @@ class ConflationCalculatorByForcedTransaction(
     processedFtxs: List<ForcedTransactionInclusionStatus>,
   ) {
     if (actuallyNewBlocks.isNotEmpty()) {
-      val newFailedFtxs = processedFtxs.filter {
-        it.inclusionResult != ForcedTransactionInclusionResult.Included &&
-          actuallyNewBlocks.contains(if (it.blockNumber > 0UL) it.blockNumber - 1UL else null)
-      }
+      val newFailedFtxs = processedFtxs.filter { actuallyNewBlocks.contains(it.blockNumber) }
       log.info(
-        "added {} new FTX conflation trigger blocks for {} non-included FTXs. ftxs={} total pending triggers: {}",
-        actuallyNewBlocks.size,
-        newFailedFtxs.size,
-        newFailedFtxs.map { "ftx=${it.ftxNumber} result=${it.inclusionResult}" },
+        "appended new conflation triggers {} of non-included ftxs={}, all pending triggers {}",
+        actuallyNewBlocks,
+        newFailedFtxs.map { it.toStringShortForLogging() },
         pendingTriggerBlocks.sorted(),
       )
     }

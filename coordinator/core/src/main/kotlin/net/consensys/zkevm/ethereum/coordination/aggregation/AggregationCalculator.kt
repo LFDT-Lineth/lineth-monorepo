@@ -50,13 +50,13 @@ fun interface AggregationTriggerHandler {
 }
 
 /**
- * The aggregation proof can be triggered by 2 conditions:
- *  - Number of batches - if number of all batches combined for all subsequent blobs above a given threshold;
+ * The proof aggregation can be triggered by the following conditions:
+ *  - proof limit: when (batches + blobs) reach a certain limit configured;
+ *  - blob limit: when (blobs) reach a certain limit configured;
+ *  - forced transaction was rejected: when an invalid (BadNonce) forced transaction is detected at block B, we need to
+ *      make aggregation boundary at B-1, to include invalidity proof a beginning of next aggregation;
  *  - Finalization deadline: the time elapsed between first block’s timestamp in the first submitted blob and
  *     current time is greater than a finalization deadline configured.
- *
- *   Sum(blob.numberOfBatches) < prover_batches_limit
- *   blob.firstBlockTimestamp < current_time - submission_deadline;
  */
 interface AggregationCalculator {
   fun newBlob(blobCounters: BlobCounters)

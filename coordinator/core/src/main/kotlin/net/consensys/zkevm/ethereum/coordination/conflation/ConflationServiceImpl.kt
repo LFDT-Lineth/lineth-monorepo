@@ -119,7 +119,7 @@ class ConflationServiceImpl(
       if (!safeBlockNumberProvider.isBlockSafeToConflate(nextBlockNumberToConflate)) {
         log.info(
           "conflation temporarily paused: blockNumber={} (likely paused by forced transactions)",
-          nextBlockNumberToConflate,
+          nextBlockNumberToConflate - 1UL,
         )
         break
       }

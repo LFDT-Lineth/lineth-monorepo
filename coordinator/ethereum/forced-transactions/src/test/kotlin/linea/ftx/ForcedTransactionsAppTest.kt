@@ -720,7 +720,7 @@ class ForcedTransactionsAppTest {
         l2DeadLine = 100UL,
       ),
       createFtxAddedEvent(
-        l1BlockNumber = 200UL,
+        l1BlockNumber = 101UL,
         ftxNumber = 2UL,
         l2DeadLine = 200UL,
       ),
@@ -762,8 +762,8 @@ class ForcedTransactionsAppTest {
     )
     this.ftxClient.setFtxInclusionResultAfterReception(
       ftxNumber = 2UL,
-      l2BlockNumber = 200UL,
-      inclusionResult = ForcedTransactionInclusionResult.Included,
+      l2BlockNumber = 101UL,
+      inclusionResult = ForcedTransactionInclusionResult.BadNonce,
     )
     this.ftxClient.setFtxInclusionResultAfterReception(
       ftxNumber = 3UL,
@@ -820,13 +820,15 @@ class ForcedTransactionsAppTest {
     }
     assertThat(conflationTriggers).isEqualTo(
       listOf(
-        99UL to ConflationTrigger.FORCED_TRANSACTION,
-        499UL to ConflationTrigger.FORCED_TRANSACTION,
+        100UL to ConflationTrigger.FORCED_TRANSACTION,
+        101UL to ConflationTrigger.FORCED_TRANSACTION,
+        500UL to ConflationTrigger.FORCED_TRANSACTION,
       ),
     )
     assertThat(aggregationTriggers).isEqualTo(
       listOf(
         99UL to AggregationTriggerType.FORCED_TRANSACTION,
+        100UL to AggregationTriggerType.FORCED_TRANSACTION,
         499UL to AggregationTriggerType.FORCED_TRANSACTION,
       ),
     )

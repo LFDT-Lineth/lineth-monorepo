@@ -15,6 +15,11 @@ class AggregationTriggerCalculatorByTargetBlockNumbers(
   private var inFlightAggregation: BlobsToAggregate? = null
 
   internal fun <T : BlockInterval> checkAggregationTrigger(blob: T): AggregationTrigger? {
+    log.debug(
+      "checking aggregation trigger: blockNumber={} targetEndBlockNumbers={}",
+      blob.intervalString(),
+      targetEndBlockNumbers.toList().sorted(),
+    )
     val endBlockNumbers = targetEndBlockNumbers.sorted()
 
     if (endBlockNumbers.isEmpty()) {

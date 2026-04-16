@@ -73,10 +73,17 @@ class GlobalBlockConflationCalculator(
       inflightConflation.counters,
     )
     val triggers =
-      calculators.mapNotNull {
-        val overflowTrigger = it.checkOverflow(blockCounters)
-        log.trace("CHECK: calculator={}, blockNumber={}, trigger={}", it.id, blockCounters.blockNumber, overflowTrigger)
-        overflowTrigger
+      calculators.mapNotNull { calculator ->
+        calculator
+          .checkOverflow(blockCounters)
+          .also { overflowTrigger ->
+            log.trace(
+              "CHECK: calculator={}, blockNumber={}, trigger={}",
+              calculator.id,
+              blockCounters.blockNumber,
+              overflowTrigger,
+            )
+          }
       }.sortedBy { it.trigger.triggerPriority }
 
     if (triggers.isNotEmpty()) {
