@@ -17,7 +17,7 @@ fun interface AggregationProofRequestHandler {
   fun acceptNewAggregationProofRequest(
     proofIndex: AggregationProofIndex,
     unProvenAggregation: Aggregation,
-  ): SafeFuture<*>
+  )
 }
 
 class AggregationProofHandlerImpl(

@@ -96,7 +96,6 @@ class ProofAggregationCoordinatorServiceTest {
         },
         aggregationProofRequestHandler = { proofIndex, unProvenAggregation ->
           aggregationProofRequestCaptures.add(proofIndex to unProvenAggregation)
-          SafeFuture.completedFuture(Unit)
         },
         consecutiveProvenBlobsProvider = mockAggregationsRepository::findConsecutiveProvenBlobs,
         proofAggregationClient = mockProofAggregationClient,

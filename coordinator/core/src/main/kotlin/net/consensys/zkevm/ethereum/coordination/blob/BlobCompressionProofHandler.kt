@@ -12,5 +12,5 @@ fun interface BlobCompressionProofRequestHandler {
   fun acceptNewBlobCompressionProofRequest(
     proofIndex: CompressionProofIndex,
     unProvenBlobRecord: BlobRecord,
-  ): SafeFuture<*>
+  )
 }

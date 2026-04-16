@@ -93,18 +93,16 @@ class ConflationBacktestingApp(
 
   fun onConflationProgress(
     blockNumber: ULong,
-  ): SafeFuture<*> {
-    return if (blockNumber == conflationBacktestingAppConfig.endBlockNumber) {
+  ) {
+    if (blockNumber == conflationBacktestingAppConfig.endBlockNumber) {
       conflationBacktestingComplete.store(true)
       log.info("Conflation backtesting complete")
-      this.stop()
     } else {
       log.info(
         "Conflation backtesting progress: processed till blockNumber={}, targetEndBlock={}",
         blockNumber,
         conflationBacktestingAppConfig.endBlockNumber,
       )
-      SafeFuture.completedFuture(Unit)
     }
   }
 
@@ -322,9 +320,7 @@ class ConflationBacktestingApp(
           "Backtesting compression proof request produced: blob={}",
           blobRecord.intervalString(),
         )
-
         inMemoryProvenBlobsTracker.acceptProvenBlobRecord(proofIndex, blobRecord)
-        SafeFuture.completedFuture(Unit)
       },
       log = log,
       metricsFacade = metricsFacade,

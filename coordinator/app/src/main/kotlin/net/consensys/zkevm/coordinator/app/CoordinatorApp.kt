@@ -159,7 +159,7 @@ class CoordinatorApp(
       vertx = vertx,
       conflationBacktestingService = conflationBacktestingService,
       metricsFacade = micrometerMetricsFacade,
-      signalTargetCheckpointResume = { l1App.signalTargetCheckpointResumeFromApi() },
+      conflationCheckpointResumeLatch = l1App::signalTargetCheckpointResumeFromApi,
     )
 
   private val requestFileCleanup =

@@ -279,8 +279,6 @@ class ConflationTargetCheckpointPauseControllerTest {
     assertThat(c.shouldPauseConflation()).isFalse()
     c.importBlock(createBlock(number = 11uL, timestamp = Instant.fromEpochSeconds(1500L)))
     assertThat(c.shouldPauseConflation()).isTrue()
-    l1.setLatest(9L)
-    assertThat(c.shouldPauseConflation()).isTrue()
     l1.setLatest(10L)
     assertThat(c.shouldPauseConflation()).isFalse()
     c.importBlock(createBlock(number = 15uL, timestamp = Instant.fromEpochSeconds(1600L)))

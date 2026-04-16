@@ -26,7 +26,7 @@ class Api(
   private val vertx: Vertx,
   private val conflationBacktestingService: ConflationBacktestingService,
   private val metricsFacade: MetricsFacade,
-  private val signalTargetCheckpointResume: () -> Boolean,
+  private val conflationCheckpointResumeLatch: () -> Boolean,
 ) : LongRunningService {
   data class Config(
     val observabilityPort: UInt,
@@ -55,7 +55,7 @@ class Api(
       ConflationGetJobStatusRequestHandler.METHOD_NAME to
         ConflationGetJobStatusRequestHandler(conflationBacktestingService = conflationBacktestingService),
       ConflationTargetCheckpointResumeRequestHandler.METHOD_NAME to
-        ConflationTargetCheckpointResumeRequestHandler(signalResume = signalTargetCheckpointResume),
+        ConflationTargetCheckpointResumeRequestHandler(signalResume = conflationCheckpointResumeLatch),
     )
     val messageHandler: JsonRpcMessageHandler =
       JsonRpcMessageProcessor(JsonRpcRequestRouter(requestHandlers), metricsFacade)

@@ -73,16 +73,20 @@ class ConflationBacktestingService(
 
   override fun action(): SafeFuture<*> {
     val completedJobIds = mutableListOf<String>()
-    conflationBackTestingApps.forEach { (jobId, app) ->
+    val appsToStop = conflationBackTestingApps.map { (jobId, app) ->
       if (app.isConflationBacktestingComplete()) {
         completedJobIds.add(jobId)
+        app
+      } else {
+        null
       }
-    }
+    }.filterNotNull()
+
     completedJobIds.forEach { jobId ->
       completedJobs.add(jobId)
       conflationBackTestingApps.remove(jobId)
     }
-    return SafeFuture.completedFuture(Unit)
+    return SafeFuture.allOf(*appsToStop.map { app -> app.stop() }.toTypedArray())
   }
 
   override fun stop(): SafeFuture<Unit> {
