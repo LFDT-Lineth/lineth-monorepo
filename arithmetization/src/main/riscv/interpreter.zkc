@@ -16,7 +16,7 @@ fn interpreter<ram,registers>(instruction:u32, pc:Address) -> (new_pc:Address) {
     printf "instruction %b\n", instruction
     printf "opcode:     %b\n", opcode
     printf "parameters: %b\n", instruction_parameters
-    printf "parameters: %b\n", instruction_parameters
+    printf "type:       %b\n", instruction_type
 
     // TODO: handle the case where rd = 0: we will handle this in RAM itself, likely by adding an extra read-write pair
     // to reset the value in registers[rd] to 0
