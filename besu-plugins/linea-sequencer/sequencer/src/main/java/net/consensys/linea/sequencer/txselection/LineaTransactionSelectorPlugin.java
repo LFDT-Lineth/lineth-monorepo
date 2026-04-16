@@ -15,18 +15,11 @@ import static net.consensys.linea.metrics.LineaMetricCategory.SEQUENCER_PROFITAB
 
 import com.google.auto.service.AutoService;
 import java.math.BigInteger;
-import java.util.Collections;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReference;
 import linea.blob.BlobCompressorSelectorByTimestamp;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
-import net.consensys.linea.config.LineaTransactionPoolValidatorCliOptions;
-import net.consensys.linea.config.LineaTransactionSelectorCliOptions;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.metrics.HistogramMetrics;
@@ -35,8 +28,6 @@ import net.consensys.linea.sequencer.liveness.LineaLivenessService;
 import net.consensys.linea.sequencer.liveness.LineaLivenessTxBuilder;
 import net.consensys.linea.sequencer.liveness.LivenessService;
 import net.consensys.linea.sequencer.txselection.selectors.ProfitableTransactionSelector;
-import net.consensys.linea.sequencer.txselection.selectors.TransactionEventFilter;
-import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.TransactionSelectionService;
@@ -51,12 +42,6 @@ import org.hyperledger.besu.plugin.services.TransactionSelectionService;
 public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin {
   private TransactionSelectionService transactionSelectionService;
   private Optional<JsonRpcManager> rejectedTxJsonRpcManager = Optional.empty();
-  private final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedEvents =
-      new AtomicReference<>(Collections.emptyMap());
-  private final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedBundleEvents =
-      new AtomicReference<>(Collections.emptyMap());
-  private final AtomicReference<Set<Address>> deniedAddresses =
-      new AtomicReference<>(Collections.emptySet());
 
   @Override
   public void doRegister(final ServiceManager serviceManager) {
@@ -123,10 +108,6 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
                     metricsSystem))
             : Optional.empty();
 
-    deniedEvents.set(txSelectorConfiguration.eventsDenyList());
-    deniedBundleEvents.set(txSelectorConfiguration.eventsBundleDenyList());
-    deniedAddresses.set(transactionPoolValidatorConfiguration().deniedAddresses());
-
     // blobCompressor is initialised in AbstractLineaSharedPrivateOptionsPlugin with the effective
     // limit. Only pass it to the factory when a blob size limit is explicitly configured so that
     // CompressionAwareTransactionSelector is only active when intentionally enabled.
@@ -146,9 +127,9 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
             bundlePoolService,
             forcedTransactionPoolService,
             getInvalidTransactionByLineCountCache(),
-            deniedEvents,
-            deniedBundleEvents,
-            deniedAddresses,
+            sharedDeniedEvents,
+            sharedDeniedBundleEvents,
+            sharedDeniedAddresses,
             transactionProfitabilityCalculator,
             transactionCompressor,
             blobCompressorSelector));
@@ -158,29 +139,5 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
   public void stop() {
     super.stop();
     rejectedTxJsonRpcManager.ifPresent(JsonRpcManager::shutdown);
-  }
-
-  @Override
-  public CompletableFuture<Void> reloadConfiguration() {
-    try {
-      Map<Address, Set<TransactionEventFilter>> newDeniedEvents =
-          LineaTransactionSelectorCliOptions.create()
-              .parseTransactionEventDenyList(
-                  transactionSelectorConfiguration().eventsDenyListPath());
-      deniedEvents.set(newDeniedEvents);
-
-      Map<Address, Set<TransactionEventFilter>> newDeniedBundleEvents =
-          LineaTransactionSelectorCliOptions.create()
-              .parseTransactionEventDenyList(
-                  transactionSelectorConfiguration().eventsBundleDenyListPath());
-      deniedBundleEvents.set(newDeniedBundleEvents);
-      Set<Address> newDeniedAddresses =
-          LineaTransactionPoolValidatorCliOptions.create()
-              .parseDeniedAddresses(transactionPoolValidatorConfiguration().denyListPath());
-      deniedAddresses.set(newDeniedAddresses);
-      return CompletableFuture.completedFuture(null);
-    } catch (Exception e) {
-      return CompletableFuture.failedFuture(e);
-    }
   }
 }

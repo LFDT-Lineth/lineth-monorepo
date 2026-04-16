@@ -23,7 +23,7 @@ import static org.mockito.Mockito.when;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
+import net.consensys.linea.config.ReloadableSet;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.datatypes.Address;
@@ -54,12 +54,12 @@ class AllowedAddressTransactionSelectorTest {
   private static final Address DELEGATION_TARGET =
       Address.fromHexString("0x0000000000000000000000000000000000001234");
 
-  private AtomicReference<Set<Address>> deniedAddresses;
+  private ReloadableSet<Address> deniedAddresses;
   private AllowedAddressTransactionSelector selector;
 
   @BeforeEach
   void setUp() {
-    deniedAddresses = new AtomicReference<>(new HashSet<>());
+    deniedAddresses = new ReloadableSet<>(new HashSet<>());
     selector = new AllowedAddressTransactionSelector(deniedAddresses);
   }
 
@@ -74,7 +74,7 @@ class AllowedAddressTransactionSelectorTest {
 
   @Test
   void rejectsTransactionWhenSenderIsDenied() {
-    deniedAddresses.set(Set.of(SENDER_ADDRESS));
+    deniedAddresses.swap(Set.of(SENDER_ADDRESS));
     final TransactionEvaluationContext context = createContext(RECIPIENT_ADDRESS);
 
     final var result = selector.evaluateTransactionPreProcessing(context);
@@ -84,7 +84,7 @@ class AllowedAddressTransactionSelectorTest {
 
   @Test
   void rejectsTransactionWhenRecipientIsDenied() {
-    deniedAddresses.set(Set.of(RECIPIENT_ADDRESS));
+    deniedAddresses.swap(Set.of(RECIPIENT_ADDRESS));
     final TransactionEvaluationContext context = createContext(RECIPIENT_ADDRESS);
 
     final var result = selector.evaluateTransactionPreProcessing(context);
@@ -94,7 +94,7 @@ class AllowedAddressTransactionSelectorTest {
 
   @Test
   void senderDenialTakesPrecedenceOverRecipientDenial() {
-    deniedAddresses.set(Set.of(SENDER_ADDRESS, RECIPIENT_ADDRESS));
+    deniedAddresses.swap(Set.of(SENDER_ADDRESS, RECIPIENT_ADDRESS));
     final TransactionEvaluationContext context = createContext(RECIPIENT_ADDRESS);
 
     final var result = selector.evaluateTransactionPreProcessing(context);
@@ -120,24 +120,24 @@ class AllowedAddressTransactionSelectorTest {
     assertThat(result).isEqualTo(SELECTED);
 
     // Update deny list to include sender
-    deniedAddresses.set(Set.of(SENDER_ADDRESS));
+    deniedAddresses.swap(Set.of(SENDER_ADDRESS));
     result = selector.evaluateTransactionPreProcessing(context);
     assertThat(result).isEqualTo(TX_FILTERED_ADDRESS_FROM);
 
     // Update deny list to only include recipient
-    deniedAddresses.set(Set.of(RECIPIENT_ADDRESS));
+    deniedAddresses.swap(Set.of(RECIPIENT_ADDRESS));
     result = selector.evaluateTransactionPreProcessing(context);
     assertThat(result).isEqualTo(TX_FILTERED_ADDRESS_TO);
 
     // Clear deny list
-    deniedAddresses.set(Set.of());
+    deniedAddresses.swap(Set.of());
     result = selector.evaluateTransactionPreProcessing(context);
     assertThat(result).isEqualTo(SELECTED);
   }
 
   @Test
   void postProcessingAlwaysReturnsSelected() {
-    deniedAddresses.set(Set.of(SENDER_ADDRESS, RECIPIENT_ADDRESS));
+    deniedAddresses.swap(Set.of(SENDER_ADDRESS, RECIPIENT_ADDRESS));
     final TransactionEvaluationContext context = createContext(RECIPIENT_ADDRESS);
 
     final var result = selector.evaluateTransactionPostProcessing(context, null);
@@ -160,7 +160,7 @@ class AllowedAddressTransactionSelectorTest {
 
   @Test
   void rejectsTransactionWhenAuthorizationAuthorityDenied() {
-    deniedAddresses.set(Set.of(AUTHORIZATION_ADDRESS));
+    deniedAddresses.swap(Set.of(AUTHORIZATION_ADDRESS));
     final CodeDelegation delegation =
         createCodeDelegation(AUTHORIZATION_KEY_PAIR, DELEGATION_TARGET);
     final TransactionEvaluationContext context =
@@ -173,7 +173,7 @@ class AllowedAddressTransactionSelectorTest {
 
   @Test
   void rejectsTransactionWhenAuthorizationAddressDenied() {
-    deniedAddresses.set(Set.of(AUTHORIZATION_ADDRESS));
+    deniedAddresses.swap(Set.of(AUTHORIZATION_ADDRESS));
     final CodeDelegation delegation = createCodeDelegation(SENDER_KEY_PAIR, AUTHORIZATION_ADDRESS);
     final TransactionEvaluationContext context =
         createContextWithDelegations(RECIPIENT_ADDRESS, List.of(delegation));
@@ -185,7 +185,7 @@ class AllowedAddressTransactionSelectorTest {
 
   @Test
   void checksAllDelegationTuplesNotJustFirst() {
-    deniedAddresses.set(Set.of(AUTHORIZATION_ADDRESS));
+    deniedAddresses.swap(Set.of(AUTHORIZATION_ADDRESS));
     final CodeDelegation cleanDelegation = createCodeDelegation(SENDER_KEY_PAIR, DELEGATION_TARGET);
     final CodeDelegation deniedDelegation =
         createCodeDelegation(SENDER_KEY_PAIR, AUTHORIZATION_ADDRESS);

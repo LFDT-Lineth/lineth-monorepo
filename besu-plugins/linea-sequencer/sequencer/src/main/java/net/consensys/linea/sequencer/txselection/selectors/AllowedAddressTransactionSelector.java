@@ -16,7 +16,6 @@ import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECT
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hyperledger.besu.datatypes.Address;
@@ -36,15 +35,14 @@ import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationCon
 @RequiredArgsConstructor
 public class AllowedAddressTransactionSelector implements PluginTransactionSelector {
 
-  private final AtomicReference<Set<Address>> denied;
+  private final Set<Address> denied;
 
   @Override
   public TransactionSelectionResult evaluateTransactionPreProcessing(
       final TransactionEvaluationContext evaluationContext) {
     final Transaction transaction = evaluationContext.getPendingTransaction().getTransaction();
-    final Set<Address> denyList = denied.get();
 
-    if (denyList.contains(transaction.getSender())) {
+    if (denied.contains(transaction.getSender())) {
       log.atInfo()
           .setMessage("action=reject_filtered_address_from txHash={} sender={}")
           .addArgument(transaction::getHash)
@@ -53,7 +51,7 @@ public class AllowedAddressTransactionSelector implements PluginTransactionSelec
       return TX_FILTERED_ADDRESS_FROM;
     }
 
-    if (transaction.getTo().isPresent() && denyList.contains(transaction.getTo().get())) {
+    if (transaction.getTo().isPresent() && denied.contains(transaction.getTo().get())) {
       log.atInfo()
           .setMessage("action=reject_filtered_address_to txHash={} to={}")
           .addArgument(transaction::getHash)
@@ -71,7 +69,7 @@ public class AllowedAddressTransactionSelector implements PluginTransactionSelec
               .setMessage("action=skip_unrecoverable_authority delegationAddress={}")
               .addArgument(delegation::address)
               .log();
-        } else if (denyList.contains(maybeAuthority.get())) {
+        } else if (denied.contains(maybeAuthority.get())) {
           log.atInfo()
               .setMessage("action=reject_filtered_address_authorization txHash={} authority={}")
               .addArgument(transaction::getHash)
@@ -80,7 +78,7 @@ public class AllowedAddressTransactionSelector implements PluginTransactionSelec
           return TX_FILTERED_ADDRESS_AUTHORIZATION;
         }
 
-        if (denyList.contains(delegation.address())) {
+        if (denied.contains(delegation.address())) {
           log.atInfo()
               .setMessage(
                   "action=reject_filtered_address_authorization txHash={} delegationAddress={}")

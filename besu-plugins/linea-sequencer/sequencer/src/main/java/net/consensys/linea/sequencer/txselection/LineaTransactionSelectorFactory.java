@@ -67,9 +67,9 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   private final Optional<LivenessService> livenessService;
   private final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache;
   private final AtomicReference<LineaTransactionSelector> currSelector = new AtomicReference<>();
-  private final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedEvents;
-  private final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedBundleEvents;
-  private final AtomicReference<Set<Address>> deniedAddresses;
+  private final Map<Address, Set<TransactionEventFilter>> deniedEvents;
+  private final Map<Address, Set<TransactionEventFilter>> deniedBundleEvents;
+  private final Set<Address> deniedAddresses;
   private final AtomicBoolean isSelectionInterrupted = new AtomicBoolean(false);
   private final TransactionProfitabilityCalculator transactionProfitabilityCalculator;
   private final TransactionCompressor transactionCompressor;
@@ -87,9 +87,9 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
       final BundlePoolService bundlePoolService,
       final ForcedTransactionPoolService forcedTransactionPoolService,
       final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache,
-      final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedEvents,
-      final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedBundleEvents,
-      final AtomicReference<Set<Address>> deniedAddresses,
+      final Map<Address, Set<TransactionEventFilter>> deniedEvents,
+      final Map<Address, Set<TransactionEventFilter>> deniedBundleEvents,
+      final Set<Address> deniedAddresses,
       final TransactionProfitabilityCalculator transactionProfitabilityCalculator,
       final TransactionCompressor transactionCompressor,
       final BlobCompressorSelectorByTimestamp blobCompressorSelectorByTimestamp) {

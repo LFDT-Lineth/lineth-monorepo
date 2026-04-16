@@ -13,7 +13,6 @@ import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectio
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bundles.TransactionBundle;
@@ -28,8 +27,8 @@ import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationCon
 @Slf4j
 @RequiredArgsConstructor
 public class TransactionEventSelector implements PluginTransactionSelector {
-  private final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedEvents;
-  private final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedBundleEvents;
+  private final Map<Address, Set<TransactionEventFilter>> deniedEvents;
+  private final Map<Address, Set<TransactionEventFilter>> deniedBundleEvents;
 
   @Override
   public TransactionSelectionResult evaluateTransactionPreProcessing(
@@ -44,7 +43,7 @@ public class TransactionEventSelector implements PluginTransactionSelector {
     final boolean isBundle =
         evaluationContext.getPendingTransaction() instanceof TransactionBundle.PendingBundleTx;
     final Map<Address, Set<TransactionEventFilter>> deniedEventsByAddress =
-        isBundle ? deniedBundleEvents.get() : deniedEvents.get();
+        isBundle ? deniedBundleEvents : deniedEvents;
     for (Log resultLog : processingResult.getLogs()) {
       Address contractAddress = resultLog.getLogger();
       Set<TransactionEventFilter> deniedEventsForTransaction =

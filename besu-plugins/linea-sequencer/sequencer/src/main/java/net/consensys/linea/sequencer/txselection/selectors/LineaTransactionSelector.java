@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import linea.blob.BlobCompressorSelectorByTimestamp;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
@@ -58,9 +57,9 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final Optional<JsonRpcManager> rejectedTxJsonRpcManager,
       final Optional<HistogramMetrics> maybeProfitabilityMetrics,
       final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache,
-      final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedEvents,
-      final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedBundleEvents,
-      final AtomicReference<Set<Address>> deniedAddresses,
+      final Map<Address, Set<TransactionEventFilter>> deniedEvents,
+      final Map<Address, Set<TransactionEventFilter>> deniedBundleEvents,
+      final Set<Address> deniedAddresses,
       final TransactionProfitabilityCalculator transactionProfitabilityCalculator,
       final TransactionCompressor transactionCompressor,
       final BlobCompressorSelectorByTimestamp blobCompressorSelectorByTimestamp) {
@@ -108,9 +107,9 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final LineaTracerConfiguration tracerConfiguration,
       final Optional<HistogramMetrics> maybeProfitabilityMetrics,
       final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache,
-      final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedEvents,
-      final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedBundleEvents,
-      final AtomicReference<Set<Address>> deniedAddresses,
+      final Map<Address, Set<TransactionEventFilter>> deniedEvents,
+      final Map<Address, Set<TransactionEventFilter>> deniedBundleEvents,
+      final Set<Address> deniedAddresses,
       final TransactionProfitabilityCalculator transactionProfitabilityCalculator,
       final TransactionCompressor transactionCompressor,
       final BlobCompressorSelectorByTimestamp blobCompressorSelectorByTimestamp) {

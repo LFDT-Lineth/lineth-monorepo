@@ -11,7 +11,6 @@ package net.consensys.linea.sequencer.txpoolvalidation.validators;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hyperledger.besu.datatypes.Address;
@@ -29,7 +28,7 @@ import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolVal
 @RequiredArgsConstructor
 public class DeniedAddressValidator implements PluginTransactionPoolValidator {
 
-  private final AtomicReference<Set<Address>> denied;
+  private final Set<Address> denied;
 
   @Override
   public Optional<String> validateTransaction(
@@ -65,7 +64,7 @@ public class DeniedAddressValidator implements PluginTransactionPoolValidator {
   }
 
   private Optional<String> checkDenied(final Address address, final String role) {
-    if (denied.get().contains(address)) {
+    if (denied.contains(address)) {
       final String errMsg =
           String.format(
               "%s %s is blocked as appearing on the SDN or other legally prohibited list",

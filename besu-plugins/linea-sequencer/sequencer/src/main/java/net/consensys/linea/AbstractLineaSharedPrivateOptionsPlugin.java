@@ -11,6 +11,8 @@ package net.consensys.linea;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import linea.blob.BlobCompressorSelectorByTimestamp;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +40,8 @@ import net.consensys.linea.config.LineaTransactionSelectorCliOptions;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.config.LineaTransactionValidatorCliOptions;
 import net.consensys.linea.config.LineaTransactionValidatorConfiguration;
+import net.consensys.linea.config.ReloadableMap;
+import net.consensys.linea.config.ReloadableSet;
 import net.consensys.linea.plugins.AbstractLineaSharedOptionsPlugin;
 import net.consensys.linea.plugins.LineaOptionsPluginConfiguration;
 import net.consensys.linea.plugins.config.LineaTracerSharedCliOptions;
@@ -45,8 +49,10 @@ import net.consensys.linea.plugins.config.LineaTracerSharedConfiguration;
 import net.consensys.linea.sequencer.forced.ForcedTransactionPoolService;
 import net.consensys.linea.sequencer.forced.LineaForcedTransactionPool;
 import net.consensys.linea.sequencer.txselection.InvalidTransactionByLineCountCache;
+import net.consensys.linea.sequencer.txselection.selectors.TransactionEventFilter;
 import net.consensys.linea.utils.CachingTransactionCompressor;
 import net.consensys.linea.utils.TransactionCompressor;
+import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.BesuEvents;
@@ -87,8 +93,15 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
   protected static TransactionProfitabilityCalculator transactionProfitabilityCalculator;
 
   public static final int DEFAULT_COMPRESSED_SIZE_LIMIT = 128 * 1024;
+  // Shared reloadable deny lists - centralized management for all plugins
+  protected static ReloadableSet<Address> sharedDeniedAddresses;
+  protected static ReloadableSet<Address> sharedBundleDeniedAddresses;
+  protected static ReloadableMap<Address, Set<TransactionEventFilter>> sharedDeniedEvents;
+  protected static ReloadableMap<Address, Set<TransactionEventFilter>> sharedDeniedBundleEvents;
+
   private static final AtomicBoolean sharedRegisterTasksDone = new AtomicBoolean(false);
   private static final AtomicBoolean sharedStartTasksDone = new AtomicBoolean(false);
+  private static final AtomicBoolean reloadInProgress = new AtomicBoolean(false);
 
   private ServiceManager serviceManager;
 
@@ -309,6 +322,95 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
             profitabilityConfiguration.compressedTxCacheSize(), blobCompressorSelectorByTimestamp);
     transactionProfitabilityCalculator =
         new TransactionProfitabilityCalculator(profitabilityConfiguration, transactionCompressor);
+
+    initializeSharedDenyLists();
+  }
+
+  private void initializeSharedDenyLists() {
+    final var txPoolConfig = transactionPoolValidatorConfiguration();
+    final var txSelectorConfig = transactionSelectorConfiguration();
+
+    // Initialize shared address deny lists
+    sharedDeniedAddresses =
+        new ReloadableSet<>(
+            LineaTransactionPoolValidatorCliOptions.create()
+                .parseDeniedAddresses(txPoolConfig.denyListPath()));
+
+    sharedBundleDeniedAddresses =
+        new ReloadableSet<>(
+            LineaTransactionPoolValidatorCliOptions.create()
+                .parseDeniedAddresses(txPoolConfig.bundleOverridingDenyListPath()));
+
+    // Initialize shared events deny lists
+    sharedDeniedEvents =
+        new ReloadableMap<>(
+            LineaTransactionSelectorCliOptions.create()
+                .parseTransactionEventDenyList(txSelectorConfig.eventsDenyListPath()));
+
+    sharedDeniedBundleEvents =
+        new ReloadableMap<>(
+            LineaTransactionSelectorCliOptions.create()
+                .parseTransactionEventDenyList(txSelectorConfig.eventsBundleDenyListPath()));
+  }
+
+  /**
+   * Reloads configuration when requested via the Besu plugin reload mechanism. This method is
+   * guarded by an atomic boolean to ensure that only one plugin actually performs the reload when
+   * multiple plugins receive the reload request simultaneously.
+   *
+   * @return a CompletableFuture that completes when reload is done
+   */
+  @Override
+  public CompletableFuture<Void> reloadConfiguration() {
+    // Guard: only one plugin actually reloads, others return completed
+    if (!reloadInProgress.compareAndSet(false, true)) {
+      return CompletableFuture.completedFuture(null);
+    }
+
+    return CompletableFuture.supplyAsync(
+        () -> {
+          try {
+            reloadSharedDenyLists();
+            return null;
+          } catch (final Exception e) {
+            log.error("Failed to reload shared deny lists", e);
+            throw e;
+          } finally {
+            reloadInProgress.set(false);
+          }
+        });
+  }
+
+  /**
+   * Reloads all shared deny lists from their configured sources using an atomic swap pattern. All
+   * new values are loaded first, and only if all loads succeed are the values swapped atomically.
+   * This ensures no partial updates occur if any load fails.
+   */
+  private void reloadSharedDenyLists() {
+    final var txPoolConfig = transactionPoolValidatorConfiguration();
+    final var txSelectorConfig = transactionSelectorConfiguration();
+
+    // Load all new values first (may throw)
+    final Set<Address> newDeniedAddresses =
+        LineaTransactionPoolValidatorCliOptions.create()
+            .parseDeniedAddresses(txPoolConfig.denyListPath());
+    final Set<Address> newBundleDeniedAddresses =
+        LineaTransactionPoolValidatorCliOptions.create()
+            .parseDeniedAddresses(txPoolConfig.bundleOverridingDenyListPath());
+    final Map<Address, Set<TransactionEventFilter>> newDeniedEvents =
+        LineaTransactionSelectorCliOptions.create()
+            .parseTransactionEventDenyList(txSelectorConfig.eventsDenyListPath());
+    final Map<Address, Set<TransactionEventFilter>> newDeniedBundleEvents =
+        LineaTransactionSelectorCliOptions.create()
+            .parseTransactionEventDenyList(txSelectorConfig.eventsBundleDenyListPath());
+
+    // All loads succeeded - swap each deny list (not atomic)
+    sharedDeniedAddresses.swap(newDeniedAddresses);
+    sharedBundleDeniedAddresses.swap(newBundleDeniedAddresses);
+    sharedDeniedEvents.swap(newDeniedEvents);
+    sharedDeniedBundleEvents.swap(newDeniedBundleEvents);
+
+    log.info("Successfully reloaded all shared deny lists");
   }
 
   @Override
@@ -316,8 +418,13 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
     super.stop();
     sharedRegisterTasksDone.set(false);
     sharedStartTasksDone.set(false);
+    reloadInProgress.set(false);
     blockchainService = null;
     metricsSystem = null;
     blobCompressorSelectorByTimestamp = null;
+    sharedDeniedAddresses = null;
+    sharedBundleDeniedAddresses = null;
+    sharedDeniedEvents = null;
+    sharedDeniedBundleEvents = null;
   }
 }

@@ -10,11 +10,10 @@ package net.consensys.linea.sequencer.txselection.selectors;
 
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.DENIED_LOG_TOPIC;
 
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import net.consensys.linea.bundles.TransactionBundle;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
@@ -32,10 +31,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 public class TransactionEventSelectorTest {
-  private final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedEvents =
-      new AtomicReference<>(Collections.emptyMap());
-  private final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedBundleEvents =
-      new AtomicReference<>(Collections.emptyMap());
+  private final Map<Address, Set<TransactionEventFilter>> deniedEvents = new HashMap<>();
+  private final Map<Address, Set<TransactionEventFilter>> deniedBundleEvents = new HashMap<>();
 
   private TransactionEventSelector selector;
 
@@ -46,8 +43,8 @@ public class TransactionEventSelectorTest {
 
   @AfterEach
   public void afterTest() {
-    deniedEvents.set(Collections.emptyMap());
-    deniedBundleEvents.set(Collections.emptyMap());
+    deniedEvents.clear();
+    deniedBundleEvents.clear();
   }
 
   @Test
@@ -77,7 +74,7 @@ public class TransactionEventSelectorTest {
   public void testEvaluateTransactionPostProcessingForSingleTransactionWithDenyListButSelected() {
     Address address = Mockito.mock(Address.class);
     TransactionEventFilter transactionEventFilter = Mockito.mock(TransactionEventFilter.class);
-    deniedEvents.set(Map.of(address, Set.of(transactionEventFilter)));
+    deniedEvents.put(address, Set.of(transactionEventFilter));
     TransactionEvaluationContext evaluationContext =
         Mockito.mock(TransactionEvaluationContext.class);
     TransactionProcessingResult processingResult = Mockito.mock(TransactionProcessingResult.class);
@@ -107,7 +104,7 @@ public class TransactionEventSelectorTest {
   public void testEvaluateTransactionPostProcessingForSingleTransactionWithDenyListButInvalid() {
     Address address = Mockito.mock(Address.class);
     TransactionEventFilter transactionEventFilter = Mockito.mock(TransactionEventFilter.class);
-    deniedEvents.set(Map.of(address, Set.of(transactionEventFilter)));
+    deniedEvents.put(address, Set.of(transactionEventFilter));
     TransactionEvaluationContext evaluationContext =
         Mockito.mock(TransactionEvaluationContext.class);
     TransactionProcessingResult processingResult = Mockito.mock(TransactionProcessingResult.class);
@@ -159,7 +156,7 @@ public class TransactionEventSelectorTest {
   public void testEvaluateTransactionPostProcessingForBundleTransactionWithDenyListButSelected() {
     Address address = Mockito.mock(Address.class);
     TransactionEventFilter transactionEventFilter = Mockito.mock(TransactionEventFilter.class);
-    deniedBundleEvents.set(Map.of(address, Set.of(transactionEventFilter)));
+    deniedBundleEvents.put(address, Set.of(transactionEventFilter));
     TransactionEvaluationContext evaluationContext =
         Mockito.mock(TransactionEvaluationContext.class);
     TransactionProcessingResult processingResult = Mockito.mock(TransactionProcessingResult.class);
@@ -189,7 +186,7 @@ public class TransactionEventSelectorTest {
   public void testEvaluateTransactionPostProcessingForBundleTransactionWithDenyListButInvalid() {
     Address address = Mockito.mock(Address.class);
     TransactionEventFilter transactionEventFilter = Mockito.mock(TransactionEventFilter.class);
-    deniedBundleEvents.set(Map.of(address, Set.of(transactionEventFilter)));
+    deniedBundleEvents.put(address, Set.of(transactionEventFilter));
     TransactionEvaluationContext evaluationContext =
         Mockito.mock(TransactionEvaluationContext.class);
     TransactionProcessingResult processingResult = Mockito.mock(TransactionProcessingResult.class);
