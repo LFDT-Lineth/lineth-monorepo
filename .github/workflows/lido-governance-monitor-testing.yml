@@ -55,7 +55,7 @@ jobs:
 
       - name: Upload linea-shared-utils coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
         with:
           fail_ci_if_error: true
           files: ./ts-libs/linea-shared-utils/coverage/lcov.info
@@ -67,7 +67,7 @@ jobs:
 
       - name: Upload lido-governance-monitor coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
         with:
           fail_ci_if_error: true
           files: ./native-yield-operations/lido-governance-monitor/coverage/lcov.info

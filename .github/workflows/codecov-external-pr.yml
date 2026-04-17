@@ -75,7 +75,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # Gets run id of the precedeing workflow that triggered this workflow_run
           run-id: ${{ github.event.workflow_run.id }}
-      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+      - uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
         if: ${{ steps.coordinator-report-download.outcome == 'success' }}
         with:
           fail_ci_if_error: true
@@ -105,7 +105,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # Gets run id of the precedeing workflow that triggered this workflow_run
           run-id: ${{ github.event.workflow_run.id }}
-      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+      - uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
         if: ${{ steps.smc-report-download.outcome == 'success' }}
         with:
           fail_ci_if_error: true
@@ -133,7 +133,7 @@ jobs:
             ${{ github.workspace }}/ci-ts-coverage
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
-      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+      - uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
         if: ${{ steps.ts-coverage-download.outcome == 'success' }}
         with:
           fail_ci_if_error: true
@@ -143,7 +143,7 @@ jobs:
           name: codecov-linea-native-libs-fork
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
-      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+      - uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
         if: ${{ steps.ts-coverage-download.outcome == 'success' }}
         with:
           fail_ci_if_error: true
@@ -153,7 +153,7 @@ jobs:
           name: codecov-postman
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
-      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+      - uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
         if: ${{ steps.ts-coverage-download.outcome == 'success' }}
         with:
           fail_ci_if_error: true
@@ -181,7 +181,7 @@ jobs:
             ${{ github.workspace }}/ci-native-yield-coverage
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
-      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+      - uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
         if: ${{ steps.native-yield-coverage-download.outcome == 'success' }}
         with:
           fail_ci_if_error: true
@@ -191,7 +191,7 @@ jobs:
           name: codecov-linea-shared-utils-native-yield-fork
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
-      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+      - uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
         if: ${{ steps.native-yield-coverage-download.outcome == 'success' }}
         with:
           fail_ci_if_error: true
@@ -219,7 +219,7 @@ jobs:
             ${{ github.workspace }}/ci-lido-coverage
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
-      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+      - uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
         if: ${{ steps.lido-coverage-download.outcome == 'success' }}
         with:
           fail_ci_if_error: true
@@ -229,7 +229,7 @@ jobs:
           name: codecov-linea-shared-utils-lido-fork
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
-      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+      - uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
         if: ${{ steps.lido-coverage-download.outcome == 'success' }}
         with:
           fail_ci_if_error: true
@@ -257,7 +257,7 @@ jobs:
             ${{ github.workspace }}/ci-sdk-coverage
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
-      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+      - uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
         if: ${{ steps.sdk-coverage-download.outcome == 'success' }}
         with:
           fail_ci_if_error: true
@@ -267,7 +267,7 @@ jobs:
           name: codecov-sdk-core-fork
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
-      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+      - uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
         if: ${{ steps.sdk-coverage-download.outcome == 'success' }}
         with:
           fail_ci_if_error: true
@@ -277,7 +277,7 @@ jobs:
           name: codecov-sdk-viem-sdk-testing-fork
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
-      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de #v5.5.2
+      - uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
         if: ${{ steps.sdk-coverage-download.outcome == 'success' }}
         with:
           fail_ci_if_error: true
