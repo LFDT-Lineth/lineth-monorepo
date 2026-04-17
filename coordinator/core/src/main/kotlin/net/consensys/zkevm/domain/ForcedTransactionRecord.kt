@@ -11,7 +11,7 @@ import kotlin.time.Instant
  *     "from": "0x6221a9c005f6e47eb398fd867784cacfdcfff4e7",
  *     // inclusion result / the type of invalidity for each forced transaction;
  *     // for the executed valid transaction it is set to [invalidity.BadNonce]
- *     // cases: Included, BadNonce, BadBalance, BadPrecompile, TooManyLogs, FilteredAddressesFrom, FilteredAddressesTo, Phylax)
+ *     // cases: Included, BadNonce, BadBalance, BadPrecompile, TooManyLogs, FilteredAddressFrom, FilteredAddressTo, Phylax)
  *     "inclusionResult": "BadNonce"
  *     "transactionHash": "0xTRANSACTION_HASH",
  *   }

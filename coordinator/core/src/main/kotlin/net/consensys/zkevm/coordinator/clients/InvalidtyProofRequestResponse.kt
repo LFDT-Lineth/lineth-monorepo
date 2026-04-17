@@ -10,8 +10,8 @@ enum class InvalidityReason {
   BadBalance,
   BadPrecompile,
   TooManyLogs,
-  FilteredAddressesFrom,
-  FilteredAddressesTo,
+  FilteredAddressFrom,
+  FilteredAddressTo,
 }
 
 data class InvalidityProofRequest(

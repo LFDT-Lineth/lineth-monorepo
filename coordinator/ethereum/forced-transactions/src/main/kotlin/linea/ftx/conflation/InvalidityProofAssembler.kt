@@ -4,7 +4,6 @@ import build.linea.clients.GetZkEVMStateMerkleProofResponse
 import build.linea.clients.LineaAccountProof
 import build.linea.clients.StateManagerAccountProofClient
 import build.linea.clients.StateManagerClientV1
-import com.github.michaelbull.result.get
 import com.github.michaelbull.result.getOrThrow
 import linea.contract.events.ForcedTransactionAddedEvent
 import linea.domain.BlockInterval
@@ -117,8 +116,8 @@ class InvalidityProofAssembler(
       ForcedTransactionInclusionResult.BadBalance -> InvalidityReason.BadBalance
       ForcedTransactionInclusionResult.BadPrecompile -> InvalidityReason.BadPrecompile
       ForcedTransactionInclusionResult.TooManyLogs -> InvalidityReason.TooManyLogs
-      ForcedTransactionInclusionResult.FilteredAddressFrom -> InvalidityReason.FilteredAddressesFrom
-      ForcedTransactionInclusionResult.FilteredAddressTo -> InvalidityReason.FilteredAddressesTo
+      ForcedTransactionInclusionResult.FilteredAddressFrom -> InvalidityReason.FilteredAddressFrom
+      ForcedTransactionInclusionResult.FilteredAddressTo -> InvalidityReason.FilteredAddressTo
       ForcedTransactionInclusionResult.Phylax ->
         throw IllegalArgumentException("Phylax invalidity proofs are not supported yet")
     }
