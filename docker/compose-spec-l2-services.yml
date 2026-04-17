@@ -307,7 +307,7 @@ services:
   coordinator:
     hostname: coordinator
     container_name: coordinator
-    image: consensys/linea-coordinator:${LINEA_COORDINATOR_TAG:-7c850f2}
+    image: consensys/linea-coordinator:${LINEA_COORDINATOR_TAG:-37e5396}
     profiles: [ "l2", "debug" ]
     depends_on:
       l2-genesis-initialization:
