@@ -18,11 +18,9 @@ graph TB
     subgraph "Cross-chain"
         PM[Postman<br/>TypeScript]
         SDK[SDK<br/>TypeScript]
-        UI[Bridge UI<br/>Next.js]
     end
     
-    Users --> UI
-    UI --> SDK
+    Users --> SDK
     SDK --> L1
     SDK --> SEQ
     

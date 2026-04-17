@@ -1,1 +1,0 @@
-export { nativeAdapter } from "./adapter";

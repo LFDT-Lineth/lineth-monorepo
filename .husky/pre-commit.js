@@ -20,7 +20,6 @@ const FILE_EXTENSION = {
 
 // Projects to filter for
 const FOLDER = {
-    BRIDGEUI: "BRIDGEUI",
     CONTRACTS: "CONTRACTS",
     E2E: "E2E",
     OPERATIONS: "OPERATIONS",
@@ -58,7 +57,6 @@ const FILE_EXTENSION_DOCUMENTATION_UPDATING_COMMAND = {
 
 // Project => Path in monorepo
 const FOLDER_PATH = {
-    [FOLDER.BRIDGEUI]: "bridge-ui/",
     [FOLDER.CONTRACTS]: "contracts/",
     [FOLDER.E2E]: "e2e/",
     [FOLDER.OPERATIONS]: "operations/",
@@ -70,7 +68,6 @@ const FOLDER_PATH = {
 
 // Project => List of changed files
 const FOLDER_CHANGED_FILES = {
-    [FOLDER.BRIDGEUI]: new Array(),
     [FOLDER.CONTRACTS]: new Array(),
     [FOLDER.E2E]: new Array(),
     [FOLDER.OPERATIONS]: new Array(),
@@ -82,7 +79,6 @@ const FOLDER_CHANGED_FILES = {
 
 // Project => Runtime
 const FOLDER_RUNTIME = {
-    [FOLDER.BRIDGEUI]: RUNTIME.NODEJS,
     [FOLDER.CONTRACTS]: RUNTIME.NODEJS,
     [FOLDER.E2E]: RUNTIME.NODEJS,
     [FOLDER.OPERATIONS]: RUNTIME.NODEJS,

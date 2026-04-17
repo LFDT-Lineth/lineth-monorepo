@@ -25,7 +25,6 @@ For contract-level workflow diagrams see [`contracts/docs/workflows/`](../../con
 | Operations CLI | TypeScript | `operations/` | oclif |
 | Integrity Verifier | TypeScript | `contracts/integrity-verifier/` | Node.js + Browser |
 | SDK | TypeScript | `sdk/` | Node.js |
-| Bridge UI | TypeScript | `bridge-ui/` | Next.js |
 | Corset | Rust | `corset/` | CLI + shared library |
 
 ## Feature Index
@@ -76,4 +75,3 @@ For contract-level workflow diagrams see [`contracts/docs/workflows/`](../../con
 | [Operational](operational.md) | Revenue vault, token burner, DEX adapters, uptime feed, operations CLI |
 | [Integrity Verifier](integrity-verifier.md) | Contract bytecode, ABI, and on-chain state verification |
 | [SDK](sdk.md) | Core, ethers, viem SDKs |
-| [Bridge UI](bridge-ui.md) | Next.js bridge interface |

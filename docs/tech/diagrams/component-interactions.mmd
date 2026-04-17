@@ -2,7 +2,6 @@ graph TB
     subgraph "User Layer"
         DAPP[dApps]
         WALLET[Wallets]
-        BRIDGEUI[Bridge UI]
     end
     
     subgraph "SDK Layer"
@@ -45,8 +44,7 @@ graph TB
     
     DAPP --> SDK_VIEM
     WALLET --> SDK_ETHERS
-    BRIDGEUI --> SDK_VIEM
-    
+
     SDK_VIEM --> ROLLUP
     SDK_VIEM --> L2MSG
     SDK_ETHERS --> ROLLUP

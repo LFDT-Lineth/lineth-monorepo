@@ -27,9 +27,6 @@ pnpm install     # installs all workspaces + sets up Husky hooks
 pnpm -F contracts run build
 pnpm -F contracts run test
 
-# Bridge UI
-pnpm -F bridge-ui dev
-
 # Coordinator (Kotlin)
 ./gradlew :coordinator:app:build
 
@@ -80,7 +77,6 @@ cd prover && gofmt -w . && golangci-lint run && go test ./... -tags nocorset,fuz
 ## Package-Specific Guides
 
 - **Smart contracts:** See [contracts/AGENTS.md](contracts/AGENTS.md) and [contracts/docs/contract-style-guide.md](contracts/docs/contract-style-guide.md)
-- **Bridge UI:** See [bridge-ui/AGENTS.md](bridge-ui/AGENTS.md)
 - **Prover:** See [prover/AGENTS.md](prover/AGENTS.md)
 
 ## Additional Resources

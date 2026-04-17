@@ -1,8 +1,0 @@
-@mixin link-indigo {
-  text-decoration: none;
-  color: var(--color-indigo);
-
-  &:hover {
-    text-decoration: underline;
-  }
-}

@@ -38,8 +38,7 @@ pnpm -F @consensys/linea-sdk-viem run lint
 ### Dependency Chain
 
 ```
-bridge-ui -> sdk-viem -> sdk-core
-postman -> sdk-ethers
+postman -> sdk-viem -> sdk-core
 ```
 
 - `sdk-ethers` requires `pnpm -F @consensys/linea-sdk run build:pre` (typechain) before build

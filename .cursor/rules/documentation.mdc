@@ -42,7 +42,6 @@ alwaysApply: true
 - `/prover/AGENTS.md`
 - `/tracer/AGENTS.md`
 - `/sdk/AGENTS.md`
-- `/bridge-ui/AGENTS.md`
 - `/besu-plugins/AGENTS.md`
 - `/transaction-exclusion-api/AGENTS.md`
 - `/e2e/AGENTS.md`

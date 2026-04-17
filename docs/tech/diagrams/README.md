@@ -46,7 +46,6 @@ This directory contains Mermaid diagram source files (`.mmd`) for the Linea arch
 | [plugin-lifecycle.mmd](./plugin-lifecycle.mmd) | Besu plugin lifecycle |
 | [postman-architecture.mmd](./postman-architecture.mmd) | Postman service structure |
 | [sdk-architecture.mmd](./sdk-architecture.mmd) | SDK package structure |
-| [bridge-ui-architecture.mmd](./bridge-ui-architecture.mmd) | Bridge UI components |
 | [contracts-architecture.mmd](./contracts-architecture.mmd) | Smart contracts structure |
 
 ### SDK Flows

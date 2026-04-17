@@ -84,7 +84,7 @@ Enforces backwards compatibility for public APIs and versioned assets (ABIs, con
 - [ ] Error returns checked (no ignored errors)
 - [ ] Build tags preserved (`nocorset`, `fuzzlight`)
 
-### Frontend (`bridge-ui/**`)
+### Frontend (`contracts/signer-ui/**`, `contracts/integrity-verifier/verifier-ui/**`)
 
 - [ ] No API keys or secrets in client-side code
 - [ ] Environment variable changes reflected in `.env.template`

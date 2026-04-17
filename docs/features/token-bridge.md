@@ -20,7 +20,6 @@ The bridge supports:
 | TokenBridgeBase | `contracts/src/bridging/token/TokenBridgeBase.sol` | Shared logic, roles, token status tracking |
 | BridgedToken | `contracts/src/bridging/token/BridgedToken.sol` | Mintable/burnable ERC20 beacon proxy |
 | CustomBridgedToken | `contracts/src/bridging/token/CustomBridgedToken.sol` | Custom token implementation |
-| Bridge UI | `bridge-ui/` | Next.js frontend for bridging |
 | SDK | `sdk/` | Programmatic bridging via ethers/viem |
 
 ## Bridge Flow (L1→L2)
@@ -83,7 +82,6 @@ function confirmDeployment(address[] memory _tokens) external payable;
 
 ## Related Documentation
 
-- [Bridge UI Feature](bridge-ui.md) — Web interface for token bridging (includes CCTP/USDC)
 - [SDK Feature](sdk.md) — Programmatic bridging via ethers/viem
 - [Tech: Contracts Component](../tech/components/contracts.md) — TokenBridge contract addresses, directory structure, deployment
 - [Workflow: TokenBridge](../../contracts/docs/workflows/TokenBridge.md)

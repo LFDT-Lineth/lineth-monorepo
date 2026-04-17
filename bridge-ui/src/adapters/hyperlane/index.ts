@@ -1,1 +1,0 @@
-export { hyperlaneAdapter } from "./adapter";

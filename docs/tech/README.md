@@ -36,7 +36,6 @@ linea-monorepo/
 │
 ├── TypeScript
 │   ├── sdk/                  # Developer SDK (viem/ethers)
-│   ├── bridge-ui/            # Bridge frontend (Next.js)
 │   ├── postman/              # Message relay service
 │   ├── e2e/                  # End-to-end tests
 │   ├── ts-libs/              # Shared TS libraries
@@ -67,7 +66,6 @@ linea-monorepo/
 | Prover | Go/gnark | ZK proof generation (PLONK + Vortex) |
 | Coordinator | Kotlin | Orchestration, L1 submission |
 | SDK | TypeScript | Developer integration library |
-| Bridge UI | Next.js/React | User-facing bridge interface |
 | Postman | TypeScript | Automated message claiming |
 
 > **Note**: Components marked *(external)* are not part of this repository. See [External Dependencies](./architecture/EXTERNAL-DEPENDENCIES.md) for details.
@@ -88,22 +86,22 @@ linea-monorepo/
 │         │                       │                      │               │
 │         ▼                       ▼                      ▼               │
 │  ┌─────────────┐        ┌─────────────┐         ┌─────────────┐        │
-│  │  Bridge UI  │        │    Maru     │         │   Prover    │        │
-│  │  (Next.js)  │        │   Engine    │         │  (Go/gnark) │        │
+│  │    SDK      │        │    Maru     │         │   Prover    │        │
+│  │ (TypeScript)│        │   Engine    │         │  (Go/gnark) │        │
 │  └──────┬──────┘        └─────────────┘         └──────┬──────┘        │
 │         │                                              │               │
-│         ▼                                              ▼               │
-│  ┌─────────────┐                                ┌─────────────┐        │
-│  │    SDK      │────────────────────────────────│ Coordinator │        │
-│  │ (TypeScript)│                                │  (Kotlin)   │        │
-│  └──────┬──────┘                                └──────┬──────┘        │
-│         │                                              │               │
-│         ▼                                              ▼               │
+│         └──────────────────────────────┐               ▼               │
+│                                        ▼       ┌─────────────┐        │
+│                                ┌─────────────┐ │ Coordinator │        │
+│                                │  Ethereum   │◀│  (Kotlin)   │        │
+│                                │     L1      │ └──────┬──────┘        │
+│                                └─────────────┘        │               │
+│                                                       │               │
+│                                                       ▼               │
 │  ┌──────────────────────────────────────────────────────────────┐      │
-│  │                       Ethereum L1                            │      │
+│  │                CROSS-CHAIN: Postman (TypeScript)            │      │
+│  │                       monitors L1 and L2                    │      │
 │  └──────────────────────────────────────────────────────────────┘      │
-│                                                                        │
-│  CROSS-CHAIN: Postman (TypeScript) ←→ L1 ←→ L2                         │
 │                                                                        │
 └────────────────────────────────────────────────────────────────────────┘
 ```

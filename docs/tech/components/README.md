@@ -15,7 +15,6 @@ This section provides detailed documentation for each component in the Linea mon
 | [Besu Plugins](./besu-plugins.md) | Kotlin/Java | `besu-plugins/` | Sequencer extensions |
 | [SDK](./sdk.md) | TypeScript | `sdk/` | Developer SDK |
 | [Postman](./postman.md) | TypeScript | `postman/` | Message relay |
-| [Bridge UI](./bridge-ui.md) | TypeScript | `bridge-ui/` | Web interface |
 | [E2E Tests](./e2e.md) | TypeScript | `e2e/` | End-to-end tests |
 | [Tracer Constraints](./tracer-constraints.md) | Lisp | `tracer-constraints/` | ZK constraints |
 | [Corset](./corset.md) | Rust | `corset/` | Constraint compiler (DSL → binary + Java interfaces) |
@@ -23,12 +22,6 @@ This section provides detailed documentation for each component in the Linea mon
 ## Component Dependency Graph
 
 ```
-                                    ┌─────────────────┐
-                                    │   bridge-ui     │
-                                    │   (Next.js)     │
-                                    └────────┬────────┘
-                                             │
-                                             ▼
                               ┌──────────────────────────────┐
                               │            sdk               │
                               │  ┌────────┬────────┬───────┐ │
@@ -104,7 +97,6 @@ root package.json
 │   ├── sdk-viem (Viem-based)
 │   └── sdk-ethers (Ethers-based)
 ├── postman/ (message relay service)
-├── bridge-ui/ (Next.js frontend)
 ├── e2e/ (end-to-end tests)
 ├── ts-libs/
 │   ├── linea-shared-utils

@@ -6,7 +6,6 @@ packages:
   - postman/**
   - native-yield-operations/**
   - operations/**
-  - bridge-ui/**
   - ts-libs/**
   - '!contracts/lib/**'
 
@@ -89,7 +88,6 @@ ignoredBuiltDependencies:
   - keccak
   - koffi
   - secp256k1
-  - sharp
   - utf-8-validate
   - web3
   - web3-bzz
