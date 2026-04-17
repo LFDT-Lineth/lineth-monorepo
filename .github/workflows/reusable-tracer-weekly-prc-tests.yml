@@ -35,21 +35,21 @@ jobs:
 
       - name: Upload prc calls test report
         if: always()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: prc-call-tests-report-${{ inputs.zkevm_fork }}
           path: tracer/arithmetization/build/reports/tests/**/*
 
       - name: Upload jacoco weekly prc-call tests coverage report
         if: always()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: jacoco-prc-call-tests-coverage-report-${{ inputs.zkevm_fork }}
           path: tracer/arithmetization/build/reports/jacoco/jacocoPrcCallTestsReport/**/*
 
       - name: Upload jacoco weekly prc-call tests exec file
         if: always()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: jacoco-prc-call-tests-exec-file-${{ inputs.zkevm_fork }}
           path: tracer/arithmetization/build/jacoco/prcCallTests.exec

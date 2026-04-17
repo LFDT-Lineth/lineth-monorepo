@@ -71,7 +71,7 @@ jobs:
         run: pnpm -F contracts run coverage
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: smart-contract-coverage-${{ env.COMMIT_TAG }}.json
           if-no-files-found: error

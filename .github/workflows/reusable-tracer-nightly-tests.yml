@@ -38,21 +38,21 @@ jobs:
 
       - name: Upload test report
         if: ${{ always() }}
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: nightly-tests-report-${{ inputs.zkevm_fork }}
           path: tracer/arithmetization/build/reports/tests/**/*
 
       - name: Upload jacoco nightly tests coverage report
         if: always()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: jacoco-nightly-tests-coverage-report-${{ inputs.zkevm_fork }}
           path: tracer/arithmetization/build/reports/jacoco/jacocoNightlyTestsReport/**/*
 
       - name: Upload jacoco nightly tests exec file
         if: always()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: jacoco-nightly-tests-exec-file-${{ inputs.zkevm_fork }}
           path: tracer/arithmetization/build/jacoco/nightlyTests.exec
@@ -80,7 +80,7 @@ jobs:
 
       - name: Upload test report
         if: always()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: nightly-modexp-tests-report-${{ inputs.zkevm_fork }}
           path: tracer/arithmetization/build/reports/tests/**/*

@@ -98,21 +98,21 @@ jobs:
 
       - name: Upload test report
         if: ${{ always() }}
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: replay-tests-report
           path: tracer/arithmetization/build/reports/tests/**/*
 
       - name: Upload jacoco fast replay tests coverage report
         if: always()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: jacoco-fast-replay-tests-coverage-report
           path: tracer/arithmetization/build/reports/jacoco/jacocoFastReplayTestsReport/**/*
 
       - name: Upload jacoco fast replay tests exec file
         if: always()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: jacoco-fast-replay-tests-exec-file
           path: tracer/arithmetization/build/jacoco/fastReplayTests.exec

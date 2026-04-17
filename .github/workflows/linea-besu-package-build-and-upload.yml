@@ -101,7 +101,7 @@ jobs:
         shell: bash
 
       - name: Upload Docker image artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linea-besu-package
           path: linea-besu-package-images.tar.gz

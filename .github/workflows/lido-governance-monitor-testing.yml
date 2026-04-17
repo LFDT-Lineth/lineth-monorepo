@@ -47,7 +47,7 @@ jobs:
           cp native-yield-operations/lido-governance-monitor/coverage/lcov.info ci-lido-coverage/lido-governance-monitor-lcov.info
 
       - name: Upload TS coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lido-ts-coverage-${{ env.COMMIT_TAG }}
           if-no-files-found: error

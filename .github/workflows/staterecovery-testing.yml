@@ -65,7 +65,7 @@ jobs:
           ./gradlew besu-plugins:state-recovery:test-cases:integrationTest
       - name: Upload Jacoco execution data
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: jacoco-staterecovery-exec
           path: |
@@ -86,7 +86,7 @@ jobs:
 #        run: |
 #          ./gradlew jacocoRootReport
 #      - name: Upload Jacoco report Staterecovery
-#        uses: actions/upload-artifact@v4
+#        uses: actions/upload-artifact@v7
 #        with:
 #          name: jacocoRootReport-${{ env.COMMIT_TAG }}.xml
 #          if-no-files-found: error
