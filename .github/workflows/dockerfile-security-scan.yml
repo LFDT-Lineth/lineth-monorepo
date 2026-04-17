@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Run KICS
-        uses: checkmarx/kics-github-action@00def9108246ec656aea725db2167522d26a99d2 # v2.1.19
+        uses: checkmarx/kics-github-action@4063ea7186bec9fed1bf055e095a4658693f9998 # v2.1.19
         with:
           path: '.'
           platform_type: Dockerfile
