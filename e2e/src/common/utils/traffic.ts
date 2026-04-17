@@ -1,4 +1,4 @@
-import { wait, serialize, etherToWei } from "@consensys/linea-shared-utils";
+import { serialize, etherToWei } from "@consensys/linea-shared-utils";
 import { Account, Chain, Client, Hash, SendTransactionErrorType, Transport } from "viem";
 import { getTransactionCount, sendTransaction, SendTransactionParameters } from "viem/actions";
 import { EstimateGasParameters } from "viem/linea";
@@ -40,6 +40,7 @@ export class TrafficGenerator<
   private txSinceRefresh = 0;
   private isRunning = false;
   private loopPromise: Promise<void> | null = null;
+  private abortController: AbortController | null = null;
 
   private readonly address: `0x${string}`;
   private readonly gasParams: EstimateGasParameters;
@@ -62,17 +63,20 @@ export class TrafficGenerator<
     this.baseFees = this.fees;
     this.txSinceRefresh = 0;
     this.isRunning = true;
+    this.abortController = new AbortController();
 
     this.loopPromise = this.loop();
   }
 
   async stop(): Promise<void> {
     this.isRunning = false;
+    this.abortController?.abort();
+
     if (this.loopPromise) {
       await this.loopPromise;
       this.loopPromise = null;
     }
-    logger.debug("Stopped generating traffic on L2");
+    logger.info("Stopped generating traffic on L2");
   }
 
   private async loop(): Promise<void> {
@@ -92,8 +96,32 @@ export class TrafficGenerator<
         await this.recover(error);
       }
 
-      await wait(this.pollingInterval);
+      await this.abortableWait(this.pollingInterval);
     }
+  }
+
+  /**
+   * Resolves after `ms` milliseconds, or immediately when the abort signal
+   * fires. Allows `stop()` to interrupt the loop's polling delay without
+   * waiting for the full interval to pass.
+   */
+  private abortableWait(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      const signal = this.abortController?.signal;
+      if (signal?.aborted) return resolve();
+
+      const timeoutId = setTimeout(() => {
+        signal?.removeEventListener("abort", onAbort);
+        resolve();
+      }, ms);
+
+      const onAbort = () => {
+        clearTimeout(timeoutId);
+        resolve();
+      };
+
+      signal?.addEventListener("abort", onAbort, { once: true });
+    });
   }
 
   private async sendTx(txNonce: number, txFees: GasFees): Promise<Hash> {
