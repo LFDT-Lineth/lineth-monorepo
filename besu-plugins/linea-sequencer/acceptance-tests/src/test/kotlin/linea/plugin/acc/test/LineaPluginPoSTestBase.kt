@@ -624,8 +624,8 @@ abstract class LineaPluginPoSTestBase : LineaPluginTestBase() {
   }
 
   // Constants for validation error messages
-  object LineaTransactionValidatorPluginErrors {
-    const val BLOB_TX_NOT_ALLOWED = "LineaTransactionValidatorPlugin - BLOB_TX_NOT_ALLOWED"
-    const val DELEGATE_CODE_TX_NOT_ALLOWED = "LineaTransactionValidatorPlugin - DELEGATE_CODE_TX_NOT_ALLOWED"
+  object TransactionTypeValidationErrors {
+    const val BLOB_TX_NOT_ALLOWED = "TransactionTypeValidation - BLOB_TX_NOT_ALLOWED"
+    const val DELEGATE_CODE_TX_NOT_ALLOWED = "TransactionTypeValidation - DELEGATE_CODE_TX_NOT_ALLOWED"
   }
 }

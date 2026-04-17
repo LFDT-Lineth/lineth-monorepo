@@ -10,39 +10,35 @@
 package net.consensys.linea.sequencer.txvalidation;
 
 import com.google.auto.service.AutoService;
-import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaTransactionValidatorConfiguration;
-import org.hyperledger.besu.datatypes.TransactionType;
+import net.consensys.linea.sequencer.txpoolvalidation.LineaTransactionPoolValidatorPlugin;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.TransactionValidatorService;
 
 /**
- * This class extends the default transaction validation rules for adding transactions to the
- * transaction pool. It leverages the PluginTransactionValidatorService to manage and customize the
- * process of transaction validation. This includes, for example, setting a deny list of addresses
- * that are not allowed to add transactions to the pool.
+ * Registers protocol-level transaction validation rules via {@link TransactionValidatorService}.
+ * These rules apply during block import and transaction selection, enforcing which transaction
+ * types (e.g. blob, delegate code) are accepted at the protocol level.
+ *
+ * <p>Note: Besu's {@link TransactionValidatorService} rules also run during transaction pool
+ * admission (RPC/P2P). Pool-level type validation is explicitly handled by {@link
+ * net.consensys.linea.sequencer.txpoolvalidation.LineaTransactionPoolValidatorPlugin}.
  */
 @Slf4j
 @AutoService(BesuPlugin.class)
-public class LineaTransactionValidatorPlugin extends AbstractLineaRequiredPlugin {
+public class LineaBlockTransactionValidatorPlugin extends AbstractLineaRequiredPlugin {
+  public static final AtomicBoolean registered = new AtomicBoolean(false);
+
   private TransactionValidatorService transactionValidatorService;
   private LineaTransactionValidatorConfiguration config;
 
-  public enum LineaTransactionValidatorError {
-    BLOB_TX_NOT_ALLOWED,
-    DELEGATE_CODE_TX_NOT_ALLOWED;
-
-    @Override
-    public String toString() {
-      return "LineaTransactionValidatorPlugin - " + name();
-    }
-  }
-
   @Override
   public void doRegister(final ServiceManager serviceManager) {
+    registered.set(true);
     transactionValidatorService =
         serviceManager
             .getService(TransactionValidatorService.class)
@@ -58,20 +54,16 @@ public class LineaTransactionValidatorPlugin extends AbstractLineaRequiredPlugin
   @Override
   public void beforeExternalServices() {
     super.beforeExternalServices();
+    if (LineaTransactionPoolValidatorPlugin.registered.get()) {
+      throw new IllegalStateException(
+          "Both LineaBlockTransactionValidatorPlugin and LineaTransactionPoolValidatorPlugin are"
+              + " enabled. Only one should be active at a time since their transaction type"
+              + " validation functionality overlaps. Use LineaTransactionPoolValidatorPlugin for"
+              + " RPC/P2P nodes or LineaBlockTransactionValidatorPlugin for validator nodes.");
+    }
     this.config = transactionValidatorConfiguration();
-    // Register rules to reject transactions
     this.transactionValidatorService.registerTransactionValidatorRule(
-        (tx) -> {
-          if (tx.getType() == TransactionType.BLOB && !config.blobTxEnabled()) {
-            return Optional.of(LineaTransactionValidatorError.BLOB_TX_NOT_ALLOWED.toString());
-          } else if (tx.getType() == TransactionType.DELEGATE_CODE
-              && !config.delegateCodeTxEnabled()) {
-            return Optional.of(
-                LineaTransactionValidatorError.DELEGATE_CODE_TX_NOT_ALLOWED.toString());
-          } else {
-            return Optional.empty();
-          }
-        });
+        (tx) -> TransactionTypeValidation.validate(tx, config));
   }
 
   @Override
@@ -80,5 +72,6 @@ public class LineaTransactionValidatorPlugin extends AbstractLineaRequiredPlugin
   @Override
   public void stop() {
     super.stop();
+    registered.set(false);
   }
 }

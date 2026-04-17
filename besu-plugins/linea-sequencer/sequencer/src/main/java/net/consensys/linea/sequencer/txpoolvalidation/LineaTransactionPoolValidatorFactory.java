@@ -18,6 +18,7 @@ import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
+import net.consensys.linea.config.LineaTransactionValidatorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.sequencer.txpoolvalidation.validators.CalldataValidator;
@@ -27,6 +28,7 @@ import net.consensys.linea.sequencer.txpoolvalidation.validators.PrecompileAddre
 import net.consensys.linea.sequencer.txpoolvalidation.validators.ProfitabilityValidator;
 import net.consensys.linea.sequencer.txpoolvalidation.validators.SimulationValidator;
 import net.consensys.linea.sequencer.txpoolvalidation.validators.TraceLineLimitValidator;
+import net.consensys.linea.sequencer.txpoolvalidation.validators.TransactionTypeValidator;
 import net.consensys.linea.sequencer.txselection.InvalidTransactionByLineCountCache;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
@@ -45,6 +47,7 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
   private final WorldStateService worldStateService;
   private final TransactionSimulationService transactionSimulationService;
   private final LineaTransactionPoolValidatorConfiguration txPoolValidatorConf;
+  private final LineaTransactionValidatorConfiguration txValidatorConf;
   private final LineaProfitabilityConfiguration profitabilityConf;
   private final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration;
   private final LineaTracerConfiguration tracerConfiguration;
@@ -59,6 +62,7 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
       final WorldStateService worldStateService,
       final TransactionSimulationService transactionSimulationService,
       final LineaTransactionPoolValidatorConfiguration txPoolValidatorConf,
+      final LineaTransactionValidatorConfiguration txValidatorConf,
       final LineaProfitabilityConfiguration profitabilityConf,
       final LineaTracerConfiguration tracerConfiguration,
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
@@ -71,6 +75,7 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
     this.worldStateService = worldStateService;
     this.transactionSimulationService = transactionSimulationService;
     this.txPoolValidatorConf = txPoolValidatorConf;
+    this.txValidatorConf = txValidatorConf;
     this.profitabilityConf = profitabilityConf;
     this.tracerConfiguration = tracerConfiguration;
     this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
@@ -89,6 +94,7 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
   @Override
   public PluginTransactionPoolValidator createTransactionValidator() {
     final List<PluginTransactionPoolValidator> validators = new ArrayList<>();
+    validators.add(new TransactionTypeValidator(txValidatorConf));
     validators.add(new TraceLineLimitValidator(invalidTransactionByLineCountCache));
     validators.add(new DeniedAddressValidator(deniedAddresses));
     validators.add(new PrecompileAddressValidator());

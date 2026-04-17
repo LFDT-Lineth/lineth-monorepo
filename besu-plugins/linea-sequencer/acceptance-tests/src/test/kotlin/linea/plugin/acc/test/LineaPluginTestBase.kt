@@ -88,7 +88,21 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
       "LineaTransactionPoolValidatorPlugin",
       "LineaTransactionSelectorPlugin",
       "LineaBundleEndpointsPlugin",
-      "LineaTransactionValidatorPlugin",
+      "LineaForcedTransactionEndpointsPlugin",
+    )
+
+    /**
+     * Plugin list for tests that validate block import behavior. Uses
+     * LineaBlockTransactionValidatorPlugin instead of LineaTransactionPoolValidatorPlugin
+     * since both cannot be active simultaneously.
+     */
+    val BLOCK_VALIDATOR_REQUESTED_PLUGINS = listOf(
+      "LineaExtraDataPlugin",
+      "LineaEstimateGasEndpointPlugin",
+      "LineaSetExtraDataEndpointPlugin",
+      "LineaBlockTransactionValidatorPlugin",
+      "LineaTransactionSelectorPlugin",
+      "LineaBundleEndpointsPlugin",
       "LineaForcedTransactionEndpointsPlugin",
     )
 
