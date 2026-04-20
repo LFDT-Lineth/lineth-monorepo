@@ -822,6 +822,8 @@ class ForcedTransactionsAppTest {
       listOf(
         100UL to ConflationTrigger.FORCED_TRANSACTION,
         101UL to ConflationTrigger.FORCED_TRANSACTION,
+        300UL to ConflationTrigger.FORCED_TRANSACTION,
+        400UL to ConflationTrigger.FORCED_TRANSACTION,
         500UL to ConflationTrigger.FORCED_TRANSACTION,
       ),
     )
@@ -829,6 +831,8 @@ class ForcedTransactionsAppTest {
       listOf(
         99UL to AggregationTriggerType.FORCED_TRANSACTION,
         100UL to AggregationTriggerType.FORCED_TRANSACTION,
+        299UL to AggregationTriggerType.FORCED_TRANSACTION,
+        399UL to AggregationTriggerType.FORCED_TRANSACTION,
         499UL to AggregationTriggerType.FORCED_TRANSACTION,
       ),
     )

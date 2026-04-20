@@ -65,9 +65,6 @@ class AggregationCalculatorByForcedTransaction(
     // Only add trigger blocks for FTXs that were NOT successfully included
     // Trigger at (blockNumber - 1) to seal aggregation before failed FTX execution block
     val newTriggerBlocks = processedFtxs
-      .filter { ftx ->
-        ftx.inclusionResult != ForcedTransactionInclusionResult.Included
-      }
       .map { ftx ->
         // ftx.blockNumber is always greater than 0 (0 is genesis block),
         // In practice, greater than 2 most of the cases because network bootstrapping

@@ -2,7 +2,6 @@ package linea.ftx.conflation
 
 import linea.domain.BlockCounters
 import linea.domain.ConflationTrigger
-import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.forcedtx.ForcedTransactionInclusionStatus
 import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculator
 import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCounters
@@ -83,8 +82,7 @@ class ConflationCalculatorByForcedTransaction(
     val highestPendingTrigger = pendingTriggerBlocks.maxOrNull() ?: 0UL
     val newTriggerBlocks = processedFtxs
       .filter { ftx ->
-        ftx.inclusionResult != ForcedTransactionInclusionResult.Included &&
-          ftx.blockNumber > highestPendingTrigger
+        ftx.blockNumber > highestPendingTrigger
       }
       .map { ftx ->
         // ftx.blockNumber is always greater than 0 (0 is genesis block),
