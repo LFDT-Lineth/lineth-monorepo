@@ -59,6 +59,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | VERIFIER_BASE_FEE | true | uint256 | Base fee passed to the verifier constructor |
 | VERIFIER_COINBASE | true | address | Coinbase address passed to the verifier constructor |
 | L2_MESSAGE_SERVICE_ADDRESS | true | address | L2 Message Service address passed to the verifier constructor |
+| VERIFIER_MIMC_ADDRESS | false | address | Optional. Reuse an existing deployed `Mimc` library for PlonkVerifier instead of deploying a new one (see [verifier.md](l1/verifier.md)). |
 | YIELD_MANAGER_ADDRESS | true | address | Yield Manager contract address |
 
 <br />
