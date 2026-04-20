@@ -1,11 +1,11 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
 import linea.domain.Block
-import net.consensys.linea.metrics.LineaMetricsCategory
+import linea.domain.BlockCounters
+import linea.domain.BlocksConflation
+import linea.domain.ConflationCalculationResult
+import linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.zkevm.domain.BlockCounters
-import net.consensys.zkevm.domain.BlocksConflation
-import net.consensys.zkevm.domain.ConflationCalculationResult
 import net.consensys.zkevm.ethereum.coordination.blockcreation.ConflationSafeBlockNumberProvider
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

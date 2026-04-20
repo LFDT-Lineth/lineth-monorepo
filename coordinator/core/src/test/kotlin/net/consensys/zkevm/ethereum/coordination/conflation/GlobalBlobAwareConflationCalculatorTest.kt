@@ -2,19 +2,19 @@ package net.consensys.zkevm.ethereum.coordination.conflation
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import linea.blob.BlobCompressor
+import linea.domain.Blob
+import linea.domain.BlockCounters
 import linea.domain.BlockHeaderSummary
+import linea.domain.ConflationCalculationResult
+import linea.domain.ConflationTrigger
 import linea.kotlin.ByteArrayExt
+import linea.metrics.LineaMetricsCategory
 import net.consensys.FakeFixedClock
 import net.consensys.linea.metrics.FakeHistogram
-import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.linea.traces.fakeTracesCountersV2
-import net.consensys.zkevm.domain.Blob
-import net.consensys.zkevm.domain.BlockCounters
-import net.consensys.zkevm.domain.ConflationCalculationResult
-import net.consensys.zkevm.domain.ConflationTrigger
 import net.consensys.zkevm.ethereum.coordination.DynamicBlockNumberSet
 import net.consensys.zkevm.ethereum.coordination.blob.FakeBlobCompressor
 import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider

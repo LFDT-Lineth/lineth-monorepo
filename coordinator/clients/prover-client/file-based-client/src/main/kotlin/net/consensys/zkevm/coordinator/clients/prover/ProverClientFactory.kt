@@ -1,15 +1,15 @@
 package net.consensys.zkevm.coordinator.clients.prover
 
 import io.vertx.core.Vertx
-import net.consensys.linea.metrics.LineaMetricsCategory
+import linea.clients.BlobCompressionProverClientV2
+import linea.clients.ExecutionProverClientV2
+import linea.clients.InvalidityProverClientV1
+import linea.clients.ProofAggregationProverClientV2
+import linea.clients.ProverClient
+import linea.domain.ProofIndex
+import linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.GaugeAggregator
-import net.consensys.zkevm.coordinator.clients.BlobCompressionProverClientV2
-import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
-import net.consensys.zkevm.coordinator.clients.InvalidityProverClientV1
-import net.consensys.zkevm.coordinator.clients.ProofAggregationProverClientV2
-import net.consensys.zkevm.coordinator.clients.ProverClient
-import net.consensys.zkevm.domain.ProofIndex
 import org.apache.logging.log4j.Logger
 import kotlin.time.Instant
 

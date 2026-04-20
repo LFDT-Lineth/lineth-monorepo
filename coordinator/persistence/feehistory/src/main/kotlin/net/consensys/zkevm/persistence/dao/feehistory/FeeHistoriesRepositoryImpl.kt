@@ -1,9 +1,9 @@
 package net.consensys.zkevm.persistence.dao.feehistory
 
 import linea.domain.FeeHistory
+import linea.error.DuplicatedRecordException
 import net.consensys.linea.ethereum.gaspricing.dynamiccap.FeeHistoriesRepositoryWithCache
 import net.consensys.linea.ethereum.gaspricing.dynamiccap.PercentileGasFees
-import net.consensys.zkevm.persistence.db.DuplicatedRecordException
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference

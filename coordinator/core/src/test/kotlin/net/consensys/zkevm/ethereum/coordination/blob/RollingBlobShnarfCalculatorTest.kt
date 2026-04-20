@@ -1,8 +1,10 @@
 package net.consensys.zkevm.ethereum.coordination.blob
 
+import linea.domain.BlobRecord
+import linea.domain.BlobShnarfCalculator
 import linea.domain.BlockIntervals
-import net.consensys.zkevm.domain.BlobRecord
-import net.consensys.zkevm.persistence.BlobsRepository
+import linea.domain.ShnarfResult
+import linea.persistence.BlobsRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

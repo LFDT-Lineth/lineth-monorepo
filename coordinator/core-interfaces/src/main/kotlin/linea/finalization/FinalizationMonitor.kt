@@ -1,0 +1,22 @@
+package linea.finalization
+
+import org.apache.tuweni.bytes.Bytes32
+import tech.pegasys.teku.infrastructure.async.SafeFuture
+
+interface FinalizationMonitor {
+  data class FinalizationUpdate(
+    val blockNumber: ULong,
+    val blockHash: Bytes32,
+    val forcedTransactionNumber: ULong,
+  )
+
+  fun getLastFinalizationUpdate(): FinalizationUpdate
+
+  fun addFinalizationHandler(handlerName: String, handler: FinalizationHandler)
+
+  fun removeFinalizationHandler(handlerName: String)
+}
+
+fun interface FinalizationHandler {
+  fun handleUpdate(update: FinalizationMonitor.FinalizationUpdate): SafeFuture<*>
+}

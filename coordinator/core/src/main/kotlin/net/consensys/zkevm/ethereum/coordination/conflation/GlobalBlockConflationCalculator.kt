@@ -1,9 +1,9 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
+import linea.domain.BlockCounters
+import linea.domain.ConflationCalculationResult
+import linea.domain.ConflationTrigger
 import net.consensys.linea.traces.TracesCounters
-import net.consensys.zkevm.domain.BlockCounters
-import net.consensys.zkevm.domain.ConflationCalculationResult
-import net.consensys.zkevm.domain.ConflationTrigger
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

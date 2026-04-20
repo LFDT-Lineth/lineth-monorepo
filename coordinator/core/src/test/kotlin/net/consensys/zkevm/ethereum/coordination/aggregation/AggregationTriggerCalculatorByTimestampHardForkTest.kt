@@ -1,7 +1,7 @@
 package net.consensys.zkevm.ethereum.coordination.aggregation
 
-import net.consensys.zkevm.domain.BlobsToAggregate
-import net.consensys.zkevm.domain.blobCounters
+import linea.domain.BlobsToAggregate
+import linea.domain.blobCounters
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test

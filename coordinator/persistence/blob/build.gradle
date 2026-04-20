@@ -6,16 +6,16 @@ plugins {
 }
 
 dependencies {
-  api(project(":coordinator:core"))
+  api(project(":coordinator:core-interfaces"))
   api(project(":coordinator:clients:prover-client:serialization"))
   implementation(project(":jvm-libs:generic:persistence:db"))
 
-  testImplementation("com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}")
   testImplementation("com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}")
+  testImplementation("com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}")
   testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}")
   testImplementation "io.consensys.tuweni:tuweni-units:${libs.versions.tuweni.get()}"
   testImplementation(project(":coordinator:persistence:db-common"))
-  testImplementation(testFixtures(project(":coordinator:core")))
+  testImplementation(testFixtures(project(":coordinator:core-interfaces")))
   testImplementation(testFixtures(project(":jvm-libs:generic:extensions:kotlin")))
   testImplementation(testFixtures(project(":jvm-libs:generic:persistence:db")))
   testImplementation("io.vertx:vertx-junit5")
@@ -27,8 +27,8 @@ sourceSets {
       compileClasspath += main.output
       runtimeClasspath += main.output
     }
-    compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + sourceSets.test.compileClasspath
-    runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath + sourceSets.test.runtimeClasspath
+    compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + sourceSets.test.compileClasspath + project(":coordinator:core-interfaces").sourceSets.main.output + project(":coordinator:core").sourceSets.main.output
+    runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath + sourceSets.test.runtimeClasspath + project(":coordinator:core-interfaces").sourceSets.main.output + project(":coordinator:core").sourceSets.main.output
   }
 }
 

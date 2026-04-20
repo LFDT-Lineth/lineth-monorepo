@@ -3,6 +3,7 @@ package linea.staterecovery
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.contract.l1.LineaRollupContractVersion
+import linea.contract.l1.LineaRollupSmartContractClient
 import linea.domain.BlockNumberAndHash
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig
@@ -16,7 +17,6 @@ import linea.web3j.ethapi.createEthApiClient
 import net.consensys.linea.testing.submission.AggregationAndBlobs
 import net.consensys.linea.testing.submission.loadBlobsAndAggregationsSortedAndGrouped
 import net.consensys.linea.testing.submission.submitBlobsAndAggregationsAndWaitExecution
-import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
 import net.consensys.zkevm.ethereum.ContractsManager
 import net.consensys.zkevm.ethereum.MakeFileDelegatedContractsManager.connectToLineaRollupContract
 import net.consensys.zkevm.ethereum.MakeFileDelegatedContractsManager.lineaRollupContractErrors

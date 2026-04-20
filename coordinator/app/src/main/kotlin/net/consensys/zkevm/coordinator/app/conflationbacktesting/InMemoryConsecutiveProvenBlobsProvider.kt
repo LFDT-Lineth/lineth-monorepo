@@ -1,11 +1,11 @@
 package net.consensys.zkevm.coordinator.app.conflationbacktesting
 
+import linea.domain.Blob
+import linea.domain.BlobAndBatchCounters
+import linea.domain.BlobCounters
+import linea.domain.BlobRecord
 import linea.domain.BlockIntervals
-import net.consensys.zkevm.domain.Blob
-import net.consensys.zkevm.domain.BlobAndBatchCounters
-import net.consensys.zkevm.domain.BlobCounters
-import net.consensys.zkevm.domain.BlobRecord
-import net.consensys.zkevm.domain.CompressionProofIndex
+import linea.domain.CompressionProofIndex
 import net.consensys.zkevm.ethereum.coordination.aggregation.ConsecutiveProvenBlobsProvider
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ConcurrentHashMap

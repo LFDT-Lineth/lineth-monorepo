@@ -4,13 +4,13 @@ import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.ExperimentalHoplite
 import com.sksamuel.hoplite.addFileSource
 import linea.contract.l1.LineaRollupContractVersion
+import linea.contract.l1.LineaRollupSmartContractClient
 import linea.kotlin.gwei
 import linea.web3j.SmartContractErrors
 import linea.web3j.gas.StaticGasProvider
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.l1.Web3JLineaRollupSmartContractClient
 import net.consensys.linea.testing.filesystem.findPathTo
-import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
 import org.slf4j.LoggerFactory
 import org.web3j.tx.gas.ContractEIP1559GasProvider
 import tech.pegasys.teku.infrastructure.async.SafeFuture

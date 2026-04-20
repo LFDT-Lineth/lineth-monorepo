@@ -5,6 +5,7 @@ import io.vertx.junit5.VertxExtension
 import io.vertx.sqlclient.PreparedQuery
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.RowSet
+import linea.error.DuplicatedRecordException
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import linea.kotlin.trimToMillisecondPrecision
@@ -16,7 +17,6 @@ import net.consensys.linea.transactionexclusion.TransactionInfo
 import net.consensys.linea.transactionexclusion.test.defaultRejectedTransaction
 import net.consensys.linea.transactionexclusion.test.rejectedContractDeploymentTransaction
 import net.consensys.zkevm.persistence.db.DbHelper
-import net.consensys.zkevm.persistence.db.DuplicatedRecordException
 import net.consensys.zkevm.persistence.db.test.CleanDbTestSuiteParallel
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach

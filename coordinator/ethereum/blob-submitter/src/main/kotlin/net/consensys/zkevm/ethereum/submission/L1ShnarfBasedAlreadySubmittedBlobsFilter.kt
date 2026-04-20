@@ -1,8 +1,8 @@
 package net.consensys.zkevm.ethereum.submission
 
 import linea.contract.l1.LineaSmartContractClientReadOnly
+import linea.domain.BlobRecord
 import net.consensys.linea.async.AsyncFilter
-import net.consensys.zkevm.domain.BlobRecord
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.function.Consumer
 

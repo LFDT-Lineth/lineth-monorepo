@@ -1,9 +1,9 @@
 package net.consensys.zkevm.coordinator.clients.prover
 
+import linea.domain.AggregationProofIndex
+import linea.domain.CompressionProofIndex
+import linea.domain.ExecutionProofIndex
 import linea.kotlin.decodeHex
-import net.consensys.zkevm.domain.AggregationProofIndex
-import net.consensys.zkevm.domain.CompressionProofIndex
-import net.consensys.zkevm.domain.ExecutionProofIndex
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import kotlin.time.Instant

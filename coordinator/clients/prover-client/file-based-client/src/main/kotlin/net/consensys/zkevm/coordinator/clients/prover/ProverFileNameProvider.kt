@@ -1,11 +1,11 @@
 package net.consensys.zkevm.coordinator.clients.prover
 
+import linea.domain.AggregationProofIndex
+import linea.domain.CompressionProofIndex
+import linea.domain.ExecutionProofIndex
+import linea.domain.InvalidityProofIndex
+import linea.domain.ProofIndex
 import linea.kotlin.encodeHex
-import net.consensys.zkevm.domain.AggregationProofIndex
-import net.consensys.zkevm.domain.CompressionProofIndex
-import net.consensys.zkevm.domain.ExecutionProofIndex
-import net.consensys.zkevm.domain.InvalidityProofIndex
-import net.consensys.zkevm.domain.ProofIndex
 
 interface ProverFileNameProvider<TProofIndex : ProofIndex> {
   fun getFileName(proofIndex: TProofIndex): String

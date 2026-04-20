@@ -4,12 +4,12 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import linea.blob.CalculateShnarfResult
 import linea.blob.GoNativeBlobShnarfCalculator
 import linea.domain.BlockIntervals
+import linea.domain.ShnarfResult
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.zkevm.ethereum.coordination.blob.GoBackedBlobShnarfCalculator
-import net.consensys.zkevm.ethereum.coordination.blob.ShnarfResult
 import org.apache.tuweni.bytes.Bytes32
 import org.apache.tuweni.bytes.Bytes48
 import org.assertj.core.api.Assertions.assertThat

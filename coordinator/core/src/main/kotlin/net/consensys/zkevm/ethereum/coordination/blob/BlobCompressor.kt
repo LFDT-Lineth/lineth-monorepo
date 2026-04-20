@@ -3,7 +3,7 @@ package net.consensys.zkevm.ethereum.coordination.blob
 import linea.blob.BlobCompressor
 import linea.blob.BlobCompressorFactory
 import linea.blob.BlobCompressorVersion
-import net.consensys.linea.metrics.LineaMetricsCategory
+import linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.Timer
 import org.apache.logging.log4j.LogManager

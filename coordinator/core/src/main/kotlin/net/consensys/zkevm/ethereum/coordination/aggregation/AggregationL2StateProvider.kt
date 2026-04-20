@@ -3,7 +3,7 @@ package net.consensys.zkevm.ethereum.coordination.aggregation
 import linea.contract.l2.L2MessageServiceSmartContractClientReadOnly
 import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.ethapi.EthApiClient
-import linea.persistence.ftx.ForcedTransactionsDao
+import linea.persistence.ForcedTransactionsDao
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 

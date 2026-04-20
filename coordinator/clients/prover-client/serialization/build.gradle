@@ -8,5 +8,5 @@ dependencies {
   api "com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}"
   api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${libs.versions.jackson.get()}")
   api(project(":jvm-libs:generic:extensions:kotlin"))
-  api(project(":coordinator:core"))
+  api(project(":coordinator:core-interfaces"))
 }

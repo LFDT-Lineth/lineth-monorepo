@@ -1,9 +1,9 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
+import linea.domain.BlockCounters
 import linea.domain.BlockHeaderSummary
 import linea.kotlin.ByteArrayExt
 import net.consensys.linea.traces.fakeTracesCountersV2
-import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
 import org.apache.logging.log4j.Logger
 import org.assertj.core.api.Assertions.assertThat

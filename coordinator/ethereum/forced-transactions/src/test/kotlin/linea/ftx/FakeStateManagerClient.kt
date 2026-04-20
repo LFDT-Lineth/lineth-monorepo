@@ -7,7 +7,7 @@ import build.linea.clients.StateManagerClientV1
 import build.linea.clients.StateManagerErrorType
 import com.github.michaelbull.result.Result
 import linea.domain.BlockInterval
-import net.consensys.linea.errors.ErrorResponse
+import linea.error.ErrorResponse
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class FakeStateManagerClient :

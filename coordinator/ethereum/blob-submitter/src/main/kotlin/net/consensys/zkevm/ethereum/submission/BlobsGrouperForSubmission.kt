@@ -1,7 +1,7 @@
 package net.consensys.zkevm.ethereum.submission
 
+import linea.domain.BlobRecord
 import linea.domain.BlockIntervals
-import net.consensys.zkevm.domain.BlobRecord
 
 fun interface BlobsGrouperForSubmission {
   fun chunkBlobs(blobsIntervals: List<BlobRecord>, aggregations: BlockIntervals): List<List<BlobRecord>>

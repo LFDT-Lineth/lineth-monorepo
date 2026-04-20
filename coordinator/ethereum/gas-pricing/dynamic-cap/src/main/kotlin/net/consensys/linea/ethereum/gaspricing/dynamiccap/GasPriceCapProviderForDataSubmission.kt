@@ -1,7 +1,7 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
 import linea.domain.gas.GasPriceCaps
-import net.consensys.linea.metrics.LineaMetricsCategory
+import linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.zkevm.ethereum.gaspricing.GasPriceCapProvider
 import tech.pegasys.teku.infrastructure.async.SafeFuture

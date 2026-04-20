@@ -5,10 +5,13 @@ import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.mapEither
 import com.github.michaelbull.result.runCatching
 import io.vertx.core.Vertx
+import linea.clients.RollupForkChoiceUpdatedClient
+import linea.clients.RollupForkChoiceUpdatedError
+import linea.clients.RollupForkChoiceUpdatedResponse
 import linea.domain.BlockNumberAndHash
+import linea.error.ErrorResponse
 import linea.kotlin.encodeHex
 import net.consensys.linea.async.toSafeFuture
-import net.consensys.linea.errors.ErrorResponse
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
 import net.consensys.linea.jsonrpc.JsonRpcRequestListParams
 import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse

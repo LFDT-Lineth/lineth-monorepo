@@ -1,9 +1,9 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
+import linea.domain.BlockCounters
+import linea.domain.ConflationTrigger
 import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.linea.traces.fakeTracesCountersV2
-import net.consensys.zkevm.domain.BlockCounters
-import net.consensys.zkevm.domain.ConflationTrigger
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

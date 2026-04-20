@@ -8,11 +8,11 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import linea.EthLogsSearcher
 import linea.contract.events.DataFinalizedV3
+import linea.domain.BlobRecord
 import linea.domain.BlockInterval
 import linea.domain.BlockParameter
+import linea.error.ErrorResponse
 import linea.kotlin.toHexStringUInt256
-import net.consensys.linea.errors.ErrorResponse
-import net.consensys.zkevm.domain.BlobRecord
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ConcurrentHashMap
 

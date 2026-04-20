@@ -1,0 +1,15 @@
+plugins {
+  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'java-test-fixtures'
+}
+
+dependencies {
+  api project(':jvm-libs:generic:errors')
+  api project(':jvm-libs:linea:core:traces')
+  api project(':jvm-libs:linea:core:domain-models')
+  api project(':jvm-libs:linea:clients:interfaces')
+  // this should not be here, but since linea-state-manager will be deprecated not worthy the refactor effort
+  api project(':jvm-libs:linea:clients:linea-state-manager')
+
+  testFixturesImplementation project(':jvm-libs:linea:metrics:micrometer')
+}

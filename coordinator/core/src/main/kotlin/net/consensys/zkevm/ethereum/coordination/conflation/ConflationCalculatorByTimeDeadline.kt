@@ -1,8 +1,8 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
 import linea.LongRunningService
-import net.consensys.zkevm.domain.BlockCounters
-import net.consensys.zkevm.domain.ConflationTrigger
+import linea.domain.BlockCounters
+import linea.domain.ConflationTrigger
 import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

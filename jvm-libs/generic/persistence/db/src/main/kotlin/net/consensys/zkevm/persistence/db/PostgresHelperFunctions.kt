@@ -1,6 +1,7 @@
 package net.consensys.zkevm.persistence.db
 
 import io.vertx.pgclient.PgException
+import linea.error.DuplicatedRecordException
 
 fun isDuplicateKeyException(th: Throwable): Boolean {
   return when (th) {

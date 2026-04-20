@@ -1,10 +1,10 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
+import linea.domain.Blob
 import linea.domain.Block
-import net.consensys.zkevm.domain.Blob
-import net.consensys.zkevm.domain.BlockCounters
-import net.consensys.zkevm.domain.BlocksConflation
-import net.consensys.zkevm.domain.ConflationCalculationResult
+import linea.domain.BlockCounters
+import linea.domain.BlocksConflation
+import linea.domain.ConflationCalculationResult
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 fun interface BlobCreationHandler {

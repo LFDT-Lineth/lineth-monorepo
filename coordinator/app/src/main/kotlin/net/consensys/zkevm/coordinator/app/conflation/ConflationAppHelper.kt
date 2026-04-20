@@ -3,6 +3,9 @@ package net.consensys.zkevm.coordinator.app.conflation
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.isDisabled
 import linea.ethapi.EthApiClient
+import linea.persistence.AggregationsRepository
+import linea.persistence.BatchesRepository
+import linea.persistence.BlobsRepository
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.zkevm.coordinator.blockcreation.FixedLaggingHeadSafeBlockProvider
 import net.consensys.zkevm.ethereum.coordination.DynamicBlockNumberSet
@@ -14,9 +17,6 @@ import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculator
 import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculatorByTimeDeadline
 import net.consensys.zkevm.ethereum.coordination.conflation.DeadlineConflationCalculatorRunner
 import net.consensys.zkevm.ethereum.coordination.conflation.TimestampHardForkConflationCalculator
-import net.consensys.zkevm.persistence.AggregationsRepository
-import net.consensys.zkevm.persistence.BatchesRepository
-import net.consensys.zkevm.persistence.BlobsRepository
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Clock

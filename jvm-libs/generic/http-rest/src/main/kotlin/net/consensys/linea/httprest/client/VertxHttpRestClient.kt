@@ -10,8 +10,8 @@ import io.vertx.core.http.PoolOptions
 import io.vertx.ext.web.client.HttpResponse
 import io.vertx.ext.web.client.WebClient
 import io.vertx.ext.web.client.WebClientOptions
+import linea.error.ErrorResponse
 import net.consensys.linea.async.toSafeFuture
-import net.consensys.linea.errors.ErrorResponse
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

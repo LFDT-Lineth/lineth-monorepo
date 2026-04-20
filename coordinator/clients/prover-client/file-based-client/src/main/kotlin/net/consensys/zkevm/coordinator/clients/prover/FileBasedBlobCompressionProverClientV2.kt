@@ -2,13 +2,13 @@ package net.consensys.zkevm.coordinator.clients.prover
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.vertx.core.Vertx
-import net.consensys.zkevm.coordinator.clients.BlobCompressionProof
-import net.consensys.zkevm.coordinator.clients.BlobCompressionProofRequest
-import net.consensys.zkevm.coordinator.clients.BlobCompressionProverClientV2
+import linea.clients.BlobCompressionProverClientV2
+import linea.domain.BlobCompressionProof
+import linea.domain.BlobCompressionProofRequest
+import linea.domain.CompressionProofIndex
 import net.consensys.zkevm.coordinator.clients.prover.serialization.BlobCompressionProofJsonRequest
 import net.consensys.zkevm.coordinator.clients.prover.serialization.BlobCompressionProofJsonResponse
 import net.consensys.zkevm.coordinator.clients.prover.serialization.JsonSerialization
-import net.consensys.zkevm.domain.CompressionProofIndex
 import net.consensys.zkevm.fileio.FileReader
 import net.consensys.zkevm.fileio.FileWriter
 import org.apache.logging.log4j.LogManager

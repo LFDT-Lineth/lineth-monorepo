@@ -2,12 +2,12 @@ package net.consensys.zkevm.ethereum.coordination.blockcreation
 
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
+import linea.clients.RollupForkChoiceUpdatedClient
+import linea.clients.RollupForkChoiceUpdatedError
+import linea.clients.RollupForkChoiceUpdatedResponse
 import linea.domain.BlockNumberAndHash
+import linea.error.ErrorResponse
 import linea.kotlin.ByteArrayExt
-import net.consensys.linea.errors.ErrorResponse
-import net.consensys.zkevm.coordinator.clients.RollupForkChoiceUpdatedClient
-import net.consensys.zkevm.coordinator.clients.RollupForkChoiceUpdatedError
-import net.consensys.zkevm.coordinator.clients.RollupForkChoiceUpdatedResponse
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any

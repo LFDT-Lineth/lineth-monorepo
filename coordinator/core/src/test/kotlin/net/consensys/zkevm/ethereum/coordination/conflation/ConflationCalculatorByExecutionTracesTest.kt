@@ -1,13 +1,13 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
+import linea.domain.BlockCounters
+import linea.domain.ConflationTrigger
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.traces.TracesCounters
 import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.linea.traces.TracingModuleV2
 import net.consensys.linea.traces.fakeTracesCountersV2
-import net.consensys.zkevm.domain.BlockCounters
-import net.consensys.zkevm.domain.ConflationTrigger
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach

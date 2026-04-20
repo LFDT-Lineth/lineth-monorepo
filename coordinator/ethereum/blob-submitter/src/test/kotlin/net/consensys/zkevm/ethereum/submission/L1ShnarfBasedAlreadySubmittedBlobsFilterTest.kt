@@ -1,7 +1,7 @@
 package net.consensys.zkevm.ethereum.submission
 
-import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
-import net.consensys.zkevm.domain.createBlobRecord
+import linea.contract.l1.LineaRollupSmartContractClient
+import linea.domain.createBlobRecord
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any

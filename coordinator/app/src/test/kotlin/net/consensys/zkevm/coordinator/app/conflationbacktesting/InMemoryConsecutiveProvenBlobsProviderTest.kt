@@ -1,12 +1,12 @@
 package net.consensys.zkevm.coordinator.app.conflationbacktesting
 
+import linea.domain.Blob
+import linea.domain.BlobRecord
 import linea.domain.BlockIntervals
+import linea.domain.CompressionProofIndex
+import linea.domain.ConflationCalculationResult
+import linea.domain.ConflationTrigger
 import net.consensys.linea.traces.TracesCountersV2
-import net.consensys.zkevm.domain.Blob
-import net.consensys.zkevm.domain.BlobRecord
-import net.consensys.zkevm.domain.CompressionProofIndex
-import net.consensys.zkevm.domain.ConflationCalculationResult
-import net.consensys.zkevm.domain.ConflationTrigger
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.random.Random

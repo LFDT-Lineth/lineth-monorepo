@@ -1,7 +1,7 @@
 package net.consensys.zkevm.ethereum.coordination.aggregation
 
-import net.consensys.zkevm.domain.BlobCounters
-import net.consensys.zkevm.domain.BlobsToAggregate
+import linea.domain.BlobCounters
+import linea.domain.BlobsToAggregate
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import kotlin.time.Instant

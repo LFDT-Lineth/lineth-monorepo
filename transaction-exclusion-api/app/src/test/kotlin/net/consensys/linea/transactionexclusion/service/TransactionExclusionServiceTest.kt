@@ -2,13 +2,13 @@ package net.consensys.linea.transactionexclusion.service
 
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
+import linea.error.DuplicatedRecordException
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.transactionexclusion.ErrorType
 import net.consensys.linea.transactionexclusion.TransactionExclusionError
 import net.consensys.linea.transactionexclusion.TransactionExclusionServiceV1
 import net.consensys.linea.transactionexclusion.test.defaultRejectedTransaction
 import net.consensys.zkevm.persistence.dao.rejectedtransaction.RejectedTransactionsDao
-import net.consensys.zkevm.persistence.db.DuplicatedRecordException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

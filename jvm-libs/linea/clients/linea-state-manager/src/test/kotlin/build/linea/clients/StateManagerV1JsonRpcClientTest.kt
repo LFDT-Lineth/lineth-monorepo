@@ -15,11 +15,11 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.domain.BlockInterval
+import linea.error.ErrorResponse
 import linea.kotlin.ByteArrayExt
 import linea.kotlin.decodeHex
 import linea.kotlin.fromHexString
 import net.consensys.linea.async.get
-import net.consensys.linea.errors.ErrorResponse
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.MetricsFacade

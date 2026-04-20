@@ -2,8 +2,8 @@ package net.consensys.zkevm.ethereum.coordination.blockcreation
 
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
+import linea.clients.RollupForkChoiceUpdatedClient
 import linea.domain.BlockNumberAndHash
-import net.consensys.zkevm.coordinator.clients.RollupForkChoiceUpdatedClient
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

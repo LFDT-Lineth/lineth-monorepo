@@ -3,7 +3,7 @@ plugins {
 }
 
 dependencies {
-  implementation(project(':coordinator:core'))
+  implementation(project(':coordinator:core-interfaces'))
   implementation project(':jvm-libs:linea:web3j-extensions')
   implementation("org.web3j:core:${libs.versions.web3j.get()}") {
     exclude group: "org.slf4j", module: "slf4j-nop"

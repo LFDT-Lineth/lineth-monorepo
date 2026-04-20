@@ -3,8 +3,8 @@ package net.consensys.zkevm.ethereum.coordination.aggregation
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import linea.LongRunningService
-import net.consensys.zkevm.domain.BlobCounters
-import net.consensys.zkevm.domain.BlobsToAggregate
+import linea.domain.BlobCounters
+import linea.domain.BlobsToAggregate
 import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

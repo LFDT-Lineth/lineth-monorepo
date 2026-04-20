@@ -9,11 +9,11 @@ import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import linea.domain.BlobCompressionProof
+import linea.domain.BlobCompressionProofRequest
 import linea.domain.BlockIntervals
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
-import net.consensys.zkevm.coordinator.clients.BlobCompressionProof
-import net.consensys.zkevm.coordinator.clients.BlobCompressionProofRequest
 
 internal class ByteArrayDeserializer : JsonDeserializer<ByteArray>() {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): ByteArray {

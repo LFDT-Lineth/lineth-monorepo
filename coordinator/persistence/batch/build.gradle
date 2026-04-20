@@ -4,7 +4,7 @@ plugins {
 }
 
 dependencies {
-  api(project(":coordinator:core"))
+  api(project(":coordinator:core-interfaces"))
   implementation(project(":jvm-libs:generic:persistence:db"))
   implementation(project(":jvm-libs:linea:core:metrics"))
   implementation(project(":coordinator:clients:prover-client:file-based-client")) {
@@ -12,7 +12,7 @@ dependencies {
   }
 
   testImplementation(project(":coordinator:persistence:db-common"))
-  testImplementation(testFixtures(project(":coordinator:core")))
+  testImplementation(testFixtures(project(":coordinator:core-interfaces")))
   testImplementation(testFixtures(project(":coordinator:persistence:db-common")))
   testImplementation(testFixtures(project(":jvm-libs:generic:persistence:db")))
   testImplementation(testFixtures(project(":jvm-libs:generic:extensions:kotlin")))

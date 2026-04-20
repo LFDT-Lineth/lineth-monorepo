@@ -3,7 +3,7 @@ package build.linea.clients
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
-import net.consensys.linea.errors.ErrorResponse
+import linea.error.ErrorResponse
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 /**

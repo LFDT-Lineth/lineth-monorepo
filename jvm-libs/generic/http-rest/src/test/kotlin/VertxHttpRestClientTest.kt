@@ -19,7 +19,7 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.client.WebClientOptions
 import io.vertx.ext.web.client.impl.HttpResponseImpl
 import io.vertx.junit5.VertxExtension
-import net.consensys.linea.errors.ErrorResponse
+import linea.error.ErrorResponse
 import net.consensys.linea.httprest.client.RestErrorType
 import net.consensys.linea.httprest.client.VertxHttpRestClient
 import org.assertj.core.api.Assertions.assertThat

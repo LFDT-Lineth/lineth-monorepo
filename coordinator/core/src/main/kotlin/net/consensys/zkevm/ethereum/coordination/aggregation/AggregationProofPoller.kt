@@ -1,11 +1,11 @@
 package net.consensys.zkevm.ethereum.coordination.aggregation
 
 import io.vertx.core.Vertx
+import linea.clients.ProofAggregationProverClientV2
+import linea.domain.Aggregation
+import linea.domain.AggregationProofIndex
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
-import net.consensys.zkevm.coordinator.clients.ProofAggregationProverClientV2
-import net.consensys.zkevm.domain.Aggregation
-import net.consensys.zkevm.domain.AggregationProofIndex
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ConcurrentLinkedDeque

@@ -3,7 +3,7 @@ plugins {
 }
 
 dependencies {
-  api (project(":coordinator:core"))
+  api (project(":coordinator:core-interfaces"))
   api project(":jvm-libs:linea:besu-libs")
   api project(":jvm-libs:linea:besu-rlp-and-mappers")
 }

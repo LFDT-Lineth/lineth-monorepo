@@ -5,12 +5,12 @@ import io.vertx.core.Future
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
+import linea.error.DuplicatedRecordException
 import linea.kotlin.encodeHex
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.transactionexclusion.ModuleOverflow
 import net.consensys.linea.transactionexclusion.RejectedTransaction
 import net.consensys.linea.transactionexclusion.TransactionInfo
-import net.consensys.zkevm.persistence.db.DuplicatedRecordException
 import net.consensys.zkevm.persistence.db.SQLQueryLogger
 import net.consensys.zkevm.persistence.db.isDuplicateKeyException
 import org.apache.logging.log4j.Level

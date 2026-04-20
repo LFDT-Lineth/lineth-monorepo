@@ -5,6 +5,7 @@ plugins {
 dependencies {
   implementation project(':transaction-exclusion-api:core')
   implementation project(':transaction-exclusion-api:persistence:rejectedtransaction')
+  implementation project(':jvm-libs:generic:errors')
   implementation project(':jvm-libs:generic:extensions:futures')
   implementation project(':jvm-libs:generic:extensions:kotlin')
   implementation project(':jvm-libs:generic:json-rpc')

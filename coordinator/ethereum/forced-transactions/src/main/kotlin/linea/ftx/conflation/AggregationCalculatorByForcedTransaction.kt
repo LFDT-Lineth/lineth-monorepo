@@ -1,8 +1,8 @@
 package linea.ftx.conflation
 
+import linea.domain.BlobCounters
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.forcedtx.ForcedTransactionInclusionStatus
-import net.consensys.zkevm.domain.BlobCounters
 import net.consensys.zkevm.ethereum.coordination.DynamicBlockNumberSet
 import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationTrigger
 import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationTriggerCalculatorByTargetBlockNumbers

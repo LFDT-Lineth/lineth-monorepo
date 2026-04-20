@@ -5,6 +5,7 @@ import io.vertx.core.http.HttpVersion
 import io.vertx.core.http.PoolOptions
 import io.vertx.core.net.PfxOptions
 import io.vertx.ext.web.client.WebClientOptions
+import linea.contract.l1.LineaSmartContractClient
 import linea.coordinator.config.v2.L1SubmissionConfig
 import linea.coordinator.config.v2.SignerConfig
 import linea.kotlin.encodeHex
@@ -13,7 +14,6 @@ import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.l1.Web3JLineaRollupSmartContractClient
 import net.consensys.linea.contract.l1.Web3JLineaValidiumSmartContractClient
 import net.consensys.linea.httprest.client.VertxHttpRestClient
-import net.consensys.zkevm.coordinator.clients.smartcontract.LineaSmartContractClient
 import net.consensys.zkevm.ethereum.crypto.Web3SignerRestClient
 import net.consensys.zkevm.ethereum.crypto.Web3SignerTxSignService
 import net.consensys.zkevm.ethereum.signing.ECKeypairSignerAdapter

@@ -4,6 +4,8 @@ import io.vertx.core.Vertx
 import linea.contract.l1.FinalizedStateDataProvider
 import linea.domain.BlockParameter
 import linea.ethapi.EthApiBlockClient
+import linea.finalization.FinalizationHandler
+import linea.finalization.FinalizationMonitor
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager

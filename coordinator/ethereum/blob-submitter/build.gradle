@@ -25,7 +25,7 @@ dependencies {
   testImplementation(project(":coordinator:persistence:aggregation"))
   testImplementation(project(":coordinator:persistence:db-common"))
   testImplementation(testFixtures(project(":coordinator:ethereum:gas-pricing")))
-  testImplementation(testFixtures(project(":coordinator:core")))
+  testImplementation(testFixtures(project(":coordinator:core-interfaces")))
   testImplementation(testFixtures(project(":jvm-libs:generic:extensions:kotlin")))
   testImplementation(testFixtures(project(":jvm-libs:generic:persistence:db")))
   testImplementation("io.vertx:vertx-junit5")

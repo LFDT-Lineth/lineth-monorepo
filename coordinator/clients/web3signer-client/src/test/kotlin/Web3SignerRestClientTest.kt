@@ -8,7 +8,6 @@ import io.vertx.ext.web.client.WebClientOptions
 import io.vertx.junit5.VertxExtension
 import net.consensys.linea.httprest.client.VertxHttpRestClient
 import net.consensys.zkevm.ethereum.crypto.Web3SignerRestClient
-import org.apache.tuweni.bytes.Bytes
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.util.encoders.Hex
 import org.junit.jupiter.api.AfterEach
@@ -72,7 +71,7 @@ class Web3SignerRestClientTest {
         ),
     )
 
-    val (r, s) = web3SignerClient.sign(Bytes.wrap(msg.toByteArray()))
+    val (r, s) = web3SignerClient.sign(msg.toByteArray())
     assertThat(r).isEqualTo(BigInteger(Hex.toHexString(signature.r), 16))
     assertThat(s).isEqualTo(BigInteger(Hex.toHexString(signature.s), 16))
 
@@ -92,6 +91,6 @@ class Web3SignerRestClientTest {
             .withStatusMessage("Public Key not found"),
         ),
     )
-    assertThrows<Exception> { web3SignerClient.sign(Bytes.wrap("Message".toByteArray())) }
+    assertThrows<Exception> { web3SignerClient.sign("Message".toByteArray()) }
   }
 }

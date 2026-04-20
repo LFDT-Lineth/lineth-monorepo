@@ -1,13 +1,13 @@
 package net.consensys.zkevm.ethereum.coordination.aggregation
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
+import linea.domain.BlobCounters
+import linea.domain.BlobsToAggregate
 import linea.domain.BlockHeaderSummary
 import linea.kotlin.ByteArrayExt
 import net.consensys.FakeFixedClock
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
-import net.consensys.zkevm.domain.BlobCounters
-import net.consensys.zkevm.domain.BlobsToAggregate
 import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat

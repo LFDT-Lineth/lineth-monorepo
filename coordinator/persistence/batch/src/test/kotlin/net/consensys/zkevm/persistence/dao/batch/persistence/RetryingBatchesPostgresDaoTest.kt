@@ -2,7 +2,7 @@ package net.consensys.zkevm.persistence.dao.batch.persistence
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import net.consensys.zkevm.domain.createBatch
+import linea.domain.createBatch
 import net.consensys.zkevm.persistence.db.PersistenceRetryer
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

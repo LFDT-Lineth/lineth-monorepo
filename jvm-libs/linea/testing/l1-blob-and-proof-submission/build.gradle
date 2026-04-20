@@ -11,6 +11,6 @@ dependencies {
   implementation(project(':jvm-libs:linea:web3j-extensions'))
   implementation(testFixtures(project(':jvm-libs:linea:web3j-extensions')))
   implementation(project(':coordinator:clients:prover-client:serialization'))
-  implementation(testFixtures(project(":coordinator:core")))
+  implementation(testFixtures(project(":coordinator:core-interfaces")))
   implementation("org.assertj:assertj-core:${libs.versions.assertj.get()}")
 }

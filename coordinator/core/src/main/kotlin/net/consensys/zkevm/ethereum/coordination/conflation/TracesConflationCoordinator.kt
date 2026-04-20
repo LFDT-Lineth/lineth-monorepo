@@ -1,7 +1,7 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
 import build.linea.clients.GetZkEVMStateMerkleProofResponse
-import net.consensys.zkevm.coordinator.clients.GenerateTracesResponse
+import linea.clients.GenerateTracesResponse
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 data class BlocksTracesConflated(

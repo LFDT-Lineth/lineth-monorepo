@@ -1,7 +1,7 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
-import net.consensys.zkevm.domain.BlockCounters
-import net.consensys.zkevm.domain.ConflationTrigger
+import linea.domain.BlockCounters
+import linea.domain.ConflationTrigger
 
 class ConflationCalculatorByBlockLimit(
   private val blockLimit: UInt,

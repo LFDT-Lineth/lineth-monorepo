@@ -3,14 +3,14 @@ package net.consensys.zkevm.ethereum.coordination.conflation
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
+import linea.domain.BlockCounters
+import linea.domain.ConflationTrigger
+import linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.Counter
-import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.Tag
 import net.consensys.linea.traces.TracesCounters
 import net.consensys.linea.traces.TracingModule
-import net.consensys.zkevm.domain.BlockCounters
-import net.consensys.zkevm.domain.ConflationTrigger
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 

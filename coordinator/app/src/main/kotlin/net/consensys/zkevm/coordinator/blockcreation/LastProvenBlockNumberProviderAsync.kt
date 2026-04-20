@@ -1,6 +1,6 @@
 package net.consensys.zkevm.coordinator.blockcreation
 
-import net.consensys.zkevm.persistence.BatchesRepository
+import linea.persistence.BatchesRepository
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.max

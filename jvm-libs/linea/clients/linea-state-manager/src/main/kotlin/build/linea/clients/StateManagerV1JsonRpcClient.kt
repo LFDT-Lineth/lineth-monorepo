@@ -8,11 +8,11 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import io.vertx.core.json.JsonObject
 import linea.domain.BlockInterval
+import linea.error.ErrorResponse
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import linea.kotlin.fromHexString
 import linea.kotlin.toHexString
-import net.consensys.linea.errors.ErrorResponse
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponseException
 import net.consensys.linea.jsonrpc.client.JsonRpcClientFactory
 import net.consensys.linea.jsonrpc.client.JsonRpcV2Client

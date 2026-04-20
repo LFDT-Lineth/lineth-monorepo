@@ -7,6 +7,7 @@ import linea.contract.l1.FakeFinalizedStateDataProvider
 import linea.domain.BlockParameter
 import linea.domain.BlockWithTxHashes
 import linea.ethapi.EthApiBlockClient
+import linea.finalization.FinalizationMonitor
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.BeforeEach

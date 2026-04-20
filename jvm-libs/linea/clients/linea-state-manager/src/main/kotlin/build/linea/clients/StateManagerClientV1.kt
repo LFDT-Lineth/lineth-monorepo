@@ -3,8 +3,8 @@ package build.linea.clients
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.github.michaelbull.result.Result
 import linea.domain.BlockInterval
+import linea.error.ErrorResponse
 import linea.kotlin.encodeHex
-import net.consensys.linea.errors.ErrorResponse
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 enum class StateManagerErrorType : ClientError {

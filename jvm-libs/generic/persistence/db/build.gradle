@@ -6,6 +6,7 @@ plugins {
 description = "Vertx + Postgres backed persistence utilities"
 
 dependencies {
+  implementation(project(":jvm-libs:generic:errors"))
   implementation(project(":jvm-libs:generic:extensions:futures"))
   implementation(project(":jvm-libs:generic:extensions:kotlin"))
   api("io.vertx:vertx-pg-client:${libs.versions.vertx.get()}")

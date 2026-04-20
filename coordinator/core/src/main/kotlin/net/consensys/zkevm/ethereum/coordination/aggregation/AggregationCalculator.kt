@@ -1,7 +1,7 @@
 package net.consensys.zkevm.ethereum.coordination.aggregation
 
-import net.consensys.zkevm.domain.BlobCounters
-import net.consensys.zkevm.domain.BlobsToAggregate
+import linea.domain.BlobCounters
+import linea.domain.BlobsToAggregate
 
 fun interface AggregationHandler {
   fun onAggregation(blobsToAggregate: BlobsToAggregate)

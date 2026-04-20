@@ -2,7 +2,7 @@ package net.consensys.linea.httprest.client
 
 import com.github.michaelbull.result.Result
 import io.vertx.core.buffer.Buffer
-import net.consensys.linea.errors.ErrorResponse
+import linea.error.ErrorResponse
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 enum class RestErrorType(val code: Int?, val message: String?) {

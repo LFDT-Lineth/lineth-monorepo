@@ -1,10 +1,11 @@
 package net.consensys.zkevm.persistence.dao.aggregation
 
-import net.consensys.zkevm.domain.Aggregation
-import net.consensys.zkevm.domain.BlobAndBatchCounters
-import net.consensys.zkevm.domain.ProofToFinalize
-import net.consensys.zkevm.persistence.AggregationsRepository
-import net.consensys.zkevm.persistence.db.DuplicatedRecordException
+import linea.domain.Aggregation
+import linea.domain.BlobAndBatchCounters
+import linea.domain.ProofToFinalize
+import linea.error.DuplicatedRecordException
+import linea.persistence.AggregationsDao
+import linea.persistence.AggregationsRepository
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 

@@ -1,7 +1,7 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
-import net.consensys.zkevm.domain.BlockCounters
-import net.consensys.zkevm.domain.ConflationTrigger
+import linea.domain.BlockCounters
+import linea.domain.ConflationTrigger
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import kotlin.time.Instant

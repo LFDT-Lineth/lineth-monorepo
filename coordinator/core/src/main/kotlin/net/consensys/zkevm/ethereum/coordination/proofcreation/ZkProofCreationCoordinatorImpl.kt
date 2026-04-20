@@ -1,15 +1,15 @@
 package net.consensys.zkevm.ethereum.coordination.proofcreation
 
+import linea.clients.BatchExecutionProofRequestV1
+import linea.clients.ExecutionProverClientV2
 import linea.contract.events.L1L2MessageHashesAddedToInboxEvent
 import linea.contract.events.L2RollingHashUpdatedEvent
 import linea.contract.events.MessageSentEvent
 import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.BlocksConflation
 import linea.domain.EthLog
+import linea.domain.ExecutionProofIndex
 import linea.ethapi.EthApiClient
-import net.consensys.zkevm.coordinator.clients.BatchExecutionProofRequestV1
-import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
-import net.consensys.zkevm.domain.BlocksConflation
-import net.consensys.zkevm.domain.ExecutionProofIndex
 import net.consensys.zkevm.ethereum.coordination.conflation.BlocksTracesConflated
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

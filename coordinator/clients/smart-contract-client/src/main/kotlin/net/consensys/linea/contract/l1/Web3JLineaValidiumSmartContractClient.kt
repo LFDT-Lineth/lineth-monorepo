@@ -1,17 +1,17 @@
 package net.consensys.linea.contract.l1
 
 import build.linea.contract.ValidiumV1
+import linea.contract.l1.BlockAndNonce
+import linea.contract.l1.LineaValidiumSmartContractClient
 import linea.contract.l1.Web3JLineaValidiumSmartContractClientReadOnly
+import linea.domain.BlobRecord
 import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.ProofToFinalize
 import linea.domain.gas.GasPriceCaps
 import linea.kotlin.toULong
 import linea.web3j.SmartContractErrors
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.Web3JContractAsyncHelper
-import net.consensys.zkevm.coordinator.clients.smartcontract.BlockAndNonce
-import net.consensys.zkevm.coordinator.clients.smartcontract.LineaValidiumSmartContractClient
-import net.consensys.zkevm.domain.BlobRecord
-import net.consensys.zkevm.domain.ProofToFinalize
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.DefaultBlockParameter
 import org.web3j.tx.gas.ContractGasProvider

@@ -4,8 +4,8 @@ import linea.contract.events.ForcedTransactionAddedEvent
 import linea.forcedtx.ForcedTransactionInclusionStatus
 import linea.forcedtx.ForcedTransactionsClient
 import linea.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
-import linea.persistence.ftx.ForcedTransactionsDao
-import net.consensys.zkevm.domain.ForcedTransactionRecord
+import linea.persistence.ForcedTransactionRecord
+import linea.persistence.ForcedTransactionsDao
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

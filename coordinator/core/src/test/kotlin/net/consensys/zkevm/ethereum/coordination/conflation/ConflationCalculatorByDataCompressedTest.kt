@@ -2,9 +2,9 @@ package net.consensys.zkevm.ethereum.coordination.conflation
 
 import linea.blob.BlobCompressionException
 import linea.blob.BlobCompressor
+import linea.domain.BlockCounters
+import linea.domain.ConflationTrigger
 import net.consensys.linea.traces.fakeTracesCountersV2
-import net.consensys.zkevm.domain.BlockCounters
-import net.consensys.zkevm.domain.ConflationTrigger
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach

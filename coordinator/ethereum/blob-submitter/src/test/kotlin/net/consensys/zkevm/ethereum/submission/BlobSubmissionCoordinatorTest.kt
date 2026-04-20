@@ -1,17 +1,17 @@
 package net.consensys.zkevm.ethereum.submission
 
 import io.vertx.core.Vertx
+import linea.contract.l1.BlockAndNonce
+import linea.contract.l1.LineaRollupSmartContractClient
+import linea.domain.BlobRecord
 import linea.domain.BlockIntervals
+import linea.domain.createAggregation
+import linea.domain.createBlobRecords
 import linea.domain.toBlockIntervals
+import linea.persistence.AggregationsRepository
+import linea.persistence.BlobsRepository
 import net.consensys.FakeFixedClock
 import net.consensys.linea.async.AsyncFilter
-import net.consensys.zkevm.coordinator.clients.smartcontract.BlockAndNonce
-import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
-import net.consensys.zkevm.domain.BlobRecord
-import net.consensys.zkevm.domain.createAggregation
-import net.consensys.zkevm.domain.createBlobRecords
-import net.consensys.zkevm.persistence.AggregationsRepository
-import net.consensys.zkevm.persistence.BlobsRepository
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.junit.jupiter.api.BeforeEach

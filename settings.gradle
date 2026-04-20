@@ -36,6 +36,7 @@ include 'jvm-libs:linea:web3j-extensions'
 
 include 'coordinator:app'
 include 'coordinator:core'
+include 'coordinator:core-interfaces'
 include 'coordinator:utilities'
 include 'coordinator:clients:prover-client:file-based-client'
 include 'coordinator:clients:prover-client:serialization'

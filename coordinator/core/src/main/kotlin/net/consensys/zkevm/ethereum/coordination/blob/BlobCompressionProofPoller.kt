@@ -1,13 +1,13 @@
 package net.consensys.zkevm.ethereum.coordination.blob
 
 import io.vertx.core.Vertx
+import linea.clients.BlobCompressionProverClientV2
+import linea.domain.BlobRecord
+import linea.domain.CompressionProofIndex
+import linea.metrics.LineaMetricsCategory
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
-import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.zkevm.coordinator.clients.BlobCompressionProverClientV2
-import net.consensys.zkevm.domain.BlobRecord
-import net.consensys.zkevm.domain.CompressionProofIndex
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ConcurrentLinkedDeque

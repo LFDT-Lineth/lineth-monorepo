@@ -1,10 +1,10 @@
 package linea.ftx.conflation
 
 import io.vertx.core.Vertx
-import linea.persistence.ftx.ForcedTransactionsDao
+import linea.persistence.ForcedTransactionRecord
+import linea.persistence.ForcedTransactionsDao
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
-import net.consensys.zkevm.domain.ForcedTransactionRecord
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

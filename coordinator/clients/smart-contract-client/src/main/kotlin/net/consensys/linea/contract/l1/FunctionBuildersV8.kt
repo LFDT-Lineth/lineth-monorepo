@@ -1,10 +1,10 @@
 package net.consensys.linea.contract.l1
 
 import build.linea.contract.LineaRollupV8
+import linea.domain.BlobRecord
+import linea.domain.ProofToFinalize
 import linea.kotlin.encodeHex
 import linea.kotlin.toBigInteger
-import net.consensys.zkevm.domain.BlobRecord
-import net.consensys.zkevm.domain.ProofToFinalize
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.DynamicBytes
 import org.web3j.abi.datatypes.Function

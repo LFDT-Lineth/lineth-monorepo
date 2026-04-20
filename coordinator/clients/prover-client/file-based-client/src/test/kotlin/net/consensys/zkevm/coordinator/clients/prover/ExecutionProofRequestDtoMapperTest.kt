@@ -2,17 +2,17 @@ package net.consensys.zkevm.coordinator.clients.prover
 
 import build.linea.clients.GetZkEVMStateMerkleProofResponse
 import com.fasterxml.jackson.databind.node.ArrayNode
+import linea.clients.BatchExecutionProofRequestV1
+import linea.clients.GenerateTracesResponse
 import linea.contract.events.createL2RollingHashUpdatedEthLogV1
 import linea.contract.events.createMessageSentEthLogV1
 import linea.domain.Block
 import linea.domain.EthLog
 import linea.domain.createBlock
+import linea.encoding.BlockEncoder
 import linea.kotlin.ByteArrayExt
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
-import net.consensys.zkevm.coordinator.clients.BatchExecutionProofRequestV1
-import net.consensys.zkevm.coordinator.clients.GenerateTracesResponse
-import net.consensys.zkevm.encoding.BlockEncoder
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

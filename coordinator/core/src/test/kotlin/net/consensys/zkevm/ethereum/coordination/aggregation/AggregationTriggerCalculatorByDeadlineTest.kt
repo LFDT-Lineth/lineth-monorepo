@@ -1,10 +1,10 @@
 package net.consensys.zkevm.ethereum.coordination.aggregation
 
+import linea.domain.BlobCounters
+import linea.domain.BlobsToAggregate
 import linea.domain.BlockHeaderSummary
 import linea.kotlin.ByteArrayExt
 import net.consensys.FakeFixedClock
-import net.consensys.zkevm.domain.BlobCounters
-import net.consensys.zkevm.domain.BlobsToAggregate
 import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test

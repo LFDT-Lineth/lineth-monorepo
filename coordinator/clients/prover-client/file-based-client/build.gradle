@@ -3,7 +3,7 @@ plugins {
 }
 
 dependencies {
-  implementation project(':coordinator:core')
+  implementation project(':coordinator:core-interfaces')
   implementation project(':coordinator:clients:smart-contract-client')
   api project(':coordinator:clients:prover-client:serialization')
   implementation project(':coordinator:utilities')
@@ -23,7 +23,7 @@ dependencies {
   implementation "com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}"
   implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${libs.versions.jackson.get()}")
 
-  testImplementation testFixtures(project(':coordinator:core'))
+  testImplementation testFixtures(project(':coordinator:core-interfaces'))
   testImplementation testFixtures(project(':jvm-libs:linea:clients:interfaces'))
   testImplementation testFixtures(project(':jvm-libs:linea:core:domain-models'))
   testImplementation "io.vertx:vertx-junit5"

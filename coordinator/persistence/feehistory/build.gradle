@@ -7,6 +7,7 @@ plugins {
 
 dependencies {
   implementation(project(":coordinator:ethereum:gas-pricing:dynamic-cap"))
+  implementation(project(":jvm-libs:generic:errors"))
   implementation(project(":jvm-libs:generic:extensions:futures"))
   implementation(project(":jvm-libs:generic:extensions:kotlin"))
   implementation(project(":jvm-libs:generic:persistence:db"))

@@ -1,6 +1,6 @@
 package net.consensys.zkevm.persistence.dao.batch.persistence
 
-import net.consensys.zkevm.domain.Batch
+import linea.domain.Batch
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 interface BatchesDao {

@@ -6,12 +6,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.vertx.core.Vertx
+import linea.clients.InvalidityProofRequest
+import linea.clients.InvalidityProofResponse
+import linea.clients.InvalidityProverClientV1
+import linea.domain.InvalidityProofIndex
 import linea.kotlin.encodeHex
-import net.consensys.zkevm.coordinator.clients.InvalidityProofRequest
-import net.consensys.zkevm.coordinator.clients.InvalidityProofResponse
-import net.consensys.zkevm.coordinator.clients.InvalidityProverClientV1
 import net.consensys.zkevm.coordinator.clients.prover.serialization.JsonSerialization
-import net.consensys.zkevm.domain.InvalidityProofIndex
 import net.consensys.zkevm.fileio.FileReader
 import net.consensys.zkevm.fileio.FileWriter
 import tech.pegasys.teku.infrastructure.async.SafeFuture

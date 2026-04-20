@@ -3,8 +3,8 @@ package net.consensys.zkevm.coordinator.clients.prover
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.domain.BlockInterval
+import linea.domain.ProofIndex
 import net.consensys.zkevm.coordinator.clients.prover.serialization.JsonSerialization
-import net.consensys.zkevm.domain.ProofIndex
 import net.consensys.zkevm.fileio.FileReader
 import net.consensys.zkevm.fileio.FileWriter
 import org.assertj.core.api.Assertions.assertThat

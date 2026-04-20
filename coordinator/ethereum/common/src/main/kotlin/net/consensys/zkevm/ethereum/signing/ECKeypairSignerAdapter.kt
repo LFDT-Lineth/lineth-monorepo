@@ -1,7 +1,6 @@
 package net.consensys.zkevm.ethereum.signing
 
-import net.consensys.zkevm.ethereum.crypto.Signer
-import org.apache.tuweni.bytes.Bytes
+import linea.crypto.Signer
 import org.web3j.crypto.ECDSASignature
 import org.web3j.crypto.ECKeyPair
 import java.math.BigInteger
@@ -32,7 +31,7 @@ class ECKeypairSignerAdapter(private val adaptee: Signer, publicKey: BigInteger)
   }
 
   override fun sign(transaction: ByteArray): ECDSASignature {
-    val (r, s) = adaptee.sign(Bytes.wrap(transaction))
+    val (r, s) = adaptee.sign(transaction)
     return ECDSASignature(r, s)
   }
 }

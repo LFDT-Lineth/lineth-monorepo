@@ -1,13 +1,13 @@
 package net.consensys.linea.testing.submission
 
+import linea.contract.l1.LineaRollupSmartContractClient
+import linea.domain.Aggregation
+import linea.domain.BlobRecord
 import linea.domain.BlockInterval
 import linea.ethapi.EthApiClient
 import linea.kotlin.decodeHex
 import linea.kotlin.toHexString
 import linea.web3j.waitForTxReceipt
-import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
-import net.consensys.zkevm.domain.Aggregation
-import net.consensys.zkevm.domain.BlobRecord
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

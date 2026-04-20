@@ -1,6 +1,6 @@
 package net.consensys.zkevm.ethereum.submission
 
-import net.consensys.zkevm.domain.BlobRecord
+import linea.domain.BlobRecord
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 interface BlobSubmitter {

@@ -1,5 +1,7 @@
 package net.consensys.zkevm.ethereum.crypto
 
+import linea.crypto.HashFunction
+import linea.crypto.Sha256HashFunction
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue

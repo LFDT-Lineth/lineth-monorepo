@@ -7,7 +7,8 @@ plugins {
 }
 
 dependencies {
-  implementation project(':coordinator:core')
+  implementation project(':coordinator:core-interfaces')
+  implementation project(':jvm-libs:generic:errors')
   implementation "org.web3j:core:${libs.versions.web3j.get()}"
   implementation project(':jvm-libs:generic:http-rest')
 

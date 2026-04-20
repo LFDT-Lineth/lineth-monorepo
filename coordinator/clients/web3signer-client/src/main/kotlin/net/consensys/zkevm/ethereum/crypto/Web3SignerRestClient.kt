@@ -5,17 +5,19 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.map
 import io.vertx.core.buffer.Buffer
 import io.vertx.ext.web.client.impl.HttpResponseImpl
+import linea.crypto.Signer
+import linea.kotlin.decodeHex
+import linea.kotlin.encodeHex
 import net.consensys.linea.httprest.client.HttpRestClient
-import org.apache.tuweni.bytes.Bytes
 import java.math.BigInteger
 
 class Web3SignerRestClient(private val client: HttpRestClient, private val publicKey: String) :
   Signer {
-  override fun sign(bytes: Bytes): Pair<BigInteger, BigInteger> {
+  override fun sign(bytes: ByteArray): Pair<BigInteger, BigInteger> {
     val path = WEB3SIGNER_SIGN_ENDPOINT + publicKey
     val requestJson =
       """
-      {"data":"$bytes"}
+      {"data":"${bytes.encodeHex()}"}
       """.trimIndent()
     val buffer = Buffer.buffer(requestJson)
 
@@ -27,7 +29,7 @@ class Web3SignerRestClient(private val client: HttpRestClient, private val publi
 
     return when (response) {
       is Ok -> {
-        val signature = Bytes.fromHexString(response.value.removePrefix("0x")).toArray()
+        val signature = response.value.decodeHex()
         val rSize = 32
         val sSize = 32
         val rSlice = signature.sliceArray(0 until rSize)

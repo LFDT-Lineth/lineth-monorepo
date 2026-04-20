@@ -5,8 +5,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.sql.DataSource
 
-class DuplicatedRecordException(message: String? = null, cause: Throwable? = null) : Exception(message, cause)
-
 object DbHelper {
   private const val POSTGRES_MAX_DB_NAME_LENGTH = 63
   private var formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")

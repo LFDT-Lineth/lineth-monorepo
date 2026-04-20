@@ -1,11 +1,11 @@
 package net.consensys.zkevm.ethereum.coordination
 
-import net.consensys.zkevm.domain.Batch
-import net.consensys.zkevm.domain.Blob
-import net.consensys.zkevm.domain.BlobRecord
-import net.consensys.zkevm.domain.BlobSubmittedEvent
-import net.consensys.zkevm.domain.BlocksConflation
-import net.consensys.zkevm.domain.FinalizationSubmittedEvent
+import linea.domain.Batch
+import linea.domain.Blob
+import linea.domain.BlobRecord
+import linea.domain.BlobSubmittedEvent
+import linea.domain.BlocksConflation
+import linea.domain.FinalizationSubmittedEvent
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.function.Supplier
 

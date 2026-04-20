@@ -5,11 +5,11 @@ import build.linea.clients.GetZkEVMStateMerkleProofResponse
 import build.linea.clients.StateManagerClientV1
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.mapBoth
+import linea.clients.GenerateTracesResponse
+import linea.clients.TracesConflationClientV2
+import linea.clients.TracesServiceErrorType
 import linea.domain.BlockInterval
-import net.consensys.linea.errors.ErrorResponse
-import net.consensys.zkevm.coordinator.clients.GenerateTracesResponse
-import net.consensys.zkevm.coordinator.clients.TracesConflationClientV2
-import net.consensys.zkevm.coordinator.clients.TracesServiceErrorType
+import linea.error.ErrorResponse
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

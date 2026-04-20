@@ -17,9 +17,12 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.junit5.VertxExtension
+import linea.clients.GenerateTracesResponse
+import linea.clients.GetTracesCountersResponse
+import linea.clients.TracesServiceErrorType
+import linea.error.ErrorResponse
 import linea.kotlin.encodeHex
 import net.consensys.linea.async.get
-import net.consensys.linea.errors.ErrorResponse
 import net.consensys.linea.jsonrpc.client.JsonRpcClient
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory

@@ -2,9 +2,9 @@ package net.consensys.linea.contract.l1
 
 import build.linea.contract.ValidiumV1
 import linea.contract.l1.LineaValidiumContractVersion
+import linea.domain.BlobRecord
+import linea.domain.ProofToFinalize
 import linea.kotlin.toBigInteger
-import net.consensys.zkevm.domain.BlobRecord
-import net.consensys.zkevm.domain.ProofToFinalize
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.DynamicBytes
 import org.web3j.abi.datatypes.Function

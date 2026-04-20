@@ -7,7 +7,7 @@ import io.vertx.micrometer.backends.NoopBackendRegistry
 import io.vertx.sqlclient.SqlClient
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.DatabaseConfig
-import linea.persistence.ftx.DisabledForcedTransactionsDao
+import linea.persistence.DisabledForcedTransactionsDao
 import linea.persistence.ftx.PostgresForcedTransactionsDao
 import linea.persistence.ftx.RetryingPostgresForcedTransactionsDao
 import net.consensys.linea.async.toSafeFuture

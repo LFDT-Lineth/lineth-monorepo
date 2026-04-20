@@ -6,9 +6,15 @@ import com.github.michaelbull.result.mapEither
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.core.json.get
+import linea.clients.GenerateTracesResponse
+import linea.clients.GetTracesCountersResponse
+import linea.clients.TracesConflationClientV2
+import linea.clients.TracesConflationVirtualBlockClientV1
+import linea.clients.TracesCountersClientV2
+import linea.clients.TracesServiceErrorType
+import linea.error.ErrorResponse
 import linea.kotlin.encodeHex
 import net.consensys.linea.async.toSafeFuture
-import net.consensys.linea.errors.ErrorResponse
 import net.consensys.linea.jsonrpc.JsonRpcRequest
 import net.consensys.linea.jsonrpc.JsonRpcRequestListParams
 import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse

@@ -3,7 +3,10 @@ package net.consensys.zkevm.coordinator.clients
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.runCatching
 import io.vertx.core.json.JsonObject
-import net.consensys.linea.errors.ErrorResponse
+import linea.clients.GenerateTracesResponse
+import linea.clients.GetTracesCountersResponse
+import linea.clients.TracesServiceErrorType
+import linea.error.ErrorResponse
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
 import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse
 import net.consensys.linea.traces.TracesCounters

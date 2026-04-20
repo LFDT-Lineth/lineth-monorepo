@@ -2,9 +2,9 @@ package net.consensys.zkevm.coordinator.clients.prover.serialization
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import linea.domain.ProofToFinalize
 import linea.kotlin.byteArrayListEquals
 import linea.kotlin.byteArrayListHashCode
-import net.consensys.zkevm.domain.ProofToFinalize
 import kotlin.time.Instant
 
 data class ProofToFinalizeJsonResponse(

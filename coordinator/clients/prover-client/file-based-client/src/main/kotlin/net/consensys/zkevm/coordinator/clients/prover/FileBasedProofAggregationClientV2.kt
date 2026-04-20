@@ -2,18 +2,18 @@ package net.consensys.zkevm.coordinator.clients.prover
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.vertx.core.Vertx
+import linea.clients.ProofAggregationProverClientV2
+import linea.crypto.HashFunction
+import linea.crypto.Sha256HashFunction
+import linea.domain.AggregationProofIndex
+import linea.domain.CompressionProofIndex
+import linea.domain.ExecutionProofIndex
+import linea.domain.InvalidityProofIndex
+import linea.domain.ProofToFinalize
+import linea.domain.ProofsToAggregate
 import linea.kotlin.encodeHex
-import net.consensys.zkevm.coordinator.clients.ProofAggregationProverClientV2
 import net.consensys.zkevm.coordinator.clients.prover.serialization.JsonSerialization
 import net.consensys.zkevm.coordinator.clients.prover.serialization.ProofToFinalizeJsonResponse
-import net.consensys.zkevm.domain.AggregationProofIndex
-import net.consensys.zkevm.domain.CompressionProofIndex
-import net.consensys.zkevm.domain.ExecutionProofIndex
-import net.consensys.zkevm.domain.InvalidityProofIndex
-import net.consensys.zkevm.domain.ProofToFinalize
-import net.consensys.zkevm.domain.ProofsToAggregate
-import net.consensys.zkevm.ethereum.crypto.HashFunction
-import net.consensys.zkevm.ethereum.crypto.Sha256HashFunction
 import net.consensys.zkevm.fileio.FileReader
 import net.consensys.zkevm.fileio.FileWriter
 import org.apache.logging.log4j.LogManager

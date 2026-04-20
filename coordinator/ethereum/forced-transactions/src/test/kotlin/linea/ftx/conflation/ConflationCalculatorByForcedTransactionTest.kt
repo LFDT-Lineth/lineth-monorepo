@@ -1,10 +1,10 @@
 package linea.ftx.conflation
 
+import linea.domain.BlockCounters
+import linea.domain.ConflationTrigger
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.forcedtx.ForcedTransactionInclusionStatus
 import net.consensys.linea.traces.TracesCountersV4
-import net.consensys.zkevm.domain.BlockCounters
-import net.consensys.zkevm.domain.ConflationTrigger
 import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculator
 import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCounters
 import org.assertj.core.api.Assertions.assertThat

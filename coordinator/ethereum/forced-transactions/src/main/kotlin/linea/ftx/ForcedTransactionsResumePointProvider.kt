@@ -2,8 +2,8 @@ package linea.ftx
 
 import linea.contract.l1.LineaRollupSmartContractClientReadOnlyFinalizedStateProvider
 import linea.domain.BlockParameter
-import linea.persistence.ftx.ForcedTransactionsDao
-import net.consensys.zkevm.domain.ForcedTransactionRecord
+import linea.persistence.ForcedTransactionRecord
+import linea.persistence.ForcedTransactionsDao
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

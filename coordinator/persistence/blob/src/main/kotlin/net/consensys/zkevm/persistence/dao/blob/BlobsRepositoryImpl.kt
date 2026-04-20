@@ -1,8 +1,8 @@
 package net.consensys.zkevm.persistence.dao.blob
 
-import net.consensys.zkevm.domain.BlobRecord
-import net.consensys.zkevm.persistence.BlobsRepository
-import net.consensys.zkevm.persistence.db.DuplicatedRecordException
+import linea.domain.BlobRecord
+import linea.error.DuplicatedRecordException
+import linea.persistence.BlobsRepository
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 

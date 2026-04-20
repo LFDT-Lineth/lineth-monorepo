@@ -1,8 +1,8 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
+import linea.domain.BlockCounters
+import linea.domain.ConflationTrigger
 import net.consensys.linea.traces.TracesCounters
-import net.consensys.zkevm.domain.BlockCounters
-import net.consensys.zkevm.domain.ConflationTrigger
 
 data class ConflationCounters(
   var dataSize: UInt = 0u,
