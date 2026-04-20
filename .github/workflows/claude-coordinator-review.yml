@@ -27,7 +27,7 @@ jobs:
 
       - name: Run Claude Coordinator Review
         id: review
-        uses: anthropics/claude-code-action@1c8b699d43e9bfed42b48ef15da85d89bab70960 #v1.0.94
+        uses: anthropics/claude-code-action@38ec876110f9fbf8b950c79f534430740c3ac009 #v1.0.101
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_args: --model claude-opus-4-6
