@@ -11,5 +11,5 @@ export default defineConfig({
   minify: true,
   splitting: false,
   outDir: "dist",
-  external: ["node-forge", "crypto", "viem"], // Avoid 'Error: Dynamic require of "crypto" is not supported' when used from native-yield-automation-service
+  external: ["node-forge", "crypto", "viem", "@aws-sdk/client-kms"],
 });

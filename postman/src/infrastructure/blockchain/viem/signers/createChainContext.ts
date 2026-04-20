@@ -57,7 +57,7 @@ export async function createChainContext(
 
   const publicClient = createPublicClient({ chain, transport: http(rpcUrl) });
 
-  const signer = createSignerClient(signerConfig, logger, rpcUrl, chain);
+  const signer = await createSignerClient(signerConfig, logger, rpcUrl, chain);
   const account = contractSignerToViemAccount(signer);
 
   const walletClient = createWalletClient({

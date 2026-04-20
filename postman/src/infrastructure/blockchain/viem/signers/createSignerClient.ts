@@ -1,4 +1,5 @@
 import {
+  AwsKmsSignerClientAdapter,
   IContractSignerClient,
   ILogger,
   ViemWalletSignerClientAdapter,
@@ -10,26 +11,42 @@ import { SignerConfig } from "./SignerConfig";
 
 /**
  * Factory that creates an IContractSignerClient from a SignerConfig.
- * Dispatches to ViemWalletSignerClientAdapter (private-key) or
- * Web3SignerClientAdapter (web3signer) transparently.
+ * Dispatches to:
+ *   - ViemWalletSignerClientAdapter (private-key)
+ *   - Web3SignerClientAdapter (web3signer)
+ *   - AwsKmsSignerClientAdapter (aws-kms, initialised asynchronously)
  */
-export function createSignerClient(
+export async function createSignerClient(
   config: SignerConfig,
   logger: ILogger,
   rpcUrl: string,
   chain: Chain,
-): IContractSignerClient {
-  if (config.type === "private-key") {
-    return new ViemWalletSignerClientAdapter(logger, rpcUrl, config.privateKey, chain);
-  }
+): Promise<IContractSignerClient> {
+  switch (config.type) {
+    case "private-key":
+      return new ViemWalletSignerClientAdapter(logger, rpcUrl, config.privateKey, chain);
 
-  return new Web3SignerClientAdapter(
-    logger,
-    config.endpoint,
-    config.publicKey,
-    config.tls?.keyStorePath ?? "",
-    config.tls?.keyStorePassword ?? "",
-    config.tls?.trustStorePath ?? "",
-    config.tls?.trustStorePassword ?? "",
-  );
+    case "web3signer":
+      return new Web3SignerClientAdapter(
+        logger,
+        config.endpoint,
+        config.publicKey,
+        config.tls?.keyStorePath ?? "",
+        config.tls?.keyStorePassword ?? "",
+        config.tls?.trustStorePath ?? "",
+        config.tls?.trustStorePassword ?? "",
+      );
+
+    case "aws-kms":
+      return AwsKmsSignerClientAdapter.create(
+        logger,
+        config.kmsKeyId,
+        config.region ? { region: config.region } : undefined,
+      );
+
+    default: {
+      const exhaustiveCheck: never = config;
+      throw new Error(`Unsupported signer type: ${(exhaustiveCheck as { type: string }).type}`);
+    }
+  }
 }

@@ -24,10 +24,10 @@ jest.mock("viem", () => {
 });
 
 jest.mock("../createSignerClient", () => ({
-  createSignerClient: jest.fn(() => ({
+  createSignerClient: jest.fn().mockResolvedValue({
     getAddress: jest.fn(() => MOCK_ADDRESS),
     sign: jest.fn(),
-  })),
+  }),
 }));
 
 jest.mock("../contractSignerToViemAccount", () => ({

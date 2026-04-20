@@ -22,6 +22,15 @@ function buildSignerConfig(prefix: "L1" | "L2"): SignerConfig {
     };
   }
 
+  if (signerType === "aws-kms") {
+    const region = process.env[`${prefix}_AWS_KMS_REGION`];
+    return {
+      type: "aws-kms",
+      kmsKeyId: process.env[`${prefix}_AWS_KMS_KEY_ID`] ?? "",
+      ...(region ? { region } : {}),
+    };
+  }
+
   return {
     type: "private-key",
     privateKey: (process.env[`${prefix}_SIGNER_PRIVATE_KEY`] ?? "0x") as `0x${string}`,

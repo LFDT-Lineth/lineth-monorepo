@@ -313,6 +313,64 @@ describe("loadPostmanOptionsFromEnv", () => {
     );
   });
 
+  it("should build aws-kms signer config when L1_SIGNER_TYPE is aws-kms", async () => {
+    await withEnv(
+      {
+        ...TEST_ENV_VARS,
+        L1_SIGNER_TYPE: "aws-kms",
+        L1_AWS_KMS_KEY_ID: "alias/linea-postman-l1",
+      },
+      () => {
+        const options = loadPostmanOptionsFromEnv();
+
+        expect(options.l1Options.claiming.signer).toEqual({
+          type: "aws-kms",
+          kmsKeyId: "alias/linea-postman-l1",
+        });
+      },
+    );
+  });
+
+  it("should include AWS region for aws-kms signer when L1_AWS_KMS_REGION is set", async () => {
+    await withEnv(
+      {
+        ...TEST_ENV_VARS,
+        L1_SIGNER_TYPE: "aws-kms",
+        L1_AWS_KMS_KEY_ID: "arn:aws:kms:eu-west-1:000000000000:key/abcd-1234",
+        L1_AWS_KMS_REGION: "eu-west-1",
+      },
+      () => {
+        const options = loadPostmanOptionsFromEnv();
+
+        expect(options.l1Options.claiming.signer).toEqual({
+          type: "aws-kms",
+          kmsKeyId: "arn:aws:kms:eu-west-1:000000000000:key/abcd-1234",
+          region: "eu-west-1",
+        });
+      },
+    );
+  });
+
+  it("should build aws-kms signer config for L2 when L2_SIGNER_TYPE is aws-kms", async () => {
+    await withEnv(
+      {
+        ...TEST_ENV_VARS,
+        L2_SIGNER_TYPE: "aws-kms",
+        L2_AWS_KMS_KEY_ID: "alias/linea-postman-l2",
+        L2_AWS_KMS_REGION: "us-east-1",
+      },
+      () => {
+        const options = loadPostmanOptionsFromEnv();
+
+        expect(options.l2Options.claiming.signer).toEqual({
+          type: "aws-kms",
+          kmsKeyId: "alias/linea-postman-l2",
+          region: "us-east-1",
+        });
+      },
+    );
+  });
+
   it("should build web3signer config for L2 when L2_SIGNER_TYPE is web3signer", async () => {
     await withEnv(
       {

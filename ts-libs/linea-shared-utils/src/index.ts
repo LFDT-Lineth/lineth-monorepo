@@ -1,6 +1,7 @@
 export * from "./applications/ExpressApiApplication";
 export * from "./clients/BeaconNodeApiClient";
 export * from "./clients/OAuth2TokenClient";
+export * from "./clients/AwsKmsSignerClientAdapter";
 export * from "./clients/ViemWalletSignerClientAdapter";
 export * from "./clients/Web3SignerClientAdapter";
 export * from "./clients/ViemBlockchainClientAdapter";
@@ -26,3 +27,5 @@ export * from "./utils/http";
 export * from "./utils/maths";
 export * from "./utils/time";
 export * from "./utils/string";
+export * from "./utils/ec-publickey";
+export * from "./utils/ecdsa-signature";

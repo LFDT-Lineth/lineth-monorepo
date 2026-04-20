@@ -31,6 +31,11 @@ const signerConfigSchema = z.discriminatedUnion("type", [
     publicKey: hexString,
     tls: web3SignerTlsConfigSchema.optional(),
   }),
+  z.object({
+    type: z.literal("aws-kms"),
+    kmsKeyId: z.string().min(1),
+    region: z.string().min(1).optional(),
+  }),
 ]);
 
 const calldataFilterSchema = z.object({

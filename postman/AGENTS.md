@@ -122,7 +122,7 @@ Migrations are written manually — TypeORM CLI auto-generation is not used due 
 ## Postman-Specific Safety Rules
 
 - Never log private keys, signer secrets, or database passwords
-- Signer configuration supports `private-key` and `web3signer` types — test both paths when modifying signer logic
+- Signer configuration supports `private-key`, `web3signer`, and `aws-kms` types — test all three paths when modifying signer logic. The `aws-kms` adapter requires an async `init()` (performed inside `createSignerClient`), so `createSignerClient` is `async` and must be awaited.
 - Nonce management is critical for transaction ordering — changes to `NonceManager` require careful review
 - Gas bumping (`MAX_BUMPS_PER_CYCLE`, `MAX_RETRY_CYCLES`) affects transaction cost — validate defaults in `core/constants/common.ts`
 - Database migration files are append-only — never modify existing migrations

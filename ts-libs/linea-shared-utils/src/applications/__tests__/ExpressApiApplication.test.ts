@@ -1,9 +1,9 @@
-import { IMetricsService } from "@consensys/linea-shared-utils";
 import axios from "axios";
 import { mock, MockProxy } from "jest-mock-extended";
 import { Registry } from "prom-client";
 
 import { createLoggerMock } from "../../__tests__/helpers/factories";
+import { IMetricsService } from "../../core/services/IMetricsService";
 import { ExpressApiApplication } from "../ExpressApiApplication";
 
 enum ExampleMetrics {
