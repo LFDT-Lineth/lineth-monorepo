@@ -29,7 +29,7 @@ jobs:
       cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Tracer Environment (for linea-besu-package build)
         if: ${{ inputs.linea_besu_package_image_tag == '' }}
