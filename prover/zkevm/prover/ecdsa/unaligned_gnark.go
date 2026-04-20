@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
+	commoncs "github.com/consensys/linea-monorepo/prover/zkevm/prover/common/common_constraints"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/generic"
 
 	"github.com/consensys/gnark-crypto/ecc/secp256k1/ecdsa"
@@ -31,6 +32,14 @@ type UnalignedGnarkData struct {
 	GnarkIndex          ifaces.Column
 	GnarkPublicKeyIndex ifaces.Column
 	GnarkData           limbs.Uint128Le
+
+	// IsPkHashFilter is like IsPublicKey but zero on the pk-rows of failed
+	// ECRECOVER frames. It gates the keccak provider's ToHash filter so that
+	// pk bytes of failed ECRECOVERs (where the EVM returned 0x00..00 and the
+	// address projection is disabled on both sides) are not sent to keccak.
+	// Without it, keccak would produce an "orphan" hash output that no
+	// consumer claims, breaking the KECCAK_RES projection.
+	IsPkHashFilter ifaces.Column
 
 	// auxiliary columns
 	IsIndex0     ifaces.Column
@@ -72,6 +81,7 @@ func newUnalignedGnarkData(comp *wizard.CompiledIOP, size int, src *unalignedGna
 		IsPublicKey:         createCol("IS_PUBLIC_KEY"),
 		GnarkIndex:          createCol("GNARK_INDEX"),
 		GnarkPublicKeyIndex: createCol("GNARK_PUBLIC_KEY_INDEX"),
+		IsPkHashFilter:      createCol("IS_PK_HASH_FILTER"),
 
 		IsEcrecoverAndFetching:   createCol("IS_ECRECOVER_AND_FETCHING"),
 		IsNotPublicKeyAndPushing: createCol("IS_NOT_PUBLIC_KEY_AND_PUSHING"),
@@ -80,6 +90,7 @@ func newUnalignedGnarkData(comp *wizard.CompiledIOP, size int, src *unalignedGna
 		Size: size,
 	}
 
+	res.csPublicKeyFilter(comp, src)
 	res.csDataIds(comp)
 	res.csIndex(comp, src)
 	res.csProjectionEcRecover(comp, src)
@@ -93,6 +104,41 @@ func newUnalignedGnarkData(comp *wizard.CompiledIOP, size int, src *unalignedGna
 	// the projection to aligned gnark data we do not use the data.
 
 	return res
+}
+
+func (res *UnalignedGnarkData) csPublicKeyFilter(
+	comp *wizard.CompiledIOP,
+	src *unalignedGnarkDataSource,
+) {
+	// IsPkHashFilter must be binary and must exactly select the pk rows that
+	// participate in the address-keccak hash:
+	//   - all tx-signature pk rows
+	//   - successful ECRECOVER pk rows
+	//   - no failed ECRECOVER pk rows
+	//
+	// The filter cannot use src.SuccessBit from the current row directly because
+	// ECRECOVER SUCCESS_BIT lives in the fetching phase, while IsPublicKey lives
+	// in the first 4 rows of the later pushing phase. The 10-row shift aligns
+	// the current pk row with the corresponding fetching row of its frame.
+	commoncs.MustBeBinary(comp, res.IsPkHashFilter)
+	comp.InsertGlobal(
+		ROUND_NR,
+		ifaces.QueryIDf("%v_%v", NAME_UNALIGNED_GNARKDATA, "PK_HASH_FILTER"),
+		sym.Sub(
+			res.IsPkHashFilter,
+			sym.Mul(
+				res.IsPublicKey,
+				sym.Add(
+					// Source=0 <> ECRecover, Source=1 <> TxSignature
+					src.Source, // if source is TxSignature, filter all rows where IsPublicKey=1
+					sym.Mul( // if source is ECRecover, filter only rows where IsPublicKey=1 and SuccessBit=1
+						sym.Sub(1, src.Source),
+						column.Shift(src.SuccessBit, -nbRowsPerEcRecFetching),
+					),
+				),
+			),
+		),
+	)
 }
 
 func (d *UnalignedGnarkData) Assign(run *wizard.ProverRuntime, src *unalignedGnarkDataSource, txSigs TxSignatureGetter) {
@@ -132,10 +178,11 @@ func (d *UnalignedGnarkData) assignUnalignedGnarkData(run *wizard.ProverRuntime,
 		// a signature
 		txCounter = 0
 
-		resIsPublicKey  = common.NewVectorBuilder(d.IsPublicKey)
-		resGnarkIndex   = common.NewVectorBuilder(d.GnarkIndex)
-		resGnarkPkIndex = common.NewVectorBuilder(d.GnarkPublicKeyIndex)
-		resGnarkData    = limbs.NewVectorBuilder(d.GnarkData.AsDynSize())
+		resIsPublicKey    = common.NewVectorBuilder(d.IsPublicKey)
+		resIsPkHashFilter = common.NewVectorBuilder(d.IsPkHashFilter)
+		resGnarkIndex     = common.NewVectorBuilder(d.GnarkIndex)
+		resGnarkPkIndex   = common.NewVectorBuilder(d.GnarkPublicKeyIndex)
+		resGnarkData      = limbs.NewVectorBuilder(d.GnarkData.AsDynSize())
 	)
 
 	recoverPk := func(h [32]byte, r, s, v *big.Int) (pkX, pkY *big.Int) {
@@ -172,6 +219,13 @@ ecdsaLoop:
 			r, s, v          *big.Int
 			h                [32]byte
 			buff             [32]byte
+			// skipRecover is set for ECRECOVER frames whose SUCCESS_BIT is 0,
+			// i.e. on-chain calls where the precompile returned 0x00..00 for
+			// inputs that don't map to a valid secp256k1 point. The circuit
+			// gates the pk-equality check on SUCCESS_BIT (see circuit.go), so
+			// we assign zero instead of running pk.RecoverFrom — which would
+			// panic on those inputs.
+			skipRecover bool
 		)
 
 		switch {
@@ -196,7 +250,9 @@ ecdsaLoop:
 			}
 
 			// The success bit
-			dataForCurrEcdsa[12] = limbs.RowFromKoala[limbs.LittleEndian](sourceSuccessBit.Get(i), 128)
+			successBit := sourceSuccessBit.Get(i)
+			dataForCurrEcdsa[12] = limbs.RowFromKoala[limbs.LittleEndian](successBit, 128)
+			skipRecover = successBit.IsZero()
 
 			// The ecrecover bit
 			dataForCurrEcdsa[13] = limbs.RowFromInt[limbs.LittleEndian](1, 128)
@@ -254,8 +310,15 @@ ecdsaLoop:
 		}
 
 		// Retro-insert the public key in the lower positions from the h, r, s,
-		// v that we just parsed.
-		pkX, pkY := recoverPk(h, r, s, v)
+		// v that we just parsed. For ECRECOVER frames with SUCCESS_BIT=0 the
+		// EVM returns 0x00..00 (the recovery would fail), so we write zero and
+		// let the circuit's isFailure gate the pk-equality assertion.
+		var pkX, pkY *big.Int
+		if skipRecover {
+			pkX, pkY = new(big.Int), new(big.Int)
+		} else {
+			pkX, pkY = recoverPk(h, r, s, v)
+		}
 		pkX.FillBytes(buff[:])
 		dataForCurrEcdsa[0] = limbs.RowFromBytes[limbs.LittleEndian](buff[:16])
 		dataForCurrEcdsa[1] = limbs.RowFromBytes[limbs.LittleEndian](buff[16:])
@@ -270,13 +333,23 @@ ecdsaLoop:
 
 		// Prepending with zeroes every frame to "skip" the fetching phase
 		resIsPublicKey.PushSeqOfZeroes(int(prependZeroCount))
+		resIsPkHashFilter.PushSeqOfZeroes(int(prependZeroCount))
 		resGnarkIndex.PushSeqOfZeroes(int(prependZeroCount))
 		resGnarkPkIndex.PushSeqOfZeroes(int(prependZeroCount))
 		resGnarkData.PushSeqOfZeroes(int(prependZeroCount))
 
-		// Public Key phase
+		// Public Key phase. IsPkHashFilter is 1 on pk-rows of frames that
+		// must be hashed (successful ECRECOVER or any TX) and 0 on pk-rows
+		// of failed ECRECOVER frames — skipping the hash prevents a keccak
+		// output that has no consumer (the address-module claim is also
+		// zeroed out for those frames).
 		for i := 0; i < nbRowsPerPublicKey; i++ {
 			resIsPublicKey.PushOne()
+			if skipRecover {
+				resIsPkHashFilter.PushZero()
+			} else {
+				resIsPkHashFilter.PushOne()
+			}
 			resGnarkPkIndex.PushInt(i)
 			resGnarkIndex.PushInt(i)
 			resGnarkData.Push(dataForCurrEcdsa[i])
@@ -285,6 +358,7 @@ ecdsaLoop:
 		// Other phase
 		for i := nbRowsPerPublicKey; i < nbRowsPerGnarkPushing; i++ {
 			resIsPublicKey.PushZero()
+			resIsPkHashFilter.PushZero()
 			resGnarkPkIndex.PushZero()
 			resGnarkIndex.PushInt(i)
 			resGnarkData.Push(dataForCurrEcdsa[i])
@@ -292,6 +366,7 @@ ecdsaLoop:
 	}
 
 	resIsPublicKey.PadAndAssign(run)
+	resIsPkHashFilter.PadAndAssign(run)
 	resGnarkIndex.PadAndAssign(run)
 	resGnarkPkIndex.PadAndAssign(run)
 	resGnarkData.PadAndAssignZero(run)

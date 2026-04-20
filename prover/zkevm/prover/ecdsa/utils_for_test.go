@@ -24,6 +24,7 @@ func commitEcRecTxnData(comp *wizard.CompiledIOP, size1 int, size int, ac *antic
 
 	ecRec = &EcRecover{
 		EcRecoverIsRes: comp.InsertCommit(0, ifaces.ColIDf("ECRECOVER_ISRES"), size, true),
+		SuccessBit:     comp.InsertCommit(0, ifaces.ColIDf("ECRECOVER_SUCCESSBIT"), size, true),
 		Limb:           limbs.NewUint128Le(comp, "ECRECOVER_LIMB", size),
 	}
 
@@ -47,6 +48,7 @@ func AssignEcRecTxnData(
 		permTrace = keccak.GenerateTrace(streams)
 
 		isEcRecRes  = common.NewVectorBuilder(ecRec.EcRecoverIsRes)
+		successBit  = common.NewVectorBuilder(ecRec.SuccessBit)
 		ecRecLimb   = limbs.NewVectorBuilder(ecRec.Limb.AsDynSize())
 		txnCt       = common.NewVectorBuilder(td.Ct)
 		txnUser     = common.NewVectorBuilder(td.User)
@@ -78,19 +80,23 @@ func AssignEcRecTxnData(
 
 		// Pushing the hi part
 		isEcRecRes.PushOne()
+		successBit.PushOne()
 		ecRecLimb.PushLeftPaddedBytes(hashRes[12:16])
 
 		// Pushing the lo part
 		isEcRecRes.PushOne()
+		successBit.PushOne()
 		ecRecLimb.PushBytes(hashRes[16:])
 
 		// Fill the rest of the frame with zeroes
 		isEcRecRes.PushSeqOfZeroes(nbRowsPerEcRec - 2)
+		successBit.PushSeqOfZeroes(nbRowsPerEcRec - 2)
 		ecRecLimb.PushSeqOfZeroes(nbRowsPerEcRec - 2)
 	}
 
 	ecRecLimb.PadAndAssignZero(run)
 	isEcRecRes.PadAndAssign(run)
+	successBit.PadAndAssign(run)
 	txnCt.PadAndAssign(run)
 	txnUser.PadAndAssign(run)
 	txnSelector.PadAndAssign(run)

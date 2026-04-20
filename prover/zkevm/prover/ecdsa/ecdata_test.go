@@ -22,7 +22,7 @@ func TestEcDataAssignData(t *testing.T) {
 		t.Fatal(err)
 	}
 	limits := &Settings{
-		MaxNbEcRecover: 3, // data has two entires, test if can align when have bigger limit
+		MaxNbEcRecover: 3, // data has three entires, test if can align when have bigger limit
 	}
 	var ecRec *EcRecover
 	var ecSrc *ecDataSource

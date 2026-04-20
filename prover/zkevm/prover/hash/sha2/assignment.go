@@ -70,10 +70,6 @@ func (sbh *sha2BlockModule) Run(run *wizard.ProverRuntime) {
 			// include in the loop boundary as it features a sanity-check.
 			if isFirstLaneOfNewHash[cursorInp].IsZero() && cursorInp+1 < numRowInp && isFirstLaneOfNewHash[cursorInp+1].IsOne() {
 
-				if selector[cursorInp].IsZero() {
-					utils.Panic("unexpected: at row %v, the selector is zero but isNewHash is one", cursorInp)
-				}
-
 				cursorInp++
 				return blocks
 			}
@@ -113,9 +109,11 @@ func (sbh *sha2BlockModule) Run(run *wizard.ProverRuntime) {
 	sbh.CanBeBlockOfInstance.Assign(run)
 	sbh.CanBeEndOfInstance.Assign(run)
 
-	for i := range sbh.ProverActions {
-		sbh.ProverActions[i].Run(run)
+	// Run the LimbsIsZero prover action, then compute the sum and run EntireLimbsIntervalIsZero.
+	for _, pa := range sbh.ProverActions {
+		pa.Run(run)
 	}
+	sbh.EntireLimbsIntervalIsZero.Run(run)
 
 	if sbh.HasCircuit {
 		// this is guarded by a once, so it is safe to call multiple times

@@ -37,6 +37,7 @@ func (ugd *UnalignedGnarkData) cols() []ifaces.Column {
 	return append(
 		[]ifaces.Column{
 			ugd.IsPublicKey,
+			ugd.IsPkHashFilter,
 			ugd.GnarkIndex,
 			ugd.GnarkPublicKeyIndex,
 			ugd.IsEcrecoverAndFetching,

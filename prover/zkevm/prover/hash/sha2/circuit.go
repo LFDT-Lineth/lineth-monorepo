@@ -47,15 +47,14 @@ func (sbpi *sha2BlockPermutationInstance) checkSha2Permutation(api frontend.API)
 		panic(fmt.Sprintf("unexpected error when instantiating `uapi`: %v", err.Error()))
 	}
 
-	var (
-		// If the new digest is zero, then the block check is skipped as this is
-		// considered a padding instance. The wizard should externally check that
-		// NewDigest = 0x0 is forbidden.
-		inpIsZero = api.Add(
-			api.IsZero(sbpi.NewDigest[0]),
-			api.IsZero(sbpi.NewDigest[1]),
-		)
-	)
+	// Count of zero limbs; equals len(NewDigest) iff NewDigest is all-zero.
+	// When equal, skip permutation check for padded / unused Plonk instances.
+	// Real compressions must not be all-zero in Limbs: see sha2_block.go
+	// (IsActive × CanBeBeginning × EntireLimbsNewStateIsZero).
+	var allLimbsAreZero frontend.Variable = 0
+	for i := range sbpi.NewDigest {
+		allLimbsAreZero = api.Add(allLimbsAreZero, api.IsZero(sbpi.NewDigest[i]))
+	}
 
 	var (
 		prevDigest = cast16xu16To8xU32s(api, sbpi.PrevDigest)
@@ -72,10 +71,9 @@ func (sbpi *sha2BlockPermutationInstance) checkSha2Permutation(api frontend.API)
 	recomputedNewDigest := sha2.Permute(uapi, prevDigest, blockBytes)
 
 	for i := range recomputedNewDigest {
-		// This checks that newDigest == recomputedDigest unless inpIsZero == 2
 		api.AssertIsEqual(
 			api.Mul(
-				api.Sub(inpIsZero, 2),
+				api.Sub(allLimbsAreZero, len(sbpi.NewDigest)),
 				api.Sub(
 					uapi.ToValue(recomputedNewDigest[i]),
 					uapi.ToValue(newDigest[i]),

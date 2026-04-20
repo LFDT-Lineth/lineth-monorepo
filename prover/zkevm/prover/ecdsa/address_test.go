@@ -47,6 +47,7 @@ func TestAddress(t *testing.T) {
 		uaGnark = &UnalignedGnarkData{
 			GnarkPublicKeyIndex: gbmGnark.Index,
 			IsPublicKey:         gbmGnark.ToHash,
+			IsPkHashFilter:      gbmGnark.ToHash,
 		}
 
 		uaGnark.GnarkData = gbmGnark.Limbs.ToLittleEndianUint()

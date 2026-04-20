@@ -1,5 +1,5 @@
 environment = "mainnet"
-version = "6.2.1"                            # TODO @gbotrel hunt all version definitions.
+version = "7.0.1"                            # TODO @gbotrel hunt all version definitions.
 assets_dir = "./prover-assets"
 log_level = 4                                  # TODO @gbotrel will be refactored with new logger.
 
@@ -9,10 +9,10 @@ spot_instance_reclaim_time_seconds = 120
 termination_grace_period_seconds = 1800
 
 [execution]
-prover_mode = "full"
+prover_mode = "limitless"
 conflated_traces_dir = "./"
 requests_root_dir = "./"
-limitless_with_debug = true
+limitless_with_debug = false
 ignore_compatibility_check = false
 keep_traces_until_block = 0
 serialization = false

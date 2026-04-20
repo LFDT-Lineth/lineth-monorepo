@@ -58,7 +58,7 @@ func NewSha2ZkEvm(comp *wizard.CompiledIOP, s Settings, arith *arithmetization.A
 				HashNum: arith.MashedColumnOf(comp, "shakiradata", "ID"),
 				HashHi:  arith.GetLimbsOfU128Be(comp, "shakiradata", "LIMB"),
 				HashLo:  arith.GetLimbsOfU128Be(comp, "shakiradata", "LIMB"),
-				// Before, we usse to pass column.Shift(IsHash, -1) but this does
+				// Before, we used to pass column.Shift(IsHash, -1) but this does
 				// not work with the prover distribution as the column is used as
 				// a filter for a projection query.
 				IsHashHi: arith.ColumnOf(comp, "shakiradata", "SELECTOR_SHA2_RES_HI"),

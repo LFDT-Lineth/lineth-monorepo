@@ -5,6 +5,7 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
+	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/plonk"
 	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
@@ -40,8 +41,8 @@ const (
 )
 
 var (
-	// initializationVector encodes the initialization vector of SHA2 in 2 field
-	// elements storing each 128 bytes of the IV in big endian order.
+	// initializationVector is the SHA-256 IV as 16 big-endian uint16 limbs
+	// (32 bytes total), each limb stored in the low 16 bits of a field element.
 	//
 	// 0x6A09E667BB67AE853C6EF372A54FF53A510E527F9B05688C1F83D9AB5BE0CD19
 	initializationVector = [16]field.Element{
@@ -70,8 +71,8 @@ var (
 // verification circuit.
 type sha2BlocksInputs struct {
 
-	// Name allows the prover to provide context in a string which we derive to
-	// to derive the name of the constraints and queries of the module.
+	// Name allows the prover to provide a string context from which we derive
+	// the names of the constraints and queries of the module.
 	Name string
 
 	// MaxNbBlock corresponds to the maximum number of blocks that can be handled
@@ -148,8 +149,11 @@ type sha2BlockModule struct {
 	// span of a hash.
 	Hash [numLimbsPerState]ifaces.Column
 
-	HashIsZero    [numLimbsPerState]ifaces.Column
-	ProverActions []wizard.ProverAction
+	// LimbsIsZero is 1 iff limb is zero.
+	LimbsIsZero ifaces.Column
+	// EntireLimbsIntervalIsZero is 1 iff every  limb in the interval equivalent with newState is zero.
+	EntireLimbsIntervalIsZero *dedicated.IsZeroCtx
+	ProverActions             []wizard.ProverAction
 
 	// GnarkCircuitConnector is the result of the Plonk alignement module. It
 	// handles all the Plonk logic responsible for verifying the correctness of
@@ -350,21 +354,34 @@ func newSha2BlockModule(comp *wizard.CompiledIOP, inp *sha2BlocksInputs) *sha2Bl
 		},
 	)
 
-	// As per the padding technique we use, the HashHi and HashLo should not
-	// be zero when isActive.
-	var ctxHash [numLimbsPerState]wizard.ProverAction
+	// Forbid all-zero newState on active compressions so gnark cannot skip Permute.
+	var limbIsZeroCtx wizard.ProverAction
+	res.LimbsIsZero, limbIsZeroCtx = dedicated.IsZero(
+		comp,
+		res.Limbs,
+	).GetColumnAndProverAction()
 
-	sumHash := sym.NewConstant(0)
-	for i := range numLimbsPerState {
-		res.HashIsZero[i], ctxHash[i] = dedicated.IsZero(comp, res.Hash[i]).GetColumnAndProverAction()
-		sumHash = sym.Add(sumHash, res.HashIsZero[i])
+	res.ProverActions = append(res.ProverActions, limbIsZeroCtx)
+
+	sumNewStateFlags := sym.NewConstant(0)
+	for i := 0; i < numLimbsPerState; i++ {
+		// shift the column by the offset of the newState interval
+		sumNewStateFlags = sym.Add(sumNewStateFlags, column.Shift(res.LimbsIsZero, numLimbsPerBlock+numLimbsPerState+i))
 	}
 
-	res.ProverActions = append(res.ProverActions, ctxHash[:]...)
-
+	lenHashCol := verifiercol.NewConstantCol(field.NewElement(uint64(numLimbsPerState)), colSize, inp.Name+"_LEN_HASH_COL")
+	res.EntireLimbsIntervalIsZero = dedicated.IsZero(
+		comp,
+		sym.Sub(lenHashCol, sumNewStateFlags),
+	)
 	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%v_HASH_CANT_BE_BOTH_ZERO", inp.Name),
-		sym.Mul(res.IsActive, sumHash),
+		// we can use CanBeBeginningOfInstance.Natural as selector since res.EntireLimbsIntervalIsZero is constructed  by the shift of the LimbsIsZero column by the offset of the newState.
+		ifaces.QueryIDf("%v_LIMBS_NEW_STATE_CANT_BE_ENTIRELY_ZERO", inp.Name),
+		sym.Mul(
+			res.IsActive,
+			res.CanBeBeginningOfInstance.Natural,
+			res.EntireLimbsIntervalIsZero.IsZero,
+		),
 	)
 
 	return res

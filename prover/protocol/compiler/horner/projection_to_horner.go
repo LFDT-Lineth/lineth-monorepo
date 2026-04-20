@@ -2,6 +2,7 @@ package horner
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
@@ -142,7 +143,21 @@ func (a AssignHornerQuery) Run(run *wizard.ProverRuntime) {
 	params.SetResult(run, a.Query)
 
 	if !params.FinalResult.IsZero() {
-		utils.Panic("expected final result to be zero, but computed %v", params.FinalResult.String())
+		// Diagnostic: dump per-part contributions so we know which projection failed.
+		perPart := params.GetPerPartResults(run, a.Query)
+		var offenders []string
+		for i := 0; i+1 < len(perPart); i += 2 {
+			sum := perPart[i].Contribution
+			sum.Add(&sum, &perPart[i+1].Contribution)
+			if !sum.IsZero() {
+				offenders = append(offenders, fmt.Sprintf("  %s count=%d vs %s count=%d (A-B=%v)",
+					perPart[i].Name, perPart[i].Count,
+					perPart[i+1].Name, perPart[i+1].Count,
+					sum.String()))
+			}
+		}
+		utils.Panic("expected final result to be zero, but computed %v (query=%v parts=%d)\nnon-canceling pairs:\n%s",
+			params.FinalResult.String(), a.Query.ID, len(a.Query.Parts), strings.Join(offenders, "\n"))
 	}
 
 	run.AssignHornerParams(a.Query.ID, params)
