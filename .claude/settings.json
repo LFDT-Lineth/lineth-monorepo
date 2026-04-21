@@ -1,0 +1,19 @@
+{
+  "Hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit",
+        "command": "./gradlew compileJava compileKotlin spotlessApply 2>&1 | tail -10"
+      }
+    ]
+  },
+  "env": {
+    "ENABLE_LSP_TOOL": "1"
+  },
+  "enabledPlugins": {
+    "typescript-lsp@claude-plugins-official": true,
+    "gopls-lsp@claude-plugins-official": true,
+    "jdtls-lsp@claude-plugins-official": true,
+    "kotlin-lsp@claude-plugins-official": true
+  }
+}

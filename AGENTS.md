@@ -52,7 +52,7 @@ Linea zkEVM monorepo — the principal repository for [Linea](https://linea.buil
 |------|---------|-------|
 | Node.js | >= 24.14.1 | See `.nvmrc` |
 | pnpm | >= 10.32.1 | Enforced via `preinstall` |
-| JDK | 21 | Coordinator, Besu plugins, transaction-exclusion-api |
+| JDK | 25 | Coordinator, Besu plugins, transaction-exclusion-api — enforced by Gradle; JDK 25+ required |
 | Gradle | 9.4+ | use ./gradlew <task> |
 | Go | 1.24.6 | Prover |
 | Docker | 24+ | Local stack, CI |
@@ -126,6 +126,46 @@ Prettier config: `prettier.config.mjs`. Formatting is integrated into `lint:fix`
 ### Typecheck
 
 - TypeScript packages: typecheck is part of build (`tsc`)
+
+## Code Intelligence (LSP)
+
+LSP provides precise navigation (go-to-definition, find-references, diagnostics) and is far more reliable than text search. Use it as the primary navigation strategy when LSP tools are available.
+
+### Setup
+
+#### Step 1 — install language server binaries
+
+| Language | macOS | Linux/Windows |
+|----------|-------|---------------|
+| TypeScript / JS | `npm install -g typescript-language-server typescript` | same |
+| Go | `go install golang.org/x/tools/gopls@latest` (ensure `$GOPATH/bin` is in `$PATH`) | same |
+| Java | `brew install jdtls` | download from [eclipse-jdtls releases](https://github.com/eclipse-jdtls/eclipse.jdt.ls/releases), symlink `bin/jdtls` into `$PATH` |
+| Kotlin | `brew install JetBrains/utils/kotlin-lsp` | download from [kotlin-lsp releases](https://github.com/Kotlin/kotlin-lsp/releases), add `bin/` to `$PATH` |
+
+#### Step 2 — install plugins in Claude Code
+
+Run `/plugins` and install `typescript-lsp`, `gopls-lsp`, `jdtls-lsp`, and `kotlin-lsp` from the
+`claude-plugins-official` marketplace.  The project's `.claude/settings.json` already enables them
+and sets `ENABLE_LSP_TOOL=1`, so no changes to your personal settings are needed.
+
+Restart Claude Code after installing.
+
+### Usage
+
+Prefer LSP tools over Grep/Glob/Read for code navigation:
+
+- `goToDefinition` / `goToImplementation` — jump to source instead of grepping
+- `findReferences` — find all call sites before renaming or changing a signature
+- `workspaceSymbol` — locate where a type or function is defined
+- `documentSymbol` — list all symbols in the current file
+- `hover` — get type info without opening the file
+- `incomingCalls` / `outgoingCalls` — trace call hierarchy
+
+Use Grep/Glob only for text/pattern searches (comments, string literals, config values) where LSP doesn't apply.
+
+**Important:** Every LSP operation requires a `filePath` pointing to a **file**, never a directory.  The file routes the request to the correct language server — pass any relevant file in the project if you don't have a specific one in mind.
+
+After writing or editing code, check LSP diagnostics and fix any type errors or missing imports before moving on.
 
 ## Code Conventions
 
