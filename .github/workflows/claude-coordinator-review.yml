@@ -80,21 +80,42 @@ jobs:
             ## Output Format
 
             Format your response as a GitHub issue body. Prefix EACH individual finding with
-            `- [ ]` (an unchecked checkbox) so team members can tick them off as addressed.
+            a plain list marker `- ` (NO checkbox on the finding itself) and append exactly
+            these four triage sub-items, indented two spaces, all left unchecked:
+
+              - [ ] ❌ won't fix
+              - [ ] ❌ false positive
+              - [ ] 🤖 to be fixed
+              - [ ] ✅ addressed/fixed
+
+            Reviewers will later tick exactly one of those sub-items to record the triage
+            decision. Do NOT put `- [ ]` on the finding line itself.
 
             Example format:
 
             ## Dead Code
-            - [ ] `coordinator/src/.../Foo.kt:42` — `unusedParam` is never read. Remove the parameter and update all call sites.
+            - `coordinator/src/.../Foo.kt:42` — `unusedParam` is never read. Remove the parameter and update all call sites.
+              - [ ] ❌ won't fix
+              - [ ] ❌ false positive
+              - [ ] 🤖 to be fixed
+              - [ ] ✅ addressed/fixed
 
             ## Duplicated / Similar Code
             No issues found.
 
             ## Anti-patterns and Code Smells
-            - [ ] `coordinator/src/.../Bar.kt:17` — Uses `!!` on a nullable result from `findOrNull` with no justification. Replace with `?: error("...")` or a safe alternative.
+            - `coordinator/src/.../Bar.kt:17` — Uses `!!` on a nullable result from `findOrNull` with no justification. Replace with `?: error("...")` or a safe alternative.
+              - [ ] ❌ won't fix
+              - [ ] ❌ false positive
+              - [ ] 🤖 to be fixed
+              - [ ] ✅ addressed/fixed
 
             ## Concurrency Issues
-            - [ ] `coordinator/src/.../Baz.kt:88` — `.get()` called on a `CompletableFuture` on the event-loop thread, which will block it. Use `.thenApply` instead.
+            - `coordinator/src/.../Baz.kt:88` — `.get()` called on a `CompletableFuture` on the event-loop thread, which will block it. Use `.thenApply` instead.
+              - [ ] ❌ won't fix
+              - [ ] ❌ false positive
+              - [ ] 🤖 to be fixed
+              - [ ] ✅ addressed/fixed
 
             Output ONLY the review content, nothing else.
 
