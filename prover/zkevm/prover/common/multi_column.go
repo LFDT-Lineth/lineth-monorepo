@@ -10,21 +10,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 )
 
-// GetMultiHandle returns a list of column handles with IDs formatted as baseColID_0, baseColID_1, ..., baseColID_{count-1}
-func GetMultiHandle(comp *wizard.CompiledIOP, baseColID string, count int) []ifaces.Column {
-	handles := make([]ifaces.Column, count)
-	for i := 0; i < count; i++ {
-		handles[i] = comp.Columns.GetHandle(ifaces.ColIDf("%s_%d", baseColID, i))
-	}
-	return handles
-}
-
-// GetMultiHandleEthAddress is the same as GetMultiHandle but returns an array of size
-// [NbLimbEthAddress].
-func GetMultiHandleEthAddress(comp *wizard.CompiledIOP, baseColID string) [NbLimbEthAddress]ifaces.Column {
-	return [NbLimbEthAddress]ifaces.Column(GetMultiHandle(comp, baseColID, NbLimbEthAddress))
-}
-
 // CreateMultiColumn creates multiple columns with names formatted as rootName_0, rootName_1, ..., rootName_{count-1}
 func CreateMultiColumn(comp *wizard.CompiledIOP, rootName string, size int, count int, withPragmas pragmas.Pragma) []ifaces.Column {
 	cols := make([]ifaces.Column, count)

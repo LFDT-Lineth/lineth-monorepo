@@ -80,10 +80,6 @@ func (a *VectorArena) Reset(offset int64) {
 	atomic.StoreInt64(&a.offset, offset)
 }
 
-func (a *VectorArena) Offset() int64 {
-	return atomic.LoadInt64(&a.offset)
-}
-
 // Get is a generic function that retrieves a typed vector from the arena.
 // It ensures that the requested type and length match the arena's chunk size.
 func Get[T any](a *VectorArena, vectorLen int) []T {

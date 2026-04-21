@@ -51,12 +51,6 @@ func (b *VectorBuilder[E]) PushRepeatBytes(x []byte, n int) {
 	}
 }
 
-// PushBigInt pushes a new big.Int to the builder
-func (b *VectorBuilder[E]) PushBigInt(x *big.Int) {
-	row := bigIntToLimbs[E](x, b.limbs.BitSize())
-	b.pushRaw(row)
-}
-
 // PushBytes pushes a new bytes to the builder
 func (b *VectorBuilder[E]) PushBytes(x []byte) {
 	row := bytesToLimbs[E](x)
@@ -94,13 +88,6 @@ func (b *VectorBuilder[E]) PushSeqOfZeroes(n int) {
 	}
 }
 
-// PushOne pushes a row storing the big integer one, respecting the endianness
-// of the limbs.
-func (b *VectorBuilder[E]) PushOne() {
-	row := bigIntToLimbs[E](big.NewInt(1), b.limbs.BitSize())
-	b.pushRaw(row)
-}
-
 // PushInt pushes a small integer to the builder. It will spread it into limbs
 // if needed.
 func (b *VectorBuilder[E]) PushInt(x int) {
@@ -117,35 +104,9 @@ func (b *VectorBuilder[E]) PeekAt(r int) row[E] {
 	return row[E]{T: rowF}
 }
 
-// PeekBigIntAt returns the last pushed row in big.Int form.
-func (b *VectorBuilder[E]) PeekBigIntAt(r int) *big.Int {
-	return limbToBigInt[E](b.PeekAt(r).T)
-}
-
 // PeekBytesAt returns the last pushed row in bytes form.
 func (b *VectorBuilder[E]) PeekBytesAt(r int) []byte {
 	return limbsToBytes[E](b.PeekAt(r).T)
-}
-
-// PeekLast returns the last pushed row in native form.
-func (b *VectorBuilder[E]) PeekLast() row[E] {
-	return b.PeekAt(len(b.slices[0]) - 1)
-}
-
-// RepushLast pushes a value equal to the last pushed value of `vb`
-func (b *VectorBuilder[E]) RepushLast() {
-	if len(b.slices[0]) == 0 {
-		panic("attempted to repush the last item of an empty builder")
-	}
-	last := b.PeekAt(len(b.slices[0]) - 1)
-	b.Push(last)
-}
-
-// PushInc repushes that last element incremented by 1
-func (b *VectorBuilder[E]) PushInc() {
-	last := b.PeekBigIntAt(len(b.slices[0]) - 1)
-	last.Add(last, big.NewInt(1))
-	b.PushBigInt(last)
 }
 
 // PadAndAssignZero assigns the content of the builder to the column.
@@ -154,17 +115,6 @@ func (b *VectorBuilder[E]) PadAndAssignZero(run *wizard.ProverRuntime) {
 		run.AssignColumn(
 			b.limbs.C[i].GetColID(),
 			smartvectors.RightZeroPadded(b.slices[i], b.limbs.C[i].Size()),
-		)
-	}
-}
-
-// PadLeftAndAssign zeroe-pads the vector to the left with zeroes and assigns it
-// to the column.
-func (b *VectorBuilder[E]) PadLeftAndAssignZero(run *wizard.ProverRuntime) {
-	for i := range b.slices {
-		run.AssignColumn(
-			b.limbs.C[i].GetColID(),
-			smartvectors.LeftZeroPadded(b.slices[i], b.limbs.C[i].Size()),
 		)
 	}
 }

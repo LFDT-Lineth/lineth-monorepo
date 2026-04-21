@@ -71,10 +71,6 @@ func NewContractEmptyStorage(
 
 var ZKHASH_EMPTY_STORAGE = EmptyStorageTrieHash()
 
-func NewAccountTrie() *AccountTrie {
-	return accumulator.InitializeProverState[Address, Account](WS_LOCATION)
-}
-
 func NewStorageTrie(address Address) *StorageTrie {
 	return accumulator.InitializeProverState[FullBytes32, FullBytes32](address.Hex())
 }

@@ -109,13 +109,6 @@ func (o Octuplet) NativeArray() [8]frontend.Variable {
 	return res
 }
 
-// In case the
-var (
-	zeroKoalaFr = field.Zero()
-	oneKoalaFr  = field.One()
-	oneBigInt   = big.NewInt(1)
-)
-
 // IsConstantZero returns true if the variable represent a constant value equal
 // to zero.
 func (api *API) IsConstantZero(v Element) bool {

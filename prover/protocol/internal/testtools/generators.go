@@ -48,13 +48,6 @@ func RandomVecFext(size int) smartvectors.SmartVector {
 	return smartvectors.PseudoRandExt(rng, size)
 }
 
-// RandomVecPadded returns a random vector of size "size" such that the
-// last "size-density" are zero.
-func RandomVecPadded(density, size int) smartvectors.SmartVector {
-	v := vector.PseudoRand(rng, density)
-	return smartvectors.RightZeroPadded(v, size)
-}
-
 // RandomOctupletVecPadded returns a random vector of size "size" such that the
 // last "size-density" are zero.
 func RandomOctupletVecPadded(density, size int) [8]smartvectors.SmartVector {
@@ -76,18 +69,6 @@ func RandomMatrix(rows, cols int) []smartvectors.SmartVector {
 		res = append(res, RandomVec(rows))
 	}
 	return res
-}
-
-// RandomBinary returns a random vector of binary values with 50% ones
-// and 50% zeroes.
-func RandBinary(size int) smartvectors.SmartVector {
-	res := make([]field.Element, size)
-	for i := range res {
-		if rng.IntN(2) == 0 {
-			res[i] = field.One()
-		}
-	}
-	return smartvectors.NewRegular(res)
 }
 
 // RandomFromSeed returns a random vector generated from a user-supplied
@@ -162,16 +143,6 @@ func CountingAt(size int, init int, at []int) smartvectors.SmartVector {
 		}
 	}
 
-	return smartvectors.NewRegular(res)
-}
-
-// RandomAt returns a vector of size "size" with random values at the
-// positions given in "positions".
-func RandomAt(size int, positions ...int) smartvectors.SmartVector {
-	res := make([]field.Element, size)
-	for _, pos := range positions {
-		res[pos] = field.PseudoRand(rng)
-	}
 	return smartvectors.NewRegular(res)
 }
 

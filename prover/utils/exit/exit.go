@@ -58,11 +58,6 @@ func SetIssueHandlingMode(mode issueHandlingMode) {
 	currentIssueHandlingMode = mode
 }
 
-// GetIssueHandlingMode returns the current handling mode
-func GetIssueHandlingMode() issueHandlingMode {
-	return currentIssueHandlingMode
-}
-
 // This function will exit the program with the exit code [limitOverflowExitCode]
 // but only if the activateExitOnIssue flag is set to true. Otherwise, it will
 // just panic.

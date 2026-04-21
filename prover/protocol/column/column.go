@@ -113,22 +113,6 @@ func StackOffsets(h ifaces.Column) int {
 	panic("unreachable")
 }
 
-// NbLeaves returns the number of underlying [Natural] columns for `h`. If `h`
-// is neither an [Interleaved] nor derived from an [Interleaved], the function
-// returns 1.
-func NbLeaves(h ifaces.Column) int {
-	switch inner := h.(type) {
-	case Natural:
-		// No changes
-		return 1
-	case Shifted:
-		return NbLeaves(inner.Parent)
-	default:
-		utils.Panic("unexpected type %v", reflect.TypeOf(inner))
-	}
-	panic("unreachable")
-}
-
 // EvalExprColumn resolves an expression to a column assignment. The expression
 // must be converted to a board prior to evaluating the expression.
 //
@@ -265,21 +249,6 @@ func ExprIsOnSameLengthHandles(board *symbolic.ExpressionBoard) int {
 	}
 
 	return length
-}
-
-// return the runtime assignments of a linear combination column
-// that is computed on the fly from the columns stored in hs
-func RandLinCombColAssignment(run ifaces.Runtime, coinVal field.Element, hs []ifaces.Column) smartvectors.SmartVector {
-	var colTableWit smartvectors.SmartVector
-	var witnessCollapsed smartvectors.SmartVector
-	x := field.One()
-	witnessCollapsed = smartvectors.NewConstant(field.Zero(), hs[0].Size())
-	for tableCol := range hs {
-		colTableWit = hs[tableCol].GetColAssignment(run)
-		witnessCollapsed = smartvectors.Add(witnessCollapsed, smartvectors.Mul(colTableWit, smartvectors.NewConstant(x, hs[0].Size())))
-		x.Mul(&x, &coinVal)
-	}
-	return witnessCollapsed
 }
 
 // maximal round of declaration for a list of commitment

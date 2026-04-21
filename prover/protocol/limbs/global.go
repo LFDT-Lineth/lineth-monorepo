@@ -22,17 +22,6 @@ func NewGlobal(comp *wizard.CompiledIOP, name ifaces.QueryID, expr *symbolic.Exp
 	return res
 }
 
-// NewLocal generates a new local constraint that spans over the coordinates
-// of a limb split object.
-func NewLocal(comp *wizard.CompiledIOP, name ifaces.QueryID, expr *symbolic.Expression) []query.LocalConstraint {
-	splittedExpressions := splitExpressions(expr)
-	res := make([]query.LocalConstraint, len(splittedExpressions))
-	for i := range splittedExpressions {
-		res[i] = comp.InsertLocal(0, ifaces.QueryIDf("%v_%v", name, i), splittedExpressions[i])
-	}
-	return res
-}
-
 // Shift converts the Limbed object into one whose columns are shifted by the
 // provided offset.
 func Shift[E Endianness](l Limbs[E], offset int) Limbs[E] {

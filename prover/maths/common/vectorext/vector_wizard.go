@@ -81,19 +81,6 @@ func ForRandTestFromLen(len int) Vector {
 	return res
 }
 
-// ForTestFromVect computes a vector of field extensions,
-// where each field extension is populated using one vector of size [fext.ExtensionDegree]
-func ForTestFromVect(xs ...[4]int) Vector {
-	res := make(Vector, len(xs))
-	for i, x := range xs {
-		res[i].B0.A0.SetInt64(int64(x[0]))
-		res[i].B0.A1.SetInt64(int64(x[1]))
-		res[i].B1.A0.SetInt64(int64(x[2]))
-		res[i].B1.A1.SetInt64(int64(x[3]))
-	}
-	return res
-}
-
 // ForTestFromQuads groups the input into Quaternarys. Each Quaternary populates the first four
 // coordinates of a field extension, and the function then
 // returns a vector instantiated these field extension elements.
@@ -106,31 +93,6 @@ func ForTestFromQuads(xs ...int) Vector {
 		res[i] = fext.NewFromInt(int64(xs[4*i]), int64(xs[4*i+1]), int64(xs[4*i+2]), int64(xs[4*i+3]))
 	}
 	return res
-}
-
-// ForTestCalculateQuadProduct performs the specific 4-element product calculation.
-// It takes two 4-element slices (a_slice, b_slice).
-// It returns a slice containing the four calculated results.
-// This function is used for generating test results
-func ForTestCalculateQuadProduct(a_slice []int, b_slice []int) []int {
-	// Ensure input slices have the correct length to prevent out-of-bounds errors.
-	// In a real application, you might want more robust error handling or panics.
-	if len(a_slice) < 4 || len(b_slice) < 4 {
-		fmt.Println("Error: Input slices must have at least 4 elements.")
-		return nil
-	}
-
-	// Extract elements for clarity (optional, could use a_slice[0], etc. directly)
-	a0, a1, a2, a3 := a_slice[0], a_slice[1], a_slice[2], a_slice[3]
-	b0, b1, b2, b3 := b_slice[0], b_slice[1], b_slice[2], b_slice[3]
-
-	// Calculate the four results based on the provided pattern
-	result0 := a0*b0 + a1*b1*fext.RootPowers[1] + a2*b3*fext.RootPowers[1] + a3*b2*fext.RootPowers[1]
-	result1 := a0*b1 + a1*b0 + a2*b2 + a3*b3*fext.RootPowers[1]
-	result2 := a0*b2 + a1*b3*fext.RootPowers[1] + a2*b0 + a3*b1*fext.RootPowers[1]
-	result3 := a0*b3 + a1*b2 + a2*b1 + a3*b0
-
-	return []int{result0, result1, result2, result3}
 }
 
 // ZeroPad pads a vector to a given length.

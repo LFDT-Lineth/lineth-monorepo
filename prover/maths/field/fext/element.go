@@ -15,8 +15,6 @@ import (
 
 const ExtensionDegree int = 4
 
-var montConstantInv = field.NewFromString("1057030144")
-
 // Embedding
 type Element = extensions.E4
 

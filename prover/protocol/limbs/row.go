@@ -25,13 +25,6 @@ func (r row[E]) NumLimbs() int {
 	return len(r.T)
 }
 
-// RowFromBigInt converts a big.Int into a row. The mapping between int and
-// bytes is always big endian. But the mapping between bytes and limbs is E.
-func RowFromBigInt[E Endianness](bi *big.Int, bitSize int) row[E] {
-	raw := bigIntToLimbs[E](bi, bitSize)
-	return row[E]{T: raw}
-}
-
 // RowFromInt converts an int into a row. The mapping between int and bytes is
 // always big endian. But the mapping between bytes and limbs is E.
 func RowFromInt[E Endianness](x int, bitSize int) row[E] {

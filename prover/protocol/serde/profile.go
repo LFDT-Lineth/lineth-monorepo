@@ -3,7 +3,6 @@ package serde
 import (
 	"fmt"
 	"io"
-	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -111,19 +110,6 @@ func Profile(v any) (*ProfileNode, error) {
 	}
 
 	return enc.profiler.root, nil
-}
-
-// WriteProfileReport writes the ProfileNode tree to a human-readable text file
-// at filePath.  Children are sorted largest-first at every level.  Each line
-// shows the label, the human-readable byte size, and the percentage of the
-// root total.
-func WriteProfileReport(node *ProfileNode, filePath string) error {
-	f, err := os.Create(filePath)
-	if err != nil {
-		return fmt.Errorf("serde profile: create %q: %w", filePath, err)
-	}
-	defer f.Close()
-	return WriteProfileTo(node, f)
 }
 
 // WriteProfileTo writes the ProfileNode tree to w.

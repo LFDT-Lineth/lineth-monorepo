@@ -49,13 +49,6 @@ func WithTargetColSize(targetColSize int) ArcaneParams {
 	}
 }
 
-// WithLogs tells the compiler to logs compilation stats.
-func WithLogs() ArcaneParams {
-	return func(set *arcaneParamSet) {
-		set.withLogs = true
-	}
-}
-
 // WithoutMpts tells the compiler to skip the Mpts compiler.
 func WithoutMpts() ArcaneParams {
 	return func(set *arcaneParamSet) {
@@ -87,15 +80,6 @@ func WithDebugMode(name string) ArcaneParams {
 func WithInnerProductMinimalRound(minRound int) ArcaneParams {
 	return func(set *arcaneParamSet) {
 		set.innerProductMinimalRound = minRound
-	}
-}
-
-// GenCSVAfterExpansion tells the compiler to generate a CSV file containing all
-// the column informations after the expansion. The provided string is the path
-// where to write the CSV file.
-func GenCSVAfterExpansion(genCSVAfterExpansion string) ArcaneParams {
-	return func(set *arcaneParamSet) {
-		set.genCSVAfterExpansion = genCSVAfterExpansion
 	}
 }
 

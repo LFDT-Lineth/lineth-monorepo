@@ -1,9 +1,6 @@
 package types
 
 import (
-	"fmt"
-	"io"
-
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
@@ -13,74 +10,9 @@ import (
 // sha256.
 type Bls12381Fr [32]byte
 
-// Marshal "e" into JSON format
-func (f Bls12381Fr) MarshalJSON() ([]byte, error) {
-	marshalled := MarshalHexBytesJSON(f[:])
-	return marshalled, nil
-}
-
-// Unmarshal an ethereum address from JSON format. The expected format is an hex
-// string.
-func (f *Bls12381Fr) UnmarshalJSON(b []byte) error {
-
-	decoded, err := DecodeQuotedHexString(b)
-	if err != nil {
-		return fmt.Errorf(
-			"could not decode bytes32 `%v`, expected an hex string of 32 bytes : %w",
-			string(b), err,
-		)
-	}
-
-	if len(decoded) != 32 {
-		return fmt.Errorf(
-			"could not unmarshal bytes32 %x : should have 32 bytes but has %v bytes",
-			decoded, len(decoded),
-		)
-	}
-
-	copy((*f)[:], decoded)
-	return nil
-}
-
-// Writes the bytes32 into the given write.
-func (b Bls12381Fr) WriteTo(w io.Writer) (int64, error) {
-	_, err := w.Write(b[:])
-	if err != nil {
-		panic(err) // hard forbid any error
-	}
-	return 32, nil
-}
-
-// Reads a bytes32 from the given reader
-func (b *Bls12381Fr) ReadFrom(r io.Reader) (int64, error) {
-	n, err := r.Read((*b)[:])
-	return int64(n), err
-}
-
-// Returns an hexstring representation of the Bls12381Fr
-func (d Bls12381Fr) Hex() string {
-	return fmt.Sprintf("0x%x", [32]byte(d))
-}
-
 // Bytes returns the bytes representation of the Bls12381Fr
 func (d Bls12381Fr) Bytes() []byte {
 	return d[:]
-}
-
-// Constructs a dummy Bls12381Fr from an integer
-func DummyBls12381Fr(i int) (d Bls12381Fr) {
-	d[31] = byte(i)
-	return d
-}
-
-// LeftPadToBls12381Fr pads a bytes32 element into a Bls12381Fr by adding zeroes to
-// the left until the slice has 32 bytes
-func LeftPadToBls12381Fr(b []byte) Bls12381Fr {
-	if len(b) > 32 {
-		utils.Panic("Passed a string of %v element but the max is 32", len(b))
-	}
-	c := append(make([]byte, 32-len(b)), b...)
-	return AsBls12381Fr(c)
 }
 
 // Create a bytes32 from a slice

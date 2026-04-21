@@ -2,7 +2,6 @@ package poseidon2_koalabear
 
 import (
 	"math/big"
-	"slices"
 	"sync"
 
 	"github.com/consensys/gnark-crypto/field/koalabear/poseidon2"
@@ -39,41 +38,8 @@ func NewKoalagnarkMDHasher(api frontend.API) *KoalagnarkMDHasher {
 	return &res
 }
 
-func (h *KoalagnarkMDHasher) Reset() {
-	h.buffer = h.buffer[:0]
-	for i := 0; i < 8; i++ {
-		h.state[i] = h.koalaAPI.Zero()
-	}
-}
-
 func (h *KoalagnarkMDHasher) Write(data ...koalagnark.Element) {
 	h.buffer = append(h.buffer, data...)
-}
-
-func (h *KoalagnarkMDHasher) WriteOctuplet(data ...KoalagnarkOctuplet) {
-	for i := 0; i < len(data); i++ {
-		h.buffer = append(h.buffer, data[i][:]...)
-	}
-}
-
-func (h *KoalagnarkMDHasher) SetState(state KoalagnarkOctuplet) {
-	h.Reset()
-	copy(h.state[:], state[:])
-}
-
-func (h *KoalagnarkMDHasher) State() KoalagnarkOctuplet {
-	// State will flush the buffer, take the state and restore the initial
-	// state of the hasher.
-	oldState := h.state
-	oldBuffer := slices.Clone(h.buffer)
-
-	_ = h.Sum() // this flushes the hasher
-	res := h.state
-
-	h.state = oldState
-	h.buffer = oldBuffer
-
-	return res
 }
 
 func (h *KoalagnarkMDHasher) Sum() KoalagnarkOctuplet {

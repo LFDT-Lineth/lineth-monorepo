@@ -128,17 +128,6 @@ func HexToKoalabearOctuplet(hexString string) (KoalaOctuplet, error) {
 	return e, nil
 }
 
-// HexToKoalabearOctupletLoose converts a hexstring of less than 32 elements into
-// a koalabear octuplet. The string must be a valid hex string (even number of
-// element or the function panic).
-func HexToKoalabearOctupletLoose(hexString string) KoalaOctuplet {
-	b, err := utils.HexDecodeString(hexString)
-	if err != nil {
-		panic(err)
-	}
-	return BytesToKoalaOctupletLoose(b)
-}
-
 // MustHexToKoalabearOctuplet converts a hexstring of less than 32 elements into a
 // koalabear octuplet.
 func MustHexToKoalabearOctuplet(hexString string) KoalaOctuplet {

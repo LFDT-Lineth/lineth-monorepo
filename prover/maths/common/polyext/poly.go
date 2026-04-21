@@ -6,15 +6,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
-func EvalUnivariateMixed(pol []fext.GenericFieldElem, x fext.GenericFieldElem) fext.GenericFieldElem {
-	res := fext.GenericFieldZero()
-	for i := len(pol) - 1; i >= 0; i-- {
-		res.Mul(&x)
-		res.Add(&pol[i])
-	}
-	return res
-}
-
 // MulByElement multiplies the polynomials a and b in coefficient form and return the result in coefficient form
 // the coefficients of a are in the extension field, the coefficients of b are in the base field
 func MulByElement(a []fext.Element, b []field.Element) (res []fext.Element) {

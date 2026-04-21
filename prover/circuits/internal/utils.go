@@ -12,7 +12,6 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/compress"
 	snarkHash "github.com/consensys/gnark/std/hash"
-	"github.com/consensys/gnark/std/hash/mimc"
 	"github.com/consensys/gnark/std/lookup/logderivlookup"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/linea-monorepo/prover/utils"
@@ -60,10 +59,6 @@ type Range struct {
 }
 
 type NewRangeOption func(*bool)
-
-func NoCheck(b *bool) {
-	*b = false
-}
 
 func NewRange(api frontend.API, n frontend.Variable, max int, opts ...NewRangeOption) *Range {
 
@@ -243,24 +238,11 @@ func (r *Range) StaticLength() int {
 	return len(r.InRange)
 }
 
-func MimcHash(api frontend.API, e ...frontend.Variable) frontend.Variable {
-	hsh, err := mimc.NewMiMC(api)
-	if err != nil {
-		panic(err)
-	}
-	hsh.Write(e...)
-	return hsh.Sum()
-}
-
 type Slice[T any] struct {
 
 	// @reviewer: better for slice to be non-generic with frontend.Variable type and just duplicate the funcs for the few [32]frontend.Variable applications?
 	Values []T // Values[:Length] contains the data
 	Length frontend.Variable
-}
-
-func (s VarSlice) Range(api frontend.API) *Range {
-	return NewRange(api, s.Length, len(s.Values))
 }
 
 // Concat does not range check the slice lengths individually, but it does their sum
@@ -327,30 +309,6 @@ func concatHint(_ *big.Int, ins, outs []*big.Int) error {
 
 type VarSlice Slice[frontend.Variable]
 type Var32Slice Slice[[32]frontend.Variable]
-
-// Checksum is the SNARK equivalent of ChecksumSlice
-// TODO consider doing (r *Range) f (slice []frontend.Variable)
-func (s VarSlice) Checksum(api frontend.API, hsh snarkHash.FieldHasher) frontend.Variable {
-	if len(s.Values) == 0 {
-		panic("zero-length input")
-	}
-	api.AssertIsDifferent(s.Length, 0)
-
-	r := NewRange(api, s.Length, len(s.Values))
-
-	hsh.Reset()
-	sum := s.Values[0]
-	for i := 1; i < len(s.Values); i++ {
-		hsh.Reset()
-		hsh.Write(sum, s.Values[i])
-		sum = api.Select(r.InRange[i], hsh.Sum(), sum)
-	}
-
-	hsh.Reset()
-	hsh.Write(s.Length, sum)
-
-	return hsh.Sum()
-}
 
 // MerkleDamgardChecksumSubSlices checks the correctness of given Merkle-Damgard hashes of consecutive sub-slices.
 // NB! User must ensure that no sub-slice is empty.
@@ -509,23 +467,6 @@ func Pack(api frontend.API, words []frontend.Variable, bitsPerElem, bitsPerWord 
 	return res
 }
 
-func flatten(s [][32]frontend.Variable) []frontend.Variable {
-	res := make([]frontend.Variable, len(s)*32)
-	for i := range s {
-		for j := range s[i] {
-			res[i*32+j] = s[i][j]
-		}
-	}
-	return res
-}
-
-func (s Var32Slice) Checksum(api frontend.API) frontend.Variable {
-	values := PackFull(api, flatten(s.Values), 8)
-	valsAndLen := make([]frontend.Variable, 1, len(values)+1)
-	valsAndLen[0] = s.Length
-	return MimcHash(api, append(valsAndLen, values...)...)
-}
-
 func CombineBytesIntoElements(api frontend.API, b [32]frontend.Variable) [2]frontend.Variable {
 	r := big.NewInt(256)
 	return [2]frontend.Variable{
@@ -564,26 +505,6 @@ func PartialSums(api frontend.API, s []frontend.Variable) []frontend.Variable {
 	return res
 }
 
-func Differences(api frontend.API, s []frontend.Variable) []frontend.Variable {
-	res := make([]frontend.Variable, len(s))
-	prev := frontend.Variable(0)
-	for i := range s {
-		res[i] = api.Sub(s[i], prev)
-		prev = s[i]
-	}
-	return res
-}
-
-func Sum[T constraints.Integer](x ...T) T {
-	var res T
-
-	for _, xI := range x {
-		res += xI
-	}
-
-	return res
-}
-
 func Uint64To32Bytes(i uint64) [32]byte {
 	var b [32]byte
 	binary.BigEndian.PutUint64(b[24:], i)
@@ -617,19 +538,6 @@ func Truncate(api frontend.API, slice []frontend.Variable, n frontend.Variable) 
 		res[i] = api.MulAcc(api.Mul(1, slice[i]), slice[i], api.Neg(nYet))
 	}
 	return res
-}
-
-// RotateLeft rotates the slice v by n positions to the left, so that res[i] becomes v[(i+n)%len(v)]
-func RotateLeft(api frontend.API, v []frontend.Variable, n frontend.Variable) (res []frontend.Variable) {
-	res = make([]frontend.Variable, len(v))
-	t := SliceToTable(api, v)
-	for _, x := range v {
-		t.Insert(x)
-	}
-	for i := range res {
-		res[i] = t.Lookup(api.Add(i, n))[0]
-	}
-	return
 }
 
 // PartitionSlice populates sub-slices subs[0], ... where subs[i] contains the elements s[j] with selectors[j] = i

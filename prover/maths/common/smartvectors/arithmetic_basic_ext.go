@@ -34,13 +34,6 @@ func MulExt(vecs ...SmartVector) SmartVector {
 	return ProductExt(coeffs, vecs)
 }
 
-// ScalarMulExt returns a smart-vector obtained by  multiplying a scalar with a [SmartVector].
-//   - the output smart-vector has the same size as the input vector
-func ScalarMulExt(vec SmartVector, x fext.Element) SmartVector {
-	xVec := NewConstantExt(x, vec.Len())
-	return MulExt(vec, xVec)
-}
-
 // InnerProductExt returns a scalar obtained as the inner-product of `a` and `b`.
 //   - a and b must have the same length, otherwise the function panics
 func InnerProductExt(a, b SmartVector) fext.Element {
@@ -149,91 +142,6 @@ func LinearCombinationExt(vecs []SmartVector, x fext.Element) (result SmartVecto
 
 	// can only happen if no vectors are found or if an unknow type is found
 	panic("unreachable")
-}
-
-// BatchInvertExt performs the batch inverse operation over a [SmartVector] and
-// returns a SmartVector of the same type. When an input element is zero, the
-// function returns 0 at the corresponding position.
-func BatchInvertExt(x SmartVector) SmartVector {
-
-	switch v := x.(type) {
-	case *ConstantExt:
-		res := &ConstantExt{Length: v.Length}
-		res.Value.Inverse(&v.Value)
-		return res
-	case *PaddedCircularWindowExt:
-		res := &PaddedCircularWindowExt{
-			TotLen:  v.TotLen,
-			Offset:  v.Offset,
-			Window_: fext.BatchInvert(v.Window_),
-		}
-		res.PaddingVal_.Inverse(&v.PaddingVal_)
-		return res
-	case *RotatedExt:
-		return NewRotatedExt(
-			fext.BatchInvert(v.v),
-			v.offset,
-		)
-	case *RegularExt:
-		return NewRegularExt(fext.BatchInvert(*v))
-	}
-
-	panic("unsupported type")
-}
-
-// IsZeroExt returns a [SmartVector] z with the same type of structure than x such
-// that x[i] = 0 => z[i] = 1 AND x[i] != 0 => z[i] = 0.
-func IsZeroExt(x SmartVector) SmartVector {
-	switch v := x.(type) {
-
-	case *ConstantExt:
-		res := &ConstantExt{Length: v.Length}
-		if v.Value == fext.Zero() {
-			res.Value = fext.One()
-		}
-		return res
-
-	case *PaddedCircularWindowExt:
-		res := &PaddedCircularWindowExt{
-			TotLen:  v.TotLen,
-			Offset:  v.Offset,
-			Window_: make([]fext.Element, len(v.Window_)),
-		}
-
-		if v.PaddingVal_ == fext.Zero() {
-			res.PaddingVal_ = fext.One()
-		}
-
-		for i := range res.Window_ {
-			if v.Window_[i] == fext.Zero() {
-				res.Window_[i] = fext.One()
-			}
-		}
-		return res
-
-	case *RotatedExt:
-		res := make([]fext.Element, len(v.v))
-		for i := range res {
-			if v.v[i] == fext.Zero() {
-				res[i] = fext.One()
-			}
-		}
-		return NewRotatedExt(
-			res,
-			v.offset,
-		)
-
-	case *RegularExt:
-		res := make([]fext.Element, len(*v))
-		for i := range res {
-			if (*v)[i] == fext.Zero() {
-				res[i] = fext.One()
-			}
-		}
-		return NewRegularExt(res)
-	}
-
-	panic("unsupported type")
 }
 
 // SumExt returns the field summation of all the elements contained in the vector

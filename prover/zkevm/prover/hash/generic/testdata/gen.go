@@ -15,23 +15,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/generic"
 )
 
-// SplitBytes splits the input slice into subarrays of the provided size.
-func SplitBytes(input []byte, limbByteSize int) [][]byte {
-	if len(input) == 0 {
-		return [][]byte{}
-	}
-
-	var result [][]byte
-	for i := 0; i < len(input); i += limbByteSize {
-		end := i + limbByteSize
-		if end > len(input) {
-			end = len(input)
-		}
-		result = append(result, input[i:end])
-	}
-	return result
-}
-
 // it receives columns hashNum and toHash and generates GenDataModule.If flag is true it generate random nBytes between 1 and 16. Otherwise it sets nBytes to 16.
 func GenerateAndAssignGenDataModule(run *wizard.ProverRuntime, gdm *generic.GenDataModule,
 	hashNumInt, toHashInt []int, flag bool, path ...string) {

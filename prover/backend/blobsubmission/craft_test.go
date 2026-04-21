@@ -73,12 +73,6 @@ func hexToBytes(t *testing.T, s string) []byte {
 	return b
 }
 
-func hexToElem(t *testing.T, s string) bls12Fr.Element {
-	var res bls12Fr.Element
-	assert.NoError(t, res.SetBytesCanonical(hexToBytes(t, s)))
-	return res
-}
-
 func TestNewSchnarf(t *testing.T) {
 	tests := []struct {
 		desc        string

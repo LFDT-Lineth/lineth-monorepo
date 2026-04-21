@@ -70,15 +70,6 @@ func EvaluateBasePolyLagrange(v SmartVector, x fext.Element, oncoset ...bool) fe
 }
 
 // Evaluate a polynomial in coefficient basis at an E4 point
-func EvalCoeff(v SmartVector, x field.Element) field.Element {
-	// Maybe there is an optim for windowed here
-	res := make([]field.Element, v.Len())
-	v.WriteInSlice(res)
-
-	return poly.Eval(res, x)
-}
-
-// Evaluate a polynomial in coefficient basis at an E4 point
 func EvalBasePolyHorner(v SmartVector, x fext.Element) fext.Element {
 	// Maybe there is an optim for windowed here
 	res := make([]field.Element, v.Len())

@@ -4,7 +4,6 @@ package vector
 
 import (
 	"fmt"
-	"math/rand/v2"
 
 	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
 	"github.com/consensys/gnark/frontend"
@@ -217,32 +216,4 @@ func IntoGnarkAssignment(msgData []field.Element) []frontend.Variable {
 		assignedMsg = append(assignedMsg, frontend.Variable(x))
 	}
 	return assignedMsg
-}
-
-// Equal compares a and b and returns a boolean indicating whether they contain
-// the same value. The function assumes that a and b have the same length. It
-// panics otherwise.
-func Equal(a, b []field.Element) bool {
-
-	if len(a) != len(b) {
-		utils.Panic("a and b don't have the same length: %v %v", len(a), len(b))
-	}
-
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-
-	return true
-}
-
-// PseudoRand generates a vector of field element with a given size using the
-// provided random number generator
-func PseudoRand(rng *rand.Rand, size int) []field.Element {
-	slice := make([]field.Element, size)
-	for i := range slice {
-		slice[i] = field.PseudoRand(rng)
-	}
-	return slice
 }

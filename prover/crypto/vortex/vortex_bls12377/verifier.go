@@ -17,10 +17,6 @@ type GParams struct {
 	NoSisHasher func(frontend.API) (poseidon2_bls12377.GnarkMDHasher, error)
 }
 
-func (p *GParams) HasNoSisHasher() bool {
-	return p.NoSisHasher != nil
-}
-
 // Check the merkle proof opening (merkleProofs[i][j], root[i]) for columns[i][j].
 // The leaves are poseidon2_bls12377(sis(columns[i][j]))
 func CheckColumnInclusion(sis *ringsis.Key, columns [][][]field.Element,

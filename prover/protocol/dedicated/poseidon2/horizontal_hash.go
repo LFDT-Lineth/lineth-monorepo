@@ -11,7 +11,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
-	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/parallel"
 )
 
@@ -28,33 +27,6 @@ type HashingCtx struct {
 	IntermediateHashes [][BlockSize]ifaces.Column
 	// Name is the name of the current context.
 	Name string
-}
-
-// MaxOctRound round of declaration for a list of commitment
-func MaxOctRound(handles ...[BlockSize]ifaces.Column) int {
-	res := 0
-	for _, handle := range handles {
-		res = utils.Max(res, handle[0].Round())
-	}
-	return res
-}
-
-// AssertSameLength is a utility function comparing the Size of all the columns
-// in `list` , panicking if the lengths are not all the same and returning the
-// shared length otherwise.
-func AssertOctSameLength(list ...[BlockSize]ifaces.Column) int {
-	if len(list) == 0 {
-		panic("passed an empty leaf")
-	}
-
-	res := list[0][0].Size()
-	for i := range list {
-		if list[i][0].Size() != res {
-			utils.Panic("the column %v (size %v) does not have the same size as column 0 (size %v)", i, list[i][0].Size(), res)
-		}
-	}
-
-	return res
 }
 
 // HashOf returns an [ifaces.Column] object containing the hash of the inputs

@@ -44,27 +44,3 @@ func FormatContractBytecodeForHashing(contractCode []byte) []byte {
 
 	return res
 }
-
-// UnformatContractBytecodeUnsafe returns the bytecode of an Ethereum contract
-// without poseidon. It is used to test the encoding function.
-func UnformatContractBytecodeUnsafe(formattedCode []byte) []byte {
-
-	if len(formattedCode)%4 != 0 {
-		panic("the contractCode length must be a multiple of 4")
-	}
-
-	var (
-		res      []byte
-		numLimbs = len(formattedCode) / 4
-	)
-
-	for i := range numLimbs {
-		if i%8 == 0 && numLimbs-i < 8 && formattedCode[4*i+2] == 0x00 {
-			res = append(res, formattedCode[4*i+3])
-		} else {
-			res = append(res, formattedCode[4*i+2], formattedCode[4*i+3])
-		}
-	}
-
-	return res
-}

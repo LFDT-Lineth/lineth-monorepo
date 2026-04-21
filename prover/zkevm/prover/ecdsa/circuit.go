@@ -108,14 +108,6 @@ func init() {
 	plonk.RegisterInputFiller(plonkInputFillerKey, PlonkInputFiller)
 }
 
-// nbInputsPerInstance is the total number of public inputs per EcRecoverInstance.
-// Layout: PKXHi[8], PKXLo[8], PKYHi[8], PKYLo[8], HHi[8], HLo[8], VHi[8], VLo[8],
-//
-//	RHi[8], RLo[8], SHi[8], SLo[8], SuccessBitUnused[7], SUCCESS_BIT, EcrecoverBitUnused[7], ECRECOVERBIT
-//
-// Total: 12 * 8 + 7 + 1 + 7 + 1 = 112 inputs
-const nbInputsPerInstance = 14 * common.NbLimbU128
-
 // PlonkInputFiller is the input-filler that we use to assign the public inputs
 // of incomplete circuits. This function must be registered via the
 // [plonk.RegisterInputFiller] via the [init] function. But this has to be done

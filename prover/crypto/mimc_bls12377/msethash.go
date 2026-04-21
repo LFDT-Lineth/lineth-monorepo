@@ -55,37 +55,6 @@ func (m *MSetHash) Insert(msgs ...field.Element) {
 	m.update(false, msgs...)
 }
 
-// Remove removes the given messages from the multisets hash. The message can be
-// an array of field elements of any size. The function panics if given an empty
-// msg.
-func (m *MSetHash) Remove(msgs ...field.Element) {
-	m.update(true, msgs...)
-}
-
-// Add combines the two multisets hashes into a single multisets hash.
-func (m *MSetHash) Add(other MSetHash) {
-	for i := 0; i < MSetHashSize; i++ {
-		m[i].Add(&m[i], &other[i])
-	}
-}
-
-// Sub substracts the multiset "other" from "m"
-func (m *MSetHash) Sub(other MSetHash) {
-	for i := 0; i < MSetHashSize; i++ {
-		m[i].Sub(&m[i], &other[i])
-	}
-}
-
-// IsEmpty returns true if the MSetHash is empty.
-func (m *MSetHash) IsEmpty() bool {
-	for i := 0; i < MSetHashSize; i++ {
-		if !m[i].IsZero() {
-			return false
-		}
-	}
-	return true
-}
-
 // update adds or removes an element from the multisets hash.
 func (m *MSetHash) update(rem bool, msgs ...field.Element) {
 
@@ -162,53 +131,6 @@ func (m *MSetHashGnark) update(api frontend.API, rem bool, msgs []frontend.Varia
 		if i < MSetHashSize-1 {
 			hasher.Write(0)
 		}
-	}
-}
-
-// Insert adds the given messages to the multisets hash. The message can be an
-// array of field elements of any size. The function panics if given an empty
-// msg.
-func (m *MSetHashGnark) Insert(api frontend.API, msgs ...frontend.Variable) {
-	m.update(api, false, msgs)
-}
-
-// Remove removes the given messages from the multisets hash. The message can be
-// an array of field elements of any size. The function panics if given an empty
-// msg.
-func (m *MSetHashGnark) Remove(api frontend.API, msgs ...frontend.Variable) {
-	m.update(api, true, msgs)
-}
-
-// Add combines the two multisets hashes into a single multisets hash.
-func (m *MSetHashGnark) Add(api frontend.API, other MSetHashGnark) {
-	for i := 0; i < MSetHashSize; i++ {
-		m.Inner[i] = api.Add(m.Inner[i], other.Inner[i])
-	}
-}
-
-// AddRaw adds in a sequence of value representing a multisets hash
-func (m *MSetHashGnark) AddRaw(api frontend.API, other []frontend.Variable) {
-
-	if len(m.Inner) != len(other) {
-		panic("MSetHashGnark.AddRaw: lengths of multisets hashes are different")
-	}
-
-	for i := 0; i < MSetHashSize; i++ {
-		m.Inner[i] = api.Add(m.Inner[i], other[i])
-	}
-}
-
-// Sub substracts the multiset "other" from "m"
-func (m *MSetHashGnark) Sub(api frontend.API, other MSetHashGnark) {
-	for i := 0; i < MSetHashSize; i++ {
-		m.Inner[i] = api.Sub(m.Inner[i], other.Inner[i])
-	}
-}
-
-// AssertEqual asserts that the multisets hashes are equal.
-func (m *MSetHashGnark) AssertEqual(api frontend.API, other MSetHashGnark) {
-	for i := 0; i < MSetHashSize; i++ {
-		api.AssertIsEqual(m.Inner[i], other.Inner[i])
 	}
 }
 

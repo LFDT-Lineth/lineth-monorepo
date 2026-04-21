@@ -68,22 +68,6 @@ func (s *ProverState[K, V]) FindKey(k K) (int64, bool) {
 	return 0, false
 }
 
-// ListAllKeys is a function used for testing and traces sample generation which never should be called in production code
-// as it is extremely inefficient
-func (s *ProverState[K, V]) ListAllKeys() []K {
-	var containedKeys []K
-	// We compute the two keys that are used as bounds, to be able to ignore them later
-	lowerBound := KoalaOctuplet{}
-	upperBound := MaxKoalaOctuplet()
-	for _, i := range s.Data.ListAllKeys() {
-		tuple := s.Data.MustGet(i)
-		if !(tuple.LeafOpening.HKey.Cmp(lowerBound) == 0 || tuple.LeafOpening.HKey.Cmp(upperBound) == 0) {
-			containedKeys = append(containedKeys, tuple.Key)
-		}
-	}
-	return containedKeys
-}
-
 // findSandwich finds the position of the two leaves sandwhich the queries leaf.
 // It assumes that "k" is not stored in the tree.
 func (s *ProverState[K, V]) findSandwich(k K) (int64, int64) {

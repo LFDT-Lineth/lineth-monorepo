@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"strings"
 )
 
 type LogStatsArgs struct {
@@ -78,8 +77,4 @@ func LogStats(_ context.Context, args LogStatsArgs) error {
 
 	// w.Flush()
 	// return nil
-}
-
-func removeCommas[T ~string](s *T) {
-	*s = T(strings.ReplaceAll(string(*s), ",", "_"))
 }

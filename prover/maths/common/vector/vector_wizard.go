@@ -8,7 +8,6 @@ import (
 
 	fr "github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
-	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
@@ -229,17 +228,6 @@ func PowerVec(x field.Element, n int) []field.Element {
 	}
 
 	return res
-}
-
-// IntoGnarkAssignment converts an array of field.Element into an array of
-// koalagnark.Var that can be used to assign a vector of koalagnark.Var
-// in a circuit or to generate a vector of constant in the circuit definition.
-func IntoGnarkAssignment(msgData []field.Element) []koalagnark.Element {
-	assignedMsg := []koalagnark.Element{}
-	for _, x := range msgData {
-		assignedMsg = append(assignedMsg, koalagnark.NewElementFromKoala(x))
-	}
-	return assignedMsg
 }
 
 // Equal compares a and b and returns a boolean indicating whether they contain

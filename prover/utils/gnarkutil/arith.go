@@ -10,13 +10,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 )
 
-func RepeatedVariable(x koalagnark.Element, n int) []koalagnark.Element {
-	res := make([]koalagnark.Element, n)
-	for i := range res {
-		res[i] = x
-	}
-	return res
-}
 func RepeatedVariableExt(x koalagnark.Ext, n int) []koalagnark.Ext {
 	res := make([]koalagnark.Ext, n)
 	for i := range res {
@@ -112,26 +105,6 @@ func Exp(api frontend.API, x koalagnark.Element, n int) koalagnark.Element {
 		acc = koalaAPI.Mul(acc, acc)
 		n >>= 1
 	}
-	return res
-}
-
-// ExpVariableExponent exponentiates x by n in a gnark circuit. Where n is not fixed.
-// n is limited to n bits (max)
-func ExpVariableExponent(api frontend.API, x koalagnark.Element, exp frontend.Variable, expNumBits int) koalagnark.Element {
-
-	koalaAPI := koalagnark.NewAPI(api)
-
-	expBits := api.ToBinary(exp, expNumBits)
-	res := koalagnark.NewElement(1)
-
-	for i := len(expBits) - 1; i >= 0; i-- {
-		if i != len(expBits)-1 {
-			res = koalaAPI.Mul(res, res)
-		}
-		tmp := koalaAPI.Mul(res, x)
-		res = koalaAPI.Select(expBits[i], tmp, res)
-	}
-
 	return res
 }
 

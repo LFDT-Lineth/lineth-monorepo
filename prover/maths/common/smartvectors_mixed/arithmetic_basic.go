@@ -62,12 +62,6 @@ func Mul(vecs ...sv.SmartVector) sv.SmartVector {
 	return ProductMixed(coeffs, vecs)
 }
 
-// ScalarMul returns a smart-vector obtained by  multiplying a scalar with a [SmartVector].
-//   - the output smart-vector has the same size as the input vector
-func ScalarMul(vec sv.SmartVector, x field.Element) sv.SmartVector {
-	xVec := sv.NewConstant(x, vec.Len())
-	return Mul(vec, xVec)
-}
 func executeFuncOnBaseExt(
 	vecs []sv.SmartVector,
 	baseOperation func(vec ...sv.SmartVector) sv.SmartVector,
@@ -125,32 +119,6 @@ func SeparateBaseAndExtVectorsWithCoeffs(coeffs []int, vecs []sv.SmartVector) ([
 		}
 	}
 	return vecsBase, vecsExt, coeffsBase, coeffsExt
-}
-
-func ExecuteFuncOnBaseExtWithMempool(
-	vecs []sv.SmartVector,
-	baseOperation func(vec []sv.SmartVector) sv.SmartVector,
-	extOperation func(vec []sv.SmartVector) sv.SmartVector,
-	finalOperation func(vec ...sv.SmartVector) sv.SmartVector,
-) sv.SmartVector {
-	vecsBase, vecsExt := SeparateBaseAndExtVectors(vecs)
-
-	var res sv.SmartVector = sv.NewConstant(field.Zero(), vecs[0].Len())
-	if len(vecsBase) > 0 {
-		res = baseOperation(vecsBase)
-	}
-
-	if len(vecsExt) == 0 {
-		// no extension vectors, return the base result
-		return res
-	} else {
-		// there are some extension vectors present
-		// apply the extension operation to the extension vectors
-		addExt := extOperation(vecsExt)
-		// lift the base result to extension representation and then apply the extension operation
-		liftedBase := LiftToExt(res)
-		return finalOperation(liftedBase, addExt)
-	}
 }
 
 // AddMixed returns a smart-vector obtained by position-wise adding [SmartVector].

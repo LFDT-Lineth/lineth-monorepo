@@ -153,15 +153,6 @@ func (a *API) NegExt(x Ext) Ext {
 	}
 }
 
-// DoubleExt returns 2*x in the extension field.
-func (a *API) DoubleExt(x Ext) Ext {
-	two := big.NewInt(2)
-	return Ext{
-		B0: E2{A0: a.MulConst(x.B0.A0, two), A1: a.MulConst(x.B0.A1, two)},
-		B1: E2{A0: a.MulConst(x.B1.A0, two), A1: a.MulConst(x.B1.A1, two)},
-	}
-}
-
 // qnrE2 is the non-residue constant for E2 extension (value 3).
 // Used with MulConst to avoid unnecessary range checks.
 var qnrE2 = big.NewInt(3)
@@ -267,14 +258,6 @@ func (a *API) SquareExt(x Ext) Ext {
 	return Ext{B0: b0, B1: b1}
 }
 
-// MulByE2Ext multiplies an Ext by an E2 element.
-func (a *API) MulByE2Ext(x Ext, c E2) Ext {
-	return Ext{
-		B0: a.e2Mul(x.B0, c),
-		B1: a.e2Mul(x.B1, c),
-	}
-}
-
 // MulByFpExt multiplies an Ext by a base field element.
 func (a *API) MulByFpExt(x Ext, c Element) Ext {
 	return Ext{
@@ -353,30 +336,7 @@ func (a *API) SumExt(xs ...Ext) Ext {
 	return res
 }
 
-// MulByNonResidueExt multiplies by the non-residue v (where v^2 = u).
-func (a *API) MulByNonResidueExt(x Ext) Ext {
-	return Ext{
-		B0: a.e2MulByNonResidue(x.B1),
-		B1: x.B0,
-	}
-}
-
-// ConjugateExt returns the conjugate of x.
-func (a *API) ConjugateExt(x Ext) Ext {
-	return Ext{
-		B0: x.B0,
-		B1: E2{A0: a.Neg(x.B1.A0), A1: a.Neg(x.B1.A1)},
-	}
-}
-
 // --- Ext Comparison and Selection ---
-
-// IsZeroExt returns 1 if x == 0, 0 otherwise.
-func (a *API) IsZeroExt(x Ext) frontend.Variable {
-	b0Zero := a.And(a.IsZero(x.B0.A0), a.IsZero(x.B0.A1))
-	b1Zero := a.And(a.IsZero(x.B1.A0), a.IsZero(x.B1.A1))
-	return a.And(b0Zero, b1Zero)
-}
 
 // SelectExt returns x if sel=1, y otherwise.
 func (a *API) SelectExt(sel frontend.Variable, x, y Ext) Ext {
@@ -503,59 +463,7 @@ func (a *API) ExpVariableExponentExt(x Ext, exp frontend.Variable, expNumBits in
 
 // --- Ext Debug ---
 
-// PrintlnExt prints Ext variables for debugging.
-func (a *API) PrintlnExt(vars ...Ext) {
-	for i := range vars {
-		a.Println(vars[i].B0.A0, vars[i].B0.A1, vars[i].B1.A0, vars[i].B1.A1)
-	}
-}
-
 // --- Ext Hints ---
-
-// NewHintExt calls a hint function with Ext inputs and outputs.
-func (a *API) NewHintExt(f solver.Hint, nbOutputs int, inputs ...Ext) ([]Ext, error) {
-	if a.IsNative() {
-		flatInputs := make([]frontend.Variable, 4*len(inputs))
-		for i, r := range inputs {
-			flatInputs[4*i] = r.B0.A0.Native()
-			flatInputs[4*i+1] = r.B0.A1.Native()
-			flatInputs[4*i+2] = r.B1.A0.Native()
-			flatInputs[4*i+3] = r.B1.A1.Native()
-		}
-		flatRes, err := a.nativeAPI.NewHint(f, 4*nbOutputs, flatInputs...)
-		if err != nil {
-			return nil, err
-		}
-		res := make([]Ext, nbOutputs)
-		for i := range res {
-			res[i] = Ext{
-				B0: E2{A0: Element{V: flatRes[4*i]}, A1: Element{V: flatRes[4*i+1]}},
-				B1: E2{A0: Element{V: flatRes[4*i+2]}, A1: Element{V: flatRes[4*i+3]}},
-			}
-		}
-		return res, nil
-	}
-
-	flatInputs := make([]*emulated.Element[emulated.KoalaBear], 4*len(inputs))
-	for i, r := range inputs {
-		flatInputs[4*i] = r.B0.A0.Emulated()
-		flatInputs[4*i+1] = r.B0.A1.Emulated()
-		flatInputs[4*i+2] = r.B1.A0.Emulated()
-		flatInputs[4*i+3] = r.B1.A1.Emulated()
-	}
-	flatRes, err := a.emulatedAPI.NewHint(f, 4*nbOutputs, flatInputs...)
-	if err != nil {
-		return nil, err
-	}
-	res := make([]Ext, nbOutputs)
-	for i := range res {
-		res[i] = Ext{
-			B0: E2{A0: Element{EV: *flatRes[4*i]}, A1: Element{EV: *flatRes[4*i+1]}},
-			B1: E2{A0: Element{EV: *flatRes[4*i+2]}, A1: Element{EV: *flatRes[4*i+3]}},
-		}
-	}
-	return res, nil
-}
 
 // --- Hint implementations ---
 

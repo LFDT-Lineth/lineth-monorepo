@@ -43,8 +43,3 @@ func uintSize[S BitSize]() int {
 		panic("unreachable")
 	}
 }
-
-// bytesSize returns the size of a Bytes[S]
-func bytesSize[S BitSize]() int {
-	return uintSize[S]() / 8
-}

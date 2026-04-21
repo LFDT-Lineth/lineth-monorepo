@@ -52,36 +52,6 @@ func ModuleOfExpr(disc *StandardModuleDiscoverer, expr *symbolic.Expression) Mod
 	return ModuleOfList(disc, metadata...)
 }
 
-// NewSizeOfExpr looks for the metadata in the expressions and resolves the new
-// size of the columns in the expression. The function returns 0 if the expression
-// does not have any size-resolvable item.
-func NewSizeOfExpr(disc *StandardModuleDiscoverer, expr *symbolic.Expression) int {
-	board := expr.Board()
-	metadata := board.ListVariableMetadata()
-	newSize := 0
-
-	for _, m := range metadata {
-		if c, ok := m.(ifaces.Column); ok {
-
-			cSize := NewSizeOfColumn(disc, c)
-
-			if cSize == 0 {
-				continue
-			}
-
-			if newSize == 0 {
-				newSize = cSize
-				continue
-			}
-
-			if cSize != newSize {
-				utils.Panic("inconsistenct size: col=%v has-size=%v but expected=%v", c.GetColID(), cSize, newSize)
-			}
-		}
-	}
-	return newSize
-}
-
 // ModuleOfColumn returns the module associated with the provided column.
 // The provided column can be of any type unlike what [*StandardModuleDiscoverer.ModuleOf]
 // requires.

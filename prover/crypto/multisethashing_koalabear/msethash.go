@@ -78,13 +78,6 @@ func (m *MSetHash) Add(other MSetHash) {
 	}
 }
 
-// Sub substracts the multiset "other" from "m"
-func (m *MSetHash) Sub(other MSetHash) {
-	for i := 0; i < MSetHashSize; i++ {
-		m[i].Sub(&m[i], &other[i])
-	}
-}
-
 // IsEmpty returns true if the MSetHash is empty.
 func (m *MSetHash) IsEmpty() bool {
 	for i := 0; i < MSetHashSize; i++ {
@@ -216,20 +209,6 @@ func (m *MSetHashGnark) AddRaw(api frontend.API, other []frontend.Variable) {
 
 	for i := 0; i < MSetHashSize; i++ {
 		m.Inner[i] = api.Add(m.Inner[i], other[i])
-	}
-}
-
-// Sub substracts the multiset "other" from "m"
-func (m *MSetHashGnark) Sub(api frontend.API, other MSetHashGnark) {
-	for i := 0; i < MSetHashSize; i++ {
-		m.Inner[i] = api.Sub(m.Inner[i], other.Inner[i])
-	}
-}
-
-// AssertEqual asserts that the multisets hashes are equal.
-func (m *MSetHashGnark) AssertEqual(api frontend.API, other MSetHashGnark) {
-	for i := 0; i < MSetHashSize; i++ {
-		api.AssertIsEqual(m.Inner[i], other.Inner[i])
 	}
 }
 

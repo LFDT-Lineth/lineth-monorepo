@@ -6,7 +6,6 @@ import (
 	"github.com/consensys/gnark/constraint/solver"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
-	"github.com/consensys/gnark/std/selector"
 )
 
 // VType indicates whether the API is operating in native or emulated mode.
@@ -52,24 +51,6 @@ func (a *API) Type() VType {
 // IsNative returns true if the API is operating in native mode.
 func (a *API) IsNative() bool {
 	return a.emulatedAPI == nil
-}
-
-// Frontend returns the underlying gnark frontend API.
-func (a *API) Frontend() frontend.API {
-	return a.nativeAPI
-}
-
-// EmulatedField returns the emulated field API, or nil if in native mode.
-func (a *API) EmulatedField() *emulated.Field[emulated.KoalaBear] {
-	return a.emulatedAPI
-}
-
-// GetFrontendVariable extracts a frontend.Variable from a Var.
-func (a *API) GetFrontendVariable(v Element) frontend.Variable {
-	if a.emulatedAPI == nil {
-		return v.V
-	}
-	return v.EV.Limbs[0]
 }
 
 // --- Constants ---
@@ -182,11 +163,6 @@ func (a *API) MulConst(x Element, c *big.Int) Element {
 	return Element{EV: *a.emulatedAPI.MulConst(x.Emulated(), c)}
 }
 
-// MulConstInt returns x * c where c is an int64 constant.
-func (a *API) MulConstInt(x Element, c int64) Element {
-	return a.MulConst(x, big.NewInt(c))
-}
-
 // Inverse returns 1/x.
 func (a *API) Inverse(x Element) Element {
 	if a.IsNative() {
@@ -205,50 +181,12 @@ func (a *API) Div(x, y Element) Element {
 
 // --- Comparison and Selection ---
 
-// IsZero returns 1 if x == 0, 0 otherwise.
-func (a *API) IsZero(x Element) frontend.Variable {
-	if a.IsNative() {
-		return a.nativeAPI.IsZero(x.Native())
-	}
-	return a.emulatedAPI.IsZero(x.Emulated())
-}
-
 // Select returns x if sel=1, y otherwise.
 func (a *API) Select(sel frontend.Variable, x, y Element) Element {
 	if a.IsNative() {
 		return Element{V: a.nativeAPI.Select(sel, x.Native(), y.Native())}
 	}
 	return Element{EV: *a.emulatedAPI.Select(sel, x.Emulated(), y.Emulated())}
-}
-
-// Lookup2 returns i0 if (b0,b1)=(0,0), i1 if (0,1), i2 if (1,0), i3 if (1,1).
-func (a *API) Lookup2(b0, b1 frontend.Variable, i0, i1, i2, i3 Element) Element {
-	if a.IsNative() {
-		return Element{V: a.nativeAPI.Lookup2(
-			b0, b1,
-			i0.Native(), i1.Native(), i2.Native(), i3.Native())}
-	}
-	return Element{EV: *a.emulatedAPI.Lookup2(
-		b0, b1,
-		i0.Emulated(), i1.Emulated(), i2.Emulated(), i3.Emulated())}
-}
-
-// Mux returns inputs[sel].
-func (a *API) Mux(sel frontend.Variable, inputs ...Element) Element {
-	if a.IsNative() {
-		nativeInputs := make([]frontend.Variable, len(inputs))
-		for i := range nativeInputs {
-			nativeInputs[i] = inputs[i].Native()
-		}
-		res := selector.Mux(a.nativeAPI, sel, nativeInputs...)
-		return Element{V: res}
-	}
-	emulatedInputs := make([]*emulated.Element[emulated.KoalaBear], len(inputs))
-	for i := range emulatedInputs {
-		emulatedInputs[i] = inputs[i].Emulated()
-	}
-	res := a.emulatedAPI.Mux(sel, emulatedInputs...)
-	return Element{EV: *res}
 }
 
 // --- Assertions ---
@@ -259,24 +197,6 @@ func (a *API) AssertIsEqual(x, y Element) {
 		a.nativeAPI.AssertIsEqual(x.Native(), y.Native())
 	} else {
 		a.emulatedAPI.AssertIsEqual(x.Emulated(), y.Emulated())
-	}
-}
-
-// AssertIsDifferent constrains x != y.
-func (a *API) AssertIsDifferent(x, y Element) {
-	if a.IsNative() {
-		a.nativeAPI.AssertIsDifferent(x.Native(), y.Native())
-	} else {
-		a.emulatedAPI.AssertIsDifferent(x.Emulated(), y.Emulated())
-	}
-}
-
-// AssertIsLessOrEqual constrains x <= y.
-func (a *API) AssertIsLessOrEqual(x, y Element) {
-	if a.IsNative() {
-		a.nativeAPI.AssertIsLessOrEqual(x.Native(), y.Native())
-	} else {
-		a.emulatedAPI.AssertIsLessOrEqual(x.Emulated(), y.Emulated())
 	}
 }
 
@@ -305,21 +225,6 @@ func (a *API) FromBinary(bits ...frontend.Variable) Element {
 		return Element{V: a.nativeAPI.FromBinary(bits...)}
 	}
 	return Element{EV: *a.emulatedAPI.FromBits(bits...)}
-}
-
-// And returns a AND b (bitwise).
-func (a *API) And(x, y frontend.Variable) frontend.Variable {
-	return a.nativeAPI.And(x, y)
-}
-
-// Or returns a OR b (bitwise).
-func (a *API) Or(x, y frontend.Variable) frontend.Variable {
-	return a.nativeAPI.Or(x, y)
-}
-
-// Xor returns a XOR b (bitwise).
-func (a *API) Xor(x, y frontend.Variable) frontend.Variable {
-	return a.nativeAPI.Xor(x, y)
 }
 
 // --- Hints ---
@@ -358,20 +263,3 @@ func (a *API) NewHint(f solver.Hint, nbOutputs int, inputs ...Element) ([]Elemen
 }
 
 // --- Debug ---
-
-// Println prints variables for debugging.
-func (a *API) Println(vars ...Element) {
-	if a.IsNative() {
-		for i := range vars {
-			a.nativeAPI.Println(vars[i].Native())
-		}
-	} else {
-		for i := range vars {
-			v := vars[i]
-			reduced := a.emulatedAPI.Reduce(&v.EV) // Use the return value!
-			for j := 0; j < len(reduced.Limbs); j++ {
-				a.nativeAPI.Println(reduced.Limbs[j])
-			}
-		}
-	}
-}

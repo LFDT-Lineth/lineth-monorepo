@@ -22,13 +22,6 @@ func assertHasLength(a, b int) {
 	}
 }
 
-// assertPowerOfTwoLen panics if l is not a power of two
-func assertPowerOfTwoLen(l int) {
-	if !utils.IsPowerOfTwo(l) {
-		logrus.Panicf("Slice should have a power of two length but has %v", l)
-	}
-}
-
 // assertStrictPositiveLen panics if l is 0 or negative
 func assertStrictPositiveLen(l int) {
 

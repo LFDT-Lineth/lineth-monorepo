@@ -105,15 +105,6 @@ func (t *Tree) GetLeaf(pos int) (types.Bls12377Fr, error) {
 	return t.OccupiedLeaves[pos], nil
 }
 
-// MustGetLeaf is as [Tree.GetLeaf] but panics on errors.
-func (t *Tree) MustGetLeaf(pos int) types.Bls12377Fr {
-	l, err := t.GetLeaf(pos)
-	if err != nil {
-		utils.Panic("could not get leaf: %v", err.Error())
-	}
-	return l
-}
-
 // getNode returns a node at a given level:
 //   - 0 is a leaf
 //   - 1 - 39 : is an intermediate node

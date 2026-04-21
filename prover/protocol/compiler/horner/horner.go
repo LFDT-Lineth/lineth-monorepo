@@ -426,19 +426,3 @@ func microAccumulate(sel, acc, x, p any) *sym.Expression {
 		),
 	)
 }
-
-func computeMicroAccumulate(sel field.Element, acc, x, p fext.Element) fext.Element {
-
-	if sel.IsZero() {
-		return acc
-	}
-
-	if sel.IsOne() {
-		var tmp fext.Element
-		tmp.Mul(&x, &acc)
-		tmp.Add(&tmp, &p)
-		return tmp
-	}
-
-	panic("selector is non-binary")
-}

@@ -221,14 +221,6 @@ func (b *Builder) Permutation(name ifaces.QueryID, a, b_ []ifaces.Column) {
 }
 
 /*
-Creates a fixed-permutation query. Were 'a' is the fixedpermutation of 'b' for
-a given-permutation p: p(a)=b, p can be deifed only by 'b' over a defult vector 'a'.
-*/
-func (b *Builder) FixedPermutation(name ifaces.QueryID, p []ifaces.ColAssignment, a, b_ []ifaces.Column) {
-	b.CompiledIOP.InsertFixedPermutation(b.currRound, name, p, a, b_)
-}
-
-/*
 Create an GlobalConstraint query, returns the global constraint
 */
 func (b *Builder) GlobalConstraint(name ifaces.QueryID, cs_ *symbolic.Expression) query.GlobalConstraint {

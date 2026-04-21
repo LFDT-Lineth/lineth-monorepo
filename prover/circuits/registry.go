@@ -94,28 +94,6 @@ var GlobalCircuitIDMapping = map[string]uint{
 	"emulation-dummy":              11, // Dummy for infrastructure circuit
 }
 
-// GetAllCircuitNames returns all circuit names in the global mapping, sorted by circuit ID.
-func GetAllCircuitNames() []string {
-	// Create reverse mapping
-	idToName := make(map[uint]string)
-	maxID := uint(0)
-	for name, id := range GlobalCircuitIDMapping {
-		idToName[id] = name
-		if id > maxID {
-			maxID = id
-		}
-	}
-
-	// Build sorted list
-	result := make([]string, 0, len(GlobalCircuitIDMapping))
-	for i := uint(0); i <= maxID; i++ {
-		if name, exists := idToName[i]; exists {
-			result = append(result, name)
-		}
-	}
-	return result
-}
-
 // ComputeIsAllowedCircuitID computes the is_allowed_circuit_id bitmask from a list of
 // allowed circuit names. This is useful for:
 // - Validating config files

@@ -2,13 +2,12 @@ package logs
 
 import (
 	"fmt"
+
 	eth "github.com/consensys/linea-monorepo/prover/backend/execution/statemanager"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
-	ethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 )
 
 const (
@@ -71,61 +70,6 @@ func ComputeSize(logs []LogInfo) int {
 		}
 	}
 	return size
-}
-
-// ConvertToL2L1Log converts LogInfo structs into Log ones by adding dummy information for
-// fees, value, salt, offset and calldata
-func (logInfo LogInfo) ConvertToL2L1Log() types.Log {
-
-	// compute the topics
-	var topics []ethCommon.Hash
-	for i := 0; i < len(logInfo.Topics); i++ {
-		var hashBytes [32]byte
-		for j := range logInfo.Topics[i] {
-			bytes := logInfo.Topics[i][j].Bytes()
-			// in the second term, we have field.Bytes-2 as the lower bound
-			// because the first part of the arithmetization bytes are leading zeros
-			copy(hashBytes[j*2:(j+1)*2], bytes[field.Bytes-2:])
-		}
-		topics = append(topics, ethCommon.BytesToHash(hashBytes[:]))
-	}
-	var data []byte
-
-	// add dummy bytes for fees, value and salt
-	// dummyBytesFunc returns the value of z as a big-endian byte array
-	dummyBytesFunc := func() (res [BRIDGE_LOG_SLICE_SIZE]byte) {
-		var dummy field.Element
-		dummy.SetInt64(21) // 21 is a dummy value
-		aux := dummy.Bytes()
-		temp := make([]byte, BRIDGE_LOG_SLICE_SIZE-field.Bytes)
-		res = [32]byte(append(temp, aux[:]...))
-		return res
-	}
-	dummyBytes := dummyBytesFunc()
-
-	data = append(data, dummyBytes[:]...)
-	data = append(data, dummyBytes[:]...)
-	data = append(data, dummyBytes[:]...)
-
-	// add bytes for the offset, offset must have the following for
-	var offsetBytes = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4 * 32}
-	data = append(data, offsetBytes[:]...)
-	// add calldata
-	var callData = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-	data = append(data, callData[:]...)
-
-	res := types.Log{
-		Address:     ethCommon.HexToAddress("DUMMY"),
-		Topics:      topics,
-		Data:        data,
-		BlockNumber: 0,
-		TxHash:      ethCommon.Hash{},
-		TxIndex:     0,
-		BlockHash:   ethCommon.Hash{},
-		Index:       0,
-		Removed:     false,
-	}
-	return res
 }
 
 // NewLogColumns returns a new LogColumns with initialized

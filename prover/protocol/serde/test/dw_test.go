@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/protocol/distributed"
-	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/zkevm"
 )
 
@@ -95,27 +94,6 @@ func GetDistWizard() *distributed.DistributedWizard {
 
 		// This tests the compilation of the compiled-IOP
 		distWizard = distributed.DistributeWizard(z.InitialCompiledIOP, disc).
-				CompileSegments(zkevm.LimitlessCompilationParams).
-				Conglomerate(zkevm.LimitlessCompilationParams)
-	)
-
-	return distWizard
-}
-
-func GetBasicDistWizard() *distributed.DistributedWizard {
-
-	var (
-		numRow = 1 << 10
-		tc     = distributeTestCase{numRow: numRow}
-		disc   = &distributed.StandardModuleDiscoverer{
-			TargetWeight: 3 * numRow,
-		}
-		comp = wizard.Compile(func(build *wizard.Builder) {
-			tc.define(build.CompiledIOP)
-		})
-
-		// This tests the compilation of the compiled-IOP
-		distWizard = distributed.DistributeWizard(comp, disc).
 				CompileSegments(zkevm.LimitlessCompilationParams).
 				Conglomerate(zkevm.LimitlessCompilationParams)
 	)

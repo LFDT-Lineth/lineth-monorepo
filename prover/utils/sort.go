@@ -8,15 +8,3 @@ type GenSorter struct {
 	SwapFn func(int, int)
 	LessFn func(int, int) bool
 }
-
-func (s GenSorter) Len() int {
-	return s.LenFn()
-}
-
-func (s GenSorter) Swap(i, j int) {
-	s.SwapFn(i, j)
-}
-
-func (s GenSorter) Less(i, j int) bool {
-	return s.LessFn(i, j)
-}

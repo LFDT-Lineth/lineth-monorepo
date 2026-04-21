@@ -1,13 +1,9 @@
 package testtools
 
 import (
-	"strconv"
-
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
-	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
-	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 )
 
 // InclusionTestcase represents a lookup relationship and and its assignment.
@@ -247,105 +243,4 @@ var ListOfInclusionTestcasesNegative = []InclusionTestcase{
 		},
 		MustFailFlag: true,
 	},
-}
-
-// Define declares all the columns and queries involved in the testcase.
-func (t *InclusionTestcase) Define(comp *wizard.CompiledIOP) {
-
-	var (
-		tableFilter = make([]ifaces.Column, len(t.TableFilter))
-		table       = make([][]ifaces.Column, len(t.Table))
-		sFilter     = make([]ifaces.Column, len(t.SFilters))
-		s           = make([][]ifaces.Column, len(t.S))
-	)
-
-	for i := range table {
-
-		tableFilter[i] = comp.InsertCommit(
-			0,
-			formatName[ifaces.ColID]("Inclusion", t.Name, "TableFilter", i),
-			t.TableFilter[i].Len(),
-			true,
-		)
-
-		table[i] = make([]ifaces.Column, len(t.Table[i]))
-		for j := range table[i] {
-			table[i][j] = comp.InsertCommit(
-				0,
-				formatName[ifaces.ColID]("Inclusion", t.Name, "Table", i, j),
-				t.Table[i][j].Len(),
-				smartvectors.IsBase(t.Table[i][j]),
-			)
-		}
-	}
-
-	for i := range s {
-
-		sFilter[i] = comp.InsertCommit(
-			0,
-			formatName[ifaces.ColID]("Inclusion", t.Name, "SFilters", i),
-			t.SFilters[i].Len(),
-			true,
-		)
-
-		s[i] = make([]ifaces.Column, len(t.S[i]))
-		for j := range s[i] {
-			s[i][j] = comp.InsertCommit(
-				0,
-				formatName[ifaces.ColID]("Inclusion", t.Name, "S", i, j),
-				t.S[i][j].Len(),
-				smartvectors.IsBase(t.S[i][j]),
-			)
-		}
-	}
-
-	for i := range s {
-		qName := ifaces.QueryID("Inclusion_" + t.Name + "_" + strconv.Itoa(i))
-		t.Q = query.NewInclusion(
-			qName,
-			s[i],
-			table,
-			sFilter[i],
-			tableFilter,
-		)
-		comp.QueriesNoParams.AddToRound(0, qName, t.Q)
-	}
-}
-
-// Assign assigns the testcase to the compiled IOP
-func (t *InclusionTestcase) Assign(run *wizard.ProverRuntime) {
-
-	for i := range t.Table {
-
-		run.AssignColumn(
-			formatName[ifaces.ColID]("Inclusion", t.Name, "TableFilter", i),
-			t.TableFilter[i],
-		)
-
-		for j := range t.Table[i] {
-			run.AssignColumn(
-				formatName[ifaces.ColID]("Inclusion", t.Name, "Table", i, j),
-				t.Table[i][j],
-			)
-		}
-	}
-
-	for i := range t.S {
-
-		run.AssignColumn(
-			formatName[ifaces.ColID]("Inclusion", t.Name, "SFilters", i),
-			t.SFilters[i],
-		)
-
-		for j := range t.S[i] {
-			run.AssignColumn(
-				formatName[ifaces.ColID]("Inclusion", t.Name, "S", i, j),
-				t.S[i][j],
-			)
-		}
-	}
-}
-
-func (t *InclusionTestcase) MustFail() bool {
-	return t.MustFailFlag
 }

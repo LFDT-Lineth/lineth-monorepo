@@ -18,17 +18,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/generic"
 )
 
-const (
-	// addressHiBytes is the size of the leftover from trimmed addressHi part (in bytes).
-	addressHiBytes = 4
-	// addressHiColumns is the number of addressHi columns.
-	addressHiColumns = addressHiBytes / common.LimbBytes
-	// addressTrimmedBytes size of the trimmed address part (in bytes).
-	addressTrimmedBytes = common.NbLimbU256 - addressHiBytes
-	// addressTrimmedColumns number of columns that represent the trimmed address part.
-	addressTrimmedColumns = addressTrimmedBytes / common.LimbBytes
-)
-
 // Addresses submodule is responsible for the columns holding the address of the sender,
 // and checking their consistency with the claimed public key
 // (since address is the truncated hash of public key).
@@ -71,18 +60,6 @@ type Addresses struct {
 
 	// providers for keccak, Providers contain the inputs and outputs of keccak hash.
 	Provider generic.GenericByteModule
-}
-
-// Addresses returns the addresses in a limbs.Uint160Le
-// in LE form.
-func (addr *Addresses) Addresses() limbs.Uint160Le {
-
-	_, address := limbs.FuseLimbs(
-		addr.AddressHiUntrimmed.AsDynSize(),
-		addr.AddressLo.AsDynSize(),
-	).SplitOnBit(160)
-
-	return address.AssertUint160()
 }
 
 // newAddress creates an Address struct, declaring native columns and the constraints among them.

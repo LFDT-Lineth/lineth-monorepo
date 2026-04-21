@@ -21,10 +21,6 @@ func Zero() Element {
 	return res
 }
 
-func Uint64(z *Element) (uint64, uint64, uint64, uint64) {
-	return uint64(z.B0.A0.Bits()[0]), uint64(z.B0.A1.Bits()[0]), uint64(z.B1.A0.Bits()[0]), uint64(z.B1.A1.Bits()[0])
-}
-
 // SetInt64 sets z to v and returns z
 // ./common/smartvectorsext/fuzzing.go:195:		coeffField.SetInt64(int64(tcase.coeffs[i]))
 // ./common/smartvectorsext/arithmetic_op.go:95:		c.SetInt64(int64(coeff))

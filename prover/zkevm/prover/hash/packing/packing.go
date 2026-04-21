@@ -165,7 +165,3 @@ func spaghettiMaker(comp *wizard.CompiledIOP, decomposed decomposition, isNewHas
 
 	return s
 }
-
-func NbRowsPerLane(laneByteSize int) int {
-	return (laneByteSize + MAXNBYTE - 1) / MAXNBYTE
-}

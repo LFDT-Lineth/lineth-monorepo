@@ -2,15 +2,10 @@ package field
 
 import (
 	"fmt"
-	"io"
-	"math/big"
 	"math/bits"
 	"math/rand/v2"
-	"unsafe"
 
-	fr377 "github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
 	"github.com/consensys/gnark-crypto/field/koalabear"
-	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 type Element = koalabear.Element
@@ -113,42 +108,12 @@ func PseudoRand(rng *rand.Rand) Element {
 	return res
 }
 
-// PseudoRandTruncated generates a field using a pseudo-random number generator
-func PseudoRandTruncated(rng *rand.Rand, sizeByte int) Element {
-
-	if sizeByte > 4 {
-		utils.Panic("supplied a byteSize larger than 4 (%v), this must be a mistake. Please check that the supplied value is not instead a BIT-size.", sizeByte)
-	}
-
-	var (
-		bigInt    = &big.Int{}
-		res       = Element{}
-		bareU32   = [1]uint32{rng.Uint32()}
-		bareBytes = *(*[4]byte)(unsafe.Pointer(&bareU32))
-	)
-
-	bigInt.SetBytes(bareBytes[:sizeByte]).Mod(bigInt, Modulus())
-	res.SetBigInt(bigInt)
-	return res
-}
-
 // FromBool returns 1 if true and zero if false
 func FromBool(b bool) Element {
 	if b {
 		return One()
 	}
 	return Zero()
-}
-
-// ParseOctuplet parses a [32]byte into an octuplet of field element
-func ParseOctuplet(data [32]byte) [8]Element {
-	var res [8]Element
-	for i := range res {
-		if err := res[i].SetBytesCanonical(data[i*4 : i*4+4]); err != nil {
-			utils.Panic("could not parse octuplet: %v, data: %v", err, data)
-		}
-	}
-	return res
 }
 
 // NewOctupletFromStrings constructs an octuplet from 8 string representations.
@@ -159,16 +124,6 @@ func NewOctupletFromStrings(s [8]string) (res Octuplet) {
 		if err != nil {
 			panic(fmt.Sprintf("failed to parse element %d: %v", i, err))
 		}
-	}
-	return res
-}
-
-// OctupletToBytes converts an octuplet of field elements to a [32]byte
-func OctupletToBytes(octuplet [8]Element) [32]byte {
-	var res [32]byte
-	for i := range octuplet {
-		x := octuplet[i].Bytes()
-		copy(res[i*4:i*4+4], x[:])
 	}
 	return res
 }
@@ -187,26 +142,4 @@ func PseudoRandOctuplet(rng *rand.Rand) Octuplet {
 		oct[i] = PseudoRand(rng)
 	}
 	return oct
-}
-
-func WriteOctupletTo(w io.Writer, octuplet Octuplet) error {
-	for i := range octuplet {
-		f := octuplet[i].Bytes()
-		if _, err := w.Write(f[:]); err != nil {
-			return fmt.Errorf("error writing field octuplet, could not write position %v: %w", i, err)
-		}
-	}
-	return nil
-}
-
-func EquivalentBLS12377Fr(f Element) fr377.Element {
-
-	var (
-		x big.Int
-		y fr377.Element
-	)
-
-	f.BigInt(&x)
-	y.SetBigInt(&x)
-	return y
 }

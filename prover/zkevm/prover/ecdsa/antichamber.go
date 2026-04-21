@@ -27,9 +27,6 @@ const (
 )
 
 const (
-	// keccak digest is on size 32bytes
-	halfDigest = 16
-
 	// number of public inputs gnark circuit takes as a public witness
 	nbRowsPerGnarkPushing = 14
 

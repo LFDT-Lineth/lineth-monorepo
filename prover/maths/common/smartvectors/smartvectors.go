@@ -88,11 +88,6 @@ func AllocateRegular(n int) SmartVector {
 	return NewRegular(make([]field.Element, n))
 }
 
-// AllocateRegularExt returns a newly allocated smart-vector
-func AllocateRegularExt(n int) SmartVector {
-	return NewRegularExt(make([]fext.Element, n))
-}
-
 // Copy into a smart-vector, will panic if into is not a regular
 // Mainly used as a sugar for refactoring
 func Copy(into *SmartVector, x SmartVector) {
@@ -257,59 +252,6 @@ func RightPadded(v []field.Element, padding field.Element, targetLen int) SmartV
 // RightZeroPadded creates a new vector (padded on the right)
 func RightZeroPadded(v []field.Element, targetLen int) SmartVector {
 	return RightPadded(v, field.Zero(), targetLen)
-}
-
-// LeftZeroPadded creates a new vector (padded on the left)
-func LeftZeroPadded(v []field.Element, targetLen int) SmartVector {
-	return LeftPadded(v, field.Zero(), targetLen)
-}
-
-// Density returns the density of a smart-vector. By density we mean the size
-// of the concrete underlying vectors. This can be used as a proxi for the
-// memory required to store the smart-vector.
-func Density(v SmartVector) int {
-	switch w := v.(type) {
-	case *Constant:
-		return 0
-	case *PaddedCircularWindow:
-		return len(w.Window_)
-	case *Regular:
-		return len(*w)
-	case *Rotated:
-		return len(w.v)
-	case *ConstantExt:
-		return 0
-	case *PaddedCircularWindowExt:
-		return len(w.Window_)
-	case *RegularExt:
-		return len(*w)
-	case *RotatedExt:
-		return len(w.v)
-	default:
-		panic(fmt.Sprintf("unexpected type %T", v))
-	}
-}
-
-// PaddingOrientationOf returns an integer indicating the orientation of the
-// padding of a column. '0' indicates an unresolved orientation. '1' indicates
-// that the columns if right-padded and '-1' indicates that it is left-padded.
-//
-// The function returns an error if the vector is not a padded-circular window.
-func PaddingOrientationOf(v SmartVector) (int, error) {
-
-	switch w := v.(type) {
-	case *PaddedCircularWindow:
-		if w.Offset_ == 0 {
-			return 1, nil
-		}
-		if w.Offset_+len(w.Window_) == w.TotLen_ {
-			return -1, nil
-		}
-	default:
-		return 0, errors.New("vector is not a padded-circular window")
-	}
-
-	return 0, nil
 }
 
 // Window returns the effective window of the vector,

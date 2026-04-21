@@ -477,26 +477,6 @@ func NewLimitlessZkEVM(cfg *config.Config) *LimitlessZkEVM {
 	}
 }
 
-// NewLimitlessRawZkEVM returns a new LimitlessZkEVM object without any
-// compilation.
-func NewLimitlessRawZkEVM(cfg *config.Config) *LimitlessZkEVM {
-
-	var (
-		traceLimits = cfg.TracesLimits
-		zkevm       = FullZKEVMWithSuite(&traceLimits, cfg, CompilationSuite{}, nil)
-		disc        = &distributed.StandardModuleDiscoverer{
-			TargetWeight: 1 << 29,
-			Advices:      DiscoveryAdvices(zkevm),
-		}
-		dw = distributed.DistributeWizard(zkevm.InitialCompiledIOP, disc)
-	)
-
-	return &LimitlessZkEVM{
-		Zkevm:      zkevm,
-		DistWizard: dw,
-	}
-}
-
 // NewLimitlessDebugZkEVM returns a new LimitlessZkEVM with only the debugging
 // components. The resulting object is not meant to be stored on disk and should
 // be used right away to debug the prover. The return object can run the
@@ -1321,42 +1301,6 @@ func (lz *LimitlessZkEVM) LoadBlueprints(cfg *config.Config) error {
 	return nil
 }
 
-// LoadCompiledGL loads the compiled GL from disk
-func LoadCompiledGL(cfg *config.Config, moduleName distributed.ModuleName) (*distributed.RecursedSegmentCompilation, error) {
-
-	var (
-		assetDir = cfg.PathForSetup(executionLimitlessPath)
-		filePath = path.Join(assetDir, fmt.Sprintf(compileGlTemplate, moduleName))
-		res      = &distributed.RecursedSegmentCompilation{}
-	)
-
-	closer, err := serde.LoadFromDisk(filePath, res, true)
-	if err != nil {
-		return nil, err
-	}
-	defer closer.Close()
-
-	return res, nil
-}
-
-// LoadCompiledLPP loads the compiled LPP from disk
-func LoadCompiledLPP(cfg *config.Config, moduleNames distributed.ModuleName) (*distributed.RecursedSegmentCompilation, error) {
-
-	var (
-		assetDir = cfg.PathForSetup(executionLimitlessPath)
-		filePath = path.Join(assetDir, fmt.Sprintf(compileLppTemplate, moduleNames))
-		res      = &distributed.RecursedSegmentCompilation{}
-	)
-
-	closer, err := serde.LoadFromDisk(filePath, res, true)
-	if err != nil {
-		return nil, err
-	}
-	defer closer.Close()
-
-	return res, nil
-}
-
 // LoadCompiledGLMmap loads the compiled GL into mmap-backed memory for explicit release.
 // The caller must call buf.Release() when done, after nilling all references to res.
 func LoadCompiledGLMmap(cfg *config.Config, moduleName distributed.ModuleName) (*distributed.RecursedSegmentCompilation, *serde.MmapBackedBuffer, error) {
@@ -1411,60 +1355,6 @@ func LoadCompiledLPPMmap(cfg *config.Config, moduleNames distributed.ModuleName)
 	}
 
 	return res, buf, nil
-}
-
-// LoadDebugGL loads the debug GL from disk
-func LoadDebugGL(cfg *config.Config, moduleName distributed.ModuleName) (*distributed.ModuleGL, error) {
-
-	var (
-		assetDir = cfg.PathForSetup(executionLimitlessPath)
-		filePath = path.Join(assetDir, fmt.Sprintf(debugGlTemplate, moduleName))
-		res      = &distributed.ModuleGL{}
-	)
-
-	closer, err := serde.LoadFromDisk(filePath, res, true)
-	if err != nil {
-		return nil, err
-	}
-	defer closer.Close()
-
-	return res, nil
-}
-
-// LoadDebugLPP loads the debug LPP from disk
-func LoadDebugLPP(cfg *config.Config, moduleName []distributed.ModuleName) (*distributed.ModuleLPP, error) {
-
-	var (
-		assetDir = cfg.PathForSetup(executionLimitlessPath)
-		filePath = path.Join(assetDir, fmt.Sprintf(debugLppTemplate, moduleName))
-		res      = &distributed.ModuleLPP{}
-	)
-
-	closer, err := serde.LoadFromDisk(filePath, res, true)
-	if err != nil {
-		return nil, err
-	}
-	defer closer.Close()
-
-	return res, nil
-}
-
-// LoadCompiledConglomeration loads the conglomeration assets from disk
-func LoadCompiledConglomeration(cfg *config.Config) (*distributed.RecursedSegmentCompilation, error) {
-
-	var (
-		assetDir = cfg.PathForSetup(executionLimitlessPath)
-		filePath = path.Join(assetDir, conglomerationFile)
-		conglo   = &distributed.RecursedSegmentCompilation{}
-	)
-
-	closer, err := serde.LoadFromDisk(filePath, conglo, true)
-	if err != nil {
-		return nil, err
-	}
-	defer closer.Close()
-
-	return conglo, nil
 }
 
 // LoadCompiledConglomerationMmap loads the conglomeration assets into mmap-backed memory.

@@ -15,12 +15,6 @@ func (f *Fifo[T]) Push(v T) {
 	*f.Inner = append(*f.Inner, v)
 }
 
-func (f *Fifo[T]) Pop() T {
-	v := (*f.Inner)[0]
-	*f.Inner = (*f.Inner)[1:]
-	return v
-}
-
 func (f *Fifo[T]) TryPop() (T, bool) {
 	if len(*f.Inner) == 0 {
 		var v T

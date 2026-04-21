@@ -3,7 +3,6 @@ package smt
 import (
 	"fmt"
 
-	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/types"
 )
 
@@ -49,15 +48,6 @@ func (t *Tree) Prove(pos int) (Proof, error) {
 		Siblings: siblings,
 		Path:     pos,
 	}, nil
-}
-
-// MustProve runs [Tree.Prove] and panics on error
-func (t *Tree) MustProve(pos int) Proof {
-	proof, err := t.Prove(pos)
-	if err != nil {
-		utils.Panic("could not prover: %v", err.Error())
-	}
-	return proof
 }
 
 // RecoverRoot returns the root recovered from the Merkle proof.

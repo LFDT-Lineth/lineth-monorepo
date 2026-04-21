@@ -138,17 +138,6 @@ func NewHorner(round int, id ifaces.QueryID, parts []HornerPart) Horner {
 	}
 }
 
-// NewIncompleteHornerParams returns an incomplete [HornerParams] by using
-// the [HornerParamsParts] as inputs. The function ignores the N1's values
-// if they are provided and does not set
-func NewHornerParamsFromIncomplete(run ifaces.Runtime, q Horner, parts []HornerParamsPart) HornerParams {
-	res := HornerParams{
-		Parts: parts,
-	}
-	res.SetResult(run, q)
-	return res
-}
-
 // SetResult computes the result parameters of the Horner evaluation from
 // an incomplete [HornerParams]. The object should however have a the X's
 // and the N0's set. The function returns a pointer to its receiver so the

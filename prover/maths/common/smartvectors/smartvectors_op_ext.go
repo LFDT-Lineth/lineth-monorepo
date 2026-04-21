@@ -12,12 +12,6 @@ func ForTestExt(xs ...int) SmartVector {
 	return NewRegularExt(vectorext.ForTest(xs...))
 }
 
-// ForTestFromVect computes a regular smartvector of field extensions,
-// where each field extension is populated using one vector of size [fext.ExtensionDegree]
-func ForTestFromVect(xs ...[fext.ExtensionDegree]int) SmartVector {
-	return NewRegularExt(vectorext.ForTestFromVect(xs...))
-}
-
 // ForTestFromQuads groups the inputs into pairs and computes a regular smartvector of
 // field extensions, where each field extension has only the first two coordinates populated.
 func ForTestFromQuads(xs ...int) SmartVector {
@@ -58,14 +52,4 @@ func RightPaddedExt(v []fext.Element, padding fext.Element, targetLen int) Smart
 	}
 
 	return NewPaddedCircularWindowExt(v, padding, 0, targetLen)
-}
-
-// RightZeroPadded creates a new vector (padded on the right)
-func RightZeroPaddedExt(v []fext.Element, targetLen int) SmartVector {
-	return RightPaddedExt(v, fext.Zero(), targetLen)
-}
-
-// LeftZeroPadded creates a new vector (padded on the left)
-func LeftZeroPaddedExt(v []fext.Element, targetLen int) SmartVector {
-	return LeftPaddedExt(v, fext.Zero(), targetLen)
 }

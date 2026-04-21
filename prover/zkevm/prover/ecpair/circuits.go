@@ -14,8 +14,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
 )
 
-var fpParams sw_bn254.BaseField
-
 type (
 	fpField   = emulated.Field[emparams.BN254Fp]
 	fpElement = emulated.Element[emparams.BN254Fp]
