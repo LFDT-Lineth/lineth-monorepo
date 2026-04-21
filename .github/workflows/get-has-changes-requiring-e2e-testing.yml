@@ -11,7 +11,7 @@ on:
 
 jobs:
   get-has-changes-requiring-e2e-testing:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     outputs:
       has_changes_requiring_e2e_testing: ${{ steps.evaluate.outputs.result }}
     steps:

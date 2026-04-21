@@ -116,7 +116,7 @@ jobs:
 
   # Run Jacoco report after all JVM tests complete
   jacoco-report:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
     name: Generate Jacoco Coverage Report
     # Run if at least one JVM test job completed (whether passed, failed, or cancelled)
     # Don't run if all test jobs were skipped due to no changes

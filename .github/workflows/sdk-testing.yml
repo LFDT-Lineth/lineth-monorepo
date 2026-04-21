@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   build-and-test:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     name: SDK Build, Test, Lint
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

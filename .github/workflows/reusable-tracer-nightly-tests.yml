@@ -18,7 +18,7 @@ jobs:
   # Nightly Tests
   # ==================================================================
   nightly-tests:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xxl
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-xxl
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -61,7 +61,7 @@ jobs:
   # Nightly Modexp Tests are treated separately while fixing performance issue on compile time
   # ==================================================================
   nightly-modexp-tests:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xxl
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-xxl
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

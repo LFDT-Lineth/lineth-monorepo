@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   guard:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     steps:
       - name: Ensure running on main
         if: github.ref != 'refs/heads/main'
@@ -61,7 +61,7 @@ jobs:
   publish-sdk-core:
     needs: guard
     if: inputs.package == 'sdk-core'
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     steps:
       - name: Checkout release commit
         uses: actions/checkout@v6
@@ -152,7 +152,7 @@ jobs:
   publish-sdk-viem:
     needs: guard
     if: inputs.package == 'sdk-viem'
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     steps:
       - name: Checkout release commit
         uses: actions/checkout@v6

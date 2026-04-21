@@ -25,7 +25,7 @@ on:
 
 jobs:
   run-validium-e2e-tests:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xl
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-xl
     steps:
       - name: Setup upterm session
         if: ${{ inputs.e2e-tests-with-ssh }}

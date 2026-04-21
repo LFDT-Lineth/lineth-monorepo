@@ -28,7 +28,7 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     # ? Seems to fail more often on xl
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-large
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
     name: Coordinator tests
     steps:
       - name: Checkout

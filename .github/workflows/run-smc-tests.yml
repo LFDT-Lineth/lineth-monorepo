@@ -18,7 +18,7 @@ env:
 jobs:
   run-contract-tests:
     # ~2 mins saved vs small
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
     name: Run smart contracts tests
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -91,7 +91,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   solidity-format-check:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
     name: Solidity format check
     steps:
       - name: Checkout

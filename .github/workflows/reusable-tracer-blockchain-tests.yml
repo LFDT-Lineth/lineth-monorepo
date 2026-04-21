@@ -40,7 +40,7 @@ jobs:
   # Blockchain ref Tests
   # ==================================================================
   blockchain-reference-tests:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xxl
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-xxl
     outputs:
       success: ${{ steps.metrics.outputs.success }}
       failed: ${{ steps.metrics.outputs.failed }}

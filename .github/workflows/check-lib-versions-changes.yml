@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   check_lib_version_change:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     outputs:
       besu_commit_changed: ${{ steps.check_besu_commit.outputs.version_changed }}
 

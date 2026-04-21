@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   stale:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     steps:
       - uses: actions/stale@v10
         with:

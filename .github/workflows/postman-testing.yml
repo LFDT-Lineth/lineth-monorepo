@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   run-tests:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-large
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
     name: Postman & SDK tests
     env:
       COMMIT_TAG: ${{ inputs.commit_tag }}

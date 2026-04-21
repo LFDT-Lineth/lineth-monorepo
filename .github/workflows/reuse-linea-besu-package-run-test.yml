@@ -9,7 +9,7 @@ on:
 
 jobs:
   list-profiles:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     outputs:
       profile-files: ${{ steps.list-profiles.outputs.files }}
     steps:
@@ -26,7 +26,7 @@ jobs:
 
   test-profile:
     timeout-minutes: 4
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
     continue-on-error: true
     needs: [ list-profiles ]
     strategy:

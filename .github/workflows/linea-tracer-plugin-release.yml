@@ -20,7 +20,7 @@ jobs:
   # Build - for release and for tests
   # ==================================================================
   build:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
     outputs:
       versionTag: ${{ steps.config.outputs.VERSION_TAG }}
     steps:
@@ -72,7 +72,7 @@ jobs:
   # ==================================================================
   replay-tests:
     needs: [ build ]
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xxl
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-xxl
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -116,7 +116,7 @@ jobs:
   publish:
     needs: [ build ]
     if: github.event_name != 'pull_request'
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
     env:
       architecture: "amd64"
       GRADLE_OPTS: "-Xmx6g -Dorg.gradle.parallel=true -Dorg.gradle.workers.max=4"

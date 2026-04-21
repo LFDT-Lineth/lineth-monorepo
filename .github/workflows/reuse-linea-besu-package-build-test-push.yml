@@ -81,7 +81,7 @@ jobs:
   build-and-push-dockerhub:
     needs: [ run-test, run-e2e-tests ]
     if: ${{ always() && !cancelled() && inputs.push_image && (needs.run-e2e-tests.result == 'skipped' || needs.run-e2e-tests.outputs.tests_outcome == 'success') && (needs.run-test.result == 'skipped' || needs.run-test.result == 'success') }}
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
     environment: dockerhub
     env:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}

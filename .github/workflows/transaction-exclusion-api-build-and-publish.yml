@@ -56,7 +56,7 @@ concurrency:
 
 jobs:
   build-and-publish:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
     name: Transaction exclusion api build
     env:
       COMMIT_TAG: ${{ inputs.commit_tag }}

@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   run-tests:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
     name: native-yield-automation-service-testing
     env:
       COMMIT_TAG: ${{ inputs.commit_tag }}

@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   filter-commit-changes:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     name: Filter commit changes
     outputs:
       coordinator: ${{ steps.filter.outputs.coordinator }}
@@ -199,7 +199,7 @@ jobs:
     uses: ./.github/workflows/get-has-changes-requiring-e2e-testing.yml
 
   manual-docker-build-and-e2e-tests:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     needs: [check-and-tag-images, get-has-changes-requiring-e2e-testing]
     if: ${{ needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'true' }}
     environment: ${{ github.ref != 'refs/heads/main' && 'docker-build-and-e2e' || '' }}
@@ -295,7 +295,7 @@ jobs:
   cleanup-deployments:
     needs: [run-e2e-tests]
     if: ${{ always() && github.event.pull_request.head.repo.fork == false }}
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     permissions:
       contents: read
       deployments: write

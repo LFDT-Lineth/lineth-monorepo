@@ -16,7 +16,7 @@ on:
 jobs:
   build:
     environment: publish
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
     steps:
       - name: Checkout
         uses: actions/checkout@v6

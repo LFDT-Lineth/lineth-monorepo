@@ -60,7 +60,7 @@ concurrency:
 
 jobs:
   check_image_tags_exist:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     name: Check image tags exist
     env:
       # REF_NAME: ${{ github.ref_name }}
@@ -139,7 +139,7 @@ jobs:
           image_name: consensys/linea-transaction-exclusion-api
 
   image_tag_push:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     if: ${{ github.ref == 'refs/heads/main' && inputs.has-changes-requiring-build == 'true' }}
     name: Tag and push images
     needs: [ check_image_tags_exist ]
