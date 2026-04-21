@@ -30,7 +30,7 @@ jobs:
         uses: anthropics/claude-code-action@38ec876110f9fbf8b950c79f534430740c3ac009 #v1.0.101
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          claude_args: --model claude-opus-4-6
+          claude_args: --model claude-opus-4-7
           prompt: |
             You are reviewing the full Kotlin/JVM codebase in the `coordinator/` and
             `jvm-libs/` modules of the Linea monorepo.
@@ -102,15 +102,20 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           INPUT_BRANCH: ${{ github.ref_name }}
-          REVIEW_BODY: ${{ steps.review.outputs.result }}
+          EXECUTION_FILE: ${{ steps.review.outputs.execution_file }}
         run: |
           DATE=$(date -u +%Y-%m-%d)
           BRANCH="${INPUT_BRANCH}"
           COMMIT=$(git rev-parse --short=7 HEAD)
           TITLE="Coordinator review ${DATE} ${BRANCH} ${COMMIT}"
 
+          REVIEW_BODY=""
+          if [ -n "${EXECUTION_FILE}" ] && [ -f "${EXECUTION_FILE}" ]; then
+            REVIEW_BODY=$(jq -r '[.[] | select(.type=="result") | .result] | last // ""' "${EXECUTION_FILE}")
+          fi
+
           if [ -z "${REVIEW_BODY}" ]; then
-            REVIEW_BODY="No review output — Claude may not have produced output."
+            REVIEW_BODY="No review output — Claude may not have produced output. See the \`claude-execution-output\` workflow artifact for debugging."
           fi
 
           printf '%s' "${REVIEW_BODY}" > /tmp/coordinator-review.md
@@ -126,3 +131,10 @@ jobs:
         with:
           name: coordinator-review
           path: /tmp/coordinator-review.md
+
+      - name: Upload Claude execution log
+        if: ${{ always() && steps.review.outputs.execution_file != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: claude-execution-output
+          path: ${{ steps.review.outputs.execution_file }}
