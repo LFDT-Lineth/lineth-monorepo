@@ -19,7 +19,7 @@ services:
       file: compose-spec-l2-services.yml
       service: coordinator
     environment:
-      config__override__conflation__blocks_limit: 10
+      config__override__conflation__blocks_limit: 20
       config__override__conflation__conflation_deadline: PT30M
       config__override__conflation__blob_compression__batches_limit: 2
       config__override__conflation__proof_aggregation__deadline: PT30M
