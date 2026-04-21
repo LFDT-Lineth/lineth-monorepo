@@ -1,3 +1,8 @@
+include "../memory.zkc"
+include "../ram/read.zkc"
+include "../utils/signed_comparisons.zkc"
+include "../utils/sign_extend.zkc"
+
 fn process_I_type_instruction<ram,registers>(opcode:Opcode, instruction_parameters:u25, pc:Address) -> (new_pc:Address) {
   
   var funct6 : Funct6

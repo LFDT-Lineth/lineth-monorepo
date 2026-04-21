@@ -1,3 +1,7 @@
+include "../memory.zkc"
+include "../utils/constants.zkc"
+include "../utils/sign_extend.zkc"
+
 fn process_U_type_instruction<registers>(opcode:Opcode,instruction_parameters:u25, pc:Address) -> () {
 
   // var funct3 : Funct3

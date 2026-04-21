@@ -1,3 +1,7 @@
+include "constants.zkc"
+include "sign_bit.zkc"
+include "type.zkc"
+
 fn absolute_value_double_word(a : DoubleWord) -> (abs : UnsignedDoubleWord) {
   var a_sign : u1
   a_sign = sign_bit_of_double_word(a)
@@ -8,7 +12,6 @@ fn absolute_value_double_word(a : DoubleWord) -> (abs : UnsignedDoubleWord) {
     abs = (MAX_UINT_64 - a) + 1
   }
 }
-
 
 fn absolute_value_word(a : Word) -> (abs : UnsignedWord) {
   var a_sign : u1

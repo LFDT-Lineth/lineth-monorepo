@@ -1,3 +1,7 @@
+include "../memory.zkc"
+include "../ram/write.zkc"
+include "../utils/constants.zkc"
+
 fn process_S_type_instruction<ram,registers>(instruction_parameters:u25) {
 
   // var funct3 : Funct3

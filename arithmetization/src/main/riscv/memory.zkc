@@ -1,0 +1,22 @@
+include "utils/type.zkc"
+
+// Stores the bytes of the RISC-V executable binary (i.e. the guest program).
+pub input riscV_program(address:Address)->(bytes:u8)
+
+// Stores the number of bytes of the RISC-V executable binary.
+pub input riscV_program_length(rv:u1)->(length:Address)
+
+// Stores the input bytes provided for the RISC-V executable.
+pub input in_bytes(address:Address)->(bytes:u8)
+
+// Stores the number of input bytes provided.
+pub input in_bytes_length(pi:u1)->(length:Address)
+
+// Represents the available Random Access Memory (RAM) for the guest program.
+// This will act as the program "heap" and will contain, amongst other things,
+// the program executable itself and the program inputs. 
+memory ram(address:Address)->(bytes:u8)
+
+// Represents the Register File to use when executing the guest program.  That
+// is, the value of all registers at the given moment.
+memory registers(id:Register)->(value:DoubleWord)

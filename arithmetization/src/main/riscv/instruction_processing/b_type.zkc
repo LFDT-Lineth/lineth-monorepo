@@ -1,3 +1,7 @@
+include "../memory.zkc"
+include "../utils/constants.zkc"
+include "../utils/signed_comparisons.zkc"
+
 fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address) -> (pc_new:Address) {
 
   // var funct3 : Funct3

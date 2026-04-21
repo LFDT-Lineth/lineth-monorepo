@@ -9,13 +9,7 @@ include "utils/bit_flip.zkc"
 include "utils/signed_comparisons.zkc"
 include "utils/sign_bit.zkc"
 include "utils/negative.zkc"
-
-pub input riscV_program(address:Address)->(bytes:u8)
-pub input riscV_program_length(rv:u1)->(length:Address)
-pub input in_bytes(address:Address)->(bytes:u8)
-pub input in_bytes_length(pi:u1)->(length:Address)
-memory ram(address:Address)->(bytes:u8)
-memory registers(id:Register)->(value:DoubleWord)
+include "memory.zkc"
 
 // TODO @Ghost
 fn main<ram, registers>() {

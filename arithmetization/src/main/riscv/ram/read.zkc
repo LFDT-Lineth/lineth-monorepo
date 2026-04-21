@@ -1,3 +1,5 @@
+include "../memory.zkc"
+
 // TODO: clarify the endianness business and uniform these functions, maybe create LE and BE versions
 fn read_32<ram>(address:Address) -> (value : u32) {
    value = ram[address + 3] :: ram[address + 2] :: ram[address + 1] :: ram[address + 0]

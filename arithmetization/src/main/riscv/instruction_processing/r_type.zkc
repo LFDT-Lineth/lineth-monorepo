@@ -1,3 +1,11 @@
+include "../memory.zkc"
+include "../utils/absolute_value.zkc"
+include "../utils/bit_flip.zkc"
+include "../utils/negative.zkc"
+include "../utils/sign_bit.zkc"
+include "../utils/sign_extend.zkc"
+include "../utils/signed_comparisons.zkc"
+
 fn process_R_type_instruction<registers>(instruction_parameters:u25) {
 
   var funct7                   : Funct7
