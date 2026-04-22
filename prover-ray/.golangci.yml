@@ -1,0 +1,125 @@
+version: "2"
+
+run:
+  issues-exit-code: 1
+  timeout: 5m
+
+linters:
+  default: none
+  enable:
+    # Correctness
+    - govet
+    - errcheck
+    - staticcheck
+    - gosec
+    - ineffassign
+    - nilerr
+
+    # Find dead code and always-same parameters (invaluable during refactoring)
+    - unused
+    - unparam
+
+    # Style & quality
+    - revive
+    - misspell
+    - unconvert
+    - goconst
+
+    # Documentation hygiene — flags TODO/FIXME (use issues, not comments)
+    - godox
+
+    # Performance — flags missing slice pre-allocations
+    - prealloc
+
+    # Size limits (per AGENTS.md: 120-char hard limit)
+    - lll
+
+    # Error handling — enforces errors.Is/As instead of == comparisons
+    - errorlint
+
+    # Testing
+    - testifylint
+    - thelper
+
+  settings:
+    gosec:
+      excludes:
+        - G115
+        - G602
+    staticcheck:
+      checks: ["all"]
+    revive:
+      rules:
+        - name: exported
+        - name: var-naming
+        - name: receiver-naming
+        - name: error-return
+        - name: error-naming
+        - name: if-return
+        - name: indent-error-flow
+        - name: unused-parameter
+        - name: redefines-builtin-id
+        - name: superfluous-else
+        - name: modifies-value-receiver
+        # deactivated
+        - name: function-length
+          arguments: [0, 0]  # [max-stmts (disabled), max-lines]
+    lll:
+      line-length: 120
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    errorlint:
+      errorf: true
+      asserts: true
+      comparison: true
+    prealloc:
+      simple: true
+      range-loops: true
+      for-loops: false
+    testifylint:
+      enable-all: true
+    godox:
+      keywords:
+        - TODO
+        - FIXME
+        - HACK
+
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - path: (.+)\.go$
+        text: '.*printf: non-constant format string in call to.*'
+      - linters:
+          - lll
+        source: '^\s*(logrus\.|log\.|fmt\.(Print|Fprintf|Sprintf|Errorf)|panic\(|errors\.(New|Errorf|Wrap|Wrapf)|utils\.Panic)'
+      - linters:
+          - lll
+        path: _test\.go$
+      - linters:
+          - gosec
+        path: _test\.go$
+        text: 'G404'
+      - linters:
+          - unparam
+        path: _test\.go$
+      - path: (.+)\.go$
+        text: '.*always receives.*'
+      - path: (.+)\.go$
+        text: '.*redefinition of the built-in function new.*'
+    paths:
+      - third_party$
+      - builtin$
+
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

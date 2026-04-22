@@ -21,6 +21,7 @@ jobs:
       staterecovery: ${{ steps.filter.outputs.staterecovery }}
       postman: ${{ steps.filter.outputs.postman }}
       prover: ${{ steps.filter.outputs.prover }}
+      prover-ray: ${{ steps.filter.outputs.prover-ray }}
       transaction-exclusion-api: ${{ steps.filter.outputs.transaction-exclusion-api }}
       linea-besu: ${{ steps.filter.outputs.linea-besu }}
       linea-besu-package: ${{ steps.filter.outputs.linea-besu-package }}
@@ -79,10 +80,14 @@ jobs:
               - '.nvmrc'
             prover:
               - 'prover/**'
-              - '.github/workflows/prover-*.yml'
+              - '.github/workflows/prover-testing.yml'
               - '.github/workflows/build-and-publish.yml'
               - '.github/workflows/main.yml'
               - '.github/workflows/reuse-*.yml'
+            prover-ray:
+              - 'prover-ray/**'
+              - '.github/workflows/prover-ray-testing.yml'
+              - '.github/workflows/main.yml'
             transaction-exclusion-api:
               - 'transaction-exclusion-api/**'
               - 'jvm-libs/generic/extensions/futures/**'
@@ -185,6 +190,7 @@ jobs:
       linea_sequencer_changed: ${{ needs.filter-commit-changes.outputs.linea-sequencer-plugin }}
       postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
       prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
+      prover_ray_changed: ${{ needs.filter-commit-changes.outputs.prover-ray }}
       smart_contracts_changed: ${{ needs.filter-commit-changes.outputs.smart-contracts }}
       staterecovery_changed: false # disable until we have time to address it ${{ needs.filter-commit-changes.outputs.staterecovery }}
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}

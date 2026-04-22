@@ -1,0 +1,708 @@
+classDiagram
+
+    %% ObjectKind tags encoded in the top byte of an ObjectID.
+    class ObjectKind {
+        <<enumeration>>
+        KindColumn
+        KindCell
+        KindCoinField
+        + String() string
+    }
+
+    %% ObjectID is a structured uint64 identifier for registered protocol objects.
+    %% Layout: [63:56] ObjectKind | [55:40] slot | [39:0] position
+    class ObjectID {
+        + Kind() ObjectKind
+        + Slot() int
+        + Position() int
+    }
+
+    ObjectID *-- "1" ObjectKind
+
+    %% ContextFrame is a node in a tree of labelled contexts used as the identity
+    %% and provenance descriptor for all named objects in the framework.
+    %% Identity is by pointer; Path() provides content-based string equality.
+    %% NewRootFramef(msg string, args ...any) *ContextFrame — package-level constructor.
+    class ContextFrame {
+        + Parent *ContextFrame
+        + PC uintptr
+        + Label string
+        + ID ObjectID
+        + Path() string
+        + String() string
+        + Childf(msg string, args ...any) *ContextFrame
+        + CallerInfo() string
+    }
+
+    ContextFrame --() context
+
+    %% Visibility is an enum type representing the visibility of the object in
+    %% the protocol.
+    class Visibility {
+        <<enumeration>>
+        %% VisibilityInternal indicates that the object is purely an internal value for
+        %% the prover. Internal objects may not be part of "active" queries
+        %% (e.g. queries that have not been reduced yet)
+        VisibilityInternal
+        %% VisibilityOracle indicates that the object can be used in "active"
+        %% queries but the object is not intended to be sent to the verifier
+        %% directly. Implicitly, this indicates an intent to commit to the column
+        %% if the object is a column. CoinField assertedly cannot have this visibility.
+        VisibilityOracle
+        %% VisibilityPublic indicates that the object can be part of queries and
+        %% that it is visible to the verifier. The object is therefore part of
+        %% the transcript and can be accessed by verifier steps.
+        VisibilityPublic
+        + String() string
+    }
+
+    %% PaddingDirection contains directives on how a column is padded.
+    class PaddingDirection {
+        <<enumeration>>
+        %% PaddingDirectionNone indicates that the column cannot be padded and
+        %% therefore it must have non-zero size.
+        PaddingDirectionNone
+        %% PaddingDirectionLeft indicates that the column's assignment must be
+        %% prepadded with a provided value to adjust its size.
+        PaddingDirectionLeft
+        %% PaddingDirectionRight indicates that the column's assignment must be
+        %% postpadded with a provided value to adjust its size.
+        PaddingDirectionRight
+        + String() string
+    }
+
+    %% ConcreteVector represents the fulfilment of VectorPromise for a
+    %% particular runtime. It consists of a plain vector of values and some
+    %% padding.
+    class ConcreteVector {
+        + Plain []field.FieldVec
+        + Padding field.Element
+        %% promise is a backreference to the VectorPromise this ConcreteVector
+        %% fulfils, giving consumers access to size and padding semantics.
+        - promise VectorPromise
+    }
+
+    %% ConcreteField represents the fulfillment of a FieldPromise.
+    class ConcreteField {
+        + Value field.FieldElem
+        - promise FieldPromise
+    }
+
+    %% Module is a collection of columns sharing the same size that are eligible
+    %% to be part of the same set of global constraints.
+    %% size is a final attribute: it can be set at most once, and only to a
+    %% positive value. Zero implies IsSized() == false.
+    class Module {
+        + Context *ContextFrame
+        + Padding PaddingDirection
+        + Annotations Annotations
+        + Columns []*Column
+        + Vanishings []*Vanishing
+        + LocalOpenings []*LocalOpening
+        - size int
+        - index int
+        - system *System
+        + Size() int
+        + IsSized() bool
+        + SetSize(size int)
+        + System() *System
+        %% NewColumn is the constructor for base-field columns.
+        + NewColumn(ctx *ContextFrame, vis Visibility, r *Round) *Column
+        %% NewExtensionColumn is the constructor for extension-field columns.
+        + NewExtensionColumn(ctx *ContextFrame, vis Visibility, r *Round) *Column
+        %% NewPrecomputedColumn is the constructor for precomputed columns.
+        %% The round is implicit: always System.PrecomputedRound.
+        + NewPrecomputedColumn(ctx *ContextFrame, vis Visibility, assignment *ConcreteVector) *Column
+        %% NewVanishing registers a Vanishing constraint whose cancelled positions
+        %% are derived automatically from the shifts in the expression.
+        + NewVanishing(ctx *ContextFrame, expr Expression) *Vanishing
+        %% NewVanishingManual registers a Vanishing constraint with an explicit
+        %% cancellation set. An empty list enforces the predicate on every row.
+        + NewVanishingManual(ctx *ContextFrame, expr Expression, positions ...int) *Vanishing
+    }
+
+    Module --() context
+
+    %% Column represents a range of values that the prover is responsible to
+    %% compute and with which the verifier interacts in the protocol.
+    class Column {
+        + Context *ContextFrame
+        + Visibility Visibility
+        %% IsExtension indicates whether the column is evaluated over an extended
+        %% domain rather than the standard domain.
+        + IsExtension bool
+        + Annotations Annotations
+        + Module *Module
+        - round *Round
+        + Round() *Round
+        + View() *ColumnView
+        %% At constructs a ColumnPosition for this column at the given zero-based row index.
+        + At(pos int) *ColumnPosition
+        %% Degree returns Size() - 1. Panics if the owning module is unsized.
+        + Degree() int
+    }
+
+    Column --() context
+    Column --> "1" Visibility : Visibility
+
+    %% ColumnView represents a perspective over a column, with an optional cyclic
+    %% shift applied. A zero offset is not allowed; use the parent Column directly.
+    class ColumnView {
+        + Column *Column
+        + ShiftingOffset int
+        %% Shift plain-copies the view and increments the offset by the given amount.
+        %% Does not mutate the receiver.
+        + Shift(offset int) *ColumnView
+
+        + IsMultiValued() bool %% Always true
+        + IsExtension() bool   %% Delegates to Column.IsExtension
+        + Degree() int         %% Returns Size() - 1; panics if unsized
+        + Round() *Round       %% Delegates to Column.round
+        + Module() *Module     %% Delegates to Column.Module
+        + IsSized() bool       %% Delegates to Column.Module.IsSized()
+        + Size() int           %% Delegates to Column.Module.Size()
+        + Visibility() Visibility %% Delegates to Column.Visibility
+
+        + EvaluateVector(Runtime) ConcreteVector
+        %% EvaluateSingle always panics: a ColumnView is vector-valued.
+        + EvaluateSingle(Runtime) ConcreteField
+    }
+
+    ColumnView --> "1" Column : Column
+
+    %% ColumnPosition represents the evaluation of a Column at a single fixed
+    %% row index. It implements FieldPromise: EvaluateSingle returns Column[Position].
+    %% Construct via Column.At(pos int).
+    class ColumnPosition {
+        + Column *Column
+        + Position int
+
+        + IsMultiValued() bool    %% Always false — scalar value
+        + IsExtension() bool      %% Delegates to Column.IsExtension
+        + Degree() int            %% Always 0 — scalar evaluation is degree-0
+        + Round() *Round          %% Delegates to Column.round
+        + Module() *Module        %% Always nil — ColumnPosition is scalar
+        + IsSized() bool          %% Panics — no meaning for a scalar
+        + Size() int              %% Panics — no meaning for a scalar
+        + Visibility() Visibility %% Delegates to Column.Visibility
+
+        %% EvaluateVector always panics: ColumnPosition is scalar.
+        + EvaluateVector(Runtime) ConcreteVector
+        %% EvaluateSingle returns the value of Column at Position.
+        + EvaluateSingle(Runtime) ConcreteField
+        %% Open constructs and registers a LocalOpening for this position.
+        + Open(ctx *ContextFrame) *LocalOpening
+    }
+
+    ColumnPosition --> "1" Column : Column
+
+    %% Cell represents a single-valued field element that the prover is
+    %% responsible to compute and with which the verifier may interact in
+    %% the protocol. Always has VisibilityPublic.
+    class Cell {
+        + Context *ContextFrame
+        + Annotations Annotations
+        - isExtensionCached bool
+        - round *Round
+        + Round() *Round
+        %% Module always returns nil: a cell is scalar and not bound to any module.
+        + Module() *Module
+        + IsExtension() bool
+        %% IsMultiValued always returns false.
+        + IsMultiValued() bool
+        %% Degree always returns 0.
+        + Degree() int
+        %% Size panics: no meaning for a scalar FieldPromise.
+        + Size() int
+        %% IsSized panics: no meaning for a scalar FieldPromise.
+        + IsSized() bool
+        %% EvaluateVector panics: a cell is scalar.
+        + EvaluateVector(Runtime) ConcreteVector
+        + EvaluateSingle(Runtime) ConcreteField
+        %% Visibility always returns VisibilityPublic.
+        + Visibility() Visibility
+    }
+
+    Cell --() context
+
+    %% VectorPromise symbolically represents a vector of field elements.
+    class VectorPromise {
+        <<interface>>
+        + IsExtension() bool
+        + IsSized() bool
+        + Size() int
+        + Module() *Module
+        + EvaluateVector(Runtime) ConcreteVector
+        %% IsMultiValued always returns true.
+        + IsMultiValued() bool
+        %% EvaluateSingle always panics.
+        + EvaluateSingle(Runtime) ConcreteField
+        %% Degree returns Size() - 1.
+        + Degree() int
+        + Visibility() Visibility
+    }
+
+    VectorPromise <|-- ColumnView
+
+    %% FieldPromise symbolically represents a scalar field element.
+    class FieldPromise {
+        <<interface>>
+        + IsExtension() bool
+        + EvaluateSingle(Runtime) ConcreteField
+        %% IsMultiValued always returns false.
+        + IsMultiValued() bool
+        %% IsSized panics.
+        + IsSized() bool
+        %% Size panics.
+        + Size() int
+        %% EvaluateVector panics.
+        + EvaluateVector(Runtime) ConcreteVector
+        %% Degree returns 0.
+        + Degree() int
+        + Visibility() Visibility
+    }
+
+    FieldPromise <|-- Cell
+    FieldPromise <|-- CoinField
+
+    %% ArithmeticOperator identifies the arithmetic operation performed by an
+    %% ArithmeticOperation node.
+    class ArithmeticOperator {
+        <<enumeration>>
+        ArithmeticOperatorAdd
+        ArithmeticOperatorMul
+        ArithmeticOperatorSub
+        ArithmeticOperatorDiv
+        ArithmeticOperatorDouble
+        ArithmeticOperatorSquare
+        ArithmeticOperatorNegate
+        ArithmeticOperatorInverse
+        ~ arity() int
+        ~ combineDegree(operandDegrees []int) int
+        + String() string
+    }
+
+    %% ArithmeticOperation is an Expression node that applies an
+    %% ArithmeticOperator to one or two sub-expressions.
+    %% Package-level constructors (all return *ArithmeticOperation):
+    %%   NewArithmeticOperation(op ArithmeticOperator, operands ...Expression)
+    %%   Add(a, b Expression), Sub(a, b Expression), Mul(a, b Expression)
+    %%   Div(a, b Expression), Double(a Expression), Square(a Expression)
+    %%   Negate(a Expression), Inverse(a Expression)
+    %%   Sum(terms ...Expression), Product(factors ...Expression)
+    class ArithmeticOperation {
+        + Operator ArithmeticOperator
+        + Operands []Expression
+        - isMultiValuedCached *bool
+        - once sync.Once
+        - prog *compiledProgram
+        + IsExtension() bool
+        + IsMultiValued() bool
+        + Size() int
+        + IsSized() bool
+        + EvaluateVector(Runtime) ConcreteVector
+        + Module() *Module
+        + EvaluateSingle(Runtime) ConcreteField
+        + Degree() int
+        + Visibility() Visibility
+    }
+
+    ArithmeticOperation --> "1..n" Expression : Operands
+    ArithmeticOperation *-- "1" ArithmeticOperator : Operator
+
+    %% Expression represents a symbolic arithmetic expression. In practice it is
+    %% implemented by an AST of operators, variables, and constants. Expressions
+    %% may reference columns from at most one module.
+    class Expression {
+        <<interface>>
+        + IsExtension() bool
+        + IsMultiValued() bool
+        %% Degree panics on non-polynomial expressions (Div, Inverse).
+        + Degree() int
+        %% The following may only be called when IsMultiValued() is true.
+        + Size() int
+        + IsSized() bool
+        + EvaluateVector(Runtime) ConcreteVector
+        + Module() *Module
+        %% The following may only be called when IsMultiValued() is false.
+        + EvaluateSingle(Runtime) ConcreteField
+        + Visibility() Visibility
+    }
+
+    Expression <|-- ArithmeticOperation
+    Expression <|-- FieldPromise
+    Expression <|-- VectorPromise
+
+    %% CoinField represents a random coin challenge drawn by the verifier during
+    %% a protocol round. Always an extension-field element (IsExtension == true)
+    %% and always VisibilityPublic. Declared via Round.NewCoinField.
+    class CoinField {
+        + Context *ContextFrame
+        + Annotations Annotations
+        - round *Round
+        + Round() *Round
+        %% Module always returns nil: a coin is scalar and not bound to any module.
+        + Module() *Module
+        %% IsExtension always returns true.
+        + IsExtension() bool
+        %% IsMultiValued always returns false.
+        + IsMultiValued() bool
+        %% Degree always returns 0.
+        + Degree() int
+        %% Size panics.
+        + Size() int
+        %% IsSized panics.
+        + IsSized() bool
+        %% EvaluateVector panics.
+        + EvaluateVector(Runtime) ConcreteVector
+        + EvaluateSingle(Runtime) ConcreteField
+        %% Visibility always returns VisibilityPublic.
+        + Visibility() Visibility
+    }
+
+    CoinField --() context
+
+    %% Constant is a fixed-value expression. Its behaviour is determined by whether
+    %% module is nil:
+    %%
+    %%   module == nil → scalar constant ([FieldPromise] semantics):
+    %%     IsMultiValued() == false; EvaluateSingle returns Value;
+    %%     IsSized/Size/EvaluateVector panic.
+    %%
+    %%   module != nil → vector constant ([VectorPromise] semantics):
+    %%     IsMultiValued() == true; EvaluateVector returns Value repeated
+    %%     Module.Size() times; EvaluateSingle panics.
+    %%
+    %% A Constant is never extension-field and is always VisibilityPublic.
+    %%
+    %% Constructors:
+    %%   NewConstantField(v field.Element) *Constant          (module = nil)
+    %%   NewConstantVector(m *Module, v field.Element) *Constant
+    class Constant {
+        + Value field.Element
+        %% module is nil for scalar constants; non-nil binds to a module domain.
+        - module *Module
+        %% Always false.
+        + IsExtension() bool
+        %% Returns true iff module is non-nil.
+        + IsMultiValued() bool
+        %% Always VisibilityPublic.
+        + Visibility() Visibility
+        %% Returns 0 if scalar; Module.Size()-1 if vector (panics if unsized).
+        + Degree() int
+        %% Returns the bound module, or nil for scalar constants.
+        + Module() *Module
+        %% IsSized and Size delegate to module; panic if scalar.
+        + IsSized() bool
+        + Size() int
+        %% EvaluateVector panics if scalar; returns constant-filled vector if vector.
+        + EvaluateVector(Runtime) ConcreteVector
+        %% EvaluateSingle returns Value if scalar; panics if vector.
+        + EvaluateSingle(Runtime) ConcreteField
+    }
+
+    Expression <|-- Constant
+    Constant --> "0..1" Module
+
+    %% Round represents an interaction round between the prover and the verifier.
+    %% Columns are registered indirectly via Module.NewColumn / NewExtensionColumn.
+    %% Coins and cells are registered via Round.NewCoinField and Round.NewCell.
+    class Round {
+        + ID int
+        + Coins []*CoinField
+        + Columns []*Column
+        + Cells []*Cell
+        - system *System
+        + System() *System
+        + Prev() (*Round, bool)
+        + Next() (*Round, bool)
+        + NewCoinField(ctx *ContextFrame) *CoinField
+        + NewCell(ctx *ContextFrame, isExtension bool) *Cell
+    }
+
+    Round *-- "*" CoinField : Coins
+    Round *-- "*" Column : Columns
+    Round *-- "*" Cell : Cells
+
+    %% PrecomputedRound is a special round representing offline precomputations
+    %% that happen before the interactive protocol begins. It extends Round but
+    %% carries two additional invariants:
+    %%   1. Coins is always empty (no verifier challenges precede it).
+    %%   2. Every Column declared in it has a corresponding static ConcreteVector
+    %%      assignment. PrecomputedValues is parallel to Round.Columns: the i-th
+    %%      entry is the assignment for the i-th column.
+    %% Precomputed columns are declared via Module.NewPrecomputedColumn.
+    class PrecomputedRound {
+        + PrecomputedValues []*ConcreteVector
+        %% Prev always panics: the precomputed round has no predecessor.
+        + Prev() (*Round, bool)
+        %% Next always panics: the precomputed round is not part of the
+        %% interactive sequence.
+        + Next() (*Round, bool)
+        - addPrecomputedColumn(col *Column, assignment *ConcreteVector)
+    }
+
+    Round <|-- PrecomputedRound
+    PrecomputedRound *-- "*" ConcreteVector : PrecomputedValues
+
+    %% System represents an abstract cryptographic protocol and is the main
+    %% user interface for constructing protocols.
+    %% NewSystemf(msg string, args ...any) *System — package-level constructor.
+    class System {
+        + Context *ContextFrame
+        + PrecomputedRound *PrecomputedRound
+        + Rounds []*Round
+        + Modules []*Module
+        + LagrangeEvals []*LagrangeEval
+        + TableRelations []*TableRelation
+        + LogDerivativeSums []*LogDerivativeSum
+        + NewRound() *Round
+        + NewModule(ctx *ContextFrame, pd PaddingDirection) *Module
+        + NewSizedModule(ctx *ContextFrame, size int, pd PaddingDirection) *Module
+        + NewLagrangeEval(ctx *ContextFrame, polys []*ColumnView, x FieldPromise) *LagrangeEval
+        + NewLagrangeEvalFrom(ctx *ContextFrame, polys []*ColumnView, x FieldPromise, claims []*Cell) *LagrangeEval
+        + NewPermutation(ctx *ContextFrame, A []Table, B []Table) *TableRelation
+        + NewInclusion(ctx *ContextFrame, included []Table, including []Table) *TableRelation
+        + NewLogDerivativeSum(ctx *ContextFrame, kind LogDerivativeSumKind, fractions []Fraction) *LogDerivativeSum
+        + LookupColumn(id ObjectID) *Column
+        + LookupCell(id ObjectID) *Cell
+        + LookupCoinField(id ObjectID) *CoinField
+    }
+
+    System *-- "1" PrecomputedRound : PrecomputedRound
+    System *-- "1..*" Round : Rounds
+    System *-- "1..*" Module : Modules
+    System *-- "*" LagrangeEval : LagrangeEvals
+    System *-- "*" TableRelation : TableRelations
+    System *-- "*" LogDerivativeSum : LogDerivativeSums
+
+    %% Query is the base interface for all verifier predicates in the protocol.
+    %% Round() returns the EARLIEST round after which the query is ready for
+    %% verification. IsReduced/MarkAsReduced support incremental compilation.
+    class Query {
+        <<interface>>
+        + Round() *Round
+        + Check(Runtime) error
+        + IsReduced() bool
+        + MarkAsReduced()
+        + Context() *ContextFrame
+    }
+
+    %% GnarkCheckableQuery is an optional interface implemented by queries that
+    %% can be verified inside a gnark arithmetic circuit.
+    class GnarkCheckableQuery {
+        <<interface>>
+        + CheckGnark(api frontend.API, run GnarkRuntime)
+    }
+
+    %% AssignableQuery is an optional interface implemented by queries that can
+    %% automatically compute and store their own result cells.
+    class AssignableQuery {
+        <<interface>>
+        + IsAlreadyAssigned(Runtime) bool
+        + SelfAssign(Runtime)
+    }
+
+    Query <|-- GnarkCheckableQuery
+    Query <|-- AssignableQuery
+
+    %% baseQuery is a private boilerplate-sparing struct embedded by all Query
+    %% implementations. It provides IsReduced, MarkAsReduced, and Context.
+    class baseQuery {
+        - context *ContextFrame
+        + Annotations Annotations
+        - isReduced bool
+        + IsReduced() bool
+        + MarkAsReduced()
+        + Context() *ContextFrame
+    }
+
+    baseQuery --> "1" ContextFrame : context
+
+    %% Vanishing is a predicate stating that an expression must vanish. It covers
+    %% both GlobalConstraint (multi-valued) and LocalConstraint (scalar) cases.
+    %% When the expression is fully public the verifier can check directly.
+    class Vanishing {
+        + Expression Expression
+        %% CancelledPositions lists rows exempt from the predicate, sorted and
+        %% deduplicated. Positive values index from the start; negative from the
+        %% end (−1 is the last row).
+        + CancelledPositions []int
+        + Module() *Module
+        + Round() *Round
+        + Check(Runtime) error
+        + CheckGnark(api frontend.API, run GnarkRuntime)
+        + String() string
+    }
+
+    Vanishing *-- "1" Expression : Expression
+    Vanishing <|-- GnarkCheckableQuery
+    Vanishing <|-- baseQuery
+
+    %% LagrangeEval evaluates a batch of polynomials at a given point X and
+    %% asserts that the results match the prover-supplied EvaluationClaims cells.
+    %% The polynomials are in Lagrange basis over the roots-of-unity domain.
+    %%
+    %% For a column C of size n and evaluation point X, the result is:
+    %%   (X^n − 1) / n · Σ_{i<n} C[i] / (X − ω^i)
+    %% where ω is the canonical n-th root of unity.
+    %%
+    %% Invariant: the round of EvaluationPoint is strictly after all polynomial
+    %% column rounds. NewLagrangeEval enforces this automatically.
+    class LagrangeEval {
+        + Polynomials []*ColumnView
+        + EvaluationPoint FieldPromise
+        + EvaluationClaims []*Cell
+        %% Round returns the round of EvaluationPoint.
+        + Round() *Round
+        + IsAlreadyAssigned(Runtime) bool
+        + SelfAssign(Runtime)
+        + Check(Runtime) error
+        + CheckGnark(api frontend.API, run GnarkRuntime)
+    }
+
+    LagrangeEval --> "*" Cell : EvaluationClaims
+    LagrangeEval --> "*" ColumnView : Polynomials
+    LagrangeEval --> "1" FieldPromise : EvaluationPoint
+    LagrangeEval <|-- GnarkCheckableQuery
+    LagrangeEval <|-- AssignableQuery
+    LagrangeEval <|-- baseQuery
+
+    %% LocalOpening is a Query asserting that Result == Column[Position] for a
+    %% compile-time-fixed row index. The Result cell lives in the same round as
+    %% the referenced column. Construct via ColumnPosition.Open(ctx).
+    class LocalOpening {
+        + Pol *ColumnPosition
+        + Result *Cell
+        %% Round returns the round of Pol.Column (== Result.Round()).
+        + Round() *Round
+        + Check(Runtime) error
+        + CheckGnark(api frontend.API, run GnarkRuntime)
+        + IsAlreadyAssigned(Runtime) bool
+        + SelfAssign(Runtime)
+    }
+
+    LocalOpening --> "1" ColumnPosition : Pol
+    LocalOpening --> "1" Cell : Result
+    LocalOpening <|-- GnarkCheckableQuery
+    LocalOpening <|-- AssignableQuery
+    LocalOpening <|-- baseQuery
+
+    %% TableRelationKind identifies the relational predicate of a TableRelation.
+    class TableRelationKind {
+        <<enumeration>>
+        %% TableRelationPermutation asserts that A and B are equal multisets of
+        %% rows. No selectors are allowed.
+        TableRelationPermutation
+        %% TableRelationInclusion asserts that every selected row of A appears
+        %% in the union of selected rows across all B fragments.
+        TableRelationInclusion
+        + String() string
+    }
+
+    %% Table is an ordered group of same-module column views with an optional
+    %% row selector. A nil Selector means all rows are selected. Value type,
+    %% carries no identity. All columns (and Selector, if non-nil) must share
+    %% the same module, enforced by NewTable and NewFilteredTable.
+    %% Package-level constructors:
+    %%   NewTable(columns ...*ColumnView) Table
+    %%   NewFilteredTable(selector *ColumnView, columns ...*ColumnView) Table
+    class Table {
+        + Columns []*ColumnView
+        + Selector *ColumnView
+        + Module() *Module
+        + Round() *Round
+        + Width() int
+    }
+
+    Table --> "1..*" ColumnView : Columns
+    Table --> "0..1" ColumnView : Selector
+
+    %% TableRelation is a Query asserting a relational predicate between two
+    %% ordered lists of table fragments (A and B). It does NOT implement
+    %% GnarkCheckableQuery: neither predicate can be verified in a gnark circuit;
+    %% a compiler pass must reduce them first.
+    class TableRelation {
+        + Kind TableRelationKind
+        + A []Table
+        + B []Table
+        %% Round returns the max Round across all columns in A and B incl. selectors.
+        + Round() *Round
+        + Check(Runtime) error
+    }
+
+    TableRelation *-- "1" TableRelationKind : Kind
+    TableRelation *-- "1..*" Table : A
+    TableRelation *-- "1..*" Table : B
+    TableRelation <|-- baseQuery
+
+    %% LogDerivativeSumKind identifies whether the rational expressions are
+    %% combined by summation or by product.
+    class LogDerivativeSumKind {
+        <<enumeration>>
+        %% RationalSum: Result = Σ_k Σ_row Num_k[row] / Den_k[row]
+        RationalSum
+    }
+
+    %% Fraction is a value type pairing a Numerator and a Denominator expression.
+    %% Both fields are always non-nil. At least one must be vector-valued; if
+    %% both are vector-valued they must reference the same module.
+    class Fraction {
+        + Numerator Expression
+        + Denominator Expression
+    }
+
+    Fraction --> "1" Expression : Numerator
+    Fraction --> "1" Expression : Denominator
+
+    %% LogDerivativeSum is a Query that reduces a list of Fraction objects to a
+    %% single field-element result stored in a Cell. Implements AssignableQuery
+    %% but NOT GnarkCheckableQuery: a compiler pass must reduce it first.
+    %% The Result cell is allocated automatically in the round immediately
+    %% following the latest column round across all fractions.
+    class LogDerivativeSum {
+        + Kind LogDerivativeSumKind
+        + Fractions []Fraction
+        + Result *Cell
+        %% Round returns Result.Round().
+        + Round() *Round
+        + Check(Runtime) error
+        + IsAlreadyAssigned(Runtime) bool
+        + SelfAssign(Runtime)
+    }
+
+    LogDerivativeSum *-- "1" LogDerivativeSumKind : Kind
+    LogDerivativeSum *-- "1..*" Fraction : Fractions
+    LogDerivativeSum --> "1" Cell : Result
+    LogDerivativeSum <|-- AssignableQuery
+    LogDerivativeSum <|-- baseQuery
+
+    %% Runtime is the execution context for protocol Actions. It holds column
+    %% assignments, cell values, coin values, and an arbitrary state bag. A
+    %% single Runtime serves both prover-side (assign) and verifier-side (read)
+    %% usage. Pass by value: mutable storage lives in map and pointer fields.
+    %% AdvanceRound must be called on a pointer to update currentRound.
+    %% NewRuntime(sys *System) Runtime — package-level constructor.
+    class Runtime {
+        + System *System
+        - currentRound *Round
+        - fs *fiatshamir.FiatShamir
+        - columns map[ObjectID]*ConcreteVector
+        - cells map[ObjectID]field.Element
+        - coins map[ObjectID]field.Ext
+        - state map[string]any
+        + CurrentRound() *Round
+        %% AdvanceRound feeds the current round into Fiat-Shamir, advances to
+        %% the next round, and derives coins for it.
+        + AdvanceRound()
+        + AssignColumn(col *Column, v *ConcreteVector)
+        + GetColumnAssignment(col *Column) *ConcreteVector
+        + HasColumnAssignment(col *Column) bool
+        + AssignCell(cell *Cell, v field.Element)
+        + GetCellValue(cell *Cell) field.Element
+        + GetCoinValue(coin *CoinField) field.Ext
+        + GetState(key string) (any, bool)
+        + SetState(key string, value any)
+    }
+
+    Runtime --> "1" System : System

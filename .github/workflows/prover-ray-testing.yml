@@ -1,0 +1,93 @@
+name: prover-ray-testing
+
+permissions:
+  contents: read
+  actions: read
+
+on: workflow_call
+env:
+  GOPROXY: "https://proxy.golang.org"
+
+concurrency:
+  group: prover-ray-testing-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  staticcheck:
+    # ~1.5 mins saved vs small
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    name: Prover static check
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+    - name: install Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.25.7
+        cache-dependency-path: |
+              prover-ray/go.sum
+    - uses: actions/cache@v5.0.4
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/Library/Caches/go-build
+          %LocalAppData%\go-build
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    - name: gofmt
+      working-directory: prover-ray
+      run: if [[ -n $(gofmt -l .) ]]; then echo "please run gofmt"; exit 1; fi
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 #v8
+      with:
+          version: v2.11.3
+          working-directory: prover-ray
+          args: --timeout=5m
+    - name: generated files should not be modified
+      working-directory: prover-ray
+      run: |
+        go generate ./...
+        git update-index --assume-unchanged go.mod
+        git update-index --assume-unchanged go.sum
+        if [[ -n $(git status --porcelain) ]]; then echo "git repo is dirty after running go generate -- please don't modify generated files"; echo $(git diff);echo $(git status --porcelain); exit 1; fi
+
+  test:
+    strategy:
+      matrix:
+        go-version: [1.25.7]
+    # ~1 min saved vs large
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xxl
+    name: Prover testing
+    needs:
+      - staticcheck
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v6
+    - name: install Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ matrix.go-version }}
+        cache-dependency-path: |
+              prover-ray/go.sum
+    - uses: actions/cache@v5.0.4
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/Library/Caches/go-build
+          %LocalAppData%\go-build
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    - name: Test
+      working-directory: prover-ray
+      run: |
+        go test -p=1 -short -timeout=120s ./...
+    # disabled as it takes many hours to run on the runner
+        # - name: Test (32 bits & race)
+    #   working-directory: prover
+    #   if: matrix.go-version == '1.25.7'
+    #   run: |
+    #       go test -p=1 -tags=nocorset,fuzzlight -timeout=120m -short -race  ./...

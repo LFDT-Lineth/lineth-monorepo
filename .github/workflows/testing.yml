@@ -28,6 +28,9 @@ on:
       prover_changed:
         required: true
         type: string
+      prover_ray_changed:
+        required: true
+        type: string
       transaction_exclusion_api_changed:
         required: true
         type: string
@@ -57,6 +60,11 @@ jobs:
   prover:
     uses: ./.github/workflows/prover-testing.yml
     if: ${{ inputs.prover_changed == 'true' }}
+    secrets: inherit
+
+  prover-ray:
+    uses: ./.github/workflows/prover-ray-testing.yml
+    if: ${{ inputs.prover_ray_changed == 'true' }}
     secrets: inherit
 
   native-yield-automation-service:
@@ -200,7 +208,7 @@ jobs:
   # If all jobs are skipped, the workflow will still succeed.
   always_succeed:
     runs-on: ubuntu-24.04
-    if: ${{ inputs.coordinator_changed == 'false' && inputs.prover_changed == 'false' && inputs.native_yield_automation_service_changed == 'false' && inputs.lido_governance_monitor_changed == 'false' && inputs.postman_changed == 'false' && inputs.transaction_exclusion_api_changed == 'false' && inputs.staterecovery_changed == 'false' && inputs.smart_contracts_changed == 'false' && inputs.linea_sequencer_changed == 'false' && inputs.constraints_changed == 'false' }}
+    if: ${{ inputs.coordinator_changed == 'false' && inputs.prover_changed == 'false' && inputs.prover_ray_changed == 'false' && inputs.native_yield_automation_service_changed == 'false' && inputs.lido_governance_monitor_changed == 'false' && inputs.postman_changed == 'false' && inputs.transaction_exclusion_api_changed == 'false' && inputs.staterecovery_changed == 'false' && inputs.smart_contracts_changed == 'false' && inputs.linea_sequencer_changed == 'false' && inputs.constraints_changed == 'false' }}
     steps:
       - name: Ensure Workflow Success
         run: echo "All jobs were skipped, but workflow succeeds."
