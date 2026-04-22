@@ -61,6 +61,13 @@ func newConfigFromFile(path string, withValidation bool) (*Config, error) {
 		if err = validate.Struct(cfg); err != nil {
 			return nil, err
 		}
+
+		// Presence-check base_fee via viper. `required` on a uint rejects 0,
+		// which is valid on gasless chains. Keep the error format identical
+		// to the tag's output so tooling that parses it is unaffected.
+		if !viper.IsSet("layer2.base_fee") {
+			return nil, fmt.Errorf("Key: 'Config.Layer2.BaseFee' Error:Field validation for 'BaseFee' failed on the 'required' tag")
+		}
 	}
 
 	// Ensure cmdTmpl and cmdLargeTmpl are parsed
@@ -149,7 +156,10 @@ type Config struct {
 	Layer2 struct {
 		// ChainID stores the ID of the Linea L2 network to consider.
 		ChainID uint `mapstructure:"chain_id" validate:"required"`
-		BaseFee uint `mapstructure:"base_fee" validate:"required"`
+		// No validator tag: presence is enforced in newConfigFromFile via
+		// viper.IsSet. `required` would reject 0, which is valid on gasless
+		// chains where every block has baseFeePerGas=0.
+		BaseFee uint `mapstructure:"base_fee"`
 
 		// MsgSvcContractStr stores the unique ID of the Service Contract (SC), that is, it's
 		// address, as a string. The Service Contract (SC) is a smart contract that the L2

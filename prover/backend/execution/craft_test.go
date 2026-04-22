@@ -15,7 +15,7 @@ func makeConfig(chainID, baseFee uint, coinBase, msgSvc ethcommon.Address) *conf
 	return &config.Config{
 		Layer2: struct {
 			ChainID           uint              `mapstructure:"chain_id" validate:"required"`
-			BaseFee           uint              `mapstructure:"base_fee" validate:"required"`
+			BaseFee           uint              `mapstructure:"base_fee"`
 			MsgSvcContractStr string            `mapstructure:"message_service_contract" validate:"required,eth_addr"`
 			MsgSvcContract    ethcommon.Address `mapstructure:"-"`
 			CoinBaseStr       string            `mapstructure:"coin_base" validate:"required,eth_addr"`
