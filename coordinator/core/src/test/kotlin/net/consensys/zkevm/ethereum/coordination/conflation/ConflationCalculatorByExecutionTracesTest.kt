@@ -20,8 +20,7 @@ class ConflationCalculatorByExecutionTracesTest {
   private val testMeterRegistry = SimpleMeterRegistry()
   private val calculator =
     ConflationCalculatorByExecutionTraces(
-      tracesLimit,
-      TracesCountersV2.EMPTY_TRACES_COUNT,
+      tracesCountersLimit = tracesLimit,
       metricsFacade = MicrometerMetricsFacade(testMeterRegistry, "test"),
     )
   private lateinit var conflationTriggerConsumer: ConflationTriggerConsumer

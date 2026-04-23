@@ -76,7 +76,6 @@ class GlobalBlockConflationCalculatorIntTest {
     calculatorByTraces =
       ConflationCalculatorByExecutionTraces(
         tracesCountersLimit = fakeTracesCountersV2(100u),
-        emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
         metricsFacade = mock<MetricsFacade>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
       )
     calculatorByHardFork =

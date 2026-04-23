@@ -16,7 +16,7 @@ import org.apache.logging.log4j.Logger
 
 class ConflationCalculatorByExecutionTraces(
   val tracesCountersLimit: TracesCounters,
-  private val emptyTracesCounters: TracesCounters,
+  private val emptyTracesCounters: TracesCounters = tracesCountersLimit.emptyTracesCounters,
   metricsFacade: MetricsFacade,
   private val log: Logger = LogManager.getLogger(ConflationCalculatorByExecutionTraces::class.java),
 ) : ConflationCalculator {

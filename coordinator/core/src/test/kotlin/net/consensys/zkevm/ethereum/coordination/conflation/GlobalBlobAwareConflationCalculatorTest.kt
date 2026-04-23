@@ -191,7 +191,6 @@ class GlobalBlobAwareConflationCalculatorTest {
     calculatorByTraces =
       ConflationCalculatorByExecutionTraces(
         tracesCountersLimit = fakeTracesCountersV2(100u),
-        emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
         metricsFacade = mock(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
       )
     conflationTargetEndBlockNumbers.clear()

@@ -6,21 +6,11 @@ import linea.ethapi.EthApiClient
 import linea.persistence.AggregationsRepository
 import linea.persistence.BatchesRepository
 import linea.persistence.BlobsRepository
-import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.zkevm.coordinator.blockcreation.FixedLaggingHeadSafeBlockProvider
-import net.consensys.zkevm.ethereum.coordination.DynamicBlockNumberSet
-import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculator
-import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculatorByBlockLimit
-import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculatorByDataCompressed
-import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculatorByExecutionTraces
-import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculatorByTargetBlockNumbers
 import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculatorByTimeDeadline
 import net.consensys.zkevm.ethereum.coordination.conflation.DeadlineConflationCalculatorRunner
-import net.consensys.zkevm.ethereum.coordination.conflation.TimestampHardForkConflationCalculator
-import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Clock
-import kotlin.time.Instant
 
 object ConflationAppHelper {
   /**
@@ -68,62 +58,6 @@ object ConflationAppHelper {
         .deleteAggregationsAfterBlockNumber((lastConsecutiveAggregatedBlockNumber + 1u).toLong())
 
     return SafeFuture.allOf(cleanupBatches, cleanupBlobs, cleanupAggregations)
-  }
-
-  fun addBlocksLimitCalculatorIfDefined(
-    configs: CoordinatorConfig,
-    calculators: MutableList<ConflationCalculator>,
-  ) {
-    if (configs.conflation.blocksLimit != null) {
-      calculators.add(
-        ConflationCalculatorByBlockLimit(
-          blockLimit = configs.conflation.blocksLimit,
-        ),
-      )
-    }
-  }
-
-  fun addTimestampHardForkCalculatorIfDefined(
-    configs: CoordinatorConfig,
-    lastProcessedTimestamp: Instant,
-    calculators: MutableList<ConflationCalculator>,
-  ) {
-    if (configs.conflation.proofAggregation.timestampBasedHardForks.isNotEmpty()) {
-      calculators.add(
-        TimestampHardForkConflationCalculator(
-          hardForkTimestamps = configs.conflation.proofAggregation.timestampBasedHardForks,
-          initialTimestamp = lastProcessedTimestamp,
-        ),
-      )
-    }
-  }
-
-  fun createCalculatorsForBlobsAndConflation(
-    configs: CoordinatorConfig,
-    compressedBlobCalculator: ConflationCalculatorByDataCompressed,
-    lastProcessedTimestamp: Instant,
-    dynamicTargetEndBlockNumberSet: DynamicBlockNumberSet,
-    logger: Logger,
-    metricsFacade: MetricsFacade,
-  ): List<ConflationCalculator> {
-    val calculators: MutableList<ConflationCalculator> =
-      mutableListOf(
-        ConflationCalculatorByExecutionTraces(
-          tracesCountersLimit = configs.conflation.tracesLimits,
-          emptyTracesCounters = configs.conflation.tracesLimits.emptyTracesCounters,
-          metricsFacade = metricsFacade,
-          log = logger,
-        ),
-        ConflationCalculatorByTargetBlockNumbers(targetEndBlockNumbers = dynamicTargetEndBlockNumberSet),
-        compressedBlobCalculator,
-      )
-    addBlocksLimitCalculatorIfDefined(configs = configs, calculators = calculators)
-    addTimestampHardForkCalculatorIfDefined(
-      configs = configs,
-      calculators = calculators,
-      lastProcessedTimestamp = lastProcessedTimestamp,
-    )
-    return calculators
   }
 
   fun createDeadlineConflationCalculatorRunner(

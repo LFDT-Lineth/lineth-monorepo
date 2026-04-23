@@ -23,7 +23,6 @@ import linea.web3j.createWeb3jHttpClient
 import linea.web3j.ethapi.createEthApiClient
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.zkevm.coordinator.app.conflation.ConflationAppHelper
 import net.consensys.zkevm.coordinator.app.conflation.TracesClientFactory
 import net.consensys.zkevm.coordinator.blockcreation.BlockCreationMonitor
 import net.consensys.zkevm.coordinator.blockcreation.FixedLaggingHeadSafeBlockProvider
@@ -44,11 +43,9 @@ import net.consensys.zkevm.ethereum.coordination.blob.ParentBlobDataProvider
 import net.consensys.zkevm.ethereum.coordination.blob.RollingBlobShnarfCalculator
 import net.consensys.zkevm.ethereum.coordination.blockcreation.AlwaysSafeBlockNumberProvider
 import net.consensys.zkevm.ethereum.coordination.conflation.BlockToBatchSubmissionCoordinator
-import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculatorByDataCompressed
+import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculatorFactory
 import net.consensys.zkevm.ethereum.coordination.conflation.ConflationService
 import net.consensys.zkevm.ethereum.coordination.conflation.ConflationServiceImpl
-import net.consensys.zkevm.ethereum.coordination.conflation.GlobalBlobAwareConflationCalculator
-import net.consensys.zkevm.ethereum.coordination.conflation.GlobalBlockConflationCalculator
 import net.consensys.zkevm.ethereum.coordination.conflation.ProofGeneratingConflationHandlerImpl
 import net.consensys.zkevm.ethereum.coordination.conflation.TracesConflationCalculator
 import net.consensys.zkevm.ethereum.coordination.conflation.TracesConflationCoordinatorImpl
@@ -176,40 +173,19 @@ class ConflationBacktestingApp(
     dataLimit = backtestingCoordinatorConfig.conflation.blobCompression.blobSizeLimit.toInt(),
   )
 
-  private val conflationCalculator: TracesConflationCalculator = run {
-    // To fail faster for JNA reasons
-
-    val compressedBlobCalculator = ConflationCalculatorByDataCompressed(
-      blobCompressor = blobCompressor,
-    )
-
-    val globalCalculator = GlobalBlockConflationCalculator(
-      lastBlockNumber = lastProcessedBlockNumber,
-      syncCalculators = ConflationAppHelper.createCalculatorsForBlobsAndConflation(
-        configs = backtestingCoordinatorConfig,
-        compressedBlobCalculator = compressedBlobCalculator,
-        lastProcessedTimestamp = lastProcessedTimestamp,
-        dynamicTargetEndBlockNumberSet = dynamicTargetEndBlockNumberSet,
-        logger = log,
-        metricsFacade = metricsFacade,
-      ),
-      deferredTriggerConflationCalculators = emptyList(),
-      emptyTracesCounters = backtestingCoordinatorConfig.conflation.tracesLimits.emptyTracesCounters,
-      log = log,
-    )
-
-    val batchesLimit = backtestingCoordinatorConfig.conflation.blobCompression.batchesLimit
-      ?: (backtestingCoordinatorConfig.conflation.proofAggregation.proofsLimit - 1U)
-
-    GlobalBlobAwareConflationCalculator(
-      conflationCalculator = globalCalculator,
-      blobCalculator = compressedBlobCalculator,
-      metricsFacade = metricsFacade,
-      batchesLimit = batchesLimit,
-      dynamicBlockNumberSet = dynamicTargetEndBlockNumberSet,
-      log = log,
-    )
-  }
+  private val conflationCalculator: TracesConflationCalculator = ConflationCalculatorFactory.conflationCalculator(
+    blobCompressor = blobCompressor,
+    tracesCountersLimit = backtestingCoordinatorConfig.conflation.tracesLimits,
+    blocksLimit = backtestingCoordinatorConfig.conflation.blocksLimit,
+    timestampBasedHardForks = backtestingCoordinatorConfig.conflation.proofAggregation.timestampBasedHardForks,
+    lastProcessedBlockNumber = lastProcessedBlockNumber,
+    lastProcessedTimestamp = lastProcessedTimestamp,
+    blobBatchesLimit = backtestingCoordinatorConfig.conflation.blobCompression.batchesLimit,
+    aggregationProofsLimit = backtestingCoordinatorConfig.conflation.proofAggregation.proofsLimit,
+    dynamicBlockNumberSet = dynamicTargetEndBlockNumberSet,
+    metricsFacade = metricsFacade,
+    log = log,
+  )
 
   private val conflationService: ConflationService =
     ConflationServiceImpl(
