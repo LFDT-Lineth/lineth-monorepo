@@ -54,6 +54,7 @@ import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.nio.file.Path
 import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -82,7 +83,7 @@ class ConflationBacktestingApp(
       ?.let { require(!it) { "Cannot use same traces endpoint for backtesting and main conflation" } }
   }
 
-  private val log = LogManager.getLogger("conflation_backtesting.job_${conflationBacktestingAppConfig.jobId()}")
+  private val log = LogManager.getLogger("conflation_backtesting_job_${conflationBacktestingAppConfig.jobId()}")
 
   private val conflationBacktestingComplete = AtomicBoolean(false)
 
@@ -105,7 +106,6 @@ class ConflationBacktestingApp(
 
   val backtestingCoordinatorConfig: CoordinatorConfig = mainCoordinatorConfig.copy(
     conflation = mainCoordinatorConfig.conflation.copy(
-      l2FetchBlocksLimit = UInt.MAX_VALUE,
       blocksLimit = conflationBacktestingAppConfig.batchesFixedSize,
       forceStopConflationAtBlockInclusive = conflationBacktestingAppConfig.endBlockNumber,
       conflationDeadline = null,
@@ -219,6 +219,7 @@ class ConflationBacktestingApp(
     logger = log,
   )
 
+  val lastProcessedBatchEndBlockNumber = AtomicLong(conflationBacktestingAppConfig.startBlockNumber.toLong() - 1)
   val proofGeneratingConflationHandlerImpl = run {
     val executionProverClient: ExecutionProverClientV2 = proverClientFactory.executionProverClient(log = log)
 
@@ -240,6 +241,13 @@ class ConflationBacktestingApp(
         log = log,
       ),
       batchProofHandler = { _ -> SafeFuture.completedFuture(Unit) },
+      batchProofRequestHandler = { proofIndex, unProvenBatch ->
+        log.info(
+          "Backtesting execution proof request produced: batch={}",
+          unProvenBatch.intervalString(),
+        )
+        lastProcessedBatchEndBlockNumber.store(proofIndex.endBlockNumber.toLong())
+      },
       vertx = vertx,
       config = ProofGeneratingConflationHandlerImpl.Config(
         conflationAndProofGenerationRetryBackoffDelay = 5.seconds,
@@ -381,7 +389,7 @@ class ConflationBacktestingApp(
     blockCreationListener = blockToBatchSubmissionCoordinator,
     lastProvenBlockNumberProviderSync = object : LastProvenBlockNumberProviderSync {
       override fun getLastKnownProvenBlockNumber(): Long {
-        return conflationBacktestingAppConfig.startBlockNumber.toLong() - 1
+        return lastProcessedBatchEndBlockNumber.load()
       }
     },
     config = BlockCreationMonitor.Config(

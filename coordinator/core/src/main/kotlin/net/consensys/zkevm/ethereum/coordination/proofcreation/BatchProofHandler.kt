@@ -1,6 +1,7 @@
 package net.consensys.zkevm.ethereum.coordination.proofcreation
 
 import linea.domain.Batch
+import linea.domain.ExecutionProofIndex
 import linea.error.DuplicatedRecordException
 import linea.persistence.BatchesRepository
 import org.apache.logging.log4j.LogManager
@@ -8,6 +9,10 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 fun interface BatchProofHandler {
   fun acceptNewBatch(batch: Batch): SafeFuture<*>
+}
+
+fun interface BatchProofRequestHandler {
+  fun acceptNewBatchProofRequest(proofIndex: ExecutionProofIndex, unProvenBatch: Batch)
 }
 
 class BatchProofHandlerImpl(
