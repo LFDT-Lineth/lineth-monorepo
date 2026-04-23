@@ -1,0 +1,125 @@
+# Generates the monthly E2E runtime report from recent CI runs and posts a Slack summary.
+# Triggered automatically at 00:00 UTC on the first day of each month, or manually via workflow_dispatch.
+name: slack-notify-e2e-runtime-report
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Number of days to look back"
+        required: false
+        type: number
+        default: 30
+  schedule:
+    - cron: "0 0 1 * *"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  generate-report:
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup nodejs environment
+        uses: ./.github/actions/setup-nodejs
+        with:
+          pnpm-install-options: '-F "e2e..." --frozen-lockfile --prefer-offline'
+
+      - name: Generate E2E runtime report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm -F e2e run generate-runtime-report -- --days ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.days || 30 }}
+
+      - name: Read summary
+        id: summary
+        run: |
+          echo "json<<EOF" >> $GITHUB_OUTPUT
+          cat e2e/e2e-runtime-report-summary.json >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Upload HTML report
+        if: ${{ fromJSON(steps.summary.outputs.json).totalRuns > 0 }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-runtime-report
+          path: e2e/e2e-runtime-report.html
+
+      - name: Post to Slack
+        if: ${{ fromJSON(steps.summary.outputs.json).totalRuns > 0 }}
+        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a #v2.1.1
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}
+          payload: |
+            channel: ${{ secrets.SLACK_ENGINEERING_ALERTS_CHANNEL_ID }}
+            text: "E2E Runtime Report - ${{ fromJSON(steps.summary.outputs.json).totalRuns }} runs (${{ fromJSON(steps.summary.outputs.json).passedRuns }} passed, ${{ fromJSON(steps.summary.outputs.json).failedRuns }} failed)"
+            blocks:
+              - type: header
+                text:
+                  type: plain_text
+                  text: "E2E Runtime Report"
+                  emoji: true
+
+              - type: rich_text
+                elements:
+                  - type: rich_text_section
+                    elements:
+                      - type: text
+                        text: "Date range: "
+                        style:
+                          bold: true
+                      - type: text
+                        text: "${{ fromJSON(steps.summary.outputs.json).dateRange }}"
+
+              - type: rich_text
+                elements:
+                  - type: rich_text_section
+                    elements:
+                      - type: text
+                        text: "Runs: "
+                        style:
+                          bold: true
+                      - type: text
+                        text: "${{ fromJSON(steps.summary.outputs.json).totalRuns }} total, ${{ fromJSON(steps.summary.outputs.json).passedRuns }} passed, ${{ fromJSON(steps.summary.outputs.json).failedRuns }} failed"
+
+              - type: rich_text
+                elements:
+                  - type: rich_text_section
+                    elements:
+                      - type: text
+                        text: "E2E run duration: "
+                        style:
+                          bold: true
+                      - type: text
+                        text: "median ${{ fromJSON(steps.summary.outputs.json).medianRunDurationSeconds }}s, max ${{ fromJSON(steps.summary.outputs.json).maxRunDurationSeconds }}s"
+
+              - type: divider
+
+              - type: rich_text
+                elements:
+                  - type: rich_text_section
+                    elements:
+                      - type: text
+                        text: "Top flaky tests:\n"
+                        style:
+                          bold: true
+                      - type: text
+                        text: "${{ fromJSON(steps.summary.outputs.json).flakySlackText }}"
+
+              - type: divider
+
+              - type: rich_text
+                elements:
+                  - type: rich_text_section
+                    elements:
+                      - type: text
+                        text: "Full report: "
+                        style:
+                          bold: true
+                      - type: link
+                        url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                        text: "View workflow run artifacts"

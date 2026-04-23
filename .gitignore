@@ -171,3 +171,5 @@ prover/*.sh
 contracts/.claude/settings.local.json
 *.analysis-report.html
 .worktrees/
+e2e/e2e-runtime-report.html
+e2e/e2e-runtime-report-summary.json
