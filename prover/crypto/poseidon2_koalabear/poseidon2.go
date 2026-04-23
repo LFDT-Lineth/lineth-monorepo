@@ -102,21 +102,21 @@ func (d *MDHasher) WriteElements(elmts ...field.Element) {
 }
 
 func (d *MDHasher) SumElement() field.Octuplet {
-	for len(d.buffer) != 0 {
+	pos := 0
+	for pos < len(d.buffer) {
 		var buf [BlockSize]field.Element
-
-		// in this case we left pad by zeroes
-		if len(d.buffer) < BlockSize {
-			copy(buf[BlockSize-len(d.buffer):], d.buffer)
-			d.buffer = d.buffer[:0]
+		remaining := len(d.buffer) - pos
+		if remaining < BlockSize {
+			copy(buf[BlockSize-remaining:], d.buffer[pos:])
+			pos = len(d.buffer)
 		} else {
-			copy(buf[:], d.buffer)
-			d.buffer = d.buffer[BlockSize:]
+			copy(buf[:], d.buffer[pos:pos+BlockSize])
+			pos += BlockSize
 		}
-
 		d.state = vortex.CompressPoseidon2(d.state, buf)
 	}
-
+	// Reset length but preserve backing array capacity for reuse after Reset.
+	d.buffer = d.buffer[:0]
 	return d.state
 }
 

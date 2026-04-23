@@ -36,8 +36,10 @@ func LinearCombination(proof *OpeningProof, v []smartvectors.SmartVector, random
 	parallel.Execute(len(linComb), func(start, stop int) {
 
 		x := fext.One()
-		scratch := make(vectorext.Vector, stop-start)
-		localLinComb := make(vectorext.Vector, stop-start)
+		var scratch vectorext.Vector // lazy-allocated only if needed (default case)
+		// Accumulate directly into the shared linComb slice — each goroutine
+		// owns a disjoint [start:stop) range, so no data race and no copy needed.
+		localLinComb := vectorext.Vector(linComb[start:stop])
 		for i := range v {
 			_sv := v[i]
 			// we distinguish the case of a regular vector and constant to avoid
@@ -52,11 +54,16 @@ func LinearCombination(proof *OpeningProof, v []smartvectors.SmartVector, random
 				x.Mul(&x, &randomCoin)
 				continue
 			case *smartvectors.Regular:
+				// MulAccByElement: fused E4×base multiply-accumulate (4 base muls)
+				// instead of SetFromBase + ScalarMul (E4×E4, 9 base muls via Karatsuba)
 				sv := field.Vector((*_svt)[start:stop])
-				for i := range scratch {
-					fext.SetFromBase(&scratch[i], &sv[i])
-				}
+				localLinComb.MulAccByElement(sv, &x)
+				x.Mul(&x, &randomCoin)
+				continue
 			default:
+				if scratch == nil {
+					scratch = make(vectorext.Vector, stop-start)
+				}
 				sv := _svt.SubVector(start, stop)
 				sv.WriteInSliceExt(scratch)
 			}
@@ -65,7 +72,6 @@ func LinearCombination(proof *OpeningProof, v []smartvectors.SmartVector, random
 			x.Mul(&x, &randomCoin)
 
 		}
-		copy(linComb[start:stop], localLinComb)
 	})
 
 	proof.LinearCombination = smartvectors.NewRegularExt(linComb)

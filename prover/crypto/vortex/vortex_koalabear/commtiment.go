@@ -178,6 +178,49 @@ func (p *Params) noSisTransversalHash(v []smartvectors.SmartVector) []field.Octu
 
 	nbRows := len(v)
 	res := make([]field.Octuplet, nbCols)
+
+	// Fast path: batch 16 columns at a time using SIMD Poseidon2.
+	// CompressPoseidon2x16 processes 16 independent MD hash chains in parallel
+	// using AVX-512, much faster than per-column sequential hashing.
+	if nbRows%8 == 0 {
+		n16 := nbCols / 16 // number of full 16-column batches
+		r16 := nbCols % 16 // remaining columns
+
+		if n16 > 0 {
+			parallel.Execute(n16, func(start, stop int) {
+				matrix := make([]field.Element, 16*nbRows)
+				for batchID := start; batchID < stop; batchID++ {
+					colStart := batchID * 16
+					// Transpose: collect 16 columns into column-major layout
+					for col := 0; col < 16; col++ {
+						for row := 0; row < nbRows; row++ {
+							matrix[col*nbRows+row] = v[row].Get(colStart + col)
+						}
+					}
+					vgnark.CompressPoseidon2x16(matrix, nbRows, res[colStart:colStart+16])
+				}
+			})
+		}
+
+		// Handle remaining columns (< 16) with per-column hashing
+		if r16 > 0 {
+			startRemaining := n16 * 16
+			curCol := make([]field.Element, nbRows)
+			h := poseidon2_koalabear.NewMDHasher()
+			for i := startRemaining; i < nbCols; i++ {
+				for j := 0; j < nbRows; j++ {
+					curCol[j] = v[j].Get(i)
+				}
+				h.WriteElements(curCol...)
+				res[i] = h.SumElement()
+				h.Reset()
+			}
+		}
+
+		return res
+	}
+
+	// Fallback for non-aligned row counts
 	parallel.Execute(nbCols, func(start, end int) {
 		curCol := make([]field.Element, nbRows)
 		h := poseidon2_koalabear.NewMDHasher()
