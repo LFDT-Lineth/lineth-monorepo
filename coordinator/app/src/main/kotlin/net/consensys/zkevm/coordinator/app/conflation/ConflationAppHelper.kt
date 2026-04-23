@@ -1,5 +1,7 @@
 package net.consensys.zkevm.coordinator.app.conflation
 
+import linea.conflation.calculators.ConflationTriggerCalculatorByTimeDeadline
+import linea.conflation.calculators.DeadlineConflationTriggerCalculatorRunner
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.isDisabled
 import linea.ethapi.EthApiClient
@@ -7,8 +9,6 @@ import linea.persistence.AggregationsRepository
 import linea.persistence.BatchesRepository
 import linea.persistence.BlobsRepository
 import net.consensys.zkevm.coordinator.blockcreation.FixedLaggingHeadSafeBlockProvider
-import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculatorByTimeDeadline
-import net.consensys.zkevm.ethereum.coordination.conflation.DeadlineConflationCalculatorRunner
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Clock
 
@@ -64,15 +64,15 @@ object ConflationAppHelper {
     configs: CoordinatorConfig,
     lastProcessedBlockNumber: ULong,
     l2EthClient: EthApiClient,
-  ): DeadlineConflationCalculatorRunner? {
+  ): DeadlineConflationTriggerCalculatorRunner? {
     if (configs.conflation.isDisabled() || configs.conflation.conflationDeadline == null) {
       return null
     }
 
-    return DeadlineConflationCalculatorRunner(
+    return DeadlineConflationTriggerCalculatorRunner(
       conflationDeadlineCheckInterval = configs.conflation.conflationDeadlineCheckInterval,
-      delegate = ConflationCalculatorByTimeDeadline(
-        config = ConflationCalculatorByTimeDeadline.Config(
+      delegate = ConflationTriggerCalculatorByTimeDeadline(
+        config = ConflationTriggerCalculatorByTimeDeadline.Config(
           conflationDeadline = configs.conflation.conflationDeadline,
           conflationDeadlineLastBlockConfirmationDelay =
           configs.conflation.conflationDeadlineLastBlockConfirmationDelay,

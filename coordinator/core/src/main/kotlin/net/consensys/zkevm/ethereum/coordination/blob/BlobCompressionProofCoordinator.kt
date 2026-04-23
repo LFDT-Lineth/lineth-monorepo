@@ -4,6 +4,7 @@ import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import linea.LongRunningService
 import linea.clients.BlobCompressionProverClientV2
+import linea.conflation.BlobCreationHandler
 import linea.domain.Blob
 import linea.domain.BlobCompressionProofRequest
 import linea.domain.BlobRecord
@@ -13,7 +14,6 @@ import linea.domain.ShnarfResult
 import linea.domain.toBlockIntervalsString
 import linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.zkevm.ethereum.coordination.conflation.BlobCreationHandler
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

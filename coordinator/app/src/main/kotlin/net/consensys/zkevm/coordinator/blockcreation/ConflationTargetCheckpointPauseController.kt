@@ -99,7 +99,7 @@ class ConflationTargetCheckpointPauseController(
 
   /**
    * Last processed block timestamp; crossing detection matches
-   * [net.consensys.zkevm.ethereum.coordination.conflation.TimestampHardForkConflationCalculator.checkOverflow].
+   * [linea.conflation.calculators.ConflationTriggerCalculatorByHardForkTimestamp.checkOverflow].
    */
   private val lastImportedBlockTimestamp = AtomicReference(config.initialLastImportedBlockTimestamp)
 

@@ -7,6 +7,7 @@ import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.getOrThrow
 import com.github.michaelbull.result.runCatching
 import io.vertx.core.Vertx
+import linea.conflation.ConflationHandler
 import linea.domain.Batch
 import linea.domain.Block
 import linea.domain.BlocksConflation

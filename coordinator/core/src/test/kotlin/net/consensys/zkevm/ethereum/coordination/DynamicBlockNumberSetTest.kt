@@ -1,5 +1,6 @@
 package net.consensys.zkevm.ethereum.coordination
 
+import linea.conflation.DynamicBlockNumberSet
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

@@ -6,6 +6,7 @@ import io.vertx.core.Vertx
 import linea.clients.GetTracesCountersResponse
 import linea.clients.TracesCountersClientV2
 import linea.clients.TracesServiceErrorType
+import linea.conflation.ConflationService
 import linea.domain.Block
 import linea.domain.BlockCounters
 import linea.encoding.BlockEncoder

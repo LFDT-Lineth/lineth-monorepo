@@ -6,6 +6,9 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.clients.InvalidityProverClientV1
 import linea.clients.TracesConflationVirtualBlockClientV1
+import linea.conflation.DynamicBlockNumberSet
+import linea.conflation.calculators.AggregationCalculatorFactory
+import linea.conflation.calculators.ConflationCalculatorFactory
 import linea.contract.events.FactoryForcedTransactionAddedEvent
 import linea.contract.events.FinalizedStateUpdatedEvent
 import linea.contract.events.ForcedTransactionAddedEvent
@@ -34,10 +37,7 @@ import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.traces.TracesCountersV5
 import net.consensys.linea.traces.TracingModuleV5
 import net.consensys.zkevm.coordinator.clients.FakeTracesConflationVirtualBlockClientV1
-import net.consensys.zkevm.ethereum.coordination.DynamicBlockNumberSet
-import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationCalculatorFactory
 import net.consensys.zkevm.ethereum.coordination.blob.FakeBlobCompressor
-import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculatorFactory
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat

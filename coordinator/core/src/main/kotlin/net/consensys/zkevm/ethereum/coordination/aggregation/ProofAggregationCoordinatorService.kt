@@ -3,6 +3,12 @@ package net.consensys.zkevm.ethereum.coordination.aggregation
 import io.vertx.core.Vertx
 import linea.LongRunningService
 import linea.clients.ProofAggregationProverClientV2
+import linea.conflation.calculators.AggregationCalculator
+import linea.conflation.calculators.AggregationCalculatorFactory
+import linea.conflation.calculators.AggregationHandler
+import linea.conflation.calculators.AggregationTriggerCalculatorByDeadline
+import linea.conflation.calculators.AggregationTriggerCalculatorByDeadlineRunner
+import linea.conflation.calculators.SyncAggregationTriggerCalculator
 import linea.domain.Aggregation
 import linea.domain.AggregationProofIndex
 import linea.domain.BlobAndBatchCounters

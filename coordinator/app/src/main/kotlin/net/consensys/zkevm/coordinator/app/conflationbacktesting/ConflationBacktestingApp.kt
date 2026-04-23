@@ -7,6 +7,11 @@ import linea.LongRunningService
 import linea.blob.BlobCompressorFactory
 import linea.blob.BlobCompressorVersion
 import linea.clients.ExecutionProverClientV2
+import linea.conflation.ConflationService
+import linea.conflation.DynamicBlockNumberSet
+import linea.conflation.calculators.AggregationTriggerCalculatorByTargetBlockNumbers
+import linea.conflation.calculators.BlockConflationCalculator
+import linea.conflation.calculators.ConflationCalculatorFactory
 import linea.contract.l2.Web3JL2MessageServiceSmartContractClient
 import linea.coordinator.config.toJsonRpcRetry
 import linea.coordinator.config.v2.CoordinatorConfig
@@ -30,9 +35,7 @@ import net.consensys.zkevm.coordinator.blockcreation.LastProvenBlockNumberProvid
 import net.consensys.zkevm.coordinator.blockcreation.TargetCheckpointPauseController
 import net.consensys.zkevm.coordinator.clients.prover.ProverClientFactory
 import net.consensys.zkevm.coordinator.clients.prover.ProverConfig
-import net.consensys.zkevm.ethereum.coordination.DynamicBlockNumberSet
 import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationL2StateProviderImpl
-import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationTriggerCalculatorByTargetBlockNumbers
 import net.consensys.zkevm.ethereum.coordination.aggregation.InvalidityProofProviderImpl
 import net.consensys.zkevm.ethereum.coordination.aggregation.ProofAggregationCoordinatorService
 import net.consensys.zkevm.ethereum.coordination.blob.BlobCompressionProofCoordinator
@@ -43,11 +46,8 @@ import net.consensys.zkevm.ethereum.coordination.blob.ParentBlobDataProvider
 import net.consensys.zkevm.ethereum.coordination.blob.RollingBlobShnarfCalculator
 import net.consensys.zkevm.ethereum.coordination.blockcreation.AlwaysSafeBlockNumberProvider
 import net.consensys.zkevm.ethereum.coordination.conflation.BlockToBatchSubmissionCoordinator
-import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculatorFactory
-import net.consensys.zkevm.ethereum.coordination.conflation.ConflationService
 import net.consensys.zkevm.ethereum.coordination.conflation.ConflationServiceImpl
 import net.consensys.zkevm.ethereum.coordination.conflation.ProofGeneratingConflationHandlerImpl
-import net.consensys.zkevm.ethereum.coordination.conflation.TracesConflationCalculator
 import net.consensys.zkevm.ethereum.coordination.conflation.TracesConflationCoordinatorImpl
 import net.consensys.zkevm.ethereum.coordination.proofcreation.ZkProofCreationCoordinatorImpl
 import org.apache.logging.log4j.LogManager
@@ -173,7 +173,7 @@ class ConflationBacktestingApp(
     dataLimit = backtestingCoordinatorConfig.conflation.blobCompression.blobSizeLimit.toInt(),
   )
 
-  private val conflationCalculator: TracesConflationCalculator = ConflationCalculatorFactory.conflationCalculator(
+  private val conflationCalculator: BlockConflationCalculator = ConflationCalculatorFactory.conflationCalculator(
     blobCompressor = blobCompressor,
     tracesCountersLimit = backtestingCoordinatorConfig.conflation.tracesLimits,
     blocksLimit = backtestingCoordinatorConfig.conflation.blocksLimit,

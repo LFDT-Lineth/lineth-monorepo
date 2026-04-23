@@ -1,9 +1,9 @@
 package linea.ftx.conflation
 
+import linea.conflation.calculators.ConflationCounters
+import linea.conflation.calculators.ConflationTriggerCalculator
 import linea.domain.BlockCounters
 import linea.domain.ConflationTrigger
-import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculator
-import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCounters
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.util.Queue
@@ -26,7 +26,7 @@ import kotlin.collections.map
 class ConflationCalculatorByForcedTransaction(
   private val processedFtxQueue: Queue<FtxConflationInfo>,
   private val log: Logger = LogManager.getLogger(ConflationCalculatorByForcedTransaction::class.java),
-) : ConflationCalculator {
+) : ConflationTriggerCalculator {
   override val id: String = ConflationTrigger.FORCED_TRANSACTION.name
 
   // Track pending trigger blocks (ftx.blockNumber) for all processed FTXs
@@ -36,7 +36,7 @@ class ConflationCalculatorByForcedTransaction(
   private var lastBlockNumber: ULong = 0UL
 
   @Synchronized
-  override fun checkOverflow(blockCounters: BlockCounters): ConflationCalculator.OverflowTrigger? {
+  override fun checkOverflow(blockCounters: BlockCounters): ConflationTriggerCalculator.OverflowTrigger? {
     readProcessedFtxs()
 
     log.debug(
@@ -53,7 +53,7 @@ class ConflationCalculatorByForcedTransaction(
         blockCounters.blockNumber,
         pendingTriggerBlocks,
       )
-      ConflationCalculator.OverflowTrigger(
+      ConflationTriggerCalculator.OverflowTrigger(
         trigger = ConflationTrigger.FORCED_TRANSACTION,
         singleBlockOverSized = false,
       )

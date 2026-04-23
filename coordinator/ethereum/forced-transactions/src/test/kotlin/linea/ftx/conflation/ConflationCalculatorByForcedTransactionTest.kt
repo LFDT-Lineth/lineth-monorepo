@@ -1,11 +1,11 @@
 package linea.ftx.conflation
 
+import linea.conflation.calculators.ConflationCounters
+import linea.conflation.calculators.ConflationTriggerCalculator
 import linea.domain.BlockCounters
 import linea.domain.ConflationTrigger
 import linea.forcedtx.ForcedTransactionInclusionResult
 import net.consensys.linea.traces.TracesCountersV4
-import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculator
-import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCounters
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -22,7 +22,7 @@ class ConflationCalculatorByForcedTransactionTest {
   private lateinit var calculator: ConflationCalculatorByForcedTransaction
 
   private val timestamp = Instant.parse("2024-01-01T00:00:00Z")
-  private val ftxOverflowTrigger = ConflationCalculator.OverflowTrigger(
+  private val ftxOverflowTrigger = ConflationTriggerCalculator.OverflowTrigger(
     trigger = ConflationTrigger.FORCED_TRANSACTION,
     singleBlockOverSized = false,
   )

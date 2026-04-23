@@ -1,11 +1,11 @@
 package linea.ftx.conflation
 
+import linea.conflation.DynamicBlockNumberSet
+import linea.conflation.calculators.AggregationTrigger
+import linea.conflation.calculators.AggregationTriggerCalculatorByTargetBlockNumbers
+import linea.conflation.calculators.AggregationTriggerType
+import linea.conflation.calculators.SyncAggregationTriggerCalculator
 import linea.domain.BlobCounters
-import net.consensys.zkevm.ethereum.coordination.DynamicBlockNumberSet
-import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationTrigger
-import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationTriggerCalculatorByTargetBlockNumbers
-import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationTriggerType
-import net.consensys.zkevm.ethereum.coordination.aggregation.SyncAggregationTriggerCalculator
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.util.Queue

@@ -1,10 +1,10 @@
 package linea.ftx.conflation
 
+import linea.conflation.calculators.AggregationTrigger
+import linea.conflation.calculators.AggregationTriggerType
 import linea.domain.BlobCounters
 import linea.domain.BlobsToAggregate
 import linea.forcedtx.ForcedTransactionInclusionResult
-import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationTrigger
-import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationTriggerType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
