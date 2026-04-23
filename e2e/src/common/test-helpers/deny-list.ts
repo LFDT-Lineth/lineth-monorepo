@@ -74,6 +74,9 @@ export async function reloadDenyList(client: DenyListControlClient): Promise<voi
   await client.pluginsReloadPluginConfig({
     pluginName: SequencerPluginName.TransactionPoolValidator,
   });
+  await client.pluginsReloadPluginConfig({
+    pluginName: SequencerPluginName.TransactionSelector,
+  });
 }
 
 async function addToDenyListUnlocked(
@@ -88,6 +91,7 @@ async function addToDenyListUnlocked(
   }
 
   writeDenyListState(denyListPath, state);
+  await waitMs(DENY_LIST_FILE_SYNC_WAIT_MS);
   await reloadDenyList(client);
 }
 
@@ -109,6 +113,7 @@ async function removeFromDenyListUnlocked(
   }
 
   writeDenyListState(denyListPath, state);
+  await waitMs(DENY_LIST_FILE_SYNC_WAIT_MS);
   await reloadDenyList(client);
 }
 
@@ -138,6 +143,22 @@ export async function removeFromDenyList(
   await withDenyListLock(async () => removeFromDenyListUnlocked(client, normalizedAddresses, denyListPath));
 }
 
+const DENY_LIST_EFFECT_WAIT_MS = 3_000;
+// Docker bind-mount on macOS (virtiofs/gRPC-FUSE) can delay host→container file visibility.
+// Wait before reloading so the sequencer sees the updated file.
+const DENY_LIST_FILE_SYNC_WAIT_MS = 500;
+
+/**
+ * Waits a fixed duration for the sequencer's deny list to take effect after an async reload.
+ */
+export async function waitForDenyListEffect(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, DENY_LIST_EFFECT_WAIT_MS));
+}
+
+function waitMs(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function withDenyListAddresses(
   client: DenyListControlClient,
   addresses: readonly string[],
@@ -153,9 +174,11 @@ export async function withDenyListAddresses(
   await withDenyListLock(async () => {
     try {
       await addToDenyListUnlocked(client, normalizedAddresses, denyListPath);
+      await waitForDenyListEffect();
       await run();
     } finally {
       await removeFromDenyListUnlocked(client, normalizedAddresses, denyListPath);
+      await waitForDenyListEffect();
     }
   });
 }

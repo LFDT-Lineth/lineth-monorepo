@@ -129,7 +129,7 @@ describe("EIP-7702 test suite", () => {
         logger.debug(`Authority address added to deny list. address=${scenario.denyListAddress}`);
         const sendTransactionPromise = scenario.sendDelegatedInitializeTx();
 
-        await expectBlockedTransaction(sendTransactionPromise);
+        await expectBlockedTransaction(l2PublicClient, sendTransactionPromise);
         logger.debug("EIP-7702 transaction correctly rejected for denied authority.");
       });
 
@@ -151,7 +151,7 @@ describe("EIP-7702 test suite", () => {
         logger.debug(`Contract address added to deny list. address=${scenario.denyListAddress}`);
         const sendTransactionPromise = scenario.sendDelegatedInitializeTx();
 
-        await expectBlockedTransaction(sendTransactionPromise);
+        await expectBlockedTransaction(l2PublicClient, sendTransactionPromise);
         logger.debug("EIP-7702 transaction correctly rejected for denied contract delegation.");
       });
 
@@ -173,7 +173,7 @@ describe("EIP-7702 test suite", () => {
       await expectSuccessfulTransaction(l2PublicClient, scenario.sendDelegatedInitializeTx());
 
       await withDenyListAddresses(sequencerClient, [scenario.denyListAddress], async () => {
-        await expectBlockedTransaction(scenario.sendDelegatedInitializeTx());
+        await expectBlockedTransaction(l2PublicClient, scenario.sendDelegatedInitializeTx());
       });
     },
     120_000,

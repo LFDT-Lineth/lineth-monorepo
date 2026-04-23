@@ -42,7 +42,7 @@ describe("deny-list helper", () => {
 
     // Assert
     expect(readFileSync(denyListPath, "utf-8")).toEqual("0xexisting\n0xabc123\n0xdef456\n");
-    expect(client.pluginsReloadPluginConfig).toHaveBeenCalledTimes(1);
+    expect(client.pluginsReloadPluginConfig).toHaveBeenCalledTimes(2);
   });
 
   it("should preserve existing file entries without requiring a trailing newline", async () => {
@@ -55,7 +55,7 @@ describe("deny-list helper", () => {
 
     // Assert
     expect(readFileSync(denyListPath, "utf-8")).toEqual("0xexisting\n0xabc123\n");
-    expect(client.pluginsReloadPluginConfig).toHaveBeenCalledTimes(1);
+    expect(client.pluginsReloadPluginConfig).toHaveBeenCalledTimes(2);
   });
 
   it("should remove only dynamically added target addresses case-insensitively", async () => {
@@ -69,7 +69,7 @@ describe("deny-list helper", () => {
 
     // Assert
     expect(readFileSync(denyListPath, "utf-8")).toEqual("0xkeepme\n0xdef456\n");
-    expect(client.pluginsReloadPluginConfig).toHaveBeenCalledTimes(2);
+    expect(client.pluginsReloadPluginConfig).toHaveBeenCalledTimes(4);
   });
 
   it("should reload before and after callback and restore deny-list content", async () => {
@@ -85,7 +85,7 @@ describe("deny-list helper", () => {
 
     // Assert
     expect(run).toHaveBeenCalledTimes(1);
-    expect(client.pluginsReloadPluginConfig).toHaveBeenCalledTimes(2);
+    expect(client.pluginsReloadPluginConfig).toHaveBeenCalledTimes(4);
     expect(readFileSync(denyListPath, "utf-8")).toEqual("");
   });
 
@@ -108,7 +108,7 @@ describe("deny-list helper", () => {
     ).rejects.toThrow("callback failed");
 
     // Assert
-    expect(client.pluginsReloadPluginConfig).toHaveBeenCalledTimes(2);
+    expect(client.pluginsReloadPluginConfig).toHaveBeenCalledTimes(4);
     expect(readFileSync(denyListPath, "utf-8")).toEqual("");
   });
 
@@ -172,7 +172,7 @@ describe("deny-list helper", () => {
 
     // Assert
     expect(events).toEqual(["first:start", "first:end", "second:start", "second:end"]);
-    expect(client.pluginsReloadPluginConfig).toHaveBeenCalledTimes(4);
+    expect(client.pluginsReloadPluginConfig).toHaveBeenCalledTimes(8);
     expect(readFileSync(denyListPath, "utf-8")).toEqual("");
   });
 
@@ -214,7 +214,7 @@ describe("deny-list helper", () => {
 
     // Assert
     expect(addCompleted).toBe(true);
-    expect(client.pluginsReloadPluginConfig).toHaveBeenCalledTimes(3);
+    expect(client.pluginsReloadPluginConfig).toHaveBeenCalledTimes(6);
     expect(readFileSync(denyListPath, "utf-8")).toEqual("0xdef456\n");
   });
 });

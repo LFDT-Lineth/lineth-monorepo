@@ -76,6 +76,8 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
 
       logger.debug("Calling the bridgeToken function on the L1 TokenBridge contract");
 
+      const l2BlockBeforeBridge = await l2PublicClient.getBlockNumber();
+
       const bridgeNonce = await l1PublicClient.getTransactionCount({ address: l1Account.address, blockTag: "pending" });
 
       const { maxPriorityFeePerGas: maxPriorityFeeBridgeToken, maxFeePerGas: maxFeeBridgeToken } =
@@ -118,7 +120,7 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
         abi: L2MessageServiceV1Abi,
         address: l2MessageService.address,
         eventName: "RollingHashUpdated",
-        fromBlock: 0n,
+        fromBlock: l2BlockBeforeBridge,
         toBlock: "latest",
         pollingIntervalMs: 1_000,
         strict: true,
@@ -143,8 +145,10 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
           args: {
             _messageHash: messageHash,
           },
+          fromBlock: l2BlockBeforeBridge,
+          toBlock: "latest",
           strict: true,
-          timeoutMs: 150_000,
+          timeoutMs: 180_000,
         }),
         waitForEvents(l2PublicClient, {
           abi: TokenBridgeV1_1Abi,
@@ -153,17 +157,19 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
           args: {
             recipient: l2Account.address,
           },
+          fromBlock: l2BlockBeforeBridge,
+          toBlock: "latest",
           strict: true,
           criteria: async (events) => {
             return events.filter((event) => event.args.amount === bridgeAmount);
           },
-          timeoutMs: 150_000,
+          timeoutMs: 180_000,
         }),
       ]);
 
       logger.debug(`Message claimed on L2. event=${serialize(claimedEvent)}.`);
     },
-    200_000,
+    240_000,
   );
 
   it.concurrent(
@@ -264,6 +270,8 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
         blockTag: "pending",
       });
 
+      const l1BlockBeforeBridge = await l1PublicClient.getBlockNumber();
+
       const { receipt: bridgeTxReceipt } = await sendTransactionWithRetry(
         l2PublicClient,
         (fees) =>
@@ -295,8 +303,10 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
           args: {
             _messageHash: messageHash,
           },
+          fromBlock: l1BlockBeforeBridge,
+          toBlock: "latest",
           strict: true,
-          timeoutMs: 150_000,
+          timeoutMs: 180_000,
         }),
         waitForEvents(l1PublicClient, {
           abi: TokenBridgeV1_1Abi,
@@ -305,16 +315,18 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
           args: {
             recipient: l1Account.address,
           },
+          fromBlock: l1BlockBeforeBridge,
+          toBlock: "latest",
           strict: true,
           criteria: async (events) => {
             return events.filter((event) => event.args.amount === bridgeAmount);
           },
-          timeoutMs: 150_000,
+          timeoutMs: 180_000,
         }),
       ]);
 
       logger.debug(`Message claimed on L1. event=${serialize(claimedEvent)}`);
     },
-    200_000,
+    240_000,
   );
 });

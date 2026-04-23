@@ -1,5 +1,6 @@
 import { createPublicClient, createWalletClient, http, HttpTransportConfig, PrivateKeyAccount } from "viem";
 
+import { createBlockNotFoundRetryExtension } from "../../common/utils";
 import { resolveChain } from "../chains/chain-registry";
 
 type ClientParamsBase = {
@@ -25,7 +26,7 @@ export class ClientFactory {
     return createPublicClient({
       chain: resolveChain(chainId),
       transport: http(rpcUrl.toString(), params?.httpConfig),
-    });
+    }).extend(createBlockNotFoundRetryExtension());
   }
 
   getWallet(params?: WalletClientParams) {

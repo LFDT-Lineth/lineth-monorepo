@@ -1,11 +1,18 @@
 import { Mutex } from "async-mutex";
-import { Address, Client, PrivateKeyAccount } from "viem";
-import { estimateFeesPerGas, getTransactionCount, sendTransaction } from "viem/actions";
+import { Address, Client, PrivateKeyAccount, PublicActions } from "viem";
+import { getTransactionCount, sendTransaction } from "viem/actions";
 
-import { estimateLineaGas, normalizeEip1559Fees, type Eip1559Fees } from "../../common/utils";
+import {
+  createBlockNotFoundRetryExtension,
+  estimateLineaGas,
+  normalizeEip1559Fees,
+  type Eip1559Fees,
+} from "../../common/utils";
 import { sendTransactionWithRetry, type TransactionResult } from "../../common/utils/retry";
 
 import type { Logger } from "winston";
+
+type FundingClient = Client & Pick<PublicActions, "estimateFeesPerGas">;
 
 type FeeData = Eip1559Fees;
 
@@ -20,12 +27,15 @@ const DEFAULT_RECEIPT_TIMEOUT_MS = 30_000;
 export class AccountFundingService {
   private readonly nonceMutex = new Mutex();
   private readonly localNonces = new Map<Address, number>();
+  private readonly client: FundingClient;
 
   constructor(
-    private readonly client: Client,
+    client: Client,
     private readonly chainId: number,
     private readonly logger: Logger,
-  ) {}
+  ) {
+    this.client = client.extend(createBlockNotFoundRetryExtension());
+  }
 
   /**
    * Funds a single target address from the whale account.
@@ -117,7 +127,7 @@ export class AccountFundingService {
       };
     }
 
-    const feeData = await estimateFeesPerGas(this.client);
+    const feeData = await this.client.estimateFeesPerGas();
     return normalizeEip1559Fees(feeData.maxPriorityFeePerGas, feeData.maxFeePerGas);
   }
 }

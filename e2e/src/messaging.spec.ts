@@ -248,9 +248,9 @@ describe("Messaging test suite", () => {
     "L1/L2 message txs for partial prover e2e testing",
     async () => {
       if (process.env.PARTIAL_PROVER != "true") {
-          logger.warn('Skipped the test as not for partial prover e2e testing');
-          return;
-        }
+        logger.warn("Skipped the test as not for partial prover e2e testing");
+        return;
+      }
 
       const l1Account = await l1AccountManager.generateAccount();
       const l2Account = await l2AccountManager.generateAccount();
@@ -312,7 +312,7 @@ describe("Messaging test suite", () => {
       logger.debug(
         `L1L2MessageHashesAddedToInbox event received on L2. messageHash=${messageHash2} transactionHash=${messageHash2AddedEvent.transactionHash}`,
       );
-      
+
       // L2->L1 message with calldata
       const { txHash: txHash3, receipt: receipt3 } = await sendL2ToL1Message(context, {
         account: l2Account,
