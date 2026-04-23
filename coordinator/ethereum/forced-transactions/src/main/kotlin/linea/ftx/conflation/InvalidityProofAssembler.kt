@@ -129,7 +129,31 @@ class InvalidityProofAssembler(
     val tracesFile: String? = null,
     val accountProof: LineaAccountProof? = null,
     val zkStateMerkleProof: GetZkEVMStateMerkleProofResponse? = null,
-  )
+  ) {
+    override fun equals(other: Any?): Boolean {
+      if (this === other) return true
+      if (javaClass != other?.javaClass) return false
+
+      other as RequiredInvalidityProofData
+
+      if (!prevFtxRollingHash.contentEquals(other.prevFtxRollingHash)) return false
+      if (!zkParentStateRootHash.contentEquals(other.zkParentStateRootHash)) return false
+      if (tracesFile != other.tracesFile) return false
+      if (accountProof != other.accountProof) return false
+      if (zkStateMerkleProof != other.zkStateMerkleProof) return false
+
+      return true
+    }
+
+    override fun hashCode(): Int {
+      var result = prevFtxRollingHash.contentHashCode()
+      result = 31 * result + zkParentStateRootHash.contentHashCode()
+      result = 31 * result + (tracesFile?.hashCode() ?: 0)
+      result = 31 * result + (accountProof?.hashCode() ?: 0)
+      result = 31 * result + (zkStateMerkleProof?.hashCode() ?: 0)
+      return result
+    }
+  }
 
   private fun fetchRequiredDataForInvalidityProof(
     invalidityReason: InvalidityReason,
