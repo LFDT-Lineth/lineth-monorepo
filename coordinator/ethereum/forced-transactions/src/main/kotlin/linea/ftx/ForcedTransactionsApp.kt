@@ -16,13 +16,13 @@ import linea.domain.BlockParameter
 import linea.domain.ConflationTrigger
 import linea.ethapi.EthApiClient
 import linea.ethapi.EthLogsFilterSubscriptionFactoryPollingBased
-import linea.forcedtx.ForcedTransactionInclusionStatus
 import linea.forcedtx.ForcedTransactionsClient
 import linea.ftx.conflation.AggregationCalculatorByForcedTransaction
 import linea.ftx.conflation.ConflationCalculatorByForcedTransaction
 import linea.ftx.conflation.ForcedTransactionConflationSafeBlockNumberProvider
 import linea.ftx.conflation.ForcedTransactionsInvalidityProofService
 import linea.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
+import linea.ftx.conflation.FtxConflationInfo
 import linea.ftx.conflation.InvalidityProofAssembler
 import linea.persistence.ForcedTransactionsDao
 import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationTriggerCalculatorByTargetBlockNumbers
@@ -132,7 +132,11 @@ internal class ForcedTransactionsAppImpl(
 ) : ForcedTransactionsApp {
   private val log = LogManager.getLogger(ForcedTransactionsAppImpl::class.java)
   internal val ftxQueue: Queue<ForcedTransactionWithTimestamp> = LinkedBlockingQueue(10_000)
-  internal val ftxProcessedQueue: Queue<ForcedTransactionInclusionStatus> = LinkedBlockingQueue(10_000)
+
+  // Separate queues per calculator: prevents the aggregation calculator (which consumes via poll())
+  // from draining entries before the conflation calculator reads them.
+  private val conflationFtxQueue: Queue<FtxConflationInfo> = LinkedBlockingQueue(100)
+  private val aggregationFtxQueue: Queue<FtxConflationInfo> = LinkedBlockingQueue(100)
   private val ftxResumePointProvider = ForcedTransactionsResumePointProviderImpl(
     finalizedStateProvider = finalizedStateProvider,
     l1HighestBlock = config.l1HighestBlockTag,
@@ -144,10 +148,14 @@ internal class ForcedTransactionsAppImpl(
   private var safeBlockNumberManager = ForcedTransactionsSafeBlockNumberManager(listener = safeBlockNumberProvider)
   override val conflationSafeBlockNumberProvider: ConflationSafeBlockNumberProvider = safeBlockNumberProvider
   override val conflationCalculator: ConflationCalculator = ConflationCalculatorByForcedTransaction(
-    processedFtxQueue = ftxProcessedQueue,
+    processedFtxQueue = conflationFtxQueue,
   )
   override val aggregationCalculator: SyncAggregationTriggerCalculator = AggregationCalculatorByForcedTransaction(
-    processedFtxQueue = ftxProcessedQueue,
+    processedFtxQueue = aggregationFtxQueue,
+  )
+  private val processedFtxConflationQueuer = FtxProcessedQueuerForConflation(
+    conflationFtxQueue = conflationFtxQueue,
+    aggregationFtxQueue = aggregationFtxQueue,
   )
   private val ftxInvalidityProofService = ForcedTransactionsInvalidityProofService(
     ftxDao = ftxDao,
@@ -205,7 +213,7 @@ internal class ForcedTransactionsAppImpl(
           dao = this.ftxDao,
           ftxClient = this.ftxClient,
           ftxQueue = this.ftxQueue,
-          ftxProcessedQueue = this.ftxProcessedQueue,
+          ftxProcessedListener = processedFtxConflationQueuer,
           lastProcessedFtxNumber = lastProcessedForcedTransactionNumber,
           safeBlockNumberManager = safeBlockNumberManager,
           ftxProcessingDelay = config.ftxProcessingDelay,

@@ -8,7 +8,7 @@ object AggregationCalculatorFactory {
     startBlockNumberInclusive: ULong,
     maxProofsPerAggregation: UInt,
     maxBlobsPerAggregation: UInt?,
-    targetEndBlockNumbers: Set<ULong>,
+    targetEndBlockNumbers: Set<ULong> = emptySet(),
     aggregationSizeMultipleOf: UInt,
     hardForkTimestamps: List<Instant> = emptyList(),
     initialTimestamp: Instant,
@@ -16,7 +16,7 @@ object AggregationCalculatorFactory {
     deferredAggregationTriggerCalculators: List<DeferredAggregationTriggerCalculator> = emptyList(),
     metricsFacade: MetricsFacade,
   ): GlobalAggregationCalculator {
-    val syncAggregationTriggerCalculators = mutableListOf<SyncAggregationTriggerCalculator>(
+    val syncAggregationTriggerCalculators = mutableListOf(
       forcedTransactionTriggerAggCalculator,
       AggregationTriggerCalculatorByProofLimit(maxProofsPerAggregation = maxProofsPerAggregation),
       AggregationTriggerCalculatorByTargetBlockNumbers(targetEndBlockNumbers = targetEndBlockNumbers),

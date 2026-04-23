@@ -14,8 +14,10 @@ import linea.contract.l1.LineaRollupContractVersion
 import linea.contract.l1.LineaRollupFinalizedState
 import linea.domain.BlobCounters
 import linea.domain.BlockCounters
+import linea.domain.BlockInterval
 import linea.domain.BlockParameter
 import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.ConflationCalculationResult
 import linea.domain.ConflationTrigger
 import linea.domain.EthLog
 import linea.ethapi.EthApiBlockClient
@@ -28,9 +30,14 @@ import linea.persistence.ForcedTransactionRecord
 import linea.persistence.ForcedTransactionsDao
 import linea.persistence.ftx.FakeForcedTransactionsDao
 import net.consensys.FakeFixedClock
-import net.consensys.linea.traces.TracesCountersV4
+import net.consensys.linea.metrics.MetricsFacade
+import net.consensys.linea.traces.TracesCountersV5
+import net.consensys.linea.traces.TracingModuleV5
 import net.consensys.zkevm.coordinator.clients.FakeTracesConflationVirtualBlockClientV1
-import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationTriggerType
+import net.consensys.zkevm.ethereum.coordination.DynamicBlockNumberSet
+import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationCalculatorFactory
+import net.consensys.zkevm.ethereum.coordination.blob.FakeBlobCompressor
+import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculatorFactory
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
@@ -38,6 +45,9 @@ import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.mockito.Mockito
+import org.mockito.kotlin.mock
+import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import kotlin.time.Clock
@@ -72,7 +82,7 @@ class ForcedTransactionsAppTest {
       "l2.FakeEthApiClient" to Level.INFO,
       "linea.ethapi" to Level.INFO,
       "linea.ftx" to Level.INFO,
-      "linea.ftx.conflation" to Level.TRACE,
+      "linea.ftx.conflation" to Level.INFO,
     )
 
     this.vertx = vertx
@@ -739,6 +749,16 @@ class ForcedTransactionsAppTest {
         ftxNumber = 5UL,
         l2DeadLine = 500UL,
       ),
+      createFtxAddedEvent(
+        l1BlockNumber = 600UL,
+        ftxNumber = 6UL,
+        l2DeadLine = 600UL,
+      ),
+      createFtxAddedEvent(
+        l1BlockNumber = 700UL,
+        ftxNumber = 7UL,
+        l2DeadLine = 700UL,
+      ),
     )
     this.l1Client.setLogs(ftxAddedEvents)
     this.fakeContractClient.finalizedStateProvider.l1FinalizedState = LineaRollupFinalizedState(
@@ -767,81 +787,131 @@ class ForcedTransactionsAppTest {
     )
     this.ftxClient.setFtxInclusionResultAfterReception(
       ftxNumber = 3UL,
-      l2BlockNumber = 300UL,
+      l2BlockNumber = 130UL,
       inclusionResult = ForcedTransactionInclusionResult.Included,
     )
     this.ftxClient.setFtxInclusionResultAfterReception(
       ftxNumber = 4UL,
-      l2BlockNumber = 400UL,
+      l2BlockNumber = 140UL,
       inclusionResult = ForcedTransactionInclusionResult.Included,
     )
     this.ftxClient.setFtxInclusionResultAfterReception(
       ftxNumber = 5UL,
-      l2BlockNumber = 500UL,
+      l2BlockNumber = 150UL,
       inclusionResult = ForcedTransactionInclusionResult.BadBalance,
     )
+    this.ftxClient.setFtxInclusionResultAfterReception(
+      ftxNumber = 6UL,
+      l2BlockNumber = 160UL,
+      inclusionResult = ForcedTransactionInclusionResult.Phylax,
+    )
+    this.ftxClient.setFtxInclusionResultAfterReception(
+      ftxNumber = 7UL,
+      l2BlockNumber = 170UL,
+      inclusionResult = ForcedTransactionInclusionResult.BadNonce,
+    )
     this.fakeClock.setTimeTo(this.l1Client.blockTimestamp(BlockParameter.Tag.LATEST) + 12.seconds)
+    val conflationTriggers = mutableListOf<Pair<BlockInterval, ConflationTrigger>>()
+    val aggregationTriggers = mutableListOf<BlockInterval>()
+
+    val conflationStartBlockNumberInclusive = 90UL
+    val blobCompressor = FakeBlobCompressor(dataLimit = 1000)
+    val conflationCalculator = ConflationCalculatorFactory.conflationCalculator(
+      blobCompressor = blobCompressor,
+      tracesCountersLimit = TracesCountersV5(TracingModuleV5.entries.associateWith { UInt.MAX_VALUE }),
+      blocksLimit = 1000u,
+      lastProcessedBlockNumber = conflationStartBlockNumberInclusive - 1UL,
+      lastProcessedTimestamp = l2Client.genesisTimestamp,
+      blobBatchesLimit = UInt.MAX_VALUE,
+      aggregationProofsLimit = UInt.MAX_VALUE,
+      dynamicBlockNumberSet = DynamicBlockNumberSet(),
+      extraSyncCalculators = listOf(app.conflationCalculator),
+      deferredTriggerConflationCalculators = emptyList(),
+      metricsFacade = mock<MetricsFacade>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
+    )
+    val aggregationCalculator = AggregationCalculatorFactory.createAggregationCalculator(
+      startBlockNumberInclusive = conflationStartBlockNumberInclusive,
+      maxProofsPerAggregation = UInt.MAX_VALUE,
+      maxBlobsPerAggregation = UInt.MAX_VALUE,
+      aggregationSizeMultipleOf = 6U,
+      initialTimestamp = l2Client.blockTimestamp(1UL.toBlockParameter()),
+      forcedTransactionTriggerAggCalculator = app.aggregationCalculator,
+      metricsFacade = mock<MetricsFacade>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
+    )
+    conflationCalculator.onConflatedBatch { conflation: ConflationCalculationResult ->
+      conflationTriggers.add(
+        BlockInterval(conflation.startBlockNumber, conflation.endBlockNumber) to conflation.conflationTrigger,
+      )
+      SafeFuture.completedFuture(Unit)
+    }
+    conflationCalculator.onBlobCreation { blob ->
+      aggregationCalculator.newBlob(
+        BlobCounters(
+          numberOfBatches = 1u,
+          startBlockNumber = blob.startBlockNumber,
+          endBlockNumber = blob.endBlockNumber,
+          startBlockTimestamp = blob.startBlockTime,
+          endBlockTimestamp = blob.endBlockTime,
+          expectedShnarf = ByteArray(0),
+        ),
+      )
+      SafeFuture.completedFuture(Unit)
+    }
+    aggregationCalculator.onAggregation { agg ->
+      aggregationTriggers.add(agg)
+      SafeFuture.completedFuture(Unit)
+    }
     app.start().get()
 
     await()
       .atMost(10.seconds.toJavaDuration())
       .untilAsserted {
-        assertThat(this.fxtDao.list().get().lastOrNull()?.ftxNumber).isEqualTo(5UL)
+        assertThat(this.fxtDao.list().get().lastOrNull()?.ftxNumber ?: 0UL).isGreaterThanOrEqualTo(1UL)
       }
 
-    val conflationTriggers = mutableListOf<Pair<ULong, ConflationTrigger>>()
-    val aggregationTriggers = mutableListOf<Pair<ULong, AggregationTriggerType>>()
-    (1UL..600UL).forEach { blockNumber ->
-      app.conflationCalculator.checkOverflow(
-        blockCounters = BlockCounters(
-          blockNumber = blockNumber,
-          blockTimestamp = Clock.System.now(),
-          tracesCounters = TracesCountersV4.EMPTY_TRACES_COUNT,
-          blockRLPEncoded = ByteArray(0),
-        ),
-      )?.also { conflationTrigger ->
-        conflationTriggers.add(blockNumber to conflationTrigger.trigger)
-        app.conflationCalculator.reset()
-      }
-
-      app.aggregationCalculator.checkAggregationTrigger(
-        blobCounters = BlobCounters(
-          numberOfBatches = 1u,
-          startBlockNumber = blockNumber,
-          endBlockNumber = blockNumber,
-          startBlockTimestamp = Clock.System.now(),
-          endBlockTimestamp = Clock.System.now(),
-          expectedShnarf = ByteArray(0),
-        ),
-      )?.also { trigger ->
-        aggregationTriggers.add(blockNumber to trigger.aggregationTriggerType)
-        app.aggregationCalculator.reset()
-      }
+    (conflationStartBlockNumberInclusive..190UL).forEach { blockNumber ->
+      await()
+        .pollInterval(1.milliseconds.toJavaDuration())
+        .atMost(2.seconds.toJavaDuration())
+        .untilAsserted {
+          assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber() ?: 159UL)
+            .isGreaterThanOrEqualTo(blockNumber.coerceAtMost(150UL))
+        }
+      val blockCounters = BlockCounters(
+        blockNumber = blockNumber,
+        blockTimestamp = Clock.System.now(),
+        tracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
+        blockRLPEncoded = ByteArray(0),
+      )
+      conflationCalculator.newBlock(blockCounters)
     }
+
     assertThat(conflationTriggers).isEqualTo(
       listOf(
-        100UL to ConflationTrigger.FORCED_TRANSACTION,
-        101UL to ConflationTrigger.FORCED_TRANSACTION,
-        300UL to ConflationTrigger.FORCED_TRANSACTION,
-        400UL to ConflationTrigger.FORCED_TRANSACTION,
-        500UL to ConflationTrigger.FORCED_TRANSACTION,
+        BlockInterval(90UL, 99UL) to ConflationTrigger.FORCED_TRANSACTION,
+        BlockInterval(100UL, 100UL) to ConflationTrigger.FORCED_TRANSACTION,
+        BlockInterval(101UL, 129UL) to ConflationTrigger.FORCED_TRANSACTION,
+        BlockInterval(130UL, 139UL) to ConflationTrigger.FORCED_TRANSACTION,
+        BlockInterval(140UL, 149UL) to ConflationTrigger.FORCED_TRANSACTION,
       ),
     )
     assertThat(aggregationTriggers).isEqualTo(
       listOf(
-        99UL to AggregationTriggerType.FORCED_TRANSACTION,
-        100UL to AggregationTriggerType.FORCED_TRANSACTION,
-        299UL to AggregationTriggerType.FORCED_TRANSACTION,
-        399UL to AggregationTriggerType.FORCED_TRANSACTION,
-        499UL to AggregationTriggerType.FORCED_TRANSACTION,
+        BlockInterval(90UL, 99UL),
+        BlockInterval(100UL, 100UL),
+        BlockInterval(101UL, 129UL),
+        BlockInterval(130UL, 139UL),
+        BlockInterval(140UL, 149UL),
       ),
     )
+    assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber())
+      .isEqualTo(150UL)
     app.stop().get()
   }
 
   private fun EthApiBlockClient.blockTimestamp(blockParameter: BlockParameter): Instant =
     this.ethGetBlockByNumberTxHashes(blockParameter)
-      .get().timestamp.let { Instant.fromEpochSeconds(it.toLong()) }
+      .get().headerSummary.timestamp
 
   class SafeBlockTracker : SafeBlockNumberUpdateListener {
     val stateTransitions = CopyOnWriteArrayList<ULong?>()

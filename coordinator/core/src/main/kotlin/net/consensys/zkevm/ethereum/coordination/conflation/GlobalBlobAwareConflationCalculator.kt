@@ -159,6 +159,7 @@ class GlobalBlobAwareConflationCalculator(
       conflation.conflationTrigger == ConflationTrigger.TIME_LIMIT ||
       conflation.conflationTrigger == ConflationTrigger.TARGET_BLOCK_NUMBER ||
       conflation.conflationTrigger == ConflationTrigger.HARD_FORK ||
+      conflation.conflationTrigger == ConflationTrigger.FORCED_TRANSACTION ||
       numberOfBatches >= batchesLimit
     ) {
       if (conflation.conflationTrigger == ConflationTrigger.HARD_FORK) {

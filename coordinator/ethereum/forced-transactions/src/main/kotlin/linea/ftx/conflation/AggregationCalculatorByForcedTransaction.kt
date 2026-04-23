@@ -1,8 +1,6 @@
 package linea.ftx.conflation
 
 import linea.domain.BlobCounters
-import linea.forcedtx.ForcedTransactionInclusionResult
-import linea.forcedtx.ForcedTransactionInclusionStatus
 import net.consensys.zkevm.ethereum.coordination.DynamicBlockNumberSet
 import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationTrigger
 import net.consensys.zkevm.ethereum.coordination.aggregation.AggregationTriggerCalculatorByTargetBlockNumbers
@@ -35,7 +33,7 @@ import kotlin.collections.map
  * 3. Successfully included FTXs don't create unnecessary aggregation boundaries
  */
 class AggregationCalculatorByForcedTransaction(
-  private val processedFtxQueue: Queue<ForcedTransactionInclusionStatus>,
+  private val processedFtxQueue: Queue<FtxConflationInfo>,
   private val log: Logger = LogManager.getLogger(AggregationCalculatorByForcedTransaction::class.java),
 ) : SyncAggregationTriggerCalculator {
 
@@ -52,7 +50,7 @@ class AggregationCalculatorByForcedTransaction(
   @Synchronized
   private fun consumeProcessedFtxs() {
     // Consume all available FTX statuses from the queue
-    val processedFtxs = mutableListOf<ForcedTransactionInclusionStatus>()
+    val processedFtxs = mutableListOf<FtxConflationInfo>()
     while (true) {
       val ftx = processedFtxQueue.poll() ?: break
       processedFtxs.add(ftx)
@@ -77,13 +75,12 @@ class AggregationCalculatorByForcedTransaction(
     logFtxPendingAggregation(processedFtxs, newTriggerBlocks)
   }
 
-  fun logFtxPendingAggregation(processedFtxs: List<ForcedTransactionInclusionStatus>, newTriggerBlocks: Set<ULong>) {
+  fun logFtxPendingAggregation(processedFtxs: List<FtxConflationInfo>, newTriggerBlocks: Set<ULong>) {
     if (newTriggerBlocks.isNotEmpty()) {
-      val failedFtxs = processedFtxs.filter { it.inclusionResult != ForcedTransactionInclusionResult.Included }
       log.info(
-        "appended new aggregation trigger of non-included FTXs: blockNumbers={} ftxs={}, total pending triggers {}",
+        "appended new aggregation trigger for FTXs: newTriggers={} ftxs={}, total pending triggers {}",
         newTriggerBlocks,
-        failedFtxs.map(ForcedTransactionInclusionStatus::toStringShortForLogging),
+        processedFtxs.map(FtxConflationInfo::toStringShortForLogging),
         pendingTriggerBlocks.sorted(),
       )
     } else {
@@ -106,7 +103,7 @@ class AggregationCalculatorByForcedTransaction(
       "checking ftx aggregation trigger: blob={} pendingTriggerBlocks={} processedFtxQueue={}",
       blobCounters.intervalString(),
       pendingTriggerBlocks.sorted(),
-      processedFtxQueue.toList().map(ForcedTransactionInclusionStatus::toStringShortForLogging),
+      processedFtxQueue.toList().map(FtxConflationInfo::toStringShortForLogging),
     )
     // First, consume all available processed FTXs from the queue
     consumeProcessedFtxs()
@@ -115,7 +112,7 @@ class AggregationCalculatorByForcedTransaction(
 
     if (trigger != null) {
       log.info(
-        "FTX aggregation trigger detected: sealing aggregation at block {} (before failed FTX execution at block {})",
+        "FTX aggregation trigger detected: sealing aggregation at block {} (before FTX at block {})",
         blobCounters.endBlockNumber,
         blobCounters.endBlockNumber + 1UL,
       )

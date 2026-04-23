@@ -3,7 +3,6 @@ package linea.ftx.conflation
 import linea.domain.BlockCounters
 import linea.domain.ConflationTrigger
 import linea.forcedtx.ForcedTransactionInclusionResult
-import linea.forcedtx.ForcedTransactionInclusionStatus
 import net.consensys.linea.traces.TracesCountersV4
 import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculator
 import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCounters
@@ -19,7 +18,7 @@ import kotlin.time.Instant
 
 class ConflationCalculatorByForcedTransactionTest {
 
-  private lateinit var queue: Queue<ForcedTransactionInclusionStatus>
+  private lateinit var queue: Queue<FtxConflationInfo>
   private lateinit var calculator: ConflationCalculatorByForcedTransaction
 
   private val timestamp = Instant.parse("2024-01-01T00:00:00Z")
@@ -38,13 +37,10 @@ class ConflationCalculatorByForcedTransactionTest {
     ftx: ULong,
     blockNumber: ULong,
     inclusionResult: ForcedTransactionInclusionResult,
-  ) = ForcedTransactionInclusionStatus(
+  ) = FtxConflationInfo(
     ftxNumber = ftx,
     blockNumber = blockNumber,
-    blockTimestamp = timestamp,
     inclusionResult = inclusionResult,
-    ftxHash = ByteArray(32),
-    from = ByteArray(20),
   )
 
   private fun blockCounters(blockNumber: ULong) = BlockCounters(
@@ -60,13 +56,13 @@ class ConflationCalculatorByForcedTransactionTest {
   }
 
   @Test
-  fun `does not consume items from the queue`() {
+  fun `appendBlock polls entries from the queue`() {
     queue.add(ftx(ftx = 1UL, blockNumber = 10UL, inclusionResult = ForcedTransactionInclusionResult.BadNonce))
 
-    calculator.checkOverflow(blockCounters(blockNumber = 9UL))
     calculator.appendBlock(blockCounters(blockNumber = 9UL))
-
-    assertThat(queue).hasSize(1)
+    assertThat(queue).isNotEmpty // not polled yet
+    calculator.appendBlock(blockCounters(blockNumber = 10UL))
+    assertThat(queue).isEmpty()
   }
 
   @Test

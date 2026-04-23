@@ -32,7 +32,7 @@ internal class ForcedTransactionsSenderForExecution(
     pollingIntervalMs = pollingInterval.inWholeMilliseconds,
     log = log,
     timerSchedule = TimerSchedule.FIXED_DELAY,
-    name = "ForcedTransactionsRelayerForExecution",
+    name = "ForcedTransactionsSenderForExecution",
   ),
   LongRunningService {
 
