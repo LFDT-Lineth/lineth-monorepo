@@ -1,7 +1,6 @@
 package linea.conflation.calculators
 
 import linea.conflation.BlobCreationHandler
-import linea.conflation.DynamicBlockNumberSet
 import linea.domain.Blob
 import linea.domain.BlockCounters
 import linea.domain.BlockInterval
@@ -28,7 +27,18 @@ class GlobalBlobAwareConflationCalculator(
   private val blobCalculator: ConflationTriggerCalculatorByDataCompressed,
   private val batchesLimit: UInt,
   metricsFacade: MetricsFacade,
-  private val dynamicBlockNumberSet: DynamicBlockNumberSet,
+  private val aggregationTargetEndBlocks: MutableSet<ULong>,
+  private val blobCutOffTiggers: Set<ConflationTrigger> = setOf(
+    ConflationTrigger.DATA_LIMIT,
+    ConflationTrigger.TIME_LIMIT,
+    ConflationTrigger.TARGET_BLOCK_NUMBER,
+    ConflationTrigger.HARD_FORK,
+    ConflationTrigger.FORCED_TRANSACTION,
+  ),
+  private val aggregationCutOffTiggers: Set<ConflationTrigger> = setOf(
+    ConflationTrigger.HARD_FORK,
+    ConflationTrigger.FORCED_TRANSACTION,
+  ),
   private val log: Logger = LogManager.getLogger(GlobalBlobAwareConflationCalculator::class.java),
 ) : BlockConflationCalculator {
   private var conflationHandler: (ConflationCalculationResult) -> SafeFuture<*> = NOOP_CONSUMER
@@ -156,15 +166,11 @@ class GlobalBlobAwareConflationCalculator(
     recordBatchMetrics(conflation)
 
     val future = conflationHandler.invoke(conflation)
-    if (conflation.conflationTrigger == ConflationTrigger.DATA_LIMIT ||
-      conflation.conflationTrigger == ConflationTrigger.TIME_LIMIT ||
-      conflation.conflationTrigger == ConflationTrigger.TARGET_BLOCK_NUMBER ||
-      conflation.conflationTrigger == ConflationTrigger.HARD_FORK ||
-      conflation.conflationTrigger == ConflationTrigger.FORCED_TRANSACTION ||
+    if (conflation.conflationTrigger in blobCutOffTiggers ||
       numberOfBatches >= batchesLimit
     ) {
-      if (conflation.conflationTrigger == ConflationTrigger.HARD_FORK) {
-        dynamicBlockNumberSet.addBlockNumber(conflation.endBlockNumber)
+      if (conflation.conflationTrigger in aggregationCutOffTiggers) {
+        aggregationTargetEndBlocks.add(conflation.endBlockNumber)
       }
       fireBlobTriggerAndResetState(conflation.conflationTrigger)
     } else {

@@ -78,7 +78,6 @@ class ProofAggregationCoordinatorServiceTest {
     val config =
       ProofAggregationCoordinatorService.Config(
         pollingInterval = 10.milliseconds,
-        proofsLimit = blobsToPoll,
         proofGenerationRetryBackoffDelay = 5.milliseconds,
       )
 

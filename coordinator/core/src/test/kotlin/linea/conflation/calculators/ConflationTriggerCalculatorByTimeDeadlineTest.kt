@@ -1,10 +1,10 @@
 package linea.conflation.calculators
 
+import linea.conflation.SafeBlockProvider
 import linea.domain.BlockCounters
 import linea.domain.BlockHeaderSummary
 import linea.kotlin.ByteArrayExt
 import net.consensys.linea.traces.fakeTracesCountersV2
-import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
 import org.apache.logging.log4j.Logger
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await

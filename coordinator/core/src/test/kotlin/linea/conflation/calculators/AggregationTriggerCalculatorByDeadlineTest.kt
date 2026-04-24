@@ -1,11 +1,11 @@
 package linea.conflation.calculators
 
+import linea.conflation.SafeBlockProvider
 import linea.domain.BlobCounters
 import linea.domain.BlobsToAggregate
 import linea.domain.BlockHeaderSummary
 import linea.kotlin.ByteArrayExt
 import net.consensys.FakeFixedClock
-import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock

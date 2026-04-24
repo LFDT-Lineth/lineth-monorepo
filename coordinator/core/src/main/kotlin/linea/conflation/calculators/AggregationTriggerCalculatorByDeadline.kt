@@ -1,11 +1,12 @@
 package linea.conflation.calculators
 
-import io.vertx.core.Handler
-import io.vertx.core.Vertx
 import linea.LongRunningService
+import linea.conflation.SafeBlockProvider
 import linea.domain.BlobCounters
 import linea.domain.BlobsToAggregate
-import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
+import linea.timer.Timer
+import linea.timer.TimerFactory
+import linea.timer.TimerSchedule
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -23,7 +24,7 @@ class AggregationTriggerCalculatorByDeadline(
   data class Config(
     val aggregationDeadline: Duration,
     val noL2ActivityTimeout: Duration,
-    val waitForNoL2ActivityToTriggerAggregation: Boolean,
+    val waitForNoL2ActivityToTriggerAggregation: Boolean = noL2ActivityTimeout > Duration.ZERO,
   )
 
   data class InFlightAggregation(
@@ -132,42 +133,35 @@ class AggregationTriggerCalculatorByDeadline(
 }
 
 class AggregationTriggerCalculatorByDeadlineRunner(
-  private val vertx: Vertx,
-  private val config: Config,
+  private val timerFactory: TimerFactory,
+  private val deadlineCheckInterval: Duration,
   private val aggregationTriggerByDeadline: AggregationTriggerCalculatorByDeadline,
 ) : DeferredAggregationTriggerCalculator by aggregationTriggerByDeadline, LongRunningService {
-  data class Config(val deadlineCheckInterval: Duration)
-
   private val log: Logger = LogManager.getLogger(this::class.java)
 
-  private var deadlineCheckerTimerId: Long? = null
-  private lateinit var deadlineCheckerAction: Handler<Long>
+  private var timer: Timer? = null
 
+  @Synchronized
   override fun start(): CompletableFuture<Unit> {
-    if (deadlineCheckerTimerId == null) {
-      deadlineCheckerAction =
-        Handler<Long> {
-          aggregationTriggerByDeadline.checkAggregation().whenComplete { _, error ->
-            error?.let {
-              log.error("Error in checking for aggregation deadline: errorMessage={}", error.message, error)
-            }
-            deadlineCheckerTimerId =
-              vertx.setTimer(
-                config.deadlineCheckInterval.inWholeMilliseconds,
-                deadlineCheckerAction,
-              )
-          }
-        }
-      deadlineCheckerTimerId = vertx.setTimer(config.deadlineCheckInterval.inWholeMilliseconds, deadlineCheckerAction)
+    if (timer == null) {
+      timer = timerFactory.createTimer(
+        name = "aggregation-deadline-checker",
+        initialDelay = deadlineCheckInterval,
+        period = deadlineCheckInterval,
+        timerSchedule = TimerSchedule.FIXED_DELAY,
+        errorHandler = { error ->
+          log.error("Error in checking for aggregation deadline: errorMessage={}", error.message, error)
+        },
+        task = { aggregationTriggerByDeadline.checkAggregation().get() },
+      ).also { it.start() }
     }
     return SafeFuture.completedFuture(Unit)
   }
 
+  @Synchronized
   override fun stop(): CompletableFuture<Unit> {
-    if (deadlineCheckerTimerId != null) {
-      vertx.cancelTimer(deadlineCheckerTimerId!!)
-      deadlineCheckerAction = Handler<Long> {}
-    }
+    timer?.stop()
+    timer = null
     return SafeFuture.completedFuture(Unit)
   }
 }

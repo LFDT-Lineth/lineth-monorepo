@@ -5,10 +5,10 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.clients.GetTracesCountersResponse
 import linea.clients.TracesCountersClientV2
+import linea.conflation.AlwaysSafeBlockNumberProvider
 import linea.conflation.ConflationService
 import linea.domain.createBlock
 import net.consensys.linea.traces.TracesCountersV2
-import net.consensys.zkevm.ethereum.coordination.blockcreation.AlwaysSafeBlockNumberProvider
 import net.consensys.zkevm.ethereum.coordination.blockcreation.BlockCreated
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

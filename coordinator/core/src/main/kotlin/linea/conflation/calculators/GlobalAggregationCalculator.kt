@@ -8,6 +8,7 @@ import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.util.PriorityQueue
+import kotlin.time.Instant
 
 class GlobalAggregationCalculator(
   private var lastBlockNumber: ULong,
@@ -189,12 +190,47 @@ class GlobalAggregationCalculator(
   }
 
   companion object {
-    fun getUpdatedAggregationSize(aggregationSize: UInt, aggregationSizeMultipleOf: UInt): UInt {
+    internal fun getUpdatedAggregationSize(aggregationSize: UInt, aggregationSizeMultipleOf: UInt): UInt {
       return if (aggregationSize > aggregationSizeMultipleOf) {
         aggregationSize - (aggregationSize % aggregationSizeMultipleOf)
       } else {
         aggregationSize
       }
+    }
+
+    fun create(
+      lastAggregatedBlockNumber: ULong,
+      lastAggregatedTimestamp: Instant,
+      aggregationTargetEndBlockNumbers: Set<ULong> = emptySet(),
+      timestampBasedHardForks: List<Instant> = emptyList(),
+      aggregationProofsLimit: UInt,
+      aggregationBlobLimit: UInt?,
+      aggregationSizeMultipleOf: UInt,
+      aggregationDeadlineCalculator: DeferredAggregationTriggerCalculator? = null,
+      metricsFacade: MetricsFacade,
+    ): GlobalAggregationCalculator {
+      val syncAggregationTriggerCalculators = mutableListOf(
+        AggregationTriggerCalculatorByProofLimit(maxProofsPerAggregation = aggregationProofsLimit),
+        AggregationTriggerCalculatorByTargetBlockNumbers(targetEndBlockNumbers = aggregationTargetEndBlockNumbers),
+      ).apply {
+        aggregationBlobLimit?.let { add(AggregationTriggerCalculatorByBlobLimit(maxBlobsPerAggregation = it)) }
+        if (timestampBasedHardForks.isNotEmpty()) {
+          add(
+            AggregationTriggerCalculatorByTimestampHardFork(
+              hardForkTimestamps = timestampBasedHardForks,
+              initialTimestamp = lastAggregatedTimestamp,
+            ),
+          )
+        }
+      }
+
+      return GlobalAggregationCalculator(
+        lastBlockNumber = lastAggregatedBlockNumber,
+        syncAggregationTrigger = syncAggregationTriggerCalculators,
+        deferredAggregationTrigger = listOfNotNull(aggregationDeadlineCalculator),
+        metricsFacade = metricsFacade,
+        aggregationSizeMultipleOf = aggregationSizeMultipleOf,
+      )
     }
   }
 }

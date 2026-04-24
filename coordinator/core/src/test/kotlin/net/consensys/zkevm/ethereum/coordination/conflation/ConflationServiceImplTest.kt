@@ -1,5 +1,6 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
+import linea.conflation.AlwaysSafeBlockNumberProvider
 import linea.conflation.calculators.BlockConflationCalculator
 import linea.conflation.calculators.ConflationTriggerCalculatorByBlockLimit
 import linea.conflation.calculators.GlobalBlockConflationCalculator
@@ -10,7 +11,6 @@ import linea.domain.ConflationTrigger
 import linea.domain.createBlock
 import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.linea.traces.fakeTracesCountersV2
-import net.consensys.zkevm.ethereum.coordination.blockcreation.AlwaysSafeBlockNumberProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.awaitility.Awaitility

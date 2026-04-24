@@ -58,8 +58,8 @@ internal class ForcedTransactionsSafeBlockNumberManager(
   fun ftxProcessedBySequencer(ftxNumber: ULong, simulatedExecutionBlockNumber: ULong) {
     if (safeBlockNumber != null && simulatedExecutionBlockNumber < safeBlockNumber!!) {
       throw IllegalStateException(
-        "simulatedExecutionBlockNumber must be greater than or equal to safeBlockNumber" +
-          "simulatedExecutionBlockNumber=$simulatedExecutionBlockNumber, safeBlockNumber=$safeBlockNumber",
+        "ftx=$ftxNumber simulatedExecutionBlockNumber=$simulatedExecutionBlockNumber " +
+          "must be greater than or equal to safeBlockNumber=$safeBlockNumber",
       )
     }
 

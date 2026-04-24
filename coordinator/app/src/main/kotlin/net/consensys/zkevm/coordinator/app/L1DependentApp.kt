@@ -49,7 +49,6 @@ import net.consensys.linea.ethereum.gaspricing.staticcap.VariableFeesCalculator
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.zkevm.coordinator.app.conflation.ConflationApp
-import net.consensys.zkevm.coordinator.app.conflation.ConflationAppHelper.resumeConflationFrom
 import net.consensys.zkevm.coordinator.clients.ShomeiClient
 import net.consensys.zkevm.ethereum.coordination.EventDispatcher
 import net.consensys.zkevm.ethereum.coordination.HighestULongTracker
@@ -301,11 +300,6 @@ class L1DependentApp(
     }
 
   private val lastFinalizedBlock = lastFinalizedBlock().get()
-  private val lastProcessedBlockNumber = resumeConflationFrom(
-    aggregationsRepository,
-    lastFinalizedBlock,
-  ).get()
-
   private val lineaSmartContractClientForDataSubmission: LineaSmartContractClient = run {
     // The below gas provider will act as the primary gas provider if L1
     // dynamic gas pricing is disabled and will act as a fallback gas provider
@@ -343,7 +337,7 @@ class L1DependentApp(
     )
   }
 
-  private val highestAcceptedBlobTracker = HighestULongTracker(lastProcessedBlockNumber).also {
+  private val highestAcceptedBlobTracker = HighestULongTracker(lastFinalizedBlock).also {
     metricsFacade.createGauge(
       category = LineaMetricsCategory.BLOB,
       name = "highest.accepted.block.number",
@@ -652,7 +646,7 @@ class L1DependentApp(
       DisabledLongRunningService
     }
 
-  val highestAcceptedFinalizationTracker = HighestULongTracker(lastProcessedBlockNumber).also {
+  val highestAcceptedFinalizationTracker = HighestULongTracker(lastFinalizedBlock).also {
     metricsFacade.createGauge(
       category = LineaMetricsCategory.AGGREGATION,
       name = "highest.accepted.block.number",

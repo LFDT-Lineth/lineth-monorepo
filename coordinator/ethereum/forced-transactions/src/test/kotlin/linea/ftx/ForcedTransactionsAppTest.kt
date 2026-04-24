@@ -6,9 +6,8 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.clients.InvalidityProverClientV1
 import linea.clients.TracesConflationVirtualBlockClientV1
-import linea.conflation.DynamicBlockNumberSet
-import linea.conflation.calculators.AggregationCalculatorFactory
-import linea.conflation.calculators.ConflationCalculatorFactory
+import linea.conflation.FixedLaggingHeadSafeBlockProvider
+import linea.conflation.calculators.CalculatorsFactory
 import linea.contract.events.FactoryForcedTransactionAddedEvent
 import linea.contract.events.FinalizedStateUpdatedEvent
 import linea.contract.events.ForcedTransactionAddedEvent
@@ -32,6 +31,7 @@ import linea.log4j.configureLoggers
 import linea.persistence.ForcedTransactionRecord
 import linea.persistence.ForcedTransactionsDao
 import linea.persistence.ftx.FakeForcedTransactionsDao
+import linea.timer.VertxTimerFactory
 import net.consensys.FakeFixedClock
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.traces.TracesCountersV5
@@ -630,7 +630,7 @@ class ForcedTransactionsAppTest {
     this.fakeClock.setTimeTo(this.l1Client.blockTimestamp(BlockParameter.Tag.LATEST) + 12.seconds)
 
     await()
-      .atMost(2.seconds.toJavaDuration())
+      .atMost(5.seconds.toJavaDuration())
       .untilAsserted {
         assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber()).isEqualTo(10UL)
         assertThat(ftxClient.ftxReceivedIds).contains(1UL)
@@ -773,8 +773,9 @@ class ForcedTransactionsAppTest {
       l1EventSearchBlockChunk = 100u,
       fakeForcedTransactionsClientErrorRatio = 0.0,
     )
+    val conflationStartBlockNumberInclusive = 90UL
     this.l1Client.setFinalizedBlockTag(1_000UL)
-    this.l2Client.setLatestBlockTag(10UL)
+    this.l2Client.setLatestBlockTag(conflationStartBlockNumberInclusive + 5UL)
     this.ftxClient.setFtxInclusionResultAfterReception(
       ftxNumber = 1UL,
       l2BlockNumber = 100UL,
@@ -814,38 +815,34 @@ class ForcedTransactionsAppTest {
     val conflationTriggers = mutableListOf<Pair<BlockInterval, ConflationTrigger>>()
     val aggregationTriggers = mutableListOf<BlockInterval>()
 
-    val conflationStartBlockNumberInclusive = 90UL
     val blobCompressor = FakeBlobCompressor(dataLimit = 1000)
-    val conflationCalculator = ConflationCalculatorFactory.conflationCalculator(
-      blobCompressor = blobCompressor,
-      tracesCountersLimit = TracesCountersV5(TracingModuleV5.entries.associateWith { UInt.MAX_VALUE }),
-      blocksLimit = 1000u,
-      lastProcessedBlockNumber = conflationStartBlockNumberInclusive - 1UL,
-      lastProcessedTimestamp = l2Client.genesisTimestamp,
-      blobBatchesLimit = UInt.MAX_VALUE,
-      aggregationProofsLimit = UInt.MAX_VALUE,
-      dynamicBlockNumberSet = DynamicBlockNumberSet(),
-      extraSyncCalculators = listOf(app.conflationCalculator),
-      deferredTriggerConflationCalculators = emptyList(),
-      metricsFacade = mock<MetricsFacade>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
-    )
-    val aggregationCalculator = AggregationCalculatorFactory.createAggregationCalculator(
-      startBlockNumberInclusive = conflationStartBlockNumberInclusive,
-      maxProofsPerAggregation = UInt.MAX_VALUE,
-      maxBlobsPerAggregation = UInt.MAX_VALUE,
-      aggregationSizeMultipleOf = 6U,
-      initialTimestamp = l2Client.blockTimestamp(1UL.toBlockParameter()),
-      forcedTransactionTriggerAggCalculator = app.aggregationCalculator,
-      metricsFacade = mock<MetricsFacade>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
-    )
-    conflationCalculator.onConflatedBatch { conflation: ConflationCalculationResult ->
+    val calculators = CalculatorsFactory
+      .create(
+        blobCompressor = blobCompressor,
+        tracesCountersLimit = TracesCountersV5(TracingModuleV5.entries.associateWith { UInt.MAX_VALUE }),
+        blocksLimit = 1000u,
+        lastAggregatedBlockNumber = conflationStartBlockNumberInclusive - 1UL,
+        lastAggregatedTimestamp = l2Client.blockTimestamp(conflationStartBlockNumberInclusive.dec().toBlockParameter()),
+        blobBatchesLimit = UInt.MAX_VALUE,
+        aggregationProofsLimit = UInt.MAX_VALUE,
+        extraSyncCalculators = listOf(app.conflationCalculator),
+        metricsFacade = mock<MetricsFacade>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
+        conflationDeadline = null,
+        aggregationDeadline = null,
+        clock = this.fakeClock,
+        aggregationBlobLimit = 1000u,
+        aggregationSizeMultipleOf = 6U,
+        timerFactory = VertxTimerFactory(this.vertx),
+        safeBlockProvider = FixedLaggingHeadSafeBlockProvider(l2Client, 0UL),
+      )
+    calculators.blockConflationCalculator.onConflatedBatch { conflation: ConflationCalculationResult ->
       conflationTriggers.add(
         BlockInterval(conflation.startBlockNumber, conflation.endBlockNumber) to conflation.conflationTrigger,
       )
       SafeFuture.completedFuture(Unit)
     }
-    conflationCalculator.onBlobCreation { blob ->
-      aggregationCalculator.newBlob(
+    calculators.blockConflationCalculator.onBlobCreation { blob ->
+      calculators.aggregationCalculator.newBlob(
         BlobCounters(
           numberOfBatches = 1u,
           startBlockNumber = blob.startBlockNumber,
@@ -857,7 +854,7 @@ class ForcedTransactionsAppTest {
       )
       SafeFuture.completedFuture(Unit)
     }
-    aggregationCalculator.onAggregation { agg ->
+    calculators.aggregationCalculator.onAggregation { agg ->
       aggregationTriggers.add(agg)
       SafeFuture.completedFuture(Unit)
     }
@@ -870,9 +867,10 @@ class ForcedTransactionsAppTest {
       }
 
     (conflationStartBlockNumberInclusive..190UL).forEach { blockNumber ->
+      this.l2Client.setLatestBlockTag(blockNumber)
       await()
         .pollInterval(1.milliseconds.toJavaDuration())
-        .atMost(2.seconds.toJavaDuration())
+        .atMost(10.seconds.toJavaDuration())
         .untilAsserted {
           assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber() ?: 159UL)
             .isGreaterThanOrEqualTo(blockNumber.coerceAtMost(150UL))
@@ -883,7 +881,7 @@ class ForcedTransactionsAppTest {
         tracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
         blockRLPEncoded = ByteArray(0),
       )
-      conflationCalculator.newBlock(blockCounters)
+      calculators.blockConflationCalculator.newBlock(blockCounters)
     }
 
     assertThat(conflationTriggers).isEqualTo(

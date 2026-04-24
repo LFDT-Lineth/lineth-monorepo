@@ -4,11 +4,7 @@ import io.vertx.core.Vertx
 import linea.LongRunningService
 import linea.clients.ProofAggregationProverClientV2
 import linea.conflation.calculators.AggregationCalculator
-import linea.conflation.calculators.AggregationCalculatorFactory
 import linea.conflation.calculators.AggregationHandler
-import linea.conflation.calculators.AggregationTriggerCalculatorByDeadline
-import linea.conflation.calculators.AggregationTriggerCalculatorByDeadlineRunner
-import linea.conflation.calculators.SyncAggregationTriggerCalculator
 import linea.domain.Aggregation
 import linea.domain.AggregationProofIndex
 import linea.domain.BlobAndBatchCounters
@@ -22,12 +18,10 @@ import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
 import net.consensys.linea.async.AsyncRetryer
 import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ConcurrentLinkedQueue
-import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -54,7 +48,6 @@ class ProofAggregationCoordinatorService(
 ) {
   data class Config(
     val pollingInterval: Duration,
-    val proofsLimit: UInt,
     val proofGenerationRetryBackoffDelay: Duration,
   )
 
@@ -278,12 +271,8 @@ class ProofAggregationCoordinatorService(
   companion object {
     fun create(
       vertx: Vertx,
+      aggregationCalculator: AggregationCalculator,
       aggregationCoordinatorPollingInterval: Duration,
-      deadlineCheckInterval: Duration,
-      aggregationDeadline: Duration,
-      latestBlockProvider: SafeBlockProvider,
-      maxProofsPerAggregation: UInt,
-      maxBlobsPerAggregation: UInt?,
       startBlockNumberInclusive: ULong,
       aggregationProofHandler: AggregationProofHandler,
       aggregationProofRequestHandler: AggregationProofRequestHandler? = null,
@@ -291,62 +280,19 @@ class ProofAggregationCoordinatorService(
       aggregationL2StateProvider: AggregationL2StateProvider,
       consecutiveProvenBlobsProvider: ConsecutiveProvenBlobsProvider,
       proofAggregationClient: ProofAggregationProverClientV2,
-      noL2ActivityTimeout: Duration,
-      waitForNoL2ActivityToTriggerAggregation: Boolean,
-      targetEndBlockNumbers: Set<ULong>,
       metricsFacade: MetricsFacade,
-      aggregationSizeMultipleOf: UInt,
-      hardForkTimestamps: List<Instant> = emptyList(),
-      initialTimestamp: Instant,
-      forcedTransactionTriggerAggCalculator: SyncAggregationTriggerCalculator,
     ): LongRunningService {
-      val aggregationCalculatorByDeadline =
-        AggregationTriggerCalculatorByDeadline(
-          config =
-          AggregationTriggerCalculatorByDeadline.Config(
-            aggregationDeadline = aggregationDeadline,
-            noL2ActivityTimeout = noL2ActivityTimeout,
-            waitForNoL2ActivityToTriggerAggregation = waitForNoL2ActivityToTriggerAggregation,
-          ),
-          clock = Clock.System,
-          latestBlockProvider = latestBlockProvider,
-        )
-
-      val globalAggregationCalculator = AggregationCalculatorFactory.createAggregationCalculator(
-        startBlockNumberInclusive = startBlockNumberInclusive,
-        maxProofsPerAggregation = maxProofsPerAggregation,
-        maxBlobsPerAggregation = maxBlobsPerAggregation,
-        targetEndBlockNumbers = targetEndBlockNumbers,
-        aggregationSizeMultipleOf = aggregationSizeMultipleOf,
-        hardForkTimestamps = hardForkTimestamps,
-        initialTimestamp = initialTimestamp,
-        forcedTransactionTriggerAggCalculator = forcedTransactionTriggerAggCalculator,
-        deferredAggregationTriggerCalculators = listOf(aggregationCalculatorByDeadline),
-        metricsFacade = metricsFacade,
-      )
-
-      val deadlineCheckRunner =
-        AggregationTriggerCalculatorByDeadlineRunner(
-          vertx = vertx,
-          config =
-          AggregationTriggerCalculatorByDeadlineRunner.Config(
-            deadlineCheckInterval = deadlineCheckInterval,
-          ),
-          aggregationTriggerByDeadline = aggregationCalculatorByDeadline,
-        )
-
       val proofAggregationService =
         ProofAggregationCoordinatorService(
           vertx = vertx,
           config =
           Config(
             pollingInterval = aggregationCoordinatorPollingInterval,
-            proofsLimit = maxProofsPerAggregation,
             proofGenerationRetryBackoffDelay = 5.seconds,
           ),
           metricsFacade = metricsFacade,
           nextBlockNumberToPoll = startBlockNumberInclusive.toLong(),
-          aggregationCalculator = globalAggregationCalculator,
+          aggregationCalculator = aggregationCalculator,
           aggregationProofHandler = aggregationProofHandler,
           aggregationProofRequestHandler = aggregationProofRequestHandler,
           invalidityProofProvider = invalidityProofProvider,
@@ -355,7 +301,7 @@ class ProofAggregationCoordinatorService(
           aggregationL2StateProvider = aggregationL2StateProvider,
         )
 
-      return LongRunningService.compose(deadlineCheckRunner, proofAggregationService)
+      return proofAggregationService
     }
   }
 

@@ -1,6 +1,7 @@
 package linea.conflation.calculators
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
+import linea.conflation.SafeBlockProvider
 import linea.domain.BlobCounters
 import linea.domain.BlobsToAggregate
 import linea.domain.BlockHeaderSummary
@@ -8,7 +9,6 @@ import linea.kotlin.ByteArrayExt
 import net.consensys.FakeFixedClock
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
-import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -30,7 +30,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.stream.Stream
-import kotlin.IllegalArgumentException
 import kotlin.random.Random
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -41,7 +40,6 @@ class GlobalAggregationCalculatorTest {
   private lateinit var fixedClock: FakeFixedClock
   private lateinit var safeBlockProvider: SafeBlockProvider
   private lateinit var aggregationTriggerCalculatorByDeadline: AggregationTriggerCalculatorByDeadline
-  private lateinit var aggregationTriggerCalculatorByTimestampHardFork: AggregationTriggerCalculatorByTimestampHardFork
 
   @BeforeEach
   fun setup() {
@@ -61,20 +59,10 @@ class GlobalAggregationCalculatorTest {
     aggregationSizeMultipleOf: Int = 1,
     metricsFacade: MetricsFacade = mock<MetricsFacade>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
     aggregationHandler: AggregationHandler = AggregationHandler.NOOP_HANDLER,
-  ): GlobalAggregationCalculator {
-    val fakeFtxCalculator = object : SyncAggregationTriggerCalculator {
-      override fun newBlob(blobCounters: BlobCounters) {
-        // no op
-      }
-      override fun checkAggregationTrigger(blobCounters: BlobCounters): AggregationTrigger? = null
-      override fun reset() {
-        // no op
-      }
-    }
-
-    val deferredAggregationTriggers = mutableListOf<DeferredAggregationTriggerCalculator>().apply {
-      aggregationDeadline?.also {
-        aggregationTriggerCalculatorByDeadline = AggregationTriggerCalculatorByDeadline(
+  ): AggregationCalculator {
+    val aggTriggerByDeadline =
+      aggregationDeadline?.let {
+        AggregationTriggerCalculatorByDeadline(
           AggregationTriggerCalculatorByDeadline.Config(
             aggregationDeadline = aggregationDeadline,
             noL2ActivityTimeout = aggregationDeadlineDelay!!,
@@ -83,20 +71,19 @@ class GlobalAggregationCalculatorTest {
           fixedClock,
           safeBlockProvider,
         )
-        add(aggregationTriggerCalculatorByDeadline)
+      }?.also {
+        aggregationTriggerCalculatorByDeadline = it
       }
-    }
 
-    return AggregationCalculatorFactory.createAggregationCalculator(
-      startBlockNumberInclusive = lastBlockNumber + 1u,
-      maxProofsPerAggregation = proofLimit ?: UInt.MAX_VALUE,
-      maxBlobsPerAggregation = blobLimit,
-      targetEndBlockNumbers = targetBlockNumbers?.map { it.toULong() }?.toSet() ?: emptySet(),
+    return GlobalAggregationCalculator.create(
+      lastAggregatedBlockNumber = lastBlockNumber,
+      lastAggregatedTimestamp = initialTimestamp,
+      aggregationTargetEndBlockNumbers = targetBlockNumbers?.map { it.toULong() }?.toSet() ?: emptySet(),
+      timestampBasedHardForks = hardForkTimestamps ?: emptyList(),
+      aggregationProofsLimit = proofLimit ?: UInt.MAX_VALUE,
+      aggregationBlobLimit = blobLimit,
       aggregationSizeMultipleOf = aggregationSizeMultipleOf.toUInt(),
-      hardForkTimestamps = hardForkTimestamps ?: emptyList(),
-      initialTimestamp = initialTimestamp,
-      forcedTransactionTriggerAggCalculator = fakeFtxCalculator,
-      deferredAggregationTriggerCalculators = deferredAggregationTriggers,
+      aggregationDeadlineCalculator = aggTriggerByDeadline,
       metricsFacade = metricsFacade,
     ).apply { onAggregation(aggregationHandler) }
   }
@@ -816,12 +803,14 @@ class GlobalAggregationCalculatorTest {
           null
         }
       }
+
       override fun newBlob(blobCounters: BlobCounters) {
         inFlightAggregation = BlobsToAggregate(
           inFlightAggregation?.startBlockNumber ?: blobCounters.startBlockNumber,
           blobCounters.endBlockNumber,
         )
       }
+
       override fun reset() {
         inFlightAggregation = null
       }
@@ -882,6 +871,7 @@ class GlobalAggregationCalculatorTest {
       override fun onAggregationTrigger(aggregationTriggerHandler: AggregationTriggerHandler) {
         this.aggregationTriggerHandler = aggregationTriggerHandler
       }
+
       override fun newBlob(blobCounters: BlobCounters) {}
       override fun reset() {}
       fun triggerAggregation() {

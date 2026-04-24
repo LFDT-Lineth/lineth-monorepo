@@ -1,6 +1,6 @@
 package linea.ftx.conflation
 
-import net.consensys.zkevm.ethereum.coordination.blockcreation.ConflationSafeBlockNumberProvider
+import linea.conflation.ConflationSafeBlockNumberProvider
 
 class ForcedTransactionConflationSafeBlockNumberProvider(
   private val listener: SafeBlockNumberUpdateListener? = null,

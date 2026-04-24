@@ -1,9 +1,9 @@
 package linea.conflation.calculators
 
 import linea.LongRunningService
+import linea.conflation.SafeBlockProvider
 import linea.domain.BlockCounters
 import linea.domain.ConflationTrigger
-import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
