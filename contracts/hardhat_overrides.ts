@@ -41,7 +41,7 @@ export const overrides = {
       viaIR: useViaIR,
       optimizer: {
         enabled: true,
-        runs: 1500,
+        runs: 800,
       },
       evmVersion: "osaka",
     },

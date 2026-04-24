@@ -1,4 +1,4 @@
 Deployed Address: TBD
 EVM Version: Osaka
-Optimizer Runs: 1_500
+Optimizer Runs: 800
 Compiler Version 0.8.33
