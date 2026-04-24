@@ -43,6 +43,8 @@ public class RequestLimiter {
 
     try {
       return processingFunc.apply(request);
+    } catch (PluginRpcEndpointException | IllegalArgumentException ex) {
+      throw ex;
     } catch (Exception ex) {
       final Optional<String> message = Optional.ofNullable(ex.getMessage());
       final boolean blockNotFound =

@@ -15,7 +15,6 @@
 
 package net.consensys.linea.plugins.rpc.tracegeneration;
 
-import java.security.InvalidParameterException;
 import net.consensys.linea.zktracer.ZkTracer;
 import org.hyperledger.besu.evm.EVM;
 
@@ -24,19 +23,19 @@ public record TraceRequestParams(long startBlockNumber, long endBlockNumber) {
 
   public void validate() {
     if (startBlockNumber < 0) {
-      throw new InvalidParameterException(
+      throw new IllegalArgumentException(
           "INVALID_START_BLOCK_NUMBER: startBlockNumber: %d cannot be a negative number"
               .formatted(startBlockNumber));
     }
 
     if (endBlockNumber < 0) {
-      throw new InvalidParameterException(
+      throw new IllegalArgumentException(
           "INVALID_END_BLOCK_NUMBER: endBlockNumber: %d cannot be a negative number"
               .formatted(endBlockNumber));
     }
 
     if (endBlockNumber - startBlockNumber < 0) {
-      throw new InvalidParameterException(
+      throw new IllegalArgumentException(
           "INVALID_END_BLOCK_NUMBER: endBlockNumber: %d cannot be less than startBlockNumber: %d"
               .formatted(endBlockNumber, startBlockNumber));
     }

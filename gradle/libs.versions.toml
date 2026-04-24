@@ -34,16 +34,16 @@ restassured = "5.3.0"
 wiremock = "3.13.2"
 logcaptor = "2.11.0"
 shomei = "3.1.0"
-besuShomeiPluginVersion = "v1.0.0"
+besuShomeiPluginVersion = "v1.0.4"
 undercouchDownload = "5.6.0"
 
 # Runtime
 # Besu commit hash from https://github.com/besu-eth/besu
 # when updates it, should run "gradlew buildAndUpdateBesuVersionInLibsVersions" to
 # checkout and build Besu from source, and will auto-update the "besu" version below
-besuCommit = "067610071de5f6760050ef434f5549c9ab8fbacf"
+besuCommit = "41cad9916393d73c1d050340b586b6f796405d57"
 
-besu = "26.3.0-RC0-0676100"
+besu = "26.4.0-RC2-41cad99"
 blobCompressor = "4.0.1"
 commonsIo = "2.21.0"
 blobShnarfCalculator = "3.0.1"

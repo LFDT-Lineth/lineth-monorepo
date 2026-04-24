@@ -113,14 +113,21 @@
       <DebouncingFilter/>
       <appender-ref ref="console"/>
     </Logger>
-    <Logger name="clients.l2" level="DEBUG" additivity="false">
+    <Logger name="net.consensys.zkevm.coordinator.clients.prover.GenericFileBasedProverClient" level="TRACE" additivity="false">
+      <appender-ref ref="console"/>
+    </Logger>
+<!--    <Logger name="clients.l2" level="DEBUG" additivity="false">-->
+<!--      <DebouncingFilter/>-->
+<!--      <appender-ref ref="console"/>-->
+<!--    </Logger>-->
+    <Logger name="clients.StateManagerShomeiClient" level="DEBUG" additivity="false">
       <DebouncingFilter/>
       <appender-ref ref="console"/>
     </Logger>
-    <Logger name="clients.l1" level="DEBUG" additivity="false">
-      <DebouncingFilter/>
-      <appender-ref ref="console"/>
-    </Logger>
+<!--    <Logger name="clients.l1" level="DEBUG" additivity="false">-->
+<!--      <DebouncingFilter/>-->
+<!--      <appender-ref ref="console"/>-->
+<!--    </Logger>-->
     <Logger name="clients.l2.ftx" level="TRACE" additivity="false">
       <appender-ref ref="console"/>
     </Logger>

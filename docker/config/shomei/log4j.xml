@@ -6,9 +6,9 @@
     </Console>
   </Appenders>
   <Loggers>
-    <Logger name="net.consensys.shomei" level="INFO" />
-    <Logger name="net.consensys.shomei.rpc" level="INFO" />
-    <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc.execution" level="INFO" />
+    <Logger name="net.consensys.shomei" level="DEBUG" />
+    <Logger name="net.consensys.shomei.rpc" level="DEBUG" />
+    <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc.execution" level="DEBUG" />
     <Root level="WARN">
       <AppenderRef ref="Console"/>
     </Root>

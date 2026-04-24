@@ -151,4 +151,57 @@ public class TraceWriter {
     return "%s-%s.conflated.%s.%s"
         .formatted(startBlockNumber, endBlockNumber, expectedTracesEngineVersion, besuVersion);
   }
+
+  /**
+   * Get the expected path for a virtual block trace file.
+   *
+   * @param blockNumber the virtual block number
+   * @param tracesEngineVersion the tracer engine version
+   * @param txsHash a short hash of the caller-supplied transactions, distinguishing cache entries
+   *     for the same block number but different transaction sets
+   * @return the expected path for the trace file
+   */
+  public Path virtualBlockTraceFilePath(
+      final long blockNumber, final String tracesEngineVersion, final String txsHash) {
+    final String fileName = generateVirtualBlockFileName(blockNumber, txsHash, tracesEngineVersion);
+    return generateOutputFilePath(tracesOutputDirPath, fileName + traceFileExtension);
+  }
+
+  /**
+   * Write virtual block trace to file with naming convention:
+   * {blockNumber}-{txsHash}-noncanonical.conflated.{tracesEngineVersion}.lt[.gz]
+   *
+   * @param tracer the ZkTracer containing the trace data
+   * @param blockNumber the virtual block number
+   * @param tracesEngineVersion the tracer engine version
+   * @param txsHash a short hash of the caller-supplied transactions
+   * @return the path to the written trace file
+   */
+  @SneakyThrows(IOException.class)
+  public Path writeVirtualBlockTraceToFile(
+      final ZkTracer tracer,
+      final long blockNumber,
+      final String tracesEngineVersion,
+      final String txsHash) {
+    final String fileName = generateVirtualBlockFileName(blockNumber, txsHash, tracesEngineVersion);
+    final Path traceFilePath =
+        generateOutputFilePath(tracesOutputDirPath, fileName + traceFileExtension);
+
+    final Path tmpTraceFilePath =
+        writeToTmpFile(tracer, fileName + ".", tempTraceFileExtension, blockNumber, blockNumber);
+
+    final Path finalizedTraceFilePath =
+        Files.move(
+            tmpTraceFilePath,
+            traceFilePath,
+            StandardCopyOption.ATOMIC_MOVE,
+            StandardCopyOption.REPLACE_EXISTING);
+
+    return finalizedTraceFilePath.toAbsolutePath();
+  }
+
+  private String generateVirtualBlockFileName(
+      final long blockNumber, final String txsHash, final String tracesEngineVersion) {
+    return "%d-%s-noncanonical.conflated.%s".formatted(blockNumber, txsHash, tracesEngineVersion);
+  }
 }

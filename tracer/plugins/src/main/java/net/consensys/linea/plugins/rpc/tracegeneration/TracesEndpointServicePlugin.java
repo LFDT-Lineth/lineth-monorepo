@@ -23,6 +23,7 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.plugins.AbstractLineaPrivateOptionsPlugin;
 import net.consensys.linea.plugins.BesuServiceProvider;
@@ -33,6 +34,7 @@ import net.consensys.linea.plugins.rpc.RequestLimiterDispatcher;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;
+import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
 
 /**
  * Registers RPC endpoints .This class provides an RPC endpoint named
@@ -93,7 +95,19 @@ public class TracesEndpointServicePlugin extends AbstractLineaPrivateOptionsPlug
         new GenerateConflatedTracesV2(
             besuContext, reqLimiter, endpointConfiguration, l1L2BridgeSharedConfiguration());
 
-    createAndRegister(method, rpcEndpointService);
+    registerRpcMethod(method.getNamespace(), method.getName(), method::execute);
+
+    final GenerateVirtualBlockConflatedTracesV1 virtualBlockMethod =
+        new GenerateVirtualBlockConflatedTracesV1(
+            reqLimiter, endpointConfiguration, l1L2BridgeSharedConfiguration(), besuContext);
+    registerRpcMethod(
+        virtualBlockMethod.getNamespace(),
+        virtualBlockMethod.getName(),
+        virtualBlockMethod::execute);
+    log.info(
+        "endpoint registered: namespace={} method={}",
+        virtualBlockMethod.getNamespace(),
+        virtualBlockMethod.getName());
   }
 
   private Optional<Path> initTracesOutputPath(final String tracesOutputPathOption) {
@@ -108,16 +122,11 @@ public class TracesEndpointServicePlugin extends AbstractLineaPrivateOptionsPlug
     return tracesOutputPath;
   }
 
-  /**
-   * Create and register the RPC service.
-   *
-   * @param method the RollupGenerateConflatedTracesToFileV0 method to be used.
-   * @param rpcEndpointService the RpcEndpointService to be registered.
-   */
-  private void createAndRegister(
-      final GenerateConflatedTracesV2 method, final RpcEndpointService rpcEndpointService) {
-    rpcEndpointService.registerRPCEndpoint(
-        method.getNamespace(), method.getName(), method::execute);
+  private void registerRpcMethod(
+      final String namespace,
+      final String methodName,
+      final Function<PluginRpcRequest, ?> executor) {
+    rpcEndpointService.registerRPCEndpoint(namespace, methodName, executor);
   }
 
   /** Start the RPC service. This method loads the OpCodes. */
