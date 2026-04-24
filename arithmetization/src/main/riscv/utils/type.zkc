@@ -9,19 +9,20 @@ type Type = u3
 type Funct3 = u3
 type Funct6 = u6
 type Funct7 = u7
-type UImm5  = u5
-type UImm6  = u6
-type Imm12  = u12
-type Imm20  = u20
+type UImm5 = u5
+type UImm6 = u6
+type Imm12 = u12
+type Imm20 = u20
 
 type SignBit = u1
 type Boolean = u1
 
-type Byte         = u8
-type HalfWord     = u16
-type Word         = u32
-type DoubleWord   = u64
+type Byte = u8
+type HalfWord = u16
+type Word = u32
+type DoubleWord = u64
 type DoubleWordMO = u63
 
-type UnsignedWord       = u32
+type UnsignedWord = u32
 type UnsignedDoubleWord = u64
+

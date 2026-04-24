@@ -2,25 +2,47 @@ include "../memory.zkc"
 include "../utils/constants.zkc"
 include "../utils/sign_extend.zkc"
 
-fn process_U_type_instruction<registers>(opcode:Opcode,instruction_parameters:u25, pc:Address) -> () {
+// Process a RISC-V U-type instruction, writing an upper-immediate value to a register.
+//
+// U-type instructions carry a 20-bit immediate (imm20) placed in the upper bits of
+// the result.  They never affect the program counter (the caller always advances by 4).
+// The 25-bit encoding (opcode stripped) is simply:
+//
+//   imm20 :: rd
+//
+// The immediate is placed into bits [31:12] of a 32-bit word (lower 12 bits zeroed)
+// and then sign-extended to 64 bits.  The opcode selects one of two variants:
+//
+//   LUI   — load upper immediate:
+//             rd = sign_extend_32_to_64(imm20 << 12)
+//
+//   AUIPC — add upper immediate to PC:
+//             rd = sign_extend_32_to_64(imm20 << 12) + pc
+//
+// LUI is typically paired with an ADDI to materialise a full 32-bit constant in a
+// register.  AUIPC is used to form PC-relative addresses for data or call targets.
+fn process_U_type_instruction<registers>(opcode:Opcode, instruction_parameters:u25, pc:Address) -> () {
 
-  // var funct3 : Funct3
-  // var funct7 : Funct7
-  // var rs1    : Register
-  // var rs2    : Register
-    var rd    : Register
-  // var uimm5  : UImm5
-  // var uimm6  : UImm6
-  // var imm12  : Imm12
-   var imm20  : Imm20
-  // var opcode : Opcode
+    // var funct3 : Funct3
+    // var funct7 : Funct7
+    // var rs1    : Register
+    // var rs2    : Register
+    var rd:Register
+    // var uimm5  : UImm5
+    // var uimm6  : UImm6
+    // var imm12  : Imm12
+    var imm20:Imm20
+    // var opcode : Opcode
 
-  var tmp:DoubleWord
+    var tmp:DoubleWord
 
-  imm20 :: rd = instruction_parameters
-  tmp = sgn_extension_u32_u64((imm20 << 12) as u32)
+    imm20::rd = instruction_parameters
+    tmp = sgn_extension_u32_u64((imm20 << 12) as u32)
 
-  if opcode == AUIPC {tmp = (tmp + pc) as DoubleWord}
+    if opcode == AUIPC {
+        tmp = (tmp + pc) as DoubleWord
+    }
 
-  registers[rd] =  tmp as DoubleWord 
+    registers[rd] = tmp as DoubleWord
 }
+

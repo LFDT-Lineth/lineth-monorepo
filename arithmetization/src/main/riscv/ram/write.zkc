@@ -2,51 +2,51 @@ include "../memory.zkc"
 
 // Everything in RISC5 is little endian
 fn write_64<ram>(address:Address, value:u64) -> () {
-   var v0:u8
-   var v1:u8
-   var v2:u8
-   var v3:u8
-   var v4:u8
-   var v5:u8
-   var v6:u8
-   var v7:u8
+    var v0:u8
+    var v1:u8
+    var v2:u8
+    var v3:u8
+    var v4:u8
+    var v5:u8
+    var v6:u8
+    var v7:u8
 
-   v7 :: v6 :: v5 :: v4 :: v3 :: v2 :: v1 :: v0 = value
+    v7::v6::v5::v4::v3::v2::v1::v0 = value
 
-   ram[address + 0] = v0
-   ram[address + 1] = v1
-   ram[address + 2] = v2
-   ram[address + 3] = v3
-   ram[address + 4] = v4
-   ram[address + 5] = v5
-   ram[address + 6] = v6
-   ram[address + 7] = v7
+    ram[address + 0] = v0
+    ram[address + 1] = v1
+    ram[address + 2] = v2
+    ram[address + 3] = v3
+    ram[address + 4] = v4
+    ram[address + 5] = v5
+    ram[address + 6] = v6
+    ram[address + 7] = v7
 }
 
 fn write_32<ram>(address:Address, value:u32) -> () {
-   var v0:u8
-   var v1:u8
-   var v2:u8
-   var v3:u8
+    var v0:u8
+    var v1:u8
+    var v2:u8
+    var v3:u8
 
-   v3 :: v2 :: v1 :: v0 = value
+    v3::v2::v1::v0 = value
 
-   ram[address + 0] = v0
-   ram[address + 1] = v1
-   ram[address + 2] = v2
-   ram[address + 3] = v3
+    ram[address + 0] = v0
+    ram[address + 1] = v1
+    ram[address + 2] = v2
+    ram[address + 3] = v3
 }
 
 fn write_16<ram>(address:Address, value:u16) -> () {
-   var v0:u8
-   var v1:u8
+    var v0:u8
+    var v1:u8
 
-   v1 :: v0 = value
+    v1::v0 = value
 
-   ram[address + 0] = v0
-   ram[address + 1] = v1
+    ram[address + 0] = v0
+    ram[address + 1] = v1
 }
 
 fn write_8<ram>(address:Address, value:u8) -> () {
-   ram[address] = value
+    ram[address] = value
 }

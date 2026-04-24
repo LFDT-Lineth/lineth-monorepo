@@ -1,30 +1,47 @@
 include "../memory.zkc"
 include "../utils/sign_extend.zkc"
 
+// Process a RISC-V J-type instruction (JAL) and return the next program counter.
+//
+// J-type is used exclusively for JAL (Jump And Link).  The 25-bit encoding
+// (opcode stripped) scrambles the immediate bits to share control lines with
+// other formats; the fields arrive in this order:
+//
+//   imm[20] :: imm[10:1] :: imm[11] :: imm[19:12] :: rd
+//
+// They are reassembled into a 21-bit signed PC-relative byte offset:
+//
+//   imm21 = imm[20] :: imm[19:12] :: imm[11] :: imm[10:1] :: 0
+//
+// The appended zero means the target is always 2-byte aligned (LSB always 0).
+//
+// Effect:
+//   rd     = pc + 4           (return address saved in destination register)
+//   pc_new = pc + sign_extend(imm21)  (unconditional jump to target)
 fn process_J_type_instruction<registers>(instruction_parameters:u25, pc:Address) -> (pc_new:Address) {
 
-  // var funct3 : Funct3
-  // var funct7 : Funct7
-  // var rs1    : Register
-  // var rs2    : Register
-    var rd    : Register
-  // var uimm5  : UImm5
-  // var uimm6  : UImm6
-  // var imm12  : Imm12
-  // var imm20  : Imm20
-  // var opcode : Opcode
+    // var funct3 : Funct3
+    // var funct7 : Funct7
+    // var rs1    : Register
+    // var rs2    : Register
+    var rd:Register
+    // var uimm5  : UImm5
+    // var uimm6  : UImm6
+    // var imm12  : Imm12
+    // var imm20  : Imm20
+    // var opcode : Opcode
 
-  var imm20:u1
-  var imm10_1:u10
-  var imm11:u1
-  var imm19_12:u8
+    var imm20:u1
+    var imm10_1:u10
+    var imm11:u1
+    var imm19_12:u8
 
-  // destructure the input
-  imm20 :: imm10_1 :: imm11 :: imm19_12 :: rd = instruction_parameters
+    // destructure the input
+    imm20::imm10_1::imm11::imm19_12::rd = instruction_parameters
 
-  // restructure and 1 left shift the immediate to get imm21
-  var imm21:u21 = ((imm20 :: imm19_12 :: imm11 :: imm10_1) as u21) << 1
+    // restructure and 1 left shift the immediate to get imm21
+    var imm21:u21 = ((imm20::imm19_12::imm11::imm10_1) as u21) << 1
 
-  registers[rd] = (pc + 4) as DoubleWord
-  pc_new = (pc + sgn_extension_u21_u64(imm21)) as Address
+    registers[rd] = (pc + 4) as DoubleWord
+    pc_new = (pc + sgn_extension_u21_u64(imm21)) as Address
 }

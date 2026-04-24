@@ -6,271 +6,297 @@ include "../utils/sign_bit.zkc"
 include "../utils/sign_extend.zkc"
 include "../utils/signed_comparisons.zkc"
 
+// Process a RISC-V R-type instruction, writing the result into the register file.
+//
+// R-type instructions operate on two source registers (rs1, rs2) and write the
+// result to a destination register (rd).  They never affect the program counter
+// (no pc parameter — the caller always advances by 4).  The 25-bit encoding
+// (opcode stripped) is:
+//
+//   funct7 :: rs2 :: rs1 :: funct3 :: rd
+//
+// funct3 selects the operation family; funct7 disambiguates within that family
+// (e.g. ADD vs SUB, SRL vs SRA, or base vs M-extension).
+//
+// Supported operation groups:
+//
+//   Base RV64I — register arithmetic/logic (64-bit):
+//     ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND
+//
+//   RV64I *W — word-width (32-bit) variants, result sign-extended to 64 bits:
+//     ADDW, SUBW, SLLW, SRLW, SRAW
+//
+//   M-extension — integer multiply/divide/remainder (64-bit):
+//     MUL, MULH, MULHSU, MULHU, DIV, DIVU, REM, REMU
+//
+//   M-extension *W — word-width multiply/divide/remainder, sign-extended to 64 bits:
+//     MULW, DIVW, DIVUW, REMW, REMUW
+//
+// Signed operations (SLT, SRA, MULH, MULHSU, DIV, REM, and their *W variants)
+// treat register values as two's-complement integers.  Division and remainder
+// follow RISC-V semantics: division by zero returns −1 (or the dividend for REM),
+// and signed overflow (INT_MIN / −1) returns INT_MIN (or 0 for REM).
 fn process_R_type_instruction<registers>(instruction_parameters:u25) {
 
-  var funct7                   : Funct7
-  var rs2                      : Register
-  var rs1                      : Register
-  var funct3                   : Funct3
-  var rd                       : Register
-  var v1                       : DoubleWord
-  var v2                       : DoubleWord
-  var v1_sign                  : SignBit
-  var v2_sign                  : SignBit
-  var v1_abs                   : UnsignedDoubleWord
-  var v2_abs                   : UnsignedDoubleWord
-  var shift_discard_6          : u58 // 58 + 6 = 64, used for DoubleWords
-  var shift_amount_6           : u6
-  var shift_discard_5          : u27 // 27 + 5 = 32, used for Words
-  var shift_amount_5           : u5
-  var double_word_working_copy : DoubleWord
-  var word_working_copy        : Word
-  var overflow                 : SignBit
-  var v1_upper                 : Word
-  var v1_lower                 : Word
-  var v2_upper                 : Word
-  var v2_lower                 : Word
-  var v1_lower_abs             : Word
-  var v2_lower_abs             : Word
-  var product_upper            : Word
-  var product_lower            : Word
-  var word_wip                 : Word
-  var sign_bit                 : SignBit
+    var funct7:Funct7
+    var rs2:Register
+    var rs1:Register
+    var funct3:Funct3
+    var rd:Register
+    var v1:DoubleWord
+    var v2:DoubleWord
+    var v1_sign:SignBit
+    var v2_sign:SignBit
+    var v1_abs:UnsignedDoubleWord
+    var v2_abs:UnsignedDoubleWord
+    var shift_discard_6:u58 // 58 + 6 = 64, used for DoubleWords
+    var shift_amount_6:u6
+    var shift_discard_5:u27 // 27 + 5 = 32, used for Words
+    var shift_amount_5:u5
+    var double_word_working_copy:DoubleWord
+    var word_working_copy:Word
+    var overflow:SignBit
+    var v1_upper:Word
+    var v1_lower:Word
+    var v2_upper:Word
+    var v2_lower:Word
+    var v1_lower_abs:Word
+    var v2_lower_abs:Word
+    var product_upper:Word
+    var product_lower:Word
+    var word_wip:Word
+    var sign_bit:SignBit
 
-  funct7 :: rs2 :: rs1 :: funct3 :: rd = instruction_parameters
+    funct7::rs2::rs1::funct3::rd = instruction_parameters
 
-  v1 = registers[rs1]
-  v2 = registers[rs2]
+    v1 = registers[rs1]
+    v2 = registers[rs2]
 
-  v1_sign = sign_bit_of_double_word(v1)
-  v2_sign = sign_bit_of_double_word(v2)
+    v1_sign = sign_bit_of_double_word(v1)
+    v2_sign = sign_bit_of_double_word(v2)
 
-  v1_abs = absolute_value_double_word(v1)
-  v2_abs = absolute_value_double_word(v2)
+    v1_abs = absolute_value_double_word(v1)
+    v2_abs = absolute_value_double_word(v2)
 
-  // Note. If x = 0b... and y = 0b... are two bit strings of length N
-  // and you interpret them either as uintN or intN, then the underlying
-  // bit string of their additions is the same in both interpretations.
-  // This also holds for subtraction.
-  if (funct3 == FUNCT3_ADD)  && (funct7 == FUNCT7_ADD)  {
-    overflow :: double_word_working_copy = (v1 as u65) + (v2 as u65)
-    registers[rd] = double_word_working_copy
-  }
-  if (funct3 == FUNCT3_SUB)  && (funct7 == FUNCT7_SUB)  {
-    // we prevent underflow by pre-pending v1 with a 1
-    overflow :: double_word_working_copy = ((1 as u1) :: (v1 as u64)) - (v2 as u65)
-    registers[rd] = double_word_working_copy
-  }
-  if (funct3 == FUNCT3_SLL)  && (funct7 == FUNCT7_SLL)  {
-    shift_discard_6 :: shift_amount_6 = v2
-    registers[rd] = v1 << shift_amount_6
-  }
-  if (funct3 == FUNCT3_SLT)  && (funct7 == FUNCT7_SLT)  {
-    registers[rd] = signed_LT(v1, v2) as DoubleWord
-  }
-  if (funct3 == FUNCT3_SLTU) && (funct7 == FUNCT7_SLTU) {
-    if (v1 < v2) {
-    registers[rd] = 1
-    } else {
-    registers[rd] = 0
+    // Note. If x = 0b... and y = 0b... are two bit strings of length N
+    // and you interpret them either as uintN or intN, then the underlying
+    // bit string of their additions is the same in both interpretations.
+    // This also holds for subtraction.
+    if (funct3 == FUNCT3_ADD) && (funct7 == FUNCT7_ADD) {
+        overflow::double_word_working_copy = (v1 as u65) + (v2 as u65)
+        registers[rd] = double_word_working_copy
     }
-  }
-  if (funct3 == FUNCT3_XOR)  && (funct7 == FUNCT7_XOR)  {
-    registers[rd] = v1 ^ v2
-  }
-  if (funct3 == FUNCT3_SRL)  && (funct7 == FUNCT7_SRL)  {
-    shift_discard_6 :: shift_amount_6 = v2
-    registers[rd] = v1 >> shift_amount_6
-  }
-  if (funct3 == FUNCT3_SRA)  && (funct7 == FUNCT7_SRA)  {
-    shift_discard_6 :: shift_amount_6 = v2
-    if (v1_sign == 1) {
-      double_word_working_copy = bit_flip_double_word(v1)
-    } else {
-      double_word_working_copy = v1
+    if (funct3 == FUNCT3_SUB) && (funct7 == FUNCT7_SUB) {
+        // we prevent underflow by pre-pending v1 with a 1
+        overflow::double_word_working_copy = ((1 as u1)::(v1 as u64)) - (v2 as u65)
+        registers[rd] = double_word_working_copy
     }
-    double_word_working_copy = double_word_working_copy >> shift_amount_6
-    if (v1_sign == 1) {
-      double_word_working_copy = bit_flip_double_word(double_word_working_copy)
+    if (funct3 == FUNCT3_SLL) && (funct7 == FUNCT7_SLL) {
+        shift_discard_6::shift_amount_6 = v2
+        registers[rd] = v1 << shift_amount_6
     }
-    registers[rd] = double_word_working_copy
+    if (funct3 == FUNCT3_SLT) && (funct7 == FUNCT7_SLT) {
+        registers[rd] = signed_LT(v1, v2) as DoubleWord
     }
-    if (funct3 == FUNCT3_OR)   && (funct7 == FUNCT7_OR)   {
-    registers[rd] = v1 | v2
+    if (funct3 == FUNCT3_SLTU) && (funct7 == FUNCT7_SLTU) {
+        if (v1<v2) {
+            registers[rd] = 1
+        } else {
+            registers[rd] = 0
+        }
     }
-    if (funct3 == FUNCT3_AND)   && (funct7 == FUNCT7_AND)   {
-    registers[rd] = v1 & v2
-  }
-
-  // Support variables to do not make multiplication overflow
-  var v1_as_u128:u128 = registers[rs1] as u128
-  var v2_as_u128:u128 = registers[rs2] as u128
-
-  var v1_abs_as_u128:u128 = v1_abs as u128
-  var v2_abs_as_u128:u128 = v2_abs as u128
-
-  if (funct3 == FUNCT3_MUL) && (funct7 == FUNCT7_MUL) {
-    registers[rd] = ((v1_as_u128 * v2_as_u128) & MAX_UINT_64_AS_U128) as u64
-  }
-
-  if (funct3 == FUNCT3_MULH) && (funct7 == FUNCT7_MULH) {
-    var v1_times_v2_as_u128:u128 = v1_abs_as_u128 * v2_abs_as_u128
-    if (v1_sign ^ v2_sign) == 1 {
-      // compute the complement's two negative of the result
-      v1_times_v2_as_u128 = (~v1_times_v2_as_u128) + 1
+    if (funct3 == FUNCT3_XOR) && (funct7 == FUNCT7_XOR) {
+        registers[rd] = v1 ^ v2
     }
-    registers[rd] = ((v1_times_v2_as_u128 >> 64) & MAX_UINT_64_AS_U128) as u64
-  }
-
-  if (funct3 == FUNCT3_MULHSU) && (funct7 == FUNCT7_MULHSU) {
-    var v1_times_v2_as_u128:u128 = v1_abs_as_u128 * v2_as_u128
-    if v1_sign == 1 {
-      // compute the complement's two negative of the result
-      v1_times_v2_as_u128 = (~v1_times_v2_as_u128) + 1
+    if (funct3 == FUNCT3_SRL) && (funct7 == FUNCT7_SRL) {
+        shift_discard_6::shift_amount_6 = v2
+        registers[rd] = v1 >> shift_amount_6
     }
-    registers[rd] = ((v1_times_v2_as_u128 >> 64) & MAX_UINT_64_AS_U128) as u64
-  }
+    if (funct3 == FUNCT3_SRA) && (funct7 == FUNCT7_SRA) {
+        shift_discard_6::shift_amount_6 = v2
+        if (v1_sign == 1) {
+            double_word_working_copy = bit_flip_double_word(v1)
+        } else {
+            double_word_working_copy = v1
+        }
+        double_word_working_copy = double_word_working_copy >> shift_amount_6
+        if (v1_sign == 1) {
+            double_word_working_copy = bit_flip_double_word(double_word_working_copy)
+        }
+        registers[rd] = double_word_working_copy
+    }
+    if (funct3 == FUNCT3_OR) && (funct7 == FUNCT7_OR) {
+        registers[rd] = v1 | v2
+    }
+    if (funct3 == FUNCT3_AND) && (funct7 == FUNCT7_AND) {
+        registers[rd] = v1 & v2
+    }
 
-  if (funct3 == FUNCT3_MULHU) && (funct7 == FUNCT7_MULHU) {
-    registers[rd] = (((v1_as_u128 * v2_as_u128) >> 64) & MAX_UINT_64_AS_U128) as u64
-  }
+    // Support variables to do not make multiplication overflow
+    var v1_as_u128:u128 = registers[rs1] as u128
+    var v2_as_u128:u128 = registers[rs2] as u128
 
-  if (funct3 == FUNCT3_DIV) && (funct7 == FUNCT7_DIV) {
-    if v2 == 0 {
-      registers[rd] = NEGATIVE_ONE_AS_I64
-    } else {
-      if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
-        registers[rd] = OVERFLOW_DIVIDEND
-      } else {
-        registers[rd] = v1_abs / v2_abs
+    var v1_abs_as_u128:u128 = v1_abs as u128
+    var v2_abs_as_u128:u128 = v2_abs as u128
+
+    if (funct3 == FUNCT3_MUL) && (funct7 == FUNCT7_MUL) {
+        registers[rd] = ((v1_as_u128 * v2_as_u128) & MAX_UINT_64_AS_U128) as u64
+    }
+
+    if (funct3 == FUNCT3_MULH) && (funct7 == FUNCT7_MULH) {
+        var v1_times_v2_as_u128:u128 = v1_abs_as_u128 * v2_abs_as_u128
         if (v1_sign ^ v2_sign) == 1 {
-          registers[rd] = negative_of_double_word(registers[rd])
+            // compute the complement's two negative of the result
+            v1_times_v2_as_u128 = (~v1_times_v2_as_u128) + 1
         }
-      }
+        registers[rd] = ((v1_times_v2_as_u128 >> 64) & MAX_UINT_64_AS_U128) as u64
     }
-  }
 
-  if (funct3 == FUNCT3_DIVU) && (funct7 == FUNCT7_DIVU) {
-    if v2 == 0 {
-      registers[rd] = NEGATIVE_ONE_AS_I64
-    } else {
-      registers[rd] = v1 / v2
-    }
-  }
-
-  if (funct3 == FUNCT3_REM) && (funct7 == FUNCT7_REM) {
-    if v2 == 0 {
-      registers[rd] = v1
-    } else {
-      if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
-        registers[rd] = 0
-      } else {
-        registers[rd] = v1_abs % v2_abs
+    if (funct3 == FUNCT3_MULHSU) && (funct7 == FUNCT7_MULHSU) {
+        var v1_times_v2_as_u128:u128 = v1_abs_as_u128 * v2_as_u128
         if v1_sign == 1 {
-          registers[rd] = negative_of_double_word(registers[rd])
+            // compute the complement's two negative of the result
+            v1_times_v2_as_u128 = (~v1_times_v2_as_u128) + 1
         }
-      }
+        registers[rd] = ((v1_times_v2_as_u128 >> 64) & MAX_UINT_64_AS_U128) as u64
     }
-  }
 
-  if ( funct3 == FUNCT3_REMU ) && ( funct7 == FUNCT7_REMU ) {
-    if v2 == 0 {
-      registers[rd] = v1
-    } else {
-      registers[rd] = v1 % v2
+    if (funct3 == FUNCT3_MULHU) && (funct7 == FUNCT7_MULHU) {
+        registers[rd] = (((v1_as_u128 * v2_as_u128) >> 64) & MAX_UINT_64_AS_U128) as u64
     }
-  }
 
-  v1_upper :: v1_lower = v1
-  v2_upper :: v2_lower = v2
-  v1_lower_abs = absolute_value_word(v1_lower)
-  v2_lower_abs = absolute_value_word(v2_lower)
-
-  if ( funct3 == FUNCT3_MULW  ) && ( funct7 == FUNCT7_MULW  ) {
-      product_upper :: product_lower = (v1_lower as DoubleWord) * (v2_lower as DoubleWord)
-      sign_bit = sign_bit_of_word(product_lower)
-      if (sign_bit == 1) {
-        registers[rd] = MAX_UINT_32 :: product_lower
-      } else {
-        registers[rd] = product_lower as DoubleWord
+    if (funct3 == FUNCT3_DIV) && (funct7 == FUNCT7_DIV) {
+        if v2 == 0 {
+            registers[rd] = NEGATIVE_ONE_AS_I64
+        } else if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
+            registers[rd] = OVERFLOW_DIVIDEND
+        } else {
+            registers[rd] = v1_abs / v2_abs
+            if (v1_sign ^ v2_sign) == 1 {
+                registers[rd] = negative_of_double_word(registers[rd])
+            }
+        }
     }
-  }
 
-  // signed division satisfies
-  // a, b ∈ Z
-  // a = b∙q + r
-  // 0 ≤ |r| < |b|
-  // r and a have the same sign
-  if ( funct3 == FUNCT3_DIVW  ) && ( funct7 == FUNCT7_DIVW  ) {
-    if (v2_lower == 0) {
-      registers[rd] = NEGATIVE_ONE_AS_I64
-    } else {
-      word_wip = v1_lower_abs / v2_lower_abs
-      if (sign_bit_of_word(v1_lower) == sign_bit_of_word(v2_lower)) {
+    if (funct3 == FUNCT3_DIVU) && (funct7 == FUNCT7_DIVU) {
+        if v2 == 0 {
+            registers[rd] = NEGATIVE_ONE_AS_I64
+        } else {
+            registers[rd] = v1 / v2
+        }
+    }
+
+    if (funct3 == FUNCT3_REM) && (funct7 == FUNCT7_REM) {
+        if v2 == 0 {
+            registers[rd] = v1
+        } else if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
+            registers[rd] = 0
+        } else {
+            registers[rd] = v1_abs % v2_abs
+            if v1_sign == 1 {
+                registers[rd] = negative_of_double_word(registers[rd])
+            }
+        }
+    }
+
+    if (funct3 == FUNCT3_REMU) && (funct7 == FUNCT7_REMU) {
+        if v2 == 0 {
+            registers[rd] = v1
+        } else {
+            registers[rd] = v1 % v2
+        }
+    }
+
+    v1_upper::v1_lower = v1
+    v2_upper::v2_lower = v2
+    v1_lower_abs = absolute_value_word(v1_lower)
+    v2_lower_abs = absolute_value_word(v2_lower)
+
+    if (funct3 == FUNCT3_MULW) && (funct7 == FUNCT7_MULW) {
+        product_upper::product_lower = (v1_lower as DoubleWord) * (v2_lower as DoubleWord)
+        sign_bit = sign_bit_of_word(product_lower)
+        if (sign_bit == 1) {
+            registers[rd] = MAX_UINT_32::product_lower
+        } else {
+            registers[rd] = product_lower as DoubleWord
+        }
+    }
+
+    // signed division satisfies
+    // a, b ∈ Z
+    // a = b∙q + r
+    // 0 ≤ |r| < |b|
+    // r and a have the same sign
+    if (funct3 == FUNCT3_DIVW) && (funct7 == FUNCT7_DIVW) {
+        if (v2_lower == 0) {
+            registers[rd] = NEGATIVE_ONE_AS_I64
+        } else {
+            word_wip = v1_lower_abs / v2_lower_abs
+            if (sign_bit_of_word(v1_lower) == sign_bit_of_word(v2_lower)) {
+                registers[rd] = sgn_extension_u32_u64(word_wip)
+            } else {
+                registers[rd] = sgn_extension_u32_u64(negative_of_word(word_wip))
+            }
+        }
+    }
+
+    if (funct3 == FUNCT3_REMW) && (funct7 == FUNCT7_REMW) {
+        if (v2_lower == 0) {
+            registers[rd] = sgn_extension_u32_u64(v1_lower)
+        } else {
+            word_wip = v1_lower_abs % v2_lower_abs
+            if (sign_bit_of_word(v1_lower) == 0) {
+                registers[rd] = sgn_extension_u32_u64(word_wip)
+            } else {
+                registers[rd] = sgn_extension_u32_u64(negative_of_word(word_wip))
+            }
+        }
+    }
+
+    if (funct3 == FUNCT3_DIVUW) && (funct7 == FUNCT7_DIVUW) {
+        if (v2_lower == 0) {
+            registers[rd] = NEGATIVE_ONE_AS_I64
+        } else {
+            registers[rd] = sgn_extension_u32_u64(v1_lower / v2_lower)
+        }
+    }
+    if (funct3 == FUNCT3_REMUW) && (funct7 == FUNCT7_REMUW) {
+        if (v2_lower == 0) {
+            registers[rd] = sgn_extension_u32_u64(v1_lower)
+        } else {
+            registers[rd] = sgn_extension_u32_u64(v1_lower % v2_lower)
+        }
+    }
+
+    if (funct3 == FUNCT3_ADDW) && (funct7 == FUNCT7_ADDW) {
+        overflow::word_wip = (v1_lower as u33) + (v2_lower as u33)
         registers[rd] = sgn_extension_u32_u64(word_wip)
-      } else {
-        registers[rd] = sgn_extension_u32_u64(negative_of_word(word_wip))
-      }
     }
-  }
-
-  if ( funct3 == FUNCT3_REMW  ) && ( funct7 == FUNCT7_REMW  ) {
-    if (v2_lower == 0) {
-      registers[rd] = sgn_extension_u32_u64(v1_lower)
-    } else {
-      word_wip = v1_lower_abs % v2_lower_abs
-      if (sign_bit_of_word(v1_lower) == 0) {
+    if (funct3 == FUNCT3_SUBW) && (funct7 == FUNCT7_SUBW) {
+        // underflow prevention
+        overflow::word_wip = ((1 as u1)::v1_lower) - (v2_lower as u33)
         registers[rd] = sgn_extension_u32_u64(word_wip)
-      } else {
-        registers[rd] = sgn_extension_u32_u64(negative_of_word(word_wip))
-      }
     }
-  }
-
-  if ( funct3 == FUNCT3_DIVUW ) && ( funct7 == FUNCT7_DIVUW ) {
-      if (v2_lower == 0) {
-      registers[rd] = NEGATIVE_ONE_AS_I64
-      } else {
-      registers[rd] = sgn_extension_u32_u64(v1_lower / v2_lower)
+    if (funct3 == FUNCT3_SLLW) && (funct7 == FUNCT7_SLLW) {
+        shift_discard_5::shift_amount_5 = v2_lower
+        registers[rd] = sgn_extension_u32_u64(v1_lower << shift_amount_5)
     }
-  }
-  if ( funct3 == FUNCT3_REMUW ) && ( funct7 == FUNCT7_REMUW ) {
-      if (v2_lower == 0) {
-      registers[rd] = sgn_extension_u32_u64(v1_lower)
-      } else {
-      registers[rd] = sgn_extension_u32_u64(v1_lower % v2_lower)
+    if (funct3 == FUNCT3_SRLW) && (funct7 == FUNCT7_SRLW) {
+        shift_discard_5::shift_amount_5 = v2_lower
+        registers[rd] = sgn_extension_u32_u64(v1_lower >> shift_amount_5)
     }
-  }
-
-  if ( funct3 == FUNCT3_ADDW  ) && ( funct7 == FUNCT7_ADDW ) {
-    overflow :: word_wip = (v1_lower as u33) + (v2_lower as u33)
-    registers[rd] = sgn_extension_u32_u64(word_wip)
-  }
-  if ( funct3 == FUNCT3_SUBW  ) && ( funct7 == FUNCT7_SUBW ) {
-    // underflow prevention
-    overflow :: word_wip = ((1 as u1) :: v1_lower) - (v2_lower as u33)
-    registers[rd] = sgn_extension_u32_u64(word_wip)
-  }
-  if ( funct3 == FUNCT3_SLLW  ) && ( funct7 == FUNCT7_SLLW ) {
-    shift_discard_5 :: shift_amount_5 = v2_lower
-    registers[rd] = sgn_extension_u32_u64(v1_lower << shift_amount_5)
+    if (funct3 == FUNCT3_SRAW) && (funct7 == FUNCT7_SRAW) {
+        shift_discard_5::shift_amount_5 = v2_lower
+        if (sign_bit_of_word(v1_lower) == 1) {
+            word_working_copy = bit_flip_word(v1_lower)
+        } else {
+            word_working_copy = v1_lower
+        }
+        word_working_copy = word_working_copy >> shift_amount_5
+        if (sign_bit_of_word(v1_lower) == 1) {
+            word_working_copy = bit_flip_word(word_working_copy)
+        }
+        registers[rd] = sgn_extension_u32_u64(word_working_copy)
     }
-  if ( funct3 == FUNCT3_SRLW  ) && ( funct7 == FUNCT7_SRLW ) {
-    shift_discard_5 :: shift_amount_5 = v2_lower
-    registers[rd] = sgn_extension_u32_u64(v1_lower >> shift_amount_5)
-  }
-  if ( funct3 == FUNCT3_SRAW  ) && ( funct7 == FUNCT7_SRAW ) {
-    shift_discard_5 :: shift_amount_5 = v2_lower
-    if (sign_bit_of_word(v1_lower) == 1) {
-      word_working_copy = bit_flip_word(v1_lower)
-    } else {
-      word_working_copy = v1_lower
-    }
-    word_working_copy = word_working_copy >> shift_amount_5
-    if (sign_bit_of_word(v1_lower) == 1) {
-      word_working_copy = bit_flip_word(word_working_copy)
-    }
-    registers[rd] = sgn_extension_u32_u64(word_working_copy)
-  }
 }
 

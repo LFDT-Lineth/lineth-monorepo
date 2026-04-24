@@ -2,52 +2,72 @@ include "../memory.zkc"
 include "../ram/write.zkc"
 include "../utils/constants.zkc"
 
-fn process_S_type_instruction<ram,registers>(instruction_parameters:u25) {
+// Process a RISC-V S-type instruction, writing a register value to memory.
+//
+// S-type instructions are stores.  They never affect the program counter
+// (no pc parameter — the caller always advances by 4).  The 25-bit encoding
+// (opcode stripped) splits the 12-bit signed immediate across two fields so
+// that rs1 and rs2 occupy the same bit positions as in other formats:
+//
+//   imm[11] :: imm[10:5] :: rs2 :: rs1 :: funct3 :: imm[4:0]
+//
+// The immediate is reassembled as imm[11] :: imm[10:5] :: imm[4:0] and
+// sign-extended to 64 bits to form the address offset.
+//
+// Effect:
+//   mem[rs1 + sign_extend(imm12)] ← lower N bits of rs2
+//
+// Store variants selected by funct3:
+//   SB (funct3 = 0b000) — store byte     (8 bits)
+//   SH (funct3 = 0b001) — store halfword (16 bits)
+//   SW (funct3 = 0b010) — store word     (32 bits)
+//   SD (funct3 = 0b011) — store doubleword (64 bits)
+fn process_S_type_instruction<ram, registers>(instruction_parameters:u25) {
 
-  // var funct3 : Funct3
-  // var funct7 : Funct7
-  // var rs1    : Register
-  // var rs2    : Register
-  // var rsd    : Register
-  // var uimm5  : UImm5
-  // var uimm6  : UImm6
-  // var imm12  : Imm12
-  // var imm20  : Imm20
+    // var funct3 : Funct3
+    // var funct7 : Funct7
+    // var rs1    : Register
+    // var rs2    : Register
+    // var rsd    : Register
+    // var uimm5  : UImm5
+    // var uimm6  : UImm6
+    // var imm12  : Imm12
+    // var imm20  : Imm20
 
-  var imm_sign   : u1
-  var funct3 : Funct3
-  var rs1    : Register
-  var rs2    : Register
-  var uimm5  : UImm5
-  var uimm6  : UImm6
+    var imm_sign:u1
+    var funct3:Funct3
+    var rs1:Register
+    var rs2:Register
+    var uimm5:UImm5
+    var uimm6:UImm6
 
-  imm_sign :: uimm6 :: rs2 :: rs1 :: funct3 :: uimm5 = instruction_parameters
+    imm_sign::uimm6::rs2::rs1::funct3::uimm5 = instruction_parameters
 
-  // TODO: uniform this across different files
-  var imm : u64
-  if imm_sign == 1 {
-    imm = DWORD_SIGN_EXT_PREFIX_52_ONES :: imm_sign :: uimm6 :: uimm5
-  } else {
-    imm = (imm_sign :: uimm6 :: uimm5) as u64
-  }
+    // TODO: uniform this across different files
+    var imm:u64
+    if imm_sign == 1 {
+        imm = DWORD_SIGN_EXT_PREFIX_52_ONES::imm_sign::uimm6::uimm5
+    } else {
+        imm = (imm_sign::uimm6::uimm5) as u64
+    }
 
-  if funct3 == FUNCT3_SB {
-    // Store byte (u8)
-    write_8(registers[rs1] + imm, (registers[rs2] & (0xFF as u64)) as u8)
-  }
+    if funct3 == FUNCT3_SB {
+        // Store byte (u8)
+        write_8(registers[rs1] + imm, (registers[rs2] & (0xFF as u64)) as u8)
+    }
 
-  if funct3 == FUNCT3_SH {
-    // Store halfword (u16)
-    write_16(registers[rs1] + imm, (registers[rs2] & (0xFFFF as u64)) as u16)
-  }
+    if funct3 == FUNCT3_SH {
+        // Store halfword (u16)
+        write_16(registers[rs1] + imm, (registers[rs2] & (0xFFFF as u64)) as u16)
+    }
 
-  if funct3 == FUNCT3_SW {
-    // Store word (u32)
-    write_32(registers[rs1] + imm, (registers[rs2] & (0xFFFFFFFF as u64)) as u32)
-  }
+    if funct3 == FUNCT3_SW {
+        // Store word (u32)
+        write_32(registers[rs1] + imm, (registers[rs2] & (0xFFFFFFFF as u64)) as u32)
+    }
 
-  if funct3 == FUNCT3_SD {
-    // Store doubleword (u64)
-    write_64(registers[rs1] + imm, registers[rs2])
-  }
+    if funct3 == FUNCT3_SD {
+        // Store doubleword (u64)
+        write_64(registers[rs1] + imm, registers[rs2])
+    }
 }

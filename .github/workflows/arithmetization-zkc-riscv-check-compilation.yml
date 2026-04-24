@@ -36,3 +36,6 @@ jobs:
 
       - name: Install zkc and check compilation of RISC-V in ZkC
         run: make -C arithmetization riscv-check-compilation
+
+      - name: Linting Check
+        run: make -C arithmetization riscv-check-lint
