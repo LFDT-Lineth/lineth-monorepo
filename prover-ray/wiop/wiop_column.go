@@ -33,6 +33,10 @@ type Module struct {
 	// size is zero when the module has not yet been sized. Use [Module.Size]
 	// and [Module.SetSize] rather than accessing this field directly.
 	size int
+	// isDynamic indicates that this module's domain size is supplied per-Runtime
+	// via [WithModuleSize] instead of being fixed once via [Module.SetSize].
+	// Dynamic modules always report IsSized() == false from the static API.
+	isDynamic bool
 	// index is the position of this module in [System.Modules]. Set once at
 	// registration time by [System.NewModule] and used to construct column IDs.
 	index int
@@ -45,18 +49,40 @@ type Module struct {
 // Module.
 func (m *Module) System() *System { return m.system }
 
+// IsDynamic reports whether this module's domain size is supplied per-Runtime
+// via [WithModuleSize] rather than fixed statically via [Module.SetSize].
+func (m *Module) IsDynamic() bool { return m.isDynamic }
+
 // Size returns the declared domain size of the module. Returns 0 if the module
-// has not yet been sized.
+// has not yet been sized. For dynamic modules this always returns 0; use
+// [Module.RuntimeSize] to obtain the size for a specific Runtime.
 func (m *Module) Size() int { return m.size }
 
 // IsSized reports whether a domain size has been fixed for this module.
+// Dynamic modules always return false here; they are sized per-Runtime.
 func (m *Module) IsSized() bool { return m.size > 0 }
+
+// RuntimeSize returns the effective domain size for the given Runtime.
+// For static modules it delegates to [Module.Size] (panics if not yet sized).
+// For dynamic modules it reads the size registered via [WithModuleSize]
+// (panics if no size was provided for this Runtime).
+func (m *Module) RuntimeSize(rt Runtime) int {
+	if !m.isDynamic {
+		return m.Size()
+	}
+	return rt.dynamicModuleSize(m)
+}
 
 // SetSize fixes the domain size of the module. It may be called at any point
 // after construction but only once; subsequent calls panic.
 //
-// Panics if size is not positive or if the module is already sized.
+// Panics if size is not positive, if the module is already sized, or if the
+// module is dynamic (dynamic modules are sized via [WithModuleSize] on each
+// [Runtime]).
 func (m *Module) SetSize(size int) {
+	if m.isDynamic {
+		panic(fmt.Sprintf("wiop: module %q is dynamic; set its size via WithModuleSize on each Runtime", m.Context.Path()))
+	}
 	if size <= 0 {
 		panic(fmt.Sprintf("wiop: Module.SetSize requires a positive size, got %d", size))
 	}
@@ -127,6 +153,12 @@ func (m *Module) NewExtensionColumn(ctx *ContextFrame, vis Visibility, r *Round)
 func (m *Module) NewPrecomputedColumn(ctx *ContextFrame, vis Visibility, assignment *ConcreteVector) *Column {
 	if ctx == nil {
 		panic("wiop: Module.NewPrecomputedColumn requires a non-nil ContextFrame")
+	}
+	if m.isDynamic {
+		panic(fmt.Sprintf(
+			"wiop: module %q is dynamic; precomputed columns require a statically-sized module",
+			m.Context.Path(),
+		))
 	}
 	if m.system == nil {
 		panic(fmt.Sprintf(
@@ -268,21 +300,21 @@ func (cv *ColumnView) Degree() int {
 func (cv *ColumnView) EvaluateVector(rt Runtime) ConcreteVector {
 	concrete := rt.GetColumnAssignment(cv.Column)
 	m := cv.Column.Module
-	n := m.Size()
+	n := m.RuntimeSize(rt)
 
 	var result field.Vec
 	if cv.Column.IsExtension {
 		dst := make([]field.Ext, n)
 		for i := range n {
 			phys := ((i+cv.ShiftingOffset)%n + n) % n
-			dst[i] = concrete.ElementAt(m, phys).Ext
+			dst[i] = concrete.ElementAtN(m.Padding, n, phys).Ext
 		}
 		result = field.VecFromExt(dst)
 	} else {
 		dst := make([]field.Element, n)
 		for i := range n {
 			phys := ((i+cv.ShiftingOffset)%n + n) % n
-			dst[i] = concrete.ElementAt(m, phys).AsBase()
+			dst[i] = concrete.ElementAtN(m.Padding, n, phys).AsBase()
 		}
 		result = field.VecFromBase(dst)
 	}
@@ -373,6 +405,7 @@ func (cp *ColumnPosition) EvaluateVector(_ Runtime) ConcreteVector {
 // EvaluateSingle implements [Expression]. Returns the value of the parent
 // column at Position in the given runtime.
 func (cp *ColumnPosition) EvaluateSingle(rt Runtime) ConcreteField {
-	elem := rt.GetColumnAssignment(cp.Column).ElementAt(cp.Column.Module, cp.Position)
+	m := cp.Column.Module
+	elem := rt.GetColumnAssignment(cp.Column).ElementAtN(m.Padding, m.RuntimeSize(rt), cp.Position)
 	return ConcreteField{Value: elem, promise: cp}
 }

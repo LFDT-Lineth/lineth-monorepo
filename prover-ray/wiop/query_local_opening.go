@@ -45,7 +45,8 @@ func (lo *LocalOpening) IsAlreadyAssigned(rt Runtime) bool {
 // runtime and writes the value into Result.
 func (lo *LocalOpening) SelfAssign(rt Runtime) {
 	col := lo.Pol.Column
-	elem := rt.GetColumnAssignment(col).ElementAt(col.Module, lo.Pol.Position)
+	m := col.Module
+	elem := rt.GetColumnAssignment(col).ElementAtN(m.Padding, m.RuntimeSize(rt), lo.Pol.Position)
 	rt.AssignCell(lo.Result, elem)
 }
 
@@ -60,7 +61,8 @@ func (lo *LocalOpening) Check(rt Runtime) error {
 		)
 	}
 
-	got := rt.GetColumnAssignment(col).ElementAt(col.Module, lo.Pol.Position)
+	m := col.Module
+	got := rt.GetColumnAssignment(col).ElementAtN(m.Padding, m.RuntimeSize(rt), lo.Pol.Position)
 	claim := rt.GetCellValue(lo.Result)
 
 	diff := got.Sub(claim)

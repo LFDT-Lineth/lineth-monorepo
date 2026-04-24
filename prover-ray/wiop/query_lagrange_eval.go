@@ -130,14 +130,14 @@ func (le *LagrangeEval) evalPolynomials(rt Runtime) []field.Gen {
 		z := evalPoint.Value
 		if k := pv.ShiftingOffset; k != 0 {
 			var (
-				n      = pv.Column.Module.Size()
+				n      = pv.Column.Module.RuntimeSize(rt)
 				omega  = field.RootOfUnityBy(n)
 				omegaK field.Element
 			)
 			omegaK.ExpInt64(omega, int64(k))
 			z = z.Mul(field.ElemFromBase(omegaK))
 		}
-		results[i] = evalLagrangePadded(rt.GetColumnAssignment(pv.Column), pv.Column.Module, z)
+		results[i] = evalLagrangePadded(rt.GetColumnAssignment(pv.Column), pv.Column.Module, rt, z)
 	}
 	return results
 }
@@ -250,13 +250,13 @@ func (sys *System) newLagrangeEval(ctx *ContextFrame, polys []*ColumnView, x Fie
 // barycentric sum directly from Plain[0], treating padding and data rows
 // separately with a single shared batch of denominator inverses. This avoids
 // materialising the full n-length padded data vector.
-func evalLagrangePadded(cv *ConcreteVector, m *Module, z field.Gen) field.Gen {
+func evalLagrangePadded(cv *ConcreteVector, m *Module, rt Runtime, z field.Gen) field.Gen {
 	data := cv.Plain[0]
 	if m.Padding == PaddingDirectionNone {
 		return polynomials.EvalLagrange(data, z)
 	}
 
-	n := m.Size()
+	n := m.RuntimeSize(rt)
 	plainLen := data.Len()
 	gen := field.RootOfUnityBy(n)
 

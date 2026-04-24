@@ -415,11 +415,11 @@ func (c *Constant) Size() int {
 // Plain slice contains a single [field.Vec] with Value repeated
 // Module.Size() times, and whose Padding is Value. Panics if scalar; check
 // [Constant.IsMultiValued] first.
-func (c *Constant) EvaluateVector(_ Runtime) ConcreteVector {
+func (c *Constant) EvaluateVector(rt Runtime) ConcreteVector {
 	if c.module == nil {
 		panic("wiop: EvaluateVector() cannot be called on a scalar Constant; check IsMultiValued() first")
 	}
-	n := c.module.Size()
+	n := c.module.RuntimeSize(rt)
 	elems := make([]field.Element, n)
 	for i := range elems {
 		elems[i] = c.Value

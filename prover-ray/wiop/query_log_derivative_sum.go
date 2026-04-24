@@ -88,14 +88,6 @@ func (rr *LogDerivativeSum) reduce(rt Runtime) field.Gen {
 	acc := field.ElemZero()
 
 	for _, f := range rr.Fractions {
-		// Determine the row count from whichever expression is vector-valued.
-		var n int
-		if f.Numerator.IsMultiValued() {
-			n = f.Numerator.Size()
-		} else {
-			n = f.Denominator.Size()
-		}
-
 		var (
 			numIsVec  = f.Numerator.IsMultiValued()
 			denIsVec  = f.Denominator.IsMultiValued()
@@ -114,6 +106,19 @@ func (rr *LogDerivativeSum) reduce(rt Runtime) field.Gen {
 			denVec = f.Denominator.EvaluateVector(rt)
 		} else {
 			denScalar = f.Denominator.EvaluateSingle(rt)
+		}
+
+		// Determine the row count from the evaluated concrete vector so that
+		// dynamic modules (whose size is not known statically) are handled correctly.
+		// At least one side must be vector-valued; both-scalar is a construction error.
+		if !numIsVec && !denIsVec {
+			panic("wiop: LogDerivativeSum.reduce: fraction has no vector-valued side; at least one of numerator or denominator must be multi-valued")
+		}
+		var n int
+		if numIsVec {
+			n = numVec.Plain[0].Len()
+		} else {
+			n = denVec.Plain[0].Len()
 		}
 
 		for row := 0; row < n; row++ {

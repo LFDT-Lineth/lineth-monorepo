@@ -108,17 +108,26 @@ type ConcreteVector struct {
 //     rows 0..plainLen-1 index Plain[0], the rest are the padding value.
 //
 // Panics if pos is out of bounds for the module size, or if m is unsized.
+// For dynamic modules use [ConcreteVector.ElementAtN] with the size obtained
+// from [Module.RuntimeSize].
 func (cv *ConcreteVector) ElementAt(m *Module, pos int) field.Gen {
-	n := m.Size() // panics if unsized
+	return cv.ElementAtN(m.Padding, m.Size(), pos)
+}
+
+// ElementAtN is like [ConcreteVector.ElementAt] but takes the domain size and
+// padding direction as explicit arguments. Use this when the size has already
+// been resolved (e.g. via [Module.RuntimeSize]) so that dynamic modules are
+// handled correctly without re-deriving the size from the module.
+func (cv *ConcreteVector) ElementAtN(padding PaddingDirection, n, pos int) field.Gen {
 	if pos < 0 || pos >= n {
-		panic(fmt.Sprintf("wiop: ConcreteVector.ElementAt: pos %d out of bounds [0, %d)", pos, n))
+		panic(fmt.Sprintf("wiop: ConcreteVector.ElementAtN: pos %d out of bounds [0, %d)", pos, n))
 	}
 
 	vec := cv.Plain[0]
 	plainLen := vec.Len()
 
 	idx, inPadding := pos, false
-	switch m.Padding {
+	switch padding {
 	case PaddingDirectionNone:
 		// plain is full-sized; direct index.
 	case PaddingDirectionLeft:
