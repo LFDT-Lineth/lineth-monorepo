@@ -171,7 +171,7 @@ class InvalidityProofAssembler(
         EncodingContext.POOLED_TRANSACTION,
       ).sender.bytes.toArray()
     if (invalidityReason == InvalidityReason.BadNonce || invalidityReason == InvalidityReason.BadBalance) {
-      accountProofFuture = fetchAccountProof(from, ftx.simulatedExecutionBlockNumber)
+      accountProofFuture = fetchAccountProof(from, ftx.simulatedExecutionBlockNumber - 1UL)
         .thenApply { it }
     }
     if (invalidityReason == InvalidityReason.BadPrecompile || invalidityReason == InvalidityReason.TooManyLogs) {
