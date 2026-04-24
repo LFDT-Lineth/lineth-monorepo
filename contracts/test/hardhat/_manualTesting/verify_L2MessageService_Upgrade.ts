@@ -1,6 +1,6 @@
 import { ethers, upgrades } from "hardhat";
 
-// npx hardhat test --network linea_mainnet
+// pnpm exec hardhat test --network linea_mainnet
 // THIS IS A MANUAL TEST TO VERIFY LINEA MAINNET DOES NOT BREAK
 // ALSO SEE PR FOR LAYOUT TABLE
 describe.skip("L2MessageService Upgrade from L2MessageService Linea Mainnet", () => {

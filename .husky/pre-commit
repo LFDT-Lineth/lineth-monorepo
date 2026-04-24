@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Run `npx husky` in root directory to initialize this pre-commit hook for local machine
+# Run `pnpx husky` in root directory to initialize this pre-commit hook for local machine
 
 # Execute NodeJS script because
 # i.) Husky requires NodeJS -> fair assumption that machine will have NodeJS

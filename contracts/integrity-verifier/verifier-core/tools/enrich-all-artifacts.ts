@@ -1,4 +1,4 @@
-#!/usr/bin/env npx ts-node
+#!/usr/bin/env -S pnpm exec ts-node
 /**
  * Batch enrich all Hardhat artifacts in a directory with immutableReferences.
  *
@@ -6,17 +6,17 @@
  * and enriches each one with immutableReferences for definitive verification.
  *
  * Usage:
- *   npx ts-node tools/enrich-all-artifacts.ts <artifacts-dir> [output-dir]
+ *   pnpm exec ts-node tools/enrich-all-artifacts.ts <artifacts-dir> [output-dir]
  *
  * Examples:
  *   # Enrich in place
- *   npx ts-node tools/enrich-all-artifacts.ts artifacts/contracts
+ *   pnpm exec ts-node tools/enrich-all-artifacts.ts artifacts/contracts
  *
  *   # Enrich to different directory
- *   npx ts-node tools/enrich-all-artifacts.ts artifacts/contracts enriched-artifacts
+ *   pnpm exec ts-node tools/enrich-all-artifacts.ts artifacts/contracts enriched-artifacts
  *
  *   # Enrich specific contracts directory for deployment
- *   npx ts-node tools/enrich-all-artifacts.ts artifacts/contracts deployments/bytecode/2026-01-14
+ *   pnpm exec ts-node tools/enrich-all-artifacts.ts artifacts/contracts deployments/bytecode/2026-01-14
  */
 
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from "fs";
@@ -267,15 +267,15 @@ function main(): void {
 Batch enrich Hardhat artifacts with immutableReferences.
 
 Usage:
-  npx ts-node tools/enrich-all-artifacts.ts <artifacts-dir> [output-dir]
+  pnpm exec ts-node tools/enrich-all-artifacts.ts <artifacts-dir> [output-dir]
 
 Arguments:
   artifacts-dir    Directory containing Hardhat artifacts
   output-dir       Output directory (optional, defaults to in-place)
 
 Examples:
-  npx ts-node tools/enrich-all-artifacts.ts artifacts/contracts
-  npx ts-node tools/enrich-all-artifacts.ts artifacts/contracts enriched/
+  pnpm exec ts-node tools/enrich-all-artifacts.ts artifacts/contracts
+  pnpm exec ts-node tools/enrich-all-artifacts.ts artifacts/contracts enriched/
 `);
     process.exit(1);
   }
@@ -295,7 +295,7 @@ Examples:
   const buildInfoFiles = loadBuildInfoFiles(artifactsDir);
 
   if (buildInfoFiles.size === 0) {
-    console.error("Error: No build-info files found. Run `npx hardhat compile` first.");
+    console.error("Error: No build-info files found. Run `pnpm exec hardhat compile` first.");
     process.exit(1);
   }
 

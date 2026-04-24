@@ -8,7 +8,7 @@ error_handler() {
 
 trap 'error_handler $LINENO' ERR
 
-npx ts-node ./src/scripts/build.ts
+pnpm exec ts-node ./src/scripts/build.ts
 cp -R src/compressor/lib/ dist/lib
 rm -rf ./dist/scripts
 

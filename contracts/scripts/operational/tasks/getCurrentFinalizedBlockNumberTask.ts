@@ -11,7 +11,7 @@ import { getTaskCliOrEnvValue } from "../../../common/helpers/environmentHelper"
     *******************************************************************************************
     DEPLOYER_PRIVATE_KEY=<key> \
     INFURA_API_KEY=<key> \
-    npx hardhat getCurrentFinalizedBlockNumber \
+    pnpm exec hardhat getCurrentFinalizedBlockNumber \
     --contract-type <string> \
     --proxy-address <address> \
     --network sepolia

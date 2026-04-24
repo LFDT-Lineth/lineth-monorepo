@@ -14,10 +14,10 @@
  *   L2_RPC_URL=https://... \
  *   LINEA_ROLLUP_ADDRESS=0x... \
  *   L2_MESSAGE_SERVICE_ADDRESS=0x... \
- *   npx ts-node scripts/operational/generateL1ClaimFields.ts
+ *   pnpm exec ts-node scripts/operational/generateL1ClaimFields.ts
  *
  * Usage (flags + env fallback):
- *   npx ts-node scripts/operational/generateL1ClaimFields.ts \
+ *   pnpm exec ts-node scripts/operational/generateL1ClaimFields.ts \
  *     --message-hash 0x... \
  *     --l1-rpc-url https://... \
  *     --l2-rpc-url https://... \

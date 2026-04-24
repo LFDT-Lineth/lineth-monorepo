@@ -19,5 +19,5 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-npx hardhat deploy --network sepolia --tags CallForwardingProxy
+pnpm exec hardhat deploy --network sepolia --tags CallForwardingProxy
 ```

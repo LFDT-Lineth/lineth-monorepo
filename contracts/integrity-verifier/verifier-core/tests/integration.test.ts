@@ -5,7 +5,7 @@
  * Tests both JSON and Markdown configuration formats.
  * Uses a mock Web3Adapter for offline testing without RPC calls.
  *
- * Run with: npx ts-node tests/integration.test.ts
+ * Run with: pnpm exec ts-node tests/integration.test.ts
  */
 
 import { resolve } from "path";

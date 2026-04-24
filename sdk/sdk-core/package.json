@@ -43,7 +43,7 @@
   },
   "scripts": {
     "build": "tsup --tsconfig tsconfig.build.json",
-    "test": "npx jest --bail --detectOpenHandles",
+    "test": "jest --bail --detectOpenHandles",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "clean": "rimraf dist node_modules coverage"

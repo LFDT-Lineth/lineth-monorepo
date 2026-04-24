@@ -27,13 +27,13 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-npx hardhat deploy --network custom --tags EIP2935SystemContract
+pnpm exec hardhat deploy --network custom --tags EIP2935SystemContract
 ```
 
 Base command with cli arguments:
 
 ```shell
-DEPLOYER_PRIVATE_KEY=<key> CUSTOM_RPC_URL=<l2_rpc_url> npx hardhat deploy --network custom --tags EIP2935SystemContract
+DEPLOYER_PRIVATE_KEY=<key> CUSTOM_RPC_URL=<l2_rpc_url> pnpm exec hardhat deploy --network custom --tags EIP2935SystemContract
 ```
 
 (make sure to replace `<key>` with actual values)
@@ -58,13 +58,13 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-npx hardhat deploy --network custom --tags EIP4788SystemContract
+pnpm exec hardhat deploy --network custom --tags EIP4788SystemContract
 ```
 
 Base command with cli arguments:
 
 ```shell
-DEPLOYER_PRIVATE_KEY=<key> CUSTOM_RPC_URL=<l2_rpc_url> npx hardhat deploy --network custom --tags EIP4788SystemContract
+DEPLOYER_PRIVATE_KEY=<key> CUSTOM_RPC_URL=<l2_rpc_url> pnpm exec hardhat deploy --network custom --tags EIP4788SystemContract
 ```
 
 (make sure to replace `<key>` with actual values)
@@ -88,13 +88,13 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-npx hardhat deploy --network linea_sepolia --tags UpgradeableWithdrawalQueuePredeploy
+pnpm exec hardhat deploy --network linea_sepolia --tags UpgradeableWithdrawalQueuePredeploy
 ```
 
 Base command with cli arguments:
 
 ```shell
-VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> npx hardhat deploy --network linea_sepolia --tags UpgradeableWithdrawalQueuePredeploy
+VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> pnpm exec hardhat deploy --network linea_sepolia --tags UpgradeableWithdrawalQueuePredeploy
 ```
 
 (make sure to replace `<key>` with actual values)
@@ -118,13 +118,13 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-npx hardhat deploy --network linea_sepolia --tags UpgradeableConsolidationQueuePredeploy
+pnpm exec hardhat deploy --network linea_sepolia --tags UpgradeableConsolidationQueuePredeploy
 ```
 
 Base command with cli arguments:
 
 ```shell
-VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> npx hardhat deploy --network linea_sepolia --tags UpgradeableConsolidationQueuePredeploy
+VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> pnpm exec hardhat deploy --network linea_sepolia --tags UpgradeableConsolidationQueuePredeploy
 ```
 
 (make sure to replace `<key>` with actual values)
@@ -148,13 +148,13 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-npx hardhat deploy --network linea_sepolia --tags UpgradeableBeaconChainDepositPredeploy
+pnpm exec hardhat deploy --network linea_sepolia --tags UpgradeableBeaconChainDepositPredeploy
 ```
 
 Base command with cli arguments:
 
 ```shell
-VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> npx hardhat deploy --network linea_sepolia --tags UpgradeableBeaconChainDepositPredeploy
+VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> pnpm exec hardhat deploy --network linea_sepolia --tags UpgradeableBeaconChainDepositPredeploy
 ```
 
 (make sure to replace `<key>` with actual values)

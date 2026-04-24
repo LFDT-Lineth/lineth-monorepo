@@ -2,7 +2,7 @@
  * Manual script to run on devnet & Sepolia deployments to test various scenarios.
  *
  * USAGE:
- *   npx ts-node postman/scripts/manualTestSendMessages.ts \
+ *   pnpm exec ts-node postman/scripts/manualTestSendMessages.ts \
  *     --rpc-url=<INSERT_STRING> \
  *     --priv-key=<INSERT_STRING> \
  *     --deployment-env=<devnet or sepolia>

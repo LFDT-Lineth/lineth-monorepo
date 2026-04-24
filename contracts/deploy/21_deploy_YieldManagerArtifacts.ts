@@ -1,5 +1,5 @@
 // Usage:
-// npx hardhat deploy --network <network> --tags YieldManagerArtifacts
+// pnpm exec hardhat deploy --network <network> --tags YieldManagerArtifacts
 //
 // Required environment variables:
 //   LINEA_ROLLUP_ADDRESS

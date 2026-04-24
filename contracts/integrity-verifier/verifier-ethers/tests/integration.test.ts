@@ -4,7 +4,7 @@
  * Tests the full verification flow using the EthersAdapter with mock RPC responses.
  * Uses real ethers.js for crypto operations, mocks only network calls.
  *
- * Run with: npx ts-node tests/integration.test.ts
+ * Run with: pnpm exec ts-node tests/integration.test.ts
  */
 
 import { resolve } from "path";

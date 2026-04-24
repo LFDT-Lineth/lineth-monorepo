@@ -29,7 +29,7 @@ export function validateDeployBranchAndTags(networkName: string) {
     // If the code passes validation, check if compilation is needed
     console.log("Forcing contract compilation based on validation logic...");
     try {
-      execSync("ENABLE_VIA_IR=true npx hardhat compile --force", { stdio: "inherit" });
+      execSync("ENABLE_VIA_IR=true pnpm exec hardhat compile --force", { stdio: "inherit" });
     } catch (error) {
       console.error("Compilation failed", error);
       throw new Error("Failed to compile contracts.");

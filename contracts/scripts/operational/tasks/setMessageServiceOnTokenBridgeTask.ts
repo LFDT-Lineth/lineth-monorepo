@@ -13,7 +13,7 @@ import { TokenBridge } from "../../../typechain-types";
     *******************************************************************************************
     DEPLOYER_PRIVATE_KEY=<key> \
     INFURA_API_KEY=<key> \
-    npx hardhat setMessageServiceOnTokenBridge \
+    pnpm exec hardhat setMessageServiceOnTokenBridge \
     --message-service-address <address> \
     --token-bridge-address <address> \
     --network sepolia

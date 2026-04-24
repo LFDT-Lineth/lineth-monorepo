@@ -5,7 +5,7 @@
 
 [smart-contract-errors]
 # L1 Linea Rollup
-# Generated from `npx ts-node contracts/scripts/operational/getSmartContractErrorsFromABI.ts contracts/local-deployments-artifacts/deployed-artifacts/LineaRollupV6-Deployed-2024-12-03.json`
+# Generated from `pnpm exec ts-node contracts/scripts/operational/getSmartContractErrorsFromABI.ts contracts/local-deployments-artifacts/deployed-artifacts/LineaRollupV6-Deployed-2024-12-03.json`
 "0f06cd15" = "DataAlreadySubmitted"
 "c01eab56" = "EmptySubmissionData"
 "36459fa0" = "L1RollingHashDoesNotExistOnL1"
@@ -49,7 +49,7 @@
 "49d466c5" = "FinalShnarfNotSubmitted"
 
 # L2 Message Service
-# Generated from `npx ts-node contracts/scripts/operational/getSmartContractErrorsFromABI.ts contracts/local-deployments-artifacts/deployed-artifacts/L2MessageServiceV1-Deployed-2024-12-03.json`
+# Generated from `pnpm exec ts-node contracts/scripts/operational/getSmartContractErrorsFromABI.ts contracts/local-deployments-artifacts/deployed-artifacts/L2MessageServiceV1-Deployed-2024-12-03.json`
 "3b174434" = "MessageHashesListLengthHigherThanOneHundred"
 "6446cc9c" = "MessageHashesListLengthIsZero"
 "d39e75f9" = "L1MessageNumberSynchronizationWrong"

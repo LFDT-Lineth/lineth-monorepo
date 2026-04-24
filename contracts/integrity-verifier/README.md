@@ -65,10 +65,10 @@ Each adapter package includes a CLI tool:
 
 ```bash
 # Using ethers adapter
-npx verify-contract-ethers -c ./config.json -v
+pnpx verify-contract-ethers -c ./config.json -v
 
 # Using viem adapter
-npx verify-contract-viem -c ./config.json -v
+pnpx verify-contract-viem -c ./config.json -v
 
 # Or after building locally
 cd contract-integrity-verifier/verifier-ethers
@@ -580,24 +580,24 @@ Convert between Hardhat and Foundry artifact formats. Auto-detects input format.
 cd verifier-core
 
 # Auto-detect and convert to opposite format
-npx ts-node tools/convert-artifact.ts <input.json> <output.json>
+pnpm exec ts-node tools/convert-artifact.ts <input.json> <output.json>
 
 # Force conversion to specific format
-npx ts-node tools/convert-artifact.ts <input.json> <output.json> --to-hardhat
-npx ts-node tools/convert-artifact.ts <input.json> <output.json> --to-foundry
+pnpm exec ts-node tools/convert-artifact.ts <input.json> <output.json> --to-hardhat
+pnpm exec ts-node tools/convert-artifact.ts <input.json> <output.json> --to-foundry
 ```
 
 **Examples:**
 
 ```bash
 # Convert Foundry artifact to Hardhat format
-npx ts-node tools/convert-artifact.ts \
+pnpm exec ts-node tools/convert-artifact.ts \
   ../contracts/out/MyContract.sol/MyContract.json \
   ./artifacts/MyContract.hardhat.json \
   --to-hardhat
 
 # Convert Hardhat artifact to Foundry format
-npx ts-node tools/convert-artifact.ts \
+pnpm exec ts-node tools/convert-artifact.ts \
   ../contracts/artifacts/MyContract.json \
   ./artifacts/MyContract.foundry.json \
   --to-foundry
@@ -616,12 +616,12 @@ Generate a template of view call configurations from a contract ABI. Extracts al
 cd verifier-core
 
 # Generate all view functions
-npx ts-node tools/generate-viewcalls.ts \
+pnpm exec ts-node tools/generate-viewcalls.ts \
   ../contracts/out/MyContract.sol/MyContract.json \
   viewcalls-template.json
 
 # Only functions without parameters (simpler to verify)
-npx ts-node tools/generate-viewcalls.ts \
+pnpm exec ts-node tools/generate-viewcalls.ts \
   ../contracts/out/MyContract.sol/MyContract.json \
   viewcalls-template.json \
   --no-params
@@ -649,11 +649,11 @@ Analyze constructor and initializer functions to suggest state verifications. He
 cd verifier-core
 
 # Analyze and print suggestions to console
-npx ts-node tools/analyze-initializers.ts \
+pnpm exec ts-node tools/analyze-initializers.ts \
   ../contracts/out/LineaRollup.sol/LineaRollup.json
 
 # Save analysis to file
-npx ts-node tools/analyze-initializers.ts \
+pnpm exec ts-node tools/analyze-initializers.ts \
   ../contracts/out/LineaRollup.sol/LineaRollup.json \
   analysis.json
 ```
@@ -678,10 +678,10 @@ Generate storage schema JSON from Solidity storage layout files. Parses struct d
 
 ```bash
 # Using viem
-npx generate-schema-viem <input.sol...> -o <output.json> [--verbose]
+pnpx generate-schema-viem <input.sol...> -o <output.json> [--verbose]
 
 # Using ethers
-npx generate-schema-ethers <input.sol...> -o <output.json> [--verbose]
+pnpx generate-schema-ethers <input.sol...> -o <output.json> [--verbose]
 
 # Or run directly after building
 cd verifier-viem && pnpm build
@@ -692,13 +692,13 @@ node dist/generate-schema-cli.mjs Storage.sol -o schema.json
 
 ```bash
 # Single file (legacy mode)
-npx generate-schema-viem Storage.sol schema.json
+pnpx generate-schema-viem Storage.sol schema.json
 
 # Multiple files (for inherited storage)
-npx generate-schema-viem LineaRollupYieldExtension.sol YieldManager.sol -o schema.json
+pnpx generate-schema-viem LineaRollupYieldExtension.sol YieldManager.sol -o schema.json
 
 # Process all .sol files in a directory
-npx generate-schema-viem ./contracts/storage/ -o schema.json --verbose
+pnpx generate-schema-viem ./contracts/storage/ -o schema.json --verbose
 ```
 
 **Programmatic Usage:**
@@ -830,7 +830,7 @@ pnpm --filter "@consensys/linea-contract-integrity-verifier-viem" build
 pnpm --filter "@consensys/linea-contract-integrity-verifier-ui" build
 
 # Typecheck
-cd verifier-core && npx tsc --noEmit
+cd verifier-core && pnpm exec tsc --noEmit
 
 # Lint
 cd verifier-core && pnpm lint:fix

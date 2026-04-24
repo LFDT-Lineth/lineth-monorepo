@@ -13,7 +13,7 @@ import { getUiSigner, runWithSignerUiSession } from "../../../scripts/hardhat/si
     *******************************************************************************************
     DEPLOYER_PRIVATE_KEY=<key> \
     INFURA_API_KEY=<key> \
-    npx hardhat setRateLimit \
+    pnpm exec hardhat setRateLimit \
     --message-service-address <address> \
     --message-service-type <string> \
     --withdraw-limit <uint256> \

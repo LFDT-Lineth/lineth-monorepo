@@ -17,7 +17,7 @@ import { runWithSignerUiSession } from "../../../../scripts/hardhat/signer-ui-br
   -------------------------------------------------------------------------------------------
   DEPLOYER_PRIVATE_KEY=<key> \
   CUSTOM_RPC_URL=https://0xrpc.io/hoodi \
-  npx hardhat addAndClaimMessageForLST \
+  pnpm exec hardhat addAndClaimMessageForLST \
     --linea-rollup-address <address> \
     --to <address> \
     --value <uint256> \

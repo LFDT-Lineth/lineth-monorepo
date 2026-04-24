@@ -90,8 +90,8 @@ Supports JSON and Markdown configuration formats. Environment variables are inje
 Each adapter package provides a CLI:
 
 ```
-npx verify-contract-viem -c ./config.json -v
-npx verify-contract-ethers -c ./config.json -v
+pnpx verify-contract-viem -c ./config.json -v
+pnpx verify-contract-ethers -c ./config.json -v
 ```
 
 Options: `--contract <NAME>`, `--chain <NAME>`, `--skip-bytecode`, `--skip-abi`, `--skip-state`.

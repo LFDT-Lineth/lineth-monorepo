@@ -20,12 +20,12 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-npx hardhat deploy --network sepolia --tags ImplementationForProxy
+pnpm exec hardhat deploy --network sepolia --tags ImplementationForProxy
 ```
 
 Base command with cli arguments:
 ```shell
-DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> CONTRACT_NAME=<string> PROXY_ADDRESS=<address> npx hardhat deploy --network sepolia --tags ImplementationForProxy
+DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> CONTRACT_NAME=<string> PROXY_ADDRESS=<address> pnpm exec hardhat deploy --network sepolia --tags ImplementationForProxy
 ```
 
 (make sure to replace `<key>` `<address>` `<string>` with actual values)

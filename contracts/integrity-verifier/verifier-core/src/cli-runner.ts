@@ -122,7 +122,7 @@ Verify smart contract bytecode, ABI, and state against local artifacts.
 Uses ${config.adapterName.toLowerCase()} for blockchain interactions.
 
 Usage:
-  npx ${config.packageName} -c <config> [options]
+  pnpx ${config.packageName} -c <config> [options]
 
 Options:
   -c, --config <path>    Path to configuration file (required)
@@ -135,8 +135,8 @@ Options:
   -h, --help             Show this help
 
 Examples:
-  npx ${config.packageName} -c ./config.json -v
-  npx ${config.packageName} -c ./config.md --contract MyProxy
+  pnpx ${config.packageName} -c ./config.json -v
+  pnpx ${config.packageName} -c ./config.md --contract MyProxy
 `);
 }
 

@@ -12,7 +12,7 @@ import { getUiSigner, runWithSignerUiSession } from "../../../scripts/hardhat/si
     *******************************************************************************************
     DEPLOYER_PRIVATE_KEY=<key> \
     INFURA_API_KEY=<key> \
-    npx hardhat setVerifierAddress \
+    pnpm exec hardhat setVerifierAddress \
     --verifier-proof-type <uint256> \
     --proxy-address <address> \
     --verifier-address <address> \

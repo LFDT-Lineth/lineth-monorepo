@@ -1,6 +1,6 @@
 import { ethers, upgrades } from "hardhat";
 
-// npx hardhat test --network mainnet
+// pnpm exec hardhat test --network mainnet
 // THIS IS A MANUAL TEST TO VERIFY MAINNET DOES NOT BREAK
 // ALSO SEE PR FOR LAYOUT TABLE
 describe.skip("LineaRollup Upgrade from ZkEvmMainnet", () => {

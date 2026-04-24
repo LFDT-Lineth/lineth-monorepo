@@ -19,7 +19,7 @@ import { getUiSigner, runWithSignerUiSession } from "../../../scripts/hardhat/si
     *******************************************************************************************
     DEPLOYER_PRIVATE_KEY=<key> \
     INFURA_API_KEY=<key> \
-    npx hardhat renounceContractRoles \
+    pnpm exec hardhat renounceContractRoles \
     --old-admin-address <address>  \
     --new-admin-address <address>  \
     --proxy-address <address> \

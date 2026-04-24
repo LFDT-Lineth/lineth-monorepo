@@ -5,7 +5,7 @@
  * Command-line interface using viem adapter.
  *
  * Usage:
- *   npx @consensys/linea-contract-integrity-verifier-viem -c config.json -v
+ *   pnpx @consensys/linea-contract-integrity-verifier-viem -c config.json -v
  */
 
 import { runCli, type CliRunnerConfig } from "@consensys/linea-contract-integrity-verifier";

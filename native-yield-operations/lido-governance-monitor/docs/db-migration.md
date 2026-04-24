@@ -31,7 +31,7 @@ Migrations run via init container (`prisma migrate deploy`) before the applicati
 initContainers:
   - name: db-migrate
     image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-    command: ["npx", "prisma", "migrate", "deploy"]
+    command: ["pnpm", "exec", "prisma", "migrate", "deploy"]
     env:
       - name: DATABASE_URL
         valueFrom:

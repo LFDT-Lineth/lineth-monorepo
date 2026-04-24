@@ -31,16 +31,16 @@
   ],
   "scripts": {
     "build": "tsup --tsconfig tsconfig.build.json",
-    "test": "npx ts-node tests/run-tests.ts",
-    "test:integration": "npx ts-node tests/integration.test.ts",
-    "test:all": "npm run test && npm run test:integration",
+    "test": "ts-node tests/run-tests.ts",
+    "test:integration": "ts-node tests/integration.test.ts",
+    "test:all": "pnpm run test && pnpm run test:integration",
     "lint": "eslint 'src/**/*.ts'",
     "lint:fix": "eslint --fix 'src/**/*.ts'",
     "prettier": "prettier -c 'src/**/*.ts'",
     "prettier:fix": "prettier -w 'src/**/*.ts'",
     "clean": "rimraf dist node_modules coverage",
-    "enrich": "npx ts-node tools/enrich-hardhat-artifact.ts",
-    "enrich:all": "npx ts-node tools/enrich-all-artifacts.ts"
+    "enrich": "ts-node tools/enrich-hardhat-artifact.ts",
+    "enrich:all": "ts-node tools/enrich-all-artifacts.ts"
   },
   "keywords": [
     "ethereum",

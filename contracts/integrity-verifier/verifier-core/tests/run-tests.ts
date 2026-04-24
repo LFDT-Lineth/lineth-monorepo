@@ -1,7 +1,7 @@
 #!/usr/bin/env ts-node
 /**
  * Contract Integrity Verifier - Test Runner
- * Run with: npx ts-node tests/run-tests.ts
+ * Run with: pnpm exec ts-node tests/run-tests.ts
  */
 
 import { detectArtifactFormat, extractSelectorsFromArtifact, parseArtifact } from "../src/utils/abi";

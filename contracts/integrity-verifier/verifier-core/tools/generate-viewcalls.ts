@@ -1,4 +1,4 @@
-#!/usr/bin/env npx ts-node
+#!/usr/bin/env -S pnpm exec ts-node
 /**
  * Generate viewCalls configuration from contract ABI.
  *
@@ -6,8 +6,8 @@
  * that users can edit to add expected values.
  *
  * Usage:
- *   npx ts-node tools/generate-viewcalls.ts <artifact.json> <output.json>
- *   npx ts-node tools/generate-viewcalls.ts <artifact.json> <output.json> --no-params
+ *   pnpm exec ts-node tools/generate-viewcalls.ts <artifact.json> <output.json>
+ *   pnpm exec ts-node tools/generate-viewcalls.ts <artifact.json> <output.json> --no-params
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from "fs";
@@ -150,7 +150,7 @@ function generateViewCalls(
 }
 
 function printUsage(): void {
-  console.log("Usage: npx ts-node tools/generate-viewcalls.ts <artifact.json> <output.json> [options]");
+  console.log("Usage: pnpm exec ts-node tools/generate-viewcalls.ts <artifact.json> <output.json> [options]");
   console.log("");
   console.log("Options:");
   console.log("  --no-params     Only include functions without parameters");

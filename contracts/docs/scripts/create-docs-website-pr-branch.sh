@@ -48,7 +48,7 @@ if [ -z "$(pnpm -F contracts list hardhat)" ]; then
 fi
 
 # Docgen
-npx hardhat docgen
+pnpm exec hardhat docgen
 
 # Git clone docs website repo and create a new branch
 cd $MONOREPO_ROOT_PATH

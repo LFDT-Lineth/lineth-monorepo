@@ -367,16 +367,16 @@ L2MSGSERVICE_L1L2_MESSAGE_SETTER=0x...
 cd contracts
 
 # Compile
-npx hardhat compile
+pnpm exec hardhat compile
 
 # Run all tests
-npx hardhat test
+pnpm exec hardhat test
 
 # Run specific test file
-npx hardhat test test/hardhat/rollup/LineaRollup.ts
+pnpm exec hardhat test test/hardhat/rollup/LineaRollup.ts
 
 # Coverage
-npx hardhat coverage
+pnpm exec hardhat coverage
 ```
 
 ## Security Features

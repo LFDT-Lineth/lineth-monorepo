@@ -18,7 +18,7 @@ pnpm run -F "./sdk/*" build
 pnpm -F @consensys/linea-postman run build
 
 # Run locally (requires local stack + PostgreSQL)
-npx ts-node src/main.ts
+pnpm exec ts-node src/main.ts
 
 # Run as part of full stack
 make start-env-with-tracing-v2

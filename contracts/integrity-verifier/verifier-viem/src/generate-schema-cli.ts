@@ -6,18 +6,18 @@
  * Uses viem for crypto operations.
  *
  * Usage:
- *   npx generate-schema-viem <input.sol...> -o <output.json> [--verbose]
- *   npx generate-schema-viem <input.sol> <output.json> [--verbose]  (legacy)
+ *   pnpx generate-schema-viem <input.sol...> -o <output.json> [--verbose]
+ *   pnpx generate-schema-viem <input.sol> <output.json> [--verbose]  (legacy)
  *
  * Examples:
  *   # Single file (legacy mode)
- *   npx generate-schema-viem Storage.sol schema.json
+ *   pnpx generate-schema-viem Storage.sol schema.json
  *
  *   # Multiple files (recommended for inherited storage)
- *   npx generate-schema-viem LineaRollupYieldExtension.sol YieldManager.sol -o schema.json
+ *   pnpx generate-schema-viem LineaRollupYieldExtension.sol YieldManager.sol -o schema.json
  *
  *   # With verbose output
- *   npx generate-schema-viem *.sol -o schema.json --verbose
+ *   pnpx generate-schema-viem *.sol -o schema.json --verbose
  */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, readdirSync } from "fs";

@@ -15,7 +15,7 @@
   },
   "scripts": {
     "build": "tsup --tsconfig tsconfig.build.json",
-    "test": "npx jest --bail --detectOpenHandles",
+    "test": "jest --bail --detectOpenHandles",
     "lint:ts": "eslint '**/*.ts'",
     "lint:ts:fix": "eslint --fix '**/*.ts'",
     "prettier": "prettier -c '**/*.ts'",

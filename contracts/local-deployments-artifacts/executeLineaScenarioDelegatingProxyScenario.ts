@@ -14,7 +14,7 @@
     GAS_LIMIT=<number> \
     DEPLOYER_PRIVATE_KEY=<key> \
     RPC_URL=<url> \
-    npx ts-node local-deployments-artifacts/executeLineaScenarioDelegatingProxyScenario.ts
+    pnpm exec ts-node local-deployments-artifacts/executeLineaScenarioDelegatingProxyScenario.ts
     *******************************************************************************************
 */
 

@@ -19,7 +19,7 @@ import { requireEnv } from "../hardhat/utils";
 
     
     *******************************************************************************************
-    PROXY_ADMIN_OWNER_ADDRESS=0x.. PROXY_ADDRESS=0x.. CONTRACT_TYPE=TokenBridge npx hardhat run --network zkevm_dev scripts/operational/transferProxyAdminOwnership.ts
+    PROXY_ADMIN_OWNER_ADDRESS=0x.. PROXY_ADDRESS=0x.. CONTRACT_TYPE=TokenBridge pnpm exec hardhat run --network zkevm_dev scripts/operational/transferProxyAdminOwnership.ts
     *******************************************************************************************
 */
 

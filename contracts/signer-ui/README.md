@@ -57,7 +57,7 @@ TEST_ERC20_NAME="LocalUI" \
 TEST_ERC20_SYMBOL="LUI" \
 TEST_ERC20_INITIAL_SUPPLY="1000000" \
 HARDHAT_SIGNER_UI=true \
-npx hardhat deploy --network zkevm_dev --tags TestERC20
+pnpm exec hardhat deploy --network zkevm_dev --tags TestERC20
 ```
 
 1. Open the printed URL (or rely on auto-open unless `HARDHAT_SIGNER_UI_OPEN_BROWSER=false`).
@@ -76,7 +76,7 @@ cd contracts
 
 L2_RPC_URL=http://127.0.0.1:8545 \
 HARDHAT_SIGNER_UI=true \
-npx hardhat deploy --network l2 --tags <YourL2Tag>
+pnpm exec hardhat deploy --network l2 --tags <YourL2Tag>
 ```
 
 ## Environment variables

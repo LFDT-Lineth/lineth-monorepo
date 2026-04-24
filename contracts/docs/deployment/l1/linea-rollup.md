@@ -28,12 +28,12 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-npx hardhat deploy --network sepolia --tags LineaRollup
+pnpm exec hardhat deploy --network sepolia --tags LineaRollup
 ```
 
 Base command with cli arguments:
 ```shell
-VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> INITIAL_L2_STATE_ROOT_HASH=<bytes> INITIAL_L2_BLOCK_NUMBER=<value> L2_GENESIS_TIMESTAMP=<value> L1_SECURITY_COUNCIL=<address> LINEA_ROLLUP_OPERATORS=<address> LINEA_ROLLUP_RATE_LIMIT_PERIOD=<value> LINEA_ROLLUP_RATE_LIMIT_AMOUNT=<value> YIELD_MANAGER_ADDRESS=<address> npx hardhat deploy --network sepolia --tags LineaRollup
+VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> INITIAL_L2_STATE_ROOT_HASH=<bytes> INITIAL_L2_BLOCK_NUMBER=<value> L2_GENESIS_TIMESTAMP=<value> L1_SECURITY_COUNCIL=<address> LINEA_ROLLUP_OPERATORS=<address> LINEA_ROLLUP_RATE_LIMIT_PERIOD=<value> LINEA_ROLLUP_RATE_LIMIT_AMOUNT=<value> YIELD_MANAGER_ADDRESS=<address> pnpm exec hardhat deploy --network sepolia --tags LineaRollup
 ```
 
 (make sure to replace `<value>` `<key>` `<bytes>` `<address>` with actual values).
@@ -53,7 +53,7 @@ Deploys a new LineaRollup implementation and generates encoded upgrade calldata 
 | LINEA_ROLLUP_ADDRESS | true | address | Existing LineaRollup proxy address |
 
 ```shell
-npx hardhat deploy --network sepolia --tags LineaRollupWithReinitialization
+pnpm exec hardhat deploy --network sepolia --tags LineaRollupWithReinitialization
 ```
 
 <br />
@@ -70,5 +70,5 @@ Deploys LineaRollup from audited artifacts and generates encoded upgrade calldat
 | NATIVE_YIELD_AUTOMATION_SERVICE_ADDRESS | true | address | Automation service address |
 
 ```shell
-npx hardhat deploy --network sepolia --tags LineaRollupV8WithReinitialization
+pnpm exec hardhat deploy --network sepolia --tags LineaRollupV8WithReinitialization
 ```

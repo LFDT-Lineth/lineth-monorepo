@@ -62,7 +62,7 @@ jobs:
         uses: foundry-rs/foundry-toolchain@8789b3e21e6c11b2697f5eb56eddae542f746c10 #v1.7.0
 
       - name: Compile kzg.node
-        run: npx node-gyp --directory=contracts/node_modules/c-kzg rebuild # explicitly running rebuild to get the .node file
+        run: pnpm -F contracts exec node-gyp --directory=node_modules/c-kzg rebuild # explicitly running rebuild to get the .node file
 
       - name: Pre-compile contracts to cache solc
         run: pnpm -F contracts run build

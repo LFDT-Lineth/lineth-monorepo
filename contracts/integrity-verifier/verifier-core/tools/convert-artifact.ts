@@ -1,13 +1,13 @@
-#!/usr/bin/env npx ts-node
+#!/usr/bin/env -S pnpm exec ts-node
 /**
  * Convert between Hardhat and Foundry artifact formats.
  *
  * Auto-detects input format and converts to the other.
  *
  * Usage:
- *   npx ts-node tools/convert-artifact.ts <input.json> <output.json>
- *   npx ts-node tools/convert-artifact.ts <input.json> <output.json> --to-hardhat
- *   npx ts-node tools/convert-artifact.ts <input.json> <output.json> --to-foundry
+ *   pnpm exec ts-node tools/convert-artifact.ts <input.json> <output.json>
+ *   pnpm exec ts-node tools/convert-artifact.ts <input.json> <output.json> --to-hardhat
+ *   pnpm exec ts-node tools/convert-artifact.ts <input.json> <output.json> --to-foundry
  */
 
 import { readFileSync, writeFileSync } from "fs";
@@ -187,7 +187,7 @@ function main(): void {
   const filteredArgs = args.filter((a) => !a.startsWith("--"));
 
   if (filteredArgs.length < 2) {
-    console.log("Usage: npx ts-node tools/convert-artifact.ts <input.json> <output.json> [--to-hardhat|--to-foundry]");
+    console.log("Usage: pnpm exec ts-node tools/convert-artifact.ts <input.json> <output.json> [--to-hardhat|--to-foundry]");
     console.log("");
     console.log("Options:");
     console.log("  --to-hardhat  Force conversion to Hardhat format");

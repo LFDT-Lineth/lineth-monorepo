@@ -11,8 +11,8 @@
     "lint:fix": "eslint --fix .",
     "clean": "rimraf dist node_modules coverage tsconfig.build.tsbuildinfo",
     "build": "tsc -p tsconfig.build.json",
-    "test": "npx jest --bail --detectOpenHandles --forceExit",
-    "migration:create": "npx ts-node -P ./tsconfig.json -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:create ./src/infrastructure/persistence/migrations/${MIGRATION_NAME}"
+    "test": "jest --bail --detectOpenHandles --forceExit",
+    "migration:create": "ts-node -P ./tsconfig.json -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:create ./src/infrastructure/persistence/migrations/${MIGRATION_NAME}"
   },
   "dependencies": {
     "@consensys/linea-native-libs": "workspace:*",

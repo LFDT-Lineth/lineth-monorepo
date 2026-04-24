@@ -10,7 +10,7 @@ import { requireEnv, checkDelegation, getAccountInfo, createAuthorization, estim
 // TARGET_ADDRESS is optional. If omitted (or set to 0x0), the authorization is set to the zero
 // address, which removes any existing EIP-7702 delegation from the signer's EOA per the spec.
 
-// RPC_URL=<> DEPLOYER_PRIVATE_KEY=<> [TARGET_ADDRESS=<>] npx hardhat run scripts/testEIP7702/sendSelfSponsoredType4Tx.ts
+// RPC_URL=<> DEPLOYER_PRIVATE_KEY=<> [TARGET_ADDRESS=<>] pnpm exec hardhat run scripts/testEIP7702/sendSelfSponsoredType4Tx.ts
 
 dotenv.config();
 

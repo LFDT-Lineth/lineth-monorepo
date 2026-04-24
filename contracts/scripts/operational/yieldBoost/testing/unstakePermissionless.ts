@@ -26,7 +26,7 @@ const gIndexPendingPartialWithdrawals = 99n;
   -------------------------------------------------------------------------------------------
   DEPLOYER_PRIVATE_KEY=0000000000000000000000000000000000000000000000000000000000000002 \
   CUSTOM_RPC_URL=https://0xrpc.io/hoodi \
-  npx hardhat unstakePermissionless \
+  pnpm exec hardhat unstakePermissionless \
     --yield-manager <address> \
     --yield-provider <address> \
     --validator-index <uint64> \

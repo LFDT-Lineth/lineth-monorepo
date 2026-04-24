@@ -24,13 +24,13 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-npx hardhat deploy --network sepolia --tags PlonkVerifier
+pnpm exec hardhat deploy --network sepolia --tags PlonkVerifier
 ```
 
 Base command with cli arguments:
 
 ```shell
-VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> VERIFIER_CONTRACT_NAME=PlonkVerifierDev npx hardhat deploy --network sepolia --tags PlonkVerifier
+VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> VERIFIER_CONTRACT_NAME=PlonkVerifierDev pnpm exec hardhat deploy --network sepolia --tags PlonkVerifier
 ```
 
 Reuse an existing `Mimc` library (no new `Mimc` deployment or `Mimc` explorer verification from this script):

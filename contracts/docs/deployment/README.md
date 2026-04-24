@@ -59,7 +59,7 @@ Dependent on which network you are using, the corresponding API Key or RPC URL m
 ## Generalized Command Format
 
 ```shell
-<possible CLI environment arguments> npx hardhat deploy --network sepolia --tags <contract tags, comma delimitted list>
+<possible CLI environment arguments> pnpm exec hardhat deploy --network sepolia --tags <contract tags, comma delimitted list>
 ```
 
 <br />
@@ -75,7 +75,7 @@ The signer UI under `contracts/signer-ui/` is local operator tooling launched by
 To sign and send transactions from a **browser wallet** (MetaMask, Rabby, etc.) instead of putting a private key in the environment:
 
 ```shell
-HARDHAT_SIGNER_UI=true npx hardhat deploy --network sepolia --tags <contract tags, comma delimited list>
+HARDHAT_SIGNER_UI=true pnpm exec hardhat deploy --network sepolia --tags <contract tags, comma delimited list>
 ```
 
 Selected **operational Hardhat tasks** (under `scripts/operational/`) also support the same flag via `runWithSignerUiSession` + `getUiSigner`.

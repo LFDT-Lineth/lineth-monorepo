@@ -157,7 +157,7 @@ Open [http://localhost:3000](http://localhost:3000).
 STATIC_EXPORT=true pnpm build
 
 # Serve locally
-npx serve out
+pnpx serve out
 # or
 cd out && python3 -m http.server 3000
 ```

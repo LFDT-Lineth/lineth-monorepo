@@ -1,4 +1,4 @@
-#!/usr/bin/env npx ts-node
+#!/usr/bin/env -S pnpm exec ts-node
 /**
  * Enrich Hardhat artifact with immutableReferences from build-info.
  *
@@ -10,17 +10,17 @@
  *
  * Usage:
  *   # Auto-find build-info in artifacts/build-info/
- *   npx ts-node tools/enrich-hardhat-artifact.ts <artifact.json> [output.json]
+ *   pnpm exec ts-node tools/enrich-hardhat-artifact.ts <artifact.json> [output.json]
  *
  *   # Specify build-info file explicitly
- *   npx ts-node tools/enrich-hardhat-artifact.ts <artifact.json> [output.json] --build-info <build-info.json>
+ *   pnpm exec ts-node tools/enrich-hardhat-artifact.ts <artifact.json> [output.json] --build-info <build-info.json>
  *
  *   # Specify contract path for multi-contract build-info
- *   npx ts-node tools/enrich-hardhat-artifact.ts <artifact.json> [output.json] --contract contracts/MyContract.sol:MyContract
+ *   pnpm exec ts-node tools/enrich-hardhat-artifact.ts <artifact.json> [output.json] --contract contracts/MyContract.sol:MyContract
  *
  * Examples:
- *   npx ts-node tools/enrich-hardhat-artifact.ts artifacts/contracts/LineaRollup.sol/LineaRollup.json
- *   npx ts-node tools/enrich-hardhat-artifact.ts LineaRollup.json enriched/LineaRollup.json --build-info build-info/abc.json
+ *   pnpm exec ts-node tools/enrich-hardhat-artifact.ts artifacts/contracts/LineaRollup.sol/LineaRollup.json
+ *   pnpm exec ts-node tools/enrich-hardhat-artifact.ts LineaRollup.json enriched/LineaRollup.json --build-info build-info/abc.json
  */
 
 import { readFileSync, writeFileSync, readdirSync, existsSync } from "fs";
@@ -130,7 +130,7 @@ function printUsage(): void {
 Enrich Hardhat artifact with immutableReferences from build-info.
 
 Usage:
-  npx ts-node tools/enrich-hardhat-artifact.ts <artifact.json> [output.json] [options]
+  pnpm exec ts-node tools/enrich-hardhat-artifact.ts <artifact.json> [output.json] [options]
 
 Arguments:
   artifact.json    Path to Hardhat artifact file
@@ -144,13 +144,13 @@ Options:
 
 Examples:
   # Auto-find build-info (searches artifacts/build-info/)
-  npx ts-node tools/enrich-hardhat-artifact.ts artifacts/contracts/LineaRollup.sol/LineaRollup.json
+  pnpm exec ts-node tools/enrich-hardhat-artifact.ts artifacts/contracts/LineaRollup.sol/LineaRollup.json
 
   # Specify build-info explicitly
-  npx ts-node tools/enrich-hardhat-artifact.ts LineaRollup.json --build-info build-info/abc.json
+  pnpm exec ts-node tools/enrich-hardhat-artifact.ts LineaRollup.json --build-info build-info/abc.json
 
   # Output to different file
-  npx ts-node tools/enrich-hardhat-artifact.ts LineaRollup.json enriched/LineaRollup.json
+  pnpm exec ts-node tools/enrich-hardhat-artifact.ts LineaRollup.json enriched/LineaRollup.json
 `);
 }
 

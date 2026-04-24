@@ -5,7 +5,7 @@ compile:
 
 force-compile: export TS_NODE_TRANSPILE_ONLY := 1
 force-compile:
-	npx hardhat compile --force
+	pnpm exec hardhat compile --force
 
 clean:
 	rm -rf coverage/

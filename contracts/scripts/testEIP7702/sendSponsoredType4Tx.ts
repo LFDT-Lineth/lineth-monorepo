@@ -16,7 +16,7 @@ import { requireEnv, checkDelegation, getAccountInfo, createAuthorization, estim
 //   TO_ADDRESS           - transaction recipient; defaults to authority address
 //   CALLDATA             - hex-encoded calldata; defaults to 0x
 
-// RPC_URL=<> SPONSOR_PRIVATE_KEY=<> AUTHORITY_PRIVATE_KEY=<> TARGET_ADDRESS=<> npx hardhat run scripts/testEIP7702/sendSponsoredType4Tx.ts
+// RPC_URL=<> SPONSOR_PRIVATE_KEY=<> AUTHORITY_PRIVATE_KEY=<> TARGET_ADDRESS=<> pnpm exec hardhat run scripts/testEIP7702/sendSponsoredType4Tx.ts
 
 dotenv.config();
 

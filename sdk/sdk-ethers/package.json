@@ -15,7 +15,7 @@
     "postpublish": "rm -rf LICENSE-APACHE LICENSE-MIT",
     "build": "pnpm run build:pre && tsc -p tsconfig.build.json",
     "typechain": "typechain --target ethers-v6 --out-dir ./src/contracts/typechain './src/contracts/abis/*.abi'",
-    "test": "npx jest --bail --detectOpenHandles --forceExit"
+    "test": "jest --bail --detectOpenHandles --forceExit"
   },
   "dependencies": {
     "ethers": "catalog:",

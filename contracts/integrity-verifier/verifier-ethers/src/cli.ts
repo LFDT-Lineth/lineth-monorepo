@@ -5,7 +5,7 @@
  * Command-line interface using ethers.js adapter.
  *
  * Usage:
- *   npx @consensys/linea-contract-integrity-verifier-ethers -c config.json -v
+ *   pnpx @consensys/linea-contract-integrity-verifier-ethers -c config.json -v
  */
 
 import { runCli, type CliRunnerConfig } from "@consensys/linea-contract-integrity-verifier";

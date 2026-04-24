@@ -6,10 +6,10 @@
     "pnpm": ">=10.32.1"
   },
   "scripts": {
-    "build": "TS_NODE_TRANSPILE_ONLY=1 npx hardhat compile",
-    "test": "npm run autoupdate && npx hardhat test",
-    "test:reportgas": "REPORT_GAS=true npx hardhat test",
-    "coverage": "npm run autoupdate && SOLIDITY_COVERAGE=true npx hardhat coverage --solcoverjs ./.solcover.js",
+    "build": "TS_NODE_TRANSPILE_ONLY=1 hardhat compile",
+    "test": "pnpm run autoupdate && hardhat test",
+    "test:reportgas": "REPORT_GAS=true hardhat test",
+    "coverage": "pnpm run autoupdate && SOLIDITY_COVERAGE=true hardhat coverage --solcoverjs ./.solcover.js",
     "autoupdate": "cd ../prover && cmd/dev-tools/testcase-gen/compression-aggregation/autoupdate.sh && cd ../contracts",
     "balance": "ts-node scripts/balanceOf.ts",
     "prettier:sol": "prettier -c '**/*.sol'",
@@ -21,7 +21,7 @@
     "lint": "pnpm run lint:sol && pnpm run lint:ts && pnpm run prettier:sol",
     "lint:fix": "pnpm run lint:sol:fix && pnpm run lint:ts:fix && pnpm run prettier:sol:fix",
     "clean": "rimraf .openzeppelin build cache node_modules typechain-types coverage coverage.json",
-    "solidity:docgen": "command -v forge && npx hardhat docgen || echo 'Foundry installation required for Solidity docgen, skipping...'"
+    "solidity:docgen": "command -v forge && hardhat docgen || echo 'Foundry installation required for Solidity docgen, skipping...'"
   },
   "devDependencies": {
     "@chainlink/contracts": "1.5.0",

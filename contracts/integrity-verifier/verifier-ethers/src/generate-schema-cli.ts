@@ -6,18 +6,18 @@
  * Uses ethers for crypto operations.
  *
  * Usage:
- *   npx generate-schema-ethers <input.sol...> -o <output.json> [--verbose]
- *   npx generate-schema-ethers <input.sol> <output.json> [--verbose]  (legacy)
+ *   pnpx generate-schema-ethers <input.sol...> -o <output.json> [--verbose]
+ *   pnpx generate-schema-ethers <input.sol> <output.json> [--verbose]  (legacy)
  *
  * Examples:
  *   # Single file (legacy mode)
- *   npx generate-schema-ethers Storage.sol schema.json
+ *   pnpx generate-schema-ethers Storage.sol schema.json
  *
  *   # Multiple files (recommended for inherited storage)
- *   npx generate-schema-ethers LineaRollupYieldExtension.sol YieldManager.sol -o schema.json
+ *   pnpx generate-schema-ethers LineaRollupYieldExtension.sol YieldManager.sol -o schema.json
  *
  *   # With verbose output
- *   npx generate-schema-ethers *.sol -o schema.json --verbose
+ *   pnpx generate-schema-ethers *.sol -o schema.json --verbose
  */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, readdirSync } from "fs";

@@ -21,12 +21,12 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-npx hardhat deploy --network sepolia --tags RecoverFunds
+pnpm exec hardhat deploy --network sepolia --tags RecoverFunds
 ```
 
 Base command with cli arguments:
 ```shell
-VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> L1_SECURITY_COUNCIL=<address> RECOVERFUNDS_EXECUTOR_ADDRESS=<address> npx hardhat deploy --network sepolia --tags RecoverFunds
+VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> L1_SECURITY_COUNCIL=<address> RECOVERFUNDS_EXECUTOR_ADDRESS=<address> pnpm exec hardhat deploy --network sepolia --tags RecoverFunds
 ```
 
 (make sure to replace `<key>` `<address>` with actual values)

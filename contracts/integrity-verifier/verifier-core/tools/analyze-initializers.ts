@@ -1,4 +1,4 @@
-#!/usr/bin/env npx ts-node
+#!/usr/bin/env -S pnpm exec ts-node
 /**
  * Analyze contract initializers and reinitializers to suggest state verification.
  *
@@ -12,8 +12,8 @@
  * - User must fill in expected values based on deployment script
  *
  * Usage:
- *   npx ts-node tools/analyze-initializers.ts <artifact.json>
- *   npx ts-node tools/analyze-initializers.ts <artifact.json> <output.json>
+ *   pnpm exec ts-node tools/analyze-initializers.ts <artifact.json>
+ *   pnpm exec ts-node tools/analyze-initializers.ts <artifact.json> <output.json>
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from "fs";
@@ -344,7 +344,7 @@ function generateRoleTemplates(
 }
 
 function printUsage(): void {
-  console.log("Usage: npx ts-node tools/analyze-initializers.ts <artifact.json> [output.json]");
+  console.log("Usage: pnpm exec ts-node tools/analyze-initializers.ts <artifact.json> [output.json]");
   console.log("");
   console.log("Arguments:");
   console.log("  artifact.json   Path to contract artifact (Hardhat or Foundry format)");
