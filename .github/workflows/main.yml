@@ -55,7 +55,6 @@ jobs:
               - '.github/workflows/coordinator-*.yml'
               - '.github/workflows/build-and-publish.yml'
               - '.github/workflows/main.yml'
-              - '.github/workflows/reuse-*.yml'
             staterecovery:
               - 'state-recovery/**'
               - 'buildSrc/**'
@@ -66,7 +65,6 @@ jobs:
               - 'settings.gradle'
               - '.github/workflows/staterecovery-*.yml'
               - '.github/workflows/main.yml'
-              - '.github/workflows/reuse-*.yml'
             postman:
               - 'postman/**'
               - 'sdk/**'
@@ -75,14 +73,12 @@ jobs:
               - '.github/workflows/postman-*.yml'
               - '.github/workflows/build-and-publish.yml'
               - '.github/workflows/main.yml'
-              - '.github/workflows/reuse-*.yml'
               - '.nvmrc'
             prover:
               - 'prover/**'
               - '.github/workflows/prover-testing.yml'
               - '.github/workflows/build-and-publish.yml'
               - '.github/workflows/main.yml'
-              - '.github/workflows/reuse-*.yml'
             prover-ray:
               - 'prover-ray/**'
               - '.github/workflows/prover-ray-testing.yml'
@@ -100,7 +96,6 @@ jobs:
               - '.github/workflows/transaction-exclusion-api-*.yml'
               - '.github/workflows/build-and-publish.yml'
               - '.github/workflows/main.yml'
-              - '.github/workflows/reuse-*.yml'
               - 'buildSrc/**'
               - 'gradle/**'
               - 'build.gradle'
