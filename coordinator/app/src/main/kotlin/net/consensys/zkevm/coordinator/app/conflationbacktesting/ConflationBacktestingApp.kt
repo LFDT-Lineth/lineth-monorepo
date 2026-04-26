@@ -75,12 +75,25 @@ class ConflationBacktestingApp(
     require(conflationBacktestingAppConfig.blobCompressorVersion != BlobCompressorVersion.V2) {
       "Blob compressor version 2 is not supported for backtesting"
     }
-    mainCoordinatorConfig.traces.common?.endpoints?.contains(conflationBacktestingAppConfig.tracesApi.endpoint)
-      ?.let { require(!it) { "Cannot use same traces endpoint for backtesting and main conflation" } }
-    mainCoordinatorConfig.traces.counters?.endpoints?.contains(conflationBacktestingAppConfig.tracesApi.endpoint)
-      ?.let { require(!it) { "Cannot use same traces endpoint for backtesting and main conflation" } }
-    mainCoordinatorConfig.traces.conflation?.endpoints?.contains(conflationBacktestingAppConfig.tracesApi.endpoint)
-      ?.let { require(!it) { "Cannot use same traces endpoint for backtesting and main conflation" } }
+    val mainCoordinatorConfigTracesEndpoints = emptySet<String>()
+      .plus(mainCoordinatorConfig.traces.common?.endpoints ?: emptyList())
+      .plus(mainCoordinatorConfig.traces.counters?.endpoints ?: emptyList())
+      .plus(mainCoordinatorConfig.traces.conflation?.endpoints ?: emptyList())
+
+    val backtestingTracesEndpoints = setOf(
+      conflationBacktestingAppConfig.tracesApi.endpoint,
+      conflationBacktestingAppConfig.tracesConflationApi?.endpoint,
+    ).filterNotNull().toSet()
+
+    require(mainCoordinatorConfigTracesEndpoints.intersect(backtestingTracesEndpoints).isEmpty()) {
+      "Cannot use same traces endpoint for backtesting and main conflation"
+    }
+    require(
+      conflationBacktestingAppConfig.tracesConflationApi == null ||
+        conflationBacktestingAppConfig.tracesConflationApi.version == conflationBacktestingAppConfig.tracesApi.version,
+    ) {
+      "When tracesConflationApi is set, its version must match tracesApi.version"
+    }
   }
 
   private val log = LogManager.getLogger("conflation_backtesting_job_${conflationBacktestingAppConfig.jobId()}")
@@ -131,15 +144,25 @@ class ConflationBacktestingApp(
         )
       },
     ),
-    traces = mainCoordinatorConfig.traces.copy(
-      expectedTracesApiVersion = conflationBacktestingAppConfig.tracesApi.version,
-      common = ClientApiConfig(
-        endpoints = listOf(conflationBacktestingAppConfig.tracesApi.endpoint),
-        requestLimitPerEndpoint = conflationBacktestingAppConfig.tracesApi.requestLimitPerEndpoint,
-      ),
-      counters = null,
-      conflation = null,
-    ),
+    traces = run {
+      val bt = conflationBacktestingAppConfig
+      val tracesApiClient = ClientApiConfig(
+        endpoints = listOf(bt.tracesApi.endpoint),
+        requestLimitPerEndpoint = bt.tracesApi.requestLimitPerEndpoint,
+      )
+      val conflationApiClient = bt.tracesConflationApi?.let { api ->
+        ClientApiConfig(
+          endpoints = listOf(api.endpoint),
+          requestLimitPerEndpoint = api.requestLimitPerEndpoint,
+        )
+      }
+      mainCoordinatorConfig.traces.copy(
+        expectedTracesApiVersion = bt.tracesApi.version,
+        common = if (conflationApiClient == null) tracesApiClient else null,
+        counters = if (conflationApiClient == null) null else tracesApiClient,
+        conflation = conflationApiClient,
+      )
+    },
     stateManager = mainCoordinatorConfig.stateManager.copy(
       endpoints = listOf(conflationBacktestingAppConfig.shomeiApi.endpoint),
       requestLimitPerEndpoint = conflationBacktestingAppConfig.shomeiApi.requestLimitPerEndpoint,

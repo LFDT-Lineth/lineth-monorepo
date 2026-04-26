@@ -126,10 +126,20 @@ Conflation backtesting allows re-running the conflation and proof-request pipeli
 
 ### How It Works
 
-1. Submit one or more backtesting jobs via `conflation_createProverRequests`, each specifying a block range, blob compressor version, and the traces/state-manager endpoints to use.
-2. Each job spins up an isolated `ConflationBacktestingApp` instance that fetches trace counts from the given Traces API, compresses blobs using the specified compressor version, and writes prover request files to disk — identical in format to the live pipeline.
+1. Submit one or more backtesting jobs via `conflation_createProverRequests`, each specifying a block range, blob compressor version, a **traces** RPC configuration (`tracesApi`, and optionally `tracesConflationApi`), and the Shomei (state manager) endpoint.
+2. Each job spins up an isolated `ConflationBacktestingApp` instance. Trace line counts always use `tracesApi`. If `tracesConflationApi` is **omitted**, the same `tracesApi` client is also used for conflated traces (`linea_generateConflatedTracesToFileV2`). If `tracesConflationApi` is **set** (split-traces deployment), counters stay on `tracesApi` and conflated traces use `tracesConflationApi`; both must declare the **same** `version` string. Blobs use the requested compressor version; prover request files are written under `conflation.backtesting-directory` — same file layout as the live pipeline.
 3. Poll job status via `conflation_getReconflationJobsStatus` until `COMPLETED`.
 
+### Prerequisites and validation
+
+| Rule | Rationale                                                       |
+|------|-----------------------------------------------------------------|
+| `conflation.backtesting-directory` is set in coordinator config | Per-job output needs a parent directory on disk                 |
+| `blobCompressorVersion` is not `V2` | Compressor `V3` or above is required for backtesting            |
+| If `tracesConflationApi` is present, `tracesConflationApi.version` equals `tracesApi.version` | Split clients must target the same traces API protocol version  |
+| No URL overlap between `tracesApi` / `tracesConflationApi` (when set) and the coordinator’s live `[traces]` endpoints (`common`, `counters`, or `conflation`) | Keeps backtesting traffic off the main conflation pipeline URLs |
+
+These checks run when each job is submitted.
 
 ### JSON-RPC API
 
@@ -137,7 +147,7 @@ Conflation backtesting allows re-running the conflation and proof-request pipeli
 
 Submits one or more backtesting jobs. Each element in `params` is an independent job. Returns a list of job IDs (one per submitted job).
 
-**Blob compressor versions:** `V1_2`, `V2`, `V3`
+**Blob compressor versions (backtesting):** `V3` or above.
 
 ```json
 {
@@ -152,7 +162,12 @@ Submits one or more backtesting jobs. Each element in `params` is an independent
       "batchesFixedSize": null,
       "parentBlobShnarf": null,
       "tracesApi": {
-        "endpoint": "http://<traces-node-ip>:8545",
+        "endpoint": "http://<traces-counters-node>:8545",
+        "version": "v2",
+        "requestLimitPerEndpoint": 1
+      },
+      "tracesConflationApi": {
+        "endpoint": "http://<traces-conflation-node>:8545",
         "version": "v2",
         "requestLimitPerEndpoint": 1
       },
@@ -165,6 +180,8 @@ Submits one or more backtesting jobs. Each element in `params` is an independent
   ]
 }
 ```
+
+To use **one** traces base URL for both counters and conflated traces, omit the `tracesConflationApi` object entirely; only `tracesApi` is required in that case.
 
 **curl:**
 
@@ -185,7 +202,12 @@ curl -X POST http://localhost:9546 \
         "batchesFixedSize": null,
         "parentBlobShnarf": null,
         "tracesApi": {
-          "endpoint": "http://<traces-node-ip>:8545",
+          "endpoint": "http://<traces-counters-node>:8545",
+          "version": "beta-v5.0-rc6",
+          "requestLimitPerEndpoint": 1
+        },
+        "tracesConflationApi": {
+          "endpoint": "http://<traces-conflation-node>:8546",
           "version": "beta-v5.0-rc6",
           "requestLimitPerEndpoint": 1
         },
@@ -247,19 +269,23 @@ curl -X POST http://localhost:9546 \
 
 ### Field Reference
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `startBlockNumber` | integer | ✓ | First block of the range to backtest (inclusive) |
-| `endBlockNumber` | integer | ✓ | Last block of the range to backtest (inclusive) |
-| `blobCompressorVersion` | string | ✓ | Compressor version to use: `V1_2`, `V2`, or `V3` |
-| `batchesFixedSize` | integer\|null | | Override batch size; `null` uses calculator-driven batching |
-| `parentBlobShnarf` | string\|null | | Hex-encoded parent shnarf to chain from; `null` starts fresh |
-| `tracesApi.endpoint` | string | ✓ | Traces API URL (typically the backtesting traces node) |
-| `tracesApi.version` | string | ✓ | Traces API version string |
-| `tracesApi.requestLimitPerEndpoint` | integer | ✓ | Max concurrent requests to the traces endpoint |
-| `shomeiApi.endpoint` | string | ✓ | State manager (Shomei) URL |
-| `shomeiApi.version` | string | ✓ | Shomei API version string |
-| `shomeiApi.requestLimitPerEndpoint` | integer | ✓ | Max concurrent requests to Shomei |
+| Field | Type | Required | Description                                                                                                                                   |
+|-------|------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------|
+| `startBlockNumber` | integer | ✓ | First block of the range to backtest (inclusive)                                                                                              |
+| `endBlockNumber` | integer | ✓ | Last block of the range to backtest (inclusive)                                                                                               |
+| `blobCompressorVersion` | string | ✓ | Compressor version: `V3` or above for backtesting                                                                            |
+| `batchesFixedSize` | integer\|null | | Override batch size; `null` uses calculator-driven batching                                                                                   |
+| `parentBlobShnarf` | string\|null | | Hex-encoded parent shnarf to chain from; `null` starts fresh                                                                                  |
+| `tracesApi.endpoint` | string | ✓ | Traces API URL for `linea_getBlockTracesCountersV2`                                                                                           |
+| `tracesApi.version` | string | ✓ | Traces API version; when `tracesConflationApi` is set, must match its `version`                                                       |
+| `tracesApi.requestLimitPerEndpoint` | integer | ✓ | Max concurrent requests to the counters traces client                                                                                         |
+| `tracesConflationApi` | object\|omitted | | Optional. If omitted, `tracesApi` is also used for `linea_generateConflatedTracesToFileV2`. If present, split-traces mode; nested fields apply. |
+| `tracesConflationApi.endpoint` | string | If split | Traces API URL for `linea_generateConflatedTracesToFileV2` (different base URL than `tracesApi` when using dedicated conflation nodes)        |
+| `tracesConflationApi.version` | string | If split | Must be identical to `tracesApi.version`                                                                                                      |
+| `tracesConflationApi.requestLimitPerEndpoint` | integer | If split | Max concurrent requests to the conflation traces client                                                                                       |
+| `shomeiApi.endpoint` | string | ✓ | State manager (Shomei) URL                                                                                                                    |
+| `shomeiApi.version` | string | ✓ | Shomei API version string                                                                                                                     |
+| `shomeiApi.requestLimitPerEndpoint` | integer | ✓ | Max concurrent requests to Shomei                                                                                                             |
 
 ## Test Coverage
 

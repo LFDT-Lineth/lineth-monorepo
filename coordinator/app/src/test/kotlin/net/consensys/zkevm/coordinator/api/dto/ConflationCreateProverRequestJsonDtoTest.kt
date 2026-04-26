@@ -9,16 +9,21 @@ import org.junit.jupiter.api.Test
 class ConflationCreateProverRequestJsonDtoTest {
 
   @Test
-  fun `parseFrom should correctly parse valid JSON RPC request params`() {
+  fun `parseFrom should correctly parse valid JSON RPC request params including optional tracesConflationApi`() {
     val expectedDtoList = listOf(
       ConflationCreateProverRequestJsonDto(
         startBlockNumber = 10,
         endBlockNumber = 20,
-        blobCompressorVersion = "V1_2",
+        blobCompressorVersion = "V3",
         batchesFixedSize = null,
         parentBlobShnarf = null,
         tracesApi = TracesApiDto(
-          endpoint = "https://example.com/traces",
+          endpoint = "https://example.com/traces/counters",
+          version = "v1",
+          requestLimitPerEndpoint = 100,
+        ),
+        tracesConflationApi = TracesApiDto(
+          endpoint = "https://example.com/traces/conflation",
           version = "v1",
           requestLimitPerEndpoint = 100,
         ),
@@ -44,7 +49,6 @@ class ConflationCreateProverRequestJsonDtoTest {
           version = "v2",
           requestLimitPerEndpoint = 50,
         ),
-
       ),
     )
     val jsonRpcRequest = JsonRpcRequestListParams(
@@ -55,9 +59,14 @@ class ConflationCreateProverRequestJsonDtoTest {
         mapOf(
           "startBlockNumber" to 10,
           "endBlockNumber" to 20,
-          "blobCompressorVersion" to "V1_2",
+          "blobCompressorVersion" to "V3",
           "tracesApi" to mapOf(
-            "endpoint" to "https://example.com/traces",
+            "endpoint" to "https://example.com/traces/counters",
+            "version" to "v1",
+            "requestLimitPerEndpoint" to 100,
+          ),
+          "tracesConflationApi" to mapOf(
+            "endpoint" to "https://example.com/traces/conflation",
             "version" to "v1",
             "requestLimitPerEndpoint" to 100,
           ),

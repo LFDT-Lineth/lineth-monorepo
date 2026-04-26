@@ -15,6 +15,7 @@ data class ConflationCreateProverRequestJsonDto(
   val batchesFixedSize: Int?,
   val parentBlobShnarf: String?,
   val tracesApi: TracesApiDto,
+  val tracesConflationApi: TracesApiDto? = null,
   val shomeiApi: ShomeiApiDto,
 ) {
   constructor() : this(
@@ -35,6 +36,7 @@ data class ConflationCreateProverRequestJsonDto(
       batchesFixedSize = this.batchesFixedSize?.toUInt(),
       parentBlobShnarf = this.parentBlobShnarf,
       tracesApi = this.tracesApi.toDomainObject(),
+      tracesConflationApi = this.tracesConflationApi?.toDomainObject(),
       shomeiApi = this.shomeiApi.toDomainObject(),
     )
   }

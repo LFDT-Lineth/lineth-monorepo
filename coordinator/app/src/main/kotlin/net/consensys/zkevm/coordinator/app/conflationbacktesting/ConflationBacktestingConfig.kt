@@ -10,6 +10,7 @@ data class ConflationBacktestingConfig(
   val batchesFixedSize: UInt? = null,
   val parentBlobShnarf: String? = null,
   val tracesApi: TracesApiConfig,
+  val tracesConflationApi: TracesApiConfig? = null,
   val shomeiApi: ShomeiApiConfig,
 ) {
   fun jobId(): String {
@@ -20,11 +21,11 @@ data class ConflationBacktestingConfig(
 data class TracesApiConfig(
   val endpoint: URL,
   val version: String,
-  val requestLimitPerEndpoint: UInt = 10u,
+  val requestLimitPerEndpoint: UInt = 1u,
 )
 
 data class ShomeiApiConfig(
   val endpoint: URL,
   val version: String,
-  val requestLimitPerEndpoint: UInt = 10u,
+  val requestLimitPerEndpoint: UInt = 1u,
 )
