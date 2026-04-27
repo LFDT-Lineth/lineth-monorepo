@@ -39,6 +39,27 @@ describe("loadPostmanOptionsFromEnv", () => {
     });
   });
 
+  it("should prefix L1/L2 signer private keys with 0x when missing", async () => {
+    await withEnv(
+      {
+        ...TEST_ENV_VARS,
+        L1_SIGNER_PRIVATE_KEY: TEST_L1_SIGNER_PRIVATE_KEY.slice(2),
+        L2_SIGNER_PRIVATE_KEY: TEST_L2_SIGNER_PRIVATE_KEY.slice(2),
+      },
+      () => {
+        const options = loadPostmanOptionsFromEnv();
+        expect(options.l1Options.claiming.signer).toEqual({
+          type: "private-key",
+          privateKey: TEST_L1_SIGNER_PRIVATE_KEY,
+        });
+        expect(options.l2Options.claiming.signer).toEqual({
+          type: "private-key",
+          privateKey: TEST_L2_SIGNER_PRIVATE_KEY,
+        });
+      },
+    );
+  });
+
   it("should build web3signer config when L1_SIGNER_TYPE is web3signer", async () => {
     await withEnv(
       {

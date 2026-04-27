@@ -1,6 +1,10 @@
 import { PostmanOptions } from "./config";
 import { SignerConfig } from "../../../../infrastructure/blockchain/viem/signers/SignerConfig";
 
+function normalizePrivateKeyHex(raw: string): `0x${string}` {
+  return (raw.startsWith("0x") ? raw : `0x${raw}`) as `0x${string}`;
+}
+
 function buildSignerConfig(prefix: "L1" | "L2"): SignerConfig {
   const signerType = process.env[`${prefix}_SIGNER_TYPE`] ?? "private-key";
 
@@ -33,7 +37,7 @@ function buildSignerConfig(prefix: "L1" | "L2"): SignerConfig {
 
   return {
     type: "private-key",
-    privateKey: (process.env[`${prefix}_SIGNER_PRIVATE_KEY`] ?? "0x") as `0x${string}`,
+    privateKey: normalizePrivateKeyHex(process.env[`${prefix}_SIGNER_PRIVATE_KEY`] ?? "0x"),
   };
 }
 
