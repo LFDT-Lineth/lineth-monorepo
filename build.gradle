@@ -18,29 +18,26 @@ tasks.register("compileAll") {
 // instead of deleting and re-adding code all the time
 def allowCompilationWarnings = System.getenv('LINEA_DEV_ALLOW_WARNINGS') != null
 
-// Runs during Gradle's configuration phase. Only applies when building from a git checkout;
-// skip for source tarballs, Docker contexts without .git, or when git is unavailable — otherwise
-// this would break all Gradle invocations (including help/tasks).
-if (file('.git').exists()) {
-  try {
-    def proc = [
-      'git',
-      'config',
-      'core.hooksPath',
-      '.githooks'
-    ].execute()
-    proc.waitFor()
-    if (proc.exitValue() != 0) {
-      logger.warn(
-          "Could not set git core.hooksPath to .githooks (git exited with {}). Local hooks under .githooks may not run.",
-          proc.exitValue(),
-          )
-    }
-  } catch (Exception e) {
-    logger.warn(
-        "Could not run git config to set core.hooksPath to .githooks: {}. Local hooks under .githooks may not run.",
-        e.message ?: e.toString(),
-        )
+spotless {
+  predeclareDeps()
+}
+
+spotlessPredeclare {
+  groovyGradle {
+    greclipse("4.35")
+  }
+  java {
+    removeUnusedImports()
+    googleJavaFormat(libs.versions.googleJavaFormat.get())
+  }
+  kotlin {
+    ktlint(libs.versions.ktlint.get().toString())
+        .editorConfigOverride([
+          'ktlint_standard_discouraged-comment-location': 'disabled',
+          'ktlint_standard_property-naming': 'disabled',
+          'ktlint_standard_function-naming': 'disabled',
+          'ktlint_standard_function-signature': 'disabled',
+        ])
   }
 }
 
@@ -64,7 +61,7 @@ allprojects {
   apply plugin: 'jacoco'
 
   // Override JUnit version from Besu BOM to ensure Java 25 compatibility
-  configurations.configureEach {
+  configurations.configureEach { cfg ->
     resolutionStrategy.eachDependency { details ->
       if (details.requested.group in [
             'org.junit.platform',
@@ -75,6 +72,17 @@ allprojects {
             "${libs.versions.junitPlatform.get()}" : "${libs.versions.junit.get()}"
         details.useVersion(junitVersion)
         details.because('Java 25 requires JUnit 5.13+ for ASM compatibility')
+      }
+
+      if (!cfg.name.toLowerCase().contains('spotless')
+          && !cfg.name.toLowerCase().contains('ktlint')
+          && details.requested.group in [
+            'org.hyperledger.besu',
+            'org.hyperledger.besu.internal'
+          ] &&
+          (!details.requested.version || details.requested.version.trim().isEmpty())) {
+        details.useVersion(rootProject.ext.resolveBesuVersion())
+        details.because('Versionless Besu dependencies are aligned to the lazily resolved Besu version') // e.g. jvm-libs:linea:besu-libs
       }
     }
   }
@@ -233,8 +241,6 @@ task jacocoRootReport(type: JacocoReport) {
   }
   onlyIf = { true }
 }
-
-apply plugin: 'linea.besu-plugin'
 
 dockerCompose {
   localStack {

@@ -10,20 +10,25 @@ LOCAL_SEQUENCER_DIST_FOLDER ?= $(abspath ../besu-plugins/linea-sequencer/sequenc
 LOCAL_TRACER_DIST_FOLDER ?= $(abspath ../tracer/plugins/build/install/linea-tracer)
 LOCAL_BESU_DIST_FOLDER ?= $(abspath ../tmp/besu-eth/build/distributions)
 
-build-besu-local-and-update-lib-version:
+clean-besu-and-maven-local:
+	cd ..; \
+	echo "Clean up tmp besu folder and maven local" ; \
+	./gradlew linea-besu:clean
+
+build-besu:
 	cd ..; \
 	echo "Build besu-eth/besu locally at BESU_COMMIT=$(BESU_COMMIT)" ; \
-	./gradlew buildAndUpdateBesuVersionInLibsVersions
+	./gradlew linea-besu:build -PskipDownloadBesuDist=false
 
 build-tracer-and-sequencer:
 	cd ..; \
 	echo "Build versions: TRACER_PLUGIN_VERSION=${TRACER_PLUGIN_VERSION} SEQUENCER_PLUGIN_VERSION=$(SEQUENCER_PLUGIN_VERSION)" ; \
 	echo "Clean and build distribution for tracer" ; \
-	./gradlew :tracer:clean && ./gradlew :tracer:plugins:installDist -PreleaseVersion=$(TRACER_PLUGIN_VERSION) ; \
+	./gradlew tracer:plugins:clean && ./gradlew tracer:plugins:installDist -PreleaseVersion=$(TRACER_PLUGIN_VERSION) ; \
 	echo "Clean and build distribution for sequencer" ; \
 	./gradlew besu-plugins:linea-sequencer:sequencer:clean && ./gradlew besu-plugins:linea-sequencer:sequencer:installDist -PreleaseVersion=$(SEQUENCER_PLUGIN_VERSION)
 
-assemble: BESU_VERSION := $(shell grep -E '^\s*besu\s*=' ../gradle/libs.versions.toml | sed -n 's/.*"\([^"]*\)".*/\1/p')
+assemble: BESU_VERSION := $(shell ls ../tmp/besu-eth/build/distributions/besu-*.tar.gz 2>/dev/null | head -1 | sed 's/.*besu-\(.*\)\.tar\.gz/\1/')
 assemble: LOCAL_BESU_ZIP_PATH := $(LOCAL_BESU_DIST_FOLDER)/besu-$(BESU_VERSION).tar.gz
 assemble:
 	BESU_VERSION=$(BESU_VERSION) \
@@ -45,11 +50,15 @@ build-image:
 
 build:
 	echo "Build linea-besu-package image from source with tag=$(BESU_PACKAGE_TAG)"
-	$(MAKE) build-besu-local-and-update-lib-version
+	$(MAKE) build-besu
 	$(MAKE) build-tracer-and-sequencer
 	$(MAKE) clean
 	$(MAKE) assemble
 	$(MAKE) build-image
+
+clean-build:
+	$(MAKE) clean-besu-and-maven-local
+	${MAKE} build
 
 build-prover:
 	echo "Build prover image from source with tag=$(PROVER_TAG)"

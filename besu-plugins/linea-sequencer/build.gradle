@@ -16,7 +16,7 @@ plugins {
 allprojects {
   plugins.withId('net.consensys.besu-plugin-library') {
     besuPlugin {
-      besuVersion = "${libs.versions.besu.get()}"
+      besuVersion = rootProject.providers.provider { rootProject.ext.resolveBesuVersion() }
       besuRepo = "https://artifacts.consensys.net/public/linea-besu/maven/"
     }
   }

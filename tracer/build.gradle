@@ -19,59 +19,78 @@ plugins {
 allprojects {
   plugins.withId('net.consensys.besu-plugin-library') {
     besuPlugin {
-      besuVersion = "${libs.versions.besu.get()}"
+      besuVersion = rootProject.providers.provider { rootProject.ext.resolveBesuVersion() }
       besuRepo = "https://artifacts.consensys.net/public/linea-besu/maven/"
     }
   }
 }
 
-sonar {
-  def tests = System.getProperty("tests")
-  def xmlTestReport = ""
-  // Conditional xmlReportPaths based on tests property
-  // Default is unit tests, we account only for the Unit tests jacoco coverage report
-  if(tests == null || tests=="Unit") {
-    print("Executing Sonarqube scanner Unit tests coverage report...\n")
-    xmlTestReport = "${project.projectDir}/arithmetization/build/reports/jacoco/test/jacocoTestReport.xml"
-    // If set to FastReplay, we account only for the Nightly tests coverage report
-  } else if(tests == "FastReplay") {
-    print("Executing Sonarqube scanner for FastReplay tests coverage report...\n")
-    xmlTestReport  =  "${project.projectDir}/arithmetization/build/reports/jacoco/jacocoFastReplayTestsReport/jacocoFastReplayTestsReport.xml"
-    // If set to Nightly, we account only for the Nightly tests coverage report
-  } else if(tests == "Nightly") {
-    print("Executing Sonarqube scanner for Nightly tests coverage report...\n")
-    xmlTestReport  =  "${project.projectDir}/arithmetization/build/reports/jacoco/jacocoNightlyTestsReport/jacocoNightlyTestsReport.xml"
-    // If set to Weekly, we account only for the Weekly tests coverage report
-  } else if(tests == "Weekly") {
-    print("Executing Sonarqube scanner for Weekly tests coverage report...\n")
-    xmlTestReport  =  "${project.projectDir}/arithmetization/build/reports/jacoco/jacocoWeeklyTestsReport/jacocoWeeklyTestsReport.xml"
-    // If set to PrcWeekly, we account only for the Weekly Prc Call tests coverage report
-  } else if(tests == "PrcWeekly") {
-    print("Executing Sonarqube scanner for Weekly Prc Call tests coverage report...\n")
-    xmlTestReport  =  "${project.projectDir}/arithmetization/build/reports/jacoco/jacocoWeeklyTestsReport/jacocoPrcCallTestsReport.xml"
-    // If set to ReferenceBlockchain, we account only for the Reference Blockchain tests coverage report
-  } else if(tests == "ReferenceBlockchain") {
-    print("Executing Sonarqube scanner for Reference Blockchain tests coverage report...\n")
-    xmlTestReport  =  "${project.projectDir}/reference-tests/build/reports/jacoco/jacocoReferenceBlockchainTestsReport/jacocoReferenceBlockchainTestsReport.xml"
-    // If set to ReferenceState, we account only for the Reference State tests coverage report
-  } else if(tests == "ReferenceState") {
-    print("Executing Sonarqube scanner for Reference State tests coverage report...\n")
-    xmlTestReport  =  "${project.projectDir}/reference-tests/build/reports/jacoco/jacocoReferenceGeneralStateTestsReport/jacocoReferenceGeneralStateTestsReport.xml"
-  } else if(tests == "All") {
-    print("Executing Sonarqube scanner for Unit, FastReplay, Nightly, Weekly, Reference Blockchain and State tests coverage report...\n")
-    xmlTestReport  =  "${project.projectDir}/arithmetization/build/reports/jacocoConcatenate/test/jacocoTestReport.xml"
-  } else {
-    // Force build failure if unknown concatenate value.
-    println("*** unknown tests property.  Try '-Dconcatenate=Unit', '-Dconcatenate=FastReplay', '-Dconcatenate=Nightly', '-Dconcatenate=Weekly', '-Dconcatenate=ReferenceBlockchain','-Dconcatenate=ReferenceState' or '-Dconcatenate=All'\n\n")
-    assert false
+def resolveSonarReport = { String tests ->
+  // Conditional xmlReportPaths based on tests property.
+  // Default is unit tests, which only use the unit-test Jacoco coverage report.
+  if (tests == null || tests == "Unit") {
+    return [
+      message: "Executing Sonarqube scanner Unit tests coverage report...",
+      xmlTestReport: "${project.projectDir}/arithmetization/build/reports/jacoco/test/jacocoTestReport.xml",
+    ]
+  } else if (tests == "FastReplay") {
+    return [
+      message: "Executing Sonarqube scanner for FastReplay tests coverage report...",
+      xmlTestReport: "${project.projectDir}/arithmetization/build/reports/jacoco/jacocoFastReplayTestsReport/jacocoFastReplayTestsReport.xml",
+    ]
+  } else if (tests == "Nightly") {
+    return [
+      message: "Executing Sonarqube scanner for Nightly tests coverage report...",
+      xmlTestReport: "${project.projectDir}/arithmetization/build/reports/jacoco/jacocoNightlyTestsReport/jacocoNightlyTestsReport.xml",
+    ]
+  } else if (tests == "Weekly") {
+    return [
+      message: "Executing Sonarqube scanner for Weekly tests coverage report...",
+      xmlTestReport: "${project.projectDir}/arithmetization/build/reports/jacoco/jacocoWeeklyTestsReport/jacocoWeeklyTestsReport.xml",
+    ]
+  } else if (tests == "PrcWeekly") {
+    return [
+      message: "Executing Sonarqube scanner for Weekly Prc Call tests coverage report...",
+      xmlTestReport: "${project.projectDir}/arithmetization/build/reports/jacoco/jacocoWeeklyTestsReport/jacocoPrcCallTestsReport.xml",
+    ]
+  } else if (tests == "ReferenceBlockchain") {
+    return [
+      message: "Executing Sonarqube scanner for Reference Blockchain tests coverage report...",
+      xmlTestReport: "${project.projectDir}/reference-tests/build/reports/jacoco/jacocoReferenceBlockchainTestsReport/jacocoReferenceBlockchainTestsReport.xml",
+    ]
+  } else if (tests == "ReferenceState") {
+    return [
+      message: "Executing Sonarqube scanner for Reference State tests coverage report...",
+      xmlTestReport: "${project.projectDir}/reference-tests/build/reports/jacoco/jacocoReferenceGeneralStateTestsReport/jacocoReferenceGeneralStateTestsReport.xml",
+    ]
+  } else if (tests == "All") {
+    return [
+      message: "Executing Sonarqube scanner for Unit, FastReplay, Nightly, Weekly, Reference Blockchain and State tests coverage report...",
+      xmlTestReport: "${project.projectDir}/arithmetization/build/reports/jacocoConcatenate/test/jacocoTestReport.xml",
+    ]
   }
+
+  throw new GradleException(
+  "*** unknown tests property. Try '-Dtests=Unit', '-Dtests=FastReplay', '-Dtests=Nightly', '-Dtests=Weekly', '-Dtests=ReferenceBlockchain', '-Dtests=ReferenceState' or '-Dtests=All'"
+  )
+}
+
+def sonarReport = resolveSonarReport(System.getProperty("tests"))
+
+sonar {
 
   properties {
     property "sonar.projectKey", "linea-tracer"
     property "sonar.host.url", "localhost:80"
     property "sonar.token", "your_token"
     property "sonar.coverage.exclusions", "reference-tests/**/*, testing/**/*, **/*/Trace.java"
-    property "sonar.coverage.jacoco.xmlReportPaths", "${xmlTestReport}"
+    property "sonar.coverage.jacoco.xmlReportPaths", sonarReport.xmlTestReport
+  }
+}
+
+tasks.matching { it.name in ['sonar', 'sonarqube'] }.configureEach {
+  doFirst {
+    logger.lifecycle(sonarReport.message)
   }
 }
 

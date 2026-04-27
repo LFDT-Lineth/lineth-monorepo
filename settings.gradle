@@ -1,5 +1,9 @@
 rootProject.name = 'linea'
 
+// linea-besu is declared first so safe for dependent modules wiring
+// task dependencies to rootProject.ext.resolveBesuVersion
+include 'linea-besu'
+
 // please keep deps sorted by group and alphabetically
 include 'jvm-libs:generic:serialization:jackson'
 include 'jvm-libs:generic:json-rpc'

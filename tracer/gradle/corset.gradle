@@ -34,8 +34,11 @@ tasks.register('installGoCorset') {
   description = 'Install go-corset'
   group = 'build'
 
+  // For configuration cache
+  def capturedCorsetVersion = project.ext.corsetVersion
+
   doLast {
-    def corsetVersion = project.ext.corsetVersion
+    def corsetVersion = capturedCorsetVersion
     def isWindows = System.getProperty('os.name').toLowerCase().contains('win')
     logger.lifecycle("Target version: $corsetVersion")
     if (corsetVersion.isEmpty()) {

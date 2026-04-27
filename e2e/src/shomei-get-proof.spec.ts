@@ -34,7 +34,7 @@ describe("Shomei Linea get proof test suite", () => {
     "Call linea_getProof to Shomei frontend node and get a valid proof",
     async () => {
       const shomeiImageTag = await getDockerImageTag("shomei-frontend", "consensys/linea-shomei");
-      logger.debug(`shomeiImageTag=${shomeiImageTag}`);
+      logger.info(`shomeiImageTag=${shomeiImageTag}`);
 
       let targetL2BlockNumber = await awaitUntil(
         async () => {
@@ -93,7 +93,7 @@ describe("Shomei Linea get proof test suite", () => {
             });
             if (!finalizedL2BlockNumbers.includes(latestFinalizedL2BlockNumber)) {
               finalizedL2BlockNumbers.push(latestFinalizedL2BlockNumber);
-              logger.debug(`finalizedL2BlockNumbers=${serialize(finalizedL2BlockNumbers.map((it) => Number(it)))}`);
+              logger.info(`finalizedL2BlockNumbers=${serialize(finalizedL2BlockNumbers.map((it) => Number(it)))}`);
             }
             const l1HeadAdvanced = finalizedL2BlockNumbers.length > previousKnownBlocks;
             const allAttemptsMissing =
@@ -119,7 +119,7 @@ describe("Shomei Linea get proof test suite", () => {
         { pollingIntervalMs: 2_000, timeoutMs: 150_000 },
       );
 
-      logger.debug(`targetL2BlockNumber=${targetL2BlockNumber}`);
+      logger.info(`targetL2BlockNumber=${targetL2BlockNumber}`);
 
       const { zkEndStateRootHash } = await lineaShomeiClient.rollupGetZkEVMStateMerkleProofV0({
         startBlockNumber: Number(targetL2BlockNumber),
@@ -127,7 +127,7 @@ describe("Shomei Linea get proof test suite", () => {
         zkStateManagerVersion: shomeiImageTag,
       });
 
-      logger.debug(`zkEndStateRootHash=${zkEndStateRootHash}`);
+      logger.info(`zkEndStateRootHash=${zkEndStateRootHash}`);
       expect(zkEndStateRootHash).toBeDefined();
 
       const l2SparseMerkleProofContract = context.l2Contracts.sparseMerkleProof(context.l2PublicClient());
@@ -143,8 +143,8 @@ describe("Shomei Linea get proof test suite", () => {
       const modifiedStateRootHash =
         zkEndStateRootHash.slice(0, -1) + ((parseInt(zkEndStateRootHash.slice(-1), 16) + 1) % 16).toString(16);
 
-      logger.debug(`originalStateRootHash=${zkEndStateRootHash}`);
-      logger.debug(`modifiedStateRootHash=${modifiedStateRootHash}`);
+      logger.info(`originalStateRootHash=${zkEndStateRootHash}`);
+      logger.info(`modifiedStateRootHash=${modifiedStateRootHash}`);
 
       const isInvalid = !(await l2SparseMerkleProofContract.read.verifyProof([
         getProofResponse!.accountProof.proof.proofRelatedNodes,

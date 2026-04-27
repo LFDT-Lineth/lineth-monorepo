@@ -35,10 +35,6 @@ gradlePlugin {
       id = "linea.yul-plugin"
       implementationClass = "YulPlugin"
     }
-    create("LineaBesuPlugin") {
-      id = "linea.besu-plugin"
-      implementationClass = "LineaBesuPlugin"
-    }
     create("DownloadNativeLibsPlugin") {
       id = "linea.download-native-libs"
       implementationClass = "DownloadNativeLibsPlugin"

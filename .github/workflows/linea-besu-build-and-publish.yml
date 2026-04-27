@@ -1,7 +1,7 @@
 name: Build and Publish Linea Besu
 
 permissions:
-  contents: write  # required to push libs.versions.toml update to the PR branch
+  contents: write  # required to push update to the PR branch
   actions: read
   packages: write
 
@@ -20,22 +20,33 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+      
+      - name: Check besuCommit change
+        uses: ./.github/actions/check-lib-version-change
+        id: check_besu_commit
+        with:
+          target_lib: besuCommit
+          target_file_path: gradle/libs.versions.toml
 
       - name: Setup Java and Gradle
+        if: ${{ steps.check_besu_commit.outputs.version_changed == 'true' }}
         uses: ./.github/actions/setup-java-and-gradle
 
       - name: Build besu from source and publish to maven including Cloudsmith
-        run: ./gradlew buildAndUpdateBesuVersionInLibsVersions -PpublishToMaven=true
+        if: ${{ steps.check_besu_commit.outputs.version_changed == 'true' }}
+        run: ./gradlew linea-besu:build -PpublishToMaven=true
         env:
           JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
           ORG_GRADLE_PROJECT_cloudsmithUser: ${{ secrets.CLOUDSMITH_USER }}
           ORG_GRADLE_PROJECT_cloudsmithApiKey: ${{ secrets.CLOUDSMITH_API_KEY }}
 
       - name: Parse besu version from lib.versions.toml
+        if: ${{ steps.check_besu_commit.outputs.version_changed == 'true' }}
         id: release_versions
         uses: ./.github/actions/parse-release-versions
 
       - name: Check besu distribution exists
+        if: ${{ steps.check_besu_commit.outputs.version_changed == 'true' }}
         id: check_besu_dist
         run: |
           BESU_DIST="tmp/besu-eth/build/distributions/besu-${{ steps.release_versions.outputs.besu_version }}.tar.gz"
@@ -47,7 +58,7 @@ jobs:
           fi
 
       - name: Publish besu distribution artifact to Cloudsmith
-        if: steps.check_besu_dist.outputs.exists == 'true'
+        if: ${{ steps.check_besu_commit.outputs.version_changed == 'true' && steps.check_besu_dist.outputs.exists == 'true'}}
         run: |
           sudo apt update
           sudo apt install -y python3 python3-pip python3-venv
@@ -66,18 +77,22 @@ jobs:
           CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
           LINEA_BESU_VERSION: ${{ steps.release_versions.outputs.besu_version }}
 
-      - name: Commit and push gradle/libs.versions.toml besu version update to PR
+      # The linea-besu/.besu-resolved cache file is listed in .gitignore so local
+      # developer regenerations don't get staged by `git add .`. CI uses `git add --force`
+      # to bypass the ignore rule and push the refreshed cache to the PR branch.
+      - name: Commit and push updated .besu-resolved cache file to PR
+        if: ${{ steps.check_besu_commit.outputs.version_changed == 'true' && github.event_name == 'pull_request' }}
         run: |
           BRANCH="${{ github.head_ref }}"
           git fetch origin "$BRANCH"
           git checkout "$BRANCH"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet gradle/libs.versions.toml; then
-            echo "No changes to libs.versions.toml, skipping commit"
+          git add --force linea-besu/.besu-resolved
+          if git diff --cached --quiet; then
+            echo "No cache updates to commit"
           else
-            git config --unset core.hooksPath || true
-            git add gradle/libs.versions.toml
-            git commit -m "chore: update besu version in libs.versions.toml after building linea-besu from source"
+            git commit -m "chore: refresh linea-besu/.besu-resolved after besuCommit bump"
             git push origin "$BRANCH"
           fi
+

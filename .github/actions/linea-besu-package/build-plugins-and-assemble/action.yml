@@ -69,8 +69,12 @@ runs:
   steps:
     - name: Setup Tracer Environment
       uses: ./.github/actions/setup-tracer-environment
-      with:
-        skip-download-besu-dist: false
+    
+    - name: Build besu from source
+      shell: bash
+      run: ./gradlew linea-besu:build -PskipDownloadBesuDist=false
+      env:
+        JAVA_OPTS: -Xmx2g
 
     - name: Compute linea-besu-package metadata
       id: metadata

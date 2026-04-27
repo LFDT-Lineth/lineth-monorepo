@@ -17,6 +17,11 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    - id: fetch_base_branch
+      if: github.event_name == 'pull_request'
+      shell: bash
+      run: git fetch origin ${{ github.base_ref }}
+
     - id: check_target_lib_version_change
       shell: bash
       env:

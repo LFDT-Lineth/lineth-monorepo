@@ -1,0 +1,402 @@
+/*
+ * Copyright Consensys Software Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+plugins {
+  id 'net.consensys.zkevm.kotlin-common-minimal-conventions'
+  id 'java-library'
+}
+
+description = 'Ensures Hyperledger Besu artifacts for besuCommit in gradle/libs.versions.toml are built or fetched before dependent modules compile, and re-exports the curated set of Besu api jars that downstream JVM modules consume'
+
+// Re-export the curated subset of Besu jars that downstream modules (jvm-libs/linea/besu-libs,
+// etc.) consume via `api project(':linea-besu')`. Kept versionless so the root
+// resolutionStrategy.eachDependency rewrite aligns them with the current resolved besuVersion.
+// transitive=false keeps Besu's own transitive graph (tuweni, jackson, netty, ...) out of
+// consumers' classpaths; those are declared explicitly where needed.
+dependencies {
+  api("${besuArtifactGroup}:besu-datatypes") {
+    transitive = false
+  }
+  api("${besuArtifactGroup}:besu-evm") {
+    transitive = false
+  }
+  api("${besuArtifactGroup}.internal:besu-ethereum-core") {
+    transitive = false
+  }
+  api("${besuArtifactGroup}.internal:besu-crypto-algorithms") {
+    transitive = false
+  }
+  api("${besuArtifactGroup}:besu-plugin-api") {
+    transitive = false
+  }
+  api("${besuArtifactGroup}.internal:besu-ethereum-rlp") {
+    transitive = false
+  }
+}
+
+def besuCommit = rootProject.libs.versions.besuCommit.get()
+def rootDirFile = rootProject.layout.projectDirectory.asFile
+// Single-file cache of (besuCommit, resolved besuVersion). Managed automatically by
+// the :linea-besu:resolveBesuVersion task and by CI (linea-besu-build-and-publish
+// workflow). Gitignored — developers should not edit or commit this file; CI force-adds
+// updates on besuCommit bumps.
+def cachedResolvedFile = new File(rootDirFile, 'linea-besu/.besu-resolved')
+
+// Capture providers at configuration time so task actions never touch Project/rootProject.
+def providers = rootProject.providers
+
+def publishToMaven = project.hasProperty('publishToMaven') ? project.publishToMaven.toBoolean() : false
+def skipDownloadBesuDist = project.hasProperty('skipDownloadBesuDist') ? project.skipDownloadBesuDist.toBoolean() : true
+def cloudsmithUser = project.hasProperty('cloudsmithUser') ? project.cloudsmithUser.toString() : ''
+def cloudsmithApiKey = project.hasProperty('cloudsmithApiKey') ? project.cloudsmithApiKey.toString() : ''
+def mavenLocalBase = providers.systemProperty('maven.repo.local')
+    .orElse(providers.systemProperty('user.home').map { it + '/.m2/repository' })
+    .get()
+
+// Expose Besu version/materialization helper for other modules that need a Besu version
+// during dependency resolution.
+//
+// Fast path: cached version file hit, BOM already in maven -> returns immediately.
+// Medium path: cached version file missed, resolve besu version by checking out besu repo,
+//              BOM available in a remote maven repo -> skip build/publish besu in buildAndPublishBesuAction.
+// Slow path: (unpublished commit, nothing local): runs the full resolve besu version and besu build+publish.
+def resolvedVersionMemo = new java.util.concurrent.atomic.AtomicReference<String>()
+def resolvedVersionLock = new Object()
+rootProject.ext.resolveBesuVersion = {
+  def cached = resolvedVersionMemo.get()
+  if (cached != null) return cached
+  synchronized (resolvedVersionLock) {
+    cached = resolvedVersionMemo.get()
+    if (cached != null) return cached
+
+    def resolvedVersion = resolveBesuVersionCached(providers, besuCommit, rootDirFile, cachedResolvedFile)
+    if (!isBesuAvailableInMavenLocal(logger, resolvedVersion, mavenLocalBase)
+        && !isBesuAvailableInMaven(logger, resolvedVersion)) {
+      logger.lifecycle("Besu BOM ${resolvedVersion} missing in both remote and local maven; building/publishing Besu to maven local on-demand")
+      buildAndPublishBesuAction(
+          logger,
+          providers,
+          besuCommit,
+          rootDirFile,
+          false,
+          skipDownloadBesuDist,
+          resolvedVersion,
+          cloudsmithUser,
+          cloudsmithApiKey,
+          mavenLocalBase
+          )
+    }
+
+    resolvedVersionMemo.set(resolvedVersion)
+    return resolvedVersion
+  }
+}
+
+// Besu build/publish is intentionally deferred to task execution.
+// Downstream projects wire task dependencies to this module's buildAndPublishBesu task.
+
+tasks.register('resolveBesuVersion') { t ->
+  group = 'Build'
+  description = 'Checkout Besu at the configured commit and resolve its version string'
+  doLast {
+    def ver = resolveBesuVersionCached(providers, besuCommit, rootDirFile, cachedResolvedFile)
+    t.logger.debug("resolveBesuVersion: wrote ${ver} to ${cachedResolvedFile}")
+  }
+}
+
+tasks.register('buildAndPublishBesu') { t ->
+  group = 'Build'
+  description = 'Build Besu at the resolved version (distTar publish/publishToMavenLocal)'
+  dependsOn tasks.named('resolveBesuVersion')
+  doLast {
+    def resolvedBesuVer = resolveBesuVersionCached(providers, besuCommit, rootDirFile, cachedResolvedFile)
+    buildAndPublishBesuAction(
+        t.logger,
+        providers,
+        besuCommit,
+        rootDirFile,
+        publishToMaven,
+        skipDownloadBesuDist,
+        resolvedBesuVer,
+        cloudsmithUser,
+        cloudsmithApiKey,
+        mavenLocalBase
+        )
+  }
+}
+
+tasks.named('compileJava').configure {
+  dependsOn tasks.named('buildAndPublishBesu')
+}
+
+tasks.named('clean').configure { t ->
+  def cachedResolvedFilePath = cachedResolvedFile.absolutePath
+  def rootPath = rootDirFile.absolutePath
+  def mavenLocalBasePath = mavenLocalBase
+  doLast {
+    [
+      new File(rootPath, 'tmp/besu-eth'),
+      new File(mavenLocalBasePath, 'besu'),
+      new File(mavenLocalBasePath, 'org/hyperledger/besu/bom')
+    ].each { f ->
+      if (f.exists()) {
+        if (f.isDirectory()) {
+          f.deleteDir()
+        } else {
+          f.delete()
+        }
+        t.logger.lifecycle("Deleted: ${f.absolutePath}")
+      }
+    }
+    def rf = new File(cachedResolvedFilePath)
+    if (rf.exists()) {
+      rf.delete()
+      t.logger.lifecycle("Deleted: ${cachedResolvedFilePath}")
+    }
+  }
+}
+
+/**
+ * Reads the cached resolved Besu version from the single Properties-format cache file
+ * when the recorded {@code besuCommit} matches the expected one. Returns null when the
+ * cache is missing, malformed, or stale.
+ */
+static String readCachedBesuVersion(File cachedResolvedFile, String expectedCommit) {
+  if (!cachedResolvedFile.exists()) return null
+  def props = new Properties()
+  cachedResolvedFile.withInputStream { props.load(it) }
+  def cachedCommit = props.getProperty('besuCommit')?.trim()
+  def cachedVersion = props.getProperty('besuVersion')?.trim()
+  if (cachedCommit == expectedCommit && cachedVersion) {
+    return cachedVersion
+  }
+  return null
+}
+
+/**
+ * Writes the (besuCommit, besuVersion) pair to the single cache file with a header that
+ * warns humans not to edit it manually.
+ */
+static void writeCachedBesuVersion(File cachedResolvedFile, String besuCommit, String besuVersion) {
+  cachedResolvedFile.text =
+      "# Auto-managed cache of the (besuCommit -> resolved besuVersion) mapping.\n" +
+      "# Written by Gradle (:linea-besu:resolveBesuVersion) and refreshed by CI\n" +
+      "# (.github/workflows/linea-besu-build-and-publish.yml) on besuCommit bumps.\n" +
+      "# Do NOT edit by hand and do NOT commit local changes — this file is gitignored.\n" +
+      "besuCommit=${besuCommit}\n" +
+      "besuVersion=${besuVersion}\n"
+}
+
+/**
+ * Single provider.exec entry point for linea-besu/scripts/checkout-and-resolve-version.sh.
+ * Returns the script's full stdout (last line is the resolved besuVersion). Side effect:
+ * tmp/besu-eth is created or updated to a git checkout at besuCommit. Configuration-cache
+ * safe — Gradle tracks the exec inputs and captured output.
+ */
+static String runCheckoutAndResolveScript(providers, String besuCommit, File rootDir, Boolean skipCheckoutAfterClone = false) {
+  return providers.exec { spec ->
+    spec.workingDir(rootDir)
+    spec.environment('BESU_DIR', rootDir.absolutePath + '/tmp/besu-eth')
+    spec.environment('BESU_COMMIT', besuCommit)
+    spec.environment('VERSION_LABEL', '')
+    spec.environment('SKIP_CHECKOUT_AFTER_CLONE', skipCheckoutAfterClone)
+    spec.commandLine('bash', rootDir.absolutePath + '/linea-besu/scripts/checkout-and-resolve-version.sh')
+  }.standardOutput.asText.get()
+}
+
+/**
+ * Read the resolved version from the cache file when the cached commit matches besuCommit.
+ * Falls back to running the checkout script if the cache is missing or stale.
+ */
+static String resolveBesuVersionCached(providers, String besuCommit, File rootDir, File cachedResolvedFile) {
+  def cached = readCachedBesuVersion(cachedResolvedFile, besuCommit)
+  if (cached) return cached
+
+  // set last parameter as true to skip checkout the besu commit
+  // to save time as we only needs to retrieve the git tag
+  def besuVer = runCheckoutAndResolveScript(providers, besuCommit, rootDir, true).trim().readLines().last()
+  writeCachedBesuVersion(cachedResolvedFile, besuCommit, besuVer)
+  return besuVer
+}
+
+static void buildAndPublishBesuAction(
+    logger,
+    providers,
+    String besuCommit,
+    File rootDir,
+    boolean publishToMaven,
+    boolean skipDownloadBesuDist,
+    String resolvedBesuVer,
+    String cloudsmithUser,
+    String cloudsmithApiKey,
+    String mavenLocalBase
+) {
+  if (!resolvedBesuVer) {
+    logger.lifecycle('Skipping buildAndPublishBesu: no resolved Besu version (run a non-clean-only build first)')
+    return
+  }
+  def publishGradleTaskName = publishToMaven ? "publish" : "publishToMavenLocal"
+  def shouldSkip = false
+  if (publishToMaven) {
+    shouldSkip = isBesuAvailableInMaven(logger, resolvedBesuVer) &&
+        canDownloadBesuDistributionFromMaven(logger, resolvedBesuVer)
+  } else {
+    if (isBesuAndDistributionAvailableInMavenLocal(logger, resolvedBesuVer, rootDir, mavenLocalBase)) {
+      shouldSkip = true
+    } else if (isBesuAvailableInMaven(logger, resolvedBesuVer) &&
+        (skipDownloadBesuDist || downloadBesuDistributionFromMaven(logger, rootDir, resolvedBesuVer))) {
+      if (skipDownloadBesuDist) {
+        logger.debug("Skipping download besu distribution from maven as skipDownloadBesuDist=${skipDownloadBesuDist}")
+      }
+      shouldSkip = true
+    }
+  }
+  if (shouldSkip) {
+    logger.debug("Skipping buildAndPublishBesu as Besu ${resolvedBesuVer} already available")
+    return
+  }
+  logger.lifecycle("Running buildAndPublishBesu as Besu ${resolvedBesuVer} was not found in remote/local maven")
+
+  // ensure the tmp besu folder has been checkout at besuCommit
+  runCheckoutAndResolveScript(providers, besuCommit, rootDir)
+
+  def rootPath = rootDir.absolutePath
+  providers.exec { spec ->
+    spec.workingDir(rootDir)
+    spec.environment('BESU_DIR', "${rootPath}/tmp/besu-eth")
+    spec.environment('RESOLVED_BESU_VERSION', resolvedBesuVer)
+    spec.environment('CLOUDSMITH_USER', cloudsmithUser)
+    spec.environment('CLOUDSMITH_API_KEY', cloudsmithApiKey)
+    spec.commandLine('bash', "${rootPath}/linea-besu/scripts/build-dist-and-publish.sh", publishGradleTaskName)
+  }.result.get()
+}
+
+static boolean isBesuAvailableInMavenLocal(logger, String version, String mavenLocalBase) {
+  if (!version) return false
+  def mavenLocalPom = new File(mavenLocalBase, "org/hyperledger/besu/bom/${version}/bom-${version}.pom")
+  def pomExists = mavenLocalPom.exists()
+  if (!pomExists) {
+    logger.debug("isBesuAvailableInMavenLocal: besu:${version} is not in maven local")
+  } else {
+    logger.debug("isBesuAvailableInMavenLocal: Besu ${version} was found in maven local")
+  }
+  return pomExists
+}
+
+static boolean isBesuLocalDistributionAvailable(logger, String version, File rootDir) {
+  if (!version) return false
+  def besuDistTar = new File(rootDir, "tmp/besu-eth/build/distributions/besu-${version}.tar.gz")
+  def distExists = besuDistTar.exists()
+  if (!distExists) {
+    logger.debug("isBesuLocalDistributionAvailable: besu-${version}.tar.gz distribution doesn't exist")
+  } else {
+    logger.debug("isBesuLocalDistributionAvailable: besu-${version}.tar.gz distribution was found under \"tmp/besu-eth/build/distributions\"")
+  }
+  return distExists
+}
+
+static boolean isBesuAndDistributionAvailableInMavenLocal(logger, String version, File rootDir, String mavenLocalBase) {
+  def pomExists = isBesuAvailableInMavenLocal(logger, version, mavenLocalBase)
+  def distExists = isBesuLocalDistributionAvailable(logger, version, rootDir)
+  return pomExists && distExists
+}
+
+static boolean isBesuAvailableInMaven(logger, String version) {
+  if (!version) return false
+  def candidates = [
+    "https://artifacts.consensys.net/public/linea-besu/maven/org/hyperledger/besu/bom/${version}/bom-${version}.pom",
+    "https://repo.maven.apache.org/maven2/org/hyperledger/besu/bom/${version}/bom-${version}.pom",
+    "https://hyperledger.jfrog.io/hyperledger/besu-maven/org/hyperledger/besu/bom/${version}/bom-${version}.pom",
+  ]
+  def connectTimeoutMs = 5000
+  def readTimeoutMs = 5000
+  for (def pomUrl : candidates) {
+    def conn = null
+    try {
+      conn = (java.net.HttpURLConnection) new URL(pomUrl).openConnection()
+      conn.setConnectTimeout(connectTimeoutMs)
+      conn.setReadTimeout(readTimeoutMs)
+      conn.setRequestMethod('HEAD')
+      if (conn.getResponseCode() == 200) {
+        logger.debug("isBesuAvailableInMaven: Besu ${version} found at maven repo: ${pomUrl}")
+        return true
+      }
+    } catch (Exception ignored) {
+    } finally {
+      if (conn != null) conn.disconnect()
+    }
+  }
+  logger.debug("isBesuAvailableInMaven: Besu ${version} not found in any maven repo")
+  return false
+}
+
+static boolean canDownloadBesuDistributionFromMaven(logger, String version) {
+  if (!version) return false
+  def baseUrl = "https://artifacts.consensys.net/public/linea-besu/raw/names/linea-besu.tar.gz/versions/"
+  def url = "${baseUrl}${version}/besu-${version}.tar.gz"
+  def conn = null
+  try {
+    conn = (java.net.HttpURLConnection) new URL(url).openConnection()
+    conn.setConnectTimeout(10000)
+    conn.setReadTimeout(60000)
+    conn.setRequestMethod('HEAD')
+    if (conn.getResponseCode() == 200) {
+      logger.debug("canDownloadBesuDistributionFromMaven: Found besu distribution from Maven (${url})")
+      return true
+    }
+    return false
+  } finally {
+    if (conn != null) conn.disconnect()
+  }
+}
+
+static boolean downloadBesuDistributionFromMaven(logger, File rootDir, String version) {
+  if (!version) return false
+  def destDir = new File(rootDir, "tmp/besu-eth/build/distributions")
+  def destFile = new File(destDir, "besu-${version}.tar.gz")
+  if (destFile.exists()) {
+    logger.lifecycle("downloadBesuDistributionFromMaven: Found existing besu distribution at ${destFile}, skipping download")
+    return true
+  }
+  def baseUrl = "https://artifacts.consensys.net/public/linea-besu/raw/names/linea-besu.tar.gz/versions/"
+  def url = "${baseUrl}${version}/besu-${version}.tar.gz"
+  def conn = null
+  try {
+    conn = (java.net.HttpURLConnection) new URL(url).openConnection()
+    conn.setConnectTimeout(10000)
+    conn.setReadTimeout(60000)
+    conn.setRequestMethod('GET')
+    destDir.mkdirs()
+
+    if (conn.getResponseCode() != 200) {
+      logger.lifecycle("downloadBesuDistributionFromMaven: Could not find and download besu distribution from Maven (${url})")
+      return false
+    }
+    conn.getInputStream().withStream { input ->
+      destFile.withOutputStream { it << input }
+    }
+    logger.lifecycle("downloadBesuDistributionFromMaven: Downloaded besu-${version}.tar.gz from Maven to ${destFile}")
+    return true
+  } catch (Exception e) {
+    logger.lifecycle("downloadBesuDistributionFromMaven: Failed to download besu distribution from Maven (${url}): ${e.message}")
+    if (destFile.exists()) {
+      destFile.delete()
+      logger.lifecycle("downloadBesuDistributionFromMaven: Removed partial/corrupt file so next run can retry: ${destFile}")
+    }
+    return false
+  } finally {
+    if (conn != null) conn.disconnect()
+  }
+}

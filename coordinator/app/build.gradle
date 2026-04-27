@@ -80,14 +80,17 @@ application {
 
 jar {
   archiveBaseName = 'coordinator'
-  manifest {
-    attributes(
-        'Class-Path': project.configurations.runtimeClasspath.collect { it.getName() }.findAll { it.endsWith('jar') }.join(' '),
-        'Main-Class': 'net.consensys.zkevm.coordinator.app.CoordinatorAppMain',
-        'Multi-Release': 'true',
-        // Required for Java 25+: Netty uses restricted System::loadLibrary in unnamed modules
-        'Enable-Native-Access': 'ALL-UNNAMED'
-        )
+  // Move Class-Path computation back to execution time and don’t resolve runtimeClasspath at configuration time
+  doFirst {
+    manifest {
+      attributes(
+          'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.findAll { it.endsWith('jar') }.join(' '),
+          'Main-Class': 'net.consensys.zkevm.coordinator.app.CoordinatorAppMain',
+          'Multi-Release': 'true',
+          // Required for Java 25+: Netty uses restricted System::loadLibrary in unnamed modules
+          'Enable-Native-Access': 'ALL-UNNAMED'
+          )
+    }
   }
 }
 

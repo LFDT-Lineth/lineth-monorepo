@@ -43,11 +43,6 @@ jobs:
         uses: ./.github/actions/setup-nodejs
         with:
           pnpm-install-options: '--frozen-lockfile --prefer-offline --filter contracts --ignore-scripts'
-      - name: Build besu from source
-        shell: bash
-        run: ./gradlew buildAndUpdateBesuVersionInLibsVersions -PskipDownloadBesuDist=true
-        env:
-          JAVA_OPTS: -Xmx2g
       - name: Build coordinator and Unit tests
         run: |
           ./gradlew -V coordinator:app:buildNeeded

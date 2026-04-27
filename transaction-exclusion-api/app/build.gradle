@@ -56,12 +56,15 @@ application {
 
 jar {
   archiveBaseName = 'transaction-exclusion-api'
-  manifest {
-    attributes(
-        'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.findAll {it.endsWith('jar') }.join(' '),
-        'Main-Class': 'net.consensys.linea.transactionexclusion.app.TransactionExclusionAppMain',
-        'Multi-Release': 'true'
-        )
+  // Move Class-Path computation back to execution time and don’t resolve runtimeClasspath at configuration time
+  doFirst {
+    manifest {
+      attributes(
+          'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.findAll { it.endsWith('jar') }.join(' '),
+          'Main-Class': 'net.consensys.linea.transactionexclusion.app.TransactionExclusionAppMain',
+          'Multi-Release': 'true'
+          )
+    }
   }
 }
 

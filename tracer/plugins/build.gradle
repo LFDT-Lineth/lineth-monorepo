@@ -28,6 +28,20 @@ apply from: lineaTracerProject.file("gradle/java.gradle")
 apply from: lineaTracerProject.file("gradle/check-licenses.gradle")
 apply from: lineaTracerProject.file("gradle/lint.gradle")
 
+// Force a single version of kotlin-stdlib across all transitive dependencies.
+// Multiple dependencies (blob-compressor, tuweni, dagger-compiler, etc.) each bring in different
+// versions of kotlin-stdlib (1.9.10, 2.0.21, 2.1.0, 2.3.0, etc.), causing version conflicts.
+// This resolution strategy ensures we use the canonical Kotlin version (libs.versions.kotlin)
+// throughout the entire dependency tree, preventing "Cannot find a version that satisfies
+// all constraints" errors and ensuring consistent Kotlin behavior at runtime.
+configurations.all {
+  resolutionStrategy.eachDependency { details ->
+    if (details.requested.group == 'org.jetbrains.kotlin' && details.requested.name.startsWith('kotlin-stdlib')) {
+      details.useVersion "${libs.versions.kotlin.get()}"
+    }
+  }
+}
+
 dependencies {
   implementation project(path: ':tracer:arithmetization')
 }

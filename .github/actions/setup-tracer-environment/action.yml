@@ -1,14 +1,10 @@
-name: 'Setup Tracer Environment (build Besu if needed)'
+name: 'Setup Tracer Environment'
 description: 'Install what is needed for building / testing, and build Besu if needed'
 inputs:
   enable-ssh:
     description: 'Enable ability to ssh into session'
     required: false
     default: 'false'
-  skip-download-besu-dist:
-    description: 'Skip downloading Besu distribution from public maven'
-    required: false
-    default: 'true'
 
 runs:
   using: 'composite'
@@ -25,10 +21,3 @@ runs:
 
       - name: Setup Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
-
-      - name: Build besu from source (if needed)
-        shell: bash
-        run: ./gradlew buildAndUpdateBesuVersionInLibsVersions -PskipDownloadBesuDist="$SKIP_DOWNLOAD_BESU_DIST"
-        env:
-          SKIP_DOWNLOAD_BESU_DIST: ${{ inputs.skip-download-besu-dist }}
-          JAVA_OPTS: -Xmx2g
