@@ -118,7 +118,7 @@ After all component jobs finish, a `jacoco-report` job aggregates JVM coverage d
 
 When the postman job runs, `postman-testing.yml` uploads Jest LCOV for `ts-libs/linea-native-libs/`, `postman/`, and `sdk/sdk-viem/` (artifact `ts-coverage-*` for forks). Staging uses a non-hidden `ci-ts-coverage/` directory because `upload-artifact@v4` excludes hidden paths by default.
 
-The native-yield and lido jobs upload LCOV for `ts-libs/linea-shared-utils/` plus their service packages (`native-yield-automation-service`, `lido-governance-monitor`) with matching artifacts for forks. The standalone `sdk-testing` workflow uploads `sdk-core`, `sdk-viem`, and `sdk-ethers` LCOV and an `sdk-ts-coverage-*` artifact. Tracer unit tests (`reusable-tracer-unit-tests.yml`, via `tracer-gradle-tests.yml` / release workflow) upload Jacoco XML under the `tracer` flag (separate from merged JVM `kotlin`). [`.github/workflows/codecov-external-pr.yml`](.github/workflows/codecov-external-pr.yml) listens for `main` and `sdk-testing` completion to re-upload fork PR coverage.
+The native-yield and lido jobs upload LCOV for `ts-libs/linea-shared-utils/` plus their service packages (`native-yield-automation-service`, `lido-governance-monitor`) with matching artifacts for forks. The standalone `sdk-testing` workflow uploads `sdk-core`, `sdk-viem`, and `sdk-ethers` LCOV and an `sdk-ts-coverage-*` artifact. Tracer unit tests (`reusable-tracer-unit-tests.yml`, via `tracer-gradle-tests.yml` / release workflow) upload Jacoco XML under the `tracer` flag (separate from merged JVM `kotlin`). [`.github/workflows/codecov-external-pr.yml`](../.github/workflows/codecov-external-pr.yml) listens for `main` and `sdk-testing` completion to re-upload fork PR coverage.
 
 ---
 

@@ -115,7 +115,7 @@ which would capture a replay of block #1300923 and store it in `arithmetization/
 - Go to `Settings | Build, Execution, Deployment | Compiler | Annotation Processors` and tick the following
   checkbox:
 
-  ![idea_enable_annotation_processing_setting.png](images/idea_enable_annotation_processing_setting.png)
+  ![idea_enable_annotation_processing_setting.png](../images/idea_enable_annotation_processing_setting.png)
 
 ______________________________________________________________________
 
@@ -143,7 +143,7 @@ ______________________________________________________________________
 
   - Go to `Settings | Editor | Code Style | Java | <hamburger menu> | Import Scheme | Checkstyle configuration`:
 
-    ![idea_checkstyle_reformat.png](images/idea_checkstyle_reformat.png)
+    ![idea_checkstyle_reformat.png](../images/idea_checkstyle_reformat.png)
 
     and select `<project_root>/config/checkstyle.xml`.
 
@@ -168,7 +168,7 @@ be easily disabled in IntelliJ:
    
    - Go to `Run | Edit Configurations`
    
-   ![idea_disable_corset_expansion.png](images/idea_disable_corset_expansion.png)
+   ![idea_disable_corset_expansion.png](../images/idea_disable_corset_expansion.png)
 
    and add `CORSET_FLAGS=` under `Environment Variables`.  This turns
    off all expansion modes, including field arithmetic.

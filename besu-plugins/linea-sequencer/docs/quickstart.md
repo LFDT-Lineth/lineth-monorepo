@@ -54,7 +54,7 @@ jar is generated in `sequencer/build/libs`.
 - Go to `Settings | Build, Execution, Deployment | Compiler | Annotation Processors` and tick the following
   checkbox:
 
-  ![idea_enable_annotation_processing_setting.png](images/idea_enable_annotation_processing_setting.png)
+  ![idea_enable_annotation_processing_setting.png](../images/idea_enable_annotation_processing_setting.png)
 
 ______________________________________________________________________
 
