@@ -324,10 +324,15 @@ jobs:
         cleanup-deployments,
       ]
     if: ${{ always() && github.ref == 'refs/heads/main' && contains(needs.*.result, 'failure') }}
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/slack-notify-failed-jobs.yml
     with:
       title: "Main workflow Failed"
       run_id: ${{ github.run_id }}
+      enable_ai_analysis: ${{ needs.run-e2e-tests.result == 'failure' }}
     secrets:
       channel_id: ${{ secrets.SLACK_ENGINEERING_ALERTS_CHANNEL_ID }}
       slack_bot_token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}
+      anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}

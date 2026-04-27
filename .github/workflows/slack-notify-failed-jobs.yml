@@ -20,6 +20,16 @@ on:
         required: false
         default: ""
         type: string
+      enable_ai_analysis:
+        description: "Run AI-powered failure analysis using Claude"
+        required: false
+        type: boolean
+        default: false
+      docker_logs_artifact_name:
+        description: "Name of the artifact containing Docker container logs"
+        required: false
+        type: string
+        default: "end-2-end-debug-logs"
     secrets:
       channel_id:
         description: "Slack channel ID (from secrets)"
@@ -27,11 +37,217 @@ on:
       slack_bot_token:
         description: "Slack bot token for posting messages"
         required: true
+      anthropic_api_key:
+        description: "Anthropic API key for Claude analysis"
+        required: false
 
 jobs:
-  notify:
+  ai-analysis:
+    if: ${{ inputs.enable_ai_analysis }}
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      summary: ${{ steps.extract_summary.outputs.summary }}
+      has_analysis: ${{ steps.extract_summary.outputs.has_analysis }}
+      artifact_url: ${{ steps.extract_summary.outputs.artifact_url }}
 
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Fetch failed job logs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          set -euo pipefail
+          # gh run view --log-failed requires the run to be complete, but the notify job
+          # is part of the same run so the run is still in_progress. Fetch logs for each
+          # already-completed failed job individually instead - those are available immediately.
+          failed_job_ids=$(gh api --paginate "repos/${REPO}/actions/runs/${RUN_ID}/jobs" \
+            --jq '[.jobs[] | select(.conclusion == "failure") | .id] | .[]')
+
+          > /tmp/failed-job-logs-raw.txt
+          for job_id in $failed_job_ids; do
+            job_name=$(gh api "repos/${REPO}/actions/jobs/${job_id}" --jq '.name')
+            echo "=== Job: ${job_name} (${job_id}) ===" >> /tmp/failed-job-logs-raw.txt
+            # The logs endpoint returns a redirect to a pre-signed URL
+            gh api "repos/${REPO}/actions/jobs/${job_id}/logs" >> /tmp/failed-job-logs-raw.txt 2>&1 || true
+          done
+
+          # Trim to last 500 KB: failures appear at the end of logs
+          tail -c 500000 /tmp/failed-job-logs-raw.txt > /tmp/failed-job-logs.txt
+
+      - name: Download Docker logs artifact
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: ${{ inputs.docker_logs_artifact_name }}
+          path: /tmp/docker-logs
+
+      - name: Run Claude AI analysis
+        uses: anthropics/claude-code-action@5d0cc745cd0cce4c0e9e0b3511de26c3bc285eb5 #v1.0.71
+        with:
+          anthropic_api_key: ${{ secrets.anthropic_api_key }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          settings: '{"permissions":{"allow":["Bash(*)","Read(*)","Write(e2e-failure-analysis.md)","Write(e2e-failure-summary.txt)"],"deny":[]}}'
+          prompt: |
+            You are analyzing a CI failure in the Linea monorepo's E2E test suite.
+
+            ## Context
+            - Repository: Linea zkEVM monorepo (L2 zero-knowledge rollup)
+            - E2E tests: Jest + Viem, run against a local Docker stack (coordinator,
+              prover, sequencer, shomei, postman, L1/L2 nodes)
+            - Tests cover: bridge tokens, messaging, submission/finalization, transaction
+              exclusion, EIP-7702, opcodes, liveness, restarts
+
+            ## Input Files
+            - `/tmp/failed-job-logs.txt` - Jest stdout/stderr from the failed CI run
+            - `/tmp/docker-logs/` - Docker container logs (may not exist)
+
+            ## Instructions
+
+            1. Read `/tmp/failed-job-logs.txt`.
+               - Extract the list of tests that are explicitly marked `FAIL` or `✕` in
+                 the Jest output. This is your authoritative failure list.
+               - **Do not infer, predict, or speculate about tests that might fail.**
+                 A test only appears in the report if Jest reported it as failed.
+            2. For each actually-failed test:
+               a. Extract the error message, file path, and line number from the Jest output.
+               b. Read the test source file under `e2e/src/` to understand the assertion.
+               c. Read relevant helpers referenced in stack traces.
+               d. If `/tmp/docker-logs/` exists, read only the container logs that are
+                  directly relevant to explaining that specific test's failure (e.g. the
+                  shomei container logs for a shomei timeout). Do not read unrelated containers.
+
+            Parse the Jest output for these markers:
+            - `FAIL <file>` - failed test suite
+            - `✕ <test name> (<duration>)` - individual failed test
+            - `● <test name>` - error detail block
+            - `Exceeded timeout` / `thrown:` - timeout or thrown error
+
+            Extract from each failure:
+            - File path and line number (e.g., `e2e/src/file.spec.ts:42:10`)
+            - The exact error message or thrown value
+            - Stack trace (full chain from symptom to origin)
+
+            ## Analysis Rules
+
+            - **Only report tests that Jest explicitly marked as failed.**
+              Do not create entries for tests that passed, were skipped, or might
+              theoretically fail based on infrastructure observations.
+            - For test failures, prefer diagnosing the code/infrastructure under test
+              over blaming the test itself, unless the test is clearly wrong.
+            - If a failure cannot be diagnosed, say "Manual investigation needed" with
+              whatever partial context you have. Do not guess.
+            - Include the actual error snippet (max 10 lines) in each failure entry.
+            - Infrastructure observations from Docker logs belong only in the
+              "Infrastructure Notes" section, never as standalone failure entries.
+
+            ## Failure Types and Fix Strategies
+
+            | Type | Strategy |
+            |---|---|
+            | Assertion mismatch | Identify expected vs actual; check if test expectation is stale or if code regressed |
+            | Timeout | Check if underlying service (coordinator, prover, sequencer) is healthy in Docker logs; look for deadlocks or slow operations |
+            | Transaction revert | Decode revert reason; check contract state prerequisites and test setup |
+            | Setup/teardown failure | Check global-setup.ts, Docker stack health, port conflicts |
+            | Infrastructure crash | Identify which container failed and why from Docker logs |
+
+            ## Confidence Levels
+            - **High**: Clear error message pointing to specific root cause
+            - **Medium**: Error is clear but root cause requires inference
+            - **Low**: Error is ambiguous or root cause is uncertain
+
+            ## Output
+
+            Write TWO files (paths are relative to the current working directory):
+
+            ### e2e-failure-analysis.md
+            Full structured analysis:
+
+            # E2E Failure Analysis
+            **Run:** [${{ inputs.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ inputs.run_id }})
+            **Date:** <current UTC timestamp>
+
+            ## Summary
+            <2-3 sentence executive summary>
+
+            ## Failures
+
+            ### 1. <Test Name>
+            - **File:** `e2e/src/<file>:<line>`
+            - **Type:** <Assertion mismatch | Timeout | Transaction revert | Setup failure | Infrastructure>
+            - **Error:**
+              <error snippet, max 10 lines>
+            - **Root Cause:** <analysis>
+            - **Suggested Fix:** <concrete action> (Confidence: High/Medium/Low)
+            - **Category:** Flake | Regression | Infrastructure
+
+            ### 2. <Test Name>
+            ...
+
+            ## Infrastructure Notes
+            <Container-level issues from Docker logs, or "No issues detected">
+
+            ### e2e-failure-summary.txt
+            A single line, max 300 characters, for a Slack notification. For each failure
+            include: what failed, the likely root cause, and the confidence level.
+            Example:
+            "2 tests failed: submission-finalization timed out - coordinator OOM suspected
+            (check memory limits, High); bridge-tokens L1->L2 claim assertion mismatch -
+            fee calculation regression (Medium)"
+
+      - name: Upload analysis artifact
+        id: upload_artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: ai-failure-analysis
+          path: e2e-failure-analysis.md
+          if-no-files-found: ignore
+
+      - name: Extract summary for Slack
+        id: extract_summary
+        if: ${{ always() }}
+        shell: bash
+        env:
+          ARTIFACT_ID: ${{ steps.upload_artifact.outputs.artifact-id }}
+          UPLOAD_OUTCOME: ${{ steps.upload_artifact.outcome }}
+        run: |
+          set -euo pipefail
+          if [[ -f e2e-failure-summary.txt ]]; then
+            # Strip newlines; heredoc avoids percent-encoded sequences (%0A/%0D) corrupting the GITHUB_OUTPUT protocol
+            summary=$(head -c 300 e2e-failure-summary.txt | tr -d '\n')
+            echo "summary<<EOF" >> "$GITHUB_OUTPUT"
+            echo "${summary}" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo "has_analysis=true" >> "$GITHUB_OUTPUT"
+            # Only emit the artifact URL when the upload actually succeeded; a failed upload
+            # (continue-on-error: true) leaves ARTIFACT_ID empty, producing a broken link.
+            if [[ "${UPLOAD_OUTCOME}" == "success" && -n "${ARTIFACT_ID}" ]]; then
+              echo "artifact_url=https://github.com/${{ github.repository }}/actions/runs/${{ inputs.run_id }}/artifacts/${ARTIFACT_ID}" >> "$GITHUB_OUTPUT"
+            else
+              echo "artifact_url=" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo 'summary=""' >> "$GITHUB_OUTPUT"
+            echo "has_analysis=false" >> "$GITHUB_OUTPUT"
+            echo "artifact_url=" >> "$GITHUB_OUTPUT"
+          fi
+
+  notify:
+    # always() so Slack still runs when ai-analysis is skipped, fails, or succeeds; needs still gates ordering.
+    needs: [ai-analysis]
+    if: always()
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     steps:
       - name: Compute context values
         id: ctx
@@ -64,11 +280,13 @@ jobs:
         id: jobs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ steps.ctx.outputs.repo }}
+          RUN_ID: ${{ inputs.run_id }}
         run: |
-          curl -s \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/${{ steps.ctx.outputs.repo }}/actions/runs/${{ inputs.run_id }}/jobs \
+          set -euo pipefail
+          gh api --paginate "repos/${REPO}/actions/runs/${RUN_ID}/jobs" \
+            --jq '.jobs' \
+            | jq -s '{jobs: map(.[]) }' \
             > jobs.json
 
           echo "json<<EOF" >> $GITHUB_OUTPUT
@@ -192,6 +410,49 @@ jobs:
             echo "block=" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Build AI analysis block
+        id: ai_block
+        if: ${{ steps.extract_jobs.outputs.has_results == 'true' && needs.ai-analysis.outputs.has_analysis == 'true' }}
+        shell: bash
+        env:
+          AI_SUMMARY: ${{ needs.ai-analysis.outputs.summary }}
+          ARTIFACT_URL: ${{ needs.ai-analysis.outputs.artifact_url }}
+        run: |
+          set -euo pipefail
+
+          divider='{"type":"divider"}'
+
+          analysis_block=$(jq -n -c --arg summary "$AI_SUMMARY" '{
+            type: "rich_text",
+            elements: [{
+              type: "rich_text_section",
+              elements: [
+                { type: "text", text: "AI Analysis: ", style: { bold: true } },
+                { type: "text", text: $summary }
+              ]
+            }]
+          }')
+
+          echo "divider_block=- ${divider}" >> "$GITHUB_OUTPUT"
+          echo "analysis_block=- ${analysis_block}" >> "$GITHUB_OUTPUT"
+
+          # Only emit the link block when the artifact URL is known-good.
+          if [[ -n "${ARTIFACT_URL}" ]]; then
+            link_block=$(jq -n -c --arg url "$ARTIFACT_URL" '{
+              type: "rich_text",
+              elements: [{
+                type: "rich_text_section",
+                elements: [
+                  { type: "text", text: "Full Analysis: ", style: { bold: true } },
+                  { type: "link", url: $url, text: "Download ai-failure-analysis artifact" }
+                ]
+              }]
+            }')
+            echo "link_block=- ${link_block}" >> "$GITHUB_OUTPUT"
+          else
+            echo "link_block=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Send Slack Notification
         if: ${{ steps.extract_jobs.outputs.has_results == 'true' }}
         uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95 #v3.0.1
@@ -245,3 +506,6 @@ jobs:
               ${{ steps.job_sections.outputs.failed_section }}
               ${{ steps.job_sections.outputs.cancelled_section }}
               ${{ steps.extra_block.outputs.block }}
+              ${{ steps.ai_block.outputs.divider_block }}
+              ${{ steps.ai_block.outputs.analysis_block }}
+              ${{ steps.ai_block.outputs.link_block }}
