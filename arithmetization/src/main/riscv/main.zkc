@@ -17,7 +17,6 @@ fn main<ram, registers>() {
     var pc:Address = ENTRY_POINT
     var opcode:Opcode
     var instruction:Instruction
-    var stop_signal:u1 = 0
     var length:Address = riscV_program_length[0]
 
     // copy public inputs and r5-program into the RAM
@@ -30,7 +29,8 @@ fn main<ram, registers>() {
 
     printf "program length=%d\n", riscV_program_length[0]
 
-    while stop_signal == 0 && pc<length {
+    // We interpret pc == MAX_UINT_64 as the stop signal, which is set by the ecall instruction
+    while pc != MAX_UINT_64 {
         printf "PC=%x\n", pc
         instruction = read_32(pc) as Instruction
         pc = interpreter(instruction, pc)

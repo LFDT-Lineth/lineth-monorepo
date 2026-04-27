@@ -255,6 +255,10 @@ const FUNCT3_SRAIW:Funct3 = 0b101, FUNCT7_SRAIW:Funct7 = 0b0100000 // Shift Righ
 // JALR
 const FUNCT3_JALR:Funct3 = 0b000 // JALR
 
+// SYSTEM
+const FUNCT3_ECALL:Funct3 = 0b000, FUNCT12_ECALL:Funct12 = 0b000000000000 // ECALL
+const FUNCT3_EBREAK:Funct3 = 0b000, FUNCT12_EBREAK:Funct12 = 0b000000000001 // EBREAK
+
 // ======================
 // S-type funct3 values
 // ======================

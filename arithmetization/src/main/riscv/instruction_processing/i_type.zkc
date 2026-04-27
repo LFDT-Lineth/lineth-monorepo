@@ -130,13 +130,27 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
         } else if (funct3 == FUNCT3_SRAIW) && (funct7 == FUNCT7_SRAIW) {
             registers[rd] = sgn_extension_u32_u64(_ashr_u32(registers[rs1], uimm5))
         }
-    } else if opcode == JALR {
+    }
+
+     else if opcode == JALR {
         // only instruction is JALR, no need to switch over funct3
         new_pc = ((registers[rs1] + signext_imm12_64) & MASK_64_ERASE_LAST_BIT) as Address
         registers[rd] = (pc + 4) as DoubleWord
-    } else if opcode == SYSTEM {
-        // TODO: implement me ...
-        printf "[ERROR] SYSTEM instruction with funct3 %b\n has been triggered, not implemented", funct3
+    }
+
+     else if opcode == SYSTEM {
+        // note: same funct3 for ECALL and EBREAK
+        if funct3 == FUNCT3_ECALL {
+            // imm12 is interpreted as funct12 for SYSTEM opcode
+            if imm12 == FUNCT12_ECALL {
+                // Note: as we don't fully support CSR, we use ECALL as generic STOP instruction for now
+                new_pc = MAX_UINT_64 // set the stop signal to end the program execution
+            } else if imm12 == FUNCT12_EBREAK {
+                printf "[ERROR] EBREAK instruction triggered\n"
+            }
+        } else {
+            printf "[ERROR] SYSTEM instruction with funct3 %b\n has been triggered, not implemented", funct3
+        }
     }
 
     // TODO: should never be reached

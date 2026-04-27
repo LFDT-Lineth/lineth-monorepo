@@ -9,6 +9,7 @@ type Type = u3
 type Funct3 = u3
 type Funct6 = u6
 type Funct7 = u7
+type Funct12 = u12
 type UImm5 = u5
 type UImm6 = u6
 type Imm12 = u12
