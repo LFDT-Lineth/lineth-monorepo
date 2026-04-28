@@ -285,8 +285,8 @@ func TestPermutation_Check_PaddingRight(t *testing.T) {
 	var e field.Element
 	e.SetUint64(5)
 	data := []field.Element{e, e}
-	vecA := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(data)}}
-	vecB := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(data)}}
+	vecA := &wiop.ConcreteVector{Plain: field.VecFromBase(data)}
+	vecB := &wiop.ConcreteVector{Plain: field.VecFromBase(data)}
 
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(colA, vecA)
@@ -316,7 +316,7 @@ func TestInclusion_Check_WithSelector(t *testing.T) {
 	// sel = [1,0,0,0]
 	var one, zero field.Element
 	one.SetUint64(1)
-	selVec := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase([]field.Element{one, zero, zero, zero})}}
+	selVec := &wiop.ConcreteVector{Plain: field.VecFromBase([]field.Element{one, zero, zero, zero})}
 	rt.AssignColumn(selA, selVec)
 
 	require.NoError(t, inc.Check(rt))
@@ -339,8 +339,8 @@ func TestInclusion_PaddingLeft_Match(t *testing.T) {
 	var v field.Element
 	v.SetUint64(7)
 	elems := []field.Element{v, v, v}
-	vA := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elems)}}
-	vB := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elems)}}
+	vA := &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
+	vB := &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
 	rt.AssignColumn(colA, vA)
 	rt.AssignColumn(colB, vB)
 
@@ -362,8 +362,8 @@ func TestInclusion_PaddingRight_Match(t *testing.T) {
 	var v field.Element
 	v.SetUint64(5)
 	elems := []field.Element{v, v, v}
-	vA := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elems)}}
-	vB := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elems)}}
+	vA := &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
+	vB := &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
 	rt.AssignColumn(colA, vA)
 	rt.AssignColumn(colB, vB)
 
@@ -387,8 +387,8 @@ func TestInclusion_PaddingLeft_Mismatch(t *testing.T) {
 	v2.SetUint64(9)
 	elemsA := []field.Element{v1, v1, v1}
 	elemsB := []field.Element{v2, v2, v2}
-	vA := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elemsA)}}
-	vB := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elemsB)}}
+	vA := &wiop.ConcreteVector{Plain: field.VecFromBase(elemsA)}
+	vB := &wiop.ConcreteVector{Plain: field.VecFromBase(elemsB)}
 	rt.AssignColumn(colA, vA)
 	rt.AssignColumn(colB, vB)
 
@@ -410,12 +410,12 @@ func TestInclusion_PaddingRight_WithSelector_Match(t *testing.T) {
 	var one, zero field.Element
 	one.SetUint64(1)
 	selElems := []field.Element{one, one}
-	selVec := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(selElems)}}
+	selVec := &wiop.ConcreteVector{Plain: field.VecFromBase(selElems)}
 
 	var v field.Element
 	v.SetUint64(3)
 	dataElems := []field.Element{v, v}
-	dataVec := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(dataElems)}}
+	dataVec := &wiop.ConcreteVector{Plain: field.VecFromBase(dataElems)}
 
 	tabA := wiop.NewFilteredTable(selA.View(), colA.View())
 	tabB := wiop.NewTable(colB.View())
@@ -446,8 +446,8 @@ func TestPermutation_PaddingLeft_Match(t *testing.T) {
 	var v field.Element
 	v.SetUint64(4)
 	elems := []field.Element{v, v, v}
-	vA := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elems)}}
-	vB := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elems)}}
+	vA := &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
+	vB := &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
 
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(colA, vA)
@@ -475,8 +475,8 @@ func TestPermutation_Check_PaddingLeft_Mismatch(t *testing.T) {
 	v2.SetUint64(7)
 	elemsA := []field.Element{v1, v1, v1}
 	elemsB := []field.Element{v2, v2, v2}
-	vA := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elemsA)}}
-	vB := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elemsB)}}
+	vA := &wiop.ConcreteVector{Plain: field.VecFromBase(elemsA)}
+	vB := &wiop.ConcreteVector{Plain: field.VecFromBase(elemsB)}
 
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(colA, vA)
@@ -503,8 +503,8 @@ func TestPermutation_Check_PaddingRight_Mismatch(t *testing.T) {
 	v2.SetUint64(5)
 	elemsA := []field.Element{v1, v1, v1}
 	elemsB := []field.Element{v2, v2, v2}
-	vA := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elemsA)}}
-	vB := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elemsB)}}
+	vA := &wiop.ConcreteVector{Plain: field.VecFromBase(elemsA)}
+	vB := &wiop.ConcreteVector{Plain: field.VecFromBase(elemsB)}
 
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(colA, vA)
@@ -532,8 +532,8 @@ func TestInclusion_PaddingRight_Mismatch(t *testing.T) {
 	v2.SetUint64(9)
 	elemsA := []field.Element{v1, v1, v1}
 	elemsB := []field.Element{v2, v2, v2}
-	vA := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elemsA)}}
-	vB := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elemsB)}}
+	vA := &wiop.ConcreteVector{Plain: field.VecFromBase(elemsA)}
+	vB := &wiop.ConcreteVector{Plain: field.VecFromBase(elemsB)}
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(colA, vA)
 	rt.AssignColumn(colB, vB)
@@ -563,9 +563,9 @@ func TestInclusion_PaddingRight_WithSelector_Mismatch(t *testing.T) {
 	var nine field.Element
 	nine.SetUint64(9)
 
-	selVec := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase([]field.Element{one, one})}}
-	vA := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase([]field.Element{one, one})}}
-	vB := &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase([]field.Element{nine, nine})}}
+	selVec := &wiop.ConcreteVector{Plain: field.VecFromBase([]field.Element{one, one})}
+	vA := &wiop.ConcreteVector{Plain: field.VecFromBase([]field.Element{one, one})}
+	vB := &wiop.ConcreteVector{Plain: field.VecFromBase([]field.Element{nine, nine})}
 
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(colA, vA)

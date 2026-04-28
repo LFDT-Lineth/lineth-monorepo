@@ -4,6 +4,53 @@ package wiop
 // is immutable: it allocates a new [ArithmeticOperation] node and returns it
 // as an [Expression]. Callers compose these freely without any side-effects.
 
+// Constructor is the visitor function used by [EditExpression]. It is called
+// for every node in the expression tree in bottom-up order. curr is the
+// original node; newChildren holds the already-transformed children (nil for
+// leaf nodes). The returned expression replaces curr in the rebuilt tree.
+type Constructor func(curr Expression, newChildren []Expression) Expression
+
+// EditExpression walks the expression tree rooted at expr in bottom-up order
+// and rebuilds it by calling constructor at each node. The input expression is
+// not modified.
+//
+// For leaf nodes ([*Constant], [*ColumnView], [*ColumnPosition], [*Cell],
+// [*CoinField], and any unknown [Expression] implementation) newChildren is
+// nil. For [*ArithmeticOperation] nodes newChildren contains the
+// already-transformed operands in the same order as [ArithmeticOperation.Operands].
+//
+// Use [DefaultConstruct] inside a constructor to delegate the default
+// reconstruction for nodes you do not need to rewrite:
+//
+//	EditExpression(expr, func(curr Expression, newChildren []Expression) Expression {
+//	    if cv, ok := curr.(*ColumnView); ok {
+//	        return replacement(cv)
+//	    }
+//	    return DefaultConstruct(curr, newChildren)
+//	})
+func EditExpression(expr Expression, constructor Constructor) Expression {
+	ao, ok := expr.(*ArithmeticOperation)
+	if !ok {
+		return constructor(expr, nil)
+	}
+	newChildren := make([]Expression, len(ao.Operands))
+	for i, operand := range ao.Operands {
+		newChildren[i] = EditExpression(operand, constructor)
+	}
+	return constructor(ao, newChildren)
+}
+
+// DefaultConstruct is the identity [Constructor]: it returns a new
+// [ArithmeticOperation] with the same operator and newChildren as operands, or
+// returns curr unchanged for leaf nodes.
+func DefaultConstruct(curr Expression, newChildren []Expression) Expression {
+	ao, ok := curr.(*ArithmeticOperation)
+	if !ok {
+		return curr
+	}
+	return NewArithmeticOperation(ao.Operator, newChildren...)
+}
+
 // Add returns an expression that computes a + b.
 func Add(a, b Expression) Expression {
 	return NewArithmeticOperation(ArithmeticOperatorAdd, a, b)

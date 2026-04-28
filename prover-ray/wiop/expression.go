@@ -263,7 +263,7 @@ func (a *ArithmeticOperation) EvaluateVector(rt Runtime) ConcreteVector {
 	}
 	a.once.Do(func() { a.prog = compileExpr(a) })
 	result := a.prog.evaluateVector(rt)
-	return ConcreteVector{Plain: []field.Vec{result}, promise: a}
+	return ConcreteVector{Plain: result, promise: a}
 }
 
 // EvaluateSingle implements [Expression].
@@ -425,7 +425,7 @@ func (c *Constant) EvaluateVector(rt Runtime) ConcreteVector {
 		elems[i] = c.Value
 	}
 	return ConcreteVector{
-		Plain:   []field.Vec{field.VecFromBase(elems)},
+		Plain:   field.VecFromBase(elems),
 		Padding: c.Value,
 		promise: c,
 	}

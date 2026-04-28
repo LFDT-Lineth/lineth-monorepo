@@ -246,17 +246,12 @@ func (p *compiledProgram) evaluateVector(rt Runtime) field.Vec {
 	n := 0
 	for i, leaf := range p.leaves {
 		cv := leaf.EvaluateVector(rt)
-		if len(cv.Plain) != 1 {
-			panic(fmt.Sprintf(
-				"wiop: compiler: leaf EvaluateVector returned ConcreteVector.Plain of length %d; expected exactly 1",
-				len(cv.Plain),
-			))
-		}
-		leafVecs[i] = cv.Plain[0]
+		leafVecs[i] = cv.Plain
 		leafLen := leafVecs[i].Len()
 		if i == 0 {
 			n = leafLen
 		} else if leafLen != n {
+			//nolint
 			panic(fmt.Sprintf(
 				"wiop: compiler: leaf %d has length %d but leaf 0 has length %d; all leaves must have the same size",
 				i, leafLen, n,

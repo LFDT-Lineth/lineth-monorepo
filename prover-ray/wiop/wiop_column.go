@@ -320,7 +320,7 @@ func (cv *ColumnView) EvaluateVector(rt Runtime) ConcreteVector {
 	}
 
 	return ConcreteVector{
-		Plain:   []field.Vec{result},
+		Plain:   result,
 		Padding: concrete.Padding,
 		promise: cv,
 	}

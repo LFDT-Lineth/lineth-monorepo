@@ -187,7 +187,7 @@ func TestLagrangeEval_PaddingLeft_SelfAssign_Check(t *testing.T) {
 	var v field.Element
 	v.SetUint64(2)
 	elems := []field.Element{v, v, v}
-	rt.AssignColumn(col, &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elems)}})
+	rt.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(elems)})
 	rt.AdvanceRound()
 
 	le.SelfAssign(rt)
@@ -282,13 +282,13 @@ func evalWithBaseZ(t *testing.T, padding wiop.PaddingDirection, ext bool) {
 		for i := range elems {
 			elems[i] = e
 		}
-		rt.AssignColumn(col, &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromExt(elems)}})
+		rt.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromExt(elems)})
 	} else {
 		// Base column: assign 3 elements all equal to 5, padded to 4.
 		var v field.Element
 		v.SetUint64(5)
 		elems := []field.Element{v, v, v}
-		rt.AssignColumn(col, &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elems)}})
+		rt.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(elems)})
 	}
 
 	// Advance to r1 so we can assign the Cell in r1.
@@ -334,7 +334,7 @@ func TestEvalLagrangePaddedExtExt(t *testing.T) {
 	for i := range elems {
 		elems[i] = e
 	}
-	rt.AssignColumn(col, &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromExt(elems)}})
+	rt.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromExt(elems)})
 	rt.AdvanceRound()
 
 	le.SelfAssign(rt)

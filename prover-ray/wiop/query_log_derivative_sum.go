@@ -116,16 +116,16 @@ func (rr *LogDerivativeSum) reduce(rt Runtime) field.Gen {
 		}
 		var n int
 		if numIsVec {
-			n = numVec.Plain[0].Len()
+			n = numVec.Plain.Len()
 		} else {
-			n = denVec.Plain[0].Len()
+			n = denVec.Plain.Len()
 		}
 
 		for row := 0; row < n; row++ {
 			var num, den field.Gen
 
 			if numIsVec {
-				fv := numVec.Plain[0]
+				fv := numVec.Plain
 				if fv.IsBase() {
 					num = field.ElemFromBase(fv.AsBase()[row])
 				} else {
@@ -136,7 +136,7 @@ func (rr *LogDerivativeSum) reduce(rt Runtime) field.Gen {
 			}
 
 			if denIsVec {
-				fv := denVec.Plain[0]
+				fv := denVec.Plain
 				if fv.IsBase() {
 					den = field.ElemFromBase(fv.AsBase()[row])
 				} else {

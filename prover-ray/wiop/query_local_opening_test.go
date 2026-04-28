@@ -24,7 +24,7 @@ func TestLocalOpening_Round_IsAlreadyAssigned_SelfAssign_Check(t *testing.T) {
 	for i := range 4 {
 		elems[i].SetUint64(uint64(i))
 	}
-	rt.AssignColumn(col, &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elems)}})
+	rt.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(elems)})
 
 	assert.False(t, lo.IsAlreadyAssigned(rt))
 	lo.SelfAssign(rt)

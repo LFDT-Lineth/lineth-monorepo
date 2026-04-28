@@ -165,7 +165,7 @@ func TestVanishing_Check_Vector_ExtZero(t *testing.T) {
 	for i := range elems {
 		elems[i] = zeroExt
 	}
-	rt.AssignColumn(extCol, &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromExt(elems)}})
+	rt.AssignColumn(extCol, &wiop.ConcreteVector{Plain: field.VecFromExt(elems)})
 
 	v := mod.NewVanishing(sys.Context.Childf("extZeroVan"), extCol.View())
 	require.NoError(t, v.Check(rt))

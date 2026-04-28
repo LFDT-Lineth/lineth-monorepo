@@ -21,7 +21,7 @@ func makeVecEvalSystem(t *testing.T) (*wiop.System, *wiop.Column, *wiop.Column, 
 }
 
 func vecAt(cv wiop.ConcreteVector, i int) field.Element {
-	return cv.Plain[0].AsBase()[i]
+	return cv.Plain.AsBase()[i]
 }
 
 func TestCompiler_VecSub(t *testing.T) {
@@ -57,7 +57,7 @@ func TestCompiler_VecDiv(t *testing.T) {
 	cv := expr.(interface {
 		EvaluateVector(wiop.Runtime) wiop.ConcreteVector
 	}).EvaluateVector(rt)
-	assert.Equal(t, 4, cv.Plain[0].Len())
+	assert.Equal(t, 4, cv.Plain.Len())
 }
 
 func TestCompiler_VecDouble(t *testing.T) {
@@ -103,7 +103,7 @@ func TestCompiler_VecInverse(t *testing.T) {
 	cv := expr.(interface {
 		EvaluateVector(wiop.Runtime) wiop.ConcreteVector
 	}).EvaluateVector(rt)
-	assert.Equal(t, 4, cv.Plain[0].Len())
+	assert.Equal(t, 4, cv.Plain.Len())
 }
 
 // Composite expression reusing a subexpression — exercises slot reuse in the compiler.

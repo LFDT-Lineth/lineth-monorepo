@@ -60,7 +60,7 @@ func (v *Vanishing) Check(rt Runtime) error {
 	}
 
 	vec := v.Expression.EvaluateVector(rt)
-	fv := vec.Plain[0]
+	fv := vec.Plain
 	n := fv.Len()
 
 	// Build a set of cancelled row indices normalised to [0, n).

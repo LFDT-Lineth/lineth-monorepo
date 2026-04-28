@@ -33,19 +33,27 @@ type System struct {
 	// scratchArena backs the [PlanningContext] used by [Materialize]. It is
 	// nil until Materialize is called.
 	scratchArena *arena.VectorArena
+	// Annotation is some user-defined information that can be attached to the
+	// System.
+	Annotations Annotations
 }
 
 // NewSystemf constructs an empty System. It creates a root [ContextFrame]
 // using the formatted name as its label, then initialises the PrecomputedRound.
 // msg and args follow [fmt.Sprintf] conventions.
+//
+// The system is initialized with one round
 func NewSystemf(msg string, args ...any) *System {
 	ctx := NewRootFramef(msg, args...)
 	sys := &System{
 		Context:          ctx,
 		PrecomputedRound: &PrecomputedRound{Round: Round{system: nil}},
 	}
+
 	// Wire the back-reference after the System pointer is stable.
 	sys.PrecomputedRound.system = sys
+	sys.Annotations = make(Annotations)
+
 	return sys
 }
 

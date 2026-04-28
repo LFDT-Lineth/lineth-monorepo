@@ -251,7 +251,7 @@ func (sys *System) newLagrangeEval(ctx *ContextFrame, polys []*ColumnView, x Fie
 // separately with a single shared batch of denominator inverses. This avoids
 // materialising the full n-length padded data vector.
 func evalLagrangePadded(cv *ConcreteVector, m *Module, rt Runtime, z field.Gen) field.Gen {
-	data := cv.Plain[0]
+	data := cv.Plain
 	if m.Padding == PaddingDirectionNone {
 		return polynomials.EvalLagrange(data, z)
 	}

@@ -421,7 +421,7 @@ func (a *QuotientProverAction) Run(rt wiop.Runtime) {
 			extFFT(bkt.smallDomain, chunk)
 
 			cv := &wiop.ConcreteVector{
-				Plain: []field.Vec{field.VecFromExt(chunk)},
+				Plain: field.VecFromExt(chunk),
 			}
 			rt.AssignColumn(bkt.shares[k], cv)
 		}

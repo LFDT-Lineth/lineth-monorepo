@@ -6,7 +6,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // ---- ArithmeticOperator ----
@@ -109,8 +108,7 @@ func TestConstant_Vector_EvaluateVector(t *testing.T) {
 	c := wiop.NewConstantVector(mod, v)
 
 	cv := c.EvaluateVector(rt)
-	require.Len(t, cv.Plain, 1)
-	vec := cv.Plain[0]
+	vec := cv.Plain
 	assert.Equal(t, 4, vec.Len())
 	for i := range 4 {
 		assert.Equal(t, field.ElemFromBase(v), field.ElemFromBase(vec.AsBase()[i]))
@@ -289,11 +287,10 @@ func TestArithmeticOperation_VectorEval_Add(t *testing.T) {
 	cv := expr.(interface {
 		EvaluateVector(wiop.Runtime) wiop.ConcreteVector
 	}).EvaluateVector(rt)
-	require.Len(t, cv.Plain, 1)
 	// each element should be 3+3 = 6
 	six := field.NewFromString("6")
 	for i := range 4 {
-		assert.Equal(t, six, cv.Plain[0].AsBase()[i])
+		assert.Equal(t, six, cv.Plain.AsBase()[i])
 	}
 }
 

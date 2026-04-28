@@ -27,7 +27,7 @@ func makeVec(n int, val uint64) *wiop.ConcreteVector {
 	for i := range elems {
 		elems[i] = e
 	}
-	return &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elems)}}
+	return &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
 }
 
 // TestDynamicModule_IsDynamic verifies the flag is set correctly on each factory.

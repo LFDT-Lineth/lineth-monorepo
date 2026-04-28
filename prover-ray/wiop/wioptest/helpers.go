@@ -13,7 +13,7 @@ func baseVec(n int, val uint64) *wiop.ConcreteVector {
 	for i := range elems {
 		elems[i] = e
 	}
-	return &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elems)}}
+	return &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
 }
 
 // makeVec returns a ConcreteVector from a varargs list of uint64 values.
@@ -22,5 +22,5 @@ func makeVec(vals ...uint64) *wiop.ConcreteVector {
 	for i, v := range vals {
 		elems[i].SetUint64(v)
 	}
-	return &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elems)}}
+	return &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
 }

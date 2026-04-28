@@ -221,7 +221,7 @@ func permTableCountInto(counts map[field.Ext]int, sign int, alpha field.Gen, rt 
 		return
 	}
 
-	plainLen := rt.GetColumnAssignment(tab.Columns[0].Column).Plain[0].Len()
+	plainLen := rt.GetColumnAssignment(tab.Columns[0].Column).Plain.Len()
 	gap := n - plainLen
 	var dataStart int
 	if m.Padding == PaddingDirectionLeft {
@@ -286,7 +286,7 @@ func inclusionBuildSet(bSet map[field.Ext]struct{}, alpha field.Gen, rt Runtime,
 		return
 	}
 
-	plainLen := rt.GetColumnAssignment(tab.Columns[0].Column).Plain[0].Len()
+	plainLen := rt.GetColumnAssignment(tab.Columns[0].Column).Plain.Len()
 	gap := n - plainLen
 	var dataStart int
 	if m.Padding == PaddingDirectionLeft {
@@ -339,7 +339,7 @@ func inclusionCheckSet(bSet map[field.Ext]struct{}, alpha field.Gen, rt Runtime,
 		return nil
 	}
 
-	plainLen := rt.GetColumnAssignment(tab.Columns[0].Column).Plain[0].Len()
+	plainLen := rt.GetColumnAssignment(tab.Columns[0].Column).Plain.Len()
 	gap := n - plainLen
 	var dataStart int
 	if m.Padding == PaddingDirectionLeft {

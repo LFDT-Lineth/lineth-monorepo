@@ -89,7 +89,7 @@ func (pd PaddingDirection) String() string {
 // separately.
 type ConcreteVector struct {
 	// Plain holds the field elements of the evaluated vector.
-	Plain []field.Vec
+	Plain field.Vec
 	// Padding is the constant fill value used when the assignment is padded.
 	Padding field.Element
 	// promise is the symbolic vector-promise this concrete value fulfils.
@@ -123,7 +123,7 @@ func (cv *ConcreteVector) ElementAtN(padding PaddingDirection, n, pos int) field
 		panic(fmt.Sprintf("wiop: ConcreteVector.ElementAtN: pos %d out of bounds [0, %d)", pos, n))
 	}
 
-	vec := cv.Plain[0]
+	vec := cv.Plain
 	plainLen := vec.Len()
 
 	idx, inPadding := pos, false
