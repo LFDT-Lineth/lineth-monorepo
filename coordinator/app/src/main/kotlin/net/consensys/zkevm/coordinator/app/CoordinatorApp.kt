@@ -54,7 +54,7 @@ class CoordinatorApp(
   private val httpJsonRpcClientFactory =
     VertxHttpJsonRpcClientFactory(
       vertx = vertx,
-      metricsFacade = MicrometerMetricsFacade(meterRegistry),
+      metricsFacade = micrometerMetricsFacade,
       requestResponseLogLevel = Level.TRACE,
       failuresLogLevel = Level.WARN,
     )
