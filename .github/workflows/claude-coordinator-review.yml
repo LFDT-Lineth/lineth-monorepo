@@ -25,6 +25,22 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Fetch previous review findings
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue list \
+            --repo "${{ github.repository }}" \
+            --label "coordinator" \
+            --label "claude-review" \
+            --state all \
+            --limit 100 \
+            --json body \
+            --jq '.[].body' \
+            | grep -oE '[a-zA-Z0-9/_.-]+\.(kt|java|scala|groovy):[0-9]+' \
+            | sort -u > /tmp/previous-findings.txt || true
+          echo "Previously reported locations: $(wc -l < /tmp/previous-findings.txt)"
+
       - name: Run Claude Coordinator Review
         id: review
         uses: anthropics/claude-code-action@38ec876110f9fbf8b950c79f534430740c3ac009 #v1.0.101
@@ -32,6 +48,11 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_args: --model claude-opus-4-7
           prompt: |
+            Before starting your analysis, read the file /tmp/previous-findings.txt.
+            It contains file:line references (e.g. `coordinator/src/.../Foo.kt:42`) already
+            reported in previous reviews. Skip any finding whose primary file:line location
+            appears in that file — do not re-report it even if the issue is still present.
+
             You are reviewing the full Kotlin/JVM codebase in the `coordinator/` and
             `jvm-libs/` modules of the Linea monorepo.
 
@@ -80,8 +101,15 @@ jobs:
             ## Output Format
 
             Format your response as a GitHub issue body. Prefix EACH individual finding with
-            a plain list marker `- ` (NO checkbox on the finding itself) and append exactly
-            these four triage sub-items, indented two spaces, all left unchecked:
+            a plain list marker `- ` (NO checkbox on the finding itself). Link the file
+            citation as a markdown link using this exact format (the URL will be constructed
+            from the commit SHA ${{ github.sha }} and the repo ${{ github.repository }}):
+
+              [`path/to/File.kt:line`](${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/path/to/File.kt#Lline)
+
+            The displayed text must be the relative file path and line number only — no
+            hostname or repository prefix. Then append exactly these four triage sub-items,
+            indented two spaces, all left unchecked:
 
               - [ ] ❌ won't fix
               - [ ] ❌ false positive
@@ -94,7 +122,7 @@ jobs:
             Example format:
 
             ## Dead Code
-            - `coordinator/src/.../Foo.kt:42` — `unusedParam` is never read. Remove the parameter and update all call sites.
+            - [`coordinator/src/.../Foo.kt:42`](${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/coordinator/src/.../Foo.kt#L42) — `unusedParam` is never read. Remove the parameter and update all call sites.
               - [ ] ❌ won't fix
               - [ ] ❌ false positive
               - [ ] 🤖 to be fixed
@@ -104,14 +132,14 @@ jobs:
             No issues found.
 
             ## Anti-patterns and Code Smells
-            - `coordinator/src/.../Bar.kt:17` — Uses `!!` on a nullable result from `findOrNull` with no justification. Replace with `?: error("...")` or a safe alternative.
+            - [`coordinator/src/.../Bar.kt:17`](${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/coordinator/src/.../Bar.kt#L17) — Uses `!!` on a nullable result from `findOrNull` with no justification. Replace with `?: error("...")` or a safe alternative.
               - [ ] ❌ won't fix
               - [ ] ❌ false positive
               - [ ] 🤖 to be fixed
               - [ ] ✅ addressed/fixed
 
             ## Concurrency Issues
-            - `coordinator/src/.../Baz.kt:88` — `.get()` called on a `CompletableFuture` on the event-loop thread, which will block it. Use `.thenApply` instead.
+            - [`coordinator/src/.../Baz.kt:88`](${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/coordinator/src/.../Baz.kt#L88) — `.get()` called on a `CompletableFuture` on the event-loop thread, which will block it. Use `.thenApply` instead.
               - [ ] ❌ won't fix
               - [ ] ❌ false positive
               - [ ] 🤖 to be fixed
@@ -144,6 +172,8 @@ jobs:
           gh issue create \
             --title "${TITLE}" \
             --body-file /tmp/coordinator-review.md \
+            --label "coordinator" \
+            --label "claude-review" \
             --repo "${{ github.repository }}"
 
       - name: Upload review file

@@ -36,7 +36,7 @@ jobs:
         uses: anthropics/claude-code-action@38ec876110f9fbf8b950c79f534430740c3ac009 #v1.0.101
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-
+          claude_args: '--allowed-tools Bash(gh pr:*) Bash(gh issue:*)'
           # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |
             actions: read
@@ -47,5 +47,3 @@ jobs:
           # Optional: Add claude_args to customize behavior and configuration
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
-          # claude_args: '--allowed-tools Bash(gh pr:*)'
-
