@@ -47,9 +47,13 @@ web3j {
 solidity {
   resolvePackages = false
   optimizeRuns = 1
-  // TODO: remove the forced version, when DEV network is upgraded to support latest forks
-  version '0.8.19'
 }
+
+sourceSets.test.solidity.srcDirs = [
+  file("src/test/solidity"),
+  file("${rootProject.projectDir}/contracts/src/_testing/integration"),
+]
+sourceSets.test.solidity.exclude("IntegrationTestTrueVerifier.sol")
 
 tasks.matching { it.name == "kaptGenerateStubsKotlin" || it.name == "kaptGenerateStubsTestKotlin" }.configureEach {
   dependsOn("${lineaSequencerProjectPath}:acceptance-tests:generateContractWrappers")

@@ -1,4 +1,5 @@
 import { etherToWei, generateKeccak256 } from "@consensys/linea-shared-utils";
+import path from "path";
 import { zeroHash, parseGwei } from "viem";
 
 export const ROLLING_HASH_UPDATED_EVENT_SIGNATURE =
@@ -17,6 +18,12 @@ export const MINIMUM_FEE_IN_WEI = etherToWei("0.0001");
 
 export const DEPLOYER_ACCOUNT_INDEX = 0;
 export const LIVENESS_ACCOUNT_INDEX = 1;
+
+export const GENESIS_TIMESTAMP_FILE_PATH = path.resolve(
+  __dirname,
+  "../../..",
+  "docker/config/l2-genesis-initialization/fork-timestamp.txt",
+);
 
 export const PAUSE_ALL_ROLE = generateKeccak256(["string"], ["PAUSE_ALL_ROLE"], true);
 export const UNPAUSE_ALL_ROLE = generateKeccak256(["string"], ["UNPAUSE_ALL_ROLE"], true);
