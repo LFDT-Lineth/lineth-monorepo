@@ -1,6 +1,5 @@
 package net.consensys.zkevm.persistence.dao.feehistory
 
-import io.vertx.core.Future
 import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
 import linea.domain.FeeHistory
@@ -127,9 +126,6 @@ class FeeHistoriesPostgresDao(
     }
     return upsertQuery.executeBatch(batch)
       .map { }
-      .recover { th ->
-        Future.failedFuture(th)
-      }
       .toSafeFuture()
   }
 
