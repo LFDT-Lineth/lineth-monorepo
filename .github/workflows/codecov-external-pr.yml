@@ -6,26 +6,20 @@ on:
     types:
       - completed
 
-permissions:
-  # Required to read uploaded artifact from another workflow run
-  actions: read
-  contents: read
+# Workflow-level permissions are denied by default; each job below declares
+# the minimum scopes it needs (least privilege).
+permissions: {}
 
 jobs:
   get-commit-tag:
     if: github.event.workflow_run.head_repository.fork == true
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     name: get-commit-tag
+    permissions: {}
     outputs:
       commit-tag: ${{ steps.compute-commit-tag.outputs.COMMIT_TAG }}
       sdk-commit-tag: ${{ steps.compute-commit-tag.outputs.SDK_COMMIT_TAG }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          repository: ${{ github.event.workflow_run.head_repository.full_name }}
-          ref:        ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 0
       - name: Compute commit tag
         shell: bash
         id: compute-commit-tag
@@ -35,20 +29,24 @@ jobs:
           WORKFLOW_RUN_PR_HEAD_SHA: ${{ github.event.workflow_run.pull_requests[0].head.sha || '' }}
         # COMMIT_TAG is derived from workflow_run.head_sha and used by workflows that upload artifacts using the shared commit_tag.
         # SDK_COMMIT_TAG is derived from the PR head SHA for sdk-testing PR runs to match sdk-testing.yml's cov-tag step.
+        # We use bash substring (${VAR:0:7}) instead of `git rev-parse --short=7` to avoid checking out fork code in this privileged workflow_run context.
         run: |
-          COMMIT_TAG="$(git rev-parse --short=7 "$WORKFLOW_RUN_HEAD_SHA")"
+          COMMIT_TAG="${WORKFLOW_RUN_HEAD_SHA:0:7}"
           SDK_COMMIT_TAG="$COMMIT_TAG"
 
           if [[ "$TRIGGERING_WORKFLOW" == "sdk-testing" ]] && [[ -n "$WORKFLOW_RUN_PR_HEAD_SHA" ]]; then
-            SDK_COMMIT_TAG="$(git rev-parse --short=7 "$WORKFLOW_RUN_PR_HEAD_SHA")"
+            SDK_COMMIT_TAG="${WORKFLOW_RUN_PR_HEAD_SHA:0:7}"
           fi
 
           echo "COMMIT_TAG=$COMMIT_TAG" >> "$GITHUB_OUTPUT"
           echo "SDK_COMMIT_TAG=$SDK_COMMIT_TAG" >> "$GITHUB_OUTPUT"
       - name: Show commit tag
+        env:
+          COMMIT_TAG: ${{ steps.compute-commit-tag.outputs.COMMIT_TAG }}
+          SDK_COMMIT_TAG: ${{ steps.compute-commit-tag.outputs.SDK_COMMIT_TAG }}
         run: |
-          echo "COMMIT_TAG: ${{ steps.compute-commit-tag.outputs.COMMIT_TAG }}"
-          echo "SDK_COMMIT_TAG: ${{ steps.compute-commit-tag.outputs.SDK_COMMIT_TAG }}"
+          echo "COMMIT_TAG: $COMMIT_TAG"
+          echo "SDK_COMMIT_TAG: $SDK_COMMIT_TAG"
 
   # Ideally we would use dorny/paths-filter@v3 to conditionally trigger an upload job based on file changes
   # However there is a limitation in Github Actions where workflows triggered by a `workflow_run` event have no access to metadata on external fork PRs - https://github.com/orgs/community/discussions/25220
@@ -60,12 +58,13 @@ jobs:
     needs: [ get-commit-tag ]
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     name: upload-codecov-coordinator
-    env:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    permissions:
+      actions: read    # download artifacts from another workflow run
+      contents: read   # codecov commit correlation
     steps:
       - name: Download Jacoco test coverage report (from coordinator-testing.yml)
         continue-on-error: true
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         id: coordinator-report-download
         with:
           name: jacocoRootReport-${{ needs.get-commit-tag.outputs.commit-tag }}.xml
@@ -90,13 +89,14 @@ jobs:
     needs: [ get-commit-tag ]
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     name: upload-codecov-smart-contracts
-    env:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    permissions:
+      actions: read    # download artifacts from another workflow run
+      contents: read   # codecov commit correlation
     steps:
       - name: Download smart contract coverage report (from run-smc.tests.yml)
         id: smc-report-download
         continue-on-error: true
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: smart-contract-coverage-${{ needs.get-commit-tag.outputs.commit-tag }}.json
           path: |
@@ -120,12 +120,13 @@ jobs:
     needs: [ get-commit-tag ]
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     name: upload-codecov-ts
-    env:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    permissions:
+      actions: read    # download artifacts from another workflow run
+      contents: read   # codecov commit correlation
     steps:
       - name: Download TS test coverage reports (from postman-testing.yml)
         continue-on-error: true
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         id: ts-coverage-download
         with:
           name: ts-coverage-${{ needs.get-commit-tag.outputs.commit-tag }}
@@ -168,12 +169,13 @@ jobs:
     needs: [ get-commit-tag ]
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     name: upload-codecov-native-yield-ts
-    env:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    permissions:
+      actions: read    # download artifacts from another workflow run
+      contents: read   # codecov commit correlation
     steps:
       - name: Download TS coverage (from native-yield-automation-service-testing.yml)
         continue-on-error: true
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         id: native-yield-coverage-download
         with:
           name: native-yield-ts-coverage-${{ needs.get-commit-tag.outputs.commit-tag }}
@@ -206,12 +208,13 @@ jobs:
     needs: [ get-commit-tag ]
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     name: upload-codecov-lido-ts
-    env:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    permissions:
+      actions: read    # download artifacts from another workflow run
+      contents: read   # codecov commit correlation
     steps:
       - name: Download TS coverage (from lido-governance-monitor-testing.yml)
         continue-on-error: true
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         id: lido-coverage-download
         with:
           name: lido-ts-coverage-${{ needs.get-commit-tag.outputs.commit-tag }}
@@ -244,12 +247,13 @@ jobs:
     needs: [ get-commit-tag ]
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     name: upload-codecov-sdk-ts
-    env:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    permissions:
+      actions: read    # download artifacts from another workflow run
+      contents: read   # codecov commit correlation
     steps:
       - name: Download TS coverage (from sdk-testing.yml)
         continue-on-error: true
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         id: sdk-coverage-download
         with:
           name: sdk-ts-coverage-${{ needs.get-commit-tag.outputs.sdk-commit-tag }}
