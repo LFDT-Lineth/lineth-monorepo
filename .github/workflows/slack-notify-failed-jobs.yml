@@ -92,11 +92,10 @@ jobs:
           path: /tmp/docker-logs
 
       - name: Run Claude AI analysis
-        uses: anthropics/claude-code-action@5d0cc745cd0cce4c0e9e0b3511de26c3bc285eb5 #v1.0.71
+        uses: anthropics/claude-code-base-action@3080e38742e9e6aab0ecf8713353dc072acca48c # main@2026-04-28 (sync from claude-code-action base-action@11a9dad)
         with:
           anthropic_api_key: ${{ secrets.anthropic_api_key }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          settings: '{"permissions":{"allow":["Bash(*)","Read(*)","Write(e2e-failure-analysis.md)","Write(e2e-failure-summary.txt)"],"deny":[]}}'
+          settings: '{"permissions":{"allow":["Bash(*)","Read(*)","Edit(./e2e-failure-analysis.md)","Edit(./e2e-failure-summary.txt)"],"deny":[]}}'
           prompt: |
             You are analyzing a CI failure in the Linea monorepo's E2E test suite.
 
