@@ -73,26 +73,6 @@ data class TracesToml(
       counters = if (common == null) reifiedWithCommonDefaults(this.counters) else null,
       conflation = if (common == null) reifiedWithCommonDefaults(this.conflation) else null,
       ignoreTracesGeneratorErrors = ignoreTracesGeneratorErrors,
-      /*
-      switchBlockNumberInclusive = switchBlockNumberInclusive,
-      new = new?.let { newTracesConfig ->
-        TracesConfig(
-          expectedTracesApiVersion = newTracesConfig.expectedTracesApiVersion,
-          counters = TracesConfig.ClientApiConfig(
-            endpoints = newTracesConfig.counters.endpoints,
-            requestLimitPerEndpoint = newTracesConfig.counters.requestLimitPerEndpoint,
-            requestRetries = newTracesConfig.counters.requestRetries.asDomain
-          ),
-          conflation = TracesConfig.ClientApiConfig(
-            endpoints = newTracesConfig.conflation.endpoints,
-            requestLimitPerEndpoint = newTracesConfig.conflation.requestLimitPerEndpoint,
-            requestRetries = newTracesConfig.conflation.requestRetries.asDomain
-          ),
-          switchBlockNumberInclusive = null,
-          new = null
-        )
-      }
-       */
     )
   }
 }
