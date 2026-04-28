@@ -47,11 +47,11 @@ internal class PriorityQueueWithFIFOFallback<T>(
   fun toList(): List<T> = priorityQueue.map { it.item }
 
   override fun remove(element: T?): Boolean {
-    TODO("Not yet implemented")
+    throw UnsupportedOperationException("remove(element) is not supported")
   }
 
   override fun addAll(elements: Collection<T?>): Boolean {
-    TODO("Not yet implemented")
+    throw UnsupportedOperationException("addAll is not supported")
   }
 
   override fun clear() {
@@ -59,15 +59,15 @@ internal class PriorityQueueWithFIFOFallback<T>(
   }
 
   override fun iterator(): MutableIterator<T?> {
-    TODO("Not yet implemented")
+    throw UnsupportedOperationException("iterator is not supported")
   }
 
   override fun removeAll(elements: Collection<T?>): Boolean {
-    TODO("Not yet implemented")
+    throw UnsupportedOperationException("removeAll is not supported")
   }
 
   override fun retainAll(elements: Collection<T?>): Boolean {
-    TODO("Not yet implemented")
+    throw UnsupportedOperationException("retainAll is not supported")
   }
 
   override fun contains(element: T): Boolean {
@@ -75,12 +75,10 @@ internal class PriorityQueueWithFIFOFallback<T>(
   }
 
   override fun containsAll(elements: Collection<T?>): Boolean {
-    TODO("Not yet implemented")
+    throw UnsupportedOperationException("containsAll is not supported")
   }
 
-  // Implement other Queue methods as needed...
   override fun offer(e: T): Boolean = add(e)
   override fun remove(): T = poll() ?: throw NoSuchElementException()
   override fun element(): T = peek() ?: throw NoSuchElementException()
-  // ... other methods
 }
