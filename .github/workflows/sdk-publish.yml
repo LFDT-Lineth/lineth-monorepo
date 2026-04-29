@@ -71,7 +71,7 @@ jobs:
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
         with:
-          pnpm-install-options: "--frozen-lockfile --prefer-offline"
+          pnpm-install-options: "--frozen-lockfile --prefer-offline --ignore-scripts"
   
       - name: Build sdk-core
         run: pnpm -F @consensys/linea-sdk-core run build
@@ -162,7 +162,7 @@ jobs:
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
         with:
-          pnpm-install-options: "--frozen-lockfile --prefer-offline"
+          pnpm-install-options: "--frozen-lockfile --prefer-offline --ignore-scripts"
 
       - name: Verify sdk-core dependency is published on npm
         run: |

@@ -281,6 +281,9 @@ After writing or editing code, check LSP diagnostics and fix any type errors or 
 - **Dependabot:** Configured for GitHub Actions dependencies (weekly, Monday 03:00 UTC)
 - **Engine strict:** `engine-strict=true` in `.npmrc`
 
+Additions to `pnpm.onlyBuiltDependencies` require a security review of the package's install script, including its
+network, filesystem, and process execution surface, publisher reputation, and recent npm publish history.
+
 ### Irreversible Operations
 
 These require human approval and follow the release process:
