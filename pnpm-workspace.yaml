@@ -108,3 +108,13 @@ overrides:
 
 strictDepBuilds: true
 trustPolicy: no-downgrade
+trustPolicyExclude:
+  # Required by eslint-plugin-import and other legacy tooling pulled during Docker deploy.
+  # These semver releases predate npm provenance, so pnpm flags them as trust downgrades.
+  - semver@6.3.1 || 5.7.2
+  # Required by eslint-plugin-import's TypeScript resolver in the operations Docker deploy path.
+  # The package version has no provenance evidence, but is pinned by the existing lockfile.
+  - eslint-import-resolver-typescript@3.10.1
+  # Pulled via ethers -> @types/node@22.7.5 during legacy deploy resolution.
+  # Excluded to keep deploy working while trustPolicy remains enabled for all other packages.
+  - undici-types@6.19.8
