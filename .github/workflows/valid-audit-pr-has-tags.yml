@@ -2,13 +2,14 @@ name: Check For Audit Tags On PR
 
 permissions:
   contents: read
+  pull-requests: read
 
 on:
   pull_request:
     branches:
       - main
     paths:
-      - 'audit/**'
+      - 'docs/audits/**'
 
 jobs:
   check:
@@ -20,10 +21,40 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Check audit tag
+    # Defence-in-depth: re-evaluate the PR's actual changed files via the
+    # GitHub API. GitHub's `pull_request.paths` filter can fire false positives
+    # on PRs with very large/rewritten histories, so we explicitly confirm
+    # that audit content is touched before enforcing the tag requirement.
+    - name: Detect audit changes in PR
+      id: detect
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
       run: |
-        TAG_NAME=$(git tag --points-at ${{ github.event.pull_request.head.sha }})
-        if [[ ! $TAG_NAME =~ ^contract-audit-.*-.*$ ]]; then
-          echo "Error: The latest commit must be tagged with a tag that matches the format 'contract-audit-${firm}-${date}'"
+        set -euo pipefail
+        AUDIT_FILES=$(gh api \
+          --paginate \
+          "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" \
+          --jq '.[].filename' | { grep -E '^docs/audits/' || true; })
+        if [[ -z "${AUDIT_FILES}" ]]; then
+          echo "No files under docs/audits/** changed in this PR; skipping tag check."
+          echo "has_audit_changes=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "Audit files changed in this PR:"
+          echo "${AUDIT_FILES}"
+          echo "has_audit_changes=true" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Check audit tag
+      if: steps.detect.outputs.has_audit_changes == 'true'
+      env:
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: |
+        set -euo pipefail
+        TAG_NAME=$(git tag --points-at "${HEAD_SHA}")
+        if [[ ! "${TAG_NAME}" =~ ^contract-audit-.*-.*$ ]]; then
+          echo "Error: The latest commit (${HEAD_SHA}) must be tagged with a tag that matches the format 'contract-audit-\${firm}-\${date}'"
+          echo "Found tag(s) at HEAD: '${TAG_NAME:-<none>}'"
           exit 1
         fi
+        echo "Audit tag check passed: ${TAG_NAME}"
