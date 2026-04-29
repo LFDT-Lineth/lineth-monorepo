@@ -30,6 +30,9 @@ type Module struct {
 	// LocalOpenings holds all [LocalOpening] queries registered with this
 	// system via [System.NewLocalOpening], in declaration order.
 	LocalOpenings []*LocalOpening
+	// RangeChecks holds all [RangeCheck] queries registered on this module
+	// via [Module.NewRangeCheck], in declaration order.
+	RangeChecks []*RangeCheck
 	// size is zero when the module has not yet been sized. Use [Module.Size]
 	// and [Module.SetSize] rather than accessing this field directly.
 	size int

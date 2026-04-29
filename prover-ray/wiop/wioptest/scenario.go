@@ -44,5 +44,6 @@ func All() []func() *Scenario {
 		NewLogDerivativeSumScenario,
 		NewPermutationScenario,
 		NewInclusionScenario,
+		NewRangeCheckScenario,
 	}
 }

@@ -131,6 +131,30 @@ func NewPermutationScenario() *Scenario {
 	}
 }
 
+// NewRangeCheckScenario returns a scenario for a RangeCheck query.
+//
+//   - Valid: column [0, 1, 2, 3]; bound B = 8.
+//   - Invalid: column [0, 1, 2, 9]; 9 ≥ 8.
+func NewRangeCheckScenario() *Scenario {
+	sys := wiop.NewSystemf("rc-sc")
+	r0 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
+	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	rc := mod.NewRangeCheck(sys.Context.Childf("rc"), col, 8)
+
+	return &Scenario{
+		Name:  "RangeCheck",
+		Sys:   sys,
+		Query: rc,
+		RunHonest: func(rt *wiop.Runtime) {
+			rt.AssignColumn(col, makeVec(0, 1, 2, 3))
+		},
+		RunInvalid: func(rt *wiop.Runtime) {
+			rt.AssignColumn(col, makeVec(0, 1, 2, 9)) // 9 ≥ B=8
+		},
+	}
+}
+
 // NewInclusionScenario returns a scenario for an Inclusion TableRelation.
 //
 //   - Valid: A = [1, 1, 2, 2], B = [1, 2, 3, 4] (every A value is in B).
