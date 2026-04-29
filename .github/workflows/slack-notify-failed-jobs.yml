@@ -45,7 +45,7 @@ jobs:
   ai-analysis:
     if: ${{ inputs.enable_ai_analysis }}
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: read
       actions: read
@@ -92,6 +92,7 @@ jobs:
           path: /tmp/docker-logs
 
       - name: Run Claude AI analysis
+        id: claude
         uses: anthropics/claude-code-base-action@3080e38742e9e6aab0ecf8713353dc072acca48c # main@2026-04-28 (sync from claude-code-action base-action@11a9dad)
         with:
           anthropic_api_key: ${{ secrets.anthropic_api_key }}
@@ -112,13 +113,19 @@ jobs:
 
             ## Instructions
 
-            1. Read `/tmp/failed-job-logs.txt`.
-               - Extract the list of tests that are explicitly marked `FAIL` or `✕` in
-                 the Jest output. This is your authoritative failure list.
-               - **Do not infer, predict, or speculate about tests that might fail.**
-                 A test only appears in the report if Jest reported it as failed.
+            **Important:** `/tmp/failed-job-logs.txt` can be very large (500KB+). Never
+            attempt to read it in full. Always use `Bash(grep ...)` or `Bash(sed ...)` to
+            extract specific line ranges. Reading the whole file will fail and waste time.
+
+            1. Extract failed tests using bash - do not read the file directly:
+               ```
+               grep -n "FAIL \|✕ \|● \|Exceeded timeout\|thrown:" /tmp/failed-job-logs.txt
+               ```
+               This is your authoritative failure list. **Do not infer or speculate about
+               tests that are not explicitly marked failed in this output.**
             2. For each actually-failed test:
-               a. Extract the error message, file path, and line number from the Jest output.
+               a. Use `sed -n '<start>,<end>p' /tmp/failed-job-logs.txt` to extract the
+                  relevant error block around the line numbers from step 1.
                b. Read the test source file under `e2e/src/` to understand the assertion.
                c. Read relevant helpers referenced in stack traces.
                d. If `/tmp/docker-logs/` exists, read only the container logs that are
@@ -211,6 +218,15 @@ jobs:
         with:
           name: ai-failure-analysis
           path: e2e-failure-analysis.md
+          if-no-files-found: ignore
+
+      - name: Upload Claude execution log
+        if: ${{ always() && steps.claude.outputs.execution_file != '' }}
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: ai-execution-log
+          path: ${{ steps.claude.outputs.execution_file }}
           if-no-files-found: ignore
 
       - name: Extract summary for Slack
