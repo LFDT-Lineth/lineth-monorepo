@@ -3,12 +3,20 @@ package main
 import (
 	"encoding/base64"
 	"encoding/hex"
+	"fmt"
+	"math/big"
 	"math/rand"
 
 	"github.com/consensys/linea-monorepo/prover/backend/aggregation"
 	"github.com/consensys/linea-monorepo/prover/backend/blobsubmission"
+	"github.com/consensys/linea-monorepo/prover/backend/invalidity"
+	circInvalidity "github.com/consensys/linea-monorepo/prover/circuits/invalidity"
+	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/utils"
-	"github.com/consensys/linea-monorepo/prover/utils/types"
+	linTypes "github.com/consensys/linea-monorepo/prover/utils/types"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // RandDataGen generates random data for the smart-contract
@@ -23,6 +31,8 @@ type RandGenSpec struct {
 	BlobSubmissionSpec BlobSubmissionSpec `json:"blobSubmissionSpec"`
 	// Optional, if set indicates that this should generate a proof aggregation
 	AggregationSpec AggregationSpec `json:"aggregationSpec"`
+	// Optional, if set indicates that this should generate an invalidity proof
+	InvalidityProofSpec InvalidityProofSpec `json:"invalidityProofSpec"`
 	// Optional, if set specifies the dynamic chain configuration to use
 	DynamicChainConfigurationSpec DynamicChainConfigurationSpec `json:"dynamicChainConfigurationSpec"`
 }
@@ -59,6 +69,15 @@ type BlobSubmissionSpec struct {
 	// isEip4844 enabled tells the generator to specify that the response it
 	// using EIP-4844.
 	Eip4844Enabled bool `json:"eip4844Enabled"`
+}
+
+// InvalidityProofSpec
+type InvalidityProofSpec struct {
+	FtxNumber                int                            `json:"ftxNumber"`
+	ChainID                  *big.Int                       `json:"chainID"`
+	ExpectedBlockHeight      int                            `json:"expectedBlockHeight"`
+	LastFinalizedBlockNumber int                            `json:"lastFinalizedBlockNumber"`
+	InvalidityType           *circInvalidity.InvalidityType `json:"invalidityType,omitempty"`
 }
 
 // Aggregation spec
@@ -115,6 +134,16 @@ type AggregationSpec struct {
 	// Final block number
 	LastFinalizedBlockNumber uint `json:"lastFinalizedBlockNumber"`
 	FinalBlockNumber         uint `json:"finalBlockNumber"`
+
+	// List of the invalidity proof responses
+	InvalidityProofs []*invalidity.Response `json:"invalidityProofs"`
+
+	// ParentFtxRollingHash is the stream hash of the parent aggregation
+	ParentAggregationFtxRollingHash string `json:"parentAggregationFtxRollingHash"`
+	ParentAggregationFtxNumber      int    `json:"parentAggregationFtxNumber"`
+
+	FinalFtxRollingHash string `json:"finalFtxRollingHash"`
+	FinalFtxNumber      uint   `json:"finalFtxNumber"`
 }
 
 // Generates a random request file for a blob submission
@@ -147,7 +176,7 @@ func RandAggregation(rng *rand.Rand, spec AggregationSpec) *aggregation.Collecte
 	cf := &aggregation.CollectedFields{
 		ParentAggregationFinalShnarf:            spec.ParentAggregationFinalShnarf,
 		FinalShnarf:                             spec.FinalShnarf,
-		ParentStateRootHashContract:             types.FullBytes32FromHex(spec.ParentStateRootHash),
+		ParentStateRootHashContract:             linTypes.FullBytes32FromHex(spec.ParentStateRootHash),
 		DataHashes:                              spec.DataHashes,
 		DataParentHash:                          spec.DataParentHash,
 		ParentAggregationLastBlockTimestamp:     spec.LastFinalizedTimestamp,
@@ -161,6 +190,21 @@ func RandAggregation(rng *rand.Rand, spec AggregationSpec) *aggregation.Collecte
 		L2MessagingBlocksOffsets:                string(spec.L2MessagingBlocksOffsets),
 		LastFinalizedBlockNumber:                spec.LastFinalizedBlockNumber,
 		FinalBlockNumber:                        spec.FinalBlockNumber,
+		LastFinalizedFtxRollingHash:             spec.ParentAggregationFtxRollingHash,
+		LastFinalizedFtxNumber:                  uint(spec.ParentAggregationFtxNumber),
+		// By default the final stream hash is the same as the parent. We will
+		// overwrite it later if there is an invalidity proof in the spec.
+		FinalFtxRollingHash: spec.ParentAggregationFtxRollingHash,
+		FinalFtxNumber:      uint(spec.ParentAggregationFtxNumber),
+	}
+
+	for _, resp := range spec.InvalidityProofs {
+		cf.InvalidityPI = append(cf.InvalidityPI, *resp.FuncInput())
+	}
+	if len(spec.InvalidityProofs) > 0 {
+		invalidityProof := spec.InvalidityProofs[len(spec.InvalidityProofs)-1]
+		cf.FinalFtxRollingHash = invalidityProof.FtxRollingHash.Hex()
+		cf.FinalFtxNumber = uint(invalidityProof.ForcedTransactionNumber)
 	}
 
 	rdg := RandDataGen{rng}
@@ -175,6 +219,185 @@ func RandAggregation(rng *rand.Rand, spec AggregationSpec) *aggregation.Collecte
 	}
 
 	return cf
+}
+
+// RandInvalidityProofRequest generates a random invalidity request for the
+// BadNonce or BadBalance case. For BadNonce, the account nonce differs from the
+// transaction nonce. For BadBalance, the nonce is valid but the account balance
+// is insufficient to cover the transaction cost.
+func RandInvalidityProofRequest(rng *rand.Rand, spec *InvalidityProofSpec, invalidityType circInvalidity.InvalidityType, specFile string) *invalidity.Request {
+
+	if invalidityType != circInvalidity.BadNonce && invalidityType != circInvalidity.BadBalance {
+		panic(fmt.Sprintf("RandInvalidityProofRequest: expected BadNonce or BadBalance, got %v", invalidityType))
+	}
+
+	var (
+		signer         = types.NewLondonSigner(spec.ChainID)
+		address        = common.HexToAddress("0xfeeddeadbeeffeeddeadbeeffeeddead01245678")
+		TEST_ADDRESS_A = common.HexToAddress("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+		TEST_HASH_F    = common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+		TEST_HASH_A    = common.HexToHash("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+	)
+
+	deterministicSeed := fmt.Sprintf("fixed_test_seed_for_invalidity_proof_123456_%v", rng.Int63())
+	hash := crypto.Keccak256([]byte(deterministicSeed))
+	privKey, err := crypto.ToECDSA(hash)
+	if err != nil {
+		panic(err)
+	}
+
+	txNonce := rng.Uint64() % 100
+
+	tx := types.NewTx(&types.DynamicFeeTx{
+		ChainID:   spec.ChainID,
+		Nonce:     txNonce,
+		GasTipCap: big.NewInt(int64(112121212)),
+		GasFeeCap: big.NewInt(int64(123543135)),
+		Gas:       4531112,
+		To:        &address,
+		Value:     big.NewInt(int64(845315452)),
+		Data:      common.Hex2Bytes("0xdeed8745a20f"),
+		AccessList: types.AccessList{
+			types.AccessTuple{Address: TEST_ADDRESS_A, StorageKeys: []common.Hash{TEST_HASH_A, TEST_HASH_F}},
+		},
+	})
+
+	signedTx, err := types.SignTx(tx, signer, privKey)
+	if err != nil {
+		panic(fmt.Sprintf("failed to sign transaction: %v", err))
+	}
+
+	rlpEncodedTxBytes, err := signedTx.MarshalBinary()
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal signed transaction: %v", err))
+	}
+
+	switch invalidityType {
+	case circInvalidity.BadNonce:
+
+	}
+
+	return &invalidity.Request{
+		RlpEncodedTx:                     "0x" + common.Bytes2Hex(rlpEncodedTxBytes),
+		ForcedTransactionNumber:          uint64(spec.FtxNumber),
+		InvalidityType:                   invalidityType,
+		DeadlineBlockHeight:              uint64(spec.ExpectedBlockHeight),
+		PrevFtxRollingHash:               linTypes.Bls12377Fr{},
+		SimulatedExecutionBlockNumber:    uint64(spec.LastFinalizedBlockNumber) + 1,
+		SimulatedExecutionBlockTimestamp: 1700000000,
+		ZkParentStateRootHash:            field.RandomOctuplet(),
+	}
+
+}
+
+// RandFilteredAddressProofRequest generates a random invalidity request for the
+// FilteredAddressFrom or FilteredAddressTo case. The invalidityType must be one
+// of those two values.
+func RandFilteredAddressProofRequest(rng *rand.Rand, spec *InvalidityProofSpec, invalidityType circInvalidity.InvalidityType, specFile string) *invalidity.Request {
+
+	if invalidityType != circInvalidity.FilteredAddressFrom && invalidityType != circInvalidity.FilteredAddressTo {
+		panic(fmt.Sprintf("RandFilteredAddressProofRequest: expected FilteredAddressFrom or FilteredAddressTo, got %v", invalidityType))
+	}
+
+	var (
+		signer  = types.NewLondonSigner(spec.ChainID)
+		address = common.HexToAddress("0xfeeddeadbeeffeeddeadbeeffeeddead01245678")
+	)
+
+	deterministicSeed := fmt.Sprintf("fixed_test_seed_for_invalidity_proof_123456_%v", rng.Int63())
+	hash := crypto.Keccak256([]byte(deterministicSeed))
+	privKey, err := crypto.ToECDSA(hash)
+	if err != nil {
+		panic(err)
+	}
+
+	tx := types.NewTx(&types.DynamicFeeTx{
+		ChainID:   spec.ChainID,
+		Nonce:     rng.Uint64() % 100,
+		GasTipCap: big.NewInt(int64(112121212)),
+		GasFeeCap: big.NewInt(int64(123543135)),
+		Gas:       4531112,
+		To:        &address,
+		Value:     big.NewInt(int64(845315452)),
+	})
+
+	signedTx, err := types.SignTx(tx, signer, privKey)
+	if err != nil {
+		panic(fmt.Sprintf("failed to sign transaction: %v", err))
+	}
+
+	rlpEncodedTxBytes, err := signedTx.MarshalBinary()
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal signed transaction: %v", err))
+	}
+
+	stateRoot := field.RandomOctuplet()
+
+	return &invalidity.Request{
+		RlpEncodedTx:                     "0x" + common.Bytes2Hex(rlpEncodedTxBytes),
+		ForcedTransactionNumber:          uint64(spec.FtxNumber),
+		InvalidityType:                   invalidityType,
+		DeadlineBlockHeight:              uint64(spec.ExpectedBlockHeight),
+		PrevFtxRollingHash:               linTypes.Bls12377Fr{},
+		SimulatedExecutionBlockNumber:    uint64(spec.LastFinalizedBlockNumber) + 1,
+		SimulatedExecutionBlockTimestamp: 1700000000,
+		ZkParentStateRootHash:            linTypes.KoalaOctuplet(stateRoot),
+	}
+}
+
+// RandBadPrecompileProofRequest generates a random invalidity request for the
+// BadPrecompile or TooManyLogs case. Trace fields are left empty; prove.go
+// will use MockZkevmArithCols to generate the wizard proof internally.
+func RandBadPrecompileProofRequest(rng *rand.Rand, spec *InvalidityProofSpec, invalidityType circInvalidity.InvalidityType) *invalidity.Request {
+
+	if invalidityType != circInvalidity.BadPrecompile && invalidityType != circInvalidity.TooManyLogs {
+		panic(fmt.Sprintf("RandBadPrecompileProofRequest: expected BadPrecompile or TooManyLogs, got %v", invalidityType))
+	}
+
+	var (
+		signer  = types.NewLondonSigner(spec.ChainID)
+		address = common.HexToAddress("0xfeeddeadbeeffeeddeadbeeffeeddead01245678")
+	)
+
+	deterministicSeed := fmt.Sprintf("fixed_test_seed_for_invalidity_proof_123456_%v", rng.Int63())
+	hash := crypto.Keccak256([]byte(deterministicSeed))
+	privKey, err := crypto.ToECDSA(hash)
+	if err != nil {
+		panic(err)
+	}
+
+	tx := types.NewTx(&types.DynamicFeeTx{
+		ChainID:   spec.ChainID,
+		Nonce:     rng.Uint64() % 100,
+		GasTipCap: big.NewInt(int64(112121212)),
+		GasFeeCap: big.NewInt(int64(123543135)),
+		Gas:       4531112,
+		To:        &address,
+		Value:     big.NewInt(int64(845315452)),
+	})
+
+	signedTx, err := types.SignTx(tx, signer, privKey)
+	if err != nil {
+		panic(fmt.Sprintf("failed to sign transaction: %v", err))
+	}
+
+	rlpEncodedTxBytes, err := signedTx.MarshalBinary()
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal signed transaction: %v", err))
+	}
+
+	stateRoot := field.RandomOctuplet()
+
+	return &invalidity.Request{
+		RlpEncodedTx:                     "0x" + common.Bytes2Hex(rlpEncodedTxBytes),
+		ForcedTransactionNumber:          uint64(spec.FtxNumber),
+		InvalidityType:                   invalidityType,
+		DeadlineBlockHeight:              uint64(spec.ExpectedBlockHeight),
+		PrevFtxRollingHash:               linTypes.Bls12377Fr{},
+		SimulatedExecutionBlockNumber:    uint64(spec.LastFinalizedBlockNumber) + 1,
+		SimulatedExecutionBlockTimestamp: 1700000000,
+		ZkParentStateRootHash:            linTypes.KoalaOctuplet(stateRoot),
+	}
 }
 
 // Returns a slice of random length in base64. If to is smaller than from, then

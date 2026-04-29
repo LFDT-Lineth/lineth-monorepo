@@ -8,6 +8,12 @@ pragma solidity ^0.8.33;
  */
 interface IL2MessageServiceV1 {
   /**
+   * @notice Emitted when the L2 message service is initialized.
+   * @param contractVersion The contract version.
+   */
+  event L2MessageServiceBaseInitialized(bytes8 indexed contractVersion);
+
+  /**
    * @notice Returns the ABI version and not the reinitialize version.
    * @return contractVersion The contract ABI version.
    */

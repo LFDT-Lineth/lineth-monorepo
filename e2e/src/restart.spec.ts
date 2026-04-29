@@ -5,13 +5,15 @@ import { MINIMUM_FEE_IN_WEI } from "./common/constants";
 import { sendL1ToL2Message } from "./common/test-helpers/messaging";
 import { awaitUntil, execDockerCommand, getEvents, waitForEvents, getMessageSentEventFromLogs } from "./common/utils";
 import { createTestContext } from "./config/setup";
-import { L2MessageServiceV1Abi, LineaRollupV6Abi } from "./generated";
 
 import type { Logger } from "winston";
 
 const COORDINATOR_HEALTH_URL = "http://localhost:9545/health";
 const COORDINATOR_READINESS_TIMEOUT_MS = 60_000;
 const COORDINATOR_READINESS_POLLING_MS = 500;
+// Extra time after the health endpoint is up for internal services (e.g. MessageAnchoringApp)
+// to fully initialise their L1 polling loops before tests send new messages.
+const COORDINATOR_ANCHORING_WARMUP_MS = 10_000;
 
 async function waitForCoordinatorReadiness(logger: Logger): Promise<void> {
   logger.debug("Waiting for coordinator readiness...");
@@ -23,6 +25,10 @@ async function waitForCoordinatorReadiness(logger: Logger): Promise<void> {
     (isHealthy) => isHealthy,
     { pollingIntervalMs: COORDINATOR_READINESS_POLLING_MS, timeoutMs: COORDINATOR_READINESS_TIMEOUT_MS },
   );
+  logger.debug(
+    `Coordinator HTTP endpoint is ready. Waiting ${COORDINATOR_ANCHORING_WARMUP_MS}ms for internal services to initialise...`,
+  );
+  await new Promise((resolve) => setTimeout(resolve, COORDINATOR_ANCHORING_WARMUP_MS));
   logger.debug("Coordinator is ready.");
 }
 
@@ -85,7 +91,7 @@ describe("Coordinator restart test suite", () => {
       // Phase 1: Confirm coordinator was working before restart
       const [dataSubmittedEventsSnapshot, dataFinalizedEventsSnapshot] = await Promise.all([
         waitForEvents(l1PublicClient, {
-          abi: LineaRollupV6Abi,
+          abi: lineaRollup.abi,
           address: lineaRollup.address,
           eventName: "DataSubmittedV3",
           fromBlock: 0n,
@@ -94,7 +100,7 @@ describe("Coordinator restart test suite", () => {
           strict: true,
         }),
         waitForEvents(l1PublicClient, {
-          abi: LineaRollupV6Abi,
+          abi: lineaRollup.abi,
           address: lineaRollup.address,
           eventName: "DataFinalizedV3",
           fromBlock: 0n,
@@ -128,7 +134,7 @@ describe("Coordinator restart test suite", () => {
 
       const [submittedDelta, finalizedDelta] = await Promise.all([
         getEvents(l1PublicClient, {
-          abi: LineaRollupV6Abi,
+          abi: lineaRollup.abi,
           address: lineaRollup.address,
           eventName: "DataSubmittedV3",
           fromBlock: lastSubmittedSnapshot.blockNumber + 1n,
@@ -136,7 +142,7 @@ describe("Coordinator restart test suite", () => {
           strict: true,
         }),
         getEvents(l1PublicClient, {
-          abi: LineaRollupV6Abi,
+          abi: lineaRollup.abi,
           address: lineaRollup.address,
           eventName: "DataFinalizedV3",
           fromBlock: lastFinalizedSnapshot.blockNumber + 1n,
@@ -155,7 +161,7 @@ describe("Coordinator restart test suite", () => {
       // Phase 4: Wait for new events produced after coordinator resumes
       logger.debug("Waiting for DataSubmittedV3 event after coordinator restart...");
       const [dataSubmittedV3EventAfterRestart] = await waitForEvents(l1PublicClient, {
-        abi: LineaRollupV6Abi,
+        abi: lineaRollup.abi,
         address: lineaRollup.address,
         eventName: "DataSubmittedV3",
         fromBlock: baselineBlockNumber,
@@ -173,7 +179,7 @@ describe("Coordinator restart test suite", () => {
 
       logger.debug("Waiting for DataFinalizedV3 event after coordinator restart...");
       const [dataFinalizedEventAfterRestart] = await waitForEvents(l1PublicClient, {
-        abi: LineaRollupV6Abi,
+        abi: lineaRollup.abi,
         address: lineaRollup.address,
         eventName: "DataFinalizedV3",
         fromBlock: baselineBlockNumber,
@@ -233,7 +239,7 @@ describe("Coordinator restart test suite", () => {
       const l2BlockBeforeAnchoring = await l2PublicClient.getBlockNumber();
 
       await waitForEvents(l2PublicClient, {
-        abi: L2MessageServiceV1Abi,
+        abi: l2MessageService.abi,
         address: l2MessageService.address,
         eventName: "RollingHashUpdated",
         fromBlock: l2BlockBeforeAnchoring,
@@ -250,7 +256,12 @@ describe("Coordinator restart test suite", () => {
       // Phase 2: Restart coordinator
       await restartBarrier.arrive(logger);
 
-      // Phase 3: Send a new L1->L2 message after restart and wait for anchoring
+      // Phase 3: Send a new L1->L2 message after restart and wait for anchoring.
+      // Capture the L2 block baseline before sending so that if the coordinator
+      // anchors the message very quickly the RollingHashUpdated event is not
+      // missed by a fromBlock that was sampled after the event was already mined.
+      const l2BlockAfterRestart = await l2PublicClient.getBlockNumber();
+
       const { receipt: l1ReceiptAfterRestart } = await sendL1ToL2Message(context, {
         account: l1MessageSender,
         fee: messageFee,
@@ -263,10 +274,8 @@ describe("Coordinator restart test suite", () => {
         `Waiting for L1->L2 anchoring after coordinator restart. messageNumber=${l1MessageAfterRestart.messageNumber}`,
       );
 
-      const l2BlockAfterRestart = await l2PublicClient.getBlockNumber();
-
       const [rollingHashUpdatedEventAfterRestart] = await waitForEvents(l2PublicClient, {
-        abi: L2MessageServiceV1Abi,
+        abi: l2MessageService.abi,
         address: l2MessageService.address,
         eventName: "RollingHashUpdated",
         fromBlock: l2BlockAfterRestart,

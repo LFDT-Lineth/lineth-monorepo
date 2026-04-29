@@ -14,21 +14,32 @@ serialization = false
 [data_availability]
 prover_mode = "dev"
 
+[invalidity]
+prover_mode = "dev"
+requests_root_dir = "./"
+max_rlp_byte_size = 4096
+
 [aggregation]
 prover_mode = "full"
 num_proofs = [10]
-verifier_id = 1
-# allowed_inputs = ["execution-dummy", "execution", "data-availability-dummy"]
 # Conversion to is_allowed_circuit_id bitmask:
-#   execution-dummy (ID 0, bit 0) = 1 → ALLOWED
-#   data-availability-dummy (ID 1, bit 1) = 1 → ALLOWED
-#   execution (ID 2, bit 2) = 1 → ALLOWED
-#   execution-large (ID 3, bit 3) = 0 → DISALLOWED
-#   execution-limitless (ID 4, bit 4) = 0 → DISALLOWED
-#   data-availability-v2 (ID 5, bit 5) = 0 → DISALLOWED
-# To customize, edit and run: go test -v -run TestCalculateCustomBitmask ./circuits/
-# Binary: 0b000111 = 7 (decimal)
-is_allowed_circuit_id = 7
+#   execution-dummy (ID 0, bit 0)                            = 1 → ALLOWED
+#   data-availability-dummy (ID 1, bit 1)                    = 1 → ALLOWED
+#   execution (ID 2, bit 2)                                  = 1 → ALLOWED
+#   execution-large (ID 3, bit 3)                            = 0 → DISALLOWED
+#   execution-limitless (ID 4, bit 4)                        = 0 → DISALLOWED
+#   data-availability-v2 (ID 5, bit 5)                       = 0 → DISALLOWED
+#   invalidity-nonce-balance-dummy (ID 6, bit 6)             = 1 → ALLOWED
+#   invalidity-precompile-logs-dummy (ID 7, bit 7)           = 1 → ALLOWED
+#   invalidity-filtered-address-dummy (ID 8, bit 8)          = 1 → ALLOWED
+#   invalidity-nonce-balance (ID 9, bit 9)                   = 1 → ALLOWED
+#   invalidity-precompile-logs (ID 10, bit 10)               = 1 → ALLOWED
+#   invalidity-filtered-address (ID 11, bit 11)              = 1 → ALLOWED
+#   invalidity-precompile-logs-limitless (ID 12, bit 12)     = 0 → DISALLOWED
+#   invalidity-precompile-logs-large (ID 13, bit 13)         = 0 → DISALLOWED
+# Binary: 0b00111111000111 = 4039 (decimal)
+is_allowed_circuit_id = 4039
+verifier_id = 1
 
 [layer2]
 chain_id = 59144

@@ -31,6 +31,7 @@ export type EndpointActions = {
   [L2RpcEndpoint.ShomeiFrontend]: ShomeiFrontendActions;
   [L2RpcEndpoint.TransactionExclusion]: TransactionExclusionActions;
   [L2RpcEndpoint.Default]: object;
+  [L2RpcEndpoint.BesuLeader]: object;
   [L2RpcEndpoint.BesuFollower]: object;
 };
 

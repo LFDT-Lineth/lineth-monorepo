@@ -54,7 +54,7 @@ type antichamberInput struct {
 	WithCircuit  bool // If false, skip gnark circuit compilation (useful for testing wizard constraints only)
 }
 
-type antichamber struct {
+type Antichamber struct {
 	Inputs     *antichamberInput
 	IsActive   ifaces.Column
 	ID         ifaces.Column
@@ -88,7 +88,7 @@ func (l *Settings) sizeAntichamber() int {
 	return utils.NextPowerOfTwo(l.MaxNbEcRecover*nbRowsPerEcRec + l.MaxNbTx*nbRowsPerTxSign)
 }
 
-func newAntichamber(comp *wizard.CompiledIOP, inputs *antichamberInput) *antichamber {
+func newAntichamber(comp *wizard.CompiledIOP, inputs *antichamberInput) *Antichamber {
 
 	settings := inputs.Settings
 	if settings.MaxNbEcRecover+settings.MaxNbTx > settings.NbInputInstance*settings.NbCircuitInstances {
@@ -98,7 +98,7 @@ func newAntichamber(comp *wizard.CompiledIOP, inputs *antichamberInput) *anticha
 	createCol := createColFn(comp, NAME_ANTICHAMBER, size)
 
 	// declare the native columns
-	res := &antichamber{
+	res := &Antichamber{
 
 		IsActive:   createCol("IS_ACTIVE"),
 		ID:         createCol("ID"),
@@ -169,7 +169,7 @@ func newAntichamber(comp *wizard.CompiledIOP, inputs *antichamberInput) *anticha
 //
 // As the initial data is copied from the EC_DATA arithmetization module, then
 // it has to be provided as an input.
-func (ac *antichamber) assign(run *wizard.ProverRuntime, txGet TxSignatureGetter, nbTx int) {
+func (ac *Antichamber) assign(run *wizard.ProverRuntime, txGet TxSignatureGetter, nbTx int) {
 
 	var (
 		ecSrc             = ac.Inputs.EcSource
@@ -200,7 +200,7 @@ func (ac *antichamber) assign(run *wizard.ProverRuntime, txGet TxSignatureGetter
 //   - Source
 //
 // The assignment depends on the number of defined EcRecover and TxSignature instances.
-func (ac *antichamber) assignAntichamber(run *wizard.ProverRuntime, nbEcRecInstances, nbTxInstances int) {
+func (ac *Antichamber) assignAntichamber(run *wizard.ProverRuntime, nbEcRecInstances, nbTxInstances int) {
 
 	var (
 		maxNbEcRecover = ac.Inputs.Settings.MaxNbEcRecover

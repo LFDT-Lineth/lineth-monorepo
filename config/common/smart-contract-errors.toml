@@ -48,6 +48,14 @@
 "f9069dd8" = "FinalStateRootHashIsZeroHash"
 "49d466c5" = "FinalShnarfNotSubmitted"
 
+# Finalization (forced transaction integration)
+# with bytes32 included.
+"d35bb1d1" = "FinalShnarfNotSubmitted" 
+"ec4f874b" = "AddressIsNotFiltered"
+"b90e2e84" = "FinalizationDataMissingForcedTransaction"
+"eca429d2" = "MissingRollingHashForForcedTransactionNumber"
+"beb1b948" = "ForcedTransactionExistsForBlockOrIsTooLow"
+
 # L2 Message Service
 # Generated from `pnpm exec ts-node contracts/scripts/operational/getSmartContractErrorsFromABI.ts contracts/local-deployments-artifacts/deployed-artifacts/L2MessageServiceV1-Deployed-2024-12-03.json`
 "3b174434" = "MessageHashesListLengthHigherThanOneHundred"

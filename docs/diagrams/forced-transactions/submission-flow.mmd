@@ -1,0 +1,51 @@
+%% Forced Transaction Submission Flow
+%% Renders with: https://mermaid.live or any Mermaid-compatible viewer
+
+sequenceDiagram
+    autonumber
+    participant User as User
+    participant L1 as L1 Chain
+    participant Gateway as ForcedTransactionGateway
+    participant Rollup as LineaRollup
+    participant Filter as AddressFilter
+    participant Coordinator as Coordinator
+    participant Sequencer as L2 Sequencer
+    
+    Note over User,L1: Step 1: Gather Required Data
+    User->>L1: Query FinalizedStateUpdated events
+    L1-->>User: blockNumber, timestamp, messageNumber, forcedTxNumber
+    User->>L1: Query rollingHashes[messageNumber]
+    L1-->>User: messageRollingHash
+    User->>L1: Query forcedTransactionRollingHashes[forcedTxNumber]
+    L1-->>User: forcedTxRollingHash
+    
+    Note over User,Gateway: Step 2: Prepare & Submit Transaction
+    User->>User: Construct LastFinalizedState struct
+    User->>User: Sign EIP-1559 transaction for L2
+    User->>Gateway: submitForcedTransaction(tx, lastFinalizedState) + fee
+    
+    Note over Gateway,Filter: Step 3: Validation
+    Gateway->>Gateway: Validate gas limits, fees, signature params
+    Gateway->>Rollup: getRequiredForcedTransactionFields()
+    Rollup-->>Gateway: currentState, prevRollingHash, blockNumber, feeAmount
+    Gateway->>Gateway: Verify msg.value == feeAmount
+    Gateway->>Gateway: Verify lastFinalizedState hash matches currentState
+    Gateway->>Gateway: Recover signer from signature (ecrecover)
+    Gateway->>Filter: addressIsFiltered(signer)?
+    Filter-->>Gateway: false
+    Gateway->>Filter: addressIsFiltered(to)?
+    Filter-->>Gateway: false
+    
+    Note over Gateway,Rollup: Step 4: Calculate & Store
+    Gateway->>Gateway: Calculate blockNumberDeadline (latest block BY which tx must be processed)
+    Gateway->>Gateway: Compute MiMC rolling hash
+    Gateway->>Gateway: RLP encode signed transaction
+    Gateway->>Rollup: storeForcedTransaction(rollingHash, signer, deadline, rlpTx)
+    Rollup->>Rollup: Store in mappings
+    Rollup->>L1: Emit ForcedTransactionAdded event
+    
+    Note over Coordinator,Sequencer: Step 5: Coordinator Forwards to Sequencer
+    Coordinator->>L1: Listen for ForcedTransactionAdded events
+    L1-->>Coordinator: Event with rlpEncodedSignedTransaction
+    Coordinator->>Sequencer: Submit transaction for processing
+    Sequencer->>Sequencer: Process tx anytime before deadline

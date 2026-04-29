@@ -61,6 +61,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | L2_MESSAGE_SERVICE_ADDRESS | true | address | L2 Message Service address passed to the verifier constructor |
 | VERIFIER_MIMC_ADDRESS | false | address | Optional. Reuse an existing deployed `Mimc` library for PlonkVerifier instead of deploying a new one (see [verifier.md](l1/verifier.md)). |
 | YIELD_MANAGER_ADDRESS | true | address | Yield Manager contract address |
+| LINEA_ROLLUP_ADDRESS_FILTER | true | address | AddressFilter contract address |
 
 <br />
 

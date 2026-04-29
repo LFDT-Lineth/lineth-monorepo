@@ -6,7 +6,7 @@ import {
   VALIDIUM_UNPAUSE_TYPES_ROLES,
   STATE_DATA_SUBMISSION_PAUSE_TYPE,
 } from "contracts/common/constants";
-import { TestValidium } from "contracts/typechain-types";
+import { AddressFilter, TestValidium } from "contracts/typechain-types";
 
 import { deployValidiumFixture, getAccountsFixture, getValidiumRoleAddressesFixture } from "./helpers";
 import firstCompressedDataContent from "../_testData/compressedData/blocks-1-46.json";
@@ -36,11 +36,13 @@ import {
   buildAccessErrorMessage,
   expectRevertWithCustomError,
   expectRevertWithReason,
+  expectRevertWhenPaused,
   generateKeccak256,
 } from "../common/helpers";
 
 describe("Validium contract", () => {
   let validium: TestValidium;
+  let addressFilter: AddressFilter;
   let verifier: string;
 
   let admin: SignerWithAddress;
@@ -49,6 +51,7 @@ describe("Validium contract", () => {
   let nonAuthorizedAccount: SignerWithAddress;
   let alternateShnarfProviderAddress: SignerWithAddress;
   let roleAddresses: { addressWithRole: string; role: string }[];
+  let addressFilterAddress: string;
 
   const { prevShnarf, expectedShnarf, parentStateRootHash } = firstCompressedDataContent;
   const { expectedShnarf: secondExpectedShnarf } = secondCompressedDataContent;
@@ -60,7 +63,8 @@ describe("Validium contract", () => {
   });
 
   beforeEach(async () => {
-    ({ verifier, validium } = await loadFixture(deployValidiumFixture));
+    ({ verifier, validium, addressFilter } = await loadFixture(deployValidiumFixture));
+    addressFilterAddress = await addressFilter.getAddress();
   });
 
   describe("Fallback/Receive tests", () => {
@@ -78,50 +82,57 @@ describe("Validium contract", () => {
   });
 
   describe("Initialisation", () => {
-    it("Should revert if verifier address is zero address", async () => {
-      const initializationData = {
-        initialStateRootHash: parentStateRootHash,
-        initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
-        genesisTimestamp: GENESIS_L2_TIMESTAMP,
-        defaultVerifier: ADDRESS_ZERO,
-        rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
-        rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
-        roleAddresses,
-        pauseTypeRoles: VALIDIUM_PAUSE_TYPES_ROLES,
-        unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
-        defaultAdmin: securityCouncil.address,
-        shnarfProvider: ADDRESS_ZERO,
-      };
-
-      const deployCall = deployUpgradableFromFactory("src/rollup/Validium.sol:Validium", [initializationData], {
-        initializer: VALIDIUM_INITIALIZE_SIGNATURE,
-        unsafeAllow: ["constructor", "incorrect-initializer-order"],
-      });
-
-      await expectRevertWithCustomError(validium, deployCall, "ZeroAddressNotAllowed");
+    // Helper to create default initialization data (type inferred to match contract expectations)
+    const createDefaultInitData = () => ({
+      initialStateRootHash: parentStateRootHash,
+      initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
+      genesisTimestamp: GENESIS_L2_TIMESTAMP,
+      defaultVerifier: verifier,
+      rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
+      rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
+      roleAddresses: [...roleAddresses.slice(1)],
+      pauseTypeRoles: VALIDIUM_PAUSE_TYPES_ROLES,
+      unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
+      defaultAdmin: securityCouncil.address,
+      shnarfProvider: ADDRESS_ZERO,
+      addressFilter: addressFilterAddress,
     });
 
-    it("Should revert if the default admin address is zero address", async () => {
-      const initializationData = {
-        initialStateRootHash: parentStateRootHash,
-        initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
-        genesisTimestamp: GENESIS_L2_TIMESTAMP,
-        defaultVerifier: verifier,
-        rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
-        rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
-        roleAddresses: [...roleAddresses.slice(1)],
-        pauseTypeRoles: VALIDIUM_PAUSE_TYPES_ROLES,
-        unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
-        defaultAdmin: ADDRESS_ZERO,
-        shnarfProvider: ADDRESS_ZERO,
-      };
+    type InitData = ReturnType<typeof createDefaultInitData>;
 
-      const deployCall = deployUpgradableFromFactory("TestValidium", [initializationData], {
+    // Helper to deploy with custom init data
+    const deployValidiumWithConfig = (initData: InitData, contractName: string = "TestValidium") =>
+      deployUpgradableFromFactory(contractName, [initData], {
         initializer: VALIDIUM_INITIALIZE_SIGNATURE,
         unsafeAllow: ["constructor", "incorrect-initializer-order"],
       });
 
-      await expectRevertWithCustomError(validium, deployCall, "ZeroAddressNotAllowed");
+    // Parameterized zero address validation tests
+    const zeroAddressValidationCases: Array<{
+      description: string;
+      getInitData: () => InitData;
+      contractName?: string;
+    }> = [
+      {
+        description: "verifier address is zero address",
+        getInitData: () => ({ ...createDefaultInitData(), defaultVerifier: ADDRESS_ZERO, roleAddresses }),
+        contractName: "src/rollup/Validium.sol:Validium",
+      },
+      {
+        description: "the default admin address is zero address",
+        getInitData: () => ({ ...createDefaultInitData(), defaultAdmin: ADDRESS_ZERO }),
+      },
+      {
+        description: "the address filter address is zero address",
+        getInitData: () => ({ ...createDefaultInitData(), addressFilter: ADDRESS_ZERO }),
+      },
+    ];
+
+    zeroAddressValidationCases.forEach(({ description, getInitData, contractName }) => {
+      it(`Should revert if ${description}`, async () => {
+        const deployCall = deployValidiumWithConfig(getInitData(), contractName);
+        await expectRevertWithCustomError(validium, deployCall, "ZeroAddressNotAllowed");
+      });
     });
 
     it("Should store verifier address in storage", async () => {
@@ -157,6 +168,7 @@ describe("Validium contract", () => {
         unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
         defaultAdmin: securityCouncil.address,
         shnarfProvider: ADDRESS_ZERO,
+        addressFilter: addressFilterAddress,
       };
 
       const validium = await deployUpgradableFromFactory("src/rollup/Validium.sol:Validium", [initializationData], {
@@ -180,6 +192,7 @@ describe("Validium contract", () => {
         unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
         defaultAdmin: securityCouncil.address,
         shnarfProvider: ADDRESS_ZERO,
+        addressFilter: addressFilterAddress,
       };
 
       const validium = await deployUpgradableFromFactory("src/rollup/Validium.sol:Validium", [initializationData], {
@@ -204,6 +217,7 @@ describe("Validium contract", () => {
         unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
         defaultAdmin: securityCouncil.address,
         shnarfProvider: alternateShnarfProviderAddress.address,
+        addressFilter: addressFilterAddress,
       };
 
       const validium = await deployUpgradableFromFactory("src/rollup/Validium.sol:Validium", [initializationData], {
@@ -212,6 +226,30 @@ describe("Validium contract", () => {
       });
 
       expect(await validium.shnarfProvider()).to.equal(alternateShnarfProviderAddress.address);
+    });
+
+    it("Should assign the passed in addressFilter address", async () => {
+      const initializationData = {
+        initialStateRootHash: parentStateRootHash,
+        initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
+        genesisTimestamp: GENESIS_L2_TIMESTAMP,
+        defaultVerifier: verifier,
+        rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
+        rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
+        roleAddresses: [...roleAddresses, { addressWithRole: operator.address, role: VERIFIER_SETTER_ROLE }],
+        pauseTypeRoles: VALIDIUM_PAUSE_TYPES_ROLES,
+        unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
+        defaultAdmin: securityCouncil.address,
+        shnarfProvider: alternateShnarfProviderAddress.address,
+        addressFilter: addressFilterAddress,
+      };
+
+      const validium = await deployUpgradableFromFactory("src/rollup/Validium.sol:Validium", [initializationData], {
+        initializer: VALIDIUM_INITIALIZE_SIGNATURE,
+        unsafeAllow: ["constructor", "incorrect-initializer-order"],
+      });
+
+      expect(await validium.addressFilter()).to.equal(addressFilterAddress);
     });
 
     it("Should have the validium address as the shnarfProvider", async () => {
@@ -223,7 +261,7 @@ describe("Validium contract", () => {
 
     it("Should have the correct contract version", async () => {
       ({ verifier, validium } = await loadFixture(deployValidiumFixture));
-      expect(await validium.CONTRACT_VERSION()).to.equal("1.0");
+      expect(await validium.CONTRACT_VERSION()).to.equal("2.0");
     });
 
     it("Should revert if the initialize function is called a second time", async () => {
@@ -240,6 +278,7 @@ describe("Validium contract", () => {
         unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
         defaultAdmin: securityCouncil.address,
         shnarfProvider: ADDRESS_ZERO,
+        addressFilter: addressFilterAddress,
       });
 
       await expectRevertWithReason(initializeCall, INITIALIZED_ALREADY_MESSAGE);
@@ -280,7 +319,8 @@ describe("Validium contract", () => {
     it("Should revert when removing verifier address if the caller has not the VERIFIER_UNSETTER_ROLE ", async () => {
       ({ verifier, validium } = await loadFixture(deployValidiumFixture));
 
-      await expect(validium.connect(nonAuthorizedAccount).unsetVerifierAddress(0)).to.be.revertedWith(
+      await expectRevertWithReason(
+        validium.connect(nonAuthorizedAccount).unsetVerifierAddress(0),
         buildAccessErrorMessage(nonAuthorizedAccount, VERIFIER_UNSETTER_ROLE),
       );
     });
@@ -417,24 +457,22 @@ describe("Validium contract", () => {
       await expectRevertWithReason(submitDataCall, buildAccessErrorMessage(nonAuthorizedAccount, OPERATOR_ROLE));
     });
 
-    it("Should revert if GENERAL_PAUSE_TYPE is enabled", async () => {
-      await validium.connect(securityCouncil).pauseByType(GENERAL_PAUSE_TYPE);
+    // Parameterized pause type tests for Validium data submission
+    const validiumSubmissionPauseTypes = [
+      { pauseType: GENERAL_PAUSE_TYPE, name: "GENERAL_PAUSE_TYPE" },
+      { pauseType: STATE_DATA_SUBMISSION_PAUSE_TYPE, name: "STATE_DATA_SUBMISSION_PAUSE_TYPE" },
+    ];
 
-      const submitDataCall = validium
-        .connect(operator)
-        .acceptShnarfData(prevShnarf, expectedShnarf, DATA_ONE.finalStateRootHash, { gasLimit: MAX_GAS_LIMIT });
+    validiumSubmissionPauseTypes.forEach(({ pauseType, name }) => {
+      it(`Should revert if ${name} is enabled`, async () => {
+        await validium.connect(securityCouncil).pauseByType(pauseType);
 
-      await expectRevertWithCustomError(validium, submitDataCall, "IsPaused", [GENERAL_PAUSE_TYPE]);
-    });
+        const submitDataCall = validium
+          .connect(operator)
+          .acceptShnarfData(prevShnarf, expectedShnarf, DATA_ONE.finalStateRootHash, { gasLimit: MAX_GAS_LIMIT });
 
-    it("Should revert if STATE_DATA_SUBMISSION_PAUSE_TYPE is enabled", async () => {
-      await validium.connect(securityCouncil).pauseByType(STATE_DATA_SUBMISSION_PAUSE_TYPE);
-
-      const submitDataCall = validium
-        .connect(operator)
-        .acceptShnarfData(prevShnarf, expectedShnarf, DATA_ONE.finalStateRootHash, { gasLimit: MAX_GAS_LIMIT });
-
-      await expectRevertWithCustomError(validium, submitDataCall, "IsPaused", [STATE_DATA_SUBMISSION_PAUSE_TYPE]);
+        await expectRevertWhenPaused(validium, submitDataCall, pauseType);
+      });
     });
 
     it("Should revert with ShnarfAlreadySubmitted when submitting same compressed data twice in 2 separate transactions", async () => {

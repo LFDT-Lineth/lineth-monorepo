@@ -385,7 +385,7 @@ export const config = {
     chainId: 1337,
   },
   contracts: {
-    lineaRollup: '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9',
+    lineaRollup: '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9',
     l2MessageService: '0xe537D669CA013d86EBeF1D64e40fC74CADC91987',
     tokenBridge: {
       l1: '0x...',

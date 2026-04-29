@@ -138,6 +138,14 @@ func (ec *EcRecover) assignFromEcDataSource(run *wizard.ProverRuntime, src *ecDa
 			if selected.IsOne() {
 				break
 			}
+
+			resEcRecoverID.PushZero()
+			resSuccessBit.PushZero()
+			resEcRecoverIndex.PushZero()
+			resEcRecoverIsData.PushZero()
+			resEcRecoverIsRes.PushZero()
+			resAuxProjectionMask.PushZero()
+			resLimb.PushZero()
 		}
 
 		for j := 0; j < nbRowsPerEcRecFetching; j++ {

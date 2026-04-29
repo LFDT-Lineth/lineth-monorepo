@@ -70,7 +70,7 @@ export async function sendL1ToL2Message(context: TestContext, params: SendMessag
         ...normalizedFees,
         ...fees,
       }),
-    { receiptTimeoutMs: timeoutMs },
+    { receiptTimeoutMs: timeoutMs, abi: lineaRollup.abi },
   );
 
   logger.debug(`sendMessage transaction sent. transactionHash=${txHash} status=${receipt.status}`);
@@ -123,6 +123,7 @@ export async function sendL2ToL1Message(context: TestContext, params: SendMessag
       }),
     {
       receiptTimeoutMs: timeoutMs,
+      abi: l2MessageService.abi,
     },
   );
 

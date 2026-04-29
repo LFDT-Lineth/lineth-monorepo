@@ -56,6 +56,9 @@ func cobraControllerRunCmd(c *cobra.Command, args []string) {
 		cfg.Aggregation.DirDone(),
 		cfg.Aggregation.DirFrom(),
 		cfg.Aggregation.DirTo(),
+		cfg.Invalidity.DirDone(),
+		cfg.Invalidity.DirFrom(),
+		cfg.Invalidity.DirTo(),
 	}
 
 	for _, dir := range dirs {

@@ -11,6 +11,10 @@ import (
 	"github.com/consensys/linea-monorepo/prover/utils/parallel"
 )
 
+// DefaultDepth is the default depth of the Linea state Merkle tree.
+// This value should not be changed as it would modify the state structure.
+const DefaultDepth = 40
+
 // Tree represents a binary sparse Merkle-tree (SMT).
 type Tree struct {
 	Depth int
@@ -38,8 +42,8 @@ type Tree struct {
 
 // NewEmptyTree creates and returns an empty tree with the provided config.
 func NewEmptyTree(depths ...int) *Tree {
-	// Default depth is 40 if no input is provided
-	depth := 40
+	// Default depth is DefaultDepth if no input is provided
+	depth := DefaultDepth
 	if len(depths) > 0 && depths[0] > 0 {
 		depth = depths[0]
 	} // Computes the empty nodes

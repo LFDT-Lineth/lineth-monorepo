@@ -1,0 +1,53 @@
+%% Complete End-to-End Forced Transaction Flow
+%% Renders with: https://mermaid.live or any Mermaid-compatible viewer
+
+sequenceDiagram
+    autonumber
+    participant User as User
+    participant Explorer as Block Explorer
+    participant Gateway as Gateway L1
+    participant Rollup as LineaRollup L1
+    participant Coordinator as Coordinator
+    participant Sequencer as Sequencer
+    participant Prover as Prover
+    
+    Note over User,Explorer: Phase 1: Data Gathering
+    User->>Explorer: Get latest finalization
+    Explorer-->>User: FinalizedStateUpdated event data
+    User->>Rollup: Read rolling hashes
+    Rollup-->>User: Complete LastFinalizedState
+    
+    Note over User,Gateway: Phase 2: Transaction Preparation
+    User->>User: Create & sign EIP-1559 L2 tx
+    User->>Rollup: Read forcedTransactionFeeInWei
+    Rollup-->>User: Required fee amount
+    
+    Note over Gateway,Rollup: Phase 3: L1 Submission
+    User->>Gateway: submitForcedTransaction + ETH fee
+    Gateway->>Gateway: Validate all parameters
+    Gateway->>Rollup: storeForcedTransaction
+    Rollup-->>User: ForcedTransactionAdded event
+    
+    Note over Coordinator,Sequencer: Phase 4: Coordinator Bridges L1 to L2
+    Coordinator->>Rollup: Listen for ForcedTransactionAdded events
+    Rollup-->>Coordinator: Event with rlpEncodedSignedTransaction
+    Coordinator->>Coordinator: Extract signed tx from event
+    Coordinator->>Sequencer: Submit tx for L2 processing
+    
+    Note over Sequencer,Prover: Phase 5: L2 Processing
+    Sequencer->>Sequencer: Receive tx from Coordinator
+    Sequencer->>Sequencer: Process tx anytime before deadline
+    Note over Sequencer: Deadline = latest acceptable block<br/>Tx typically processed much sooner<br/><br/>Tx may fail on L2 due to:<br/>- Invalid nonce<br/>- Insufficient gas<br/>- Insufficient balance<br/>- Contract revert
+    
+    Note over Prover,Rollup: Phase 6: Proving (Off-Chain)
+    Sequencer->>Prover: L2 state including forced tx
+    Prover->>Prover: Generate ZK proof
+    Prover->>Prover: Compute rolling hash in proof
+    
+    Note over Rollup,Prover: Phase 7: Finalization (L1)
+    Prover->>Rollup: finalizeBlocks(proof, finalizationData)
+    Rollup->>Rollup: Verify proof
+    Rollup->>Rollup: Check forced tx deadlines
+    Rollup->>Rollup: Verify rolling hash matches
+    Rollup->>Rollup: Update currentFinalizedState
+    Rollup-->>User: DataFinalizedV3 + FinalizedStateUpdated events

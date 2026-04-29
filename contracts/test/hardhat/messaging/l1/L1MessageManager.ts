@@ -5,6 +5,9 @@ import { TestL1MessageManager } from "../../../../typechain-types";
 import { INBOX_STATUS_UNKNOWN } from "../../common/constants";
 import { deployFromFactory } from "../../common/deployment";
 import {
+  expectEvent,
+  expectNoEvent,
+  expectRevertWithCustomError,
   generateKeccak256Hash,
   generateL2MessagingBlocksOffsets,
   generateRandomBytes,
@@ -29,8 +32,9 @@ describe("L1MessageManager", () => {
       await l1MessageManager.addL2L1MessageHash(messageHash);
       await l1MessageManager.updateL2L1MessageStatusToClaimed(messageHash);
 
-      await expect(l1MessageManager.updateL2L1MessageStatusToClaimed(messageHash)).to.be.revertedWithCustomError(
+      await expectRevertWithCustomError(
         l1MessageManager,
+        l1MessageManager.updateL2L1MessageStatusToClaimed(messageHash),
         "MessageDoesNotExistOrHasAlreadyBeenClaimed",
       );
     });
@@ -50,9 +54,12 @@ describe("L1MessageManager", () => {
       const messageNumber = 1;
       await l1MessageManager.setL2L1MessageToClaimed(messageNumber);
 
-      await expect(l1MessageManager.setL2L1MessageToClaimed(messageNumber))
-        .to.be.revertedWithCustomError(l1MessageManager, "MessageAlreadyClaimed")
-        .withArgs(messageNumber);
+      await expectRevertWithCustomError(
+        l1MessageManager,
+        l1MessageManager.setL2L1MessageToClaimed(messageNumber),
+        "MessageAlreadyClaimed",
+        [messageNumber],
+      );
     });
 
     it("Should set the message as claimed", async () => {
@@ -81,18 +88,24 @@ describe("L1MessageManager", () => {
       const treeDepth = 32;
 
       await l1MessageManager.addL2MerkleRoots([merkleRoot], treeDepth);
-      await expect(l1MessageManager.addL2MerkleRoots([merkleRoot], treeDepth))
-        .to.be.revertedWithCustomError(l1MessageManager, "L2MerkleRootAlreadyAnchored")
-        .withArgs(merkleRoot);
+      await expectRevertWithCustomError(
+        l1MessageManager,
+        l1MessageManager.addL2MerkleRoots([merkleRoot], treeDepth),
+        "L2MerkleRootAlreadyAnchored",
+        [merkleRoot],
+      );
     });
 
     it("Should add the new root to contract storage and emit a 'L2MerkleRootAdded' event", async () => {
       const merkleRoot = generateRandomBytes(32);
       const treeDepth = 32;
 
-      await expect(l1MessageManager.addL2MerkleRoots([merkleRoot], treeDepth))
-        .to.emit(l1MessageManager, "L2MerkleRootAdded")
-        .withArgs(merkleRoot, treeDepth);
+      await expectEvent(
+        l1MessageManager,
+        l1MessageManager.addL2MerkleRoots([merkleRoot], treeDepth),
+        "L2MerkleRootAdded",
+        [merkleRoot, treeDepth],
+      );
 
       expect(await l1MessageManager.l2MerkleRootsDepths(merkleRoot)).to.not.equal(0);
     });
@@ -101,15 +114,19 @@ describe("L1MessageManager", () => {
   describe("Anchor L2 messaging blocks on L1", () => {
     it("Should fail when '_l2MessagingBlocksOffsets' length is not a multiple of 2", async () => {
       const currentL2BlockNumber = 10n;
-      await expect(l1MessageManager.anchorL2MessagingBlocks("0x01", currentL2BlockNumber))
-        .to.be.revertedWithCustomError(l1MessageManager, "BytesLengthNotMultipleOfTwo")
-        .withArgs(1);
+      await expectRevertWithCustomError(
+        l1MessageManager,
+        l1MessageManager.anchorL2MessagingBlocks("0x01", currentL2BlockNumber),
+        "BytesLengthNotMultipleOfTwo",
+        [1],
+      );
     });
 
     it("Should not emit events when '_l2MessagingBlocksOffsets' is empty", async () => {
       const currentL2BlockNumber = 10n;
-      await expect(l1MessageManager.anchorL2MessagingBlocks("0x", currentL2BlockNumber)).to.not.emit(
+      await expectNoEvent(
         l1MessageManager,
+        l1MessageManager.anchorL2MessagingBlocks("0x", currentL2BlockNumber),
         "L2MessagingBlockAnchored",
       );
     });

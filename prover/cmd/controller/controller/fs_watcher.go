@@ -47,6 +47,10 @@ func NewFsWatcher(conf *config.Config) *FsWatcher {
 		fs.JobToWatch = append(fs.JobToWatch, AggregatedDefinition(conf))
 	}
 
+	if conf.Controller.EnableInvalidity {
+		fs.JobToWatch = append(fs.JobToWatch, InvalidityDefinition(conf))
+	}
+
 	return fs
 }
 

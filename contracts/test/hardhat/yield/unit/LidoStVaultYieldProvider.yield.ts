@@ -12,7 +12,7 @@ import {
 import { ethers } from "hardhat";
 
 import { ONE_ETHER, OperationType, ZERO_VALUE, YieldProviderVendor, CONNECT_DEPOSIT } from "../../common/constants";
-import { expectRevertWithCustomError, getAccountsFixture } from "../../common/helpers";
+import { expectRevertWithCustomError, expectEvent, expectNoEvent, getAccountsFixture } from "../../common/helpers";
 import {
   deployAndAddSingleLidoStVaultYieldProvider,
   fundLidoStVaultYieldProvider,
@@ -73,11 +73,13 @@ describe("LidoStVaultYieldProvider contract - yield operations", () => {
       const lstLiabilityPrincipalSynced = await yieldManager
         .connect(securityCouncil)
         .syncExternalLiabilitySettlement.staticCall(yieldProviderAddress, liabilityShares, liabilityPrincipalBefore);
-      await expect(
+      await expectNoEvent(
+        yieldManager,
         yieldManager
           .connect(securityCouncil)
           .syncExternalLiabilitySettlement(yieldProviderAddress, liabilityShares, liabilityPrincipalBefore),
-      ).to.not.emit(yieldManager, "LSTLiabilityPrincipalSynced");
+        "LSTLiabilityPrincipalSynced",
+      );
 
       // Assert
       expect(lstLiabilityPrincipalSynced).eq(liabilityPrincipalBefore);
@@ -110,18 +112,19 @@ describe("LidoStVaultYieldProvider contract - yield operations", () => {
         .connect(securityCouncil)
         .syncExternalLiabilitySettlement.staticCall(yieldProviderAddress, liabilityShares, liabilityPrincipalBefore);
       const yieldProviderIndex = await yieldManager.getYieldProviderIndex(yieldProviderAddress);
-      await expect(
+      await expectEvent(
+        yieldManager,
         yieldManager
           .connect(securityCouncil)
           .syncExternalLiabilitySettlement(yieldProviderAddress, liabilityShares, liabilityPrincipalBefore),
-      )
-        .to.emit(yieldManager, "LSTLiabilityPrincipalSynced")
-        .withArgs(
+        "LSTLiabilityPrincipalSynced",
+        [
           YieldProviderVendor.LIDO_ST_VAULT_YIELD_PROVIDER_VENDOR,
           yieldProviderIndex,
           liabilityPrincipalBefore,
           ethValueOfLidoLiabilityShares,
-        );
+        ],
+      );
 
       // Assert
       expect(lstLiabilityPrincipalSynced).eq(ethValueOfLidoLiabilityShares);
@@ -136,8 +139,9 @@ describe("LidoStVaultYieldProvider contract - yield operations", () => {
 
   describe("syncLSTLiabilityPrincipal", () => {
     it("Should revert if not invoked via delegatecall", async () => {
-      await expect(yieldProvider.syncLSTLiabilityPrincipal(yieldProviderAddress)).to.be.revertedWithCustomError(
+      await expectRevertWithCustomError(
         yieldProvider,
+        yieldProvider.syncLSTLiabilityPrincipal(yieldProviderAddress),
         "ContextIsNotYieldManager",
       );
     });

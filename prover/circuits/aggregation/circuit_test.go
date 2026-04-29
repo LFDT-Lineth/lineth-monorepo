@@ -17,11 +17,11 @@ import (
 	"github.com/consensys/linea-monorepo/prover/circuits/dummy"
 	"github.com/consensys/linea-monorepo/prover/circuits/internal"
 	snarkTestUtils "github.com/consensys/linea-monorepo/prover/circuits/internal/test_utils"
+	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/consensys/linea-monorepo/prover/utils/test_utils"
 
 	pi_interconnection "github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak"
-	"github.com/consensys/linea-monorepo/prover/config"
 	public_input "github.com/consensys/linea-monorepo/prover/public-input"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/types"
@@ -33,6 +33,10 @@ import (
 
 func TestPublicInput(t *testing.T) {
 
+	filteredAddresses := []types.EthAddress{
+		types.EthAddress(common.HexToAddress("0x8F81e2E3F8b46467523463835F965fFE476E1c9E")),
+		types.EthAddress(common.HexToAddress("0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec")),
+	}
 	// test case taken from backend/aggregation
 	testCases := []public_input.Aggregation{
 		{
@@ -48,11 +52,17 @@ func TestPublicInput(t *testing.T) {
 			L1RollingHashMessageNumber:              549263,
 			L2MsgRootHashes:                         []string{"0xfb7ce9c89be905d39bfa2f6ecdf312f127f8984cf313cbea91bca882fca340cd"},
 			L2MsgMerkleTreeDepth:                    5,
+			LastFinalizedFtxNumber:                  3,
+			FinalFtxNumber:                          5,
+			LastFinalizedFtxRollingHash:             utils.FmtIntHex32Bytes(0x0345),
+			FinalFtxRollingHash:                     utils.FmtIntHex32Bytes(0x45),
 			// Chain configuration
 			ChainID:              59144,
 			BaseFee:              7,
 			CoinBase:             types.EthAddress(common.HexToAddress("0x8F81e2E3F8b46467523463835F965fFE476E1c9E")),
 			L2MessageServiceAddr: types.EthAddress(common.HexToAddress("0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec")),
+			// Filtered addresses
+			FilteredAddresses: filteredAddresses,
 		},
 	}
 
@@ -61,11 +71,19 @@ func TestPublicInput(t *testing.T) {
 		fpi, err := public_input.NewAggregationFPI(&testCases[i])
 		assert.NoError(t, err)
 
-		sfpi := fpi.ToSnarkType()
+		sfpi := fpi.ToSnarkType(10)
+
 		// TODO incorporate into public input hash or decide not to
 		sfpi.NbDataAvailability = -1
 		sfpi.InitialStateRootHash = [2]frontend.Variable{0, -2}
 		sfpi.NbL2Messages = -5
+
+		// Set up FilteredAddresses (similar to how assign.go does it)
+		sfpi.FilteredAddressesFPISnark.Addresses = make([]frontend.Variable, len(testCases[i].FilteredAddresses))
+		for j, addr := range testCases[i].FilteredAddresses {
+			sfpi.FilteredAddressesFPISnark.Addresses[j] = addr[:]
+		}
+		sfpi.FilteredAddressesFPISnark.NbAddresses = len(testCases[i].FilteredAddresses)
 
 		var res [32]frontend.Variable
 		assert.NoError(t, internal.CopyHexEncodedBytes(res[:], testCases[i].GetPublicInputHex()))
@@ -78,27 +96,34 @@ func TestPublicInput(t *testing.T) {
 }
 
 func TestAggregationOneInner(t *testing.T) {
-	t.Skipf("Skipped. DEBT: See TestFewDifferentOnes.")
+	// t.Skipf("Skipped. DEBT: See TestFewDifferentOnes.")
+	// as a temporary solution  we manually use the same SRS for different proofs;
+	// by replacing all the occurrence of circuits.MockCircuitID() with circuits.MockCircuitID(0)).
 	testAggregation(t, 2, 1)
 }
 
 func TestAggregationFewDifferentInners(t *testing.T) {
-	t.Skipf("Skipped. CRITICAL TODO: this test is failing due to non-matching SRS for circuits of different sizes (most notably the PI circuit). Must come up with a solution: probably using circuits.NewSRSStore instead of circuits.NewUnsafeSRSProvider, but doing that correctly also requires a dummy public input circuit.")
+	// t.Skipf("Skipped. CRITICAL TODO: this test is failing due to non-matching SRS for circuits of different sizes (most notably the PI circuit). Must come up with a solution: probably using circuits.NewSRSStore instead of circuits.NewUnsafeSRSProvider, but doing that correctly also requires a dummy public input circuit.")
 	testAggregation(t, 1, 5)
 	testAggregation(t, 2, 5)
 	testAggregation(t, 3, 2, 6, 10)
 }
 
-func testAggregation(t *testing.T, nCircuits int, ncs ...int) {
+// It generates subCircuits (exec/decomp/invalidity) and interconnection proofs to be aggregated.
+//
+//	nbVerifyingKey and maxNbProofs are parameters for the subCircuits (exec/decomp/invalidity).
+//
+// To generate the proofs based on the same SRS, replace the occurrence of circuits.MockCircuitID() with circuits.MockCircuitID(0).
+func testAggregation(t *testing.T, nbVerifyingKey int, maxNbProofs ...int) {
 
-	// Mock circuits to aggregate
+	// Mock circuits (exec, comp,invalidity) to aggregate
 	var innerSetups []circuits.Setup
-	logrus.Infof("Initializing many inner-circuits of %v\n", nCircuits)
+	logrus.Infof("Initializing many inner-circuits of %v\n", nbVerifyingKey)
 
 	srsProvider := circuits.NewUnsafeSRSProvider() // This is a dummy SRS provider, not to use in prod.
-	for i := 0; i < nCircuits; i++ {
-		logrus.Infof("\t%d/%d\n", i+1, nCircuits)
-		pp, _ := dummy.MakeUnsafeSetup(srsProvider, circuits.MockCircuitID(i), ecc.BLS12_377.ScalarField())
+	for i := 0; i < nbVerifyingKey; i++ {
+		logrus.Infof("\t%d/%d\n", i+1, nbVerifyingKey)
+		pp, _ := dummy.MakeUnsafeSetup(srsProvider, circuits.MockCircuitID(0), ecc.BLS12_377.ScalarField())
 		innerSetups = append(innerSetups, pp)
 	}
 
@@ -113,11 +138,12 @@ func testAggregation(t *testing.T, nCircuits int, ncs ...int) {
 	aggregationPI.SetBytes(aggregationPIBytes)
 
 	logrus.Infof("Compiling interconnection circuit")
-	maxNC := utils.Max(ncs...)
+	maxNC := utils.Max(maxNbProofs...)
 
 	piConfig := config.PublicInput{
 		MaxNbDataAvailability: maxNC,
 		MaxNbExecution:        maxNC,
+		MaxNbInvalidity:       maxNC,
 	}
 
 	piCircuit := pi_interconnection.DummyCircuit{
@@ -125,6 +151,8 @@ func testAggregation(t *testing.T, nCircuits int, ncs ...int) {
 		ExecutionFPI:             make([]frontend.Variable, piConfig.MaxNbExecution),
 		DecompressionPublicInput: make([]frontend.Variable, piConfig.MaxNbDataAvailability),
 		DecompressionFPI:         make([]frontend.Variable, piConfig.MaxNbDataAvailability),
+		InvalidityPublicInput:    make([]frontend.Variable, piConfig.MaxNbInvalidity),
+		InvalidityFPI:            make([]frontend.Variable, piConfig.MaxNbInvalidity),
 	}
 
 	piCs, err := frontend.Compile(ecc.BLS12_377.ScalarField(), scs.NewBuilder, &piCircuit)
@@ -133,7 +161,7 @@ func testAggregation(t *testing.T, nCircuits int, ncs ...int) {
 	piSetup, err := circuits.MakeSetup(context.TODO(), circuits.PublicInputInterconnectionCircuitID, piCs, srsProvider, nil)
 	assert.NoError(t, err)
 
-	for _, nc := range ncs {
+	for _, nc := range maxNbProofs {
 
 		// Building aggregation circuit for max `nc` proofs
 		logrus.Infof("Building aggregation circuit for size of %v\n", nc)
@@ -148,10 +176,10 @@ func testAggregation(t *testing.T, nCircuits int, ncs ...int) {
 		for i := range innerProofClaims {
 
 			// Assign the dummy circuit for a random value
-			circID := i % nCircuits
+			circID := i % nbVerifyingKey
 			_, err = innerPI[i].SetRandom()
 			assert.NoError(t, err)
-			a := dummy.Assign(circuits.MockCircuitID(circID), innerPI[i])
+			a := dummy.Assign(circuits.MockCircuitID(0), innerPI[i])
 
 			// Stores the inner-proofs for later
 			proof, err := circuits.ProveCheck(
@@ -172,12 +200,16 @@ func testAggregation(t *testing.T, nCircuits int, ncs ...int) {
 		// assign public input circuit
 		circuitTypes := make([]pi_interconnection.InnerCircuitType, nc)
 		for i := range circuitTypes {
-			circuitTypes[i] = pi_interconnection.InnerCircuitType(test_utils.RandIntN(2)) // #nosec G115 -- value already constrained
+			circuitTypes[i] = pi_interconnection.InnerCircuitType(test_utils.RandIntN(3)) // #nosec G115 -- value already constrained
 		}
 
-		innerPiPartition := utils.RightPad(utils.Partition(innerPI, circuitTypes), 2)
+		innerPiPartition := utils.RightPad(utils.Partition(innerPI, circuitTypes), 3)
 		execPI := utils.RightPad(innerPiPartition[typeExec], len(piCircuit.ExecutionPublicInput))
 		decompPI := utils.RightPad(innerPiPartition[typeDecomp], len(piCircuit.DecompressionPublicInput))
+		invalPI := utils.RightPad(innerPiPartition[typeInval], len(piCircuit.InvalidityPublicInput))
+
+		// Set IsAllowedCircuitID bitmask to allow all circuit IDs used in the test.
+		isAllowedMask := (1 << nbVerifyingKey) - 1
 
 		piAssignment := pi_interconnection.DummyCircuit{
 			AggregationPublicInput:   [2]frontend.Variable{aggregationPIBytes[:16], aggregationPIBytes[16:]},
@@ -187,6 +219,10 @@ func testAggregation(t *testing.T, nCircuits int, ncs ...int) {
 			ExecutionFPI:             utils.ToVariableSlice(pow5(execPI)),
 			NbExecution:              len(innerPiPartition[typeExec]),
 			NbDecompression:          len(innerPiPartition[typeDecomp]),
+			NbInvalidity:             len(innerPiPartition[typeInval]),
+			InvalidityPublicInput:    utils.ToVariableSlice(invalPI),
+			InvalidityFPI:            utils.ToVariableSlice(pow5(invalPI)),
+			IsAllowedCircuitID:       isAllowedMask,
 		}
 
 		logrus.Infof("Generating PI proof")
@@ -220,6 +256,7 @@ func testAggregation(t *testing.T, nCircuits int, ncs ...int) {
 const (
 	typeExec   = pi_interconnection.Execution
 	typeDecomp = pi_interconnection.Decompression
+	typeInval  = pi_interconnection.Invalidity
 )
 
 func pow5(s []frBls.Element) []frBls.Element {

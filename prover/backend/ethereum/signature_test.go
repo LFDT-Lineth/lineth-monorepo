@@ -148,3 +148,116 @@ func ecRecover(msg []byte, sig Signature) common.Address {
 	res.SetBytes(crypto.Keccak256(pubKey[:])[12:])
 	return res
 }
+
+// TestRlpDecodeWithSignature verifies that RlpDecodeWithSignature correctly
+// decodes a hex-encoded signed RLP transaction and recovers the signature.
+func TestRlpDecodeWithSignature(t *testing.T) {
+
+	for i := range testSigners {
+		t.Run(fmt.Sprintf("testcase-%v", i), func(t *testing.T) {
+			// Create and sign a transaction
+			txData := testTxDatas[i]
+			signer := testSigners[i]
+			tx := types.NewTx(txData)
+
+			// Sign the transaction
+			privKey, err := ecdsa.GenerateKey(secp256k1.S256(), rand.Reader)
+			require.NoError(t, err)
+			txHash := signer.Hash(tx)
+			sig, err := crypto.Sign(txHash[:], privKey)
+			require.NoError(t, err)
+			signedTx, err := tx.WithSignature(signer, sig)
+			require.NoError(t, err)
+
+			// Get the original signature and sender
+			origV, origR, origS := signedTx.RawSignatureValues()
+			origFrom, err := signer.Sender(signedTx)
+			require.NoError(t, err)
+			t.Logf("Original: from=%s, V=%s, R=%s, S=%s",
+				origFrom.Hex(), origV.String(), origR.String(), origS.String())
+
+			// Encode to hex string using MarshalBinary (includes signature)
+			signedRlpBytes, err := signedTx.MarshalBinary()
+			require.NoError(t, err)
+			hexEncodedTx := "0x" + common.Bytes2Hex(signedRlpBytes)
+			t.Logf("Hex encoded signed tx: %s", hexEncodedTx)
+
+			// Decode using RlpDecodeWithSignature
+			decodedTx, err := RlpDecodeWithSignature(hexEncodedTx)
+			require.NoError(t, err)
+
+			// Verify the decoded transaction has the same signature
+			decodedV, decodedR, decodedS := decodedTx.RawSignatureValues()
+			assert.Equal(t, origV.String(), decodedV.String(), "V mismatch")
+			assert.Equal(t, origR.String(), decodedR.String(), "R mismatch")
+			assert.Equal(t, origS.String(), decodedS.String(), "S mismatch")
+
+			// Verify we can recover the same sender
+			decodedFrom, err := signer.Sender(decodedTx)
+			require.NoError(t, err)
+			assert.Equal(t, origFrom, decodedFrom, "Sender address mismatch")
+
+			// Verify transaction fields match
+			assert.Equal(t, signedTx.Hash(), decodedTx.Hash(), "Transaction hash mismatch")
+			assert.Equal(t, signedTx.Nonce(), decodedTx.Nonce(), "Nonce mismatch")
+			assert.Equal(t, signedTx.Gas(), decodedTx.Gas(), "Gas mismatch")
+			assert.Equal(t, signedTx.Value(), decodedTx.Value(), "Value mismatch")
+			assert.Equal(t, signedTx.Data(), decodedTx.Data(), "Data mismatch")
+			assert.Equal(t, signedTx.To(), decodedTx.To(), "To address mismatch")
+
+			// Verify GetJsonSignature works on decoded transaction
+			origJsonSig := GetJsonSignature(signedTx)
+			decodedJsonSig := GetJsonSignature(decodedTx)
+			assert.Equal(t, origJsonSig, decodedJsonSig, "JSON signature mismatch")
+
+			// Verify GetTxHash works on decoded transaction
+			origTxHash := GetTxHash(signedTx)
+			decodedTxHash := GetTxHash(decodedTx)
+			assert.Equal(t, origTxHash, decodedTxHash, "TxHash mismatch")
+
+			t.Logf("✓ RlpDecodeWithSignature correctly decoded tx with signature")
+		})
+	}
+}
+
+// TestRlpDecodeWithSignature_InvalidInput tests error handling for invalid inputs
+func TestRlpDecodeWithSignature_InvalidInput(t *testing.T) {
+	testCases := []struct {
+		name        string
+		input       string
+		expectError bool
+	}{
+		{
+			name:        "empty string",
+			input:       "",
+			expectError: true,
+		},
+		{
+			name:        "invalid hex",
+			input:       "not-hex",
+			expectError: true,
+		},
+		{
+			name:        "valid hex but invalid RLP",
+			input:       "0xdeadbeef",
+			expectError: true,
+		},
+		{
+			name:        "unsigned RLP (missing signature)",
+			input:       "0xe50284075d1e5f834523a894feeddeadbeeffeeddeadbeeffeeddead012456788432627d7c80",
+			expectError: true, // unsigned RLP cannot be decoded as signed tx
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := RlpDecodeWithSignature(tc.input)
+			if tc.expectError {
+				assert.Error(t, err, "expected error for input: %s", tc.input)
+				t.Logf("Got expected error: %v", err)
+			} else {
+				assert.NoError(t, err, "unexpected error for input: %s", tc.input)
+			}
+		})
+	}
+}

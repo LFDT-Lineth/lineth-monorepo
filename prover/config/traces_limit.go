@@ -440,7 +440,6 @@ func GetTestTracesLimits() *TracesLimits {
 			{Module: "rlp_addr", Limit: 4096, LimitLarge: 8192},
 			{Module: "rlp_txn", Limit: 131072, LimitLarge: 262144},
 			{Module: "rlp_txn_rcpt", Limit: 65536, LimitLarge: 131072},
-			{Module: "rlp_auth", Limit: 16384, LimitLarge: 32768},
 			{Module: "rom", Limit: 8388608, LimitLarge: 8388608},
 			{Module: "rom_lex", Limit: 1024, LimitLarge: 2048},
 			{Module: "shakira_data", Limit: 65536, LimitLarge: 65536},

@@ -14,7 +14,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network.|
-| PLONKVERIFIER_ADDRESS | true | address | PlonkVerifier contract address |
+| VERIFIER_ADDRESS | true | address | PlonkVerifier contract address |
 | INITIAL_L2_STATE_ROOT_HASH   | true      | bytes | Initial State Root Hash (shared base) |
 | INITIAL_L2_BLOCK_NUMBER   | true      | uint256 | Initial L2 Block Number (shared base) |
 | L2_GENESIS_TIMESTAMP | true | uint256 | Genesis timestamp (shared base) |

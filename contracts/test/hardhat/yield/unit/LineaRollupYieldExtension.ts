@@ -24,6 +24,7 @@ import {
   buildAccessErrorMessage,
   expectRevertWithCustomError,
   expectRevertWithReason,
+  expectRevertWhenPaused,
   calculateRollingHash,
   getAccountsFixture,
 } from "../../common/helpers";
@@ -120,7 +121,7 @@ describe("Linea Rollup Yield Extension", () => {
 
       const transferCall = lineaRollup.connect(securityCouncil).transferFundsForNativeYield(0n);
 
-      await expectRevertWithCustomError(lineaRollup, transferCall, "IsPaused", [GENERAL_PAUSE_TYPE]);
+      await expectRevertWhenPaused(lineaRollup, transferCall, GENERAL_PAUSE_TYPE);
     });
 
     it("Should revert if NATIVE_YIELD_STAKING pause type is enabled", async () => {
@@ -128,7 +129,7 @@ describe("Linea Rollup Yield Extension", () => {
 
       const transferCall = lineaRollup.connect(securityCouncil).transferFundsForNativeYield(0n);
 
-      await expectRevertWithCustomError(lineaRollup, transferCall, "IsPaused", [NATIVE_YIELD_STAKING_PAUSE_TYPE]);
+      await expectRevertWhenPaused(lineaRollup, transferCall, NATIVE_YIELD_STAKING_PAUSE_TYPE);
     });
 
     it("Security council should be able to unpause NATIVE_YIELD_STAKING pause type", async () => {
@@ -138,7 +139,8 @@ describe("Linea Rollup Yield Extension", () => {
 
     it("Should revert when non-authorized account enacts NATIVE_YIELD_STAKING pause type", async () => {
       const call = lineaRollup.connect(nonAuthorizedAccount).pauseByType(NATIVE_YIELD_STAKING_PAUSE_TYPE);
-      await expect(call).to.be.revertedWith(
+      await expectRevertWithReason(
+        call,
         buildAccessErrorMessage(nonAuthorizedAccount, await lineaRollup.PAUSE_NATIVE_YIELD_STAKING_ROLE()),
       );
     });
@@ -146,7 +148,8 @@ describe("Linea Rollup Yield Extension", () => {
     it("Should revert when non-authorized account unpauses NATIVE_YIELD_STAKING pause type", async () => {
       await lineaRollup.connect(securityCouncil).pauseByType(NATIVE_YIELD_STAKING_PAUSE_TYPE);
       const call = lineaRollup.connect(nonAuthorizedAccount).unPauseByType(NATIVE_YIELD_STAKING_PAUSE_TYPE);
-      await expect(call).to.be.revertedWith(
+      await expectRevertWithReason(
+        call,
         buildAccessErrorMessage(nonAuthorizedAccount, await lineaRollup.UNPAUSE_NATIVE_YIELD_STAKING_ROLE()),
       );
     });
@@ -216,7 +219,7 @@ describe("Linea Rollup Yield Extension", () => {
 
       const reportCall = lineaRollup.connect(yieldManagerSigner).reportNativeYield(1n, operator.address);
 
-      await expectRevertWithCustomError(lineaRollup, reportCall, "IsPaused", [GENERAL_PAUSE_TYPE]);
+      await expectRevertWhenPaused(lineaRollup, reportCall, GENERAL_PAUSE_TYPE);
 
       await stopYieldManagerImpersonation();
     });
@@ -227,7 +230,7 @@ describe("Linea Rollup Yield Extension", () => {
 
       const reportCall = lineaRollup.connect(yieldManagerSigner).reportNativeYield(1n, operator.address);
 
-      await expectRevertWithCustomError(lineaRollup, reportCall, "IsPaused", [L1_L2_PAUSE_TYPE]);
+      await expectRevertWhenPaused(lineaRollup, reportCall, L1_L2_PAUSE_TYPE);
 
       await stopYieldManagerImpersonation();
     });

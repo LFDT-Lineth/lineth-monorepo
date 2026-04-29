@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 	"io"
+	"math/big"
 
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
@@ -116,4 +117,14 @@ func (f FullBytes32) IsZero() bool {
 		}
 	}
 	return true
+}
+
+// Uint64BigEndian interprets f as a big-endian unsigned integer.
+// If the value does not fit in uint64, returns (0, false). Callers must check ok.
+func (f FullBytes32) Uint64BigEndian() (uint64, bool) {
+	bi := new(big.Int).SetBytes(f[:])
+	if !bi.IsUint64() {
+		return 0, false
+	}
+	return bi.Uint64(), true
 }

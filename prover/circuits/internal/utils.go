@@ -60,7 +60,24 @@ type Range struct {
 
 type NewRangeOption func(*bool)
 
-func NewRange(api frontend.API, n frontend.Variable, max int, opts ...NewRangeOption) *Range {
+// NewRange creates a Range struct to help work with variable-length arrays in circuits.
+// Given an 'actualLength' (the actual length) and 'max' (the maximum possible length), it computes
+// three boolean indicator arrays:
+//
+//   - InRange[i]:       1 if i < actualLength, 0 otherwise (marks valid/active indices)
+//   - IsLast[i]:        1 if i == actualLength-1, 0 otherwise (marks the last valid index)
+//   - IsFirstBeyond[i]: 1 if i == actualLength, 0 otherwise (marks the first index beyond the range)
+//
+// Example: if actualLength=3 and max=5:
+//
+//	InRange       = [1, 1, 1, 0, 0]
+//	IsLast        = [0, 0, 1, 0, 0]
+//	IsFirstBeyond = [0, 0, 0, 1, 0]
+//
+// This is useful for conditionally applying constraints only to real entries
+// by multiplying constraint expressions by InRange[i].
+// It also implicitly checks that actualLength <= max
+func NewRange(api frontend.API, actualLength frontend.Variable, max int, opts ...NewRangeOption) *Range {
 
 	if max < 0 {
 		panic("negative maximum not allowed")
@@ -73,7 +90,7 @@ func NewRange(api frontend.API, n frontend.Variable, max int, opts ...NewRangeOp
 
 	if max == 0 {
 		if check {
-			api.AssertIsEqual(n, 0)
+			api.AssertIsEqual(actualLength, 0)
 		}
 		return &Range{api: api}
 	}
@@ -84,18 +101,18 @@ func NewRange(api frontend.API, n frontend.Variable, max int, opts ...NewRangeOp
 
 	prevInRange := frontend.Variable(1)
 	for i := range isFirstBeyond {
-		isFirstBeyond[i] = api.IsZero(api.Sub(i, n))
+		isFirstBeyond[i] = api.IsZero(api.Sub(i, actualLength))
 		prevInRange = api.Sub(prevInRange, isFirstBeyond[i])
 		inRange[i] = prevInRange
 		if i != 0 {
 			isLast[i-1] = isFirstBeyond[i]
 		}
 	}
-	isLast[max-1] = api.IsZero(api.Sub(max, n))
+	isLast[max-1] = api.IsZero(api.Sub(max, actualLength))
 
 	if check {
-		// if the last element is still in range, it must be the last, meaning isLast = 1 = inRange, otherwise n > max
-		// if the last element is not in range, it already means n is in range and we don't need to check anything, but isLast = 0 = inRange will be the case anyway
+		// if the last element is still in range, it must be the last, meaning isLast = 1 = inRange, otherwise actualLength > max
+		// if the last element is not in range, it already means actualLength is in range and we don't need to check anything, but isLast = 0 = inRange will be the case anyway
 		api.AssertIsEqual(isLast[max-1], inRange[max-1])
 	}
 
@@ -743,4 +760,13 @@ func divEuclideanHint(_ *big.Int, ins, outs []*big.Int) error {
 	remainder.Mod(a, b)
 
 	return nil
+}
+
+// FromBytesToElements converts a slice of bytes to a slice of field elements, with no range check.
+func FromBytesToElements(b []byte) []frontend.Variable {
+	var res = make([]frontend.Variable, len(b))
+	for i := range b {
+		res[i] = b[i]
+	}
+	return res
 }

@@ -5,7 +5,6 @@ import { encodeFunctionData, toHex } from "viem";
 import { awaitUntil, estimateLineaGas } from "./common/utils";
 import { L2RpcEndpoint } from "./config/clients/l2-client";
 import { createTestContext } from "./config/setup";
-import { DummyContractAbi } from "./generated";
 
 const context = createTestContext();
 const l2AccountManager = context.getL2AccountManager();
@@ -41,7 +40,7 @@ describe("Linea besu fleet test suite", () => {
       account,
       to: dummyContract.address,
       data: encodeFunctionData({
-        abi: DummyContractAbi,
+        abi: dummyContract.abi,
         functionName: "setPayload",
         args: [randomPayload],
       }),
@@ -54,7 +53,7 @@ describe("Linea besu fleet test suite", () => {
       account,
       to: dummyContract.address,
       data: encodeFunctionData({
-        abi: DummyContractAbi,
+        abi: dummyContract.abi,
         functionName: "setPayload",
         args: [randomPayload],
       }),
@@ -71,7 +70,7 @@ describe("Linea besu fleet test suite", () => {
       account: account.address,
       to: dummyContract.address,
       data: encodeFunctionData({
-        abi: DummyContractAbi,
+        abi: dummyContract.abi,
         functionName: "setPayload",
         args: [randomPayload],
       }),
@@ -82,7 +81,7 @@ describe("Linea besu fleet test suite", () => {
       account: account.address,
       to: dummyContract.address,
       data: encodeFunctionData({
-        abi: DummyContractAbi,
+        abi: dummyContract.abi,
         functionName: "setPayload",
         args: [randomPayload],
       }),

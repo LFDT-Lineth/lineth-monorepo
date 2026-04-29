@@ -1,0 +1,42 @@
+%% Forced Transaction System Overview
+%% Renders with: https://mermaid.live or any Mermaid-compatible viewer
+
+graph TB
+    subgraph "User Flow"
+        User[User]
+        Wallet[Wallet/Signer]
+    end
+    
+    subgraph "Data Sources"
+        L1Events[L1 FinalizedStateUpdated Events]
+        L1State[LineaRollup State]
+        Indexer[Indexer/Explorer]
+    end
+    
+    subgraph "L1 Contracts"
+        Gateway[ForcedTransactionGateway]
+        Rollup[LineaRollup]
+        Filter[AddressFilter]
+    end
+    
+    subgraph "Off-Chain Services"
+        Coordinator[Coordinator]
+        Prover[Prover]
+    end
+    
+    subgraph "L2 Processing"
+        Sequencer[Sequencer]
+    end
+    
+    User --> |1. Sign EIP-1559 Tx|Wallet
+    User --> |2. Query finalized state|L1Events
+    L1Events --> |Get components|User
+    User --> |3. Submit forced tx|Gateway
+    Gateway --> |4. Validate & store|Rollup
+    Gateway --> |Check addresses|Filter
+    Rollup --> |5. Emit ForcedTransactionAdded|Coordinator
+    Coordinator --> |6. Submit tx to sequencer|Sequencer
+    Sequencer --> |7. Must process BY deadline|Sequencer
+    Sequencer --> |8. L2 state with forced tx|Prover
+    Prover --> |9. Generate proof|Prover
+    Prover --> |10. Submit proof + finalization|Rollup

@@ -62,6 +62,27 @@ func (d Bls12377Fr) Hex() string {
 	return fmt.Sprintf("0x%x", [32]byte(d))
 }
 
+// Bls12377FrFromHex parses hex into a canonical BLS12-377 field element (left-padded; 0x optional).
+func Bls12377FrFromHex(s string) Bls12377Fr {
+	b, err := utils.HexDecodeString(s)
+	if err != nil {
+		utils.Panic("not an hexadecimal %v", s)
+	}
+	if len(b) > 32 {
+		utils.Panic("String passed should have even length <= 32 bytes")
+	}
+
+	var res Bls12377Fr
+	copy(res[32-len(b):], b)
+
+	var f fr.Element
+	if err := f.SetBytesCanonical(res[:]); err != nil {
+		utils.Panic("Invalid field element %v", err.Error())
+	}
+
+	return res
+}
+
 // Create a bytes32 from a slice
 func AsBls12377Fr(b []byte) (d Bls12377Fr) {
 	// Sanity-check the length of the digest

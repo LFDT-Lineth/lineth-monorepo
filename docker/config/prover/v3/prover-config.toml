@@ -15,10 +15,10 @@ prover_mode = "dev"
 requests_root_dir = "/data/prover/v3/compression"
 dict_paths = ["/opt/linea/prover/lib/compressor/compressor_dict.bin", "/opt/linea/prover/lib/compressor/dict/25-04-21.bin"]
 
-#[invalidity]
-#prover_mode = "dev"
-#requests_root_dir = "/data/prover/v3/invalidity"
-#max_rlp_byte_size = 4096
+[invalidity]
+prover_mode = "dev"
+requests_root_dir = "/data/prover/v3/invalidity"
+max_rlp_byte_size = 4096
 
 [aggregation]
 prover_mode = "dev"
@@ -88,7 +88,7 @@ modules = [
     {module = "PRECOMPILE_BLAKE_ROUNDS", limit = 0, limit_large = 0},
     {module = "BLOCK_KECCAK", limit = 8192, limit_large = 8192},
     {module = "BLOCK_L1_SIZE", limit = 1000000, limit_large = 1000000, is_not_scalable = true},
-    {module = "BLOCK_L2_L1_LOGS", limit = 16, limit_large = 16, is_not_scalable = true},
+    {module = "BLOCK_L2_L1_LOGS", limit = 10, limit_large = 10, is_not_scalable = true},
     {module = "BLOCK_TRANSACTIONS", limit = 300, limit_large = 300},
     {module = "BIN_REFERENCE_TABLE", limit = 262144, limit_large = 262144, is_not_scalable = true},
     {module = "SHF_REFERENCE_TABLE", limit = 4096, limit_large = 4096, is_not_scalable = true},

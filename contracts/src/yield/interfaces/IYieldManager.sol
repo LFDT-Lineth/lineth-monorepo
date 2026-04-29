@@ -44,9 +44,10 @@ interface IYieldManager {
 
   /**
    * @notice Emitted when YieldManager is initialized.
+   * @param contractVersion The contract ABI version.
    * @param initialL2YieldRecipients The list of initial L2 yield recipients.
    */
-  event YieldManagerInitialized(address[] initialL2YieldRecipients);
+  event YieldManagerInitialized(bytes8 indexed contractVersion, address[] initialL2YieldRecipients);
 
   /**
    * @notice Struct used to represent reserve threshold updates.

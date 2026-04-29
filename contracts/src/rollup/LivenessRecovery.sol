@@ -3,6 +3,7 @@ pragma solidity ^0.8.33;
 
 import { LineaRollupBase } from "./LineaRollupBase.sol";
 import { ILivenessRecovery } from "./interfaces/ILivenessRecovery.sol";
+import { FinalizedStateHashing } from "../libraries/FinalizedStateHashing.sol";
 /**
  * @title Contract to manage liveness recovery.
  * @author ConsenSys Software Inc.
@@ -30,20 +31,39 @@ abstract contract LivenessRecovery is LineaRollupBase, ILivenessRecovery {
    * @dev Reverts if six months have not passed since the last finalization.
    * @param _messageNumber Last finalized L1 message number as part of the feedback loop.
    * @param _rollingHash Last finalized L1 rolling hash as part of the feedback loop.
+   * @param _lastFinalizedForcedTransactionNumber Last finalized forced transaction number.
+   * @param _lastFinalizedForcedTransactionRollingHash Last finalized forced transaction rolling hash.
    * @param _lastFinalizedTimestamp Last finalized L2 block timestamp.
    */
   function setLivenessRecoveryOperator(
     uint256 _messageNumber,
     bytes32 _rollingHash,
+    uint256 _lastFinalizedForcedTransactionNumber,
+    bytes32 _lastFinalizedForcedTransactionRollingHash,
     uint256 _lastFinalizedTimestamp
   ) external {
     if (block.timestamp < _lastFinalizedTimestamp + SIX_MONTHS_IN_SECONDS) {
       revert LastFinalizationTimeNotLapsed();
     }
-    if (currentFinalizedState != _computeLastFinalizedState(_messageNumber, _rollingHash, _lastFinalizedTimestamp)) {
+    if (
+      currentFinalizedState !=
+      FinalizedStateHashing._computeLastFinalizedState(
+        _messageNumber,
+        _rollingHash,
+        _lastFinalizedForcedTransactionNumber,
+        _lastFinalizedForcedTransactionRollingHash,
+        _lastFinalizedTimestamp
+      )
+    ) {
       revert FinalizationStateIncorrect(
         currentFinalizedState,
-        _computeLastFinalizedState(_messageNumber, _rollingHash, _lastFinalizedTimestamp)
+        FinalizedStateHashing._computeLastFinalizedState(
+          _messageNumber,
+          _rollingHash,
+          _lastFinalizedForcedTransactionNumber,
+          _lastFinalizedForcedTransactionRollingHash,
+          _lastFinalizedTimestamp
+        )
       );
     }
 

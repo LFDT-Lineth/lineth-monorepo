@@ -20,26 +20,39 @@ prover_mode = "full"
 requests_root_dir = "./shared/v3/prover-compression/"
 dict_paths = ["lib/compressor/compressor_dict.bin", "lib/compressor/dict/25-04-21.bin"]
 
+[invalidity]
+prover_mode = "full"
+requests_root_dir = "./"
+max_rlp_byte_size = 4096
+
 [aggregation]
 prover_mode = "full"
 requests_root_dir = "./shared/v3/prover-aggregation/"
 num_proofs = [10, 20, 50, 100, 200, 400]
 verifier_id = 0
-# allowed_inputs = ["execution-dummy", "execution", "execution-large", "data-availability-dummy", "data-availability-v2"]
 # Conversion to is_allowed_circuit_id bitmask:
-#   execution-dummy (ID 0, bit 0) = 1 → ALLOWED
-#   data-availability-dummy (ID 1, bit 1) = 1 → ALLOWED
-#   execution (ID 2, bit 2) = 0 → DISALLOWED
-#   execution-large (ID 3, bit 3) = 0 → DISALLOWED
-#   execution-limitless (ID 4, bit 4) = 1 → ALLOWED
-#   data-availability-v2 (ID 5, bit 5) = 1 → ALLOWED
+#   execution-dummy (ID 0, bit 0)                            = 1 → ALLOWED
+#   data-availability-dummy (ID 1, bit 1)                    = 1 → ALLOWED
+#   execution (ID 2, bit 2)                                  = 0 → DISALLOWED
+#   execution-large (ID 3, bit 3)                            = 0 → DISALLOWED
+#   execution-limitless (ID 4, bit 4)                        = 1 → ALLOWED
+#   data-availability-v2 (ID 5, bit 5)                       = 1 → ALLOWED
+#   invalidity-nonce-balance-dummy (ID 6, bit 6)             = 1 → ALLOWED
+#   invalidity-precompile-logs-dummy (ID 7, bit 7)           = 1 → ALLOWED
+#   invalidity-filtered-address-dummy (ID 8, bit 8)          = 1 → ALLOWED
+#   invalidity-nonce-balance (ID 9, bit 9)                   = 0 → DISALLOWED
+#   invalidity-precompile-logs (ID 10, bit 10)               = 0 → DISALLOWED
+#   invalidity-filtered-address (ID 11, bit 11)              = 0 → DISALLOWED
+#   invalidity-precompile-logs-limitless (ID 12, bit 12)     = 1 → ALLOWED
+#   invalidity-precompile-logs-large (ID 13, bit 13)         = 0 → DISALLOWED
 # To customize, edit and run: go test -v -run TestCalculateCustomBitmask ./circuits/
-# Binary: 0b110011 = 51 (decimal)
-is_allowed_circuit_id = 51
+# Binary: 0b01000111110011 = 4595 (decimal)
+is_allowed_circuit_id = 4595
 
 [public_input_interconnection]
 max_nb_data_availability = 400
 max_nb_execution = 400
+max_nb_invalidity = 200
 max_nb_circuits = 400
 execution_max_nb_msg = 16
 l2_msg_merkle_depth = 5

@@ -15,6 +15,8 @@
         "l1RollingHashMessageNumber": 14,
         "howManyL2Msgs": 30,
         "treeDepth": 5,
-        "l2MessagingBlocksOffsets": "0x00000000000000000000000fffff"
+        "l2MessagingBlocksOffsets": "0x00000000000000000000000fffff",
+        "parentAggregationFtxRollingHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "parentAggregationFtxNumber": 0
     }
 }

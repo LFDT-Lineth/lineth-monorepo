@@ -2,6 +2,7 @@
 pragma solidity 0.8.33;
 
 import { LineaRollup } from "../../../rollup/LineaRollup.sol";
+import { FinalizedStateHashing } from "../../../libraries/FinalizedStateHashing.sol";
 import { LineaRollupBase } from "../../../rollup/LineaRollupBase.sol";
 import { CalldataBlobAcceptor } from "../../../rollup/dataAvailability/CalldataBlobAcceptor.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
@@ -44,8 +45,33 @@ contract TestLineaRollup is LineaRollup, CalldataBlobAcceptor {
     _blobShnarfExists[_shnarf] = _finalBlockNumber;
   }
 
-  function setLastFinalizedState(uint256 _messageNumber, bytes32 _rollingHash, uint256 _timestamp) external {
-    currentFinalizedState = _computeLastFinalizedState(_messageNumber, _rollingHash, _timestamp);
+  function setLastFinalizedStateV6(uint256 _messageNumber, bytes32 _rollingHash, uint256 _timestamp) external {
+    currentFinalizedState = FinalizedStateHashing._computeLastFinalizedState(_messageNumber, _rollingHash, _timestamp);
+  }
+
+  function setLastFinalizedState(
+    uint256 _messageNumber,
+    bytes32 _rollingHash,
+    uint256 _forcedTransactionNumber,
+    bytes32 _forcedTransactionRollingHash,
+    uint256 _timestamp
+  ) external {
+    currentFinalizedState = FinalizedStateHashing._computeLastFinalizedState(
+      _messageNumber,
+      _rollingHash,
+      _forcedTransactionNumber,
+      _forcedTransactionRollingHash,
+      _timestamp
+    );
+  }
+
+  function setForcedTransactionBlockNumber(uint256 _blockNumber) external {
+    uint256 currentForcedTxNumber = nextForcedTransactionNumber++;
+    forcedTransactionL2BlockNumbers[currentForcedTxNumber] = _blockNumber;
+  }
+
+  function setForcedTransactionRollingHash(uint256 _forcedTransactionNumber, bytes32 _rollingHash) external {
+    forcedTransactionRollingHashes[_forcedTransactionNumber] = _rollingHash;
   }
 
   /**

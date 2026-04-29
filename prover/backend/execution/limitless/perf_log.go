@@ -38,7 +38,7 @@ type perfLogger struct {
 	enc  *json.Encoder
 }
 
-func newPerfLogger() *perfLogger {
+func NewPerfLogger() *perfLogger {
 	if os.Getenv("LIMITLESS_PERF_LOG") != "true" {
 		return nil
 	}
@@ -51,7 +51,7 @@ func newPerfLogger() *perfLogger {
 	return &perfLogger{file: f, enc: json.NewEncoder(f)}
 }
 
-func (pl *perfLogger) close() {
+func (pl *perfLogger) Close() {
 	if pl == nil {
 		return
 	}

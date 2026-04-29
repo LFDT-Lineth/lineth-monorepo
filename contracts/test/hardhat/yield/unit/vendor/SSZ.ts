@@ -448,70 +448,80 @@ describe("SSZ", () => {
       await expectRevertWithCustomError(ssz, call, "InvalidProof");
     });
     it("revert: proving root", async () => {
-      await expect(
+      await expectRevertWithCustomError(
+        ssz,
         ssz.verifyProof(
           [],
           "0xf5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b",
           "0xf5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b",
           await gIndexLib.pack(1, 0),
         ),
-      ).to.be.revertedWithCustomError(ssz, "InvalidProof");
+        "InvalidProof",
+      );
     });
     it("revert: invalid proof", async () => {
       const proof = [
         "0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30",
         "0xf4551dd23f47858f0e66957db62a0bced8cfd5e9cbd63f2fd73672ed0db7c124",
       ];
-      await expect(
+      await expectRevertWithCustomError(
+        ssz,
         ssz.verifyProof(
           proof,
           "0xda1c902c54a4386439ce622d7e527dc11decace28ebb902379cba91c4a116b1c",
           "0xad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5",
           await gIndexLib.pack(4, 0),
         ),
-      ).to.be.revertedWithCustomError(ssz, "InvalidProof");
+        "InvalidProof",
+      );
     });
     it("revert: wrong gindex", async () => {
       const proof = [
         "0xad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5",
         "0xf4551dd23f47858f0e66957db62a0bced8cfd5e9cbd63f2fd73672ed0db7c124",
       ];
-      await expect(
+      await expectRevertWithCustomError(
+        ssz,
         ssz.verifyProof(
           proof,
           "0xda1c902c54a4386439ce622d7e527dc11decace28ebb902379cba91c4a116b1c",
           ZeroHash,
           await gIndexLib.pack(5, 0),
         ),
-      ).to.be.revertedWithCustomError(ssz, "InvalidProof");
+        "InvalidProof",
+      );
     });
     it("revert: BranchHasExtraItem", async () => {
       const proof = [
         "0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30",
         "0xf4551dd23f47858f0e66957db62a0bced8cfd5e9cbd63f2fd73672ed0db7c124",
       ];
-      await expect(
+      await expectRevertWithCustomError(
+        ssz,
         ssz.verifyProof(
           proof,
           "0xda1c902c54a4386439ce622d7e527dc11decace28ebb902379cba91c4a116b1c",
           "0xad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5",
           await gIndexLib.pack(2, 0),
         ),
-      ).to.be.revertedWithCustomError(ssz, "BranchHasExtraItem");
+        "BranchHasExtraItem",
+      );
     });
     it("revert: BranchHasMissingItem", async () => {
       const proof = [
         "0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30",
         "0xf4551dd23f47858f0e66957db62a0bced8cfd5e9cbd63f2fd73672ed0db7c124",
       ];
-      await expect(
+      await expectRevertWithCustomError(
+        ssz,
         ssz.verifyProof(
           proof,
           "0xda1c902c54a4386439ce622d7e527dc11decace28ebb902379cba91c4a116b1c",
           "0xad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5",
           await gIndexLib.pack(8, 0),
         ),
-      ).to.be.revertedWithCustomError(ssz, "BranchHasMissingItem");
+        "BranchHasMissingItem",
+      );
     });
   });
 

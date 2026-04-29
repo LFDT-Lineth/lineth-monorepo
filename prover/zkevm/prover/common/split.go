@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/binary"
+	"math/big"
 )
 
 // LimbBytes is the size of one limb in bytes
@@ -32,5 +33,15 @@ func SplitBytes(input []byte, limbBytes ...int) [][]byte {
 func SplitBigEndianUint64(input uint64) [][]byte {
 	inputBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(inputBytes, input)
+	return SplitBytes(inputBytes)
+}
+
+// SplitBigEndianBigInt splits the big.Int input into big endian subarrays.
+// The input is padded to numBytes before splitting.
+func SplitBigEndianBigInt(input *big.Int, numBytes int) [][]byte {
+	if input == nil {
+		return SplitBytes(make([]byte, numBytes))
+	}
+	inputBytes := input.FillBytes(make([]byte, numBytes))
 	return SplitBytes(inputBytes)
 }

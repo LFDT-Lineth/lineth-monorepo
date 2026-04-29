@@ -14,7 +14,7 @@ bin/compression-aggregation-sample --odir .samples-multiproof-calldata/ --spec .
 bin/compression-aggregation-sample --odir .samples-test-eip4844/ --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-comp-eip4844-1.json --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-agg.json
 bin/compression-aggregation-sample --odir .samples-simple-eip4844/ --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-comp-eip4844-1.json --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-comp-eip4844-1.json --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-comp-eip4844-1.json --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-comp-eip4844-1.json --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-agg.json
 bin/compression-aggregation-sample --odir .samples-multiproof-eip4844/ --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-comp-eip4844-1.json --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-comp-eip4844-1.json --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-agg.json
-bin/compression-aggregation-sample --odir .samples-multiproof-eip4844/ --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-comp-eip4844-2.json --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-comp-eip4844-2.json --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-agg-2.json
+bin/compression-aggregation-sample --odir .samples-multiproof-eip4844/ --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-invalidity-1.json --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-invalidity-2.json --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-comp-eip4844-2.json --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-comp-eip4844-2.json --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-agg-2.json
 
 SOLTESTDIR=../contracts/test/hardhat/_testData/compressedData
 SOLTESTDIR_EIP4844=../contracts/test/hardhat/_testData/compressedDataEip4844
@@ -23,13 +23,13 @@ mkdir -p ${SOLTESTDIR} ${SOLTESTDIR}/multipleProofs  ${SOLTESTDIR}/test
 mkdir -p ${SOLTESTDIR_EIP4844} ${SOLTESTDIR_EIP4844}/multipleProofs  ${SOLTESTDIR_EIP4844}/test
 
 rm -f ${SOLTESTDIR}/blocks* ${SOLTESTDIR}/aggregatedProof*
-rm -f ${SOLTESTDIR}/multipleProofs/blocks* ${SOLTESTDIR}/multipleProofs/aggregatedProof*
+rm -f ${SOLTESTDIR}/multipleProofs/blocks* ${SOLTESTDIR}/multipleProofs/aggregatedProof* ${SOLTESTDIR}/multipleProofs/forcedTransaction*
 mv -f .samples-simple-calldata/* ${SOLTESTDIR} 
 mv -f .samples-multiproof-calldata/* ${SOLTESTDIR}/multipleProofs 
 mv -f .samples-test-calldata/* ${SOLTESTDIR}/test
 
 rm -f ${SOLTESTDIR_EIP4844}/blocks* ${SOLTESTDIR_EIP4844}/aggregatedProof*
-rm -f ${SOLTESTDIR_EIP4844}/multipleProofs/blocks* ${SOLTESTDIR_EIP4844}/multipleProofs/aggregatedProof*
+rm -f ${SOLTESTDIR_EIP4844}/multipleProofs/blocks* ${SOLTESTDIR_EIP4844}/multipleProofs/aggregatedProof* ${SOLTESTDIR_EIP4844}/multipleProofs/forcedTransaction*
 mv -f .samples-simple-eip4844/* ${SOLTESTDIR_EIP4844} 
 mv -f .samples-multiproof-eip4844/* ${SOLTESTDIR_EIP4844}/multipleProofs 
 mv -f .samples-test-eip4844/* ${SOLTESTDIR_EIP4844}/test

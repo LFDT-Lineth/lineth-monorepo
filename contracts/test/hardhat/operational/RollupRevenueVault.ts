@@ -15,7 +15,7 @@ import {
   TestDexSwapAdapter,
   TestDexSwapAdapter__factory,
 } from "../../../typechain-types";
-import { ADDRESS_ZERO, EMPTY_CALLDATA, ONE_DAY_IN_SECONDS } from "../common/constants";
+import { ADDRESS_ZERO, EMPTY_CALLDATA, ONE_DAY_IN_SECONDS, ONE_ETHER } from "../common/constants";
 import { deployUpgradableFromFactory } from "../common/deployment";
 import {
   expectEvent,
@@ -38,8 +38,6 @@ describe("RollupRevenueVault", () => {
   let invoicePaymentReceiver: SignerWithAddress;
   let l1LineaTokenBurner: SignerWithAddress;
   let nonAuthorizedAccount: SignerWithAddress;
-
-  const ONE_ETHER = ethers.parseEther("1");
 
   before(async () => {
     await network.provider.send("hardhat_reset");
@@ -97,258 +95,90 @@ describe("RollupRevenueVault", () => {
       );
     });
 
+    // Configuration for initialization arguments
+    interface InitConfig {
+      lastInvoiceDate: number | bigint;
+      defaultAdmin: string;
+      invoiceSubmitter: string;
+      burner: string;
+      invoicePaymentReceiver: string;
+      tokenBridge: string;
+      messageService: string;
+      l1LineaTokenBurner: string;
+      lineaToken: string;
+      dexSwapAdapter: string;
+    }
+
+    // Convert config to args array
+    const toArgs = (config: InitConfig): unknown[] => [
+      config.lastInvoiceDate,
+      config.defaultAdmin,
+      config.invoiceSubmitter,
+      config.burner,
+      config.invoicePaymentReceiver,
+      config.tokenBridge,
+      config.messageService,
+      config.l1LineaTokenBurner,
+      config.lineaToken,
+      config.dexSwapAdapter,
+    ];
+
+    // Helper to create default config
+    const createDefaultConfig = async (): Promise<InitConfig> => ({
+      lastInvoiceDate: await time.latest(),
+      defaultAdmin: admin.address,
+      invoiceSubmitter: invoiceSubmitter.address,
+      burner: burner.address,
+      invoicePaymentReceiver: invoicePaymentReceiver.address,
+      tokenBridge: await tokenBridge.getAddress(),
+      messageService: await messageService.getAddress(),
+      l1LineaTokenBurner: l1LineaTokenBurner.address,
+      lineaToken: await l2LineaToken.getAddress(),
+      dexSwapAdapter: await dexSwapAdapter.getAddress(),
+    });
+
+    // Helper to deploy with config
+    const deployWithConfig = (config: InitConfig) =>
+      deployUpgradableFromFactory("RollupRevenueVault", toArgs(config), {
+        initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
+        unsafeAllow: ["constructor"],
+      });
+
     it("should revert if lastInvoiceDate is zero", async () => {
-      const deployCall = deployUpgradableFromFactory(
-        "RollupRevenueVault",
-        [
-          0n,
-          admin.address,
-          invoiceSubmitter.address,
-          burner.address,
-          invoicePaymentReceiver.address,
-          await tokenBridge.getAddress(),
-          await messageService.getAddress(),
-          l1LineaTokenBurner.address,
-          await l2LineaToken.getAddress(),
-          await dexSwapAdapter.getAddress(),
-        ],
-        {
-          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor"],
-        },
-      );
+      const config = await createDefaultConfig();
+      const deployCall = deployWithConfig({ ...config, lastInvoiceDate: 0n });
       await expectRevertWithCustomError(rollupRevenueVault, deployCall, "ZeroTimestampNotAllowed");
     });
 
     it("should revert if lastInvoiceDate is in the future", async () => {
+      const config = await createDefaultConfig();
       const futureInvoiceDate = (await time.latest()) + ONE_DAY_IN_SECONDS;
-      const deployCall = deployUpgradableFromFactory(
-        "RollupRevenueVault",
-        [
-          futureInvoiceDate,
-          admin.address,
-          invoiceSubmitter.address,
-          burner.address,
-          invoicePaymentReceiver.address,
-          await tokenBridge.getAddress(),
-          await messageService.getAddress(),
-          l1LineaTokenBurner.address,
-          await l2LineaToken.getAddress(),
-          await dexSwapAdapter.getAddress(),
-        ],
-        {
-          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor"],
-        },
-      );
+      const deployCall = deployWithConfig({ ...config, lastInvoiceDate: futureInvoiceDate });
       await expectRevertWithCustomError(rollupRevenueVault, deployCall, "FutureInvoicesNotAllowed");
     });
 
-    it("Should revert if defaultAdmin address is zero address", async () => {
-      const deployCall = deployUpgradableFromFactory(
-        "RollupRevenueVault",
-        [
-          await time.latest(),
-          ADDRESS_ZERO,
-          invoiceSubmitter.address,
-          burner.address,
-          invoicePaymentReceiver.address,
-          await tokenBridge.getAddress(),
-          await messageService.getAddress(),
-          l1LineaTokenBurner.address,
-          await l2LineaToken.getAddress(),
-          await dexSwapAdapter.getAddress(),
-        ],
-        {
-          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor"],
-        },
-      );
-      await expectRevertWithCustomError(rollupRevenueVault, deployCall, "ZeroAddressNotAllowed");
-    });
+    // Parameterized zero address validation tests
+    const zeroAddressValidationCases: Array<{
+      description: string;
+      field: keyof InitConfig;
+    }> = [
+      { description: "defaultAdmin", field: "defaultAdmin" },
+      { description: "invoiceSubmitter", field: "invoiceSubmitter" },
+      { description: "burner", field: "burner" },
+      { description: "invoicePaymentReceiver", field: "invoicePaymentReceiver" },
+      { description: "tokenBridge", field: "tokenBridge" },
+      { description: "messageService", field: "messageService" },
+      { description: "l1LineaTokenBurner", field: "l1LineaTokenBurner" },
+      { description: "lineaToken", field: "lineaToken" },
+      { description: "V3DexSwapAdapter contract", field: "dexSwapAdapter" },
+    ];
 
-    it("Should revert if invoiceSubmitter address is zero address", async () => {
-      const deployCall = deployUpgradableFromFactory(
-        "RollupRevenueVault",
-        [
-          await time.latest(),
-          admin.address,
-          ADDRESS_ZERO,
-          burner.address,
-          invoicePaymentReceiver.address,
-          await tokenBridge.getAddress(),
-          await messageService.getAddress(),
-          l1LineaTokenBurner.address,
-          await l2LineaToken.getAddress(),
-          await dexSwapAdapter.getAddress(),
-        ],
-        {
-          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor"],
-        },
-      );
-      await expectRevertWithCustomError(rollupRevenueVault, deployCall, "ZeroAddressNotAllowed");
-    });
-
-    it("Should revert if burner address is zero address", async () => {
-      const deployCall = deployUpgradableFromFactory(
-        "RollupRevenueVault",
-        [
-          await time.latest(),
-          admin.address,
-          invoiceSubmitter.address,
-          ADDRESS_ZERO,
-          invoicePaymentReceiver.address,
-          await tokenBridge.getAddress(),
-          await messageService.getAddress(),
-          l1LineaTokenBurner.address,
-          await l2LineaToken.getAddress(),
-          await dexSwapAdapter.getAddress(),
-        ],
-        {
-          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor"],
-        },
-      );
-      await expectRevertWithCustomError(rollupRevenueVault, deployCall, "ZeroAddressNotAllowed");
-    });
-
-    it("Should revert if invoicePaymentReceiver address is zero address", async () => {
-      const deployCall = deployUpgradableFromFactory(
-        "RollupRevenueVault",
-        [
-          await time.latest(),
-          admin.address,
-          invoiceSubmitter.address,
-          burner.address,
-          ADDRESS_ZERO,
-          await tokenBridge.getAddress(),
-          await messageService.getAddress(),
-          l1LineaTokenBurner.address,
-          await l2LineaToken.getAddress(),
-          await dexSwapAdapter.getAddress(),
-        ],
-        {
-          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor"],
-        },
-      );
-      await expectRevertWithCustomError(rollupRevenueVault, deployCall, "ZeroAddressNotAllowed");
-    });
-
-    it("Should revert if tokenBridge address is zero address", async () => {
-      const deployCall = deployUpgradableFromFactory(
-        "RollupRevenueVault",
-        [
-          await time.latest(),
-          admin.address,
-          invoiceSubmitter.address,
-          burner.address,
-          invoicePaymentReceiver.address,
-          ADDRESS_ZERO,
-          await messageService.getAddress(),
-          l1LineaTokenBurner.address,
-          await l2LineaToken.getAddress(),
-          await dexSwapAdapter.getAddress(),
-        ],
-        {
-          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor"],
-        },
-      );
-      await expectRevertWithCustomError(rollupRevenueVault, deployCall, "ZeroAddressNotAllowed");
-    });
-
-    it("Should revert if messageService address is zero address", async () => {
-      const deployCall = deployUpgradableFromFactory(
-        "RollupRevenueVault",
-        [
-          await time.latest(),
-          admin.address,
-          invoiceSubmitter.address,
-          burner.address,
-          invoicePaymentReceiver.address,
-          await tokenBridge.getAddress(),
-          ADDRESS_ZERO,
-          l1LineaTokenBurner.address,
-          await l2LineaToken.getAddress(),
-          await dexSwapAdapter.getAddress(),
-        ],
-        {
-          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor"],
-        },
-      );
-      await expectRevertWithCustomError(rollupRevenueVault, deployCall, "ZeroAddressNotAllowed");
-    });
-
-    it("Should revert if l1LineaTokenBurner address is zero address", async () => {
-      const deployCall = deployUpgradableFromFactory(
-        "RollupRevenueVault",
-        [
-          await time.latest(),
-          admin.address,
-          invoiceSubmitter.address,
-          burner.address,
-          invoicePaymentReceiver.address,
-          await tokenBridge.getAddress(),
-          await messageService.getAddress(),
-          ADDRESS_ZERO,
-          await l2LineaToken.getAddress(),
-          await dexSwapAdapter.getAddress(),
-        ],
-        {
-          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor"],
-        },
-      );
-      await expectRevertWithCustomError(rollupRevenueVault, deployCall, "ZeroAddressNotAllowed");
-    });
-
-    it("Should revert if lineaToken address is zero address", async () => {
-      const deployCall = deployUpgradableFromFactory(
-        "RollupRevenueVault",
-        [
-          await time.latest(),
-          admin.address,
-          invoiceSubmitter.address,
-          burner.address,
-          invoicePaymentReceiver.address,
-          await tokenBridge.getAddress(),
-          await messageService.getAddress(),
-          l1LineaTokenBurner.address,
-          ADDRESS_ZERO,
-          await dexSwapAdapter.getAddress(),
-        ],
-        {
-          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor"],
-        },
-      );
-      await expectRevertWithCustomError(rollupRevenueVault, deployCall, "ZeroAddressNotAllowed");
-    });
-
-    it("Should revert if V3DexSwapAdapter contract address is zero address", async () => {
-      const deployCall = deployUpgradableFromFactory(
-        "RollupRevenueVault",
-        [
-          await time.latest(),
-          admin.address,
-          invoiceSubmitter.address,
-          burner.address,
-          invoicePaymentReceiver.address,
-          await tokenBridge.getAddress(),
-          await messageService.getAddress(),
-          l1LineaTokenBurner.address,
-          await l2LineaToken.getAddress(),
-          ADDRESS_ZERO,
-        ],
-        {
-          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor"],
-        },
-      );
-      await expectRevertWithCustomError(rollupRevenueVault, deployCall, "ZeroAddressNotAllowed");
+    zeroAddressValidationCases.forEach(({ description, field }) => {
+      it(`Should revert if ${description} address is zero address`, async () => {
+        const config = await createDefaultConfig();
+        const deployCall = deployWithConfig({ ...config, [field]: ADDRESS_ZERO });
+        await expectRevertWithCustomError(rollupRevenueVault, deployCall, "ZeroAddressNotAllowed");
+      });
     });
 
     it("should emit an event when initialized", async () => {

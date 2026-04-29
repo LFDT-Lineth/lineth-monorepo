@@ -1,21 +1,14 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture, time as networkTime } from "@nomicfoundation/hardhat-network-helpers";
-import * as kzg from "c-kzg";
 import { expect } from "chai";
-import {
-  LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES,
-  LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
-  PAUSE_STATE_DATA_SUBMISSION_ROLE,
-  STATE_DATA_SUBMISSION_PAUSE_TYPE,
-} from "contracts/common/constants";
-import { CallForwardingProxy, TestLineaRollup } from "contracts/typechain-types";
-import { IPauseManager } from "contracts/typechain-types/src/_testing/unit/rollup/TestLineaRollup";
-import { IPermissionsManager } from "contracts/typechain-types/src/rollup/LineaRollup";
-import { Typed } from "ethers";
+import { LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES, LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES } from "contracts/common/constants";
+import { AddressFilter, CallForwardingProxy, LineaRollup__factory, TestLineaRollup } from "contracts/typechain-types";
 import { ethers, upgrades } from "hardhat";
 
+import { ensureKzgSetup } from "./helpers";
 import {
   deployCallForwardingProxy,
+  deployForcedTransactionGatewayFixture,
   deployLineaRollupFixture,
   expectSuccessfulFinalizeViaCallForwarder,
   getAccountsFixture,
@@ -23,13 +16,10 @@ import {
   sendBlobTransactionViaCallForwarder,
 } from "./helpers";
 import firstCompressedDataContent from "../_testData/compressedData/blocks-1-46.json";
-import fourthCompressedDataContent from "../_testData/compressedData/blocks-115-155.json";
-import secondCompressedDataContent from "../_testData/compressedData/blocks-47-81.json";
 import blobAggregatedProof1To155 from "../_testData/compressedDataEip4844/aggregatedProof-1-155.json";
 import {
   ADDRESS_ZERO,
   FALLBACK_OPERATOR_ADDRESS,
-  GENERAL_PAUSE_TYPE,
   HASH_WITHOUT_ZERO_FIRST_BYTE,
   HASH_ZERO,
   INITIAL_MIGRATION_BLOCK,
@@ -44,28 +34,29 @@ import {
   DEFAULT_LAST_FINALIZED_TIMESTAMP,
   SIX_MONTHS_IN_SECONDS,
   LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-  UNPAUSE_STATE_DATA_SUBMISSION_ROLE,
+  FORCED_TRANSACTION_FEE,
+  SET_ADDRESS_FILTER_ROLE,
   MAX_GAS_LIMIT,
+  INITIALIZED_ALREADY_MESSAGE,
 } from "../common/constants";
-import { deployUpgradableFromFactory } from "../common/deployment";
+import { deployUpgradableFromFactory, reinitializeUpgradeableProxy } from "../common/deployment";
 import {
   calculateRollingHash,
   encodeData,
   generateRandomBytes,
-  generateCallDataSubmission,
   expectEvent,
   buildAccessErrorMessage,
   expectRevertWithCustomError,
   expectRevertWithReason,
   generateBlobParentShnarfData,
   calculateLastFinalizedState,
-  generateKeccak256,
-  convertStringToPaddedHexBytes,
   expectNoEvent,
+  expectEventDirectFromReceiptData,
+  computeGenesisShnarf,
 } from "../common/helpers";
-import { CalldataSubmissionData } from "../common/types";
+import { LineaRollupInitializationData, PauseTypeRole } from "../common/types";
 
-kzg.loadTrustedSetup(0, `${__dirname}/../_testData/trusted_setup.txt`);
+ensureKzgSetup();
 
 describe("Linea Rollup contract", () => {
   let lineaRollup: TestLineaRollup;
@@ -79,131 +70,20 @@ describe("Linea Rollup contract", () => {
   let nonAuthorizedAccount: SignerWithAddress;
   let alternateShnarfProviderAddress: SignerWithAddress;
   let roleAddresses: { addressWithRole: string; role: string }[];
-  let upgradePauseTypeRoles: Typed | IPauseManager.PauseTypeRoleStruct[] = [];
-  let upgradeUnpauseTypeRoles: Typed | IPauseManager.PauseTypeRoleStruct[] = [];
-  let upgradeArgs: (IPauseManager.PauseTypeRoleStruct[] | IPermissionsManager.RoleAddressStruct[])[] = [];
-  let upgradeRoleAddresses: IPermissionsManager.RoleAddressStruct[];
+  let addressFilterAddress: string;
+  let addressFilter: AddressFilter;
 
-  const { compressedData, prevShnarf, expectedShnarf, expectedX, expectedY, parentStateRootHash } =
-    firstCompressedDataContent;
-  const { expectedShnarf: secondExpectedShnarf } = secondCompressedDataContent;
+  const { compressedData, expectedX, expectedY, parentStateRootHash } = firstCompressedDataContent;
 
   before(async () => {
     ({ admin, securityCouncil, operator, nonAuthorizedAccount, alternateShnarfProviderAddress } =
       await loadFixture(getAccountsFixture));
     roleAddresses = await loadFixture(getRoleAddressesFixture);
-
-    upgradeRoleAddresses = [
-      {
-        addressWithRole: securityCouncil.address,
-        role: PAUSE_STATE_DATA_SUBMISSION_ROLE,
-      },
-      {
-        addressWithRole: securityCouncil.address,
-        role: UNPAUSE_STATE_DATA_SUBMISSION_ROLE,
-      },
-    ];
-
-    upgradePauseTypeRoles = [{ pauseType: STATE_DATA_SUBMISSION_PAUSE_TYPE, role: PAUSE_STATE_DATA_SUBMISSION_ROLE }];
-    upgradeUnpauseTypeRoles = [
-      { pauseType: STATE_DATA_SUBMISSION_PAUSE_TYPE, role: UNPAUSE_STATE_DATA_SUBMISSION_ROLE },
-    ];
-    upgradeArgs = [upgradeRoleAddresses, upgradePauseTypeRoles, upgradeUnpauseTypeRoles];
   });
 
   beforeEach(async () => {
-    ({ verifier, lineaRollup, yieldManager } = await loadFixture(deployLineaRollupFixture));
-  });
-
-  describe("Upgrading", () => {
-    it("Should be able to upgrade", async () => {
-      // Simulate a pre-upgrade state by lowering the initialized version
-      await lineaRollup.setSlotValue(0, 7);
-
-      // Deploy new LineaRollup implementation
-      const newLineaRollupFactory = await ethers.getContractFactory(
-        "src/_testing/unit/rollup/TestLineaRollup.sol:TestLineaRollup",
-      );
-
-      const newLineaRollup = await upgrades.upgradeProxy(lineaRollup, newLineaRollupFactory, {
-        call: { fn: "reinitializeV8", args: upgradeArgs },
-        kind: "transparent",
-        unsafeAllowRenames: true,
-        unsafeAllow: ["incorrect-initializer-order"],
-      });
-
-      await newLineaRollup.waitForDeployment();
-
-      expect(await newLineaRollup.shnarfProvider()).to.equal(await lineaRollup.getAddress());
-
-      // version should be 8 after reinitialize
-      const slotValue = await lineaRollup.getSlotValue(0);
-      expect(slotValue).equal(8);
-    });
-
-    it("Should emit LineaRollupVersionChanged event on upgrade", async () => {
-      // Simulate a pre-upgrade state by lowering the initialized version
-      await lineaRollup.setSlotValue(0, 7);
-
-      // Deploy new LineaRollup implementation
-      const newLineaRollupFactory = await ethers.getContractFactory(
-        "src/_testing/unit/rollup/TestLineaRollup.sol:TestLineaRollup",
-      );
-
-      const newLineaRollup = await upgrades.upgradeProxy(lineaRollup, newLineaRollupFactory, {
-        call: { fn: "reinitializeV8", args: upgradeArgs },
-        kind: "transparent",
-        unsafeAllowRenames: true,
-        unsafeAllow: ["incorrect-initializer-order"],
-      });
-
-      const upgradedContract = await newLineaRollup.waitForDeployment();
-
-      const previousVersion = convertStringToPaddedHexBytes("7.0", 8);
-      const newVersion = convertStringToPaddedHexBytes("7.1", 8);
-
-      // Query for the emitted event since upgradeProxy doesn't return a transaction and expectEvent needs more work.
-      const events = await upgradedContract.queryFilter(upgradedContract.filters.LineaRollupVersionChanged());
-      expect(events.length).to.equal(1);
-      expect(events[0].args.previousVersion).to.equal(previousVersion);
-      expect(events[0].args.newVersion).to.equal(newVersion);
-    });
-
-    it("Should fail to upgrade twice", async () => {
-      // Simulate a pre-upgrade state by lowering the initialized version
-      await lineaRollup.setSlotValue(0, 7);
-
-      // Deploy new LineaRollup implementation
-      const newLineaRollupFactory = await ethers.getContractFactory(
-        "src/_testing/unit/rollup/TestLineaRollup.sol:TestLineaRollup",
-      );
-
-      const newLineaRollup = await upgrades.upgradeProxy(lineaRollup, newLineaRollupFactory, {
-        call: { fn: "reinitializeV8", args: upgradeArgs },
-        kind: "transparent",
-        unsafeAllowRenames: true,
-        unsafeAllow: ["incorrect-initializer-order"],
-      });
-
-      await newLineaRollup.waitForDeployment();
-
-      expect(await newLineaRollup.shnarfProvider()).to.equal(await lineaRollup.getAddress());
-
-      await expectRevertWithReason(
-        upgrades.upgradeProxy(lineaRollup, newLineaRollupFactory, {
-          call: { fn: "reinitializeV8", args: upgradeArgs },
-          kind: "transparent",
-          unsafeAllowRenames: true,
-          unsafeAllow: ["incorrect-initializer-order"],
-        }),
-        "Initializable: contract is already initialized",
-      );
-    });
-
-    it("Should set initialized version to 8 on fresh deploy", async () => {
-      const slotValue = await lineaRollup.getSlotValue(0);
-      expect(slotValue).equal(8);
-    });
+    ({ addressFilter, verifier, lineaRollup, yieldManager } = await loadFixture(deployForcedTransactionGatewayFixture));
+    addressFilterAddress = await addressFilter.getAddress();
   });
 
   describe("Fallback/Receive tests", () => {
@@ -221,112 +101,74 @@ describe("Linea Rollup contract", () => {
   });
 
   describe("Initialisation", () => {
-    it("Should revert if verifier address is zero address", async () => {
-      const initializationData = {
-        initialStateRootHash: parentStateRootHash,
-        initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
-        genesisTimestamp: GENESIS_L2_TIMESTAMP,
-        defaultVerifier: ADDRESS_ZERO,
-        rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
-        rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
-        roleAddresses,
-        pauseTypeRoles: LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES,
-        unpauseTypeRoles: LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
-        defaultAdmin: securityCouncil.address,
-        shnarfProvider: ADDRESS_ZERO,
-      };
-
-      const deployCall = deployUpgradableFromFactory(
-        "src/rollup/LineaRollup.sol:LineaRollup",
-        [initializationData, FALLBACK_OPERATOR_ADDRESS, yieldManager],
-        {
-          initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor", "incorrect-initializer-order"],
-        },
-      );
-
-      await expectRevertWithCustomError(lineaRollup, deployCall, "ZeroAddressNotAllowed");
+    // Helper to create default initialization data (type inferred to match contract expectations)
+    const createDefaultInitData = () => ({
+      initialStateRootHash: parentStateRootHash,
+      initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
+      genesisTimestamp: GENESIS_L2_TIMESTAMP,
+      defaultVerifier: verifier,
+      rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
+      rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
+      roleAddresses: [...roleAddresses.slice(1)],
+      pauseTypeRoles: LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES,
+      unpauseTypeRoles: LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
+      defaultAdmin: securityCouncil.address,
+      shnarfProvider: ADDRESS_ZERO,
+      addressFilter: addressFilterAddress,
     });
 
-    it("Should revert if the liveness recovery operator address is zero address", async () => {
-      const initializationData = {
-        initialStateRootHash: parentStateRootHash,
-        initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
-        genesisTimestamp: GENESIS_L2_TIMESTAMP,
-        defaultVerifier: verifier,
-        rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
-        rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
-        roleAddresses: [...roleAddresses.slice(1)],
-        pauseTypeRoles: LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES,
-        unpauseTypeRoles: LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
-        defaultAdmin: securityCouncil.address,
-        shnarfProvider: ADDRESS_ZERO,
-      };
+    type InitData = ReturnType<typeof createDefaultInitData>;
 
-      const deployCall = deployUpgradableFromFactory(
-        "TestLineaRollup",
-        [initializationData, ADDRESS_ZERO, yieldManager],
-        {
-          initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor", "incorrect-initializer-order"],
-        },
-      );
+    // Helper to deploy with custom init data and args
+    const deployLineaRollupWithConfig = (
+      initData: InitData,
+      fallbackOperator: string = FALLBACK_OPERATOR_ADDRESS,
+      contractName: string = "TestLineaRollup",
+    ) =>
+      deployUpgradableFromFactory(contractName, [initData, fallbackOperator, yieldManager], {
+        initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
+        unsafeAllow: ["constructor", "incorrect-initializer-order"],
+      });
 
-      await expectRevertWithCustomError(lineaRollup, deployCall, "ZeroAddressNotAllowed");
-    });
+    // Parameterized zero address validation tests
+    const zeroAddressValidationCases: Array<{
+      description: string;
+      getInitData: () => InitData;
+      fallbackOperator?: string;
+      contractName?: string;
+    }> = [
+      {
+        description: "verifier address is zero address",
+        getInitData: () => ({ ...createDefaultInitData(), defaultVerifier: ADDRESS_ZERO, roleAddresses }),
+        contractName: "src/rollup/LineaRollup.sol:LineaRollup",
+      },
+      {
+        description: "the liveness recovery operator address is zero address",
+        getInitData: createDefaultInitData,
+        fallbackOperator: ADDRESS_ZERO,
+      },
+      {
+        description: "the default admin address is zero address",
+        getInitData: () => ({ ...createDefaultInitData(), defaultAdmin: ADDRESS_ZERO }),
+      },
+      {
+        description: "an operator address is zero address",
+        getInitData: () => ({
+          ...createDefaultInitData(),
+          roleAddresses: [{ addressWithRole: ADDRESS_ZERO, role: DEFAULT_ADMIN_ROLE }, ...roleAddresses.slice(1)],
+        }),
+      },
+      {
+        description: "the address filter address is zero address",
+        getInitData: () => ({ ...createDefaultInitData(), addressFilter: ADDRESS_ZERO }),
+      },
+    ];
 
-    it("Should revert if the default admin address is zero address", async () => {
-      const initializationData = {
-        initialStateRootHash: parentStateRootHash,
-        initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
-        genesisTimestamp: GENESIS_L2_TIMESTAMP,
-        defaultVerifier: verifier,
-        rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
-        rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
-        roleAddresses: [...roleAddresses.slice(1)],
-        pauseTypeRoles: LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES,
-        unpauseTypeRoles: LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
-        defaultAdmin: ADDRESS_ZERO,
-        shnarfProvider: ADDRESS_ZERO,
-      };
-
-      const deployCall = deployUpgradableFromFactory(
-        "TestLineaRollup",
-        [initializationData, FALLBACK_OPERATOR_ADDRESS, yieldManager],
-        {
-          initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor", "incorrect-initializer-order"],
-        },
-      );
-
-      await expectRevertWithCustomError(lineaRollup, deployCall, "ZeroAddressNotAllowed");
-    });
-
-    it("Should revert if an operator address is zero address", async () => {
-      const initializationData = {
-        initialStateRootHash: parentStateRootHash,
-        initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
-        genesisTimestamp: GENESIS_L2_TIMESTAMP,
-        defaultVerifier: verifier,
-        rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
-        rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
-        roleAddresses: [{ addressWithRole: ADDRESS_ZERO, role: DEFAULT_ADMIN_ROLE }, ...roleAddresses.slice(1)],
-        pauseTypeRoles: LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES,
-        unpauseTypeRoles: LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
-        defaultAdmin: securityCouncil.address,
-        shnarfProvider: ADDRESS_ZERO,
-      };
-
-      const deployCall = deployUpgradableFromFactory(
-        "TestLineaRollup",
-        [initializationData, FALLBACK_OPERATOR_ADDRESS, yieldManager],
-        {
-          initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor", "incorrect-initializer-order"],
-        },
-      );
-
-      await expectRevertWithCustomError(lineaRollup, deployCall, "ZeroAddressNotAllowed");
+    zeroAddressValidationCases.forEach(({ description, getInitData, fallbackOperator, contractName }) => {
+      it(`Should revert if ${description}`, async () => {
+        const deployCall = deployLineaRollupWithConfig(getInitData(), fallbackOperator, contractName);
+        await expectRevertWithCustomError(lineaRollup, deployCall, "ZeroAddressNotAllowed");
+      });
     });
 
     it("Should store verifier address in storage", async () => {
@@ -350,19 +192,36 @@ describe("Linea Rollup contract", () => {
     });
 
     it("Should store the startingRootHash in storage for the first block number", async () => {
-      const initializationData = {
+      // This test needs explicit BigInt types for event verification
+      const initializationData: LineaRollupInitializationData = {
         initialStateRootHash: parentStateRootHash,
-        initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
-        genesisTimestamp: GENESIS_L2_TIMESTAMP,
+        initialL2BlockNumber: BigInt(INITIAL_MIGRATION_BLOCK),
+        genesisTimestamp: BigInt(GENESIS_L2_TIMESTAMP),
         defaultVerifier: verifier,
-        rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
+        rateLimitPeriodInSeconds: BigInt(ONE_DAY_IN_SECONDS),
         rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
         roleAddresses,
-        pauseTypeRoles: LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES,
-        unpauseTypeRoles: LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
+        pauseTypeRoles: LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
+        unpauseTypeRoles: LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
         defaultAdmin: securityCouncil.address,
         shnarfProvider: ADDRESS_ZERO,
+        addressFilter: addressFilterAddress,
       };
+
+      const expectedAsTuple = [
+        initializationData.initialStateRootHash,
+        initializationData.initialL2BlockNumber,
+        initializationData.genesisTimestamp,
+        initializationData.defaultVerifier,
+        initializationData.rateLimitPeriodInSeconds,
+        initializationData.rateLimitAmountInWei,
+        initializationData.roleAddresses.map((r) => [r.addressWithRole, r.role]),
+        initializationData.pauseTypeRoles.map((p) => [BigInt(p.pauseType), p.role]),
+        initializationData.unpauseTypeRoles.map((p) => [BigInt(p.pauseType), p.role]),
+        initializationData.defaultAdmin,
+        initializationData.shnarfProvider,
+        initializationData.addressFilter,
+      ];
 
       const lineaRollup = await deployUpgradableFromFactory(
         "src/rollup/LineaRollup.sol:LineaRollup",
@@ -373,31 +232,29 @@ describe("Linea Rollup contract", () => {
         },
       );
 
+      const receipt = await lineaRollup.deploymentTransaction()?.wait();
+
+      await expectEventDirectFromReceiptData(
+        lineaRollup,
+        receipt!,
+        "LineaRollupBaseInitialized",
+        [ethers.zeroPadBytes(ethers.toUtf8Bytes("8.0"), 8), expectedAsTuple, computeGenesisShnarf(parentStateRootHash)],
+        38,
+      );
+
       expect(await lineaRollup.stateRootHashes(INITIAL_MIGRATION_BLOCK)).to.be.equal(parentStateRootHash);
     });
 
     it("Should assign the VERIFIER_SETTER_ROLE to both SecurityCouncil and Operator", async () => {
-      const initializationData = {
-        initialStateRootHash: parentStateRootHash,
-        initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
-        genesisTimestamp: GENESIS_L2_TIMESTAMP,
-        defaultVerifier: verifier,
-        rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
-        rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
+      const initData = {
+        ...createDefaultInitData(),
         roleAddresses: [...roleAddresses, { addressWithRole: operator.address, role: VERIFIER_SETTER_ROLE }],
-        pauseTypeRoles: LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES,
-        unpauseTypeRoles: LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
-        defaultAdmin: securityCouncil.address,
-        shnarfProvider: ADDRESS_ZERO,
       };
 
-      const lineaRollup = await deployUpgradableFromFactory(
+      const lineaRollup = await deployLineaRollupWithConfig(
+        initData,
+        FALLBACK_OPERATOR_ADDRESS,
         "src/rollup/LineaRollup.sol:LineaRollup",
-        [initializationData, FALLBACK_OPERATOR_ADDRESS, yieldManager],
-        {
-          initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor", "incorrect-initializer-order"],
-        },
       );
 
       expect(await lineaRollup.hasRole(VERIFIER_SETTER_ROLE, securityCouncil.address)).to.be.true;
@@ -405,30 +262,34 @@ describe("Linea Rollup contract", () => {
     });
 
     it("Should assign the passed in shnarfProvider address", async () => {
-      const initializationData = {
-        initialStateRootHash: parentStateRootHash,
-        initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
-        genesisTimestamp: GENESIS_L2_TIMESTAMP,
-        defaultVerifier: verifier,
-        rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
-        rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
+      const initData = {
+        ...createDefaultInitData(),
         roleAddresses: [...roleAddresses, { addressWithRole: operator.address, role: VERIFIER_SETTER_ROLE }],
-        pauseTypeRoles: LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES,
-        unpauseTypeRoles: LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
-        defaultAdmin: securityCouncil.address,
         shnarfProvider: alternateShnarfProviderAddress.address,
       };
 
-      const lineaRollup = await deployUpgradableFromFactory(
+      const lineaRollup = await deployLineaRollupWithConfig(
+        initData,
+        FALLBACK_OPERATOR_ADDRESS,
         "src/rollup/LineaRollup.sol:LineaRollup",
-        [initializationData, FALLBACK_OPERATOR_ADDRESS, yieldManager],
-        {
-          initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor", "incorrect-initializer-order"],
-        },
       );
 
       expect(await lineaRollup.shnarfProvider()).to.equal(alternateShnarfProviderAddress.address);
+    });
+
+    it("Should assign the passed in addressFilter address", async () => {
+      const initData = {
+        ...createDefaultInitData(),
+        roleAddresses: [...roleAddresses, { addressWithRole: operator.address, role: VERIFIER_SETTER_ROLE }],
+      };
+
+      const lineaRollup = await deployLineaRollupWithConfig(
+        initData,
+        FALLBACK_OPERATOR_ADDRESS,
+        "src/rollup/LineaRollup.sol:LineaRollup",
+      );
+
+      expect(await lineaRollup.addressFilter()).to.equal(addressFilterAddress);
     });
 
     it("Should have the lineaRollup address as the shnarfProvider", async () => {
@@ -440,30 +301,125 @@ describe("Linea Rollup contract", () => {
 
     it("Should have the correct contract version", async () => {
       ({ verifier, lineaRollup } = await loadFixture(deployLineaRollupFixture));
-      expect(await lineaRollup.CONTRACT_VERSION()).to.equal("7.1");
+      expect(await lineaRollup.CONTRACT_VERSION()).to.equal("8.0");
     });
 
     it("Should revert if the initialize function is called a second time", async () => {
       ({ verifier, lineaRollup } = await loadFixture(deployLineaRollupFixture));
-      const initializeCall = lineaRollup.initialize(
-        {
-          initialStateRootHash: parentStateRootHash,
-          initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
-          genesisTimestamp: GENESIS_L2_TIMESTAMP,
-          defaultVerifier: verifier,
-          rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
-          rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
-          roleAddresses,
-          pauseTypeRoles: LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES,
-          unpauseTypeRoles: LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
-          defaultAdmin: securityCouncil.address,
-          shnarfProvider: ADDRESS_ZERO,
-        },
-        FALLBACK_OPERATOR_ADDRESS,
-        yieldManager,
+      const initData = { ...createDefaultInitData(), roleAddresses };
+      const initializeCall = lineaRollup.initialize(initData, FALLBACK_OPERATOR_ADDRESS, yieldManager);
+
+      await expectRevertWithCustomError(lineaRollup, initializeCall, "InitializedVersionWrong", [0, 9]);
+    });
+  });
+
+  describe("Upgrading / reinitialisation", () => {
+    beforeEach(async () => {
+      // Simulate a pre-upgrade state by lowering the initialized version to allow reinitializer(9) to run
+      await lineaRollup.setSlotValue(0, 8);
+    });
+
+    it("Should revert if the forced transaction fee is zero", async () => {
+      const upgradeCall = reinitializeUpgradeableProxy(
+        lineaRollup,
+        LineaRollup__factory.abi,
+        "reinitializeLineaRollupV9",
+        [0n, addressFilterAddress],
       );
 
-      await expectRevertWithCustomError(lineaRollup, initializeCall, "InitializedVersionWrong", [0, 8]);
+      await expectRevertWithCustomError(lineaRollup, upgradeCall, "ZeroValueNotAllowed");
+    });
+
+    it("Should revert if the address filter address is zero address", async () => {
+      const upgradeCall = reinitializeUpgradeableProxy(
+        lineaRollup,
+        LineaRollup__factory.abi,
+        "reinitializeLineaRollupV9",
+        [FORCED_TRANSACTION_FEE, ADDRESS_ZERO],
+      );
+
+      await expectRevertWithCustomError(lineaRollup, upgradeCall, "ZeroAddressNotAllowed");
+    });
+
+    it("Should set the next forced transaction number to 1", async () => {
+      await reinitializeUpgradeableProxy(lineaRollup, LineaRollup__factory.abi, "reinitializeLineaRollupV9", [
+        FORCED_TRANSACTION_FEE,
+        addressFilterAddress,
+      ]);
+
+      expect(await lineaRollup.nextForcedTransactionNumber()).to.equal(1n);
+    });
+
+    it("Should emit the AddressFilterChanged event when the address filter is set", async () => {
+      await expectEvent(
+        lineaRollup,
+        reinitializeUpgradeableProxy(lineaRollup, LineaRollup__factory.abi, "reinitializeLineaRollupV9", [
+          FORCED_TRANSACTION_FEE,
+          addressFilterAddress,
+        ]),
+        "AddressFilterChanged",
+        [ADDRESS_ZERO, addressFilterAddress],
+      );
+    });
+
+    it("Should emit the ForcedTransactionFeeSet event when the address filter is set", async () => {
+      await expectEvent(
+        lineaRollup,
+        reinitializeUpgradeableProxy(lineaRollup, LineaRollup__factory.abi, "reinitializeLineaRollupV9", [
+          FORCED_TRANSACTION_FEE,
+          addressFilterAddress,
+        ]),
+        "ForcedTransactionFeeSet",
+        [FORCED_TRANSACTION_FEE],
+      );
+    });
+
+    it("Should set the address filter", async () => {
+      await reinitializeUpgradeableProxy(lineaRollup, LineaRollup__factory.abi, "reinitializeLineaRollupV9", [
+        FORCED_TRANSACTION_FEE,
+        addressFilterAddress,
+      ]);
+
+      expect(await lineaRollup.addressFilter()).to.equal(addressFilterAddress);
+    });
+
+    it("Next contract version number should be 8.0", async () => {
+      await reinitializeUpgradeableProxy(lineaRollup, LineaRollup__factory.abi, "reinitializeLineaRollupV9", [
+        FORCED_TRANSACTION_FEE,
+        addressFilterAddress,
+      ]);
+
+      expect(await lineaRollup.CONTRACT_VERSION()).to.equal("8.0");
+    });
+
+    it("Next contract version number should be 8.0", async () => {
+      const upgradeCall = reinitializeUpgradeableProxy(
+        lineaRollup,
+        LineaRollup__factory.abi,
+        "reinitializeLineaRollupV9",
+        [FORCED_TRANSACTION_FEE, addressFilterAddress],
+      );
+
+      const previousVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("7.1"), 8);
+      const newVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("8.0"), 8);
+
+      await expectEvent(lineaRollup, upgradeCall, "LineaRollupVersionChanged", [previousVersion, newVersion]);
+    });
+
+    it("Fails to reinitialize twice", async () => {
+      await reinitializeUpgradeableProxy(lineaRollup, LineaRollup__factory.abi, "reinitializeLineaRollupV9", [
+        FORCED_TRANSACTION_FEE,
+        addressFilterAddress,
+      ]);
+
+      const secondUpgradeCall = reinitializeUpgradeableProxy(
+        lineaRollup,
+        LineaRollup__factory.abi,
+        "reinitializeLineaRollupV9",
+        [FORCED_TRANSACTION_FEE, addressFilterAddress],
+      );
+
+      await expectRevertWithReason(secondUpgradeCall, INITIALIZED_ALREADY_MESSAGE);
     });
   });
 
@@ -501,7 +457,8 @@ describe("Linea Rollup contract", () => {
     it("Should revert when removing verifier address if the caller has not the VERIFIER_UNSETTER_ROLE ", async () => {
       ({ verifier, lineaRollup } = await loadFixture(deployLineaRollupFixture));
 
-      await expect(lineaRollup.connect(nonAuthorizedAccount).unsetVerifierAddress(0)).to.be.revertedWith(
+      await expectRevertWithReason(
+        lineaRollup.connect(nonAuthorizedAccount).unsetVerifierAddress(0),
         buildAccessErrorMessage(nonAuthorizedAccount, VERIFIER_UNSETTER_ROLE),
       );
     });
@@ -525,191 +482,58 @@ describe("Linea Rollup contract", () => {
     });
   });
 
-  describe("Data submission tests", () => {
+  describe("Change address filter", () => {
     beforeEach(async () => {
-      await lineaRollup.setLastFinalizedBlock(0);
+      await lineaRollup.connect(securityCouncil).grantRole(SET_ADDRESS_FILTER_ROLE, securityCouncil.address);
     });
 
-    const [DATA_ONE] = generateCallDataSubmission(0, 1);
-
-    it("Fails when the compressed data is empty", async () => {
-      const [submissionData] = generateCallDataSubmission(0, 1);
-      submissionData.compressedData = EMPTY_CALLDATA;
-
-      const submitDataCall = lineaRollup
-        .connect(operator)
-        .submitDataAsCalldata(submissionData, prevShnarf, secondExpectedShnarf, { gasLimit: MAX_GAS_LIMIT });
-      await expectRevertWithCustomError(lineaRollup, submitDataCall, "EmptySubmissionData");
+    it("Should revert if the address filter is the zero address", async () => {
+      const setAddressFilterCall = lineaRollup.connect(securityCouncil).setAddressFilter(ADDRESS_ZERO);
+      await expectRevertWithCustomError(lineaRollup, setAddressFilterCall, "ZeroAddressNotAllowed");
     });
 
-    it("Should fail when the parent shnarf does not exist", async () => {
-      const [submissionData] = generateCallDataSubmission(0, 1);
-      const nonExistingParentShnarf = generateRandomBytes(32);
+    it("Should revert if the caller has not the SET_ADDRESS_FILTER_ROLE", async () => {
+      const setAddressFilterCall = lineaRollup.connect(nonAuthorizedAccount).setAddressFilter(addressFilterAddress);
+      await expectRevertWithReason(
+        setAddressFilterCall,
+        buildAccessErrorMessage(nonAuthorizedAccount, SET_ADDRESS_FILTER_ROLE),
+      );
+    });
 
-      const wrongExpectedShnarf = generateKeccak256(
-        ["bytes32", "bytes32", "bytes32", "bytes32", "bytes32"],
-        [HASH_ZERO, HASH_ZERO, submissionData.finalStateRootHash, HASH_ZERO, HASH_ZERO],
+    it("Should set the new address filter", async () => {
+      const newAddressFilter = ethers.getAddress(generateRandomBytes(20));
+      await lineaRollup.connect(securityCouncil).setAddressFilter(newAddressFilter);
+      expect(await lineaRollup.addressFilter()).to.be.equal(newAddressFilter);
+    });
+
+    it("Should emit the AddressFilterChanged event when the address filter is set", async () => {
+      const newAddressFilter = ethers.getAddress(generateRandomBytes(20));
+      await expectEvent(
+        lineaRollup,
+        lineaRollup.connect(securityCouncil).setAddressFilter(newAddressFilter),
+        "AddressFilterChanged",
+        [addressFilterAddress, newAddressFilter],
+      );
+    });
+
+    it("Should not emit the event if the address filter is the same", async () => {
+      const newAddressFilter = ethers.getAddress(generateRandomBytes(20));
+
+      await expectEvent(
+        lineaRollup,
+        lineaRollup.connect(securityCouncil).setAddressFilter(newAddressFilter),
+        "AddressFilterChanged",
+        [addressFilterAddress, newAddressFilter],
       );
 
-      const asyncCall = lineaRollup
-        .connect(operator)
-        .submitDataAsCalldata(submissionData, nonExistingParentShnarf, wrongExpectedShnarf, {
-          gasLimit: MAX_GAS_LIMIT,
-        });
-
-      await expectRevertWithCustomError(lineaRollup, asyncCall, "ParentShnarfNotSubmitted", [nonExistingParentShnarf]);
-    });
-
-    it("Should succesfully submit 1 compressed data chunk setting values", async () => {
-      const [submissionData] = generateCallDataSubmission(0, 1);
-
-      await expect(
-        lineaRollup
-          .connect(operator)
-          .submitDataAsCalldata(submissionData, prevShnarf, expectedShnarf, { gasLimit: MAX_GAS_LIMIT }),
-      ).to.not.be.reverted;
-
-      const blobShnarfExists = await lineaRollup.blobShnarfExists(expectedShnarf);
-      expect(blobShnarfExists).to.equal(1n);
-    });
-
-    it("Should successfully submit 2 compressed data chunks in two transactions", async () => {
-      const [firstSubmissionData, secondSubmissionData] = generateCallDataSubmission(0, 2);
-
-      await expect(
-        lineaRollup
-          .connect(operator)
-          .submitDataAsCalldata(firstSubmissionData, prevShnarf, expectedShnarf, { gasLimit: MAX_GAS_LIMIT }),
-      ).to.not.be.reverted;
-
-      await expect(
-        lineaRollup.connect(operator).submitDataAsCalldata(secondSubmissionData, expectedShnarf, secondExpectedShnarf, {
-          gasLimit: MAX_GAS_LIMIT,
-        }),
-      ).to.not.be.reverted;
-
-      const blobShnarfExists = await lineaRollup.blobShnarfExists(expectedShnarf);
-      expect(blobShnarfExists).to.equal(1n);
-    });
-
-    it("Should emit an event while submitting 1 compressed data chunk", async () => {
-      const [submissionData] = generateCallDataSubmission(0, 1);
-
-      const submitDataCall = lineaRollup
-        .connect(operator)
-        .submitDataAsCalldata(submissionData, prevShnarf, expectedShnarf, { gasLimit: MAX_GAS_LIMIT });
-      const eventArgs = [prevShnarf, expectedShnarf, submissionData.finalStateRootHash];
-
-      await expectEvent(lineaRollup, submitDataCall, "DataSubmittedV3", eventArgs);
-    });
-
-    it("Should fail if the final state root hash is empty", async () => {
-      const [submissionData] = generateCallDataSubmission(0, 1);
-
-      submissionData.finalStateRootHash = HASH_ZERO;
-
-      const submitDataCall = lineaRollup
-        .connect(operator)
-        .submitDataAsCalldata(submissionData, prevShnarf, expectedShnarf, { gasLimit: MAX_GAS_LIMIT });
-
-      // TODO: Make the failure shnarf dynamic and computed
-      await expectRevertWithCustomError(lineaRollup, submitDataCall, "FinalShnarfWrong", [
-        expectedShnarf,
-        "0xd14582c1b7041f523ac1428657196f30d5260227668151e660840fb629cacba4",
-      ]);
-    });
-
-    it("Should fail to submit where expected shnarf is wrong", async () => {
-      const [firstSubmissionData, secondSubmissionData] = generateCallDataSubmission(0, 2);
-
-      await expect(
-        lineaRollup
-          .connect(operator)
-          .submitDataAsCalldata(firstSubmissionData, prevShnarf, expectedShnarf, { gasLimit: MAX_GAS_LIMIT }),
-      ).to.not.be.reverted;
-
-      const wrongComputedShnarf = generateRandomBytes(32);
-
-      const submitDataCall = lineaRollup
-        .connect(operator)
-        .submitDataAsCalldata(secondSubmissionData, expectedShnarf, wrongComputedShnarf, { gasLimit: MAX_GAS_LIMIT });
-
-      const eventArgs = [wrongComputedShnarf, secondExpectedShnarf];
-
-      await expectRevertWithCustomError(lineaRollup, submitDataCall, "FinalShnarfWrong", eventArgs);
-    });
-
-    it("Should revert if the caller does not have the OPERATOR_ROLE", async () => {
-      const submitDataCall = lineaRollup
-        .connect(nonAuthorizedAccount)
-        .submitDataAsCalldata(DATA_ONE, prevShnarf, expectedShnarf, { gasLimit: MAX_GAS_LIMIT });
-
-      await expectRevertWithReason(submitDataCall, buildAccessErrorMessage(nonAuthorizedAccount, OPERATOR_ROLE));
-    });
-
-    it("Should revert if GENERAL_PAUSE_TYPE is enabled", async () => {
-      await lineaRollup.connect(securityCouncil).pauseByType(GENERAL_PAUSE_TYPE);
-
-      const submitDataCall = lineaRollup
-        .connect(operator)
-        .submitDataAsCalldata(DATA_ONE, prevShnarf, expectedShnarf, { gasLimit: MAX_GAS_LIMIT });
-
-      await expectRevertWithCustomError(lineaRollup, submitDataCall, "IsPaused", [GENERAL_PAUSE_TYPE]);
-    });
-
-    it("Should revert if STATE_DATA_SUBMISSION_PAUSE_TYPE is enabled", async () => {
-      await lineaRollup.connect(securityCouncil).pauseByType(STATE_DATA_SUBMISSION_PAUSE_TYPE);
-
-      const submitDataCall = lineaRollup
-        .connect(operator)
-        .submitDataAsCalldata(DATA_ONE, prevShnarf, expectedShnarf, { gasLimit: MAX_GAS_LIMIT });
-
-      await expectRevertWithCustomError(lineaRollup, submitDataCall, "IsPaused", [STATE_DATA_SUBMISSION_PAUSE_TYPE]);
-    });
-
-    it("Should revert with ShnarfAlreadySubmitted when submitting same compressed data twice in 2 separate transactions", async () => {
-      await lineaRollup
-        .connect(operator)
-        .submitDataAsCalldata(DATA_ONE, prevShnarf, expectedShnarf, { gasLimit: MAX_GAS_LIMIT });
-
-      const submitDataCall = lineaRollup
-        .connect(operator)
-        .submitDataAsCalldata(DATA_ONE, prevShnarf, expectedShnarf, { gasLimit: MAX_GAS_LIMIT });
-
-      await expectRevertWithCustomError(lineaRollup, submitDataCall, "ShnarfAlreadySubmitted", [expectedShnarf]);
-    });
-
-    it("Should revert with ShnarfAlreadySubmitted when submitting same data, differing block numbers", async () => {
-      await lineaRollup
-        .connect(operator)
-        .submitDataAsCalldata(DATA_ONE, prevShnarf, expectedShnarf, { gasLimit: MAX_GAS_LIMIT });
-
-      const [dataOneCopy] = generateCallDataSubmission(0, 1);
-
-      const submitDataCall = lineaRollup
-        .connect(operator)
-        .submitDataAsCalldata(dataOneCopy, prevShnarf, expectedShnarf, { gasLimit: MAX_GAS_LIMIT });
-
-      await expectRevertWithCustomError(lineaRollup, submitDataCall, "ShnarfAlreadySubmitted", [expectedShnarf]);
-    });
-
-    it("Should revert when snarkHash is zero hash", async () => {
-      const submissionData: CalldataSubmissionData = {
-        ...DATA_ONE,
-        snarkHash: HASH_ZERO,
-      };
-
-      const submitDataCall = lineaRollup
-        .connect(operator)
-        .submitDataAsCalldata(submissionData, prevShnarf, expectedShnarf, { gasLimit: MAX_GAS_LIMIT });
-
-      // TODO: Make the failure shnarf dynamic and computed
-      await expectRevertWithCustomError(lineaRollup, submitDataCall, "FinalShnarfWrong", [
-        expectedShnarf,
-        "0xa6b52564082728b51bb81a4fa92cfb4ec3af8de3f18b5d68ec27b89eead93293",
-      ]);
+      await expectNoEvent(
+        lineaRollup,
+        lineaRollup.connect(securityCouncil).setAddressFilter(newAddressFilter),
+        "AddressFilterChanged",
+      );
     });
   });
+
   describe("Validate L2 computed rolling hash", () => {
     it("Should revert if l1 message number == 0 and l1 rolling hash is not empty", async () => {
       const l1MessageNumber = 0;
@@ -799,25 +623,31 @@ describe("Linea Rollup contract", () => {
   });
 
   describe("liveness recovery operator Role", () => {
-    const expectedLastFinalizedState = calculateLastFinalizedState(0n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP);
+    const expectedLastFinalizedState = calculateLastFinalizedState(
+      0n,
+      HASH_ZERO,
+      0n,
+      HASH_ZERO,
+      DEFAULT_LAST_FINALIZED_TIMESTAMP,
+    );
 
     it("Should revert if trying to set liveness recovery operator role before six months have passed", async () => {
       const initialBlock = await ethers.provider.getBlock("latest");
 
       await expectRevertWithCustomError(
         lineaRollup,
-        lineaRollup.setLivenessRecoveryOperator(0n, HASH_ZERO, BigInt(initialBlock!.timestamp)),
+        lineaRollup.setLivenessRecoveryOperator(0n, HASH_ZERO, 0n, HASH_ZERO, BigInt(initialBlock!.timestamp)),
         "LastFinalizationTimeNotLapsed",
       );
     });
 
     it("Should revert if the time has passed and the last finalized timestamp does not match", async () => {
       await networkTime.increase(SIX_MONTHS_IN_SECONDS);
-      const actualSentState = calculateLastFinalizedState(0n, HASH_ZERO, 123456789n);
+      const actualSentState = calculateLastFinalizedState(0n, HASH_ZERO, 0n, HASH_ZERO, 123456789n);
 
       await expectRevertWithCustomError(
         lineaRollup,
-        lineaRollup.setLivenessRecoveryOperator(0n, HASH_ZERO, 123456789n),
+        lineaRollup.setLivenessRecoveryOperator(0n, HASH_ZERO, 0n, HASH_ZERO, 123456789n),
         "FinalizationStateIncorrect",
         [expectedLastFinalizedState, actualSentState],
       );
@@ -825,11 +655,17 @@ describe("Linea Rollup contract", () => {
 
     it("Should revert if the time has passed and the last finalized L1 message number does not match", async () => {
       await networkTime.increase(SIX_MONTHS_IN_SECONDS);
-      const actualSentState = calculateLastFinalizedState(1n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP);
+      const actualSentState = calculateLastFinalizedState(
+        1n,
+        HASH_ZERO,
+        0n,
+        HASH_ZERO,
+        DEFAULT_LAST_FINALIZED_TIMESTAMP,
+      );
 
       await expectRevertWithCustomError(
         lineaRollup,
-        lineaRollup.setLivenessRecoveryOperator(1n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP),
+        lineaRollup.setLivenessRecoveryOperator(1n, HASH_ZERO, 0n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP),
         "FinalizationStateIncorrect",
         [expectedLastFinalizedState, actualSentState],
       );
@@ -838,11 +674,17 @@ describe("Linea Rollup contract", () => {
     it("Should revert if the time has passed and the last finalized L1 rolling hash does not match", async () => {
       await networkTime.increase(SIX_MONTHS_IN_SECONDS);
       const random32Bytes = generateRandomBytes(32);
-      const actualSentState = calculateLastFinalizedState(0n, random32Bytes, DEFAULT_LAST_FINALIZED_TIMESTAMP);
+      const actualSentState = calculateLastFinalizedState(
+        0n,
+        random32Bytes,
+        0n,
+        HASH_ZERO,
+        DEFAULT_LAST_FINALIZED_TIMESTAMP,
+      );
 
       await expectRevertWithCustomError(
         lineaRollup,
-        lineaRollup.setLivenessRecoveryOperator(0n, random32Bytes, DEFAULT_LAST_FINALIZED_TIMESTAMP),
+        lineaRollup.setLivenessRecoveryOperator(0n, random32Bytes, 0n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP),
         "FinalizationStateIncorrect",
         [expectedLastFinalizedState, actualSentState],
       );
@@ -853,7 +695,7 @@ describe("Linea Rollup contract", () => {
 
       await expectEvent(
         lineaRollup,
-        lineaRollup.setLivenessRecoveryOperator(0n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP),
+        lineaRollup.setLivenessRecoveryOperator(0n, HASH_ZERO, 0n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP),
         "LivenessRecoveryOperatorRoleGranted",
         [admin.address, FALLBACK_OPERATOR_ADDRESS],
       );
@@ -866,7 +708,7 @@ describe("Linea Rollup contract", () => {
 
       await expectEvent(
         lineaRollup,
-        lineaRollup.setLivenessRecoveryOperator(0n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP),
+        lineaRollup.setLivenessRecoveryOperator(0n, HASH_ZERO, 0n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP),
         "LivenessRecoveryOperatorRoleGranted",
         [admin.address, FALLBACK_OPERATOR_ADDRESS],
       );
@@ -875,7 +717,7 @@ describe("Linea Rollup contract", () => {
 
       await expectNoEvent(
         lineaRollup,
-        lineaRollup.setLivenessRecoveryOperator(0n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP),
+        lineaRollup.setLivenessRecoveryOperator(0n, HASH_ZERO, 0n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP),
         "LivenessRecoveryOperatorRoleGranted",
       );
     });
@@ -885,7 +727,7 @@ describe("Linea Rollup contract", () => {
 
       await expectEvent(
         lineaRollup,
-        lineaRollup.setLivenessRecoveryOperator(0n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP),
+        lineaRollup.setLivenessRecoveryOperator(0n, HASH_ZERO, 0n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP),
         "LivenessRecoveryOperatorRoleGranted",
         [admin.address, FALLBACK_OPERATOR_ADDRESS],
       );
@@ -902,7 +744,7 @@ describe("Linea Rollup contract", () => {
 
       const renounceCall = lineaRollup.connect(operator).renounceRole(OPERATOR_ROLE, operator.address);
       const args = [OPERATOR_ROLE, operator.address, operator.address];
-      expectEvent(lineaRollup, renounceCall, "RoleRevoked", args);
+      await expectEvent(lineaRollup, renounceCall, "RoleRevoked", args);
     });
 
     it("Should fail to accept ETH on the CallForwardingProxy receive function", async () => {
@@ -938,9 +780,10 @@ describe("Linea Rollup contract", () => {
 
       // Grants deployed callforwarding proxy as operator
       await networkTime.increase(SIX_MONTHS_IN_SECONDS);
+
       await expectEvent(
         upgradedContract,
-        upgradedContract.setLivenessRecoveryOperator(0n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP),
+        upgradedContract.setLivenessRecoveryOperator(0n, HASH_ZERO, 0n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP),
         "LivenessRecoveryOperatorRoleGranted",
         [admin.address, forwardingProxyAddress],
       );
@@ -951,17 +794,18 @@ describe("Linea Rollup contract", () => {
       await sendBlobTransactionViaCallForwarder(upgradedContract, 2, 4, forwardingProxyAddress);
 
       // Finalize 4 blobs
-      await expectSuccessfulFinalizeViaCallForwarder(
-        blobAggregatedProof1To155,
-        4,
-        fourthCompressedDataContent.finalStateRootHash,
-        generateBlobParentShnarfData,
-        false,
-        HASH_ZERO,
-        0n,
-        forwardingProxyAddress,
-        upgradedContract,
-      );
+      await expectSuccessfulFinalizeViaCallForwarder({
+        context: {
+          callforwarderAddress: forwardingProxyAddress,
+          upgradedContract,
+        },
+        proofConfig: {
+          proofData: blobAggregatedProof1To155,
+          blobParentShnarfIndex: 4,
+          shnarfDataGenerator: generateBlobParentShnarfData,
+          isMultiple: false,
+        },
+      });
     });
   });
 });

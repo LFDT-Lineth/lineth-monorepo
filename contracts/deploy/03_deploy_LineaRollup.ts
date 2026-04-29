@@ -41,6 +41,8 @@ const func: DeployFunction = withSignerUiSession("03_deploy_LineaRollup.ts", asy
   const roleAddresses = getEnvVarOrDefault("LINEA_ROLLUP_ROLE_ADDRESSES", defaultRoleAddresses);
   const yieldManagerAddress = getRequiredEnvVar("YIELD_MANAGER_ADDRESS");
 
+  const addressFilter = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS_FILTER");
+
   const contract = await deployUpgradableFromFactory(
     "LineaRollup",
     [
@@ -56,6 +58,7 @@ const func: DeployFunction = withSignerUiSession("03_deploy_LineaRollup.ts", asy
         unpauseTypeRoles,
         defaultAdmin: lineaRollupSecurityCouncil,
         shnarfProvider: ADDRESS_ZERO,
+        addressFilter,
       },
       MultiCallAddress,
       yieldManagerAddress,

@@ -10,7 +10,10 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/consensys/linea-monorepo/prover/circuits/invalidity"
 	pi_interconnection "github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection"
+	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak"
+	"github.com/consensys/linea-monorepo/prover/crypto/state-management/smt_koalabear"
 	"github.com/consensys/linea-monorepo/prover/protocol/serde"
 	"github.com/consensys/linea-monorepo/prover/utils/signal"
 
@@ -44,6 +47,11 @@ var AllCircuits = []circuits.CircuitID{
 	circuits.ExecutionLargeCircuitID,
 	circuits.ExecutionLimitlessCircuitID,
 	circuits.DataAvailabilityV2CircuitID,
+	circuits.InvalidityNonceBalanceCircuitID,
+	circuits.InvalidityPrecompileLogsCircuitID,
+	circuits.InvalidityPrecompileLogsLargeCircuitID,
+	circuits.InvalidityPrecompileLogsLimitlessCircuitID,
+	circuits.InvalidityFilteredAddressCircuitID,
 	circuits.PublicInputInterconnectionCircuitID,
 	circuits.AggregationCircuitID,
 	circuits.EmulationCircuitID,
@@ -52,8 +60,7 @@ var AllCircuits = []circuits.CircuitID{
 
 // PayloadCircuits defines the ordered list of payload circuits that can be aggregated.
 // This order corresponds to circuit IDs 0-5 in GlobalCircuitIDMapping.
-// Infrastructure circuits (emulation, aggregation, pi-interconnection, emulation-dummy)
-// are NOT included here.
+// Infrastructure circuits (emulation, aggregation, pi-interconnection, emulation-dummy) are NOT included here.
 var PayloadCircuits = []string{
 	"execution-dummy",         // ID 0
 	"data-availability-dummy", // ID 1
@@ -317,6 +324,60 @@ func createCircuitBuilder(c circuits.CircuitID, cfg *config.Config, args SetupAr
 	case circuits.PublicInputInterconnectionCircuitID:
 		return pi_interconnection.NewBuilder(cfg.PublicInputInterconnection), extraFlags, nil
 
+	case circuits.InvalidityNonceBalanceCircuitID:
+		// BadNonce/BadBalance circuit needs KeccakCompiledIOP
+		keccakComp := invalidity.MakeKeccakCompiledIOP(cfg.Invalidity.MaxRlpByteSize, keccak.WizardCompilationParameters()...)
+		return invalidity.NewBuilder(
+			invalidity.Config{
+				Depth:             smt_koalabear.DefaultDepth, // account trie depth
+				KeccakCompiledIOP: keccakComp,
+				MaxRlpByteSize:    cfg.Invalidity.MaxRlpByteSize,
+			},
+			&invalidity.BadNonceBalanceCircuit{}), extraFlags, nil
+
+	case circuits.InvalidityPrecompileLogsCircuitID:
+		limits := cfg.TracesLimits
+		extraFlags["cfg_checksum"] = limits.Checksum()
+		zkEvm := zkevm.FullZkEvm(&limits, cfg)
+		return invalidity.NewBuilder(invalidity.Config{
+			ZkEvmComp: zkEvm.RecursionCompiledIOP,
+		}, &invalidity.BadPrecompileCircuit{}), extraFlags, nil
+
+	case circuits.InvalidityPrecompileLogsLargeCircuitID:
+		limits := cfg.TracesLimits
+		limits.SetLargeMode()
+		extraFlags["cfg_checksum"] = limits.Checksum()
+		zkEvm := zkevm.FullZkEvmLarge(&limits, cfg)
+		return invalidity.NewBuilder(invalidity.Config{
+			ZkEvmComp: zkEvm.RecursionCompiledIOP,
+		}, &invalidity.BadPrecompileCircuit{}), extraFlags, nil
+
+	case circuits.InvalidityPrecompileLogsLimitlessCircuitID:
+		limitlessPath := cfg.PathForSetup("invalidity-precompile-logs-limitless")
+		extraFlags["cfg_checksum"] = cfg.TracesLimits.Checksum()
+
+		logrus.Info("Setting up limitless invalidity prover assets")
+		asset := zkevm.NewLimitlessZkEVM(cfg)
+
+		logrus.Infof("Writing limitless invalidity prover assets to path: %s", limitlessPath)
+		if err := asset.Store(cfg); err != nil {
+			return nil, nil, fmt.Errorf("failed to write limitless invalidity prover assets: %w", err)
+		}
+		compCong := asset.DistWizard.CompiledConglomeration
+		asset = nil
+		runtime.GC()
+
+		return invalidity.NewBuilderLimitless(compCong.RecursionCompBLS), extraFlags, nil
+	case circuits.InvalidityFilteredAddressCircuitID:
+		keccakComp := invalidity.MakeKeccakCompiledIOP(cfg.Invalidity.MaxRlpByteSize, keccak.WizardCompilationParameters()...)
+		return invalidity.NewBuilder(
+			invalidity.Config{
+				Depth:             smt_koalabear.DefaultDepth,
+				KeccakCompiledIOP: keccakComp,
+				MaxRlpByteSize:    cfg.Invalidity.MaxRlpByteSize,
+			},
+			&invalidity.FilteredAddressCircuit{}), extraFlags, nil
+
 	case circuits.EmulationDummyCircuitID:
 		// we can get the Verifier.sol from there.
 		return dummy.NewBuilder(circuits.MockCircuitIDEmulation, ecc.BN254.ScalarField()), extraFlags, nil
@@ -382,6 +443,12 @@ func getDummyCircuitParams(cID string) (ecc.ID, circuits.MockCircuitID, error) {
 		return ecc.BLS12_377, circuits.MockCircuitIDDecompression, nil
 	case circuits.EmulationDummyCircuitID:
 		return ecc.BN254, circuits.MockCircuitIDEmulation, nil
+	case circuits.InvalidityNonceBalanceDummyCircuitID:
+		return ecc.BLS12_377, circuits.MockCircuitIDInvalidityNonceBalance, nil
+	case circuits.InvalidityPrecompileLogsDummyCircuitID:
+		return ecc.BLS12_377, circuits.MockCircuitIDInvalidityPrecompileLogs, nil
+	case circuits.InvalidityFilteredAddressDummyCircuitID:
+		return ecc.BLS12_377, circuits.MockCircuitIDInvalidityFilteredAddress, nil
 	default:
 		return 0, 0, fmt.Errorf("unknown dummy circuit: %s", cID)
 	}
@@ -392,7 +459,9 @@ func setupAggregationCircuits(ctx context.Context, cfg *config.Config, force boo
 	srsProvider circuits.SRSProvider, inCircuits map[circuits.CircuitID]bool,
 	piSetup *circuits.Setup, payloadVks []plonk.VerifyingKey,
 ) ([]plonk.VerifyingKey, error) {
+
 	if !inCircuits[circuits.AggregationCircuitID] {
+
 		// Aggregation was not requested, but emulation may still need the
 		// aggregation verifying keys. Try to read them from disk.
 		if inCircuits[circuits.EmulationCircuitID] {
@@ -410,6 +479,7 @@ func setupAggregationCircuits(ctx context.Context, cfg *config.Config, force boo
 			}
 			return allowedVkForEmulation, nil
 		}
+
 		return nil, nil
 	}
 
@@ -447,6 +517,8 @@ func setupAggregationCircuits(ctx context.Context, cfg *config.Config, force boo
 	return allowedVkForEmulation, nil
 }
 
+// getDummyCircuitVK compiles a dummy circuit and returns its verifying key.
+// This is used by collectVerifyingKeys to get VKs for dummy circuits.
 func getDummyCircuitVK(ctx context.Context, srsProvider circuits.SRSProvider, circuit circuits.CircuitID, builder circuits.Builder) (plonk.VerifyingKey, error) {
 	// compile the circuit
 	logrus.Infof("compiling %s", circuit)

@@ -41,6 +41,6 @@ contract Validium is LineaRollupBase, LocalShnarfProvider, ShnarfDataAcceptor {
    * @return contractVersion The contract ABI version.
    */
   function CONTRACT_VERSION() public view virtual override returns (string memory contractVersion) {
-    contractVersion = "1.0";
+    contractVersion = "2.0";
   }
 }

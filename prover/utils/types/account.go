@@ -214,3 +214,12 @@ func (a *AccountShomeiTraces) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
+// AccountForSerialization is a wrapper for Account, used for serialization of the account via io.Writer
+type AccountForSerialization struct {
+	Acc Account
+}
+
+func (a AccountForSerialization) WriteTo(w io.Writer) (int64, error) {
+	return a.Acc.writeTo(w, true)
+}

@@ -15,6 +15,10 @@ type Request struct {
 	// aggregate.
 	ExecutionProofs []string `json:"executionProofs"`
 
+	// List of Invalidity proofs prover responses containing the proofs to
+	// aggregate.
+	InvalidityProofs []string `json:"invalidityProofs"`
+
 	// List of the compression proofs prover responses containing the
 	// compression proofs to aggregate.
 	DecompressionProofs []string `json:"compressionProofs"`
@@ -43,6 +47,11 @@ type Request struct {
 	// FullBytes32 to represent either. This is needed only for the koalabear
 	// migration, afterward it will be simplifiable to only Koalabear.
 	ParentAggregationStateRootHashContract types.FullBytes32 `json:"parentAggregationStateRootHashContract"`
+
+	// last finalized stream hash
+	ParentAggregationLastFtxRollingHash string `json:"parentAggregationLastFtxRollingHash"`
+	// last finalized forced transaction number
+	ParentAggregationLastFtxNumber int `json:"parentAggregationLastFtxNumber"`
 }
 
 // This struct contains a collection of fields that are to be extracted from the
@@ -120,5 +129,13 @@ type CollectedFields struct {
 
 	ExecutionPI       []public_input.Execution
 	DecompressionPI   []dataavailability.Request
+	InvalidityPI      []public_input.Invalidity
 	InnerCircuitTypes []pi_interconnection.InnerCircuitType // a hint to the aggregation circuit detailing which public input correspond to which actual public input
+
+	// last finalized (forced) transaction number
+	LastFinalizedFtxNumber uint
+	FinalFtxNumber         uint
+
+	LastFinalizedFtxRollingHash string
+	FinalFtxRollingHash         string
 }

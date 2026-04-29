@@ -25,6 +25,7 @@ func setDefaultValues() {
 	viper.SetDefault("controller.enable_execution", true)
 	viper.SetDefault("controller.enable_data_availability", true)
 	viper.SetDefault("controller.enable_aggregation", true)
+	viper.SetDefault("controller.enable_invalidity", true)
 
 	// Set the default values for the retry delays
 	viper.SetDefault("controller.retry_delays", []int{0, 1, 2, 3, 5, 8, 13, 21, 44, 85})
@@ -52,5 +53,6 @@ func setDefaultPaths() {
 	viper.SetDefault("execution.requests_root_dir", "/shared/prover-execution")
 	viper.SetDefault("data_availability.requests_root_dir", "/shared/prover-compression")
 	viper.SetDefault("aggregation.requests_root_dir", "/shared/prover-aggregation")
+	viper.SetDefault("invalidity.requests_root_dir", "/shared/prover-invalidity")
 	viper.SetDefault("debug.performance_monitor.profile_dir", "/shared/prover-execution/profiling")
 }

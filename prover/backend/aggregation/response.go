@@ -1,5 +1,7 @@
 package aggregation
 
+import "github.com/consensys/linea-monorepo/prover/utils/types"
+
 // Response contains all the fields returned by the prover to run the
 // aggregation. Reflects the data to be sent to the smart-contract for
 // finalization
@@ -39,6 +41,7 @@ type Response struct {
 
 	// ParentStateRootHash is the root hash of the last finalized state.
 	// 0x-prefixed hexstring
+	FinalStateRootHash  string `json:"finalStateRootHash"`
 	ParentStateRootHash string `json:"parentStateRootHash"`
 
 	// The timestamp before and after what is finalized
@@ -61,6 +64,13 @@ type Response struct {
 	LastFinalizedL1RollingHashMessageNumber uint `json:"lastFinalizedL1RollingHashMessageNumber"`
 	L1RollingHashMessageNumber              uint `json:"l1RollingHashMessageNumber"`
 
+	// FinalFtxRollingHash stores the last stream hash in the frame of the current aggregation.
+	FinalFtxRollingHash             string `json:"finalFtxRollingHash"`
+	ParentAggregationFtxRollingHash string `json:"parentAggregationFtxRollingHash"`
+	// FinalFtxNumber stores the number of last ftx in the frame of the current aggregation.
+	FinalFtxNumber             uint `json:"finalFtxNumber"`
+	ParentAggregationFtxNumber uint `json:"parentAggregationFtxNumber"`
+
 	// L2 messages related messages. L2MerkleRoots stores a sequences of Merkle
 	// roots containing the hashes of the messages emitted on layer 2.
 	L2MerkleRoots   []string `json:"l2MerkleRoots"` // 0x hexstring
@@ -69,4 +79,12 @@ type Response struct {
 	// Hexstring encoding a bitmap of the block containing “MessageSent” events.
 	// events
 	L2MessagingBlocksOffsets string `json:"l2MessagingBlocksOffsets"`
+
+	// chain configuration
+	ChainID              uint64             `json:"chainID"`
+	BaseFee              uint64             `json:"baseFee"`
+	CoinBase             types.EthAddress   `json:"coinBase"`
+	L2MessageServiceAddr types.EthAddress   `json:"l2MessageServiceAddr"`
+	IsAllowedCircuitID   uint64             `json:"isAllowedCircuitID"`
+	FilteredAddresses    []types.EthAddress `json:"filteredAddresses"`
 }

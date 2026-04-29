@@ -417,3 +417,17 @@ func TryCast[T any](into *T, from any, explainer string) error {
 
 	return nil
 }
+
+// RlpDecodeWithSignature decodes a hex-encoded RlpEncodedTx that contains a signature and returns the transaction
+func RlpDecodeWithSignature(rlpEncodedTxHex string) (*types.Transaction, error) {
+	// Decode the hex string to bytes
+	rlpBytes, err := utils.HexDecodeString(rlpEncodedTxHex)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode hex RlpEncodedTx: %w", err)
+	}
+	tx := new(types.Transaction)
+	if err := tx.UnmarshalBinary(rlpBytes); err != nil {
+		return nil, fmt.Errorf("could not decode the RlpEncodedTx: %w", err)
+	}
+	return tx, nil
+}

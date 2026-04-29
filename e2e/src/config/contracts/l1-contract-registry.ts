@@ -1,5 +1,6 @@
 import {
   getDummyContract,
+  getForcedTransactionGatewayContract,
   getLineaRollupContract,
   getLineaRollupProxyAdminContract,
   getTestERC20Contract,
@@ -30,6 +31,10 @@ export function createL1ContractRegistry(cfg: L1Config) {
     dummyContract: <T extends Transport, C extends Chain | undefined, A extends Account | undefined>(
       client: Client<T, C, A>,
     ) => getDummyContract(client, cfg.dummyContractAddress),
+
+    forcedTransactionGateway: <T extends Transport, C extends Chain | undefined, A extends Account | undefined>(
+      client: Client<T, C, A>,
+    ) => getForcedTransactionGatewayContract(client, cfg.forcedTransactionGatewayAddress),
   };
 }
 

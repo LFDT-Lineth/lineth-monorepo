@@ -55,7 +55,7 @@ func TestUnalignedGnarkDataAssign(t *testing.T) {
 			uagSrc.TxHashLo,
 		)
 
-		uag.Assign(run, uagSrc, dummyTxSignatureGetter)
+		uag.Assign(run, uagSrc, DummyTxSignatureGetter)
 
 		ct.CheckAssignment(run,
 			uag.IsPublicKey,

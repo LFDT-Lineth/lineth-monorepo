@@ -32,7 +32,7 @@
   "gasLimit": "0x77359400",
   "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
   "nonce": "0x0",
-  "timestamp": "0x645580D1",
+  "timestamp": "%FORK_TIME%",
   "baseFeePerGas": "0x7",
   "@_WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
   "alloc": {

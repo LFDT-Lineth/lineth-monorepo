@@ -22,7 +22,7 @@ const func: DeployFunction = withSignerUiSession("03_deploy_Validium.ts", async 
   const contractName = "Validium";
 
   // Validium DEPLOYED AS UPGRADEABLE PROXY
-  const verifierAddress = getRequiredEnvVar("PLONKVERIFIER_ADDRESS");
+  const verifierAddress = getRequiredEnvVar("VERIFIER_ADDRESS");
   const validiumInitialStateRootHash = getRequiredEnvVar("INITIAL_L2_STATE_ROOT_HASH");
   const validiumInitialL2BlockNumber = getRequiredEnvVar("INITIAL_L2_BLOCK_NUMBER");
   const validiumSecurityCouncil = getRequiredEnvVar("L1_SECURITY_COUNCIL");

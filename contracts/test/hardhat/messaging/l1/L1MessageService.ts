@@ -45,9 +45,17 @@ import {
   buildAccessErrorMessage,
   calculateRollingHash,
   expectEvent,
+  expectHasRole,
   expectRevertWithCustomError,
   expectRevertWithReason,
+  expectRevertWhenPaused,
+  expectPaused,
+  expectNotPaused,
   generateKeccak256Hash,
+  validateRollingHashStorage,
+  validateRollingHashNotZero,
+  expectRollingHashUpdatedEvent,
+  INITIAL_ROLLING_HASH,
 } from "../../common/helpers";
 
 describe("L1MessageService", () => {
@@ -108,23 +116,23 @@ describe("L1MessageService", () => {
 
   describe("Initialisation tests", () => {
     it("Deployer has default admin role", async () => {
-      expect(await l1MessageService.hasRole(DEFAULT_ADMIN_ROLE, admin.address)).to.be.true;
+      await expectHasRole(l1MessageService, DEFAULT_ADMIN_ROLE, admin);
     });
 
     it("limitSetter has RATE_LIMIT_SETTER_ROLE", async () => {
-      expect(await l1MessageService.hasRole(RATE_LIMIT_SETTER_ROLE, limitSetter.address)).to.be.true;
+      await expectHasRole(l1MessageService, RATE_LIMIT_SETTER_ROLE, limitSetter);
     });
 
     it("limitSetter has USED_RATE_LIMIT_RESETTER_ROLE", async () => {
-      expect(await l1MessageService.hasRole(USED_RATE_LIMIT_RESETTER_ROLE, limitSetter.address)).to.be.true;
+      await expectHasRole(l1MessageService, USED_RATE_LIMIT_RESETTER_ROLE, limitSetter);
     });
 
     it("pauser has PAUSE_ALL_ROLE", async () => {
-      expect(await l1MessageService.hasRole(PAUSE_ALL_ROLE, pauser.address)).to.be.true;
+      await expectHasRole(l1MessageService, PAUSE_ALL_ROLE, pauser);
     });
 
     it("pauser has UNPAUSE_ALL_ROLE", async () => {
-      expect(await l1MessageService.hasRole(UNPAUSE_ALL_ROLE, pauser.address)).to.be.true;
+      await expectHasRole(l1MessageService, UNPAUSE_ALL_ROLE, pauser);
     });
 
     it("Should set rate limit and period", async () => {
@@ -281,7 +289,7 @@ describe("L1MessageService", () => {
       );
 
       const messageHash = ethers.keccak256(expectedBytes);
-      const rollingHash = calculateRollingHash(ethers.ZeroHash, messageHash);
+      const rollingHash = calculateRollingHash(INITIAL_ROLLING_HASH, messageHash);
 
       const sendMessageCall = l1MessageService
         .connect(admin)
@@ -297,15 +305,22 @@ describe("L1MessageService", () => {
         EMPTY_CALLDATA,
         messageHash,
       ];
-      const rollingHashUpdatedEventArgs = [1, rollingHash, messageHash];
 
       await expectEvent(l1MessageService, sendMessageCall, "MessageSent", messageSentEventArgs);
-      await expectEvent(l1MessageService, sendMessageCall, "RollingHashUpdated", rollingHashUpdatedEventArgs);
+      await expectRollingHashUpdatedEvent({
+        contract: l1MessageService,
+        updateCall: sendMessageCall,
+        messageNumber: 1n,
+        expectedRollingHash: rollingHash,
+        messageHash,
+      });
 
-      const rollingHashAtIndex = await l1MessageService.rollingHashes(1);
-
-      expect(rollingHashAtIndex).to.equal(rollingHash);
-      expect(rollingHashAtIndex).to.not.equal(ethers.ZeroHash);
+      await validateRollingHashStorage({
+        contract: l1MessageService,
+        messageNumber: 1n,
+        expectedHash: rollingHash,
+      });
+      await validateRollingHashNotZero({ contract: l1MessageService, messageNumber: 1n });
     });
 
     it("Should use the previous existing rolling hash when sending a message post migration", async () => {
@@ -319,7 +334,7 @@ describe("L1MessageService", () => {
       );
 
       let messageHash = ethers.keccak256(expectedBytes);
-      let rollingHash = calculateRollingHash(ethers.ZeroHash, messageHash);
+      let rollingHash = calculateRollingHash(INITIAL_ROLLING_HASH, messageHash);
 
       await l1MessageService.connect(admin).canSendMessage(notAuthorizedAccount.address, MESSAGE_FEE, EMPTY_CALLDATA, {
         value: MESSAGE_FEE + MESSAGE_VALUE_1ETH,
@@ -343,7 +358,7 @@ describe("L1MessageService", () => {
         .canSendMessage(notAuthorizedAccount.address, MESSAGE_FEE, EMPTY_CALLDATA, {
           value: MESSAGE_FEE + MESSAGE_VALUE_1ETH,
         });
-      const messageSenteventArgs = [
+      const messageSentEventArgs = [
         await l1MessageService.getAddress(),
         notAuthorizedAccount.address,
         MESSAGE_FEE,
@@ -352,14 +367,22 @@ describe("L1MessageService", () => {
         EMPTY_CALLDATA,
         messageHash,
       ];
-      const rollingHashUpdatedEventArgs = [2, rollingHash, messageHash];
 
-      await expectEvent(l1MessageService, sendMessageCall, "MessageSent", messageSenteventArgs);
-      await expectEvent(l1MessageService, sendMessageCall, "RollingHashUpdated", rollingHashUpdatedEventArgs);
+      await expectEvent(l1MessageService, sendMessageCall, "MessageSent", messageSentEventArgs);
+      await expectRollingHashUpdatedEvent({
+        contract: l1MessageService,
+        updateCall: sendMessageCall,
+        messageNumber: 2n,
+        expectedRollingHash: rollingHash,
+        messageHash,
+      });
 
-      const rollingHashAtIndex = await l1MessageService.rollingHashes(2);
-      expect(rollingHashAtIndex).to.equal(rollingHash);
-      expect(rollingHashAtIndex).to.not.equal(ethers.ZeroHash);
+      await validateRollingHashStorage({
+        contract: l1MessageService,
+        messageNumber: 2n,
+        expectedHash: rollingHash,
+      });
+      await validateRollingHashNotZero({ contract: l1MessageService, messageNumber: 2n });
     });
   });
 
@@ -898,7 +921,8 @@ describe("L1MessageService", () => {
       );
 
       await l1MessageService.addL2L1MessageHash(ethers.keccak256(expectedBytes));
-      await expect(
+      await expectRevertWithCustomError(
+        l1MessageService,
         l1MessageService
           .connect(admin)
           .claimMessage(
@@ -910,9 +934,9 @@ describe("L1MessageService", () => {
             EMPTY_CALLDATA,
             1,
           ),
-      )
-        .to.be.revertedWithCustomError(l1MessageService, "MessageSendingFailed")
-        .withArgs(await l1MessageService.getAddress());
+        "MessageSendingFailed",
+        [await l1MessageService.getAddress()],
+      );
 
       expect(await l1MessageService.inboxL2L1MessageStatus(ethers.keccak256(expectedBytes))).to.be.equal(
         INBOX_STATUS_RECEIVED,
@@ -1064,7 +1088,8 @@ describe("L1MessageService", () => {
     it("Should fail to claim when the contract is generally paused", async () => {
       await l1MessageServiceMerkleProof.connect(pauser).pauseByType(GENERAL_PAUSE_TYPE);
 
-      await expect(
+      await expectRevertWhenPaused(
+        l1MessageService,
         l1MessageServiceMerkleProof.claimMessageWithProof({
           proof: VALID_MERKLE_PROOF.proof,
           messageNumber: 1,
@@ -1077,9 +1102,8 @@ describe("L1MessageService", () => {
           merkleRoot: VALID_MERKLE_PROOF.merkleRoot,
           data: EMPTY_CALLDATA,
         }),
-      )
-        .to.be.revertedWithCustomError(l1MessageService, "IsPaused")
-        .withArgs(GENERAL_PAUSE_TYPE);
+        GENERAL_PAUSE_TYPE,
+      );
     });
 
     it("Should fail when the message has already been claimed", async () => {
@@ -1316,21 +1340,22 @@ describe("L1MessageService", () => {
 
   describe("Pausing contracts", () => {
     it("Should fail general pausing as non-pauser", async () => {
-      expect(await l1MessageService.isPaused(GENERAL_PAUSE_TYPE)).to.be.false;
+      await expectNotPaused(l1MessageService, GENERAL_PAUSE_TYPE);
 
-      await expect(l1MessageService.connect(admin).pauseByType(GENERAL_PAUSE_TYPE)).to.be.revertedWith(
-        "AccessControl: account " + admin.address.toLowerCase() + " is missing role " + PAUSE_ALL_ROLE,
+      await expectRevertWithReason(
+        l1MessageService.connect(admin).pauseByType(GENERAL_PAUSE_TYPE),
+        buildAccessErrorMessage(admin, PAUSE_ALL_ROLE),
       );
 
-      expect(await l1MessageService.isPaused(GENERAL_PAUSE_TYPE)).to.be.false;
+      await expectNotPaused(l1MessageService, GENERAL_PAUSE_TYPE);
     });
 
     it("Should pause generally as pause manager", async () => {
-      expect(await l1MessageService.isPaused(GENERAL_PAUSE_TYPE)).to.be.false;
+      await expectNotPaused(l1MessageService, GENERAL_PAUSE_TYPE);
 
       await l1MessageService.connect(pauser).pauseByType(GENERAL_PAUSE_TYPE);
 
-      expect(await l1MessageService.isPaused(GENERAL_PAUSE_TYPE)).to.be.true;
+      await expectPaused(l1MessageService, GENERAL_PAUSE_TYPE);
     });
 
     it("Should fail when to claim the contract is generally paused", async () => {
@@ -1346,7 +1371,7 @@ describe("L1MessageService", () => {
         1,
       );
 
-      await expectRevertWithCustomError(l1MessageService, claimMessageCall, "IsPaused", [GENERAL_PAUSE_TYPE]);
+      await expectRevertWhenPaused(l1MessageService, claimMessageCall, GENERAL_PAUSE_TYPE);
     });
 
     it("Should fail to claim when the L2 to L1 communication is paused", async () => {
@@ -1362,7 +1387,7 @@ describe("L1MessageService", () => {
         1,
       );
 
-      await expectRevertWithCustomError(l1MessageService, claimMessageCall, "IsPaused", [L2_L1_PAUSE_TYPE]);
+      await expectRevertWhenPaused(l1MessageService, claimMessageCall, L2_L1_PAUSE_TYPE);
     });
 
     it("Should fail to send if the contract is generally paused", async () => {
@@ -1372,7 +1397,7 @@ describe("L1MessageService", () => {
         .connect(admin)
         .canSendMessage(notAuthorizedAccount.address, 0, EMPTY_CALLDATA, { value: INITIAL_WITHDRAW_LIMIT });
 
-      await expectRevertWithCustomError(l1MessageService, claimMessageCall, "IsPaused", [GENERAL_PAUSE_TYPE]);
+      await expectRevertWhenPaused(l1MessageService, claimMessageCall, GENERAL_PAUSE_TYPE);
 
       const usedAmount = await l1MessageService.currentPeriodAmountInWei();
       expect(usedAmount).to.be.equal(0);
@@ -1385,7 +1410,7 @@ describe("L1MessageService", () => {
         .connect(admin)
         .canSendMessage(notAuthorizedAccount.address, 0, EMPTY_CALLDATA, { value: INITIAL_WITHDRAW_LIMIT });
 
-      await expectRevertWithCustomError(l1MessageService, claimMessageCall, "IsPaused", [L1_L2_PAUSE_TYPE]);
+      await expectRevertWhenPaused(l1MessageService, claimMessageCall, L1_L2_PAUSE_TYPE);
 
       const usedAmount = await l1MessageService.currentPeriodAmountInWei();
       expect(usedAmount).to.be.equal(0);

@@ -8,12 +8,17 @@ import (
 	"github.com/consensys/gnark-crypto/ecc"
 	fr377 "github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
 	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/frontend/cs/scs"
 	"github.com/consensys/gnark/test"
 	"github.com/consensys/linea-monorepo/prover/backend/aggregation"
 	"github.com/consensys/linea-monorepo/prover/circuits/internal"
 	pi_interconnection "github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak"
+	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/leanovate/gopter"
+	"github.com/leanovate/gopter/gen"
+	"github.com/leanovate/gopter/prop"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/sha3"
 )
@@ -97,4 +102,35 @@ func (c *testMerkleCircuit) Define(api frontend.API) error {
 	}
 
 	return nil
+}
+
+func TestMaxNbCircuitsSum(t *testing.T) {
+	parameters := gopter.DefaultTestParameters()
+	parameters.MinSuccessfulTests = 3
+	parameters.Rng.Seed(0x123456789abcdef0)
+
+	properties := gopter.NewProperties(parameters)
+
+	properties.Property("provides the correct number of public inputs", prop.ForAll(
+		func(maxNbDecompression, maxNbExecution, maxNbInvalidity int) bool {
+			cfg := config.PublicInput{
+				MaxNbDataAvailability: maxNbDecompression,
+				MaxNbExecution:        maxNbExecution,
+				MaxNbInvalidity:       maxNbInvalidity,
+				MaxNbCircuits:         30,
+				ExecutionMaxNbMsg:     2,
+				L2MsgMerkleDepth:      5,
+				L2MsgMaxNbMerkle:      2,
+				MockKeccakWizard:      true,
+			}
+
+			c, err := pi_interconnection.Compile(cfg, nil)
+			assert.NoError(t, err)
+			cs, err := frontend.Compile(ecc.BLS12_377.ScalarField(), scs.NewBuilder, c.Circuit)
+			assert.NoError(t, err)
+			return cfg.MaxNbDataAvailability+cfg.MaxNbExecution+cfg.MaxNbInvalidity == pi_interconnection.GetMaxNbCircuitsSum(cs)
+		}, gen.IntRange(1, 10), gen.IntRange(1, 10), gen.IntRange(1, 10),
+	))
+
+	properties.TestingRun(t)
 }

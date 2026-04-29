@@ -1,6 +1,7 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
+import { DEFAULT_ADMIN_ROLE } from "contracts/common/constants";
 import { SSZMerkleTree, TestValidatorContainerProofVerifier } from "contracts/typechain-types";
 import { ethers } from "hardhat";
 
@@ -8,11 +9,19 @@ import { randomBytes32 } from "../../../../common/helpers/encoding";
 import {
   GI_FIRST_VALIDATOR,
   GI_PENDING_PARTIAL_WITHDRAWALS_ROOT,
+  HASH_ZERO,
   ONE_GWEI,
   SHARD_COMMITTEE_PERIOD,
   SLOTS_PER_EPOCH,
 } from "../../common/constants";
-import { buildAccessErrorMessage, expectRevertWithCustomError, getAccountsFixture } from "../../common/helpers";
+import {
+  buildAccessErrorMessage,
+  expectRevertWithCustomError,
+  expectRevertWithReason,
+  getAccountsFixture,
+  expectZeroAddressRevert,
+  expectZeroHashRevert,
+} from "../../common/helpers";
 import { expectEvent } from "../../common/helpers/expectations";
 import { deployTestValidatorContainerProofVerifier, ValidatorContainerWitness } from "../helpers";
 import {
@@ -66,29 +75,30 @@ describe("ValidatorContainerProofVerifier", () => {
       expect(await verifier.GI_PENDING_PARTIAL_WITHDRAWALS_ROOT()).eq(GI_PENDING_PARTIAL_WITHDRAWALS_ROOT);
     });
     it("It should grant DEFAULT_ADMIN_ROLE to admin", async () => {
-      const DEFAULT_ADMIN_ROLE = "0x0000000000000000000000000000000000000000000000000000000000000000";
       expect(await verifier.hasRole(DEFAULT_ADMIN_ROLE, await admin.getAddress())).to.be.true;
     });
     it("should revert when admin address is zero", async () => {
       const factory = await ethers.getContractFactory("TestValidatorContainerProofVerifier");
-      const deployCall = factory.deploy(ethers.ZeroAddress, GI_FIRST_VALIDATOR, GI_PENDING_PARTIAL_WITHDRAWALS_ROOT);
-      await expectRevertWithCustomError(factory, deployCall, "ZeroAddressNotAllowed");
+      await expectZeroAddressRevert({
+        contract: factory,
+        deployOrInitCall: factory.deploy(ethers.ZeroAddress, GI_FIRST_VALIDATOR, GI_PENDING_PARTIAL_WITHDRAWALS_ROOT),
+      });
     });
     it("should revert when GI_FIRST_VALIDATOR is zero hash", async () => {
       const factory = await ethers.getContractFactory("TestValidatorContainerProofVerifier");
       const [deployer] = await ethers.getSigners();
-      const deployCall = factory.deploy(
-        await deployer.getAddress(),
-        ethers.ZeroHash,
-        GI_PENDING_PARTIAL_WITHDRAWALS_ROOT,
-      );
-      await expectRevertWithCustomError(factory, deployCall, "ZeroHashNotAllowed");
+      await expectZeroHashRevert({
+        contract: factory,
+        deployOrInitCall: factory.deploy(await deployer.getAddress(), HASH_ZERO, GI_PENDING_PARTIAL_WITHDRAWALS_ROOT),
+      });
     });
     it("should revert when GI_PENDING_PARTIAL_WITHDRAWALS_ROOT is zero hash", async () => {
       const factory = await ethers.getContractFactory("TestValidatorContainerProofVerifier");
       const [deployer] = await ethers.getSigners();
-      const deployCall = factory.deploy(await deployer.getAddress(), GI_FIRST_VALIDATOR, ethers.ZeroHash);
-      await expectRevertWithCustomError(factory, deployCall, "ZeroHashNotAllowed");
+      await expectZeroHashRevert({
+        contract: factory,
+        deployOrInitCall: factory.deploy(await deployer.getAddress(), GI_FIRST_VALIDATOR, HASH_ZERO),
+      });
     });
   });
 
@@ -127,16 +137,16 @@ describe("ValidatorContainerProofVerifier", () => {
 
     it("should revert when non-admin tries to set GI_FIRST_VALIDATOR", async () => {
       const newGIndex = randomBytes32();
-      const DEFAULT_ADMIN_ROLE = "0x0000000000000000000000000000000000000000000000000000000000000000";
-      await expect(verifier.connect(nonAdmin).setGIFirstValidator(newGIndex)).to.be.revertedWith(
+      await expectRevertWithReason(
+        verifier.connect(nonAdmin).setGIFirstValidator(newGIndex),
         buildAccessErrorMessage(nonAdmin, DEFAULT_ADMIN_ROLE),
       );
     });
 
     it("should revert when non-admin tries to set GI_PENDING_PARTIAL_WITHDRAWALS_ROOT", async () => {
       const newGIndex = randomBytes32();
-      const DEFAULT_ADMIN_ROLE = "0x0000000000000000000000000000000000000000000000000000000000000000";
-      await expect(verifier.connect(nonAdmin).setGIPendingPartialWithdrawalsRoot(newGIndex)).to.be.revertedWith(
+      await expectRevertWithReason(
+        verifier.connect(nonAdmin).setGIPendingPartialWithdrawalsRoot(newGIndex),
         buildAccessErrorMessage(nonAdmin, DEFAULT_ADMIN_ROLE),
       );
     });
@@ -144,7 +154,7 @@ describe("ValidatorContainerProofVerifier", () => {
     it("should revert when admin tries to set GI_FIRST_VALIDATOR to zero hash", async () => {
       await expectRevertWithCustomError(
         verifier,
-        verifier.connect(admin).setGIFirstValidator(ethers.ZeroHash),
+        verifier.connect(admin).setGIFirstValidator(HASH_ZERO),
         "ZeroHashNotAllowed",
       );
     });
@@ -152,7 +162,7 @@ describe("ValidatorContainerProofVerifier", () => {
     it("should revert when admin tries to set GI_PENDING_PARTIAL_WITHDRAWALS_ROOT to zero hash", async () => {
       await expectRevertWithCustomError(
         verifier,
-        verifier.connect(admin).setGIPendingPartialWithdrawalsRoot(ethers.ZeroHash),
+        verifier.connect(admin).setGIPendingPartialWithdrawalsRoot(HASH_ZERO),
         "ZeroHashNotAllowed",
       );
     });

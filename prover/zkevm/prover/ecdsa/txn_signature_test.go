@@ -29,7 +29,7 @@ func TestTxnSignature(t *testing.T) {
 			createCol = common.CreateColFn(comp, "TESTING_TxSignature", size, pragmas.RightPadded)
 
 			txSignInputs = txSignatureInputs{
-				Ac: &antichamber{
+				Ac: &Antichamber{
 					IsFetching: createCol("Is_Fetching"),
 					IsActive:   createCol("Is_Active"),
 					Source:     createCol("Source"),

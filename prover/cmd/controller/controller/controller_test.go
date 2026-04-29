@@ -61,6 +61,11 @@ func TestRunCommand(t *testing.T) {
 	createTestInputFile(aFrom, 4, 6, aggregationJob, exit77)
 	createTestInputFile(aFrom, 6, 8, aggregationJob, exit137)
 
+	// invalidity
+	iFrom := confM.Invalidity.DirFrom()
+	createTestInputFile(iFrom, 1000, 10, invalidityJob, exit0)
+	createTestInputFile(iFrom, 2000, 20, invalidityJob, exit2)
+
 	ctxM, stopM := context.WithCancel(context.Background())
 	ctxL, stopL := context.WithCancel(context.Background())
 
@@ -143,6 +148,21 @@ func TestRunCommand(t *testing.T) {
 			Path:    confM.Aggregation.DirTo(),
 			Entries: []string{"0-2-deadbeef57-getZkAggregatedProof.json"},
 		},
+		{
+			Path:    confM.Invalidity.DirFrom(),
+			Entries: []string{},
+		},
+		{
+			Path: confM.Invalidity.DirDone(),
+			Entries: []string{
+				"1000-10-getZkInvalidityProof.json.success",
+				"2000-20-getZkInvalidityProof.json.failure.code_2",
+			},
+		},
+		{
+			Path:    confM.Invalidity.DirTo(),
+			Entries: []string{"1000-10-getZkInvalidityProof.json"},
+		},
 	}
 
 	for _, dirVal := range expectedStructure {
@@ -164,10 +184,12 @@ func TestFileWatcherM(t *testing.T) {
 	eFrom := confM.Execution.DirFrom
 	cFrom := confM.DataAvailability.DirFrom
 	aFrom := confM.Aggregation.DirFrom
+	iFrom := confM.Invalidity.DirFrom
 
 	exitCode := 0 // we are not interesting in the exit code here
 
-	// The jobs, declared in the order in which they are expected to be found
+	// The jobs, declared in the order in which they are expected to be found.
+	// Order is determined by Score() = 100*End + Priority (ascending).
 
 	// Name of the expected inprogress files
 	expectedFNames := []struct {
@@ -205,6 +227,12 @@ func TestFileWatcherM(t *testing.T) {
 		},
 		{
 			FName: createTestInputFile(aFrom(), 2, 5, aggregationJob, exitCode),
+		},
+		{
+			FName: createTestInputFile(iFrom(), 1000, 10, invalidityJob, exitCode),
+		},
+		{
+			FName: createTestInputFile(iFrom(), 2000, 20, invalidityJob, exitCode),
 		},
 	}
 
@@ -288,6 +316,7 @@ func setupFsTest(t *testing.T) (confM, confL *config.Config) {
 		execution   = "execution"
 		compression = "compression"
 		aggregation = "aggregation"
+		invalidity  = "invalidity"
 	)
 
 	// Create a configuration using temporary directories
@@ -327,6 +356,7 @@ exit $CODE
 			EnableExecution:            true,
 			EnableDataAvailability:     true,
 			EnableAggregation:          true,
+			EnableInvalidity:           true,
 			LocalID:                    proverM,
 			Prometheus:                 config.Prometheus{Enabled: false},
 			RetryDelays:                []int{0, 1},
@@ -349,6 +379,11 @@ exit $CODE
 		Aggregation: config.Aggregation{
 			WithRequestDir: config.WithRequestDir{
 				RequestsRootDir: path.Join(testDir, proverM, aggregation),
+			},
+		},
+		Invalidity: config.Invalidity{
+			WithRequestDir: config.WithRequestDir{
+				RequestsRootDir: path.Join(testDir, proverM, invalidity),
 			},
 		},
 	}
@@ -411,6 +446,9 @@ exit $CODE
 		os.MkdirAll(confM.Aggregation.DirFrom(), permCode),
 		os.MkdirAll(confM.Aggregation.DirTo(), permCode),
 		os.MkdirAll(confM.Aggregation.DirDone(), permCode),
+		os.MkdirAll(confM.Invalidity.DirFrom(), permCode),
+		os.MkdirAll(confM.Invalidity.DirTo(), permCode),
+		os.MkdirAll(confM.Invalidity.DirDone(), permCode),
 	)
 
 	if err != nil {
@@ -424,6 +462,7 @@ const (
 	execJob int = iota
 	compressionJob
 	aggregationJob
+	invalidityJob
 	forLarge bool = true
 )
 
@@ -443,6 +482,8 @@ func createTestInputFile(
 		fmtString = "%v-%v-bcv0.1.2-ccv0.1.2-getZkBlobCompressionProof.json"
 	case aggregationJob:
 		fmtString = "%v-%v-deadbeef57-getZkAggregatedProof.json"
+	case invalidityJob:
+		fmtString = "%v-%v-getZkInvalidityProof.json"
 	default:
 		panic("incorrect job type")
 	}
@@ -465,7 +506,7 @@ func createTestInputFile(
 }
 
 func TestSpotInstanceMode(t *testing.T) {
-	t.Skipf("this breaks the CI pipeline")
+	// t.Skipf("this breaks the CI pipeline")
 
 	var (
 		cfg    = setupFsTestSpotInstance(t)
@@ -583,7 +624,7 @@ func waitFor(t *testing.T, timeout time.Duration, interval time.Duration, condit
 // Test that on SIGTERM (graceful) the controller lets the job finish and the result is in the done folder.
 func TestSIGTERMGracefulShutdown(t *testing.T) {
 
-	t.Skipf("this breaks the CI pipeline")
+	// t.Skipf("this breaks the CI pipeline")
 
 	confM, _ := setupFsTest(t)
 

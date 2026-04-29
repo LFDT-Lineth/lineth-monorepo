@@ -1,0 +1,84 @@
+%% Forced Transaction Contract Architecture
+%% Renders with: https://mermaid.live or any Mermaid-compatible viewer
+
+classDiagram
+    class LineaRollup {
+        +bytes32 currentFinalizedState
+        +uint256 nextForcedTransactionNumber
+        +mapping forcedTransactionL2BlockNumbers
+        +mapping forcedTransactionRollingHashes
+        +uint256 forcedTransactionFeeInWei
+        +IAddressFilter addressFilter
+        +getRequiredForcedTransactionFields()
+        +storeForcedTransaction()
+        +setForcedTransactionFee()
+        +setAddressFilter()
+        +finalizeBlocks()
+    }
+    
+    class ForcedTransactionGateway {
+        +IAcceptForcedTransactions LINEA_ROLLUP
+        +uint256 DESTINATION_CHAIN_ID
+        +uint256 L2_BLOCK_BUFFER
+        +uint256 MAX_GAS_LIMIT
+        +uint256 MAX_INPUT_LENGTH_LIMIT
+        +IAddressFilter ADDRESS_FILTER
+        +bool useAddressFilter
+        +submitForcedTransaction()
+        +toggleUseAddressFilter()
+    }
+    
+    class AddressFilter {
+        +mapping filteredAddresses
+        +addressIsFiltered()
+        +setFilteredStatus()
+    }
+    
+    class IAcceptForcedTransactions {
+        <<interface>>
+        +getRequiredForcedTransactionFields()
+        +storeForcedTransaction()
+        +setForcedTransactionFee()
+        +setAddressFilter()
+    }
+    
+    class FinalizedStateHashing {
+        <<library>>
+        +_computeLastFinalizedState()
+    }
+    
+    class Mimc {
+        <<library>>
+        +hash()
+    }
+    
+    class Coordinator {
+        <<off-chain service>>
+        +listenForForcedTransactionAdded()
+        +submitToSequencer()
+    }
+    
+    class Sequencer {
+        <<L2 node>>
+        +receiveForcedTransaction()
+        +processTransaction()
+    }
+    
+    class Prover {
+        <<off-chain service>>
+        +generateProof()
+        +computeRollingHashInCircuit()
+        +submitFinalization()
+    }
+    
+    LineaRollup ..|> IAcceptForcedTransactions
+    ForcedTransactionGateway --> IAcceptForcedTransactions : calls
+    ForcedTransactionGateway --> AddressFilter : validates
+    ForcedTransactionGateway --> Mimc : uses
+    ForcedTransactionGateway --> FinalizedStateHashing : uses
+    LineaRollup --> FinalizedStateHashing : uses
+    LineaRollup --> AddressFilter : references
+    LineaRollup ..> Coordinator : emits ForcedTransactionAdded
+    Coordinator --> Sequencer : submits tx
+    Sequencer --> Prover : provides L2 state
+    Prover --> LineaRollup : submits proof + finalization

@@ -28,7 +28,12 @@ import {
   OperationType,
   BEACON_PROOF_WITNESS_TYPE,
 } from "../../common/constants";
-import { expectRevertWithCustomError, getAccountsFixture } from "../../common/helpers";
+import {
+  expectRevertWithCustomError,
+  expectEvent,
+  getAccountsFixture,
+  expectZeroAddressRevert,
+} from "../../common/helpers";
 import {
   buildVendorExitData,
   buildVendorInitializationData,
@@ -100,81 +105,59 @@ describe("LidoStVaultYieldProvider contract - basic operations", () => {
   });
 
   describe("Constructor", () => {
-    it("Should revert if 0 address provided for _l1MessageService", async () => {
-      const contractFactory = await ethers.getContractFactory("TestLidoStVaultYieldProvider");
-      const call = contractFactory.deploy(
-        ZeroAddress,
-        yieldManagerAddress,
-        vaultHubAddress,
-        vaultFactoryAddress,
-        stethAddress,
-        verifierAddress,
-      );
-      await expectRevertWithCustomError(contractFactory, call, "ZeroAddressNotAllowed");
-    });
-    it("Should revert if 0 address provided for _yieldManager", async () => {
-      const contractFactory = await ethers.getContractFactory("TestLidoStVaultYieldProvider");
-      const call = contractFactory
-        .connect(nativeYieldOperator)
-        .deploy(
-          l1MessageServiceAddress,
-          ZeroAddress,
-          vaultHubAddress,
-          vaultFactoryAddress,
-          stethAddress,
-          verifierAddress,
-        );
-      await expectRevertWithCustomError(contractFactory, call, "ZeroAddressNotAllowed");
-    });
-    it("Should revert if 0 address provided for _vaultHub", async () => {
-      const contractFactory = await ethers.getContractFactory("TestLidoStVaultYieldProvider");
-      const call = contractFactory.deploy(
-        l1MessageServiceAddress,
-        yieldManagerAddress,
-        ZeroAddress,
-        vaultFactoryAddress,
-        stethAddress,
-        verifierAddress,
-      );
-      await expectRevertWithCustomError(contractFactory, call, "ZeroAddressNotAllowed");
-    });
-    it("Should revert if 0 address provided for _vaultFactory", async () => {
-      const contractFactory = await ethers.getContractFactory("TestLidoStVaultYieldProvider");
-      const call = contractFactory.deploy(
-        l1MessageServiceAddress,
-        yieldManagerAddress,
-        vaultHubAddress,
-        ZeroAddress,
-        stethAddress,
-        verifierAddress,
-      );
-      await expectRevertWithCustomError(contractFactory, call, "ZeroAddressNotAllowed");
-    });
+    // Configuration for constructor arguments
+    interface ConstructorConfig {
+      l1MessageService: string;
+      yieldManager: string;
+      vaultHub: string;
+      vaultFactory: string;
+      steth: string;
+      validatorContainerProofVerifier: string;
+    }
 
-    it("Should revert if 0 address provided for _steth", async () => {
-      const contractFactory = await ethers.getContractFactory("TestLidoStVaultYieldProvider");
-      const call = contractFactory.deploy(
-        l1MessageServiceAddress,
-        yieldManagerAddress,
-        vaultHubAddress,
-        vaultFactoryAddress,
-        ZeroAddress,
-        verifierAddress,
-      );
-      await expectRevertWithCustomError(contractFactory, call, "ZeroAddressNotAllowed");
-    });
+    // Convert config to args tuple
+    const toArgs = (config: ConstructorConfig): [string, string, string, string, string, string] => [
+      config.l1MessageService,
+      config.yieldManager,
+      config.vaultHub,
+      config.vaultFactory,
+      config.steth,
+      config.validatorContainerProofVerifier,
+    ];
 
-    it("Should revert if 0 address provided for _validatorContainerProofVerifier", async () => {
-      const contractFactory = await ethers.getContractFactory("TestLidoStVaultYieldProvider");
-      const call = contractFactory.deploy(
-        l1MessageServiceAddress,
-        yieldManagerAddress,
-        vaultHubAddress,
-        vaultFactoryAddress,
-        stethAddress,
-        ZeroAddress,
-      );
-      await expectRevertWithCustomError(contractFactory, call, "ZeroAddressNotAllowed");
+    // Parameterized zero address validation tests
+    const zeroAddressValidationCases: Array<{
+      name: string;
+      field: keyof ConstructorConfig;
+    }> = [
+      { name: "_l1MessageService", field: "l1MessageService" },
+      { name: "_yieldManager", field: "yieldManager" },
+      { name: "_vaultHub", field: "vaultHub" },
+      { name: "_vaultFactory", field: "vaultFactory" },
+      { name: "_steth", field: "steth" },
+      { name: "_validatorContainerProofVerifier", field: "validatorContainerProofVerifier" },
+    ];
+
+    zeroAddressValidationCases.forEach(({ name, field }) => {
+      it(`Should revert if 0 address provided for ${name}`, async () => {
+        const contractFactory = await ethers.getContractFactory("TestLidoStVaultYieldProvider");
+
+        const defaultConfig: ConstructorConfig = {
+          l1MessageService: l1MessageServiceAddress,
+          yieldManager: yieldManagerAddress,
+          vaultHub: vaultHubAddress,
+          vaultFactory: vaultFactoryAddress,
+          steth: stethAddress,
+          validatorContainerProofVerifier: verifierAddress,
+        };
+
+        const args = toArgs({ ...defaultConfig, [field]: ZeroAddress });
+
+        await expectZeroAddressRevert({
+          contract: contractFactory,
+          deployOrInitCall: contractFactory.deploy(...args),
+        });
+      });
     });
 
     it("Should succeed and emit the correct deployment event", async () => {
@@ -187,16 +170,14 @@ describe("LidoStVaultYieldProvider contract - basic operations", () => {
         stethAddress,
         verifierAddress,
       );
-      expect(contract.deploymentTransaction)
-        .to.emit(contract, "LidoStVaultYieldProviderDeployed")
-        .withArgs(
-          l1MessageServiceAddress,
-          yieldManagerAddress,
-          vaultHubAddress,
-          vaultFactoryAddress,
-          stethAddress,
-          verifierAddress,
-        );
+      await expectEvent(contract, contract.deploymentTransaction()!, "LidoStVaultYieldProviderDeployed", [
+        l1MessageServiceAddress,
+        yieldManagerAddress,
+        vaultHubAddress,
+        vaultFactoryAddress,
+        stethAddress,
+        verifierAddress,
+      ]);
     });
   });
 

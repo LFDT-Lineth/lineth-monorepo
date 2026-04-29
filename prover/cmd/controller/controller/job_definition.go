@@ -14,6 +14,7 @@ const (
 	jobNameExecution        = "execution"
 	jobNameDataAvailability = "compression"
 	jobNameAggregation      = "aggregation"
+	jobNameInvalidity       = "invalidity"
 )
 
 // JobDefinition represents a collection of static parameters allowing to define
@@ -46,7 +47,7 @@ type JobDefinition struct {
 	// Priority at which this type of job should be processed. The lower the
 	// more of a priority.
 	//
-	// Typically 0 for execution, 1 for compression and 2 for aggregation.
+	// Typically 0 for execution and invalidity, 1 for compression and 2 for aggregation.
 	//
 	Priority int
 
@@ -222,6 +223,46 @@ func AggregatedDefinition(conf *config.Config) JobDefinition {
 			End: regexp2.MustCompile(`(?<=^[0-9]+-)[0-9]+`, regexp2.None),
 			// Match the hexadecimal string that precedes `getZkAggregatedProof`
 			ContentHash: regexp2.MustCompile(`(?<=^[0-9]+-[0-9]+-)[a-fA-F0-9]+(?=-getZk)`, regexp2.None),
+		},
+
+		FailureSuffix: matchFailureSuffix(config.FailSuffix),
+	}
+}
+
+// Definition of an invalidity prover job.
+func InvalidityDefinition(conf *config.Config) JobDefinition {
+
+	return JobDefinition{
+		RequestsRootDir: conf.Invalidity.RequestsRootDir,
+
+		Name: jobNameInvalidity,
+
+		InputFileRegexp: regexp2.MustCompile(
+			fmt.Sprintf(
+				`^[0-9]+-[0-9]+-getZkInvalidityProof\.json(\.failure\.%v_[0-9]+)*$`,
+				config.FailSuffix,
+			),
+			regexp2.None,
+		),
+
+		OutputFileTmpl: tmplMustCompile(
+			"invalidity-output-file",
+			"{{.Start}}-{{.End}}-getZkInvalidityProof.json",
+		),
+
+		// Invalidity proofs have the same priority as execution
+		Priority: 0,
+
+		ParamsRegexp: struct {
+			Start       *regexp2.Regexp
+			End         *regexp2.Regexp
+			Stv         *regexp2.Regexp
+			Etv         *regexp2.Regexp
+			Cv          *regexp2.Regexp
+			ContentHash *regexp2.Regexp
+		}{
+			Start: regexp2.MustCompile(`^[0-9]+`, regexp2.None),
+			End:   regexp2.MustCompile(`(?<=^[0-9]+-)[0-9]+`, regexp2.None),
 		},
 
 		FailureSuffix: matchFailureSuffix(config.FailSuffix),

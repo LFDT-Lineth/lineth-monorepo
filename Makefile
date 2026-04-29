@@ -21,7 +21,7 @@ clean-environment:
 start-env: COMPOSE_PROFILES:=l1,l2
 start-env: CLEAN_PREVIOUS_ENV:=true
 start-env: COMPOSE_FILE:=docker/compose-tracing-v2.yml
-start-env: L1_CONTRACT_VERSION:=7_1
+start-env: L1_CONTRACT_VERSION:=8
 start-env: SKIP_CONTRACTS_DEPLOYMENT:=false
 start-env: SKIP_L1_L2_NODE_HEALTH_CHECK:=false
 start-env: LINEA_PROTOCOL_CONTRACTS_ONLY:=false
@@ -48,7 +48,7 @@ start-env:
 	fi
 
 start-env-with-validium:
-	$(MAKE) start-env L1_CONTRACT_VERSION=1 LINEA_COORDINATOR_DATA_AVAILABILITY=VALIDIUM LINEA_L1_CONTRACT_DEPLOYMENT_TARGET=deploy-validium
+	$(MAKE) start-env L1_CONTRACT_VERSION=2 LINEA_COORDINATOR_DATA_AVAILABILITY=VALIDIUM LINEA_L1_CONTRACT_DEPLOYMENT_TARGET=deploy-validium
 
 start-l1:
 	make start-env COMPOSE_PROFILES:=l1 COMPOSE_FILE:=docker/compose-tracing-v2.yml SKIP_CONTRACTS_DEPLOYMENT:=true SKIP_L1_L2_NODE_HEALTH_CHECK:=true
@@ -93,7 +93,7 @@ start-env-with-staterecovery: L1_CONTRACT_VERSION:=6
 start-env-with-staterecovery:
 	make start-env COMPOSE_FILE=docker/compose-tracing-v2-staterecovery-extension.yml LINEA_PROTOCOL_CONTRACTS_ONLY=true L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION) COMPOSE_PROFILES=$(COMPOSE_PROFILES)
 
-staterecovery-replay-from-block: L1_ROLLUP_CONTRACT_ADDRESS:=0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
+staterecovery-replay-from-block: L1_ROLLUP_CONTRACT_ADDRESS:=0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9
 staterecovery-replay-from-block: STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER:=1
 staterecovery-replay-from-block:
 	docker compose -f docker/compose-tracing-v2-staterecovery-extension.yml down zkbesu-shomei-sr shomei-sr

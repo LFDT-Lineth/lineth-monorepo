@@ -11,9 +11,9 @@ import { IShnarfDataAcceptorBase } from "./IShnarfDataAcceptorBase.sol";
 interface IAcceptCalldataBlobs is IShnarfDataAcceptorBase {
   /**
    * @notice Supporting data for compressed calldata submission including compressed data.
-   * @dev finalStateRootHash is used to set state root at the end of the data.
-   * @dev snarkHash is the computed hash for compressed data (using a SNARK-friendly hash function) that aggregates per data submission to be used in public input.
-   * @dev compressedData is the compressed transaction data. It contains ordered data for each L2 block - l2Timestamps, the encoded transaction data.
+   * @param finalStateRootHash is used to set state root at the end of the data.
+   * @param snarkHash is the computed hash for compressed data (using a SNARK-friendly hash function) that aggregates per data submission to be used in public input.
+   * @param compressedData is the compressed transaction data. It contains ordered data for each L2 block - l2Timestamps, the encoded transaction data.
    */
   struct CompressedCalldataSubmission {
     bytes32 finalStateRootHash;

@@ -12,6 +12,9 @@ import (
 	"github.com/consensys/linea-monorepo/prover/backend/execution"
 	"github.com/consensys/linea-monorepo/prover/backend/execution/limitless"
 	"github.com/consensys/linea-monorepo/prover/backend/files"
+	"github.com/consensys/linea-monorepo/prover/backend/invalidity"
+	invalidityLimitless "github.com/consensys/linea-monorepo/prover/backend/invalidity/limitless"
+	invalidityCir "github.com/consensys/linea-monorepo/prover/circuits/invalidity"
 	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/consensys/linea-monorepo/prover/utils/signal"
 )
@@ -45,6 +48,7 @@ func Prove(args ProverArgs) error {
 	var (
 		jobExecution        = strings.Contains(args.Input, "getZkProof")
 		jobDataAvailability = strings.Contains(args.Input, "getZkBlobCompressionProof")
+		jobInvalidity       = strings.Contains(args.Input, "getZkInvalidityProof")
 		jobAggregation      = strings.Contains(args.Input, "getZkAggregatedProof")
 	)
 
@@ -52,6 +56,8 @@ func Prove(args ProverArgs) error {
 	switch {
 	case jobExecution:
 		return handleExecutionJob(cfg, args)
+	case jobInvalidity:
+		return handleInvalidityJob(cfg, args)
 	case jobDataAvailability:
 		return handleDataAvailabilityJob(cfg, args)
 	case jobAggregation:
@@ -116,6 +122,30 @@ func handleAggregationJob(cfg *config.Config, args ProverArgs) error {
 		return fmt.Errorf("could not prove the aggregation: %w", err)
 	}
 
+	return writeResponse(args.Output, resp)
+}
+
+// handleInvalidityJob processes an invalidity job
+func handleInvalidityJob(cfg *config.Config, args ProverArgs) error {
+	req := &invalidity.Request{}
+	if err := readRequest(args.Input, req); err != nil {
+		return fmt.Errorf("could not read the input file (%v): %w", args.Input, err)
+	}
+	if cfg.Invalidity.ProverMode == config.ProverModeLimitless {
+		if req.InvalidityType == invalidityCir.BadPrecompile || req.InvalidityType == invalidityCir.TooManyLogs {
+			resp, err := invalidityLimitless.Prove(cfg, req)
+			if err != nil {
+				return fmt.Errorf("could not prove the invalidity in limitless mode: %w", err)
+			}
+			return writeResponse(args.Output, resp)
+		}
+	}
+
+	large := args.Large || (strings.Contains(args.Input, "large") && cfg.Invalidity.CanRunFullLarge)
+	resp, err := invalidity.Prove(cfg, req, large)
+	if err != nil {
+		return fmt.Errorf("could not prove the invalidity: %w", err)
+	}
 	return writeResponse(args.Output, resp)
 }
 

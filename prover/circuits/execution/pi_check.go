@@ -85,26 +85,26 @@ func AllocatePICheck(maxL2L1Logs int) PICheckCircuit {
 // [CircuitExecution.Define] so that [checkPublicInputs] can operate on the
 // lightweight [ExtractedPISnark] instead of the full [wizard.VerifierCircuit].
 func extractPIsFromWVC(api frontend.API, wvc *wizard.VerifierCircuit) ExtractedPISnark {
-	pie := getPublicInputExtractor(wvc)
+	pie := GetPublicInputExtractor(wvc)
 
 	toVar := func(pi wizard.PublicInput) frontend.Variable {
-		return getPublicInput(api, wvc, pi)
+		return GetPublicInput(api, wvc, pi)
 	}
 
 	toVarArr8 := func(pis [zkcommon.NbElemPerHash]wizard.PublicInput) [zkcommon.NbElemPerHash]frontend.Variable {
-		return [zkcommon.NbElemPerHash]frontend.Variable(getPublicInputArr(api, wvc, pis[:]))
+		return [zkcommon.NbElemPerHash]frontend.Variable(GetPublicInputArr(api, wvc, pis[:]))
 	}
 
 	toVarArr3 := func(pis [zkcommon.NbLimbU48]wizard.PublicInput) [zkcommon.NbLimbU48]frontend.Variable {
-		return [zkcommon.NbLimbU48]frontend.Variable(getPublicInputArr(api, wvc, pis[:]))
+		return [zkcommon.NbLimbU48]frontend.Variable(GetPublicInputArr(api, wvc, pis[:]))
 	}
 
 	toVarArr10 := func(pis [zkcommon.NbLimbEthAddress]wizard.PublicInput) [zkcommon.NbLimbEthAddress]frontend.Variable {
-		return [zkcommon.NbLimbEthAddress]frontend.Variable(getPublicInputArr(api, wvc, pis[:]))
+		return [zkcommon.NbLimbEthAddress]frontend.Variable(GetPublicInputArr(api, wvc, pis[:]))
 	}
 
 	toVarArr16 := func(pis [zkcommon.NbLimbU256]wizard.PublicInput) [zkcommon.NbLimbU256]frontend.Variable {
-		return [zkcommon.NbLimbU256]frontend.Variable(getPublicInputArr(api, wvc, pis[:]))
+		return [zkcommon.NbLimbU256]frontend.Variable(GetPublicInputArr(api, wvc, pis[:]))
 	}
 
 	extr := ExtractedPISnark{
@@ -130,7 +130,7 @@ func extractPIsFromWVC(api frontend.API, wvc *wizard.VerifierCircuit) ExtractedP
 
 	extr.L2Messages = make([][zkcommon.NbLimbU256]frontend.Variable, len(pie.L2Messages))
 	for i, msgs := range pie.L2Messages {
-		extr.L2Messages[i] = [zkcommon.NbLimbU256]frontend.Variable(getPublicInputArr(api, wvc, msgs[:]))
+		extr.L2Messages[i] = [zkcommon.NbLimbU256]frontend.Variable(GetPublicInputArr(api, wvc, msgs[:]))
 	}
 
 	return extr
@@ -301,9 +301,9 @@ func CheckPublicInputConsistency(
 	logrus.Infof("Public input consistency check passed")
 }
 
-// getPublicInputExtractor extracts the [publicInput.FunctionalInputExtractor]
+// GetPublicInputExtractor extracts the [publicInput.FunctionalInputExtractor]
 // from the wizard verifier circuit's compiled IOP ExtraData.
-func getPublicInputExtractor(wvc *wizard.VerifierCircuit) *publicInput.FunctionalInputExtractor {
+func GetPublicInputExtractor(wvc *wizard.VerifierCircuit) *publicInput.FunctionalInputExtractor {
 	extraData, extraDataFound := wvc.Spec.ExtraData[publicInput.PublicInputExtractorMetadata]
 	if !extraDataFound {
 		panic("public input extractor not found")
@@ -331,9 +331,11 @@ func getPublicInputExt(api frontend.API, wvc *wizard.VerifierCircuit, pi wizard.
 	}
 }
 
-// getPublicInputArr returns a slice of frontend.Variable values from a slice
-// of [wizard.PublicInput] references.
-func getPublicInputArr(api frontend.API, wvc *wizard.VerifierCircuit, pis []wizard.PublicInput) []frontend.Variable {
+// GetPublicInputArr returns a slice of frontend.Variable values from a slice
+// of [wizard.PublicInput] references. In limitless mode, public input names
+// are prefixed with "functional." — the lookup falls back to the prefixed
+// name when the original is not found.
+func GetPublicInputArr(api frontend.API, wvc *wizard.VerifierCircuit, pis []wizard.PublicInput) []frontend.Variable {
 	res := make([]frontend.Variable, len(pis))
 	for i := range pis {
 		// When the outer-proof runs on top of the limitless prover, the names of
@@ -348,8 +350,9 @@ func getPublicInputArr(api frontend.API, wvc *wizard.VerifierCircuit, pis []wiza
 	return res
 }
 
-// getPublicInput returns a single frontend.Variable from a [wizard.PublicInput].
-func getPublicInput(api frontend.API, wvc *wizard.VerifierCircuit, pi wizard.PublicInput) frontend.Variable {
+// GetPublicInput returns a single frontend.Variable from a [wizard.PublicInput].
+// In limitless mode, falls back to "functional."-prefixed name.
+func GetPublicInput(api frontend.API, wvc *wizard.VerifierCircuit, pi wizard.PublicInput) frontend.Variable {
 	name := pi.Name
 	if !wvc.HasPublicInput(name) {
 		name = "functional." + name

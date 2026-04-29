@@ -18,6 +18,11 @@ interface IGenericErrors {
   error ZeroHashNotAllowed();
 
   /**
+   * @dev Thrown when a parameter is zero.
+   */
+  error ZeroValueNotAllowed();
+
+  /**
    * @dev Thrown when no ETH is sent.
    */
   error NoEthSent();
@@ -28,4 +33,9 @@ interface IGenericErrors {
    * @param actual The actual initialized version.
    */
   error InitializedVersionWrong(uint256 expected, uint256 actual);
+
+  /**
+   * @dev Thrown when a parameter is the zero length.
+   */
+  error ZeroLengthNotAllowed();
 }

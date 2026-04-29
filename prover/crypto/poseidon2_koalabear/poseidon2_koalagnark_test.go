@@ -19,7 +19,8 @@ type KoalagnarkMDHasherCircuit struct {
 }
 
 func (c *KoalagnarkMDHasherCircuit) Define(api frontend.API) error {
-	h := NewKoalagnarkMDHasher(api)
+	koalagnarkAPI := koalagnark.NewAPI(api)
+	h := NewKoalagnarkMDHasher(koalagnarkAPI)
 
 	// write elements
 	h.Write(c.Inputs...)
@@ -28,9 +29,8 @@ func (c *KoalagnarkMDHasherCircuit) Define(api frontend.API) error {
 	res := h.Sum()
 
 	// check the result using koalagnark API
-	koalaAPI := koalagnark.NewAPI(api)
 	for i := 0; i < 8; i++ {
-		koalaAPI.AssertIsEqual(c.Output[i], res[i])
+		koalagnarkAPI.AssertIsEqual(c.Output[i], res[i])
 	}
 
 	return nil
@@ -127,12 +127,12 @@ type KoalagnarkCompressCircuit struct {
 }
 
 func (c *KoalagnarkCompressCircuit) Define(api frontend.API) error {
-	h := NewKoalagnarkMDHasher(api)
+	koalagnarkAPI := koalagnark.NewAPI(api)
+	h := NewKoalagnarkMDHasher(koalagnarkAPI)
 	res := h.compressPoseidon2(c.A, c.B)
 
-	koalaAPI := koalagnark.NewAPI(api)
 	for i := 0; i < 8; i++ {
-		koalaAPI.AssertIsEqual(c.Output[i], res[i])
+		koalagnarkAPI.AssertIsEqual(c.Output[i], res[i])
 	}
 	return nil
 }

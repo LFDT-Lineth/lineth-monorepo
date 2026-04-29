@@ -5,11 +5,15 @@ export async function expectRevertWithCustomError<T extends BaseContract | Contr
   contract: T,
   asyncCall: Promise<unknown>,
   errorName: string,
-  errorArgs: unknown[] = [],
+  errorArgs?: unknown[],
 ) {
-  await expect(asyncCall)
-    .to.be.revertedWithCustomError(contract, errorName)
-    .withArgs(...errorArgs);
+  if (errorArgs !== undefined && errorArgs.length > 0) {
+    await expect(asyncCall)
+      .to.be.revertedWithCustomError(contract, errorName)
+      .withArgs(...errorArgs);
+  } else {
+    await expect(asyncCall).to.be.revertedWithCustomError(contract, errorName);
+  }
 }
 
 export async function expectRevertWithReason(asyncCall: Promise<unknown>, reason: string) {
@@ -20,11 +24,15 @@ export async function expectEvent<T extends BaseContract>(
   contract: T,
   asyncCall: Promise<unknown>,
   eventName: string,
-  eventArgs: unknown[] = [],
+  eventArgs?: unknown[],
 ) {
-  await expect(asyncCall)
-    .to.emit(contract, eventName)
-    .withArgs(...eventArgs);
+  if (eventArgs !== undefined && eventArgs.length > 0) {
+    await expect(asyncCall)
+      .to.emit(contract, eventName)
+      .withArgs(...eventArgs);
+  } else {
+    await expect(asyncCall).to.emit(contract, eventName);
+  }
 }
 
 export async function expectNoEvent<T extends BaseContract>(

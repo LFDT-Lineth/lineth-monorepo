@@ -23,6 +23,7 @@ interface ILineaRollupBase {
    * @param unpauseTypeRoles The list of unpause types to associate with roles.
    * @param defaultAdmin The account to be given DEFAULT_ADMIN_ROLE on initialization.
    * @param shnarfProvider The address of the shnarf providing contract. Default is address(this).
+   * @param addressFilter The address of the address filter.
    */
   struct BaseInitializationData {
     bytes32 initialStateRootHash;
@@ -36,15 +37,16 @@ interface ILineaRollupBase {
     IPauseManager.PauseTypeRole[] unpauseTypeRoles;
     address defaultAdmin;
     address shnarfProvider;
+    address addressFilter;
   }
 
   /**
    * @notice Shnarf data for validating a shnarf.
-   * @dev parentShnarf is the parent computed shnarf.
-   * @dev snarkHash is the computed hash for compressed data (using a SNARK-friendly hash function) that aggregates per data submission to be used in public input.
-   * @dev finalStateRootHash is the final state root hash.
-   * @dev dataEvaluationPoint is the data evaluation point.
-   * @dev dataEvaluationClaim is the data evaluation claim.
+   * @param parentShnarf is the parent computed shnarf.
+   * @param snarkHash is the computed hash for compressed data (using a SNARK-friendly hash function) that aggregates per data submission to be used in public input.
+   * @param finalStateRootHash is the final state root hash.
+   * @param dataEvaluationPoint is the data evaluation point.
+   * @param dataEvaluationClaim is the data evaluation claim.
    */
   struct ShnarfData {
     bytes32 parentShnarf;
@@ -56,23 +58,27 @@ interface ILineaRollupBase {
 
   /**
    * @notice Supporting data for finalization with proof.
-   * @dev NB: the dynamic sized fields are placed last on purpose for efficient keccaking on public input.
-   * @dev parentStateRootHash is the expected last state root hash finalized.
-   * @dev endBlockNumber is the end block finalizing until.
-   * @dev shnarfData contains data about the last data submission's shnarf used in finalization.
-   * @dev lastFinalizedTimestamp is the expected last finalized block's timestamp.
-   * @dev finalTimestamp is the timestamp of the last block being finalized.
-   * @dev lastFinalizedL1RollingHash is the last stored L2 computed rolling hash used in finalization.
-   * @dev l1RollingHash is the calculated rolling hash on L2 that is expected to match L1 at l1RollingHashMessageNumber.
+   * @param NB: the dynamic sized fields are placed last on purpose for efficient keccaking on public input.
+   * @param parentStateRootHash is the expected last state root hash finalized.
+   * @param endBlockNumber is the end block finalizing until.
+   * @param shnarfData contains data about the last data submission's shnarf used in finalization.
+   * @param lastFinalizedTimestamp is the expected last finalized block's timestamp.
+   * @param finalTimestamp is the timestamp of the last block being finalized.
+   * @param lastFinalizedL1RollingHash is the last stored L2 computed rolling hash used in finalization.
+   * @param l1RollingHash is the calculated rolling hash on L2 that is expected to match L1 at l1RollingHashMessageNumber.
    * This value will be used along with the stored last finalized L2 calculated rolling hash in the public input.
-   * @dev lastFinalizedL1RollingHashMessageNumber is the last stored L2 computed message number used in finalization.
-   * @dev l1RollingHashMessageNumber is the calculated message number on L2 that is expected to match the existing L1 rolling hash.
+   * @param lastFinalizedL1RollingHashMessageNumber is the last stored L2 computed message number used in finalization.
+   * @param l1RollingHashMessageNumber is the calculated message number on L2 that is expected to match the existing L1 rolling hash.
    * This value will be used along with the stored last finalized L2 calculated message number in the public input.
-   * @dev l2MerkleTreesDepth is the depth of all l2MerkleRoots.
-   * @dev l2MerkleRoots is an array of L2 message Merkle roots of depth l2MerkleTreesDepth between last finalized block and finalSubmissionData.finalBlockNumber.
-   * @dev l2MessagingBlocksOffsets indicates by offset from currentL2BlockNumber which L2 blocks contain MessageSent events.
+   * @param l2MerkleTreesDepth is the depth of all l2MerkleRoots.
+   * @param lastFinalizedForcedTransactionNumber is the last proven forced transaction number processed on L2.
+   * @param finalForcedTransactionNumber is the final forced transaction being finalized.
+   * @param lastFinalizedForcedTransactionRollingHash is the last proven forced transaction rolling hash.
+   * @param l2MerkleRoots is an array of L2 message Merkle roots of depth l2MerkleTreesDepth between last finalized block and finalSubmissionData.finalBlockNumber.
+   * @param filteredAddresses is an array of addresses that are filtered from forced transactions.
+   * @param l2MessagingBlocksOffsets indicates by offset from currentL2BlockNumber which L2 blocks contain MessageSent events.
    */
-  struct FinalizationDataV3 {
+  struct FinalizationDataV4 {
     bytes32 parentStateRootHash;
     uint256 endBlockNumber;
     ShnarfData shnarfData;
@@ -83,7 +89,11 @@ interface ILineaRollupBase {
     uint256 lastFinalizedL1RollingHashMessageNumber;
     uint256 l1RollingHashMessageNumber;
     uint256 l2MerkleTreesDepth;
+    uint256 lastFinalizedForcedTransactionNumber;
+    uint256 finalForcedTransactionNumber;
+    bytes32 lastFinalizedForcedTransactionRollingHash;
     bytes32[] l2MerkleRoots;
+    address[] filteredAddresses;
     bytes l2MessagingBlocksOffsets;
   }
 
@@ -128,11 +138,33 @@ interface ILineaRollupBase {
   );
 
   /**
-   * @notice Emitted when the LineaRollup contract is initialized.
-   * @param InitializationData The initialization data.
+   * @notice Emitted when L2 blocks have been finalized and the state is updated.
+   * @dev Message rolling hash, forced transaction rolling hash, can be retrieved by using their numbered values.
+   * @dev These fields can be used to reconstruct the values for `lastFinalizedState`.
+   * @dev The `lastFinalizedState` fields are needed for liveness recovery as well as forced transactions.
+   * @param blockNumber The indexed L2 block number indicating which block the finalization the data ends on.
+   * @param timestamp The timestamp of the last block being finalized.
+   * @param messageNumber The calculated message number on L2 that is expected to match the existing L1 rolling hash.
+   * @param forcedTransactionNumber The final forced transaction finalized.
+   */
+  event FinalizedStateUpdated(
+    uint256 indexed blockNumber,
+    uint256 timestamp,
+    uint256 messageNumber,
+    uint256 forcedTransactionNumber
+  );
+
+  /**
+   * @notice Emitted when the LineaRollupBase contract is initialized.
+   * @param initialContractVersion The initial contract version.
+   * @param initializationData The initialization data.
    * @param genesisShnarf The genesis shnarf.
    */
-  event LineaRollupBaseInitialized(BaseInitializationData InitializationData, bytes32 genesisShnarf);
+  event LineaRollupBaseInitialized(
+    bytes8 indexed initialContractVersion,
+    BaseInitializationData initializationData,
+    bytes32 genesisShnarf
+  );
 
   /**
    * @dev Thrown when finalizationData.l1RollingHash does not exist on L1 (Feedback loop).
@@ -170,6 +202,16 @@ interface ILineaRollupBase {
   error FinalShnarfNotSubmitted(bytes32 shnarf);
 
   /**
+   * @dev Thrown when the rollup is missing a forced transaction in the finalization block range.
+   */
+  error FinalizationDataMissingForcedTransaction(uint256 nextForcedTransactionNumber);
+
+  /**
+   * @dev Thrown when an address is not filtered and expected to be.
+   */
+  error AddressIsNotFiltered(address addressNotFiltered);
+
+  /**
    * @notice Returns the ABI version and not the reinitialize version.
    * @return contractVersion The contract ABI version.
    */
@@ -200,6 +242,6 @@ interface ILineaRollupBase {
   function finalizeBlocks(
     bytes calldata _aggregatedProof,
     uint256 _proofType,
-    FinalizationDataV3 calldata _finalizationData
+    FinalizationDataV4 calldata _finalizationData
   ) external;
 }

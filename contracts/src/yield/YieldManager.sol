@@ -60,6 +60,9 @@ contract YieldManager is
   /// @notice The number of slots per historical beacon chain root.
   uint64 internal constant SLOTS_PER_HISTORICAL_ROOT = 8192;
 
+  /// @dev This is the ABI version and not the reinitialize version.
+  string private constant _CONTRACT_VERSION = "1.0";
+
   /**
    * @notice Minimum withdrawal reserve percentage in bps.
    * @return The withdrawal reserve percentage threshold in basis points (where 10000 = 100%).
@@ -166,7 +169,15 @@ contract YieldManager is
     // Ensure address(0) at index=0.
     $.yieldProviders.push(address(0));
 
-    emit YieldManagerInitialized(_initializationData.initialL2YieldRecipients);
+    emit YieldManagerInitialized(bytes8(bytes(CONTRACT_VERSION())), _initializationData.initialL2YieldRecipients);
+  }
+
+  /**
+   * @notice Returns the ABI version and not the reinitialize version.
+   * @return contractVersion The contract ABI version.
+   */
+  function CONTRACT_VERSION() public view virtual returns (string memory contractVersion) {
+    contractVersion = _CONTRACT_VERSION;
   }
 
   /**

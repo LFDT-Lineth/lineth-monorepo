@@ -9,12 +9,16 @@ type DummyCircuit struct {
 	AggregationPublicInput   [2]frontend.Variable `gnark:",public"` // the public input of the aggregation circuit; divided big-endian into two 16-byte chunks
 	ExecutionPublicInput     []frontend.Variable  `gnark:",public"`
 	DecompressionPublicInput []frontend.Variable  `gnark:",public"`
+	InvalidityPublicInput    []frontend.Variable  `gnark:",public"`
+	IsAllowedCircuitID       frontend.Variable    `gnark:",public"` // bitmask of allowed circuit IDs (must match real Circuit layout)
 
 	NbExecution     frontend.Variable
 	NbDecompression frontend.Variable
+	NbInvalidity    frontend.Variable
 
 	DecompressionFPI []frontend.Variable
 	ExecutionFPI     []frontend.Variable
+	InvalidityFPI    []frontend.Variable
 }
 
 // x -> x^5 to match the dummycircuit package
@@ -37,6 +41,7 @@ func (c *DummyCircuit) Define(api frontend.API) error {
 
 	checkFPI(c.NbExecution, c.ExecutionFPI, c.ExecutionPublicInput)
 	checkFPI(c.NbDecompression, c.DecompressionFPI, c.DecompressionPublicInput)
+	checkFPI(c.NbInvalidity, c.InvalidityFPI, c.InvalidityPublicInput)
 
 	challenge, err := api.(frontend.Committer).Commit(c.AggregationPublicInput[0]) // dummy commitment for aggregation to work
 	if err != nil {

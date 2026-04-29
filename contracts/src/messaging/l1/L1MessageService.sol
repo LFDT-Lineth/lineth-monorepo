@@ -154,6 +154,11 @@ abstract contract L1MessageService is
     emit MessageClaimed(messageLeafHash);
   }
 
+  /**
+   * @notice Validates and consumes a message proof.
+   * @param _params Collection of claim data with proof and supporting data.
+   * @return messageLeafHash The leaf hash of the message.
+   */
   function _validateAndConsumeMessageProof(
     ClaimMessageWithProofParams calldata _params
   ) internal virtual returns (bytes32 messageLeafHash) {

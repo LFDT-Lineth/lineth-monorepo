@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.33;
 
 import { LineaRollupBase } from "./LineaRollupBase.sol";
 import { ILineaRollupYieldExtension } from "../yield/interfaces/ILineaRollupYieldExtension.sol";

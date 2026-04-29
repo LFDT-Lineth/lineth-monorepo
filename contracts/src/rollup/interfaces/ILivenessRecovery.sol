@@ -36,11 +36,15 @@ interface ILivenessRecovery {
    * @dev Reverts if six months have not passed since the last finalization.
    * @param _messageNumber Last finalized L1 message number as part of the feedback loop.
    * @param _rollingHash Last finalized L1 rolling hash as part of the feedback loop.
+   * @param _lastFinalizedForcedTransactionNumber Last finalized forced transaction number.
+   * @param _lastFinalizedForcedTransactionRollingHash Last finalized forced transaction rolling hash.
    * @param _lastFinalizedTimestamp Last finalized L2 block timestamp.
    */
   function setLivenessRecoveryOperator(
     uint256 _messageNumber,
     bytes32 _rollingHash,
+    uint256 _lastFinalizedForcedTransactionNumber,
+    bytes32 _lastFinalizedForcedTransactionRollingHash,
     uint256 _lastFinalizedTimestamp
   ) external;
 }

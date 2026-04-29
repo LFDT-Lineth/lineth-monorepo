@@ -12,9 +12,9 @@ import fourthBlobDataContent from "../../_testData/compressedDataEip4844/blocks-
 import secondBlobDataContent from "../../_testData/compressedDataEip4844/blocks-47-81.json";
 import thirdBlobDataContent from "../../_testData/compressedDataEip4844/blocks-82-114.json";
 import firstBlobContent_multiple from "../../_testData/compressedDataEip4844/multipleProofs/blocks-1-46.json";
-import fourthBlobContent_multiple from "../../_testData/compressedDataEip4844/multipleProofs/blocks-120-153.json";
+import fourthBlobContent_multiple from "../../_testData/compressedDataEip4844/multipleProofs/blocks-111-139.json";
 import secondBlobContent_multiple from "../../_testData/compressedDataEip4844/multipleProofs/blocks-47-81.json";
-import thirdBlobContent_multiple from "../../_testData/compressedDataEip4844/multipleProofs/blocks-82-119.json";
+import thirdBlobContent_multiple from "../../_testData/compressedDataEip4844/multipleProofs/blocks-82-110.json";
 
 export const DEFAULT_SUBMISSION_DATA = {
   dataParentHash: HASH_ZERO,

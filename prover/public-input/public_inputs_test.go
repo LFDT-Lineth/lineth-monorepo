@@ -36,12 +36,14 @@ func TestAggregation(t *testing.T) {
 				L2MsgRootHashes:                         []string{"0xfb7ce9c89be905d39bfa2f6ecdf312f127f8984cf313cbea91bca882fca340cd"},
 				L2MsgMerkleTreeDepth:                    5,
 				// Chain configuration
-				ChainID:              59144,
-				BaseFee:              7,
-				CoinBase:             types.EthAddress(common.HexToAddress("0x8F81e2E3F8b46467523463835F965fFE476E1c9E")),
-				L2MessageServiceAddr: types.EthAddress(common.HexToAddress("0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec")),
+				ChainID:                59144,
+				BaseFee:                7,
+				CoinBase:               types.EthAddress(common.HexToAddress("0x8F81e2E3F8b46467523463835F965fFE476E1c9E")),
+				L2MessageServiceAddr:   types.EthAddress(common.HexToAddress("0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec")),
+				LastFinalizedFtxNumber: 0,
+				FinalFtxNumber:         0,
 			},
-			Res: "0x30058e1a3af2c0e4efe6afc5ee17dfa541fb029c6e4fbd9368649c482ad7b90d",
+			Res: "0x0eeedb87d99ab9ef1850a0e4c3ad717ebb9d7cf6b7e0720dc995f333046eb0af",
 		},
 	}
 

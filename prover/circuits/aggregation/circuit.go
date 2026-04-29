@@ -38,9 +38,8 @@ type (
 type Circuit struct {
 	// The list of claims to be provided to the circuit.
 	ProofClaims []proofClaim `gnark:",secret"`
-
-	// List of ALL available payload verifying keys (from GlobalCircuitIDMapping, IDs 0-5).
-	// This is treated as a constant by the circuit - all payload verifying keys are always
+	// List of ALL available verifying keys (from GlobalCircuitIDMapping).
+	// This is treated as a constant by the circuit - all verifying keys are always
 	// included regardless of configuration. The IsAllowedCircuitID bitmask from the
 	// PI circuit's public input controls which circuits are actually allowed at runtime.
 	//
@@ -48,18 +47,9 @@ type Circuit struct {
 	// circuit ID from GlobalCircuitIDMapping:
 	//   - Bit 0 (LSb): execution-dummy (ID 0)
 	//   - Bit 1: data-availability-dummy (ID 1)
-	//   - Bit 2: execution (ID 2)
-	//   - Bit 3: execution-large (ID 3)
-	//   - Bit 4: execution-limitless (ID 4)
-	//   - Bit 5: data-availability-v2 (ID 5)
-	//
-	// Examples:
-	//   Mainnet (IsAllowedCircuitID = 60 = 0b111100):
-	//     - Bits 0-1 are 0 → dummy circuits (IDs 0-1) are DISALLOWED
-	//     - Bits 2-5 are 1 → production circuits (IDs 2-5) are ALLOWED
-	//
-	//   Testnet (IsAllowedCircuitID = 63 = 0b111111):
-	//     - All bits 0-5 are 1 → all circuits including dummies are ALLOWED
+	//   - Bits 2-5: production payload circuits (execution, execution-large, etc.)
+	//   - Bits 6-8: invalidity dummy circuits
+	//   - Bits 9-13: invalidity production circuits
 	verifyingKeys []emVkey `gnark:"-"`
 
 	publicInputVerifyingKey        emVkey              `gnark:"-"`
@@ -110,8 +100,7 @@ func (c *Circuit) Define(api frontend.API) error {
 	//   isCircuitAllowed[1] = 0 (data-availability-dummy NOT allowed)
 	//   isCircuitAllowed[2] = 1 (execution ALLOWED)
 	//   isCircuitAllowed[3] = 1 (execution-large ALLOWED)
-	//   isCircuitAllowed[4] = 1 (execution-limitless ALLOWED)
-	//   isCircuitAllowed[5] = 1 (data-availability-v2 ALLOWED)
+	//   ... and so on for all circuit IDs
 	isCircuitAllowed := make([]frontend.Variable, len(c.verifyingKeys))
 	for i := range isCircuitAllowed {
 		if i < len(maskBits) {
@@ -131,14 +120,14 @@ func (c *Circuit) Define(api frontend.API) error {
 		// circuit ID matches any of them. If it matches circuit ID j, we check
 		// if isCircuitAllowed[j] is 1.
 		//
-		// Example: Suppose we have a proof claim with CircuitID = 4 (execution-limitless)
-		// and mask = 60 = 0b111100:
-		//   - When j = 4: isGoodPod = 1 (circuit ID matches)
-		//                 isAllowed = isCircuitAllowed[4] = 1 (bit 4 is set)
+		// Example: Suppose we have a proof claim with CircuitID = 5 (execution-limitless)
+		// and mask = 2040 = 0b11111111000:
+		//   - When j = 5: isGoodPod = 1 (circuit ID matches)
+		//                 isAllowed = isCircuitAllowed[5] = 1 (bit 5 is set)
 		//   - For all other j: isGoodPod = 0, isAllowed remains unchanged
 		//   - Final assertion: isAllowed must equal 1
 		//
-		// If the circuit was NOT allowed (e.g., CircuitID = 0 with mask = 60):
+		// If the circuit was NOT allowed (e.g., CircuitID = 0 with mask = 2040):
 		//   - When j = 0: isGoodPod = 1, isAllowed = isCircuitAllowed[0] = 0
 		//   - Final assertion would FAIL since isAllowed = 0 ≠ 1
 		isAllowed := frontend.Variable(0)
@@ -194,7 +183,7 @@ func (c *Circuit) Define(api frontend.API) error {
 		PublicInput: c.PublicInputWitness,
 	})
 
-	// Verify the constraints the execution proofs
+	// Verify the all the sub proofs (including interconnection).
 	if err = verifyClaimBatch(api, vks, claims); err != nil {
 		return fmt.Errorf("processing execution proofs: %w", err)
 	}

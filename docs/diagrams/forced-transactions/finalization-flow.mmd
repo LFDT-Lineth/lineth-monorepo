@@ -1,0 +1,44 @@
+%% Finalization and Forced Transaction Processing Check
+%% Renders with: https://mermaid.live or any Mermaid-compatible viewer
+
+flowchart TB
+    subgraph "Off-Chain: Proving"
+        ProverStart[Prover receives L2 state]
+        GenerateProof[Generate ZK proof covering forced txs]
+        ComputeRolling[Compute rolling hash in proof circuit]
+    end
+    
+    subgraph "On-Chain: Finalization"
+        Start[Operator calls finalizeBlocks with proof]
+        ValidateState{Last finalized state matches?}
+        CheckForcedTx{All forced txs with passed deadlines processed?}
+        VerifyProof{ZK proof valid?}
+        VerifyRolling{Rolling hash in proof matches L1 storage?}
+        Finalize[Update state & emit events]
+    end
+    
+    subgraph "Forced Transaction Deadline Check"
+        GetNext[Get next forced tx number after finalForcedTxNumber]
+        GetDeadline[Get its deadline - latest block BY which tx must be processed]
+        CompareBlock{deadline <= endBlockNumber?}
+        MustProcess[REVERT: FinalizationDataMissingForcedTransaction<br/>Tx should have been processed by now]
+        OK[Continue - deadline is in the future]
+    end
+    
+    ProverStart --> GenerateProof
+    GenerateProof --> ComputeRolling
+    ComputeRolling --> Start
+    
+    Start --> ValidateState
+    ValidateState -->|No| Revert1[REVERT: FinalizationStateIncorrect]
+    ValidateState -->|Yes| CheckForcedTx
+    CheckForcedTx --> GetNext
+    GetNext --> GetDeadline
+    GetDeadline --> CompareBlock
+    CompareBlock -->|Yes - tx should have been processed by now| MustProcess
+    CompareBlock -->|No - deadline has not passed yet| OK
+    OK --> VerifyProof
+    VerifyProof -->|No| Revert2[REVERT: InvalidProof]
+    VerifyProof -->|Yes| VerifyRolling
+    VerifyRolling -->|No| Revert3[REVERT: Rolling hash mismatch]
+    VerifyRolling -->|Yes| Finalize

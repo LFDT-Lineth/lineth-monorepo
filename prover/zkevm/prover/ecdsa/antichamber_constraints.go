@@ -9,12 +9,12 @@ import (
 )
 
 // csIsActiveActivation constraints that IsActive module to be only one for antichamber rounds.
-func (ac *antichamber) csIsActiveActivation(comp *wizard.CompiledIOP) {
+func (ac *Antichamber) csIsActiveActivation(comp *wizard.CompiledIOP) {
 	// IsActive must be binary and cannot transition from 0 to 1
 	commoncs.MustBeActivationColumns(comp, ac.IsActive)
 }
 
-func (ac *antichamber) csZeroWhenInactive(comp *wizard.CompiledIOP) {
+func (ac *Antichamber) csZeroWhenInactive(comp *wizard.CompiledIOP) {
 	commoncs.MustZeroWhenInactive(comp, ac.IsActive, ac.cols(false)...)
 	commoncs.MustZeroWhenInactive(comp, ac.IsActive, ac.EcRecover.cols()...)
 	commoncs.MustZeroWhenInactive(comp, ac.IsActive, ac.Addresses.cols()...)
@@ -22,7 +22,7 @@ func (ac *antichamber) csZeroWhenInactive(comp *wizard.CompiledIOP) {
 	commoncs.MustZeroWhenInactive(comp, ac.IsActive, ac.UnalignedGnarkData.cols()...)
 }
 
-func (ac *antichamber) csConsistentPushingFetching(comp *wizard.CompiledIOP) {
+func (ac *Antichamber) csConsistentPushingFetching(comp *wizard.CompiledIOP) {
 	// pushing and fetching must be binary
 	commoncs.MustBeBinary(comp, ac.IsPushing)
 	commoncs.MustBeBinary(comp, ac.IsFetching)
@@ -34,7 +34,7 @@ func (ac *antichamber) csConsistentPushingFetching(comp *wizard.CompiledIOP) {
 	)
 }
 
-func (ac *antichamber) csIDSequential(comp *wizard.CompiledIOP) {
+func (ac *Antichamber) csIDSequential(comp *wizard.CompiledIOP) {
 	idDiff := sym.Sub(ac.ID, column.Shift(ac.ID, -1))
 	// ID must be sequential
 	comp.InsertGlobal(
@@ -44,13 +44,13 @@ func (ac *antichamber) csIDSequential(comp *wizard.CompiledIOP) {
 	)
 }
 
-func (ac *antichamber) csSource(comp *wizard.CompiledIOP) {
+func (ac *Antichamber) csSource(comp *wizard.CompiledIOP) {
 	// source must be binary
 	// Source=0 <> ECRecover, Source=1 <> TxSignature
 	commoncs.MustBeBinary(comp, ac.Source)
 }
 
-func (ac *antichamber) csTransitions(comp *wizard.CompiledIOP) {
+func (ac *Antichamber) csTransitions(comp *wizard.CompiledIOP) {
 	// stop fetching when have received ecrecover address limbs
 	// TODO: store the condition as a variable to use later
 	comp.InsertGlobal(

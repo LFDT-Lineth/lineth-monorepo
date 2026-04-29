@@ -139,6 +139,8 @@ Selected **operational Hardhat tasks** (under `scripts/operational/`) also suppo
 | RecoverFunds | [recover-funds.md](l1/recover-funds.md) | `RecoverFunds` |
 | CallForwardingProxy | [call-forwarding-proxy.md](l1/call-forwarding-proxy.md) | `CallForwardingProxy` |
 | L1LineaTokenBurner | [l1-linea-token-burner.md](l1/l1-linea-token-burner.md) | `L1LineaTokenBurner` |
+| AddressFilter | [address-filter.md](l1/address-filter.md) | `AddressFilter` |
+| ForcedTransactionGateway | [forced-transaction-gateway.md](l1/forced-transaction-gateway.md) | `ForcedTransactionGateway` |
 
 ### L2 Contracts (Linea)
 

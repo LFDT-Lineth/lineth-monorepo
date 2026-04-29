@@ -68,6 +68,9 @@ abstract contract L2MessageServiceBase is
     nextMessageNumber = 1;
 
     minimumFeeInWei = 0.0001 ether;
+
+    emit MinimumFeeChanged(0, 0.0001 ether, msg.sender);
+    emit L2MessageServiceBaseInitialized(bytes8(bytes(CONTRACT_VERSION())));
   }
 
   /**

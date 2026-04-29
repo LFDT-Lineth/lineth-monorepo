@@ -177,3 +177,127 @@ func TestExtEmulated(t *testing.T) {
 	err = ccs.IsSolved(fullWitness)
 	assert.NoError(t, err)
 }
+
+// TestOctupletIsLessIf tests lexicographic comparison with cond (1 X<Y)
+type TestOctLessCircuit struct {
+	X, Y Octuplet
+	Cond Element
+}
+
+func (c *TestOctLessCircuit) Define(api frontend.API) error {
+	f := NewAPI(api)
+	f.AssertOctupletIsLessIf(f.GetFrontendVariable(c.Cond), c.X, c.Y)
+	return nil
+}
+
+func TestOctupletIsLessIfEmulated(t *testing.T) {
+	// Test 1: cond=0 (should pass trivially)
+	t.Run("cond0_greater", func(t *testing.T) {
+		var octX, octY Octuplet
+		for i := 0; i < 8; i++ {
+			octX[i] = NewElement(uint64(100 + i))
+			octY[i] = NewElement(uint64(100 - i))
+		}
+
+		witness := &TestOctLessCircuit{X: octX, Y: octY, Cond: NewElement(0)}
+		circuit := &TestOctLessCircuit{}
+
+		ccs, err := frontend.Compile(ecc.BLS12_377.ScalarField(), scs.NewBuilder, circuit)
+		assert.NoError(t, err)
+
+		fullWitness, err := frontend.NewWitness(witness, ecc.BLS12_377.ScalarField())
+		assert.NoError(t, err)
+
+		err = ccs.IsSolved(fullWitness)
+		assert.NoError(t, err, "cond=0 with equal values should pass")
+	})
+
+	// Test 2: cond=1, x < y (first element differs)
+	t.Run("cond1_less_first", func(t *testing.T) {
+		var x, y Octuplet
+		for i := 0; i < 8; i++ {
+			x[i] = NewElement(uint64(100 + i))
+			y[i] = NewElement(uint64(100 + i))
+		}
+		x[0] = NewElement(uint64(50))
+		y[0] = NewElement(uint64(200))
+
+		witness := &TestOctLessCircuit{X: x, Y: y, Cond: NewElement(1)}
+		circuit := &TestOctLessCircuit{}
+
+		ccs, err := frontend.Compile(ecc.BLS12_377.ScalarField(), scs.NewBuilder, circuit)
+		assert.NoError(t, err)
+
+		fullWitness, err := frontend.NewWitness(witness, ecc.BLS12_377.ScalarField())
+		assert.NoError(t, err)
+
+		err = ccs.IsSolved(fullWitness)
+		assert.NoError(t, err, "cond=1 with x < y should pass")
+	})
+
+	// Test 3: cond=1, x < y (last element differs)
+	t.Run("cond1_less_last", func(t *testing.T) {
+		var x, y Octuplet
+		for i := 0; i < 8; i++ {
+			x[i] = NewElement(uint64(100))
+			y[i] = NewElement(uint64(100))
+		}
+		x[7] = NewElement(uint64(99))
+		y[7] = NewElement(uint64(100))
+
+		witness := &TestOctLessCircuit{X: x, Y: y, Cond: NewElement(1)}
+		circuit := &TestOctLessCircuit{}
+
+		ccs, err := frontend.Compile(ecc.BLS12_377.ScalarField(), scs.NewBuilder, circuit)
+		assert.NoError(t, err)
+
+		fullWitness, err := frontend.NewWitness(witness, ecc.BLS12_377.ScalarField())
+		assert.NoError(t, err)
+
+		err = ccs.IsSolved(fullWitness)
+		assert.NoError(t, err, "cond=1 with x < y (last element) should pass")
+	})
+
+	// Test 4: cond=1, x == y (should FAIL: not strictly less)
+	t.Run("cond1_equal_fails", func(t *testing.T) {
+		var oct Octuplet
+		for i := 0; i < 8; i++ {
+			oct[i] = NewElement(uint64(100 + i))
+		}
+
+		witness := &TestOctLessCircuit{X: oct, Y: oct, Cond: NewElement(1)}
+		circuit := &TestOctLessCircuit{}
+
+		ccs, err := frontend.Compile(ecc.BLS12_377.ScalarField(), scs.NewBuilder, circuit)
+		assert.NoError(t, err)
+
+		fullWitness, err := frontend.NewWitness(witness, ecc.BLS12_377.ScalarField())
+		assert.NoError(t, err)
+
+		err = ccs.IsSolved(fullWitness)
+		assert.Error(t, err, "cond=1 with x == y should fail")
+	})
+
+	// Test 5: cond=1, x > y (should FAIL)
+	t.Run("cond1_greater_fails", func(t *testing.T) {
+		var x, y Octuplet
+		for i := 0; i < 8; i++ {
+			x[i] = NewElement(uint64(100 + i))
+			y[i] = NewElement(uint64(100 + i))
+		}
+		x[0] = NewElement(uint64(200))
+		y[0] = NewElement(uint64(50))
+
+		witness := &TestOctLessCircuit{X: x, Y: y, Cond: NewElement(1)}
+		circuit := &TestOctLessCircuit{}
+
+		ccs, err := frontend.Compile(ecc.BLS12_377.ScalarField(), scs.NewBuilder, circuit)
+		assert.NoError(t, err)
+
+		fullWitness, err := frontend.NewWitness(witness, ecc.BLS12_377.ScalarField())
+		assert.NoError(t, err)
+
+		err = ccs.IsSolved(fullWitness)
+		assert.Error(t, err, "cond=1 with x > y should fail")
+	})
+}

@@ -249,6 +249,51 @@ func TestAggregatedInFileRegexp(t *testing.T) {
 	}
 }
 
+func TestInvalidityInFileRegexp(t *testing.T) {
+
+	var (
+		correctM           = "1000-10-getZkInvalidityProof.json"
+		correctWithFailM   = "1000-10-getZkInvalidityProof.json.failure.code_77"
+		correctWith2FailsM = "1000-10-getZkInvalidityProof.json.failure.code_77.failure.code_77"
+		notAPoint          = "1000-10-getZkInvalidityProofAjson"
+		badName            = "1000-10-getZkProof.json"
+		wrongFormat        = "1000-getZkInvalidityProof.json"
+	)
+
+	var (
+		respM = "responses/1000-10-getZkInvalidityProof.json"
+		// #nosec G101 -- Not a credential
+		respWithFailM = "responses/1000-10-getZkInvalidityProof.json"
+		// #nosec G101 -- Not a credential
+		respWith2FailsM = "responses/1000-10-getZkInvalidityProof.json"
+	)
+
+	testcase := []inpFileNamesCases{
+		{
+			Ext: "", Fail: "code", ShouldMatch: true,
+			Fnames:         []string{correctM, correctWithFailM, correctWith2FailsM},
+			Explainer:      "happy path invalidity",
+			ExpectedOutput: []string{respM, respWithFailM, respWith2FailsM},
+		},
+		{
+			Ext: "", Fail: "code", ShouldMatch: false,
+			Fnames:    []string{notAPoint, badName, wrongFormat},
+			Explainer: "does not pick obviously invalid files",
+		},
+	}
+
+	for _, c := range testcase {
+		conf := config.Config{}
+		conf.Version = "0.1.2"
+
+		def := InvalidityDefinition(&conf)
+
+		t.Run(c.Explainer, func(t *testing.T) {
+			runInpFileTestCase(t, &def, c)
+		})
+	}
+}
+
 func runInpFileTestCase(t *testing.T, def *JobDefinition, c inpFileNamesCases) {
 
 	for i, fname := range c.Fnames {

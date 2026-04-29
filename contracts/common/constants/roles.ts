@@ -93,6 +93,19 @@ export const SECURITY_COUNCIL_ROLE = generateKeccak256(["string"], ["SECURITY_CO
   encodePacked: true,
 });
 
+export const SET_ADDRESS_FILTER_ROLE = generateKeccak256(["string"], ["SET_ADDRESS_FILTER_ROLE"], {
+  encodePacked: true,
+});
+export const FORCED_TRANSACTION_SENDER_ROLE = generateKeccak256(["string"], ["FORCED_TRANSACTION_SENDER_ROLE"], {
+  encodePacked: true,
+});
+export const FORCED_TRANSACTION_FEE_SETTER_ROLE = generateKeccak256(
+  ["string"],
+  ["FORCED_TRANSACTION_FEE_SETTER_ROLE"],
+  {
+    encodePacked: true,
+  },
+);
 // Roles for LineaRollup introduced with YieldManager
 export const SET_YIELD_MANAGER_ROLE = generateKeccak256(["string"], ["SET_YIELD_MANAGER_ROLE"], {
   encodePacked: true,
@@ -217,6 +230,9 @@ export const VALIDIUM_ROLES = [
   UNPAUSE_L2_L1_ROLE,
   PAUSE_FINALIZATION_ROLE,
   UNPAUSE_FINALIZATION_ROLE,
+  FORCED_TRANSACTION_FEE_SETTER_ROLE,
+  SET_ADDRESS_FILTER_ROLE,
+  FORCED_TRANSACTION_SENDER_ROLE,
   // New roles introduced with YieldManager
   SET_YIELD_MANAGER_ROLE,
   YIELD_PROVIDER_STAKING_ROLE,
@@ -238,6 +254,9 @@ export const LINEA_ROLLUP_V8_ROLES = [
   UNPAUSE_FINALIZATION_ROLE,
   PAUSE_STATE_DATA_SUBMISSION_ROLE,
   UNPAUSE_STATE_DATA_SUBMISSION_ROLE,
+  FORCED_TRANSACTION_FEE_SETTER_ROLE,
+  SET_ADDRESS_FILTER_ROLE,
+  FORCED_TRANSACTION_SENDER_ROLE,
   // New roles introduced with YieldManager
   SET_YIELD_MANAGER_ROLE,
   YIELD_PROVIDER_STAKING_ROLE,

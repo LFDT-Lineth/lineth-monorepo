@@ -21,8 +21,9 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | LINEA_ROLLUP_OPERATORS     | true      | address | L1 Operators Addresses (comma-delimited if multiple) |
 | LINEA_ROLLUP_RATE_LIMIT_PERIOD     | true  | uint256   | L1 Rate Limit Period |
 | LINEA_ROLLUP_RATE_LIMIT_AMOUNT     | true  | uint256   | L1 Rate Limit Amount |
-| PLONKVERIFIER_ADDRESS | true | address | PlonkVerifier contract address (set automatically when deploying Verifier in same chain) |
+| VERIFIER_ADDRESS | true | address | PlonkVerifier contract address (set automatically when deploying Verifier in same chain) |
 | YIELD_MANAGER_ADDRESS | true | address | Yield Manager contract address |
+| LINEA_ROLLUP_ADDRESS_FILTER | true | address | AddressFilter contract address |
 
 <br />
 
@@ -60,14 +61,14 @@ pnpm exec hardhat deploy --network sepolia --tags LineaRollupWithReinitializatio
 
 ### LineaRollupV8WithReinitialization
 
-Deploys LineaRollup from audited artifacts and generates encoded upgrade calldata with `reinitializeV8`.
+Deploys a new LineaRollup implementation and generates encoded upgrade calldata with `reinitializeLineaRollupV9`.
 
 | Parameter name | Required | Input value | Description |
 |---|---|---|---|
 | \**DEPLOYER_PRIVATE_KEY* | true | key | Network-specific private key |
-| L1_SECURITY_COUNCIL | true | address | Security Council address |
 | LINEA_ROLLUP_ADDRESS | true | address | Existing LineaRollup proxy address |
-| NATIVE_YIELD_AUTOMATION_SERVICE_ADDRESS | true | address | Automation service address |
+| LINEA_ROLLUP_FORCED_TRANSACTION_FEE_IN_WEI | true | uint256 | Forced transaction fee in wei |
+| LINEA_ROLLUP_ADDRESS_FILTER | true | address | AddressFilter contract address |
 
 ```shell
 pnpm exec hardhat deploy --network sepolia --tags LineaRollupV8WithReinitialization

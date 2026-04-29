@@ -54,10 +54,12 @@
     "hardhat-storage-layout": "0.1.7",
     "hardhat-tracer": "2.8.2",
     "node-gyp": "10.1.0",
+    "prettier": "catalog:",
     "prettier-plugin-solidity": "2.2.1",
     "solhint": "6.0.3",
     "solidity-coverage": "0.8.17",
     "solidity-docgen": "0.6.0-beta.36",
-    "yargs": "catalog:"
+    "yargs": "catalog:",
+    "solady": "0.1.26"
   }
 }

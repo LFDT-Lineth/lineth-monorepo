@@ -43,6 +43,13 @@ var (
 	numConcurrentMergeJobs = 4
 )
 
+// PipelineResult holds the output of RunDistributedPipeline.
+type PipelineResult struct {
+	FinalProof *distributed.SegmentProof
+	Cong       *distributed.RecursedSegmentCompilation
+	CongBuf    *serde.MmapBackedBuffer
+}
+
 // Prove function for the Assest struct
 func Prove(cfg *config.Config, req *execution.Request) (*execution.Response, error) {
 
@@ -50,18 +57,12 @@ func Prove(cfg *config.Config, req *execution.Request) (*execution.Response, err
 	profiling.SetMonitorParams(cfg)
 
 	// Initialize JSONL performance event logger
-	plog := newPerfLogger()
-	defer plog.close()
+	plog := NewPerfLogger()
+	defer plog.Close()
 
 	// Setting the issue handler to exit on unsatisfied constraint and missing trace file,
 	// but not limit overflow.
 	exit.SetIssueHandlingMode(exit.ExitOnUnsatisfiedConstraint | exit.ExitOnMissingTraceFile)
-
-	// Clean up witness directory to be sure it is empty when we start the
-	// process. This helps addressing the situation where a previous process
-	// have been interrupted.
-	os.RemoveAll(witnessDir)
-	defer os.RemoveAll(witnessDir)
 
 	// Setup execution witness and output response
 	var (
@@ -76,6 +77,51 @@ func Prove(cfg *config.Config, req *execution.Request) (*execution.Response, err
 		return &out, nil
 	}
 
+	// Run the distributed pipeline: bootstrapper → GL/LPP segment
+	// proofs → shared randomness → hierarchical conglomeration.
+	pipeline, err := RunDistributedPipeline(cfg, witness.ZkEVM, plog)
+	if err != nil {
+		return nil, fmt.Errorf("distributed pipeline failed: %w", err)
+	}
+
+	// Load setup and build the outer proof
+	setupStart := plog.phaseStart("setup_load")
+	logrus.Infof("Loading setup - circuitID: %s", circuits.ExecutionLimitlessCircuitID)
+	setup, errSetup := circuits.LoadSetup(cfg, circuits.ExecutionLimitlessCircuitID)
+	plog.phaseEnd("setup_load", setupStart)
+	if errSetup != nil {
+		utils.Panic("could not load setup: %v", errSetup)
+	}
+
+	outerStart := plog.phaseStart("outer_proof")
+	out.Proof = execCirc.MakeProof(
+		&cfg.TracesLimits,
+		setup,
+		pipeline.Cong.RecursionCompBLS,
+		pipeline.FinalProof.GetOuterProofInput(),
+		*witness.FuncInp,
+		witness.ZkEVM.ExecData,
+	)
+	plog.phaseEnd("outer_proof", outerStart)
+
+	// Release the conglomeration circuit mmap buffer now that MakeProof is done.
+	pipeline.Cong = nil
+	pipeline.CongBuf.Release()
+
+	out.VerifyingKeyShaSum = setup.VerifyingKeyDigest()
+
+	return &out, nil
+}
+
+// RunDistributedPipeline runs the full limitless distributed proving pipeline:
+// bootstrapper → GL segment proofs → shared randomness → LPP segment proofs →
+// hierarchical conglomeration. It returns the final conglomeration proof and
+// the compiled conglomeration (needed for RecursionCompBLS in the outer proof).
+func RunDistributedPipeline(cfg *config.Config, zkevmWitness *zkevm.Witness, plog *perfLogger) (*PipelineResult, error) {
+
+	os.RemoveAll(witnessDir)
+	defer os.RemoveAll(witnessDir)
+
 	// -- 1. Launch bootstrapper
 	logrus.Info("Starting to run the bootstrapper")
 	bootStart := plog.phaseStart("bootstrapper")
@@ -85,21 +131,8 @@ func Prove(cfg *config.Config, req *execution.Request) (*execution.Response, err
 		return nil, fmt.Errorf("could not load verification key merkle tree: %w", err)
 	}
 
-	// Start setup loading early
-	setupStart := plog.phaseStart("setup_load")
 	var (
-		setup       circuits.Setup
-		errSetup    error
-		chSetupDone = make(chan struct{})
-	)
-	go func() {
-		logrus.Infof("Loading setup - circuitID: %s", circuits.ExecutionLimitlessCircuitID)
-		setup, errSetup = circuits.LoadSetup(cfg, circuits.ExecutionLimitlessCircuitID)
-		close(chSetupDone)
-	}()
-
-	var (
-		numGL, numLPP, glModuleNames = RunBootstrapper(cfg, witness.ZkEVM, mt.GetRoot())
+		numGL, numLPP, glModuleNames = RunBootstrapper(cfg, zkevmWitness, mt.GetRoot())
 	)
 	plog.phaseEnd("bootstrapper", bootStart)
 	logrus.Infof("Finished running the bootstrapper, generated %d GL modules and %d LPP modules", numGL, numLPP)
@@ -108,11 +141,10 @@ func Prove(cfg *config.Config, req *execution.Request) (*execution.Response, err
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Final Conglomeration outcome
 	type congResult struct {
 		proof   *distributed.SegmentProof
 		err     error
-		congBuf *serde.MmapBackedBuffer // mmap buffer holding the conglomeration circuit
+		congBuf *serde.MmapBackedBuffer
 	}
 
 	var (
@@ -375,35 +407,11 @@ func Prove(cfg *config.Config, req *execution.Request) (*execution.Response, err
 
 	logrus.Infof("HIERARCHICAL CONGLOMERATION SUCCESSFUL!!!")
 
-	congFinalproof := res.proof
-
-	// Wait for setup (started during bootstrapper; should be done by now)
-	<-chSetupDone
-	plog.phaseEnd("setup_load", setupStart)
-	if errSetup != nil {
-		utils.Panic("could not load setup: %v", errSetup)
-	}
-
-	outerStart := plog.phaseStart("outer_proof")
-	out.Proof = execCirc.MakeProof(
-		&cfg.TracesLimits,
-		setup,
-		cong.RecursionCompBLS,
-		congFinalproof.GetOuterProofInput(),
-		*witness.FuncInp,
-		witness.ZkEVM.ExecData,
-	)
-
-	plog.phaseEnd("outer_proof", outerStart)
-
-	// Release the conglomeration circuit mmap buffer now that MakeProof is done.
-	// cong.RecursionCompBLS pointed into this buffer.
-	cong = nil
-	res.congBuf.Release()
-
-	out.VerifyingKeyShaSum = setup.VerifyingKeyDigest()
-
-	return &out, nil
+	return &PipelineResult{
+		FinalProof: res.proof,
+		Cong:       cong,
+		CongBuf:    res.congBuf,
+	}, nil
 }
 
 // RunBootstrapper loads the assets required to run the bootstrapper and runs it,

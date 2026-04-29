@@ -3,23 +3,22 @@ import { describe, expect, it } from "@jest/globals";
 import { waitForEvents, awaitUntil, getBlockByNumberOrBlockTag } from "./common/utils";
 import { L2RpcEndpoint } from "./config/clients/l2-client";
 import { createTestContext } from "./config/setup";
-import { LineaRollupV6Abi } from "./generated";
 
 const context = createTestContext();
 
 describe("Submission and finalization test suite", () => {
-  describe("Contracts v6", () => {
+  describe("Contracts v8", () => {
     it.concurrent(
       "Check L1 data submission and finalization",
       async () => {
-        const lineaRollupV6 = context.l1Contracts.lineaRollup(context.l1PublicClient());
+        const lineaRollup = context.l1Contracts.lineaRollup(context.l1PublicClient());
         const l1PublicClient = context.l1PublicClient();
-        const currentL2BlockNumber = await lineaRollupV6.read.currentL2BlockNumber();
+        const currentL2BlockNumber = await lineaRollup.read.currentL2BlockNumber();
 
         logger.debug("Waiting for DataSubmittedV3 used to finalize with proof...");
         const [dataSubmittedEvent] = await waitForEvents(l1PublicClient, {
-          abi: LineaRollupV6Abi,
-          address: lineaRollupV6.address,
+          abi: lineaRollup.abi,
+          address: lineaRollup.address,
           eventName: "DataSubmittedV3",
           fromBlock: 0n,
           toBlock: "latest",
@@ -31,8 +30,8 @@ describe("Submission and finalization test suite", () => {
 
         logger.debug("Waiting for DataFinalizedV3 event with proof...");
         const [dataFinalizedEvent] = await waitForEvents(l1PublicClient, {
-          abi: LineaRollupV6Abi,
-          address: lineaRollupV6.address,
+          abi: lineaRollup.abi,
+          address: lineaRollup.address,
           eventName: "DataFinalizedV3",
           fromBlock: 0n,
           toBlock: "latest",
@@ -46,8 +45,8 @@ describe("Submission and finalization test suite", () => {
         expect(dataFinalizedEvent).toBeDefined();
 
         const [lastBlockFinalized, newStateRootHash] = await Promise.all([
-          lineaRollupV6.read.currentL2BlockNumber(),
-          lineaRollupV6.read.stateRootHashes([dataFinalizedEvent.args.endBlockNumber]),
+          lineaRollup.read.currentL2BlockNumber(),
+          lineaRollup.read.stateRootHashes([dataFinalizedEvent.args.endBlockNumber]),
         ]);
 
         expect(lastBlockFinalized).toBeGreaterThanOrEqual(dataFinalizedEvent.args.endBlockNumber);
@@ -55,7 +54,7 @@ describe("Submission and finalization test suite", () => {
 
         logger.debug(`Finalization with proof done. lastFinalizedBlockNumber=${lastBlockFinalized}`);
       },
-      150_000,
+      250_000,
     );
 
     it.concurrent(

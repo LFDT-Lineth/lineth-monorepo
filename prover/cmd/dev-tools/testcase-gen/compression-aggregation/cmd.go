@@ -14,10 +14,15 @@ import (
 	"github.com/consensys/linea-monorepo/prover/backend/aggregation"
 	"github.com/consensys/linea-monorepo/prover/backend/blobsubmission"
 	"github.com/consensys/linea-monorepo/prover/backend/files"
+	"github.com/consensys/linea-monorepo/prover/backend/invalidity"
 	"github.com/consensys/linea-monorepo/prover/circuits"
 	"github.com/consensys/linea-monorepo/prover/circuits/dummy"
+	circInvalidity "github.com/consensys/linea-monorepo/prover/circuits/invalidity"
+	"github.com/consensys/linea-monorepo/prover/cmd/prover/cmd"
 	"github.com/consensys/linea-monorepo/prover/config"
+	linTypes "github.com/consensys/linea-monorepo/prover/utils/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -30,9 +35,10 @@ var rootCmd = &cobra.Command{
 
 // List of spec to use to generate the testcases
 var (
-	specFiles []string
-	odir      string
-	seed      int64
+	specFiles  []string
+	odir       string
+	seed       int64
+	configFile string
 )
 
 // Sample config to use to generate mocked aggregation
@@ -42,7 +48,25 @@ var cfg = &config.Config{
 		ProverMode: config.ProverModeDev,
 		VerifierID: 1,
 	},
-	AssetsDir: "./prover-assets", // TODO @gbotrel untested
+	Invalidity: config.Invalidity{
+		ProverMode: config.ProverModePartial,
+	},
+	AssetsDir: "./prover-assets",
+	Layer2: struct {
+		ChainID           uint           `mapstructure:"chain_id" validate:"required"`
+		BaseFee           uint           `mapstructure:"base_fee"`
+		MsgSvcContractStr string         `mapstructure:"message_service_contract" validate:"required,eth_addr"`
+		MsgSvcContract    common.Address `mapstructure:"-"`
+		CoinBaseStr       string         `mapstructure:"coin_base" validate:"required,eth_addr"`
+		CoinBase          common.Address `mapstructure:"-"`
+	}{
+		ChainID:           1,
+		BaseFee:           0,
+		MsgSvcContractStr: "0x0000000000000000000000000000000000000000",
+		MsgSvcContract:    common.Address{},
+		CoinBaseStr:       "0x0000000000000000000000000000000000000000",
+		CoinBase:          common.Address{},
+	},
 	// Layer2 fields will be populated from the DCC spec in aggregation spec files
 }
 
@@ -63,6 +87,11 @@ func init() {
 		&seed, "seed", 0,
 		"Seed to use for the randomness generation",
 	)
+
+	rootCmd.Flags().StringVar(
+		&configFile, "config", "config/config-integration-development.toml",
+		"Path to the prover config file (used for invalidity proofs)",
+	)
 }
 
 func genFiles(cmd *cobra.Command, args []string) {
@@ -81,10 +110,14 @@ func genFiles(cmd *cobra.Command, args []string) {
 		// generation.
 		aggregationResponses *aggregation.Response
 
+		// The previous invalidity proof response
+		prevInvalidityProofResp *invalidity.Response
+
 		// Empty spec, handy for testing if a spec is for aggregation or blob
 		// submission.
 		emptyBlobSubmissionSpec BlobSubmissionSpec
 		emptyAggSpec            AggregationSpec
+		emptyInvaliditySpec     InvalidityProofSpec
 	)
 
 	for _, specFile := range specFiles {
@@ -93,10 +126,12 @@ func genFiles(cmd *cobra.Command, args []string) {
 
 		hasBlobSubmission := !reflect.DeepEqual(spec.BlobSubmissionSpec, emptyBlobSubmissionSpec)
 		hasAggregation := !reflect.DeepEqual(spec.AggregationSpec, emptyAggSpec)
+		hasInvalidity := !reflect.DeepEqual(spec.InvalidityProofSpec, emptyInvaliditySpec)
 
 		switch {
 		// It's a blob submission spec
 		case hasBlobSubmission && !hasAggregation:
+			logrus.Infof("[BlobSubmission] processing spec file: %s", specFile)
 			resp := ProcessBlobSubmissionSpec(
 				rng, runningSpec, blobSubmissionResponses,
 				spec.BlobSubmissionSpec,
@@ -105,6 +140,7 @@ func genFiles(cmd *cobra.Command, args []string) {
 
 		// It's an aggregation spec
 		case hasAggregation && !hasBlobSubmission:
+			logrus.Infof("[Aggregation] processing spec file: %s", specFile)
 
 			if len(blobSubmissionResponses) == 0 {
 				printlnAndExit("provided aggregation spec without any blob submission spec before")
@@ -122,11 +158,13 @@ func genFiles(cmd *cobra.Command, args []string) {
 				blobSubmissionResponses[0],
 				runningSpec,
 				spec.AggregationSpec,
+				blobSubmissionResponses[len(blobSubmissionResponses)-1].FinalStateRootHash,
 			)
 			aggregationResponses = resp
 
 		// It's both, in that case, we do first the submission then the aggregation
 		case hasAggregation && hasBlobSubmission:
+			logrus.Infof("[BlobSubmission+Aggregation] processing spec file: %s", specFile)
 
 			if aggregationResponses != nil {
 				printlnAndExit("more than one aggregation spec is not allowed")
@@ -146,12 +184,29 @@ func genFiles(cmd *cobra.Command, args []string) {
 				blobSubmissionResponses[0],
 				runningSpec,
 				spec.AggregationSpec,
+				blobSubmissionResponses[len(blobSubmissionResponses)-1].FinalStateRootHash,
 			)
 			aggregationResponses = resp
+
+		case hasInvalidity:
+			invType := "unspecified"
+			if spec.InvalidityProofSpec.InvalidityType != nil {
+				invType = spec.InvalidityProofSpec.InvalidityType.String()
+			}
+			logrus.Infof("[Invalidity] processing spec file: %s (type: %s)", specFile, invType)
+			resp := ProcessInvaliditySpec(
+				rng,
+				&spec.InvalidityProofSpec,
+				prevInvalidityProofResp,
+				specFile,
+			)
+			prevInvalidityProofResp = resp
+			runningSpec.InvalidityProofs = append(runningSpec.InvalidityProofs, resp)
 
 		default:
 			printlnAndExit("Spec is neither a BlobSubmissionSpec nor an AggregationSpec : %++v", spec)
 		}
+
 	}
 
 	// Then write the files
@@ -199,6 +254,28 @@ func genFiles(cmd *cobra.Command, args []string) {
 
 		// and dump the circuit id
 		dumpVerifierContract(odir, circuits.MockCircuitIDEmulation)
+	}
+
+	// and for the invalidity proofs
+	for i, resp := range runningSpec.InvalidityProofs {
+		p := path.Join(odir, fmt.Sprintf("forcedTransaction-%v.json", i))
+		f, err := os.Create(p)
+		if err != nil {
+			// It should not be possible due to the above check
+			printlnAndExit("Unexpected error creating output file: %v", err)
+		}
+
+		serialized, err := json.MarshalIndent(resp, "", "\t")
+		if err != nil {
+			printlnAndExit("could not serialize invalidity response: %v", err)
+		}
+
+		_, err = f.Write(serialized)
+		if err != nil {
+			printlnAndExit("Unexpected error writing output file: %v", err)
+		}
+
+		f.Close()
 	}
 }
 
@@ -324,6 +401,7 @@ func ProcessAggregationSpec(
 	firstBlobSub *blobsubmission.Response,
 	runningSpec *AggregationSpec,
 	spec AggregationSpec,
+	finalStateRootHash string,
 ) (
 	resp *aggregation.Response,
 ) {
@@ -344,6 +422,8 @@ func ProcessAggregationSpec(
 			spec.LastFinalizedL1RollingHashMessageNumber = runningSpec.L1RollingHashMessageNumber
 			spec.LastFinalizedL1RollingHash = runningSpec.L1RollingHash
 		}
+
+		spec.InvalidityProofs = runningSpec.InvalidityProofs
 	}
 
 	collectedFields := RandAggregation(rng, spec)
@@ -352,11 +432,19 @@ func ProcessAggregationSpec(
 	if err != nil {
 		printlnAndExit("Could not craft aggregation response : %s", err)
 	}
-
+	resp.FinalStateRootHash = finalStateRootHash
 	// Post-processing, stores the L1ROllingHash data
 	runningSpec.LastFinalizedL1RollingHash = resp.L1RollingHash
 	runningSpec.LastFinalizedL1RollingHashMessageNumber = resp.L1RollingHashMessageNumber
 
+	runningSpec.ParentAggregationFtxRollingHash = resp.FinalFtxRollingHash
+	runningSpec.ParentAggregationFtxNumber = int(resp.FinalFtxNumber)
+
+	for i := range runningSpec.InvalidityProofs {
+		runningSpec.InvalidityProofs[i].ZkParentStateRootHash = linTypes.HexToKoalabearOctupletLoose(spec.ParentStateRootHash)
+		runningSpec.InvalidityProofs[i].SimulatedExecutionBlockNumber = uint64(spec.LastFinalizedBlockNumber) + 1
+		runningSpec.InvalidityProofs[i].SimulatedExecutionBlockTimestamp = uint64(spec.LastFinalizedTimestamp) + 1
+	}
 	return resp
 }
 
@@ -376,7 +464,7 @@ func aggregationRespFileName(resp []*blobsubmission.Response) string {
 
 // dump the verifier contract in odir
 func dumpVerifierContract(odir string, circID circuits.MockCircuitID) {
-	filepath := filepath.Join(odir, fmt.Sprintf("Verifier%v.sol", circID))
+	filepath := filepath.Join(odir, fmt.Sprintf("Verifier%d.sol", circID))
 	f := files.MustOverwrite(filepath)
 	defer f.Close()
 
@@ -393,4 +481,71 @@ func dumpVerifierContract(odir string, circID circuits.MockCircuitID) {
 	if err := pp.VerifyingKey.ExportSolidity(f, circuits.LineaVerifierExportOptions()...); err != nil {
 		printlnAndExit("could not export verifying key to solidity: %v", err)
 	}
+}
+
+// ProcessInvaliditySpec processes an invalidity spec file. PrevNumber is the
+// previous ftx number generated (for consistency).
+// Uses cmd.Prove to follow the production code path: serialize request to file,
+// invoke the prover CLI entry point, and deserialize the response.
+func ProcessInvaliditySpec(rng *rand.Rand, spec *InvalidityProofSpec, prevResp *invalidity.Response, specFile string) *invalidity.Response {
+
+	var invalidityReq *invalidity.Request
+
+	switch *spec.InvalidityType {
+	case circInvalidity.BadNonce, circInvalidity.BadBalance:
+		invalidityReq = RandInvalidityProofRequest(rng, spec, *spec.InvalidityType, specFile)
+	case circInvalidity.FilteredAddressFrom, circInvalidity.FilteredAddressTo:
+		invalidityReq = RandFilteredAddressProofRequest(rng, spec, *spec.InvalidityType, specFile)
+	case circInvalidity.BadPrecompile, circInvalidity.TooManyLogs:
+		invalidityReq = RandBadPrecompileProofRequest(rng, spec, *spec.InvalidityType)
+	default:
+		printlnAndExit("unsupported invalidity type: %v", *spec.InvalidityType)
+	}
+
+	if prevResp != nil {
+		invalidityReq.ForcedTransactionNumber = uint64(prevResp.ForcedTransactionNumber + 1)
+		invalidityReq.PrevFtxRollingHash = prevResp.FtxRollingHash
+		spec.FtxNumber = int(invalidityReq.ForcedTransactionNumber)
+	}
+
+	// Write request to a temp file (filename must contain "getZkInvalidityProof" for cmd.Prove routing)
+	inFile, err := os.CreateTemp("", "*-getZkInvalidityProof.json")
+	if err != nil {
+		printlnAndExit("Could not create temp input file: %s", err)
+	}
+	defer os.Remove(inFile.Name())
+
+	if err := json.NewEncoder(inFile).Encode(invalidityReq); err != nil {
+		printlnAndExit("Could not write invalidity request to temp file: %s", err)
+	}
+	inFile.Close()
+
+	outFile, err := os.CreateTemp("", "invalidity-response-*.json")
+	if err != nil {
+		printlnAndExit("Could not create temp output file: %s", err)
+	}
+	defer os.Remove(outFile.Name())
+	outFile.Close()
+
+	// Use cmd.Prove with ProverArgs to follow the production code path.
+	if err := cmd.Prove(cmd.ProverArgs{
+		Input:      inFile.Name(),
+		Output:     outFile.Name(),
+		ConfigFile: configFile,
+	}); err != nil {
+		printlnAndExit("Could not prove invalidity: %s", err)
+	}
+
+	// Read back the response
+	respBytes, err := os.ReadFile(outFile.Name())
+	if err != nil {
+		printlnAndExit("Could not read invalidity response: %s", err)
+	}
+
+	var resp invalidity.Response
+	if err := json.Unmarshal(respBytes, &resp); err != nil {
+		printlnAndExit("Could not decode invalidity response: %s", err)
+	}
+
+	return &resp
 }

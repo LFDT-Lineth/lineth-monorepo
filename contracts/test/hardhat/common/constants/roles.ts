@@ -13,6 +13,7 @@ export const CANCELLER_ROLE = generateKeccak256(["string"], ["CANCELLER_ROLE"], 
 
 // Roles hashes
 export const DEFAULT_ADMIN_ROLE = HASH_ZERO;
+export const FORCED_TRANSACTION_SENDER_ROLE = generateKeccak256(["string"], ["FORCED_TRANSACTION_SENDER_ROLE"], true);
 export const FUNCTION_EXECUTOR_ROLE = generateKeccak256(["string"], ["FUNCTION_EXECUTOR_ROLE"], true);
 export const RATE_LIMIT_SETTER_ROLE = generateKeccak256(["string"], ["RATE_LIMIT_SETTER_ROLE"], true);
 export const USED_RATE_LIMIT_RESETTER_ROLE = generateKeccak256(["string"], ["USED_RATE_LIMIT_RESETTER_ROLE"], true);
@@ -39,6 +40,7 @@ export const MINIMUM_FEE_SETTER_ROLE = generateKeccak256(["string"], ["MINIMUM_F
 export const OPERATOR_ROLE = generateKeccak256(["string"], ["OPERATOR_ROLE"], true);
 export const VERIFIER_SETTER_ROLE = generateKeccak256(["string"], ["VERIFIER_SETTER_ROLE"], true);
 export const VERIFIER_UNSETTER_ROLE = generateKeccak256(["string"], ["VERIFIER_UNSETTER_ROLE"], true);
+export const SET_ADDRESS_FILTER_ROLE = generateKeccak256(["string"], ["SET_ADDRESS_FILTER_ROLE"], true);
 export const L1_MERKLE_ROOTS_SETTER_ROLE = generateKeccak256(["string"], ["L1_MERKLE_ROOTS_SETTER_ROLE"], true);
 export const L2_MERKLE_ROOTS_SETTER_ROLE = generateKeccak256(["string"], ["L2_MERKLE_ROOTS_SETTER_ROLE"], true);
 export const SECURITY_COUNCIL_ROLE = generateKeccak256(["string"], ["SECURITY_COUNCIL_ROLE"], true);

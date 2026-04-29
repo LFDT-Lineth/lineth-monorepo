@@ -3,6 +3,7 @@ pragma solidity 0.8.33;
 
 import { LineaRollupBase } from "../../../rollup/LineaRollupBase.sol";
 import { Validium } from "../../../rollup/Validium.sol";
+import { FinalizedStateHashing } from "../../../libraries/FinalizedStateHashing.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 /// @custom:oz-upgrades-unsafe-allow missing-initializer
@@ -40,6 +41,6 @@ contract TestValidium is Validium {
   }
 
   function setLastFinalizedState(uint256 _messageNumber, bytes32 _rollingHash, uint256 _timestamp) external {
-    currentFinalizedState = _computeLastFinalizedState(_messageNumber, _rollingHash, _timestamp);
+    currentFinalizedState = FinalizedStateHashing._computeLastFinalizedState(_messageNumber, _rollingHash, _timestamp);
   }
 }

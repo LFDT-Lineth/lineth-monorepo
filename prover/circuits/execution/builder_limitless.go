@@ -52,7 +52,7 @@ func makeCSLimitless(b *limitlessBuilder) constraint.ConstraintSystem {
 // - the shared randomness is correctly computed
 // - the general multiset cancels out
 // - the verification keys and merkle root match the expected values
-func (c *CircuitExecution) checkLimitlessConglomerationCompletion(api frontend.API) {
+func (c *CircuitExecution) CheckLimitlessConglomerationCompletion(api frontend.API) {
 
 	wvc := c.WizardVerifier
 	koalaAPI := koalagnark.NewAPI(api)
@@ -114,7 +114,7 @@ func (c *CircuitExecution) checkLimitlessConglomerationCompletion(api frontend.A
 	// Hash the shared randomness multiset using Poseidon2 over KoalaBear
 	// (matching the native poseidon2_koalabear.HashVec used in
 	// GetSharedRandomnessFromSegmentProofs)
-	hasher := poseidon2_koalabear.NewKoalagnarkMDHasher(api)
+	hasher := poseidon2_koalabear.NewKoalagnarkMDHasher(koalaAPI)
 	sharedRandElements := make([]koalagnark.Element, len(sharedRandMSet))
 	for i, v := range sharedRandMSet {
 		sharedRandElements[i] = koalagnark.WrapFrontendVariable(v)

@@ -4,7 +4,6 @@ import { describe, expect, it } from "@jest/globals";
 import { estimateLineaGas, sendTransactionWithRetry } from "./common/utils";
 import { L2RpcEndpoint } from "./config/clients/l2-client";
 import { createTestContext } from "./config/setup";
-import { OpcodeTesterAbi } from "./generated";
 
 const context = createTestContext();
 const l2AccountManager = context.getL2AccountManager();
@@ -23,7 +22,7 @@ describe("Opcodes test suite", () => {
       account,
       to: opcodeTesterRead.address,
       data: encodeFunctionCall({
-        abi: OpcodeTesterAbi,
+        abi: opcodeTesterRead.abi,
         functionName: "executeAllOpcodes",
       }),
     };
@@ -31,8 +30,10 @@ describe("Opcodes test suite", () => {
     const estimatedGasFees = await estimateLineaGas(l2PublicClient, txEstimationParams);
     const nonce = await l2PublicClient.getTransactionCount({ address: account.address });
 
-    await sendTransactionWithRetry(l2PublicClient, (fees) =>
-      opcodeTesterWrite.write.executeAllOpcodes({ nonce, ...estimatedGasFees, ...fees }),
+    await sendTransactionWithRetry(
+      l2PublicClient,
+      (fees) => opcodeTesterWrite.write.executeAllOpcodes({ nonce, ...estimatedGasFees, ...fees }),
+      { abi: opcodeTesterWrite.abi },
     );
 
     const valueAfterExecution = await opcodeTesterRead.read.rollingBlockDetailComputations();
@@ -53,7 +54,7 @@ describe("Opcodes test suite", () => {
       account,
       to: opcodeTester.address,
       data: encodeFunctionCall({
-        abi: OpcodeTesterAbi,
+        abi: opcodeTester.abi,
         functionName: "executePrecompiles",
       }),
     };
@@ -61,8 +62,10 @@ describe("Opcodes test suite", () => {
     const estimatedGasFees = await estimateLineaGas(l2PublicClient, txEstimationParams);
     const nonce = await l2PublicClient.getTransactionCount({ address: account.address });
 
-    const { receipt } = await sendTransactionWithRetry(l2PublicClient, (fees) =>
-      opcodeTester.write.executePrecompiles({ nonce, ...estimatedGasFees, ...fees }),
+    const { receipt } = await sendTransactionWithRetry(
+      l2PublicClient,
+      (fees) => opcodeTester.write.executePrecompiles({ nonce, ...estimatedGasFees, ...fees }),
+      { abi: opcodeTester.abi },
     );
 
     expect(receipt.status).toBe("success");
@@ -79,7 +82,7 @@ describe("Opcodes test suite", () => {
       account,
       to: opcodeTester.address,
       data: encodeFunctionCall({
-        abi: OpcodeTesterAbi,
+        abi: opcodeTester.abi,
         functionName: "executeG1BLSPrecompiles",
       }),
     };
@@ -87,8 +90,10 @@ describe("Opcodes test suite", () => {
     const estimatedGasFees = await estimateLineaGas(l2PublicClient, txEstimationParams);
     const nonce = await l2PublicClient.getTransactionCount({ address: account.address });
 
-    const { receipt } = await sendTransactionWithRetry(l2PublicClient, (fees) =>
-      opcodeTester.write.executeG1BLSPrecompiles({ nonce, ...estimatedGasFees, ...fees }),
+    const { receipt } = await sendTransactionWithRetry(
+      l2PublicClient,
+      (fees) => opcodeTester.write.executeG1BLSPrecompiles({ nonce, ...estimatedGasFees, ...fees }),
+      { abi: opcodeTester.abi },
     );
 
     expect(receipt.status).toBe("success");
@@ -105,7 +110,7 @@ describe("Opcodes test suite", () => {
       account,
       to: opcodeTester.address,
       data: encodeFunctionCall({
-        abi: OpcodeTesterAbi,
+        abi: opcodeTester.abi,
         functionName: "executeG2BLSPrecompiles",
       }),
     };
@@ -113,8 +118,10 @@ describe("Opcodes test suite", () => {
     const estimatedGasFees = await estimateLineaGas(l2PublicClient, txEstimationParams);
     const nonce = await l2PublicClient.getTransactionCount({ address: account.address });
 
-    const { receipt } = await sendTransactionWithRetry(l2PublicClient, (fees) =>
-      opcodeTester.write.executeG2BLSPrecompiles({ nonce, ...estimatedGasFees, ...fees }),
+    const { receipt } = await sendTransactionWithRetry(
+      l2PublicClient,
+      (fees) => opcodeTester.write.executeG2BLSPrecompiles({ nonce, ...estimatedGasFees, ...fees }),
+      { abi: opcodeTester.abi },
     );
 
     expect(receipt.status).toBe("success");
@@ -131,7 +138,7 @@ describe("Opcodes test suite", () => {
       account,
       to: opcodeTester.address,
       data: encodeFunctionCall({
-        abi: OpcodeTesterAbi,
+        abi: opcodeTester.abi,
         functionName: "executeBLSPairingAndMapPrecompiles",
       }),
     };
@@ -139,8 +146,10 @@ describe("Opcodes test suite", () => {
     const estimatedGasFees = await estimateLineaGas(l2PublicClient, txEstimationParams);
     const nonce = await l2PublicClient.getTransactionCount({ address: account.address });
 
-    const { receipt } = await sendTransactionWithRetry(l2PublicClient, (fees) =>
-      opcodeTester.write.executeBLSPairingAndMapPrecompiles({ nonce, ...estimatedGasFees, ...fees }),
+    const { receipt } = await sendTransactionWithRetry(
+      l2PublicClient,
+      (fees) => opcodeTester.write.executeBLSPairingAndMapPrecompiles({ nonce, ...estimatedGasFees, ...fees }),
+      { abi: opcodeTester.abi },
     );
 
     expect(receipt.status).toBe("success");

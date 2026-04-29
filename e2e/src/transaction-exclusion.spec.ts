@@ -5,7 +5,6 @@ import { PrepareTransactionRequestReturnType, encodeFunctionData, parseGwei } fr
 import { getTransactionHash, awaitUntil } from "./common/utils";
 import { L2RpcEndpoint } from "./config/clients/l2-client";
 import { createTestContext } from "./config/setup";
-import { TestContractAbi } from "./generated";
 
 const context = createTestContext();
 const l2AccountManager = context.getL2AccountManager();
@@ -33,7 +32,7 @@ describe("Transaction exclusion test suite", () => {
         account: l2Account,
         to: testContract.address,
         data: encodeFunctionData({
-          abi: TestContractAbi,
+          abi: testContract.abi,
           functionName: "testAddmod",
           args: [13000n, 31n],
         }),

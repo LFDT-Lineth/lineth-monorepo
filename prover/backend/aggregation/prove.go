@@ -46,8 +46,9 @@ func makeProof(
 	publicInput string,
 ) (proof string, err error) {
 
+	logrus.Infof("[Aggregation] generating proof (mode: %s)", cfg.Aggregation.ProverMode)
+
 	if cfg.Aggregation.ProverMode == config.ProverModeDev {
-		// In the development mode, we generate a fake proof
 		return makeDummyProof(cfg, publicInput, circuits.MockCircuitIDEmulation), nil
 	}
 
@@ -82,6 +83,10 @@ func (cf CollectedFields) AggregationPublicInput(cfg *config.Config) public_inpu
 		L1RollingHash:                           cf.L1RollingHash,
 		LastFinalizedL1RollingHashMessageNumber: cf.LastFinalizedL1RollingHashMessageNumber,
 		L1RollingHashMessageNumber:              cf.L1RollingHashMessageNumber,
+		LastFinalizedFtxRollingHash:             cf.LastFinalizedFtxRollingHash,
+		FinalFtxRollingHash:                     cf.FinalFtxRollingHash,
+		LastFinalizedFtxNumber:                  cf.LastFinalizedFtxNumber,
+		FinalFtxNumber:                          cf.FinalFtxNumber,
 		L2MsgRootHashes:                         cf.L2MsgRootHashes,
 		L2MsgMerkleTreeDepth:                    utils.ToInt(cf.L2MsgTreeDepth),
 		ChainID:                                 uint64(cfg.Layer2.ChainID),
@@ -112,6 +117,7 @@ func makePiProof(cfg *config.Config, cf *CollectedFields) (plonk.Proof, witness.
 	assignment, err := c.Assign(pi_interconnection.Request{
 		DataAvailabilities: cf.DecompressionPI,
 		Executions:         cf.ExecutionPI,
+		Invalidity:         cf.InvalidityPI,
 		Aggregation:        cf.AggregationPublicInput(cfg),
 	}, cfg.BlobDecompressionDictStore(string(circuits.DataAvailabilityV2CircuitID)))
 	if err != nil {
@@ -264,7 +270,7 @@ func makeBw6Proof(
 	// not do it before because the "ordering" of the verifying keys can be
 	// circuit dependent. So, we needed to pick the circuit first.
 
-	assignCircuitIDToProofClaims(bestAllowedVkForAggregation, cf.ProofClaims)
+	AssignCircuitIDToProofClaims(bestAllowedVkForAggregation, cf.ProofClaims)
 
 	// Pre-flight check: validate that all assigned circuit IDs are allowed by
 	// the IsAllowedCircuitID bitmask BEFORE running the expensive BW6 prover.
@@ -452,13 +458,13 @@ func doesBw6CircuitSupportVKeys(supportedVkeys []string, proofClaims []aggregati
 	return nil
 }
 
-// This function assigns circuits ID to the input proof claims based on the list
+// AssignCircuitIDToProofClaims assigns circuit IDs to the input proof claims based on the list
 // of verifying keys that are supported by the circuit. This function mutates the
 // proofClaims parameter. It will panic if one of the claim's verifying key is
 // missing from the supportedVkeys. Therefore, this function should only be
 // called after `doesBW6CircuitSupportsVKeys` has been called and has returned
 // true.
-func assignCircuitIDToProofClaims(supportedVkeys []string, proofClaims []aggregation.ProofClaimAssignment) {
+func AssignCircuitIDToProofClaims(supportedVkeys []string, proofClaims []aggregation.ProofClaimAssignment) {
 
 	// Parse the required verifying keys into a list of bytes32
 	suppBytes32 := make([]types.FullBytes32, len(supportedVkeys))

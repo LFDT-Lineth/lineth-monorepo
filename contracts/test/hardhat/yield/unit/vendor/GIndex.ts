@@ -4,6 +4,7 @@ import { TestGIndex } from "contracts/typechain-types";
 import { hexlify, MaxUint256, randomBytes, toBeHex, ZeroHash, zeroPadValue } from "ethers";
 
 import { deployFromFactory } from "../../../common/deployment";
+import { expectRevertWithCustomError } from "../../../common/helpers";
 
 describe("GIndex", () => {
   let gIndex: TestGIndex;
@@ -79,14 +80,8 @@ describe("GIndex", () => {
   });
 
   it("test_concat_RevertsIfZeroGIndex", async () => {
-    await expect(gIndex.concat(ZERO, await gIndex.pack(1024, 1))).to.be.revertedWithCustomError(
-      gIndex,
-      "IndexOutOfRange",
-    );
-    await expect(gIndex.concat(await gIndex.pack(1024, 1), ZERO)).to.be.revertedWithCustomError(
-      gIndex,
-      "IndexOutOfRange",
-    );
+    await expectRevertWithCustomError(gIndex, gIndex.concat(ZERO, await gIndex.pack(1024, 1)), "IndexOutOfRange");
+    await expectRevertWithCustomError(gIndex, gIndex.concat(await gIndex.pack(1024, 1), ZERO), "IndexOutOfRange");
   });
 
   it("test_concat_BigIndicesBorderCases", async () => {
@@ -96,15 +91,19 @@ describe("GIndex", () => {
   });
 
   it("test_concat_RevertsIfTooBigIndices", async () => {
-    await expect(gIndex.concat(MAX, MAX)).to.be.revertedWithCustomError(gIndex, "IndexOutOfRange");
+    await expectRevertWithCustomError(gIndex, gIndex.concat(MAX, MAX), "IndexOutOfRange");
 
-    await expect(
+    await expectRevertWithCustomError(
+      gIndex,
       gIndex.concat(await gIndex.pack(2n ** 48n, 0), await gIndex.pack(2n ** 200n, 0)),
-    ).to.be.revertedWithCustomError(gIndex, "IndexOutOfRange");
+      "IndexOutOfRange",
+    );
 
-    await expect(
+    await expectRevertWithCustomError(
+      gIndex,
       gIndex.concat(await gIndex.pack(2n ** 200n, 0), await gIndex.pack(2n ** 48n, 0)),
-    ).to.be.revertedWithCustomError(gIndex, "IndexOutOfRange");
+      "IndexOutOfRange",
+    );
   });
 
   it("testFuzz_concat_WithRoot", async () => {
@@ -186,28 +185,31 @@ describe("GIndex", () => {
   });
 
   it("test_shr_OffTheWidth", async () => {
-    await expect(gIndex.shr(ROOT, 1)).to.be.revertedWithCustomError(gIndex, "IndexOutOfRange");
-    await expect(gIndex.shr(await gIndex.pack(1024, 4), 16)).to.be.revertedWithCustomError(gIndex, "IndexOutOfRange");
-    await expect(gIndex.shr(await gIndex.pack(1031, 4), 9)).to.be.revertedWithCustomError(gIndex, "IndexOutOfRange");
-    await expect(gIndex.shr(await gIndex.pack(1023, 4), 1)).to.be.revertedWithCustomError(gIndex, "IndexOutOfRange");
+    await expectRevertWithCustomError(gIndex, gIndex.shr(ROOT, 1), "IndexOutOfRange");
+    await expectRevertWithCustomError(gIndex, gIndex.shr(await gIndex.pack(1024, 4), 16), "IndexOutOfRange");
+    await expectRevertWithCustomError(gIndex, gIndex.shr(await gIndex.pack(1031, 4), 9), "IndexOutOfRange");
+    await expectRevertWithCustomError(gIndex, gIndex.shr(await gIndex.pack(1023, 4), 1), "IndexOutOfRange");
   });
 
   it("test_shr_OffTheWidth_AfterConcat", async () => {
     const gIParent = await gIndex.pack(154, 4);
 
-    await expect(gIndex.shr(await gIndex.concat(gIParent, ROOT), 1)).to.be.revertedWithCustomError(
+    await expectRevertWithCustomError(gIndex, gIndex.shr(await gIndex.concat(gIParent, ROOT), 1), "IndexOutOfRange");
+    await expectRevertWithCustomError(
       gIndex,
+      gIndex.shr(await gIndex.concat(gIParent, await gIndex.pack(1024, 4)), 16),
       "IndexOutOfRange",
     );
-    await expect(
-      gIndex.shr(await gIndex.concat(gIParent, await gIndex.pack(1024, 4)), 16),
-    ).to.be.revertedWithCustomError(gIndex, "IndexOutOfRange");
-    await expect(
+    await expectRevertWithCustomError(
+      gIndex,
       gIndex.shr(await gIndex.concat(gIParent, await gIndex.pack(1031, 4)), 9),
-    ).to.be.revertedWithCustomError(gIndex, "IndexOutOfRange");
-    await expect(
+      "IndexOutOfRange",
+    );
+    await expectRevertWithCustomError(
+      gIndex,
       gIndex.shr(await gIndex.concat(gIParent, await gIndex.pack(1023, 4)), 1),
-    ).to.be.revertedWithCustomError(gIndex, "IndexOutOfRange");
+      "IndexOutOfRange",
+    );
   });
 
   it("test_shl", async () => {
@@ -265,28 +267,31 @@ describe("GIndex", () => {
   });
 
   it("test_shl_OffTheWidth", async () => {
-    await expect(gIndex.shl(ROOT, 1)).to.be.revertedWithCustomError(gIndex, "IndexOutOfRange");
-    await expect(gIndex.shl(await gIndex.pack(1024, 4), 1)).to.be.revertedWithCustomError(gIndex, "IndexOutOfRange");
-    await expect(gIndex.shl(await gIndex.pack(1031, 4), 9)).to.be.revertedWithCustomError(gIndex, "IndexOutOfRange");
-    await expect(gIndex.shl(await gIndex.pack(1023, 4), 16)).to.be.revertedWithCustomError(gIndex, "IndexOutOfRange");
+    await expectRevertWithCustomError(gIndex, gIndex.shl(ROOT, 1), "IndexOutOfRange");
+    await expectRevertWithCustomError(gIndex, gIndex.shl(await gIndex.pack(1024, 4), 1), "IndexOutOfRange");
+    await expectRevertWithCustomError(gIndex, gIndex.shl(await gIndex.pack(1031, 4), 9), "IndexOutOfRange");
+    await expectRevertWithCustomError(gIndex, gIndex.shl(await gIndex.pack(1023, 4), 16), "IndexOutOfRange");
   });
 
   it("test_shl_OffTheWidth_AfterConcat", async () => {
     const gIParent = await gIndex.pack(154, 4);
 
-    await expect(gIndex.shl(await gIndex.concat(gIParent, ROOT), 1)).to.be.revertedWithCustomError(
+    await expectRevertWithCustomError(gIndex, gIndex.shl(await gIndex.concat(gIParent, ROOT), 1), "IndexOutOfRange");
+    await expectRevertWithCustomError(
       gIndex,
+      gIndex.shl(await gIndex.concat(gIParent, await gIndex.pack(1024, 4)), 1),
       "IndexOutOfRange",
     );
-    await expect(
-      gIndex.shl(await gIndex.concat(gIParent, await gIndex.pack(1024, 4)), 1),
-    ).to.be.revertedWithCustomError(gIndex, "IndexOutOfRange");
-    await expect(
+    await expectRevertWithCustomError(
+      gIndex,
       gIndex.shl(await gIndex.concat(gIParent, await gIndex.pack(1031, 4)), 9),
-    ).to.be.revertedWithCustomError(gIndex, "IndexOutOfRange");
-    await expect(
+      "IndexOutOfRange",
+    );
+    await expectRevertWithCustomError(
+      gIndex,
       gIndex.shl(await gIndex.concat(gIParent, await gIndex.pack(1023, 4)), 16),
-    ).to.be.revertedWithCustomError(gIndex, "IndexOutOfRange");
+      "IndexOutOfRange",
+    );
   });
 
   it("test_fls", async () => {

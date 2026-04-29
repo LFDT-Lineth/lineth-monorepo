@@ -9,7 +9,7 @@ import (
 )
 
 type EcdsaZkEvm struct {
-	Ant *antichamber
+	Ant *Antichamber
 }
 
 func NewEcdsaZkEvm(

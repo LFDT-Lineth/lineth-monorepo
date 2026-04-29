@@ -5,18 +5,16 @@ import (
 	"sync"
 
 	"github.com/consensys/gnark-crypto/field/koalabear/poseidon2"
-	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
 )
 
 // KoalagnarkOctuplet is an octuplet of koalagnark.Element
-type KoalagnarkOctuplet [8]koalagnark.Element
+type KoalagnarkOctuplet = koalagnark.Octuplet
 
 // KoalagnarkMDHasher is a Merkle-Damgard hasher using Poseidon2 as compression function.
 // This implementation uses koalagnark.Element and koalagnark.API, allowing it to work
 // in both native KoalaBear circuits and emulated circuits (e.g., BLS12-377).
 type KoalagnarkMDHasher struct {
-	api      frontend.API
 	koalaAPI *koalagnark.API
 
 	// Sponge construction state
@@ -27,19 +25,31 @@ type KoalagnarkMDHasher struct {
 }
 
 // NewKoalagnarkMDHasher creates a new Merkle-Damgard hasher using koalagnark types.
-func NewKoalagnarkMDHasher(api frontend.API) *KoalagnarkMDHasher {
-	koalaAPI := koalagnark.NewAPI(api)
+func NewKoalagnarkMDHasher(koalaAPI *koalagnark.API) *KoalagnarkMDHasher {
+
 	var res KoalagnarkMDHasher
 	for i := 0; i < 8; i++ {
 		res.state[i] = koalaAPI.Zero()
 	}
-	res.api = api
 	res.koalaAPI = koalaAPI
 	return &res
 }
 
+func (h *KoalagnarkMDHasher) Reset() {
+	h.buffer = h.buffer[:0]
+	for i := 0; i < 8; i++ {
+		h.state[i] = h.koalaAPI.Zero()
+	}
+}
+
 func (h *KoalagnarkMDHasher) Write(data ...koalagnark.Element) {
 	h.buffer = append(h.buffer, data...)
+}
+
+func (h *KoalagnarkMDHasher) WriteOctuplet(data ...KoalagnarkOctuplet) {
+	for i := 0; i < len(data); i++ {
+		h.buffer = append(h.buffer, data[i][:]...)
+	}
 }
 
 func (h *KoalagnarkMDHasher) Sum() KoalagnarkOctuplet {
