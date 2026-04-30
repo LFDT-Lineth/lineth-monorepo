@@ -26,7 +26,7 @@ func makeVec(vals ...uint64) *wiop.ConcreteVector {
 	for i, v := range vals {
 		elems[i].SetUint64(v)
 	}
-	return &wiop.ConcreteVector{Plain: []field.Vec{field.VecFromBase(elems)}}
+	return &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
 }
 
 // ---- Structural tests ----

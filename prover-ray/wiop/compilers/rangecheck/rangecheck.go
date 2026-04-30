@@ -65,7 +65,7 @@ func createRangeColumn(sys *wiop.System, ctx *wiop.ContextFrame, b int) *wiop.Co
 	}
 
 	cv := &wiop.ConcreteVector{
-		Plain: []field.Vec{field.VecFromBase(elems)},
+		Plain: field.VecFromBase(elems),
 	}
 	return mod.NewPrecomputedColumn(
 		ctx.Childf("range-col-b%d", b),
