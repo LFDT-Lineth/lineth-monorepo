@@ -52,10 +52,11 @@ class GasPriceCapProviderForDataSubmission(
     )
   }
 
+  private fun ULong.coerceWithFallback(cap: ULong): ULong = coerceAtMost(cap).let { if (it <= 0uL) cap else it }
+
   private fun coerceGasPriceCaps(gasPriceCaps: GasPriceCaps): GasPriceCaps {
     val maxPriorityFeePerGasCap = gasPriceCaps.maxPriorityFeePerGasCap
-      .coerceAtMost(config.maxPriorityFeePerGasCap)
-      .run { if (this <= 0uL) config.maxPriorityFeePerGasCap else this }
+      .coerceWithFallback(config.maxPriorityFeePerGasCap)
 
     val maxFeePerGasCap = (
       if (gasPriceCaps.maxBaseFeePerGasCap != null) {
@@ -64,12 +65,10 @@ class GasPriceCapProviderForDataSubmission(
         gasPriceCaps.maxFeePerGasCap
       }
       )
-      .coerceAtMost(config.maxFeePerGasCap)
-      .run { if (this <= 0uL) config.maxFeePerGasCap else this }
+      .coerceWithFallback(config.maxFeePerGasCap)
 
     val maxFeePerBlobGasCap = gasPriceCaps.maxFeePerBlobGasCap
-      .coerceAtMost(config.maxFeePerBlobGasCap)
-      .run { if (this <= 0uL) config.maxFeePerBlobGasCap else this }
+      .coerceWithFallback(config.maxFeePerBlobGasCap)
 
     return GasPriceCaps(
       maxFeePerGasCap = maxFeePerGasCap,

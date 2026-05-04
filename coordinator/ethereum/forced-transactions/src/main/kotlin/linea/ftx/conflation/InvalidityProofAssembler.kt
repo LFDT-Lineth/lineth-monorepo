@@ -195,11 +195,11 @@ class InvalidityProofAssembler(
       )
       .thenApply {
         RequiredInvalidityProofData(
-          prevFtxRollingHash = prevFtxRollingHashFuture.get(),
-          zkParentStateRootHash = zkParentStateRootHashFuture.get().zkParentStateRootHash,
-          tracesFile = tracesFuture.get()?.tracesFileName,
-          accountProof = accountProofFuture.get(),
-          zkStateMerkleProof = stateProofFuture.get(),
+          prevFtxRollingHash = prevFtxRollingHashFuture.join(),
+          zkParentStateRootHash = zkParentStateRootHashFuture.join().zkParentStateRootHash,
+          tracesFile = tracesFuture.join()?.tracesFileName,
+          accountProof = accountProofFuture.join(),
+          zkStateMerkleProof = stateProofFuture.join(),
         )
       }
   }

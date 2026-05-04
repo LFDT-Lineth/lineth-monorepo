@@ -34,6 +34,8 @@ class BlobCompressionProofCoordinator(
 ) : BlobCreationHandler, LongRunningService {
   private val defaultQueueCapacity = 1000 // Should be more than blob submission limit
   private val blobsToHandle = LinkedBlockingDeque<Blob>(defaultQueueCapacity)
+
+  @Volatile
   private var timerId: Long? = null
   private lateinit var blobPollingAction: Handler<Long>
   private val blobCompressionProofPoller = BlobCompressionProofPoller(
@@ -194,7 +196,9 @@ class BlobCompressionProofCoordinator(
       blobPollingAction =
         Handler<Long> {
           handleBlobFromTheQueue().whenComplete { _, _ ->
-            timerId = vertx.setTimer(config.pollingInterval.inWholeMilliseconds, blobPollingAction)
+            synchronized(this@BlobCompressionProofCoordinator) {
+              timerId = vertx.setTimer(config.pollingInterval.inWholeMilliseconds, blobPollingAction)
+            }
           }
         }
       timerId = vertx.setTimer(config.pollingInterval.inWholeMilliseconds, blobPollingAction)
@@ -220,6 +224,7 @@ class BlobCompressionProofCoordinator(
     }
   }
 
+  @Synchronized
   override fun stop(): SafeFuture<Unit> {
     if (timerId != null) {
       vertx.cancelTimer(timerId!!)

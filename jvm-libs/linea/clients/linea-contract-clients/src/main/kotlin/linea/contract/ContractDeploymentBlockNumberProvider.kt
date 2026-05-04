@@ -39,7 +39,7 @@ class EventBasedContractDeploymentBlockNumberProvider(
           if (logs.isEmpty()) {
             throw IllegalStateException("Upgraded event not found: contractAddress=$contractAddress")
           }
-          val blockNumber = logs.minByOrNull { it.blockNumber }!!.blockNumber
+          val blockNumber = logs.minBy { it.blockNumber }.blockNumber
           deploymentBlockNumberCache.set(blockNumber)
           blockNumber
         }

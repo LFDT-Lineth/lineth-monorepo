@@ -14,7 +14,7 @@ class L2CalldataSizeAccumulatorImpl(
   private val config: Config,
 ) : L2CalldataSizeAccumulator {
   private val log: Logger = LogManager.getLogger(this::class.java)
-  private var lastCalldataSizeSum: AtomicReference<Pair<ULong, ULong>> =
+  private val lastCalldataSizeSum: AtomicReference<Pair<ULong, ULong>> =
     AtomicReference(0UL to 0uL)
 
   data class Config(
