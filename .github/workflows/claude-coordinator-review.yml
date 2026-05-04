@@ -38,8 +38,8 @@ jobs:
             --json body \
             --jq '.[].body' \
             | grep -oE '[a-zA-Z0-9/_.-]+\.(kt|java|scala|groovy):[0-9]+' \
-            | sort -u > /tmp/previous-findings.txt || true
-          echo "Previously reported locations: $(wc -l < /tmp/previous-findings.txt)"
+            | sort -u > "$GITHUB_WORKSPACE/previous-findings.txt" || true
+          echo "Previously reported locations: $(wc -l < "$GITHUB_WORKSPACE/previous-findings.txt")"
 
       - name: Run Claude Coordinator Review
         id: review
@@ -48,9 +48,9 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_args: --model claude-opus-4-7
           prompt: |
-            Before starting your analysis, read the file /tmp/previous-findings.txt.
-            It contains file:line references (e.g. `coordinator/src/.../Foo.kt:42`) already
-            reported in previous reviews. Skip any finding whose primary file:line location
+            Before starting your analysis, read the file `previous-findings.txt` in the
+            repository root. It contains file:line references (e.g. `coordinator/src/.../Foo.kt:42`)
+            already reported in previous reviews. Skip any finding whose primary file:line location
             appears in that file — do not re-report it even if the issue is still present.
 
             You are reviewing the full Kotlin/JVM codebase in the `coordinator/` and
@@ -122,7 +122,7 @@ jobs:
             Example format:
 
             ## Dead Code
-            - [`coordinator/src/.../Foo.kt:42`](${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/coordinator/src/.../Foo.kt#L42) — `unusedParam` is never read. Remove the parameter and update all call sites.
+            - [`coordinator/src/.../Foo.kt:42`](../blob/${{ github.sha }}/coordinator/src/.../Foo.kt#L42) — `unusedParam` is never read. Remove the parameter and update all call sites.
               - [ ] ❌ won't fix
               - [ ] ❌ false positive
               - [ ] 🤖 to be fixed
@@ -132,14 +132,14 @@ jobs:
             No issues found.
 
             ## Anti-patterns and Code Smells
-            - [`coordinator/src/.../Bar.kt:17`](${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/coordinator/src/.../Bar.kt#L17) — Uses `!!` on a nullable result from `findOrNull` with no justification. Replace with `?: error("...")` or a safe alternative.
+            - [`coordinator/src/.../Bar.kt:17`](../blob/${{ github.sha }}/coordinator/src/.../Bar.kt#L17) — Uses `!!` on a nullable result from `findOrNull` with no justification. Replace with `?: error("...")` or a safe alternative.
               - [ ] ❌ won't fix
               - [ ] ❌ false positive
               - [ ] 🤖 to be fixed
               - [ ] ✅ addressed/fixed
 
             ## Concurrency Issues
-            - [`coordinator/src/.../Baz.kt:88`](${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/coordinator/src/.../Baz.kt#L88) — `.get()` called on a `CompletableFuture` on the event-loop thread, which will block it. Use `.thenApply` instead.
+            - [`coordinator/src/.../Baz.kt:88`](../blob/${{ github.sha }}/coordinator/src/.../Baz.kt#L88) — `.get()` called on a `CompletableFuture` on the event-loop thread, which will block it. Use `.thenApply` instead.
               - [ ] ❌ won't fix
               - [ ] ❌ false positive
               - [ ] 🤖 to be fixed
