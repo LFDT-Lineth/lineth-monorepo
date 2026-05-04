@@ -1,6 +1,7 @@
 include "../memory.zkc"
 include "../utils/constants.zkc"
 include "../utils/signed_comparisons.zkc"
+include "../utils/signed_sum.zkc"
 
 // Process a RISC-V B-type (branch) instruction and return the next program counter.
 //
@@ -69,39 +70,39 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
     if funct3 == FUNCT3_BEQ {
         if registers[rs1] == registers[rs2] {
             // the branch case
-            pc_new = pc + imm
+            pc_new = signed_sum_of_double_word(pc, imm)
         }
     }
     if funct3 == FUNCT3_BNE {
         if registers[rs1] != registers[rs2] {
             // the branch case
-            pc_new = pc + imm
+            pc_new = signed_sum_of_double_word(pc, imm)
         }
     }
     if funct3 == FUNCT3_BLT {
         comparison = signed_LT(registers[rs1], registers[rs2])
         if comparison == 1 {
             // the branch case
-            pc_new = pc + imm
+            pc_new = signed_sum_of_double_word(pc, imm)
         }
     }
     if funct3 == FUNCT3_BGE {
         comparison = signed_LT(registers[rs1], registers[rs2])
         if comparison == 0 {
             // the branch case
-            pc_new = pc + imm
+            pc_new = signed_sum_of_double_word(pc, imm)
         }
     }
     if funct3 == FUNCT3_BLTU {
         if registers[rs1]<registers[rs2] {
             // the branch case
-            pc_new = pc + imm
+            pc_new = signed_sum_of_double_word(pc, imm)
         }
     }
     if funct3 == FUNCT3_BGEU {
         if registers[rs1] >= registers[rs2] {
             // the branch case
-            pc_new = pc + imm
+            pc_new = signed_sum_of_double_word(pc, imm)
         }
     }
 }

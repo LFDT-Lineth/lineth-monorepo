@@ -1,0 +1,17 @@
+[package]
+name = "riscv-tests"
+version = "0.1.0"
+edition = "2021"
+
+# Add a [[bin]] entry for each new .rs test file added to src/
+[[bin]]
+name = "blake"
+path = "src/blake.rs"
+
+[[bin]]
+name = "test"
+path = "src/test.rs"
+
+[profile.release]
+opt-level = 2
+debug = false

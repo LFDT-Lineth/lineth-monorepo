@@ -1,5 +1,6 @@
 include "../memory.zkc"
 include "../utils/sign_extend.zkc"
+include "../utils/signed_sum.zkc"
 
 // Process a RISC-V J-type instruction (JAL) and return the next program counter.
 //
@@ -42,6 +43,6 @@ fn process_J_type_instruction<registers>(instruction_parameters:u25, pc:Address)
     // restructure and 1 left shift the immediate to get imm21
     var imm21:u21 = ((imm20::imm19_12::imm11::imm10_1) as u21) << 1
 
-    registers[rd] = (pc + 4) as DoubleWord
-    pc_new = (pc + sgn_extension_u21_u64(imm21)) as Address
+    registers[rd] = signed_sum_of_double_word(pc, 4)
+    pc_new = signed_sum_of_double_word(pc, sgn_extension_u21_u64(imm21)) as Address
 }

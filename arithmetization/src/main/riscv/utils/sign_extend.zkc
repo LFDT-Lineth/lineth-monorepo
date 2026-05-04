@@ -91,8 +91,8 @@ fn _ashr_u64(value:DoubleWord, shamt:u6) -> (out:DoubleWord) {
 }
 
 // 32-bit arithmetic right shift on low 32 bits of value
-fn _ashr_u32(value:DoubleWord, shamt:u5) -> (out:u32) {
-    var w:u32 = value as u32
+fn _ashr_u32(value:DoubleWord, shamt:u5) -> (out:Word) {
+    var w:u32 = (value & MAX_UINT_32_AS_U64) as Word
     var sign:SignBit = sign_bit_of_word(w)
     var logical:u32 = w >> shamt
     if sign == 0 {

@@ -20,6 +20,8 @@ fn interpreter<ram, registers>(instruction:u32, pc:Address) -> (new_pc:Address) 
     printf "parameters: %b\n", instruction_parameters
     printf "type:       %b\n", instruction_type
 
+    // printf "[SP before execution] : %x\n", registers[2]
+
     // TODO: handle the case where rd = 0: we will handle this in RAM itself, likely by adding an extra read-write pair
     // to reset the value in registers[rd] to 0
 
@@ -48,6 +50,8 @@ fn interpreter<ram, registers>(instruction:u32, pc:Address) -> (new_pc:Address) 
     } else {
         fail
     }
+
+    // printf "[SP after execution] : %x\n", registers[2]
 
     printf "-----------\n"
 }

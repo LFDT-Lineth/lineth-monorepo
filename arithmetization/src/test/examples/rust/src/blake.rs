@@ -1,3 +1,19 @@
+#![no_std]
+#![no_main]
+use core::convert::TryInto;
+
+// Note: to execute from main use the imports below instead,
+// replace _start, exit, panic with main (using process::exit)
+// and run rustc src/blake.rs -o bin/blake && ./bin/blake; echo $?
+
+// use std::process;
+// use std::convert::TryInto;
+
+// fn main() {
+//     // ...
+//     process::exit(code);
+// }
+
 /// Blake2b‑F compression function (used in EIP‑152 precompile, zkVMs, etc.)
 ///
 /// Reference: RFC 7693, plus the Java gist:
@@ -102,38 +118,17 @@ pub fn blake2b_f(rounds: u32, h: &mut [u64; 8], m: &[u64; 16], t: [u64; 2], f: b
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper functions for parsing / encoding (matching the Java gist's test vector)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// Parse a hex string into a Vec<u8>.
-pub fn hex_to_bytes(s: &str) -> Vec<u8> {
-    (0..s.len())
-        .step_by(2)
-        .map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap())
-        .collect()
-}
-
-/// Encode bytes as lowercase hex string.
-pub fn bytes_to_hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{:02x}", b)).collect()
-}
-
 /// Read a little‑endian u64 from a byte slice at offset `i * 8`.
-pub fn read_u64_le(data: &[u8], i: usize) -> u64 {
+fn read_u64_le(data: &[u8], i: usize) -> u64 {
     let off = i * 8;
     u64::from_le_bytes(data[off..off + 8].try_into().unwrap())
 }
 
 /// Write a little‑endian u64 into a byte slice at offset `i * 8`.
-pub fn write_u64_le(data: &mut [u8], i: usize, val: u64) {
+fn write_u64_le(data: &mut [u8], i: usize, val: u64) {
     let off = i * 8;
     data[off..off + 8].copy_from_slice(&val.to_le_bytes());
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// EIP‑152 style interface (input = 213 bytes, output = 64 bytes)
-// ─────────────────────────────────────────────────────────────────────────────
 
 /// Runs the Blake2b‑F compression given the EIP‑152 input format:
 ///
@@ -190,81 +185,88 @@ pub fn blake2b_f_eip152(input: &[u8]) -> Result<[u8; 64], &'static str> {
     Ok(out)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tests (including the EIP‑152 test vector from the Java gist)
-// ─────────────────────────────────────────────────────────────────────────────
+core::arch::global_asm!(
+    ".global _start",
+    "_start:",
+    "li sp, 0x087fffff", // set stack pointer to a known memory region
+    "call main",
+);
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[no_mangle]
+fn main() -> ! {
+    // EIP-152 test vector as raw bytes — no heap allocation needed
+    let input: [u8; 213] = [
+        0x00, 0x00, 0x00, 0x0c, // rounds = 12
+        // h (64 bytes)
+        0x48, 0xc9, 0xbd, 0xf2, 0x67, 0xe6, 0x09, 0x6a,
+        0x3b, 0xa7, 0xca, 0x84, 0x85, 0xae, 0x67, 0xbb,
+        0x2b, 0xf8, 0x94, 0xfe, 0x72, 0xf3, 0x6e, 0x3c,
+        0xf1, 0x36, 0x1d, 0x5f, 0x3a, 0xf5, 0x4f, 0xa5,
+        0xd1, 0x82, 0xe6, 0xad, 0x7f, 0x52, 0x0e, 0x51,
+        0x1f, 0x6c, 0x3e, 0x2b, 0x8c, 0x68, 0x05, 0x9b,
+        0x6b, 0xbd, 0x41, 0xfb, 0xab, 0xd9, 0x83, 0x1f,
+        0x79, 0x21, 0x7e, 0x13, 0x19, 0xcd, 0xe0, 0x5b,
+        // m (128 bytes)
+        0x61, 0x62, 0x63, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        // t[0] (8 bytes)
+        0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        // t[1] (8 bytes)
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        // f = true
+        0x01,
+    ];
 
-    #[test]
-    fn test_eip152_vector() {
-        // Test vector from EIP‑152 / the Java gist
-        let input_hex = concat!(
-            "0000000c",                                                                 // rounds = 12
-            "48c9bdf267e6096a3ba7ca8485ae67bb2bf894fe72f36e3cf1361d5f3af54fa5",         // h (part 1)
-            "d182e6ad7f520e511f6c3e2b8c68059b6bbd41fbabd9831f79217e1319cde05b",         // h (part 2)
-            "6162630000000000000000000000000000000000000000000000000000000000",         // m (part 1)
-            "0000000000000000000000000000000000000000000000000000000000000000",         // m (part 2)
-            "0000000000000000000000000000000000000000000000000000000000000000",         // m (part 3)
-            "0000000000000000000000000000000000000000000000000000000000000000",         // m (part 4)
-            "0300000000000000",                                                         // t[0]
-            "0000000000000000",                                                         // t[1]
-            "01"                                                                        // f = true
+    // expected output from EIP-152 test vector
+    let expected: [u8; 64] = [
+        0xba, 0x80, 0xa5, 0x3f, 0x98, 0x1c, 0x4d, 0x0d,
+        0x6a, 0x27, 0x97, 0xb6, 0x9f, 0x12, 0xf6, 0xe9,
+        0x4c, 0x21, 0x2f, 0x14, 0x68, 0x5a, 0xc4, 0xb7,
+        0x4b, 0x12, 0xbb, 0x6f, 0xdb, 0xff, 0xa2, 0xd1,
+        0x7d, 0x87, 0xc5, 0x39, 0x2a, 0xab, 0x79, 0x2d,
+        0xc2, 0x52, 0xd5, 0xde, 0x45, 0x33, 0xcc, 0x95,
+        0x18, 0xd3, 0x8a, 0xa8, 0xdb, 0xf1, 0x92, 0x5a,
+        0xb9, 0x23, 0x86, 0xed, 0xd4, 0x00, 0x99, 0x23,
+    ];
+    
+
+    let code = match blake2b_f_eip152(&input) {
+        Ok(result) if result == expected => 0, // success
+        Ok(_) => 1,                            // wrong result
+        Err(_) => 2,                           // compression failed
+    };
+
+    exit(code)
+}
+
+fn exit(code: i32) -> ! {
+    unsafe {
+        core::arch::asm!(
+            "mv a0, {0}",  // exit code
+            "li a7, 93",   // syscall number for exit
+            "ecall",
+            in(reg) code,
+            options(noreturn)
         );
-
-        let expected_hex = concat!(
-            "ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d1",
-            "7d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923"
-        );
-
-        let input = hex_to_bytes(input_hex);
-        let result = blake2b_f_eip152(&input).expect("compression failed");
-        let result_hex = bytes_to_hex(&result);
-
-        assert_eq!(result_hex, expected_hex);
-    }
-
-    #[test]
-    fn test_g_function() {
-        // Simple sanity check for g function
-        let mut v: [u64; 16] = [
-            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-        ];
-        g(&mut v, 0, 4, 8, 12, 0x100, 0x200);
-        // Just check it doesn't panic and modifies v
-        assert_ne!(v[0], 0);
-        assert_ne!(v[4], 4);
-        assert_ne!(v[8], 8);
-        assert_ne!(v[12], 12);
     }
 }
 
-fn main() {
-    // Quick demo: run the EIP‑152 test vector
-    let input_hex = concat!(
-        "0000000c",
-        "48c9bdf267e6096a3ba7ca8485ae67bb2bf894fe72f36e3cf1361d5f3af54fa5",
-        "d182e6ad7f520e511f6c3e2b8c68059b6bbd41fbabd9831f79217e1319cde05b",
-        "6162630000000000000000000000000000000000000000000000000000000000",
-        "0000000000000000000000000000000000000000000000000000000000000000",
-        "0000000000000000000000000000000000000000000000000000000000000000",
-        "0000000000000000000000000000000000000000000000000000000000000000",
-        "0300000000000000",
-        "0000000000000000",
-        "01"
-    );
-
-    let input = hex_to_bytes(input_hex);
-    println!("Input ({} bytes): {}", input.len(), input_hex);
-
-    match blake2b_f_eip152(&input) {
-        Ok(result) => {
-            println!("Output: {}", bytes_to_hex(&result));
-        }
-        Err(e) => {
-            eprintln!("Error: {}", e);
-        }
-    }
+// required by the compiler even if unreachable — no std means no default panic handler
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! {
+    exit(3);
 }

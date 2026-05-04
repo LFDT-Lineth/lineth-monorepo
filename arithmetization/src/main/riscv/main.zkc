@@ -14,25 +14,34 @@ include "memory.zkc"
 // TODO @Ghost
 fn main<ram, registers>() {
 
-    var pc:Address = ENTRY_POINT
+    var pc:Address = entry_point[0]
     var opcode:Opcode
     var instruction:Instruction
-    var length:Address = riscV_program_length[0]
+    var program_len:Length = riscV_program_length[0]
+    var in_bytes_len:Length = in_bytes_length[0]
+    var program_off:Offset = riscV_program_offset[0]
+    var in_bytes_off:Offset = in_bytes_offset[0]
+    var clock_cycle:u32 = 0
 
     // copy public inputs and r5-program into the RAM
-    for i:Address = 0; i<riscV_program_length[0] as Address; i = i + 1 {
-        write_8((PROGRAM_OFFSET + i) as Address, riscV_program[i])
+    for i:Address = 0; i<program_len; i = i + 1 {
+        write_8(program_off + i, riscV_program[i])
     }
-    for j:Address = 0; j<in_bytes_length[0]; j = j + 1 {
-        write_8((IN_BYTES_OFFSET + j) as Address, in_bytes[j])
+    for j:Address = 0; j<in_bytes_len; j = j + 1 {
+        write_8(in_bytes_off + j, in_bytes[j])
     }
 
-    printf "program length=%d\n", riscV_program_length[0]
+    printf "program length=%d\n", program_len
 
     // We interpret pc == MAX_UINT_64 as the stop signal, which is set by the ecall instruction
     while pc != MAX_UINT_64 {
         printf "PC=%x\n", pc
         instruction = read_32(pc) as Instruction
+
+        // clock cycle starts at 1
+        clock_cycle = clock_cycle + 1
+        printf "clock cycle: %d\n", clock_cycle
+
         pc = interpreter(instruction, pc)
     }
 }

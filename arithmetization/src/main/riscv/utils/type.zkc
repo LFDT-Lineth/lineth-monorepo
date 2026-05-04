@@ -27,3 +27,6 @@ type DoubleWordMO = u63
 type UnsignedWord = u32
 type UnsignedDoubleWord = u64
 
+type Length = u64
+type Offset = u64
+

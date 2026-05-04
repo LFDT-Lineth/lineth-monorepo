@@ -1,6 +1,7 @@
 include "../memory.zkc"
 include "../ram/write.zkc"
 include "../utils/constants.zkc"
+include "../utils/signed_sum.zkc"
 
 // Process a RISC-V S-type instruction, writing a register value to memory.
 //
@@ -43,31 +44,35 @@ fn process_S_type_instruction<ram, registers>(instruction_parameters:u25) {
 
     imm_sign::uimm6::rs2::rs1::funct3::uimm5 = instruction_parameters
 
-    // TODO: uniform this across different files
-    var imm:u64
-    if imm_sign == 1 {
-        imm = DWORD_SIGN_EXT_PREFIX_52_ONES::imm_sign::uimm6::uimm5
-    } else {
-        imm = (imm_sign::uimm6::uimm5) as u64
-    }
+    // TODO: do we just want to use a mask instead?
+    var signext_imm12_64:DoubleWord = sgn_extension_u12_u64(imm_sign::uimm6::uimm5)
+
+    // var signext_imm12_64:DoubleWord
+    // if imm_sign == 1 {
+    //    signext_imm12_64 = DWORD_SIGN_EXT_PREFIX_52_ONES::imm_sign::uimm6::uimm5
+    //} else {
+    //    signext_imm12_64 = (imm_sign::uimm6::uimm5) as u64
+    //}
+
+    var mem_address:Address = signed_sum_of_double_word(registers[rs1], signext_imm12_64) as Address
 
     if funct3 == FUNCT3_SB {
         // Store byte (u8)
-        write_8(registers[rs1] + imm, (registers[rs2] & (0xFF as u64)) as u8)
+        write_8(mem_address, (registers[rs2] & (0xFF as u64)) as u8)
     }
 
     if funct3 == FUNCT3_SH {
         // Store halfword (u16)
-        write_16(registers[rs1] + imm, (registers[rs2] & (0xFFFF as u64)) as u16)
+        write_16(mem_address, (registers[rs2] & (0xFFFF as u64)) as u16)
     }
 
     if funct3 == FUNCT3_SW {
         // Store word (u32)
-        write_32(registers[rs1] + imm, (registers[rs2] & (0xFFFFFFFF as u64)) as u32)
+        write_32(mem_address, (registers[rs2] & (0xFFFFFFFF as u64)) as u32)
     }
 
     if funct3 == FUNCT3_SD {
         // Store doubleword (u64)
-        write_64(registers[rs1] + imm, registers[rs2])
+        write_64(mem_address, registers[rs2])
     }
 }

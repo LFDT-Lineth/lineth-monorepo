@@ -12,6 +12,15 @@ pub input in_bytes(address:Address) -> (bytes:u8)
 // Stores the number of input bytes provided.
 pub input in_bytes_length(pi:u1) -> (length:Address)
 
+// Stores the offset in RAM where the RISC-V executable binary is stored
+pub input riscV_program_offset(i:u1) -> (address:Address)
+
+// Stores the offset in RAM where the input bytes for the RISC-V executable are stored
+pub input in_bytes_offset(i:u1) -> (address:Address)
+
+// Stores the entry point of the RISC-V executable binary
+pub input entry_point(i:u1) -> (address:Address)
+
 // Represents the available Random Access Memory (RAM) for the guest program.
 // This will act as the program "heap" and will contain, amongst other things,
 // the program executable itself and the program inputs. 

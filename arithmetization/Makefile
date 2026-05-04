@@ -14,7 +14,7 @@ GO_CORSET_REPO ?= https://github.com/consensys/go-corset.git
 GO_CORSET_REF_FOR_ZKC ?=
 
 # Used to install go-corset
-GO_CORSET_VERSION ?= v1.2.11
+GO_CORSET_VERSION ?= v1.2.12
 
 ZKC_FILES := $(shell find $(MAKEFILE_DIR)src/main/riscv/* -name "*.zkc")
 ZKC_MAIN := $(MAKEFILE_DIR)src/main/riscv/main.zkc

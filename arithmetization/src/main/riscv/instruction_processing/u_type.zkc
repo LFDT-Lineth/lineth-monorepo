@@ -1,6 +1,7 @@
 include "../memory.zkc"
 include "../utils/constants.zkc"
 include "../utils/sign_extend.zkc"
+include "../utils/signed_sum.zkc"
 
 // Process a RISC-V U-type instruction, writing an upper-immediate value to a register.
 //
@@ -37,12 +38,13 @@ fn process_U_type_instruction<registers>(opcode:Opcode, instruction_parameters:u
     var tmp:DoubleWord
 
     imm20::rd = instruction_parameters
-    tmp = sgn_extension_u32_u64((imm20 << 12) as u32)
+    tmp = sgn_extension_u32_u64(((imm20 as u32) << 12) as u32)
 
     if opcode == AUIPC {
-        tmp = (tmp + pc) as DoubleWord
+        tmp = signed_sum_of_double_word(tmp, pc) as DoubleWord
     }
 
+    // Note: the definition of tmp already works for the LUI opcode
     registers[rd] = tmp as DoubleWord
 }
 
