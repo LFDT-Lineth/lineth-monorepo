@@ -14,17 +14,17 @@ catalog:
   '@typechain/ethers-v6': 0.5.1
   '@types/jest': 30.0.0
   '@types/yargs': 17.0.35
-  axios: 1.15.0
-  dotenv: 17.3.1
+  axios: 1.15.2
+  dotenv: 17.4.2
   eslint: 9.39.4
   ethers: 6.16.0
   express: 5.2.1
   jest: 30.3.0
-  jest-mock-extended: 4.0.0
+  jest-mock-extended: 4.0.1
   neverthrow: 8.2.0
   prettier: 3.8.1
   prom-client: 15.1.3
-  ts-jest: 29.4.6
+  ts-jest: 29.4.9
   tsup: 8.5.1
   tsx: 4.21.0
   typechain: 8.3.2
@@ -32,7 +32,7 @@ catalog:
   viem: 2.47.5
   winston: 3.19.0
   yargs: 18.0.0
-  zod: 4.3.6
+  zod: 4.4.1
 
 ignoredBuiltDependencies:
   - '@arbitrum/nitro-contracts'
@@ -64,14 +64,19 @@ onlyBuiltDependencies:
 
 overrides:
   "@hono/node-server@<1.19.10": ">=1.19.10"
+  '@hono/node-server@<1.19.13': '1.19.13'
   axios@<0.30.0: ">=0.30.0"
   axios@<=0.30.2: ">=0.30.3"
   axios@>=0.8.1 <0.28.0: ">=0.28.0"
   axios@>=1.0.0 <1.12.0: ">=1.12.0"
+  axios@>=1.0.0 <1.15.0: '1.15.2'
   axios@>=1.0.0 <1.8.2: ">=1.8.2"
   axios@>=1.0.0 <=1.13.4: ">=1.13.5"
   axios@>=1.3.2 <=1.7.3: ">=1.7.4"
   bn.js@<4.12.3: ">=4.12.3"
+  brace-expansion@<1.1.13: '1.1.13'
+  brace-expansion@>=2.0.0 <2.0.3: '2.0.3'
+  brace-expansion@>=4.0.0 <5.0.5: '5.0.5'
   cookie@<0.7.0: ">=0.7.0"
   effect@<3.20.0: ">=3.20.0"
   elliptic@<6.5.6: ">=6.5.6"
@@ -82,14 +87,29 @@ overrides:
   elliptic@>=5.2.1 <=6.5.6: ">=6.5.7"
   esbuild@<=0.24.2: ">=0.25.0"
   eslint: "9.39.4"
+  fast-xml-parser@>=4.0.0-beta.3 <5.7.0: ">=5.7.0"
   fast-xml-parser@>=4.0.0-beta.3 <=5.5.5: ">=5.5.6"
   fast-xml-parser@>=4.0.0-beta.3 <=5.5.6: ">=5.5.7"
+  follow-redirects@<=1.15.11: '1.16.0'
   glob@>=10.2.0 <10.5.0: ">=10.5.0"
+  handlebars@>=4.0.0 <4.7.9: '4.7.9'
+  handlebars@>=4.0.0 <=4.7.8: '4.7.9'
+  handlebars@>=4.6.0 <=4.7.8: '4.7.9'
   hono@<4.11.10: ">=4.11.10"
   hono@<4.11.7: ">=4.11.7"
+  hono@<4.12.12: '4.12.16'
+  hono@<4.12.14: '4.12.16'
   hono@<4.12.4: ">=4.12.4"
   hono@<4.12.7: ">=4.12.7"
+  hono@>=4.0.0 <=4.12.11: '4.12.16'
+  lodash@<=4.17.23: '4.18.1'
   lodash@>=4.0.0 <=4.17.22: ">=4.17.23"
+  lodash@>=4.0.0 <=4.17.23: '4.18.1'
+  path-to-regexp@>=8.0.0 <8.4.0: '8.4.2'
+  picomatch@<2.3.2: '2.3.2'
+  picomatch@>=4.0.0 <4.0.4: '4.0.4'
+  postcss@<8.5.10: '8.5.13'
+  serialize-javascript@<7.0.5: '7.0.5'
   serialize-javascript@<=7.0.2: ">=7.0.3"
   tar@<7.5.7: ">=7.5.7"
   tar@<7.5.8: ">=7.5.8"
@@ -98,13 +118,15 @@ overrides:
   tar@<=7.5.3: ">=7.5.4"
   tar@<=7.5.9: ">=7.5.10"
   tmp@<=0.2.3: ">=0.2.4"
-  typescript-eslint: "8.55.0"
+  typescript-eslint: "8.59.1"
   undici: "6.24.1"
+  uuid@<11.1.0: '11.1.0'
   valibot@>=0.31.0 <1.2.0: ">=1.2.0"
   ws@>=7.0.0 <7.5.10: ">=7.5.10"
   ws@>=8.0.0 <8.17.1: ">=8.17.1"
   xml2js@<0.5.0: ">=0.5.0"
-  zod: "4.3.6"
+  yaml@>=1.0.0 <1.10.3: '1.10.3'
+  zod: "4.4.1"
 
 strictDepBuilds: true
 trustPolicy: no-downgrade
@@ -118,3 +140,11 @@ trustPolicyExclude:
   # Pulled via ethers -> @types/node@22.7.5 during legacy deploy resolution.
   # Excluded to keep deploy working while trustPolicy remains enabled for all other packages.
   - undici-types@6.19.8
+  # Already present in the lockfile via @lidofinance/lsv-cli -> WalletConnect; lacks provenance evidence.
+  - "@noble/curves@1.8.0"
+  # Already present in the lockfile via @lidofinance/lsv-cli -> WalletConnect; lacks provenance evidence.
+  - "@noble/hashes@1.7.0"
+  # Already present in the lockfile via Hardhat/Sass tooling; lacks provenance evidence.
+  - "chokidar@4.0.3"
+  # Already present in the lockfile via WalletConnect logging; lacks provenance evidence.
+  - "slow-redact@0.3.2"

@@ -41,6 +41,6 @@
     "viem": "2.47.5"
   },
   "dependencies": {
-    "koffi": "2.15.2"
+    "koffi": "2.16.1"
   }
 }
