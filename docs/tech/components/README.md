@@ -111,15 +111,15 @@ root package.json
 
 ### Kotlin/Java (Gradle)
 
-- Java 21 required
-- Gradle 8.5+ for building
+- Java 25 required
+- Gradle 9.4+ for building
 - Run tests: `./gradlew test`
 - Build all: `./gradlew build`
 - Code style: ktlint for Kotlin, Google Java Format for Java
 
 ### Go
 
-- Go 1.24.6 required
+- Go 1.25.7 required
 - Build: `go build ./...`
 - Test: `go test ./...`
 - Uses gnark library for ZK circuits

@@ -2,10 +2,10 @@
 
 ### Development setup
 
-#### Step 1: Install Java 21
+#### Step 1: Install Java 25
 
 ```
-brew install openjdk@21
+brew install openjdk@25
 ```
 
 #### Step 2: Install the Go toolchain

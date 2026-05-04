@@ -22,7 +22,7 @@
 
 ## Development Setup
 
-### Install Java 21
+### Install Java 25
 
 ### Native Lib Prerequisites
 

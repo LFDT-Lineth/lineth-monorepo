@@ -54,7 +54,7 @@ Linea zkEVM monorepo — the principal repository for [Linea](https://linea.buil
 | pnpm | >= 10.32.1 | Enforced via `preinstall` |
 | JDK | 25 | Coordinator, Besu plugins, transaction-exclusion-api — enforced by Gradle; JDK 25+ required |
 | Gradle | 9.4+ | use ./gradlew <task> |
-| Go | 1.24.6 | Prover |
+| Go | 1.25.7 | Prover |
 | Docker | 24+ | Local stack, CI |
 | Docker Compose | 2.19+ | Multi-service orchestration |
 | Make | 3.81+ | Environment management |
@@ -340,7 +340,7 @@ These require human approval and follow the release process:
 |------|------|-------|---------|
 | `contracts` | Smart contracts | Solidity 0.8.33, Hardhat, Foundry | Core protocol contracts (rollup, messaging, bridge, tokens) |
 | `coordinator` | Backend service | Kotlin 2.3.0, Gradle, Vertx | Orchestrates proof submission, blob submission, finalization |
-| `prover` | Backend service | Go 1.24.6 | ZK proof generation (gnark, gnark-crypto) |
+| `prover` | Backend service | Go 1.25.7 | ZK proof generation (gnark, gnark-crypto) |
 | `postman` | Backend service | TypeScript, Express, TypeORM | Bridge message execution service |
 | `sdk/sdk-core` | Library | TypeScript, tsup | Core SDK utilities and types |
 | `sdk/sdk-ethers` | Library | TypeScript, ethers.js 6 | SDK for ethers.js integration |

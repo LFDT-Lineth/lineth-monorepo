@@ -468,7 +468,7 @@ pnpm clean
 
 1. Open project root
 2. Import Gradle project
-3. Set JDK 21
+3. Set JDK 25
 4. Install Kotlin plugin
 
 ### VS Code (TypeScript)
