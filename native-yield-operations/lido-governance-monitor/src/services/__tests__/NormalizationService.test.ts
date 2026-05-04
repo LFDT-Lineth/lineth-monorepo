@@ -88,6 +88,37 @@ describe("NormalizationService", () => {
       // Assert
       expect(result).toBe('It\'s a "test"');
     });
+
+    it("preserves representative Discourse cooked HTML text formatting", () => {
+      // Arrange
+      const html =
+        "<h2>TLDR</h2><p>Seek grant approvals.</p><ul><li>First item</li><li>Second item<br>continued</li></ul>" +
+        '<p>Intro <a href="https://research.lido.fi/t/example/1">link</a></p>' +
+        '<p><img src="https://example.com/chart.png" alt="Chart Template"> 1090×545 62.5 KB</p>' +
+        "<blockquote><p>Quoted <strong>question</strong></p></blockquote><pre><code>line 1\nline 2</code></pre>";
+
+      // Act
+      const result = service.stripHtml(html);
+
+      // Assert
+      expect(result).toBe(
+        [
+          "TLDR",
+          "Seek grant approvals.",
+          " * First item",
+          "",
+          " * Second item",
+          "   continued",
+          "",
+          "Intro link [https://research.lido.fi/t/example/1]",
+          "Chart Template [https://example.com/chart.png] 1090×545 62.5 KB",
+          "> Quoted question",
+          "",
+          "line 1",
+          "line 2",
+        ].join("\n"),
+      );
+    });
   });
 
   describe("normalizeDiscourseProposal", () => {

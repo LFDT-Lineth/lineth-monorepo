@@ -26,7 +26,7 @@
     "@prisma/adapter-pg": "7.8.0",
     "@prisma/client": "7.8.0",
     "dotenv": "catalog:",
-    "html-to-text": "9.0.5",
+    "html-to-text": "10.0.0",
     "neverthrow": "catalog:",
     "prisma": "7.8.0",
     "viem": "catalog:",
