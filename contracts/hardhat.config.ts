@@ -33,7 +33,7 @@ const requireFromConfig = createRequire(__filename);
 /** Lazy `require` avoids HH9 (signer-ui-bridge pulls in `hardhat`) and avoids native `import()` of `.ts`, which uses Node ESM resolution (directory `common/` vs `common.ts`, CJS `hardhat`, type-only `ethers` exports). */
 subtask(TASK_DEPLOY_RUN_DEPLOY).setAction(async (args, hre, runSuper) => {
   const { signerUiHardhatDeployRunSubtaskAction } = requireFromConfig(
-    "./scripts/hardhat/signer-ui-bridge.ts",
+    "./scripts/hardhat/signer-ui-bridge",
   ) as typeof import("./scripts/hardhat/signer-ui-bridge");
   return signerUiHardhatDeployRunSubtaskAction(args, hre, runSuper);
 });

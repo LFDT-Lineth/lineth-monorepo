@@ -266,7 +266,7 @@ services:
   prover-v3: # prover compatible with the traces from zkbesu
     container_name: prover-v3
     hostname: prover-v3
-    image: consensys/linea-prover:${LINEA_PROVER_TAG:-7d56432}
+    image: consensys/linea-prover:${LINEA_PROVER_TAG:-4ddbeba}
     platform: linux/amd64
     # to avoid spinning up on CI for now
     profiles: [ "l2" ]
@@ -287,7 +287,7 @@ services:
   postman:
     container_name: postman
     hostname: postman
-    image: consensys/linea-postman:${LINEA_POSTMAN_TAG:-fe6de52}
+    image: consensys/linea-postman:${LINEA_POSTMAN_TAG:-4ddbeba}
     profiles: [ "l2", "debug" ]
     restart: on-failure
     ports:
@@ -307,7 +307,7 @@ services:
   coordinator:
     hostname: coordinator
     container_name: coordinator
-    image: consensys/linea-coordinator:${LINEA_COORDINATOR_TAG:-37e5396}
+    image: consensys/linea-coordinator:${LINEA_COORDINATOR_TAG:-4ddbeba}
     profiles: [ "l2", "debug" ]
     depends_on:
       l2-genesis-initialization:
@@ -431,7 +431,7 @@ services:
       - l1network
 
   shomei:
-    image: consensys/linea-shomei:${LINEA_SHOMEI_TAG:-3.1.0}
+    image: consensys/linea-shomei:${LINEA_SHOMEI_TAG:-3.2.3}
     hostname: shomei
     container_name: shomei
     profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
@@ -466,7 +466,7 @@ services:
   #      - ../tmp/local/shomei:/data/shomei/:z
 
   shomei-frontend:
-    image: consensys/linea-shomei:${LINEA_SHOMEI_TAG:-3.1.0}
+    image: consensys/linea-shomei:${LINEA_SHOMEI_TAG:-3.2.3}
     hostname: shomei-frontend
     container_name: shomei-frontend
     profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
@@ -510,7 +510,7 @@ services:
   transaction-exclusion-api:
     hostname: transaction-exclusion-api
     container_name: transaction-exclusion-api
-    image: consensys/linea-transaction-exclusion-api:${LINEA_TRANSACTION_EXCLUSION_API_TAG:-7d56432}
+    image: consensys/linea-transaction-exclusion-api:${LINEA_TRANSACTION_EXCLUSION_API_TAG:-4ddbeba}
     profiles: [ "l2", "debug" ]
     restart: on-failure
     depends_on:
@@ -658,7 +658,7 @@ services:
       - ../besu-plugins/state-recovery/besu-plugin/build/libs/linea-staterecovery-besu-plugin-SNAPSHOT.jar:/opt/besu/plugins/linea-staterecovery-besu-plugin-SNAPSHOT.jar
 
   shomei-sr:
-    image: consensys/linea-shomei:${LINEA_SHOMEI_TAG:-3.1.0}
+    image: consensys/linea-shomei:${LINEA_SHOMEI_TAG:-3.2.3}
     hostname: shomei-sr
     container_name: shomei-sr
     profiles: [ "staterecovery", "external-to-monorepo" ]

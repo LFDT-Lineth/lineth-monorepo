@@ -9,7 +9,7 @@ let signerUiBridgeWorkflowApiPromise: Promise<SignerUiBridgeWorkflowApi | null> 
 
 async function loadSignerUiBridgeWorkflowApi(): Promise<SignerUiBridgeWorkflowApi | null> {
   if (!signerUiBridgeWorkflowApiPromise) {
-    signerUiBridgeWorkflowApiPromise = import("../../scripts/hardhat/signer-ui-bridge")
+    signerUiBridgeWorkflowApiPromise = import("../../scripts/hardhat/signer-ui-bridge.js")
       .then((mod) => ({
         setUiWorkflowStatus: mod.setUiWorkflowStatus,
         clearUiWorkflowStatus: mod.clearUiWorkflowStatus,

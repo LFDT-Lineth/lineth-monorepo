@@ -339,6 +339,17 @@ tasks.register("composePullLocalStackStartedImages", Exec) {
   }
 }
 
+// Seed the gitignored runtime deny-list before any compose-up so the sequencer's
+// bind-mount finds a regular file (not an auto-created directory) on fresh checkouts.
+// Delegates to the Makefile target so Make and Gradle stay in lockstep.
+def seedSequencerDenyList = tasks.register("seedSequencerDenyList", Exec) {
+  workingDir rootDir
+  commandLine 'make', 'seed-deny-list'
+}
+tasks.matching { it.name.endsWith("ComposeUp") }.configureEach {
+  dependsOn(seedSequencerDenyList)
+}
+
 static Boolean hasKotlinPlugin(Project proj) {
   return proj.plugins.hasPlugin("org.jetbrains.kotlin.jvm")
 }

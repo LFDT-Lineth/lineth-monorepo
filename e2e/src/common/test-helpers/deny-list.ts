@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "fs";
+import { closeSync, openSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { resolve } from "path";
 
 import { SequencerPluginName } from "../../config/clients/linea-rpc/sequencer-plugins";
@@ -8,14 +8,10 @@ import type { PluginsReloadPluginConfigParameters } from "../../config/clients/l
 
 const DEFAULT_DENY_LIST_PATH = resolve(__dirname, "../../../..", "docker/config/linea-besu-sequencer/deny-list.txt");
 const NEWLINE = "\n";
+const FILE_LOCK_RETRY_MS = 25;
+const FILE_LOCK_TIMEOUT_MS = 30_000;
+
 let denyListOperationQueue: Promise<void> = Promise.resolve();
-
-type DenyListState = {
-  baseAddresses: string[];
-  dynamicAddressCounts: Map<string, number>;
-};
-
-const denyListStates = new Map<string, DenyListState>();
 
 type DenyListControlClient = {
   pluginsReloadPluginConfig: (args: PluginsReloadPluginConfigParameters) => Promise<unknown>;
@@ -34,40 +30,58 @@ function normalizeAddresses(addresses: readonly string[]): string[] {
   return [...new Set(toLowercaseLines(addresses).filter(Boolean))];
 }
 
-function parseDenyListContent(content: string): string[] {
-  return normalizeAddresses(content.split(NEWLINE));
-}
-
-function getOrCreateDenyListState(denyListPath: string): DenyListState {
-  const existingState = denyListStates.get(denyListPath);
-  if (existingState) {
-    return existingState;
-  }
-
-  const state: DenyListState = {
-    baseAddresses: parseDenyListContent(readFileSync(denyListPath, "utf-8")),
-    dynamicAddressCounts: new Map<string, number>(),
-  };
-  denyListStates.set(denyListPath, state);
-  return state;
-}
-
-function getEffectiveDenyListAddresses(state: DenyListState): string[] {
-  const addresses = [...state.baseAddresses];
-  const existingAddresses = new Set(state.baseAddresses);
-
-  for (const [address, count] of state.dynamicAddressCounts) {
-    if (count > 0 && !existingAddresses.has(address)) {
-      addresses.push(address);
+// Cross-worker file lock using O_EXCL: openSync('wx') atomically creates the lockfile or
+// fails if it exists. Coordinates the read-modify-write of the deny-list across all Jest
+// workers (and any other process that respects the same lockfile).
+async function acquireFileLock(denyListPath: string): Promise<() => void> {
+  const lockfile = `${denyListPath}.lock`;
+  const start = Date.now();
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    try {
+      const fd = openSync(lockfile, "wx");
+      closeSync(fd);
+      return () => {
+        try {
+          unlinkSync(lockfile);
+        } catch {
+          // already removed
+        }
+      };
+    } catch {
+      if (Date.now() - start > FILE_LOCK_TIMEOUT_MS) {
+        throw new Error(`acquireFileLock: timed out waiting for ${lockfile}`);
+      }
+      await waitMs(FILE_LOCK_RETRY_MS);
     }
   }
-
-  return addresses;
 }
 
-function writeDenyListState(denyListPath: string, state: DenyListState): void {
-  const addresses = getEffectiveDenyListAddresses(state);
+function readFileAddresses(denyListPath: string): string[] {
+  return normalizeAddresses(readFileSync(denyListPath, "utf-8").split(NEWLINE));
+}
+
+function writeFileAddresses(denyListPath: string, addresses: readonly string[]): void {
   writeFileSync(denyListPath, addresses.length > 0 ? `${addresses.join(NEWLINE)}${NEWLINE}` : "");
+}
+
+async function mutateDenyListFile(
+  denyListPath: string,
+  toAdd: readonly string[],
+  toRemove: readonly string[],
+): Promise<void> {
+  if (toAdd.length === 0 && toRemove.length === 0) {
+    return;
+  }
+  const release = await acquireFileLock(denyListPath);
+  try {
+    const current = new Set(readFileAddresses(denyListPath));
+    for (const a of toAdd) current.add(a);
+    for (const a of toRemove) current.delete(a);
+    writeFileAddresses(denyListPath, [...current]);
+  } finally {
+    release();
+  }
 }
 
 export async function reloadDenyList(client: DenyListControlClient): Promise<void> {
@@ -84,13 +98,7 @@ async function addToDenyListUnlocked(
   normalizedAddresses: readonly string[],
   denyListPath: string,
 ): Promise<void> {
-  const state = getOrCreateDenyListState(denyListPath);
-
-  for (const address of normalizedAddresses) {
-    state.dynamicAddressCounts.set(address, (state.dynamicAddressCounts.get(address) ?? 0) + 1);
-  }
-
-  writeDenyListState(denyListPath, state);
+  await mutateDenyListFile(denyListPath, normalizedAddresses, []);
   await waitMs(DENY_LIST_FILE_SYNC_WAIT_MS);
   await reloadDenyList(client);
 }
@@ -100,19 +108,7 @@ async function removeFromDenyListUnlocked(
   normalizedAddresses: readonly string[],
   denyListPath: string,
 ): Promise<void> {
-  const state = getOrCreateDenyListState(denyListPath);
-
-  for (const address of normalizedAddresses) {
-    const currentCount = state.dynamicAddressCounts.get(address) ?? 0;
-    if (currentCount <= 1) {
-      state.dynamicAddressCounts.delete(address);
-      continue;
-    }
-
-    state.dynamicAddressCounts.set(address, currentCount - 1);
-  }
-
-  writeDenyListState(denyListPath, state);
+  await mutateDenyListFile(denyListPath, [], normalizedAddresses);
   await waitMs(DENY_LIST_FILE_SYNC_WAIT_MS);
   await reloadDenyList(client);
 }

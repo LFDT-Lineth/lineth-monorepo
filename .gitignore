@@ -175,3 +175,8 @@ e2e/e2e-runtime-report.html
 e2e/e2e-runtime-report-summary.json
 /linea-besu/.besu-resolved
 .zig-cache/
+
+# Runtime sequencer deny-list, seeded empty by Makefile/gradle before each env start
+# and mutated by E2E tests via withDenyListAddresses. Never commit.
+docker/config/linea-besu-sequencer/deny-list.txt
+docker/config/linea-besu-sequencer/deny-list.txt.lock

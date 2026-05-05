@@ -24,6 +24,7 @@ const INCLUDE_FILES: string[] = [
   "Poseidon2",
   "TestEIP7702Delegation",
   "ForcedTransactionGateway",
+  "AddressFilter",
   "ExcludedPrecompiles",
   "MultiMessageSender",
 ];

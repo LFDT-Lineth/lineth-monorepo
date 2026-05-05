@@ -100,7 +100,7 @@ backoff-delay = "PT1S"
 failures-warning-threshold = 10
 
 [state-manager]
-version = "3.1.0"
+version = "3.2.3"
 endpoints = ["http://shomei:8888/"]
 request-limit-per-endpoint = 3
 [state-manager.request-retries]
@@ -255,11 +255,21 @@ trust-store-password = "changeit"
 
 [forced-transactions]
 disabled = true
-l1-highest-block-tag = "SAFE"
+l1-highest-block-tag = "LATEST"
 processing-tick-interval = "PT5S"
 processing-delay = "PT0S"
 sequencer-endpoint = "http://sequencer:8545/"
 invalidity-proof-check-interval = "PT10S"
+
+[forced-transactions.l1-event-scraping]
+# Polling interval must be faster than L1 block production so the EthLogsFilterSubscription
+# can reach `CaughtUp` state. Otherwise startUpScanFinished never flips to true and the
+# conflation safe-block lock can only ever advance, never release — see ConflationServiceImpl
+# pause "(likely paused by forced transactions)".
+polling-interval = "PT0.2S"
+polling-timeout = "PT10S"
+eth-logs-search-success-backoff-delay = "PT0.5S"
+eth-logs-search-block-chunk-size = 1000
 
 [l2-network-gas-pricing] # old [dynamic-gas-price-service]
 disabled = false
