@@ -78,7 +78,10 @@ describe("BeaconNodeApiClient", () => {
 
       // Assert
       expect(result).toBeUndefined();
-      expect(logger.error).toHaveBeenCalledWith("Failed GET request to", EXPECTED_URL);
+      expect(logger.error).toHaveBeenCalledWith("Failed to fetch pending partial withdrawals.", {
+        method: "GET",
+        url: EXPECTED_URL,
+      });
     });
 
     it("return undefined when data array is null", async () => {
@@ -168,7 +171,10 @@ describe("BeaconNodeApiClient", () => {
 
       // Assert
       expect(result).toBeUndefined();
-      expect(logger.error).toHaveBeenCalledWith("Failed GET request to", EXPECTED_URL);
+      expect(logger.error).toHaveBeenCalledWith("Failed to fetch pending deposits.", {
+        method: "GET",
+        url: EXPECTED_URL,
+      });
     });
 
     it("return undefined when data array is null", async () => {
@@ -383,7 +389,10 @@ describe("BeaconNodeApiClient", () => {
 
       // Assert
       expect(result).toBeUndefined();
-      expect(logger.error).toHaveBeenCalledWith(`Invalid slot value: invalid from`, EXPECTED_URL);
+      expect(logger.error).toHaveBeenCalledWith("Invalid slot value in beacon head response.", {
+        slotString: "invalid",
+        url: EXPECTED_URL,
+      });
     });
   });
 });

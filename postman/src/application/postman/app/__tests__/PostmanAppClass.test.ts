@@ -11,16 +11,24 @@ const mockBuildPostmanServices = jest.fn();
 const mockDBCreate = jest.fn();
 const mockCreatePostmanApi = jest.fn();
 
-jest.mock("@consensys/linea-shared-utils", () => ({
-  ...jest.requireActual("@consensys/linea-shared-utils"),
-  WinstonLogger: jest.fn().mockImplementation(() => ({
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-    name: "test",
-  })),
-}));
+jest.mock("@consensys/linea-shared-utils", () => {
+  const buildLoggerMock = () => {
+    const mock: Record<string, unknown> = {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+      name: "test",
+      child: jest.fn(),
+    };
+    (mock.child as jest.Mock).mockImplementation(() => buildLoggerMock());
+    return mock;
+  };
+  return {
+    ...jest.requireActual("@consensys/linea-shared-utils"),
+    WinstonLogger: jest.fn().mockImplementation(() => buildLoggerMock()),
+  };
+});
 
 jest.mock("../PostmanContainer", () => ({
   buildPostmanServices: (...args: unknown[]) => mockBuildPostmanServices(...args),

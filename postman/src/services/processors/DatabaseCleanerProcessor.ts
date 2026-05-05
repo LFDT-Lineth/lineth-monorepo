@@ -22,7 +22,7 @@ export class DatabaseCleanerProcessor implements IDatabaseCleanerProcessor {
   public async process(): Promise<void> {
     try {
       const affected = await this.messageRepository.deleteMessages(this.msBeforeNowToDelete);
-      this.logger.info("Database cleanup result: deleted %s rows", affected);
+      this.logger.info("Database cleanup completed.", { deletedRows: affected });
     } catch (e) {
       this.logger.error("Database cleanup failed.", { error: e });
     }

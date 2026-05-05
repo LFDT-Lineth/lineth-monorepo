@@ -4,13 +4,18 @@ import type { ILogger } from "@consensys/linea-shared-utils";
 /**
  * Creates a mock logger for testing.
  */
-export const createLoggerMock = (): jest.Mocked<ILogger> => ({
-  name: "test-logger",
-  debug: jest.fn(),
-  error: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-});
+export const createLoggerMock = (): jest.Mocked<ILogger> => {
+  const mock: jest.Mocked<ILogger> = {
+    name: "test-logger",
+    debug: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    child: jest.fn(),
+  };
+  mock.child.mockReturnValue(mock);
+  return mock;
+};
 
 /**
  * Creates a mock metrics updater with all methods stubbed.

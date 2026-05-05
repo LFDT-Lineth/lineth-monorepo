@@ -20,4 +20,13 @@ export interface ILidoGovernanceMonitorLogger extends ILogger {
    * Use when: HTTP errors, DB errors, Slack webhook fails, API request errors.
    */
   critical(message: string, meta?: Record<string, unknown>): void;
+
+  /**
+   * Returns a derived logger that preserves the severity-classified overrides
+   * (`critical`, `error`, `warn`) while merging `context` into every log entry.
+   *
+   * Narrowed from `ILogger.child` so child loggers retain the
+   * `Severity.CRITICAL/ERROR/WARN` auto-injection behavior of the wrapper.
+   */
+  child(context: Record<string, unknown>): ILidoGovernanceMonitorLogger;
 }

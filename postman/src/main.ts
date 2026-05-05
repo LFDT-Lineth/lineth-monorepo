@@ -25,8 +25,7 @@ async function shutdown() {
 }
 
 main().catch((error: unknown) => {
-  const safeError = error instanceof Error ? { message: error.message } : { message: String(error) };
-  bootstrapLogger.error("Fatal startup error.", safeError);
+  bootstrapLogger.error("Fatal startup error.", error);
   process.exit(1);
 });
 

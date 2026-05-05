@@ -11,13 +11,18 @@ import { IProposalRepository } from "../../core/repositories/IProposalRepository
 import { NotificationService } from "../../services/NotificationService.js";
 import { ProposalProcessor } from "../../services/ProposalProcessor.js";
 
-const createLoggerMock = (): jest.Mocked<ILogger> => ({
-  name: "test-logger",
-  debug: jest.fn(),
-  error: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-});
+const createLoggerMock = (): jest.Mocked<ILogger> => {
+  const mock: jest.Mocked<ILogger> = {
+    name: "test-logger",
+    debug: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    child: jest.fn(),
+  };
+  mock.child.mockReturnValue(mock);
+  return mock;
+};
 
 describe("Proposal Lifecycle Integration", () => {
   let logger: jest.Mocked<ILogger>;

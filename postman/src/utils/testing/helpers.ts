@@ -33,6 +33,11 @@ export class TestLogger implements ILogger {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public debug(error: any): void {}
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  public child(_context: Record<string, unknown>): ILogger {
+    return this;
+  }
 }
 
 export const generateReceipt = (overrides: Partial<TransactionReceipt> = {}): TransactionReceipt => ({

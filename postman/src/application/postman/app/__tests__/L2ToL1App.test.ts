@@ -3,15 +3,21 @@ import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
 import { buildL2ToL1Deps } from "../../../../utils/testing/fixtures";
 import { L2ToL1App } from "../L2ToL1App";
 
-jest.mock("@consensys/linea-shared-utils", () => ({
-  WinstonLogger: jest.fn().mockImplementation(() => ({
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-    name: "test",
-  })),
-}));
+jest.mock("@consensys/linea-shared-utils", () => {
+  const buildLoggerMock = () => {
+    const mock: Record<string, unknown> = {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+      name: "test",
+      child: jest.fn(),
+    };
+    (mock.child as jest.Mock).mockImplementation(() => buildLoggerMock());
+    return mock;
+  };
+  return { WinstonLogger: jest.fn().mockImplementation(() => buildLoggerMock()) };
+});
 
 describe("L2ToL1App", () => {
   afterEach(() => {

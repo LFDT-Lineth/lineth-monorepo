@@ -15,6 +15,7 @@ describe("LidoGovernanceMonitorLogger", () => {
       error: jest.fn(),
       warn: jest.fn(),
       debug: jest.fn(),
+      child: jest.fn(),
     };
     logger = new LidoGovernanceMonitorLogger(mockBaseLogger);
   });
@@ -93,6 +94,61 @@ describe("LidoGovernanceMonitorLogger", () => {
   describe("name property", () => {
     it("returns base logger name", () => {
       expect(logger.name).toBe("TestLogger");
+    });
+  });
+
+  describe("child", () => {
+    it("returns a LidoGovernanceMonitorLogger that preserves severity overrides", () => {
+      const childBaseLogger: jest.Mocked<ILogger> = {
+        name: "TestLogger",
+        info: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        child: jest.fn(),
+      };
+      mockBaseLogger.child.mockReturnValue(childBaseLogger);
+
+      const child = logger.child({ proposalId: "42" });
+
+      expect(mockBaseLogger.child).toHaveBeenCalledWith({ proposalId: "42" });
+      expect(child).toBeInstanceOf(LidoGovernanceMonitorLogger);
+
+      child.critical("Database down", { host: "localhost" });
+      expect(childBaseLogger.error).toHaveBeenCalledWith("Database down", {
+        severity: Severity.CRITICAL,
+        host: "localhost",
+      });
+
+      child.error("Validation failed");
+      expect(childBaseLogger.error).toHaveBeenCalledWith("Validation failed", {
+        severity: Severity.ERROR,
+      });
+
+      child.warn("Retrying");
+      expect(childBaseLogger.warn).toHaveBeenCalledWith("Retrying", {
+        severity: Severity.WARN,
+      });
+    });
+
+    it("does not mutate the parent logger when creating a child", () => {
+      const childBaseLogger: jest.Mocked<ILogger> = {
+        name: "TestLogger",
+        info: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        child: jest.fn(),
+      };
+      mockBaseLogger.child.mockReturnValue(childBaseLogger);
+
+      logger.child({ proposalId: "42" });
+      logger.error("Parent error");
+
+      expect(mockBaseLogger.error).toHaveBeenCalledWith("Parent error", {
+        severity: Severity.ERROR,
+      });
+      expect(childBaseLogger.error).not.toHaveBeenCalled();
     });
   });
 });

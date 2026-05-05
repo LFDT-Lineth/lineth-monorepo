@@ -33,7 +33,7 @@ describe("DatabaseCleanerProcessor", () => {
 
       expect(messageRepositorySpy).toHaveBeenCalledTimes(1);
       expect(loggerInfoSpy).toHaveBeenCalledTimes(1);
-      expect(loggerInfoSpy).toHaveBeenCalledWith("Database cleanup result: deleted %s rows", 10);
+      expect(loggerInfoSpy).toHaveBeenCalledWith("Database cleanup completed.", { deletedRows: 10 });
     });
 
     it("Should log error if deleteMessages returns error", async () => {

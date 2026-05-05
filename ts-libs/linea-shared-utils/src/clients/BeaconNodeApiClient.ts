@@ -68,21 +68,21 @@ export class BeaconNodeApiClient implements IBeaconNodeAPIClient {
    */
   async getPendingPartialWithdrawals(): Promise<PendingPartialWithdrawal[] | undefined> {
     const url = `${this.rpcURL}/eth/v1/beacon/states/head/pending_partial_withdrawals`;
-    this.logger.debug(`getPendingPartialWithdrawals making GET request to url=${url}`);
+    this.logger.debug("Fetching pending partial withdrawals.", { method: "GET", url });
     const { data } = await this.retryService.retry(() =>
       axios.get<{ execution_optimistic: boolean; finalized: boolean; data: RawPendingPartialWithdrawal[] }>(url),
     );
     if (data === undefined || data?.data === undefined) {
-      this.logger.error("Failed GET request to", url);
+      this.logger.error("Failed to fetch pending partial withdrawals.", { method: "GET", url });
       return undefined;
     }
     if (data.data === null) {
-      this.logger.info(`getPendingPartialWithdrawals succeeded, pendingWithdrawalCount=0`);
+      this.logger.info("Fetched pending partial withdrawals.", { pendingWithdrawalCount: 0 });
       this.logger.debug("getPendingPartialWithdrawals return value", { returnVal: undefined });
       return undefined;
     }
     const returnVal = data.data.map((raw) => this.parsePendingPartialWithdrawal(raw));
-    this.logger.info(`getPendingPartialWithdrawals succeeded, pendingWithdrawalCount=${returnVal.length}`);
+    this.logger.info("Fetched pending partial withdrawals.", { pendingWithdrawalCount: returnVal.length });
     this.logger.debug("getPendingPartialWithdrawals return value", { returnVal });
     return returnVal;
   }
@@ -95,21 +95,21 @@ export class BeaconNodeApiClient implements IBeaconNodeAPIClient {
    */
   async getPendingDeposits(): Promise<PendingDeposit[] | undefined> {
     const url = `${this.rpcURL}/eth/v1/beacon/states/head/pending_deposits`;
-    this.logger.debug(`getPendingDeposits making GET request to url=${url}`);
+    this.logger.debug("Fetching pending deposits.", { method: "GET", url });
     const { data } = await this.retryService.retry(() =>
       axios.get<{ execution_optimistic: boolean; finalized: boolean; data: RawPendingDeposit[] }>(url),
     );
     if (data === undefined || data?.data === undefined) {
-      this.logger.error("Failed GET request to", url);
+      this.logger.error("Failed to fetch pending deposits.", { method: "GET", url });
       return undefined;
     }
     if (data.data === null) {
-      this.logger.info(`getPendingDeposits succeeded, pendingDepositCount=0`);
+      this.logger.info("Fetched pending deposits.", { pendingDepositCount: 0 });
       this.logger.debug("getPendingDeposits return value", { returnVal: undefined });
       return undefined;
     }
     const returnVal = data.data.map((raw) => this.parsePendingDeposit(raw));
-    this.logger.info(`getPendingDeposits succeeded, pendingDepositCount=${returnVal.length}`);
+    this.logger.info("Fetched pending deposits.", { pendingDepositCount: returnVal.length });
     this.logger.debug("getPendingDeposits return value", { returnVal });
     return returnVal;
   }
@@ -122,7 +122,7 @@ export class BeaconNodeApiClient implements IBeaconNodeAPIClient {
    */
   async getCurrentEpoch(): Promise<number | undefined> {
     const url = `${this.rpcURL}/eth/v1/beacon/headers/head`;
-    this.logger.debug(`getCurrentEpoch making GET request to url=${url}`);
+    this.logger.debug("Fetching beacon head.", { method: "GET", url });
     const { data } = await this.retryService.retry(() => axios.get<BeaconHeadResponse>(url));
     const slotString = data?.data?.header?.message?.slot;
     if (slotString === undefined || slotString === null) {
@@ -131,11 +131,11 @@ export class BeaconNodeApiClient implements IBeaconNodeAPIClient {
     }
     const slot = parseInt(slotString, 10);
     if (isNaN(slot)) {
-      this.logger.error(`Invalid slot value: ${slotString} from`, url);
+      this.logger.error("Invalid slot value in beacon head response.", { slotString, url });
       return undefined;
     }
     const epoch = slotToEpoch(slot);
-    this.logger.info(`getCurrentEpoch succeeded, epoch=${epoch}, slot=${slot}`);
+    this.logger.info("Fetched current epoch.", { epoch, slot });
     this.logger.debug("getCurrentEpoch return value", { epoch, slot });
     return epoch;
   }

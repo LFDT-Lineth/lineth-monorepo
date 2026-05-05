@@ -46,6 +46,8 @@ export class TransactionLifecycleManager implements ITransactionLifecycleManager
       this.logger.warn("Bumping fee for claim transaction.", {
         attempt: attempt.toString(),
         messageHash: message.messageHash,
+        oldMaxFeePerGas: message.claimTxMaxFeePerGas?.toString(),
+        oldMaxPriorityFeePerGas: message.claimTxMaxPriorityFeePerGas?.toString(),
       });
 
       const retryCreationDate = new Date();
@@ -60,6 +62,12 @@ export class TransactionLifecycleManager implements ITransactionLifecycleManager
         claimNumberOfRetry: attempt,
         claimLastRetriedAt: new Date(),
         claimTxNonce: tx.nonce,
+      });
+      this.logger.debug("Fee bump transaction submitted.", {
+        messageHash: message.messageHash,
+        newTxHash: tx.hash,
+        newMaxFeePerGas: tx.maxFeePerGas?.toString(),
+        newMaxPriorityFeePerGas: tx.maxPriorityFeePerGas?.toString(),
       });
       try {
         await this.messageRepository.updateMessage(message);
@@ -81,7 +89,7 @@ export class TransactionLifecycleManager implements ITransactionLifecycleManager
         this.config.receiptPollingInterval,
       );
     } catch (e) {
-      this.logger.error("Failed to retry with bumped fee.", { error: e, messageHash: message.messageHash });
+      this.logger.error("Failed to retry with bumped fee.", { messageHash: message.messageHash, error: e });
       return null;
     }
   }

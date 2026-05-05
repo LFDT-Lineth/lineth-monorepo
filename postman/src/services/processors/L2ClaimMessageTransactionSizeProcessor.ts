@@ -91,22 +91,22 @@ export class L2ClaimMessageTransactionSizeProcessor implements IL2ClaimMessageTr
    * @returns {Promise<void>} A promise that resolves when the error has been handled.
    */
   private async handleProcessingError(e: unknown, message: Message | null): Promise<void> {
-    const parsedError = this.errorParser.parse(e);
+    const { retryable } = this.errorParser.parse(e);
 
-    if (!parsedError.retryable && message) {
+    if (!retryable && message) {
       message.edit({ status: MessageStatus.NON_EXECUTABLE });
       await this.messageRepository.updateMessage(message);
       this.logger.error("Non-retryable error computing transaction size.", {
-        error: e,
-        parsedError,
         messageHash: message.messageHash,
+        retryable,
+        error: e,
       });
       return;
     }
 
     this.logger.error("Error computing transaction size.", {
+      retryable,
       error: e,
-      parsedError,
     });
   }
 }

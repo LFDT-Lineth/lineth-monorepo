@@ -132,7 +132,10 @@ function buildL1ToL2Deps(
     { getMaxPendingNonce: () => messageRepository.getMaxPendingNonce(Direction.L1_TO_L2) },
     l2SignerAddress,
     l2Config.claiming.maxNonceDiff,
-    new WinstonLogger("L2NonceManager", loggerOptions),
+    new WinstonLogger("L2NonceManager", loggerOptions).child({
+      direction: Direction.L1_TO_L2,
+      signerAddress: l2SignerAddress,
+    }),
   );
 
   const l2TransactionRetrier = new ViemTransactionRetrier(
@@ -209,7 +212,10 @@ function buildL2ToL1Deps(
     { getMaxPendingNonce: () => messageRepository.getMaxPendingNonce(Direction.L2_TO_L1) },
     l1SignerAddress,
     l1Config.claiming.maxNonceDiff,
-    new WinstonLogger("L1NonceManager", loggerOptions),
+    new WinstonLogger("L1NonceManager", loggerOptions).child({
+      direction: Direction.L2_TO_L1,
+      signerAddress: l1SignerAddress,
+    }),
   );
 
   const l1TransactionRetrier = new ViemTransactionRetrier(

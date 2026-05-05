@@ -72,7 +72,7 @@ export class L1ToL2App {
       loggerOptions,
     } = deps;
 
-    const log = (name: string) => new WinstonLogger(name, loggerOptions);
+    const log = (name: string) => new WinstonLogger(name, loggerOptions).child({ direction: Direction.L1_TO_L2 });
 
     const sentEventProcessor = new MessageSentEventProcessor(
       messageRepository,
@@ -116,7 +116,7 @@ export class L1ToL2App {
 
     const anchoringPoller = new IntervalPoller(
       anchoringProcessor,
-      { direction: Direction.L1_TO_L2, pollingInterval: l2Config.listener.pollingInterval },
+      { pollingInterval: l2Config.listener.pollingInterval },
       log("L2MessageAnchoringPoller"),
     );
 
@@ -151,7 +151,7 @@ export class L1ToL2App {
 
     const claimingPoller = new IntervalPoller(
       claimingProcessor,
-      { direction: Direction.L1_TO_L2, pollingInterval: l2Config.listener.pollingInterval },
+      { pollingInterval: l2Config.listener.pollingInterval },
       log("L2MessageClaimingPoller"),
     );
 
@@ -194,7 +194,7 @@ export class L1ToL2App {
 
     const persistingPoller = new IntervalPoller(
       claimingPersister,
-      { direction: Direction.L1_TO_L2, pollingInterval: l2Config.listener.receiptPollingInterval },
+      { pollingInterval: l2Config.listener.receiptPollingInterval },
       log("L2MessagePersistingPoller"),
     );
 
@@ -209,7 +209,7 @@ export class L1ToL2App {
 
     const sizePoller = new IntervalPoller(
       sizeProcessor,
-      { pollingInterval: l2Config.listener.pollingInterval, direction: Direction.L1_TO_L2 },
+      { pollingInterval: l2Config.listener.pollingInterval },
       log("L2ClaimMessageTransactionSizePoller"),
     );
 

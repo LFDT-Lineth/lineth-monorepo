@@ -33,6 +33,7 @@ export class NonceManager implements INonceManager {
     this.nextNonce = dbMaxNonce !== null ? Math.max(onChainNonce, dbMaxNonce + 1) : onChainNonce;
 
     this.logger.info("NonceManager initialized.", {
+      signerAddress: this.signerAddress,
       startNonce: this.nextNonce,
       onChainNonce,
       dbMaxNonce,

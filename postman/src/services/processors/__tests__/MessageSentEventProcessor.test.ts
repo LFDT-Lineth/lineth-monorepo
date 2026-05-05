@@ -94,6 +94,16 @@ describe("TestMessageSentEventProcessor", () => {
       await messageSentEventProcessor.process(200, 0);
 
       expect(loggerInfoSpy).toHaveBeenCalledTimes(3);
+      expect(loggerInfoSpy).toHaveBeenCalledWith("MessageSent event stored.", {
+        messageHash: testMessageSentEvent.messageHash,
+        blockNumber: testMessageSentEvent.blockNumber,
+        transactionHash: testMessageSentEvent.transactionHash,
+      });
+      expect(loggerInfoSpy).toHaveBeenCalledWith("Fetched and stored MessageSent events.", {
+        total: 1,
+        sentCount: 1,
+        excludedCount: 0,
+      });
       expect(messageRepositoryInsertSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositoryInsertSpy).toHaveBeenCalledWith(expectedMessageToInsert);
     });
@@ -128,7 +138,13 @@ describe("TestMessageSentEventProcessor", () => {
 
       await messageSentEventProcessor.process(0, 0);
 
-      expect(loggerInfoSpy).toHaveBeenCalledTimes(3);
+      expect(loggerInfoSpy).toHaveBeenCalledTimes(2);
+      expect(loggerInfoSpy).not.toHaveBeenCalledWith("MessageSent event stored.", expect.anything());
+      expect(loggerInfoSpy).toHaveBeenCalledWith("Fetched and stored MessageSent events.", {
+        total: 1,
+        sentCount: 0,
+        excludedCount: 1,
+      });
       expect(messageRepositoryInsertSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositoryInsertSpy).toHaveBeenCalledWith(expectedMessageToInsert);
     });
@@ -195,7 +211,18 @@ describe("TestMessageSentEventProcessor", () => {
 
       await messageSentEventProcessor.process(0, 0);
 
+      // 1 "Fetching events." + 1 per-event log (only the sent one) + 1 summary
       expect(loggerInfoSpy).toHaveBeenCalledTimes(3);
+      expect(loggerInfoSpy).toHaveBeenCalledWith("MessageSent event stored.", {
+        messageHash: testMessageSentEvent.messageHash,
+        blockNumber: testMessageSentEvent.blockNumber,
+        transactionHash: testMessageSentEvent.transactionHash,
+      });
+      expect(loggerInfoSpy).toHaveBeenCalledWith("Fetched and stored MessageSent events.", {
+        total: 2,
+        sentCount: 1,
+        excludedCount: 1,
+      });
       expect(messageRepositoryInsertSpy).toHaveBeenCalledTimes(2);
       expect(messageRepositoryInsertSpy).toHaveBeenNthCalledWith(1, expectedMessage1ToInsert);
       expect(messageRepositoryInsertSpy).toHaveBeenNthCalledWith(2, expectedMessage2ToInsert);
@@ -232,6 +259,11 @@ describe("TestMessageSentEventProcessor", () => {
       await messageSentEventProcessor.process(0, 0);
 
       expect(loggerInfoSpy).toHaveBeenCalledTimes(3);
+      expect(loggerInfoSpy).toHaveBeenCalledWith("MessageSent event stored.", {
+        messageHash: testMessageSentEventWithCallData.messageHash,
+        blockNumber: testMessageSentEventWithCallData.blockNumber,
+        transactionHash: testMessageSentEventWithCallData.transactionHash,
+      });
       expect(messageRepositoryInsertSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositoryInsertSpy).toHaveBeenCalledWith(expectedMessageToInsert);
     });

@@ -9,7 +9,6 @@ export interface IProcessable {
 
 type IntervalPollerConfig = {
   pollingInterval: number;
-  direction?: string;
 };
 
 export class IntervalPoller implements IPoller {
@@ -23,38 +22,25 @@ export class IntervalPoller implements IPoller {
 
   public async start(): Promise<void> {
     if (this.isPolling) {
-      this.logger.warn("Poller has already started.", { name: this.logger.name });
+      this.logger.warn("Poller has already started.");
       return;
     }
-    this.logger.info("Starting poller.", {
-      ...(this.config.direction ? { direction: this.config.direction } : {}),
-      name: this.logger.name,
-    });
+    this.logger.info("Starting poller.", { pollingInterval: this.config.pollingInterval });
     this.isPolling = true;
 
     while (this.isPolling) {
       try {
         await this.processor.process();
       } catch (error) {
-        this.logger.error("Unhandled error in polling loop — continuing.", {
-          ...(this.config.direction ? { direction: this.config.direction } : {}),
-          name: this.logger.name,
-          error,
-        });
+        this.logger.error("Unhandled error in polling loop — continuing.", { error });
       }
       await wait(this.config.pollingInterval);
     }
   }
 
   public stop() {
-    this.logger.info("Stopping poller.", {
-      ...(this.config.direction ? { direction: this.config.direction } : {}),
-      name: this.logger.name,
-    });
+    this.logger.info("Stopping poller.");
     this.isPolling = false;
-    this.logger.info("Poller stopped.", {
-      ...(this.config.direction ? { direction: this.config.direction } : {}),
-      name: this.logger.name,
-    });
+    this.logger.info("Poller stopped.");
   }
 }

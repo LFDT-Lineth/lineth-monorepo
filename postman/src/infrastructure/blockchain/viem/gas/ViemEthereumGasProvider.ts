@@ -42,9 +42,13 @@ export class ViemEthereumGasProvider implements IEthereumGasProvider {
     const maxPriorityFeePerGas = this.calculateMaxPriorityFee(feeHistory.reward ?? []);
 
     if (maxPriorityFeePerGas > this.config.maxFeePerGasCap) {
-      const msg = `Estimated miner tip of ${maxPriorityFeePerGas} exceeds configured max fee per gas of ${this.config.maxFeePerGasCap}!`;
-      this.logger.warn(msg);
-      throw new BaseError(msg);
+      this.logger.warn("Estimated miner tip exceeds configured max fee per gas.", {
+        estimatedMaxPriorityFeePerGas: maxPriorityFeePerGas.toString(),
+        maxFeePerGasCap: this.config.maxFeePerGasCap.toString(),
+      });
+      throw new BaseError(
+        `Estimated miner tip of ${maxPriorityFeePerGas} exceeds configured max fee per gas of ${this.config.maxFeePerGasCap}!`,
+      );
     }
 
     this.updateCache(currentBlockNumber, feeHistory.baseFeePerGas, maxPriorityFeePerGas);

@@ -43,13 +43,16 @@ export class MessageSentEventPoller implements IPoller {
    *
    * @returns {Promise<void>} A promise that resolves when the poller is started.
    */
+  // `logger=<name>` and `direction=<dir>` are emitted automatically by
+  // WinstonLogger's format pipeline and the direction-bearing child logger
+  // built in L1ToL2App / L2ToL1App; do not duplicate them as metadata.
   public async start(): Promise<void> {
     if (this.isPolling) {
-      this.logger.warn("Poller has already started.", { name: this.logger.name });
+      this.logger.warn("Poller has already started.");
       return;
     }
 
-    this.logger.info("Starting poller.", { direction: this.config.direction, name: this.logger.name });
+    this.logger.info("Starting poller.", { pollingInterval: this.config.pollingInterval });
 
     this.isPolling = true;
     this.startProcessingEvents();
@@ -60,9 +63,9 @@ export class MessageSentEventPoller implements IPoller {
    * Logs information about the stopping process.
    */
   public stop() {
-    this.logger.info("Stopping poller.", { direction: this.config.direction, name: this.logger.name });
+    this.logger.info("Stopping poller.");
     this.isPolling = false;
-    this.logger.info("Poller stopped.", { direction: this.config.direction, name: this.logger.name });
+    this.logger.info("Poller stopped.");
   }
 
   /**
@@ -75,7 +78,7 @@ export class MessageSentEventPoller implements IPoller {
       const { fromBlock, fromBlockLogIndex } = await this.getInitialFromBlock();
       this.processEvents(fromBlock, fromBlockLogIndex);
     } catch (e) {
-      this.logger.error("Failed to get initial block number.", { error: e, direction: this.config.direction });
+      this.logger.error("Failed to get initial block number.", { error: e });
       await wait(this.config.pollingInterval);
       this.startProcessingEvents();
     }
@@ -106,7 +109,7 @@ export class MessageSentEventPoller implements IPoller {
           errorMessage: e.message,
         });
       } else {
-        this.logger.error("Unexpected error processing events.", { error: e, direction: this.config.direction });
+        this.logger.error("Unexpected error processing events.", { error: e });
       }
     } finally {
       await wait(this.config.pollingInterval);

@@ -137,10 +137,18 @@ export class Message {
     this.updatedAt = new Date();
   }
 
+  /**
+   * Returns a log-safe string summary of the message.
+   *
+   * Intentionally omits `calldata`: it is unbounded in size and would generate
+   * multi-KB log lines on hot paths (warnings on gas-limit / fee-underpriced
+   * issues are emitted per message). Operators can re-fetch the full payload
+   * from the database via `messageHash` if needed.
+   */
   public toString(): string {
     return `Message(messageSender=${this.messageSender}, destination=${this.destination}, fee=${
       this.fee
-    }, value=${this.value}, messageNonce=${this.messageNonce}, calldata=${this.calldata}, messageHash=${
+    }, value=${this.value}, messageNonce=${this.messageNonce}, messageHash=${
       this.messageHash
     }, contractAddress=${this.contractAddress}, sentBlockNumber=${this.sentBlockNumber}, direction=${
       this.direction
@@ -152,8 +160,6 @@ export class Message {
       this.claimNumberOfRetry
     }, claimCycleCount=${this.claimCycleCount}, claimLastRetriedAt=${this.claimLastRetriedAt?.toISOString()}, claimGasEstimationThreshold=${
       this.claimGasEstimationThreshold
-    }, compressedTransactionSize=${
-      this.compressedTransactionSize
-    }, isForSponsorship=${this.isForSponsorship}, createdAt=${this.createdAt?.toISOString()}, updatedAt=${this.updatedAt?.toISOString()})`;
+    }, compressedTransactionSize=${this.compressedTransactionSize}, isForSponsorship=${this.isForSponsorship})`;
   }
 }

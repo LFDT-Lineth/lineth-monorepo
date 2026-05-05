@@ -51,10 +51,7 @@ export class MessageAnchoringProcessor implements IMessageAnchoringProcessor {
         return;
       }
 
-      this.logger.debug("Fetched messages for anchoring.", {
-        count: messages.length,
-        direction: this.config.direction,
-      });
+      this.logger.debug("Fetched messages for anchoring.", { count: messages.length });
 
       for (const message of messages) {
         this.logger.debug("Checking on-chain status.", { messageHash: message.messageHash });
@@ -82,10 +79,7 @@ export class MessageAnchoringProcessor implements IMessageAnchoringProcessor {
 
       await this.messageRepository.saveMessages(messages);
     } catch (e) {
-      this.logger.error("Error processing message anchoring.", {
-        error: e,
-        direction: this.config.direction,
-      });
+      this.logger.error("Error processing message anchoring.", { error: e });
     }
   }
 }

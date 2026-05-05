@@ -32,4 +32,8 @@ export class LidoGovernanceMonitorLogger implements ILidoGovernanceMonitorLogger
   debug(message: string, ...params: unknown[]): void {
     this.baseLogger.debug(message, ...params);
   }
+
+  child(context: Record<string, unknown>): ILidoGovernanceMonitorLogger {
+    return new LidoGovernanceMonitorLogger(this.baseLogger.child(context));
+  }
 }

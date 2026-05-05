@@ -70,7 +70,7 @@ describe("L2ClaimMessageTransactionSizeProcessor", () => {
       expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
       expect(loggerErrorSpy).toHaveBeenCalledWith("Non-retryable error computing transaction size.", {
         error: new Error("calculation failed."),
-        parsedError: { retryable: false, message: "" },
+        retryable: false,
         messageHash: testMessage.messageHash,
       });
     });
@@ -86,7 +86,7 @@ describe("L2ClaimMessageTransactionSizeProcessor", () => {
       expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
       expect(loggerErrorSpy).toHaveBeenCalledWith("Non-retryable error computing transaction size.", {
         error,
-        parsedError: { retryable: false, message: "" },
+        retryable: false,
         messageHash: testMessage.messageHash,
       });
     });
@@ -103,7 +103,7 @@ describe("L2ClaimMessageTransactionSizeProcessor", () => {
       expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
       expect(loggerErrorSpy).toHaveBeenCalledWith("Error computing transaction size.", {
         error,
-        parsedError: { retryable: true, message: "rate limited" },
+        retryable: true,
       });
     });
 
@@ -118,7 +118,7 @@ describe("L2ClaimMessageTransactionSizeProcessor", () => {
       expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
       expect(loggerErrorSpy).toHaveBeenCalledWith("Error computing transaction size.", {
         error,
-        parsedError: { retryable: false, message: "" },
+        retryable: false,
       });
     });
 

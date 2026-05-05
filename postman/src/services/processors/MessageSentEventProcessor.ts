@@ -12,7 +12,7 @@ import {
   MessageSentEventProcessorConfig,
 } from "../../core/services/processors/IMessageSentEventProcessor";
 import { MessageSent } from "../../core/types";
-import { isEmptyBytes, serialize } from "../../core/utils/shared";
+import { isEmptyBytes } from "../../core/utils/shared";
 
 export class MessageSentEventProcessor implements IMessageSentEventProcessor {
   private readonly maxBlocksToFetchLogs: number;
@@ -72,7 +72,8 @@ export class MessageSentEventProcessor implements IMessageSentEventProcessor {
       fromBlockLogIndex,
     });
 
-    this.logger.info("Number of fetched MessageSent events.", { count: events.length });
+    let sentCount = 0;
+    let excludedCount = 0;
 
     for (const event of events) {
       const shouldBeProcessed = this.shouldProcessMessage(
@@ -92,8 +93,26 @@ export class MessageSentEventProcessor implements IMessageSentEventProcessor {
       });
 
       await this.messageRepository.insertMessage(message);
+
+      if (shouldBeProcessed) {
+        sentCount++;
+        // Per-event info log: keeps full message-hash traceability without
+        // emitting a multi-MB single line for the whole batch.
+        this.logger.info("MessageSent event stored.", {
+          messageHash: event.messageHash,
+          blockNumber: event.blockNumber,
+          transactionHash: event.transactionHash,
+        });
+      } else {
+        excludedCount++;
+      }
     }
-    this.logger.info("Messages hashes found.", { messageHashes: serialize(events.map((event) => event.messageHash)) });
+
+    this.logger.info("Fetched and stored MessageSent events.", {
+      total: events.length,
+      sentCount,
+      excludedCount,
+    });
 
     return { nextFromBlock: toBlock + 1, nextFromBlockLogIndex: 0 };
   }

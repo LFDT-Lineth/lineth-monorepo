@@ -54,12 +54,15 @@ export class PostmanApp {
 
     await this.messageMetricsUpdater.initialize();
     this.db.subscribers.push(
-      new MessageStatusSubscriber(this.messageMetricsUpdater, new WinstonLogger(MessageStatusSubscriber.name)),
+      new MessageStatusSubscriber(
+        this.messageMetricsUpdater,
+        new WinstonLogger(MessageStatusSubscriber.name, this.config.loggerOptions),
+      ),
     );
     this.api = createPostmanApi(
       this.config.apiConfig.port,
       this.postmanMetricsService,
-      new WinstonLogger("ExpressApiApplication"),
+      new WinstonLogger("ExpressApiApplication", this.config.loggerOptions),
     );
 
     this.services.l1ToL2App?.start();

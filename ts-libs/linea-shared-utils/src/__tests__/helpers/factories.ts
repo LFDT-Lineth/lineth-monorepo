@@ -25,7 +25,9 @@ export const createLoggerMock = (overrides: Partial<jest.Mocked<ILogger>> = {}):
     error: jest.fn(),
     warn: jest.fn(),
     debug: jest.fn(),
+    child: jest.fn(),
   };
+  mock.child.mockReturnValue(mock);
   return { ...mock, ...overrides };
 };
 

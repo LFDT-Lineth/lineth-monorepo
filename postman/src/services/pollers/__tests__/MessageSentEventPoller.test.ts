@@ -55,7 +55,7 @@ describe("TestMessageSentEventPoller", () => {
       await testMessageSentEventPoller.start();
 
       expect(loggerWarnSpy).toHaveBeenCalledTimes(1);
-      expect(loggerWarnSpy).toHaveBeenCalledWith("Poller has already started.", { name: MessageSentEventPoller.name });
+      expect(loggerWarnSpy).toHaveBeenCalledWith("Poller has already started.");
 
       testMessageSentEventPoller.stop();
     });
@@ -76,8 +76,7 @@ describe("TestMessageSentEventPoller", () => {
 
       expect(loggerInfoSpy).toHaveBeenCalledTimes(1);
       expect(loggerInfoSpy).toHaveBeenCalledWith("Starting poller.", {
-        direction: Direction.L1_TO_L2,
-        name: MessageSentEventPoller.name,
+        pollingInterval: DEFAULT_LISTENER_INTERVAL,
       });
       expect(l1QuerierMockSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositoryMockSpy).toHaveBeenCalledTimes(1);
@@ -100,10 +99,7 @@ describe("TestMessageSentEventPoller", () => {
       await wait(500);
 
       expect(loggerErrorSpy).toHaveBeenCalled();
-      expect(loggerErrorSpy).toHaveBeenCalledWith("Failed to get initial block number.", {
-        error,
-        direction: Direction.L1_TO_L2,
-      });
+      expect(loggerErrorSpy).toHaveBeenCalledWith("Failed to get initial block number.", { error });
       expect(l1QuerierMockSpy).toHaveBeenCalled();
 
       testMessageSentEventPoller.stop();
@@ -164,10 +160,7 @@ describe("TestMessageSentEventPoller", () => {
       await wait(500);
 
       expect(loggerErrorSpy).toHaveBeenCalled();
-      expect(loggerErrorSpy).toHaveBeenCalledWith("Unexpected error processing events.", {
-        error,
-        direction: Direction.L1_TO_L2,
-      });
+      expect(loggerErrorSpy).toHaveBeenCalledWith("Unexpected error processing events.", { error });
       expect(l1QuerierMockSpy).toHaveBeenCalled();
       expect(messageRepositoryMockSpy).toHaveBeenCalled();
       expect(messageRepositoryMockSpy).toHaveBeenCalledWith(
@@ -294,17 +287,10 @@ describe("TestMessageSentEventPoller", () => {
 
       expect(loggerInfoSpy).toHaveBeenCalledTimes(3);
       expect(loggerInfoSpy).toHaveBeenNthCalledWith(1, "Starting poller.", {
-        direction: Direction.L1_TO_L2,
-        name: MessageSentEventPoller.name,
+        pollingInterval: DEFAULT_LISTENER_INTERVAL,
       });
-      expect(loggerInfoSpy).toHaveBeenNthCalledWith(2, "Stopping poller.", {
-        direction: Direction.L1_TO_L2,
-        name: MessageSentEventPoller.name,
-      });
-      expect(loggerInfoSpy).toHaveBeenNthCalledWith(3, "Poller stopped.", {
-        direction: Direction.L1_TO_L2,
-        name: MessageSentEventPoller.name,
-      });
+      expect(loggerInfoSpy).toHaveBeenNthCalledWith(2, "Stopping poller.");
+      expect(loggerInfoSpy).toHaveBeenNthCalledWith(3, "Poller stopped.");
     });
   });
 });
