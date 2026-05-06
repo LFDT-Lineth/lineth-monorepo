@@ -32,6 +32,7 @@ checkout-go-corset:
 	@if [ -n "$(GO_CORSET_REF_FOR_ZKC)" ]; then \
 		git -C "$(GO_CORSET)" fetch origin "$(GO_CORSET_REF_FOR_ZKC)" || true; \
 		git -C "$(GO_CORSET)" checkout "$(GO_CORSET_REF_FOR_ZKC)"; \
+		git -C "$(GO_CORSET)" pull --ff-only origin "$(GO_CORSET_REF_FOR_ZKC)" 2>/dev/null || true; \
 	fi
 
 # Install the zkc CLI from the go-corset repository.

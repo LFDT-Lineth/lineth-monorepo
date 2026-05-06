@@ -16,7 +16,17 @@ on:
      - '.github/actions/setup-arithmetization-riscv/**'
      - '.github/workflows/arithmetization-*.yml'
   workflow_call:
+    inputs:
+      go-corset-ref:
+        description: 'go-corset commit/branch/tag for zkc (defaults to main)'
+        required: false
+        type: string
   workflow_dispatch:
+    inputs:
+      go-corset-ref:
+        description: 'go-corset commit/branch/tag for zkc (defaults to main)'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -24,7 +34,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-xl
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -36,6 +46,9 @@ jobs:
 
       - name: Install zkc
         run: make -C arithmetization install-zkc
+        env:
+          ## Override with a custom go-corset repo commit here in the event zkc on main is failing
+          GO_CORSET_REF_FOR_ZKC: ${{ inputs.go-corset-ref || 'main' }}
 
       - name: Run simple Zig guest program with Zkc interpreter
         # IN_BYTES values not used in the sum test program but is still written in memory
