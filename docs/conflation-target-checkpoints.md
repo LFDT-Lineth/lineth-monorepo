@@ -1,6 +1,6 @@
 # Target checkpoints, L1 finalization, and API resume
 
-Configure `[conflation.proof-aggregation]` in the coordinator TOML (for example `config/coordinator/coordinator-config-v2.toml` or
+Configure `[conflation.proof-aggregation]` in the coordinator TOML (for example `docker/config/coordinator/coordinator-config-v2.toml` or
 your Docker-mounted coordinator config). Optionally set `[api]` for JSON-RPC (default path `/`; `json-rpc-port` is often
 `9546` in Docker, and that port is usually not published to the host).
 

@@ -89,13 +89,13 @@ export POSTGRES_PASSWORD=postgres
 docker compose -f docker/compose-tracing-v2.yml up -d postgres
 
 # Run the coordinator with your local build
-java -Dvertx.configurationFile=config/coordinator/vertx-options.json \
-     -Dlog4j2.configurationFile=config/coordinator/log4j2-dev.xml \
+java -Dvertx.configurationFile=docker/config/coordinator/vertx-options.json \
+     -Dlog4j2.configurationFile=docker/config/coordinator/log4j2-dev.xml \
      -jar coordinator/app/build/libs/coordinator.jar \
-     --traces-limits-v4 config/common/traces-limits-v4.4.toml \
-     --smart-contract-errors config/common/smart-contract-errors.toml \
-     --gas-price-cap-time-of-day-multipliers config/common/gas-price-cap-time-of-day-multipliers.toml \
-     config/coordinator/coordinator-config-v2.toml
+     --traces-limits-v4 docker/config/common/traces-limits-v4.4.toml \
+     --smart-contract-errors docker/config/common/smart-contract-errors.toml \
+     --gas-price-cap-time-of-day-multipliers docker/config/common/gas-price-cap-time-of-day-multipliers.toml \
+     docker/config/coordinator/coordinator-config-v2.toml
 ```
 
 Note: When running the coordinator standalone, you'll need to ensure that all its dependencies (such as L1 and L2 nodes) are properly configured and running.
@@ -104,10 +104,10 @@ Note: When running the coordinator standalone, you'll need to ensure that all it
 
 The coordinator uses several configuration files:
 
-- `config/coordinator/coordinator-config-v2.toml`: Main configuration file
-- `config/common/traces-limits-v4.4.toml`: Traces limits configuration
-- `config/common/smart-contract-errors.toml`: Smart contract errors configuration
-- `config/common/gas-price-cap-time-of-day-multipliers.toml`: Gas price cap multipliers
+- `docker/config/coordinator/coordinator-config-v2.toml`: Main configuration file
+- `docker/config/common/traces-limits-v4.4.toml`: Traces limits configuration
+- `docker/config/common/smart-contract-errors.toml`: Smart contract errors configuration
+- `docker/config/common/gas-price-cap-time-of-day-multipliers.toml`: Gas price cap multipliers
 
 For development, you may want to modify the following parameters in the coordinator configuration:
 

@@ -14,7 +14,7 @@ services:
         condition: service_started
     command: bash -c "bin/blockscout eval \"Elixir.Explorer.ReleaseTasks.create_and_migrate()\" && bin/blockscout start"
     env_file:
-      - ../config/blockscout/l1-blockscout.env
+      - ./config/blockscout/l1-blockscout.env
     environment:
       ETHEREUM_JSONRPC_HTTP_URL: http://l1-el-node:8545/
       ETHEREUM_JSONRPC_TRACE_URL: http://l1-el-node:8545/
@@ -41,7 +41,7 @@ services:
     # - smart-contract-verifier not supported for v0.1
     command: bash -c "bin/blockscout eval \"Elixir.Explorer.ReleaseTasks.create_and_migrate()\" && bin/blockscout start"
     env_file:
-      - ../config/blockscout/l2-blockscout.env
+      - ./config/blockscout/l2-blockscout.env
     environment:
       ETHEREUM_JSONRPC_HTTP_URL: http://l2-node-besu:8545/
       ETHEREUM_JSONRPC_TRACE_URL: http://l2-node-besu:8545/

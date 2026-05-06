@@ -77,14 +77,14 @@ distributions {
 run {
   workingDir = rootProject.projectDir
   jvmArgs = [
-    "-Dvertx.configurationFile=config/transaction-exclusion-api/vertx.json",
-    "-Dlog4j2.configurationFile=config/transaction-exclusion-api/log4j2-dev.xml"
+    "-Dvertx.configurationFile=docker/config/transaction-exclusion-api/vertx-options.json",
+    "-Dlog4j2.configurationFile=docker/config/transaction-exclusion-api/log4j2-dev.xml"
   ] + System.properties.entrySet()
   .findAll { it.key.startsWith("config") }
   .collect { "-D${it.key}=${it.value}" }
   args = [
-    "config/transaction-exclusion-api/transaction-exclusion-app-docker.config.toml",
-    "config/transaction-exclusion-api/transaction-exclusion-app-local-dev.config.overrides.toml"
+    "docker/config/transaction-exclusion-api/transaction-exclusion-app-docker.config.toml",
+    "docker/config/transaction-exclusion-api/transaction-exclusion-app-local-dev.config.overrides.toml"
   ]
 }
 

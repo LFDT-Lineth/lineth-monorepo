@@ -13,7 +13,7 @@ class TracesCountersTest {
 
   @Test
   fun `configs v4 match specifiedModules`() {
-    val path = findPathTo("config/common/traces-limits-v4.4.toml")
+    val path = findPathTo("docker/config/common/traces-limits-v4.4.toml")
 
     val tracesConfig = ConfigLoaderBuilder.default()
       .addFileSource(path.toString())

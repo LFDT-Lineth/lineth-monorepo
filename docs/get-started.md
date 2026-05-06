@@ -76,7 +76,7 @@ docker system prune --volumes
 ## Tuning in conflation
 
 For local testing and development conflation deadline is set to 6s `conflation-deadline=PT6S` in
-`config/coordinator/coordinator-config-v2.toml` (Docker-based `make start-env*` stacks often mount a different file from `docker/config/`).
+`docker/config/coordinator/coordinator-config-v2.toml` (Docker-based `make start-env*` stacks often mount a different file from `docker/config/`).
 Hence, only a two-block conflation.
 If you want bigger conflations, increase the deadline accordingly.
 

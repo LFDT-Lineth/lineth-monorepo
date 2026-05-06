@@ -45,7 +45,7 @@ flowchart LR
 - **Runtime**: Kotlin, Vert.x, Caffeine (caching), Hoplite (config)
 - **Storage**: PostgreSQL with connection pooling (read/write pools)
 - **Deployment**: Docker (`transaction-exclusion-api/Dockerfile`)
-- **Config**: `config/transaction-exclusion-api/`
+- **Config**: `docker/config/transaction-exclusion-api/`
 
 ## Test Coverage
 

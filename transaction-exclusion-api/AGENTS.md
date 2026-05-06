@@ -51,10 +51,10 @@ transaction-exclusion-api/
 
 ### Configuration Files
 
-- `config/transaction-exclusion-api/transaction-exclusion-app-docker.config.toml` — Docker config
-- `config/transaction-exclusion-api/transaction-exclusion-app-local-dev.config.overrides.toml` — Local overrides
-- `config/transaction-exclusion-api/vertx.json` — Vert.x options
-- `config/transaction-exclusion-api/log4j2-dev.xml` — Logging
+- `docker/config/transaction-exclusion-api/transaction-exclusion-app-docker.config.toml` — Docker config
+- `docker/config/transaction-exclusion-api/transaction-exclusion-app-local-dev.config.overrides.toml` — Local overrides
+- `docker/config/transaction-exclusion-api/vertx-options.json` — Vert.x options
+- `docker/config/transaction-exclusion-api/log4j2-dev.xml` — Logging
 
 ## API-Specific Safety Rules
 

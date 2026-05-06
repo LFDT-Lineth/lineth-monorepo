@@ -375,7 +375,7 @@ besu-plugins/            Besu client plugins
 jvm-libs/                Shared Kotlin/Java libraries
 transaction-exclusion-api/ Transaction exclusion API
 tracer/                  EVM tracer
-config/                  Service configuration files (TOML, JSON, XML)
+docker/config/           Service configuration files (TOML, JSON, XML)
 docker/                  Docker Compose files for local stack
 docs/                    Project documentation
 .github/workflows/       CI/CD workflows

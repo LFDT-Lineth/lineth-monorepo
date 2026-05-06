@@ -103,24 +103,24 @@ distributions {
 run {
   workingDir = rootProject.projectDir
   jvmArgs = [
-    "-Dvertx.configurationFile=config/coordinator/vertx-options.json",
-    "-Dlog4j2.configurationFile=config/coordinator/log4j2-dev.xml"
+    "-Dvertx.configurationFile=docker/config/coordinator/vertx-options.json",
+    "-Dlog4j2.configurationFile=docker/config/coordinator/log4j2-dev.xml"
   ] + System.properties.entrySet()
   .findAll { it.key.startsWith("config") }
   .collect { "-D${it.key}=${it.value}" }
   args = [
     "--traces-limits-v5",
-    "config/common/traces-limits-v5.toml",
+    "docker/config/common/traces-limits-v5.toml",
     "--smart-contract-errors",
-    "config/common/smart-contract-errors.toml",
+    "docker/config/common/smart-contract-errors.toml",
     "--gas-price-cap-time-of-day-multipliers",
-    "config/common/gas-price-cap-time-of-day-multipliers.toml",
-    "config/coordinator/coordinator-config-v2.toml"
+    "docker/config/common/gas-price-cap-time-of-day-multipliers.toml",
+    "docker/config/coordinator/coordinator-config-v2.toml"
   ]
 }
 
 test {
-  inputs.dir("$rootDir/config/coordinator/")
+  inputs.dir("$rootDir/docker/config/coordinator/")
 }
 
 tasks.register('integrationTestAllNeeded') {

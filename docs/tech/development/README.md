@@ -320,16 +320,16 @@ export L1_ROLLUP_CONTRACT_ADDRESS=0x...
 
 | File | Location | Purpose |
 |------|----------|---------|
-| Coordinator config | `config/coordinator/` | Main coordinator settings |
+| Coordinator config | `docker/config/coordinator/` | Main coordinator settings |
 | Prover config | `config/prover/` | Prover settings |
-| Traces limits | `config/common/traces-limits-v2.toml` | Conflation limits |
-| Gas multipliers | `config/common/gas-price-cap-time-of-day-multipliers.toml` | Gas pricing |
+| Traces limits | `docker/config/common/traces-limits-v2.toml` | Conflation limits |
+| Gas multipliers | `docker/config/common/gas-price-cap-time-of-day-multipliers.toml` | Gas pricing |
 | L1 node | `docker/config/l1-node/` | L1 Besu/Teku config |
 | L2 sequencer | `docker/config/linea-besu-sequencer/` | Sequencer config |
 
 ### Tuning Conflation
 
-Edit `config/coordinator/coordinator-docker.config.toml`:
+Edit `docker/config/coordinator/coordinator-docker.config.toml`:
 
 ```toml
 [conflation]
