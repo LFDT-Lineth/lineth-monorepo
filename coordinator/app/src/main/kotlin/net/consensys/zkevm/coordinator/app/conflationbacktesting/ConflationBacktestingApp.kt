@@ -54,6 +54,7 @@ import java.nio.file.Path
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.fetchAndUpdate
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -270,7 +271,15 @@ class ConflationBacktestingApp(
           "Backtesting execution proof request produced: batch={}",
           unProvenBatch.intervalString(),
         )
-        lastProcessedBatchEndBlockNumber.store(proofIndex.endBlockNumber.toLong())
+        // check to prevent out of order proof request from regressing teh last processed batch number.
+        lastProcessedBatchEndBlockNumber.fetchAndUpdate {
+            current ->
+          if (current < proofIndex.endBlockNumber.toLong()) {
+            proofIndex.endBlockNumber.toLong()
+          } else {
+            current
+          }
+        }
       },
       vertx = vertx,
       config = ProofGeneratingConflationHandlerImpl.Config(

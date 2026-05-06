@@ -15,6 +15,7 @@ import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.vertx.ObservabilityServer
 import net.consensys.zkevm.coordinator.api.requesthandlers.ConflationCreateProverRequestHandler
 import net.consensys.zkevm.coordinator.api.requesthandlers.ConflationGetJobStatusRequestHandler
+import net.consensys.zkevm.coordinator.api.requesthandlers.ConflationStopJobRequestHandler
 import net.consensys.zkevm.coordinator.api.requesthandlers.ConflationTargetCheckpointResumeRequestHandler
 import net.consensys.zkevm.coordinator.app.conflationbacktesting.ConflationBacktestingService
 import org.apache.logging.log4j.LogManager
@@ -54,6 +55,8 @@ class Api(
         ConflationCreateProverRequestHandler(conflationBacktestingService = conflationBacktestingService),
       ConflationGetJobStatusRequestHandler.METHOD_NAME to
         ConflationGetJobStatusRequestHandler(conflationBacktestingService = conflationBacktestingService),
+      ConflationStopJobRequestHandler.METHOD_NAME to
+        ConflationStopJobRequestHandler(conflationBacktestingService = conflationBacktestingService),
       ConflationTargetCheckpointResumeRequestHandler.METHOD_NAME to
         ConflationTargetCheckpointResumeRequestHandler(signalResume = conflationCheckpointResumeLatch),
     )

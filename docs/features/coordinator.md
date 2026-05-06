@@ -128,7 +128,7 @@ Conflation backtesting allows re-running the conflation and proof-request pipeli
 
 1. Submit one or more backtesting jobs via `conflation_createProverRequests`, each specifying a block range, blob compressor version, a **traces** RPC configuration (`tracesApi`, and optionally `tracesConflationApi`), and the Shomei (state manager) endpoint.
 2. Each job spins up an isolated `ConflationBacktestingApp` instance. Trace line counts always use `tracesApi`. If `tracesConflationApi` is **omitted**, the same `tracesApi` client is also used for conflated traces (`linea_generateConflatedTracesToFileV2`). If `tracesConflationApi` is **set** (split-traces deployment), counters stay on `tracesApi` and conflated traces use `tracesConflationApi`; both must declare the **same** `version` string. Blobs use the requested compressor version; prover request files are written under `conflation.backtesting-directory` — same file layout as the live pipeline.
-3. Poll job status via `conflation_getReconflationJobsStatus` until `COMPLETED`.
+3. Poll job status via `conflation_getReconflationJobsStatus` (one or more job IDs per call) until each job reports `COMPLETED`.
 
 ### Prerequisites and validation
 
@@ -233,7 +233,7 @@ curl -X POST http://localhost:9546 \
 
 #### `conflation_getReconflationJobsStatus`
 
-Polls the status of one or more jobs by ID. Returns `IN_PROGRESS` or `COMPLETED` for each.
+Polls the status of one or more jobs by ID. `params` is a JSON array of job ID strings. The `result` array lists `IN_PROGRESS` or `COMPLETED` for each id, in the same order as `params`.
 
 ```json
 {
@@ -264,6 +264,29 @@ curl -X POST http://localhost:9546 \
   "jsonrpc": "2.0",
   "id": 2,
   "result": ["COMPLETED"]
+}
+```
+
+#### `conflation_stopReconflationJob`
+
+Stops one in-progress backtesting job. `params` must be a JSON array containing **exactly one** job ID string. On success `result` is `"STOPPED"`; on failure (unknown id, already completed, or shutdown error) `result` is `"ERROR: <message>"` (still HTTP 200 with a JSON-RPC success object).
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "conflation_stopReconflationJob",
+  "params": ["1-2-hash"]
+}
+```
+
+**Response (success):**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": "STOPPED"
 }
 ```
 
