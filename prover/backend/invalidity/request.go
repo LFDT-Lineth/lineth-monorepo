@@ -66,7 +66,7 @@ func (req *Request) AccountTrieInputs() (invalidity.AccountTrieInputs, types.Eth
 // Both partial and full modes require the same trace inputs.
 func (req *Request) Validate(proverMode config.ProverMode) error {
 
-	logrus.Infof("Validating invalidity request: %+v, proverMode: %s", req, proverMode)
+	logrus.Infof("Validating invalidity request")
 
 	if req.ZkParentStateRootHash == (types.KoalaOctuplet{}) {
 		return fmt.Errorf("zkParentStateRootHash is required")

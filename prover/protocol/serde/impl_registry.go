@@ -80,6 +80,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/modexp"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/p256verify"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput"
+	invalidity_pi "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/invalidity_pi"
 )
 
 func init() {
@@ -360,6 +361,7 @@ func init() {
 
 	// Public input extractor (stored in CompiledIOP.ExtraData as any)
 	RegisterImplementation(publicInput.FunctionalInputExtractor{})
+	RegisterImplementation(invalidity_pi.InvalidityPIExtractor{})
 	RegisterImplementation(koalabear.Element{})
 	RegisterImplementation(field.Element{})
 }

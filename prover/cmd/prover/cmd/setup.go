@@ -353,13 +353,24 @@ func createCircuitBuilder(c circuits.CircuitID, cfg *config.Config, args SetupAr
 		}, &invalidity.BadPrecompileCircuit{}), extraFlags, nil
 
 	case circuits.InvalidityPrecompileLogsLimitlessCircuitID:
-		limitlessPath := cfg.PathForSetup("invalidity-precompile-logs-limitless")
 		extraFlags["cfg_checksum"] = cfg.TracesLimits.Checksum()
 
-		logrus.Info("Setting up limitless invalidity prover assets")
-		asset := zkevm.NewLimitlessZkEVM(cfg)
+		// The invalidity limitless prover reuses execution-limitless distributed wizard
+		// assets at prove time (loaded from the execution-limitless path). If those assets
+		// already exist on disk, load just the compiled conglomeration to avoid the
+		// multi-hour recompilation and store step.
+		if conglo, _, err := zkevm.LoadCompiledConglomerationMmap(cfg); err == nil {
+			logrus.Info("Reusing existing execution-limitless conglomeration for invalidity limitless setup")
+			// buf is intentionally not released: zero-copy deserialization means conglo
+			// points into the mmap region, which must stay mapped until Compile() finishes.
+			// For a one-shot setup process this is safe — the OS reclaims it at exit.
+			return invalidity.NewBuilderLimitless(conglo.RecursionCompBLS), extraFlags, nil
+		}
 
-		logrus.Infof("Writing limitless invalidity prover assets to path: %s", limitlessPath)
+		logrus.Info("execution-limitless assets not found; generating them now for invalidity limitless setup")
+		asset := zkevm.NewLimitlessZkEVM(cfg)
+		// Store writes to the execution-limitless path, which is where the invalidity
+		// limitless prover loads distributed wizard assets from at prove time.
 		if err := asset.Store(cfg); err != nil {
 			return nil, nil, fmt.Errorf("failed to write limitless invalidity prover assets: %w", err)
 		}

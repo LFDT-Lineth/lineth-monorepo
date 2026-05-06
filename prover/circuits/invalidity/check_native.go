@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/consensys/linea-monorepo/prover/crypto/poseidon2_koalabear"
 	smt "github.com/consensys/linea-monorepo/prover/crypto/state-management/smt_koalabear"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
@@ -30,6 +31,7 @@ func CheckOnlyNativeBadPrecompile(
 	proof wizard.Proof,
 	funcInputs public_input.Invalidity,
 	invalidityType InvalidityType,
+	proverMode ...config.ProverMode,
 ) error {
 	invExtractor, err := getInvalidityExtractor(comp)
 	if err != nil {
@@ -41,6 +43,9 @@ func CheckOnlyNativeBadPrecompile(
 	}
 
 	getPI := func(pi wizard.PublicInput) field.Element {
+		if len(proverMode) > 0 && proverMode[0] == config.ProverModeLimitless {
+			pi.Name = "functional." + pi.Name
+		}
 		return proof.GetPublicInput(comp, pi.Name, true).Base
 	}
 

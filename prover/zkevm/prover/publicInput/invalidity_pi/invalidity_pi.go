@@ -46,11 +46,11 @@ type InvalidityPI struct {
 // InputColumns collects the input columns from the arithmetization, ECDSA, and logs module
 type InputColumns struct {
 	// Input columns from arithmetization indicate if a bad precompile was detected
-	badPrecompileCol ifaces.Column
+	BadPrecompileCol ifaces.Column
 
 	// Input columns from ECDSA
-	addresses   *ecdsa.Addresses   // used to bubble up FromAddress to the public input
-	txSignature *ecdsa.TxSignature // used to bubble up TxHash to the public input
+	Addresses   *ecdsa.Addresses   // used to bubble up FromAddress to the public input
+	TxSignature *ecdsa.TxSignature // used to bubble up TxHash to the public input
 
 	// Input columns from logs and root hash fetcher
 	FilterFetchedL2L1 ifaces.Column // Input columns from logs - used to bubble up NbL2Logs to the public input
@@ -92,9 +92,9 @@ func NewInvalidityPI(comp *wizard.CompiledIOP, ecdsa *ecdsa.EcdsaZkEvm, filtered
 
 		// Input columns
 		InputColumns: InputColumns{
-			badPrecompileCol:  badPrecompileCol,
-			txSignature:       ecdsa.Ant.TxSignature,
-			addresses:         ecdsa.Ant.Addresses,
+			BadPrecompileCol:  badPrecompileCol,
+			TxSignature:       ecdsa.Ant.TxSignature,
+			Addresses:         ecdsa.Ant.Addresses,
 			FilterFetchedL2L1: filteredFetchedL2L1,
 		},
 	}
@@ -112,7 +112,7 @@ func NewInvalidityPI(comp *wizard.CompiledIOP, ecdsa *ecdsa.EcdsaZkEvm, filtered
 func (pi *InvalidityPI) defineConstraints(comp *wizard.CompiledIOP) {
 
 	// HasBadPrecompile must be an accumulator backward of the badPrecompileCol column
-	commonconstraints.MustBeAccumulatorBackward(comp, pi.HasBadPrecompile, pi.InputColumns.badPrecompileCol)
+	commonconstraints.MustBeAccumulatorBackward(comp, pi.HasBadPrecompile, pi.InputColumns.BadPrecompileCol)
 
 	// NbL2Logs is the backward accumulator of the filterFetched column
 	commonconstraints.MustBeAccumulatorBackward(comp, pi.NbL2Logs, pi.InputColumns.FilterFetchedL2L1)
@@ -125,8 +125,8 @@ func (pi *InvalidityPI) defineConstraints(comp *wizard.CompiledIOP) {
 	limbs.NewGlobal(comp, ifaces.QueryIDf("%s_TX_HASH_PROPAGATION", "INVALIDITY_PI"),
 		sym.Add(
 			sym.Sub(pi.TxHash.AsDynSize(), txHashShifted),
-			sym.Mul(pi.InputColumns.txSignature.IsTxHash,
-				sym.Sub(txHashShifted, pi.InputColumns.txSignature.TxHash.ToBigEndianLimbs()),
+			sym.Mul(pi.InputColumns.TxSignature.IsTxHash,
+				sym.Sub(txHashShifted, pi.InputColumns.TxSignature.TxHash.ToBigEndianLimbs()),
 			),
 		))
 
@@ -137,8 +137,8 @@ func (pi *InvalidityPI) defineConstraints(comp *wizard.CompiledIOP) {
 	limbs.NewGlobal(comp, ifaces.QueryIDf("%s_FROM_PROPAGATION", "INVALIDITY_PI"),
 		sym.Add(
 			sym.Sub(pi.From.AsDynSize(), fromShifted),
-			sym.Mul(pi.InputColumns.addresses.IsAddressFromTxnData,
-				sym.Sub(fromShifted, pi.InputColumns.addresses.Addresses().ToBigEndianLimbs()),
+			sym.Mul(pi.InputColumns.Addresses.IsAddressFromTxnData,
+				sym.Sub(fromShifted, pi.InputColumns.Addresses.Addresses().ToBigEndianLimbs()),
 			),
 		))
 }
@@ -178,15 +178,15 @@ func (pi *InvalidityPI) generateExtractor(comp *wizard.CompiledIOP, name string)
 // Assign assigns values to the InvalidityPI columns.
 func (pi *InvalidityPI) Assign(run *wizard.ProverRuntime) {
 
-	isTxHashCol := pi.InputColumns.txSignature.IsTxHash.GetColAssignment(run)
+	isTxHashCol := pi.InputColumns.TxSignature.IsTxHash.GetColAssignment(run)
 	ecdsaSize := isTxHashCol.Len()
-	isFromCol := pi.InputColumns.addresses.IsAddressFromTxnData.GetColAssignment(run)
+	isFromCol := pi.InputColumns.Addresses.IsAddressFromTxnData.GetColAssignment(run)
 
 	// Backward-propagate TxHash: when IsTxHash=1 grab from ECDSA, else copy next row.
 	// The first flagged value propagates to row 0.
 	txHashLimbValues := backwardPropagate(ecdsaSize, zkevmcommon.NbLimbU256, isTxHashCol,
 		func(row int) []field.Element {
-			leRow := pi.InputColumns.txSignature.TxHash.GetRow(run, row)
+			leRow := pi.InputColumns.TxSignature.TxHash.GetRow(run, row)
 			be := make([]field.Element, zkevmcommon.NbLimbU256)
 			for j := range be {
 				be[j] = leRow.T[zkevmcommon.NbLimbU256-1-j]
@@ -200,7 +200,7 @@ func (pi *InvalidityPI) Assign(run *wizard.ProverRuntime) {
 	// Backward-propagate From: when IsAddressFromTxnData=1 grab from ECDSA, else copy next row.
 	fromLimbValues := backwardPropagate(ecdsaSize, zkevmcommon.NbLimbEthAddress, isFromCol,
 		func(row int) []field.Element {
-			leRow := pi.InputColumns.addresses.Addresses().GetRow(run, row)
+			leRow := pi.InputColumns.Addresses.Addresses().GetRow(run, row)
 			be := make([]field.Element, zkevmcommon.NbLimbEthAddress)
 			for j := range be {
 				be[j] = leRow.T[zkevmcommon.NbLimbEthAddress-1-j]
@@ -223,7 +223,7 @@ func (pi *InvalidityPI) Assign(run *wizard.ProverRuntime) {
 	run.AssignColumn(pi.NbL2Logs.GetColID(), smartvectors.NewRegular(accNbL2LogsValues))
 
 	// Assign HasBadPrecompile (backward accumulator of badPrecompileCol)
-	badPrecompileCol := pi.InputColumns.badPrecompileCol.GetColAssignment(run)
+	badPrecompileCol := pi.InputColumns.BadPrecompileCol.GetColAssignment(run)
 	size := badPrecompileCol.Len()
 	accBadPrecompileValues := make([]field.Element, size)
 	accBadPrecompileValues[size-1] = badPrecompileCol.Get(size - 1)

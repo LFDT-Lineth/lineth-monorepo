@@ -89,9 +89,22 @@ func Prove(cfg *config.Config, req *backendInvalidity.Request) (*backendInvalidi
 	}
 
 	if cfg.Invalidity.LimitlessWithDebug {
-		logrus.Info("Running limitless invalidity prover in debug mode")
+		logrus.Info("Running wizard ZkEvm in DEBUG mode")
 		limitlessZkEVM := zkevm.NewLimitlessDebugZkEVM(cfg)
-		limitlessZkEVM.RunDebug(cfg, zkevmWitness)
+		runtimeBoot := limitlessZkEVM.RunDebug(cfg, zkevmWitness)
+		logrus.Info("Running Gnark outer proof debug check")
+		proof := runtimeBoot.ExtractProof()
+		if err := invalidity.CheckOnlyNativeBadPrecompile(
+			limitlessZkEVM.DistWizard.Bootstrapper,
+			proof,
+			*funcInput,
+			req.InvalidityType,
+			config.ProverModeLimitless,
+		); err != nil {
+			utils.Panic("outer proof constraint check failed (DEBUG MODE): %v", err)
+		}
+		logrus.Info("outer proof constraint check passed (DEBUG MODE)")
+
 		return rsp, nil
 	}
 

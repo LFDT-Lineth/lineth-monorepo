@@ -19,6 +19,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/exit"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput"
+	invalidity "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/invalidity_pi"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
@@ -471,6 +472,11 @@ func NewLimitlessZkEVM(cfg *config.Config) *LimitlessZkEVM {
 		ExtraData[publicInput.PublicInputExtractorMetadata] = zkevm.
 		InitialCompiledIOP.ExtraData[publicInput.PublicInputExtractorMetadata]
 
+	if invExt, ok := zkevm.InitialCompiledIOP.ExtraData[invalidity.InvalidityPIExtractorMetadata]; ok {
+		dw.CompiledConglomeration.RecursionCompBLS.
+			ExtraData[invalidity.InvalidityPIExtractorMetadata] = invExt
+	}
+
 	return &LimitlessZkEVM{
 		Zkevm:      zkevm,
 		DistWizard: dw,
@@ -553,7 +559,9 @@ func (lz *LimitlessZkEVM) RunStatRecords(cfg *config.Config, witness *Witness) [
 // the segmentation and then the sanity checks for all the segments. The
 // check of the LPP module is done using a deterministic pseudo-random number
 // generator and will yield the same result every time.
-func (lz *LimitlessZkEVM) RunDebug(cfg *config.Config, witness *Witness) {
+//
+// Returns the bootstrapper runtime which can be used for outer proof checking.
+func (lz *LimitlessZkEVM) RunDebug(cfg *config.Config, witness *Witness) *wizard.ProverRuntime {
 
 	runtimeBoot := runBootstrapperWithRescaling(
 		cfg,
@@ -1003,6 +1011,8 @@ func (lz *LimitlessZkEVM) RunDebug(cfg *config.Config, witness *Witness) {
 	}
 
 	logrus.Infof("All conglomeration completion checks passed (segment-counts, LPP-column-consistency)")
+
+	return runtimeBoot
 }
 
 // runBootstrapperWithRescaling runs the bootstrapper and returns the resulting
