@@ -46,14 +46,14 @@ runs:
     - name: generate token to fetch artifacts from private besu-fleet-plugin
       id: generate_token
       if: ${{ inputs.fetch_besu_fleet_plugin == 'true' }}
-      uses: getsentry/action-github-app-token@v3
+      uses: getsentry/action-github-app-token@d4b5da6c5e37703f8c3b3e43abb5705b46e159cc #v3
       with:
         private_key: ${{ inputs.fleet_github_app_private_key }}
         app_id: ${{ inputs.fleet_github_app_id }}
 
     - name: get plugins from private besu-fleet-plugin
       if: ${{ inputs.fetch_besu_fleet_plugin == 'true' }}
-      uses: dsaltares/fetch-gh-release-asset@master
+      uses: dsaltares/fetch-gh-release-asset@aa2ab1243d6e0d5b405b973c89fa4d06a2d0fff7 #1.1.2
       with:
         repo: 'Consensys/besu-fleet-plugin'
         version: 'tags/${{ inputs.besu_fleet_plugin_version }}'
