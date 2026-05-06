@@ -1,0 +1,44 @@
+name: Tracer simple guest program run
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'arithmetization/**'
+      - '.github/actions/setup-arithmetization-riscv/**'
+      - '.github/workflows/arithmetization-*.yml'
+  push:
+    branches:
+     - main
+    paths:
+     - 'arithmetization/**'
+     - '.github/actions/setup-arithmetization-riscv/**'
+     - '.github/workflows/arithmetization-*.yml'
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build:
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-xl
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: false
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-arithmetization-riscv
+
+      - name: Install zkc
+        run: make -C arithmetization install-zkc
+
+      - name: Run simple Zig guest program with Zkc interpreter
+        # IN_BYTES values not used in the sum test program but is still written in memory
+        run: make TEST=test.zig IN_BYTES="0xAABB" IN_BYTES_OFFSET=0x08800000
+        working-directory: arithmetization/src/test/examples
+        timeout-minutes: 6

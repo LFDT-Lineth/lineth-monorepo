@@ -8,7 +8,7 @@ The executable, the json and the disassembled elf file all live in the `<ext>/bi
 
 ## Requirements
 
-- `riscv64-unknown-elf-as (>= 2.45)` — for assembly programs
+- `riscv64-unknown-elf-as (>= 2.45)` — for assembly programs and Zig
 - `zig (>= 0.16.0)` — for Zig programs
 - `cargo (>= 1.88.0)` — for Rust programs
 - `rustc (>= rustc 1.88.0)` with `riscv64imac-unknown-none-elf` target — for Rust programs
