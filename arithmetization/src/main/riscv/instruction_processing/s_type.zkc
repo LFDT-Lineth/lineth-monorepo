@@ -56,23 +56,27 @@ fn process_S_type_instruction<ram, registers>(instruction_parameters:u25) {
 
     var mem_address:Address = signed_sum_of_double_word(registers[rs1], signext_imm12_64) as Address
 
-    if funct3 == FUNCT3_SB {
-        // Store byte (u8)
-        write_8(mem_address, (registers[rs2] & (0xFF as u64)) as u8)
-    }
-
-    if funct3 == FUNCT3_SH {
-        // Store halfword (u16)
-        write_16(mem_address, (registers[rs2] & (0xFFFF as u64)) as u16)
-    }
-
-    if funct3 == FUNCT3_SW {
-        // Store word (u32)
-        write_32(mem_address, (registers[rs2] & (0xFFFFFFFF as u64)) as u32)
-    }
-
-    if funct3 == FUNCT3_SD {
-        // Store doubleword (u64)
-        write_64(mem_address, registers[rs2])
+    switch funct3 {
+        case FUNCT3_SB: {
+            printf "SB\n"
+            write_8(mem_address, (registers[rs2] & (0xFF as u64)) as u8)
+        }
+        case FUNCT3_SH: {
+            printf "SH\n"
+            write_16(mem_address, (registers[rs2] & (0xFFFF as u64)) as u16)
+        }
+        case FUNCT3_SW: {
+            printf "SW\n"
+            write_32(mem_address, (registers[rs2] & (0xFFFFFFFF as u64)) as u32)
+        }
+        case FUNCT3_SD: {
+            printf "SD\n"
+            write_64(mem_address, registers[rs2])
+        }
+        default: {
+            printf "[ERROR] Unsupported S-type instruction with\n"
+            printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
+            fail
+        }
     }
 }

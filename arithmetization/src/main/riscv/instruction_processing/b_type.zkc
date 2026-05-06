@@ -60,49 +60,58 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         imm = (imm_11::imm_10_5::imm_4_1::(0 as u1)) as DoubleWord
     }
 
-    // TODO: question @david: providing a default value to overwrite later on seems like it would
-    // trigger a second row just to overwrite the original value. Is that correct, and if so
-    // should it be avoided _a priori_ ?
-    //
-    // default case
+    // "no branching" value of pc_new;
+    // gets overwritten if branching occurs
     pc_new = pc + 4
 
-    if funct3 == FUNCT3_BEQ {
-        if registers[rs1] == registers[rs2] {
-            // the branch case
-            pc_new = signed_sum_of_double_word(pc, imm)
+    switch funct3 {
+        case FUNCT3_BEQ: {
+            printf "BEQ\n"
+            if registers[rs1] == registers[rs2] {
+                // the branch case
+                pc_new = signed_sum_of_double_word(pc, imm)
+            }
         }
-    }
-    if funct3 == FUNCT3_BNE {
-        if registers[rs1] != registers[rs2] {
-            // the branch case
-            pc_new = signed_sum_of_double_word(pc, imm)
+        case FUNCT3_BNE: {
+            printf "BNE\n"
+            if registers[rs1] != registers[rs2] {
+                // the branch case
+                pc_new = signed_sum_of_double_word(pc, imm)
+            }
         }
-    }
-    if funct3 == FUNCT3_BLT {
-        comparison = signed_LT(registers[rs1], registers[rs2])
-        if comparison == 1 {
-            // the branch case
-            pc_new = signed_sum_of_double_word(pc, imm)
+        case FUNCT3_BLT: {
+            printf "BLT\n"
+            comparison = signed_LT(registers[rs1], registers[rs2])
+            if comparison == 1 {
+                // the branch case
+                pc_new = signed_sum_of_double_word(pc, imm)
+            }
         }
-    }
-    if funct3 == FUNCT3_BGE {
-        comparison = signed_LT(registers[rs1], registers[rs2])
-        if comparison == 0 {
-            // the branch case
-            pc_new = signed_sum_of_double_word(pc, imm)
+        case FUNCT3_BGE: {
+            printf "BGE\n"
+            comparison = signed_LT(registers[rs1], registers[rs2])
+            if comparison == 0 {
+                // the branch case
+                pc_new = signed_sum_of_double_word(pc, imm)
+            }
         }
-    }
-    if funct3 == FUNCT3_BLTU {
-        if registers[rs1]<registers[rs2] {
-            // the branch case
-            pc_new = signed_sum_of_double_word(pc, imm)
+        case FUNCT3_BLTU: {
+            printf "BLTU\n"
+            if registers[rs1]<registers[rs2] {
+                // the branch case
+                pc_new = signed_sum_of_double_word(pc, imm)
+            }
         }
-    }
-    if funct3 == FUNCT3_BGEU {
-        if registers[rs1] >= registers[rs2] {
-            // the branch case
-            pc_new = signed_sum_of_double_word(pc, imm)
+        case FUNCT3_BGEU: {
+            printf "BGEU\n"
+            if registers[rs1] >= registers[rs2] {
+                // the branch case
+                pc_new = signed_sum_of_double_word(pc, imm)
+            }
+        }
+        default: {
+            printf "[ERROR] Unsupported B-Type instruction with funct3 ≡ %x ≡ %b", funct3, funct3
+            fail
         }
     }
 }

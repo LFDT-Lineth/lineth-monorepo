@@ -32,6 +32,7 @@ fn main<ram, registers>() {
     }
 
     printf "program length=%d\n", program_len
+    printf "===========\n"
 
     // We interpret pc == MAX_UINT_64 as the stop signal, which is set by the ecall instruction
     while pc != MAX_UINT_64 {

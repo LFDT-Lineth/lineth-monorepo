@@ -40,8 +40,19 @@ fn process_U_type_instruction<registers>(opcode:Opcode, instruction_parameters:u
     imm20::rd = instruction_parameters
     tmp = sgn_extension_u32_u64(((imm20 as u32) << 12) as u32)
 
-    if opcode == AUIPC {
-        tmp = signed_sum_of_double_word(tmp, pc) as DoubleWord
+    switch opcode {
+        case AUIPC: {
+            printf "AUIPC\n"
+            tmp = signed_sum_of_double_word(tmp, pc) as DoubleWord
+        }
+        case LUI: {
+            printf "LUI\n"
+        }
+        default: {
+            printf "[ERROR] Unsupported instruction of U-Type\n"
+            printf "\topcode ≡ %x ≡ %b\n", opcode, opcode
+            fail
+        }
     }
 
     // Note: the definition of tmp already works for the LUI opcode

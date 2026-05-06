@@ -54,105 +54,156 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
     var signext_imm12_64:DoubleWord = sgn_extension_u12_u64(imm12)
     var mem_address:Address = signed_sum_of_double_word(registers[rs1], signext_imm12_64) as Address
 
-    new_pc = (pc + 4) as Address //TODO: this is the default case, we will overwrite it for JALR. 
+    //TODO: this is the default case, we will overwrite it for JALR.
     // We should handle this differently to avoid a potential second row just to overwrite the value of new_pc?
+    new_pc = (pc + 4) as Address
 
-    // ----- LOAD (opcode LOAD) -----
-    if opcode == LOAD {
-        if funct3 == FUNCT3_LB {
-            registers[rd] = sgn_extension_u8_u64(ram[mem_address])
-        }
-        if funct3 == FUNCT3_LH {
-            registers[rd] = sgn_extension_u16_u64(read_16(mem_address))
-        }
-        if funct3 == FUNCT3_LW {
-            registers[rd] = sgn_extension_u32_u64(read_32(mem_address))
-        }
-        if funct3 == FUNCT3_LBU {
-            registers[rd] = ram[mem_address] as DoubleWord
-        }
-        if funct3 == FUNCT3_LHU {
-            registers[rd] = read_16(mem_address) as DoubleWord
-        }
-        if funct3 == FUNCT3_LWU {
-            registers[rd] = read_32(mem_address) as DoubleWord
-        }
-        if funct3 == FUNCT3_LD {
-            registers[rd] = read_64(mem_address) as DoubleWord
-        }
-    }
+    switch opcode {
 
-    // ----- OP-IMM (opcode OP_IMM) -----
-     else if opcode == OP_IMM {
+        // ===============================
+        // ----- LOAD (opcode LOAD) -----
+        // ===============================
 
-        if funct3 == FUNCT3_ADDI {
-            registers[rd] = signed_sum_of_double_word(registers[rs1], signext_imm12_64) as DoubleWord
-        } else if funct3 == FUNCT3_SLTI {
-            var is_lt:Boolean = signed_LT(registers[rs1], signext_imm12_64)
-            if is_lt == 1 {
-                registers[rd] = 1
+        case LOAD: {
+            switch funct3 {
+                case FUNCT3_LB: {
+                    printf "LB\n"
+                    registers[rd] = sgn_extension_u8_u64(ram[mem_address])
+                }
+                case FUNCT3_LH: {
+                    printf "LH\n"
+                    registers[rd] = sgn_extension_u16_u64(read_16(mem_address))
+                }
+                case FUNCT3_LW: {
+                    printf "LW\n"
+                    registers[rd] = sgn_extension_u32_u64(read_32(mem_address))
+                }
+                case FUNCT3_LBU: {
+                    printf "LBU\n"
+                    registers[rd] = ram[mem_address] as DoubleWord
+                }
+                case FUNCT3_LHU: {
+                    printf "LHU\n"
+                    registers[rd] = read_16(mem_address) as DoubleWord
+                }
+                case FUNCT3_LWU: {
+                    printf "LWU\n"
+                    registers[rd] = read_32(mem_address) as DoubleWord
+                }
+                case FUNCT3_LD: {
+                    printf "LD\n"
+                    registers[rd] = read_64(mem_address) as DoubleWord
+                }
+                default: {
+                    printf "[ERROR] Unsupported LOAD instruction of I-Type\n"
+                    printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
+                    fail
+                }
+            }
+        }
+
+        // ===================================
+        // ----- OP-IMM (opcode OP_IMM) -----
+        // ===================================
+
+        case OP_IMM: {
+            if funct3 == FUNCT3_ADDI {
+                printf "ADDI\n"
+                registers[rd] = signed_sum_of_double_word(registers[rs1], signext_imm12_64) as DoubleWord
+            } else if funct3 == FUNCT3_SLTI {
+                printf "SLTI\n"
+                var is_lt:Boolean = signed_LT(registers[rs1], signext_imm12_64)
+                if is_lt == 1 {
+                    registers[rd] = 1
+                } else {
+                    registers[rd] = 0
+                }
+            } else if funct3 == FUNCT3_SLTIU {
+                printf "SLTIU\n"
+                // Warn: this is an unsigned comparison (even if imm12 is SGN_EXT)
+                if registers[rs1]<signext_imm12_64 {
+                    registers[rd] = 1
+                } else {
+                    registers[rd] = 0
+                }
+            } else if funct3 == FUNCT3_XORI {
+                printf "XORI\n"
+                registers[rd] = registers[rs1] ^ signext_imm12_64
+            } else if funct3 == FUNCT3_ORI {
+                printf "ORI\n"
+                registers[rd] = registers[rs1] | signext_imm12_64
+            } else if funct3 == FUNCT3_ANDI {
+                printf "ANDI\n"
+                registers[rd] = registers[rs1] & signext_imm12_64
+            } else if (funct3 == FUNCT3_SLLI) && (funct6 == FUNCT6_SLLI) {
+                printf "SLLI\n"
+                registers[rd] = registers[rs1] << uimm6
+            } else if (funct3 == FUNCT3_SRLI) && (funct6 == FUNCT6_SRLI) {
+                printf "SRLI\n"
+                registers[rd] = registers[rs1] >> uimm6
+            } else if (funct3 == FUNCT3_SRAI) && (funct6 == FUNCT6_SRAI) {
+                printf "SRAI\n"
+                registers[rd] = _ashr_u64(registers[rs1], uimm6)
+            }
+        }
+
+        // ===================================================
+        // ----- OP-IMM-32 (opcode OP_IMM_32) — RV64 *W -----
+        // ===================================================
+
+        case OP_IMM_32: {
+            if funct3 == FUNCT3_ADDIW {
+                printf "ADDIW\n"
+                registers[rd] = sgn_extension_u32_u64((signed_sum_of_double_word(registers[rs1], signext_imm12_64) & MAX_UINT_32_AS_U64) as Word)
+            } else if (funct3 == FUNCT3_SLLIW) && (funct7 == FUNCT7_SLLIW) {
+                printf "SLLIW\n"
+                registers[rd] = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) << uimm5)
+            } else if (funct3 == FUNCT3_SRLIW) && (funct7 == FUNCT7_SRLIW) {
+                printf "SRLIW\n"
+                registers[rd] = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) >> uimm5)
+            } else if (funct3 == FUNCT3_SRAIW) && (funct7 == FUNCT7_SRAIW) {
+                printf "SRAIW\n"
+                registers[rd] = sgn_extension_u32_u64(_ashr_u32(registers[rs1], uimm5))
+            }
+        }
+
+        // =================
+        // ----- JALR -----
+        // =================
+
+        case JALR: {
+            printf "JALR\n"
+            // only instruction is JALR, no need to switch over funct3
+            new_pc = (signed_sum_of_double_word(registers[rs1], signext_imm12_64) & MASK_64_ERASE_LAST_BIT) as Address
+            registers[rd] = (pc + 4) as DoubleWord
+        }
+
+        // ===================
+        // ----- SYSTEM -----
+        // ===================
+
+        case SYSTEM: {
+            // note: same funct3 for ECALL and EBREAK
+            if funct3 == FUNCT3_ECALL {
+                // imm12 is interpreted as funct12 for SYSTEM opcode
+                if imm12 == FUNCT12_ECALL {
+                    printf "ECALL\n"
+                    // Note: as we don't fully support CSR, we use ECALL as generic STOP instruction for now
+                    new_pc = MAX_UINT_64 // set the stop signal to end the program execution
+                } else if imm12 == FUNCT12_EBREAK {
+                    printf "[ERROR] EBREAK instruction triggered\n"
+                }
             } else {
-                registers[rd] = 0
+                printf "[ERROR] SYSTEM instruction with funct3 %b has been triggered, not implemented\n", funct3
             }
-        } else if funct3 == FUNCT3_SLTIU {
-            // Warn: this is an unsigned comparison (even if imm12 is SGN_EXT)
-            if registers[rs1]<signext_imm12_64 {
-                registers[rd] = 1
-            } else {
-                registers[rd] = 0
-            }
-        } else if funct3 == FUNCT3_XORI {
-            registers[rd] = registers[rs1] ^ signext_imm12_64
-        } else if funct3 == FUNCT3_ORI {
-            registers[rd] = registers[rs1] | signext_imm12_64
-        } else if funct3 == FUNCT3_ANDI {
-            registers[rd] = registers[rs1] & signext_imm12_64
-        } else if (funct3 == FUNCT3_SLLI) && (funct6 == FUNCT6_SLLI) {
-            registers[rd] = registers[rs1] << uimm6
-        } else if (funct3 == FUNCT3_SRLI) && (funct6 == FUNCT6_SRLI) {
-            registers[rd] = registers[rs1] >> uimm6
-        } else if (funct3 == FUNCT3_SRAI) && (funct6 == FUNCT6_SRAI) {
-            registers[rd] = _ashr_u64(registers[rs1], uimm6)
         }
-    }
 
-    // ----- OP-IMM-32 (opcode OP_IMM_32) — RV64 *W -----
-     else if opcode == OP_IMM_32 {
-        if funct3 == FUNCT3_ADDIW {
-            registers[rd] = sgn_extension_u32_u64((signed_sum_of_double_word(registers[rs1], signext_imm12_64) & MAX_UINT_32_AS_U64) as Word)
-        } else if (funct3 == FUNCT3_SLLIW) && (funct7 == FUNCT7_SLLIW) {
-            registers[rd] = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) << uimm5)
-        } else if (funct3 == FUNCT3_SRLIW) && (funct7 == FUNCT7_SRLIW) {
-            registers[rd] = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) >> uimm5)
-        } else if (funct3 == FUNCT3_SRAIW) && (funct7 == FUNCT7_SRAIW) {
-            registers[rd] = sgn_extension_u32_u64(_ashr_u32(registers[rs1], uimm5))
+        default: {
+            printf "[ERROR] Unsupported I-Type instruction with\n"
+            printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
+            printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
+            fail
         }
-    }
-
-     else if opcode == JALR {
-        // only instruction is JALR, no need to switch over funct3
-        new_pc = (signed_sum_of_double_word(registers[rs1], signext_imm12_64) & MASK_64_ERASE_LAST_BIT) as Address
-        registers[rd] = (pc + 4) as DoubleWord
-    }
-
-     else if opcode == SYSTEM {
-        // note: same funct3 for ECALL and EBREAK
-        if funct3 == FUNCT3_ECALL {
-            // imm12 is interpreted as funct12 for SYSTEM opcode
-            if imm12 == FUNCT12_ECALL {
-                // Note: as we don't fully support CSR, we use ECALL as generic STOP instruction for now
-                new_pc = MAX_UINT_64 // set the stop signal to end the program execution
-            } else if imm12 == FUNCT12_EBREAK {
-                printf "[ERROR] EBREAK instruction triggered\n"
-            }
-        } else {
-            printf "[ERROR] SYSTEM instruction with funct3 %b\n has been triggered, not implemented", funct3
-        }
-    }
-
-    // TODO: should never be reached
-     else {
-        fail
     }
 }
 

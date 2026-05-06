@@ -17,41 +17,45 @@ fn interpreter<ram, registers>(instruction:u32, pc:Address) -> (new_pc:Address) 
 
     printf "instruction %b\n", instruction
     printf "opcode:     %b\n", opcode
-    printf "parameters: %b\n", instruction_parameters
     printf "type:       %b\n", instruction_type
-
-    // printf "[SP before execution] : %x\n", registers[2]
+    printf "parameters: %b\n", instruction_parameters
 
     // TODO: handle the case where rd = 0: we will handle this in RAM itself, likely by adding an extra read-write pair
     // to reset the value in registers[rd] to 0
 
-    // TODO: switch
-    if instruction_type == R_TYPE {
-        printf "R-Type instruction\n"
-        process_R_type_instruction(instruction_parameters)
-        new_pc = pc + 4 as Address
-    } else if instruction_type == I_TYPE {
-        printf "I-Type instruction\n"
-        new_pc = process_I_type_instruction(opcode, instruction_parameters, pc)
-    } else if instruction_type == S_TYPE {
-        printf "S-Type instruction\n"
-        process_S_type_instruction(instruction_parameters)
-        new_pc = pc + 4 as Address
-    } else if instruction_type == B_TYPE {
-        printf "B-Type instruction\n"
-        new_pc = process_B_type_instruction(instruction_parameters, pc)
-    } else if instruction_type == U_TYPE {
-        printf "U-Type instruction\n"
-        process_U_type_instruction(opcode, instruction_parameters, pc)
-        new_pc = pc + 4 as Address
-    } else if instruction_type == J_TYPE {
-        printf "J-Type instruction\n"
-        new_pc = process_J_type_instruction(instruction_parameters, pc)
-    } else {
-        fail
+    switch instruction_type {
+        case R_TYPE: {
+            printf "R-Type instruction\n"
+            process_R_type_instruction(opcode, instruction_parameters)
+            new_pc = pc + 4 as Address
+        }
+        case I_TYPE: {
+            printf "I-Type instruction\n"
+            new_pc = process_I_type_instruction(opcode, instruction_parameters, pc)
+        }
+        case S_TYPE: {
+            printf "S-Type instruction\n"
+            process_S_type_instruction(instruction_parameters)
+            new_pc = pc + 4 as Address
+        }
+        case B_TYPE: {
+            printf "B-Type instruction\n"
+            new_pc = process_B_type_instruction(instruction_parameters, pc)
+        }
+        case U_TYPE: {
+            printf "U-Type instruction\n"
+            process_U_type_instruction(opcode, instruction_parameters, pc)
+            new_pc = pc + 4 as Address
+        }
+        case J_TYPE: {
+            printf "J-Type instruction\n"
+            new_pc = process_J_type_instruction(instruction_parameters, pc)
+        }
+        default: {
+            printf "[ERROR] Unsupported instruction type %d\n", instruction_type
+            fail
+        }
     }
-
-    // printf "[SP after execution] : %x\n", registers[2]
 
     printf "-----------\n"
 }
