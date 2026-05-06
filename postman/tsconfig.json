@@ -14,7 +14,7 @@
       "path": "../ts-libs/linea-shared-utils"
     },
     {
-      "path": "../sdk/sdk-ethers"
+      "path": "../ts-libs/sdk/sdk-ethers"
     }
   ]
 }

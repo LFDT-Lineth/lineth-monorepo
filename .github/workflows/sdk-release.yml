@@ -50,8 +50,8 @@ jobs:
           PACKAGE: ${{ inputs.package }}
         run: |
           case "$PACKAGE" in
-            sdk-core) echo "dir=sdk/sdk-core" >> "$GITHUB_OUTPUT" ;;
-            sdk-viem) echo "dir=sdk/sdk-viem" >> "$GITHUB_OUTPUT" ;;
+            sdk-core) echo "dir=ts-libs/sdk/sdk-core" >> "$GITHUB_OUTPUT" ;;
+            sdk-viem) echo "dir=ts-libs/sdk/sdk-viem" >> "$GITHUB_OUTPUT" ;;
           esac
 
       - name: Compute next version

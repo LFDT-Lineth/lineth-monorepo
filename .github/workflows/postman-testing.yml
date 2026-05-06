@@ -36,7 +36,7 @@ jobs:
           pnpm run -F "@consensys/linea-postman^..." build
           pnpm run -F @consensys/linea-native-libs test
           pnpm run -F ./postman test;
-          pnpm run -F ./sdk/sdk-viem test;
+          pnpm run -F ./ts-libs/sdk/sdk-viem test;
 
       # Use a non-hidden directory name: upload-artifact@v4 excludes hidden paths by default
       # (include-hidden-files=false), so .ci-ts-coverage/ would upload zero files.
@@ -45,7 +45,7 @@ jobs:
           mkdir -p ci-ts-coverage
           cp ts-libs/linea-native-libs/coverage/lcov.info ci-ts-coverage/native-libs-lcov.info
           cp postman/coverage/lcov.info ci-ts-coverage/postman-lcov.info
-          cp sdk/sdk-viem/coverage/lcov.info ci-ts-coverage/sdk-viem-lcov.info
+          cp ts-libs/sdk/sdk-viem/coverage/lcov.info ci-ts-coverage/sdk-viem-lcov.info
 
       - name: Upload TS coverage report
         uses: actions/upload-artifact@v7
@@ -83,7 +83,7 @@ jobs:
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
         with:
           fail_ci_if_error: true
-          files: ./sdk/sdk-viem/coverage/lcov.info
+          files: ./ts-libs/sdk/sdk-viem/coverage/lcov.info
           flags: sdk-viem
           os: linux
           name: codecov-sdk-viem

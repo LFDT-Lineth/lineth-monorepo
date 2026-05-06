@@ -8,11 +8,11 @@ The Linea SDK is split into three packages providing different integration paths
 
 | Package | npm | Dependency |
 |---------|-----|------------|
-| `@consensys/linea-sdk-core` | `sdk/sdk-core/` | None (pure types + utilities) |
-| `@consensys/linea-sdk` | `sdk/sdk-ethers/` | ethers |
-| `@consensys/linea-sdk-viem` | `sdk/sdk-viem/` | viem, `@consensys/linea-sdk-core` |
+| `@consensys/linea-sdk-core` | `ts-libs/sdk/sdk-core/` | None (pure types + utilities) |
+| `@consensys/linea-sdk` | `ts-libs/sdk/sdk-ethers/` | ethers |
+| `@consensys/linea-sdk-viem` | `ts-libs/sdk/sdk-viem/` | viem, `@consensys/linea-sdk-core` |
 
-## SDK Core (`sdk/sdk-core/`)
+## SDK Core (`ts-libs/sdk/sdk-core/`)
 
 Provides framework-agnostic types, utilities, and the sparse Merkle tree implementation.
 
@@ -51,11 +51,11 @@ Provides framework-agnostic types, utilities, and the sparse Merkle tree impleme
 | `claimOnL2` | Claim message on L2 |
 | `getMessageProof` | Construct Merkle proof for claiming |
 
-## SDK Ethers (`sdk/sdk-ethers/`)
+## SDK Ethers (`ts-libs/sdk/sdk-ethers/`)
 
 Wraps `linea-sdk-core` with ethers bindings and TypeChain-generated contract types. Provides `LineaSDK` class for high-level bridging operations.
 
-## SDK Viem (`sdk/sdk-viem/`)
+## SDK Viem (`ts-libs/sdk/sdk-viem/`)
 
 Provides viem-native client decorators:
 
@@ -70,9 +70,9 @@ const status = await client.getL2ToL1MessageStatus({ messageHash });
 
 | Test File | Runner | Validates |
 |-----------|--------|-----------|
-| `sdk/sdk-core/src/merkle-tree/smt.test.ts` | Jest | Sparse Merkle tree operations |
-| `sdk/sdk-ethers/src/LineaSDK.test.ts` | Jest | SDK initialization, ethers bindings |
-| `sdk/sdk-viem/src/**/*.test.ts` | Jest | Decorators, actions, error handling |
+| `ts-libs/sdk/sdk-core/src/merkle-tree/smt.test.ts` | Jest | Sparse Merkle tree operations |
+| `ts-libs/sdk/sdk-ethers/src/LineaSDK.test.ts` | Jest | SDK initialization, ethers bindings |
+| `ts-libs/sdk/sdk-viem/src/**/*.test.ts` | Jest | Decorators, actions, error handling |
 
 ## Related Documentation
 

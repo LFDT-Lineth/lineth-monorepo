@@ -15,7 +15,7 @@ The Linea SDK enables developers to:
 ## Package Structure
 
 ```
-sdk/
+ts-libs/sdk/
 ├── sdk-core/           # @consensys/linea-sdk-core
 │   │                   # Shared types, utilities, constants
 │   └── src/
@@ -98,8 +98,8 @@ Each SDK package has its own detailed documentation:
 
 | Package | Install | Documentation |
 |---------|---------|---------------|
-| **sdk-viem** (recommended) | `npm install @consensys/linea-sdk-viem viem` | [README](../../../sdk/sdk-viem/README.md) |
-| **sdk-ethers** | `npm install @consensys/linea-sdk` | [README](../../../sdk/sdk-ethers/README.md) |
+| **sdk-viem** (recommended) | `npm install @consensys/linea-sdk-viem viem` | [README](../../../ts-libs/sdk/sdk-viem/README.md) |
+| **sdk-ethers** | `npm install @consensys/linea-sdk` | [README](../../../ts-libs/sdk/sdk-ethers/README.md) |
 | **sdk-core** | `npm install @consensys/linea-sdk-core` | Types & utilities only |
 
 > **Note:** `viem@>=2.22.0` is a required peer dependency for `@consensys/linea-sdk-viem`.
@@ -247,7 +247,7 @@ const sepoliaAddresses = {
 ## Development
 
 ```bash
-cd sdk
+cd ts-libs/sdk
 pnpm install && pnpm run build && pnpm run test
 ```
 

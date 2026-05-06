@@ -121,7 +121,7 @@ make start-env COMPOSE_PROFILES=l1,l2,debug
 pnpm run build
 
 # Build specific package
-cd sdk && pnpm run build
+pnpm -F "./ts-libs/sdk/*" run build
 cd contracts && pnpm run build
 cd postman && pnpm run build
 

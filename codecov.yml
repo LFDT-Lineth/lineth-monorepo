@@ -40,11 +40,11 @@ flags:
     carryforward: true
   sdk-viem:
     paths:
-      - sdk/sdk-viem/
+      - ts-libs/sdk/sdk-viem/
     carryforward: true
   sdk-core:
     paths:
-      - sdk/sdk-core/
+      - ts-libs/sdk/sdk-core/
     carryforward: true
   linea-shared-utils:
     paths:
@@ -64,7 +64,7 @@ flags:
     carryforward: true
   sdk-ethers:
     paths:
-      - sdk/sdk-ethers/
+      - ts-libs/sdk/sdk-ethers/
     carryforward: true
   tracer:
     paths:

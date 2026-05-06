@@ -79,7 +79,7 @@ jobs:
       - name: Check if version already published
         id: check
         run: |
-          VERSION=$(node -p "require('./sdk/sdk-core/package.json').version")
+          VERSION=$(node -p "require('./ts-libs/sdk/sdk-core/package.json').version")
           if npm view @consensys/linea-sdk-core@"$VERSION" version 2>/dev/null; then
             echo "::notice::sdk-core@$VERSION already published, skipping"
             echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -100,7 +100,7 @@ jobs:
         env:
           RELEASE_SHA: ${{ inputs.release_commit_sha }}
         run: |
-          VERSION=$(node -p "require('./sdk/sdk-core/package.json').version")
+          VERSION=$(node -p "require('./ts-libs/sdk/sdk-core/package.json').version")
           TAG="@consensys/linea-sdk-core@${VERSION}"
 
           REMOTE_SHA=$(git ls-remote --tags origin "refs/tags/$TAG" | awk '{print $1}')
@@ -121,9 +121,9 @@ jobs:
         if: ${{ !inputs.dry_run }}
         id: release_notes
         run: |
-          VERSION=$(node -p "require('./sdk/sdk-core/package.json').version")
+          VERSION=$(node -p "require('./ts-libs/sdk/sdk-core/package.json').version")
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          CHANGELOG="sdk/sdk-core/CHANGELOG.md"
+          CHANGELOG="ts-libs/sdk/sdk-core/CHANGELOG.md"
           if [[ -f "$CHANGELOG" ]]; then
             awk '/^## /{if(found)exit; found=1} found' "$CHANGELOG" > release-notes.md
           else
@@ -134,8 +134,8 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: |
           VERSION=${{ steps.release_notes.outputs.version }}
-          tar -czf "linea-sdk-core-${VERSION}.tar.gz" -C sdk/sdk-core .
-          cd sdk/sdk-core && zip -rq "../../linea-sdk-core-${VERSION}.zip" .
+          tar -czf "linea-sdk-core-${VERSION}.tar.gz" -C ts-libs/sdk/sdk-core .
+          cd ts-libs/sdk/sdk-core && zip -rq "../../../linea-sdk-core-${VERSION}.zip" .
 
       - name: Create GitHub Release
         if: ${{ !inputs.dry_run }}
@@ -166,7 +166,7 @@ jobs:
 
       - name: Verify sdk-core dependency is published on npm
         run: |
-          CORE_VERSION=$(node -p "require('./sdk/sdk-core/package.json').version")
+          CORE_VERSION=$(node -p "require('./ts-libs/sdk/sdk-core/package.json').version")
           echo "Resolved @consensys/linea-sdk-core dependency version: $CORE_VERSION"
           if ! npm view "@consensys/linea-sdk-core@${CORE_VERSION}" version 2>/dev/null; then
             echo "::error::@consensys/linea-sdk-core@${CORE_VERSION} is not published on npm. Run this workflow for sdk-core first."
@@ -179,7 +179,7 @@ jobs:
       - name: Check if version already published
         id: check
         run: |
-          VERSION=$(node -p "require('./sdk/sdk-viem/package.json').version")
+          VERSION=$(node -p "require('./ts-libs/sdk/sdk-viem/package.json').version")
           if npm view @consensys/linea-sdk-viem@"$VERSION" version 2>/dev/null; then
             echo "::notice::sdk-viem@$VERSION already published, skipping"
             echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -200,7 +200,7 @@ jobs:
         env:
           RELEASE_SHA: ${{ inputs.release_commit_sha }}
         run: |
-          VERSION=$(node -p "require('./sdk/sdk-viem/package.json').version")
+          VERSION=$(node -p "require('./ts-libs/sdk/sdk-viem/package.json').version")
           TAG="@consensys/linea-sdk-viem@${VERSION}"
 
           REMOTE_SHA=$(git ls-remote --tags origin "refs/tags/$TAG" | awk '{print $1}')
@@ -221,9 +221,9 @@ jobs:
         if: ${{ !inputs.dry_run }}
         id: release_notes
         run: |
-          VERSION=$(node -p "require('./sdk/sdk-viem/package.json').version")
+          VERSION=$(node -p "require('./ts-libs/sdk/sdk-viem/package.json').version")
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          CHANGELOG="sdk/sdk-viem/CHANGELOG.md"
+          CHANGELOG="ts-libs/sdk/sdk-viem/CHANGELOG.md"
           if [[ -f "$CHANGELOG" ]]; then
             awk '/^## /{if(found)exit; found=1} found' "$CHANGELOG" > release-notes.md
           else
@@ -234,8 +234,8 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: |
           VERSION=${{ steps.release_notes.outputs.version }}
-          tar -czf "linea-sdk-viem-${VERSION}.tar.gz" -C sdk/sdk-viem .
-          cd sdk/sdk-viem && zip -rq "../../linea-sdk-viem-${VERSION}.zip" .
+          tar -czf "linea-sdk-viem-${VERSION}.tar.gz" -C ts-libs/sdk/sdk-viem .
+          cd ts-libs/sdk/sdk-viem && zip -rq "../../../linea-sdk-viem-${VERSION}.zip" .
 
       - name: Create GitHub Release
         if: ${{ !inputs.dry_run }}

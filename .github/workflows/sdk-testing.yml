@@ -3,14 +3,14 @@ name: sdk-testing
 on:
   pull_request:
     paths:
-      - "sdk/**"
+      - "ts-libs/sdk/**"
       - ".github/workflows/sdk-testing.yml"
       - ".nvmrc"
   push:
     branches:
       - main
     paths:
-      - "sdk/**"
+      - "ts-libs/sdk/**"
       - ".github/workflows/sdk-testing.yml"
       - ".nvmrc"
 
@@ -79,9 +79,9 @@ jobs:
       - name: Stage TS coverage for artifact (fork PR uploads)
         run: |
           mkdir -p ci-sdk-coverage
-          cp sdk/sdk-core/coverage/lcov.info ci-sdk-coverage/sdk-core-lcov.info
-          cp sdk/sdk-viem/coverage/lcov.info ci-sdk-coverage/sdk-viem-lcov.info
-          cp sdk/sdk-ethers/coverage/lcov.info ci-sdk-coverage/sdk-ethers-lcov.info
+          cp ts-libs/sdk/sdk-core/coverage/lcov.info ci-sdk-coverage/sdk-core-lcov.info
+          cp ts-libs/sdk/sdk-viem/coverage/lcov.info ci-sdk-coverage/sdk-viem-lcov.info
+          cp ts-libs/sdk/sdk-ethers/coverage/lcov.info ci-sdk-coverage/sdk-ethers-lcov.info
 
       - name: Upload TS coverage report
         uses: actions/upload-artifact@v7
@@ -95,7 +95,7 @@ jobs:
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
         with:
           fail_ci_if_error: true
-          files: ./sdk/sdk-core/coverage/lcov.info
+          files: ./ts-libs/sdk/sdk-core/coverage/lcov.info
           flags: sdk-core
           os: linux
           name: codecov-sdk-core
@@ -107,7 +107,7 @@ jobs:
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
         with:
           fail_ci_if_error: true
-          files: ./sdk/sdk-viem/coverage/lcov.info
+          files: ./ts-libs/sdk/sdk-viem/coverage/lcov.info
           flags: sdk-viem
           os: linux
           name: codecov-sdk-viem-sdk-testing
@@ -119,7 +119,7 @@ jobs:
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
         with:
           fail_ci_if_error: true
-          files: ./sdk/sdk-ethers/coverage/lcov.info
+          files: ./ts-libs/sdk/sdk-ethers/coverage/lcov.info
           flags: sdk-ethers
           os: linux
           name: codecov-sdk-ethers

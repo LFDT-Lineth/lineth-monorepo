@@ -2,7 +2,7 @@
  * Runs as git pre-commit hook
  * Filters the list of changed files on 'git commit'
  * If *.ts files in specified projects are detected, runs the 'lint:ts:fix' package.json script for that project
- * E.g. if a *.ts file is changed in /sdk, then this script will run 'pnpm run lint:ts:fix' in the /sdk project
+ * E.g. if a *.ts file is changed in /ts-libs/sdk, then this script will run 'pnpm run lint:ts:fix' in the /ts-libs/sdk project
  */
 
 const fs = require('fs');
@@ -61,9 +61,9 @@ const FOLDER_PATH = {
     [FOLDER.E2E]: "e2e/",
     [FOLDER.OPERATIONS]: "operations/",
     [FOLDER.POSTMAN]: "postman/",
-    [FOLDER["SDK-CORE"]]: "sdk/sdk-core/",
-    [FOLDER["SDK-ETHERS"]]: "sdk/sdk-ethers/",
-    [FOLDER["SDK-VIEM"]]: "sdk/sdk-viem/",
+    [FOLDER["SDK-CORE"]]: "ts-libs/sdk/sdk-core/",
+    [FOLDER["SDK-ETHERS"]]: "ts-libs/sdk/sdk-ethers/",
+    [FOLDER["SDK-VIEM"]]: "ts-libs/sdk/sdk-viem/",
 };
 
 // Project => List of changed files

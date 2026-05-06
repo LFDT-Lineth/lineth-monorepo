@@ -43,8 +43,6 @@ jobs:
               - '**/Dockerfile'
               - 'e2e/src/**'
               - 'e2e/package.json'
-              - 'sdk/**/src/**'
-              - 'sdk/**/package.json'
               - 'besu-plugins/linea-sequencer/**'
               - 'tracer/**'
               - 'tracer-constraints/**'

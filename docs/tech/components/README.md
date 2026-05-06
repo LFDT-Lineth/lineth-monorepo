@@ -13,7 +13,7 @@ This section provides detailed documentation for each component in the Linea mon
 | [Contracts](./contracts.md) | Solidity | `contracts/` | Smart contracts |
 | [Tracer](./tracer.md) | Java | `tracer/` | EVM trace generation |
 | [Besu Plugins](./besu-plugins.md) | Kotlin/Java | `besu-plugins/` | Sequencer extensions |
-| [SDK](./sdk.md) | TypeScript | `sdk/` | Developer SDK |
+| [SDK](./sdk.md) | TypeScript | `ts-libs/sdk/` | Developer SDK |
 | [Postman](./postman.md) | TypeScript | `postman/` | Message relay |
 | [E2E Tests](./e2e.md) | TypeScript | `e2e/` | End-to-end tests |
 | [Tracer Constraints](./tracer-constraints.md) | Lisp | `tracer-constraints/` | ZK constraints |
@@ -92,13 +92,13 @@ root build.gradle
 ```
 root package.json
 ├── contracts/ (Hardhat + TypeScript tests)
-├── sdk/
-│   ├── sdk-core (shared types)
-│   ├── sdk-viem (Viem-based)
-│   └── sdk-ethers (Ethers-based)
 ├── postman/ (message relay service)
 ├── e2e/ (end-to-end tests)
 ├── ts-libs/
+│   ├── sdk/
+│   │   ├── sdk-core (shared types)
+│   │   ├── sdk-viem (Viem-based)
+│   │   └── sdk-ethers (Ethers-based)
 │   ├── linea-shared-utils
 │   ├── linea-native-libs
 │   └── eslint-config

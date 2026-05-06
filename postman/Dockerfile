@@ -28,8 +28,8 @@ ENV NATIVE_LIBS_RELEASE_TAG=${NATIVE_LIBS_RELEASE_TAG}
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 
 COPY ./postman/package.json ./postman/package.json
-COPY ./sdk/sdk-core/package.json ./sdk/sdk-core/package.json
-COPY ./sdk/sdk-viem/package.json ./sdk/sdk-viem/package.json
+COPY ./ts-libs/sdk/sdk-core/package.json ./ts-libs/sdk/sdk-core/package.json
+COPY ./ts-libs/sdk/sdk-viem/package.json ./ts-libs/sdk/sdk-viem/package.json
 COPY ./ts-libs/linea-native-libs/package.json ./ts-libs/linea-native-libs/package.json
 COPY ./ts-libs/linea-shared-utils/package.json ./ts-libs/linea-shared-utils/package.json
 COPY ./ts-libs/eslint-config/package.json ./ts-libs/eslint-config/package.json
@@ -39,8 +39,8 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 # Copy source code for building
 COPY ./postman ./postman
-COPY ./sdk/sdk-core ./sdk/sdk-core
-COPY ./sdk/sdk-viem ./sdk/sdk-viem
+COPY ./ts-libs/sdk/sdk-core ./ts-libs/sdk/sdk-core
+COPY ./ts-libs/sdk/sdk-viem ./ts-libs/sdk/sdk-viem
 COPY ./ts-libs/linea-native-libs ./ts-libs/linea-native-libs
 COPY ./ts-libs/linea-shared-utils ./ts-libs/linea-shared-utils
 COPY ./ts-libs/eslint-config ./ts-libs/eslint-config

@@ -1,15 +1,15 @@
 {
-  "name": "@consensys/linea-sdk-viem",
+  "name": "@consensys/linea-sdk-core",
   "version": "1.0.0",
-  "description": "Viem-based SDK for Linea bridge deposits, withdrawals, claims, and message queries",
+  "description": "Core utilities for the Linea bridge SDK — Merkle tree, message types, chain and contract helpers",
   "author": "Consensys Software Inc.",
   "license": "(MIT OR Apache-2.0)",
   "repository": {
     "type": "git",
     "url": "https://github.com/Consensys/linea-monorepo.git",
-    "directory": "sdk/sdk-viem"
+    "directory": "ts-libs/sdk/sdk-core"
   },
-  "homepage": "https://github.com/Consensys/linea-monorepo/tree/main/sdk/sdk-viem#readme",
+  "homepage": "https://github.com/Consensys/linea-monorepo/tree/main/ts-libs/sdk/sdk-core#readme",
   "bugs": {
     "url": "https://github.com/Consensys/linea-monorepo/issues"
   },
@@ -17,13 +17,11 @@
     "linea",
     "bridge",
     "sdk",
-    "viem",
+    "merkle-tree",
+    "messaging",
     "ethereum",
     "layer2",
-    "zk-rollup",
-    "deposit",
-    "withdrawal",
-    "messaging"
+    "zk-rollup"
   ],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -50,9 +48,6 @@
     "lint:fix": "eslint --fix .",
     "clean": "rimraf dist node_modules coverage"
   },
-  "dependencies": {
-    "@consensys/linea-sdk-core": "workspace:*"
-  },
   "devDependencies": {
     "@consensys/eslint-config": "workspace:*",
     "@types/jest": "catalog:",
@@ -61,7 +56,7 @@
     "tsup": "catalog:",
     "viem": "catalog:"
   },
-  "peerDependencies": {
-    "viem": ">=2.22.0"
+  "dependencies": {
+    "abitype": "1.2.4"
   }
 }

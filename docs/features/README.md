@@ -24,7 +24,7 @@ For contract-level workflow diagrams see [`contracts/docs/workflows/`](../../con
 | Lido Governance Monitor | TypeScript | `native-yield-operations/lido-governance-monitor/` | Node.js + Prisma — see [Yield Management](yield-management.md) |
 | Operations CLI | TypeScript | `operations/` | oclif |
 | Integrity Verifier | TypeScript | `contracts/integrity-verifier/` | Node.js + Browser |
-| SDK | TypeScript | `sdk/` | Node.js |
+| SDK | TypeScript | `ts-libs/sdk/` | Node.js |
 | Corset | Rust | `corset/` | CLI + shared library |
 
 ## Feature Index

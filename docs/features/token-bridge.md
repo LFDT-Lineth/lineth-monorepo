@@ -20,7 +20,7 @@ The bridge supports:
 | TokenBridgeBase | `contracts/src/bridging/token/TokenBridgeBase.sol` | Shared logic, roles, token status tracking |
 | BridgedToken | `contracts/src/bridging/token/BridgedToken.sol` | Mintable/burnable ERC20 beacon proxy |
 | CustomBridgedToken | `contracts/src/bridging/token/CustomBridgedToken.sol` | Custom token implementation |
-| SDK | `sdk/` | Programmatic bridging via ethers/viem |
+| SDK | `ts-libs/sdk/` | Programmatic bridging via ethers/viem |
 
 ## Bridge Flow (L1→L2)
 

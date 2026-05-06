@@ -67,7 +67,7 @@ jobs:
               - '.github/workflows/main.yml'
             postman:
               - 'postman/**'
-              - 'sdk/**'
+              - 'ts-libs/sdk/**'
               - 'ts-libs/linea-native-libs/**'
               - 'ts-libs/linea-shared-utils/**'
               - '.github/workflows/postman-*.yml'

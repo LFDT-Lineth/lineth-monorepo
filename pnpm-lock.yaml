@@ -686,10 +686,10 @@ importers:
         version: link:../ts-libs/linea-native-libs
       '@consensys/linea-sdk-core':
         specifier: workspace:*
-        version: link:../sdk/sdk-core
+        version: link:../ts-libs/sdk/sdk-core
       '@consensys/linea-sdk-viem':
         specifier: workspace:*
-        version: link:../sdk/sdk-viem
+        version: link:../ts-libs/sdk/sdk-viem
       '@consensys/linea-shared-utils':
         specifier: workspace:*
         version: link:../ts-libs/linea-shared-utils
@@ -755,7 +755,7 @@ importers:
         specifier: 'catalog:'
         version: 18.0.0
 
-  sdk/sdk-core:
+  ts-libs/sdk/sdk-core:
     dependencies:
       abitype:
         specifier: 1.2.4
@@ -763,7 +763,7 @@ importers:
     devDependencies:
       '@consensys/eslint-config':
         specifier: workspace:*
-        version: link:../../ts-libs/eslint-config
+        version: link:../../eslint-config
       '@types/jest':
         specifier: 'catalog:'
         version: 30.0.0
@@ -780,7 +780,7 @@ importers:
         specifier: 'catalog:'
         version: 2.47.5(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.4.1)
 
-  sdk/sdk-ethers:
+  ts-libs/sdk/sdk-ethers:
     dependencies:
       ethers:
         specifier: 'catalog:'
@@ -791,7 +791,7 @@ importers:
     devDependencies:
       '@consensys/eslint-config':
         specifier: workspace:*
-        version: link:../../ts-libs/eslint-config
+        version: link:../../eslint-config
       '@jest/globals':
         specifier: 'catalog:'
         version: 30.3.0
@@ -814,7 +814,7 @@ importers:
         specifier: 'catalog:'
         version: 8.3.2(typescript@5.9.3)
 
-  sdk/sdk-viem:
+  ts-libs/sdk/sdk-viem:
     dependencies:
       '@consensys/linea-sdk-core':
         specifier: workspace:*
@@ -822,7 +822,7 @@ importers:
     devDependencies:
       '@consensys/eslint-config':
         specifier: workspace:*
-        version: link:../../ts-libs/eslint-config
+        version: link:../../eslint-config
       '@types/jest':
         specifier: 'catalog:'
         version: 30.0.0

@@ -35,7 +35,7 @@ linea-monorepo/
 │   └── contracts/token-generation-event/  # Token generation event contracts
 │
 ├── TypeScript
-│   ├── sdk/                  # Developer SDK (viem/ethers)
+│   ├── ts-libs/sdk/          # Developer SDK (viem/ethers)
 │   ├── postman/              # Message relay service
 │   ├── e2e/                  # End-to-end tests
 │   ├── ts-libs/              # Shared TS libraries

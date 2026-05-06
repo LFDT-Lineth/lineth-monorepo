@@ -1,6 +1,6 @@
 # AGENTS.md — sdk
 
-> Inherits all rules from [root AGENTS.md](../AGENTS.md). Only overrides and additions below.
+> Inherits all rules from [root AGENTS.md](../../AGENTS.md). Only overrides and additions below.
 
 ## Package Overview
 
@@ -54,7 +54,7 @@ postman -> sdk-viem -> sdk-core
 ### Directory Structure
 
 ```
-sdk/
+ts-libs/sdk/
 ├── sdk-core/       Core types, utilities (framework-agnostic)
 ├── sdk-ethers/     Ethers.js v6 integration with typechain contract bindings
 └── sdk-viem/       Viem integration
@@ -106,7 +106,7 @@ Go to **Actions → sdk-publish → Run workflow**, select the package. CI build
 
 ### CI
 
-- **PR guard:** `.github/workflows/sdk-testing.yml` runs build, test, and lint on PRs touching `sdk/**`.
+- **PR guard:** `.github/workflows/sdk-testing.yml` runs build, test, and lint on PRs touching `ts-libs/sdk/**`.
 - **Release:** `.github/workflows/sdk-release.yml` creates a release PR (version bump + auto-changelog) via manual dispatch.
 - **Publish:** `.github/workflows/sdk-publish.yml` builds, tests, and publishes to npm via manual dispatch.
 
