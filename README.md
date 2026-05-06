@@ -73,6 +73,66 @@ Please keep in mind that we do not accept non-code contributions like fixing com
 
 Consider starting with a ["good first issue"](https://github.com/Consensys/linea-monorepo/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
+### Commit message format
+
+All commits must follow the [Conventional Commits](https://www.conventionalcommits.org) format, enforced locally by a Husky `commit-msg` hook:
+
+```
+<type>(<scope>): <short description>
+
+[optional body]
+
+[optional footer: Closes #<issue>, BREAKING CHANGE: ...]
+```
+
+**Allowed types:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`, `revert`, `build`
+
+**Required scope** (one or multiple of):
+
+| Scope | Area |
+|---|---|
+| `coordinator` | Coordinator service |
+| `prover` | Prover |
+| `prover-ray` | Prover Ray (RISC-V) |
+| `postman` | Message bridging and executor |
+| `tx-exclusion-api` | Transaction exclusion API |
+| `linea-besu` | Linea-Besu package & plugins |
+| `tracer` | Tracer |
+| `sequencer` | Sequencer |
+| `state-recovery` | State recovery |
+| `contracts` | Smart contracts |
+| `sdk-core` / `sdk-ethers` / `sdk-viem` | SDKs |
+| `jvm-libs` | JVM shared libraries |
+| `blob-libs` | Blob libraries |
+| `e2e` | End-to-end tests |
+| `ci` | CI/CD workflows |
+| `docker` | Docker / compose |
+| `deps` | Dependency updates |
+| `misc` | For anything that does not have impact on deliverable, e.g docs, configs, AI agents, etc |
+
+**Examples:**
+```
+feat(coordinator): add retry logic for L1 message sending
+
+Retries up to 3 times on transient network errors before failing.
+
+Closes #456
+```
+
+```
+chore(coordinator,sequencer,tracer,tx-exclusion-api): update to java 25
+```
+
+To write a single-line breaking change commit from the terminal:
+```bash
+git commit -m 'feat(coordinator)!: breaking changes'
+```
+
+To write a multi-line commit from the terminal:
+```bash
+git commit -m $'feat(coordinator): add retry logic\n\nRetries up to 3 times on transient network errors.\n\nCloses issue# 123'
+```
+
 Before contributing, ensure you're familiar with:
 
 - Our [contribution guide](docs/contribute.md)

@@ -1,0 +1,112 @@
+#!/usr/bin/env sh
+# Conventional Commits + scope-enum validator (POSIX sh, no node/pnpm).
+#
+# Husky v9's runner invokes this hook with `sh -e`, so this script must be
+# POSIX-compatible (no bash arrays, no [[ ... ]], no =~, no process
+# substitution, no here-strings).
+#
+# Supports multi-scope syntax, e.g.:
+#   feat(coordinator, postman, contracts): add multi-component change
+
+set -eu
+
+MSG_FILE="$1"
+
+# Subject = first non-empty, non-comment line of the commit message.
+SUBJECT=$(grep -v '^#' "${MSG_FILE}" | sed '/^$/d' | head -n 1)
+
+# Let merge / fixup / squash / revert auto-commits through unchecked.
+case "${SUBJECT}" in
+  "Merge "*|"fixup! "*|"squash! "*|"amend! "*|'Revert "'*) exit 0 ;;
+esac
+
+# Conventional Commits default type set (from @commitlint/config-conventional).
+ALLOWED_TYPES='feat|fix|docs|style|refactor|perf|test|chore|ci|revert|build'
+
+# Allowed scopes
+ALLOWED_SCOPES=\
+'coordinator prover prover-ray postman tx-exclusion-api '\
+'linea-besu contracts sdk-core sdk-ethers sdk-viem '\
+'tracer sequencer state-recovery jvm-libs blob-libs '\
+'e2e ci docker deps misc'
+
+# Match overall structure: <type>(<scope-group>)!?: <subject>
+HEADER_RE="^(${ALLOWED_TYPES})\\(([^)]+)\\)!?: .+"
+
+if ! printf '%s' "${SUBJECT}" | grep -qE "${HEADER_RE}"; then
+  cat >&2 <<EOF
+✗ Commit message does not match the Conventional Commits format.
+
+  Expected:  <type>(<scope>[, <scope>...]): <short description>
+  Got:       ${SUBJECT}
+
+  Allowed types:  $(printf '%s' "${ALLOWED_TYPES}" | tr '|' ',' | sed 's/,/, /g')
+  Allowed scopes: $(printf '%s' "${ALLOWED_SCOPES}" | sed 's/ /, /g')
+EOF
+  exit 1
+fi
+
+# Extract scope group (capture group 2) using sed.
+SCOPES_RAW=$(printf '%s' "${SUBJECT}" | sed -E "s/${HEADER_RE}.*/\\2/")
+
+# Reject malformed scope groups before splitting. Caught patterns:
+#   "( )"                    — only whitespace
+#   "(,coordinator)"         — leading comma
+#   "(coordinator,)"         — trailing comma
+#   "(coordinator,,postman)" — empty slot between commas
+# (The for-loop below word-splits on whitespace so it would silently swallow
+# these otherwise.)
+if printf '%s' "${SCOPES_RAW}" \
+     | grep -qE '(^[[:space:]]*$|^[[:space:]]*,|,[[:space:]]*$|,[[:space:]]*,)'; then
+  cat >&2 <<EOF
+✗ Malformed scope group: "(${SCOPES_RAW})"
+  Scope name must be present and each comma must be followed by a non-empty scope name.
+EOF
+  exit 1
+fi
+
+# Split on commas, trim each, validate against the enum and detect duplicates.
+# `for x in $(...)` word-splits on whitespace; tr collapses commas to spaces
+# so each scope ends up as its own field.
+INVALID=""
+SEEN=""
+DUPLICATES=""
+for scope in $(printf '%s' "${SCOPES_RAW}" | tr ',' ' '); do
+  # Membership check against the enum.
+  case " ${ALLOWED_SCOPES} " in
+    *" ${scope} "*) ;;
+    *) INVALID="${INVALID} ${scope}" ;;
+  esac
+
+  # Duplicate detection — record the first occurrence in SEEN, append to
+  # DUPLICATES on the second occurrence (and skip on subsequent ones so the
+  # message lists each duplicate only once).
+  case " ${SEEN} " in
+    *" ${scope} "*)
+      case " ${DUPLICATES} " in
+        *" ${scope} "*) ;;
+        *) DUPLICATES="${DUPLICATES} ${scope}" ;;
+      esac
+      ;;
+    *) SEEN="${SEEN} ${scope}" ;;
+  esac
+done
+
+if [ -n "${INVALID}" ]; then
+  cat >&2 <<EOF
+✗ Scope(s) not in the allowed list:${INVALID}
+
+  Allowed scopes: $(printf '%s' "${ALLOWED_SCOPES}" | sed 's/ /, /g')
+EOF
+  exit 1
+fi
+
+if [ -n "${DUPLICATES}" ]; then
+  cat >&2 <<EOF
+✗ Duplicate scope(s) in scope group:${DUPLICATES}
+  Each scope must appear at most once inside the parentheses.
+EOF
+  exit 1
+fi
+
+exit 0
