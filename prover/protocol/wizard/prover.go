@@ -147,8 +147,9 @@ type ProverRuntime struct {
 	BLSFS   fiatshamir.FS
 	IsBLS   bool
 
-	// lock is global lock so that the assignment maps are thread safes
-	lock *sync.Mutex
+	// lock is global lock so that the assignment maps are thread safes.
+	// RWMutex allows concurrent reads (GetColumn) while serializing writes.
+	lock *sync.RWMutex
 
 	PerformanceMonitor *config.PerformanceMonitor
 
@@ -297,7 +298,7 @@ func (c *CompiledIOP) createProver(IsBLS bool) ProverRuntime {
 		State:              collection.NewMapping[string, interface{}](),
 		IsBLS:              IsBLS,
 		currRound:          0,
-		lock:               &sync.Mutex{},
+		lock:               &sync.RWMutex{},
 		PerformanceMonitor: profiling.GetMonitorParams(),
 	}
 
@@ -343,9 +344,9 @@ func (c *CompiledIOP) createProver(IsBLS bool) ProverRuntime {
 //     not readily available when the function is called.
 func (run ProverRuntime) GetColumn(name ifaces.ColID) ifaces.ColAssignment {
 
-	// global prover's lock before accessing the witnesses
-	run.lock.Lock()
-	defer run.lock.Unlock()
+	// global prover's lock before accessing the witnesses (read-only)
+	run.lock.RLock()
+	defer run.lock.RUnlock()
 
 	/*
 		Make sure the column is registered. If the name is the one specified
@@ -360,8 +361,8 @@ func (run ProverRuntime) GetColumn(name ifaces.ColID) ifaces.ColAssignment {
 // TryGetColumn attempts to retrieve a column assignment in a thread-safe way.
 // Returns the assignment and true if found, or zero-value and false otherwise.
 func (run ProverRuntime) TryGetColumn(name ifaces.ColID) (ifaces.ColAssignment, bool) {
-	run.lock.Lock()
-	defer run.lock.Unlock()
+	run.lock.RLock()
+	defer run.lock.RUnlock()
 	return run.Columns.TryGet(name)
 }
 
@@ -369,9 +370,9 @@ func (run ProverRuntime) TryGetColumn(name ifaces.ColID) (ifaces.ColAssignment, 
 // provided column name does not exists
 func (run ProverRuntime) HasColumn(name ifaces.ColID) bool {
 
-	// global prover's lock before accessing the witnesses
-	run.lock.Lock()
-	defer run.lock.Unlock()
+	// global prover's lock before accessing the witnesses (read-only)
+	run.lock.RLock()
+	defer run.lock.RUnlock()
 
 	/*
 		Make sure the column is registered. If the name is the one specified
@@ -386,9 +387,9 @@ func (run ProverRuntime) HasColumn(name ifaces.ColID) bool {
 // Deprecated: this is deadcode
 func (run ProverRuntime) CopyColumnInto(name ifaces.ColID, buff *ifaces.ColAssignment) {
 
-	// global prover's lock before accessing the witnesses
-	run.lock.Lock()
-	defer run.lock.Unlock()
+	// global prover's lock before accessing the witnesses (read-only)
+	run.lock.RLock()
+	defer run.lock.RUnlock()
 
 	/*
 		Make sure the column is registered. If the name is the one specified
@@ -414,9 +415,9 @@ func (run ProverRuntime) CopyColumnInto(name ifaces.ColID, buff *ifaces.ColAssig
 // explicitly an assigned column (meaning not a derive column).
 func (run ProverRuntime) GetColumnAt(name ifaces.ColID, pos int) field.Element {
 
-	// global prover's lock before accessing the witnesses
-	run.lock.Lock()
-	defer run.lock.Unlock()
+	// global prover's lock before accessing the witnesses (read-only)
+	run.lock.RLock()
+	defer run.lock.RUnlock()
 
 	/*
 		Make sure the column is registered. If the name is the one specified
@@ -434,9 +435,9 @@ func (run ProverRuntime) GetColumnAt(name ifaces.ColID, pos int) field.Element {
 }
 
 func (run ProverRuntime) GetColumnAtBase(name ifaces.ColID, pos int) (field.Element, error) {
-	// global prover's lock before accessing the witnesses
-	run.lock.Lock()
-	defer run.lock.Unlock()
+	// global prover's lock before accessing the witnesses (read-only)
+	run.lock.RLock()
+	defer run.lock.RUnlock()
 
 	/*
 		Make sure the column is registered. If the name is the one specified
@@ -459,9 +460,9 @@ func (run ProverRuntime) GetColumnAtBase(name ifaces.ColID, pos int) (field.Elem
 }
 
 func (run ProverRuntime) GetColumnAtExt(name ifaces.ColID, pos int) fext.Element {
-	// global prover's lock before accessing the witnesses
-	run.lock.Lock()
-	defer run.lock.Unlock()
+	// global prover's lock before accessing the witnesses (read-only)
+	run.lock.RLock()
+	defer run.lock.RUnlock()
 
 	/*
 		Make sure the column is registered. If the name is the one specified
@@ -519,36 +520,25 @@ func (run *ProverRuntime) AssignColumn(name ifaces.ColID, witness ifaces.ColAssi
 		opts_ |= opts[i]
 	}
 
-	// global prover's lock before accessing the witnesses. This makes the
-	// function thread-safe
-	run.lock.Lock()
-	defer run.lock.Unlock()
-
 	// Sanity-check : the handle should not be empty
 	if len(name) == 0 {
 		panic("given an empty name")
 	}
 
-	// @alex: this check is redundant with the following check since GetHandle
-	// would panic as it won't be able to find the column if it is
-	// "VerifierDefined". The advantage of this check is that it provides a
-	// more accurate error message if this occurs.
+	// Read the column metadata under a read lock. Spec is immutable after
+	// compilation, so we only need the read lock to check the current round
+	// and column status — no writes to shared state here.
+	run.lock.RLock()
 	if run.Spec.Columns.Status(name) == column.VerifierDefined {
+		run.lock.RUnlock()
 		utils.Panic("tried assign a verifier defined column : %v", name)
 	}
-
-	// Sanity-check: Make sure, it is done at the right round
 	handle := run.Spec.Columns.GetHandle(name).(column.Natural)
-
-	// if round is empty, we expect it to assign the column at the current round,
-	// otherwise it assigns it in the round the column was declared.
-	// This is useful when we have for loop over rounds.
 	ifaces.MustBeInRound(handle, run.currRound)
+	currRound := run.currRound
+	run.lock.RUnlock()
 
-	// This sanity-check here is to ensure that if we declare a column as "IsBase"
-	// , then it's assignment should be done on the base field. If the provides
-	// a field extension witness, then the function will try to cast it into
-	// a [smartvectors.Regular] and will panic if that is not possible.
+	// Base-field conversion (no lock needed — operates on local witness)
 	if handle.IsBase() && !smartvectors.IsBase(witness) {
 		w_, err := smartvectors.IntoBase(witness)
 		if err != nil {
@@ -559,23 +549,20 @@ func (run *ProverRuntime) AssignColumn(name ifaces.ColID, witness ifaces.ColAssi
 	if witness.Len() != handle.Size() {
 		utils.Panic("Bad length for %v, expected %v got %v\n", handle, handle.Size(), witness.Len())
 	}
-
-	// This is supposed to be redundant with the checks we make when
-	// registering a column. So, if it fails here it likely should have failed
-	// earlier. Thus, the check is there purely for defensive purposes.
 	if !utils.IsPowerOfTwo(witness.Len()) {
 		utils.Panic("Witness with non-power of two sizes, should have been caught earlier")
 	}
 
-	// If the column is generated after the first round, there is no need
-	// optimizing the assignment because it is likely created by wizard
-	// compilation and its representation is already optimized.
-	if run.currRound > 0 {
-		// Adds it to the assignments
+	// For rounds > 0, skip size optimization (columns already optimized by compiler)
+	if currRound > 0 {
+		run.lock.Lock()
 		run.Columns.InsertNew(handle.GetColID(), witness)
+		run.lock.Unlock()
 		return
 	}
 
+	// CPU-intensive size reduction runs WITHOUT the lock held.
+	// This enables parallel module assignments in the bootstrapper.
 	start, stop := smartvectors.CoWindowRange(witness)
 
 	var (
@@ -588,58 +575,37 @@ func (run *ProverRuntime) AssignColumn(name ifaces.ColID, witness ifaces.ColAssi
 
 	switch {
 	case hasLeftPaddedPragma:
-
 		if !hasLeftPaddedRange {
-			// This conversion to regular ensures that the witness won't be
-			// stored as a right-padded column. The size reduction might later
-			// find a padding opportunity in the right direction. The conversion
-			// is ineffective in case the column is a regular column (which
-			// might be caught by the condition)
 			witness = smartvectors.NewRegular(witness.IntoRegVecSaveAlloc())
 		}
-
-		// This reduction is a trade-off between runtime and memory. It costs CPU
-		// but can save a significant amount of memory.
 		if opts_&DisableAssignmentSizeReduction == 0 {
 			witness, _ = smartvectors.TryReduceSizeLeft(witness)
 		}
 
 	case hasRightPaddedPragma:
-
 		if !hasRightPaddedRange {
-			// This conversion to regular ensures that the witness won't be
-			// stored as a left-padded column. The size reduction might later
-			// find a padding opportunity in the right direction. The conversion
-			// is ineffective in case the column is a regular column (which
-			// might be caught by the condition)
 			witness = smartvectors.NewRegular(witness.IntoRegVecSaveAlloc())
 		}
-
-		// This reduction is a trade-off between runtime and memory. It costs CPU
-		// but can save a significant amount of memory.
 		if opts_&DisableAssignmentSizeReduction == 0 {
 			witness, _ = smartvectors.TryReduceSizeRight(witness)
 		}
 
 	case hasFullColumnPragma:
-
 		if hasLeftPaddedRange || hasRightPaddedRange {
 			logrus.Errorf("Full column with non-full witness: %v, start: %v, stop: %v", name, start, stop)
 		}
-
 		witness = smartvectors.NewRegular(witness.IntoRegVecSaveAlloc())
 
 	default:
-
-		// This reduction is a trade-off between runtime and memory. It costs CPU
-		// but can save a significant amount of memory.
 		if opts_&DisableAssignmentSizeReduction == 0 {
 			witness, _ = smartvectors.TryReduceSizeRight(witness)
 		}
 	}
 
-	// Adds it to the assignments
+	// Only hold the write lock for the final map insertion
+	run.lock.Lock()
 	run.Columns.InsertNew(handle.GetColID(), witness)
+	run.lock.Unlock()
 }
 
 // getRandomCoinGeneric is an internal utility function that we use when
@@ -815,8 +781,8 @@ func (run *ProverRuntime) runProverSteps() {
 // Deprecated: use [ProverRuntime.GetColumn] instead
 func (run *ProverRuntime) GetMessage(name ifaces.ColID) ifaces.ColAssignment {
 	// Global prover locks for accessing the maps
-	run.lock.Lock()
-	defer run.lock.Unlock()
+	run.lock.RLock()
+	defer run.lock.RUnlock()
 
 	// Sanity-check, this panics if the column does not exists
 	return run.Columns.MustGet(name)
@@ -885,8 +851,8 @@ func (run *ProverRuntime) AssignUnivariateExt(name ifaces.QueryID, x fext.Elemen
 // the same thing.
 func (run *ProverRuntime) GetUnivariateEval(name ifaces.QueryID) query.UnivariateEval {
 	// Global prover locks for accessing the maps
-	run.lock.Lock()
-	defer run.lock.Unlock()
+	run.lock.RLock()
+	defer run.lock.RUnlock()
 	return run.Spec.QueriesParams.Data(name).(query.UnivariateEval)
 }
 
@@ -896,8 +862,8 @@ func (run *ProverRuntime) GetUnivariateEval(name ifaces.QueryID) query.Univariat
 // step of the prover runtime.
 func (run *ProverRuntime) GetUnivariateParams(name ifaces.QueryID) query.UnivariateEvalParams {
 	// Global prover's lock for accessing params
-	run.lock.Lock()
-	defer run.lock.Unlock()
+	run.lock.RLock()
+	defer run.lock.RUnlock()
 	return run.QueriesParams.MustGet(name).(query.UnivariateEvalParams)
 }
 
@@ -949,8 +915,8 @@ func (run *ProverRuntime) AssignLocalPointExt(name ifaces.QueryID, y fext.Elemen
 // the same thing.
 func (run *ProverRuntime) GetLocalPointEval(name ifaces.QueryID) query.LocalOpening {
 	// Global prover locks for accessing the maps
-	run.lock.Lock()
-	defer run.lock.Unlock()
+	run.lock.RLock()
+	defer run.lock.RUnlock()
 	return run.Spec.QueriesParams.Data(name).(query.LocalOpening)
 }
 
@@ -959,8 +925,8 @@ func (run *ProverRuntime) GetLocalPointEval(name ifaces.QueryID) query.LocalOpen
 func (run *ProverRuntime) GetLocalPointEvalParams(name ifaces.QueryID) query.LocalOpeningParams {
 
 	// Global prover's lock for accessing params
-	run.lock.Lock()
-	defer run.lock.Unlock()
+	run.lock.RLock()
+	defer run.lock.RUnlock()
 
 	return run.QueriesParams.MustGet(name).(query.LocalOpeningParams)
 }
@@ -1020,8 +986,8 @@ func (run *ProverRuntime) AssignGrandProductExt(name ifaces.QueryID, y fext.Elem
 // GetLogDeriveSum gets the metadata of a [query.LogDerivativeSum] query. Panic if not found.
 func (run *ProverRuntime) GetLogDeriveSum(name ifaces.QueryID) query.LogDerivativeSum {
 	// Global prover locks for accessing the maps
-	run.lock.Lock()
-	defer run.lock.Unlock()
+	run.lock.RLock()
+	defer run.lock.RUnlock()
 	return run.Spec.QueriesParams.Data(name).(query.LogDerivativeSum)
 }
 
@@ -1029,8 +995,8 @@ func (run *ProverRuntime) GetLogDeriveSum(name ifaces.QueryID) query.LogDerivati
 func (run *ProverRuntime) GetLogDerivSumParams(name ifaces.QueryID) query.LogDerivSumParams {
 
 	// Global prover's lock for accessing params
-	run.lock.Lock()
-	defer run.lock.Unlock()
+	run.lock.RLock()
+	defer run.lock.RUnlock()
 
 	return run.QueriesParams.MustGet(name).(query.LogDerivSumParams)
 }
@@ -1062,8 +1028,8 @@ func (run *ProverRuntime) AssignHornerParams(name ifaces.QueryID, params query.H
 // GetHornerParams returns the parameters of a [query.Honer] query.
 func (run *ProverRuntime) GetHornerParams(name ifaces.QueryID) query.HornerParams {
 	// Global prover's lock for accessing params
-	run.lock.Lock()
-	defer run.lock.Unlock()
+	run.lock.RLock()
+	defer run.lock.RUnlock()
 	return run.QueriesParams.MustGet(name).(query.HornerParams)
 }
 

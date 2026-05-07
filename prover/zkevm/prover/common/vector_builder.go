@@ -176,7 +176,10 @@ func (vb *VectorBuilder) PadAndAssign(run *wizard.ProverRuntime, v ...field.Elem
 		exit.OnLimitOverflow(
 			vb.column.Size(),
 			len(vb.slice),
-			fmt.Errorf("the slice size %v is larger than the column size %v", len(vb.slice), vb.column.Size()),
+			fmt.Errorf(
+				"column %s slice size %v is larger than column size %v",
+				vb.column.GetColID(), len(vb.slice), vb.column.Size(),
+			),
 		)
 	}
 

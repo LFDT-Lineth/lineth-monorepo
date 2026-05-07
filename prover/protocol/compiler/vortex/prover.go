@@ -269,10 +269,6 @@ func (ctx *OpenSelectedColumnsProverAction) Run(run *wizard.ProverRuntime) {
 		treesSIS               = []*smt_koalabear.Tree{}
 		treesNoSIS             = []*smt_koalabear.Tree{}
 		blsTrees               = []*smt_bls12377.Tree{}
-		// We need them to assign the opened sis and non sis columns
-		// to be used in the self-recursion compiler
-		sisProof    = vortex.OpeningProof{}
-		nonSisProof = vortex.OpeningProof{}
 	)
 
 	// Append the precomputed committedMatrices and trees to the SIS or no SIS matrices
@@ -378,26 +374,20 @@ func (ctx *OpenSelectedColumnsProverAction) Run(run *wizard.ProverRuntime) {
 	// Assign the opened columns
 	ctx.assignOpenedColumns(run, entryList, selectedCols, NonSelfRecursion)
 
-	// Assign the SIS and non SIS selected columns.
-	// They are not used in the Vortex compilers,
-	// but are used in the self-recursion compilers.
-	// But we need to assign them anyway as the self-recursion
-	// compiler always runs after running the Vortex compiler
+	// Assign the SIS and non SIS selected columns for the self-recursion
+	// compiler. Instead of calling SelectColumnsAndMerkleProofs again, we
+	// partition the already-computed selectedCols by the NoSIS/SIS boundary.
+	// The combined matrices were built as append(NoSIS, SIS...), so the
+	// first len(committedMatricesNoSIS) entries are NoSIS.
+	numNoSIS := len(committedMatricesNoSIS)
 
-	// Handle SIS round
 	if len(committedMatricesSIS) > 0 {
-		vortex_koalabear.SelectColumnsAndMerkleProofs(&sisProof, entryList, committedMatricesSIS, treesSIS)
-		sisSelectedCols := sisProof.Columns
-		// Assign the opened columns
+		sisSelectedCols := selectedCols[numNoSIS:]
 		ctx.assignOpenedColumns(run, entryList, sisSelectedCols, SelfRecursionSIS)
 	}
-	// Handle non SIS round
 	if len(committedMatricesNoSIS) > 0 {
-		vortex_koalabear.SelectColumnsAndMerkleProofs(&nonSisProof, entryList, committedMatricesNoSIS, treesNoSIS)
-		nonSisSelectedCols := nonSisProof.Columns
+		nonSisSelectedCols := selectedCols[:numNoSIS]
 		ctx.assignOpenedColumns(run, entryList, nonSisSelectedCols, SelfRecursionPoseidon2Only)
-		// Store the selected columns for the non sis round
-		//  in the prover state
 		ctx.storeSelectedColumnsForNonSisRounds(run, nonSisSelectedCols)
 	}
 }
@@ -625,8 +615,14 @@ func (ctx *Ctx) assignOpenedColumns(
 	mode commitmentMode) {
 	// The columns are split by commitment round. So we need to
 	// restick them when we commit them.
+	totalLen := 0
+	for i := range selectedCols {
+		if len(selectedCols[i]) > 0 {
+			totalLen += len(selectedCols[i][0])
+		}
+	}
 	for j := range entryList {
-		fullCol := []field.Element{}
+		fullCol := make([]field.Element, 0, totalLen)
 		for i := range selectedCols {
 			fullCol = append(fullCol, selectedCols[i][j]...)
 		}

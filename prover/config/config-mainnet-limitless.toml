@@ -17,7 +17,6 @@ ignore_compatibility_check = false
 keep_traces_until_block = 0
 serialization = false
 
-
 [data_availability]
 prover_mode = "full"
 requests_root_dir = "./"

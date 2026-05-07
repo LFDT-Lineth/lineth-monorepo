@@ -99,6 +99,10 @@ type VerifierCircuit struct {
 	// provided in the proof and in the VerifyingKey.
 	Columns    [][]koalagnark.Element `gnark:",secret"`
 	ColumnsExt [][]koalagnark.Ext     `gnark:",secret"`
+	// Cached verifying-key columns avoid rematerializing the same constants
+	// repeatedly while building recursion circuits.
+	VKColumnsBase map[ifaces.ColID][]koalagnark.Element `gnark:"-"`
+	VKColumnsExt  map[ifaces.ColID][]koalagnark.Ext     `gnark:"-"`
 	// UnivariateParams stores an assignment for each [query.UnivariateParams]
 	// from the proof. This is part of the witness of the gnark circuit.
 	UnivariateParams []query.GnarkUnivariateEvalParams `gnark:",secret"`
@@ -162,6 +166,8 @@ func newVerifierCircuit(comp *CompiledIOP, numRound int, IsBLS bool) *VerifierCi
 
 		Columns:            [][]koalagnark.Element{},
 		ColumnsExt:         [][]koalagnark.Ext{},
+		VKColumnsBase:      make(map[ifaces.ColID][]koalagnark.Element),
+		VKColumnsExt:       make(map[ifaces.ColID][]koalagnark.Ext),
 		UnivariateParams:   make([]query.GnarkUnivariateEvalParams, 0),
 		InnerProductParams: make([]query.GnarkInnerProductParams, 0),
 		LocalOpeningParams: make([]query.GnarkLocalOpeningParams, 0),
@@ -593,13 +599,16 @@ func (c *VerifierCircuit) GetColumnBase(name ifaces.ColID) ([]koalagnark.Element
 
 	// case where the column is part of the verification key
 	if c.Spec.Columns.Status(name) == column.VerifyingKey {
+		if res, ok := c.VKColumnsBase[name]; ok {
+			return res, nil
+		}
+
 		val := smartvectors.IntoRegVec(c.Spec.Precomputed.MustGet(name))
-		// res := gnarkutil.AllocateSlice(len(val))
 		res := make([]koalagnark.Element, len(val))
-		// Return the column as an array of constants
 		for i := range val {
 			res[i] = koalagnark.NewElementFromKoala(val[i])
 		}
+		c.VKColumnsBase[name] = res
 		return res, nil
 	}
 
@@ -622,24 +631,28 @@ func (c *VerifierCircuit) GetColumnExt(name ifaces.ColID) []koalagnark.Ext {
 		}
 
 		resExt := make([]koalagnark.Ext, len(res))
+		zero := koalagnark.NewElement(uint64(0))
 
 		for i := 0; i < len(resExt); i++ {
 			resExt[i].B0.A0 = res[i]
-			resExt[i].B0.A1 = koalagnark.NewElement(0)
-			resExt[i].B1.A0 = koalagnark.NewElement(0)
-			resExt[i].B1.A1 = koalagnark.NewElement(0)
+			resExt[i].B0.A1 = zero
+			resExt[i].B1.A0 = zero
+			resExt[i].B1.A1 = zero
 		}
 		return resExt
 	}
 	// case where the column is part of the verification key
 	if c.Spec.Columns.Status(name) == column.VerifyingKey {
+		if res, ok := c.VKColumnsExt[name]; ok {
+			return res
+		}
+
 		val := smartvectors.IntoRegVecExt(c.Spec.Precomputed.MustGet(name))
 		res := gnarkutil.AllocateSliceExt(len(val))
-		// Return the column as an array of constants
 		for i := range val {
-			// res[i].Assign(val[i])
 			res[i] = koalagnark.NewExt(val[i])
 		}
+		c.VKColumnsExt[name] = res
 		return res
 	}
 

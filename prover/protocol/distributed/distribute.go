@@ -3,6 +3,10 @@ package distributed
 import (
 	"errors"
 	"fmt"
+	"os"
+	"runtime"
+	"strconv"
+	"sync"
 
 	multsethashing "github.com/consensys/linea-monorepo/prover/crypto/multisethashing_koalabear"
 	"github.com/consensys/linea-monorepo/prover/crypto/poseidon2_koalabear"
@@ -18,6 +22,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 )
 
 // DistributedWizard represents a wizard protocol that has undergone a
@@ -70,139 +75,227 @@ type DistributedWizard struct {
 
 	// VerificationKeyMerkleTree
 	VerificationKeyMerkleTree VerificationKeyMerkleTree
+
+	precompiledConglomeration     *RecursedSegmentCompilation
+	precompiledConglomerationDone chan struct{}
+	precompiledConglomerationOnce sync.Once
+}
+
+type DistributeWizardOptions struct {
+	BuildDebugModules bool
 }
 
 // DistributeWizard returns a [DistributedWizard] from a [wizard.CompiledIOP]. It
 // takes ownership of the input [wizard.CompiledIOP]. And uses disc to design
 // the scope of each module.
 func DistributeWizard(comp *wizard.CompiledIOP, disc *StandardModuleDiscoverer) *DistributedWizard {
+	return DistributeWizardWithOptions(comp, disc, DistributeWizardOptions{
+		BuildDebugModules: true,
+	})
+}
+
+// DistributeWizardWithOptions is like [DistributeWizard] but allows callers to
+// skip optional work such as debug-module construction.
+func DistributeWizardWithOptions(
+	comp *wizard.CompiledIOP,
+	disc *StandardModuleDiscoverer,
+	opts DistributeWizardOptions,
+) *DistributedWizard {
 
 	// We complie the comp object to manually shift all the columns that need to be shifted. This is due to the
 	// fact that distributed wizard does not support shifted columns.
 	CompileManualShifter(comp)
+
+	bootstrapper := PrecompileInitialWizard(comp, disc)
+
 	if err := auditInitialWizard(comp); err != nil {
 		utils.Panic("improper initial wizard for distribution: %v", err)
 	}
 
 	distributedWizard := &DistributedWizard{
-		Bootstrapper: PrecompileInitialWizard(comp, disc),
+		Bootstrapper: bootstrapper,
 		Disc:         disc,
 	}
 
 	disc.Analyze(distributedWizard.Bootstrapper)
 	distributedWizard.ModuleNames = disc.ModuleList()
 
-	allFilteredModuleInputs := make([]FilteredModuleInputs, 0)
-
-	for _, moduleName := range distributedWizard.ModuleNames {
-
-		moduleFilter := moduleFilter{
-			Disc:   disc,
-			Module: moduleName,
+	buildModuleWorkers := 4
+	if v := os.Getenv("LIMITLESS_BUILD_JOBS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			buildModuleWorkers = n
 		}
-
-		filteredModuleInputs := moduleFilter.FilterCompiledIOP(
-			distributedWizard.Bootstrapper,
-		)
-
-		var (
-			moduleGL         = BuildModuleGL(&filteredModuleInputs)
-			moduleGLForDebug = BuildModuleGL(&filteredModuleInputs)
-		)
-
-		// This add sanity-checking the module initial assignment. Without
-		// this compilation, the module would not check anything.
-		wizard.ContinueCompilation(
-			moduleGLForDebug.Wiop,
-			dummy.CompileAtProverLvl(dummy.WithMsg(fmt.Sprintf("GL module (debug) %v", moduleName))),
-		)
-
-		distributedWizard.DebugGLs = append(
-			distributedWizard.DebugGLs,
-			moduleGLForDebug,
-		)
-
-		distributedWizard.GLs = append(
-			distributedWizard.GLs,
-			moduleGL,
-		)
-
-		distributedWizard.BlueprintGLs = append(
-			distributedWizard.BlueprintGLs,
-			moduleGL.Blueprint(),
-		)
-
-		allFilteredModuleInputs = append(
-			allFilteredModuleInputs,
-			filteredModuleInputs,
-		)
+	} else {
+		buildModuleWorkers = min(4, runtime.GOMAXPROCS(0))
 	}
 
-	var (
-		nbLPP = len(distributedWizard.ModuleNames)
-	)
-
-	for i := 0; i < nbLPP; i++ {
-
-		var (
-			moduleLPP         = BuildModuleLPP(allFilteredModuleInputs[i])
-			moduleLPPForDebug = BuildModuleLPP(allFilteredModuleInputs[i])
-		)
-
-		// This add sanity-checking the module initial assignment. Without
-		// this compilation, the module would not check anything.
-		wizard.ContinueCompilation(
-			moduleLPPForDebug.Wiop,
-			dummy.CompileAtProverLvl(dummy.WithMsg(fmt.Sprintf("LPP module (debug) %d", i))),
-		)
-
-		distributedWizard.DebugLPPs = append(
-			distributedWizard.DebugLPPs,
-			moduleLPPForDebug,
-		)
-
-		distributedWizard.LPPs = append(
-			distributedWizard.LPPs,
-			moduleLPP,
-		)
-
-		distributedWizard.BlueprintLPPs = append(
-			distributedWizard.BlueprintLPPs,
-			moduleLPP.Blueprint(),
-		)
+	numModules := len(distributedWizard.ModuleNames)
+	allFilteredModuleInputs := make([]FilteredModuleInputs, numModules)
+	distributedWizard.GLs = make([]*ModuleGL, numModules)
+	if opts.BuildDebugModules {
+		distributedWizard.DebugGLs = make([]*ModuleGL, numModules)
 	}
+	distributedWizard.BlueprintGLs = make([]ModuleSegmentationBlueprint, numModules)
+
+	var glBuildGroup errgroup.Group
+	glBuildGroup.SetLimit(buildModuleWorkers)
+	for i, moduleName := range distributedWizard.ModuleNames {
+		i, moduleName := i, moduleName
+		glBuildGroup.Go(func() error {
+			moduleFilter := moduleFilter{
+				Disc:   disc,
+				Module: moduleName,
+			}
+
+			filteredModuleInputs := moduleFilter.FilterCompiledIOP(
+				distributedWizard.Bootstrapper,
+			)
+			moduleGL := BuildModuleGL(&filteredModuleInputs)
+
+			allFilteredModuleInputs[i] = filteredModuleInputs
+			distributedWizard.GLs[i] = moduleGL
+			if opts.BuildDebugModules {
+				moduleGLForDebug := BuildModuleGL(&filteredModuleInputs)
+
+				// This add sanity-checking the module initial assignment. Without
+				// this compilation, the module would not check anything.
+				wizard.ContinueCompilation(
+					moduleGLForDebug.Wiop,
+					dummy.CompileAtProverLvl(dummy.WithMsg(fmt.Sprintf("GL module (debug) %v", moduleName))),
+				)
+				distributedWizard.DebugGLs[i] = moduleGLForDebug
+			}
+			distributedWizard.BlueprintGLs[i] = moduleGL.Blueprint()
+			return nil
+		})
+	}
+	if err := glBuildGroup.Wait(); err != nil {
+		utils.Panic("GL module build failed: %v", err)
+	}
+
+	distributedWizard.LPPs = make([]*ModuleLPP, numModules)
+	if opts.BuildDebugModules {
+		distributedWizard.DebugLPPs = make([]*ModuleLPP, numModules)
+	}
+	distributedWizard.BlueprintLPPs = make([]ModuleSegmentationBlueprint, numModules)
+	var lppBuildGroup errgroup.Group
+	lppBuildGroup.SetLimit(buildModuleWorkers)
+	for i := range numModules {
+		i := i
+		lppBuildGroup.Go(func() error {
+			moduleLPP := BuildModuleLPP(allFilteredModuleInputs[i])
+
+			distributedWizard.LPPs[i] = moduleLPP
+			if opts.BuildDebugModules {
+				moduleLPPForDebug := BuildModuleLPP(allFilteredModuleInputs[i])
+
+				// This add sanity-checking the module initial assignment. Without
+				// this compilation, the module would not check anything.
+				wizard.ContinueCompilation(
+					moduleLPPForDebug.Wiop,
+					dummy.CompileAtProverLvl(dummy.WithMsg(fmt.Sprintf("LPP module (debug) %d", i))),
+				)
+				distributedWizard.DebugLPPs[i] = moduleLPPForDebug
+			}
+			distributedWizard.BlueprintLPPs[i] = moduleLPP.Blueprint()
+			return nil
+		})
+	}
+	if err := lppBuildGroup.Wait(); err != nil {
+		utils.Panic("LPP module build failed: %v", err)
+	}
+
+	logrus.Infof("Built %d modules (debug=%v)", len(distributedWizard.ModuleNames), opts.BuildDebugModules)
 
 	return distributedWizard
 }
 
-// CompileModules applies the compilation steps to each modules identically.
+// CompileSegments applies the compilation steps to each module. It uses
+// parallel workers when LIMITLESS_COMPILE_JOBS > 1 (default: 4).
 func (dist *DistributedWizard) CompileSegments(params CompilationParams) *DistributedWizard {
 	logrus.Infoln("Compiling distributed wizard default module")
 
-	logrus.Infof("Number of GL modules to compile:%d\n", len(dist.GLs))
-	dist.CompiledGLs = make([]*RecursedSegmentCompilation, len(dist.GLs))
-	for i := range dist.GLs {
-
-		logrus.
-			WithField("module-name", dist.GLs[i].DefinitionInput.ModuleName).
-			WithField("module-type", "GL").
-			Info("compiling module")
-
-		dist.CompiledGLs[i] = CompileSegment(dist.GLs[i], params)
+	numWorkers := 4 // default: 4 parallel compilations
+	if v := os.Getenv("LIMITLESS_COMPILE_JOBS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			numWorkers = n
+		}
 	}
 
-	logrus.Infof("Number of LPP modules to compile:%d\n", len(dist.LPPs))
-	dist.CompiledLPPs = make([]*RecursedSegmentCompilation, len(dist.LPPs))
-	for i := range dist.LPPs {
-		logrus.
-			WithField("module-name", dist.LPPs[i].ModuleName()).
-			WithField("module-type", "LPP").
-			Info("compiling module")
+	logrus.Infof("Compiling %d GL + %d LPP modules with %d workers\n", len(dist.GLs), len(dist.LPPs), numWorkers)
 
-		dist.CompiledLPPs[i] = CompileSegment(dist.LPPs[i], params)
+	dist.CompiledGLs = make([]*RecursedSegmentCompilation, len(dist.GLs))
+	dist.CompiledLPPs = make([]*RecursedSegmentCompilation, len(dist.LPPs))
+
+	// Build a unified job list: GL first, then LPP
+	type compileJob struct {
+		isLPP bool
+		index int
+	}
+
+	jobs := make([]compileJob, 0, len(dist.GLs)+len(dist.LPPs))
+	for i := range dist.GLs {
+		jobs = append(jobs, compileJob{isLPP: false, index: i})
+	}
+	for i := range dist.LPPs {
+		jobs = append(jobs, compileJob{isLPP: true, index: i})
+	}
+
+	var wg errgroup.Group
+	wg.SetLimit(numWorkers)
+
+	for _, job := range jobs {
+		job := job
+		wg.Go(func() error {
+			if job.isLPP {
+				moduleName := dist.LPPs[job.index].ModuleName()
+				logrus.WithField("module-name", moduleName).
+					WithField("module-type", "LPP").
+					Info("compiling module")
+				dist.CompiledLPPs[job.index] = CompileSegment(dist.LPPs[job.index], params)
+				logrus.WithField("module-name", moduleName).
+					WithField("module-type", "LPP").
+					Info("compiled module")
+			} else {
+				moduleName := dist.GLs[job.index].DefinitionInput.ModuleName
+				logrus.WithField("module-name", moduleName).
+					WithField("module-type", "GL").
+					Info("compiling module")
+				dist.CompiledGLs[job.index] = CompileSegment(dist.GLs[job.index], params)
+				if job.index == 0 {
+					dist.startPrecompilingConglomeration(params)
+				}
+				logrus.WithField("module-name", moduleName).
+					WithField("module-type", "GL").
+					Info("compiled module")
+			}
+			return nil
+		})
+	}
+
+	if err := wg.Wait(); err != nil {
+		utils.Panic("compilation failed: %v", err)
 	}
 
 	return dist
+}
+
+func (dist *DistributedWizard) startPrecompilingConglomeration(params CompilationParams) {
+	dist.precompiledConglomerationOnce.Do(func() {
+		dist.precompiledConglomerationDone = make(chan struct{})
+		go func() {
+			defer close(dist.precompiledConglomerationDone)
+
+			conglo := &ModuleConglo{
+				ModuleNumber: len(dist.CompiledGLs),
+			}
+
+			comp := wizard.NewCompiledIOP()
+			conglo.Compile(comp, dist.CompiledGLs[0].RecursionCompKoala)
+			dist.precompiledConglomeration = CompileSegment(conglo, params)
+
+		}()
+	})
 }
 
 // GetSharedRandomnessFromSegmentProofs returns the shared randomness used by

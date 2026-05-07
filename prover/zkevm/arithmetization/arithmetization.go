@@ -3,6 +3,9 @@ package arithmetization
 import (
 	"errors"
 	"fmt"
+	"math"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +28,57 @@ import (
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/sirupsen/logrus"
 )
+
+type traceBuilderConfig struct {
+	batchSize uint
+	checks    bool
+	validate  bool
+	parallel  bool
+}
+
+func getenvBool(key string, defaultValue bool) bool {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		logrus.Warnf("ignoring invalid boolean for %s: %q", key, value)
+		return defaultValue
+	}
+
+	return parsed
+}
+
+func getenvUint(key string, defaultValue uint) uint {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+
+	parsed, err := strconv.ParseUint(value, 10, 64)
+	if err != nil {
+		logrus.Warnf("ignoring invalid unsigned integer for %s: %q", key, value)
+		return defaultValue
+	}
+
+	if parsed > math.MaxUint {
+		logrus.Warnf("ignoring too-large unsigned integer for %s: %q", key, value)
+		return defaultValue
+	}
+
+	return uint(parsed)
+}
+
+func getTraceBuilderConfig() traceBuilderConfig {
+	return traceBuilderConfig{
+		batchSize: getenvUint("LIMITLESS_TRACE_EXPANSION_BATCH_SIZE", 1024),
+		checks:    getenvBool("LIMITLESS_TRACE_EXPANSION_CHECKS", true),
+		validate:  getenvBool("LIMITLESS_TRACE_EXPANSION_VALIDATE", true),
+		parallel:  getenvBool("LIMITLESS_TRACE_EXPANSION_PARALLEL", true),
+	}
+}
 
 // Settings specifies the parameters for the arithmetization part of the zkEVM.
 type Settings struct {
@@ -178,8 +232,12 @@ func (a *Arithmetization) AssignWithPreRead(run *wizard.ProverRuntime, preRead P
 	logrus.Infof("[bootstrapper] propagation: %v", time.Since(propStart))
 	// Perform trace expansion
 	expStart := time.Now()
+	traceBuilderCfg := getTraceBuilderConfig()
 	expandedTrace, errs := ir.NewTraceBuilder[koalabear.Element]().
-		WithBatchSize(1024).
+		WithBatchSize(traceBuilderCfg.batchSize).
+		WithExpansionChecks(traceBuilderCfg.checks).
+		WithParallelism(traceBuilderCfg.parallel).
+		WithValidation(traceBuilderCfg.validate).
 		WithRegisterMapping(a.LimbMapping).
 		Build(a.AirSchema, rawTrace)
 	//

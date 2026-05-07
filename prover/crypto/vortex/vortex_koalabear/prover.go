@@ -7,6 +7,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils/parallel"
 )
 
 func Prove(
@@ -28,7 +29,7 @@ func Prove(
 }
 
 // SelectColumnsAndMerkleProofs completes the proof adding the columns pointed by entryList
-// (implictly the random positions pointed to by the verifier).
+// (implicitly the random positions pointed to by the verifier).
 func SelectColumnsAndMerkleProofs(
 	proof *vortex.OpeningProof,
 	entryList []int,
@@ -40,36 +41,40 @@ func SelectColumnsAndMerkleProofs(
 		utils.Panic("empty entry list")
 	}
 
+	// Extract columns in parallel across committed matrices.
 	proof.Columns = make([][][]field.Element, len(committedMatrices))
-
-	for i := range committedMatrices {
-		proof.Columns[i] = make([][]field.Element, len(entryList))
-		for j := range entryList {
-			col := make([]field.Element, len(committedMatrices[i]))
-			for k := range committedMatrices[i] {
-				col[k] = committedMatrices[i][k].Get(entryList[j])
+	parallel.Execute(len(committedMatrices), func(start, stop int) {
+		for i := start; i < stop; i++ {
+			proof.Columns[i] = make([][]field.Element, len(entryList))
+			for j := range entryList {
+				col := make([]field.Element, len(committedMatrices[i]))
+				for k := range committedMatrices[i] {
+					col[k] = committedMatrices[i][k].Get(entryList[j])
+				}
+				proof.Columns[i][j] = col
 			}
-			proof.Columns[i][j] = col
 		}
-	}
+	})
 
+	// Generate Merkle proofs in parallel across trees.
 	numTrees := len(trees)
 	proofs := make([][]smt_koalabear.Proof, numTrees)
-
-	// Generate the proofs for each tree and each entry
-	for treeID, tree := range trees {
-		if tree == nil {
-			utils.Panic("tree is nil")
-		}
-		proofs[treeID] = make([]smt_koalabear.Proof, len(entryList))
-		for k, entry := range entryList {
-			var err error
-			proofs[treeID][k], err = tree.Prove(entry)
-			if err != nil {
-				utils.Panic("invalid entry leaf: %v", err.Error())
+	parallel.Execute(numTrees, func(start, stop int) {
+		for treeID := start; treeID < stop; treeID++ {
+			tree := trees[treeID]
+			if tree == nil {
+				utils.Panic("tree is nil")
+			}
+			proofs[treeID] = make([]smt_koalabear.Proof, len(entryList))
+			for k, entry := range entryList {
+				var err error
+				proofs[treeID][k], err = tree.Prove(entry)
+				if err != nil {
+					utils.Panic("invalid entry leaf: %v", err.Error())
+				}
 			}
 		}
-	}
+	})
 
 	return proofs
 }

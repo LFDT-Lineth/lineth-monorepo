@@ -341,10 +341,18 @@ func (ctx *QuotientCtx) Run(run *wizard.ProverRuntime) {
 				numNonConstRoots++
 			}
 		}
+
 		nbFFTTasks := max(2, min(64, runtime.GOMAXPROCS(0)/max(1, numNonConstRoots)))
 
 		log.Infof("[quotient d=%d] ratio=%d, uniqueRoots=%d (nonConst=%d), constraints=%d, nbFFTTasks=%d",
 			ctx.DomainSize, ratio, len(uniqueRoots), numNonConstRoots, len(constraintsIndices), nbFFTTasks)
+
+		rootResults := make([]sv.SmartVector, len(uniqueRoots))
+		evalInputsPerConstraint := make([][]sv.SmartVector, len(constraintsIndices))
+		for ci, j := range constraintsIndices {
+			metadatas := ctx.AggregateExpressionsBoard[j].ListVariableMetadata()
+			evalInputsPerConstraint[ci] = make([]sv.SmartVector, len(metadatas))
+		}
 
 		// 3. Inner loop: iterate over applicable cosets for this ratio group.
 		var totalFFT, totalEval time.Duration
@@ -359,12 +367,12 @@ func (ctx *QuotientCtx) Run(run *wizard.ProverRuntime) {
 				shift = computeShift(uint64(ctx.DomainSize), ratio, shareIdx)
 			)
 
-			rootResults := make([]sv.SmartVector, len(uniqueRoots))
-
 			domain := fft.NewDomain(uint64(ctx.DomainSize), fft.WithShift(shift), fft.WithCache())
 
 			// For each root: constants are returned directly,
 			// non-constants copy cached coefficients and apply forward FFT.
+			// Limit concurrent FFT goroutines to maxConcurrentFFTs so that
+			// each FFT gets nbFFTTasks threads without over-subscribing.
 			tFFT := time.Now()
 			parallel.Execute(len(uniqueRoots), func(start, stop int) {
 				for k := start; k < stop; k++ {
@@ -392,13 +400,13 @@ func (ctx *QuotientCtx) Run(run *wizard.ProverRuntime) {
 			})
 			totalFFT += time.Since(tFFT)
 
-			computedReeval := make(map[ifaces.ColID]sv.SmartVector, len(uniqueRoots))
+			computedReeval := make(map[ifaces.ColID]sv.SmartVector, len(uniqueRoots)*2)
 			for k, root := range uniqueRoots {
 				computedReeval[root.GetColID()] = rootResults[k]
 			}
 
 			tEval := time.Now()
-			for _, j := range constraintsIndices {
+			for ci, j := range constraintsIndices {
 				var (
 					handles   = ctx.ShiftedColumnsForRatio[j]
 					board     = &ctx.AggregateExpressionsBoard[j]
@@ -435,7 +443,7 @@ func (ctx *QuotientCtx) Run(run *wizard.ProverRuntime) {
 				}
 
 				// Evaluates the constraint expression on the coset
-				evalInputs := make([]sv.SmartVector, len(metadatas))
+				evalInputs := evalInputsPerConstraint[ci]
 
 				for k, metadataInterface := range metadatas {
 

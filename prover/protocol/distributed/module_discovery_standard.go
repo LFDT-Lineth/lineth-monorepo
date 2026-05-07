@@ -4,8 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
+	"runtime"
+	"sort"
 	"sync"
 	"unsafe"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
@@ -41,6 +46,7 @@ type QueryBasedModuleDiscoverer struct {
 	Modules         []*QueryBasedModule
 	ModuleNames     []ModuleName
 	ColumnsToModule *collection.DeterministicMap[ifaces.ColID, ModuleName]
+	ColumnOwners    map[ifaces.ColID]*QueryBasedModule
 }
 
 // StandardModule is a structure coalescing a set of [QueryBasedModule]s.
@@ -53,6 +59,7 @@ type StandardModule struct {
 // QueryBasedModule represents a set of columns grouped by constraints.
 type QueryBasedModule struct {
 	ModuleName   ModuleName
+	Order        int
 	Ds           *collection.DisjointSet[ifaces.ColID] // Uses a disjoint set to track relationships among columns.
 	OriginalSize int
 	// NbConstraintsOfPlonkCirc counts the number of constraints in a Plonk
@@ -113,6 +120,7 @@ func NewQueryBasedDiscoverer() *QueryBasedModuleDiscoverer {
 		Modules:         []*QueryBasedModule{},
 		ModuleNames:     []ModuleName{},
 		ColumnsToModule: collection.MakeDeterministicMap[ifaces.ColID, ModuleName](0),
+		ColumnOwners:    map[ifaces.ColID]*QueryBasedModule{},
 	}
 }
 
@@ -326,10 +334,21 @@ func (disc *StandardModuleDiscoverer) analyzeWithAdvices(comp *wizard.CompiledIO
 				disc.ColumnsToSize[colID] = newSize
 				numCol++
 			}
-			logrus.Infof("Number of columns: %v, SubModule name: %v, ModuleName: %v, NewSize: %v", numCol, subModule.ModuleName, moduleName, newSize)
+			logrus.Debugf(
+				"module-discovery: submodule=%s module=%s columns=%d new_size=%d",
+				subModule.ModuleName,
+				moduleName,
+				numCol,
+				newSize,
+			)
 			numColModule += numCol
 		}
-		logrus.Infof("Total number of columns: %v, ModuleName: %v", numColModule, moduleName)
+		logrus.Infof(
+			"[module-discovery] module=%s submodules=%d columns=%d",
+			moduleName,
+			len(disc.Modules[i].SubModules),
+			numColModule,
+		)
 	}
 }
 
@@ -470,9 +489,21 @@ func (disc *QueryBasedModuleDiscoverer) Analyze(comp *wizard.CompiledIOP) {
 	disc.Mutex.Lock()
 	defer disc.Mutex.Unlock()
 
+	// Pre-compile all PlonkInWizard circuits in parallel to avoid sequential
+	// compilation during the query loop below. This is the #1 bottleneck in
+	// Build+Distribute (~61s of 100s).
+	precompilePlonkConstraintCounts(comp)
+
 	disc.ColumnsToModule = collection.MakeDeterministicMap[ifaces.ColID, ModuleName](0)
 
 	moduleCandidates := []*QueryBasedModule{}
+	assignedColumns := make(map[ifaces.ColID]struct{}, comp.Columns.NumEntriesTotal())
+
+	markAssigned := func(columns []column.Natural) {
+		for _, col := range columns {
+			assignedColumns[col.GetColID()] = struct{}{}
+		}
+	}
 
 	for _, qName := range comp.QueriesNoParams.AllKeys() {
 
@@ -530,6 +561,7 @@ func (disc *QueryBasedModuleDiscoverer) Analyze(comp *wizard.CompiledIOP) {
 				nbInstancesOfPlonkCirc,
 				nbInstancesOfPlonkQuery,
 			)
+			markAssigned(columns)
 		}
 	}
 
@@ -588,6 +620,7 @@ func (disc *QueryBasedModuleDiscoverer) Analyze(comp *wizard.CompiledIOP) {
 				moduleCandidates,
 				0, 0, 0,
 			)
+			markAssigned(columns)
 		}
 	}
 
@@ -595,18 +628,14 @@ func (disc *QueryBasedModuleDiscoverer) Analyze(comp *wizard.CompiledIOP) {
 	// when the column is lookup table usually. In that case, we make it be
 	// its own query based module.
 	for _, col := range comp.Columns.All() {
-
-		foundModuleForCol := false
-		for _, module := range disc.Modules {
-			if module.Ds.Has(col.GetColID()) {
-				foundModuleForCol = true
-				break
-			}
+		colID := col.GetColID()
+		if _, found := assignedColumns[colID]; found {
+			continue
 		}
 
-		if !foundModuleForCol {
-			disc.GroupColumns([]column.Natural{col.(column.Natural)}, moduleCandidates, 0, 0, 0)
-		}
+		nat := col.(column.Natural)
+		disc.GroupColumns([]column.Natural{nat}, moduleCandidates, 0, 0, 0)
+		assignedColumns[colID] = struct{}{}
 	}
 
 	// Remove empty modules
@@ -656,6 +685,7 @@ func (disc *QueryBasedModuleDiscoverer) CreateModule(columns []column.Natural) *
 
 	module := &QueryBasedModule{
 		ModuleName:          ModuleName(fmt.Sprintf("Module_%d_%s", len(disc.Modules), colID)),
+		Order:               len(disc.Modules),
 		Ds:                  collection.NewDisjointSetFromList(columnIDs),
 		NbSegmentCache:      make(map[unsafe.Pointer][3]int),
 		NbSegmentCacheMutex: &sync.Mutex{},
@@ -687,6 +717,7 @@ func (disc *QueryBasedModuleDiscoverer) MergeModules(modules []*QueryBasedModule
 
 		for col := range module.Ds.Iter() {
 			mergedModule.Ds.Union(mergedModule.Ds.Find(col), col)
+			disc.ColumnOwners[col] = mergedModule
 		}
 
 		mergedModule.NbConstraintsOfPlonkCirc += module.NbConstraintsOfPlonkCirc
@@ -712,11 +743,33 @@ func (disc *QueryBasedModuleDiscoverer) GroupColumns(
 ) []*QueryBasedModule {
 
 	overlappingModules := []*QueryBasedModule{}
+	seenModules := map[*QueryBasedModule]struct{}{}
+	allTracked := true
+	for _, col := range columns {
+		module, found := disc.ColumnOwners[col.GetColID()]
+		if !found || module == nil || module.Ds.Size() == 0 {
+			allTracked = false
+			continue
+		}
+		if _, seen := seenModules[module]; seen {
+			continue
+		}
+		seenModules[module] = struct{}{}
+		overlappingModules = append(overlappingModules, module)
+	}
 
-	// Find overlapping modules
-	for _, module := range moduleCandidates {
-		if module.HasOverlap(columns) {
-			overlappingModules = append(overlappingModules, module)
+	sort.Slice(overlappingModules, func(i, j int) bool {
+		return overlappingModules[i].Order < overlappingModules[j].Order
+	})
+
+	if !allTracked {
+		// Fall back to the full scan when some columns were not tracked
+		// by ColumnOwners, to ensure we find all overlapping modules.
+		overlappingModules = overlappingModules[:0]
+		for _, module := range moduleCandidates {
+			if module.HasOverlap(columns) {
+				overlappingModules = append(overlappingModules, module)
+			}
 		}
 	}
 
@@ -744,6 +797,10 @@ func (disc *QueryBasedModuleDiscoverer) GroupColumns(
 		assignedModule.NbInstancesOfPlonkCirc += nbInstancesOfPlonkCirc
 		assignedModule.NbInstancesOfPlonkQuery += nbInstancesOfPlonkQuery
 		moduleCandidates = append(moduleCandidates, assignedModule)
+	}
+
+	for _, colID := range columnIDs {
+		disc.ColumnOwners[colID] = assignedModule
 	}
 
 	return moduleCandidates
@@ -1079,10 +1136,42 @@ func (module *QueryBasedModule) NumColumn() int {
 	return module.Ds.Size()
 }
 
-// countConstraintsOfPlonkCirc returns the number of constraint of the circuit. The function is
-// quite expensive as this requires to compile the circuit. So it's better to cache
-// the result when possible.
+type plonkConstraintCacheKey struct {
+	circuitType string
+	circuitPtr  uintptr
+	options     string
+	queryID     ifaces.QueryID
+}
+
+func makePlonkConstraintCacheKey(piw *query.PlonkInWizard) plonkConstraintCacheKey {
+	key := plonkConstraintCacheKey{
+		circuitType: reflect.TypeOf(piw.Circuit).String(),
+		options:     fmt.Sprint(piw.PlonkOptions),
+		queryID:     piw.ID,
+	}
+
+	val := reflect.ValueOf(piw.Circuit)
+	if val.IsValid() {
+		switch val.Kind() {
+		case reflect.Pointer, reflect.Map, reflect.Slice, reflect.Func, reflect.UnsafePointer:
+			key.circuitPtr = val.Pointer()
+			key.queryID = ""
+		}
+	}
+
+	return key
+}
+
+// plonkConstraintCache caches circuit constraint counts to avoid redundant compilations.
+var plonkConstraintCache sync.Map // map[plonkConstraintCacheKey]int
+
+// countConstraintsOfPlonkCirc returns the number of constraints of the circuit.
+// Results are cached since compilation is expensive (~1-7s per circuit).
 func countConstraintsOfPlonkCirc(piw *query.PlonkInWizard) int {
+	cacheKey := makePlonkConstraintCacheKey(piw)
+	if v, ok := plonkConstraintCache.Load(cacheKey); ok {
+		return v.(int)
+	}
 
 	hasAddGates := false
 	if len(piw.PlonkOptions) > 0 {
@@ -1094,7 +1183,41 @@ func countConstraintsOfPlonkCirc(piw *query.PlonkInWizard) int {
 		utils.Panic("unable to compile plonk-in-wizard circuit %s: %v", piw.ID, err)
 	}
 	nbConstraints := ccs.GetNbConstraints()
+	plonkConstraintCache.Store(cacheKey, nbConstraints)
 	return nbConstraints
+}
+
+// precompilePlonkConstraintCounts compiles all PlonkInWizard circuits in parallel
+// and caches their constraint counts. This avoids sequential compilation during Analyze.
+func precompilePlonkConstraintCounts(comp *wizard.CompiledIOP) {
+	var circuits []*query.PlonkInWizard
+
+	for _, qName := range comp.QueriesNoParams.AllKeys() {
+		if comp.QueriesNoParams.IsIgnored(qName) {
+			continue
+		}
+		if piw, ok := comp.QueriesNoParams.Data(qName).(*query.PlonkInWizard); ok {
+			if _, cached := plonkConstraintCache.Load(makePlonkConstraintCacheKey(piw)); !cached {
+				circuits = append(circuits, piw)
+			}
+		}
+	}
+
+	if len(circuits) == 0 {
+		return
+	}
+
+	logrus.Infof("pre-compiling %d PlonkInWizard circuits in parallel for constraint counting", len(circuits))
+	var wg errgroup.Group
+	wg.SetLimit(runtime.GOMAXPROCS(0))
+	for _, piw := range circuits {
+		p := piw
+		wg.Go(func() error {
+			countConstraintsOfPlonkCirc(p)
+			return nil
+		})
+	}
+	wg.Wait()
 }
 
 // rootsOfColumns returns a clean and deduplicated list of the roots of the

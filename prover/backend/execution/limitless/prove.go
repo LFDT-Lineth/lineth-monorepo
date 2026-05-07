@@ -36,12 +36,23 @@ var (
 	// by a semaphore on top of this.
 	numConcurrentWitnessWritingGoroutines = 20
 	// numConcurrentSubProverJobs governs the number of concurrent sub-prover
-	// jobs.
-	numConcurrentSubProverJobs = 4
+	// jobs. Override via LIMITLESS_SUBPROVER_JOBS.
+	numConcurrentSubProverJobs = getEnvPositiveInt("LIMITLESS_SUBPROVER_JOBS", 4)
 	// numConcurrentMergeJobs governs the number of concurrent conglomeration
 	// merge operations during hierarchical reduction.
 	numConcurrentMergeJobs = 4
 )
+
+// getEnvPositiveInt reads a positive integer from an environment variable,
+// returning defaultVal if unset, empty, or invalid.
+func getEnvPositiveInt(key string, defaultVal int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return defaultVal
+}
 
 // PipelineResult holds the output of RunDistributedPipeline.
 type PipelineResult struct {
@@ -75,6 +86,11 @@ func Prove(cfg *config.Config, req *execution.Request) (*execution.Response, err
 		limitlessZkEVM.RunDebug(cfg, witness.ZkEVM)
 		// The return of "out" is to avoid panics later on in the process.
 		return &out, nil
+	}
+
+	// Dispatch to on-the-fly prover when serialization is disabled.
+	if !cfg.Execution.Serialization {
+		return ProveOnTheFly(cfg, req)
 	}
 
 	// Run the distributed pipeline: bootstrapper → GL/LPP segment
