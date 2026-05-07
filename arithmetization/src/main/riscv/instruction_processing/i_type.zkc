@@ -187,9 +187,7 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
             if funct3 == FUNCT3_ECALL {
                 // imm12 is interpreted as funct12 for SYSTEM opcode
                 if imm12 == FUNCT12_ECALL {
-                    printf "ECALL\n"
-                    // Note: as we don't fully support CSR, we use ECALL as generic STOP instruction for now
-                    new_pc = MAX_UINT_64 // set the stop signal to end the program execution
+                    new_pc = process_syscall(pc)
                 } else if imm12 == FUNCT12_EBREAK {
                     printf "[ERROR] EBREAK instruction triggered\n"
                 }
@@ -203,6 +201,25 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
             printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
             printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
             fail
+        }
+    }
+}
+
+fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
+    var call_num:DoubleWord = registers[17]
+    //
+    switch call_num {
+        case 93: { // exit 
+            var exit_code:DoubleWord = registers[10]
+            // check for non-zero exit code
+            if exit_code != 0 {
+                fail "exit with code %d", exit_code
+            }
+            // set stop signal to terminate execution
+            new_pc = MAX_UINT_64
+        }
+        default: {
+            fail "unsupported system call (%d)", call_num
         }
     }
 }
