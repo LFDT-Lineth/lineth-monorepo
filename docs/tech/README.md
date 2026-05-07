@@ -39,8 +39,9 @@ linea-monorepo/
 │   ├── postman/              # Message relay service
 │   ├── e2e/                  # End-to-end tests
 │   ├── ts-libs/              # Shared TS libraries
-│   ├── operations/           # CLI operational tools
-│   └── native-yield-operations/
+│   └── operations/
+│       ├── operations-cli/   # CLI operational tools
+│       └── native-yield-operations/
 │
 ├── Rust
 │   └── corset/               # Constraint compiler

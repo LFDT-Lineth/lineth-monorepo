@@ -102,9 +102,10 @@ root package.json
 │   ├── linea-shared-utils
 │   ├── linea-native-libs
 │   └── eslint-config
-├── operations/ (CLI tools)
-└── native-yield-operations/
-    └── automation-service/
+└── operations/
+    ├── operations-cli/ (CLI tools)
+    └── native-yield-operations/
+        └── automation-service/
 ```
 
 ## Language-Specific Notes

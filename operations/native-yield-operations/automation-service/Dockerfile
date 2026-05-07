@@ -23,19 +23,19 @@ WORKDIR /usr/src/app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 
-COPY ./native-yield-operations/automation-service/package.json ./native-yield-operations/automation-service/package.json
+COPY ./operations/native-yield-operations/automation-service/package.json ./operations/native-yield-operations/automation-service/package.json
 COPY ./ts-libs/linea-shared-utils/package.json ./ts-libs/linea-shared-utils/package.json
 COPY ./ts-libs/eslint-config/package.json ./ts-libs/eslint-config/package.json
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
 
-COPY ./native-yield-operations/automation-service ./native-yield-operations/automation-service
+COPY ./operations/native-yield-operations/automation-service ./operations/native-yield-operations/automation-service
 COPY ts-libs/linea-shared-utils ./ts-libs/linea-shared-utils
 COPY ts-libs/eslint-config ./ts-libs/eslint-config
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm run build
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm deploy --legacy --prefer-offline --filter=./native-yield-operations/automation-service --prod ./prod/native-yield-operations/automation-service
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm deploy --legacy --prefer-offline --filter=./operations/native-yield-operations/automation-service --prod ./prod/operations/native-yield-operations/automation-service
 
 FROM node:${NODE_VERSION}-slim AS production
 
@@ -51,6 +51,6 @@ RUN mkdir -p /usr/src/app/ipfs-cache && \
 
 USER node
 
-COPY --from=builder /usr/src/app/prod/native-yield-operations/automation-service ./native-yield-operations/automation-service
+COPY --from=builder /usr/src/app/prod/operations/native-yield-operations/automation-service ./operations/native-yield-operations/automation-service
 
-CMD [ "node", "./native-yield-operations/automation-service/dist/run.js" ]
+CMD [ "node", "./operations/native-yield-operations/automation-service/dist/run.js" ]

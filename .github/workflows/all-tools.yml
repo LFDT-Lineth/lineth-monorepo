@@ -10,14 +10,14 @@ on:
     branches:
       - main
     paths:
-      - "operations/**"
+      - "operations/operations-cli/**"
       - ".github/workflows/all-tools.yml"
       - ".nvmrc"
   pull_request:
     branches:
       - main
     paths:
-      - "operations/**"
+      - "operations/operations-cli/**"
       - ".github/workflows/all-tools.yml"
       - ".nvmrc"
 
@@ -38,7 +38,7 @@ jobs:
           list-files: "json"
           filters: |
             all-tools:
-              - 'operations/**'
+              - 'operations/operations-cli/**'
               - '.github/workflows/all-tools.yml'
               - '.github/workflows/reuse-*.yml'
               - '.nvmrc'
@@ -131,7 +131,7 @@ jobs:
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 #v7.0.0
         with:
           context: .
-          file: ./operations/Dockerfile
+          file: ./operations/operations-cli/Dockerfile
           platforms: linux/amd64 # Note: Build amd64 image only
           push: ${{ github.event_name != 'pull_request' }}
           tags: |

@@ -33,7 +33,7 @@ On-chain liveness oracle. Reports sequencer uptime/downtime status via `AnswerUp
 
 ---
 
-## Operations CLI (`operations/`)
+## Operations CLI (`operations/operations-cli/`)
 
 An oclif-based CLI tool for recurring protocol operations. Commands use Web3Signer for key management and support dry-run mode.
 
@@ -65,7 +65,7 @@ An oclif-based CLI tool for recurring protocol operations. Commands use Web3Sign
 | `contracts/test/hardhat/operational/V3DexSwapAdapter.ts` | Hardhat | Swap execution, adapter logic |
 | `contracts/test/hardhat/operational/V3DexSwapWethDepositAdapter.ts` | Hardhat | WETH deposit + swap |
 | `e2e/src/liveness.spec.ts` | Jest | Sequencer restart, `AnswerUpdated` events |
-| `operations/` unit tests | Jest | CLI command logic, utility functions |
+| `operations/operations-cli/` unit tests | Jest | CLI command logic, utility functions |
 
 ## Related Documentation
 

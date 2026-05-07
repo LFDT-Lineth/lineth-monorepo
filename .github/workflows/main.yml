@@ -121,12 +121,12 @@ jobs:
               - 'linea-besu-package/versions.env'
               - 'linea-besu-package/scripts/assemble-packages.sh'
             native-yield-automation-service:
-              - 'native-yield-operations/automation-service/**'
+              - 'operations/native-yield-operations/automation-service/**'
               - 'ts-libs/linea-shared-utils/**'
               - '.github/workflows/native-yield-automation-service-*.yml'
               - '.nvmrc'
             lido-governance-monitor:
-              - 'native-yield-operations/lido-governance-monitor/**'
+              - 'operations/native-yield-operations/lido-governance-monitor/**'
               - 'ts-libs/linea-shared-utils/**'
               - '.github/workflows/lido-governance-monitor-*.yml'
               - '.nvmrc'

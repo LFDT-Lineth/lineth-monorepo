@@ -44,7 +44,7 @@ jobs:
         run: |
           mkdir -p ci-lido-coverage
           cp ts-libs/linea-shared-utils/coverage/lcov.info ci-lido-coverage/shared-utils-lcov.info
-          cp native-yield-operations/lido-governance-monitor/coverage/lcov.info ci-lido-coverage/lido-governance-monitor-lcov.info
+          cp operations/native-yield-operations/lido-governance-monitor/coverage/lcov.info ci-lido-coverage/lido-governance-monitor-lcov.info
 
       - name: Upload TS coverage report
         uses: actions/upload-artifact@v7
@@ -70,7 +70,7 @@ jobs:
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
         with:
           fail_ci_if_error: true
-          files: ./native-yield-operations/lido-governance-monitor/coverage/lcov.info
+          files: ./operations/native-yield-operations/lido-governance-monitor/coverage/lcov.info
           flags: lido-governance-monitor
           os: linux
           name: codecov-lido-governance-monitor

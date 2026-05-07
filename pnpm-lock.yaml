@@ -496,14 +496,14 @@ importers:
         specifier: 4.4.1
         version: 4.4.1
 
-  native-yield-operations/automation-service:
+  operations/native-yield-operations/automation-service:
     dependencies:
       '@apollo/client':
         specifier: 4.1.9
         version: 4.1.9(graphql@16.13.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(rxjs@7.8.2)
       '@consensys/linea-shared-utils':
         specifier: workspace:*
-        version: link:../../ts-libs/linea-shared-utils
+        version: link:../../../ts-libs/linea-shared-utils
       '@lidofinance/lsv-cli':
         specifier: 1.8.0
         version: 1.8.0(@react-native-async-storage/async-storage@1.24.0(react-native@0.74.0(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.5)(utf-8-validate@6.0.6)))(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.4.1)
@@ -525,7 +525,7 @@ importers:
     devDependencies:
       '@consensys/eslint-config':
         specifier: workspace:*
-        version: link:../../ts-libs/eslint-config
+        version: link:../../../ts-libs/eslint-config
       '@jest/globals':
         specifier: 'catalog:'
         version: 30.3.0
@@ -545,14 +545,14 @@ importers:
         specifier: 'catalog:'
         version: 4.21.0
 
-  native-yield-operations/lido-governance-monitor:
+  operations/native-yield-operations/lido-governance-monitor:
     dependencies:
       '@anthropic-ai/sdk':
         specifier: 0.92.0
         version: 0.92.0(zod@4.4.1)
       '@consensys/linea-shared-utils':
         specifier: workspace:*
-        version: link:../../ts-libs/linea-shared-utils
+        version: link:../../../ts-libs/linea-shared-utils
       '@prisma/adapter-pg':
         specifier: 7.8.0
         version: 7.8.0
@@ -583,7 +583,7 @@ importers:
     devDependencies:
       '@consensys/eslint-config':
         specifier: workspace:*
-        version: link:../../ts-libs/eslint-config
+        version: link:../../../ts-libs/eslint-config
       '@jest/globals':
         specifier: 'catalog:'
         version: 30.3.0
@@ -612,7 +612,7 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
-  operations:
+  operations/operations-cli:
     dependencies:
       '@aws-sdk/client-cost-explorer':
         specifier: 3.1040.0
@@ -653,7 +653,7 @@ importers:
     devDependencies:
       '@consensys/eslint-config':
         specifier: workspace:*
-        version: link:../ts-libs/eslint-config
+        version: link:../../ts-libs/eslint-config
       '@jest/globals':
         specifier: 'catalog:'
         version: 30.3.0

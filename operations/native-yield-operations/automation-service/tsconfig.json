@@ -1,5 +1,5 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../../tsconfig.json",
   "compilerOptions": {
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
@@ -8,10 +8,10 @@
   },
   "references": [
     {
-      "path": "../../ts-libs/linea-shared-utils"
+      "path": "../../../ts-libs/linea-shared-utils"
     },
     {
-      "path": "../../ts-libs/sdk/sdk-ethers"
+      "path": "../../../ts-libs/sdk/sdk-ethers"
     }
   ]
 }

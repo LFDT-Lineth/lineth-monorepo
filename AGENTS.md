@@ -346,12 +346,12 @@ These require human approval and follow the release process:
 | `ts-libs/sdk/sdk-ethers` | Library | TypeScript, ethers.js 6 | SDK for ethers.js integration |
 | `ts-libs/sdk/sdk-viem` | Library | TypeScript, tsup, Viem | SDK for Viem integration |
 | `e2e` | Tests | TypeScript, Jest | Protocol-level end-to-end tests |
-| `operations` | CLI tool | TypeScript, oclif | Operations management CLI |
+| `operations/operations-cli` | CLI tool | TypeScript, oclif | Operations management CLI |
 | `ts-libs/eslint-config` | Config | ESLint 9 flat config | Shared ESLint configuration |
 | `ts-libs/linea-native-libs` | Library | TypeScript, Koffi (FFI) | Native library bindings |
 | `ts-libs/linea-shared-utils` | Library | TypeScript, Express, Viem | Shared utilities (server, metrics, logging) |
-| `native-yield-operations/automation-service` | Backend service | TypeScript, Apollo | Automated native yield operations |
-| `native-yield-operations/lido-governance-monitor` | Backend service | TypeScript, Prisma | Lido governance proposal monitoring |
+| `operations/native-yield-operations/automation-service` | Backend service | TypeScript, Apollo | Automated native yield operations |
+| `operations/native-yield-operations/lido-governance-monitor` | Backend service | TypeScript, Prisma | Lido governance proposal monitoring |
 | `besu-plugins` | Plugins | Kotlin, Gradle | Besu blockchain client plugins (sequencer, state recovery) |
 | `jvm-libs` | Libraries | Kotlin, Gradle | Shared JVM libraries (JSON-RPC, HTTP, persistence, metrics) |
 | `transaction-exclusion-api` | Backend service | Kotlin, Gradle, Vertx | Transaction exclusion tracking API |
@@ -368,9 +368,10 @@ corset/                  Rust constraint compiler
 postman/                 TypeScript bridge message executor
 ts-libs/sdk/             TypeScript SDKs (core, ethers, viem)
 e2e/                     Protocol E2E tests
-operations/              Operations CLI tool
+operations/              Operations tools
+operations/operations-cli/ Operations CLI tool
 ts-libs/                 Shared TypeScript libraries
-native-yield-operations/ Native yield services
+operations/native-yield-operations/ Native yield services
 besu-plugins/            Besu client plugins
 jvm-libs/                Shared Kotlin/Java libraries
 transaction-exclusion-api/ Transaction exclusion API
@@ -402,8 +403,8 @@ docs/                    Project documentation
 postman -> @consensys/linea-sdk-viem -> @consensys/linea-sdk-core
 postman -> @consensys/linea-native-libs, @consensys/linea-shared-utils
 e2e -> @consensys/linea-shared-utils
-operations -> (standalone, uses ethers + viem)
-native-yield-operations/* -> @consensys/linea-shared-utils
+operations/operations-cli -> (standalone, uses ethers + viem)
+operations/native-yield-operations/* -> @consensys/linea-shared-utils
 coordinator -> jvm-libs/*
 transaction-exclusion-api -> jvm-libs/*
 besu-plugins -> jvm-libs/*

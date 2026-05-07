@@ -20,9 +20,9 @@ For contract-level workflow diagrams see [`contracts/docs/workflows/`](../../con
 | State Recovery | Kotlin | `besu-plugins/state-recovery/` | Besu plugin |
 | Transaction Exclusion API | Kotlin | `transaction-exclusion-api/` | Vert.x |
 | Postman | TypeScript | `postman/` | Node.js |
-| Yield Automation Service | TypeScript | `native-yield-operations/automation-service/` | Node.js |
-| Lido Governance Monitor | TypeScript | `native-yield-operations/lido-governance-monitor/` | Node.js + Prisma — see [Yield Management](yield-management.md) |
-| Operations CLI | TypeScript | `operations/` | oclif |
+| Yield Automation Service | TypeScript | `operations/native-yield-operations/automation-service/` | Node.js |
+| Lido Governance Monitor | TypeScript | `operations/native-yield-operations/lido-governance-monitor/` | Node.js + Prisma — see [Yield Management](yield-management.md) |
+| Operations CLI | TypeScript | `operations/operations-cli/` | oclif |
 | Integrity Verifier | TypeScript | `contracts/integrity-verifier/` | Node.js + Browser |
 | SDK | TypeScript | `ts-libs/sdk/` | Node.js |
 | Corset | Rust | `corset/` | CLI + shared library |

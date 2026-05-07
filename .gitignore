@@ -76,9 +76,11 @@ proving_key.bin
 **/.direnv
 
 # Prisma generated clients
-/native-yield-operations/lido-governance-monitor/prisma/client/
+/operations/native-yield-operations/lido-governance-monitor/prisma/client/
 
 bin/
+!/operations/operations-cli/bin/
+!/operations/operations-cli/bin/**
 build/
 cache_forge/
 coverage/
@@ -143,7 +145,6 @@ __pycache__/
 /docker/config/l2-genesis-initialization/fork-timestamp.txt
 
 !.gitkeep
-!operations/bin/
 # Authorize the kzg srs folder
 !prover/prover-assets/kzgsrs/**
 !prover/**/testdata/**/*.csv

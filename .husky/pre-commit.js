@@ -59,7 +59,7 @@ const FILE_EXTENSION_DOCUMENTATION_UPDATING_COMMAND = {
 const FOLDER_PATH = {
     [FOLDER.CONTRACTS]: "contracts/",
     [FOLDER.E2E]: "e2e/",
-    [FOLDER.OPERATIONS]: "operations/",
+    [FOLDER.OPERATIONS]: "operations/operations-cli/",
     [FOLDER.POSTMAN]: "postman/",
     [FOLDER["SDK-CORE"]]: "ts-libs/sdk/sdk-core/",
     [FOLDER["SDK-ETHERS"]]: "ts-libs/sdk/sdk-ethers/",
