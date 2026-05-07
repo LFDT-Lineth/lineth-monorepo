@@ -37,7 +37,7 @@ async function expectReceiptNotFound(
 }
 
 describe("Forced transaction test suite", () => {
-  it.skip(
+  it.concurrent(
     "Should successfully submit a forced transaction containing a valid l2 transaction",
     async () => {
       const [l1Account, l2Account] = await Promise.all([
@@ -159,7 +159,7 @@ describe("Forced transaction test suite", () => {
     200_000,
   );
 
-  it.skip(
+  it.concurrent(
     "Should successfully submit a forced transaction containing an invalid L2 tx.",
     async () => {
       const [l1Account, l2Account] = await Promise.all([
@@ -276,7 +276,7 @@ describe("Forced transaction test suite", () => {
     200_000,
   );
 
-  it.skip(
+  it.concurrent(
     "Should reject a forced transaction that calls an excluded precompile (BadPrecompile)",
     async () => {
       const [l1Account, l2Deployer, l2ForcedAccount] = await Promise.all([
@@ -427,7 +427,7 @@ describe("Forced transaction test suite", () => {
     300_000,
   );
 
-  it.skip(
+  it.concurrent(
     "Should reject a forced transaction that exceeds the L2-L1 log limit (TooManyLogs)",
     async () => {
       const [l1Account, l2Deployer, l2ForcedAccount] = await Promise.all([
@@ -588,7 +588,7 @@ describe("Forced transaction test suite", () => {
     300_000,
   );
 
-  it.skip(
+  it.concurrent(
     "Should reject a forced transaction from a denylisted sender (FilteredAddressFrom)",
     async () => {
       const [l1Account, l2DeniedSender, l2Recipient] = await Promise.all([
@@ -728,7 +728,7 @@ describe("Forced transaction test suite", () => {
     300_000,
   );
 
-  it.skip(
+  it.concurrent(
     "Should reject a forced transaction to a denylisted recipient (FilteredAddressTo)",
     async () => {
       const [l1Account, l2ForcedSender, l2DeniedRecipient] = await Promise.all([

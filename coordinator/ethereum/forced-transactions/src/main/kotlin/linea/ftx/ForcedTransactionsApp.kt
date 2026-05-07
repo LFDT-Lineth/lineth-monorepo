@@ -229,13 +229,76 @@ internal class ForcedTransactionsAppImpl(
           ftxQueue = ftxQueue,
         )
 
-        SafeFuture.allOf(
-          ftxSender.start(),
-          ftxFetcher.start(),
-          ftxInvalidityProofService.start(),
-        )
+        rehydrateConflationQueueFromDao().thenCompose {
+          SafeFuture.allOf(
+            ftxSender.start(),
+            ftxFetcher.start(),
+            ftxInvalidityProofService.start(),
+          )
+        }
       }.thenApply {
         log.debug("ForcedTransactionsApp started successfully")
+      }
+  }
+
+  /**
+   * Replay sequencer-processed FTXs from the DAO into the in-memory `conflationFtxQueue`.
+   *
+   * The queue is the only path from the status updater into [ConflationCalculatorByForcedTransaction]
+   * and is reset on every restart. The FTXs at risk are exactly those in the **in-flight window**:
+   * `L1.finalizedFtxNumber < ftxNumber <= DAO.highestFtxNumber` — their sequencer status was already
+   * fetched and persisted to the DAO before shutdown, but the aggregation containing them has not
+   * yet been finalised on L1. Two things conspire to make those FTXs invisible to the conflation
+   * pipeline after restart:
+   *
+   *  1. The L1 events fetcher resumes from the L1 block immediately after the one that emitted
+   *     `lastProcessedForcedTransactionNumber = max(L1.finalizedFtxNumber, DAO.highestFtxNumber)`.
+   *     Since the in-flight FTXs are already in the DAO, that resume point is past their L1
+   *     blocks, and the fetcher never re-pushes them into `ftxQueue`.
+   *  2. The status updater filters anything below
+   *     `nextExpectedFtxNumber = lastProcessedForcedTransactionNumber + 1`, so even hypothetical
+   *     re-fetches would be dropped before reaching `addFtxToConflation`.
+   *
+   * Without rehydration the conflation calculator therefore merges the FTX-execution block into
+   * the surrounding aggregation, and L1 finalization later reverts with `FinalizationStateIncorrect`
+   *
+   * We rehydrate every DAO row whose `ftxNumber` is strictly greater than the L1-finalized FTX
+   * number — i.e., the same in-flight window. Triggers for already-conflated blocks (if any) are
+   * pruned by the calculator's `appendBlock`, so a generous lower bound is safe.
+   */
+  private fun rehydrateConflationQueueFromDao(): SafeFuture<Unit> {
+    return finalizedStateProvider
+      .getLatestFinalizedState(blockParameter = config.l1HighestBlockTag)
+      .thenApply { it.forcedTransactionNumber }
+      .exceptionally { th ->
+        if (th is UnsupportedOperationException || th.cause is UnsupportedOperationException) {
+          // Same fallback as ForcedTransactionsResumePointProviderImpl: pre-V8 contracts have no
+          // finalization event yet. Treat the lower bound as 0 so every DAO row replays.
+          0UL
+        } else {
+          throw th
+        }
+      }
+      .thenCompose { l1FinalizedFtxNumber ->
+        ftxDao.list().thenApply { allFtxs ->
+          val toReplay = allFtxs.filter { it.ftxNumber > l1FinalizedFtxNumber }
+          if (toReplay.isNotEmpty()) {
+            log.info(
+              "rehydrating conflationFtxQueue: l1FinalizedFtxNumber={} ftxs={}",
+              l1FinalizedFtxNumber,
+              toReplay.map { it.ftxNumber },
+            )
+            toReplay.forEach { ftx ->
+              conflationFtxQueue.add(
+                FtxConflationInfo(
+                  ftxNumber = ftx.ftxNumber,
+                  blockNumber = ftx.simulatedExecutionBlockNumber,
+                  inclusionResult = ftx.inclusionResult,
+                ),
+              )
+            }
+          }
+        }
       }
   }
 

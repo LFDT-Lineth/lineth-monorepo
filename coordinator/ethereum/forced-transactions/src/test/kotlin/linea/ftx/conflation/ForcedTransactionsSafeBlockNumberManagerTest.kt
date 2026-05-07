@@ -1,11 +1,22 @@
 package linea.ftx.conflation
 
 import linea.contract.events.ForcedTransactionAddedEvent
+import linea.forcedtx.ForcedTransactionInclusionResult
+import linea.ftx.FakeForcedTransactionsClient
+import linea.ftx.ForcedTransactionWithTimestamp
+import linea.ftx.ForcedTransactionsStatusUpdater
+import linea.persistence.ftx.FakeForcedTransactionsDao
+import net.consensys.FakeFixedClock
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import java.util.Queue
+import java.util.concurrent.LinkedBlockingQueue
 import kotlin.random.Random
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 
 class ForcedTransactionsSafeBlockNumberManagerTest {
   private lateinit var manager: ForcedTransactionsSafeBlockNumberManager
@@ -36,7 +47,9 @@ class ForcedTransactionsSafeBlockNumberManagerTest {
   inner class LockSafeBlockNumberBeforeSendingToSequencer {
     @Test
     fun `should lock to headBlockNumber when startup finished and safeBlockNumber is null`() {
-      manager.caughtUpWithChainHeadAfterStartUp() // sets startUpScanFinished=true, releases 0->null
+      // caughtUp now only marks startup finished; the release happens via unprocessedFtxQueueIsEmpty
+      manager.caughtUpWithChainHeadAfterStartUp()
+      manager.unprocessedFtxQueueIsEmpty()
       assertThat(safeBlockNumberProvider.getHighestSafeBlockNumber()).isNull()
 
       manager.lockSafeBlockNumberBeforeSendingToSequencer(500UL)
@@ -87,18 +100,26 @@ class ForcedTransactionsSafeBlockNumberManagerTest {
   @Nested
   inner class CaughtUpWithChainHeadAfterStartUp {
     @Test
-    fun `should release lock when no ftx in sequencer and safeBlockNumber is 0`() {
+    fun `does not release the lock on its own`() {
+      // caughtUp only marks the L1 startup scan as finished; it must not release the lock,
+      // because FTXs already queued by the fetcher may still be awaiting their sequencer status.
       assertThat(safeBlockNumberProvider.getHighestSafeBlockNumber()).isEqualTo(0UL)
       manager.caughtUpWithChainHeadAfterStartUp()
+      assertThat(safeBlockNumberProvider.getHighestSafeBlockNumber()).isEqualTo(0UL)
+
+      // The actual release happens once the L1-events queue is genuinely drained
+      // (the call site of unprocessedFtxQueueIsEmpty enforces ftxQueue.isEmpty()).
+      manager.unprocessedFtxQueueIsEmpty()
       assertThat(safeBlockNumberProvider.getHighestSafeBlockNumber()).isNull()
     }
 
     @Test
-    fun `should be idempotent`() {
+    fun `is idempotent`() {
       manager.caughtUpWithChainHeadAfterStartUp()
+      manager.unprocessedFtxQueueIsEmpty()
       assertThat(safeBlockNumberProvider.getHighestSafeBlockNumber()).isNull()
 
-      // Lock again and call caughtUp - should not change since already finished
+      // Lock at a head and call caughtUp again - it must remain a no-op
       manager.lockSafeBlockNumberBeforeSendingToSequencer(500UL)
       assertThat(safeBlockNumberProvider.getHighestSafeBlockNumber()).isEqualTo(500UL)
       manager.caughtUpWithChainHeadAfterStartUp()
@@ -123,8 +144,12 @@ class ForcedTransactionsSafeBlockNumberManagerTest {
       // Start: safeBlockNumber=0, startUpScanFinished=false
       assertThat(safeBlockNumberProvider.getHighestSafeBlockNumber()).isEqualTo(0UL)
 
-      // Scan finishes, no FTX found
+      // Scan finishes, no FTX found. caughtUp only marks startup finished;
+      // the StatusUpdater's next tick observes an empty queue and releases the lock.
       manager.caughtUpWithChainHeadAfterStartUp()
+      assertThat(safeBlockNumberProvider.getHighestSafeBlockNumber()).isEqualTo(0UL)
+
+      manager.unprocessedFtxQueueIsEmpty()
       assertThat(safeBlockNumberProvider.getHighestSafeBlockNumber()).isNull()
     }
 
@@ -215,6 +240,150 @@ class ForcedTransactionsSafeBlockNumberManagerTest {
       // After scan catches up
       manager.caughtUpWithChainHeadAfterStartUp()
       assertThat(safeBlockNumberProvider.getHighestSafeBlockNumber()).isEqualTo(500UL)
+    }
+  }
+
+  /**
+   * Regression scenarios reproducing the wedge observed on CI: after a coordinator restart,
+   * the L1 fetcher caught up with FTXs already queued, the safe-block lock was released to
+   * null, conflation advanced past the FTX execution block and the resulting aggregation
+   * proof carried `finalFtxNumber=0` — leading to a permanent `FinalizationStateIncorrect`
+   * revert on the next aggregation's finalize.
+   *
+   * These tests exercise the manager + StatusUpdater + ftxQueue together because the fix
+   * spans both the manager (caughtUp no longer releases) and the StatusUpdater call site
+   * (release gated on ftxQueue.isEmpty()).
+   */
+  @Nested
+  inner class StartupRaceWithQueuedFtx {
+    private val now = Instant.parse("2026-04-29T18:50:30Z")
+    private val l1BlockTimestamp = Instant.parse("2026-04-29T18:50:15Z")
+
+    private lateinit var clock: FakeFixedClock
+    private lateinit var dao: FakeForcedTransactionsDao
+    private lateinit var ftxClient: FakeForcedTransactionsClient
+    private lateinit var ftxQueue: Queue<ForcedTransactionWithTimestamp>
+    private lateinit var processedFtx: MutableList<FtxConflationInfo>
+
+    private fun newStatusUpdater(
+      ftxProcessingDelay: Duration = Duration.ZERO,
+    ): ForcedTransactionsStatusUpdater {
+      return ForcedTransactionsStatusUpdater(
+        dao = dao,
+        ftxClient = ftxClient,
+        safeBlockNumberManager = manager,
+        ftxQueue = ftxQueue,
+        ftxProcessedListener = { processedFtx.add(it) },
+        lastProcessedFtxNumber = 0UL,
+        ftxProcessingDelay = ftxProcessingDelay,
+        clock = clock,
+      )
+    }
+
+    @BeforeEach
+    fun setUpStatusUpdaterFixtures() {
+      clock = FakeFixedClock(now)
+      dao = FakeForcedTransactionsDao()
+      ftxClient = FakeForcedTransactionsClient()
+      ftxQueue = LinkedBlockingQueue()
+      processedFtx = mutableListOf()
+    }
+
+    /**
+     * Direct reproduction of the wedge: before the fix, [caughtUpWithChainHeadAfterStartUp]
+     * released the lock to null whenever `safeBlockNumber == 0UL` and the sequencer hadn't
+     * yet been told about any FTX, ignoring the L1-events queue.
+     */
+    @Test
+    fun `caughtUpWithChainHeadAfterStartUp does not release the lock by itself`() {
+      // L1 fetcher has just enqueued an FTX before signalling that it has caught up
+      ftxQueue.add(ForcedTransactionWithTimestamp(createFtxEvent(1UL), l1BlockTimestamp))
+
+      manager.caughtUpWithChainHeadAfterStartUp()
+
+      assertThat(safeBlockNumberProvider.getHighestSafeBlockNumber())
+        .describedAs("lock must remain held while ftxQueue holds an unprocessed FTX")
+        .isEqualTo(0UL)
+    }
+
+    /**
+     * Tests the StatusUpdater call-site guard: `unprocessedFtxQueueIsEmpty()` must only fire
+     * when the L1-events queue is genuinely drained. When an FTX is still inside
+     * `ftxProcessingDelay`, the filtered list returned by `getUnprocessedForcedTransactions`
+     * is empty, but the queue itself is not. Releasing the lock in that state would let
+     * conflation race past the FTX block.
+     */
+    @Test
+    fun `unprocessedFtxQueueIsEmpty does not fire while a queued FTX is inside the processing delay`() {
+      ftxQueue.add(ForcedTransactionWithTimestamp(createFtxEvent(1UL), now))
+      val statusUpdater = newStatusUpdater(ftxProcessingDelay = 1.minutes)
+
+      manager.caughtUpWithChainHeadAfterStartUp()
+      val unprocessed = statusUpdater.getUnprocessedForcedTransactions().get()
+
+      assertThat(unprocessed).isEmpty()
+      assertThat(ftxQueue).hasSize(1)
+      assertThat(safeBlockNumberProvider.getHighestSafeBlockNumber())
+        .describedAs("lock must be held while the queue still contains an FTX")
+        .isEqualTo(0UL)
+    }
+
+    /**
+     * Once the sequencer confirms the queued FTX, the StatusUpdater drains the queue and
+     * the manager releases the lock through the normal `ftxProcessedBySequencer` path.
+     */
+    @Test
+    fun `lock is released after the sequencer confirms the queued FTX`() {
+      ftxQueue.add(ForcedTransactionWithTimestamp(createFtxEvent(1UL), l1BlockTimestamp))
+      val statusUpdater = newStatusUpdater()
+
+      manager.caughtUpWithChainHeadAfterStartUp()
+      // Sequencer not yet aware of FTX#1
+      statusUpdater.getUnprocessedForcedTransactions().get()
+      assertThat(safeBlockNumberProvider.getHighestSafeBlockNumber()).isEqualTo(0UL)
+      assertThat(ftxQueue).hasSize(1)
+
+      // Sequencer publishes status -> next poll drains the queue
+      ftxClient.setFtxInclusionResult(
+        ftxNumber = 1UL,
+        l2BlockNumber = 14UL,
+        inclusionResult = ForcedTransactionInclusionResult.BadNonce,
+      )
+      statusUpdater.getUnprocessedForcedTransactions().get()
+
+      assertThat(ftxQueue).isEmpty()
+      assertThat(processedFtx).hasSize(1)
+      assertThat(processedFtx.first().ftxNumber).isEqualTo(1UL)
+      assertThat(safeBlockNumberProvider.getHighestSafeBlockNumber())
+        .describedAs("lock must be released once the queue drains end-to-end")
+        .isNull()
+    }
+
+    /**
+     * No FTX ever submitted: the L1 scan catches up and the next poll observes both
+     * the queue and the filtered list empty, so the lock is released to null.
+     */
+    @Test
+    fun `lock is released on first poll after caught-up when no FTXs were ever queued`() {
+      val statusUpdater = newStatusUpdater()
+
+      manager.caughtUpWithChainHeadAfterStartUp()
+      assertThat(safeBlockNumberProvider.getHighestSafeBlockNumber()).isEqualTo(0UL)
+
+      statusUpdater.getUnprocessedForcedTransactions().get()
+
+      assertThat(safeBlockNumberProvider.getHighestSafeBlockNumber()).isNull()
+    }
+
+    /**
+     * Polls happening before the L1 scan finishes must not release the lock,
+     * even when both the queue and the filtered list are empty.
+     */
+    @Test
+    fun `lock is held while L1 startup scan has not finished`() {
+      val statusUpdater = newStatusUpdater()
+      statusUpdater.getUnprocessedForcedTransactions().get()
+      assertThat(safeBlockNumberProvider.getHighestSafeBlockNumber()).isEqualTo(0UL)
     }
   }
 }

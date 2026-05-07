@@ -254,7 +254,7 @@ trust-store-path = "/tls-files/web3signer-truststore.p12"
 trust-store-password = "changeit"
 
 [forced-transactions]
-disabled = true
+disabled = false
 l1-highest-block-tag = "LATEST"
 processing-tick-interval = "PT5S"
 processing-delay = "PT0S"

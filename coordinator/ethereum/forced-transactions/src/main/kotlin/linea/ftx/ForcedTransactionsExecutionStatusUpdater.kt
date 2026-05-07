@@ -48,7 +48,11 @@ internal class ForcedTransactionsStatusUpdater(
           .map { it.event }
       }
       .thenPeek {
-        if (it.isEmpty()) {
+        // Only release the safe-block lock when the L1-events queue is genuinely drained.
+        // The filtered list can be empty while the queue is not (e.g. entries inside the
+        // ftxProcessingDelay window or awaiting their sequencer status), in which case
+        // releasing would let conflation advance past an in-flight FTX block.
+        if (it.isEmpty() && ftxQueue.isEmpty()) {
           safeBlockNumberManager.unprocessedFtxQueueIsEmpty()
         }
       }
