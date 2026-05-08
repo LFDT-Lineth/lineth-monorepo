@@ -230,8 +230,7 @@ public class TransactionProcessingMetadata {
     floorCost =
         // the value below will not work in the Cancun TXN_DATA module (where it spits out 0,
         // but we still carry out the computation with the Prague value).
-        hub.gasCalculator.transactionFloorCost(
-            getBesuTransaction().getPayload(), numberOfZeroBytesInPayload);
+        hub.gasCalculator.transactionFloorCost(getBesuTransaction());
     floorCostPrague = GAS_CONST_G_TRANSACTION + this.weightedByteCount() * FLOOR_TOKEN_COST;
     initiallyAvailableGas = getInitiallyAvailableGas();
 
