@@ -2,6 +2,10 @@
 
 > Inherits all rules from [root AGENTS.md](../AGENTS.md). Only overrides and additions below.
 
+## External Documentation
+
+- [Besu Docs](https://github.com/besu-eth/besu/tree/main/docs) — Hyperledger Besu source documentation. Refer here for Besu APIs, plugin interfaces, and internals. Do **not** decompress Besu JARs or grep compiled artifacts to understand the API.
+
 ## Package Overview
 
 Besu blockchain client plugins for Linea: the sequencer plugin (transaction ordering, profitability, tracing integration), finalized-tag-updater, and state-recovery modules. Built as Gradle distributions that extend Hyperledger Besu.

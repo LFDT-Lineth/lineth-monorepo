@@ -417,6 +417,12 @@ transaction-exclusion-api -> jvm-libs/*
 besu-plugins -> jvm-libs/*
 ```
 
+### External Docs
+
+| Dependency | Documentation | Notes |
+|------------|--------------|-------|
+| Hyperledger Besu | [besu/docs](https://github.com/besu-eth/besu/tree/main/docs) | Besu APIs, plugin interfaces, and internals — prefer this over grepping compiled JARs or decompressing artifacts |
+
 ### Internal Docs
 
 - [README](README.md) — Repository overview
