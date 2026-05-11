@@ -13,6 +13,13 @@
 - Claude Code: `CLAUDE.md`, then `AGENTS.md`
 - GitHub Copilot: `.github/copilot-instructions.md`, then `AGENTS.md`
 
+## Local Agent Workflows
+
+- `squash-bugbot`: canonical skill at `.agents/skills/squash-bugbot/SKILL.md`.
+- Use `/squash-bugbot <PR_NUMBER>` locally in Codex, Cursor, or Claude Code to triage unresolved bot PR comments.
+- Claude Code exposes the same workflow through `.claude/commands/squash-bugbot.md`, a symlink to the canonical skill.
+- Requires an authenticated `gh` CLI with access to read PR comments, write PR comments, resolve review threads, and push the current branch.
+
 ## Discoverability Index
 
 - Repository overview: `README.md`
@@ -382,7 +389,7 @@ docs/                    Project documentation
 .github/workflows/       CI/CD workflows
 .github/actions/         Custom GitHub Actions
 .cursor/rules/           Cursor IDE rules
-.agents/skills/          Agent skills (smart contract development)
+.agents/skills/          Agent skills (smart contract, dependency maintenance, local PR workflows)
 ```
 
 ### CI/CD
