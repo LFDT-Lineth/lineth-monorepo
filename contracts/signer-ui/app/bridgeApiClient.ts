@@ -26,6 +26,25 @@ function parseErrorMessageFromBody(text: string): string | undefined {
   return trimmed;
 }
 
+export async function bootstrapSession(apiBaseUrl: string, fetchImpl: typeof fetch = fetch): Promise<string> {
+  const response = await fetchImpl(`${apiBaseUrl}/api/bootstrap`, {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    const bodyText = await response.text();
+    const errorMessage = parseErrorMessageFromBody(bodyText);
+    throw new Error(errorMessage ?? `Session bootstrap failed with ${response.status}`);
+  }
+
+  const parsed = (await response.json()) as { sessionToken?: unknown };
+  if (typeof parsed.sessionToken !== "string" || parsed.sessionToken.length === 0) {
+    throw new Error("Session bootstrap response did not include a token.");
+  }
+
+  return parsed.sessionToken;
+}
+
 export async function postJson(
   url: string,
   payload: unknown,

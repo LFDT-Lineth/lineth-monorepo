@@ -3,7 +3,8 @@ export function getRequiredEnvVar(name: string): string {
   if (!envValue) {
     throw new Error(`Required environment variable "${name}" is missing or empty.`);
   }
-  console.log(`Using environment variable ${name}=${envValue}`);
+  // Do not log the value of the environment variable for safety reasons
+  console.log(`Using environment variable ${name}`);
   return envValue;
 }
 

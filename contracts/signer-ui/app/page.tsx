@@ -5,7 +5,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { flushSync } from "react-dom";
 
-import { HARDHAT_SIGNER_UI_SESSION_TOKEN_HEADER, postJson } from "./bridgeApiClient";
+import { HARDHAT_SIGNER_UI_SESSION_TOKEN_HEADER, bootstrapSession, postJson } from "./bridgeApiClient";
 import { LineaWordmark } from "./components/LineaWordmark";
 import {
   canEnableSignButton,
@@ -18,7 +18,6 @@ import {
   signerTxFragmentId,
   signerUiHistoryStorageKey,
   signerUiLastSessionIdStorageKey,
-  signerUiSessionSecretStorageKey,
   transactionExplorerUrl,
   transactionKindBadgeLabels,
   type TransactionDetails,
@@ -305,20 +304,41 @@ function ContractsDeployUiPage() {
       return;
     }
 
+    let cancelled = false;
+    setSessionAuthReady(false);
+
     if (sessionSecretFromUrl) {
       setSessionSecret(sessionSecretFromUrl);
       const nextUrl = new URL(window.location.href);
       nextUrl.searchParams.delete("sessionToken");
       window.history.replaceState({}, "", `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
       setSessionAuthReady(true);
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
 
-    const storageKey = signerUiSessionSecretStorageKey(apiBaseUrl);
-    setSessionSecret((previousSessionSecret) => {
-      return previousSessionSecret ?? sessionStorage.getItem(storageKey);
-    });
-    setSessionAuthReady(true);
+    const loadSessionSecret = async () => {
+      try {
+        const bootstrappedSessionSecret = await bootstrapSession(apiBaseUrl);
+        if (cancelled) {
+          return;
+        }
+        setSessionSecret(bootstrappedSessionSecret);
+        setSessionAuthReady(true);
+      } catch (error) {
+        if (!cancelled) {
+          setSessionSecret(null);
+          setActionError((error as Error).message ?? "Failed to bootstrap the signer session.");
+          setSessionAuthReady(true);
+        }
+      }
+    };
+
+    void loadSessionSecret();
+    return () => {
+      cancelled = true;
+    };
   }, [apiBaseUrl, sessionSecretFromUrl]);
 
   const sessionUrl = useMemo(() => {
@@ -370,9 +390,7 @@ function ContractsDeployUiPage() {
     }
 
     if (!sessionSecret) {
-      setActionError(
-        "Missing session token. Open this UI using the full URL from Hardhat (HARDHAT_SIGNER_UI), not a bookmark without sessionToken.",
-      );
+      setActionError("Missing session token. Open this UI from the current Hardhat signer run, not an old bookmark.");
       return;
     }
 

@@ -3,6 +3,13 @@ import { expect } from "chai";
 import { __testOnlySignerUiBridge } from "../../../scripts/hardhat/signer-ui-bridge";
 
 describe("signer-ui bridge payload parsing and request shaping", () => {
+  it("builds the signer UI URL without a bearer session token", () => {
+    const url = __testOnlySignerUiBridge.buildSignerUiUrl(3001, "http://127.0.0.1:15555");
+
+    expect(url).to.equal("http://127.0.0.1:3001?apiBaseUrl=http%3A%2F%2F127.0.0.1%3A15555");
+    expect(url).not.to.contain("sessionToken");
+  });
+
   it("parses wallet payload with valid address and integer chain id", () => {
     const parsed = __testOnlySignerUiBridge.parseWalletPayload({
       address: "0x000000000000000000000000000000000000dEaD",

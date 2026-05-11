@@ -86,10 +86,6 @@ export function signerUiLastSessionIdStorageKey(apiBaseUrl: string): string {
   return `signerUiLastSessionId:${apiBaseUrl}`;
 }
 
-export function signerUiSessionSecretStorageKey(apiBaseUrl: string): string {
-  return `signerUiSessionSecret:${apiBaseUrl}`;
-}
-
 export function transactionExplorerUrl(blockExplorerUrls: string[], txHash: string): string | null {
   const base = blockExplorerUrls.find((u) => typeof u === "string" && u.length > 0);
   if (!base) {
