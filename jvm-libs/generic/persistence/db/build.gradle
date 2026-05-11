@@ -15,7 +15,7 @@ dependencies {
   api("org.flywaydb:flyway-database-postgresql:${libs.versions.flywaydb.get()}") {
     because("Flyway 10+ keeps PostgreSQL support in a dedicated database module")
   }
-  api("org.slf4j:slf4j-api:1.7.30") {
+  api("org.slf4j:slf4j-api:${libs.versions.slf4j.get()}") {
     because("Flyway DB and other dependencies use SLF4J")
   }
 
