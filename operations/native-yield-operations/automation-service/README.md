@@ -75,4 +75,4 @@ pnpm --filter @consensys/linea-native-yield-automation-service exec tsx scripts/
 
 ## License
 
-This package is licensed under the [Apache 2.0](../../LICENSE-APACHE) and the [MIT](../../LICENSE-MIT) licenses.
+This package is licensed under the [Apache 2.0](../../../LICENSE-APACHE) and the [MIT](../../../LICENSE-MIT) licenses.

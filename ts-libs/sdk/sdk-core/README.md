@@ -76,4 +76,4 @@ const status = formatMessageStatus(OnChainMessageStatus.CLAIMED);
 
 ## License
 
-[Apache-2.0](../../LICENSE-APACHE)
+[Apache-2.0](../../../LICENSE-APACHE)
