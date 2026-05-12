@@ -21,3 +21,10 @@ services:
     extends:
       file: compose-spec-l2-services.yml
       service: transaction-exclusion-api
+  
+  sequencer:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: sequencer
+    environment:
+      BESU_PLUGIN_LINEA_LIVENESS_ENABLED: true

@@ -257,6 +257,7 @@ describe("Messaging test suite", () => {
       const l1Account = await l1AccountManager.generateAccount();
       const l2Account = await l2AccountManager.generateAccount();
       const l2PublicClient = context.l2PublicClient();
+      const l2MessageService = context.l2Contracts.l2MessageService(l2PublicClient);
       const l2BlockBeforeSend = await l2PublicClient.getBlockNumber();
 
       // L1->L2 message with calldata
@@ -285,8 +286,8 @@ describe("Messaging test suite", () => {
 
       logger.debug(`Waiting for L1L2MessageHashesAddedToInbox event on L2. messageHash=${messageHash1}`);
       const [messageHash1AddedEvent] = await waitForEvents(l2PublicClient, {
-        abi: L2MessageServiceV1Abi,
-        address: context.l2Contracts.l2MessageService(l2PublicClient).address,
+        abi: l2MessageService.abi,
+        address: l2MessageService.address,
         eventName: "L1L2MessageHashesAddedToInbox",
         fromBlock: l2BlockBeforeSend,
         toBlock: "latest",
@@ -301,8 +302,8 @@ describe("Messaging test suite", () => {
 
       logger.debug(`Waiting for L1L2MessageHashesAddedToInbox event on L2. messageHash=${messageHash2}`);
       const [messageHash2AddedEvent] = await waitForEvents(l2PublicClient, {
-        abi: L2MessageServiceV1Abi,
-        address: context.l2Contracts.l2MessageService(l2PublicClient).address,
+        abi: l2MessageService.abi,
+        address: l2MessageService.address,
         eventName: "L1L2MessageHashesAddedToInbox",
         fromBlock: l2BlockBeforeSend,
         toBlock: "latest",
