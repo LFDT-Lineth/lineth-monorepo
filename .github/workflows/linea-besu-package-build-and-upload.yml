@@ -83,7 +83,7 @@ jobs:
         env:
           DOCKER_BUILD_SUMMARY: false
         with:
-          context: linea-besu-package/linea-besu/.
+          context: linea-besu/package/linea-besu/.
           platforms: linux/amd64
           provenance: false
           build-args: |

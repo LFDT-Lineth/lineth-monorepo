@@ -37,14 +37,14 @@ When relevant files (e.g. under tracer and sequencer related folders, `gradle/li
 
 ## 3. Linea-Besu-Package Makefile: Local Build with Local Tracer and Sequencer
 
-The **`linea-besu-package/Makefile`** was revised so one can build the linea-besu-package image **locally** using besu, tracer, and sequencer plugins built from source in this repo, with the desired besu commit from `gradle/libs.versions.toml`.
+The **`linea-besu/package/Makefile`** was revised so one can build the linea-besu-package image **locally** using besu, tracer, and sequencer plugins built from source in this repo, with the desired besu commit from `gradle/libs.versions.toml`.
 
 ### Example: full local build and e2e
 
 From the repository root:
 
 ```bash
-cd linea-besu-package
+cd linea-besu/package
 make build
 make run-e2e-test
 # when done
@@ -67,7 +67,7 @@ This builds tracer and sequencer from source (and besu if needed), assembles the
 
 1. Create a PR to update the `besuCommit` field in [libs.versions.toml](../gradle/libs.versions.toml) which denotes the desired commit hash tag from the [besu-eth/besu](https://github.com/besu-eth/besu) repo
 - The triggered Github workflows will automatically build Besu at the desired commit hash and publish it to Cloudsmith [maven](https://cloudsmith.io/~consensys/repos/linea-besu/packages/)
-- To build Besu locally before running any Github workflow, run `./gradlew linea-besu:build` or `cd linea-besu-package && make build-besu`
+- To build Besu locally before running any Github workflow, run `./gradlew linea-besu:build` or `cd linea-besu/package && make build-besu`
 2. Make necessary changes in tracer and seqeuencer to accommodate the besu version change (Please note that tracer and sequencer version will be set as `linea-[7_char_commit_hash]`)
 3. Once the testing workflows of tracer and sequencer are all passed, the CI pipeline will build the `linea-besu-package` image using **locally built** tracer and sequencer plugins and runs e2e tests against that image
 4. When the PR merged into `main`, manually trigger the manual release [workflow](https://github.com/Consensys/linea-monorepo/actions/workflows/linea-besu-package-release.yml) and the release will be found in the linea-monorepo release [page](https://github.com/Consensys/linea-monorepo/releases)
@@ -89,4 +89,4 @@ This builds tracer and sequencer from source (and besu if needed), assembles the
 
 ## 6. Related documentations
 
-- [Linea-besu-package README](../linea-besu-package/README.md)
+- [Linea-besu-package README](../linea-besu/package/README.md)

@@ -39,7 +39,7 @@ runs:
         LOCAL_SEQUENCER_DIST_PATH: ${{ steps.set_local_zip_paths.outputs.local_sequencer_dist_path }}
         LOCAL_BESU_ZIP_PATH: ${{ steps.set_local_zip_paths.outputs.local_besu_zip_path }}
       run: |
-        cd linea-besu-package
+        cd linea-besu/package
         BESU_VERSION="$LOCAL_BESU_VERSION" LOCAL_BESU_ZIP_PATH="$LOCAL_BESU_ZIP_PATH" LOCAL_TRACER_DIST_FOLDER="$LOCAL_TRACER_DIST_PATH" LOCAL_SEQUENCER_DIST_FOLDER="$LOCAL_SEQUENCER_DIST_PATH" make assemble
         mv ./tmp/besu ./linea-besu
     
@@ -57,14 +57,14 @@ runs:
       with:
         repo: 'Consensys/besu-fleet-plugin'
         version: 'tags/${{ inputs.besu_fleet_plugin_version }}'
-        target: './linea-besu-package/linea-besu/besu/plugins/besu-fleet-plugin-${{ inputs.besu_fleet_plugin_version }}.jar'
+        target: './linea-besu/package/linea-besu/besu/plugins/besu-fleet-plugin-${{ inputs.besu_fleet_plugin_version }}.jar'
         file: 'besu-fleet-plugin-${{ inputs.besu_fleet_plugin_version }}.jar'
         token: ${{ steps.generate_token.outputs.token }}
     
     - name: show folder structure
       shell: bash
       run: |
-        cd linea-besu-package
+        cd linea-besu/package
         sudo apt update
         sudo apt-get install --no-install-recommends --assume-yes tree
         tree .

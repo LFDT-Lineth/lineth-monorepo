@@ -31,8 +31,6 @@ jobs:
               - 'transaction-exclusion-api/**/src/main/**'
               - 'config/**/*.toml'
               - 'linea-besu/**'
-              - 'linea-besu-package/versions.env'
-              - 'linea-besu-package/scripts/assemble-packages.sh'
               - 'gradle/libs.versions.toml'
               - 'postman/src/**'
               - 'postman/package.json'

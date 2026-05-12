@@ -39,7 +39,7 @@ jobs:
     uses: ./.github/workflows/reusable-component-release-metadata.yml
     with:
       component-name: linea-besu
-      include-path: '["tracer/**","tracer-constraints/**","besu-plugins/linea-sequencer/**","linea-besu/**","linea-besu-package/**","gradle/libs.versions.toml"]'
+      include-path: '["tracer/**","tracer-constraints/**","besu-plugins/linea-sequencer/**","linea-besu/**","gradle/libs.versions.toml"]'
 
   build-and-upload-artifact:
     needs: [compute-linea-besu-release-metadata]
@@ -76,8 +76,8 @@ jobs:
     uses: ./.github/workflows/reusable-component-release-push-tag-changelog.yml
     with:
       component-name: linea-besu
-      folder-name: linea-besu-package
-      include-path: '["tracer/**","tracer-constraints/**","besu-plugins/linea-sequencer/**","linea-besu/**","linea-besu-package/**","gradle/libs.versions.toml"]'
+      folder-name: linea-besu/package
+      include-path: '["tracer/**","tracer-constraints/**","besu-plugins/linea-sequencer/**","linea-besu/**","gradle/libs.versions.toml"]'
     secrets: inherit
 
   build-linea-besu-docker-image-and-gh-release:

@@ -19,7 +19,7 @@ jobs:
       - name: Split and list profiles
         id: list-profiles
         run: |
-          files=$(ls linea-besu-package/linea-besu/profiles/* | xargs -n 1 basename | sed 's/\.[^.]*$//')
+          files=$(ls linea-besu/package/linea-besu/profiles/* | xargs -n 1 basename | sed 's/\.[^.]*$//')
           files_json=$(echo "$files" | tr ' ' '\n' | jq -R -s -c 'split("\n") | map(select(length > 0))')
           echo "files=$files_json" >> "$GITHUB_OUTPUT"
           echo "Files: $files_json"
@@ -61,7 +61,7 @@ jobs:
           eval $COMMAND
 
       - name: Verify besu container
-        run: bash linea-besu-package/scripts/besu-container-verify.sh
+        run: bash linea-besu/package/scripts/besu-container-verify.sh
         env:
           CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
 

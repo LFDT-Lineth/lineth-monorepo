@@ -145,7 +145,7 @@ jobs:
         env:
           DOCKER_BUILD_SUMMARY: false
         with:
-          context: linea-besu-package/linea-besu/.
+          context: linea-besu/package/linea-besu/.
           platforms: linux/arm64,linux/amd64
           provenance: false
           cache-from: type=local,src=/tmp/.buildx-cache
@@ -165,19 +165,19 @@ jobs:
         if: ${{ inputs.with_besu_fleet_plugin }}
         shell: bash
         run: |
-          echo "sha256sum=$(sha256sum linea-besu-package/linea-besu/besu/plugins/besu-fleet-plugin-${{ steps.build-plugins-and-assemble.outputs.besu_fleet_version }}.jar | awk '{ print $1 }' )" >> $GITHUB_OUTPUT
+          echo "sha256sum=$(sha256sum linea-besu/package/linea-besu/besu/plugins/besu-fleet-plugin-${{ steps.build-plugins-and-assemble.outputs.besu_fleet_version }}.jar | awk '{ print $1 }' )" >> $GITHUB_OUTPUT
 
       - name: Remove the Besu fleet plugin after image build (if existed)
         shell: bash
         run: |
-          rm -fr linea-besu-package/linea-besu/besu/plugins/besu-fleet-plugin* || true
+          rm -fr linea-besu/package/linea-besu/besu/plugins/besu-fleet-plugin* || true
 
       - name: build and push the combined manifest (without Besu fleet plugin)
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 #v7.0.0
         env:
           DOCKER_BUILD_SUMMARY: false
         with:
-          context: linea-besu-package/linea-besu/.
+          context: linea-besu/package/linea-besu/.
           platforms: linux/arm64,linux/amd64
           provenance: false
           cache-from: type=local,src=/tmp/.buildx-cache
@@ -197,7 +197,7 @@ jobs:
         id: release_create_artifacts
         run: |
           mkdir release && cd release
-          tar -czvf linea-besu-package-${{ steps.build-plugins-and-assemble.outputs.dockertag }}.tar.gz ../linea-besu-package/linea-besu/
+          tar -czvf linea-besu-package-${{ steps.build-plugins-and-assemble.outputs.dockertag }}.tar.gz ../linea-besu/package/linea-besu/
           echo "# Release Artifact: Linea Besu Package" > output.md
           echo "**Name:** linea-besu-package-${{ steps.build-plugins-and-assemble.outputs.dockertag }}.tar.gz" >> output.md
           echo "**SHA256:** $(sha256sum linea-besu-package-${{ steps.build-plugins-and-assemble.outputs.dockertag }}.tar.gz | awk '{ print $1 }' )" >> output.md
@@ -207,11 +207,11 @@ jobs:
           echo "### Besu and Plugin Details" >> output.md
           echo "| Module | Version | SHA-256 |" >> output.md
           echo "|--------|---------|--------------|" >> output.md
-          echo "| linea-besu | ${{ steps.build-plugins-and-assemble.outputs.besu_version }} | $(sha256sum ../linea-besu-package/tmp/besu-${{ steps.build-plugins-and-assemble.outputs.besu_version }}.tar.gz | awk '{ print $1 }' ) |" >> output.md
-          echo "| linea-sequencer-plugin | ${{ steps.build-plugins-and-assemble.outputs.sequencer_plugin_version }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/linea-sequencer-${{steps.build-plugins-and-assemble.outputs.sequencer_plugin_version }}.jar | awk '{ print $1 }' ) |" >> output.md
-          echo "| linea-tracer-plugin | ${{ steps.build-plugins-and-assemble.outputs.tracer_plugin_version }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/linea-tracer-${{ steps.build-plugins-and-assemble.outputs.tracer_plugin_version }}.jar | awk '{ print $1 }' ) |" >> output.md
-          echo "| linea-staterecovery-plugin | ${{ steps.build-plugins-and-assemble.outputs.staterecovery_version }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/linea-staterecovery-besu-plugin-v${{ steps.build-plugins-and-assemble.outputs.staterecovery_version }}.jar | awk '{ print $1 }' ) |" >> output.md
-          echo "| shomei-plugin | ${{ steps.build-plugins-and-assemble.outputs.shomei_version }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/besu-shomei-plugin-v${{ steps.build-plugins-and-assemble.outputs.shomei_version }}.jar | awk '{ print $1 }' ) |" >> output.md
+          echo "| linea-besu | ${{ steps.build-plugins-and-assemble.outputs.besu_version }} | $(sha256sum ../linea-besu/package/tmp/besu-${{ steps.build-plugins-and-assemble.outputs.besu_version }}.tar.gz | awk '{ print $1 }' ) |" >> output.md
+          echo "| linea-sequencer-plugin | ${{ steps.build-plugins-and-assemble.outputs.sequencer_plugin_version }} | $(sha256sum ../linea-besu/package/linea-besu/besu/plugins/linea-sequencer-${{steps.build-plugins-and-assemble.outputs.sequencer_plugin_version }}.jar | awk '{ print $1 }' ) |" >> output.md
+          echo "| linea-tracer-plugin | ${{ steps.build-plugins-and-assemble.outputs.tracer_plugin_version }} | $(sha256sum ../linea-besu/package/linea-besu/besu/plugins/linea-tracer-${{ steps.build-plugins-and-assemble.outputs.tracer_plugin_version }}.jar | awk '{ print $1 }' ) |" >> output.md
+          echo "| linea-staterecovery-plugin | ${{ steps.build-plugins-and-assemble.outputs.staterecovery_version }} | $(sha256sum ../linea-besu/package/linea-besu/besu/plugins/linea-staterecovery-besu-plugin-v${{ steps.build-plugins-and-assemble.outputs.staterecovery_version }}.jar | awk '{ print $1 }' ) |" >> output.md
+          echo "| shomei-plugin | ${{ steps.build-plugins-and-assemble.outputs.shomei_version }} | $(sha256sum ../linea-besu/package/linea-besu/besu/plugins/besu-shomei-plugin-v${{ steps.build-plugins-and-assemble.outputs.shomei_version }}.jar | awk '{ print $1 }' ) |" >> output.md
           if [[ "${{ inputs.with_besu_fleet_plugin }}" == "true" ]]; then
             echo "| besu-fleet-plugin | ${{ steps.build-plugins-and-assemble.outputs.besu_fleet_version }} | ${{ steps.besu-fleet-plugin-checksum.outputs.sha256sum }} |" >> output.md
           fi
@@ -245,7 +245,7 @@ jobs:
         if: ${{ inputs.changelog == '' }}
         uses: TriPSs/conventional-changelog-action@84dadaf2c367cb52af02737cd9c7e888807219e7 #v6.2.0
         with:
-          git-path: ./linea-besu-package/
+          git-path: ./linea-besu/package/
           git-push: false
           output-file: "false"
 

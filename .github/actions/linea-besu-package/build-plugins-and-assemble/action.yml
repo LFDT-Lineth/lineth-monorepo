@@ -94,7 +94,7 @@ runs:
 
     - name: Build tracer and sequencer from source
       shell: bash
-      run: cd linea-besu-package && make build-tracer-and-sequencer
+      run: cd linea-besu/package && make build-tracer-and-sequencer
       env:
         JAVA_OPTS: -Xmx2g
         TRACER_PLUGIN_VERSION: ${{ steps.metadata.outputs.tracer_plugin_version }}

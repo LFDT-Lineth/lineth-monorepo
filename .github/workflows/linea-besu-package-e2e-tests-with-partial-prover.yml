@@ -39,7 +39,7 @@ jobs:
       - name: Build linea-besu-package from source 
         if: ${{ inputs.linea_besu_package_image_tag == '' }}
         shell: bash
-        run: cd linea-besu-package && make build
+        run: cd linea-besu/package && make build
         env:
           JAVA_OPTS: -Xmx2g
 
@@ -47,7 +47,7 @@ jobs:
         if: ${{ inputs.linea_besu_package_image_tag == '' }}
         shell: bash
         run: |
-          cd linea-besu-package
+          cd linea-besu/package
           sudo apt update
           sudo apt-get install --no-install-recommends --assume-yes tree
           tree .
@@ -77,7 +77,7 @@ jobs:
       - name: Build prover from source 
         if: ${{ inputs.prover_image_tag == '' }}
         shell: bash
-        run: cd linea-besu-package && make build-prover
+        run: cd linea-besu/package && make build-prover
         env:
           JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
 

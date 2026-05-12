@@ -31,8 +31,9 @@ jobs:
             folder-name: transaction-exclusion-api
             include-path: 'transaction-exclusion-api/**'
           - component: linea-besu
-            folder-name: linea-besu-package
-            include-path: [ 'tracer/**', 'tracer-constraints/**', 'besu-plugins/linea-sequencer/**', 'linea-besu/besu/**', 'linea-besu-package/**', 'gradle/libs.versions.toml' ]
+            folder-name: linea-besu/package
+            artifact-name: linea-besu-package
+            include-path: [ 'tracer/**', 'tracer-constraints/**', 'besu-plugins/linea-sequencer/**', 'linea-besu/besu/**', 'linea-besu/package/**', 'gradle/libs.versions.toml' ]
 
     name: Generate ${{ matrix.component }} [Unreleased] changelog & next version
     steps:
@@ -63,7 +64,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
-          name: unreleased-changelog-${{ matrix.folder-name }}
+          name: unreleased-changelog-${{ matrix.artifact-name || matrix.folder-name }}
           path: ${{ matrix.folder-name }}/CHANGELOG.md
 
       - name: Post/update ${{ matrix.component }} changelog preview comment on PR

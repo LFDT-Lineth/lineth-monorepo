@@ -81,6 +81,9 @@ jobs:
             artifact_name=$(basename "${dir}")
             # Strip the "unreleased-changelog-" prefix → destination folder name.
             dest_folder="${artifact_name#${PREFIX}}"
+            if [ "${dest_folder}" = "linea-besu-package" ]; then
+              dest_folder="linea-besu/package"
+            fi
             src="${dir}CHANGELOG.md"
             dest="${GITHUB_WORKSPACE}/${dest_folder}/CHANGELOG.md"
 
@@ -108,7 +111,7 @@ jobs:
             echo "No CHANGELOG.md changes to commit."
             exit 0
           fi
-          git add '*/CHANGELOG.md'
+          git add '*/CHANGELOG.md' '*/*/CHANGELOG.md'
           git commit -m "chore(misc): update CHANGELOG.md unreleased section of each updated component [skip ci]"
 
           # Rebase on top of any commits that landed on the branch between
