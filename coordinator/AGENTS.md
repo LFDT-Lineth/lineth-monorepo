@@ -61,7 +61,7 @@ coordinator/
 ├── core/         Core business logic
 ├── clients/      Client implementations (prover, smart-contract, web3signer, traces-generator)
 ├── ethereum/     Ethereum modules (gas-pricing, blob-submitter, finalization-monitor, message-anchoring)
-├── persistence/  Database persistence (aggregation, batch, blob, feehistory, db-common)
+├── persistence/  Database persistence (aggregation, batch, blob, fee history)
 └── utilities/    Shared utilities
 ```
 

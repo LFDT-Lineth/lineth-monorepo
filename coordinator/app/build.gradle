@@ -1,3 +1,6 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
 plugins {
   id 'net.consensys.zkevm.kotlin-application-conventions'
 }
@@ -10,6 +13,21 @@ configurations.configureEach {
 configurations {
   runtimeClasspath.exclude group: "it.unimi.dsi", module: "fastutil"
   runtimeClasspath.exclude group: "org.hyperledger.besu", module: "gnark"
+}
+
+sourceSets {
+  integrationTest {
+    kotlin {
+      compileClasspath += main.output
+      runtimeClasspath += main.output
+    }
+    compileClasspath += sourceSets.main.output +
+        sourceSets.main.compileClasspath +
+        sourceSets.test.compileClasspath
+    runtimeClasspath += sourceSets.main.output +
+        sourceSets.main.runtimeClasspath +
+        sourceSets.test.runtimeClasspath
+  }
 }
 
 dependencies {
@@ -37,11 +55,7 @@ dependencies {
   implementation project(':coordinator:ethereum:message-anchoring')
   implementation project(':coordinator:ethereum:forced-transactions')
   implementation project(':coordinator:clients:web3signer-client')
-  implementation project(':coordinator:persistence:blob')
-  implementation project(':coordinator:persistence:aggregation')
-  implementation project(':coordinator:persistence:batch')
-  implementation project(':coordinator:persistence:feehistory')
-  implementation project(':coordinator:persistence:db-common')
+  implementation project(':coordinator:persistence')
 
   implementation project(':coordinator:ethereum:gas-pricing:static-cap')
   implementation project(':coordinator:ethereum:gas-pricing:dynamic-cap')
@@ -68,9 +82,14 @@ dependencies {
   testImplementation project(':jvm-libs:generic:serialization:jackson')
   testImplementation testFixtures(project(':jvm-libs:linea:core:domain-models'))
   testImplementation testFixtures(project(':jvm-libs:generic:json-rpc'))
+  testImplementation(testFixtures(project(":jvm-libs:generic:persistence:db")))
+  testImplementation testFixtures(project(':coordinator:persistence'))
+
   testImplementation project(':coordinator:ethereum:test-utils')
   testImplementation "io.vertx:vertx-junit5"
   runtimeOnly "org.hyperledger.besu:secp256k1:${libs.versions.secp.get()}"
+
+  integrationTestImplementation testFixtures(project(':coordinator:core-interfaces'))
 }
 
 application {
@@ -136,4 +155,26 @@ tasks.register('integrationTestAllNeeded') {
       dependsOn "${dep.path}:integrationTest"
     }
   }
+}
+
+tasks.register('integrationTest', Test) { test ->
+  testLogging {
+    events TestLogEvent.FAILED,
+        TestLogEvent.SKIPPED,
+        TestLogEvent.STANDARD_ERROR,
+        TestLogEvent.STANDARD_OUT
+    exceptionFormat TestExceptionFormat.FULL
+    showCauses true
+    showExceptions true
+    showStackTraces true
+    showStandardStreams false
+  }
+  description = "Runs integration tests."
+  group = "verification"
+  useJUnitPlatform()
+
+  classpath = sourceSets.integrationTest.runtimeClasspath
+  testClassesDirs = sourceSets.integrationTest.output.classesDirs
+
+  dependsOn(":localStackPostgresDbOnlyComposeUp")
 }

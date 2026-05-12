@@ -1,0 +1,74 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
+plugins {
+  id "net.consensys.zkevm.kotlin-library-conventions"
+  id "java-test-fixtures"
+}
+
+dependencies {
+  api(project(":coordinator:clients:prover-client:serialization"))
+  api(project(":coordinator:core-interfaces"))
+
+  implementation(project(":coordinator:clients:prover-client:file-based-client")) {
+    because "ProverResponseIndex is a part of it"
+  }
+
+  implementation(project(":jvm-libs:generic:errors"))
+  implementation(project(":jvm-libs:generic:extensions:futures"))
+  implementation(project(":jvm-libs:generic:extensions:kotlin"))
+  implementation(project(":jvm-libs:generic:persistence:db"))
+  implementation(project(":jvm-libs:linea:core:domain-models"))
+  implementation(project(":jvm-libs:linea:core:metrics"))
+
+  testImplementation(testFixtures(project(":coordinator:core-interfaces")))
+  testImplementation(testFixtures(project(":jvm-libs:generic:extensions:kotlin")))
+  testImplementation(testFixtures(project(":jvm-libs:generic:persistence:db")))
+  testImplementation("com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}")
+  testImplementation("com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}")
+  testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}")
+  testImplementation("io.vertx:vertx-junit5")
+
+  testFixturesImplementation("io.vertx:vertx-pg-client:${libs.versions.vertx.get()}")
+}
+
+sourceSets {
+  integrationTest {
+    kotlin {
+      compileClasspath += main.output + testFixtures.output
+      runtimeClasspath += main.output + testFixtures.output
+    }
+    compileClasspath += sourceSets.main.output +
+        sourceSets.main.compileClasspath +
+        sourceSets.test.compileClasspath +
+        sourceSets.testFixtures.output +
+        sourceSets.testFixtures.compileClasspath
+    runtimeClasspath += sourceSets.main.output +
+        sourceSets.main.runtimeClasspath +
+        sourceSets.test.runtimeClasspath +
+        sourceSets.testFixtures.output +
+        sourceSets.testFixtures.runtimeClasspath
+  }
+}
+
+task integrationTest(type: Test) { test ->
+  testLogging {
+    events TestLogEvent.FAILED,
+        TestLogEvent.SKIPPED,
+        TestLogEvent.STANDARD_ERROR,
+        TestLogEvent.STANDARD_OUT
+    exceptionFormat TestExceptionFormat.FULL
+    showCauses true
+    showExceptions true
+    showStackTraces true
+    showStandardStreams false
+  }
+  description = "Runs integration tests."
+  group = "verification"
+  useJUnitPlatform()
+
+  classpath = sourceSets.integrationTest.runtimeClasspath
+  testClassesDirs = sourceSets.integrationTest.output.classesDirs
+
+  dependsOn(":localStackPostgresDbOnlyComposeUp")
+}
