@@ -19,14 +19,14 @@
     "@consensys/linea-contract-integrity-verifier-ethers": "workspace:*",
     "@consensys/linea-contract-integrity-verifier-viem": "workspace:*",
     "@headlessui/react": "2.2.10",
-    "@tanstack/react-query": "5.100.7",
+    "@tanstack/react-query": "5.100.9",
     "clsx": "2.1.1",
-    "next": "16.2.4",
-    "react": "19.2.5",
-    "react-dom": "19.2.5",
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
     "viem": "catalog:",
     "zod": "catalog:",
-    "zustand": "5.0.12"
+    "zustand": "5.0.13"
   },
   "devDependencies": {
     "@consensys/eslint-config": "workspace:*",

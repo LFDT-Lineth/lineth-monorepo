@@ -26,7 +26,7 @@
     "filtrex": "3.1.0",
     "pg": "8.20.0",
     "prom-client": "catalog:",
-    "typeorm": "0.3.28",
+    "typeorm": "0.3.29",
     "typeorm-naming-strategies": "4.1.0",
     "winston": "catalog:",
     "zod": "catalog:"
