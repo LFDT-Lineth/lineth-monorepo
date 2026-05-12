@@ -167,10 +167,7 @@ class JsonRpcManagerTest {
     // successful)
     final Path rejTxRpcDir =
         tempDataDir.resolve(JsonRpcManager.JSON_RPC_DIR).resolve(PLUGIN_IDENTIFIER);
-    try (Stream<Path> files = Files.list(rejTxRpcDir)) {
-      long fileCount = files.filter(path -> path.toString().endsWith(".json")).count();
-      assertThat(fileCount).isEqualTo(0);
-    }
+    await().atMost(2, SECONDS).untilAsserted(() -> assertThat(jsonFileCount(rejTxRpcDir)).isZero());
   }
 
   @Test
@@ -282,9 +279,12 @@ class JsonRpcManagerTest {
     // successful)
     final Path rejTxRpcDir =
         tempDataDir.resolve(JsonRpcManager.JSON_RPC_DIR).resolve(PLUGIN_IDENTIFIER);
-    try (Stream<Path> files = Files.list(rejTxRpcDir)) {
-      long fileCount = files.filter(path -> path.toString().endsWith(".json")).count();
-      assertThat(fileCount).isEqualTo(0);
+    await().atMost(2, SECONDS).untilAsserted(() -> assertThat(jsonFileCount(rejTxRpcDir)).isZero());
+  }
+
+  private static long jsonFileCount(final Path directory) throws IOException {
+    try (Stream<Path> files = Files.list(directory)) {
+      return files.filter(path -> path.toString().endsWith(".json")).count();
     }
   }
 }
