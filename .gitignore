@@ -96,7 +96,7 @@ typechain-types/
 generated/
 __pycache__/
 
-/besu-plugins/linea-sequencer/**/site
+/linea-besu/plugins/linea-sequencer/**/site
 
 /contracts/.env~
 /contracts/coverage.json

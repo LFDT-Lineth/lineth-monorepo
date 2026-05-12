@@ -22,7 +22,7 @@ linea-monorepo/
 ├── Kotlin/Java (Gradle)
 │   ├── coordinator/          # Orchestration service
 │   ├── jvm-libs/             # Shared JVM libraries
-│   ├── besu-plugins/         # Besu plugin extensions
+│   ├── linea-besu/plugins/         # Besu plugin extensions
 │   ├── tracer/               # EVM trace generation
 │   ├── transaction-exclusion-api/
 │   └── testing-tools/

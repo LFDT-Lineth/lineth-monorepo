@@ -53,15 +53,15 @@ jobs:
 
       - name: Build
         run: |
-          GRAGLE_PATH=:$(echo "besu-plugins/${{inputs.workspaceModulePath}}" | sed 's/\//:/g')
+          GRAGLE_PATH=:$(echo "linea-besu/plugins/${{inputs.workspaceModulePath}}" | sed 's/\//:/g')
           echo $GRAGLE_PATH
           ./gradlew $GRAGLE_PATH:shadowJar -Pversion=v${{inputs.version}}
-          ls -lh besu-plugins/${{inputs.workspaceModulePath}}/build/libs
+          ls -lh linea-besu/plugins/${{inputs.workspaceModulePath}}/build/libs
 
       - name: Release to GitHub
         uses: jreleaser/release-action@90ac653bb9c79d11179e65d81499f3f34527dcd5 #v2.5.0
         with:
-          arguments: full-release --git-root-search --basedir=${{github.workspace}}/besu-plugins/${{inputs.workspaceModulePath}} -P=version=v${{inputs.version}}
+          arguments: full-release --git-root-search --basedir=${{github.workspace}}/linea-besu/plugins/${{inputs.workspaceModulePath}} -P=version=v${{inputs.version}}
         env:
           GITHUB_TOKEN: ${{secrets._GITHUB_TOKEN_RELEASE_ACCESS}}
           JRELEASER_TAG_NAME: ${{inputs.pluginName}}-v${{inputs.version}}

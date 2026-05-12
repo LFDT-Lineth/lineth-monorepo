@@ -28,7 +28,7 @@
 - Architecture: `docs/architecture-description.md`
 - Engineering guidelines: `docs/development-guidelines.md`
 - Security and audits: `docs/security.md`, `docs/audits.md`
-- Package-specific agent rules: `*/AGENTS.md` (`contracts/`, `coordinator/`, `prover/`, `tracer/`, `ts-libs/sdk/`, `besu-plugins/`, `transaction-exclusion-api/`, `e2e/`)
+- Package-specific agent rules: `*/AGENTS.md` (`contracts/`, `coordinator/`, `prover/`, `tracer/`, `ts-libs/sdk/`, `linea-besu/plugins/`, `transaction-exclusion-api/`, `e2e/`)
 
 ## Project Guidelines
 
@@ -359,7 +359,7 @@ These require human approval and follow the release process:
 | `ts-libs/linea-shared-utils` | Library | TypeScript, Express, Viem | Shared utilities (server, metrics, logging) |
 | `operations/native-yield-operations/automation-service` | Backend service | TypeScript, Apollo | Automated native yield operations |
 | `operations/native-yield-operations/lido-governance-monitor` | Backend service | TypeScript, Prisma | Lido governance proposal monitoring |
-| `besu-plugins` | Plugins | Kotlin, Gradle | Besu blockchain client plugins (sequencer, state recovery) |
+| `linea-besu/plugins` | Plugins | Kotlin, Gradle | Besu blockchain client plugins (sequencer, state recovery) |
 | `jvm-libs` | Libraries | Kotlin, Gradle | Shared JVM libraries (JSON-RPC, HTTP, persistence, metrics) |
 | `transaction-exclusion-api` | Backend service | Kotlin, Gradle, Vertx | Transaction exclusion tracking API |
 | `tracer` | Backend service | Java/Go Corset, Gradle | EVM trace generation and arithmetization |
@@ -379,7 +379,7 @@ operations/              Operations tools
 operations/operations-cli/ Operations CLI tool
 ts-libs/                 Shared TypeScript libraries
 operations/native-yield-operations/ Native yield services
-besu-plugins/            Besu client plugins
+linea-besu/plugins/      Besu client plugins
 jvm-libs/                Shared Kotlin/Java libraries
 transaction-exclusion-api/ Transaction exclusion API
 tracer/                  EVM tracer
@@ -414,7 +414,7 @@ operations/operations-cli -> (standalone, uses ethers + viem)
 operations/native-yield-operations/* -> @consensys/linea-shared-utils
 coordinator -> jvm-libs/*
 transaction-exclusion-api -> jvm-libs/*
-besu-plugins -> jvm-libs/*
+linea-besu/plugins -> jvm-libs/*
 ```
 
 ### External Docs

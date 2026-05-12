@@ -142,7 +142,7 @@ pnpm run test
 # Build specific project
 ./gradlew :coordinator:app:build
 ./gradlew :tracer:arithmetization:build
-./gradlew :besu-plugins:linea-sequencer:build
+./gradlew :linea-besu:plugins:linea-sequencer:build
 
 # Test
 ./gradlew test

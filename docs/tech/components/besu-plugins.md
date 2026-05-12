@@ -63,7 +63,7 @@ Two main plugin groups:
 ## Directory Structure
 
 ```
-besu-plugins/
+linea-besu/plugins/
 ├── linea-sequencer/
 │   ├── sequencer/
 │   │   └── src/main/java/
@@ -378,15 +378,15 @@ abstract class AbstractLineaSharedPrivateOptionsPlugin : BesuPlugin {
 
 ```bash
 # Build all plugins
-./gradlew :besu-plugins:linea-sequencer:build
-./gradlew :besu-plugins:state-recovery:besu-plugin:build
+./gradlew :linea-besu:plugins:linea-sequencer:build
+./gradlew :linea-besu:plugins:state-recovery:besu-plugin:build
 
 # Run tests
-./gradlew :besu-plugins:linea-sequencer:test
-./gradlew :besu-plugins:state-recovery:test-cases:test
+./gradlew :linea-besu:plugins:linea-sequencer:test
+./gradlew :linea-besu:plugins:state-recovery:test-cases:test
 
 # Run acceptance tests
-./gradlew :besu-plugins:linea-sequencer:acceptance-tests:test
+./gradlew :linea-besu:plugins:linea-sequencer:acceptance-tests:test
 ```
 
 ## Configuration

@@ -1,6 +1,6 @@
-# AGENTS.md — besu-plugins
+# AGENTS.md — linea-besu/plugins
 
-> Inherits all rules from [root AGENTS.md](../AGENTS.md). Only overrides and additions below.
+> Inherits all rules from [root AGENTS.md](../../AGENTS.md). Only overrides and additions below.
 
 ## External Documentation
 
@@ -14,20 +14,20 @@ Besu blockchain client plugins for Linea: the sequencer plugin (transaction orde
 
 ```bash
 # Build sequencer plugin
-./gradlew :besu-plugins:linea-sequencer:build
+./gradlew :linea-besu:plugins:linea-sequencer:build
 
 # Unit tests
-./gradlew :besu-plugins:linea-sequencer:test
+./gradlew :linea-besu:plugins:linea-sequencer:test
 
 # Acceptance tests (large runner, requires Docker)
-./gradlew :besu-plugins:linea-sequencer:acceptance-tests:acceptanceTests
+./gradlew :linea-besu:plugins:linea-sequencer:acceptance-tests:acceptanceTests
 
 # Lint and format
 ./gradlew spotlessCheck
 ./gradlew spotlessApply
 
 # License check
-./gradlew :besu-plugins:linea-sequencer:checkLicense
+./gradlew :linea-besu:plugins:linea-sequencer:checkLicense
 ```
 
 ## Plugin-Specific Conventions
@@ -40,7 +40,7 @@ Besu blockchain client plugins for Linea: the sequencer plugin (transaction orde
 ### Directory Structure
 
 ```
-besu-plugins/
+linea-besu/plugins/
 ├── linea-sequencer/          Main sequencer plugin
 │   ├── sequencer/            Core sequencer implementation
 │   ├── acceptance-tests/     Acceptance tests (Web3j, REST-assured, Wiremock)
@@ -69,6 +69,6 @@ besu-plugins/
 
 ## Agent Rules (Overrides)
 
-- Always run acceptance tests for sequencer changes: `./gradlew :besu-plugins:linea-sequencer:acceptance-tests:acceptanceTests`
-- Check license compliance: `./gradlew :besu-plugins:linea-sequencer:checkLicense`
-- Plugin distribution changes may require corresponding linea-besu-package updates
+- Always run acceptance tests for sequencer changes: `./gradlew :linea-besu:plugins:linea-sequencer:acceptance-tests:acceptanceTests`
+- Check license compliance: `./gradlew :linea-besu:plugins:linea-sequencer:checkLicense`
+- Plugin distribution changes may require corresponding `linea-besu/package` updates

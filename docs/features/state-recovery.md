@@ -12,14 +12,14 @@ This provides a censorship-resistance guarantee: even if the sequencer stops pro
 
 | Component | Path | Role |
 |-----------|------|------|
-| LineaStateRecoveryPlugin | `besu-plugins/state-recovery/besu-plugin/` | Besu plugin entry point |
-| RecoveryModeManager | `besu-plugins/state-recovery/besu-plugin/` | Switches between recovery and normal sync |
-| StateRecoveryApp | `besu-plugins/state-recovery/appcore/logic/` | Orchestrates the recovery flow |
-| StateSynchronizerService | `besu-plugins/state-recovery/appcore/logic/` | Polling service for L1 events and blob fetching |
-| BlobDecompressorAndDeserializer | `besu-plugins/state-recovery/appcore/logic/` | Decompresses blobs into block data |
-| LineaSubmissionEventsClient | `besu-plugins/state-recovery/appcore/` | Fetches `DataFinalizedV3` events from L1 |
-| BlobScanClient | `besu-plugins/state-recovery/clients/blobscan-client/` | Retrieves blob data from BlobScan API |
-| ExecutionLayerInProcessClient | `besu-plugins/state-recovery/besu-plugin/` | Imports recovered blocks into Besu |
+| LineaStateRecoveryPlugin | `linea-besu/plugins/state-recovery/besu-plugin/` | Besu plugin entry point |
+| RecoveryModeManager | `linea-besu/plugins/state-recovery/besu-plugin/` | Switches between recovery and normal sync |
+| StateRecoveryApp | `linea-besu/plugins/state-recovery/appcore/logic/` | Orchestrates the recovery flow |
+| StateSynchronizerService | `linea-besu/plugins/state-recovery/appcore/logic/` | Polling service for L1 events and blob fetching |
+| BlobDecompressorAndDeserializer | `linea-besu/plugins/state-recovery/appcore/logic/` | Decompresses blobs into block data |
+| LineaSubmissionEventsClient | `linea-besu/plugins/state-recovery/appcore/` | Fetches `DataFinalizedV3` events from L1 |
+| BlobScanClient | `linea-besu/plugins/state-recovery/clients/blobscan-client/` | Retrieves blob data from BlobScan API |
+| ExecutionLayerInProcessClient | `linea-besu/plugins/state-recovery/besu-plugin/` | Imports recovered blocks into Besu |
 
 ## Recovery Flow
 
@@ -51,7 +51,7 @@ The `RecoveryModeManager` controls two modes:
 
 | Test File | Runner | Validates |
 |-----------|--------|-----------|
-| `besu-plugins/state-recovery/test-cases/` | JUnit | StateRecoveryE2ETest |
+| `linea-besu/plugins/state-recovery/test-cases/` | JUnit | StateRecoveryE2ETest |
 | Unit tests in submodules | JUnit | Individual component behavior |
 
 ## Related Documentation

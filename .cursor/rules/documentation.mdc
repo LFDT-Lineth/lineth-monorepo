@@ -48,7 +48,7 @@ alwaysApply: true
 - `/prover/AGENTS.md`
 - `/tracer/AGENTS.md`
 - `/sdk/AGENTS.md`
-- `/besu-plugins/AGENTS.md`
+- `/linea-besu/plugins/AGENTS.md`
 - `/transaction-exclusion-api/AGENTS.md`
 - `/e2e/AGENTS.md`
 

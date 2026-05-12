@@ -15,9 +15,9 @@ For contract-level workflow diagrams see [`contracts/docs/workflows/`](../../con
 | Smart Contracts | Solidity | `contracts/` | Hardhat + Foundry |
 | Coordinator | Kotlin | `coordinator/` | JVM / Vert.x |
 | Prover | Go + Rust (Corset) | `prover/` | gnark circuits |
-| Sequencer | Java/Kotlin | `besu-plugins/linea-sequencer/` | Besu plugin |
+| Sequencer | Java/Kotlin | `linea-besu/plugins/linea-sequencer/` | Besu plugin |
 | Tracer | Java/Kotlin | `tracer/` | Besu plugin |
-| State Recovery | Kotlin | `besu-plugins/state-recovery/` | Besu plugin |
+| State Recovery | Kotlin | `linea-besu/plugins/state-recovery/` | Besu plugin |
 | Transaction Exclusion API | Kotlin | `transaction-exclusion-api/` | Vert.x |
 | Postman | TypeScript | `postman/` | Node.js |
 | Yield Automation Service | TypeScript | `operations/native-yield-operations/automation-service/` | Node.js |

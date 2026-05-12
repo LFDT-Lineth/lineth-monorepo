@@ -33,7 +33,7 @@ jobs:
           - component: linea-besu
             folder-name: linea-besu/package
             artifact-name: linea-besu-package
-            include-path: [ 'tracer/**', 'tracer-constraints/**', 'besu-plugins/linea-sequencer/**', 'linea-besu/besu/**', 'linea-besu/package/**', 'gradle/libs.versions.toml' ]
+            include-path: [ 'tracer/**', 'tracer-constraints/**', 'linea-besu/plugins/linea-sequencer/**', 'linea-besu/besu/**', 'linea-besu/package/**', 'gradle/libs.versions.toml' ]
 
     name: Generate ${{ matrix.component }} [Unreleased] changelog & next version
     steps:

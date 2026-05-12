@@ -12,7 +12,7 @@ This section provides detailed documentation for each component in the Linea mon
 | [Prover](./prover.md) | Go | `prover/` | ZK proof generation |
 | [Contracts](./contracts.md) | Solidity | `contracts/` | Smart contracts |
 | [Tracer](./tracer.md) | Java | `tracer/` | EVM trace generation |
-| [Besu Plugins](./besu-plugins.md) | Kotlin/Java | `besu-plugins/` | Sequencer extensions |
+| [Besu Plugins](./besu-plugins.md) | Kotlin/Java | `linea-besu/plugins/` | Sequencer extensions |
 | [SDK](./sdk.md) | TypeScript | `ts-libs/sdk/` | Developer SDK |
 | [Postman](./postman.md) | TypeScript | `postman/` | Message relay |
 | [E2E Tests](./e2e.md) | TypeScript | `e2e/` | End-to-end tests |
@@ -49,7 +49,7 @@ This section provides detailed documentation for each component in the Linea mon
         │               │               │
         ▼               ▼               ▼
 ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐
-│   prover    │ │  jvm-libs   │ │    besu-plugins     │
+│   prover    │ │  jvm-libs   │ │ linea-besu/plugins  │
 │    (Go)     │ │   shared    │ │  sequencer + state  │
 └──────┬──────┘ └─────────────┘ │      recovery       │
        │                        └──────────┬──────────┘
@@ -78,7 +78,7 @@ root build.gradle
 ├── jvm-libs/
 │   ├── generic/ (shared utilities)
 │   └── linea/ (Linea-specific libs)
-├── besu-plugins/
+├── linea-besu/plugins/
 │   ├── linea-sequencer/ (sequencer plugins)
 │   └── state-recovery/ (recovery plugin)
 ├── tracer/
@@ -137,7 +137,7 @@ root package.json
 
 - Hardhat for development
 - Protocol contracts: Solidity **0.8.33** (see [`contracts/AGENTS.md`](../../../contracts/AGENTS.md))
-- Besu plugin acceptance tests use Web3j wrappers generated from a separate Solidity version for fixtures (see [`besu-plugins/AGENTS.md`](../../../besu-plugins/AGENTS.md))
+- Besu plugin acceptance tests use Web3j wrappers generated from a separate Solidity version for fixtures (see [`linea-besu/plugins/AGENTS.md`](../../../linea-besu/plugins/AGENTS.md))
 - OpenZeppelin upgradeable contracts
 - Compile: `pnpm -F contracts run compile`
 

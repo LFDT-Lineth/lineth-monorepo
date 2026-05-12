@@ -41,7 +41,7 @@ jobs:
               - '**/Dockerfile'
               - 'e2e/src/**'
               - 'e2e/package.json'
-              - 'besu-plugins/linea-sequencer/**'
+              - 'linea-besu/plugins/linea-sequencer/**'
               - 'tracer/**'
               - 'tracer-constraints/**'
               - 'ts-libs/**/src/**'
@@ -88,7 +88,7 @@ jobs:
               continue
             fi
 
-            if [[ "$file" =~ ^besu-plugins/linea-sequencer/acceptance-tests/ ]]; then
+            if [[ "$file" =~ ^linea-besu/plugins/linea-sequencer/acceptance-tests/ ]]; then
               continue
             fi
 
