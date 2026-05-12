@@ -7,7 +7,7 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      commit_tag:
+      image_tag:
         description: 'The commit tag to use'
         required: true
         type: string
@@ -28,7 +28,7 @@ on:
         default: true
   workflow_call:
     inputs:
-      commit_tag:
+      image_tag:
         required: true
         type: string
       linea_besu_package_tag:
@@ -141,7 +141,7 @@ jobs:
             artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-${service}-docker-image.tar.gz"
             env_var="LINEA_$(echo "${service}" | tr '[:lower:]-' '[:upper:]_')_TAG"
             if [ -f "$artifact_path" ]; then
-              echo "${env_var}=${{ inputs.commit_tag }}" >> "$GITHUB_ENV"
+              echo "${env_var}=${{ inputs.image_tag }}" >> "$GITHUB_ENV"
             else
               echo "${env_var}=develop" >> "$GITHUB_ENV"
             fi

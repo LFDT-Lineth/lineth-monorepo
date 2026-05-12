@@ -22,11 +22,34 @@ runs:
       id: compute_version_tags
       shell: bash
       run: |
-        # For PR, GITHUB_SHA is NOT the last commit pushed onto the PR branch - https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#pull_request
+        set -euo pipefail
+
+        # For PR, GITHUB_SHA or HEAD is NOT the last commit pushed onto the PR branch -
+        # https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#pull_request
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          echo "COMMIT_TAG=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})" >> $GITHUB_OUTPUT
+          commit_sha="${{ github.event.pull_request.head.sha }}"
+          last_sha="${{ github.event.before }}"
         else
-          echo "COMMIT_TAG=$(git rev-parse --short=7 $GITHUB_SHA)" >> $GITHUB_OUTPUT
+          # Use HEAD instead of GITHUB_SHA because we want the latest commit hash
+          # after a potential CHANGELOG.md update commit pushed earlier in the run.
+          commit_sha="HEAD"
+          last_sha="HEAD~1"
         fi
-        echo LAST_COMMIT_TAG=$(git rev-parse --short=7 "${{ github.event.before }}") >> $GITHUB_OUTPUT
-        echo DEVELOP_TAG=develop >> $GITHUB_OUTPUT
+
+        COMMIT_TAG=$(git rev-parse --short=7 "${commit_sha}")
+
+        # LAST_COMMIT_TAG can legitimately be unresolvable:
+        #   - workflow_dispatch (github.event.before is empty)
+        #   - first commit on a new branch (no HEAD~1)
+        #   - shallow checkout with fetch-depth=1
+        # Silently emit an empty value in those cases so callers can decide.
+        LAST_COMMIT_TAG=""
+        if [[ -n "${last_sha}" ]]; then
+          LAST_COMMIT_TAG=$(git rev-parse --short=7 "${last_sha}" 2>/dev/null || true)
+        fi
+
+        {
+          echo "COMMIT_TAG=${COMMIT_TAG}"
+          echo "LAST_COMMIT_TAG=${LAST_COMMIT_TAG}"
+          echo "DEVELOP_TAG=develop"
+        } >> "$GITHUB_OUTPUT"

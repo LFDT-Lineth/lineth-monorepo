@@ -1,0 +1,46 @@
+name: "Reusable: Compute Component Docker Image Tag"
+
+on:
+  workflow_call:
+    inputs:
+      version-prefix:
+        description: 'Semver version as the docker image tag prefix'
+        required: true
+        type: string
+      image-tag-suffix:
+        description: 'Custom image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDDHHMMSS]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDDHHMMSS]-[commit]'
+        required: false
+        type: string
+        default: ''
+    outputs:
+      docker_tag:
+        description: "Docker image tag"
+        value: ${{ jobs.compute-docker-image-tag.outputs.docker_tag }}
+
+jobs:
+  compute-docker-image-tag:
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    name: Compute docker image tag
+    outputs:
+      docker_tag: ${{ steps.dockertag.outputs.dockertag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 2   # need at least 2 commits so HEAD~1 resolves later would not fail on compute-version-tags
+
+      - name: Compute version tags
+        id: compute_version_tags
+        uses: ./.github/actions/compute-version-tags
+
+      - name: Set timestamp
+        id: timestamp
+        run: echo "TIMESTAMP=$(date -u +%Y%m%d%H%M%S)" >> "$GITHUB_OUTPUT"
+
+      - name: Set docker tag
+        id: dockertag
+        run: |
+          base="${{ inputs.version-prefix }}-${{ steps.timestamp.outputs.TIMESTAMP }}-${{ steps.compute_version_tags.outputs.commit_tag }}"
+          suffix="${{ inputs.image-tag-suffix && format('-{0}', inputs.image-tag-suffix) || '' }}"
+          echo "dockertag=${base}${suffix}" >> "$GITHUB_OUTPUT"

@@ -1,0 +1,76 @@
+name: "Lint Commit Messages"
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+
+concurrency:
+  group: lint-commit-messages-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-commit-messages:
+    if: github.event_name == 'pull_request'
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    name: Lint PR commit messages
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          # Need both PR head and base so we can list commits in the PR.
+          fetch-depth: 0
+          submodules: false
+
+      - name: Lint each commit in the PR with .husky/commit-msg
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          # Number of most-recent PR commits to lint, if unset, defaults to "all".
+          LINT_COMMIT_COUNT: 1
+        run: |
+          set -eu
+
+          lint_count="${LINT_COMMIT_COUNT:-all}"
+
+          # All commits introduced by this PR (exclusive of base), newest first.
+          commits=$(git rev-list --no-merges "${BASE_SHA}..${HEAD_SHA}")
+          if [ -z "${commits}" ]; then
+            echo "No commits to lint."
+            exit 0
+          fi
+
+          if [ "${lint_count}" != "all" ]; then
+            case "${lint_count}" in
+              ''|*[!0-9]*)
+                echo "LINT_COMMIT_COUNT must be a positive integer or 'all' (got: '${lint_count}')." >&2
+                exit 1
+                ;;
+            esac
+            commits=$(printf '%s\n' "${commits}" | head -n "${lint_count}")
+            echo "Linting the ${lint_count} most recent commit(s)."
+          else
+            echo "Linting all commits in the PR."
+          fi
+
+          failed=0
+          tmpfile=$(mktemp)
+          trap 'rm -f "${tmpfile}"' EXIT
+
+          for sha in ${commits}; do
+            git log -1 --pretty=%B "${sha}" > "${tmpfile}"
+            subject=$(head -n 1 "${tmpfile}")
+            printf '── %s  %s\n' "$(echo "${sha}" | cut -c1-8)" "${subject}"
+
+            if ! .husky/commit-msg "${tmpfile}"; then
+              failed=$((failed + 1))
+            fi
+            echo
+          done
+
+          if [ "${failed}" -gt 0 ]; then
+            echo "✗ ${failed} commit message(s) failed validation." >&2
+            exit 0 # TODO: This will be set to 1 by later PR after merging into main
+          fi
+          echo "✓ All commit messages OK."

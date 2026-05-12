@@ -1,0 +1,41 @@
+name: "Postman Release (still in testing phase)"
+
+permissions:
+  actions: read
+  contents: write
+  packages: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag_suffix:
+        description: 'Custom image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDDHHMMSS]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDDHHMMSS]-[commit]'
+        required: false
+        type: string
+        default: ''
+      draft_release:
+        description: 'Draft Release'
+        required: false
+        default: false
+        type: boolean
+      pre_release:
+        description: 'Pre Release'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: postman-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  component-release:
+    uses: ./.github/workflows/reusable-component-release.yml
+    with:
+      component-name: postman
+      folder-name: postman
+      include-path: '"postman/**"'
+      image_tag_suffix: ${{ inputs.image_tag_suffix }}
+      draft_release: ${{ inputs.draft_release }}
+      pre_release: ${{ inputs.pre_release }}
+    secrets: inherit

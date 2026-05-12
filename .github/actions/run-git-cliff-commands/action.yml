@@ -1,0 +1,163 @@
+name: 'Run git cliff commands'
+
+description: 'Run git cliff for bumping version, update/retrieve changelog, and prepend to existing changelog'
+inputs:
+  component-name:
+    description: "Component name — used to derive tag pattern (e.g. coordinator, postman)"
+    required: true
+  folder-name:
+    description: "Folder name of the component which hosts CHANGELOG.md (e.g. linea-besu's home folder is linea-besu-package)"
+    required: false
+  include-path:
+    description: "git-cliff --include-path filter, either single path (e.g. '\"coordinator/**\"') or JSON array string (e.g. '[\"tracer/**\",\"linea-besu/**\"]')"
+    required: true
+  cliff-config:
+    description: "Path to the cliff.toml config file"
+    required: false
+    default: "cliff.toml"
+  prepend-changelog:
+    description: "Prepend the unreleased changelogs to the CHANGELOG.md"
+    required: false
+    default: "false"
+  generate-changelog-with-next-tag-version:
+    description: "Generate the unreleased changelogs but replace the header with next-tag-version"
+    required: false
+    default: "false"
+  
+outputs:
+  changelog_content:
+    description: "The changelog content"
+    value: ${{ steps.changelog.outputs.content }}
+  next_version:
+    description: "The next semver version of the component"
+    value: ${{ steps.version.outputs.version }}
+  next_tag:
+    description: "The next release tag of the component"
+    value: ${{ steps.version.outputs.tag }}
+  tag_changed:
+    description: "Indicate whether the release tag of the component has changed"
+    value: ${{ steps.version.outputs.changed }}
+  
+runs:
+  using: 'composite'
+  steps:
+    # Normalize inputs.include-path into one path per line so downstream
+    # steps reconstruct a bash array safely. Accepts any of:
+    #   - bare path           e.g. coordinator/**
+    #   - JSON string scalar  e.g. "coordinator/**"
+    #   - JSON array string   e.g. ["tracer/**","linea-besu/**"]
+    # Bare paths are not valid JSON, so we probe with `jq -e .` first and
+    # fall back to emitting the input verbatim when JSON parsing fails.
+    - name: Build include-path list
+      id: paths
+      shell: bash
+      env:
+        INCLUDE_PATH: ${{ inputs.include-path }}
+      run: |
+        set -euo pipefail
+        {
+          echo 'include_paths<<__PATHS_EOF__'
+          if printf '%s' "$INCLUDE_PATH" | jq -e . >/dev/null 2>&1; then
+            printf '%s' "$INCLUDE_PATH" \
+              | jq -r 'if type == "array" then .[] else . end'
+          else
+            printf '%s\n' "$INCLUDE_PATH"
+          fi
+          echo '__PATHS_EOF__'
+        } >> "$GITHUB_OUTPUT"
+
+    # Compute the next release version
+    - name: Compute next ${{ inputs.component-name }} version (semver)
+      id: version
+      shell: bash
+      env:
+        COMPONENT: ${{ inputs.component-name }}
+        CLIFF_CONFIG: ${{ inputs.cliff-config }}
+      run: |
+        set -euo pipefail
+        mapfile -t paths <<< "${{ steps.paths.outputs.include_paths }}"
+        cliff_args=(--config "${CLIFF_CONFIG}" --bumped-version)
+        for p in "${paths[@]}"; do
+          cliff_args+=(--include-path "${p}")
+        done
+        cliff_args+=(--tag-pattern "releases/${COMPONENT}/v.*")
+        next_tag=$(git cliff "${cliff_args[@]}")
+        if [ -z "${next_tag}" ]; then
+          echo "git-cliff returned no version; nothing to release."
+          echo "tag=" >> "$GITHUB_OUTPUT"
+          echo "version=" >> "$GITHUB_OUTPUT"
+          echo "changed=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        next_semver="${next_tag#releases/${COMPONENT}/v}"
+        current_tag=$(git describe --tags --abbrev=0 --match "releases/${COMPONENT}/v*" 2>/dev/null || echo "") 
+        echo "current ${COMPONENT} tag: ${current_tag}"
+        echo "next ${COMPONENT} tag:    ${next_tag}"
+        echo "next ${COMPONENT} semver: ${next_semver}"
+        changed=false
+        if [ "${current_tag}" != "${next_tag}" ]; then
+          changed=true
+        fi
+        {
+          echo "tag=${next_tag}"
+          echo "version=${next_semver}"
+          echo "changed=${changed}"
+        } >> "$GITHUB_OUTPUT"
+    
+    - name: Generate ${{ inputs.component-name }} unreleased or latest changelog
+      id: changelog
+      if: steps.version.outputs.changed == 'true'
+      env:
+        COMPONENT: ${{ inputs.component-name }}
+        CLIFF_CONFIG: ${{ inputs.cliff-config }}
+        TAG_CONFIG: ${{ inputs.generate-changelog-with-next-tag-version == 'true' && format(' --tag {0}', steps.version.outputs.version) || '' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        mapfile -t paths <<< "${{ steps.paths.outputs.include_paths }}"
+        read -ra tag_config_args <<< "--unreleased${TAG_CONFIG}"
+        cliff_args=(--config "${CLIFF_CONFIG}" "${tag_config_args[@]}")
+        for p in "${paths[@]}"; do
+          cliff_args+=(--include-path "${p}")
+        done
+        cliff_args+=(--tag-pattern "releases/${COMPONENT}/v.*")
+        {
+          echo 'content<<__CLIFF_EOF__'
+          git cliff "${cliff_args[@]}"
+          echo '__CLIFF_EOF__'
+        } >> "$GITHUB_OUTPUT"
+    
+    - name: Generate and prepend release changelog section
+      if: inputs.prepend-changelog == 'true' && steps.version.outputs.changed == 'true'
+      shell: bash
+      env:
+        COMPONENT: ${{ inputs.component-name }}
+        FOLDER_NAME: ${{ inputs.folder-name }}
+        CLIFF_CONFIG: ${{ inputs.cliff-config }}
+        TAG_CONFIG: ${{ inputs.generate-changelog-with-next-tag-version == 'true' && format(' --tag {0}', steps.version.outputs.version) || '' }}
+        TARGET_REF: ${{ github.head_ref || github.ref_name }}
+      run: |
+        set -euo pipefail
+        
+        # retrieve the latest changes of CHANGELOG.md first to avoid chances
+        # of rebase or merge conflicts later from other workflows 
+        git pull --ff-only origin "refs/heads/${TARGET_REF}"
+
+        CHANGELOG_FILE="${FOLDER_NAME}/CHANGELOG.md"
+
+        # Drop existing [unreleased] block if any
+        awk '
+          /^## \[unreleased\]/ { skip=1; next }
+          /^## \[/ && skip       { skip=0 }
+          !skip                  { print }
+        ' "${CHANGELOG_FILE}" > "${CHANGELOG_FILE}.tmp" && mv "${CHANGELOG_FILE}.tmp" "${CHANGELOG_FILE}"
+
+        # Prepend a fresh [unreleased/tag-version] section
+        mapfile -t paths <<< "${{ steps.paths.outputs.include_paths }}"
+        read -ra tag_config_args <<< "--unreleased${TAG_CONFIG}"
+        cliff_args=(--config "${CLIFF_CONFIG}" "${tag_config_args[@]}")
+        for p in "${paths[@]}"; do
+          cliff_args+=(--include-path "${p}")
+        done
+        cliff_args+=(--tag-pattern "releases/${COMPONENT}/v.*" --prepend "${CHANGELOG_FILE}")
+        git cliff "${cliff_args[@]}"

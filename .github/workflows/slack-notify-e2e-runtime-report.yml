@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   generate-report:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     steps:
       - name: Checkout
         uses: actions/checkout@v4

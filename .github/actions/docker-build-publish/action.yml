@@ -134,7 +134,7 @@ runs:
     # Build & push
     - name: Build & push
       uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
-      if: ${{ inputs.push_image == 'true' || github.event_name == 'workflow_dispatch' }}
+      if: ${{ inputs.push_image == 'true' }}
       with:
         context: ${{ inputs.docker_context }}
         build-contexts: ${{ inputs.build_contexts }}

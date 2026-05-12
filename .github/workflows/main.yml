@@ -13,7 +13,29 @@ permissions:
   packages: write
 
 jobs:
+  code-analysis:
+    uses: ./.github/workflows/codeql.yml
+  
+  lint-latest-commit-messages:
+    uses: ./.github/workflows/lint-commit-messages.yml
+
+  component-changelog-upload:
+    needs: [lint-latest-commit-messages]
+    permissions:
+      pull-requests: write
+    if: always()
+    uses: ./.github/workflows/component-changelog-upload.yml
+  
+  component-changelog-commit:
+    needs: [component-changelog-upload]
+    permissions:
+      contents: write
+    uses: ./.github/workflows/component-changelog-commit.yml
+    secrets: inherit
+
   filter-commit-changes:
+    needs: [lint-latest-commit-messages]
+    if: always()
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     name: Filter commit changes
     outputs:
@@ -171,9 +193,6 @@ jobs:
       lido_governance_monitor_changed: ${{ needs.filter-commit-changes.outputs.lido-governance-monitor }}
     secrets: inherit
 
-  code-analysis:
-    uses: ./.github/workflows/codeql.yml
-
   testing:
     needs: [filter-commit-changes, check-and-tag-images]
     if: ${{ always() && needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' && needs.check-and-tag-images.outputs.commit_tag != '' }}
@@ -252,7 +271,7 @@ jobs:
       cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
     uses: ./.github/workflows/reuse-run-e2e-tests.yml
     with:
-      commit_tag: ${{ needs.check-and-tag-images.outputs.commit_tag }}
+      image_tag: ${{ needs.check-and-tag-images.outputs.commit_tag }}
       linea_besu_package_tag: ${{ needs.docker-build.outputs.linea_besu_package_tag }}
       e2e-tests-logs-dump: true
       has-changes-requiring-e2e-testing: ${{ needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing }}

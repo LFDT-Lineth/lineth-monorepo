@@ -87,7 +87,7 @@ jobs:
           git fetch origin "$BRANCH"
           git checkout "$BRANCH"
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add --force linea-besu/.besu-resolved
           if git diff --cached --quiet; then
             echo "No cache updates to commit"

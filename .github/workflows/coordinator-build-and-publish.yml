@@ -8,7 +8,7 @@ permissions:
 on:
   workflow_call:
     inputs:
-      commit_tag:
+      image_tag:
         required: true
         type: string
       develop_tag:
@@ -28,7 +28,7 @@ on:
         required: false
   workflow_dispatch:
     inputs:
-      commit_tag:
+      image_tag:
         description: 'Image tag'
         required: true
         type: string
@@ -59,7 +59,7 @@ jobs:
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
     name: Coordinator build
     env:
-      COMMIT_TAG: ${{ inputs.commit_tag }}
+      IMAGE_TAG: ${{ inputs.image_tag }}
       DEVELOP_TAG: ${{ inputs.develop_tag }}
       IMAGE_NAME: ${{ inputs.image_name }}
       PUSH_IMAGE: ${{ inputs.push_image }}
@@ -87,7 +87,7 @@ jobs:
         with:
           docker_context: .
           image_name: ${{ env.IMAGE_NAME }}
-          image_tag: ${{ env.COMMIT_TAG }}
+          image_tag: ${{ env.IMAGE_TAG }}
           develop_tag: ${{ env.DEVELOP_TAG }}
           push_image: ${{ env.PUSH_IMAGE }}
           dockerfile_path: ./coordinator/Dockerfile

@@ -7,6 +7,11 @@ inputs:
     description: "Release version tag prefix"
     required: true
   
+  image_tag_suffix:
+    description: 'Custom docker image tag suffix'
+    required: false
+    default: ''
+  
   with_besu_fleet_plugin:
     description: When "true", assemble with besu fleet plugin
     required: true
@@ -81,6 +86,7 @@ runs:
       uses: ./.github/actions/linea-besu-package/compute-metadata
       with:
         release_tag_prefix: ${{ inputs.release_tag_prefix }}
+        image_tag_suffix: ${{ inputs.image_tag_suffix }}
 
     - name: Display linea-besu-package metadata
       shell: bash

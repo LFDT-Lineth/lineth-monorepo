@@ -71,7 +71,7 @@ jobs:
     uses: ./.github/workflows/coordinator-build-and-publish.yml
     if: ${{ always() && (inputs.coordinator_changed == 'true' || (inputs.push_image && inputs.coordinator_image_tagged != 'true')) }}
     with:
-      commit_tag: ${{ inputs.commit_tag }}
+      image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
       image_name: consensys/linea-coordinator
       push_image: ${{ inputs.push_image }}
@@ -101,7 +101,7 @@ jobs:
     uses: ./.github/workflows/prover-build-and-publish.yml
     if: ${{ always() && (inputs.prover_changed == 'true' || (inputs.push_image && inputs.prover_image_tagged != 'true')) }}
     with:
-      commit_tag: ${{ inputs.commit_tag }}
+      image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
       image_name: consensys/linea-prover
       push_image: ${{ inputs.push_image }}
@@ -111,7 +111,7 @@ jobs:
     uses: ./.github/workflows/postman-build-and-publish.yml
     if: ${{ always() && (inputs.postman_changed == 'true' || (inputs.push_image && inputs.postman_image_tagged != 'true')) }}
     with:
-      commit_tag: ${{ inputs.commit_tag }}
+      image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
       image_name: consensys/linea-postman
       push_image: ${{ inputs.push_image }}
@@ -121,7 +121,7 @@ jobs:
     uses: ./.github/workflows/transaction-exclusion-api-build-and-publish.yml
     if: ${{ always() && (inputs.transaction_exclusion_api_changed == 'true' || (inputs.push_image && inputs.transaction_exclusion_api_image_tagged != 'true')) }}
     with:
-      commit_tag: ${{ inputs.commit_tag }}
+      image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
       image_name: consensys/linea-transaction-exclusion-api
       push_image: ${{ inputs.push_image }}

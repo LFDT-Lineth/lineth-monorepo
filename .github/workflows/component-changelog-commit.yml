@@ -1,0 +1,130 @@
+name: "Component Changelog Commit"
+
+permissions:
+  contents: write
+
+on:
+  workflow_call:
+
+concurrency:
+  group: component-changelog-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  push-component-changelog:
+    if: github.ref == 'refs/heads/main'
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    steps:
+      # Mint a short-lived token for the release bot GitHub App. 
+      # The App has `contents: write` permission and was added to the branch-protection
+      # bypass list for `main`.
+      - name: Generate release bot App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          # Use the App token so subsequent `git push` is authenticated as the App.
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
+          fetch-tags: true
+          submodules: false
+
+      # Look up the App's bot user id so the commit author email follows
+      # GitHub's canonical noreply format and shows up under the App in the UI.
+      - name: Resolve bot user id
+        id: bot-user
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          set -euo pipefail
+          user_id=$(gh api "/users/${APP_SLUG}%5Bbot%5D" --jq .id)
+          echo "user-id=${user_id}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure git identity
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          USER_ID: ${{ steps.bot-user.outputs.user-id }}
+        run: |
+          git config user.name  "${APP_SLUG}[bot]"
+          git config user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+      
+      - name: Download CHANGELOG.md artifact
+        uses: actions/download-artifact@v7
+        continue-on-error: true
+        with:
+          pattern: unreleased-changelog-*
+          path: ${{ github.workspace }}/tmp/artifacts
+          # Keep each artifact in its own subdir so we can recover the
+          # destination folder name from the artifact name suffix.
+          merge-multiple: false
+
+      - name: Distribute CHANGELOG.md to component folders
+        env:
+          ARTIFACTS_DIR: ${{ github.workspace }}/tmp/artifacts
+          PREFIX: unreleased-changelog-
+        run: |
+          set -euo pipefail
+          if [ ! -d "${ARTIFACTS_DIR}" ]; then
+            echo "No artifacts directory at ${ARTIFACTS_DIR}; nothing to do."
+            exit 0
+          fi
+
+          shopt -s nullglob
+          applied=0
+          for dir in "${ARTIFACTS_DIR}/${PREFIX}"*/; do
+            artifact_name=$(basename "${dir}")
+            # Strip the "unreleased-changelog-" prefix → destination folder name.
+            dest_folder="${artifact_name#${PREFIX}}"
+            src="${dir}CHANGELOG.md"
+            dest="${GITHUB_WORKSPACE}/${dest_folder}/CHANGELOG.md"
+
+            if [ ! -f "${src}" ]; then
+              echo "✗ ${src} missing; skipping."
+              continue
+            fi
+
+            mkdir -p "$(dirname "${dest}")"
+            cp "${src}" "${dest}"
+            echo "✓ ${artifact_name} -> ${dest_folder}/CHANGELOG.md"
+            applied=$((applied + 1))
+          done
+
+          if [ "${applied}" -eq 0 ]; then
+            echo "No CHANGELOG.md artifacts were applied."
+          else
+            echo "Applied ${applied} CHANGELOG.md update(s)."
+          fi
+
+      - name: Commit and push all CHANGELOG.md
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "No CHANGELOG.md changes to commit."
+            exit 0
+          fi
+          git add '*/CHANGELOG.md'
+          git commit -m "chore(misc): update CHANGELOG.md unreleased section of each updated component [skip ci]"
+
+          # Rebase on top of any commits that landed on the branch between
+          # checkout and now (e.g. a concurrent component-changelog-update push),
+          # then push. Retry a few times in case of repeated races.
+          for attempt in 1 2 3; do
+            git fetch origin "${GITHUB_REF_NAME}"
+            if ! git rebase "origin/${GITHUB_REF_NAME}"; then
+              git rebase --abort
+              echo "Rebase conflict on attempt ${attempt}; aborting."
+              exit 1
+            fi
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              exit 0
+            fi
+            echo "Push rejected on attempt ${attempt}; refetching and retrying..."
+          done
+          echo "Failed to push CHANGELOG.md changes after 3 attempts." >&2
+          exit 1

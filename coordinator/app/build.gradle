@@ -1,7 +1,6 @@
 plugins {
   id 'net.consensys.zkevm.kotlin-application-conventions'
 }
-
 configurations.configureEach {
   exclude group: "org.rocksdb", module: "rocksdbjni"
   exclude group: "org.hyperledger.besu", module: "bls12-381"
