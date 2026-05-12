@@ -52,7 +52,7 @@ def rootDirFile = rootProject.layout.projectDirectory.asFile
 // the :linea-besu:resolveBesuVersion task and by CI (linea-besu-build-and-publish
 // workflow). Gitignored — developers should not edit or commit this file; CI force-adds
 // updates on besuCommit bumps.
-def cachedResolvedFile = new File(rootDirFile, 'linea-besu/.besu-resolved')
+def cachedResolvedFile = new File(projectDir, '.besu-resolved')
 
 // Capture providers at configuration time so task actions never touch Project/rootProject.
 def providers = rootProject.providers
@@ -200,7 +200,7 @@ static void writeCachedBesuVersion(File cachedResolvedFile, String besuCommit, S
 }
 
 /**
- * Single provider.exec entry point for linea-besu/scripts/checkout-and-resolve-version.sh.
+ * Single provider.exec entry point for linea-besu/besu/scripts/checkout-and-resolve-version.sh.
  * Returns the script's full stdout (last line is the resolved besuVersion). Side effect:
  * tmp/besu-eth is created or updated to a git checkout at besuCommit. Configuration-cache
  * safe — Gradle tracks the exec inputs and captured output.
@@ -212,7 +212,7 @@ static String runCheckoutAndResolveScript(providers, String besuCommit, File roo
     spec.environment('BESU_COMMIT', besuCommit)
     spec.environment('VERSION_LABEL', '')
     spec.environment('SKIP_CHECKOUT_AFTER_CLONE', skipCheckoutAfterClone)
-    spec.commandLine('bash', rootDir.absolutePath + '/linea-besu/scripts/checkout-and-resolve-version.sh')
+    spec.commandLine('bash', rootDir.absolutePath + '/linea-besu/besu/scripts/checkout-and-resolve-version.sh')
   }.standardOutput.asText.get()
 }
 
@@ -279,7 +279,7 @@ static void buildAndPublishBesuAction(
     spec.environment('RESOLVED_BESU_VERSION', resolvedBesuVer)
     spec.environment('CLOUDSMITH_USER', cloudsmithUser)
     spec.environment('CLOUDSMITH_API_KEY', cloudsmithApiKey)
-    spec.commandLine('bash', "${rootPath}/linea-besu/scripts/build-dist-and-publish.sh", publishGradleTaskName)
+    spec.commandLine('bash', "${rootPath}/linea-besu/besu/scripts/build-dist-and-publish.sh", publishGradleTaskName)
   }.result.get()
 }
 

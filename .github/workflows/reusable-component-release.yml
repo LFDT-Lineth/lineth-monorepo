@@ -75,7 +75,7 @@ jobs:
       image_name: consensys/linea-prover
       push_image: false
     secrets: inherit
-  
+
   build-local-tx-exclusion-api:
     needs: [compute-release-metadata]
     if: ${{ needs.compute-release-metadata.outputs.tag_changed == 'true' && inputs.component-name == 'tx-exclusion-api' }}
@@ -124,7 +124,7 @@ jobs:
 
   build-and-publish-image-coordinator:
     needs: [compute-docker-tag]
-    if: | 
+    if: |
       always() && !cancelled() &&
       needs.compute-docker-tag.result == 'success' &&
       inputs.component-name == 'coordinator'
@@ -163,7 +163,7 @@ jobs:
       image_name: consensys/linea-prover
       push_image: true
     secrets: inherit
-  
+
   build-and-publish-image-tx-exclusion-api:
     needs: [compute-docker-tag]
     if: |

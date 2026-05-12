@@ -77,7 +77,7 @@ runs:
     
     - name: Build besu from source
       shell: bash
-      run: ./gradlew linea-besu:build -PskipDownloadBesuDist=false
+      run: ./gradlew :linea-besu:besu:build -PskipDownloadBesuDist=false
       env:
         JAVA_OPTS: -Xmx2g
 

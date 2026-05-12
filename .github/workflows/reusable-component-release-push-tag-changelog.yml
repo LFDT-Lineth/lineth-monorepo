@@ -40,7 +40,7 @@ jobs:
       contents: write
     name: Release ${{ inputs.component-name }} (push changelog + tag)
     steps:
-      # Mint a short-lived token for the release bot GitHub App. 
+      # Mint a short-lived token for the release bot GitHub App.
       # The App has `contents: write` permission and was added to the branch-protection
       # bypass list for `main`.
       - name: Generate release bot App token

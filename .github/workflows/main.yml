@@ -138,7 +138,7 @@ jobs:
               - 'gradle.properties'
               - 'settings.gradle'
             linea-besu:
-              - 'linea-besu/**'
+              - 'linea-besu/besu/**'
             linea-besu-package:
               - 'linea-besu-package/versions.env'
               - 'linea-besu-package/scripts/assemble-packages.sh'

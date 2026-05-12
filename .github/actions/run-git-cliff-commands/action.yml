@@ -23,7 +23,7 @@ inputs:
     description: "Generate the unreleased changelogs but replace the header with next-tag-version"
     required: false
     default: "false"
-  
+
 outputs:
   changelog_content:
     description: "The changelog content"
@@ -37,7 +37,7 @@ outputs:
   tag_changed:
     description: "Indicate whether the release tag of the component has changed"
     value: ${{ steps.version.outputs.changed }}
-  
+
 runs:
   using: 'composite'
   steps:
@@ -90,7 +90,7 @@ runs:
           exit 0
         fi
         next_semver="${next_tag#releases/${COMPONENT}/v}"
-        current_tag=$(git describe --tags --abbrev=0 --match "releases/${COMPONENT}/v*" 2>/dev/null || echo "") 
+        current_tag=$(git describe --tags --abbrev=0 --match "releases/${COMPONENT}/v*" 2>/dev/null || echo "")
         echo "current ${COMPONENT} tag: ${current_tag}"
         echo "next ${COMPONENT} tag:    ${next_tag}"
         echo "next ${COMPONENT} semver: ${next_semver}"
@@ -103,7 +103,7 @@ runs:
           echo "version=${next_semver}"
           echo "changed=${changed}"
         } >> "$GITHUB_OUTPUT"
-    
+
     - name: Generate ${{ inputs.component-name }} unreleased or latest changelog
       id: changelog
       if: steps.version.outputs.changed == 'true'
@@ -126,7 +126,7 @@ runs:
           git cliff "${cliff_args[@]}"
           echo '__CLIFF_EOF__'
         } >> "$GITHUB_OUTPUT"
-    
+
     - name: Generate and prepend release changelog section
       if: inputs.prepend-changelog == 'true' && steps.version.outputs.changed == 'true'
       shell: bash
@@ -138,9 +138,9 @@ runs:
         TARGET_REF: ${{ github.head_ref || github.ref_name }}
       run: |
         set -euo pipefail
-        
+
         # retrieve the latest changes of CHANGELOG.md first to avoid chances
-        # of rebase or merge conflicts later from other workflows 
+        # of rebase or merge conflicts later from other workflows
         git pull --ff-only origin "refs/heads/${TARGET_REF}"
 
         CHANGELOG_FILE="${FOLDER_NAME}/CHANGELOG.md"
