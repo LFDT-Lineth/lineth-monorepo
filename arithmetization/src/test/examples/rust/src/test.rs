@@ -1,40 +1,47 @@
 #![no_std]
 #![no_main]
 
-// no_mangle so the linker can find this entry point by its exact name
-core::arch::global_asm!(
-    ".global _start",
-    "_start:",
-    "li sp, 0x087fffff", // set stack pointer to a known memory region
-    "call main",
-);
+// To run:
+// zkc-test test.rs IN_BYTES="0x05" (pass)
+// zkc-test test.rs IN_BYTES="0x42" (fail)
+
+include!("custom_std.rs");
+
+// zero-initialized static: lives in .bss
+static STATIC_ZERO_VAR: u8 = 0;
+
+// inlined at compile time: no memory address, no ELF section
+const CONST_VAR: u8 = 1;
+
+// immutable static: lives in .rodata
+static STATIC_VAR: u8 = 2;
+
+// mutable static: lives in .data
+static mut STATIC_MUT_VAR: u8 = 3;
 
 #[no_mangle]
 fn main() -> ! {
-    let r = add(2, 7);
-    exit(r) // no OS to return to, signal halt via ecall
+    // local variable: lives on the stack, no ELF section
+    let local_var: u8 = 4;
+    // variable from input: value read from the input region (IN_BYTES)
+    let var_from_input = read_input();
+    let r = STATIC_ZERO_VAR
+        + CONST_VAR
+        + STATIC_VAR
+        + unsafe { STATIC_MUT_VAR }
+        + local_var
+        + var_from_input;
+    if r != 15 {
+        // 0 + 1 + 2 + 3 + 4 + 5 = 15
+        exit(1); // test failed
+    }
+    exit(0) // test passed
 }
 
-fn add(op1: u8, op2: u8) -> u16 {
-    let r = (op1 as u16).wrapping_add(op2 as u16);
-    r
-}
-
-fn exit(r: u16) -> ! {
+fn read_input() -> u8 {
+    static mut BUF: [u8; 1] = [0u8; 1];
     unsafe {
-        core::arch::asm!(
-            "mv a0, {0}",  // exit code
-            "li a7, 93",   // syscall number for exit
-            "ecall",
-            in(reg) r,
-            options(noreturn)
-        );
+        read_memory(&raw mut BUF as *mut u8, 1);
+        BUF[0]
     }
 }
-
-// required by the compiler even if unreachable — no std means no default panic handler
-#[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    exit(3);
-}
-

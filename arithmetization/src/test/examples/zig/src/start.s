@@ -1,6 +1,5 @@
-# start.s
 .section .text
 .global _start
 _start:
-    li sp, 0x087fffff  # set stack pointer to a known memory region
+    la sp, _stack_start  # SP from linker script
     call main

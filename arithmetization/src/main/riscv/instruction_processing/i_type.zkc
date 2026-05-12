@@ -187,6 +187,7 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
             if funct3 == FUNCT3_ECALL {
                 // imm12 is interpreted as funct12 for SYSTEM opcode
                 if imm12 == FUNCT12_ECALL {
+                    printf "ECALL\n"
                     new_pc = process_syscall(pc)
                 } else if imm12 == FUNCT12_EBREAK {
                     printf "[ERROR] EBREAK instruction triggered\n"
@@ -210,11 +211,13 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
     //
     switch call_num {
         case 93: { // exit 
+            printf "ECALL for exit\n"
             var exit_code:DoubleWord = registers[10]
             // check for non-zero exit code
             if exit_code != 0 {
                 fail "exit with code %d", exit_code
             }
+            printf "Program exited successfully (exit with code 0).\n"
             // set stop signal to terminate execution
             new_pc = MAX_UINT_64
         }

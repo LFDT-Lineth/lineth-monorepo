@@ -33,8 +33,6 @@ func main() {
 		os.Exit(1)
 	}
 	defer elfFile.Close()
-	// extract text section
-	var text = extractTextBytes(elfFile.Sections)
 	// inBytes
 	var inBytes []byte
 	inBytesString := os.Args[2]
@@ -66,49 +64,82 @@ func main() {
 		fmt.Fprintf(os.Stderr, "error reading entry point: %v\n", err)
 		os.Exit(1)
 	}
-	printJson(text, inBytes, programOffset, inputsOffset, entryPoint)
+	// extract program sections
+	var program = extractProgramBytes(elfFile.Sections, programOffset)
+	printJson(program, inBytes, programOffset, inputsOffset, entryPoint)
 }
 
-// Extract the bytes of the text section.
-func extractTextBytes(sections []*elf.Section) []byte {
+// Extract .text, .rodata and .data sections and assemble them into a
+// contiguous byte slice starting at programOffset, being writte in
+// the riscV_program field of the output JSON. The .bss section is
+// implicitly zeroed out in the output, so we do not need to explicitly include it.
+func extractProgramBytes(sections []*elf.Section, programOffset uint64) []byte {
+	programBytesSections := map[string]bool{
+		".text":   true,
+		".rodata": true,
+		".data":   true,
+	}
+
+	// First pass: find the total size needed
+	var maxAddr uint64 = 0
 	for _, s := range sections {
-		if s.Name == ".text" {
-			data, err := s.Data()
-			// Sanity check
-			if err != nil {
-				panic(err.Error())
+		if programBytesSections[s.Name] {
+			end := s.Addr + s.Size
+			if end > maxAddr {
+				maxAddr = end
 			}
-			//
-			return data
 		}
 	}
-	//
-	panic("no text section found!")
+
+	if maxAddr == 0 {
+		panic("no program sections found.")
+	}
+
+	// Allocate zeroed buffer covering the full program image (.bss is implicitly zeroed)
+	buf := make([]byte, maxAddr-programOffset)
+
+	// Second pass: copy each section into the correct offset in the buffer
+	for _, s := range sections {
+		if programBytesSections[s.Name] {
+			data, err := s.Data()
+			if err != nil {
+				panic(fmt.Sprintf("error reading section %s: %v", s.Name, err))
+			}
+			offset := s.Addr - programOffset
+			copy(buf[offset:], data)
+		}
+	}
+
+	// If needed pad buffer to multiple of 4 bytes (add at most 3 zero bytes)
+	for len(buf)%4 != 0 {
+		buf = append(buf, 0)
+	}
+
+	return buf
 }
 
-func printJson(text, inBytes []byte, programOffset, inputsOffset, entryPoint uint64) {
-	// Convert text bytes into a hex string
+func printJson(program, inBytes []byte, programOffset, inputsOffset, entryPoint uint64) {
 	var (
-		textString          = hex.EncodeToString(text)
+		programString       = hex.EncodeToString(program)
 		inBytesString       = hex.EncodeToString(inBytes)
 		programOffsetString = fmt.Sprintf("%016x", programOffset)
 		inputsOffsetString  = fmt.Sprintf("%016x", inputsOffset)
 		entryPointString    = fmt.Sprintf("%016x", entryPoint)
-		textLenString       = fmt.Sprintf("%016x", len(text))
+		programLenString    = fmt.Sprintf("%016x", len(program))
 		inputLenString      = fmt.Sprintf("%016x", len(inBytes))
 	)
-	//
-	if len(text)%4 != 0 {
-		panic("text section length not multiple of 4")
+
+	if len(program)%4 != 0 {
+		panic("program length not multiple of 4")
 	}
-	//
+
 	fmt.Println("{")
-	fmt.Printf("\t\"%s\": \"0x%s\",\n", RISCV_PROGRAM, textString)
+	fmt.Printf("\t\"%s\": \"0x%s\",\n", RISCV_PROGRAM, programString)
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", IN_BYTES, inBytesString)
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", RISCV_PROGRAM_OFFSET, programOffsetString)
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", IN_BYTES_OFFSET, inputsOffsetString)
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", ENTRY_POINT, entryPointString)
-	fmt.Printf("\t\"%s\": \"0x%s\",\n", RISCV_PROGRAM_LENGTH, textLenString)
+	fmt.Printf("\t\"%s\": \"0x%s\",\n", RISCV_PROGRAM_LENGTH, programLenString)
 	fmt.Printf("\t\"%s\": \"0x%s\"\n", IN_BYTES_LENGTH, inputLenString)
 	fmt.Println("}")
 }
