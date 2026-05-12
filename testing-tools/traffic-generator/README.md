@@ -10,6 +10,6 @@ to pay the generated txs.
  _ request: the path to the file describing the traffic to generate.
 
 ## Run a load test against Devnet
-* Run `./gradlew :testing-tools:app:run --args="-request devnet/%JSON_FILE% -pk %PRIVATE_KEY%"`
+* Run `./gradlew :testing-tools:traffic-generator:run --args="-request devnet/%JSON_FILE% -pk %PRIVATE_KEY%"`
   * Note that you have to specify the correct private key for the account id you put into a json
   * You have to put the right file name instead of `%JSON_FILE%` too

@@ -61,4 +61,4 @@ jobs:
       - name: Load Test
         run: |
           echo "Network to execute load test on: ${{ github.event.inputs.network }}"
-          ./gradlew :testing-tools:app:run --args="-request ${{ github.event.inputs.network }}/${{ github.event.inputs.file }} -pk $PRIVATE_KEY"
+          ./gradlew :testing-tools:traffic-generator:run --args="-request ${{ github.event.inputs.network }}/${{ github.event.inputs.file }} -pk $PRIVATE_KEY"

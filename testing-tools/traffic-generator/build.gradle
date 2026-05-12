@@ -7,7 +7,7 @@ plugins {
 
 openApiGenerate {
   generatorName.set("java")
-  inputSpec.set("$rootDir/testing-tools/app/src/main/specs/swagger.yaml")
+  inputSpec.set("$rootDir/testing-tools/traffic-generator/src/main/specs/swagger.yaml")
   outputDir.set("$buildDir/generated")
   modelPackage.set("net.consensys.zkevm.load.model.swagger")
   configOptions.set([

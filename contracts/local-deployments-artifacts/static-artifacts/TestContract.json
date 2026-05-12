@@ -1,6 +1,6 @@
 {
   "contractName": "TestContract",
-  "sourceName": "testing-tools/app/src/main/solidity/TestContract.sol",
+  "sourceName": "testing-tools/traffic-generator/src/main/solidity/TestContract.sol",
   "abi": [
 		{
 			"anonymous": false,

@@ -9,4 +9,4 @@ paths-ignore:
   - "**/build/tmp/**"
   - "**/build/reports/**"
   # Auto-generated Swagger client for load-testing tools
-  - "testing-tools/app/src/main/java/net/consensys/zkevm/load/swagger/**"
+  - "testing-tools/traffic-generator/src/main/java/net/consensys/zkevm/load/swagger/**"
