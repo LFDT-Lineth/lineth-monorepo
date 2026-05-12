@@ -224,12 +224,18 @@ abstract class LineaPluginPoSTestBase : LineaPluginTestBase() {
    * Build a block giving Besu only [blockBuildingTimeMs] to assemble it. Use a short
    * value (e.g. 300ms) when the test needs the selector to run a single pass instead
    * of the default ~10 retries within a 5s window.
+   *
+   * The timestamp is bumped by 1s past the natural slot timestamp so our fcu's
+   * payloadId differs from anything the background consensus scheduler may have
+   * already started building. Without this offset, an in-progress background build
+   * (with stale txpool state) absorbs our fcu and getPayload returns its cached
+   * selection, missing any txs the test sent after the background tick fired.
    */
   protected fun buildNewBlockAndWait(blockBuildingTimeMs: Long) {
     val initialBlockNumber = getLatestBlockNumber()
     val latestTimestamp = minerNode.execute(ethTransactions.block()).timestamp
     buildNewBlock(
-      latestTimestamp.toLong() + blockTimeSeconds!!,
+      latestTimestamp.toLong() + blockTimeSeconds!! + 1L,
       blockBuildingTimeMs,
     ) { false }
     await()
