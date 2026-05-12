@@ -22,11 +22,11 @@ import linea.domain.ProofIndex
 import linea.domain.createBlobRecord
 import linea.kotlin.ByteArrayExt
 import linea.persistence.BlobsRepository
+import linea.persistence.conflation.BlobsPostgresDao
+import linea.persistence.conflation.BlobsRepositoryImpl
+import linea.persistence.db.DbHelper
+import linea.persistence.db.test.CleanDbTestSuiteParallel
 import net.consensys.linea.traces.TracesCountersV2
-import net.consensys.zkevm.persistence.dao.blob.BlobsPostgresDao
-import net.consensys.zkevm.persistence.dao.blob.BlobsRepositoryImpl
-import net.consensys.zkevm.persistence.db.DbHelper
-import net.consensys.zkevm.persistence.db.test.CleanDbTestSuiteParallel
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.waitAtMost
 import org.junit.jupiter.api.BeforeEach

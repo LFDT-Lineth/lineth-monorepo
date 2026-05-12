@@ -5,9 +5,9 @@ import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
 import linea.persistence.ForcedTransactionRecord
 import linea.persistence.ForcedTransactionsDao
+import linea.persistence.db.PersistenceRetryer
+import linea.persistence.db.SQLQueryLogger
 import net.consensys.linea.async.toSafeFuture
-import net.consensys.zkevm.persistence.db.PersistenceRetryer
-import net.consensys.zkevm.persistence.db.SQLQueryLogger
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture

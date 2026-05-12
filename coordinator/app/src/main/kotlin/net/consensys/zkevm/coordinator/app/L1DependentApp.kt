@@ -25,6 +25,7 @@ import linea.persistence.BatchesRepository
 import linea.persistence.BlobsRepository
 import linea.persistence.FeeHistoriesPostgresDao
 import linea.persistence.ForcedTransactionsDao
+import linea.persistence.conflation.RecordsCleanupFinalizationHandler
 import linea.web3j.SmartContractErrors
 import linea.web3j.createWeb3jHttpClient
 import linea.web3j.ethapi.createEthApiClient
@@ -62,7 +63,6 @@ import net.consensys.zkevm.ethereum.finalization.AggregationSubmitterImpl
 import net.consensys.zkevm.ethereum.finalization.FinalizationMonitorImpl
 import net.consensys.zkevm.ethereum.submission.BlobSubmissionCoordinator
 import net.consensys.zkevm.ethereum.submission.L1ShnarfBasedAlreadySubmittedBlobsFilter
-import net.consensys.zkevm.persistence.dao.aggregation.RecordsCleanupFinalizationHandler
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CompletableFuture

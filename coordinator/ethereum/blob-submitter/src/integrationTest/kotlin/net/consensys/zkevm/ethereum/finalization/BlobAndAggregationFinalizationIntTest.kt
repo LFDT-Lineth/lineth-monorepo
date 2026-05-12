@@ -12,6 +12,12 @@ import linea.domain.BlobSubmittedEvent
 import linea.domain.FinalizationSubmittedEvent
 import linea.persistence.AggregationsRepository
 import linea.persistence.BlobsRepository
+import linea.persistence.conflation.AggregationsRepositoryImpl
+import linea.persistence.conflation.BlobsPostgresDao
+import linea.persistence.conflation.BlobsRepositoryImpl
+import linea.persistence.conflation.PostgresAggregationsDao
+import linea.persistence.db.DbHelper
+import linea.persistence.db.test.CleanDbTestSuiteParallel
 import net.consensys.FakeFixedClock
 import net.consensys.linea.ethereum.gaspricing.FakeGasPriceCapProvider
 import net.consensys.linea.testing.submission.loadBlobsAndAggregations
@@ -21,12 +27,6 @@ import net.consensys.zkevm.ethereum.MakeFileDelegatedContractsManager
 import net.consensys.zkevm.ethereum.coordination.EventDispatcher
 import net.consensys.zkevm.ethereum.submission.BlobSubmissionCoordinator
 import net.consensys.zkevm.ethereum.submission.L1ShnarfBasedAlreadySubmittedBlobsFilter
-import net.consensys.zkevm.persistence.dao.aggregation.AggregationsRepositoryImpl
-import net.consensys.zkevm.persistence.dao.aggregation.PostgresAggregationsDao
-import net.consensys.zkevm.persistence.dao.blob.BlobsPostgresDao
-import net.consensys.zkevm.persistence.dao.blob.BlobsRepositoryImpl
-import net.consensys.zkevm.persistence.db.DbHelper
-import net.consensys.zkevm.persistence.db.test.CleanDbTestSuiteParallel
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.waitAtMost
 import org.junit.jupiter.api.Disabled
