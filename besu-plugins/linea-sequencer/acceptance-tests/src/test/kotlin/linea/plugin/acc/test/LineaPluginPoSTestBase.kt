@@ -221,6 +221,24 @@ abstract class LineaPluginPoSTestBase : LineaPluginTestBase() {
   }
 
   /**
+   * Build a block giving Besu only [blockBuildingTimeMs] to assemble it. Use a short
+   * value (e.g. 300ms) when the test needs the selector to run a single pass instead
+   * of the default ~10 retries within a 5s window.
+   */
+  protected fun buildNewBlockAndWait(blockBuildingTimeMs: Long) {
+    val initialBlockNumber = getLatestBlockNumber()
+    val latestTimestamp = minerNode.execute(ethTransactions.block()).timestamp
+    buildNewBlock(
+      latestTimestamp.toLong() + blockTimeSeconds!!,
+      blockBuildingTimeMs,
+    ) { false }
+    await()
+      .atMost(3 * blockTimeSeconds!!, TimeUnit.SECONDS)
+      .pollInterval(100, TimeUnit.MILLISECONDS)
+      .untilAsserted { assertThat(getLatestBlockNumber()).isGreaterThan(initialBlockNumber) }
+  }
+
+  /**
    * Creates and sends a blob transaction. This method is designed to be stateless and should not
    * rely on any class properties or instance methods. All required data should be passed as
    * parameters. This makes it easier to test and reuse in different contexts.

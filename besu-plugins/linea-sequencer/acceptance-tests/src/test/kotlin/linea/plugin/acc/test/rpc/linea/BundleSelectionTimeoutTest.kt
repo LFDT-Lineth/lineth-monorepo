@@ -124,21 +124,41 @@ class BundleSelectionTimeoutTest : AbstractSendBundleTest() {
   @Test
   fun multipleBundleSelectionTimeout() {
     val mulmodExecutor = deployMulmodExecutor()
+    // Stop background block production so it cannot fire a competing block-2
+    // creation attempt alongside the explicit one below. The background scheduler
+    // uses the default 5s build window, which permits ~10 selection retries — any
+    // one of which can complete the bundle inside the plugin selection budget.
+    buildBlocksInBackground = false
 
-    // singleBundleSelectionTimeout uses 31 txs × 2_000 iterations to reliably trigger the plugin
-    // timeout (1_875 ms for a 5-second Clique block: 5_000 ms × 75% PoA budget × 50% plugin budget).
-    // Here we only have 9 txs, so scale the iterations proportionally
-    // (31 / 9 × 2_000 ≈ 7_000) and gas limit accordingly.
+    // Mirror singleBundleSelectionTimeout's per-tx work (2_000 iter,
+    // MAX_TX_GAS_LIMIT / 10). The plugin selection budget is ~100ms (2% of the 5s
+    // slot, configured in LineaPluginTestBase). The bundle must do enough work to
+    // exceed that budget, and each tx must be small enough that the timeout fires
+    // mid-bundle.
+    //
+    // Total compute time alone doesn't decide whether the timeout fires — total
+    // wall-clock time does. Many small txs is more reliable than a few big ones
+    // for the same total compute, because:
+    //   1. Per-tx selector overhead (signature recovery, module-limit check,
+    //      profitability calc, HUB tracing setup) is paid once per tx and doesn't
+    //      shrink under cache warmup or JIT, so 30 small txs accumulate ~3x more
+    //      fixed overhead than 9 large ones.
+    //   2. The cache/JIT-sensitive compute portion is a smaller fraction of total
+    //      time, so variance from warm caches or a fast runner can't drop the
+    //      bundle below the budget.
+    // The previous shape (9 txs × 7_000 iter, MAX_TX_GAS_LIMIT / 3) made each tx
+    // large enough that on a fast runner the whole bundle could finish inside
+    // the budget — no timeout, calls[1] gets committed, test fails.
     val calls = generateMulmodCalls(
       accounts.primaryBenefactor,
       mulmodExecutor,
       1,
-      10,
-      7_000,
-      MAX_TX_GAS_LIMIT / 3,
+      31,
+      2_000,
+      MAX_TX_GAS_LIMIT / 10,
     )
     val bundle1Calls = calls.copyOfRange(0, 1)
-    val bundle2Calls = calls.copyOfRange(1, 10)
+    val bundle2Calls = calls.copyOfRange(1, 31)
 
     val sendBundleRequestSmall = SendBundleRequest(
       BundleParams(bundle1Calls.map { it.rawTx }.toTypedArray(), Integer.toHexString(2)),
@@ -172,6 +192,14 @@ class BundleSelectionTimeoutTest : AbstractSendBundleTest() {
     sendBundleResponseSmall.assertSuccessResponse()
     sendBundleResponseBig1.assertSuccessResponse()
     followingBundleResponses.forEach { resp -> resp.assertSuccessResponse() }
+
+    // Build block 2 with a short block-building window so Besu's iterative selector
+    // gets only a single selection pass. The default 5s window allows ~10 selection
+    // retries; each retry has its own ~100ms plugin selection budget, so a fast
+    // runner has many independent chances to complete the bundle inside the budget
+    // and include the tx that should have timed out. A short window collapses that
+    // to a single pass.
+    buildNewBlockAndWait(300L)
 
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
     val transferReceipt = ethTransactions.getTransactionReceipt(transferTxHash.bytes.toHexString())
