@@ -87,8 +87,8 @@ class GoBackedBlobShnarfCalculator(
           kzgProofContract = result.kzgProofContract.decodeHex(),
           kzgProofSideCar = result.kzgProofSideCar.decodeHex(),
         )
-      } catch (it: Exception) {
-        throw RuntimeException("Error while decoding Shnarf calculation response from Go: ${it.message}")
+      } catch (e: Exception) {
+        throw RuntimeException("Error while decoding Shnarf calculation response from Go: ${e.message}")
       }
 
     return domainResult
