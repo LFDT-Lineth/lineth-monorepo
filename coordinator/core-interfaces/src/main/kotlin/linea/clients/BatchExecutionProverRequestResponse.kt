@@ -1,6 +1,5 @@
 package linea.clients
 
-import build.linea.clients.GetZkEVMStateMerkleProofResponse
 import linea.domain.Block
 import linea.domain.BlockInterval
 import linea.domain.EthLog

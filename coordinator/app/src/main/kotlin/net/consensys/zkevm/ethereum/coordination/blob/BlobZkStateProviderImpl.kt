@@ -1,7 +1,7 @@
 package net.consensys.zkevm.ethereum.coordination.blob
 
-import build.linea.clients.GetStateMerkleProofRequest
-import build.linea.clients.StateManagerClientV1
+import linea.clients.GetStateMerkleProofRequest
+import linea.clients.StateManagerClientV1
 import linea.domain.BlockInterval
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 

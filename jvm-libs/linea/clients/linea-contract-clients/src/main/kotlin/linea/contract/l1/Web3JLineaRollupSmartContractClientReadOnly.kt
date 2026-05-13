@@ -1,8 +1,8 @@
 package linea.contract.l1
 
-import build.linea.contract.LineaRollupV6
-import build.linea.contract.LineaRollupV8
 import linea.contract.FAKE_READ_ONLY_CREDENTIALS
+import linea.contract.LineaRollupV6
+import linea.contract.LineaRollupV8
 import linea.contract.events.FinalizedStateUpdatedEvent
 import linea.domain.BlockParameter
 import linea.ethapi.EthLogsClient

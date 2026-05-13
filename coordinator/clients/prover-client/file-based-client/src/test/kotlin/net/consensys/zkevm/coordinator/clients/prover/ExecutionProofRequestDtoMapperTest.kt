@@ -1,9 +1,9 @@
 package net.consensys.zkevm.coordinator.clients.prover
 
-import build.linea.clients.GetZkEVMStateMerkleProofResponse
 import com.fasterxml.jackson.databind.node.ArrayNode
 import linea.clients.BatchExecutionProofRequestV1
 import linea.clients.GenerateTracesResponse
+import linea.clients.GetZkEVMStateMerkleProofResponse
 import linea.contract.events.createL2RollingHashUpdatedEthLogV1
 import linea.contract.events.createMessageSentEthLogV1
 import linea.domain.Block

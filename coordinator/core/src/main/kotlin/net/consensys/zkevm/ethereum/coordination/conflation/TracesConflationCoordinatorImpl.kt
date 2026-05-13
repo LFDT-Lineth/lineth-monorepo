@@ -1,11 +1,11 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
-import build.linea.clients.GetStateMerkleProofRequest
-import build.linea.clients.GetZkEVMStateMerkleProofResponse
-import build.linea.clients.StateManagerClientV1
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.mapBoth
 import linea.clients.GenerateTracesResponse
+import linea.clients.GetStateMerkleProofRequest
+import linea.clients.GetZkEVMStateMerkleProofResponse
+import linea.clients.StateManagerClientV1
 import linea.clients.TracesConflationClientV2
 import linea.clients.TracesServiceErrorType
 import linea.domain.BlockInterval

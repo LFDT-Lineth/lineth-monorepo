@@ -1,11 +1,11 @@
 package linea.ftx
 
-import build.linea.clients.StateManagerAccountProofClient
-import build.linea.clients.StateManagerClientV1
 import io.vertx.core.Vertx
 import linea.DisabledService
 import linea.LongRunningService
 import linea.clients.InvalidityProverClientV1
+import linea.clients.StateManagerAccountProofClient
+import linea.clients.StateManagerClientV1
 import linea.clients.TracesConflationVirtualBlockClientV1
 import linea.conflation.AlwaysSafeBlockNumberProvider
 import linea.conflation.ConflationSafeBlockNumberProvider

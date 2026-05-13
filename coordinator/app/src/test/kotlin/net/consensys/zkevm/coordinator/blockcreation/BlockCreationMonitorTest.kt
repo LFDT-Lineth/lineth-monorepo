@@ -1,6 +1,5 @@
 package net.consensys.zkevm.coordinator.blockcreation
 
-import build.linea.s11n.jackson.ethApiObjectMapper
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.domain.Block
@@ -12,6 +11,7 @@ import linea.kotlin.ByteArrayExt
 import linea.kotlin.toHexString
 import linea.kotlin.toULongFromHex
 import linea.log4j.configureLoggers
+import linea.s11n.jackson.ethApiObjectMapper
 import linea.web3j.ethapi.createEthApiClient
 import net.consensys.linea.async.get
 import net.consensys.zkevm.ethereum.coordination.blockcreation.BlockCreated

@@ -1,10 +1,10 @@
 package net.consensys.zkevm.ethereum.coordination.proofcreation
 
-import build.linea.clients.GetZkEVMStateMerkleProofResponse
 import com.fasterxml.jackson.databind.node.ArrayNode
 import linea.clients.BatchExecutionProofRequestV1
 import linea.clients.ExecutionProverClientV2
 import linea.clients.GenerateTracesResponse
+import linea.clients.GetZkEVMStateMerkleProofResponse
 import linea.contract.events.createL2RollingHashUpdatedEthLogV1
 import linea.contract.events.createMessageSentEthLogV1
 import linea.domain.BlocksConflation

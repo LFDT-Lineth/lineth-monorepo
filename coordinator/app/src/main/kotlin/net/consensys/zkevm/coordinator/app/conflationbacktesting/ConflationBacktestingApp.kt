@@ -1,12 +1,12 @@
 package net.consensys.zkevm.coordinator.app.conflationbacktesting
 
-import build.linea.clients.StateManagerClientV1
-import build.linea.clients.StateManagerV1JsonRpcClient
 import io.vertx.core.Vertx
 import linea.LongRunningService
 import linea.blob.BlobCompressorFactory
 import linea.blob.BlobCompressorVersion
 import linea.clients.ExecutionProverClientV2
+import linea.clients.StateManagerClientV1
+import linea.clients.StateManagerV1JsonRpcClient
 import linea.conflation.AlwaysSafeBlockNumberProvider
 import linea.conflation.ConflationService
 import linea.conflation.FixedLaggingHeadSafeBlockProvider

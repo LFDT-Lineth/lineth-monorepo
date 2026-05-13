@@ -1,7 +1,5 @@
 package net.consensys.zkevm.ethereum.coordination.blob
 
-import build.linea.clients.GetZkEVMStateMerkleProofResponse
-import build.linea.clients.StateManagerClientV1
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.michaelbull.result.Ok
@@ -9,6 +7,8 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
 import linea.clients.BlobCompressionProverClientV2
+import linea.clients.GetZkEVMStateMerkleProofResponse
+import linea.clients.StateManagerClientV1
 import linea.domain.Blob
 import linea.domain.BlobCompressionProof
 import linea.domain.BlobCompressionProofRequest

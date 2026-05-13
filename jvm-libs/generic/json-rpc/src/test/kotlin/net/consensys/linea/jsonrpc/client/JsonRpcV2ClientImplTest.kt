@@ -1,9 +1,5 @@
 package net.consensys.linea.jsonrpc.client
 
-import build.linea.s11n.jackson.ByteArrayToHexSerializer
-import build.linea.s11n.jackson.ULongToHexSerializer
-import build.linea.s11n.jackson.ethByteAsHexSerialisersModule
-import build.linea.s11n.jackson.ethNumberAsHexSerialisersModule
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
@@ -25,6 +21,10 @@ import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.junit5.VertxExtension
 import linea.kotlin.decodeHex
+import linea.s11n.jackson.ByteArrayToHexSerializer
+import linea.s11n.jackson.ULongToHexSerializer
+import linea.s11n.jackson.ethByteAsHexSerialisersModule
+import linea.s11n.jackson.ethNumberAsHexSerialisersModule
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponseException
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade

@@ -1,7 +1,7 @@
 package linea.contract.l1
 
-import build.linea.contract.ValidiumV1
 import linea.contract.FAKE_READ_ONLY_CREDENTIALS
+import linea.contract.ValidiumV1
 import linea.domain.BlockParameter
 import linea.kotlin.toBigInteger
 import linea.kotlin.toULong

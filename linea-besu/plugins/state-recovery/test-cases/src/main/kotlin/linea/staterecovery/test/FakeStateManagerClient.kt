@@ -1,12 +1,12 @@
 package linea.staterecovery.test
 
-import build.linea.clients.GetZkEVMStateMerkleProofResponse
-import build.linea.clients.StateManagerClientV1
-import build.linea.clients.StateManagerErrorType
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import linea.EthLogsSearcher
+import linea.clients.GetZkEVMStateMerkleProofResponse
+import linea.clients.StateManagerClientV1
+import linea.clients.StateManagerErrorType
 import linea.contract.events.DataFinalizedV3
 import linea.domain.BlobRecord
 import linea.domain.BlockInterval

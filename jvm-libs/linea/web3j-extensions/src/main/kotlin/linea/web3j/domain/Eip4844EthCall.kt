@@ -1,11 +1,11 @@
 package linea.web3j.domain
 
-import build.linea.s11n.jackson.ByteArrayToHexSerializer
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import linea.s11n.jackson.ByteArrayToHexSerializer
 import org.apache.tuweni.bytes.Bytes
 import org.web3j.crypto.Blob
 import org.web3j.crypto.BlobUtils

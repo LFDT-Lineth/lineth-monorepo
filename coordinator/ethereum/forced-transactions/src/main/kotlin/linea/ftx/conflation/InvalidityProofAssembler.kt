@@ -1,15 +1,15 @@
 package linea.ftx.conflation
 
-import build.linea.clients.GetZkEVMStateMerkleProofResponse
-import build.linea.clients.LineaAccountProof
-import build.linea.clients.StateManagerAccountProofClient
-import build.linea.clients.StateManagerClientV1
 import com.github.michaelbull.result.getOrThrow
 import linea.clients.GenerateTracesResponse
+import linea.clients.GetZkEVMStateMerkleProofResponse
 import linea.clients.InvalidityProofRequest
 import linea.clients.InvalidityProofResponse
 import linea.clients.InvalidityProverClientV1
 import linea.clients.InvalidityReason
+import linea.clients.LineaAccountProof
+import linea.clients.StateManagerAccountProofClient
+import linea.clients.StateManagerClientV1
 import linea.clients.TracesConflationVirtualBlockClientV1
 import linea.contract.events.ForcedTransactionAddedEvent
 import linea.domain.BlockInterval

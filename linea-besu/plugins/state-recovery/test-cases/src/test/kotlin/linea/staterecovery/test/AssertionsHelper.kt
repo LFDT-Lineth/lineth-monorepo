@@ -1,6 +1,6 @@
 package linea.staterecovery.test
 
-import build.linea.clients.StateManagerClientV1
+import linea.clients.StateManagerClientV1
 import linea.domain.BlockInterval
 import linea.ethapi.EthApiBlockClient
 import linea.testing.CommandResult

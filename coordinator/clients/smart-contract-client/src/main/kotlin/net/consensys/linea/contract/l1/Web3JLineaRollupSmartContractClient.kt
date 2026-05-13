@@ -1,6 +1,6 @@
 package net.consensys.linea.contract.l1
 
-import build.linea.contract.LineaRollupV6
+import linea.contract.LineaRollupV6
 import linea.contract.l1.BlockAndNonce
 import linea.contract.l1.LineaRollupSmartContractClient
 import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly

@@ -1,10 +1,10 @@
 package net.consensys.linea.jsonrpc.client
 
-import build.linea.s11n.jackson.ethByteAsHexSerialisersModule
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeType
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.vertx.core.json.jackson.VertxModule
+import linea.s11n.jackson.ethByteAsHexSerialisersModule
 
 internal val objectMapper = jacksonObjectMapper()
   .registerModules(VertxModule())

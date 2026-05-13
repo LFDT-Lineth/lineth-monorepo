@@ -1,9 +1,9 @@
 package net.consensys.zkevm.coordinator.app.conflation
 
-import build.linea.clients.StateManagerV1JsonRpcClient
 import io.vertx.core.Vertx
 import linea.LongRunningService
 import linea.clients.ExecutionProverClientV2
+import linea.clients.StateManagerV1JsonRpcClient
 import linea.conflation.ConflationService
 import linea.conflation.FixedLaggingHeadSafeBlockProvider
 import linea.conflation.calculators.CalculatorsFactory

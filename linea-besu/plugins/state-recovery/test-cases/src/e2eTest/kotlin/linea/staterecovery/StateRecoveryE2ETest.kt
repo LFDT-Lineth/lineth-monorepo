@@ -1,10 +1,10 @@
 package linea.staterecovery
 
-import build.linea.clients.StateManagerClientV1
-import build.linea.clients.StateManagerV1JsonRpcClient
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
+import linea.clients.StateManagerClientV1
+import linea.clients.StateManagerV1JsonRpcClient
 import linea.contract.events.DataFinalizedV3
 import linea.domain.EthLogEvent
 import linea.ethapi.EthLogsSearcherImpl
