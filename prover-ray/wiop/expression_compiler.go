@@ -241,21 +241,53 @@ func (p *compiledProgram) evaluateVector(rt Runtime) field.Vec {
 	// ------------------------------------------------------------------
 	// Evaluate all leaves up-front to determine the vector length and to
 	// avoid re-evaluating leaves inside the main execution loop.
+	//
+	// Vector leaves are evaluated in the first pass; scalar leaves (which
+	// would otherwise panic from EvaluateVector) are recorded for a second
+	// broadcast pass once n is known.
 	// ------------------------------------------------------------------
 	leafVecs := make([]field.Vec, len(p.leaves))
-	n := 0
+	scalarIdx := make([]int, 0, len(p.leaves))
+	n := -1
 	for i, leaf := range p.leaves {
+		if !leaf.IsMultiValued() {
+			scalarIdx = append(scalarIdx, i)
+			continue
+		}
 		cv := leaf.EvaluateVector(rt)
 		leafVecs[i] = cv.Plain
 		leafLen := leafVecs[i].Len()
-		if i == 0 {
+		if n == -1 {
 			n = leafLen
 		} else if leafLen != n {
 			//nolint
 			panic(fmt.Sprintf(
-				"wiop: compiler: leaf %d has length %d but leaf 0 has length %d; all leaves must have the same size",
+				"wiop: compiler: leaf %d has length %d but the first vector leaf has length %d; all vector leaves must have the same size",
 				i, leafLen, n,
 			))
+		}
+	}
+	if n == -1 {
+		// The root is multi-valued, so at least one leaf must be too. Reaching
+		// this branch indicates a bug in [ArithmeticOperation.IsMultiValued].
+		panic("wiop: compiler: evaluateVector called on an expression with no vector leaf")
+	}
+	for _, i := range scalarIdx {
+		val := p.leaves[i].EvaluateSingle(rt).Value
+		if val.IsBase() {
+			base := make([]field.Element, n)
+			b := val.AsBase()
+			for j := range base {
+				base[j] = b
+			}
+			leafVecs[i] = field.VecFromBase(base)
+		} else {
+			ext := make([]field.Ext, n)
+			e := val.AsExt()
+			for j := range ext {
+				ext[j] = e
+			}
+			leafVecs[i] = field.VecFromExt(ext)
 		}
 	}
 
