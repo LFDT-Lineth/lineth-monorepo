@@ -2,6 +2,9 @@ package linea.crypto
 
 import java.math.BigInteger
 
-interface Signer {
+fun interface Signer {
+  /**
+   * Signs data and returns (R, S) tuples.
+   */
   fun sign(bytes: ByteArray): Pair<BigInteger, BigInteger>
 }

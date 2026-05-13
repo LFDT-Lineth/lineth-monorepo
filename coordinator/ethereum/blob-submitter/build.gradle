@@ -8,7 +8,6 @@ plugins {
 dependencies {
   implementation(project(':coordinator:core'))
   implementation(project(":coordinator:clients:smart-contract-client"))
-  implementation(project(':coordinator:ethereum:common'))
   implementation(project(':coordinator:ethereum:gas-pricing'))
   implementation(project(":coordinator:persistence"))
   implementation("com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}")

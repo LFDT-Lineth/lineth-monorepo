@@ -1,4 +1,4 @@
-package net.consensys.zkevm.ethereum.crypto
+package linea.web3j
 
 import org.web3j.crypto.Credentials
 import org.web3j.crypto.RawTransaction

@@ -9,7 +9,6 @@ dependencies {
   implementation project(':jvm-libs:linea:clients:eth-logs-searcher')
   implementation project(':coordinator:core')
   implementation project(':coordinator:clients:smart-contract-client')
-  implementation project(':coordinator:ethereum:common')
 
   testImplementation project(':coordinator:ethereum:test-utils')
   testImplementation testFixtures(project(':jvm-libs:linea:core:domain-models'))

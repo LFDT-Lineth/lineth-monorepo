@@ -9,14 +9,14 @@ import linea.contract.l1.LineaSmartContractClient
 import linea.coordinator.config.v2.L1SubmissionConfig
 import linea.coordinator.config.v2.SignerConfig
 import linea.kotlin.encodeHex
+import linea.web3j.ECKeypairSignerAdapter
 import linea.web3j.SmartContractErrors
+import linea.web3j.Web3SignerTxSignService
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.l1.Web3JLineaRollupSmartContractClient
 import net.consensys.linea.contract.l1.Web3JLineaValidiumSmartContractClient
 import net.consensys.linea.httprest.client.VertxHttpRestClient
 import net.consensys.zkevm.ethereum.crypto.Web3SignerRestClient
-import net.consensys.zkevm.ethereum.crypto.Web3SignerTxSignService
-import net.consensys.zkevm.ethereum.signing.ECKeypairSignerAdapter
 import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j
 import org.web3j.service.TxSignServiceImpl
@@ -111,7 +111,7 @@ fun createTransactionManager(
           .setHttp1MaxSize(web3SignerConfig.maxPoolSize)
         val httpRestClient = VertxHttpRestClient(webClientOptions, poolOptions, vertx)
         val signer = Web3SignerRestClient(httpRestClient, signerConfig.web3signer.publicKey.encodeHex())
-        val signerAdapter = ECKeypairSignerAdapter(signer, Numeric.toBigInt(signerConfig.web3signer.publicKey))
+        val signerAdapter = ECKeypairSignerAdapter(signer::sign, Numeric.toBigInt(signerConfig.web3signer.publicKey))
         val web3SignerCredentials = Credentials.create(signerAdapter)
         Web3SignerTxSignService(web3SignerCredentials)
       }

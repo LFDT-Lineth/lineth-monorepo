@@ -10,7 +10,6 @@ dependencies {
     exclude group: 'org.slf4j', module: 'slf4j-nop'
   }
   implementation project(':coordinator:core-interfaces')
-  implementation project(':coordinator:ethereum:common')
   implementation "io.vertx:vertx-core"
 
   testImplementation "io.vertx:vertx-junit5"
