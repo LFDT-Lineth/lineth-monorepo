@@ -1,9 +1,3 @@
-import {
-  PAUSE_STATE_DATA_SUBMISSION_ROLE,
-  UNPAUSE_STATE_DATA_SUBMISSION_ROLE,
-  STATE_DATA_SUBMISSION_PAUSE_TYPE,
-  SECURITY_COUNCIL_ROLE,
-} from "contracts/common/constants";
 import { LineaRollup__factory } from "contracts/typechain-types";
 import { ethers, upgrades } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
@@ -13,78 +7,50 @@ import { tryVerifyContract, getRequiredEnvVar } from "../common/helpers";
 import { getUiSigner, withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
 
 const func: DeployFunction = withSignerUiSession(
-  "03_deploy_LineaRollupWithReinitialization.ts",
+  "03_deploy_LineaRollupV8WithReinitialization.ts",
   async function (hre: HardhatRuntimeEnvironment) {
     const signer = await getUiSigner(hre);
-    let upgradePauseTypeRoles = [];
-    let upgradeUnpauseTypeRoles = [];
-    let upgradeRoleAddresses = [];
 
-    const securityCouncilAddress = getRequiredEnvVar("L1_SECURITY_COUNCIL");
     const proxyAddress = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS");
-
-    upgradeRoleAddresses = [
-      {
-        addressWithRole: securityCouncilAddress,
-        role: SECURITY_COUNCIL_ROLE,
-      },
-      {
-        addressWithRole: securityCouncilAddress,
-        role: PAUSE_STATE_DATA_SUBMISSION_ROLE,
-      },
-      {
-        addressWithRole: securityCouncilAddress,
-        role: UNPAUSE_STATE_DATA_SUBMISSION_ROLE,
-      },
-    ];
-
-    upgradePauseTypeRoles = [{ pauseType: STATE_DATA_SUBMISSION_PAUSE_TYPE, role: PAUSE_STATE_DATA_SUBMISSION_ROLE }];
-    upgradeUnpauseTypeRoles = [
-      { pauseType: STATE_DATA_SUBMISSION_PAUSE_TYPE, role: UNPAUSE_STATE_DATA_SUBMISSION_ROLE },
-    ];
+    const forcedTransactionFeeInWei = getRequiredEnvVar("LINEA_ROLLUP_FORCED_TRANSACTION_FEE_IN_WEI");
+    const addressFilter = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS_FILTER");
 
     const contractName = "LineaRollup";
 
     const factory = await ethers.getContractFactory(contractName, signer);
 
-    console.log("Deploying Contract...");
-    const newContract = await upgrades.deployImplementation(factory, {
+    console.log("Deploying new LineaRollup implementation...");
+    const newImplementation = await upgrades.deployImplementation(factory, {
       kind: "transparent",
     });
 
-    const contract = newContract.toString();
+    const implementationAddress = newImplementation.toString();
+    console.log(`Implementation deployed at ${implementationAddress}`);
 
-    console.log(`Contract deployed at ${contract}`);
-
-    // The encoding should be used through the safe.
-    // THIS IS JUST A SAMPLE AND WILL BE ADJUSTED WHEN NEEDED FOR GENERATING THE CALLDATA FOR THE UPGRADE CALL
-    // https://www.4byte.directory/signatures/?bytes4_signature=0x9623609d
-    const upgradeCallWithReinitializationUsingSecurityCouncil = ethers.concat([
+    // Encoded calldata for upgradeAndCall via ProxyAdmin (selector 0x9623609d).
+    // Submit this through the Security Council Safe using upgradeAndCall on the ProxyAdmin.
+    // See: https://www.4byte.directory/signatures/?bytes4_signature=0x9623609d
+    const upgradeCallWithReinitialization = ethers.concat([
       "0x9623609d",
       ethers.AbiCoder.defaultAbiCoder().encode(
         ["address", "address", "bytes"],
         [
           proxyAddress,
-          newContract,
-          LineaRollup__factory.createInterface().encodeFunctionData("reinitializeV8", [
-            upgradeRoleAddresses,
-            upgradePauseTypeRoles,
-            upgradeUnpauseTypeRoles,
+          newImplementation,
+          LineaRollup__factory.createInterface().encodeFunctionData("reinitializeLineaRollupV9", [
+            forcedTransactionFeeInWei,
+            addressFilter,
           ]),
         ],
       ),
     ]);
 
-    console.log(
-      "Encoded Tx Upgrade with Reinitialization from Security Council:",
-      "\n",
-      upgradeCallWithReinitializationUsingSecurityCouncil,
-    );
-    console.log("\n");
+    console.log("Encoded upgradeAndCall calldata for reinitializeLineaRollupV9:");
+    console.log("\n", upgradeCallWithReinitialization, "\n");
 
-    await tryVerifyContract(contract);
+    await tryVerifyContract(implementationAddress);
   },
 );
 
 export default func;
-func.tags = ["LineaRollupWithReinitialization"];
+func.tags = ["LineaRollupV8WithReinitialization"];

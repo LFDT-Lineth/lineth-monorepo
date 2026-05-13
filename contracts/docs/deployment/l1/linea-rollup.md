@@ -61,13 +61,13 @@ pnpm exec hardhat deploy --network sepolia --tags LineaRollupWithReinitializatio
 
 ### LineaRollupV8WithReinitialization
 
-Deploys a new LineaRollup implementation and generates encoded upgrade calldata with `reinitializeLineaRollupV9`.
+Deploys a new LineaRollup implementation and generates encoded `upgradeAndCall` calldata for `reinitializeLineaRollupV9`. Submit the printed calldata through the Security Council Safe targeting the ProxyAdmin.
 
 | Parameter name | Required | Input value | Description |
 |---|---|---|---|
 | \**DEPLOYER_PRIVATE_KEY* | true | key | Network-specific private key |
 | LINEA_ROLLUP_ADDRESS | true | address | Existing LineaRollup proxy address |
-| LINEA_ROLLUP_FORCED_TRANSACTION_FEE_IN_WEI | true | uint256 | Forced transaction fee in wei |
+| LINEA_ROLLUP_FORCED_TRANSACTION_FEE_IN_WEI | true | uint256 | Forced transaction fee in wei (must be > 0) |
 | LINEA_ROLLUP_ADDRESS_FILTER | true | address | AddressFilter contract address |
 
 ```shell
