@@ -183,7 +183,7 @@ func TestLocalConstraint_RegistersOnModuleVanishings(t *testing.T) {
 
 	before := len(mod.Vanishings)
 	v := mod.NewLocalConstraint(sys.Context.Childf("lcReg"), col.View(), 0)
-	assert.Equal(t, before+1, len(mod.Vanishings))
+	assert.Len(t, mod.Vanishings, before+1)
 	assert.Same(t, v, mod.Vanishings[before])
 	// "Local" constraints never auto-cancel any rows.
 	assert.Empty(t, v.CancelledPositions)
