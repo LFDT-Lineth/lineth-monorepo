@@ -1,0 +1,80 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
+plugins {
+  id 'maru.kotlin-library-conventions'
+}
+
+dependencies {
+  implementation project(":core")
+  implementation project(":app")
+  implementation project(":consensus")
+  implementation project(":executionlayer")
+  implementation project(":config")
+  implementation project(":p2p")
+  // For the syncing logic
+  implementation project(":jvm-libs:mappers")
+  implementation(project(":serialization"))
+  implementation(project(":jvm-libs:extensions"))
+  implementation project(":jvm-libs:test-utils")
+
+  implementation "tech.pegasys.teku.internal:executionclient"
+  implementation "tech.pegasys.teku.internal:time"
+  implementation "tech.pegasys.teku.internal:ethereum-events"
+  implementation "tech.pegasys.teku.internal:spec"
+
+
+  implementation ("org.web3j:core")
+
+  implementation "com.sksamuel.hoplite:hoplite-toml"
+  implementation "com.sksamuel.hoplite:hoplite-json"
+  implementation "com.sksamuel.hoplite:hoplite-core"
+
+  implementation('com.palantir.docker.compose:docker-compose-rule-junit4')
+  implementation('com.palantir.docker.compose:docker-compose-junit-jupiter')
+  implementation "org.hyperledger.besu.internal:besu-acceptance-tests-dsl"
+
+  implementation "build.linea.internal:metrics"
+  implementation "build.linea.internal:micrometer"
+  implementation "build.linea.internal:long-running-service"
+}
+
+sourceSets {
+  acceptanceTest {
+    kotlin {
+      compileClasspath += main.output
+      runtimeClasspath += main.output
+    }
+    compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + sourceSets.test.compileClasspath
+    runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath + sourceSets.test.runtimeClasspath
+  }
+}
+
+
+build.dependsOn compileAcceptanceTestKotlin
+
+tasks.register('acceptanceTest', Test) { test ->
+  description = "Runs acceptance tests."
+  group = "verification"
+  useJUnitPlatform()
+  outputs.upToDateWhen { false }
+
+  classpath = sourceSets.acceptanceTest.runtimeClasspath
+  testClassesDirs = sourceSets.acceptanceTest.output.classesDirs
+
+  testLogging {
+    events TestLogEvent.FAILED,
+        TestLogEvent.SKIPPED,
+        TestLogEvent.STANDARD_ERROR
+    // TestLogEvent.STARTED,
+    // TestLogEvent.PASSED
+    exceptionFormat TestExceptionFormat.FULL
+    showCauses true
+    showExceptions true
+    showStackTraces true
+    // set showStandardStreams if you need to see test logs
+    showStandardStreams false
+  }
+
+  systemProperties["junit.jupiter.execution.parallel.enabled"] = false
+}

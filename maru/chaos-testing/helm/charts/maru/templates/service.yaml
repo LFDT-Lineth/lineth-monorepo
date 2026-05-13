@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "maru.fullname" . }}
+  labels:
+    {{- include "maru.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  {{- if .Values.service.headless }}
+  clusterIP: None
+  {{- end }}
+  selector:
+    {{- include "maru.selectorLabels" . | nindent 4 }}
+  ports:
+    {{- range .Values.service.ports }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      targetPort: {{ default .port .targetPort }}
+      protocol: {{ default "TCP" .protocol | upper }}
+    {{- end }}

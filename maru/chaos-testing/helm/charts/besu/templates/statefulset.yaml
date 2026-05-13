@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "besu.fullname" . }}
+  labels:
+    {{- include "besu.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "besu.fullname" . }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+    {{- include "besu.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "besu.labels" . | nindent 8 }}
+    spec:
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: besu
+          image: "{{ .Values.image.name }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /opt/besu/bin/besu
+            - --config-file=/opt/besu/configs/configs.toml
+            - --genesis-file=/opt/besu/configs/genesis.json
+            - --node-private-key-file="/opt/besu/configs/private-key.txt"
+            {{- if $.Values.bootnodes }}
+            - --bootnodes={{ $.Values.bootnodes }}
+            {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /opt/besu/data
+            - name: configs
+              mountPath: /opt/besu/configs
+          ports:
+            {{- range .Values.service.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .port }}
+              protocol: TCP
+           {{- end }}
+      volumes:
+        - name: configs
+          configMap:
+            name: {{ include "besu.fullname" . }}-configs
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ "{{ $.Values.persistence.accessMode }}" ]
+        resources:
+          requests:
+            storage: {{ $.Values.persistence.size }}
+        {{- if $.Values.persistence.storageClass }}
+        storageClassName: {{ $.Values.persistence.storageClass }}
+        {{- end }}

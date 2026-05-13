@@ -1,0 +1,98 @@
+name: Reusable run e2e tests
+on:
+  workflow_dispatch:
+    inputs:
+#      commit-tag:
+#        description: 'The commit tag to use'
+#        required: true
+#        type: string
+      e2e-tests-with-ssh:
+        description: Run end to end tests with ability to ssh into environment
+        required: false
+        type: boolean
+        default: false
+      e2e-tests-logs-dump:
+        description: Dump logs after running end to end tests
+        required: false
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+#      commit-tag:
+#        required: true
+#        type: string
+      e2e-tests-with-ssh:
+        description: Run end to end tests with ability to ssh into environment
+        required: false
+        type: boolean
+        default: false
+      e2e-tests-logs-dump:
+        description: Dump logs after running end to end tests
+        required: false
+        type: boolean
+        default: false
+      has-changes-requiring-build:
+        type: string
+    outputs:
+      tests_outcome:
+        value: ${{ jobs.run-e2e-tests.outputs.tests_outcome }}
+
+permissions: {} # lock everything by default (least-privilege)
+
+concurrency:
+  group: maru-e2e-tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  # Required job
+  run-e2e-tests:
+    permissions:
+      contents: read # for actions/checkout
+    # We can only use conditionals, and not path filters to 'successfully' skip a required job - https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks#handling-skipped-but-required-checks
+    if: ${{ inputs.has-changes-requiring-build == 'true' }}
+    env:
+      DOCKER_ORG_NAME: ${{ secrets.DOCKER_ORG_NAME }}
+      DOCKER_REPO_TOKEN: ${{ secrets.DOCKER_REPO_TOKEN }}
+    outputs:
+      tests_outcome: ${{ steps.run_e2e_tests.outcome }}
+    runs-on: [gha-runner-scale-set-ubuntu-24-amd64-med]
+    name: e2e tests
+    steps:
+      - name: Setup upterm session
+        if: ${{ inputs.e2e-tests-with-ssh }}
+        uses: lhotari/action-upterm@v1
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Login to Docker Hub
+        if: ${{ env.DOCKER_ORG_NAME != '' && env.DOCKER_REPO_TOKEN != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_ORG_NAME }}
+          password: ${{ secrets.DOCKER_REPO_TOKEN }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326 # 4.4.0
+      - name: Download images
+        run: |
+          make docker-pull
+      - name: Run e2e tests
+        id: run_e2e_tests
+        timeout-minutes: 10
+        run: |
+          make run-e2e-test
+      - name: Show e2e tests result
+        if: always()
+        run: |
+          echo "E2E_TESTS_RESULT: ${{ steps.run_e2e_tests.outcome }}"
+
+      - name: Archive debug logs
+        uses: actions/upload-artifact@v4
+        if: ${{ failure() && inputs.e2e-tests-logs-dump }}
+        with:
+          name: end-2-end-debug-logs
+          if-no-files-found: error
+          path: |
+            e2e/docker_logs/**/*

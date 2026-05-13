@@ -1,0 +1,63 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
+plugins {
+  id 'maru.kotlin-library-conventions'
+}
+
+dependencies {
+  implementation(project(":jvm-libs:extensions"))
+  implementation project(":jvm-libs:test-utils")
+  implementation project(":api")
+  implementation("build.linea.internal:file-system")
+  implementation("build.linea.internal:web3j-extensions") {
+    exclude group: "build.linea", module: "besu-libs"
+  }
+
+  implementation("org.http4k:http4k-core")
+  implementation("org.http4k:http4k-client-okhttp")
+  implementation("org.http4k:http4k-format-jackson")
+}
+
+sourceSets {
+  acceptanceTest {
+    kotlin {
+      compileClasspath += main.output
+      runtimeClasspath += main.output
+    }
+    compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + sourceSets.test.compileClasspath
+    runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath + sourceSets.test.runtimeClasspath
+  }
+}
+
+build.dependsOn compileAcceptanceTestKotlin
+
+tasks.register('acceptanceTest', Test) { test ->
+  description = "Runs acceptance tests."
+  group = "verification"
+  useJUnitPlatform()
+  outputs.upToDateWhen { false }
+
+  classpath = sourceSets.acceptanceTest.runtimeClasspath
+  testClassesDirs = sourceSets.acceptanceTest.output.classesDirs
+
+  // Forward any -Dexperiment.* flags from the Gradle command line into the test JVM.
+  // Example: ./gradlew acceptanceTest -Dexperiment.latency=100ms
+  System.properties.each { key, value ->
+    if (key.toString().startsWith("experiment.")) {
+      systemProperty key, value
+    }
+  }
+
+  testLogging {
+    events TestLogEvent.FAILED,
+        TestLogEvent.SKIPPED,
+        TestLogEvent.STANDARD_ERROR
+    exceptionFormat TestExceptionFormat.FULL
+    showCauses true
+    showExceptions true
+    showStackTraces true
+    // set showStandardStreams if you need to see test logs
+    showStandardStreams true
+  }
+}

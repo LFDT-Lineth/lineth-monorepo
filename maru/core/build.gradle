@@ -1,0 +1,40 @@
+/*
+ * Copyright ConsenSys AG.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+plugins {
+  id 'maru.kotlin-library-conventions'
+  id 'java-test-fixtures'
+}
+
+dependencies {
+  implementation(project(":jvm-libs:extensions"))
+  implementation "build.linea.internal:kotlin"
+  implementation "build.linea.internal:metrics"
+  implementation "build.linea.internal:long-running-service"
+  implementation "io.consensys.tuweni:tuweni-bytes"
+  implementation "org.jetbrains.kotlin:kotlin-reflect"
+  testImplementation(project(":serialization"))
+  testFixturesImplementation("org.hyperledger.besu:besu-datatypes")
+  testFixturesImplementation("org.hyperledger.besu:besu-plugin-api")
+  testFixturesImplementation("org.hyperledger.besu.internal:besu-ethereum-core")
+  testFixturesImplementation("org.hyperledger.besu.internal:besu-crypto-algorithms")
+  testFixturesImplementation("build.linea.internal:kotlin")
+  testFixturesImplementation("build.linea.internal:metrics")
+  testFixturesImplementation("build.linea.internal:micrometer")
+  testFixturesImplementation(project(":serialization"))
+  testFixturesImplementation(project(":observability"))
+  testFixturesImplementation(project(":p2p"))
+  testFixturesImplementation(project(":crypto"))
+}

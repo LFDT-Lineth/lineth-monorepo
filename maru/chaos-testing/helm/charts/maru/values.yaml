@@ -1,0 +1,132 @@
+replicaCount: 1
+image:
+  name: consensys/maru:develop
+  pullPolicy: IfNotPresent
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+service:
+  type: ClusterIP
+  ports:
+    - name: api
+      port: 5060
+    - name: p2p
+      port: 9000
+      protocol: TCP
+    - name: discovery
+      port: 9000
+      protocol: UDP
+    - name: metrics
+      port: 9545
+persistence:
+  enabled: true
+  accessMode: ReadWriteOnce
+  size: 1Gi
+  storageClass: ""
+
+# Health check probes configuration
+probes:
+  liveness:
+    enabled: true
+    type: httpGet  # Options: httpGet, tcpSocket, exec
+#    tcpSocket:
+#      port: api  # Use the API port for liveness check
+    httpGet:
+     path: /live
+     port: 9545
+     scheme: HTTP
+    # exec:
+    #   command: ["/bin/sh", "-c", "pgrep java"]
+    initialDelaySeconds: 30
+    periodSeconds: 5
+    timeoutSeconds: 10
+    successThreshold: 1
+    failureThreshold: 6
+  readiness:
+    enabled: true
+    type: httpGet  # Options: httpGet, tcpSocket, exec
+#    tcpSocket:
+#      port: api  # Use the API port for readiness check
+    httpGet:
+      path: /ready
+      port: 9545
+      scheme: HTTP
+    # exec:
+    #   command: ["/bin/sh", "-c", "nc -z localhost 5060"]
+    initialDelaySeconds: 30
+    periodSeconds: 5
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 6
+
+configFiles:
+  privateKey: |
+  configsDefaultsToml: |
+    allow-empty-blocks = true
+
+    [persistence]
+    data-path="/opt/consensys/maru/data/db"
+    private-key-path="/opt/consensys/maru/configs/private-key.txt"
+
+    [p2p]
+    port = 9000
+    ip-address = "0.0.0.0"
+
+    [p2p.discovery]
+    port = 9000
+    refresh-interval = "2 seconds"
+
+    [p2p.reputation]
+    cooldown-period = "2 seconds"
+    ban-period = "30 seconds"
+
+    [p2p.status-update]
+    refresh-interval= "2 seconds"
+
+    [syncing]
+    peer-chain-height-polling-interval = "1 seconds"
+    use-unconditional-random-download-peer = false
+    sync-target-selection = "Highest"
+
+    [observability]
+    port = 9545
+
+    [api]
+    port = 5060
+  configsToml: |
+  genesisJson: |
+    {
+      "chainId": 1337,
+      "config": {
+        "0": {
+          "type": "qbft",
+          "validatorSet": ["0x1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0"],
+          "blockTimeSeconds": 1,
+          "feeRecipient": "0x0000000000000000000000000000000000000000",
+          "elFork": "Osaka"
+        }
+      }
+    }
+  log4j: |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <Configuration status="INFO" monitorInterval="2">
+    <Appenders>
+      <Console name="Console" target="SYSTEM_OUT">
+        <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS}{UTC} | %-5level | %c{1} | %msg | %t %throwable%n" />
+      </Console>
+    </Appenders>
+    <Loggers>
+      <Logger name="org.hyperledger.besu" level="INFO"/>
+      <Logger name="tech.pegasys.teku" level="INFO"/>
+      <Logger name="maru" level="INFO"/>
+      <Logger name="maru.syncing" level="DEBUG"/>
+      <Logger name="maru.clients" level="DEBUG"/>
+      <Logger name="maru.executionlayer.manager" level="DEBUG"/>
+      <Logger name="maru.consensus.qbft" level="DEBUG"/>
+      <Logger name="maru.consensus.blockimport" level="DEBUG"/>
+      <Root level="INFO">
+        <AppenderRef ref="Console"/>
+      </Root>
+    </Loggers>
+    </Configuration>

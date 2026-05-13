@@ -1,0 +1,38 @@
+replicaCount: 1
+fullnameOverride: maru-validator-1
+componentRole: validator
+configFiles:
+  privateKey: |
+    0x0802122100abb81ba53518eb0a206dfe80f2a973182e5d66c98cd31d00bf7471fcd5514157
+  configsToml: |
+    [fork-transition]
+    l2-eth-api-endpoint = { endpoint = "http://besu-validator-1-0.besu-validator-1:8545" }
+
+    [qbft]
+    fee-recipient = "0x0000000000000000000000000000000000000000"
+    min-block-build-time = "200 milliseconds"
+
+    [payload-validator]
+    engine-api-endpoint = { endpoint = "http://besu-validator-1-0.besu-validator-1:8550" }
+
+    [syncing]
+    desync-tolerance = 0
+
+  genesisJson: |
+    {
+      "chainId": 1337,
+      "config": {
+        "0": {
+          "type": "qbft",
+          "validatorSet": [
+            "0x1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0",
+            "0x504c58969274660b176d65daffdee3f8b1967b27",
+            "0x9f2b437a74f98d9a4247393a5858de5473eb9e10",
+            "0xf64aeac8556931af7350d7b7e5e4c91003a84f0a"
+          ],
+          "blockTimeSeconds": 1,
+          "feeRecipient": "0x0000000000000000000000000000000000000000",
+          "elFork": "Osaka"
+        }
+      }
+    }

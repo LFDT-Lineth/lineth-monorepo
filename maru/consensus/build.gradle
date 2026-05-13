@@ -1,0 +1,62 @@
+/*
+ * Copyright ConsenSys AG.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+plugins {
+  id 'maru.kotlin-library-conventions'
+}
+
+dependencies {
+  implementation(project(":core"))
+  implementation(project(":serialization"))
+  implementation(project(":config"))
+  implementation(project(":p2p"))
+  implementation(project(":crypto"))
+  implementation(project(":jvm-libs:extensions"))
+  implementation(project(":jvm-libs:mappers"))
+  implementation(project(":executionlayer")) {
+    because "because of protocol builders"
+  }
+
+  api("org.hyperledger.besu.internal:besu-consensus-common") {
+    because("API of the BftEventHandler interface")
+  }
+  implementation("org.hyperledger.besu.internal:besu-ethereum-core")
+  implementation("org.hyperledger.besu.internal:besu-ethereum-rlp")
+  implementation("org.hyperledger.besu.internal:besu-crypto-algorithms")
+  implementation("org.hyperledger.besu.internal:besu-crypto-services")
+  implementation("org.hyperledger.besu.internal:besu-ethereum-p2p")
+  implementation("org.hyperledger.besu.internal:besu-config")
+  api("org.hyperledger.besu.internal:besu-ethereum-blockcreation") {
+    because("of the BlockCreator")
+  }
+  implementation "org.hyperledger.besu.internal:besu-consensus-qbft-core"
+  implementation("org.hyperledger.besu.internal:besu-util")
+  implementation("org.hyperledger.besu:besu-datatypes")
+  implementation("org.hyperledger.besu:besu-evm")
+
+  implementation "tech.pegasys.teku.internal:executionclient"
+  implementation "tech.pegasys.teku.internal:spec"
+
+  implementation "build.linea.internal:long-running-service"
+
+
+  testImplementation(testFixtures(project(":core")))
+  testImplementation(testFixtures(project(":crypto")))
+  testImplementation(project(":jvm-libs:test-utils"))
+  testImplementation "org.jetbrains.kotlin:kotlin-test:2.1.0"
+  testImplementation "tech.pegasys.teku.internal:executionclient"
+  testImplementation "tech.pegasys.teku.internal:spec"
+  testImplementation "build.linea.internal:metrics"
+}

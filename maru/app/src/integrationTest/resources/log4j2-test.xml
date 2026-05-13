@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="warn">
+  <Appenders>
+    <Console name="console" target="SYSTEM_OUT">
+      <PatternLayout pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"/>
+    </Console>
+  </Appenders>
+  <Loggers>
+    <Logger name="maru" level="INFO" additivity="false">
+      <AppenderRef ref="console"/>
+    </Logger>
+<!--    <Logger name="org.hyperledger.besu.ethereum.blockcreation" level="TRACE"/>-->
+    <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.ExecutionEngineJsonRpcMethod"
+            level="INFO"/>
+    <Logger name="maru.executionlayer.manager" level="DEBUG"/>
+    <Logger name="maru.syncing" level="DEBUG"/>
+    <Logger name="org.hyperledger.besu" level="INFO"/>
+    <!-- Surfaces Besu's underlying reason for engine_forkchoiceUpdated/newPayload UNSUPPORTED_FORK
+         (-38005) responses, which Teku's Web3JClient otherwise swallows in our consensus-switch tests. -->
+    <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc" level="TRACE"/>
+    <Logger name="org.hyperledger.besu.consensus.qbft" level="INFO"/>
+    <Logger name="maru.p2p" level="TRACE"/>
+    <Root level="INFO" additivity="false">
+      <appender-ref ref="console"/>
+    </Root>
+  </Loggers>
+</Configuration>

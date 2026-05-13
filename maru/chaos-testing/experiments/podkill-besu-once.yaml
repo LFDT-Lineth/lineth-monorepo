@@ -1,0 +1,14 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: pod-kill-besu-once
+  namespace: chaos-mesh
+spec:
+  action: pod-failure
+  mode: all
+  duration: '60s'
+  selector:
+    namespaces:
+      - default
+    labelSelectors:
+      'app.kubernetes.io/component': 'besu'

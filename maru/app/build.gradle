@@ -1,0 +1,144 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
+plugins {
+  id 'maru.kotlin-application-conventions'
+}
+
+sourceSets {
+  integrationTest {
+    kotlin {
+      compileClasspath += main.output
+      runtimeClasspath += main.output
+    }
+    compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + sourceSets.test.compileClasspath
+    runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath + sourceSets.test.runtimeClasspath
+  }
+}
+
+dependencies {
+  implementation(project(":api"))
+  implementation(project(":config"))
+  implementation(project(":consensus"))
+  implementation(project(":core"))
+  implementation(project(":executionlayer"))
+  implementation(project(":p2p"))
+  implementation(project(":storage"))
+  implementation(project(":syncing"))
+  implementation(project(":crypto"))
+  implementation(project(":serialization"))
+  implementation(project(":observability"))
+  implementation(project(":syncing"))
+  implementation(project(":jvm-libs:teku-web3j"))
+  api(project(":linea-finalization-provider")) {
+    exclude group: "build.linea", module: "besu-libs"
+  }
+  implementation("build.linea.internal:web3j-extensions") {
+    exclude group: "build.linea", module: "besu-libs"
+  }
+  implementation(project(":jvm-libs:extensions"))
+  implementation(project(":jvm-libs:mappers"))
+
+  implementation "build.linea.internal:futures"
+  implementation "build.linea.internal:long-running-service"
+
+  implementation "info.picocli:picocli"
+  implementation "com.sksamuel.hoplite:hoplite-core"
+
+  implementation("org.hyperledger.besu.internal:besu-consensus-qbft-core")
+  implementation("org.hyperledger.besu.internal:besu-metrics-core")
+  implementation("org.hyperledger.besu.internal:besu-crypto-algorithms")
+  implementation("tech.pegasys.teku.internal:p2p")
+  implementation("tech.pegasys.teku.internal:eth2")
+  implementation ("io.consensys.protocols:discovery")
+
+  integrationTestRuntimeOnly("org.junit.platform:junit-platform-launcher")
+  integrationTestImplementation 'org.jetbrains.kotlinx:kotlinx-datetime'
+  integrationTestImplementation(project(":jvm-libs:test-utils"))
+  integrationTestImplementation(testFixtures(project(":p2p")))
+  integrationTestImplementation(testFixtures(project(":crypto")))
+  integrationTestImplementation("org.hyperledger.besu.internal:besu-crypto-services")
+  integrationTestImplementation "org.hyperledger.besu.internal:besu-ethereum-api"
+  integrationTestImplementation(group: 'org.hyperledger.besu.internal', name: 'besu-ethereum-core', classifier: 'test-support')
+  integrationTestImplementation("org.hyperledger.besu.internal:besu-ethereum-p2p")
+  integrationTestImplementation("org.hyperledger.besu.internal:besu-consensus-qbft-core")
+  integrationTestImplementation("com.squareup.okhttp3:okhttp")
+  integrationTestImplementation("io.javalin:javalin")
+  testImplementation(testFixtures(project(":core")))
+}
+
+// Besu and Teku have similar versioning and some modules are also named the same. This creates conflicts when
+// dependencies are collected
+tasks.named("distTar").configure {
+  enabled = false // disable from build, not used
+  duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+tasks.named("distZip").configure {
+  enabled = false // disable from build, not used
+  duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+application {
+  mainClass = 'maru.app.CliEntrypoint'
+}
+
+jar {
+  archiveBaseName = 'maru'
+  manifest {
+    attributes(
+        'Class-Path': project.configurations.runtimeClasspath
+        .collect {
+          it.getName()
+        }
+        .findAll {
+          it.endsWith('jar')
+        }
+        .join(' '),
+        'Main-Class': 'maru.app.CliEntrypoint',
+        'Multi-Release': 'true'
+        )
+  }
+}
+
+task integrationTest(type: Test) {
+  description = "Runs integration tests."
+  group = "verification"
+  useJUnitPlatform()
+
+  classpath = sourceSets.integrationTest.runtimeClasspath
+  testClassesDirs = sourceSets.integrationTest.output.classesDirs
+
+  // To make room for Besu threads
+  systemProperties["junit.jupiter.execution.parallel.config.strategy"] = "fixed"
+  int maxThreads = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
+  systemProperties["junit.jupiter.execution.parallel.config.fixed.max-pool-size"] = maxThreads
+  systemProperties["junit.jupiter.execution.parallel.config.fixed.parallelism"] = maxThreads
+
+  testLogging {
+    events TestLogEvent.FAILED,
+        TestLogEvent.SKIPPED,
+        TestLogEvent.STANDARD_ERROR
+    // TestLogEvent.STARTED,
+    // TestLogEvent.PASSED
+    exceptionFormat TestExceptionFormat.FULL
+    showCauses true
+    showExceptions true
+    showStackTraces true
+    // set showStandardStreams if you need to see test logs
+    showStandardStreams false
+  }
+}
+
+afterEvaluate {
+  // Integration tests are getting unstable when running concurrently with other tests
+  tasks.named('integrationTest') {
+    mustRunAfter rootProject.subprojects.collect {
+      it.tasks.matching {
+        it.name == 'test'
+      }
+    }.flatten()
+  }
+}
+
+check.dependsOn(integrationTest)

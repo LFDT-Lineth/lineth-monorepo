@@ -1,0 +1,5 @@
+// Could be useful for consolidating a set of dependencies without any actual classes
+plugins {
+  id 'maru.kotlin-common-minimal-conventions'
+  id 'java-library'
+}
