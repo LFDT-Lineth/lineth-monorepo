@@ -1,19 +1,16 @@
 package linea.contract.l1
 
 import build.linea.contract.ValidiumV1
+import linea.contract.FAKE_READ_ONLY_CREDENTIALS
 import linea.domain.BlockParameter
-import linea.kotlin.encodeHex
 import linea.kotlin.toBigInteger
 import linea.kotlin.toULong
 import linea.web3j.domain.toWeb3j
 import net.consensys.linea.async.toSafeFuture
-import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j
 import org.web3j.tx.gas.StaticGasProvider
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.math.BigInteger
-
-private val fakeCredentials = Credentials.create(ByteArray(32).encodeHex())
 
 open class Web3JLineaValidiumSmartContractClientReadOnly(
   val web3j: Web3j,
@@ -23,7 +20,7 @@ open class Web3JLineaValidiumSmartContractClientReadOnly(
     return ValidiumV1.load(
       contractAddress,
       web3j,
-      fakeCredentials,
+      FAKE_READ_ONLY_CREDENTIALS,
       StaticGasProvider(BigInteger.ZERO, BigInteger.ZERO),
     ).apply {
       this.setDefaultBlockParameter(blockParameter.toWeb3j())

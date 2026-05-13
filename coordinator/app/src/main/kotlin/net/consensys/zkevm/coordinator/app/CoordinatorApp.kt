@@ -208,7 +208,7 @@ class CoordinatorApp(
   }
 
   fun stop(): Int {
-    return runCatching {
+    return try {
       SafeFuture.allOf(
         l1App.stop(),
         api.stop(),
@@ -223,10 +223,10 @@ class CoordinatorApp(
         log.info("CoordinatorApp Stopped")
       }.get()
       0
-    }.recover { e ->
+    } catch (e: Exception) {
       log.error("CoordinatorApp Stopped with error: errorMessage={}", e.message, e)
       1
-    }.getOrThrow()
+    }
   }
 
   private fun initDb(dbConfig: DatabaseConfig): SqlClient {

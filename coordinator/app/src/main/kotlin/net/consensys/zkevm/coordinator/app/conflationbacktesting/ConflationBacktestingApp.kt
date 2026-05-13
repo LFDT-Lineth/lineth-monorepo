@@ -118,7 +118,9 @@ class ConflationBacktestingApp(
     proversConfig = mainCoordinatorConfig.proversConfig.copy(
       proverA = getUpdatedProverConfig(
         proverConfig = mainCoordinatorConfig.proversConfig.proverA,
-        backtestingDirectory = mainCoordinatorConfig.conflation.backtestingDirectory!!,
+        backtestingDirectory = requireNotNull(mainCoordinatorConfig.conflation.backtestingDirectory) {
+          "conflation.backtestingDirectory must be set when running in backtesting mode"
+        },
         conflationBacktestingJobId = conflationBacktestingAppConfig.jobId(),
       ),
       proverB = mainCoordinatorConfig.proversConfig.proverB?.let { proverB ->
@@ -422,8 +424,8 @@ class ConflationBacktestingApp(
     ).thenApply {
       try {
         blobCompressor.close()
-      } catch (_: Throwable) {
-        // Ignored, we want to attempt to close the compressor but it should not prevent the rest of the shutdown
+      } catch (t: Throwable) {
+        log.warn("Failed to close blobCompressor during shutdown: errorMessage={}", t.message, t)
       }
       log.info("Conflation backtesting stopped successfully")
     }

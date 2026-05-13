@@ -3,6 +3,7 @@ package net.consensys.zkevm.ethereum.coordination.aggregation
 import linea.contract.l2.L2MessageServiceSmartContractClientReadOnly
 import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.ethapi.EthApiClient
+import linea.kotlin.zeroHash32
 import linea.persistence.ForcedTransactionsDao
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
@@ -93,6 +94,6 @@ class AggregationL2StateProviderImpl(
   }
 
   companion object {
-    internal val GENESIS_ZERO_HASH = ByteArray(32)
+    val GENESIS_ZERO_HASH: ByteArray get() = zeroHash32()
   }
 }

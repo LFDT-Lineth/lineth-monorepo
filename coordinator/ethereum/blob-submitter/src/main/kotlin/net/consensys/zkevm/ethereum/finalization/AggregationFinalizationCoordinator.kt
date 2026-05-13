@@ -5,6 +5,7 @@ import linea.contract.l1.LineaSmartContractClient
 import linea.domain.BlobRecord
 import linea.domain.ProofToFinalize
 import linea.kotlin.trimToMinutePrecision
+import linea.kotlin.zeroHash32
 import linea.persistence.AggregationsRepository
 import linea.persistence.BlobsRepository
 import linea.timer.TimerSchedule
@@ -188,7 +189,7 @@ class AggregationFinalizationCoordinator(
           aggregationProof = aggregationProof,
           aggregationEndBlob = aggregationEndBlob,
           parentShnarf = parentShnarf,
-          parentL1RollingHash = ByteArray(32),
+          parentL1RollingHash = zeroHash32(),
           parentL1RollingHashMessageNumber = 0,
         )
       }

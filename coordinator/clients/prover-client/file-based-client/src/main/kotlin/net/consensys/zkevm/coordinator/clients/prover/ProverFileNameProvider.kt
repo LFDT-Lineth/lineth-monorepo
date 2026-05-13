@@ -18,6 +18,8 @@ object FileNameSuffixes {
   const val INVALIDITY_PROOF_SUFFIX = "getZkInvalidityProof.json"
 }
 
+private fun encodeHash(hash: ByteArray): String = hash.encodeHex(prefix = false)
+
 object ExecutionProofFileNameProvider : ProverFileNameProvider<ExecutionProofIndex> {
   override fun getFileName(proofIndex: ExecutionProofIndex): String {
     return "${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}-${FileNameSuffixes.EXECUTION_PROOF_SUFFIX}"
@@ -25,7 +27,6 @@ object ExecutionProofFileNameProvider : ProverFileNameProvider<ExecutionProofInd
 }
 
 object CompressionProofRequestFileNameProvider : ProverFileNameProvider<CompressionProofIndex> {
-  private fun encodeHash(hash: ByteArray): String = hash.encodeHex(prefix = false)
   private const val HARD_CODED_VERSION = "0.0"
 
   override fun getFileName(proofIndex: CompressionProofIndex): String {
@@ -39,8 +40,6 @@ object CompressionProofRequestFileNameProvider : ProverFileNameProvider<Compress
 }
 
 object CompressionProofResponseFileNameProvider : ProverFileNameProvider<CompressionProofIndex> {
-  private fun encodeHash(hash: ByteArray): String = hash.encodeHex(prefix = false)
-
   override fun getFileName(proofIndex: CompressionProofIndex): String {
     val requestHashString = encodeHash(proofIndex.hash)
     return "${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}-" +
@@ -50,8 +49,6 @@ object CompressionProofResponseFileNameProvider : ProverFileNameProvider<Compres
 }
 
 object AggregationProofFileNameProvider : ProverFileNameProvider<AggregationProofIndex> {
-  private fun encodeHash(hash: ByteArray): String = hash.encodeHex(prefix = false)
-
   override fun getFileName(proofIndex: AggregationProofIndex): String {
     val requestHashString = encodeHash(proofIndex.hash)
 

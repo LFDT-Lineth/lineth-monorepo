@@ -2,10 +2,10 @@ package linea.contract.l2
 
 import linea.contract.ContractDeploymentBlockNumberProvider
 import linea.contract.EventBasedContractDeploymentBlockNumberProvider
+import linea.contract.FAKE_READ_ONLY_CREDENTIALS
 import linea.contract.StaticContractDeploymentBlockNumberProvider
 import linea.domain.BlockParameter
 import linea.ethapi.EthApiClient
-import linea.kotlin.encodeHex
 import linea.kotlin.toBigInteger
 import linea.kotlin.toULong
 import linea.web3j.SmartContractErrors
@@ -17,14 +17,12 @@ import net.consensys.linea.contract.L2MessageService
 import net.consensys.linea.contract.Web3JContractAsyncHelper
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j
 import org.web3j.tx.Contract
 import org.web3j.tx.gas.StaticGasProvider
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.random.Random
 
 class Web3JL2MessageServiceSmartContractClient(
   private val web3j: Web3j,
@@ -88,7 +86,7 @@ class Web3JL2MessageServiceSmartContractClient(
     ): L2MessageServiceSmartContractClientReadOnly {
       val unUsedTxManager = AsyncFriendlyTransactionManager(
         web3j = web3jClient,
-        credentials = Credentials.create(Random.nextBytes(64).encodeHex()),
+        credentials = FAKE_READ_ONLY_CREDENTIALS,
         chainId = 1L,
       )
       return create(
@@ -106,7 +104,6 @@ class Web3JL2MessageServiceSmartContractClient(
     }
   }
 
-  private val fakeCredentials = Credentials.create(ByteArray(32).encodeHex())
   private val smartContractVersionCache = AtomicReference<L2MessageServiceSmartContractVersion>(null)
 
   private fun <T : Contract> contractClientAtBlock(blockParameter: BlockParameter, contract: Class<T>): T {
@@ -115,7 +112,7 @@ class Web3JL2MessageServiceSmartContractClient(
       L2MessageService::class.java.isAssignableFrom(contract) -> L2MessageService.load(
         contractAddress,
         web3j,
-        fakeCredentials,
+        FAKE_READ_ONLY_CREDENTIALS,
         StaticGasProvider(BigInteger.ZERO, BigInteger.ZERO),
       ).apply {
         this.setDefaultBlockParameter(blockParameter.toWeb3j())

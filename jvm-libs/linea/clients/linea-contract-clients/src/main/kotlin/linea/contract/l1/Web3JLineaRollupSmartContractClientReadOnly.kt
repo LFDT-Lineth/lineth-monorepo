@@ -2,10 +2,10 @@ package linea.contract.l1
 
 import build.linea.contract.LineaRollupV6
 import build.linea.contract.LineaRollupV8
+import linea.contract.FAKE_READ_ONLY_CREDENTIALS
 import linea.contract.events.FinalizedStateUpdatedEvent
 import linea.domain.BlockParameter
 import linea.ethapi.EthLogsClient
-import linea.kotlin.encodeHex
 import linea.kotlin.toBigInteger
 import linea.kotlin.toHexStringUInt256
 import linea.kotlin.toULong
@@ -13,15 +13,12 @@ import linea.web3j.domain.toWeb3j
 import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j
 import org.web3j.tx.Contract
 import org.web3j.tx.gas.StaticGasProvider
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicReference
-
-private val fakeCredentials = Credentials.create(ByteArray(32).encodeHex())
 
 open class Web3JLineaRollupSmartContractClientReadOnly(
   val web3j: Web3j,
@@ -42,14 +39,14 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
       LineaRollupV6::class.java.isAssignableFrom(contract) -> LineaRollupV6.load(
         contractAddress,
         web3j,
-        fakeCredentials,
+        FAKE_READ_ONLY_CREDENTIALS,
         StaticGasProvider(BigInteger.ZERO, BigInteger.ZERO),
       )
 
       LineaRollupV8::class.java.isAssignableFrom(contract) -> LineaRollupV8.load(
         contractAddress,
         web3j,
-        fakeCredentials,
+        FAKE_READ_ONLY_CREDENTIALS,
         StaticGasProvider(BigInteger.ZERO, BigInteger.ZERO),
       )
 

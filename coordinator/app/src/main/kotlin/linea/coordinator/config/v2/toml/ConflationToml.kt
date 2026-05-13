@@ -114,7 +114,10 @@ data class ConflationToml(
         ?: throw AssertionError("please set l2GetLogsEndpoint or l2Endpoint config"),
       blobCompression = this.blobCompression.reified(),
       proofAggregation = this.proofAggregation.reified(),
-      tracesLimits = tracesCountersLimitsV4 ?: tracesCountersLimitsV5!!,
+      tracesLimits = tracesCountersLimitsV4
+        ?: requireNotNull(tracesCountersLimitsV5) {
+          "either tracesCountersLimitsV4 or tracesCountersLimitsV5 must be set"
+        },
       backtestingDirectory = backtestingDirectory,
     )
   }

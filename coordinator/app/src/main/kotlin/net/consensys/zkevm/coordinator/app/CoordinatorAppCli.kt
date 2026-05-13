@@ -82,9 +82,10 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
         printUsage(errorWriter)
         return 1
       }
+      val tracesFiles = tracesLimitsFiles
       if (
-        tracesLimitsFiles!!.tracesLimitsV4File == null &&
-        tracesLimitsFiles!!.tracesLimitsV5File == null
+        tracesFiles == null ||
+        (tracesFiles.tracesLimitsV4File == null && tracesFiles.tracesLimitsV5File == null)
       ) {
         errorWriter.println("Please provide a traces-limits file!")
         printUsage(errorWriter)
@@ -110,8 +111,8 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
       val configs =
         loadConfigs(
           coordinatorConfigFiles = configFiles.map { it.toPath() },
-          tracesLimitsFileV4 = tracesLimitsFiles!!.tracesLimitsV4File?.toPath(),
-          tracesLimitsFileV5 = tracesLimitsFiles!!.tracesLimitsV5File?.toPath(),
+          tracesLimitsFileV4 = tracesFiles.tracesLimitsV4File?.toPath(),
+          tracesLimitsFileV5 = tracesFiles.tracesLimitsV5File?.toPath(),
           smartContractErrorsFile = smartContractErrorsFile.toPath(),
           gasPriceCapTimeOfDayMultipliersFile = gasPriceCapTimeOfDayMultipliersFile.toPath(),
           logger = logger,

@@ -46,7 +46,9 @@ data class TracesToml(
 
   private fun reifiedWithCommonDefaults(config: ClientApiConfigToml?): TracesConfig.ClientApiConfig {
     return TracesConfig.ClientApiConfig(
-      endpoints = (config?.endpoints ?: endpoints)!!,
+      endpoints = requireNotNull(config?.endpoints ?: endpoints) {
+        "endpoints must be set either in the specific config or in the common traces config"
+      },
       requestLimitPerEndpoint = config?.requestLimitPerEndpoint ?: requestLimitPerEndpoint,
       requestTimeout = config?.requestTimeout ?: requestTimeout,
       requestRetries = config?.requestRetries?.asDomain ?: requestRetries.asDomain,
@@ -60,7 +62,9 @@ data class TracesToml(
         null
       } else {
         TracesConfig.ClientApiConfig(
-          endpoints = endpoints!!,
+          endpoints = requireNotNull(endpoints) {
+            "traces.endpoints must be set when counters and conflation specific endpoints are not configured"
+          },
           requestLimitPerEndpoint = requestLimitPerEndpoint,
           requestTimeout = requestTimeout,
           requestRetries = requestRetries.asDomain,

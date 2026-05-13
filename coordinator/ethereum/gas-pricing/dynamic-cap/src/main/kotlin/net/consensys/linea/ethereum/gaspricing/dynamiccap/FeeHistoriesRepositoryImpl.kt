@@ -124,10 +124,15 @@ class FeeHistoriesRepositoryImpl(
           ).thenApply { percentileAvgReward ->
           lastPercentileGasFees.set(
             PercentileGasFees(
-              percentileBaseFeePerGas!!,
-              percentileBaseFeePerBlobGas!!
-                .coerceAtLeast(config.minBaseFeePerBlobGasToCache ?: percentileBaseFeePerBlobGas),
-              percentileAvgReward!!,
+              percentileBaseFeePerGas = requireNotNull(percentileBaseFeePerGas) {
+                "DB returned null for percentileBaseFeePerGas — no fee history rows from block $fromBlockNumber"
+              },
+              percentileBaseFeePerBlobGas = requireNotNull(percentileBaseFeePerBlobGas) {
+                "DB returned null for percentileBaseFeePerBlobGas — no fee history rows from block $fromBlockNumber"
+              }.coerceAtLeast(config.minBaseFeePerBlobGasToCache ?: percentileBaseFeePerBlobGas),
+              percentileAvgReward = requireNotNull(percentileAvgReward) {
+                "DB returned null for percentileAvgReward — no fee history rows from block $fromBlockNumber"
+              },
             ),
           )
         }

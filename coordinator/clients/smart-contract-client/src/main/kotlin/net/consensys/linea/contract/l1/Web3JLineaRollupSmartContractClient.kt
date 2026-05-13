@@ -108,7 +108,7 @@ class Web3JLineaRollupSmartContractClient internal constructor(
       .thenCompose { blockNumber ->
         web3jLineaClient.setDefaultBlockParameter(DefaultBlockParameter.valueOf(blockNumber))
         resetNonce(blockNumber)
-          .thenApply { BlockAndNonce(blockNumber.toULong(), currentNonce()) }
+          .thenApply { currentNonce -> BlockAndNonce(blockNumber.toULong(), currentNonce) }
       }
   }
 

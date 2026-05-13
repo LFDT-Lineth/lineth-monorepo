@@ -32,10 +32,10 @@ class HistoricVariableCostProviderImpl(
           try {
             MinerExtraDataV1.decodeV1(block.extraData.encodeHex())
               .variableCostInKWei.toDouble() * OneKWei
-          } catch (th: Throwable) {
+          } catch (e: Exception) {
             log.debug(
               "Will return historic variable cost as zero due to failure in decoding extra data: {}",
-              th.message,
+              e.message,
             )
             0.0
           }

@@ -24,14 +24,6 @@ class GasPriceCapProviderForFinalization(
       "gasPriceCapMultiplier must be no less than 0. Value=${config.gasPriceCapMultiplier}"
     }
 
-    require(config.maxPriorityFeePerGasCap >= 0uL) {
-      "maxPriorityFeePerGasCap must be no less than 0. Value=${config.maxPriorityFeePerGasCap}"
-    }
-
-    require(config.maxFeePerGasCap >= 0uL) {
-      "maxFeePerGasCap must be no less than 0. Value=${config.maxFeePerGasCap}"
-    }
-
     metricsFacade.createGauge(
       category = LineaMetricsCategory.GAS_PRICE_CAP,
       name = "l1.finalization.maxpriorityfeepergascap",
@@ -56,11 +48,8 @@ class GasPriceCapProviderForFinalization(
 
     val amplifiedMaxFeePerGasCap = (config.maxFeePerGasCap.toDouble() * config.gasPriceCapMultiplier).toULong()
     val maxFeePerGasCap = (
-      if (gasPriceCaps.maxBaseFeePerGasCap != null) {
-        gasPriceCaps.maxBaseFeePerGasCap!! + maxPriorityFeePerGasCap
-      } else {
-        gasPriceCaps.maxFeePerGasCap
-      }
+      gasPriceCaps.maxBaseFeePerGasCap?.let { it + maxPriorityFeePerGasCap }
+        ?: gasPriceCaps.maxFeePerGasCap
       )
       .coerceAtMost(amplifiedMaxFeePerGasCap)
       .run { if (this <= 0uL) amplifiedMaxFeePerGasCap else this }
