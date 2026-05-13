@@ -9,8 +9,8 @@ import "fmt"
 // The position argument selects which row of the module the predicate is
 // pinned to. Only three values are accepted:
 //
-//   -  0: the first row (row 0).
-//   -  1: the second row (row 1).
+//   - 0: the first row (row 0).
+//   - 1: the second row (row 1).
 //   - -1: the last row (row n−1, where n is the module size).
 //
 // Every column reference in expr is interpreted as the column's value at the
