@@ -97,7 +97,6 @@ class ConflationApp(
     maxInflightRequestsPerClient = configs.stateManager.requestLimitPerEndpoint,
     requestRetry = configs.stateManager.requestRetries.toJsonRpcRetry(),
     requestTimeout = configs.stateManager.requestTimeout?.inWholeMilliseconds,
-    zkStateManagerVersion = configs.stateManager.version,
     logger = LogManager.getLogger("clients.StateManagerShomeiClient"),
   )
   val tracesClients =

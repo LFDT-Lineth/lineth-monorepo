@@ -187,7 +187,6 @@ End point exposed by the state manager and used in the flow are:
 rollup_getZkEVMStateMerkleProofV0(
   startBlockNumber      int
   endBlockNumber        int
-  zkStateManagerVersion string
 ):
   zkParentStateRootHash  string
   zkStateMerkleProof     StateMerkleProof[^1]

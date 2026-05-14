@@ -26,6 +26,5 @@ data class TracesApiConfig(
 
 data class ShomeiApiConfig(
   val endpoint: URL,
-  val version: String,
   val requestLimitPerEndpoint: UInt = 1u,
 )

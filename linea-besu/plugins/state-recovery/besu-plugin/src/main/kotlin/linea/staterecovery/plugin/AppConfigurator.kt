@@ -96,7 +96,6 @@ fun createAppClients(
   stateManagerClientEndpoint: URI,
   blobscanRequestRateLimitBackoffDelay: Duration? = null,
   stateManagerRequestRetry: RetryConfig = RetryConfig(backoffDelay = 1.seconds),
-  zkStateManagerVersion: String = "2.3.0",
 ): AppClients {
   val ethLogsSearcher =
     run {
@@ -143,7 +142,6 @@ fun createAppClients(
       endpoints = listOf(stateManagerClientEndpoint),
       maxInflightRequestsPerClient = 10u,
       requestRetry = stateManagerRequestRetry.toRequestRetryConfig(),
-      zkStateManagerVersion = zkStateManagerVersion,
       logger = LogManager.getLogger("linea.plugin.staterecovery.clients.state-manager"),
     )
   val transactionDetailsClient: TransactionDetailsClient =

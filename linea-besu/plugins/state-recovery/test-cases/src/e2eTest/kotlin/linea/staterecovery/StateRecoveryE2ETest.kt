@@ -64,7 +64,6 @@ class StateRecoveryE2ETest {
         backoffDelay = 10.milliseconds,
         timeout = 2.seconds,
       ),
-      zkStateManagerVersion = "2.3.0",
       logger = LogManager.getLogger("test.clients.l1.state-manager"),
     )
 

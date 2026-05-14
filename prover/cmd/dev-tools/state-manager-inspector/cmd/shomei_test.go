@@ -45,7 +45,6 @@ func TestShomeiReceptor(t *testing.T) {
 		&zkEVMStateMerkleProofV0Req{
 			StartBlockNumber: 0,
 			EndBlockNumber:   1,
-			ShomeiVersion:    "0.0.1-dev-18823579",
 		},
 	)
 

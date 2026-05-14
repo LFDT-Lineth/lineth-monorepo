@@ -124,7 +124,6 @@ describe("Shomei Linea get proof test suite", () => {
       const { zkEndStateRootHash } = await lineaShomeiClient.rollupGetZkEVMStateMerkleProofV0({
         startBlockNumber: Number(targetL2BlockNumber),
         endBlockNumber: Number(targetL2BlockNumber),
-        zkStateManagerVersion: shomeiImageTag,
       });
 
       logger.info(`zkEndStateRootHash=${zkEndStateRootHash}`);

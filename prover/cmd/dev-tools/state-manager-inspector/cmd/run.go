@@ -95,7 +95,6 @@ func fetchAndInspect(cmd *cobra.Command, args []string) error {
 			&zkEVMStateMerkleProofV0Req{
 				StartBlockNumber: start,
 				EndBlockNumber:   stop,
-				ShomeiVersion:    shomeiVersion,
 			},
 		)
 

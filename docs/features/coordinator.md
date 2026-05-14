@@ -173,7 +173,6 @@ Submits one or more backtesting jobs. Each element in `params` is an independent
       },
       "shomeiApi": {
         "endpoint": "http://shomei:8888",
-        "version": "v0.0.4",
         "requestLimitPerEndpoint": 1
       }
     }
@@ -213,7 +212,6 @@ curl -X POST http://localhost:9546 \
         },
         "shomeiApi": {
           "endpoint": "http://shomei:8888",
-          "version": "3.0.0",
           "requestLimitPerEndpoint": 1
         }
       }
@@ -307,7 +305,6 @@ Stops one in-progress backtesting job. `params` must be a JSON array containing 
 | `tracesConflationApi.version` | string | If split | Must be identical to `tracesApi.version`                                                                                                      |
 | `tracesConflationApi.requestLimitPerEndpoint` | integer | If split | Max concurrent requests to the conflation traces client                                                                                       |
 | `shomeiApi.endpoint` | string | ✓ | State manager (Shomei) URL                                                                                                                    |
-| `shomeiApi.version` | string | ✓ | Shomei API version string                                                                                                                     |
 | `shomeiApi.requestLimitPerEndpoint` | integer | ✓ | Max concurrent requests to Shomei                                                                                                             |
 
 ## Test Coverage

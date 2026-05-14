@@ -24,7 +24,6 @@ import java.net.URI
 
 class StateManagerV1JsonRpcClient(
   private val rpcClient: JsonRpcV2Client,
-  private val zkStateManagerVersion: String,
   private val log: Logger = LogManager.getLogger(StateManagerV1JsonRpcClient::class.java),
 ) : StateManagerClientV1, StateManagerAccountProofClient {
 
@@ -37,7 +36,6 @@ class StateManagerV1JsonRpcClient(
       maxInflightRequestsPerClient: UInt,
       requestRetry: RequestRetryConfig,
       requestTimeout: Long? = null,
-      zkStateManagerVersion: String,
       logger: Logger = LogManager.getLogger(StateManagerV1JsonRpcClient::class.java),
     ): StateManagerV1JsonRpcClient {
       return StateManagerV1JsonRpcClient(
@@ -49,7 +47,6 @@ class StateManagerV1JsonRpcClient(
           log = logger,
           shallRetryRequestsClientBasePredicate = { it is Err },
         ),
-        zkStateManagerVersion = zkStateManagerVersion,
       )
     }
   }
@@ -70,8 +67,6 @@ class StateManagerV1JsonRpcClient(
         blockInterval.startBlockNumber.toLong(),
         "endBlockNumber",
         blockInterval.endBlockNumber.toLong(),
-        "zkStateManagerVersion",
-        zkStateManagerVersion,
       ),
     )
 

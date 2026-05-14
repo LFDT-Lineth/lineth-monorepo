@@ -65,7 +65,6 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
         backoffDelay = 1.seconds,
         timeout = 4.seconds,
       ),
-      zkStateManagerVersion = "2.3.0",
       logger = LogManager.getLogger("test.clients.l1.state-manager"),
     )
 

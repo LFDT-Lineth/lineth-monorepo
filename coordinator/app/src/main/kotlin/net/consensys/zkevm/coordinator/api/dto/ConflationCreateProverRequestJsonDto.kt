@@ -1,5 +1,6 @@
 package net.consensys.zkevm.coordinator.api.dto
 
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import linea.blob.BlobCompressorVersion
 import linea.kotlin.toURL
@@ -44,8 +45,10 @@ data class ConflationCreateProverRequestJsonDto(
   companion object {
     fun parseFrom(request: JsonRpcRequest): List<ConflationCreateProverRequestJsonDto> {
       try {
-        return jacksonObjectMapper().readValue(
-          jacksonObjectMapper().writeValueAsString(request.params),
+        val objectMapper = jacksonObjectMapper()
+          .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        return objectMapper.readValue(
+          objectMapper.writeValueAsString(request.params),
           Array<ConflationCreateProverRequestJsonDto>::class.java,
         ).toList()
       } catch (e: Exception) {
@@ -77,18 +80,15 @@ data class TracesApiDto(
 
 data class ShomeiApiDto(
   val endpoint: String,
-  val version: String,
   val requestLimitPerEndpoint: Int,
 ) {
   constructor() : this(
     endpoint = "",
-    version = "",
     requestLimitPerEndpoint = 0,
   )
   fun toDomainObject(): ShomeiApiConfig {
     return ShomeiApiConfig(
       endpoint = this.endpoint.toURL(),
-      version = this.version,
       requestLimitPerEndpoint = this.requestLimitPerEndpoint.toUInt(),
     )
   }

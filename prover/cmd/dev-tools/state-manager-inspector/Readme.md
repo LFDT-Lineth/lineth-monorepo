@@ -29,7 +29,6 @@ Flags:
   -h, --help                    help for state-manager-inspector
       --max-rps duration        minimal time to wait between each request (default 20ms)
       --num-threads int         number of threads to use for verification (default 10)
-      --shomei-version string   version string to send to shomei via rpc (default "0.0.1")
       --start int               starting block of the range (must be the beginning of a conflated batch)
       --stop int                end of the range to fetch
       --url string              host:port of the shomei state-manager to query (default "https://127.0.0.1:443")
@@ -38,6 +37,5 @@ Flags:
 ## Example
 
 ```bash
-bin/state-manager-inspector --url https://127.0.0.1:443 --start 0 --stop 1000 --shomei-version 0.0.1-dev-18823579 --max-rps 20ms --num-threads 3 --block-range 10
+bin/state-manager-inspector --url https://127.0.0.1:443 --start 0 --stop 1000 --max-rps 20ms --num-threads 3 --block-range 10
 ```
-

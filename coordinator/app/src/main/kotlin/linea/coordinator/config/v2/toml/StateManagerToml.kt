@@ -6,7 +6,6 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 data class StateManagerToml(
-  val version: String,
   val endpoints: List<URL>,
   val requestLimitPerEndpoint: UInt = UInt.MAX_VALUE,
   val requestTimeout: Duration? = null,
@@ -18,7 +17,6 @@ data class StateManagerToml(
 ) {
   fun reified(): StateManagerConfig {
     return StateManagerConfig(
-      version = this.version,
       endpoints = this.endpoints,
       requestLimitPerEndpoint = this.requestLimitPerEndpoint,
       requestTimeout = this.requestTimeout,

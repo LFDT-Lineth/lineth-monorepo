@@ -153,7 +153,6 @@ class ConflationBacktestingApp(
     stateManager = mainCoordinatorConfig.stateManager.copy(
       endpoints = listOf(conflationBacktestingAppConfig.shomeiApi.endpoint),
       requestLimitPerEndpoint = conflationBacktestingAppConfig.shomeiApi.requestLimitPerEndpoint,
-      version = conflationBacktestingAppConfig.shomeiApi.version,
     ),
   ).also {
     log.info("Conflation backtesting coordinatorConfig={}", it)
@@ -223,7 +222,6 @@ class ConflationBacktestingApp(
   private val zkStateClient: StateManagerClientV1 = StateManagerV1JsonRpcClient.create(
     rpcClientFactory = httpJsonRpcClientFactory,
     endpoints = backtestingCoordinatorConfig.stateManager.endpoints.map { it.toURI() },
-    zkStateManagerVersion = backtestingCoordinatorConfig.stateManager.version,
     maxInflightRequestsPerClient = backtestingCoordinatorConfig.stateManager.requestLimitPerEndpoint,
     requestRetry = backtestingCoordinatorConfig.stateManager.requestRetries.toJsonRpcRetry(),
     requestTimeout = backtestingCoordinatorConfig.stateManager.requestTimeout?.inWholeMilliseconds,

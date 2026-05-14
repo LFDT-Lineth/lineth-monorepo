@@ -3,7 +3,6 @@ import type { Client, Hash, Transport, Chain, Account } from "viem";
 export type RollupGetZkEVMStateMerkleProofV0Parameters = {
   startBlockNumber: number;
   endBlockNumber: number;
-  zkStateManagerVersion: string;
 };
 
 export type RollupGetZkEVMStateMerkleProofV0ReturnType = {

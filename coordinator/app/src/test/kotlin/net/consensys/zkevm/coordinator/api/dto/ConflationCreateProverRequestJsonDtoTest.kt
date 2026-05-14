@@ -29,7 +29,6 @@ class ConflationCreateProverRequestJsonDtoTest {
         ),
         shomeiApi = ShomeiApiDto(
           endpoint = "https://example.com/shomei",
-          version = "v1",
           requestLimitPerEndpoint = 50,
         ),
       ),
@@ -46,7 +45,6 @@ class ConflationCreateProverRequestJsonDtoTest {
         ),
         shomeiApi = ShomeiApiDto(
           endpoint = "https://example.com/shomei",
-          version = "v2",
           requestLimitPerEndpoint = 50,
         ),
       ),
@@ -72,7 +70,6 @@ class ConflationCreateProverRequestJsonDtoTest {
           ),
           "shomeiApi" to mapOf(
             "endpoint" to "https://example.com/shomei",
-            "version" to "v1",
             "requestLimitPerEndpoint" to 50,
           ),
         ),
@@ -87,7 +84,6 @@ class ConflationCreateProverRequestJsonDtoTest {
           ),
           "shomeiApi" to mapOf(
             "endpoint" to "https://example.com/shomei",
-            "version" to "v2",
             "requestLimitPerEndpoint" to 50,
           ),
         ),
@@ -98,6 +94,55 @@ class ConflationCreateProverRequestJsonDtoTest {
 
     assertEquals(2, dtoList.size)
     assertThat(dtoList).isEqualTo(expectedDtoList)
+  }
+
+  @Test
+  fun `parseFrom should ignore unknown JSON RPC request params`() {
+    val jsonRpcRequest = JsonRpcRequestListParams(
+      jsonrpc = "2.0",
+      id = 1,
+      method = "conflation_createProverRequests",
+      params = listOf(
+        mapOf(
+          "startBlockNumber" to 10,
+          "endBlockNumber" to 20,
+          "blobCompressorVersion" to "V3",
+          "unknownTopLevelField" to "ignored",
+          "tracesApi" to mapOf(
+            "endpoint" to "https://example.com/traces",
+            "version" to "v1",
+            "requestLimitPerEndpoint" to 100,
+            "unknownTracesField" to "ignored",
+          ),
+          "shomeiApi" to mapOf(
+            "endpoint" to "https://example.com/shomei",
+            "version" to "legacy-version-field",
+            "requestLimitPerEndpoint" to 50,
+          ),
+        ),
+      ),
+    )
+
+    val dtoList = ConflationCreateProverRequestJsonDto.parseFrom(jsonRpcRequest)
+
+    assertThat(dtoList).containsExactly(
+      ConflationCreateProverRequestJsonDto(
+        startBlockNumber = 10,
+        endBlockNumber = 20,
+        blobCompressorVersion = "V3",
+        batchesFixedSize = null,
+        parentBlobShnarf = null,
+        tracesApi = TracesApiDto(
+          endpoint = "https://example.com/traces",
+          version = "v1",
+          requestLimitPerEndpoint = 100,
+        ),
+        shomeiApi = ShomeiApiDto(
+          endpoint = "https://example.com/shomei",
+          requestLimitPerEndpoint = 50,
+        ),
+      ),
+    )
   }
 
   @Test

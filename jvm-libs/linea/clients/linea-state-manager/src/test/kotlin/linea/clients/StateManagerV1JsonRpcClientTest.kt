@@ -70,7 +70,6 @@ class StateManagerV1JsonRpcClientTest {
         10.milliseconds,
         1u,
       ),
-      zkStateManagerVersion = "0.1.2",
     )
   }
 
