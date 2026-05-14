@@ -45,8 +45,7 @@ Trace counts per module determine whether a batch can be proven within circuit c
 
 ```
 linea_getBlockTracesCountersV2(
-    blockNumber:                 string,
-    expectedTracesEngineVersion: string
+    blockNumber: string
 ) → {
     tracesEngineVersion: string,
     tracesCounters:      map[string, string]
@@ -55,9 +54,8 @@ linea_getBlockTracesCountersV2(
 
 ```
 linea_generateConflatedTracesToFileV2(
-    startBlockNumber:            string,
-    endBlockNumber:              string,
-    expectedTracesEngineVersion: string
+    startBlockNumber: string,
+    endBlockNumber:   string
 ) → {
     tracesEngineVersion:      string,
     conflatedTracesFileName:  string  // $first-$last.conflated.v$version.lt

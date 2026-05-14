@@ -63,7 +63,6 @@ class TracesGeneratorJsonRpcClientV2Test {
       }
   private lateinit var fakeTracesServerUri: URL
   private lateinit var vertxHttpJsonRpcClient: JsonRpcClient
-  private val expectedTracesApiVersion = "2.3.4"
 
   @BeforeEach
   fun setup(vertx: Vertx) {
@@ -91,7 +90,6 @@ class TracesGeneratorJsonRpcClientV2Test {
       TracesGeneratorJsonRpcClientV2(
         vertxHttpJsonRpcClient,
         TracesGeneratorJsonRpcClientV2.Config(
-          expectedTracesApiVersion = expectedTracesApiVersion,
           fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
         ),
       )
@@ -173,15 +171,13 @@ class TracesGeneratorJsonRpcClientV2Test {
           JsonObject.of(
             "blockNumber",
             1,
-            "expectedTracesEngineVersion",
-            expectedTracesApiVersion,
           ),
         ),
       )
     wiremock.verify(
       postRequestedFor(urlEqualTo("/"))
         .withHeader("Content-Type", equalTo("application/json"))
-        .withRequestBody(equalToJson(expectedJsonRequest.toString(), false, true)),
+        .withRequestBody(equalToJson(expectedJsonRequest.toString(), false, false)),
     )
   }
 
@@ -313,15 +309,13 @@ class TracesGeneratorJsonRpcClientV2Test {
             queryStartBlockNumber.toLong(),
             "endBlockNumber",
             queryEndBlockNumber.toLong(),
-            "expectedTracesEngineVersion",
-            expectedTracesApiVersion,
           ),
         ),
       )
     wiremock.verify(
       postRequestedFor(urlEqualTo("/"))
         .withHeader("Content-Type", equalTo("application/json"))
-        .withRequestBody(equalToJson(expectedJsonRequest.toString(), false, true)),
+        .withRequestBody(equalToJson(expectedJsonRequest.toString(), false, false)),
     )
   }
 
@@ -442,7 +436,6 @@ class TracesGeneratorJsonRpcClientV2Test {
       TracesGeneratorJsonRpcClientV2(
         vertxHttpJsonRpcClient,
         TracesGeneratorJsonRpcClientV2.Config(
-          expectedTracesApiVersion = expectedTracesApiVersion,
           fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
         ),
       )
@@ -489,7 +482,6 @@ class TracesGeneratorJsonRpcClientV2Test {
       TracesGeneratorJsonRpcClientV2(
         vertxHttpJsonRpcClient,
         TracesGeneratorJsonRpcClientV2.Config(
-          expectedTracesApiVersion = expectedTracesApiVersion,
           ignoreTracesGeneratorErrors = true,
           fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
         ),
@@ -502,7 +494,7 @@ class TracesGeneratorJsonRpcClientV2Test {
     assertThat(result).isInstanceOf(Ok::class.java)
     result as Ok
     assertThat(result.value.tracesCounters).isEqualTo(TracesCountersV2.EMPTY_TRACES_COUNT)
-    assertThat(result.value.tracesEngineVersion).isEqualTo(expectedTracesApiVersion)
+    assertThat(result.value.tracesEngineVersion).isEqualTo("fallback")
   }
 
   @Test
@@ -572,7 +564,7 @@ class TracesGeneratorJsonRpcClientV2Test {
     wiremock.verify(
       postRequestedFor(urlEqualTo("/"))
         .withHeader("Content-Type", equalTo("application/json"))
-        .withRequestBody(equalToJson(expectedJsonRequest.toString(), false, true)),
+        .withRequestBody(equalToJson(expectedJsonRequest.toString(), false, false)),
     )
   }
 

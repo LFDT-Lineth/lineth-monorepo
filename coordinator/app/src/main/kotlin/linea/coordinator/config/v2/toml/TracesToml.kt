@@ -6,7 +6,6 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 data class TracesToml(
-  val expectedTracesApiVersion: String,
   val endpoints: List<URL>? = null,
   val requestLimitPerEndpoint: UInt = UInt.MAX_VALUE,
   val requestTimeout: Duration? = null,
@@ -72,7 +71,6 @@ data class TracesToml(
       }
 
     return TracesConfig(
-      expectedTracesApiVersion = expectedTracesApiVersion,
       common = common,
       counters = if (common == null) reifiedWithCommonDefaults(this.counters) else null,
       conflation = if (common == null) reifiedWithCommonDefaults(this.conflation) else null,

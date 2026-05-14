@@ -20,7 +20,6 @@ data class ConflationBacktestingConfig(
 
 data class TracesApiConfig(
   val endpoint: URL,
-  val version: String,
   val requestLimitPerEndpoint: UInt = 1u,
 )
 

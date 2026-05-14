@@ -84,12 +84,6 @@ class ConflationBacktestingApp(
     require(mainCoordinatorConfigTracesEndpoints.intersect(backtestingTracesEndpoints).isEmpty()) {
       "Cannot use same traces endpoint for backtesting and main conflation"
     }
-    require(
-      conflationBacktestingAppConfig.tracesConflationApi == null ||
-        conflationBacktestingAppConfig.tracesConflationApi.version == conflationBacktestingAppConfig.tracesApi.version,
-    ) {
-      "When tracesConflationApi is set, its version must match tracesApi.version"
-    }
   }
 
   private val log = LogManager.getLogger("conflation_backtesting_job_${conflationBacktestingAppConfig.jobId()}")
@@ -144,7 +138,6 @@ class ConflationBacktestingApp(
         )
       }
       mainCoordinatorConfig.traces.copy(
-        expectedTracesApiVersion = bt.tracesApi.version,
         common = if (conflationApiClient == null) tracesApiClient else null,
         counters = if (conflationApiClient == null) null else tracesApiClient,
         conflation = conflationApiClient,

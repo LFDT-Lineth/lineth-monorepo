@@ -57,12 +57,11 @@ class TracesGeneratorJsonRpcClientV2(
   )
 
   data class Config(
-    val expectedTracesApiVersion: String,
     val ignoreTracesGeneratorErrors: Boolean = false,
     val fallBackTracesCounters: TracesCounters,
   )
 
-  private var requestBuilder = RequestBuilder(config.expectedTracesApiVersion)
+  private var requestBuilder = RequestBuilder()
 
   override fun getTracesCounters(
     blockNumber: ULong,
@@ -113,7 +112,7 @@ class TracesGeneratorJsonRpcClientV2(
   private fun createFallbackTracesCountersResponse(): GetTracesCountersResponse {
     return GetTracesCountersResponse(
       tracesCounters = config.fallBackTracesCounters,
-      tracesEngineVersion = config.expectedTracesApiVersion,
+      tracesEngineVersion = FALLBACK_TRACES_ENGINE_VERSION,
     )
   }
 
@@ -121,20 +120,20 @@ class TracesGeneratorJsonRpcClientV2(
     startBlockNumber: ULong,
     endBlockNumber: ULong,
   ): GenerateTracesResponse {
-    val defaultFileName = "$startBlockNumber-$endBlockNumber.fake-empty.conflated.${config.expectedTracesApiVersion}.lt"
+    val defaultFileName = "$startBlockNumber-$endBlockNumber.fake-empty.conflated.$FALLBACK_TRACES_ENGINE_VERSION.lt"
     return GenerateTracesResponse(
       tracesFileName = defaultFileName,
-      tracesEngineVersion = config.expectedTracesApiVersion,
+      tracesEngineVersion = FALLBACK_TRACES_ENGINE_VERSION,
     )
   }
 
   private fun createFallbackVirtualBlockConflatedTracesResponse(
     blockNumber: ULong,
   ): GenerateTracesResponse {
-    val defaultFileName = "$blockNumber.fake-empty.conflated.${config.expectedTracesApiVersion}.lt"
+    val defaultFileName = "$blockNumber.fake-empty.conflated.$FALLBACK_TRACES_ENGINE_VERSION.lt"
     return GenerateTracesResponse(
       tracesFileName = defaultFileName,
-      tracesEngineVersion = config.expectedTracesApiVersion,
+      tracesEngineVersion = FALLBACK_TRACES_ENGINE_VERSION,
     )
   }
 
@@ -174,7 +173,6 @@ class TracesGeneratorJsonRpcClientV2(
   }
 
   internal class RequestBuilder(
-    private val expectedTracesEngineVersion: String,
     private val id: AtomicInteger = AtomicInteger(0),
   ) {
     fun buildGetTracesCountersV2Request(blockNumber: ULong): JsonRpcRequest {
@@ -186,8 +184,6 @@ class TracesGeneratorJsonRpcClientV2(
           JsonObject.of(
             "blockNumber",
             blockNumber,
-            "expectedTracesEngineVersion",
-            expectedTracesEngineVersion,
           ),
         ),
       )
@@ -204,8 +200,6 @@ class TracesGeneratorJsonRpcClientV2(
             startBlockNumber,
             "endBlockNumber",
             endBlockNumber,
-            "expectedTracesEngineVersion",
-            expectedTracesEngineVersion,
           ),
         ),
       )
@@ -232,6 +226,8 @@ class TracesGeneratorJsonRpcClientV2(
   }
 
   companion object {
+    private const val FALLBACK_TRACES_ENGINE_VERSION = "fallback"
+
     internal val retryableMethods = setOf(
       "linea_getBlockTracesCountersV2",
       "linea_generateConflatedTracesToFileV2",

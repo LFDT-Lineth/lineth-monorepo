@@ -4,7 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 class TracesApiRequestPriorityComparatorTest {
-  private val reqBuilder = TracesGeneratorJsonRpcClientV2.RequestBuilder("v2")
+  private val reqBuilder = TracesGeneratorJsonRpcClientV2.RequestBuilder()
   private val comparator = TracesGeneratorJsonRpcClientV2.requestPriorityComparator
 
   @Test

@@ -19,12 +19,10 @@ class ConflationCreateProverRequestJsonDtoTest {
         parentBlobShnarf = null,
         tracesApi = TracesApiDto(
           endpoint = "https://example.com/traces/counters",
-          version = "v1",
           requestLimitPerEndpoint = 100,
         ),
         tracesConflationApi = TracesApiDto(
           endpoint = "https://example.com/traces/conflation",
-          version = "v1",
           requestLimitPerEndpoint = 100,
         ),
         shomeiApi = ShomeiApiDto(
@@ -40,7 +38,6 @@ class ConflationCreateProverRequestJsonDtoTest {
         parentBlobShnarf = null,
         tracesApi = TracesApiDto(
           endpoint = "https://example.com/traces",
-          version = "v2",
           requestLimitPerEndpoint = 100,
         ),
         shomeiApi = ShomeiApiDto(
@@ -60,12 +57,10 @@ class ConflationCreateProverRequestJsonDtoTest {
           "blobCompressorVersion" to "V3",
           "tracesApi" to mapOf(
             "endpoint" to "https://example.com/traces/counters",
-            "version" to "v1",
             "requestLimitPerEndpoint" to 100,
           ),
           "tracesConflationApi" to mapOf(
             "endpoint" to "https://example.com/traces/conflation",
-            "version" to "v1",
             "requestLimitPerEndpoint" to 100,
           ),
           "shomeiApi" to mapOf(
@@ -79,7 +74,6 @@ class ConflationCreateProverRequestJsonDtoTest {
           "blobCompressorVersion" to "V2",
           "tracesApi" to mapOf(
             "endpoint" to "https://example.com/traces",
-            "version" to "v2",
             "requestLimitPerEndpoint" to 100,
           ),
           "shomeiApi" to mapOf(
@@ -110,7 +104,6 @@ class ConflationCreateProverRequestJsonDtoTest {
           "unknownTopLevelField" to "ignored",
           "tracesApi" to mapOf(
             "endpoint" to "https://example.com/traces",
-            "version" to "v1",
             "requestLimitPerEndpoint" to 100,
             "unknownTracesField" to "ignored",
           ),
@@ -134,7 +127,6 @@ class ConflationCreateProverRequestJsonDtoTest {
         parentBlobShnarf = null,
         tracesApi = TracesApiDto(
           endpoint = "https://example.com/traces",
-          version = "v1",
           requestLimitPerEndpoint = 100,
         ),
         shomeiApi = ShomeiApiDto(

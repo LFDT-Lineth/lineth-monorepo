@@ -60,19 +60,16 @@ data class ConflationCreateProverRequestJsonDto(
 
 data class TracesApiDto(
   val endpoint: String,
-  val version: String,
   val requestLimitPerEndpoint: Int,
 ) {
   constructor() : this(
     endpoint = "",
-    version = "",
     requestLimitPerEndpoint = 0,
   )
 
   fun toDomainObject(): TracesApiConfig {
     return TracesApiConfig(
       endpoint = this.endpoint.toURL(),
-      version = this.version,
       requestLimitPerEndpoint = this.requestLimitPerEndpoint.toUInt(),
     )
   }

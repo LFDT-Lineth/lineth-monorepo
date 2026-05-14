@@ -6,7 +6,6 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 data class TracesConfig(
-  val expectedTracesApiVersion: String,
   val common: ClientApiConfig? = null,
   val counters: ClientApiConfig? = null,
   val conflation: ClientApiConfig? = null,

@@ -424,7 +424,6 @@ The endpoint exposed by the traces-API and used in the flow are:
 ```
 linea_getBlockTracesCountersV2(
   blockNumber                    string
-  expectedTracesEngineVersion    string
 ):
   tracesEngineVersion        string
   tracesCounters             map[string:string]
@@ -436,7 +435,6 @@ linea_getBlockTracesCountersV2(
 linea_generateConflatedTracesToFileV2(
   startBlockNumber              string
   endBlockNumber                string
-  expectedTracesEngineVersion   string
 ):
   tracesEngineVersion        string
   conflatedTracesFileName    string //$first-$last.conflated.v$version.lt

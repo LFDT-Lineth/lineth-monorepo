@@ -20,7 +20,6 @@ object TracesClientFactory {
     rpcClientFactory: VertxHttpJsonRpcClientFactory,
     apiConfig: ClientApiConfig,
     ignoreTracesGeneratorErrors: Boolean,
-    expectedTracesApiVersion: String,
     fallBackTracesCounters: TracesCounters,
     logger: Logger,
   ): TracesGeneratorJsonRpcClientV2 {
@@ -36,7 +35,6 @@ object TracesClientFactory {
       ),
       config =
       TracesGeneratorJsonRpcClientV2.Config(
-        expectedTracesApiVersion = expectedTracesApiVersion,
         ignoreTracesGeneratorErrors = ignoreTracesGeneratorErrors,
         fallBackTracesCounters = fallBackTracesCounters,
       ),
@@ -60,7 +58,6 @@ object TracesClientFactory {
             rpcClientFactory,
             configs.common,
             configs.ignoreTracesGeneratorErrors,
-            configs.expectedTracesApiVersion,
             fallBackTracesCounters,
             log ?: LogManager.getLogger("clients.traces"),
           )
@@ -74,7 +71,6 @@ object TracesClientFactory {
             rpcClientFactory,
             configs.counters!!,
             configs.ignoreTracesGeneratorErrors,
-            configs.expectedTracesApiVersion,
             fallBackTracesCounters,
             log ?: LogManager.getLogger("clients.traces.counters"),
           )
@@ -84,7 +80,6 @@ object TracesClientFactory {
             rpcClientFactory,
             configs.conflation!!,
             configs.ignoreTracesGeneratorErrors,
-            configs.expectedTracesApiVersion,
             fallBackTracesCounters,
             log ?: LogManager.getLogger("clients.traces.conflation"),
           )

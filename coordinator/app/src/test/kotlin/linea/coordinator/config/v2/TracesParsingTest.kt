@@ -16,7 +16,6 @@ class TracesParsingTest {
     val toml =
       """
       [traces]
-      expected-traces-api-version = "1.2.0"
       [traces.counters]
       endpoints = ["http://traces-api-1:8080/"]
       request-limit-per-endpoint = 20
@@ -36,7 +35,6 @@ class TracesParsingTest {
 
       [traces.new]
       switch-block-number-inclusive=1_000
-      expected-traces-api-version = "2.0.0"
       [traces.new.counters]
       endpoints = ["http://traces-api-v2-11:8080/", "http://traces-api-v2-12:8080/"]
       request-limit-per-endpoint = 200
@@ -56,7 +54,6 @@ class TracesParsingTest {
 
     val config =
       TracesToml(
-        expectedTracesApiVersion = "1.2.0",
         counters =
         TracesToml.ClientApiConfigToml(
           endpoints = listOf(URI.create("http://traces-api-1:8080/").toURL()),
@@ -82,7 +79,6 @@ class TracesParsingTest {
         ),
         new =
         TracesToml(
-          expectedTracesApiVersion = "2.0.0",
           switchBlockNumberInclusive = 1_000u,
           counters =
           TracesToml.ClientApiConfigToml(
@@ -112,7 +108,6 @@ class TracesParsingTest {
     val tomlMinimal =
       """
       [traces]
-      expected-traces-api-version = "1.2.0"
       [traces.counters]
       endpoints = ["http://traces-api-1:8080/"]
       [traces.conflation]
@@ -121,7 +116,6 @@ class TracesParsingTest {
 
     val configMinimal =
       TracesToml(
-        expectedTracesApiVersion = "1.2.0",
         requestLimitPerEndpoint = UInt.MAX_VALUE,
         requestRetries =
         RequestRetriesToml(
@@ -200,7 +194,6 @@ class TracesParsingTest {
     val tomlWithIgnoreErrors =
       """
       [traces]
-      expected-traces-api-version = "1.2.0"
       ignore-traces-generator-errors = true
       [traces.counters]
       endpoints = ["http://traces-api-1:8080/"]
@@ -219,7 +212,6 @@ class TracesParsingTest {
     val tomlWithIgnoreErrorsDisabled =
       """
       [traces]
-      expected-traces-api-version = "1.2.0"
       ignore-traces-generator-errors = false
       [traces.counters]
       endpoints = ["http://traces-api-1:8080/"]
@@ -238,7 +230,6 @@ class TracesParsingTest {
     val toml =
       """
       [traces]
-      expected-traces-api-version = "1.2.0"
       endpoints = ["http://traces-api-lb:8080/"]
       request-limit-per-endpoint = 2
       request-timeout = "PT60S"
@@ -250,7 +241,6 @@ class TracesParsingTest {
 
     val config =
       TracesConfig(
-        expectedTracesApiVersion = "1.2.0",
         common =
         ClientApiConfig(
           endpoints = listOf("http://traces-api-lb:8080/".toURL()),
@@ -273,7 +263,6 @@ class TracesParsingTest {
     val toml =
       """
       [traces]
-      expected-traces-api-version = "1.2.0"
       endpoints = ["http://traces-api-lb:8080/"]
       request-limit-per-endpoint = 20
       request-timeout = "PT20S"
@@ -300,7 +289,6 @@ class TracesParsingTest {
       )
     val config =
       TracesConfig(
-        expectedTracesApiVersion = "1.2.0",
         common = null,
         counters = commonConfig.copy(endpoints = listOf("http://traces-api-2:8080/".toURL())),
         conflation = commonConfig,
