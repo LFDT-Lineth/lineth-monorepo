@@ -210,16 +210,36 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
     var call_num:DoubleWord = registers[17]
     //
     switch call_num {
-        case 93: { // exit 
+        case EXIT_SYSCALL: { // exit
             printf "ECALL for exit\n"
-            var exit_code:DoubleWord = registers[10]
-            // check for non-zero exit code
-            if exit_code != 0 {
-                fail "exit with code %d", exit_code
+            var a0:DoubleWord = registers[10] // exit code
+            if a0 != 0 {
+                fail "exit with code %d", a0
             }
             printf "Program exited successfully (exit with code 0).\n"
             // set stop signal to terminate execution
             new_pc = MAX_UINT_64
+        }
+        case WRITE_SYSCALL: {
+            // write(fd, buf, count) — Linux RISC-V syscall convention
+            // a0 = fd (ignored — we treat every write as going to stdout);
+            // a1 = pointer to byte buffer in RAM;
+            // a2 = number of bytes to write.
+            // ACT4's RVMODEL_IO_WRITE_STR (in rvmodel_macros.h) issues this
+            // syscall so the framework's failure messages (failing PC,
+            // label, expected vs actual) surface on our printf channel
+            // verbatim — each byte is rendered as its ASCII character via
+            // the go-corset %c format specifier (issue #1759).
+            printf "ECALL for write\n"
+            var a1:Address = registers[11] as Address // buf
+            var a2:DoubleWord = registers[12] // count
+            var addr:Address = a1
+            for i:DoubleWord = 0; i<a2; i = i + 1 {
+                printf "%c", ram[addr]
+                addr = addr + 1
+            }
+            registers[10] = a2 // return value: bytes written
+            new_pc = (pc + 4) as Address
         }
         default: {
             fail "unsupported system call (%d)", call_num

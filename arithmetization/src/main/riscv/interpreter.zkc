@@ -51,6 +51,10 @@ fn interpreter<ram, registers>(instruction:u32, pc:Address) -> (new_pc:Address) 
             printf "J-Type instruction\n"
             new_pc = process_J_type_instruction(instruction_parameters, pc)
         }
+        case MISC_MEM_TYPE: {
+            // FENCE / FENCE.I — no caches, single hart, so this is a no-op.
+            new_pc = pc + 4 as Address
+        }
         default: {
             printf "[ERROR] Unsupported instruction type %d\n", instruction_type
             fail

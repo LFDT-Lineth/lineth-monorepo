@@ -106,7 +106,7 @@ compile: $(SRC) linker-script
 	fi
 # Disassemble ELF
 	@echo "\nDisassembling $(BIN)"
-	@LANG=C riscv64-unknown-elf-objdump -D -s --line-numbers $(BIN) > $(BIN)_disassembled.txt
+	@LANG=C riscv64-unknown-elf-objdump -D -s --line-numbers $(BIN) > $(BIN).objdump
 # Verify that PROGRAM_OFFSET, IN_BYTES_OFFSET, ENTRY_POINT, SP match the ELF values
 	@if [ "$(VERIFY_ELF)" = "true" ]; then \
 		$(MAKE) -f $(MAKEFILE_DIR)Makefile verify-elf TEST=$(TEST); \
@@ -128,7 +128,7 @@ zkc-debug:
 	zkc debug $(JSON) $(ZKC_MAIN)
 
 clean:
-	rm -f $(BIN) $(JSON) $(BIN)_disassembled.txt $(LINKER_SCRIPT)
+	rm -f $(BIN) $(JSON) $(BIN).objdump $(LINKER_SCRIPT)
 
 clean-all:
 	rm -rf $(MAKEFILE_DIR)asm/bin/

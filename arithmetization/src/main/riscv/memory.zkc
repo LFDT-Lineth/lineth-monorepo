@@ -24,7 +24,7 @@ pub input entry_point(i:u1) -> (address:Address)
 // Represents the available Random Access Memory (RAM) for the guest program.
 // This will act as the program "heap" and will contain, amongst other things,
 // the program executable itself and the program inputs. 
-@bipartite
+#[bipartite]
 memory ram(address:Address) -> (bytes:u8)
 
 // Represents the Register File to use when executing the guest program.  That

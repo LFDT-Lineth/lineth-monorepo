@@ -2,7 +2,7 @@
 
 The `Makefile` in this folder has commands to compile and run RISC-V test programs written in assembly, Zig or Rust against the Linea zkVM.
 Programs are compiled for the  `riscv64im_zicclsm-unknown-none-elf` architecture. The resulting ELF is converted to JSON, and passed to `zkc` as an input.
-The output ELF is also disassembled, producing an explorable `<name>_disassembled.txt` file.
+The output ELF is also disassembled, producing an explorable `<name>.objdump` file.
 
 The executable, the JSON and the disassembled file live in `asm/bin/` for assembly, `zig/zig-out/bin/` for Zig, and `rust/target/riscv64im-unknown-none-elf/release/` for Rust.
 

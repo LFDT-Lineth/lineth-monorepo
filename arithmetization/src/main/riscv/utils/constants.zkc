@@ -7,6 +7,10 @@ const S_TYPE:Type = 3
 const B_TYPE:Type = 4
 const U_TYPE:Type = 5
 const J_TYPE:Type = 6
+// MISC-MEM opcode (FENCE / FENCE.I). On a single-hart machine with no caches
+// or memory hierarchy, both are architecturally allowed to be no-ops, so we
+// treat them as such — advance PC by 4, do nothing else.
+const MISC_MEM_TYPE:Type = 7
 
 // ===============
 // decoding types
@@ -29,7 +33,7 @@ static instruction_type_from_opcode(opcode:Opcode) -> (instruction_type:Type) {
     UNDEFINED_TYPE, // 0b0001100
     UNDEFINED_TYPE, // 0b0001101
     UNDEFINED_TYPE, // 0b0001110
-    UNDEFINED_TYPE, // 0b0001111
+    MISC_MEM_TYPE, // 0b0001111  (FENCE, FENCE.I — no-op on this implementation)
     UNDEFINED_TYPE, // 0b0010000
     UNDEFINED_TYPE, // 0b0010001
     UNDEFINED_TYPE, // 0b0010010
@@ -154,7 +158,7 @@ const OP_IMM:Opcode = 0b0010011 // ADDI, SLTI, SLTIU, XORI, ORI, ANDI, SLLI, SRL
 const OP_IMM_32:Opcode = 0b0011011 // ADDIW, SLLIW, SRLIW, SRAIW (RV64 only)
 const JALR:Opcode = 0b1100111 // JALR
 const SYSTEM:Opcode = 0b1110011 // ECALL, EBREAK, CSR*
-// const MISC_MEM:Opcode  = 0b0001111 // FENCE, FENCE.I We don't support them for now, but we can add them later if needed
+const MISC_MEM:Opcode = 0b0001111 // FENCE, FENCE.I — treated as no-op (see MISC_MEM_TYPE)
 
 //  S_type
 const STORE:Opcode = 0b0100011 // SB, SH, SW, SD
@@ -285,3 +289,8 @@ const OVERFLOW_DIVIDEND:u64 = 0x8000000000000000
 const NEGATIVE_ONE_AS_I64:u64 = 0xffffffffffffffff
 const MASK_64_ERASE_LAST_BIT:u64 = 0xfffffffffffffffe
 
+// ======================
+// Syscalls
+// ======================
+const EXIT_SYSCALL:DoubleWord = 93
+const WRITE_SYSCALL:DoubleWord = 64

@@ -162,16 +162,18 @@ fn process_R_type_instruction<registers>(opcode:Opcode, instruction_parameters:u
             } else if (funct3 == FUNCT3_MULH) && (funct7 == FUNCT7_MULH) {
                 printf "MULH\n"
                 var v1_times_v2_as_u128:u128 = v1_abs_as_u128 * v2_abs_as_u128
-                if (v1_sign ^ v2_sign) == 1 {
-                    // compute the complement's two negative of the result
+                // Two's-complement negate the product when the operand signs
+                // differ.  Guard with `!= 0` because `~0 + 1` overflows u128
+                // (and `-0 == 0` anyway, so there's nothing to negate).
+                if (v1_sign ^ v2_sign) == 1 && v1_times_v2_as_u128 != 0 {
                     v1_times_v2_as_u128 = (~v1_times_v2_as_u128) + 1
                 }
                 registers[rd] = ((v1_times_v2_as_u128 >> 64) & MAX_UINT_64_AS_U128) as u64
             } else if (funct3 == FUNCT3_MULHSU) && (funct7 == FUNCT7_MULHSU) {
                 printf "MULHSU\n"
                 var v1_times_v2_as_u128:u128 = v1_abs_as_u128 * v2_as_u128
-                if v1_sign == 1 {
-                    // compute the complement's two negative of the result
+                // Same overflow guard as MULH above.
+                if v1_sign == 1 && v1_times_v2_as_u128 != 0 {
                     v1_times_v2_as_u128 = (~v1_times_v2_as_u128) + 1
                 }
                 registers[rd] = ((v1_times_v2_as_u128 >> 64) & MAX_UINT_64_AS_U128) as u64

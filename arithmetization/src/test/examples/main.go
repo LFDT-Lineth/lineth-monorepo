@@ -75,9 +75,14 @@ func main() {
 // implicitly zeroed out in the output, so we do not need to explicitly include it.
 func extractProgramBytes(sections []*elf.Section, programOffset uint64) []byte {
 	programBytesSections := map[string]bool{
-		".text":   true,
-		".rodata": true,
-		".data":   true,
+		".text":         true,
+		".rodata":       true,
+		".data":         true,
+		".data.string":  true, // ACT4 string literals
+		".text.init":    true, // ACT4 entry boilerplate (rvtest_entry_point)
+		".text.rvtest":  true, // ACT4 test body
+		".text.rvmodel": true, // ACT4 RVMODEL_* macros (HALT_PASS, HALT_FAIL, ...)
+		".tohost":       true, // ACT4 self-checking cell (tohost/fromhost)
 	}
 
 	// First pass: find the total size needed
