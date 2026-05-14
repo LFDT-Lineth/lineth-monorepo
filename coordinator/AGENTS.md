@@ -50,7 +50,7 @@ make start-env-with-tracing-v2 LINEA_COORDINATOR_TAG=local
 - **Kotlin version:** 2.3.0
 - **Formatter:** ktlint via Spotless (disabled rules: discouraged-comment-location, property-naming, function-naming, function-signature)
 - **Build plugin:** `net.consensys.zkevm.kotlin-application-conventions`
-- **Main class:** `net.consensys.zkevm.coordinator.app.CoordinatorAppMain`
+- **Main class:** `linea.coordinator.app.CoordinatorAppMain`
 - **Warnings as errors** unless `LINEA_DEV_ALLOW_WARNINGS` is set
 
 ### Directory Structure

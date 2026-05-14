@@ -1,0 +1,107 @@
+package linea.coordinator.clients.prover
+
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ArrayNode
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import io.vertx.core.Vertx
+import linea.clients.InvalidityProofRequest
+import linea.clients.InvalidityProofResponse
+import linea.clients.InvalidityProverClientV1
+import linea.coordinator.clients.prover.serialization.JsonSerialization
+import linea.domain.InvalidityProofIndex
+import linea.fileio.FileReader
+import linea.fileio.FileWriter
+import linea.kotlin.encodeHex
+import tech.pegasys.teku.infrastructure.async.SafeFuture
+import java.nio.file.Path
+
+data class InvalidityProofRequestDto(
+  val ftxRLP: String,
+  val ftxNumber: Long,
+  val prevFtxRollingHash: String,
+  val ftxBlockNumberDeadline: Long,
+  val invalidityType: String,
+  val zkParentStateRootHash: String,
+  val conflatedExecutionTracesFile: String?,
+  val accountMerkleProof: JsonNode?,
+  val zkStateMerkleProof: ArrayNode?,
+  val simulatedExecutionBlockNumber: Long,
+  val simulatedExecutionBlockTimestamp: Long,
+) {
+  companion object {
+    private val objectMapper = jacksonObjectMapper()
+
+    fun fromDomainObject(invalidityProofRequest: InvalidityProofRequest): InvalidityProofRequestDto {
+      return InvalidityProofRequestDto(
+        ftxRLP = invalidityProofRequest.ftxRlp.encodeHex(),
+        ftxNumber = invalidityProofRequest.ftxNumber.toLong(),
+        prevFtxRollingHash = invalidityProofRequest.prevFtxRollingHash.encodeHex(),
+        ftxBlockNumberDeadline = invalidityProofRequest.ftxBlockNumberDeadline.toLong(),
+        invalidityType = invalidityProofRequest.invalidityReason.name,
+        zkParentStateRootHash = invalidityProofRequest.zkParentStateRootHash.encodeHex(),
+        conflatedExecutionTracesFile = invalidityProofRequest.tracesResponse,
+        accountMerkleProof = invalidityProofRequest.accountProof?.accountProof?.let {
+          objectMapper.readTree(it)
+        },
+        zkStateMerkleProof = invalidityProofRequest.zkStateMerkleProof?.zkStateMerkleProof,
+        simulatedExecutionBlockNumber = invalidityProofRequest.simulatedExecutionBlockNumber.toLong(),
+        simulatedExecutionBlockTimestamp = invalidityProofRequest.simulatedExecutionBlockTimestamp.epochSeconds,
+      )
+    }
+  }
+}
+
+class FileBasedInvalidityProverClient(
+  val config: FileBasedProverConfig,
+  val vertx: Vertx,
+  jsonObjectMapper: ObjectMapper = JsonSerialization.proofResponseMapperV1,
+) :
+  GenericFileBasedProverClient<
+    InvalidityProofRequest,
+    InvalidityProofResponse,
+    InvalidityProofRequestDto,
+    InvalidityProofResponse,
+    InvalidityProofIndex,
+    >(
+    config = config,
+    vertx = vertx,
+    fileWriter = FileWriter(vertx, jsonObjectMapper),
+    fileReader = FileReader(
+      vertx,
+      jsonObjectMapper,
+      InvalidityProofResponse::class.java,
+    ),
+    requestFileNameProvider = InvalidityProofFileNameProvider,
+    responseFileNameProvider = InvalidityProofFileNameProvider,
+    proofIndexProvider = FileBasedInvalidityProverClient::invalidityProofIndex,
+    requestMapper = { invalidityProofRequest ->
+      SafeFuture.completedFuture(
+        InvalidityProofRequestDto.fromDomainObject(invalidityProofRequest),
+      )
+    },
+    responseMapper = { throw UnsupportedOperationException("Invalidity proof response will not be parsed!") },
+    proofTypeLabel = "invalidity",
+  ),
+  InvalidityProverClientV1 {
+  override fun parseResponse(
+    responseFilePath: Path,
+    proofIndex: InvalidityProofIndex,
+  ): SafeFuture<InvalidityProofResponse> {
+    return SafeFuture.completedFuture(
+      InvalidityProofResponse(
+        ftxNumber = proofIndex.ftxNumber,
+      ),
+    )
+  }
+
+  companion object {
+    fun invalidityProofIndex(request: InvalidityProofRequest): InvalidityProofIndex {
+      return InvalidityProofIndex(
+        simulatedExecutionBlockNumber = request.simulatedExecutionBlockNumber,
+        ftxNumber = request.ftxNumber,
+        startBlockTimestamp = request.startBlockTimestamp,
+      )
+    }
+  }
+}

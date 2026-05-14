@@ -6,8 +6,8 @@ import io.vertx.core.http.HttpVersion
 import io.vertx.core.http.PoolOptions
 import io.vertx.ext.web.client.WebClientOptions
 import io.vertx.junit5.VertxExtension
+import linea.crypto.Web3SignerRestClient
 import net.consensys.linea.httprest.client.VertxHttpRestClient
-import net.consensys.zkevm.ethereum.crypto.Web3SignerRestClient
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.util.encoders.Hex
 import org.junit.jupiter.api.AfterEach

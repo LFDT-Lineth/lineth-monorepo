@@ -4,6 +4,7 @@ import io.vertx.core.Future
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
+import linea.coordinator.clients.prover.serialization.BlobCompressionProofJsonResponse
 import linea.domain.BlobCompressionProof
 import linea.domain.BlobRecord
 import linea.domain.BlobStatus
@@ -13,7 +14,6 @@ import linea.kotlin.encodeHex
 import linea.persistence.db.SQLQueryLogger
 import linea.persistence.db.isDuplicateKeyException
 import net.consensys.linea.async.toSafeFuture
-import net.consensys.zkevm.coordinator.clients.prover.serialization.BlobCompressionProofJsonResponse
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

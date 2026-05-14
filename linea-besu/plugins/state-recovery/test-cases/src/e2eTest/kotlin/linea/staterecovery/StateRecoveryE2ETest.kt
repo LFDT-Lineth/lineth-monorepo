@@ -3,6 +3,8 @@ package linea.staterecovery
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
+import linea.EthApiClientManager
+import linea.L2AccountManager
 import linea.clients.StateManagerClientV1
 import linea.clients.StateManagerV1JsonRpcClient
 import linea.contract.events.DataFinalizedV3
@@ -24,8 +26,6 @@ import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.testing.filesystem.getPathTo
-import net.consensys.zkevm.ethereum.EthApiClientManager
-import net.consensys.zkevm.ethereum.L2AccountManager
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat

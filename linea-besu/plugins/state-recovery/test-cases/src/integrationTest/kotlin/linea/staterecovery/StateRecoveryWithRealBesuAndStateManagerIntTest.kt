@@ -3,6 +3,11 @@ package linea.staterecovery
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
+import linea.ContractsManager
+import linea.EthApiClientManager
+import linea.LineaRollupDeploymentResult
+import linea.MakeFileDelegatedContractsManager.connectToLineaRollupContract
+import linea.MakeFileDelegatedContractsManager.lineaRollupContractErrors
 import linea.clients.StateManagerClientV1
 import linea.clients.StateManagerV1JsonRpcClient
 import linea.contract.l1.LineaRollupContractVersion
@@ -18,11 +23,6 @@ import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.testing.submission.AggregationAndBlobs
 import net.consensys.linea.testing.submission.loadBlobsAndAggregationsSortedAndGrouped
 import net.consensys.linea.testing.submission.submitBlobsAndAggregationsAndWaitExecution
-import net.consensys.zkevm.ethereum.ContractsManager
-import net.consensys.zkevm.ethereum.EthApiClientManager
-import net.consensys.zkevm.ethereum.LineaRollupDeploymentResult
-import net.consensys.zkevm.ethereum.MakeFileDelegatedContractsManager.connectToLineaRollupContract
-import net.consensys.zkevm.ethereum.MakeFileDelegatedContractsManager.lineaRollupContractErrors
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.junit.jupiter.api.BeforeEach

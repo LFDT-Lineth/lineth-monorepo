@@ -1,6 +1,7 @@
 package linea.conflation.calculators
 
 import linea.conflation.SafeBlockProvider
+import linea.coordination.blob.FakeBlobCompressor
 import linea.domain.BlockCounters
 import linea.domain.BlockHeaderSummary
 import linea.domain.ConflationCalculationResult
@@ -10,7 +11,6 @@ import net.consensys.FakeFixedClock
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.linea.traces.fakeTracesCountersV2
-import net.consensys.zkevm.ethereum.coordination.blob.FakeBlobCompressor
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

@@ -5,6 +5,7 @@ import io.vertx.pgclient.PgException
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
+import linea.coordinator.clients.prover.serialization.ProofToFinalizeJsonResponse
 import linea.domain.Aggregation
 import linea.domain.BlobAndBatchCounters
 import linea.domain.BlobCounters
@@ -16,7 +17,6 @@ import linea.kotlin.decodeHex
 import linea.persistence.AggregationsDao
 import linea.persistence.db.SQLQueryLogger
 import net.consensys.linea.async.toSafeFuture
-import net.consensys.zkevm.coordinator.clients.prover.serialization.ProofToFinalizeJsonResponse
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture

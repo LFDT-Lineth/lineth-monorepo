@@ -92,7 +92,7 @@ dependencies {
 }
 
 application {
-  mainClass = 'net.consensys.zkevm.coordinator.app.CoordinatorAppMain'
+  mainClass = 'linea.coordinator.app.CoordinatorAppMain'
 }
 
 jar {
@@ -102,7 +102,7 @@ jar {
     manifest {
       attributes(
           'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.findAll { it.endsWith('jar') }.join(' '),
-          'Main-Class': 'net.consensys.zkevm.coordinator.app.CoordinatorAppMain',
+          'Main-Class': 'linea.coordinator.app.CoordinatorAppMain',
           'Multi-Release': 'true',
           // Required for Java 25+: Netty uses restricted System::loadLibrary in unnamed modules
           'Enable-Native-Access': 'ALL-UNNAMED'

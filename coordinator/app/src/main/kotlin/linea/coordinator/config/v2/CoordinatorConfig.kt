@@ -1,7 +1,7 @@
 package linea.coordinator.config.v2
 
+import linea.coordinator.clients.prover.ProversConfig
 import linea.web3j.SmartContractErrors
-import net.consensys.zkevm.coordinator.clients.prover.ProversConfig
 
 data class CoordinatorConfig(
   val protocol: ProtocolConfig,
