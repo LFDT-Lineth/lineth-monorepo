@@ -182,3 +182,5 @@ arithmetization/src/test/examples/asm/src/op/*.s
 # and mutated by E2E tests via withDenyListAddresses. Never commit.
 docker/config/linea-besu-sequencer/deny-list.txt
 docker/config/linea-besu-sequencer/deny-list.txt.lock
+
+**/.venv
