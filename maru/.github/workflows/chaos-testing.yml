@@ -1,0 +1,153 @@
+name: Chaos Testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      consensus-client-changed:
+        required: true
+        type: string
+        default: 'true'
+        description: 'when false, skips the job'
+      enable_ssh_debug:
+        description: 'Enable SSH debugging before tests start'
+        required: false
+        type: boolean
+        default: false
+      ssh_debug_on_failure:
+        required: false
+        type: boolean
+        default: false
+        description: 'Enable SSH debugging on test failure'
+  workflow_call:
+    inputs:
+      consensus-client-changed:
+        required: true
+        type: string
+      enable_ssh_debug:
+        required: false
+        type: boolean
+        default: false
+      ssh_debug_on_failure:
+        required: false
+        type: boolean
+        default: false
+
+permissions: {} # lock everything by default (least-privilege)
+
+concurrency:
+  group: maru-chaos-testing-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  run-chaos-tests:
+    permissions:
+      contents: read # for actions/checkout
+    if: ${{ inputs.consensus-client-changed == 'true' }}
+    env:
+      COMMIT_TAG: ${{ inputs.commit_tag }}
+      DOCKER_ORG_NAME: ${{ secrets.DOCKER_ORG_NAME }}
+      DOCKER_REPO_TOKEN: ${{ secrets.DOCKER_REPO_TOKEN }}
+    runs-on: [ gha-runner-scale-set-ubuntu-24-amd64-large ]
+    name: chaos tests
+    # useful for debugging flaky tests.
+    #    strategy:
+    #      matrix:
+    #        iterations: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Login to Docker Hub
+        if: ${{ env.DOCKER_ORG_NAME != '' && env.DOCKER_REPO_TOKEN != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_ORG_NAME }}
+          password: ${{ secrets.DOCKER_REPO_TOKEN }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326 # 4.4.0
+      - name: Install helm
+        uses: azure/setup-helm@v4.3.1
+        with:
+          version: 'v3.18.3'
+        id: install
+
+      # SSH debugging session - before tests (if explicitly requested)
+      - name: Setup upterm session (pre-test)
+        if: ${{ inputs.enable_ssh_debug }}
+        uses: lhotari/action-upterm@v1
+        with:
+          ## If no one connects shut down ssh server after timeout.
+          wait-timeout-minutes: 20
+
+      - name: Run chaos tests
+        id: chaos-tests
+        timeout-minutes: 30
+        run: |
+          cd chaos-testing
+          mkdir -p ~/.kube
+          export KUBECONFIG=~/.kube/k3s-server
+          make k3s-reload    # installs k3s K8S implementation
+          kubectl config set-context --current --namespace=default
+          make chaos-redeploy-chaos-mesh-and-linea maru_image=consensys/maru:local
+          make chaos-health-check # just make sure that the cluster is healthy before starting the chaos tests
+          make chaos-experiment-workflow-and-health-check
+
+      - name: Collect pod logs
+        if: failure()
+        run: |
+          export KUBECONFIG=~/.kube/k3s-server
+          mkdir -p chaos-testing/tmp/pod-logs
+          echo "Collecting logs from all pods..."
+          for pod in $(kubectl get pods -n default -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
+            echo "Collecting logs for $pod"
+            kubectl logs "$pod" -n default --tail=5000 > "chaos-testing/tmp/pod-logs/${pod}.log" 2>&1 || true
+            # Also collect previous container logs (if pod restarted)
+            kubectl logs "$pod" -n default --previous --tail=5000 > "chaos-testing/tmp/pod-logs/${pod}-previous.log" 2>&1 || true
+          done
+          # Collect pod status/describe for context
+          kubectl get pods -n default -o wide > "chaos-testing/tmp/pod-logs/pod-status.txt" 2>&1 || true
+          kubectl describe pods -n default > "chaos-testing/tmp/pod-logs/pod-describe.txt" 2>&1 || true
+          echo "Log collection complete"
+          ls -la chaos-testing/tmp/pod-logs/
+
+      - name: Collect port-forward logs
+        if: failure()
+        run: |
+          echo "Collecting port-forward logs..."
+          if [ -d chaos-testing/tmp/pf ]; then
+            ls -la chaos-testing/tmp/pf/
+          else
+            echo "No port-forward log directory found"
+          fi
+          # Also collect port-forward summary files
+          for f in chaos-testing/tmp/port-forward-*.txt; do
+            if [ -f "$f" ]; then
+              echo "=== $f ==="
+              cat "$f"
+            fi
+          done
+          # Check for any surviving port-forward processes
+          ps -o pid=,command= -ax | grep 'kubectl port-forward' | grep -v grep > chaos-testing/tmp/pod-logs/port-forward-processes.txt 2>&1 || true
+          echo "Port-forward process collection complete"
+
+      - name: Store reports and pod logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-test-reports-and-logs
+          path: |
+            **/build/reports/tests/
+            chaos-testing/tmp/pod-logs/
+            chaos-testing/tmp/pf/
+            chaos-testing/tmp/port-forward-*.txt
+
+      # SSH debugging session - on failure (if requested)
+      - name: Setup upterm session after failure
+        if: ${{ (failure() || steps.chaos-tests.outcome == 'failure') && inputs.ssh_debug_on_failure == true }}
+        uses: lhotari/action-upterm@v1
+        with:
+          ## If no one connects shut down ssh server after timeout.
+          wait-timeout-minutes: 20

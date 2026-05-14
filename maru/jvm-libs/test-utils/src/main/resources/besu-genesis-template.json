@@ -1,0 +1,54 @@
+{
+  "@_WARNING": "THIS FILE IS FOR LOCAL DEVELOPMENT ONLY! DO NOT REUSE ELSEWHERE",
+  "config": {
+    "chainId": 6110,
+    "homesteadBlock": 0,
+    "eip150Block": 0,
+    "eip155Block": 0,
+    "eip158Block": 0,
+    "byzantiumBlock": 0,
+    "constantinopleBlock": 0,
+    "petersburgBlock": 0,
+    "istanbulBlock": 0,
+    "berlinBlock": 0,
+    "londonBlock": 0,
+    "depositContractAddress": "0x0000000000000000000000000000000000009999",
+    "withdrawalRequestContractAddress": "0x0000000000000000000000000000000000009999",
+    "consolidationRequestContractAddress": "0x0000000000000000000000000000000000009999"
+  },
+  "coinbase": "0x1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0",
+  "difficulty": "0x1",
+  "extraData": "0x00000000000000000000000000000000000000000000000000000000000000008F1F505E5DF8AFF01E442DB0B8AA9990D28F8D990000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+  "gasLimit": "0x1C9C380",
+  "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "nonce": "0x0",
+  "timestamp": "0x0",
+  "baseFeePerGas": "0x7",
+  "@_WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+  "alloc": {
+    "a05b21E5186Ce93d2a226722b85D6e550Ac7D6E3": {
+      "privateKey": "3a4ff6d22d7502ef2452368165422861c01a0f72f851793b372b87888dc3c453",
+      "balance": "90000000000000000000000"
+    },
+    "0x0000000000000000000000000000000000009999": {
+      "comment": "Contract sends all its Ether to the address provided as a call data.",
+      "balance": "0",
+      "code": "5F5F5F5F475F355AF100",
+      "codeDecompiled": "PUSH0 PUSH0 PUSH0 PUSH0 SELFBALANCE PUSH0 CALLDATALOAD GAS CALL STOP",
+      "storage": {}
+    },
+    "0xa4664C40AACeBD82A2Db79f0ea36C06Bc6A19Adb": {
+      "balance": "1000000000000000000000000000"
+    },
+    "0x0000F90827F1C53a10cb7A02335B175320002935": {
+      "balance": "0",
+      "nonce": "1",
+      "code": "0x3373fffffffffffffffffffffffffffffffffffffffe14604657602036036042575f35600143038111604257611fff81430311604257611fff9006545f5260205ff35b5f5ffd5b5f35611fff60014303065500"
+    },
+    "0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02": {
+      "balance": "0",
+      "nonce": "1",
+      "code": "0x3373fffffffffffffffffffffffffffffffffffffffe14604d57602036146024575f5ffd5b5f35801560495762001fff810690815414603c575f5ffd5b62001fff01545f5260205ff35b5f5ffd5b62001fff42064281555f359062001fff015500"
+    }
+  }
+}

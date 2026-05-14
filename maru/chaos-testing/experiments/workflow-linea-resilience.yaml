@@ -1,0 +1,225 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: linea-resilience
+  namespace: chaos-mesh
+  labels:
+    purpose: resilience-test
+spec:
+  entry: serial-tests
+  templates:
+    # Top-level serial orchestration of all chaos experiments
+    # This is WIP flow, many experiments are missing
+    - name: serial-tests
+      templateType: Serial
+      children:
+        - network-full-restart # simulate a full cluster restart (e.g blackout)
+        - wait-10s # wait 10s to allow all nodes to recover
+        - podkill-randomly
+        - wait
+        - network-chaos-p2p
+        - wait
+        - network-http-rpc-failures
+        - wait
+    - name: podkill-randomly
+      templateType: Parallel
+      children:
+        - kill-besu-randomly
+        - kill-maru-randomly
+
+    - name: network-full-restart
+      templateType: Parallel
+      children:
+        - kill-maru-all
+        - kill-besu-all
+
+    - name: network-http-rpc-failures
+      templateType: Parallel
+      children:
+        - http-abort-engine-api
+        - http-abort-eth-api
+        - network-latency
+
+    # Wait for a period of time
+    - name: wait
+      templateType: Suspend
+      deadline: 5s
+    - name: wait-10s
+      templateType: Suspend
+      deadline: 10s
+
+    # Abort a percentage of Engine API HTTP requests (simulate execution <-> consensus issues)
+    - name: http-abort-engine-api
+      templateType: HTTPChaos
+      deadline: 40s
+      httpChaos:
+        selector:
+          namespaces:
+            - default
+          labelSelectors:
+            app.kubernetes.io/component: besu
+        mode: fixed-percent
+        value: "70"
+        target: Request
+        method: "POST"
+        port: 8550
+        abort: true
+
+    - name: http-abort-eth-api
+      templateType: HTTPChaos
+      deadline: 40s
+      httpChaos:
+        selector:
+          namespaces:
+            - default
+          labelSelectors:
+            app.kubernetes.io/component: besu
+        mode: fixed-percent
+        value: "70"
+        target: Request
+        method: "POST"
+        port: 8545
+        abort: true
+
+    - name: network-chaos-p2p
+      templateType: NetworkChaos
+      deadline: 30s
+      networkChaos:
+        action: netem
+        mode: all
+        selector:
+          namespaces:
+            - default
+          labelSelectors:
+            app.kubernetes.io/component: maru
+        duplicate:
+          duplicate: "50"
+          correlation: "25"
+        loss:
+          loss: "50"
+          correlation: "25"
+#          reorder: "80"     # 50% probability of reordering
+#          gap: 10           # reorder gap of 10 packets
+#          correlation: "25" # correlation between successive probabilities
+
+    # Introduce network latency to any single maru pod
+    - name: network-latency
+      templateType: NetworkChaos
+      deadline: 30s
+      networkChaos:
+        action: delay
+        mode: one
+        selector:
+          namespaces:
+            - default
+          labelSelectors:
+            app.kubernetes.io/component: maru
+        delay:
+          latency: "300ms"
+          correlation: "100"
+          jitter: "500ms"
+    # Kill one validator (consensus client) pod
+    - name: kill-maru-sequencer
+      templateType: PodChaos
+      deadline: 10s
+      podChaos:
+        action: pod-kill
+        mode: one
+        selector:
+          namespaces:
+            - default
+          labelSelectors:
+            app.kubernetes.io/component: maru
+            app.kubernetes.io/component-role: sequencer
+
+    - name: kill-besu-sequencer
+      templateType: PodChaos
+      deadline: 10s
+      podChaos:
+        action: pod-kill
+        mode: all
+        selector:
+          namespaces:
+            - default
+          labelSelectors:
+            app.kubernetes.io/component: besu
+            app.kubernetes.io/component-role: sequencer
+
+    - name: kill-maru-randomly
+      templateType: PodChaos
+      deadline: 20s
+      podChaos:
+        action: pod-kill
+        mode: random-max-percent
+        value: "50"
+        selector:
+          namespaces:
+            - default
+          labelSelectors:
+            app.kubernetes.io/component: maru
+          # We cannot kill bootnodes because they get new IP and other nodes cannot reconnect
+          expressionSelectors:
+            - key: app.kubernetes.io/component-role
+              operator: NotIn
+              values:
+                - bootnode
+
+    - name: kill-besu-randomly
+      templateType: PodChaos
+      deadline: 20s
+      podChaos:
+        action: pod-kill
+        mode: random-max-percent
+        value: "50"
+        selector:
+          namespaces:
+            - default
+          labelSelectors:
+            app.kubernetes.io/component: besu
+          # We cannot kill bootnodes because they get new IP and other nodes cannot reconnect
+          expressionSelectors:
+            - key: app.kubernetes.io/component-role
+              operator: NotIn
+              values:
+                - bootnode
+
+    - name: kill-maru-all
+      templateType: PodChaos
+      deadline: 10s
+      podChaos:
+        action: pod-failure
+        mode: all
+        selector:
+          namespaces:
+            - default
+          labelSelectors:
+            app.kubernetes.io/component: maru
+          # We cannot kill bootnodes because they get new IP and other nodes cannot reconnect
+          expressionSelectors:
+            - key: app.kubernetes.io/component-role
+              operator: NotIn
+              values:
+                - bootnode
+
+    - name: kill-besu-all
+      templateType: PodChaos
+      deadline: 10s
+      podChaos:
+        action: pod-failure
+        mode: all
+        selector:
+          namespaces:
+            - default
+          labelSelectors:
+            app.kubernetes.io/component: besu
+          # We cannot kill bootnodes because they get new IP and other nodes cannot reconnect
+          expressionSelectors:
+            - key: app.kubernetes.io/component-role
+              operator: NotIn
+              values:
+                - bootnode
+
+# Usage:
+# kubectl apply -f workflow-network-clients.yaml
+# Observe with: kubectl describe workflows.chaos-mesh.org linea-resilience -n chaos-mesh; or via Chaos Mesh dashboard.
+# Tune durations & modes to fit SLOs. Add health-check integration externally (e.g., health-checker test) during Suspends.

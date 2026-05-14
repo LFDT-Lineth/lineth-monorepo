@@ -1,0 +1,4 @@
+plugins {
+    id 'maru.kotlin-common-conventions'
+    id 'java-library'
+}

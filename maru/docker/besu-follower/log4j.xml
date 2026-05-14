@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="INFO" monitorInterval="2">
+  <Properties>
+    <Property name="root.log.level">DEBUG</Property>
+  </Properties>
+
+  <Appenders>
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSSZZZ} | %t | %-5level | %c{1} | %msg %throwable%n" />
+    </Console>
+  </Appenders>
+  <Loggers>
+    <!-- edit the package name/level below to add more logging to specific classes -->
+    <!-- no need to restart Besu as it will detect changes every 2s -->
+    <Logger name="org.hyperledger.besu" level="WARN" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <!-- to avoid annoying message "INFO ... No sync target, waiting for peers. Current peers: 0" change to WARN-->
+    <Logger name="org.hyperledger.besu.ethereum.eth.sync" level="DEBUG" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="org.hyperledger.besu.ethereum.blockcreation" level="INFO" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="org.hyperledger.besu.consensus.merge.blockcreation" level="INFO" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc" level="TRACE" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="io.opentelemetry" level="WARN" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="org.hyperledger.besu.ethereum.eth.transactions.TransactionPool" level="TRACE" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc.internal" level="DEBUG" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="org.hyperledger.besu.ethereum.chain" level="DEBUG" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="org.hyperledger.besu.ethereum" level="DEBUG" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Root level="${sys:root.log.level}">
+      <AppenderRef ref="Console"/>
+    </Root>
+  </Loggers>
+</Configuration>

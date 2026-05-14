@@ -1,0 +1,74 @@
+[Eth]
+NetworkId = 1337
+SyncMode = "full"
+NoPruning = true
+NoPrefetch = false
+TxLookupLimit = 0
+LightPeers = 100
+DatabaseCache = 512
+DatabaseFreezer = ""
+TrieCleanCache = 154
+TrieDirtyCache = 256
+TrieTimeout = 3600000000000
+SnapshotCache = 102
+Preimages = false
+FilterLogCacheSize = 32
+EnablePreimageRecording = false
+RPCGasCap = 30000000
+RPCEVMTimeout = 5000000000
+RPCTxFeeCap = 100.0
+
+[Eth.TxPool]
+Locals = []
+NoLocals = true
+Journal = "transactions.rlp"
+Rejournal = 3600000000000
+PriceLimit = 9999999999999999999
+PriceBump = 1
+AccountSlots = 64
+GlobalSlots = 100000
+AccountQueue = 256
+GlobalQueue = 4096
+Lifetime = 10800000000000
+
+[Eth.GPO]
+Blocks = 20
+Percentile = 60
+MaxHeaderHistory = 1024
+MaxBlockHistory = 1024
+MaxPrice = 100000000000000
+IgnorePrice = 2
+
+[Node]
+DataDir = "/data"
+IPCPath = "geth.ipc"
+AllowUnprotectedTxs = true
+HTTPHost = "0.0.0.0"
+HTTPCors = ["*"]
+HTTPPort = 8545
+HTTPVirtualHosts = ["*"]
+HTTPModules = ["eth","debug","miner","net","txpool","web3","admin"]
+AuthAddr = "0.0.0.0"
+AuthPort = 8551
+AuthVirtualHosts = ["*"]
+WSHost = "0.0.0.0"
+WSOrigins = ["*"]
+WSPort = 8546
+WSModules = ["eth","debug","net","txpool","web3"]
+GraphQLVirtualHosts = ["localhost"]
+
+[Node.P2P]
+MaxPeers = 100
+NoDiscovery = false
+NetRestrict = ["11.11.11.0/24"]
+StaticNodes = []
+TrustedNodes = []
+ListenAddr = ":30301"
+DiscAddr = ""
+EnableMsgEvents = false
+
+[Node.HTTPTimeouts]
+ReadTimeout = 30000000000
+ReadHeaderTimeout = 30000000000
+WriteTimeout = 30000000000
+IdleTimeout = 120000000000

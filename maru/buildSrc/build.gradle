@@ -1,0 +1,13 @@
+plugins {
+  id("groovy-gradle-plugin")
+}
+
+repositories {
+  mavenLocal()
+  mavenCentral()
+  gradlePluginPortal()
+}
+
+dependencies {
+  implementation(libs.kotlin.plugin)
+}

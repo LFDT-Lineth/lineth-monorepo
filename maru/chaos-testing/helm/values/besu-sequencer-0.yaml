@@ -1,0 +1,6 @@
+replicaCount: 1
+fullnameOverride: besu-sequencer-0
+componentRole: sequencer
+configFiles:
+  privateKey: |
+    0xf3f61f30399831b8b6b00b67fd357faa3a641768846e6df25fd9990f151e3846

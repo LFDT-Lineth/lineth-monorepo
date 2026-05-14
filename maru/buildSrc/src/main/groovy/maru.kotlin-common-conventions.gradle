@@ -1,0 +1,22 @@
+plugins {
+  id 'maru.kotlin-common-minimal-conventions'
+}
+
+dependencies {
+  //<utils>
+  implementation("tech.pegasys.teku.internal:async") {
+    exclude group: 'org.slf4j'
+    exclude group: 'com.github.jnr'
+    exclude group: 'com.squareup.okhttp3'
+    exclude group: 'org.apache.logging.log4j'
+    exclude group: 'tech.pegasys.teku.internal', module: 'metrics'
+    exclude group: 'tech.pegasys.teku.internal', module: 'time'
+  } because("We are using Teku's SafeFuture, an improved/extension of CompletableFuture.")
+
+  implementation "com.michael-bull.kotlin-result:kotlin-result"
+
+  //<logging>
+  implementation "org.apache.logging.log4j:log4j-api"
+  implementation "org.apache.logging.log4j:log4j-core"
+  //</logging>
+}

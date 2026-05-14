@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "maru.fullname" . }}
+  labels:
+    {{- include "maru.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "maru.fullname" . }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "maru.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "maru.labels" . | nindent 8 }}
+    spec:
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: maru
+          image: "{{ .Values.image.name }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            {{- if .Values.bootnodes }}
+            - name: config__override__p2p__discovery__bootnodes
+              value: {{ .Values.bootnodes | quote }}
+            {{- end }}
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+          command:
+            - java
+            - -Dlog4j2.configurationFile=configs/log4j.xml
+            - -jar
+            - maru.jar
+            - --maru-genesis-file
+            - /opt/consensys/maru/configs/genesis.json
+            - --config
+            {{ if .Values.configFiles.configsDefaultsToml }}
+            - /opt/consensys/maru/configs/configs-defaults.toml
+            {{ end }}
+            {{ if .Values.configFiles.configsToml }}
+            - /opt/consensys/maru/configs/configs.toml
+            {{ end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /opt/consensys/maru/data
+            - name: configs
+              mountPath: /opt/consensys/maru/configs
+          ports:
+            {{- range .Values.service.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .port }}
+              protocol: {{ default "TCP" .protocol | upper }}
+            {{- end }}
+          {{- if .Values.probes.liveness.enabled }}
+          livenessProbe:
+            {{- if eq .Values.probes.liveness.type "httpGet" }}
+            httpGet:
+              path: {{ .Values.probes.liveness.httpGet.path }}
+              port: {{ .Values.probes.liveness.httpGet.port }}
+              scheme: {{ .Values.probes.liveness.httpGet.scheme | default "HTTP" }}
+            {{- else if eq .Values.probes.liveness.type "tcpSocket" }}
+            tcpSocket:
+              port: {{ .Values.probes.liveness.tcpSocket.port }}
+            {{- else if eq .Values.probes.liveness.type "exec" }}
+            exec:
+              command: {{ .Values.probes.liveness.exec.command | toYaml | nindent 14 }}
+            {{- end }}
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            successThreshold: {{ .Values.probes.liveness.successThreshold }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          {{- end }}
+          {{- if .Values.probes.readiness.enabled }}
+          readinessProbe:
+            {{- if eq .Values.probes.readiness.type "httpGet" }}
+            httpGet:
+              path: {{ .Values.probes.readiness.httpGet.path }}
+              port: {{ .Values.probes.readiness.httpGet.port }}
+              scheme: {{ .Values.probes.readiness.httpGet.scheme | default "HTTP" }}
+            {{- else if eq .Values.probes.readiness.type "tcpSocket" }}
+            tcpSocket:
+              port: {{ .Values.probes.readiness.tcpSocket.port }}
+            {{- else if eq .Values.probes.readiness.type "exec" }}
+            exec:
+              command: {{ .Values.probes.readiness.exec.command | toYaml | nindent 14 }}
+            {{- end }}
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            successThreshold: {{ .Values.probes.readiness.successThreshold }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          {{- end }}
+      volumes:
+        - name: configs
+          configMap:
+            name: {{ include "maru.fullname" . }}-configs
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ "{{ $.Values.persistence.accessMode }}" ]
+        resources:
+          requests:
+            storage: {{ $.Values.persistence.size }}
+          {{- if $.Values.persistence.storageClass }}
+        storageClassName: {{ $.Values.persistence.storageClass }}
+          {{- end }}

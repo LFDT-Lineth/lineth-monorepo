@@ -1,0 +1,177 @@
+# volumes:
+#   local-dev:
+#     name: "local-dev"
+name: maru
+
+networks:
+  linea:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 11.11.11.0/24
+
+services:
+  initialization:
+    image: busybox:latest
+    container_name: intialization_using_busybox
+    environment:
+      CREATE_EMPTY_BLOCKS: ${CREATE_EMPTY_BLOCKS:-false}
+    entrypoint: [ "sh","/initialization/init.sh" ]
+    volumes:
+      - ./initialization/:/initialization:rw
+
+  sequencer:
+    depends_on:
+      initialization:
+        condition: service_completed_successfully
+    image: hyperledger/besu:25.11.0
+    container_name: sequencer
+    healthcheck:
+      test: [ "CMD-SHELL", "bash -c \"[ -f /tmp/pid ]\"" ]
+      interval: 1s
+      timeout: 1s
+      retries: 120
+    environment:
+      LOG4J_CONFIGURATION_FILE: /var/lib/besu/log4j.xml
+      JAVA_OPTS: -Xmx512m -XX:+UnlockExperimentalVMOptions -XX:+UseZGC
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        /opt/besu/bin/besu --config-file=/var/lib/besu/config.toml \
+        --genesis-file=/initialization/genesis-besu.json \
+        --node-private-key-file="/var/lib/besu/key" \
+        --Xplugins-external-enabled=false
+    volumes:
+      - ./sequencer/config.toml:/var/lib/besu/config.toml:ro
+      - ./sequencer/log4j.xml:/var/lib/besu/log4j.xml:ro
+      - ./sequencer/key:/var/lib/besu/key:ro
+      - ./initialization/:/initialization/:ro
+    ports:
+      - "8545:8545"
+      - "8550:8550"
+      - "8551:8551"
+      - "30303:30303"
+    networks:
+      linea:
+        ipv4_address: 11.11.11.101
+
+  follower-geth:
+    depends_on:
+      sequencer:
+        condition: service_healthy
+    image: ethereum/client-go:v1.16.3
+    container_name: follower-geth
+    restart: always
+    entrypoint: [ "sh", "/scripts/node.sh", "/initialization/genesis-geth.json" ]
+    environment:
+      BOOTNODES: "enode://14408801a444dafc44afbccce2eb755f902aed3b5743fed787b3c790e021fef28b8c827ed896aa4e8fb46e22bd67c39f994a73768b4b382f8597b0d44370e15d@11.11.11.101:30303"
+    volumes:
+      - ./geth:/scripts:ro
+      - ./initialization/:/initialization/:ro
+      - ./jwt:/jwt:ro
+    ports:
+      - "8555:8545"
+      - "8561:8551"
+    networks:
+      - linea
+
+  follower-geth-2:
+    depends_on:
+      sequencer:
+        condition: service_healthy
+    image: ethereum/client-go:release-1.13
+    container_name: follower-geth-2
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "/scripts/healthcheck.sh" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    entrypoint: [ "sh", "/scripts/node.sh", "/initialization/genesis-geth.json" ]
+    environment:
+      BOOTNODES: "enode://14408801a444dafc44afbccce2eb755f902aed3b5743fed787b3c790e021fef28b8c827ed896aa4e8fb46e22bd67c39f994a73768b4b382f8597b0d44370e15d@11.11.11.101:30303"
+    volumes:
+      - ./geth:/scripts:ro
+      - ./initialization/:/initialization/:ro
+      - ./jwt:/jwt:ro
+    ports:
+      - "8565:8545"
+      - "8571:8551"
+    networks:
+      - linea
+
+  follower-besu:
+    depends_on:
+      sequencer:
+        condition: service_healthy
+    image: hyperledger/besu:25.11.0
+    container_name: follower-besu
+    healthcheck:
+      test: [ "CMD-SHELL", "bash -c \"[ -f /tmp/pid ]\"" ]
+      interval: 1s
+      timeout: 1s
+      retries: 120
+    environment:
+      LOG4J_CONFIGURATION_FILE: /var/lib/besu/log4j.xml
+      JAVA_OPTS: -Xmx512m -XX:+UnlockExperimentalVMOptions -XX:+UseZGC
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        /opt/besu/bin/besu --config-file=/var/lib/besu/config.toml \
+        --genesis-file=/initialization/genesis-besu.json \
+        --Xplugins-external-enabled=false
+    volumes:
+      - ./besu-follower/config.toml:/var/lib/besu/config.toml:ro
+      - ./besu-follower/log4j.xml:/var/lib/besu/log4j.xml:ro
+      - ./initialization/:/initialization/:ro
+    ports:
+      - "9545:8545"
+      - "9550:8550"
+    networks:
+      - linea
+
+  follower-nethermind:
+    depends_on:
+      sequencer:
+        condition: service_healthy
+    image: nethermind/nethermind:1.32.4
+    container_name: follower-nethermind
+    command: >
+      --configs-dir /config/
+      -c test
+    volumes:
+      - ./initialization/:/initialization/:ro
+      - ./nethermind/:/config/:ro
+      - ./jwt:/nethermind/keystore/jwt-secret:ro
+    ports:
+      - "10545:8545"
+      - "10550:8550"
+    networks:
+      - linea
+
+  follower-erigon:
+    depends_on:
+      sequencer:
+        condition: service_healthy
+    image: erigontech/erigon:v3.0.2 # versions after v3.0.2 doesn't work for switching from Clique to Prague
+    container_name: follower-erigon
+    environment:
+      BOOTNODES: "enode://14408801a444dafc44afbccce2eb755f902aed3b5743fed787b3c790e021fef28b8c827ed896aa4e8fb46e22bd67c39f994a73768b4b382f8597b0d44370e15d@11.11.11.101:30303"
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        erigon --datadir /home/erigon init /initialization/genesis-geth.json && \
+        erigon --config=/config.toml --bootnodes=$$BOOTNODES
+    ports:
+      - "11545:8545"
+      - "11551:8551"
+    volumes:
+      # It's ok to mount sub-dirs of "datadir" to different drives
+      - ./jwt:/jwt:ro
+      - ./erigon/config.toml:/config.toml:ro
+      - ./initialization/:/initialization/:ro
+    networks:
+      - linea

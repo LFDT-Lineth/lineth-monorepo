@@ -1,0 +1,12 @@
+plugins {
+  id 'maru.kotlin-library-conventions'
+}
+
+dependencies {
+  implementation "build.linea.internal:micrometer"
+  implementation "build.linea.internal:metrics"
+  implementation "org.hyperledger.besu.internal:besu-metrics-core"
+  implementation "org.hyperledger.besu:besu-plugin-api"
+  implementation "com.google.guava:guava"
+  implementation(project(":core"))
+}

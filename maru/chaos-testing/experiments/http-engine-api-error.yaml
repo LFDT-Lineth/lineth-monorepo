@@ -1,0 +1,23 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: HTTPChaos
+metadata:
+  name: http-engine-api-random-error
+spec:
+  mode: all
+  selector:
+    namespaces:
+      - default
+    labelSelectors:
+      'app.kubernetes.io/component': 'besu'
+  target: Response
+  port: 8550
+#  method: GET
+  delay: 5s
+  patch:
+    headers:
+      - ['x-chaos-test', 'forced-error']
+    body:
+      type: JSON
+      value: '{"jsonrpc": "2.0", "id": 1, "error": {"code": -32000, "message": "Forced error - chaos testing"}}'
+#      value: '{"jsonrpc": "2.0", "id": 1, "some-key": "foreced-error"}'
+  duration: 20s

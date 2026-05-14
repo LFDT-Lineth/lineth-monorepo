@@ -1,0 +1,12 @@
+replicaCount: 1
+fullnameOverride: maru-bootnode-0
+componentRole: bootnode
+configFiles:
+  privateKey: |
+    0x08021220064974d5f62a7ab9b76ea97fc6451d2dd6416cb8150625ccb15640a57b96510e
+  configsToml: |
+    [fork-transition]
+    l2-eth-api-endpoint = { endpoint = "http://besu-bootnode-0-0.besu-bootnode-0.default.svc.cluster.local:8545" }
+
+    [payload-validator]
+    engine-api-endpoint = { endpoint = "http://besu-bootnode-0-0.besu-bootnode-0.default.svc.cluster.local:8550" }

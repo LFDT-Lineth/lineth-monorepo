@@ -1,0 +1,60 @@
+# Parameterized template. Rendered by Makefile via sed before applying:
+#   __LATENCY__             → e.g. 100ms
+#   __EXPERIMENT_DURATION__ → e.g. 2m
+#
+# This workflow only handles pod reset and experiment timing.
+# The NetworkChaos is applied separately via network-chaos-multi-validator-latency.yaml
+# and remains active after this workflow completes, covering the metrics collection window.
+#
+# Workflow timeline:
+#   t=0:              kill validators        (~10s)  — resets in-memory metrics to zero
+#   t~10s:            wait-pod-recovery      (90s)   — pods restart under already-active latency
+#   t~100s:           experiment-window      (__EXPERIMENT_DURATION__)
+#   t~100s+DURATION:  workflow done → metrics collected (latency still active)
+#   after collection: NetworkChaos deleted by Makefile
+#
+# Usage (via Makefile):
+#   make chaos-multi-validator-latency-experiment-100ms [experiment_duration=2m]
+#   make chaos-multi-validator-local-latency-sweep      [experiment_duration=2m]
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: multi-validator-latency-__LATENCY__
+  namespace: chaos-mesh
+  labels:
+    purpose: multi-validator-latency-test
+spec:
+  entry: serial-reset-and-wait
+  templates:
+    - name: serial-reset-and-wait
+      templateType: Serial
+      children:
+        - kill-validators
+        - wait-pod-recovery
+        - experiment-window
+
+    # Kill all validator pods to reset their in-memory Micrometer metrics to zero.
+    # Pods restart under the already-active NetworkChaos latency.
+    - name: kill-validators
+      templateType: PodChaos
+      deadline: 60s
+      podChaos:
+        action: pod-kill
+        mode: all
+        selector:
+          namespaces:
+            - default
+          labelSelectors:
+            app.kubernetes.io/component: maru
+            app.kubernetes.io/component-role: validator
+
+    # Wait for validators to restart and reach steady state.
+    - name: wait-pod-recovery
+      templateType: Suspend
+      deadline: 45s
+
+    # Controls when the workflow completes and metrics collection begins.
+    # All blocks committed during this window are under the injected latency.
+    - name: experiment-window
+      templateType: Suspend
+      deadline: __EXPERIMENT_DURATION__

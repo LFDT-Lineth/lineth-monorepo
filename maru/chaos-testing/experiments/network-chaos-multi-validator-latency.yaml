@@ -1,0 +1,34 @@
+# Standalone NetworkChaos template. Applied before the experiment workflow and deleted
+# after metrics are collected, so latency is guaranteed to be active during collection.
+# A 30m safety-net duration auto-expires the chaos if the Makefile cleanup step is skipped.
+#
+# Rendered by Makefile via sed:
+#   __LATENCY__ → e.g. 100ms
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: multi-validator-latency-__LATENCY__
+  namespace: chaos-mesh
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces:
+      - default
+    labelSelectors:
+      app.kubernetes.io/component: maru
+      app.kubernetes.io/component-role: validator
+  target:
+    selector:
+      namespaces:
+        - default
+      labelSelectors:
+        app.kubernetes.io/component: maru
+        app.kubernetes.io/component-role: validator
+    mode: all
+  delay:
+    latency: "__LATENCY__"
+    correlation: "100"
+    jitter: "0ms"
+  direction: both
+  duration: 30m

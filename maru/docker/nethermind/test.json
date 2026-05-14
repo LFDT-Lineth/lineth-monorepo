@@ -1,0 +1,31 @@
+{
+  "Init": {
+    "ChainSpecPath": "/initialization/genesis-nethermind.json",
+    "GenesisHash": "0xd8137c4fcff28a19ad33ae547e8a4f8a56ed3ef7a5b0e5b7ba814cbbedde8bcd",
+    "BaseDbPath": "nethermind_db/test",
+    "LogFileName": "test.logs.txt"
+  },
+  "Merge": {
+    "Enabled": true
+  },
+  "TxPool": {
+    "BlobsSupport": "Disabled"
+  },
+  "Metrics": {
+    "NodeName": "Test"
+  },
+  "Sync": {
+    "SnapSync": true
+  },
+  "JsonRpc": {
+    "Enabled": true,
+    "EnabledModules": ["eth","engine","admin"],
+    "Port": 8545,
+    "Host": "0.0.0.0",
+    "EnginePort": 8550,
+    "EngineHost": "0.0.0.0"
+  },
+  "Network": {
+    "StaticPeers": "enode://14408801a444dafc44afbccce2eb755f902aed3b5743fed787b3c790e021fef28b8c827ed896aa4e8fb46e22bd67c39f994a73768b4b382f8597b0d44370e15d@11.11.11.101:30303"
+  }
+}

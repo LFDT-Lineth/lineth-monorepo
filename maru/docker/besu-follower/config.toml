@@ -1,0 +1,41 @@
+data-path="/opt/besu/data"
+host-allowlist=["*"]
+sync-mode="SNAP"
+p2p-port=30303
+bootnodes=["enode://14408801a444dafc44afbccce2eb755f902aed3b5743fed787b3c790e021fef28b8c827ed896aa4e8fb46e22bd67c39f994a73768b4b382f8597b0d44370e15d@11.11.11.101:30303"]
+
+min-gas-price=0
+
+# engine
+engine-host-allowlist=["*"]
+engine-rpc-port=8550
+engine-jwt-disabled=true
+
+# rpc
+rpc-http-enabled=true
+rpc-http-host="0.0.0.0"
+rpc-http-port=8545
+rpc-http-cors-origins=["*"]
+rpc-http-api=["ADMIN","ENGINE","DEBUG","NET","ETH","WEB3","PLUGINS"]
+rpc-http-max-active-connections=200
+
+# ws
+rpc-ws-enabled=true
+rpc-ws-host="0.0.0.0"
+rpc-ws-port=8546
+rpc-ws-api=["ADMIN","TXPOOL","WEB3","ETH","NET","PERM"]
+rpc-ws-max-active-connections=200
+
+# graphql
+graphql-http-enabled=false
+
+# metrics
+metrics-enabled=true
+metrics-host="0.0.0.0"
+metrics-port=9545
+
+# database
+data-storage-format="BONSAI"
+bonsai-limit-trie-logs-enabled=false
+bonsai-historical-block-limit=1024
+fast-sync-min-peers=1

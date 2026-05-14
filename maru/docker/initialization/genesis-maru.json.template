@@ -1,0 +1,32 @@
+{
+  "chainId": 1337,
+  "config": {
+    "0": {
+      "type": "difficultyAwareQbft",
+      "blockTimeSeconds": 2,
+      "postTtdConfig": {
+        "validatorSet": ["0x1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0"],
+        "elFork": "Paris"
+      },
+      "terminalTotalDifficulty": 10
+    },
+    "%SHANGHAI_TIME%": {
+      "type": "qbft",
+      "validatorSet": ["0x1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0"],
+      "blockTimeSeconds": 2,
+      "elFork": "Shanghai"
+    },
+    "%CANCUN_TIME%": {
+      "type": "qbft",
+      "validatorSet": ["0x1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0"],
+      "blockTimeSeconds": 2,
+      "elFork": "Cancun"
+    },
+    "%PRAGUE_TIME%": {
+      "type": "qbft",
+      "validatorSet": ["0x1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0"],
+      "blockTimeSeconds": 2,
+      "elFork": "Prague"
+    }
+  }
+}
