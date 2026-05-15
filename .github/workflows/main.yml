@@ -34,8 +34,6 @@ jobs:
     secrets: inherit
 
   filter-commit-changes:
-    needs: [lint-latest-commit-messages]
-    if: always()
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     name: Filter commit changes
     outputs:
