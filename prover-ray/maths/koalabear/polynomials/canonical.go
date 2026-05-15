@@ -1,6 +1,10 @@
 package polynomials
 
 import (
+	"fmt"
+
+	"github.com/consensys/gnark-crypto/field/koalabear/fft"
+	"github.com/consensys/gnark-crypto/utils"
 	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
@@ -27,6 +31,22 @@ func evalNative(poly field.Vec, z field.Gen) field.Gen {
 // The result is tagged base iff both poly and z are base-field values.
 func EvalCanonical(poly field.Vec, z field.Gen) field.Gen {
 	return evalNative(poly, z)
+}
+
+// LCEvalsToCoefficients recovers the coefficients p[0],…,p[n-1] of p(X) = Σᵢ p[i]·Xⁱ
+// from its evaluations v[i] = p(ωⁱ) on the n-th roots of unity (n = d.Cardinality,
+// ω a primitive n-th root of unity), via p[j] = (1/n)·Σᵢ v[i]·ω⁻ⁱʲ, implemented as
+// a single IFFT_n + bit-reverse over the extension field.
+func LCEvalsToCoefficients(d *fft.Domain, v []field.Ext) []field.Ext {
+	n := int(d.Cardinality)
+	if len(v) != n {
+		panic(fmt.Sprintf("LCEvalsToCoefficients: expected %d evals got %d", n, len(v)))
+	}
+	coeffs := make([]field.Ext, n)
+	copy(coeffs, v)
+	d.FFTInverseExt(coeffs, fft.DIF)
+	utils.BitReverse(coeffs)
+	return coeffs
 }
 
 // EvalCanonicalBatch evaluates multiple polynomials at the same point z,
@@ -77,12 +97,12 @@ func EvalCanonicalBatch(polys []field.Vec, z field.Gen) []field.Gen {
 		acc := field.ElemZero()
 		if poly.IsBase() {
 			base := poly.AsBase()
-			for i := 0; i < n; i++ {
+			for i := range n {
 				acc = acc.Add(field.ElemFromBase(base[i]).Mul(powers[i]))
 			}
 		} else {
 			ext := poly.AsExt()
-			for i := 0; i < n; i++ {
+			for i := range n {
 				acc = acc.Add(field.ElemFromExt(ext[i]).Mul(powers[i]))
 			}
 		}

@@ -1,7 +1,9 @@
 package vortex
 
 import (
+	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/consensys/linea-monorepo/prover-ray/utils"
 	"github.com/consensys/linea-monorepo/prover-ray/utils/parallel"
 )
@@ -13,15 +15,16 @@ type OpeningProof struct {
 	// of the j-th selected column of the i-th commitment
 	Columns [][][]field.Element
 
-	// Linear combination of the Reed-Solomon encoded polynomials to open.
+	// Linear combination of the Reed-Solomon encoded polynomials to open,
+	// in coefficient (monomial) form.
 	LinearCombination []field.Ext
 }
 
-// LinearCombination computes the linear combination of the vectors v[i]
-// Let x := randomCoin
-// computes ∑ᵢxⁱ * v[i]
-// n is the size of each vector v[i]
-func LinearCombination(proof *OpeningProof, v [][]field.Element, randomCoin field.Ext) []field.Ext {
+// LinearCombination computes ∑ᵢ randomCoinⁱ · v[i] in evaluation form, then
+// converts the result to coefficient form via IFFT over d and stores it in
+// proof.LinearCombination. Returning the coefficient form directly keeps
+// proof.LinearCombination in a single, well-defined representation.
+func LinearCombination(proof *OpeningProof, d *fft.Domain, v [][]field.Element, randomCoin field.Ext) []field.Ext {
 
 	if len(v) == 0 {
 		utils.Panic("attempted to open an empty witness")
@@ -32,26 +35,21 @@ func LinearCombination(proof *OpeningProof, v [][]field.Element, randomCoin fiel
 	parallel.Execute(nColumns, func(start, stop int) {
 
 		var (
-			x            = field.OneExt()
-			localLinComb = make([]field.Ext, stop-start)
-			tmp          field.Ext
+			x   = field.OneExt()
+			tmp field.Ext
 		)
 
+		out := linComb[start:stop]
 		for i := range v {
-			// we distinguish the case of a regular vector and constant to avoid
-			// unnecessary allocations and copies
-			for j := range localLinComb {
+			for j := range out {
 				tmp.MulByElement(&x, &v[i][start+j])
-				localLinComb[j].Add(&localLinComb[j], &tmp)
+				out[j].Add(&out[j], &tmp)
 			}
-
 			x.Mul(&x, &randomCoin)
 		}
-
-		copy(linComb[start:stop], localLinComb)
 	})
 
-	proof.LinearCombination = linComb
+	proof.LinearCombination = polynomials.LCEvalsToCoefficients(d, linComb)
 
-	return linComb
+	return proof.LinearCombination
 }

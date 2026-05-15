@@ -195,3 +195,21 @@ func (r *RsParams) IsCodewordExt(v []field.Ext) error {
 
 	return nil
 }
+
+// EncodeFromMonomials evaluates p(X) = Σᵢ coefficients[i]·Xⁱ (T = len(coefficients))
+// at the N = NbEncodedColumns() points ωⱼ = ω_N^j (j = 0,…,N-1, ω_N a primitive
+// N-th root of unity), returning the length-N Reed-Solomon codeword c[j] = p(ωⱼ)
+// via a single FFT_N over the extension field.
+func (r *RsParams) EncodeFromMonomials(coefficients []field.Ext) []field.Ext {
+	t := r.NbColumns()
+	n := r.NbEncodedColumns()
+	if len(coefficients) != t {
+		panic(fmt.Sprintf("EncodeFromMonomials: expected %d coeffs got %d", t, len(coefficients)))
+	}
+	buf := make([]field.Ext, n)
+	copy(buf, coefficients)
+	// DIT FFT expects bit-reversed input; natural-order evaluations come out.
+	utils.BitReverse(buf)
+	r.Domains[1].FFTExt(buf, fft.DIT)
+	return buf
+}

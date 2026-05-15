@@ -1,6 +1,7 @@
 package vortex
 
 import (
+	"strconv"
 	"testing"
 
 	smt "github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/smt"
@@ -56,28 +57,25 @@ func getProofVortexNCommitmentsWithMerkle(_ *testing.T, nCommitments, nbPolys, p
 	}
 
 	// Generate the proof
-	proof, merkleProofs := Prove(vi.EntryList, encodedMatrices, trees, vi.Alpha)
+	proof, merkleProofs := Prove(vortexInstance, vi.EntryList, polyLists, encodedMatrices, trees, vi.Alpha)
 
 	return vortexInstance, proof, vi, commitments, merkleProofs
 }
 
 func TestVerifier(t *testing.T) {
+	for _, rate := range []int{2, 4, 8, 16} {
+		t.Run("rate="+strconv.Itoa(rate), func(t *testing.T) {
+			nCommitments := 4
+			nbPolys := 15
+			polySize := 1 << 10
+			WithSis := []bool{true, true, false, true}
 
-	nCommitments := 4
-	nbPolys := 15
-	polySize := 1 << 10
-	rate := 2
-	WithSis := make([]bool, nCommitments)
+			params, proof, vi, commitments, merkleProofs := getProofVortexNCommitmentsWithMerkle(t, nCommitments, nbPolys,
+				polySize, rate, WithSis)
 
-	WithSis[0] = true
-	WithSis[1] = true
-	WithSis[2] = false
-	WithSis[3] = true
-	params, proof, vi, commitments, merkleProofs := getProofVortexNCommitmentsWithMerkle(t, nCommitments, nbPolys,
-		polySize, rate, WithSis)
-
-	err := Verify(params, proof, &vi, commitments, merkleProofs, WithSis)
-	if err != nil {
-		t.Fatal(err)
+			if err := Verify(params, proof, &vi, commitments, merkleProofs, WithSis); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
