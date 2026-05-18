@@ -178,9 +178,9 @@ After writing or editing code, check LSP diagnostics and fix any type errors or 
 
 ### Style
 
-- **Formatter:** Prettier 3.7.4 — `prettier.config.mjs`
-- **Linter (TS/JS):** ESLint 9.39.2 flat config — `ts-libs/eslint-config/`
-- **Linter (Solidity):** Solhint 6.0.3 + Prettier plugin
+- **Formatter:** Prettier 3.8.1 — `prettier.config.mjs`
+- **Linter (TS/JS):** ESLint 9.39.4 flat config — `ts-libs/eslint-config/`
+- **Linter (Solidity):** Solhint 6.2.1 + Prettier plugin
 - **Linter (Kotlin/Java):** Spotless with ktlint + Google Java Format
 - **Linter (Go):** gofmt + golangci-lint
 - **Line length:** 120 characters
@@ -223,7 +223,7 @@ After writing or editing code, check LSP diagnostics and fix any type errors or 
 |------|----------|-------|
 | Contracts (Hardhat) | Hardhat + ethers.js | `pnpm -F contracts run test` |
 | Contracts (Foundry) | Forge | `test/foundry/*` |
-| TypeScript packages | Jest 29.7.0 + ts-jest | `pnpm -F <pkg> run test` |
+| TypeScript packages | Jest 30.3.0 + ts-jest | `pnpm -F <pkg> run test` |
 | Coordinator | JUnit 5 + Mockito + WireMock | `./gradlew :coordinator:app:test` |
 | Prover | Go test | `go test ./... -tags nocorset,fuzzlight` |
 | E2E (protocol) | Jest | `pnpm -F e2e run test:local` |

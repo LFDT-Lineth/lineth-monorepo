@@ -104,7 +104,7 @@ postman/
 
 ### Testing
 
-- Framework: Jest 29.7.0 with ts-jest preset
+- Framework: Jest 30.3.0 with ts-jest preset
 - Uses `jest-mock-extended` for mock generation
 - `--forceExit` and `--detectOpenHandles` flags enabled
 - Test files: `**/__tests__/*.test.ts` pattern

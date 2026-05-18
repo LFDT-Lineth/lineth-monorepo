@@ -32,7 +32,7 @@ pnpm -F @consensys/linea-sdk-viem run lint
 | Package | Build Tool | Output | Key Dependency |
 |---------|-----------|--------|----------------|
 | `sdk-core` | tsup | CJS + ESM + DTS | abitype |
-| `sdk-ethers` | tsc (+ typechain pre-step) | CJS + DTS | ethers 6.13.7 |
+| `sdk-ethers` | tsc (+ typechain pre-step) | CJS + DTS | ethers 6.16.0 |
 | `sdk-viem` | tsup | CJS + ESM + DTS | viem (peer dep >= 2.22.0) |
 
 ### Dependency Chain
@@ -46,7 +46,7 @@ postman -> sdk-viem -> sdk-core
 
 ### Testing
 
-- Framework: Jest 29.7.0 with ts-jest preset
+- Framework: Jest 30.3.0 with ts-jest preset
 - `sdk-ethers` uses `--forceExit` and `jest-mock-extended`
 - Coverage: HTML, LCOV, and text reporters
 - Test files: `*.test.ts` pattern
