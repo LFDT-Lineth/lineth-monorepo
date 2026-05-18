@@ -9,7 +9,7 @@
 /// Note: this is a freestanding implementation
 ///
 /// To run:
-/// zkc-test blake/blake_with_in_embedded.rs
+/// riscv-test blake/blake_with_in_embedded.rs
 use core::convert::TryInto;
 use core::result::Result;
 use core::result::Result::Err;

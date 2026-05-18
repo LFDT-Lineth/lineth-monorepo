@@ -2,8 +2,8 @@
 #![no_main]
 
 // To run:
-// zkc-test test.rs IN_BYTES="0x05" (pass)
-// zkc-test test.rs IN_BYTES="0x42" (fail)
+// riscv-test test.rs IN_BYTES="0x05" (pass)
+// riscv-test test.rs IN_BYTES="0x42" (fail)
 
 include!("custom_std.rs");
 

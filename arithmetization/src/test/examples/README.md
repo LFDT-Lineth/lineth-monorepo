@@ -36,10 +36,10 @@ make -f /path/to/linea-monorepo/arithmetization/src/test/examples/Makefile TEST=
 Useful shell function (add to `~/.zshrc` or `~/.bashrc`):
 
 ```bash
-zkc-test() {
+riscv-test() {
     local makefile="path/to/linea-monorepo/arithmetization/src/test/examples/Makefile"
     case "$1" in
-        clean-all|linker-script)
+        clean-all|linker-script|blake-all)
             # targets that do NOT require TEST argument
             make -f "$makefile" "$1" "${@:2}"
             ;;
@@ -48,7 +48,7 @@ zkc-test() {
             make -f "$makefile" "$1" TEST="$2" "${@:3}"
             ;;
         *)
-            # default target (zkc-test foo.<ext> is the same as zkc-test exec TEST=foo.<ext>)
+            # default target (riscv-test foo.<ext> is the same as riscv-test exec TEST=foo.<ext>)
             make -f "$makefile" TEST="$1" "${@:2}"
             ;;
     esac
@@ -57,33 +57,35 @@ zkc-test() {
 # Usage examples
 
 # Compile and execute (note that <name>.<ext> can be replaced by <src_optional_subfolder>/<name>.<ext>)
-zkc-test <name>.<ext>
+riscv-test <name>.<ext>
 # Compile and execute with input bytes
-zkc-test <name>.<ext> IN_BYTES="0xAABB"
+riscv-test <name>.<ext> IN_BYTES="0xAABB"
 # Compile and debug
-zkc-test debug <name>.<ext>
+riscv-test debug <name>.<ext>
 # Compile and debug with input bytes
-zkc-test debug <name>.<ext> IN_BYTES="0xAABB"
+riscv-test debug <name>.<ext> IN_BYTES="0xAABB"
 # Compile and execute with input bytes at a custom offset
-zkc-test <name>.<ext> IN_BYTES="0xAABB" IN_BYTES_OFFSET=0x08800008
+riscv-test <name>.<ext> IN_BYTES="0xAABB" IN_BYTES_OFFSET=0x08800008
 # Compile only
-zkc-test compile <name>.<ext>
+riscv-test compile <name>.<ext>
 # Clean build artifacts for a specific test
-zkc-test clean <name>.<ext>
+riscv-test clean <name>.<ext>
 # Clean all build artifacts
-zkc-test clean-all
+riscv-test clean-all
+# Run all converted Blake test vectors
+riscv-test blake-all
 # Run blake_with_in_embedded.rs (input bytes are embedded in main())
-zkc-test blake/blake_with_in_embedded.rs
+riscv-test blake/blake_with_in_embedded.rs
 # Run blake_with_in_bytes.rs with IN_BYTES="0x<213_bytes_input_hex><64_bytes_expected_output_hex>"
-zkc-test blake/blake_with_in_bytes.rs IN_BYTES="0x0000000c48c9bdf267e6096a3ba7ca8485ae67bb2bf894fe72f36e3cf1361d5f3af54fa5d182e6ad7f520e511f6c3e2b8c68059b6bbd41fbabd9831f79217e1319cde05b61626300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000001ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923"
+riscv-test blake/blake_with_in_bytes.rs IN_BYTES="0x0000000c48c9bdf267e6096a3ba7ca8485ae67bb2bf894fe72f36e3cf1361d5f3af54fa5d182e6ad7f520e511f6c3e2b8c68059b6bbd41fbabd9831f79217e1319cde05b61626300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000001ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923"
 # Generate the linker script with custom input bytes offset
-zkc-test linker-script IN_BYTES_OFFSET=0x00000042
+riscv-test linker-script IN_BYTES_OFFSET=0x00000042
 # Verify ELF offsets, entry point and sp match the default ones
-zkc-test verify-elf <name>.<ext>
+riscv-test verify-elf <name>.<ext>
 # Verify ELF offsets, entry point and sp match the custom ones
-zkc-test verify-elf <name>.<ext> PROGRAM_OFFSET=0x10000000 IN_BYTES_OFFSET=0x18800000 SP=0x187fffff 
+riscv-test verify-elf <name>.<ext> PROGRAM_OFFSET=0x10000000 IN_BYTES_OFFSET=0x18800000 SP=0x187fffff 
 # Compile and verify generated ELF offsets, entry point and sp match the default ones
-zkc-test compile <name>.<ext> VERIFY_ELF=true
+riscv-test compile <name>.<ext> VERIFY_ELF=true
 ```
 
 ## Targets
@@ -99,6 +101,7 @@ zkc-test compile <name>.<ext> VERIFY_ELF=true
 | `make clean-all`                 | Remove all build artifacts                                            |
 | `make linker-script`             | Generate the linker script with the memory layout                     |
 | `make verify-elf TEST=foo.<ext>` | Verify ELF offsets, entry point and sp match the ones in the Makefile |
+| `make blake-all`                 | Run all blake test vectors in `rust/src/blake/blake.all`              |
 
 ## Options
 
