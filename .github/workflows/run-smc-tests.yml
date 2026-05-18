@@ -24,16 +24,16 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version: 1.23.x
           cache-dependency-path: |
                 prover/go.sum
 
-      - uses: actions/cache@v5.0.4
+      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: |
             ~/.cache/go-build
@@ -47,7 +47,7 @@ jobs:
         uses: ./.github/actions/setup-nodejs
 
       - name: Cache Hardhat compiler
-        uses: actions/cache@v5.0.4
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: ~/.cache/hardhat-nodejs
           key: ${{ runner.os }}-hardhat-compilers-${{ hashFiles('contracts/hardhat.config.ts', 'contracts/hardhat_overrides.ts') }}
@@ -71,7 +71,7 @@ jobs:
         run: pnpm -F contracts run coverage
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: smart-contract-coverage-${{ env.COMMIT_TAG }}.json
           if-no-files-found: error
@@ -95,7 +95,7 @@ jobs:
     name: Solidity format check
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs

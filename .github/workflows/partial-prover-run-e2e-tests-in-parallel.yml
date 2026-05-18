@@ -39,11 +39,11 @@ jobs:
     name: Run test:partial-prover:${{ matrix.test }} e2e tests
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Download local linea-besu-package docker image
         if: ${{ inputs.linea_besu_package_image_tag == '' }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           pattern: linea-besu-package
           path: ${{ github.workspace }}/tmp/artifacts
@@ -57,7 +57,7 @@ jobs:
 
       - name: Download local prover docker image
         if: ${{ inputs.prover_image_tag == '' }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           pattern: linea-prover
           path: ${{ github.workspace }}/tmp/artifacts
@@ -129,7 +129,7 @@ jobs:
           docker logs l1-el-node --since 1h &>> docker_logs/l1-el-node.txt || true
 
       - name: Archive debug logs
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
         with:
           name: end-2-end-debug-logs-${{ matrix.archive-name }}
@@ -138,7 +138,7 @@ jobs:
             docker_logs/**/*
       
       - name: Archive shared folder
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
         with:
           name: end-2-end-shared-folder-${{ matrix.archive-name }}

@@ -14,7 +14,7 @@ jobs:
       profile-files: ${{ steps.list-profiles.outputs.files }}
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Split and list profiles
         id: list-profiles
@@ -38,10 +38,10 @@ jobs:
       DOCKER_IMAGE: ${{ inputs.dockerimage }}
     steps:
       - name: Check repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Download local docker image artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           pattern: linea-besu-package
           path: ${{ github.workspace }}/tmp/artifacts

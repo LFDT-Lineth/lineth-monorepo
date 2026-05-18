@@ -56,7 +56,7 @@ jobs:
         if: ${{ inputs.e2e-tests-with-ssh }}
         uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
         with:
@@ -74,7 +74,7 @@ jobs:
           mkdir -p tmp/local/traces/v2/conflated
           chmod -R a+rw tmp/local/
       - name: Download local docker image artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           pattern: linea-besu-package
           path: ${{ github.workspace }}/tmp/artifacts
@@ -149,7 +149,7 @@ jobs:
             docker logs l2-node-besu-follower --since 1h &>> docker_logs/l2-node-besu-follower.txt || true
           fi
       - name: Archive debug logs
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ failure() && inputs.e2e-tests-logs-dump }}
         with:
           name: end-2-end-debug-logs
