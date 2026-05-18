@@ -31,6 +31,7 @@ func VanishingScenarios() []func() *VanishingScenario {
 		NewGeometricProgressionVanishingScenario,
 		NewConditionalCounterVanishingScenario,
 		NewPythagoreanTripletVanishingScenario,
+		NewDynamicFibonacciVanishingScenario,
 	}
 }
 

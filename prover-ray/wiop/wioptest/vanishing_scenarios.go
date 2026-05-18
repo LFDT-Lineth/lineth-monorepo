@@ -169,3 +169,37 @@ func NewBooleanColumnVanishingScenario() *VanishingScenario {
 		},
 	}
 }
+
+// NewDynamicFibonacciVanishingScenario is like NewFibonacciVanishingScenario
+// but uses a dynamic-size module. The module size is determined at runtime
+// from the assigned column length rather than being fixed at compile time.
+//
+//   - Valid: A = [1, 1, 2, 3, 5, 8, 13, 21].
+//   - Invalid: A = [1, 1, 2, 3, 5, 8, 13, 22] (last value wrong).
+//
+// Rows 0 and 1 are automatically cancelled (back-shifts of 1 and 2).
+func NewDynamicFibonacciVanishingScenario() *VanishingScenario {
+	sys := wiop.NewSystemf("dyn-fib")
+	r0 := sys.NewRound()
+	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
+	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	// A[i] − A[i−1] − A[i−2] = 0
+	mod.NewVanishing(
+		sys.Context.Childf("fib"),
+		wiop.Sub(
+			wiop.Sub(col.View(), col.View().Shift(-1)),
+			col.View().Shift(-2),
+		),
+	)
+
+	return &VanishingScenario{
+		Name: "DynamicFibonacci",
+		Sys:  sys,
+		AssignHonest: func(rt *wiop.Runtime) {
+			rt.AssignColumn(col, makeVec(1, 1, 2, 3, 5, 8, 13, 21))
+		},
+		AssignInvalid: func(rt *wiop.Runtime) {
+			rt.AssignColumn(col, makeVec(1, 1, 2, 3, 5, 8, 13, 22)) // last value off by one
+		},
+	}
+}

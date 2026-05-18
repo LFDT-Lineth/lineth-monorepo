@@ -43,6 +43,10 @@ func (c *Cell) IsMultiValued() bool { return false }
 // element, not a polynomial.
 func (c *Cell) Degree() int { return 0 }
 
+// DegreeFactor implements [Expression]. Always returns 0: a cell is a scalar
+// constant.
+func (c *Cell) DegreeFactor() int { return 0 }
+
 // Size implements [Expression]. Panics unconditionally: size has no meaning
 // for a scalar FieldPromise. Check IsMultiValued() before calling Size.
 func (c *Cell) Size() int {

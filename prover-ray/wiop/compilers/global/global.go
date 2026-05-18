@@ -23,7 +23,10 @@ import (
 //     cells for both witness columns and quotient shares, and the verifier
 //     check.
 //
-// Panics if any module with vanishing constraints has not been sized yet.
+// This compiler supports dynamic-size modules. The quotient ratio is computed
+// from the expression's DegreeFactor() which doesn't require knowing the module
+// size at compile time. Size-dependent data (FFT domains, annihilator inverses,
+// cancellation cosets) is computed at runtime using RuntimeSize.
 func Compile(sys *wiop.System) {
 	var hasWork bool
 	for _, m := range sys.Modules {
@@ -66,7 +69,7 @@ type rawBucket struct {
 // proverVanishingEntry bundles a Vanishing with the precomputed base-field
 // evaluations of its cancellation polynomial on the large coset.
 // cancellationCoset[j] = C(g · ω_{N}^j) where g is the multiplicative
-// generator and N = n · ratio.
+// generator and N = n · ratio. Only populated for static modules.
 type proverVanishingEntry struct {
 	v                 *wiop.Vanishing
 	cancellationCoset []field.Element // length N = n*ratio; nil if no cancellation
@@ -74,23 +77,31 @@ type proverVanishingEntry struct {
 
 // proverBucket holds all compilation artefacts needed by the prover to compute
 // the quotient shares for one ratio bucket.
+//
+// For static modules, size-dependent data (FFT domains, annihilator inverses,
+// cancellation cosets) is precomputed at compile time. For dynamic modules,
+// these fields are nil and the data is computed at runtime using RuntimeSize.
 type proverBucket struct {
-	ratio       int
-	entries     []proverVanishingEntry
-	rootCols    []*wiop.Column  // deduplicated root columns from all expressions
-	shares      []*wiop.Column  // quotient share columns (length = ratio)
-	smallDomain *fft.Domain     // FFT domain of size n
-	largeDomain *fft.Domain     // FFT domain of size n*ratio
-	annInv      []field.Element // 1/(g^n · ω_ratio^j − 1) for j = 0..ratio-1
+	ratio    int
+	rootCols []*wiop.Column // deduplicated root columns from all expressions
+	shares   []*wiop.Column // quotient share columns (length = ratio)
 
-	// Pre-allocated scratch slices populated by Plan; nil until Materialize is
-	// called. When non-nil, Run uses these instead of allocating fresh memory.
-	scratchAgg  []field.Ext     // aggregate[j], length N = n*ratio
-	scratchVals []field.Element // coset re-evaluation buffer, length N
-	scratchC0   []field.Element // coordinate slice 0 for applyBaseFFT4, length N
-	scratchC1   []field.Element // coordinate slice 1 for applyBaseFFT4, length N
-	scratchC2   []field.Element // coordinate slice 2 for applyBaseFFT4, length N
-	scratchC3   []field.Element // coordinate slice 3 for applyBaseFFT4, length N
+	// --- Static-module fields (nil for dynamic modules) ---
+	entries     []proverVanishingEntry // precomputed cancellation cosets
+	smallDomain *fft.Domain            // FFT domain of size n
+	largeDomain *fft.Domain            // FFT domain of size n*ratio
+	annInv      []field.Element        // 1/(g^n · ω_ratio^j − 1) for j = 0..ratio-1
+
+	// --- Dynamic-module fields (nil for static modules) ---
+	vanishings []*wiop.Vanishing // raw vanishings for runtime computation
+
+	// Pre-allocated scratch slices populated by Plan; nil until Plan is called.
+	// When non-nil, Run uses these instead of allocating fresh memory.
+	scratchAgg []field.Ext     // aggregate[j], length N = n*ratio
+	scratchC0  []field.Element // coordinate slice 0 for applyBaseFFT4, length N
+	scratchC1  []field.Element // coordinate slice 1 for applyBaseFFT4, length N
+	scratchC2  []field.Element // coordinate slice 2 for applyBaseFFT4, length N
+	scratchC3  []field.Element // coordinate slice 3 for applyBaseFFT4, length N
 }
 
 // verifierBucket holds everything the verifier needs for one ratio bucket.
@@ -110,16 +121,18 @@ func compileModule(
 	ctx *wiop.ContextFrame,
 	quotientRound, evalRound *wiop.Round,
 ) {
-	n := m.Size()
-	if n == 0 {
-		panic(fmt.Sprintf("wiop/compilers: module %q must be sized before calling Compile", m.Context.Path()))
+	// Static modules must be sized before compilation.
+	if !m.IsDynamic() && !m.IsSized() {
+		panic(fmt.Sprintf("wiop/compilers: static module %q must be sized before calling Compile", m.Context.Path()))
 	}
 
 	// --- Step 1: bucket vanishing constraints by ratio ---
+	// Ratio is computed from DegreeFactor() which doesn't require knowing the
+	// module size, allowing compilation to proceed for dynamic-size modules.
 	ratioToEntries := make(map[int][]*wiop.Vanishing)
 	var ratioOrder []int
 	for _, v := range m.Vanishings {
-		r := computeRatio(v, n)
+		r := computeRatio(v)
 		if _, exists := ratioToEntries[r]; !exists {
 			ratioOrder = append(ratioOrder, r)
 		}
@@ -197,8 +210,10 @@ func compileModule(
 		quotientBucketClaims[i] = claimsForBucket
 	}
 
-	// --- Step 8: build prover buckets (precompute coset data) ---
-	proverBuckets := buildProverBuckets(rawBuckets, n)
+	// --- Step 8: build prover buckets ---
+	// For static modules, precompute size-dependent data (FFT domains, annihilator
+	// inverses, cancellation cosets). For dynamic modules, defer to runtime.
+	proverBuckets := buildProverBuckets(rawBuckets, m)
 
 	// --- Step 9: register prover actions ---
 	quotientRound.RegisterAction(&QuotientProverAction{
@@ -220,7 +235,7 @@ func compileModule(
 		}
 	}
 	evalRound.RegisterVerifierAction(&Verifier{
-		n:             n,
+		m:             m,
 		mergeCoin:     mergeCoin,
 		evalCoin:      evalCoin,
 		witnessViews:  views,
@@ -230,31 +245,21 @@ func compileModule(
 	})
 }
 
-// buildProverBuckets constructs the runtime prover buckets from the raw bucket
-// descriptions, precomputing all data that depends only on the system
-// structure (not on runtime witness assignments).
-func buildProverBuckets(rawBuckets []rawBucket, n int) []proverBucket {
+// buildProverBuckets constructs the prover buckets from the raw bucket
+// descriptions. For static modules, size-dependent data (FFT domains,
+// annihilator inverses, cancellation cosets) is precomputed. For dynamic
+// modules, these are left nil and computed at runtime using RuntimeSize.
+func buildProverBuckets(rawBuckets []rawBucket, m *wiop.Module) []proverBucket {
 	result := make([]proverBucket, len(rawBuckets))
+
+	// For static modules, get n now; for dynamic, n=0 signals runtime computation.
+	var n int
+	if !m.IsDynamic() {
+		n = m.Size()
+	}
+
 	for i, bkt := range rawBuckets {
 		ratio := bkt.ratio
-		N := n * ratio
-
-		smallDomain := fft.NewDomain(uint64(n))
-		largeDomain := fft.NewDomain(uint64(N))
-
-		// Precompute annihilator inverses: 1/(g^n · ω_ratio^j − 1) for j=0..ratio-1.
-		annVals := polynomials.EvalXnMinusOneOnCoset(n, N)
-		annInv := make([]field.Element, ratio)
-		field.VecBatchInvBase(annInv, annVals)
-
-		// Precompute cancellation polynomial coset evaluations.
-		entries := make([]proverVanishingEntry, len(bkt.vanishings))
-		for j, v := range bkt.vanishings {
-			entries[j] = proverVanishingEntry{
-				v:                 v,
-				cancellationCoset: precomputeCancellationCoset(v.CancelledPositions, n, N),
-			}
-		}
 
 		// Collect deduplicated root columns from all expressions.
 		rootColsSeen := make(map[wiop.ObjectID]*wiop.Column)
@@ -268,24 +273,47 @@ func buildProverBuckets(rawBuckets []rawBucket, n int) []proverBucket {
 			rootCols = append(rootCols, col)
 		}
 
-		result[i] = proverBucket{
-			ratio:       ratio,
-			entries:     entries,
-			rootCols:    rootCols,
-			shares:      bkt.shares,
-			smallDomain: smallDomain,
-			largeDomain: largeDomain,
-			annInv:      annInv,
+		pb := proverBucket{
+			ratio:    ratio,
+			rootCols: rootCols,
+			shares:   bkt.shares,
 		}
+
+		if m.IsDynamic() {
+			// Dynamic module: store vanishings for runtime computation.
+			pb.vanishings = bkt.vanishings
+		} else {
+			// Static module: precompute size-dependent data.
+			N := n * ratio
+
+			pb.smallDomain = fft.NewDomain(uint64(n))
+			pb.largeDomain = fft.NewDomain(uint64(N))
+
+			// Precompute annihilator inverses: 1/(g^n · ω_ratio^j − 1) for j=0..ratio-1.
+			annVals := polynomials.EvalXnMinusOneOnCoset(n, N)
+			pb.annInv = make([]field.Element, ratio)
+			field.VecBatchInvBase(pb.annInv, annVals)
+
+			// Precompute cancellation polynomial coset evaluations.
+			pb.entries = make([]proverVanishingEntry, len(bkt.vanishings))
+			for j, v := range bkt.vanishings {
+				pb.entries[j] = proverVanishingEntry{
+					v:                 v,
+					cancellationCoset: computeCancellationCoset(v.CancelledPositions, n, N),
+				}
+			}
+		}
+
+		result[i] = pb
 	}
 	return result
 }
 
-// precomputeCancellationCoset returns the base-field evaluation of the
+// computeCancellationCoset returns the base-field evaluation of the
 // cancellation polynomial C(X) = Π_{k ∈ cancelled} (X − ω_n^{norm(k)}) at
 // all N = n·ratio coset points {g · ω_N^j : j = 0…N-1}. Returns nil when
 // there are no cancelled positions.
-func precomputeCancellationCoset(cancelled []int, n, N int) []field.Element {
+func computeCancellationCoset(cancelled []int, n, N int) []field.Element {
 	if len(cancelled) == 0 {
 		return nil
 	}
@@ -335,15 +363,18 @@ type QuotientProverAction struct {
 }
 
 // Plan pre-allocates scratch buffers for each ratio bucket from the planning
-// arena. When called before the first proof, Run uses these slices instead of
-// allocating fresh memory on every invocation.
+// arena. For static modules, Run uses these slices instead of allocating fresh
+// memory on every invocation. For dynamic modules, this is a no-op since the
+// size isn't known until runtime.
 func (a *QuotientProverAction) Plan(ctx *wiop.PlanningContext) {
+	if a.m.IsDynamic() {
+		return // Size not known at plan time for dynamic modules.
+	}
 	n := a.m.Size()
 	for i := range a.buckets {
 		bkt := &a.buckets[i]
 		N := n * bkt.ratio
 		bkt.scratchAgg = ctx.AllocExt(N)
-		bkt.scratchVals = ctx.AllocField(N)
 		bkt.scratchC0 = ctx.AllocField(N)
 		bkt.scratchC1 = ctx.AllocField(N)
 		bkt.scratchC2 = ctx.AllocField(N)
@@ -352,20 +383,44 @@ func (a *QuotientProverAction) Plan(ctx *wiop.PlanningContext) {
 }
 
 // Run executes the quotient polynomial computation and assigns quotient share columns.
+// For static modules, uses precomputed domains and scratch buffers. For dynamic
+// modules, computes size-dependent data at runtime using RuntimeSize.
 func (a *QuotientProverAction) Run(rt wiop.Runtime) {
-	n := a.m.Size()
+	n := a.m.RuntimeSize(rt)
+
+	if !a.m.IsDynamic() && n != a.m.Size() {
+		panic(fmt.Sprintf("wiop/compilers: global quotient prover action called with runtime size %d but module size is %d", n, a.m.Size()))
+	}
 	coinExt := rt.GetCoinValue(a.mergeCoin).Ext
 
 	for _, bkt := range a.buckets {
 		ratio := bkt.ratio
 		N := n * ratio
 
+		// Get or compute FFT domains and annihilator inverses.
+		var smallDomain, largeDomain *fft.Domain
+		var annInv []field.Element
+
+		if bkt.smallDomain != nil {
+			// Static module: use precomputed values.
+			smallDomain = bkt.smallDomain
+			largeDomain = bkt.largeDomain
+			annInv = bkt.annInv
+		} else {
+			// Dynamic module: compute at runtime.
+			smallDomain = fft.NewDomain(uint64(n))
+			largeDomain = fft.NewDomain(uint64(N))
+			annVals := polynomials.EvalXnMinusOneOnCoset(n, N)
+			annInv = make([]field.Element, ratio)
+			field.VecBatchInvBase(annInv, annVals)
+		}
+
 		// --- Evaluate all root columns on the large coset ---
 		// cosetEvals[colID][j] = col evaluated at coset point j
 		cosetEvals := make(map[wiop.ObjectID][]field.Element, len(bkt.rootCols))
 		for _, col := range bkt.rootCols {
 			cosetEvals[col.Context.ID] = reevalOnLargeCoset(
-				rt, col, a.m, n, N, bkt.smallDomain, bkt.largeDomain,
+				rt, col, a.m, n, N, smallDomain, largeDomain,
 			)
 		}
 
@@ -383,34 +438,56 @@ func (a *QuotientProverAction) Run(rt wiop.Runtime) {
 
 		var coinPow field.Ext
 		coinPow.SetOne()
-		for _, entry := range bkt.entries {
-			for j := 0; j < N; j++ {
-				pVal := evalExprOnCoset(entry.v.Expression, cosetEvals, j, ratio, N)
-				var pTimesC field.Element
-				if entry.cancellationCoset != nil {
-					pTimesC.Mul(&pVal, &entry.cancellationCoset[j])
-				} else {
-					pTimesC = pVal
+
+		if bkt.entries != nil {
+			// Static module: use precomputed cancellation cosets.
+			for _, entry := range bkt.entries {
+				for j := 0; j < N; j++ {
+					pVal := evalExprOnCoset(entry.v.Expression, cosetEvals, j, ratio, N)
+					var pTimesC field.Element
+					if entry.cancellationCoset != nil {
+						pTimesC.Mul(&pVal, &entry.cancellationCoset[j])
+					} else {
+						pTimesC = pVal
+					}
+					// aggregate[j] += coinPow * pTimesC
+					var term field.Ext
+					term.MulByElement(&coinPow, &pTimesC)
+					aggregate[j].Add(&aggregate[j], &term)
 				}
-				// aggregate[j] += coinPow * pTimesC
-				var term field.Ext
-				term.MulByElement(&coinPow, &pTimesC)
-				aggregate[j].Add(&aggregate[j], &term)
+				// advance coinPow: coinPow *= coinExt
+				coinPow.Mul(&coinPow, &coinExt)
 			}
-			// advance coinPow: coinPow *= coinExt
-			coinPow.Mul(&coinPow, &coinExt)
+		} else {
+			// Dynamic module: compute cancellation cosets at runtime.
+			for _, v := range bkt.vanishings {
+				cancellationCoset := computeCancellationCoset(v.CancelledPositions, n, N)
+				for j := 0; j < N; j++ {
+					pVal := evalExprOnCoset(v.Expression, cosetEvals, j, ratio, N)
+					var pTimesC field.Element
+					if cancellationCoset != nil {
+						pTimesC.Mul(&pVal, &cancellationCoset[j])
+					} else {
+						pTimesC = pVal
+					}
+					var term field.Ext
+					term.MulByElement(&coinPow, &pTimesC)
+					aggregate[j].Add(&aggregate[j], &term)
+				}
+				coinPow.Mul(&coinPow, &coinExt)
+			}
 		}
 
 		// --- Divide by annihilator (x^n − 1) at each coset point ---
 		// annihilator at point j is annInv[j % ratio] (already inverted).
 		for j := 0; j < N; j++ {
-			aggregate[j].MulByElement(&aggregate[j], &bkt.annInv[j%ratio])
+			aggregate[j].MulByElement(&aggregate[j], &annInv[j%ratio])
 		}
 
 		// --- IFFT on the large coset: coset evals → canonical coefficients ---
 		// Operates component-wise on the 4 base-field components of Ext.
 		// Use pre-allocated coordinate scratch buffers when available.
-		applyBaseFFT4(bkt.largeDomain, aggregate[:N], func(d *fft.Domain, c []field.Element) {
+		applyBaseFFT4(largeDomain, aggregate[:N], func(d *fft.Domain, c []field.Element) {
 			d.FFTInverse(c, fft.DIF, fft.OnCoset())
 		}, bkt.scratchC0, bkt.scratchC1, bkt.scratchC2, bkt.scratchC3)
 
@@ -418,7 +495,7 @@ func (a *QuotientProverAction) Run(rt wiop.Runtime) {
 		for k := range ratio {
 			chunk := make([]field.Ext, n)
 			copy(chunk, aggregate[k*n:(k+1)*n])
-			extFFT(bkt.smallDomain, chunk)
+			extFFT(smallDomain, chunk)
 
 			cv := &wiop.ConcreteVector{
 				Plain: field.VecFromExt(chunk),
@@ -440,9 +517,10 @@ func reevalOnLargeCoset(
 	cv := rt.GetColumnAssignment(col)
 
 	// Build the full n-length standard-domain evaluation.
+	// Use ElementAtN with explicit size to support dynamic modules.
 	vals := make([]field.Element, N) // zero-padded
 	for i := range n {
-		elem := cv.ElementAt(m, i)
+		elem := cv.ElementAtN(m.Padding, n, i)
 		if !elem.IsBase() {
 			panic(fmt.Sprintf(
 				"wiop/compilers: global quotient does not support extension-field columns in vanishing expressions; column %q",
@@ -479,7 +557,7 @@ func (a *EvalProverAction) Run(rt wiop.Runtime) {
 // Verifier checks the PLONK quotient identity for one module.
 // It runs in evalRound.
 type Verifier struct {
-	n             int
+	m             *wiop.Module
 	mergeCoin     *wiop.CoinField
 	evalCoin      *wiop.CoinField
 	witnessViews  []*wiop.ColumnView
@@ -490,7 +568,11 @@ type Verifier struct {
 
 // Check verifies the PLONK quotient identity for the module using the runtime's claimed values.
 func (gv *Verifier) Check(rt wiop.Runtime) error {
-	n := gv.n
+	n := gv.m.RuntimeSize(rt)
+
+	if !gv.m.IsDynamic() && n != gv.m.Size() {
+		panic(fmt.Sprintf("wiop/compilers: global quotient Check called with runtime size %d but module size is %d", n, gv.m.Size()))
+	}
 	r := rt.GetCoinValue(gv.evalCoin)
 	coinExt := rt.GetCoinValue(gv.mergeCoin).Ext
 
@@ -746,15 +828,32 @@ func collectRootColumns(expr wiop.Expression) []*wiop.Column {
 // Ratio computation
 // ---------------------------------------------------------------------------
 
-// computeRatio returns the smallest power of two ≥ 1 such that
-// ratio · n ≥ deg(v.Expression) + len(v.CancelledPositions) + 1.
-func computeRatio(v *wiop.Vanishing, n int) int {
-	exprDeg := v.Expression.Degree()
-	cancelDeg := len(v.CancelledPositions)
-	effectiveDeg := exprDeg + cancelDeg
-	quotientSize := effectiveDeg - n + 1
-	ratio := utils.DivCeil(max(1, quotientSize), n)
-	return utils.NextPowerOfTwo(ratio)
+// computeRatio returns the smallest power of two ratio such that the quotient
+// polynomial fits within ratio shares. The ratio is computed from the
+// expression's DegreeFactor() which doesn't require knowing the module size,
+// allowing compilation to proceed for dynamic-size modules.
+//
+// For a vanishing constraint with expression degree d = degreeFactor * (n-1)
+// and c cancelled positions, the numerator polynomial has degree at most
+// d + c = degreeFactor * (n-1) + c. Dividing by the annihilator (x^n - 1)
+// gives a quotient of degree at most:
+//
+//	quotientDeg = degreeFactor * (n-1) + c - n +1
+//	            = (degreeFactor - 1) * n + (c - degreeFactor + 1)
+//
+// For this to fit in ratio shares of size n (i.e., degree < ratio * n), we need:
+//
+//	ratio * n > quotientDeg
+//	ratio > (degreeFactor - 1) + (c - degreeFactor +1) / n
+func computeRatio(v *wiop.Vanishing) int {
+	factor := v.Expression.DegreeFactor()
+	// usually n > c, n >factor, so if c-factor+1> 0 ratio= factor, otherwise ratio= factor-1.
+	// We use
+	// max(1, ratio) since ratio must be at least 1.
+	if len(v.CancelledPositions)-factor+1 > 0 {
+		return utils.NextPowerOfTwo(max(1, factor))
+	}
+	return utils.NextPowerOfTwo(max(1, factor-1))
 }
 
 // ---------------------------------------------------------------------------

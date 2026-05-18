@@ -41,6 +41,10 @@ func (cf *CoinField) IsMultiValued() bool { return false }
 // respect to any polynomial evaluation.
 func (cf *CoinField) Degree() int { return 0 }
 
+// DegreeFactor implements [Expression]. Always returns 0: a coin is a scalar
+// constant.
+func (cf *CoinField) DegreeFactor() int { return 0 }
+
 // Size implements [Expression]. Panics unconditionally: size has no meaning
 // for a scalar FieldPromise. Check IsMultiValued() before calling Size.
 func (cf *CoinField) Size() int {
