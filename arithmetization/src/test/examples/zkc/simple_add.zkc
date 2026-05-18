@@ -1,0 +1,13 @@
+// This main function is used for test purposes to integrate the different compilation steps in CI
+pub input data(address:u16) -> (byte:u16)
+
+// prove that two numbers add up to a third.
+fn main() {
+    var lhs:u16 = data[0]
+    var rhs:u16 = data[1]
+    var sum:u16
+    sum = lhs + rhs
+    if sum != data[2] {
+        fail
+    }
+}

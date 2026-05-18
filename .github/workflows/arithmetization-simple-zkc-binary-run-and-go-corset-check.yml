@@ -1,0 +1,42 @@
+name: Tracer simple zkc binary run and go-corset check
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'arithmetization/**'
+      - '.github/actions/setup-arithmetization-riscv/**'
+      - '.github/workflows/arithmetization-*.yml'
+  push:
+    branches:
+     - main
+    paths:
+     - 'arithmetization/**'
+     - '.github/actions/setup-arithmetization-riscv/**'
+     - '.github/workflows/arithmetization-*.yml'
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build:
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: false
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-arithmetization-riscv
+
+      - name: Install zkc, compile risc binary for simple zkc test program and go-corset check it
+        run: make -C arithmetization zkc-compile-and-check
+        env:
+          ZKC_MAIN: src/test/examples/zkc/simple_add.zkc
+          ZKC_FILES: src/test/examples/zkc/simple_add.zkc
+          ZKC_INPUT: src/test/examples/zkc/simple_add.json

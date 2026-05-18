@@ -16,12 +16,13 @@ GO_CORSET_REF_FOR_ZKC ?=
 # Used to install go-corset
 GO_CORSET_VERSION ?= v1.2.17
 
-ZKC_FILES := $(shell find $(MAKEFILE_DIR)src/main/riscv/* -name "*.zkc")
-ZKC_MAIN := $(MAKEFILE_DIR)src/main/riscv/main.zkc
-ZKC_BINDIR := $(MAKEFILE_DIR)bin
-ZKC_BINARY := riscv.bin
+ZKC_FILES ?= $(shell find $(MAKEFILE_DIR)src/main/riscv/* -name "*.zkc")
+ZKC_MAIN ?= $(MAKEFILE_DIR)src/main/riscv/main.zkc
+ZKC_BINDIR ?= $(MAKEFILE_DIR)bin
+ZKC_BINARY ?= riscv.bin
+ZKC_INPUT ?= input.json
 
-.PHONY: checkout-go-corset install-go-corset install-zkc zkc-compile check
+.PHONY: checkout-go-corset install-go-corset install-zkc zkc-compile zkc-check zkc-compile-and-check check
 
 # Fetch go-corset if missing (no-op when CI already checked it out into GO_CORSET).
 checkout-go-corset:
@@ -41,10 +42,17 @@ checkout-go-corset:
 install-zkc: checkout-go-corset
 	cd "$(GO_CORSET)" && go install ./cmd/zkc
 
-# Compile the main RISC-V ZKC program.
+# Compile zkc program in a binary file
 zkc-compile: $(ZKC_FILES)
 	mkdir -p $(ZKC_BINDIR)
 	zkc compile -o $(ZKC_BINDIR)/$(ZKC_BINARY) --wir $(ZKC_MAIN)
+
+# Check execution of the compiled zkc binary against an input JSON
+# Only works for small zkc programs for now
+zkc-check:
+	zkc exec --check $(ZKC_INPUT) $(ZKC_BINDIR)/$(ZKC_BINARY)
+
+zkc-compile-and-check: install-zkc zkc-compile zkc-check
 
 zkc-lint:
 	zkc format --check $(ZKC_FILES)
@@ -52,6 +60,7 @@ zkc-lint:
 zkc-lint-apply:
 	zkc format $(ZKC_FILES)
 
+# Compile the main RISC-V zkc program in a binary file
 riscv-check-compilation: install-zkc zkc-compile
 
 riscv-check-lint: install-zkc zkc-lint
