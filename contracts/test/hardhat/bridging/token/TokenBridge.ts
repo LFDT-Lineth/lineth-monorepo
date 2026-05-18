@@ -437,12 +437,13 @@ describe("TokenBridge", function () {
       it("Should successfully set new message service address", async function () {
         const { owner, l1TokenBridge } = await loadFixture(deployContractsFixture);
         const newMessageServiceAddress = ethers.Wallet.createRandom().address;
+        const oldMessageServiceAddress = await l1TokenBridge.messageService();
 
         await expectEvent(
           l1TokenBridge,
           l1TokenBridge.connect(owner).setMessageService(newMessageServiceAddress),
           "MessageServiceUpdated",
-          [newMessageServiceAddress, await l1TokenBridge.messageService(), owner.address],
+          [newMessageServiceAddress, oldMessageServiceAddress, owner.address],
         );
 
         expect(await l1TokenBridge.messageService()).to.equal(newMessageServiceAddress);

@@ -52,6 +52,7 @@
     "@consensys/eslint-config": "workspace:*",
     "@types/jest": "catalog:",
     "jest": "catalog:",
+    "jest-environment-node": "catalog:",
     "ts-jest": "catalog:",
     "tsup": "catalog:",
     "viem": "catalog:"

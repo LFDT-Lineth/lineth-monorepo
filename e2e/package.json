@@ -36,6 +36,7 @@
     "child_process": "1.0.2",
     "dotenv": "catalog:",
     "jest": "catalog:",
+    "jest-environment-node": "catalog:",
     "ts-jest": "catalog:",
     "tsx": "catalog:",
     "viem": "catalog:",

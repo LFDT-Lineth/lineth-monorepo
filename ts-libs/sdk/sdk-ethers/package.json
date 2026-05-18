@@ -27,6 +27,7 @@
     "@typechain/ethers-v6": "catalog:",
     "@types/jest": "catalog:",
     "jest": "catalog:",
+    "jest-environment-node": "catalog:",
     "jest-mock-extended": "catalog:",
     "ts-jest": "catalog:",
     "typechain": "catalog:"

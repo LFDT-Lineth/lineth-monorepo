@@ -38,6 +38,7 @@
     "@types/jest": "catalog:",
     "@types/yargs": "catalog:",
     "jest": "catalog:",
+    "jest-environment-node": "catalog:",
     "jest-mock-extended": "catalog:",
     "ts-jest": "catalog:",
     "yargs": "catalog:"

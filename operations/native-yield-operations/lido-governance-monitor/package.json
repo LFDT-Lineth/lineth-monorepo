@@ -39,6 +39,7 @@
     "@types/html-to-text": "9.0.4",
     "@types/jest": "catalog:",
     "jest": "catalog:",
+    "jest-environment-node": "catalog:",
     "jest-mock-extended": "catalog:",
     "rimraf": "6.1.3",
     "ts-jest": "catalog:",

@@ -30,6 +30,7 @@
     "@types/jest": "catalog:",
     "@types/node-forge": "1.3.14",
     "jest": "catalog:",
+    "jest-environment-node": "catalog:",
     "jest-mock-extended": "catalog:",
     "ts-jest": "catalog:",
     "tsup": "catalog:",
