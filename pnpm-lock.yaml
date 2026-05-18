@@ -178,8 +178,8 @@ importers:
         specifier: 10.1.1
         version: 10.1.1
       '@lidofinance/lsv-cli':
-        specifier: 1.4.0
-        version: 1.4.0(@react-native-async-storage/async-storage@1.24.0(react-native@0.74.0(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(bufferutil@4.1.0)(encoding@0.1.13)(react@18.2.0)(utf-8-validate@6.0.6)))(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.4.1)
+        specifier: 1.8.0
+        version: 1.8.0(@react-native-async-storage/async-storage@1.24.0(react-native@0.74.0(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(bufferutil@4.1.0)(encoding@0.1.13)(react@18.2.0)(utf-8-validate@6.0.6)))(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.4.1)
       '@lodestar/types':
         specifier: 1.42.0
         version: 1.42.0
@@ -13510,7 +13510,7 @@ snapshots:
       multiformats: 13.4.2
       weald: 1.1.1
 
-  '@lidofinance/lsv-cli@1.4.0(@react-native-async-storage/async-storage@1.24.0(react-native@0.74.0(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(bufferutil@4.1.0)(encoding@0.1.13)(react@18.2.0)(utf-8-validate@6.0.6)))(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.4.1)':
+  '@lidofinance/lsv-cli@1.8.0(@react-native-async-storage/async-storage@1.24.0(react-native@0.74.0(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(bufferutil@4.1.0)(encoding@0.1.13)(react@18.2.0)(utf-8-validate@6.0.6)))(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.4.1)':
     dependencies:
       '@chainsafe/blst': 2.2.0
       '@chainsafe/persistent-merkle-tree': 1.2.5
