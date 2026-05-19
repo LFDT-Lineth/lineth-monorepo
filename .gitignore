@@ -94,6 +94,10 @@ tmp/
 typechain/
 typechain-types/
 generated/
+!/verifier-ray/src/generated/
+!/verifier-ray/src/generated/**
+!/verifier-ray/testdata/generated/
+!/verifier-ray/testdata/generated/**
 __pycache__/
 
 /linea-besu/plugins/linea-sequencer/**/site
