@@ -38,7 +38,7 @@ func (fs *FiatShamir) UpdateExt(vec ...field.Ext) {
 	if len(vec) == 0 {
 		return
 	}
-	vElems := unsafe.Slice((*field.Element)(unsafe.Pointer(&vec[0])), 4*len(vec)) //nolint
+	vElems := unsafe.Slice((*field.Element)(unsafe.Pointer(&vec[0])), field.ExtensionDegree*len(vec)) //nolint
 	fs.h.WriteElements(vElems...)
 }
 
@@ -96,6 +96,8 @@ func (fs *FiatShamir) RandomField() field.Octuplet {
 }
 
 // RandomFext samples a random extension field element from the transcript.
+// Uses the first ExtensionDegree (=6) of the 8 octuplet coordinates; the
+// remaining two are discarded.
 func (fs *FiatShamir) RandomFext() field.Ext {
 	s := fs.RandomField() // already calls safeguardUpdate()
 	var res field.Ext
@@ -103,6 +105,8 @@ func (fs *FiatShamir) RandomFext() field.Ext {
 	res.B0.A1 = s[1]
 	res.B1.A0 = s[2]
 	res.B1.A1 = s[3]
+	res.B2.A0 = s[4]
+	res.B2.A1 = s[5]
 
 	return res
 }

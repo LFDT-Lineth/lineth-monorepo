@@ -97,13 +97,14 @@ func TestVarEmulated(t *testing.T) {
 
 // TestExtCircuit tests Ext operations
 type TestExtCircuit struct {
-	A, B    Ext
-	AddAB   Ext
-	SubAB   Ext
-	MulAB   Ext
-	SquareA Ext
-	DivAB   Ext
-	InvA    Ext
+	A, B             Ext
+	AddAB            Ext
+	SubAB            Ext
+	MulAB            Ext
+	SquareA          Ext
+	MulByNonResidueA Ext
+	DivAB            Ext
+	InvA             Ext
 }
 
 func (c *TestExtCircuit) Define(api frontend.API) error {
@@ -121,6 +122,9 @@ func (c *TestExtCircuit) Define(api frontend.API) error {
 	squareA := f.SquareExt(c.A)
 	f.AssertIsEqualExt(squareA, c.SquareA)
 
+	mulByNonResidueA := f.MulByNonResidueExt(c.A)
+	f.AssertIsEqualExt(mulByNonResidueA, c.MulByNonResidueA)
+
 	divAB := f.DivExt(c.A, c.B)
 	f.AssertIsEqualExt(divAB, c.DivAB)
 
@@ -131,29 +135,33 @@ func (c *TestExtCircuit) Define(api frontend.API) error {
 }
 
 func getExtWitness() *TestExtCircuit {
-	var a, b, addab, subab, mulab, squarea, inva, divab field.Ext
+	var a, b, addab, subab, mulab, squarea, mulByNonResidueA, inva, divab field.Ext
 	if _, err := a.SetRandom(); err != nil {
 		panic(err)
 	}
 	if _, err := b.SetRandom(); err != nil {
 		panic(err)
 	}
+	var nonResidueRoot field.Ext
+	nonResidueRoot.B1.A0.SetOne()
 	addab.Add(&a, &b)
 	subab.Sub(&a, &b)
 	mulab.Mul(&a, &b)
 	squarea.Square(&a)
+	mulByNonResidueA.Mul(&a, &nonResidueRoot)
 	divab.Div(&a, &b)
 	inva.Inverse(&a)
 
 	return &TestExtCircuit{
-		A:       NewExt(a),
-		B:       NewExt(b),
-		AddAB:   NewExt(addab),
-		SubAB:   NewExt(subab),
-		MulAB:   NewExt(mulab),
-		SquareA: NewExt(squarea),
-		DivAB:   NewExt(divab),
-		InvA:    NewExt(inva),
+		A:                NewExt(a),
+		B:                NewExt(b),
+		AddAB:            NewExt(addab),
+		SubAB:            NewExt(subab),
+		MulAB:            NewExt(mulab),
+		SquareA:          NewExt(squarea),
+		MulByNonResidueA: NewExt(mulByNonResidueA),
+		DivAB:            NewExt(divab),
+		InvA:             NewExt(inva),
 	}
 }
 

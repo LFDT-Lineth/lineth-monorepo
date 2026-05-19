@@ -146,7 +146,7 @@ func (r *RsParams) rsEncodeExt(v []field.Ext) []field.Ext {
 
 		smallDomain := r.Domains[0]
 		largeDomain := r.Domains[1]
-		smallDomain.FFTInverseExt(expandedCoeffs[:n], fft.DIF, fft.WithNbTasks(1))
+		smallDomain.FFTInverseExt6(expandedCoeffs[:n], fft.DIF, fft.WithNbTasks(1))
 
 		// this loop dispatches the values that are all located at the beginning
 		// of the domain to the entire domain by homothety
@@ -155,16 +155,16 @@ func (r *RsParams) rsEncodeExt(v []field.Ext) []field.Ext {
 			expandedCoeffs[j] = field.Ext{}
 		}
 
-		largeDomain.FFTExt(expandedCoeffs, fft.DIT, fft.WithNbTasks(1))
+		largeDomain.FFTExt6(expandedCoeffs, fft.DIT, fft.WithNbTasks(1))
 		return expandedCoeffs
 	}
 
 	// fast path; we avoid the bit reverse operations and work on the smaller domain.
-	inputCoeffs := extensions.Vector(expandedCoeffs[:r.NbColumns()])
-	r.Domains[0].FFTInverseExt(inputCoeffs, fft.DIF, fft.WithNbTasks(1))
+	inputCoeffs := extensions.VectorE6(expandedCoeffs[:r.NbColumns()])
+	r.Domains[0].FFTInverseExt6(inputCoeffs, fft.DIF, fft.WithNbTasks(1))
 	inputCoeffs.MulByElement(inputCoeffs, r.CosetTableBitReverse)
 
-	r.Domains[0].FFTExt(inputCoeffs, fft.DIT, fft.WithNbTasks(1))
+	r.Domains[0].FFTExt6(inputCoeffs, fft.DIT, fft.WithNbTasks(1))
 	for j := r.NbColumns() - 1; j >= 0; j-- {
 		expandedCoeffs[rho*j+1] = expandedCoeffs[j]
 		expandedCoeffs[rho*j] = v[j]
@@ -184,7 +184,7 @@ func (r *RsParams) IsCodewordExt(v []field.Ext) error {
 	coeffs := make([]field.Ext, r.NbEncodedColumns())
 	copy(coeffs, v)
 
-	r.Domains[1].FFTInverseExt(coeffs, fft.DIF, fft.WithNbTasks(1))
+	r.Domains[1].FFTInverseExt6(coeffs, fft.DIF, fft.WithNbTasks(1))
 	utils.BitReverse(coeffs)
 	for i := r.NbColumns(); i < r.NbEncodedColumns(); i++ {
 		c := coeffs[i]
@@ -210,6 +210,6 @@ func (r *RsParams) EncodeFromMonomials(coefficients []field.Ext) []field.Ext {
 	copy(buf, coefficients)
 	// DIT FFT expects bit-reversed input; natural-order evaluations come out.
 	utils.BitReverse(buf)
-	r.Domains[1].FFTExt(buf, fft.DIT)
+	r.Domains[1].FFTExt6(buf, fft.DIT)
 	return buf
 }

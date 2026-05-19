@@ -1,5 +1,5 @@
 // Package polynomials provides native polynomial evaluation utilities over the
-// KoalaBear field and its degree-4 extension, using the union types
+// KoalaBear field and its degree-6 extension, using the union types
 // [field.Vec] and [field.Gen] for type-aware dispatch.
 //
 // Two evaluation bases are supported:

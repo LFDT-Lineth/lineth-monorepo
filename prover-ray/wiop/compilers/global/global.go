@@ -97,11 +97,7 @@ type proverBucket struct {
 
 	// Pre-allocated scratch slices populated by Plan; nil until Plan is called.
 	// When non-nil, Run uses these instead of allocating fresh memory.
-	scratchAgg []field.Ext     // aggregate[j], length N = n*ratio
-	scratchC0  []field.Element // coordinate slice 0 for applyBaseFFT4, length N
-	scratchC1  []field.Element // coordinate slice 1 for applyBaseFFT4, length N
-	scratchC2  []field.Element // coordinate slice 2 for applyBaseFFT4, length N
-	scratchC3  []field.Element // coordinate slice 3 for applyBaseFFT4, length N
+	scratchAgg []field.Ext // aggregate[j], length N = n*ratio
 }
 
 // verifierBucket holds everything the verifier needs for one ratio bucket.
@@ -375,10 +371,6 @@ func (a *QuotientProverAction) Plan(ctx *wiop.PlanningContext) {
 		bkt := &a.buckets[i]
 		N := n * bkt.ratio
 		bkt.scratchAgg = ctx.AllocExt(N)
-		bkt.scratchC0 = ctx.AllocField(N)
-		bkt.scratchC1 = ctx.AllocField(N)
-		bkt.scratchC2 = ctx.AllocField(N)
-		bkt.scratchC3 = ctx.AllocField(N)
 	}
 }
 
@@ -389,7 +381,11 @@ func (a *QuotientProverAction) Run(rt wiop.Runtime) {
 	n := a.m.RuntimeSize(rt)
 
 	if !a.m.IsDynamic() && n != a.m.Size() {
-		panic(fmt.Sprintf("wiop/compilers: global quotient prover action called with runtime size %d but module size is %d", n, a.m.Size()))
+		panic(fmt.Sprintf(
+			"wiop/compilers: global quotient prover action called with runtime size %d but module size is %d",
+			n,
+			a.m.Size(),
+		))
 	}
 	coinExt := rt.GetCoinValue(a.mergeCoin).Ext
 
@@ -485,11 +481,8 @@ func (a *QuotientProverAction) Run(rt wiop.Runtime) {
 		}
 
 		// --- IFFT on the large coset: coset evals → canonical coefficients ---
-		// Operates component-wise on the 4 base-field components of Ext.
-		// Use pre-allocated coordinate scratch buffers when available.
-		applyBaseFFT4(largeDomain, aggregate[:N], func(d *fft.Domain, c []field.Element) {
-			d.FFTInverse(c, fft.DIF, fft.OnCoset())
-		}, bkt.scratchC0, bkt.scratchC1, bkt.scratchC2, bkt.scratchC3)
+		// FFTInverseExt6 operates directly on the contiguous E6 layout.
+		largeDomain.FFTInverseExt6(aggregate[:N], fft.DIF, fft.OnCoset())
 
 		// --- Split into ratio chunks and FFT each to standard Lagrange form ---
 		for k := range ratio {
@@ -571,7 +564,11 @@ func (gv *Verifier) Check(rt wiop.Runtime) error {
 	n := gv.m.RuntimeSize(rt)
 
 	if !gv.m.IsDynamic() && n != gv.m.Size() {
-		panic(fmt.Sprintf("wiop/compilers: global quotient Check called with runtime size %d but module size is %d", n, gv.m.Size()))
+		panic(fmt.Sprintf(
+			"wiop/compilers: global quotient Check called with runtime size %d but module size is %d",
+			n,
+			gv.m.Size(),
+		))
 	}
 	r := rt.GetCoinValue(gv.evalCoin)
 	coinExt := rt.GetCoinValue(gv.mergeCoin).Ext
@@ -860,47 +857,9 @@ func computeRatio(v *wiop.Vanishing) int {
 // Extension-field FFT helpers
 // ---------------------------------------------------------------------------
 
-// extFFT applies the forward standard-domain FFT to the extension-field slice v,
-// operating component-wise. After the call, v contains standard Lagrange
-// evaluations.
+// extFFT applies the forward standard-domain FFT to the extension-field slice
+// v. The gnark-crypto FFTExt6 implementation handles the six E6 coordinates
+// directly on the contiguous layout.
 func extFFT(d *fft.Domain, v []field.Ext) {
-	applyBaseFFT4(d, v, func(d *fft.Domain, c []field.Element) {
-		d.FFT(c, fft.DIT)
-	}, nil, nil, nil, nil)
-}
-
-// applyBaseFFT4 deinterleaves v into four base-field coordinate slices, applies
-// fn to each, then reassembles the result back into v. If any of c0..c3 is
-// non-nil and long enough, it is used as scratch instead of allocating.
-func applyBaseFFT4(d *fft.Domain, v []field.Ext, fn func(*fft.Domain, []field.Element),
-	c0, c1, c2, c3 []field.Element) {
-	n := len(v)
-	if len(c0) < n {
-		c0 = make([]field.Element, n)
-	}
-	if len(c1) < n {
-		c1 = make([]field.Element, n)
-	}
-	if len(c2) < n {
-		c2 = make([]field.Element, n)
-	}
-	if len(c3) < n {
-		c3 = make([]field.Element, n)
-	}
-	for i, e := range v {
-		c0[i] = e.B0.A0
-		c1[i] = e.B0.A1
-		c2[i] = e.B1.A0
-		c3[i] = e.B1.A1
-	}
-	fn(d, c0)
-	fn(d, c1)
-	fn(d, c2)
-	fn(d, c3)
-	for i := range v {
-		v[i].B0.A0 = c0[i]
-		v[i].B0.A1 = c1[i]
-		v[i].B1.A0 = c2[i]
-		v[i].B1.A1 = c3[i]
-	}
+	d.FFTExt6(v, fft.DIT)
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
-// fftExtInplace applies the FFT to each of the 4 coordinates of an []Ext slice
+// fftExtInplace applies the FFT to each of the 6 coordinates of an []Ext slice
 // individually, using the base-field FFT provided by *fft.Domain.
 // After the call, poly holds the Lagrange (evaluation) form of the input.
 func fftExtInplace(poly []field.Ext, d *fft.Domain) {
@@ -30,6 +30,8 @@ func fftExtInplace(poly []field.Ext, d *fft.Domain) {
 	copyCoord(func(i int) *field.Element { return &poly[i].B0.A1 })
 	copyCoord(func(i int) *field.Element { return &poly[i].B1.A0 })
 	copyCoord(func(i int) *field.Element { return &poly[i].B1.A1 })
+	copyCoord(func(i int) *field.Element { return &poly[i].B2.A0 })
+	copyCoord(func(i int) *field.Element { return &poly[i].B2.A1 })
 }
 
 // fftBaseInplace applies the FFT to a []Element slice, converting from
@@ -59,6 +61,8 @@ func ifftExtInplace(poly []field.Ext, d *fft.Domain) {
 	copyCoord(func(i int) *field.Element { return &poly[i].B0.A1 })
 	copyCoord(func(i int) *field.Element { return &poly[i].B1.A0 })
 	copyCoord(func(i int) *field.Element { return &poly[i].B1.A1 })
+	copyCoord(func(i int) *field.Element { return &poly[i].B2.A0 })
+	copyCoord(func(i int) *field.Element { return &poly[i].B2.A1 })
 }
 
 func TestEvalLagrange(t *testing.T) {

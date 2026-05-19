@@ -19,16 +19,17 @@ func init() {
 		mulExtHintNative, mulExtHintEmulated)
 }
 
-// E2 is a quadratic extension element .
+// E2 is a quadratic extension element.
 // It represents an element of F_p^2 = F_p[u] / (u^2 - 3).
 type E2 struct {
 	A0, A1 Element
 }
 
-// Ext is a circuit variable over the degree-4 extension field.
-// It represents an element of F_p^4 = F_p^2[v] / (v^2 - u).
+// Ext is a circuit variable over the degree-6 extension field.
+// It represents an element of F_p^6 = F_p^2[v] / (v^3 - (u+1)), i.e. each
+// element is stored as (B0, B1, B2) with each Bi in E2.
 type Ext struct {
-	B0, B1 E2
+	B0, B1, B2 E2
 }
 
 // --- Ext Constructors (for witness assignment) ---
@@ -38,6 +39,7 @@ func NewExt(v field.Ext) Ext {
 	return Ext{
 		B0: newE2(v.B0),
 		B1: newE2(v.B1),
+		B2: newE2(v.B2),
 	}
 }
 
@@ -54,6 +56,7 @@ func NewFromBaseExt(v any) Ext {
 	return Ext{
 		B0: E2{A0: NewElement(v), A1: z},
 		B1: E2{A0: z, A1: z},
+		B2: E2{A0: z, A1: z},
 	}
 }
 
@@ -63,21 +66,23 @@ func NewExtFromFrontendVar(v frontend.Variable) Ext {
 	return Ext{
 		B0: E2{A0: WrapFrontendVariable(v), A1: z},
 		B1: E2{A0: z, A1: z},
+		B2: E2{A0: z, A1: z},
 	}
 }
 
-// NewExtFrom4FrontendVars creates an Ext from 4 frontend.Variable values.
-// The order is: B0.A0, B0.A1, B1.A0, B1.A1.
-func NewExtFrom4FrontendVars(b0a0, b0a1, b1a0, b1a1 frontend.Variable) Ext {
+// NewExtFrom6FrontendVars creates an Ext from 6 frontend.Variable values, one
+// per coordinate (in the order B0.A0, B0.A1, B1.A0, B1.A1, B2.A0, B2.A1).
+func NewExtFrom6FrontendVars(b0a0, b0a1, b1a0, b1a1, b2a0, b2a1 frontend.Variable) Ext {
 	return Ext{
 		B0: E2{A0: WrapFrontendVariable(b0a0), A1: WrapFrontendVariable(b0a1)},
 		B1: E2{A0: WrapFrontendVariable(b1a0), A1: WrapFrontendVariable(b1a1)},
+		B2: E2{A0: WrapFrontendVariable(b2a0), A1: WrapFrontendVariable(b2a1)},
 	}
 }
 
-// Coordinates returns all 4 base field coordinates.
-func (x Ext) Coordinates() (b0a0, b0a1, b1a0, b1a1 Element) {
-	return x.B0.A0, x.B0.A1, x.B1.A0, x.B1.A1
+// Coordinates returns all 6 base field coordinates.
+func (x Ext) Coordinates() (b0a0, b0a1, b1a0, b1a1, b2a0, b2a1 Element) {
+	return x.B0.A0, x.B0.A1, x.B1.A0, x.B1.A1, x.B2.A0, x.B2.A1
 }
 
 // FromBaseVar creates an Ext from a Var (for in-circuit conversion).
@@ -87,6 +92,7 @@ func FromBaseVar(v Element) Ext {
 	return Ext{
 		B0: E2{A0: v, A1: z},
 		B1: E2{A0: z, A1: z},
+		B2: E2{A0: z, A1: z},
 	}
 }
 
@@ -95,22 +101,22 @@ func FromBaseVar(v Element) Ext {
 // ZeroExt returns the additive identity in the extension field.
 func (a *API) ZeroExt() Ext {
 	z := a.Zero()
-	return Ext{B0: E2{A0: z, A1: z}, B1: E2{A0: z, A1: z}}
+	return Ext{B0: E2{A0: z, A1: z}, B1: E2{A0: z, A1: z}, B2: E2{A0: z, A1: z}}
 }
 
 // OneExt returns the multiplicative identity in the extension field.
 func (a *API) OneExt() Ext {
 	z, o := a.Zero(), a.One()
-	return Ext{B0: E2{A0: o, A1: z}, B1: E2{A0: z, A1: z}}
+	return Ext{B0: E2{A0: o, A1: z}, B1: E2{A0: z, A1: z}, B2: E2{A0: z, A1: z}}
 }
 
 // FromBaseExt creates an Ext element with a base field value in the constant term.
 func (a *API) FromBaseExt(x Element) Ext {
 	z := a.Zero()
-	return Ext{B0: E2{A0: x, A1: z}, B1: E2{A0: z, A1: z}}
+	return Ext{B0: E2{A0: x, A1: z}, B1: E2{A0: z, A1: z}, B2: E2{A0: z, A1: z}}
 }
 
-// ConstExt creates a constant Ext element from an field.Ext.
+// ConstExt creates a constant Ext element from a field.Ext.
 // This should be used during circuit definition to create constant extension field values.
 // For witness assignment, use NewExt instead.
 func (a *API) ConstExt(v field.Ext) Ext {
@@ -123,6 +129,10 @@ func (a *API) ConstExt(v field.Ext) Ext {
 			A0: a.Const(int64(v.B1.A0.Uint64())),
 			A1: a.Const(int64(v.B1.A1.Uint64())),
 		},
+		B2: E2{
+			A0: a.Const(int64(v.B2.A0.Uint64())),
+			A1: a.Const(int64(v.B2.A1.Uint64())),
+		},
 	}
 }
 
@@ -131,25 +141,29 @@ func (a *API) ConstExt(v field.Ext) Ext {
 // AddExt returns x + y in the extension field.
 func (a *API) AddExt(x, y Ext) Ext {
 	return Ext{
-		B0: E2{A0: a.Add(x.B0.A0, y.B0.A0), A1: a.Add(x.B0.A1, y.B0.A1)},
-		B1: E2{A0: a.Add(x.B1.A0, y.B1.A0), A1: a.Add(x.B1.A1, y.B1.A1)},
+		B0: a.e2Add(x.B0, y.B0),
+		B1: a.e2Add(x.B1, y.B1),
+		B2: a.e2Add(x.B2, y.B2),
 	}
 }
 
 // SubExt returns x - y in the extension field.
 func (a *API) SubExt(x, y Ext) Ext {
 	return Ext{
-		B0: E2{A0: a.Sub(x.B0.A0, y.B0.A0), A1: a.Sub(x.B0.A1, y.B0.A1)},
-		B1: E2{A0: a.Sub(x.B1.A0, y.B1.A0), A1: a.Sub(x.B1.A1, y.B1.A1)},
+		B0: a.e2Sub(x.B0, y.B0),
+		B1: a.e2Sub(x.B1, y.B1),
+		B2: a.e2Sub(x.B2, y.B2),
 	}
 }
 
 // NegExt returns -x in the extension field.
 func (a *API) NegExt(x Ext) Ext {
 	z := a.Zero()
+	zero := E2{A0: z, A1: z}
 	return Ext{
-		B0: E2{A0: a.Sub(z, x.B0.A0), A1: a.Sub(z, x.B0.A1)},
-		B1: E2{A0: a.Sub(z, x.B1.A0), A1: a.Sub(z, x.B1.A1)},
+		B0: a.e2Sub(zero, x.B0),
+		B1: a.e2Sub(zero, x.B1),
+		B2: a.e2Sub(zero, x.B2),
 	}
 }
 
@@ -157,22 +171,22 @@ func (a *API) NegExt(x Ext) Ext {
 func (a *API) DoubleExt(x Ext) Ext {
 	two := big.NewInt(2)
 	return Ext{
-		B0: E2{A0: a.MulConst(x.B0.A0, two), A1: a.MulConst(x.B0.A1, two)},
-		B1: E2{A0: a.MulConst(x.B1.A0, two), A1: a.MulConst(x.B1.A1, two)},
+		B0: a.e2MulConst(x.B0, two),
+		B1: a.e2MulConst(x.B1, two),
+		B2: a.e2MulConst(x.B2, two),
 	}
 }
 
-// qnrE2 is the non-residue constant for E2 extension (value 3).
-// Used with MulConst to avoid unnecessary range checks.
+// qnrE2 is the quadratic non-residue constant for E2: u^2 = 3.
 var qnrE2 = big.NewInt(3)
 
-// e2MulByNonResidue multiplies an E2 by the non-residue u (where u^2 = 3).
-// Returns (3*a1, a0).
-func (a *API) e2MulByNonResidue(x E2) E2 {
-	return E2{
-		A0: a.MulConst(x.A1, qnrE2),
-		A1: x.A0,
-	}
+// e2MulByCubicNonResidue multiplies an E2 by the cubic non-residue (u+1).
+// Given x = a0 + a1*u, (a0 + a1*u)*(1+u) = (a0+3*a1) + (a0+a1)*u (because u^2=3).
+func (a *API) e2MulByCubicNonResidue(x E2) E2 {
+	z1 := a.Add(x.A0, x.A1)
+	z0 := a.MulConst(x.A1, qnrE2) // 3*a1
+	z0 = a.Add(z0, x.A0)          // a0 + 3*a1
+	return E2{A0: z0, A1: z1}
 }
 
 // e2Add returns x + y in E2.
@@ -231,22 +245,41 @@ func (a *API) e2MulConst(x E2, c *big.Int) E2 {
 	}
 }
 
-// MulExt returns x * y in the extension field using Karatsuba.
-// (B0 + B1*v) * (C0 + C1*v) where v^2 = u
+// MulExt returns x * y in the extension field using Karatsuba over E2.
+// Implements Algorithm 13 from https://eprint.iacr.org/2010/354.pdf, specialized
+// for E6 = E2[v]/(v^3 - (u+1)). Costs 6 E2 multiplications (≈18 variable base muls).
 func (a *API) MulExt(x, y Ext, more ...*Ext) Ext {
-	l1 := a.e2Add(x.B0, x.B1)
-	l2 := a.e2Add(y.B0, y.B1)
-	u := a.e2Mul(l1, l2)      // (B0+B1)(C0+C1)
-	ac := a.e2Mul(x.B0, y.B0) // B0*C0
-	bd := a.e2Mul(x.B1, y.B1) // B1*C1
+	t0 := a.e2Mul(x.B0, y.B0)
+	t1 := a.e2Mul(x.B1, y.B1)
+	t2 := a.e2Mul(x.B2, y.B2)
 
-	sum := a.e2Add(ac, bd)
-	b1 := a.e2Sub(u, sum) // (B0+B1)(C0+C1) - B0*C0 - B1*C1
+	// z0 = ((B1+B2)*(C1+C2) - t1 - t2) * (u+1) + t0
+	c0 := a.e2Add(x.B1, x.B2)
+	tmp := a.e2Add(y.B1, y.B2)
+	c0 = a.e2Mul(c0, tmp)
+	c0 = a.e2Sub(c0, t1)
+	c0 = a.e2Sub(c0, t2)
+	c0 = a.e2MulByCubicNonResidue(c0)
+	c0 = a.e2Add(c0, t0)
 
-	bdNR := a.e2MulByNonResidue(bd)
-	b0 := a.e2Add(ac, bdNR)
+	// z1 = (B0+B1)*(C0+C1) - t0 - t1 + t2*(u+1)
+	c1 := a.e2Add(x.B0, x.B1)
+	tmp = a.e2Add(y.B0, y.B1)
+	c1 = a.e2Mul(c1, tmp)
+	c1 = a.e2Sub(c1, t0)
+	c1 = a.e2Sub(c1, t1)
+	t2NR := a.e2MulByCubicNonResidue(t2)
+	c1 = a.e2Add(c1, t2NR)
 
-	result := Ext{B0: b0, B1: b1}
+	// z2 = (B0+B2)*(C0+C2) - t0 - t2 + t1
+	c2 := a.e2Add(x.B0, x.B2)
+	tmp = a.e2Add(y.B0, y.B2)
+	c2 = a.e2Mul(c2, tmp)
+	c2 = a.e2Sub(c2, t0)
+	c2 = a.e2Sub(c2, t2)
+	c2 = a.e2Add(c2, t1)
+
+	result := Ext{B0: c0, B1: c1, B2: c2}
 
 	if len(more) > 0 {
 		return a.MulExt(result, *more[0], more[1:]...)
@@ -254,17 +287,47 @@ func (a *API) MulExt(x, y Ext, more ...*Ext) Ext {
 	return result
 }
 
-// SquareExt returns x^2 in the extension field.
+// SquareExt returns x^2 in the extension field, following Algorithm 16 from
+// https://eprint.iacr.org/2010/354.pdf, specialized for E6 = E2[v]/(v^3-(u+1)).
 func (a *API) SquareExt(x Ext) Ext {
-	sum := a.e2Add(x.B0, x.B1)
-	d := a.e2Square(x.B0)
-	c := a.e2Square(x.B1)
-	sum = a.e2Square(sum)
-	bc := a.e2Add(d, c)
-	b1 := a.e2Sub(sum, bc)
-	cNR := a.e2MulByNonResidue(c)
-	b0 := a.e2Add(cNR, d)
-	return Ext{B0: b0, B1: b1}
+	// c4 = 2*B0*B1
+	c4 := a.e2Mul(x.B0, x.B1)
+	c4 = a.e2MulConst(c4, big.NewInt(2))
+
+	// c5 = B2^2
+	c5 := a.e2Square(x.B2)
+
+	// c1 = c5*(u+1) + c4
+	c1 := a.e2MulByCubicNonResidue(c5)
+	c1 = a.e2Add(c1, c4)
+
+	// c2 = c4 - c5
+	c2 := a.e2Sub(c4, c5)
+
+	// c3 = B0^2
+	c3 := a.e2Square(x.B0)
+
+	// c4 = B0 - B1 + B2
+	c4 = a.e2Sub(x.B0, x.B1)
+	c4 = a.e2Add(c4, x.B2)
+
+	// c5 = 2*B1*B2
+	c5 = a.e2Mul(x.B1, x.B2)
+	c5 = a.e2MulConst(c5, big.NewInt(2))
+
+	// c4 = c4^2
+	c4 = a.e2Square(c4)
+
+	// c0 = c5*(u+1) + c3
+	c0 := a.e2MulByCubicNonResidue(c5)
+	c0 = a.e2Add(c0, c3)
+
+	// z.B2 = c2 + c4 + c5 - c3
+	b2 := a.e2Add(c2, c4)
+	b2 = a.e2Add(b2, c5)
+	b2 = a.e2Sub(b2, c3)
+
+	return Ext{B0: c0, B1: c1, B2: b2}
 }
 
 // MulByE2Ext multiplies an Ext by an E2 element.
@@ -272,6 +335,7 @@ func (a *API) MulByE2Ext(x Ext, c E2) Ext {
 	return Ext{
 		B0: a.e2Mul(x.B0, c),
 		B1: a.e2Mul(x.B1, c),
+		B2: a.e2Mul(x.B2, c),
 	}
 }
 
@@ -280,6 +344,7 @@ func (a *API) MulByFpExt(x Ext, c Element) Ext {
 	return Ext{
 		B0: a.e2MulByFp(x.B0, c),
 		B1: a.e2MulByFp(x.B1, c),
+		B2: a.e2MulByFp(x.B2, c),
 	}
 }
 
@@ -288,6 +353,7 @@ func (a *API) MulConstExt(x Ext, c *big.Int) Ext {
 	return Ext{
 		B0: a.e2MulConst(x.B0, c),
 		B1: a.e2MulConst(x.B1, c),
+		B2: a.e2MulConst(x.B2, c),
 	}
 }
 
@@ -298,14 +364,9 @@ func (a *API) ModReduceExt(x Ext) Ext {
 		return x
 	}
 	return Ext{
-		B0: E2{
-			A0: a.ModReduce(x.B0.A0),
-			A1: a.ModReduce(x.B0.A1),
-		},
-		B1: E2{
-			A0: a.ModReduce(x.B1.A0),
-			A1: a.ModReduce(x.B1.A1),
-		},
+		B0: E2{A0: a.ModReduce(x.B0.A0), A1: a.ModReduce(x.B0.A1)},
+		B1: E2{A0: a.ModReduce(x.B1.A0), A1: a.ModReduce(x.B1.A1)},
+		B2: E2{A0: a.ModReduce(x.B2.A0), A1: a.ModReduce(x.B2.A1)},
 	}
 }
 
@@ -314,58 +375,47 @@ func (a *API) AddByBaseExt(x Ext, y Element) Ext {
 	return Ext{
 		B0: E2{A0: a.Add(x.B0.A0, y), A1: x.B0.A1},
 		B1: x.B1,
+		B2: x.B2,
 	}
 }
 
 // SumExt returns x + y + z...
 func (a *API) SumExt(xs ...Ext) Ext {
+	// One scratch slice reused across the six coordinate-wise reductions to
+	// avoid allocating 6× len(xs) Elements per call on the hot witness path.
+	coords := make([]Element, len(xs))
 
-	res := Ext{}
-
-	// summing the B0.A0 terms using gnark's optimized [Sum] function.
-	b0A0s := make([]Element, len(xs))
-	for i := range xs {
-		b0A0s[i] = xs[i].B0.A0
+	sumCoord := func(get func(x Ext) Element) Element {
+		for i := range xs {
+			coords[i] = get(xs[i])
+		}
+		return a.Sum(coords...)
 	}
-	res.B0.A0 = a.Sum(b0A0s...)
 
-	// summing the B0.A1 terms using gnark's optimized [Sum] function.
-	b0A1s := make([]Element, len(xs))
-	for i := range xs {
-		b0A1s[i] = xs[i].B0.A1
+	return Ext{
+		B0: E2{
+			A0: sumCoord(func(x Ext) Element { return x.B0.A0 }),
+			A1: sumCoord(func(x Ext) Element { return x.B0.A1 }),
+		},
+		B1: E2{
+			A0: sumCoord(func(x Ext) Element { return x.B1.A0 }),
+			A1: sumCoord(func(x Ext) Element { return x.B1.A1 }),
+		},
+		B2: E2{
+			A0: sumCoord(func(x Ext) Element { return x.B2.A0 }),
+			A1: sumCoord(func(x Ext) Element { return x.B2.A1 }),
+		},
 	}
-	res.B0.A1 = a.Sum(b0A1s...)
-
-	// summing the B0.A0 terms using gnark's optimized [Sum] function.
-	b1A0s := make([]Element, len(xs))
-	for i := range xs {
-		b1A0s[i] = xs[i].B1.A0
-	}
-	res.B1.A0 = a.Sum(b1A0s...)
-
-	// summing the B1.A1 terms using gnark's optimized [Sum] function.
-	b1A1s := make([]Element, len(xs))
-	for i := range xs {
-		b1A1s[i] = xs[i].B1.A1
-	}
-	res.B1.A1 = a.Sum(b1A1s...)
-
-	return res
 }
 
-// MulByNonResidueExt multiplies by the non-residue v (where v^2 = u).
+// MulByNonResidueExt multiplies x by v, where v is the irreducible cubic root
+// generator (v^3 = u+1). Equivalent to a single-coordinate cyclic shift with
+// (u+1) wrap on the highest slot.
 func (a *API) MulByNonResidueExt(x Ext) Ext {
 	return Ext{
-		B0: a.e2MulByNonResidue(x.B1),
+		B0: a.e2MulByCubicNonResidue(x.B2),
 		B1: x.B0,
-	}
-}
-
-// ConjugateExt returns the conjugate of x.
-func (a *API) ConjugateExt(x Ext) Ext {
-	return Ext{
-		B0: x.B0,
-		B1: E2{A0: a.Neg(x.B1.A0), A1: a.Neg(x.B1.A1)},
+		B2: x.B1,
 	}
 }
 
@@ -375,7 +425,8 @@ func (a *API) ConjugateExt(x Ext) Ext {
 func (a *API) IsZeroExt(x Ext) frontend.Variable {
 	b0Zero := a.And(a.IsZero(x.B0.A0), a.IsZero(x.B0.A1))
 	b1Zero := a.And(a.IsZero(x.B1.A0), a.IsZero(x.B1.A1))
-	return a.And(b0Zero, b1Zero)
+	b2Zero := a.And(a.IsZero(x.B2.A0), a.IsZero(x.B2.A1))
+	return a.And(a.And(b0Zero, b1Zero), b2Zero)
 }
 
 // SelectExt returns x if sel=1, y otherwise.
@@ -389,6 +440,10 @@ func (a *API) SelectExt(sel frontend.Variable, x, y Ext) Ext {
 			A0: a.Select(sel, x.B1.A0, y.B1.A0),
 			A1: a.Select(sel, x.B1.A1, y.B1.A1),
 		},
+		B2: E2{
+			A0: a.Select(sel, x.B2.A0, y.B2.A0),
+			A1: a.Select(sel, x.B2.A1, y.B2.A1),
+		},
 	}
 }
 
@@ -398,6 +453,8 @@ func (a *API) AssertIsEqualExt(x, y Ext) {
 	a.AssertIsEqual(x.B0.A1, y.B0.A1)
 	a.AssertIsEqual(x.B1.A0, y.B1.A0)
 	a.AssertIsEqual(x.B1.A1, y.B1.A1)
+	a.AssertIsEqual(x.B2.A0, y.B2.A0)
+	a.AssertIsEqual(x.B2.A1, y.B2.A1)
 }
 
 // --- Ext Division and Inverse ---
@@ -405,7 +462,8 @@ func (a *API) AssertIsEqualExt(x, y Ext) {
 // InverseExt returns 1/x in the extension field.
 func (a *API) InverseExt(x Ext) Ext {
 	hint := a.inverseExtHint()
-	res, err := a.NewHint(hint, 4, x.B0.A0, x.B0.A1, x.B1.A0, x.B1.A1)
+	res, err := a.NewHint(hint, extDegree,
+		x.B0.A0, x.B0.A1, x.B1.A0, x.B1.A1, x.B2.A0, x.B2.A1)
 	if err != nil {
 		panic(err)
 	}
@@ -420,9 +478,9 @@ func (a *API) InverseExt(x Ext) Ext {
 // DivExt returns x / y in the extension field.
 func (a *API) DivExt(x, y Ext) Ext {
 	hint := a.divExtHint()
-	res, err := a.NewHint(hint, 4,
-		x.B0.A0, x.B0.A1, x.B1.A0, x.B1.A1,
-		y.B0.A0, y.B0.A1, y.B1.A0, y.B1.A1)
+	res, err := a.NewHint(hint, extDegree,
+		x.B0.A0, x.B0.A1, x.B1.A0, x.B1.A1, x.B2.A0, x.B2.A1,
+		y.B0.A0, y.B0.A1, y.B1.A0, y.B1.A1, y.B2.A0, y.B2.A1)
 	if err != nil {
 		panic(err)
 	}
@@ -439,14 +497,18 @@ func (a *API) DivByBaseExt(x Ext, y Element) Ext {
 	return Ext{
 		B0: E2{A0: a.Div(x.B0.A0, y), A1: a.Div(x.B0.A1, y)},
 		B1: E2{A0: a.Div(x.B1.A0, y), A1: a.Div(x.B1.A1, y)},
+		B2: E2{A0: a.Div(x.B2.A0, y), A1: a.Div(x.B2.A1, y)},
 	}
 }
 
-// extFromVars creates an Ext from 4 Vars.
+const extDegree = field.ExtensionDegree
+
+// extFromVars creates an Ext from 6 Vars.
 func (a *API) extFromVars(v []Element) Ext {
 	return Ext{
 		B0: E2{A0: v[0], A1: v[1]},
 		B1: E2{A0: v[2], A1: v[3]},
+		B2: E2{A0: v[4], A1: v[5]},
 	}
 }
 
@@ -506,7 +568,7 @@ func (a *API) ExpVariableExponentExt(x Ext, exp frontend.Variable, expNumBits in
 // PrintlnExt prints Ext variables for debugging.
 func (a *API) PrintlnExt(vars ...Ext) {
 	for i := range vars {
-		a.Println(vars[i].B0.A0, vars[i].B0.A1, vars[i].B1.A0, vars[i].B1.A1)
+		a.Println(vars[i].B0.A0, vars[i].B0.A1, vars[i].B1.A0, vars[i].B1.A1, vars[i].B2.A0, vars[i].B2.A1)
 	}
 }
 
@@ -515,43 +577,49 @@ func (a *API) PrintlnExt(vars ...Ext) {
 // NewHintExt calls a hint function with Ext inputs and outputs.
 func (a *API) NewHintExt(f solver.Hint, nbOutputs int, inputs ...Ext) ([]Ext, error) {
 	if a.IsNative() {
-		flatInputs := make([]frontend.Variable, 4*len(inputs))
+		flatInputs := make([]frontend.Variable, extDegree*len(inputs))
 		for i, r := range inputs {
-			flatInputs[4*i] = r.B0.A0.Native()
-			flatInputs[4*i+1] = r.B0.A1.Native()
-			flatInputs[4*i+2] = r.B1.A0.Native()
-			flatInputs[4*i+3] = r.B1.A1.Native()
+			flatInputs[extDegree*i+0] = r.B0.A0.Native()
+			flatInputs[extDegree*i+1] = r.B0.A1.Native()
+			flatInputs[extDegree*i+2] = r.B1.A0.Native()
+			flatInputs[extDegree*i+3] = r.B1.A1.Native()
+			flatInputs[extDegree*i+4] = r.B2.A0.Native()
+			flatInputs[extDegree*i+5] = r.B2.A1.Native()
 		}
-		flatRes, err := a.nativeAPI.NewHint(f, 4*nbOutputs, flatInputs...)
+		flatRes, err := a.nativeAPI.NewHint(f, extDegree*nbOutputs, flatInputs...)
 		if err != nil {
 			return nil, err
 		}
 		res := make([]Ext, nbOutputs)
 		for i := range res {
 			res[i] = Ext{
-				B0: E2{A0: Element{V: flatRes[4*i]}, A1: Element{V: flatRes[4*i+1]}},
-				B1: E2{A0: Element{V: flatRes[4*i+2]}, A1: Element{V: flatRes[4*i+3]}},
+				B0: E2{A0: Element{V: flatRes[extDegree*i+0]}, A1: Element{V: flatRes[extDegree*i+1]}},
+				B1: E2{A0: Element{V: flatRes[extDegree*i+2]}, A1: Element{V: flatRes[extDegree*i+3]}},
+				B2: E2{A0: Element{V: flatRes[extDegree*i+4]}, A1: Element{V: flatRes[extDegree*i+5]}},
 			}
 		}
 		return res, nil
 	}
 
-	flatInputs := make([]*emulated.Element[emulated.KoalaBear], 4*len(inputs))
+	flatInputs := make([]*emulated.Element[emulated.KoalaBear], extDegree*len(inputs))
 	for i, r := range inputs {
-		flatInputs[4*i] = r.B0.A0.Emulated()
-		flatInputs[4*i+1] = r.B0.A1.Emulated()
-		flatInputs[4*i+2] = r.B1.A0.Emulated()
-		flatInputs[4*i+3] = r.B1.A1.Emulated()
+		flatInputs[extDegree*i+0] = r.B0.A0.Emulated()
+		flatInputs[extDegree*i+1] = r.B0.A1.Emulated()
+		flatInputs[extDegree*i+2] = r.B1.A0.Emulated()
+		flatInputs[extDegree*i+3] = r.B1.A1.Emulated()
+		flatInputs[extDegree*i+4] = r.B2.A0.Emulated()
+		flatInputs[extDegree*i+5] = r.B2.A1.Emulated()
 	}
-	flatRes, err := a.emulatedAPI.NewHint(f, 4*nbOutputs, flatInputs...)
+	flatRes, err := a.emulatedAPI.NewHint(f, extDegree*nbOutputs, flatInputs...)
 	if err != nil {
 		return nil, err
 	}
 	res := make([]Ext, nbOutputs)
 	for i := range res {
 		res[i] = Ext{
-			B0: E2{A0: Element{EV: *flatRes[4*i]}, A1: Element{EV: *flatRes[4*i+1]}},
-			B1: E2{A0: Element{EV: *flatRes[4*i+2]}, A1: Element{EV: *flatRes[4*i+3]}},
+			B0: E2{A0: Element{EV: *flatRes[extDegree*i+0]}, A1: Element{EV: *flatRes[extDegree*i+1]}},
+			B1: E2{A0: Element{EV: *flatRes[extDegree*i+2]}, A1: Element{EV: *flatRes[extDegree*i+3]}},
+			B2: E2{A0: Element{EV: *flatRes[extDegree*i+4]}, A1: Element{EV: *flatRes[extDegree*i+5]}},
 		}
 	}
 	return res, nil
@@ -569,17 +637,30 @@ func inverseE2Hint(_ *big.Int, inputs []*big.Int, res []*big.Int) error {
 	return nil
 }
 
+func extFromInputs(inputs []*big.Int) (e field.Ext) {
+	e.B0.A0.SetBigInt(inputs[0])
+	e.B0.A1.SetBigInt(inputs[1])
+	e.B1.A0.SetBigInt(inputs[2])
+	e.B1.A1.SetBigInt(inputs[3])
+	e.B2.A0.SetBigInt(inputs[4])
+	e.B2.A1.SetBigInt(inputs[5])
+	return e
+}
+
+func extToOutputs(e field.Ext, out []*big.Int) {
+	e.B0.A0.BigInt(out[0])
+	e.B0.A1.BigInt(out[1])
+	e.B1.A0.BigInt(out[2])
+	e.B1.A1.BigInt(out[3])
+	e.B2.A0.BigInt(out[4])
+	e.B2.A1.BigInt(out[5])
+}
+
 func inverseExtHintNative(_ *big.Int, inputs []*big.Int, res []*big.Int) error {
-	var a, c field.Ext
-	a.B0.A0.SetBigInt(inputs[0])
-	a.B0.A1.SetBigInt(inputs[1])
-	a.B1.A0.SetBigInt(inputs[2])
-	a.B1.A1.SetBigInt(inputs[3])
+	a := extFromInputs(inputs)
+	var c field.Ext
 	c.Inverse(&a)
-	c.B0.A0.BigInt(res[0])
-	c.B0.A1.BigInt(res[1])
-	c.B1.A0.BigInt(res[2])
-	c.B1.A1.BigInt(res[3])
+	extToOutputs(c, res)
 	return nil
 }
 
@@ -595,20 +676,11 @@ func (a *API) inverseExtHint() solver.Hint {
 }
 
 func divExtHintNative(_ *big.Int, inputs []*big.Int, res []*big.Int) error {
-	var x, y, c field.Ext
-	x.B0.A0.SetBigInt(inputs[0])
-	x.B0.A1.SetBigInt(inputs[1])
-	x.B1.A0.SetBigInt(inputs[2])
-	x.B1.A1.SetBigInt(inputs[3])
-	y.B0.A0.SetBigInt(inputs[4])
-	y.B0.A1.SetBigInt(inputs[5])
-	y.B1.A0.SetBigInt(inputs[6])
-	y.B1.A1.SetBigInt(inputs[7])
+	x := extFromInputs(inputs[:extDegree])
+	y := extFromInputs(inputs[extDegree : 2*extDegree])
+	var c field.Ext
 	c.Div(&x, &y)
-	c.B0.A0.BigInt(res[0])
-	c.B0.A1.BigInt(res[1])
-	c.B1.A0.BigInt(res[2])
-	c.B1.A1.BigInt(res[3])
+	extToOutputs(c, res)
 	return nil
 }
 
@@ -624,20 +696,11 @@ func (a *API) divExtHint() solver.Hint {
 }
 
 func mulExtHintNative(_ *big.Int, inputs []*big.Int, res []*big.Int) error {
-	var x, y, c field.Ext
-	x.B0.A0.SetBigInt(inputs[0])
-	x.B0.A1.SetBigInt(inputs[1])
-	x.B1.A0.SetBigInt(inputs[2])
-	x.B1.A1.SetBigInt(inputs[3])
-	y.B0.A0.SetBigInt(inputs[4])
-	y.B0.A1.SetBigInt(inputs[5])
-	y.B1.A0.SetBigInt(inputs[6])
-	y.B1.A1.SetBigInt(inputs[7])
+	x := extFromInputs(inputs[:extDegree])
+	y := extFromInputs(inputs[extDegree : 2*extDegree])
+	var c field.Ext
 	c.Mul(&x, &y)
-	c.B0.A0.BigInt(res[0])
-	c.B0.A1.BigInt(res[1])
-	c.B1.A0.BigInt(res[2])
-	c.B1.A1.BigInt(res[3])
+	extToOutputs(c, res)
 	return nil
 }
 
@@ -650,24 +713,21 @@ func (a *API) IsConstantZeroExt(e Ext) bool {
 	return a.IsConstantZero(e.B0.A0) &&
 		a.IsConstantZero(e.B0.A1) &&
 		a.IsConstantZero(e.B1.A0) &&
-		a.IsConstantZero(e.B1.A1)
+		a.IsConstantZero(e.B1.A1) &&
+		a.IsConstantZero(e.B2.A0) &&
+		a.IsConstantZero(e.B2.A1)
 }
 
 // BaseValueOfElement returns true if the Ext element actually represents a
-// a base field element and returns it as an [Element]. Namely, the function
-// checks if the non-constant terms of the extension element are zero constants
-// and returns the constant term if so.
+// base field element and returns it as an [Element]. The function checks that
+// every non-constant coordinate is a zero constant.
 func (a *API) BaseValueOfElement(e Ext) (*Element, bool) {
-
-	var (
-		b1a0IsConst = a.IsConstantZero(e.B1.A0)
-		b0a1IsConst = a.IsConstantZero(e.B0.A1)
-		b1a1IsConst = a.IsConstantZero(e.B1.A1)
-	)
-
-	if !b1a0IsConst || !b0a1IsConst || !b1a1IsConst {
+	if !a.IsConstantZero(e.B0.A1) ||
+		!a.IsConstantZero(e.B1.A0) ||
+		!a.IsConstantZero(e.B1.A1) ||
+		!a.IsConstantZero(e.B2.A0) ||
+		!a.IsConstantZero(e.B2.A1) {
 		return nil, false
 	}
-
 	return &e.B0.A0, true
 }

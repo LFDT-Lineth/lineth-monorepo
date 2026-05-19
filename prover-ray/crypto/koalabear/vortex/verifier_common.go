@@ -77,7 +77,7 @@ func CheckLinComb(
 		y := polynomials.EvalCanonical(field.VecFromBase(fullCol), field.ElemFromExt(alpha)).AsExt()
 		other := evals[selectedColID]
 
-		if y != other {
+		if !y.Equal(&other) {
 			return fmt.Errorf("the linear combination is inconsistent %v : %v", y.String(), other.String())
 		}
 	}

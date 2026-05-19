@@ -5,35 +5,45 @@ import (
 	"testing"
 )
 
-// TestNewExtFromUints verifies that NewExtFromUints correctly sets all four
+// TestNewExtFromUints verifies that UintsToExt correctly sets all six
 // extension coordinates to the given canonical values.
 func TestNewExtFromUints(t *testing.T) {
-	e := UintsToExt(10, 20, 30, 40)
-	if got := e.B0.A0.Uint64(); got != 10 {
-		t.Errorf("B0.A0 = %d, want 10", got)
+	e := UintsToExt(10, 20, 30, 40, 50, 60)
+	checks := []struct {
+		name string
+		got  uint64
+		want uint64
+	}{
+		{"B0.A0", e.B0.A0.Uint64(), 10},
+		{"B0.A1", e.B0.A1.Uint64(), 20},
+		{"B1.A0", e.B1.A0.Uint64(), 30},
+		{"B1.A1", e.B1.A1.Uint64(), 40},
+		{"B2.A0", e.B2.A0.Uint64(), 50},
+		{"B2.A1", e.B2.A1.Uint64(), 60},
 	}
-	if got := e.B0.A1.Uint64(); got != 20 {
-		t.Errorf("B0.A1 = %d, want 20", got)
-	}
-	if got := e.B1.A0.Uint64(); got != 30 {
-		t.Errorf("B1.A0 = %d, want 30", got)
-	}
-	if got := e.B1.A1.Uint64(); got != 40 {
-		t.Errorf("B1.A1 = %d, want 40", got)
+	for _, c := range checks {
+		if c.got != c.want {
+			t.Errorf("%s = %d, want %d", c.name, c.got, c.want)
+		}
 	}
 }
 
 // TestNewExtFromInt verifies positive and negative int64 inputs.
 // Negative values are reduced mod p, consistent with Element.SetInt64.
 func TestNewExtFromInt(t *testing.T) {
-	e := IntsToExt(1, 2, 3, 4)
-	for i, got := range []uint64{e.B0.A0.Uint64(), e.B0.A1.Uint64(), e.B1.A0.Uint64(), e.B1.A1.Uint64()} {
-		if got != uint64(i+1) {
-			t.Errorf("coordinate %d = %d, want %d", i, got, i+1)
+	e := IntsToExt(1, 2, 3, 4, 5, 6)
+	got := []uint64{
+		e.B0.A0.Uint64(), e.B0.A1.Uint64(),
+		e.B1.A0.Uint64(), e.B1.A1.Uint64(),
+		e.B2.A0.Uint64(), e.B2.A1.Uint64(),
+	}
+	for i, v := range got {
+		if v != uint64(i+1) {
+			t.Errorf("coordinate %d = %d, want %d", i, v, i+1)
 		}
 	}
 	// Negative: SetInt64(-1) gives p-1.
-	e2 := IntsToExt(-1, 0, 0, 0)
+	e2 := IntsToExt(-1, 0, 0, 0, 0, 0)
 	var want Element
 	want.SetInt64(-1)
 	checkElem(t, want, e2.B0.A0)
@@ -45,7 +55,7 @@ func TestNewExtFromString(t *testing.T) {
 	e := NewExtFromString("42")
 	want := NewFromString("42")
 	checkElem(t, want, e.B0.A0)
-	if !e.B0.A1.IsZero() || !e.B1.A0.IsZero() || !e.B1.A1.IsZero() {
+	if !extUpperIsZero(e) {
 		t.Error("NewExtFromString: extension coordinates should be zero")
 	}
 }
@@ -117,7 +127,7 @@ func TestIsBaseFunc(t *testing.T) {
 	for range testN {
 		e := PseudoRandExt(rng)
 		// Skip the rare case where all extension coordinates happen to be zero.
-		if e.B0.A1.IsZero() && e.B1.A0.IsZero() && e.B1.A1.IsZero() {
+		if extUpperIsZero(e) {
 			continue
 		}
 		if IsBase(&e) {
@@ -141,7 +151,7 @@ func TestGetBase(t *testing.T) {
 	}
 	for range testN {
 		e := PseudoRandExt(rng)
-		if e.B0.A1.IsZero() && e.B1.A0.IsZero() && e.B1.A1.IsZero() {
+		if extUpperIsZero(e) {
 			continue
 		}
 		if _, isBase := GetBase(&e); isBase {
@@ -335,13 +345,43 @@ func TestSetInterface(t *testing.T) {
 		}
 	})
 
+	t.Run("baseInputsClearUpperCoordinates", func(t *testing.T) {
+		cases := []struct {
+			name  string
+			input any
+			want  uint64
+		}{
+			{name: "string", input: "123", want: 123},
+			{name: "*big.Int", input: big.NewInt(999), want: 999},
+			{name: "big.Int", input: *big.NewInt(777), want: 777},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				z := PseudoRandExt(rng)
+				if _, err := SetInterface(&z, tc.input); err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if z.B0.A0.Uint64() != tc.want {
+					t.Errorf("B0.A0 = %d, want %d", z.B0.A0.Uint64(), tc.want)
+				}
+				if !extUpperIsZero(z) {
+					t.Error("SetInterface base input should clear all extension coordinates")
+				}
+			})
+		}
+	})
+
 	t.Run("[]byte", func(t *testing.T) {
 		// The []byte case in SetInterface returns a new *Ext built via
 		// BytesToExt rather than modifying the receiver. This is an
 		// inconsistency with every other type case (all of which modify the
 		// receiver z), but it is the current behaviour, so the test checks
 		// the returned pointer.
-		data := []byte{0, 0, 0, 5, 0, 0, 0, 6, 0, 0, 0, 7, 0, 0, 0, 8}
+		data := make([]byte, ExtensionDegree*Bytes)
+		for i := range data {
+			data[i] = byte((i*17 + 3) & 0xff)
+		}
 		var z Ext
 		result, err := SetInterface(&z, data)
 		if err != nil {
@@ -416,22 +456,20 @@ func TestZeroExtFunc(t *testing.T) {
 	}
 }
 
-// TestToUint64s verifies consistency of ToUint64s: zero produces (0,0,0,0) and
+// TestToUint64s verifies consistency of ToUint64s: zero produces all-zeros and
 // two copies of the same Ext produce identical tuples.
 func TestToUint64s(t *testing.T) {
 	z := ZeroExt()
-	u1, u2, u3, u4 := ExtToUint64s(&z)
-	if u1 != 0 || u2 != 0 || u3 != 0 || u4 != 0 {
-		t.Errorf("ToUint64s(ZeroExt) = (%d,%d,%d,%d), want (0,0,0,0)", u1, u2, u3, u4)
+	u0, u1, u2, u3, u4, u5 := ExtToUint64s(&z)
+	if u0 != 0 || u1 != 0 || u2 != 0 || u3 != 0 || u4 != 0 || u5 != 0 {
+		t.Errorf("ToUint64s(ZeroExt) = (%d,%d,%d,%d,%d,%d), want all zeros", u0, u1, u2, u3, u4, u5)
 	}
 
 	rng := newRng()
 	for range testN {
 		a := PseudoRandExt(rng)
 		b := a // value copy
-		a1, a2, a3, a4 := ExtToUint64s(&a)
-		b1, b2, b3, b4 := ExtToUint64s(&b)
-		if a1 != b1 || a2 != b2 || a3 != b3 || a4 != b4 {
+		if extToUint64sTuple(&a) != extToUint64sTuple(&b) {
 			t.Error("ToUint64s: equal Ext values should produce equal tuples")
 		}
 	}
@@ -445,7 +483,7 @@ func TestSetExtFromUInt(t *testing.T) {
 	if z.B0.A0.Uint64() != 42 {
 		t.Errorf("B0.A0 = %d, want 42", z.B0.A0.Uint64())
 	}
-	if !z.B0.A1.IsZero() || !z.B1.A0.IsZero() || !z.B1.A1.IsZero() {
+	if !extUpperIsZero(z) {
 		t.Error("SetExtFromUInt: extension coordinates should be zero")
 	}
 }
@@ -474,21 +512,21 @@ func TestSetExtFromBase(t *testing.T) {
 		var z Ext
 		SetExtFromBase(&z, &e)
 		checkElem(t, e, z.B0.A0)
-		if !z.B0.A1.IsZero() || !z.B1.A0.IsZero() || !z.B1.A1.IsZero() {
+		if !extUpperIsZero(z) {
 			t.Error("SetExtFromBase: extension coordinates should be zero")
 		}
 	}
 }
 
-// TestNewExtFromUint verifies that NewExtFromUint sets B0.A0 to the given
+// TestNewExtFromUint verifies that Uint64ToExt sets B0.A0 to the given
 // value and leaves the remaining coordinates at zero.
 func TestNewExtFromUint(t *testing.T) {
 	e := Uint64ToExt(55)
 	if e.B0.A0.Uint64() != 55 {
 		t.Errorf("B0.A0 = %d, want 55", e.B0.A0.Uint64())
 	}
-	if !e.B0.A1.IsZero() || !e.B1.A0.IsZero() || !e.B1.A1.IsZero() {
-		t.Error("NewExtFromUint: extension coordinates should be zero")
+	if !extUpperIsZero(e) {
+		t.Error("Uint64ToExt: extension coordinates should be zero")
 	}
 }
 
@@ -546,13 +584,11 @@ func TestExpByIntExt(t *testing.T) {
 //  1. All-zero bytes produce the zero extension element.
 //  2. BytesToExt and SetInterface([]byte) agree on their output.
 //
-// Note: BytesToExt stores the input uint32 values as raw Montgomery-form
-// internal representations. ToUint64s uses Bits()[0] which converts *from*
-// Montgomery form (multiplying by R⁻¹ = MontConstantInv), so
-// ToUint64s(BytesToExt(data)) ≠ the raw numeric bytes — this is expected.
+// Note: BytesToExt expects the canonical coordinate encoding produced by
+// Element.Bytes.
 func TestBytesToExt(t *testing.T) {
 	// All-zero bytes produce the zero element (zero is zero in any representation).
-	zeroData := make([]byte, 16)
+	zeroData := make([]byte, ExtensionDegree*Bytes)
 	if e := BytesToExt(zeroData); !e.IsZero() {
 		t.Error("BytesToExt(zeros) should be the zero extension element")
 	}
@@ -563,19 +599,21 @@ func TestBytesToExt(t *testing.T) {
 		src := PseudoRandExt(rng)
 		b := ExtToBytes(&src)
 		fromFunc := BytesToExt(b[:])
+		if !extEq(src, fromFunc) {
+			t.Error("BytesToExt(ExtToBytes(src)) should round-trip to src")
+		}
 		var dummy Ext
 		result, err := SetInterface(&dummy, b[:])
 		if err != nil {
 			t.Fatalf("SetInterface([]byte): %v", err)
 		}
-		// SetInterface for []byte returns a new *Ext (see SetInterface/[]byte test).
 		if !extEq(fromFunc, *result) {
 			t.Error("BytesToExt and SetInterface([]byte) should produce equal results")
 		}
 	}
 }
 
-// TestExtFromBytes verifies that ExtFromBytes extracts the canonical byte
+// TestExtFromBytes verifies that ExtToBytes extracts the canonical byte
 // representation of each coordinate, consistent with Element.Bytes().
 func TestExtFromBytes(t *testing.T) {
 	rng := newRng()
@@ -583,23 +621,13 @@ func TestExtFromBytes(t *testing.T) {
 		e := PseudoRandExt(rng)
 		b := ExtToBytes(&e)
 
-		b00 := e.B0.A0.Bytes()
-		b01 := e.B0.A1.Bytes()
-		b10 := e.B1.A0.Bytes()
-		b11 := e.B1.A1.Bytes()
-
-		for i := 0; i < Bytes; i++ {
-			if b[i] != b00[i] {
-				t.Errorf("B0.A0 byte %d: got %d, want %d", i, b[i], b00[i])
-			}
-			if b[Bytes+i] != b01[i] {
-				t.Errorf("B0.A1 byte %d: got %d, want %d", i, b[Bytes+i], b01[i])
-			}
-			if b[2*Bytes+i] != b10[i] {
-				t.Errorf("B1.A0 byte %d: got %d, want %d", i, b[2*Bytes+i], b10[i])
-			}
-			if b[3*Bytes+i] != b11[i] {
-				t.Errorf("B1.A1 byte %d: got %d, want %d", i, b[3*Bytes+i], b11[i])
+		coords := []Element{e.B0.A0, e.B0.A1, e.B1.A0, e.B1.A1, e.B2.A0, e.B2.A1}
+		for k, c := range coords {
+			cb := c.Bytes()
+			for i := 0; i < Bytes; i++ {
+				if b[k*Bytes+i] != cb[i] {
+					t.Errorf("coord %d byte %d: got %d, want %d", k, i, b[k*Bytes+i], cb[i])
+				}
 			}
 		}
 	}
@@ -609,4 +637,17 @@ func TestExtFromBytes(t *testing.T) {
 // not panic and returns some value.
 func TestRandomElementExt(_ *testing.T) {
 	_ = RandomElementExt()
+}
+
+// extUpperIsZero reports whether every coordinate except B0.A0 is zero.
+func extUpperIsZero(e Ext) bool {
+	return e.B0.A1.IsZero() &&
+		e.B1.A0.IsZero() && e.B1.A1.IsZero() &&
+		e.B2.A0.IsZero() && e.B2.A1.IsZero()
+}
+
+// extToUint64sTuple wraps ExtToUint64s into a comparable struct for tests.
+func extToUint64sTuple(e *Ext) [6]uint64 {
+	a, b, c, d, f, g := ExtToUint64s(e)
+	return [6]uint64{a, b, c, d, f, g}
 }

@@ -44,7 +44,7 @@ func LCEvalsToCoefficients(d *fft.Domain, v []field.Ext) []field.Ext {
 	}
 	coeffs := make([]field.Ext, n)
 	copy(coeffs, v)
-	d.FFTInverseExt(coeffs, fft.DIF)
+	d.FFTInverseExt6(coeffs, fft.DIF)
 	utils.BitReverse(coeffs)
 	return coeffs
 }

@@ -197,7 +197,7 @@ func (k Key) HashModXnMinus1(limbs []field.Ext) []field.Ext {
 			inputReader = nil
 		}
 
-		domain.FFTExt(polyK, fft.DIF)
+		domain.FFTExt6(polyK, fft.DIF)
 		domain.FFT(a, fft.DIF)
 
 		var tmp field.Ext
@@ -212,7 +212,7 @@ func (k Key) HashModXnMinus1(limbs []field.Ext) []field.Ext {
 	}
 
 	// by linearity, we defer the fft inverse at the end
-	domain.FFTInverseExt(r, fft.DIT)
+	domain.FFTInverseExt6(r, fft.DIT)
 
 	// also account for the Montgommery issue : in gnark's implementation
 	// the key is implictly multiplied by RInv

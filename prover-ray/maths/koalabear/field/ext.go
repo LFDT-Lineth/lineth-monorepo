@@ -1,7 +1,6 @@
 package field
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"math/big"
@@ -10,31 +9,28 @@ import (
 	"reflect"
 	"runtime"
 
-	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 	"github.com/consensys/linea-monorepo/prover-ray/utils/parallel"
 )
 
 // ExtensionDegree is the degree of the field extension over the base field.
-const ExtensionDegree int = 4
+const ExtensionDegree int = 6
 
-// Ext is the degree-4 extension field element type alias.
-type Ext = extensions.E4
+// Ext is the degree-6 extension field element type alias.
+//
+// Layout: 𝔽_{p^6} = 𝔽_{p^2}[v] / (v^3 − (u+1)) where 𝔽_{p^2} = 𝔽_p[u] / (u^2 − 3).
+// An element is stored as (B0, B1, B2) of three E2 = (A0, A1) pairs, packing
+// six base-field coordinates contiguously in memory.
+type Ext = extensions.E6
 
-// NewExtFromString only sets the first coordinate of the field extension
-func NewExtFromString(s string) (res Ext) {
-	res.B0.A0 = NewFromString(s)
-	return res
-}
-
-// RootPowers stores the non-quadratic residue used to defined the extension.
-// [1, 3] encoding the relations v^2=u and u^2=3.
-var RootPowers = []int{1, 3}
+// RootPowers stores the irreducible polynomial coefficients used to define the
+// tower. The first triple encodes v^3 = u + 1, the trailing 3 encodes u^2 = 3.
+var RootPowers = []int{1, 1, 0, 3}
 
 // BatchInvertExt compute the inverses of all elements in the provided slice
 // using the Montgommery trick. Zeroes are ignored.
 func BatchInvertExt(a []Ext) []Ext {
-	return extensions.BatchInvertE4(a)
+	return extensions.BatchInvertE6(a)
 }
 
 // BatchInvertExtInto computes the inverses of all elements in a and writes the result into res.
@@ -71,20 +67,31 @@ func BatchInvertExtInto(a, res []Ext) {
 	}
 }
 
-// PseudoRandExt returns a random field extension element.
-func PseudoRandExt(rng *rand.Rand) Ext {
-	result := new(Ext).SetZero()
-	result.B0.A0 = PseudoRand(rng)
-	result.B0.A1 = PseudoRand(rng)
-	result.B1.A0 = PseudoRand(rng)
-	result.B1.A1 = PseudoRand(rng)
-	return *result
+// NewExtFromString only sets the first coordinate of the field extension
+func NewExtFromString(s string) (res Ext) {
+	res.B0.A0 = NewFromString(s)
+	return res
 }
 
-// IsBase checks if the field extensionElement is a base element.  An Element is
-// considered a base element if all coordinates are 0 except for the first one.
+// PseudoRandExt returns a random field extension element with all six
+// coordinates drawn from the same RNG.
+func PseudoRandExt(rng *rand.Rand) Ext {
+	var res Ext
+	res.B0.A0 = PseudoRand(rng)
+	res.B0.A1 = PseudoRand(rng)
+	res.B1.A0 = PseudoRand(rng)
+	res.B1.A1 = PseudoRand(rng)
+	res.B2.A0 = PseudoRand(rng)
+	res.B2.A1 = PseudoRand(rng)
+	return res
+}
+
+// IsBase checks if the field extensionElement is a base element. An element
+// lies in the base field iff every non-constant coordinate is zero.
 func IsBase(z *Ext) bool {
-	return z.B0.A1[0] == 0 && z.B1.A0[0] == 0 && z.B1.A1[0] == 0
+	return z.B0.A1[0] == 0 &&
+		z.B1.A0[0] == 0 && z.B1.A1[0] == 0 &&
+		z.B2.A0[0] == 0 && z.B2.A1[0] == 0
 }
 
 // GetBase attempts to unlift a field extension element into a base field
@@ -109,6 +116,8 @@ func MulByBase(z *Ext, first *Ext, second *Element) *Ext {
 	z.B0.A1.Mul(&first.B0.A1, second)
 	z.B1.A0.Mul(&first.B1.A0, second)
 	z.B1.A1.Mul(&first.B1.A1, second)
+	z.B2.A0.Mul(&first.B2.A0, second)
+	z.B2.A1.Mul(&first.B2.A1, second)
 	return z
 }
 
@@ -118,6 +127,8 @@ func DivByBase(z *Ext, first *Ext, second *Element) *Ext {
 	z.B0.A1.Div(&first.B0.A1, second)
 	z.B1.A0.Div(&first.B1.A0, second)
 	z.B1.A1.Div(&first.B1.A1, second)
+	z.B2.A0.Div(&first.B2.A0, second)
+	z.B2.A1.Div(&first.B2.A1, second)
 	return z
 }
 
@@ -169,15 +180,22 @@ func SetInterface(z *Ext, i1 interface{}) (*Ext, error) {
 		}
 		z.B0.A1.SetZero()
 		z.B1.SetZero()
+		z.B2.SetZero()
 		return z, nil
 	case *big.Int:
 		if c1 == nil {
 			return nil, errors.New("can't set fr.Element with <nil>")
 		}
 		z.B0.A0.SetBigInt(c1)
+		z.B0.A1.SetZero()
+		z.B1.SetZero()
+		z.B2.SetZero()
 		return z, nil
 	case big.Int:
 		z.B0.A0.SetBigInt(&c1)
+		z.B0.A1.SetZero()
+		z.B1.SetZero()
+		z.B2.SetZero()
 		return z, nil
 	case []byte:
 		z := BytesToExt(c1)
@@ -196,9 +214,10 @@ func ExtToText(z *Ext, base int) string {
 		return "<nil>"
 	}
 
-	res := fmt.Sprintf("%s + %s*u + (%s + %s*u)*v", z.B0.A0.Text(base), z.B0.A1.Text(base), z.B1.A0.Text(base),
-		z.B1.A1.Text(base))
-	return res
+	return fmt.Sprintf("%s + %s*u + (%s + %s*u)*v + (%s + %s*u)*v^2",
+		z.B0.A0.Text(base), z.B0.A1.Text(base),
+		z.B1.A0.Text(base), z.B1.A1.Text(base),
+		z.B2.A0.Text(base), z.B2.A1.Text(base))
 }
 
 // ParBatchInvertExt computes inverses of all elements in a in parallel using numCPU goroutines.
@@ -236,12 +255,14 @@ func ZeroExt() Ext {
 	return res
 }
 
-// ExtToUint64s returns the value of z as a tuple of 4 uint64.
-func ExtToUint64s(z *Ext) (uint64, uint64, uint64, uint64) {
+// ExtToUint64s returns the value of z as a tuple of 6 uint64.
+func ExtToUint64s(z *Ext) (uint64, uint64, uint64, uint64, uint64, uint64) {
 	return uint64(z.B0.A0.Bits()[0]),
 		uint64(z.B0.A1.Bits()[0]),
 		uint64(z.B1.A0.Bits()[0]),
-		uint64(z.B1.A1.Bits()[0])
+		uint64(z.B1.A1.Bits()[0]),
+		uint64(z.B2.A0.Bits()[0]),
+		uint64(z.B2.A1.Bits()[0])
 }
 
 // SetExtFromUInt sets z to v and returns z. After conversion, z is in the base
@@ -249,14 +270,20 @@ func ExtToUint64s(z *Ext) (uint64, uint64, uint64, uint64) {
 func SetExtFromUInt(z *Ext, v uint64) *Ext {
 	//  sets z LSB to v (non-Montgomery form) and convert z to Montgomery form
 	z.B0.A0.SetUint64(v)
-	return z // z.toMont()
+	z.B0.A1.SetZero()
+	z.B1.SetZero()
+	z.B2.SetZero()
+	return z
 }
 
 // SetExtFromInt sets z to v and returns z. After conversion, z is in the base
 // field and can safely be converted into an [Element].
 func SetExtFromInt(z *Ext, v int64) *Ext {
 	z.B0.A0.SetInt64(v)
-	return z // z.toMont()
+	z.B0.A1.SetZero()
+	z.B1.SetZero()
+	z.B2.SetZero()
+	return z
 }
 
 // SetExtFromBase sets z to v and returns z. After conversion, z is in the base
@@ -266,6 +293,8 @@ func SetExtFromBase(z *Ext, x *Element) *Ext {
 	z.B0.A1[0] = 0
 	z.B1.A0[0] = 0
 	z.B1.A1[0] = 0
+	z.B2.A0[0] = 0
+	z.B2.A1[0] = 0
 	return z
 }
 
@@ -277,23 +306,27 @@ func Uint64ToExt(b uint64) Ext {
 	return res
 }
 
-// UintsToExt constructs a field extension from 4 uint64
-func UintsToExt(v1, v2, v3, v4 uint64) Ext {
+// UintsToExt constructs a field extension from 6 uint64.
+func UintsToExt(v1, v2, v3, v4, v5, v6 uint64) Ext {
 	var z Ext
 	z.B0.A0.SetUint64(v1)
 	z.B0.A1.SetUint64(v2)
 	z.B1.A0.SetUint64(v3)
 	z.B1.A1.SetUint64(v4)
+	z.B2.A0.SetUint64(v5)
+	z.B2.A1.SetUint64(v6)
 	return z
 }
 
-// IntsToExt constructs a field extension from 4 int64
-func IntsToExt(v1, v2, v3, v4 int64) Ext {
+// IntsToExt constructs a field extension from 6 int64.
+func IntsToExt(v1, v2, v3, v4, v5, v6 int64) Ext {
 	var z Ext
 	z.B0.A0.SetInt64(v1)
 	z.B0.A1.SetInt64(v2)
 	z.B1.A0.SetInt64(v3)
 	z.B1.A1.SetInt64(v4)
+	z.B2.A0.SetInt64(v5)
+	z.B2.A1.SetInt64(v6)
 	return z
 }
 
@@ -336,15 +369,16 @@ func ExpByIntExt(z *Ext, x Ext, k int) *Ext {
 	return z
 }
 
-// ExtToBytes returns the value of z as a big-endian byte array (16 bytes).
-func ExtToBytes(z *Ext) (res [Bytes * 4]byte) {
-	var result [Bytes * 4]byte
+// ExtToBytes returns the value of z as a big-endian byte array (one block per
+// coordinate, totalling 6 * Bytes bytes).
+func ExtToBytes(z *Ext) (res [Bytes * ExtensionDegree]byte) {
+	var result [Bytes * ExtensionDegree]byte
 
 	valBytes := z.B0.A0.Bytes()
-	copy(result[0:Bytes], valBytes[:])
+	copy(result[0*Bytes:1*Bytes], valBytes[:])
 
 	valBytes = z.B0.A1.Bytes()
-	copy(result[Bytes:2*Bytes], valBytes[:])
+	copy(result[1*Bytes:2*Bytes], valBytes[:])
 
 	valBytes = z.B1.A0.Bytes()
 	copy(result[2*Bytes:3*Bytes], valBytes[:])
@@ -352,15 +386,24 @@ func ExtToBytes(z *Ext) (res [Bytes * 4]byte) {
 	valBytes = z.B1.A1.Bytes()
 	copy(result[3*Bytes:4*Bytes], valBytes[:])
 
+	valBytes = z.B2.A0.Bytes()
+	copy(result[4*Bytes:5*Bytes], valBytes[:])
+
+	valBytes = z.B2.A1.Bytes()
+	copy(result[5*Bytes:6*Bytes], valBytes[:])
+
 	return result
 }
 
-// BytesToExt constructs an extension field element from a 16-byte big-endian encoding.
+// BytesToExt constructs an extension field element from a (6 * Bytes)-byte
+// big-endian encoding produced by [ExtToBytes].
 func BytesToExt(data []byte) Ext {
 	var res Ext
-	res.B0.A0 = koalabear.Element{binary.BigEndian.Uint32(data[0:4])}
-	res.B0.A1 = koalabear.Element{binary.BigEndian.Uint32(data[4:8])}
-	res.B1.A0 = koalabear.Element{binary.BigEndian.Uint32(data[8:12])}
-	res.B1.A1 = koalabear.Element{binary.BigEndian.Uint32(data[12:16])}
+	res.B0.A0.SetBytes(data[0*Bytes : 1*Bytes])
+	res.B0.A1.SetBytes(data[1*Bytes : 2*Bytes])
+	res.B1.A0.SetBytes(data[2*Bytes : 3*Bytes])
+	res.B1.A1.SetBytes(data[3*Bytes : 4*Bytes])
+	res.B2.A0.SetBytes(data[4*Bytes : 5*Bytes])
+	res.B2.A1.SetBytes(data[5*Bytes : 6*Bytes])
 	return res
 }

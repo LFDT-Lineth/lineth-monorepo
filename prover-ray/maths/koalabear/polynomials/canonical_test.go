@@ -26,27 +26,16 @@ func randBase(_ *rand.Rand) field.Element {
 }
 
 func randExt(_ *rand.Rand) field.Ext {
-	var e field.Ext
-	if _, err := e.B0.A0.SetRandom(); err != nil {
-		panic(err)
-	}
-	if _, err := e.B0.A1.SetRandom(); err != nil {
-		panic(err)
-	}
-	if _, err := e.B1.A0.SetRandom(); err != nil {
-		panic(err)
-	}
-	if _, err := e.B1.A1.SetRandom(); err != nil {
-		panic(err)
-	}
-	return e
+	return field.RandomElementExt()
 }
 
 func extEq(a, b field.Ext) bool {
 	return a.B0.A0.Equal(&b.B0.A0) &&
 		a.B0.A1.Equal(&b.B0.A1) &&
 		a.B1.A0.Equal(&b.B1.A0) &&
-		a.B1.A1.Equal(&b.B1.A1)
+		a.B1.A1.Equal(&b.B1.A1) &&
+		a.B2.A0.Equal(&b.B2.A0) &&
+		a.B2.A1.Equal(&b.B2.A1)
 }
 
 // hornerExt evaluates p(X) = Σᵢ p[i]·Xⁱ at x using Horner's method directly
