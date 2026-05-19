@@ -15,6 +15,25 @@ The executable, the JSON and the disassembled file live in `asm/bin/` for assemb
 - `go (>= 1.26.1)` — to convert ELF to JSON
 - `go-corset, zkc (>= 1.2.12)` — to execute/debug the JSON
 
+ACT4 tests can be built either with Docker or directly on the host.
+
+For Docker builds:
+
+- `docker` — to build and run the ACT4 container
+
+For host builds:
+
+- `mise` — to install the Python, Ruby and Bundler versions used by `riscv-arch-test`
+- `sail_riscv_sim (0.11)` — RISC-V Sail reference model
+- `riscv64-unknown-elf-gcc (>= 15)` and `riscv64-unknown-elf-objdump` — to compile and inspect ACT4 ELFs
+- `z3` on macOS — used by UDB while validating ACT4 configs
+
+To install and prepare these host-build dependencies on Linux or macOS, from `linea-monorepo/`:
+
+```bash
+make -C arithmetization install-act4-host-deps
+```
+
 ## Usage
 
 From the `Makefile` directory:
@@ -39,7 +58,7 @@ Useful shell function (add to `~/.zshrc` or `~/.bashrc`):
 riscv-test() {
     local makefile="path/to/linea-monorepo/arithmetization/src/test/examples/Makefile"
     case "$1" in
-        clean-all|linker-script|blake-all)
+        clean-all|linker-script|blake-all|build-act4|run-act4)
             # targets that do NOT require TEST argument
             make -f "$makefile" "$1" "${@:2}"
             ;;
@@ -74,6 +93,10 @@ riscv-test clean <name>.<ext>
 riscv-test clean-all
 # Run all converted Blake test vectors
 riscv-test blake-all
+# Build ACT4 ELFs
+riscv-test build-act4
+# Run ACT4 ELFs through zkc
+riscv-test run-act4
 # Run blake_with_in_embedded.rs (input bytes are embedded in main())
 riscv-test blake/blake_with_in_embedded.rs
 # Run blake_with_in_bytes.rs with IN_BYTES="0x<213_bytes_input_hex><64_bytes_expected_output_hex>"
@@ -90,18 +113,20 @@ riscv-test compile <name>.<ext> VERIFY_ELF=true
 
 ## Targets
 
-| Target                           | Description                                                           |
-|----------------------------------|-----------------------------------------------------------------------|
-| `make TEST=foo.<ext>`            | Compile and execute (default)                                         |
-| `make debug TEST=foo.<ext>`      | Compile and debug                                                     |
-| `make compile TEST=foo.<ext>`    | Compile only                                                          |
-| `make zkc-exec TEST=foo.<ext>`   | Execute without recompiling                                           |
-| `make zkc-debug TEST=foo.<ext>`  | Debug without recompiling                                             |
-| `make clean TEST=foo.<ext>`      | Remove binary and JSON for this test                                  |
-| `make clean-all`                 | Remove all build artifacts                                            |
-| `make linker-script`             | Generate the linker script with the memory layout                     |
-| `make verify-elf TEST=foo.<ext>` | Verify ELF offsets, entry point and sp match the ones in the Makefile |
-| `make blake-all`                 | Run all blake test vectors in `rust/src/blake/blake.all`              |
+| Target                           | Description                                                                            |
+|----------------------------------|----------------------------------------------------------------------------------------|
+| `make TEST=foo.<ext>`            | Compile and execute (default)                                                          |
+| `make debug TEST=foo.<ext>`      | Compile and debug                                                                      |
+| `make compile TEST=foo.<ext>`    | Compile only                                                                           |
+| `make zkc-exec TEST=foo.<ext>`   | Execute without recompiling                                                            |
+| `make zkc-debug TEST=foo.<ext>`  | Debug without recompiling                                                              |
+| `make clean TEST=foo.<ext>`      | Remove binary and JSON for this test                                                   |
+| `make clean-all`                 | Remove all build artifacts                                                             |
+| `make linker-script`             | Generate the linker script with the memory layout                                      |
+| `make verify-elf TEST=foo.<ext>` | Verify ELF offsets, entry point and sp match the ones in the Makefile                  |
+| `make blake-all`                 | Run all blake test vectors in `rust/src/blake/blake.all`                               |
+| `make build-act4`                | Build ACT4 ELFs with the Linea ACT4 config                                             |
+| `make run-act4`                  | Build and run ACT4 ELFs through zkc and write results/logs under `act4/bin/`           |
 
 ## Options
 
@@ -110,14 +135,75 @@ riscv-test compile <name>.<ext> VERIFY_ELF=true
 | `IN_BYTES`       | `""`                                                                                    | Input bytes written to memory at `IN_BYTES_OFFSET` before execution           |
 | `PROGRAM_OFFSET` | `0x00000000`                                                                            | Memory address where the program is loaded (up to 128 MiB)                    |
 | `IN_BYTES_OFFSET`| `0x08800000`                                                                            | Memory address where input bytes are written (up to 1 GiB)                    |
-| `SP`             | `0x087fffff`                                                                            | Top of the stack region, stack grows downward from this address (8 MiB)       |
+| `SP`             | `0x08800000`                                                                            | Top of the stack region, stack grows downward from this address (8 MiB)       |
 | `VERIFY_ELF`     | `false`                                                                                 | Set to `true` to verify offsets, entry point and sp match the ELF ones        |
+| `ACT4_BUILD_MODE`| `host`                                                                                  | Build ACT4 ELFs with `host` or `docker`                                       |
+| `ACT4_REF`       | `9798a554ce4139f472c9ccd3a18c9061d0f7024d`                                              | `riscv-arch-test` tag or commit used to build ACT4 ELFs                       |
+| `ACT4_REPO`      | `../riscv-arch-test`                                                                    | Local `riscv-arch-test` checkout used for ACT4 builds                         |
+| `ACT4_RISCV_DIR` | `~/riscv`                                                                               | Host tool directory used for `sail_riscv_sim` and RISC-V tool aliases         |
+| `ACT4_DEBUG`     | `true`                                                                                  | Set to `false` to skip ACT4 debug artifacts                                   |
+| `ACT4_FAST`      | `false`                                                                                 | Set to `true` to skip ACT4 objdump generation for faster builds               |
 
 ## Target ISA
 
 All programs are compiled targeting `RV64IM` accordingly to the [Ethereum zkVM standards](https://github.com/eth-act/zkvm-standards/blob/main/standards/riscv-target/target.md).
 Note that `Zicclsm` extension does not affect the generated ELF so it is omitted.
 Moreover, ABI being `LP64` (soft-float) is relevant only for float numbers, which we do not use, so it can be omitted as well.
+
+## ACT4
+
+The `Makefile` in this folder allows running tests from the [RISC-V Architectural Certification Tests (ACTs)](https://github.com/riscv/riscv-arch-test) framework (currently ACT4), which is set of assembly language tests designed to certify that a design faithfully implements the RISC-V specification.
+
+Tests can be inspected by looking at:
+
+```
+https://github.com/riscv/riscv-arch-test/tree/act4/tests/rv64i/I
+https://github.com/riscv/riscv-arch-test/tree/act4/tests/rv64i/M
+```
+
+ACT4 uses the configuration in `act4/config/linea-rv64im-zicclsm/`.
+`make build-act4` clones `riscv-arch-test` next to `linea-monorepo` if needed, checks out `ACT4_REF`, and builds ELFs either with Docker or on the host.
+The folder structure is the following:
+
+```text
+parent/
+├── linea-monorepo/
+│   └── arithmetization/src/test/examples/
+│       └── act4/
+│           ├── config/linea-rv64im-zicclsm/    # Linea ACT4 config
+│           └── bin/
+│               ├── work/linea-rv64im-zicclsm/  # ACT4 generated files
+│               │   ├── build/                  # intermediate/debug ACT4 artifacts
+│               │   └── elfs/                   # final self-checking ACT4 ELFs
+│               ├── logs/                       # per-test JSON and zkc logs
+│               └── results.txt                 # PASS/FAIL summary
+└── riscv-arch-test/                            # ACT4 framework checkout
+```
+
+From `linea-monorepo/arithmetization/src/test/examples`:
+
+```bash
+make run-act4                         # build on the host and run
+make run-act4 ACT4_BUILD_MODE=docker  # build with Docker and run
+```
+
+By default, ACT4 is built with debug artifacts enabled and fast mode disabled.
+To build faster without objdumps, traces and trap reports:
+
+```bash
+make build-act4 ACT4_DEBUG=false ACT4_FAST=true
+```
+
+The `build/` directory contains ACT4 intermediate and debug artifacts: signature-generating ELFs, signatures, objdumps, traces and trap reports.
+The `elfs/` directory contains the final self-checking ELFs run by `make run-act4`.
+The `logs/` directory contains one JSON input per test, non-empty JSON conversion stderr in `.json.err`, and the filtered ecall output (for `exit` or `write`) in `.out`.
+The full zkc output is kept as `.full` only for failing tests. A summary of ACT4 results is written in `results.txt`.
+
+To rerun one generated ACT4 test through zkc:
+
+```bash
+zkc exec act4/bin/logs/<test-name>.json ../../main/riscv/main.zkc
+```
 
 ## Default memory layout
 
@@ -127,8 +213,8 @@ Moreover, ABI being `LP64` (soft-float) is relevant only for float numbers, whic
 0x07FFFFFF  ──  program ends at most
 0x08000000  --  sp ends here
     ↑  stack grows downward
-0x087fffff  ──  sp starts here (up to 8 MiB)
+0x08800000  ──  sp starts here (up to 8 MiB)
 0x08800000  ──  input starts
     ↓  input grows up (up to 1 GiB)
-0x48800000 ──  input ends at most
+0x48800000  ──  input ends at most
 ```
