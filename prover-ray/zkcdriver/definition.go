@@ -6,6 +6,7 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	"github.com/sirupsen/logrus"
 
 	"github.com/consensys/go-corset/pkg/ir/air"
 	"github.com/consensys/go-corset/pkg/schema"
@@ -64,15 +65,60 @@ func (s *schemaScanner) scanColumns() {
 	// Use the pre-sorted modules from the scanner to ensure deterministic ordering
 	// Iterate each declared module
 	for _, modDecl := range s.Modules {
+		// Check for special cases
+		if modDecl.IsStatic() {
 
-		// The "root" module is part of the if the list of the modules. It
-		// expectedly does not contains any column. We need to skip it because
-		// we would not be able to find its name.
-		if modDecl.Name().String() == "" {
-			if modDecl.Width() != 0 {
-				utils.Panic("found a module with no names but with columns")
+			content := modDecl.StaticContents()
+			moduleName := modDecl.Name().String()
+			moduleWIOP := s.Sys.NewSizedModule(
+				s.Sys.Context.Childf("module-%v", moduleName),
+				len(content),
+				wiop.PaddingDirectionLeft,
+			)
+
+			// This works assuming the [System] appends-only to the list of modules.
+			s.ModulesIDsWiop[moduleName] = len(s.Sys.Modules) - 1
+
+			for i, colDecl := range modDecl.Registers() {
+
+				vec := make([]field.Element, len(content))
+				for j := range content {
+					vec[j] = field.Element(content[j][i])
+				}
+
+				var (
+					colName          = colDecl.Name()
+					colQualifiedName = qualifiedCorsetName(moduleName, colName)
+					col              = moduleWIOP.NewPrecomputedColumn(
+						moduleWIOP.Context.Childf("column-%v", colName),
+						wiop.VisibilityOracle,
+						&wiop.ConcreteVector{Plain: field.VecFromBase(vec)},
+					)
+				)
+
+				s.ColumnIDs[colQualifiedName] = col.Context.ID
 			}
+
 			continue
+		}
+
+		if modDecl.IsNative() {
+			// @david: need to add support for native modules.  These correspond
+			// to ZkC functions declared with the "native" attribute".  The
+			// expectation is that the prover will maintain a list of supported
+			// native modules.  Each of these will have an expected number of
+			// columns (which the prover may wish to check matches the
+			// declaration here).  These columns correspond to the input/output
+			// registers of the corresponding ZkC function.
+			//
+			// A key aspect of native modules is that ZkC will not generate any
+			// constraints for them.  Instead, the expectation is that whatever
+			// constraints are required will be added somehow / somewhere by the
+			// prover.  Since forgetting to do this is a critical soundness
+			// issue, care must be taken to ensure it really happens (e.g.
+			// through testing negative cases which should cause constraint
+			// failures).
+			logrus.Panic("zkcdriver: add support for native modules!")
 		}
 
 		// moduleName is the name of the module as given by the arithmetization
@@ -243,12 +289,26 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 		module.NewVanishing(module.Context.Childf("local-%v", name), wExpr)
 
 	case air.RangeConstraint[koalabear.Element]:
-		utils.Panic("RangeConstraint is not yet supported (constraint: %s)", name)
+
+		rc := cs.Unwrap()
+
+		// Sanity check:  If a RangeConstraint ever has more than one source/bitwidth, the second iteration will panic
+		// because the first iteration already registered that QueryID in the CompiledIOP. In practice
+		// the len is always expected to be either 0 (no-op) or 1 (single pass).
+		if len(rc.Bitwidths) > 1 {
+			utils.Panic("multiple bitwidths for range constraints not supported")
+		}
+
+		for i, bitwidth := range rc.Bitwidths {
+			// Determine bound for this range constraint
+			bound := 1 << bitwidth
+			col := s.compColumnByCorsetID(rc.Context, rc.Sources[i].Register())
+			col.Module.NewRangeCheck(col.Context.Childf("range-%v", name), col, bound)
+		}
+
 	case air.Assertion[koalabear.Element]:
 		// Property assertions can be ignored, as they are a debugging tool and
 		// not part of the constraints proper.
-	case air.InterleavingConstraint[koalabear.Element]:
-		panic("to be removed once corset, removes it. We will never support this.")
 
 	default:
 		utils.Panic("unexpected constraint type: %s", cs.Lisp(s.Schema).String(false))

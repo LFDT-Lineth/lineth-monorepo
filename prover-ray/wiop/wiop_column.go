@@ -172,6 +172,9 @@ func (m *Module) NewPrecomputedColumn(ctx *ContextFrame, vis Visibility, assignm
 	if ctx.ID != 0 {
 		panic(fmt.Sprintf("wiop: ContextFrame %q is already registered (id=%d)", ctx.Path(), ctx.ID))
 	}
+	if assignment.promise != nil {
+		panic("wiop: Module.NewPrecomputedColumn requires a non-promised assignment")
+	}
 	ctx.ID = newColumnID(m.index, len(m.Columns))
 	pr := m.system.PrecomputedRound
 	col := &Column{
@@ -182,6 +185,7 @@ func (m *Module) NewPrecomputedColumn(ctx *ContextFrame, vis Visibility, assignm
 		Module:      m,
 		round:       &pr.Round,
 	}
+	assignment.promise = col.View()
 	m.Columns = append(m.Columns, col)
 	pr.addPrecomputedColumn(col, assignment)
 	return col

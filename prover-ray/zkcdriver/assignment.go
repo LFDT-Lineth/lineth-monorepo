@@ -3,6 +3,7 @@ package zkcdriver
 import (
 	"unsafe"
 
+	"github.com/consensys/go-corset/pkg/ir/air"
 	"github.com/consensys/go-corset/pkg/trace"
 	"github.com/consensys/go-corset/pkg/util/field/koalabear"
 	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
@@ -19,14 +20,23 @@ var _ [1]uint32 = field.Element{}
 
 // ReadExpandedTraces parses the provided trace file, expands it and returns the
 // corset object holding the expanded traces.
-func AssignFromLtTraces(run *wiop.Runtime, expTraces trace.Trace[koalabear.Element]) {
+func AssignFromTrace(run *wiop.Runtime, traces trace.Trace[koalabear.Element], schema air.Schema[koalabear.Element]) {
 
 	// Parallelize across modules
 	eg := &errgroup.Group{}
-	for modID := range expTraces.Width() {
+	for modID := range traces.Width() {
 		eg.Go(func() error {
 
-			trMod := expTraces.Module(modID)
+			trMod := traces.Module(modID)
+			scMod := schema.Module(modID)
+
+			if scMod.IsStatic() {
+				// @alex: the current version of corset flags modules as being
+				// static or not static. But it may be the case, that a module
+				// has static size, some its column have static content but some
+				// do not have static content.
+				return nil
+			}
 
 			// Iterate each column in module
 			parallel.Execute(int(trMod.Width()), func(start, stop int) {
@@ -41,7 +51,7 @@ func AssignFromLtTraces(run *wiop.Runtime, expTraces trace.Trace[koalabear.Eleme
 					)
 
 					if _, ok := columnIDMap[name]; !ok {
-						logrus.Debugf("zkcdriver: AssignFromLtTraces: skipping unknown column %q", name)
+						logrus.Debugf("zkcdriver: AssignFromTrace: skipping unknown column %q", name)
 						continue
 					}
 
@@ -74,6 +84,6 @@ func AssignFromLtTraces(run *wiop.Runtime, expTraces trace.Trace[koalabear.Eleme
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		logrus.Panicf("AssignFromLtTraces failed: %v", err)
+		logrus.Panicf("zkcdriver: AssignFromTrace failed: %v", err)
 	}
 }

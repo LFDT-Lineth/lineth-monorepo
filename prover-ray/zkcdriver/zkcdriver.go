@@ -2,55 +2,44 @@ package zkcdriver
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"time"
 
-	"github.com/consensys/go-corset/pkg/asm"
-	"github.com/consensys/go-corset/pkg/binfile"
-	"github.com/consensys/go-corset/pkg/ir"
-	"github.com/consensys/go-corset/pkg/ir/air"
-	"github.com/consensys/go-corset/pkg/ir/mir"
-	"github.com/consensys/go-corset/pkg/schema/module"
-	"github.com/consensys/go-corset/pkg/trace/lt"
 	"github.com/consensys/go-corset/pkg/util/collection/typed"
 	"github.com/consensys/go-corset/pkg/util/field/koalabear"
+	"github.com/consensys/go-corset/pkg/zkc/constraints"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop"
 	"github.com/sirupsen/logrus"
 )
 
-// Settings specifies the parameters for the arithmetization part of the zkEVM.
+// BinaryFile represents a given set of constraints generated from a ZkC
+// program.  A BinaryFile is typically obtained by decoding an array of bytes,
+// though it can also be obtained by compiling a given set of ZkC source files.
+// A BinaryFile provides two key pieces of functionality: firstly, it provides
+// access to the AIR constraints representing the given ZkC program; secondly,
+// it provides a means to generate a trace of that program from a given set of
+// inputs.
+type BinaryFile = constraints.BinaryFile[koalabear.Element]
+
+// Settings specifies the parameters for the arithmetization (a.k.a. the
+// "constraints").
 type Settings struct {
-	// IgnoreCompatibilityCheck disables the strong compatibility check.
-	// Specifically, it does not require the constraints and the trace file to
-	// have both originated from the same commit.  By default, the compatibility
-	// check should be enabled.
-	IgnoreCompatibilityCheck bool
-	// OptimisationLevel determines the optimisation level which go-corset will
-	// apply when compiling the zkevm.bin file to AIR constraints.  If in doubt,
-	// use mir.DEFAULT_OPTIMISATION_LEVEL.
-	OptimisationLevel *mir.OptimisationConfig
 }
 
-// ZkCDriver exposes all the methods relevant for the user to interact
-// with the arithmetization of the zkEVM. It is a sub-component of the whole
-// ZkEvm object as it does not includes the precompiles, the keccaks and the
-// signature verification.
+// ZkCDriver exposes all the methods relevant for the user to interact with the
+// constraints being used for proving.  This includes all constraints arising
+// from the target ZkC program, but it does not include any native circuits
+// (e.g. for precompiles, or accelerators, etc).
 type ZkCDriver struct {
 	Settings *Settings
-	// Binary encoding of the zkevm.bin file, which captures the high-level
-	// structure of constraints.  This is primarily useful for assembly
-	// functions (as these have big differences between their assembly
-	// representation and their constraints representation).
-	BinaryFile *binfile.BinaryFile `serde:"omit"`
-	// Air schema defines the low-level columns, constraints and computations
-	// used to expand a given trace, and to subsequently to check
-	// satisfiability.
-	AirSchema *air.Schema[koalabear.Element] `serde:"omit"`
-	// Maps each column in the raw trace file into one (or more) columns in the
-	// expanded trace file.  In particular, columns which are too large for the
-	// given field are split into multiple "limbs".
-	LimbMapping module.LimbsMap `serde:"omit"`
+	// Binary constraints file generated from a ZkC program.  This includes the
+	// raw arithmetic (AIR) constraints generated from the program, as well as
+	// functionality for tracing the program from a given set of inputs.
+	BinaryFile *BinaryFile `serde:"omit"`
+	// Configuration options for tracing (e.g. whether or not to use
+	// parallelisation, what batch size to use, etc).  Generally speaking this
+	// should be left to the provided defaults.
+	TracingConfig constraints.TraceConfig `serde:"omit"`
 	// Metadata embedded in the zkevm.bin file, as needed to check
 	// compatibility.  Guaranteed non-nil.
 	Metadata typed.Map `serde:"omit"`
@@ -61,22 +50,20 @@ type ZkCDriver struct {
 func NewZkCDriver(sys *wiop.System, settings Settings, bin io.Reader) *ZkCDriver {
 
 	// Read and parse the binary file
-	binf, metadata, errS := ReadZkevmBin(bin)
+	binf, metadata, errS := ReadConstraintsFile(bin)
 	if errS != nil {
 		panic(errS)
 	}
-
-	// Compile binary file into an air.Schema
-	schema, mapping := CompileZkevmBin(binf, settings.OptimisationLevel)
+	// Extract the AIR constraints from the binary file
+	schema := binf.AirConstraints()
 	// Translate air.Schema into prover's internal representation
-	Define(sys, schema)
-
+	Define(sys, &schema)
+	// Construct the driver
 	return &ZkCDriver{
-		BinaryFile:  binf,
-		AirSchema:   schema,
-		Settings:    &settings,
-		LimbMapping: mapping,
-		Metadata:    metadata,
+		BinaryFile:    binf,
+		TracingConfig: constraints.DEFAULT_TRACE_CONFIG,
+		Settings:      &settings,
+		Metadata:      metadata,
 	}
 }
 
@@ -86,104 +73,68 @@ func NewZkCDriver(sys *wiop.System, settings Settings, bin io.Reader) *ZkCDriver
 // according to the given schema.  The expansion process is about filling in
 // computed columns with concrete values, such for determining multiplicative
 // inverses, etc.
-func (a *ZkCDriver) Assign(run *wiop.Runtime, traceFile string) {
-	a.AssignWithPreRead(run, PreReadTrace(traceFile))
+func (a *ZkCDriver) Assign(run *wiop.Runtime, inputsFile string) {
+	a.AssignWithPreRead(run, ReadZkcInputs(inputsFile))
 }
 
-// PreReadResult holds the result of pre-reading a trace file.
-type PreReadResult struct {
-	RawTrace  lt.TraceFile
-	Metadata  typed.Map
-	Err       error
-	TraceFile string
+// PreReadInputs holds the result of pre-reading a trace file.
+type PreReadInputs struct {
+	// Inputs as required for the zkc program.  Each input corresponds with a
+	// (non-static) input memory of the ZkC program.  For the RISC-V
+	// interpreter, the inputs will include the full binary of the guest program
+	// (hence, some entries could be 100Mb or more).
+	Inputs map[string][]byte
+	// Errors arising from parsing the input file.
+	Err error
+	// Name of the input file.
+	InputsFile string
 }
 
-// PreReadTrace reads and parses a trace file, returning the raw trace data.
-// This can be called early to overlap I/O with other work.
-func PreReadTrace(traceFile string) PreReadResult {
-	traceF, err := readTraceFile(traceFile)
+// ReadZkcInputs reads and parses a zkc inputs file, returning the "pre-read"
+// input data. This can be called early to overlap I/O with other work.
+func ReadZkcInputs(inputsFile string) PreReadInputs {
+	traceF, err := ReadMaybeCompressedFile(inputsFile)
 	if err != nil {
-		return PreReadResult{Err: err, TraceFile: traceFile}
+		return PreReadInputs{Err: err, InputsFile: inputsFile}
 	}
-	rawTrace, metadata, err := ReadLtTraces(traceF)
-	return PreReadResult{RawTrace: rawTrace, Metadata: metadata, Err: err, TraceFile: traceFile}
+	inputs, err := ReadZkcInputFile(traceF)
+	return PreReadInputs{Inputs: inputs, Err: err, InputsFile: inputsFile}
 }
 
 // AssignWithPreRead assigns arithmetization columns using a pre-read trace.
-func (a *ZkCDriver) AssignWithPreRead(run *wiop.Runtime, preRead PreReadResult) {
+func (a *ZkCDriver) AssignWithPreRead(run *wiop.Runtime, preRead PreReadInputs) {
 	assignStart := time.Now()
 	var (
-		errs     []error
-		rawTrace = preRead.RawTrace
-		metadata = preRead.Metadata
-		errT     = preRead.Err
+		errs   []error
+		inputs = preRead.Inputs
+		errT   = preRead.Err
 	)
 	logrus.Infof("[bootstrapper] trace available (pre-read): %v", time.Since(assignStart))
 
 	// Extract commit metadata from both files
-	zkevmBinCommit, zkevmBinCommitOk := a.Metadata.String("commit")
-	traceFileCommit, traceFileCommitOk := metadata.String("commit")
+	binfCommit, binfCommitOk := a.Metadata.String("commit")
 
-	// Performs a compatibility check by comparing the constraints
-	// commit of zkevm.bin with the constraints commit of the trace file.
-	// Panics if an incompatibility is detected.
-	if !a.Settings.IgnoreCompatibilityCheck {
-		var errors []string
-
-		if !zkevmBinCommitOk {
-			errors = append(errors, "missing constraints commit metadata in 'zkevm.bin'")
-		}
-
-		if !traceFileCommitOk {
-			errors = append(errors, "missing constraints commit metadata in '.lt' file")
-		}
-
-		// Check commit mismatch
-		if zkevmBinCommit != traceFileCommit {
-			errors = append(errors, "zkevm.bin incompatible with trace file")
-			errors = append(errors, fmt.Sprintf("zkevm.bin: %s", zkevmBinCommit))
-			errors = append(errors, fmt.Sprintf("trace file: %s", traceFileCommit))
-		}
-
-		// Panic only if there are errors
-		if len(errors) > 0 {
-			for _, err := range errors {
-				logrus.Error(err)
-			}
-			logrus.Panic("compatibility check failed")
-		}
-	} else {
-		logrus.Info("Skip constraints compatibility check between zkevm.bin and trace file")
-		logrus.Infof("zkevm.bin: %s", zkevmBinCommit)
-		logrus.Infof("trace file: %s", traceFileCommit)
+	if !binfCommitOk {
+		logrus.Warn("missing commit metadata from binary constraints file")
 	}
+	//
+	logrus.Infof("constraints commit: %s", binfCommit)
 
 	if errT != nil {
-		logrus.Warnf("error loading the trace fpath=%q err=%v", preRead.TraceFile, errT.Error())
+		logrus.Warnf("error loading the trace fpath=%q err=%v", preRead.InputsFile, errT.Error())
 	}
-
-	propStart := time.Now()
-	rawTrace, errs = asm.Propagate(a.BinaryFile.Schema, rawTrace)
+	// Attempt to trace the ZkC program using the provided inputs, generating a
+	// fully expanded AIR-compatible trace.
+	tracingStart := time.Now()
+	expandedTrace, errs := a.BinaryFile.Trace(inputs, a.TracingConfig)
 
 	if len(errs) > 0 {
-		logrus.Warnf("corset propagation gave the following errors: %v", errors.Join(errs...).Error())
+		logrus.Panicf("tracing failed: %v", errors.Join(errs...).Error())
 	}
-
-	logrus.Infof("[bootstrapper] propagation: %v", time.Since(propStart))
-
-	expStart := time.Now()
-	expandedTrace, errs := ir.NewTraceBuilder[koalabear.Element]().
-		WithBatchSize(1024).
-		WithRegisterMapping(a.LimbMapping).
-		Build(a.AirSchema, rawTrace)
-
-	if len(errs) > 0 {
-		logrus.Warnf("corset expansion gave the following errors: %v", errors.Join(errs...).Error())
-	}
-	logrus.Infof("[bootstrapper] expansion: %v", time.Since(expStart))
+	logrus.Infof("[bootstrapper] tracing: %v", time.Since(tracingStart))
 
 	copyStart := time.Now()
-	AssignFromLtTraces(run, expandedTrace)
+	AssignFromTrace(run, expandedTrace, a.BinaryFile.AirConstraints())
 	logrus.Infof("[bootstrapper] column assignment: %v", time.Since(copyStart))
 	logrus.Infof("[bootstrapper] total Arithmetization.Assign: %v", time.Since(assignStart))
 }
