@@ -11,14 +11,14 @@ const func: DeployFunction = withSignerUiSession(
     const contractName = "ForcedTransactionGateway";
     const signer = await getUiSigner(hre);
 
-    const lineaRollupAddress = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS");
+    const lineaRollupAddress = ethers.getAddress(getRequiredEnvVar("LINEA_ROLLUP_ADDRESS"));
     const destinationChainId = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID");
     const l2BlockBuffer = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER");
     const maxGasLimit = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_MAX_GAS_LIMIT");
     const maxInputLengthBuffer = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_MAX_INPUT_LENGTH_BUFFER");
-    const defaultAdmin = getRequiredEnvVar("L1_SECURITY_COUNCIL");
-    const addressFilter = getRequiredEnvVar("FORCED_TRANSACTION_ADDRESS_FILTER");
-    const mimcLibraryAddress = getRequiredEnvVar("MIMC_LIBRARY_ADDRESS");
+    const defaultAdmin = ethers.getAddress(getRequiredEnvVar("L1_SECURITY_COUNCIL"));
+    const addressFilter = ethers.getAddress(getRequiredEnvVar("FORCED_TRANSACTION_ADDRESS_FILTER"));
+    const mimcLibraryAddress = ethers.getAddress(getRequiredEnvVar("MIMC_LIBRARY_ADDRESS"));
 
     const factory = await ethers.getContractFactory(contractName, {
       libraries: { Mimc: mimcLibraryAddress },

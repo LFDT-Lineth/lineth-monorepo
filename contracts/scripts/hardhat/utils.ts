@@ -11,6 +11,7 @@ import {
   setUiTransactionContext,
   setUiWorkflowStatus,
 } from "./signer-ui-bridge";
+import { normalizeAddressArgs } from "../../common/helpers/normalize-address-args";
 
 type RunnerOrProvider = AbstractSigner | Provider | JsonRpcProvider | HardhatEthersHelpers["provider"] | null;
 
@@ -62,11 +63,11 @@ function pushUiDeployContext(
 
   setUiTransactionContext({
     contractName,
-    constructorArgs: details.constructorArgs,
-    initializerArgs: details.initializerArgs,
-    proxyOptions: details.proxyOptions,
-    notes: details.notes,
-    openZeppelinProxyKind: details.openZeppelinProxyKind,
+    ...(details.constructorArgs === undefined ? {} : { constructorArgs: details.constructorArgs }),
+    ...(details.initializerArgs === undefined ? {} : { initializerArgs: details.initializerArgs }),
+    ...(details.proxyOptions === undefined ? {} : { proxyOptions: details.proxyOptions }),
+    ...(details.notes === undefined ? {} : { notes: details.notes }),
+    ...(details.openZeppelinProxyKind === undefined ? {} : { openZeppelinProxyKind: details.openZeppelinProxyKind }),
   });
 }
 
@@ -159,12 +160,7 @@ function logUpgradableDeploymentComplete(
   );
 }
 
-async function deployFromFactory(
-  contractName: string,
-  runnerOrProvider: RunnerOrProvider = null,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ...args: any[]
-) {
+async function deployFromFactory(contractName: string, runnerOrProvider: RunnerOrProvider = null, ...args: unknown[]) {
   const startTime = performance.now();
   const skipLog = process.env.SKIP_DEPLOY_LOG === "true" || false;
   const runner = await resolveUiRunner(runnerOrProvider);
@@ -174,8 +170,9 @@ async function deployFromFactory(
   }
 
   const factory = await ethers.getContractFactory(contractName, runner);
-  pushUiDeployContext(contractName, { constructorArgs: jsonSafeForUi(args) });
-  const contract = await factory.deploy(...args);
+  const normalizedArgs = await normalizeAddressArgs(factory, args);
+  pushUiDeployContext(contractName, { constructorArgs: jsonSafeForUi(normalizedArgs) });
+  const contract = await factory.deploy(...normalizedArgs);
   if (!skipLog) {
     logStandardDeploymentTx(contractName, contract.deploymentTransaction());
   }
@@ -190,8 +187,7 @@ async function deployFromFactoryWithOpts(
   contractName: string,
   runnerOrProvider: RunnerOrProvider = null,
   factoryOpts: FactoryOptions,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ...args: any[]
+  ...args: unknown[]
 ) {
   const startTime = performance.now();
   const skipLog = process.env.SKIP_DEPLOY_LOG === "true" || false;
@@ -202,8 +198,9 @@ async function deployFromFactoryWithOpts(
   }
 
   const factory = await ethers.getContractFactory(contractName, factoryOpts);
-  pushUiDeployContext(contractName, { constructorArgs: jsonSafeForUi(args) });
-  const contract = await factory.connect(runner).deploy(...args);
+  const normalizedArgs = await normalizeAddressArgs(factory, args);
+  pushUiDeployContext(contractName, { constructorArgs: jsonSafeForUi(normalizedArgs) });
+  const contract = await factory.connect(runner).deploy(...normalizedArgs);
   if (!skipLog) {
     logStandardDeploymentTx(contractName, contract.deploymentTransaction());
   }
@@ -229,10 +226,11 @@ async function deployUpgradableFromFactory(
   const factory = factoryOpts
     ? await ethers.getContractFactory(contractName, factoryOpts)
     : await ethers.getContractFactory(contractName, runner);
+  const proxyOptions = tryStringifyProxyOpts(opts);
   pushUiDeployContext(contractName, {
     initializerArgs: jsonSafeForUi(args ?? []),
     constructorArgs: jsonSafeForUi(opts?.constructorArgs),
-    proxyOptions: tryStringifyProxyOpts(opts),
+    ...(proxyOptions === undefined ? {} : { proxyOptions }),
     openZeppelinProxyKind: openZeppelinProxyKindFromOpts(opts),
   });
   const contract = await withUiReceiptWorkflow(contractName, async () => {
@@ -262,11 +260,12 @@ async function deployUpgradableWithAbiAndByteCode(
     console.log(`Going to deploy upgradable ${contractName}`);
   }
   const factory: ContractFactory = new ContractFactory(abi, byteCode, deployer);
+  const proxyOptions = tryStringifyProxyOpts(opts);
 
   pushUiDeployContext(contractName, {
     initializerArgs: jsonSafeForUi(args ?? []),
     constructorArgs: jsonSafeForUi(opts?.constructorArgs),
-    proxyOptions: tryStringifyProxyOpts(opts),
+    ...(proxyOptions === undefined ? {} : { proxyOptions }),
     openZeppelinProxyKind: openZeppelinProxyKindFromOpts(opts),
   });
   const contract = await withUiReceiptWorkflow(contractName, async () => {
@@ -300,10 +299,11 @@ async function deployUpgradableFromFactoryWithConstructorArgs(
   const factory = factoryOpts
     ? await ethers.getContractFactory(contractName, factoryOpts)
     : await ethers.getContractFactory(contractName, runner);
+  const proxyOptions = tryStringifyProxyOpts(opts);
   pushUiDeployContext(contractName, {
     constructorArgs: jsonSafeForUi(constructorArgs),
     initializerArgs: jsonSafeForUi(initializerArgs),
-    proxyOptions: tryStringifyProxyOpts(opts),
+    ...(proxyOptions === undefined ? {} : { proxyOptions }),
     openZeppelinProxyKind: openZeppelinProxyKindFromOpts(opts),
   });
   const contract = await withUiReceiptWorkflow(contractName, async () => {
