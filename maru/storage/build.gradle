@@ -14,18 +14,18 @@
  */
 
 plugins {
-  id 'maru.kotlin-library-conventions'
+  id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
 dependencies {
-  implementation (project(":core"))
-  implementation (project(":serialization"))
-  implementation (project(":jvm-libs:extensions"))
-  implementation "org.rocksdb:rocksdbjni"
-  implementation "tech.pegasys.teku.internal:storage"
+  implementation (project(':maru:core'))
+  implementation (project(':maru:serialization'))
+  implementation (project(':maru:jvm-libs:extensions'))
+  implementation "org.rocksdb:rocksdbjni:${libs.versions.rocksdbjni.get()}"
+  implementation "tech.pegasys.teku.internal:storage:${libs.versions.teku.get()}"
   implementation "org.hyperledger.besu.internal:besu-metrics-core"
   implementation "org.hyperledger.besu:besu-plugin-api"
-  testImplementation (testFixtures(project(":core")))
-  testImplementation (project(":observability"))
-  testImplementation ("build.linea.internal:metrics")
+  testImplementation (testFixtures(project(':maru:core')))
+  testImplementation (project(':maru:observability'))
+  testImplementation (project(':jvm-libs:linea:core:metrics'))
 }

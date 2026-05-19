@@ -51,6 +51,7 @@ jobs:
       lido-governance-monitor: ${{ steps.filter.outputs.lido-governance-monitor }}
       tracer: ${{ steps.filter.outputs.tracer }}
       tracer-constraints: ${{ steps.filter.outputs.tracer-constraints }}
+      maru: ${{ steps.filter.outputs.maru }}
       has-changes-requiring-build: ${{ steps.exclusion-filter.outputs.has-changes-requiring-build }}
       has-changes-requiring-linea-besu-package-build: ${{ steps.filter.outputs.linea-sequencer-plugin == 'true' || steps.filter.outputs.tracer == 'true' || steps.filter.outputs.tracer-constraints == 'true' ||  steps.filter.outputs.linea-besu == 'true' || steps.filter.outputs.linea-besu-package == 'true' }}
     steps:
@@ -158,6 +159,17 @@ jobs:
               - 'tracer-constraints/**'
               - '.github/workflows/tracer-constraints-*.yml'
               - 'tracer/gradle/corset.gradle'
+            maru:
+              - 'maru/**'
+              - 'buildSrc/**'
+              - 'jvm-libs/**'
+              - 'gradle/**'
+              - 'build.gradle'
+              - 'gradle.properties'
+              - 'settings.gradle'
+              - '.github/workflows/maru-*.yml'
+              - '.github/workflows/build-and-publish.yml'
+              - '.github/workflows/main.yml'
 
       - name: Filter out commit changes
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2
@@ -189,6 +201,7 @@ jobs:
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
       native_yield_automation_service_changed: ${{ needs.filter-commit-changes.outputs.native-yield-automation-service }}
       lido_governance_monitor_changed: ${{ needs.filter-commit-changes.outputs.lido-governance-monitor }}
+      maru_changed: ${{ needs.filter-commit-changes.outputs.maru }}
     secrets: inherit
 
   testing:
@@ -209,6 +222,7 @@ jobs:
       lido_governance_monitor_changed: ${{ needs.filter-commit-changes.outputs.lido-governance-monitor }}
       tracer_changed: ${{ needs.filter-commit-changes.outputs.tracer }}
       constraints_changed: ${{ needs.filter-commit-changes.outputs.tracer-constraints }}
+      maru_changed: ${{ needs.filter-commit-changes.outputs.maru }}
     secrets: inherit
 
   get-has-changes-requiring-e2e-testing:
@@ -245,6 +259,7 @@ jobs:
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
       native_yield_automation_service_changed: ${{ needs.filter-commit-changes.outputs.native-yield-automation-service }}
       lido_governance_monitor_changed: ${{ needs.filter-commit-changes.outputs.lido-governance-monitor }}
+      maru_changed: ${{ needs.filter-commit-changes.outputs.maru }}
       build_linea_besu_package: ${{ needs.filter-commit-changes.outputs.has-changes-requiring-linea-besu-package-build }}
       coordinator_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_coordinator }}
       postman_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_postman }}
@@ -252,6 +267,7 @@ jobs:
       transaction_exclusion_api_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_transaction_exclusion_api }}
       native_yield_automation_service_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_native_yield_automation_service }}
       lido_governance_monitor_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_lido_governance_monitor }}
+      maru_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_maru }}
     secrets: inherit
 
   run-e2e-tests:
@@ -300,6 +316,7 @@ jobs:
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
       native_yield_automation_service_changed: ${{ needs.filter-commit-changes.outputs.native-yield-automation-service }}
       lido_governance_monitor_changed: ${{ needs.filter-commit-changes.outputs.lido-governance-monitor }}
+      maru_changed: ${{ needs.filter-commit-changes.outputs.maru }}
       build_linea_besu_package: ${{ needs.filter-commit-changes.outputs.has-changes-requiring-linea-besu-package-build }}
       coordinator_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_coordinator }}
       postman_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_postman }}
@@ -307,6 +324,7 @@ jobs:
       transaction_exclusion_api_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_transaction_exclusion_api }}
       native_yield_automation_service_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_native_yield_automation_service }}
       lido_governance_monitor_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_lido_governance_monitor }}
+      maru_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_maru }}
     secrets: inherit
 
   cleanup-deployments:

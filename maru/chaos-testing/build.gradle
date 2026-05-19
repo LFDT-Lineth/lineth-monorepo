@@ -14,5 +14,5 @@
  */
 
 plugins {
-  id 'maru.kotlin-library-conventions'
+  id 'net.consensys.zkevm.kotlin-library-conventions'
 }

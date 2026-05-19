@@ -14,16 +14,16 @@
  */
 
 plugins {
-  id 'maru.kotlin-library-conventions'
+  id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
 dependencies {
-  implementation(project(":jvm-libs:extensions"))
-  implementation(project(":core"))
-  api("build.linea.internal:domain-models")
-  api("build.linea.internal:kotlin")
+  implementation(project(':maru:jvm-libs:extensions'))
+  implementation(project(':maru:core'))
+  api(project(':jvm-libs:linea:core:domain-models'))
+  api(project(':jvm-libs:generic:extensions:kotlin'))
 
-  implementation "com.sksamuel.hoplite:hoplite-toml"
-  implementation "com.sksamuel.hoplite:hoplite-json"
-  implementation "com.sksamuel.hoplite:hoplite-core"
+  implementation "com.sksamuel.hoplite:hoplite-toml:${libs.versions.hoplite.get()}"
+  implementation "com.sksamuel.hoplite:hoplite-json:${libs.versions.hoplite.get()}"
+  implementation "com.sksamuel.hoplite:hoplite-core:${libs.versions.hoplite.get()}"
 }

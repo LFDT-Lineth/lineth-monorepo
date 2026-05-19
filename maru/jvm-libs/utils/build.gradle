@@ -14,19 +14,19 @@
  */
 
 plugins {
-  id 'maru.kotlin-common-minimal-conventions'
+  id 'net.consensys.zkevm.kotlin-common-minimal-conventions'
 }
 
 dependencies {
-  implementation(testFixtures(project(":crypto")))
-  implementation "io.libp2p:jvm-libp2p"
-  implementation "tech.pegasys.teku.internal:p2p"
-  implementation "build.linea.internal:kotlin"
+  implementation(testFixtures(project(':maru:crypto')))
+  implementation "io.libp2p:jvm-libp2p:${libs.versions.jvmLibp2p.get()}"
+  implementation "tech.pegasys.teku.internal:p2p:${libs.versions.teku.get()}"
+  implementation project(':jvm-libs:generic:extensions:kotlin')
   implementation("org.hyperledger.besu.internal:besu-crypto-algorithms")
   implementation("org.hyperledger.besu.internal:besu-crypto-services")
   implementation("org.hyperledger.besu.internal:besu-ethereum-core")
-  implementation "info.picocli:picocli"
-  implementation("org.slf4j:slf4j-nop") {
+  implementation "info.picocli:picocli:${libs.versions.picoli.get()}"
+  implementation("org.slf4j:slf4j-nop:${libs.versions.slf4j.get()}") {
     because "To suppress slf4j logs"
   }
 }

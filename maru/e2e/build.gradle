@@ -2,41 +2,41 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
-  id 'maru.kotlin-library-conventions'
+  id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
 dependencies {
-  implementation project(":core")
-  implementation project(":app")
-  implementation project(":consensus")
-  implementation project(":executionlayer")
-  implementation project(":config")
-  implementation project(":p2p")
+  implementation project(':maru:core')
+  implementation project(':maru:app')
+  implementation project(':maru:consensus')
+  implementation project(':maru:executionlayer')
+  implementation project(':maru:config')
+  implementation project(':maru:p2p')
   // For the syncing logic
-  implementation project(":jvm-libs:mappers")
-  implementation(project(":serialization"))
-  implementation(project(":jvm-libs:extensions"))
-  implementation project(":jvm-libs:test-utils")
+  implementation project(':maru:jvm-libs:mappers')
+  implementation(project(':maru:serialization'))
+  implementation(project(':maru:jvm-libs:extensions'))
+  implementation project(':maru:jvm-libs:test-utils')
 
-  implementation "tech.pegasys.teku.internal:executionclient"
-  implementation "tech.pegasys.teku.internal:time"
-  implementation "tech.pegasys.teku.internal:ethereum-events"
-  implementation "tech.pegasys.teku.internal:spec"
+  implementation "tech.pegasys.teku.internal:executionclient:${libs.versions.teku.get()}"
+  implementation "tech.pegasys.teku.internal:time:${libs.versions.teku.get()}"
+  implementation "tech.pegasys.teku.internal:ethereum-events:${libs.versions.teku.get()}"
+  implementation "tech.pegasys.teku.internal:spec:${libs.versions.teku.get()}"
 
 
-  implementation ("org.web3j:core")
+  implementation ("org.web3j:core:${libs.versions.web3j.get()}")
 
-  implementation "com.sksamuel.hoplite:hoplite-toml"
-  implementation "com.sksamuel.hoplite:hoplite-json"
-  implementation "com.sksamuel.hoplite:hoplite-core"
+  implementation "com.sksamuel.hoplite:hoplite-toml:${libs.versions.hoplite.get()}"
+  implementation "com.sksamuel.hoplite:hoplite-json:${libs.versions.hoplite.get()}"
+  implementation "com.sksamuel.hoplite:hoplite-core:${libs.versions.hoplite.get()}"
 
-  implementation('com.palantir.docker.compose:docker-compose-rule-junit4')
-  implementation('com.palantir.docker.compose:docker-compose-junit-jupiter')
+  implementation("com.palantir.docker.compose:docker-compose-rule-junit4:${libs.versions.dockerComposeRule.get()}")
+  implementation("com.palantir.docker.compose:docker-compose-junit-jupiter:${libs.versions.dockerComposeRule.get()}")
   implementation "org.hyperledger.besu.internal:besu-acceptance-tests-dsl"
 
-  implementation "build.linea.internal:metrics"
-  implementation "build.linea.internal:micrometer"
-  implementation "build.linea.internal:long-running-service"
+  implementation project(':jvm-libs:linea:core:metrics')
+  implementation project(':jvm-libs:linea:metrics:micrometer')
+  implementation project(':jvm-libs:linea:core:long-running-service')
 }
 
 sourceSets {
@@ -48,6 +48,10 @@ sourceSets {
     compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + sourceSets.test.compileClasspath
     runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath + sourceSets.test.runtimeClasspath
   }
+}
+
+dependencies {
+  acceptanceTestImplementation "org.awaitility:awaitility-kotlin:${libs.versions.awaitility.get()}"
 }
 
 

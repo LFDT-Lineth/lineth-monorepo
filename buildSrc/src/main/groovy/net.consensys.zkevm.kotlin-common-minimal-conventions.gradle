@@ -41,6 +41,22 @@ repositories {
   maven {
     url "https://artifacts.consensys.net/public/maven/maven/"
   }
+  // Repositories required for the imported maru subprojects:
+  //   - io.libp2p:jvm-libp2p (used by maru's p2p / crypto / utils modules)
+  //   - com.github.multiformats:* (libp2p transitive)
+  //   - com.splunk.* (parity with maru's previous build setup)
+  maven {
+    url "https://dl.cloudsmith.io/public/libp2p/jvm-libp2p/maven/"
+    content { includeGroup('io.libp2p') }
+  }
+  maven {
+    url "https://jitpack.io"
+    content { includeGroup('com.github.multiformats') }
+  }
+  maven {
+    url 'https://splunk.jfrog.io/splunk/ext-releases-local'
+    content { includeGroupByRegex('com\\.splunk\\..*') }
+  }
   // to allow locally published artifacts to be resolved uncomment enable mavenLocal() below
   // build.linea:blob-compressor:2.0.0-SNAPSHOT
   // useful to test WIP development versions

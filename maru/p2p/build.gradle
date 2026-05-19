@@ -14,25 +14,25 @@
  */
 
 plugins {
-  id 'maru.kotlin-library-conventions'
+  id 'net.consensys.zkevm.kotlin-library-conventions'
   id 'java-test-fixtures'
 }
 
 dependencies {
-  implementation project(":config")
-  implementation project(":serialization")
-  implementation project(":crypto")
-  implementation project(":core")
-  implementation project(":observability")
+  implementation project(':maru:config')
+  implementation project(':maru:serialization')
+  implementation project(':maru:crypto')
+  implementation project(':maru:core')
+  implementation project(':maru:observability')
 
-  api "io.libp2p:jvm-libp2p"
+  api "io.libp2p:jvm-libp2p:${libs.versions.jvmLibp2p.get()}"
 
-  implementation "tech.pegasys.teku.internal:p2p"
-  implementation "tech.pegasys.teku.internal:eth2"
-  implementation "tech.pegasys.teku.internal:spec"
-  implementation "tech.pegasys.teku.internal:storage"
-  implementation "tech.pegasys.teku.internal:unsigned"
-  implementation "tech.pegasys.teku.internal:time"
+  implementation "tech.pegasys.teku.internal:p2p:${libs.versions.teku.get()}"
+  implementation "tech.pegasys.teku.internal:eth2:${libs.versions.teku.get()}"
+  implementation "tech.pegasys.teku.internal:spec:${libs.versions.teku.get()}"
+  implementation "tech.pegasys.teku.internal:storage:${libs.versions.teku.get()}"
+  implementation "tech.pegasys.teku.internal:unsigned:${libs.versions.teku.get()}"
+  implementation "tech.pegasys.teku.internal:time:${libs.versions.teku.get()}"
 
   implementation "org.hyperledger.besu:besu-plugin-api"
   implementation "org.hyperledger.besu.internal:besu-metrics-core"
@@ -40,21 +40,22 @@ dependencies {
   implementation "org.hyperledger.besu.internal:besu-ethereum-p2p"
   implementation "org.hyperledger.besu.internal:besu-consensus-qbft-core"
 
-  implementation "io.consensys.tuweni:tuweni-crypto"
-  implementation "io.consensys.tuweni:tuweni-rlp"
+  implementation "io.consensys.tuweni:tuweni-crypto:${libs.versions.tuweni.get()}"
+  implementation "io.consensys.tuweni:tuweni-rlp:${libs.versions.tuweni.get()}"
 
-  implementation "build.linea.internal:metrics"
-  implementation "build.linea.internal:futures"
-  implementation "build.linea.internal:long-running-service"
+  implementation project(':jvm-libs:linea:core:metrics')
+  implementation project(':jvm-libs:generic:extensions:futures')
+  implementation project(':jvm-libs:linea:core:long-running-service')
 
-  implementation 'io.consensys.protocols:discovery'
-  implementation 'org.jetbrains.kotlinx:kotlinx-datetime'
+  implementation "io.consensys.protocols:discovery:${libs.versions.discovery.get()}"
+  implementation "org.jetbrains.kotlinx:kotlinx-datetime:${libs.versions.kotlinxDatetime.get()}"
 
-  implementation(project(":core"))
+  implementation(project(':maru:core'))
 
-  testImplementation(testFixtures(project(":core")))
+  testImplementation(testFixtures(project(':maru:core')))
+  testImplementation "org.awaitility:awaitility-kotlin:${libs.versions.awaitility.get()}"
 
-  testFixturesImplementation(project(":serialization"))
-  testFixturesImplementation(project(":crypto"))
-  testFixturesImplementation(testFixtures(project(":core")))
+  testFixturesImplementation(project(':maru:serialization'))
+  testFixturesImplementation(project(':maru:crypto'))
+  testFixturesImplementation(testFixtures(project(':maru:core')))
 }

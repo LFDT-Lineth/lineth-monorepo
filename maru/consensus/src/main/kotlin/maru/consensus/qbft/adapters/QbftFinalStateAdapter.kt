@@ -55,5 +55,5 @@ class QbftFinalStateAdapter(
   override fun getBlockTimer(): BlockTimer = blockTimer
 
   override fun isLocalNodeProposerForRound(roundIdentifier: ConsensusRoundIdentifier): Boolean =
-    proposerSelector.selectProposerForRound(roundIdentifier).equals(localAddress)
+    proposerSelector.selectProposerForRound(roundIdentifier) == localAddress
 }

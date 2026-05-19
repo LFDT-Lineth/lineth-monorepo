@@ -68,7 +68,7 @@ class BesuTransactionsHelper {
     this@BesuTransactionsHelper
       .ethConditions
       .expectSuccessfulTransactionReceipt(
-        txHash.toString(),
+        txHash.bytes.toHexString(),
       ).verify(this)
     logger.info("Transaction {} was mined", txHash)
   }

@@ -46,6 +46,9 @@ on:
       constraints_changed:
         required: true
         type: string
+      maru_changed:
+        required: true
+        type: string
 
 jobs:
   # Cache for pulling Docker images is disabled as we empirically found that this
@@ -120,6 +123,13 @@ jobs:
   constraints:
     uses: ./.github/workflows/tracer-constraints-check-compilation.yml
     if: ${{ inputs.constraints_changed == 'true' }}
+    secrets: inherit
+
+  maru:
+    uses: ./.github/workflows/maru-testing.yml
+    if: ${{ inputs.maru_changed == 'true' }}
+    with:
+      commit_tag: ${{ inputs.commit_tag }}
     secrets: inherit
 
   # Run Jacoco report after all JVM tests complete
@@ -208,7 +218,7 @@ jobs:
   # If all jobs are skipped, the workflow will still succeed.
   always_succeed:
     runs-on: ubuntu-24.04
-    if: ${{ inputs.coordinator_changed == 'false' && inputs.prover_changed == 'false' && inputs.prover_ray_changed == 'false' && inputs.native_yield_automation_service_changed == 'false' && inputs.lido_governance_monitor_changed == 'false' && inputs.postman_changed == 'false' && inputs.transaction_exclusion_api_changed == 'false' && inputs.staterecovery_changed == 'false' && inputs.smart_contracts_changed == 'false' && inputs.linea_sequencer_changed == 'false' && inputs.constraints_changed == 'false' }}
+    if: ${{ inputs.coordinator_changed == 'false' && inputs.prover_changed == 'false' && inputs.prover_ray_changed == 'false' && inputs.native_yield_automation_service_changed == 'false' && inputs.lido_governance_monitor_changed == 'false' && inputs.postman_changed == 'false' && inputs.transaction_exclusion_api_changed == 'false' && inputs.staterecovery_changed == 'false' && inputs.smart_contracts_changed == 'false' && inputs.linea_sequencer_changed == 'false' && inputs.constraints_changed == 'false' && inputs.maru_changed == 'false' }}
     steps:
       - name: Ensure Workflow Success
         run: echo "All jobs were skipped, but workflow succeeds."

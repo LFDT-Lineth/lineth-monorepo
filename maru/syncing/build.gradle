@@ -14,39 +14,39 @@
  */
 
 plugins {
-  id 'maru.kotlin-library-conventions'
+  id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
 dependencies {
-  implementation project(':core')
-  implementation project(':consensus')
-  implementation project(':config')
-  implementation project(':observability')
-  implementation project(':p2p')
-  implementation project(':storage')
-  implementation project(':jvm-libs:extensions')
-  implementation 'build.linea.internal:metrics'
-  implementation 'build.linea.internal:kotlin'
-  implementation 'build.linea.internal:long-running-service'
-  implementation 'org.apache.logging.log4j:log4j-api'
+  implementation project(':maru:core')
+  implementation project(':maru:consensus')
+  implementation project(':maru:config')
+  implementation project(':maru:observability')
+  implementation project(':maru:p2p')
+  implementation project(':maru:storage')
+  implementation project(':maru:jvm-libs:extensions')
+  implementation project(':jvm-libs:linea:core:metrics')
+  implementation project(':jvm-libs:generic:extensions:kotlin')
+  implementation project(':jvm-libs:linea:core:long-running-service')
+  implementation "org.apache.logging.log4j:log4j-api:${libs.versions.log4j.get()}"
   implementation 'org.hyperledger.besu.internal:besu-crypto-algorithms'
   implementation 'org.hyperledger.besu.internal:besu-metrics-core'
   implementation 'org.hyperledger.besu.internal:besu-services-pipeline'
   implementation 'org.hyperledger.besu.internal:besu-util'
-  implementation 'tech.pegasys.teku.internal:async'
-  implementation 'tech.pegasys.teku.internal:p2p'
-  implementation "tech.pegasys.teku.internal:eth2"
+  implementation "tech.pegasys.teku.internal:async:${libs.versions.teku.get()}"
+  implementation "tech.pegasys.teku.internal:p2p:${libs.versions.teku.get()}"
+  implementation "tech.pegasys.teku.internal:eth2:${libs.versions.teku.get()}"
 
-  testImplementation project(':config')
-  testImplementation project(':crypto')
-  testImplementation project(':observability')
-  testImplementation project(':serialization')
-  testImplementation(testFixtures(project(":core")))
-  testImplementation(testFixtures(project(":p2p")))
-  testImplementation(project(":jvm-libs:test-utils"))
-  testImplementation 'org.mockito:mockito-core'
-  testImplementation 'org.mockito.kotlin:mockito-kotlin'
-  testImplementation 'org.assertj:assertj-core'
-  testImplementation 'build.linea.internal:metrics'
+  testImplementation project(':maru:config')
+  testImplementation project(':maru:crypto')
+  testImplementation project(':maru:observability')
+  testImplementation project(':maru:serialization')
+  testImplementation(testFixtures(project(':maru:core')))
+  testImplementation(testFixtures(project(':maru:p2p')))
+  testImplementation(project(':maru:jvm-libs:test-utils'))
+  testImplementation "org.mockito:mockito-core:${libs.versions.mockito.get()}"
+  testImplementation "org.mockito.kotlin:mockito-kotlin:${libs.versions.mockitoKotlin.get()}"
+  testImplementation "org.assertj:assertj-core:${libs.versions.assertj.get()}"
+  testImplementation project(':jvm-libs:linea:core:metrics')
   testImplementation 'org.hyperledger.besu.internal:besu-ethereum-core'
 }

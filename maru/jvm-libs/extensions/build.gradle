@@ -14,11 +14,11 @@
  */
 
 plugins {
-  id 'maru.kotlin-library-conventions'
+  id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
 dependencies {
-  implementation "build.linea.internal:metrics"
-  implementation "build.linea.internal:futures"
-  implementation "tech.pegasys.teku.internal:executionclient"
+  implementation project(':jvm-libs:linea:core:metrics')
+  implementation project(':jvm-libs:generic:extensions:futures')
+  implementation "tech.pegasys.teku.internal:executionclient:${libs.versions.teku.get()}"
 }

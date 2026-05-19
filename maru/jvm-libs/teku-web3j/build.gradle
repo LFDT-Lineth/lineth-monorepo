@@ -14,15 +14,15 @@
  */
 
 plugins {
-  id 'maru.kotlin-library-conventions'
+  id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
 dependencies {
-  implementation "tech.pegasys.teku.internal:executionclient"
-  implementation "tech.pegasys.teku.internal:logging"
-  implementation "tech.pegasys.teku.internal:time"
-  implementation "tech.pegasys.teku.internal:ethereum-events"
-  implementation "tech.pegasys.teku.internal:infrastructure-events"
-  implementation "build.linea.internal:logging"
-  implementation "build.linea.internal:json-rpc"
+  implementation "tech.pegasys.teku.internal:executionclient:${libs.versions.teku.get()}"
+  implementation "tech.pegasys.teku.internal:logging:${libs.versions.teku.get()}"
+  implementation "tech.pegasys.teku.internal:time:${libs.versions.teku.get()}"
+  implementation "tech.pegasys.teku.internal:ethereum-events:${libs.versions.teku.get()}"
+  implementation "tech.pegasys.teku.internal:infrastructure-events:${libs.versions.teku.get()}"
+  implementation project(':jvm-libs:generic:logging')
+  implementation project(':jvm-libs:generic:json-rpc')
 }

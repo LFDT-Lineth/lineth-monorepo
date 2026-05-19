@@ -1,9 +1,11 @@
-name: Release
+name: maru-release
 
 on:
   push:
     tags:
-      - 'v*'
+      # NOTE: monorepo convention - maru releases use a 'maru-v*' tag prefix
+      # (e.g. maru-v1.0.0) to avoid collisions with other components' release tags.
+      - 'maru-v*'
 
 permissions: {} # lock everything by default (least-privilege)
 
@@ -19,6 +21,7 @@ jobs:
     name: Compute version
     outputs:
       tag_name: ${{ steps.version.outputs.tag_name }}
+      semver_tag: ${{ steps.version.outputs.semver_tag }}
       full_version: ${{ steps.version.outputs.full_version }}
       date: ${{ steps.version.outputs.date }}
       commit_hash: ${{ steps.version.outputs.commit_hash }}
@@ -34,27 +37,33 @@ jobs:
           TAG_NAME=${GITHUB_REF#refs/tags/}
           echo "Tag: $TAG_NAME"
 
-          # Validate tag format: v<semver>-<product-label-ver>?
-          # Examples: v2.0.1-betav4 OR v2.0.1 OR v2.0.1-beta-v4
-          if [[ ! $TAG_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9-]+)?$ ]]; then
-            echo "Error: Tag format is invalid. Expected format: v<semver>-<product-label-ver>?"
-            echo "Examples: v2.0.1-betav4 OR v2.0.1 OR v2.0.1-beta-v4"
+          # Validate tag format: maru-v<semver>-<product-label-ver>?
+          # Examples: maru-v2.0.1-betav4 OR maru-v2.0.1 OR maru-v2.0.1-beta-v4
+          if [[ ! $TAG_NAME =~ ^maru-v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9-]+)?$ ]]; then
+            echo "Error: Tag format is invalid. Expected format: maru-v<semver>-<product-label-ver>?"
+            echo "Examples: maru-v2.0.1-betav4 OR maru-v2.0.1 OR maru-v2.0.1-beta-v4"
             exit 1
           fi
+
+          # Strip the 'maru-' prefix to get the semver tag (matches the old 'v*' format used
+          # downstream by the docker image tag).
+          SEMVER_TAG=${TAG_NAME#maru-}
 
           # Compute date and commit hash
           DATE=$(date -u +%Y%m%d%H%M%S)
           COMMIT_HASH=$(git show-ref -s $TAG_NAME | cut -c1-7)
 
           # Create full version: <semver>-<product-label-ver>?-<date>-<commit-hash>
-          FULL_VERSION="${TAG_NAME}-${DATE}-${COMMIT_HASH}"
+          FULL_VERSION="${SEMVER_TAG}-${DATE}-${COMMIT_HASH}"
 
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "semver_tag=$SEMVER_TAG" >> $GITHUB_OUTPUT
           echo "full_version=$FULL_VERSION" >> $GITHUB_OUTPUT
           echo "date=$DATE" >> $GITHUB_OUTPUT
           echo "commit_hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
 
           echo "Release tag: $TAG_NAME"
+          echo "Semver tag: $SEMVER_TAG"
           echo "Full version: $FULL_VERSION"
 
   build-and-publish-docker:
@@ -64,7 +73,7 @@ jobs:
     uses: ./.github/workflows/maru-build-and-publish.yml
     with:
       commit_tag: ${{ needs.compute-version.outputs.full_version }}
-      develop_tag: ${{ needs.compute-version.outputs.tag_name }}
+      develop_tag: ${{ needs.compute-version.outputs.semver_tag }}
       image_name: 'consensys/maru'
       push_image: true
       upload_dist_artifact: true
@@ -86,30 +95,31 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: maru-distribution
-          path: app/build/install/app/
+          path: maru/app/build/install/app/
 
       - name: Create distribution archive
         run: |
-          tar -czf maru-${{ needs.compute-version.outputs.full_version }}.tar.gz -C app/build/install/app .
+          tar -czf maru-${{ needs.compute-version.outputs.full_version }}.tar.gz -C maru/app/build/install/app .
 
       - name: Prepare release body
         run: |
           cat << 'EOF' > release-body.md
           ## Docker Image
 
-          🐳 **Docker Hub:** https://hub.docker.com/r/consensys/maru/tags?name=${{ needs.compute-version.outputs.full_version }}
+          Docker Hub: https://hub.docker.com/r/consensys/maru/tags?name=${{ needs.compute-version.outputs.full_version }}
 
           ```bash
           docker pull consensys/maru:${{ needs.compute-version.outputs.full_version }}
           ```
 
           EOF
-          cat CHANGELOG.md >> release-body.md
+          cat maru/CHANGELOG.md >> release-body.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           draft: true
+          tag_name: ${{ needs.compute-version.outputs.tag_name }}
           body_path: release-body.md
           files: maru-${{ needs.compute-version.outputs.full_version }}.tar.gz
           fail_on_unmatched_files: true

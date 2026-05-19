@@ -71,6 +71,25 @@ flywaydb = "12.0.3"
 postgresql = "42.7.10"
 guava = "33.5.0"
 
+# Maru
+discovery = "26.3.0"
+# The published build.linea.internal:vertx-helper artifact is on Vert.x 4.
+# Maru depends on it (rather than the local :jvm-libs:generic:vertx-helper, which is on
+# Vert.x 5) because Besu 26.5's bytecode references both removed Vert.x 4 internal
+# types (e.g. io.vertx.core.impl.ConcurrentHashSet) AND removed Vert.x 4 methods on
+# still-present types (e.g. Vertx.nettyEventLoopGroup). Class-level shims cover the
+# former but not the latter, so maru must run on Vert.x 4 at test runtime. Drop this
+# pin and switch back to :jvm-libs:generic:vertx-helper once Besu moves to Vert.x 5.
+lineaPackages = "0.0.1-v20260327160734"
+dockerComposeRule = "2.3.0"
+http4k = "6.15.1.0"
+javalin = "6.7.0"
+jvmLibp2p = "1.2.2-RELEASE"
+kotlinxDatetime = "0.7.0"
+okhttp = "4.12.0"
+pktsCore = "3.0.10"
+rocksdbjni = "9.7.3"
+
 # Other
 googleJavaFormat = "1.27.0"
 dependencyLicenseReport = "3.1.1"

@@ -29,6 +29,9 @@ on:
       lido_governance_monitor_changed:
         required: true
         type: string
+      maru_changed:
+        required: true
+        type: string
     outputs:
       commit_tag:
         value: ${{ jobs.check_image_tags_exist.outputs.commit_tag }}
@@ -48,6 +51,8 @@ on:
         value: ${{ jobs.image_tag_push.outputs.image_tagged_lido_governance_monitor || 'false' }}
       image_tagged_transaction_exclusion_api:
         value: ${{ jobs.image_tag_push.outputs.image_tagged_transaction_exclusion_api || 'false' }}
+      image_tagged_maru:
+        value: ${{ jobs.image_tag_push.outputs.image_tagged_maru || 'false' }}
     secrets:
       DOCKERHUB_USERNAME:
         required: false
@@ -72,6 +77,7 @@ jobs:
       last_commit_tag_exists_postman: ${{ steps.check_image_tags_exist_postman.outputs.last_commit_tag_exists }}
       last_commit_tag_exists_prover: ${{ steps.check_image_tags_exist_prover.outputs.last_commit_tag_exists }}
       last_commit_tag_exists_transaction_exclusion_api: ${{ steps.check_image_tags_exist_transaction_exclusion_api.outputs.last_commit_tag_exists }}
+      last_commit_tag_exists_maru: ${{ steps.check_image_tags_exist_maru.outputs.last_commit_tag_exists }}
       commit_tag: ${{ steps.compute-version-tags.outputs.commit_tag }}
       last_commit_tag: ${{ steps.compute-version-tags.outputs.last_commit_tag }}
       develop_tag: ${{ steps.compute-version-tags.outputs.develop_tag }}
@@ -138,6 +144,14 @@ jobs:
           last_commit_tag: ${{ steps.compute-version-tags.outputs.last_commit_tag }}
           image_name: consensys/linea-transaction-exclusion-api
 
+      - name: Check image tags exist for maru
+        uses: ./.github/actions/check-image-tags-exist
+        if: ${{ github.ref == 'refs/heads/main' && inputs.maru_changed == 'false' }}
+        id: check_image_tags_exist_maru
+        with:
+          last_commit_tag: ${{ steps.compute-version-tags.outputs.last_commit_tag }}
+          image_name: consensys/maru
+
   image_tag_push:
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     if: ${{ github.ref == 'refs/heads/main' && inputs.has-changes-requiring-build == 'true' }}
@@ -150,6 +164,7 @@ jobs:
       image_tagged_prover: ${{ steps.image_tag_push_prover.outputs.image_tagged }}
       image_tagged_postman: ${{ steps.image_tag_push_postman.outputs.image_tagged }}
       image_tagged_transaction_exclusion_api: ${{ steps.image_tag_push_transaction_exclusion_api.outputs.image_tagged }}
+      image_tagged_maru: ${{ steps.image_tag_push_maru.outputs.image_tagged }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -232,5 +247,18 @@ jobs:
           develop_tag: ${{ needs.check_image_tags_exist.outputs.develop_tag }}
           image_name: consensys/linea-transaction-exclusion-api
           last_commit_tag_exists: ${{ needs.check_image_tags_exist.outputs.last_commit_tag_exists_transaction_exclusion_api }}
+          docker_username: ${{ secrets.DOCKERHUB_USERNAME }}
+          docker_password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Tag and push maru image
+        id: image_tag_push_maru
+        uses: ./.github/actions/image-tag-and-push
+        if: ${{ inputs.maru_changed == 'false' }}
+        with:
+          commit_tag: ${{ needs.check_image_tags_exist.outputs.commit_tag }}
+          last_commit_tag: ${{ needs.check_image_tags_exist.outputs.last_commit_tag }}
+          develop_tag: ${{ needs.check_image_tags_exist.outputs.develop_tag }}
+          image_name: consensys/maru
+          last_commit_tag_exists: ${{ needs.check_image_tags_exist.outputs.last_commit_tag_exists_maru }}
           docker_username: ${{ secrets.DOCKERHUB_USERNAME }}
           docker_password: ${{ secrets.DOCKERHUB_TOKEN }}

@@ -14,16 +14,16 @@
  */
 
 plugins {
-  id 'maru.kotlin-library-conventions'
+  id 'net.consensys.zkevm.kotlin-library-conventions'
   id 'java-test-fixtures'
 }
 
 dependencies {
-  implementation(project(":jvm-libs:extensions"))
-  api(project(":core"))
-  api("build.linea.internal:linea-contract-clients"){
+  implementation(project(':maru:jvm-libs:extensions'))
+  api(project(':maru:core'))
+  api(project(':jvm-libs:linea:clients:linea-contract-clients')){
     exclude group: "build.linea", module: "besu-libs"
   }
-  api("build.linea.internal:interfaces")
-  implementation("build.linea.internal:long-running-service")
+  api(project(':jvm-libs:linea:clients:interfaces'))
+  implementation(project(':jvm-libs:linea:core:long-running-service'))
 }

@@ -14,21 +14,21 @@
  */
 
 plugins {
-  id 'maru.kotlin-library-conventions'
+  id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
 dependencies {
-  implementation(project(":core"))
-  implementation(project(":jvm-libs:extensions"))
+  implementation(project(':maru:core'))
+  implementation(project(':maru:jvm-libs:extensions'))
 
-  implementation "tech.pegasys.teku.internal:unsigned"
-  implementation "tech.pegasys.teku.internal:bytes"
-  implementation "tech.pegasys.teku.internal:executionclient"
+  implementation "tech.pegasys.teku.internal:unsigned:${libs.versions.teku.get()}"
+  implementation "tech.pegasys.teku.internal:bytes:${libs.versions.teku.get()}"
+  implementation "tech.pegasys.teku.internal:executionclient:${libs.versions.teku.get()}"
   implementation "org.hyperledger.besu.internal:besu-metrics-core"
   implementation "org.hyperledger.besu.internal:besu-crypto-algorithms"
   implementation "org.hyperledger.besu.internal:besu-ethereum-core"
   implementation "org.hyperledger.besu:besu-datatypes"
   implementation "org.hyperledger.besu:besu-plugin-api"
-  implementation "io.consensys.tuweni:tuweni-bytes"
-  implementation "tech.pegasys.teku.internal:spec"
+  implementation "io.consensys.tuweni:tuweni-bytes:${libs.versions.tuweni.get()}"
+  implementation "tech.pegasys.teku.internal:spec:${libs.versions.teku.get()}"
 }

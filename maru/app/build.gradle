@@ -2,7 +2,7 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
-  id 'maru.kotlin-application-conventions'
+  id 'net.consensys.zkevm.kotlin-application-conventions'
 }
 
 sourceSets {
@@ -17,54 +17,66 @@ sourceSets {
 }
 
 dependencies {
-  implementation(project(":api"))
-  implementation(project(":config"))
-  implementation(project(":consensus"))
-  implementation(project(":core"))
-  implementation(project(":executionlayer"))
-  implementation(project(":p2p"))
-  implementation(project(":storage"))
-  implementation(project(":syncing"))
-  implementation(project(":crypto"))
-  implementation(project(":serialization"))
-  implementation(project(":observability"))
-  implementation(project(":syncing"))
-  implementation(project(":jvm-libs:teku-web3j"))
-  api(project(":linea-finalization-provider")) {
+  implementation(project(':maru:api'))
+  implementation(project(':maru:config'))
+  implementation(project(':maru:consensus'))
+  implementation(project(':maru:core'))
+  implementation(project(':maru:executionlayer'))
+  implementation(project(':maru:p2p'))
+  implementation(project(':maru:storage'))
+  implementation(project(':maru:syncing'))
+  implementation(project(':maru:crypto'))
+  implementation(project(':maru:serialization'))
+  implementation(project(':maru:observability'))
+  implementation(project(':maru:syncing'))
+  implementation(project(':maru:jvm-libs:teku-web3j'))
+  api(project(':maru:linea-finalization-provider')) {
     exclude group: "build.linea", module: "besu-libs"
   }
-  implementation("build.linea.internal:web3j-extensions") {
+  implementation(project(':jvm-libs:linea:web3j-extensions')) {
     exclude group: "build.linea", module: "besu-libs"
   }
-  implementation(project(":jvm-libs:extensions"))
-  implementation(project(":jvm-libs:mappers"))
+  implementation(project(':maru:jvm-libs:extensions'))
+  implementation(project(':maru:jvm-libs:mappers'))
 
-  implementation "build.linea.internal:futures"
-  implementation "build.linea.internal:long-running-service"
+  implementation project(':jvm-libs:generic:extensions:futures')
+  implementation project(':jvm-libs:linea:core:long-running-service')
 
-  implementation "info.picocli:picocli"
-  implementation "com.sksamuel.hoplite:hoplite-core"
+  // Previously inherited from maru's `maru.kotlin-application-conventions` plugin (which the
+  // import dropped in favor of zkevm's lighter `net.consensys.zkevm.kotlin-application-conventions`).
+  implementation project(':jvm-libs:linea:core:metrics')
+  implementation project(':jvm-libs:linea:metrics:micrometer')
+  // Pinned to the published Vert.x 4-era artifact rather than the local
+  // :jvm-libs:generic:vertx-helper (Vert.x 5) because Besu 26.5's acceptance-tests-dsl
+  // and besu-ethereum-p2p call removed Vert.x 4 methods/internals at runtime.
+  // Tracked in libs.versions.toml `lineaPackages`.
+  implementation "build.linea.internal:vertx-helper:${libs.versions.lineaPackages.get()}"
+  implementation "io.vertx:vertx-micrometer-metrics"
+
+  implementation "info.picocli:picocli:${libs.versions.picoli.get()}"
+  implementation "com.sksamuel.hoplite:hoplite-core:${libs.versions.hoplite.get()}"
 
   implementation("org.hyperledger.besu.internal:besu-consensus-qbft-core")
   implementation("org.hyperledger.besu.internal:besu-metrics-core")
   implementation("org.hyperledger.besu.internal:besu-crypto-algorithms")
-  implementation("tech.pegasys.teku.internal:p2p")
-  implementation("tech.pegasys.teku.internal:eth2")
-  implementation ("io.consensys.protocols:discovery")
+  implementation("tech.pegasys.teku.internal:p2p:${libs.versions.teku.get()}")
+  implementation("tech.pegasys.teku.internal:eth2:${libs.versions.teku.get()}")
+  implementation ("io.consensys.protocols:discovery:${libs.versions.discovery.get()}")
 
-  integrationTestRuntimeOnly("org.junit.platform:junit-platform-launcher")
-  integrationTestImplementation 'org.jetbrains.kotlinx:kotlinx-datetime'
-  integrationTestImplementation(project(":jvm-libs:test-utils"))
-  integrationTestImplementation(testFixtures(project(":p2p")))
-  integrationTestImplementation(testFixtures(project(":crypto")))
+  integrationTestRuntimeOnly("org.junit.platform:junit-platform-launcher:${libs.versions.junitPlatform.get()}")
+  integrationTestImplementation "org.jetbrains.kotlinx:kotlinx-datetime:${libs.versions.kotlinxDatetime.get()}"
+  integrationTestImplementation "org.awaitility:awaitility-kotlin:${libs.versions.awaitility.get()}"
+  integrationTestImplementation(project(':maru:jvm-libs:test-utils'))
+  integrationTestImplementation(testFixtures(project(':maru:p2p')))
+  integrationTestImplementation(testFixtures(project(':maru:crypto')))
   integrationTestImplementation("org.hyperledger.besu.internal:besu-crypto-services")
   integrationTestImplementation "org.hyperledger.besu.internal:besu-ethereum-api"
   integrationTestImplementation(group: 'org.hyperledger.besu.internal', name: 'besu-ethereum-core', classifier: 'test-support')
   integrationTestImplementation("org.hyperledger.besu.internal:besu-ethereum-p2p")
   integrationTestImplementation("org.hyperledger.besu.internal:besu-consensus-qbft-core")
-  integrationTestImplementation("com.squareup.okhttp3:okhttp")
-  integrationTestImplementation("io.javalin:javalin")
-  testImplementation(testFixtures(project(":core")))
+  integrationTestImplementation("com.squareup.okhttp3:okhttp:${libs.versions.okhttp.get()}")
+  integrationTestImplementation("io.javalin:javalin:${libs.versions.javalin.get()}")
+  testImplementation(testFixtures(project(':maru:core')))
 }
 
 // Besu and Teku have similar versioning and some modules are also named the same. This creates conflicts when

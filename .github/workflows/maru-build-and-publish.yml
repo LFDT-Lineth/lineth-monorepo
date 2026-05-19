@@ -1,0 +1,125 @@
+name: maru-build-and-publish
+
+permissions:
+  contents: read
+  actions: read
+  packages: write
+
+on:
+  workflow_call:
+    inputs:
+      commit_tag:
+        required: false
+        type: string
+        default: ''
+      develop_tag:
+        required: true
+        type: string
+      image_name:
+        required: true
+        type: string
+      push_image:
+        required: false
+        type: boolean
+        default: false
+      upload_dist_artifact: # Used for release process to reuse the artifact
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      commit_tag:
+        value: ${{ jobs.build-and-publish.outputs.commit_tag }}
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: false
+      DOCKERHUB_TOKEN:
+        required: false
+  workflow_dispatch:
+    inputs:
+      commit_tag:
+        description: 'Image tag, if not given, HEAD commit hash will be used'
+        required: false
+        type: string
+        default: ''
+      develop_tag:
+        description: 'Image tag will be "develop" if target branch is main'
+        required: true
+        type: choice
+        options:
+          - develop
+        default: 'develop'
+      image_name:
+        description: 'Image name'
+        required: true
+        type: string
+        default: 'consensys/maru'
+      push_image:
+        description: 'Toggle whether to push image to docker registry'
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: maru-docker-build-and-publish-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build-and-publish:
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
+    name: Maru build and publish
+    env:
+      COMMIT_TAG: ${{ inputs.commit_tag }}
+      DEVELOP_TAG: ${{ inputs.develop_tag }}
+      IMAGE_NAME: ${{ inputs.image_name }}
+      PUSH_IMAGE: ${{ inputs.push_image }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    outputs:
+      commit_tag: ${{ env.COMMIT_TAG }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Set commit tag if not given
+        if: ${{ inputs.commit_tag == '' }}
+        run: |
+          # For PR, GITHUB_SHA is NOT the last commit pushed onto the PR branch - https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#pull_request
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            COMMIT_TAG=$(git rev-parse --short ${{ github.event.pull_request.head.sha }})
+          else
+            COMMIT_TAG=$(git rev-parse --short $GITHUB_SHA)
+          fi
+          echo "COMMIT_TAG=$COMMIT_TAG" >> $GITHUB_ENV
+          echo "COMMIT_TAG=$COMMIT_TAG"
+      - name: Login to Docker Hub
+        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Setup Java and Gradle
+        uses: ./.github/actions/setup-java-and-gradle
+      - name: Build dist
+        run: |
+          ./gradlew :maru:app:installDist
+      - name: Upload distribution artifact
+        if: ${{ inputs.upload_dist_artifact }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: maru-distribution
+          path: maru/app/build/install/app/
+          retention-days: 1
+      - name: Build and publish Docker image
+        uses: ./.github/actions/docker-build-publish
+        with:
+          docker_context: maru/app
+          image_name: ${{ env.IMAGE_NAME }}
+          image_tag: ${{ env.COMMIT_TAG }}
+          develop_tag: ${{ env.DEVELOP_TAG }}
+          push_image: ${{ env.PUSH_IMAGE }}
+          dockerfile_path: maru/app/Dockerfile
+          requires_qemu: ${{ env.PUSH_IMAGE }}
+          build_contexts: |
+            libs=./maru/app/build/install/app/lib/
+            maru=./maru/app/build/libs/
+          save_artifact: ${{ env.PUSH_IMAGE == 'false' }}
+          artifact_name: linea-maru

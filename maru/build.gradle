@@ -1,239 +1,79 @@
-import net.ltgt.gradle.errorprone.CheckSeverity
-import org.gradle.api.tasks.testing.logging.TestExceptionFormat
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
+// :maru is the parent project for the maru beacon-chain client subtree, imported
+// from Consensys/maru via `git filter-repo --to-subdirectory-filter maru` + merge.
+// Convention plugins (Kotlin/Java setup, base Spotless ktlint, JUnit, JaCoCo)
+// come from the monorepo's root build.gradle and zkevm/buildSrc conventions.
+// Versions are governed by zkevm's gradle/libs.versions.toml.
+//
+// This file adds the only maru-local concern that isn't part of the monorepo's
+// defaults: the SPDX dual MIT/Apache license-header rule + Java importOrder,
+// layered on top of the monorepo's base Spotless ktlint / googleJavaFormat
+// config. The monorepo doesn't enforce headers; maru retains them so the
+// licensing markers stay on every Kotlin and Java file.
 
-plugins {
-  alias(libs.plugins.errorprone)
-  alias(libs.plugins.spotless)
-  alias(libs.plugins.spring.dependency.management)
-  id "jacoco"
-  id 'maru.kotlin-common-minimal-conventions'
-}
-
-subprojects.each {
-
-  if (!it.project.plugins.hasPlugin("org.jetbrains.kotlin.jvm")) {
-    it.project.apply plugin: libs.plugins.errorprone.get().getPluginId()
-
-    it.project.dependencies {
-      errorprone 'com.google.errorprone:error_prone_core'
-    }
-  }
-}
-
-allprojects {
-  apply plugin: libs.plugins.spring.dependency.management.get().getPluginId()
-  apply from: "${rootDir}/gradle/versions.gradle"
-  apply plugin: 'java-library'
-  apply plugin: libs.plugins.spotless.get().getPluginId()
-
-  spotless {
-    kotlin {
-      // by default the target is every '.kt' and '.kts` file in the java sourcesets
-      ktlint(libs.versions.ktlint.get().toString())
-          .editorConfigOverride([
-            'ktlint_standard_discouraged-comment-location': 'disabled',
-            'ktlint_standard_property-naming': 'disabled',
-            'ktlint_standard_function-naming': 'disabled',
-            'ktlint_standard_function-signature': 'disabled',
-          ])
-      licenseHeaderFile("${rootDir}/gradle/spotless/java-kotlin.license").onlyIfContentMatches("^(?!/\\*\\r?\\n \\*." +
-          "*ConsenSys AG\\.)")
-    }
-    java {
-      // This path needs to be relative to each project
-      target 'src/**/*.java'
-      removeUnusedImports()
-      googleJavaFormat()
-      importOrder 'build.linea', 'java', ''
-      trimTrailingWhitespace()
-      endWithNewline()
-      // apply appropriate license header files.
-      licenseHeaderFile("${rootDir}/gradle/spotless/java-kotlin.license").onlyIfContentMatches("^(?!/\\*\\r?\\n \\*." +
-          "*ConsenSys AG\\.)")
-    }
-    // spotless check applied to build.gradle (groovy) files
-    groovyGradle {
-      target '*.gradle'
-      greclipse("4.35")
-      leadingTabsToSpaces(2)
-      endWithNewline()
-    }
-  }
-
-  tasks.withType(KotlinCompilationTask) {
-    compilerOptions {
-      freeCompilerArgs.add("-Xannotation-default-target=param-property")
-    }
-  }
-
-  tasks.withType(JavaCompile).configureEach {
-    options.compilerArgs += [
-      '-Xlint:unchecked',
-      '-Xlint:cast',
-      '-Xlint:rawtypes',
-      '-Xlint:overloads',
-      '-Xlint:divzero',
-      '-Xlint:finally',
-      '-Xlint:static',
-      '-Werror',
-    ]
-
-    options.errorprone {
-      excludedPaths = '.*/generated/*.*'
-      disableWarningsInGeneratedCode = true
-      // Our equals need to be symmetric, this checker doesn't respect that.
-      check('EqualsGetClass', CheckSeverity.OFF)
-      // We like to use futures with no return values.
-      check('FutureReturnValueIgnored', CheckSeverity.OFF)
-      // We use the JSR-305 annotations instead of the Google annotations.
-      check('ImmutableEnumChecker', CheckSeverity.OFF)
-      // This is a style check instead of an error-prone pattern.
-      check('UnnecessaryParentheses', CheckSeverity.OFF)
-
-      // This check is broken in Java 12.  See https://github.com/google/error-prone/issues/1257
-      if (JavaVersion.current() == JavaVersion.VERSION_12) {
-        check('Finally', CheckSeverity.OFF)
-      }
-      // This check is broken after Java 12.  See https://github.com/google/error-prone/issues/1352
-      if (JavaVersion.current() > JavaVersion.VERSION_12) {
-        check('TypeParameterUnusedInFormals', CheckSeverity.OFF)
-      }
-
-      check('FieldCanBeFinal', CheckSeverity.WARN)
-      check('InsecureCryptoUsage', CheckSeverity.WARN)
-      check('WildcardImport', CheckSeverity.WARN)
-    }
-
-    options.encoding = 'UTF-8'
-  }
-
-  // IntelliJ workaround to allow repeated debugging of unchanged code
-  tasks.withType(JavaExec).configureEach {
-    if (it.name.contains(".")) {
-      outputs.upToDateWhen { false }
-    }
-  }
-
-  test {
-    jvmArgs += [
-      // JDK 22+: Netty (Vert.x 5) loads native libs from the unnamed module; this opts in so tests do not fail on restricted native access.
-      '--enable-native-access=ALL-UNNAMED',
-      '-Xmx4g',
-      '-XX:-UseGCOverheadLimit',
-      // Mockito and jackson-databind do some strange reflection during tests.
-      // This suppresses an illegal access warning.
-      '--add-opens',
-      'java.base/java.util=ALL-UNNAMED',
-      '--add-opens',
-      'java.base/java.util.concurrent=ALL-UNNAMED',
-      '--add-opens',
-      'java.base/java.util.concurrent.atomic=ALL-UNNAMED',
-      // errorprone tests need access to the javac compiler
-      '--add-exports',
-      'jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED',
-      '--add-exports',
-      'jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED',
-      '--add-exports',
-      'jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED',
-      '--add-exports',
-      'jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED',
-      '--add-exports',
-      'jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED',
-      '--add-exports',
-      'jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED',
-      '--add-exports',
-      'jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED',
-      '--add-exports',
-      'jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED'
-    ]
-    Set toImport = [
-      'test.ethereum.include',
-      'test.ethereum.state.eip',
-      'root.log.level',
-      'evm.log.level',
-      'acctests.keepLogsOfPassingTests'
-    ]
-    for (String name : toImport) {
-      if (System.getProperty(name) != null) {
-        systemProperty name, System.getProperty(name)
-      }
-    }
-    useJUnitPlatform {}
-    testLogging {
-      exceptionFormat TestExceptionFormat.FULL
-      events 'skipped', 'failed'
-      showStandardStreams = false
-    }
-  }
-
-  tasks.withType(Test).configureEach {
-    // Same as test.jvmArgs above: Vert.x / Netty native access on modern JDKs (also applies to other Test task types).
-    jvmArgs("--enable-native-access=ALL-UNNAMED")
-    // Java 25: Byte Buddy (pulled in by Mockito inline mocks) may not list 25 as supported yet;
-    // this flag opts in so tests run until Byte Buddy catches up.
-    jvmArgs("-Dnet.bytebuddy.experimental=true")
-    systemProperties["junit.jupiter.execution.parallel.enabled"] = true
-    systemProperties["junit.jupiter.execution.parallel.mode.default"] = "concurrent"
-    systemProperties["junit.jupiter.execution.parallel.mode.classes.default"] = "concurrent"
-    maxParallelForks = 1
-  }
+// Aggregate task that builds every :maru:* subproject (and via each subproject's
+// `check`, runs that subproject's tests + :maru:app:integrationTest). This is
+// CI's entry point. Standalone maru used `./gradlew build` for the same purpose
+// (it built every subproject because the standalone repo had no others); in the
+// monorepo we need an aggregate scoped to :maru:* so we don't trigger zkevm builds.
+//
+// Avoiding `buildNeeded` is deliberate: maru's :maru:core has testFixtures that
+// depend on :maru:serialization, which in turn depends on :maru:core's main jar.
+// That's a clean linear dep in normal builds but `buildNeeded` walks testFixtures
+// too and trips on the cycle (config -> core -> serialization -> config). Per-
+// subproject `build` doesn't traverse cross-project test deps that way, so it
+// resolves without conflict.
+// :maru already has a `build` task from zkevm root's `allprojects { apply plugin
+// 'java' }`. Wire it up to also depend on every :maru:* subproject's build, so
+// `./gradlew :maru:build` becomes the CI entry point.
+tasks.named('build') {
+  description = 'Aggregate: build every :maru:* subproject (compile + check + integrationTest).'
+  dependsOn(subprojects.collect { sp -> "${sp.path}:build" })
 }
 
 subprojects {
-  apply plugin: "jacoco"
-
-  tasks.withType(JavaCompile) {
-    options.fork = true
-    options.incremental = true
-  }
-
-  configurations {
-    testSupportImplementation.extendsFrom implementation
-    testSupportArtifacts
-  }
-
-  // Gradle 9: do not declare `integrationTestImplementation` in the `configurations { }` block above.
-  // Defining it before `sourceSets { integrationTest { } }` (e.g. in :app) causes a duplicate name error.
-  // After evaluation, extend the configuration only if the integrationTest source set created it.
-  afterEvaluate { subproject ->
-    def integrationTestImpl = subproject.configurations.findByName("integrationTestImplementation")
-    if (integrationTestImpl != null) {
-      integrationTestImpl.extendsFrom(subproject.configurations.implementation)
-    }
-
-    // making sure assemble task invokes integration test compile
-    project.tasks.jacocoTestReport {
-      if (project.tasks.findByName('acceptanceTest')) {
-        executionData(tasks.named("acceptanceTest").get())
-        sourceSets(sourceSets.named("acceptanceTest").get())
+  // Maru runs on Vert.x 4 at test runtime because Besu 26.5's acceptance-tests-dsl
+  // (and besu-ethereum-p2p / besu-metrics-core internals it loads via
+  // ThreadBesuNodeRunner) is bytecode-bound to removed Vert.x 4 types and methods
+  // (e.g. io.vertx.core.impl.ConcurrentHashSet, Vertx.nettyEventLoopGroup).
+  // zkevm's kotlin-common-conventions applies `api platform("vertx-stack-depchain
+  // :5.0.10")` which would normally win conflict resolution; resolutionStrategy.force
+  // on individual artifacts overrides that without colliding with the strict-5.0.10
+  // constraint on vertx-stack-depchain itself.
+  // Drop this block once Besu moves to Vert.x 5.
+  configurations.configureEach { cfg ->
+    resolutionStrategy.eachDependency { details ->
+      if (details.requested.group == 'io.vertx' && details.requested.name != 'vertx-stack-depchain') {
+        details.useVersion('4.5.24')
+        details.because('Force Vert.x 4 for Besu 26.5 acceptance-tests-dsl bytecode compatibility')
+      }
+      // Besu 26.5's metrics-core (PrometheusMetricsSystem, PrometheusGuavaCache$Context)
+      // is bytecode-bound to io.micrometer.prometheus.PrometheusMeterRegistry, which was
+      // renamed to io.micrometer.prometheusmetrics.PrometheusMeterRegistry in Micrometer
+      // 1.13+. zkevm's catalog pins 1.16.4 (new package); pinning maru to the last 1.12.x
+      // keeps the old package so Besu's class-load succeeds.
+      if (details.requested.group == 'io.micrometer') {
+        details.useVersion('1.12.13')
+        details.because('Match Besu 26.5 bytecode that references io.micrometer.prometheus.* (pre-1.13 package)')
       }
     }
+  }
 
-    if (subproject.tasks.findByName('compileIntegrationTestJava')) {
-      subproject.tasks.assemble.dependsOn compileIntegrationTestJava
+  afterEvaluate { subproject ->
+    if (subproject.plugins.hasPlugin('com.diffplug.spotless')) {
+      subproject.spotless {
+        kotlin {
+          licenseHeaderFile(
+              "${project.rootDir}/maru/gradle/spotless/java-kotlin.license"
+              ).onlyIfContentMatches("^(?!/\\*\\r?\\n \\*.*ConsenSys AG\\.)")
+        }
+        java {
+          target 'src/**/*.java'
+          importOrder 'build.linea', 'java', ''
+          licenseHeaderFile(
+              "${project.rootDir}/maru/gradle/spotless/java-kotlin.license"
+              ).onlyIfContentMatches("^(?!/\\*\\r?\\n \\*.*ConsenSys AG\\.)")
+        }
+      }
     }
   }
-}
-
-task jacocoAggregatedReport(type: JacocoReport) {
-  group = "verification"
-
-  additionalSourceDirs.from files(subprojects.sourceSets.main.allSource.srcDirs)
-  sourceDirectories.from files(subprojects.sourceSets.main.allSource.srcDirs)
-  classDirectories.from files(subprojects.sourceSets.main.output)
-
-  executionData.from fileTree(dir: '.', includes: ['**/jacoco/*.exec'])
-  reports {
-    xml.required = true
-    html.required = true
-    // Gradle 9: `html.destination` was removed from the reporting API; use `outputLocation` instead.
-    html.outputLocation.set(layout.buildDirectory.dir("reports/jacocoHtml"))
-  }
-}
-
-apply plugin: 'application'
-
-run {
-  // TODO: Fill
 }

@@ -1,0 +1,72 @@
+name: maru-testing
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  workflow_call:
+    inputs:
+      commit_tag:
+        required: true
+        type: string
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: false
+      DOCKERHUB_TOKEN:
+        required: false
+
+concurrency:
+  group: maru-testing-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  run-tests:
+    env:
+      COMMIT_TAG: ${{ inputs.commit_tag }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    name: maru tests
+    # useful for debugging flaky tests. Comment out Jacoco and Codecov steps because they override the test results.
+    #    strategy:
+    #      matrix:
+    #        iterations: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: false
+      - name: Setup Java and Gradle
+        uses: ./.github/actions/setup-java-and-gradle
+      - name: Build maru and run unit + integration tests
+        run: |
+          # force tests to run even if the code is not changed
+          # this is to debug flaky tests
+          # :maru:build is an aggregate task defined in maru/build.gradle that
+          # depends on each :maru:* subproject's `build`. We avoid `buildNeeded`
+          # because :maru:core's testFixtures depend on :maru:serialization
+          # which depends on :maru:core's main jar -- linear under `build` but a
+          # cycle under `buildNeeded` (which walks testFixtures).
+          ./gradlew -V :maru:build --rerun-tasks
+      - name: Store reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test reports
+          path: |
+            maru/**/build/reports/tests/
+      - name: Upload Jacoco execution data
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: jacoco-maru-exec
+          path: |
+            maru/**/build/jacoco/*.exec
+          if-no-files-found: ignore
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() && env.CODECOV_TOKEN != '' }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}

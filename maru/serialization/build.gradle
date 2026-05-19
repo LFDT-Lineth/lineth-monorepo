@@ -14,19 +14,19 @@
  */
 
 plugins {
-  id 'maru.kotlin-library-conventions'
+  id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
 dependencies {
-  implementation(project(":core"))
-  implementation(project(":config"))
-  implementation(project(":crypto"))
-  implementation(project(":jvm-libs:extensions"))
-  implementation "io.consensys.tuweni:tuweni-bytes"
-  implementation "io.libp2p:jvm-libp2p"
+  implementation(project(':maru:core'))
+  implementation(project(':maru:config'))
+  implementation(project(':maru:crypto'))
+  implementation(project(':maru:jvm-libs:extensions'))
+  implementation "io.consensys.tuweni:tuweni-bytes:${libs.versions.tuweni.get()}"
+  implementation "io.libp2p:jvm-libp2p:${libs.versions.jvmLibp2p.get()}"
   implementation "org.hyperledger.besu:besu-datatypes"
   implementation "org.hyperledger.besu.internal:besu-ethereum-rlp"
   implementation 'org.xerial.snappy:snappy-java'
-  implementation "tech.pegasys.teku.internal:eth2"
-  testImplementation(testFixtures(project(":core")))
+  implementation "tech.pegasys.teku.internal:eth2:${libs.versions.teku.get()}"
+  testImplementation(testFixtures(project(':maru:core')))
 }
