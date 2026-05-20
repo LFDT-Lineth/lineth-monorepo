@@ -143,6 +143,11 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
     MemoryAppender.reset()
   }
 
+  // Override this in subclasses to use a different genesis file template
+  protected open fun getGenesisFileTemplatePath(): String {
+    return "/clique/clique-to-pos.json.tpl"
+  }
+
   protected open fun maybeCustomGenesisExtraData(): Optional<Bytes32> {
     return Optional.empty()
   }
@@ -204,8 +209,8 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
     return besu.create(nodeConfBuilder.build())
   }
 
-  protected open fun provideGenesisConfig(validators: Collection<RunnableNode>): String {
-    val template = GenesisConfigurationFactory.readGenesisFile("/clique/clique.json.tpl")
+  fun provideGenesisConfig(validators: Collection<RunnableNode>): String {
+    val template = GenesisConfigurationFactory.readGenesisFile(getGenesisFileTemplatePath())
     val addresses = validators.map { it.address }
     val extraData = CliqueExtraData.createGenesisExtraDataString(addresses)
     val genesis = template

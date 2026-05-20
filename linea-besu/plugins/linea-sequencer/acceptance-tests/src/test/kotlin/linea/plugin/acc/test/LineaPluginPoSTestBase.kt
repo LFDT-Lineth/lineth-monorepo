@@ -20,7 +20,6 @@ import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
-import org.hyperledger.besu.consensus.clique.CliqueExtraData
 import org.hyperledger.besu.crypto.SECP256K1
 import org.hyperledger.besu.datatypes.Address
 import org.hyperledger.besu.datatypes.BlobGas
@@ -39,8 +38,6 @@ import org.hyperledger.besu.ethereum.eth.transactions.TransactionPoolConfigurati
 import org.hyperledger.besu.ethereum.mainnet.BodyValidation
 import org.hyperledger.besu.ethereum.mainnet.MainnetBlockHeaderFunctions
 import org.hyperledger.besu.tests.acceptance.dsl.EngineAPIService
-import org.hyperledger.besu.tests.acceptance.dsl.node.RunnableNode
-import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.genesis.GenesisConfigurationFactory
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.web3j.crypto.Blob
@@ -100,11 +97,6 @@ abstract class LineaPluginPoSTestBase : LineaPluginTestBase() {
     private val secp256k1 = SECP256K1()
   }
 
-  // Override this in subclasses to use a different genesis file template
-  protected open fun getGenesisFileTemplatePath(): String {
-    return "/clique/clique-to-pos.json.tpl"
-  }
-
   protected open fun getRequestedPlugins(): List<String> = DEFAULT_REQUESTED_PLUGINS
 
   protected open fun getAdditionalRpcApis(): Set<String> = emptySet()
@@ -137,20 +129,6 @@ abstract class LineaPluginPoSTestBase : LineaPluginTestBase() {
     } finally {
       super.stop()
     }
-  }
-
-  override fun provideGenesisConfig(validators: Collection<RunnableNode>): String {
-    val template = GenesisConfigurationFactory.readGenesisFile(getGenesisFileTemplatePath())
-    val addresses = validators.map { it.address }
-    val extraData = CliqueExtraData.createGenesisExtraDataString(addresses)
-    val genesis = template
-      .replace("%blockperiodseconds%", getBlockPeriodSeconds().toString())
-      .replace("%epochlength%", "30000")
-      .replace("%createemptyblocks%", "false")
-      .replace("%extraData%", extraData)
-    return maybeCustomGenesisExtraData()
-      .map { ed -> setGenesisCustomExtraData(genesis, ed) }
-      .orElse(genesis)
   }
 
   protected fun stopBackgroundBlockBuilding() {
