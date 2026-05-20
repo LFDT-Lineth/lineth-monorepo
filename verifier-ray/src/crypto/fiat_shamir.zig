@@ -19,7 +19,7 @@ pub const Transcript = struct {
 
     pub fn updateExt(self: *Transcript, values: []const ext.Ext) void {
         for (values) |value| {
-            self.hasher.writeElements(&value.limbs);
+            self.hasher.writeElements(&.{ value.B0.a0, value.B0.a1, value.B1.a0, value.B1.a1, value.B2.a0, value.B2.a1 });
         }
     }
 
@@ -31,12 +31,11 @@ pub const Transcript = struct {
 
     pub fn randomExt(self: *Transcript) ext.Ext {
         const challenge = self.randomField();
-        return .{ .limbs = .{
-            challenge[0],
-            challenge[1],
-            challenge[2],
-            challenge[3],
-        } };
+        return .{
+            .B0 = .{ .a0 = challenge[0], .a1 = challenge[1] },
+            .B1 = .{ .a0 = challenge[2], .a1 = challenge[3] },
+            .B2 = .{ .a0 = challenge[4], .a1 = challenge[5] },
+        };
     }
 
     pub fn state(self: Transcript) poseidon2.Digest {
@@ -46,6 +45,4 @@ pub const Transcript = struct {
     pub fn setState(self: *Transcript, digest: poseidon2.Digest) void {
         self.hasher.setState(digest);
     }
-
-    pub const challengeExt = randomExt;
 };

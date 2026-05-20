@@ -57,24 +57,24 @@ func writeHeader(out *bytes.Buffer) {
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "pub const ExtCase = struct {")
-	fmt.Fprintln(out, "    a: [4]u32,")
-	fmt.Fprintln(out, "    b: [4]u32,")
+	fmt.Fprintln(out, "    a: [6]u32,")
+	fmt.Fprintln(out, "    b: [6]u32,")
 	fmt.Fprintln(out, "    scalar: u32,")
-	fmt.Fprintln(out, "    add: [4]u32,")
-	fmt.Fprintln(out, "    sub: [4]u32,")
-	fmt.Fprintln(out, "    mul: [4]u32,")
-	fmt.Fprintln(out, "    square_a: [4]u32,")
-	fmt.Fprintln(out, "    neg_a: [4]u32,")
-	fmt.Fprintln(out, "    mul_by_base: [4]u32,")
+	fmt.Fprintln(out, "    add: [6]u32,")
+	fmt.Fprintln(out, "    sub: [6]u32,")
+	fmt.Fprintln(out, "    mul: [6]u32,")
+	fmt.Fprintln(out, "    square_a: [6]u32,")
+	fmt.Fprintln(out, "    neg_a: [6]u32,")
+	fmt.Fprintln(out, "    mul_by_base: [6]u32,")
 	fmt.Fprintln(out, "    has_inv_a: bool,")
-	fmt.Fprintln(out, "    inv_a: [4]u32,")
-	fmt.Fprintln(out, "    bytes_a: [16]u8,")
+	fmt.Fprintln(out, "    inv_a: [6]u32,")
+	fmt.Fprintln(out, "    bytes_a: [24]u8,")
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "pub const CanonicalBaseCase = struct { coeffs: []const u32, point: u32, expected: u32 };")
-	fmt.Fprintln(out, "pub const CanonicalBaseAtExtCase = struct { coeffs: []const u32, point: [4]u32, expected: [4]u32 };")
-	fmt.Fprintln(out, "pub const CanonicalExtAtBaseCase = struct { coeffs: []const [4]u32, point: u32, expected: [4]u32 };")
-	fmt.Fprintln(out, "pub const CanonicalExtCase = struct { coeffs: []const [4]u32, point: [4]u32, expected: [4]u32 };")
+	fmt.Fprintln(out, "pub const CanonicalBaseAtExtCase = struct { coeffs: []const u32, point: [6]u32, expected: [6]u32 };")
+	fmt.Fprintln(out, "pub const CanonicalExtAtBaseCase = struct { coeffs: []const [6]u32, point: u32, expected: [6]u32 };")
+	fmt.Fprintln(out, "pub const CanonicalExtCase = struct { coeffs: []const [6]u32, point: [6]u32, expected: [6]u32 };")
 	fmt.Fprintln(out, "pub const LagrangeBaseCase = CanonicalBaseCase;")
 	fmt.Fprintln(out, "pub const LagrangeBaseAtExtCase = CanonicalBaseAtExtCase;")
 	fmt.Fprintln(out, "pub const LagrangeExtAtBaseCase = CanonicalExtAtBaseCase;")
@@ -82,7 +82,7 @@ func writeHeader(out *bytes.Buffer) {
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "pub const PoseidonCompressCase = struct { left: [8]u32, right: [8]u32, expected: [8]u32 };")
 	fmt.Fprintln(out, "pub const PoseidonMdCase = struct { message: []const u32, expected: [8]u32 };")
-	fmt.Fprintln(out, "pub const FiatShamirCase = struct { base_updates: []const u32, ext_updates: []const [4]u32, random_field: [8]u32, random_ext: [4]u32 };")
+	fmt.Fprintln(out, "pub const FiatShamirCase = struct { base_updates: []const u32, ext_updates: []const [6]u32, random_field: [8]u32, random_ext: [6]u32 };")
 	fmt.Fprintln(out)
 }
 
@@ -134,13 +134,15 @@ func writeFieldCase(out *bytes.Buffer, a, b field.Element) {
 func writeExtCases(out *bytes.Buffer) {
 	rng := rand.New(rand.NewPCG(0x11111111, 0x22222222))
 	values := []field.Ext{
-		field.UintsToExt(0, 0, 0, 0),
-		field.UintsToExt(1, 0, 0, 0),
-		field.UintsToExt(0, 1, 0, 0),
-		field.UintsToExt(0, 0, 1, 0),
-		field.UintsToExt(0, 0, 0, 1),
-		field.UintsToExt(1, 2, 3, 4),
-		field.UintsToExt(koalaModulus-1, koalaModulus-2, 7, 11),
+		field.UintsToExt(0, 0, 0, 0, 0, 0),
+		field.UintsToExt(1, 0, 0, 0, 0, 0),
+		field.UintsToExt(0, 1, 0, 0, 0, 0),
+		field.UintsToExt(0, 0, 1, 0, 0, 0),
+		field.UintsToExt(0, 0, 0, 1, 0, 0),
+		field.UintsToExt(0, 0, 0, 0, 1, 0),
+		field.UintsToExt(0, 0, 0, 0, 0, 1),
+		field.UintsToExt(1, 2, 3, 4, 5, 6),
+		field.UintsToExt(koalaModulus-1, koalaModulus-2, 7, 11, 13, 17),
 	}
 	for range 6 {
 		values = append(values, field.PseudoRandExt(rng))
@@ -172,28 +174,28 @@ func writeExtCase(out *bytes.Buffer, a, b field.Ext, scalar field.Element) {
 
 	bytesA := field.ExtToBytes(&a)
 	fmt.Fprintf(out, "    .{ .a = %s, .b = %s, .scalar = %d, .add = %s, .sub = %s, .mul = %s, .square_a = %s, .neg_a = %s, .mul_by_base = %s, .has_inv_a = %t, .inv_a = %s, .bytes_a = %s },\n",
-		ext4(a), ext4(b), u(scalar), ext4(add), ext4(sub), ext4(mul), ext4(square), ext4(neg), ext4(byBase), hasInv, ext4(inv), bytes16(bytesA))
+		ext6(a), ext6(b), u(scalar), ext6(add), ext6(sub), ext6(mul), ext6(square), ext6(neg), ext6(byBase), hasInv, ext6(inv), bytes24(bytesA))
 }
 
 func writePolynomialCases(out *bytes.Buffer) {
 	basePolyA := []field.Element{elem(0), elem(1), elem(koalaModulus - 1), elem(17), elem(123456)}
 	basePolyB := []field.Element{elem(9), elem(8), elem(7), elem(6)}
 	extPolyA := []field.Ext{
-		field.UintsToExt(1, 2, 3, 4),
-		field.UintsToExt(0, 1, 0, 1),
-		field.UintsToExt(9, 0, 8, 0),
-		field.UintsToExt(11, 12, 13, 14),
+		field.UintsToExt(1, 2, 3, 4, 5, 6),
+		field.UintsToExt(0, 1, 0, 1, 2, 3),
+		field.UintsToExt(9, 0, 8, 0, 4, 5),
+		field.UintsToExt(11, 12, 13, 14, 6, 7),
 	}
 	extPolyB := []field.Ext{
-		field.UintsToExt(4, 3, 2, 1),
-		field.UintsToExt(5, 0, 0, 6),
-		field.UintsToExt(7, 8, 9, 10),
+		field.UintsToExt(4, 3, 2, 1, 5, 6),
+		field.UintsToExt(5, 0, 0, 6, 7, 8),
+		field.UintsToExt(7, 8, 9, 10, 11, 12),
 	}
 
 	basePoint := elem(5)
 	basePoint2 := elem(19)
-	extPoint := field.UintsToExt(5, 1, 7, 2)
-	extPoint2 := field.UintsToExt(13, 3, 0, 4)
+	extPoint := field.UintsToExt(5, 1, 7, 2, 3, 4)
+	extPoint2 := field.UintsToExt(13, 3, 0, 4, 5, 6)
 
 	fmt.Fprintln(out, "pub const canonical_base_cases = [_]CanonicalBaseCase{")
 	writeCanonicalBaseCase(out, basePolyA, basePoint)
@@ -221,13 +223,13 @@ func writePolynomialCases(out *bytes.Buffer) {
 
 	lagrangeBase := []field.Element{elem(3), elem(1), elem(4), elem(1)}
 	lagrangeExt := []field.Ext{
-		field.UintsToExt(3, 1, 4, 1),
-		field.UintsToExt(5, 9, 2, 6),
-		field.UintsToExt(5, 3, 5, 8),
-		field.UintsToExt(9, 7, 9, 3),
+		field.UintsToExt(3, 1, 4, 1, 5, 9),
+		field.UintsToExt(5, 9, 2, 6, 5, 3),
+		field.UintsToExt(5, 3, 5, 8, 9, 7),
+		field.UintsToExt(9, 7, 9, 3, 2, 3),
 	}
 	lagrangeBasePoint := elem(7)
-	lagrangeExtPoint := field.UintsToExt(7, 2, 0, 1)
+	lagrangeExtPoint := field.UintsToExt(7, 2, 0, 1, 4, 5)
 
 	fmt.Fprintln(out, "pub const lagrange_base_cases = [_]LagrangeBaseCase{")
 	writeLagrangeBaseCase(out, lagrangeBase, lagrangeBasePoint)
@@ -257,17 +259,17 @@ func writeCanonicalBaseCase(out *bytes.Buffer, coeffs []field.Element, point fie
 
 func writeCanonicalBaseAtExtCase(out *bytes.Buffer, coeffs []field.Element, point field.Ext) {
 	res := polynomials.EvalCanonical(field.VecFromBase(coeffs), field.ElemFromExt(point))
-	fmt.Fprintf(out, "    .{ .coeffs = &%s, .point = %s, .expected = %s },\n", elemSlice(coeffs), ext4(point), ext4(res.AsExt()))
+	fmt.Fprintf(out, "    .{ .coeffs = &%s, .point = %s, .expected = %s },\n", elemSlice(coeffs), ext6(point), ext6(res.AsExt()))
 }
 
 func writeCanonicalExtAtBaseCase(out *bytes.Buffer, coeffs []field.Ext, point field.Element) {
 	res := polynomials.EvalCanonical(field.VecFromExt(coeffs), field.ElemFromBase(point))
-	fmt.Fprintf(out, "    .{ .coeffs = &%s, .point = %d, .expected = %s },\n", extSlice(coeffs), u(point), ext4(res.AsExt()))
+	fmt.Fprintf(out, "    .{ .coeffs = &%s, .point = %d, .expected = %s },\n", extSlice(coeffs), u(point), ext6(res.AsExt()))
 }
 
 func writeCanonicalExtCase(out *bytes.Buffer, coeffs []field.Ext, point field.Ext) {
 	res := polynomials.EvalCanonical(field.VecFromExt(coeffs), field.ElemFromExt(point))
-	fmt.Fprintf(out, "    .{ .coeffs = &%s, .point = %s, .expected = %s },\n", extSlice(coeffs), ext4(point), ext4(res.AsExt()))
+	fmt.Fprintf(out, "    .{ .coeffs = &%s, .point = %s, .expected = %s },\n", extSlice(coeffs), ext6(point), ext6(res.AsExt()))
 }
 
 func writeLagrangeBaseCase(out *bytes.Buffer, values []field.Element, point field.Element) {
@@ -277,17 +279,17 @@ func writeLagrangeBaseCase(out *bytes.Buffer, values []field.Element, point fiel
 
 func writeLagrangeBaseAtExtCase(out *bytes.Buffer, values []field.Element, point field.Ext) {
 	res := polynomials.EvalLagrange(field.VecFromBase(values), field.ElemFromExt(point))
-	fmt.Fprintf(out, "    .{ .coeffs = &%s, .point = %s, .expected = %s },\n", elemSlice(values), ext4(point), ext4(res.AsExt()))
+	fmt.Fprintf(out, "    .{ .coeffs = &%s, .point = %s, .expected = %s },\n", elemSlice(values), ext6(point), ext6(res.AsExt()))
 }
 
 func writeLagrangeExtAtBaseCase(out *bytes.Buffer, values []field.Ext, point field.Element) {
 	res := polynomials.EvalLagrange(field.VecFromExt(values), field.ElemFromBase(point))
-	fmt.Fprintf(out, "    .{ .coeffs = &%s, .point = %d, .expected = %s },\n", extSlice(values), u(point), ext4(res.AsExt()))
+	fmt.Fprintf(out, "    .{ .coeffs = &%s, .point = %d, .expected = %s },\n", extSlice(values), u(point), ext6(res.AsExt()))
 }
 
 func writeLagrangeExtCase(out *bytes.Buffer, values []field.Ext, point field.Ext) {
 	res := polynomials.EvalLagrange(field.VecFromExt(values), field.ElemFromExt(point))
-	fmt.Fprintf(out, "    .{ .coeffs = &%s, .point = %s, .expected = %s },\n", extSlice(values), ext4(point), ext4(res.AsExt()))
+	fmt.Fprintf(out, "    .{ .coeffs = &%s, .point = %s, .expected = %s },\n", extSlice(values), ext6(point), ext6(res.AsExt()))
 }
 
 func writePoseidonCases(out *bytes.Buffer) {
@@ -328,11 +330,11 @@ func writeFiatShamirCases(out *bytes.Buffer) {
 	fmt.Fprintln(out, "pub const fiat_shamir_cases = [_]FiatShamirCase{")
 	writeFiatShamirCase(out,
 		[]field.Element{elem(3), elem(4), elem(5)},
-		[]field.Ext{field.UintsToExt(1, 2, 3, 4)},
+		[]field.Ext{field.UintsToExt(1, 2, 3, 4, 5, 6)},
 	)
 	writeFiatShamirCase(out,
 		[]field.Element{elem(koalaModulus - 1), elem(9)},
-		[]field.Ext{field.UintsToExt(5, 0, 6, 0), field.UintsToExt(7, 8, 9, 10)},
+		[]field.Ext{field.UintsToExt(5, 0, 6, 0, 7, 8), field.UintsToExt(7, 8, 9, 10, 11, 12)},
 	)
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
@@ -345,7 +347,7 @@ func writeFiatShamirCase(out *bytes.Buffer, baseUpdates []field.Element, extUpda
 	randomField := fs.RandomField()
 	randomExt := fs.RandomFext()
 	fmt.Fprintf(out, "    .{ .base_updates = &%s, .ext_updates = &%s, .random_field = %s, .random_ext = %s },\n",
-		elemSlice(baseUpdates), extSlice(extUpdates), oct8(randomField), ext4(randomExt))
+		elemSlice(baseUpdates), extSlice(extUpdates), oct8(randomField), ext6(randomExt))
 }
 
 func elem(v uint64) field.Element {
@@ -369,9 +371,9 @@ func u(e field.Element) uint64 {
 	return uint64(e.Bits()[0])
 }
 
-func ext4(e field.Ext) string {
-	a0, a1, b0, b1 := field.ExtToUint64s(&e)
-	return fmt.Sprintf(".{ %d, %d, %d, %d }", a0, a1, b0, b1)
+func ext6(e field.Ext) string {
+	a0, a1, b0, b1, c0, c1 := field.ExtToUint64s(&e)
+	return fmt.Sprintf(".{ %d, %d, %d, %d, %d, %d }", a0, a1, b0, b1, c0, c1)
 }
 
 func oct8(values field.Octuplet) string {
@@ -393,7 +395,7 @@ func elemSlice(values []field.Element) string {
 func extSlice(values []field.Ext) string {
 	parts := make([]string, len(values))
 	for i, value := range values {
-		parts[i] = ext4(value)
+		parts[i] = ext6(value)
 	}
 	return ".{ " + strings.Join(parts, ", ") + " }"
 }
@@ -402,7 +404,7 @@ func bytes4(data [4]byte) string {
 	return fmt.Sprintf(".{ 0x%02x, 0x%02x, 0x%02x, 0x%02x }", data[0], data[1], data[2], data[3])
 }
 
-func bytes16(data [16]byte) string {
+func bytes24(data [24]byte) string {
 	parts := make([]string, len(data))
 	for i, b := range data {
 		parts[i] = fmt.Sprintf("0x%02x", b)

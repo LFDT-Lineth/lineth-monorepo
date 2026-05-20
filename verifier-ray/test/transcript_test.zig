@@ -11,6 +11,6 @@ test "transcript absorbs elements deterministically" {
         field.Element.init(4),
     });
 
-    const challenge = transcript.challengeExt();
+    const challenge = transcript.randomExt();
     try std.testing.expect(!challenge.isZero());
 }
