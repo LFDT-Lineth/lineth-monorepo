@@ -12,6 +12,7 @@ dependencies {
 
 
   testImplementation project(":jvm-libs:generic:logging")
+  testImplementation project(":jvm-libs:linea:metrics:micrometer")
   testImplementation project(":coordinator:ethereum:test-utils")
   testImplementation testFixtures(project(":coordinator:core"))
   testImplementation testFixtures(project(":jvm-libs:generic:extensions:kotlin"))

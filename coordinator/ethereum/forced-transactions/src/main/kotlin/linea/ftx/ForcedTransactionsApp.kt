@@ -28,6 +28,7 @@ import linea.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
 import linea.ftx.conflation.FtxConflationInfo
 import linea.ftx.conflation.InvalidityProofAssembler
 import linea.persistence.ForcedTransactionsDao
+import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.Queue
@@ -77,6 +78,7 @@ interface ForcedTransactionsApp : LongRunningService {
       accountProofClient: StateManagerAccountProofClient,
       tracesClient: TracesConflationVirtualBlockClientV1,
       clock: Clock,
+      metricsFacade: MetricsFacade,
     ): ForcedTransactionsApp = ForcedTransactionsAppImpl(
       config = config,
       vertx = vertx,
@@ -91,6 +93,7 @@ interface ForcedTransactionsApp : LongRunningService {
       accountProofClient = accountProofClient,
       tracesClient = tracesClient,
       clock = clock,
+      metricsFacade = metricsFacade,
     )
   }
 }
@@ -119,6 +122,7 @@ internal class ForcedTransactionsAppImpl(
   private val accountProofClient: StateManagerAccountProofClient,
   private val tracesClient: TracesConflationVirtualBlockClientV1,
   private val clock: Clock,
+  private val metricsFacade: MetricsFacade,
   safeBlockNumberProvider: ForcedTransactionConflationSafeBlockNumberProvider =
     ForcedTransactionConflationSafeBlockNumberProvider(),
 ) : ForcedTransactionsApp {
@@ -184,6 +188,11 @@ internal class ForcedTransactionsAppImpl(
       }
       .thenCompose { ftxResumePointProvider.getLastProcessedForcedTransaction() }
       .thenCompose { (lastProcessedForcedTransactionNumber, ftxRecord) ->
+        val metrics = ForcedTransactionsMetricsRecorder(
+          metricsFacade = metricsFacade,
+          initialLatestForcedTransactionNumber = lastProcessedForcedTransactionNumber,
+        )
+
         // check the database for the highest simulatedExecutionBlockNumber of in-flight forced transactions (if any)
         // otherwise, lock safe block number to 0 until we fetch all events from L1 and determine the correct safe block number to conflate to
         if (ftxRecord != null) {
@@ -227,6 +236,7 @@ internal class ForcedTransactionsAppImpl(
           l1EarliestBlock = BlockParameter.Tag.EARLIEST,
           l1HighestBlock = config.l1HighestBlockTag,
           ftxQueue = ftxQueue,
+          metrics = metrics,
         )
 
         rehydrateConflationQueueFromDao().thenCompose {

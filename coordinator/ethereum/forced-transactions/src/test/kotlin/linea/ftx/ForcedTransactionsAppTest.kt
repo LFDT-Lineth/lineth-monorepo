@@ -1,5 +1,6 @@
 package linea.ftx
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.clients.InvalidityProverClientV1
@@ -37,6 +38,7 @@ import linea.persistence.ftx.FakeForcedTransactionsDao
 import linea.timer.VertxTimerFactory
 import net.consensys.FakeFixedClock
 import net.consensys.linea.metrics.MetricsFacade
+import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.traces.TracesCountersV5
 import net.consensys.linea.traces.TracingModuleV5
 import org.apache.logging.log4j.Level
@@ -119,6 +121,7 @@ class ForcedTransactionsAppTest {
     ftxProcessingDelay: Duration = Duration.ZERO,
     fakeForcedTransactionsClientErrorRatio: Double = 0.5,
     safeBlockTracker: SafeBlockTracker? = null,
+    metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = SimpleMeterRegistry()),
   ): ForcedTransactionsAppImpl {
     val config = ForcedTransactionsApp.Config(
       l1PollingInterval = l1PollingInterval,
@@ -144,6 +147,7 @@ class ForcedTransactionsAppTest {
       accountProofClient = this.accountProofClient,
       tracesClient = this.tracesClient,
       clock = fakeClock,
+      metricsFacade = metricsFacade,
       safeBlockNumberProvider = ForcedTransactionConflationSafeBlockNumberProvider(listener = safeBlockTracker),
     )
   }
@@ -257,6 +261,57 @@ class ForcedTransactionsAppTest {
       .atMost(5.seconds.toJavaDuration())
       .untilAsserted {
         assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber()).isNull()
+      }
+    app.stop().get()
+  }
+
+  @Test
+  fun `should export accepted forced transaction event metrics`() {
+    val meterRegistry = SimpleMeterRegistry()
+    val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry)
+    val ftxAddedEvents = listOf(
+      createFtxAddedEvent(
+        l1BlockNumber = 990UL,
+        ftxNumber = 10UL,
+        l2DeadLine = 100UL,
+      ),
+      createFtxAddedEvent(
+        l1BlockNumber = 1_100UL,
+        ftxNumber = 11UL,
+        l2DeadLine = 200UL,
+      ),
+      createFtxAddedEvent(
+        l1BlockNumber = 1_200UL,
+        ftxNumber = 12UL,
+        l2DeadLine = 220UL,
+      ),
+    )
+    this.l1Client.setLogs(ftxAddedEvents)
+    this.fakeContractClient.finalizedStateProvider.l1FinalizedState = LineaRollupFinalizedState(
+      blockNumber = 100UL,
+      blockTimestamp = Clock.System.now(),
+      messageNumber = 0UL,
+      forcedTransactionNumber = 10UL,
+    )
+
+    val app = createApp(
+      l1PollingInterval = 10.milliseconds,
+      l1EventSearchBlockChunk = 100u,
+      fakeForcedTransactionsClientErrorRatio = 0.0,
+      metricsFacade = metricsFacade,
+    )
+    this.l1Client.setFinalizedBlockTag(5_000UL)
+    this.l1Client.setLatestBlockTag(10_000UL)
+    this.l2Client.setLatestBlockTag(2_000UL)
+    this.fakeClock.setTimeTo(this.l1Client.blockTimestamp(BlockParameter.Tag.LATEST) + 12.seconds)
+
+    app.start().get()
+
+    await()
+      .atMost(5.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(meterRegistry.find("forced.transaction.events.consumed").counter()?.count()).isEqualTo(2.0)
+        assertThat(meterRegistry.find("forced.transaction.events.highest").gauge()?.value()).isEqualTo(12.0)
       }
     app.stop().get()
   }

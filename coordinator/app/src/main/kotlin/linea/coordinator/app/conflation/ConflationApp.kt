@@ -168,6 +168,7 @@ class ConflationApp(
         accountProofClient = zkStateClient,
         tracesClient = tracesClients.tracesConflationClient,
         clock = this.clock,
+        metricsFacade = metricsFacade,
       )
     }
   }
