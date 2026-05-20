@@ -4,14 +4,14 @@
 
 The monorepo includes several operational utilities for managing the Linea network.
 
-## Operations CLI (`operations/operations-cli/`)
+## Operations CLI (`operations/cli/`)
 
 Command-line tools for network operations.
 
 ### Available Commands
 
 ```bash
-cd operations/operations-cli
+cd operations/cli
 
 # Build first (required)
 pnpm run build
@@ -59,7 +59,7 @@ Submits invoices to on-chain contract.
 
 Burns LINEA tokens and bridges to L2.
 
-## Native Yield Operations (`operations/native-yield-operations/`)
+## Native Yield Operations (`operations/native-yield/`)
 
 Automation service for native yield management.
 
@@ -100,7 +100,7 @@ Automation service for native yield management.
 ### Running
 
 ```bash
-cd operations/native-yield-operations/automation-service
+cd operations/native-yield/automation-service
 
 # Install dependencies
 pnpm install
@@ -113,7 +113,7 @@ cp .env.sample .env
 pnpm run start
 ```
 
-> **Configuration**: See the [automation-service README](../../../operations/native-yield-operations/automation-service/README.md#configuration) for environment variable details.
+> **Configuration**: See the [automation-service README](../../../operations/native-yield/automation-service/README.md#configuration) for environment variable details.
 
 ## Contract Verification
 

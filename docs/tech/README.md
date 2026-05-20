@@ -40,8 +40,8 @@ linea-monorepo/
 │   ├── e2e/                  # End-to-end tests
 │   ├── ts-libs/              # Shared TS libraries
 │   └── operations/
-│       ├── operations-cli/   # CLI operational tools
-│       └── native-yield-operations/
+│       ├── cli/   # CLI operational tools
+│       └── native-yield/
 │
 ├── Rust
 │   └── corset/               # Constraint compiler

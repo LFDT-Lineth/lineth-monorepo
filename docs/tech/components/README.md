@@ -103,8 +103,8 @@ root package.json
 │   ├── linea-native-libs
 │   └── eslint-config
 └── operations/
-    ├── operations-cli/ (CLI tools)
-    └── native-yield-operations/
+    ├── cli/ (CLI tools)
+    └── native-yield/
         └── automation-service/
 ```
 

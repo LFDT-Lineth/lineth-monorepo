@@ -89,7 +89,7 @@ jobs:
           develop_tag: ${{ env.DEVELOP_TAG }}
           push_platforms: linux/amd64
           push_image: ${{ env.PUSH_IMAGE }}
-          dockerfile_path: ./operations/native-yield-operations/automation-service/Dockerfile
+          dockerfile_path: ./operations/native-yield/automation-service/Dockerfile
           build_args: NODE_VERSION=${{ steps.get-node-version.outputs.node-version }}
           save_artifact: ${{ env.PUSH_IMAGE == 'false' }}
           artifact_name: linea-native-yield-automation-service

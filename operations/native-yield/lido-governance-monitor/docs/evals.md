@@ -32,7 +32,7 @@ The script calls `ClaudeAIClient` directly - no DB, no state machine. Exits 0 re
 ### Run
 
 ```bash
-# From operations/native-yield-operations/lido-governance-monitor/
+# From operations/native-yield/lido-governance-monitor/
 ANTHROPIC_API_KEY=sk-ant-xxx pnpm exec tsx scripts/run-eval.ts
 ```
 

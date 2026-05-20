@@ -76,11 +76,11 @@ proving_key.bin
 **/.direnv
 
 # Prisma generated clients
-/operations/native-yield-operations/lido-governance-monitor/prisma/client/
+/operations/native-yield/lido-governance-monitor/prisma/client/
 
 bin/
-!/operations/operations-cli/bin/
-!/operations/operations-cli/bin/**
+!/operations/cli/bin/
+!/operations/cli/bin/**
 build/
 cache_forge/
 coverage/

@@ -513,129 +513,7 @@ importers:
         specifier: 4.4.1
         version: 4.4.1
 
-  operations/native-yield-operations/automation-service:
-    dependencies:
-      '@apollo/client':
-        specifier: 4.1.9
-        version: 4.1.9(graphql@16.13.2)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(rxjs@7.8.2)
-      '@consensys/linea-shared-utils':
-        specifier: workspace:*
-        version: link:../../../ts-libs/linea-shared-utils
-      '@lidofinance/lsv-cli':
-        specifier: 1.8.0
-        version: 1.8.0(@react-native-async-storage/async-storage@1.24.0(react-native@0.74.0(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(utf-8-validate@6.0.6)))(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.4.1)
-      dotenv:
-        specifier: 'catalog:'
-        version: 17.4.2
-      neverthrow:
-        specifier: 'catalog:'
-        version: 8.2.0
-      viem:
-        specifier: 'catalog:'
-        version: 2.47.5(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.4.1)
-      winston:
-        specifier: 'catalog:'
-        version: 3.19.0
-      zod:
-        specifier: 4.4.1
-        version: 4.4.1
-    devDependencies:
-      '@consensys/eslint-config':
-        specifier: workspace:*
-        version: link:../../../ts-libs/eslint-config
-      '@jest/globals':
-        specifier: 'catalog:'
-        version: 30.4.1
-      '@types/jest':
-        specifier: 'catalog:'
-        version: 30.0.0
-      jest:
-        specifier: 'catalog:'
-        version: 30.4.2(@types/node@25.5.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@25.5.0)(typescript@5.9.3))
-      jest-environment-node:
-        specifier: 'catalog:'
-        version: 30.4.1
-      jest-mock-extended:
-        specifier: 'catalog:'
-        version: 4.0.1(@jest/globals@30.4.1)(jest@30.4.2(@types/node@25.5.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@25.5.0)(typescript@5.9.3)))(typescript@5.9.3)
-      ts-jest:
-        specifier: 'catalog:'
-        version: 29.4.9(@babel/core@7.29.0)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.0))(jest-util@30.4.1)(jest@30.4.2(@types/node@25.5.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@25.5.0)(typescript@5.9.3)))(typescript@5.9.3)
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
-
-  operations/native-yield-operations/lido-governance-monitor:
-    dependencies:
-      '@anthropic-ai/sdk':
-        specifier: 0.95.1
-        version: 0.95.1(zod@4.4.1)
-      '@consensys/linea-shared-utils':
-        specifier: workspace:*
-        version: link:../../../ts-libs/linea-shared-utils
-      '@prisma/adapter-pg':
-        specifier: 7.8.0
-        version: 7.8.0
-      '@prisma/client':
-        specifier: 7.8.0
-        version: 7.8.0(prisma@7.8.0(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(better-sqlite3@12.8.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@5.9.3))(typescript@5.9.3)
-      dotenv:
-        specifier: 'catalog:'
-        version: 17.4.2
-      html-to-text:
-        specifier: 10.0.0
-        version: 10.0.0
-      neverthrow:
-        specifier: 'catalog:'
-        version: 8.2.0
-      prisma:
-        specifier: 7.8.0
-        version: 7.8.0(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(better-sqlite3@12.8.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
-      viem:
-        specifier: 'catalog:'
-        version: 2.47.5(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.4.1)
-      winston:
-        specifier: 'catalog:'
-        version: 3.19.0
-      zod:
-        specifier: 4.4.1
-        version: 4.4.1
-    devDependencies:
-      '@consensys/eslint-config':
-        specifier: workspace:*
-        version: link:../../../ts-libs/eslint-config
-      '@jest/globals':
-        specifier: 'catalog:'
-        version: 30.4.1
-      '@types/html-to-text':
-        specifier: 9.0.4
-        version: 9.0.4
-      '@types/jest':
-        specifier: 'catalog:'
-        version: 30.0.0
-      jest:
-        specifier: 'catalog:'
-        version: 30.4.2(@types/node@25.5.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@25.5.0)(typescript@5.9.3))
-      jest-environment-node:
-        specifier: 'catalog:'
-        version: 30.4.1
-      jest-mock-extended:
-        specifier: 'catalog:'
-        version: 4.0.1(@jest/globals@30.4.1)(jest@30.4.2(@types/node@25.5.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@25.5.0)(typescript@5.9.3)))(typescript@5.9.3)
-      rimraf:
-        specifier: 6.1.3
-        version: 6.1.3
-      ts-jest:
-        specifier: 'catalog:'
-        version: 29.4.9(@babel/core@7.29.0)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.0))(jest-util@30.4.1)(jest@30.4.2(@types/node@25.5.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@25.5.0)(typescript@5.9.3)))(typescript@5.9.3)
-      tsx:
-        specifier: 4.21.0
-        version: 4.21.0
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-
-  operations/operations-cli:
+  operations/cli:
     dependencies:
       '@aws-sdk/client-cost-explorer':
         specifier: 3.1045.0
@@ -704,6 +582,128 @@ importers:
       ts-jest:
         specifier: 29.4.9
         version: 29.4.9(@babel/core@7.29.0)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.0))(jest-util@30.4.1)(jest@30.4.2(@types/node@25.5.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@25.5.0)(typescript@5.9.3)))(typescript@5.9.3)
+
+  operations/native-yield/automation-service:
+    dependencies:
+      '@apollo/client':
+        specifier: 4.1.9
+        version: 4.1.9(graphql@16.13.2)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(rxjs@7.8.2)
+      '@consensys/linea-shared-utils':
+        specifier: workspace:*
+        version: link:../../../ts-libs/linea-shared-utils
+      '@lidofinance/lsv-cli':
+        specifier: 1.8.0
+        version: 1.8.0(@react-native-async-storage/async-storage@1.24.0(react-native@0.74.0(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(utf-8-validate@6.0.6)))(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.4.1)
+      dotenv:
+        specifier: 'catalog:'
+        version: 17.4.2
+      neverthrow:
+        specifier: 'catalog:'
+        version: 8.2.0
+      viem:
+        specifier: 'catalog:'
+        version: 2.47.5(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.4.1)
+      winston:
+        specifier: 'catalog:'
+        version: 3.19.0
+      zod:
+        specifier: 4.4.1
+        version: 4.4.1
+    devDependencies:
+      '@consensys/eslint-config':
+        specifier: workspace:*
+        version: link:../../../ts-libs/eslint-config
+      '@jest/globals':
+        specifier: 'catalog:'
+        version: 30.4.1
+      '@types/jest':
+        specifier: 'catalog:'
+        version: 30.0.0
+      jest:
+        specifier: 'catalog:'
+        version: 30.4.2(@types/node@25.5.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@25.5.0)(typescript@5.9.3))
+      jest-environment-node:
+        specifier: 'catalog:'
+        version: 30.4.1
+      jest-mock-extended:
+        specifier: 'catalog:'
+        version: 4.0.1(@jest/globals@30.4.1)(jest@30.4.2(@types/node@25.5.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@25.5.0)(typescript@5.9.3)))(typescript@5.9.3)
+      ts-jest:
+        specifier: 'catalog:'
+        version: 29.4.9(@babel/core@7.29.0)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.0))(jest-util@30.4.1)(jest@30.4.2(@types/node@25.5.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@25.5.0)(typescript@5.9.3)))(typescript@5.9.3)
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
+
+  operations/native-yield/lido-governance-monitor:
+    dependencies:
+      '@anthropic-ai/sdk':
+        specifier: 0.95.1
+        version: 0.95.1(zod@4.4.1)
+      '@consensys/linea-shared-utils':
+        specifier: workspace:*
+        version: link:../../../ts-libs/linea-shared-utils
+      '@prisma/adapter-pg':
+        specifier: 7.8.0
+        version: 7.8.0
+      '@prisma/client':
+        specifier: 7.8.0
+        version: 7.8.0(prisma@7.8.0(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(better-sqlite3@12.8.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@5.9.3))(typescript@5.9.3)
+      dotenv:
+        specifier: 'catalog:'
+        version: 17.4.2
+      html-to-text:
+        specifier: 10.0.0
+        version: 10.0.0
+      neverthrow:
+        specifier: 'catalog:'
+        version: 8.2.0
+      prisma:
+        specifier: 7.8.0
+        version: 7.8.0(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(better-sqlite3@12.8.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
+      viem:
+        specifier: 'catalog:'
+        version: 2.47.5(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.4.1)
+      winston:
+        specifier: 'catalog:'
+        version: 3.19.0
+      zod:
+        specifier: 4.4.1
+        version: 4.4.1
+    devDependencies:
+      '@consensys/eslint-config':
+        specifier: workspace:*
+        version: link:../../../ts-libs/eslint-config
+      '@jest/globals':
+        specifier: 'catalog:'
+        version: 30.4.1
+      '@types/html-to-text':
+        specifier: 9.0.4
+        version: 9.0.4
+      '@types/jest':
+        specifier: 'catalog:'
+        version: 30.0.0
+      jest:
+        specifier: 'catalog:'
+        version: 30.4.2(@types/node@25.5.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@25.5.0)(typescript@5.9.3))
+      jest-environment-node:
+        specifier: 'catalog:'
+        version: 30.4.1
+      jest-mock-extended:
+        specifier: 'catalog:'
+        version: 4.0.1(@jest/globals@30.4.1)(jest@30.4.2(@types/node@25.5.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@25.5.0)(typescript@5.9.3)))(typescript@5.9.3)
+      rimraf:
+        specifier: 6.1.3
+        version: 6.1.3
+      ts-jest:
+        specifier: 'catalog:'
+        version: 29.4.9(@babel/core@7.29.0)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.0))(jest-util@30.4.1)(jest@30.4.2(@types/node@25.5.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@25.5.0)(typescript@5.9.3)))(typescript@5.9.3)
+      tsx:
+        specifier: 4.21.0
+        version: 4.21.0
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
   postman:
     dependencies:
@@ -2875,10 +2875,6 @@ packages:
 
   '@libp2p/logger@5.2.0':
     resolution: {integrity: sha512-OEFS529CnIKfbWEHmuCNESw9q0D0hL8cQ8klQfjIVPur15RcgAEgc1buQ7Y6l0B6tCYg120bp55+e9tGvn8c0g==}
-
-  '@lidofinance/lsv-cli@1.4.0':
-    resolution: {integrity: sha512-ApDnT6MquLN7pPpFc3X2wm7fqOyncTmbhmDCikPqyPea8RwfkCFWJqchh+ZcsKi1ygdEKtvmlnWr31YKz7E2Cg==}
-    hasBin: true
 
   '@lidofinance/lsv-cli@1.8.0':
     resolution: {integrity: sha512-kbR0NEbIoQhuDq0QCb4xOx3bOcNoFg3HCq/ZeGzzK5F5nDsWaHYtUM99rcViXG3Gkc6P2tW/8py89HXsoGyomA==}

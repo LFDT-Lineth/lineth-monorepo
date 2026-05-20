@@ -89,7 +89,7 @@ jobs:
           develop_tag: ${{ env.DEVELOP_TAG }}
           push_platforms: linux/amd64
           push_image: ${{ env.PUSH_IMAGE }}
-          dockerfile_path: ./operations/native-yield-operations/lido-governance-monitor/Dockerfile
+          dockerfile_path: ./operations/native-yield/lido-governance-monitor/Dockerfile
           build_args: NODE_VERSION=${{ steps.get-node-version.outputs.node-version }}
           artifact_name: linea-lido-governance-monitor
           requires_qemu: ${{ env.PUSH_IMAGE }}

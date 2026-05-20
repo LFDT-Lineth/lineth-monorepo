@@ -52,11 +52,11 @@ flags:
     carryforward: true
   native-yield-automation-service:
     paths:
-      - operations/native-yield-operations/automation-service/
+      - operations/native-yield/automation-service/
     carryforward: true
   lido-governance-monitor:
     paths:
-      - operations/native-yield-operations/lido-governance-monitor/
+      - operations/native-yield/lido-governance-monitor/
     carryforward: true
   linea-native-libs:
     paths:

@@ -76,7 +76,7 @@ Yield providers can be ossified (permanently frozen) through a two-step process:
 
 ### Overview
 
-A long-running TypeScript service (`operations/native-yield-operations/automation-service/`) that automates the yield lifecycle. It continuously polls the YieldManager contract and routes execution through one of three operation modes based on the yield provider's ossification state.
+A long-running TypeScript service (`operations/native-yield/automation-service/`) that automates the yield lifecycle. It continuously polls the YieldManager contract and routes execution through one of three operation modes based on the yield provider's ossification state.
 
 ### Operation Modes
 
@@ -116,7 +116,7 @@ The service interacts with: `YieldManager`, `LineaRollupYieldExtension`, `VaultH
 
 ### Overview
 
-A standalone TypeScript service (`operations/native-yield-operations/lido-governance-monitor/`) that monitors Lido governance activity and alerts on proposals that may affect Linea's yield infrastructure.
+A standalone TypeScript service (`operations/native-yield/lido-governance-monitor/`) that monitors Lido governance activity and alerts on proposals that may affect Linea's yield infrastructure.
 
 ### Pipeline
 
@@ -153,10 +153,10 @@ A standalone TypeScript service (`operations/native-yield-operations/lido-govern
 | `contracts/test/hardhat/yield/unit/ValidatorContainerProofVerifier.ts` | Hardhat | Beacon chain proof verification |
 | `contracts/test/hardhat/yield/unit/LineaRollupYieldExtension.ts` | Hardhat | Rollup↔YieldManager integration |
 | `contracts/test/hardhat/yield/integration/YieldManager.integration.ts` | Hardhat | Full stack: LineaRollup + YieldManager + LidoProvider |
-| `operations/native-yield-operations/automation-service/` unit tests | Jest | Operation mode processors, rebalance logic, metrics |
-| `operations/native-yield-operations/lido-governance-monitor/` unit tests | Jest | Proposal lifecycle, fetchers, notification, AI analysis |
+| `operations/native-yield/automation-service/` unit tests | Jest | Operation mode processors, rebalance logic, metrics |
+| `operations/native-yield/lido-governance-monitor/` unit tests | Jest | Proposal lifecycle, fetchers, notification, AI analysis |
 
 ## Related Documentation
 
-- [Automation Service README](../../operations/native-yield-operations/automation-service/README.md) — Configuration, environment variables, development
+- [Automation Service README](../../operations/native-yield/automation-service/README.md) — Configuration, environment variables, development
 - [Tech: Contracts Component](../tech/components/contracts.md) — Yield contract directory, deployment
