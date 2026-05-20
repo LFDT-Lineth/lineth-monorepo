@@ -24,7 +24,36 @@ runs:
         with:
           version: '0.17.0-dev.251+0db721ec2'
 
-      - name: Install riscv64-unknown-elf-as
+      - name: Install Rust nightly
         shell: bash
-        run: sudo apt-get update && sudo apt-get install -y binutils-riscv64-unknown-elf
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly --profile minimal
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          . "$HOME/.cargo/env"
+          rustup component add rust-src --toolchain nightly
+
+      - name: Install mise
+        shell: bash
+        run: |
+          curl https://mise.run | sh
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+          echo "${HOME}/.local/share/mise/shims" >> "${GITHUB_PATH}"
+
+      - name: Install riscv64-unknown-elf toolchain
+        # Install the riscv64-unknown-elf toolchain
+        # Use the xpack-dev-tools/riscv-none-elf-gcc-xpack for riscv64-none-elf-gcc
+        # Simlinked riscv64-none-elf-gcc to riscv64-none-elf-gcc
+        shell: bash
+        run: |
+          sudo apt-get update && sudo apt-get install -y binutils-riscv64-unknown-elf
+          XPACK_GCC_VERSION="15.2.0-1"
+          XPACK_GCC_DIR="${HOME}/riscv-none-elf-gcc"
+          mkdir -p "${XPACK_GCC_DIR}"
+          curl --fail --location \
+            "https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v${XPACK_GCC_VERSION}/xpack-riscv-none-elf-gcc-${XPACK_GCC_VERSION}-linux-x64.tar.gz" \
+            | tar xz --directory="${XPACK_GCC_DIR}" --strip-components=1
+          ln -sf "${XPACK_GCC_DIR}/bin/riscv-none-elf-gcc" "${XPACK_GCC_DIR}/bin/riscv64-unknown-elf-gcc"
+          echo "${XPACK_GCC_DIR}/bin" >> "${GITHUB_PATH}"
+
+
 

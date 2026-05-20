@@ -1,0 +1,46 @@
+name: Tracer riscv ACT4 test
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'arithmetization/**'
+      - '.github/actions/setup-arithmetization-riscv/**'
+      - '.github/workflows/arithmetization-*.yml'
+  push:
+    branches:
+     - main
+    paths:
+     - 'arithmetization/**'
+     - '.github/actions/setup-arithmetization-riscv/**'
+     - '.github/workflows/arithmetization-*.yml'
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  act4-reference-tests:
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: false
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-arithmetization-riscv
+
+      - name: Install Sail
+        run: make -C arithmetization install-sail
+
+      - name: Build ACT4 ELFs
+        run: make build-act4
+        working-directory: arithmetization/src/test/examples
+
+      - name: Run ACT4 tests
+        run: make run-act4
+        working-directory: arithmetization/src/test/examples

@@ -23,7 +23,7 @@ permissions:
   actions: read
 
 jobs:
-  build:
+  binary-run-and-go-corset-check:
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     steps:
       - name: Checkout repository

@@ -43,7 +43,15 @@ checkout-go-corset:
 	fi
 
 # Install the zkc CLI from the go-corset repository.
-install-zkc: checkout-go-corset
+# - When GO_CORSET_REF_FOR_ZKC is set: always checkout the pinned ref and reinstall.
+# - When GO_CORSET_REF_FOR_ZKC is empty: skip if zkc is already on PATH.
+install-zkc:
+	@set -eu; \
+	if [ -z "$(GO_CORSET_REF_FOR_ZKC)" ] && command -v zkc >/dev/null 2>&1; then \
+		exit 0; \
+	fi; \
+	$(MAKE) checkout-go-corset; \
+	echo "Installing zkc from $(GO_CORSET)..."; \
 	cd "$(GO_CORSET)" && go install ./cmd/zkc
 
 # Compile zkc program in a binary file

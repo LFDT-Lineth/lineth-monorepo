@@ -3,14 +3,15 @@
 # Moreover, ABI being LP64 (soft-float) is relevant only for float numbers, which we do not use, so it can be omitted as well.
 
 # Declare all targets as phony to prevent conflicts with files of the same name
-.PHONY: exec debug compile zkc-exec zkc-debug clean clean-all linker-script verify-elf blake-all build-act4 run-act4
+.PHONY: exec debug compile zkc-exec zkc-debug clean clean-all linker-script verify-elf blake-all build-act4 run-act4 install-zkc
 
 # Directory of this Makefile (used for relative paths)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+ARITHMETIZATION_DIR := $(abspath $(MAKEFILE_DIR)../../..)
 
 # Test to run (with src optional subfolder and extension), mandatory unless clean-all or linker-script are the targets
 # src_optional_subfolder/your_test(.s|.zig|.rs)
-ifeq ($(filter clean-all linker-script blake-all build-act4 run-act4,$(MAKECMDGOALS)),)
+ifeq ($(filter clean-all linker-script blake-all build-act4 run-act4 install-zkc,$(MAKECMDGOALS)),)
 ifndef TEST
 $(error TEST is mandatory. Usage: make TEST=src_optional_subfolder/your_test(.s|.zig|.rs))
 endif
@@ -143,10 +144,13 @@ compile: $(SRC) linker-script
 #
 # Note: we use opt-level=2 to remove unused code.
 
-zkc-exec:
+install-zkc:
+	$(MAKE) -C $(ARITHMETIZATION_DIR) install-zkc
+
+zkc-exec: install-zkc
 	zkc exec $(JSON) $(ZKC_MAIN)
 
-zkc-debug:
+zkc-debug: install-zkc
 	zkc debug $(JSON) $(ZKC_MAIN)
 
 clean:
@@ -217,7 +221,7 @@ verify-elf: $(BIN)
 	@echo "All values match\n"
 
 # Run all blake test vectors in `rust/src/blake/blake.all` (blake_with_in_bytes.rs and main.go are compiled just once)
-blake-all:
+blake-all: install-zkc
 	@compile_output=$$($(MAKE) -f $(MAKEFILE_DIR)Makefile compile TEST=blake/blake_with_in_bytes.rs 2>&1); \
 	compile_status=$$?; \
 	if [ $$compile_status -ne 0 ]; then \
@@ -225,12 +229,21 @@ blake-all:
 		exit $$compile_status; \
 	fi; \
 	go build -o $(MAKEFILE_DIR)rust/target/blake_elf2json $(GO_MAIN) || exit $$?; \
+	pass=0; fail=0; \
 	i=0; while IFS= read -r in_bytes; do \
 		i=$$((i + 1)); \
 		$(MAKEFILE_DIR)rust/target/blake_elf2json $(MAKEFILE_DIR)rust/target/riscv64im-unknown-none-elf/release/blake_with_in_bytes "$$in_bytes" $(PROGRAM_OFFSET) $(IN_BYTES_OFFSET) $(ENTRY_POINT) > $(MAKEFILE_DIR)rust/target/riscv64im-unknown-none-elf/release/blake_with_in_bytes.json || exit $$?; \
 		result_line=$$(zkc exec $(MAKEFILE_DIR)rust/target/riscv64im-unknown-none-elf/release/blake_with_in_bytes.json $(ZKC_MAIN) 2>&1 | awk '{ previous = current; current = $$0 } END { print previous }'); \
-		echo "case $$i: $$result_line"; \
-	done < $(MAKEFILE_DIR)rust/src/blake/blake.all
+		if [ "$$result_line" = "Program exited successfully (exit with code 0)." ]; then \
+			echo "PASS  case $$i"; \
+			pass=$$((pass + 1)); \
+		else \
+			echo "FAIL  case $$i: $$result_line" >&2; \
+			fail=$$((fail + 1)); \
+		fi; \
+	done < $(MAKEFILE_DIR)rust/src/blake/blake.all; \
+	echo "DONE: $$i vectors   PASS: $$pass   FAIL: $$fail"; \
+	if [ "$$fail" -ne 0 ]; then echo "error: $$fail blake vector(s) failed" >&2; exit 1; fi
 
 # Build the ACT4 self-checking ELFs with the Linea ACT4 config 
 # Note: build if needed
@@ -283,7 +296,7 @@ build-act4:
 	fi
 
 # Build and run the ACT4 self-checking ELFs with the Linea ACT4 config
-run-act4: build-act4
+run-act4: install-zkc build-act4
 	@rm -f "$(ACT4_LOGS)"/*; \
 	mkdir -p "$(ACT4_LOGS)"; \
 	> "$(ACT4_RESULTS)"; \
@@ -314,4 +327,6 @@ run-act4: build-act4
 	done; \
 	echo "DONE: $$count tests   PASS: $$pass   FAIL: $$fail" | tee -a "$(ACT4_RESULTS)"; \
 	echo "results: $(ACT4_RESULTS)"; \
-	echo "logs:    $(ACT4_LOGS)/"
+	echo "logs:    $(ACT4_LOGS)/"; \
+	if [ "$$count" -eq 0 ]; then echo "error: no ACT4 ELFs found in $(ACT4_ELF_DIR)" >&2; exit 1; fi; \
+	if [ "$$fail" -ne 0 ]; then echo "error: $$fail of $$count ACT4 test(s) failed" >&2; exit 1; fi
