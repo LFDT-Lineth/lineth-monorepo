@@ -1,0 +1,47 @@
+// =============================================
+// switch statements that return
+// =============================================
+
+const CASE_A:u8 = 1
+const CASE_B:u8 = 2
+const CASE_C:u8 = 3
+
+input inputs(c:u1) -> (d:u8)
+input results(c:u1) -> (out:u8)
+
+// standard switch case statement doing actual computations
+// computations are checked against inputs
+fn main() {
+
+    var x:u8
+    var r:u8
+    x = inputs[0]
+    r = results[0]
+
+    var y:u8
+    y = do_something(x)
+
+    if y != r {
+        fail
+    }
+}
+
+fn do_something(x:u8) -> (y:u8) {
+
+    switch x {
+        case CASE_A: {
+            y = 0x10
+        }
+        case CASE_B: {
+            y = 0x11
+        }
+        case CASE_C: {
+            y = 0x12
+        }
+        default: {
+            y = 0x13
+        }
+    }
+
+    return
+}

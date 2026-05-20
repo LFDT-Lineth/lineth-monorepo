@@ -1,0 +1,22 @@
+pub input data(address:u16) -> (word:u32)
+
+// prove that two numbers add up to a third.
+fn main() {
+    var val:𝔽 = data[0] as 𝔽
+    var res:𝔽 = data[1] as 𝔽
+    //
+    if norm(val) != res {
+        fail
+    }
+}
+
+// Basic normalise function
+fn norm(x:𝔽) -> (r:𝔽) {
+    if x == 0 {
+        r = 0
+    } else {
+        r = 1
+    }
+    //
+    return
+}

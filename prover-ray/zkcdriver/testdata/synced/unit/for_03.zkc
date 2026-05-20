@@ -1,0 +1,23 @@
+pub input in(address:u16) -> (word:u16)
+pub output out(address:u16) -> (word:u16)
+
+static mask(address:u16) -> (word:u16) {
+    0x3456, 0xf2f2, 0x2299
+}
+
+// copy (masked) input to output
+fn main() {
+    var j:u16 = 0
+    var n:u16 = in[0] + 1
+    //
+    for i:u16 = 1; i<n; i = i + 1 {
+        out[i - 1] = mask[j] & in[i]
+        j = j + 1
+        // wrap j
+        if j == 3 {
+            j = 0
+        }
+    }
+    //
+    return
+}

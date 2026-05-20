@@ -1,0 +1,8 @@
+pub input data(address:u16) -> (byte:u32)
+
+// Exercise %c (character) format specifier — argument must be a concrete u8.
+fn main() {
+    var b:u8 = 0x41 // 'A'
+    //
+    printf "char: %c\n", b
+}

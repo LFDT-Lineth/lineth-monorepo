@@ -1,0 +1,9 @@
+include "../lib/sgn_extension_u32_u64.zkc"
+
+pub input data(address:u1) -> (data:u32)
+pub output extend(address:u1) -> (extend:u64)
+
+fn main() {
+    extend[0] = sgn_extension_u32_u64(data[0])
+    return
+}

@@ -1,0 +1,3 @@
+{ "data": "0x01", "result": "0x01" }
+{ "data": "0xff", "result": "0xff" }
+{ "data": "0x0f", "result": "0x0f" }

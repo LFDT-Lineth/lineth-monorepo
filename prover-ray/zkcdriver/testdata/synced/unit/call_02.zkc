@@ -1,0 +1,18 @@
+pub input data(address:u16) -> (byte:u8)
+pub output result(address:u16) -> (byte:u8)
+
+fn main() {
+    init(data[0])
+    return
+}
+
+fn init(x:u8) -> (r:u1) {
+    if x == 0 {
+        fail
+    }
+    //
+    result[0] = x
+    //
+    r = 1
+    return
+}

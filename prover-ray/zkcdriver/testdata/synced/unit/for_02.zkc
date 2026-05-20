@@ -1,0 +1,8 @@
+fn f(x:u8) -> (r:u8) {
+    var i:u8
+    r = 1
+    for i = 0; i<x; i = i + 1 {
+        r = r + r
+    }
+    return
+}

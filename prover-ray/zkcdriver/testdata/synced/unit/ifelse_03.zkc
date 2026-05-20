@@ -1,0 +1,11 @@
+pub input data(address:u16) -> (byte:u32)
+
+// x must equal 1 or 2; anything else causes a failure.
+fn main() {
+    var x:u32 = data[0]
+    if x == 1 {
+    } else if x == 2 {
+    } else {
+        fail
+    }
+}

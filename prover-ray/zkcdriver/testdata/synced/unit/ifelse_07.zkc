@@ -1,0 +1,25 @@
+pub input data(address:u16) -> (byte:u8)
+
+// prove that two numbers add up to a third.
+fn main() {
+    var val:u8 = data[0]
+    var res:u8 = data[1]
+
+    if example(val) != res {
+        fail
+    }
+}
+
+fn example(val:u8) -> (r:u8) {
+    if val == 0 || val == 1 {
+        r = 0
+    } else if val == 2 {
+        r = 1
+    } else if val == 3 {
+        r = 1
+    } else {
+        r = 2
+    }
+    //
+    return
+}

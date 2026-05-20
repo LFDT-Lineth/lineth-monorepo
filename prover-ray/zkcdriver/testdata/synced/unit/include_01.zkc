@@ -1,0 +1,5 @@
+include "includes/*.zkc"
+
+fn f() -> (r:UINT16) {
+    r = MAX_U16
+}

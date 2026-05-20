@@ -1,0 +1,40 @@
+const CASE_A:u8 = 1
+const CASE_B:u8 = 2
+const CASE_C:u8 = 3
+
+input inputs(c:u1) -> (d:u8)
+input outputs(c:u1) -> (out:u8)
+
+// standard switch case statement doing actual computations
+// computations are checked against inputs
+fn main() {
+
+    var discr:u8 = inputs[0]
+
+    switch discr {
+        case 0: {
+            discr = 255
+        }
+        case CASE_A: {
+            discr = deal_with(discr)
+        }
+        case CASE_B: {
+            discr = deal_with(discr) + 1
+        }
+        default: {
+            discr = 17
+        }
+        case CASE_C: {
+            discr = deal_with(discr) + 3
+        }
+    }
+
+    if discr != outputs[0] {
+        fail
+    }
+}
+
+fn deal_with(discr:u8) -> (res:u8) {
+    res = 4 * discr
+    return
+}

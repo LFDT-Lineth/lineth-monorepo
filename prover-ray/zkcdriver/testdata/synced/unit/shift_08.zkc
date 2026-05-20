@@ -1,0 +1,18 @@
+pub input data(address:u16) -> (byte:u32)
+
+// prove that two numbers add up to a third.
+fn main() {
+    var lhs:u32 = data[0]
+    var rhs:u32 = data[1]
+    var res:u32
+    //
+    res = test(lhs, rhs)
+    //
+    if res != data[2] {
+        fail
+    }
+}
+
+fn test(q:u32, i:u32) -> (r:u32) {
+    r = q | (1 << i)
+}

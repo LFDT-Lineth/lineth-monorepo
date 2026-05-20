@@ -1,0 +1,14 @@
+pub input data(address:u3) -> (byte:u8)
+
+fn main() -> () {
+    var x:u8 = data[0]
+    var y:u8 = data[1]
+    var z:u8 = data[2]
+    var result:u8 = data[3]
+
+    var computedResult:u8
+    computedResult = (x != 0) ? (y>z ? y:z):(y == z ? 1:z)
+    if result != computedResult {
+        fail
+    }
+}

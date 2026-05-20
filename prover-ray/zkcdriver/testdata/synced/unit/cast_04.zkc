@@ -1,0 +1,9 @@
+pub input data(address:u16) -> (byte:u16)
+pub output result(address:u16) -> (byte:u8)
+
+// Prove that casting a parenthesised expression works correctly.
+fn main() {
+    var x:u16 = data[0]
+    result[0] = (x + 1) as u8
+    return
+}

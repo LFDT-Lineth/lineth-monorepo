@@ -1,0 +1,29 @@
+static table(address:u4, flag:u1) -> (word:u8) {
+    0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x8,
+    0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf
+}
+
+pub input in(address:u16) -> (word:u8)
+pub output out(address:u16) -> (word:u8)
+
+// copy (factored) input to output
+fn main() {
+    out[0] = table[0, 0] * in[0]
+    out[1] = table[0, 1] * in[1]
+    out[2] = table[1, 0] * in[2]
+    out[3] = table[1, 1] * in[3]
+    out[4] = table[2, 0] * in[4]
+    out[5] = table[2, 1] * in[5]
+    out[6] = table[3, 0] * in[6]
+    out[7] = table[3, 1] * in[7]
+    out[8] = table[4, 0] * in[8]
+    out[9] = table[4, 1] * in[9]
+    out[10] = table[5, 0] * in[10]
+    out[11] = table[5, 1] * in[11]
+    out[12] = table[6, 0] * in[12]
+    out[13] = table[6, 1] * in[13]
+    out[14] = table[7, 0] * in[14]
+    out[15] = table[7, 1] * in[15]
+    //
+    return
+}

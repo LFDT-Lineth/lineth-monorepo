@@ -1,0 +1,38 @@
+input inputs(c:u1) -> (in:u8)
+
+fn main() {
+    var x:u32 = 12
+    var y:u32 = 23
+    var r_switch:u32
+    var r_ifelse:u32
+    var b:u8
+
+    b = inputs[0]
+
+    r_switch = choose_switch(b, x, y)
+    r_ifelse = choose_ifelse(b, x, y)
+
+    if r_switch != r_ifelse {
+        fail
+    }
+}
+
+fn choose_ifelse(b:u8, x:u32, y:u32) -> (r:u32) {
+    if b == 1 {
+        r = x
+    } else {
+        r = y
+    }
+}
+
+fn choose_switch(b:u8, x:u32, y:u32) -> (r:u32) {
+    switch b {
+        case 1: {
+            r = x
+        }
+        default: {
+            r = y
+            return
+        }
+    }
+}

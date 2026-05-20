@@ -1,0 +1,9 @@
+pub input data(address:u16) -> (byte:u8)
+pub output result(address:u16) -> (byte:u8)
+
+// Prove that identity cast (u8 as u8) is a no-op.
+fn main() {
+    var x:u8 = data[0]
+    result[0] = x as u8
+    return
+}

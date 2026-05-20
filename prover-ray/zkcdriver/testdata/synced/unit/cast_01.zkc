@@ -1,0 +1,9 @@
+pub input data(address:u16) -> (byte:u16)
+pub output result(address:u16) -> (byte:u8)
+
+// Prove that casting u16 to u8 retains only the low byte.
+fn main() {
+    var x:u16 = data[0]
+    result[0] = x as u8
+    return
+}

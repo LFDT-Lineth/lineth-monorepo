@@ -1,0 +1,34 @@
+include "../lib/hi_lo_32.zkc"
+include "../lib/sgn_extension_u32_u64.zkc"
+
+fn mul(a:u32, b:u32) -> (c:u32) {
+    var a_tmp:u64 = a as u64 // left-pad a to 64 bits
+    var b_tmp:u64 = b as u64 // left-pad b to 64 bits
+    var c_tmp:u64 = a_tmp * b_tmp // result fits in 64 bits
+    c = lo_32(c_tmp) // take the low 32 bits
+    return
+}
+
+fn mulh(a:u32, b:u32) -> (c:u32) {
+    var a_tmp:u128 = sgn_extension_u32_u64(a) as u128 // left-pad a with sign extension to 128 bits
+    var b_tmp:u128 = sgn_extension_u32_u64(b) as u128 // left-pad b with sign extension to 128 bits
+    var c_tmp:u128 = a_tmp * b_tmp // result fits in 128 bits
+    c = hi_32((c_tmp & 0xFFFFFFFF_FFFFFFFF) as u64) // take the high 32 bits (after masking to 64 bits)
+    return
+}
+
+fn mulhu(a:u32, b:u32) -> (c:u32) {
+    var a_tmp:u64 = a as u64 // left-pad a to 64 bits
+    var b_tmp:u64 = b as u64 // left-pad b to 64 bits
+    var c_tmp:u64 = a_tmp * b_tmp // result fits in 64 bits
+    c = hi_32(c_tmp) // take the high 32 bits
+    return
+}
+
+fn mulhsu(a:u32, b:u32) -> (c:u32) {
+    var a_tmp:u128 = sgn_extension_u32_u64(a) as u128 // left-pad a with sign extension to 128 bits
+    var b_tmp:u128 = b as u128 // left-pad b to 128 bits
+    var c_tmp:u128 = a_tmp * b_tmp // result fits in 128 bits
+    c = hi_32((c_tmp & 0xFFFFFFFF_FFFFFFFF) as u64) // take the high 32 bits (after masking to 64 bits)
+    return
+}

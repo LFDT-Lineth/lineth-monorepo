@@ -1,0 +1,8 @@
+{ "inputs": "0x00", "results": "0x13" }
+{ "inputs": "0x01", "results": "0x10" }
+{ "inputs": "0x02", "results": "0x11" }
+{ "inputs": "0x03", "results": "0x12" }
+{ "inputs": "0x04", "results": "0x13" }
+{ "inputs": "0x11", "results": "0x13" }
+{ "inputs": "0xc3", "results": "0x13" }
+{ "inputs": "0xff", "results": "0x13" }

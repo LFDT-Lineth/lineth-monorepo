@@ -1,0 +1,15 @@
+const SGNEXTMASK:u64 = 0xFFFFFFFF_00000000
+
+fn sgn_extension_u32_u64(value:u32) -> (ext_value:u64) {
+    // cast from u32 to u64
+    ext_value = value as u64
+
+    // if first bit of int is one, the first 32 bits are 1 as well
+    var first_bit:u32
+    first_bit = value >> 31
+    if first_bit == 1 {
+        ext_value = SGNEXTMASK | ext_value
+    }
+
+    return
+}

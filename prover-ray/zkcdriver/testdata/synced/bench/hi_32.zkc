@@ -1,0 +1,9 @@
+include "../lib/hi_lo_32.zkc"
+
+pub input data(address:u1) -> (data:u64)
+pub output hi(address:u1) -> (hi:u32)
+
+fn main() {
+    hi[0] = hi_32(data[0])
+    return
+}

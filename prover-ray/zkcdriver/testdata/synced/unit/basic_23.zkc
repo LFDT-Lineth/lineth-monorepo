@@ -1,0 +1,11 @@
+input inputs(c:u8) -> (d:u1)
+output outputs(c:u8) -> (d:u1)
+
+fn main() {
+    var bit:u1
+    //
+    for i:u8 = 0; i<16; i = i + 1 {
+        bit = inputs[i]
+        outputs[i] = ~bit
+    }
+}

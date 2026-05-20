@@ -1,0 +1,16 @@
+pub input data(address:u16) -> (byte:u8)
+pub output result(address:u16) -> (byte:u8)
+
+// check panics if x == 0, proving the call actually executes.
+fn check(x:u8) {
+    if x == 0 {
+        fail
+    }
+    return
+}
+
+fn main() {
+    check(data[0])
+    result[0] = data[0]
+    return
+}

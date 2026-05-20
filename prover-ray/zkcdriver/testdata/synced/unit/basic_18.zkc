@@ -1,0 +1,22 @@
+fn keyword_at_end_of_word() {
+    var X_as:u32
+    var X_break:u32
+    var X_continue:u32
+    var X_const:u32
+    var X_else:u32
+    var X_fail:u32
+    var X_fn:u32
+    var X_for:u32
+    var X_if:u32
+    var X_include:u32
+    var X_input:u32
+    var X_memory:u32
+    var X_return:u32
+    var X_static:u32
+    var X_output:u32
+    var X_printf:u32
+    var X_pub:u32
+    var X_while:u32
+    var X_var:u32
+    var X_type:u32
+}

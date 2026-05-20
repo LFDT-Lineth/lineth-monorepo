@@ -1,0 +1,6 @@
+const SIZE:u4 = 3
+const SIZE_P1:u4 = SIZE + 3
+fn main() {
+    var items:[u8;SIZE_P1]
+    items[2] = 0
+}

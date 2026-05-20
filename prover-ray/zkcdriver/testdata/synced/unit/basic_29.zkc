@@ -1,0 +1,5 @@
+output out(addr:u16) -> (lhs:u16, rhs:u16)
+
+fn main() {
+    out[0] = 1, 2
+}

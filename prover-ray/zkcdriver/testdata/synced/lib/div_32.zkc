@@ -1,0 +1,116 @@
+const MINUS_ONE:u32 = 0xffffffff
+const OVERFLOW_DIVIDEND:u32 = 0x80000000
+
+// negate a u32 using two's complement
+fn neg_u32(value:u32) -> (out:u32) {
+    if value == 0 {
+        out = 0
+        return
+    }
+    out = (~value) + 1
+    return
+}
+
+// absolute value of a u32 interpreted as signed
+fn abs_u32(value:u32) -> (out:u32) {
+    var sign:u1 = (value >> 31) as u1
+    if sign == 0 {
+        out = value
+        return
+    }
+    // sign == 1
+    out = neg_u32(value)
+    return
+}
+
+// unsigned binary long division
+fn long_division_u32(a:u32, b:u32, get_remainder:u1) -> (result:u32) {
+    if b == 0 {
+        if get_remainder == 0 {
+            result = MINUS_ONE
+            return
+        }
+        // get_remainder == 1
+        result = a
+        return
+    } // division by zero
+    var q:u32 = 0
+    var r:u32 = 0
+    for i:u32 = 0; i<32; i = i + 1 {
+        r = ((r << 1) | ((a >> (31 - i)) & 1))
+        if r >= b {
+            r = r - b
+            var tmp:u32 = 1 << (31 - i) // TODO: temporary workaround due to parsing issue
+            q = q | tmp
+        }
+    }
+    if get_remainder == 0 {
+        result = q
+        return
+    }
+    // get_remainder == 1
+    result = r
+    return
+}
+
+fn div(a:u32, b:u32) -> (c:u32) {
+    if b == 0 {
+        c = MINUS_ONE
+        return
+    } // division by zero
+    if a == OVERFLOW_DIVIDEND {
+        if b == MINUS_ONE {
+            c = OVERFLOW_DIVIDEND
+            return
+        }
+    } // division overflow
+    var sign:u1 = ((a >> 31) as u1) ^ ((b >> 31) as u1)
+    var q:u32 = divu(abs_u32(a), abs_u32(b))
+    if sign == 0 {
+        c = q
+        return
+    }
+    // sign == 1
+    c = neg_u32(q)
+    return
+}
+
+fn divu(a:u32, b:u32) -> (c:u32) {
+    if b == 0 {
+        c = MINUS_ONE
+        return // division by zero
+    }
+    c = a / b
+    return
+}
+
+fn rem(a:u32, b:u32) -> (c:u32) {
+    if b == 0 {
+        c = a
+        return
+    } // division by zero
+    if a == OVERFLOW_DIVIDEND {
+        if b == MINUS_ONE {
+            c = 0x00000000
+            return
+        }
+    } // division overflow
+    var sign:u1 = (a >> 31) as u1
+    var r:u32 = remu(abs_u32(a), abs_u32(b))
+    if sign == 0 {
+        c = r
+        return
+    }
+    // sign == 1
+    c = neg_u32(r)
+    return
+}
+
+fn remu(a:u32, b:u32) -> (c:u32) {
+    if b == 0 {
+        c = a
+        return // division by zero
+    }
+    c = a % b
+    return
+}

@@ -1,0 +1,22 @@
+fn keyword_in_middle_of_word() {
+    var X_as_Y:u32
+    var X_break_Y:u32
+    var X_continue_Y:u32
+    var X_const_Y:u32
+    var X_else_Y:u32
+    var X_fail_Y:u32
+    var X_fn_Y:u32
+    var X_for_Y:u32
+    var X_if_Y:u32
+    var X_include_Y:u32
+    var X_input_Y:u32
+    var X_memory_Y:u32
+    var X_return_Y:u32
+    var X_static_Y:u32
+    var X_output_Y:u32
+    var X_printf_Y:u32
+    var X_pub_Y:u32
+    var X_while_Y:u32
+    var X_var_Y:u32
+    var X_type_Y:u32
+}

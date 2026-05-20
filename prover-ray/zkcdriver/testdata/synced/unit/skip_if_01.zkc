@@ -1,0 +1,22 @@
+pub input data(address:u8) -> (byte:u8)
+
+// extract max (a, b, c) through nested (VM) Skip If
+fn main() {
+    var x:u8 = data[0]
+    var y:u8 = data[1]
+    var z:u8 = data[2]
+    var expected:u8 = data[3]
+    var r:u8
+
+    if (x<y) {
+        r = (y <= z) ? z:y
+    } else
+    {
+        r = (x>z) ? x:z
+    }
+
+    if (r != expected) {
+        fail
+    }
+    return
+}

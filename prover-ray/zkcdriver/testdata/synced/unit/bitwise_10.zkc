@@ -1,0 +1,13 @@
+pub input data(address:u8) -> (byte:u8)
+
+// prove that a & b & c == d
+fn main() {
+    var a:u8 = data[0]
+    var b:u8 = data[1]
+    var c:u8 = data[2]
+    var d:u8 = data[3]
+
+    if (a & b & c) != d {
+        fail
+    }
+}

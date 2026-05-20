@@ -1,0 +1,12 @@
+const SIZE:u8 = 2
+fn main() {
+    var items:[u8;SIZE]
+    items[0] = 1
+    items[1] = 2
+    fg(items)
+}
+
+fn fg(x:[u8;SIZE]) -> (r:[u8;SIZE]) {
+    r = x
+    return
+}

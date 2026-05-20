@@ -1,0 +1,16 @@
+pub input data(address:u16) -> (word:u32)
+
+// prove that two numbers add up to a third.
+fn main() {
+    var v1:𝔽 = data[0] as 𝔽
+    var v0:𝔽 = data[1] as 𝔽
+    var w0:u16, w1:u16
+    var r:u32 = data[2]
+    //
+    w0 = v0 as u16
+    w1 = v1 as u16
+    //
+    if w1::w0 != r {
+        fail
+    }
+}

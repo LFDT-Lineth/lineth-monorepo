@@ -1,0 +1,7 @@
+const ZERO:u8 = 0
+const ONE:u8 = 1
+fn main() {
+    var items:[u8;3]
+    items[ZERO + ONE + 1] = 3
+    var item_two:u8 = items[2]
+}

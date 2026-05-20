@@ -1,0 +1,2 @@
+// Maximum value which can be stored in a variable of type u16
+const MAX_U16:u16 = 65535

@@ -1,0 +1,16 @@
+pub input lhs(address:u16) -> (byte:u8)
+pub input rhs(address:u16) -> (byte:u8)
+
+const C1:u8 = 0x11, C2:u8 = 0x3
+
+// prove that two numbers add up to a third.
+fn main() {
+    var lhs:u8 = lhs[0]
+    var rhs:u8 = rhs[0]
+
+    if (lhs + rhs) >= (C1 + C2) {
+        fail
+    }
+
+    return
+}

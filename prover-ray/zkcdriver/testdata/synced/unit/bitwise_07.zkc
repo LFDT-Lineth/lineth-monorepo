@@ -1,0 +1,14 @@
+pub input data(address:u8) -> (byte:u32)
+
+// prove that x ^ y == z
+fn main() {
+    var x:u32 = data[0]
+    var y:u32 = data[1]
+    var z:u32 = data[2]
+
+    if (x ^ y) != z {
+        fail
+    }
+
+    return
+}

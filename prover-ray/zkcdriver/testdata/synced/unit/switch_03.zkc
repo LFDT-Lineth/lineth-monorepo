@@ -1,0 +1,88 @@
+type exmp = u8
+
+const CASE_A:exmp = 1
+const CASE_B:exmp = 2
+const CASE_MATCH:exmp = 13
+const INITIAL_X:u16 = 1000
+
+fn main() {
+
+    var case_expression:exmp = CASE_MATCH
+    var x:u16 = INITIAL_X
+
+    // empty switch case statement
+    // default case applies
+    printf "x = %d", x
+    switch case_expression {
+        default: {
+            x = add_one(x)
+        }
+    }
+    printf "x = %d expected to have incremented by 1", x
+
+    // only default case
+    switch case_expression {
+        case CASE_MATCH: {
+            x = add_one(x)
+        }
+    }
+    printf "x = %d expected to have incremented by 1", x
+
+    // no default case
+    switch case_expression {
+        case CASE_A: {
+        }
+    }
+    printf "x = %d expected to not have changed", x
+
+    // no default case
+    switch case_expression {
+        case CASE_A, CASE_B: {
+        }
+    }
+    printf "x = %d expected to not have changed", x
+
+    x = reset(x)
+
+    // no fall through
+    switch case_expression {
+        case CASE_MATCH: {
+            x = add_one(x)
+        }
+        default: {
+            x = add_one(x)
+        }
+    }
+    printf "x = %d expected to have incremented by 1, not 2", x
+
+    // generic case
+    switch case_expression {
+        case CASE_A: {
+        }
+        case CASE_B: {
+        }
+        default: {
+            x = add_one(x)
+        }
+    }
+    printf "x = %d expected to have incremented by 1", x
+
+    // several cases for one body
+    switch case_expression {
+        case CASE_A, CASE_B: {
+        }
+        default: {
+            x = add_one(x)
+        }
+    }
+    printf "x = %d expected to have incremented by 1", x
+}
+
+fn add_one(x:u16) -> (x_plus_one:u16) {
+    x_plus_one = x + 1
+}
+
+fn reset(x:u16) -> (x_reset:u16) {
+    x_reset = INITIAL_X
+    printf "x reset to %d", x_reset
+}

@@ -1,0 +1,36 @@
+// ================================================
+// the discriminant comes from a function argument
+// ================================================
+
+fn main() {
+    var x:u32 = 12
+    var y:u32 = 42
+
+    var fffx:u32 = fff(x)
+    var gggy:u32 = ggg(y)
+
+    if fffx != x || gggy != y {
+        fail
+    }
+
+    printf "success"
+}
+
+fn fff(x:u32) -> (r:u32) {
+    var y:u32 = x
+    switch y {
+        default: {
+            r = x
+            return
+        }
+    }
+}
+
+fn ggg(x:u32) -> (r:u32) {
+    switch x {
+        default: {
+            r = x
+            return
+        }
+    }
+}

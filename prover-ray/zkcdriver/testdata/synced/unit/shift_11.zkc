@@ -1,0 +1,20 @@
+pub input data(address:u16) -> (byte:u16)
+
+// prove that x << 1 == x * 2
+// prove that x >> 1 == x / 2
+
+fn main() {
+    var x:u16 = data[0]
+    var x_shl:u16 = x << 1
+    var x_shr:u16 = x >> 1
+
+    if (x_shl != (x * 2)) {
+        fail
+    }
+
+    if (x_shr != (x / 2)) {
+        fail
+    }
+
+    return
+}

@@ -1,0 +1,13 @@
+pub input lhs(address:u16) -> (byte:u16)
+pub input rhs(address:u16) -> (byte:u16)
+pub output res(address:u16) -> (byte:u16)
+
+// prove that two numbers add up to a third.
+fn main() {
+    var lhs:u16 = lhs[0]
+    var rhs:u16 = rhs[0]
+    // write output
+    res[0] = lhs * rhs
+    // done
+    return
+}

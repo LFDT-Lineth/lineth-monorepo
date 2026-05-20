@@ -1,0 +1,4 @@
+type binary = u1
+const ONE:binary = 1
+const DIV:binary = 1 / ONE
+const REM:binary = 1 % ONE

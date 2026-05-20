@@ -1,0 +1,16 @@
+pub input data(address:u8) -> (byte:u8)
+
+fn main() -> (r:u1) {
+    var n:u8 = data[0]
+    var tmp:u8
+    n = n + 1
+    //
+    for i:u8 = 1; i<n; i = i + 1 {
+        tmp = data[i]
+        if tmp == 0 {
+            fail
+        }
+    }
+    //
+    r = 1
+}

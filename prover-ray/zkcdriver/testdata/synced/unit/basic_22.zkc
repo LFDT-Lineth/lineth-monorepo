@@ -1,0 +1,17 @@
+// =====================
+// decoding issue #1696
+// =====================
+
+input inputs(c:u1) -> (d:u1)
+
+fn main() {
+
+    var in:u1
+    in = inputs[0]
+
+    printf "in = %d\n", in
+
+    if in != 1 {
+        fail
+    }
+}

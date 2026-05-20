@@ -1,0 +1,6 @@
+pub input data(address:u8) -> (b:u8)
+type byte = u8
+fn main() {
+    var items:[byte;3]
+    items[0] = data[0]
+}

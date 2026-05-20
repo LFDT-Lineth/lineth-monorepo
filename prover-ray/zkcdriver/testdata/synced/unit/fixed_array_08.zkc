@@ -1,0 +1,11 @@
+fn main() {
+    var items:[u8;2]
+    items[0] = 1
+    items[1] = 2
+    fg(items)
+}
+
+fn fg(x:[u8;2]) -> (r:[u8;2]) {
+    r = x
+    return
+}
