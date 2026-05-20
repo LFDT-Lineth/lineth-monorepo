@@ -44,12 +44,12 @@ It runs on **push** and **pull_request** to `main` when relevant paths change, i
 
 It is also available via **workflow_dispatch** and **workflow_call**.
 
-### Install ACT4 host dependencies
+### Install Sail for ACT4 host builds
 
-The `install-act4-host-deps` target installs dependencies to build tests from the [RISC-V Architectural Certification Tests (ACTs)](https://github.com/riscv/riscv-arch-test) framework (currently ACT4).
+The `install-sail` target downloads Sail.
 
 ```bash
-make -C arithmetization install-act4-host-deps
+make -C arithmetization install-sail
 ```
 
-See [src/test/examples/README.md](src/test/examples/README.md) for ACT4 build and run commands.
+See [src/test/examples/README.md](src/test/examples/README.md) for ACT4 prerequisites, build, and run commands.

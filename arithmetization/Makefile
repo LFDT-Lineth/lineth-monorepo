@@ -16,9 +16,7 @@ GO_CORSET_REF_FOR_ZKC ?=
 # Used to install go-corset
 GO_CORSET_VERSION ?= v1.2.17
 
-# Used to prepare host builds for ACT4 tests.
-ACT4_REF ?= 9798a554ce4139f472c9ccd3a18c9061d0f7024d
-ACT4_REPO ?= $(REPO_ROOT)/../riscv-arch-test
+# Used to install Sail for ACT4 host builds.
 ACT4_RISCV_DIR ?= $(HOME)/riscv
 SAIL_RISCV_VERSION ?= 0.11
 
@@ -28,7 +26,7 @@ ZKC_BINDIR ?= $(MAKEFILE_DIR)bin
 ZKC_BINARY ?= riscv.bin
 ZKC_INPUT ?= input.json
 
-.PHONY: checkout-go-corset install-go-corset install-zkc install-act4-host-deps zkc-compile zkc-check zkc-compile-and-check check
+.PHONY: checkout-go-corset install-go-corset install-zkc install-sail zkc-compile zkc-check zkc-compile-and-check check
 
 # Fetch go-corset if missing (no-op when CI already checked it out into GO_CORSET).
 checkout-go-corset:
@@ -88,59 +86,16 @@ install-go-corset:
 		go install github.com/consensys/go-corset/cmd/go-corset@$(GO_CORSET_VERSION); \
 	fi
 
-# Install the tools needed to build ACT4 ELFs directly on the host for Linux and macOS
-install-act4-host-deps:
-	@set -eu; \
-	if ! command -v brew >/dev/null 2>&1; then \
-		echo "Installing Homebrew..."; \
-		/bin/bash -c "$$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; \
-	fi; \
-	brew_cmd=$$(command -v brew || true); \
-	if [ -z "$$brew_cmd" ] && [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then brew_cmd=/home/linuxbrew/.linuxbrew/bin/brew; fi; \
-	if [ -z "$$brew_cmd" ] && [ -x /opt/homebrew/bin/brew ]; then brew_cmd=/opt/homebrew/bin/brew; fi; \
-	if [ -z "$$brew_cmd" ] && [ -x /usr/local/bin/brew ]; then brew_cmd=/usr/local/bin/brew; fi; \
-	if [ -z "$$brew_cmd" ]; then echo "error: brew not found"; exit 1; fi; \
-	if [ "$$(uname -s)" = "Darwin" ] && ! xcode-select -p >/dev/null 2>&1; then \
-		echo "Installing Xcode Command Line Tools..."; \
-		xcode-select --install || true; \
-		echo "Finish the Xcode Command Line Tools installation, then rerun this target."; \
-		exit 1; \
-	fi; \
-	brew_prefix=$$("$$brew_cmd" --prefix); \
-	export PATH="$(ACT4_RISCV_DIR)/bin:$$brew_prefix/bin:$$PATH"; \
-	"$$brew_cmd" install mise riscv64-elf-gcc; \
-	if [ "$$(uname -s)" = "Darwin" ]; then "$$brew_cmd" install z3; fi; \
-	mkdir -p "$(ACT4_RISCV_DIR)/bin"; \
+# Install Sail for ACT4 host builds. Other host tools are prerequisites.
+install-sail:
+	@mkdir -p "$(ACT4_RISCV_DIR)/bin" || exit $$?; \
 	if ! "$(ACT4_RISCV_DIR)/bin/sail_riscv_sim" --version 2>/dev/null | grep -qx "$(SAIL_RISCV_VERSION)"; then \
 		echo "Installing sail_riscv_sim $(SAIL_RISCV_VERSION)..."; \
 		sail_os=$$(uname -s); \
 		if [ "$$sail_os" = "Darwin" ]; then sail_os=Mac; fi; \
-		curl --fail --location "https://github.com/riscv/sail-riscv/releases/download/$(SAIL_RISCV_VERSION)/sail-riscv-$$sail_os-$$(uname -m).tar.gz" \
-			| tar xz --directory="$(ACT4_RISCV_DIR)" --strip-components=1; \
+		sail_archive="$$(mktemp)" || exit $$?; \
+		curl --fail --location --output "$$sail_archive" "https://github.com/riscv/sail-riscv/releases/download/$(SAIL_RISCV_VERSION)/sail-riscv-$$sail_os-$$(uname -m).tar.gz" || exit $$?; \
+		tar xzf "$$sail_archive" -C "$(ACT4_RISCV_DIR)" --strip-components=1 || exit $$?; \
+		rm -f "$$sail_archive"; \
 	fi; \
-	ln -sf "$$brew_prefix/bin/riscv64-elf-gcc" "$(ACT4_RISCV_DIR)/bin/riscv64-unknown-elf-gcc"; \
-	ln -sf "$$brew_prefix/bin/riscv64-elf-objdump" "$(ACT4_RISCV_DIR)/bin/riscv64-unknown-elf-objdump"; \
-	shell_rc="$$HOME/.bashrc"; \
-	if [ "$$(uname -s)" = "Darwin" ]; then shell_rc="$$HOME/.zshrc"; fi; \
-	path_line='export PATH="$(ACT4_RISCV_DIR)/bin:$$PATH"'; \
-	touch "$$shell_rc"; \
-	if ! grep -Fqx "$$path_line" "$$shell_rc"; then echo "$$path_line" >> "$$shell_rc"; fi; \
-	if [ ! -d "$(ACT4_REPO)" ]; then git clone https://github.com/riscv/riscv-arch-test.git "$(ACT4_REPO)"; fi; \
-	if ! git -C "$(ACT4_REPO)" rev-parse "$(ACT4_REF)^{commit}" >/dev/null 2>&1; then git -C "$(ACT4_REPO)" fetch --tags origin; fi; \
-	if [ "$$(git -C "$(ACT4_REPO)" rev-parse HEAD)" != "$$(git -C "$(ACT4_REPO)" rev-parse "$(ACT4_REF)^{commit}")" ]; then \
-		git -C "$(ACT4_REPO)" checkout --detach "$(ACT4_REF)"; \
-	fi; \
-	cd "$(ACT4_REPO)" && mise trust .mise.toml && mise install && mise exec -- uv sync; \
-	cd "$(ACT4_REPO)/framework/src/act/data" && BUNDLE_JOBS=1 mise exec -- bundle install; \
-	if [ "$$(uname -s)" = "Darwin" ]; then \
-		udb_cpu=$$(uname -m); \
-		case "$$udb_cpu" in arm64|aarch64) udb_cpu=arm64 ;; x86_64|x64) udb_cpu=x64 ;; *) echo "error: unsupported UDB CPU $$udb_cpu"; exit 1 ;; esac; \
-		udb_z3_version=$$(cd "$(ACT4_REPO)/framework/src/act/data" && mise exec -- ruby -e 'require "udb/dep_versions"; print Udb::Z3_VERSION'); \
-		udb_z3_dir="$${XDG_CACHE_HOME:-$$HOME/.cache}/udb/z3/$$udb_z3_version/$$udb_cpu"; \
-		mkdir -p "$$udb_z3_dir"; \
-		for z3_name in libz3.so.4.8 libz3.so libz3 z3; do \
-			ln -sf "$$brew_prefix/opt/z3/lib/libz3.dylib" "$$udb_z3_dir/$$z3_name"; \
-		done; \
-	fi; \
-	echo "ACT4 host dependencies are ready"; \
-	echo "ACT4 host builds will use $(ACT4_RISCV_DIR)/bin automatically"
+	echo "sail_riscv_sim is ready at $(ACT4_RISCV_DIR)/bin/sail_riscv_sim"
