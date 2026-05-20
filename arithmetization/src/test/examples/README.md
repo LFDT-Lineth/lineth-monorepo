@@ -21,20 +21,18 @@ For Docker builds:
 
 - `docker` — to build and run the ACT4 container
 
-For Linux host builds, install these prerequisites with your package manager of choice:
+For host builds on Linux or macOS, install these prerequisites with your package manager of choice:
 
 - `git`, `curl`, `tar`, `make`
-- `mise` — recommended by `riscv-arch-test` to provide `uv`, Python, Ruby and Bundler
-- Without `mise`: `uv`, or a Python 3.10+ virtualenv where `python3 -m pip install -e ./framework -e ./generators/testgen -e ./generators/coverage` was run from the `riscv-arch-test` checkout, plus Ruby and Bundler
 - `riscv64-unknown-elf-gcc (>= 15)` and `riscv64-unknown-elf-objdump` — to compile and inspect ACT4 ELFs
+- one ACT4 tool-management option:
+  - `mise` — recommended by `riscv-arch-test` to provide `uv`, Python, Ruby and Bundler
+  - `uv`, plus Ruby and Bundler
+  - a Python 3.10+ virtualenv where `python3 -m pip install -e ./framework -e ./generators/testgen -e ./generators/coverage` was run from the `riscv-arch-test` checkout, plus Ruby and Bundler
 
-For macOS host builds, install these prerequisites with your package manager of choice:
+For macOS host builds, also install:
 
 - Xcode Command Line Tools or equivalent compiler tools
-- `git`, `curl`, `tar`, `make`
-- `mise` — recommended by `riscv-arch-test` to provide `uv`, Python, Ruby and Bundler
-- Without `mise`: `uv`, or a Python 3.10+ virtualenv where `python3 -m pip install -e ./framework -e ./generators/testgen -e ./generators/coverage` was run from the `riscv-arch-test` checkout, plus Ruby and Bundler
-- `riscv64-unknown-elf-gcc (>= 15)` and `riscv64-unknown-elf-objdump` — to compile and inspect ACT4 ELFs
 - native `z3`/`libz3` — used by UDB while validating ACT4 configs
 
 To install Sail for ACT4 host builds, from `linea-monorepo/`:
