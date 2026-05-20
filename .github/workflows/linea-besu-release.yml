@@ -1,16 +1,22 @@
-name: "Linea Besu Release (still in testing phase)"
+name: "Linea Besu Release"
 
 permissions:
   actions: read
   id-token: write
   contents: write
   packages: write
+  pull-requests: write
 
 on:
   workflow_dispatch:
     inputs:
       image_tag_suffix:
-        description: 'Custom image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDDHHMMSS]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDDHHMMSS]-[commit]'
+        description: 'Custom docker image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDD]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDD]-[commit]'
+        required: false
+        type: string
+        default: ''
+      release_tag_suffix:
+        description: 'Custom release tag suffix (must need for non-main release), i.e. release tag would be releases/[component]/v[semver]-[suffix]'
         required: false
         type: string
         default: ''
@@ -19,13 +25,8 @@ on:
         required: false
         type: string
         default: ''
-      draft_release:
-        description: 'Draft Release'
-        required: false
-        default: false
-        type: boolean
       pre_release:
-        description: 'Pre Release'
+        description: 'Pre Release if checked; Draft release otherwise'
         required: false
         default: false
         type: boolean
@@ -35,11 +36,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  check-branch-and-release-tag-suffix:
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    steps:
+      - name: Enforce non-main branch must have custom release tag suffix
+        if: github.ref_name != 'main' && inputs.release_tag_suffix == ''
+        run: |
+          echo "❌ Non-main branch must have non-empty custom tag suffix"
+          exit 1
+
   compute-linea-besu-release-metadata:
+    needs: [check-branch-and-release-tag-suffix]
     uses: ./.github/workflows/reusable-component-release-metadata.yml
     with:
-      component-name: linea-besu
-      include-path: '["tracer/**","tracer-constraints/**","linea-besu/plugins/linea-sequencer/**","linea-besu/**","gradle/libs.versions.toml"]'
+      # Release tag uses 'linea-besu-package' (e.g. releases/linea-besu-package/v1.2.3)
+      component-name: linea-besu-package
+      include-path: |
+        tracer/**
+        tracer-constraints/**
+        linea-besu/plugins/linea-sequencer/**
+        linea-besu/besu/**
+        linea-besu/package/**
+        gradle/libs.versions.toml
+      release_tag_suffix: ${{ inputs.release_tag_suffix }}
 
   build-and-upload-artifact:
     needs: [compute-linea-besu-release-metadata]
@@ -71,28 +90,13 @@ jobs:
       e2e-tests-with-besu-fleet: ${{ inputs.without_besu_fleet_plugin != 'true' }}
     secrets: inherit
 
-  release-linea-besu-push-tag-changelog:
+  push-tag-update-changelog-and-gh-release:
     needs: [run-test, run-e2e-tests]
-    uses: ./.github/workflows/reusable-component-release-push-tag-changelog.yml
+    uses: ./.github/workflows/reusable-linea-besu-package-gh-release.yml
     with:
-      component-name: linea-besu
-      folder-name: linea-besu/package
-      include-path: '["tracer/**","tracer-constraints/**","linea-besu/plugins/linea-sequencer/**","linea-besu/**","gradle/libs.versions.toml"]'
-    secrets: inherit
-
-  build-linea-besu-docker-image-and-gh-release:
-    needs: [compute-linea-besu-release-metadata, release-linea-besu-push-tag-changelog]
-    uses: ./.github/workflows/reuse-linea-besu-package-build-test-push.yml
-    with:
-      release_tag_prefix: ${{ needs.compute-linea-besu-release-metadata.outputs.release_version }}
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
-      run_test: false
-      run_e2e_test: false
-      push_image: true
-      draft_release: ${{ inputs.draft_release }}
+      release_tag_suffix: ${{ inputs.release_tag_suffix }}
+      without_besu_fleet_plugin: ${{ inputs.without_besu_fleet_plugin }}
+      draft_release: ${{ !inputs.pre_release }}
       pre_release: ${{ inputs.pre_release }}
-      with_besu_fleet_plugin: ${{ inputs.without_besu_fleet_plugin != 'true' }}
-      changelog: ${{ needs.compute-linea-besu-release-metadata.outputs.changelog }}
-      release_tag: ${{ needs.compute-linea-besu-release-metadata.outputs.release_tag }}
-      release_version: ${{ needs.compute-linea-besu-release-metadata.outputs.release_version }}
     secrets: inherit

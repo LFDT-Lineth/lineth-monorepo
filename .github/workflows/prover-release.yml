@@ -1,25 +1,27 @@
-name: "Prover Release (still in testing phase)"
+name: "Prover Release"
 
 permissions:
   actions: read
   contents: write
   packages: write
+  pull-requests: write
 
 on:
+
   workflow_dispatch:
     inputs:
       image_tag_suffix:
-        description: 'Custom image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDDHHMMSS]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDDHHMMSS]-[commit]'
+        description: 'Custom image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDD]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDD]-[commit]'
         required: false
         type: string
         default: ''
-      draft_release:
-        description: 'Draft Release'
+      release_tag_suffix:
+        description: 'Custom release tag suffix (must need for non-main release), i.e. release tag would be releases/[component]/v[semver]-[suffix]'
         required: false
-        default: false
-        type: boolean
+        type: string
+        default: ''
       pre_release:
-        description: 'Pre Release'
+        description: 'Pre Release if checked; Draft release otherwise'
         required: false
         default: false
         type: boolean
@@ -34,8 +36,9 @@ jobs:
     with:
       component-name: prover
       folder-name: prover
-      include-path: '"prover/**"'
+      include-path: prover/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
-      draft_release: ${{ inputs.draft_release }}
+      release_tag_suffix: ${{ inputs.release_tag_suffix }}
+      draft_release: ${{ !inputs.pre_release }}
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit

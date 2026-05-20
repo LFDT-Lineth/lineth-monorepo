@@ -8,6 +8,10 @@ inputs:
   image_tag:
     description: 'Docker image tag'
     required: true
+  extra_image_tag:
+    description: 'Extra docker image tag'
+    required: false
+    default: ''
   develop_tag:
     description: 'Develop tag (used when on main branch)'
     required: false
@@ -66,10 +70,18 @@ runs:
     - name: Set tags
       id: set-tags
       shell: bash
+      env:
+        IMAGE_NAME: ${{ inputs.image_name }}
+        IMAGE_TAG: ${{ inputs.image_tag }}
+        EXTRA_IMAGE_TAG: ${{ inputs.extra_image_tag }}
+        DEVELOP_TAG: ${{ inputs.develop_tag }}
       run: |
-        TAGS="${{ inputs.image_name }}:${{ inputs.image_tag }}"
-        if [[ "${{ github.ref }}" == "refs/heads/main" ]] && [[ -n "${{ inputs.develop_tag }}" ]]; then
-          TAGS="${{ inputs.image_name }}:${{ inputs.image_tag }},${{ inputs.image_name }}:${{ inputs.develop_tag }}"
+        TAGS="${IMAGE_NAME}:${IMAGE_TAG}"
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]] && [[ -n "${DEVELOP_TAG}" ]]; then
+          TAGS="${TAGS},${IMAGE_NAME}:${DEVELOP_TAG}"
+        fi
+        if [[ -n "${EXTRA_IMAGE_TAG}" ]] && [[ "${EXTRA_IMAGE_TAG}" != "${IMAGE_TAG}" ]]; then
+          TAGS="${TAGS},${IMAGE_NAME}:${EXTRA_IMAGE_TAG}"
         fi
         echo "tags=$TAGS" >> $GITHUB_OUTPUT
 

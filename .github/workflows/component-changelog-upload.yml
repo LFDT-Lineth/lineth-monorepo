@@ -11,34 +11,103 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  filter-commit-changes:
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    name: Filter commit changes
+    outputs:
+      coordinator: ${{ steps.filter.outputs.coordinator }}
+      postman: ${{ steps.filter.outputs.postman }}
+      prover: ${{ steps.filter.outputs.prover }}
+      tx-exclusion-api: ${{ steps.filter.outputs.tx-exclusion-api }}
+      linea-besu-package: ${{ steps.filter.outputs.linea-besu-package }}
+      linea: ${{ steps.filter.outputs.linea }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Filter commit changes
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2
+        id: filter
+        with:
+          base: ${{ github.ref }}
+          list-files: "json"
+          filters: |
+            coordinator:
+              - 'coordinator/**'
+            postman:
+              - 'postman/**'
+            prover:
+              - 'prover/**'
+            tx-exclusion-api:
+              - 'transaction-exclusion-api/**'
+            linea-besu-package:
+              - 'tracer/**'
+              - 'tracer-constraints/**'
+              - 'linea-besu/plugins/linea-sequencer/**'
+              - 'linea-besu/besu/**'
+              - 'linea-besu/package/**'
+              - 'gradle/libs.versions.toml'
+            linea:
+              - 'coordinator/**'
+              - 'postman/**'
+              - 'prover/**'
+              - 'transaction-exclusion-api/**'
+              - 'tracer/**'
+              - 'tracer-constraints/**'
+              - 'linea-besu/plugins/linea-sequencer/**'
+              - 'linea-besu/besu/**'
+              - 'linea-besu/package/**'
+              - 'gradle/libs.versions.toml'
+
   upload-component-changelog:
+    needs: [filter-commit-changes]
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     strategy:
       fail-fast: false
       matrix:
-        component: [ coordinator, prover, postman, tx-exclusion-api, linea-besu ]
+        component: [ coordinator, prover, postman, tx-exclusion-api, linea-besu-package, linea ]
         include:
           - component: coordinator
             folder-name: coordinator
-            include-path: 'coordinator/**'
+            include-path: coordinator/**
           - component: prover
             folder-name: prover
-            include-path: 'prover/**'
+            include-path: prover/**
           - component: postman
             folder-name: postman
-            include-path: 'postman/**'
+            include-path: postman/**
           - component: tx-exclusion-api
             folder-name: transaction-exclusion-api
-            include-path: 'transaction-exclusion-api/**'
-          - component: linea-besu
+            include-path: transaction-exclusion-api/**
+          - component: linea-besu-package
             folder-name: linea-besu/package
             artifact-name: linea-besu-package
-            include-path: [ 'tracer/**', 'tracer-constraints/**', 'linea-besu/plugins/linea-sequencer/**', 'linea-besu/besu/**', 'linea-besu/package/**', 'gradle/libs.versions.toml' ]
+            include-path: |
+              tracer/**
+              tracer-constraints/**
+              linea-besu/plugins/linea-sequencer/**
+              linea-besu/besu/**
+              linea-besu/package/**
+              gradle/libs.versions.toml
+          - component: linea
+            folder-name: .
+            artifact-name: linea
+            include-path: |
+              coordinator/**
+              postman/**
+              prover/**
+              transaction-exclusion-api/**
+              tracer/**
+              tracer-constraints/**
+              linea-besu/plugins/linea-sequencer/**
+              linea-besu/besu/**
+              linea-besu/package/**
+              gradle/libs.versions.toml
 
-    name: Generate ${{ matrix.component }} [Unreleased] changelog & next version
+    name: Generate ${{ matrix.component }} [Unreleased] changelog
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        if: needs.filter-commit-changes.outputs[matrix.component] == 'true'
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           # git-cliff needs full history + tags to compute changelog/version
           ref: ${{ github.head_ref || github.ref_name }}
@@ -47,39 +116,24 @@ jobs:
           submodules: false
 
       - name: Install git-cliff
+        if: needs.filter-commit-changes.outputs[matrix.component] == 'true'
         uses: taiki-e/install-action@5f57d6cb7cd20b14a8a27f522884c4bc8a187458 #(v2.75.19)
         with:
           tool: git-cliff
 
       - name: Update [Unreleased] section in ${{ matrix.folder-name }}/CHANGELOG.md
+        if: needs.filter-commit-changes.outputs[matrix.component] == 'true'
         id: changelog
         uses: ./.github/actions/run-git-cliff-commands
         with:
           component-name: ${{ matrix.component }}
           folder-name: ${{ matrix.folder-name }}
-          include-path: ${{ toJSON(matrix.include-path) }}
+          include-path: ${{ matrix.include-path }}
           prepend-changelog: 'true'
 
       - name: Upload CHANGELOG.md artifact
-        if: github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
+        if: github.ref == 'refs/heads/main' && needs.filter-commit-changes.outputs[matrix.component] == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: unreleased-changelog-${{ matrix.artifact-name || matrix.folder-name }}
           path: ${{ matrix.folder-name }}/CHANGELOG.md
-
-      - name: Post/update ${{ matrix.component }} changelog preview comment on PR
-        if: github.ref != 'refs/heads/main' && steps.changelog.outputs.tag_changed == 'true'
-        uses: marocchino/sticky-pull-request-comment@0ea0beb66eb9baf113663a64ec522f60e49231c0 #(v3.0.4)
-        with:
-          header: ${{ matrix.component }}-changelog-preview
-          message: |
-            ## ${{ matrix.component }} Changelog Preview (informational)
-
-            <details>
-            <summary><strong>[Unreleased] diff</strong> (commits touching <code>${{ matrix.component }}/**</code> since latest <code>releases/${{ matrix.component }}/v*</code> tag)</summary>
-
-            ${{ steps.changelog.outputs.changelog_content }}
-
-            </details>
-
-            <sub>Generated by <a href="https://github.com/orhun/git-cliff-action">git-cliff-action</a> using <code>cliff.toml</code>. This comment is informational and does not gate the PR.</sub>

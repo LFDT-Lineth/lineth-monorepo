@@ -1,0 +1,79 @@
+name: "Reusable: Milestone Check Branch and Compute Tag"
+
+on:
+  workflow_call:
+    inputs:
+      release_tag_suffix:
+        description: 'Custom release tag suffix appended to the milestone tag'
+        required: false
+        type: string
+        default: ''
+    outputs:
+      release_version:
+        description: "Milestone next release semver"
+        value: ${{ jobs.check-branch-and-compute-tag.outputs.release_version }}
+      release_tag:
+        description: "Milestone next release tag (releases/linea/v...)"
+        value: ${{ jobs.check-branch-and-compute-tag.outputs.release_tag }}
+      tag_changed:
+        description: "Whether the milestone tag has changed since the last release"
+        value: ${{ jobs.check-branch-and-compute-tag.outputs.tag_changed }}
+
+jobs:
+  check-branch-and-compute-tag:
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    outputs:
+      release_version: ${{ steps.compute-release-tag.outputs.next_version }}
+      release_tag: ${{ steps.compute-release-tag.outputs.next_tag }}
+      tag_changed: ${{ steps.compute-release-tag.outputs.tag_changed }}
+    steps: #TODO: set exit back to 1
+      - name: Enforce main branch
+        if: github.ref_name != 'main'
+        run: |
+          echo "❌ This workflow can only be run on main (current: ${{ github.ref_name }})"
+          exit 0
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
+          fetch-tags: true
+          submodules: false
+
+      - name: Install git-cliff
+        uses: taiki-e/install-action@5f57d6cb7cd20b14a8a27f522884c4bc8a187458 #(v2.75.19)
+        with:
+          tool: git-cliff
+
+      - name: Compute Linea milestone next release tag
+        id: compute-release-tag
+        uses: ./.github/actions/run-git-cliff-commands
+        with:
+          component-name: linea
+          include-path: |
+            coordinator/**
+            postman/**
+            prover/**
+            transaction-exclusion-api/**
+            tracer/**
+            tracer-constraints/**
+            linea-besu/plugins/linea-sequencer/**
+            linea-besu/besu/**
+            linea-besu/package/**
+            gradle/libs.versions.toml
+          release_tag_suffix: ${{ inputs.release_tag_suffix }}
+
+      - name: Check if the next release tag already existed
+        env:
+          TAG: ${{ steps.compute-release-tag.outputs.next_tag }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TAG}" ]; then
+            echo "No next tag computed; aborting."
+            exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/${TAG}" > /dev/null; then
+            echo "Tag ${TAG} already exists; exit now."
+            exit 1
+          fi

@@ -1,4 +1,4 @@
-name: run-e2e-tests
+name: "Reusable: run-e2e-tests"
 
 permissions:
   contents: read
@@ -35,6 +35,22 @@ on:
         required: false
         type: string
         default: ""
+      coordinator_tag:
+        required: false
+        type: string
+        default: ""
+      postman_tag:
+        required: false
+        type: string
+        default: ""
+      prover_tag:
+        required: false
+        type: string
+        default: ""
+      tx_exclusion_api_tag:
+        required: false
+        type: string
+        default: ""
       e2e-tests-with-ssh:
         description: Run end to end tests with ability to ssh into environment
         required: false
@@ -68,6 +84,10 @@ jobs:
     if: ${{ inputs.has-changes-requiring-e2e-testing == 'true' }}
     env:
       LINEA_BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
+      LINEA_COORDINATOR_TAG: ${{ inputs.coordinator_tag }}
+      LINEA_POSTMAN_TAG: ${{ inputs.postman_tag }}
+      LINEA_PROVER_TAG: ${{ inputs.prover_tag }}
+      LINEA_TRANSACTION_EXCLUSION_API_TAG: ${{ inputs.tx_exclusion_api_tag }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     outputs:
@@ -142,7 +162,8 @@ jobs:
             env_var="LINEA_$(echo "${service}" | tr '[:lower:]-' '[:upper:]_')_TAG"
             if [ -f "$artifact_path" ]; then
               echo "${env_var}=${{ inputs.image_tag }}" >> "$GITHUB_ENV"
-            else
+            elif [ -z "${!env_var:-}" ]; then
+              # Fall back to "develop" only when the job-level env var is unset or empty.
               echo "${env_var}=develop" >> "$GITHUB_ENV"
             fi
           done

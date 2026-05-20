@@ -1,0 +1,84 @@
+name: Reusable Linea-besu-package Push Tag and Changelog and GitHub Release
+
+permissions:
+  actions: read
+  id-token: write
+  contents: write
+  packages: write
+  pull-requests: write
+
+on:
+  workflow_call:
+    inputs:
+      image_tag_suffix:
+        description: 'Custom docker image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDD]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDD]-[commit]'
+        required: false
+        type: string
+        default: ''
+      release_tag_suffix:
+        description: 'Custom release tag suffix, i.e. release tag would be releases/[component]/v[semver]-[suffix]'
+        required: false
+        type: string
+        default: ''
+      without_besu_fleet_plugin:
+        description: 'Type "true" to exclude besu-fleet-plugin in the release'
+        required: false
+        type: string
+        default: ''
+      draft_release:
+        description: 'Draft Release'
+        required: false
+        default: false
+        type: boolean
+      pre_release:
+        description: 'Pre Release'
+        required: false
+        default: false
+        type: boolean
+      upload_changelog:
+        description: "Upload the updated CHANGELOG.md and skip pushing the commit or creating PR"
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      docker_tag:
+        description: "Docker image tag base (without suffix)"
+        value: ${{ jobs.build-linea-besu-docker-image-and-gh-release.outputs.docker_tag }}
+      docker_tag_with_suffix:
+        description: "Docker image tag with suffix (same value as docker_tag if no suffix is given)"
+        value: ${{ jobs.build-linea-besu-docker-image-and-gh-release.outputs.docker_tag_with_suffix }}
+
+jobs:
+  release-linea-besu-push-tag-changelog:
+    uses: ./.github/workflows/reusable-component-release-push-tag-changelog.yml
+    with:
+      # Release tag uses 'linea-besu-package' (e.g. releases/linea-besu-package/v1.2.3)
+      component-name: linea-besu-package
+      folder-name: linea-besu/package
+      include-path: |
+        tracer/**
+        tracer-constraints/**
+        linea-besu/plugins/linea-sequencer/**
+        linea-besu/besu/**
+        linea-besu/package/**
+        gradle/libs.versions.toml
+      release_tag_suffix: ${{ inputs.release_tag_suffix }}
+      upload_changelog: ${{ inputs.upload_changelog }}
+    secrets: inherit
+
+  build-linea-besu-docker-image-and-gh-release:
+    needs: [release-linea-besu-push-tag-changelog]
+    uses: ./.github/workflows/reuse-linea-besu-package-build-test-push.yml
+    with:
+      release_tag_prefix: ${{ needs.release-linea-besu-push-tag-changelog.outputs.release_version }}
+      image_tag_suffix: ${{ inputs.image_tag_suffix }}
+      run_test: false
+      run_e2e_test: false
+      push_image: true
+      draft_release: ${{ inputs.draft_release }}
+      pre_release: ${{ inputs.pre_release }}
+      with_besu_fleet_plugin: ${{ inputs.without_besu_fleet_plugin != 'true' }}
+      changelog: ${{ needs.release-linea-besu-push-tag-changelog.outputs.changelog }}
+      release_tag: ${{ needs.release-linea-besu-push-tag-changelog.outputs.release_tag }}
+      release_version: ${{ needs.release-linea-besu-push-tag-changelog.outputs.release_version}}
+    secrets: inherit

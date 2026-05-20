@@ -34,8 +34,12 @@ outputs:
     value: ${{ steps.metadata.outputs.build_date }}
 
   dockertag:
-    description: docker tag
+    description: docker image tag base (without suffix)
     value: ${{ steps.metadata.outputs.dockertag }}
+
+  dockertag_with_suffix:
+    description: docker image tag with suffix (same value as dockertag if no suffix is given)
+    value: ${{ steps.metadata.outputs.dockertag_with_suffix }}
 
   dockerimage:
     description: docker image

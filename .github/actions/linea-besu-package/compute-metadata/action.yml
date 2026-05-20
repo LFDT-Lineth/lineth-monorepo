@@ -22,8 +22,12 @@ outputs:
     value: ${{ steps.workflowdetails.outputs.build_date }}
 
   dockertag:
-    description: docker tag
+    description: docker image tag base (without suffix)
     value: ${{ steps.dockertag.outputs.dockertag }}
+
+  dockertag_with_suffix:
+    description: docker image tag with suffix (same value as dockertag if no suffix is given)
+    value: ${{ steps.dockertag.outputs.dockertag_with_suffix }}
 
   dockerimage:
     description: docker image
@@ -87,20 +91,14 @@ runs:
         echo "id=${{ github.run_id }}" >> $GITHUB_OUTPUT
         echo "build_date=$(date --rfc-3339=date)" >> $GITHUB_OUTPUT
     
-    - name: Set timestamp
-      id: timestamp
-      shell: bash
-      run: |
-        echo "TIMESTAMP=$(date -u +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
-
-    - name: set docker tag
+    - name: Compute docker tag
       id: dockertag
-      shell: bash
-      run: |
-        base="${{ inputs.release_tag_prefix }}-${{ steps.timestamp.outputs.TIMESTAMP }}-${{ steps.compute_version_tags.outputs.commit_tag }}"
-        suffix="${{ inputs.image_tag_suffix && format('-{0}', inputs.image_tag_suffix) || '' }}"
-        echo "dockertag=${base}${suffix}" >> "$GITHUB_OUTPUT"
-    
+      uses: ./.github/actions/compute-docker-tag
+      with:
+        version_prefix: ${{ inputs.release_tag_prefix }}
+        image_tag_suffix: ${{ inputs.image_tag_suffix }}
+        commit_tag: ${{ steps.compute_version_tags.outputs.commit_tag }}
+  
     - name: set release tag
       id: releasetag
       shell: bash

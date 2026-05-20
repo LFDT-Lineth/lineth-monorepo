@@ -8,14 +8,17 @@ on:
         required: true
         type: string
       image-tag-suffix:
-        description: 'Custom image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDDHHMMSS]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDDHHMMSS]-[commit]'
+        description: 'Custom image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDD]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDD]-[commit]'
         required: false
         type: string
         default: ''
     outputs:
       docker_tag:
-        description: "Docker image tag"
+        description: "Docker image tag base (without suffix)"
         value: ${{ jobs.compute-docker-image-tag.outputs.docker_tag }}
+      docker_tag_with_suffix:
+        description: "Docker image tag with suffix (same value as docker_tag if no suffix is given)"
+        value: ${{ jobs.compute-docker-image-tag.outputs.docker_tag_with_suffix }}
 
 jobs:
   compute-docker-image-tag:
@@ -23,9 +26,10 @@ jobs:
     name: Compute docker image tag
     outputs:
       docker_tag: ${{ steps.dockertag.outputs.dockertag }}
+      docker_tag_with_suffix: ${{ steps.dockertag.outputs.dockertag_with_suffix }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.ref_name }}
           fetch-depth: 2   # need at least 2 commits so HEAD~1 resolves later would not fail on compute-version-tags
@@ -34,13 +38,11 @@ jobs:
         id: compute_version_tags
         uses: ./.github/actions/compute-version-tags
 
-      - name: Set timestamp
-        id: timestamp
-        run: echo "TIMESTAMP=$(date -u +%Y%m%d%H%M%S)" >> "$GITHUB_OUTPUT"
-
-      - name: Set docker tag
+      - name: Compute docker tag
         id: dockertag
-        run: |
-          base="${{ inputs.version-prefix }}-${{ steps.timestamp.outputs.TIMESTAMP }}-${{ steps.compute_version_tags.outputs.commit_tag }}"
-          suffix="${{ inputs.image-tag-suffix && format('-{0}', inputs.image-tag-suffix) || '' }}"
-          echo "dockertag=${base}${suffix}" >> "$GITHUB_OUTPUT"
+        uses: ./.github/actions/compute-docker-tag
+        with:
+          version_prefix: ${{ inputs.version-prefix }}
+          image_tag_suffix: ${{ inputs.image-tag-suffix }}
+          commit_tag: ${{ steps.compute_version_tags.outputs.commit_tag }}
+

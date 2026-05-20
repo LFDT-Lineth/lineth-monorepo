@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag_prefix:
-        description: 'Custom release tag prefix, i.e. docker image tag would be [prefix]-[YYYYMMDDHHMMSS]-[commit], if not given, would be dev-[YYYYMMDDHHMMSS]-[commit]'
+        description: 'Custom release tag prefix, i.e. docker image tag would be [prefix]-[YYYYMMDD]-[commit], if not given, would be dev-[YYYYMMDD]-[commit]'
         required: false
         type: string
         default: ''

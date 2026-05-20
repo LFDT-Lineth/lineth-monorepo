@@ -1,0 +1,286 @@
+name: "Reusable: Linea Milestone Push Tag and CHANGELOG Update"
+
+on:
+  workflow_call:
+    inputs:
+      release_version:
+        description: "Release semver associated with the release tag (e.g. 1.2.3)"
+        required: true
+        type: string
+      release_tag:
+        description: "Release tag (e.g. releases/linea/v1.2.3)"
+        required: true
+        type: string
+      coordinator_release_version:
+        description: "Coordinator release version"
+        required: true
+        type: string
+      postman_release_version:
+        description: "Postman release version"
+        required: true
+        type: string
+      prover_release_version:
+        description: "Prover release version"
+        required: true
+        type: string
+      tx_exclusion_api_release_version:
+        description: "Tx-exclusion-api release version"
+        required: true
+        type: string
+      linea_besu_release_version:
+        description: "Linea-besu-package release version"
+        required: true
+        type: string
+      create_pull_request:
+        description: "Create PR instead of direct commit"
+        required: false
+        type: boolean
+        default: false
+
+    outputs:
+      changelog:
+        description: "Milestone CHANGELOG.md content (milestone header + per-component sections, with heading levels demoted by one)"
+        value: ${{ jobs.update-linea-milestone-changelog.outputs.changelog }}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-linea-milestone-changelog:
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    outputs:
+      changelog: ${{ steps.prepend-milestone-header.outputs.changelog }}
+    env:
+      LINEA_TAG_PATTERN: 'releases/linea/v[0-9]+\.[0-9]+\.[0-9]+$'
+      TMP_CHANGELOG: CHANGELOG.linea-milestone.tmp.md
+    steps:
+      # Mint a short-lived token either for the release bot GitHub App to commit the changelog changes 
+      # directly bypassin the branch-protection or for PR bot GitHub App to create PR with the changelog changes.
+      - name: Generate release or PR bot App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ !inputs.create_pull_request && secrets.RELEASE_BOT_APP_ID || secrets.CREATE_GITHUB_PR_APP_ID }}
+          private-key: ${{ !inputs.create_pull_request && secrets.RELEASE_BOT_PRIVATE_KEY || secrets.CREATE_GITHUB_PR_PRIVATE_KEY }}
+
+      # Look up the App's bot user id so the commit author email follows
+      # GitHub's canonical noreply format and shows up under the App in the UI.
+      - name: Resolve bot user id
+        id: bot-user
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          set -euo pipefail
+          user_id=$(gh api "/users/${APP_SLUG}%5Bbot%5D" --jq .id)
+          echo "user-id=${user_id}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # Use the App token so subsequent `git push` is authenticated as the App.
+          token: ${{ steps.app-token.outputs.token }}
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
+          fetch-tags: true
+          submodules: false
+
+      - name: Configure git identity
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          USER_ID: ${{ steps.bot-user.outputs.user-id }}
+        run: |
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+
+      - name: Install git-cliff
+        uses: taiki-e/install-action@5f57d6cb7cd20b14a8a27f522884c4bc8a187458 #(v2.75.19)
+        with:
+          tool: git-cliff
+
+      # Build the new milestone section in a standalone temp file so we never
+      # touch the existing CHANGELOG.md content during prepend/demote/header.
+      - name: Initialize temp milestone CHANGELOG
+        run: |
+          set -euo pipefail
+          : > "${TMP_CHANGELOG}"
+
+      # Prepend each component's [unreleased] section to the temp file.
+      # `git cliff --prepend` always pushes to the top, so iterate in REVERSE
+      # of the desired final order — final top-to-bottom ends up:
+      #   coordinator, postman, prover, tx-exclusion-api, linea-besu.
+      - name: Prepend per-component [unreleased] changelogs (temp file)
+        env:
+          COORDINATOR_VERSION: ${{ inputs.coordinator_release_version }}
+          POSTMAN_VERSION: ${{ inputs.postman_release_version }}
+          PROVER_VERSION: ${{ inputs.prover_release_version }}
+          TX_EXCLUSION_API_VERSION: ${{ inputs.tx_exclusion_api_release_version }}
+          LINEA_BESU_VERSION: ${{ inputs.linea_besu_release_version }}
+        run: |
+          set -euo pipefail
+
+          # Entries are listed in the user-facing top-to-bottom order; we
+          # iterate them in reverse below so coordinator ends up on top.
+          # Format per entry: <tag>|<version>|<json-array-of-include-paths>
+          components=(
+            "coordinator|${COORDINATOR_VERSION}|[\"coordinator/**\"]"
+            "postman|${POSTMAN_VERSION}|[\"postman/**\"]"
+            "prover|${PROVER_VERSION}|[\"prover/**\"]"
+            "tx-exclusion-api|${TX_EXCLUSION_API_VERSION}|[\"transaction-exclusion-api/**\"]"
+            "linea-besu-package|${LINEA_BESU_VERSION}|[\"tracer/**\",\"tracer-constraints/**\",\"linea-besu/plugins/linea-sequencer/**\",\"linea-besu/besu/**\",\"linea-besu/package/**\",\"gradle/libs.versions.toml\"]"
+          )
+
+          for (( i=${#components[@]}-1; i>=0; i-- )); do
+            entry="${components[i]}"
+            tag="${entry%%|*}"
+            rest="${entry#*|}"
+            version="${rest%%|*}"
+            paths_json="${rest#*|}"
+            mapfile -t paths < <(echo "$paths_json" | jq -r '.[]')
+
+            args=(--unreleased --tag "$tag" --tag-pattern "$LINEA_TAG_PATTERN" --prepend "${TMP_CHANGELOG}")
+            for p in "${paths[@]}"; do
+              args+=(--include-path "$p")
+            done
+
+            echo "→ git cliff ${args[*]}"
+            git cliff "${args[@]}"
+
+            # Replace the date on the just-prepended "# [<tag>] - <date>" line
+            # with a markdown link to the component's GitHub release page.
+            release_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/releases%2F${tag}%2Fv${version}"
+            sed -i.bak -E "0,/^## \[${tag}\] - [0-9]{4}-[0-9]{2}-[0-9]{2}/s|^## \[${tag}\] - [0-9]{4}-[0-9]{2}-[0-9]{2}|## [${tag}] - [v${version}](${release_url})|" "${TMP_CHANGELOG}"
+            rm -f "${TMP_CHANGELOG}.bak"
+          done
+
+      # Demote every Markdown heading by one level (# -> ##, ## -> ###, ...).
+      # Safe to run across the whole temp file because it contains only the
+      # newly generated content.
+      - name: Demote heading levels (temp file)
+        run: |
+          set -euo pipefail
+          sed -i.bak -E 's/^#/##/' "${TMP_CHANGELOG}"
+          rm -f "${TMP_CHANGELOG}.bak"
+
+      # Prepend the milestone version header, e.g. "## [1.1.0] - 2026-05-16".
+      - name: Prepend milestone version header (temp file)
+        id: prepend-milestone-header
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+        run: |
+          set -euo pipefail
+          DATE=$(date -u +%Y-%m-%d)
+          {
+            printf '## [%s] - %s\n\n' "${RELEASE_VERSION}" "${DATE}"
+            cat "${TMP_CHANGELOG}"
+          } > "${TMP_CHANGELOG}.new" && mv "${TMP_CHANGELOG}.new" "${TMP_CHANGELOG}"
+
+          # Expose the finalized temp CHANGELOG content as a step output so
+          # downstream steps/jobs (or callers, via job/workflow outputs) can
+          # consume it without re-reading the file.
+          {
+            echo 'changelog<<__CHANGELOG_EOF__'
+            cat "${TMP_CHANGELOG}"
+            echo '__CHANGELOG_EOF__'
+          } >> "$GITHUB_OUTPUT"
+
+      # Now the only edit to the real ./CHANGELOG.md: strip the existing
+      # [unreleased] block, then concatenate the temp file on top.
+      - name: Drop [unreleased] and prepend milestone block to ./CHANGELOG.md
+        run: |
+          set -euo pipefail
+          if [ ! -f CHANGELOG.md ]; then
+            echo "./CHANGELOG.md not found; creating empty baseline."
+            : > CHANGELOG.md
+          fi
+          awk '
+            /^## \[unreleased\]/ { skip=1; next }
+            /^## \[/ && skip       { skip=0 }
+            !skip                  { print }
+          ' CHANGELOG.md > CHANGELOG.md.stripped
+
+          cat "${TMP_CHANGELOG}" CHANGELOG.md.stripped > CHANGELOG.md
+          rm -f CHANGELOG.md.stripped "${TMP_CHANGELOG}"
+
+      - name: Show updated CHANGELOG.md (head)
+        run: head -n 80 CHANGELOG.md || true
+
+      - name: Download CHANGELOG.md artifact and distribute to component folders
+        uses: ./.github/actions/download-and-update-changelog
+        with:
+          artifact_prefix: prepended-changelog-
+
+      - name: Commit and push all CHANGELOG.md
+        if: ${{ !inputs.create_pull_request }}
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "No CHANGELOG.md changes to commit."
+            exit 0
+          fi
+          git add 'CHANGELOG.md' '**/CHANGELOG.md'
+          git commit -m "chore(misc): update CHANGELOG.md for milestone v${{ env.RELEASE_VERSION }} [skip ci]"
+
+          # Rebase on top of any commits that landed on the branch between
+          # checkout and now (e.g. a concurrent component-changelog-update push),
+          # then push. Retry a few times in case of repeated races.
+          for attempt in 1 2 3; do
+            git fetch origin "${GITHUB_REF_NAME}"
+            if ! git rebase "origin/${GITHUB_REF_NAME}"; then
+              git rebase --abort
+              echo "Rebase conflict on attempt ${attempt}; aborting."
+              exit 1
+            fi
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              exit 0
+            fi
+            echo "Push rejected on attempt ${attempt}; refetching and retrying..."
+          done
+          echo "Failed to push CHANGELOG.md changes after 3 attempts." >&2
+          exit 1
+
+      - name: Create pull request
+        if: ${{ inputs.create_pull_request }}
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          commit-message: "chore(misc): update CHANGELOG.md for milestone v${{ env.RELEASE_VERSION }} [skip ci]"
+          branch: ci/chore-linea-milestone-changelog-v${{ env.RELEASE_VERSION }}
+          base: ${{ github.head_ref || github.ref_name }}
+          title: "chore(misc): update CHANGELOG.md for milestone v${{ env.RELEASE_VERSION }}"
+          body: |
+            Auto-generated milestone CHANGELOG update for `releases/linea/v${{ env.RELEASE_VERSION }}`.
+
+            - Built a milestone block in a temp file:
+              - Prepended `[unreleased]` for: coordinator, postman, prover, tx-exclusion-api, linea-besu
+              - Demoted heading levels by one
+              - Added top-level `## [${{ env.RELEASE_VERSION }}]` header
+            - Stripped the previous `[unreleased]` section from `CHANGELOG.md`
+            - Concatenated the milestone block on top
+            - In addition, also updated CHANGLOG.md for each newly released component for this milestone release
+          add-paths: |
+            CHANGELOG.md
+            **/CHANGELOG.md
+      
+      - name: Create and push Linea milestone release tag
+        env:
+          COMPONENT: "Linea Milestone"
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TAG}" ]; then
+            echo "No tag computed; aborting."
+            exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/${TAG}" > /dev/null; then
+            echo "Tag ${TAG} already exists; exit now."
+            exit 0
+          fi
+          git tag -a "${TAG}" -m "${COMPONENT^} release ${TAG}"
+          git push origin "${TAG}"
+          echo "Pushed ${TAG} pointing at $(git rev-parse HEAD)"

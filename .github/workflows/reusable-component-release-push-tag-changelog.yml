@@ -12,57 +12,62 @@ on:
         required: true
         type: string
       include-path:
-        description: "git-cliff --include-path filter, either single path (e.g. '\"coordinator/**\"') or JSON array string (e.g. '[\"tracer/**\",\"linea-besu/**\"]')"
+        description: 'newline-separated string to represent the "git-cliff --include-path filter"'
         required: true
         type: string
-      cliff-config:
-        description: "Path to the cliff.toml config file"
+      release_tag_suffix:
+        description: "Custom tag release tag suffix, i.e. releases/[component]/v[semver]-[suffix]"
         required: false
         type: string
-        default: "cliff.toml"
-      runner:
-        description: "Runner label"
+        default: ''
+      upload_changelog:
+        description: "Upload the updated CHANGELOG.md and skip pushing the commit or creating PR"
         required: false
-        type: string
-        default: "gha-runner-scale-set-ubuntu-24-amd64-med"
-    secrets:
-      RELEASE_BOT_APP_ID:
-        description: "APP ID for the release bot GitHub App"
-        required: true
-      RELEASE_BOT_PRIVATE_KEY:
-        description: "PEM-encoded private key for the release bot GitHub App"
-        required: true
+        type: boolean
+        default: false
+      create_pull_request:
+        description: "Create PR instead of direct commit"
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      release_tag:
+        description: "Full release tag (e.g. releases/coordinator/v0.2.0)"
+        value: ${{ jobs.release-component.outputs.release_tag }}
+      release_version:
+        description: "Bare semver (e.g. 0.2.0)"
+        value: ${{ jobs.release-component.outputs.release_version }}
+      changelog:
+        description: "Latest changelog section content"
+        value: ${{ jobs.release-component.outputs.changelog }}
 
 jobs:
   release-component:
-    runs-on: ${{ inputs.runner }}
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
     permissions:
       contents: write
+      pull-requests: write
     name: Release ${{ inputs.component-name }} (push changelog + tag)
+    outputs:
+      release_tag: ${{ steps.prepend-changelog.outputs.next_tag }}
+      release_version: ${{ steps.prepend-changelog.outputs.next_version }}
+      changelog: ${{ steps.prepend-changelog.outputs.changelog_content }}
     steps:
-      # Mint a short-lived token for the release bot GitHub App.
-      # The App has `contents: write` permission and was added to the branch-protection
-      # bypass list for `main`.
-      - name: Generate release bot App token
+      # Mint a short-lived token either for the release bot GitHub App to commit the changelog changes 
+      # directly bypassin the branch-protection or for PR bot GitHub App to create PR with the changelog changes.
+      - name: Generate release or PR bot App token
         id: app-token
+        if: ${{ !inputs.upload_changelog }}
         uses: actions/create-github-app-token@v2
         with:
-          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
-          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
-
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          # Use the App token so subsequent `git push` is authenticated as the App.
-          token: ${{ steps.app-token.outputs.token }}
-          fetch-depth: 0
-          fetch-tags: true
-          submodules: false
+          app-id: ${{ !inputs.create_pull_request && secrets.RELEASE_BOT_APP_ID || secrets.CREATE_GITHUB_PR_APP_ID }}
+          private-key: ${{ !inputs.create_pull_request && secrets.RELEASE_BOT_PRIVATE_KEY || secrets.CREATE_GITHUB_PR_PRIVATE_KEY }}
 
       # Look up the App's bot user id so the commit author email follows
       # GitHub's canonical noreply format and shows up under the App in the UI.
       - name: Resolve bot user id
         id: bot-user
+        if: ${{ !inputs.upload_changelog }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
@@ -71,13 +76,30 @@ jobs:
           user_id=$(gh api "/users/${APP_SLUG}%5Bbot%5D" --jq .id)
           echo "user-id=${user_id}" >> "$GITHUB_OUTPUT"
 
-      - name: Configure git identity
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # Use the App token so subsequent `git push` is authenticated as the App.
+          token: ${{ (!inputs.upload_changelog && steps.app-token.outputs.token) ||  github.token }}
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
+          fetch-tags: true
+          submodules: false
+
+      - name: Configure git identity for app bot
+        if: ${{ !inputs.upload_changelog }}
         env:
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
           USER_ID: ${{ steps.bot-user.outputs.user-id }}
         run: |
-          git config user.name  "${APP_SLUG}[bot]"
+          git config user.name "${APP_SLUG}[bot]"
           git config user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+
+      - name: Configure git identity for push tag use
+        if: ${{ inputs.upload_changelog }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Install git-cliff
         uses: taiki-e/install-action@5f57d6cb7cd20b14a8a27f522884c4bc8a187458 #(v2.75.19)
@@ -92,10 +114,12 @@ jobs:
           component-name: ${{ inputs.component-name }}
           folder-name: ${{ inputs.folder-name }}
           include-path: ${{ inputs.include-path }}
+          release_tag_suffix: ${{ inputs.release_tag_suffix }}
           prepend-changelog: 'true'
           generate-changelog-with-next-tag-version: 'true'
 
       - name: Commit and push ${{ inputs.component-name }}/CHANGELOG.md
+        if: ${{ !inputs.upload_changelog && !inputs.create_pull_request }}
         env:
           COMPONENT: ${{ inputs.component-name }}
           FOLDER_NAME: ${{ inputs.folder-name }}
@@ -126,6 +150,25 @@ jobs:
           done
           echo "Failed to push ${FOLDER_NAME}/CHANGELOG.md after 3 attempts." >&2
           exit 1
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0
+        if: ${{ !inputs.upload_changelog && inputs.create_pull_request }}
+        id: create-pull-request
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          commit-message: "chore(${{ inputs.component-name }}): update CHANGELOG.md for ${{ steps.prepend-changelog.outputs.next_tag }} release [skip ci]"
+          branch: ci/chore-${{ inputs.component-name }}-changelog-update-release-v${{ steps.prepend-changelog.outputs.next_version }}
+          base: ${{ github.head_ref || github.ref_name }}
+          title: "chore(${{ inputs.component-name }}): update CHANGELOG.md for ${{ steps.prepend-changelog.outputs.next_tag }} release [skip ci]"
+          add-paths: ${{ inputs.folder-name }}/CHANGELOG.md
+
+      - name: Upload CHANGELOG.md artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ inputs.upload_changelog }}
+        with:
+          name: prepended-changelog-${{ inputs.component-name }}
+          path: ${{ inputs.folder-name }}/CHANGELOG.md
 
       - name: Create and push ${{ inputs.component-name }} release tag
         env:

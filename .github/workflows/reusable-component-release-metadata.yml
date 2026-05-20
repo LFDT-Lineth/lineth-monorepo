@@ -8,14 +8,13 @@ on:
         required: true
         type: string
       include-path:
-        description: "git-cliff --include-path filter, either single path (e.g. '\"coordinator/**\"') or JSON array string (e.g. '[\"tracer/**\",\"linea-besu/**\"]')"
-        required: true
+        description: 'newline-separated string to represent the "git-cliff --include-path filter"'
         type: string
-      cliff-config:
-        description: "Path to the cliff.toml config file"
+      release_tag_suffix:
+        description: "Custom release tag suffix, i.e. release tag would be releases/[component]/v[semver]-[suffix]"
         required: false
         type: string
-        default: "cliff.toml"
+        default: ''
     outputs:
       release_tag:
         description: "Full release tag (e.g. releases/coordinator/v0.2.0)"
@@ -41,7 +40,7 @@ jobs:
       changelog: ${{ steps.changelog.outputs.changelog_content }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -58,4 +57,5 @@ jobs:
         with:
           component-name: ${{ inputs.component-name }}
           include-path: ${{ inputs.include-path }}
+          release_tag_suffix: ${{ inputs.release_tag_suffix }}
           generate-changelog-with-next-tag-version: 'true'

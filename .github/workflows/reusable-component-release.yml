@@ -4,6 +4,7 @@ permissions:
   actions: read
   contents: write
   packages: write
+  pull-requests: write
 
 on:
   workflow_call:
@@ -17,11 +18,16 @@ on:
         required: true
         type: string
       include-path:
-        description: "git-cliff --include-path filter, either single path (e.g. '\"coordinator/**\"') or JSON array string (e.g. '[\"tracer/**\",\"linea-besu/**\"]')"
+        description: 'newline-separated string to represent the "git-cliff --include-path filter"'
         required: true
         type: string
       image_tag_suffix:
-        description: 'Custom image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDDHHMMSS]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDDHHMMSS]-[commit]'
+        description: 'Custom docker image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDD]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDD]-[commit]'
+        required: false
+        type: string
+        default: ''
+      release_tag_suffix:
+        description: 'Custom release tag suffix, i.e. release tag would be releases/[component]/v[semver]-[suffix]'
         required: false
         type: string
         default: ''
@@ -35,13 +41,37 @@ on:
         required: false
         default: false
         type: boolean
+    outputs:
+      tag_changed:
+        description: "Indicate whether the release tag of the component has changed"
+        value: ${{ jobs.compute-release-metadata.outputs.tag_changed }}
+      docker_tag:
+        description: "Docker image tag associated with the release tag, empty if tag_changed is false"
+        value: ${{ jobs.compute-docker-tag.outputs.docker_tag }}
+      release_version:
+        description: "Release semver associated with the release tag (e.g. 1.2.3), empty if tag_changed is false"
+        value: ${{ jobs.compute-release-metadata.outputs.release_version }}
+      release_tag:
+        description: "Release tag (e.g. releases/coordinator/v1.2.3), empty if tag_changed is false"
+        value: ${{ jobs.compute-release-metadata.outputs.release_tag }}
 
 jobs:
+  check-branch-and-release-tag-suffix:
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    steps:
+      - name: Enforce non-main branch must have custom release tag suffix
+        if: github.ref_name != 'main' && inputs.release_tag_suffix == ''
+        run: |
+          echo "❌ Non-main branch must have non-empty custom tag suffix"
+          exit 1
+
   compute-release-metadata:
+    needs: [check-branch-and-release-tag-suffix]
     uses: ./.github/workflows/reusable-component-release-metadata.yml
     with:
       component-name: ${{ inputs.component-name }}
       include-path: ${{ inputs.include-path }}
+      release_tag_suffix: ${{ inputs.release_tag_suffix }}
 
   build-local-coordinator:
     needs: [compute-release-metadata]
@@ -104,128 +134,16 @@ jobs:
       has-changes-requiring-e2e-testing: "true"
     secrets: inherit
 
-  release-push-tag-changelog:
+  push-tag-update-changelog-and-gh-release:
     needs: [run-e2e-tests]
-    if: always() && needs.run-e2e-tests.result == 'success'
-    uses: ./.github/workflows/reusable-component-release-push-tag-changelog.yml
+    if: always() && !cancelled() && needs.run-e2e-tests.result == 'success'
+    uses: ./.github/workflows/reusable-component-gh-release.yml
     with:
       component-name: ${{ inputs.component-name }}
       folder-name: ${{ inputs.folder-name }}
       include-path: ${{ inputs.include-path }}
+      image_tag_suffix: ${{ inputs.image_tag_suffix }}
+      release_tag_suffix: ${{ inputs.release_tag_suffix }}
+      draft_release: ${{ inputs.draft_release }}
+      pre_release: ${{ inputs.pre_release }}
     secrets: inherit
-
-  compute-docker-tag:
-    needs: [compute-release-metadata, release-push-tag-changelog]
-    if: always() && !cancelled() && needs.release-push-tag-changelog.result == 'success'
-    uses: ./.github/workflows/reusable-component-docker-tag.yml
-    with:
-      version-prefix: ${{ needs.compute-release-metadata.outputs.release_version }}
-      image-tag-suffix: ${{ inputs.image_tag_suffix }}
-
-  build-and-publish-image-coordinator:
-    needs: [compute-docker-tag]
-    if: |
-      always() && !cancelled() &&
-      needs.compute-docker-tag.result == 'success' &&
-      inputs.component-name == 'coordinator'
-    uses: ./.github/workflows/coordinator-build-and-publish.yml
-    with:
-      image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
-      develop_tag: develop
-      image_name: consensys/linea-coordinator
-      push_image: true
-    secrets: inherit
-
-  build-and-publish-image-postman:
-    needs: [compute-docker-tag]
-    if: |
-      always() && !cancelled() &&
-      needs.compute-docker-tag.result == 'success' &&
-      inputs.component-name == 'postman'
-    uses: ./.github/workflows/postman-build-and-publish.yml
-    with:
-      image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
-      develop_tag: develop
-      image_name: consensys/linea-postman
-      push_image: true
-    secrets: inherit
-
-  build-and-publish-image-prover:
-    needs: [compute-docker-tag]
-    if: |
-      always() && !cancelled() &&
-      needs.compute-docker-tag.result == 'success' &&
-      inputs.component-name == 'prover'
-    uses: ./.github/workflows/prover-build-and-publish.yml
-    with:
-      image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
-      develop_tag: develop
-      image_name: consensys/linea-prover
-      push_image: true
-    secrets: inherit
-
-  build-and-publish-image-tx-exclusion-api:
-    needs: [compute-docker-tag]
-    if: |
-      always() && !cancelled() &&
-      needs.compute-docker-tag.result == 'success' &&
-      inputs.component-name == 'tx-exclusion-api'
-    uses: ./.github/workflows/transaction-exclusion-api-build-and-publish.yml
-    with:
-      image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
-      develop_tag: develop
-      image_name: consensys/linea-transaction-exclusion-api
-      push_image: true
-    secrets: inherit
-
-  gh-release:
-    needs: [compute-release-metadata, compute-docker-tag, build-and-publish-image-coordinator, build-and-publish-image-postman, build-and-publish-image-prover, build-and-publish-image-tx-exclusion-api]
-    if: >
-      always() && !cancelled() &&
-      needs.compute-release-metadata.outputs.tag_changed == 'true' &&
-      needs.compute-docker-tag.result == 'success' &&
-      (needs.build-and-publish-image-coordinator.result   == 'success' ||
-       needs.build-and-publish-image-postman.result       == 'success' ||
-       needs.build-and-publish-image-prover.result        == 'success' ||
-       needs.build-and-publish-image-tx-exclusion-api.result == 'success')
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Append Changelog Action to release note
-        id: append_change_log
-        shell: bash
-        env:
-          # Pass via env to avoid shell injection: changelog content is derived
-          # from commit messages (via git-cliff) and may contain backticks, $(...), etc.
-          CHANGELOG: ${{ needs.compute-release-metadata.outputs.changelog }}
-          DOCKER_TAG: ${{ needs.compute-docker-tag.outputs.docker_tag }}
-          DOCKER_IMAGE_SUFFIX: ${{ inputs.folder-name }}
-        run: |
-          mkdir release && cd release
-          printf '%s\n' "$CHANGELOG" >> output.md
-          echo "### Docker Image Details" >> output.md
-          echo "" >> output.md
-          echo "To pull the image, use the following command:" >> output.md
-          echo "\`\`\`" >> output.md
-          printf 'docker pull consensys/linea-%s:%s\n' "$DOCKER_IMAGE_SUFFIX" "$DOCKER_TAG" >> output.md
-          echo "\`\`\`" >> output.md
-
-      - name: Set capitalized component name
-        env:
-          COMPONENT_NAME: ${{ inputs.component-name }}
-        run: |
-          echo "COMPONENT_CAP=${COMPONENT_NAME^}" >> $GITHUB_ENV
-
-      - name: gh-release
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b #v2.5.0
-        with:
-          name: ${{ env.COMPONENT_CAP }} v${{ needs.compute-release-metadata.outputs.release_version }}
-          tag_name: ${{ needs.compute-release-metadata.outputs.release_tag }}
-          body_path: release/output.md
-          draft: ${{ inputs.draft_release }}
-          prerelease: ${{ inputs.pre_release }}
-          generate_release_notes: false
-          target_commitish: ${{ github.sha }}
-          fail_on_unmatched_files: true

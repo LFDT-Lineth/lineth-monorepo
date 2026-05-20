@@ -17,7 +17,7 @@ jobs:
     name: Lint PR commit messages
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           # Need both PR head and base so we can list commits in the PR.
           fetch-depth: 0
@@ -71,6 +71,6 @@ jobs:
 
           if [ "${failed}" -gt 0 ]; then
             echo "✗ ${failed} commit message(s) failed validation." >&2
-            exit 0 # TODO: This will be set to 1 by later PR after merging into main
+            exit 0 # TODO: This will be set to 1
           fi
           echo "✓ All commit messages OK."
