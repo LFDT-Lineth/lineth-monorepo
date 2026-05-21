@@ -69,7 +69,7 @@ func (p *Params) sisTransversalHash(v [][]field.Element) ([]field.Octuplet, []fi
 				startChunk := chunkID * chunkSize
 				hasher.Reset()
 				hasher.WriteElements(sisHashes[startChunk : startChunk+chunkSize]...)
-				leaves[chunkID] = hasher.SumElement()
+				leaves[chunkID] = hasher.SumDigest()
 			}
 		})
 		return leaves, sisHashes
@@ -91,7 +91,7 @@ func (p *Params) sisTransversalHash(v [][]field.Element) ([]field.Octuplet, []fi
 		startChunk := i * chunkSize
 		hasher.Reset()
 		hasher.WriteElements(sisHashes[startChunk : startChunk+chunkSize]...)
-		leaves[i] = hasher.SumElement()
+		leaves[i] = hasher.SumDigest()
 	}
 
 	return leaves, sisHashes
@@ -146,7 +146,7 @@ func (p *Params) noSisTransversalHash(v [][]field.Element) []field.Octuplet {
 				curCol[j] = v[j][i]
 			}
 			h.WriteElements(curCol...)
-			res[i] = h.SumElement()
+			res[i] = h.SumDigest()
 			h.Reset()
 		}
 	})

@@ -86,7 +86,7 @@ func (d *MDHasher) GetStateOctuplet() field.Octuplet {
 	oldBuffer := slices.Clone(d.buffer)
 	oldBufferPosition := d.bufferPosition
 
-	_ = d.SumElement() // this flushes the hasher
+	_ = d.SumDigest() // this flushes the hasher
 	res := slices.Clone(d.state[:])
 
 	d.state = oldState
@@ -101,8 +101,8 @@ func (d *MDHasher) WriteElements(elmts ...field.Element) {
 	d.buffer = append(d.buffer, elmts[:]...)
 }
 
-// SumElement finalizes the hash and returns the digest as an octuplet.
-func (d *MDHasher) SumElement() field.Octuplet {
+// SumDigest finalizes the hash and returns the digest as an octuplet.
+func (d *MDHasher) SumDigest() field.Octuplet {
 	for len(d.buffer) != 0 {
 		var buf [BlockSize]field.Element
 
@@ -154,7 +154,7 @@ func (d *MDHasher) Sum(msg []byte) []byte {
 	if _, err := d.Write(msg); err != nil {
 		panic(err)
 	}
-	h := d.SumElement()
+	h := d.SumDigest()
 	h32 := field.OctupletToBytes(h)
 	return h32[:]
 }
@@ -163,5 +163,5 @@ func (d *MDHasher) Sum(msg []byte) []byte {
 func HashVec(v ...field.Element) (h field.Octuplet) {
 	state := NewMDHasher()
 	state.WriteElements(v...)
-	return state.SumElement()
+	return state.SumDigest()
 }

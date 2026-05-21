@@ -24,11 +24,11 @@ func TestDeterminism(t *testing.T) {
 
 	h1 := NewMDHasher()
 	h1.WriteElements(vals...)
-	r1 := h1.SumElement()
+	r1 := h1.SumDigest()
 
 	h2 := NewMDHasher()
 	h2.WriteElements(vals...)
-	r2 := h2.SumElement()
+	r2 := h2.SumDigest()
 
 	require.Equal(t, r1, r2)
 }
@@ -39,36 +39,36 @@ func TestIncrementalWrites(t *testing.T) {
 
 	h1 := NewMDHasher()
 	h1.WriteElements(vals...)
-	r1 := h1.SumElement()
+	r1 := h1.SumDigest()
 
 	h2 := NewMDHasher()
 	h2.WriteElements(vals[:5]...)
 	h2.WriteElements(vals[5:9]...)
 	h2.WriteElements(vals[9:]...)
-	r2 := h2.SumElement()
+	r2 := h2.SumDigest()
 
 	require.Equal(t, r1, r2)
 }
 
-// TestResetAfterSum checks that Reset() after SumElement() allows re-hashing cleanly.
+// TestResetAfterSum checks that Reset() after SumDigest() allows re-hashing cleanly.
 func TestResetAfterSum(t *testing.T) {
 	vals := randomElems(t, 7)
 
 	h := NewMDHasher()
 	h.WriteElements(vals...)
-	_ = h.SumElement()
+	_ = h.SumDigest()
 	h.Reset()
 	h.WriteElements(vals...)
-	r1 := h.SumElement()
+	r1 := h.SumDigest()
 
 	h2 := NewMDHasher()
 	h2.WriteElements(vals...)
-	r2 := h2.SumElement()
+	r2 := h2.SumDigest()
 
 	require.Equal(t, r1, r2)
 }
 
-// TestResetWithoutPriorSum checks that Reset() clears the buffer even when SumElement was not called first.
+// TestResetWithoutPriorSum checks that Reset() clears the buffer even when SumDigest was not called first.
 // This exercises a latent bug: Reset() resets state but not buffer.
 func TestResetWithoutPriorSum(t *testing.T) {
 	vals := randomElems(t, 7)
@@ -78,23 +78,23 @@ func TestResetWithoutPriorSum(t *testing.T) {
 	h.WriteElements(vals...)
 	h.Reset() // must discard vals from the buffer
 	h.WriteElements(extra...)
-	r1 := h.SumElement()
+	r1 := h.SumDigest()
 
 	h2 := NewMDHasher()
 	h2.WriteElements(extra...)
-	r2 := h2.SumElement()
+	r2 := h2.SumDigest()
 
-	require.Equal(t, r1, r2, "Reset() must clear the buffer even when SumElement was not called first")
+	require.Equal(t, r1, r2, "Reset() must clear the buffer even when SumDigest was not called first")
 }
 
-// TestSumElementIdempotent checks that calling SumElement again on an already-flushed hasher is a no-op.
-func TestSumElementIdempotent(t *testing.T) {
+// TestSumDigestIdempotent checks that calling SumDigest again on an already-flushed hasher is a no-op.
+func TestSumDigestIdempotent(t *testing.T) {
 	vals := randomElems(t, 9)
 
 	h := NewMDHasher()
 	h.WriteElements(vals...)
-	r1 := h.SumElement()
-	r2 := h.SumElement()
+	r1 := h.SumDigest()
+	r2 := h.SumDigest()
 
 	require.Equal(t, r1, r2)
 }
@@ -107,11 +107,11 @@ func TestGetStateOctupletNonDestructive(t *testing.T) {
 	h1.WriteElements(vals[:3]...)
 	_ = h1.GetStateOctuplet() // must not consume the buffer
 	h1.WriteElements(vals[3:]...)
-	r1 := h1.SumElement()
+	r1 := h1.SumDigest()
 
 	h2 := NewMDHasher()
 	h2.WriteElements(vals...)
-	r2 := h2.SumElement()
+	r2 := h2.SumDigest()
 
 	require.Equal(t, r1, r2, "GetStateOctuplet must not consume the buffer")
 }
@@ -124,18 +124,18 @@ func TestLeftPadding(t *testing.T) {
 	// [a] must hash identically to [0, 0, 0, 0, 0, 0, 0, a]
 	h1 := NewMDHasher()
 	h1.WriteElements(a)
-	r1 := h1.SumElement()
+	r1 := h1.SumDigest()
 
 	h2 := NewMDHasher()
 	h2.WriteElements(zero, zero, zero, zero, zero, zero, zero, a)
-	r2 := h2.SumElement()
+	r2 := h2.SumDigest()
 
 	require.Equal(t, r1, r2, "single element must be placed at the end of the block (left-padding)")
 
 	// Must differ from right-padding: [a, 0, 0, 0, 0, 0, 0, 0]
 	h3 := NewMDHasher()
 	h3.WriteElements(a, zero, zero, zero, zero, zero, zero, zero)
-	r3 := h3.SumElement()
+	r3 := h3.SumDigest()
 
 	require.NotEqual(t, r1, r3, "left-padded hash must differ from right-padded hash")
 }
@@ -148,11 +148,11 @@ func TestBlockBoundaries(t *testing.T) {
 
 			h1 := NewMDHasher()
 			h1.WriteElements(vals...)
-			r1 := h1.SumElement()
+			r1 := h1.SumDigest()
 
 			h2 := NewMDHasher()
 			h2.WriteElements(vals...)
-			r2 := h2.SumElement()
+			r2 := h2.SumDigest()
 
 			require.Equal(t, r1, r2)
 		})
@@ -172,11 +172,11 @@ func TestWriteWriteElementsConsistency(t *testing.T) {
 	h1 := NewMDHasher()
 	_, err := h1.Write(buf)
 	require.NoError(t, err)
-	r1 := h1.SumElement()
+	r1 := h1.SumDigest()
 
 	h2 := NewMDHasher()
 	h2.WriteElements(vals...)
-	r2 := h2.SumElement()
+	r2 := h2.SumDigest()
 
 	require.Equal(t, r1, r2, "Write(canonical bytes) and WriteElements must produce the same hash")
 }
@@ -189,7 +189,7 @@ func TestHashVecMatchesMDHasher(t *testing.T) {
 
 	h := NewMDHasher()
 	h.WriteElements(vals...)
-	r2 := h.SumElement()
+	r2 := h.SumDigest()
 
 	require.Equal(t, r1, r2)
 }
@@ -212,11 +212,11 @@ func TestOrderSensitivity(t *testing.T) {
 
 	h1 := NewMDHasher()
 	h1.WriteElements(a, b)
-	r1 := h1.SumElement()
+	r1 := h1.SumDigest()
 
 	h2 := NewMDHasher()
 	h2.WriteElements(b, a)
-	r2 := h2.SumElement()
+	r2 := h2.SumDigest()
 
 	require.NotEqual(t, r1, r2, "permuting inputs must change the hash")
 }

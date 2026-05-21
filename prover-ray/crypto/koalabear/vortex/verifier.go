@@ -41,12 +41,12 @@ func CheckColumnInclusion(sis *ringsis.Key, columns [][][]field.Element,
 				}
 				h.Reset()
 				h.WriteElements(sisHash...)
-				leaf = h.SumElement()
+				leaf = h.SumDigest()
 			} else {
 				// compute leaf = poseidon2_bls12377(columns[i][j]))
 				h.Reset()
 				h.WriteElements(columns[i][j]...)
-				leaf = h.SumElement()
+				leaf = h.SumDigest()
 			}
 
 			// check merkle proof

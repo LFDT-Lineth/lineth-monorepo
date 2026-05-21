@@ -123,7 +123,7 @@ func referenceNoSisTransversalHash(v [][]field.Element) []field.Octuplet {
 			curCol[row] = v[row][col]
 		}
 		h.WriteElements(curCol...)
-		res[col] = h.SumElement()
+		res[col] = h.SumDigest()
 		h.Reset()
 	}
 	return res

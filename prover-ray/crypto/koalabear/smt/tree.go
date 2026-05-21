@@ -414,6 +414,6 @@ func hashLR(hasher *poseidon2.MDHasher, nodeL, nodeR field.Octuplet) field.Octup
 	var d field.Octuplet
 	hasher.WriteElements(nodeL[:]...)
 	hasher.WriteElements(nodeR[:]...)
-	d = hasher.SumElement()
+	d = hasher.SumDigest()
 	return d
 }
