@@ -89,7 +89,7 @@ Useful shell function (add to `~/.zshrc` or `~/.bashrc`):
 riscv-test() {
     local makefile="path/to/linea-monorepo/arithmetization/src/test/examples/Makefile"
     case "$1" in
-        clean-all|linker-script|blake-all|build-act4|run-act4|install-zkc)
+        clean-all|linker-script|blake-rust-exec|build-act4|run-act4|install-zkc)
             # targets that do NOT require TEST argument
             make -f "$makefile" "$1" "${@:2}"
             ;;
@@ -122,8 +122,8 @@ riscv-test compile <name>.<ext>
 riscv-test clean <name>.<ext>
 # Clean all build artifacts
 riscv-test clean-all
-# Run all converted Blake test vectors
-riscv-test blake-all
+# Run 10 blake test vectors
+riscv-test blake-rust-exec
 # Build ACT4 ELFs
 riscv-test build-act4
 # Run ACT4 ELFs through zkc
@@ -155,7 +155,7 @@ riscv-test compile <name>.<ext> VERIFY_ELF=true
 | `make clean-all`                 | Remove all build artifacts                                                             |
 | `make linker-script`             | Generate the linker script with the memory layout                                      |
 | `make verify-elf TEST=foo.<ext>` | Verify ELF offsets, entry point and sp match the ones in the Makefile                  |
-| `make blake-all`                 | Run all blake test vectors in `rust/src/blake/blake.all`                               |
+| `make blake-rust-exec`           | Run 10 blake test vectors from `rust/src/blake/blake10.all`                            |
 | `make build-act4`                | Build ACT4 ELFs with the Linea ACT4 config                                             |
 | `make run-act4`                  | Build and run ACT4 ELFs through zkc and write results/logs under `act4/bin/`           |
 
@@ -249,3 +249,4 @@ zkc exec act4/bin/logs/<test-name>.json ../../main/riscv/main.zkc
     ↓  input grows up (up to 1 GiB)
 0x48800000  ──  input ends at most
 ```
+

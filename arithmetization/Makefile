@@ -11,7 +11,7 @@ REPO_ROOT := $(abspath $(MAKEFILE_DIR)/..)
 GO_CORSET ?= $(REPO_ROOT)/go-corset
 GO_CORSET_REPO ?= https://github.com/consensys/go-corset.git
 # Optional: pin a commit or branch (e.g. 763f30878e5fc260f0d88863c9883c904f8fc056). Leave empty for default branch.
-GO_CORSET_REF_FOR_ZKC ?=
+GO_CORSET_REF_FOR_ZKC ?=414e7b73971eaa77afcb6a4797b44d0fdf8c99db
 
 # Used to install go-corset
 GO_CORSET_VERSION ?= v1.2.17
@@ -45,6 +45,7 @@ checkout-go-corset:
 # Install the zkc CLI from the go-corset repository.
 # - When GO_CORSET_REF_FOR_ZKC is set: always checkout the pinned ref and reinstall.
 # - When GO_CORSET_REF_FOR_ZKC is empty: skip if zkc is already on PATH.
+# To update zkc version with latest, make install-zkc GO_CORSET_REF_FOR_ZKC=main
 install-zkc:
 	@set -eu; \
 	if [ -z "$(GO_CORSET_REF_FOR_ZKC)" ] && command -v zkc >/dev/null 2>&1; then \
