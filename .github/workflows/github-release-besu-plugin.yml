@@ -23,12 +23,16 @@ on:
     inputs:
       pluginName:
         required: true
-        type: string
-        description: 'plugin name used for the tag name, e.g linea-staterecovery'
+        type: choice
+        description: 'plugin name used for the tag name'
+        options:
+          - linea-staterecovery
       workspaceModulePath:
         required: true
-        type: string
-        description: 'Path to plugin to release, e.g state-recovery/besu-plugin'
+        type: choice
+        description: 'Path to plugin to release'
+        options:
+          - state-recovery/besu-plugin
       version:
         required: true
         type: string
@@ -38,6 +42,25 @@ jobs:
   release:
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
     steps:
+      - name: Validate inputs
+        env:
+          INPUT_PLUGIN_NAME: ${{ inputs.pluginName }}
+          INPUT_WORKSPACE_MODULE_PATH: ${{ inputs.workspaceModulePath }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if ! [[ "$INPUT_PLUGIN_NAME" =~ ^[a-z][a-z0-9-]+$ ]]; then
+            echo "Error: pluginName must contain only lowercase letters, digits, and hyphens, got: '$INPUT_PLUGIN_NAME'" >&2
+            exit 1
+          fi
+          if ! [[ "$INPUT_WORKSPACE_MODULE_PATH" =~ ^[a-z0-9][a-z0-9/_-]+$ ]]; then
+            echo "Error: workspaceModulePath must contain only lowercase letters, digits, slashes, underscores, and hyphens, got: '$INPUT_WORKSPACE_MODULE_PATH'" >&2
+            exit 1
+          fi
+          if ! [[ "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: version must be a semantic version (MAJOR.MINOR.PATCH, digits only), got: '$INPUT_VERSION'" >&2
+            exit 1
+          fi
+
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -52,11 +75,14 @@ jobs:
         run: ./gradlew clean
 
       - name: Build
+        env:
+          WORKSPACE_MODULE_PATH: ${{ inputs.workspaceModulePath }}
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          GRAGLE_PATH=:$(echo "linea-besu/plugins/${{inputs.workspaceModulePath}}" | sed 's/\//:/g')
-          echo $GRAGLE_PATH
-          ./gradlew $GRAGLE_PATH:shadowJar -Pversion=v${{inputs.version}}
-          ls -lh linea-besu/plugins/${{inputs.workspaceModulePath}}/build/libs
+          GRADLE_PATH=:$(echo "linea-besu/plugins/${WORKSPACE_MODULE_PATH}" | sed 's/\//:/g')
+          echo "${GRADLE_PATH}"
+          ./gradlew "${GRADLE_PATH}:shadowJar" "-Pversion=v${INPUT_VERSION}"
+          ls -lh "linea-besu/plugins/${WORKSPACE_MODULE_PATH}/build/libs"
 
       - name: Release to GitHub
         uses: jreleaser/release-action@90ac653bb9c79d11179e65d81499f3f34527dcd5 #v2.5.0

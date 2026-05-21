@@ -10,8 +10,14 @@ on:
     inputs:
       libToRelease:
         required: true
-        type: string
-        description: 'Library to release, e.g :jvm-libs:linea:blob-compressor'
+        type: choice
+        description: 'Library to release'
+        options:
+          - ':jvm-libs:linea:blob-compressor'
+          - ':jvm-libs:linea:blob-decompressor'
+          - ':jvm-libs:linea:blob-shnarf-calculator'
+          - ':jvm-libs:linea:linea-contracts:l1-rollup'
+          - ':jvm-libs:linea:linea-contracts:l2-message-service'
       version:
         required: true
         type: string
@@ -21,6 +27,15 @@ jobs:
   release:
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
     steps:
+      - name: Validate inputs
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          if ! [[ "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: version must be a semantic version (MAJOR.MINOR.PATCH, digits only), got: '$INPUT_VERSION'" >&2
+            exit 1
+          fi
+
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -37,21 +52,24 @@ jobs:
       - name: Build
         # ./gradlew clean is necessary because the build is cached
         # and cause issues with JReleaser
-        run: ./gradlew ${{github.event.inputs.libToRelease}}:build
         env:
+          LIB_TO_RELEASE: ${{ github.event.inputs.libToRelease }}
           GITHUB_TOKEN: ${{ secrets._GITHUB_TOKEN_RELEASE_ACCESS }}
+        run: ./gradlew "${LIB_TO_RELEASE}:build"
 
       - name: Deploy to Local File System
-        run: ./gradlew ${{github.event.inputs.libToRelease}}:publish -Pversion=${{github.event.inputs.version}}
         env:
+          LIB_TO_RELEASE: ${{ github.event.inputs.libToRelease }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
           GITHUB_TOKEN: ${{ secrets._GITHUB_TOKEN_RELEASE_ACCESS }}
-
+        run: ./gradlew "${LIB_TO_RELEASE}:publish" "-Pversion=${INPUT_VERSION}"
 
       - name: Build and Release to Maven Central
         # ./gradlew clean is necessary because the build is cached
         # and cause issues with JReleaser
-        run: ./gradlew --stacktrace ${{github.event.inputs.libToRelease}}:jreleaserRelease -Pversion=${{github.event.inputs.version}}
         env:
+          LIB_TO_RELEASE: ${{ github.event.inputs.libToRelease }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
           GITHUB_TOKEN: ${{ secrets._GITHUB_TOKEN_RELEASE_ACCESS }}
           JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           JRELEASER_GITHUB_USERNAME: ${{ github.actor }}
@@ -61,6 +79,7 @@ jobs:
           JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.JRELEASER_GPG_PUBLIC_KEY }}
           JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.JRELEASER_MAVENCENTRAL_USERNAME }}
           JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.JRELEASER_MAVENCENTRAL_PASSWORD }}
+        run: ./gradlew --stacktrace "${LIB_TO_RELEASE}:jreleaserRelease" "-Pversion=${INPUT_VERSION}"
 
       # Persist logs
       - name: JReleaser release output

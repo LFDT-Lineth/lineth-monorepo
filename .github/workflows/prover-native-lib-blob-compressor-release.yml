@@ -25,7 +25,21 @@ on:
 
 jobs:
 
+  validate:
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    steps:
+      - name: Validate version
+        id: validate_version
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          if ! [[ "$INPUT_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: version must be 'vMAJOR.MINOR.PATCH' (e.g. v1.2.3), got: '$INPUT_VERSION'" >&2
+            exit 1
+          fi
+
   build-linux:
+    needs: [validate]
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     steps:
       - name: Checkout code
@@ -60,6 +74,7 @@ jobs:
           path: ./prover/target
 
   build-linux-arm64:
+    needs: [validate]
     runs-on: gha-runner-scale-set-ubuntu-24-arm64-med
     steps:
       - name: Checkout code
@@ -94,6 +109,7 @@ jobs:
           path: ./prover/target
 
   build-mac-os:
+    needs: [validate]
     runs-on: macos-latest
     steps:
       - name: Checkout code
@@ -131,8 +147,10 @@ jobs:
 
   release_artefacts:
     name: Release artefacts
-    needs: [ build-linux, build-linux-arm64, build-mac-os]
+    needs: [validate, build-linux, build-linux-arm64, build-mac-os]
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    env:
+      VERSION: ${{ github.event.inputs.version }}
     steps:
       - name: Load cached binaries
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
@@ -143,7 +161,7 @@ jobs:
           ls -la ./
       - name: Zip the release files
         run: |
-          zip -r linea-blob-libs-${{ github.event.inputs.version }}.zip .
+          zip -r "linea-blob-libs-${VERSION}.zip" .
       - name: Get current date
         id: current_date
         run: echo "::set-output name=date::$(date --utc +'%Y-%m-%dT%H:%M:%SZ')"
@@ -154,12 +172,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: blob-libs-${{ github.event.inputs.version }}
-          release_name: Blob libs ${{ github.event.inputs.version }}
+          tag_name: blob-libs-${{ env.VERSION }}
+          release_name: Blob libs ${{ env.VERSION }}
           draft: ${{ github.event.inputs.draft-release }}
           prerelease: ${{ github.event.inputs.pre-release }}
           body: |
-            Go lang blob binaries ${{ github.event.inputs.version }}
+            Go lang blob binaries ${{ env.VERSION }}
             commit: ${{ github.sha }}
             date: ${{ steps.current_date.outputs.date }}
       - name: Upload Release Asset
@@ -168,6 +186,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./linea-blob-libs-${{ github.event.inputs.version }}.zip
-          asset_name: linea-blob-libs-${{ github.event.inputs.version }}.zip
+          asset_path: ./linea-blob-libs-${{ env.VERSION }}.zip
+          asset_name: linea-blob-libs-${{ env.VERSION }}.zip
           asset_content_type: application/zip
