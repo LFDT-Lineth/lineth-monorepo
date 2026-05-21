@@ -6,8 +6,8 @@ github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565 h1:NlOAmbLYsVb/
 github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565/go.mod h1:EoWWbEboQRydCqJDSA7zrFxucIeoy/5R+MDx04oFpF4=
 github.com/consensys/gnark-crypto v0.20.2-0.20260514182922-df0578435b08 h1:EdljQKaHxACX5JMSTXlVM9R8qASU/W1husqDsB2b5tU=
 github.com/consensys/gnark-crypto v0.20.2-0.20260514182922-df0578435b08/go.mod h1:NzeBHSZ49bIM7RtrNTYYR2kymTqwvI/A4eTgQlyQc+Q=
-github.com/consensys/linea-monorepo/prover-ray v0.0.0-20260519010204-24a53941da53 h1:DpSMTgN3kJYo7vbBGnSXGJXQx4yVVR35WUE/NFqYdWY=
-github.com/consensys/linea-monorepo/prover-ray v0.0.0-20260519010204-24a53941da53/go.mod h1:qHFJ8kDpr4/FxFebRGZ1aPg74qHUbSaDv7j1K5yKefY=
+github.com/consensys/linea-monorepo/prover-ray v0.0.0-20260521063207-ab0f753372c8 h1:ZFVPaOu3F7rf8Tv6vtO00jnadeXB2OUopYxrtdqjwMY=
+github.com/consensys/linea-monorepo/prover-ray v0.0.0-20260521063207-ab0f753372c8/go.mod h1:2cEA44vEDPh8MB1huZtKZv//iXB0ZOghXq7idgt4UPc=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/fxamacker/cbor/v2 v2.9.1 h1:2rWm8B193Ll4VdjsJY28jxs70IdDsHRWgQYAI80+rMQ=

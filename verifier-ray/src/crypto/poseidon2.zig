@@ -77,7 +77,7 @@ pub const MDHasher = struct {
         }
     }
 
-    pub fn sumElement(self: *MDHasher) Digest {
+    pub fn sumDigest(self: *MDHasher) Digest {
         if (self.buffer_len != 0) {
             var block: Digest = zeroArray(block_size);
             // Match prover-ray MDHasher: partial blocks are zero-left-padded.
@@ -89,12 +89,12 @@ pub const MDHasher = struct {
     }
 
     pub fn sumBytes(self: *MDHasher) [digest_bytes]u8 {
-        return digestToBytes(self.sumElement());
+        return digestToBytes(self.sumDigest());
     }
 
     pub fn getState(self: MDHasher) Digest {
         var copy = self;
-        return copy.sumElement();
+        return copy.sumDigest();
     }
 
     pub fn setState(self: *MDHasher, state: Digest) void {
@@ -106,7 +106,7 @@ pub const MDHasher = struct {
 pub fn hashElements(values: []const field.Element) Digest {
     var h = MDHasher.init();
     h.writeElements(values);
-    return h.sumElement();
+    return h.sumDigest();
 }
 
 fn permutation(comptime width: usize, state: *[width]field.Element) void {

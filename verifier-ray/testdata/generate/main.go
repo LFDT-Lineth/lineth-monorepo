@@ -322,7 +322,7 @@ func writePoseidonCompressCase(out *bytes.Buffer, left, right field.Octuplet) {
 func writePoseidonMdCase(out *bytes.Buffer, msg []field.Element) {
 	h := poseidon2.NewMDHasher()
 	h.WriteElements(msg...)
-	res := h.SumElement()
+	res := h.SumDigest()
 	fmt.Fprintf(out, "    .{ .message = &%s, .expected = %s },\n", elemSlice(msg), oct8(res))
 }
 
@@ -344,10 +344,10 @@ func writeFiatShamirCase(out *bytes.Buffer, baseUpdates []field.Element, extUpda
 	fs := fiatshamir.NewFiatShamir()
 	fs.Update(baseUpdates...)
 	fs.UpdateExt(extUpdates...)
-	randomField := fs.RandomField()
+	randomDigest := fs.RandomDigest()
 	randomExt := fs.RandomFext()
 	fmt.Fprintf(out, "    .{ .base_updates = &%s, .ext_updates = &%s, .random_field = %s, .random_ext = %s },\n",
-		elemSlice(baseUpdates), extSlice(extUpdates), oct8(randomField), ext6(randomExt))
+		elemSlice(baseUpdates), extSlice(extUpdates), oct8(randomDigest), ext6(randomExt))
 }
 
 func elem(v uint64) field.Element {

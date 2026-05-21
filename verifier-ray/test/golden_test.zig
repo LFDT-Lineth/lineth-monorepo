@@ -155,7 +155,7 @@ test "poseidon2 compression and merkle-damgard match prover-ray golden cases" {
         var message: [32]field.Element = undefined;
         fillElems(&message, case.message);
         h.writeElements(message[0..case.message.len]);
-        try expectDigest(h.sumElement(), case.expected);
+        try expectDigest(h.sumDigest(), case.expected);
     }
 }
 
@@ -171,7 +171,7 @@ test "fiat-shamir transcript matches prover-ray golden cases" {
         fillExts(&ext_updates, case.ext_updates);
         transcript.updateExt(ext_updates[0..case.ext_updates.len]);
 
-        try expectDigest(transcript.randomField(), case.random_field);
+        try expectDigest(transcript.randomDigest(), case.random_field);
         try expectExt(transcript.randomExt(), uintsToExt(case.random_ext));
     }
 }

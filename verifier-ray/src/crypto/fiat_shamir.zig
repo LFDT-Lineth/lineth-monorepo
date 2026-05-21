@@ -23,14 +23,14 @@ pub const Transcript = struct {
         }
     }
 
-    pub fn randomField(self: *Transcript) poseidon2.Digest {
-        const challenge = self.hasher.sumElement();
+    pub fn randomDigest(self: *Transcript) poseidon2.Digest {
+        const challenge = self.hasher.sumDigest();
         self.updateElement(field.Element.zero());
         return challenge;
     }
 
     pub fn randomExt(self: *Transcript) ext.Ext {
-        const challenge = self.randomField();
+        const challenge = self.randomDigest();
         return .{
             .B0 = .{ .a0 = challenge[0], .a1 = challenge[1] },
             .B1 = .{ .a0 = challenge[2], .a1 = challenge[3] },

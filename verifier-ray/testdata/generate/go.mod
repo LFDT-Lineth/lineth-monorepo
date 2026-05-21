@@ -2,7 +2,7 @@ module github.com/consensys/linea-monorepo/verifier-ray/testdata/generate
 
 go 1.25.7
 
-require github.com/consensys/linea-monorepo/prover-ray v0.0.0-20260519010204-24a53941da53
+require github.com/consensys/linea-monorepo/prover-ray v0.0.0-20260521063207-ab0f753372c8
 
 require (
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect
