@@ -39,17 +39,17 @@ class GoBackedBlobShnarfCalculator(
     prevShnarf: ByteArray,
     conflationOrder: BlockIntervals,
   ): ShnarfResult {
-    val compressedDataB64 = Base64.getEncoder().encodeToString(compressedData)
+    val compressedDataBase64 = Base64.getEncoder().encodeToString(compressedData)
     log.trace(
       "calculateShnarf: " +
         "compressedDataHex={} " +
-        "compressedDataBaseB64={} " +
+        "compressedDataBase64={} " +
         "parentStateRootHash={} " +
         "finalStateRootHash={} " +
         "prevShnarf={} " +
         "conflationOrder={}",
       compressedData.encodeHex(),
-      compressedDataB64,
+      compressedDataBase64,
       parentStateRootHash.encodeHex(),
       finalStateRootHash.encodeHex(),
       prevShnarf.encodeHex(),
@@ -60,7 +60,7 @@ class GoBackedBlobShnarfCalculator(
       calculateShnarfTimer.captureTime {
         delegate.CalculateShnarf(
           eip4844Enabled = true,
-          compressedData = compressedDataB64,
+          compressedData = compressedDataBase64,
           parentStateRootHash = parentStateRootHash.encodeHex(),
           finalStateRootHash = finalStateRootHash.encodeHex(),
           prevShnarf = prevShnarf.encodeHex(),

@@ -11,6 +11,7 @@ import linea.kotlin.ByteArrayExt
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -31,6 +32,7 @@ class ProverClientFactoryTest {
     tmpDir: Path,
     switchBlockNumber: Int? = null,
     switchBlockTimestamp: Instant? = null,
+    withProverB: Boolean = switchBlockNumber != null || switchBlockTimestamp != null,
   ): ProversConfig {
     require(!(switchBlockNumber != null && switchBlockTimestamp != null)) {
       "Only one of switchBlockNumber and switchBlockTimestamp may be set"
@@ -69,7 +71,7 @@ class ProverClientFactoryTest {
       switchBlockNumberInclusive = switchBlockNumber?.toULong(),
       switchBlockTimestamp = switchBlockTimestamp,
       proverB =
-      if (switchBlockNumber != null || switchBlockTimestamp != null) {
+      if (withProverB) {
         buildProverConfig(tmpDir.resolve("prover/v3"))
       } else {
         null
@@ -172,6 +174,20 @@ class ProverClientFactoryTest {
   }
 
   @Test
+  fun `should fail with clear error when block number switch has no prover B`() {
+    val factory =
+      ProverClientFactory(
+        vertx,
+        buildProversConfig(testTmpDir, switchBlockNumber = 200, withProverB = false),
+        metricsFacade,
+      )
+
+    assertThatThrownBy { factory.proofAggregationProverClient() }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessage("proverBConfig must be provided when switchBlockNumberInclusive is set")
+  }
+
+  @Test
   fun `should create a prover with routing when switchBlockTimestamp is defined`() {
     val factory =
       ProverClientFactory(
@@ -196,6 +212,24 @@ class ProverClientFactoryTest {
           assertThat(it.count()).isEqualTo(1)
         }
       }
+  }
+
+  @Test
+  fun `should fail with clear error when timestamp switch has no prover B`() {
+    val factory =
+      ProverClientFactory(
+        vertx,
+        buildProversConfig(
+          testTmpDir,
+          switchBlockTimestamp = Instant.fromEpochSeconds(50),
+          withProverB = false,
+        ),
+        metricsFacade,
+      )
+
+    assertThatThrownBy { factory.proofAggregationProverClient() }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessage("proverBConfig must be provided when switchBlockTimestamp is set")
   }
 
   @Test

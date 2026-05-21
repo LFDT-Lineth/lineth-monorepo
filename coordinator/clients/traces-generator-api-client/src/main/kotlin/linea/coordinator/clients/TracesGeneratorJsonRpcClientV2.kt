@@ -61,7 +61,7 @@ class TracesGeneratorJsonRpcClientV2(
     val fallBackTracesCounters: TracesCounters,
   )
 
-  private var requestBuilder = RequestBuilder()
+  private val requestBuilder = RequestBuilder()
 
   override fun getTracesCounters(
     blockNumber: ULong,

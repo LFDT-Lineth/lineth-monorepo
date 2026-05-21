@@ -33,7 +33,7 @@ class FeeHistoryFetcherImpl(
     }
   }
 
-  private var cacheIsValidForBlockNumber: AtomicLong = AtomicLong(0)
+  private val cacheIsValidForBlockNumber: AtomicLong = AtomicLong(0)
   private lateinit var feesCache: FeeHistory
 
   private fun getRecentFees(): SafeFuture<FeeHistory> {

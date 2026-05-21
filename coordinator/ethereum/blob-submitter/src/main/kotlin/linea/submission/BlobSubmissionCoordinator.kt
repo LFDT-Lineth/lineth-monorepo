@@ -53,7 +53,7 @@ class BlobSubmissionCoordinator(
         "maxBlobsToSubmitPerTick=$maxBlobsToSubmitPerTick must be greater than 0"
       }
       require(targetBlobsToSubmitPerTx > 0u) {
-        "targetBlobsToSubmitPerTx=$maxBlobsToSubmitPerTick must be greater than 0"
+        "targetBlobsToSubmitPerTx=$targetBlobsToSubmitPerTx must be greater than 0"
       }
       require(maxBlobsToSubmitPerTick >= targetBlobsToSubmitPerTx) {
         "maxBlobsToSubmitPerTick=$maxBlobsToSubmitPerTick must be greater or equal to" +

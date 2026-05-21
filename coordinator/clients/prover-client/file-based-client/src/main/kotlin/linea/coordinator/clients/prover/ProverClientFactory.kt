@@ -132,18 +132,24 @@ class ProverClientFactory(
     where ProofRequest : Any, TProofIndex : ProofIndex {
     return when {
       switchBlockNumberInclusive != null -> {
+        require(proverBConfig != null) {
+          "proverBConfig must be provided when switchBlockNumberInclusive is set"
+        }
         val switchPredicate = StartBlockNumberBasedSwitchPredicate(switchBlockNumberInclusive)
         ABProverClientRouter(
           proverA = clientBuilder(proverAConfig),
-          proverB = clientBuilder(proverBConfig!!),
+          proverB = clientBuilder(proverBConfig),
           switchToProverBPredicate = switchPredicate::invoke,
         )
       }
       switchBlockTimestamp != null -> {
+        require(proverBConfig != null) {
+          "proverBConfig must be provided when switchBlockTimestamp is set"
+        }
         val switchPredicate = StartBlockTimestampBasedSwitchPredicate(switchBlockTimestamp)
         ABProverClientRouter(
           proverA = clientBuilder(proverAConfig),
-          proverB = clientBuilder(proverBConfig!!),
+          proverB = clientBuilder(proverBConfig),
           switchToProverBPredicate = switchPredicate::invoke,
         )
       }
