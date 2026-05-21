@@ -110,7 +110,7 @@ jobs:
 
   run-test-prover:
     uses: ./.github/workflows/prover-testing.yml
-    needs: [compute-commit-tag, compute-release-metadata]
+    needs: [compute-release-metadata]
     if: >
       needs.compute-release-metadata.outputs.tag_changed == 'true' && 
       inputs.component-name == 'prover' && 
@@ -119,7 +119,7 @@ jobs:
 
   run-test-transaction-exclusion-api:
     uses: ./.github/workflows/transaction-exclusion-api-testing.yml
-    needs: [compute-commit-tag, compute-release-metadata]
+    needs: [compute-release-metadata]
     if: >
       needs.compute-release-metadata.outputs.tag_changed == 'true' && 
       inputs.component-name == 'tx-exclusion-api' && 

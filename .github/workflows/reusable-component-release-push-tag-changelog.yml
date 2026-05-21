@@ -121,7 +121,7 @@ jobs:
       - name: Commit and push ${{ inputs.component-name }}/CHANGELOG.md
         if: ${{ !inputs.upload_changelog && !inputs.create_pull_request }}
         env:
-          COMPONENT: ${{ inputs.component-name }}
+          SCOPE_NAME: ${{ inputs.component-name == 'linea-besu-package' && 'linea-besu' || inputs.component-name }}
           FOLDER_NAME: ${{ inputs.folder-name }}
           TAG: ${{ steps.prepend-changelog.outputs.next_tag }}
         run: |
@@ -131,7 +131,7 @@ jobs:
             exit 0
           fi
           git add "${FOLDER_NAME}/CHANGELOG.md"
-          git commit -m "chore(${COMPONENT}): update CHANGELOG.md for ${TAG} release [skip ci]"
+          git commit -m "chore(${SCOPE_NAME}): update CHANGELOG.md for ${TAG} release [skip ci]"
 
           # Rebase on top of any commits that landed on the branch between
           # checkout and now (e.g. a concurrent component-changelog-update push),
@@ -157,10 +157,10 @@ jobs:
         id: create-pull-request
         with:
           token: ${{ steps.app-token.outputs.token }}
-          commit-message: "chore(${{ inputs.component-name }}): update CHANGELOG.md for ${{ steps.prepend-changelog.outputs.next_tag }} release [skip ci]"
-          branch: ci/chore-${{ inputs.component-name }}-changelog-update-release-v${{ steps.prepend-changelog.outputs.next_version }}
+          commit-message: "chore(${{ inputs.component-name == 'linea-besu-package' && 'linea-besu' || inputs.component-name }}): update CHANGELOG.md for ${{ steps.prepend-changelog.outputs.next_tag }} release [skip ci]"
+          branch: ci/chore-${{ inputs.component-name == 'linea-besu-package' && 'linea-besu' || inputs.component-name }}-changelog-update-release-v${{ steps.prepend-changelog.outputs.next_version }}
           base: ${{ github.head_ref || github.ref_name }}
-          title: "chore(${{ inputs.component-name }}): update CHANGELOG.md for ${{ steps.prepend-changelog.outputs.next_tag }} release [skip ci]"
+          title: "chore(${{ inputs.component-name == 'linea-besu-package' && 'linea-besu' || inputs.component-name }}): update CHANGELOG.md for ${{ steps.prepend-changelog.outputs.next_tag }} release [skip ci]"
           add-paths: ${{ inputs.folder-name }}/CHANGELOG.md
 
       - name: Upload CHANGELOG.md artifact
