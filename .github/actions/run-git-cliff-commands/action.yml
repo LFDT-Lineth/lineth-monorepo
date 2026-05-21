@@ -89,7 +89,10 @@ runs:
           || true)
 
         mapfile -t paths <<< "${{ steps.paths.outputs.include_paths }}"
-        cliff_args=(--config "${CLIFF_CONFIG}" --bumped-version)
+        # --unreleased scopes the bump computation to commits since the last
+        # matching tag. Without it, git-cliff walks the full visible history
+        # and can over-bump (e.g. counting feats from prior release windows).
+        cliff_args=(--config "${CLIFF_CONFIG}" --bumped-version --unreleased)
         for p in "${paths[@]}"; do
           cliff_args+=(--include-path "${p}")
         done

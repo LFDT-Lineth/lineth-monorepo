@@ -65,17 +65,74 @@ jobs:
           echo "❌ Non-main branch must have non-empty custom tag suffix"
           exit 1
 
-  compute-release-metadata:
+  compute-commit-tag:
     needs: [check-branch-and-release-tag-suffix]
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    outputs:
+       commit_tag: ${{ steps.compute-version-tags.outputs.commit_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Compute version tags
+        id: compute-version-tags
+        uses: ./.github/actions/compute-version-tags
+
+  compute-release-metadata:
+    needs: [compute-commit-tag]
     uses: ./.github/workflows/reusable-component-release-metadata.yml
     with:
       component-name: ${{ inputs.component-name }}
       include-path: ${{ inputs.include-path }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }}
 
+  run-test-coordinator:
+    uses: ./.github/workflows/coordinator-testing.yml
+    needs: [compute-commit-tag, compute-release-metadata]
+    if: >
+      needs.compute-release-metadata.outputs.tag_changed == 'true' && 
+      inputs.component-name == 'coordinator' &&
+      github.ref_name != 'main'
+    with:
+      commit_tag: ${{ needs.compute-commit-tag.outputs.commit_tag }}
+    secrets: inherit
+
+  run-test-postman:
+    uses: ./.github/workflows/postman-testing.yml
+    needs: [compute-commit-tag, compute-release-metadata]
+    if: >
+      needs.compute-release-metadata.outputs.tag_changed == 'true' && 
+      inputs.component-name == 'postman' && 
+      github.ref_name != 'main'
+    with:
+      commit_tag: ${{ needs.compute-commit-tag.outputs.commit_tag }}
+    secrets: inherit
+
+  run-test-prover:
+    uses: ./.github/workflows/prover-testing.yml
+    needs: [compute-commit-tag, compute-release-metadata]
+    if: >
+      needs.compute-release-metadata.outputs.tag_changed == 'true' && 
+      inputs.component-name == 'prover' && 
+      github.ref_name != 'main'
+    secrets: inherit
+
+  run-test-transaction-exclusion-api:
+    uses: ./.github/workflows/transaction-exclusion-api-testing.yml
+    needs: [compute-commit-tag, compute-release-metadata]
+    if: >
+      needs.compute-release-metadata.outputs.tag_changed == 'true' && 
+      inputs.component-name == 'tx-exclusion-api' && 
+      github.ref_name != 'main'
+    secrets: inherit
+
   build-local-coordinator:
-    needs: [compute-release-metadata]
-    if: ${{ needs.compute-release-metadata.outputs.tag_changed == 'true' && inputs.component-name == 'coordinator' }}
+    needs: [compute-release-metadata, run-test-coordinator]
+    if: >
+      always() && !cancelled() &&
+      needs.compute-release-metadata.outputs.tag_changed == 'true' && 
+      inputs.component-name == 'coordinator' &&
+      (github.ref_name == 'main' || needs.run-test-coordinator.result == 'success')
     uses: ./.github/workflows/coordinator-build-and-publish.yml
     with:
       image_tag: local
@@ -85,8 +142,12 @@ jobs:
     secrets: inherit
 
   build-local-postman:
-    needs: [compute-release-metadata]
-    if: ${{ needs.compute-release-metadata.outputs.tag_changed == 'true' && inputs.component-name == 'postman' }}
+    needs: [compute-release-metadata, run-test-postman]
+    if: >
+      always() && !cancelled() &&
+      needs.compute-release-metadata.outputs.tag_changed == 'true' && 
+      inputs.component-name == 'postman' &&
+      (github.ref_name == 'main' || needs.run-test-postman.result == 'success')
     uses: ./.github/workflows/postman-build-and-publish.yml
     with:
       image_tag: local
@@ -96,8 +157,12 @@ jobs:
     secrets: inherit
 
   build-local-prover:
-    needs: [compute-release-metadata]
-    if: ${{ needs.compute-release-metadata.outputs.tag_changed == 'true' && inputs.component-name == 'prover' }}
+    needs: [compute-release-metadata, run-test-prover]
+    if: >
+      always() && !cancelled() &&
+      needs.compute-release-metadata.outputs.tag_changed == 'true' && 
+      inputs.component-name == 'prover' &&
+      (github.ref_name == 'main' || needs.run-test-prover.result == 'success')
     uses: ./.github/workflows/prover-build-and-publish.yml
     with:
       image_tag: local
@@ -107,8 +172,12 @@ jobs:
     secrets: inherit
 
   build-local-tx-exclusion-api:
-    needs: [compute-release-metadata]
-    if: ${{ needs.compute-release-metadata.outputs.tag_changed == 'true' && inputs.component-name == 'tx-exclusion-api' }}
+    needs: [compute-release-metadata, run-test-transaction-exclusion-api]
+    if: >
+      always() && !cancelled() &&
+      needs.compute-release-metadata.outputs.tag_changed == 'true' && 
+      inputs.component-name == 'tx-exclusion-api' &&
+      (github.ref_name == 'main' || needs.run-test-transaction-exclusion-api.result == 'success')
     uses: ./.github/workflows/transaction-exclusion-api-build-and-publish.yml
     with:
       image_tag: local

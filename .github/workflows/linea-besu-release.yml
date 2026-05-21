@@ -60,9 +60,28 @@ jobs:
         gradle/libs.versions.toml
       release_tag_suffix: ${{ inputs.release_tag_suffix }}
 
-  build-and-upload-artifact:
+  run-test-linea-sequencer:
     needs: [compute-linea-besu-release-metadata]
-    if: ${{ needs.compute-linea-besu-release-metadata.outputs.tag_changed == 'true' }}
+    uses: ./.github/workflows/linea-sequencer-plugin-testing.yml
+    if: >
+      needs.compute-linea-besu-release-metadata.outputs.tag_changed == 'true' && 
+      github.ref_name != 'main'
+    secrets: inherit
+
+  run-test-constraints:
+    needs: [compute-linea-besu-release-metadata]
+    uses: ./.github/workflows/tracer-constraints-check-compilation.yml
+    if: >
+      needs.compute-linea-besu-release-metadata.outputs.tag_changed == 'true' && 
+      github.ref_name != 'main'
+    secrets: inherit
+
+  build-and-upload-artifact:
+    needs: [compute-linea-besu-release-metadata, run-test-linea-sequencer, run-test-constraints]
+    if: >
+      always() && !cancelled() &&
+      needs.compute-linea-besu-release-metadata.outputs.tag_changed == 'true' && 
+      (github.ref_name == 'main' || (needs.run-test-linea-sequencer.result == 'success' && needs.run-test-constraints.result == 'success'))
     uses: ./.github/workflows/linea-besu-package-build-and-upload.yml
     with:
       release_tag_prefix: ${{ needs.compute-linea-besu-release-metadata.outputs.release_version }}
@@ -71,6 +90,7 @@ jobs:
 
   run-test:
     needs: [ build-and-upload-artifact ]
+    if: always() && !cancelled() && needs.build-and-upload-artifact.result == 'success'
     concurrency:
       group: run-test-${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -80,6 +100,7 @@ jobs:
 
   run-e2e-tests:
     needs: [ build-and-upload-artifact ]
+    if: always() && !cancelled() && needs.build-and-upload-artifact.result == 'success'
     concurrency:
       group: run-e2e-tests-${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -92,6 +113,7 @@ jobs:
 
   push-tag-update-changelog-and-gh-release:
     needs: [run-test, run-e2e-tests]
+    if: always() && !cancelled() && needs.run-test.result == 'success' && needs.run-e2e-tests.result == 'success'
     uses: ./.github/workflows/reusable-linea-besu-package-gh-release.yml
     with:
       image_tag_suffix: ${{ inputs.image_tag_suffix }}

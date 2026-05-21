@@ -45,6 +45,10 @@ jobs:
   run-e2e-tests:
     env:
       LINEA_BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
+      LINEA_COORDINATOR_TAG: develop
+      LINEA_POSTMAN_TAG: develop
+      LINEA_PROVER_TAG: develop
+      LINEA_TRANSACTION_EXCLUSION_API_TAG: develop
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     outputs:

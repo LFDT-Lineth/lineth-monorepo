@@ -5,6 +5,12 @@ permissions:
 
 on:
   workflow_call:
+    inputs:
+      skip-lint-commit-msgs:
+        description: "Skip linting commit messages"
+        required: false
+        type: boolean
+        default: true
 
 concurrency:
   group: lint-commit-messages-${{ github.workflow }}-${{ github.ref }}
@@ -12,18 +18,30 @@ concurrency:
 
 jobs:
   lint-commit-messages:
-    if: github.event_name == 'pull_request'
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
-    name: Lint PR commit messages
+    name: Lint PR title and commit messages
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
+        if: github.event_name == 'pull_request'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           # Need both PR head and base so we can list commits in the PR.
           fetch-depth: 0
           submodules: false
 
+       # Check if PR title is in Conventional Commits format
+       # It's important, as in a squash merge, the PR title becomes 
+       # the single commit message on main.
+      - name: Lint PR title
+        if: github.event_name == 'pull_request'
+        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 #v6.1.1
+        with:
+          requireScope: true
+
       - name: Lint each commit in the PR with .husky/commit-msg
+        if: github.event_name == 'pull_request' && !inputs.skip-lint-commit-msgs
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -71,6 +89,6 @@ jobs:
 
           if [ "${failed}" -gt 0 ]; then
             echo "✗ ${failed} commit message(s) failed validation." >&2
-            exit 0 # TODO: This will be set to 1
+            exit 1
           fi
           echo "✓ All commit messages OK."

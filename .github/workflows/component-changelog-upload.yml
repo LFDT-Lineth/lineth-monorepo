@@ -1,8 +1,5 @@
 name: "Component Changelog Upload"
 
-permissions:
-  pull-requests: write
-
 on:
   workflow_call:
 

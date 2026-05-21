@@ -41,11 +41,11 @@ For AI coding agents and developer tools:
 
 ## Release workflows
 
-Releases are driven by GitHub Actions workflows in `.github/workflows/`. There are two flavors: **per-component releases** and **milestone releases**.
+Releases are driven by GitHub Actions workflows under `.github/workflows`. There are two flavors: **per-component releases** and **milestone releases**.
 
 ### Release tag and version
 
-Release tag of each component is in the format of `releases/[component]/v[semver]` and the semver version is computed from the relevant Git history commit messages by using [git-cliff](https://github.com/orhun/git-cliff)
+Release tag of each component is in the format of `releases/[component]/v[semver]` and the semver version is computed from the relevant Git history commit messages [using Conventional Commits format](#commit-message-format) by using [git-cliff](https://github.com/orhun/git-cliff)
 
 ### Per-component release
 
@@ -138,6 +138,7 @@ All commits must follow the [Conventional Commits](https://www.conventionalcommi
 | Scope | Area |
 |---|---|
 | `coordinator` | Coordinator service |
+| `maru` | Maru consensus client |
 | `prover` | Prover |
 | `prover-ray` | Prover Ray (RISC-V) |
 | `postman` | Message bridging and executor |
@@ -185,6 +186,26 @@ Before contributing, ensure you're familiar with:
 - Our [code of conduct](docs/code-of-conduct.md)
 - The [Besu contribution guide](https://wiki.hyperledger.org/display/BESU/Coding+Conventions), for Besu:Linea related contributions
 - Our [security policy](docs/security.md)
+
+### PR title
+
+**PR titles must follow the same [Conventional Commits](https://www.conventionalcommits.org) format as commit messages** (see [Commit message format](#commit-message-format) above for the allowed `<type>(<scope>): <short description>` shape, types, and scopes).
+
+This matters because PRs are **squash-merged** into `main`: GitHub uses the PR title as the single resulting commit message on `main`. Our release tooling — [git-cliff](https://github.com/orhun/git-cliff), which drives automated version bumps and `CHANGELOG.md` generation in the [release workflows](#release-workflows) — parses those commit messages to decide the next semver bump and to categorize entries in the changelog. A non-conforming PR title turns into a non-conforming commit on `main`, which means:
+
+- **No automatic version bump** for the affected component (git-cliff will skip it).
+- **Missing or miscategorized changelog entry** on the next release.
+
+Examples of good PR titles:
+
+```
+feat(coordinator): add retry logic for L1 message sending
+fix(prover): correct integer overflow in trace builder
+chore(linea-besu,sequencer): bump dependency versions
+feat(coordinator)!: rename public API method (BREAKING CHANGE)
+```
+
+Please note that the linea-monorepo GitHub [CI](https://github.com/Consensys/linea-monorepo/actions/workflows/main.yml) will lint the PR title when new commits pushed to the PR branch, and the whole CI will fail if the PR title doesn't conform.
 
 ### Useful links
 
