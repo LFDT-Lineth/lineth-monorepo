@@ -70,7 +70,7 @@ jobs:
       - name: Setup Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
       - name: Install helm
-        uses: azure/setup-helm@v4.3.1
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
         with:
           version: 'v3.18.3'
         id: install
@@ -78,7 +78,7 @@ jobs:
       # SSH debugging session - before tests (if explicitly requested)
       - name: Setup upterm session (pre-test)
         if: ${{ inputs.enable_ssh_debug }}
-        uses: lhotari/action-upterm@v1
+        uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 # v1
         with:
           ## If no one connects shut down ssh server after timeout.
           wait-timeout-minutes: 20
@@ -148,7 +148,7 @@ jobs:
       # SSH debugging session - on failure (if requested)
       - name: Setup upterm session after failure
         if: ${{ (failure() || steps.chaos-tests.outcome == 'failure') && inputs.ssh_debug_on_failure == true }}
-        uses: lhotari/action-upterm@v1
+        uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 # v1
         with:
           ## If no one connects shut down ssh server after timeout.
           wait-timeout-minutes: 20

@@ -42,24 +42,22 @@ jobs:
         uses: ./.github/actions/setup-java-and-gradle
       - name: Build maru and run unit + integration tests
         run: |
-          # force tests to run even if the code is not changed
-          # this is to debug flaky tests
           # :maru:build is an aggregate task defined in maru/build.gradle that
           # depends on each :maru:* subproject's `build`. We avoid `buildNeeded`
           # because :maru:core's testFixtures depend on :maru:serialization
           # which depends on :maru:core's main jar -- linear under `build` but a
           # cycle under `buildNeeded` (which walks testFixtures).
-          ./gradlew -V :maru:build --rerun-tasks
+          ./gradlew -V :maru:build
       - name: Store reports
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test reports
           path: |
             maru/**/build/reports/tests/
       - name: Upload Jacoco execution data
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: jacoco-maru-exec
           path: |
@@ -67,6 +65,6 @@ jobs:
           if-no-files-found: ignore
       - name: Upload test results to Codecov
         if: ${{ !cancelled() && env.CODECOV_TOKEN != '' }}
-        uses: codecov/test-results-action@v1
+        uses: codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 # v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

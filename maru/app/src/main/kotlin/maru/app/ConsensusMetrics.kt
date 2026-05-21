@@ -67,11 +67,6 @@ class ConsensusMetrics(
     description = description,
     tags = listOf(Tag("role", role)),
     publishPercentileHistogram = true,
-    // NOTE: zkevm's createHistogram in :jvm-libs:linea:core:metrics does not yet expose
-    // a `percentileBuckets` parameter (was added in newer maru-side metrics versions).
-    // Dropping the customized buckets — the publishPercentileHistogram flag still emits
-    // a percentile histogram with default buckets. Re-add `percentileBuckets` here once
-    // the zkevm metrics interface gains the parameter.
   )
 
   // Total consensus latency: timer-fire to block committed (ms).
