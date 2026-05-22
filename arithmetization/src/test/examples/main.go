@@ -4,6 +4,7 @@ import (
 	"debug/elf"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -64,55 +65,84 @@ func main() {
 		fmt.Fprintf(os.Stderr, "error reading entry point: %v\n", err)
 		os.Exit(1)
 	}
-	// extract program sections
-	var program = extractProgramBytes(elfFile.Sections, programOffset)
+	// extract loadable program segments
+	var program = extractProgramBytes(elfFile.Progs, programOffset)
+	switch writeSections := os.Getenv("ELF2JSON_WRITE_SECTIONS"); writeSections {
+	case "", "false":
+	case "true":
+		sectionsFile, err := os.Create(strings.TrimSuffix(os.Args[1], ".elf") + ".sections")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error creating ELF sections file: %v\n", err)
+			os.Exit(1)
+		}
+		for _, s := range elfFile.Sections {
+			if s.Name != "" && s.Size > 0 && s.Flags&elf.SHF_ALLOC != 0 {
+				fmt.Fprintln(sectionsFile, s.Name)
+			}
+		}
+		if err := sectionsFile.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "error writing ELF sections file: %v\n", err)
+			os.Exit(1)
+		}
+	default:
+		fmt.Fprintf(os.Stderr, "ELF2JSON_WRITE_SECTIONS must be true or false, got %q\n", writeSections)
+		os.Exit(1)
+	}
 	printJson(program, inBytes, programOffset, inputsOffset, entryPoint)
 }
 
-// Extract .text, .rodata and .data sections and assemble them into a
-// contiguous byte slice starting at programOffset, being writte in
-// the riscV_program field of the output JSON. The .bss section is
-// implicitly zeroed out in the output, so we do not need to explicitly include it.
-func extractProgramBytes(sections []*elf.Section, programOffset uint64) []byte {
-	programBytesSections := map[string]bool{
-		".text":         true,
-		".rodata":       true,
-		".data":         true,
-		".data.string":  true, // ACT4 string literals
-		".text.init":    true, // ACT4 entry boilerplate (rvtest_entry_point)
-		".text.rvtest":  true, // ACT4 test body
-		".text.rvmodel": true, // ACT4 RVMODEL_* macros (HALT_PASS, HALT_FAIL, ...)
-		".tohost":       true, // ACT4 self-checking cell (tohost/fromhost)
-	}
-
-	// First pass: find the total size needed
+// Extract loadable ELF segments and assemble them into a contiguous byte slice
+// starting at programOffset. The JSON format has a single riscV_program blob for
+// now; supporting very sparse ELFs properly would require multiple memory blobs.
+//
+// Our own tests contain .text, .rodata, .data and .bss sections.
+// ACT4 tests contain .text.init, .text.rvtest, .text.rvmodel, .data,
+// and .tohost sections. We do not filter by section names here:
+// PT_LOAD segments are what the ELF loader actually maps into memory.
+func extractProgramBytes(progs []*elf.Prog, programOffset uint64) []byte {
 	var maxAddr uint64 = 0
-	for _, s := range sections {
-		if programBytesSections[s.Name] {
-			end := s.Addr + s.Size
-			if end > maxAddr {
-				maxAddr = end
-			}
+	for _, p := range progs {
+		if p.Type != elf.PT_LOAD {
+			continue
+		}
+		if p.Filesz > p.Memsz {
+			panic(fmt.Sprintf("loadable segment at %#x has file size larger than memory size", p.Vaddr))
+		}
+		if p.Memsz == 0 {
+			continue
+		}
+		if p.Vaddr < programOffset {
+			panic(fmt.Sprintf("loadable segment starts before program offset: segment=%#x programOffset=%#x", p.Vaddr, programOffset))
+		}
+		end := p.Vaddr + p.Memsz
+		if end < p.Vaddr {
+			panic(fmt.Sprintf("loadable segment address overflow at %#x", p.Vaddr))
+		}
+		if end > maxAddr {
+			maxAddr = end
 		}
 	}
 
 	if maxAddr == 0 {
-		panic("no program sections found.")
+		panic("no loadable program segments found.")
 	}
 
-	// Allocate zeroed buffer covering the full program image (.bss is implicitly zeroed)
 	buf := make([]byte, maxAddr-programOffset)
 
-	// Second pass: copy each section into the correct offset in the buffer
-	for _, s := range sections {
-		if programBytesSections[s.Name] {
-			data, err := s.Data()
-			if err != nil {
-				panic(fmt.Sprintf("error reading section %s: %v", s.Name, err))
-			}
-			offset := s.Addr - programOffset
-			copy(buf[offset:], data)
+	for _, p := range progs {
+		if p.Type != elf.PT_LOAD || p.Filesz == 0 {
+			continue
 		}
+		data := make([]byte, p.Filesz)
+		n, err := p.ReadAt(data, 0)
+		if err != nil && err != io.EOF {
+			panic(fmt.Sprintf("error reading loadable segment at %#x: %v", p.Vaddr, err))
+		}
+		if uint64(n) != p.Filesz {
+			panic(fmt.Sprintf("short read for loadable segment at %#x: got %d bytes, expected %d", p.Vaddr, n, p.Filesz))
+		}
+		offset := p.Vaddr - programOffset
+		copy(buf[offset:], data)
 	}
 
 	// If needed pad buffer to multiple of 4 bytes (add at most 3 zero bytes)

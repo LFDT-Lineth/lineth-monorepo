@@ -3,21 +3,32 @@
 # Moreover, ABI being LP64 (soft-float) is relevant only for float numbers, which we do not use, so it can be omitted as well.
 
 # Declare all targets as phony to prevent conflicts with files of the same name
-.PHONY: exec debug compile zkc-exec zkc-debug clean clean-all linker-script verify-elf blake-rust-exec build-act4 run-act4 install-zkc
+.PHONY: exec debug compile exec-elf elf-to-json install-zkc zkc-exec zkc-debug clean clean-all linker-script verify-elf blake-rust-exec build-act4 run-act4 require-test require-src require-bin-ext
+
+# Keep validation, build, and execution targets running in order
+.NOTPARALLEL:
+
+######################################################
+# Variables and support functions
+######################################################
 
 # Directory of this Makefile (used for relative paths)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 ARITHMETIZATION_DIR := $(abspath $(MAKEFILE_DIR)../../..)
 
-# Test to run (with src optional subfolder and extension), mandatory unless clean-all or linker-script are the targets
-# src_optional_subfolder/your_test(.s|.zig|.rs)
-ifeq ($(filter clean-all linker-script blake-rust-exec build-act4 run-act4 install-zkc,$(MAKECMDGOALS)),)
-ifndef TEST
-$(error TEST is mandatory. Usage: make TEST=src_optional_subfolder/your_test(.s|.zig|.rs))
-endif
-endif
+# Paths to go main (to turn BIN into JSON), zkc main (to execute/debug the json) and linker script
+GO_MAIN       := $(MAKEFILE_DIR)main.go
+ZKC_MAIN      := $(MAKEFILE_DIR)../../main/riscv/main.zkc
+LINKER_SCRIPT := $(MAKEFILE_DIR)linker_script.ld
+# Assembly, Zig, or Rust test file to execute with exec target (TEST=src_optional_subfolder/your_test(.s|.zig|.rs)
+TEST ?=
 
-# src_optionaL_subfolder/your_test
+# Already compiled binary to execute with exec-elf target (BIN_EXT=path/to/your_bin)
+BIN_EXT  ?=
+JSON_EXT ?= $(BIN_EXT).json
+
+# If TEST=src_optional_subfolder/your_test(.s|.zig|.rs), the variables below are set as follows:
+# src_optional_subfolder/your_test
 BASENAME     := $(basename $(TEST))
 
 # your_test
@@ -32,22 +43,16 @@ NOTSUBDIR    := $(notdir $(TEST))
 # (.s|.zig|.rs)
 EXT          := $(suffix $(TEST))
 
-# Paths below are determined by the extension
+# Paths below are determined by TEST and the extension
 SRC  := $(MAKEFILE_DIR)$(if $(filter .s,$(EXT)),asm,$(if $(filter .zig,$(EXT)),zig,rust))/src/$(TEST)
 BIN  := $(MAKEFILE_DIR)$(if $(filter .s,$(EXT)),asm/bin/,$(if $(filter .zig,$(EXT)),zig/zig-out/bin/,rust/target/riscv64im-unknown-none-elf/release/))$(NAME)
-JSON := $(MAKEFILE_DIR)$(if $(filter .s,$(EXT)),asm/bin/,$(if $(filter .zig,$(EXT)),zig/zig-out/bin/,rust/target/riscv64im-unknown-none-elf/release/))$(NAME).json
+JSON := $(BIN).json
 # Note: in the future the JSON file will be removed and main.zkc will receive directly the ELF file
-
-# Paths to go main (to turn BIN into JSON), zkc main (to execute/debug the json) and linker script
-GO_MAIN       := $(MAKEFILE_DIR)main.go
-ZKC_MAIN      := $(MAKEFILE_DIR)../../main/riscv/main.zkc
-LINKER_SCRIPT := $(MAKEFILE_DIR)linker_script.ld
 
 # Inputs and offsets for the program
 IN_BYTES        ?= ""
 
 # Values to generate the linker script
-
 # 128 MiB (0x00000000 -> 0x07FFFFFF)
 PROGRAM_OFFSET  ?= 0x00000000
 
@@ -89,12 +94,25 @@ ACT4_FAST       ?= false
 # If true, enables debug output (signature objdump, trace files, and trap report)
 ACT4_DEBUG      ?= true
 
+# String to determine if a program is exiiting with exit code 0
+EXIT_SUCCESS_STRING := "EXIT CODE = 0"
+
+# Support function to generate JSON from an ELF
+define ELF_TO_JSON
+	@echo "\nGenerating $(2) from $(1)"
+	@go run $(GO_MAIN) "$(1)" "$(IN_BYTES)" $(PROGRAM_OFFSET) $(IN_BYTES_OFFSET) $(ENTRY_POINT) > "$(2)"
+endef
+
+######################################################
+# Targets
+######################################################
+
 # Default target (make)
 exec: compile zkc-exec
 
 debug: compile zkc-debug
 
-compile: $(SRC) linker-script
+compile: require-src linker-script
 # Print all variables for debugging purposes
 	@echo "TEST:      $(TEST)"
 	@echo "BASENAME:  $(BASENAME)"
@@ -135,8 +153,7 @@ compile: $(SRC) linker-script
 		$(MAKE) -f $(MAKEFILE_DIR)Makefile verify-elf TEST=$(TEST); \
 	fi
 # Generate JSON from ELF
-	@echo "\nGenerating $(JSON) from $(BIN)"
-	@go run $(GO_MAIN) $(BIN) "$(IN_BYTES)" $(PROGRAM_OFFSET) $(IN_BYTES_OFFSET) $(ENTRY_POINT) > $(JSON)
+	$(call ELF_TO_JSON,$(BIN),$(JSON))
 
 # Note: compiled Rust libraries may contain instructions from excluded extensions. For instance, the core library is compiled
 # for the IMAC extension, and contains COMPRESSED instructions. The output ELF may thus contain such instructions, too, even
@@ -144,16 +161,25 @@ compile: $(SRC) linker-script
 #
 # Note: we use opt-level=2 to remove unused code.
 
+# Convert and execute an already compiled external ELF
+exec-elf: elf-to-json
+	zkc exec $(JSON_EXT) $(ZKC_MAIN)
+
+# Convert an already compiled external ELF to a JSON
+elf-to-json: require-bin-ext
+# Generate JSON from ELF
+	$(call ELF_TO_JSON,$(BIN_EXT),$(JSON_EXT))
+
 install-zkc:
 	$(MAKE) -C $(ARITHMETIZATION_DIR) install-zkc
 
-zkc-exec: install-zkc
+zkc-exec: require-test install-zkc
 	zkc exec $(JSON) $(ZKC_MAIN)
 
-zkc-debug: install-zkc
+zkc-debug: require-test install-zkc
 	zkc debug $(JSON) $(ZKC_MAIN)
 
-clean:
+clean: require-test
 	rm -f $(BIN) $(JSON) $(BIN).objdump $(LINKER_SCRIPT)
 
 clean-all:
@@ -204,7 +230,7 @@ linker-script:
 		> $(LINKER_SCRIPT)
 
 # Verify that PROGRAM_OFFSET, IN_BYTES_OFFSET, ENTRY_POINT, SP match the ELF values
-verify-elf: $(BIN)
+verify-elf: require-test
 	@echo "\nVerify that PROGRAM_OFFSET, IN_BYTES_OFFSET, ENTRY_POINT, SP match the ELF values"
 	@[ "$(shell printf '0x%016x' $$(($(PROGRAM_OFFSET_FROM_ELF))))" = "$(shell printf '0x%016x' $$(($(PROGRAM_OFFSET))))" ] || \
 		(echo "ERROR: PROGRAM_OFFSET mismatch: expected $(PROGRAM_OFFSET), got $(PROGRAM_OFFSET_FROM_ELF)" && exit 1)
@@ -232,12 +258,14 @@ blake-rust-exec: install-zkc
 		i=$$((i + 1)); \
 		$(MAKEFILE_DIR)rust/target/blake_elf2json $(MAKEFILE_DIR)rust/target/riscv64im-unknown-none-elf/release/blake_with_in_bytes "$$in_bytes" $(PROGRAM_OFFSET) $(IN_BYTES_OFFSET) $(ENTRY_POINT) > $(MAKEFILE_DIR)rust/target/riscv64im-unknown-none-elf/release/blake_with_in_bytes.json || exit $$?; \
 		echo "RUN   case $$i"; \
-		result_line=$$(zkc exec $(MAKEFILE_DIR)rust/target/riscv64im-unknown-none-elf/release/blake_with_in_bytes.json $(ZKC_MAIN) 2>&1 | awk '{ previous = current; current = $$0 } END { print previous }'); \
-		if [ "$$result_line" = "Program exited successfully (exit with code 0)." ]; then \
+		exit_line=$$(zkc exec $(MAKEFILE_DIR)rust/target/riscv64im-unknown-none-elf/release/blake_with_in_bytes.json $(ZKC_MAIN) 2>&1 | awk 'previous == "ECALL for exit" { print; exit } { previous = $$0 }'); \
+		if [ "$$exit_line" = $(EXIT_SUCCESS_STRING) ]; then \
 			echo "PASS  case $$i"; \
+			echo "  $$exit_line"; \
 			pass=$$((pass + 1)); \
 		else \
-			echo "FAIL  case $$i: $$result_line" >&2; \
+			echo "FAIL  case $$i"; \
+			echo "  $$exit_line"; \
 			fail=$$((fail + 1)); \
 		fi; \
 	done < $(MAKEFILE_DIR)rust/src/blake/blake10.all; \
@@ -307,9 +335,9 @@ run-act4: install-zkc build-act4
 		go run $(GO_MAIN) "$$elf" "" "$(PROGRAM_OFFSET)" 0 "$(ENTRY_POINT)" > "$$base.json" 2> "$$base.json.err"; \
 		[ -s "$$base.json.err" ] || rm -f "$$base.json.err"; \
 		zkc exec "$$base.json" $(ZKC_MAIN) > "$$base.full" 2>&1; \
-		awk 'previous == "ECALL for write" || previous == "ECALL for exit" { print } { previous = $$0 }' "$$base.full" > "$$base.out"; \
+		awk '(previous == "ECALL for write" || previous == "ECALL for exit") && $$0 != "" { print } { previous = $$0 }' "$$base.full" > "$$base.out"; \
 		exit_line=$$(awk 'previous == "ECALL for exit" { print; exit } { previous = $$0 }' "$$base.full"); \
-		if [ "$$exit_line" = "Program exited successfully (exit with code 0)." ]; then \
+		if [ "$$exit_line" = $(EXIT_SUCCESS_STRING) ]; then \
 			echo "PASS  $$name"; \
 			echo "PASS  $$name" >> "$(ACT4_RESULTS)"; \
 			awk '{ print "  " $$0 }' "$$base.out"; \
@@ -329,3 +357,17 @@ run-act4: install-zkc build-act4
 	echo "logs:    $(ACT4_LOGS)/"; \
 	if [ "$$count" -eq 0 ]; then echo "error: no ACT4 ELFs found in $(ACT4_ELF_DIR)" >&2; exit 1; fi; \
 	if [ "$$fail" -ne 0 ]; then echo "error: $$fail of $$count ACT4 test(s) failed" >&2; exit 1; fi
+
+######################################################
+# Support targets to validate mandatory parameters
+######################################################
+
+require-test:
+	@[ -n "$(TEST)" ] || { echo "TEST is mandatory. Usage: make TEST=src_optional_subfolder/your_test(.s|.zig|.rs)"; exit 1; }
+
+require-src: require-test
+	@[ -f $(SRC) ] || { echo "TEST file not found: $(SRC)"; exit 1; }
+
+require-bin-ext:
+	@[ -n "$(BIN_EXT)" ] || { echo "BIN_EXT is mandatory. Usage: make BIN_EXT=path/to/your_bin"; exit 1; }
+	@[ -f $(BIN_EXT) ] || { echo "BIN_EXT file not found: $(BIN_EXT)"; exit 1; }

@@ -1,3 +1,6 @@
+/* References:                                                                          */
+/* https://github.com/riscv/riscv-arch-test#linker-script                               */
+/* https://github.com/riscv/riscv-arch-test/blob/act4/docs/memory_map.md#section-layout */
 OUTPUT_ARCH( "riscv" )
 ENTRY(rvtest_entry_point)
 
