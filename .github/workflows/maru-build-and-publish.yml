@@ -122,4 +122,4 @@ jobs:
             libs=./maru/app/build/install/app/lib/
             maru=./maru/app/build/libs/
           save_artifact: ${{ env.PUSH_IMAGE == 'false' }}
-          artifact_name: linea-maru
+          artifact_name: maru

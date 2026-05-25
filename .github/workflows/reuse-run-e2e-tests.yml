@@ -135,6 +135,13 @@ jobs:
           path: ${{ github.workspace }}/tmp/artifacts
           merge-multiple: true
 
+      - name: Download Maru docker image artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        continue-on-error: true
+        with:
+          name: maru
+          path: ${{ github.workspace }}/tmp/artifacts
+
       - name: Load Docker images from artifacts or pull develop for unchanged services
         uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
         with:
@@ -143,23 +150,37 @@ jobs:
           retry_wait_seconds: 30
           timeout_minutes: 10
           command: |
-            set -eo pipefail
-            for service in coordinator postman transaction-exclusion-api prover; do
-              artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-${service}-docker-image.tar.gz"
+            set -euo pipefail
+            for service in coordinator postman transaction-exclusion-api prover maru; do
+              if [ "$service" = "maru" ]; then
+                artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/maru-docker-image.tar.gz"
+                image_name="consensys/maru"
+              else
+                artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-${service}-docker-image.tar.gz"
+                image_name="consensys/linea-${service}"
+              fi
+
               if [ -f "$artifact_path" ]; then
-                echo "Loading ${service} from build artifact..."
+                echo "Loading ${service} from build artifact ${artifact_path}..."
                 gunzip -c "$artifact_path" | docker load
               else
                 echo "No artifact found for ${service}, falling back develop tag from registry..."
-                # docker pull "consensys/linea-${service}:develop"
+                # docker pull "${image_name}:develop"
               fi
             done
       - name: Set Docker image tags
         shell: bash
         run: |
-          for service in coordinator postman transaction-exclusion-api prover; do
-            artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-${service}-docker-image.tar.gz"
-            env_var="LINEA_$(echo "${service}" | tr '[:lower:]-' '[:upper:]_')_TAG"
+          set -euo pipefail
+          for service in coordinator postman transaction-exclusion-api prover maru; do
+            if [ "$service" = "maru" ]; then
+              artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/maru-docker-image.tar.gz"
+              env_var="MARU_TAG"
+            else
+              artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-${service}-docker-image.tar.gz"
+              env_var="LINEA_$(echo "${service}" | tr '[:lower:]-' '[:upper:]_')_TAG"
+            fi
+
             if [ -f "$artifact_path" ]; then
               echo "${env_var}=${{ inputs.image_tag }}" >> "$GITHUB_ENV"
             elif [ -z "${!env_var:-}" ]; then
