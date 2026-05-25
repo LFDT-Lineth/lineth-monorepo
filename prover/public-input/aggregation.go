@@ -353,10 +353,8 @@ func (pi *AggregationFPISnark) Sum(api frontend.API, hash keccak.BlockHasher) [3
 		gnarkutil.ToBytes32(api, pi.FinalFtxNumber),
 		gnarkutil.ToBytes32(api, pi.L2MsgMerkleTreeDepth),
 		hash.Sum(pi.NbL2MsgMerkleTreeRoots, pi.L2MsgMerkleTreeRoots...),
-
 		//include a hash of the chain configuration
-		utils.ToBytes(api, pi.ChainConfigurationFPISnark.Sum(api)),
-
+		gnarkutil.ToBytes32(api, pi.ChainConfigurationFPISnark.Sum(api)),
 		pi.FilteredAddressesFPISnark.Sum(api, hash),
 	)
 
@@ -396,7 +394,7 @@ func copyFromHex(dst []byte, src string) error {
 func (pi *FilteredAddressesFPISnark) Sum(api frontend.API, hash keccak.BlockHasher) [32]frontend.Variable {
 	bytes32 := [][32]frontend.Variable{}
 	for _, addr := range pi.Addresses {
-		bytes32 = append(bytes32, utils.ToBytes(api, addr))
+		bytes32 = append(bytes32, gnarkutil.ToBytes32(api, addr))
 	}
 	// Use NbAddresses to hash only actual addresses, not padded ones
 	return hash.Sum(pi.NbAddresses, bytes32...)

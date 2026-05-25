@@ -29,11 +29,13 @@ import (
 	"github.com/consensys/gnark/test"
 	mimc "github.com/consensys/linea-monorepo/prover/crypto/mimc_bls12377"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils/gnarkutil"
 	"github.com/consensys/linea-monorepo/prover/utils/types"
 )
 
 func init() {
 	utils.RegisterHints()
+	gnarkutil.RegisterHintsAndGkrGates()
 }
 
 // chainConfigTestCase defines test data for chain configuration hashing tests.
@@ -111,7 +113,7 @@ func (c *ChainConfigurationTestCircuit) Define(api frontend.API) error {
 
 	// This is where ChainConfigurationFPISnark.Sum() is actually tested
 	computedHash := chainConfig.Sum(api)
-	computedHashBytes := utils.ToBytes(api, computedHash)
+	computedHashBytes := gnarkutil.ToBytes32(api, computedHash)
 
 	// Constrain that the circuit output matches the expected hash from the reference implementation
 	for i := 0; i < 32; i++ {

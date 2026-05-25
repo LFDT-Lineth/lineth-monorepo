@@ -3,13 +3,17 @@ package internal_test
 import (
 	"crypto/rand"
 	"fmt"
+	"math/big"
 	"testing"
 
+	"github.com/consensys/gnark-crypto/ecc"
 	fr377 "github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
 	fr381 "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	bn254fr "github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	gchash "github.com/consensys/gnark-crypto/hash"
+	"github.com/consensys/gnark/constraint/solver"
 	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/frontend/cs/scs"
 	"github.com/consensys/gnark/std/math/emulated"
 	poseidon2permutation "github.com/consensys/gnark/std/permutation/poseidon2/gkr-poseidon2"
 	"github.com/consensys/linea-monorepo/prover/circuits/internal"
@@ -217,4 +221,119 @@ func TestPartitionSlice(t *testing.T) {
 
 		t.Run(fmt.Sprintf("selectors=%v,slack=%v", selectors, subsSlack), test(slice, selectors, subsSlack))
 	}
+}
+
+// toCrumbsWrapperCircuit wraps a single ToCrumbs call so we can test soundness.
+type toCrumbsWrapperCircuit struct {
+	V frontend.Variable
+}
+
+func (c *toCrumbsWrapperCircuit) Define(api frontend.API) error {
+	internal.ToCrumbs(api, c.V, 64)
+	return nil
+}
+
+// TestToCrumbsRecompositionEnforced verifies that ToCrumbs rejects a forged hint
+// whose crumbs do not recompose to the input value.
+func TestToCrumbsRecompositionEnforced(t *testing.T) {
+	internal.RegisterHints()
+
+	ccs, err := frontend.Compile(ecc.BLS12_377.ScalarField(), scs.NewBuilder, &toCrumbsWrapperCircuit{})
+	require.NoError(t, err)
+
+	witness, err := frontend.NewWitness(&toCrumbsWrapperCircuit{V: 0}, ecc.BLS12_377.ScalarField())
+	require.NoError(t, err)
+
+	// Honest hint (all-zero crumbs for V=0) must be accepted.
+	require.NoError(t, ccs.IsSolved(witness), "honest all-zero crumbs for V=0 must be accepted")
+
+	// Forged hint: crumbs[0]=1 makes sum=1 ≠ V=0; must be rejected.
+	hintID := findToCrumbsHintID(t)
+	forgedHint := func(_ *big.Int, _ []*big.Int, outputs []*big.Int) error {
+		for i := range outputs {
+			outputs[i].SetUint64(0)
+		}
+		outputs[0].SetUint64(1)
+		return nil
+	}
+	require.Error(
+		t,
+		ccs.IsSolved(witness, solver.OverrideHint(hintID, forgedHint)),
+		"crumbs summing to 1 must be rejected when V=0",
+	)
+}
+
+func findToCrumbsHintID(t *testing.T) solver.HintID {
+	t.Helper()
+	const name = "github.com/consensys/linea-monorepo/prover/circuits/internal.toCrumbsHint"
+	for _, hintFn := range solver.GetRegisteredHints() {
+		if solver.GetHintName(hintFn) == name {
+			return solver.GetHintID(hintFn)
+		}
+	}
+	t.Fatalf("hint %q is not registered", name)
+	return 0
+}
+
+type divEuclideanWrapperCircuit struct {
+	A, B frontend.Variable
+}
+
+func (c *divEuclideanWrapperCircuit) Define(api frontend.API) error {
+	internal.DivEuclidean(api, c.A, c.B)
+	return nil
+}
+
+// TestDivEuclideanRecompositionEnforced verifies that DivEuclidean rejects a
+// forged hint whose (quotient, remainder) do not satisfy a = q*b + r, even when
+// the bound constraints (r < b and q <= a) are individually satisfied.
+func TestDivEuclideanRecompositionEnforced(t *testing.T) {
+	internal.RegisterHints()
+
+	ccs, err := frontend.Compile(ecc.BLS12_377.ScalarField(), scs.NewBuilder, &divEuclideanWrapperCircuit{})
+	require.NoError(t, err)
+
+	// a=10, b=3: honest (q=3, r=1).
+	witness, err := frontend.NewWitness(&divEuclideanWrapperCircuit{A: 10, B: 3}, ecc.BLS12_377.ScalarField())
+	require.NoError(t, err)
+
+	require.NoError(t, ccs.IsSolved(witness), "honest (q=3, r=1) for a=10, b=3 must be accepted")
+
+	hintID := findDivEuclideanHintID(t)
+
+	// Forged (q=0, r=0): r < b and q <= a both hold, but 0*3 + 0 ≠ 10.
+	forgedZero := func(_ *big.Int, _ []*big.Int, outputs []*big.Int) error {
+		outputs[0].SetUint64(0)
+		outputs[1].SetUint64(0)
+		return nil
+	}
+	require.Error(
+		t,
+		ccs.IsSolved(witness, solver.OverrideHint(hintID, forgedZero)),
+		"forged (q=0, r=0) for a=10, b=3 must be rejected",
+	)
+
+	// Forged (q=10, r=0): r < b and q <= a both hold, but 10*3 + 0 ≠ 10.
+	forgedMax := func(_ *big.Int, _ []*big.Int, outputs []*big.Int) error {
+		outputs[0].SetUint64(10)
+		outputs[1].SetUint64(0)
+		return nil
+	}
+	require.Error(
+		t,
+		ccs.IsSolved(witness, solver.OverrideHint(hintID, forgedMax)),
+		"forged (q=10, r=0) for a=10, b=3 must be rejected",
+	)
+}
+
+func findDivEuclideanHintID(t *testing.T) solver.HintID {
+	t.Helper()
+	const name = "github.com/consensys/linea-monorepo/prover/circuits/internal.divEuclideanHint"
+	for _, hintFn := range solver.GetRegisteredHints() {
+		if solver.GetHintName(hintFn) == name {
+			return solver.GetHintID(hintFn)
+		}
+	}
+	t.Fatalf("hint %q is not registered", name)
+	return 0
 }

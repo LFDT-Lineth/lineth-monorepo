@@ -132,6 +132,7 @@ func (i *FunctionalPublicInputQSnark) RangeCheck(api frontend.API) {
 	}
 	rc.Check(i.Y[0], 128)
 	rc.Check(i.Y[1], 128)
+	api.AssertIsBoolean(i.Eip4844Enabled)
 }
 
 func (i *FunctionalPublicInput) ToSnarkType(maxNbBatches int) (FunctionalPublicInputSnark, error) {
