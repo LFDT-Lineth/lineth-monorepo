@@ -119,7 +119,7 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
         )
 
       if (checkConfigsOnly) {
-        logger.info("All configs are valid. Final configs: {}", configs)
+        logger.info("All configs are valid. Final configs:\n{}", configs.toPrettyLog())
       } else {
         startAction.start(configs)
       }

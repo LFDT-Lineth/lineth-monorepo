@@ -45,7 +45,19 @@ class CoordinatorApp(
       log.trace("System properties: {}", System.getProperties())
       val vertxConfig = loadVertxConfig()
       log.debug("Vertx full configs: {}", vertxConfig)
-      log.info("App configs: {}", configs)
+      log.info("App configs:\n{}", configs.toPrettyLog())
+      log.trace(
+        "Full smartContractErrors ({} entries): {}",
+        configs.smartContractErrors.size,
+        configs.smartContractErrors,
+      )
+      configs.l1Submission?.dynamicGasPriceCap?.let { dgc ->
+        log.trace("dynamicGasPriceCap.timeOfDayMultipliers: {}", dgc.timeOfDayMultipliers)
+        log.trace(
+          "dynamicGasPriceCap.gasPriceCapCalculation.timeOfTheDayMultipliers: {}",
+          dgc.gasPriceCapCalculation.timeOfTheDayMultipliers,
+        )
+      }
 
       Vertx.vertx(vertxConfig)
     }
