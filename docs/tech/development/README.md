@@ -7,13 +7,13 @@
 | Tool | Version | Purpose |
 |------|---------|---------|
 | Node.js | >= 24.14.1 (see `.nvmrc`) | TypeScript projects |
-| pnpm | v10.28+ | Package management |
+| pnpm | v10.32.1+ | Package management |
 | Docker | v24+ | Container runtime |
 | Docker Compose | v2.19+ | Multi-container orchestration |
 | Make | v3.81+ | Build automation |
-| JDK | 21 | Kotlin/Java projects |
-| Gradle | 8.5+ | JVM build system |
-| Go | 1.21+ | Prover |
+| JDK | 25 | Kotlin/Java projects |
+| Gradle | 9.4+ | JVM build system |
+| Go | 1.25.7+ | Prover |
 
 ### Resource Requirements
 
