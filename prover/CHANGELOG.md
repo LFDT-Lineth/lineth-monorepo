@@ -1,5 +1,5 @@
 ## [unreleased]
 
-### 🐛 Bug Fixes
+### ⚙️ Miscellaneous Tasks
 
-- *(prover)* Stronger soundness binding for euclidean division and crumb decomposition (#2910)
+- Update gnark dependency (#3215)

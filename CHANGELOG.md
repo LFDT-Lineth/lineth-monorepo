@@ -29,3 +29,5 @@
 - Update to latest gnark and gnark-crypto (#3142)
 - *(misc)* Besu-plugin acceptance test cleanup of deadcode (#3152)
 - *(coordinator)* Log and message error improvements (#3193)
+- *(maru)* Remove spring dependency management (#3205)
+- Update gnark dependency (#3215)
