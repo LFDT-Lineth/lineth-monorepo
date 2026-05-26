@@ -7,12 +7,6 @@ import java.time.Duration
 plugins {
   alias(libs.plugins.spotless)
   alias(libs.plugins.docker)
-  // Loaded on the root plugin classpath so maru subprojects can apply it
-  // via `alias(libs.plugins.dependencyManagement)` in their own plugins{}
-  // block. Maru continues to use io.spring.dependency-management for its
-  // BOM-driven version resolution until maru/gradle/versions.gradle is
-  // folded into the catalog (follow-up commit).
-  alias(libs.plugins.dependencyManagement) apply false
 }
 
 tasks.register("compileAll") {

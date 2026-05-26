@@ -16,13 +16,23 @@ plugins {
   alias(libs.plugins.web3jSolidity)
   alias(libs.plugins.lombok)
   alias(libs.plugins.gradleVersions)
-  alias(libs.plugins.dependencyManagement)
   id "org.jetbrains.kotlin.kapt"
 }
 
 def lineaSequencerProject = project(lineaSequencerProjectPath)
 apply from: lineaSequencerProject.file("gradle/java.gradle")
 apply from: lineaSequencerProject.file("gradle/lint.gradle")
+
+// Besu acceptance-test dependencies pull strict Kotlin stdlib constraints that conflict with the repository Kotlin
+// version. Keep stdlib artifacts aligned with the repo version without reintroducing io.spring.dependency-management.
+configurations.configureEach {
+  resolutionStrategy.eachDependency { details ->
+    if (details.requested.group == 'org.jetbrains.kotlin' && details.requested.name.startsWith('kotlin-stdlib')) {
+      details.useVersion("${libs.versions.kotlin.get()}")
+      details.because('Align Kotlin stdlib with the repository Kotlin version')
+    }
+  }
+}
 
 kapt {
   arguments {
