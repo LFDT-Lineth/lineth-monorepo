@@ -43,6 +43,11 @@ pub const PoseidonCompressCase = struct { left: [8]u32, right: [8]u32, expected:
 pub const PoseidonMdCase = struct { message: []const u32, expected: [8]u32 };
 pub const FiatShamirCase = struct { base_updates: []const u32, ext_updates: []const [6]u32, random_field: [8]u32, random_ext: [6]u32 };
 
+pub const RuntimeTraceColumn = struct { visibility: u8, is_assigned: bool, is_ext: bool, base_values: []const u32, ext_values: []const [6]u32 };
+pub const RuntimeTraceCell = struct { is_assigned: bool, is_ext: bool, base_value: u32, ext_value: [6]u32 };
+pub const RuntimeTraceRound = struct { columns: []const RuntimeTraceColumn, cells: []const RuntimeTraceCell, expected_coins: []const [6]u32 };
+pub const RuntimeTraceCase = struct { rounds: []const RuntimeTraceRound };
+
 pub const field_cases = [_]FieldCase{
     .{ .a = 0, .b = 1, .add = 1, .sub = 2130706432, .mul = 0, .square_a = 0, .neg_a = 0, .has_inv_a = false, .inv_a = 0, .has_div_ab = true, .div_ab = 0, .bytes_a = .{ 0x00, 0x00, 0x00, 0x00 } },
     .{ .a = 1, .b = 2, .add = 3, .sub = 2130706432, .mul = 2, .square_a = 1, .neg_a = 2130706432, .has_inv_a = true, .inv_a = 1, .has_div_ab = true, .div_ab = 1065353217, .bytes_a = .{ 0x00, 0x00, 0x00, 0x01 } },
@@ -130,4 +135,36 @@ pub const poseidon_md_cases = [_]PoseidonMdCase{
 pub const fiat_shamir_cases = [_]FiatShamirCase{
     .{ .base_updates = &.{ 3, 4, 5 }, .ext_updates = &.{.{ 1, 2, 3, 4, 5, 6 }}, .random_field = .{ 1369968576, 1921227010, 1284177723, 1574299405, 1986605901, 1260024162, 2021358802, 1052246783 }, .random_ext = .{ 378558963, 1331620468, 704318959, 1741344688, 795303229, 1909764152 } },
     .{ .base_updates = &.{ 2130706432, 9 }, .ext_updates = &.{ .{ 5, 0, 6, 0, 7, 8 }, .{ 7, 8, 9, 10, 11, 12 } }, .random_field = .{ 821752357, 1879104200, 444728925, 120774738, 934984782, 1711802630, 89715619, 2068643356 }, .random_ext = .{ 420362591, 716070027, 1100697449, 1384724807, 307514712, 1179118643 } },
+};
+
+pub const runtime_trace_cases = [_]RuntimeTraceCase{
+    .{ .rounds = &.{
+        .{
+            .columns = &.{
+                .{ .visibility = 1, .is_assigned = true, .is_ext = false, .base_values = &.{ 3, 1, 4, 1 }, .ext_values = &.{} },
+                .{ .visibility = 2, .is_assigned = true, .is_ext = true, .base_values = &.{}, .ext_values = &.{ .{ 5, 9, 2, 6, 5, 3 }, .{ 5, 8, 9, 7, 9, 3 }, .{ 2, 3, 8, 4, 6, 2 }, .{ 6, 4, 3, 3, 8, 3 } } },
+                .{ .visibility = 0, .is_assigned = false, .is_ext = false, .base_values = &.{}, .ext_values = &.{} },
+            },
+            .cells = &.{
+                .{ .is_assigned = true, .is_ext = false, .base_value = 23, .ext_value = .{ 0, 0, 0, 0, 0, 0 } },
+                .{ .is_assigned = true, .is_ext = true, .base_value = 0, .ext_value = .{ 10, 20, 30, 40, 50, 60 } },
+            },
+            .expected_coins = &.{ .{ 801423174, 1112238097, 730631189, 1937398400, 284419417, 80048649 }, .{ 1418026916, 65193884, 839433822, 939931361, 1821039800, 1785241556 } },
+        },
+        .{
+            .columns = &.{
+                .{ .visibility = 1, .is_assigned = true, .is_ext = true, .base_values = &.{}, .ext_values = &.{ .{ 101, 102, 103, 104, 105, 106 }, .{ 201, 202, 203, 204, 205, 206 }, .{ 301, 302, 303, 304, 305, 306 }, .{ 401, 402, 403, 404, 405, 406 } } },
+                .{ .visibility = 2, .is_assigned = true, .is_ext = false, .base_values = &.{ 11, 22, 33, 44 }, .ext_values = &.{} },
+            },
+            .cells = &.{
+                .{ .is_assigned = true, .is_ext = false, .base_value = 77, .ext_value = .{ 0, 0, 0, 0, 0, 0 } },
+            },
+            .expected_coins = &.{.{ 1285509378, 897649283, 1356811217, 1746075755, 877556703, 130031402 }},
+        },
+        .{
+            .columns = &.{},
+            .cells = &.{},
+            .expected_coins = &.{},
+        },
+    } },
 };

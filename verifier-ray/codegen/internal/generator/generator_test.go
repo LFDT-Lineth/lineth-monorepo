@@ -24,8 +24,11 @@ func TestGenerate_DefaultEntryPoint(t *testing.T) {
 	if !strings.Contains(src, "pub fn verifyGenerated") {
 		t.Fatalf("generated source is missing default entry point:\n%s", src)
 	}
-	if got := strings.Count(src, "rt.advanceRound();"); got != 2 {
-		t.Fatalf("expected one advance per round, got %d:\n%s", got, src)
+	if strings.Contains(src, "rt.advanceRound") {
+		t.Fatalf("generated source should not emit placeholder round advancement:\n%s", src)
+	}
+	if got := strings.Count(src, "// Round "); got != 2 {
+		t.Fatalf("expected one comment per round, got %d:\n%s", got, src)
 	}
 }
 

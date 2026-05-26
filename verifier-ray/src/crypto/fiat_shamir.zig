@@ -1,5 +1,6 @@
 const field = @import("../field/koalabear.zig");
 const ext = @import("../field/koalabear_ext.zig");
+const field_value = @import("../field/value.zig");
 const poseidon2 = @import("poseidon2.zig");
 
 pub const Transcript = struct {
@@ -13,13 +14,27 @@ pub const Transcript = struct {
         self.hasher.writeElement(value);
     }
 
-    pub fn updateElements(self: *Transcript, values: []const field.Element) void {
+    pub fn updateElements(self: *Transcript, values: field_value.ElementSlice) void {
         self.hasher.writeElements(values);
     }
 
-    pub fn updateExt(self: *Transcript, values: []const ext.Ext) void {
-        for (values) |value| {
-            self.hasher.writeElements(&.{ value.B0.a0, value.B0.a1, value.B1.a0, value.B1.a1, value.B2.a0, value.B2.a1 });
+    pub fn updateExt(self: *Transcript, values: field_value.ExtSlice) void {
+        for (values) |ext_value| {
+            self.hasher.writeElements(&.{ ext_value.B0.a0, ext_value.B0.a1, ext_value.B1.a0, ext_value.B1.a1, ext_value.B2.a0, ext_value.B2.a1 });
+        }
+    }
+
+    pub fn absorbVector(self: *Transcript, vector: field_value.Vector) void {
+        switch (vector) {
+            .base => |values| self.updateElements(values),
+            .ext => |values| self.updateExt(values),
+        }
+    }
+
+    pub fn absorbScalar(self: *Transcript, scalar: field_value.Scalar) void {
+        switch (scalar) {
+            .base => |scalar_value| self.updateElement(scalar_value),
+            .ext => |scalar_value| self.updateExt(&.{scalar_value}),
         }
     }
 

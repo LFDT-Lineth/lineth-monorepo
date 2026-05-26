@@ -5,7 +5,7 @@ pub const verifier = @import("verifier.zig");
 pub const field = struct {
     pub const koalabear = @import("field/koalabear.zig");
     pub const koalabear_ext = @import("field/koalabear_ext.zig");
-    pub const vec = @import("field/vec.zig");
+    pub const value = @import("field/value.zig");
 };
 
 pub const crypto = struct {

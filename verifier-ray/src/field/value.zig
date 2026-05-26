@@ -4,6 +4,16 @@ const ext = @import("koalabear_ext.zig");
 pub const ElementSlice = []const base.Element;
 pub const ExtSlice = []const ext.Ext;
 
+pub const Vector = union(enum) {
+    base: ElementSlice,
+    ext: ExtSlice,
+};
+
+pub const Scalar = union(enum) {
+    base: base.Element,
+    ext: ext.Ext,
+};
+
 pub fn ElementArray(comptime len: usize) type {
     return [len]base.Element;
 }

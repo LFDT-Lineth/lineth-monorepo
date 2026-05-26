@@ -37,13 +37,13 @@ func Generate(system System, opts Options, dst io.Writer) error {
 	w.Blank()
 	w.Line("pub fn %s(rt: *runtime_mod.Runtime, p: proof_mod.Proof) verifier.VerifyError!void {", opts.EntryPoint)
 	w.In()
+	w.Line("_ = rt;")
 	w.Line("_ = p;")
 	for _, round := range system.Rounds {
 		w.Line("// Round %d", round.ID)
 		for _, action := range round.VerifierActions {
 			w.Line("// verifier action: %s", action)
 		}
-		w.Line("rt.advanceRound();")
 	}
 	w.Line("return verifier.VerifyError.Unsupported;")
 	w.Out()
