@@ -132,8 +132,8 @@ func CheckOnlyNativeNonceBalance(
 
 	switch assi.InvalidityType {
 	case BadNonce:
-		if tx.Nonce() == uint64(accountNonce+1) {
-			return fmt.Errorf("nonce is valid (tx=%d, account+1=%d): not a bad-nonce case", tx.Nonce(), accountNonce+1)
+		if tx.Nonce() == uint64(accountNonce) {
+			return fmt.Errorf("nonce is valid (tx=%d, account=%d): not a bad-nonce case", tx.Nonce(), accountNonce)
 		}
 	case BadBalance:
 		if txCost.Cmp(accountBalance) <= 0 {

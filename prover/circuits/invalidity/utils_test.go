@@ -615,7 +615,7 @@ var tcases = []TestCases{
 		InvalidityType: 1,
 	},
 	{
-		// EOA
+		// EOA with BadNonce: tx nonce (66) != account nonce (65)
 		Account: Account{
 			Nonce:          65,
 			Balance:        big.NewInt(5690),
@@ -640,7 +640,7 @@ var tcases = []TestCases{
 		},
 		Tx: types.DynamicFeeTx{
 			ChainID:   big.NewInt(59144), // Linea mainnet chain ID
-			Nonce:     65,                // invalid nonce
+			Nonce:     66,                // invalid nonce (account nonce is 65)
 			Value:     big.NewInt(5700),  // invalid value
 			Gas:       1,
 			GasFeeCap: big.NewInt(1), // gas price
