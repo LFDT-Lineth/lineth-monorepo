@@ -1,0 +1,201 @@
+include "type.zkc"
+
+fn print_register_values<registers>() -> () {
+    printf "zero ≡ %d\n", registers[0]
+    printf "ra   ≡ %d\n", registers[1]
+    printf "sp   ≡ %d\n", registers[2]
+    printf "gp   ≡ %d\n", registers[3]
+    printf "tp   ≡ %d\n", registers[4]
+    printf "t0   ≡ %d\n", registers[5]
+    printf "t1   ≡ %d\n", registers[6]
+    printf "t2   ≡ %d\n", registers[7]
+    printf "s0   ≡ %d\n", registers[8]
+    printf "s1   ≡ %d\n", registers[9]
+    printf "a0   ≡ %d\n", registers[10]
+    printf "a1   ≡ %d\n", registers[11]
+    printf "a2   ≡ %d\n", registers[12]
+    printf "a3   ≡ %d\n", registers[13]
+    printf "a4   ≡ %d\n", registers[14]
+    printf "a5   ≡ %d\n", registers[15]
+    printf "a6   ≡ %d\n", registers[16]
+    printf "a7   ≡ %d\n", registers[17]
+    printf "s2   ≡ %d\n", registers[18]
+    printf "s3   ≡ %d\n", registers[19]
+    printf "s4   ≡ %d\n", registers[20]
+    printf "s5   ≡ %d\n", registers[21]
+    printf "s6   ≡ %d\n", registers[22]
+    printf "s7   ≡ %d\n", registers[23]
+    printf "s8   ≡ %d\n", registers[24]
+    printf "s9   ≡ %d\n", registers[25]
+    printf "s10  ≡ %d\n", registers[26]
+    printf "s11  ≡ %d\n", registers[27]
+    printf "t3   ≡ %d\n", registers[28]
+    printf "t4   ≡ %d\n", registers[29]
+    printf "t5   ≡ %d\n", registers[30]
+    printf "t6   ≡ %d\n", registers[31]
+}
+
+fn print_register_name(r:Register) {
+    switch r {
+        case 0: {
+            printf "zero"
+        }
+        case 1: {
+            printf "ra"
+        }
+        case 2: {
+            printf "sp"
+        }
+        case 3: {
+            printf "gp"
+        }
+        case 4: {
+            printf "tp"
+        }
+        case 5: {
+            printf "t0"
+        }
+        case 6: {
+            printf "t1"
+        }
+        case 7: {
+            printf "t2"
+        }
+        case 8: {
+            printf "s0"
+        }
+        case 9: {
+            printf "s1"
+        }
+        case 10: {
+            printf "a0"
+        }
+        case 11: {
+            printf "a1"
+        }
+        case 12: {
+            printf "a2"
+        }
+        case 13: {
+            printf "a3"
+        }
+        case 14: {
+            printf "a4"
+        }
+        case 15: {
+            printf "a5"
+        }
+        case 16: {
+            printf "a6"
+        }
+        case 17: {
+            printf "a7"
+        }
+        case 18: {
+            printf "s2"
+        }
+        case 19: {
+            printf "s3"
+        }
+        case 20: {
+            printf "s4"
+        }
+        case 21: {
+            printf "s5"
+        }
+        case 22: {
+            printf "s6"
+        }
+        case 23: {
+            printf "s7"
+        }
+        case 24: {
+            printf "s8"
+        }
+        case 25: {
+            printf "s9"
+        }
+        case 26: {
+            printf "s10"
+        }
+        case 27: {
+            printf "s11"
+        }
+        case 28: {
+            printf "t3"
+        }
+        case 29: {
+            printf "t4"
+        }
+        case 30: {
+            printf "t5"
+        }
+        case 31: {
+            printf "t6"
+        }
+        default: {
+            printf "x%d", r
+        }
+    }
+}
+
+fn print_r_operands(rd:Register, rs1:Register, rs2:Register) {
+    print_register_name(rd)
+    printf ", "
+    print_register_name(rs1)
+    printf ", "
+    print_register_name(rs2)
+    printf "\n"
+}
+
+fn print_i_operands(rd:Register, rs1:Register, imm:DoubleWord) {
+    print_register_name(rd)
+    printf ", "
+    print_register_name(rs1)
+    printf ", 0x%x\n", imm
+}
+
+fn print_i_memory_operands(rd:Register, rs1:Register, imm:DoubleWord) {
+    print_register_name(rd)
+    printf ", 0x%x(", imm
+    print_register_name(rs1)
+    printf ")\n"
+}
+
+fn print_i_shift5_operands(rd:Register, rs1:Register, shamt:UImm5) {
+    print_register_name(rd)
+    printf ", "
+    print_register_name(rs1)
+    printf ", 0x%x\n", shamt
+}
+
+fn print_i_shift6_operands(rd:Register, rs1:Register, shamt:UImm6) {
+    print_register_name(rd)
+    printf ", "
+    print_register_name(rs1)
+    printf ", 0x%x\n", shamt
+}
+
+fn print_s_operands(rs2:Register, rs1:Register, imm:DoubleWord) {
+    print_register_name(rs2)
+    printf ", 0x%x(", imm
+    print_register_name(rs1)
+    printf ")\n"
+}
+
+fn print_b_operands(rs1:Register, rs2:Register, imm:DoubleWord) {
+    print_register_name(rs1)
+    printf ", "
+    print_register_name(rs2)
+    printf ", 0x%x\n", imm
+}
+
+fn print_u_operands(rd:Register, imm:Imm20) {
+    print_register_name(rd)
+    printf ", 0x%x\n", imm
+}
+
+fn print_j_operands(rd:Register, imm:DoubleWord) {
+    print_register_name(rd)
+    printf ", 0x%x\n", imm
+}

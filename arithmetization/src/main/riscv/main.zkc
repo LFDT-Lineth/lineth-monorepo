@@ -9,39 +9,39 @@ include "utils/bit_flip.zkc"
 include "utils/signed_comparisons.zkc"
 include "utils/sign_bit.zkc"
 include "utils/negative.zkc"
+include "utils/register_utils.zkc"
 include "memory.zkc"
 
 // TODO @Ghost
 fn main<ram, registers>() {
-
-    var pc:Address = entry_point[0]
     var opcode:Opcode
     var instruction:Instruction
-    var program_len:Length = riscV_program_length[0]
-    var in_bytes_len:Length = in_bytes_length[0]
-    var program_off:Offset = riscV_program_offset[0]
-    var in_bytes_off:Offset = in_bytes_offset[0]
     var clock_cycle:u32 = 0
+    var entry_point:Address
+    var blobs_count:u64
+    entry_point, blobs_count = entry_point_and_blobs_count[0]
+    var pc:Address = entry_point
 
-    // copy public inputs and r5-program into the RAM
-    for i:Address = 0; i<program_len; i = i + 1 {
-        write_8(program_off + i, riscV_program[i])
+    var internal_offset:Length = 0 // internal offset to blobs_data
+    for i:u64 = 0; i<blobs_count; i = i + 1 {
+        var blob_offset:Address
+        var blob_size:Length
+        blob_offset, blob_size = blobs_offset_and_size[i]
+        // printf "blobs_offset_and_size[%d] == %x :: %x\n", i, blob_offset, blob_size
+        for j:Address = 0; j<blob_size; j = j + 1 {
+            // printf "blobs_data[%d + %d] = %x\n", internal_offset, j, blobs_data[internal_offset + j]
+            write_8(blob_offset + j, blobs_data[internal_offset + j])
+        }
+        internal_offset = internal_offset + blob_size
     }
-    for j:Address = 0; j<in_bytes_len; j = j + 1 {
-        write_8(in_bytes_off + j, in_bytes[j])
-    }
-
-    printf "program length=%d\n", program_len
-    printf "===========\n"
 
     // We interpret pc == MAX_UINT_64 as the stop signal, which is set by the ecall instruction
     while pc != MAX_UINT_64 {
-        printf "PC=%x\n", pc
         instruction = read_32(pc) as Instruction
 
         // clock cycle starts at 1
         clock_cycle = clock_cycle + 1
-        printf "clock cycle: %d\n", clock_cycle
+        printf "----------------------------------------------------------------- PC=%d, clock cycle: %d\n", pc, clock_cycle
 
         pc = interpreter(instruction, pc)
     }

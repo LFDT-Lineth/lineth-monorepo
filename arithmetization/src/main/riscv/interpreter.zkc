@@ -1,4 +1,5 @@
 include "utils/constants.zkc"
+include "utils/register_utils.zkc"
 include "utils/type.zkc"
 include "instruction_processing/b_type.zkc"
 include "instruction_processing/r_type.zkc"
@@ -15,40 +16,29 @@ fn interpreter<ram, registers>(instruction:u32, pc:Address) -> (new_pc:Address) 
     instruction_parameters::opcode = instruction
     instruction_type = instruction_type_from_opcode(opcode)
 
-    printf "instruction %b\n", instruction
-    printf "opcode:     %b\n", opcode
-    printf "type:       %b\n", instruction_type
-    printf "parameters: %b\n", instruction_parameters
-
     // TODO: handle the case where rd = 0: we will handle this in RAM itself, likely by adding an extra read-write pair
     // to reset the value in registers[rd] to 0
 
     switch instruction_type {
         case R_TYPE: {
-            printf "R-Type instruction\n"
             process_R_type_instruction(opcode, instruction_parameters)
             new_pc = pc + 4 as Address
         }
         case I_TYPE: {
-            printf "I-Type instruction\n"
             new_pc = process_I_type_instruction(opcode, instruction_parameters, pc)
         }
         case S_TYPE: {
-            printf "S-Type instruction\n"
             process_S_type_instruction(instruction_parameters)
             new_pc = pc + 4 as Address
         }
         case B_TYPE: {
-            printf "B-Type instruction\n"
             new_pc = process_B_type_instruction(instruction_parameters, pc)
         }
         case U_TYPE: {
-            printf "U-Type instruction\n"
             process_U_type_instruction(opcode, instruction_parameters, pc)
             new_pc = pc + 4 as Address
         }
         case J_TYPE: {
-            printf "J-Type instruction\n"
             new_pc = process_J_type_instruction(instruction_parameters, pc)
         }
         case MISC_MEM_TYPE: {
@@ -63,48 +53,4 @@ fn interpreter<ram, registers>(instruction:u32, pc:Address) -> (new_pc:Address) 
 
     // Forcefully set registers[0] = zero back to 0
     registers[0] = 0
-
-    // Useful for debugging
-    // print_registers()
-
-    printf "-----------\n"
-
 }
-
-fn print_registers<registers>() -> () {
-    printf "#########################\n"
-    printf "zero ≡ %d\n", registers[0]
-    printf "ra   ≡ %d\n", registers[1]
-    printf "sp   ≡ %d\n", registers[2]
-    printf "gp   ≡ %d\n", registers[3]
-    printf "tp   ≡ %d\n", registers[4]
-    printf "t0   ≡ %d\n", registers[5]
-    printf "t1   ≡ %d\n", registers[6]
-    printf "t2   ≡ %d\n", registers[7]
-    printf "s0   ≡ %d\n", registers[8]
-    printf "s1   ≡ %d\n", registers[9]
-    printf "a0   ≡ %d\n", registers[10]
-    printf "a1   ≡ %d\n", registers[11]
-    printf "a2   ≡ %d\n", registers[12]
-    printf "a3   ≡ %d\n", registers[13]
-    printf "a4   ≡ %d\n", registers[14]
-    printf "a5   ≡ %d\n", registers[15]
-    printf "a6   ≡ %d\n", registers[16]
-    printf "a7   ≡ %d\n", registers[17]
-    printf "s2   ≡ %d\n", registers[18]
-    printf "s3   ≡ %d\n", registers[19]
-    printf "s4   ≡ %d\n", registers[20]
-    printf "s5   ≡ %d\n", registers[21]
-    printf "s6   ≡ %d\n", registers[22]
-    printf "s7   ≡ %d\n", registers[23]
-    printf "s8   ≡ %d\n", registers[24]
-    printf "s9   ≡ %d\n", registers[25]
-    printf "s10  ≡ %d\n", registers[26]
-    printf "s11  ≡ %d\n", registers[27]
-    printf "t3   ≡ %d\n", registers[28]
-    printf "t4   ≡ %d\n", registers[29]
-    printf "t5   ≡ %d\n", registers[30]
-    printf "t6   ≡ %d\n", registers[31]
-    printf "#########################\n"
-}
-

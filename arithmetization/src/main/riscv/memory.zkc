@@ -1,26 +1,5 @@
 include "utils/type.zkc"
 
-// Stores the bytes of the RISC-V executable binary (i.e. the guest program).
-pub input riscV_program(address:Address) -> (bytes:u8)
-
-// Stores the number of bytes of the RISC-V executable binary.
-pub input riscV_program_length(rv:u1) -> (length:Address)
-
-// Stores the input bytes provided for the RISC-V executable.
-pub input in_bytes(address:Address) -> (bytes:u8)
-
-// Stores the number of input bytes provided.
-pub input in_bytes_length(pi:u1) -> (length:Address)
-
-// Stores the offset in RAM where the RISC-V executable binary is stored
-pub input riscV_program_offset(i:u1) -> (address:Address)
-
-// Stores the offset in RAM where the input bytes for the RISC-V executable are stored
-pub input in_bytes_offset(i:u1) -> (address:Address)
-
-// Stores the entry point of the RISC-V executable binary
-pub input entry_point(i:u1) -> (address:Address)
-
 // Represents the available Random Access Memory (RAM) for the guest program.
 // This will act as the program "heap" and will contain, amongst other things,
 // the program executable itself and the program inputs. 
@@ -30,3 +9,12 @@ memory ram(address:Address) -> (bytes:u8)
 // Represents the Register File to use when executing the guest program.  That
 // is, the value of all registers at the given moment.
 memory registers(id:Register) -> (value:DoubleWord)
+
+// Entry point of the RISC-V executable binary and number of sparse memory blobs to copy into RAM before execution
+pub input entry_point_and_blobs_count(i:u1) -> (entry_point:Address, blobs_count:u64)
+
+// RAM offset where each blob must be written and umber of bytes in each blob
+pub input blobs_offset_and_size(i:u64) -> (blob_offset:Address, blob_size:Length)
+
+// Concatenated bytes for all sparse memory blobs, in blob order
+pub input blobs_data(i:Address) -> (byte:u8)
