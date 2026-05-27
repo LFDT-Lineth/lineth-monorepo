@@ -117,6 +117,17 @@ jobs:
       github.ref_name != 'main'
     secrets: inherit
 
+  run-test-maru:
+    uses: ./.github/workflows/maru-testing.yml
+    needs: [compute-commit-tag, compute-release-metadata]
+    if: >
+      needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      inputs.component-name == 'maru' &&
+      github.ref_name != 'main'
+    with:
+      commit_tag: ${{ needs.compute-commit-tag.outputs.commit_tag }}
+    secrets: inherit
+
   run-test-transaction-exclusion-api:
     uses: ./.github/workflows/transaction-exclusion-api-testing.yml
     needs: [compute-release-metadata]
@@ -171,6 +182,21 @@ jobs:
       push_image: false
     secrets: inherit
 
+  build-local-maru:
+    needs: [compute-release-metadata, run-test-maru]
+    if: >
+      always() && !cancelled() &&
+      needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      inputs.component-name == 'maru' &&
+      (github.ref_name == 'main' || needs.run-test-maru.result == 'success')
+    uses: ./.github/workflows/maru-build-and-publish.yml
+    with:
+      image_tag: local
+      develop_tag: develop
+      image_name: consensys/maru
+      push_image: false
+    secrets: inherit
+
   build-local-tx-exclusion-api:
     needs: [compute-release-metadata, run-test-transaction-exclusion-api]
     if: >
@@ -187,14 +213,15 @@ jobs:
     secrets: inherit
 
   run-e2e-tests:
-    needs: [compute-release-metadata, build-local-coordinator, build-local-postman, build-local-prover, build-local-tx-exclusion-api]
+    needs: [compute-release-metadata, build-local-coordinator, build-local-postman, build-local-prover, build-local-tx-exclusion-api, build-local-maru]
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
-      (needs.build-local-coordinator.result   == 'success' ||
-       needs.build-local-postman.result       == 'success' ||
-       needs.build-local-prover.result        == 'success' ||
-       needs.build-local-tx-exclusion-api.result == 'success')
+      (needs.build-local-coordinator.result       == 'success' ||
+       needs.build-local-postman.result           == 'success' ||
+       needs.build-local-prover.result            == 'success' ||
+       needs.build-local-tx-exclusion-api.result  == 'success' ||
+       needs.build-local-maru.result              == 'success')
     uses: ./.github/workflows/reuse-run-e2e-tests.yml
     with:
       image_tag: local

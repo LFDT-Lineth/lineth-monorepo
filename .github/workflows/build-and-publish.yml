@@ -137,7 +137,7 @@ jobs:
     uses: ./.github/workflows/maru-build-and-publish.yml
     if: ${{ always() && (inputs.maru_changed == 'true' || (inputs.push_image && inputs.maru_image_tagged != 'true')) }}
     with:
-      commit_tag: ${{ inputs.commit_tag }}
+      image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
       image_name: consensys/maru
       push_image: ${{ inputs.push_image }}

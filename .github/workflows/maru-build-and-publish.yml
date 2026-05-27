@@ -8,7 +8,11 @@ permissions:
 on:
   workflow_call:
     inputs:
-      commit_tag:
+      image_tag: #TODO: should be required as true when maru-release.yml get removed
+        required: false
+        type: string
+        default: ''
+      image_tag_with_suffix:
         required: false
         type: string
         default: ''
@@ -22,13 +26,10 @@ on:
         required: false
         type: boolean
         default: false
-      upload_dist_artifact: # Used for release process to reuse the artifact
+      upload_dist_artifact: # Used for release process to reuse the artifact #TODO: to be removed when maru-release.yml get removed
         required: false
         type: boolean
         default: false
-    outputs:
-      commit_tag:
-        value: ${{ jobs.build-and-publish.outputs.commit_tag }}
     secrets:
       DOCKERHUB_USERNAME:
         required: false
@@ -36,7 +37,7 @@ on:
         required: false
   workflow_dispatch:
     inputs:
-      commit_tag:
+      image_tag:
         description: 'Image tag, if not given, HEAD commit hash will be used'
         required: false
         type: string
@@ -68,28 +69,27 @@ jobs:
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
     name: Maru build and publish
     env:
-      COMMIT_TAG: ${{ inputs.commit_tag }}
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      IMAGE_TAG_WITH_SUFFIX: ${{ inputs.image_tag_with_suffix }}
       DEVELOP_TAG: ${{ inputs.develop_tag }}
       IMAGE_NAME: ${{ inputs.image_name }}
       PUSH_IMAGE: ${{ inputs.push_image }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-    outputs:
-      commit_tag: ${{ env.COMMIT_TAG }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
-      - name: Set commit tag if not given
-        if: ${{ inputs.commit_tag == '' }}
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set image tag if not given
+        if: ${{ inputs.image_tag == '' }}
         run: |
           # For PR, GITHUB_SHA is NOT the last commit pushed onto the PR branch - https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#pull_request
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            COMMIT_TAG=$(git rev-parse --short ${{ github.event.pull_request.head.sha }})
+            IMAGE_TAG=$(git rev-parse --short ${{ github.event.pull_request.head.sha }})
           else
-            COMMIT_TAG=$(git rev-parse --short $GITHUB_SHA)
+            IMAGE_TAG=$(git rev-parse --short $GITHUB_SHA)
           fi
-          echo "COMMIT_TAG=$COMMIT_TAG" >> $GITHUB_ENV
-          echo "COMMIT_TAG=$COMMIT_TAG"
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+          echo "IMAGE_TAG=$IMAGE_TAG"
       - name: Login to Docker Hub
         if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
@@ -113,7 +113,8 @@ jobs:
         with:
           docker_context: maru/app
           image_name: ${{ env.IMAGE_NAME }}
-          image_tag: ${{ env.COMMIT_TAG }}
+          image_tag: ${{ env.IMAGE_TAG }}
+          extra_image_tag: ${{ env.IMAGE_TAG_WITH_SUFFIX }}
           develop_tag: ${{ env.DEVELOP_TAG }}
           push_image: ${{ env.PUSH_IMAGE }}
           dockerfile_path: maru/app/Dockerfile

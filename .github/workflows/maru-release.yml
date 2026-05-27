@@ -72,7 +72,7 @@ jobs:
     needs: compute-version
     uses: ./.github/workflows/maru-build-and-publish.yml
     with:
-      commit_tag: ${{ needs.compute-version.outputs.full_version }}
+      image_tag: ${{ needs.compute-version.outputs.full_version }}
       develop_tag: ${{ needs.compute-version.outputs.semver_tag }}
       image_name: 'consensys/maru'
       push_image: true

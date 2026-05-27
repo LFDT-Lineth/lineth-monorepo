@@ -26,6 +26,9 @@ on:
       linea_besu_package_metadata:
         required: true
         type: string
+      maru_metadata:
+        required: true
+        type: string
       coordinator_latest_docker_tag:
         required: true
         type: string
@@ -41,6 +44,9 @@ on:
       linea_besu_package_latest_docker_tag:
         required: true
         type: string
+      maru_latest_docker_tag:
+        required: true
+        type: string
     secrets:
       DOCKERHUB_USERNAME:
         required: true
@@ -53,12 +59,17 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        component: [ coordinator, prover, postman, tx-exclusion-api, linea-besu-package ]
+        component: [ coordinator, maru, prover, postman, tx-exclusion-api, linea-besu-package ]
         include:
           - component: coordinator
             image-name: linea-coordinator
             metadata: ${{ inputs.coordinator_metadata }}
             latest-docker-tag: ${{ inputs.coordinator_latest_docker_tag }}
+          - component: maru
+            # maru is published as consensys/maru rather than consensys/linea-maru.
+            image-name: maru
+            metadata: ${{ inputs.maru_metadata }}
+            latest-docker-tag: ${{ inputs.maru_latest_docker_tag }}
           - component: prover
             image-name: linea-prover
             metadata: ${{ inputs.prover_metadata }}

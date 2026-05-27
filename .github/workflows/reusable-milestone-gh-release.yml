@@ -44,6 +44,9 @@ on:
       linea_besu_package_metadata:
         required: true
         type: string
+      maru_metadata:
+        required: true
+        type: string
       coordinator_docker_tag_with_suffix:
         description: "Docker tag (with suffix already baked in) produced by this run's coordinator gh-release"
         required: false
@@ -65,6 +68,10 @@ on:
         required: false
         type: string
         default: ''
+      maru_docker_tag_with_suffix:
+        required: false
+        type: string
+        default: ''
       coordinator_latest_docker_tag:
         required: false
         type: string
@@ -82,6 +89,10 @@ on:
         type: string
         default: ''
       linea_besu_package_latest_docker_tag:
+        required: false
+        type: string
+        default: ''
+      maru_latest_docker_tag:
         required: false
         type: string
         default: ''
@@ -112,6 +123,7 @@ jobs:
             prover|linea-prover|${{ fromJson(inputs.prover_metadata).tag_changed }}|${{ inputs.prover_docker_tag_with_suffix }}|${{ inputs.prover_latest_docker_tag }}
             tx-exclusion-api|linea-transaction-exclusion-api|${{ fromJson(inputs.tx_exclusion_api_metadata).tag_changed }}|${{ inputs.tx_exclusion_api_docker_tag_with_suffix }}|${{ inputs.tx_exclusion_api_latest_docker_tag }}
             linea-besu|linea-besu-package|${{ fromJson(inputs.linea_besu_package_metadata).tag_changed }}|${{ inputs.linea_besu_package_docker_tag_with_suffix }}|${{ inputs.linea_besu_package_latest_docker_tag }}
+            maru|maru|${{ fromJson(inputs.maru_metadata).tag_changed }}|${{ inputs.maru_docker_tag_with_suffix }}|${{ inputs.maru_latest_docker_tag }}
         run: |
           set -euo pipefail
           mkdir release && cd release

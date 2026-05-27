@@ -108,6 +108,18 @@ jobs:
       push_image: true
     secrets: inherit
 
+  build-and-publish-image-maru:
+    needs: [compute-docker-tag]
+    if: inputs.component-name == 'maru'
+    uses: ./.github/workflows/maru-build-and-publish.yml
+    with:
+      image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
+      image_tag_with_suffix: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+      develop_tag: develop
+      image_name: consensys/maru
+      push_image: true
+    secrets: inherit
+
   build-and-publish-image-tx-exclusion-api:
     needs: [compute-docker-tag]
     if: inputs.component-name == 'tx-exclusion-api'
@@ -121,13 +133,14 @@ jobs:
     secrets: inherit
 
   gh-release:
-    needs: [release-push-tag-changelog, compute-docker-tag, build-and-publish-image-coordinator, build-and-publish-image-postman, build-and-publish-image-prover, build-and-publish-image-tx-exclusion-api]
+    needs: [release-push-tag-changelog, compute-docker-tag, build-and-publish-image-coordinator, build-and-publish-image-postman, build-and-publish-image-prover, build-and-publish-image-tx-exclusion-api, build-and-publish-image-maru]
     if: >
       always() && !cancelled() &&
-      (needs.build-and-publish-image-coordinator.result   == 'success' ||
-       needs.build-and-publish-image-postman.result       == 'success' ||
-       needs.build-and-publish-image-prover.result        == 'success' ||
-       needs.build-and-publish-image-tx-exclusion-api.result == 'success')
+      (needs.build-and-publish-image-coordinator.result       == 'success' ||
+       needs.build-and-publish-image-postman.result           == 'success' ||
+       needs.build-and-publish-image-prover.result            == 'success' ||
+       needs.build-and-publish-image-tx-exclusion-api.result  == 'success' ||
+       needs.build-and-publish-image-maru.result              == 'success')
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     steps:
       - name: Checkout
@@ -142,19 +155,26 @@ jobs:
           CHANGELOG: ${{ needs.release-push-tag-changelog.outputs.changelog }}
           DOCKER_TAG: ${{ needs.compute-docker-tag.outputs.docker_tag }}
           DOCKER_TAG_WITH_SUFFIX: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+          COMPONENT_NAME: ${{ inputs.component-name }}
           DOCKER_IMAGE_SUFFIX: ${{ inputs.folder-name }}
         run: |
           mkdir release && cd release
+          # maru's image is published as consensys/maru rather than consensys/linea-maru.
+          if [ "$COMPONENT_NAME" = "maru" ]; then
+            IMAGE_NAME="consensys/maru"
+          else
+            IMAGE_NAME="consensys/linea-${DOCKER_IMAGE_SUFFIX}"
+          fi
           printf '%s\n' "$CHANGELOG" >> output.md
           echo "### Docker Image Details" >> output.md
           echo "" >> output.md
           echo "To pull the image, use any of the following commands:" >> output.md
           echo "\`\`\`" >> output.md
-          printf 'docker pull consensys/linea-%s:%s\n' "$DOCKER_IMAGE_SUFFIX" "$DOCKER_TAG" >> output.md
+          printf 'docker pull %s:%s\n' "$IMAGE_NAME" "$DOCKER_TAG" >> output.md
           echo "\`\`\`" >> output.md
           if [ -n "$DOCKER_TAG_WITH_SUFFIX" ] && [ "$DOCKER_TAG_WITH_SUFFIX" != "$DOCKER_TAG" ]; then
             echo "\`\`\`" >> output.md
-            printf 'docker pull consensys/linea-%s:%s\n' "$DOCKER_IMAGE_SUFFIX" "$DOCKER_TAG_WITH_SUFFIX" >> output.md
+            printf 'docker pull %s:%s\n' "$IMAGE_NAME" "$DOCKER_TAG_WITH_SUFFIX" >> output.md
             echo "\`\`\`" >> output.md
           fi
 

@@ -53,6 +53,7 @@ jobs:
           component-name: linea
           include-path: |
             coordinator/**
+            maru/**
             postman/**
             prover/**
             transaction-exclusion-api/**

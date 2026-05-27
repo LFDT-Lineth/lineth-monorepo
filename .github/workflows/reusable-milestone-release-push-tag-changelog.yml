@@ -31,6 +31,10 @@ on:
         description: "Linea-besu-package release version"
         required: true
         type: string
+      maru_release_version:
+        description: "Maru release version"
+        required: true
+        type: string
       create_pull_request:
         description: "Create PR instead of direct commit"
         required: false
@@ -117,6 +121,7 @@ jobs:
           PROVER_VERSION: ${{ inputs.prover_release_version }}
           TX_EXCLUSION_API_VERSION: ${{ inputs.tx_exclusion_api_release_version }}
           LINEA_BESU_VERSION: ${{ inputs.linea_besu_release_version }}
+          MARU_VERSION: ${{ inputs.maru_release_version }}
         run: |
           set -euo pipefail
 
@@ -125,6 +130,7 @@ jobs:
           # Format per entry: <tag>|<version>|<json-array-of-include-paths>
           components=(
             "coordinator|${COORDINATOR_VERSION}|[\"coordinator/**\"]"
+            "maru|${MARU_VERSION}|[\"maru/**\"]"
             "postman|${POSTMAN_VERSION}|[\"postman/**\"]"
             "prover|${PROVER_VERSION}|[\"prover/**\"]"
             "tx-exclusion-api|${TX_EXCLUSION_API_VERSION}|[\"transaction-exclusion-api/**\"]"
@@ -257,7 +263,7 @@ jobs:
             Auto-generated milestone CHANGELOG update for `releases/linea/v${{ env.RELEASE_VERSION }}`.
 
             - Built a milestone block in a temp file:
-              - Prepended `[unreleased]` for: coordinator, postman, prover, tx-exclusion-api, linea-besu
+              - Prepended `[unreleased]` for: coordinator, postman, prover, tx-exclusion-api, linea-besu, maru
               - Demoted heading levels by one
               - Added top-level `## [${{ env.RELEASE_VERSION }}]` header
             - Stripped the previous `[unreleased]` section from `CHANGELOG.md`

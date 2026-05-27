@@ -24,6 +24,9 @@ on:
       linea-besu-package:
         description: "JSON: {changelog, release_version, release_tag, tag_changed} for linea-besu-package"
         value: ${{ jobs.component-release-metadata.outputs.linea-besu-package }}
+      maru:
+        description: "JSON: {changelog, release_version, release_tag, tag_changed} for maru"
+        value: ${{ jobs.component-release-metadata.outputs.maru }}
 
 jobs:
   component-release-metadata:
@@ -31,10 +34,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        component-name: [ coordinator, prover, postman, tx-exclusion-api, linea-besu-package ]
+        component-name: [ coordinator, maru, prover, postman, tx-exclusion-api, linea-besu-package ]
         include:
           - component-name: coordinator
             include-path: coordinator/**
+          - component-name: maru
+            include-path: maru/**
           - component-name: prover
             include-path: prover/**
           - component-name: postman
@@ -51,6 +56,7 @@ jobs:
               gradle/libs.versions.toml
     outputs:
       coordinator: ${{ steps.changelog-outputs.outputs.coordinator }}
+      maru: ${{ steps.changelog-outputs.outputs.maru }}
       prover: ${{ steps.changelog-outputs.outputs.prover }}
       postman: ${{ steps.changelog-outputs.outputs.postman }}
       tx-exclusion-api: ${{ steps.changelog-outputs.outputs.tx-exclusion-api }}

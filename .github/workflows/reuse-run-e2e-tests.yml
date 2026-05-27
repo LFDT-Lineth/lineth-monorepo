@@ -51,6 +51,10 @@ on:
         required: false
         type: string
         default: ""
+      maru_tag:
+        required: false
+        type: string
+        default: ""
       e2e-tests-with-ssh:
         description: Run end to end tests with ability to ssh into environment
         required: false
@@ -88,6 +92,7 @@ jobs:
       LINEA_POSTMAN_TAG: ${{ inputs.postman_tag }}
       LINEA_PROVER_TAG: ${{ inputs.prover_tag }}
       LINEA_TRANSACTION_EXCLUSION_API_TAG: ${{ inputs.tx_exclusion_api_tag }}
+      MARU_TAG: ${{ inputs.maru_tag }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     outputs:

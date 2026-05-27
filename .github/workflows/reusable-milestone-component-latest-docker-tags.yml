@@ -28,6 +28,10 @@ on:
         description: "JSON metadata for linea-besu-package"
         required: true
         type: string
+      maru_metadata:
+        description: "JSON metadata for maru"
+        required: true
+        type: string
     outputs:
       coordinator:
         description: "Coordinator latest docker tag"
@@ -44,6 +48,9 @@ on:
       linea-besu-package:
         description: "Linea-besu-package latest docker tag"
         value: ${{ jobs.component-latest-docker-tags.outputs.linea-besu-package }}
+      maru:
+        description: "Maru latest docker tag"
+        value: ${{ jobs.component-latest-docker-tags.outputs.maru }}
       coordinator-release-version:
         description: "Coordinator release version associated with the latest docker tag"
         value: ${{ jobs.component-latest-docker-tags.outputs.coordinator-release-version }}
@@ -59,6 +66,9 @@ on:
       linea-besu-package-release-version:
         description: "Linea-besu-package release version associated with the latest docker tag"
         value: ${{ jobs.component-latest-docker-tags.outputs.linea-besu-package-release-version }}
+      maru-release-version:
+        description: "Maru release version associated with the latest docker tag"
+        value: ${{ jobs.component-latest-docker-tags.outputs.maru-release-version }}
 
 jobs:
   component-latest-docker-tags:
@@ -66,11 +76,15 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        component: [ coordinator, prover, postman, tx-exclusion-api, linea-besu-package ]
+        component: [ coordinator, maru, prover, postman, tx-exclusion-api, linea-besu-package ]
         include:
           - component: coordinator
             image-name: linea-coordinator
             metadata: ${{ inputs.coordinator_metadata }}
+          - component: maru
+            # maru is published as consensys/maru rather than consensys/linea-maru.
+            image-name: maru
+            metadata: ${{ inputs.maru_metadata }}
           - component: prover
             image-name: linea-prover
             metadata: ${{ inputs.prover_metadata }}
@@ -89,11 +103,13 @@ jobs:
       postman: ${{ steps.latest-docker-tag.outputs.postman-latest-docker-tag }}
       tx-exclusion-api: ${{ steps.latest-docker-tag.outputs.tx-exclusion-api-latest-docker-tag }}
       linea-besu-package: ${{ steps.latest-docker-tag.outputs.linea-besu-package-latest-docker-tag }}
+      maru: ${{ steps.latest-docker-tag.outputs.maru-latest-docker-tag }}
       coordinator-release-version: ${{ steps.latest-release-version.outputs.coordinator-latest-release-version }}
       prover-release-version: ${{ steps.latest-release-version.outputs.prover-latest-release-version }}
       postman-release-version: ${{ steps.latest-release-version.outputs.postman-latest-release-version }}
       tx-exclusion-api-release-version: ${{ steps.latest-release-version.outputs.tx-exclusion-api-latest-release-version }}
       linea-besu-package-release-version: ${{ steps.latest-release-version.outputs.linea-besu-package-latest-release-version }}
+      maru-release-version: ${{ steps.latest-release-version.outputs.maru-latest-release-version }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6

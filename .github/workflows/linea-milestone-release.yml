@@ -91,6 +91,17 @@ jobs:
       push_image: false
     secrets: inherit
 
+  build-local-maru:
+    needs: [component-release-metadata]
+    if: ${{ fromJson(needs.component-release-metadata.outputs.maru).tag_changed == 'true' }}
+    uses: ./.github/workflows/maru-build-and-publish.yml
+    with:
+      image_tag: local
+      develop_tag: develop
+      image_name: consensys/maru
+      push_image: false
+    secrets: inherit
+
   build-local-linea-besu-package:
     needs: [component-release-metadata]
     if: ${{ fromJson(needs.component-release-metadata.outputs.linea-besu-package).tag_changed == 'true' }}
@@ -108,13 +119,15 @@ jobs:
       - build-local-prover
       - build-local-tx-exclusion-api
       - build-local-linea-besu-package
+      - build-local-maru
     if: >
       always() && !cancelled() &&
       ((fromJson(needs.component-release-metadata.outputs.coordinator).tag_changed != 'true' || needs.build-local-coordinator.result == 'success') &&
       (fromJson(needs.component-release-metadata.outputs.postman).tag_changed != 'true' || needs.build-local-postman.result == 'success') &&
       (fromJson(needs.component-release-metadata.outputs.prover).tag_changed != 'true' || needs.build-local-prover.result == 'success') &&
       (fromJson(needs.component-release-metadata.outputs.tx-exclusion-api).tag_changed != 'true' || needs.build-local-tx-exclusion-api.result == 'success') &&
-      (fromJson(needs.component-release-metadata.outputs.linea-besu-package).tag_changed != 'true' || needs.build-local-linea-besu-package.result == 'success'))
+      (fromJson(needs.component-release-metadata.outputs.linea-besu-package).tag_changed != 'true' || needs.build-local-linea-besu-package.result == 'success') &&
+      (fromJson(needs.component-release-metadata.outputs.maru).tag_changed != 'true' || needs.build-local-maru.result == 'success'))
     uses: ./.github/workflows/reusable-milestone-component-latest-docker-tags.yml
     with:
       coordinator_metadata: ${{ needs.component-release-metadata.outputs.coordinator }}
@@ -122,6 +135,7 @@ jobs:
       postman_metadata: ${{ needs.component-release-metadata.outputs.postman }}
       tx_exclusion_api_metadata: ${{ needs.component-release-metadata.outputs.tx-exclusion-api }}
       linea_besu_package_metadata: ${{ needs.component-release-metadata.outputs.linea-besu-package }}
+      maru_metadata: ${{ needs.component-release-metadata.outputs.maru }}
     secrets: inherit
 
   run-e2e-tests:
@@ -138,6 +152,7 @@ jobs:
       prover_tag: ${{ fromJson(needs.component-release-metadata.outputs.prover).tag_changed != 'true' && needs.component-latest-docker-tags.outputs.prover || '' }}
       tx_exclusion_api_tag: ${{ fromJson(needs.component-release-metadata.outputs.tx-exclusion-api).tag_changed != 'true' && needs.component-latest-docker-tags.outputs.tx-exclusion-api || '' }}
       linea_besu_package_tag: ${{ fromJson(needs.component-release-metadata.outputs.linea-besu-package).tag_changed != 'true' && needs.component-latest-docker-tags.outputs.linea-besu-package || needs.build-local-linea-besu-package.outputs.linea_besu_package_tag }}
+      maru_tag: ${{ fromJson(needs.component-release-metadata.outputs.maru).tag_changed != 'true' && needs.component-latest-docker-tags.outputs.maru || '' }}
       e2e-tests-logs-dump: true
       has-changes-requiring-e2e-testing: 'true'
     secrets: inherit
@@ -214,6 +229,24 @@ jobs:
       upload_changelog: true
     secrets: inherit
 
+  maru-gh-release:
+    needs: [component-release-metadata, run-e2e-tests]
+    if: >
+      always() && !cancelled() &&
+      needs.run-e2e-tests.result == 'success' &&
+      fromJson(needs.component-release-metadata.outputs.maru).tag_changed == 'true'
+    uses: ./.github/workflows/reusable-component-gh-release.yml
+    with:
+      component-name: maru
+      folder-name: maru
+      include-path: maru/**
+      image_tag_suffix: ${{ inputs.image_tag_suffix }}
+      release_tag_suffix: '' # no release tag suffix allowed for milestone component release
+      draft_release: ${{ !inputs.pre_release }}
+      pre_release: ${{ inputs.pre_release }}
+      upload_changelog: true
+    secrets: inherit
+
   linea-besu-gh-release:
     needs: [component-release-metadata, run-e2e-tests]
     if: >
@@ -246,11 +279,13 @@ jobs:
       postman_metadata: ${{ needs.component-release-metadata.outputs.postman }}
       tx_exclusion_api_metadata: ${{ needs.component-release-metadata.outputs.tx-exclusion-api }}
       linea_besu_package_metadata: ${{ needs.component-release-metadata.outputs.linea-besu-package }}
+      maru_metadata: ${{ needs.component-release-metadata.outputs.maru }}
       coordinator_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.coordinator }}
       prover_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.prover }}
       postman_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.postman }}
       tx_exclusion_api_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.tx-exclusion-api }}
       linea_besu_package_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.linea-besu-package }}
+      maru_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.maru }}
     secrets: inherit
 
   # prepend CHANGELOG for each component for linea release (and then create PR)
@@ -265,6 +300,7 @@ jobs:
       - prover-gh-release
       - tx-exclusion-api-gh-release
       - linea-besu-gh-release
+      - maru-gh-release
     if: >
       always() && !cancelled() &&
       (inputs.image_tag_suffix == '' || needs.retag-latest-docker-tags.result == 'success') &&
@@ -272,7 +308,8 @@ jobs:
       (fromJson(needs.component-release-metadata.outputs.postman).tag_changed != 'true' || needs.postman-gh-release.result == 'success') &&
       (fromJson(needs.component-release-metadata.outputs.prover).tag_changed != 'true' || needs.prover-gh-release.result == 'success') &&
       (fromJson(needs.component-release-metadata.outputs.tx-exclusion-api).tag_changed != 'true' || needs.tx-exclusion-api-gh-release.result == 'success') &&
-      (fromJson(needs.component-release-metadata.outputs.linea-besu-package).tag_changed != 'true' || needs.linea-besu-gh-release.result == 'success')
+      (fromJson(needs.component-release-metadata.outputs.linea-besu-package).tag_changed != 'true' || needs.linea-besu-gh-release.result == 'success') &&
+      (fromJson(needs.component-release-metadata.outputs.maru).tag_changed != 'true' || needs.maru-gh-release.result == 'success')
     uses: ./.github/workflows/reusable-milestone-release-push-tag-changelog.yml
     with:
       release_version: ${{ needs.check-branch-and-compute-tag.outputs.release_version }}
@@ -282,6 +319,7 @@ jobs:
       prover_release_version: ${{ fromJson(needs.component-release-metadata.outputs.prover).release_version || needs.component-latest-docker-tags.outputs.prover-release-version }}
       tx_exclusion_api_release_version: ${{ fromJson(needs.component-release-metadata.outputs.tx-exclusion-api).release_version || needs.component-latest-docker-tags.outputs.tx-exclusion-api-release-version }}
       linea_besu_release_version: ${{ fromJson(needs.component-release-metadata.outputs.linea-besu-package).release_version || needs.component-latest-docker-tags.outputs.linea-besu-package-release-version }}
+      maru_release_version: ${{ fromJson(needs.component-release-metadata.outputs.maru).release_version || needs.component-latest-docker-tags.outputs.maru-release-version }}
     secrets: inherit
 
   linea-milestone-gh-release:
@@ -295,6 +333,7 @@ jobs:
       - prover-gh-release
       - tx-exclusion-api-gh-release
       - linea-besu-gh-release
+      - maru-gh-release
     if: >
       always() && !cancelled() &&
       needs.linea-milestone-push-tag-changelog-update.result == 'success'
@@ -311,14 +350,17 @@ jobs:
       postman_metadata: ${{ needs.component-release-metadata.outputs.postman }}
       tx_exclusion_api_metadata: ${{ needs.component-release-metadata.outputs.tx-exclusion-api }}
       linea_besu_package_metadata: ${{ needs.component-release-metadata.outputs.linea-besu-package }}
+      maru_metadata: ${{ needs.component-release-metadata.outputs.maru }}
       coordinator_docker_tag_with_suffix: ${{ needs.coordinator-gh-release.outputs.docker_tag_with_suffix }}
       prover_docker_tag_with_suffix: ${{ needs.prover-gh-release.outputs.docker_tag_with_suffix }}
       postman_docker_tag_with_suffix: ${{ needs.postman-gh-release.outputs.docker_tag_with_suffix }}
       tx_exclusion_api_docker_tag_with_suffix: ${{ needs.tx-exclusion-api-gh-release.outputs.docker_tag_with_suffix }}
       linea_besu_package_docker_tag_with_suffix: ${{ needs.linea-besu-gh-release.outputs.docker_tag_with_suffix }}
+      maru_docker_tag_with_suffix: ${{ needs.maru-gh-release.outputs.docker_tag_with_suffix }}
       coordinator_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.coordinator }}
       prover_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.prover }}
       postman_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.postman }}
       tx_exclusion_api_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.tx-exclusion-api }}
       linea_besu_package_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.linea-besu-package }}
+      maru_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.maru }}
     secrets: inherit
