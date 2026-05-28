@@ -8,8 +8,8 @@
 ///
 /// Note: this is a freestanding implementation that reads input from memory
 ///
-/// To run using test vector 5:
-/// riscv-test blake/blake_with_in_bytes.rs IN_BYTES="0x0000000c48c9bdf267e6096a3ba7ca8485ae67bb2bf894fe72f36e3cf1361d5f3af54fa5d182e6ad7f520e511f6c3e2b8c68059b6bbd41fbabd9831f79217e1319cde05b61626300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000001ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923"
+/// To run using test vector 5 (IN_BYTES is big-endian and is reversed before it reaches RAM):
+/// riscv-test blake/blake_with_in_bytes.rs IN_BYTES="0x239900d4ed8623b95a92f1dba88ad31895cc3345ded552c22d79ab2a39c5877dd1a2ffdb6fbb124bb7c45a68142f214ce9f6129fb697276a0d4d1c983fa580ba010000000000000000000000000000000300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006362615be0cd19137e21791f83d9abfb41bd6b9b05688c2b3e6c1f510e527fade682d1a54ff53a5f1d36f13c6ef372fe94f82bbb67ae8584caa73b6a09e667f2bdc9480c000000"
 use core::convert::TryInto;
 use core::result::Result;
 use core::result::Result::Err;
@@ -32,8 +32,9 @@ fn main() -> ! {
 }
 
 fn get_test_vector() -> (&'static [u8], &'static [u8]) {
-    // NOTE: `main.go` already hex-decodes `IN_BYTES`, so RAM contains *raw*
-    // bytes — not ASCII hex. The lengths below count raw bytes,
+    // NOTE: `main.go` hex-decodes big-endian `IN_BYTES` and emits the
+    // reversed raw bytes, so RAM contains *raw* bytes, not ASCII hex.
+    // The lengths below count raw bytes,
     // and we return byte slices straight from the buffer instead
     // of running them back through `hex_to_input` / `hex_to_expected`.
     const INPUT_LEN: usize = 213;
