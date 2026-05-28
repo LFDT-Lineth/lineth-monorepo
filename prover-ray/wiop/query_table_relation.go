@@ -6,38 +6,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
-// TableRelationKind identifies the relational predicate asserted by a
-// [TableRelation] query.
-type TableRelationKind int
-
-const (
-	// TableRelationPermutation asserts that the multiset of rows in A equals
-	// the multiset of rows in B. No selectors are permitted on either side.
-	// The total row count of A and B must match; this is verified at runtime
-	// by Check rather than at construction, because modules may be unsized
-	// when the query is registered.
-	//
-	// To encode a fixed permutation B = S(A): construct the permuted-B side
-	// as a precomputed column (apply S to A's concrete assignment offline) and
-	// pass it directly to [System.NewPermutation].
-	TableRelationPermutation TableRelationKind = iota
-	// TableRelationInclusion asserts that every selected row of A[0] appears
-	// in the union of selected rows across all B fragments.
-	TableRelationInclusion
-)
-
-// String implements [fmt.Stringer].
-func (k TableRelationKind) String() string {
-	switch k {
-	case TableRelationPermutation:
-		return "Permutation"
-	case TableRelationInclusion:
-		return "Inclusion"
-	default:
-		return fmt.Sprintf("TableRelationKind(%d)", int(k))
-	}
-}
-
 // Table is an ordered group of same-module column views with an optional row
 // selector. A nil Selector is semantically equivalent to an all-ones column:
 // every row is selected. Table is a value type and carries no identity.
@@ -124,22 +92,20 @@ func (t Table) Round() *Round {
 // Width returns the number of columns in this Table.
 func (t Table) Width() int { return len(t.Columns) }
 
-// TableRelation is a [Query] asserting a relational predicate between two
+// LookupQuery is a [Query] asserting a relational predicate between two
 // ordered lists of table fragments (A and B). The predicate semantics are
-// controlled by [TableRelation.Kind]:
+// controlled by [LookupQuery.Kind]:
 //
 //   - Permutation: A and B, treated as multisets of rows, are equal. No
 //     selectors are permitted.
 //   - Inclusion: every selected row of A appears in the union of selected
 //     rows across all B fragments.
 //
-// TableRelation does not implement [GnarkCheckableQuery]: neither predicate
+// LookupQuery does not implement [GnarkCheckableQuery]: neither predicate
 // can be verified inside a gnark circuit. A compiler pass must reduce them
 // before gnark verification.
-type TableRelation struct {
+type LookupQuery struct {
 	baseQuery
-	// Kind identifies the relational predicate being asserted.
-	Kind TableRelationKind
 	// A is the left-hand side of the relation.
 	A []Table
 	// B is the right-hand side of the relation.
@@ -148,7 +114,7 @@ type TableRelation struct {
 
 // Round implements [Query]. Returns the latest [Round] across all columns in
 // A and B, including selectors.
-func (tr *TableRelation) Round() *Round {
+func (tr *LookupQuery) Round() *Round {
 	var best *Round
 	for _, tables := range [2][]Table{tr.A, tr.B} {
 		for _, tab := range tables {
@@ -162,81 +128,9 @@ func (tr *TableRelation) Round() *Round {
 }
 
 // Check implements [Query]. Dispatches to [checkPermutation] or
-// [checkInclusion] depending on [TableRelation.Kind].
-func (tr *TableRelation) Check(rt Runtime) error {
-	switch tr.Kind {
-	case TableRelationPermutation:
-		return tr.checkPermutation(rt)
-	case TableRelationInclusion:
-		return tr.checkInclusion(rt)
-	default:
-		return fmt.Errorf("wiop: TableRelation(%s).Check: unknown kind %v", tr.context.Path(), tr.Kind)
-	}
-}
-
-// checkPermutation verifies that A and B are equal as multisets of rows.
-//
-// This is a probabilistic check: a random extension-field scalar alpha is
-// sampled, and each row is hashed to a single field element via Horner's rule.
-// A collision (two distinct rows mapping to the same hash) causes a false
-// negative with probability at most (total rows) / |field|, which is
-// negligible for realistic table sizes. A is used to populate a counter map;
-// B decrements it. Any non-zero counter at the end signals a mismatch.
-//
-// When all column views in a table have zero shift and the module has
-// directional padding, identical padding rows are batch-added/-subtracted as
-// a single count entry rather than being iterated row-by-row.
-func (tr *TableRelation) checkPermutation(rt Runtime) error {
-	alpha := field.RandomElemExt()
-	counts := make(map[field.Ext]int)
-	for _, tab := range tr.A {
-		permTableCountInto(counts, 1, alpha, rt, tab)
-	}
-	for _, tab := range tr.B {
-		permTableCountInto(counts, -1, alpha, rt, tab)
-	}
-	for _, c := range counts {
-		if c != 0 {
-			return fmt.Errorf(
-				"wiop: TableRelation(%s).Check: Permutation multiset mismatch",
-				tr.context.Path(),
-			)
-		}
-	}
-	return nil
-}
-
-// permTableCountInto adds sign*(1 per row) into counts for every row in tab.
-// When all column views have zero shift and the module has directional padding,
-// the gap identical padding rows are registered as a single entry with count
-// sign*gap instead of iterating them individually.
-func permTableCountInto(counts map[field.Ext]int, sign int, alpha field.Gen, rt Runtime, tab Table) {
-	n := tab.Module().RuntimeSize(rt)
-	m := tab.Module()
-
-	if m.Padding == PaddingDirectionNone || !tableHasZeroShift(tab) {
-		for row := range n {
-			counts[tableRowHash(alpha, rt, tab.Columns, row, n)] += sign
-		}
-		return
-	}
-
-	plainLen := rt.GetColumnAssignment(tab.Columns[0].Column).Plain.Len()
-	gap := n - plainLen
-	var dataStart int
-	if m.Padding == PaddingDirectionLeft {
-		dataStart = gap
-	}
-
-	if gap > 0 {
-		// All padding rows produce the same per-column values, so their row
-		// hashes are equal. Use the anchor row as a representative.
-		anchor := padAnchorRow(m.Padding, plainLen)
-		counts[tableRowHash(alpha, rt, tab.Columns, anchor, n)] += sign * gap
-	}
-	for row := dataStart; row < dataStart+plainLen; row++ {
-		counts[tableRowHash(alpha, rt, tab.Columns, row, n)] += sign
-	}
+// [checkInclusion] depending on [LookupQuery.Kind].
+func (tr *LookupQuery) Check(rt Runtime) error {
+	return tr.checkInclusion(rt)
 }
 
 // checkInclusion verifies that every selected row of A appears in the union of
@@ -254,7 +148,7 @@ func permTableCountInto(counts map[field.Ext]int, sign int, alpha field.Gen, rt 
 // rows, the first padding row (the anchor) is probed once: if selected and
 // absent from B, the check fails immediately; if present, every other selected
 // padding row is also satisfied.
-func (tr *TableRelation) checkInclusion(rt Runtime) error {
+func (tr *LookupQuery) checkInclusion(rt Runtime) error {
 	alpha := field.RandomElemExt()
 	bSet := make(map[field.Ext]struct{})
 	for _, tab := range tr.B {
@@ -422,37 +316,7 @@ func padAnchorRow(pd PaddingDirection, plainLen int) int {
 	return plainLen
 }
 
-// NewPermutation constructs and registers a Permutation [TableRelation] on sys.
-// The query asserts that A and B, as multisets of rows, are equal.
-//
-// Invariants enforced at construction:
-//   - A and B are non-empty.
-//   - No Table in A or B carries a Selector.
-//   - All fragments across A and B have the same column width.
-//
-// The total row count equality (Σrows(A) == Σrows(B)) cannot be checked at
-// construction time because modules may be unsized; it is deferred to Check.
-//
-// To encode a fixed permutation B = S(A): construct the permuted-B columns as
-// precomputed columns (applying S to A's concrete assignment at setup time) and
-// pass them here as the B side.
-//
-// Panics on any of the above invariant violations.
-func (sys *System) NewPermutation(ctx *ContextFrame, A, B []Table) *TableRelation {
-	if ctx == nil {
-		panic("wiop: System.NewPermutation requires a non-nil ContextFrame")
-	}
-	validateNonEmpty("NewPermutation", "A", A)
-	validateNonEmpty("NewPermutation", "B", B)
-	validateNoSelectors("NewPermutation", A)
-	validateNoSelectors("NewPermutation", B)
-	width := A[0].Width()
-	validateUniformWidth("NewPermutation", width, A)
-	validateUniformWidth("NewPermutation", width, B)
-	return sys.newTableRelation(ctx, TableRelationPermutation, A, B)
-}
-
-// NewInclusion constructs and registers an Inclusion [TableRelation] on sys.
+// NewInclusion constructs and registers an Inclusion [LookupQuery] on sys.
 // The query asserts that every selected row of included appears in the union
 // of selected rows across all including fragments.
 //
@@ -462,7 +326,7 @@ func (sys *System) NewPermutation(ctx *ContextFrame, A, B []Table) *TableRelatio
 //   - All including fragments have the same column width as included.
 //
 // Panics on any of the above invariant violations or if ctx is nil.
-func (sys *System) NewInclusion(ctx *ContextFrame, included []Table, including []Table) *TableRelation {
+func (sys *System) NewInclusion(ctx *ContextFrame, included []Table, including []Table) *LookupQuery {
 	if ctx == nil {
 		panic("wiop: System.NewInclusion requires a non-nil ContextFrame")
 	}
@@ -470,21 +334,20 @@ func (sys *System) NewInclusion(ctx *ContextFrame, included []Table, including [
 	validateNonEmpty("NewInclusion", "including", including)
 	validateUniformWidth("NewInclusion/included-same-width", included[0].Width(), including)
 	validateUniformWidth("NewInclusion/including-same-width", included[0].Width(), included)
-	return sys.newTableRelation(ctx, TableRelationInclusion, included, including)
+	return sys.newTableRelation(ctx, included, including)
 }
 
 // newTableRelation is the shared registration step used by all TableRelation
 // constructors. It builds the struct, appends it to sys.TableRelations, and
 // returns it.
-func (sys *System) newTableRelation(ctx *ContextFrame, kind TableRelationKind, A, B []Table) *TableRelation {
-	tr := &TableRelation{
+func (sys *System) newTableRelation(ctx *ContextFrame, A, B []Table) *LookupQuery {
+	tr := &LookupQuery{
 		baseQuery: baseQuery{
 			context:     ctx,
 			Annotations: make(Annotations),
 		},
-		Kind: kind,
-		A:    A,
-		B:    B,
+		A: A,
+		B: B,
 	}
 	sys.TableRelations = append(sys.TableRelations, tr)
 	return tr
@@ -494,18 +357,6 @@ func (sys *System) newTableRelation(ctx *ContextFrame, kind TableRelationKind, A
 func validateNonEmpty(caller, side string, tables []Table) {
 	if len(tables) == 0 {
 		panic(fmt.Sprintf("wiop: System.%s: %s must have at least one fragment", caller, side))
-	}
-}
-
-// validateNoSelectors panics if any Table in tables carries a non-nil Selector.
-func validateNoSelectors(caller string, tables []Table) {
-	for i, t := range tables {
-		if t.Selector != nil {
-			panic(fmt.Sprintf(
-				"wiop: System.%s: fragment %d carries a Selector; Permutation does not support selectors",
-				caller, i,
-			))
-		}
 	}
 }
 

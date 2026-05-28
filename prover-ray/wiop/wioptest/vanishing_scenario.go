@@ -32,17 +32,53 @@ func VanishingScenarios() []func() *VanishingScenario {
 		NewConditionalCounterVanishingScenario,
 		NewPythagoreanTripletVanishingScenario,
 		NewDynamicFibonacciVanishingScenario,
+		// Additional scenarios that broaden compiler coverage.
+		NewConstantColumnVanishingScenario,
+		NewForwardShiftVanishingScenario,
+		NewBooleanCubeVanishingScenario,
+		NewLinearCombinationVanishingScenario,
+		NewLargeFibonacciVanishingScenario,
+		NewMultipleVanishingsSameRatioScenario,
+		NewMixedRatioVanishingsScenario,
+		NewMultiModuleVanishingScenario,
+		NewManualCancellationVanishingScenario,
+		NewPrecomputedSelectorVanishingScenario,
+		NewCellLeafVanishingScenario,
+		NewCoinScaledVanishingScenario,
+		NewThreeStepRecurrenceVanishingScenario,
+		NewQuarticVanishingScenario,
+		NewLeftPadDynamicVanishingScenario,
+		// Ratio > 1 corner cases (ratios stay within {2, 4}, the realistic
+		// range produced by [computeRatio] for DegreeFactor up to 4).
+		NewCubicWithBackShiftVanishingScenario,
+		NewMixedHighRatioVanishingsScenario,
+		NewMultiModuleHighRatioVanishingScenario,
+		NewSizeThirtyTwoCubicVanishingScenario,
+		NewLargeForwardShiftVanishingScenario,
+		NewBackAndForwardShiftVanishingScenario,
+		NewDynamicQuadraticVanishingScenario,
+		NewQuarticWithBackShiftVanishingScenario,
 	}
 }
 
-// RunAndVerify advances a Runtime through all rounds after r0, running prover
-// actions immediately after entering each new round. Once at the final round,
-// it runs all registered verifier actions across every round and returns the
-// first error encountered, or nil.
+// RunAndVerify drives a Runtime through every interactive round of its
+// system, running each round's registered prover actions before advancing
+// to the next. After the final round it runs all verifier actions across
+// every round and returns the first error encountered, or nil.
 //
-// The caller must assign all r0 oracle columns before calling RunAndVerify.
+// The caller must assign all r0 oracle columns before calling RunAndVerify;
+// any prover action registered on r0 (e.g. the multiplicity-column
+// assignment that lookuptologderivsum installs) is then run by RunAndVerify
+// itself.
 func RunAndVerify(rt *wiop.Runtime) error {
 	sys := rt.System
+	// Run any prover actions on the current (first) round before any
+	// AdvanceRound. The lookup-to-log-derivative compiler installs its
+	// multiplicity-assignment task on the group's witness round, which is
+	// the runtime's starting round.
+	for _, a := range rt.CurrentRound().ProverActions {
+		a.Run(*rt)
+	}
 	for rt.CurrentRound().ID < len(sys.Rounds)-1 {
 		rt.AdvanceRound()
 		for _, a := range rt.CurrentRound().ProverActions {

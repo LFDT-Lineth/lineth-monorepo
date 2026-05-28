@@ -26,7 +26,7 @@ type System struct {
 	// TableRelations holds all [TableRelation] queries registered with this
 	// system via [System.NewPermutation] and [System.NewInclusion], in
 	// declaration order.
-	TableRelations []*TableRelation
+	TableRelations []*LookupQuery
 	// LogDerivativeSums holds all [LogDerivativeSum] queries registered with
 	// this system via [System.NewLogDerivativeSum], in declaration order.
 	LogDerivativeSums []*LogDerivativeSum

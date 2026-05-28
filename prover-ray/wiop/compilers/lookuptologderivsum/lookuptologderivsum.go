@@ -1,8 +1,7 @@
-// Package lookuptologderivsum compiles every unreduced [wiop.TableRelation]
-// of kind [wiop.TableRelationInclusion] into a single [wiop.LogDerivativeSum]
-// query whose final result is asserted to be zero. It is the prover-ray
-// analogue of linea/prover/protocol/compiler/logderivativesum's
-// LookupIntoLogDerivativeSum pass.
+// Package lookuptologderivsum compiles every unreduced [wiop.LookupQuery]
+// into a single [wiop.LogDerivativeSum] query whose final result is asserted
+// to be zero. It is the prover-ray analogue of linea/prover/protocol/compiler/
+// logderivativesum's LookupIntoLogDerivativeSum pass.
 //
 // The reduction follows the standard log-derivative argument:
 //
@@ -37,7 +36,7 @@
 // A-side, mirroring linea/lookuptologderivsum's IsFilteredOnIncluding
 // handling.
 //
-// After Compile runs, every consumed [wiop.TableRelation] is marked reduced
+// After Compile runs, every consumed [wiop.LookupQuery] is marked reduced
 // and a single [wiop.LogDerivativeSum] query is left in sys for the
 // downstream [logderivativesum] compiler pass to consume.
 //
@@ -57,7 +56,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover-ray/wiop"
 )
 
-// Compile reduces every unreduced inclusion [wiop.TableRelation] in sys to a
+// Compile reduces every unreduced inclusion [wiop.LookupQuery] in sys to a
 // single [wiop.LogDerivativeSum] query plus a multiplicity column per
 // lookup-table fragment, plus a verifier action that asserts the resulting
 // LogDerivativeSum result equals zero.
@@ -84,12 +83,36 @@ func Compile(sys *wiop.System) {
 	sort.Strings(keys)
 
 	// Determine the latest witness round across every group: this dictates
-	// where the coin and result rounds live.
+	// where the coin and result rounds live. Groups whose only contributing
+	// columns are precomputed leave witnessRound nil (see
+	// [lookupGroup.updateWitnessRound]); they are skipped here and patched up
+	// after the loop so the compiler still emits its M / α / γ on an
+	// interactive round.
 	var latestWitness *wiop.Round
 	for _, k := range keys {
 		g := groups[k]
+		if g.witnessRound == nil {
+			continue
+		}
 		if latestWitness == nil || g.witnessRound.ID > latestWitness.ID {
 			latestWitness = g.witnessRound
+		}
+	}
+	if latestWitness == nil {
+		// Every group's columns were precomputed. Default to the first
+		// interactive round so M (committed in each group's witness round)
+		// still lives outside the PrecomputedRound.
+		if len(sys.Rounds) == 0 {
+			panic("wiop/compilers/lookuptologderivsum: cannot compile a fully-precomputed inclusion " +
+				"against a system with no interactive rounds; call sys.NewRound() first")
+		}
+		latestWitness = sys.Rounds[0]
+	}
+	// Backfill any group whose witnessRound is still nil so compileGroup can
+	// rely on a non-nil interactive round.
+	for _, k := range keys {
+		if groups[k].witnessRound == nil {
+			groups[k].witnessRound = latestWitness
 		}
 	}
 
@@ -112,7 +135,7 @@ func Compile(sys *wiop.System) {
 
 	var (
 		fractions  []wiop.Fraction
-		consumedQs []*wiop.TableRelation
+		consumedQs []*wiop.LookupQuery
 	)
 	for _, k := range keys {
 		g := groups[k]
@@ -157,9 +180,6 @@ func collectGroups(sys *wiop.System) map[string]*lookupGroup {
 	groups := make(map[string]*lookupGroup)
 	for _, q := range sys.TableRelations {
 		if q.IsReduced() {
-			continue
-		}
-		if q.Kind != wiop.TableRelationInclusion {
 			continue
 		}
 		if len(q.B) != 1 {

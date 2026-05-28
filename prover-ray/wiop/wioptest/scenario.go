@@ -42,7 +42,6 @@ func All() []func() *Scenario {
 		NewLocalOpeningScenario,
 		NewLagrangeEvalScenario,
 		NewLogDerivativeSumScenario,
-		NewPermutationScenario,
 		NewInclusionScenario,
 		NewRangeCheckScenario,
 	}

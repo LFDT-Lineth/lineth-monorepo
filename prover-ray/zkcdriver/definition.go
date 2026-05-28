@@ -229,29 +229,6 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 			[]wiop.Table{tableTarget},
 		)
 
-	case air.PermutationConstraint[koalabear.Element]:
-
-		var (
-			pc       = cs.Unwrap()
-			numCol   = len(pc.Sources)
-			cSources = pc.Sources
-			cTargets = pc.Targets
-			wSources = make([]*wiop.ColumnView, numCol)
-			wTargets = make([]*wiop.ColumnView, numCol)
-		)
-
-		// this will panic over interleaved columns, we can debug that later
-		for i := 0; i < numCol; i++ {
-			wSources[i] = s.compColumnByCorsetID(pc.Context, cSources[i]).View()
-			wTargets[i] = s.compColumnByCorsetID(pc.Context, cTargets[i]).View()
-		}
-
-		s.Sys.NewPermutation(
-			s.Sys.Context.Childf("permutation-%v", name),
-			[]wiop.Table{wiop.NewTable(wSources...)},
-			[]wiop.Table{wiop.NewTable(wTargets...)},
-		)
-
 	case air.VanishingConstraint[koalabear.Element]:
 
 		var (

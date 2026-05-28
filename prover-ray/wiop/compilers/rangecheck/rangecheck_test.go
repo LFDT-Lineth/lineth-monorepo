@@ -5,10 +5,85 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/logderivativesum"
+	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/rangecheck"
+	"github.com/consensys/linea-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// runRound executes every prover action registered on the runtime's current
+// round.
+func runRound(rt *wiop.Runtime) {
+	for _, a := range rt.CurrentRound().ProverActions {
+		a.Run(*rt)
+	}
+}
+
+// checkAllVerifierActions evaluates every verifier action across every round
+// of the runtime. Returns the first non-nil error or nil if everything
+// passes.
+func checkAllVerifierActions(rt *wiop.Runtime) error {
+	for _, r := range rt.System.Rounds {
+		for _, va := range r.VerifierActions {
+			if err := va.Check(*rt); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// driveRangeCheckProtocol mirrors the canonical "assign-witness → run →
+// advance" loop for the rangecheck → lookuptologderivsum → logderivativesum
+// pipeline. After all three compile steps the round layout is the same as
+// the lookup tests': r0 hosts the witness columns and M; r1 hosts the α/γ
+// coins; r2 hosts the Z columns and the LogDerivativeSum result.
+func driveRangeCheckProtocol(rt *wiop.Runtime) {
+	runRound(rt)
+	rt.AdvanceRound()
+	rt.AdvanceRound()
+	runRound(rt)
+}
+
+// TestCompile_WioptestCompleteness runs every scenario from
+// [wioptest.RangeCheckCompilerScenarios] through the full
+// rangecheck → lookuptologderivsum → logderivativesum pipeline. The
+// verifier must accept.
+func TestCompile_WioptestCompleteness(t *testing.T) {
+	for _, build := range wioptest.RangeCheckCompilerScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			rangecheck.Compile(sc.Sys)
+			lookuptologderivsum.Compile(sc.Sys)
+			logderivativesum.Compile(sc.Sys)
+			rt := wiop.NewRuntime(sc.Sys)
+			sc.AssignWitness(&rt)
+			driveRangeCheckProtocol(&rt)
+			require.NoError(t, checkAllVerifierActions(&rt),
+				"compiled verifier must accept an honest witness")
+		})
+	}
+}
+
+// TestCompile_WioptestSoundnessPanics runs every scenario from
+// [wioptest.RangeCheckSoundnessScenarios]. An out-of-range value reaches the
+// downstream M-assignment prover action with no matching row, which panics.
+func TestCompile_WioptestSoundnessPanics(t *testing.T) {
+	for _, build := range wioptest.RangeCheckSoundnessScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			rangecheck.Compile(sc.Sys)
+			lookuptologderivsum.Compile(sc.Sys)
+			logderivativesum.Compile(sc.Sys)
+			rt := wiop.NewRuntime(sc.Sys)
+			sc.AssignWitness(&rt)
+			assert.Panics(t, func() { runRound(&rt) },
+				"out-of-range value must cause the downstream M-assignment to panic")
+		})
+	}
+}
 
 // newRC builds a minimal system with one sized module and one RangeCheck.
 func newRC(t *testing.T, b int) (sys *wiop.System, col *wiop.Column, rc *wiop.RangeCheck) {
@@ -37,7 +112,6 @@ func TestCompile_CreatesInclusion(t *testing.T) {
 
 	assert.True(t, rc.IsReduced(), "RangeCheck must be marked reduced after Compile")
 	require.Len(t, sys.TableRelations, 1)
-	assert.Equal(t, wiop.TableRelationInclusion, sys.TableRelations[0].Kind)
 }
 
 func TestCompile_SharedRangeColumn(t *testing.T) {

@@ -6,9 +6,138 @@ import (
 	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/logderivativesum"
+	"github.com/consensys/linea-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// TestCompile_WioptestCompleteness exercises every
+// [wioptest.LogDerivativeSumCompilerScenarios] fixture: an honest assignment
+// must drive the prover actions to completion and the verifier actions must
+// then accept.
+func TestCompile_WioptestCompleteness(t *testing.T) {
+	for _, build := range wioptest.LogDerivativeSumCompilerScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			logderivativesum.Compile(sc.Sys)
+			rt := wiop.NewRuntime(sc.Sys)
+			sc.AssignWitness(&rt)
+			rt.AdvanceRound()
+			runRound(&rt)
+			require.NoError(t, checkAllVerifierActions(&rt),
+				"compiled verifier must accept an honest witness")
+		})
+	}
+}
+
+// TestCompile_WioptestSoundness exercises every
+// [wioptest.LogDerivativeSumCompilerScenarios] fixture's invalid path. The
+// witness is assigned honestly; the test then advances to the result round
+// and corrupts the Result cell BEFORE the prover action runs (the prover
+// skips re-assigning a cell that already holds a value). This isolates the
+// verifier's claim-vs-running-sum identity from the per-bucket recurrence
+// check.
+func TestCompile_WioptestSoundness(t *testing.T) {
+	for _, build := range wioptest.LogDerivativeSumCompilerScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			logderivativesum.Compile(sc.Sys)
+			rt := wiop.NewRuntime(sc.Sys)
+			sc.AssignWitness(&rt)
+			rt.AdvanceRound()
+			sc.TamperResult(&rt)
+			runRound(&rt)
+			assert.Error(t, checkAllVerifierActions(&rt),
+				"compiled verifier must reject an invalid witness")
+		})
+	}
+}
+
+// TestCompile_WioptestSoundness_TamperZ runs every wioptest scenario with a
+// constant-17 Z column instead of the honest prover output. The bogus Z
+// breaks the verifier's initial-condition check (Z[0]·zDen[0] = zNum[0])
+// on any non-trivial scenario; the recurrence vanishing is also violated
+// but the LDS verifier action is enough to surface the failure here.
+//
+// We bypass [proverAction.Run] entirely (no runRound), since the runtime
+// rejects re-assigning a column. Instead we set up the post-prover state
+// manually: Z gets the bogus value, every LocalOpening gets a SelfAssign
+// against that Z, and each LogDerivativeSum's Result cell is pinned to
+// zero. The verifier's claim-vs-running-sum check then catches a mismatch
+// even before the initial-condition check runs.
+func TestCompile_WioptestSoundness_TamperZ(t *testing.T) {
+	for _, build := range wioptest.LogDerivativeSumCompilerScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			// Snapshot per-module column lists so we can identify Z columns
+			// (added by the compiler) by diffing after compile.
+			beforeByMod := make(map[*wiop.Module]map[*wiop.Column]struct{})
+			for _, m := range sc.Sys.Modules {
+				cols := make(map[*wiop.Column]struct{}, len(m.Columns))
+				for _, c := range m.Columns {
+					cols[c] = struct{}{}
+				}
+				beforeByMod[m] = cols
+			}
+			openingsBefore := make(map[*wiop.Module]int)
+			for _, m := range sc.Sys.Modules {
+				openingsBefore[m] = len(m.LocalOpenings)
+			}
+
+			logderivativesum.Compile(sc.Sys)
+
+			var zCols []*wiop.Column
+			for _, m := range sc.Sys.Modules {
+				before := beforeByMod[m]
+				for _, c := range m.Columns {
+					if _, existed := before[c]; existed {
+						continue
+					}
+					if c.IsExtension {
+						zCols = append(zCols, c)
+					}
+				}
+			}
+			if len(zCols) == 0 {
+				t.Skip("scenario emits no Z columns — nothing to tamper")
+			}
+
+			rt := wiop.NewRuntime(sc.Sys)
+			sc.AssignWitness(&rt)
+			rt.AdvanceRound()
+
+			// Pre-assign every Z column with a constant non-zero extension value.
+			for _, z := range zCols {
+				n := z.Module.RuntimeSize(rt)
+				vals := make([]field.Ext, n)
+				for i := range vals {
+					vals[i] = field.Lift(field.NewFromString("17"))
+				}
+				rt.AssignColumn(z, &wiop.ConcreteVector{Plain: field.VecFromExt(vals)})
+			}
+
+			// Self-assign every freshly-added LocalOpening (they read from Z).
+			for _, m := range sc.Sys.Modules {
+				for i, lo := range m.LocalOpenings {
+					if i < openingsBefore[m] {
+						continue
+					}
+					lo.SelfAssign(rt)
+				}
+			}
+
+			// Pin each LogDerivativeSum's Result cell to zero so the
+			// claim-vs-running-sum check fires (the sum of constant-17
+			// Z[n-1] across entries cannot equal zero).
+			for _, ld := range sc.Sys.LogDerivativeSums {
+				rt.AssignCell(ld.Result, field.ElemFromExt(field.Ext{}))
+			}
+
+			assert.Error(t, checkAllVerifierActions(&rt),
+				"verifier must reject a corrupted Z column")
+		})
+	}
+}
 
 // ---- Helpers ----
 

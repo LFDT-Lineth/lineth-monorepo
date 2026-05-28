@@ -7,6 +7,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover-ray/wiop"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/global"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/localvanishing"
+	"github.com/consensys/linea-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -153,6 +154,40 @@ func TestCompile_Soundness(t *testing.T) {
 			rt := wiop.NewRuntime(sys)
 			invalid(&rt)
 			assert.Error(t, runAndVerify(&rt),
+				"compiled verifier must reject an invalid witness")
+		})
+	}
+}
+
+// TestCompile_WioptestCompleteness exercises [wioptest.LocalVanishingScenarios]
+// — a shared corpus of scalar-vanishing fixtures consumed by every test in
+// this package's pipeline. Each scenario is independent; the loop builds a
+// fresh System for each case via the factory functions.
+func TestCompile_WioptestCompleteness(t *testing.T) {
+	for _, build := range wioptest.LocalVanishingScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			localvanishing.Compile(sc.Sys)
+			global.Compile(sc.Sys)
+			rt := wiop.NewRuntime(sc.Sys)
+			sc.AssignHonest(&rt)
+			require.NoError(t, wioptest.RunAndVerify(&rt),
+				"compiled verifier must accept an honest witness")
+		})
+	}
+}
+
+// TestCompile_WioptestSoundness checks every wioptest scalar-vanishing
+// fixture: an invalid witness must be rejected by the compiled verifier.
+func TestCompile_WioptestSoundness(t *testing.T) {
+	for _, build := range wioptest.LocalVanishingScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			localvanishing.Compile(sc.Sys)
+			global.Compile(sc.Sys)
+			rt := wiop.NewRuntime(sc.Sys)
+			sc.AssignInvalid(&rt)
+			assert.Error(t, wioptest.RunAndVerify(&rt),
 				"compiled verifier must reject an invalid witness")
 		})
 	}

@@ -100,37 +100,6 @@ func NewLogDerivativeSumScenario() *Scenario {
 	}
 }
 
-// NewPermutationScenario returns a scenario for a Permutation TableRelation.
-//
-//   - Valid: A = [1, 2, 3, 4], B = [2, 1, 4, 3] (same multiset, rows shuffled).
-//   - Invalid: A = [1, 2, 3, 4], B = [1, 2, 3, 5] (5 ≠ 4; different multisets).
-func NewPermutationScenario() *Scenario {
-	sys := wiop.NewSystemf("perm-sc")
-	r0 := sys.NewRound()
-	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	colA := mod.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
-	perm := sys.NewPermutation(
-		sys.Context.Childf("perm"),
-		[]wiop.Table{wiop.NewTable(colA.View())},
-		[]wiop.Table{wiop.NewTable(colB.View())},
-	)
-
-	return &Scenario{
-		Name:  "Permutation",
-		Sys:   sys,
-		Query: perm,
-		RunHonest: func(rt *wiop.Runtime) {
-			rt.AssignColumn(colA, makeVec(1, 2, 3, 4))
-			rt.AssignColumn(colB, makeVec(2, 1, 4, 3)) // same multiset, different order
-		},
-		RunInvalid: func(rt *wiop.Runtime) {
-			rt.AssignColumn(colA, makeVec(1, 2, 3, 4))
-			rt.AssignColumn(colB, makeVec(1, 2, 3, 5)) // 5 replaces 4 → different multisets
-		},
-	}
-}
-
 // NewRangeCheckScenario returns a scenario for a RangeCheck query.
 //
 //   - Valid: column [0, 1, 2, 3]; bound B = 8.

@@ -11,7 +11,7 @@
 // by the verifier.
 //
 // Constraints and verifier predicates are expressed as [Query] values:
-// [Vanishing], [LagrangeEval], [LocalOpening], [TableRelation], and
+// [Vanishing], [LagrangeEval], [LocalOpening], [LookupQuery], and
 // [LogDerivativeSum]. Each query references symbolic [Expression] objects that
 // form an arithmetic AST evaluated at runtime.
 //

@@ -7,9 +7,123 @@ import (
 	"github.com/consensys/linea-monorepo/prover-ray/wiop"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/consensys/linea-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// TestCompile_WioptestCompleteness runs every honest-witness scenario from
+// [wioptest.LookupScenarios] through the full lookuptologderivsum →
+// logderivativesum pipeline. The verifier must accept.
+func TestCompile_WioptestCompleteness(t *testing.T) {
+	for _, build := range wioptest.LookupScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			lookuptologderivsum.Compile(sc.Sys)
+			logderivativesum.Compile(sc.Sys)
+			rt := wiop.NewRuntime(sc.Sys)
+			sc.AssignWitness(&rt)
+			driveProtocol(&rt)
+			require.NoError(t, checkAllVerifierActions(&rt),
+				"compiled verifier must accept an honest witness")
+		})
+	}
+}
+
+// TestCompile_WioptestSoundnessPanics runs every prover-side soundness
+// scenario from [wioptest.LookupSoundnessScenarios]. Each one is engineered
+// so that the M-assignment prover action (round 0) panics; we assert that
+// behaviour via assert.Panics.
+func TestCompile_WioptestSoundnessPanics(t *testing.T) {
+	for _, build := range wioptest.LookupSoundnessScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			lookuptologderivsum.Compile(sc.Sys)
+			logderivativesum.Compile(sc.Sys)
+			rt := wiop.NewRuntime(sc.Sys)
+			sc.AssignWitness(&rt)
+			assert.Panics(t, func() { runRound(&rt) },
+				"M-assignment prover task must panic on this invalid witness")
+		})
+	}
+}
+
+// TestCompile_WioptestSoundness_TamperM runs every honest wioptest lookup
+// scenario but overwrites the multiplicity column(s) M with zeros before
+// the M-assignment prover task can run. The aggregated LogDerivativeSum
+// then equals the sum of A-side fractions only (B-side cancels to zero),
+// which is non-zero with overwhelming probability over γ. The
+// resultIsZeroVerifierAction must reject.
+//
+// Lookup soundness is therefore double-covered: prover-side panics for
+// outright violations (no matching B row, etc.) AND verifier-side
+// rejection when a malicious prover skips the M-assignment task. The
+// EmptySelected scenario is skipped because its A-side contributes zero
+// to the aggregate even with M=0, so the verifier cannot distinguish.
+func TestCompile_WioptestSoundness_TamperM(t *testing.T) {
+	for _, build := range wioptest.LookupScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			if sc.Name == "EmptySelected" {
+				t.Skip("A-side contributes zero with all-zero filter; M=0 is consistent")
+			}
+
+			// Snapshot per-module columns to identify the M column(s)
+			// (added by the lookuptologderivsum pass as new non-extension
+			// columns on each lookup-table module).
+			beforeByMod := make(map[*wiop.Module]map[*wiop.Column]struct{})
+			for _, m := range sc.Sys.Modules {
+				cols := make(map[*wiop.Column]struct{}, len(m.Columns))
+				for _, c := range m.Columns {
+					cols[c] = struct{}{}
+				}
+				beforeByMod[m] = cols
+			}
+
+			lookuptologderivsum.Compile(sc.Sys)
+
+			var mCols []*wiop.Column
+			for _, m := range sc.Sys.Modules {
+				before := beforeByMod[m]
+				for _, c := range m.Columns {
+					if _, existed := before[c]; existed {
+						continue
+					}
+					if !c.IsExtension {
+						mCols = append(mCols, c)
+					}
+				}
+			}
+			require.NotEmpty(t, mCols,
+				"lookuptologderivsum must allocate at least one M column")
+
+			logderivativesum.Compile(sc.Sys)
+
+			rt := wiop.NewRuntime(sc.Sys)
+			sc.AssignWitness(&rt)
+
+			// Pre-assign every M with zeros. The mAssignmentTask doesn't
+			// guard against re-assignment, so we must skip the round-0
+			// prover loop entirely (otherwise the task panics on M's
+			// pre-existing assignment). The two AdvanceRound calls below
+			// move us straight to the result round; runRound there triggers
+			// only the LDS prover task, which sees the bogus M and computes
+			// a non-zero aggregated sum.
+			for _, mCol := range mCols {
+				n := mCol.Module.RuntimeSize(rt)
+				zeros := make([]field.Element, n)
+				rt.AssignColumn(mCol, &wiop.ConcreteVector{Plain: field.VecFromBase(zeros)})
+			}
+			rt.AdvanceRound() // → coin round (samples α/γ)
+			rt.AdvanceRound() // → result round
+			runRound(&rt)     // assigns Z and the LDS result
+
+			err := checkAllVerifierActions(&rt)
+			assert.ErrorContains(t, err, "must be zero",
+				"verifier must reject a tampered M (aggregated sum != 0)")
+		})
+	}
+}
 
 // ---- Helpers ----
 
@@ -408,22 +522,6 @@ func TestCompile_NoInclusions(t *testing.T) {
 	lookuptologderivsum.Compile(sys) // must not panic
 	assert.Empty(t, sys.LogDerivativeSums,
 		"compile without inclusion queries must register no LogDerivativeSum")
-}
-
-func TestCompile_PermutationIgnored(t *testing.T) {
-	sys := wiop.NewSystemf("ll-perm-ignored")
-	r0 := sys.NewRound()
-	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	colA := mod.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-	perm := sys.NewPermutation(sys.Context.Childf("perm"),
-		[]wiop.Table{wiop.NewTable(colA.View())},
-		[]wiop.Table{wiop.NewTable(colB.View())})
-	lookuptologderivsum.Compile(sys) // must not panic
-	assert.False(t, perm.IsReduced(),
-		"permutation queries must be left untouched by this compiler")
-	assert.Empty(t, sys.LogDerivativeSums,
-		"no LogDerivativeSum should be emitted when there are no inclusion queries")
 }
 
 func TestCompile_MultiFragmentBPanics(t *testing.T) {
