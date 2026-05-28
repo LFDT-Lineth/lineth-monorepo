@@ -8,6 +8,10 @@
  */
 package maru.app
 
+import linea.testing.besu.BesuFactory
+import linea.testing.besu.BesuTransactionsHelper
+import linea.testing.besu.ethGetBlockByNumber
+import linea.testing.besu.startWithRetry
 import maru.config.SyncingConfig
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
@@ -25,10 +29,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import testutils.Checks.checkAllNodesHaveSameBlocks
 import testutils.Checks.getBlockNumber
 import testutils.PeeringNodeNetworkStack
-import testutils.besu.BesuFactory
-import testutils.besu.BesuTransactionsHelper
-import testutils.besu.ethGetBlockByNumber
-import testutils.besu.startWithRetry
 import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
 import kotlin.collections.map

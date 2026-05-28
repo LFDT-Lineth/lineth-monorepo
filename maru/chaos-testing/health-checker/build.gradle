@@ -6,8 +6,6 @@ plugins {
 }
 
 dependencies {
-  implementation(project(':maru:jvm-libs:extensions'))
-  implementation project(':maru:jvm-libs:test-utils')
   implementation project(':maru:api')
   implementation(project(':jvm-libs:linea:testing:file-system'))
   implementation(project(':jvm-libs:linea:web3j-extensions')) {

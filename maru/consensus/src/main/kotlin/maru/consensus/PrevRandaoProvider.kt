@@ -8,10 +8,10 @@
  */
 package maru.consensus
 
+import linea.kotlin.encodeHex
+import linea.kotlin.xor
 import maru.core.Hasher
 import maru.core.Signer
-import maru.extensions.encodeHex
-import maru.extensions.xor
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 

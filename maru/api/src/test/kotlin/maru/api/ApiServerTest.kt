@@ -9,6 +9,7 @@
 package maru.api
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import linea.kotlin.encodeHex
 import maru.VersionProvider
 import maru.api.beacon.GetBlock
 import maru.api.beacon.GetBlockHeader
@@ -48,7 +49,6 @@ import maru.core.BeaconState
 import maru.core.SealedBeaconBlock
 import maru.core.ext.DataGenerators
 import maru.database.InMemoryBeaconChain
-import maru.extensions.encodeHex
 import maru.p2p.NetworkDataProvider
 import maru.p2p.PeerInfo
 import maru.syncing.AlwaysSyncedController

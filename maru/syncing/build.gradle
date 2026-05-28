@@ -24,7 +24,6 @@ dependencies {
   implementation project(':maru:observability')
   implementation project(':maru:p2p')
   implementation project(':maru:storage')
-  implementation project(':maru:jvm-libs:extensions')
   implementation project(':jvm-libs:linea:core:metrics')
   implementation project(':jvm-libs:generic:extensions:kotlin')
   implementation project(':jvm-libs:linea:core:long-running-service')

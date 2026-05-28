@@ -8,12 +8,12 @@
  */
 package maru.test.cluster
 
+import linea.kotlin.encodeHex
 import maru.app.MaruApp
 import maru.config.MaruConfig
 import maru.consensus.ChainFork
 import maru.consensus.ClFork
 import maru.consensus.ElFork
-import maru.extensions.encodeHex
 import maru.test.extensions.latestBlockNumber
 import maru.test.genesis.GenesisFactory
 import org.apache.logging.log4j.LogManager

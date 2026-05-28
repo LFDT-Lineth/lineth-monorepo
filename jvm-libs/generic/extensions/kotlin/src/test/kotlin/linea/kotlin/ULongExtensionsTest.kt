@@ -12,10 +12,33 @@ class ULongExtensionsTest {
     ULong.MAX_VALUE to "0xffffffffffffffff",
   )
 
+  private fun String.toByteArray(): ByteArray =
+    this
+      .removePrefix("0x")
+      .chunked(2)
+      .map { it.toInt(16).toByte() }
+      .toByteArray()
+
   @Test
   fun `toHexString`() {
     uLongParsingTestCases.forEach { (number: ULong, hexString: String) ->
       assertThat(number.toHexString()).isEqualTo(hexString)
+    }
+  }
+
+  @Test
+  fun `ULong#toBytes32`() {
+    val testCases =
+      mapOf(
+        1UL to "0x0000000000000000000000000000000000000000000000000000000000000001".toByteArray(),
+        16UL to "0x0000000000000000000000000000000000000000000000000000000000000010".toByteArray(),
+        0xABCDEF1234567890UL to "0x000000000000000000000000000000000000000000000000abcdef1234567890".toByteArray(),
+        ULong.MIN_VALUE to "0x0000000000000000000000000000000000000000000000000000000000000000".toByteArray(),
+        ULong.MAX_VALUE to "0x000000000000000000000000000000000000000000000000ffffffffffffffff".toByteArray(),
+      )
+
+    testCases.forEach { (number, byteArray) ->
+      assertThat(number.toBytes32()).isEqualTo(byteArray)
     }
   }
 
@@ -127,5 +150,21 @@ class ULongExtensionsTest {
   @Test
   fun `minusCoercingUnderflow should return zero when minuend is equal to subtrahend`() {
     assertThat(5UL.minusCoercingUnderflow(5UL)).isEqualTo(0UL)
+  }
+
+  @Test
+  fun `clampedAdd returns sum when no overflow`() {
+    assertThat(10UL.clampedAdd(20UL)).isEqualTo(30UL)
+  }
+
+  @Test
+  fun `clampedAdd returns ULong_MAX_VALUE on overflow`() {
+    assertThat(ULong.MAX_VALUE.clampedAdd(1UL)).isEqualTo(ULong.MAX_VALUE)
+    assertThat((ULong.MAX_VALUE - 1UL).clampedAdd(ULong.MAX_VALUE - 2UL)).isEqualTo(ULong.MAX_VALUE)
+  }
+
+  @Test
+  fun `clampedAdd works with zero`() {
+    assertThat(0UL.clampedAdd(0UL)).isEqualTo(0UL)
   }
 }

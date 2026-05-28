@@ -9,7 +9,7 @@ dependencies {
   implementation "io.javalin:javalin:${libs.versions.javalin.get()}"
   implementation project(':maru:core')
   implementation project(':maru:p2p')
-  implementation project(':maru:jvm-libs:extensions')
+  implementation project(':jvm-libs:generic:extensions:kotlin')
 
   testImplementation(testFixtures(project(':maru:core')))
   testImplementation(project(':maru:serialization'))

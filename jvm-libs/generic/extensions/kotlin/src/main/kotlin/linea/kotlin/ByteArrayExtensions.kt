@@ -2,6 +2,7 @@ package linea.kotlin
 
 import java.math.BigInteger
 import java.util.HexFormat
+import kotlin.experimental.xor
 
 fun zeroHash32(): ByteArray = ByteArray(32)
 
@@ -65,6 +66,11 @@ fun ByteArray.encodeHex(prefix: Boolean = true): String {
   } else {
     return hexStr
   }
+}
+
+fun ByteArray.xor(other: ByteArray): ByteArray {
+  require(this.size == other.size) { "ByteArrays must have the same length" }
+  return ByteArray(this.size) { i -> this[i].xor(other[i]) }
 }
 
 fun ByteArray.toULongFromLast8Bytes(lenient: Boolean = false): ULong {

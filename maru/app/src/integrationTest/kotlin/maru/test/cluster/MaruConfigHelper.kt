@@ -8,6 +8,7 @@
  */
 package maru.test.cluster
 
+import linea.kotlin.encodeHex
 import maru.config.ApiConfig
 import maru.config.ApiEndpointConfig
 import maru.config.FollowersConfig
@@ -22,7 +23,6 @@ import maru.config.SyncingConfig
 import maru.config.SyncingConfig.SyncTargetSelection
 import maru.config.ValidatorElNode
 import maru.crypto.PrivateKeyGenerator
-import maru.extensions.encodeHex
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path

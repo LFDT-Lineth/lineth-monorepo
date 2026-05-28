@@ -8,6 +8,7 @@
  */
 package maru.test
 
+import linea.testing.besu.BesuFactory
 import maru.consensus.ChainFork
 import maru.consensus.ClFork
 import maru.consensus.DifficultyAwareQbftConfig
@@ -28,7 +29,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import testutils.besu.BesuFactory
 import java.net.ConnectException
 import java.util.Optional
 import kotlin.random.Random

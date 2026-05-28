@@ -8,6 +8,7 @@
  */
 package maru.syncing.beaconchain
 
+import linea.kotlin.decodeHex
 import linea.timer.JvmTimerFactory
 import linea.timer.TimerFactory
 import maru.config.P2PConfig
@@ -32,7 +33,6 @@ import maru.database.BeaconChain
 import maru.database.InMemoryBeaconChain
 import maru.database.InMemoryP2PState
 import maru.database.P2PState
-import maru.extensions.fromHexToByteArray
 import maru.p2p.P2PNetworkImpl
 import maru.p2p.PeerLookup
 import maru.p2p.fork.ForkPeeringManager
@@ -76,10 +76,10 @@ class CLSyncServiceImplTest {
     private const val BEACON_CHAIN_2_HEAD = 100UL
     private val targetNodeKey =
       "0x0802122012c0b113e2b0c37388e2b484112e13f05c92c4471e3ee1dfaa368fa5045325b2"
-        .fromHexToByteArray()
+        .decodeHex()
     private val sourceNodeKey =
       "0x0802122100f3d2fffa99dc8906823866d96316492ebf7a8478713a89a58b7385af85b088a1"
-        .fromHexToByteArray()
+        .decodeHex()
     private val backoffDelay = 1.seconds
 
     fun createForkIdHashProvider(beaconChain: BeaconChain): ForkPeeringManager {

@@ -8,6 +8,8 @@
  */
 package maru.consensus.qbft
 
+import linea.testing.besu.BesuFactory
+import linea.testing.besu.BesuTransactionsHelper
 import maru.consensus.ValidatorProvider
 import maru.consensus.qbft.adapters.QbftBlockHeaderAdapter
 import maru.consensus.qbft.adapters.toBeaconBlock
@@ -27,7 +29,7 @@ import maru.executionlayer.client.PragueWeb3JJsonRpcExecutionLayerEngineApiClien
 import maru.executionlayer.manager.ExecutionLayerManager
 import maru.executionlayer.manager.JsonRpcExecutionLayerManager
 import maru.executionlayer.manager.LatestBlockMetadata
-import maru.mappers.Mappers.toDomain
+import maru.executionlayer.mappers.Mappers.toDomain
 import maru.serialization.rlp.bodyRoot
 import maru.serialization.rlp.headerHash
 import maru.serialization.rlp.stateRoot
@@ -58,8 +60,6 @@ import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
 import tech.pegasys.teku.ethereum.executionclient.web3j.Web3jClientBuilder
 import tech.pegasys.teku.infrastructure.async.SafeFuture.completedFuture
 import tech.pegasys.teku.infrastructure.time.SystemTimeProvider
-import testutils.besu.BesuFactory
-import testutils.besu.BesuTransactionsHelper
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant

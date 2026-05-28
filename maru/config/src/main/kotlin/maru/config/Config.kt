@@ -11,7 +11,7 @@ package maru.config
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig
 import linea.kotlin.assertIs20Bytes
-import maru.extensions.encodeHex
+import linea.kotlin.encodeHex
 import java.net.InetAddress
 import java.net.URL
 import java.nio.file.Path

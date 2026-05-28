@@ -18,8 +18,8 @@ import maru.app.MaruApp
 import maru.config.ApiEndpointConfig
 import maru.config.FollowersConfig
 import maru.core.EMPTY_HASH
-import maru.extensions.encodeHex
-import maru.extensions.fromHexToByteArray
+import linea.kotlin.encodeHex
+import linea.kotlin.decodeHex
 import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -39,7 +39,7 @@ import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.DefaultBlockParameter
 import org.web3j.protocol.core.methods.response.EthBlock
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import testutils.Web3jTransactionsHelper
+import linea.testing.web3j.Web3jTransactionsHelper
 import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
 import java.io.File
@@ -121,7 +121,7 @@ class CliqueToPosTest {
       pragueTimestamp = forksTimestamps["pragueTime"]!!
       ttd = forksTimestamps["terminalTotalDifficulty"]!!
       maruFactory = MaruFactory(
-        validatorPrivateKey = VALIDATOR_PRIVATE_KEY_WITH_PREFIX.fromHexToByteArray(),
+        validatorPrivateKey = VALIDATOR_PRIVATE_KEY_WITH_PREFIX.decodeHex(),
         shanghaiTimestamp = shanghaiTimestamp,
         cancunTimestamp = cancunTimestamp,
         pragueTimestamp = pragueTimestamp,

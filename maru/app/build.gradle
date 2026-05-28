@@ -28,16 +28,14 @@ dependencies {
   implementation(project(':maru:crypto'))
   implementation(project(':maru:serialization'))
   implementation(project(':maru:observability'))
-  implementation(project(':maru:jvm-libs:teku-web3j'))
+  implementation(project(':jvm-libs:linea:teku-web3j'))
   api(project(':maru:linea-finalization-provider')) {
     exclude group: "build.linea", module: "besu-libs"
   }
   implementation(project(':jvm-libs:linea:web3j-extensions')) {
     exclude group: "build.linea", module: "besu-libs"
   }
-  implementation(project(':maru:jvm-libs:extensions'))
-  implementation(project(':maru:jvm-libs:mappers'))
-
+  implementation project(':jvm-libs:generic:extensions:kotlin')
   implementation project(':jvm-libs:generic:extensions:futures')
   implementation project(':jvm-libs:linea:core:long-running-service')
 
@@ -65,7 +63,7 @@ dependencies {
   integrationTestRuntimeOnly("org.junit.platform:junit-platform-launcher:${libs.versions.junitPlatform.get()}")
   integrationTestImplementation "org.jetbrains.kotlinx:kotlinx-datetime:${libs.versions.kotlinxDatetime.get()}"
   integrationTestImplementation "org.awaitility:awaitility-kotlin:${libs.versions.awaitility.get()}"
-  integrationTestImplementation(project(':maru:jvm-libs:test-utils'))
+  integrationTestImplementation(project(':jvm-libs:linea:testing:besu'))
   integrationTestImplementation(testFixtures(project(':maru:p2p')))
   integrationTestImplementation(testFixtures(project(':maru:crypto')))
   integrationTestImplementation("org.hyperledger.besu.internal:besu-crypto-services")

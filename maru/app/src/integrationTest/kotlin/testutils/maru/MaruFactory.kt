@@ -46,7 +46,6 @@ import maru.core.Validator
 import maru.crypto.SecpCrypto
 import maru.database.BeaconChain
 import maru.database.P2PState
-import maru.extensions.fromHexToByteArray
 import maru.p2p.NoOpP2PNetwork
 import maru.p2p.P2PNetwork
 import maru.p2p.P2PNetworkImpl
@@ -136,7 +135,7 @@ class MaruFactory(
   val qbftValidator =
     SecpCrypto.privateKeyToValidator(SecpCrypto.privateKeyBytesWithoutPrefix(validatorPrivateKeyWithPrefix.bytes()))
   val validatorAddress = qbftValidator.address.encodeHex()
-  val initialValidators = setOf(Validator(validatorAddress.fromHexToByteArray()))
+  val initialValidators = setOf(Validator(validatorAddress.decodeHex()))
 
   private val validatorQbftOptions =
     QbftConfig(
@@ -161,7 +160,7 @@ class MaruFactory(
             blockTimeSeconds = 1u,
             configuration = DifficultyAwareQbftConfig(
               QbftConsensusConfig(
-                validatorSet = setOf(Validator(validatorAddress.fromHexToByteArray())),
+                validatorSet = setOf(Validator(validatorAddress.decodeHex())),
                 fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Paris),
               ),
               terminalTotalDifficulty = ttd!!,
@@ -171,7 +170,7 @@ class MaruFactory(
             timestampSeconds = shanghaiTimestamp,
             blockTimeSeconds = 1u,
             configuration = QbftConsensusConfig(
-              validatorSet = setOf(Validator(validatorAddress.fromHexToByteArray())),
+              validatorSet = setOf(Validator(validatorAddress.decodeHex())),
               fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Shanghai),
             ),
           ),
@@ -179,7 +178,7 @@ class MaruFactory(
             timestampSeconds = cancunTimestamp,
             blockTimeSeconds = 1u,
             configuration = QbftConsensusConfig(
-              validatorSet = setOf(Validator(validatorAddress.fromHexToByteArray())),
+              validatorSet = setOf(Validator(validatorAddress.decodeHex())),
               fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Cancun),
             ),
           ),

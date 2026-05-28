@@ -5,7 +5,7 @@ plugins {
 
 dependencies {
   implementation(project(':maru:core'))
-  implementation(project(':maru:jvm-libs:extensions'))
+  implementation(project(':jvm-libs:generic:extensions:kotlin'))
   implementation("org.hyperledger.besu:besu-datatypes")
   implementation("org.hyperledger.besu.internal:besu-crypto-algorithms")
   implementation("org.hyperledger.besu.internal:besu-crypto-services")

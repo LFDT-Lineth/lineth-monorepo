@@ -10,8 +10,8 @@ package maru.executionlayer.manager
 
 import maru.core.ExecutionPayload
 import maru.executionlayer.client.ExecutionLayerEngineApiClient
-import maru.mappers.Mappers.toDomain
-import maru.mappers.Mappers.toPayloadAttributesV1
+import maru.executionlayer.mappers.Mappers.toDomain
+import maru.executionlayer.mappers.Mappers.toPayloadAttributesV1
 import org.apache.logging.log4j.LogManager
 import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32

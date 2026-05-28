@@ -8,9 +8,9 @@
  */
 package maru.consensus
 
+import linea.kotlin.decodeHex
 import maru.core.Validator
 import maru.core.ext.DataGenerators
-import maru.extensions.fromHexToByteArray
 import org.assertj.core.api.Assertions.assertThat
 import kotlin.test.Test
 
@@ -32,9 +32,9 @@ class StaticValidatorProviderTest {
 
   @Test
   fun `validators are sorted by address`() {
-    val validator1 = Validator("0x0000000000000000000000000000000000000001".fromHexToByteArray())
-    val validator2 = Validator("0x0000000000000000000000000000000000000002".fromHexToByteArray())
-    val validator3 = Validator("0x0000000000000000000000000000000000000003".fromHexToByteArray())
+    val validator1 = Validator("0x0000000000000000000000000000000000000001".decodeHex())
+    val validator2 = Validator("0x0000000000000000000000000000000000000002".decodeHex())
+    val validator3 = Validator("0x0000000000000000000000000000000000000003".decodeHex())
 
     val unsortedValidators = setOf(validator3, validator1, validator2)
     val provider = StaticValidatorProvider(unsortedValidators)

@@ -8,9 +8,9 @@
  */
 package maru.test.cluster
 
+import linea.testing.besu.BesuFactory
 import maru.config.MaruConfig
 import maru.crypto.PrivateKeyGenerator
-import testutils.besu.BesuFactory
 import java.nio.file.Path
 
 class NodeBuilder(

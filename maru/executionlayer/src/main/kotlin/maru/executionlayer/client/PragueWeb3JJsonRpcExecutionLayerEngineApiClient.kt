@@ -10,9 +10,9 @@ package maru.executionlayer.client
 
 import maru.consensus.ElFork
 import maru.core.ExecutionPayload
-import maru.extensions.captureTimeSafeFuture
-import maru.mappers.Mappers.toDomainExecutionPayload
-import maru.mappers.Mappers.toExecutionPayloadV3
+import maru.executionlayer.mappers.Mappers.toDomainExecutionPayload
+import maru.executionlayer.mappers.Mappers.toExecutionPayloadV3
+import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.metrics.MetricsFacade
 import org.apache.tuweni.bytes.Bytes32
 import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceStateV1
@@ -33,7 +33,7 @@ open class PragueWeb3JJsonRpcExecutionLayerEngineApiClient(
   override fun getFork(): ElFork = ElFork.Prague
 
   override fun getPayload(payloadId: Bytes8): SafeFuture<Response<ExecutionPayload>> =
-    createRequestTimer<ExecutionPayload>(method = "getPayload").captureTimeSafeFuture(
+    createRequestTimer<ExecutionPayload>(method = "getPayload").captureTime(
       web3jEngineClient.getPayloadV4(payloadId).thenApply {
         when {
           it.payload != null ->
@@ -46,10 +46,10 @@ open class PragueWeb3JJsonRpcExecutionLayerEngineApiClient(
             throw IllegalStateException("Failed to get payload!")
         }
       },
-    )
+    ).toSafeFuture()
 
   override fun newPayload(executionPayload: ExecutionPayload): SafeFuture<Response<PayloadStatusV1>> =
-    createRequestTimer<PayloadStatusV1>(method = "newPayload").captureTimeSafeFuture(
+    createRequestTimer<PayloadStatusV1>(method = "newPayload").captureTime(
       web3jEngineClient
         .newPayloadV4(executionPayload.toExecutionPayloadV3(), emptyList(), Bytes32.ZERO, emptyList())
         .thenApply {
@@ -59,7 +59,7 @@ open class PragueWeb3JJsonRpcExecutionLayerEngineApiClient(
             Response.fromErrorMessage(it.errorMessage)
           }
         },
-    )
+    ).toSafeFuture()
 
   override fun forkChoiceUpdate(
     forkChoiceState: ForkChoiceStateV1,
@@ -67,9 +67,9 @@ open class PragueWeb3JJsonRpcExecutionLayerEngineApiClient(
   ): SafeFuture<Response<ForkChoiceUpdatedResult>> =
     createRequestTimer<ForkChoiceUpdatedResult>(
       method = "forkChoiceUpdate",
-    ).captureTimeSafeFuture(
+    ).captureTime(
       web3jEngineClient.forkChoiceUpdatedV3(forkChoiceState, Optional.ofNullable(payloadAttributes?.toV3())),
-    )
+    ).toSafeFuture()
 
   private fun PayloadAttributesV1.toV3(): PayloadAttributesV3 =
     PayloadAttributesV3(

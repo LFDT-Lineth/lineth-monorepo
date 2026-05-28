@@ -13,13 +13,13 @@ import linea.domain.BlockData
 import linea.domain.BlockParameter
 import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.ethapi.EthApiClient
+import linea.kotlin.encodeHex
 import linea.timer.PeriodicPollingService
 import linea.timer.TimerFactory
 import linea.timer.TimerSchedule
 import maru.consensus.state.FinalizationProvider
 import maru.consensus.state.FinalizationState
 import maru.core.BeaconBlockBody
-import maru.extensions.encodeHex
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

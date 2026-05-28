@@ -20,7 +20,6 @@ plugins {
 dependencies {
   implementation (project(':maru:core'))
   implementation (project(':maru:serialization'))
-  implementation (project(':maru:jvm-libs:extensions'))
   implementation "org.rocksdb:rocksdbjni:${libs.versions.rocksdbjni.get()}"
   implementation "tech.pegasys.teku.internal:storage:${libs.versions.teku.get()}"
   implementation "org.hyperledger.besu.internal:besu-metrics-core"
