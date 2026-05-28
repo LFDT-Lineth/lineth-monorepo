@@ -41,7 +41,9 @@ fun createSyncController(
   desyncTolerance: ULong,
   elSyncEnabled: Boolean = true,
 ): BeaconSyncControllerImpl {
-  val state = DataGenerators.randomBeaconState(blockNumber)
+  val state = DataGenerators.randomBeaconState(
+    blockNumber,
+  )
   val beaconChain = InMemoryBeaconChain(state)
   return BeaconSyncControllerImpl(
     beaconChain = beaconChain,

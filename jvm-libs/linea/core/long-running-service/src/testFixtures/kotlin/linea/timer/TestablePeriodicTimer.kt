@@ -1,20 +1,9 @@
-/*
- * Copyright Consensys Software Inc.
- *
- * This file is dual-licensed under either the MIT license or Apache License 2.0.
- * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
- *
- * SPDX-License-Identifier: MIT OR Apache-2.0
- */
-package testutils.maru
+package linea.timer
 
-import linea.timer.Timer
-import linea.timer.TimerFactory
-import linea.timer.TimerSchedule
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration
 
-// Test implementation that allows controlling the timer execution. Supports only scheduleAtFixedRate
+// Test implementation that allows controlling the timer execution. Supports only scheduleAtFixedRate.
 class TestablePeriodicTimer(
   override val name: String,
   override val initialDelay: Duration,

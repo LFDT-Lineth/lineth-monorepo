@@ -82,9 +82,15 @@ class BeaconBlocksByRangeHandlerTest {
 
     val blocks =
       listOf(
-        DataGenerators.randomSealedBeaconBlock(number = 100UL),
-        DataGenerators.randomSealedBeaconBlock(number = 101UL),
-        DataGenerators.randomSealedBeaconBlock(number = 102UL),
+        DataGenerators.randomSealedBeaconBlock(
+          number = 100UL,
+        ),
+        DataGenerators.randomSealedBeaconBlock(
+          number = 101UL,
+        ),
+        DataGenerators.randomSealedBeaconBlock(
+          number = 102UL,
+        ),
       )
 
     whenever(beaconChain.getSealedBeaconBlocks(100UL, 3UL)).thenReturn(blocks)
@@ -115,7 +121,9 @@ class BeaconBlocksByRangeHandlerTest {
     // Handler should limit to MAX_BLOCKS_PER_REQUEST
     val limitedBlocks =
       (0UL until MAX_BLOCKS_PER_REQUEST).map { i ->
-        DataGenerators.randomSealedBeaconBlock(number = i)
+        DataGenerators.randomSealedBeaconBlock(
+          number = i,
+        )
       }
 
     // handler should limit to MAX_BLOCKS_PER_REQUEST
@@ -152,7 +160,9 @@ class BeaconBlocksByRangeHandlerTest {
 
     val limitedBlocks =
       (0UL until 10UL).map { i ->
-        DataGenerators.randomSealedBeaconBlock(number = i)
+        DataGenerators.randomSealedBeaconBlock(
+          number = i,
+        )
       }
 
     var startBlockNumber = 0UL

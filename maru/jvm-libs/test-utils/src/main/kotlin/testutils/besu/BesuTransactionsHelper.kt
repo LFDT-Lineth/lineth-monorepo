@@ -8,8 +8,6 @@
  */
 package testutils.besu
 
-import maru.test.cluster.BesuElNode
-import maru.test.cluster.ElNode
 import org.apache.logging.log4j.Logger
 import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.besu.datatypes.Hash
@@ -71,17 +69,5 @@ class BesuTransactionsHelper {
         txHash.bytes.toHexString(),
       ).verify(this)
     logger.info("Transaction {} was mined", txHash)
-  }
-
-  fun ElNode?.sendTransactionAndAssertExecution(
-    logger: Logger,
-    recipient: Account,
-    amount: Amount,
-  ) {
-    if (this is BesuElNode) {
-      this.besu.sendTransactionAndAssertExecution(logger, recipient, amount)
-    } else {
-      throw IllegalArgumentException("Unsupported ElNode type ${this?.javaClass}")
-    }
   }
 }

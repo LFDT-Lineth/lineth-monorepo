@@ -38,7 +38,9 @@ class QbftBlockInterfaceAdapterTest {
   fun `can replace round number in header for commit block`() {
     val beaconBlock =
       BeaconBlock(
-        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(1UL).copy(round = 10u),
+        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(
+          1UL,
+        ).copy(round = 10u),
         beaconBlockBody = DataGenerators.randomBeaconBlockBody(),
       )
     val qbftBlock = QbftBlockAdapter(beaconBlock)
@@ -58,7 +60,9 @@ class QbftBlockInterfaceAdapterTest {
     val newProposer = DataGenerators.randomValidator()
     val beaconBlock =
       BeaconBlock(
-        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(1UL).copy(
+        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(
+          1UL,
+        ).copy(
           round = 10u,
           proposer = originalProposer,
         ),
@@ -79,7 +83,9 @@ class QbftBlockInterfaceAdapterTest {
     val validators = DataGenerators.randomValidators().toSortedSet()
     val beaconBlock =
       BeaconBlock(
-        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(1UL).copy(round = 10u),
+        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(
+          1UL,
+        ).copy(round = 10u),
         beaconBlockBody = DataGenerators.randomBeaconBlockBody(),
       )
     val qbftBlock = QbftBlockAdapter(beaconBlock)
@@ -100,7 +106,9 @@ class QbftBlockInterfaceAdapterTest {
     val validators = DataGenerators.randomValidators().toSortedSet()
     val beaconBlock =
       BeaconBlock(
-        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(1UL).copy(
+        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(
+          1UL,
+        ).copy(
           round = 10u,
           proposer = originalProposer,
         ),

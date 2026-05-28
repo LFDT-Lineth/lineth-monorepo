@@ -23,8 +23,14 @@ class QbftValidatorProviderAdapterTest {
     val validatorProvider = Mockito.mock(ValidatorProvider::class.java)
     val validators1 = DataGenerators.randomValidators()
     val validators2 = DataGenerators.randomValidators()
-    val header1 = QbftBlockHeaderAdapter(DataGenerators.randomBeaconBlockHeader(10U))
-    val header2 = QbftBlockHeaderAdapter(DataGenerators.randomBeaconBlockHeader(11U))
+    val header1 =
+      QbftBlockHeaderAdapter(
+        DataGenerators.randomBeaconBlockHeader(10U),
+      )
+    val header2 =
+      QbftBlockHeaderAdapter(
+        DataGenerators.randomBeaconBlockHeader(11U),
+      )
     whenever(
       validatorProvider.getValidatorsAfterBlock(header1.beaconBlockHeader.number),
     ).thenReturn(completedFuture(validators1))
@@ -47,8 +53,14 @@ class QbftValidatorProviderAdapterTest {
     val validatorProvider = Mockito.mock(ValidatorProvider::class.java)
     val validators1 = DataGenerators.randomValidators()
     val validators2 = DataGenerators.randomValidators()
-    val header1 = QbftBlockHeaderAdapter(DataGenerators.randomBeaconBlockHeader(10U))
-    val header2 = QbftBlockHeaderAdapter(DataGenerators.randomBeaconBlockHeader(11U))
+    val header1 =
+      QbftBlockHeaderAdapter(
+        DataGenerators.randomBeaconBlockHeader(10U),
+      )
+    val header2 =
+      QbftBlockHeaderAdapter(
+        DataGenerators.randomBeaconBlockHeader(11U),
+      )
     whenever(
       validatorProvider.getValidatorsForBlock(header1.beaconBlockHeader.number),
     ).thenReturn(completedFuture(validators1))

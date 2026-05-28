@@ -15,9 +15,6 @@ dependencies {
   testFixturesImplementation "io.libp2p:jvm-libp2p:${libs.versions.jvmLibp2p.get()}"
   testFixturesImplementation "tech.pegasys.teku.internal:p2p:${libs.versions.teku.get()}"
   testFixturesImplementation project(':jvm-libs:generic:extensions:kotlin')
-  testFixturesImplementation "io.consensys.tuweni:tuweni-bytes:${libs.versions.tuweni.get()}"
-  testFixturesImplementation "org.hyperledger.besu.internal:besu-crypto-algorithms"
-  testFixturesImplementation "org.hyperledger.besu.internal:besu-crypto-services"
 
   testImplementation project(':jvm-libs:generic:extensions:kotlin')
 }

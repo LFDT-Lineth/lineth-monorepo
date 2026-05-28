@@ -99,8 +99,12 @@ class ApiServerTest {
 
   private val fakeChainDataProvider =
     object : ChainDataProvider {
-      val SEALED_BEACON_BLOCK = DataGenerators.randomSealedBeaconBlock(1u)
-      val BEACON_STATE = DataGenerators.randomBeaconState(1u)
+      val SEALED_BEACON_BLOCK = DataGenerators.randomSealedBeaconBlock(
+        1u,
+      )
+      val BEACON_STATE = DataGenerators.randomBeaconState(
+        1u,
+      )
 
       override fun getLatestBeaconState(): BeaconState = BEACON_STATE
 
@@ -132,7 +136,13 @@ class ApiServerTest {
       }
     }
 
-  private val fakeBeaconChain = InMemoryBeaconChain(DataGenerators.randomBeaconState(number = 0u, timestamp = 0u))
+  private val fakeBeaconChain =
+    InMemoryBeaconChain(
+      DataGenerators.randomBeaconState(
+        number = 0u,
+        timestamp = 0u,
+      ),
+    )
   private val fakeElOnlineProvider =
     object : () -> Boolean {
       var isElOnline: Boolean = false
@@ -276,7 +286,12 @@ class ApiServerTest {
   @Test
   fun `test GetSyncingStatus method`() {
     fakeBeaconChain.newBeaconChainUpdater().apply {
-      putBeaconState(DataGenerators.randomBeaconState(number = 100u, timestamp = 100u))
+      putBeaconState(
+        DataGenerators.randomBeaconState(
+          number = 100u,
+          timestamp = 100u,
+        ),
+      )
       commit()
     }
     fakeElOnlineProvider.isElOnline = true
@@ -295,7 +310,12 @@ class ApiServerTest {
     )
 
     fakeBeaconChain.newBeaconChainUpdater().apply {
-      putBeaconState(DataGenerators.randomBeaconState(number = 200u, timestamp = 100u))
+      putBeaconState(
+        DataGenerators.randomBeaconState(
+          number = 200u,
+          timestamp = 100u,
+        ),
+      )
       commit()
     }
     fakeElOnlineProvider.isElOnline = false

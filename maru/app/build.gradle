@@ -28,7 +28,6 @@ dependencies {
   implementation(project(':maru:crypto'))
   implementation(project(':maru:serialization'))
   implementation(project(':maru:observability'))
-  implementation(project(':maru:syncing'))
   implementation(project(':maru:jvm-libs:teku-web3j'))
   api(project(':maru:linea-finalization-provider')) {
     exclude group: "build.linea", module: "besu-libs"
@@ -70,10 +69,12 @@ dependencies {
   integrationTestImplementation(testFixtures(project(':maru:p2p')))
   integrationTestImplementation(testFixtures(project(':maru:crypto')))
   integrationTestImplementation("org.hyperledger.besu.internal:besu-crypto-services")
+  integrationTestImplementation("org.hyperledger.besu.internal:besu-consensus-common")
+  integrationTestImplementation("org.hyperledger.besu.internal:besu-consensus-qbft")
+  integrationTestImplementation("org.hyperledger.besu.internal:besu-ethereum-core")
   integrationTestImplementation "org.hyperledger.besu.internal:besu-ethereum-api"
   integrationTestImplementation(group: 'org.hyperledger.besu.internal', name: 'besu-ethereum-core', classifier: 'test-support')
   integrationTestImplementation("org.hyperledger.besu.internal:besu-ethereum-p2p")
-  integrationTestImplementation("org.hyperledger.besu.internal:besu-consensus-qbft-core")
   integrationTestImplementation("com.squareup.okhttp3:okhttp:${libs.versions.okhttp.get()}")
   integrationTestImplementation("io.javalin:javalin:${libs.versions.javalin.get()}")
   testImplementation(testFixtures(project(':maru:core')))

@@ -25,16 +25,9 @@ dependencies {
   implementation project(':jvm-libs:linea:core:long-running-service')
   implementation "io.consensys.tuweni:tuweni-bytes:${libs.versions.tuweni.get()}"
   implementation "org.jetbrains.kotlin:kotlin-reflect:${libs.versions.kotlin.get()}"
-  testImplementation(project(':maru:serialization'))
+  testFixturesImplementation(project(':maru:serialization'))
   testFixturesImplementation("org.hyperledger.besu:besu-datatypes")
   testFixturesImplementation("org.hyperledger.besu:besu-plugin-api")
   testFixturesImplementation("org.hyperledger.besu.internal:besu-ethereum-core")
   testFixturesImplementation("org.hyperledger.besu.internal:besu-crypto-algorithms")
-  testFixturesImplementation(project(':jvm-libs:generic:extensions:kotlin'))
-  testFixturesImplementation(project(':jvm-libs:linea:core:metrics'))
-  testFixturesImplementation(project(':jvm-libs:linea:metrics:micrometer'))
-  testFixturesImplementation(project(':maru:serialization'))
-  testFixturesImplementation(project(':maru:observability'))
-  testFixturesImplementation(project(':maru:p2p'))
-  testFixturesImplementation(project(':maru:crypto'))
 }

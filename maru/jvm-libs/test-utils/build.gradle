@@ -3,21 +3,14 @@ plugins {
 }
 
 dependencies {
-  implementation(project(':maru:consensus'))
-  implementation(project(':maru:app'))
-  implementation(project(':maru:crypto'))
-  implementation(testFixtures(project(':maru:crypto')))
-  implementation(project(':maru:p2p'))
-  implementation(project(':maru:config'))
-  implementation(project(':maru:jvm-libs:extensions'))
   implementation project(':jvm-libs:generic:extensions:kotlin')
-  implementation project(':jvm-libs:linea:core:long-running-service')
 
 
   api "org.hyperledger.besu.internal:besu-acceptance-tests-dsl"
   implementation("org.hyperledger.besu.internal:besu-ethereum-core")
   implementation("org.hyperledger.besu.internal:besu-ethereum-eth")
   implementation("org.hyperledger.besu.internal:besu-ethereum-api")
+  implementation("org.hyperledger.besu.internal:besu-consensus-common")
   implementation("org.hyperledger.besu.internal:besu-consensus-merge")
   implementation("org.hyperledger.besu.internal:besu-crypto-algorithms")
   implementation("org.hyperledger.besu.internal:besu-consensus-clique")

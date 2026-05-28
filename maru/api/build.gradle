@@ -12,6 +12,7 @@ dependencies {
   implementation project(':maru:jvm-libs:extensions')
 
   testImplementation(testFixtures(project(':maru:core')))
+  testImplementation(project(':maru:serialization'))
   testImplementation(project(':maru:syncing'))
   testImplementation("com.squareup.okhttp3:okhttp:${libs.versions.okhttp.get()}")
 }

@@ -39,6 +39,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.SequencedSet
+import maru.executionlayer.manager.ext.DataGenerators as ExecutionLayerDataGenerators
 
 class BlockValidatorTest {
   private val validators = (1..3).map { DataGenerators.randomValidator() }
@@ -49,7 +50,9 @@ class BlockValidatorTest {
 
   private val validCurrBlockBody = DataGenerators.randomBeaconBlockBody(numSeals = validators.size)
   private val validCurrBlockHeader =
-    DataGenerators.randomBeaconBlockHeader(currBlockNumber).copy(
+    DataGenerators.randomBeaconBlockHeader(
+      currBlockNumber,
+    ).copy(
       proposer = validators[0],
       bodyRoot = HashUtil.bodyRoot(validCurrBlockBody),
     )
@@ -70,7 +73,9 @@ class BlockValidatorTest {
       )
     }
   private val validNewBlockStateRootHeader =
-    DataGenerators.randomBeaconBlockHeader(newBlockNumber).copy(
+    DataGenerators.randomBeaconBlockHeader(
+      newBlockNumber,
+    ).copy(
       proposer = validators[1],
       parentRoot = validCurrBlockHeader.hash,
       timestamp = validCurrBlockHeader.timestamp + 1u,
@@ -117,7 +122,7 @@ class BlockValidatorTest {
       mock<ExecutionLayerManager> {
         on { newPayload(any()) }.thenReturn(
           SafeFuture.completedFuture(
-            DataGenerators.randomValidPayloadStatus(),
+            ExecutionLayerDataGenerators.randomValidPayloadStatus(),
           ),
         )
       }

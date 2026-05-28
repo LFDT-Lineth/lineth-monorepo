@@ -50,12 +50,9 @@ dependencies {
   implementation "io.consensys.protocols:discovery:${libs.versions.discovery.get()}"
   implementation "org.jetbrains.kotlinx:kotlinx-datetime:${libs.versions.kotlinxDatetime.get()}"
 
-  implementation(project(':maru:core'))
-
   testImplementation(testFixtures(project(':maru:core')))
+  testImplementation(testFixtures(project(':maru:observability')))
   testImplementation "org.awaitility:awaitility-kotlin:${libs.versions.awaitility.get()}"
 
-  testFixturesImplementation(project(':maru:serialization'))
-  testFixturesImplementation(project(':maru:crypto'))
   testFixturesImplementation(testFixtures(project(':maru:core')))
 }

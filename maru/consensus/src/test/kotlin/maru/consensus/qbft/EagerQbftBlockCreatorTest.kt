@@ -165,7 +165,9 @@ class EagerQbftBlockCreatorTest {
         .toDomain()
     val parentBlock =
       BeaconBlock(
-        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(0U),
+        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(
+          0U,
+        ),
         beaconBlockBody = DataGenerators
           .randomBeaconBlockBody()
           .copy(executionPayload = genesisExecutionPayload),
@@ -238,7 +240,9 @@ class EagerQbftBlockCreatorTest {
         .toDomain()
     val genesisBeaconBlock =
       BeaconBlock(
-        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(0U),
+        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(
+          0U,
+        ),
         beaconBlockBody = DataGenerators
           .randomBeaconBlockBody()
           .copy(executionPayload = GENESIS_EXECUTION_PAYLOAD),
@@ -291,7 +295,9 @@ class EagerQbftBlockCreatorTest {
         .toDomain()
     val genesisBeaconBlock =
       BeaconBlock(
-        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(0U), // Genesis block has number 0
+        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(
+          0U,
+        ), // Genesis block has number 0
         beaconBlockBody = DataGenerators
           .randomBeaconBlockBody()
           .copy(executionPayload = GENESIS_EXECUTION_PAYLOAD),

@@ -42,12 +42,7 @@ jobs:
         uses: ./.github/actions/setup-java-and-gradle
       - name: Build maru and run unit + integration tests
         run: |
-          # :maru:build is an aggregate task defined in maru/build.gradle that
-          # depends on each :maru:* subproject's `build`. We avoid `buildNeeded`
-          # because :maru:core's testFixtures depend on :maru:serialization
-          # which depends on :maru:core's main jar -- linear under `build` but a
-          # cycle under `buildNeeded` (which walks testFixtures).
-          ./gradlew -V :maru:build
+          ./gradlew -V :maru:app:buildNeeded
       - name: Store reports
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

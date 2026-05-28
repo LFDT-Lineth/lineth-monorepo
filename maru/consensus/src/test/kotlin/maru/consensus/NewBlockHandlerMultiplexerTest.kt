@@ -26,7 +26,9 @@ import kotlin.text.contains
 class NewBlockHandlerMultiplexerTest {
   @Test
   fun `should invoke all handlers for BeaconBlock`() {
-    val block = DataGenerators.randomBeaconBlock(1u)
+    val block = DataGenerators.randomBeaconBlock(
+      1u,
+    )
     val handler1 =
       mock<NewBlockHandler<Unit>> {
         on { handleNewBlock(any()) } doReturn SafeFuture.completedFuture(Unit)
@@ -50,7 +52,9 @@ class NewBlockHandlerMultiplexerTest {
 
   @Test
   fun `should log and throw error if handler throws`() {
-    val block = DataGenerators.randomBeaconBlock(1u)
+    val block = DataGenerators.randomBeaconBlock(
+      1u,
+    )
     val handler =
       mock<NewBlockHandler<Unit>> {
         on { handleNewBlock(any()) } doThrow RuntimeException("fail")

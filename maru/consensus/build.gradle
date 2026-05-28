@@ -53,10 +53,11 @@ dependencies {
 
 
   testImplementation(testFixtures(project(':maru:core')))
+  testImplementation(testFixtures(project(':maru:executionlayer')))
+  testImplementation(testFixtures(project(':maru:observability')))
   testImplementation(testFixtures(project(':maru:crypto')))
   testImplementation(project(':maru:jvm-libs:test-utils'))
+  testImplementation(testFixtures(project(':jvm-libs:linea:core:long-running-service')))
   testImplementation "org.jetbrains.kotlin:kotlin-test:2.1.0"
-  testImplementation "tech.pegasys.teku.internal:executionclient:${libs.versions.teku.get()}"
-  testImplementation "tech.pegasys.teku.internal:spec:${libs.versions.teku.get()}"
   testImplementation project(':jvm-libs:linea:core:metrics')
 }

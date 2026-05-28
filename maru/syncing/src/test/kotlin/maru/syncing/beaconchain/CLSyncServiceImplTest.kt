@@ -24,6 +24,7 @@ import maru.core.Seal
 import maru.core.SealedBeaconBlock
 import maru.core.Validator
 import maru.core.ext.DataGenerators
+import maru.core.ext.DataGenerators.randomExecutionPayload
 import maru.core.ext.metrics.TestMetrics.TestMetricsFacade
 import maru.core.ext.metrics.TestMetrics.TestMetricsSystemAdapter
 import maru.crypto.SecpCrypto
@@ -128,7 +129,10 @@ class CLSyncServiceImplTest {
     validators = sortedSetOf(Validator(Util.publicKeyToAddress(keypair.publicKey).bytes.toArray()))
 
     val genesisTimestamp = DataGenerators.randomTimestamp()
-    val (genesisBeaconState, genesisBeaconBlock) = DataGenerators.genesisState(genesisTimestamp, validators)
+    val (genesisBeaconState, genesisBeaconBlock) = DataGenerators.genesisState(
+      genesisTimestamp,
+      validators,
+    )
     targetBeaconChain = spy(InMemoryBeaconChain(genesisBeaconState, genesisBeaconBlock))
     sourceBeaconChain = spy(InMemoryBeaconChain(genesisBeaconState, genesisBeaconBlock))
 
@@ -445,7 +449,7 @@ class CLSyncServiceImplTest {
     var parentSealedBeaconBlock = genesisBeaconBlock
     for (i in 1uL..BEACON_CHAIN_2_HEAD) {
       val parentElBlockNumber = parentSealedBeaconBlock.beaconBlock.beaconBlockBody.executionPayload.blockNumber
-      val executionPayload = DataGenerators.randomExecutionPayload().copy(blockNumber = parentElBlockNumber + 1u)
+      val executionPayload = randomExecutionPayload().copy(blockNumber = parentElBlockNumber + 1u)
 
       val beaconBlock =
         DelayedQbftBlockCreator.createBeaconBlock(

@@ -26,7 +26,10 @@ class BeaconBlockHeaderSerializerTest {
 
   @Test
   fun `can serialize and deserialize same value`() {
-    val testValue = DataGenerators.randomBeaconBlockHeader(Random.nextULong())
+    val testValue =
+      DataGenerators.randomBeaconBlockHeader(
+        Random.nextULong(),
+      )
     val serializedData = serializer.serialize(testValue)
     val deserializedValue = serializer.deserialize(serializedData)
 

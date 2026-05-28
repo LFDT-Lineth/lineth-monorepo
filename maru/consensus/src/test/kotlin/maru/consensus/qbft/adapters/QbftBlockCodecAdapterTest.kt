@@ -16,7 +16,9 @@ import org.junit.jupiter.api.Test
 class QbftBlockCodecAdapterTest {
   @Test
   fun `can encode and decode same value`() {
-    val beaconBlock = DataGenerators.randomBeaconBlock(10U)
+    val beaconBlock = DataGenerators.randomBeaconBlock(
+      10U,
+    )
     val testValue = QbftBlockAdapter(beaconBlock)
     val qbftBlockCodecAdapter = QbftBlockCodecAdapter
 

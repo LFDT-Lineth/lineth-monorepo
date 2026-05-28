@@ -41,9 +41,15 @@ class ImportBlocksStepTest {
 
   @Test
   fun `successfully imports all blocks when all are accepted`() {
-    val block1 = DataGenerators.randomSealedBeaconBlock(1u)
-    val block2 = DataGenerators.randomSealedBeaconBlock(2u)
-    val block3 = DataGenerators.randomSealedBeaconBlock(3u)
+    val block1 = DataGenerators.randomSealedBeaconBlock(
+      1u,
+    )
+    val block2 = DataGenerators.randomSealedBeaconBlock(
+      2u,
+    )
+    val block3 = DataGenerators.randomSealedBeaconBlock(
+      3u,
+    )
     val blocks = listOf(block1, block2, block3)
 
     whenever(blockImporter.importBlock(any())).thenReturn(SafeFuture.completedFuture(Valid))
@@ -65,9 +71,15 @@ class ImportBlocksStepTest {
 
   @Test
   fun `stops processing on REJECT result`() {
-    val block1 = DataGenerators.randomSealedBeaconBlock(1u)
-    val block2 = DataGenerators.randomSealedBeaconBlock(2u)
-    val block3 = DataGenerators.randomSealedBeaconBlock(3u)
+    val block1 = DataGenerators.randomSealedBeaconBlock(
+      1u,
+    )
+    val block2 = DataGenerators.randomSealedBeaconBlock(
+      2u,
+    )
+    val block3 = DataGenerators.randomSealedBeaconBlock(
+      3u,
+    )
     val blocks = listOf(block1, block2, block3)
 
     whenever(blockImporter.importBlock(block1)).thenReturn(SafeFuture.completedFuture(Valid))
@@ -85,9 +97,15 @@ class ImportBlocksStepTest {
 
   @Test
   fun `stops processing on IGNORE result`() {
-    val block1 = DataGenerators.randomSealedBeaconBlock(1u)
-    val block2 = DataGenerators.randomSealedBeaconBlock(2u)
-    val block3 = DataGenerators.randomSealedBeaconBlock(3u)
+    val block1 = DataGenerators.randomSealedBeaconBlock(
+      1u,
+    )
+    val block2 = DataGenerators.randomSealedBeaconBlock(
+      2u,
+    )
+    val block3 = DataGenerators.randomSealedBeaconBlock(
+      3u,
+    )
     val blocks = listOf(block1, block2, block3)
 
     whenever(blockImporter.importBlock(block1)).thenReturn(SafeFuture.completedFuture(Valid))
@@ -109,7 +127,9 @@ class ImportBlocksStepTest {
 
   @Test
   fun `propagates exception when block import fails`() {
-    val block1 = DataGenerators.randomSealedBeaconBlock(1u)
+    val block1 = DataGenerators.randomSealedBeaconBlock(
+      1u,
+    )
     val blocks = listOf(block1)
 
     val expectedException = RuntimeException("Import failed")
@@ -127,9 +147,15 @@ class ImportBlocksStepTest {
 
   @Test
   fun `processes blocks sequentially in order`() {
-    val block1 = DataGenerators.randomSealedBeaconBlock(1u)
-    val block2 = DataGenerators.randomSealedBeaconBlock(2u)
-    val block3 = DataGenerators.randomSealedBeaconBlock(3u)
+    val block1 = DataGenerators.randomSealedBeaconBlock(
+      1u,
+    )
+    val block2 = DataGenerators.randomSealedBeaconBlock(
+      2u,
+    )
+    val block3 = DataGenerators.randomSealedBeaconBlock(
+      3u,
+    )
     val blocks = listOf(block1, block2, block3)
 
     val acceptResult = Valid
@@ -148,10 +174,18 @@ class ImportBlocksStepTest {
 
   @Test
   fun `handles mixed results correctly`() {
-    val block1 = DataGenerators.randomSealedBeaconBlock(1u)
-    val block2 = DataGenerators.randomSealedBeaconBlock(2u)
-    val block3 = DataGenerators.randomSealedBeaconBlock(3u)
-    val block4 = DataGenerators.randomSealedBeaconBlock(4u)
+    val block1 = DataGenerators.randomSealedBeaconBlock(
+      1u,
+    )
+    val block2 = DataGenerators.randomSealedBeaconBlock(
+      2u,
+    )
+    val block3 = DataGenerators.randomSealedBeaconBlock(
+      3u,
+    )
+    val block4 = DataGenerators.randomSealedBeaconBlock(
+      4u,
+    )
     val blocks = listOf(block1, block2, block3, block4)
 
     whenever(blockImporter.importBlock(block1)).thenReturn(SafeFuture.completedFuture(Valid))
