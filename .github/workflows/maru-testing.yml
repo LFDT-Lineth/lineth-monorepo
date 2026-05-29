@@ -40,9 +40,12 @@ jobs:
           submodules: false
       - name: Setup Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
-      - name: Build maru and run unit + integration tests
+      - name: Build maru and Unit tests
         run: |
-          ./gradlew -V :maru:app:buildNeeded
+          ./gradlew -V maru:app:buildNeeded
+      - name: Run integration tests
+        run: |
+          ./gradlew maru:app:integrationTest
       - name: Store reports
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

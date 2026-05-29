@@ -154,5 +154,3 @@ afterEvaluate {
     }.flatten()
   }
 }
-
-check.dependsOn(integrationTest)
