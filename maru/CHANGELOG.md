@@ -12,3 +12,4 @@
 ### ⚙️ Miscellaneous Tasks
 
 - *(maru)* Follow up for pr 3236 (#3237)
+- *(maru)* Split testing workflow (#3234)
