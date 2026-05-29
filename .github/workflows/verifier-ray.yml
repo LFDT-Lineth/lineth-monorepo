@@ -6,14 +6,26 @@ on:
       - main
     paths:
       - 'verifier-ray/**'
-      - 'prover-ray/**'
+      # Keep prover-ray off this trigger for now: verifier-ray uses a pinned
+      # known-good prover-ray version and updates it manually to save CI runtime.
+      # - 'prover-ray/**'
+      # Keep arithmetization integration dependencies documented but non-blocking
+      # while the RISC-V/zkc pipeline is still moving quickly.
+      # - 'arithmetization/src/test/examples/main.go'
+      # - 'arithmetization/src/main/riscv/main.zkc'
       - '.github/workflows/verifier-ray.yml'
   push:
     branches:
       - main
     paths:
       - 'verifier-ray/**'
-      - 'prover-ray/**'
+      # Keep prover-ray off this trigger for now: verifier-ray uses a pinned
+      # known-good prover-ray version and updates it manually to save CI runtime.
+      # - 'prover-ray/**'
+      # Keep arithmetization integration dependencies documented but non-blocking
+      # while the RISC-V/zkc pipeline is still moving quickly.
+      # - 'arithmetization/src/test/examples/main.go'
+      # - 'arithmetization/src/main/riscv/main.zkc'
       - '.github/workflows/verifier-ray.yml'
   workflow_call:
   workflow_dispatch:
@@ -24,8 +36,8 @@ permissions:
 
 env:
   GO_VERSION: '1.25.7'
-  GO_CORSET_VERSION: 'v1.2.14'
-  GO_CORSET_REF_FOR_ZKC: 'v1.2.14'
+  GO_CORSET_VERSION: 'v1.2.17'
+  GO_CORSET_REF_FOR_ZKC: '414e7b73971eaa77afcb6a4797b44d0fdf8c99db'
   ZIG_VERSION: '0.17.0-dev.251+0db721ec2'
 
 concurrency:
@@ -34,7 +46,7 @@ concurrency:
 
 jobs:
   test:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -54,8 +66,8 @@ jobs:
         with:
           version: ${{ env.ZIG_VERSION }}
 
-      - name: Install riscv64-unknown-elf-as
-        run: sudo apt-get update && sudo apt-get install -y binutils-riscv64-unknown-elf
+      - name: Install native tools
+        run: sudo apt-get update && sudo apt-get install -y binutils-riscv64-unknown-elf xxd
 
       - name: Install go-corset and zkc
         run: |
@@ -72,14 +84,26 @@ jobs:
         working-directory: verifier-ray
         run: make verify-testdata
 
-      - name: Verifier-ray build
+      - name: Verifier-ray release build
         working-directory: verifier-ray
-        run: make build
+        run: make build-release
 
       - name: Verifier-ray tests
         working-directory: verifier-ray
         run: make test
 
-      - name: ZKC verifier smoke test
+      - name: Native verifier passing smoke test
         working-directory: verifier-ray
-        run: make zkc-verify
+        run: make run-passing
+
+      - name: Native verifier failing smoke test
+        working-directory: verifier-ray
+        run: make run-failing-expected
+
+      - name: ZKC verifier passing smoke test
+        working-directory: verifier-ray
+        run: make zkc-verify-passing
+
+      - name: ZKC verifier failing smoke test
+        working-directory: verifier-ray
+        run: make zkc-verify-failing-expected

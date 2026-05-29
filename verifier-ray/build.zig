@@ -1,9 +1,26 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
-    const strip = b.option(bool, "strip", "Omit debug symbols") orelse (optimize == .ReleaseSmall);
+    const r5 = b.option(bool, "r5", "Build for the Linea R5 zkVM target") orelse false;
+
+    const default_target: std.Target.Query = if (r5) .{
+        .cpu_arch = .riscv64,
+        .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv64 },
+        .cpu_features_add = std.Target.riscv.featureSet(&.{.m}),
+        .cpu_features_sub = std.Target.riscv.featureSet(&.{ .a, .c, .d, .f, .zicsr, .zaamo, .zalrsc }),
+        .os_tag = .freestanding,
+        .abi = .none,
+    } else .{};
+
+    const target = b.standardTargetOptions(.{ .default_target = default_target });
+    // TODO: consider adding a "release" option that sets optimize to ReleaseFast instead of ReleaseSmall.
+    // For R5 the ReleaseFast optimization causes 2x binary size increase but 1/3 reduction in execution time, so it may be worth having if the binary size is not a concern.
+    // For native execution we don't really care about the difference between ReleaseSmall and ReleaseFast, so we can just use ReleaseSmall for the optimized native build.
+    const optimize = if (r5)
+        b.standardOptimizeOption(.{ .preferred_optimize_mode = .ReleaseSmall })
+    else
+        b.standardOptimizeOption(.{});
+    const strip = b.option(bool, "strip", "Omit debug symbols") orelse (r5 or optimize == .ReleaseSmall);
 
     const verifier_mod = b.addModule("verifier_ray", .{
         .root_source_file = b.path("src/lib.zig"),
@@ -29,21 +46,43 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
+
+    if (!r5) {
+        exe.root_module.link_libc = true;
+    }
+
+    if (r5) {
+        // Point to assembly overwriting default SP with the one defined in the linker script.
+        exe.root_module.addAssemblyFile(b.path("src/start.s"));
+        exe.setLinkerScript(b.path("linker_script.ld"));
+
+        // Remove unused code sections for the zkVM binary.
+        exe.link_gc_sections = true;
+    }
+
     b.installArtifact(exe);
 
-    const unit_tests = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("test/all.zig"),
-            .target = target,
-            .optimize = optimize,
-            .imports = &.{
-                .{ .name = "verifier_ray", .module = verifier_mod },
-                .{ .name = "test_vectors", .module = test_vectors_mod },
-            },
-        }),
-    });
+    if (!r5) {
+        const run_exe = b.addRunArtifact(exe);
+        if (b.args) |args| run_exe.addArgs(args);
 
-    const run_unit_tests = b.addRunArtifact(unit_tests);
-    const test_step = b.step("test", "Run verifier-ray unit tests");
-    test_step.dependOn(&run_unit_tests.step);
+        const run_step = b.step("run", "Run verifier-ray natively");
+        run_step.dependOn(&run_exe.step);
+
+        const unit_tests = b.addTest(.{
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("test/all.zig"),
+                .target = target,
+                .optimize = optimize,
+                .imports = &.{
+                    .{ .name = "verifier_ray", .module = verifier_mod },
+                    .{ .name = "test_vectors", .module = test_vectors_mod },
+                },
+            }),
+        });
+
+        const run_unit_tests = b.addRunArtifact(unit_tests);
+        const test_step = b.step("test", "Run verifier-ray unit tests");
+        test_step.dependOn(&run_unit_tests.step);
+    }
 }

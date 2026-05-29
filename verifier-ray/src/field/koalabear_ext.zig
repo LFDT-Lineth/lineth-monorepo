@@ -6,7 +6,10 @@ pub const bytes = degree * base.bytes;
 pub const E2 = @import("koalabear_e2.zig").E2;
 
 /// Cubic extension F_{p^6} = F_{p^2}[v]/(v^3 - (u+1)).
-pub const Ext = struct {
+///
+/// This is an `extern struct` so Fiat-Shamir challenges and other extension
+/// values have stable byte-cast layout across native and R5 builds.
+pub const Ext = extern struct {
     B0: E2,
     B1: E2,
     B2: E2,
