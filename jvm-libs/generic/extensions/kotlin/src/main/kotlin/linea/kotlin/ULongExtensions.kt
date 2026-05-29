@@ -79,9 +79,9 @@ fun ULong.minusCoercingUnderflow(other: ULong): ULong {
 fun ULong.clampedAdd(other: ULong): ULong {
   val result = this + other
   return if (result < this || result < other) {
-    ULong.MAX_VALUE
+    ULong.MAX_VALUE // Overflow occurred, return max value
   } else {
-    result
+    result // No overflow, return the result
   }
 }
 

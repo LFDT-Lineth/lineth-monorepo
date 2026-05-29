@@ -12,13 +12,6 @@ class ULongExtensionsTest {
     ULong.MAX_VALUE to "0xffffffffffffffff",
   )
 
-  private fun String.toByteArray(): ByteArray =
-    this
-      .removePrefix("0x")
-      .chunked(2)
-      .map { it.toInt(16).toByte() }
-      .toByteArray()
-
   @Test
   fun `toHexString`() {
     uLongParsingTestCases.forEach { (number: ULong, hexString: String) ->
@@ -30,11 +23,11 @@ class ULongExtensionsTest {
   fun `ULong#toBytes32`() {
     val testCases =
       mapOf(
-        1UL to "0x0000000000000000000000000000000000000000000000000000000000000001".toByteArray(),
-        16UL to "0x0000000000000000000000000000000000000000000000000000000000000010".toByteArray(),
-        0xABCDEF1234567890UL to "0x000000000000000000000000000000000000000000000000abcdef1234567890".toByteArray(),
-        ULong.MIN_VALUE to "0x0000000000000000000000000000000000000000000000000000000000000000".toByteArray(),
-        ULong.MAX_VALUE to "0x000000000000000000000000000000000000000000000000ffffffffffffffff".toByteArray(),
+        1UL to "0x0000000000000000000000000000000000000000000000000000000000000001".decodeHex(),
+        16UL to "0x0000000000000000000000000000000000000000000000000000000000000010".decodeHex(),
+        0xABCDEF1234567890UL to "0x000000000000000000000000000000000000000000000000abcdef1234567890".decodeHex(),
+        ULong.MIN_VALUE to "0x0000000000000000000000000000000000000000000000000000000000000000".decodeHex(),
+        ULong.MAX_VALUE to "0x000000000000000000000000000000000000000000000000ffffffffffffffff".decodeHex(),
       )
 
     testCases.forEach { (number, byteArray) ->
@@ -154,17 +147,33 @@ class ULongExtensionsTest {
 
   @Test
   fun `clampedAdd returns sum when no overflow`() {
-    assertThat(10UL.clampedAdd(20UL)).isEqualTo(30UL)
+    val a = 10uL
+    val b = 20uL
+    val result = a.clampedAdd(b)
+    assertThat(result).isEqualTo(30uL)
   }
 
   @Test
   fun `clampedAdd returns ULong_MAX_VALUE on overflow`() {
-    assertThat(ULong.MAX_VALUE.clampedAdd(1UL)).isEqualTo(ULong.MAX_VALUE)
-    assertThat((ULong.MAX_VALUE - 1UL).clampedAdd(ULong.MAX_VALUE - 2UL)).isEqualTo(ULong.MAX_VALUE)
+    val a = ULong.MAX_VALUE
+    val b = 1uL
+    val result = a.clampedAdd(b)
+    assertThat(result).isEqualTo(ULong.MAX_VALUE)
+  }
+
+  @Test
+  fun `clampedAdd returns ULong_MAX_VALUE when both operands are large`() {
+    val a = ULong.MAX_VALUE - 1uL
+    val b = ULong.MAX_VALUE - 2uL
+    val result = a.clampedAdd(b)
+    assertThat(result).isEqualTo(ULong.MAX_VALUE)
   }
 
   @Test
   fun `clampedAdd works with zero`() {
-    assertThat(0UL.clampedAdd(0UL)).isEqualTo(0UL)
+    val a = 0uL
+    val b = 0uL
+    val result = a.clampedAdd(b)
+    assertThat(result).isEqualTo(0uL)
   }
 }

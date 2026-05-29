@@ -47,7 +47,10 @@ dependencies {
   // :jvm-libs:generic:vertx-helper (Vert.x 5) because Besu 26.5's acceptance-tests-dsl
   // and besu-ethereum-p2p call removed Vert.x 4 methods/internals at runtime.
   // Tracked in libs.versions.toml `lineaPackages`.
-  implementation "build.linea.internal:vertx-helper:${libs.versions.lineaPackages.get()}"
+  implementation("build.linea.internal:vertx-helper:${libs.versions.lineaPackages.get()}") {
+    exclude group: "build.linea.internal", module: "kotlin"
+    exclude group: "build.linea.internal", module: "futures"
+  }
   implementation "io.vertx:vertx-micrometer-metrics"
 
   implementation "info.picocli:picocli:${libs.versions.picoli.get()}"

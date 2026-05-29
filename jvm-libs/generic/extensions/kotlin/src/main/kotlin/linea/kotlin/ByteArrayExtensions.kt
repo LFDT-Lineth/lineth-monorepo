@@ -69,7 +69,9 @@ fun ByteArray.encodeHex(prefix: Boolean = true): String {
 }
 
 fun ByteArray.xor(other: ByteArray): ByteArray {
-  require(this.size == other.size) { "ByteArrays must have the same length" }
+  require(this.size == other.size) {
+    "ByteArrays must have the same length. Array sizes: ${this.size}, ${other.size}"
+  }
   return ByteArray(this.size) { i -> this[i].xor(other[i]) }
 }
 

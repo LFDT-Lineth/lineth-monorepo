@@ -23,7 +23,7 @@ class ByteArrayExtensionsTest {
       .isEqualTo(byteArrayOf(0xff.toByte(), 0xff.toByte()))
     assertThatThrownBy { byteArrayOf(0x01).xor(byteArrayOf(0x01, 0x02)) }
       .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessage("ByteArrays must have the same length")
+      .hasMessageContaining("ByteArrays must have the same length")
   }
 
   @Test
