@@ -45,7 +45,7 @@ runs:
         # Simlinked riscv64-none-elf-gcc to riscv64-none-elf-gcc
         shell: bash
         run: |
-          sudo apt-get update && sudo apt-get install -y binutils-riscv64-unknown-elf
+          sudo apt-get update && sudo apt-get install -y binutils-riscv64-unknown-elf time
           XPACK_GCC_VERSION="15.2.0-1"
           XPACK_GCC_DIR="${HOME}/riscv-none-elf-gcc"
           mkdir -p "${XPACK_GCC_DIR}"

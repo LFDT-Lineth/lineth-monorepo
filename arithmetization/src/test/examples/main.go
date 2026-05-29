@@ -22,11 +22,53 @@ type memoryBlob struct {
 	name   string
 }
 
+// parseInBytes accepts either an inline hex literal / raw string, or @path to a
+// file containing a 0x-prefixed hex blob (used for large batched inputs that
+// would exceed the shell's per-argument size limit).
+//
+// Endianness contract:
+//   - Inline `0x…` hex is treated as a big-endian wire value and is
+//     byte-reversed here so that RAM ends up in little-endian byte order. This
+//     preserves the legacy contract documented in README.md and exercised by
+//     the Blake guest (rust/src/blake/blake_with_in_bytes.rs), whose `.all`
+//     lines are stored byte-reversed on disk and need un-reversing before
+//     reaching RAM.
+//   - `@path` hex is taken to be already in canonical RAM order and is *not*
+//     reversed. This matches helpers that produce bulk inputs directly in
+//     RAM layout (e.g. scripts/keccak_accepts_to_in_bytes, whose 720-byte
+//     per-vector layout is the exact byte order rust/src/keccak/keccak.rs
+//     reads).
+//   - Raw (non-hex) inputs are passed through verbatim.
+func parseInBytes(arg string) ([]byte, error) {
+	fromFile := false
+	if strings.HasPrefix(arg, "@") {
+		data, err := os.ReadFile(strings.TrimPrefix(arg, "@"))
+		if err != nil {
+			return nil, fmt.Errorf("reading inBytes file: %w", err)
+		}
+		arg = strings.TrimSpace(string(data))
+		fromFile = true
+	}
+	if strings.HasPrefix(arg, "0x") || strings.HasPrefix(arg, "0X") {
+		inBytes, err := hex.DecodeString(arg[2:])
+		if err != nil {
+			return nil, fmt.Errorf("decoding hex input bytes: %w", err)
+		}
+		if !fromFile {
+			for i, j := 0, len(inBytes)-1; i < j; i, j = i+1, j-1 {
+				inBytes[i], inBytes[j] = inBytes[j], inBytes[i]
+			}
+		}
+		return inBytes, nil
+	}
+	return []byte(arg), nil
+}
+
 // The purpose of this program is simply to generate a suitable ZkC json input
 // file for a given RISC-V binary program.
 func main() {
 	if len(os.Args) != 4 {
-		fmt.Fprintln(os.Stderr, "usage: go run main.go <elfFile> <inBytes> <inBytesOffset>")
+		fmt.Fprintln(os.Stderr, "usage: go run main.go <elfFile> <inBytes|@hexFile> <inBytesOffset>")
 		os.Exit(1)
 	}
 
@@ -36,21 +78,11 @@ func main() {
 		os.Exit(1)
 	}
 	defer elfFile.Close()
-	// Parse inBytes
-	var inBytes []byte
-	inBytesString := os.Args[2]
-	if strings.HasPrefix(inBytesString, "0x") || strings.HasPrefix(inBytesString, "0X") {
-		inBytes, err = hex.DecodeString(inBytesString[2:])
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error decoding hex input bytes: %v\n", err)
-			os.Exit(1)
-		}
-		// Hex IN_BYTES is provided as big-endian and written to RAM in little-endian byte order
-		for i, j := 0, len(inBytes)-1; i < j; i, j = i+1, j-1 {
-			inBytes[i], inBytes[j] = inBytes[j], inBytes[i]
-		}
-	} else {
-		inBytes = []byte(inBytesString)
+	// Parse inBytes (supports inline 0x-hex, raw bytes, or @path-to-hex-file).
+	inBytes, err := parseInBytes(os.Args[2])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		os.Exit(1)
 	}
 	// Parse inBytesOffset
 	var inBytesOffset uint64

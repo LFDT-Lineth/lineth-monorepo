@@ -1,0 +1,194 @@
+name: Arithmetization zkc interpreter benchmark (base vs optim)
+
+# Benchmark of guest programs executed by the zkc interpreter of
+# two branches, the base branch and the optim branch.
+# Guest programs are the Keccak and Blake programs in the arithmetization/src/test/examples 
+# directory.
+
+# Benchmark methodology : 
+# Designed to give a reliable paired comparison on a
+# single runner: one untimed warmup per branch, then N alternating (opt, base)
+# timed iterations with a per-iteration cache reset + brief cool-down to keep
+# the machine state similar across runs.
+
+# Benchmark data : 
+# -- For Keccak
+# In arithmetization/src/test/examples/rust/src/keccak/keccak.accepts
+# There are 20k test vectors you can select from to run the benchmark.
+# Each test vector has a raw message of 16 * 32 bytes, ie fits in 4 blocks of 1088 bits.
+# 1 test vector = 4 blocks
+# -- For Blake
+# In the inputs, you can select the number of Blake compression rounds.
+# Script ./scripts/blake_rounds_to_accepts/main.go will generate the test vector with the requested number of compression rounds.
+# h, m, t, f are hard-coded to the standard Blake2b "abc" test vector.
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'arithmetization/**'
+      - '.github/actions/setup-arithmetization-riscv/**'
+      - '.github/workflows/arithmetization-*.yml'
+  push:
+    branches:
+     - main
+    paths:
+     - 'arithmetization/**'
+     - '.github/actions/setup-arithmetization-riscv/**'
+     - '.github/workflows/arithmetization-*.yml'
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: 'Baseline branch / commit ref'
+        required: true
+        type: string
+      optim_ref:
+        description: 'Optim-test branch / commit ref'
+        required: true
+        type: string
+      iterations:
+        description: 'Number of timed iterations per (program, variant)'
+        required: false
+        type: number
+        default: 5
+      go_corset_ref:
+        description: 'go-corset commit/branch/tag for zkc (defaults to main)'
+        required: false
+        type: string
+        default: main
+      n_vectors_keccak:
+        description: 'First N Keccak test vectors from keccak.accepts (x4 for number of blocks)'
+        required: false
+        type: number
+        default: 10
+      n_rounds_blake:
+        description: 'N Blake compression rounds'
+        required: false
+        type: number
+        default: 12
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  bench:
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
+    timeout-minutes: 120
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          submodules: false
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-arithmetization-riscv
+
+      - name: Install zkc
+        run: make -C arithmetization install-zkc
+        env:
+          GO_CORSET_REF_FOR_ZKC: ${{ inputs.go_corset_ref }}
+
+      - name: Add worktrees for base and optim branches
+        run: |
+          set -eux
+          BASE_REF="${{ inputs.base_ref || 'main' }}"
+          OPTIM_REF="${{ inputs.optim_ref || github.event.pull_request.head.sha || github.sha }}"
+          git fetch origin "${BASE_REF}":refs/bench/base
+          git fetch origin "${OPTIM_REF}":refs/bench/opt
+          git worktree add /tmp/wt-base refs/bench/base
+          git worktree add /tmp/wt-opt  refs/bench/opt
+
+      - name: Build ELFs, helpers, and per-vector JSONs (on opt worktree)
+        run: |
+          set -eux
+          mkdir -p /tmp/bench/logs /tmp/bench/json/blake
+          cd /tmp/wt-opt/arithmetization/src/test/examples
+          # Keccak: one batched JSON.
+          make keccak-rust-json \
+            KECCAK_N_VECTORS=${{ inputs.n_vectors_keccak || 10 }} \
+            KECCAK_JSON=/tmp/keccak.json
+          # Blake: synthesize a single .all line at the requested rounds count
+          go build -o /tmp/bench/blake_rounds2bytes ./scripts/blake_rounds_to_accepts/main.go
+          /tmp/bench/blake_rounds2bytes ${{ inputs.n_rounds_blake || 12 }} > /tmp/blake_custom.accepts
+          make blake-rust-json \
+            BLAKE_ACCEPTS=/tmp/blake_custom.accepts \
+            BLAKE_N_VECTORS=1 \
+            BLAKE_JSON_DIR=/tmp/bench/json/blake
+          # Helper binaries used by the timing loop and the summary step.
+          go build -o /tmp/bench/cache_thrasher       ./scripts/cache_thrasher/main.go
+          go build -o /tmp/bench/render_bench_summary ./scripts/render_bench_summary/main.go
+
+      - name: Run benchmark (warmup + alternating timed iterations with per-iter cache reset)
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p /tmp/bench/logs
+          ITERS=${{ inputs.iterations || 0 }}
+
+          # progress prints
+          log() { printf '[%s] %s\n' "$(date +'%H:%M:%S')" "$*"; }
+
+          reset_state() {
+            sync || true
+            # sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches' || true
+            /tmp/bench/cache_thrasher 256 >/dev/null 2>&1 || true
+            sleep 5
+          }
+
+          run_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
+            local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
+            /usr/bin/time -v zkc execute -v -q /tmp/keccak.json "$zkc_main" \
+              > "/tmp/bench/logs/keccak_${1}_${2}.log" 2>&1
+          }
+
+          run_blake() {   # $1=variant  $2=label. Runs all N vectors, one log file per vector.
+            local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
+            for json in /tmp/bench/json/blake/*.json; do
+              local n
+              n=$(basename "$json" .json)
+              /usr/bin/time -v zkc execute -v -q "$json" "$zkc_main" \
+                > "/tmp/bench/logs/blake_${1}_${2}_${n}.log" 2>&1
+            done
+          }
+
+          for wl in keccak blake; do
+            log "=== workload: ${wl} ==="
+            # Untimed warmup: opt then base. Primes the page cache and shared libs
+            # so both branches face an already-warm filesystem on iteration 1.
+            reset_state; log "${wl}: warmup opt  (untimed)"; run_${wl} opt  warmup || true
+            reset_state; log "${wl}: warmup base (untimed)"; run_${wl} base warmup || true
+            # Timed runs: opt_i, base_i alternating, starting with opt.
+            for i in $(seq 1 "$ITERS"); do
+              reset_state; log "${wl}: iter ${i}/${ITERS} opt";  run_${wl} opt  "$i"
+              reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_${wl} base "$i"
+            done
+          done
+          log "all workloads done"
+
+      - name: Parse logs and emit summary
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/bench/logs
+          /tmp/bench/render_bench_summary \
+            -logs /tmp/bench/logs \
+            -iters ${{ inputs.iterations || 0}} \
+            -blake-n 1 \
+            -base-ref "${{ inputs.base_ref || 'main' }}" \
+            -optim-ref "${{ inputs.optim_ref || github.event.pull_request.head.sha || github.sha }}" \
+            -zkc-version "${{ inputs.go_corset_ref || 'main' }}" \
+            -keccak-n-vectors ${{ inputs.n_vectors_keccak || 10 }} \
+            -blake-rounds ${{ inputs.n_rounds_blake || 12 }} \
+            | tee -a "$GITHUB_STEP_SUMMARY" \
+            | tee /tmp/bench/logs/summary.md
+
+      - name: Upload benchmark logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zkc-bench-logs
+          path: /tmp/bench/logs

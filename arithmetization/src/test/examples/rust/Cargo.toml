@@ -20,6 +20,10 @@ path = "src/blake/blake_with_in_bytes.rs"
 name = "stack_load_test"
 path = "src/stack_load_test.rs"
 
+[[bin]]
+name = "keccak"
+path = "src/keccak/keccak.rs"
+
 [profile.release]
 opt-level = 2
 debug = false

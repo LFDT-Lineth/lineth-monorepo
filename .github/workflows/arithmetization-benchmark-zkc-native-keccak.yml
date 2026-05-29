@@ -1,0 +1,164 @@
+name: Arithmetization native zkc benchmark - Keccak (base vs optim)
+
+# Benchmark of native zkc batched Keccak-f function against two
+# zkc versions: a "base" version and an "optim" version. 
+#
+# Benchmark methodology : 
+# one untimed warm-up (untimed) + N timed iterations for the base variant
+# one untimed warm-up (untimed) + N timed iterations for the optim variant
+# Per-iteration `cache_thrasher` + sleep attempts to keep CPU cache state comparable across timed runs.
+# Launched with zkc exec --field KOALABEAR_16 <input.json> <program.zkc>
+#
+# Benchmark data : 
+# In arithmetization/src/test/examples/zkc/keccakf/keccakf_batched.accepts
+# There are 20k test vectors you can select from to run the benchmark.
+# Each test vector has a raw message of 16 * 32 bytes, ie fits in 4 blocks of 1088 bits.
+# 1 test vector = 4 blocks
+# The `n_vectors_keccak` input picks the first N vectors from this fixture
+# (1..20000);
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'arithmetization/**'
+      - '.github/actions/setup-arithmetization-riscv/**'
+      - '.github/workflows/arithmetization-*.yml'
+  push:
+    branches:
+     - main
+    paths:
+     - 'arithmetization/**'
+     - '.github/actions/setup-arithmetization-riscv/**'
+     - '.github/workflows/arithmetization-*.yml'
+  workflow_dispatch:
+    inputs:
+      zkc_base_ref:
+        description: 'go-corset commit/branch/tag for the BASE zkc binary'
+        required: true
+        type: string
+      zkc_optim_ref:
+        description: 'go-corset commit/branch/tag for the OPTIM zkc binary'
+        required: true
+        type: string
+      n_vectors_keccak:
+        description: 'First N Keccak test vectors from keccakf_batched.accepts (1..20000)'
+        required: false
+        type: number
+        default: 100
+      iterations:
+        description: 'Number of timed iterations per variant'
+        required: false
+        type: number
+        default: 5
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  bench:
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
+    timeout-minutes: 120
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          submodules: false
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-arithmetization-riscv
+
+      - name: Build two zkc binaries (base + opt) via go install
+        run: |
+          set -eux
+          # We collect each install into its own GOBIN and rename the output
+          # so they coexist on disk.
+          for variant in base opt; do
+            case "$variant" in
+              base) ref="${{ inputs.zkc_base_ref || 'main' }}" ;;
+              opt)  ref="${{ inputs.zkc_optim_ref || 'b1af3445bfc4b3a3254a52b1929aadd07ad7fa3e' }}" ;;
+            esac
+            tmpbin=$(mktemp -d)
+            GOBIN="$tmpbin" go install "github.com/consensys/go-corset/cmd/zkc@${ref}"
+            mv "$tmpbin/zkc" "/tmp/zkc-${variant}"
+            rmdir "$tmpbin"
+            echo "::group::zkc-${variant} version (${ref})"
+            "/tmp/zkc-${variant}" --version || true
+            echo "::endgroup::"
+          done
+
+      - name: Build helpers and synthesize Keccak input JSON
+        run: |
+          set -eux
+          mkdir -p /tmp/bench/logs
+          cd arithmetization/src/test/examples
+          go build -o /tmp/bench/keccakf_accepts_to_json ./scripts/keccakf_accepts_to_json/main.go
+          go build -o /tmp/bench/cache_thrasher           ./scripts/cache_thrasher/main.go
+          go build -o /tmp/bench/render_bench_summary     ./scripts/render_bench_summary/main.go
+          # Slice the .accepts fixture to the first N vectors and drop the
+          # `result` WOM output so the remaining ROM inputs can be fed to
+          # `zkc exec`.
+          /tmp/bench/keccakf_accepts_to_json \
+            "$PWD/zkc/keccakf/keccakf_batched.accepts" \
+            /tmp/keccakf_input.json \
+            ${{ inputs.n_vectors_keccak || 100 }}
+
+      - name: Run benchmark (warmup + sequential timed iterations, base then opt)
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p /tmp/bench/logs
+          zkc_prog="$PWD/arithmetization/src/test/examples/zkc/keccakf/keccakf_batched.zkc"
+          ITERS=${{ inputs.iterations || 0 }}
+
+          # progress prints
+          log() { printf '[%s] %s\n' "$(date +'%H:%M:%S')" "$*"; }
+
+          reset_state() {
+            sync || true
+            # sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches' || true
+            /tmp/bench/cache_thrasher 256 >/dev/null 2>&1 || true
+            sleep 5
+          }
+
+          run_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)
+            local zkc_bin="/tmp/zkc-${1}"
+            /usr/bin/time -v "$zkc_bin" exec -v -q --field KOALABEAR_16 \
+              /tmp/keccakf_input.json "$zkc_prog" \
+              > "/tmp/bench/logs/keccak_${1}_${2}.log" 2>&1
+          }
+
+          for variant in base opt; do
+            log "=== variant: ${variant} ==="
+            reset_state; log "${variant}: warmup (untimed)"; run_native_keccak "$variant" warmup || true
+            for i in $(seq 1 "$ITERS"); do
+              reset_state; log "${variant}: iter ${i}/${ITERS}"; run_native_keccak "$variant" "$i"
+            done
+          done
+          log "all variants done"
+
+      - name: Parse logs and emit summary
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/bench/logs
+          /tmp/bench/render_bench_summary \
+            -logs /tmp/bench/logs \
+            -iters ${{ inputs.iterations || 0 }} \
+            -workloads keccak \
+            -base-ref "${{ inputs.zkc_base_ref || 'main' }}" \
+            -optim-ref "${{ inputs.zkc_optim_ref || 'b1af3445bfc4b3a3254a52b1929aadd07ad7fa3e' }}" \
+            -keccak-n-vectors ${{ inputs.n_vectors_keccak || 100 }} \
+            | tee -a "$GITHUB_STEP_SUMMARY" \
+            | tee /tmp/bench/logs/summary.md
+
+      - name: Upload benchmark logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zkc-native-keccak-bench-logs
+          path: /tmp/bench/logs

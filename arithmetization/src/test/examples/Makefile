@@ -3,7 +3,7 @@
 # Moreover, ABI being LP64 (soft-float) is relevant only for float numbers, which we do not use, so it can be omitted as well.
 
 # Declare all targets as phony to prevent conflicts with files of the same name
-.PHONY: exec debug compile exec-elf elf-to-json install-zkc zkc-exec zkc-debug clean clean-all linker-script verify-elf blake-rust-exec build-act4 run-act4 require-test require-src require-bin-ext
+.PHONY: exec debug compile exec-elf elf-to-json install-zkc zkc-exec zkc-debug clean clean-all linker-script verify-elf blake-rust-build blake-rust-json blake-rust-exec keccak-rust-build keccak-rust-json keccak-rust-exec build-act4 run-act4 require-test require-src require-bin-ext
 
 # Keep validation, build, and execution targets running in order
 .NOTPARALLEL:
@@ -51,6 +51,9 @@ JSON := $(BIN).json
 
 # Inputs and offsets for the program
 IN_BYTES        ?= ""
+
+# Keccak guest: compile-time vector count
+KECCAK_N_VECTORS ?= 10
 
 # Values to generate the linker script
 # 128 MiB (0x00000000 -> 0x07FFFFFF)
@@ -133,14 +136,25 @@ compile: require-src linker-script
 		zig build --build-file $(MAKEFILE_DIR)zig/build.zig -Dpath=$(BASENAME); \
 	elif [ "$(EXT)" = ".rs" ]; then \
 		echo "\nGenerating $(BIN) from $(SRC)"; \
-		cargo +nightly rustc \
-			--manifest-path $(MAKEFILE_DIR)rust/Cargo.toml \
-			--target $(MAKEFILE_DIR)rust/riscv64im-unknown-none-elf.json \
-			-Z build-std=core \
-			-Z json-target-spec \
-			--bin $(NAME) \
-			--release \
-			-- -C link-arg=-T$(LINKER_SCRIPT); \
+		if [ "$(NAME)" = "keccak" ]; then \
+			env KECCAK_N_VECTORS="$(KECCAK_N_VECTORS)" cargo +nightly rustc \
+				--manifest-path $(MAKEFILE_DIR)rust/Cargo.toml \
+				--target $(MAKEFILE_DIR)rust/riscv64im-unknown-none-elf.json \
+				-Z build-std=core \
+				-Z json-target-spec \
+				--bin $(NAME) \
+				--release \
+				-- -C link-arg=-T$(LINKER_SCRIPT); \
+		else \
+			cargo +nightly rustc \
+				--manifest-path $(MAKEFILE_DIR)rust/Cargo.toml \
+				--target $(MAKEFILE_DIR)rust/riscv64im-unknown-none-elf.json \
+				-Z build-std=core \
+				-Z json-target-spec \
+				--bin $(NAME) \
+				--release \
+				-- -C link-arg=-T$(LINKER_SCRIPT); \
+		fi; \
 	else \
 		echo "Unsupported file extension: $(EXT)"; \
 		exit 1; \
@@ -246,29 +260,97 @@ verify-elf: require-test
 	@echo "  SP:              $(SP) (expected) = $(SP_FROM_ELF) (from ELF)"
 	@echo "All values match\n"
 
-# Run 10 blake test vectors from `rust/src/blake/blake10.all`
-# (blake_with_in_bytes.rs and main.go are compiled just once)
-blake-rust-exec: install-zkc
+######################################################
+# Keccak (Rust guest) — split build/json/exec for reuse from CI benchmarks.
+#
+# `keccak-rust-build` — ELF + helper binaries (no zkc dependency).
+# `keccak-rust-json`  — pack first KECCAK_N_VECTORS vectors of KECCAK_ACCEPTS into
+#                       a single batched IN_BYTES blob, then render the ZKC JSON
+#                       at KECCAK_JSON. No zkc dependency.
+# `keccak-rust-exec`  — depends on keccak-rust-json + install-zkc; runs
+#                       `zkc exec` on the produced JSON.
+######################################################
+KECCAK_ACCEPTS      ?= $(MAKEFILE_DIR)rust/src/keccak/keccak.accepts
+
+KECCAK_ELF          := $(MAKEFILE_DIR)rust/target/riscv64im-unknown-none-elf/release/keccak
+KECCAK_JSON         ?= $(KECCAK_ELF).json
+KECCAK_ELF2JSON     := $(MAKEFILE_DIR)rust/target/keccak_elf2json
+KECCAK_ACCEPTS2HEX  := $(MAKEFILE_DIR)rust/target/keccak_accepts2hex
+KECCAK_IN_BYTES_HEX := /tmp/keccak_in_bytes.hex
+
+keccak-rust-build:
+	cargo clean -p riscv-tests --manifest-path $(MAKEFILE_DIR)rust/Cargo.toml
+	$(MAKE) -f $(MAKEFILE_DIR)Makefile compile TEST=keccak/keccak.rs IN_BYTES=0x00 KECCAK_N_VECTORS=$(KECCAK_N_VECTORS)
+	@echo "building keccak_elf2json..."
+	go build -o $(KECCAK_ELF2JSON) $(GO_MAIN)
+	@echo "building keccak_accepts2hex..."
+	go build -o $(KECCAK_ACCEPTS2HEX) $(MAKEFILE_DIR)scripts/keccak_accepts_to_in_bytes/main.go
+
+keccak-rust-json: keccak-rust-build
+	@echo "packing first $(KECCAK_N_VECTORS) vector(s) from $(KECCAK_ACCEPTS) into $(KECCAK_IN_BYTES_HEX)"
+	$(KECCAK_ACCEPTS2HEX) "$(KECCAK_ACCEPTS)" $(KECCAK_N_VECTORS) > $(KECCAK_IN_BYTES_HEX)
+	@echo "rendering ZKC JSON to $(KECCAK_JSON)"
+	$(KECCAK_ELF2JSON) $(KECCAK_ELF) @$(KECCAK_IN_BYTES_HEX) $(IN_BYTES_OFFSET) > $(KECCAK_JSON)
+
+keccak-rust-exec: install-zkc keccak-rust-json
+	zkc exec -q $(KECCAK_JSON) $(ZKC_MAIN)
+
+######################################################
+# Blake (Rust guest) — split build/json/exec mirroring Keccak's structure.
+#
+# `blake-rust-build` — ELF + helper binaries (no zkc dependency).
+# `blake-rust-json`  — select first BLAKE_N_VECTORS lines of BLAKE_ACCEPTS (0 =
+#                      all lines) and render one ZKC JSON per vector under
+#                      BLAKE_JSON_DIR. No zkc dependency.
+# `blake-rust-exec`  — depends on blake-rust-json + install-zkc; loops over the
+#                      produced JSONs and runs `zkc exec` with PASS/FAIL
+#                      accounting (preserves the prior behaviour).
+#
+# Defaults preserve the current `arithmetization-sample-guest-programs-run.yml`
+# workflow (BLAKE_ACCEPTS=blake10.all + BLAKE_N_VECTORS=0 -> all 10 vectors).
+######################################################
+BLAKE_ACCEPTS       ?= $(MAKEFILE_DIR)rust/src/blake/blake10.all
+BLAKE_N_VECTORS     ?= 0
+
+BLAKE_ELF           := $(MAKEFILE_DIR)rust/target/riscv64im-unknown-none-elf/release/blake_with_in_bytes
+BLAKE_JSON_DIR      ?= $(MAKEFILE_DIR)rust/target/riscv64im-unknown-none-elf/release/blake_json
+BLAKE_ELF2JSON      := $(MAKEFILE_DIR)rust/target/blake_elf2json
+BLAKE_ACCEPTS2HEX   := $(MAKEFILE_DIR)rust/target/blake_accepts2hex
+BLAKE_IN_BYTES_ALL  := /tmp/blake_in_bytes.all
+
+blake-rust-build:
 	$(MAKE) -f $(MAKEFILE_DIR)Makefile compile TEST=blake/blake_with_in_bytes.rs
-	@echo "building blake_elf2json..."; \
-	go build -o $(MAKEFILE_DIR)rust/target/blake_elf2json $(GO_MAIN) || exit $$?; \
-	echo "blake_elf2json built"; \
-	pass=0; fail=0; \
-	i=0; while IFS= read -r in_bytes; do \
+	@echo "building blake_elf2json..."
+	go build -o $(BLAKE_ELF2JSON) $(GO_MAIN)
+	@echo "building blake_accepts2hex..."
+	go build -o $(BLAKE_ACCEPTS2HEX) $(MAKEFILE_DIR)scripts/blake_accepts_to_in_bytes/main.go
+
+blake-rust-json: blake-rust-build
+	@echo "selecting vectors from $(BLAKE_ACCEPTS) (N=$(BLAKE_N_VECTORS), 0=all)"
+	$(BLAKE_ACCEPTS2HEX) "$(BLAKE_ACCEPTS)" $(BLAKE_N_VECTORS) > $(BLAKE_IN_BYTES_ALL)
+	@mkdir -p $(BLAKE_JSON_DIR)
+	@rm -f $(BLAKE_JSON_DIR)/*.json
+	@echo "rendering one ZKC JSON per vector under $(BLAKE_JSON_DIR)"
+	@n=0; while IFS= read -r in_bytes; do \
+		n=$$((n + 1)); idx=$$(printf '%03d' $$n); \
+		$(BLAKE_ELF2JSON) $(BLAKE_ELF) "$$in_bytes" $(IN_BYTES_OFFSET) \
+			> "$(BLAKE_JSON_DIR)/$$idx.json" || exit $$?; \
+	done < $(BLAKE_IN_BYTES_ALL); \
+	echo "generated $$n Blake JSON(s) in $(BLAKE_JSON_DIR)"
+
+blake-rust-exec: install-zkc blake-rust-json
+	@pass=0; fail=0; i=0; \
+	for json in $(BLAKE_JSON_DIR)/*.json; do \
 		i=$$((i + 1)); \
-		$(MAKEFILE_DIR)rust/target/blake_elf2json $(MAKEFILE_DIR)rust/target/riscv64im-unknown-none-elf/release/blake_with_in_bytes "$$in_bytes" $(IN_BYTES_OFFSET) > $(MAKEFILE_DIR)rust/target/riscv64im-unknown-none-elf/release/blake_with_in_bytes.json || exit $$?; \
-		echo "RUN   case $$i"; \
-		exit_line=$$(zkc exec $(MAKEFILE_DIR)rust/target/riscv64im-unknown-none-elf/release/blake_with_in_bytes.json $(ZKC_MAIN) 2>&1 | awk 'previous == "ECALL for exit" { print; exit } { previous = $$0 }'); \
-		if [ "$$exit_line" = $(EXIT_SUCCESS_STRING) ]; then \
+		echo "RUN   case $$i  ($$json)"; \
+		if zkc exec -q "$$json" $(ZKC_MAIN) >/dev/null 2>&1; then \
 			echo "PASS  case $$i"; \
-			echo "  $$exit_line"; \
 			pass=$$((pass + 1)); \
 		else \
-			echo "FAIL  case $$i"; \
-			echo "  $$exit_line"; \
+			echo "FAIL  case $$i (zkc exec exited non-zero; rerun without -q for the panic message)"; \
 			fail=$$((fail + 1)); \
 		fi; \
-	done < $(MAKEFILE_DIR)rust/src/blake/blake10.all; \
+	done; \
 	echo "DONE: $$i vectors   PASS: $$pass   FAIL: $$fail"; \
 	if [ "$$fail" -ne 0 ]; then echo "error: $$fail blake vector(s) failed" >&2; exit 1; fi
 
@@ -322,7 +404,7 @@ build-act4:
 		exit 2; \
 	fi
 
-# Build and run the ACT4 self-checking ELFs with the Linea ACT4 config
+# Build and run the ACT4 self-checking ELFs with the Linea ACT4 config.
 run-act4: install-zkc build-act4
 	@rm -f "$(ACT4_LOGS)"/*; \
 	mkdir -p "$(ACT4_LOGS)"; \
@@ -334,17 +416,13 @@ run-act4: install-zkc build-act4
 		count=$$((count + 1)); \
 		go run $(GO_MAIN) "$$elf" "" 0 > "$$base.json" 2> "$$base.json.err"; \
 		[ -s "$$base.json.err" ] || rm -f "$$base.json.err"; \
-		zkc exec "$$base.json" $(ZKC_MAIN) > "$$base.full" 2>&1; \
-		awk '(previous == "ECALL for write" || previous == "ECALL for exit") && $$0 != "" { print } { previous = $$0 }' "$$base.full" > "$$base.out"; \
-		exit_line=$$(awk 'previous == "ECALL for exit" { print; exit } { previous = $$0 }' "$$base.full"); \
-		if [ "$$exit_line" = $(EXIT_SUCCESS_STRING) ]; then \
+		if zkc exec -q "$$base.json" $(ZKC_MAIN) >/dev/null 2>&1; then \
 			echo "PASS  $$name"; \
 			echo "PASS  $$name" >> "$(ACT4_RESULTS)"; \
-			awk '{ print "  " $$0 }' "$$base.out"; \
-			awk '{ print "  " $$0 }' "$$base.out" >> "$(ACT4_RESULTS)"; \
 			pass=$$((pass + 1)); \
-			rm -f "$$base.full"; \
 		else \
+			zkc exec "$$base.json" $(ZKC_MAIN) > "$$base.full" 2>&1 || true; \
+			awk '(previous == "ECALL for write" || previous == "ECALL for exit") && $$0 != "" { print } { previous = $$0 }' "$$base.full" > "$$base.out"; \
 			echo "FAIL  $$name"; \
 			echo "FAIL  $$name" >> "$(ACT4_RESULTS)"; \
 			awk '{ print "  " $$0 }' "$$base.out"; \
@@ -371,3 +449,4 @@ require-src: require-test
 require-bin-ext:
 	@[ -n "$(BIN_EXT)" ] || { echo "BIN_EXT is mandatory. Usage: make BIN_EXT=path/to/your_bin"; exit 1; }
 	@[ -f $(BIN_EXT) ] || { echo "BIN_EXT file not found: $(BIN_EXT)"; exit 1; }
+	
