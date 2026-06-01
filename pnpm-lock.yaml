@@ -539,9 +539,6 @@ importers:
       date-fns-tz:
         specifier: 3.2.0
         version: 3.2.0(date-fns@4.1.0)
-      ethers:
-        specifier: 'catalog:'
-        version: 6.16.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
       neverthrow:
         specifier: 'catalog:'
         version: 8.2.0

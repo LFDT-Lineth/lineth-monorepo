@@ -24,7 +24,6 @@
     "axios": "catalog:",
     "date-fns": "4.1.0",
     "date-fns-tz": "3.2.0",
-    "ethers": "catalog:",
     "neverthrow": "catalog:",
     "node-forge": "1.4.0",
     "viem": "catalog:"
