@@ -13,13 +13,14 @@ import com.palantir.docker.compose.DockerComposeRule
 import com.palantir.docker.compose.configuration.DockerComposeFiles
 import com.palantir.docker.compose.configuration.ProjectName
 import com.palantir.docker.compose.connection.waiting.HealthChecks
+import linea.kotlin.decodeHex
+import linea.kotlin.encodeHex
 import linea.kotlin.toULong
+import linea.testing.web3j.Web3jTransactionsHelper
 import maru.app.MaruApp
 import maru.config.ApiEndpointConfig
 import maru.config.FollowersConfig
 import maru.core.EMPTY_HASH
-import linea.kotlin.encodeHex
-import linea.kotlin.decodeHex
 import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -39,7 +40,6 @@ import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.DefaultBlockParameter
 import org.web3j.protocol.core.methods.response.EthBlock
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import linea.testing.web3j.Web3jTransactionsHelper
 import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
 import java.io.File
