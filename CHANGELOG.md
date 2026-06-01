@@ -15,6 +15,7 @@
 - *(coordinator)* Export FTX number metrics (#3165)
 - *(prover)* Stronger soundness binding for euclidean division and crumb decomposition (#2910)
 - *(prover)* Valid-nonce-ftx (#3179)
+- *(arithmetization)* Fix alert 514 (#3246)
 
 ### ⚙️ Miscellaneous Tasks
 

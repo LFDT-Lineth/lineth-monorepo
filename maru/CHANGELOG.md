@@ -3,6 +3,7 @@
 ### 🐛 Bug Fixes
 
 - *(maru)* Address PR 3126 workflow follow-ups (#3164)
+- *(arithmetization)* Fix alert 514 (#3246)
 
 ### 🚜 Refactor
 

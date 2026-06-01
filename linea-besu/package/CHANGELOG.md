@@ -8,6 +8,7 @@
 
 - *(sequencer)* Bypass background scheduler collision in buildNewBlockAndWait(Long) (#3072)
 - *(tracer)* No parallelism (#2957)
+- *(arithmetization)* Fix alert 514 (#3246)
 
 ### ⚙️ Miscellaneous Tasks
 
