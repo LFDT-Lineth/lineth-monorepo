@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- *(linea-besu)* Add interfaces module: security and LineaTransactionSelectionResult (#3238)
+
 ### 🐛 Bug Fixes
 
 - *(sequencer)* Bypass background scheduler collision in buildNewBlockAndWait(Long) (#3072)
