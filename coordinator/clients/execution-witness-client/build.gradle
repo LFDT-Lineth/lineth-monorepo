@@ -1,0 +1,16 @@
+plugins {
+  id 'net.consensys.zkevm.kotlin-library-conventions'
+}
+
+dependencies {
+  implementation project(':jvm-libs:linea:clients:interfaces')
+  implementation project(':jvm-libs:generic:extensions:futures')
+  implementation project(':jvm-libs:generic:extensions:kotlin')
+  implementation project(':jvm-libs:generic:json-rpc')
+  implementation project(':jvm-libs:generic:errors')
+  api "io.vertx:vertx-core"
+
+  testImplementation "io.vertx:vertx-junit5"
+  testImplementation project(':jvm-libs:linea:metrics:micrometer')
+  testImplementation "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
+}

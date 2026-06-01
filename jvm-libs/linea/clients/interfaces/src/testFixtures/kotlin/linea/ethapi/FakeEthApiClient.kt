@@ -298,6 +298,10 @@ class FakeEthApiClient(
         ?: throw IllegalArgumentException("Invalid blockParameter=$blockParameter")
 
       is BlockParameter.BlockNumber -> blockParameter.getNumber()
+
+      is BlockParameter.BlockHash ->
+        blocksDb.values.firstOrNull { it.hash.contentEquals(blockParameter.getHash()) }?.number
+          ?: throw IllegalArgumentException("Block hash not found in fake client: $blockParameter")
     }
   }
 
