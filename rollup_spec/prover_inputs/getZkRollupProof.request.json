@@ -1,7 +1,10 @@
 {
-    "_comment": "Blob proof request schema (§2.2). K ≥ 1 EIP-4844 blobs + N execution proofs tiling their combined block range. Emits the 14-field PI tuple defined in §2.4.",
+    "_comment": "Rollup proof request schema (§2.2). K ≥ 1 EIP-4844 blobs + N l2-execution proofs tiling their combined block range. Emits the 14-field PI tuple defined in §2.4.",
 
     "proverVersion":      "4.0.0-riscv",
+
+    "_comment_chainId": "Chain identifier (uint64). Needed for sender recovery during DA truncation (§2.2 step 1). Same value across all l2-execution proofs in this rollup proof; committed transitively via their `dynamicChainConfigHash` PI field.",
+    "chainId": 59144,
 
     "_comment_blockRange": "Combined block range across all K blobs. Equals `blobs[0].blockRange.startBlockNumber .. blobs[K-1].blockRange.endBlockNumber`; consecutive blob ranges must be contiguous.",
     "blockRange": {
@@ -9,31 +12,35 @@
         "endBlockNumber":   1000520
     },
 
-    "_comment_blobs": "K = 2 blobs in this example (K = 1 is the degenerate single-blob case). Ordered by on-chain shnarf-chain order. Each entry carries KZG inputs and its block range.",
+    "_comment_blobs": "K = 2 blobs in this example (K = 1 is the degenerate single-blob case). Ordered by on-chain shnarf-chain order. Each entry carries `blobHash`, `blobKzgProof`, its block range, and `blockRlps` — the canonical full block RLPs (one per block in [startBlockNumber, endBlockNumber]), same canonical form the l2-execution proof receives. The rollup guest truncates each block internally per §3.2, RLP-encodes the truncated form, LZ4-compresses it, zero-pads to BLOB_BYTES_LENGTH (4096 × 32 = 131072 bytes), computes the KZG commitment from those bytes, asserts `kzg_commitment_to_versioned_hash(computedCommitment) == blobHash`, and verifies `blobKzgProof` via `verify_blob_kzg_proof` (§2.2 step 1). `blobKzgCommitment` and compressed blob bytes are *not* witness fields — they are recomputed inside the guest. There is no separately witnessed truncated form either; the full block RLPs' authenticity is anchored by KZG plus downstream cross-checks against the l2-execution proofs (block-hash boundaries, txFromsHash).",
     "blobs": [
         {
             "blobInputs": {
-                "compressedData":      "AJT9wvov/MBB0/8SBFtzyG5P+V/...",
                 "blobHash":             "0x010a00a15d2e30654d134fd34d1f56e625978f5bc42c411df5df424fbb8a38d1",
-                "blobKzgCommitment":    "0xa2ecbd5af0b424ab703cf85637ef2e26251ee67aeedcb5ee39e03634b49060d44d61e22019ad77ac1bf7a74ef51a3593",
                 "blobKzgProof":         "0x943aa027b213c11cda3f734f165c3dbde5641dc0a78290bef8e7f2021d7dc112f72e267bff7c99d4d982171851924ba7"
             },
             "blockRange": {
                 "startBlockNumber": 1000501,
                 "endBlockNumber":   1000510
-            }
+            },
+            "blockRlps": [
+                "0xf90215a0...",
+                "_comment: m_b = 10 entries (one canonical block RLP per block in the range); abbreviated"
+            ]
         },
         {
             "blobInputs": {
-                "compressedData":      "Ki4HoRO0lIgABZUiOEoSDqEgYULZbAlTRApEEkR...",
                 "blobHash":             "0x015a3e6e75f2d24b1c3c7c2e8f9a4d6b5e0123456789abcdef0123456789abcd",
-                "blobKzgCommitment":    "0xb1d4a7c8e9f6b5a3d2e1f4c7b8a9d0e2c3f5b6a7d8e9f0c1b2a3d4e5f6c7b8a9d0e1f2c3b4a5d6e7f8c9b0a1d2e3f4c5",
                 "blobKzgProof":         "0xcafeb1d4a7c8e9f6b5a3d2e1f4c7b8a9d0e2c3f5b6a7d8e9f0c1b2a3d4e5f6c7b8a9d0e1f2c3b4a5d6e7f8c9b0a1d2e3"
             },
             "blockRange": {
                 "startBlockNumber": 1000511,
                 "endBlockNumber":   1000520
-            }
+            },
+            "blockRlps": [
+                "0xf90215a0...",
+                "_comment: m_b = 10 entries; abbreviated"
+            ]
         }
     ],
 
@@ -43,15 +50,15 @@
         "endShnarf":      "0x8d0a74047e241998a03664b98064da391c492e8a4ad96160ae46eeaaabdc7b5a"
     },
 
-    "_comment_executionProofs": "N execution proofs tiling the combined block range, in canonical (start..end) order. Each entry inlines everything the blob-proof guest needs for that execution proof: the recursive STARK `proof` bytes, the 15-field `publicInputs` tuple, and the preimages of the three hash-committed PI fields — `L2L1MsgList` (preimage of publicInputs.L2L1MessagesHash), `froms` (preimage of publicInputs.txFromsHash), and `addrs` (preimage of publicInputs.filteredAddressesHash, §6.5).",
-    "executionProofs": [
+    "_comment_l2ExecutionProofs": "N l2-execution proofs tiling the combined block range, in canonical (start..end) order. Each entry inlines everything the rollup guest needs for that l2-execution proof: the recursive STARK `proof` bytes, the 15-field `publicInputs` tuple, and the preimages of the three hash-committed PI fields — `L2L1MsgList` (preimage of publicInputs.L2L1MessagesHash), `froms` (preimage of publicInputs.txFromsHash), and `addrs` (preimage of publicInputs.filteredAddressesHash, §6.5).",
+    "l2ExecutionProofs": [
         {
             "proof": "0x...",
             "publicInputs": {
                 "parentBlockHash":                          "0x0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 "endBlockHash":                             "0x0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
                 "endBlockNumber":                           1000503,
-                "endStateRootHash":                         "0x00c79c9d2af1da310f19e194bae34ac3e5dc58ddca0900dd55760b3ea4a91a75",
+                "endBlockTimestamp":                         1763000123,
                 "L2L1MessagesHash":                         "0x0000000000000000000000000000000000000000000000000000000000000000",
                 "parentL1L2BridgeRollingHash":              "0x0000000000000000000000000000000000000000000000000000000000000000",
                 "parentL1L2BridgeRollingHashMessageNumber": 0,
@@ -73,7 +80,7 @@
     "_comment_publicInputs": "The 14-field PI tuple defined in §2.4.",
     "publicInputs": {
         "endBlockNumber":                      1000520,
-        "endStateRootHash":                      "0x00c79c9d2af1da310f19e194bae34ac3e5dc58ddca0900dd55760b3ea4a91a75",
+        "endBlockTimestamp":                   1763000457,
         "L2L1BridgeTransactionTree":               "0x0000000000000000000000000000000000000000000000000000000000000000",
         "parentL1L2BridgeRollingHash":               "0x0000000000000000000000000000000000000000000000000000000000000000",
         "parentL1L2BridgeRollingHashMessageNumber":  0,

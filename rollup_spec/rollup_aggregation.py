@@ -1,0 +1,107 @@
+from dataclasses import dataclass
+from typing import List
+
+from ethereum.crypto.hash import Hash32
+from ethereum.state import Address
+
+from .l2_execution import hash_address_list, hash_hash_list
+from .rollup import RollupProof, RollupPublicInput
+
+
+@dataclass
+class RollupAggregationProofPrivateInput:
+    """
+    Logical rollup-aggregation request. The topology is flat across M rollup
+    proofs, as specified in Readme.md section 2.3.
+    """
+    rollup_proofs: List[RollupProof]
+
+
+def run_rollup_aggregation_guest(
+    aggregation_input: RollupAggregationProofPrivateInput,
+) -> RollupPublicInput:
+    """
+    rollup-aggregation: flat recursion over M rollup proofs with continuity
+    checks and merged L2-to-L1 root/address commitments.
+    """
+    if len(aggregation_input.rollup_proofs) == 0:
+        raise Exception("rollup-aggregation proof must consume at least one rollup proof")
+
+    for proof in aggregation_input.rollup_proofs:
+        verify_rollup_proof(proof)
+
+    for left, right in zip(aggregation_input.rollup_proofs, aggregation_input.rollup_proofs[1:]):
+        assert_rollup_proof_continuity(left, right)
+
+    first_proof = aggregation_input.rollup_proofs[0]
+    last_proof = aggregation_input.rollup_proofs[-1]
+    merged_l2_l1_roots: List[Hash32] = []
+    merged_filtered_addresses: List[Address] = []
+
+    for proof in aggregation_input.rollup_proofs:
+        merged_l2_l1_roots.extend(proof.l2_l1_roots)
+        merged_filtered_addresses.extend(proof.filtered_addresses)
+
+    return RollupPublicInput(
+        end_block_number=last_proof.public_inputs.end_block_number,
+        end_block_timestamp=last_proof.public_inputs.end_block_timestamp,
+        l2_l1_bridge_transaction_tree=hash_hash_list(merged_l2_l1_roots),
+        parent_l1_l2_bridge_rolling_hash=first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash,
+        parent_l1_l2_bridge_rolling_hash_message_number=(
+            first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number
+        ),
+        end_l1_l2_bridge_rolling_hash=last_proof.public_inputs.end_l1_l2_bridge_rolling_hash,
+        end_l1_l2_bridge_rolling_hash_message_number=(
+            last_proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number
+        ),
+        dynamic_chain_config_hash=first_proof.public_inputs.dynamic_chain_config_hash,
+        parent_ftx_rolling_hash=first_proof.public_inputs.parent_ftx_rolling_hash,
+        end_ftx_rolling_hash=last_proof.public_inputs.end_ftx_rolling_hash,
+        last_processed_ftx_number=last_proof.public_inputs.last_processed_ftx_number,
+        filtered_addresses_hash=hash_address_list(merged_filtered_addresses),
+        parent_shnarf=first_proof.public_inputs.parent_shnarf,
+        end_shnarf=last_proof.public_inputs.end_shnarf,
+    )
+
+
+def verify_rollup_proof(proof: RollupProof) -> None:
+    """
+    Verify an inner rollup proof against its claimed public inputs.
+
+    PRECOMPILE (production guest): recursive STARK verification.
+        Same primitive as `verify_l2_execution_proof` (§rollup.py) — the zkVM's
+        in-circuit recursive verifier. In this reference, the
+        recursive-verify step is implicit; `RollupProof.proof` stands in for
+        the recursive STARK bytes the guest would actually check. We only
+        re-validate the hash preimages (`L2L1BridgeTransactionTree`,
+        `filteredAddressesHash`) the rollup-aggregation proof consumes.
+    """
+    if proof.public_inputs.end_block_number != proof.end_block_number:
+        raise Exception("rollup proof range metadata does not match public inputs")
+    # PRECOMPILE: keccak256 (preimage-binding checks).
+    if hash_hash_list(proof.l2_l1_roots) != proof.public_inputs.l2_l1_bridge_transaction_tree:
+        raise Exception("invalid L2L1BridgeTransactionTree preimage")
+    if hash_address_list(proof.filtered_addresses) != proof.public_inputs.filtered_addresses_hash:
+        raise Exception("invalid rollup filteredAddressesHash preimage")
+
+
+def assert_rollup_proof_continuity(left: RollupProof, right: RollupProof) -> None:
+    # Block-number / block-hash continuity is implicit in the shnarf check:
+    # `endShnarf = Hash(parentShnarf, lastBlockHash, blobHash)` binds the
+    # last block hash. Once the next blob's `parentShnarf` matches, the
+    # inner block-hash chain inside that blob anchors block numbers
+    # transitively. No separate block-number assertion is needed at this
+    # layer (the rollup PI does not expose `startBlockNumber` anyway).
+    if left.public_inputs.end_shnarf != right.public_inputs.parent_shnarf:
+        raise Exception("rollup shnarf continuity failed")
+    if left.public_inputs.end_l1_l2_bridge_rolling_hash != right.public_inputs.parent_l1_l2_bridge_rolling_hash:
+        raise Exception("rollup L1-to-L2 rolling-hash continuity failed")
+    if (
+        left.public_inputs.end_l1_l2_bridge_rolling_hash_message_number !=
+        right.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number
+    ):
+        raise Exception("rollup L1-to-L2 rolling-hash-number continuity failed")
+    if left.public_inputs.dynamic_chain_config_hash != right.public_inputs.dynamic_chain_config_hash:
+        raise Exception("rollup dynamic chain configuration continuity failed")
+    if left.public_inputs.end_ftx_rolling_hash != right.public_inputs.parent_ftx_rolling_hash:
+        raise Exception("rollup FTX rolling-hash continuity failed")
