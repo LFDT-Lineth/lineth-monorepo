@@ -1,11 +1,16 @@
 package linea.domain
 
+import linea.kotlin.decodeHex
+import linea.kotlin.encodeHex
+
 sealed interface BlockParameter {
   fun getTag(): String
 
   fun getNumber(): ULong
 
   companion object {
+    private const val BLOCK_HASH_HEX_LENGTH = 64
+
     fun fromNumber(blockNumber: Number): BlockNumber {
       require(blockNumber.toLong() >= 0) { "block number must be greater or equal than 0, value=$blockNumber" }
       return BlockNumber(blockNumber.toLong().toULong())
@@ -13,18 +18,26 @@ sealed interface BlockParameter {
 
     fun fromNumber(blockNumber: ULong): BlockNumber = BlockNumber(blockNumber)
 
+    fun fromHash(blockHash: ByteArray): BlockHash = BlockHash(blockHash)
+
+    fun fromHash(blockHashHex: String): BlockHash = BlockHash(blockHashHex.decodeHex())
+
     fun parse(input: String): BlockParameter {
       return try {
-        // Try to parse the input as a tag
         Tag.fromString(input)
       } catch (e: IllegalArgumentException) {
-        // If it's not a valid tag, try to parse it as a block number
-        val blockNumber = if (input.startsWith("0x")) {
-          input.drop(2).toULongOrNull(radix = 16)
-        } else {
-          input.toULongOrNull(radix = 10)
-        } ?: throw IllegalArgumentException("Invalid BlockParameter: $input")
-
+        val normalized = input.lowercase()
+        if (normalized.startsWith("0x")) {
+          val hexBody = normalized.drop(2)
+          if (hexBody.length == BLOCK_HASH_HEX_LENGTH) {
+            return BlockHash("0x$hexBody".decodeHex())
+          }
+          val blockNumber = hexBody.toULongOrNull(radix = 16)
+            ?: throw IllegalArgumentException("Invalid BlockParameter: $input")
+          return BlockNumber(blockNumber)
+        }
+        val blockNumber = input.toULongOrNull(radix = 10)
+          ?: throw IllegalArgumentException("Invalid BlockParameter: $input")
         blockNumber.toBlockParameter()
       }
     }
@@ -72,6 +85,27 @@ sealed interface BlockParameter {
 
     override fun toString(): String {
       return parameter.toString()
+    }
+  }
+
+  @JvmInline
+  value class BlockHash(private val hash: ByteArray) : BlockParameter {
+    init {
+      require(hash.size == 32) { "block hash must be 32 bytes, got ${hash.size}" }
+    }
+
+    fun getHash(): ByteArray = hash
+
+    override fun getTag(): String {
+      throw UnsupportedOperationException("getTag isn't supported on BlockHash!")
+    }
+
+    override fun getNumber(): ULong {
+      throw UnsupportedOperationException("getNumber isn't supported on BlockHash!")
+    }
+
+    override fun toString(): String {
+      return hash.encodeHex(prefix = true)
     }
   }
 }

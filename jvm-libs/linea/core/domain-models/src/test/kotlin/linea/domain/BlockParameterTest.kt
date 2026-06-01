@@ -1,5 +1,7 @@
 package linea.domain
 
+import linea.kotlin.decodeHex
+import linea.kotlin.encodeHex
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -21,6 +23,28 @@ class BlockParameterTest {
   @Test
   fun `parse should parse valid hexdecimal number`() {
     assertThat(BlockParameter.parse("0x78")).isEqualTo(BlockParameter.BlockNumber(120UL))
+  }
+
+  @Test
+  fun `parse should parse block hash`() {
+    val hashHex = "0x" + "ab".repeat(32)
+    val expectedHash = hashHex.decodeHex()
+    val parsed = BlockParameter.parse(hashHex) as BlockParameter.BlockHash
+    assertThat(parsed.getHash()).isEqualTo(expectedHash)
+  }
+
+  @Test
+  fun `fromHash should accept bytes and hex string`() {
+    val hash = ByteArray(32) { 1 }
+    assertThat(BlockParameter.fromHash(hash).getHash()).isEqualTo(hash)
+    assertThat(BlockParameter.fromHash(hash.encodeHex(prefix = true)).getHash()).isEqualTo(hash)
+  }
+
+  @Test
+  fun `fromHash should reject invalid hash length`() {
+    assertThatThrownBy { BlockParameter.fromHash(ByteArray(31)) }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessageContaining("32 bytes")
   }
 
   @Test
