@@ -8,7 +8,7 @@
  */
 package net.consensys.linea.sequencer.txselection.selectors;
 
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.DENIED_LOG_TOPIC;
+import static linea.txselection.LineaTransactionSelectionResult.DENIED_LOG_TOPIC;
 
 import java.util.List;
 import java.util.Map;

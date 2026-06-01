@@ -8,7 +8,7 @@
  */
 package net.consensys.linea.sequencer.txselection;
 
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.txModuleLineCountOverflowCached;
+import static linea.txselection.LineaTransactionSelectionResult.txModuleLineCountOverflowCached;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 import static org.mockito.ArgumentMatchers.any;

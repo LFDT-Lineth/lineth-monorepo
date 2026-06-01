@@ -9,7 +9,7 @@
 package linea.plugin.acc.test
 
 import linea.kotlin.encodeHex
-import net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult
+import linea.txselection.LineaTransactionSelectionResult
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.hyperledger.besu.tests.acceptance.dsl.account.Account

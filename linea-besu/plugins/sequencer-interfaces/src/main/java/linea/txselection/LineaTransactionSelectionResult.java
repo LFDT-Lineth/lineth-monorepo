@@ -6,12 +6,12 @@
  *
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
-package net.consensys.linea.sequencer.txselection;
+package linea.txselection;
 
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 
 public class LineaTransactionSelectionResult extends TransactionSelectionResult {
-  private enum LineaStatus implements TransactionSelectionResult.Status {
+  public enum LineaStatus implements Status {
     BLOCK_CALLDATA_OVERFLOW(false, false, false),
     BLOCK_COMPRESSED_SIZE_OVERFLOW(false, false, false),
     BLOCK_MODULE_LINE_COUNT_FULL(true, false, false),
@@ -27,7 +27,8 @@ public class LineaTransactionSelectionResult extends TransactionSelectionResult 
     DENIED_LOG_TOPIC(false, true, true),
     TX_FILTERED_ADDRESS_FROM(false, true, true),
     TX_FILTERED_ADDRESS_TO(false, true, true),
-    TX_FILTERED_ADDRESS_AUTHORIZATION(false, true, true);
+    TX_FILTERED_ADDRESS_AUTHORIZATION(false, true, true),
+    CHAIN_SECURITY_RULE_VIOLATED(false, true, true);
 
     private final boolean stop;
     private final boolean discard;
@@ -107,4 +108,12 @@ public class LineaTransactionSelectionResult extends TransactionSelectionResult 
       new LineaTransactionSelectionResult(LineaStatus.TX_FILTERED_ADDRESS_TO);
   public static final TransactionSelectionResult TX_FILTERED_ADDRESS_AUTHORIZATION =
       new LineaTransactionSelectionResult(LineaStatus.TX_FILTERED_ADDRESS_AUTHORIZATION);
+  public static final TransactionSelectionResult CHAIN_SECURITY_RULE_VIOLATED =
+      new LineaTransactionSelectionResult(LineaStatus.CHAIN_SECURITY_RULE_VIOLATED);
+
+  public static LineaTransactionSelectionResult chainSecurityRuleViolated(
+      final String description) {
+    return new LineaTransactionSelectionResult(
+        LineaStatus.CHAIN_SECURITY_RULE_VIOLATED, description);
+  }
 }

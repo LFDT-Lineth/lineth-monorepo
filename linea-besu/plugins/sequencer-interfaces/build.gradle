@@ -1,0 +1,42 @@
+buildscript {
+  ext {
+    distributionIdentifier = "linea-chain-security-interfaces"
+    releaseVersion = project.findProperty('releaseVersion') ?: "SNAPSHOT"
+  }
+}
+
+repositories {
+  mavenCentral()
+  maven {
+    name = 'linea-besu'
+    url = "https://artifacts.consensys.net/public/linea-besu/maven/"
+  }
+}
+
+group = 'build.linea'
+description = 'Linea chain security interfaces'
+
+jar { enabled = true }
+
+apply plugin: 'maven-publish'
+
+dependencies {
+  // Besu Plugin API and core dependencies
+  compileOnly "org.hyperledger.besu:besu-plugin-api:${rootProject.ext.resolveBesuVersion()}"
+  compileOnly "org.hyperledger.besu:besu-evm:${rootProject.ext.resolveBesuVersion()}"
+  compileOnly "org.hyperledger.besu:besu-datatypes:${rootProject.ext.resolveBesuVersion()}"
+}
+
+publishing {
+  publications {
+    maven(MavenPublication) {
+      from components.java
+      artifactId = 'chain-security-interfaces'
+      version = releaseVersion
+    }
+  }
+}
+
+tasks.withType(GenerateModuleMetadata).configureEach {
+  suppressedValidationErrors.add('enforced-platform')
+}

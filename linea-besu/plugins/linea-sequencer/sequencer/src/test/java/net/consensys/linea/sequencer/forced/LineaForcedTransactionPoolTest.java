@@ -8,9 +8,9 @@
  */
 package net.consensys.linea.sequencer.forced;
 
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_FROM;
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_TO;
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.txModuleLineCountOverflow;
+import static linea.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_FROM;
+import static linea.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_TO;
+import static linea.txselection.LineaTransactionSelectionResult.txModuleLineCountOverflow;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;

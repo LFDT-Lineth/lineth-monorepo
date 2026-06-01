@@ -8,7 +8,7 @@
  */
 package net.consensys.linea.rpc.methods;
 
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_TO;
+import static linea.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_TO;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;

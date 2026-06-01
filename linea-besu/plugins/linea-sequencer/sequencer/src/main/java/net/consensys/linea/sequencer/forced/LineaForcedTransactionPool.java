@@ -8,6 +8,8 @@
  */
 package net.consensys.linea.sequencer.forced;
 
+import static linea.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_FROM;
+import static linea.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_TO;
 import static net.consensys.linea.sequencer.forced.ForcedTransactionInclusionResult.BadBalance;
 import static net.consensys.linea.sequencer.forced.ForcedTransactionInclusionResult.BadNonce;
 import static net.consensys.linea.sequencer.forced.ForcedTransactionInclusionResult.BadPrecompile;
@@ -16,8 +18,6 @@ import static net.consensys.linea.sequencer.forced.ForcedTransactionInclusionRes
 import static net.consensys.linea.sequencer.forced.ForcedTransactionInclusionResult.Included;
 import static net.consensys.linea.sequencer.forced.ForcedTransactionInclusionResult.Other;
 import static net.consensys.linea.sequencer.forced.ForcedTransactionInclusionResult.TooManyLogs;
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_FROM;
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_TO;
 import static org.hyperledger.besu.plugin.data.AddedBlockContext.EventType.HEAD_ADVANCED;
 
 import com.github.benmanes.caffeine.cache.Cache;
