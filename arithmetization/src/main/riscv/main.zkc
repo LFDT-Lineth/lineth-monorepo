@@ -10,10 +10,11 @@ include "utils/signed_comparisons.zkc"
 include "utils/sign_bit.zkc"
 include "utils/negative.zkc"
 include "utils/register_utils.zkc"
+include "stats/opcode_stats.zkc"
 include "memory.zkc"
 
 // TODO @Ghost
-fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block>() {
+fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block, opcode_stats>() {
     var opcode:Opcode
     var instruction:Instruction
     var clock_cycle:u32 = 0
@@ -45,5 +46,7 @@ fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_ro
 
         pc = interpreter(instruction, pc)
     }
+
+    print_opcode_stats(clock_cycle)
 }
 

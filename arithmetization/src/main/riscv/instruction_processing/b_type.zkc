@@ -1,4 +1,5 @@
 include "../memory.zkc"
+include "../stats/opcode_stats.zkc"
 include "../utils/constants.zkc"
 include "../utils/signed_comparisons.zkc"
 include "../utils/signed_sum.zkc"
@@ -22,7 +23,7 @@ include "../utils/signed_sum.zkc"
 //
 // When the branch condition is false, pc_new = pc + 4 (fall-through).
 // When the branch condition is true,  pc_new = pc + imm (taken branch).
-fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address) -> (pc_new:Address) {
+fn process_B_type_instruction<registers, opcode_stats>(instruction_parameters:u25, pc:Address) -> (pc_new:Address) {
 
     // var funct3 : Funct3
     // var funct7 : Funct7
@@ -67,6 +68,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
     switch funct3 {
         case FUNCT3_BEQ: {
             printf "BEQ "
+            inc_opcode_stat(STAT_BEQ)
             print_b_operands(rs1, rs2, imm)
             if registers[rs1] == registers[rs2] {
                 // the branch case
@@ -75,6 +77,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         }
         case FUNCT3_BNE: {
             printf "BNE "
+            inc_opcode_stat(STAT_BNE)
             print_b_operands(rs1, rs2, imm)
             if registers[rs1] != registers[rs2] {
                 // the branch case
@@ -83,6 +86,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         }
         case FUNCT3_BLT: {
             printf "BLT "
+            inc_opcode_stat(STAT_BLT)
             print_b_operands(rs1, rs2, imm)
             comparison = signed_LT(registers[rs1], registers[rs2])
             if comparison == 1 {
@@ -92,6 +96,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         }
         case FUNCT3_BGE: {
             printf "BGE "
+            inc_opcode_stat(STAT_BGE)
             print_b_operands(rs1, rs2, imm)
             comparison = signed_LT(registers[rs1], registers[rs2])
             if comparison == 0 {
@@ -101,6 +106,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         }
         case FUNCT3_BLTU: {
             printf "BLTU "
+            inc_opcode_stat(STAT_BLTU)
             print_b_operands(rs1, rs2, imm)
             if registers[rs1]<registers[rs2] {
                 // the branch case
@@ -109,6 +115,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         }
         case FUNCT3_BGEU: {
             printf "BGEU "
+            inc_opcode_stat(STAT_BGEU)
             print_b_operands(rs1, rs2, imm)
             if registers[rs1] >= registers[rs2] {
                 // the branch case
