@@ -1,5 +1,4 @@
 include "../memory.zkc"
-include "../stats/opcode_stats.zkc"
 include "../utils/sign_extend.zkc"
 include "../utils/signed_sum.zkc"
 
@@ -20,7 +19,7 @@ include "../utils/signed_sum.zkc"
 // Effect:
 //   rd     = pc + 4           (return address saved in destination register)
 //   pc_new = pc + sign_extend(imm21)  (unconditional jump to target)
-fn process_J_type_instruction<registers, opcode_stats>(instruction_parameters:u25, pc:Address) -> (pc_new:Address) {
+fn process_J_type_instruction<registers>(instruction_parameters:u25, pc:Address) -> (pc_new:Address) {
 
     // var funct3 : Funct3
     // var funct7 : Funct7
@@ -45,7 +44,6 @@ fn process_J_type_instruction<registers, opcode_stats>(instruction_parameters:u2
     var imm21:u21 = ((imm20::imm19_12::imm11::imm10_1) as u21) << 1
 
     printf "JAL "
-    inc_opcode_stat(STAT_JAL)
     print_j_operands(rd, sgn_extension_u21_u64(imm21))
     registers[rd] = signed_sum_of_double_word(pc, 4)
     pc_new = signed_sum_of_double_word(pc, sgn_extension_u21_u64(imm21)) as Address
