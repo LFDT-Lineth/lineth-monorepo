@@ -88,7 +88,6 @@ jobs:
           retry_on: error
           retry_wait_seconds: 30
           timeout_minutes: 10
-          # TODO: hardcoded image tags for testing, should be removed 
           command: |
             LINEA_BESU_PACKAGE_TAG=${{ inputs.linea_besu_package_image_tag || 'local' }} \
             LINEA_PROVER_TAG=${{ inputs.prover_image_tag || 'local' }} \

@@ -34,13 +34,13 @@ on:
       draft_release:
         description: 'Draft Release'
         required: false
-        default: false
         type: boolean
+        default: false
       pre_release:
         description: 'Pre Release'
         required: false
-        default: false
         type: boolean
+        default: false
     outputs:
       tag_changed:
         description: "Indicate whether the release tag of the component has changed"

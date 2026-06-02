@@ -55,6 +55,7 @@ Each component has its own release workflow. Run the one that matches the compon
 | ---------------- | ------------------------------------------------ | -------------------------------- |
 | linea-besu       | [.github/workflows/linea-besu-release.yml](https://github.com/Consensys/linea-monorepo/actions/workflows/linea-besu-release.yml)       | `releases/linea-besu-package/v[semver]` |
 | coordinator      | [.github/workflows/coordinator-release.yml](https://github.com/Consensys/linea-monorepo/actions/workflows/coordinator-release.yml)      | `releases/coordinator/v[semver]`        |
+| maru             | [.github/workflows/maru-release-manual.yml](https://github.com/Consensys/linea-monorepo/actions/workflows/maru-release-manual.yml)      | `releases/maru/v[semver]`        |
 | postman          | [.github/workflows/postman-release.yml](https://github.com/Consensys/linea-monorepo/actions/workflows/postman-release.yml)          | `releases/postman/v[semver]`            |
 | prover           | [.github/workflows/prover-release.yml](https://github.com/Consensys/linea-monorepo/actions/workflows/prover-release.yml)           | `releases/prover/v[semver]`             |
 | tx-exclusion-api | [.github/workflows/tx-exclusion-api-release.yml](https://github.com/Consensys/linea-monorepo/actions/workflows/tx-exclusion-api-release.yml) | `releases/tx-exclusion-api/v[semver]`   |
@@ -70,20 +71,33 @@ Notes:
 
 Milestone releases bundle every component into a single Linea release.
 
-- **Workflow:** [.github/workflows/linea-milestone-release.yml](https://github.com/Consensys/linea-monorepo/actions/workflows/linea-milestone-release.yml)
+- **Workflow:** [.github/workflows/linea-milestone-release-with-dry-run.yml](https://github.com/Consensys/linea-monorepo/actions/workflows/linea-milestone-release-with-dry-run.yml)
 - **Release tag pattern:** `releases/linea/v[semver]`
 - **Branch:** can only be run from `main`.
-- **`release_tag_suffix`:** when set, the suffix is applied **only** to the milestone tag (e.g. `releases/linea/v1.2.3-rc1`). Per-component release tags are not affected.
-- **`image_tag_suffix`:** when set, every component's docker image gets an additional suffixed tag (alongside the unsuffixed one).
 
 #### Unified-cut behavior
 
 For each component, the milestone workflow decides between two paths based on whether the component's release version has bumped at the milestone commit:
 
 - **Bumped → release the component.** A new per-component release is cut as part of the milestone (new tag, docker image, GitHub Release page).
-- **Not bumped → re-tag only.** The existing docker image associated with the component's latest release tag is re-tagged with `image_tag_suffix` (if given). No new component release is cut.
+- **Not bumped → do nothing.** No new component release is cut. The existing docker image associated with the component's latest release tag will be shown on the milestone release page.
 
 The milestone GitHub Release page aggregates the `CHANGELOG` entries from every component (newly released or carried over) and lists their docker image pull instructions.
+
+#### Dry-run on a temporary branch before releasing on main
+
+The milestone workflow defaults to running a **dry run on a temporary branch forked from the latest `main`** before touching `main` itself. This catches issues (e.g. failing e2e, docker push permission gaps, changelog generation errors) without leaving any artifacts on `main`. The job graph is:
+
+1. **`create-temp-branch-and-dispatch-release`** — forks a new branch `ci/milestone-dry-run-<timestamp>` from `origin/main` and dispatches the `linea-milestone-release.yml` workflow against it. All artifacts (i.e. tags and GitHub releases) produced in the dispatched run will be thrown away later in later workflow.
+2. **`manual-run-release-on-main`** — guarded by the `run-release-on-main` GitHub Environment, this job blocks on **manual approval** in the GitHub UI. Reviewers should:
+   - Open the dispatched milestone run (URL is printed in the kickoff job's summary) and confirm every job (build, e2e, per-component gh-release, milestone gh-release) succeeded against the temp branch.
+   - Spot-check the draft GitHub Releases that the dry run produced (they are clearly suffixed with `-dry-run-<timestamp>`).
+   - Approve the environment gate to proceed with the real release on `main`, or reject to abort.
+3. **`dry-run-release-cleanup`** — runs after the manual gate is approved. It waits for the dispatched dry-run to reach a terminal state and then removes every artifact the dry run created:
+   - **GitHub releases + git tags** — enumerates tags reachable from the temp branch but not from `origin/main` and removed all of them with their associated releases.
+   - **Temp branch** — `git push origin --delete ci/milestone-dry-run-<timestamp>`.
+   - **Please note that no images will be pushed to Docker Hub during dry run release.**
+4. **`milestone-release-on-main`** — only runs after the manual gate is approved. Calls `linea-milestone-release.yml` against `main`.
 
 ## Looking for the Linea code?
 

@@ -97,8 +97,7 @@ jobs:
         with:
           docker_context: .
           image_name: ${{ env.IMAGE_NAME }}
-          image_tag: ${{ env.IMAGE_TAG }}
-          extra_image_tag: ${{ env.IMAGE_TAG_WITH_SUFFIX }}
+          image_tags: ${{ env.IMAGE_TAG_WITH_SUFFIX && format('{0},{1}', env.IMAGE_TAG, env.IMAGE_TAG_WITH_SUFFIX) || env.IMAGE_TAG }}
           develop_tag: ${{ env.DEVELOP_TAG }}
           push_image: ${{ env.PUSH_IMAGE }}
           dockerfile_path: ./coordinator/Dockerfile

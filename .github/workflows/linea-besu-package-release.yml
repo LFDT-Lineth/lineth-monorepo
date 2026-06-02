@@ -11,13 +11,13 @@ on:
       draft_release:
         description: 'Draft Release'
         required: false
-        default: false
         type: boolean
+        default: false
       pre_release:
         description: 'Pre Release'
         required: false
-        default: false
         type: boolean
+        default: false
       without_besu_fleet_plugin:
         description: 'Type "true" to exclude besu-fleet-plugin in the release'
         required: false

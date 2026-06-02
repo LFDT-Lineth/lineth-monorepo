@@ -28,13 +28,18 @@ on:
       draft_release:
         description: 'Draft Release'
         required: false
-        default: false
         type: boolean
+        default: false
       pre_release:
         description: 'Pre Release'
         required: false
-        default: false
         type: boolean
+        default: false
+      dry_run_release:
+        description: 'Dry run a release (without build and push the docker image to dockerhub)'
+        required: false
+        type: boolean
+        default: false
       upload_changelog:
         description: "Upload the updated CHANGELOG.md and skip pushing the commit or creating PR"
         required: false
@@ -77,6 +82,7 @@ jobs:
       push_image: true
       draft_release: ${{ inputs.draft_release }}
       pre_release: ${{ inputs.pre_release }}
+      skip_docker_image_build_and_push: ${{ inputs.dry_run_release }}
       with_besu_fleet_plugin: ${{ inputs.without_besu_fleet_plugin != 'true' }}
       changelog: ${{ needs.release-linea-besu-push-tag-changelog.outputs.changelog }}
       release_tag: ${{ needs.release-linea-besu-push-tag-changelog.outputs.release_tag }}

@@ -85,7 +85,7 @@ jobs:
         with:
           docker_context: .
           image_name: ${{ env.IMAGE_NAME }}
-          image_tag: ${{ env.COMMIT_TAG }}
+          image_tags: ${{ env.COMMIT_TAG }}
           develop_tag: ${{ env.DEVELOP_TAG }}
           push_platforms: linux/amd64
           push_image: ${{ env.PUSH_IMAGE }}

@@ -26,12 +26,12 @@ jobs:
       release_version: ${{ steps.compute-release-tag.outputs.next_version }}
       release_tag: ${{ steps.compute-release-tag.outputs.next_tag }}
       tag_changed: ${{ steps.compute-release-tag.outputs.tag_changed }}
-    steps: #TODO: set exit back to 1
-      - name: Enforce main branch
-        if: github.ref_name != 'main'
+    steps:
+      - name: Enforce non-main branch must have custom release tag suffix
+        if: github.ref_name != 'main' && inputs.release_tag_suffix == ''
         run: |
-          echo "❌ This workflow can only be run on main (current: ${{ github.ref_name }})"
-          exit 0
+          echo "❌ Non-main branch must have non-empty custom tag suffix"
+          exit 1
 
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

@@ -127,6 +127,11 @@ runs:
           next_semver="${next_semver}-${RELEASE_TAG_SUFFIX}"
         fi
 
+        if git rev-parse -q --verify "refs/tags/${next_tag}" > /dev/null; then
+          echo "The next tag ${next_tag} already exists; exit now."
+          exit 1
+        fi
+
         echo "latest ${COMPONENT} tag:  ${latest_tag}"
         echo "next ${COMPONENT} tag:    ${next_tag}"
         echo "next ${COMPONENT} semver: ${next_semver}"

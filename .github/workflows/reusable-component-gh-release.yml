@@ -34,15 +34,20 @@ on:
       draft_release:
         description: 'Draft Release'
         required: false
-        default: false
         type: boolean
+        default: false
       pre_release:
         description: 'Pre Release'
         required: false
-        default: false
         type: boolean
+        default: false
       upload_changelog:
         description: "Upload the updated CHANGELOG.md and skip pushing the commit or creating PR"
+        required: false
+        type: boolean
+        default: false
+      dry_run_release:
+        description: "Dry run a release (without build and push the docker image to dockerhub)"
         required: false
         type: boolean
         default: false
@@ -67,6 +72,7 @@ jobs:
 
   compute-docker-tag:
     needs: [release-push-tag-changelog]
+    if: inputs.dry_run_release == false
     uses: ./.github/workflows/reusable-component-docker-tag.yml
     with:
       version-prefix: ${{ needs.release-push-tag-changelog.outputs.release_version }}
@@ -74,7 +80,7 @@ jobs:
 
   build-and-publish-image-coordinator:
     needs: [compute-docker-tag]
-    if: inputs.component-name == 'coordinator'
+    if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'coordinator'
     uses: ./.github/workflows/coordinator-build-and-publish.yml
     with:
       image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
@@ -86,7 +92,7 @@ jobs:
 
   build-and-publish-image-postman:
     needs: [compute-docker-tag]
-    if: inputs.component-name == 'postman'
+    if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'postman'
     uses: ./.github/workflows/postman-build-and-publish.yml
     with:
       image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
@@ -98,7 +104,7 @@ jobs:
 
   build-and-publish-image-prover:
     needs: [compute-docker-tag]
-    if: inputs.component-name == 'prover'
+    if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'prover'
     uses: ./.github/workflows/prover-build-and-publish.yml
     with:
       image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
@@ -110,7 +116,7 @@ jobs:
 
   build-and-publish-image-maru:
     needs: [compute-docker-tag]
-    if: inputs.component-name == 'maru'
+    if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'maru'
     uses: ./.github/workflows/maru-build-and-publish.yml
     with:
       image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
@@ -122,7 +128,7 @@ jobs:
 
   build-and-publish-image-tx-exclusion-api:
     needs: [compute-docker-tag]
-    if: inputs.component-name == 'tx-exclusion-api'
+    if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'tx-exclusion-api'
     uses: ./.github/workflows/transaction-exclusion-api-build-and-publish.yml
     with:
       image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
@@ -136,11 +142,12 @@ jobs:
     needs: [release-push-tag-changelog, compute-docker-tag, build-and-publish-image-coordinator, build-and-publish-image-postman, build-and-publish-image-prover, build-and-publish-image-tx-exclusion-api, build-and-publish-image-maru]
     if: >
       always() && !cancelled() &&
+      (inputs.dry_run_release ||
       (needs.build-and-publish-image-coordinator.result       == 'success' ||
        needs.build-and-publish-image-postman.result           == 'success' ||
        needs.build-and-publish-image-prover.result            == 'success' ||
        needs.build-and-publish-image-tx-exclusion-api.result  == 'success' ||
-       needs.build-and-publish-image-maru.result              == 'success')
+       needs.build-and-publish-image-maru.result              == 'success'))
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
     steps:
       - name: Checkout
@@ -157,6 +164,7 @@ jobs:
           DOCKER_TAG_WITH_SUFFIX: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
           COMPONENT_NAME: ${{ inputs.component-name }}
           DOCKER_IMAGE_SUFFIX: ${{ inputs.folder-name }}
+          SKIP_DOCKER_IMAGE_INFO: ${{ inputs.dry_run_release }}
         run: |
           mkdir release && cd release
           # maru's image is published as consensys/maru rather than consensys/linea-maru.
@@ -166,16 +174,19 @@ jobs:
             IMAGE_NAME="consensys/linea-${DOCKER_IMAGE_SUFFIX}"
           fi
           printf '%s\n' "$CHANGELOG" >> output.md
-          echo "### Docker Image Details" >> output.md
-          echo "" >> output.md
-          echo "To pull the image, use any of the following commands:" >> output.md
-          echo "\`\`\`" >> output.md
-          printf 'docker pull %s:%s\n' "$IMAGE_NAME" "$DOCKER_TAG" >> output.md
-          echo "\`\`\`" >> output.md
-          if [ -n "$DOCKER_TAG_WITH_SUFFIX" ] && [ "$DOCKER_TAG_WITH_SUFFIX" != "$DOCKER_TAG" ]; then
+          # Only include docker pull instructions when an image was actually published.
+          if [ "$SKIP_DOCKER_IMAGE_INFO" != "true" ]; then
+            echo "### Docker Image Details" >> output.md
+            echo "" >> output.md
+            echo "To pull the image, use any of the following commands:" >> output.md
             echo "\`\`\`" >> output.md
-            printf 'docker pull %s:%s\n' "$IMAGE_NAME" "$DOCKER_TAG_WITH_SUFFIX" >> output.md
+            printf 'docker pull %s:%s\n' "$IMAGE_NAME" "$DOCKER_TAG" >> output.md
             echo "\`\`\`" >> output.md
+            if [ -n "$DOCKER_TAG_WITH_SUFFIX" ] && [ "$DOCKER_TAG_WITH_SUFFIX" != "$DOCKER_TAG" ]; then
+              echo "\`\`\`" >> output.md
+              printf 'docker pull %s:%s\n' "$IMAGE_NAME" "$DOCKER_TAG_WITH_SUFFIX" >> output.md
+              echo "\`\`\`" >> output.md
+            fi
           fi
 
       - name: Set capitalized component name

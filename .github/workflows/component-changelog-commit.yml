@@ -74,7 +74,7 @@ jobs:
             exit 0
           fi
           git add 'CHANGELOG.md' '**/CHANGELOG.md'
-          git commit -m "chore(misc): update CHANGELOG.md unreleased section of each updated component [skip ci]"
+          git commit -m "chore(misc): update CHANGELOG.md unreleased section of each updated component and milestone [skip ci]"
 
           # Rebase on top of any commits that landed on the branch between
           # checkout and now (e.g. a concurrent component-changelog-update push),
@@ -98,17 +98,17 @@ jobs:
         id: timestamp
         shell: bash
         run: |
-          echo "TIMESTAMP=$(date -u +%Y%m%d)" >> $GITHUB_OUTPUT
+          echo "TIMESTAMP=$(date -u +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
 
       - name: Create pull request
         if: ${{ inputs.create_pull_request }}
         uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0
         with:
           token: ${{ steps.app-token.outputs.token }}
-          commit-message: "chore(misc): update CHANGELOG.md unreleased section of each updated component [skip ci]"
+          commit-message: "chore(misc): update CHANGELOG.md unreleased section of each updated component and milestone [skip ci]"
           branch: ci/chore-linea-unrelease-changelog-${{ steps.timestamp.outputs.TIMESTAMP }}
           base: main
-          title: "chore(misc): update CHANGELOG.md unreleased section of each updated component"
+          title: "chore(misc): update CHANGELOG.md unreleased section of each updated component and milestone"
           add-paths: |
             CHANGELOG.md
             **/CHANGELOG.md
