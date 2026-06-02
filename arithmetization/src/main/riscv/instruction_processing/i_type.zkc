@@ -1,5 +1,4 @@
 include "../memory.zkc"
-include "../stats/opcode_stats.zkc"
 include "../ram/read.zkc"
 include "../utils/signed_comparisons.zkc"
 include "../utils/sign_extend.zkc"
@@ -34,7 +33,7 @@ include "../utils/signed_sum.zkc"
 //   SYSTEM    — system calls (not yet implemented)
 //
 // For all opcodes except JALR, new_pc = pc + 4 (sequential fall-through).
-fn process_I_type_instruction<ram, registers, opcode_stats>(opcode:Opcode, instruction_parameters:u25, pc:Address) -> (new_pc:Address) {
+fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_parameters:u25, pc:Address) -> (new_pc:Address) {
 
     var funct3:Funct3
     var imm12:Imm12
@@ -61,43 +60,36 @@ fn process_I_type_instruction<ram, registers, opcode_stats>(opcode:Opcode, instr
             switch funct3 {
                 case FUNCT3_LB: {
                     printf "LB "
-                    inc_opcode_stat(STAT_LB)
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = sgn_extension_u8_u64(read_8(rs1_plus_signext_imm12))
                 }
                 case FUNCT3_LH: {
                     printf "LH "
-                    inc_opcode_stat(STAT_LH)
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = sgn_extension_u16_u64(read_16(rs1_plus_signext_imm12))
                 }
                 case FUNCT3_LW: {
                     printf "LW "
-                    inc_opcode_stat(STAT_LW)
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = sgn_extension_u32_u64(read_32(rs1_plus_signext_imm12))
                 }
                 case FUNCT3_LBU: {
                     printf "LBU "
-                    inc_opcode_stat(STAT_LBU)
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = read_8(rs1_plus_signext_imm12) as DoubleWord
                 }
                 case FUNCT3_LHU: {
                     printf "LHU "
-                    inc_opcode_stat(STAT_LHU)
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = read_16(rs1_plus_signext_imm12) as DoubleWord
                 }
                 case FUNCT3_LWU: {
                     printf "LWU "
-                    inc_opcode_stat(STAT_LWU)
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = read_32(rs1_plus_signext_imm12) as DoubleWord
                 }
                 case FUNCT3_LD: {
                     printf "LD "
-                    inc_opcode_stat(STAT_LD)
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = read_64(rs1_plus_signext_imm12) as DoubleWord
                 }
@@ -226,7 +218,6 @@ fn process_I_type_instruction<ram, registers, opcode_stats>(opcode:Opcode, instr
 
         case JALR: {
             printf "JALR "
-            inc_opcode_stat(STAT_JALR)
             print_i_memory_operands(rd, rs1, signext_imm12_64)
             // only instruction is JALR, no need to switch over funct3
             new_pc = rs1_plus_signext_imm12 & MASK_64_ERASE_LAST_BIT
@@ -243,7 +234,6 @@ fn process_I_type_instruction<ram, registers, opcode_stats>(opcode:Opcode, instr
                 // imm12 is interpreted as funct12 for SYSTEM opcode
                 if imm12 == FUNCT12_ECALL {
                     printf "ECALL\n"
-                    inc_opcode_stat(STAT_ECALL)
                     new_pc = process_syscall(pc)
                 } else if imm12 == FUNCT12_EBREAK {
                     printf "[ERROR] EBREAK instruction triggered\n"
@@ -261,7 +251,7 @@ fn process_I_type_instruction<ram, registers, opcode_stats>(opcode:Opcode, instr
     }
 }
 
-fn process_syscall<registers, ram, opcode_stats>(pc:Address) -> (new_pc:Address) {
+fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
     var call_num:DoubleWord = registers[17]
     //
     switch call_num {

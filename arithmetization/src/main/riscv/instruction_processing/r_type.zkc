@@ -1,5 +1,4 @@
 include "../memory.zkc"
-include "../stats/opcode_stats.zkc"
 include "../utils/absolute_value.zkc"
 include "../utils/bit_flip.zkc"
 include "../utils/negative.zkc"

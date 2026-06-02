@@ -1,5 +1,4 @@
 include "../memory.zkc"
-include "../stats/opcode_stats.zkc"
 include "../ram/write.zkc"
 include "../utils/constants.zkc"
 include "../utils/signed_sum.zkc"
@@ -24,7 +23,7 @@ include "../utils/signed_sum.zkc"
 //   SH (funct3 = 0b001) — store halfword (16 bits)
 //   SW (funct3 = 0b010) — store word     (32 bits)
 //   SD (funct3 = 0b011) — store doubleword (64 bits)
-fn process_S_type_instruction<ram, registers, opcode_stats>(instruction_parameters:u25) {
+fn process_S_type_instruction<ram, registers>(instruction_parameters:u25) {
 
     // var funct3 : Funct3
     // var funct7 : Funct7
@@ -60,25 +59,21 @@ fn process_S_type_instruction<ram, registers, opcode_stats>(instruction_paramete
     switch funct3 {
         case FUNCT3_SB: {
             printf "SB "
-            inc_opcode_stat(STAT_SB)
             print_s_operands(rs2, rs1, signext_imm12_64)
             write_8(mem_address, (registers[rs2] & (0xFF as u64)) as u8)
         }
         case FUNCT3_SH: {
             printf "SH "
-            inc_opcode_stat(STAT_SH)
             print_s_operands(rs2, rs1, signext_imm12_64)
             write_16(mem_address, (registers[rs2] & (0xFFFF as u64)) as u16)
         }
         case FUNCT3_SW: {
             printf "SW "
-            inc_opcode_stat(STAT_SW)
             print_s_operands(rs2, rs1, signext_imm12_64)
             write_32(mem_address, (registers[rs2] & (0xFFFFFFFF as u64)) as u32)
         }
         case FUNCT3_SD: {
             printf "SD "
-            inc_opcode_stat(STAT_SD)
             print_s_operands(rs2, rs1, signext_imm12_64)
             write_64(mem_address, registers[rs2])
         }
