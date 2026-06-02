@@ -263,6 +263,7 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
                 printf "%c", ram[addr]
                 addr = addr + 1
             }
+            printf "\n"
             registers[10] = a2 // return value: bytes written
             new_pc = (pc + 4) as Address
         }

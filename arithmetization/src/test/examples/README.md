@@ -45,7 +45,7 @@ Then build the ACT4 ELFs on the host:
 
 ```bash
 cd arithmetization/src/test/examples
-make build-act4
+make act4-build
 ```
 
 #### Note for MacOS
@@ -89,11 +89,11 @@ Useful shell function (add to `~/.zshrc` or `~/.bashrc`):
 riscv-test() {
     local makefile="path/to/linea-monorepo/arithmetization/src/test/examples/Makefile"
     case "$1" in
-        clean-all|linker-script|blake-rust-exec|build-act4|run-act4|install-zkc|exec-elf|elf-to-json)
+        elf-exec|elf-to-json|install-zkc|clean-all|linker-script|vector-exec|keccak-rust-build|keccak-rust-json|keccak-rust-exec|blake-rust-build|blake-rust-json|blake-rust-exec|act4-build|act4-exec)
             # targets that do NOT require TEST argument
             make -f "$makefile" "$1" "${@:2}"
             ;;
-        exec|debug|compile|zkc-exec|zkc-debug|clean|verify-elf)
+        exec|debug|compile|zkc-exec|zkc-debug|clean|verify-elf|vector-build|vector-json)
             # targets that require TEST argument
             make -f "$makefile" "$1" TEST="$2" "${@:3}"
             ;;
@@ -108,8 +108,10 @@ riscv-test() {
 
 # Compile and execute (note that <name>.<ext> can be replaced by <src_optional_subfolder>/<name>.<ext>)
 riscv-test <name>.<ext>
-# Compile and execute with input bytes
+# Compile and execute with input bytes as hex string
 riscv-test <name>.<ext> IN_BYTES="0xAABB"
+# Compile and execute with input bytes from a file
+riscv-test <name>.<ext> IN_BYTES="@path/to/in_bytes"
 # Compile and debug
 riscv-test debug <name>.<ext>
 # Compile and debug with input bytes
@@ -118,20 +120,34 @@ riscv-test debug <name>.<ext> IN_BYTES="0xAABB"
 riscv-test <name>.<ext> IN_BYTES="0xAABB" IN_BYTES_OFFSET=0x08800008
 # Compile only
 riscv-test compile <name>.<ext>
+# Build, convert and execute vectors with the generic vector targets
+riscv-test vector-build <name>.<ext>
+riscv-test vector-json <name>.<ext> VECTOR_FILE=path/to/vectors.all VECTOR_N_VECTORS=10
+riscv-test vector-exec VECTOR_JSON_DIR=path/to/json_dir
+# Use VECTOR_N_VECTORS=-1 to select all vectors
+riscv-test vector-json <name>.<ext> VECTOR_FILE=path/to/vectors.all VECTOR_N_VECTORS=-1
+# Build one batched JSON from selected .all vectors
+riscv-test vector-build <name>.<ext>
+riscv-test vector-json <name>.<ext> VECTOR_FILE=path/to/vectors.all VECTOR_N_VECTORS=10 VECTOR_JSON_MODE=batched VECTOR_JSON_FILE=path/to/vectors.json
+riscv-test vector-exec VECTOR_JSON_MODE=batched VECTOR_JSON_FILE=path/to/vectors.json
 # Convert an already compiled ELF to JSON
 riscv-test elf-to-json BIN_EXT=asm/bin/test
 # Execute an already compiled ELF
-riscv-test exec-elf BIN_EXT=asm/bin/test
+riscv-test elf-exec BIN_EXT=path/to/bin
+# Execute an already compiled ELF in quiet mode
+riscv-test elf-exec BIN_EXT=path/to/bin ZKC_EXEC_FLAGS=-q
 # Clean build artifacts for a specific test
 riscv-test clean <name>.<ext>
 # Clean all build artifacts
 riscv-test clean-all
-# Run 10 blake test vectors
+# Run all Blake vectors from blake10.all
 riscv-test blake-rust-exec
+# Build one batched Keccak JSON
+riscv-test keccak-rust-json KECCAK_N_VECTORS=10 KECCAK_JSON_FILE=/path/to/keccak.json
 # Build ACT4 ELFs
-riscv-test build-act4
+riscv-test act4-build
 # Run ACT4 ELFs through zkc
-riscv-test run-act4
+riscv-test act4-exec
 # Run blake_with_in_embedded.rs (input bytes are embedded in main())
 riscv-test blake/blake_with_in_embedded.rs
 # Run blake_with_in_bytes.rs
@@ -149,44 +165,80 @@ riscv-test compile <name>.<ext> VERIFY_ELF=true
 
 ## Targets
 
-| Target                           | Description                                                                            |
-|----------------------------------|----------------------------------------------------------------------------------------|
-| `make TEST=foo.<ext>`            | Compile and execute (default)                                                          |
-| `make debug TEST=foo.<ext>`      | Compile and debug                                                                      |
-| `make compile TEST=foo.<ext>`    | Compile only                                                                           |
-| `make exec-elf BIN_EXT=foo`      | Convert and execute an already compiled ELF (`JSON_EXT=foo.json` by default)           |
-| `make elf-to-json BIN_EXT=foo`   | Convert an already compiled ELF to JSON (`JSON_EXT=foo.json` by default)               |
-| `make install-zkc`               | Invoke `../../../Makefile install-zkc` to install zkc if not already installed         |
-| `make zkc-exec TEST=foo.<ext>`   | Execute without recompiling                                                            |
-| `make zkc-debug TEST=foo.<ext>`  | Debug without recompiling                                                              |
-| `make clean TEST=foo.<ext>`      | Remove binary and JSON for this test                                                   |
-| `make clean-all`                 | Remove all build artifacts                                                             |
-| `make linker-script`             | Generate the linker script with the memory layout                                      |
-| `make verify-elf TEST=foo.<ext>` | Verify ELF offsets, entry point and sp match the ones in the Makefile                  |
-| `make blake-rust-exec`           | Run 10 blake test vectors from `rust/src/blake/blake10.all`                            |
-| `make build-act4`                | Build ACT4 ELFs with the Linea ACT4 config                                             |
-| `make run-act4`                  | Build and run ACT4 ELFs through zkc and write results/logs under `act4/bin/`           |
+| Target                                                   | Description                                                                            |
+|----------------------------------------------------------|----------------------------------------------------------------------------------------|
+| `make TEST=foo.<ext>`                                    | Compile and execute (default)                                                          |
+| `make debug TEST=foo.<ext>`                              | Compile and debug                                                                      |
+| `make compile TEST=foo.<ext>`                            | Compile only                                                                           |
+| `make elf-exec BIN_EXT=foo`                              | Convert and execute an already compiled ELF (`JSON_EXT=foo.json` by default)           |
+| `make elf-to-json BIN_EXT=foo`                           | Convert an already compiled ELF to JSON (`JSON_EXT=foo.json` by default)               |
+| `make install-zkc`                                       | Invoke `../../../Makefile install-zkc` to install zkc if not already installed         |
+| `make zkc-exec TEST=foo.<ext>`                           | Execute without recompiling                                                            |
+| `make zkc-debug TEST=foo.<ext>`                          | Debug without recompiling                                                              |
+| `make clean TEST=foo.<ext>`                              | Remove binary and JSON for this test                                                   |
+| `make clean-all`                                         | Remove all build artifacts                                                             |
+| `make linker-script`                                     | Generate the linker script with the memory layout                                      |
+| `make verify-elf TEST=foo.<ext>`                         | Verify ELF offsets, entry point and sp match the ones in the Makefile                  |
+| `make vector-build TEST=foo.<ext>`                       | Compile the test and build vector helpers                                              |
+| `make vector-json TEST=foo.<ext> VECTOR_FILE=foo.all`    | Generate vector JSON inputs; run `vector-build` first                                  |
+| `make vector-exec`                                       | Execute vector JSON inputs generated by `vector-json`                                  |
+| `make keccak-rust-build`                                 | Build the Keccak Rust vector test and helper binaries                                  |
+| `make keccak-rust-json`                                  | Generate one batched Keccak vector JSON input                                          |
+| `make keccak-rust-exec`                                  | Run the batched Keccak vector JSON input                                               |
+| `make blake-rust-build`                                  | Build the Blake Rust vector test and helper binaries                                   |
+| `make blake-rust-json`                                   | Generate Blake vector JSON inputs                                                      |
+| `make blake-rust-exec`                                   | Run all Blake vectors from `rust/src/blake/blake10.all`                                |
+| `make act4-build`                                        | Build ACT4 ELFs with the Linea ACT4 config                                             |
+| `make act4-exec`                                         | Build and run ACT4 ELFs through zkc and write results/logs under `act4/bin/`           |
 
-`require-test`, `require-src`, and `require-bin-ext` are internal support targets used to validate mandatory command-line variables before running the targets above.
+`require-*` targets are internal support targets used to validate mandatory command-line variables before running the targets above.
 
 ## Options
 
-| Variable         | Default                                                                                 | Description                                                                                        |
-|------------------|-----------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
-| `TEST`           | `""`                                                                                    | Source file path with extension, relative to the corresponding `src/` folder                       |
-| `BIN_EXT`        | `""`                                                                                    | Already compiled ELF used by `elf-to-json` and `exec-elf`                                          |
-| `JSON_EXT`       | `$(BIN_EXT).json`                                                                       | JSON output path used by `elf-to-json` and `exec-elf`                                              |
-| `IN_BYTES`       | `""`                                                                                    | Hex big-endian input written in RAM at `IN_BYTES_OFFSET` as little-endian bytes before execution   |
-| `PROGRAM_OFFSET` | `0x00000000`                                                                            | Program address used by this Makefile's generated linker script (up to 128 MiB)                    |
-| `IN_BYTES_OFFSET`| `0x08800000`                                                                            | Memory address where input bytes are written (up to 1 GiB)                                         |
-| `SP`             | `0x08800000`                                                                            | Top of the stack region, stack grows downward from this address (8 MiB)                            |
-| `VERIFY_ELF`     | `false`                                                                                 | Set to `true` to verify offsets, entry point and sp match the ELF ones                             |
-| `ACT4_BUILD_MODE`| `host`                                                                                  | Build ACT4 ELFs with `host` or `docker`                                                            |
-| `ACT4_REF`       | `9798a554ce4139f472c9ccd3a18c9061d0f7024d`                                              | `riscv-arch-test` tag or commit used to build ACT4 ELFs                                            |
-| `ACT4_REPO`      | `../riscv-arch-test`                                                                    | Local `riscv-arch-test` checkout used for ACT4 builds                                              |
-| `ACT4_RISCV_DIR` | `~/riscv`                                                                               | Directory where `install-sail` installs `sail_riscv_sim`                                           |
-| `ACT4_FAST`      | `false`                                                                                 | Set to `true` to skip ACT4 objdump generation for faster builds                                    |
-| `ACT4_DEBUG`     | `true`                                                                                  | Set to `false` to skip ACT4 debug artifacts                                                        |
+| Variable                     | Default                                                        | Description                                                                                                                                   |
+|------------------------------|----------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
+| `TEST`                       | `""`                                                           | Source file path with extension, relative to the corresponding `src/` folder                                                                  |
+| `ZKC_EXEC_FLAGS`             | `""`                                                           | Flags to use when invoking `zkc exec` within `zkc-exec` and `elf-exec` targets                                                                |
+| `BIN_EXT`                    | `""`                                                           | Already compiled ELF used by `elf-to-json` and `elf-exec`                                                                                     |
+| `JSON_EXT`                   | `$(BIN_EXT).json`                                              | JSON output path used by `elf-to-json` and `elf-exec`                                                                                         |
+| `VECTOR_FILE`                | `""`                                                           | `.all` vector file consumed by `vector-json`; one `IN_BYTES` per line                                                                         |
+| `VECTOR_N_VECTORS`           | `""`                                                           | Number of vectors selected by `vector-json`; `-1` means all vectors                                                                           |
+| `VECTOR_JSON_MODE`           | `per-vector`                                                   | `per-vector` for one JSON per vector, `batched` for one JSON with selected vectors concatenated                                               |
+| `VECTOR_JSON_FILE`           | `$(JSON)`                                                      | Batched JSON path used when `VECTOR_JSON_MODE=batched`                                                                                        |
+| `VECTOR_JSON_DIR`            | `$(dir $(JSON))vector_json`                                    | JSON directory used when `VECTOR_JSON_MODE=per-vector`                                                                                        |
+| `VECTOR_SUBSET_FILE`         | `$(BIN).all`                                                   | Intermediate `.all` file selected from `VECTOR_FILE`; one line per vector, or one blob including all vectors                                  |
+| `IN_BYTES`                   | `""`                                                           | Hex big-endian input written in RAM at `IN_BYTES_OFFSET` as little-endian bytes before execution (either string or `@path/to/in_bytes`)       |
+| `PROGRAM_OFFSET`             | `0x00000000`                                                   | Program address used by this Makefile's generated linker script (up to 128 MiB)                                                               |
+| `IN_BYTES_OFFSET`            | `0x08800000`                                                   | Memory address where input bytes are written (up to 1 GiB)                                                                                    |
+| `SP`                         | `0x08800000`                                                   | Top of the stack region, stack grows downward from this address (8 MiB)                                                                       |
+| `VERIFY_ELF`                 | `false`                                                        | Set to `true` to verify offsets, entry point and sp match the ELF ones                                                                        |
+| `ACT4_BUILD_MODE`            | `host`                                                         | Build ACT4 ELFs with `host` or `docker`                                                                                                       |
+| `ACT4_REF`                   | `9798a554ce4139f472c9ccd3a18c9061d0f7024d`                     | `riscv-arch-test` tag or commit used to build ACT4 ELFs                                                                                       |
+| `ACT4_REPO`                  | `../riscv-arch-test`                                           | Local `riscv-arch-test` checkout used for ACT4 builds                                                                                         |
+| `ACT4_RISCV_DIR`             | `~/riscv`                                                      | Directory where `install-sail` installs `sail_riscv_sim`                                                                                      |
+| `ACT4_FAST`                  | `false`                                                        | Set to `true` to skip ACT4 objdump generation for faster builds                                                                               |
+| `ACT4_DEBUG`                 | `true`                                                         | Set to `false` to skip ACT4 debug artifacts                                                                                                   |
+| `BLAKE_ALL_FILE`             | `rust/src/blake/blake10.all`                                   | Blake `.all` vector file used by `blake-rust-json`                                                                                            |
+| `BLAKE_N_VECTORS`            | `-1`                                                           | Number of Blake vectors to generate; `-1` means all vectors                                                                                   |
+| `BLAKE_JSON_DIR`             | `rust/target/riscv64im-unknown-none-elf/release/blake_json`    | Directory where `blake-rust-json` writes per-vector JSON files                                                                                |
+| `KECCAK_ALL_FILE`            | `rust/src/keccak/keccak.all`                                   | Keccak `.all` vector file used by `keccak-rust-json`                                                                                          |
+| `KECCAK_N_VECTORS`           | `10`                                                           | Number of Keccak vectors compiled into and packed for the Keccak guest; `-1` means all vectors                                                |
+| `KECCAK_JSON_FILE`           | `rust/target/riscv64im-unknown-none-elf/release/keccak.json`   | JSON path written by `keccak-rust-json`                                                                                                       |
+
+`IN_BYTES` values are expected in big-endian hex format.
+All `.all` vector files contain one big-endian `IN_BYTES` value per line.
+In `batched` mode, the Makefile writes the selected vectors as one big-endian `IN_BYTES` blob, and `main.go` reverses that blob into the RAM-order input consumed by the guest.
+
+## ELF-to-JSON helper
+
+`main.go` converts an ELF and optional input bytes into the JSON consumed by `zkc`:
+
+```bash
+go run main.go <elfFile> <inBytes|@hexFile> <inBytesOffset>
+```
+
+Use inline `0x...` for small inputs and `@path/to/in_bytes` for a file containing one `0x...` blob.
+Both forms are interpreted as big-endian `IN_BYTES` and reversed before being written to RAM.
 
 ## JSON input format
 
@@ -222,7 +274,7 @@ https://github.com/riscv/riscv-arch-test/tree/act4/tests/rv64i/M
 ```
 
 ACT4 uses the configuration in `act4/config/linea-rv64im-zicclsm/`.
-`make build-act4` clones `riscv-arch-test` next to `linea-monorepo` if needed, checks out `ACT4_REF`, and builds ELFs either with Docker or on the host.
+`make act4-build` clones `riscv-arch-test` next to `linea-monorepo` if needed, checks out `ACT4_REF`, rebuilds ELFs either with Docker or on the host, and generates one JSON input per ELF.
 The folder structure is the following:
 
 ```text
@@ -243,27 +295,27 @@ parent/
 From `linea-monorepo/arithmetization/src/test/examples`:
 
 ```bash
-make run-act4                         # build on the host and run
-make run-act4 ACT4_BUILD_MODE=docker  # build with Docker and run
+make act4-exec                         # build on the host and run
+make act4-exec ACT4_BUILD_MODE=docker  # build with Docker and run
 ```
 
 By default, ACT4 is built with debug artifacts enabled and fast mode disabled.
 To build faster without objdumps, traces and trap reports:
 
 ```bash
-make build-act4 ACT4_DEBUG=false ACT4_FAST=true
+make act4-build ACT4_DEBUG=false ACT4_FAST=true
 ```
 
 The `build/` directory contains ACT4 intermediate and debug artifacts: signature-generating ELFs, signatures, objdumps, traces and trap reports.
-The `elfs/` directory contains the final self-checking ELFs run by `make run-act4`.
-The `logs/` directory contains one JSON input per test, non-empty JSON conversion stderr in `.json.err`, and the filtered ecall output (for `exit` or `write`) in `.out`.
+The `elfs/` directory contains the final self-checking ELFs run by `make act4-exec`.
+The `logs/` directory contains one JSON input per test generated by `act4-build`, non-empty JSON conversion stderr in `.json.err`, and non-empty zkc stderr in `.err` for failing tests.
 Add `export ELF2JSON_WRITE_SECTIONS=true` to your shell startup file (e.g. `~/.bashrc` or `~/.zshrc`) to also write `.sections` files next to the ELF files, listing the sparse blobs included in the generated JSON input with their indexes, offsets, sizes and names.
-The full zkc output is kept as `.full` only for failing tests. A summary of ACT4 results is written in `results.txt`.
+`act4-exec` runs `zkc exec -q`, so stdout is suppressed and a test passes when zkc exits with code 0 and stderr is empty. A summary of ACT4 results is written in `results.txt`.
 
 To rerun one generated ACT4 test through zkc:
 
 ```bash
-zkc exec act4/bin/logs/<test-name>.json ../../main/riscv/main.zkc
+zkc exec -q act4/bin/logs/<test-name>.json ../../main/riscv/main.zkc
 ```
 
 ## Default memory layout

@@ -38,9 +38,9 @@ jobs:
         run: make -C arithmetization install-sail
 
       - name: Build ACT4 ELFs
-        run: make build-act4
+        run: make act4-build
         working-directory: arithmetization/src/test/examples
 
       - name: Run ACT4 tests
-        run: make run-act4
+        run: make act4-exec
         working-directory: arithmetization/src/test/examples
