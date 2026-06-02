@@ -88,8 +88,7 @@ sealed interface BlockParameter {
     }
   }
 
-  @JvmInline
-  value class BlockHash(private val hash: ByteArray) : BlockParameter {
+  data class BlockHash(private val hash: ByteArray) : BlockParameter {
     init {
       require(hash.size == 32) { "block hash must be 32 bytes, got ${hash.size}" }
     }
@@ -103,6 +102,14 @@ sealed interface BlockParameter {
     override fun getNumber(): ULong {
       throw UnsupportedOperationException("getNumber isn't supported on BlockHash!")
     }
+
+    override fun equals(other: Any?): Boolean {
+      if (this === other) return true
+      if (other !is BlockHash) return false
+      return hash.contentEquals(other.hash)
+    }
+
+    override fun hashCode(): Int = hash.contentHashCode()
 
     override fun toString(): String {
       return hash.encodeHex(prefix = true)

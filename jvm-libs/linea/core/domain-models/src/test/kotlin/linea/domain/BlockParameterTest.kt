@@ -41,6 +41,16 @@ class BlockParameterTest {
   }
 
   @Test
+  fun `BlockHash should use content-based equality`() {
+    val hashBytes = ByteArray(32) { 7 }
+    val a = BlockParameter.fromHash(hashBytes)
+    val b = BlockParameter.fromHash(hashBytes.copyOf())
+    assertThat(a).isEqualTo(b)
+    assertThat(a.hashCode()).isEqualTo(b.hashCode())
+    assertThat(BlockParameter.fromHash(ByteArray(32) { 8 })).isNotEqualTo(a)
+  }
+
+  @Test
   fun `fromHash should reject invalid hash length`() {
     assertThatThrownBy { BlockParameter.fromHash(ByteArray(31)) }
       .isInstanceOf(IllegalArgumentException::class.java)

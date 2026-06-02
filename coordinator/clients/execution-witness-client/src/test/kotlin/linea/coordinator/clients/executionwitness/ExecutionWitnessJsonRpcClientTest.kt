@@ -128,7 +128,7 @@ class ExecutionWitnessJsonRpcClientTest {
         ),
     )
 
-    val result = client.getExecutionWitness(BlockParameter.BlockHash(hash)).get()
+    val result = client.getExecutionWitness(BlockParameter.fromHash(hash)).get()
 
     assertThat(result).isInstanceOf(Ok::class.java)
     wiremock.verify(
