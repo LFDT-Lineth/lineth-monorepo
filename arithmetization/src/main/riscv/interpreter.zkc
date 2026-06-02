@@ -1,7 +1,6 @@
 include "utils/constants.zkc"
 include "utils/register_utils.zkc"
 include "utils/type.zkc"
-include "stats/opcode_stats.zkc"
 include "instruction_processing/b_type.zkc"
 include "instruction_processing/r_type.zkc"
 include "instruction_processing/i_type.zkc"
@@ -44,7 +43,6 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
         }
         case MISC_MEM_TYPE: {
             // FENCE / FENCE.I — no caches, single hart, so this is a no-op.
-            inc_opcode_stat(STAT_FENCE)
             new_pc = pc + 4 as Address
         }
         default: {

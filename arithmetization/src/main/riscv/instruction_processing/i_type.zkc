@@ -1,5 +1,4 @@
 include "../memory.zkc"
-include "../stats/opcode_stats.zkc"
 include "../ram/read.zkc"
 include "../utils/signed_comparisons.zkc"
 include "../utils/sign_extend.zkc"
@@ -34,7 +33,7 @@ include "../utils/signed_sum.zkc"
 //   SYSTEM    — system calls (not yet implemented)
 //
 // For all opcodes except JALR, new_pc = pc + 4 (sequential fall-through).
-fn process_I_type_instruction<ram, registers, opcode_stats>(opcode:Opcode, instruction_parameters:u25, pc:Address) -> (new_pc:Address) {
+fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_parameters:u25, pc:Address) -> (new_pc:Address) {
 
     var funct3:Funct3
     var imm12:Imm12
@@ -61,43 +60,36 @@ fn process_I_type_instruction<ram, registers, opcode_stats>(opcode:Opcode, instr
             switch funct3 {
                 case FUNCT3_LB: {
                     printf "LB "
-                    inc_opcode_stat(STAT_LB)
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = sgn_extension_u8_u64(read_8(rs1_plus_signext_imm12))
                 }
                 case FUNCT3_LH: {
                     printf "LH "
-                    inc_opcode_stat(STAT_LH)
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = sgn_extension_u16_u64(read_16(rs1_plus_signext_imm12))
                 }
                 case FUNCT3_LW: {
                     printf "LW "
-                    inc_opcode_stat(STAT_LW)
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = sgn_extension_u32_u64(read_32(rs1_plus_signext_imm12))
                 }
                 case FUNCT3_LBU: {
                     printf "LBU "
-                    inc_opcode_stat(STAT_LBU)
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = read_8(rs1_plus_signext_imm12) as DoubleWord
                 }
                 case FUNCT3_LHU: {
                     printf "LHU "
-                    inc_opcode_stat(STAT_LHU)
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = read_16(rs1_plus_signext_imm12) as DoubleWord
                 }
                 case FUNCT3_LWU: {
                     printf "LWU "
-                    inc_opcode_stat(STAT_LWU)
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = read_32(rs1_plus_signext_imm12) as DoubleWord
                 }
                 case FUNCT3_LD: {
                     printf "LD "
-                    inc_opcode_stat(STAT_LD)
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = read_64(rs1_plus_signext_imm12) as DoubleWord
                 }
@@ -122,12 +114,10 @@ fn process_I_type_instruction<ram, registers, opcode_stats>(opcode:Opcode, instr
 
             if funct3 == FUNCT3_ADDI {
                 printf "ADDI "
-                inc_opcode_stat(STAT_ADDI)
                 print_i_operands(rd, rs1, signext_imm12_64)
                 registers[rd] = rs1_plus_signext_imm12
             } else if funct3 == FUNCT3_SLTI {
                 printf "SLTI "
-                inc_opcode_stat(STAT_SLTI)
                 print_i_operands(rd, rs1, signext_imm12_64)
                 var is_lt:Boolean = signed_LT(registers[rs1], signext_imm12_64)
                 if is_lt == 1 {
@@ -137,7 +127,6 @@ fn process_I_type_instruction<ram, registers, opcode_stats>(opcode:Opcode, instr
                 }
             } else if funct3 == FUNCT3_SLTIU {
                 printf "SLTIU "
-                inc_opcode_stat(STAT_SLTIU)
                 print_i_operands(rd, rs1, signext_imm12_64)
                 // Warn: this is an unsigned comparison (even if imm12 is SGN_EXT)
                 if registers[rs1]<signext_imm12_64 {
@@ -147,32 +136,26 @@ fn process_I_type_instruction<ram, registers, opcode_stats>(opcode:Opcode, instr
                 }
             } else if funct3 == FUNCT3_XORI {
                 printf "XORI "
-                inc_opcode_stat(STAT_XORI)
                 print_i_operands(rd, rs1, signext_imm12_64)
                 registers[rd] = registers[rs1] ^ signext_imm12_64
             } else if funct3 == FUNCT3_ORI {
                 printf "ORI "
-                inc_opcode_stat(STAT_ORI)
                 print_i_operands(rd, rs1, signext_imm12_64)
                 registers[rd] = registers[rs1] | signext_imm12_64
             } else if funct3 == FUNCT3_ANDI {
                 printf "ANDI "
-                inc_opcode_stat(STAT_ANDI)
                 print_i_operands(rd, rs1, signext_imm12_64)
                 registers[rd] = registers[rs1] & signext_imm12_64
             } else if (funct3 == FUNCT3_SLLI) && (funct6 == FUNCT6_SLLI) {
                 printf "SLLI "
-                inc_opcode_stat(STAT_SLLI)
                 print_i_shift6_operands(rd, rs1, uimm6)
                 registers[rd] = registers[rs1] << uimm6
             } else if (funct3 == FUNCT3_SRLI) && (funct6 == FUNCT6_SRLI) {
                 printf "SRLI "
-                inc_opcode_stat(STAT_SRLI)
                 print_i_shift6_operands(rd, rs1, uimm6)
                 registers[rd] = registers[rs1] >> uimm6
             } else if (funct3 == FUNCT3_SRAI) && (funct6 == FUNCT6_SRAI) {
                 printf "SRAI "
-                inc_opcode_stat(STAT_SRAI)
                 print_i_shift6_operands(rd, rs1, uimm6)
                 registers[rd] = _ashr_u64(registers[rs1], uimm6)
             }
@@ -191,22 +174,18 @@ fn process_I_type_instruction<ram, registers, opcode_stats>(opcode:Opcode, instr
 
             if funct3 == FUNCT3_ADDIW {
                 printf "ADDIW "
-                inc_opcode_stat(STAT_ADDIW)
                 print_i_operands(rd, rs1, signext_imm12_64)
                 registers[rd] = sgn_extension_u32_u64((rs1_plus_signext_imm12 & MAX_UINT_32_AS_U64) as Word)
             } else if (funct3 == FUNCT3_SLLIW) && (funct7 == FUNCT7_SLLIW) {
                 printf "SLLIW "
-                inc_opcode_stat(STAT_SLLIW)
                 print_i_shift5_operands(rd, rs1, uimm5)
                 registers[rd] = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) << uimm5)
             } else if (funct3 == FUNCT3_SRLIW) && (funct7 == FUNCT7_SRLIW) {
                 printf "SRLIW "
-                inc_opcode_stat(STAT_SRLIW)
                 print_i_shift5_operands(rd, rs1, uimm5)
                 registers[rd] = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) >> uimm5)
             } else if (funct3 == FUNCT3_SRAIW) && (funct7 == FUNCT7_SRAIW) {
                 printf "SRAIW "
-                inc_opcode_stat(STAT_SRAIW)
                 print_i_shift5_operands(rd, rs1, uimm5)
                 registers[rd] = sgn_extension_u32_u64(_ashr_u32(registers[rs1], uimm5))
             }
@@ -218,7 +197,6 @@ fn process_I_type_instruction<ram, registers, opcode_stats>(opcode:Opcode, instr
 
         case JALR: {
             printf "JALR "
-            inc_opcode_stat(STAT_JALR)
             print_i_memory_operands(rd, rs1, signext_imm12_64)
             // only instruction is JALR, no need to switch over funct3
             new_pc = rs1_plus_signext_imm12 & MASK_64_ERASE_LAST_BIT
@@ -235,7 +213,6 @@ fn process_I_type_instruction<ram, registers, opcode_stats>(opcode:Opcode, instr
                 // imm12 is interpreted as funct12 for SYSTEM opcode
                 if imm12 == FUNCT12_ECALL {
                     printf "ECALL\n"
-                    inc_opcode_stat(STAT_ECALL)
                     new_pc = process_syscall(pc)
                 } else if imm12 == FUNCT12_EBREAK {
                     printf "[ERROR] EBREAK instruction triggered\n"
@@ -253,7 +230,7 @@ fn process_I_type_instruction<ram, registers, opcode_stats>(opcode:Opcode, instr
     }
 }
 
-fn process_syscall<registers, ram, opcode_stats>(pc:Address) -> (new_pc:Address) {
+fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
     var call_num:DoubleWord = registers[17]
     //
     switch call_num {
