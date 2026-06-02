@@ -1,4 +1,5 @@
 include "../memory.zkc"
+include "../stats/opcode_stats.zkc"
 include "../utils/constants.zkc"
 include "../utils/sign_extend.zkc"
 include "../utils/signed_sum.zkc"
@@ -22,7 +23,7 @@ include "../utils/signed_sum.zkc"
 //
 // LUI is typically paired with an ADDI to materialise a full 32-bit constant in a
 // register.  AUIPC is used to form PC-relative addresses for data or call targets.
-fn process_U_type_instruction<registers>(opcode:Opcode, instruction_parameters:u25, pc:Address) -> () {
+fn process_U_type_instruction<registers, opcode_stats>(opcode:Opcode, instruction_parameters:u25, pc:Address) -> () {
 
     // var funct3 : Funct3
     // var funct7 : Funct7
@@ -43,11 +44,13 @@ fn process_U_type_instruction<registers>(opcode:Opcode, instruction_parameters:u
     switch opcode {
         case AUIPC: {
             printf "AUIPC "
+            inc_opcode_stat(STAT_AUIPC)
             print_u_operands(rd, imm20)
             tmp = signed_sum_of_double_word(tmp, pc) as DoubleWord
         }
         case LUI: {
             printf "LUI "
+            inc_opcode_stat(STAT_LUI)
             print_u_operands(rd, imm20)
         }
         default: {

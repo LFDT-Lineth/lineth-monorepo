@@ -1,4 +1,5 @@
 include "../memory.zkc"
+include "../stats/opcode_stats.zkc"
 include "../utils/absolute_value.zkc"
 include "../utils/bit_flip.zkc"
 include "../utils/negative.zkc"
@@ -38,7 +39,7 @@ include "../../lib/poseidon2/ram.zkc"
 // treat register values as two's-complement integers.  Division and remainder
 // follow RISC-V semantics: division by zero returns −1 (or the dividend for REM),
 // and signed overflow (INT_MIN / −1) returns INT_MIN (or 0 for REM).
-fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block, poseidon2_state>(opcode:Opcode, instruction_parameters:u25) {
+fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block, opcode_stats,poseidon2_state>(opcode:Opcode, instruction_parameters:u25) {
 
     var funct7:Funct7
     var rs2:Register
