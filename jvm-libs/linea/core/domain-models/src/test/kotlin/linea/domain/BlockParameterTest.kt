@@ -34,6 +34,14 @@ class BlockParameterTest {
   }
 
   @Test
+  fun `parse should parse block hash from encoded byte array`() {
+    val expectedHash = ByteArray(32) { index -> (index + 1).toByte() }
+    val hashHex = expectedHash.encodeHex(prefix = true)
+    val parsed = BlockParameter.parse(hashHex) as BlockParameter.BlockHash
+    assertThat(parsed.getHash()).isEqualTo(expectedHash)
+  }
+
+  @Test
   fun `fromHash should accept bytes and hex string`() {
     val hash = ByteArray(32) { 1 }
     assertThat(BlockParameter.fromHash(hash).getHash()).isEqualTo(hash)
