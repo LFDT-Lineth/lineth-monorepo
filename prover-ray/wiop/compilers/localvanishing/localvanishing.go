@@ -140,7 +140,17 @@ func reduce(
 	})
 
 	lifted := wiop.Mul(shifted, lagCol.View())
-	m.NewVanishing(ctx.Childf("global"), lifted)
+	// Register with no cancelled positions: the constraint must hold on every
+	// row. That is safe and intentional. The shifted sub-expression may read
+	// out-of-domain (wrap-around) values at rows other than `anchor`, but the
+	// Lagrange factor L_anchor is zero everywhere except at `anchor`, so the
+	// product is trivially zero at every non-anchor row regardless of what
+	// the shift wraps to. Letting NewVanishing auto-cancel those rows would
+	// be redundant and would inflate the constraint's effective degree
+	// (cancellation polynomial degree feeds into computeRatio in the global
+	// compiler, growing the quotient ratio, the FFT coset, and the number of
+	// committed quotient share columns).
+	m.NewVanishingManual(ctx.Childf("global"), lifted)
 
 	v.MarkAsReduced()
 }
