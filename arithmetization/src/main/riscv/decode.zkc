@@ -1,0 +1,20 @@
+include "utils/constants.zkc"
+
+fn decode<funct3_buffer, imm12_buffer, rs1_buffer, rd_buffer>(instruction:u32, clock_cycle:u32) -> (opcode:Opcode, instruction_parameters:u25, instruction_type:Type) {
+
+    instruction_parameters::opcode = instruction
+    instruction_type = instruction_type_from_opcode(opcode)
+
+    var funct3:Funct3
+    var imm12:Imm12
+    var rs1:Register
+    var rd:Register
+
+    imm12::rs1::funct3::rd = instruction_parameters
+
+    funct3_buffer[clock_cycle] = funct3
+    imm12_buffer[clock_cycle] = imm12
+    rs1_buffer[clock_cycle] = rs1
+    rd_buffer[clock_cycle] = rd
+
+}
