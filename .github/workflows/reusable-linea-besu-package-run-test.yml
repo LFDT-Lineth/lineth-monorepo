@@ -1,4 +1,4 @@
-name: Reusable linea-besu-package Besu run test
+name: "Reusable Linea-besu-package Besu Profile Run Test"
 
 on:
   workflow_call:

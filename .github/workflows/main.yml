@@ -197,7 +197,7 @@ jobs:
 
   check-and-tag-images:
     needs: [filter-commit-changes]
-    uses: ./.github/workflows/reuse-check-images-tags-and-push.yml
+    uses: ./.github/workflows/reusable-check-images-tags-and-push.yml
     with:
       has-changes-requiring-build: ${{ needs.filter-commit-changes.outputs.has-changes-requiring-build }}
       coordinator_changed: ${{ needs.filter-commit-changes.outputs.coordinator }}
@@ -283,12 +283,12 @@ jobs:
         get-has-changes-requiring-e2e-testing,
         manual-docker-build-and-e2e-tests,
       ]
-    # Make this execute for has-changes-requiring-e2e-testing == 'false' so that we can get to the required job @ which is in reuse-run-e2e-tests.yml
+    # Make this execute for has-changes-requiring-e2e-testing == 'false' so that we can get to the required job @ which is in reusable-run-e2e-tests.yml
     if: ${{ always() && needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'false' || needs.docker-build.result == 'success' }}
     concurrency:
       group: run-e2e-tests-${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
-    uses: ./.github/workflows/reuse-run-e2e-tests.yml
+    uses: ./.github/workflows/reusable-run-e2e-tests.yml
     with:
       image_tag: ${{ needs.check-and-tag-images.outputs.commit_tag }}
       linea_besu_package_tag: ${{ needs.docker-build.outputs.linea_besu_package_tag }}

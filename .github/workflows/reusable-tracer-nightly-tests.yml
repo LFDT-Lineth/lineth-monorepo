@@ -1,4 +1,4 @@
-name: "Reusable tracer nightly tests workflow"
+name: "Reusable: Tracer Nightly Tests"
 
 permissions:
   contents: read

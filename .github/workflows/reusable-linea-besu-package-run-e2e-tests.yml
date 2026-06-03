@@ -1,4 +1,4 @@
-name: Reusable run e2e tests
+name: "Reusable: Linea-besu-package Run E2E Tests"
 
 permissions:
   contents: read

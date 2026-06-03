@@ -47,7 +47,7 @@ jobs:
               - 'tracer-constraints/**'
               - 'ts-libs/**/src/**'
               - 'ts-libs/**/package.json'
-              - '.github/workflows/reuse-run-e2e-tests.yml'
+              - '.github/workflows/reusable-run-e2e-tests.yml'
               - '.nvmrc'
               - 'package.json'
 

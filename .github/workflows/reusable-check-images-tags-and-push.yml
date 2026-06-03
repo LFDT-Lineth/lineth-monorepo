@@ -1,4 +1,4 @@
-name: Reusable check images tags and push
+name: "Reusable: Check Images Tags and Push"
 
 permissions:
   contents: read

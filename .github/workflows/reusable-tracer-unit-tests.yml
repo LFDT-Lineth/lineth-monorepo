@@ -1,4 +1,4 @@
-name: "Reusable unit tests workflow"
+name: "Reusable: Tracer Unit Tests"
 
 permissions:
   contents: read

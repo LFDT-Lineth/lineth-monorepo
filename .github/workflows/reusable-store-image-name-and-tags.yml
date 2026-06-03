@@ -1,4 +1,4 @@
-name: Reusable store image name and tags
+name: "Reusable: Store Image Name and Tags"
 
 permissions:
   contents: read

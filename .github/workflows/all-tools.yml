@@ -40,11 +40,11 @@ jobs:
             all-tools:
               - 'operations/cli/**'
               - '.github/workflows/all-tools.yml'
-              - '.github/workflows/reuse-*.yml'
+              - '.github/workflows/reusable-*.yml'
               - '.nvmrc'
 
   store_image_name_and_tags:
-    uses: ./.github/workflows/reuse-store-image-name-and-tags.yml
+    uses: ./.github/workflows/reusable-store-image-name-and-tags.yml
 
   check_image_tags_exist:
     runs-on: gha-runner-scale-set-ubuntu-24-amd64-small

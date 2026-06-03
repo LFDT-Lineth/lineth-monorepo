@@ -1,4 +1,4 @@
-name: "Reusable tracer weekly prc call tests workflow"
+name: "Reusable: Tracer Weekly PRC Call Tests"
 
 permissions:
   contents: read

@@ -1,4 +1,4 @@
-name: Reusable Linea-besu-package Push Tag and Changelog and GitHub Release
+name: "Reusable: Linea-besu-package Push Tag and Changelog and GitHub Release"
 
 permissions:
   actions: read
@@ -73,18 +73,16 @@ jobs:
 
   build-linea-besu-docker-image-and-gh-release:
     needs: [release-linea-besu-push-tag-changelog]
-    uses: ./.github/workflows/reuse-linea-besu-package-build-test-push.yml
+    uses: ./.github/workflows/reusable-linea-besu-package-build-test-push.yml
     with:
-      release_tag_prefix: ${{ needs.release-linea-besu-push-tag-changelog.outputs.release_version }}
+      release_version: ${{ needs.release-linea-besu-push-tag-changelog.outputs.release_version}}
+      release_tag: ${{ needs.release-linea-besu-push-tag-changelog.outputs.release_tag }}
+      changelog: ${{ needs.release-linea-besu-push-tag-changelog.outputs.changelog }}
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       run_test: false
       run_e2e_test: false
-      push_image: true
       draft_release: ${{ inputs.draft_release }}
       pre_release: ${{ inputs.pre_release }}
       skip_docker_image_build_and_push: ${{ inputs.dry_run_release }}
       with_besu_fleet_plugin: ${{ inputs.without_besu_fleet_plugin != 'true' }}
-      changelog: ${{ needs.release-linea-besu-push-tag-changelog.outputs.changelog }}
-      release_tag: ${{ needs.release-linea-besu-push-tag-changelog.outputs.release_tag }}
-      release_version: ${{ needs.release-linea-besu-push-tag-changelog.outputs.release_version}}
     secrets: inherit

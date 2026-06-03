@@ -48,6 +48,7 @@ jobs:
     outputs:
       branch: ${{ steps.mkbranch.outputs.branch }}
       run_id: ${{ steps.find-run.outputs.run_id }}
+      release_tag_suffix: ${{ steps.dispatch-release.outputs.release_tag_suffix }}
     steps:
       # The default GITHUB_TOKEN cannot trigger another workflow_dispatch run
       # (GitHub blocks token-initiated workflow chaining to prevent loops),
@@ -85,7 +86,8 @@ jobs:
           git push origin "${BRANCH}"
           echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
 
-      - name: Dispatch linea-milestone-release.yml on new branch with dry run release 
+      - name: Dispatch linea-milestone-release.yml on new branch with dry run release
+        id: dispatch-release
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           BRANCH: ${{ steps.mkbranch.outputs.branch }}
@@ -95,12 +97,14 @@ jobs:
           TIMESTAMP: ${{ steps.timestamp.outputs.timestamp }}
         run: |
           set -euo pipefail
+          FULL_RELEASE_TAG_SUFFIX="${RELEASE_TAG_SUFFIX}-${TIMESTAMP}"
           gh workflow run linea-milestone-release.yml \
             --ref "${BRANCH}" \
             -f image_tag_suffix="${IMAGE_TAG_SUFFIX}" \
-            -f release_tag_suffix="${RELEASE_TAG_SUFFIX}-${TIMESTAMP}" \
+            -f release_tag_suffix="${FULL_RELEASE_TAG_SUFFIX}" \
             -f pre_release="${PRE_RELEASE}" \
             -f dry_run_release=true
+          echo "release_tag_suffix=${FULL_RELEASE_TAG_SUFFIX}" >> "$GITHUB_OUTPUT"
 
       - name: Find dispatched run and report URL
         id: find-run
@@ -210,22 +214,20 @@ jobs:
       - name: Enumerate tags created on the temp branch
         id: list-tags
         env:
-          BRANCH: ${{ needs.create-temp-branch-and-dispatch-release.outputs.branch }}
+          RELEASE_TAG_SUFFIX: ${{ needs.create-temp-branch-and-dispatch-release.outputs.release_tag_suffix }}
         run: |
           set -euo pipefail
-          # Make sure we have the temp branch tip + every tag (including ones
-          # pushed by the dispatched run after our initial checkout).
-          git fetch origin main --tags --prune --prune-tags
-          git fetch origin "${BRANCH}":"refs/remotes/origin/${BRANCH}"
+          # Fetch all remote tags so locally-absent ones (pushed by the
+          # dispatched run after our checkout) are visible.
+          git fetch origin --tags --prune --prune-tags
 
-          # A "new tag" is any tag whose commit is reachable from the temp
-          # branch tip but NOT from origin/main. This catches every tag the
-          # dispatched run created (component release tags + milestone tag).
-          MAIN_TAGS=$(git tag --merged "origin/main" | sort -u)
-          BRANCH_TAGS=$(git tag --merged "origin/${BRANCH}" | sort -u)
-          NEW_TAGS=$(comm -23 <(echo "${BRANCH_TAGS}") <(echo "${MAIN_TAGS}") || true)
+          # Every tag created by this dry-run ends with the unique suffix
+          # "dry-run-<TIMESTAMP>" that was passed to linea-milestone-release.yml.
+          # Using the suffix is more precise than the merge-reachability diff
+          # and doesn't require fetching the (potentially already-deleted) temp branch.
+          NEW_TAGS=$(git tag --list "*${RELEASE_TAG_SUFFIX}" | sort -u)
 
-          echo "Tags created on ${BRANCH}:"
+          echo "Tags matching suffix '${RELEASE_TAG_SUFFIX}':"
           echo "${NEW_TAGS:-<none>}"
 
           # Multiline output via heredoc delimiter.

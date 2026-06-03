@@ -79,7 +79,6 @@ jobs:
     with:
       image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
-      image_name: consensys/linea-coordinator
       push_image: ${{ inputs.push_image }}
     secrets: inherit
 
@@ -109,7 +108,6 @@ jobs:
     with:
       image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
-      image_name: consensys/linea-prover
       push_image: ${{ inputs.push_image }}
     secrets: inherit
 
@@ -119,7 +117,6 @@ jobs:
     with:
       image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
-      image_name: consensys/linea-postman
       push_image: ${{ inputs.push_image }}
     secrets: inherit
 
@@ -129,7 +126,6 @@ jobs:
     with:
       image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
-      image_name: consensys/linea-transaction-exclusion-api
       push_image: ${{ inputs.push_image }}
     secrets: inherit
 
@@ -139,7 +135,6 @@ jobs:
     with:
       image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
-      image_name: consensys/maru
       push_image: ${{ inputs.push_image }}
     secrets: inherit
 
@@ -147,7 +142,7 @@ jobs:
     uses: ./.github/workflows/linea-besu-package-build-and-upload.yml
     if: ${{ always() && inputs.build_linea_besu_package == 'true' && !inputs.push_image }}
     with:
-      release_tag_prefix: 'dev'
+      release_version: 'dev'
       with_besu_fleet_plugin: false
     secrets: inherit
   

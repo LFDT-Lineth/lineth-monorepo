@@ -1,126 +1,43 @@
-name: maru-release
+name: "Maru Release"
+
+permissions:
+  actions: read
+  contents: write
+  packages: write
+  pull-requests: write
 
 on:
-  push:
-    tags:
-      # NOTE: monorepo convention - maru releases use a 'maru-v*' tag prefix
-      # (e.g. maru-v1.0.0) to avoid collisions with other components' release tags.
-      - 'maru-v*'
-
-permissions: {} # lock everything by default (least-privilege)
+  workflow_dispatch:
+    inputs:
+      image_tag_suffix:
+        description: 'Custom image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDD]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDD]-[commit]'
+        required: false
+        type: string
+        default: ''
+      release_tag_suffix:
+        description: 'Custom release tag suffix (must need for non-main release), i.e. release tag would be releases/[component]/v[semver]-[suffix]'
+        required: false
+        type: string
+        default: ''
+      pre_release:
+        description: 'Pre Release if checked; Draft release otherwise'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
-  group: maru-release-${{ github.workflow }}-${{ github.ref }}
+  group: maru-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  compute-version:
-    permissions:
-      contents: read # for actions/checkout with fetch-depth: 0
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
-    name: Compute version
-    outputs:
-      tag_name: ${{ steps.version.outputs.tag_name }}
-      semver_tag: ${{ steps.version.outputs.semver_tag }}
-      full_version: ${{ steps.version.outputs.full_version }}
-      date: ${{ steps.version.outputs.date }}
-      commit_hash: ${{ steps.version.outputs.commit_hash }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-
-      - name: Validate tag and compute version
-        id: version
-        run: |
-          TAG_NAME=${GITHUB_REF#refs/tags/}
-          echo "Tag: $TAG_NAME"
-
-          # Validate tag format: maru-v<semver>-<product-label-ver>?
-          # Examples: maru-v2.0.1-betav4 OR maru-v2.0.1 OR maru-v2.0.1-beta-v4
-          if [[ ! $TAG_NAME =~ ^maru-v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9-]+)?$ ]]; then
-            echo "Error: Tag format is invalid. Expected format: maru-v<semver>-<product-label-ver>?"
-            echo "Examples: maru-v2.0.1-betav4 OR maru-v2.0.1 OR maru-v2.0.1-beta-v4"
-            exit 1
-          fi
-
-          # Strip the 'maru-' prefix to get the semver tag (matches the old 'v*' format used
-          # downstream by the docker image tag).
-          SEMVER_TAG=${TAG_NAME#maru-}
-
-          # Compute date and commit hash
-          DATE=$(date -u +%Y%m%d%H%M%S)
-          COMMIT_HASH=$(git show-ref -s $TAG_NAME | cut -c1-7)
-
-          # Create full version: <semver>-<product-label-ver>?-<date>-<commit-hash>
-          FULL_VERSION="${SEMVER_TAG}-${DATE}-${COMMIT_HASH}"
-
-          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
-          echo "semver_tag=$SEMVER_TAG" >> $GITHUB_OUTPUT
-          echo "full_version=$FULL_VERSION" >> $GITHUB_OUTPUT
-          echo "date=$DATE" >> $GITHUB_OUTPUT
-          echo "commit_hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
-
-          echo "Release tag: $TAG_NAME"
-          echo "Semver tag: $SEMVER_TAG"
-          echo "Full version: $FULL_VERSION"
-
-  build-and-publish-docker:
-    permissions:
-      contents: read # for actions/checkout in called workflow
-    needs: compute-version
-    uses: ./.github/workflows/maru-build-and-publish.yml
+  component-release:
+    uses: ./.github/workflows/reusable-component-release.yml
     with:
-      image_tag: ${{ needs.compute-version.outputs.full_version }}
-      develop_tag: ${{ needs.compute-version.outputs.semver_tag }}
-      image_name: 'consensys/maru'
-      push_image: true
-      upload_dist_artifact: true
+      component-name: maru
+      folder-name: maru
+      include-path: maru/**
+      image_tag_suffix: ${{ inputs.image_tag_suffix }}
+      release_tag_suffix: ${{ inputs.release_tag_suffix }}
+      draft_release: ${{ !inputs.pre_release }}
+      pre_release: ${{ inputs.pre_release }}
     secrets: inherit
-
-  create-release:
-    permissions:
-      contents: write # for actions/checkout and softprops/action-gh-release
-    needs: [compute-version, build-and-publish-docker]
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
-    name: Create GitHub Release
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-
-      - name: Download distribution artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: maru-distribution
-          path: maru/app/build/install/app/
-
-      - name: Create distribution archive
-        run: |
-          tar -czf maru-${{ needs.compute-version.outputs.full_version }}.tar.gz -C maru/app/build/install/app .
-
-      - name: Prepare release body
-        run: |
-          cat << 'EOF' > release-body.md
-          ## Docker Image
-
-          Docker Hub: https://hub.docker.com/r/consensys/maru/tags?name=${{ needs.compute-version.outputs.full_version }}
-
-          ```bash
-          docker pull consensys/maru:${{ needs.compute-version.outputs.full_version }}
-          ```
-
-          EOF
-          cat maru/CHANGELOG.md >> release-body.md
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
-        with:
-          draft: true
-          tag_name: ${{ needs.compute-version.outputs.tag_name }}
-          body_path: release-body.md
-          files: maru-${{ needs.compute-version.outputs.full_version }}.tar.gz
-          fail_on_unmatched_files: true
-          make_latest: true
