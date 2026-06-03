@@ -745,7 +745,8 @@ func SelectMany(api frontend.API, c frontend.Variable, ifSo, ifNot []frontend.Va
 	return res
 }
 
-// DivEuclidean conventional integer division with a remainder
+// DivEuclidean conventional integer division with a remainder.
+// a = b * quotient + remainder
 // TODO @Tabaie replace all/most special-case divisions with this, barring performance issues
 func DivEuclidean(api frontend.API, a, b frontend.Variable) (quotient, remainder frontend.Variable) {
 	api.AssertIsDifferent(b, 0)
