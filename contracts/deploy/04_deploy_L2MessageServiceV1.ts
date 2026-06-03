@@ -3,13 +3,18 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import path from "path";
 
-import { tryVerifyContract, getRequiredEnvVar, LogContractDeployment } from "../common/helpers";
+import {
+  tryVerifyContract,
+  getRequiredEnvVar,
+  requireAddressFromRegistryOrEnv,
+  LogContractDeployment,
+} from "../common/helpers";
 import { abi, bytecode } from "./V1/L2MessageServiceV1Deployed.json";
 import { getUiSigner, withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
 import { deployUpgradableWithAbiAndByteCode } from "../scripts/hardhat/utils";
 
 const func: DeployFunction = withSignerUiSession(
-  "04_deploy_L2MessageServiceV1Deployed.ts",
+  "04_deploy_L2MessageServiceV1.ts",
   async function (hre: HardhatRuntimeEnvironment) {
     const mainnetDeployedL2MessageServiceCacheFolder = path.resolve("./deploy/V1/L2MessageServiceV1Cache/");
 
@@ -24,8 +29,16 @@ const func: DeployFunction = withSignerUiSession(
 
     const contractName = "L2MessageServiceLineaMainnet";
 
-    const L2MessageService_securityCouncil = getRequiredEnvVar("L2_SECURITY_COUNCIL");
-    const L2MessageService_l1l2MessageSetter = getRequiredEnvVar("L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER");
+    const L2MessageService_securityCouncil = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "L2_SECURITY_COUNCIL",
+      "L2_SECURITY_COUNCIL",
+    );
+    const L2MessageService_l1l2MessageSetter = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER",
+      "L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER",
+    );
     const L2MessageService_rateLimitPeriod = getRequiredEnvVar("L2_MESSAGE_SERVICE_RATE_LIMIT_PERIOD");
     const L2MessageService_rateLimitAmount = getRequiredEnvVar("L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT");
 

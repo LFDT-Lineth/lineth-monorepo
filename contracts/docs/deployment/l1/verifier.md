@@ -17,7 +17,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | VERIFIER_CHAIN_ID | true  | uint256 | Chain ID passed to the verifier constructor |
 | VERIFIER_BASE_FEE | true  | uint256 | Base fee passed to the verifier constructor |
 | VERIFIER_COINBASE | true  | address | Coinbase address passed to the verifier constructor |
-| L2_MESSAGE_SERVICE_ADDRESS | true  | address | L2 Message Service address passed to the verifier constructor |
+| L2_MESSAGE_SERVICE_ADDRESS | registry\|env | address | L2 Message Service address passed to the verifier constructor. Read from registry on stable networks; env var used as fallback. |
 | VERIFIER_MIMC_ADDRESS | false | address | When set, links the Plonk verifier against this **already deployed** `Mimc` library instead of deploying a new one. Use this to reuse a shared `Mimc` deployment across multiple verifier upgrades or environments. Must be a checksummed or valid hex address with bytecode on the target network. When unset, the script deploys `Mimc` and verifies it when `VERIFY_CONTRACT=true`. |
 
 <br />

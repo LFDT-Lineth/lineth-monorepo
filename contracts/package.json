@@ -20,6 +20,8 @@
     "lint:ts:fix": "eslint --fix '**/*.{js,ts}'",
     "lint": "pnpm run lint:sol && pnpm run lint:ts && pnpm run prettier:sol",
     "lint:fix": "pnpm run lint:sol:fix && pnpm run lint:ts:fix && pnpm run prettier:sol:fix",
+    "validate:address-registry": "ts-node scripts/deployment/validateAddressRegistry.ts",
+    "validate:deploy-scripts": "ts-node scripts/deployment/validateDeployScripts.ts",
     "clean": "rimraf .openzeppelin build cache node_modules typechain-types coverage coverage.json",
     "solidity:docgen": "command -v forge && hardhat docgen || echo 'Foundry installation required for Solidity docgen, skipping...'"
   },
