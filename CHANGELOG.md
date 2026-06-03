@@ -17,6 +17,7 @@
 - *(prover)* Valid-nonce-ftx (#3179)
 - *(arithmetization)* Fix alert 514 (#3246)
 - *(prover)* L2 Messages (#3195)
+- *(arithmetization)* Security alert 513 on loop condition in BlockDataInstruction (#3253)
 
 ### ⚙️ Miscellaneous Tasks
 
