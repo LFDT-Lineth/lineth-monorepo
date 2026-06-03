@@ -11,7 +11,6 @@ include "utils/sign_bit.zkc"
 include "utils/negative.zkc"
 include "utils/register_utils.zkc"
 include "memory.zkc"
-include "decode.zkc"
 
 // TODO @Ghost
 fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block, opcode_stats>() {
