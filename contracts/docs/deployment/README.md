@@ -162,6 +162,8 @@ The old fallback to `deployments/<network_name>/ContractName.json` (hardhat-depl
 
 ### L1 Contracts (Ethereum)
 
+Verifier deployments require chain-configuration inputs in addition to the contract name and proof type. See [verifier.md](l1/verifier.md) for the full list, including `VERIFIER_IS_ALLOWED_CIRCUIT_ID`.
+
 | Contract | Doc | Tags |
 |----------|-----|------|
 | PlonkVerifier | [verifier.md](l1/verifier.md) | `PlonkVerifier` |

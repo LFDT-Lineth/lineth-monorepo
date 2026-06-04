@@ -30,6 +30,7 @@ const func: DeployFunction = withSignerUiSession(
       "L2MessageService",
       "L2_MESSAGE_SERVICE_ADDRESS",
     );
+    const isAllowedCircuitId = getRequiredEnvVar("VERIFIER_IS_ALLOWED_CIRCUIT_ID");
 
     const optionalMimcAddress = getOptionalEnvVar("VERIFIER_MIMC_ADDRESS")?.trim();
     let mimcAddress: string;
@@ -70,6 +71,10 @@ const func: DeployFunction = withSignerUiSession(
         {
           value: toBeHex(l2MessageServiceAddress, 32),
           name: "l2MessageServiceAddress",
+        },
+        {
+          value: toBeHex(isAllowedCircuitId, 32),
+          name: "isAllowedCircuitId",
         },
       ],
     ];
