@@ -35,7 +35,6 @@ fn process_S_type_instruction<ram, registers>(instruction_parameters:u25) {
     // var imm12  : Imm12
     // var imm20  : Imm20
 
-    printsteps "S-type before decode"
     var imm_sign:u1
     var funct3:Funct3
     var rs1:Register
@@ -47,7 +46,6 @@ fn process_S_type_instruction<ram, registers>(instruction_parameters:u25) {
 
     // TODO: do we just want to use a mask instead?
     var signext_imm12_64:DoubleWord = sgn_extension_u12_u64(imm_sign::uimm6::uimm5)
-    printsteps "S-type after decode"
 
     // var signext_imm12_64:DoubleWord
     // if imm_sign == 1 {
