@@ -17,7 +17,7 @@ clean-environment:
 		make clean-local-folders;
 		$(MAKE) seed-deny-list; # truncate runtime deny-list and drop any stale lockfile from a crashed run
 		docker volume rm linea-local-dev linea-logs || true; # ignore failure if volumes do not exist already
-		docker system prune -f || true;
+		docker image prune -f || true;
 
 # Ensure the runtime sequencer deny-list exists (empty) before docker compose
 # bind-mounts it. Gitignored; may be mutated at test time by withDenyListAddresses.

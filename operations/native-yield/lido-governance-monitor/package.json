@@ -10,7 +10,7 @@
     "postinstall": "DATABASE_URL=postgresql://localhost:5432/dummy prisma generate",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "clean": "rimraf dist node_modules coverage tsconfig.build.tsbuildinfo",
+    "clean": "rimraf dist node_modules coverage tsconfig.build.tsbuildinfo prisma/client",
     "build": "tsc -p tsconfig.build.json",
     "test": "jest --bail --detectOpenHandles --forceExit",
     "test:watch": "jest --watch",
