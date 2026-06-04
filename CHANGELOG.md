@@ -18,6 +18,7 @@
 - *(arithmetization)* Fix alert 514 (#3246)
 - *(prover)* L2 Messages (#3195)
 - *(arithmetization)* Security alert 513 on loop condition in BlockDataInstruction (#3253)
+- *(prover)* Incorporate `isAllowedCircuitID` into aggregation FPI (#3194)
 
 ### ⚙️ Miscellaneous Tasks
 
