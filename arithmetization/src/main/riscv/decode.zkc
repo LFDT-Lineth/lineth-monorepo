@@ -1,0 +1,35 @@
+include "utils/constants.zkc"
+include "utils/type.zkc"
+include "memory.zkc"
+
+fn decode<registers, is_decoded_buffer, instruction_parameters_buffer, instruction_type_buffer, opcode_buffer, funct3_buffer, imm12_buffer, rs1_buffer, rd_buffer, signext_imm12_64_buffer, rs1_plus_signext_imm12_buffer>(instruction:u32) {
+
+    var instruction_parameters:u25
+    var opcode:Opcode
+    instruction_parameters::opcode = instruction
+
+    instruction_parameters_buffer[instruction] = instruction_parameters
+    opcode_buffer[instruction] = opcode
+    instruction_type_buffer[instruction] = instruction_type_from_opcode(opcode)
+
+    switch instruction_type_buffer[instruction] {
+        case I_TYPE: {
+            var imm12:Imm12
+            var rs1:Register
+            var funct3:Funct3
+            var rd:Register
+            imm12::rs1::funct3::rd = instruction_parameters
+            imm12_buffer[instruction] = imm12
+            rs1_buffer[instruction] = rs1
+            funct3_buffer[instruction] = funct3
+            rd_buffer[instruction] = rd
+            signext_imm12_64_buffer[instruction] = sgn_extension_u12_u64(imm12)
+            rs1_plus_signext_imm12_buffer[instruction] = signed_sum_of_double_word(registers[rs1], signext_imm12_64_buffer[instruction])
+        }
+        default: {
+            // do nothing
+        }
+    }
+
+    is_decoded_buffer[instruction] = 1
+}

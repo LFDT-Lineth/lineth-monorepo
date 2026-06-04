@@ -33,19 +33,18 @@ include "../utils/signed_sum.zkc"
 //   SYSTEM    — system calls (not yet implemented)
 //
 // For all opcodes except JALR, new_pc = pc + 4 (sequential fall-through).
-fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_parameters:u25, pc:Address) -> (new_pc:Address) {
+fn process_I_type_instruction<ram, registers, opcode_buffer, funct3_buffer, imm12_buffer, rs1_buffer, rd_buffer, signext_imm12_64_buffer, rs1_plus_signext_imm12_buffer>(instruction:u32, pc:Address) -> (new_pc:Address) {
 
-    var funct3:Funct3
-    var imm12:Imm12
-    var rs1:Register
-    var rd:Register
+    var opcode:Opcode = opcode_buffer[instruction]
+    var funct3:Funct3 = funct3_buffer[instruction]
+    var imm12:Imm12 = imm12_buffer[instruction]
+    var rs1:Register = rs1_buffer[instruction]
+    var rd:Register = rd_buffer[instruction]
 
-    imm12::rs1::funct3::rd = instruction_parameters
-
-    var signext_imm12_64:DoubleWord = sgn_extension_u12_u64(imm12)
+    var signext_imm12_64:DoubleWord = signext_imm12_64_buffer[instruction]
     // Used as an Address in the LOAD instructions and as a DoubleWord in the OP-IMM and JALR instructions
-    var rs1_plus_signext_imm12:u64 = signed_sum_of_double_word(registers[rs1], signext_imm12_64)
-
+    var rs1_plus_signext_imm12:u64 = rs1_plus_signext_imm12_buffer[instruction]
+  
     //TODO: this is the default case, we will overwrite it for JALR.
     // We should handle this differently to avoid a potential second row just to overwrite the value of new_pc?
     new_pc = (pc + 4) as Address
