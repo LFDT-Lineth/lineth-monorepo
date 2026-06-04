@@ -34,3 +34,10 @@ typealias ProofAggregationProverClientV2 = ProverClient<ProofsToAggregate, Proof
 typealias ExecutionProverClientV2 =
   ProverClient<BatchExecutionProofRequestV1, BatchExecutionProofResponse, ExecutionProofIndex>
 typealias InvalidityProverClientV1 = ProverClient<InvalidityProofRequest, InvalidityProofResponse, InvalidityProofIndex>
+
+typealias L2ExecutionProverClientV1 =
+  ProverClient<L2ExecutionProofRequestV1, L2ExecutionProofResponse, ExecutionProofIndex>
+typealias RollupProverClientV1 =
+  ProverClient<RollupProofRequestV1, RollupProofResponse, CompressionProofIndex>
+typealias RollupAggregationProverClientV1 =
+  ProverClient<RollupAggregationProofRequestV1, RollupAggregationProofResponse, AggregationProofIndex>
