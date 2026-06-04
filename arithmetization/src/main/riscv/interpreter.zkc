@@ -10,15 +10,11 @@ include "instruction_processing/u_type.zkc"
 
 fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block>(instruction:u32, pc:Address) -> (new_pc:Address) {
 
-    printsteps "Interpreter before decode"
-
     var instruction_parameters:u25
     var instruction_type:Type
     var opcode:Opcode
     instruction_parameters::opcode = instruction
     instruction_type = instruction_type_from_opcode(opcode)
-
-    printsteps "Interpreter after decode"
 
     // TODO: handle the case where rd = 0: we will handle this in RAM itself, likely by adding an extra read-write pair
     // to reset the value in registers[rd] to 0

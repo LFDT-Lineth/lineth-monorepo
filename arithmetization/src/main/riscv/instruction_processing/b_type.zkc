@@ -35,8 +35,6 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
     // var imm20  : Imm20
     // var opcode : Opcode
 
-    printsteps "B-type before decode"
-
     var funct3:Funct3
     var imm_sign:SignBit
     var imm_11:u1
@@ -56,14 +54,11 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
 
     imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters
 
-
     if imm_sign == 1 {
         imm = DWORD_SIGN_EXT_PREFIX_52_ONES::imm_11::imm_10_5::imm_4_1::(0 as u1)
     } else {
         imm = (imm_11::imm_10_5::imm_4_1::(0 as u1)) as DoubleWord
     }
-
-    printsteps "B-type after decode"
 
     // "no branching" value of pc_new;
     // gets overwritten if branching occurs
