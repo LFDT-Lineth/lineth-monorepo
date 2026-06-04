@@ -30,8 +30,9 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
             var rs1:Register
             var funct3:Funct3
             var rd:Register
-            imm12, rs1, funct3, rd = decode_i_type_fields(instruction_parameters)
-            new_pc = process_I_type_instruction(opcode, imm12, rs1, funct3, rd, pc)
+            var signext_imm12_64:DoubleWord
+            imm12, rs1, funct3, rd, signext_imm12_64 = decode_i_type_fields(instruction_parameters)
+            new_pc = process_I_type_instruction(opcode, imm12, rs1, funct3, rd, signext_imm12_64, pc)
         }
         case S_TYPE: {
             process_S_type_instruction(instruction_parameters)
