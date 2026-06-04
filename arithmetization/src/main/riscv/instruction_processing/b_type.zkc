@@ -22,8 +22,28 @@ include "../utils/signed_sum.zkc"
 //
 // When the branch condition is false, pc_new = pc + 4 (fall-through).
 // When the branch condition is true,  pc_new = pc + imm (taken branch).
-fn process_B_type_instruction<registers>(imm_sign:SignBit, imm_10_5:u6, rs2:Register, rs1:Register, funct3:Funct3, imm_4_1:u4, imm_11:u1, pc:Address) -> (pc_new:Address) {
+fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address) -> (pc_new:Address) {
 
+    // var funct3 : Funct3
+    // var funct7 : Funct7
+    // var rs1    : Register
+    // var rs2    : Register
+    // var rsd    : Register
+    // var uimm5  : UImm5
+    // var uimm6  : UImm6
+    // var imm12  : Imm12
+    // var imm20  : Imm20
+    // var opcode : Opcode
+
+    var funct3:Funct3
+    var imm_sign:SignBit
+    var imm_11:u1
+    var imm_10_5:u6
+    var imm_4_1:u4
+    var rs1:Register
+    var rs2:Register
+    var funct7:Funct7
+    var rd:Register
     var imm:DoubleWord
     var comparison:Boolean
     var raw_comparison:Boolean
@@ -31,6 +51,8 @@ fn process_B_type_instruction<registers>(imm_sign:SignBit, imm_10_5:u6, rs2:Regi
     var reg_val_2:DoubleWord
     var rem_1:u63
     var rem_2:u63
+
+    imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters
 
     if imm_sign == 1 {
         imm = DWORD_SIGN_EXT_PREFIX_52_ONES::imm_11::imm_10_5::imm_4_1::(0 as u1)
