@@ -23,7 +23,7 @@ include "../utils/signed_sum.zkc"
 // LUI is typically paired with an ADDI to materialise a full 32-bit constant in a
 // register.  AUIPC is used to form PC-relative addresses for data or call targets.
 fn process_U_type_instruction<registers>(opcode:Opcode, instruction_parameters:u25, pc:Address) -> () {
-
+    printsteps "U-type before decode"
     // var funct3 : Funct3
     // var funct7 : Funct7
     // var rs1    : Register
@@ -39,6 +39,7 @@ fn process_U_type_instruction<registers>(opcode:Opcode, instruction_parameters:u
 
     imm20::rd = instruction_parameters
     tmp = sgn_extension_u32_u64(((imm20 as u32) << 12) as u32)
+    printsteps "U-type after decode"
 
     switch opcode {
         case AUIPC: {

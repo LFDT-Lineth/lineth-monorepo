@@ -21,6 +21,7 @@ include "../utils/signed_sum.zkc"
 //   pc_new = pc + sign_extend(imm21)  (unconditional jump to target)
 fn process_J_type_instruction<registers>(instruction_parameters:u25, pc:Address) -> (pc_new:Address) {
 
+    printsteps "J-type before decode"
     // var funct3 : Funct3
     // var funct7 : Funct7
     // var rs1    : Register
@@ -42,6 +43,7 @@ fn process_J_type_instruction<registers>(instruction_parameters:u25, pc:Address)
 
     // restructure and 1 left shift the immediate to get imm21
     var imm21:u21 = ((imm20::imm19_12::imm11::imm10_1) as u21) << 1
+    printsteps "J-type after decode"
 
     printf "JAL "
     print_j_operands(rd, sgn_extension_u21_u64(imm21))
