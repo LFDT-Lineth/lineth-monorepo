@@ -35,6 +35,8 @@ include "../utils/signed_sum.zkc"
 // For all opcodes except JALR, new_pc = pc + 4 (sequential fall-through).
 fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_parameters:u25, pc:Address) -> (new_pc:Address) {
 
+    printsteps "I-type before decode"
+
     var funct3:Funct3
     var imm12:Imm12
     var rs1:Register
@@ -43,6 +45,8 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
     imm12::rs1::funct3::rd = instruction_parameters
 
     var signext_imm12_64:DoubleWord = sgn_extension_u12_u64(imm12)
+    
+    printsteps "I-type after decode"
     // Used as an Address in the LOAD instructions and as a DoubleWord in the OP-IMM and JALR instructions
     var rs1_plus_signext_imm12:u64 = signed_sum_of_double_word(registers[rs1], signext_imm12_64)
 
@@ -106,11 +110,12 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
         // ===================================
 
         case OP_IMM: {
-
+            printsteps "I-type OP-IMM before decode"
             var funct6:Funct6
             var uimm6:UImm6
             // for SLLI, SRLI, SRAI
             funct6::uimm6 = imm12
+            printsteps "I-type OP-IMM after decode"
 
             if funct3 == FUNCT3_ADDI {
                 printf "ADDI "
@@ -167,10 +172,12 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
 
         case OP_IMM_32: {
 
+            printsteps "I-type OP-IMM-32 before decode"
             var funct7:Funct7
             var uimm5:UImm5
             // for SLLIW, SRLIW, SRAIW
             funct7::uimm5 = imm12
+            printsteps "I-type OP-IMM-32 after decode"
 
             if funct3 == FUNCT3_ADDIW {
                 printf "ADDIW "
