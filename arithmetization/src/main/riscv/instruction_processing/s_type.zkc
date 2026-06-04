@@ -23,26 +23,7 @@ include "../utils/signed_sum.zkc"
 //   SH (funct3 = 0b001) — store halfword (16 bits)
 //   SW (funct3 = 0b010) — store word     (32 bits)
 //   SD (funct3 = 0b011) — store doubleword (64 bits)
-fn process_S_type_instruction<ram, registers>(instruction_parameters:u25) {
-
-    // var funct3 : Funct3
-    // var funct7 : Funct7
-    // var rs1    : Register
-    // var rs2    : Register
-    // var rsd    : Register
-    // var uimm5  : UImm5
-    // var uimm6  : UImm6
-    // var imm12  : Imm12
-    // var imm20  : Imm20
-
-    var imm_sign:u1
-    var funct3:Funct3
-    var rs1:Register
-    var rs2:Register
-    var uimm5:UImm5
-    var uimm6:UImm6
-
-    imm_sign::uimm6::rs2::rs1::funct3::uimm5 = instruction_parameters
+fn process_S_type_instruction<ram, registers>(imm_sign:u1, uimm6:UImm6, rs2:Register, rs1:Register, funct3:Funct3, uimm5:UImm5) {
 
     // TODO: do we just want to use a mask instead?
     var signext_imm12_64:DoubleWord = sgn_extension_u12_u64(imm_sign::uimm6::uimm5)
