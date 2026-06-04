@@ -1,5 +1,6 @@
 include "utils/constants.zkc"
 include "utils/type.zkc"
+include "utils/sign_extend.zkc"
 
 // Decode a 32-bit instruction word into its opcode, payload, and instruction type.
 fn decode_instruction(instruction:Instruction) -> (instruction_parameters:u25, opcode:Opcode, instruction_type:Type) {
@@ -10,6 +11,7 @@ fn decode_instruction(instruction:Instruction) -> (instruction_parameters:u25, o
 // Decode I-type fields from the 25-bit payload (opcode already stripped).
 //
 //   instruction_parameters = imm12 :: rs1 :: funct3 :: rd
-fn decode_i_type_fields(instruction_parameters:u25) -> (imm12:Imm12, rs1:Register, funct3:Funct3, rd:Register) {
+fn decode_i_type_fields(instruction_parameters:u25) -> (imm12:Imm12, rs1:Register, funct3:Funct3, rd:Register, signext_imm12_64:DoubleWord) {
     imm12::rs1::funct3::rd = instruction_parameters
+    signext_imm12_64 = sgn_extension_u12_u64(imm12)
 }
