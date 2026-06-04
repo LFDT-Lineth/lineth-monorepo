@@ -1,0 +1,15 @@
+include "utils/constants.zkc"
+include "utils/type.zkc"
+
+// Decode a 32-bit instruction word into its opcode, payload, and instruction type.
+fn decode_instruction(instruction:Instruction) -> (instruction_parameters:u25, opcode:Opcode, instruction_type:Type) {
+    instruction_parameters::opcode = instruction
+    instruction_type = instruction_type_from_opcode(opcode)
+}
+
+// Decode I-type fields from the 25-bit payload (opcode already stripped).
+//
+//   instruction_parameters = imm12 :: rs1 :: funct3 :: rd
+fn decode_i_type_fields(instruction_parameters:u25) -> (imm12:Imm12, rs1:Register, funct3:Funct3, rd:Register) {
+    imm12::rs1::funct3::rd = instruction_parameters
+}
