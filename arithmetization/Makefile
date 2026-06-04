@@ -64,6 +64,14 @@ zkc-check:
 
 zkc-compile-and-check: install-zkc zkc-compile zkc-check
 
+# Run the interpreter and extract decode vs execution timing from zkc -v stderr.
+# Requires go-corset with VM execution profiling (decode_* function prefix).
+# Usage: make decode-profile ZKC_INPUT=src/test/examples/.../foo.json
+decode-profile: install-zkc zkc-compile
+	zkc execute -v -q $(ZKC_INPUT) $(ZKC_MAIN) 2>&1 | tee $(ZKC_BINDIR)/decode-profile.log
+	@echo "--- decode profile ---"
+	@grep -E 'Interpreter decode|Interpreter execution|Decode share:' $(ZKC_BINDIR)/decode-profile.log
+
 zkc-lint:
 	zkc format --check $(ZKC_FILES)
 
