@@ -7,44 +7,9 @@ fn decode_instruction(instruction:Instruction) -> (instruction_parameters:u25, o
     instruction_type = instruction_type_from_opcode(opcode)
 }
 
-// Decode R-type fields from the 25-bit payload (opcode already stripped).
-//
-//   instruction_parameters = funct7 :: rs2 :: rs1 :: funct3 :: rd
-fn decode_r_type_fields(instruction_parameters:u25) -> (funct7:Funct7, rs2:Register, rs1:Register, funct3:Funct3, rd:Register) {
-    funct7::rs2::rs1::funct3::rd = instruction_parameters
-}
-
 // Decode I-type fields from the 25-bit payload (opcode already stripped).
 //
 //   instruction_parameters = imm12 :: rs1 :: funct3 :: rd
 fn decode_i_type_fields(instruction_parameters:u25) -> (imm12:Imm12, rs1:Register, funct3:Funct3, rd:Register) {
     imm12::rs1::funct3::rd = instruction_parameters
-}
-
-// Decode S-type fields from the 25-bit payload (opcode already stripped).
-//
-//   instruction_parameters = imm[11] :: imm[10:5] :: rs2 :: rs1 :: funct3 :: imm[4:0]
-fn decode_s_type_fields(instruction_parameters:u25) -> (imm_sign:u1, uimm6:UImm6, rs2:Register, rs1:Register, funct3:Funct3, uimm5:UImm5) {
-    imm_sign::uimm6::rs2::rs1::funct3::uimm5 = instruction_parameters
-}
-
-// Decode B-type fields from the 25-bit payload (opcode already stripped).
-//
-//   instruction_parameters = imm[12] :: imm[10:5] :: rs2 :: rs1 :: funct3 :: imm[4:1] :: imm[11]
-fn decode_b_type_fields(instruction_parameters:u25) -> (imm_sign:SignBit, imm_10_5:u6, rs2:Register, rs1:Register, funct3:Funct3, imm_4_1:u4, imm_11:u1) {
-    imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters
-}
-
-// Decode U-type fields from the 25-bit payload (opcode already stripped).
-//
-//   instruction_parameters = imm20 :: rd
-fn decode_u_type_fields(instruction_parameters:u25) -> (imm20:Imm20, rd:Register) {
-    imm20::rd = instruction_parameters
-}
-
-// Decode J-type fields from the 25-bit payload (opcode already stripped).
-//
-//   instruction_parameters = imm[20] :: imm[10:1] :: imm[11] :: imm[19:12] :: rd
-fn decode_j_type_fields(instruction_parameters:u25) -> (imm20:u1, imm10_1:u10, imm11:u1, imm19_12:u8, rd:Register) {
-    imm20::imm10_1::imm11::imm19_12::rd = instruction_parameters
 }
