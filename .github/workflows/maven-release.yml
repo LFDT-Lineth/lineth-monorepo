@@ -18,6 +18,7 @@ on:
           - ':jvm-libs:linea:blob-shnarf-calculator'
           - ':jvm-libs:linea:linea-contracts:l1-rollup'
           - ':jvm-libs:linea:linea-contracts:l2-message-service'
+          - ':linea-besu:plugins:sequencer-interfaces'
       version:
         required: true
         type: string

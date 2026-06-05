@@ -14,10 +14,6 @@ on:
       develop_tag:
         required: true
         type: string
-      push_image:
-        required: false
-        type: boolean
-        default: false
       coordinator_changed:
         required: true
         type: string
@@ -42,27 +38,6 @@ on:
       build_linea_besu_package:
         required: true
         type: string
-      coordinator_image_tagged:
-        required: true
-        type: string
-      native_yield_automation_service_image_tagged:
-        required: true
-        type: string
-      lido_governance_monitor_image_tagged:
-        required: true
-        type: string
-      prover_image_tagged:
-        required: true
-        type: string
-      postman_image_tagged:
-        required: true
-        type: string
-      transaction_exclusion_api_image_tagged:
-        required: true
-        type: string
-      maru_image_tagged:
-        required: true
-        type: string
     outputs:
       linea_besu_package_tag:
         value: ${{ jobs.linea_besu_package_build_and_upload.outputs.linea_besu_package_tag }}
@@ -75,11 +50,11 @@ on:
 jobs:
   coordinator:
     uses: ./.github/workflows/coordinator-build-and-publish.yml
-    if: ${{ always() && (inputs.coordinator_changed == 'true' || (inputs.push_image && inputs.coordinator_image_tagged != 'true')) }}
+    if: ${{ inputs.coordinator_changed == 'true' }}
     with:
       image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
-      push_image: ${{ inputs.push_image }}
+      push_image: false
     secrets: inherit
 
   native_yield_automation_service:
@@ -89,58 +64,58 @@ jobs:
       commit_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
       image_name: consensys/linea-native-yield-automation-service
-      push_image: ${{ inputs.push_image }}
+      push_image: false
     secrets: inherit
 
   lido_governance_monitor:
     uses: ./.github/workflows/lido-governance-monitor-build-and-publish.yml
-    if: ${{ always() && (inputs.lido_governance_monitor_changed == 'true' || (inputs.push_image && inputs.lido_governance_monitor_image_tagged != 'true')) }}
+    if: ${{ inputs.lido_governance_monitor_changed == 'true' }}
     with:
       commit_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
       image_name: consensys/linea-lido-governance-monitor
-      push_image: ${{ inputs.push_image }}
+      push_image: false
     secrets: inherit
 
   prover:
     uses: ./.github/workflows/prover-build-and-publish.yml
-    if: ${{ always() && (inputs.prover_changed == 'true' || (inputs.push_image && inputs.prover_image_tagged != 'true')) }}
+    if: ${{ inputs.prover_changed == 'true' }}
     with:
       image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
-      push_image: ${{ inputs.push_image }}
+      push_image: false
     secrets: inherit
 
   postman:
     uses: ./.github/workflows/postman-build-and-publish.yml
-    if: ${{ always() && (inputs.postman_changed == 'true' || (inputs.push_image && inputs.postman_image_tagged != 'true')) }}
+    if: ${{ inputs.postman_changed == 'true' }}
     with:
       image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
-      push_image: ${{ inputs.push_image }}
+      push_image: false
     secrets: inherit
 
   transaction_exclusion_api:
     uses: ./.github/workflows/transaction-exclusion-api-build-and-publish.yml
-    if: ${{ always() && (inputs.transaction_exclusion_api_changed == 'true' || (inputs.push_image && inputs.transaction_exclusion_api_image_tagged != 'true')) }}
+    if: ${{ inputs.transaction_exclusion_api_changed == 'true' }}
     with:
       image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
-      push_image: ${{ inputs.push_image }}
+      push_image: false
     secrets: inherit
 
   maru:
     uses: ./.github/workflows/maru-build-and-publish.yml
-    if: ${{ always() && (inputs.maru_changed == 'true' || (inputs.push_image && inputs.maru_image_tagged != 'true')) }}
+    if: ${{ inputs.maru_changed == 'true' }}
     with:
       image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
-      push_image: ${{ inputs.push_image }}
+      push_image: false
     secrets: inherit
 
   linea_besu_package_build_and_upload:
     uses: ./.github/workflows/linea-besu-package-build-and-upload.yml
-    if: ${{ always() && inputs.build_linea_besu_package == 'true' && !inputs.push_image }}
+    if: ${{ inputs.build_linea_besu_package == 'true' }}
     with:
       release_version: 'dev'
       with_besu_fleet_plugin: false

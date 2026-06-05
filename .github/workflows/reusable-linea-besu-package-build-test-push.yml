@@ -164,7 +164,6 @@ jobs:
             consensys/linea-besu-package-with-fleet:${{ steps.build-plugins-and-assemble.outputs.dockertag }}
             ${{ inputs.image_tag_suffix != '' && format('consensys/linea-besu-package-with-fleet:{0}', steps.build-plugins-and-assemble.outputs.dockertag_with_suffix) || ''}}
             ${{ github.ref == 'refs/heads/main' && 'consensys/linea-besu-package-with-fleet:develop' || '' }}
-            ${{ github.event_name == 'workflow_dispatch' && 'consensys/linea-besu-package-with-fleet:latest' || '' }}
 
       - name: Calculate the checksum of Besu fleet plugin
         id: besu-fleet-plugin-checksum
@@ -198,7 +197,6 @@ jobs:
             consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag }}
             ${{ inputs.image_tag_suffix != '' && format('consensys/linea-besu-package:{0}', steps.build-plugins-and-assemble.outputs.dockertag_with_suffix) || ''}}
             ${{ github.ref == 'refs/heads/main' && 'consensys/linea-besu-package:develop' || '' }}
-            ${{ github.event_name == 'workflow_dispatch' && 'consensys/linea-besu-package:latest' || '' }}
 
       ### update the release notes with docker hashes
       - name: create the release notes and then the release
