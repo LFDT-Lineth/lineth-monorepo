@@ -54,15 +54,25 @@ test "runtime rejects advancing without a next round" {
     );
 }
 
-test "runtime absorbs columns and squeezes requested extension coins" {
+test "runtime absorbs commitments, public columns, and squeezes requested extension coins" {
     var rt = runtime.Runtime.initWithRoundCount(2);
     var coins: [2]runtime.Coin = undefined;
 
-    const columns = [_]runtime.ColumnAssignment{
-        .{ .visibility = .oracle, .assignment = .{ .base = &.{field.Element.init(1)} } },
+    const columns = [_]runtime.ColumnMessage{
+        .{ .oracle_commitment = .{
+            field.Element.init(1),
+            field.Element.init(2),
+            field.Element.init(3),
+            field.Element.init(4),
+            field.Element.init(5),
+            field.Element.init(6),
+            field.Element.init(7),
+            field.Element.init(8),
+        } },
+        .{ .public_column = .{ .base = &.{field.Element.init(9)} } },
     };
     const cells = [_]runtime.Scalar{
-        .{ .base = field.Element.init(2) },
+        .{ .base = field.Element.init(10) },
     };
     const got = try rt.advanceRoundWithMessage(0, .{
         .columns = &columns,

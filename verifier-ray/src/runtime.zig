@@ -1,6 +1,7 @@
 const fiat_shamir = @import("crypto/fiat_shamir.zig");
 const ext = @import("field/koalabear_ext.zig");
 const value = @import("field/value.zig");
+const proof_mod = @import("proof.zig");
 
 pub const Error = error{
     NoRounds,
@@ -20,16 +21,18 @@ pub const Visibility = enum(u8) {
 pub const Vector = value.Vector;
 pub const Scalar = value.Scalar;
 pub const Coin = ext.Ext;
+pub const Commitment = proof_mod.Commitment;
 
-pub const ColumnAssignment = struct {
-    visibility: Visibility,
-    assignment: Vector,
+pub const ColumnMessage = union(enum) {
+    oracle_commitment: Commitment,
+    public_column: Vector,
 };
 
-/// Verifier-visible data sent before deriving the next round's coins.
-/// Columns and cells are expected to be assigned before the round advances.
+/// Verifier-visible data sent before deriving the next round's coins. Oracle
+/// columns are represented only by their commitments; public columns and cells
+/// carry their raw values because the verifier sees them directly.
 pub const RoundMessage = struct {
-    columns: []const ColumnAssignment = &.{},
+    columns: []const ColumnMessage = &.{},
     cells: []const Scalar = &.{},
     next_round_coin_count: usize = 0,
 };
@@ -57,8 +60,9 @@ pub const Runtime = struct {
     /// `expected_round` must match the runtime's current round and must not be the
     /// final round, because there is no next round to receive derived coins.
     ///
-    /// `message` contains the assigned oracle/public columns and public cells that
-    /// are absorbed into the Fiat-Shamir transcript before any coins are sampled.
+    /// `message` contains oracle commitments, public column assignments, and
+    /// public cells that are absorbed into the Fiat-Shamir transcript before
+    /// any coins are sampled.
     ///
     /// `out_coins` is caller-owned backing storage. The runtime writes exactly
     /// `message.next_round_coin_count` coins into the beginning of that slice and
@@ -77,7 +81,10 @@ pub const Runtime = struct {
         if (message.next_round_coin_count > out_coins.len) return Error.OutputTooSmall;
 
         for (message.columns) |column| {
-            self.transcript.absorbVector(column.assignment);
+            switch (column) {
+                .oracle_commitment => |commitment| self.transcript.updateElements(&commitment),
+                .public_column => |public_column| self.transcript.absorbVector(public_column),
+            }
         }
         for (message.cells) |cell| {
             self.transcript.absorbScalar(cell);

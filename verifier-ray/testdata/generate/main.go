@@ -93,8 +93,11 @@ func writeHeader(out *bytes.Buffer) {
 	fmt.Fprintln(out, "pub const PoseidonMdCase = struct { message: []const u32, expected: [8]u32 };")
 	fmt.Fprintln(out, "pub const FiatShamirCase = struct { base_updates: []const u32, ext_updates: []const [6]u32, random_field: [8]u32, random_ext: [6]u32 };")
 	fmt.Fprintln(out)
-	fmt.Fprintln(out, "pub const RuntimeTraceColumn = struct { visibility: u8, is_assigned: bool, is_ext: bool, base_values: []const u32, ext_values: []const [6]u32 };")
-	fmt.Fprintln(out, "pub const RuntimeTraceCell = struct { is_assigned: bool, is_ext: bool, base_value: u32, ext_value: [6]u32 };")
+	fmt.Fprintf(out, "pub const prover_visibility_oracle: u8 = %d;\n", int(wiop.VisibilityOracle))
+	fmt.Fprintf(out, "pub const prover_visibility_public: u8 = %d;\n", int(wiop.VisibilityPublic))
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "pub const RuntimeTraceColumn = union(enum) { oracle: []const [8]u32, public_base: []const u32, public_ext: []const [6]u32 };")
+	fmt.Fprintln(out, "pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };")
 	fmt.Fprintln(out, "pub const RuntimeTraceRound = struct { columns: []const RuntimeTraceColumn, cells: []const RuntimeTraceCell, expected_coins: []const [6]u32 };")
 	fmt.Fprintln(out, "pub const RuntimeTraceCase = struct { rounds: []const RuntimeTraceRound };")
 	fmt.Fprintln(out)
@@ -377,25 +380,21 @@ type runtimeTraceRound struct {
 	expectedCoins []field.Ext
 }
 
-// runtimeTraceColumn records enough information for the Zig runtime to replay
-// prover-ray's column absorption rules: internal columns are skipped, while
-// oracle and public columns must be assigned and absorbed into Fiat-Shamir.
+// runtimeTraceColumn records one verifier-visible column assignment. prover-ray
+// may have internal columns in the source protocol, but they are intentionally
+// not exported to verifier-ray traces.
 type runtimeTraceColumn struct {
-	visibility wiop.Visibility
-	assigned   bool
-	isExt      bool
-	baseValues []field.Element
-	extValues  []field.Ext
+	commitments      []field.Octuplet
+	publicBaseValues []field.Element
+	publicExtValues  []field.Ext
 }
 
 // runtimeTraceCell records a scalar value opened in the round. Unlike internal
 // columns, cells are always verifier-visible in prover-ray AdvanceRound and must
 // be assigned.
 type runtimeTraceCell struct {
-	assigned  bool
-	isExt     bool
-	baseValue field.Element
-	extValue  field.Ext
+	baseValue *field.Element
+	extValue  *field.Ext
 }
 
 // writeRuntimeTraceCases emits the scripted multi-round WIOP trace used by
@@ -414,32 +413,36 @@ func writeRuntimeTraceCases(out *bytes.Buffer) {
 	fmt.Fprintln(out)
 }
 
-// buildRuntimeTraceCases constructs a small real prover-ray WIOP protocol and
-// runs prover-ray's Runtime.AdvanceRound. The returned trace contains both the
-// verifier-visible messages and the coins produced by prover-ray, so Zig can
-// replay the same transcript updates without porting the whole Go runtime.
+// buildRuntimeTraceCases constructs a small prover-ray WIOP runtime at the
+// verifier boundary. Oracle columns are represented by their commitment values
+// rather than raw witness assignments, and expected coins are sampled through
+// Runtime.AdvanceRound so the fixture stays coupled to prover-ray round logic.
 func buildRuntimeTraceCases() []runtimeTraceCase {
 	sys := wiop.NewSystemf("runtime-trace")
 	r0 := sys.NewRound()
 	r1 := sys.NewRound()
 	r2 := sys.NewRound()
-	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
+	commitmentMod := sys.NewSizedModule(sys.Context.Childf("commitments"), len(field.Octuplet{}), wiop.PaddingDirectionNone)
+	valueMod := sys.NewSizedModule(sys.Context.Childf("values"), 4, wiop.PaddingDirectionNone)
 
-	r0OracleBase := mod.NewColumn(sys.Context.Childf("r0-oracle-base"), wiop.VisibilityOracle, r0)
-	r0PublicExt := mod.NewExtensionColumn(sys.Context.Childf("r0-public-ext"), wiop.VisibilityPublic, r0)
-	mod.NewColumn(sys.Context.Childf("r0-internal-unassigned"), wiop.VisibilityInternal, r0)
+	r0OracleCommitmentColumn := commitmentMod.NewColumn(sys.Context.Childf("r0-oracle-commitment"), wiop.VisibilityOracle, r0)
+	r0PublicExt := valueMod.NewExtensionColumn(sys.Context.Childf("r0-public-ext"), wiop.VisibilityPublic, r0)
+	// Keep an unassigned internal column in the prover-ray protocol. It is not a
+	// verifier-visible transcript message and is intentionally not exported.
+	commitmentMod.NewColumn(sys.Context.Childf("r0-internal-unassigned"), wiop.VisibilityInternal, r0)
 	r0BaseCell := r0.NewCell(sys.Context.Childf("r0-base-cell"), false)
 	r0ExtCell := r0.NewCell(sys.Context.Childf("r0-ext-cell"), true)
 
 	r1CoinA := r1.NewCoinField(sys.Context.Childf("r1-coin-a"))
 	r1CoinB := r1.NewCoinField(sys.Context.Childf("r1-coin-b"))
-	r1OracleExt := mod.NewExtensionColumn(sys.Context.Childf("r1-oracle-ext"), wiop.VisibilityOracle, r1)
-	r1PublicBase := mod.NewColumn(sys.Context.Childf("r1-public-base"), wiop.VisibilityPublic, r1)
+	r1OracleCommitmentColumn := commitmentMod.NewColumn(sys.Context.Childf("r1-oracle-commitment"), wiop.VisibilityOracle, r1)
+	r1PublicBase := valueMod.NewColumn(sys.Context.Childf("r1-public-base"), wiop.VisibilityPublic, r1)
 	r1BaseCell := r1.NewCell(sys.Context.Childf("r1-base-cell"), false)
 
 	r2Coin := r2.NewCoinField(sys.Context.Childf("r2-coin"))
 
 	r0OracleBaseValues := elems(3, 1, 4, 1)
+	r0OracleCommitment := commitmentFromElements(r0OracleBaseValues)
 	r0PublicExtValues := []field.Ext{
 		field.UintsToExt(5, 9, 2, 6, 5, 3),
 		field.UintsToExt(5, 8, 9, 7, 9, 3),
@@ -455,30 +458,24 @@ func buildRuntimeTraceCases() []runtimeTraceCase {
 		field.UintsToExt(301, 302, 303, 304, 305, 306),
 		field.UintsToExt(401, 402, 403, 404, 405, 406),
 	}
+	r1OracleCommitment := commitmentFromExts(r1OracleExtValues)
 	r1PublicBaseValues := elems(11, 22, 33, 44)
 	r1BaseCellValue := elem(77)
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(r0OracleBase, concreteBase(r0OracleBaseValues))
+	rt.AssignColumn(r0OracleCommitmentColumn, concreteBase(r0OracleCommitment[:]))
 	rt.AssignColumn(r0PublicExt, concreteExt(r0PublicExtValues))
 	rt.AssignCell(r0BaseCell, field.ElemFromBase(r0BaseCellValue))
 	rt.AssignCell(r0ExtCell, field.ElemFromExt(r0ExtCellValue))
-
-	// This is the reference behavior verifier-ray must match. prover-ray absorbs
-	// round-0 oracle/public columns and cells, advances to round 1, then squeezes
-	// the coins declared on round 1.
 	rt.AdvanceRound()
 	r1Coins := []field.Ext{
 		rt.GetCoinValue(r1CoinA).AsExt(),
 		rt.GetCoinValue(r1CoinB).AsExt(),
 	}
 
-	rt.AssignColumn(r1OracleExt, concreteExt(r1OracleExtValues))
+	rt.AssignColumn(r1OracleCommitmentColumn, concreteBase(r1OracleCommitment[:]))
 	rt.AssignColumn(r1PublicBase, concreteBase(r1PublicBaseValues))
 	rt.AssignCell(r1BaseCell, field.ElemFromBase(r1BaseCellValue))
-
-	// Advance once more so the generated trace covers more than one downstream
-	// coin derivation.
 	rt.AdvanceRound()
 	r2Coins := []field.Ext{rt.GetCoinValue(r2Coin).AsExt()}
 
@@ -486,27 +483,25 @@ func buildRuntimeTraceCases() []runtimeTraceCase {
 		rounds: []runtimeTraceRound{
 			{
 				columns: []runtimeTraceColumn{
-					{visibility: wiop.VisibilityOracle, assigned: true, baseValues: r0OracleBaseValues},
-					{visibility: wiop.VisibilityPublic, assigned: true, isExt: true, extValues: r0PublicExtValues},
-					{visibility: wiop.VisibilityInternal, assigned: false},
+					{commitments: []field.Octuplet{r0OracleCommitment}},
+					{publicExtValues: r0PublicExtValues},
 				},
 				cells: []runtimeTraceCell{
-					{assigned: true, baseValue: r0BaseCellValue},
-					{assigned: true, isExt: true, extValue: r0ExtCellValue},
+					baseTraceCell(r0BaseCellValue),
+					extTraceCell(r0ExtCellValue),
 				},
 				expectedCoins: r1Coins,
 			},
 			{
 				columns: []runtimeTraceColumn{
-					{visibility: wiop.VisibilityOracle, assigned: true, isExt: true, extValues: r1OracleExtValues},
-					{visibility: wiop.VisibilityPublic, assigned: true, baseValues: r1PublicBaseValues},
+					{commitments: []field.Octuplet{r1OracleCommitment}},
+					{publicBaseValues: r1PublicBaseValues},
 				},
 				cells: []runtimeTraceCell{
-					{assigned: true, baseValue: r1BaseCellValue},
+					baseTraceCell(r1BaseCellValue),
 				},
 				expectedCoins: r2Coins,
 			},
-			{},
 		},
 	}}
 }
@@ -528,29 +523,35 @@ func writeRuntimeTraceRound(out *bytes.Buffer, round runtimeTraceRound) {
 }
 
 func writeRuntimeTraceColumn(out *bytes.Buffer, column runtimeTraceColumn) {
-	baseValues := ".{}"
-	if column.assigned && !column.isExt {
-		baseValues = elemSlice(column.baseValues)
+	switch {
+	case column.commitments != nil:
+		fmt.Fprintf(out, "                .{ .oracle = &%s },\n", commitmentSlice(column.commitments))
+	case column.publicBaseValues != nil:
+		fmt.Fprintf(out, "                .{ .public_base = &%s },\n", elemSlice(column.publicBaseValues))
+	case column.publicExtValues != nil:
+		fmt.Fprintf(out, "                .{ .public_ext = &%s },\n", extSlice(column.publicExtValues))
+	default:
+		panic("runtime trace column has no data variant")
 	}
-	extValues := ".{}"
-	if column.assigned && column.isExt {
-		extValues = extSlice(column.extValues)
-	}
-	fmt.Fprintf(out, "                .{ .visibility = %d, .is_assigned = %t, .is_ext = %t, .base_values = &%s, .ext_values = &%s },\n",
-		int(column.visibility), column.assigned, column.isExt, baseValues, extValues)
 }
 
 func writeRuntimeTraceCell(out *bytes.Buffer, cell runtimeTraceCell) {
-	baseValue := uint64(0)
-	if cell.assigned && !cell.isExt {
-		baseValue = u(cell.baseValue)
+	switch {
+	case cell.baseValue != nil:
+		fmt.Fprintf(out, "                .{ .base = %d },\n", u(*cell.baseValue))
+	case cell.extValue != nil:
+		fmt.Fprintf(out, "                .{ .ext = %s },\n", ext6(*cell.extValue))
+	default:
+		panic("runtime trace cell has no data variant")
 	}
-	extValue := field.ZeroExt()
-	if cell.assigned && cell.isExt {
-		extValue = cell.extValue
-	}
-	fmt.Fprintf(out, "                .{ .is_assigned = %t, .is_ext = %t, .base_value = %d, .ext_value = %s },\n",
-		cell.assigned, cell.isExt, baseValue, ext6(extValue))
+}
+
+func baseTraceCell(value field.Element) runtimeTraceCell {
+	return runtimeTraceCell{baseValue: &value}
+}
+
+func extTraceCell(value field.Ext) runtimeTraceCell {
+	return runtimeTraceCell{extValue: &value}
 }
 
 func elem(v uint64) field.Element {
@@ -586,8 +587,33 @@ func octuplet(values ...uint64) field.Octuplet {
 	return out
 }
 
+func commitmentFromElements(values []field.Element) field.Octuplet {
+	h := poseidon2.NewMDHasher()
+	h.WriteElements(values...)
+	return h.SumDigest()
+}
+
+func commitmentFromExts(values []field.Ext) field.Octuplet {
+	return commitmentFromElements(elementsFromExts(values))
+}
+
+func elementsFromExts(values []field.Ext) []field.Element {
+	elems := make([]field.Element, 0, len(values)*field.ExtensionDegree)
+	for i := range values {
+		elems = append(elems,
+			values[i].B0.A0,
+			values[i].B0.A1,
+			values[i].B1.A0,
+			values[i].B1.A1,
+			values[i].B2.A0,
+			values[i].B2.A1,
+		)
+	}
+	return elems
+}
+
 func u(e field.Element) uint64 {
-	return uint64(e.Bits()[0])
+	return e.Uint64()
 }
 
 func ext6(e field.Ext) string {
@@ -615,6 +641,14 @@ func extSlice(values []field.Ext) string {
 	parts := make([]string, len(values))
 	for i, value := range values {
 		parts[i] = ext6(value)
+	}
+	return ".{ " + strings.Join(parts, ", ") + " }"
+}
+
+func commitmentSlice(values []field.Octuplet) string {
+	parts := make([]string, len(values))
+	for i, value := range values {
+		parts[i] = oct8(value)
 	}
 	return ".{ " + strings.Join(parts, ", ") + " }"
 }

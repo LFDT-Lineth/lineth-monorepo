@@ -4,14 +4,12 @@ SHELL := /bin/bash
 
 R5_BIN := zig-out/bin/verifier-ray
 R5_JSON := $(R5_BIN).json
-ELF_TO_JSON := ../arithmetization/src/test/examples/main.go
+ELF_TO_JSON := ../arithmetization/src/test/examples/scripts/elf_to_json_gen/main.go
 ZKC_MAIN := ../arithmetization/src/main/riscv/main.zkc
 
 PASSING_INPUT_FILE := testdata/inputs/passing.bin
 FAILING_INPUT_FILE := testdata/inputs/failing.bin
 INPUT_FILE ?= $(PASSING_INPUT_FILE)
-# Encode the binary fixture for the ELF-to-JSON helper; the verifier sees decoded bytes.
-IN_BYTES ?= 0x$(shell xxd -p -c 256 $(INPUT_FILE))
 IN_BYTES_OFFSET ?= 0x08800000
 NATIVE_INPUT_FILE := zig-out/input.bin
 IN_BYTES_FILE ?= zig-out/input.hex
@@ -45,9 +43,8 @@ help:
 		'' \
 		'input variables:' \
 		'  INPUT_FILE            Binary input fixture for native and zkc runs, default testdata/inputs/passing.bin' \
-		'  IN_BYTES              0x transport string for zkc; defaults to encoded INPUT_FILE bytes' \
 		'  NATIVE_INPUT_FILE     Fixed native input path; must match main.zig' \
-		'  IN_BYTES_FILE         Hex transport file for zkc; @file preserves RAM byte order' \
+		'  IN_BYTES_FILE         Big-endian hex transport file for zkc' \
 		'' \
 		'zkc variables:' \
 		'  IN_BYTES_OFFSET       Input bytes address, default 0x08800000'
@@ -117,10 +114,13 @@ generate-testdata:
 verify-testdata: generate-testdata
 	git diff --exit-code -- testdata/generated/vectors.zig
 
-zkc-build: build-r5
-	@echo "Generating $(R5_JSON)"
+prepare-zkc-input:
+	@# The ELF-to-JSON helper treats 0x input as a big-endian integer and reverses it
+	@# before writing guest RAM, so encode binary fixtures in reverse transport order.
 	mkdir -p $(dir $(IN_BYTES_FILE))
-	printf '%s\n' "$(IN_BYTES)" > $(IN_BYTES_FILE)
+	{ printf "0x"; xxd -p -c1 $(INPUT_FILE) | awk 'BEGIN{i=0} {lines[i++]=$$0} END{for(j=i-1;j>=0;j--) print lines[j]}' | tr -d '\n'; } > $(IN_BYTES_FILE)
+
+zkc-build: build-r5 prepare-zkc-input
 	go run $(ELF_TO_JSON) $(R5_BIN) "@$(IN_BYTES_FILE)" $(IN_BYTES_OFFSET) > $(R5_JSON)
 
 zkc-verify: zkc-build
