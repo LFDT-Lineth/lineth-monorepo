@@ -112,7 +112,7 @@ generate-testdata:
 	cd testdata/generate && go run .
 
 verify-testdata: generate-testdata
-	git diff --exit-code -- testdata/generated/vectors.zig
+	git diff --exit-code -- testdata/generated/*.zig
 
 prepare-zkc-input:
 	@# The ELF-to-JSON helper treats 0x input as a big-endian integer and reverses it

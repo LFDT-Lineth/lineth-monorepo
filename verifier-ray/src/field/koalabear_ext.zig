@@ -110,6 +110,17 @@ pub const Ext = extern struct {
         return result;
     }
 
+    pub fn powComptime(self: Ext, comptime exponent: usize) Ext {
+        var result = Ext.one();
+        var b = self;
+        comptime var exp = exponent;
+        inline while (exp != 0) : (exp >>= 1) {
+            if ((exp & 1) == 1) result = result.mul(b);
+            b = b.square();
+        }
+        return result;
+    }
+
     pub fn toBytes(self: Ext) [bytes]u8 {
         var out: [bytes]u8 = undefined;
         const limbs = [_]base.Element{ self.B0.a0, self.B0.a1, self.B1.a0, self.B1.a1, self.B2.a0, self.B2.a1 };

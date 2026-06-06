@@ -18,6 +18,10 @@ pub const pcs = struct {
     pub const polynomial = @import("pcs/polynomial.zig");
 };
 
+pub const query = struct {
+    pub const vanishing = @import("query/vanishing.zig");
+};
+
 pub const precompiles = struct {
     pub const interface = @import("precompiles/interface.zig");
     pub const native = @import("precompiles/native.zig");
