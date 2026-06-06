@@ -59,7 +59,7 @@ permissions:
 
 jobs:
   bench:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     timeout-minutes: 120
     steps:
       - name: Checkout repository
@@ -82,7 +82,12 @@ jobs:
               opt)  ref="${{ inputs.zkc_optim_ref || 'b1af3445bfc4b3a3254a52b1929aadd07ad7fa3e' }}" ;;
             esac
             tmpbin=$(mktemp -d)
-            GOBIN="$tmpbin" go install "github.com/consensys/go-corset/cmd/zkc@${ref}"
+            # go-corset was renamed/moved to github.com/LFDT-Lineth/zkc. The module
+            # path must match the ref's own go.mod: post-rename refs (e.g. main) use
+            # the new path, pre-rename refs/tags still declare the old path. Try the
+            # new path first and fall back to the old one so both sides resolve.
+            GOBIN="$tmpbin" go install "github.com/LFDT-Lineth/zkc/cmd/zkc@${ref}" \
+              || GOBIN="$tmpbin" go install "github.com/consensys/go-corset/cmd/zkc@${ref}"
             mv "$tmpbin/zkc" "/tmp/zkc-${variant}"
             rmdir "$tmpbin"
             echo "::group::zkc-${variant} version (${ref})"

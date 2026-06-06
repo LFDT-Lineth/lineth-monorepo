@@ -74,7 +74,7 @@ permissions:
 
 jobs:
   bench:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     timeout-minutes: 120
     steps:
       - name: Checkout repository

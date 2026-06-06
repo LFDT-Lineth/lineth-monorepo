@@ -8,7 +8,7 @@ permissions:
 on: workflow_dispatch
 jobs:
   data_gathering:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     steps:
       - name: CSV export
         uses: advanced-security/ghas-to-csv@8c2ad35efb234e8e1bd12efaced0f0609ad8afbb # v3

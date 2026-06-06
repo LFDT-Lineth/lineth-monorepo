@@ -27,7 +27,7 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     name: maru tests
     # useful for debugging flaky tests. Comment out Jacoco and Codecov steps because they override the test results.
     #    strategy:

@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   compute_commit_tags:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: Check image tags exist
     env:
       # REF_NAME: ${{ github.ref_name }}

@@ -43,7 +43,7 @@ on:
 
 jobs:
   release-component:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     permissions:
       contents: write
       pull-requests: write

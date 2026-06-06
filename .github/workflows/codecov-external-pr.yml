@@ -13,7 +13,7 @@ permissions: {}
 jobs:
   get-commit-tag:
     if: github.event.workflow_run.head_repository.fork == true
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: get-commit-tag
     permissions: {}
     outputs:
@@ -56,7 +56,7 @@ jobs:
 
   upload-codecov-coordinator:
     needs: [ get-commit-tag ]
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: upload-codecov-coordinator
     permissions:
       actions: read    # download artifacts from another workflow run
@@ -87,7 +87,7 @@ jobs:
 
   upload-codecov-smart-contracts:
     needs: [ get-commit-tag ]
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: upload-codecov-smart-contracts
     permissions:
       actions: read    # download artifacts from another workflow run
@@ -118,7 +118,7 @@ jobs:
 
   upload-codecov-ts:
     needs: [ get-commit-tag ]
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: upload-codecov-ts
     permissions:
       actions: read    # download artifacts from another workflow run
@@ -167,7 +167,7 @@ jobs:
 
   upload-codecov-native-yield-ts:
     needs: [ get-commit-tag ]
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: upload-codecov-native-yield-ts
     permissions:
       actions: read    # download artifacts from another workflow run
@@ -206,7 +206,7 @@ jobs:
 
   upload-codecov-lido-ts:
     needs: [ get-commit-tag ]
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: upload-codecov-lido-ts
     permissions:
       actions: read    # download artifacts from another workflow run
@@ -245,7 +245,7 @@ jobs:
 
   upload-codecov-sdk-ts:
     needs: [ get-commit-tag ]
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: upload-codecov-sdk-ts
     permissions:
       actions: read    # download artifacts from another workflow run

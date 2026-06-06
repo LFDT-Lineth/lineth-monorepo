@@ -34,7 +34,7 @@ permissions:
 
 jobs:
   sample-guest-programs-run:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     ## Override with a custom go-corset repo commit here in the event zkc on main is failing
     env:
       GO_CORSET_REF_FOR_ZKC: ${{ inputs.go-corset-ref || 'main' }}

@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   push-component-changelog:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     steps:
       # Mint a short-lived token either for the release bot GitHub App to commit the changelog changes 
       # directly bypassin the branch-protection or for PR bot GitHub App to create PR with the changelog changes.
