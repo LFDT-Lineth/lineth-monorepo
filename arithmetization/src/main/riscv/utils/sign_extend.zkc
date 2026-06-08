@@ -49,13 +49,7 @@ fn sgn_extension_u16_u64(value:u16) -> (ext_value:u64) {
 }
 
 fn sgn_extension_u12_u64(value:u12) -> (ext_value:u64) {
-    ext_value = value as u64
-
-    var sign_bit:u12
-    sign_bit = value >> 11
-    if sign_bit == 1 {
-        ext_value = SGNEXTMASK_U12 | ext_value
-    }
+    ext_value = (value as u64) | (((value >> 11) as u64) * SGNEXTMASK_U12)
 }
 
 fn sgn_extension_u8_u64(value:u8) -> (ext_value:u64) {
