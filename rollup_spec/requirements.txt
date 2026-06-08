@@ -7,5 +7,5 @@ ckzg>=2.1
 lz4>=4
 remerkleable>=0.1.28
 # Validates the V1 prover-request/response JSON against the shared schemas in
-# rollup_spec/schemas/ (see test_proof_io_v1.py).
+# rollup_spec/schemas/ (see proof_io_v1_test.py).
 jsonschema>=4.18

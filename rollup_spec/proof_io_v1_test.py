@@ -7,7 +7,7 @@ for documentation, so they are NOT valid fixtures. These tests load the
 fully-valid fixtures under `prover_inputs/testdata/` (mutually consistent
 request/response pair) and assert the codec round-trip against them.
 
-Run from the repo root:  python -m pytest rollup_spec/test_proof_io_v1.py
+Run from the repo root:  python -m pytest rollup_spec/proof_io_v1_test.py
 """
 
 import json
