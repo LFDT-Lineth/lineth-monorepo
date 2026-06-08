@@ -1,7 +1,7 @@
 # V1 prover I/O test fixtures
 
-Fully-valid `getZkL2ExecutionProofV1` request/response payloads (real hex, no
-ellipses) used by `rollup_spec/test_proof_io_v1.py`.
+Fully-valid `getZkL2ExecutionProofV1` and `getZkRollupProofV1` request/response
+payloads (real hex, no ellipses) used by `rollup_spec/test_proof_io_v1.py`.
 
 These differ from the illustrative examples in `../` (the parent
 `prover_inputs/` directory): those use `0x...` placeholders for documentation and
