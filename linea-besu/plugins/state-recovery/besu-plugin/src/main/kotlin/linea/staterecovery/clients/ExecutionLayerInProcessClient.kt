@@ -72,7 +72,7 @@ class ExecutionLayerInProcessClient(
 
         is BlockParameter.BlockHash ->
           blockchainService
-            .getBlockHeaderByHash(Hash.wrap(Bytes32.wrap(blockParameter.getHash())))
+            .getBlockHeaderByHash(Hash.wrap(Bytes32.fromHexString(blockParameter.getHash())))
             .getOrNull()
       }
 
