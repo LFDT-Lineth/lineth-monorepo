@@ -1,0 +1,38 @@
+{
+  "proverVersion": "4.0.0-riscv",
+  "chainId": 59144,
+  "blockRange": {
+    "startBlockNumber": 1000501,
+    "endBlockNumber": 1000520
+  },
+  "rollupProofs": [
+    {
+      "proof": "0xabcdef",
+      "startBlockNumber": 1000501,
+      "endBlockNumber": 1000520,
+      "publicInputs": {
+        "endBlockNumber": 1000520,
+        "endBlockTimestamp": 1763000457,
+        "l2L1BridgeTransactionTree": "0x1111111111111111111111111111111111111111111111111111111111111111",
+        "parentL1L2BridgeRollingHash": "0x2222222222222222222222222222222222222222222222222222222222222222",
+        "parentL1L2BridgeRollingHashMessageNumber": 0,
+        "endL1L2BridgeRollingHash": "0x3333333333333333333333333333333333333333333333333333333333333333",
+        "endL1L2BridgeRollingHashMessageNumber": 7,
+        "dynamicChainConfigHash": "0xc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0",
+        "parentFtxRollingHash": "0x4444444444444444444444444444444444444444444444444444444444444444",
+        "endFtxRollingHash": "0x5555555555555555555555555555555555555555555555555555555555555555",
+        "lastProcessedFtxNumber": 9,
+        "filteredAddressesHash": "0x6666666666666666666666666666666666666666666666666666666666666666",
+        "parentShnarf": "0x4747474747474747474747474747474747474747474747474747474747474747",
+        "endShnarf": "0x8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d"
+      },
+      "l2L1Roots": [
+        "0x7777777777777777777777777777777777777777777777777777777777777777",
+        "0x8888888888888888888888888888888888888888888888888888888888888888"
+      ],
+      "filteredAddresses": [
+        "0x0101010101010101010101010101010101010101"
+      ]
+    }
+  ]
+}
