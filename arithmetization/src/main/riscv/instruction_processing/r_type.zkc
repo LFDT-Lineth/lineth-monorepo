@@ -73,6 +73,12 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
     v1 = registers[rs1]
     v2 = registers[rs2]
 
+    v1_sign = sign_bit_of_double_word(v1)
+    v2_sign = sign_bit_of_double_word(v2)
+
+    v1_abs = absolute_value_double_word(v1)
+    v2_abs = absolute_value_double_word(v2)
+
     // Note. If x = 0b... and y = 0b... are two bit strings of length N
     // and you interpret them either as uintN or intN, then the underlying
     // bit string of their additions is the same in both interpretations.
@@ -163,10 +169,6 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                 } else if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
                     registers[rd] = OVERFLOW_DIVIDEND
                 } else {
-                    v1_sign = sign_bit_of_double_word(v1)
-                    v2_sign = sign_bit_of_double_word(v2)
-                    v1_abs = absolute_value_double_word(v1)
-                    v2_abs = absolute_value_double_word(v2)
                     registers[rd] = v1_abs / v2_abs
                     if (v1_sign ^ v2_sign) == 1 {
                         registers[rd] = negative_of_double_word(registers[rd])
