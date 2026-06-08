@@ -4,7 +4,7 @@
 
 ## Package Overview
 
-Solidity smart contracts for the Linea protocol: L1 rollup (LineaRollup), messaging services (L1/L2MessageService), token bridge (TokenBridge), and supporting libraries. Built with Hardhat and Foundry.
+Solidity smart contracts for the Lineth protocol: L1 rollup (LineaRollup), messaging services (L1/L2MessageService), token bridge (TokenBridge), and supporting libraries. Built with Hardhat and Foundry.
 
 ## How to Run
 

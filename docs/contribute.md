@@ -64,7 +64,7 @@ Once you submit a pull request, it will be reviewed by the maintainers. They may
 
 We use GitOps, ArgoCD, Helm, and Kubernetes for our release process. When changes are merged into the main branch, they can be deployed to a testnet environment using ArgoCD and Helm. After successful testing in the testnet environment, the changes can be promoted to the mainnet environment.
 
-Deployments to testnet and mainnet are done by Consensys engineers.
+Deployments to testnet and mainnet are done by Lineth contributors.
 
 The Release Manager is responsible for the technical soundness of each release. This includes:
 * Ensuring that any code deployed to any environment (including Devnet) has corresponding E2E test coverage. If blockers prevent E2E coverage, they must be flagged and tracked before deployment proceeds.
@@ -89,9 +89,9 @@ Configuration changes that are part of ops are not considered releases. This inc
 
 ### Standard deployment timeline
 
-> External contributor's PRs will be added to the standard deployment flow and supported by a Consensys engineer.
+> External contributor's PRs will be added to the standard deployment flow and supported by a Lineth contributors.
 
-* Consensys engineers share their PRs with the release manager weekly and the details are added to the Release Notes.
+* Lineth contributors share their PRs with the release manager weekly and the details are added to the Release Notes.
 * The release manager greenlights the release, proposes a day and time for deploying the release to the engineer. The release manager ensures communication has been shared with internal stakeholders (SRE) as well as external stakeholders when relevant (external contributor/community/partners).
 * The deployment on testnet is performed with the help of DevOps and SRE teams.
 * The deployment on mainnet is performed following the exact same process as testnet, after sufficient time to be confident the release can be promoted to mainnet.

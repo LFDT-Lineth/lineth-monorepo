@@ -2,7 +2,7 @@
 
 > **Diagrams:** [Sequencer Architecture](../diagrams/sequencer-architecture.mmd) | [State Recovery Flow](../diagrams/state-recovery-flow.mmd)
 
-This document describes external components that are used by the Linea stack but are not part of this monorepo.
+This document describes external components that are used by the Lineth stack but are not part of this monorepo.
 
 ## Maru Engine
 

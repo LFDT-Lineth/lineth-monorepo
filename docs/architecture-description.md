@@ -59,7 +59,7 @@ The main components of Linea are:
 * The provers which generate zk-proof for conflated blocks, kzg commitment and compression proof of the blobs, as well as aggregated proof for multiple conflation and compression proofs.
 
 
-![Diagram of Linea components](assets/linea.drawio.svg)
+![Diagram of Lineth components](assets/linea.drawio.svg)
 
 The above diagram shows the flow from transaction to finalization. High level, the flow is as follows:
 (1) the coordinator pulls the latest block from the sequencer,
@@ -799,7 +799,7 @@ BlobSubmissionData
 L1 finalization is triggered by the coordinator once an aggregation proof has been generated. This is done by triggering a transaction to execute `LineaService.finalizeBlocks` method on L1. In the process, the aggregation
 proof is sent to L1. Once the transaction is completed on L1, all the blocks are finalized on L2.
 
-The interface use is described below labeled with their respective Linea release version.
+The interface use is described below labeled with their respective Lineth release version.
 
 ```
 finalizeBlocks(

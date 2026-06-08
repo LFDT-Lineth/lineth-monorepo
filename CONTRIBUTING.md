@@ -15,7 +15,7 @@
 
 ```bash
 git clone https://github.com/LFDT-Lineth/lineth-monorepo.git
-cd linea-monorepo
+cd lineth-monorepo
 nvm use          # or install Node 24.14.1
 pnpm install     # installs all workspaces + sets up Husky hooks
 ```
@@ -63,7 +63,7 @@ cd prover && gofmt -w . && golangci-lint run && go test ./... -tags nocorset,fuz
 4. Commit: `type(issue#): short description` (e.g., `fix(456): corrected login error`)
 5. Open a PR to `main` using the PR template
 6. Ensure CI passes; respond to review feedback
-7. External PRs follow the standard deployment flow with Consensys engineer support
+7. External PRs follow the standard deployment flow with Lineth contributor support
 
 ## Rules
 

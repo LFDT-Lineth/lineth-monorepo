@@ -1,5 +1,5 @@
 # ZKC toolchain for RISC-V arithmetization.
-# Usage from linea-monorepo root:
+# Usage from lineth-monorepo root:
 #   make -C arithmetization check
 # Or from this directory:
 #   make check
@@ -9,7 +9,7 @@ REPO_ROOT := $(abspath $(MAKEFILE_DIR)/..)
 
 # Used to install zkc from go-corset repository (while zkc is not released yet).
 GO_CORSET ?= $(REPO_ROOT)/go-corset
-GO_CORSET_REPO ?= https://github.com/consensys/go-corset.git
+GO_CORSET_REPO ?= https://github.com/LFDT-Lineth/zkc.git
 # Optional: pin a commit or branch (e.g. 763f30878e5fc260f0d88863c9883c904f8fc056). Leave empty for default branch.
 GO_CORSET_REF_FOR_ZKC ?=414e7b73971eaa77afcb6a4797b44d0fdf8c99db
 

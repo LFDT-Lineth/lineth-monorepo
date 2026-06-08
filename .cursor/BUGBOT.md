@@ -1,6 +1,6 @@
 # Bugbot Review Instructions
 
-Automated security and code quality enforcement across the Linea monorepo.
+Automated security and code quality enforcement across the Lineth monorepo.
 For the complete repository guide, see [AGENTS.md](../AGENTS.md).
 
 ## Precedence and Discovery

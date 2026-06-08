@@ -17,7 +17,7 @@ Before you start, make sure you have the following installed:
 
 ## Building the Coordinator Locally
 
-The coordinator is a Java-based service that orchestrates the Linea protocol's operations. You can build it locally using the following steps:
+The coordinator is a Java-based service that orchestrates the Lineth protocol's operations. You can build it locally using the following steps:
 
 ### 1. Clone the Repository
 
@@ -25,7 +25,7 @@ If you haven't already, clone the repository and navigate to the project directo
 
 ```bash
 git clone https://github.com/LFDT-Lineth/lineth-monorepo.git
-cd linea-monorepo
+cd lineth-monorepo
 ```
 
 ### 2. Install Dependencies
@@ -64,7 +64,7 @@ There are two main ways to run the coordinator:
 
 ### 1. Running as Part of the Full Stack
 
-The recommended way to run the coordinator is as part of the complete Linea stack:
+The recommended way to run the coordinator is as part of the complete Lineth stack:
 
 ```bash
 # Start the entire stack with tracing v2 using your local coordinator image

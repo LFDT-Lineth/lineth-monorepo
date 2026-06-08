@@ -6,7 +6,7 @@ implementation in Go.
 
 Tracing refers to the process of extracting data from the execution of an EVM client in order to construct large matrices known as execution traces. Execution traces are subject to the constraint system specified in the [linea-specification](https://github.com/Consensys/linea-specification) repo and implemented in the [tracer-constraints](../tracer-constraints) folder.
 
-It serves developers by making the Linea tech stack open source under
+It serves developers by making the Lineth stack open source under
 the [Apache 2.0 license](LICENSE).
 
 ## What is Linea?
@@ -21,15 +21,15 @@ If you already have an understanding of the tech stack, use our [Get Started](do
 
 Discover [existing plugins](docs/plugins.md) and understand the [plugin release process](docs/plugin-release.md).
 
-## Looking for the Linea code?
+## Looking for the Lineth code?
 
-Linea's stack is made up of multiple components, these include:
+The Lineth stack is made up of multiple components, these include:
 
 - This folder, [tracer](../tracer): Linea-Besu plugin which produces the traces that the constraint system applies and that serve as inputs to the prover
 
-> This repository contains the elements of the Linea stack responsible for this process.
+> This repository contains the elements of the Lineth stack responsible for this process.
 
-- [linea-monorepo](https://github.com/LFDT-Lineth/lineth-monorepo): The main repository for the Linea stack & network in which this folder lives
+- [lineth-monorepo](https://github.com/LFDT-Lineth/lineth-monorepo): The main repository for the Lineth stack & Linea network in which this folder lives
 - [besu](https://github.com/besu-eth/besu): Besu client
 - [linea-sequencer](https://github.com/Consensys/linea-sequencer): A set of Linea-Besu plugins for the sequencer and RPC nodes
 - [tracer-constraints](../tracer-constraints) folder: Implementation of the constraint system from the specification
@@ -63,8 +63,8 @@ Consider starting with a ["good first issue"](https://github.com/LFDT-Lineth/lin
 
 Before contributing, ensure you're familiar with:
 
-- Our [Linea contribution guide](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/contribute.md)
-- Our [Linea code of conduct](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/code-of-conduct.md)
+- Our [Lineth contribution guide](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/contribute.md)
+- Our [Lineth code of conduct](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/code-of-conduct.md)
 - The [Besu contribution guide](https://wiki.hyperledger.org/display/BESU/Coding+Conventions), for Besu:Linea related contributions
 - Our [Security policy](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/security.md)
 

@@ -46,7 +46,7 @@ BLOB_BYTES_LENGTH = 4096 * 32
 # EIP-4844 trusted setup (4096 G1 + 65 G2 monomial points from the Ethereum
 # KZG ceremony). The `ckzg` wheel does not bundle a setup file, so we reuse
 # the one already vendored in this repo for the hardhat contract tests. All
-# four trusted-setup files we found in linea-monorepo (`contracts/test/...`,
+# four trusted-setup files we found in lineth-monorepo (`contracts/test/...`,
 # `contracts/scripts/testEIP4844/...`, `tmp/besu-eth/.../resources/...`)
 # produce identical KZG commitments; the byte-level sha256 differences are
 # just file-format ordering variants that ckzg parses transparently.
@@ -68,7 +68,7 @@ def _trusted_setup():
     if not _TRUSTED_SETUP_PATH.is_file():
         raise FileNotFoundError(
             f"trusted setup not found at {_TRUSTED_SETUP_PATH}. "
-            "The Python reference expects the linea-monorepo layout — re-fetch via "
+            "The Python reference expects the lineth-monorepo layout — re-fetch via "
             "`curl -L https://raw.githubusercontent.com/ethereum/c-kzg-4844/main/src/trusted_setup.txt "
             f"-o {_TRUSTED_SETUP_PATH}` if missing."
         )

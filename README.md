@@ -1,4 +1,4 @@
-# Linea zkEVM
+# Lineth
 
 <a href="https://x.com/LineaBuild">
   <img src="https://img.shields.io/twitter/follow/LineaBuild?style=for-the-badge" alt="X (formerly Twitter) Follow" height="20">
@@ -13,15 +13,15 @@
   <img src="https://codecov.io/gh/LFDT-Lineth/lineth-monorepo/graph/badge.svg?token=2TM55P0CGJ" alt="Codecov" height="20">
 </a>
 
-This is the principal Linea repository. It mainly includes the smart contracts covering Linea's core functions, the prover in charge of generating ZK proofs, the coordinator responsible for multiple orchestrations, and the Postman to execute bridge messages.
+This is the principal Lineth repository. It mainly includes the smart contracts covering Lineth's core functions, the prover in charge of generating ZK proofs, the coordinator responsible for multiple orchestrations, and the Postman to execute bridge messages.
 
-It serves developers by making the Linea tech stack open source under the [Apache 2.0](LICENSE-APACHE) and the [MIT](LICENSE-MIT) licenses.
+It serves developers by making the Lineth stack open source under the [Apache 2.0](LICENSE-APACHE) and the [MIT](LICENSE-MIT) licenses.
 
-## What is Linea?
+## What is Lineth?
 
-[Linea](https://linea.build) is a developer-ready layer 2 network scaling Ethereum. It's secured with a zero-knowledge rollup, built on lattice-based cryptography, and powered by [Consensys](https://consensys.io).
+Lineth is a enterprise-ready layer 2 network scaling Ethereum. It's secured with a zero-knowledge rollup, built on lattice-based cryptography, and powered by [Consensys](https://consensys.io) and [the Linea Consortium](https://consortium.linea.build/). It's the technology powering the [Linea Mainnet](https://linea.build).
 
-Linea is compatible with the execution clients [Besu](https://github.com/besu-eth/besu/) or [Geth](https://github.com/ethereum/go-ethereum). To run a full node, an execution client is paired with the consensus client [Maru](./maru/).
+Lineth is compatible with the execution clients [Besu](https://github.com/besu-eth/besu/) or [Geth](https://github.com/ethereum/go-ethereum). To run a full node, an execution client is paired with the consensus client [Maru](./maru/).
 
 ## Get started
 
@@ -69,7 +69,7 @@ Notes:
 
 ### Milestone release
 
-Milestone releases bundle every component into a single Linea release.
+Milestone releases bundle every component into a single Lineth release.
 
 - **Workflow:** [.github/workflows/linea-milestone-release-with-dry-run.yml](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/linea-milestone-release-with-dry-run.yml)
 - **Release tag pattern:** `releases/linea/v[semver]`
@@ -99,11 +99,11 @@ The milestone workflow defaults to running a **dry run on a temporary branch for
    - **Please note that no images will be pushed to Docker Hub during dry run release.**
 4. **`milestone-release-on-main`** — only runs after the manual gate is approved. Calls `linea-milestone-release.yml` against `main`.
 
-## Looking for the Linea code?
+## Looking for the Lineth code?
 
 Linea's stack is made up of multiple repositories, these include:
 
-- This repo, [linea-monorepo](https://github.com/LFDT-Lineth/lineth-monorepo): The main repository for the Linea stack & network
+- This repo, [lineth-monorepo](https://github.com/LFDT-Lineth/lineth-monorepo): The main repository for the Lineth stack & Linea network
 > Also maintains a set of Linea-Besu plugins for the sequencer and RPC nodes.
 - [linea-besu](./linea-besu/): Besu build configured for Linea (now in-tree; previously `Consensys/linea-besu-upstream`)
 - [tracer](./tracer/): Linea-Besu plugin which produces the traces that the constraint system applies and that serve as inputs to the prover (now in-tree; previously `Consensys/linea-tracer`)
@@ -220,7 +220,7 @@ chore(linea-besu,sequencer): bump dependency versions
 feat(coordinator)!: rename public API method (BREAKING CHANGE)
 ```
 
-Please note that the linea-monorepo GitHub [CI](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/main.yml) will lint the PR title when new commits pushed to the PR branch, and the whole CI will fail if the PR title doesn't conform.
+Please note that the lineth-monorepo GitHub [CI](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/main.yml) will lint the PR title when new commits pushed to the PR branch, and the whole CI will fail if the PR title doesn't conform.
 
 ### Useful links
 

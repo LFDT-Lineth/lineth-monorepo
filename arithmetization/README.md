@@ -2,7 +2,7 @@
 
 This directory holds the arithmetization of RISC-V, with target = `riscv64im_zicclsm-unknown-none-elf`.
 
-Arithmetization is written in ZkC, a simple imperative language designed primarily for writing programs whose executions can be proved. This language is written and maintained by the Linea arithmetization team, available in the [`go-corset`repository](https://github.com/Consensys/go-corset/blob/main/ZKC_LANGUAGE.md)
+Arithmetization is written in ZkC, a simple imperative language designed primarily for writing programs whose executions can be proved. This language is written and maintained by the Linea arithmetization team, available in the [`zkc`repository](https://github.com/LFDT-Lineth/zkc/blob/main/ZKC_LANGUAGE.md)
 
 ## Prerequisites for local setup
 
@@ -15,7 +15,7 @@ Note: The target riscv64im_zicclsm-unknown-none-elf is not a standard target. To
 ### Install Zkc
 
 No official releases yet
-Clone repo [go-corset](https://github.com/Consensys/go-corset)
+Clone repo [zkc](https://github.com/LFDT-Lineth/zkc)
 
 `go install .cmd/zkc`
 
@@ -26,15 +26,15 @@ Clone repo [go-corset](https://github.com/Consensys/go-corset)
 All RISC-V arithmetization workflow should use the composite action **[Setup Arithmetization RISC-V Environment](../.github/actions/setup-arithmetization-riscv/action.yml)**.
 It installs:
 - Go (version pinned in the action)
-- the `go-corset` CLI from `github.com/consensys/go-corset`
+- the `go-corset` CLI from `github.com/LFDT-Lineth/zkc`
 
 ### Tracer riscv-constraints check compilation
 
 The workflow **[Tracer riscv-constraints check compilation](../.github/workflows/arithmetization-zkc-riscv-check-compilation.yml)** verifies that the ZkC program compiles in CI.
 It runs the arithmetization setup step above .
-It checks out [go-corset](https://github.com/Consensys/go-corset), installs the `zkc` CLI, and runs `zkc compile` on the main entrypoint under this tree.
+It checks out [zkc](https://github.com/LFDT-Lineth/zkc), installs the `zkc` CLI, and runs `zkc compile` on the main entrypoint under this tree.
 
-As there are no official releases for `zkc` CLI yet, the install is done from main. If you wish to install the version from a branch, the flow can be modified at step `Checkout go-corset repo`, see comment.
+As there are no official releases for `zkc` CLI yet, the install is done from main. If you wish to install the version from a branch, the flow can be modified at step `Checkout zkc repo`, see comment.
 
 It runs on **push** and **pull_request** to `main` when relevant paths change, including:
 

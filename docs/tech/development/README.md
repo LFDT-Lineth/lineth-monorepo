@@ -26,7 +26,7 @@
 ```bash
 # 1. Clone repository
 git clone https://github.com/LFDT-Lineth/lineth-monorepo.git
-cd linea-monorepo
+cd lineth-monorepo
 
 # 2. Install Node dependencies
 make pnpm-install

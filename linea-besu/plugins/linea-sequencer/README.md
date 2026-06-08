@@ -1,8 +1,8 @@
 # Besu Plugins related to tracer and sequencer functionality
 
-This repository hosts the implementation of the sequencer, the component of the Linea stack responsible for ordering transactions and building blocks, as well as executing them. It provides a set of [Besu](https://github.com/besu-eth/besu):Linea plugins. 
+This repository hosts the implementation of the sequencer, the component of the Lineth stack responsible for ordering transactions and building blocks, as well as executing them. It provides a set of [Besu](https://github.com/besu-eth/besu):Linea plugins. 
 
-It serves developers by making the Linea tech stack open source under the [Apache 2.0](../../../LICENSE-APACHE) and the [MIT](../../../LICENSE-MIT) licenses.
+It serves developers by making the Lineth stack open source under the [Apache 2.0](../../../LICENSE-APACHE) and the [MIT](../../../LICENSE-MIT) licenses.
 
 ## What is Linea?
 
@@ -16,10 +16,10 @@ If you already have an understanding of the tech stack, use our [Quickstart](doc
 
 Discover [existing plugins](docs/plugins.md) and understand the [plugin release process](docs/plugin-release.md). 
 
-## Looking for the Linea code?
+## Looking for the Lineth code?
 
-Linea's stack is made up of multiple repositories, these include:
-- This repo, [linea-monorepo](https://github.com/LFDT-Lineth/lineth-monorepo): main repository for the Linea stack & network
+The Lineth stack is made up of multiple components, these include:
+- This repo, [lineth-monorepo](https://github.com/LFDT-Lineth/lineth-monorepo): main repository for the Lineth stack & Linea network
 - [besu](https://github.com/besu-eth/besu): Besu client
 - [tracer](../../../tracer/): Linea-Besu plugin which produces the traces that the constraint system applies and that serve as inputs to the prover (in-tree; previously `Consensys/linea-tracer`)
 - [tracer-constraints](../../../tracer-constraints/): Implementation of the constraint system from the specification (in-tree; previously `Consensys/linea-constraints`)
@@ -49,8 +49,8 @@ Consider starting with a ["good first issue"](https://github.com/LFDT-Lineth/lin
 
 Before contributing, ensure you're familiar with:
 
-- Our [Linea contribution guide](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/contribute.md)
-- Our [Linea code of conduct](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/code-of-conduct.md)
+- Our [Lineth contribution guide](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/contribute.md)
+- Our [Lineth code of conduct](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/code-of-conduct.md)
 - The [Besu contribution guide](https://github.com/besu-eth/besu/blob/main/CONTRIBUTING.md), for Besu:Linea related contributions
 - Our [Security policy](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/security.md)
 

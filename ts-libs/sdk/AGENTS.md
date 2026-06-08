@@ -4,7 +4,7 @@
 
 ## Package Overview
 
-TypeScript SDK libraries for interacting with the Linea protocol. Three packages: `sdk-core` (framework-agnostic types and utilities), `sdk-ethers` (ethers.js v6 wrapper with typechain-generated contract bindings), and `sdk-viem` (Viem wrapper).
+TypeScript SDK libraries for interacting with the Lineth protocol. Three packages: `sdk-core` (framework-agnostic types and utilities), `sdk-ethers` (ethers.js v6 wrapper with typechain-generated contract bindings), and `sdk-viem` (Viem wrapper).
 
 ## How to Run
 

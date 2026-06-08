@@ -49,7 +49,7 @@ Only propose rules that are repository-specific and repeatable.
 
 ## Repository
 
-Linea zkEVM monorepo — the principal repository for [Linea](https://linea.build), a Layer 2 zero-knowledge rollup scaling Ethereum. Contains smart contracts, ZK prover, coordinator, postman (bridge message executor), SDKs, and supporting tooling. Licensed under Apache-2.0 and MIT.
+Lineth zkEVM monorepo — the principal repository for [Linea](https://linea.build), a Layer 2 zero-knowledge rollup scaling Ethereum. Contains smart contracts, ZK prover, coordinator, postman (bridge message executor), SDKs, and supporting tooling. Licensed under Apache-2.0 and MIT.
 
 ## How to Run
 
@@ -363,7 +363,6 @@ These require human approval and follow the release process:
 | `jvm-libs` | Libraries | Kotlin, Gradle | Shared JVM libraries (JSON-RPC, HTTP, persistence, metrics) |
 | `transaction-exclusion-api` | Backend service | Kotlin, Gradle, Vertx | Transaction exclusion tracking API |
 | `tracer` | Backend service | Java/Go Corset, Gradle | EVM trace generation and arithmetization |
-| `corset` | Compiler | Rust 2021 (1.70.0+), Cargo | Constraint system compiler (cdylib + CLI) |
 
 ### Key Directories
 
@@ -371,7 +370,6 @@ These require human approval and follow the release process:
 contracts/               Solidity smart contracts (Hardhat + Foundry)
 coordinator/             Kotlin coordinator service
 prover/                  Go ZK prover
-corset/                  Rust constraint compiler
 postman/                 TypeScript bridge message executor
 ts-libs/sdk/             TypeScript SDKs (core, ethers, viem)
 e2e/                     Protocol E2E tests

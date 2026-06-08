@@ -6,7 +6,7 @@ Linea’s constraint system applies to so-called traces which are large matrices
 
 Constraints and traces are two of the inputs to the prover.
 
-It serves developers by making the Linea tech stack open source under
+It serves developers by making the Lineth stack open source under
 the [Apache 2.0 license](LICENSE).
 
 ## What is Linea?
@@ -19,11 +19,11 @@ Linea is compatible with the execution clients [Besu](https://github.com/besu-et
 
 tbd -->
 
-## Looking for the Linea code?
+## Looking for the Lineth code?
 
-Linea's stack is made up of multiple components, these include:
+The Lineth stack is made up of multiple components, these include:
 
-- [linea-monorepo](https://github.com/LFDT-Lineth/lineth-monorepo): The main repository for the Linea stack & network
+- [lineth-monorepo](https://github.com/LFDT-Lineth/lineth-monorepo): The main repository for the Lineth stack & Linea network
 - In which, this folder, [tracer-constraints](../tracer-constraints): Implementation of the constraint system from the specification
 > Also maintains a set of Linea-Besu plugins for the sequencer, tracer, and RPC nodes.
 - In which, the [tracer](../tracer) component: Linea-Besu plugin which produces the traces that the constraint system applies and that serve as inputs to the prover
@@ -54,8 +54,8 @@ Consider starting with a ["good first issue"](https://github.com/LFDT-Lineth/lin
 
 Before contributing, ensure you're familiar with:
 
-- Our [Linea contribution guide](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/contribute.md)
-- Our [Linea code of conduct](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/code-of-conduct.md)
+- Our [Lineth contribution guide](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/contribute.md)
+- Our [Lineth code of conduct](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/code-of-conduct.md)
 - The [Besu contribution guide](https://wiki.hyperledger.org/display/BESU/Coding+Conventions), for Besu:Linea related contributions
 - Our [Security policy](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/security.md)
 

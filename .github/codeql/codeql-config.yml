@@ -1,8 +1,8 @@
-name: "linea-monorepo"
+name: "lineth-monorepo"
 
 paths-ignore:
   # Gradle build output directories — generated sources, compiled classes, etc.
-  # Note: cannot use **/build/** because src/main/kotlin/build/linea/ is a real package
+  # Note: cannot use **/build/** because src/main/kotlin/build/lineth/ is a real package
   - "**/build/generated/**"
   - "**/build/classes/**"
   - "**/build/libs/**"

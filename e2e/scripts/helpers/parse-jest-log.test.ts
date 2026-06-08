@@ -14,11 +14,11 @@ const RAW_LOG = `pnpm run -F e2e test:local
     TRANSACTION_EXCLUSION_API_TAG: 67f147a
     PROVER_TAG: 2fc4392
 
-> e2e@1.0.0 test:local /home/runner/_work/linea-monorepo/linea-monorepo/e2e
+> e2e@1.0.0 test:local /home/runner/_work/lineth-monorepo/lineth-monorepo/e2e
 > pnpm run test:local:run --testPathIgnorePatterns=linea-besu-fleet.spec.ts --testPathIgnorePatterns=liveness.spec.ts && pnpm run test:liveness:local
 
 
-> e2e@1.0.0 test:local:run /home/runner/_work/linea-monorepo/linea-monorepo/e2e
+> e2e@1.0.0 test:local:run /home/runner/_work/lineth-monorepo/lineth-monorepo/e2e
 > TEST_ENV=local npx jest --testPathIgnorePatterns=linea-besu-fleet.spec.ts --testPathIgnorePatterns=liveness.spec.ts
 
 timestamp=2026-04-01T06:24:19.543Z level=info | message=Configuring once-off prerequisite contracts
@@ -111,7 +111,7 @@ Snapshots:   0 total
 Time:        159.28 s
 Ran all test suites.
 
-> e2e@1.0.0 test:liveness:local /home/runner/_work/linea-monorepo/linea-monorepo/e2e
+> e2e@1.0.0 test:liveness:local /home/runner/_work/lineth-monorepo/lineth-monorepo/e2e
 > TEST_ENV=local npx jest liveness.spec.ts
 
 timestamp=2026-04-01T06:27:21.734Z level=info | message=Generating L2 traffic...
