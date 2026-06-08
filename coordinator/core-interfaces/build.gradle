@@ -10,7 +10,7 @@ dependencies {
   api project(':jvm-libs:linea:clients:interfaces')
   // this should not be here, but since linea-state-manager will be deprecated not worthy the refactor effort
   api project(':jvm-libs:linea:clients:linea-state-manager')
-  api project(':maru:core')
+  //api project(':maru:core')
 
   testFixturesImplementation project(':jvm-libs:linea:metrics:micrometer')
 }

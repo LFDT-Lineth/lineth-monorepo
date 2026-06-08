@@ -3,6 +3,7 @@ package linea.coordinator.clients.prover.riscv
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.clients.ChainConfig
+import linea.clients.ExecutionPayload
 import linea.clients.ExecutionWitness
 import linea.clients.L2ExecutionProofRequestV1
 import linea.coordinator.clients.prover.ExecutionProofFileNameProvider
@@ -11,7 +12,6 @@ import linea.coordinator.clients.prover.serialization.JsonSerialization
 import linea.domain.ExecutionProofIndex
 import linea.fileio.FileReader
 import linea.fileio.FileWriter
-import maru.core.ExecutionPayload
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -125,6 +125,10 @@ class L2ExecutionProverClientFileBasedTest {
         baseFeePerGas = BigInteger.valueOf(Random.nextLong(0, Long.MAX_VALUE)),
         blockHash = Random.nextBytes(32),
         transactions = emptyList(),
+        withdrawals = emptyList(),
+        blobGasUsed = 0UL,
+        excessBlobGas = 0UL,
+        blockAccessList = ByteArray(0),
       ),
       ExecutionPayload(
         parentHash = Random.nextBytes(32),
@@ -141,6 +145,10 @@ class L2ExecutionProverClientFileBasedTest {
         baseFeePerGas = BigInteger.valueOf(Random.nextLong(0, Long.MAX_VALUE)),
         blockHash = Random.nextBytes(32),
         transactions = emptyList(),
+        withdrawals = emptyList(),
+        blobGasUsed = 0UL,
+        excessBlobGas = 0UL,
+        blockAccessList = ByteArray(0),
       ),
     ),
     executionWitnesses = listOf(

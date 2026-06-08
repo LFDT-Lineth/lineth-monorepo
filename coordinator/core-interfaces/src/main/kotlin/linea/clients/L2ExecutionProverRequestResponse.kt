@@ -5,7 +5,7 @@ import linea.domain.BlockInterval
 import linea.domain.StartBlockTimestampProvider
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.byteArrayListEquals
-import maru.core.ExecutionPayload
+import java.math.BigInteger
 import kotlin.time.Instant
 
 data class L2ExecutionProofRequestV1(
@@ -104,6 +104,78 @@ data class ChainConfig(
     var result = l2MessageServiceContract.contentHashCode()
     result = 31 * result + coinbase.contentHashCode()
     result = 31 * result + chainId.hashCode()
+    return result
+  }
+}
+
+/**
+ * Execution Payload V3 + blockAccessList for the Engine API and Beacon Block
+ */
+data class ExecutionPayload(
+  val parentHash: ByteArray,
+  val feeRecipient: ByteArray,
+  val stateRoot: ByteArray,
+  val receiptsRoot: ByteArray,
+  val logsBloom: ByteArray,
+  val prevRandao: ByteArray,
+  val blockNumber: ULong,
+  val gasLimit: ULong,
+  val gasUsed: ULong,
+  val timestamp: ULong,
+  val extraData: ByteArray,
+  val baseFeePerGas: BigInteger,
+  val blockHash: ByteArray,
+  val transactions: List<ByteArray>,
+  val withdrawals: List<ByteArray>,
+  val blobGasUsed: ULong,
+  val excessBlobGas: ULong,
+  val blockAccessList: ByteArray,
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as ExecutionPayload
+
+    if (!parentHash.contentEquals(other.parentHash)) return false
+    if (!stateRoot.contentEquals(other.stateRoot)) return false
+    if (!receiptsRoot.contentEquals(other.receiptsRoot)) return false
+    if (!logsBloom.contentEquals(other.logsBloom)) return false
+    if (!prevRandao.contentEquals(other.prevRandao)) return false
+    if (blockNumber != other.blockNumber) return false
+    if (gasLimit != other.gasLimit) return false
+    if (gasUsed != other.gasUsed) return false
+    if (timestamp != other.timestamp) return false
+    if (!extraData.contentEquals(other.extraData)) return false
+    if (baseFeePerGas != other.baseFeePerGas) return false
+    if (!blockHash.contentEquals(other.blockHash)) return false
+    if (!transactions.zip(other.transactions).all { it.first.contentEquals(it.second) }) return false
+    if (!withdrawals.zip(other.withdrawals).all { it.first.contentEquals(it.second) }) return false
+    if (blobGasUsed != other.blobGasUsed) return false
+    if (excessBlobGas != other.excessBlobGas) return false
+    if (!blockAccessList.contentEquals(other.extraData)) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = parentHash.contentHashCode()
+    result = 31 * result + stateRoot.contentHashCode()
+    result = 31 * result + receiptsRoot.contentHashCode()
+    result = 31 * result + logsBloom.contentHashCode()
+    result = 31 * result + prevRandao.contentHashCode()
+    result = 31 * result + blockNumber.hashCode()
+    result = 31 * result + gasLimit.hashCode()
+    result = 31 * result + gasUsed.hashCode()
+    result = 31 * result + timestamp.hashCode()
+    result = 31 * result + extraData.contentHashCode()
+    result = 31 * result + baseFeePerGas.hashCode()
+    result = 31 * result + blockHash.contentHashCode()
+    result = 31 * result + transactions.hashCode()
+    result = 31 * result + withdrawals.hashCode()
+    result = 31 * result + blobGasUsed.hashCode()
+    result = 31 * result + excessBlobGas.hashCode()
+    result = 31 * result + blockAccessList.contentHashCode()
     return result
   }
 }
