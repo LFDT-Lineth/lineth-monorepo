@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://linea.build/schemas/getZkL2ExecutionProofV1.request.schema.json",
+  "title": "getZkL2ExecutionProof V1 request",
+  "description": "Coordinator -> prover l2-execution proof request. The shared, versioned contract for rollup_spec/proof_io_v1.py::decode_request. The example file getZkL2ExecutionProofV1.request.json uses '0x...' ellipsis placeholders for documentation and does NOT validate against this schema; real payloads must.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "proverVersion",
+    "blockRange",
+    "chainConfig",
+    "parentFtxRollingHash",
+    "parentLastProcessedFtxNumber",
+    "payloads"
+  ],
+  "properties": {
+    "proverVersion": { "type": "string", "minLength": 1 },
+    "blockRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["startBlockNumber", "endBlockNumber"],
+      "properties": {
+        "startBlockNumber": { "$ref": "#/$defs/uint" },
+        "endBlockNumber": { "$ref": "#/$defs/uint" }
+      }
+    },
+    "chainConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["l2MessageServiceAddress", "coinbase", "chainId"],
+      "properties": {
+        "l2MessageServiceAddress": { "$ref": "#/$defs/address" },
+        "coinbase": { "$ref": "#/$defs/address" },
+        "chainId": { "$ref": "#/$defs/uint" }
+      }
+    },
+    "parentFtxRollingHash": { "$ref": "#/$defs/hash32" },
+    "parentLastProcessedFtxNumber": { "$ref": "#/$defs/uint" },
+    "payloads": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/payload" }
+    }
+  },
+  "$defs": {
+    "uint": { "type": "integer", "minimum": 0 },
+    "hex": {
+      "type": "string",
+      "pattern": "^0x([0-9a-fA-F]{2})*$"
+    },
+    "hash32": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{64}$"
+    },
+    "address": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{40}$"
+    },
+    "acceptance": {
+      "type": "string",
+      "enum": [
+        "INCLUDED",
+        "BAD_NONCE",
+        "BAD_BALANCE",
+        "FILTERED_ADDRESS_FROM",
+        "FILTERED_ADDRESS_TO"
+      ]
+    },
+    "forcedTransaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["number", "deadline", "signedTxRlp", "acceptance"],
+      "properties": {
+        "number": { "$ref": "#/$defs/uint" },
+        "deadline": { "$ref": "#/$defs/uint" },
+        "signedTxRlp": { "$ref": "#/$defs/hex" },
+        "acceptance": { "$ref": "#/$defs/acceptance" }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statelessInputSsz", "rollupExtension"],
+      "properties": {
+        "statelessInputSsz": { "$ref": "#/$defs/hex" },
+        "_debugStatelessInput": {
+          "description": "Review-only decoded mirror; ignored by the decoder. Not constrained here.",
+          "type": "object"
+        },
+        "rollupExtension": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["forcedTransactions"],
+          "properties": {
+            "forcedTransactions": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/forcedTransaction" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
