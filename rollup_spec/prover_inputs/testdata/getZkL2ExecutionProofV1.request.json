@@ -19,11 +19,18 @@
         "anything": "discarded"
       },
       "rollupExtension": {
-        "forcedTransactions": []
+        "forcedTransactions": [
+          {
+            "number": 16,
+            "deadline": 1000599,
+            "signedTxRlp": "0x02f86b",
+            "acceptance": "INCLUDED"
+          }
+        ]
       }
     },
     {
-      "statelessInputSsz": "0x",
+      "statelessInputSsz": "0x0001abcd",
       "rollupExtension": {
         "forcedTransactions": [
           {

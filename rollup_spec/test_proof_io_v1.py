@@ -96,10 +96,15 @@ def test_decode_request_maps_all_fields_and_renames() -> None:
 
     assert len(req.payloads) == 2
     assert bytes(req.payloads[0].stateless_input_ssz) == bytes.fromhex("0001abcd")
-    assert req.payloads[0].rollup_extension.forced_transactions == []
-    assert bytes(req.payloads[1].stateless_input_ssz) == b""
+    ftxs = req.payloads[0].rollup_extension.forced_transactions
+    assert len(ftxs) == 1
+    assert int(ftxs[0].number) == 16
+    assert int(ftxs[0].deadline) == 1000599
+    assert bytes(ftxs[0].signed_tx_rlp) == bytes.fromhex("02f86b")
+    assert ftxs[0].acceptance == ForcedTransactionAcceptance.INCLUDED
 
     ftxs = req.payloads[1].rollup_extension.forced_transactions
+    assert bytes(req.payloads[1].stateless_input_ssz) == bytes.fromhex("0001abcd")
     assert len(ftxs) == 2
     assert int(ftxs[0].number) == 17
     assert int(ftxs[0].deadline) == 1000600
