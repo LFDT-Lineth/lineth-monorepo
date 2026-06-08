@@ -22,10 +22,6 @@ fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_ro
     entry_point, blobs_count = entry_point_and_blobs_count[0]
     var pc:Address = entry_point
 
-    // Base address of the pre-decoded instruction tables (lowest executable
-    // instruction address). Used to map pc -> instruction index.
-    var base:Address = instruction_base[0]
-
     var internal_offset:Length = 0 // internal offset to blobs_data
     for i:u64 = 0; i<blobs_count; i = i + 1 {
         var blob_offset:Address
@@ -41,13 +37,13 @@ fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_ro
 
     // We interpret pc == MAX_UINT_64 as the stop signal, which is set by the ecall instruction
     while pc != MAX_UINT_64 {
-        var index:u64 = (pc - base) >> 2
+        instruction = read_32(pc) as Instruction
 
         // clock cycle starts at 1
         clock_cycle = clock_cycle + 1
         printf "\n----------------------------------------------------------------- PC=%d, clock cycle: %d\n", pc, clock_cycle
 
-        pc = interpreter(index, pc)
+        pc = interpreter(instruction, pc)
     }
 }
 
