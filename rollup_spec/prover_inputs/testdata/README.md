@@ -2,7 +2,7 @@
 
 Fully-valid `getZkL2ExecutionProofV1`, `getZkRollupProofV1`, and
 `getZkRollupAggregationProofV1` request/response payloads (real hex, no ellipses)
-used by `rollup_spec/test_proof_io_v1.py`.
+used by `rollup_spec/proof_io_v1_test.py`.
 
 These differ from the illustrative examples in `../` (the parent
 `prover_inputs/` directory): those use `0x...` placeholders for documentation and
@@ -36,7 +36,7 @@ the rollup request's `shnarfTransition.endShnarf`, the aggregation request's
 
 ## Running the tests locally
 
-`rollup_spec/test_proof_io_v1.py` imports the guest dataclasses, which pull in the
+`rollup_spec/proof_io_v1_test.py` imports the guest dataclasses, which pull in the
 native dependencies in `rollup_spec/requirements.txt` (`ckzg`, `coincurve` via
 `ethereum-execution`, `lz4`). Those have no wheels for the newest Python and are
 built from source, so use **Python 3.11 or 3.12** and the Xcode command-line
@@ -67,7 +67,7 @@ Run the tests from the **repo root** (so the `rollup_spec` package resolves):
 
 ```bash
 cd ..                       # back to the repo root
-python -m pytest rollup_spec/test_proof_io_v1.py
+python -m pytest rollup_spec/proof_io_v1_test.py
 ```
 
 When you are done, `deactivate` the virtualenv.
