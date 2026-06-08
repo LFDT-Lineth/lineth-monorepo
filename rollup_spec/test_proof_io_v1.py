@@ -172,12 +172,12 @@ def test_encode_response_shape_and_values() -> None:
     assert pi["endBlockHash"] == "0x" + ("0b" * 32)
     assert pi["endBlockNumber"] == 1000503
     assert pi["endBlockTimestamp"] == 1763000123
-    assert pi["L2L1MessagesHash"] == "0x" + ("01" * 32)
+    assert pi["l2L1MessagesHash"] == "0x" + ("01" * 32)
     assert pi["endL1L2BridgeRollingHashMessageNumber"] == 5
     assert pi["lastProcessedFtxNumber"] == 18
     assert set(pi.keys()) == {
         "parentBlockHash", "endBlockHash", "endBlockNumber", "endBlockTimestamp",
-        "L2L1MessagesHash", "parentL1L2BridgeRollingHash",
+        "l2L1MessagesHash", "parentL1L2BridgeRollingHash",
         "parentL1L2BridgeRollingHashMessageNumber", "endL1L2BridgeRollingHash",
         "endL1L2BridgeRollingHashMessageNumber", "dynamicChainConfigHash",
         "parentFtxRollingHash", "endFtxRollingHash", "lastProcessedFtxNumber",

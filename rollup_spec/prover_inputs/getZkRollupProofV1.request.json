@@ -47,7 +47,7 @@
                 "endBlockHash":                             "0x0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
                 "endBlockNumber":                           1000503,
                 "endBlockTimestamp":                         1763000123,
-                "L2L1MessagesHash":                         "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "l2L1MessagesHash":                         "0x0000000000000000000000000000000000000000000000000000000000000000",
                 "parentL1L2BridgeRollingHash":              "0x0000000000000000000000000000000000000000000000000000000000000000",
                 "parentL1L2BridgeRollingHashMessageNumber": 0,
                 "endL1L2BridgeRollingHash":                 "0x0000000000000000000000000000000000000000000000000000000000000000",

@@ -50,7 +50,7 @@
         "endShnarf":      "0x8d0a74047e241998a03664b98064da391c492e8a4ad96160ae46eeaaabdc7b5a"
     },
 
-    "_comment_l2ExecutionProofs": "N l2-execution proofs tiling the combined block range, in canonical (start..end) order. Each entry inlines everything the rollup guest needs for that l2-execution proof: the recursive STARK `proof` bytes, the 15-field `publicInputs` tuple, and the preimages of the three hash-committed PI fields — `L2L1MsgList` (preimage of publicInputs.L2L1MessagesHash), `froms` (preimage of publicInputs.txFromsHash), and `addrs` (preimage of publicInputs.filteredAddressesHash, §6.5).",
+    "_comment_l2ExecutionProofs": "N l2-execution proofs tiling the combined block range, in canonical (start..end) order. Each entry inlines everything the rollup guest needs for that l2-execution proof: the recursive STARK `proof` bytes, the 15-field `publicInputs` tuple, and the preimages of the three hash-committed PI fields — `l2L1Messages` (preimage of publicInputs.l2L1MessagesHash), `txFroms` (preimage of publicInputs.txFromsHash), and `filteredAddresses` (preimage of publicInputs.filteredAddressesHash, §6.5).",
     "l2ExecutionProofs": [
         {
             "proof": "0x...",
@@ -59,7 +59,7 @@
                 "endBlockHash":                             "0x0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
                 "endBlockNumber":                           1000503,
                 "endBlockTimestamp":                         1763000123,
-                "L2L1MessagesHash":                         "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "l2L1MessagesHash":                         "0x0000000000000000000000000000000000000000000000000000000000000000",
                 "parentL1L2BridgeRollingHash":              "0x0000000000000000000000000000000000000000000000000000000000000000",
                 "parentL1L2BridgeRollingHashMessageNumber": 0,
                 "endL1L2BridgeRollingHash":                 "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -71,9 +71,9 @@
                 "filteredAddressesHash":                    "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
                 "txFromsHash":                              "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
             },
-            "L2L1MsgList": [],
-            "froms":       ["0x0000000000000000000000000000000000000001"],
-            "addrs":       []
+            "l2L1Messages": [],
+            "txFroms":       ["0x0000000000000000000000000000000000000001"],
+            "filteredAddresses":       []
         },
         { "_comment": "remaining N-1 entries (covering 1000504-1000510, 1000511-1000515, 1000516-1000520) have the same shape; abbreviated in the fixture" }
     ],
@@ -81,7 +81,7 @@
     "publicInputs": {
         "endBlockNumber":                      1000520,
         "endBlockTimestamp":                   1763000457,
-        "L2L1BridgeTransactionTree":               "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "l2L1BridgeTransactionTree":               "0x0000000000000000000000000000000000000000000000000000000000000000",
         "parentL1L2BridgeRollingHash":               "0x0000000000000000000000000000000000000000000000000000000000000000",
         "parentL1L2BridgeRollingHashMessageNumber":  0,
         "endL1L2BridgeRollingHash":                   "0x0000000000000000000000000000000000000000000000000000000000000000",
