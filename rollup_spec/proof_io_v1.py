@@ -52,7 +52,12 @@ from .rollup import (
     BlobWitness,
     RollupProof,
     RollupProofPrivateInput,
+    RollupPublicInput,
     run_rollup_guest,
+)
+from .rollup_aggregation import (
+    RollupAggregationProofPrivateInput,
+    run_rollup_aggregation_guest,
 )
 
 
@@ -374,37 +379,42 @@ def decode_rollup_request_json(text: str | bytes) -> RollupProofPrivateInput:
 # ── rollup response: guest dataclass -> JSON dict ─────────────────────────────
 
 
+def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
+    """The 14-field rollup PI tuple (§2.4) as JSON — shared by the rollup and
+    rollup-aggregation responses, which expose the identical PI structure."""
+    return {
+        "endBlockNumber": int(pi.end_block_number),
+        "endBlockTimestamp": int(pi.end_block_timestamp),
+        "l2L1BridgeTransactionTree": _hx(pi.l2_l1_bridge_transaction_tree),
+        "parentL1L2BridgeRollingHash": _hx(pi.parent_l1_l2_bridge_rolling_hash),
+        "parentL1L2BridgeRollingHashMessageNumber": int(
+            pi.parent_l1_l2_bridge_rolling_hash_message_number
+        ),
+        "endL1L2BridgeRollingHash": _hx(pi.end_l1_l2_bridge_rolling_hash),
+        "endL1L2BridgeRollingHashMessageNumber": int(
+            pi.end_l1_l2_bridge_rolling_hash_message_number
+        ),
+        "dynamicChainConfigHash": _hx(pi.dynamic_chain_config_hash),
+        "parentFtxRollingHash": _hx(pi.parent_ftx_rolling_hash),
+        "endFtxRollingHash": _hx(pi.end_ftx_rolling_hash),
+        "lastProcessedFtxNumber": int(pi.last_processed_ftx_number),
+        "filteredAddressesHash": _hx(pi.filtered_addresses_hash),
+        "parentShnarf": _hx(pi.parent_shnarf),
+        "endShnarf": _hx(pi.end_shnarf),
+    }
+
+
 def encode_rollup_response(proof: RollupProof, prover_version: str) -> dict:
     """
     Convert the guest's `RollupProof` into a `getZkRollupProofV1.response.json`
     object the coordinator's Jackson mapper consumes directly.
     """
-    pi = proof.public_inputs
     return {
         "proverVersion": prover_version,
         "proof": _hx(proof.proof),
         "startBlockNumber": int(proof.start_block_number),
         "endBlockNumber": int(proof.end_block_number),
-        "publicInputs": {
-            "endBlockNumber": int(pi.end_block_number),
-            "endBlockTimestamp": int(pi.end_block_timestamp),
-            "l2L1BridgeTransactionTree": _hx(pi.l2_l1_bridge_transaction_tree),
-            "parentL1L2BridgeRollingHash": _hx(pi.parent_l1_l2_bridge_rolling_hash),
-            "parentL1L2BridgeRollingHashMessageNumber": int(
-                pi.parent_l1_l2_bridge_rolling_hash_message_number
-            ),
-            "endL1L2BridgeRollingHash": _hx(pi.end_l1_l2_bridge_rolling_hash),
-            "endL1L2BridgeRollingHashMessageNumber": int(
-                pi.end_l1_l2_bridge_rolling_hash_message_number
-            ),
-            "dynamicChainConfigHash": _hx(pi.dynamic_chain_config_hash),
-            "parentFtxRollingHash": _hx(pi.parent_ftx_rolling_hash),
-            "endFtxRollingHash": _hx(pi.end_ftx_rolling_hash),
-            "lastProcessedFtxNumber": int(pi.last_processed_ftx_number),
-            "filteredAddressesHash": _hx(pi.filtered_addresses_hash),
-            "parentShnarf": _hx(pi.parent_shnarf),
-            "endShnarf": _hx(pi.end_shnarf),
-        },
+        "publicInputs": _encode_rollup_public_inputs(proof.public_inputs),
         "l2L1Roots": [_hx(r) for r in proof.l2_l1_roots],
         "filteredAddresses": [_hx(a) for a in proof.filtered_addresses],
     }
@@ -424,3 +434,146 @@ def run_rollup_from_request_json(text: str | bytes, prover_version: str) -> dict
     rollup_input = decode_rollup_request_json(text)
     proof = run_rollup_guest(rollup_input)
     return encode_rollup_response(proof, prover_version)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Rollup-aggregation proof (V1)
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# A rollup-aggregation request embeds the rollup proofs it recursively verifies,
+# in the same JSON shape the rollup *response* uses (minus the `proverVersion`
+# envelope field). We decode each embedded rollup proof back into the
+# `RollupProof` guest dataclass — the inverse of `encode_rollup_response`.
+
+
+# ── rollup proof: nested decode (embedded in the aggregation request) ─────────
+
+
+def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
+    def h(key: str) -> Hash32:
+        return Hash32(_bytes_from_hex(_require(obj, key, ctx), f"{ctx}{key}"))
+
+    def n(key: str) -> U64:
+        return _u64(_require(obj, key, ctx), f"{ctx}{key}")
+
+    return RollupPublicInput(
+        end_block_number=n("endBlockNumber"),
+        end_block_timestamp=n("endBlockTimestamp"),
+        l2_l1_bridge_transaction_tree=h("l2L1BridgeTransactionTree"),
+        parent_l1_l2_bridge_rolling_hash=h("parentL1L2BridgeRollingHash"),
+        parent_l1_l2_bridge_rolling_hash_message_number=n("parentL1L2BridgeRollingHashMessageNumber"),
+        end_l1_l2_bridge_rolling_hash=h("endL1L2BridgeRollingHash"),
+        end_l1_l2_bridge_rolling_hash_message_number=n("endL1L2BridgeRollingHashMessageNumber"),
+        dynamic_chain_config_hash=h("dynamicChainConfigHash"),
+        parent_ftx_rolling_hash=h("parentFtxRollingHash"),
+        end_ftx_rolling_hash=h("endFtxRollingHash"),
+        last_processed_ftx_number=n("lastProcessedFtxNumber"),
+        filtered_addresses_hash=h("filteredAddressesHash"),
+        parent_shnarf=h("parentShnarf"),
+        end_shnarf=h("endShnarf"),
+    )
+
+
+def _decode_rollup_proof(obj: dict, ctx: str) -> RollupProof:
+    l2_l1_roots = _require_list(obj, "l2L1Roots", ctx)
+    filtered_addresses = _require_list(obj, "filteredAddresses", ctx)
+    return RollupProof(
+        public_inputs=_decode_rollup_public_input(
+            _require(obj, "publicInputs", ctx), f"{ctx}publicInputs."
+        ),
+        start_block_number=_u64(_require(obj, "startBlockNumber", ctx), f"{ctx}startBlockNumber"),
+        end_block_number=_u64(_require(obj, "endBlockNumber", ctx), f"{ctx}endBlockNumber"),
+        proof=_bytes_from_hex(_require(obj, "proof", ctx), f"{ctx}proof"),
+        l2_l1_roots=[
+            Hash32(_bytes_from_hex(r, f"{ctx}l2L1Roots[{i}]")) for i, r in enumerate(l2_l1_roots)
+        ],
+        filtered_addresses=[
+            Address(_bytes_from_hex(a, f"{ctx}filteredAddresses[{i}]"))
+            for i, a in enumerate(filtered_addresses)
+        ],
+    )
+
+
+# ── rollup-aggregation request: JSON dict -> guest dataclass ──────────────────
+
+
+def decode_aggregation_request(obj: dict) -> RollupAggregationProofPrivateInput:
+    """
+    Convert a parsed `getZkRollupAggregationProofV1.request.json` object into the
+    rollup-aggregation guest input dataclass.
+
+    `proverVersion`, `chainId`, and the top-level `blockRange` are request
+    metadata; the aggregation guest input is just the flat list of rollup proofs.
+    """
+    rollup_proofs = _require_list(obj, "rollupProofs", "")
+    if not rollup_proofs:
+        raise ProofIoError("'rollupProofs' must be a non-empty array")
+    return RollupAggregationProofPrivateInput(
+        rollup_proofs=[
+            _decode_rollup_proof(p, f"rollupProofs[{i}].") for i, p in enumerate(rollup_proofs)
+        ],
+    )
+
+
+def decode_aggregation_request_json(text: str | bytes) -> RollupAggregationProofPrivateInput:
+    return decode_aggregation_request(json.loads(text))
+
+
+# ── rollup-aggregation response: guest dataclass -> JSON dict ─────────────────
+
+
+def encode_aggregation_response(
+    public_inputs: RollupPublicInput,
+    prover_version: str,
+    *,
+    start_block_number: int,
+    proof: bytes = b"",
+) -> dict:
+    """
+    Convert the rollup-aggregation guest's `RollupPublicInput` into a
+    `getZkRollupAggregationProofV1.response.json` object.
+
+    Unlike the rollup proof, the aggregation guest returns only the public-input
+    tuple (`run_rollup_aggregation_guest` -> `RollupPublicInput`). The SNARK
+    `proof` bytes and the range's `startBlockNumber` are host-side metadata
+    supplied here: `endBlockNumber` comes from the PI, but `startBlockNumber` is
+    not part of the PI tuple (the rollup PI does not expose it).
+    """
+    return {
+        "proverVersion": prover_version,
+        "proof": _hx(proof),
+        "startBlockNumber": int(start_block_number),
+        "endBlockNumber": int(public_inputs.end_block_number),
+        "publicInputs": _encode_rollup_public_inputs(public_inputs),
+    }
+
+
+def encode_aggregation_response_json(
+    public_inputs: RollupPublicInput,
+    prover_version: str,
+    *,
+    start_block_number: int,
+    proof: bytes = b"",
+    indent: int | None = None,
+) -> str:
+    return json.dumps(
+        encode_aggregation_response(
+            public_inputs, prover_version, start_block_number=start_block_number, proof=proof
+        ),
+        indent=indent,
+    )
+
+
+# ── rollup-aggregation prover entrypoint ──────────────────────────────────────
+
+
+def run_aggregation_from_request_json(text: str | bytes, prover_version: str) -> dict:
+    """Full host flow: parse aggregation request JSON, run the guest, return response JSON dict."""
+    aggregation_input = decode_aggregation_request_json(text)
+    public_inputs = run_rollup_aggregation_guest(aggregation_input)
+    # startBlockNumber is not part of the PI tuple; take it from the first
+    # rollup proof's range (the aggregation covers a contiguous range).
+    start_block_number = int(aggregation_input.rollup_proofs[0].start_block_number)
+    return encode_aggregation_response(
+        public_inputs, prover_version, start_block_number=start_block_number
+    )

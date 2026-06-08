@@ -27,8 +27,10 @@ from rollup_spec.l2_execution import (
 from rollup_spec.rollup import RollupProof, RollupPublicInput
 from rollup_spec.proof_io_v1 import (
     ProofIoError,
+    decode_aggregation_request,
     decode_request,
     decode_rollup_request,
+    encode_aggregation_response,
     encode_response,
     encode_rollup_response,
 )
@@ -386,5 +388,167 @@ def test_rollup_schema_rejects_bad_request() -> None:
     validator = _validator("getZkRollupProofV1.request.schema.json")
     bad = _valid_rollup_request()
     bad["blobs"][0]["blobInputs"]["blobKzgProof"] = "0x1234"  # not 48 bytes
+    with pytest.raises(jsonschema.ValidationError):
+        validator.validate(bad)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Rollup-aggregation proof (V1)
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+def _valid_aggregation_request() -> dict:
+    return _load(_TESTDATA_DIR / "getZkRollupAggregationProofV1.request.json")
+
+
+def _expected_aggregation_response() -> dict:
+    return _load(_TESTDATA_DIR / "getZkRollupAggregationProofV1.response.json")
+
+
+def _sample_rollup_public_input() -> RollupPublicInput:
+    return RollupPublicInput(
+        end_block_number=U64(1000520),
+        end_block_timestamp=U64(1763000457),
+        l2_l1_bridge_transaction_tree=Hash32(bytes([0x11]) * 32),
+        parent_l1_l2_bridge_rolling_hash=Hash32(bytes([0x22]) * 32),
+        parent_l1_l2_bridge_rolling_hash_message_number=U64(0),
+        end_l1_l2_bridge_rolling_hash=Hash32(bytes([0x33]) * 32),
+        end_l1_l2_bridge_rolling_hash_message_number=U64(7),
+        dynamic_chain_config_hash=Hash32(bytes([0xC0]) * 32),
+        parent_ftx_rolling_hash=Hash32(bytes([0x44]) * 32),
+        end_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
+        last_processed_ftx_number=U64(9),
+        filtered_addresses_hash=Hash32(bytes([0x66]) * 32),
+        parent_shnarf=Hash32(bytes([0x47]) * 32),
+        end_shnarf=Hash32(bytes([0x8D]) * 32),
+    )
+
+
+# ── aggregation request decode ──────────────────────────────────────────────────
+
+
+def test_decode_aggregation_request_maps_all_fields() -> None:
+    req = decode_aggregation_request(_valid_aggregation_request())
+
+    assert len(req.rollup_proofs) == 1
+    proof = req.rollup_proofs[0]
+    assert bytes(proof.proof) == bytes.fromhex("abcdef")
+    assert int(proof.start_block_number) == 1000501
+    assert int(proof.end_block_number) == 1000520
+    assert proof.l2_l1_roots == [Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32)]
+    assert proof.filtered_addresses == [Address(bytes([0x01]) * 20)]
+
+    pi = proof.public_inputs
+    assert int(pi.end_block_number) == 1000520
+    assert int(pi.end_block_timestamp) == 1763000457
+    assert bytes(pi.l2_l1_bridge_transaction_tree) == bytes([0x11]) * 32
+    assert int(pi.end_l1_l2_bridge_rolling_hash_message_number) == 7
+    assert int(pi.last_processed_ftx_number) == 9
+    assert bytes(pi.parent_shnarf) == bytes([0x47]) * 32
+    assert bytes(pi.end_shnarf) == bytes([0x8D]) * 32
+
+
+def test_decode_aggregation_request_empty_rollup_proofs_is_rejected() -> None:
+    req = _valid_aggregation_request()
+    req["rollupProofs"] = []
+    with pytest.raises(ProofIoError, match="rollupProofs"):
+        decode_aggregation_request(req)
+
+
+def test_decode_aggregation_request_non_array_rollup_proofs_is_rejected() -> None:
+    req = _valid_aggregation_request()
+    req["rollupProofs"] = {"not": "an array"}
+    with pytest.raises(ProofIoError, match="rollupProofs"):
+        decode_aggregation_request(req)
+
+
+def test_decode_aggregation_request_missing_nested_pi_field_is_rejected() -> None:
+    req = _valid_aggregation_request()
+    del req["rollupProofs"][0]["publicInputs"]["endShnarf"]
+    with pytest.raises(ProofIoError, match="endShnarf"):
+        decode_aggregation_request(req)
+
+
+def test_decode_aggregation_request_malformed_nested_hash_is_rejected() -> None:
+    req = _valid_aggregation_request()
+    req["rollupProofs"][0]["publicInputs"]["parentShnarf"] = "0xnothex"
+    with pytest.raises(ProofIoError, match="parentShnarf"):
+        decode_aggregation_request(req)
+
+
+# ── aggregation response encode ─────────────────────────────────────────────────
+
+
+def test_encode_aggregation_response_matches_fixture_exactly() -> None:
+    out = encode_aggregation_response(
+        _sample_rollup_public_input(),
+        prover_version=_PROVER_VERSION,
+        start_block_number=1000501,
+        proof=b"\xde\xad\xbe\xef",
+    )
+    assert out == _expected_aggregation_response()
+
+
+def test_encode_aggregation_response_shape_and_values() -> None:
+    out = encode_aggregation_response(
+        _sample_rollup_public_input(),
+        prover_version="4.0.0-riscv",
+        start_block_number=1000501,
+        proof=b"\xde\xad\xbe\xef",
+    )
+
+    assert out["proverVersion"] == "4.0.0-riscv"
+    assert out["proof"] == "0xdeadbeef"
+    assert out["startBlockNumber"] == 1000501
+    assert out["endBlockNumber"] == 1000520
+    # The aggregation response has no top-level l2L1Roots / filteredAddresses.
+    assert set(out.keys()) == {
+        "proverVersion", "proof", "startBlockNumber", "endBlockNumber", "publicInputs",
+    }
+
+    pi = out["publicInputs"]
+    assert pi["parentShnarf"] == "0x" + ("47" * 32)
+    assert pi["endShnarf"] == "0x" + ("8d" * 32)
+    assert pi["lastProcessedFtxNumber"] == 9
+    assert set(pi.keys()) == {
+        "endBlockNumber", "endBlockTimestamp", "l2L1BridgeTransactionTree",
+        "parentL1L2BridgeRollingHash", "parentL1L2BridgeRollingHashMessageNumber",
+        "endL1L2BridgeRollingHash", "endL1L2BridgeRollingHashMessageNumber",
+        "dynamicChainConfigHash", "parentFtxRollingHash", "endFtxRollingHash",
+        "lastProcessedFtxNumber", "filteredAddressesHash", "parentShnarf", "endShnarf",
+    }
+
+
+def test_encode_aggregation_response_defaults_proof_to_0x() -> None:
+    out = encode_aggregation_response(
+        _sample_rollup_public_input(), prover_version="v", start_block_number=1
+    )
+    assert out["proof"] == "0x"
+
+
+# ── aggregation JSON Schema conformance ────────────────────────────────────────
+
+
+def test_valid_aggregation_request_conforms_to_schema() -> None:
+    _validator("getZkRollupAggregationProofV1.request.schema.json").validate(
+        _valid_aggregation_request()
+    )
+
+
+def test_encoded_aggregation_response_conforms_to_schema() -> None:
+    out = encode_aggregation_response(
+        _sample_rollup_public_input(),
+        prover_version="4.0.0-riscv",
+        start_block_number=1000501,
+        proof=b"\xde\xad\xbe\xef",
+    )
+    _validator("getZkRollupAggregationProofV1.response.schema.json").validate(out)
+
+
+def test_aggregation_schema_rejects_bad_request() -> None:
+    jsonschema = pytest.importorskip("jsonschema")
+    validator = _validator("getZkRollupAggregationProofV1.request.schema.json")
+    bad = _valid_aggregation_request()
+    bad["rollupProofs"][0]["publicInputs"]["parentShnarf"] = "0x1234"  # not 32 bytes
     with pytest.raises(jsonschema.ValidationError):
         validator.validate(bad)
