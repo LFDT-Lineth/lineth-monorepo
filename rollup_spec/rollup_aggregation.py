@@ -73,14 +73,14 @@ def verify_rollup_proof(proof: RollupProof) -> None:
         in-circuit recursive verifier. In this reference, the
         recursive-verify step is implicit; `RollupProof.proof` stands in for
         the recursive STARK bytes the guest would actually check. We only
-        re-validate the hash preimages (`L2L1BridgeTransactionTree`,
+        re-validate the hash preimages (`l2L1BridgeTransactionTree`,
         `filteredAddressesHash`) the rollup-aggregation proof consumes.
     """
     if proof.public_inputs.end_block_number != proof.end_block_number:
         raise Exception("rollup proof range metadata does not match public inputs")
     # PRECOMPILE: keccak256 (preimage-binding checks).
     if hash_hash_list(proof.l2_l1_roots) != proof.public_inputs.l2_l1_bridge_transaction_tree:
-        raise Exception("invalid L2L1BridgeTransactionTree preimage")
+        raise Exception("invalid l2L1BridgeTransactionTree preimage")
     if hash_address_list(proof.filtered_addresses) != proof.public_inputs.filtered_addresses_hash:
         raise Exception("invalid rollup filteredAddressesHash preimage")
 

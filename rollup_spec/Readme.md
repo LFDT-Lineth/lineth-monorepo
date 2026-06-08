@@ -84,7 +84,7 @@ declared outcome is one of the allowed outcomes in §6.5.
 | `endBlockHash` | Block hash at the end of this range |
 | `endBlockNumber` | Block number at the end of this range; required for the L1 contract to update `currentL2BlockNumber` and support liveness checks |
 | `endBlockTimestamp` | UNIX timestamp of the last block in this range. Bubbled up unchanged through the rollup and rollup-aggregation proofs (§2.2, §2.3) and stored on L1 as `currentL2BlockTimestamp` at finalization, so L1 consumers can read the finalized L2 "wall clock". |
-| `L2L1MessagesHash` | keccak256 of the ordered list of L2→L1 withdrawal message hashes emitted in this range; the number of messages is bounded per l2-execution proof |
+| `l2L1MessagesHash` | keccak256 of the ordered list of L2→L1 withdrawal message hashes emitted in this range; the number of messages is bounded per l2-execution proof |
 | `parentL1L2BridgeRollingHash` | Accumulated L1→L2 deposit rolling hash at the start of this range; enables chaining across l2-execution proofs and L1 continuity verification |
 | `parentL1L2BridgeRollingHashMessageNumber` | Message number corresponding to `parentL1L2BridgeRollingHash` |
 | `endL1L2BridgeRollingHash` | Accumulated L1→L2 deposit rolling hash at the end of this range |
@@ -138,7 +138,7 @@ The **l2-execution proof's 15-field PI** is *input* to this guest (private witne
 |---|---|
 | `parentBlockHash` | **Dropped** — folded into `parentShnarf` via `Hash(parentShnarf, lastBlockHash, blobHash)` (step 2) |
 | `endBlockHash` | **Dropped** — folded into `endShnarf` (last block of the last blob) |
-| `L2L1MessagesHash` | **Dropped** — per-execution flat hash consumed in step 6 to build `L2L1BridgeTransactionTree`, then discarded |
+| `l2L1MessagesHash` | **Dropped** — per-execution flat hash consumed in step 6 to build `l2L1BridgeTransactionTree`, then discarded |
 | `txFromsHash` | **Dropped** — consumed in step 3 to cross-check `froms_e` against blob `blockData.froms`; not propagated |
 | `endBlockNumber` | Carried over from `PI_Eₙ` |
 | `endBlockTimestamp` | Carried over from `PI_Eₙ` |
@@ -152,7 +152,7 @@ The **l2-execution proof's 15-field PI** is *input* to this guest (private witne
 | `lastProcessedFtxNumber` | Carried over from `PI_Eₙ` |
 | `filteredAddressesHash` | Same name, content rehashed: `keccak256(addrs_E₁ ‖ … ‖ addrs_Eₙ)` (step 8) |
 
-Plus three **new** rollup-level fields: `parentShnarf` (input), `endShnarf` (computed in step 2), `L2L1BridgeTransactionTree` (computed in step 6).
+Plus three **new** rollup-level fields: `parentShnarf` (input), `endShnarf` (computed in step 2), `l2L1BridgeTransactionTree` (computed in step 6).
 
 **Private Inputs (Witness)**
 
@@ -164,9 +164,9 @@ Plus three **new** rollup-level fields: `parentShnarf` (input), `endShnarf` (com
 | `blockRlps_b` | The ordered list of canonical full block RLPs published through the DA path for blob `b` (`m_b` entries: header + tx list [+ withdrawals], EIP-2718 typed transactions in full signed form). The l2-execution proof receives `NewPayloadRequest` inputs instead; the rollup proof cross-checks these DA blocks against l2-execution public block hashes and `txFromsHash`. Truncation per §3.2 happens *inside* the guest; there is no separately witnessed truncated form, and the compressed blob bytes are not witnessed either — the guest recomputes them. |
 | `E₁ … Eₙ` | The l2-execution proofs, ordered by block range, tiling the combined range of all K blobs |
 | `PI_E₁ … PI_Eₙ` | The public-input tuple for each l2-execution proof |
-| `L2L1MsgList_e` | Per-l2-execution-proof L2→L1 message hash list, for `e ∈ [1, N]` |
-| `froms_e` | Per-l2-execution-proof sender address list (block-then-transaction order) — preimage of `PI_E_e.txFromsHash` |
-| `addrs_e` | Per-l2-execution-proof refused-FTX address list (§6.5) — preimage of `PI_E_e.filteredAddressesHash` |
+| `l2L1Messages_e` | Per-l2-execution-proof L2→L1 message hash list, for `e ∈ [1, N]` |
+| `txFroms_e` | Per-l2-execution-proof sender address list (block-then-transaction order) — preimage of `PI_E_e.txFromsHash` |
+| `filteredAddresses_e` | Per-l2-execution-proof refused-FTX address list (§6.5) — preimage of `PI_E_e.filteredAddressesHash` |
 
 The proven statement is **KZG verification on the canonical compressed payload computed from the canonical truncated RLP**: the guest applies the §3.2 truncation rule to each `blockRlps_b[i]` internally, RLP-encodes the truncated form, LZ4-compresses it, zero-pads to `BLOB_BYTES_LENGTH` (4096 × 32 = 131 072 bytes), computes `computedBlobCommitment_b = blob_to_kzg_commitment(paddedBytes_b)`, asserts `kzg_commitment_to_versioned_hash(computedBlobCommitment_b) == blobHash_b`, and runs `verify_blob_kzg_proof(paddedBytes_b, computedBlobCommitment_b, KzgProof_b)`. The KZG verifier accepts iff the computed bytes match what the sequencer committed to on L1 — so there is no separate byte-equality assertion against a witnessed `blobContent`; the commitment is an in-guest value, not a witness field. The intermediate truncated blocks are computed by the guest, not witnessed; their downstream consumers (block-hash boundary checks in step 5, sender-list cross-checks in step 3) read them from the in-guest computation. Authenticity of the full block RLPs is anchored by KZG (the compressed bytes are pinned to L1) plus the downstream checks — every block hash is bound to an l2-execution-proof boundary, every `froms` list to the l2-execution proof's `txFromsHash` — so the guest cannot diverge from what was actually executed.
 
@@ -208,7 +208,7 @@ For each blob `b ∈ [1, K]` in order, perform the per-blob block (steps 1–2);
 
     Adjacent l2-execution proofs already chain `endBlockHash → parentBlockHash` via step 7 below, so the head-anchor in (b) only needs to look at `PI_E₁.parentBlockHash`.
 
-6. **Build the L2→L1 Merkle trees.** For each `e ∈ [1, N]`, receive the message hash list as a private witness and assert `keccak256(L2L1MsgList_e) == PI_E_e.L2L1MessagesHash`. Concatenate all N lists in order. Partition the combined list into consecutive chunks of `2^D` leaves (where D is the fixed protocol-level tree depth, currently 5). Pad the final chunk with zero-value (0x00…00) leaves to fill it. Each leaf is a 32-byte message hash; internal nodes are `keccak256(left ‖ right)`. Compute the root of each full tree and collect them into an ordered array `[root_1, …, root_T]`. Output `L2L1BridgeTransactionTree = keccak256(root_1 ‖ … ‖ root_T)` as a commitment to this ordered root list. The tree depth D is a protocol constant and is not included in the public output.
+6. **Build the L2→L1 Merkle trees.** For each `e ∈ [1, N]`, receive the message hash list as a private witness and assert `keccak256(l2L1Messages_e) == PI_E_e.l2L1MessagesHash`. Concatenate all N lists in order. Partition the combined list into consecutive chunks of `2^D` leaves (where D is the fixed protocol-level tree depth, currently 5). Pad the final chunk with zero-value (0x00…00) leaves to fill it. Each leaf is a 32-byte message hash; internal nodes are `keccak256(left ‖ right)`. Compute the root of each full tree and collect them into an ordered array `[root_1, …, root_T]`. Output `l2L1BridgeTransactionTree = keccak256(root_1 ‖ … ‖ root_T)` as a commitment to this ordered root list. The tree depth D is a protocol constant and is not included in the public output.
 
 7. **Chain the l2-execution proofs.** For each consecutive pair `(Eᵢ, Eᵢ₊₁)` assert:
    ```
@@ -234,7 +234,7 @@ The same 14-field tuple as the rollup proof (§2.2) and as the final rollup-aggr
 
 - The `M` rollup proofs `B₁ … Bₘ` (or, in a hierarchical setup, prior rollup-aggregation proofs)
 - Their complete 14-field public-input tuples `PI_B₁ … PI_Bₘ`
-- For each `i`, the ordered L2L1 root array whose committed hash is `PI_Bᵢ.L2L1BridgeTransactionTree`
+- For each `i`, the ordered L2L1 root array whose committed hash is `PI_Bᵢ.l2L1BridgeTransactionTree`
 - For each `i`, the ordered filtered-address list whose committed hash is `PI_Bᵢ.filteredAddressesHash`
 - The environment-dependent `isAllowedCircuitID` bitmask gating which inner circuit/program identities step 1 may accept (bit *i*, LSb→MSb, allows circuit ID *i*). It mirrors the prover's `Aggregation.is_allowed_circuit_id` config and is a proving-policy input only — not one of the 14 public-input fields and not part of `dynamicChainConfigHash`.
 
@@ -254,9 +254,9 @@ The same 14-field tuple as the rollup proof (§2.2) and as the final rollup-aggr
 
 3. **Merge the L2→L1 root lists.** Receive each rollup proof's ordered root array as a private witness and verify it against its committed hash:
    ```
-   for i in [1, M]: keccak256(roots_Bᵢ) == PI_Bᵢ.L2L1BridgeTransactionTree
+   for i in [1, M]: keccak256(roots_Bᵢ) == PI_Bᵢ.l2L1BridgeTransactionTree
    ```
-   Concatenate all `M` arrays in order and output `L2L1BridgeTransactionTree = keccak256(roots_B₁ ‖ … ‖ roots_Bₘ)`.
+   Concatenate all `M` arrays in order and output `l2L1BridgeTransactionTree = keccak256(roots_B₁ ‖ … ‖ roots_Bₘ)`.
 
 4. **Merge filtered address lists.** Receive each rollup proof's address list, verify it against its committed hash, concatenate all `M` lists in order, and output `filteredAddressesHash = keccak256(addrs_B₁ ‖ … ‖ addrs_Bₘ)`.
 
@@ -274,7 +274,7 @@ The rollup-aggregation proof's root exposes fourteen values to the L1 contract:
 |---|---|
 | 1 | `endBlockNumber` |
 | 2 | `endBlockTimestamp` |
-| 3 | `L2L1BridgeTransactionTree` |
+| 3 | `l2L1BridgeTransactionTree` |
 | 4 | `parentL1L2BridgeRollingHash` |
 | 5 | `parentL1L2BridgeRollingHashMessageNumber` |
 | 6 | `endL1L2BridgeRollingHash` |
@@ -379,15 +379,15 @@ Across rollup and rollup-aggregation proofs, continuity is enforced by the rollu
 
 ### 4.2 L2 → L1 (Withdrawals)
 
-The L2→L1 bridge state is tracked via `L2L1BridgeTransactionTree`, a commitment to an ordered list of fixed-depth Merkle tree roots. The message commitment is represented differently at each level of the proof tree.
+The L2→L1 bridge state is tracked via `l2L1BridgeTransactionTree`, a commitment to an ordered list of fixed-depth Merkle tree roots. The message commitment is represented differently at each level of the proof tree.
 
 **How it works across proof levels:**
 
-- **l2-execution proof** — outputs `L2L1MessagesHash`, a flat hash of the bounded ordered list of withdrawal message hashes emitted in its range. The number of messages per l2-execution proof used to be bounded to 16 by design, keeping this commitment cheap but this requirement does not hold anymore.
-- **rollup proof** — receives the per-l2-execution message hash lists as private witnesses, verifies each against the corresponding `L2L1MessagesHash`, concatenates them across all `N` l2-execution proofs, partitions the combined list into consecutive chunks of `2^D` leaves (where D is the protocol-level tree depth, currently 5), pads the last chunk with zero-value leaves, computes the root of each full tree, and outputs `L2L1BridgeTransactionTree = keccak256(root₁ ‖ … ‖ rootₖ)`. This is the single point where the flat commitment is expanded into a tree structure.
-- **rollup-aggregation proof** — receives the per-rollup-proof root arrays as private witnesses, verifies each against the corresponding `L2L1BridgeTransactionTree`, concatenates the arrays in order, and outputs `keccak256(roots_B₁ ‖ … ‖ roots_Bₘ)`.
+- **l2-execution proof** — outputs `l2L1MessagesHash`, a flat hash of the bounded ordered list of withdrawal message hashes emitted in its range. The number of messages per l2-execution proof used to be bounded to 16 by design, keeping this commitment cheap but this requirement does not hold anymore.
+- **rollup proof** — receives the per-l2-execution message hash lists as private witnesses, verifies each against the corresponding `l2L1MessagesHash`, concatenates them across all `N` l2-execution proofs, partitions the combined list into consecutive chunks of `2^D` leaves (where D is the protocol-level tree depth, currently 5), pads the last chunk with zero-value leaves, computes the root of each full tree, and outputs `l2L1BridgeTransactionTree = keccak256(root₁ ‖ … ‖ rootₖ)`. This is the single point where the flat commitment is expanded into a tree structure.
+- **rollup-aggregation proof** — receives the per-rollup-proof root arrays as private witnesses, verifies each against the corresponding `l2L1BridgeTransactionTree`, concatenates the arrays in order, and outputs `keccak256(roots_B₁ ‖ … ‖ roots_Bₘ)`.
 
-**On-chain storage and withdrawal claims.** At finalization, the submitter provides the actual root list as calldata alongside the proof. The L1 contract verifies `keccak256(roots) == L2L1BridgeTransactionTree` from the proof's public output, then stores each root via `l2MerkleRootsDepths[root] = D` exactly as today. Users claim withdrawals identically to the current flow: they provide a `merkleRoot`, `leafIndex`, and `proof[]`; the contract looks up the stored depth and verifies the sparse Merkle proof.
+**On-chain storage and withdrawal claims.** At finalization, the submitter provides the actual root list as calldata alongside the proof. The L1 contract verifies `keccak256(roots) == l2L1BridgeTransactionTree` from the proof's public output, then stores each root via `l2MerkleRootsDepths[root] = D` exactly as today. Users claim withdrawals identically to the current flow: they provide a `merkleRoot`, `leafIndex`, and `proof[]`; the contract looks up the stored depth and verifies the sparse Merkle proof.
 
 **Leaf position derivability from message number.** Withdrawal messages are assigned monotonically increasing message numbers. Because the finalization anchors the message number range via `parentL1L2BridgeRollingHashMessageNumber` and `endL1L2BridgeRollingHashMessageNumber`, the tree index and leaf index of any message are deterministic: for a message at offset `k` from the start of the finalization range, `treeIndex = k / 2^D` and `leafIndex = k mod 2^D`. This means a user who knows their message number can always locate their leaf without any additional on-chain data.
 
@@ -411,7 +411,7 @@ separate from the l2-execution, rollup, and rollup-aggregation guest programs.
    - Assert `parentL1L2BridgeRollingHash == currentFinalizedL1L2BridgeRollingHash` and `parentL1L2BridgeRollingHashMessageNumber == currentFinalizedL1L2BridgeRollingHashMessageNumber` (deposit bridge continuity)
    - Assert `endL1L2BridgeRollingHash == l1RollingHash[endL1L2BridgeRollingHashMessageNumber]` (deposit bridge authenticity — the proof's claimed end-of-range rolling hash must match L1's authoritative chain)
    - Assert the proof's `dynamicChainConfigHash` matches what the verifier was deployed with: `pi.dynamicChainConfigHash == IPlonkVerifier(verifier).getChainConfiguration()`. The verifier holds this digest as an immutable `bytes32` (`CHAIN_CONFIGURATION`); its preimage — the four named `ChainConfigurationParameter` entries `chainId`, `baseFee`, `coinbase`, `l2MessageServiceAddress` — is bound at verifier deploy time and emitted in the `ChainConfigurationSet` event, so the values are auditable on-chain via the deploy log + the verifier's verified constructor args. Changing any of the four values means deploying a new verifier and re-pointing the rollup at it via `setVerifierAddress`; there is no separate L1 storage slot for the chain-config preimage that could fall out of sync.
-   - Verify `keccak256(submittedRoots) == L2L1BridgeTransactionTree`; store each root via `l2MerkleRootsDepths[root] = D`
+   - Verify `keccak256(submittedRoots) == l2L1BridgeTransactionTree`; store each root via `l2MerkleRootsDepths[root] = D`
    - Optionally process `l2MessagingBlocksOffsets` calldata to emit `L2MessagingBlockAnchored` discovery events (unchanged from today)
    - Update storage: `currentFinalizedLastBlockHash`, `currentFinalizedShnarf`, `currentL2BlockNumber`, `currentL2BlockTimestamp`, `currentFinalizedL1L2BridgeRollingHash`, `currentFinalizedL1L2BridgeRollingHashMessageNumber`
 

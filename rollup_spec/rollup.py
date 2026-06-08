@@ -461,7 +461,7 @@ def verify_l2_execution_proof(proof: L2ExecutionProof) -> None:
 
     Recursive STARK verification is a zkVM primitive in the guest; here
     `L2ExecutionProof.proof` stands in for those bytes, and the reference only
-    re-checks the hash-preimage bindings (`txFromsHash`, `L2L1MessagesHash`,
+    re-checks the hash-preimage bindings (`txFromsHash`, `l2L1MessagesHash`,
     `filteredAddressesHash`) the rollup proof consumes alongside the PI tuple.
     """
     if proof.public_inputs.end_block_number != proof.end_block_number:
@@ -516,7 +516,7 @@ def build_l2_messages_tree(msgs: Sequence[Hash32]) -> Tuple[List[Hash32], Hash32
     - Flat-hash the ordered roots with keccak256(root_1 || ... || root_n).
 
     The returned root list is the private preimage used by aggregation and L1
-    calldata; the returned hash is the public `L2L1BridgeTransactionTree`.
+    calldata; the returned hash is the public `l2L1BridgeTransactionTree`.
     """
     roots = build_l2_message_roots(msgs)
     return roots, hash_hash_list(roots)

@@ -189,7 +189,7 @@ def encode_response(proof: L2ExecutionProof, prover_version: str) -> dict:
             "endBlockHash": _hx(pi.end_block_hash),
             "endBlockNumber": int(pi.end_block_number),
             "endBlockTimestamp": int(pi.end_block_timestamp),
-            "L2L1MessagesHash": _hx(pi.l2_l1_messages_hash),
+            "l2L1MessagesHash": _hx(pi.l2_l1_messages_hash),
             "parentL1L2BridgeRollingHash": _hx(pi.parent_l1_l2_bridge_rolling_hash),
             "parentL1L2BridgeRollingHashMessageNumber": int(
                 pi.parent_l1_l2_bridge_rolling_hash_message_number
