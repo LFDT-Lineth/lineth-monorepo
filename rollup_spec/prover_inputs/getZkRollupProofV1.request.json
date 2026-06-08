@@ -1,0 +1,67 @@
+{
+    "proverVersion":      "4.0.0-riscv",
+    "chainId": 59144,
+    "blockRange": {
+        "startBlockNumber": 1000501,
+        "endBlockNumber":   1000520
+    },
+    "blobs": [
+        {
+            "blobInputs": {
+                "blobHash":             "0x010a00a15d2e30654d134fd34d1f56e625978f5bc42c411df5df424fbb8a38d1",
+                "blobKzgProof":         "0x943aa027b213c11cda3f734f165c3dbde5641dc0a78290bef8e7f2021d7dc112f72e267bff7c99d4d982171851924ba7"
+            },
+            "blockRange": {
+                "startBlockNumber": 1000501,
+                "endBlockNumber":   1000510
+            },
+            "blockRlps": [
+                "0xf90215a0..."
+            ]
+        },
+        {
+            "blobInputs": {
+                "blobHash":             "0x015a3e6e75f2d24b1c3c7c2e8f9a4d6b5e0123456789abcdef0123456789abcd",
+                "blobKzgProof":         "0xcafeb1d4a7c8e9f6b5a3d2e1f4c7b8a9d0e2c3f5b6a7d8e9f0c1b2a3d4e5f6c7b8a9d0e1f2c3b4a5d6e7f8c9b0a1d2e3"
+            },
+            "blockRange": {
+                "startBlockNumber": 1000511,
+                "endBlockNumber":   1000520
+            },
+            "blockRlps": [
+                "0xf90215a0..."
+            ]
+        }
+    ],
+    "shnarfTransition": {
+        "parentShnarf":     "0x47452a1b9ebadfe02bdd02f580fa1eba17680d57eec968a591644d05d78ee84f",
+        "endShnarf":      "0x8d0a74047e241998a03664b98064da391c492e8a4ad96160ae46eeaaabdc7b5a"
+    },
+    "l2ExecutionProofs": [
+        {
+            "proof": "0x...",
+            "startBlockNumber": 1000511,
+            "endBlockNumber":   1000520,
+            "publicInputs": {
+                "parentBlockHash":                          "0x0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "endBlockHash":                             "0x0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "endBlockNumber":                           1000503,
+                "endBlockTimestamp":                         1763000123,
+                "L2L1MessagesHash":                         "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "parentL1L2BridgeRollingHash":              "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "parentL1L2BridgeRollingHashMessageNumber": 0,
+                "endL1L2BridgeRollingHash":                 "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "endL1L2BridgeRollingHashMessageNumber":    0,
+                "dynamicChainConfigHash":                   "0xc0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ff",
+                "parentFtxRollingHash":                     "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "endFtxRollingHash":                        "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "lastProcessedFtxNumber":                   0,
+                "filteredAddressesHash":                    "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
+                "txFromsHash":                              "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+            },
+            "l2L1Messages": [],
+            "txFroms":       ["0x0000000000000000000000000000000000000001"],
+            "filteredAddresses":       []
+        }
+    ]
+}

@@ -6,3 +6,6 @@ ethereum-execution @ git+https://github.com/ethereum/execution-specs.git@a456712
 ckzg>=2.1
 lz4>=4
 remerkleable>=0.1.28
+# Validates the V1 prover-request/response JSON against the shared schemas in
+# rollup_spec/schemas/ (see test_proof_io_v1.py).
+jsonschema>=4.18

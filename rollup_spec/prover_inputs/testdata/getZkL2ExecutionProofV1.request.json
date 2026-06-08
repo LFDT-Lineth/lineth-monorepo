@@ -1,0 +1,45 @@
+{
+  "proverVersion": "4.0.0-riscv",
+  "blockRange": {
+    "startBlockNumber": 1000501,
+    "endBlockNumber": 1000502
+  },
+  "chainConfig": {
+    "l2MessageServiceAddress": "0x1111111111111111111111111111111111111111",
+    "coinbase": "0x0000000000000000000000000000000000000000",
+    "chainId": 59144
+  },
+  "parentFtxRollingHash": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+  "parentLastProcessedFtxNumber": 100,
+  "payloads": [
+    {
+      "statelessInputSsz": "0x0001abcd",
+      "_debugStatelessInput": {
+        "_comment": "Review-only decoded mirror; discarded by proof_io_v1.decode_request. Kept here to prove it is ignored.",
+        "anything": "discarded"
+      },
+      "rollupExtension": {
+        "forcedTransactions": []
+      }
+    },
+    {
+      "statelessInputSsz": "0x",
+      "rollupExtension": {
+        "forcedTransactions": [
+          {
+            "number": 17,
+            "deadline": 1000600,
+            "signedTxRlp": "0x02f86b",
+            "acceptance": "INCLUDED"
+          },
+          {
+            "number": 18,
+            "deadline": 1000601,
+            "signedTxRlp": "0x",
+            "acceptance": "FILTERED_ADDRESS_TO"
+          }
+        ]
+      }
+    }
+  ]
+}

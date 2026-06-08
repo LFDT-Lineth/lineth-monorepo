@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://linea.build/schemas/getZkL2ExecutionProofV1.response.schema.json",
+  "title": "getZkL2ExecutionProof V1 response",
+  "description": "Prover -> coordinator l2-execution proof response. The shared, versioned contract for rollup_spec/proof_io_v1.py::encode_response and the coordinator's Jackson mapper.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "proverVersion",
+    "proof",
+    "startBlockNumber",
+    "endBlockNumber",
+    "publicInputs",
+    "l2L1Messages",
+    "txFroms",
+    "filteredAddresses"
+  ],
+  "properties": {
+    "proverVersion": { "type": "string", "minLength": 1 },
+    "proof": { "$ref": "#/$defs/hex" },
+    "startBlockNumber": { "$ref": "#/$defs/uint" },
+    "endBlockNumber": { "$ref": "#/$defs/uint" },
+    "publicInputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "parentBlockHash",
+        "endBlockHash",
+        "endBlockNumber",
+        "endBlockTimestamp",
+        "L2L1MessagesHash",
+        "parentL1L2BridgeRollingHash",
+        "parentL1L2BridgeRollingHashMessageNumber",
+        "endL1L2BridgeRollingHash",
+        "endL1L2BridgeRollingHashMessageNumber",
+        "dynamicChainConfigHash",
+        "parentFtxRollingHash",
+        "endFtxRollingHash",
+        "lastProcessedFtxNumber",
+        "filteredAddressesHash",
+        "txFromsHash"
+      ],
+      "properties": {
+        "parentBlockHash": { "$ref": "#/$defs/hash32" },
+        "endBlockHash": { "$ref": "#/$defs/hash32" },
+        "endBlockNumber": { "$ref": "#/$defs/uint" },
+        "endBlockTimestamp": { "$ref": "#/$defs/uint" },
+        "L2L1MessagesHash": { "$ref": "#/$defs/hash32" },
+        "parentL1L2BridgeRollingHash": { "$ref": "#/$defs/hash32" },
+        "parentL1L2BridgeRollingHashMessageNumber": { "$ref": "#/$defs/uint" },
+        "endL1L2BridgeRollingHash": { "$ref": "#/$defs/hash32" },
+        "endL1L2BridgeRollingHashMessageNumber": { "$ref": "#/$defs/uint" },
+        "dynamicChainConfigHash": { "$ref": "#/$defs/hash32" },
+        "parentFtxRollingHash": { "$ref": "#/$defs/hash32" },
+        "endFtxRollingHash": { "$ref": "#/$defs/hash32" },
+        "lastProcessedFtxNumber": { "$ref": "#/$defs/uint" },
+        "filteredAddressesHash": { "$ref": "#/$defs/hash32" },
+        "txFromsHash": { "$ref": "#/$defs/hash32" }
+      }
+    },
+    "l2L1Messages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/hash32" }
+    },
+    "txFroms": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/address" }
+    },
+    "filteredAddresses": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/address" }
+    }
+  },
+  "$defs": {
+    "uint": { "type": "integer", "minimum": 0 },
+    "hex": {
+      "type": "string",
+      "pattern": "^0x([0-9a-fA-F]{2})*$"
+    },
+    "hash32": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{64}$"
+    },
+    "address": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{40}$"
+    }
+  }
+}
