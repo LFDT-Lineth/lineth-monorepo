@@ -59,43 +59,27 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
         case LOAD: {
             switch funct3 {
                 case FUNCT3_LB: {
-                    printf "LB "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = sgn_extension_u8_u64(read_8(rs1_plus_signext_imm12))
                 }
                 case FUNCT3_LH: {
-                    printf "LH "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = sgn_extension_u16_u64(read_16(rs1_plus_signext_imm12))
                 }
                 case FUNCT3_LW: {
-                    printf "LW "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = sgn_extension_u32_u64(read_32(rs1_plus_signext_imm12))
                 }
                 case FUNCT3_LBU: {
-                    printf "LBU "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = read_8(rs1_plus_signext_imm12) as DoubleWord
                 }
                 case FUNCT3_LHU: {
-                    printf "LHU "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = read_16(rs1_plus_signext_imm12) as DoubleWord
                 }
                 case FUNCT3_LWU: {
-                    printf "LWU "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = read_32(rs1_plus_signext_imm12) as DoubleWord
                 }
                 case FUNCT3_LD: {
-                    printf "LD "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = read_64(rs1_plus_signext_imm12) as DoubleWord
                 }
                 default: {
-                    printf "[ERROR] Unsupported LOAD instruction of I-Type\n"
-                    printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
                     fail
                 }
             }
@@ -217,8 +201,6 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
         // =================
 
         case JALR: {
-            printf "JALR "
-            print_i_memory_operands(rd, rs1, signext_imm12_64)
             // only instruction is JALR, no need to switch over funct3
             new_pc = rs1_plus_signext_imm12 & MASK_64_ERASE_LAST_BIT
             registers[rd] = (pc + 4) as DoubleWord
@@ -233,19 +215,12 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
             if funct3 == FUNCT3_ECALL {
                 // imm12 is interpreted as funct12 for SYSTEM opcode
                 if imm12 == FUNCT12_ECALL {
-                    printf "ECALL\n"
                     new_pc = process_syscall(pc)
-                } else if imm12 == FUNCT12_EBREAK {
-                    printf "[ERROR] EBREAK instruction triggered\n"
                 }
-            } else {
-                printf "[ERROR] SYSTEM instruction with funct3 %b has been triggered, not implemented\n", funct3
             }
         }
 
         default: {
-            printf "[ERROR] Unsupported I-Type instruction with\n"
-            printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
             fail
         }
     }
@@ -256,11 +231,8 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
     //
     switch call_num {
         case EXIT_SYSCALL: { // exit
-            printf "ECALL for exit\n"
             var a0:DoubleWord = registers[10] // exit code
-            if a0 == 0 {
-                printf "EXIT CODE = 0\n"
-            } else {
+            if a0 != 0 {
                 fail "EXIT CODE = %d\n", a0
             }
             // set stop signal to terminate execution
@@ -284,7 +256,6 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
                 printf "%c", read_8(addr)
                 addr = addr + 1
             }
-            printf "\n"
             registers[10] = a2 // return value: bytes written
             new_pc = (pc + 4) as Address
         }
