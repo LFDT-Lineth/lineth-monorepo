@@ -33,3 +33,15 @@ memory b4(address:u3) -> (state:lane)
 memory c(address:u3) -> (state:lane)
 memory d(address:u3) -> (state:lane)
 memory padded_input_block(address:u5) -> (state:lane)
+// Lowest executable instruction address (4-aligned). Used to convert a pc into
+// an index into the pre-decoded instruction tables below: index = (pc - base) >> 2
+pub input instruction_base(i:u1) -> (base:Address)
+
+// Pre-decoded instruction stream, indexed by instruction index (one record per
+// 4-byte word of the executable region). Replaces the in-interpreter decode of
+// `instruction_parameters::opcode = instruction` and `instruction_type_from_opcode`.
+pub input decoded_core(i:u64) -> (opcode:u8, instruction_type:u8, instruction_parameters:u32)
+
+// Pre-decoded I-type field split, indexed by the same instruction index.
+// Replaces `imm12::rs1::funct3::rd = instruction_parameters` in i_type.zkc.
+pub input decoded_itype(i:u64) -> (funct3:u8, imm12:u16, rs1:u8, rd:u8)

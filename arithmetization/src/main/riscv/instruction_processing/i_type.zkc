@@ -33,14 +33,20 @@ include "../utils/signed_sum.zkc"
 //   SYSTEM    — system calls (not yet implemented)
 //
 // For all opcodes except JALR, new_pc = pc + 4 (sequential fall-through).
-fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_parameters:u25, pc:Address) -> (new_pc:Address) {
+fn process_I_type_instruction<ram, registers>(index:u64, opcode:Opcode, pc:Address) -> (new_pc:Address) {
 
-    var funct3:Funct3
-    var imm12:Imm12
-    var rs1:Register
-    var rd:Register
+    // The I-type field split (imm12 :: rs1 :: funct3 :: rd) is pre-decoded
+    // externally (see decoded_itype in memory.zkc) and looked up by index.
+    var funct3_u8:u8
+    var imm12_u16:u16
+    var rs1_u8:u8
+    var rd_u8:u8
+    funct3_u8, imm12_u16, rs1_u8, rd_u8 = decoded_itype[index]
 
-    imm12::rs1::funct3::rd = instruction_parameters
+    var funct3:Funct3 = funct3_u8 as Funct3
+    var imm12:Imm12 = imm12_u16 as Imm12
+    var rs1:Register = rs1_u8 as Register
+    var rd:Register = rd_u8 as Register
 
     var signext_imm12_64:DoubleWord = sgn_extension_u12_u64(imm12)
     // Used as an Address in the LOAD instructions and as a DoubleWord in the OP-IMM and JALR instructions
