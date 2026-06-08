@@ -1,0 +1,60 @@
+{
+  "proverVersion": "4.0.0-riscv",
+  "chainId": 59144,
+  "blockRange": {
+    "startBlockNumber": 1000501,
+    "endBlockNumber": 1000520
+  },
+  "blobs": [
+    {
+      "blobInputs": {
+        "blobHash": "0x1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+        "blobKzgProof": "0x949494949494949494949494949494949494949494949494949494949494949494949494949494949494949494949494"
+      },
+      "blockRange": {
+        "startBlockNumber": 1000501,
+        "endBlockNumber": 1000510
+      },
+      "blockRlps": [
+        "0xf90215a0",
+        "0xf90216b1"
+      ]
+    }
+  ],
+  "shnarfTransition": {
+    "parentShnarf": "0x4747474747474747474747474747474747474747474747474747474747474747",
+    "endShnarf": "0x8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d"
+  },
+  "l2ExecutionProofs": [
+    {
+      "proof": "0xabcdef",
+      "startBlockNumber": 1000501,
+      "endBlockNumber": 1000510,
+      "publicInputs": {
+        "parentBlockHash": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+        "endBlockHash": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+        "endBlockNumber": 1000510,
+        "endBlockTimestamp": 1763000200,
+        "l2L1MessagesHash": "0x0101010101010101010101010101010101010101010101010101010101010101",
+        "parentL1L2BridgeRollingHash": "0x0202020202020202020202020202020202020202020202020202020202020202",
+        "parentL1L2BridgeRollingHashMessageNumber": 0,
+        "endL1L2BridgeRollingHash": "0x0303030303030303030303030303030303030303030303030303030303030303",
+        "endL1L2BridgeRollingHashMessageNumber": 4,
+        "dynamicChainConfigHash": "0xc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0",
+        "parentFtxRollingHash": "0x0404040404040404040404040404040404040404040404040404040404040404",
+        "endFtxRollingHash": "0x0505050505050505050505050505050505050505050505050505050505050505",
+        "lastProcessedFtxNumber": 12,
+        "filteredAddressesHash": "0x0606060606060606060606060606060606060606060606060606060606060606",
+        "txFromsHash": "0x0707070707070707070707070707070707070707070707070707070707070707"
+      },
+      "l2L1Messages": [
+        "0x0808080808080808080808080808080808080808080808080808080808080808"
+      ],
+      "txFroms": [
+        "0x0101010101010101010101010101010101010101",
+        "0x0202020202020202020202020202020202020202"
+      ],
+      "filteredAddresses": []
+    }
+  ]
+}

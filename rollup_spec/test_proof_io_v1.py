@@ -24,10 +24,13 @@ from rollup_spec.l2_execution import (
     L2ExecutionProof,
     L2ExecutionProofPublicInput,
 )
+from rollup_spec.rollup import RollupProof, RollupPublicInput
 from rollup_spec.proof_io_v1 import (
     ProofIoError,
     decode_request,
+    decode_rollup_request,
     encode_response,
+    encode_rollup_response,
 )
 
 _SCHEMA_DIR = Path(__file__).parent / "schemas"
@@ -221,5 +224,167 @@ def test_schema_rejects_bad_request() -> None:
     validator = _validator("getZkL2ExecutionProofV1.request.schema.json")
     bad = _valid_request()
     bad["chainConfig"]["l2MessageServiceAddress"] = "0x1234"  # not 20 bytes
+    with pytest.raises(jsonschema.ValidationError):
+        validator.validate(bad)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Rollup proof (V1)
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+def _valid_rollup_request() -> dict:
+    return _load(_TESTDATA_DIR / "getZkRollupProofV1.request.json")
+
+
+def _expected_rollup_response() -> dict:
+    return _load(_TESTDATA_DIR / "getZkRollupProofV1.response.json")
+
+
+def _sample_rollup_proof() -> RollupProof:
+    pi = RollupPublicInput(
+        end_block_number=U64(1000520),
+        end_block_timestamp=U64(1763000457),
+        l2_l1_bridge_transaction_tree=Hash32(bytes([0x11]) * 32),
+        parent_l1_l2_bridge_rolling_hash=Hash32(bytes([0x22]) * 32),
+        parent_l1_l2_bridge_rolling_hash_message_number=U64(0),
+        end_l1_l2_bridge_rolling_hash=Hash32(bytes([0x33]) * 32),
+        end_l1_l2_bridge_rolling_hash_message_number=U64(7),
+        dynamic_chain_config_hash=Hash32(bytes([0xC0]) * 32),
+        parent_ftx_rolling_hash=Hash32(bytes([0x44]) * 32),
+        end_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
+        last_processed_ftx_number=U64(9),
+        filtered_addresses_hash=Hash32(bytes([0x66]) * 32),
+        parent_shnarf=Hash32(bytes([0x47]) * 32),
+        end_shnarf=Hash32(bytes([0x8D]) * 32),
+    )
+    return RollupProof(
+        public_inputs=pi,
+        start_block_number=U64(1000501),
+        end_block_number=U64(1000520),
+        proof=b"\xde\xad\xbe\xef",
+        l2_l1_roots=[Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32)],
+        filtered_addresses=[Address(bytes([0x01]) * 20)],
+    )
+
+
+# ── rollup request decode ──────────────────────────────────────────────────────
+
+
+def test_decode_rollup_request_maps_all_fields() -> None:
+    req = decode_rollup_request(_valid_rollup_request())
+
+    assert int(req.chain_id) == 59144
+    # shnarfTransition.parentShnarf -> parent_shnarf; endShnarf is metadata, dropped.
+    assert bytes(req.parent_shnarf) == bytes([0x47]) * 32
+
+    assert len(req.blobs) == 1
+    blob = req.blobs[0]
+    assert blob.block_number_range == (1000501, 1000510)
+    assert bytes(blob.blob_hash) == bytes([0x1A]) * 32
+    assert bytes(blob.blob_kzg_proof) == bytes([0x94]) * 48
+    assert len(bytes(blob.blob_kzg_proof)) == 48
+    assert blob.block_rlps == [bytes.fromhex("f90215a0"), bytes.fromhex("f90216b1")]
+
+    assert len(req.l2_execution_proofs) == 1
+    proof = req.l2_execution_proofs[0]
+    assert bytes(proof.proof) == bytes.fromhex("abcdef")
+    assert int(proof.start_block_number) == 1000501
+    assert int(proof.end_block_number) == 1000510
+    assert bytes(proof.public_inputs.parent_block_hash) == bytes([0x0A]) * 32
+    assert bytes(proof.public_inputs.l2_l1_messages_hash) == bytes([0x01]) * 32
+    assert int(proof.public_inputs.last_processed_ftx_number) == 12
+    assert proof.l2_l1_messages == [Hash32(bytes([0x08]) * 32)]
+    assert proof.tx_froms == [Address(bytes([0x01]) * 20), Address(bytes([0x02]) * 20)]
+    assert proof.filtered_addresses == []
+
+
+def test_decode_rollup_request_missing_field_is_rejected() -> None:
+    req = _valid_rollup_request()
+    del req["shnarfTransition"]["parentShnarf"]
+    with pytest.raises(ProofIoError, match="parentShnarf"):
+        decode_rollup_request(req)
+
+
+def test_decode_rollup_request_empty_blobs_is_rejected() -> None:
+    req = _valid_rollup_request()
+    req["blobs"] = []
+    with pytest.raises(ProofIoError, match="blobs"):
+        decode_rollup_request(req)
+
+
+def test_decode_rollup_request_empty_l2_execution_proofs_is_rejected() -> None:
+    req = _valid_rollup_request()
+    req["l2ExecutionProofs"] = []
+    with pytest.raises(ProofIoError, match="l2ExecutionProofs"):
+        decode_rollup_request(req)
+
+
+def test_decode_rollup_request_non_array_blobs_is_rejected() -> None:
+    req = _valid_rollup_request()
+    req["blobs"] = {"not": "an array"}
+    with pytest.raises(ProofIoError, match="blobs"):
+        decode_rollup_request(req)
+
+
+def test_decode_rollup_request_malformed_kzg_proof_is_rejected() -> None:
+    req = _valid_rollup_request()
+    req["blobs"][0]["blobInputs"]["blobKzgProof"] = "0xnothex"
+    with pytest.raises(ProofIoError, match="blobKzgProof"):
+        decode_rollup_request(req)
+
+
+# ── rollup response encode ─────────────────────────────────────────────────────
+
+
+def test_encode_rollup_response_matches_fixture_exactly() -> None:
+    out = encode_rollup_response(_sample_rollup_proof(), prover_version=_PROVER_VERSION)
+    assert out == _expected_rollup_response()
+
+
+def test_encode_rollup_response_shape_and_values() -> None:
+    out = encode_rollup_response(_sample_rollup_proof(), prover_version="4.0.0-riscv")
+
+    assert out["proverVersion"] == "4.0.0-riscv"
+    assert out["proof"] == "0xdeadbeef"
+    assert out["startBlockNumber"] == 1000501
+    assert out["endBlockNumber"] == 1000520
+
+    pi = out["publicInputs"]
+    assert pi["endBlockNumber"] == 1000520
+    assert pi["endBlockTimestamp"] == 1763000457
+    assert pi["l2L1BridgeTransactionTree"] == "0x" + ("11" * 32)
+    assert pi["parentShnarf"] == "0x" + ("47" * 32)
+    assert pi["endShnarf"] == "0x" + ("8d" * 32)
+    assert pi["lastProcessedFtxNumber"] == 9
+    assert set(pi.keys()) == {
+        "endBlockNumber", "endBlockTimestamp", "l2L1BridgeTransactionTree",
+        "parentL1L2BridgeRollingHash", "parentL1L2BridgeRollingHashMessageNumber",
+        "endL1L2BridgeRollingHash", "endL1L2BridgeRollingHashMessageNumber",
+        "dynamicChainConfigHash", "parentFtxRollingHash", "endFtxRollingHash",
+        "lastProcessedFtxNumber", "filteredAddressesHash", "parentShnarf", "endShnarf",
+    }
+
+    assert out["l2L1Roots"] == ["0x" + ("77" * 32), "0x" + ("88" * 32)]
+    assert out["filteredAddresses"] == ["0x" + ("01" * 20)]
+
+
+# ── rollup JSON Schema conformance ─────────────────────────────────────────────
+
+
+def test_valid_rollup_request_conforms_to_schema() -> None:
+    _validator("getZkRollupProofV1.request.schema.json").validate(_valid_rollup_request())
+
+
+def test_encoded_rollup_response_conforms_to_schema() -> None:
+    out = encode_rollup_response(_sample_rollup_proof(), prover_version="4.0.0-riscv")
+    _validator("getZkRollupProofV1.response.schema.json").validate(out)
+
+
+def test_rollup_schema_rejects_bad_request() -> None:
+    jsonschema = pytest.importorskip("jsonschema")
+    validator = _validator("getZkRollupProofV1.request.schema.json")
+    bad = _valid_rollup_request()
+    bad["blobs"][0]["blobInputs"]["blobKzgProof"] = "0x1234"  # not 48 bytes
     with pytest.raises(jsonschema.ValidationError):
         validator.validate(bad)

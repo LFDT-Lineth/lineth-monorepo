@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://linea.build/schemas/getZkRollupProofV1.response.schema.json",
+  "title": "getZkRollupProof V1 response",
+  "description": "Prover -> coordinator rollup proof response. The shared, versioned contract for rollup_spec/proof_io_v1.py::encode_rollup_response and the coordinator's Jackson mapper.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "proverVersion",
+    "proof",
+    "startBlockNumber",
+    "endBlockNumber",
+    "publicInputs",
+    "l2L1Roots",
+    "filteredAddresses"
+  ],
+  "properties": {
+    "proverVersion": { "type": "string", "minLength": 1 },
+    "proof": { "$ref": "#/$defs/hex" },
+    "startBlockNumber": { "$ref": "#/$defs/uint" },
+    "endBlockNumber": { "$ref": "#/$defs/uint" },
+    "publicInputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "endBlockNumber",
+        "endBlockTimestamp",
+        "l2L1BridgeTransactionTree",
+        "parentL1L2BridgeRollingHash",
+        "parentL1L2BridgeRollingHashMessageNumber",
+        "endL1L2BridgeRollingHash",
+        "endL1L2BridgeRollingHashMessageNumber",
+        "dynamicChainConfigHash",
+        "parentFtxRollingHash",
+        "endFtxRollingHash",
+        "lastProcessedFtxNumber",
+        "filteredAddressesHash",
+        "parentShnarf",
+        "endShnarf"
+      ],
+      "properties": {
+        "endBlockNumber": { "$ref": "#/$defs/uint" },
+        "endBlockTimestamp": { "$ref": "#/$defs/uint" },
+        "l2L1BridgeTransactionTree": { "$ref": "#/$defs/hash32" },
+        "parentL1L2BridgeRollingHash": { "$ref": "#/$defs/hash32" },
+        "parentL1L2BridgeRollingHashMessageNumber": { "$ref": "#/$defs/uint" },
+        "endL1L2BridgeRollingHash": { "$ref": "#/$defs/hash32" },
+        "endL1L2BridgeRollingHashMessageNumber": { "$ref": "#/$defs/uint" },
+        "dynamicChainConfigHash": { "$ref": "#/$defs/hash32" },
+        "parentFtxRollingHash": { "$ref": "#/$defs/hash32" },
+        "endFtxRollingHash": { "$ref": "#/$defs/hash32" },
+        "lastProcessedFtxNumber": { "$ref": "#/$defs/uint" },
+        "filteredAddressesHash": { "$ref": "#/$defs/hash32" },
+        "parentShnarf": { "$ref": "#/$defs/hash32" },
+        "endShnarf": { "$ref": "#/$defs/hash32" }
+      }
+    },
+    "l2L1Roots": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/hash32" }
+    },
+    "filteredAddresses": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/address" }
+    }
+  },
+  "$defs": {
+    "uint": { "type": "integer", "minimum": 0 },
+    "hex": { "type": "string", "pattern": "^0x([0-9a-fA-F]{2})*$" },
+    "hash32": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
+    "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" }
+  }
+}
