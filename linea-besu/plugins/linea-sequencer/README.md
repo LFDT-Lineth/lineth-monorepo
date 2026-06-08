@@ -21,8 +21,8 @@ Discover [existing plugins](docs/plugins.md) and understand the [plugin release 
 Linea's stack is made up of multiple repositories, these include:
 - This repo, [linea-monorepo](https://github.com/LFDT-Lineth/lineth-monorepo): main repository for the Linea stack & network
 - [besu](https://github.com/besu-eth/besu): Besu client
-- [linea-tracer](https://github.com/Consensys/linea-tracer): Linea-Besu plugin which produces the traces that the constraint system applies and that serve as inputs to the prover
-- [linea-constraints](https://github.com/Consensys/linea-constraints): Implementation of the constraint system from the specification
+- [tracer](../../../tracer/): Linea-Besu plugin which produces the traces that the constraint system applies and that serve as inputs to the prover (in-tree; previously `Consensys/linea-tracer`)
+- [tracer-constraints](../../../tracer-constraints/): Implementation of the constraint system from the specification (in-tree; previously `Consensys/linea-constraints`)
 - [linea-specification](https://github.com/Consensys/linea-specification): Specification of the constraint system defining Linea's zkEVM
 
 Linea abstracts away the complexity of this technical architecture to allow developers to:

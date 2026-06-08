@@ -13,7 +13,7 @@ the [Apache 2.0 license](LICENSE).
 
 [Linea](https://linea.build) is a developer-ready layer 2 network scaling Ethereum. It's secured with a zero-knowledge rollup, built on lattice-based cryptography, and powered by [Consensys](https://consensys.io).
 
-Linea is compatible with the execution clients [Besu](https://github.com/besu-eth/besu/) or [Geth](https://github.com/ethereum/go-ethereum). To run a full node, an execution client is paired with [Maru](https://github.com/Consensys/maru).
+Linea is compatible with the execution clients [Besu](https://github.com/besu-eth/besu/) or [Geth](https://github.com/ethereum/go-ethereum). To run a full node, an execution client is paired with [Maru](../maru/).
 
 <!-- ## Get started
 
@@ -45,12 +45,12 @@ Contributions are welcome!
 
 Please keep in mind that we do not accept non-code contributions like fixing comments, typos or some other trivial fixes. Although we appreciate the extra help, managing lots of these small contributions is unfeasible, and puts extra pressure in our continuous delivery systems (running all tests, etc). Feel free to open an issue pointing to any of those errors, and we will batch them into a single change.
 
-1. [Create an issue](https://github.com/Consensys/linea-constraints/issues).
+1. [Create an issue](https://github.com/LFDT-Lineth/lineth-monorepo/issues).
 > If the proposed update requires input, also tag us for discussion.
 2. Submit the update as a pull request from your [fork of this repo](https://github.com/LFDT-Lineth/lineth-monorepo/fork), and tag us for review.
 > Include the issue number in the pull request description and (optionally) in the branch name.
 
-Consider starting with a ["good first issue"](https://github.com/Consensys/linea-constraints/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+Consider starting with a ["good first issue"](https://github.com/LFDT-Lineth/lineth-monorepo/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
 Before contributing, ensure you're familiar with:
 

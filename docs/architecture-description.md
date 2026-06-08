@@ -89,7 +89,7 @@ A script automatically removes all files that are more than one week old.
 
 ## Sequencer
 
-> **Note**: The consensus protocol has since moved from Clique to QBFT via the [Maru](https://github.com/Consensys/maru) consensus client. See the [official architecture docs](https://docs.linea.build/protocol/architecture) for the current design.
+> **Note**: The consensus protocol has since moved from Clique to QBFT via the [Maru](../maru/) consensus client. See the [official architecture docs](https://docs.linea.build/protocol/architecture) for the current design.
 
 There is a unique instance of Sequencer. It’s a special instance of a consensus client based on Besu. The consensus protocol used is Clique.
 
@@ -970,4 +970,4 @@ Any party (e.g. via an npm package we provide for the bridge/partners etc) does 
 
 # Finalized Block Tag on L2
 
-[Maru](https://github.com/Consensys/maru), a consensus client developed by Linea team, will be responsible on updating the execution clients for `finalized` block tag on L1
+[Maru](../maru/), a consensus client developed by Linea team, will be responsible on updating the execution clients for `finalized` block tag on L1

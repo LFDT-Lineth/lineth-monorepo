@@ -43,8 +43,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * These tests address issue <a
- * href="https://github.com/LFDT-Lineth/lineth-monorepo/issues/2437">[ZkTracer] Test delegation lists +
- * access lists</a>
+ * href="https://github.com/LFDT-Lineth/lineth-monorepo/issues/2437">[ZkTracer] Test delegation
+ * lists + access lists</a>
  */
 public class DelegationAndAccessListTests extends TracerTestBase {
 
