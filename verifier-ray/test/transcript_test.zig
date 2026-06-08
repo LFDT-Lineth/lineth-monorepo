@@ -39,7 +39,7 @@ test "runtime rejects skipped and replayed rounds" {
 }
 
 test "runtime rejects advancing without a next round" {
-    var no_rounds = runtime.Runtime.init();
+    var no_rounds = runtime.Runtime.initWithRoundCount(0);
     var coins: [1]runtime.Coin = undefined;
 
     try std.testing.expectError(

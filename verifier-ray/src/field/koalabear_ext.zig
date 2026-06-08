@@ -148,11 +148,24 @@ pub const Ext = extern struct {
         };
     }
 
-    pub fn fromUints(v1: u32, v2: u32, v3: u32, v4: u32, v5: u32, v6: u32) Ext {
+    /// Flattening order: [B0.a0, B0.a1, B1.a0, B1.a1, B2.a0, B2.a1].
+    pub fn fromUints(v: [6]u32) Ext {
         return .{
-            .B0 = .{ .a0 = base.Element.init(v1), .a1 = base.Element.init(v2) },
-            .B1 = .{ .a0 = base.Element.init(v3), .a1 = base.Element.init(v4) },
-            .B2 = .{ .a0 = base.Element.init(v5), .a1 = base.Element.init(v6) },
+            .B0 = .{ .a0 = base.Element.init(v[0]), .a1 = base.Element.init(v[1]) },
+            .B1 = .{ .a0 = base.Element.init(v[2]), .a1 = base.Element.init(v[3]) },
+            .B2 = .{ .a0 = base.Element.init(v[4]), .a1 = base.Element.init(v[5]) },
+        };
+    }
+
+    /// Flattening order: [B0.a0, B0.a1, B1.a0, B1.a1, B2.a0, B2.a1].
+    pub fn toUints(self: Ext) [6]u32 {
+        return .{
+            self.B0.a0.value,
+            self.B0.a1.value,
+            self.B1.a0.value,
+            self.B1.a1.value,
+            self.B2.a0.value,
+            self.B2.a1.value,
         };
     }
 };

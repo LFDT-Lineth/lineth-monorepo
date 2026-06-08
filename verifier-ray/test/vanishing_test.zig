@@ -4,6 +4,7 @@ const fixtures = @import("test_vanishing");
 
 const field = verifier_ray.field.koalabear;
 const ext = verifier_ray.field.koalabear_ext;
+const commitment = verifier_ray.crypto.commitment;
 const runtime = verifier_ray.runtime;
 const vanishing = verifier_ray.query.vanishing;
 
@@ -77,12 +78,12 @@ test "dynamic vanishing module sizes are required and validated" {
 fn proofInput(allocator: std.mem.Allocator, proof: fixtures.VanishingProofView) !vanishing.CheckInput {
     const witness_claims = try allocator.alloc(ext.Ext, proof.witness_claims.len);
     for (proof.witness_claims, 0..) |claim, i| {
-        witness_claims[i] = uintsToExt(claim);
+        witness_claims[i] = ext.Ext.fromUints(claim);
     }
 
     const quotient_claims = try allocator.alloc(ext.Ext, proof.quotient_claims.len);
     for (proof.quotient_claims, 0..) |claim, i| {
-        quotient_claims[i] = uintsToExt(claim);
+        quotient_claims[i] = ext.Ext.fromUints(claim);
     }
 
     const rounds = try allocator.alloc(runtime.RoundMessage, proof.rounds.len);
@@ -112,8 +113,8 @@ fn roundMessage(allocator: std.mem.Allocator, round: fixtures.RuntimeTraceRound)
     for (round.columns) |column| {
         switch (column) {
             .oracle => |commitments| {
-                for (commitments) |commitment| {
-                    columns[next_column] = .{ .oracle_commitment = uintsToCommitment(commitment) };
+                for (commitments) |c| {
+                    columns[next_column] = .{ .oracle_commitment = commitment.fromUints(c) };
                     next_column += 1;
                 }
             },
@@ -128,7 +129,7 @@ fn roundMessage(allocator: std.mem.Allocator, round: fixtures.RuntimeTraceRound)
             .public_ext => |values| {
                 const converted = try allocator.alloc(ext.Ext, values.len);
                 for (values, 0..) |value, i| {
-                    converted[i] = uintsToExt(value);
+                    converted[i] = ext.Ext.fromUints(value);
                 }
                 columns[next_column] = .{ .public_column = .{ .ext = converted } };
                 next_column += 1;
@@ -140,21 +141,9 @@ fn roundMessage(allocator: std.mem.Allocator, round: fixtures.RuntimeTraceRound)
     for (round.cells, 0..) |cell, i| {
         cells[i] = switch (cell) {
             .base => |value| .{ .base = field.Element.init(value) },
-            .ext => |value| .{ .ext = uintsToExt(value) },
+            .ext => |value| .{ .ext = ext.Ext.fromUints(value) },
         };
     }
 
     return .{ .columns = columns, .cells = cells };
-}
-
-fn uintsToExt(limbs: [6]u32) ext.Ext {
-    return ext.Ext.fromUints(limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5]);
-}
-
-fn uintsToCommitment(limbs: [8]u32) runtime.Commitment {
-    var out: runtime.Commitment = undefined;
-    for (&out, limbs) |*dst, limb| {
-        dst.* = field.Element.init(limb);
-    }
-    return out;
 }

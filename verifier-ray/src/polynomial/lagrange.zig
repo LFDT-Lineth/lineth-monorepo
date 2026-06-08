@@ -89,54 +89,6 @@ pub fn evaluateExtAtExt(values: []const ext.Ext, point: ext.Ext) Error!ext.Ext {
     return vanishing.mul(sum);
 }
 
-pub fn evaluateBaseBatchAtBase(
-    out: []field.Element,
-    values: []const field.Element,
-    points: []const field.Element,
-) Error!void {
-    if (out.len != points.len) return error.InvalidCardinality;
-    for (points, out) |point, *dst| {
-        dst.* = try evaluateBaseAtBase(values, point);
-    }
-}
-
-pub fn evaluateBaseBatchAtExt(
-    out: []ext.Ext,
-    values: []const field.Element,
-    points: []const ext.Ext,
-) Error!void {
-    if (out.len != points.len) return error.InvalidCardinality;
-    for (points, out) |point, *dst| {
-        dst.* = try evaluateBaseAtExt(values, point);
-    }
-}
-
-pub fn evaluateExtBatchAtBase(
-    out: []ext.Ext,
-    values: []const ext.Ext,
-    points: []const field.Element,
-) Error!void {
-    if (out.len != points.len) return error.InvalidCardinality;
-    for (points, out) |point, *dst| {
-        dst.* = try evaluateExtAtBase(values, point);
-    }
-}
-
-pub fn evaluateExtBatchAtExt(
-    out: []ext.Ext,
-    values: []const ext.Ext,
-    points: []const ext.Ext,
-) Error!void {
-    if (out.len != points.len) return error.InvalidCardinality;
-    for (points, out) |point, *dst| {
-        dst.* = try evaluateExtAtExt(values, point);
-    }
-}
-
-pub fn evaluate(values: []const field.Element, point: field.Element) Error!field.Element {
-    return evaluateBaseAtBase(values, point);
-}
-
 fn checkedCardinality(cardinality: usize) Error!u32 {
     if (!field.isPowerOfTwo(cardinality)) {
         return error.InvalidCardinality;

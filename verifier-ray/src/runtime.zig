@@ -1,7 +1,7 @@
+const commitment_mod = @import("crypto/commitment.zig");
 const fiat_shamir = @import("crypto/fiat_shamir.zig");
 const ext = @import("field/koalabear_ext.zig");
 const value = @import("field/value.zig");
-const proof_mod = @import("proof.zig");
 
 pub const Error = error{
     NoRounds,
@@ -21,7 +21,7 @@ pub const Visibility = enum(u8) {
 pub const Vector = value.Vector;
 pub const Scalar = value.Scalar;
 pub const Coin = ext.Ext;
-pub const Commitment = proof_mod.Commitment;
+pub const Commitment = commitment_mod.Commitment;
 
 pub const ColumnMessage = union(enum) {
     oracle_commitment: Commitment,
@@ -41,10 +41,6 @@ pub const Runtime = struct {
     transcript: fiat_shamir.Transcript,
     current_round: usize,
     total_rounds: usize,
-
-    pub fn init() Runtime {
-        return initWithRoundCount(0);
-    }
 
     pub fn initWithRoundCount(round_count: usize) Runtime {
         return .{

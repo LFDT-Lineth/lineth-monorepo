@@ -11,10 +11,11 @@ const vectors = @import("test_vectors");
 
 const field = verifier_ray.field.koalabear;
 const ext = verifier_ray.field.koalabear_ext;
+const commitment = verifier_ray.crypto.commitment;
 const fiat_shamir = verifier_ray.crypto.fiat_shamir;
 const poseidon2 = verifier_ray.crypto.poseidon2;
-const lagrange = verifier_ray.pcs.lagrange;
-const polynomial = verifier_ray.pcs.polynomial;
+const poly_lagrange = verifier_ray.polynomial.lagrange;
+const poly_canonical = verifier_ray.polynomial.canonical;
 const runtime = verifier_ray.runtime;
 
 test "runtime visibility tags match prover-ray" {
@@ -24,8 +25,8 @@ test "runtime visibility tags match prover-ray" {
 
 test "koalabear base field matches prover-ray golden cases" {
     for (vectors.field_cases) |case| {
-        const a = elem(case.a);
-        const b = elem(case.b);
+        const a = field.Element.init(case.a);
+        const b = field.Element.init(case.b);
 
         try expectElem(a.add(b), case.add);
         try expectElem(a.sub(b), case.sub);
@@ -45,20 +46,20 @@ test "koalabear base field matches prover-ray golden cases" {
 
 test "koalabear extension field matches prover-ray golden cases" {
     for (vectors.ext_cases) |case| {
-        const a = uintsToExt(case.a);
-        const b = uintsToExt(case.b);
-        const scalar = elem(case.scalar);
+        const a = ext.Ext.fromUints(case.a);
+        const b = ext.Ext.fromUints(case.b);
+        const scalar = field.Element.init(case.scalar);
 
-        try expectExt(a.add(b), uintsToExt(case.add));
-        try expectExt(a.sub(b), uintsToExt(case.sub));
-        try expectExt(a.mul(b), uintsToExt(case.mul));
-        try expectExt(a.square(), uintsToExt(case.square_a));
-        try expectExt(a.neg(), uintsToExt(case.neg_a));
-        try expectExt(a.mulByBase(scalar), uintsToExt(case.mul_by_base));
+        try expectExt(a.add(b), ext.Ext.fromUints(case.add));
+        try expectExt(a.sub(b), ext.Ext.fromUints(case.sub));
+        try expectExt(a.mul(b), ext.Ext.fromUints(case.mul));
+        try expectExt(a.square(), ext.Ext.fromUints(case.square_a));
+        try expectExt(a.neg(), ext.Ext.fromUints(case.neg_a));
+        try expectExt(a.mulByBase(scalar), ext.Ext.fromUints(case.mul_by_base));
         try std.testing.expectEqualSlices(u8, &case.bytes_a, &a.toBytes());
 
         if (case.has_inv_a) {
-            try expectExt(a.inverse(), uintsToExt(case.inv_a));
+            try expectExt(a.inverse(), ext.Ext.fromUints(case.inv_a));
         }
     }
 }
@@ -67,15 +68,15 @@ test "canonical polynomial evaluation matches prover-ray golden cases" {
     for (vectors.canonical_base_cases) |case| {
         var coeffs: [16]field.Element = undefined;
         fillElems(&coeffs, case.coeffs);
-        try expectElem(polynomial.evaluateBaseCanonical(coeffs[0..case.coeffs.len], elem(case.point)), case.expected);
+        try expectElem(poly_canonical.evaluateBaseAtBase(coeffs[0..case.coeffs.len], field.Element.init(case.point)), case.expected);
     }
 
     for (vectors.canonical_base_at_ext_cases) |case| {
         var coeffs: [16]field.Element = undefined;
         fillElems(&coeffs, case.coeffs);
         try expectExt(
-            polynomial.evaluateBaseCanonicalAtExt(coeffs[0..case.coeffs.len], uintsToExt(case.point)),
-            uintsToExt(case.expected),
+            poly_canonical.evaluateBaseAtExt(coeffs[0..case.coeffs.len], ext.Ext.fromUints(case.point)),
+            ext.Ext.fromUints(case.expected),
         );
     }
 
@@ -83,8 +84,8 @@ test "canonical polynomial evaluation matches prover-ray golden cases" {
         var coeffs: [16]ext.Ext = undefined;
         fillExts(&coeffs, case.coeffs);
         try expectExt(
-            polynomial.evaluateExtCanonicalAtBase(coeffs[0..case.coeffs.len], elem(case.point)),
-            uintsToExt(case.expected),
+            poly_canonical.evaluateExtAtBase(coeffs[0..case.coeffs.len], field.Element.init(case.point)),
+            ext.Ext.fromUints(case.expected),
         );
     }
 
@@ -92,8 +93,8 @@ test "canonical polynomial evaluation matches prover-ray golden cases" {
         var coeffs: [16]ext.Ext = undefined;
         fillExts(&coeffs, case.coeffs);
         try expectExt(
-            polynomial.evaluateExtCanonical(coeffs[0..case.coeffs.len], uintsToExt(case.point)),
-            uintsToExt(case.expected),
+            poly_canonical.evaluateExtAtExt(coeffs[0..case.coeffs.len], ext.Ext.fromUints(case.point)),
+            ext.Ext.fromUints(case.expected),
         );
     }
 }
@@ -102,15 +103,15 @@ test "lagrange polynomial evaluation matches prover-ray golden cases" {
     for (vectors.lagrange_base_cases) |case| {
         var coeffs: [16]field.Element = undefined;
         fillElems(&coeffs, case.coeffs);
-        try expectElem(try lagrange.evaluateBaseAtBase(coeffs[0..case.coeffs.len], elem(case.point)), case.expected);
+        try expectElem(try poly_lagrange.evaluateBaseAtBase(coeffs[0..case.coeffs.len], field.Element.init(case.point)), case.expected);
     }
 
     for (vectors.lagrange_base_at_ext_cases) |case| {
         var coeffs: [16]field.Element = undefined;
         fillElems(&coeffs, case.coeffs);
         try expectExt(
-            try lagrange.evaluateBaseAtExt(coeffs[0..case.coeffs.len], uintsToExt(case.point)),
-            uintsToExt(case.expected),
+            try poly_lagrange.evaluateBaseAtExt(coeffs[0..case.coeffs.len], ext.Ext.fromUints(case.point)),
+            ext.Ext.fromUints(case.expected),
         );
     }
 
@@ -118,8 +119,8 @@ test "lagrange polynomial evaluation matches prover-ray golden cases" {
         var coeffs: [16]ext.Ext = undefined;
         fillExts(&coeffs, case.coeffs);
         try expectExt(
-            try lagrange.evaluateExtAtBase(coeffs[0..case.coeffs.len], elem(case.point)),
-            uintsToExt(case.expected),
+            try poly_lagrange.evaluateExtAtBase(coeffs[0..case.coeffs.len], field.Element.init(case.point)),
+            ext.Ext.fromUints(case.expected),
         );
     }
 
@@ -127,33 +128,33 @@ test "lagrange polynomial evaluation matches prover-ray golden cases" {
         var coeffs: [16]ext.Ext = undefined;
         fillExts(&coeffs, case.coeffs);
         try expectExt(
-            try lagrange.evaluateExtAtExt(coeffs[0..case.coeffs.len], uintsToExt(case.point)),
-            uintsToExt(case.expected),
+            try poly_lagrange.evaluateExtAtExt(coeffs[0..case.coeffs.len], ext.Ext.fromUints(case.point)),
+            ext.Ext.fromUints(case.expected),
         );
     }
 }
 
 test "lagrange evaluation returns domain value at roots of unity" {
     const base_values = [_]field.Element{
-        elem(3),
-        elem(1),
-        elem(4),
-        elem(1),
+        field.Element.init(3),
+        field.Element.init(1),
+        field.Element.init(4),
+        field.Element.init(1),
     };
     const ext_values = [_]ext.Ext{
-        .{ .B0 = .{ .a0 = elem(3), .a1 = elem(1) }, .B1 = .{ .a0 = elem(4), .a1 = elem(1) }, .B2 = .{ .a0 = elem(5), .a1 = elem(9) } },
-        .{ .B0 = .{ .a0 = elem(5), .a1 = elem(9) }, .B1 = .{ .a0 = elem(2), .a1 = elem(6) }, .B2 = .{ .a0 = elem(5), .a1 = elem(3) } },
-        .{ .B0 = .{ .a0 = elem(5), .a1 = elem(3) }, .B1 = .{ .a0 = elem(5), .a1 = elem(8) }, .B2 = .{ .a0 = elem(9), .a1 = elem(7) } },
-        .{ .B0 = .{ .a0 = elem(9), .a1 = elem(7) }, .B1 = .{ .a0 = elem(9), .a1 = elem(3) }, .B2 = .{ .a0 = elem(2), .a1 = elem(3) } },
+        ext.Ext.fromUints(.{ 3, 1, 4, 1, 5, 9 }),
+        ext.Ext.fromUints(.{ 5, 9, 2, 6, 5, 3 }),
+        ext.Ext.fromUints(.{ 5, 3, 5, 8, 9, 7 }),
+        ext.Ext.fromUints(.{ 9, 7, 9, 3, 2, 3 }),
     };
 
     const omega = try field.rootOfUnityBy(base_values.len);
     var domain_point = field.Element.one();
     for (base_values, ext_values) |base_value, ext_value| {
-        try expectElem(try lagrange.evaluateBaseAtBase(&base_values, domain_point), base_value.value);
-        try expectExt(try lagrange.evaluateBaseAtExt(&base_values, ext.Ext.lift(domain_point)), ext.Ext.lift(base_value));
-        try expectExt(try lagrange.evaluateExtAtBase(&ext_values, domain_point), ext_value);
-        try expectExt(try lagrange.evaluateExtAtExt(&ext_values, ext.Ext.lift(domain_point)), ext_value);
+        try expectElem(try poly_lagrange.evaluateBaseAtBase(&base_values, domain_point), base_value.value);
+        try expectExt(try poly_lagrange.evaluateBaseAtExt(&base_values, ext.Ext.lift(domain_point)), ext.Ext.lift(base_value));
+        try expectExt(try poly_lagrange.evaluateExtAtBase(&ext_values, domain_point), ext_value);
+        try expectExt(try poly_lagrange.evaluateExtAtExt(&ext_values, ext.Ext.lift(domain_point)), ext_value);
         domain_point = domain_point.mul(omega);
     }
 }
@@ -185,7 +186,7 @@ test "fiat-shamir transcript matches prover-ray golden cases" {
         transcript.updateExt(ext_updates[0..case.ext_updates.len]);
 
         try expectDigest(transcript.randomDigest(), case.random_field);
-        try expectExt(transcript.randomExt(), uintsToExt(case.random_ext));
+        try expectExt(transcript.randomExt(), ext.Ext.fromUints(case.random_ext));
     }
 }
 
@@ -218,32 +219,14 @@ test "runtime downstream coin diverges after tampered absorb" {
 
     const got = try rt.advanceRoundWithMessage(0, message, &coins);
     try std.testing.expect(got.len > 0);
-    try std.testing.expect(!got[0].eql(uintsToExt(case.rounds[0].expected_coins[0])));
-}
-
-/// Convert a generated base-field integer into the concrete field element type.
-fn elem(value: u32) field.Element {
-    return field.Element.init(value);
-}
-
-/// Convert six generated base-field limbs into one KoalaBear extension value.
-fn uintsToExt(limbs: [6]u32) ext.Ext {
-    return ext.Ext.fromUints(limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5]);
-}
-
-fn uintsToCommitment(limbs: [8]u32) runtime.Commitment {
-    var out: runtime.Commitment = undefined;
-    for (&out, limbs) |*dst, limb| {
-        dst.* = elem(limb);
-    }
-    return out;
+    try std.testing.expect(!got[0].eql(ext.Ext.fromUints(case.rounds[0].expected_coins[0])));
 }
 
 /// Convert a generated Poseidon digest fixture into field elements.
 fn digest(values: [8]u32) poseidon2.Digest {
     var out: poseidon2.Digest = undefined;
     for (&out, values) |*dst, value| {
-        dst.* = elem(value);
+        dst.* = field.Element.init(value);
     }
     return out;
 }
@@ -251,14 +234,14 @@ fn digest(values: [8]u32) poseidon2.Digest {
 /// Fill an existing buffer with generated base-field values.
 fn fillElems(out: []field.Element, values: []const u32) void {
     for (values, 0..) |value, i| {
-        out[i] = elem(value);
+        out[i] = field.Element.init(value);
     }
 }
 
 /// Fill an existing buffer with generated extension-field values.
 fn fillExts(out: []ext.Ext, values: []const [6]u32) void {
     for (values, 0..) |value, i| {
-        out[i] = uintsToExt(value);
+        out[i] = ext.Ext.fromUints(value);
     }
 }
 
@@ -272,19 +255,8 @@ fn expectExt(actual: ext.Ext, expected: ext.Ext) !void {
     try std.testing.expect(actual.eql(expected));
 }
 
-fn extToUints(value: ext.Ext) [6]u32 {
-    return .{
-        value.B0.a0.value,
-        value.B0.a1.value,
-        value.B1.a0.value,
-        value.B1.a1.value,
-        value.B2.a0.value,
-        value.B2.a1.value,
-    };
-}
-
 fn expectExtUints(actual: ext.Ext, expected: [6]u32) !void {
-    const actual_u32 = extToUints(actual);
+    const actual_u32 = actual.toUints();
     try std.testing.expectEqualSlices(u32, &expected, &actual_u32);
 }
 
@@ -368,10 +340,10 @@ const TraceRoundBacking = struct {
             switch (column_case) {
                 .oracle => |commitments| {
                     try std.testing.expect(commitments.len <= max_trace_commitments);
-                    for (commitments) |commitment| {
-                        self.oracle_commitments[oracle_commitment_count] = uintsToCommitment(commitment);
+                    for (commitments) |c| {
+                        self.oracle_commitments[oracle_commitment_count] = commitment.fromUints(c);
                         if (tamper_first_absorb and !tampered) {
-                            self.oracle_commitments[oracle_commitment_count][0] = elem(self.oracle_commitments[oracle_commitment_count][0].value ^ 1);
+                            self.oracle_commitments[oracle_commitment_count][0] = field.Element.init(self.oracle_commitments[oracle_commitment_count][0].value ^ 1);
                             tampered = true;
                         }
                         self.columns[column_count] = .{ .oracle_commitment = self.oracle_commitments[oracle_commitment_count] };
@@ -383,7 +355,7 @@ const TraceRoundBacking = struct {
                     try std.testing.expect(values.len <= max_trace_values);
                     fillElems(&self.base_values[i], values);
                     if (tamper_first_absorb and !tampered and values.len != 0) {
-                        self.base_values[i][0] = elem(self.base_values[i][0].value ^ 1);
+                        self.base_values[i][0] = field.Element.init(self.base_values[i][0].value ^ 1);
                         tampered = true;
                     }
                     self.columns[column_count] = .{ .public_column = .{ .base = self.base_values[i][0..values.len] } };
@@ -393,7 +365,7 @@ const TraceRoundBacking = struct {
                     try std.testing.expect(values.len <= max_trace_values);
                     fillExts(&self.ext_values[i], values);
                     if (tamper_first_absorb and !tampered and values.len != 0) {
-                        self.ext_values[i][0].B0.a0 = elem(self.ext_values[i][0].B0.a0.value ^ 1);
+                        self.ext_values[i][0].B0.a0 = field.Element.init(self.ext_values[i][0].B0.a0.value ^ 1);
                         tampered = true;
                     }
                     self.columns[column_count] = .{ .public_column = .{ .ext = self.ext_values[i][0..values.len] } };
@@ -404,8 +376,8 @@ const TraceRoundBacking = struct {
 
         for (round_case.cells, 0..) |cell_case, i| {
             self.cells[i] = switch (cell_case) {
-                .base => |base_value| .{ .base = elem(base_value) },
-                .ext => |ext_value| .{ .ext = uintsToExt(ext_value) },
+                .base => |base_value| .{ .base = field.Element.init(base_value) },
+                .ext => |ext_value| .{ .ext = ext.Ext.fromUints(ext_value) },
             };
         }
 
