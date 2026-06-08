@@ -38,7 +38,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * These tests address issue <a
- * href="https://github.com/Consensys/linea-monorepo/issues/2355">[ZkTracer] Test transactions where
+ * href="https://github.com/LFDT-Lineth/lineth-monorepo/issues/2355">[ZkTracer] Test transactions where
  * delegations swap the recipient from executable to non-executable and vice versa</a>
  */
 public class DelegationsMakingAccountsExecutableAndViceVersaTests extends TracerTestBase {

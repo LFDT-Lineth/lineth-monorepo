@@ -1,7 +1,7 @@
 import { parseJestLog } from "./parse-jest-log";
 
 // Raw log fixture copied from the GitHub Actions E2E job below.
-// Source: https://github.com/Consensys/linea-monorepo/actions/runs/23834802065/job/69476754215
+// Source: https://github.com/LFDT-Lineth/lineth-monorepo/actions/runs/23834802065/job/69476754215
 const RAW_LOG = `pnpm run -F e2e test:local
   shell: /usr/bin/bash -e {0}
   env:

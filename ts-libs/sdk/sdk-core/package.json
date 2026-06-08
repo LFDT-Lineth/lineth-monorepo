@@ -6,12 +6,12 @@
   "license": "(MIT OR Apache-2.0)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Consensys/linea-monorepo.git",
+    "url": "https://github.com/LFDT-Lineth/lineth-monorepo.git",
     "directory": "ts-libs/sdk/sdk-core"
   },
-  "homepage": "https://github.com/Consensys/linea-monorepo/tree/main/ts-libs/sdk/sdk-core#readme",
+  "homepage": "https://github.com/LFDT-Lineth/lineth-monorepo/tree/main/ts-libs/sdk/sdk-core#readme",
   "bugs": {
-    "url": "https://github.com/Consensys/linea-monorepo/issues"
+    "url": "https://github.com/LFDT-Lineth/lineth-monorepo/issues"
   },
   "keywords": [
     "linea",

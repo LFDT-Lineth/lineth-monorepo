@@ -14,7 +14,7 @@
 ## Setup
 
 ```bash
-git clone https://github.com/Consensys/linea-monorepo.git
+git clone https://github.com/LFDT-Lineth/lineth-monorepo.git
 cd linea-monorepo
 nvm use          # or install Node 24.14.1
 pnpm install     # installs all workspaces + sets up Husky hooks

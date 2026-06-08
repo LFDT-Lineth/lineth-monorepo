@@ -8,7 +8,7 @@ used to run a node with a specific profile.
 
 ### Step 1. Download configuration files
 
-You can start with the Docker Compose files located in the [docker](https://github.com/Consensys/linea-monorepo/tree/main/linea-besu/package/docker) directory.
+You can start with the Docker Compose files located in the [docker](https://github.com/LFDT-Lineth/lineth-monorepo/tree/main/linea-besu/package/docker) directory.
 
 ### Step 2. Update the Docker Compose file
 In the docker-compose.yaml file, update the --p2p-host command to include your public IP address. For example:
@@ -42,7 +42,7 @@ docker run -e BESU_PROFILE=basic-mainnet consensys/linea-besu-package:2.1.0-2025
 ## Run with a binary distribution
 
 ### Step 1. Install Linea Besu from packaged binaries
-* Download the [linea-besu-package-&lt;release&gt;.tar.gz](https://github.com/Consensys/linea-monorepo/releases?q=linea-besu-package&expanded=true)
+* Download the [linea-besu-package-&lt;release&gt;.tar.gz](https://github.com/LFDT-Lineth/lineth-monorepo/releases?q=linea-besu-package&expanded=true)
 from the assets.
 * Unpack the downloaded files and change directory into the `linea-besu/besu`
 directory.
@@ -97,11 +97,11 @@ BESU_PACKAGE_TAG=xxx make run-e2e-test
 
 1. Make a branch with changes to tracer/sequencer codes and update `gradle/libs.versions.toml` with desired besu commit tag (if needed)
 
-2. Go to the [actions tab](https://github.com/Consensys/linea-monorepo/actions) and click on the workflow `linea-besu-package-release` and select the target branch for making a release
+2. Go to the [actions tab](https://github.com/LFDT-Lineth/lineth-monorepo/actions) and click on the workflow `linea-besu-package-release` and select the target branch for making a release
 
 3. Provide the `releasePrefix` input for the workflow, and the resultant release tag would be `linea-besu-package-[releasePrefix]-[YYYYMMDDHHMMSS]-[shortenCommitHash]` and the docker image tag would be `[releasePrefix]-[YYYYMMDDHHMMSS]-[shortenCommitHash]`
 
-4. Once the workflow is done successfully, go to the [releases page](https://github.com/Consensys/linea-monorepo/releases?q=linea-besu-package&expanded=true) and you should find the corresponding release info along with the docker image tag
+4. Once the workflow is done successfully, go to the [releases page](https://github.com/LFDT-Lineth/lineth-monorepo/releases?q=linea-besu-package&expanded=true) and you should find the corresponding release info along with the docker image tag
 
 Additionally, the `latest` tag will be updated to match this manual release. Please note that running the manual release workflow with `main` branch, the `develop` tag (along with the `latest` tag) will also be updated to match the release.
 
@@ -109,7 +109,7 @@ Additionally, the `latest` tag will be updated to match this manual release. Ple
 
 This project leverages [Besu Profiles](https://besu.hyperledger.org/public-networks/how-to/use-configuration-file/profile) to enable multiple startup configurations for different node types.
 
-During the build process, all TOML files located in the [linea-besu/package/linea-besu/profiles](https://github.com/Consensys/linea-monorepo/tree/main/linea-besu/package/linea-besu/profiles) directory will be incorporated into the package. These profiles are crucial for configuring the node, as each one specifies the necessary plugins and CLI options to ensure Besu operates correctly.
+During the build process, all TOML files located in the [linea-besu/package/linea-besu/profiles](https://github.com/LFDT-Lineth/lineth-monorepo/tree/main/linea-besu/package/linea-besu/profiles) directory will be incorporated into the package. These profiles are crucial for configuring the node, as each one specifies the necessary plugins and CLI options to ensure Besu operates correctly.
 
 Each profile is a TOML file that outlines the plugins and CLI options to be used when starting the node. For example:
 
@@ -130,7 +130,7 @@ Currently, the following profiles are available:
 
 | Profile Name                                                                                                              | Description                                                               | Network |
 |---------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|---------|
-| [`basic-mainnet`](https://github.com/Consensys/linea-monorepo/blob/main/linea-besu/package/linea-besu/profiles/basic-mainnet.toml)       | Creates a basic Linea Node.                                               | Mainnet |
-| [`advanced-mainnet`](https://github.com/Consensys/linea-monorepo/blob/main/linea-besu/package/linea-besu/profiles/advanced-mainnet.toml) | Creates a Linea Node with extra features such as `linea_estimateGas`. | Mainnet |
-| [`basic-sepolia`](https://github.com/Consensys/linea-monorepo/blob/main/linea-besu/package/linea-besu/profiles/basic-sepolia.toml)       | Creates a basic Linea Node.                                               | Sepolia |
-| [`advanced-sepolia`](https://github.com/Consensys/linea-monorepo/blob/main/linea-besu/package/linea-besu/profiles/advanced-mainnet.toml) | Creates a Linea Node with extra features such as `linea_estimateGas`. | Sepolia |
+| [`basic-mainnet`](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/linea-besu/package/linea-besu/profiles/basic-mainnet.toml)       | Creates a basic Linea Node.                                               | Mainnet |
+| [`advanced-mainnet`](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/linea-besu/package/linea-besu/profiles/advanced-mainnet.toml) | Creates a Linea Node with extra features such as `linea_estimateGas`. | Mainnet |
+| [`basic-sepolia`](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/linea-besu/package/linea-besu/profiles/basic-sepolia.toml)       | Creates a basic Linea Node.                                               | Sepolia |
+| [`advanced-sepolia`](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/linea-besu/package/linea-besu/profiles/advanced-mainnet.toml) | Creates a Linea Node with extra features such as `linea_estimateGas`. | Sepolia |

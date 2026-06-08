@@ -3,14 +3,14 @@
 <a href="https://x.com/LineaBuild">
   <img src="https://img.shields.io/twitter/follow/LineaBuild?style=for-the-badge" alt="X (formerly Twitter) Follow" height="20">
 </a>
-<a href="https://github.com/Consensys/linea-monorepo/blob/main/LICENSE-APACHE">
+<a href="https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/LICENSE-APACHE">
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="Apache 2.0 License" height="20">
 </a>
-<a href="https://github.com/Consensys/linea-monorepo/blob/main/LICENSE-MIT">
+<a href="https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/LICENSE-MIT">
   <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License" height="20">
 </a>
-<a href="https://codecov.io/gh/Consensys/linea-monorepo">
-  <img src="https://codecov.io/gh/Consensys/linea-monorepo/graph/badge.svg?token=2TM55P0CGJ" alt="Codecov" height="20">
+<a href="https://codecov.io/gh/LFDT-Lineth/lineth-monorepo">
+  <img src="https://codecov.io/gh/LFDT-Lineth/lineth-monorepo/graph/badge.svg?token=2TM55P0CGJ" alt="Codecov" height="20">
 </a>
 
 This is the principal Linea repository. It mainly includes the smart contracts covering Linea's core functions, the prover in charge of generating ZK proofs, the coordinator responsible for multiple orchestrations, and the Postman to execute bridge messages.
@@ -53,12 +53,12 @@ Each component has its own release workflow. Run the one that matches the compon
 
 | Component        | Workflow                                         | Release tag pattern              |
 | ---------------- | ------------------------------------------------ | -------------------------------- |
-| linea-besu       | [.github/workflows/linea-besu-release.yml](https://github.com/Consensys/linea-monorepo/actions/workflows/linea-besu-release.yml)       | `releases/linea-besu-package/v[semver]` |
-| coordinator      | [.github/workflows/coordinator-release.yml](https://github.com/Consensys/linea-monorepo/actions/workflows/coordinator-release.yml)      | `releases/coordinator/v[semver]`        |
-| maru             | [.github/workflows/maru-release-manual.yml](https://github.com/Consensys/linea-monorepo/actions/workflows/maru-release-manual.yml)      | `releases/maru/v[semver]`        |
-| postman          | [.github/workflows/postman-release.yml](https://github.com/Consensys/linea-monorepo/actions/workflows/postman-release.yml)          | `releases/postman/v[semver]`            |
-| prover           | [.github/workflows/prover-release.yml](https://github.com/Consensys/linea-monorepo/actions/workflows/prover-release.yml)           | `releases/prover/v[semver]`             |
-| tx-exclusion-api | [.github/workflows/tx-exclusion-api-release.yml](https://github.com/Consensys/linea-monorepo/actions/workflows/tx-exclusion-api-release.yml) | `releases/tx-exclusion-api/v[semver]`   |
+| linea-besu       | [.github/workflows/linea-besu-release.yml](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/linea-besu-release.yml)       | `releases/linea-besu-package/v[semver]` |
+| coordinator      | [.github/workflows/coordinator-release.yml](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/coordinator-release.yml)      | `releases/coordinator/v[semver]`        |
+| maru             | [.github/workflows/maru-release-manual.yml](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/maru-release-manual.yml)      | `releases/maru/v[semver]`        |
+| postman          | [.github/workflows/postman-release.yml](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/postman-release.yml)          | `releases/postman/v[semver]`            |
+| prover           | [.github/workflows/prover-release.yml](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/prover-release.yml)           | `releases/prover/v[semver]`             |
+| tx-exclusion-api | [.github/workflows/tx-exclusion-api-release.yml](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/tx-exclusion-api-release.yml) | `releases/tx-exclusion-api/v[semver]`   |
 
 Notes:
 
@@ -71,7 +71,7 @@ Notes:
 
 Milestone releases bundle every component into a single Linea release.
 
-- **Workflow:** [.github/workflows/linea-milestone-release-with-dry-run.yml](https://github.com/Consensys/linea-monorepo/actions/workflows/linea-milestone-release-with-dry-run.yml)
+- **Workflow:** [.github/workflows/linea-milestone-release-with-dry-run.yml](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/linea-milestone-release-with-dry-run.yml)
 - **Release tag pattern:** `releases/linea/v[semver]`
 - **Branch:** can only be run from `main`.
 
@@ -103,7 +103,7 @@ The milestone workflow defaults to running a **dry run on a temporary branch for
 
 Linea's stack is made up of multiple repositories, these include:
 
-- This repo, [linea-monorepo](https://github.com/Consensys/linea-monorepo): The main repository for the Linea stack & network
+- This repo, [linea-monorepo](https://github.com/LFDT-Lineth/lineth-monorepo): The main repository for the Linea stack & network
 > Also maintains a set of Linea-Besu plugins for the sequencer and RPC nodes.
 - [linea-besu-upstream](https://github.com/Consensys/linea-besu-upstream/): Besu build configured for Linea
 - [linea-tracer](https://github.com/Consensys/linea-tracer): Linea-Besu plugin which produces the traces that the constraint system applies and that serve as inputs to the prover
@@ -126,12 +126,12 @@ Contributions are welcome!
 
 Please keep in mind that we do not accept non-code contributions like fixing comments, typos or some other trivial fixes. Although we appreciate the extra help, managing lots of these small contributions is unfeasible, and puts extra pressure in our continuous delivery systems (running all tests, etc). Feel free to open an issue pointing to any of those errors, and we will batch them into a single change.
 
-1. [Create an issue](https://github.com/Consensys/linea-monorepo/issues)
+1. [Create an issue](https://github.com/LFDT-Lineth/lineth-monorepo/issues)
 > If the proposed update is non-trivial, also tag us for discussion.
-2. Submit the update as a pull request from your [fork of this repo](https://github.com/Consensys/linea-monorepo/fork), and tag us for review.
+2. Submit the update as a pull request from your [fork of this repo](https://github.com/LFDT-Lineth/lineth-monorepo/fork), and tag us for review.
 > Include the issue number in the pull request description and (optionally) in the branch name.
 
-Consider starting with a ["good first issue"](https://github.com/Consensys/linea-monorepo/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+Consider starting with a ["good first issue"](https://github.com/LFDT-Lineth/lineth-monorepo/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
 ### Commit message format
 
@@ -219,7 +219,7 @@ chore(linea-besu,sequencer): bump dependency versions
 feat(coordinator)!: rename public API method (BREAKING CHANGE)
 ```
 
-Please note that the linea-monorepo GitHub [CI](https://github.com/Consensys/linea-monorepo/actions/workflows/main.yml) will lint the PR title when new commits pushed to the PR branch, and the whole CI will fail if the PR title doesn't conform.
+Please note that the linea-monorepo GitHub [CI](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/main.yml) will lint the PR title when new commits pushed to the PR branch, and the whole CI will fail if the PR title doesn't conform.
 
 ### Useful links
 

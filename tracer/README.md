@@ -29,7 +29,7 @@ Linea's stack is made up of multiple components, these include:
 
 > This repository contains the elements of the Linea stack responsible for this process.
 
-- [linea-monorepo](https://github.com/Consensys/linea-monorepo): The main repository for the Linea stack & network in which this folder lives
+- [linea-monorepo](https://github.com/LFDT-Lineth/lineth-monorepo): The main repository for the Linea stack & network in which this folder lives
 - [besu](https://github.com/besu-eth/besu): Besu client
 - [linea-sequencer](https://github.com/Consensys/linea-sequencer): A set of Linea-Besu plugins for the sequencer and RPC nodes
 - [tracer-constraints](../tracer-constraints) folder: Implementation of the constraint system from the specification
@@ -55,7 +55,7 @@ Please keep in mind that we do not accept non-code contributions like fixing com
 
 > If the proposed update requires input, also tag us for discussion.
 
-2. Submit the update as a pull request from your [fork of this repo](https://github.com/Consensys/linea-monorepo/fork), and tag us for review.
+2. Submit the update as a pull request from your [fork of this repo](https://github.com/LFDT-Lineth/lineth-monorepo/fork), and tag us for review.
 
 > Include the issue number in the pull request description and (optionally) in the branch name.
 
@@ -63,10 +63,10 @@ Consider starting with a ["good first issue"](https://github.com/Consensys/linea
 
 Before contributing, ensure you're familiar with:
 
-- Our [Linea contribution guide](https://github.com/Consensys/linea-monorepo/blob/main/docs/contribute.md)
-- Our [Linea code of conduct](https://github.com/Consensys/linea-monorepo/blob/main/docs/code-of-conduct.md)
+- Our [Linea contribution guide](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/contribute.md)
+- Our [Linea code of conduct](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/code-of-conduct.md)
 - The [Besu contribution guide](https://wiki.hyperledger.org/display/BESU/Coding+Conventions), for Besu:Linea related contributions
-- Our [Security policy](https://github.com/Consensys/linea-monorepo/blob/main/docs/security.md)
+- Our [Security policy](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/security.md)
 
 ### Useful links
 
@@ -91,7 +91,7 @@ To update the reference tests, follow the steps below:
     ./gradlew tracer:reference-tests:generateExecutionSpecBlockchainTests
     ```
 - Commit the changes
-- You can launch all tests to ensure everything is passing locally with the command line below or on the CI with this [GitHub Action](https://github.com/Consensys/linea-monorepo/actions/workflows/tracer-reference-blockchain-daily-tests.yml)
+- You can launch all tests to ensure everything is passing locally with the command line below or on the CI with this [GitHub Action](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/tracer-reference-blockchain-daily-tests.yml)
   - ```shell
     ./gradlew tracer:reference-tests:referenceExecutionSpecBlockchainTests
     ```

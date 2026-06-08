@@ -209,7 +209,7 @@ jobs:
           echo "# Release Artifact: Linea Besu Package" > output.md
           echo "**Name:** linea-besu-package-${{ steps.build-plugins-and-assemble.outputs.dockertag }}.tar.gz" >> output.md
           echo "**SHA256:** $(sha256sum linea-besu-package-${{ steps.build-plugins-and-assemble.outputs.dockertag }}.tar.gz | awk '{ print $1 }' )" >> output.md
-          echo "**From:** [${{ github.ref_name }} (${{ github.event_name }})](https://github.com/Consensys/linea-monorepo/actions/runs/${{ github.run_id }})" >> output.md
+          echo "**From:** [${{ github.ref_name }} (${{ github.event_name }})](https://github.com/LFDT-Lineth/lineth-monorepo/actions/runs/${{ github.run_id }})" >> output.md
           echo "" >> output.md
 
           echo "### Besu and Plugin Details" >> output.md

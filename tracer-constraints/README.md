@@ -23,7 +23,7 @@ tbd -->
 
 Linea's stack is made up of multiple components, these include:
 
-- [linea-monorepo](https://github.com/Consensys/linea-monorepo): The main repository for the Linea stack & network
+- [linea-monorepo](https://github.com/LFDT-Lineth/lineth-monorepo): The main repository for the Linea stack & network
 - In which, this folder, [tracer-constraints](../tracer-constraints): Implementation of the constraint system from the specification
 > Also maintains a set of Linea-Besu plugins for the sequencer, tracer, and RPC nodes.
 - In which, the [tracer](../tracer) component: Linea-Besu plugin which produces the traces that the constraint system applies and that serve as inputs to the prover
@@ -47,17 +47,17 @@ Please keep in mind that we do not accept non-code contributions like fixing com
 
 1. [Create an issue](https://github.com/Consensys/linea-constraints/issues).
 > If the proposed update requires input, also tag us for discussion.
-2. Submit the update as a pull request from your [fork of this repo](https://github.com/Consensys/linea-monorepo/fork), and tag us for review.
+2. Submit the update as a pull request from your [fork of this repo](https://github.com/LFDT-Lineth/lineth-monorepo/fork), and tag us for review.
 > Include the issue number in the pull request description and (optionally) in the branch name.
 
 Consider starting with a ["good first issue"](https://github.com/Consensys/linea-constraints/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
 Before contributing, ensure you're familiar with:
 
-- Our [Linea contribution guide](https://github.com/Consensys/linea-monorepo/blob/main/docs/contribute.md)
-- Our [Linea code of conduct](https://github.com/Consensys/linea-monorepo/blob/main/docs/code-of-conduct.md)
+- Our [Linea contribution guide](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/contribute.md)
+- Our [Linea code of conduct](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/code-of-conduct.md)
 - The [Besu contribution guide](https://wiki.hyperledger.org/display/BESU/Coding+Conventions), for Besu:Linea related contributions
-- Our [Security policy](https://github.com/Consensys/linea-monorepo/blob/main/docs/security.md)
+- Our [Security policy](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docs/security.md)
 
 
 ### Useful links

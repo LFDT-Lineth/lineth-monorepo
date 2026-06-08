@@ -32,16 +32,16 @@ There are global caps for maxFeePerGas and maxPriorityFeePerGas (i.e. set by `l1
 
 The `adjustmentConstant` is used to adjust the exponential increase in gas price. The higher the constant the faster the gas price increases as the `elapsedTimeSinceAggregationFirstBlock` increases = 25 (configurable)
 
-`TDM` stands for "Time of Day Mutliplier" and has a range of values between 0.25 - 1.75. When we expect the L1 gas price to be low, for example on a Saturday night, the `TDM` will be at it's highest because we want to increase the rate at which we increase the threshold to try and settle within this time window. The value will be at it's lowest during peak L1 gas price times, for example, on a Tuesday afternoon, because we know it is likely to be expensive during this window. (Here's the [toml file in repo](https://github.com/Consensys/linea-monorepo/blob/main/docker/config/common/gas-price-cap-time-of-day-multipliers.toml#L16))
+`TDM` stands for "Time of Day Mutliplier" and has a range of values between 0.25 - 1.75. When we expect the L1 gas price to be low, for example on a Saturday night, the `TDM` will be at it's highest because we want to increase the rate at which we increase the threshold to try and settle within this time window. The value will be at it's lowest during peak L1 gas price times, for example, on a Tuesday afternoon, because we know it is likely to be expensive during this window. (Here's the [toml file in repo](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/docker/config/common/gas-price-cap-time-of-day-multipliers.toml#L16))
 
 
-The implementation of the above equation can be found [here](https://github.com/Consensys/linea-monorepo/blob/main/coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/net/consensys/linea/ethereum/gaspricing/dynamiccap/GasPriceCapCalculatorImpl.kt)
+The implementation of the above equation can be found [here](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/net/consensys/linea/ethereum/gaspricing/dynamiccap/GasPriceCapCalculatorImpl.kt)
 
 ### Here's the final version of the formulas:
 - *Assuming the "percentile" is set as 10th*
 
 #### Aggregation Finalization
-[implementation](https://github.com/Consensys/linea-monorepo/blob/main/coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/net/consensys/linea/ethereum/gaspricing/dynamiccap/GasPriceCapProviderForFinalization.kt)
+[implementation](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/net/consensys/linea/ethereum/gaspricing/dynamiccap/GasPriceCapProviderForFinalization.kt)
 ``` 
 baseFeeCap = p10(baseFeePastWeek) * (1 + adjustmentConstant * TDM * (elapsedTimeSinceAggregationFirstBlock / SLA)^2 )
 priorityFeeCap = average(p10rewardsPastWeek) * (1 + adjustmentConstant * TDM * (elapsedTimeSinceAggregationFirstBlock / SLA)^2 )
@@ -51,7 +51,7 @@ maxFeePerGas = min(baseFeeCap + maxPriorityFeePerGas, max-fee-per-gas-cap-for-ag
 ```
 
 #### Blob Submission 
-[implementation](https://github.com/Consensys/linea-monorepo/blob/main/coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/net/consensys/linea/ethereum/gaspricing/dynamiccap/GasPriceCapProviderForDataSubmission.kt)
+[implementation](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/net/consensys/linea/ethereum/gaspricing/dynamiccap/GasPriceCapProviderForDataSubmission.kt)
 ```
 baseFeeCap = p10(baseFeePastWeek) * (1 + adjustmentConstant * TDM * (elapsedTimeSinceAggregationFirstBlock / SLA)^2 )
 priorityFeeCap = average(p10rewardsPastWeek) * (1 + adjustmentConstant * TDM * (elapsedTimeSinceAggregationFirstBlock / SLA)^2 )

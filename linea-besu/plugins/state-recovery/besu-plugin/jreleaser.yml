@@ -3,7 +3,7 @@ project:
   description: Linea State Recovery Besu Plugin
   longDescription: Besu Plugin to allow Linea rollup state recovery from L1 Blob data
   links:
-    homepage: https://github.com/Consensys/linea-monorepo
+    homepage: https://github.com/LFDT-Lineth/lineth-monorepo
   authors:
     - Linea automations
   license: (MIT OR Apache-2.0)

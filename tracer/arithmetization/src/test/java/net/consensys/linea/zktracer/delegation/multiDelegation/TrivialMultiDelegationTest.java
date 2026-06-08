@@ -42,7 +42,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-// https://github.com/Consensys/linea-monorepo/issues/2455
+// https://github.com/LFDT-Lineth/lineth-monorepo/issues/2455
 
 @ExtendWith(UnitTestWatcher.class)
 public class TrivialMultiDelegationTest extends TracerTestBase {
