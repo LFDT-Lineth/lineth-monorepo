@@ -11,7 +11,7 @@ from ethereum.crypto.kzg import (
     KZGCommitment,
     kzg_commitment_to_versioned_hash,
 )
-from ethereum.forks.osaka.transactions import (
+from .fork import (
     AccessListTransaction,
     BlobTransaction,
     FeeMarketTransaction,
@@ -113,12 +113,14 @@ class BlobWitness:
     Fields:
       - `block_number_range`: `(startBlockNumber, endBlockNumber)` of the
         L2 blocks contained in this blob.
-      - `block_rlps`: the canonical full block RLPs (same shape the
-        l2-execution proof receives — header + tx list [+ withdrawals], EIP-2718
-        typed transactions in full signed form), one per block in
-        `block_number_range`. Truncation per §3.2 happens *inside* the
-        guest from these full RLPs; there is no separately-witnessed
-        truncated form.
+      - `block_rlps`: the canonical full block RLPs published through the DA
+        blob path (header + tx list [+ withdrawals], EIP-2718 typed
+        transactions in full signed form), one per block in
+        `block_number_range`. The l2-execution proof receives Engine API
+        `NewPayloadRequest` inputs instead; the rollup proof cross-checks this
+        DA material against l2-execution public block hashes and `txFromsHash`.
+        Truncation per §3.2 happens *inside* the guest from these full RLPs;
+        there is no separately-witnessed truncated form.
       - `blob_hash`: the L1-anchored versioned hash of the DA blob. The
         rollup guest computes the KZG commitment from the computed padded
         blob bytes and checks its versioned hash against this value.
@@ -457,15 +459,10 @@ def verify_l2_execution_proof(proof: L2ExecutionProof) -> None:
     """
     Verify an inner l2-execution proof against its claimed public inputs.
 
-    PRECOMPILE (production guest): recursive STARK verification.
-        The zkVM exposes the inner-proof verifier as a circuit primitive
-        (typically wired through the underlying field's hash precompile,
-        e.g. Poseidon2 for KoalaBear / Goldilocks). In this reference,
-        the recursive-verify step is implicit — `L2ExecutionProof.proof`
-        stands in for the recursive STARK bytes the guest would actually
-        check. The Python reference only re-checks the hash-preimage
-        bindings (`txFromsHash`, `L2L1MessagesHash`, `filteredAddressesHash`)
-        the rollup proof consumes alongside the PI tuple.
+    Recursive STARK verification is a zkVM primitive in the guest; here
+    `L2ExecutionProof.proof` stands in for those bytes, and the reference only
+    re-checks the hash-preimage bindings (`txFromsHash`, `L2L1MessagesHash`,
+    `filteredAddressesHash`) the rollup proof consumes alongside the PI tuple.
     """
     if proof.public_inputs.end_block_number != proof.end_block_number:
         raise Exception("l2-execution proof range metadata does not match public inputs")
