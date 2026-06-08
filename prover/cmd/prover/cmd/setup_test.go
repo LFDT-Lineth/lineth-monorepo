@@ -323,6 +323,45 @@ func pow5(s []frBls.Element) []frBls.Element {
 	return res
 }
 
+// TestPayloadCircuitsMatchGlobalMapping validates that PayloadCircuits is consistent
+// with GlobalCircuitIDMapping. This prevents the bug where new circuits are added to
+// GlobalCircuitIDMapping but not to PayloadCircuits, causing VK digest mismatches at
+// aggregation proof time.
+func TestPayloadCircuitsMatchGlobalMapping(t *testing.T) {
+	// Determine expected payload circuit count: all circuits with ID < 14 (infrastructure threshold)
+	const infrastructureThreshold = 14
+	expectedPayload := make(map[string]uint)
+	for name, id := range circuits.GlobalCircuitIDMapping {
+		if id < infrastructureThreshold {
+			expectedPayload[name] = id
+		}
+	}
+
+	// PayloadCircuits must contain exactly the non-infrastructure circuits
+	assert.Equal(t, len(expectedPayload), len(PayloadCircuits),
+		"PayloadCircuits has %d entries but GlobalCircuitIDMapping has %d circuits with ID < %d",
+		len(PayloadCircuits), len(expectedPayload), infrastructureThreshold)
+
+	// Each entry in PayloadCircuits must exist in GlobalCircuitIDMapping with matching index
+	for i, name := range PayloadCircuits {
+		id, exists := circuits.GlobalCircuitIDMapping[name]
+		require.True(t, exists,
+			"PayloadCircuits[%d] = %q is not in GlobalCircuitIDMapping", i, name)
+		assert.Equal(t, uint(i), id,
+			"PayloadCircuits[%d] = %q has GlobalCircuitIDMapping ID %d (expected %d)", i, name, id, i)
+	}
+
+	// Every non-infrastructure circuit in GlobalCircuitIDMapping must be in PayloadCircuits
+	for name, id := range circuits.GlobalCircuitIDMapping {
+		if id >= infrastructureThreshold {
+			continue
+		}
+		if int(id) >= len(PayloadCircuits) || PayloadCircuits[id] != name {
+			t.Errorf("GlobalCircuitIDMapping[%q] = %d is not at PayloadCircuits[%d]", name, id, id)
+		}
+	}
+}
+
 // circuitNameToIdx returns the index of a circuit name in the allowedInputs slice
 func circuitNameToIdx(allowedInputs []string, name string) int {
 	for i, n := range allowedInputs {

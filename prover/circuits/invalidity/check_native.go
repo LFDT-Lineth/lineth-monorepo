@@ -24,13 +24,14 @@ import (
 // The inner wizard constraints are already validated by the dummy compiler
 // during ProveInner/VerifyInner. This checks:
 //   - PI values extracted from the wizard proof match funcInputs
-//   - hasBadPrecompile != 0 (type 2) or NbL2Logs > MAX_L2_LOGS (type 3)
+//   - hasBadPrecompile != 0 (type 2) or NbL2Logs > maxL2Logs (type 3)
 //   - The public input hash is consistent
 func CheckOnlyNativeBadPrecompile(
 	comp *wizard.CompiledIOP,
 	proof wizard.Proof,
 	funcInputs public_input.Invalidity,
 	invalidityType InvalidityType,
+	maxL2Logs int,
 	proverMode ...config.ProverMode,
 ) error {
 	invExtractor, err := getInvalidityExtractor(comp)
@@ -63,9 +64,9 @@ func CheckOnlyNativeBadPrecompile(
 		}
 	case TooManyLogs:
 		var threshold field.Element
-		threshold.SetUint64(MAX_L2_LOGS + 1)
+		threshold.SetUint64(uint64(maxL2Logs) + 1)
 		if nbL2Logs.Cmp(&threshold) < 0 {
-			return fmt.Errorf("nbL2Logs=%v is not > %d for TooManyLogs invalidity type", nbL2Logs, MAX_L2_LOGS)
+			return fmt.Errorf("nbL2Logs=%v is not > %d for TooManyLogs invalidity type", nbL2Logs, maxL2Logs)
 		}
 	default:
 		return fmt.Errorf("unsupported invalidity type for bad-precompile native check: %s", invalidityType)
