@@ -91,10 +91,9 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
 
         case OP_IMM: {
 
+            // for SLLI, SRLI, SRAI
             var funct6:Funct6
             var uimm6:UImm6
-            // for SLLI, SRLI, SRAI
-            funct6::uimm6 = imm12
 
             switch funct3 {
                 case FUNCT3_ADDI: {
@@ -103,6 +102,7 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                     registers[rd] = rs1_plus_signext_imm12
                 }
                 case FUNCT3_SLLI: {
+                    funct6::uimm6 = imm12
                     if funct6 == FUNCT6_SLLI {
                         registers[rd] = registers[rs1] << uimm6
                     }
@@ -127,6 +127,7 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                     registers[rd] = registers[rs1] ^ signext_imm12_64
                 }
                 case FUNCT3_SRLI: {
+                    funct6::uimm6 = imm12
                     // FUNCT3_SRLI and FUNCT3_SRAI share funct3 = 0b101; disambiguate with funct6.
                     if funct6 == FUNCT6_SRLI {
                         registers[rd] = registers[rs1] >> uimm6
