@@ -7,6 +7,7 @@ import linea.clients.RollupProofPublicInputs
 import linea.clients.RollupProofResponse
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
+import java.math.BigInteger
 import kotlin.time.Instant
 
 /**
@@ -89,6 +90,41 @@ data class L2BlockDto(
   val forcedTransactions: List<ForcedTransactionDto>,
 )
 
+// ExecutionPayloadV3 plus blockAccessList
+data class ExecutionPayloadDto(
+  val parentHash: String,
+  val feeRecipient: String,
+  val stateRoot: String,
+  val receiptsRoot: String,
+  val logsBloom: String,
+  val prevRandao: String,
+  val blockNumber: Long,
+  val gasLimit: Long,
+  val gasUsed: Long,
+  val timestamp: Long,
+  val extraData: String,
+  val baseFeePerGas: BigInteger,
+  val blockHash: String,
+  val transactions: List<String>,
+  val withdrawals: List<String>,
+  val blobGasUsed: Long,
+  val excessBlobGas: Long,
+  val blockAccessList: String,
+)
+
+data class ExecutionRequestsDto(
+  val deposits: List<String>,
+  val withdrawals: List<String>,
+  val consolidations: List<String>,
+)
+
+data class NewPayloadRequestDto(
+  val executionPayload: ExecutionPayloadDto,
+  val versionedHashes: List<String>,
+  val parentBeaconBlockRoot: String,
+  val executionRequests: ExecutionRequestsDto,
+)
+
 /** Static chain configuration (preimage inputs of `dynamicChainConfigHash`). */
 data class ChainConfigDto(
   val l2MessageServiceContract: String,
@@ -104,22 +140,47 @@ data class ExecutionWitnessDto(
   val headers: List<String>,
 )
 
+data class LineaRollupExtensionDto(
+  val forcedTransactions: List<ForcedTransactionDto>,
+)
+
+data class StatelessChainConfigDto(
+  val chainId: Long,
+  val forkName: String,
+)
+
+data class StatelessInputDto(
+  val newPayloadRequest: NewPayloadRequestDto,
+  val executionWitness: ExecutionWitnessDto,
+  val chainConfig: StatelessChainConfigDto,
+  val publicKeys: List<String>,
+)
+
+data class LineaPayloadInputDto(
+  val statelessInputSzz: String,
+  val debugStatelessInput: StatelessInputDto,
+  val lineaRollupExtensionDto: LineaRollupExtensionDto,
+)
+
 data class L2ExecutionProofRequestDto(
   val proverVersion: String,
   val blockRange: BlockRangeDto,
-  val publicInputs: L2ExecutionProofPublicInputsDto,
+  val parentFtxRollingHash: String,
+  val parentLastProcessedFtxNumber: Long,
+  val payloads: List<LineaPayloadInputDto>,
   val chainConfig: ChainConfigDto,
-  val blocks: List<L2BlockDto>,
-  val executionWitness: List<ExecutionWitnessDto>,
 )
 
 data class L2ExecutionProofResponseDto(
+  val proverVersion: String,
+  val startBlockNumber: Long,
+  val endBlockNumber: Long,
   val proof: String,
   val publicInputs: L2ExecutionProofPublicInputsDto,
-  @get:JsonProperty("L2L1MsgList")
-  val L2L1MsgList: List<String>,
-  val froms: List<String>,
-  val addrs: List<String>,
+  @get:JsonProperty("L2L1Messages")
+  val L2L1Messages: List<String>,
+  val txFroms: List<String>,
+  val filteredAddresses: List<String>,
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -143,13 +204,15 @@ data class ShnarfTransitionDto(
 )
 
 /** An inlined l2-execution proof consumed by the rollup guest. */
-data class InlinedL2ExecutionProofDto(
+data class L2ExecutionProofDto(
   val proof: String,
+  val startBlockNumber: Long,
+  val endBlockNumber: Long,
   val publicInputs: L2ExecutionProofPublicInputsDto,
-  @get:JsonProperty("L2L1MsgList")
-  val L2L1MsgList: List<String>,
-  val froms: List<String>,
-  val addrs: List<String>,
+  @get:JsonProperty("L2L1Messages")
+  val L2L1Messages: List<String>,
+  val txFroms: List<String>,
+  val filteredAddresses: List<String>,
 )
 
 data class RollupProofRequestDto(
@@ -158,11 +221,13 @@ data class RollupProofRequestDto(
   val blockRange: BlockRangeDto,
   val blobs: List<BlobDto>,
   val shnarfTransition: ShnarfTransitionDto,
-  val l2ExecutionProofs: List<InlinedL2ExecutionProofDto>,
-  val publicInputs: RollupProofPublicInputsDto,
+  val l2ExecutionProofs: List<L2ExecutionProofDto>,
 )
 
 data class RollupProofResponseDto(
+  val proverVersion: String,
+  val startBlockNumber: Long,
+  val endBlockNumber: Long,
   val proof: String,
   val publicInputs: RollupProofPublicInputsDto,
   @get:JsonProperty("L2L1Roots")
@@ -175,8 +240,10 @@ data class RollupProofResponseDto(
 // ---------------------------------------------------------------------------------------------------------------------
 
 /** An inlined rollup proof consumed by the rollup-aggregation guest. */
-data class InlinedRollupProofDto(
+data class RollupProofDto(
   val proof: String,
+  val startBlockNumber: Long,
+  val endBlockNumber: Long,
   val publicInputs: RollupProofPublicInputsDto,
   @get:JsonProperty("L2L1Roots")
   val L2L1Roots: List<String>,
@@ -187,13 +254,16 @@ typealias RollupAggregationPublicInputsDto = RollupProofPublicInputsDto
 
 data class RollupAggregationProofRequestDto(
   val proverVersion: String,
+  val chainId: Long,
   val blockRange: BlockRangeDto,
-  val rollupProofs: List<InlinedRollupProofDto>,
-  val expectedRollupAggregationPublicInputs: RollupAggregationPublicInputsDto,
+  val rollupProofs: List<RollupProofDto>,
 )
 
 /** Response of a rollup-aggregation proof: the aggregated proof bytes plus the 14-field PI tuple (§2.4). */
 data class RollupAggregationProofResponseDto(
+  val proverVersion: String,
+  val startBlockNumber: Long,
+  val endBlockNumber: Long,
   val proof: String,
   val publicInputs: RollupAggregationPublicInputsDto,
 )
@@ -285,19 +355,23 @@ internal fun RollupProofPublicInputs.fromDomainObject(): RollupProofPublicInputs
   )
 }
 
-internal fun L2ExecutionProofResponse.fromDomainObject(): InlinedL2ExecutionProofDto {
-  return InlinedL2ExecutionProofDto(
+internal fun L2ExecutionProofResponse.fromDomainObject(): L2ExecutionProofDto {
+  return L2ExecutionProofDto(
     proof = proof.encodeHex(),
+    startBlockNumber = startBlockNumber.toLong(),
+    endBlockNumber = endBlockNumber.toLong(),
     publicInputs = publicInputs.fromDomainObject(),
-    L2L1MsgList = L2L1MsgList.map { it.encodeHex() },
-    froms = froms.map { it.encodeHex() },
-    addrs = addrs.map { it.encodeHex() },
+    L2L1Messages = L2L1MsgList.map { it.encodeHex() },
+    txFroms = froms.map { it.encodeHex() },
+    filteredAddresses = addrs.map { it.encodeHex() },
   )
 }
 
-internal fun RollupProofResponse.fromDomainObject(): InlinedRollupProofDto {
-  return InlinedRollupProofDto(
+internal fun RollupProofResponse.fromDomainObject(): RollupProofDto {
+  return RollupProofDto(
     proof = proof.encodeHex(),
+    startBlockNumber = startBlockNumber.toLong(),
+    endBlockNumber = endBlockNumber.toLong(),
     publicInputs = publicInputs.fromDomainObject(),
     L2L1Roots = L2L1Roots.map { it.encodeHex() },
     filteredAddresses = filteredAddresses.map { it.encodeHex() },

@@ -96,11 +96,14 @@ class RiscVProofResponseDtoMapperTest {
   @Test
   fun `L2ExecutionProofResponseDtoMapper decodes every field`() {
     val dto = L2ExecutionProofResponseDto(
+      proverVersion = "4.0.0-riscv",
+      startBlockNumber = 1000500L,
+      endBlockNumber = 1000503L,
       proof = "0xabcd",
       publicInputs = executionPublicInputsDto(),
-      L2L1MsgList = listOf("0xaa"),
-      froms = listOf("0xbb"),
-      addrs = listOf("0xcc"),
+      L2L1Messages = listOf("0xaa"),
+      txFroms = listOf("0xbb"),
+      filteredAddresses = listOf("0xcc"),
     )
 
     assertThat(
@@ -128,6 +131,9 @@ class RiscVProofResponseDtoMapperTest {
   @Test
   fun `RollupProofResponseDtoMapper decodes every field`() {
     val dto = RollupProofResponseDto(
+      proverVersion = "4.0.0-riscv",
+      startBlockNumber = 1000500L,
+      endBlockNumber = 1000503L,
       proof = "0xabcd",
       publicInputs = rollupPublicInputsDto(),
       L2L1Roots = listOf("0xaa"),
@@ -159,6 +165,9 @@ class RiscVProofResponseDtoMapperTest {
   @Test
   fun `RollupAggregationProofResponseDtoMapper decodes every field`() {
     val dto = RollupAggregationProofResponseDto(
+      proverVersion = "4.0.0-riscv",
+      startBlockNumber = 1000500L,
+      endBlockNumber = 1000503L,
       proof = "0xabcd",
       publicInputs = rollupPublicInputsDto(),
     )
@@ -187,7 +196,10 @@ class RiscVProofResponseDtoMapperTest {
   fun `L2 execution proof response JSON parses into the DTO and maps to the domain response`() {
     val json = """
       {
+        "proverVersion": "4.0.0-riscv",
         "proof": "0xabcd",
+        "startBlockNumber": 1000500,
+        "endBlockNumber": 1000503,
         "publicInputs": {
           "parentBlockHash": "0x0a",
           "endBlockHash": "0x0b",
@@ -205,9 +217,9 @@ class RiscVProofResponseDtoMapperTest {
           "filteredAddressesHash": "0x09",
           "txFromsHash": "0x0c"
         },
-        "L2L1MsgList": ["0xaa"],
-        "froms": ["0xbb"],
-        "addrs": []
+        "L2L1Messages": ["0xaa"],
+        "txFroms": ["0xbb"],
+        "filteredAddresses": []
       }
     """.trimIndent()
 
@@ -240,6 +252,9 @@ class RiscVProofResponseDtoMapperTest {
     val json = """
       {
         "proof": "0xabcd",
+        "proverVersion": "4.0.0-riscv",
+        "startBlockNumber": 1000500,
+        "endBlockNumber": 1000520,
         "publicInputs": {
           "endBlockNumber": 1000520,
           "endBlockTimestamp": 1763000457,
@@ -265,7 +280,7 @@ class RiscVProofResponseDtoMapperTest {
     val mappedDto = RollupProofResponseDtoMapper(
       CompressionProofIndex(
         1000500UL,
-        1000503UL,
+        1000520UL,
         ByteArray(32),
         Instant.DISTANT_PAST,
       ),
@@ -275,7 +290,7 @@ class RiscVProofResponseDtoMapperTest {
     assertThat(mappedDto).isEqualTo(
       RollupProofResponse(
         startBlockNumber = 1000500UL,
-        endBlockNumber = 1000503UL,
+        endBlockNumber = 1000520UL,
         proof = "0xabcd".decodeHex(),
         publicInputs = expectedRollupPublicInputs(),
         L2L1Roots = listOf("0xaa".decodeHex()),

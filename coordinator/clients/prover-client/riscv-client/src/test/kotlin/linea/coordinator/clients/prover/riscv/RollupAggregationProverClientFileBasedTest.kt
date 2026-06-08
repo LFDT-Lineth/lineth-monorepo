@@ -30,6 +30,7 @@ import kotlin.time.Instant
 class RollupAggregationProverClientFileBasedTest {
   private val jsonMapper = JsonSerialization.proofResponseMapperV1
   private val proverVersion = "4.0.0-riscv"
+  private val chainId = 59144L
   private val proofIndexProvider =
     RollupAggregationProverClient.createProofIndexProviderFn(Sha256HashFunction())
 
@@ -61,6 +62,7 @@ class RollupAggregationProverClientFileBasedTest {
     client = RollupAggregationProverClient(
       transport = transport,
       proverVersion = proverVersion,
+      chainId = chainId,
     )
   }
 
@@ -72,9 +74,10 @@ class RollupAggregationProverClientFileBasedTest {
 
     val requestFile = config.requestsDirectory.resolve(AggregationProofFileNameProvider.getFileName(proofIndex))
     assertThat(requestFile).exists()
+    println("RequestFile = ${requestFile.toAbsolutePath()}")
 
     val writtenDto = jsonMapper.readValue(requestFile.toFile(), RollupAggregationProofRequestDto::class.java)
-    val expectedDto = RollupAggregationProofRequestDtoMapper(proverVersion).invoke(request).get()
+    val expectedDto = RollupAggregationProofRequestDtoMapper(proverVersion, chainId).invoke(request).get()
     assertThat(writtenDto).isEqualTo(expectedDto)
   }
 
@@ -97,8 +100,8 @@ class RollupAggregationProverClientFileBasedTest {
 
   private fun aggregationRequest(): RollupAggregationProofRequestV1 = RollupAggregationProofRequestV1(
     startBlockNumber = 1000501UL,
+    endBlockNumber = 1000567UL,
     startBlockTimestamp = Instant.fromEpochSeconds(1763000000),
-    publicInputs = rollupPublicInputs(),
     rollupProofs = emptyList(),
   )
 
@@ -121,7 +124,10 @@ class RollupAggregationProverClientFileBasedTest {
 
   private fun aggregationResponseDto(): RollupAggregationProofResponseDto = RollupAggregationProofResponseDto(
     proof = "0xabcd",
-    publicInputs = RollupProofPublicInputsDto(
+    proverVersion = "4.0.0-riscv",
+    startBlockNumber = 1000500,
+    endBlockNumber = 1000567,
+    publicInputs = RollupAggregationPublicInputsDto(
       endBlockNumber = 1000567,
       endBlockTimestamp = 1763002301,
       L2L1BridgeTransactionTree = "0x10",

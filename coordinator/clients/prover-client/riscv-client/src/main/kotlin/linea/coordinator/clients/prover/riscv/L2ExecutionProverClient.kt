@@ -4,8 +4,6 @@ import linea.clients.L2ExecutionProofRequestV1
 import linea.clients.L2ExecutionProofResponse
 import linea.clients.L2ExecutionProverClientV1
 import linea.domain.ExecutionProofIndex
-import linea.encoding.BlockEncoder
-import linea.encoding.BlockRLPEncoder
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
@@ -24,7 +22,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 internal class L2ExecutionProofRequestDtoMapper(
   private val proverVersion: String,
   private val chainConfig: ChainConfigDto,
-  private val encoder: BlockEncoder = BlockRLPEncoder,
+  // private val encoder: BlockEncoder = BlockRLPEncoder,
 ) : (L2ExecutionProofRequestV1) -> SafeFuture<L2ExecutionProofRequestDto> {
   private fun mapFtxInclusionResultToAcceptance(
     inclusionResult: ForcedTransactionInclusionResult,
@@ -40,18 +38,64 @@ internal class L2ExecutionProofRequestDtoMapper(
   }
 
   override fun invoke(request: L2ExecutionProofRequestV1): SafeFuture<L2ExecutionProofRequestDto> {
-    val blocks = request.blocks.map { block ->
-      L2BlockDto(
-        blockRlp = encoder.encode(block).encodeHex(),
-        // TODO: forced-transaction metadata (§6.5) is not present on L2ExecutionProofRequestV1.
-        forcedTransactions = request.forcedTransactions.filter { it -> it.blockNumber == block.number }.map {
-          ForcedTransactionDto(
-            ftxNumber = it.ftxNumber.toLong(),
-            deadlineBlockNumber = it.deadlineBlockNumber.toLong(),
-            signedTxRlp = it.signedTxRlp.encodeHex(),
-            acceptance = mapFtxInclusionResultToAcceptance(it.acceptance),
-          )
-        },
+    val payloads = request.executionPayloads.map { executionPayload ->
+      val blockNumber = executionPayload.blockNumber
+      LineaPayloadInputDto(
+        statelessInputSzz = ByteArray(0).encodeHex(),
+        debugStatelessInput = StatelessInputDto(
+          newPayloadRequest = NewPayloadRequestDto(
+            executionPayload = ExecutionPayloadDto(
+              parentHash = executionPayload.parentHash.encodeHex(),
+              feeRecipient = executionPayload.feeRecipient.encodeHex(),
+              stateRoot = executionPayload.stateRoot.encodeHex(),
+              receiptsRoot = executionPayload.receiptsRoot.encodeHex(),
+              logsBloom = executionPayload.logsBloom.encodeHex(),
+              prevRandao = executionPayload.prevRandao.encodeHex(),
+              blockNumber = executionPayload.blockNumber.toLong(),
+              gasLimit = executionPayload.gasLimit.toLong(),
+              gasUsed = executionPayload.gasUsed.toLong(),
+              timestamp = executionPayload.timestamp.toLong(),
+              extraData = executionPayload.extraData.encodeHex(),
+              baseFeePerGas = executionPayload.baseFeePerGas,
+              blockHash = executionPayload.blockHash.encodeHex(),
+              transactions = executionPayload.transactions.map { it.encodeHex() },
+              withdrawals = emptyList(),
+              blobGasUsed = 0L,
+              excessBlobGas = 0L,
+              blockAccessList = ByteArray(32).encodeHex(),
+            ),
+            versionedHashes = emptyList(),
+            parentBeaconBlockRoot = ByteArray(32).encodeHex(),
+            executionRequests = ExecutionRequestsDto(
+              deposits = emptyList(),
+              withdrawals = emptyList(),
+              consolidations = emptyList(),
+            ),
+          ),
+          executionWitness = request.executionWitnesses.find { it.blockNumber == blockNumber }!!.let { execWithness ->
+            ExecutionWitnessDto(
+              state = execWithness.state.map { it.encodeHex() },
+              keys = execWithness.keys.map { it.encodeHex() },
+              codes = execWithness.codes.map { it.encodeHex() },
+              headers = execWithness.headers.map { it.encodeHex() },
+            )
+          },
+          chainConfig = StatelessChainConfigDto(
+            chainId = request.chainConfig.chainId.toLong(),
+            forkName = "Osaka",
+          ),
+          publicKeys = emptyList(),
+        ),
+        lineaRollupExtensionDto = LineaRollupExtensionDto(
+          forcedTransactions = request.forcedTransactions.filter { it -> it.blockNumber == blockNumber }.map {
+            ForcedTransactionDto(
+              ftxNumber = it.ftxNumber.toLong(),
+              deadlineBlockNumber = it.deadlineBlockNumber.toLong(),
+              signedTxRlp = it.signedTxRlp.encodeHex(),
+              acceptance = mapFtxInclusionResultToAcceptance(it.acceptance),
+            )
+          },
+        ),
       )
     }
 
@@ -61,28 +105,10 @@ internal class L2ExecutionProofRequestDtoMapper(
         startBlockNumber = request.startBlockNumber.toLong(),
         endBlockNumber = request.endBlockNumber.toLong(),
       ),
-      // TODO: the 15-field public-inputs tuple is not derivable from L2ExecutionProofRequestV1 yet.
-      publicInputs = L2ExecutionProofPublicInputsDto(
-        parentBlockHash = request.blocks.first().parentHash.encodeHex(),
-        endBlockHash = request.blocks.last().hash.encodeHex(),
-        endBlockNumber = request.endBlockNumber.toLong(),
-        endBlockTimestamp = request.blocks.last().timestamp.toLong(),
-        L2L1MessagesHash = request.l2L1MessagesHash.encodeHex(),
-        parentL1L2BridgeRollingHash = request.parentL1L2BridgeRollingHash.encodeHex(),
-        parentL1L2BridgeRollingHashMessageNumber = request.parentL1L2BridgeRollingHashMessageNumber.toLong(),
-        endL1L2BridgeRollingHash = request.endL1L2BridgeRollingHash.encodeHex(),
-        endL1L2BridgeRollingHashMessageNumber = request.endL1L2BridgeRollingHashMessageNumber.toLong(),
-        dynamicChainConfigHash = request.dynamicChainConfigHash.encodeHex(),
-        parentFtxRollingHash = request.parentFtxRollingHash.encodeHex(),
-        endFtxRollingHash = request.endFtxRollingHash.encodeHex(),
-        lastProcessedFtxNumber = request.lastProcessedFtxNumber.toLong(),
-        filteredAddressesHash = request.filteredAddressesHash.encodeHex(),
-        txFromsHash = request.txFromsHash.encodeHex(),
-      ),
+      parentFtxRollingHash = request.parentFtxRollingHash.encodeHex(),
+      parentLastProcessedFtxNumber = request.parentLastProcessedFtxNumber.toLong(),
       chainConfig = chainConfig,
-      blocks = blocks,
-      // TODO: per-block execution witness (debug_executionWitness output) is not carried by the domain request yet.
-      executionWitness = emptyList(),
+      payloads = payloads,
     )
 
     return SafeFuture.completedFuture(dto)
@@ -103,13 +129,13 @@ internal object L2ExecutionProofResponseDtoMapper : (
     responseDto: L2ExecutionProofResponseDto,
   ): L2ExecutionProofResponse {
     return L2ExecutionProofResponse(
-      startBlockNumber = proofIndex.startBlockNumber,
-      endBlockNumber = proofIndex.endBlockNumber,
+      startBlockNumber = responseDto.startBlockNumber.toULong(),
+      endBlockNumber = responseDto.endBlockNumber.toULong(),
       proof = responseDto.proof.decodeHex(),
       publicInputs = responseDto.publicInputs.toDomainObject(),
-      L2L1MsgList = responseDto.L2L1MsgList.map { it.decodeHex() },
-      froms = responseDto.froms.map { it.decodeHex() },
-      addrs = responseDto.addrs.map { it.decodeHex() },
+      L2L1MsgList = responseDto.L2L1Messages.map { it.decodeHex() },
+      froms = responseDto.txFroms.map { it.decodeHex() },
+      addrs = responseDto.filteredAddresses.map { it.decodeHex() },
     )
   }
 }

@@ -1,5 +1,6 @@
 package linea.clients
 
+import linea.domain.BlobCompressionProof
 import linea.domain.BlockInterval
 import linea.domain.StartBlockTimestampProvider
 import linea.kotlin.byteArrayListEquals
@@ -7,13 +8,13 @@ import kotlin.time.Instant
 
 data class RollupProofRequestV1(
   override val startBlockNumber: ULong,
+  override val endBlockNumber: ULong,
   override val startBlockTimestamp: Instant,
-  val publicInputs: RollupProofPublicInputs,
+  val blobs: List<BlobCompressionProof>,
+  val parentShnarf: ByteArray,
+  val endShnarf: ByteArray,
   val l2ExecutionProofs: List<L2ExecutionProofResponse>,
 ) : BlockInterval, StartBlockTimestampProvider {
-  override val endBlockNumber: ULong
-    get() = publicInputs.endBlockNumber
-
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
@@ -21,8 +22,11 @@ data class RollupProofRequestV1(
     other as RollupProofRequestV1
 
     if (startBlockNumber != other.startBlockNumber) return false
+    if (endBlockNumber != other.endBlockNumber) return false
     if (startBlockTimestamp != other.startBlockTimestamp) return false
-    if (publicInputs != other.publicInputs) return false
+    if (blobs != other.blobs) return false
+    if (!parentShnarf.contentEquals(other.parentShnarf)) return false
+    if (!endShnarf.contentEquals(other.endShnarf)) return false
     if (l2ExecutionProofs != other.l2ExecutionProofs) return false
 
     return true
@@ -30,8 +34,11 @@ data class RollupProofRequestV1(
 
   override fun hashCode(): Int {
     var result = startBlockNumber.hashCode()
+    result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + startBlockTimestamp.hashCode()
-    result = 31 * result + publicInputs.hashCode()
+    result = 31 * result + blobs.hashCode()
+    result = 31 * result + parentShnarf.contentHashCode()
+    result = 31 * result + endShnarf.contentHashCode()
     result = 31 * result + l2ExecutionProofs.hashCode()
     return result
   }

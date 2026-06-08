@@ -32,11 +32,10 @@ internal class RollupProofRequestDtoMapper(
       ),
       blobs = emptyList(), // TODO: RollupProofRequestV1 should contain blobs info
       shnarfTransition = ShnarfTransitionDto(
-        parentShnarf = request.publicInputs.parentShnarf.encodeHex(),
-        endShnarf = request.publicInputs.endShnarf.encodeHex(),
+        parentShnarf = request.parentShnarf.encodeHex(),
+        endShnarf = request.endShnarf.encodeHex(),
       ),
       l2ExecutionProofs = request.l2ExecutionProofs.map { it.fromDomainObject() },
-      publicInputs = request.publicInputs.fromDomainObject(),
     )
 
     return SafeFuture.completedFuture(dto)
@@ -54,8 +53,8 @@ internal object RollupProofResponseDtoMapper : (CompressionProofIndex, RollupPro
     responseDto: RollupProofResponseDto,
   ): RollupProofResponse {
     return RollupProofResponse(
-      startBlockNumber = proofIndex.startBlockNumber,
-      endBlockNumber = proofIndex.endBlockNumber,
+      startBlockNumber = responseDto.startBlockNumber.toULong(),
+      endBlockNumber = responseDto.endBlockNumber.toULong(),
       proof = responseDto.proof.decodeHex(),
       publicInputs = responseDto.publicInputs.toDomainObject(),
       L2L1Roots = responseDto.L2L1Roots.map { it.decodeHex() },
@@ -92,7 +91,7 @@ class RollupProverClient(
     CompressionProofIndex(
       startBlockNumber = request.startBlockNumber,
       endBlockNumber = request.endBlockNumber,
-      hash = request.publicInputs.endShnarf,
+      hash = request.endShnarf,
       startBlockTimestamp = request.startBlockTimestamp,
     )
   },

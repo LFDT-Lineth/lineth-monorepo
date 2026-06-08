@@ -8,13 +8,10 @@ typealias RollupAggregationPublicInputs = RollupProofPublicInputs
 
 data class RollupAggregationProofRequestV1(
   override val startBlockNumber: ULong,
+  override val endBlockNumber: ULong,
   override val startBlockTimestamp: Instant,
-  val publicInputs: RollupAggregationPublicInputs,
   val rollupProofs: List<RollupProofResponse>,
 ) : BlockInterval, StartBlockTimestampProvider {
-  override val endBlockNumber: ULong
-    get() = publicInputs.endBlockNumber
-
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
@@ -22,8 +19,8 @@ data class RollupAggregationProofRequestV1(
     other as RollupAggregationProofRequestV1
 
     if (startBlockNumber != other.startBlockNumber) return false
+    if (endBlockNumber != other.endBlockNumber) return false
     if (startBlockTimestamp != other.startBlockTimestamp) return false
-    if (publicInputs != other.publicInputs) return false
     if (rollupProofs != other.rollupProofs) return false
 
     return true
@@ -31,8 +28,8 @@ data class RollupAggregationProofRequestV1(
 
   override fun hashCode(): Int {
     var result = startBlockNumber.hashCode()
+    result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + startBlockTimestamp.hashCode()
-    result = 31 * result + publicInputs.hashCode()
     result = 31 * result + rollupProofs.hashCode()
     return result
   }

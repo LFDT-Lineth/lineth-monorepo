@@ -102,8 +102,11 @@ class RollupProverClientFileBasedTest {
 
   private fun rollupRequest(): RollupProofRequestV1 = RollupProofRequestV1(
     startBlockNumber = 1000501UL,
+    endBlockNumber = 1000503UL,
     startBlockTimestamp = Instant.fromEpochSeconds(1763000000),
-    publicInputs = rollupPublicInputs(),
+    blobs = emptyList(),
+    parentShnarf = ByteArray(32) { 0x19 },
+    endShnarf = ByteArray(32) { 0x20 },
     l2ExecutionProofs = emptyList(),
   )
 
@@ -126,6 +129,9 @@ class RollupProverClientFileBasedTest {
 
   private fun rollupResponseDto(): RollupProofResponseDto = RollupProofResponseDto(
     proof = "0xabcd",
+    proverVersion = "4.0.0-riscv",
+    startBlockNumber = 1000500,
+    endBlockNumber = 1000520,
     publicInputs = RollupProofPublicInputsDto(
       endBlockNumber = 1000520,
       endBlockTimestamp = 1763000457,

@@ -22,16 +22,17 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
  */
 internal class RollupAggregationProofRequestDtoMapper(
   private val proverVersion: String,
+  private val chainId: Long,
 ) : (RollupAggregationProofRequestV1) -> SafeFuture<RollupAggregationProofRequestDto> {
   override fun invoke(request: RollupAggregationProofRequestV1): SafeFuture<RollupAggregationProofRequestDto> {
     val dto = RollupAggregationProofRequestDto(
       proverVersion = proverVersion,
+      chainId = chainId,
       blockRange = BlockRangeDto(
         startBlockNumber = request.startBlockNumber.toLong(),
         endBlockNumber = request.endBlockNumber.toLong(),
       ),
       rollupProofs = request.rollupProofs.map { it.fromDomainObject() },
-      expectedRollupAggregationPublicInputs = request.publicInputs.fromDomainObject(),
     )
 
     return SafeFuture.completedFuture(dto)
@@ -51,8 +52,8 @@ internal object RollupAggregationProofResponseDtoMapper :
     responseDto: RollupAggregationProofResponseDto,
   ): RollupAggregationProofResponse {
     return RollupAggregationProofResponse(
-      startBlockNumber = proofIndex.startBlockNumber,
-      endBlockNumber = proofIndex.endBlockNumber,
+      startBlockNumber = responseDto.startBlockNumber.toULong(),
+      endBlockNumber = responseDto.endBlockNumber.toULong(),
       proof = responseDto.proof.decodeHex(),
       publicInputs = responseDto.publicInputs.toDomainObject(),
     )
@@ -69,9 +70,10 @@ private typealias RollupAggregationProofTransport =
 class RollupAggregationProverClient(
   private val transport: RollupAggregationProofTransport,
   proverVersion: String,
+  chainId: Long,
   hashFunction: HashFunction = Sha256HashFunction(),
   proofRequestDtoMapper: (RollupAggregationProofRequestV1) -> SafeFuture<RollupAggregationProofRequestDto> =
-    RollupAggregationProofRequestDtoMapper(proverVersion),
+    RollupAggregationProofRequestDtoMapper(proverVersion, chainId),
   proofResponseDtoMapper: (AggregationProofIndex, RollupAggregationProofResponseDto) -> RollupAggregationProofResponse =
     RollupAggregationProofResponseDtoMapper,
   log: Logger = LOG,

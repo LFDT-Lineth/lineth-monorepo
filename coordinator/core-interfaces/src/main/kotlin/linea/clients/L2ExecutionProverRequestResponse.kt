@@ -1,33 +1,27 @@
 package linea.clients
 
-import linea.domain.Block
+// import tech.pegasys.teku.ethereum.executionclient.schema.ExecutionPayloadV3
 import linea.domain.BlockInterval
 import linea.domain.StartBlockTimestampProvider
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.byteArrayListEquals
+import maru.core.ExecutionPayload
 import kotlin.time.Instant
 
 data class L2ExecutionProofRequestV1(
-  val blocks: List<Block>,
+  val executionPayloads: List<ExecutionPayload>,
+  val executionWitnesses: List<ExecutionWitness>,
   val forcedTransactions: List<ForcedTransaction>,
-  val l2L1MessagesHash: ByteArray,
-  val parentL1L2BridgeRollingHash: ByteArray,
-  val parentL1L2BridgeRollingHashMessageNumber: ULong,
-  val endL1L2BridgeRollingHash: ByteArray,
-  val endL1L2BridgeRollingHashMessageNumber: ULong,
-  val dynamicChainConfigHash: ByteArray,
+  val chainConfig: ChainConfig,
   val parentFtxRollingHash: ByteArray,
-  val endFtxRollingHash: ByteArray,
-  val lastProcessedFtxNumber: ULong,
-  val filteredAddressesHash: ByteArray,
-  val txFromsHash: ByteArray,
+  val parentLastProcessedFtxNumber: ULong,
 ) : BlockInterval, StartBlockTimestampProvider {
   override val startBlockNumber: ULong
-    get() = blocks.first().number
+    get() = executionPayloads.first().blockNumber
   override val endBlockNumber: ULong
-    get() = blocks.last().number
+    get() = executionPayloads.last().blockNumber
   override val startBlockTimestamp: Instant
-    get() = blocks.first().headerSummary.timestamp
+    get() = Instant.fromEpochSeconds(executionPayloads.first().timestamp.toLong())
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -35,37 +29,23 @@ data class L2ExecutionProofRequestV1(
 
     other as L2ExecutionProofRequestV1
 
-    if (blocks != other.blocks) return false
+    if (executionPayloads != other.executionPayloads) return false
+    if (executionWitnesses != other.executionWitnesses) return false
     if (forcedTransactions != other.forcedTransactions) return false
-    if (!l2L1MessagesHash.contentEquals(other.l2L1MessagesHash)) return false
-    if (!parentL1L2BridgeRollingHash.contentEquals(other.parentL1L2BridgeRollingHash)) return false
-    if (parentL1L2BridgeRollingHashMessageNumber != other.parentL1L2BridgeRollingHashMessageNumber) return false
-    if (!endL1L2BridgeRollingHash.contentEquals(other.endL1L2BridgeRollingHash)) return false
-    if (endL1L2BridgeRollingHashMessageNumber != other.endL1L2BridgeRollingHashMessageNumber) return false
-    if (!dynamicChainConfigHash.contentEquals(other.dynamicChainConfigHash)) return false
+    if (chainConfig != other.chainConfig) return false
     if (!parentFtxRollingHash.contentEquals(other.parentFtxRollingHash)) return false
-    if (!endFtxRollingHash.contentEquals(other.endFtxRollingHash)) return false
-    if (lastProcessedFtxNumber != other.lastProcessedFtxNumber) return false
-    if (!filteredAddressesHash.contentEquals(other.filteredAddressesHash)) return false
-    if (!txFromsHash.contentEquals(other.txFromsHash)) return false
+    if (parentLastProcessedFtxNumber != other.parentLastProcessedFtxNumber) return false
 
     return true
   }
 
   override fun hashCode(): Int {
-    var result = blocks.hashCode()
+    var result = executionPayloads.hashCode()
+    result = 31 * result + executionWitnesses.hashCode()
     result = 31 * result + forcedTransactions.hashCode()
-    result = 31 * result + l2L1MessagesHash.contentHashCode()
-    result = 31 * result + parentL1L2BridgeRollingHash.contentHashCode()
-    result = 31 * result + parentL1L2BridgeRollingHashMessageNumber.hashCode()
-    result = 31 * result + endL1L2BridgeRollingHash.contentHashCode()
-    result = 31 * result + endL1L2BridgeRollingHashMessageNumber.hashCode()
-    result = 31 * result + dynamicChainConfigHash.contentHashCode()
+    result = 31 * result + chainConfig.hashCode()
     result = 31 * result + parentFtxRollingHash.contentHashCode()
-    result = 31 * result + endFtxRollingHash.contentHashCode()
-    result = 31 * result + lastProcessedFtxNumber.hashCode()
-    result = 31 * result + filteredAddressesHash.contentHashCode()
-    result = 31 * result + txFromsHash.contentHashCode()
+    result = 31 * result + parentLastProcessedFtxNumber.hashCode()
     return result
   }
 }
@@ -98,6 +78,65 @@ data class ForcedTransaction(
     result = 31 * result + deadlineBlockNumber.hashCode()
     result = 31 * result + signedTxRlp.contentHashCode()
     result = 31 * result + acceptance.hashCode()
+    return result
+  }
+}
+
+data class ChainConfig(
+  val l2MessageServiceContract: ByteArray,
+  val coinbase: ByteArray,
+  val chainId: ULong,
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as ChainConfig
+
+    if (!l2MessageServiceContract.contentEquals(other.l2MessageServiceContract)) return false
+    if (!coinbase.contentEquals(other.coinbase)) return false
+    if (chainId != other.chainId) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = l2MessageServiceContract.contentHashCode()
+    result = 31 * result + coinbase.contentHashCode()
+    result = 31 * result + chainId.hashCode()
+    return result
+  }
+}
+
+// This class should add a blockNumber field with the ExecutionWitness class declared in PR-3248
+data class ExecutionWitness(
+  val blockNumber: ULong,
+  val state: List<ByteArray>,
+  val keys: List<ByteArray>,
+  val codes: List<ByteArray>,
+  val headers: List<ByteArray>,
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as ExecutionWitness
+
+    if (blockNumber != other.blockNumber) return false
+    if (!state.byteArrayListEquals(other.state)) return false
+    if (!keys.byteArrayListEquals(other.keys)) return false
+    if (!codes.byteArrayListEquals(other.codes)) return false
+    if (!headers.byteArrayListEquals(other.headers)) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = blockNumber.hashCode()
+    result = 31 * result + state.hashCode()
+    result = 31 * result + keys.hashCode()
+    result = 31 * result + codes.hashCode()
+    result = 31 * result + headers.hashCode()
     return result
   }
 }
