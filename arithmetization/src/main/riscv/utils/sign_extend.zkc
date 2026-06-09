@@ -17,35 +17,20 @@ const SGNEXTMASK_U8:u64 = 0xFFFFFFFF_FFFFFF00
 // Upper 48 bits set; OR with zero-extended u16 when sign (bit 15) is 1.
 const SGNEXTMASK_U16:u64 = 0xFFFFFFFF_FFFF0000
 
-fn sgn_extension_u32_u64(value:u32) -> (ext_value:u64) {
-    ext_value = value as u64
+// Sign extension functions are branch-free
+// Shift right extracts the sign bit
+// Use multiply as a switch to set or not upper bits
 
-    // if first bit of int is one, the first 32 bits are 1 as well
-    var sign_bit:u32
-    sign_bit = value >> 31
-    if sign_bit == 1 {
-        ext_value = SGNEXTMASK_U32 | ext_value
-    }
+fn sgn_extension_u32_u64(value:u32) -> (ext_value:u64) {
+    ext_value = (value as u64) | (((value >> 31) as u64) * SGNEXTMASK_U32)
 }
 
 fn sgn_extension_u21_u64(value:u21) -> (ext_value:u64) {
-    ext_value = value as u64
-
-    var sign_bit:u21
-    sign_bit = value >> 20
-    if sign_bit == 1 {
-        ext_value = SGNEXTMASK_U21 | ext_value
-    }
+    ext_value = (value as u64) | (((value >> 20) as u64) * SGNEXTMASK_U21)
 }
 
 fn sgn_extension_u16_u64(value:u16) -> (ext_value:u64) {
-    ext_value = value as u64
-
-    var sign_bit:u16
-    sign_bit = value >> 15
-    if sign_bit == 1 {
-        ext_value = SGNEXTMASK_U16 | ext_value
-    }
+    ext_value = (value as u64) | (((value >> 15) as u64) * SGNEXTMASK_U16)
 }
 
 fn sgn_extension_u12_u64(value:u12) -> (ext_value:u64) {
@@ -53,23 +38,11 @@ fn sgn_extension_u12_u64(value:u12) -> (ext_value:u64) {
 }
 
 fn sgn_extension_u8_u64(value:u8) -> (ext_value:u64) {
-    ext_value = value as u64
-
-    var sign_bit:u8
-    sign_bit = value >> 7
-    if sign_bit == 1 {
-        ext_value = SGNEXTMASK_U8 | ext_value
-    }
+    ext_value = (value as u64) | (((value >> 7) as u64) * SGNEXTMASK_U8)
 }
 
 fn sgn_extension_u12_u32(value:u12) -> (ext_value:u32) {
-    ext_value = value as u32
-
-    var sign_bit:u12
-    sign_bit = value >> 11
-    if sign_bit == 1 {
-        ext_value = SGNEXTMASK_U12_U32 | ext_value
-    }
+    ext_value = (value as u32) | (((value >> 11) as u32) * SGNEXTMASK_U12_U32)
 }
 
 // 64-bit arithmetic right shift
