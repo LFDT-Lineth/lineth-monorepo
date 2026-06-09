@@ -1,0 +1,333 @@
+include "constants.zkc"
+include "utils.zkc"
+include "../../riscv/memory.zkc"
+include "../../riscv/ram/write.zkc"
+include "../../riscv/utils/type.zkc"
+
+// Implementation of the keccak hash function
+// - state size = 1600 bits
+// - little endian inputs
+
+// ===================================================================
+// Keccak-f[1600] parameters and constants
+// ===================================================================
+
+// 5x5xW state with W = 64 (5x5x64 = 1600 bits)
+type lane = u64
+
+// KECCAK_ROUNDS = number of rounds = 12 + 2 * l with 2^l = W
+const KECCAK_ROUNDS:u5 = 24
+
+// ===================================================================
+// Main function
+// ===================================================================
+
+fn keccak<ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block>(msg_address:Address, msg_length:u32, output_address:Address) {
+
+    // remove any leftovers from previous keccak computations
+    wipe_state()
+
+    printf "\n"
+    printf "msg_address: %x\n", msg_address
+    printf "msg_length: %x\n", msg_length
+    printf "output_address: %x\n", output_address
+
+    absorbing_phase(msg_address, msg_length)
+
+    squeezing_phase(output_address)
+
+    print_hash()
+}
+
+// print_hash prints the hash in BIG-ENDIAN convention
+fn print_hash<state_row0,state_row1,state_row2,state_row3>() {
+    printf "\nkeccak hash:\t"
+    print_big_endian(state_row0[0])
+    print_big_endian(state_row1[0])
+    print_big_endian(state_row2[0])
+    print_big_endian(state_row3[0])
+    printf "\n"
+
+}
+// print_big_endian prints a u64 in BIG-ENDIAN convention
+fn print_big_endian(val :u64) {
+    var b7:u8, b6:u8, b5:u8, b4:u8, b3:u8, b2:u8, b1:u8, b0:u8
+    b7 :: b6 :: b5 :: b4 :: b3 :: b2 :: b1 :: b0 = val
+    printf "%x%x%x%x%x%x%x%x", b0, b1, b2, b3, b4, b5, b6, b7
+}
+
+fn wipe_state<state_row0, state_row1, state_row2, state_row3, state_row4>() {
+    for i:u3 = 0; i<5; i = i + 1 {
+        state_row0[i] = 0
+        state_row1[i] = 0
+        state_row2[i] = 0
+        state_row3[i] = 0
+        state_row4[i] = 0
+    }
+}
+
+// ===================================================================
+// Sponge absorption and squeezing phases
+// ===================================================================
+
+// Xor the input blocks into the state and perform the permutation
+fn absorbing_phase<ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block>(msg_address:Address, msg_length:u32) {
+
+    var n_blocks:u32 = (msg_length / BLOCK_BYTE_LENGTH) + 1
+    var remainder:u8 = (msg_length % BLOCK_BYTE_LENGTH) as u8
+
+    var curr_address:Address = msg_address
+
+    // =======================================================================================
+    // building full blocks (no padding), XORing them into the state,
+    // and calling keccak_f
+    // =======================================================================================
+
+    // we build the blocks that DO NOT require padding and call keccak_f on them
+    // NOTE: n_blocks ≥ 1
+    for block:u32 = 0; block<(n_blocks - 1); block = block + 1 {
+        for limb:u5 = 0; limb<17; limb = limb + 1 {
+            padded_input_block[limb] = read_64(curr_address + (8 * (limb as Address)))
+        }
+
+        xor_padded_input_block_into_state()
+        keccak_f()
+
+        curr_address = curr_address + (BLOCK_BYTE_LENGTH as Address)
+    }
+
+    // =======================================================================================
+    // building the final padded block, XORing it into the state,
+    // and calling keccak_f
+    // =======================================================================================
+
+    // final block, DOES require padding --- always
+    // n_full_words ∈ {0, 1, ..., 16}
+    var n_full_words:u5 = (remainder / 8) as u5
+    var n_bytes:u3 = (remainder % 8) as u3
+
+    var final_word_in_block:u1
+    if n_full_words == 16 {
+        final_word_in_block = 1
+    } else {
+        final_word_in_block = 0
+    }
+
+    for limb:u5 = 0; limb<n_full_words; limb = limb + 1 {
+        padded_input_block[limb] = read_64(curr_address + (8 * (limb as Address)))
+    }
+    curr_address = curr_address + (8 * (n_full_words  as Address))
+    padded_input_block[n_full_words] = read_and_pad_64(curr_address, n_bytes, final_word_in_block)
+
+    // the code below should only trigger if n_full_words < 16 = 17 - 1
+    // the above "read_and_pad_64" call didn't fill the final word, so
+    // more padding happens: zero words followed by a terminating 1
+    if final_word_in_block != 1 {
+        for limb:u5 = n_full_words + 1; limb<16; limb = limb + 1 {
+            padded_input_block[limb] = 0
+        }
+        padded_input_block[16] = FINAL_RIGHT_PADDING
+    }
+
+    xor_padded_input_block_into_state()
+    keccak_f()
+}
+
+// xor_padded_input_block_into_state does exactly what its name suggests
+fn xor_padded_input_block_into_state<state_row0, state_row1, state_row2, state_row3, state_row4, padded_input_block>() {
+    state_row0[0] = state_row0[0] ^ padded_input_block[0]
+    state_row1[0] = state_row1[0] ^ padded_input_block[1]
+    state_row2[0] = state_row2[0] ^ padded_input_block[2]
+    state_row3[0] = state_row3[0] ^ padded_input_block[3]
+    state_row4[0] = state_row4[0] ^ padded_input_block[4]
+    state_row0[1] = state_row0[1] ^ padded_input_block[5]
+    state_row1[1] = state_row1[1] ^ padded_input_block[6]
+    state_row2[1] = state_row2[1] ^ padded_input_block[7]
+    state_row3[1] = state_row3[1] ^ padded_input_block[8]
+    state_row4[1] = state_row4[1] ^ padded_input_block[9]
+    state_row0[2] = state_row0[2] ^ padded_input_block[10]
+    state_row1[2] = state_row1[2] ^ padded_input_block[11]
+    state_row2[2] = state_row2[2] ^ padded_input_block[12]
+    state_row3[2] = state_row3[2] ^ padded_input_block[13]
+    state_row4[2] = state_row4[2] ^ padded_input_block[14]
+    state_row0[3] = state_row0[3] ^ padded_input_block[15]
+    state_row1[3] = state_row1[3] ^ padded_input_block[16]
+}
+
+fn squeezing_phase<ram, state_row0, state_row1, state_row2, state_row3>(output_address:Address) {
+    write_64(output_address + (0 * 8), state_row0[0] as u64)
+    write_64(output_address + (1 * 8), state_row1[0] as u64)
+    write_64(output_address + (2 * 8), state_row2[0] as u64)
+    write_64(output_address + (3 * 8), state_row3[0] as u64)
+}
+
+// ===================================================================
+// The Keccak-f permutation
+// ===================================================================
+
+fn keccak_f<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d>() {
+    for j:u5 = 0; j<KECCAK_ROUNDS; j = j + 1 {
+        var round_constant:u64 = RC[j]
+        keccak_f_round(round_constant)
+    }
+}
+
+fn keccak_f_round<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d>(round_constant:u64) {
+    theta()
+    rho()
+    pi()
+    chi()
+    iota(round_constant)
+}
+
+// THETA: column parity mixing step
+// C[x] = A[x,0] ^ A[x,1] ^ A[x,2] ^ A[x,3] ^ A[x,4]
+// D[x] = C[x-1] ^ rot(C[x+1], 1)
+// A[x,y] = A[x,y] ^ D[x]
+fn theta<state_row0, state_row1, state_row2, state_row3, state_row4, c, d>() {
+
+    c[0] = state_row0[0] ^ state_row0[1] ^ state_row0[2] ^ state_row0[3] ^ state_row0[4]
+    c[1] = state_row1[0] ^ state_row1[1] ^ state_row1[2] ^ state_row1[3] ^ state_row1[4]
+    c[2] = state_row2[0] ^ state_row2[1] ^ state_row2[2] ^ state_row2[3] ^ state_row2[4]
+    c[3] = state_row3[0] ^ state_row3[1] ^ state_row3[2] ^ state_row3[3] ^ state_row3[4]
+    c[4] = state_row4[0] ^ state_row4[1] ^ state_row4[2] ^ state_row4[3] ^ state_row4[4]
+
+    for i_minus_one:u5 = 0; i_minus_one<5; i_minus_one = i_minus_one + 1 {
+        var i:u5 = i_minus_one + 1
+        d[mod5(i)] = c[i_minus_one as u3] ^ bit_rotl64(c[mod5(i + 1)], 1)
+    }
+
+    for j:u3 = 0; j<5; j = j + 1 {
+        state_row0[j] = state_row0[j] ^ d[0]
+        state_row1[j] = state_row1[j] ^ d[1]
+        state_row2[j] = state_row2[j] ^ d[2]
+        state_row3[j] = state_row3[j] ^ d[3]
+        state_row4[j] = state_row4[j] ^ d[4]
+    }
+
+}
+
+// RHO: lane rotations step
+// B[y, (2x+3y) mod 5] = rot(A[x,y], r[x,y])
+fn rho<state_row0, state_row1, state_row2, state_row3, state_row4>() {
+
+    for j:u3 = 0; j<5; j = j + 1 {
+        state_row0[j] = bit_rotl64(state_row0[j], rot_offset(0, j))
+        state_row1[j] = bit_rotl64(state_row1[j], rot_offset(1, j))
+        state_row2[j] = bit_rotl64(state_row2[j], rot_offset(2, j))
+        state_row3[j] = bit_rotl64(state_row3[j], rot_offset(3, j))
+        state_row4[j] = bit_rotl64(state_row4[j], rot_offset(4, j))
+    }
+}
+
+// PI: lane permutation step
+// A[x,y] → B[y, (2x+3y) mod 5]
+fn pi<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4>() {
+
+    // we apply bY[Z] = state_rowX[Y] with Z = (2*X + 3*Y) mod 5
+    b0[0] = state_row0[0]
+    b1[3] = state_row0[1]
+    b2[1] = state_row0[2]
+    b3[4] = state_row0[3]
+    b4[2] = state_row0[4]
+    b0[2] = state_row1[0]
+    b1[0] = state_row1[1]
+    b2[3] = state_row1[2]
+    b3[1] = state_row1[3]
+    b4[4] = state_row1[4]
+    b0[4] = state_row2[0]
+    b1[2] = state_row2[1]
+    b2[0] = state_row2[2]
+    b3[3] = state_row2[3]
+    b4[1] = state_row2[4]
+    b0[1] = state_row3[0]
+    b1[4] = state_row3[1]
+    b2[2] = state_row3[2]
+    b3[0] = state_row3[3]
+    b4[3] = state_row3[4]
+    b0[3] = state_row4[0]
+    b1[1] = state_row4[1]
+    b2[4] = state_row4[2]
+    b3[2] = state_row4[3]
+    b4[0] = state_row4[4]
+}
+
+// CHI: non-linear step
+// A[x,y] = B[x,y] ^ ((not B[x+1,y]) and B[x+2,y])
+fn chi<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4>() {
+
+    for j:u3 = 0; j<5; j = j + 1 {
+        state_row0[j] = b0[j] ^ ((~b1[j]) & b2[j])
+        state_row1[j] = b1[j] ^ ((~b2[j]) & b3[j])
+        state_row2[j] = b2[j] ^ ((~b3[j]) & b4[j])
+        state_row3[j] = b3[j] ^ ((~b4[j]) & b0[j])
+        state_row4[j] = b4[j] ^ ((~b0[j]) & b1[j])
+    }
+
+}
+
+// IOTA: round constant step
+// A[0,0] = A[0,0] ^ RC
+fn iota<state_row0>(round_constant:u64) {
+    state_row0[0] = state_row0[0] ^ round_constant
+}
+
+// ===================================================================
+// Helper functions
+// ===================================================================
+
+// rotate left by n bits
+fn bit_rotl64(word:u64, n:u6) -> (res:u64) {
+    var b5:u1
+    var b4:u1
+    var b3:u1
+    var b2:u1
+    var b1:u1
+    var b0:u1
+    b5::b4::b3::b2::b1::b0 = n
+    var w:u64 = word
+    // rotate by 32 if bit 5 is set
+    if b5 == 1 {
+        var hi:u32
+        var lo:u32
+        hi::lo = w
+        w = lo::hi
+    }
+    // rotate by 16 if bit 4 is set
+    if b4 == 1 {
+        var hi:u16
+        var lo:u48
+        hi::lo = w
+        w = lo::hi
+    }
+    // rotate by 8 if bit 3 is set
+    if b3 == 1 {
+        var hi:u8
+        var lo:u56
+        hi::lo = w
+        w = lo::hi
+    }
+    // rotate by 4 if bit 2 is set
+    if b2 == 1 {
+        var hi:u4
+        var lo:u60
+        hi::lo = w
+        w = lo::hi
+    }
+    // rotate by 2 if bit 1 is set
+    if b1 == 1 {
+        var hi:u2
+        var lo:u62
+        hi::lo = w
+        w = lo::hi
+    }
+    // rotate by 1 if bit 0 is set
+    if b0 == 1 {
+        var hi:u1
+        var lo:u63
+        hi::lo = w
+        w = lo::hi
+    }
+    res = w
+}
+

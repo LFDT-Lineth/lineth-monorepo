@@ -1,15 +1,5 @@
 const custom_std = @import("custom_std.zig");
 
-export fn main() noreturn {
-    const data: [*c]const u8 = @ptrFromInt(0x1000);
-    const len: usize = 64;
-    const output: [*c]zkvm_keccak256_hash = @ptrFromInt(0x2000);
-
-    _ = zkvm_keccak256(data, len, output);
-
-    custom_std.exit(0);
-}
-
 // https://github.com/eth-act/zkvm-standards/blob/282cd356c3a0498416bb0619f9c8a347ce9933fb/standards/c-interface-accelerators/zkvm_accelerators.h#L42
 pub const zkvm_status = enum(c_int) {
     ZKVM_EOK = 0, // Success
@@ -22,7 +12,7 @@ pub const zkvm_keccak256_hash = extern struct {
 };
 
 // https://github.com/eth-act/zkvm-standards/blob/282cd356c3a0498416bb0619f9c8a347ce9933fb/standards/c-interface-accelerators/zkvm_accelerators.h#L166
-export fn zkvm_keccak256(data: [*c]const u8, len: usize, output: [*c]zkvm_keccak256_hash) zkvm_status {
+pub fn zkvm_keccak256(data: [*c]const u8, len: usize, output: [*c]zkvm_keccak256_hash) zkvm_status {
     if (data == null or output == null) {
         custom_std.panic();
     }

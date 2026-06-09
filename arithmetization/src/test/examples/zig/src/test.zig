@@ -1,4 +1,4 @@
-const custom_std = @import("custom_std.zig");
+const custom_std = @import("wrappers").custom_std;
 
 export fn main() noreturn {
     const a: i64 = 42;

@@ -5,6 +5,7 @@ include "../utils/negative.zkc"
 include "../utils/sign_bit.zkc"
 include "../utils/sign_extend.zkc"
 include "../utils/signed_comparisons.zkc"
+include "../../lib/keccak/impl.zkc"
 
 // Process a RISC-V R-type instruction, writing the result into the register file.
 //
@@ -36,7 +37,7 @@ include "../utils/signed_comparisons.zkc"
 // treat register values as two's-complement integers.  Division and remainder
 // follow RISC-V semantics: division by zero returns −1 (or the dividend for REM),
 // and signed overflow (INT_MIN / −1) returns INT_MIN (or 0 for REM).
-fn process_R_type_instruction<registers>(opcode:Opcode, instruction_parameters:u25) {
+fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block>(opcode:Opcode, instruction_parameters:u25) {
 
     var funct7:Funct7
     var rs2:Register
@@ -362,8 +363,8 @@ fn process_R_type_instruction<registers>(opcode:Opcode, instruction_parameters:u
         }
         case CUSTOM_1: {
             if (funct3 == FUNCT3_KECCAK) && (funct7 == FUNCT7_KECCAK) {
-                printf "KECCAK \n"
-                // TODO: call keccak
+                printf "KECCAK precompile "
+                keccak(v1 as Address, v2 as u32, registers[rd] as Address)
             } else {
                 printf "[ERROR] Unsupported R-type custom-1 instruction with\n"
                 printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3

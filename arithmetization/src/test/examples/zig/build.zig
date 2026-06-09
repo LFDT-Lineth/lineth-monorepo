@@ -40,6 +40,13 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
+    const wrappers = b.createModule(.{
+        .root_source_file = b.path("../../../wrappers/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.root_module.addImport("wrappers", wrappers);
+
     // Point to assembly overwriting default SP with the one defined in the linker script
     exe.root_module.addAssemblyFile(b.path("src/start.s"));
     exe.setLinkerScript(b.path("../linker_script.ld"));
