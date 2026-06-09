@@ -28,8 +28,11 @@ from rollup_spec.rollup import RollupProof, RollupPublicInput
 from rollup_spec.proof_io_v1 import (
     ProofIoError,
     decode_aggregation_request,
+    decode_aggregation_request_json,
     decode_request,
+    decode_request_json,
     decode_rollup_request,
+    decode_rollup_request_json,
     encode_aggregation_response,
     encode_response,
     encode_rollup_response,
@@ -557,3 +560,66 @@ def test_aggregation_schema_rejects_bad_request() -> None:
     bad["rollupProofs"][0]["publicInputs"]["parentShnarf"] = "0x1234"  # not 32 bytes
     with pytest.raises(jsonschema.ValidationError):
         validator.validate(bad)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Opt-in schema enforcement on the `*_json` entry points (validate=True)
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# `decode_*_json(..., validate=True)` runs the JSON Schema before decoding. Its
+# distinguishing power over the inline coercion is rejecting *unknown/extra*
+# fields (the schemas set `additionalProperties: false`), which the decoders
+# otherwise ignore. `jsonschema` is optional, so these tests skip without it.
+
+
+def test_decode_request_json_validate_accepts_valid_request() -> None:
+    pytest.importorskip("jsonschema")
+    decoded = decode_request_json(json.dumps(_valid_request()), validate=True)
+    assert int(decoded.chain_config.chain_id) == 59144
+
+
+def test_decode_request_json_validate_rejects_unknown_field() -> None:
+    pytest.importorskip("jsonschema")
+    bad = _valid_request()
+    bad["unexpectedField"] = 123
+    with pytest.raises(ProofIoError, match="does not conform"):
+        decode_request_json(json.dumps(bad), validate=True)
+
+
+def test_decode_request_json_without_validate_ignores_unknown_field() -> None:
+    # The inline coercion path only reads the keys it needs, so an extra field
+    # is silently ignored when validate=False (the default).
+    obj = _valid_request()
+    obj["unexpectedField"] = 123
+    decoded = decode_request_json(json.dumps(obj))  # validate=False
+    assert int(decoded.chain_config.chain_id) == 59144
+
+
+def test_decode_rollup_request_json_validate_rejects_unknown_field() -> None:
+    pytest.importorskip("jsonschema")
+    bad = _valid_rollup_request()
+    bad["blobs"][0]["unexpectedField"] = "0xdead"
+    with pytest.raises(ProofIoError, match="does not conform"):
+        decode_rollup_request_json(json.dumps(bad), validate=True)
+
+
+def test_decode_rollup_request_json_validate_accepts_valid_request() -> None:
+    pytest.importorskip("jsonschema")
+    decoded = decode_rollup_request_json(json.dumps(_valid_rollup_request()), validate=True)
+    assert int(decoded.chain_id) == 59144
+
+
+def test_decode_aggregation_request_json_validate_rejects_unknown_field() -> None:
+    pytest.importorskip("jsonschema")
+    bad = _valid_aggregation_request()
+    bad["rollupProofs"][0]["publicInputs"]["unexpectedField"] = 1
+    with pytest.raises(ProofIoError, match="does not conform"):
+        decode_aggregation_request_json(json.dumps(bad), validate=True)
+
+
+def test_decode_aggregation_request_json_validate_accepts_valid_request() -> None:
+    pytest.importorskip("jsonschema")
+    decoded = decode_aggregation_request_json(
+        json.dumps(_valid_aggregation_request()), validate=True
+    )
+    assert len(decoded.rollup_proofs) == 1

@@ -22,12 +22,18 @@ Design notes:
     intentionally discarded (see §3.3 of the spec Readme).
   - The wire contract is pinned by the JSON Schemas under `rollup_spec/schemas/`;
     only `proverVersion` (a version tag) travels on the wire, never the schema.
+    Inline coercion (`_require`, `_bytes_from_hex`, `_u64`, the enum lookup) is the
+    primary validation and yields precise field-path errors. The `*_json` and
+    `run_*_from_request_json` entry points additionally accept `validate=True` to
+    enforce the JSON Schema (e.g. rejecting unknown/extra fields) at the trust
+    boundary; `jsonschema` is imported lazily so it stays an optional dependency.
 
 Conventions (Linea): byte/hash fields are 0x-prefixed hex; integers that fit in
 JSON are plain numbers but `_u64` also accepts 0x-hex strings defensively.
 """
 
 import json
+from pathlib import Path
 from typing import Any
 
 from ethereum.crypto.hash import Hash32
@@ -115,6 +121,53 @@ def _hx(value: Any) -> str:
     return "0x" + bytes(value).hex()
 
 
+# ── optional JSON Schema validation ───────────────────────────────────────────
+#
+# Schema files live next to the code so they ship with the package and stay the
+# single cross-language contract artifact. Validation is opt-in (`validate=True`)
+# and `jsonschema` is imported lazily, so callers that only need the inline
+# coercion incur neither the dependency nor the cost.
+
+_SCHEMA_DIR = Path(__file__).parent / "schemas"
+
+_L2_REQUEST_SCHEMA = "getZkL2ExecutionProofV1.request.schema.json"
+_L2_RESPONSE_SCHEMA = "getZkL2ExecutionProofV1.response.schema.json"
+_ROLLUP_REQUEST_SCHEMA = "getZkRollupProofV1.request.schema.json"
+_ROLLUP_RESPONSE_SCHEMA = "getZkRollupProofV1.response.schema.json"
+_AGGREGATION_REQUEST_SCHEMA = "getZkRollupAggregationProofV1.request.schema.json"
+_AGGREGATION_RESPONSE_SCHEMA = "getZkRollupAggregationProofV1.response.schema.json"
+
+
+def _validate_against_schema(obj: Any, schema_filename: str) -> Any:
+    """
+    Validate `obj` against the named JSON Schema under `rollup_spec/schemas/` and
+    return it unchanged. Raises `ProofIoError` on a schema violation — or if the
+    optional `jsonschema` dependency is not installed.
+
+    This is the only check that catches *unknown/extra* fields (the schemas set
+    `additionalProperties: false`), which the inline coercion intentionally
+    ignores.
+    """
+    try:
+        import jsonschema
+    except ImportError as exc:  # pragma: no cover - exercised only without the extra
+        raise ProofIoError(
+            "schema validation requested (validate=True) but the optional "
+            "'jsonschema' dependency is not installed; install it (see "
+            "rollup_spec/requirements.txt) or call with validate=False"
+        ) from exc
+
+    schema = json.loads((_SCHEMA_DIR / schema_filename).read_text())
+    try:
+        jsonschema.validate(obj, schema, cls=jsonschema.Draft202012Validator)
+    except jsonschema.ValidationError as exc:
+        raise ProofIoError(
+            f"payload does not conform to {schema_filename} "
+            f"at {exc.json_path}: {exc.message}"
+        ) from exc
+    return obj
+
+
 # ── request: JSON dict -> guest dataclass ─────────────────────────────────────
 
 
@@ -188,8 +241,13 @@ def decode_request(obj: dict) -> L2ExecutionProofPrivateInput:
     )
 
 
-def decode_request_json(text: str | bytes) -> L2ExecutionProofPrivateInput:
-    return decode_request(json.loads(text))
+def decode_request_json(
+    text: str | bytes, *, validate: bool = False
+) -> L2ExecutionProofPrivateInput:
+    obj = json.loads(text)
+    if validate:
+        _validate_against_schema(obj, _L2_REQUEST_SCHEMA)
+    return decode_request(obj)
 
 
 # ── response: guest dataclass -> JSON dict ────────────────────────────────────
@@ -243,11 +301,21 @@ def encode_response_json(
 # ── prover entrypoint ─────────────────────────────────────────────────────────
 
 
-def run_from_request_json(text: str | bytes, prover_version: str) -> dict:
-    """Full host flow: parse request JSON, run the guest, return response JSON dict."""
-    execution_input = decode_request_json(text)
+def run_from_request_json(
+    text: str | bytes, prover_version: str, *, validate: bool = False
+) -> dict:
+    """
+    Full host flow: parse request JSON, run the guest, return response JSON dict.
+
+    With `validate=True`, the incoming request and the emitted response are both
+    checked against their JSON Schemas (defense-in-depth at the trust boundary).
+    """
+    execution_input = decode_request_json(text, validate=validate)
     proof = run_l2_execution_guest(execution_input)
-    return encode_response(proof, prover_version)
+    response = encode_response(proof, prover_version)
+    if validate:
+        _validate_against_schema(response, _L2_RESPONSE_SCHEMA)
+    return response
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -372,8 +440,13 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
     )
 
 
-def decode_rollup_request_json(text: str | bytes) -> RollupProofPrivateInput:
-    return decode_rollup_request(json.loads(text))
+def decode_rollup_request_json(
+    text: str | bytes, *, validate: bool = False
+) -> RollupProofPrivateInput:
+    obj = json.loads(text)
+    if validate:
+        _validate_against_schema(obj, _ROLLUP_REQUEST_SCHEMA)
+    return decode_rollup_request(obj)
 
 
 # ── rollup response: guest dataclass -> JSON dict ─────────────────────────────
@@ -429,11 +502,21 @@ def encode_rollup_response_json(
 # ── rollup prover entrypoint ──────────────────────────────────────────────────
 
 
-def run_rollup_from_request_json(text: str | bytes, prover_version: str) -> dict:
-    """Full host flow: parse rollup request JSON, run the guest, return response JSON dict."""
-    rollup_input = decode_rollup_request_json(text)
+def run_rollup_from_request_json(
+    text: str | bytes, prover_version: str, *, validate: bool = False
+) -> dict:
+    """
+    Full host flow: parse rollup request JSON, run the guest, return response JSON dict.
+
+    With `validate=True`, the incoming request and the emitted response are both
+    checked against their JSON Schemas.
+    """
+    rollup_input = decode_rollup_request_json(text, validate=validate)
     proof = run_rollup_guest(rollup_input)
-    return encode_rollup_response(proof, prover_version)
+    response = encode_rollup_response(proof, prover_version)
+    if validate:
+        _validate_against_schema(response, _ROLLUP_RESPONSE_SCHEMA)
+    return response
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -515,8 +598,13 @@ def decode_aggregation_request(obj: dict) -> RollupAggregationProofPrivateInput:
     )
 
 
-def decode_aggregation_request_json(text: str | bytes) -> RollupAggregationProofPrivateInput:
-    return decode_aggregation_request(json.loads(text))
+def decode_aggregation_request_json(
+    text: str | bytes, *, validate: bool = False
+) -> RollupAggregationProofPrivateInput:
+    obj = json.loads(text)
+    if validate:
+        _validate_against_schema(obj, _AGGREGATION_REQUEST_SCHEMA)
+    return decode_aggregation_request(obj)
 
 
 # ── rollup-aggregation response: guest dataclass -> JSON dict ─────────────────
@@ -567,13 +655,23 @@ def encode_aggregation_response_json(
 # ── rollup-aggregation prover entrypoint ──────────────────────────────────────
 
 
-def run_aggregation_from_request_json(text: str | bytes, prover_version: str) -> dict:
-    """Full host flow: parse aggregation request JSON, run the guest, return response JSON dict."""
-    aggregation_input = decode_aggregation_request_json(text)
+def run_aggregation_from_request_json(
+    text: str | bytes, prover_version: str, *, validate: bool = False
+) -> dict:
+    """
+    Full host flow: parse aggregation request JSON, run the guest, return response JSON dict.
+
+    With `validate=True`, the incoming request and the emitted response are both
+    checked against their JSON Schemas.
+    """
+    aggregation_input = decode_aggregation_request_json(text, validate=validate)
     public_inputs = run_rollup_aggregation_guest(aggregation_input)
     # startBlockNumber is not part of the PI tuple; take it from the first
     # rollup proof's range (the aggregation covers a contiguous range).
     start_block_number = int(aggregation_input.rollup_proofs[0].start_block_number)
-    return encode_aggregation_response(
+    response = encode_aggregation_response(
         public_inputs, prover_version, start_block_number=start_block_number
     )
+    if validate:
+        _validate_against_schema(response, _AGGREGATION_RESPONSE_SCHEMA)
+    return response
