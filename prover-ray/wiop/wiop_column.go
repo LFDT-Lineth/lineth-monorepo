@@ -27,9 +27,6 @@ type Module struct {
 	// Vanishings is the ordered list of vanishing constraints registered on
 	// this module via [Module.NewVanishing] and [Module.NewVanishingManual].
 	Vanishings []*Vanishing
-	// LocalOpenings holds all [LocalOpening] queries registered with this
-	// system via [System.NewLocalOpening], in declaration order.
-	LocalOpenings []*LocalOpening
 	// RangeChecks holds all [RangeCheck] queries registered on this module
 	// via [Module.NewRangeCheck], in declaration order.
 	RangeChecks []*RangeCheck
@@ -427,4 +424,49 @@ func (cp *ColumnPosition) EvaluateSingle(rt Runtime) ConcreteField {
 	m := cp.Column.Module
 	elem := rt.GetColumnAssignment(cp.Column).ElementAtN(m.Padding, m.RuntimeSize(rt), cp.Position)
 	return ConcreteField{Value: elem, promise: cp}
+}
+
+// Open creates a "local opening" of this column position: a prover-supplied
+// scalar [Cell] (the result) pinned, by a constraint, to equal the column's
+// value at this position — Result == Column[Position].
+//
+// An opening is not a standalone query type. It is realised as:
+//
+//   - a lazily-assigned result [Cell] (see [Round.NewLazyCell]) living in the
+//     same round as the column; at prove time it resolves to Column[Position]
+//     by reading the runtime column assignment. Its extension flag inherits
+//     from the column.
+//   - a scalar [Vanishing] Result − Column[Position], registered on the
+//     column's module. Because the expression is scalar (a single
+//     [ColumnPosition] leaf plus the result [Cell]), it is discharged by the
+//     local-vanishing compiler, which lifts it to a domain-wide identity via a
+//     Lagrange indicator at Position. This is what soundly binds the opening
+//     into the proof (and gives it a gnark path) — the cell value alone is not
+//     trusted.
+//
+// The returned [Cell] is the opening value; read it back with
+// [Runtime.GetCellValue]. The prover does not need to assign it explicitly.
+//
+// Panics if ctx or the receiver is nil.
+func (cp *ColumnPosition) Open(ctx *ContextFrame) *Cell {
+	if cp == nil {
+		panic("wiop: ColumnPosition.Open requires a non-nil ColumnPosition")
+	}
+	if ctx == nil {
+		panic("wiop: ColumnPosition.Open requires a non-nil ContextFrame")
+	}
+
+	col := cp.Column
+	result := col.Round().NewLazyCell(
+		ctx.Childf("result"),
+		col.IsExtension,
+		func(rt Runtime) field.Gen {
+			m := col.Module
+			return rt.GetColumnAssignment(col).
+				ElementAtN(m.Padding, m.RuntimeSize(rt), cp.Position)
+		},
+	)
+
+	col.Module.NewVanishing(ctx, Sub(result, cp))
+	return result
 }

@@ -16,7 +16,7 @@
 //   - one or more "running-sum" extension columns Z, each absorbing up to
 //     packingArity fractions whose vector-valued sides live on the same module;
 //   - a vanishing recurrence per Z column linking it to its source fractions;
-//   - LocalOpenings of Z[0] (initial condition) and Z[n-1] (column endpoint);
+//   - openings of Z[0] (initial condition) and Z[n-1] (column endpoint);
 //   - a verifier action that checks the initial condition for every Z column
 //     and that the sum of endpoints matches the query's claimed Result cell.
 //
@@ -44,7 +44,7 @@ import (
 const packingArity = 3
 
 // Compile reduces every [wiop.LogDerivativeSum] query in sys to a Z-column
-// recurrence plus endpoint LocalOpenings, and registers prover/verifier
+// recurrence plus endpoint openings, and registers prover/verifier
 // actions that tie the resulting artefacts back to the query's Result cell.
 // Already-reduced queries are skipped.
 func Compile(sys *wiop.System) {
@@ -129,14 +129,14 @@ func fractionModule(f wiop.Fraction) *wiop.Module {
 // zEntry collects the per-Z artefacts shared by the prover and verifier
 // actions: the Z column, the symbolic packed numerator/denominator, the raw
 // triples (filter, num, den) used by the prover for filter-aware row skipping,
-// and the endpoint LocalOpenings.
+// and the endpoint openings.
 type zEntry struct {
 	zCol   *wiop.Column
 	zNum   wiop.Expression
 	zDen   wiop.Expression
 	packed []wiop.Fraction // raw fractions used by the prover for filter-aware evaluation
-	zInit  *wiop.LocalOpening
-	zFinal *wiop.LocalOpening
+	zInit  *wiop.Cell      // lazily-assigned opening of Z[0]
+	zFinal *wiop.Cell      // lazily-assigned opening of Z[n-1]
 }
 
 // buildZ allocates one Z column for a packed fraction group, registers the
@@ -247,10 +247,9 @@ func (a *proverAction) Run(rt wiop.Runtime) {
 
 		rt.AssignColumn(e.zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(z)})
 
-		// SelfAssign reads Z[0] and Z[n-1] from the runtime, so the column
-		// must already be assigned at this point.
-		e.zInit.SelfAssign(rt)
-		e.zFinal.SelfAssign(rt)
+		// zInit and zFinal are lazy openings of Z[0] and Z[n-1]; they resolve
+		// from this column assignment on first read (or at round advance), so
+		// no explicit assignment is needed here.
 
 		total.Add(&total, &z[n-1])
 	}
@@ -384,8 +383,8 @@ func (a *verifierAction) Check(rt wiop.Runtime) error {
 	var sum field.Ext
 
 	for i, e := range a.entries {
-		zInit := genToExt(rt.GetCellValue(e.zInit.Result))
-		zFinal := genToExt(rt.GetCellValue(e.zFinal.Result))
+		zInit := genToExt(rt.GetCellValue(e.zInit))
+		zFinal := genToExt(rt.GetCellValue(e.zFinal))
 
 		num0 := genToExt(evaluateRowZero(rt, e.zNum))
 		den0 := genToExt(evaluateRowZero(rt, e.zDen))

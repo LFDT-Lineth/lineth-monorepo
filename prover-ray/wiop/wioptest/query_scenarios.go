@@ -5,34 +5,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover-ray/wiop"
 )
 
-// NewLocalOpeningScenario returns a scenario for LocalOpening.
-//
-//   - Column: [7, 7, 7, 7]; opening at position 2 → claimed value 7.
-//   - Invalid: column honest, Result cell set to 0 (≠ 7).
-func NewLocalOpeningScenario() *Scenario {
-	sys := wiop.NewSystemf("lo-sc")
-	r0 := sys.NewRound()
-	sys.NewRound() // r1 needed so LagrangeEval / runtime construction is valid
-	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
-	lo := col.At(2).Open(sys.Context.Childf("lo"))
-
-	return &Scenario{
-		Name:  "LocalOpening",
-		Sys:   sys,
-		Query: lo,
-		RunHonest: func(rt *wiop.Runtime) {
-			rt.AssignColumn(col, baseVec(4, 7))
-			lo.SelfAssign(*rt)
-		},
-		RunInvalid: func(rt *wiop.Runtime) {
-			rt.AssignColumn(col, baseVec(4, 7))
-			// Correct value is 7; assign 0 instead.
-			rt.AssignCell(lo.Result, field.ElemZero())
-		},
-	}
-}
-
 // NewLagrangeEvalScenario returns a scenario for LagrangeEval.
 //
 //   - Column: [3, 3, 3, 3] (constant 3); evaluation point: verifier coin.

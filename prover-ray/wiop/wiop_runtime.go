@@ -127,9 +127,10 @@ func (run *Runtime) AdvanceRound() {
 		run.fs.UpdateSV(cv.Plain)
 	}
 
-	// Feed all cell values into the Fiat-Shamir state.
+	// Feed all cell values into the Fiat-Shamir state. Lazily-assigned cells
+	// are resolved here if they have not been read yet.
 	for _, cell := range run.currentRound.Cells {
-		v, ok := run.cells[cell.Context.ID]
+		v, ok := run.resolveLazyCell(cell)
 		if !ok {
 			panic(fmt.Sprintf(
 				"wiop: AdvanceRound: cell %q not assigned before advancing round",
@@ -242,19 +243,48 @@ func (run Runtime) AssignCell(cell *Cell, v field.Gen) {
 	run.cells[id] = v
 }
 
-// GetCellValue returns the concrete scalar value of cell. Panics if cell has
-// not been assigned yet.
+// GetCellValue returns the concrete scalar value of cell, resolving a lazily-
+// assigned cell on demand. Panics if cell is neither assigned nor lazy.
 func (run Runtime) GetCellValue(cell *Cell) field.Gen {
-	run.lock.Lock()
-	defer run.lock.Unlock()
-	v, ok := run.cells[cell.Context.ID]
-	if !ok {
-		panic(fmt.Sprintf(
-			"wiop: GetCellValue: cell %q is not assigned",
-			cell.Context.Path(),
-		))
+	if v, ok := run.resolveLazyCell(cell); ok {
+		return v
 	}
-	return v
+	panic(fmt.Sprintf(
+		"wiop: GetCellValue: cell %q is not assigned",
+		cell.Context.Path(),
+	))
+}
+
+// resolveLazyCell returns cell's value and whether it has one. An already-
+// assigned cell is returned directly. An unassigned cell with a non-nil
+// [Cell.Assigner] is resolved by invoking the assigner, caching the result,
+// and returning it. An unassigned cell with no assigner yields (_, false).
+//
+// The assigner is invoked without holding the runtime lock because it typically
+// reads a column assignment (which takes the lock itself). If a concurrent path
+// assigns the cell first, that value wins and the freshly-computed one is
+// discarded.
+func (run Runtime) resolveLazyCell(cell *Cell) (field.Gen, bool) {
+	run.lock.Lock()
+	v, ok := run.cells[cell.Context.ID]
+	run.lock.Unlock()
+	if ok {
+		return v, true
+	}
+	if cell.Assigner == nil {
+		return field.Gen{}, false
+	}
+
+	v = cell.Assigner(run)
+
+	run.lock.Lock()
+	if existing, exists := run.cells[cell.Context.ID]; exists {
+		v = existing
+	} else {
+		run.cells[cell.Context.ID] = v
+	}
+	run.lock.Unlock()
+	return v, true
 }
 
 // HasCellAssignment reports whether cell has been assigned in this runtime.

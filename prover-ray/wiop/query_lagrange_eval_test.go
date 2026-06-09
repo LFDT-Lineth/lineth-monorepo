@@ -374,11 +374,3 @@ func TestLagrangeEval_Check_ColumnUnassigned(t *testing.T) {
 	err := le.Check(rt)
 	assert.Error(t, err, "Check must fail when the polynomial column is unassigned")
 }
-
-// ---- Vanishing/LocalOpening CheckGnark panics ----
-func TestLocalOpening_CheckGnark_Panics(t *testing.T) {
-	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("logCol"), wiop.VisibilityOracle, r0)
-	lo := col.At(0).Open(sys.Context.Childf("log"))
-	assert.Panics(t, func() { lo.CheckGnark(nil, nil) })
-}
