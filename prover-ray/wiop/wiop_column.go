@@ -222,6 +222,9 @@ func (c *Column) Round() *Round { return c.round }
 // Degree returns the polynomial degree of the column over its domain, which
 // is Size() - 1. Panics if the owning module has not been sized yet.
 func (c *Column) Degree() int {
+	if c.Module.IsDynamic() {
+		panic(fmt.Sprintf("wiop: Degree() called on dynamic-sized column %q", c.Context.Path()))
+	}
 	if !c.Module.IsSized() {
 		panic(fmt.Sprintf("wiop: Degree() called on unsized column %q", c.Context.Path()))
 	}
@@ -290,8 +293,20 @@ func (cv *ColumnView) IsMultiValued() bool { return true }
 func (cv *ColumnView) IsSized() bool { return cv.Column.Module.IsSized() }
 
 // Size implements [Expression]. Returns the domain size of the owning module.
-// Returns 0 if the module has not been sized yet.
-func (cv *ColumnView) Size() int { return cv.Column.Module.Size() }
+//
+// Panics if the owning module is dynamic (its size is per-Runtime; use the
+// module's RuntimeSize instead) or has not yet been sized. Check IsSized()
+// first.
+func (cv *ColumnView) Size() int {
+	m := cv.Column.Module
+	if m.IsDynamic() {
+		panic(fmt.Sprintf("wiop: Size() called on dynamic-sized column view of %q", cv.Column.Context.Path()))
+	}
+	if !m.IsSized() {
+		panic(fmt.Sprintf("wiop: Size() called on unsized column view of %q", cv.Column.Context.Path()))
+	}
+	return m.Size()
+}
 
 // Degree implements [Expression]. Returns Size() - 1. Panics if the owning
 // module has not been sized yet.

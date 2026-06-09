@@ -353,6 +353,98 @@ func computeCancellationCoset(cancelled []int, n, N int) []field.Element {
 	return cVals
 }
 
+// computeLagrangeSelectorCoset returns the base-field evaluation of the
+// Lagrange selector polynomial
+//
+//	L_p(X) = ω^p · (X^n − 1) / (n · (X − ω^p))
+//
+// at all N = n·ratio coset points {g · ω_N^j : j = 0…N-1}, where ω =
+// RootOfUnityBy(n), ω_N = RootOfUnityBy(N), g = MultiplicativeGen, and p is
+// `position` normalised into [0, n). This is the polynomial that
+// [wiop.LagrangeSelector] represents (1 at row p, 0 elsewhere on the domain);
+// the same closed form is used pointwise by
+// [wiop.LagrangeSelector.EvaluateOutOfDomain].
+//
+// The coset parametrisation mirrors [computeCancellationCoset] exactly so the
+// result lines up with the FFT-coset evaluations of the witness columns. The
+// denominator never vanishes: a coset point g·ω_N^j is never a pure n-th root
+// of unity, so X − ω^p ≠ 0.
+func computeLagrangeSelectorCoset(position, n, N int) []field.Element {
+	// Normalise the anchor into [0, n).
+	p := ((position % n) + n) % n
+
+	omega := field.RootOfUnityBy(n)
+	var omegaP field.Element
+	field.ExpToInt(&omegaP, omega, p)
+
+	// Constant numerator coefficient ω^p / n.
+	var nInv field.Element
+	nInv.SetUint64(uint64(n))
+	nInv.Inverse(&nInv)
+	var numCoef field.Element
+	numCoef.Mul(&omegaP, &nInv)
+
+	omegaN := field.RootOfUnityBy(N)
+	var g field.Element
+	g.SetUint64(field.MultiplicativeGen)
+
+	// x_j^n = (g·ω_N^j)^n = g^n · (ω_N^n)^j cycles with period ratio = N/n,
+	// advanced incrementally to avoid a per-point exponentiation.
+	var gPowN, omegaNPowN field.Element
+	field.ExpToInt(&gPowN, g, n)           // g^n
+	field.ExpToInt(&omegaNPowN, omegaN, n) // ω_N^n
+	var one field.Element
+	one.SetOne()
+
+	denom := make([]field.Element, N) // x_j − ω^p
+	num := make([]field.Element, N)   // x_j^n − 1
+	x := g
+	xPowN := gPowN
+	for j := 0; j < N; j++ {
+		denom[j].Sub(&x, &omegaP)
+		num[j].Sub(&xPowN, &one)
+		x.Mul(&x, &omegaN)
+		xPowN.Mul(&xPowN, &omegaNPowN)
+	}
+
+	invDenom := make([]field.Element, N)
+	field.VecBatchInvBase(invDenom, denom)
+
+	res := make([]field.Element, N)
+	for j := 0; j < N; j++ {
+		res[j].Mul(&numCoef, &num[j])
+		res[j].Mul(&res[j], &invDenom[j])
+	}
+	return res
+}
+
+// collectLagrangeSelectorPositions records the Position of every
+// [wiop.LagrangeSelector] leaf reachable from expr into out.
+func collectLagrangeSelectorPositions(expr wiop.Expression, out map[int]struct{}) {
+	switch e := expr.(type) {
+	case *wiop.LagrangeSelector:
+		out[e.Position] = struct{}{}
+	case *wiop.ArithmeticOperation:
+		for _, op := range e.Operands {
+			collectLagrangeSelectorPositions(op, out)
+		}
+	}
+}
+
+// bktVanishings returns the Vanishing constraints of a bucket, regardless of
+// whether it is a static bucket (size-dependent data precomputed into entries)
+// or a dynamic bucket (raw vanishings deferred to runtime).
+func bktVanishings(bkt *proverBucket) []*wiop.Vanishing {
+	if bkt.entries != nil {
+		vs := make([]*wiop.Vanishing, len(bkt.entries))
+		for i, e := range bkt.entries {
+			vs[i] = e.v
+		}
+		return vs
+	}
+	return bkt.vanishings
+}
+
 // ---------------------------------------------------------------------------
 // Prover actions
 // ---------------------------------------------------------------------------
@@ -437,6 +529,18 @@ func (a *QuotientProverAction) Run(rt wiop.Runtime) {
 			}
 		}
 
+		// --- Evaluate every distinct Lagrange selector on the large coset ---
+		// Selectors are not committed columns, so they are computed analytically
+		// rather than re-FFT'd. selectorCosets[position][j] = L_position(coset_j).
+		selectorPositions := make(map[int]struct{})
+		for _, v := range bktVanishings(&bkt) {
+			collectLagrangeSelectorPositions(v.Expression, selectorPositions)
+		}
+		selectorCosets := make(map[int][]field.Element, len(selectorPositions))
+		for pos := range selectorPositions {
+			selectorCosets[pos] = computeLagrangeSelectorCoset(pos, n, N)
+		}
+
 		// --- Compute the aggregate extension-field polynomial on the coset ---
 		// aggregate[j] = Σ_i coin^i · P_i(coset_j) · C_i(coset_j)
 		//
@@ -456,7 +560,7 @@ func (a *QuotientProverAction) Run(rt wiop.Runtime) {
 			// Static module: use precomputed cancellation cosets.
 			for _, entry := range bkt.entries {
 				accumulateOnCoset(
-					rt, entry.v.Expression, cosetEvals, cosetEvalsExt,
+					rt, entry.v.Expression, cosetEvals, cosetEvalsExt, selectorCosets,
 					entry.cancellationCoset, &coinPow, aggregate, ratio, N,
 				)
 				// advance coinPow: coinPow *= coinExt
@@ -467,7 +571,7 @@ func (a *QuotientProverAction) Run(rt wiop.Runtime) {
 			for _, v := range bkt.vanishings {
 				cancellationCoset := computeCancellationCoset(v.CancelledPositions, n, N)
 				accumulateOnCoset(
-					rt, v.Expression, cosetEvals, cosetEvalsExt,
+					rt, v.Expression, cosetEvals, cosetEvalsExt, selectorCosets,
 					cancellationCoset, &coinPow, aggregate, ratio, N,
 				)
 				coinPow.Mul(&coinPow, &coinExt)
@@ -674,7 +778,7 @@ func (gv *Verifier) Check(rt wiop.Runtime) error {
 		var coinPow field.Ext
 		coinPow.SetOne()
 		for _, v := range bkt.Vanishings {
-			pr := evalExprAtPoint(v.Expression, viewEvals, rt)
+			pr := evalExprAtPoint(v.Expression, viewEvals, r, rt)
 			cr := evalCancellationAtPoint(v.CancelledPositions, n, r)
 			pTimesC := pr.Mul(cr)
 			// coinPow · pTimesC  (coinPow is Ext, pTimesC may be base or ext)
@@ -743,12 +847,13 @@ func evalCancellationAtPoint(cancelled []int, n int, r field.Gen) field.Gen {
 	return result
 }
 
-// evalExprAtPoint evaluates a symbolic expression at a pre-computed scalar
-// point using the witness column evaluation map (from LagrangeEval claim cells).
-// Coins and cells are looked up directly from the runtime.
+// evalExprAtPoint evaluates a symbolic expression at the point r using the
+// witness column evaluation map (from LagrangeEval claim cells). Coins and
+// cells are looked up directly from the runtime.
 func evalExprAtPoint(
 	expr wiop.Expression,
 	viewEvals map[colViewKey]field.Gen,
+	r field.Gen,
 	rt wiop.Runtime,
 ) field.Gen {
 	switch e := expr.(type) {
@@ -762,9 +867,11 @@ func evalExprAtPoint(
 			))
 		}
 		return v
+	case *wiop.LagrangeSelector:
+		return e.EvaluateOutOfDomain(rt, r)
 	case *wiop.ArithmeticOperation:
 		eval := func(i int) field.Gen {
-			return evalExprAtPoint(e.Operands[i], viewEvals, rt)
+			return evalExprAtPoint(e.Operands[i], viewEvals, r, rt)
 		}
 		a0 := eval(0)
 		switch e.Operator {
@@ -818,6 +925,7 @@ func accumulateOnCoset(
 	expr wiop.Expression,
 	cosetEvals map[wiop.ObjectID][]field.Element,
 	cosetEvalsExt map[wiop.ObjectID][]field.Ext,
+	selectorCosets map[int][]field.Element,
 	cancellationCoset []field.Element,
 	coinPow *field.Ext,
 	aggregate []field.Ext,
@@ -825,7 +933,7 @@ func accumulateOnCoset(
 ) {
 	if isBaseExpr(expr) {
 		for j := 0; j < N; j++ {
-			pVal := evalExprOnCoset(rt, expr, cosetEvals, j, ratio, N)
+			pVal := evalExprOnCoset(rt, expr, cosetEvals, selectorCosets, j, ratio, N)
 			var pTimesC field.Element
 			if cancellationCoset != nil {
 				pTimesC.Mul(&pVal, &cancellationCoset[j])
@@ -839,7 +947,7 @@ func accumulateOnCoset(
 		return
 	}
 	for j := 0; j < N; j++ {
-		pVal := evalExprOnCosetExt(rt, expr, cosetEvals, cosetEvalsExt, j, ratio, N)
+		pVal := evalExprOnCosetExt(rt, expr, cosetEvals, cosetEvalsExt, selectorCosets, j, ratio, N)
 		var pTimesC field.Ext
 		if cancellationCoset != nil {
 			pTimesC.MulByElement(&pVal, &cancellationCoset[j])
@@ -862,6 +970,8 @@ func isBaseExpr(expr wiop.Expression) bool {
 	switch e := expr.(type) {
 	case *wiop.ColumnView:
 		return !e.Column.IsExtension
+	case *wiop.LagrangeSelector:
+		return true
 	case *wiop.Constant:
 		return true
 	case *wiop.Cell:
@@ -895,6 +1005,7 @@ func evalExprOnCoset(
 	rt wiop.Runtime,
 	expr wiop.Expression,
 	cosetEvals map[wiop.ObjectID][]field.Element,
+	selectorCosets map[int][]field.Element,
 	j, ratio, N int,
 ) field.Element {
 	switch e := expr.(type) {
@@ -902,6 +1013,9 @@ func evalExprOnCoset(
 		k := e.ShiftingOffset
 		idx := ((j+k*ratio)%N + N) % N
 		return cosetEvals[e.Column.Context.ID][idx]
+	case *wiop.LagrangeSelector:
+		// Selectors are unshifted, so the coset index is j directly.
+		return selectorCosets[e.Position][j]
 	case *wiop.Cell:
 		if e.IsExtension() {
 			panic(fmt.Sprintf(
@@ -922,7 +1036,7 @@ func evalExprOnCoset(
 		return e.Value
 	case *wiop.ArithmeticOperation:
 		eval := func(i int) field.Element {
-			return evalExprOnCoset(rt, e.Operands[i], cosetEvals, j, ratio, N)
+			return evalExprOnCoset(rt, e.Operands[i], cosetEvals, selectorCosets, j, ratio, N)
 		}
 		a0 := eval(0)
 		var res field.Element
@@ -979,6 +1093,7 @@ func evalExprOnCosetExt(
 	expr wiop.Expression,
 	cosetEvals map[wiop.ObjectID][]field.Element,
 	cosetEvalsExt map[wiop.ObjectID][]field.Ext,
+	selectorCosets map[int][]field.Element,
 	j, ratio, N int,
 ) field.Ext {
 	switch e := expr.(type) {
@@ -989,6 +1104,9 @@ func evalExprOnCosetExt(
 			return cosetEvalsExt[e.Column.Context.ID][idx]
 		}
 		return field.Lift(cosetEvals[e.Column.Context.ID][idx])
+	case *wiop.LagrangeSelector:
+		// Selectors are base-field and unshifted: lift L_pos(coset_j) into 𝔽_{p^6}.
+		return field.Lift(selectorCosets[e.Position][j])
 	case *wiop.Cell:
 		return rt.GetCellValue(e).AsExt()
 	case *wiop.CoinField:
@@ -997,7 +1115,7 @@ func evalExprOnCosetExt(
 		return field.Lift(e.Value)
 	case *wiop.ArithmeticOperation:
 		eval := func(i int) field.Ext {
-			return evalExprOnCosetExt(rt, e.Operands[i], cosetEvals, cosetEvalsExt, j, ratio, N)
+			return evalExprOnCosetExt(rt, e.Operands[i], cosetEvals, cosetEvalsExt, selectorCosets, j, ratio, N)
 		}
 		a0 := eval(0)
 		var res field.Ext

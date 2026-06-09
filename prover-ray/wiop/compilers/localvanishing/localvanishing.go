@@ -15,16 +15,19 @@
 //     [wiop.ColumnPosition] leaf.
 //  2. Determines the anchor row min = the smallest position seen across
 //     those leaves.
-//  3. Creates (or reuses, via a per-(module, anchor) cache) a precomputed
-//     Lagrange column L_min on the module: values [0, …, 0, 1, 0, …, 0]
-//     with the 1 at row min.
+//  3. Creates (or reuses, via a per-(module, anchor) cache) a
+//     [wiop.LagrangeSelector] L_min on the module: the public indicator that
+//     is 1 at row min and 0 elsewhere. Unlike a committed column, the selector
+//     carries no assignment — it is evaluated from the module's runtime size,
+//     so the lift works for dynamic-size modules as well as static ones.
 //  4. Rewrites the expression: every [wiop.ColumnPosition]{c, p} leaf
 //     becomes c.View().Shift(p − min). Evaluating the rewritten expression
 //     at row x of the domain reads column c at row (x + p − min) mod n;
 //     at the anchor x = min that is exactly c[p].
-//  5. Multiplies the rewritten expression by L_min.View() and registers
-//     the product as a new multi-valued [wiop.Vanishing] on the module —
-//     to be discharged by the global-quotient compiler.
+//  5. Multiplies the rewritten expression by L_min and registers the product
+//     as a new multi-valued [wiop.Vanishing] on the module — to be discharged
+//     by the global-quotient compiler, which evaluates the selector
+//     analytically on the quotient coset and at the verifier's point.
 //  6. Marks the original scalar vanishing as reduced.
 //
 // At row min the product evaluates to the original local predicate; at
@@ -51,7 +54,6 @@ package localvanishing
 import (
 	"fmt"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop"
 )
 
@@ -91,11 +93,11 @@ func Compile(sys *wiop.System) {
 	}
 
 	compCtx := sys.Context.Childf("local-vanishing")
-	lagrangeCols := make(map[lagrangeKey]*wiop.Column)
+	selectors := make(map[lagrangeKey]*wiop.LagrangeSelector)
 
 	for _, w := range work {
 		ctx := compCtx.Childf("m%d-v%d", w.mIdx, w.vIdx)
-		reduce(ctx, w.m, w.mIdx, w.v, lagrangeCols)
+		reduce(ctx, w.m, w.mIdx, w.v, selectors)
 	}
 }
 
@@ -106,7 +108,7 @@ func reduce(
 	m *wiop.Module,
 	mIdx int,
 	v *wiop.Vanishing,
-	cache map[lagrangeKey]*wiop.Column,
+	cache map[lagrangeKey]*wiop.LagrangeSelector,
 ) {
 	positions := collectColumnPositions(v.Expression)
 	if len(positions) == 0 {
@@ -124,10 +126,10 @@ func reduce(
 	}
 
 	key := lagrangeKey{mIdx, anchor}
-	lagCol, ok := cache[key]
+	lagSel, ok := cache[key]
 	if !ok {
-		lagCol = newLagrangeColumn(ctx, m, anchor)
-		cache[key] = lagCol
+		lagSel = wiop.NewLagrangeSelector(m, anchor)
+		cache[key] = lagSel
 	}
 
 	shifted := wiop.EditExpression(v.Expression, func(
@@ -139,7 +141,7 @@ func reduce(
 		return wiop.DefaultConstruct(curr, newChildren)
 	})
 
-	lifted := wiop.Mul(shifted, lagCol.View())
+	lifted := wiop.Mul(shifted, lagSel)
 	// Register with no cancelled positions: the constraint must hold on every
 	// row. That is safe and intentional. The shifted sub-expression may read
 	// out-of-domain (wrap-around) values at rows other than `anchor`, but the
@@ -175,34 +177,4 @@ func collectColumnPositions(expr wiop.Expression) []int {
 	}
 	walk(expr)
 	return positions
-}
-
-// newLagrangeColumn creates a precomputed base-field column of length
-// m.Size() whose value is 1 at row anchor and 0 elsewhere — the Lagrange-basis
-// indicator polynomial at the anchor row.
-//
-// Precondition: anchor must lie in [0, m.Size()). Callers obtain it from
-// [collectColumnPositions], which sources positions from *ColumnPosition.Position
-// leaves; for ColumnPositions produced by [wiop.Module.NewLocalConstraint],
-// [wiop.columnViewAtRow] normalises positions to [0, n). Hand-constructed
-// ColumnPositions (via [wiop.Column.At]) skip that normalisation, so an
-// explicit bounds check here turns the resulting "index out of range" runtime
-// crash into a localised message that names the offender.
-func newLagrangeColumn(ctx *wiop.ContextFrame, m *wiop.Module, anchor int) *wiop.Column {
-	n := m.Size()
-	if anchor < 0 || anchor >= n {
-		panic(fmt.Sprintf(
-			"wiop/compilers/localvanishing: Lagrange anchor %d out of range [0, %d) for module %q; "+
-				"all *ColumnPosition.Position leaves must be normalised to the domain",
-			anchor, n, m.Context.Path(),
-		))
-	}
-	elems := make([]field.Element, n)
-	elems[anchor].SetOne()
-	cv := &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
-	return m.NewPrecomputedColumn(
-		ctx.Childf("lagrange-row%d", anchor),
-		wiop.VisibilityOracle,
-		cv,
-	)
 }

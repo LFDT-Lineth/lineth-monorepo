@@ -53,5 +53,8 @@ func LocalVanishingScenarios() []func() *LocalVanishingScenario {
 		NewLocalMultiAnchorMultiColumnScenario,
 		NewLocalCubeAtFirstRowScenario,
 		NewLocalMultiModuleScenario,
+		NewLocalDynamicFirstRowZeroScenario,
+		NewLocalDynamicShiftedScenario,
+		NewLocalDynamicProductIsZeroScenario,
 	}
 }
