@@ -72,12 +72,6 @@ fn process_R_type_instruction<registers>(opcode:Opcode, instruction_parameters:u
     v1 = registers[rs1]
     v2 = registers[rs2]
 
-    v1_sign = sign_bit_of_double_word(v1)
-    v2_sign = sign_bit_of_double_word(v2)
-
-    v1_abs = absolute_value_double_word(v1)
-    v2_abs = absolute_value_double_word(v2)
-
     // Note. If x = 0b... and y = 0b... are two bit strings of length N
     // and you interpret them either as uintN or intN, then the underlying
     // bit string of their additions is the same in both interpretations.
@@ -85,17 +79,6 @@ fn process_R_type_instruction<registers>(opcode:Opcode, instruction_parameters:u
 
     switch opcode {
         case OP: {
-
-            // ======================
-            // M-extension variables
-            // ======================
-
-            // Support variables to do not make multiplication overflow
-            var v1_as_u128:u128 = registers[rs1] as u128
-            var v2_as_u128:u128 = registers[rs2] as u128
-
-            var v1_abs_as_u128:u128 = v1_abs as u128
-            var v2_abs_as_u128:u128 = v2_abs as u128
 
             // =============================================
             // RISCV-64-I base instruction set instructions
@@ -141,6 +124,7 @@ fn process_R_type_instruction<registers>(opcode:Opcode, instruction_parameters:u
             } else if (funct3 == FUNCT3_SRA) && (funct7 == FUNCT7_SRA) {
                 printf "SRA "
                 // print_r_operands(rd, rs1, rs2)
+                v1_sign = sign_bit_of_double_word(v1)
                 shift_discard_6::shift_amount_6 = v2
                 if (v1_sign == 1) {
                     double_word_working_copy = bit_flip_double_word(v1)
@@ -169,31 +153,37 @@ fn process_R_type_instruction<registers>(opcode:Opcode, instruction_parameters:u
              else if (funct3 == FUNCT3_MUL) && (funct7 == FUNCT7_MUL) {
                 printf "MUL "
                 // print_r_operands(rd, rs1, rs2)
-                registers[rd] = ((v1_as_u128 * v2_as_u128) & MAX_UINT_64_AS_U128) as u64
+                registers[rd] = (((v1 as u128) * (v2 as u128)) & MAX_UINT_64_AS_U128) as u64
             } else if (funct3 == FUNCT3_MULH) && (funct7 == FUNCT7_MULH) {
                 printf "MULH "
                 // print_r_operands(rd, rs1, rs2)
-                var v1_times_v2_as_u128:u128 = v1_abs_as_u128 * v2_abs_as_u128
+                v1_sign = sign_bit_of_double_word(v1)
+                v2_sign = sign_bit_of_double_word(v2)
+                v1_abs = absolute_value_double_word(v1)
+                v2_abs = absolute_value_double_word(v2)
+                var v1_times_v2_as_u128:u128 = (v1_abs as u128) * (v2_abs as u128)
                 // Two's-complement negate the product when the operand signs
                 // differ.  Guard with `!= 0` because `~0 + 1` overflows u128
                 // (and `-0 == 0` anyway, so there's nothing to negate).
                 if (v1_sign ^ v2_sign) == 1 && v1_times_v2_as_u128 != 0 {
                     v1_times_v2_as_u128 = (~v1_times_v2_as_u128) + 1
                 }
-                registers[rd] = ((v1_times_v2_as_u128 >> 64) & MAX_UINT_64_AS_U128) as u64
+                registers[rd] = (v1_times_v2_as_u128 >> 64) as u64
             } else if (funct3 == FUNCT3_MULHSU) && (funct7 == FUNCT7_MULHSU) {
                 printf "MULHSU "
                 // print_r_operands(rd, rs1, rs2)
-                var v1_times_v2_as_u128:u128 = v1_abs_as_u128 * v2_as_u128
+                v1_abs = absolute_value_double_word(v1)
+                var v1_times_v2_as_u128:u128 = (v1_abs as u128) * (v2 as u128)
                 // Same overflow guard as MULH above.
+                v1_sign = sign_bit_of_double_word(v1)
                 if v1_sign == 1 && v1_times_v2_as_u128 != 0 {
                     v1_times_v2_as_u128 = (~v1_times_v2_as_u128) + 1
                 }
-                registers[rd] = ((v1_times_v2_as_u128 >> 64) & MAX_UINT_64_AS_U128) as u64
+                registers[rd] = (v1_times_v2_as_u128 >> 64) as u64
             } else if (funct3 == FUNCT3_MULHU) && (funct7 == FUNCT7_MULHU) {
                 printf "MULHU "
                 // print_r_operands(rd, rs1, rs2)
-                registers[rd] = (((v1_as_u128 * v2_as_u128) >> 64) & MAX_UINT_64_AS_U128) as u64
+                registers[rd] = (((v1 as u128) * (v2 as u128)) >> 64) as u64
             } else if (funct3 == FUNCT3_DIV) && (funct7 == FUNCT7_DIV) {
                 printf "DIV "
                 // print_r_operands(rd, rs1, rs2)
@@ -202,6 +192,10 @@ fn process_R_type_instruction<registers>(opcode:Opcode, instruction_parameters:u
                 } else if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
                     registers[rd] = OVERFLOW_DIVIDEND
                 } else {
+                    v1_sign = sign_bit_of_double_word(v1)
+                    v2_sign = sign_bit_of_double_word(v2)
+                    v1_abs = absolute_value_double_word(v1)
+                    v2_abs = absolute_value_double_word(v2)
                     registers[rd] = v1_abs / v2_abs
                     if (v1_sign ^ v2_sign) == 1 {
                         registers[rd] = negative_of_double_word(registers[rd])
@@ -223,6 +217,9 @@ fn process_R_type_instruction<registers>(opcode:Opcode, instruction_parameters:u
                 } else if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
                     registers[rd] = 0
                 } else {
+                    v1_sign = sign_bit_of_double_word(v1)
+                    v1_abs = absolute_value_double_word(v1)
+                    v2_abs = absolute_value_double_word(v2)
                     registers[rd] = v1_abs % v2_abs
                     if v1_sign == 1 {
                         registers[rd] = negative_of_double_word(registers[rd])
