@@ -28,7 +28,7 @@ class RiscVProofResponseDtoMapperTest {
     endBlockHash = "0x0b",
     endBlockNumber = 1000503,
     endBlockTimestamp = 1763000123,
-    L2L1MessagesHash = "0x01",
+    l2L1MessagesHash = "0x01",
     parentL1L2BridgeRollingHash = "0x02",
     parentL1L2BridgeRollingHashMessageNumber = 3,
     endL1L2BridgeRollingHash = "0x04",
@@ -46,7 +46,7 @@ class RiscVProofResponseDtoMapperTest {
     endBlockHash = "0x0b".decodeHex(),
     endBlockNumber = 1000503UL,
     endBlockTimestamp = 1763000123UL,
-    L2L1MessagesHash = "0x01".decodeHex(),
+    l2L1MessagesHash = "0x01".decodeHex(),
     parentL1L2BridgeRollingHash = "0x02".decodeHex(),
     parentL1L2BridgeRollingHashMessageNumber = 3UL,
     endL1L2BridgeRollingHash = "0x04".decodeHex(),
@@ -62,7 +62,7 @@ class RiscVProofResponseDtoMapperTest {
   private fun rollupPublicInputsDto(): RollupProofPublicInputsDto = RollupProofPublicInputsDto(
     endBlockNumber = 1000520,
     endBlockTimestamp = 1763000457,
-    L2L1BridgeTransactionTree = "0x10",
+    l2L1BridgeTransactionTree = "0x10",
     parentL1L2BridgeRollingHash = "0x11",
     parentL1L2BridgeRollingHashMessageNumber = 12,
     endL1L2BridgeRollingHash = "0x13",
@@ -79,7 +79,7 @@ class RiscVProofResponseDtoMapperTest {
   private fun expectedRollupPublicInputs(): RollupProofPublicInputs = RollupProofPublicInputs(
     endBlockNumber = 1000520UL,
     endBlockTimestamp = Instant.fromEpochSeconds(1763000457L),
-    L2L1BridgeTransactionTree = "0x10".decodeHex(),
+    l2L1BridgeTransactionTree = "0x10".decodeHex(),
     parentL1L2BridgeRollingHash = "0x11".decodeHex(),
     parentL1L2BridgeRollingHashMessageNumber = 12UL,
     endL1L2BridgeRollingHash = "0x13".decodeHex(),
@@ -101,7 +101,7 @@ class RiscVProofResponseDtoMapperTest {
       endBlockNumber = 1000503L,
       proof = "0xabcd",
       publicInputs = executionPublicInputsDto(),
-      L2L1Messages = listOf("0xaa"),
+      l2L1Messages = listOf("0xaa"),
       txFroms = listOf("0xbb"),
       filteredAddresses = listOf("0xcc"),
     )
@@ -121,9 +121,9 @@ class RiscVProofResponseDtoMapperTest {
         endBlockNumber = 1000503UL,
         proof = "0xabcd".decodeHex(),
         publicInputs = expectedExecutionPublicInputs(),
-        L2L1MsgList = listOf("0xaa".decodeHex()),
-        froms = listOf("0xbb".decodeHex()),
-        addrs = listOf("0xcc".decodeHex()),
+        l2L1Messages = listOf("0xaa".decodeHex()),
+        txFroms = listOf("0xbb".decodeHex()),
+        filteredAddresses = listOf("0xcc".decodeHex()),
       ),
     )
   }
@@ -136,7 +136,7 @@ class RiscVProofResponseDtoMapperTest {
       endBlockNumber = 1000503L,
       proof = "0xabcd",
       publicInputs = rollupPublicInputsDto(),
-      L2L1Roots = listOf("0xaa"),
+      l2L1Roots = listOf("0xaa"),
       filteredAddresses = listOf("0xbb"),
     )
 
@@ -156,7 +156,7 @@ class RiscVProofResponseDtoMapperTest {
         endBlockNumber = 1000503UL,
         proof = "0xabcd".decodeHex(),
         publicInputs = expectedRollupPublicInputs(),
-        L2L1Roots = listOf("0xaa".decodeHex()),
+        l2L1Roots = listOf("0xaa".decodeHex()),
         filteredAddresses = listOf("0xbb".decodeHex()),
       ),
     )
@@ -205,7 +205,7 @@ class RiscVProofResponseDtoMapperTest {
           "endBlockHash": "0x0b",
           "endBlockNumber": 1000503,
           "endBlockTimestamp": 1763000123,
-          "L2L1MessagesHash": "0x01",
+          "l2L1MessagesHash": "0x01",
           "parentL1L2BridgeRollingHash": "0x02",
           "parentL1L2BridgeRollingHashMessageNumber": 3,
           "endL1L2BridgeRollingHash": "0x04",
@@ -217,7 +217,7 @@ class RiscVProofResponseDtoMapperTest {
           "filteredAddressesHash": "0x09",
           "txFromsHash": "0x0c"
         },
-        "L2L1Messages": ["0xaa"],
+        "l2L1Messages": ["0xaa"],
         "txFroms": ["0xbb"],
         "filteredAddresses": []
       }
@@ -240,9 +240,9 @@ class RiscVProofResponseDtoMapperTest {
         endBlockNumber = 1000503UL,
         proof = "0xabcd".decodeHex(),
         publicInputs = expectedExecutionPublicInputs(),
-        L2L1MsgList = listOf("0xaa".decodeHex()),
-        froms = listOf("0xbb".decodeHex()),
-        addrs = emptyList(),
+        l2L1Messages = listOf("0xaa".decodeHex()),
+        txFroms = listOf("0xbb".decodeHex()),
+        filteredAddresses = emptyList(),
       ),
     )
   }
@@ -258,7 +258,7 @@ class RiscVProofResponseDtoMapperTest {
         "publicInputs": {
           "endBlockNumber": 1000520,
           "endBlockTimestamp": 1763000457,
-          "L2L1BridgeTransactionTree": "0x10",
+          "l2L1BridgeTransactionTree": "0x10",
           "parentL1L2BridgeRollingHash": "0x11",
           "parentL1L2BridgeRollingHashMessageNumber": 12,
           "endL1L2BridgeRollingHash": "0x13",
@@ -271,7 +271,7 @@ class RiscVProofResponseDtoMapperTest {
           "parentShnarf": "0x19",
           "endShnarf": "0x1a"
         },
-        "L2L1Roots": ["0xaa"],
+        "l2L1Roots": ["0xaa"],
         "filteredAddresses": []
       }
     """.trimIndent()
@@ -293,7 +293,7 @@ class RiscVProofResponseDtoMapperTest {
         endBlockNumber = 1000520UL,
         proof = "0xabcd".decodeHex(),
         publicInputs = expectedRollupPublicInputs(),
-        L2L1Roots = listOf("0xaa".decodeHex()),
+        l2L1Roots = listOf("0xaa".decodeHex()),
         filteredAddresses = emptyList(),
       ),
     )

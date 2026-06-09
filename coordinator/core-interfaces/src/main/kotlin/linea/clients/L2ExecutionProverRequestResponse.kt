@@ -225,7 +225,7 @@ data class L2ExecutionProofPublicInputs(
   val endBlockHash: ByteArray,
   val endBlockNumber: ULong,
   val endBlockTimestamp: ULong,
-  val L2L1MessagesHash: ByteArray,
+  val l2L1MessagesHash: ByteArray,
   val parentL1L2BridgeRollingHash: ByteArray,
   val parentL1L2BridgeRollingHashMessageNumber: ULong,
   val endL1L2BridgeRollingHash: ByteArray,
@@ -247,7 +247,7 @@ data class L2ExecutionProofPublicInputs(
     if (!endBlockHash.contentEquals(other.endBlockHash)) return false
     if (endBlockNumber != other.endBlockNumber) return false
     if (endBlockTimestamp != other.endBlockTimestamp) return false
-    if (!L2L1MessagesHash.contentEquals(other.L2L1MessagesHash)) return false
+    if (!l2L1MessagesHash.contentEquals(other.l2L1MessagesHash)) return false
     if (!parentL1L2BridgeRollingHash.contentEquals(other.parentL1L2BridgeRollingHash)) return false
     if (parentL1L2BridgeRollingHashMessageNumber != other.parentL1L2BridgeRollingHashMessageNumber) return false
     if (!endL1L2BridgeRollingHash.contentEquals(other.endL1L2BridgeRollingHash)) return false
@@ -267,7 +267,7 @@ data class L2ExecutionProofPublicInputs(
     result = 31 * result + endBlockHash.contentHashCode()
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + endBlockTimestamp.hashCode()
-    result = 31 * result + L2L1MessagesHash.contentHashCode()
+    result = 31 * result + l2L1MessagesHash.contentHashCode()
     result = 31 * result + parentL1L2BridgeRollingHash.contentHashCode()
     result = 31 * result + parentL1L2BridgeRollingHashMessageNumber.hashCode()
     result = 31 * result + endL1L2BridgeRollingHash.contentHashCode()
@@ -294,9 +294,10 @@ data class L2ExecutionProofResponse(
   override val endBlockNumber: ULong,
   val proof: ByteArray,
   val publicInputs: L2ExecutionProofPublicInputs,
-  val L2L1MsgList: List<ByteArray>,
-  val froms: List<ByteArray>,
-  val addrs: List<ByteArray>,
+  val l2L1Messages: List<ByteArray>,
+  val txFroms: List<ByteArray>,
+  val filteredAddresses: List<ByteArray>,
+
 ) : BlockInterval {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -308,9 +309,9 @@ data class L2ExecutionProofResponse(
     if (endBlockNumber != other.endBlockNumber) return false
     if (!proof.contentEquals(other.proof)) return false
     if (publicInputs != other.publicInputs) return false
-    if (!L2L1MsgList.byteArrayListEquals(other.L2L1MsgList)) return false
-    if (!froms.byteArrayListEquals(other.froms)) return false
-    if (!addrs.byteArrayListEquals(other.addrs)) return false
+    if (!l2L1Messages.byteArrayListEquals(other.l2L1Messages)) return false
+    if (!txFroms.byteArrayListEquals(other.txFroms)) return false
+    if (!filteredAddresses.byteArrayListEquals(other.filteredAddresses)) return false
 
     return true
   }
@@ -320,9 +321,9 @@ data class L2ExecutionProofResponse(
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + proof.contentHashCode()
     result = 31 * result + publicInputs.hashCode()
-    result = 31 * result + L2L1MsgList.hashCode()
-    result = 31 * result + froms.hashCode()
-    result = 31 * result + addrs.hashCode()
+    result = 31 * result + l2L1Messages.hashCode()
+    result = 31 * result + txFroms.hashCode()
+    result = 31 * result + filteredAddresses.hashCode()
     return result
   }
 }

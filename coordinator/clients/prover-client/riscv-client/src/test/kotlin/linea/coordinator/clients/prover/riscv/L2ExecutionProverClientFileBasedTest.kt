@@ -35,7 +35,7 @@ class L2ExecutionProverClientFileBasedTest {
   private val jsonMapper = JsonSerialization.proofResponseMapperV1
   private val proverVersion = "4.0.0-riscv"
   private val chainConfig = ChainConfigDto(
-    l2MessageServiceContract = "0x508ca82df566dcd1b0019d2dedf7e3d6f7ad6dde",
+    l2MessageServiceAddress = "0x508ca82df566dcd1b0019d2dedf7e3d6f7ad6dde",
     coinbase = "0x0000000000000000000000000000000000000000",
     chainId = 59144,
   )
@@ -187,7 +187,7 @@ class L2ExecutionProverClientFileBasedTest {
       endBlockHash = "0x0b",
       endBlockNumber = 1000503,
       endBlockTimestamp = 1763000123,
-      L2L1MessagesHash = "0x01",
+      l2L1MessagesHash = "0x01",
       parentL1L2BridgeRollingHash = "0x02",
       parentL1L2BridgeRollingHashMessageNumber = 3,
       endL1L2BridgeRollingHash = "0x04",
@@ -199,7 +199,7 @@ class L2ExecutionProverClientFileBasedTest {
       filteredAddressesHash = "0x09",
       txFromsHash = "0x0c",
     ),
-    L2L1Messages = listOf("0xaa"),
+    l2L1Messages = listOf("0xaa"),
     txFroms = listOf("0xbb"),
     filteredAddresses = emptyList(),
   )

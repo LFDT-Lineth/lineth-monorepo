@@ -1,6 +1,5 @@
 package linea.coordinator.clients.prover.riscv
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import linea.clients.L2ExecutionProofPublicInputs
 import linea.clients.L2ExecutionProofResponse
 import linea.clients.RollupProofPublicInputs
@@ -24,14 +23,13 @@ data class BlockRangeDto(
   val endBlockNumber: Long,
 )
 
-/** The 15-field PI tuple emitted by an l2-execution proof (rollup_spec §2.1). */
+/** The 15-field PI tuple emitted by a l2-execution proof (rollup_spec §2.1). */
 data class L2ExecutionProofPublicInputsDto(
   val parentBlockHash: String,
   val endBlockHash: String,
   val endBlockNumber: Long,
   val endBlockTimestamp: Long,
-  @get:JsonProperty("L2L1MessagesHash")
-  val L2L1MessagesHash: String,
+  val l2L1MessagesHash: String,
   val parentL1L2BridgeRollingHash: String,
   val parentL1L2BridgeRollingHashMessageNumber: Long,
   val endL1L2BridgeRollingHash: String,
@@ -48,8 +46,7 @@ data class L2ExecutionProofPublicInputsDto(
 data class RollupProofPublicInputsDto(
   val endBlockNumber: Long,
   val endBlockTimestamp: Long,
-  @get:JsonProperty("L2L1BridgeTransactionTree")
-  val L2L1BridgeTransactionTree: String,
+  val l2L1BridgeTransactionTree: String,
   val parentL1L2BridgeRollingHash: String,
   val parentL1L2BridgeRollingHashMessageNumber: Long,
   val endL1L2BridgeRollingHash: String,
@@ -78,16 +75,10 @@ enum class ForcedTransactionAcceptance {
 
 /** Per-FTX metadata (rollup_spec §6.5). */
 data class ForcedTransactionDto(
-  val ftxNumber: Long,
-  val deadlineBlockNumber: Long,
+  val number: Long,
+  val deadline: Long,
   val signedTxRlp: String,
   val acceptance: ForcedTransactionAcceptance,
-)
-
-/** A canonical RLP-encoded L2 block plus its per-block FTX metadata. */
-data class L2BlockDto(
-  val blockRlp: String,
-  val forcedTransactions: List<ForcedTransactionDto>,
 )
 
 // ExecutionPayloadV3 plus blockAccessList
@@ -127,7 +118,7 @@ data class NewPayloadRequestDto(
 
 /** Static chain configuration (preimage inputs of `dynamicChainConfigHash`). */
 data class ChainConfigDto(
-  val l2MessageServiceContract: String,
+  val l2MessageServiceAddress: String,
   val coinbase: String,
   val chainId: Long,
 )
@@ -140,7 +131,7 @@ data class ExecutionWitnessDto(
   val headers: List<String>,
 )
 
-data class LineaRollupExtensionDto(
+data class RollupExtensionDto(
   val forcedTransactions: List<ForcedTransactionDto>,
 )
 
@@ -156,10 +147,10 @@ data class StatelessInputDto(
   val publicKeys: List<String>,
 )
 
-data class LineaPayloadInputDto(
+data class PayloadInputDto(
   val statelessInputSzz: String,
   val debugStatelessInput: StatelessInputDto,
-  val lineaRollupExtensionDto: LineaRollupExtensionDto,
+  val rollupExtensionDto: RollupExtensionDto,
 )
 
 data class L2ExecutionProofRequestDto(
@@ -167,7 +158,7 @@ data class L2ExecutionProofRequestDto(
   val blockRange: BlockRangeDto,
   val parentFtxRollingHash: String,
   val parentLastProcessedFtxNumber: Long,
-  val payloads: List<LineaPayloadInputDto>,
+  val payloads: List<PayloadInputDto>,
   val chainConfig: ChainConfigDto,
 )
 
@@ -177,8 +168,7 @@ data class L2ExecutionProofResponseDto(
   val endBlockNumber: Long,
   val proof: String,
   val publicInputs: L2ExecutionProofPublicInputsDto,
-  @get:JsonProperty("L2L1Messages")
-  val L2L1Messages: List<String>,
+  val l2L1Messages: List<String>,
   val txFroms: List<String>,
   val filteredAddresses: List<String>,
 )
@@ -209,8 +199,7 @@ data class L2ExecutionProofDto(
   val startBlockNumber: Long,
   val endBlockNumber: Long,
   val publicInputs: L2ExecutionProofPublicInputsDto,
-  @get:JsonProperty("L2L1Messages")
-  val L2L1Messages: List<String>,
+  val l2L1Messages: List<String>,
   val txFroms: List<String>,
   val filteredAddresses: List<String>,
 )
@@ -230,8 +219,7 @@ data class RollupProofResponseDto(
   val endBlockNumber: Long,
   val proof: String,
   val publicInputs: RollupProofPublicInputsDto,
-  @get:JsonProperty("L2L1Roots")
-  val L2L1Roots: List<String>,
+  val l2L1Roots: List<String>,
   val filteredAddresses: List<String>,
 )
 
@@ -245,8 +233,7 @@ data class RollupProofDto(
   val startBlockNumber: Long,
   val endBlockNumber: Long,
   val publicInputs: RollupProofPublicInputsDto,
-  @get:JsonProperty("L2L1Roots")
-  val L2L1Roots: List<String>,
+  val l2L1Roots: List<String>,
   val filteredAddresses: List<String>,
 )
 
@@ -278,7 +265,7 @@ internal fun L2ExecutionProofPublicInputsDto.toDomainObject(): L2ExecutionProofP
     endBlockHash = endBlockHash.decodeHex(),
     endBlockNumber = endBlockNumber.toULong(),
     endBlockTimestamp = endBlockTimestamp.toULong(),
-    L2L1MessagesHash = L2L1MessagesHash.decodeHex(),
+    l2L1MessagesHash = l2L1MessagesHash.decodeHex(),
     parentL1L2BridgeRollingHash = parentL1L2BridgeRollingHash.decodeHex(),
     parentL1L2BridgeRollingHashMessageNumber = parentL1L2BridgeRollingHashMessageNumber.toULong(),
     endL1L2BridgeRollingHash = endL1L2BridgeRollingHash.decodeHex(),
@@ -298,7 +285,7 @@ internal fun L2ExecutionProofPublicInputs.fromDomainObject(): L2ExecutionProofPu
     endBlockHash = endBlockHash.encodeHex(),
     endBlockNumber = endBlockNumber.toLong(),
     endBlockTimestamp = endBlockTimestamp.toLong(),
-    L2L1MessagesHash = L2L1MessagesHash.encodeHex(),
+    l2L1MessagesHash = l2L1MessagesHash.encodeHex(),
     parentL1L2BridgeRollingHash = parentL1L2BridgeRollingHash.encodeHex(),
     parentL1L2BridgeRollingHashMessageNumber = parentL1L2BridgeRollingHashMessageNumber.toLong(),
     endL1L2BridgeRollingHash = endL1L2BridgeRollingHash.encodeHex(),
@@ -321,7 +308,7 @@ internal fun RollupProofPublicInputsDto.toDomainObject(): RollupProofPublicInput
   return RollupProofPublicInputs(
     endBlockNumber = endBlockNumber.toULong(),
     endBlockTimestamp = Instant.fromEpochSeconds(endBlockTimestamp),
-    L2L1BridgeTransactionTree = L2L1BridgeTransactionTree.decodeHex(),
+    l2L1BridgeTransactionTree = l2L1BridgeTransactionTree.decodeHex(),
     parentL1L2BridgeRollingHash = parentL1L2BridgeRollingHash.decodeHex(),
     parentL1L2BridgeRollingHashMessageNumber = parentL1L2BridgeRollingHashMessageNumber.toULong(),
     endL1L2BridgeRollingHash = endL1L2BridgeRollingHash.decodeHex(),
@@ -340,7 +327,7 @@ internal fun RollupProofPublicInputs.fromDomainObject(): RollupProofPublicInputs
   return RollupProofPublicInputsDto(
     endBlockNumber = endBlockNumber.toLong(),
     endBlockTimestamp = endBlockTimestamp.epochSeconds,
-    L2L1BridgeTransactionTree = L2L1BridgeTransactionTree.encodeHex(),
+    l2L1BridgeTransactionTree = l2L1BridgeTransactionTree.encodeHex(),
     parentL1L2BridgeRollingHash = parentL1L2BridgeRollingHash.encodeHex(),
     parentL1L2BridgeRollingHashMessageNumber = parentL1L2BridgeRollingHashMessageNumber.toLong(),
     endL1L2BridgeRollingHash = endL1L2BridgeRollingHash.encodeHex(),
@@ -361,9 +348,9 @@ internal fun L2ExecutionProofResponse.fromDomainObject(): L2ExecutionProofDto {
     startBlockNumber = startBlockNumber.toLong(),
     endBlockNumber = endBlockNumber.toLong(),
     publicInputs = publicInputs.fromDomainObject(),
-    L2L1Messages = L2L1MsgList.map { it.encodeHex() },
-    txFroms = froms.map { it.encodeHex() },
-    filteredAddresses = addrs.map { it.encodeHex() },
+    l2L1Messages = l2L1Messages.map { it.encodeHex() },
+    txFroms = txFroms.map { it.encodeHex() },
+    filteredAddresses = filteredAddresses.map { it.encodeHex() },
   )
 }
 
@@ -373,7 +360,7 @@ internal fun RollupProofResponse.fromDomainObject(): RollupProofDto {
     startBlockNumber = startBlockNumber.toLong(),
     endBlockNumber = endBlockNumber.toLong(),
     publicInputs = publicInputs.fromDomainObject(),
-    L2L1Roots = L2L1Roots.map { it.encodeHex() },
+    l2L1Roots = l2L1Roots.map { it.encodeHex() },
     filteredAddresses = filteredAddresses.map { it.encodeHex() },
   )
 }

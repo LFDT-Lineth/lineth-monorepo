@@ -108,7 +108,7 @@ class RollupAggregationProverClientFileBasedTest {
   private fun rollupPublicInputs(): RollupProofPublicInputs = RollupProofPublicInputs(
     endBlockNumber = 1000567UL,
     endBlockTimestamp = Instant.fromEpochSeconds(1763002301),
-    L2L1BridgeTransactionTree = ByteArray(32) { 0x10 },
+    l2L1BridgeTransactionTree = ByteArray(32) { 0x10 },
     parentL1L2BridgeRollingHash = ByteArray(32) { 0x11 },
     parentL1L2BridgeRollingHashMessageNumber = 12UL,
     endL1L2BridgeRollingHash = ByteArray(32) { 0x13 },
@@ -130,7 +130,7 @@ class RollupAggregationProverClientFileBasedTest {
     publicInputs = RollupAggregationPublicInputsDto(
       endBlockNumber = 1000567,
       endBlockTimestamp = 1763002301,
-      L2L1BridgeTransactionTree = "0x10",
+      l2L1BridgeTransactionTree = "0x10",
       parentL1L2BridgeRollingHash = "0x11",
       parentL1L2BridgeRollingHashMessageNumber = 12,
       endL1L2BridgeRollingHash = "0x13",

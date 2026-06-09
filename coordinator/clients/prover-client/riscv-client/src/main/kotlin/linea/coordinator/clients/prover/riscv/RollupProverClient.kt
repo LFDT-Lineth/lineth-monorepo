@@ -57,7 +57,7 @@ internal object RollupProofResponseDtoMapper : (CompressionProofIndex, RollupPro
       endBlockNumber = responseDto.endBlockNumber.toULong(),
       proof = responseDto.proof.decodeHex(),
       publicInputs = responseDto.publicInputs.toDomainObject(),
-      L2L1Roots = responseDto.L2L1Roots.map { it.decodeHex() },
+      l2L1Roots = responseDto.l2L1Roots.map { it.decodeHex() },
       filteredAddresses = responseDto.filteredAddresses.map { it.decodeHex() },
     )
   }

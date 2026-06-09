@@ -40,7 +40,7 @@ internal class L2ExecutionProofRequestDtoMapper(
   override fun invoke(request: L2ExecutionProofRequestV1): SafeFuture<L2ExecutionProofRequestDto> {
     val payloads = request.executionPayloads.map { executionPayload ->
       val blockNumber = executionPayload.blockNumber
-      LineaPayloadInputDto(
+      PayloadInputDto(
         statelessInputSzz = ByteArray(0).encodeHex(),
         debugStatelessInput = StatelessInputDto(
           newPayloadRequest = NewPayloadRequestDto(
@@ -86,11 +86,11 @@ internal class L2ExecutionProofRequestDtoMapper(
           ),
           publicKeys = emptyList(),
         ),
-        lineaRollupExtensionDto = LineaRollupExtensionDto(
+        rollupExtensionDto = RollupExtensionDto(
           forcedTransactions = request.forcedTransactions.filter { it -> it.blockNumber == blockNumber }.map {
             ForcedTransactionDto(
-              ftxNumber = it.ftxNumber.toLong(),
-              deadlineBlockNumber = it.deadlineBlockNumber.toLong(),
+              number = it.ftxNumber.toLong(),
+              deadline = it.deadlineBlockNumber.toLong(),
               signedTxRlp = it.signedTxRlp.encodeHex(),
               acceptance = mapFtxInclusionResultToAcceptance(it.acceptance),
             )
@@ -133,9 +133,9 @@ internal object L2ExecutionProofResponseDtoMapper : (
       endBlockNumber = responseDto.endBlockNumber.toULong(),
       proof = responseDto.proof.decodeHex(),
       publicInputs = responseDto.publicInputs.toDomainObject(),
-      L2L1MsgList = responseDto.L2L1Messages.map { it.decodeHex() },
-      froms = responseDto.txFroms.map { it.decodeHex() },
-      addrs = responseDto.filteredAddresses.map { it.decodeHex() },
+      l2L1Messages = responseDto.l2L1Messages.map { it.decodeHex() },
+      txFroms = responseDto.txFroms.map { it.decodeHex() },
+      filteredAddresses = responseDto.filteredAddresses.map { it.decodeHex() },
     )
   }
 }

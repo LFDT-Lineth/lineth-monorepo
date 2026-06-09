@@ -54,7 +54,7 @@ data class RollupProofRequestV1(
 data class RollupProofPublicInputs(
   val endBlockNumber: ULong,
   val endBlockTimestamp: Instant,
-  val L2L1BridgeTransactionTree: ByteArray,
+  val l2L1BridgeTransactionTree: ByteArray,
   val parentL1L2BridgeRollingHash: ByteArray,
   val parentL1L2BridgeRollingHashMessageNumber: ULong,
   val endL1L2BridgeRollingHash: ByteArray,
@@ -75,7 +75,7 @@ data class RollupProofPublicInputs(
 
     if (endBlockNumber != other.endBlockNumber) return false
     if (endBlockTimestamp != other.endBlockTimestamp) return false
-    if (!L2L1BridgeTransactionTree.contentEquals(other.L2L1BridgeTransactionTree)) return false
+    if (!l2L1BridgeTransactionTree.contentEquals(other.l2L1BridgeTransactionTree)) return false
     if (!parentL1L2BridgeRollingHash.contentEquals(other.parentL1L2BridgeRollingHash)) return false
     if (parentL1L2BridgeRollingHashMessageNumber != other.parentL1L2BridgeRollingHashMessageNumber) return false
     if (!endL1L2BridgeRollingHash.contentEquals(other.endL1L2BridgeRollingHash)) return false
@@ -94,7 +94,7 @@ data class RollupProofPublicInputs(
   override fun hashCode(): Int {
     var result = endBlockNumber.hashCode()
     result = 31 * result + endBlockTimestamp.hashCode()
-    result = 31 * result + L2L1BridgeTransactionTree.contentHashCode()
+    result = 31 * result + l2L1BridgeTransactionTree.contentHashCode()
     result = 31 * result + parentL1L2BridgeRollingHash.contentHashCode()
     result = 31 * result + parentL1L2BridgeRollingHashMessageNumber.hashCode()
     result = 31 * result + endL1L2BridgeRollingHash.contentHashCode()
@@ -122,7 +122,7 @@ data class RollupProofResponse(
   override val endBlockNumber: ULong,
   val proof: ByteArray,
   val publicInputs: RollupProofPublicInputs,
-  val L2L1Roots: List<ByteArray>,
+  val l2L1Roots: List<ByteArray>,
   val filteredAddresses: List<ByteArray>,
 ) : BlockInterval {
   override fun equals(other: Any?): Boolean {
@@ -135,7 +135,7 @@ data class RollupProofResponse(
     if (endBlockNumber != other.endBlockNumber) return false
     if (!proof.contentEquals(other.proof)) return false
     if (publicInputs != other.publicInputs) return false
-    if (!L2L1Roots.byteArrayListEquals(other.L2L1Roots)) return false
+    if (!l2L1Roots.byteArrayListEquals(other.l2L1Roots)) return false
     if (!filteredAddresses.byteArrayListEquals(other.filteredAddresses)) return false
 
     return true
@@ -146,7 +146,7 @@ data class RollupProofResponse(
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + proof.contentHashCode()
     result = 31 * result + publicInputs.hashCode()
-    result = 31 * result + L2L1Roots.hashCode()
+    result = 31 * result + l2L1Roots.hashCode()
     result = 31 * result + filteredAddresses.hashCode()
     return result
   }
