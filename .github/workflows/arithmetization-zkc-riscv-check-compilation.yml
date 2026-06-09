@@ -18,8 +18,8 @@ on:
   workflow_call:
   workflow_dispatch:
     inputs:
-      go-corset-ref:
-        description: 'go-corset commit/branch/tag for zkc (defaults to main)'
+      zkc-ref:
+        description: 'zkc commit/branch/tag (defaults to pinned ref below)'
         required: false
         type: string
 
@@ -41,9 +41,8 @@ jobs:
 
       - name: Install zkc and check compilation of RISC-V in ZkC
         run: make -C arithmetization riscv-check-compilation
-        # Pinned to the last known-good commit before go-corset#1813
         env:
-          GO_CORSET_REF_FOR_ZKC: ${{ inputs.go-corset-ref || '5dc39754f5596b701231d6535c5973e3f8ec3889' }}
+          ZKC_REF: ${{ inputs.zkc-ref || 'main' }}
 
       - name: Linting Check
         run: make -C arithmetization riscv-check-lint

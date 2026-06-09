@@ -254,7 +254,7 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
             // syscall so the framework's failure messages (failing PC,
             // label, expected vs actual) surface on our printf channel
             // verbatim — each byte is rendered as its ASCII character via
-            // the go-corset %c format specifier (issue #1759).
+            // the zkc %c format specifier (issue #1759).
             printf "ECALL for write\n"
             var a1:Address = registers[11] as Address // buf
             var a2:DoubleWord = registers[12] // count

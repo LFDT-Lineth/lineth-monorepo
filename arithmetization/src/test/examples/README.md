@@ -13,7 +13,7 @@ The executable, the JSON and the disassembled file live in `asm/bin/` for assemb
 - `cargo (>= 1.88.0)` — for Rust programs
 - nightly `rustc (>= rustc 1.88.0)` — for Rust programs
 - `go (>= 1.26.1)` — to convert ELF to JSON
-- `go-corset, zkc (>= 1.2.12)` — to execute/debug the JSON
+- `zkc` — to execute/debug the JSON (`make install-zkc` from the arithmetization Makefile)
 
 ACT4 tests can be built either with Docker or directly on the host.
 

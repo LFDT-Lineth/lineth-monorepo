@@ -52,8 +52,8 @@ on:
         required: false
         type: number
         default: 5
-      go_corset_ref:
-        description: 'go-corset commit/branch/tag for zkc (defaults to main)'
+      zkc_ref:
+        description: 'zkc commit/branch/tag (defaults to main)'
         required: false
         type: string
         default: main
@@ -89,7 +89,7 @@ jobs:
       - name: Install zkc
         run: make -C arithmetization install-zkc
         env:
-          GO_CORSET_REF_FOR_ZKC: ${{ inputs.go_corset_ref }}
+          ZKC_REF: ${{ inputs.zkc_ref }}
 
       - name: Add worktrees for base and optim branches
         run: |
@@ -180,7 +180,7 @@ jobs:
             -blake-n 1 \
             -base-ref "${{ inputs.base_ref || 'main' }}" \
             -optim-ref "${{ inputs.optim_ref || github.event.pull_request.head.sha || github.sha }}" \
-            -zkc-version "${{ inputs.go_corset_ref || 'main' }}" \
+            -zkc-version "${{ inputs.zkc_ref || 'main' }}" \
             -keccak-n-vectors ${{ inputs.n_vectors_keccak || 10 }} \
             -blake-rounds ${{ inputs.n_rounds_blake || 12 }} \
             | tee -a "$GITHUB_STEP_SUMMARY" \

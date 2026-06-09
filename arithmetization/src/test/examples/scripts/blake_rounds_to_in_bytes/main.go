@@ -3,7 +3,7 @@
 // configurable workload size on a single Blake vector.
 //
 // The h, m, t, f fields are hard-coded to the canonical Blake2b "abc" test
-// vector (matches every line of go-corset's testdata/zkc/bench/blake.accepts —
+// vector (matches every line of zkc's testdata/zkc/bench/blake.accepts —
 // they all share the same h, m, t and the most common f=1 = final block).
 // Only the rounds count varies. The expected h_out is computed live by running
 // the Blake2b-F compression function in Go, so the generated line is valid
