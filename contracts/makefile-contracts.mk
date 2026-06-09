@@ -11,11 +11,11 @@ clean-smc-folders:
 
 compile-contracts:
 		cd $(contracts_package_dir); \
-		make compile
+		$(MAKE) compile
 
 compile-contracts-no-cache:
 		cd $(contracts_package_dir); \
-		make force-compile
+		$(MAKE) force-compile
 
 deploy-eip-system-contracts:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
