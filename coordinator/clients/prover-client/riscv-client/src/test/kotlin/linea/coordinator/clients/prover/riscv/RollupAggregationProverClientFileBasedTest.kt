@@ -3,7 +3,6 @@ package linea.coordinator.clients.prover.riscv
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.clients.RollupAggregationProofRequestV1
-import linea.clients.RollupProofPublicInputs
 import linea.coordinator.clients.prover.AggregationProofFileNameProvider
 import linea.coordinator.clients.prover.FileBasedProverConfig
 import linea.coordinator.clients.prover.serialization.JsonSerialization
@@ -74,7 +73,6 @@ class RollupAggregationProverClientFileBasedTest {
 
     val requestFile = config.requestsDirectory.resolve(AggregationProofFileNameProvider.getFileName(proofIndex))
     assertThat(requestFile).exists()
-    println("RequestFile = ${requestFile.toAbsolutePath()}")
 
     val writtenDto = jsonMapper.readValue(requestFile.toFile(), RollupAggregationProofRequestDto::class.java)
     val expectedDto = RollupAggregationProofRequestDtoMapper(proverVersion, chainId).invoke(request).get()
@@ -89,9 +87,7 @@ class RollupAggregationProverClientFileBasedTest {
 
     val response = client.findProofResponse(proofIndex).get()
 
-    assertThat(response).isEqualTo(
-      RollupAggregationProofResponseDtoMapper(proofIndex, responseDto),
-    )
+    assertThat(response).isEqualTo(RollupAggregationProofResponseDtoMapper(proofIndex, responseDto))
   }
 
   private fun saveResponseFile(fileName: String, responseDto: RollupAggregationProofResponseDto) {
@@ -105,29 +101,12 @@ class RollupAggregationProverClientFileBasedTest {
     rollupProofs = emptyList(),
   )
 
-  private fun rollupPublicInputs(): RollupProofPublicInputs = RollupProofPublicInputs(
-    endBlockNumber = 1000567UL,
-    endBlockTimestamp = Instant.fromEpochSeconds(1763002301),
-    l2L1BridgeTransactionTree = ByteArray(32) { 0x10 },
-    parentL1L2BridgeRollingHash = ByteArray(32) { 0x11 },
-    parentL1L2BridgeRollingHashMessageNumber = 12UL,
-    endL1L2BridgeRollingHash = ByteArray(32) { 0x13 },
-    endL1L2BridgeRollingHashMessageNumber = 14UL,
-    dynamicChainConfigHash = ByteArray(32) { 0x0c },
-    parentFtxRollingHash = ByteArray(32) { 0x15 },
-    endFtxRollingHash = ByteArray(32) { 0x16 },
-    lastProcessedFtxNumber = 17UL,
-    filteredAddressesHash = ByteArray(32) { 0x18 },
-    parentShnarf = ByteArray(32) { 0x19 },
-    endShnarf = ByteArray(32) { 0x1a },
-  )
-
   private fun aggregationResponseDto(): RollupAggregationProofResponseDto = RollupAggregationProofResponseDto(
-    proof = "0xabcd",
-    proverVersion = "4.0.0-riscv",
-    startBlockNumber = 1000500,
+    proverVersion = proverVersion,
+    startBlockNumber = 1000501,
     endBlockNumber = 1000567,
-    publicInputs = RollupAggregationPublicInputsDto(
+    proof = "0xabcd",
+    publicInputs = RollupProofPublicInputsDto(
       endBlockNumber = 1000567,
       endBlockTimestamp = 1763002301,
       l2L1BridgeTransactionTree = "0x10",

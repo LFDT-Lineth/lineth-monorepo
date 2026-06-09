@@ -1,0 +1,160 @@
+package linea.coordinator.clients.prover.riscv
+
+import com.fasterxml.jackson.databind.JsonNode
+import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.client.WireMock
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration
+import io.vertx.core.Vertx
+import io.vertx.core.http.HttpVersion
+import io.vertx.core.http.PoolOptions
+import io.vertx.ext.web.client.WebClientOptions
+import io.vertx.junit5.VertxExtension
+import linea.clients.RollupProofRequestV1
+import linea.coordinator.clients.prover.serialization.JsonSerialization
+import linea.domain.CompressionProofIndex
+import net.consensys.linea.httprest.client.VertxHttpRestClient
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
+
+/**
+ * Exercises [RollupProverClient] end-to-end over the [RestfulProverProofTransport]:
+ *  - writing a domain request: request -> request DTO -> POST body (`proof_request`);
+ *  - reading a response: GET job body -> response DTO -> domain response.
+ */
+@ExtendWith(VertxExtension::class)
+class RollupProverClientRestfulTest {
+  private val jsonMapper = JsonSerialization.proofResponseMapperV1
+  private val proverVersion = "4.0.0-riscv"
+  private val proofType = "rollup"
+  private val chainId = 59144L
+  private val jobsPathPattern = "/v1/jobs/$proofType/.*"
+
+  private lateinit var wiremock: WireMockServer
+  private lateinit var client: RollupProverClient
+
+  @BeforeEach
+  fun beforeEach(vertx: Vertx) {
+    wiremock = WireMockServer(WireMockConfiguration.options().dynamicPort())
+    wiremock.start()
+    val webClientOptions = WebClientOptions()
+      .setProtocolVersion(HttpVersion.HTTP_1_1)
+      .setDefaultHost("localhost")
+      .setDefaultPort(wiremock.port())
+    val restClient = VertxHttpRestClient(webClientOptions, PoolOptions(), vertx)
+    val transport = RestfulProverProofTransport<
+      RollupProofRequestDto,
+      RollupProofResponseDto,
+      CompressionProofIndex,
+      >(
+      restClient = restClient,
+      vertx = vertx,
+      proofType = proofType,
+      startBlockProvider = { it.startBlockNumber },
+      endBlockProvider = { it.endBlockNumber },
+      responseDtoClass = RollupProofResponseDto::class.java,
+      pollingInterval = 50.milliseconds,
+      pollingTimeout = 2.seconds,
+    )
+    client = RollupProverClient(
+      transport = transport,
+      proverVersion = proverVersion,
+      chainId = chainId,
+    )
+  }
+
+  @AfterEach
+  fun tearDown() {
+    wiremock.stop()
+  }
+
+  @Test
+  fun `createProofRequest posts the request DTO to the prover service`() {
+    wiremock.stubFor(WireMock.get(WireMock.urlPathMatching(jobsPathPattern)).willReturn(WireMock.notFound()))
+    wiremock.stubFor(WireMock.post(WireMock.urlPathMatching(jobsPathPattern)).willReturn(WireMock.ok()))
+
+    val request = rollupRequest()
+    client.createProofRequest(request).get()
+
+    val postedRequests = wiremock.findAll(WireMock.postRequestedFor(WireMock.urlPathMatching(jobsPathPattern)))
+    assertThat(postedRequests).hasSize(1)
+
+    val body = jsonMapper.readTree(postedRequests.first().bodyAsString)
+    val postedDto = jsonMapper.treeToValue(body.get("proof_request"), RollupProofRequestDto::class.java)
+    val expectedDto = RollupProofRequestDtoMapper(proverVersion, chainId).invoke(request).get()
+    assertThat(postedDto).isEqualTo(expectedDto)
+  }
+
+  @Test
+  fun `findProofResponse reads the job response and maps it to the domain response`() {
+    val responseDto = rollupResponseDto()
+    val proofIndex = CompressionProofIndex(
+      startBlockNumber = 1000501UL,
+      endBlockNumber = 1000520UL,
+      hash = ByteArray(32) { 0x1a },
+      startBlockTimestamp = Instant.fromEpochSeconds(1763000457),
+    )
+    wiremock.stubFor(
+      WireMock.get(WireMock.urlEqualTo("/v1/jobs/$proofType/1000501/1000520")).willReturn(
+        WireMock.okJson(jobResponseBody(status = "proved", proofResponse = responseDto)),
+      ),
+    )
+
+    val response = client.findProofResponse(proofIndex).get()
+
+    assertThat(response).isEqualTo(RollupProofResponseDtoMapper(proofIndex, responseDto))
+  }
+
+  private fun jobResponseBody(status: String, proofResponse: RollupProofResponseDto): String {
+    val job = jsonMapper.createObjectNode().apply {
+      put("proof_type", proofType)
+      put("start_block", proofResponse.startBlockNumber)
+      put("end_block", proofResponse.endBlockNumber)
+      put("status", status)
+      put("tier", "large")
+      put("attempt", 1)
+      set<JsonNode>("proof_response", jsonMapper.valueToTree(proofResponse))
+    }
+    return jsonMapper.writeValueAsString(job)
+  }
+
+  private fun rollupRequest(): RollupProofRequestV1 = RollupProofRequestV1(
+    startBlockNumber = 1000501UL,
+    endBlockNumber = 1000520UL,
+    startBlockTimestamp = Instant.fromEpochSeconds(1763000000),
+    blobs = emptyList(),
+    parentShnarf = ByteArray(32) { 0x19 },
+    endShnarf = ByteArray(32) { 0x20 },
+    l2ExecutionProofs = emptyList(),
+  )
+
+  private fun rollupResponseDto(): RollupProofResponseDto = RollupProofResponseDto(
+    proverVersion = proverVersion,
+    startBlockNumber = 1000501,
+    endBlockNumber = 1000520,
+    proof = "0xabcd",
+    publicInputs = RollupProofPublicInputsDto(
+      endBlockNumber = 1000520,
+      endBlockTimestamp = 1763000457,
+      l2L1BridgeTransactionTree = "0x10",
+      parentL1L2BridgeRollingHash = "0x11",
+      parentL1L2BridgeRollingHashMessageNumber = 12,
+      endL1L2BridgeRollingHash = "0x13",
+      endL1L2BridgeRollingHashMessageNumber = 14,
+      dynamicChainConfigHash = "0xc0ffee",
+      parentFtxRollingHash = "0x15",
+      endFtxRollingHash = "0x16",
+      lastProcessedFtxNumber = 17,
+      filteredAddressesHash = "0x18",
+      parentShnarf = "0x19",
+      endShnarf = "0x1a",
+    ),
+    l2L1Roots = listOf("0xaa"),
+    filteredAddresses = emptyList(),
+  )
+}
