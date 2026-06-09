@@ -144,6 +144,55 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
             }
         }
 
+        // ===============================
+        // ----- LOAD (opcode LOAD) -----
+        // ===============================
+
+        case LOAD: {
+            switch funct3 {
+                case FUNCT3_LB: {
+                    printf "LB "
+                    // print_i_memory_operands(rd, rs1, signext_imm12_64)
+                    registers[rd] = sgn_extension_u8_u64(ram[rs1_plus_signext_imm12])
+                }
+                case FUNCT3_LH: {
+                    printf "LH "
+                    // print_i_memory_operands(rd, rs1, signext_imm12_64)
+                    registers[rd] = sgn_extension_u16_u64(read_16(rs1_plus_signext_imm12))
+                }
+                case FUNCT3_LW: {
+                    printf "LW "
+                    // print_i_memory_operands(rd, rs1, signext_imm12_64)
+                    registers[rd] = sgn_extension_u32_u64(read_32(rs1_plus_signext_imm12))
+                }
+                case FUNCT3_LBU: {
+                    printf "LBU "
+                    // print_i_memory_operands(rd, rs1, signext_imm12_64)
+                    registers[rd] = ram[rs1_plus_signext_imm12] as DoubleWord
+                }
+                case FUNCT3_LHU: {
+                    printf "LHU "
+                    // print_i_memory_operands(rd, rs1, signext_imm12_64)
+                    registers[rd] = read_16(rs1_plus_signext_imm12) as DoubleWord
+                }
+                case FUNCT3_LWU: {
+                    printf "LWU "
+                    // print_i_memory_operands(rd, rs1, signext_imm12_64)
+                    registers[rd] = read_32(rs1_plus_signext_imm12) as DoubleWord
+                }
+                case FUNCT3_LD: {
+                    printf "LD "
+                    // print_i_memory_operands(rd, rs1, signext_imm12_64)
+                    registers[rd] = read_64(rs1_plus_signext_imm12) as DoubleWord
+                }
+                default: {
+                    printf "[ERROR] Unsupported LOAD instruction of I-Type\n"
+                    printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
+                    fail
+                }
+            }
+        }
+
         // ===================================================
         // ----- OP-IMM-32 (opcode OP_IMM_32) — RV64 *W -----
         // ===================================================
