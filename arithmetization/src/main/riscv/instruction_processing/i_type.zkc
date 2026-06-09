@@ -150,6 +150,16 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
 
         case LOAD: {
             switch funct3 {
+                case FUNCT3_LD: {
+                    printf "LD "
+                    // print_i_memory_operands(rd, rs1, signext_imm12_64)
+                    registers[rd] = read_64(rs1_plus_signext_imm12) as DoubleWord
+                }
+                case FUNCT3_LBU: {
+                    printf "LBU "
+                    // print_i_memory_operands(rd, rs1, signext_imm12_64)
+                    registers[rd] = ram[rs1_plus_signext_imm12] as DoubleWord
+                }
                 case FUNCT3_LB: {
                     printf "LB "
                     // print_i_memory_operands(rd, rs1, signext_imm12_64)
@@ -165,11 +175,6 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                     // print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = sgn_extension_u32_u64(read_32(rs1_plus_signext_imm12))
                 }
-                case FUNCT3_LBU: {
-                    printf "LBU "
-                    // print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = ram[rs1_plus_signext_imm12] as DoubleWord
-                }
                 case FUNCT3_LHU: {
                     printf "LHU "
                     // print_i_memory_operands(rd, rs1, signext_imm12_64)
@@ -179,11 +184,6 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                     printf "LWU "
                     // print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = read_32(rs1_plus_signext_imm12) as DoubleWord
-                }
-                case FUNCT3_LD: {
-                    printf "LD "
-                    // print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = read_64(rs1_plus_signext_imm12) as DoubleWord
                 }
                 default: {
                     printf "[ERROR] Unsupported LOAD instruction of I-Type\n"
