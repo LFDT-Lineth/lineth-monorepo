@@ -2,7 +2,7 @@
 
 The `Makefile` in this folder has commands to compile and run RISC-V test programs written in assembly, Zig or Rust against the Linea zkVM.
 Programs are compiled for the  `riscv64im_zicclsm-unknown-none-elf` architecture. The resulting ELF is converted to JSON, and passed to `zkc` as an input.
-The output ELF is also disassembled, producing an explorable `<name>.objdump` file.
+The output ELF is also optinally disassembled, producing an explorable `<name>.objdump` file.
 
 The executable, the JSON and the disassembled file live in `asm/bin/` for assembly, `zig/zig-out/bin/` for Zig, and `rust/target/riscv64im-unknown-none-elf/release/` for Rust.
 
@@ -112,6 +112,8 @@ riscv-test <name>.<ext>
 riscv-test <name>.<ext> IN_BYTES="0xAABB"
 # Compile and execute with input bytes from a file
 riscv-test <name>.<ext> IN_BYTES="@path/to/in_bytes"
+# Compile, execute and generate an objdump
+riscv-test <name>.<ext> OBJDUMP=true
 # Compile and debug
 riscv-test debug <name>.<ext>
 # Compile and debug with input bytes
@@ -211,6 +213,7 @@ riscv-test compile <name>.<ext> VERIFY_ELF=true
 | `PROGRAM_OFFSET`             | `0x00000000`                                                   | Program address used by this Makefile's generated linker script (up to 128 MiB)                                                               |
 | `IN_BYTES_OFFSET`            | `0x08800000`                                                   | Memory address where input bytes are written (up to 1 GiB)                                                                                    |
 | `SP`                         | `0x08800000`                                                   | Top of the stack region, stack grows downward from this address (8 MiB)                                                                       |
+| `OBJDUMP`                    | `false`                                                        | Set to `true` to generate an objdump file for each compiled ELF                                                                               |
 | `VERIFY_ELF`                 | `false`                                                        | Set to `true` to verify offsets, entry point and sp match the ELF ones                                                                        |
 | `ACT4_BUILD_MODE`            | `host`                                                         | Build ACT4 ELFs with `host` or `docker`                                                                                                       |
 | `ACT4_REF`                   | `9798a554ce4139f472c9ccd3a18c9061d0f7024d`                     | `riscv-arch-test` tag or commit used to build ACT4 ELFs                                                                                       |

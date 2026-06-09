@@ -69,6 +69,9 @@ ENTRY_POINT     := $(PROGRAM_OFFSET)
 # 8 MiB   (0x08000000 <- 0x08800000)
 SP              ?= 0x08800000
 
+# If true, generates an objdump of the generated ELF for debugging purposes
+OBJDUMP ?= false
+
 # Parsed values are just to verify that the generated ELF is correct (lazy evaluation allows to parse the ELF only after it is generated)
 PROGRAM_OFFSET_FROM_ELF  = $(shell LANG=C riscv64-unknown-elf-readelf -S $(BIN) | grep '\.text' | awk '{print "0x"$$5}')
 IN_BYTES_OFFSET_FROM_ELF = $(shell LANG=C riscv64-unknown-elf-nm $(BIN) | grep _input_start | awk '{print "0x"$$1}') 
@@ -125,8 +128,10 @@ compile: require-src linker-script
 		exit 1; \
 	fi
 # Disassemble ELF
-	@echo "\nDisassembling $(BIN)"
-	@LANG=C riscv64-unknown-elf-objdump -D -s --line-numbers $(BIN) > $(BIN).objdump
+	@if [ "$(OBJDUMP)" = "true" ]; then \
+		echo "\nDisassembling $(BIN)"; \
+		LANG=C riscv64-unknown-elf-objdump -D -s --line-numbers $(BIN) > $(BIN).objdump; \
+	fi
 # Verify that PROGRAM_OFFSET, IN_BYTES_OFFSET, ENTRY_POINT, SP match the ELF values
 	@if [ "$(VERIFY_ELF)" = "true" ]; then \
 		$(MAKE) -f $(MAKEFILE_DIR)Makefile verify-elf TEST=$(TEST); \
