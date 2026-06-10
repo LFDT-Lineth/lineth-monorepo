@@ -55,6 +55,7 @@ type Runtime struct {
 //
 // Panics if sys has no interactive rounds (len(sys.Rounds) == 0).
 func NewRuntime(sys *System) Runtime {
+
 	run := Runtime{
 		System:       sys,
 		fs:           fiatshamir.NewFiatShamir(),

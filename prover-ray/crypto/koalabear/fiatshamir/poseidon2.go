@@ -5,7 +5,7 @@ package fiatshamir
 import (
 	"unsafe"
 
-	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/poseidon2"
+	poseidon2 "github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/poseidon2refactor"
 	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/linea-monorepo/prover-ray/utils"
 	"github.com/consensys/linea-monorepo/prover-ray/utils/types"
