@@ -20,6 +20,9 @@ public class LineaForcedTransactionCliOptions implements LineaCliOptions {
 
   public static final String FORCED_TX_STATUS_CACHE_SIZE =
       "--plugin-linea-forced-tx-status-cache-size";
+  public static final String
+      FORCED_TX_CHAIN_SECURITY_VIOLATION_BEFORE_DEADLINE_INCLUSION_ALLOWANCE =
+          "--plugin-linea-forced-tx-chain-security-violation-before-deadline-inclusion-allowance";
 
   @Positive
   @CommandLine.Option(
@@ -29,6 +32,17 @@ public class LineaForcedTransactionCliOptions implements LineaCliOptions {
       description =
           "Maximum number of forced transaction statuses to keep in cache (default: ${DEFAULT-VALUE})")
   private int statusCacheSize = LineaForcedTransactionPool.DEFAULT_STATUS_CACHE_SIZE;
+
+  @Positive
+  @CommandLine.Option(
+      names = {FORCED_TX_CHAIN_SECURITY_VIOLATION_BEFORE_DEADLINE_INCLUSION_ALLOWANCE},
+      hidden = true,
+      paramLabel = "<INTEGER>",
+      description =
+          "Number of blocks before ftx deadline that ftx can be included if rejected security plugins (default: ${DEFAULT-VALUE})")
+  private int chainSecurityViolationBeforeDeadlineInclusionAllowance =
+      LineaForcedTransactionPool
+          .DEFAULT_CHAIN_SECURITY_VIOLATION_BEFORE_DEADLINE_INCLUSION_ALLOWANCE;
 
   private LineaForcedTransactionCliOptions() {}
 
@@ -51,6 +65,7 @@ public class LineaForcedTransactionCliOptions implements LineaCliOptions {
       final LineaForcedTransactionConfiguration config) {
     final LineaForcedTransactionCliOptions options = create();
     options.statusCacheSize = config.statusCacheSize();
+    options.chainSecurityViolationBeforeDeadlineInclusionAllowance = config.statusCacheSize();
     return options;
   }
 
@@ -61,13 +76,20 @@ public class LineaForcedTransactionCliOptions implements LineaCliOptions {
    */
   @Override
   public LineaForcedTransactionConfiguration toDomainObject() {
-    return LineaForcedTransactionConfiguration.builder().statusCacheSize(statusCacheSize).build();
+    return LineaForcedTransactionConfiguration.builder()
+        .statusCacheSize(statusCacheSize)
+        .chainSecurityViolationHoldOffBeforeDeadline(
+            chainSecurityViolationBeforeDeadlineInclusionAllowance)
+        .build();
   }
 
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
         .add(FORCED_TX_STATUS_CACHE_SIZE, statusCacheSize)
+        .add(
+            FORCED_TX_CHAIN_SECURITY_VIOLATION_BEFORE_DEADLINE_INCLUSION_ALLOWANCE,
+            chainSecurityViolationBeforeDeadlineInclusionAllowance)
         .toString();
   }
 }
