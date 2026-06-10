@@ -11,6 +11,7 @@ import linea.domain.Transaction
 import linea.domain.TransactionForEthCall
 import linea.domain.TransactionReceipt
 import linea.ethapi.EthApiClient
+import linea.ethapi.ExecutionWitness
 import linea.ethapi.StateOverride
 import net.consensys.linea.async.AsyncRetryer
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -168,5 +169,11 @@ class Web3jEthApiClientWithRetries(
 
   override fun ethEstimateGas(transaction: TransactionForEthCall): SafeFuture<ULong> {
     return retry { ethApiClient.ethEstimateGas(transaction) }
+  }
+
+  override fun getExecutionWitness(block: BlockParameter): SafeFuture<ExecutionWitness> {
+    return retry(stopRetriesPredicateForTag(block)) {
+      ethApiClient.getExecutionWitness(block)
+    }
   }
 }
