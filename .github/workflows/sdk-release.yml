@@ -209,5 +209,6 @@ jobs:
           commit-message: "release(${{ inputs.package }}): v${{ steps.version.outputs.next }}"
           branch: release-${{ inputs.package }}-v${{ steps.version.outputs.next }}
           base: main
-          title: "release(${{ inputs.package }}): v${{ steps.version.outputs.next }}"
+          title: "chore(${{ inputs.package }}): release v${{ steps.version.outputs.next }}"
           body-path: ${{ steps.pr_body.outputs.path }}
+          signoff: true
