@@ -15,6 +15,7 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.math.BigInteger
+import kotlin.collections.get
 import kotlin.random.Random
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -34,6 +35,7 @@ class FakeEthApiClient(
   ),
   private val topicsTranslation: Map<String, String> = emptyMap(),
   private val log: Logger = LogManager.getLogger(FakeEthApiClient::class.java),
+  private val witnessesByBlock: Map<BlockParameter, ExecutionWitness> = emptyMap(),
 ) : EthApiClient {
   private val blockTags: MutableMap<BlockParameter.Tag, ULong> = initialTagsBlocks.toMutableMap()
   private val logsDb: MutableList<EthLog> = mutableListOf()
@@ -267,6 +269,17 @@ class FakeEthApiClient(
       }
   }
 
+  override fun getExecutionWitness(block: BlockParameter): SafeFuture<ExecutionWitness> {
+    val witness = witnessesByBlock[block]
+      ?: return SafeFuture.failedFuture(
+        ExecutionWitnessClientException(
+          ExecutionWitnessError.NULL_RESULT,
+          "no witness configured for block=$block",
+        ),
+      )
+    return SafeFuture.completedFuture(witness)
+  }
+
   private fun findLogsInRange(fromBlock: BlockParameter, toBlock: BlockParameter): List<EthLog> {
     return logsDb.filter { isInRange(it.blockNumber, fromBlock, toBlock) }
   }
@@ -298,6 +311,10 @@ class FakeEthApiClient(
         ?: throw IllegalArgumentException("Invalid blockParameter=$blockParameter")
 
       is BlockParameter.BlockNumber -> blockParameter.getNumber()
+
+      is BlockParameter.BlockHash ->
+        blocksDb.values.firstOrNull { it.hash.contentEquals(blockParameter.getHash().decodeHex()) }?.number
+          ?: throw IllegalArgumentException("Block hash not found in fake client: $blockParameter")
     }
   }
 
