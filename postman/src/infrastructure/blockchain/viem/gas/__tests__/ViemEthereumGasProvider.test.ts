@@ -1,5 +1,5 @@
-import { ILogger } from "@consensys/linea-shared-utils";
 import { describe, it, expect, beforeEach } from "@jest/globals";
+import { ILogger } from "@lfdt-lineth/shared-utils";
 import { mock } from "jest-mock-extended";
 
 import { DefaultGasProviderConfig } from "../../../../../core/clients/blockchain/IGasProvider";

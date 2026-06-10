@@ -1,5 +1,5 @@
 {
-  "name": "@consensys/lido-governance-monitor",
+  "name": "@lfdt-lineth/lido-governance-monitor",
   "version": "1.0.0",
   "author": "Consensys Software Inc.",
   "license": "(MIT OR Apache-2.0)",
@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.95.1",
-    "@consensys/linea-shared-utils": "workspace:*",
+    "@lfdt-lineth/shared-utils": "workspace:*",
     "@prisma/adapter-pg": "7.8.0",
     "@prisma/client": "7.8.0",
     "dotenv": "catalog:",
@@ -34,7 +34,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@consensys/eslint-config": "workspace:*",
+    "@lfdt-lineth/eslint-config": "workspace:*",
     "@jest/globals": "catalog:",
     "@types/html-to-text": "9.0.4",
     "@types/jest": "catalog:",

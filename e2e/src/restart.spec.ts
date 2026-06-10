@@ -1,5 +1,5 @@
-import { etherToWei, serialize } from "@consensys/linea-shared-utils";
 import { describe, expect, it } from "@jest/globals";
+import { etherToWei, serialize } from "@lfdt-lineth/shared-utils";
 
 import { MINIMUM_FEE_IN_WEI } from "./common/constants";
 import { sendL1ToL2Message } from "./common/test-helpers/messaging";

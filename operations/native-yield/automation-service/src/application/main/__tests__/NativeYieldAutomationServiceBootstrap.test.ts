@@ -24,7 +24,7 @@ const mockWinstonLogger = jest.fn().mockImplementation(() => createLoggerMock())
 const mockViemBlockchainClientAdapter = jest.fn().mockImplementation(() => ({}));
 const mockWeb3SignerClientAdapter = jest.fn().mockImplementation(() => ({}));
 
-jest.mock("@consensys/linea-shared-utils", () => ({
+jest.mock("@lfdt-lineth/shared-utils", () => ({
   ExponentialBackoffRetryService: jest.fn().mockImplementation(() => ({})),
   ExpressApiApplication: mockExpressApiApplication,
   WinstonLogger: mockWinstonLogger,

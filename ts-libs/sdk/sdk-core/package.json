@@ -1,5 +1,5 @@
 {
-  "name": "@consensys/linea-sdk-core",
+  "name": "@lfdt-lineth/sdk-core",
   "version": "1.0.0",
   "description": "Core utilities for the Linea bridge SDK — Merkle tree, message types, chain and contract helpers",
   "author": "Consensys Software Inc.",
@@ -49,7 +49,7 @@
     "clean": "rimraf dist node_modules coverage"
   },
   "devDependencies": {
-    "@consensys/eslint-config": "workspace:*",
+    "@lfdt-lineth/eslint-config": "workspace:*",
     "@types/jest": "catalog:",
     "jest": "catalog:",
     "jest-environment-node": "catalog:",

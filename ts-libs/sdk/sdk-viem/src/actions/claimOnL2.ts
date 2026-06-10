@@ -1,4 +1,4 @@
-import { getContractsAddressesByChainId, Message } from "@consensys/linea-sdk-core";
+import { getContractsAddressesByChainId, Message } from "@lfdt-lineth/sdk-core";
 import {
   Account,
   Address,
@@ -52,7 +52,7 @@ export type ClaimOnL2ErrorType = SendTransactionErrorType | ChainNotFoundErrorTy
  * import { createWalletClient, http, zeroAddress } from 'viem'
  * import { privateKeyToAccount } from 'viem/accounts'
  * import { linea } from 'viem/chains'
- * import { claimOnL2 } from '@consensys/linea-sdk-viem'
+ * import { claimOnL2 } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createWalletClient({
  *   chain: linea,
@@ -78,7 +78,7 @@ export type ClaimOnL2ErrorType = SendTransactionErrorType | ChainNotFoundErrorTy
  * import { createWalletClient, http, zeroAddress } from 'viem'
  * import { privateKeyToAccount } from 'viem/accounts'
  * import { linea } from 'viem/chains'
- * import { claimOnL2 } from '@consensys/linea-sdk-viem'
+ * import { claimOnL2 } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createWalletClient({
  *   account: privateKeyToAccount('0x…'),

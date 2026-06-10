@@ -1,7 +1,7 @@
 {
-  "name": "@consensys/linea-contract-integrity-verifier-ethers",
+  "name": "@lfdt-lineth/contract-integrity-verifier-ethers",
   "version": "1.0.0",
-  "description": "Ethers v6 adapter for @consensys/linea-contract-integrity-verifier",
+  "description": "Ethers v6 adapter for @lfdt-lineth/contract-integrity-verifier",
   "author": "Consensys Software Inc.",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
@@ -42,10 +42,10 @@
     "linea"
   ],
   "dependencies": {
-    "@consensys/linea-contract-integrity-verifier": "workspace:*"
+    "@lfdt-lineth/contract-integrity-verifier": "workspace:*"
   },
   "devDependencies": {
-    "@consensys/eslint-config": "workspace:*",
+    "@lfdt-lineth/eslint-config": "workspace:*",
     "@types/jest": "catalog:",
     "jest": "catalog:",
     "jest-environment-node": "catalog:",

@@ -4,7 +4,7 @@ import { encodeFunctionData, getContract } from "viem";
 import { LineaRollupYieldExtensionABI } from "../../../core/abis/LineaRollupYieldExtension.js";
 import { LineaRollupYieldExtensionContractClient } from "../LineaRollupYieldExtensionContractClient.js";
 
-import type { ILogger, IBlockchainClient } from "@consensys/linea-shared-utils";
+import type { ILogger, IBlockchainClient } from "@lfdt-lineth/shared-utils";
 import type { PublicClient, TransactionReceipt, Address, Hex } from "viem";
 
 jest.mock("viem", () => {

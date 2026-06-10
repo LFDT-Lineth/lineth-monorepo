@@ -24,9 +24,9 @@ const nextConfig = {
   },
   // Transpile workspace packages
   transpilePackages: [
-    "@consensys/linea-contract-integrity-verifier",
-    "@consensys/linea-contract-integrity-verifier-ethers",
-    "@consensys/linea-contract-integrity-verifier-viem",
+    "@lfdt-lineth/contract-integrity-verifier",
+    "@lfdt-lineth/contract-integrity-verifier-ethers",
+    "@lfdt-lineth/contract-integrity-verifier-viem",
   ],
   // External packages for server components (only used in non-static builds)
   ...(isStaticExport ? {} : { serverExternalPackages: ["ethers", "viem"] }),

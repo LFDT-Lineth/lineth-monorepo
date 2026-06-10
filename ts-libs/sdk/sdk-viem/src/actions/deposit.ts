@@ -1,4 +1,4 @@
-import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
+import { getContractsAddressesByChainId } from "@lfdt-lineth/sdk-core";
 import {
   Account,
   Address,
@@ -100,7 +100,7 @@ export type DepositErrorType =
  * import { createWalletClient, http, zeroAddress } from 'viem'
  * import { privateKeyToAccount } from 'viem/accounts'
  * import { mainnet, linea } from 'viem/chains'
- * import { deposit } from '@consensys/linea-sdk-viem'
+ * import { deposit } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createWalletClient({
  *   chain: mainnet,
@@ -126,7 +126,7 @@ export type DepositErrorType =
  * import { createPublicClient, createWalletClient, http, zeroAddress } from 'viem'
  * import { privateKeyToAccount } from 'viem/accounts'
  * import { mainnet, linea } from 'viem/chains'
- * import { deposit } from '@consensys/linea-sdk-viem'
+ * import { deposit } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createWalletClient({
  *   account: privateKeyToAccount('0x…'),

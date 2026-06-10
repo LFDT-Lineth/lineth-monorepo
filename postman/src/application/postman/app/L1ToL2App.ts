@@ -1,4 +1,4 @@
-import { WinstonLogger } from "@consensys/linea-shared-utils";
+import { WinstonLogger } from "@lfdt-lineth/shared-utils";
 import { type LoggerOptions } from "winston";
 
 import { L1NetworkConfig, L2NetworkConfig } from "./config/config";

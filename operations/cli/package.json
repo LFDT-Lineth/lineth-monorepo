@@ -29,7 +29,7 @@
     "viem": "catalog:"
   },
   "devDependencies": {
-    "@consensys/eslint-config": "workspace:*",
+    "@lfdt-lineth/eslint-config": "workspace:*",
     "@jest/globals": "catalog:",
     "@oclif/test": "4.1.18",
     "@types/jest": "catalog:",

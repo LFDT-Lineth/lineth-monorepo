@@ -12,7 +12,7 @@ import {
   parseSoliditySource as coreParseSoliditySource,
   mergeSchemas as coreMergeSchemas,
   calculateErc7201BaseSlotWithAdapter,
-} from "@consensys/linea-contract-integrity-verifier";
+} from "@lfdt-lineth/contract-integrity-verifier";
 import { ethers } from "ethers";
 
 import type {
@@ -20,7 +20,7 @@ import type {
   SchemaGeneratorOptions,
   ParseResult,
   Schema,
-} from "@consensys/linea-contract-integrity-verifier";
+} from "@lfdt-lineth/contract-integrity-verifier";
 
 /**
  * Ethers implementation of CryptoAdapter.
@@ -55,7 +55,7 @@ export function createCryptoAdapter(): CryptoAdapter {
 
 // Re-export types
 export type { Schema, SchemaGeneratorOptions, ParseResult };
-export type { StructDef, FieldDef } from "@consensys/linea-contract-integrity-verifier";
+export type { StructDef, FieldDef } from "@lfdt-lineth/contract-integrity-verifier";
 
 /**
  * Calculate ERC-7201 base slot from namespace ID using ethers.

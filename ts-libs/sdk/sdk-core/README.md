@@ -1,15 +1,15 @@
-# @consensys/linea-sdk-core
+# @lfdt-lineth/sdk-core
 
 Core utilities for the [Linea](https://linea.build) bridge SDK — Merkle tree, message types, chain and contract helpers.
 
-This package is framework-agnostic and serves as the foundation for higher-level SDKs like [`@consensys/linea-sdk-viem`](../sdk-viem/).
+This package is framework-agnostic and serves as the foundation for higher-level SDKs like [`@lfdt-lineth/sdk-viem`](../sdk-viem/).
 
 ## Installation
 
 ```bash
-npm install @consensys/linea-sdk-core
+npm install @lfdt-lineth/sdk-core
 # or
-pnpm add @consensys/linea-sdk-core
+pnpm add @lfdt-lineth/sdk-core
 ```
 
 ## Usage
@@ -21,13 +21,13 @@ import {
   formatMessageStatus,
   getContractsAddressesByChainId,
   OnChainMessageStatus,
-} from "@consensys/linea-sdk-core";
+} from "@lfdt-lineth/sdk-core";
 ```
 
 ### Sparse Merkle Tree
 
 ```ts
-import { SparseMerkleTree } from "@consensys/linea-sdk-core";
+import { SparseMerkleTree } from "@lfdt-lineth/sdk-core";
 
 const tree = new SparseMerkleTree();
 // Build and verify Merkle proofs for L2 → L1 message claiming
@@ -42,7 +42,7 @@ import {
   isLineaMainnet,
   isSepolia,
   isLineaSepolia,
-} from "@consensys/linea-sdk-core";
+} from "@lfdt-lineth/sdk-core";
 
 const addresses = getContractsAddressesByChainId(1); // Ethereum Mainnet
 ```
@@ -50,7 +50,7 @@ const addresses = getContractsAddressesByChainId(1); // Ethereum Mainnet
 ### Message Utilities
 
 ```ts
-import { formatMessageStatus, OnChainMessageStatus } from "@consensys/linea-sdk-core";
+import { formatMessageStatus, OnChainMessageStatus } from "@lfdt-lineth/sdk-core";
 
 const status = formatMessageStatus(OnChainMessageStatus.CLAIMED);
 ```

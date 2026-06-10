@@ -19,6 +19,11 @@ on:
         required: false
         type: boolean
         default: false
+      dual_publish_legacy:
+        description: "Also publish the legacy @consensys/linea-sdk-* package"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   actions: read
@@ -74,26 +79,62 @@ jobs:
           pnpm-install-options: "--frozen-lockfile --prefer-offline --ignore-scripts"
   
       - name: Build sdk-core
-        run: pnpm -F @consensys/linea-sdk-core run build
+        run: pnpm -F @lfdt-lineth/sdk-core run build
 
       - name: Check if version already published
         id: check
         run: |
           VERSION=$(node -p "require('./ts-libs/sdk/sdk-core/package.json').version")
-          if npm view @consensys/linea-sdk-core@"$VERSION" version 2>/dev/null; then
+          if npm view @lfdt-lineth/sdk-core@"$VERSION" version 2>/dev/null; then
             echo "::notice::sdk-core@$VERSION already published, skipping"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Configure npm auth
-        if: ${{ !inputs.dry_run && steps.check.outputs.skip != 'true' }}
+        if: ${{ !inputs.dry_run && (steps.check.outputs.skip != 'true' || inputs.dual_publish_legacy) }}
         run: echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" >> .npmrc
 
       - name: Publish sdk-core
         if: ${{ !inputs.dry_run && steps.check.outputs.skip != 'true' }}
-        run: pnpm -F @consensys/linea-sdk-core publish --no-git-checks
+        run: pnpm -F @lfdt-lineth/sdk-core publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Check if legacy sdk-core version already published
+        if: ${{ !inputs.dry_run && inputs.dual_publish_legacy }}
+        id: legacy_check
+        run: |
+          VERSION=$(node -p "require('./ts-libs/sdk/sdk-core/package.json').version")
+          if npm view @consensys/linea-sdk-core@"$VERSION" version 2>/dev/null; then
+            echo "::notice::@consensys/linea-sdk-core@$VERSION already published, skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish legacy sdk-core
+        if: ${{ !inputs.dry_run && inputs.dual_publish_legacy && steps.legacy_check.outputs.skip != 'true' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          LEGACY_DIR="${RUNNER_TEMP}/legacy-sdk-core"
+          rm -rf "$LEGACY_DIR"
+          mkdir -p "$LEGACY_DIR"
+          cp -R \
+            ts-libs/sdk/sdk-core/CHANGELOG.md \
+            ts-libs/sdk/sdk-core/dist \
+            ts-libs/sdk/sdk-core/LICENSE-APACHE \
+            ts-libs/sdk/sdk-core/LICENSE-MIT \
+            ts-libs/sdk/sdk-core/package.json \
+            ts-libs/sdk/sdk-core/README.md \
+            "$LEGACY_DIR"
+          node -e '
+            const fs = require("fs");
+            const packageJsonPath = process.argv[1];
+            const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+            pkg.name = "@consensys/linea-sdk-core";
+            pkg.files = [...new Set([...(pkg.files ?? []), "CHANGELOG.md"])];
+            fs.writeFileSync(packageJsonPath, JSON.stringify(pkg, null, 2) + "\n");
+          ' "$LEGACY_DIR/package.json"
+          npm publish "$LEGACY_DIR" --access public
 
       - name: Tag sdk-core release
         if: ${{ !inputs.dry_run }}
@@ -101,7 +142,7 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_commit_sha }}
         run: |
           VERSION=$(node -p "require('./ts-libs/sdk/sdk-core/package.json').version")
-          TAG="@consensys/linea-sdk-core@${VERSION}"
+          TAG="@lfdt-lineth/sdk-core@${VERSION}"
 
           REMOTE_SHA=$(git ls-remote --tags origin "refs/tags/$TAG" | awk '{print $1}')
           if [[ -n "$REMOTE_SHA" ]]; then
@@ -127,7 +168,7 @@ jobs:
           if [[ -f "$CHANGELOG" ]]; then
             awk '/^## /{if(found)exit; found=1} found' "$CHANGELOG" > release-notes.md
           else
-            echo "Release @consensys/linea-sdk-core@${VERSION}" > release-notes.md
+            echo "Release @lfdt-lineth/sdk-core@${VERSION}" > release-notes.md
           fi
 
       - name: Package source archive
@@ -141,8 +182,8 @@ jobs:
         if: ${{ !inputs.dry_run }}
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b #v2.5.0
         with:
-          tag_name: "@consensys/linea-sdk-core@${{ steps.release_notes.outputs.version }}"
-          name: "@consensys/linea-sdk-core@${{ steps.release_notes.outputs.version }}"
+          tag_name: "@lfdt-lineth/sdk-core@${{ steps.release_notes.outputs.version }}"
+          name: "@lfdt-lineth/sdk-core@${{ steps.release_notes.outputs.version }}"
           body_path: release-notes.md
           target_commitish: ${{ inputs.release_commit_sha }}
           files: |
@@ -167,33 +208,84 @@ jobs:
       - name: Verify sdk-core dependency is published on npm
         run: |
           CORE_VERSION=$(node -p "require('./ts-libs/sdk/sdk-core/package.json').version")
+          echo "Resolved @lfdt-lineth/sdk-core dependency version: $CORE_VERSION"
+          if ! npm view "@lfdt-lineth/sdk-core@${CORE_VERSION}" version 2>/dev/null; then
+            echo "::error::@lfdt-lineth/sdk-core@${CORE_VERSION} is not published on npm. Run this workflow for sdk-core first."
+            exit 1
+          fi
+
+      - name: Verify legacy sdk-core dependency is published on npm
+        if: ${{ inputs.dual_publish_legacy }}
+        run: |
+          CORE_VERSION=$(node -p "require('./ts-libs/sdk/sdk-core/package.json').version")
           echo "Resolved @consensys/linea-sdk-core dependency version: $CORE_VERSION"
           if ! npm view "@consensys/linea-sdk-core@${CORE_VERSION}" version 2>/dev/null; then
-            echo "::error::@consensys/linea-sdk-core@${CORE_VERSION} is not published on npm. Run this workflow for sdk-core first."
+            echo "::error::@consensys/linea-sdk-core@${CORE_VERSION} is not published on npm. Run this workflow for sdk-core with dual_publish_legacy enabled first."
             exit 1
           fi
       
       - name: Build sdk-viem
-        run: pnpm -F "@consensys/linea-sdk-viem..." run build
+        run: pnpm -F "@lfdt-lineth/sdk-viem..." run build
 
       - name: Check if version already published
         id: check
         run: |
           VERSION=$(node -p "require('./ts-libs/sdk/sdk-viem/package.json').version")
-          if npm view @consensys/linea-sdk-viem@"$VERSION" version 2>/dev/null; then
+          if npm view @lfdt-lineth/sdk-viem@"$VERSION" version 2>/dev/null; then
             echo "::notice::sdk-viem@$VERSION already published, skipping"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Configure npm auth
-        if: ${{ !inputs.dry_run && steps.check.outputs.skip != 'true' }}
+        if: ${{ !inputs.dry_run && (steps.check.outputs.skip != 'true' || inputs.dual_publish_legacy) }}
         run: echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" >> .npmrc
 
       - name: Publish sdk-viem
         if: ${{ !inputs.dry_run && steps.check.outputs.skip != 'true' }}
-        run: pnpm -F @consensys/linea-sdk-viem publish --no-git-checks
+        run: pnpm -F @lfdt-lineth/sdk-viem publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Check if legacy sdk-viem version already published
+        if: ${{ !inputs.dry_run && inputs.dual_publish_legacy }}
+        id: legacy_check
+        run: |
+          VERSION=$(node -p "require('./ts-libs/sdk/sdk-viem/package.json').version")
+          if npm view @consensys/linea-sdk-viem@"$VERSION" version 2>/dev/null; then
+            echo "::notice::@consensys/linea-sdk-viem@$VERSION already published, skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish legacy sdk-viem
+        if: ${{ !inputs.dry_run && inputs.dual_publish_legacy && steps.legacy_check.outputs.skip != 'true' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          LEGACY_DIR="${RUNNER_TEMP}/legacy-sdk-viem"
+          rm -rf "$LEGACY_DIR"
+          mkdir -p "$LEGACY_DIR"
+          cp -R \
+            ts-libs/sdk/sdk-viem/CHANGELOG.md \
+            ts-libs/sdk/sdk-viem/dist \
+            ts-libs/sdk/sdk-viem/LICENSE-APACHE \
+            ts-libs/sdk/sdk-viem/LICENSE-MIT \
+            ts-libs/sdk/sdk-viem/package.json \
+            ts-libs/sdk/sdk-viem/README.md \
+            "$LEGACY_DIR"
+          node -e '
+            const fs = require("fs");
+            const packageJsonPath = process.argv[1];
+            const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+            pkg.name = "@consensys/linea-sdk-viem";
+            pkg.dependencies = {
+              ...pkg.dependencies,
+              "@consensys/linea-sdk-core": pkg.version,
+            };
+            delete pkg.dependencies["@lfdt-lineth/sdk-core"];
+            pkg.files = [...new Set([...(pkg.files ?? []), "CHANGELOG.md"])];
+            fs.writeFileSync(packageJsonPath, JSON.stringify(pkg, null, 2) + "\n");
+          ' "$LEGACY_DIR/package.json"
+          npm publish "$LEGACY_DIR" --access public
 
       - name: Tag sdk-viem release
         if: ${{ !inputs.dry_run }}
@@ -201,7 +293,7 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_commit_sha }}
         run: |
           VERSION=$(node -p "require('./ts-libs/sdk/sdk-viem/package.json').version")
-          TAG="@consensys/linea-sdk-viem@${VERSION}"
+          TAG="@lfdt-lineth/sdk-viem@${VERSION}"
 
           REMOTE_SHA=$(git ls-remote --tags origin "refs/tags/$TAG" | awk '{print $1}')
           if [[ -n "$REMOTE_SHA" ]]; then
@@ -227,7 +319,7 @@ jobs:
           if [[ -f "$CHANGELOG" ]]; then
             awk '/^## /{if(found)exit; found=1} found' "$CHANGELOG" > release-notes.md
           else
-            echo "Release @consensys/linea-sdk-viem@${VERSION}" > release-notes.md
+            echo "Release @lfdt-lineth/sdk-viem@${VERSION}" > release-notes.md
           fi
 
       - name: Package source archive
@@ -241,8 +333,8 @@ jobs:
         if: ${{ !inputs.dry_run }}
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b #v2.5.0
         with:
-          tag_name: "@consensys/linea-sdk-viem@${{ steps.release_notes.outputs.version }}"
-          name: "@consensys/linea-sdk-viem@${{ steps.release_notes.outputs.version }}"
+          tag_name: "@lfdt-lineth/sdk-viem@${{ steps.release_notes.outputs.version }}"
+          name: "@lfdt-lineth/sdk-viem@${{ steps.release_notes.outputs.version }}"
           body_path: release-notes.md
           target_commitish: ${{ inputs.release_commit_sha }}
           files: |

@@ -1,5 +1,5 @@
-import { etherToWei } from "@consensys/linea-shared-utils";
 import { describe, expect, it } from "@jest/globals";
+import { etherToWei } from "@lfdt-lineth/shared-utils";
 
 import { sendL1ToL2Message, sendL2ToL1Message } from "./common/test-helpers/messaging";
 import { getMessageSentEventFromLogs, waitForEvents } from "./common/utils";

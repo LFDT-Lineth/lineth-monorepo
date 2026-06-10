@@ -1,4 +1,4 @@
-import { getContractsAddressesByChainId, MessageProof, SparseMerkleTree } from "@consensys/linea-sdk-core";
+import { getContractsAddressesByChainId, MessageProof, SparseMerkleTree } from "@lfdt-lineth/sdk-core";
 import {
   Abi,
   Account,
@@ -85,7 +85,7 @@ export type GetMessageProofErrorType =
  * @example
  * import { createPublicClient, http } from 'viem'
  * import { mainnet, linea } from 'viem/chains'
- * import { getMessageProof } from '@consensys/linea-sdk-viem'
+ * import { getMessageProof } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createPublicClient({
  *   chain: mainnet,

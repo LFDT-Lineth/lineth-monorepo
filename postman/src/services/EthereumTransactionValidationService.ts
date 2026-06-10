@@ -1,4 +1,4 @@
-import { ILogger } from "@consensys/linea-shared-utils";
+import { ILogger } from "@lfdt-lineth/shared-utils";
 
 import { BaseTransactionValidationService } from "./BaseTransactionValidationService";
 import { ILineaRollupClient } from "../core/clients/blockchain/ethereum/ILineaRollupClient";

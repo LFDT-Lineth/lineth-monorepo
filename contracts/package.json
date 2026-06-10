@@ -28,7 +28,7 @@
   "devDependencies": {
     "@chainlink/contracts": "1.5.0",
     "@chainsafe/persistent-merkle-tree": "1.2.5",
-    "@consensys/eslint-config": "workspace:*",
+    "@lfdt-lineth/eslint-config": "workspace:*",
     "@ethereumjs/util": "10.1.1",
     "@lidofinance/lsv-cli": "1.8.0",
     "@lodestar/types": "1.42.0",

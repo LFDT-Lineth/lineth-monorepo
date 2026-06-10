@@ -105,17 +105,17 @@ pnpm -F contracts run build
 | All pnpm packages | `pnpm run test` |
 | Contracts (Hardhat) | `pnpm -F contracts run test` |
 | Contracts (coverage) | `pnpm -F contracts run coverage` |
-| SDK core | `pnpm -F @consensys/linea-sdk-core run test` |
-| SDK ethers | `pnpm -F @consensys/linea-sdk run test` |
-| SDK viem | `pnpm -F @consensys/linea-sdk-viem run test` |
-| Postman | `pnpm -F @consensys/linea-postman run test` |
+| SDK core | `pnpm -F @lfdt-lineth/sdk-core run test` |
+| SDK ethers | `pnpm -F @lfdt-lineth/sdk run test` |
+| SDK viem | `pnpm -F @lfdt-lineth/sdk-viem run test` |
+| Postman | `pnpm -F @lfdt-lineth/postman run test` |
 | E2E (requires local stack) | `pnpm -F e2e run test:local` |
 | Coordinator (Kotlin) | `./gradlew :coordinator:app:test` |
 | Prover (Go) | `cd prover && go test ./... -tags nocorset,fuzzlight -timeout 30m` |
-| Native libs | `pnpm -F @consensys/linea-native-libs run test` |
-| Shared utils | `pnpm -F @consensys/linea-shared-utils run test` |
-| Automation service | `pnpm -F @consensys/linea-native-yield-automation-service run test` |
-| Lido governance monitor | `pnpm -F @consensys/lido-governance-monitor run test` |
+| Native libs | `pnpm -F @lfdt-lineth/native-libs run test` |
+| Shared utils | `pnpm -F @lfdt-lineth/shared-utils run test` |
+| Automation service | `pnpm -F @lfdt-lineth/native-yield-automation-service run test` |
+| Lido governance monitor | `pnpm -F @lfdt-lineth/lido-governance-monitor run test` |
 
 ### Lint and Format
 
@@ -196,7 +196,7 @@ After writing or editing code, check LSP diagnostics and fix any type errors or 
 - **Monorepo tool:** pnpm workspaces (`pnpm-workspace.yaml`)
 - **Dual build systems:** pnpm for TypeScript/JavaScript, Gradle for Kotlin/Java, Make+Go for prover
 - **Dependency catalog:** Shared versions in `pnpm-workspace.yaml` catalog section
-- **Shared ESLint config:** `@consensys/eslint-config` with exports for default, `./nextjs`, and `./node`
+- **Shared ESLint config:** `@lfdt-lineth/eslint-config` with exports for default, `./nextjs`, and `./node`
 
 ### Naming
 
@@ -405,11 +405,11 @@ docs/                    Project documentation
 ### Cross-Package Dependencies
 
 ```
-postman -> @consensys/linea-sdk-viem -> @consensys/linea-sdk-core
-postman -> @consensys/linea-native-libs, @consensys/linea-shared-utils
-e2e -> @consensys/linea-shared-utils
+postman -> @lfdt-lineth/sdk-viem -> @lfdt-lineth/sdk-core
+postman -> @lfdt-lineth/native-libs, @lfdt-lineth/shared-utils
+e2e -> @lfdt-lineth/shared-utils
 operations/cli -> (standalone, uses ethers + viem)
-operations/native-yield/* -> @consensys/linea-shared-utils
+operations/native-yield/* -> @lfdt-lineth/shared-utils
 coordinator -> jvm-libs/*
 transaction-exclusion-api -> jvm-libs/*
 linea-besu/plugins -> jvm-libs/*

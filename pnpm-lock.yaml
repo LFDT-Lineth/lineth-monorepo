@@ -177,12 +177,12 @@ importers:
       '@chainsafe/persistent-merkle-tree':
         specifier: 1.2.5
         version: 1.2.5
-      '@consensys/eslint-config':
-        specifier: workspace:*
-        version: link:../ts-libs/eslint-config
       '@ethereumjs/util':
         specifier: 10.1.1
         version: 10.1.1
+      '@lfdt-lineth/eslint-config':
+        specifier: workspace:*
+        version: link:../ts-libs/eslint-config
       '@lidofinance/lsv-cli':
         specifier: 1.8.0
         version: 1.8.0(@react-native-async-storage/async-storage@1.24.0(react-native@0.74.0(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(bufferutil@4.1.0)(encoding@0.1.13)(react@18.2.0)(utf-8-validate@6.0.6)))(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.4.1)
@@ -288,7 +288,7 @@ importers:
 
   contracts/integrity-verifier/verifier-core:
     devDependencies:
-      '@consensys/eslint-config':
+      '@lfdt-lineth/eslint-config':
         specifier: workspace:*
         version: link:../../../ts-libs/eslint-config
       '@types/jest':
@@ -309,11 +309,11 @@ importers:
 
   contracts/integrity-verifier/verifier-ethers:
     dependencies:
-      '@consensys/linea-contract-integrity-verifier':
+      '@lfdt-lineth/contract-integrity-verifier':
         specifier: workspace:*
         version: link:../verifier-core
     devDependencies:
-      '@consensys/eslint-config':
+      '@lfdt-lineth/eslint-config':
         specifier: workspace:*
         version: link:../../../ts-libs/eslint-config
       '@types/jest':
@@ -337,18 +337,18 @@ importers:
 
   contracts/integrity-verifier/verifier-ui:
     dependencies:
-      '@consensys/linea-contract-integrity-verifier':
-        specifier: workspace:*
-        version: link:../verifier-core
-      '@consensys/linea-contract-integrity-verifier-ethers':
-        specifier: workspace:*
-        version: link:../verifier-ethers
-      '@consensys/linea-contract-integrity-verifier-viem':
-        specifier: workspace:*
-        version: link:../verifier-viem
       '@headlessui/react':
         specifier: 2.2.10
         version: 2.2.10(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@lfdt-lineth/contract-integrity-verifier':
+        specifier: workspace:*
+        version: link:../verifier-core
+      '@lfdt-lineth/contract-integrity-verifier-ethers':
+        specifier: workspace:*
+        version: link:../verifier-ethers
+      '@lfdt-lineth/contract-integrity-verifier-viem':
+        specifier: workspace:*
+        version: link:../verifier-viem
       '@tanstack/react-query':
         specifier: 5.100.9
         version: 5.100.9(react@19.2.6)
@@ -374,7 +374,7 @@ importers:
         specifier: 5.0.13
         version: 5.0.13(@types/react@19.2.14)(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6))
     devDependencies:
-      '@consensys/eslint-config':
+      '@lfdt-lineth/eslint-config':
         specifier: workspace:*
         version: link:../../../ts-libs/eslint-config
       '@playwright/test':
@@ -401,11 +401,11 @@ importers:
 
   contracts/integrity-verifier/verifier-viem:
     dependencies:
-      '@consensys/linea-contract-integrity-verifier':
+      '@lfdt-lineth/contract-integrity-verifier':
         specifier: workspace:*
         version: link:../verifier-core
     devDependencies:
-      '@consensys/eslint-config':
+      '@lfdt-lineth/eslint-config':
         specifier: workspace:*
         version: link:../../../ts-libs/eslint-config
       '@types/jest':
@@ -448,7 +448,7 @@ importers:
         specifier: 3.6.11
         version: 3.6.11(@coinbase/wallet-sdk@4.3.7(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.4.1))(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.4.1))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.4.1))(@tanstack/query-core@5.100.9)(@tanstack/react-query@5.100.9(react@19.2.6))(@types/react@19.2.14)(@walletconnect/ethereum-provider@2.21.8(@react-native-async-storage/async-storage@1.24.0(react-native@0.74.0(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(utf-8-validate@6.0.6)))(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.4.1))(react@19.2.6)(typescript@5.9.3)(viem@2.47.5(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.4.1))
     devDependencies:
-      '@consensys/eslint-config':
+      '@lfdt-lineth/eslint-config':
         specifier: workspace:*
         version: link:../../ts-libs/eslint-config
       '@types/node':
@@ -469,15 +469,15 @@ importers:
 
   e2e:
     devDependencies:
-      '@consensys/eslint-config':
-        specifier: workspace:*
-        version: link:../ts-libs/eslint-config
-      '@consensys/linea-shared-utils':
-        specifier: workspace:*
-        version: link:../ts-libs/linea-shared-utils
       '@jest/globals':
         specifier: 'catalog:'
         version: 30.4.1
+      '@lfdt-lineth/eslint-config':
+        specifier: workspace:*
+        version: link:../ts-libs/eslint-config
+      '@lfdt-lineth/shared-utils':
+        specifier: workspace:*
+        version: link:../ts-libs/linea-shared-utils
       '@octokit/rest':
         specifier: 22.0.1
         version: 22.0.1
@@ -551,12 +551,12 @@ importers:
         specifier: 'catalog:'
         version: 2.47.5(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.4.1)
     devDependencies:
-      '@consensys/eslint-config':
-        specifier: workspace:*
-        version: link:../../ts-libs/eslint-config
       '@jest/globals':
         specifier: 'catalog:'
         version: 30.4.1
+      '@lfdt-lineth/eslint-config':
+        specifier: workspace:*
+        version: link:../../ts-libs/eslint-config
       '@oclif/test':
         specifier: 4.1.18
         version: 4.1.18(@oclif/core@4.11.1)
@@ -587,7 +587,7 @@ importers:
       '@apollo/client':
         specifier: 4.1.9
         version: 4.1.9(graphql@16.13.2)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(rxjs@7.8.2)
-      '@consensys/linea-shared-utils':
+      '@lfdt-lineth/shared-utils':
         specifier: workspace:*
         version: link:../../../ts-libs/linea-shared-utils
       '@lidofinance/lsv-cli':
@@ -609,12 +609,12 @@ importers:
         specifier: 4.4.1
         version: 4.4.1
     devDependencies:
-      '@consensys/eslint-config':
-        specifier: workspace:*
-        version: link:../../../ts-libs/eslint-config
       '@jest/globals':
         specifier: 'catalog:'
         version: 30.4.1
+      '@lfdt-lineth/eslint-config':
+        specifier: workspace:*
+        version: link:../../../ts-libs/eslint-config
       '@types/jest':
         specifier: 'catalog:'
         version: 30.0.0
@@ -639,7 +639,7 @@ importers:
       '@anthropic-ai/sdk':
         specifier: 0.95.1
         version: 0.95.1(zod@4.4.1)
-      '@consensys/linea-shared-utils':
+      '@lfdt-lineth/shared-utils':
         specifier: workspace:*
         version: link:../../../ts-libs/linea-shared-utils
       '@prisma/adapter-pg':
@@ -670,12 +670,12 @@ importers:
         specifier: 4.4.1
         version: 4.4.1
     devDependencies:
-      '@consensys/eslint-config':
-        specifier: workspace:*
-        version: link:../../../ts-libs/eslint-config
       '@jest/globals':
         specifier: 'catalog:'
         version: 30.4.1
+      '@lfdt-lineth/eslint-config':
+        specifier: workspace:*
+        version: link:../../../ts-libs/eslint-config
       '@types/html-to-text':
         specifier: 9.0.4
         version: 9.0.4
@@ -706,16 +706,16 @@ importers:
 
   postman:
     dependencies:
-      '@consensys/linea-native-libs':
+      '@lfdt-lineth/native-libs':
         specifier: workspace:*
         version: link:../ts-libs/linea-native-libs
-      '@consensys/linea-sdk-core':
+      '@lfdt-lineth/sdk-core':
         specifier: workspace:*
         version: link:../ts-libs/sdk/sdk-core
-      '@consensys/linea-sdk-viem':
+      '@lfdt-lineth/sdk-viem':
         specifier: workspace:*
         version: link:../ts-libs/sdk/sdk-viem
-      '@consensys/linea-shared-utils':
+      '@lfdt-lineth/shared-utils':
         specifier: workspace:*
         version: link:../ts-libs/linea-shared-utils
       class-validator:
@@ -752,12 +752,12 @@ importers:
         specifier: 4.4.1
         version: 4.4.1
     devDependencies:
-      '@consensys/eslint-config':
-        specifier: workspace:*
-        version: link:../ts-libs/eslint-config
       '@jest/globals':
         specifier: 'catalog:'
         version: 30.4.1
+      '@lfdt-lineth/eslint-config':
+        specifier: workspace:*
+        version: link:../ts-libs/eslint-config
       '@types/express':
         specifier: 5.0.6
         version: 5.0.6
@@ -823,12 +823,12 @@ importers:
         specifier: 2.16.2
         version: 2.16.2
     devDependencies:
-      '@consensys/eslint-config':
-        specifier: workspace:*
-        version: link:../eslint-config
       '@jest/globals':
         specifier: 'catalog:'
         version: 30.4.1
+      '@lfdt-lineth/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
       '@types/jest':
         specifier: 'catalog:'
         version: 30.0.0
@@ -890,7 +890,7 @@ importers:
         specifier: 'catalog:'
         version: 3.19.0
     devDependencies:
-      '@consensys/eslint-config':
+      '@lfdt-lineth/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
       '@types/express':
@@ -927,7 +927,7 @@ importers:
         specifier: 1.2.4
         version: 1.2.4(typescript@5.9.3)(zod@4.4.1)
     devDependencies:
-      '@consensys/eslint-config':
+      '@lfdt-lineth/eslint-config':
         specifier: workspace:*
         version: link:../../eslint-config
       '@types/jest':
@@ -958,12 +958,12 @@ importers:
         specifier: 11.3.6
         version: 11.3.6
     devDependencies:
-      '@consensys/eslint-config':
-        specifier: workspace:*
-        version: link:../../eslint-config
       '@jest/globals':
         specifier: 'catalog:'
         version: 30.4.1
+      '@lfdt-lineth/eslint-config':
+        specifier: workspace:*
+        version: link:../../eslint-config
       '@typechain/ethers-v6':
         specifier: 'catalog:'
         version: 0.5.1(ethers@6.16.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(typechain@8.3.2(typescript@5.9.3))(typescript@5.9.3)
@@ -988,11 +988,11 @@ importers:
 
   ts-libs/sdk/sdk-viem:
     dependencies:
-      '@consensys/linea-sdk-core':
+      '@lfdt-lineth/sdk-core':
         specifier: workspace:*
         version: link:../sdk-core
     devDependencies:
-      '@consensys/eslint-config':
+      '@lfdt-lineth/eslint-config':
         specifier: workspace:*
         version: link:../../eslint-config
       '@types/jest':
