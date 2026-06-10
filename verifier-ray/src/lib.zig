@@ -1,4 +1,5 @@
-pub const runtime = @import("runtime.zig");
+pub const protocol = @import("protocol/root.zig");
+pub const verifier = @import("verifier.zig");
 
 pub const field = struct {
     pub const koalabear = @import("field/koalabear.zig");

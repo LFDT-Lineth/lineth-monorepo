@@ -17,7 +17,11 @@ func TestBuildVanishingSystemStaticModuleSize(t *testing.T) {
 	mod.NewVanishing(sys.Context.Childf("bool"), wiop.Sub(wiop.Mul(col.View(), col.View()), col.View()))
 
 	global.Compile(sys)
-	got, err := BuildVanishingSystem(sys)
+	routing, err := BuildCoinRouting(sys)
+	if err != nil {
+		t.Fatalf("BuildCoinRouting() error = %v", err)
+	}
+	got, err := BuildVanishingSystem(sys, routing)
 	if err != nil {
 		t.Fatalf("BuildVanishingSystem() error = %v", err)
 	}
@@ -46,7 +50,11 @@ func TestBuildVanishingSystemDynamicIndicesAreCompact(t *testing.T) {
 	dynB.NewVanishing(sys.Context.Childf("bBool"), wiop.Sub(wiop.Mul(colB.View(), colB.View()), colB.View()))
 
 	global.Compile(sys)
-	got, err := BuildVanishingSystem(sys)
+	routing, err := BuildCoinRouting(sys)
+	if err != nil {
+		t.Fatalf("BuildCoinRouting() error = %v", err)
+	}
+	got, err := BuildVanishingSystem(sys, routing)
 	if err != nil {
 		t.Fatalf("BuildVanishingSystem() error = %v", err)
 	}
@@ -75,7 +83,11 @@ func TestWriteVanishingScenariosZigEmitsSizeModes(t *testing.T) {
 	dynMod.NewVanishing(sys.Context.Childf("dynBool"), wiop.Sub(wiop.Mul(dynCol.View(), dynCol.View()), dynCol.View()))
 
 	global.Compile(sys)
-	vanishingSystem, err := BuildVanishingSystem(sys)
+	routing, err := BuildCoinRouting(sys)
+	if err != nil {
+		t.Fatalf("BuildCoinRouting() error = %v", err)
+	}
+	vanishingSystem, err := BuildVanishingSystem(sys, routing)
 	if err != nil {
 		t.Fatalf("BuildVanishingSystem() error = %v", err)
 	}
@@ -102,7 +114,11 @@ func TestBuildVanishingSystemSupportsCellAndCoinLeaves(t *testing.T) {
 	mod.NewVanishing(sys.Context.Childf("coinScaled"), wiop.Mul(coin, wiop.Sub(col.View(), cell)))
 
 	global.Compile(sys)
-	vanishingSystem, err := BuildVanishingSystem(sys)
+	routing, err := BuildCoinRouting(sys)
+	if err != nil {
+		t.Fatalf("BuildCoinRouting() error = %v", err)
+	}
+	vanishingSystem, err := BuildVanishingSystem(sys, routing)
 	if err != nil {
 		t.Fatalf("BuildVanishingSystem() error = %v", err)
 	}

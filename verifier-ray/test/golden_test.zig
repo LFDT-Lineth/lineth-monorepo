@@ -11,16 +11,16 @@ const vectors = @import("test_vectors");
 
 const field = verifier_ray.field.koalabear;
 const ext = verifier_ray.field.koalabear_ext;
-const commitment = verifier_ray.crypto.commitment;
+const commitment_mod = verifier_ray.crypto.commitment;
 const fiat_shamir = verifier_ray.crypto.fiat_shamir;
 const poseidon2 = verifier_ray.crypto.poseidon2;
 const poly_lagrange = verifier_ray.polynomial.lagrange;
 const poly_canonical = verifier_ray.polynomial.canonical;
-const runtime = verifier_ray.runtime;
+const protocol = verifier_ray.protocol;
 
 test "runtime visibility tags match prover-ray" {
-    try std.testing.expectEqual(vectors.prover_visibility_oracle, @intFromEnum(runtime.Visibility.oracle));
-    try std.testing.expectEqual(vectors.prover_visibility_public, @intFromEnum(runtime.Visibility.public));
+    try std.testing.expectEqual(vectors.prover_visibility_oracle, @intFromEnum(protocol.Visibility.oracle));
+    try std.testing.expectEqual(vectors.prover_visibility_public, @intFromEnum(protocol.Visibility.public));
 }
 
 test "koalabear base field matches prover-ray golden cases" {
@@ -190,36 +190,44 @@ test "fiat-shamir transcript matches prover-ray golden cases" {
     }
 }
 
-test "runtime round coin derivation matches generated verifier transcript" {
+test "transcript derives round coins matching prover-ray golden vectors" {
     for (vectors.runtime_trace_cases) |case| {
-        var rt = runtime.Runtime.initWithRoundCount(case.rounds.len + 1);
-        var coins: [max_trace_coins]runtime.Coin = undefined;
-
-        // The trace is generated from prover-ray data at the verifier boundary:
-        // oracle commitments, public values, and public cells.
-        for (case.rounds, 0..) |round_case, round_index| {
+        // protocol.replay is parametric on a comptime Spec; the golden vectors
+        // carry runtime coin counts, so drive fiat_shamir.Transcript directly
+        // and compare against the prover-ray expected values.
+        var transcript = fiat_shamir.Transcript.init();
+        for (case.rounds) |round_case| {
             var backing = TraceRoundBacking{};
             const message = try backing.fill(round_case, false);
-            // all the random coins generated via zig runtime
-            const got = try rt.advanceRoundWithMessage(round_index, message, &coins);
-            try std.testing.expectEqual(round_case.expected_coins.len, got.len);
-            for (got, round_case.expected_coins) |actual, expected| {
-                try expectExtUints(actual, expected);
+            for (message.columns) |entry| {
+                switch (entry) {
+                    .oracle_commitment => |c| transcript.updateElements(&c),
+                    .public_column => |col| transcript.absorbVector(col),
+                }
+            }
+            for (message.cells) |cell| transcript.absorbScalar(cell);
+            for (round_case.expected_coins) |expected| {
+                try expectExt(transcript.randomExt(), ext.Ext.fromUints(expected));
             }
         }
     }
 }
 
-test "runtime downstream coin diverges after tampered absorb" {
+test "tampered round message produces different downstream coins" {
     const case = vectors.runtime_trace_cases[0];
-    var rt = runtime.Runtime.initWithRoundCount(case.rounds.len + 1);
+    var transcript = fiat_shamir.Transcript.init();
     var backing = TraceRoundBacking{};
     const message = try backing.fill(case.rounds[0], true);
-    var coins: [max_trace_coins]runtime.Coin = undefined;
-
-    const got = try rt.advanceRoundWithMessage(0, message, &coins);
-    try std.testing.expect(got.len > 0);
-    try std.testing.expect(!got[0].eql(ext.Ext.fromUints(case.rounds[0].expected_coins[0])));
+    for (message.columns) |entry| {
+        switch (entry) {
+            .oracle_commitment => |c| transcript.updateElements(&c),
+            .public_column => |col| transcript.absorbVector(col),
+        }
+    }
+    for (message.cells) |cell| transcript.absorbScalar(cell);
+    try std.testing.expect(case.rounds[0].expected_coins.len > 0);
+    const got = transcript.randomExt();
+    try std.testing.expect(!got.eql(ext.Ext.fromUints(case.rounds[0].expected_coins[0])));
 }
 
 /// Convert a generated Poseidon digest fixture into field elements.
@@ -253,11 +261,6 @@ fn expectElem(actual: field.Element, expected: u32) !void {
 /// Compare extension-field values using the field's equality helper.
 fn expectExt(actual: ext.Ext, expected: ext.Ext) !void {
     try std.testing.expect(actual.eql(expected));
-}
-
-fn expectExtUints(actual: ext.Ext, expected: [6]u32) !void {
-    const actual_u32 = actual.toUints();
-    try std.testing.expectEqualSlices(u32, &expected, &actual_u32);
 }
 
 /// Compare a Poseidon digest to its generated integer representation.
@@ -322,14 +325,14 @@ fn traceDimensions(comptime cases: anytype) TraceDimensions {
 /// `RoundMessage` stores slices into this backing, so callers must keep the
 /// backing alive until the runtime has absorbed the message.
 const TraceRoundBacking = struct {
-    oracle_commitments: [max_trace_commitments]runtime.Commitment = undefined,
-    columns: [trace_dimensions.message_columns]runtime.ColumnMessage = undefined,
-    cells: [max_trace_cells]runtime.Scalar = undefined,
+    oracle_commitments: [max_trace_commitments]protocol.Commitment = undefined,
+    columns: [trace_dimensions.message_columns]protocol.ColumnMessage = undefined,
+    cells: [max_trace_cells]protocol.Scalar = undefined,
     base_values: [max_trace_columns][max_trace_values]field.Element = undefined,
     ext_values: [max_trace_columns][max_trace_values]ext.Ext = undefined,
 
     /// Convert one generated trace round into the verifier runtime message shape.
-    fn fill(self: *TraceRoundBacking, round_case: vectors.RuntimeTraceRound, tamper_first_absorb: bool) !runtime.RoundMessage {
+    fn fill(self: *TraceRoundBacking, round_case: vectors.RuntimeTraceRound, tamper_first_absorb: bool) !protocol.RoundMessage {
         try std.testing.expect(round_case.columns.len <= max_trace_columns);
         try std.testing.expect(round_case.cells.len <= max_trace_cells);
 
@@ -341,7 +344,7 @@ const TraceRoundBacking = struct {
                 .oracle => |commitments| {
                     try std.testing.expect(commitments.len <= max_trace_commitments);
                     for (commitments) |c| {
-                        self.oracle_commitments[oracle_commitment_count] = commitment.fromUints(c);
+                        self.oracle_commitments[oracle_commitment_count] = commitment_mod.fromUints(c);
                         if (tamper_first_absorb and !tampered) {
                             self.oracle_commitments[oracle_commitment_count][0] = field.Element.init(self.oracle_commitments[oracle_commitment_count][0].value ^ 1);
                             tampered = true;
@@ -384,7 +387,6 @@ const TraceRoundBacking = struct {
         return .{
             .columns = self.columns[0..column_count],
             .cells = self.cells[0..round_case.cells.len],
-            .next_round_coin_count = round_case.expected_coins.len,
         };
     }
 };

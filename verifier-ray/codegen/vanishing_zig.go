@@ -149,19 +149,12 @@ const vanishing = {{.Options.VanishingImport}};
 
 {{end}}const system_{{$case.Index}}_modules = [_]vanishing.Module{
 {{range $case.Modules}}    // module: "{{zig .Module.SourceName}}"
-    .{ .size = {{moduleSize .Module.Size}}, .expressions = &system_{{$case.Index}}_module_{{.Index}}_expressions, .buckets = &system_{{$case.Index}}_module_{{.Index}}_buckets, .witness_claim_offset = {{.Module.WitnessClaimOffset}} },
+    .{ .size = {{moduleSize .Module.Size}}, .expressions = &system_{{$case.Index}}_module_{{.Index}}_expressions, .buckets = &system_{{$case.Index}}_module_{{.Index}}_buckets, .witness_claim_offset = {{.Module.WitnessClaimOffset}}, .merge_coin_index = {{.Module.MergeCoinIndex}}, .eval_coin_index = {{.Module.EvalCoinIndex}} },
 {{end}}};
-
-const system_{{$case.Index}}_round_coin_counts = [_]usize{{intArray $case.System.RoundCoinCounts}};
-const system_{{$case.Index}}_round_coin_offsets = [_]usize{{intArray $case.System.RoundCoinOffsets}};
 
 // system: "{{zig $case.System.SourceName}}"
 const system_{{$case.Index}} = vanishing.System{
     .modules = &system_{{$case.Index}}_modules,
-    .round_coin_counts = &system_{{$case.Index}}_round_coin_counts,
-    .round_coin_offsets = &system_{{$case.Index}}_round_coin_offsets,
-    .max_round_coins = {{$case.System.MaxRoundCoins}},
-    .total_round_coins = {{$case.System.TotalRoundCoins}},
     .dynamic_module_count = {{$case.System.DynamicModuleCount}},
     .total_witness_claims = {{$case.System.TotalWitnessClaims}},
     .total_quotient_claims = {{$case.System.TotalQuotientClaims}},

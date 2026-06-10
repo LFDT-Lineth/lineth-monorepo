@@ -2,13 +2,20 @@
 
 const verifier_ray = @import("verifier_ray");
 const field = verifier_ray.field.koalabear;
+const protocol = verifier_ray.protocol;
 const vanishing = verifier_ray.query.vanishing;
 
 pub const RuntimeTraceColumn = union(enum) { oracle: []const [8]u32, public_base: []const u32, public_ext: []const [6]u32 };
 pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };
 pub const RuntimeTraceRound = struct { columns: []const RuntimeTraceColumn, cells: []const RuntimeTraceCell };
 pub const VanishingProofView = struct { rounds: []const RuntimeTraceRound, witness_claims: []const [6]u32, quotient_claims: []const [6]u32, module_sizes: []const usize };
-pub const VanishingScenario = struct { name: []const u8, system: vanishing.System, honest: VanishingProofView, invalid: ?VanishingProofView = null };
+pub const VanishingScenario = struct { name: []const u8, spec: protocol.Spec, system: vanishing.System, honest: VanishingProofView, invalid: ?VanishingProofView = null };
+
+pub const system_0_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
 
 // scenario: "Vanishing/BooleanColumn"
 
@@ -32,19 +39,12 @@ const system_0_module_0_buckets = [_]vanishing.Bucket{
 
 const system_0_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_0_module_0_expressions, .buckets = &system_0_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_0_module_0_expressions, .buckets = &system_0_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_0_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_0_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "bool-col"
 const system_0 = vanishing.System{
     .modules = &system_0_modules,
-    .round_coin_counts = &system_0_round_coin_counts,
-    .round_coin_offsets = &system_0_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 1,
     .total_quotient_claims = 1,
@@ -52,6 +52,7 @@ const system_0 = vanishing.System{
 
 const vanishing_scenario_0 = VanishingScenario{
     .name = "Vanishing/BooleanColumn",
+    .spec = system_0_spec,
     .system = system_0,
     .honest = .{
         .rounds = &.{
@@ -93,6 +94,12 @@ const vanishing_scenario_0 = VanishingScenario{
     },
 };
 
+pub const system_1_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/Fibonacci"
 
 // expression: "fib"
@@ -115,19 +122,12 @@ const system_1_module_0_buckets = [_]vanishing.Bucket{
 
 const system_1_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 8 }, .expressions = &system_1_module_0_expressions, .buckets = &system_1_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_1_module_0_expressions, .buckets = &system_1_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_1_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_1_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "fib"
 const system_1 = vanishing.System{
     .modules = &system_1_modules,
-    .round_coin_counts = &system_1_round_coin_counts,
-    .round_coin_offsets = &system_1_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 3,
     .total_quotient_claims = 1,
@@ -135,6 +135,7 @@ const system_1 = vanishing.System{
 
 const vanishing_scenario_1 = VanishingScenario{
     .name = "Vanishing/Fibonacci",
+    .spec = system_1_spec,
     .system = system_1,
     .honest = .{
         .rounds = &.{
@@ -176,6 +177,12 @@ const vanishing_scenario_1 = VanishingScenario{
     },
 };
 
+pub const system_2_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/GeometricProgression"
 
 // expression: "geo"
@@ -198,19 +205,12 @@ const system_2_module_0_buckets = [_]vanishing.Bucket{
 
 const system_2_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 8 }, .expressions = &system_2_module_0_expressions, .buckets = &system_2_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_2_module_0_expressions, .buckets = &system_2_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_2_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_2_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "geo"
 const system_2 = vanishing.System{
     .modules = &system_2_modules,
-    .round_coin_counts = &system_2_round_coin_counts,
-    .round_coin_offsets = &system_2_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 1,
@@ -218,6 +218,7 @@ const system_2 = vanishing.System{
 
 const vanishing_scenario_2 = VanishingScenario{
     .name = "Vanishing/GeometricProgression",
+    .spec = system_2_spec,
     .system = system_2,
     .honest = .{
         .rounds = &.{
@@ -259,6 +260,12 @@ const vanishing_scenario_2 = VanishingScenario{
     },
 };
 
+pub const system_3_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/ConditionalCounter"
 
 // expression: "ctr"
@@ -281,19 +288,12 @@ const system_3_module_0_buckets = [_]vanishing.Bucket{
 
 const system_3_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 8 }, .expressions = &system_3_module_0_expressions, .buckets = &system_3_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_3_module_0_expressions, .buckets = &system_3_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_3_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_3_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "ctr"
 const system_3 = vanishing.System{
     .modules = &system_3_modules,
-    .round_coin_counts = &system_3_round_coin_counts,
-    .round_coin_offsets = &system_3_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 3,
     .total_quotient_claims = 1,
@@ -301,6 +301,7 @@ const system_3 = vanishing.System{
 
 const vanishing_scenario_3 = VanishingScenario{
     .name = "Vanishing/ConditionalCounter",
+    .spec = system_3_spec,
     .system = system_3,
     .honest = .{
         .rounds = &.{
@@ -344,6 +345,12 @@ const vanishing_scenario_3 = VanishingScenario{
     },
 };
 
+pub const system_4_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/PythagoreanTriplet"
 
 // expression: "pyth"
@@ -369,19 +376,12 @@ const system_4_module_0_buckets = [_]vanishing.Bucket{
 
 const system_4_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 8 }, .expressions = &system_4_module_0_expressions, .buckets = &system_4_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_4_module_0_expressions, .buckets = &system_4_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_4_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_4_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "pyth"
 const system_4 = vanishing.System{
     .modules = &system_4_modules,
-    .round_coin_counts = &system_4_round_coin_counts,
-    .round_coin_offsets = &system_4_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 3,
     .total_quotient_claims = 1,
@@ -389,6 +389,7 @@ const system_4 = vanishing.System{
 
 const vanishing_scenario_4 = VanishingScenario{
     .name = "Vanishing/PythagoreanTriplet",
+    .spec = system_4_spec,
     .system = system_4,
     .honest = .{
         .rounds = &.{
@@ -434,6 +435,12 @@ const vanishing_scenario_4 = VanishingScenario{
     },
 };
 
+pub const system_5_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/DynamicFibonacci"
 
 // expression: "fib"
@@ -456,19 +463,12 @@ const system_5_module_0_buckets = [_]vanishing.Bucket{
 
 const system_5_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .dynamic = 0 }, .expressions = &system_5_module_0_expressions, .buckets = &system_5_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .dynamic = 0 }, .expressions = &system_5_module_0_expressions, .buckets = &system_5_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_5_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_5_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "dyn-fib"
 const system_5 = vanishing.System{
     .modules = &system_5_modules,
-    .round_coin_counts = &system_5_round_coin_counts,
-    .round_coin_offsets = &system_5_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 1,
     .total_witness_claims = 3,
     .total_quotient_claims = 1,
@@ -476,6 +476,7 @@ const system_5 = vanishing.System{
 
 const vanishing_scenario_5 = VanishingScenario{
     .name = "Vanishing/DynamicFibonacci",
+    .spec = system_5_spec,
     .system = system_5,
     .honest = .{
         .rounds = &.{
@@ -517,6 +518,12 @@ const vanishing_scenario_5 = VanishingScenario{
     },
 };
 
+pub const system_6_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/ConstantColumn"
 
 // expression: "const"
@@ -537,19 +544,12 @@ const system_6_module_0_buckets = [_]vanishing.Bucket{
 
 const system_6_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_6_module_0_expressions, .buckets = &system_6_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_6_module_0_expressions, .buckets = &system_6_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_6_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_6_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "const-col"
 const system_6 = vanishing.System{
     .modules = &system_6_modules,
-    .round_coin_counts = &system_6_round_coin_counts,
-    .round_coin_offsets = &system_6_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 1,
     .total_quotient_claims = 1,
@@ -557,6 +557,7 @@ const system_6 = vanishing.System{
 
 const vanishing_scenario_6 = VanishingScenario{
     .name = "Vanishing/ConstantColumn",
+    .spec = system_6_spec,
     .system = system_6,
     .honest = .{
         .rounds = &.{
@@ -598,6 +599,12 @@ const vanishing_scenario_6 = VanishingScenario{
     },
 };
 
+pub const system_7_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/ForwardShiftConstant"
 
 // expression: "eq-next"
@@ -618,19 +625,12 @@ const system_7_module_0_buckets = [_]vanishing.Bucket{
 
 const system_7_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 8 }, .expressions = &system_7_module_0_expressions, .buckets = &system_7_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_7_module_0_expressions, .buckets = &system_7_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_7_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_7_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "fwd-shift"
 const system_7 = vanishing.System{
     .modules = &system_7_modules,
-    .round_coin_counts = &system_7_round_coin_counts,
-    .round_coin_offsets = &system_7_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 1,
@@ -638,6 +638,7 @@ const system_7 = vanishing.System{
 
 const vanishing_scenario_7 = VanishingScenario{
     .name = "Vanishing/ForwardShiftConstant",
+    .spec = system_7_spec,
     .system = system_7,
     .honest = .{
         .rounds = &.{
@@ -679,6 +680,12 @@ const vanishing_scenario_7 = VanishingScenario{
     },
 };
 
+pub const system_8_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/BooleanCube"
 
 // expression: "cube"
@@ -703,19 +710,12 @@ const system_8_module_0_buckets = [_]vanishing.Bucket{
 
 const system_8_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_8_module_0_expressions, .buckets = &system_8_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_8_module_0_expressions, .buckets = &system_8_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_8_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_8_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "bool-cube"
 const system_8 = vanishing.System{
     .modules = &system_8_modules,
-    .round_coin_counts = &system_8_round_coin_counts,
-    .round_coin_offsets = &system_8_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 1,
     .total_quotient_claims = 2,
@@ -723,6 +723,7 @@ const system_8 = vanishing.System{
 
 const vanishing_scenario_8 = VanishingScenario{
     .name = "Vanishing/BooleanCube",
+    .spec = system_8_spec,
     .system = system_8,
     .honest = .{
         .rounds = &.{
@@ -766,6 +767,12 @@ const vanishing_scenario_8 = VanishingScenario{
     },
 };
 
+pub const system_9_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/LinearCombination"
 
 // expression: "lin"
@@ -792,19 +799,12 @@ const system_9_module_0_buckets = [_]vanishing.Bucket{
 
 const system_9_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_9_module_0_expressions, .buckets = &system_9_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_9_module_0_expressions, .buckets = &system_9_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_9_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_9_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "lin-comb"
 const system_9 = vanishing.System{
     .modules = &system_9_modules,
-    .round_coin_counts = &system_9_round_coin_counts,
-    .round_coin_offsets = &system_9_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 3,
     .total_quotient_claims = 1,
@@ -812,6 +812,7 @@ const system_9 = vanishing.System{
 
 const vanishing_scenario_9 = VanishingScenario{
     .name = "Vanishing/LinearCombination",
+    .spec = system_9_spec,
     .system = system_9,
     .honest = .{
         .rounds = &.{
@@ -857,6 +858,12 @@ const vanishing_scenario_9 = VanishingScenario{
     },
 };
 
+pub const system_10_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/LargeFibonacci"
 
 // expression: "fib"
@@ -879,19 +886,12 @@ const system_10_module_0_buckets = [_]vanishing.Bucket{
 
 const system_10_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 16 }, .expressions = &system_10_module_0_expressions, .buckets = &system_10_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 16 }, .expressions = &system_10_module_0_expressions, .buckets = &system_10_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_10_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_10_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "fib-16"
 const system_10 = vanishing.System{
     .modules = &system_10_modules,
-    .round_coin_counts = &system_10_round_coin_counts,
-    .round_coin_offsets = &system_10_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 3,
     .total_quotient_claims = 1,
@@ -899,6 +899,7 @@ const system_10 = vanishing.System{
 
 const vanishing_scenario_10 = VanishingScenario{
     .name = "Vanishing/LargeFibonacci",
+    .spec = system_10_spec,
     .system = system_10,
     .honest = .{
         .rounds = &.{
@@ -940,6 +941,12 @@ const vanishing_scenario_10 = VanishingScenario{
     },
 };
 
+pub const system_11_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/MultipleVanishingsSameRatio"
 
 const system_11_module_0_expressions = [_]vanishing.ExprNode{
@@ -964,19 +971,12 @@ const system_11_module_0_buckets = [_]vanishing.Bucket{
 
 const system_11_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_11_module_0_expressions, .buckets = &system_11_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_11_module_0_expressions, .buckets = &system_11_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_11_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_11_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "same-ratio"
 const system_11 = vanishing.System{
     .modules = &system_11_modules,
-    .round_coin_counts = &system_11_round_coin_counts,
-    .round_coin_offsets = &system_11_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 1,
@@ -984,6 +984,7 @@ const system_11 = vanishing.System{
 
 const vanishing_scenario_11 = VanishingScenario{
     .name = "Vanishing/MultipleVanishingsSameRatio",
+    .spec = system_11_spec,
     .system = system_11,
     .honest = .{
         .rounds = &.{
@@ -1027,6 +1028,12 @@ const vanishing_scenario_11 = VanishingScenario{
     },
 };
 
+pub const system_12_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/MixedRatioVanishings"
 
 const system_12_module_0_expressions = [_]vanishing.ExprNode{
@@ -1053,19 +1060,12 @@ const system_12_module_0_buckets = [_]vanishing.Bucket{
 
 const system_12_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_12_module_0_expressions, .buckets = &system_12_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_12_module_0_expressions, .buckets = &system_12_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_12_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_12_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "mixed-ratio"
 const system_12 = vanishing.System{
     .modules = &system_12_modules,
-    .round_coin_counts = &system_12_round_coin_counts,
-    .round_coin_offsets = &system_12_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 1,
@@ -1073,6 +1073,7 @@ const system_12 = vanishing.System{
 
 const vanishing_scenario_12 = VanishingScenario{
     .name = "Vanishing/MixedRatioVanishings",
+    .spec = system_12_spec,
     .system = system_12,
     .honest = .{
         .rounds = &.{
@@ -1114,6 +1115,12 @@ const vanishing_scenario_12 = VanishingScenario{
     },
 };
 
+pub const system_13_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 2 },
+    .total_round_coins = 4,
+};
+
 // scenario: "Vanishing/MultiModule"
 
 // expression: "a-bool"
@@ -1152,21 +1159,14 @@ const system_13_module_1_buckets = [_]vanishing.Bucket{
 
 const system_13_modules = [_]vanishing.Module{
     // module: "modA"
-    .{ .size = .{ .static = 4 }, .expressions = &system_13_module_0_expressions, .buckets = &system_13_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_13_module_0_expressions, .buckets = &system_13_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 2 },
     // module: "modB"
-    .{ .size = .{ .static = 8 }, .expressions = &system_13_module_1_expressions, .buckets = &system_13_module_1_buckets, .witness_claim_offset = 1 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_13_module_1_expressions, .buckets = &system_13_module_1_buckets, .witness_claim_offset = 1, .merge_coin_index = 1, .eval_coin_index = 3 },
 };
-
-const system_13_round_coin_counts = [_]usize{ 0, 2, 2 };
-const system_13_round_coin_offsets = [_]usize{ 0, 0, 2 };
 
 // system: "multi-mod"
 const system_13 = vanishing.System{
     .modules = &system_13_modules,
-    .round_coin_counts = &system_13_round_coin_counts,
-    .round_coin_offsets = &system_13_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 4,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 2,
@@ -1174,6 +1174,7 @@ const system_13 = vanishing.System{
 
 const vanishing_scenario_13 = VanishingScenario{
     .name = "Vanishing/MultiModule",
+    .spec = system_13_spec,
     .system = system_13,
     .honest = .{
         .rounds = &.{
@@ -1219,6 +1220,12 @@ const vanishing_scenario_13 = VanishingScenario{
     },
 };
 
+pub const system_14_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/ManualCancellation"
 
 // expression: "incr"
@@ -1241,19 +1248,12 @@ const system_14_module_0_buckets = [_]vanishing.Bucket{
 
 const system_14_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_14_module_0_expressions, .buckets = &system_14_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_14_module_0_expressions, .buckets = &system_14_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_14_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_14_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "manual-cxl"
 const system_14 = vanishing.System{
     .modules = &system_14_modules,
-    .round_coin_counts = &system_14_round_coin_counts,
-    .round_coin_offsets = &system_14_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 1,
@@ -1261,6 +1261,7 @@ const system_14 = vanishing.System{
 
 const vanishing_scenario_14 = VanishingScenario{
     .name = "Vanishing/ManualCancellation",
+    .spec = system_14_spec,
     .system = system_14,
     .honest = .{
         .rounds = &.{
@@ -1302,6 +1303,12 @@ const vanishing_scenario_14 = VanishingScenario{
     },
 };
 
+pub const system_15_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/PrecomputedSelector"
 
 // expression: "masked"
@@ -1324,19 +1331,12 @@ const system_15_module_0_buckets = [_]vanishing.Bucket{
 
 const system_15_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_15_module_0_expressions, .buckets = &system_15_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_15_module_0_expressions, .buckets = &system_15_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_15_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_15_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "pre-sel"
 const system_15 = vanishing.System{
     .modules = &system_15_modules,
-    .round_coin_counts = &system_15_round_coin_counts,
-    .round_coin_offsets = &system_15_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 1,
@@ -1344,6 +1344,7 @@ const system_15 = vanishing.System{
 
 const vanishing_scenario_15 = VanishingScenario{
     .name = "Vanishing/PrecomputedSelector",
+    .spec = system_15_spec,
     .system = system_15,
     .honest = .{
         .rounds = &.{
@@ -1385,6 +1386,12 @@ const vanishing_scenario_15 = VanishingScenario{
     },
 };
 
+pub const system_16_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/CellLeaf"
 
 // expression: "eq"
@@ -1405,19 +1412,12 @@ const system_16_module_0_buckets = [_]vanishing.Bucket{
 
 const system_16_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_16_module_0_expressions, .buckets = &system_16_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_16_module_0_expressions, .buckets = &system_16_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_16_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_16_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "cell-leaf"
 const system_16 = vanishing.System{
     .modules = &system_16_modules,
-    .round_coin_counts = &system_16_round_coin_counts,
-    .round_coin_offsets = &system_16_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 1,
     .total_quotient_claims = 1,
@@ -1425,6 +1425,7 @@ const system_16 = vanishing.System{
 
 const vanishing_scenario_16 = VanishingScenario{
     .name = "Vanishing/CellLeaf",
+    .spec = system_16_spec,
     .system = system_16,
     .honest = .{
         .rounds = &.{
@@ -1470,6 +1471,12 @@ const vanishing_scenario_16 = VanishingScenario{
     },
 };
 
+pub const system_17_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
+    .total_round_coins = 3,
+};
+
 // scenario: "Vanishing/CoinScaled"
 
 // expression: "scaled"
@@ -1492,19 +1499,12 @@ const system_17_module_0_buckets = [_]vanishing.Bucket{
 
 const system_17_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_17_module_0_expressions, .buckets = &system_17_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_17_module_0_expressions, .buckets = &system_17_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 2 },
 };
-
-const system_17_round_coin_counts = [_]usize{ 0, 1, 1, 1 };
-const system_17_round_coin_offsets = [_]usize{ 0, 0, 1, 2 };
 
 // system: "coin-scaled"
 const system_17 = vanishing.System{
     .modules = &system_17_modules,
-    .round_coin_counts = &system_17_round_coin_counts,
-    .round_coin_offsets = &system_17_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 3,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 1,
@@ -1512,6 +1512,7 @@ const system_17 = vanishing.System{
 
 const vanishing_scenario_17 = VanishingScenario{
     .name = "Vanishing/CoinScaled",
+    .spec = system_17_spec,
     .system = system_17,
     .honest = .{
         .rounds = &.{
@@ -1561,6 +1562,12 @@ const vanishing_scenario_17 = VanishingScenario{
     },
 };
 
+pub const system_18_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/ThreeStepRecurrence"
 
 // expression: "rec"
@@ -1583,19 +1590,12 @@ const system_18_module_0_buckets = [_]vanishing.Bucket{
 
 const system_18_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 8 }, .expressions = &system_18_module_0_expressions, .buckets = &system_18_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_18_module_0_expressions, .buckets = &system_18_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_18_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_18_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "step3"
 const system_18 = vanishing.System{
     .modules = &system_18_modules,
-    .round_coin_counts = &system_18_round_coin_counts,
-    .round_coin_offsets = &system_18_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 3,
     .total_quotient_claims = 1,
@@ -1603,6 +1603,7 @@ const system_18 = vanishing.System{
 
 const vanishing_scenario_18 = VanishingScenario{
     .name = "Vanishing/ThreeStepRecurrence",
+    .spec = system_18_spec,
     .system = system_18,
     .honest = .{
         .rounds = &.{
@@ -1644,6 +1645,12 @@ const vanishing_scenario_18 = VanishingScenario{
     },
 };
 
+pub const system_19_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/Quartic"
 
 // expression: "q"
@@ -1670,19 +1677,12 @@ const system_19_module_0_buckets = [_]vanishing.Bucket{
 
 const system_19_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_19_module_0_expressions, .buckets = &system_19_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_19_module_0_expressions, .buckets = &system_19_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_19_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_19_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "quartic"
 const system_19 = vanishing.System{
     .modules = &system_19_modules,
-    .round_coin_counts = &system_19_round_coin_counts,
-    .round_coin_offsets = &system_19_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 1,
     .total_quotient_claims = 4,
@@ -1690,6 +1690,7 @@ const system_19 = vanishing.System{
 
 const vanishing_scenario_19 = VanishingScenario{
     .name = "Vanishing/Quartic",
+    .spec = system_19_spec,
     .system = system_19,
     .honest = .{
         .rounds = &.{
@@ -1737,6 +1738,12 @@ const vanishing_scenario_19 = VanishingScenario{
     },
 };
 
+pub const system_20_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/LeftPadDynamic"
 
 // expression: "eq"
@@ -1757,19 +1764,12 @@ const system_20_module_0_buckets = [_]vanishing.Bucket{
 
 const system_20_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .dynamic = 0 }, .expressions = &system_20_module_0_expressions, .buckets = &system_20_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .dynamic = 0 }, .expressions = &system_20_module_0_expressions, .buckets = &system_20_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_20_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_20_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "dyn-leftpad"
 const system_20 = vanishing.System{
     .modules = &system_20_modules,
-    .round_coin_counts = &system_20_round_coin_counts,
-    .round_coin_offsets = &system_20_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 1,
     .total_witness_claims = 2,
     .total_quotient_claims = 1,
@@ -1777,6 +1777,7 @@ const system_20 = vanishing.System{
 
 const vanishing_scenario_20 = VanishingScenario{
     .name = "Vanishing/LeftPadDynamic",
+    .spec = system_20_spec,
     .system = system_20,
     .honest = .{
         .rounds = &.{
@@ -1818,6 +1819,12 @@ const vanishing_scenario_20 = VanishingScenario{
     },
 };
 
+pub const system_21_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/CubicWithBackShift"
 
 // expression: "cube-shift"
@@ -1842,19 +1849,12 @@ const system_21_module_0_buckets = [_]vanishing.Bucket{
 
 const system_21_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 8 }, .expressions = &system_21_module_0_expressions, .buckets = &system_21_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_21_module_0_expressions, .buckets = &system_21_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_21_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_21_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "cube-shift"
 const system_21 = vanishing.System{
     .modules = &system_21_modules,
-    .round_coin_counts = &system_21_round_coin_counts,
-    .round_coin_offsets = &system_21_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 2,
@@ -1862,6 +1862,7 @@ const system_21 = vanishing.System{
 
 const vanishing_scenario_21 = VanishingScenario{
     .name = "Vanishing/CubicWithBackShift",
+    .spec = system_21_spec,
     .system = system_21,
     .honest = .{
         .rounds = &.{
@@ -1905,6 +1906,12 @@ const vanishing_scenario_21 = VanishingScenario{
     },
 };
 
+pub const system_22_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/MixedHighRatio"
 
 const system_22_module_0_expressions = [_]vanishing.ExprNode{
@@ -1943,19 +1950,12 @@ const system_22_module_0_buckets = [_]vanishing.Bucket{
 
 const system_22_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 8 }, .expressions = &system_22_module_0_expressions, .buckets = &system_22_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_22_module_0_expressions, .buckets = &system_22_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_22_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_22_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "mixed-hi-ratio"
 const system_22 = vanishing.System{
     .modules = &system_22_modules,
-    .round_coin_counts = &system_22_round_coin_counts,
-    .round_coin_offsets = &system_22_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 1,
     .total_quotient_claims = 6,
@@ -1963,6 +1963,7 @@ const system_22 = vanishing.System{
 
 const vanishing_scenario_22 = VanishingScenario{
     .name = "Vanishing/MixedHighRatio",
+    .spec = system_22_spec,
     .system = system_22,
     .honest = .{
         .rounds = &.{
@@ -2014,6 +2015,12 @@ const vanishing_scenario_22 = VanishingScenario{
     },
 };
 
+pub const system_23_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 2 },
+    .total_round_coins = 4,
+};
+
 // scenario: "Vanishing/MultiModuleHighRatio"
 
 // expression: "cubeA"
@@ -2058,21 +2065,14 @@ const system_23_module_1_buckets = [_]vanishing.Bucket{
 
 const system_23_modules = [_]vanishing.Module{
     // module: "modA"
-    .{ .size = .{ .static = 4 }, .expressions = &system_23_module_0_expressions, .buckets = &system_23_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_23_module_0_expressions, .buckets = &system_23_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 2 },
     // module: "modB"
-    .{ .size = .{ .static = 8 }, .expressions = &system_23_module_1_expressions, .buckets = &system_23_module_1_buckets, .witness_claim_offset = 1 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_23_module_1_expressions, .buckets = &system_23_module_1_buckets, .witness_claim_offset = 1, .merge_coin_index = 1, .eval_coin_index = 3 },
 };
-
-const system_23_round_coin_counts = [_]usize{ 0, 2, 2 };
-const system_23_round_coin_offsets = [_]usize{ 0, 0, 2 };
 
 // system: "multi-mod-hi-ratio"
 const system_23 = vanishing.System{
     .modules = &system_23_modules,
-    .round_coin_counts = &system_23_round_coin_counts,
-    .round_coin_offsets = &system_23_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 4,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 4,
@@ -2080,6 +2080,7 @@ const system_23 = vanishing.System{
 
 const vanishing_scenario_23 = VanishingScenario{
     .name = "Vanishing/MultiModuleHighRatio",
+    .spec = system_23_spec,
     .system = system_23,
     .honest = .{
         .rounds = &.{
@@ -2129,6 +2130,12 @@ const vanishing_scenario_23 = VanishingScenario{
     },
 };
 
+pub const system_24_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/SizeThirtyTwoCubic"
 
 // expression: "cube"
@@ -2153,19 +2160,12 @@ const system_24_module_0_buckets = [_]vanishing.Bucket{
 
 const system_24_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 32 }, .expressions = &system_24_module_0_expressions, .buckets = &system_24_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 32 }, .expressions = &system_24_module_0_expressions, .buckets = &system_24_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_24_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_24_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "cube-32"
 const system_24 = vanishing.System{
     .modules = &system_24_modules,
-    .round_coin_counts = &system_24_round_coin_counts,
-    .round_coin_offsets = &system_24_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 1,
     .total_quotient_claims = 2,
@@ -2173,6 +2173,7 @@ const system_24 = vanishing.System{
 
 const vanishing_scenario_24 = VanishingScenario{
     .name = "Vanishing/SizeThirtyTwoCubic",
+    .spec = system_24_spec,
     .system = system_24,
     .honest = .{
         .rounds = &.{
@@ -2216,6 +2217,12 @@ const vanishing_scenario_24 = VanishingScenario{
     },
 };
 
+pub const system_25_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/LargeForwardShift"
 
 // expression: "eq-plus3"
@@ -2236,19 +2243,12 @@ const system_25_module_0_buckets = [_]vanishing.Bucket{
 
 const system_25_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 8 }, .expressions = &system_25_module_0_expressions, .buckets = &system_25_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_25_module_0_expressions, .buckets = &system_25_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_25_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_25_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "fwd-shift-3"
 const system_25 = vanishing.System{
     .modules = &system_25_modules,
-    .round_coin_counts = &system_25_round_coin_counts,
-    .round_coin_offsets = &system_25_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 1,
@@ -2256,6 +2256,7 @@ const system_25 = vanishing.System{
 
 const vanishing_scenario_25 = VanishingScenario{
     .name = "Vanishing/LargeForwardShift",
+    .spec = system_25_spec,
     .system = system_25,
     .honest = .{
         .rounds = &.{
@@ -2297,6 +2298,12 @@ const vanishing_scenario_25 = VanishingScenario{
     },
 };
 
+pub const system_26_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/BackAndForwardShift"
 
 // expression: "twoShift"
@@ -2321,19 +2328,12 @@ const system_26_module_0_buckets = [_]vanishing.Bucket{
 
 const system_26_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 8 }, .expressions = &system_26_module_0_expressions, .buckets = &system_26_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_26_module_0_expressions, .buckets = &system_26_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_26_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_26_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "two-shift"
 const system_26 = vanishing.System{
     .modules = &system_26_modules,
-    .round_coin_counts = &system_26_round_coin_counts,
-    .round_coin_offsets = &system_26_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 3,
     .total_quotient_claims = 1,
@@ -2341,6 +2341,7 @@ const system_26 = vanishing.System{
 
 const vanishing_scenario_26 = VanishingScenario{
     .name = "Vanishing/BackAndForwardShift",
+    .spec = system_26_spec,
     .system = system_26,
     .honest = .{
         .rounds = &.{
@@ -2382,6 +2383,12 @@ const vanishing_scenario_26 = VanishingScenario{
     },
 };
 
+pub const system_27_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/DynamicQuadratic"
 
 // expression: "bool"
@@ -2404,19 +2411,12 @@ const system_27_module_0_buckets = [_]vanishing.Bucket{
 
 const system_27_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .dynamic = 0 }, .expressions = &system_27_module_0_expressions, .buckets = &system_27_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .dynamic = 0 }, .expressions = &system_27_module_0_expressions, .buckets = &system_27_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_27_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_27_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "dyn-quad"
 const system_27 = vanishing.System{
     .modules = &system_27_modules,
-    .round_coin_counts = &system_27_round_coin_counts,
-    .round_coin_offsets = &system_27_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 1,
     .total_witness_claims = 1,
     .total_quotient_claims = 1,
@@ -2424,6 +2424,7 @@ const system_27 = vanishing.System{
 
 const vanishing_scenario_27 = VanishingScenario{
     .name = "Vanishing/DynamicQuadratic",
+    .spec = system_27_spec,
     .system = system_27,
     .honest = .{
         .rounds = &.{
@@ -2465,6 +2466,12 @@ const vanishing_scenario_27 = VanishingScenario{
     },
 };
 
+pub const system_28_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "Vanishing/QuarticWithBackShift"
 
 // expression: "quartic-shift"
@@ -2493,19 +2500,12 @@ const system_28_module_0_buckets = [_]vanishing.Bucket{
 
 const system_28_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 8 }, .expressions = &system_28_module_0_expressions, .buckets = &system_28_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_28_module_0_expressions, .buckets = &system_28_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_28_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_28_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "quartic-shift"
 const system_28 = vanishing.System{
     .modules = &system_28_modules,
-    .round_coin_counts = &system_28_round_coin_counts,
-    .round_coin_offsets = &system_28_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 4,
@@ -2513,6 +2513,7 @@ const system_28 = vanishing.System{
 
 const vanishing_scenario_28 = VanishingScenario{
     .name = "Vanishing/QuarticWithBackShift",
+    .spec = system_28_spec,
     .system = system_28,
     .honest = .{
         .rounds = &.{
@@ -2560,6 +2561,12 @@ const vanishing_scenario_28 = VanishingScenario{
     },
 };
 
+pub const system_29_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LocalVanishing/SingleColumnFirstRowZero"
 
 // expression: "global"
@@ -2580,19 +2587,12 @@ const system_29_module_0_buckets = [_]vanishing.Bucket{
 
 const system_29_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_29_module_0_expressions, .buckets = &system_29_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_29_module_0_expressions, .buckets = &system_29_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_29_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_29_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "lv-row0"
 const system_29 = vanishing.System{
     .modules = &system_29_modules,
-    .round_coin_counts = &system_29_round_coin_counts,
-    .round_coin_offsets = &system_29_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 1,
@@ -2600,6 +2600,7 @@ const system_29 = vanishing.System{
 
 const vanishing_scenario_29 = VanishingScenario{
     .name = "LocalVanishing/SingleColumnFirstRowZero",
+    .spec = system_29_spec,
     .system = system_29,
     .honest = .{
         .rounds = &.{
@@ -2641,6 +2642,12 @@ const vanishing_scenario_29 = VanishingScenario{
     },
 };
 
+pub const system_30_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LocalVanishing/SingleColumnLastRowZero"
 
 // expression: "global"
@@ -2661,19 +2668,12 @@ const system_30_module_0_buckets = [_]vanishing.Bucket{
 
 const system_30_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_30_module_0_expressions, .buckets = &system_30_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_30_module_0_expressions, .buckets = &system_30_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_30_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_30_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "lv-rowN"
 const system_30 = vanishing.System{
     .modules = &system_30_modules,
-    .round_coin_counts = &system_30_round_coin_counts,
-    .round_coin_offsets = &system_30_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 1,
@@ -2681,6 +2681,7 @@ const system_30 = vanishing.System{
 
 const vanishing_scenario_30 = VanishingScenario{
     .name = "LocalVanishing/SingleColumnLastRowZero",
+    .spec = system_30_spec,
     .system = system_30,
     .honest = .{
         .rounds = &.{
@@ -2722,6 +2723,12 @@ const vanishing_scenario_30 = VanishingScenario{
     },
 };
 
+pub const system_31_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LocalVanishing/ShiftedColumnFirstRowZero"
 
 // expression: "global"
@@ -2742,19 +2749,12 @@ const system_31_module_0_buckets = [_]vanishing.Bucket{
 
 const system_31_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_31_module_0_expressions, .buckets = &system_31_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_31_module_0_expressions, .buckets = &system_31_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_31_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_31_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "lv-shift"
 const system_31 = vanishing.System{
     .modules = &system_31_modules,
-    .round_coin_counts = &system_31_round_coin_counts,
-    .round_coin_offsets = &system_31_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 1,
@@ -2762,6 +2762,7 @@ const system_31 = vanishing.System{
 
 const vanishing_scenario_31 = VanishingScenario{
     .name = "LocalVanishing/ShiftedColumnFirstRowZero",
+    .spec = system_31_spec,
     .system = system_31,
     .honest = .{
         .rounds = &.{
@@ -2803,6 +2804,12 @@ const vanishing_scenario_31 = VanishingScenario{
     },
 };
 
+pub const system_32_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LocalVanishing/TwoColumnsEqualAtFirstRow"
 
 // expression: "global"
@@ -2825,19 +2832,12 @@ const system_32_module_0_buckets = [_]vanishing.Bucket{
 
 const system_32_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_32_module_0_expressions, .buckets = &system_32_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_32_module_0_expressions, .buckets = &system_32_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_32_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_32_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "lv-pair"
 const system_32 = vanishing.System{
     .modules = &system_32_modules,
-    .round_coin_counts = &system_32_round_coin_counts,
-    .round_coin_offsets = &system_32_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 3,
     .total_quotient_claims = 1,
@@ -2845,6 +2845,7 @@ const system_32 = vanishing.System{
 
 const vanishing_scenario_32 = VanishingScenario{
     .name = "LocalVanishing/TwoColumnsEqualAtFirstRow",
+    .spec = system_32_spec,
     .system = system_32,
     .honest = .{
         .rounds = &.{
@@ -2888,6 +2889,12 @@ const vanishing_scenario_32 = VanishingScenario{
     },
 };
 
+pub const system_33_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LocalVanishing/MultipleConstraintsSameModule"
 
 const system_33_module_0_expressions = [_]vanishing.ExprNode{
@@ -2912,19 +2919,12 @@ const system_33_module_0_buckets = [_]vanishing.Bucket{
 
 const system_33_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_33_module_0_expressions, .buckets = &system_33_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_33_module_0_expressions, .buckets = &system_33_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_33_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_33_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "lv-multi"
 const system_33 = vanishing.System{
     .modules = &system_33_modules,
-    .round_coin_counts = &system_33_round_coin_counts,
-    .round_coin_offsets = &system_33_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 3,
     .total_quotient_claims = 1,
@@ -2932,6 +2932,7 @@ const system_33 = vanishing.System{
 
 const vanishing_scenario_33 = VanishingScenario{
     .name = "LocalVanishing/MultipleConstraintsSameModule",
+    .spec = system_33_spec,
     .system = system_33,
     .honest = .{
         .rounds = &.{
@@ -2973,6 +2974,12 @@ const vanishing_scenario_33 = VanishingScenario{
     },
 };
 
+pub const system_34_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LocalVanishing/SecondRowConstraint"
 
 // expression: "global"
@@ -2995,19 +3002,12 @@ const system_34_module_0_buckets = [_]vanishing.Bucket{
 
 const system_34_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_34_module_0_expressions, .buckets = &system_34_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_34_module_0_expressions, .buckets = &system_34_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_34_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_34_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "lv-row1"
 const system_34 = vanishing.System{
     .modules = &system_34_modules,
-    .round_coin_counts = &system_34_round_coin_counts,
-    .round_coin_offsets = &system_34_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 1,
@@ -3015,6 +3015,7 @@ const system_34 = vanishing.System{
 
 const vanishing_scenario_34 = VanishingScenario{
     .name = "LocalVanishing/SecondRowConstraint",
+    .spec = system_34_spec,
     .system = system_34,
     .honest = .{
         .rounds = &.{
@@ -3056,6 +3057,12 @@ const vanishing_scenario_34 = VanishingScenario{
     },
 };
 
+pub const system_35_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LocalVanishing/CellEquality"
 
 // expression: "global"
@@ -3078,19 +3085,12 @@ const system_35_module_0_buckets = [_]vanishing.Bucket{
 
 const system_35_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_35_module_0_expressions, .buckets = &system_35_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_35_module_0_expressions, .buckets = &system_35_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_35_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_35_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "lv-cell"
 const system_35 = vanishing.System{
     .modules = &system_35_modules,
-    .round_coin_counts = &system_35_round_coin_counts,
-    .round_coin_offsets = &system_35_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 1,
@@ -3098,6 +3098,7 @@ const system_35 = vanishing.System{
 
 const vanishing_scenario_35 = VanishingScenario{
     .name = "LocalVanishing/CellEquality",
+    .spec = system_35_spec,
     .system = system_35,
     .honest = .{
         .rounds = &.{
@@ -3143,6 +3144,12 @@ const vanishing_scenario_35 = VanishingScenario{
     },
 };
 
+pub const system_36_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
+    .total_round_coins = 3,
+};
+
 // scenario: "LocalVanishing/CoinScaled"
 
 // expression: "global"
@@ -3167,19 +3174,12 @@ const system_36_module_0_buckets = [_]vanishing.Bucket{
 
 const system_36_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_36_module_0_expressions, .buckets = &system_36_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_36_module_0_expressions, .buckets = &system_36_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 2 },
 };
-
-const system_36_round_coin_counts = [_]usize{ 0, 1, 1, 1 };
-const system_36_round_coin_offsets = [_]usize{ 0, 0, 1, 2 };
 
 // system: "lv-coin"
 const system_36 = vanishing.System{
     .modules = &system_36_modules,
-    .round_coin_counts = &system_36_round_coin_counts,
-    .round_coin_offsets = &system_36_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 3,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 1,
@@ -3187,6 +3187,7 @@ const system_36 = vanishing.System{
 
 const vanishing_scenario_36 = VanishingScenario{
     .name = "LocalVanishing/CoinScaled",
+    .spec = system_36_spec,
     .system = system_36,
     .honest = .{
         .rounds = &.{
@@ -3236,6 +3237,12 @@ const vanishing_scenario_36 = VanishingScenario{
     },
 };
 
+pub const system_37_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LocalVanishing/MultipleAnchorsSharedColumn"
 
 const system_37_module_0_expressions = [_]vanishing.ExprNode{
@@ -3271,19 +3278,12 @@ const system_37_module_0_buckets = [_]vanishing.Bucket{
 
 const system_37_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_37_module_0_expressions, .buckets = &system_37_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_37_module_0_expressions, .buckets = &system_37_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_37_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_37_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "lv-anchors"
 const system_37 = vanishing.System{
     .modules = &system_37_modules,
-    .round_coin_counts = &system_37_round_coin_counts,
-    .round_coin_offsets = &system_37_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 4,
     .total_quotient_claims = 1,
@@ -3291,6 +3291,7 @@ const system_37 = vanishing.System{
 
 const vanishing_scenario_37 = VanishingScenario{
     .name = "LocalVanishing/MultipleAnchorsSharedColumn",
+    .spec = system_37_spec,
     .system = system_37,
     .honest = .{
         .rounds = &.{
@@ -3332,6 +3333,12 @@ const vanishing_scenario_37 = VanishingScenario{
     },
 };
 
+pub const system_38_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LocalVanishing/ConstantSubtraction"
 
 // expression: "global"
@@ -3354,19 +3361,12 @@ const system_38_module_0_buckets = [_]vanishing.Bucket{
 
 const system_38_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_38_module_0_expressions, .buckets = &system_38_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_38_module_0_expressions, .buckets = &system_38_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_38_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_38_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "lv-const"
 const system_38 = vanishing.System{
     .modules = &system_38_modules,
-    .round_coin_counts = &system_38_round_coin_counts,
-    .round_coin_offsets = &system_38_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 1,
@@ -3374,6 +3374,7 @@ const system_38 = vanishing.System{
 
 const vanishing_scenario_38 = VanishingScenario{
     .name = "LocalVanishing/ConstantSubtraction",
+    .spec = system_38_spec,
     .system = system_38,
     .honest = .{
         .rounds = &.{
@@ -3415,6 +3416,12 @@ const vanishing_scenario_38 = VanishingScenario{
     },
 };
 
+pub const system_39_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LocalVanishing/WrapAroundShift"
 
 // expression: "global"
@@ -3435,19 +3442,12 @@ const system_39_module_0_buckets = [_]vanishing.Bucket{
 
 const system_39_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_39_module_0_expressions, .buckets = &system_39_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_39_module_0_expressions, .buckets = &system_39_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_39_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_39_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "lv-wrap"
 const system_39 = vanishing.System{
     .modules = &system_39_modules,
-    .round_coin_counts = &system_39_round_coin_counts,
-    .round_coin_offsets = &system_39_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 1,
@@ -3455,6 +3455,7 @@ const system_39 = vanishing.System{
 
 const vanishing_scenario_39 = VanishingScenario{
     .name = "LocalVanishing/WrapAroundShift",
+    .spec = system_39_spec,
     .system = system_39,
     .honest = .{
         .rounds = &.{
@@ -3496,6 +3497,12 @@ const vanishing_scenario_39 = VanishingScenario{
     },
 };
 
+pub const system_40_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LocalVanishing/ProductIsZero"
 
 // expression: "global"
@@ -3518,19 +3525,12 @@ const system_40_module_0_buckets = [_]vanishing.Bucket{
 
 const system_40_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_40_module_0_expressions, .buckets = &system_40_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_40_module_0_expressions, .buckets = &system_40_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_40_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_40_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "lv-prod"
 const system_40 = vanishing.System{
     .modules = &system_40_modules,
-    .round_coin_counts = &system_40_round_coin_counts,
-    .round_coin_offsets = &system_40_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 3,
     .total_quotient_claims = 2,
@@ -3538,6 +3538,7 @@ const system_40 = vanishing.System{
 
 const vanishing_scenario_40 = VanishingScenario{
     .name = "LocalVanishing/ProductIsZero",
+    .spec = system_40_spec,
     .system = system_40,
     .honest = .{
         .rounds = &.{
@@ -3583,6 +3584,12 @@ const vanishing_scenario_40 = VanishingScenario{
     },
 };
 
+pub const system_41_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
+    .total_round_coins = 3,
+};
+
 // scenario: "LocalVanishing/CellAndCoin"
 
 // expression: "global"
@@ -3607,19 +3614,12 @@ const system_41_module_0_buckets = [_]vanishing.Bucket{
 
 const system_41_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_41_module_0_expressions, .buckets = &system_41_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_41_module_0_expressions, .buckets = &system_41_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 2 },
 };
-
-const system_41_round_coin_counts = [_]usize{ 0, 1, 1, 1 };
-const system_41_round_coin_offsets = [_]usize{ 0, 0, 1, 2 };
 
 // system: "lv-cell-coin"
 const system_41 = vanishing.System{
     .modules = &system_41_modules,
-    .round_coin_counts = &system_41_round_coin_counts,
-    .round_coin_offsets = &system_41_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 3,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 1,
@@ -3627,6 +3627,7 @@ const system_41 = vanishing.System{
 
 const vanishing_scenario_41 = VanishingScenario{
     .name = "LocalVanishing/CellAndCoin",
+    .spec = system_41_spec,
     .system = system_41,
     .honest = .{
         .rounds = &.{
@@ -3680,6 +3681,12 @@ const vanishing_scenario_41 = VanishingScenario{
     },
 };
 
+pub const system_42_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LocalVanishing/ThreeColumnLinear"
 
 // expression: "global"
@@ -3704,19 +3711,12 @@ const system_42_module_0_buckets = [_]vanishing.Bucket{
 
 const system_42_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_42_module_0_expressions, .buckets = &system_42_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_42_module_0_expressions, .buckets = &system_42_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_42_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_42_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "lv-3col"
 const system_42 = vanishing.System{
     .modules = &system_42_modules,
-    .round_coin_counts = &system_42_round_coin_counts,
-    .round_coin_offsets = &system_42_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 4,
     .total_quotient_claims = 1,
@@ -3724,6 +3724,7 @@ const system_42 = vanishing.System{
 
 const vanishing_scenario_42 = VanishingScenario{
     .name = "LocalVanishing/ThreeColumnLinear",
+    .spec = system_42_spec,
     .system = system_42,
     .honest = .{
         .rounds = &.{
@@ -3769,6 +3770,12 @@ const vanishing_scenario_42 = VanishingScenario{
     },
 };
 
+pub const system_43_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LocalVanishing/MultiAnchorMultiColumn"
 
 const system_43_module_0_expressions = [_]vanishing.ExprNode{
@@ -3795,19 +3802,12 @@ const system_43_module_0_buckets = [_]vanishing.Bucket{
 
 const system_43_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_43_module_0_expressions, .buckets = &system_43_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_43_module_0_expressions, .buckets = &system_43_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_43_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_43_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "lv-multi-anchor-multi-col"
 const system_43 = vanishing.System{
     .modules = &system_43_modules,
-    .round_coin_counts = &system_43_round_coin_counts,
-    .round_coin_offsets = &system_43_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 4,
     .total_quotient_claims = 1,
@@ -3815,6 +3815,7 @@ const system_43 = vanishing.System{
 
 const vanishing_scenario_43 = VanishingScenario{
     .name = "LocalVanishing/MultiAnchorMultiColumn",
+    .spec = system_43_spec,
     .system = system_43,
     .honest = .{
         .rounds = &.{
@@ -3858,6 +3859,12 @@ const vanishing_scenario_43 = VanishingScenario{
     },
 };
 
+pub const system_44_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LocalVanishing/CubeAtFirstRow"
 
 // expression: "global"
@@ -3884,19 +3891,12 @@ const system_44_module_0_buckets = [_]vanishing.Bucket{
 
 const system_44_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_44_module_0_expressions, .buckets = &system_44_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_44_module_0_expressions, .buckets = &system_44_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_44_round_coin_counts = [_]usize{ 0, 1, 1 };
-const system_44_round_coin_offsets = [_]usize{ 0, 0, 1 };
 
 // system: "lv-cube"
 const system_44 = vanishing.System{
     .modules = &system_44_modules,
-    .round_coin_counts = &system_44_round_coin_counts,
-    .round_coin_offsets = &system_44_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 2,
     .total_quotient_claims = 4,
@@ -3904,6 +3904,7 @@ const system_44 = vanishing.System{
 
 const vanishing_scenario_44 = VanishingScenario{
     .name = "LocalVanishing/CubeAtFirstRow",
+    .spec = system_44_spec,
     .system = system_44,
     .honest = .{
         .rounds = &.{
@@ -3951,6 +3952,12 @@ const vanishing_scenario_44 = VanishingScenario{
     },
 };
 
+pub const system_45_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 2 },
+    .total_round_coins = 4,
+};
+
 // scenario: "LocalVanishing/MultiModule"
 
 // expression: "global"
@@ -3987,21 +3994,14 @@ const system_45_module_1_buckets = [_]vanishing.Bucket{
 
 const system_45_modules = [_]vanishing.Module{
     // module: "modA"
-    .{ .size = .{ .static = 4 }, .expressions = &system_45_module_0_expressions, .buckets = &system_45_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_45_module_0_expressions, .buckets = &system_45_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 2 },
     // module: "modB"
-    .{ .size = .{ .static = 4 }, .expressions = &system_45_module_1_expressions, .buckets = &system_45_module_1_buckets, .witness_claim_offset = 2 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_45_module_1_expressions, .buckets = &system_45_module_1_buckets, .witness_claim_offset = 2, .merge_coin_index = 1, .eval_coin_index = 3 },
 };
-
-const system_45_round_coin_counts = [_]usize{ 0, 2, 2 };
-const system_45_round_coin_offsets = [_]usize{ 0, 0, 2 };
 
 // system: "lv-multi-mod"
 const system_45 = vanishing.System{
     .modules = &system_45_modules,
-    .round_coin_counts = &system_45_round_coin_counts,
-    .round_coin_offsets = &system_45_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 4,
     .dynamic_module_count = 0,
     .total_witness_claims = 4,
     .total_quotient_claims = 2,
@@ -4009,6 +4009,7 @@ const system_45 = vanishing.System{
 
 const vanishing_scenario_45 = VanishingScenario{
     .name = "LocalVanishing/MultiModule",
+    .spec = system_45_spec,
     .system = system_45,
     .honest = .{
         .rounds = &.{
@@ -4054,6 +4055,12 @@ const vanishing_scenario_45 = VanishingScenario{
     },
 };
 
+pub const system_46_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LogDerivativeSumCompiler/SingleFractionAllOnes"
 
 // expression: "z-recurrence-b0-k0"
@@ -4078,19 +4085,12 @@ const system_46_module_0_buckets = [_]vanishing.Bucket{
 
 const system_46_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_46_module_0_expressions, .buckets = &system_46_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_46_module_0_expressions, .buckets = &system_46_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_46_round_coin_counts = [_]usize{ 0, 0, 1, 1 };
-const system_46_round_coin_offsets = [_]usize{ 0, 0, 0, 1 };
 
 // system: "lds-ones"
 const system_46 = vanishing.System{
     .modules = &system_46_modules,
-    .round_coin_counts = &system_46_round_coin_counts,
-    .round_coin_offsets = &system_46_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 3,
     .total_quotient_claims = 1,
@@ -4098,6 +4098,7 @@ const system_46 = vanishing.System{
 
 const vanishing_scenario_46 = VanishingScenario{
     .name = "LogDerivativeSumCompiler/SingleFractionAllOnes",
+    .spec = system_46_spec,
     .system = system_46,
     .honest = .{
         .rounds = &.{
@@ -4130,6 +4131,12 @@ const vanishing_scenario_46 = VanishingScenario{
     },
 };
 
+pub const system_47_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LogDerivativeSumCompiler/PartialFilter"
 
 // expression: "z-recurrence-b0-k0"
@@ -4156,19 +4163,12 @@ const system_47_module_0_buckets = [_]vanishing.Bucket{
 
 const system_47_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_47_module_0_expressions, .buckets = &system_47_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_47_module_0_expressions, .buckets = &system_47_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_47_round_coin_counts = [_]usize{ 0, 0, 1, 1 };
-const system_47_round_coin_offsets = [_]usize{ 0, 0, 0, 1 };
 
 // system: "lds-partial"
 const system_47 = vanishing.System{
     .modules = &system_47_modules,
-    .round_coin_counts = &system_47_round_coin_counts,
-    .round_coin_offsets = &system_47_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 4,
     .total_quotient_claims = 1,
@@ -4176,6 +4176,7 @@ const system_47 = vanishing.System{
 
 const vanishing_scenario_47 = VanishingScenario{
     .name = "LogDerivativeSumCompiler/PartialFilter",
+    .spec = system_47_spec,
     .system = system_47,
     .honest = .{
         .rounds = &.{
@@ -4209,6 +4210,12 @@ const vanishing_scenario_47 = VanishingScenario{
     },
 };
 
+pub const system_48_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LogDerivativeSumCompiler/AllZeroFilter"
 
 // expression: "z-recurrence-b0-k0"
@@ -4235,19 +4242,12 @@ const system_48_module_0_buckets = [_]vanishing.Bucket{
 
 const system_48_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_48_module_0_expressions, .buckets = &system_48_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_48_module_0_expressions, .buckets = &system_48_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_48_round_coin_counts = [_]usize{ 0, 0, 1, 1 };
-const system_48_round_coin_offsets = [_]usize{ 0, 0, 0, 1 };
 
 // system: "lds-zeros"
 const system_48 = vanishing.System{
     .modules = &system_48_modules,
-    .round_coin_counts = &system_48_round_coin_counts,
-    .round_coin_offsets = &system_48_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 4,
     .total_quotient_claims = 1,
@@ -4255,6 +4255,7 @@ const system_48 = vanishing.System{
 
 const vanishing_scenario_48 = VanishingScenario{
     .name = "LogDerivativeSumCompiler/AllZeroFilter",
+    .spec = system_48_spec,
     .system = system_48,
     .honest = .{
         .rounds = &.{
@@ -4288,6 +4289,12 @@ const vanishing_scenario_48 = VanishingScenario{
     },
 };
 
+pub const system_49_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LogDerivativeSumCompiler/FilterMasksZeroDenominator"
 
 // expression: "z-recurrence-b0-k0"
@@ -4314,19 +4321,12 @@ const system_49_module_0_buckets = [_]vanishing.Bucket{
 
 const system_49_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_49_module_0_expressions, .buckets = &system_49_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_49_module_0_expressions, .buckets = &system_49_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_49_round_coin_counts = [_]usize{ 0, 0, 1, 1 };
-const system_49_round_coin_offsets = [_]usize{ 0, 0, 0, 1 };
 
 // system: "lds-maskzero"
 const system_49 = vanishing.System{
     .modules = &system_49_modules,
-    .round_coin_counts = &system_49_round_coin_counts,
-    .round_coin_offsets = &system_49_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 5,
     .total_quotient_claims = 1,
@@ -4334,6 +4334,7 @@ const system_49 = vanishing.System{
 
 const vanishing_scenario_49 = VanishingScenario{
     .name = "LogDerivativeSumCompiler/FilterMasksZeroDenominator",
+    .spec = system_49_spec,
     .system = system_49,
     .honest = .{
         .rounds = &.{
@@ -4366,6 +4367,12 @@ const vanishing_scenario_49 = VanishingScenario{
         .quotient_claims = &.{.{ 597550778, 851285320, 602398993, 451939824, 1591540249, 1161581321 }},
         .module_sizes = &.{},
     },
+};
+
+pub const system_50_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
+    .total_round_coins = 2,
 };
 
 // scenario: "LogDerivativeSumCompiler/Packing4Fractions"
@@ -4424,19 +4431,12 @@ const system_50_module_0_buckets = [_]vanishing.Bucket{
 
 const system_50_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_50_module_0_expressions, .buckets = &system_50_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_50_module_0_expressions, .buckets = &system_50_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_50_round_coin_counts = [_]usize{ 0, 0, 1, 1 };
-const system_50_round_coin_offsets = [_]usize{ 0, 0, 0, 1 };
 
 // system: "lds-pack"
 const system_50 = vanishing.System{
     .modules = &system_50_modules,
-    .round_coin_counts = &system_50_round_coin_counts,
-    .round_coin_offsets = &system_50_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 8,
     .total_quotient_claims = 5,
@@ -4444,6 +4444,7 @@ const system_50 = vanishing.System{
 
 const vanishing_scenario_50 = VanishingScenario{
     .name = "LogDerivativeSumCompiler/Packing4Fractions",
+    .spec = system_50_spec,
     .system = system_50,
     .honest = .{
         .rounds = &.{
@@ -4484,6 +4485,12 @@ const vanishing_scenario_50 = VanishingScenario{
         .quotient_claims = &.{ .{ 1065353236, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1065353231, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_51_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 0, 2 },
+    .total_round_coins = 4,
 };
 
 // scenario: "LogDerivativeSumCompiler/MultiModuleBucketing"
@@ -4532,21 +4539,14 @@ const system_51_module_1_buckets = [_]vanishing.Bucket{
 
 const system_51_modules = [_]vanishing.Module{
     // module: "mA"
-    .{ .size = .{ .static = 4 }, .expressions = &system_51_module_0_expressions, .buckets = &system_51_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_51_module_0_expressions, .buckets = &system_51_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 2 },
     // module: "mB"
-    .{ .size = .{ .static = 4 }, .expressions = &system_51_module_1_expressions, .buckets = &system_51_module_1_buckets, .witness_claim_offset = 3 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_51_module_1_expressions, .buckets = &system_51_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 1, .eval_coin_index = 3 },
 };
-
-const system_51_round_coin_counts = [_]usize{ 0, 0, 2, 2 };
-const system_51_round_coin_offsets = [_]usize{ 0, 0, 0, 2 };
 
 // system: "lds-multi-mod"
 const system_51 = vanishing.System{
     .modules = &system_51_modules,
-    .round_coin_counts = &system_51_round_coin_counts,
-    .round_coin_offsets = &system_51_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 4,
     .dynamic_module_count = 0,
     .total_witness_claims = 7,
     .total_quotient_claims = 2,
@@ -4554,6 +4554,7 @@ const system_51 = vanishing.System{
 
 const vanishing_scenario_51 = VanishingScenario{
     .name = "LogDerivativeSumCompiler/MultiModuleBucketing",
+    .spec = system_51_spec,
     .system = system_51,
     .honest = .{
         .rounds = &.{
@@ -4590,6 +4591,12 @@ const vanishing_scenario_51 = VanishingScenario{
         .quotient_claims = &.{ .{ 1065353219, 0, 0, 0, 0, 0 }, .{ 566231818, 588605018, 1292526225, 506615929, 371725082, 256958535 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_52_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 0, 2 },
+    .total_round_coins = 4,
 };
 
 // scenario: "LogDerivativeSumCompiler/ConditionalLookupShape"
@@ -4643,21 +4650,14 @@ const system_52_module_1_buckets = [_]vanishing.Bucket{
 
 const system_52_modules = [_]vanishing.Module{
     // module: "mS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_52_module_0_expressions, .buckets = &system_52_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_52_module_0_expressions, .buckets = &system_52_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 2 },
     // module: "mT"
-    .{ .size = .{ .static = 2 }, .expressions = &system_52_module_1_expressions, .buckets = &system_52_module_1_buckets, .witness_claim_offset = 4 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_52_module_1_expressions, .buckets = &system_52_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 1, .eval_coin_index = 3 },
 };
-
-const system_52_round_coin_counts = [_]usize{ 0, 0, 2, 2 };
-const system_52_round_coin_offsets = [_]usize{ 0, 0, 0, 2 };
 
 // system: "lds-cond"
 const system_52 = vanishing.System{
     .modules = &system_52_modules,
-    .round_coin_counts = &system_52_round_coin_counts,
-    .round_coin_offsets = &system_52_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 4,
     .dynamic_module_count = 0,
     .total_witness_claims = 8,
     .total_quotient_claims = 2,
@@ -4665,6 +4665,7 @@ const system_52 = vanishing.System{
 
 const vanishing_scenario_52 = VanishingScenario{
     .name = "LogDerivativeSumCompiler/ConditionalLookupShape",
+    .spec = system_52_spec,
     .system = system_52,
     .honest = .{
         .rounds = &.{
@@ -4702,6 +4703,12 @@ const vanishing_scenario_52 = VanishingScenario{
         .quotient_claims = &.{ .{ 122189837, 1674092279, 801485207, 1701019454, 633607522, 279711890 }, .{ 613425040, 786564257, 216706602, 2118173335, 553600268, 1678495828 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_53_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
+    .total_round_coins = 2,
 };
 
 // scenario: "LogDerivativeSumCompiler/ManyFractions"
@@ -4789,19 +4796,12 @@ const system_53_module_0_buckets = [_]vanishing.Bucket{
 
 const system_53_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_53_module_0_expressions, .buckets = &system_53_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_53_module_0_expressions, .buckets = &system_53_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_53_round_coin_counts = [_]usize{ 0, 0, 1, 1 };
-const system_53_round_coin_offsets = [_]usize{ 0, 0, 0, 1 };
 
 // system: "lds-many"
 const system_53 = vanishing.System{
     .modules = &system_53_modules,
-    .round_coin_counts = &system_53_round_coin_counts,
-    .round_coin_offsets = &system_53_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 13,
     .total_quotient_claims = 5,
@@ -4809,6 +4809,7 @@ const system_53 = vanishing.System{
 
 const vanishing_scenario_53 = VanishingScenario{
     .name = "LogDerivativeSumCompiler/ManyFractions",
+    .spec = system_53_spec,
     .system = system_53,
     .honest = .{
         .rounds = &.{
@@ -4857,6 +4858,12 @@ const vanishing_scenario_53 = VanishingScenario{
     },
 };
 
+pub const system_54_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LogDerivativeSumCompiler/SizeTwoModule"
 
 // expression: "z-recurrence-b0-k0"
@@ -4881,19 +4888,12 @@ const system_54_module_0_buckets = [_]vanishing.Bucket{
 
 const system_54_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 2 }, .expressions = &system_54_module_0_expressions, .buckets = &system_54_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_54_module_0_expressions, .buckets = &system_54_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_54_round_coin_counts = [_]usize{ 0, 0, 1, 1 };
-const system_54_round_coin_offsets = [_]usize{ 0, 0, 0, 1 };
 
 // system: "lds-size2"
 const system_54 = vanishing.System{
     .modules = &system_54_modules,
-    .round_coin_counts = &system_54_round_coin_counts,
-    .round_coin_offsets = &system_54_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 3,
     .total_quotient_claims = 1,
@@ -4901,6 +4901,7 @@ const system_54 = vanishing.System{
 
 const vanishing_scenario_54 = VanishingScenario{
     .name = "LogDerivativeSumCompiler/SizeTwoModule",
+    .spec = system_54_spec,
     .system = system_54,
     .honest = .{
         .rounds = &.{
@@ -4931,6 +4932,12 @@ const vanishing_scenario_54 = VanishingScenario{
         .quotient_claims = &.{.{ 4, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
     },
+};
+
+pub const system_55_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
+    .total_round_coins = 2,
 };
 
 // scenario: "LogDerivativeSumCompiler/MultipleQueries"
@@ -4965,19 +4972,12 @@ const system_55_module_0_buckets = [_]vanishing.Bucket{
 
 const system_55_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_55_module_0_expressions, .buckets = &system_55_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_55_module_0_expressions, .buckets = &system_55_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_55_round_coin_counts = [_]usize{ 0, 0, 1, 1 };
-const system_55_round_coin_offsets = [_]usize{ 0, 0, 0, 1 };
 
 // system: "lds-multi-q"
 const system_55 = vanishing.System{
     .modules = &system_55_modules,
-    .round_coin_counts = &system_55_round_coin_counts,
-    .round_coin_offsets = &system_55_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 6,
     .total_quotient_claims = 1,
@@ -4985,6 +4985,7 @@ const system_55 = vanishing.System{
 
 const vanishing_scenario_55 = VanishingScenario{
     .name = "LogDerivativeSumCompiler/MultipleQueries",
+    .spec = system_55_spec,
     .system = system_55,
     .honest = .{
         .rounds = &.{
@@ -5022,6 +5023,12 @@ const vanishing_scenario_55 = VanishingScenario{
     },
 };
 
+pub const system_56_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
+    .total_round_coins = 2,
+};
+
 // scenario: "LogDerivativeSumCompiler/VectorDenominator"
 
 // expression: "z-recurrence-b0-k0"
@@ -5046,19 +5053,12 @@ const system_56_module_0_buckets = [_]vanishing.Bucket{
 
 const system_56_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_56_module_0_expressions, .buckets = &system_56_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_56_module_0_expressions, .buckets = &system_56_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_56_round_coin_counts = [_]usize{ 0, 0, 1, 1 };
-const system_56_round_coin_offsets = [_]usize{ 0, 0, 0, 1 };
 
 // system: "lds-vec-den"
 const system_56 = vanishing.System{
     .modules = &system_56_modules,
-    .round_coin_counts = &system_56_round_coin_counts,
-    .round_coin_offsets = &system_56_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 4,
     .total_quotient_claims = 1,
@@ -5066,6 +5066,7 @@ const system_56 = vanishing.System{
 
 const vanishing_scenario_56 = VanishingScenario{
     .name = "LogDerivativeSumCompiler/VectorDenominator",
+    .spec = system_56_spec,
     .system = system_56,
     .honest = .{
         .rounds = &.{
@@ -5097,6 +5098,12 @@ const vanishing_scenario_56 = VanishingScenario{
         .quotient_claims = &.{.{ 455937306, 1866453309, 47631833, 1865703095, 2024525063, 703886066 }},
         .module_sizes = &.{},
     },
+};
+
+pub const system_57_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
+    .total_round_coins = 2,
 };
 
 // scenario: "LogDerivativeSumCompiler/AllFiltersOnesPacked"
@@ -5149,19 +5156,12 @@ const system_57_module_0_buckets = [_]vanishing.Bucket{
 
 const system_57_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_57_module_0_expressions, .buckets = &system_57_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_57_module_0_expressions, .buckets = &system_57_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
-
-const system_57_round_coin_counts = [_]usize{ 0, 0, 1, 1 };
-const system_57_round_coin_offsets = [_]usize{ 0, 0, 0, 1 };
 
 // system: "lds-ones-pack"
 const system_57 = vanishing.System{
     .modules = &system_57_modules,
-    .round_coin_counts = &system_57_round_coin_counts,
-    .round_coin_offsets = &system_57_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 2,
     .dynamic_module_count = 0,
     .total_witness_claims = 6,
     .total_quotient_claims = 4,
@@ -5169,6 +5169,7 @@ const system_57 = vanishing.System{
 
 const vanishing_scenario_57 = VanishingScenario{
     .name = "LogDerivativeSumCompiler/AllFiltersOnesPacked",
+    .spec = system_57_spec,
     .system = system_57,
     .honest = .{
         .rounds = &.{
@@ -5205,6 +5206,12 @@ const vanishing_scenario_57 = VanishingScenario{
         .quotient_claims = &.{ .{ 6, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_58_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
+    .total_round_coins = 5,
 };
 
 // scenario: "Lookup/SingleColumnNoFilters"
@@ -5256,21 +5263,14 @@ const system_58_module_1_buckets = [_]vanishing.Bucket{
 
 const system_58_modules = [_]vanishing.Module{
     // module: "modT"
-    .{ .size = .{ .static = 4 }, .expressions = &system_58_module_0_expressions, .buckets = &system_58_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_58_module_0_expressions, .buckets = &system_58_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_58_module_1_expressions, .buckets = &system_58_module_1_buckets, .witness_claim_offset = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_58_module_1_expressions, .buckets = &system_58_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
 };
-
-const system_58_round_coin_counts = [_]usize{ 0, 1, 0, 2, 2 };
-const system_58_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 3 };
 
 // system: "lk-simple"
 const system_58 = vanishing.System{
     .modules = &system_58_modules,
-    .round_coin_counts = &system_58_round_coin_counts,
-    .round_coin_offsets = &system_58_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 5,
     .dynamic_module_count = 0,
     .total_witness_claims = 7,
     .total_quotient_claims = 2,
@@ -5278,6 +5278,7 @@ const system_58 = vanishing.System{
 
 const vanishing_scenario_58 = VanishingScenario{
     .name = "Lookup/SingleColumnNoFilters",
+    .spec = system_58_spec,
     .system = system_58,
     .honest = .{
         .rounds = &.{
@@ -5318,6 +5319,12 @@ const vanishing_scenario_58 = VanishingScenario{
         .quotient_claims = &.{ .{ 1985670035, 1737293058, 695162779, 900207283, 701960615, 1313262606 }, .{ 4962341, 632827347, 916994485, 423708261, 2072320924, 30754973 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_59_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
+    .total_round_coins = 5,
 };
 
 // scenario: "Lookup/FilterOnIncluded"
@@ -5371,21 +5378,14 @@ const system_59_module_1_buckets = [_]vanishing.Bucket{
 
 const system_59_modules = [_]vanishing.Module{
     // module: "modT"
-    .{ .size = .{ .static = 2 }, .expressions = &system_59_module_0_expressions, .buckets = &system_59_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_59_module_0_expressions, .buckets = &system_59_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_59_module_1_expressions, .buckets = &system_59_module_1_buckets, .witness_claim_offset = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_59_module_1_expressions, .buckets = &system_59_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
 };
-
-const system_59_round_coin_counts = [_]usize{ 0, 1, 0, 2, 2 };
-const system_59_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 3 };
 
 // system: "lk-filterA"
 const system_59 = vanishing.System{
     .modules = &system_59_modules,
-    .round_coin_counts = &system_59_round_coin_counts,
-    .round_coin_offsets = &system_59_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 5,
     .dynamic_module_count = 0,
     .total_witness_claims = 8,
     .total_quotient_claims = 2,
@@ -5393,6 +5393,7 @@ const system_59 = vanishing.System{
 
 const vanishing_scenario_59 = VanishingScenario{
     .name = "Lookup/FilterOnIncluded",
+    .spec = system_59_spec,
     .system = system_59,
     .honest = .{
         .rounds = &.{
@@ -5434,6 +5435,12 @@ const vanishing_scenario_59 = VanishingScenario{
         .quotient_claims = &.{ .{ 1528134863, 363516060, 1385475521, 489063201, 389572824, 1969011824 }, .{ 702891393, 1571916773, 1853709551, 150464482, 1746899932, 1299241305 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_60_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4 },
+    .total_round_coins = 6,
 };
 
 // scenario: "Lookup/FilterOnIncluding"
@@ -5493,21 +5500,14 @@ const system_60_module_1_buckets = [_]vanishing.Bucket{
 
 const system_60_modules = [_]vanishing.Module{
     // module: "modT"
-    .{ .size = .{ .static = 4 }, .expressions = &system_60_module_0_expressions, .buckets = &system_60_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_60_module_0_expressions, .buckets = &system_60_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_60_module_1_expressions, .buckets = &system_60_module_1_buckets, .witness_claim_offset = 5 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_60_module_1_expressions, .buckets = &system_60_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 3, .eval_coin_index = 5 },
 };
-
-const system_60_round_coin_counts = [_]usize{ 0, 2, 0, 2, 2 };
-const system_60_round_coin_offsets = [_]usize{ 0, 0, 2, 2, 4 };
 
 // system: "lk-filterT"
 const system_60 = vanishing.System{
     .modules = &system_60_modules,
-    .round_coin_counts = &system_60_round_coin_counts,
-    .round_coin_offsets = &system_60_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 6,
     .dynamic_module_count = 0,
     .total_witness_claims = 8,
     .total_quotient_claims = 2,
@@ -5515,6 +5515,7 @@ const system_60 = vanishing.System{
 
 const vanishing_scenario_60 = VanishingScenario{
     .name = "Lookup/FilterOnIncluding",
+    .spec = system_60_spec,
     .system = system_60,
     .honest = .{
         .rounds = &.{
@@ -5556,6 +5557,12 @@ const vanishing_scenario_60 = VanishingScenario{
         .quotient_claims = &.{ .{ 819606509, 739928043, 470380032, 371415314, 509965036, 1026187313 }, .{ 1591750897, 928355508, 733876383, 528991461, 1660767531, 9004066 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_61_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4 },
+    .total_round_coins = 6,
 };
 
 // scenario: "Lookup/DoubleConditional"
@@ -5617,21 +5624,14 @@ const system_61_module_1_buckets = [_]vanishing.Bucket{
 
 const system_61_modules = [_]vanishing.Module{
     // module: "modT"
-    .{ .size = .{ .static = 4 }, .expressions = &system_61_module_0_expressions, .buckets = &system_61_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_61_module_0_expressions, .buckets = &system_61_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_61_module_1_expressions, .buckets = &system_61_module_1_buckets, .witness_claim_offset = 5 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_61_module_1_expressions, .buckets = &system_61_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 3, .eval_coin_index = 5 },
 };
-
-const system_61_round_coin_counts = [_]usize{ 0, 2, 0, 2, 2 };
-const system_61_round_coin_offsets = [_]usize{ 0, 0, 2, 2, 4 };
 
 // system: "lk-double"
 const system_61 = vanishing.System{
     .modules = &system_61_modules,
-    .round_coin_counts = &system_61_round_coin_counts,
-    .round_coin_offsets = &system_61_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 6,
     .dynamic_module_count = 0,
     .total_witness_claims = 9,
     .total_quotient_claims = 2,
@@ -5639,6 +5639,7 @@ const system_61 = vanishing.System{
 
 const vanishing_scenario_61 = VanishingScenario{
     .name = "Lookup/DoubleConditional",
+    .spec = system_61_spec,
     .system = system_61,
     .honest = .{
         .rounds = &.{
@@ -5681,6 +5682,12 @@ const vanishing_scenario_61 = VanishingScenario{
         .quotient_claims = &.{ .{ 1451886264, 928253701, 2096256371, 1616547234, 1310823661, 1085738052 }, .{ 1132677885, 1949604440, 1572231807, 415880319, 1897149676, 836347172 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_62_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4 },
+    .total_round_coins = 6,
 };
 
 // scenario: "Lookup/MultiColumn"
@@ -5740,21 +5747,14 @@ const system_62_module_1_buckets = [_]vanishing.Bucket{
 
 const system_62_modules = [_]vanishing.Module{
     // module: "modT"
-    .{ .size = .{ .static = 4 }, .expressions = &system_62_module_0_expressions, .buckets = &system_62_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_62_module_0_expressions, .buckets = &system_62_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_62_module_1_expressions, .buckets = &system_62_module_1_buckets, .witness_claim_offset = 5 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_62_module_1_expressions, .buckets = &system_62_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 3, .eval_coin_index = 5 },
 };
-
-const system_62_round_coin_counts = [_]usize{ 0, 2, 0, 2, 2 };
-const system_62_round_coin_offsets = [_]usize{ 0, 0, 2, 2, 4 };
 
 // system: "lk-multi-col"
 const system_62 = vanishing.System{
     .modules = &system_62_modules,
-    .round_coin_counts = &system_62_round_coin_counts,
-    .round_coin_offsets = &system_62_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 6,
     .dynamic_module_count = 0,
     .total_witness_claims = 9,
     .total_quotient_claims = 2,
@@ -5762,6 +5762,7 @@ const system_62 = vanishing.System{
 
 const vanishing_scenario_62 = VanishingScenario{
     .name = "Lookup/MultiColumn",
+    .spec = system_62_spec,
     .system = system_62,
     .honest = .{
         .rounds = &.{
@@ -5804,6 +5805,12 @@ const vanishing_scenario_62 = VanishingScenario{
         .quotient_claims = &.{ .{ 441308543, 1241124293, 1269610163, 1610445318, 1809620604, 133234795 }, .{ 1724676296, 1025497116, 1070889488, 1519302703, 435561409, 1202815977 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_63_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 3 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4 },
+    .total_round_coins = 7,
 };
 
 // scenario: "Lookup/SharedTable"
@@ -5877,23 +5884,16 @@ const system_63_module_2_buckets = [_]vanishing.Bucket{
 
 const system_63_modules = [_]vanishing.Module{
     // module: "modT"
-    .{ .size = .{ .static = 4 }, .expressions = &system_63_module_0_expressions, .buckets = &system_63_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_63_module_0_expressions, .buckets = &system_63_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 4 },
     // module: "modS1"
-    .{ .size = .{ .static = 4 }, .expressions = &system_63_module_1_expressions, .buckets = &system_63_module_1_buckets, .witness_claim_offset = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_63_module_1_expressions, .buckets = &system_63_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 5 },
     // module: "modS2"
-    .{ .size = .{ .static = 2 }, .expressions = &system_63_module_2_expressions, .buckets = &system_63_module_2_buckets, .witness_claim_offset = 7 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_63_module_2_expressions, .buckets = &system_63_module_2_buckets, .witness_claim_offset = 7, .merge_coin_index = 3, .eval_coin_index = 6 },
 };
-
-const system_63_round_coin_counts = [_]usize{ 0, 1, 0, 3, 3 };
-const system_63_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 4 };
 
 // system: "lk-shared"
 const system_63 = vanishing.System{
     .modules = &system_63_modules,
-    .round_coin_counts = &system_63_round_coin_counts,
-    .round_coin_offsets = &system_63_round_coin_offsets,
-    .max_round_coins = 3,
-    .total_round_coins = 7,
     .dynamic_module_count = 0,
     .total_witness_claims = 10,
     .total_quotient_claims = 3,
@@ -5901,6 +5901,7 @@ const system_63 = vanishing.System{
 
 const vanishing_scenario_63 = VanishingScenario{
     .name = "Lookup/SharedTable",
+    .spec = system_63_spec,
     .system = system_63,
     .honest = .{
         .rounds = &.{
@@ -5946,6 +5947,12 @@ const vanishing_scenario_63 = VanishingScenario{
         .quotient_claims = &.{ .{ 1667254416, 1413910019, 1271130542, 1248924433, 979948431, 251693332 }, .{ 633070469, 1318982090, 1133885389, 1948362949, 1458572814, 669134388 }, .{ 1613742654, 1173637069, 894069481, 53546225, 215888905, 1492713302 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_64_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 4, 4 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 5 },
+    .total_round_coins = 9,
 };
 
 // scenario: "Lookup/DistinctTables"
@@ -6042,25 +6049,18 @@ const system_64_module_3_buckets = [_]vanishing.Bucket{
 
 const system_64_modules = [_]vanishing.Module{
     // module: "modT1"
-    .{ .size = .{ .static = 4 }, .expressions = &system_64_module_0_expressions, .buckets = &system_64_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_64_module_0_expressions, .buckets = &system_64_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 5 },
     // module: "modT2"
-    .{ .size = .{ .static = 2 }, .expressions = &system_64_module_1_expressions, .buckets = &system_64_module_1_buckets, .witness_claim_offset = 4 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_64_module_1_expressions, .buckets = &system_64_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 6 },
     // module: "modS1"
-    .{ .size = .{ .static = 2 }, .expressions = &system_64_module_2_expressions, .buckets = &system_64_module_2_buckets, .witness_claim_offset = 8 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_64_module_2_expressions, .buckets = &system_64_module_2_buckets, .witness_claim_offset = 8, .merge_coin_index = 3, .eval_coin_index = 7 },
     // module: "modS2"
-    .{ .size = .{ .static = 2 }, .expressions = &system_64_module_3_expressions, .buckets = &system_64_module_3_buckets, .witness_claim_offset = 11 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_64_module_3_expressions, .buckets = &system_64_module_3_buckets, .witness_claim_offset = 11, .merge_coin_index = 4, .eval_coin_index = 8 },
 };
-
-const system_64_round_coin_counts = [_]usize{ 0, 1, 0, 4, 4 };
-const system_64_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 5 };
 
 // system: "lk-distinct"
 const system_64 = vanishing.System{
     .modules = &system_64_modules,
-    .round_coin_counts = &system_64_round_coin_counts,
-    .round_coin_offsets = &system_64_round_coin_offsets,
-    .max_round_coins = 4,
-    .total_round_coins = 9,
     .dynamic_module_count = 0,
     .total_witness_claims = 14,
     .total_quotient_claims = 4,
@@ -6068,6 +6068,7 @@ const system_64 = vanishing.System{
 
 const vanishing_scenario_64 = VanishingScenario{
     .name = "Lookup/DistinctTables",
+    .spec = system_64_spec,
     .system = system_64,
     .honest = .{
         .rounds = &.{
@@ -6119,6 +6120,12 @@ const vanishing_scenario_64 = VanishingScenario{
         .quotient_claims = &.{ .{ 1232834157, 388769993, 343868081, 904234896, 686746440, 439802588 }, .{ 665985511, 259877978, 1759771256, 256196466, 938087248, 1058622757 }, .{ 466442113, 337071518, 327117759, 117200188, 1895036658, 1828472793 }, .{ 1144430205, 111171936, 2027583795, 2105289180, 337968491, 826654703 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_65_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4 },
+    .total_round_coins = 6,
 };
 
 // scenario: "Lookup/MultiColumnFilterOnIncluding"
@@ -6186,21 +6193,14 @@ const system_65_module_1_buckets = [_]vanishing.Bucket{
 
 const system_65_modules = [_]vanishing.Module{
     // module: "modT"
-    .{ .size = .{ .static = 4 }, .expressions = &system_65_module_0_expressions, .buckets = &system_65_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_65_module_0_expressions, .buckets = &system_65_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_65_module_1_expressions, .buckets = &system_65_module_1_buckets, .witness_claim_offset = 6 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_65_module_1_expressions, .buckets = &system_65_module_1_buckets, .witness_claim_offset = 6, .merge_coin_index = 3, .eval_coin_index = 5 },
 };
-
-const system_65_round_coin_counts = [_]usize{ 0, 2, 0, 2, 2 };
-const system_65_round_coin_offsets = [_]usize{ 0, 0, 2, 2, 4 };
 
 // system: "lk-multi-filterT"
 const system_65 = vanishing.System{
     .modules = &system_65_modules,
-    .round_coin_counts = &system_65_round_coin_counts,
-    .round_coin_offsets = &system_65_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 6,
     .dynamic_module_count = 0,
     .total_witness_claims = 10,
     .total_quotient_claims = 2,
@@ -6208,6 +6208,7 @@ const system_65 = vanishing.System{
 
 const vanishing_scenario_65 = VanishingScenario{
     .name = "Lookup/MultiColumnFilterOnIncluding",
+    .spec = system_65_spec,
     .system = system_65,
     .honest = .{
         .rounds = &.{
@@ -6251,6 +6252,12 @@ const vanishing_scenario_65 = VanishingScenario{
         .quotient_claims = &.{ .{ 2114120142, 842428066, 845470639, 1113034227, 5499584, 464880250 }, .{ 932793044, 253514625, 367327939, 1712551146, 269457479, 1689363281 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_66_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
+    .total_round_coins = 5,
 };
 
 // scenario: "Lookup/RepeatedValueInTable"
@@ -6302,21 +6309,14 @@ const system_66_module_1_buckets = [_]vanishing.Bucket{
 
 const system_66_modules = [_]vanishing.Module{
     // module: "modT"
-    .{ .size = .{ .static = 4 }, .expressions = &system_66_module_0_expressions, .buckets = &system_66_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_66_module_0_expressions, .buckets = &system_66_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_66_module_1_expressions, .buckets = &system_66_module_1_buckets, .witness_claim_offset = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_66_module_1_expressions, .buckets = &system_66_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
 };
-
-const system_66_round_coin_counts = [_]usize{ 0, 1, 0, 2, 2 };
-const system_66_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 3 };
 
 // system: "lk-repeated"
 const system_66 = vanishing.System{
     .modules = &system_66_modules,
-    .round_coin_counts = &system_66_round_coin_counts,
-    .round_coin_offsets = &system_66_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 5,
     .dynamic_module_count = 0,
     .total_witness_claims = 7,
     .total_quotient_claims = 2,
@@ -6324,6 +6324,7 @@ const system_66 = vanishing.System{
 
 const vanishing_scenario_66 = VanishingScenario{
     .name = "Lookup/RepeatedValueInTable",
+    .spec = system_66_spec,
     .system = system_66,
     .honest = .{
         .rounds = &.{
@@ -6364,6 +6365,12 @@ const vanishing_scenario_66 = VanishingScenario{
         .quotient_claims = &.{ .{ 1788930017, 456467605, 769132236, 926821841, 1605809599, 742381766 }, .{ 1496057622, 1246002100, 1175597075, 360234179, 501297149, 51840246 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_67_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
+    .total_round_coins = 5,
 };
 
 // scenario: "Lookup/ShiftedAColumn"
@@ -6415,21 +6422,14 @@ const system_67_module_1_buckets = [_]vanishing.Bucket{
 
 const system_67_modules = [_]vanishing.Module{
     // module: "modT"
-    .{ .size = .{ .static = 4 }, .expressions = &system_67_module_0_expressions, .buckets = &system_67_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_67_module_0_expressions, .buckets = &system_67_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_67_module_1_expressions, .buckets = &system_67_module_1_buckets, .witness_claim_offset = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_67_module_1_expressions, .buckets = &system_67_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
 };
-
-const system_67_round_coin_counts = [_]usize{ 0, 1, 0, 2, 2 };
-const system_67_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 3 };
 
 // system: "lk-shift-a"
 const system_67 = vanishing.System{
     .modules = &system_67_modules,
-    .round_coin_counts = &system_67_round_coin_counts,
-    .round_coin_offsets = &system_67_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 5,
     .dynamic_module_count = 0,
     .total_witness_claims = 7,
     .total_quotient_claims = 3,
@@ -6437,6 +6437,7 @@ const system_67 = vanishing.System{
 
 const vanishing_scenario_67 = VanishingScenario{
     .name = "Lookup/ShiftedAColumn",
+    .spec = system_67_spec,
     .system = system_67,
     .honest = .{
         .rounds = &.{
@@ -6478,6 +6479,12 @@ const vanishing_scenario_67 = VanishingScenario{
         .quotient_claims = &.{ .{ 702642712, 1747455588, 504539883, 454850292, 99564324, 1032013071 }, .{ 1132770249, 1796583015, 2003671330, 1498745362, 1889221477, 1399700381 }, .{ 784580641, 562684934, 270987402, 180525770, 1576926346, 357414471 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_68_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
+    .total_round_coins = 5,
 };
 
 // scenario: "Lookup/ShiftedBColumn"
@@ -6529,21 +6536,14 @@ const system_68_module_1_buckets = [_]vanishing.Bucket{
 
 const system_68_modules = [_]vanishing.Module{
     // module: "modT"
-    .{ .size = .{ .static = 4 }, .expressions = &system_68_module_0_expressions, .buckets = &system_68_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_68_module_0_expressions, .buckets = &system_68_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_68_module_1_expressions, .buckets = &system_68_module_1_buckets, .witness_claim_offset = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_68_module_1_expressions, .buckets = &system_68_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
 };
-
-const system_68_round_coin_counts = [_]usize{ 0, 1, 0, 2, 2 };
-const system_68_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 3 };
 
 // system: "lk-shift-b"
 const system_68 = vanishing.System{
     .modules = &system_68_modules,
-    .round_coin_counts = &system_68_round_coin_counts,
-    .round_coin_offsets = &system_68_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 5,
     .dynamic_module_count = 0,
     .total_witness_claims = 7,
     .total_quotient_claims = 2,
@@ -6551,6 +6551,7 @@ const system_68 = vanishing.System{
 
 const vanishing_scenario_68 = VanishingScenario{
     .name = "Lookup/ShiftedBColumn",
+    .spec = system_68_spec,
     .system = system_68,
     .honest = .{
         .rounds = &.{
@@ -6591,6 +6592,12 @@ const vanishing_scenario_68 = VanishingScenario{
         .quotient_claims = &.{ .{ 54811241, 1931824376, 1895367118, 1012436279, 1882262524, 1579424636 }, .{ 1169179922, 1287351204, 357020390, 504685457, 1434587006, 286566210 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_69_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 3 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4 },
+    .total_round_coins = 7,
 };
 
 // scenario: "Lookup/MultipleAFragments"
@@ -6664,23 +6671,16 @@ const system_69_module_2_buckets = [_]vanishing.Bucket{
 
 const system_69_modules = [_]vanishing.Module{
     // module: "modT"
-    .{ .size = .{ .static = 4 }, .expressions = &system_69_module_0_expressions, .buckets = &system_69_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_69_module_0_expressions, .buckets = &system_69_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 4 },
     // module: "modS1"
-    .{ .size = .{ .static = 4 }, .expressions = &system_69_module_1_expressions, .buckets = &system_69_module_1_buckets, .witness_claim_offset = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_69_module_1_expressions, .buckets = &system_69_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 5 },
     // module: "modS2"
-    .{ .size = .{ .static = 2 }, .expressions = &system_69_module_2_expressions, .buckets = &system_69_module_2_buckets, .witness_claim_offset = 7 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_69_module_2_expressions, .buckets = &system_69_module_2_buckets, .witness_claim_offset = 7, .merge_coin_index = 3, .eval_coin_index = 6 },
 };
-
-const system_69_round_coin_counts = [_]usize{ 0, 1, 0, 3, 3 };
-const system_69_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 4 };
 
 // system: "lk-multi-A"
 const system_69 = vanishing.System{
     .modules = &system_69_modules,
-    .round_coin_counts = &system_69_round_coin_counts,
-    .round_coin_offsets = &system_69_round_coin_offsets,
-    .max_round_coins = 3,
-    .total_round_coins = 7,
     .dynamic_module_count = 0,
     .total_witness_claims = 10,
     .total_quotient_claims = 3,
@@ -6688,6 +6688,7 @@ const system_69 = vanishing.System{
 
 const vanishing_scenario_69 = VanishingScenario{
     .name = "Lookup/MultipleAFragments",
+    .spec = system_69_spec,
     .system = system_69,
     .honest = .{
         .rounds = &.{
@@ -6733,6 +6734,12 @@ const vanishing_scenario_69 = VanishingScenario{
         .quotient_claims = &.{ .{ 468643805, 861283288, 1568284012, 46082280, 1941052183, 854984265 }, .{ 1067918597, 1761666704, 878487444, 755562004, 834731978, 199383987 }, .{ 1326177374, 1307240021, 2049755915, 1665819445, 2127845016, 1752509181 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_70_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4 },
+    .total_round_coins = 6,
 };
 
 // scenario: "Lookup/WidthThree"
@@ -6800,21 +6807,14 @@ const system_70_module_1_buckets = [_]vanishing.Bucket{
 
 const system_70_modules = [_]vanishing.Module{
     // module: "modT"
-    .{ .size = .{ .static = 4 }, .expressions = &system_70_module_0_expressions, .buckets = &system_70_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_70_module_0_expressions, .buckets = &system_70_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS"
-    .{ .size = .{ .static = 2 }, .expressions = &system_70_module_1_expressions, .buckets = &system_70_module_1_buckets, .witness_claim_offset = 6 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_70_module_1_expressions, .buckets = &system_70_module_1_buckets, .witness_claim_offset = 6, .merge_coin_index = 3, .eval_coin_index = 5 },
 };
-
-const system_70_round_coin_counts = [_]usize{ 0, 2, 0, 2, 2 };
-const system_70_round_coin_offsets = [_]usize{ 0, 0, 2, 2, 4 };
 
 // system: "lk-w3"
 const system_70 = vanishing.System{
     .modules = &system_70_modules,
-    .round_coin_counts = &system_70_round_coin_counts,
-    .round_coin_offsets = &system_70_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 6,
     .dynamic_module_count = 0,
     .total_witness_claims = 11,
     .total_quotient_claims = 2,
@@ -6822,6 +6822,7 @@ const system_70 = vanishing.System{
 
 const vanishing_scenario_70 = VanishingScenario{
     .name = "Lookup/WidthThree",
+    .spec = system_70_spec,
     .system = system_70,
     .honest = .{
         .rounds = &.{
@@ -6866,6 +6867,12 @@ const vanishing_scenario_70 = VanishingScenario{
         .quotient_claims = &.{ .{ 1137524644, 1514905902, 106763816, 1087919554, 711882611, 1105249009 }, .{ 1010365003, 748789065, 1841365540, 2072627629, 566502225, 1850914326 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_71_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
+    .total_round_coins = 5,
 };
 
 // scenario: "Lookup/PrecomputedTable"
@@ -6917,21 +6924,14 @@ const system_71_module_1_buckets = [_]vanishing.Bucket{
 
 const system_71_modules = [_]vanishing.Module{
     // module: "modT"
-    .{ .size = .{ .static = 4 }, .expressions = &system_71_module_0_expressions, .buckets = &system_71_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_71_module_0_expressions, .buckets = &system_71_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_71_module_1_expressions, .buckets = &system_71_module_1_buckets, .witness_claim_offset = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_71_module_1_expressions, .buckets = &system_71_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
 };
-
-const system_71_round_coin_counts = [_]usize{ 0, 1, 0, 2, 2 };
-const system_71_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 3 };
 
 // system: "lk-precomp"
 const system_71 = vanishing.System{
     .modules = &system_71_modules,
-    .round_coin_counts = &system_71_round_coin_counts,
-    .round_coin_offsets = &system_71_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 5,
     .dynamic_module_count = 0,
     .total_witness_claims = 7,
     .total_quotient_claims = 2,
@@ -6939,6 +6939,7 @@ const system_71 = vanishing.System{
 
 const vanishing_scenario_71 = VanishingScenario{
     .name = "Lookup/PrecomputedTable",
+    .spec = system_71_spec,
     .system = system_71,
     .honest = .{
         .rounds = &.{
@@ -6978,6 +6979,12 @@ const vanishing_scenario_71 = VanishingScenario{
         .quotient_claims = &.{ .{ 972881531, 1800541319, 1899507054, 869768099, 279967025, 1225185912 }, .{ 1603565802, 28960043, 114945582, 1310863417, 295953337, 108760670 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_72_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
+    .total_round_coins = 5,
 };
 
 // scenario: "Lookup/RepeatedSValues"
@@ -7029,21 +7036,14 @@ const system_72_module_1_buckets = [_]vanishing.Bucket{
 
 const system_72_modules = [_]vanishing.Module{
     // module: "modT"
-    .{ .size = .{ .static = 4 }, .expressions = &system_72_module_0_expressions, .buckets = &system_72_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_72_module_0_expressions, .buckets = &system_72_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_72_module_1_expressions, .buckets = &system_72_module_1_buckets, .witness_claim_offset = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_72_module_1_expressions, .buckets = &system_72_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
 };
-
-const system_72_round_coin_counts = [_]usize{ 0, 1, 0, 2, 2 };
-const system_72_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 3 };
 
 // system: "lk-rep-s"
 const system_72 = vanishing.System{
     .modules = &system_72_modules,
-    .round_coin_counts = &system_72_round_coin_counts,
-    .round_coin_offsets = &system_72_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 5,
     .dynamic_module_count = 0,
     .total_witness_claims = 7,
     .total_quotient_claims = 2,
@@ -7051,6 +7051,7 @@ const system_72 = vanishing.System{
 
 const vanishing_scenario_72 = VanishingScenario{
     .name = "Lookup/RepeatedSValues",
+    .spec = system_72_spec,
     .system = system_72,
     .honest = .{
         .rounds = &.{
@@ -7091,6 +7092,12 @@ const vanishing_scenario_72 = VanishingScenario{
         .quotient_claims = &.{ .{ 2130706432, 0, 0, 0, 0, 0 }, .{ 1, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_73_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
+    .total_round_coins = 5,
 };
 
 // scenario: "Lookup/EmptySelected"
@@ -7144,21 +7151,14 @@ const system_73_module_1_buckets = [_]vanishing.Bucket{
 
 const system_73_modules = [_]vanishing.Module{
     // module: "modT"
-    .{ .size = .{ .static = 4 }, .expressions = &system_73_module_0_expressions, .buckets = &system_73_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_73_module_0_expressions, .buckets = &system_73_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_73_module_1_expressions, .buckets = &system_73_module_1_buckets, .witness_claim_offset = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_73_module_1_expressions, .buckets = &system_73_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
 };
-
-const system_73_round_coin_counts = [_]usize{ 0, 1, 0, 2, 2 };
-const system_73_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 3 };
 
 // system: "lk-empty"
 const system_73 = vanishing.System{
     .modules = &system_73_modules,
-    .round_coin_counts = &system_73_round_coin_counts,
-    .round_coin_offsets = &system_73_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 5,
     .dynamic_module_count = 0,
     .total_witness_claims = 8,
     .total_quotient_claims = 2,
@@ -7166,6 +7166,7 @@ const system_73 = vanishing.System{
 
 const vanishing_scenario_73 = VanishingScenario{
     .name = "Lookup/EmptySelected",
+    .spec = system_73_spec,
     .system = system_73,
     .honest = .{
         .rounds = &.{
@@ -7207,6 +7208,12 @@ const vanishing_scenario_73 = VanishingScenario{
         .quotient_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_74_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
+    .total_round_coins = 5,
 };
 
 // scenario: "RangeCheckCompiler/Basic"
@@ -7258,21 +7265,14 @@ const system_74_module_1_buckets = [_]vanishing.Bucket{
 
 const system_74_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 8 }, .expressions = &system_74_module_0_expressions, .buckets = &system_74_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_74_module_0_expressions, .buckets = &system_74_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b8"
-    .{ .size = .{ .static = 8 }, .expressions = &system_74_module_1_expressions, .buckets = &system_74_module_1_buckets, .witness_claim_offset = 3 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_74_module_1_expressions, .buckets = &system_74_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
 };
-
-const system_74_round_coin_counts = [_]usize{ 0, 1, 0, 2, 2 };
-const system_74_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 3 };
 
 // system: "rc-basic"
 const system_74 = vanishing.System{
     .modules = &system_74_modules,
-    .round_coin_counts = &system_74_round_coin_counts,
-    .round_coin_offsets = &system_74_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 5,
     .dynamic_module_count = 0,
     .total_witness_claims = 7,
     .total_quotient_claims = 2,
@@ -7280,6 +7280,7 @@ const system_74 = vanishing.System{
 
 const vanishing_scenario_74 = VanishingScenario{
     .name = "RangeCheckCompiler/Basic",
+    .spec = system_74_spec,
     .system = system_74,
     .honest = .{
         .rounds = &.{
@@ -7319,6 +7320,12 @@ const vanishing_scenario_74 = VanishingScenario{
         .quotient_claims = &.{ .{ 1964074936, 1171884120, 376301121, 24805349, 1796151973, 1933893137 }, .{ 378549771, 773784203, 1399207819, 1940395118, 899314058, 417587788 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_75_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
+    .total_round_coins = 5,
 };
 
 // scenario: "RangeCheckCompiler/SharedBound"
@@ -7384,21 +7391,14 @@ const system_75_module_1_buckets = [_]vanishing.Bucket{
 
 const system_75_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_75_module_0_expressions, .buckets = &system_75_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_75_module_0_expressions, .buckets = &system_75_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b4"
-    .{ .size = .{ .static = 4 }, .expressions = &system_75_module_1_expressions, .buckets = &system_75_module_1_buckets, .witness_claim_offset = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_75_module_1_expressions, .buckets = &system_75_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
 };
-
-const system_75_round_coin_counts = [_]usize{ 0, 1, 0, 2, 2 };
-const system_75_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 3 };
 
 // system: "rc-shared"
 const system_75 = vanishing.System{
     .modules = &system_75_modules,
-    .round_coin_counts = &system_75_round_coin_counts,
-    .round_coin_offsets = &system_75_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 5,
     .dynamic_module_count = 0,
     .total_witness_claims = 8,
     .total_quotient_claims = 3,
@@ -7406,6 +7406,7 @@ const system_75 = vanishing.System{
 
 const vanishing_scenario_75 = VanishingScenario{
     .name = "RangeCheckCompiler/SharedBound",
+    .spec = system_75_spec,
     .system = system_75,
     .honest = .{
         .rounds = &.{
@@ -7447,6 +7448,12 @@ const vanishing_scenario_75 = VanishingScenario{
         .quotient_claims = &.{ .{ 2125918153, 631110159, 193966681, 1573239027, 662163544, 92719685 }, .{ 1113260692, 1865114326, 1535968733, 222938895, 1353009446, 852981831 }, .{ 253289668, 1187926539, 1733300259, 1721030268, 972550661, 805369520 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_76_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 3 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4 },
+    .total_round_coins = 7,
 };
 
 // scenario: "RangeCheckCompiler/DistinctBounds"
@@ -7535,23 +7542,16 @@ const system_76_module_2_buckets = [_]vanishing.Bucket{
 
 const system_76_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_76_module_0_expressions, .buckets = &system_76_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_76_module_0_expressions, .buckets = &system_76_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 4 },
     // module: "range-mod-b4"
-    .{ .size = .{ .static = 4 }, .expressions = &system_76_module_1_expressions, .buckets = &system_76_module_1_buckets, .witness_claim_offset = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_76_module_1_expressions, .buckets = &system_76_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 5 },
     // module: "range-mod-b8"
-    .{ .size = .{ .static = 8 }, .expressions = &system_76_module_2_expressions, .buckets = &system_76_module_2_buckets, .witness_claim_offset = 8 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_76_module_2_expressions, .buckets = &system_76_module_2_buckets, .witness_claim_offset = 8, .merge_coin_index = 3, .eval_coin_index = 6 },
 };
-
-const system_76_round_coin_counts = [_]usize{ 0, 1, 0, 3, 3 };
-const system_76_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 4 };
 
 // system: "rc-distinct"
 const system_76 = vanishing.System{
     .modules = &system_76_modules,
-    .round_coin_counts = &system_76_round_coin_counts,
-    .round_coin_offsets = &system_76_round_coin_offsets,
-    .max_round_coins = 3,
-    .total_round_coins = 7,
     .dynamic_module_count = 0,
     .total_witness_claims = 12,
     .total_quotient_claims = 4,
@@ -7559,6 +7559,7 @@ const system_76 = vanishing.System{
 
 const vanishing_scenario_76 = VanishingScenario{
     .name = "RangeCheckCompiler/DistinctBounds",
+    .spec = system_76_spec,
     .system = system_76,
     .honest = .{
         .rounds = &.{
@@ -7605,6 +7606,12 @@ const vanishing_scenario_76 = VanishingScenario{
         .quotient_claims = &.{ .{ 802298102, 1572918488, 294934810, 2119083740, 2079866512, 867054235 }, .{ 140519088, 1899162085, 1444359993, 1903647232, 776925311, 1661973663 }, .{ 374801483, 785717020, 751116134, 535993010, 1028592555, 1838351994 }, .{ 1138779091, 1272452581, 1461981262, 864496535, 876227812, 1273334958 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_77_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
+    .total_round_coins = 5,
 };
 
 // scenario: "RangeCheckCompiler/BoundIsPowerOfTwo"
@@ -7656,21 +7663,14 @@ const system_77_module_1_buckets = [_]vanishing.Bucket{
 
 const system_77_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_77_module_0_expressions, .buckets = &system_77_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_77_module_0_expressions, .buckets = &system_77_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b16"
-    .{ .size = .{ .static = 16 }, .expressions = &system_77_module_1_expressions, .buckets = &system_77_module_1_buckets, .witness_claim_offset = 3 },
+    .{ .size = .{ .static = 16 }, .expressions = &system_77_module_1_expressions, .buckets = &system_77_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
 };
-
-const system_77_round_coin_counts = [_]usize{ 0, 1, 0, 2, 2 };
-const system_77_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 3 };
 
 // system: "rc-pow2"
 const system_77 = vanishing.System{
     .modules = &system_77_modules,
-    .round_coin_counts = &system_77_round_coin_counts,
-    .round_coin_offsets = &system_77_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 5,
     .dynamic_module_count = 0,
     .total_witness_claims = 7,
     .total_quotient_claims = 2,
@@ -7678,6 +7678,7 @@ const system_77 = vanishing.System{
 
 const vanishing_scenario_77 = VanishingScenario{
     .name = "RangeCheckCompiler/BoundIsPowerOfTwo",
+    .spec = system_77_spec,
     .system = system_77,
     .honest = .{
         .rounds = &.{
@@ -7719,6 +7720,12 @@ const vanishing_scenario_77 = VanishingScenario{
     },
 };
 
+pub const system_78_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 1, 1 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 2 },
+    .total_round_coins = 3,
+};
+
 // scenario: "RangeCheckCompiler/BoundIsOne"
 
 // expression: "z-recurrence-b1-k0"
@@ -7745,19 +7752,12 @@ const system_78_module_0_buckets = [_]vanishing.Bucket{
 
 const system_78_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_78_module_0_expressions, .buckets = &system_78_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_78_module_0_expressions, .buckets = &system_78_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 2 },
 };
-
-const system_78_round_coin_counts = [_]usize{ 0, 1, 0, 1, 1 };
-const system_78_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 2 };
 
 // system: "rc-bound1"
 const system_78 = vanishing.System{
     .modules = &system_78_modules,
-    .round_coin_counts = &system_78_round_coin_counts,
-    .round_coin_offsets = &system_78_round_coin_offsets,
-    .max_round_coins = 1,
-    .total_round_coins = 3,
     .dynamic_module_count = 0,
     .total_witness_claims = 3,
     .total_quotient_claims = 1,
@@ -7765,6 +7765,7 @@ const system_78 = vanishing.System{
 
 const vanishing_scenario_78 = VanishingScenario{
     .name = "RangeCheckCompiler/BoundIsOne",
+    .spec = system_78_spec,
     .system = system_78,
     .honest = .{
         .rounds = &.{
@@ -7803,6 +7804,12 @@ const vanishing_scenario_78 = VanishingScenario{
         .quotient_claims = &.{.{ 1, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
     },
+};
+
+pub const system_79_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 3 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4 },
+    .total_round_coins = 7,
 };
 
 // scenario: "RangeCheckCompiler/MultiModule"
@@ -7876,23 +7883,16 @@ const system_79_module_2_buckets = [_]vanishing.Bucket{
 
 const system_79_modules = [_]vanishing.Module{
     // module: "modA"
-    .{ .size = .{ .static = 4 }, .expressions = &system_79_module_0_expressions, .buckets = &system_79_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_79_module_0_expressions, .buckets = &system_79_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 4 },
     // module: "modB"
-    .{ .size = .{ .static = 4 }, .expressions = &system_79_module_1_expressions, .buckets = &system_79_module_1_buckets, .witness_claim_offset = 3 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_79_module_1_expressions, .buckets = &system_79_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 5 },
     // module: "range-mod-b4"
-    .{ .size = .{ .static = 4 }, .expressions = &system_79_module_2_expressions, .buckets = &system_79_module_2_buckets, .witness_claim_offset = 6 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_79_module_2_expressions, .buckets = &system_79_module_2_buckets, .witness_claim_offset = 6, .merge_coin_index = 3, .eval_coin_index = 6 },
 };
-
-const system_79_round_coin_counts = [_]usize{ 0, 1, 0, 3, 3 };
-const system_79_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 4 };
 
 // system: "rc-cross-mod"
 const system_79 = vanishing.System{
     .modules = &system_79_modules,
-    .round_coin_counts = &system_79_round_coin_counts,
-    .round_coin_offsets = &system_79_round_coin_offsets,
-    .max_round_coins = 3,
-    .total_round_coins = 7,
     .dynamic_module_count = 0,
     .total_witness_claims = 10,
     .total_quotient_claims = 3,
@@ -7900,6 +7900,7 @@ const system_79 = vanishing.System{
 
 const vanishing_scenario_79 = VanishingScenario{
     .name = "RangeCheckCompiler/MultiModule",
+    .spec = system_79_spec,
     .system = system_79,
     .honest = .{
         .rounds = &.{
@@ -7944,6 +7945,12 @@ const vanishing_scenario_79 = VanishingScenario{
         .quotient_claims = &.{ .{ 887923209, 1646556279, 1221539953, 1359551340, 406337609, 1144110475 }, .{ 181640722, 570261428, 158606499, 420395183, 542245047, 1762835477 }, .{ 2029085349, 1540473856, 714417711, 1931550892, 865724273, 603089724 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_80_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
+    .total_round_coins = 5,
 };
 
 // scenario: "RangeCheckCompiler/LargeBound"
@@ -7995,21 +8002,14 @@ const system_80_module_1_buckets = [_]vanishing.Bucket{
 
 const system_80_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 8 }, .expressions = &system_80_module_0_expressions, .buckets = &system_80_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_80_module_0_expressions, .buckets = &system_80_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b128"
-    .{ .size = .{ .static = 128 }, .expressions = &system_80_module_1_expressions, .buckets = &system_80_module_1_buckets, .witness_claim_offset = 3 },
+    .{ .size = .{ .static = 128 }, .expressions = &system_80_module_1_expressions, .buckets = &system_80_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
 };
-
-const system_80_round_coin_counts = [_]usize{ 0, 1, 0, 2, 2 };
-const system_80_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 3 };
 
 // system: "rc-large"
 const system_80 = vanishing.System{
     .modules = &system_80_modules,
-    .round_coin_counts = &system_80_round_coin_counts,
-    .round_coin_offsets = &system_80_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 5,
     .dynamic_module_count = 0,
     .total_witness_claims = 7,
     .total_quotient_claims = 2,
@@ -8017,6 +8017,7 @@ const system_80 = vanishing.System{
 
 const vanishing_scenario_80 = VanishingScenario{
     .name = "RangeCheckCompiler/LargeBound",
+    .spec = system_80_spec,
     .system = system_80,
     .honest = .{
         .rounds = &.{
@@ -8056,6 +8057,12 @@ const vanishing_scenario_80 = VanishingScenario{
         .quotient_claims = &.{ .{ 1587682297, 1957918073, 150632765, 861106021, 1620372568, 1518906703 }, .{ 1204318650, 1406137395, 1362571429, 1683386622, 172265352, 1024641714 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_81_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
+    .total_round_coins = 5,
 };
 
 // scenario: "RangeCheckCompiler/NonPowerOfTwoBound"
@@ -8107,21 +8114,14 @@ const system_81_module_1_buckets = [_]vanishing.Bucket{
 
 const system_81_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_81_module_0_expressions, .buckets = &system_81_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_81_module_0_expressions, .buckets = &system_81_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b5"
-    .{ .size = .{ .static = 8 }, .expressions = &system_81_module_1_expressions, .buckets = &system_81_module_1_buckets, .witness_claim_offset = 3 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_81_module_1_expressions, .buckets = &system_81_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
 };
-
-const system_81_round_coin_counts = [_]usize{ 0, 1, 0, 2, 2 };
-const system_81_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 3 };
 
 // system: "rc-np2"
 const system_81 = vanishing.System{
     .modules = &system_81_modules,
-    .round_coin_counts = &system_81_round_coin_counts,
-    .round_coin_offsets = &system_81_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 5,
     .dynamic_module_count = 0,
     .total_witness_claims = 7,
     .total_quotient_claims = 2,
@@ -8129,6 +8129,7 @@ const system_81 = vanishing.System{
 
 const vanishing_scenario_81 = VanishingScenario{
     .name = "RangeCheckCompiler/NonPowerOfTwoBound",
+    .spec = system_81_spec,
     .system = system_81,
     .honest = .{
         .rounds = &.{
@@ -8168,6 +8169,12 @@ const vanishing_scenario_81 = VanishingScenario{
         .quotient_claims = &.{ .{ 1068081313, 942207039, 582959613, 1443346601, 299676925, 917335817 }, .{ 1271695966, 985981691, 78364014, 577450384, 2214088, 1261627374 } },
         .module_sizes = &.{},
     },
+};
+
+pub const system_82_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
+    .total_round_coins = 5,
 };
 
 // scenario: "RangeCheckCompiler/AllZeros"
@@ -8219,21 +8226,14 @@ const system_82_module_1_buckets = [_]vanishing.Bucket{
 
 const system_82_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .static = 4 }, .expressions = &system_82_module_0_expressions, .buckets = &system_82_module_0_buckets, .witness_claim_offset = 0 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_82_module_0_expressions, .buckets = &system_82_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b8"
-    .{ .size = .{ .static = 8 }, .expressions = &system_82_module_1_expressions, .buckets = &system_82_module_1_buckets, .witness_claim_offset = 3 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_82_module_1_expressions, .buckets = &system_82_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
 };
-
-const system_82_round_coin_counts = [_]usize{ 0, 1, 0, 2, 2 };
-const system_82_round_coin_offsets = [_]usize{ 0, 0, 1, 1, 3 };
 
 // system: "rc-zeros"
 const system_82 = vanishing.System{
     .modules = &system_82_modules,
-    .round_coin_counts = &system_82_round_coin_counts,
-    .round_coin_offsets = &system_82_round_coin_offsets,
-    .max_round_coins = 2,
-    .total_round_coins = 5,
     .dynamic_module_count = 0,
     .total_witness_claims = 7,
     .total_quotient_claims = 2,
@@ -8241,6 +8241,7 @@ const system_82 = vanishing.System{
 
 const vanishing_scenario_82 = VanishingScenario{
     .name = "RangeCheckCompiler/AllZeros",
+    .spec = system_82_spec,
     .system = system_82,
     .honest = .{
         .rounds = &.{

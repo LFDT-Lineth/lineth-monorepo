@@ -597,7 +597,11 @@ func buildVanishingFixtureCases() ([]vanishingFixtureCase, []codegen.NamedVanish
 
 	add := func(source, name string, sys *wiop.System, honest vanishingAssign, invalid vanishingAssign) error {
 		compileFullPipeline(sys)
-		vanishingSystem, err := codegen.BuildVanishingSystem(sys)
+		routing, err := codegen.BuildCoinRouting(sys)
+		if err != nil {
+			return fmt.Errorf("build coin routing %s/%s: %w", source, name, err)
+		}
+		vanishingSystem, err := codegen.BuildVanishingSystem(sys, routing)
 		if err != nil {
 			return fmt.Errorf("build vanishing system %s/%s: %w", source, name, err)
 		}
@@ -613,7 +617,7 @@ func buildVanishingFixtureCases() ([]vanishingFixtureCase, []codegen.NamedVanish
 			invalidProof = &proof
 		}
 		cases = append(cases, vanishingFixtureCase{name: prefixedName, honest: honestProof, invalid: invalidProof})
-		systems = append(systems, codegen.NamedVanishingSystem{Name: prefixedName, System: vanishingSystem})
+		systems = append(systems, codegen.NamedVanishingSystem{Name: prefixedName, System: vanishingSystem, Routing: routing})
 		return nil
 	}
 
@@ -757,6 +761,13 @@ func writeVanishingFixtures(cases []vanishingFixtureCase, systems []codegen.Name
 	var out bytes.Buffer
 	writeVanishingHeader(&out)
 	for i := range cases {
+		if err := codegen.WriteSpecZigWithOptions(&out, systems[i].Routing, codegen.SpecZigOptions{
+			ProtocolImport: "verifier_ray.protocol",
+			ConstName:      fmt.Sprintf("system_%d_spec", i),
+			EmitHeader:     false,
+		}); err != nil {
+			return err
+		}
 		if err := codegen.WriteVanishingSystemZigWithOptions(&out, i, systems[i], codegen.VanishingZigOptions{
 			FieldImport:     "verifier_ray.field.koalabear",
 			VanishingImport: "verifier_ray.query.vanishing",
@@ -780,19 +791,21 @@ func writeVanishingHeader(out *bytes.Buffer) {
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "const verifier_ray = @import(\"verifier_ray\");")
 	fmt.Fprintln(out, "const field = verifier_ray.field.koalabear;")
+	fmt.Fprintln(out, "const protocol = verifier_ray.protocol;")
 	fmt.Fprintln(out, "const vanishing = verifier_ray.query.vanishing;")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "pub const RuntimeTraceColumn = union(enum) { oracle: []const [8]u32, public_base: []const u32, public_ext: []const [6]u32 };")
 	fmt.Fprintln(out, "pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };")
 	fmt.Fprintln(out, "pub const RuntimeTraceRound = struct { columns: []const RuntimeTraceColumn, cells: []const RuntimeTraceCell };")
 	fmt.Fprintln(out, "pub const VanishingProofView = struct { rounds: []const RuntimeTraceRound, witness_claims: []const [6]u32, quotient_claims: []const [6]u32, module_sizes: []const usize };")
-	fmt.Fprintln(out, "pub const VanishingScenario = struct { name: []const u8, system: vanishing.System, honest: VanishingProofView, invalid: ?VanishingProofView = null };")
+	fmt.Fprintln(out, "pub const VanishingScenario = struct { name: []const u8, spec: protocol.Spec, system: vanishing.System, honest: VanishingProofView, invalid: ?VanishingProofView = null };")
 	fmt.Fprintln(out)
 }
 
 func writeVanishingScenario(out *bytes.Buffer, idx int, tc vanishingFixtureCase) {
 	fmt.Fprintf(out, "const vanishing_scenario_%d = VanishingScenario{\n", idx)
 	fmt.Fprintf(out, "    .name = \"%s\",\n", zigString(tc.name))
+	fmt.Fprintf(out, "    .spec = system_%d_spec,\n", idx)
 	fmt.Fprintf(out, "    .system = system_%d,\n", idx)
 	fmt.Fprintln(out, "    .honest =")
 	writeVanishingProofView(out, tc.honest, "        ")

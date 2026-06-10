@@ -4,18 +4,26 @@ const fixtures = @import("test_vanishing");
 
 const field = verifier_ray.field.koalabear;
 const ext = verifier_ray.field.koalabear_ext;
-const commitment = verifier_ray.crypto.commitment;
-const runtime = verifier_ray.runtime;
+const protocol = verifier_ray.protocol;
 const vanishing = verifier_ray.query.vanishing;
+const commitment_mod = verifier_ray.crypto.commitment;
 
 test "vanishing quotient honest scenarios match prover-ray" {
     try std.testing.expect(fixtures.scenarios.len > 0);
     inline for (fixtures.scenarios) |case| {
+        const spec = case.spec;
         const system = case.system;
         var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
         defer arena.deinit();
-        const input = try proofInput(arena.allocator(), case.honest);
-        try vanishing.verify(system, input);
+        const proof = try buildProofData(arena.allocator(), case.honest);
+        const coins = try protocol.replay(spec, proof.rounds);
+        const ctx = protocol.Context{ .all_coins = &coins, .rounds = proof.rounds };
+        try vanishing.verify(system, .{
+            .ctx = ctx,
+            .witness_claims = proof.witness_claims,
+            .quotient_claims = proof.quotient_claims,
+            .module_sizes = proof.module_sizes,
+        });
     }
 }
 
@@ -24,11 +32,22 @@ test "vanishing quotient invalid scenarios fail identity" {
     inline for (fixtures.scenarios) |case| {
         const invalid = case.invalid orelse continue;
         invalid_case_count += 1;
+        const spec = case.spec;
         const system = case.system;
         var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
         defer arena.deinit();
-        const input = try proofInput(arena.allocator(), invalid);
-        try std.testing.expectError(error.QuotientIdentityMismatch, vanishing.verify(system, input));
+        const proof = try buildProofData(arena.allocator(), invalid);
+        const coins = try protocol.replay(spec, proof.rounds);
+        const ctx = protocol.Context{ .all_coins = &coins, .rounds = proof.rounds };
+        try std.testing.expectError(
+            error.QuotientIdentityMismatch,
+            vanishing.verify(system, .{
+                .ctx = ctx,
+                .witness_claims = proof.witness_claims,
+                .quotient_claims = proof.quotient_claims,
+                .module_sizes = proof.module_sizes,
+            }),
+        );
     }
     try std.testing.expect(invalid_case_count > 0);
 }
@@ -37,6 +56,7 @@ test "dynamic vanishing module sizes are required and validated" {
     comptime var dynamic_case_count: usize = 0;
     var wrong_size_failures: usize = 0;
     inline for (fixtures.scenarios) |case| {
+        const spec = case.spec;
         const system = case.system;
         if (system.dynamic_module_count == 0) continue;
         dynamic_case_count += 1;
@@ -44,52 +64,60 @@ test "dynamic vanishing module sizes are required and validated" {
         var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
         defer arena.deinit();
 
-        const valid = try proofInput(arena.allocator(), case.honest);
-        try vanishing.verify(system, valid);
+        const valid = try buildProofData(arena.allocator(), case.honest);
+        const coins = try protocol.replay(spec, valid.rounds);
+        const ctx = protocol.Context{ .all_coins = &coins, .rounds = valid.rounds };
 
-        var missing = valid;
-        missing.module_sizes = &.{};
-        try std.testing.expectError(error.MissingDynamicModuleSize, vanishing.verify(system, missing));
+        try vanishing.verify(system, .{ .ctx = ctx, .witness_claims = valid.witness_claims, .quotient_claims = valid.quotient_claims, .module_sizes = valid.module_sizes });
+
+        try std.testing.expectError(
+            error.MissingDynamicModuleSize,
+            vanishing.verify(system, .{ .ctx = ctx, .witness_claims = valid.witness_claims, .quotient_claims = valid.quotient_claims, .module_sizes = &.{} }),
+        );
 
         var zero_sizes = try arena.allocator().dupe(usize, valid.module_sizes);
         zero_sizes[0] = 0;
-        var zero = valid;
-        zero.module_sizes = zero_sizes;
-        try std.testing.expectError(error.InvalidModuleSize, vanishing.verify(system, zero));
+        try std.testing.expectError(
+            error.InvalidModuleSize,
+            vanishing.verify(system, .{ .ctx = ctx, .witness_claims = valid.witness_claims, .quotient_claims = valid.quotient_claims, .module_sizes = zero_sizes }),
+        );
 
         var non_power_sizes = try arena.allocator().dupe(usize, valid.module_sizes);
         non_power_sizes[0] = 7;
-        var non_power = valid;
-        non_power.module_sizes = non_power_sizes;
-        try std.testing.expectError(error.InvalidModuleSize, vanishing.verify(system, non_power));
+        try std.testing.expectError(
+            error.InvalidModuleSize,
+            vanishing.verify(system, .{ .ctx = ctx, .witness_claims = valid.witness_claims, .quotient_claims = valid.quotient_claims, .module_sizes = non_power_sizes }),
+        );
 
         var wrong_sizes = try arena.allocator().dupe(usize, valid.module_sizes);
         wrong_sizes[0] = if (wrong_sizes[0] == 16) 8 else 16;
-        var wrong = valid;
-        wrong.module_sizes = wrong_sizes;
-        vanishing.verify(system, wrong) catch |err| {
+        vanishing.verify(system, .{ .ctx = ctx, .witness_claims = valid.witness_claims, .quotient_claims = valid.quotient_claims, .module_sizes = wrong_sizes }) catch |err| {
             if (err == error.QuotientIdentityMismatch) wrong_size_failures += 1 else return err;
         };
     }
     try std.testing.expect(dynamic_case_count > 0);
+    // Some constraints may trivially vanish at multiple domain sizes (P(r) = 0,
+    // Q(r) = 0 simultaneously), so not every case necessarily produces a
+    // mismatch. Assert at least one case does to confirm the check is live.
     try std.testing.expect(wrong_size_failures > 0);
 }
 
-fn proofInput(allocator: std.mem.Allocator, proof: fixtures.VanishingProofView) !vanishing.CheckInput {
+const ProofData = struct {
+    rounds: []const protocol.RoundMessage,
+    witness_claims: []const ext.Ext,
+    quotient_claims: []const ext.Ext,
+    module_sizes: []const usize,
+};
+
+fn buildProofData(allocator: std.mem.Allocator, proof: fixtures.VanishingProofView) !ProofData {
     const witness_claims = try allocator.alloc(ext.Ext, proof.witness_claims.len);
-    for (proof.witness_claims, 0..) |claim, i| {
-        witness_claims[i] = ext.Ext.fromUints(claim);
-    }
+    for (proof.witness_claims, 0..) |claim, i| witness_claims[i] = ext.Ext.fromUints(claim);
 
     const quotient_claims = try allocator.alloc(ext.Ext, proof.quotient_claims.len);
-    for (proof.quotient_claims, 0..) |claim, i| {
-        quotient_claims[i] = ext.Ext.fromUints(claim);
-    }
+    for (proof.quotient_claims, 0..) |claim, i| quotient_claims[i] = ext.Ext.fromUints(claim);
 
-    const rounds = try allocator.alloc(runtime.RoundMessage, proof.rounds.len);
-    for (proof.rounds, 0..) |round, i| {
-        rounds[i] = try roundMessage(allocator, round);
-    }
+    const round_cells = try buildRoundCells(allocator, proof);
+    const rounds = try buildRounds(allocator, proof, round_cells);
 
     return .{
         .rounds = rounds,
@@ -99,7 +127,30 @@ fn proofInput(allocator: std.mem.Allocator, proof: fixtures.VanishingProofView) 
     };
 }
 
-fn roundMessage(allocator: std.mem.Allocator, round: fixtures.RuntimeTraceRound) !runtime.RoundMessage {
+fn buildRoundCells(allocator: std.mem.Allocator, proof: fixtures.VanishingProofView) ![]const []const protocol.Scalar {
+    const round_cells = try allocator.alloc([]const protocol.Scalar, proof.rounds.len);
+    for (proof.rounds, 0..) |round, i| {
+        const cells = try allocator.alloc(protocol.Scalar, round.cells.len);
+        for (round.cells, 0..) |cell, j| {
+            cells[j] = switch (cell) {
+                .base => |v| .{ .base = field.Element.init(v) },
+                .ext => |v| .{ .ext = ext.Ext.fromUints(v) },
+            };
+        }
+        round_cells[i] = cells;
+    }
+    return round_cells;
+}
+
+fn buildRounds(allocator: std.mem.Allocator, proof: fixtures.VanishingProofView, round_cells: []const []const protocol.Scalar) ![]const protocol.RoundMessage {
+    const rounds = try allocator.alloc(protocol.RoundMessage, proof.rounds.len);
+    for (proof.rounds, 0..) |round, i| {
+        rounds[i] = try buildRoundMessage(allocator, round, round_cells[i]);
+    }
+    return rounds;
+}
+
+fn buildRoundMessage(allocator: std.mem.Allocator, round: fixtures.RuntimeTraceRound, cells: []const protocol.Scalar) !protocol.RoundMessage {
     var column_count: usize = 0;
     for (round.columns) |column| {
         column_count += switch (column) {
@@ -108,41 +159,29 @@ fn roundMessage(allocator: std.mem.Allocator, round: fixtures.RuntimeTraceRound)
         };
     }
 
-    const columns = try allocator.alloc(runtime.ColumnMessage, column_count);
+    const columns = try allocator.alloc(protocol.ColumnMessage, column_count);
     var next_column: usize = 0;
     for (round.columns) |column| {
         switch (column) {
             .oracle => |commitments| {
-                for (commitments) |c| {
-                    columns[next_column] = .{ .oracle_commitment = commitment.fromUints(c) };
+                for (commitments) |commitment| {
+                    columns[next_column] = .{ .oracle_commitment = commitment_mod.fromUints(commitment) };
                     next_column += 1;
                 }
             },
             .public_base => |values| {
                 const converted = try allocator.alloc(field.Element, values.len);
-                for (values, 0..) |value, i| {
-                    converted[i] = field.Element.init(value);
-                }
+                for (values, 0..) |value, i| converted[i] = field.Element.init(value);
                 columns[next_column] = .{ .public_column = .{ .base = converted } };
                 next_column += 1;
             },
             .public_ext => |values| {
                 const converted = try allocator.alloc(ext.Ext, values.len);
-                for (values, 0..) |value, i| {
-                    converted[i] = ext.Ext.fromUints(value);
-                }
+                for (values, 0..) |value, i| converted[i] = ext.Ext.fromUints(value);
                 columns[next_column] = .{ .public_column = .{ .ext = converted } };
                 next_column += 1;
             },
         }
-    }
-
-    const cells = try allocator.alloc(runtime.Scalar, round.cells.len);
-    for (round.cells, 0..) |cell, i| {
-        cells[i] = switch (cell) {
-            .base => |value| .{ .base = field.Element.init(value) },
-            .ext => |value| .{ .ext = ext.Ext.fromUints(value) },
-        };
     }
 
     return .{ .columns = columns, .cells = cells };
