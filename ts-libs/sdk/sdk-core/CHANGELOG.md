@@ -1,6 +1,6 @@
 # @lfdt-lineth/sdk-core
 
-## 1.0.0 (2026-04-10)
+## 1.0.0 (2026-06-10)
 
 Initial release of `@lfdt-lineth/sdk-core`, the framework-agnostic foundation for Linea bridge SDKs.
 
