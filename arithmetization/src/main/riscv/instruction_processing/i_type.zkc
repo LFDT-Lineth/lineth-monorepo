@@ -151,13 +151,15 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                     registers[rd] = registers[rs1] ^ signext_imm12_64
                 }
                 case FUNCT3_SRLI: {
-                    printf "SRLI "
-                    print_i_shift6_operands(rd, rs1, uimm6)
                     funct6::uimm6 = imm12
                     // FUNCT3_SRLI and FUNCT3_SRAI share funct3 = 0b101; disambiguate with funct6.
                     if funct6 == FUNCT6_SRLI {
+                        printf "SRLI "
+                        print_i_shift6_operands(rd, rs1, uimm6)
                         registers[rd] = registers[rs1] >> uimm6
                     } else if funct6 == FUNCT6_SRAI {
+                        printf "SRAI "
+                        print_i_shift6_operands(rd, rs1, uimm6)
                         registers[rd] = _ashr_u64(registers[rs1], uimm6)
                     }
                 }
@@ -202,7 +204,7 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                     // FUNCT3_SRLIW and FUNCT3_SRAIW share funct3 = 0b101; disambiguate with funct7.
                     if funct7 == FUNCT7_SRLIW {
                         printf "SRLIW "
-                        print_i_shift5_operands(rd, rs1, uimm5)  
+                        print_i_shift5_operands(rd, rs1, uimm5)
                         registers[rd] = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) >> uimm5)
                     } else if funct7 == FUNCT7_SRAIW {
                         printf "SRAIW "
