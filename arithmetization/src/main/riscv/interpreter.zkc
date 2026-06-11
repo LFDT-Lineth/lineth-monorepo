@@ -29,7 +29,7 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
             new_pc = pc + 4 as Address
         }
         case S_TYPE: {
-            process_S_type_instruction(instruction_parameters)
+            process_S_type_instruction(index)
             new_pc = pc + 4 as Address
         }
         case B_TYPE: {
