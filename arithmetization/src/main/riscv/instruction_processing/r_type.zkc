@@ -39,11 +39,6 @@ include "../../lib/keccak/impl.zkc"
 // and signed overflow (INT_MIN / −1) returns INT_MIN (or 0 for REM).
 fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block, opcode_stats>(opcode:Opcode, instruction_parameters:u25) {
 
-    var funct7:Funct7
-    var rs2:Register
-    var rs1:Register
-    var funct3:Funct3
-    var rd:Register
     var v1:DoubleWord
     var v2:DoubleWord
     var v1_sign:SignBit
@@ -68,7 +63,14 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
     var word_wip:Word
     var sign_bit:SignBit
 
-    funct7::rs2::rs1::funct3::rd = instruction_parameters
+    // The R-type field split (funct7 :: rs2 :: rs1 :: funct3 :: rd) is pre-decoded
+    // externally (see decoded_rtype in memory.zkc) and looked up by index.
+    var funct7:Funct7
+    var rs2:Register
+    var rs1:Register
+    var funct3:Funct3
+    var rd:Register
+    funct7, rs2, rs1, funct3, rd = decoded_rtype[index]
 
     v1 = registers[rs1]
     v2 = registers[rs2]
