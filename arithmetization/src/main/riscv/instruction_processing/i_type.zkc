@@ -154,7 +154,7 @@ fn process_I_type_instruction<ram, registers>(index:u64, opcode:Opcode, pc:Addre
                 case FUNCT3_LB: {
                     printf "LB "
                     // print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = sgn_extension_u8_u64(ram[rs1_plus_signext_imm12])
+                    registers[rd] = sgn_extension_u8_u64(read_8(rs1_plus_signext_imm12))
                 }
                 case FUNCT3_LH: {
                     printf "LH "
