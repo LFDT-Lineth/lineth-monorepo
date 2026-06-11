@@ -59,6 +59,8 @@ type PipelineResult struct {
 	FinalProof *distributed.SegmentProof
 	Cong       *distributed.RecursedSegmentCompilation
 	CongBuf    *serde.MmapBackedBuffer
+	// Setup is the outer-circuit setup, loaded in the background by the pipeline.
+	Setup circuits.Setup
 }
 
 // Prove function for the Assest struct
@@ -100,14 +102,7 @@ func Prove(cfg *config.Config, req *execution.Request) (*execution.Response, err
 		return nil, fmt.Errorf("distributed pipeline failed: %w", err)
 	}
 
-	// Load setup and build the outer proof
-	setupStart := plog.phaseStart("setup_load")
-	logrus.Infof("Loading setup - circuitID: %s", circuits.ExecutionLimitlessCircuitID)
-	setup, errSetup := circuits.LoadSetup(cfg, circuits.ExecutionLimitlessCircuitID)
-	plog.phaseEnd("setup_load", setupStart)
-	if errSetup != nil {
-		utils.Panic("could not load setup: %v", errSetup)
-	}
+	setup := pipeline.Setup
 
 	outerStart := plog.phaseStart("outer_proof")
 	out.Proof = execCirc.MakeProof(
@@ -296,6 +291,21 @@ func RunDistributedPipeline(cfg *config.Config, zkevmWitness *zkevm.Witness, plo
 	plog.phaseEnd("GL", glPhaseStart)
 	plog.flush()
 
+	// Load the outer-circuit setup in the background, overlapping it with the LPP
+	// and conglomeration phases. Collected just before return.
+	type setupResult struct {
+		setup circuits.Setup
+		err   error
+	}
+	setupCh := make(chan setupResult, 1)
+	go func() {
+		setupStart := plog.phaseStart("setup_load")
+		logrus.Infof("Loading setup (background) - circuitID: %s", circuits.ExecutionLimitlessCircuitID)
+		s, err := circuits.LoadSetup(cfg, circuits.ExecutionLimitlessCircuitID)
+		plog.phaseEnd("setup_load", setupStart)
+		setupCh <- setupResult{setup: s, err: err}
+	}()
+
 	// -- 4. Compute shared randomness FIRST (while proofGLs is still valid)
 	sharedRandomness := distributed.GetSharedRandomnessFromSegmentProofs(proofGLs)
 
@@ -423,10 +433,16 @@ func RunDistributedPipeline(cfg *config.Config, zkevmWitness *zkevm.Witness, plo
 
 	logrus.Infof("HIERARCHICAL CONGLOMERATION SUCCESSFUL!!!")
 
+	sr := <-setupCh
+	if sr.err != nil {
+		return nil, fmt.Errorf("could not load setup: %w", sr.err)
+	}
+
 	return &PipelineResult{
 		FinalProof: res.proof,
 		Cong:       cong,
 		CongBuf:    res.congBuf,
+		Setup:      sr.setup,
 	}, nil
 }
 
