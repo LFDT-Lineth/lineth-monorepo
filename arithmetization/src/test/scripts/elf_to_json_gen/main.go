@@ -86,6 +86,29 @@ type memoryBlob struct {
 	name   string
 }
 
+// bitWriter accumulates values into a big-endian, MSB-first bit stream. This
+// matches how zkc deserializes `pub input` records (see EncodeBytes /
+// DecodeUnsignedInt in zkc): fields are packed tightly by their exact bit width
+// (NOT rounded up to bytes), records are concatenated with no per-record
+// alignment, and the final byte is zero-padded in its low bits.
+type bitWriter struct {
+	buf   []byte
+	nbits int
+}
+
+// writeBits appends the low `width` bits of `val`, most-significant bit first.
+func (w *bitWriter) writeBits(val uint64, width int) {
+	for i := width - 1; i >= 0; i-- {
+		if w.nbits%8 == 0 {
+			w.buf = append(w.buf, 0)
+		}
+		if (val>>uint(i))&1 == 1 {
+			w.buf[w.nbits/8] |= 1 << uint(7-(w.nbits%8))
+		}
+		w.nbits++
+	}
+}
+
 // The purpose of this program is simply to generate a suitable ZkC json input
 // file for a given RISC-V binary program.
 func main() {
@@ -308,11 +331,16 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		data := readSectionBytes(s)
 		copy(image[s.Addr-base:], data)
 	}
-	// Decode each instruction word.
+	// Decode each instruction word. Field bit widths MUST match the semantic
+	// types declared for the inputs in memory.zkc, because zkc packs input
+	// records tightly by bit width:
+	//   decoded_core : opcode:Opcode(u7), instruction_type:Type(u3), instruction_parameters:u25
+	//   decoded_itype: funct3:Funct3(u3), imm12:Imm12(u12), rs1:Register(u5), rd:Register(u5)
+	//   decoded_rtype: funct7:Funct7(u7), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3), rd:Register(u5)
 	var (
-		coreParts  = make([]string, 0, nRecords)
-		itypeParts = make([]string, 0, nRecords)
-		rtypeParts = make([]string, 0, nRecords)
+		coreBits  bitWriter
+		itypeBits bitWriter
+		rtypeBits bitWriter
 	)
 	for off := uint64(0); off+4 <= uint64(len(image)); off += 4 {
 		instr := uint32(image[off]) | uint32(image[off+1])<<8 | uint32(image[off+2])<<16 | uint32(image[off+3])<<24
@@ -328,15 +356,23 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		imm12 := (instr >> 20) & 0xfff
 		funct7 := (instr >> 25) & 0x7f
 
-		// decoded_core record: opcode:u8, instruction_type:u8, instruction_parameters:u32
-		coreParts = append(coreParts, fmt.Sprintf("%02x%02x%08x", opcode, instrType, params))
-		// decoded_itype record: funct3:u8, imm12:u16, rs1:u8, rd:u8
-		itypeParts = append(itypeParts, fmt.Sprintf("%02x%04x%02x%02x", funct3, imm12, rs1, rd))
-		// decoded_rtype record: funct7:u8, rs2:u8, rs1:u8, funct3:u8, rd:u8
-		rtypeParts = append(rtypeParts, fmt.Sprintf("%02x%02x%02x%02x%02x", funct7, rs2, rs1, funct3, rd))
+		coreBits.writeBits(uint64(opcode), 7)
+		coreBits.writeBits(uint64(instrType), 3)
+		coreBits.writeBits(uint64(params), 25)
+
+		itypeBits.writeBits(uint64(funct3), 3)
+		itypeBits.writeBits(uint64(imm12), 12)
+		itypeBits.writeBits(uint64(rs1), 5)
+		itypeBits.writeBits(uint64(rd), 5)
+
+		rtypeBits.writeBits(uint64(funct7), 7)
+		rtypeBits.writeBits(uint64(rs2), 5)
+		rtypeBits.writeBits(uint64(rs1), 5)
+		rtypeBits.writeBits(uint64(funct3), 3)
+		rtypeBits.writeBits(uint64(rd), 5)
 	}
 
-	return base, strings.Join(coreParts, "____"), strings.Join(itypeParts, "____"), strings.Join(rtypeParts, "____")
+	return base, hex.EncodeToString(coreBits.buf), hex.EncodeToString(itypeBits.buf), hex.EncodeToString(rtypeBits.buf)
 }
 
 // maxDecodedRecordsFromEnv returns the configured cap on decoded records.
