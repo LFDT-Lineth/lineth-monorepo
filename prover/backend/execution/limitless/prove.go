@@ -194,9 +194,11 @@ func RunDistributedPipeline(cfg *config.Config, zkevmWitness *zkevm.Witness, plo
 	glPhaseStart := plog.phaseStart("GL")
 	glErrGroup.SetLimit(numConcurrentSubProverJobs)
 
-	// Round-robin across module types to limit same-module concurrency.
-	glOrder := buildRoundRobinOrder(glModuleNames)
+	// Group segments by module so glCache loads each module's circuit once.
+	glOrder := buildModuleGroupedOrder(glModuleNames)
 	plog.jobOrder("GL", glOrder)
+
+	glCache := newCircuitCache(glModuleNames)
 
 	var glCompleted atomic.Int64
 	var glGCMu sync.Mutex
@@ -235,7 +237,7 @@ func RunDistributedPipeline(cfg *config.Config, zkevmWitness *zkevm.Witness, plo
 				}()
 
 				var err error
-				proofGL, err = RunGL(cfg, i, plog)
+				proofGL, err = RunGL(cfg, i, plog, glCache)
 				if err != nil {
 					jobErr = fmt.Errorf("could not run GL prover for witness index=%v: %w", i, err)
 				}
@@ -290,6 +292,9 @@ func RunDistributedPipeline(cfg *config.Config, zkevmWitness *zkevm.Witness, plo
 	}
 	plog.phaseEnd("GL", glPhaseStart)
 	plog.flush()
+
+	// GL proofs are extracted; the cached GL circuits are no longer needed.
+	glCache.release()
 
 	// Load the outer-circuit setup in the background, overlapping it with the LPP
 	// and conglomeration phases. Collected just before return.
@@ -628,7 +633,7 @@ func RunBootstrapper(cfg *config.Config, zkevmWitness *zkevm.Witness, merkleTree
 // The circuit mmap buffer is released immediately after proving because
 // ExtractProof deep-copies all string map keys (column/query names), so
 // the proof no longer references the circuit mmap region.
-func RunGL(cfg *config.Config, witnessIndex int, plog *perfLogger) (proofGL *distributed.SegmentProof, err error) {
+func RunGL(cfg *config.Config, witnessIndex int, plog *perfLogger, circuits *circuitCache) (proofGL *distributed.SegmentProof, err error) {
 
 	logrus.Infof("Running the GL-prover for witness index=%v", witnessIndex)
 
@@ -648,8 +653,9 @@ func RunGL(cfg *config.Config, witnessIndex int, plog *perfLogger) (proofGL *dis
 
 	logrus.Infof("Loaded the witness for witness index=%v, module=%v", witnessIndex, moduleName)
 
-	// Load compiled GL into mmap-backed buffer for explicit memory release
-	compiledGL, circBuf, err := zkevm.LoadCompiledGLMmap(cfg, witness.ModuleName)
+	// Fetch the compiled GL circuit from the cache. Key on the heap-copied
+	// moduleName, not witness.ModuleName, which points into the soon-released mmap.
+	compiledGL, err := circuits.getGL(cfg, distributed.ModuleName(moduleName))
 	if err != nil {
 		witnessBuf.Release()
 		return nil, fmt.Errorf("could not load compiled GL: %w", err)
@@ -662,15 +668,13 @@ func RunGL(cfg *config.Config, witnessIndex int, plog *perfLogger) (proofGL *dis
 	_proofGL := compiledGL.ProveSegmentKoala(witness).ClearRuntime()
 	plog.jobEnd("GL_prove", witnessIndex, moduleName, proveStart)
 
-	// Release both mmap buffers immediately. The proof's RecursionWitness
-	// map keys (column/query names) have been deep-copied by ExtractProof,
-	// so nothing in the proof references the circuit mmap anymore.
-	compiledGL = nil
+	// Release the witness mmap; the circuit stays cached, freed by done() after
+	// this module's last segment.
 	witness = nil
 	witnessBuf.Release()
-	circBuf.Release()
+	circuits.done(distributed.ModuleName(moduleName))
 
-	logrus.Infof("Finished GL-prover for witness index=%v, module=%v (witness+circuit released)", witnessIndex, moduleName)
+	logrus.Infof("Finished GL-prover for witness index=%v, module=%v (witness released)", witnessIndex, moduleName)
 
 	return _proofGL, nil
 }
@@ -859,6 +863,34 @@ func RunConglomerationHierarchical(ctx context.Context,
 	}
 
 	return nil, fmt.Errorf("conglomeration finished without producing a final proof")
+}
+
+// buildModuleGroupedOrder emits each module's segments contiguously, largest
+// module first, so a cached circuit loads once and is released before the next
+// module starts, bounding resident memory.
+func buildModuleGroupedOrder(moduleNames []string) []int {
+	type group struct {
+		name    string
+		indices []int
+	}
+	seen := map[string]int{}
+	var groups []group
+	for i, name := range moduleNames {
+		if idx, ok := seen[name]; ok {
+			groups[idx].indices = append(groups[idx].indices, i)
+		} else {
+			seen[name] = len(groups)
+			groups = append(groups, group{name: name, indices: []int{i}})
+		}
+	}
+	sort.Slice(groups, func(a, b int) bool {
+		return len(groups[a].indices) > len(groups[b].indices)
+	})
+	order := make([]int, 0, len(moduleNames))
+	for g := range groups {
+		order = append(order, groups[g].indices...)
+	}
+	return order
 }
 
 // buildRoundRobinOrder interleaves GL jobs across module types so that
