@@ -49,3 +49,8 @@ pub input decoded_itype(i:u64) -> (funct3:Funct3, imm12:Imm12, rs1:Register, rd:
 // Pre-decoded R-type field split, indexed by the same instruction index.
 // Replaces `funct7::rs2::rs1::funct3::rd = instruction_parameters` in r_type.zkc.
 pub input decoded_rtype(i:u64) -> (funct7:Funct7, rs2:Register, rs1:Register, funct3:Funct3, rd:Register)
+
+// Pre-decoded S-type field split, indexed by the same instruction index.
+// Replaces `imm_sign::uimm6::rs2::rs1::funct3::uimm5 = instruction_parameters` in s_type.zkc.
+// The 12-bit store immediate (imm[11]::imm[10:5]::imm[4:0]) is pre-assembled into imm12.
+pub input decoded_stype(i:u64) -> (imm12:Imm12, rs2:Register, rs1:Register, funct3:Funct3)

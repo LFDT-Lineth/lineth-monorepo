@@ -23,36 +23,18 @@ include "../utils/signed_sum.zkc"
 //   SH (funct3 = 0b001) — store halfword (16 bits)
 //   SW (funct3 = 0b010) — store word     (32 bits)
 //   SD (funct3 = 0b011) — store doubleword (64 bits)
-fn process_S_type_instruction<ram, registers>(instruction_parameters:u25) {
+fn process_S_type_instruction<ram, registers>(index:u64) {
 
-    // var funct3 : Funct3
-    // var funct7 : Funct7
-    // var rs1    : Register
-    // var rs2    : Register
-    // var rsd    : Register
-    // var uimm5  : UImm5
-    // var uimm6  : UImm6
-    // var imm12  : Imm12
-    // var imm20  : Imm20
-
-    var imm_sign:u1
-    var funct3:Funct3
-    var rs1:Register
+    // The S-type fields (imm12, rs2, rs1, funct3) are pre-decoded externally
+    // (see decoded_stype in memory.zkc) and looked up by index. The 12-bit store
+    // immediate is already assembled, so no field reconstruction is needed here.
+    var imm12:Imm12
     var rs2:Register
-    var uimm5:UImm5
-    var uimm6:UImm6
+    var rs1:Register
+    var funct3:Funct3
+    imm12, rs2, rs1, funct3 = decoded_stype[index]
 
-    imm_sign::uimm6::rs2::rs1::funct3::uimm5 = instruction_parameters
-
-    // TODO: do we just want to use a mask instead?
-    var signext_imm12_64:DoubleWord = sgn_extension_u12_u64(imm_sign::uimm6::uimm5)
-
-    // var signext_imm12_64:DoubleWord
-    // if imm_sign == 1 {
-    //    signext_imm12_64 = DWORD_SIGN_EXT_PREFIX_52_ONES::imm_sign::uimm6::uimm5
-    //} else {
-    //    signext_imm12_64 = (imm_sign::uimm6::uimm5) as u64
-    //}
+    var signext_imm12_64:DoubleWord = sgn_extension_u12_u64(imm12)
 
     var mem_address:Address = signed_sum_of_double_word(registers[rs1], signext_imm12_64) as Address
 

@@ -19,6 +19,7 @@ const (
 	DECODED_CORE                = "decoded_core"
 	DECODED_ITYPE               = "decoded_itype"
 	DECODED_RTYPE               = "decoded_rtype"
+	DECODED_STYPE               = "decoded_stype"
 )
 
 // Instruction type identifiers. These MUST match the Type constants in
@@ -163,8 +164,8 @@ func main() {
 	}
 	// Statically decode the executable region into the pre-decoded instruction
 	// input tables consumed by the interpreter.
-	base, coreHex, itypeHex, rtypeHex := buildDecodedProgram(elfFile.Sections)
-	printJson(blobs, elfFile.Entry, base, coreHex, itypeHex, rtypeHex)
+	base, coreHex, itypeHex, rtypeHex, stypeHex := buildDecodedProgram(elfFile.Sections)
+	printJson(blobs, elfFile.Entry, base, coreHex, itypeHex, rtypeHex, stypeHex)
 }
 
 // parseInBytes turns an arg into raw input bytes. Four forms:
@@ -281,10 +282,10 @@ func readSectionBytes(s *elf.Section) []byte {
 
 // buildDecodedProgram statically decodes every 4-byte instruction word across
 // the executable region of the ELF, producing the base address plus the
-// hex-encoded decoded_core, decoded_itype and decoded_rtype input arrays. The
-// arrays are dense (one record per word in [base, end)), indexed at runtime by
-// index = (pc - base) >> 2.
-func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHex, rtypeHex string) {
+// hex-encoded decoded_core, decoded_itype, decoded_rtype and decoded_stype input
+// arrays. The arrays are dense (one record per word in [base, end)), indexed at
+// runtime by index = (pc - base) >> 2.
+func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHex, rtypeHex, stypeHex string) {
 	var (
 		execSections []*elf.Section
 		minAddr      = ^uint64(0)
@@ -337,10 +338,12 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	//   decoded_core : opcode:Opcode(u7), instruction_type:Type(u3), instruction_parameters:u25
 	//   decoded_itype: funct3:Funct3(u3), imm12:Imm12(u12), rs1:Register(u5), rd:Register(u5)
 	//   decoded_rtype: funct7:Funct7(u7), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3), rd:Register(u5)
+	//   decoded_stype: imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3)
 	var (
 		coreBits  bitWriter
 		itypeBits bitWriter
 		rtypeBits bitWriter
+		stypeBits bitWriter
 	)
 	for off := uint64(0); off+4 <= uint64(len(image)); off += 4 {
 		instr := uint32(image[off]) | uint32(image[off+1])<<8 | uint32(image[off+2])<<16 | uint32(image[off+3])<<24
@@ -356,6 +359,10 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		imm12 := (instr >> 20) & 0xfff
 		funct7 := (instr >> 25) & 0x7f
 
+		// S-type immediate is split in the encoding (imm[11] :: imm[10:5] :: imm[4:0]);
+		// reassemble it into the 12-bit store immediate.
+		simm12 := (((instr >> 31) & 0x1) << 11) | (((instr >> 25) & 0x3f) << 5) | ((instr >> 7) & 0x1f)
+
 		coreBits.writeBits(uint64(opcode), 7)
 		coreBits.writeBits(uint64(instrType), 3)
 		coreBits.writeBits(uint64(params), 25)
@@ -370,9 +377,14 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		rtypeBits.writeBits(uint64(rs1), 5)
 		rtypeBits.writeBits(uint64(funct3), 3)
 		rtypeBits.writeBits(uint64(rd), 5)
+
+		stypeBits.writeBits(uint64(simm12), 12)
+		stypeBits.writeBits(uint64(rs2), 5)
+		stypeBits.writeBits(uint64(rs1), 5)
+		stypeBits.writeBits(uint64(funct3), 3)
 	}
 
-	return base, hex.EncodeToString(coreBits.buf), hex.EncodeToString(itypeBits.buf), hex.EncodeToString(rtypeBits.buf)
+	return base, hex.EncodeToString(coreBits.buf), hex.EncodeToString(itypeBits.buf), hex.EncodeToString(rtypeBits.buf), hex.EncodeToString(stypeBits.buf)
 }
 
 // maxDecodedRecordsFromEnv returns the configured cap on decoded records.
@@ -395,7 +407,7 @@ func writeSectionsFile(file *os.File, blobs []memoryBlob) {
 	}
 }
 
-func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, coreHex, itypeHex, rtypeHex string) {
+func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, coreHex, itypeHex, rtypeHex, stypeHex string) {
 	var (
 		entryPointString   = fmt.Sprintf("%016x", entryPoint)
 		blobsCountString   = fmt.Sprintf("%016x", len(blobs))
@@ -418,6 +430,7 @@ func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, coreHex, 
 	fmt.Printf("\t\"%s\": \"0x%016x\",\n", INSTRUCTION_BASE, instructionBase)
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_CORE, coreHex)
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_ITYPE, itypeHex)
-	fmt.Printf("\t\"%s\": \"0x%s\"\n", DECODED_RTYPE, rtypeHex)
+	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_RTYPE, rtypeHex)
+	fmt.Printf("\t\"%s\": \"0x%s\"\n", DECODED_STYPE, stypeHex)
 	fmt.Println("}")
 }
