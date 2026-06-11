@@ -49,6 +49,7 @@ jobs:
       LINEA_POSTMAN_TAG: develop
       LINEA_PROVER_TAG: develop
       LINEA_TRANSACTION_EXCLUSION_API_TAG: develop
+      MARU_TAG: develop
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     outputs:
