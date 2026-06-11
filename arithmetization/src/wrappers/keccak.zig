@@ -7,9 +7,11 @@ pub const zkvm_status = enum(c_int) {
 };
 
 // https://github.com/eth-act/zkvm-standards/blob/282cd356c3a0498416bb0619f9c8a347ce9933fb/standards/c-interface-accelerators/zkvm_accelerators.h#L72
-pub const zkvm_keccak256_hash = extern struct {
+pub const zkvm_bytes_32 = extern struct {
     data: [32]u8 align(8),
 };
+
+pub const zkvm_keccak256_hash = zkvm_bytes_32;
 
 // https://github.com/eth-act/zkvm-standards/blob/282cd356c3a0498416bb0619f9c8a347ce9933fb/standards/c-interface-accelerators/zkvm_accelerators.h#L166
 pub fn zkvm_keccak256(data: [*c]const u8, len: usize, output: [*c]zkvm_keccak256_hash) zkvm_status {

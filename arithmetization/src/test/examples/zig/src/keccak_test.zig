@@ -21,7 +21,8 @@ export fn main() noreturn {
     const data_137: [*c]const u8 = &buf_137;
 
     // pointer for writing output
-    const output: [*c]keccak.zkvm_keccak256_hash = @ptrFromInt(0x08000000);
+    var output_hash: keccak.zkvm_keccak256_hash = undefined;
+    const output: [*c]keccak.zkvm_keccak256_hash = &output_hash;
 
     _ = keccak.zkvm_keccak256(data_0, 0, output); // empty keccak
     _ = keccak.zkvm_keccak256(data_32, 32, output); // keccak of "00".repeat(32)

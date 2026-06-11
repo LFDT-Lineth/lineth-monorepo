@@ -55,7 +55,7 @@ const fn parse_usize_env(s: &str) -> usize {
 
 const N_VECTORS: usize = parse_usize_env(env!("KECCAK_N_VECTORS"));
 
-/// Total bytes the program expects to find at `_input_start`.
+/// Total bytes the program expects to find at `_in_start`.
 const TOTAL_INPUT_BYTES: usize = N_VECTORS * VECTOR_BYTES;
 
 /// Max extracted message size after stripping left pad (= full field in the worst case).
@@ -334,9 +334,9 @@ fn digest_eq(computed: &[u8; OUTPUT_BYTES], expected: &[u8]) -> bool {
 }
 
 /// Returns a static slice over the whole input region. The host fills
-/// `_input_start..` with `TOTAL_INPUT_BYTES` bytes before the VM is
+/// `_in_start..` with `TOTAL_INPUT_BYTES` bytes before the VM is
 /// kicked, so reading lazily (rather than memcpy-ing 7.2 MB into a
 /// `static mut BUF`) saves the copy and the static allocation.
 fn input_region() -> &'static [u8] {
-    unsafe { core::slice::from_raw_parts(&raw const _input_start, TOTAL_INPUT_BYTES) }
+    unsafe { core::slice::from_raw_parts(&raw const _in_start, TOTAL_INPUT_BYTES) }
 }
