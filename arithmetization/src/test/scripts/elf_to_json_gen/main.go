@@ -18,6 +18,7 @@ const (
 	INSTRUCTION_BASE            = "instruction_base"
 	DECODED_CORE                = "decoded_core"
 	DECODED_ITYPE               = "decoded_itype"
+	DECODED_RTYPE               = "decoded_rtype"
 )
 
 // Instruction type identifiers. These MUST match the Type constants in
@@ -139,8 +140,8 @@ func main() {
 	}
 	// Statically decode the executable region into the pre-decoded instruction
 	// input tables consumed by the interpreter.
-	base, coreHex, itypeHex := buildDecodedProgram(elfFile.Sections)
-	printJson(blobs, elfFile.Entry, base, coreHex, itypeHex)
+	base, coreHex, itypeHex, rtypeHex := buildDecodedProgram(elfFile.Sections)
+	printJson(blobs, elfFile.Entry, base, coreHex, itypeHex, rtypeHex)
 }
 
 // parseInBytes turns an arg into raw input bytes. Four forms:
@@ -257,10 +258,10 @@ func readSectionBytes(s *elf.Section) []byte {
 
 // buildDecodedProgram statically decodes every 4-byte instruction word across
 // the executable region of the ELF, producing the base address plus the
-// hex-encoded decoded_core and decoded_itype input arrays. The arrays are dense
-// (one record per word in [base, end)), indexed at runtime by
+// hex-encoded decoded_core, decoded_itype and decoded_rtype input arrays. The
+// arrays are dense (one record per word in [base, end)), indexed at runtime by
 // index = (pc - base) >> 2.
-func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHex string) {
+func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHex, rtypeHex string) {
 	var (
 		execSections []*elf.Section
 		minAddr      = ^uint64(0)
@@ -311,6 +312,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	var (
 		coreParts  = make([]string, 0, nRecords)
 		itypeParts = make([]string, 0, nRecords)
+		rtypeParts = make([]string, 0, nRecords)
 	)
 	for off := uint64(0); off+4 <= uint64(len(image)); off += 4 {
 		instr := uint32(image[off]) | uint32(image[off+1])<<8 | uint32(image[off+2])<<16 | uint32(image[off+3])<<24
@@ -322,15 +324,19 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		rd := (instr >> 7) & 0x1f
 		funct3 := (instr >> 12) & 0x7
 		rs1 := (instr >> 15) & 0x1f
+		rs2 := (instr >> 20) & 0x1f
 		imm12 := (instr >> 20) & 0xfff
+		funct7 := (instr >> 25) & 0x7f
 
 		// decoded_core record: opcode:u8, instruction_type:u8, instruction_parameters:u32
 		coreParts = append(coreParts, fmt.Sprintf("%02x%02x%08x", opcode, instrType, params))
 		// decoded_itype record: funct3:u8, imm12:u16, rs1:u8, rd:u8
 		itypeParts = append(itypeParts, fmt.Sprintf("%02x%04x%02x%02x", funct3, imm12, rs1, rd))
+		// decoded_rtype record: funct7:u8, rs2:u8, rs1:u8, funct3:u8, rd:u8
+		rtypeParts = append(rtypeParts, fmt.Sprintf("%02x%02x%02x%02x%02x", funct7, rs2, rs1, funct3, rd))
 	}
 
-	return base, strings.Join(coreParts, "____"), strings.Join(itypeParts, "____")
+	return base, strings.Join(coreParts, "____"), strings.Join(itypeParts, "____"), strings.Join(rtypeParts, "____")
 }
 
 // maxDecodedRecordsFromEnv returns the configured cap on decoded records.
@@ -353,7 +359,7 @@ func writeSectionsFile(file *os.File, blobs []memoryBlob) {
 	}
 }
 
-func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, coreHex, itypeHex string) {
+func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, coreHex, itypeHex, rtypeHex string) {
 	var (
 		entryPointString   = fmt.Sprintf("%016x", entryPoint)
 		blobsCountString   = fmt.Sprintf("%016x", len(blobs))
@@ -375,6 +381,7 @@ func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, coreHex, 
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", BLOBS_DATA, strings.Join(blobData, "____"))
 	fmt.Printf("\t\"%s\": \"0x%016x\",\n", INSTRUCTION_BASE, instructionBase)
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_CORE, coreHex)
-	fmt.Printf("\t\"%s\": \"0x%s\"\n", DECODED_ITYPE, itypeHex)
+	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_ITYPE, itypeHex)
+	fmt.Printf("\t\"%s\": \"0x%s\"\n", DECODED_RTYPE, rtypeHex)
 	fmt.Println("}")
 }

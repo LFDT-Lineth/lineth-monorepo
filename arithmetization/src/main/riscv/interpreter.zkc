@@ -12,14 +12,10 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
 
     // The opcode, instruction type and parameters are pre-decoded externally
     // (see decoded_core in memory.zkc) and looked up by instruction index.
-    var opcode_u8:u8
-    var type_u8:u8
-    var params_u32:u32
-    opcode_u8, type_u8, params_u32 = decoded_core[index]
-
-    var opcode:Opcode = opcode_u8 as Opcode
-    var instruction_type:Type = type_u8 as Type
-    var instruction_parameters:u25 = params_u32 as u25
+    var opcode:Opcode
+    var instruction_type:Type
+    var instruction_parameters:u25
+    opcode, instruction_type, instruction_parameters = decoded_core[index]
 
     // TODO: handle the case where rd = 0: we will handle this in RAM itself, likely by adding an extra read-write pair
     // to reset the value in registers[rd] to 0
@@ -29,7 +25,7 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
             new_pc = process_I_type_instruction(index, opcode, pc)
         }
         case R_TYPE: {
-            process_R_type_instruction(opcode, instruction_parameters)
+            process_R_type_instruction(index, opcode)
             new_pc = pc + 4 as Address
         }
         case S_TYPE: {
