@@ -169,6 +169,7 @@ func TestProveBadPrecompile(t *testing.T) {
 	builder := invalidity.NewBuilder(
 		invalidity.Config{
 			ZkEvmComp: comp,
+			MaxL2Logs: 16,
 		},
 		&invalidity.BadPrecompileCircuit{},
 	)
