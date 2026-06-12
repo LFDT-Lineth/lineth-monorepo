@@ -135,7 +135,7 @@ func fractionModule(f wiop.Fraction) *wiop.Module {
 type ZEntry struct {
 	zCol   *wiop.Column
 	packed []wiop.Fraction // raw fractions used by the prover for filter-aware evaluation
-	ZFinal *wiop.Cell // coordinate (round, slot) locating the Z[n-1] opening in the proof transcript; carries no witness value
+	ZFinal *wiop.Cell      // coordinate (round, slot) locating the Z[n-1] opening in the proof transcript; carries no witness value
 }
 
 // buildZ allocates one Z column for a packed fraction group, registers the
