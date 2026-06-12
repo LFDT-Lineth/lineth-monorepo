@@ -149,7 +149,7 @@ func Compile(sys *wiop.System) {
 	ld := sys.NewLogDerivativeSum(compCtx.Childf("aggregated"), fractions)
 
 	// The verifier check: the aggregated log-derivative sum must be zero.
-	ld.Result.Round().RegisterVerifierAction(&resultIsZeroVerifierAction{ld: ld})
+	ld.Result.Round().RegisterVerifierAction(&ResultIsZeroVerifierAction{Ld: ld})
 
 	// Mark every consumed query as reduced so subsequent compiler passes skip
 	// them. We deliberately wait until the LogDerivativeSum has been
@@ -411,22 +411,28 @@ func viewExprs(cols []*wiop.ColumnView) []wiop.Expression {
 	return out
 }
 
-// resultIsZeroVerifierAction asserts that the aggregated [wiop.LogDerivativeSum]
+// ResultIsZeroVerifierAction asserts that the aggregated [wiop.LogDerivativeSum]
 // result cell holds the zero field element. This is the standard
 // log-derivative identity: the sum of A-side fractions cancels the sum of
 // T-side fractions exactly when every selected A row is in the union of
 // selected B rows.
-type resultIsZeroVerifierAction struct {
-	ld *wiop.LogDerivativeSum
+//
+// Exported (with an exported field) so out-of-package consumers — notably the
+// verifier-ray codegen — can recognise a lookup-reduced LogDerivativeSum and
+// flag that its Result must be zero.
+type ResultIsZeroVerifierAction struct {
+	// Ld is exported so codegen can use the pointer as a map key to flag the
+	// corresponding LogDerivativeSum query's Result as required to be zero.
+	Ld *wiop.LogDerivativeSum
 }
 
 // Check implements [wiop.VerifierAction].
-func (a *resultIsZeroVerifierAction) Check(rt wiop.Runtime) error {
-	v := rt.GetCellValue(a.ld.Result)
+func (a *ResultIsZeroVerifierAction) Check(rt wiop.Runtime) error {
+	v := rt.GetCellValue(a.Ld.Result)
 	if !v.IsZero() {
 		return fmt.Errorf(
 			"wiop/compilers/lookuptologderivsum: aggregated lookup result for query %q must be zero",
-			a.ld.Context().Path(),
+			a.Ld.Context().Path(),
 		)
 	}
 	return nil
