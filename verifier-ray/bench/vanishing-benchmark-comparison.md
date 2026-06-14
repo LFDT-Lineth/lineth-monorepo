@@ -14,8 +14,7 @@ Each row measures one generated honest vanishing benchmark case. The zkc RISC-V 
 | Cases measured | 83 |
 | Fastest | `6 Vanishing/ConstantColumn` (164,861 cycles) |
 | Slowest | `80 RangeCheckCompiler/LargeBound` (7,237,154 cycles) |
-| Zig release mode | `small` |
-| Git commit | `e35ea9732` |
+| Git commit | `5b19b33cf` |
 | Zig | `0.16.0` |
 | zkc | `mod	github.com/consensys/go-corset	v1.2.18-0.20260521022840-414e7b73971e` |
 | zkc main | `bench/riscv_main_bench.zkc` |
@@ -113,5 +112,5 @@ Each row measures one generated honest vanishing benchmark case. The zkc RISC-V 
 
 ```bash
 cd verifier-ray
-make bench-vanishing-compare-doc VANISHING_BENCH_CASES=all VANISHING_BENCH_RELEASE=small
+make bench-vanishing-compare-doc VANISHING_BENCH_CASES=all
 ```

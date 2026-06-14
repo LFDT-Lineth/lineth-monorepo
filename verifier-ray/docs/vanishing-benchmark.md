@@ -41,7 +41,7 @@ It does not include generating the fixtures, converting raw test fixtures into t
 One benchmark run measures one selected case:
 
 ```bash
-make bench-vanishing-doc VANISHING_BENCH_CASE=1 VANISHING_BENCH_RELEASE=small
+make bench-vanishing-doc VANISHING_BENCH_CASE=1
 ```
 
 The generated catalog currently has 83 honest benchmark cases. `VANISHING_BENCH_CASE` selects which one is compiled into the guest.

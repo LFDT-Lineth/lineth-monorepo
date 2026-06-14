@@ -26,7 +26,6 @@ This measures the RISC-V instruction count for the typed vanishing benchmark gue
 | Vanishings | 1 |
 | Witness claims | 1 |
 | Quotient claims | 1 |
-| Zig release mode | `small` |
 | R5 ELF size | 12,288 bytes |
 | zkc JSON size | 15,322 bytes |
 
@@ -34,7 +33,7 @@ This measures the RISC-V instruction count for the typed vanishing benchmark gue
 
 | Tool | Value |
 | --- | --- |
-| Git commit | `e35ea9732` |
+| Git commit | `5b19b33cf` |
 | Zig | `0.16.0` |
 | zkc | `mod	github.com/consensys/go-corset	v1.2.18-0.20260521022840-414e7b73971e` |
 | zkc main | `bench/riscv_main_bench.zkc` |
@@ -44,5 +43,5 @@ This measures the RISC-V instruction count for the typed vanishing benchmark gue
 
 ```bash
 cd verifier-ray
-make bench-vanishing-doc VANISHING_BENCH_CASE=6 VANISHING_BENCH_RELEASE=small
+make bench-vanishing-doc VANISHING_BENCH_CASE=6
 ```

@@ -15,7 +15,6 @@ VANISHING_BENCH_DOC := bench/vanishing-benchmark.md
 VANISHING_BENCH_COMPARE_DOC := bench/vanishing-benchmark-comparison.md
 VANISHING_BENCH_CASE ?= 0
 VANISHING_BENCH_CASES ?= 0-5
-VANISHING_BENCH_RELEASE ?= small
 VANISHING_INVALID ?= false
 
 PASSING_INPUT_FILE := testdata/inputs/passing.bin
@@ -69,7 +68,6 @@ help:
 		'benchmark variables:' \
 		'  VANISHING_BENCH_CASE     Generated vanishing case index, default 0' \
 		'  VANISHING_BENCH_CASES    Case selector for comparison, default 0-5; examples: all, 0-10, 0,2,5-8' \
-		'  VANISHING_BENCH_RELEASE  Zig release mode for R5 benchmark, default small' \
 		'  VANISHING_INVALID        Use invalid benchmark fixture when true, default false'
 
 fmt: generate-testdata fmt-zig fmt-codegen fmt-testdata-generate fmt-bench
@@ -172,7 +170,7 @@ zkc-verify-failing-expected:
 	fi
 
 bench-vanishing-build: generate-testdata
-	zig build --release=$(VANISHING_BENCH_RELEASE) -Dstrip=true -Dr5=true -Dvanishing-bench=true -Dvanishing-case=$(VANISHING_BENCH_CASE) -Dvanishing-invalid=$(VANISHING_INVALID)
+	zig build --release=small -Dstrip=true -Dr5=true -Dvanishing-bench=true -Dvanishing-case=$(VANISHING_BENCH_CASE) -Dvanishing-invalid=$(VANISHING_INVALID)
 
 bench-vanishing-json: bench-vanishing-build
 	go run $(ELF_TO_JSON) $(VANISHING_BENCH_BIN) "" $(IN_BYTES_OFFSET) > $(VANISHING_BENCH_JSON)
@@ -200,7 +198,6 @@ bench-vanishing-doc: bench-vanishing-zkc
 		-bin $(VANISHING_BENCH_BIN) \
 		-json $(VANISHING_BENCH_JSON) \
 		-case-index $(VANISHING_BENCH_CASE) \
-		-release $(VANISHING_BENCH_RELEASE) \
 		-zkc-main $(VANISHING_BENCH_ZKC_MAIN)
 
 bench-vanishing-compare-doc: generate-testdata
@@ -214,7 +211,7 @@ bench-vanishing-compare-doc: generate-testdata
 	echo "vanishing benchmark cases: $$cases"; \
 	for case in $$cases; do \
 		echo "benchmarking vanishing case $$case"; \
-		zig build --release=$(VANISHING_BENCH_RELEASE) -Dstrip=true -Dr5=true -Dvanishing-bench=true -Dvanishing-case=$$case -Dvanishing-invalid=false; \
+		zig build --release=small -Dstrip=true -Dr5=true -Dvanishing-bench=true -Dvanishing-case=$$case -Dvanishing-invalid=false; \
 		go run $(ELF_TO_JSON) $(VANISHING_BENCH_BIN) "" $(IN_BYTES_OFFSET) > $(VANISHING_BENCH_JSON); \
 		zkc exec -q $(VANISHING_BENCH_JSON) $(VANISHING_BENCH_ZKC_MAIN) | tee $(VANISHING_BENCH_LOG_DIR)/case-$$case.log; \
 	done; \
@@ -223,7 +220,6 @@ bench-vanishing-compare-doc: generate-testdata
 		-out $(VANISHING_BENCH_COMPARE_DOC) \
 		-metadata bench/generated/vanishing.zig \
 		-case-spec "$(VANISHING_BENCH_CASES)" \
-		-release $(VANISHING_BENCH_RELEASE) \
 		-zkc-main $(VANISHING_BENCH_ZKC_MAIN)
 
 bench-vanishing-all-doc:

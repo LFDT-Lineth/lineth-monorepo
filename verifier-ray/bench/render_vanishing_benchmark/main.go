@@ -44,7 +44,6 @@ func main() {
 	caseIndex := flag.Int("case-index", 0, "vanishing benchmark case index")
 	caseSpec := flag.String("case-spec", "", "case selector for comparison: all, 0-10, or 0,2,5-8")
 	printCases := flag.Bool("print-cases", false, "print selected case indexes from -case-spec and exit")
-	releaseMode := flag.String("release", "", "Zig release mode")
 	zkcMain := flag.String("zkc-main", "", "zkc RISC-V benchmark main path")
 	flag.Parse()
 
@@ -89,7 +88,7 @@ func main() {
 		if err != nil {
 			fatalf("%v", err)
 		}
-		renderComparisonReport(*outPath, *logDir, *caseSpec, *releaseMode, *zkcMain, results)
+		renderComparisonReport(*outPath, *logDir, *caseSpec, *zkcMain, results)
 		return
 	}
 
@@ -137,9 +136,6 @@ func main() {
 	fmt.Fprintf(&out, "| Vanishings | %s |\n", meta.vanishingCount)
 	fmt.Fprintf(&out, "| Witness claims | %s |\n", meta.totalWitnessClaims)
 	fmt.Fprintf(&out, "| Quotient claims | %s |\n", meta.totalQuotientClaims)
-	if *releaseMode != "" {
-		fmt.Fprintf(&out, "| Zig release mode | `%s` |\n", *releaseMode)
-	}
 	if *binPath != "" {
 		fmt.Fprintf(&out, "| R5 ELF size | %s bytes |\n", formatThousands(fileSize(*binPath)))
 	}
@@ -163,7 +159,7 @@ func main() {
 	fmt.Fprintln(&out)
 	fmt.Fprintln(&out, "```bash")
 	fmt.Fprintf(&out, "cd verifier-ray\n")
-	fmt.Fprintf(&out, "make bench-vanishing-doc VANISHING_BENCH_CASE=%d VANISHING_BENCH_RELEASE=%s\n", *caseIndex, *releaseMode)
+	fmt.Fprintf(&out, "make bench-vanishing-doc VANISHING_BENCH_CASE=%d\n", *caseIndex)
 	fmt.Fprintln(&out, "```")
 
 	if err := os.MkdirAll(filepath.Dir(*outPath), 0o755); err != nil {
@@ -397,7 +393,7 @@ func readComparisonResults(logDir string, metas []metadata, cases []int) ([]benc
 	return results, nil
 }
 
-func renderComparisonReport(outPath, logDir, caseSpec, releaseMode, zkcMain string, results []benchmarkResult) {
+func renderComparisonReport(outPath, logDir, caseSpec, zkcMain string, results []benchmarkResult) {
 	if len(results) == 0 {
 		fatalf("no benchmark results to render")
 	}
@@ -430,9 +426,6 @@ func renderComparisonReport(outPath, logDir, caseSpec, releaseMode, zkcMain stri
 	fmt.Fprintf(&out, "| Cases measured | %d |\n", len(results))
 	fmt.Fprintf(&out, "| Fastest | `%d %s` (%s cycles) |\n", minResult.caseIndex, markdownCell(minResult.meta.name), formatThousands(minResult.cycles))
 	fmt.Fprintf(&out, "| Slowest | `%d %s` (%s cycles) |\n", maxResult.caseIndex, markdownCell(maxResult.meta.name), formatThousands(maxResult.cycles))
-	if releaseMode != "" {
-		fmt.Fprintf(&out, "| Zig release mode | `%s` |\n", releaseMode)
-	}
 	fmt.Fprintf(&out, "| Git commit | `%s` |\n", commandText("git", "rev-parse", "--short", "HEAD"))
 	fmt.Fprintf(&out, "| Zig | `%s` |\n", commandText("zig", "version"))
 	fmt.Fprintf(&out, "| zkc | `%s` |\n", zkcVersion())
@@ -473,7 +466,7 @@ func renderComparisonReport(outPath, logDir, caseSpec, releaseMode, zkcMain stri
 	fmt.Fprintln(&out)
 	fmt.Fprintln(&out, "```bash")
 	fmt.Fprintln(&out, "cd verifier-ray")
-	fmt.Fprintf(&out, "make bench-vanishing-compare-doc VANISHING_BENCH_CASES=%s VANISHING_BENCH_RELEASE=%s\n", shellQuote(caseSpec), shellQuote(releaseMode))
+	fmt.Fprintf(&out, "make bench-vanishing-compare-doc VANISHING_BENCH_CASES=%s\n", shellQuote(caseSpec))
 	fmt.Fprintln(&out, "```")
 
 	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
