@@ -2,7 +2,7 @@ name: Arithmetization zkc interpreter benchmark (base vs optim)
 
 # Benchmark of guest programs executed by the zkc interpreter of
 # two branches, the base branch and the optim branch.
-# Guest programs are the Keccak and Blake programs in the arithmetization/src/test/examples 
+# Guest programs are the Keccak and Blake programs in the arithmetization/src/test 
 # directory.
 
 # Benchmark methodology : 
@@ -13,7 +13,7 @@ name: Arithmetization zkc interpreter benchmark (base vs optim)
 
 # Benchmark data : 
 # -- For Keccak
-# In arithmetization/src/test/examples/rust/src/keccak/keccak.all
+# In arithmetization/src/test/rust/src/keccak/keccak.all
 # There are 20k test vectors you can select from to run the benchmark.
 # Each test vector has a raw message of 16 * 32 bytes, ie fits in 4 blocks of 1088 bits.
 # 1 test vector = 4 blocks
@@ -105,7 +105,7 @@ jobs:
         run: |
           set -eux
           mkdir -p /tmp/bench/logs /tmp/bench/json/blake
-          cd /tmp/wt-opt/arithmetization/src/test/examples
+          cd /tmp/wt-opt/arithmetization/src/test
           # Keccak: one batched JSON.
           make keccak-rust-json \
             KECCAK_N_VECTORS=${{ inputs.n_vectors_keccak || 10 }} \

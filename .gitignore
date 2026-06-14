@@ -183,22 +183,25 @@ contracts/.claude/settings.local.json
 e2e/e2e-runtime-report.html
 e2e/e2e-runtime-report-summary.json
 .zig-cache/
-arithmetization/src/test/examples/linker_script.ld
-arithmetization/src/test/examples/scripts/output-*/
+arithmetization/src/test/linker_script.ld
+arithmetization/src/test/scripts/output-*/
 
 # Stray host-target binaries that `cargo build` / `rustc` may produce next
 # to the source when invoked without --target riscv64im-unknown-none-elf.
-# Update this list whenever a new .rs guest program is added under 
-# arithmetization/src/test/examples/rust/src/.
-arithmetization/src/test/examples/rust/src/custom_std
-arithmetization/src/test/examples/rust/src/stack_load_test
-arithmetization/src/test/examples/rust/src/test
-arithmetization/src/test/examples/rust/src/keccak/keccak
-arithmetization/src/test/examples/rust/src/blake/blake_core
-arithmetization/src/test/examples/rust/src/blake/blake_from_main
-arithmetization/src/test/examples/rust/src/blake/blake_test_vectors
-arithmetization/src/test/examples/rust/src/blake/blake_with_in_bytes
-arithmetization/src/test/examples/rust/src/blake/blake_with_in_embedded
+# Update this list whenever a new .rs guest program is added under
+# arithmetization/src/test/rust/src/.
+arithmetization/src/test/rust/src/custom_std
+arithmetization/src/test/rust/src/stack_load_test
+arithmetization/src/test/rust/src/test
+arithmetization/src/test/rust/src/keccak/keccak
+arithmetization/src/test/rust/src/blake/blake_core
+arithmetization/src/test/rust/src/blake/blake_from_main
+arithmetization/src/test/rust/src/blake/blake_test_vectors
+arithmetization/src/test/rust/src/blake/blake_with_in_bytes
+arithmetization/src/test/rust/src/blake/blake_with_in_embedded
+
+# RISC-V guest build artifacts and dependency caches are ignored per-directory:
+# see riscv-guests/.gitignore (each guest package has its own zig-out/zig-pkg/.zig-cache).
 
 # Runtime sequencer deny-list, seeded empty by Makefile/gradle before each env start
 # and mutated by E2E tests via withDenyListAddresses. Never commit.

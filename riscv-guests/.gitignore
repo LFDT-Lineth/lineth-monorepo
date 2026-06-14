@@ -1,0 +1,11 @@
+# Zig build artifacts and local dependency/package caches. Unanchored on purpose:
+# each guest package (l2-execution/, future rollup/, rollup-aggregation/, …) produces
+# its own zig-out/, zig-pkg/ and .zig-cache/ — these patterns cover them all.
+.zig-cache/
+zig-out/
+zig-pkg/
+*.objdump
+
+# generated linker script
+build_common/linker_script.ld
+

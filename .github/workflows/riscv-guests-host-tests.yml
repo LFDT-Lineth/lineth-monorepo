@@ -1,0 +1,71 @@
+# Host-machine CI for the RISC-V guest programs (riscv-guests/):
+#   - host-tests: `make test` — the top-level orchestrator fans the native unit tests out to every
+#     guest in GUESTS (single-fixture smoke test, delegated-accel integration test, …).
+#   - spec-tests: `make spec-test` in l2-execution — the FULL EF execution-spec-tests zkevm
+#     stateless suite (~2,880 fixture files / ~16.8k blocks) run through the guest on the host.
+#     This is deliberately NOT orchestrated: the EF suite only exists for the EVM-execution guest.
+# Both run the guest logic natively (no RISC-V, no ZKC); the guest-in-ZKC-interpreter CI is a
+# separate, later concern blocked on the prover link toolchain.
+name: riscv-guests host tests
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'riscv-guests/**'
+      - '.github/actions/setup-riscv-guests/**'
+      - '.github/workflows/riscv-guests-host-tests.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'riscv-guests/**'
+      - '.github/actions/setup-riscv-guests/**'
+      - '.github/workflows/riscv-guests-host-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  host-tests:
+    name: Guest unit tests (host)
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: false
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-riscv-guests
+
+      - name: Check Zig formatting
+        # File list lives in the Makefile (FMT_PATHS, driven by GUESTS) so CI and local stay in sync.
+        run: make fmt-check
+        working-directory: riscv-guests
+        timeout-minutes: 2
+
+      - name: Run native unit tests for all guests
+        run: make test
+        working-directory: riscv-guests
+        timeout-minutes: 20
+
+  spec-tests:
+    name: l2-execution EF spec tests (host)
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: false
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-riscv-guests
+
+      - name: Run full EF zkevm stateless fixture suite
+        run: make spec-test
+        working-directory: riscv-guests/l2-execution
+        timeout-minutes: 30

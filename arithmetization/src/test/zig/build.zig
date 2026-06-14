@@ -22,8 +22,7 @@ pub fn build(b: *std.Build) void {
         .preferred_optimize_mode = .ReleaseSmall,
     });
 
-    const path = b.option([]const u8, "path", "Source path under src/, without .zig")
-    orelse @panic("'-Dpath=<path>' is required");
+    const path = b.option([]const u8, "path", "Source path under src/, without .zig") orelse @panic("'-Dpath=<path>' is required");
 
     // e.g. path = "src_optional_subfolder/your_test"
     const source = b.fmt("src/{s}.zig", .{path});
@@ -40,8 +39,9 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
+    // exposing the zkvm wrappers
     const wrappers = b.createModule(.{
-        .root_source_file = b.path("../../../wrappers/root.zig"),
+        .root_source_file = b.path("../../wrappers/root.zig"),
         .target = target,
         .optimize = optimize,
     });

@@ -57,4 +57,4 @@ The `install-sail` target downloads Sail.
 make -C arithmetization install-sail
 ```
 
-See [src/test/examples/README.md](src/test/examples/README.md) for ACT4 prerequisites, build, and run commands.
+See [src/test/README.md](src/test/README.md) for ACT4 prerequisites, build, and run commands.

@@ -11,7 +11,7 @@ on:
       # - 'prover-ray/**'
       # Keep arithmetization integration dependencies documented but non-blocking
       # while the RISC-V/zkc pipeline is still moving quickly.
-      # - 'arithmetization/src/test/examples/main.go'
+      # - 'arithmetization/src/test/main.go'
       # - 'arithmetization/src/main/riscv/main.zkc'
       - '.github/workflows/verifier-ray.yml'
   push:
@@ -24,7 +24,7 @@ on:
       # - 'prover-ray/**'
       # Keep arithmetization integration dependencies documented but non-blocking
       # while the RISC-V/zkc pipeline is still moving quickly.
-      # - 'arithmetization/src/test/examples/main.go'
+      # - 'arithmetization/src/test/main.go'
       # - 'arithmetization/src/main/riscv/main.zkc'
       - '.github/workflows/verifier-ray.yml'
   workflow_call:
@@ -36,8 +36,8 @@ permissions:
 
 env:
   GO_VERSION: '1.25.7'
-  GO_CORSET_VERSION: 'v1.2.17'
-  GO_CORSET_REF_FOR_ZKC: '414e7b73971eaa77afcb6a4797b44d0fdf8c99db'
+  GO_CORSET_VERSION: 'v1.2.18'
+  GO_CORSET_REF_FOR_ZKC: 'c7d95e35a4975bd32814ad46b079b16760f2475f'
   ZIG_VERSION: '0.17.0-dev.251+0db721ec2'
 
 concurrency:

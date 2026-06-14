@@ -3,7 +3,7 @@
 # Moreover, ABI being LP64 (soft-float) is relevant only for float numbers, which we do not use, so it can be omitted as well.
 
 # Declare all targets as phony to prevent conflicts with files of the same name
-.PHONY: exec debug compile elf-exec elf-to-json install-zkc zkc-exec zkc-debug clean clean-all linker-script verify-elf vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-bin-ext require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode
+.PHONY: exec debug compile elf-exec elf-debug elf-to-json install-zkc zkc-exec zkc-debug clean clean-all linker-script verify-elf vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-bin-ext require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode
 
 # Keep validation, build, and execution targets running in order
 .NOTPARALLEL:
@@ -14,11 +14,11 @@
 
 # Directory of this Makefile (used for relative paths)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-ARITHMETIZATION_DIR := $(abspath $(MAKEFILE_DIR)../../..)
+ARITHMETIZATION_DIR := $(abspath $(MAKEFILE_DIR)../..)
 
 # Paths to go main (to turn BIN into JSON), zkc main (to execute/debug the json) and linker script
 ELF_TO_JSON_GEN := $(MAKEFILE_DIR)scripts/elf_to_json_gen/main.go
-ZKC_MAIN        := $(MAKEFILE_DIR)../../main/riscv/main.zkc
+ZKC_MAIN        := $(MAKEFILE_DIR)../main/riscv/main.zkc
 LINKER_SCRIPT   := $(MAKEFILE_DIR)linker_script.ld
 # Assembly, Zig, or Rust test file to execute with exec target (TEST=src_optional_subfolder/your_test(.s|.zig|.rs)
 TEST ?=
@@ -53,7 +53,7 @@ BIN  := $(MAKEFILE_DIR)$(if $(filter .s,$(EXT)),asm/bin/,$(if $(filter .zig,$(EX
 JSON := $(BIN).json
 # Note: in the future the JSON file will be removed and main.zkc will receive directly the ELF file
 
-# Inputs and offsets for the program
+# Hex big-endian input or `@path/to/in_bytes`
 IN_BYTES        ?= ""
 
 # Support function to evaluate expressions and format them as hex
@@ -148,6 +148,10 @@ compile: require-src linker-script
 elf-exec: elf-to-json
 	zkc exec $(ZKC_EXEC_FLAGS) $(JSON_EXT) $(ZKC_MAIN)
 
+# Convert and debug an already compiled external ELF
+elf-debug: elf-to-json
+	zkc debug $(JSON_EXT) $(ZKC_MAIN)
+
 # Convert an already compiled external ELF to a JSON
 elf-to-json: require-bin-ext
 # Generate JSON from ELF
@@ -171,6 +175,7 @@ clean-all:
 	rm -rf $(MAKEFILE_DIR)zig/.zig-cache/
 	rm -rf $(MAKEFILE_DIR)rust/target/
 	rm -rf $(MAKEFILE_DIR)act4/bin/
+	rm -rf $(MAKEFILE_DIR)bin/
 	rm -f  $(LINKER_SCRIPT)
 
 # Generate the linker script with the specified memory layout
@@ -214,6 +219,9 @@ linker-script:
 		'    _program_end = ORIGIN(PROGRAM) + LENGTH(PROGRAM);' \
 		'    _in_start = ORIGIN(IN);' \
 		'    _in_end = ORIGIN(IN) + LENGTH(IN);' \
+		'    /* aliases */' \
+		'    _input_start = _in_start;' \
+		'    _input_end = _in_end;' \
 		'' \
 		'    /* heap grows upward from this address by program convention */' \
 		'    _heap_start = $(HEAP_ORIGIN);' \

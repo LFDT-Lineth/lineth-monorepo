@@ -10,7 +10,7 @@ name: Arithmetization native zkc benchmark - Keccak (base vs optim)
 # Launched with zkc exec --field KOALABEAR_16 <input.json> <program.zkc>
 #
 # Benchmark data : 
-# In arithmetization/src/test/examples/zkc/keccakf/keccakf_batched.accepts
+# In arithmetization/src/test/zkc/keccakf/keccakf_batched.accepts
 # There are 20k test vectors you can select from to run the benchmark.
 # Each test vector has a raw message of 16 * 32 bytes, ie fits in 4 blocks of 1088 bits.
 # 1 test vector = 4 blocks
@@ -99,7 +99,7 @@ jobs:
         run: |
           set -eux
           mkdir -p /tmp/bench/logs
-          cd arithmetization/src/test/examples
+          cd arithmetization/src/test
           go build -o /tmp/bench/keccakf_accepts_to_json ./scripts/keccakf_accepts_to_json/main.go
           go build -o /tmp/bench/cache_thrasher           ./scripts/cache_thrasher/main.go
           go build -o /tmp/bench/render_bench_summary     ./scripts/render_bench_summary/main.go
@@ -116,7 +116,7 @@ jobs:
         run: |
           set -uo pipefail
           mkdir -p /tmp/bench/logs
-          zkc_prog="$PWD/arithmetization/src/test/examples/zkc/keccakf/keccakf_batched.zkc"
+          zkc_prog="$PWD/arithmetization/src/test/zkc/keccakf/keccakf_batched.zkc"
           ITERS=${{ inputs.iterations || 0 }}
 
           # progress prints

@@ -43,6 +43,6 @@ jobs:
         run: make -C arithmetization zkc-compile-and-check
         env:
           ZKC_REF: ${{ inputs.zkc-ref || 'main' }}
-          ZKC_MAIN: src/test/examples/zkc/simple_add.zkc
-          ZKC_FILES: src/test/examples/zkc/simple_add.zkc
-          ZKC_INPUT: src/test/examples/zkc/simple_add.json
+          ZKC_MAIN: src/test/zkc/simple_add.zkc
+          ZKC_FILES: src/test/zkc/simple_add.zkc
+          ZKC_INPUT: src/test/zkc/simple_add.json
