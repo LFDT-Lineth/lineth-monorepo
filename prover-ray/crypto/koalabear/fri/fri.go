@@ -274,7 +274,7 @@ func Prove(p Params, levels []Level, ts *fiatshamirrefactor.Transcript) (Proof, 
 	if err != nil {
 		return Proof{}, nil, err
 	}
-	if err := registerChallenges(p, plan.numLevels-1, ts); err != nil {
+	if err := registerChallenges(p, plan.introductions, ts); err != nil {
 		return Proof{}, nil, err
 	}
 
@@ -285,9 +285,49 @@ func Prove(p Params, levels []Level, ts *fiatshamirrefactor.Transcript) (Proof, 
 }
 
 type provePlan struct {
-	rail         field.Kind
-	numLevels    int
-	levelAtRound map[int]int
+	rail          field.Kind
+	numLevels     int
+	introductions levelIntroductions
+}
+
+type levelIntroductions struct {
+	levelAtRound map[int]int // which polynomial is introduced at round j?
+	introRounds  []int       // at which round is polynomial i introduced into the fold?
+}
+
+func newLevelIntroductions(p Params, levelDs []int) (levelIntroductions, error) {
+	numExtraLevels := len(levelDs) - 1
+	if numExtraLevels < 0 {
+		numExtraLevels = 0
+	}
+	res := levelIntroductions{
+		levelAtRound: make(map[int]int, numExtraLevels),
+		introRounds:  make([]int, len(levelDs)),
+	}
+	for level := range res.introRounds {
+		res.introRounds[level] = -1
+	}
+	for level := 1; level < len(levelDs); level++ {
+		levelD := levelDs[level]
+		if levelD <= 0 || levelD&(levelD-1) != 0 {
+			return res, fmt.Errorf("level %d D=%d is not a positive power of two", level, levelD)
+		}
+		ratio := p.D / levelD
+		if ratio <= 0 || ratio*levelD != p.D || ratio&(ratio-1) != 0 {
+			return res, fmt.Errorf("level %d D=%d does not divide p.D=%d by a power-of-two ratio", level, levelD, p.D)
+		}
+		round := log2(ratio)
+		if round < 1 || round >= p.numRounds {
+			return res, fmt.Errorf("level %d D=%d gives intro round %d, must be in 1..%d",
+				level, levelD, round, p.numRounds-1)
+		}
+		if _, dup := res.levelAtRound[round]; dup {
+			return res, fmt.Errorf("two levels share intro round %d", round)
+		}
+		res.levelAtRound[round] = level
+		res.introRounds[level] = round
+	}
+	return res, nil
 }
 
 func buildProvePlan(p Params, levels []Level) (provePlan, error) {
@@ -312,12 +352,15 @@ func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 
 	plan.numLevels = len(levels)
 
-	// Build levelAtRound: folding round j → level index l (1-based).
-	plan.levelAtRound = make(map[int]int, plan.numLevels-1)
+	levelDs := make([]int, plan.numLevels)
+	for l := range levels {
+		levelDs[l] = levels[l].D
+	}
+	if plan.introductions, err = newLevelIntroductions(p, levelDs); err != nil {
+		return plan, fmt.Errorf("fri: Prove: %w", err)
+	}
+
 	for l := 1; l < plan.numLevels; l++ {
-		if levels[l].D <= 0 || levels[l].D&(levels[l].D-1) != 0 {
-			return plan, fmt.Errorf("fri: Prove: levels[%d].D=%d is not a positive power of two", l, levels[l].D)
-		}
 		levelRail, err := levels[l].Evals.checkedField()
 		if err != nil {
 			return plan, fmt.Errorf("fri: Prove: levels[%d].Evals: %w", l, err)
@@ -325,16 +368,7 @@ func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 		if levelRail != rail {
 			return plan, fmt.Errorf("fri: Prove: levels[%d] is %s, running rail is %s", l, levelRail, rail)
 		}
-		jl := log2(p.D / levels[l].D)
-		if jl < 1 || jl >= p.numRounds {
-			return plan, fmt.Errorf(
-				"fri: Prove: levels[%d].D=%d gives intro round %d, must be in 1..%d",
-				l, levels[l].D, jl, p.numRounds-1)
-		}
-		if _, dup := plan.levelAtRound[jl]; dup {
-			return plan, fmt.Errorf("fri: Prove: two levels share intro round %d", jl)
-		}
-		plan.levelAtRound[jl] = l
+		jl := plan.introductions.introRounds[l]
 		Nl := p.N >> jl
 		if levels[l].Evals.Len() != Nl {
 			return plan, fmt.Errorf("fri: Prove: levels[%d].Evals length %d != N_l=%d", l, levels[l].Evals.Len(), Nl)
@@ -347,8 +381,8 @@ func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 	return plan, nil
 }
 
-func registerChallenges(p Params, numExtraLevels int, ts *fiatshamirrefactor.Transcript) error {
-	if numExtraLevels > 0 {
+func registerChallenges(p Params, introductions levelIntroductions, ts *fiatshamirrefactor.Transcript) error {
+	if len(introductions.introRounds) > 1 {
 		if err := ts.NewChallenge(gammaName()); err != nil {
 			return err
 		}
@@ -406,7 +440,7 @@ func proveBase(p Params, levels []Level, plan provePlan, ts *fiatshamirrefactor.
 	for j := 0; j < p.numRounds; j++ {
 		// Level batching step (j > 0 only; j=0 reuses the caller-supplied levels[0].Tree).
 		if j > 0 {
-			if l, ok := plan.levelAtRound[j]; ok {
+			if l, ok := plan.introductions.levelAtRound[j]; ok {
 				gamma := gammas[l]
 				// Mix γ^l * levels[l].Evals into running (pointwise).
 				for k, v := range levels[l].Evals.Base {
@@ -494,7 +528,7 @@ func proveBase(p Params, levels []Level, plan provePlan, ts *fiatshamirrefactor.
 		prf.FRIQueries[k] = q
 
 		for l := 1; l < plan.numLevels; l++ {
-			jl := log2(p.D / levels[l].D)
+			jl := plan.introductions.introRounds[l]
 			Nl := p.N >> jl
 			base := s % (Nl / 2)
 
@@ -549,7 +583,7 @@ func proveExt(p Params, levels []Level, plan provePlan, ts *fiatshamirrefactor.T
 
 	for j := 0; j < p.numRounds; j++ {
 		if j > 0 {
-			if l, ok := plan.levelAtRound[j]; ok {
+			if l, ok := plan.introductions.levelAtRound[j]; ok {
 				gamma := gammas[l]
 				for k, v := range levels[l].Evals.Ext {
 					var term ext.E6
@@ -631,7 +665,7 @@ func proveExt(p Params, levels []Level, plan provePlan, ts *fiatshamirrefactor.T
 		prf.FRIQueries[k] = q
 
 		for l := 1; l < plan.numLevels; l++ {
-			jl := log2(p.D / levels[l].D)
+			jl := plan.introductions.introRounds[l]
 			Nl := p.N >> jl
 			base := s % (Nl / 2)
 
@@ -690,6 +724,11 @@ func Verify(p Params, levelRoots []hash.Digest, levelDs []int, prf Proof, ts *fi
 	if len(prf.FRIQueries) != p.NumQueries {
 		return fmt.Errorf("fri: Verify: proof has %d FRI queries, want %d", len(prf.FRIQueries), p.NumQueries)
 	}
+	for k, q := range prf.FRIQueries {
+		if len(q.Layers) != p.numRounds {
+			return fmt.Errorf("fri: Verify: proof FRI query %d has %d layers, want %d", k, len(q.Layers), p.numRounds)
+		}
+	}
 	if len(prf.LevelQueries) != numExtraLevels {
 		return fmt.Errorf("fri: Verify: proof has %d level query sets, want %d", len(prf.LevelQueries), numExtraLevels)
 	}
@@ -708,29 +747,12 @@ func Verify(p Params, levelRoots []hash.Digest, levelDs []int, prf Proof, ts *fi
 		return fmt.Errorf("fri: Verify: ext final field with empty FinalPolyExt")
 	}
 
-	// levelAtRound: folding round j → level index l (1-based).
-	levelAtRound := make(map[int]int, numExtraLevels)
-	for l := 1; l < numLevels; l++ {
-		if levelDs[l] <= 0 || levelDs[l]&(levelDs[l]-1) != 0 {
-			return fmt.Errorf("fri: Verify: levelDs[%d]=%d is not a positive power of two", l, levelDs[l])
-		}
-		ratio := p.D / levelDs[l]
-		if ratio <= 0 || ratio*levelDs[l] != p.D || ratio&(ratio-1) != 0 {
-			return fmt.Errorf("fri: Verify: levelDs[%d]=%d does not divide p.D=%d by a power-of-two ratio", l, levelDs[l], p.D)
-		}
-		jl := log2(ratio)
-		if jl < 1 || jl >= p.numRounds {
-			return fmt.Errorf(
-				"fri: Verify: levelDs[%d]=%d gives intro round %d, must be in 1..%d",
-				l, levelDs[l], jl, p.numRounds-1)
-		}
-		if _, dup := levelAtRound[jl]; dup {
-			return fmt.Errorf("fri: Verify: two levels share intro round %d", jl)
-		}
-		levelAtRound[jl] = l
+	introductions, err := newLevelIntroductions(p, levelDs)
+	if err != nil {
+		return fmt.Errorf("fri: Verify: %w", err)
 	}
 
-	if err := registerChallenges(p, numExtraLevels, ts); err != nil {
+	if err := registerChallenges(p, introductions, ts); err != nil {
 		return err
 	}
 
@@ -748,15 +770,15 @@ func Verify(p Params, levelRoots []hash.Digest, levelDs []int, prf Proof, ts *fi
 	}
 
 	if prf.FinalField == field.KindExt {
-		return verifyExt(p, levelRoots, levelRootsExtra, levelAtRound, roots, prf, ts)
+		return verifyExt(p, levelRoots, levelRootsExtra, introductions, roots, prf, ts)
 	}
-	return verifyBase(p, levelRoots, levelRootsExtra, levelAtRound, roots, prf, ts)
+	return verifyBase(p, levelRoots, levelRootsExtra, introductions, roots, prf, ts)
 }
 
 func verifyBase(
 	p Params,
 	levelRoots, levelRootsExtra []hash.Digest,
-	levelAtRound map[int]int,
+	introductions levelIntroductions,
 	roots []hash.Digest,
 	prf Proof,
 	ts *fiatshamirrefactor.Transcript,
@@ -826,7 +848,7 @@ func verifyBase(
 		}
 
 		if err := checkQuery(s, prf.FRIQueries[k], levelQueriesForQuery, levelRootsExtra,
-			levelAtRound, gammas, roots, prf.FinalPolyBase, alphas, p); err != nil {
+			introductions, gammas, roots, prf.FinalPolyBase, alphas, p); err != nil {
 			return fmt.Errorf("fri: Verify: query %d failed: %w", k, err)
 		}
 	}
@@ -837,7 +859,7 @@ func verifyBase(
 func verifyExt(
 	p Params,
 	levelRoots, levelRootsExtra []hash.Digest,
-	levelAtRound map[int]int,
+	introductions levelIntroductions,
 	roots []hash.Digest,
 	prf Proof,
 	ts *fiatshamirrefactor.Transcript,
@@ -904,7 +926,7 @@ func verifyExt(
 		}
 
 		if err := checkQueryExt(s, prf.FRIQueries[k], levelQueriesForQuery, levelRootsExtra,
-			levelAtRound, gammas, roots, prf.FinalPolyExt, alphas, p); err != nil {
+			introductions, gammas, roots, prf.FinalPolyExt, alphas, p); err != nil {
 			return fmt.Errorf("fri: Verify: query %d failed: %w", k, err)
 		}
 	}
@@ -1139,6 +1161,18 @@ func openQueryExt(s int, layers [][]ext.E6, trees []*merkle.Tree, numRounds int)
 	return q, nil
 }
 
+func (li levelIntroductions) checkLevelQueryBase(s, lIdx, leafIdx, domainSize int) error {
+	level := lIdx + 1
+	if level >= len(li.introRounds) || li.introRounds[level] < 0 {
+		return fmt.Errorf("level %d: missing introduction round", level)
+	}
+	base := s % ((domainSize >> li.introRounds[level]) / 2)
+	if leafIdx != base {
+		return fmt.Errorf("level %d: Merkle proof opened leaf %d, want %d", level, leafIdx, base)
+	}
+	return nil
+}
+
 // checkQuery verifies one base-field multi-degree FRI query:
 //   - Merkle proofs for all level polynomial openings
 //   - Merkle proofs and fold consistency for the running-polynomial path
@@ -1150,7 +1184,7 @@ func openQueryExt(s int, layers [][]ext.E6, trees []*merkle.Tree, numRounds int)
 func checkQuery(s int, fq Query,
 	levelQueriesForQuery []QueryLayer,
 	levelRoots []hash.Digest,
-	levelAtRound map[int]int,
+	introductions levelIntroductions,
 	gammas []koalabear.Element,
 	roots []hash.Digest,
 	finalPoly []koalabear.Element,
@@ -1161,6 +1195,9 @@ func checkQuery(s int, fq Query,
 	for lIdx, ld := range levelQueriesForQuery {
 		if ld.Field != field.KindBase {
 			return fmt.Errorf("level %d: expected base query layer, got %s", lIdx+1, ld.Field)
+		}
+		if err := introductions.checkLevelQueryBase(s, lIdx, ld.Path.LeafIdx, p.N); err != nil {
+			return err
 		}
 		pair := []commitment.PairBase{{ld.LeafPBase, ld.LeafQBase}}
 		leaf := p.LeafHasher.HashLeaf(pair, nil)
@@ -1176,6 +1213,9 @@ func checkQuery(s int, fq Query,
 		layer := fq.Layers[j]
 		if layer.Field != field.KindBase {
 			return fmt.Errorf("round %d: expected base query layer, got %s", j, layer.Field)
+		}
+		if layer.Path.LeafIdx != base {
+			return fmt.Errorf("round %d: Merkle proof opened leaf %d, want %d", j, layer.Path.LeafIdx, base)
 		}
 
 		pair := []commitment.PairBase{{layer.LeafPBase, layer.LeafQBase}}
@@ -1204,7 +1244,7 @@ func checkQuery(s int, fq Query,
 			var expectedNext koalabear.Element
 			expectedNext.Set(&expected)
 
-			if li, ok := levelAtRound[j+1]; ok {
+			if li, ok := introductions.levelAtRound[j+1]; ok {
 				gamma := gammas[li]
 				ld := levelQueriesForQuery[li-1]
 				var leafVal koalabear.Element
@@ -1241,7 +1281,7 @@ func checkQuery(s int, fq Query,
 func checkQueryExt(s int, fq Query,
 	levelQueriesForQuery []QueryLayer,
 	levelRoots []hash.Digest,
-	levelAtRound map[int]int,
+	introductions levelIntroductions,
 	gammas []ext.E6,
 	roots []hash.Digest,
 	finalPoly []ext.E6,
@@ -1251,6 +1291,9 @@ func checkQueryExt(s int, fq Query,
 	for lIdx, ld := range levelQueriesForQuery {
 		if ld.Field != field.KindExt {
 			return fmt.Errorf("level %d: expected ext query layer, got %s", lIdx+1, ld.Field)
+		}
+		if err := introductions.checkLevelQueryBase(s, lIdx, ld.Path.LeafIdx, p.N); err != nil {
+			return err
 		}
 		pair := []commitment.PairExt{{ld.LeafPExt, ld.LeafQExt}}
 		leaf := p.LeafHasher.HashLeaf(nil, pair)
@@ -1265,6 +1308,9 @@ func checkQueryExt(s int, fq Query,
 		layer := fq.Layers[j]
 		if layer.Field != field.KindExt {
 			return fmt.Errorf("round %d: expected ext query layer, got %s", j, layer.Field)
+		}
+		if layer.Path.LeafIdx != base {
+			return fmt.Errorf("round %d: Merkle proof opened leaf %d, want %d", j, layer.Path.LeafIdx, base)
 		}
 
 		pair := []commitment.PairExt{{layer.LeafPExt, layer.LeafQExt}}
@@ -1293,7 +1339,7 @@ func checkQueryExt(s int, fq Query,
 			var expectedNext ext.E6
 			expectedNext.Set(&expected)
 
-			if li, ok := levelAtRound[j+1]; ok {
+			if li, ok := introductions.levelAtRound[j+1]; ok {
 				gamma := gammas[li]
 				ld := levelQueriesForQuery[li-1]
 				var leafVal ext.E6
