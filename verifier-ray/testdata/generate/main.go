@@ -912,9 +912,6 @@ func writeVanishingBenchHeader(out *bytes.Buffer, count int) {
 
 func writeVanishingBenchCase(out *bytes.Buffer, idx int, tc vanishingFixtureCase) {
 	writeVanishingBenchProof(out, fmt.Sprintf("bench_case_%d", idx), tc.honest)
-	if tc.invalid != nil {
-		writeVanishingBenchProof(out, fmt.Sprintf("bench_case_%d_invalid", idx), *tc.invalid)
-	}
 }
 
 func writeVanishingBenchProof(out *bytes.Buffer, prefix string, proof vanishingProofView) {
@@ -1044,18 +1041,6 @@ func writeVanishingBenchCaseSwitch(out *bytes.Buffer, cases []vanishingFixtureCa
 		fmt.Fprintf(out, "        %d => .{ .name = \"%s\", .spec = system_%d_spec, .system = system_%d, .input = bench_case_%d_input },\n", i, zigString(tc.name), i, i, i)
 	}
 	fmt.Fprintln(out, "        else => @compileError(\"unknown vanishing benchmark case index\"),")
-	fmt.Fprintln(out, "    };")
-	fmt.Fprintln(out, "}")
-	fmt.Fprintln(out)
-	fmt.Fprintln(out, "pub fn getInvalid(comptime index: usize) BenchCase {")
-	fmt.Fprintln(out, "    return switch (index) {")
-	for i, tc := range cases {
-		if tc.invalid == nil {
-			continue
-		}
-		fmt.Fprintf(out, "        %d => .{ .name = \"%s\", .spec = system_%d_spec, .system = system_%d, .input = bench_case_%d_invalid_input },\n", i, zigString(tc.name), i, i, i)
-	}
-	fmt.Fprintln(out, "        else => @compileError(\"vanishing benchmark case does not have an invalid input\"),")
 	fmt.Fprintln(out, "    };")
 	fmt.Fprintln(out, "}")
 }

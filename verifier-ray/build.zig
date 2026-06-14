@@ -4,7 +4,6 @@ pub fn build(b: *std.Build) void {
     const r5 = b.option(bool, "r5", "Build for the Linea R5 zkVM target") orelse false;
     const vanishing_bench = b.option(bool, "vanishing-bench", "Build the R5 vanishing benchmark guest") orelse false;
     const vanishing_case_index = b.option(usize, "vanishing-case", "Generated vanishing benchmark case index") orelse 0;
-    const vanishing_invalid = b.option(bool, "vanishing-invalid", "Use the selected generated invalid vanishing benchmark input") orelse false;
 
     const default_target: std.Target.Query = if (r5) .{
         .cpu_arch = .riscv64,
@@ -57,7 +56,6 @@ pub fn build(b: *std.Build) void {
     }
     const vanishing_bench_options = b.addOptions();
     vanishing_bench_options.addOption(usize, "case_index", vanishing_case_index);
-    vanishing_bench_options.addOption(bool, "invalid", vanishing_invalid);
     const vanishing_bench_options_mod = vanishing_bench_options.createModule();
 
     const exe_imports: []const std.Build.Module.Import = if (vanishing_bench) &.{

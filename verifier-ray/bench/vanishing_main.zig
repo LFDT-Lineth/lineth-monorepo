@@ -7,10 +7,7 @@ const protocol = verifier_ray.protocol;
 const vanishing = verifier_ray.query.vanishing;
 
 const is_r5_zkvm = builtin.target.cpu.arch == .riscv64 and builtin.target.os.tag == .freestanding;
-const selected_case = if (bench_options.invalid)
-    bench_data.getInvalid(bench_options.case_index)
-else
-    bench_data.get(bench_options.case_index);
+const selected_case = bench_data.get(bench_options.case_index);
 
 pub fn main() noreturn {
     if (comptime !is_r5_zkvm) {

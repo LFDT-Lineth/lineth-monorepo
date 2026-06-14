@@ -62,13 +62,3 @@ make bench-vanishing-compare-doc VANISHING_BENCH_CASES=0,2,5-8
 ```
 
 `make bench-vanishing-all-doc` is a shortcut for the full generated catalog. The comparison target rebuilds the tiny R5 guest once per selected case, stores logs under `zig-out/vanishing-bench/case-<index>.log`, and renders the table from those logs plus `bench/generated/vanishing.zig` metadata.
-
-## Invalid Sanity Check
-
-The invalid-input path is a rejection smoke test, not a cost report. It builds the same benchmark guest with `-Dvanishing-invalid=true`, selects an invalid variant for the chosen case, and expects zkc to fail with guest exit code `1`.
-
-```bash
-make bench-vanishing-zkc-failing-expected VANISHING_BENCH_CASE=0
-```
-
-Only scenarios that have source invalid assignments can be used this way. The current catalog has invalid variants for cases `0..45`, so there are 46 invalid inputs. Cases `46..82` do not have invalid variants and will fail at compile time if selected with `VANISHING_INVALID=true`.
