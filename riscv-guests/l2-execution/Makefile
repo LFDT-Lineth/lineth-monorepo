@@ -24,14 +24,14 @@ ZIG_BUILD_FLAGS ?= --cache-dir $(BUILD_CACHE_DIR) --summary all
 ZIG_FETCH_FLAGS ?=
 
 # Makefile containaining the logic for generating a linker scritpt, executing and debugging generic programs
-GENERIC_PROGRAM_MAKEFILE := $(abspath $(MAKEFILE_DIR)../../arithmetization/src/test)/Makefile
+ARITHMETIZATION_TESTING_MAKEFILE := $(abspath $(MAKEFILE_DIR)../../arithmetization/src/test)/Makefile
 
+# Name and ELF generated of the guest program (@TODO: if we need that)
 GP_NAME     := evm_execution_guest
-# Sample fixture input used by gp-exec/gp-debug
-GP_INPUT    ?= $(MAKEFILE_DIR)test/testdata/fixture_input.in.hex
-
-# Guest ELF produced by gp-compile
 GP_BIN      := $(MAKEFILE_DIR)zig-out/bin/$(GP_NAME)
+
+# Sample fixture input used by gp-exec/gp-debug
+GP_INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
 
 # If true, generates an objdump of the generated ELF for debugging purposes
 OBJDUMP     ?= false
@@ -67,7 +67,7 @@ clean:
 # in arithmetization/src/test/Makefile have default values but can be overriden.
 
 gp-linker-script:
-	$(MAKE) -f $(GENERIC_PROGRAM_MAKEFILE) linker-script LINKER_SCRIPT=$(MAKEFILE_DIR)../build_common/linker_script.ld
+	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) linker-script LINKER_SCRIPT=$(MAKEFILE_DIR)../build_common/linker_script.ld
 
 gp-compile: gp-linker-script
 	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS)
@@ -81,7 +81,7 @@ gp-compile: gp-linker-script
 	fi
 
 gp-exec: gp-compile
-	$(MAKE) -f $(GENERIC_PROGRAM_MAKEFILE) elf-exec BIN_EXT="$(GP_BIN)" IN_BYTES="@$(GP_INPUT)" ZKC_EXEC_FLAGS=-q
+	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-exec BIN_EXT="$(GP_BIN)" IN_BYTES="@$(GP_INPUT)" ZKC_EXEC_FLAGS=-q
 
 gp-debug: gp-compile
-	$(MAKE) -f $(GENERIC_PROGRAM_MAKEFILE) elf-debug BIN_EXT="$(GP_BIN)" IN_BYTES="@$(GP_INPUT)"
+	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-debug BIN_EXT="$(GP_BIN)" IN_BYTES="@$(GP_INPUT)"
