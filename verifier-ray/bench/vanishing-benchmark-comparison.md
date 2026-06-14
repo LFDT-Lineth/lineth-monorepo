@@ -14,7 +14,7 @@ Each row measures one generated honest vanishing benchmark case. The zkc RISC-V 
 | Cases measured | 83 |
 | Fastest | `6 Vanishing/ConstantColumn` (164,861 cycles) |
 | Slowest | `80 RangeCheckCompiler/LargeBound` (7,237,154 cycles) |
-| Git commit | `5b19b33cf` |
+| Git commit | `b15e97a84` |
 | Zig | `0.16.0` |
 | zkc | `mod	github.com/consensys/go-corset	v1.2.18-0.20260521022840-414e7b73971e` |
 | zkc main | `bench/riscv_main_bench.zkc` |
@@ -88,7 +88,7 @@ Each row measures one generated honest vanishing benchmark case. The zkc RISC-V 
 | 61 | `Lookup/DoubleConditional` | 749,175 | 731,736 | 23 | 31814.61 | 17,416 | 23 | +584,314 (354.4%) | 2 | 0 | 5 | 29 | 2 | 2 | 9 | 2 |
 | 62 | `Lookup/MultiColumn` | 748,475 | 731,720 | 23 | 31813.91 | 16,732 | 23 | +583,614 (354.0%) | 2 | 0 | 5 | 27 | 2 | 2 | 9 | 2 |
 | 63 | `Lookup/SharedTable` | 880,571 | 858,524 | 27 | 31797.19 | 22,025 | 22 | +715,710 (434.1%) | 3 | 0 | 5 | 28 | 3 | 3 | 10 | 3 |
-| 64 | `Lookup/DistinctTables` | 1,013,699 | 985,583 | 31 | 31793.00 | 28,094 | 22 | +848,838 (514.9%) | 4 | 0 | 5 | 38 | 4 | 4 | 14 | 4 |
+| 64 | `Lookup/DistinctTables` | 1,013,767 | 985,651 | 31 | 31795.19 | 28,094 | 22 | +848,906 (514.9%) | 4 | 0 | 5 | 38 | 4 | 4 | 14 | 4 |
 | 65 | `Lookup/MultiColumnFilterOnIncluding` | 749,891 | 731,562 | 23 | 31807.04 | 18,306 | 23 | +585,030 (354.9%) | 2 | 0 | 5 | 35 | 2 | 2 | 10 | 2 |
 | 66 | `Lookup/RepeatedValueInTable` | 682,714 | 667,465 | 21 | 31784.05 | 15,227 | 22 | +517,853 (314.1%) | 2 | 0 | 5 | 19 | 2 | 2 | 7 | 2 |
 | 67 | `Lookup/ShiftedAColumn` | 781,225 | 762,561 | 24 | 31773.38 | 18,638 | 26 | +616,364 (373.9%) | 2 | 0 | 5 | 19 | 2 | 2 | 7 | 3 |

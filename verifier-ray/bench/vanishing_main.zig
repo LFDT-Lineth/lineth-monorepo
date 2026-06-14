@@ -1,13 +1,13 @@
 const builtin = @import("builtin");
 const verifier_ray = @import("verifier_ray");
-const bench_data = @import("vanishing_bench_data");
+const verify_data = @import("verify_data");
 const bench_options = @import("vanishing_bench_options");
 
 const protocol = verifier_ray.protocol;
 const vanishing = verifier_ray.query.vanishing;
 
 const is_r5_zkvm = builtin.target.cpu.arch == .riscv64 and builtin.target.os.tag == .freestanding;
-const selected_case = bench_data.get(bench_options.case_index);
+const selected_case = verify_data.get(bench_options.case_index);
 
 pub fn main() noreturn {
     if (comptime !is_r5_zkvm) {
@@ -21,23 +21,23 @@ pub export fn r5_main() noreturn {
         @compileError("vanishing benchmark guest is currently only wired for the R5 zkVM target");
     }
 
-    const input = selected_case.input;
+    const proof = selected_case.proof;
 
     markR5(1);
-    const replay_stats = protocol.replayWithStats(selected_case.spec, input.ctx.rounds) catch exitR5(1);
+    const replay_stats = protocol.replayWithStats(selected_case.spec, proof.rounds) catch exitR5(1);
     var all_coins = replay_stats.coins;
 
     markR5Value(2, replay_stats.compression_count);
     const replayed_input = vanishing.CheckInput{
         .ctx = .{
             .all_coins = &all_coins,
-            .rounds = input.ctx.rounds,
+            .rounds = proof.rounds,
         },
-        .witness_claims = input.witness_claims,
-        .quotient_claims = input.quotient_claims,
-        .module_sizes = input.module_sizes,
+        .witness_claims = proof.witness_claims,
+        .quotient_claims = proof.quotient_claims,
+        .module_sizes = proof.module_sizes,
     };
-    vanishing.verify(selected_case.system, replayed_input) catch exitR5(1);
+    vanishing.verify(selected_case.systems.vanishing, replayed_input) catch exitR5(1);
 
     markR5(3);
     exitR5(0);

@@ -138,7 +138,7 @@ generate-testdata:
 	cd testdata/generate && go run .
 
 verify-testdata: generate-testdata
-	git diff --exit-code -- testdata/generated/*.zig bench/generated/*.zig
+	git diff --exit-code -- testdata/generated/*.zig
 
 prepare-zkc-input:
 	@# The ELF-to-JSON helper treats 0x input as a big-endian integer and reverses it
@@ -180,7 +180,7 @@ bench-vanishing-doc: bench-vanishing-zkc
 	go run bench/render_vanishing_benchmark/main.go \
 		-log $(VANISHING_BENCH_LOG) \
 		-out $(VANISHING_BENCH_DOC) \
-		-metadata bench/generated/vanishing.zig \
+		-metadata testdata/generated/verify.zig \
 		-bin $(VANISHING_BENCH_BIN) \
 		-json $(VANISHING_BENCH_JSON) \
 		-case-index $(VANISHING_BENCH_CASE) \
@@ -191,7 +191,7 @@ bench-vanishing-compare-doc: generate-testdata
 	rm -f $(VANISHING_BENCH_LOG_DIR)/case-*.log
 	set -e; set -o pipefail; \
 	cases="$$(go run bench/render_vanishing_benchmark/main.go \
-		-metadata bench/generated/vanishing.zig \
+		-metadata testdata/generated/verify.zig \
 		-case-spec "$(VANISHING_BENCH_CASES)" \
 		-print-cases)"; \
 	echo "vanishing benchmark cases: $$cases"; \
@@ -204,7 +204,7 @@ bench-vanishing-compare-doc: generate-testdata
 	go run bench/render_vanishing_benchmark/main.go \
 		-log-dir $(VANISHING_BENCH_LOG_DIR) \
 		-out $(VANISHING_BENCH_COMPARE_DOC) \
-		-metadata bench/generated/vanishing.zig \
+		-metadata testdata/generated/verify.zig \
 		-case-spec "$(VANISHING_BENCH_CASES)" \
 		-zkc-main $(VANISHING_BENCH_ZKC_MAIN)
 

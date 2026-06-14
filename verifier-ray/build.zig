@@ -43,10 +43,10 @@ pub fn build(b: *std.Build) void {
             .{ .name = "verifier_ray", .module = verifier_mod },
         },
     });
-    var vanishing_bench_data_mod: *std.Build.Module = undefined;
+    var verify_data_mod: *std.Build.Module = undefined;
     if (vanishing_bench) {
-        vanishing_bench_data_mod = b.addModule("vanishing_bench_data", .{
-            .root_source_file = b.path("bench/generated/vanishing.zig"),
+        verify_data_mod = b.addModule("verify_data", .{
+            .root_source_file = b.path("testdata/generated/verify.zig"),
             .target = target,
             .optimize = optimize,
             .imports = &.{
@@ -60,7 +60,7 @@ pub fn build(b: *std.Build) void {
 
     const exe_imports: []const std.Build.Module.Import = if (vanishing_bench) &.{
         .{ .name = "verifier_ray", .module = verifier_mod },
-        .{ .name = "vanishing_bench_data", .module = vanishing_bench_data_mod },
+        .{ .name = "verify_data", .module = verify_data_mod },
         .{ .name = "vanishing_bench_options", .module = vanishing_bench_options_mod },
     } else &.{
         .{ .name = "verifier_ray", .module = verifier_mod },

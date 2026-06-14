@@ -22,7 +22,7 @@ Zig benchmark guest
 
 The ordinary vanishing test fixture in `testdata/generated/vanishing.zig` is shaped for unit tests. It stores proof values as raw `u32` limbs and the tests convert them into `protocol.RoundMessage`, `field.Element`, and `ext.Ext` values using allocator-backed helpers.
 
-The benchmark fixture in `bench/generated/vanishing.zig` is shaped for measurement. It emits typed `vanishing.CheckInput` data directly, so the guest does not spend measured RISC-V cycles parsing proof bytes, allocating arrays, or converting raw limbs into field elements. The generated protocol spec and vanishing system metadata remain compile-time data; selected proof-value arrays are emitted as mutable fixture data, which keeps ReleaseSmall from treating proof values as compile-time constants.
+The shared verifier fixture in `testdata/generated/verify.zig` is shaped for measurement. It emits typed `verifier.ProofData`, `protocol.Spec`, and `verifier.Systems` data directly, so the guest does not spend measured RISC-V cycles parsing proof bytes, allocating arrays, or converting raw limbs into field elements. The generated protocol spec and verifier system metadata remain compile-time data; selected proof-value arrays are emitted as mutable fixture data, which keeps ReleaseSmall from treating proof values as compile-time constants.
 
 ## Measurement Scope
 
@@ -61,4 +61,4 @@ make bench-vanishing-compare-doc VANISHING_BENCH_CASES=all
 make bench-vanishing-compare-doc VANISHING_BENCH_CASES=0,2,5-8
 ```
 
-`make bench-vanishing-all-doc` is a shortcut for the full generated catalog. The comparison target rebuilds the tiny R5 guest once per selected case, stores logs under `zig-out/vanishing-bench/case-<index>.log`, and renders the table from those logs plus `bench/generated/vanishing.zig` metadata.
+`make bench-vanishing-all-doc` is a shortcut for the full generated catalog. The comparison target rebuilds the tiny R5 guest once per selected case, stores logs under `zig-out/vanishing-bench/case-<index>.log`, and renders the table from those logs plus `testdata/generated/verify.zig` metadata.
