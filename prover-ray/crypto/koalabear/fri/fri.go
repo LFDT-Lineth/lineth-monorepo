@@ -724,6 +724,11 @@ func Verify(p Params, levelRoots []hash.Digest, levelDs []int, prf Proof, ts *fi
 	if len(prf.FRIQueries) != p.NumQueries {
 		return fmt.Errorf("fri: Verify: proof has %d FRI queries, want %d", len(prf.FRIQueries), p.NumQueries)
 	}
+	for k, q := range prf.FRIQueries {
+		if len(q.Layers) != p.numRounds {
+			return fmt.Errorf("fri: Verify: proof FRI query %d has %d layers, want %d", k, len(q.Layers), p.numRounds)
+		}
+	}
 	if len(prf.LevelQueries) != numExtraLevels {
 		return fmt.Errorf("fri: Verify: proof has %d level query sets, want %d", len(prf.LevelQueries), numExtraLevels)
 	}
