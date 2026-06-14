@@ -26,7 +26,7 @@ ZIG_FETCH_FLAGS ?=
 # Makefile containaining the logic for generating a linker scritpt, executing and debugging generic programs
 ARITHMETIZATION_TESTING_MAKEFILE := $(abspath $(MAKEFILE_DIR)../../arithmetization/src/test)/Makefile
 
-# Name and ELF generated of the guest program (@TODO: if we need that)
+# Name and ELF generated of the guest program (@TODO: check if we need that)
 GP_NAME     := evm_execution_guest
 GP_BIN      := $(MAKEFILE_DIR)zig-out/bin/$(GP_NAME)
 
