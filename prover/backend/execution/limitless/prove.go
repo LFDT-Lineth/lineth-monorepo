@@ -36,8 +36,8 @@ var (
 	// by a semaphore on top of this.
 	numConcurrentWitnessWritingGoroutines = 20
 	// numConcurrentSubProverJobs governs the number of concurrent sub-prover
-	// jobs. Override via LIMITLESS_SUBPROVER_JOBS.
-	numConcurrentSubProverJobs = getEnvPositiveInt("LIMITLESS_SUBPROVER_JOBS", 4)
+	// jobs.
+	numConcurrentSubProverJobs = 5
 	// numConcurrentMergeJobs governs the number of concurrent conglomeration
 	// merge operations during hierarchical reduction.
 	numConcurrentMergeJobs = 4
