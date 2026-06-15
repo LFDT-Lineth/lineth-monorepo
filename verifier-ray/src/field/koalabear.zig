@@ -110,6 +110,17 @@ pub const Element = extern struct {
         return result;
     }
 
+    pub fn powComptime(self: Element, comptime exponent: usize) Element {
+        var result = Element.one();
+        var b = self;
+        comptime var exp = exponent;
+        inline while (exp != 0) : (exp >>= 1) {
+            if ((exp & 1) == 1) result = result.mul(b);
+            b = b.square();
+        }
+        return result;
+    }
+
     pub fn inverse(self: Element) Element {
         if (self.isZero()) unreachable;
         return self.pow(modulus - 2);

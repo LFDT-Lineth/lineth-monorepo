@@ -144,6 +144,56 @@ func TestBuildVanishingSystemSupportsCellAndCoinLeaves(t *testing.T) {
 	}
 }
 
+func TestBuildVanishingSystemSupportsLagrangeSelector(t *testing.T) {
+	sys := wiop.NewSystemf("lagrange")
+	r0 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
+	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	selector := wiop.NewLagrangeSelector(mod, 2)
+	// selector·col = 0 pins col[2] = 0; the selector is evaluated out of domain
+	// by the verifier and is never exported as a witness claim.
+	mod.NewVanishing(sys.Context.Childf("boundary"), wiop.Mul(selector, col.View()))
+
+	global.Compile(sys)
+	routing, err := BuildCoinRouting(sys)
+	if err != nil {
+		t.Fatalf("BuildCoinRouting() error = %v", err)
+	}
+	vanishingSystem, err := BuildVanishingSystem(sys, routing)
+	if err != nil {
+		t.Fatalf("BuildVanishingSystem() error = %v", err)
+	}
+
+	var selectorNode *ExprNode
+	for i := range vanishingSystem.Modules[0].Expressions {
+		if vanishingSystem.Modules[0].Expressions[i].Kind == ExprLagrangeSelector {
+			selectorNode = &vanishingSystem.Modules[0].Expressions[i]
+		}
+	}
+	if selectorNode == nil {
+		t.Fatalf("no ExprLagrangeSelector node exported")
+	}
+	if selectorNode.SelectorPosition != 2 {
+		t.Fatalf("selector position = %d, want 2", selectorNode.SelectorPosition)
+	}
+
+	var out bytes.Buffer
+	if err := WriteVanishingScenariosZig(&out, []NamedVanishingSystem{{Name: "lagrange", System: vanishingSystem}}); err != nil {
+		t.Fatalf("WriteVanishingScenariosZig() error = %v", err)
+	}
+	if want := ".{ .lagrange_selector = 2 },"; !strings.Contains(out.String(), want) {
+		t.Fatalf("generated Zig missing %q:\n%s", want, out.String())
+	}
+}
+
+func TestExprNodeLiteralRendersLagrangeSelector(t *testing.T) {
+	got := exprNodeLiteral(ExprNode{Kind: ExprLagrangeSelector, SelectorPosition: 3})
+	want := ".{ .lagrange_selector = 3 },"
+	if got != want {
+		t.Fatalf("exprNodeLiteral(lagrange selector) = %q, want %q", got, want)
+	}
+}
+
 func TestExprNodeLiteralRendersZeroConstant(t *testing.T) {
 	got := exprNodeLiteral(ExprNode{Kind: ExprConstant})
 	want := ".{ .constant = field.Element.init(0) },"

@@ -102,6 +102,55 @@ test "dynamic vanishing module sizes are required and validated" {
     try std.testing.expect(wrong_size_failures > 0);
 }
 
+test "lagrange selector rejects an in-domain evaluation coin" {
+    // A minimal static module of size 4 whose sole vanishing is the bare
+    // selector L_1. The Fiat-Shamir eval coin is never on-domain in practice,
+    // so the golden fixtures cannot reach the guard; build the degenerate input
+    // by hand and feed r = ω^1 directly.
+    const n = 4;
+    const position = 1;
+    const expressions = [_]vanishing.ExprNode{.{ .lagrange_selector = position }};
+    const vanishings = [_]vanishing.Vanishing{.{ .expression = 0 }};
+    const buckets = [_]vanishing.Bucket{.{ .ratio = 1, .vanishings = &vanishings, .quotient_claim_offset = 0 }};
+    const modules = [_]vanishing.Module{.{
+        .size = .{ .static = n },
+        .expressions = &expressions,
+        .buckets = &buckets,
+        .witness_claim_offset = 0,
+        .merge_coin_index = 0,
+        .eval_coin_index = 1,
+    }};
+    const system = vanishing.System{ .modules = &modules, .total_witness_claims = 0, .total_quotient_claims = 1 };
+
+    const omega = try field.rootOfUnityBy(n);
+    const on_domain = ext.Ext.lift(omega.pow(position)); // r = ω^position
+    const quotient_claims = [_]ext.Ext{ext.Ext.zero()};
+
+    // In-domain coin: the r − ω^position denominator vanishes, so the guard
+    // must reject rather than silently dividing by zero (the field's 1/0 = 0).
+    {
+        const all_coins = [_]ext.Ext{ ext.Ext.one(), on_domain };
+        const ctx = protocol.Context{ .all_coins = &all_coins, .rounds = &.{} };
+        try std.testing.expectError(
+            error.LagrangeSelectorInDomain,
+            vanishing.verify(system, .{ .ctx = ctx, .witness_claims = &.{}, .quotient_claims = &quotient_claims }),
+        );
+    }
+
+    // Control: an out-of-domain coin must clear the guard and proceed to the
+    // ordinary identity check (which fails here, confirming the earlier error
+    // was specifically the in-domain guard and not something structural).
+    {
+        const off_domain = ext.Ext.lift(field.Element.init(2)); // 2 is not a 4th root of unity
+        const all_coins = [_]ext.Ext{ ext.Ext.one(), off_domain };
+        const ctx = protocol.Context{ .all_coins = &all_coins, .rounds = &.{} };
+        try std.testing.expectError(
+            error.QuotientIdentityMismatch,
+            vanishing.verify(system, .{ .ctx = ctx, .witness_claims = &.{}, .quotient_claims = &quotient_claims }),
+        );
+    }
+}
+
 const ProofData = struct {
     rounds: []const protocol.RoundMessage,
     witness_claims: []const ext.Ext,
