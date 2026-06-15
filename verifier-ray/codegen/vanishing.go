@@ -254,17 +254,8 @@ func appendExpr(module *VanishingModule, views map[viewKey]int, routing CoinRout
 }
 
 func validateOperator(op wiop.ArithmeticOperator) error {
-	switch op {
-	case wiop.ArithmeticOperatorAdd,
-		wiop.ArithmeticOperatorMul,
-		wiop.ArithmeticOperatorSub,
-		wiop.ArithmeticOperatorDiv,
-		wiop.ArithmeticOperatorDouble,
-		wiop.ArithmeticOperatorSquare,
-		wiop.ArithmeticOperatorNegate,
-		wiop.ArithmeticOperatorInverse:
+	if _, ok := operatorLiteral(op); ok {
 		return nil
-	default:
-		return &UnsupportedExpressionError{Type: fmt.Sprintf("ArithmeticOperator(%d)", int(op))}
 	}
+	return &UnsupportedExpressionError{Type: fmt.Sprintf("ArithmeticOperator(%d)", int(op))}
 }

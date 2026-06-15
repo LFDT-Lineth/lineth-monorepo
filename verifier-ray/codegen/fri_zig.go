@@ -32,7 +32,7 @@ func WriteFRISpecZig(w io.Writer, params FRIParams, layout Layout, dq DQLayout) 
 
 func WriteFRISpecZigWithOptions(w io.Writer, params FRIParams, layout Layout, dq DQLayout, opts FRISpecZigOptions) error {
 	tmpl, err := template.New("fri_spec").Funcs(template.FuncMap{
-		"u32Array": u32Array,
+		"intArray": intArray,
 		"u64Inits": u64Inits,
 		"railLit":  railLiteral,
 		"zigStr":   zigString,
@@ -112,19 +112,6 @@ type friSpecTemplateData struct {
 	DQLevels []friSpecLevelData
 }
 
-// u32Array renders a []int as a Zig array literal body. The template supplies
-// the [_]u32 type prefix; this returns only the brace-enclosed value list.
-func u32Array(vals []int) string {
-	out := "{ "
-	for i, v := range vals {
-		if i > 0 {
-			out += ", "
-		}
-		out += fmt.Sprintf("%d", v)
-	}
-	return out + " }"
-}
-
 // u64Inits renders a []uint64 as a sequence of field.Element.init(…) literals
 // for use inside a [_]field.Element array body.
 func u64Inits(vals []uint64) string {
@@ -168,9 +155,9 @@ const layout_col_slots = [_]fri_spec.NamedSlot{
 const layout_air_chunk_slots = [_]fri_spec.NamedSlot{
 {{range .Layout.AirChunkSlotsSorted}}    .{ .name = "{{zigStr .Name}}", .slot = .{ .tree_idx = {{.TreeIdx}}, .poly_idx = {{.PolyIdx}}, .rail = {{railLit .Rail}} } },
 {{end}}};
-const layout_trace_begin = [_]u32{{u32Array .Layout.TraceBegin}};
-const layout_trace_end = [_]u32{{u32Array .Layout.TraceEnd}};
-const layout_tree_size = [_]u32{{u32Array .Layout.TreeSizes}};
+const layout_trace_begin = [_]u32{{intArray .Layout.TraceBegin}};
+const layout_trace_end = [_]u32{{intArray .Layout.TraceEnd}};
+const layout_tree_size = [_]u32{{intArray .Layout.TreeSizes}};
 
 pub const layout = fri_spec.Layout{
     .num_trees = {{.Layout.NumTrees}},
@@ -186,7 +173,7 @@ pub const layout = fri_spec.Layout{
 };
 
 {{range .DQLevels}}{{- $lv := . }}
-const dq_level_{{$lv.LevelI}}_shifts = [_]u32{{u32Array $lv.Level.Shifts}};
+const dq_level_{{$lv.LevelI}}_shifts = [_]u32{{intArray $lv.Level.Shifts}};
 {{range $lv.ColGroups}}const dq_level_{{$lv.LevelI}}_col_group_{{.GroupI}} = [_]fri_spec.ColRef{
 {{range .Cols}}    .{ .name = "{{zigStr .Name}}", .key = "{{zigStr .Key}}" },
 {{end}}};

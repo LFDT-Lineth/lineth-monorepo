@@ -178,7 +178,11 @@ func exprNodeLiteral(expr ExprNode) string {
 	case ExprConstant:
 		return fmt.Sprintf(".{ .constant = field.Element.init(%d) },", expr.Constant.Uint64())
 	case ExprOp:
-		return fmt.Sprintf(".{ .op = .{ .operator = .%s, .operands = &%s } },", operatorLiteral(expr.Operator), intSlice(expr.Operands))
+		operator, ok := operatorLiteral(expr.Operator)
+		if !ok {
+			panic(fmt.Sprintf("unknown ArithmeticOperator %d", int(expr.Operator)))
+		}
+		return fmt.Sprintf(".{ .op = .{ .operator = .%s, .operands = &%s } },", operator, intSlice(expr.Operands))
 	case ExprLagrangeSelector:
 		return fmt.Sprintf(".{ .lagrange_selector = %d },", expr.SelectorPosition)
 	default:
@@ -186,26 +190,26 @@ func exprNodeLiteral(expr ExprNode) string {
 	}
 }
 
-func operatorLiteral(op wiop.ArithmeticOperator) string {
+func operatorLiteral(op wiop.ArithmeticOperator) (string, bool) {
 	switch op {
 	case wiop.ArithmeticOperatorAdd:
-		return "add"
+		return "add", true
 	case wiop.ArithmeticOperatorMul:
-		return "mul"
+		return "mul", true
 	case wiop.ArithmeticOperatorSub:
-		return "sub"
+		return "sub", true
 	case wiop.ArithmeticOperatorDiv:
-		return "div"
+		return "div", true
 	case wiop.ArithmeticOperatorDouble:
-		return "double"
+		return "double", true
 	case wiop.ArithmeticOperatorSquare:
-		return "square"
+		return "square", true
 	case wiop.ArithmeticOperatorNegate:
-		return "negate"
+		return "negate", true
 	case wiop.ArithmeticOperatorInverse:
-		return "inverse"
+		return "inverse", true
 	default:
-		panic(fmt.Sprintf("unknown ArithmeticOperator %d", int(op)))
+		return "", false
 	}
 }
 
