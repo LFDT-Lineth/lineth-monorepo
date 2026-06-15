@@ -37,7 +37,7 @@ permissions:
 env:
   GO_VERSION: '1.25.7'
   GO_CORSET_VERSION: 'v1.2.17'
-  GO_CORSET_REF_FOR_ZKC: '414e7b73971eaa77afcb6a4797b44d0fdf8c99db'
+  GO_CORSET_REF_FOR_ZKC: 'c7d95e35a4975bd32814ad46b079b16760f2475f'
   ZIG_VERSION: '0.17.0-dev.251+0db721ec2'
 
 concurrency:
@@ -72,7 +72,7 @@ jobs:
       - name: Install go-corset and zkc
         run: |
           go install github.com/consensys/go-corset/cmd/go-corset@${GO_CORSET_VERSION}
-          go install github.com/consensys/go-corset/cmd/zkc@${GO_CORSET_REF_FOR_ZKC}
+          go install github.com/LFDT-Lineth/zkc/cmd/zkc@${GO_CORSET_REF_FOR_ZKC}
           go-corset --version
           go version -m "$(which zkc)"
 
