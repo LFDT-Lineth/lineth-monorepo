@@ -2,6 +2,8 @@ const std = @import("std");
 
 pub fn build(b: *std.Build) void {
     const r5 = b.option(bool, "r5", "Build for the Linea R5 zkVM target") orelse false;
+    const vanishing_bench = b.option(bool, "vanishing-bench", "Build the R5 vanishing benchmark guest") orelse false;
+    const vanishing_case_index = b.option(usize, "vanishing-case", "Generated vanishing benchmark case index") orelse 0;
 
     const default_target: std.Target.Query = if (r5) .{
         .cpu_arch = .riscv64,
@@ -41,16 +43,37 @@ pub fn build(b: *std.Build) void {
             .{ .name = "verifier_ray", .module = verifier_mod },
         },
     });
-    const exe = b.addExecutable(.{
-        .name = "verifier-ray",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
+    var verify_data_mod: *std.Build.Module = undefined;
+    if (vanishing_bench) {
+        verify_data_mod = b.addModule("verify_data", .{
+            .root_source_file = b.path("testdata/generated/verify.zig"),
             .target = target,
             .optimize = optimize,
-            .strip = strip,
             .imports = &.{
                 .{ .name = "verifier_ray", .module = verifier_mod },
             },
+        });
+    }
+    const vanishing_bench_options = b.addOptions();
+    vanishing_bench_options.addOption(usize, "case_index", vanishing_case_index);
+    const vanishing_bench_options_mod = vanishing_bench_options.createModule();
+
+    const exe_imports: []const std.Build.Module.Import = if (vanishing_bench) &.{
+        .{ .name = "verifier_ray", .module = verifier_mod },
+        .{ .name = "verify_data", .module = verify_data_mod },
+        .{ .name = "vanishing_bench_options", .module = vanishing_bench_options_mod },
+    } else &.{
+        .{ .name = "verifier_ray", .module = verifier_mod },
+    };
+
+    const exe = b.addExecutable(.{
+        .name = if (vanishing_bench) "verifier-ray-vanishing-bench" else "verifier-ray",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path(if (vanishing_bench) "bench/vanishing_main.zig" else "src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+            .strip = strip,
+            .imports = exe_imports,
         }),
     });
 

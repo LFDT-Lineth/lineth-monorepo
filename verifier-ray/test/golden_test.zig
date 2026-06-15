@@ -170,6 +170,9 @@ test "poseidon2 compression and merkle-damgard match prover-ray golden cases" {
         fillElems(&message, case.message);
         h.writeElements(message[0..case.message.len]);
         try expectDigest(h.sumDigest(), case.expected);
+
+        const expected_compressions = (case.message.len + poseidon2.block_size - 1) / poseidon2.block_size;
+        try std.testing.expectEqual(expected_compressions, h.compression_count);
     }
 }
 

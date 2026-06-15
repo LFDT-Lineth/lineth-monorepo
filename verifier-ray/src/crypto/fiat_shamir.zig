@@ -52,4 +52,8 @@ pub const Transcript = struct {
             .B2 = .{ .a0 = challenge[4], .a1 = challenge[5] },
         };
     }
+
+    pub fn compressionCount(self: *const Transcript) usize {
+        return self.hasher.compression_count;
+    }
 };

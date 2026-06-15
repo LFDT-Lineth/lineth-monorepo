@@ -35,6 +35,13 @@ pub const Context = struct {
     rounds: []const RoundMessage,
 };
 
+pub fn ReplayStats(comptime coin_count: usize) type {
+    return struct {
+        coins: [coin_count]Coin,
+        compression_count: usize,
+    };
+}
+
 /// Replays the prover–verifier transcript to derive all Fiat-Shamir coins.
 ///
 /// For each message round, absorbs the round's oracle commitments, public
@@ -50,6 +57,17 @@ pub fn replay(
     comptime spec: Spec,
     rounds: []const RoundMessage,
 ) Error![spec.total_round_coins]Coin {
+    return (try replayWithStats(spec, rounds)).coins;
+}
+
+/// Replays the transcript and returns benchmark-friendly Poseidon2 statistics.
+///
+/// `replay` intentionally keeps the original API and delegates here, so coin
+/// generation remains implemented in one place.
+pub fn replayWithStats(
+    comptime spec: Spec,
+    rounds: []const RoundMessage,
+) Error!ReplayStats(spec.total_round_coins) {
     comptime {
         if (spec.round_coin_counts.len == 0)
             @compileError("spec: round_coin_counts must have at least one entry (the pre-round-1 phase)");
@@ -89,5 +107,8 @@ pub fn replay(
         for (all_coins[offset..][0..count]) |*coin| coin.* = transcript.randomExt();
     }
 
-    return all_coins;
+    return .{
+        .coins = all_coins,
+        .compression_count = transcript.compressionCount(),
+    };
 }

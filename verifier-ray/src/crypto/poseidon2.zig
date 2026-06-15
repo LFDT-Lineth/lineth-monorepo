@@ -45,12 +45,14 @@ pub const MDHasher = struct {
     state: Digest,
     buffer: [block_size]field.Element,
     buffer_len: usize,
+    compression_count: usize,
 
     pub fn init() MDHasher {
         return .{
             .state = zeroDigest(),
             .buffer = zeroArray(block_size),
             .buffer_len = 0,
+            .compression_count = 0,
         };
     }
 
@@ -60,6 +62,7 @@ pub const MDHasher = struct {
         if (self.buffer_len == block_size) {
             self.state = compress(self.state, self.buffer);
             self.buffer_len = 0;
+            self.compression_count += 1;
         }
     }
 
@@ -84,6 +87,7 @@ pub const MDHasher = struct {
             @memcpy(block[block_size - self.buffer_len ..], self.buffer[0..self.buffer_len]);
             self.state = compress(self.state, block);
             self.buffer_len = 0;
+            self.compression_count += 1;
         }
         return self.state;
     }
@@ -100,6 +104,7 @@ pub const MDHasher = struct {
     pub fn setState(self: *MDHasher, state: Digest) void {
         self.state = state;
         self.buffer_len = 0;
+        self.compression_count = 0;
     }
 };
 

@@ -1,0 +1,81 @@
+// Benchmark RISC-V runner for verifier-ray guests.
+//
+// The JSON passed to `zkc exec` contains the RISC-V ELF entry point and sparse
+// memory blobs produced by `elf_to_json_gen`. This program copies those blobs
+// into zkc RAM, starts execution at the ELF entry point, and repeatedly calls
+// the shared RISC-V interpreter until the guest exits. The guest exit path sets
+// the program counter to `MAX_UINT_64`.
+//
+// Unlike the generic arithmetization RISC-V runner, this version does not print
+// every interpreted instruction. Instead it increments `clock_cycle` once per
+// interpreted RISC-V instruction and exposes the final value through the public
+// `cycle_count` output. The Makefile captures that output and renders the
+// vanishing benchmark markdown report.
+
+include "../../arithmetization/src/main/riscv/interpreter.zkc"
+include "../../arithmetization/src/main/riscv/ram/read.zkc"
+include "../../arithmetization/src/main/riscv/ram/write.zkc"
+include "../../arithmetization/src/main/riscv/utils/sign_extend.zkc"
+include "../../arithmetization/src/main/riscv/utils/constants.zkc"
+include "../../arithmetization/src/main/riscv/utils/signed_comparisons.zkc"
+include "../../arithmetization/src/main/riscv/utils/absolute_value.zkc"
+include "../../arithmetization/src/main/riscv/utils/bit_flip.zkc"
+include "../../arithmetization/src/main/riscv/utils/sign_bit.zkc"
+include "../../arithmetization/src/main/riscv/utils/negative.zkc"
+include "../../arithmetization/src/main/riscv/utils/register_utils.zkc"
+include "../../arithmetization/src/main/riscv/memory.zkc"
+
+pub output cycle_count(address:u1) -> (cycles:u64)
+pub output transcript_start_cycle(address:u1) -> (cycles:u64)
+pub output transcript_end_cycle(address:u1) -> (cycles:u64)
+pub output vanishing_end_cycle(address:u1) -> (cycles:u64)
+pub output poseidon2_compression_count(address:u1) -> (count:u64)
+
+const ECALL_INSTRUCTION:Instruction = 0x00000073
+const BENCH_MARK_SYSCALL:u64 = 4242
+
+fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block>() {
+    var instruction:Instruction
+    var clock_cycle:u64 = 0
+    var entry_point:Address
+    var blobs_count:u64
+    entry_point, blobs_count = entry_point_and_blobs_count[0]
+    var pc:Address = entry_point
+
+    var internal_offset:Length = 0
+    for i:u64 = 0; i<blobs_count; i = i + 1 {
+        var blob_offset:Address
+        var blob_size:Length
+        blob_offset, blob_size = blobs_offset_and_size[i]
+        for j:Address = 0; j<blob_size; j = j + 1 {
+            write_8(blob_offset + j, blobs_data[internal_offset + j])
+        }
+        internal_offset = internal_offset + blob_size
+    }
+
+    while pc != MAX_UINT_64 {
+        instruction = read_32(pc) as Instruction
+        clock_cycle = clock_cycle + 1
+        if instruction == ECALL_INSTRUCTION {
+            if registers[17] == BENCH_MARK_SYSCALL {
+                if registers[10] == 1 {
+                    transcript_start_cycle[0] = clock_cycle
+                }
+                if registers[10] == 2 {
+                    transcript_end_cycle[0] = clock_cycle
+                    poseidon2_compression_count[0] = registers[11]
+                }
+                if registers[10] == 3 {
+                    vanishing_end_cycle[0] = clock_cycle
+                }
+                pc = pc + 4
+            } else {
+                pc = interpreter(instruction, pc)
+            }
+        } else {
+            pc = interpreter(instruction, pc)
+        }
+    }
+
+    cycle_count[0] = clock_cycle
+}
