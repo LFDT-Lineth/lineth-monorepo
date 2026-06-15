@@ -6,6 +6,8 @@ import (
 	"sort"
 	"text/template"
 
+	"github.com/consensys/gnark-crypto/field/koalabear"
+	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/fri"
 	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
@@ -26,16 +28,17 @@ func defaultFRISpecZigOptions() FRISpecZigOptions {
 // WriteFRISpecZig writes generated Zig source containing comptime-consumable
 // FRI spec constants: params, layout, and dq_layout. It emits data only; no
 // control flow is generated.
-func WriteFRISpecZig(w io.Writer, params FRIParams, layout Layout, dq DQLayout) error {
+func WriteFRISpecZig(w io.Writer, params fri.Params, layout Layout, dq DQLayout) error {
 	return WriteFRISpecZigWithOptions(w, params, layout, dq, defaultFRISpecZigOptions())
 }
 
-func WriteFRISpecZigWithOptions(w io.Writer, params FRIParams, layout Layout, dq DQLayout, opts FRISpecZigOptions) error {
+func WriteFRISpecZigWithOptions(w io.Writer, params fri.Params, layout Layout, dq DQLayout, opts FRISpecZigOptions) error {
 	tmpl, err := template.New("fri_spec").Funcs(template.FuncMap{
-		"intArray": intArray,
-		"u64Inits": u64Inits,
-		"railLit":  railLiteral,
-		"zigStr":   zigString,
+		"domainGenInits":    domainGenInits,
+		"domainGenInvInits": domainGenInvInits,
+		"intArray":          intArray,
+		"railLit":           railLiteral,
+		"zigStr":            zigString,
 	}).Parse(friSpecTemplate)
 	if err != nil {
 		return err
@@ -107,20 +110,31 @@ func friSpecDQLevels(dq DQLayout) []friSpecLevelData {
 
 type friSpecTemplateData struct {
 	Options  FRISpecZigOptions
-	Params   FRIParams
+	Params   fri.Params
 	Layout   friSpecLayoutData
 	DQLevels []friSpecLevelData
 }
 
-// u64Inits renders a []uint64 as a sequence of field.Element.init(…) literals
-// for use inside a [_]field.Element array body.
-func u64Inits(vals []uint64) string {
+func domainGenInits(domains []fri.DomainLight) string {
 	out := "&[_]field.Element{"
-	for i, v := range vals {
+	for i, domain := range domains {
 		if i > 0 {
 			out += ", "
 		}
-		out += fmt.Sprintf(" field.Element.init(%d)", v)
+		out += fmt.Sprintf(" field.Element.init(%d)", domain.Generator.Uint64())
+	}
+	return out + " }"
+}
+
+func domainGenInvInits(domains []fri.DomainLight) string {
+	out := "&[_]field.Element{"
+	for i, domain := range domains {
+		if i > 0 {
+			out += ", "
+		}
+		var inv koalabear.Element
+		inv.Inverse(&domain.Generator)
+		out += fmt.Sprintf(" field.Element.init(%d)", inv.Uint64())
 	}
 	return out + " }"
 }
@@ -144,8 +158,8 @@ const field = verifier_ray.field.koalabear;
     .d = {{.Params.D}},
     .num_queries = {{.Params.NumQueries}},
     .num_rounds = {{.Params.NumRounds}},
-    .domain_gens = {{u64Inits .Params.DomainGens}},
-    .domain_gens_inv = {{u64Inits .Params.DomainGensInv}},
+    .domain_gens = {{domainGenInits .Params.DomainsLight}},
+    .domain_gens_inv = {{domainGenInvInits .Params.DomainsLight}},
     .grinding = {{.Params.Grinding}},
 };
 

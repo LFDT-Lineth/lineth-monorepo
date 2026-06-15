@@ -28,14 +28,14 @@ type Params struct {
 	N          int // 2^n: size of the evaluation domain
 	D          int // 2^m: degree of the purported polynomial
 	NumQueries int // number of independent queries (controls soundness error ≈ (1-δ)^Q)
+	NumRounds  int // numRounds = m
+	Grinding   int // grinding bits for PoW, on the alpha
 	LeafHasher commitment.LeafHasher
 	NodeHasher commitment.NodeHasher
 
-	numRounds    int // numRounds = m
 	invTwo       koalabear.Element
 	domains      []*fft.Domain // domains[j] has cardinality N/2^j, generator ωⱼ
-	domainsLight []domainLight // domainLight stores only the cardinality and the domain generator
-	grinding     int           // grinding bits for PoW, on the alpha
+	DomainsLight []DomainLight // DomainsLight[j] stores the cardinality and generator for N/2^j
 }
 
 type Config struct {
@@ -102,11 +102,11 @@ func NewParams(
 		N:          N,
 		D:          D,
 		NumQueries: numQueries,
+		NumRounds:  numRounds,
+		Grinding:   config.Grinding,
 		LeafHasher: lh,
 		NodeHasher: nh,
-		numRounds:  numRounds,
 		invTwo:     invTwo,
-		grinding:   config.Grinding,
 	}
 
 	if !config.WoFullDomainAllocation {
@@ -115,22 +115,22 @@ func NewParams(
 			res.domains[j] = fft.NewDomain(uint64(N) >> j)
 		}
 	}
-	res.domainsLight = make([]domainLight, numRounds+1)
+	res.DomainsLight = make([]DomainLight, numRounds+1)
 	for j := 0; j <= numRounds; j++ {
 		g, err := koalabear.Generator(uint64(N) >> j)
 		if err != nil {
 			return Params{}, err
 		}
-		res.domainsLight[j] = domainLight{cardinality: uint64(N) >> j, generator: g}
+		res.DomainsLight[j] = DomainLight{Cardinality: uint64(N) >> j, Generator: g}
 
 	}
 
 	return res, nil
 }
 
-type domainLight struct {
-	cardinality uint64
-	generator   koalabear.Element
+type DomainLight struct {
+	Cardinality uint64
+	Generator   koalabear.Element
 }
 
 // QueryLayer holds the two opened values and a single Merkle proof for one
@@ -221,11 +221,8 @@ type Proof struct {
 
 // FullDomainGenerator returns the generator of the full evaluation domain (layer 0, size N).
 func (p Params) FullDomainGenerator() koalabear.Element {
-	return p.domains[0].Generator
+	return p.DomainsLight[0].Generator
 }
-
-// Grinding returns the number of proof-of-work grinding bits configured for this instance.
-func (p Params) Grinding() int { return p.grinding }
 
 // Encode converts a polynomial from Lagrange form (size D) to its evaluation
 // on the full domain of size N. The result is a₀, ready to pass to Prove.
@@ -320,9 +317,9 @@ func newLevelIntroductions(p Params, levelDs []int) (levelIntroductions, error) 
 			return res, fmt.Errorf("level %d D=%d does not divide p.D=%d by a power-of-two ratio", level, levelD, p.D)
 		}
 		round := log2(ratio)
-		if round < 1 || round >= p.numRounds {
+		if round < 1 || round >= p.NumRounds {
 			return res, fmt.Errorf("level %d D=%d gives intro round %d, must be in 1..%d",
-				level, levelD, round, p.numRounds-1)
+				level, levelD, round, p.NumRounds-1)
 		}
 		if _, dup := res.levelAtRound[round]; dup {
 			return res, fmt.Errorf("two levels share intro round %d", round)
@@ -390,7 +387,7 @@ func registerChallenges(p Params, introductions levelIntroductions, ts *fiatsham
 			return err
 		}
 	}
-	for j := 0; j < p.numRounds; j++ {
+	for j := 0; j < p.NumRounds; j++ {
 		if err := ts.NewChallenge(foldName(j)); err != nil {
 			return err
 		}
@@ -431,16 +428,16 @@ func proveBase(p Params, levels []Level, plan provePlan, ts *fiatshamirrefactor.
 	running := make([]koalabear.Element, p.N)
 	copy(running, levels[0].Evals.Base)
 
-	layers := make([][]koalabear.Element, p.numRounds+1)
-	friTrees := make([]*merkle.Tree, p.numRounds)
-	alphas := make([]koalabear.Element, p.numRounds)
+	layers := make([][]koalabear.Element, p.NumRounds+1)
+	friTrees := make([]*merkle.Tree, p.NumRounds)
+	alphas := make([]koalabear.Element, p.NumRounds)
 
 	var prf Proof
-	if p.numRounds > 1 {
-		prf.FRIRoots = make([]hash.Digest, p.numRounds-1)
+	if p.NumRounds > 1 {
+		prf.FRIRoots = make([]hash.Digest, p.NumRounds-1)
 	}
 
-	for j := 0; j < p.numRounds; j++ {
+	for j := 0; j < p.NumRounds; j++ {
 		// Level batching step (j > 0 only; j=0 reuses the caller-supplied levels[0].Tree).
 		if j > 0 {
 			if l, ok := plan.introductions.levelAtRound[j]; ok {
@@ -474,7 +471,7 @@ func proveBase(p Params, levels []Level, plan provePlan, ts *fiatshamirrefactor.
 		if err := ts.Bind(name, root[:]); err != nil {
 			return Proof{}, nil, fmt.Errorf("fri: Prove: bind fold %d: %w", j, err)
 		}
-		challenge, err := computeProverFoldChallenge(ts, name, p.grinding)
+		challenge, err := computeProverFoldChallenge(ts, name, p.Grinding)
 		if err != nil {
 			return Proof{}, nil, fmt.Errorf("fri: Prove: compute fold challenge %d: %w", j, err)
 		}
@@ -488,7 +485,7 @@ func proveBase(p Params, levels []Level, plan provePlan, ts *fiatshamirrefactor.
 		// foldLayer returns a new slice, so running for round j+1 is independent.
 		running = foldLayerBase(running, alphas[j], p.domains[j], p.invTwo)
 	}
-	layers[p.numRounds] = running
+	layers[p.NumRounds] = running
 	prf.FinalField = field.KindBase
 	prf.FinalPolyBase = running
 	if err := recordFoldProofsOfWork(p, &prf, ts); err != nil {
@@ -524,7 +521,7 @@ func proveBase(p Params, levels []Level, plan provePlan, ts *fiatshamirrefactor.
 			}
 		}
 
-		q, err := openQueryBase(s, layers, friTrees, p.numRounds)
+		q, err := openQueryBase(s, layers, friTrees, p.NumRounds)
 		if err != nil {
 			return Proof{}, nil, fmt.Errorf("fri: Prove: open FRI query %d: %w", k, err)
 		}
@@ -575,16 +572,16 @@ func proveExt(p Params, levels []Level, plan provePlan, ts *fiatshamirrefactor.T
 	running := make([]ext.E6, p.N)
 	copy(running, levels[0].Evals.Ext)
 
-	layers := make([][]ext.E6, p.numRounds+1)
-	friTrees := make([]*merkle.Tree, p.numRounds)
-	alphas := make([]ext.E6, p.numRounds)
+	layers := make([][]ext.E6, p.NumRounds+1)
+	friTrees := make([]*merkle.Tree, p.NumRounds)
+	alphas := make([]ext.E6, p.NumRounds)
 
 	var prf Proof
-	if p.numRounds > 1 {
-		prf.FRIRoots = make([]hash.Digest, p.numRounds-1)
+	if p.NumRounds > 1 {
+		prf.FRIRoots = make([]hash.Digest, p.NumRounds-1)
 	}
 
-	for j := 0; j < p.numRounds; j++ {
+	for j := 0; j < p.NumRounds; j++ {
 		if j > 0 {
 			if l, ok := plan.introductions.levelAtRound[j]; ok {
 				gamma := gammas[l]
@@ -615,7 +612,7 @@ func proveExt(p Params, levels []Level, plan provePlan, ts *fiatshamirrefactor.T
 		if err := ts.Bind(name, root[:]); err != nil {
 			return Proof{}, nil, fmt.Errorf("fri: Prove: bind fold %d: %w", j, err)
 		}
-		challenge, err := computeProverFoldChallenge(ts, name, p.grinding)
+		challenge, err := computeProverFoldChallenge(ts, name, p.Grinding)
 		if err != nil {
 			return Proof{}, nil, fmt.Errorf("fri: Prove: compute fold challenge %d: %w", j, err)
 		}
@@ -627,7 +624,7 @@ func proveExt(p Params, levels []Level, plan provePlan, ts *fiatshamirrefactor.T
 
 		running = foldLayerExt(running, alphas[j], p.domains[j], p.invTwo)
 	}
-	layers[p.numRounds] = running
+	layers[p.NumRounds] = running
 	prf.FinalField = field.KindExt
 	prf.FinalPolyExt = running
 	if err := recordFoldProofsOfWork(p, &prf, ts); err != nil {
@@ -661,7 +658,7 @@ func proveExt(p Params, levels []Level, plan provePlan, ts *fiatshamirrefactor.T
 			}
 		}
 
-		q, err := openQueryExt(s, layers, friTrees, p.numRounds)
+		q, err := openQueryExt(s, layers, friTrees, p.NumRounds)
 		if err != nil {
 			return Proof{}, nil, fmt.Errorf("fri: Prove: open FRI query %d: %w", k, err)
 		}
@@ -717,8 +714,8 @@ func Verify(p Params, levelRoots []hash.Digest, levelDs []int, prf Proof, ts *fi
 	numLevels := len(levelDs)
 	numExtraLevels := numLevels - 1
 
-	wantFRIRoots := p.numRounds - 1
-	if p.numRounds <= 1 {
+	wantFRIRoots := p.NumRounds - 1
+	if p.NumRounds <= 1 {
 		wantFRIRoots = 0
 	}
 	if len(prf.FRIRoots) != wantFRIRoots {
@@ -728,8 +725,8 @@ func Verify(p Params, levelRoots []hash.Digest, levelDs []int, prf Proof, ts *fi
 		return fmt.Errorf("fri: Verify: proof has %d FRI queries, want %d", len(prf.FRIQueries), p.NumQueries)
 	}
 	for k, q := range prf.FRIQueries {
-		if len(q.Layers) != p.numRounds {
-			return fmt.Errorf("fri: Verify: proof FRI query %d has %d layers, want %d", k, len(q.Layers), p.numRounds)
+		if len(q.Layers) != p.NumRounds {
+			return fmt.Errorf("fri: Verify: proof FRI query %d has %d layers, want %d", k, len(q.Layers), p.NumRounds)
 		}
 	}
 	if len(prf.LevelQueries) != numExtraLevels {
@@ -761,9 +758,9 @@ func Verify(p Params, levelRoots []hash.Digest, levelDs []int, prf Proof, ts *fi
 
 	// Assemble FRI running-polynomial roots: roots[0] is the level-0 root;
 	// roots[1..r-1] come from prf.FRIRoots.
-	roots := make([]hash.Digest, p.numRounds)
+	roots := make([]hash.Digest, p.NumRounds)
 	roots[0] = levelRoots[0]
-	for j := 1; j < p.numRounds; j++ {
+	for j := 1; j < p.NumRounds; j++ {
 		roots[j] = prf.FRIRoots[j-1]
 	}
 
@@ -810,14 +807,14 @@ func verifyBase(
 		}
 	}
 
-	alphas := make([]koalabear.Element, p.numRounds)
-	for j := 0; j < p.numRounds; j++ {
+	alphas := make([]koalabear.Element, p.NumRounds)
+	for j := 0; j < p.NumRounds; j++ {
 		name := foldName(j)
 		root := roots[j]
 		if err := ts.Bind(name, root[:]); err != nil {
 			return fmt.Errorf("fri: Verify: bind fold %d: %w", j, err)
 		}
-		challenge, err := computeVerifierFoldChallenge(ts, name, p.grinding, prf.PoW)
+		challenge, err := computeVerifierFoldChallenge(ts, name, p.Grinding, prf.PoW)
 		if err != nil {
 			return fmt.Errorf("fri: Verify: compute fold challenge %d: %w", j, err)
 		}
@@ -889,14 +886,14 @@ func verifyExt(
 		}
 	}
 
-	alphas := make([]ext.E6, p.numRounds)
-	for j := 0; j < p.numRounds; j++ {
+	alphas := make([]ext.E6, p.NumRounds)
+	for j := 0; j < p.NumRounds; j++ {
 		name := foldName(j)
 		root := roots[j]
 		if err := ts.Bind(name, root[:]); err != nil {
 			return fmt.Errorf("fri: Verify: bind fold %d: %w", j, err)
 		}
-		challenge, err := computeVerifierFoldChallenge(ts, name, p.grinding, prf.PoW)
+		challenge, err := computeVerifierFoldChallenge(ts, name, p.Grinding, prf.PoW)
 		if err != nil {
 			return fmt.Errorf("fri: Verify: compute fold challenge %d: %w", j, err)
 		}
@@ -975,11 +972,11 @@ func computeVerifierFoldChallenge(
 }
 
 func recordFoldProofsOfWork(p Params, prf *Proof, ts *fiatshamirrefactor.Transcript) error {
-	if p.grinding == 0 || p.numRounds == 0 {
+	if p.Grinding == 0 || p.NumRounds == 0 {
 		return nil
 	}
-	prf.PoW = make(map[string]fiatshamirrefactor.ProofOfWork, p.numRounds)
-	for j := 0; j < p.numRounds; j++ {
+	prf.PoW = make(map[string]fiatshamirrefactor.ProofOfWork, p.NumRounds)
+	for j := 0; j < p.NumRounds; j++ {
 		name := foldName(j)
 		pow, ok := ts.ProofOfWork(name)
 		if !ok {
@@ -1210,8 +1207,8 @@ func checkQuery(s int, fq Query,
 	}
 
 	// Verify running-polynomial fold path with batching consistency checks.
-	for j := 0; j < p.numRounds; j++ {
-		Nj := int(p.domainsLight[j].cardinality)
+	for j := 0; j < p.NumRounds; j++ {
+		Nj := int(p.DomainsLight[j].Cardinality)
 		base := s % (Nj / 2)
 		layer := fq.Layers[j]
 		if layer.Field != field.KindBase {
@@ -1229,7 +1226,7 @@ func checkQuery(s int, fq Query,
 
 		// Fold: expected = (LeafP+LeafQ)/2 + α*(LeafP-LeafQ)/(2·ωⱼ^base).
 		var xInv, sum, diff, expected koalabear.Element
-		xInv.Exp(p.domainsLight[j].generator, big.NewInt(int64(Nj-base)))
+		xInv.Exp(p.DomainsLight[j].Generator, big.NewInt(int64(Nj-base)))
 		sum.Add(&layer.LeafPBase, &layer.LeafQBase)
 		sum.Mul(&sum, &p.invTwo)
 		diff.Sub(&layer.LeafPBase, &layer.LeafQBase)
@@ -1238,7 +1235,7 @@ func checkQuery(s int, fq Query,
 		diff.Mul(&diff, &alphas[j])
 		expected.Add(&sum, &diff)
 
-		if j < p.numRounds-1 {
+		if j < p.NumRounds-1 {
 			Nj1 := Nj / 2
 			nextLayer := fq.Layers[j+1]
 			isLeafP := base < Nj1/2
@@ -1305,8 +1302,8 @@ func checkQueryExt(s int, fq Query,
 		}
 	}
 
-	for j := 0; j < p.numRounds; j++ {
-		Nj := int(p.domainsLight[j].cardinality)
+	for j := 0; j < p.NumRounds; j++ {
+		Nj := int(p.DomainsLight[j].Cardinality)
 		base := s % (Nj / 2)
 		layer := fq.Layers[j]
 		if layer.Field != field.KindExt {
@@ -1323,7 +1320,7 @@ func checkQueryExt(s int, fq Query,
 		}
 
 		var xInv koalabear.Element
-		xInv.Exp(p.domainsLight[j].generator, big.NewInt(int64(Nj-base)))
+		xInv.Exp(p.DomainsLight[j].Generator, big.NewInt(int64(Nj-base)))
 
 		var sum, diff, expected ext.E6
 		sum.Add(&layer.LeafPExt, &layer.LeafQExt)
@@ -1334,7 +1331,7 @@ func checkQueryExt(s int, fq Query,
 		diff.Mul(&diff, &alphas[j])
 		expected.Add(&sum, &diff)
 
-		if j < p.numRounds-1 {
+		if j < p.NumRounds-1 {
 			Nj1 := Nj / 2
 			nextLayer := fq.Layers[j+1]
 			isLeafP := base < Nj1/2

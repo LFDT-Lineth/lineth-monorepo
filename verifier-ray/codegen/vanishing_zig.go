@@ -60,7 +60,6 @@ func WriteVanishingSystemZigWithOptions(w io.Writer, index int, system NamedVani
 func executeVanishingTemplate(w io.Writer, data vanishingTemplateData) error {
 	tmpl, err := template.New("vanishing_scenarios").Funcs(template.FuncMap{
 		"expr":       exprNodeLiteral,
-		"ints":       intSlice,
 		"intArray":   intArray,
 		"moduleSize": moduleSizeLiteral,
 		"zig":        zigString,
@@ -142,7 +141,7 @@ const vanishing = {{.Options.VanishingImport}};
 
 {{range $module.Buckets}}{{- $bucket := . }}const system_{{$case.Index}}_module_{{$bucket.ModuleIndex}}_bucket_{{$bucket.Index}}_vanishings = [_]vanishing.Vanishing{
 {{range $bucket.Bucket.Vanishings}}    // expression: "{{zig .SourceName}}"
-    .{ .expression = {{.Expression}}, .cancelled_positions = &{{ints .CancelledPositions}} },
+    .{ .expression = {{.Expression}}, .cancelled_positions = &.{{intArray .CancelledPositions}} },
 {{end}}};
 
 {{end}}const system_{{$case.Index}}_module_{{$module.Index}}_buckets = [_]vanishing.Bucket{
@@ -182,7 +181,7 @@ func exprNodeLiteral(expr ExprNode) string {
 		if !ok {
 			panic(fmt.Sprintf("unknown ArithmeticOperator %d", int(expr.Operator)))
 		}
-		return fmt.Sprintf(".{ .op = .{ .operator = .%s, .operands = &%s } },", operator, intSlice(expr.Operands))
+		return fmt.Sprintf(".{ .op = .{ .operator = .%s, .operands = &.%s } },", operator, intArray(expr.Operands))
 	case ExprLagrangeSelector:
 		return fmt.Sprintf(".{ .lagrange_selector = %d },", expr.SelectorPosition)
 	default:
@@ -218,10 +217,6 @@ func moduleSizeLiteral(size ModuleSize) string {
 		return fmt.Sprintf(".{ .dynamic = %d }", size.DynamicIndex)
 	}
 	return fmt.Sprintf(".{ .static = %d }", size.StaticSize)
-}
-
-func intSlice(values []int) string {
-	return "." + intArray(values)
 }
 
 func intArray(values []int) string {

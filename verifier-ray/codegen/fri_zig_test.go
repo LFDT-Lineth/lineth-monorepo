@@ -10,14 +10,9 @@ import (
 	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
-func testFRIParams(t *testing.T) FRIParams {
+func testFRIParams(t *testing.T) fri.Params {
 	t.Helper()
-	p := newTestParams(t, 32, 8, 4, fri.WithGrinding(0))
-	out, err := BuildFRIParams(p)
-	if err != nil {
-		t.Fatalf("BuildFRIParams: %v", err)
-	}
-	return out
+	return newTestParams(t, 32, 8, 4, fri.WithGrinding(0))
 }
 
 func testLayout(t *testing.T) Layout {

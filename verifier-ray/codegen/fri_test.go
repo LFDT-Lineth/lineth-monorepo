@@ -19,8 +19,8 @@ func newTestParams(t *testing.T, n, d, numQueries int, opts ...fri.Option) fri.P
 	return p
 }
 
-// TestBuildFRIParamsNumRounds verifies that NumRounds = log2(D).
-func TestBuildFRIParamsNumRounds(t *testing.T) {
+// TestFRIParamsNumRounds verifies that NumRounds = log2(D).
+func TestFRIParamsNumRounds(t *testing.T) {
 	for _, tc := range []struct {
 		n, d, want int
 	}{
@@ -29,70 +29,52 @@ func TestBuildFRIParamsNumRounds(t *testing.T) {
 		{16, 2, 1},
 		{8, 2, 1},
 	} {
-		p := newTestParams(t, tc.n, tc.d, 4)
-		got, err := BuildFRIParams(p)
-		if err != nil {
-			t.Fatalf("N=%d D=%d: BuildFRIParams error = %v", tc.n, tc.d, err)
-		}
+		got := newTestParams(t, tc.n, tc.d, 4)
 		if got.NumRounds != tc.want {
 			t.Errorf("N=%d D=%d: NumRounds = %d, want %d", tc.n, tc.d, got.NumRounds, tc.want)
 		}
-		if len(got.DomainGens) != tc.want+1 {
-			t.Errorf("N=%d D=%d: len(DomainGens) = %d, want %d", tc.n, tc.d, len(got.DomainGens), tc.want+1)
+		if len(got.DomainsLight) != tc.want+1 {
+			t.Errorf("N=%d D=%d: len(DomainsLight) = %d, want %d", tc.n, tc.d, len(got.DomainsLight), tc.want+1)
 		}
 	}
 }
 
-// TestBuildFRIParamsGenInvAreInverse verifies that DomainGens[j] * DomainGensInv[j] = 1
+// TestFRIParamsGenInvAreInverse verifies that each domain generator is invertible
 // in the Koalabear field for every fold round.
-func TestBuildFRIParamsGenInvAreInverse(t *testing.T) {
+func TestFRIParamsGenInvAreInverse(t *testing.T) {
 	p := newTestParams(t, 32, 8, 4)
-	out, err := BuildFRIParams(p)
-	if err != nil {
-		t.Fatalf("BuildFRIParams: %v", err)
-	}
 	var one koalabear.Element
 	one.SetOne()
-	for j := range out.DomainGens {
-		var gen, inv, product koalabear.Element
-		gen.SetUint64(out.DomainGens[j])
-		inv.SetUint64(out.DomainGensInv[j])
-		product.Mul(&gen, &inv)
+	for j, domain := range p.DomainsLight {
+		var inv, product koalabear.Element
+		inv.Inverse(&domain.Generator)
+		product.Mul(&domain.Generator, &inv)
 		if product != one {
-			t.Errorf("round %d: gen * inv != 1 (gen=%d inv=%d product=%v)", j, out.DomainGens[j], out.DomainGensInv[j], product)
+			t.Errorf("round %d: gen * inv != 1 (gen=%d inv=%d product=%v)", j, domain.Generator.Uint64(), inv.Uint64(), product)
 		}
 	}
 }
 
-// TestBuildFRIParamsHalvingProperty verifies that DomainGens[j+1] = DomainGens[j]^2,
+// TestFRIParamsHalvingProperty verifies that DomainGens[j+1] = DomainGens[j]^2,
 // i.e. squaring the round-j generator produces the round-(j+1) generator.
-func TestBuildFRIParamsHalvingProperty(t *testing.T) {
+func TestFRIParamsHalvingProperty(t *testing.T) {
 	p := newTestParams(t, 32, 8, 4)
-	out, err := BuildFRIParams(p)
-	if err != nil {
-		t.Fatalf("BuildFRIParams: %v", err)
-	}
-	for j := 0; j < out.NumRounds; j++ {
-		var gen, squared koalabear.Element
-		gen.SetUint64(out.DomainGens[j])
-		squared.Square(&gen)
+	for j := 0; j < p.NumRounds; j++ {
+		var squared koalabear.Element
+		squared.Square(&p.DomainsLight[j].Generator)
 		want := squared.Uint64()
-		if out.DomainGens[j+1] != want {
-			t.Errorf("round %d: DomainGens[%d] = %d, want %d (= DomainGens[%d]^2)", j+1, j+1, out.DomainGens[j+1], want, j)
+		if got := p.DomainsLight[j+1].Generator.Uint64(); got != want {
+			t.Errorf("round %d: DomainGens[%d] = %d, want %d (= DomainGens[%d]^2)", j+1, j+1, got, want, j)
 		}
 	}
 }
 
-// TestBuildFRIParamsGrinding verifies that the grinding bit count is preserved.
-func TestBuildFRIParamsGrinding(t *testing.T) {
+// TestFRIParamsGrinding verifies that the grinding bit count is preserved.
+func TestFRIParamsGrinding(t *testing.T) {
 	const grinding = 8
 	p := newTestParams(t, 16, 4, 4, fri.WithGrinding(grinding))
-	out, err := BuildFRIParamsWithGrinding(p, grinding)
-	if err != nil {
-		t.Fatalf("BuildFRIParams: %v", err)
-	}
-	if out.Grinding != 8 {
-		t.Errorf("Grinding = %d, want 8", out.Grinding)
+	if p.Grinding != 8 {
+		t.Errorf("Grinding = %d, want 8", p.Grinding)
 	}
 }
 

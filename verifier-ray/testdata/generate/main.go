@@ -43,11 +43,12 @@ func main() {
 	writePoseidonCases(&out)
 	writeFiatShamirCases(&out)
 	writeRuntimeTraceCases(&out)
+	writeLayoutLoaderVectors(&out)
 	if err := writeFRISpecFixture(); err != nil {
 		panic(err)
 	}
 
-	vanishingCases, vanishingSystems, err := buildVanishingFixtureCases()
+	vanishingCases, vanishingSystems, vanishingRoutings, err := buildVanishingFixtureCases()
 	if err != nil {
 		panic(err)
 	}
@@ -62,7 +63,7 @@ func main() {
 	if err := os.WriteFile(outputPath, data, 0o644); err != nil {
 		panic(err)
 	}
-	if err := writeVanishingFixtures(vanishingCases, vanishingSystems); err != nil {
+	if err := writeVanishingFixtures(vanishingCases, vanishingSystems, vanishingRoutings); err != nil {
 		panic(err)
 	}
 }
@@ -433,6 +434,139 @@ func writeRuntimeTraceCases(out *bytes.Buffer) {
 	fmt.Fprintln(out)
 }
 
+// writeLayoutLoaderVectors emits byte fixtures produced by the Go-side encoder
+// for the LAY1 and DQL1 formats consumed by verifier-ray's layout loaders.
+func writeLayoutLoaderVectors(out *bytes.Buffer) {
+	writeU8Vector(out, "layout_loader_vector", layoutLoaderVectorBytes())
+	writeU8Vector(out, "dq_layout_loader_vector", dqLayoutLoaderVectorBytes())
+}
+
+func layoutLoaderVectorBytes() []byte {
+	var out []byte
+	out = append(out, 'L', 'A', 'Y', '1')
+	appendU32LE(&out, 3) // num_trees
+	appendU32LE(&out, 0) // setup_begin
+	appendU32LE(&out, 1) // setup_end
+	appendU32Slice(&out, []uint32{1, 3})
+	appendU32SliceValues(&out, []uint32{3, 5})
+	appendU32LE(&out, 5) // air_begin
+	appendU32LE(&out, 6) // air_end
+	appendU32Slice(&out, []uint32{4, 2, 8})
+
+	appendU32LE(&out, 3)
+	appendSlot(&out, "A", 0, 1, field.KindBase)
+	appendSlot(&out, "B.shift", 1, 0, field.KindExt)
+	appendSlot(&out, "C", 2, 4, field.KindBase)
+
+	appendU32LE(&out, 1)
+	appendSlot(&out, "air.main.0", 2, 0, field.KindExt)
+	return out
+}
+
+func dqLayoutLoaderVectorBytes() []byte {
+	var out []byte
+	out = append(out, 'D', 'Q', 'L', '1')
+	appendU32LE(&out, 2)
+
+	appendU32LE(&out, 4)
+	appendU32LE(&out, 2)
+	appendExtWire(&out, [6]uint32{2, 3, 5, 7, 11, 13})
+	appendExtWire(&out, [6]uint32{17, 19, 23, 29, 31, 37})
+	appendColTerms(&out, []struct {
+		name string
+		key  string
+	}{
+		{"A", "A"},
+		{"B.shift", "B@1"},
+	})
+	appendColTerms(&out, []struct {
+		name string
+		key  string
+	}{{"C", "C@rot"}})
+	appendStringSlice(&out, []string{"air.main.0"})
+
+	appendU32LE(&out, 2)
+	appendU32LE(&out, 1)
+	appendExtWire(&out, [6]uint32{41, 43, 47, 53, 59, 61})
+	appendColTerms(&out, []struct {
+		name string
+		key  string
+	}{{"small", "small"}})
+	appendStringSlice(&out, nil)
+	return out
+}
+
+func appendSlot(out *[]byte, name string, treeIdx, polyIdx uint32, rail field.Kind) {
+	appendWireString(out, name)
+	appendU32LE(out, treeIdx)
+	appendU32LE(out, polyIdx)
+	switch rail {
+	case field.KindBase:
+		*out = append(*out, 0)
+	case field.KindExt:
+		*out = append(*out, 1)
+	default:
+		panic(fmt.Sprintf("unsupported rail kind %v", rail))
+	}
+}
+
+func appendU32Slice(out *[]byte, values []uint32) {
+	appendU32LE(out, uint32(len(values)))
+	appendU32SliceValues(out, values)
+}
+
+func appendU32SliceValues(out *[]byte, values []uint32) {
+	for _, value := range values {
+		appendU32LE(out, value)
+	}
+}
+
+func appendStringSlice(out *[]byte, values []string) {
+	appendU32LE(out, uint32(len(values)))
+	for _, value := range values {
+		appendWireString(out, value)
+	}
+}
+
+func appendColTerms(out *[]byte, terms []struct {
+	name string
+	key  string
+}) {
+	appendU32LE(out, uint32(len(terms)))
+	for _, term := range terms {
+		appendWireString(out, term.name)
+		appendWireString(out, term.key)
+	}
+}
+
+func appendExtWire(out *[]byte, limbs [6]uint32) {
+	for _, limb := range limbs {
+		appendU32LE(out, limb)
+	}
+}
+
+func appendWireString(out *[]byte, value string) {
+	appendU32LE(out, uint32(len(value)))
+	*out = append(*out, value...)
+}
+
+func appendU32LE(out *[]byte, value uint32) {
+	*out = append(*out,
+		byte(value),
+		byte(value>>8),
+		byte(value>>16),
+		byte(value>>24),
+	)
+}
+
+func writeU8Vector(out *bytes.Buffer, name string, values []byte) {
+	parts := make([]string, len(values))
+	for i, value := range values {
+		parts[i] = fmt.Sprintf("%d", value)
+	}
+	fmt.Fprintf(out, "pub const %s = [_]u8{ %s };\n\n", name, strings.Join(parts, ", "))
+}
+
 // buildRuntimeTraceCases constructs a small prover-ray WIOP runtime at the
 // verifier boundary. Oracle columns are represented by their commitment values
 // rather than raw witness assignments, and expected coins are sampled through
@@ -597,9 +731,10 @@ func compileFullPipeline(sys *wiop.System) {
 	global.Compile(sys)
 }
 
-func buildVanishingFixtureCases() ([]vanishingFixtureCase, []codegen.NamedVanishingSystem, error) {
+func buildVanishingFixtureCases() ([]vanishingFixtureCase, []codegen.NamedVanishingSystem, []codegen.CoinRouting, error) {
 	var cases []vanishingFixtureCase
 	var systems []codegen.NamedVanishingSystem
+	var routings []codegen.CoinRouting
 
 	add := func(source, name string, sys *wiop.System, honest vanishingAssign, invalid vanishingAssign) error {
 		compileFullPipeline(sys)
@@ -623,38 +758,39 @@ func buildVanishingFixtureCases() ([]vanishingFixtureCase, []codegen.NamedVanish
 			invalidProof = &proof
 		}
 		cases = append(cases, vanishingFixtureCase{name: prefixedName, honest: honestProof, invalid: invalidProof})
-		systems = append(systems, codegen.NamedVanishingSystem{Name: prefixedName, System: vanishingSystem, Routing: routing})
+		systems = append(systems, codegen.NamedVanishingSystem{Name: prefixedName, System: vanishingSystem})
+		routings = append(routings, routing)
 		return nil
 	}
 
 	for _, factory := range wioptest.VanishingScenarios() {
 		sc := factory()
 		if err := add("Vanishing", sc.Name, sc.Sys, sc.AssignHonest, sc.AssignInvalid); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 	for _, factory := range wioptest.LocalVanishingScenarios() {
 		sc := factory()
 		if err := add("LocalVanishing", sc.Name, sc.Sys, sc.AssignHonest, sc.AssignInvalid); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 	for _, factory := range wioptest.LogDerivativeSumCompilerScenarios() {
 		sc := factory()
 		if err := add("LogDerivativeSumCompiler", sc.Name, sc.Sys, sc.AssignWitness, nil); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 	for _, factory := range wioptest.LookupScenarios() {
 		sc := factory()
 		if err := add("Lookup", sc.Name, sc.Sys, sc.AssignWitness, nil); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 	for _, factory := range wioptest.RangeCheckCompilerScenarios() {
 		sc := factory()
 		if err := add("RangeCheckCompiler", sc.Name, sc.Sys, sc.AssignWitness, nil); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
@@ -668,7 +804,7 @@ func buildVanishingFixtureCases() ([]vanishingFixtureCase, []codegen.NamedVanish
 		honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 99, 7, 7))) }
 		invalid := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 98, 7, 7))) }
 		if err := add("Vanishing", "LagrangeSelectorBoundary", sys, honest, invalid); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
@@ -681,11 +817,11 @@ func buildVanishingFixtureCases() ([]vanishingFixtureCase, []codegen.NamedVanish
 		honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 99, 7, 7))) }
 		invalid := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 98, 7, 7))) }
 		if err := add("Vanishing", "DynamicLagrangeSelectorBoundary", sys, honest, invalid); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
-	return cases, systems, nil
+	return cases, systems, routings, nil
 }
 
 // buildLagrangeSelectorBoundarySystem builds a size-4 module with the single
@@ -828,11 +964,11 @@ func runtimeTraceRoundFromRuntime(rt wiop.Runtime, round *wiop.Round) runtimeTra
 	return trace
 }
 
-func writeVanishingFixtures(cases []vanishingFixtureCase, systems []codegen.NamedVanishingSystem) error {
+func writeVanishingFixtures(cases []vanishingFixtureCase, systems []codegen.NamedVanishingSystem, routings []codegen.CoinRouting) error {
 	var out bytes.Buffer
 	writeVanishingHeader(&out)
 	for i := range cases {
-		if err := codegen.WriteSpecZigWithOptions(&out, systems[i].Routing, codegen.SpecZigOptions{
+		if err := codegen.WriteSpecZigWithOptions(&out, routings[i], codegen.SpecZigOptions{
 			ProtocolImport: "verifier_ray.protocol",
 			ConstName:      fmt.Sprintf("system_%d_spec", i),
 			EmitHeader:     false,
@@ -1107,11 +1243,6 @@ func writeFRISpecFixture() error {
 	if err != nil {
 		return fmt.Errorf("fri.NewParams: %w", err)
 	}
-	params, err := codegen.BuildFRIParamsWithGrinding(p, grinding)
-	if err != nil {
-		return fmt.Errorf("BuildFRIParams: %w", err)
-	}
-
 	layout, err := codegen.BuildLayout(codegen.LayoutConfig{
 		NumTrees:   1,
 		SetupBegin: 0, SetupEnd: 0,
@@ -1141,7 +1272,7 @@ func writeFRISpecFixture() error {
 	}
 
 	var buf bytes.Buffer
-	if err := codegen.WriteFRISpecZig(&buf, params, layout, dq); err != nil {
+	if err := codegen.WriteFRISpecZig(&buf, p, layout, dq); err != nil {
 		return fmt.Errorf("WriteFRISpecZig: %w", err)
 	}
 

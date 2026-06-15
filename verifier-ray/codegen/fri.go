@@ -2,10 +2,7 @@ package codegen
 
 import (
 	"fmt"
-	"math/bits"
 
-	"github.com/consensys/gnark-crypto/field/koalabear"
-	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/fri"
 	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
@@ -16,55 +13,6 @@ type Slot struct {
 	TreeIdx int
 	PolyIdx int
 	Rail    field.Kind
-}
-
-// FRIParams holds the program-determined FRI configuration. It is derived from
-// fri.Params and carries pre-computed domain generators for all fold rounds so
-// the Zig side receives them as constants.
-type FRIParams struct {
-	N             int
-	D             int
-	NumQueries    int
-	NumRounds     int      // log₂(D); also the number of fold rounds
-	Grinding      int      // proof-of-work grinding bits
-	DomainGens    []uint64 // DomainGens[j]    = ω_{N/2^j}   as a canonical field element
-	DomainGensInv []uint64 // DomainGensInv[j] = ω_{N/2^j}⁻¹ as a canonical field element
-}
-
-// BuildFRIParams extracts the program-determined FRI configuration from p and
-// pre-computes the per-round domain generators for rounds 0 through NumRounds.
-// Generators are returned as canonical (non-Montgomery) field element values
-// so the Zig renderer can emit them as integer literals.
-func BuildFRIParams(p fri.Params) (FRIParams, error) {
-	return BuildFRIParamsWithGrinding(p, 0)
-}
-
-// BuildFRIParamsWithGrinding is BuildFRIParams with the proof-of-work grinding
-// count supplied by the caller. The pinned prover-ray module does not expose
-// this unexported Params field, so codegen must carry the option value from the
-// same configuration point that constructs fri.Params.
-func BuildFRIParamsWithGrinding(p fri.Params, grinding int) (FRIParams, error) {
-	numRounds := bits.Len(uint(p.D)) - 1
-	out := FRIParams{
-		N:             p.N,
-		D:             p.D,
-		NumQueries:    p.NumQueries,
-		NumRounds:     numRounds,
-		Grinding:      grinding,
-		DomainGens:    make([]uint64, numRounds+1),
-		DomainGensInv: make([]uint64, numRounds+1),
-	}
-	for j := range out.DomainGens {
-		gen, err := koalabear.Generator(uint64(p.N) >> j)
-		if err != nil {
-			return FRIParams{}, fmt.Errorf("fri codegen: domain generator for round %d: %w", j, err)
-		}
-		out.DomainGens[j] = gen.Uint64()
-		var inv koalabear.Element
-		inv.Inverse(&gen)
-		out.DomainGensInv[j] = inv.Uint64()
-	}
-	return out, nil
 }
 
 // LayoutConfig is the input to BuildLayout. It carries the program-determined

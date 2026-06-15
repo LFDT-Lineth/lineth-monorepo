@@ -25,9 +25,8 @@ func IsUnsupportedExpression(err error) bool {
 }
 
 type NamedVanishingSystem struct {
-	Name    string
-	System  VanishingSystem
-	Routing CoinRouting
+	Name   string
+	System VanishingSystem
 }
 
 type VanishingSystem struct {
