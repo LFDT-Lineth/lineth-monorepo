@@ -104,6 +104,7 @@ test: test-zig test-codegen
 
 test-zig: generate-testdata
 	zig build test
+	zig build -Dverifier-profiling=true test-profiling
 
 test-generated-zig: test-zig
 

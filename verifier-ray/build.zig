@@ -22,12 +22,22 @@ pub fn build(b: *std.Build) void {
         b.standardOptimizeOption(.{});
     const strip = b.option(bool, "strip", "Omit debug symbols") orelse (r5 or optimize == .ReleaseSmall);
 
+    const verifier_profiling = b.option(
+        bool,
+        "verifier-profiling",
+        "Enable comptime inclusion of profiling counters",
+    ) orelse false;
+    const profiling_opts = b.addOptions();
+    profiling_opts.addOption(bool, "is_enabled", verifier_profiling);
+
     const verifier_mod = b.addModule("verifier_ray", .{
         .root_source_file = b.path("src/lib.zig"),
         .target = target,
         .optimize = optimize,
         .strip = strip,
     });
+    verifier_mod.addOptions("profiling_config", profiling_opts);
+
     const test_vectors_mod = b.addModule("test_vectors", .{
         .root_source_file = b.path("testdata/generated/vectors.zig"),
         .target = target,
@@ -92,5 +102,24 @@ pub fn build(b: *std.Build) void {
         const run_unit_tests = b.addRunArtifact(unit_tests);
         const test_step = b.step("test", "Run verifier-ray unit tests");
         test_step.dependOn(&run_unit_tests.step);
+
+        // Profiling counters only do anything when profiling is enabled at build
+        // time. This test fails if profiling is not enabled, so it serves as a
+        // canary to ensure that the profiling tests are actually testing something
+        // and not silently passing due to profiling being disabled.
+        const profiling_tests = b.addTest(.{
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("test/profiling_test.zig"),
+                .target = target,
+                .optimize = optimize,
+                .imports = &.{
+                    .{ .name = "verifier_ray", .module = verifier_mod },
+                },
+            }),
+        });
+
+        const run_profiling_tests = b.addRunArtifact(profiling_tests);
+        const profiling_test_step = b.step("test-profiling", "Run profiling counter tests");
+        profiling_test_step.dependOn(&run_profiling_tests.step);
     }
 }
