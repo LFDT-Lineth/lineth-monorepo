@@ -89,7 +89,7 @@ Useful shell function (add to `~/.zshrc` or `~/.bashrc`):
 riscv-test() {
     local makefile="path/to/lineth-monorepo/arithmetization/src/test/Makefile"
     case "$1" in
-        elf-exec|elf-debug|elf-to-json|install-zkc|clean-all|linker-script|vector-exec|keccak-rust-build|keccak-rust-json|keccak-rust-exec|blake-rust-build|blake-rust-json|blake-rust-exec|act4-build|act4-exec|gp-exec|gp-build)
+        elf-exec|elf-debug|elf-to-json|install-zkc|clean-all|linker-script|vector-exec|keccak-rust-build|keccak-rust-json|keccak-rust-exec|blake-rust-build|blake-rust-json|blake-rust-exec|act4-build|act4-exec)
             # targets that do NOT require TEST argument
             make -f "$makefile" "$1" "${@:2}"
             ;;
@@ -103,16 +103,10 @@ riscv-test() {
             ;;
     esac
 }
-
-# `agp` (accelerated guest program): build the l2-execution guest with the keccak
-# accelerator (if needed) and run it in zkc on an SSZ input. The input path is taken
-# relative to your current directory, so `agp` works from anywhere. `/usr/bin/time -p`
-# prints wall-clock real/user/sys after the run (use `/usr/bin/time` on Linux too).
-agp() {
-    local makefile="path/to/lineth-monorepo/arithmetization/src/test/Makefile"
-    /usr/bin/time -p make -f "$makefile" gp-exec GP_INPUT="$1" "${@:2}"
-}
 ```
+
+For the accelerated l2-execution guest helper (`agp`), see the
+[l2-execution guest README](../../../riscv-guests/l2-execution/README.md).
 
 ## Usage examples
 
@@ -151,10 +145,6 @@ riscv-test elf-exec BIN_EXT=path/to/bin
 riscv-test elf-debug BIN_EXT=path/to/bin
 # Execute an already compiled ELF in quiet mode
 riscv-test elf-exec BIN_EXT=path/to/bin ZKC_EXEC_FLAGS=-q
-# Build the accelerated l2-execution guest (if needed) and run it on an SSZ input (quiet by default)
-agp relative/path/to/input.ssz
-# Same, but show the full instruction trace (warning: can be many GB)
-agp relative/path/to/input.ssz GP_ZKC_EXEC_FLAGS=
 # Clean build artifacts for a specific test
 riscv-test clean <name>.<ext>
 # Clean all build artifacts
@@ -210,7 +200,6 @@ riscv-test compile <name>.<ext> VERIFY_ELF=true
 | `make blake-rust-exec`                                   | Run all Blake vectors from `rust/src/blake/blake10.all`                                |
 | `make act4-build`                                        | Build ACT4 ELFs with the Linea ACT4 config                                             |
 | `make act4-exec`                                         | Build and run ACT4 ELFs through zkc and write results/logs under `act4/bin/`           |
-| `make gp-exec GP_INPUT=foo.ssz`                          | Build the l2-execution guest (keccak-accel) if needed and run it in zkc on `foo.ssz`   |
 
 `require-*` targets are internal support targets used to validate mandatory command-line variables before running the targets above.
 
@@ -248,8 +237,6 @@ riscv-test compile <name>.<ext> VERIFY_ELF=true
 | `KECCAK_ALL_FILE`            | `rust/src/keccak/keccak.all`                                                           | Keccak `.all` vector file used by `keccak-rust-json`                                                                                          |
 | `KECCAK_N_VECTORS`           | `10`                                                                                   | Number of Keccak vectors compiled into and packed for the Keccak guest; `-1` means all vectors                                                |
 | `KECCAK_JSON_FILE`           | `rust/target/riscv64im-unknown-none-elf/release/keccak.json`                           | JSON path written by `keccak-rust-json`                                                                                                       |
-| `GP_INPUT`                   | `""`                                                                                   | SSZ input file fed to the l2-execution guest by `gp-exec` (a complete `[u64 len][SSZ body]` blob)                                            |
-| `GP_ZKC_EXEC_FLAGS`          | `-q`                                                                                   | Flags passed to `zkc exec` by `gp-exec`; defaults to quiet because a full guest trace can be many GB                                          |
 
 `IN_BYTES` values are expected in big-endian hex format.
 All `.all` vector files contain one big-endian `IN_BYTES` value per line.

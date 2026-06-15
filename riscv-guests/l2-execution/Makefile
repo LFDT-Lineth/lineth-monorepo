@@ -11,7 +11,7 @@
 
 # guest-program = gp
 
-.PHONY: fetch test spec-test clean gp-linker-script gp-compile gp-exec gp-debug
+.PHONY: fetch test spec-test clean gp-linker-script gp-compile gp-exec gp-debug gp-require-input
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -35,6 +35,10 @@ GP_INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
 
 # If true, generates an objdump of the generated ELF for debugging purposes
 OBJDUMP     ?= false
+
+# If true, build with the arithmetization keccak wrapper (prover-accelerated
+# custom op) instead of the standard zig keccak.
+KECCAK_ACCEL ?= false
 
 # ── Proving-system-agnostic guest lifecycle ─────────────────────────────────
 fetch:
@@ -70,7 +74,7 @@ gp-linker-script:
 	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) linker-script LINKER_SCRIPT=$(MAKEFILE_DIR)../build_common/linker_script.ld
 
 gp-compile: gp-linker-script
-	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS)
+	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true)
 	@if command -v riscv64-unknown-elf-objdump >/dev/null 2>&1; then \
 		if [ "$(OBJDUMP)" = "true" ]; then \
 			echo "\nDisassembling $(GP_BIN)"; \
@@ -80,8 +84,12 @@ gp-compile: gp-linker-script
 		echo "\nSkipping objdump: riscv64-unknown-elf-objdump is not on PATH"; \
 	fi
 
-gp-exec: gp-compile
+# Fail early on a missing/empty GP_INPUT instead of building then erroring in the converter.
+gp-require-input:
+	@[ -n "$(GP_INPUT)" ] && [ -f "$(GP_INPUT)" ] || { echo "GP_INPUT not found: '$(GP_INPUT)' (set GP_INPUT=path/to/input.ssz)"; exit 1; }
+
+gp-exec: gp-require-input gp-compile
 	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-exec BIN_EXT="$(GP_BIN)" IN_BYTES="@$(GP_INPUT)" ZKC_EXEC_FLAGS=-q
 
-gp-debug: gp-compile
+gp-debug: gp-require-input gp-compile
 	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-debug BIN_EXT="$(GP_BIN)" IN_BYTES="@$(GP_INPUT)"

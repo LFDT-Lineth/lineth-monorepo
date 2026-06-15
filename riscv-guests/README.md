@@ -60,7 +60,7 @@ make -C l2-execution gp-compile ZIG=/path/to/zig
 make -C l2-execution gp-compile ZIG=/path/to/zig IN_ORIGIN=0x08800000   # override the input offset
 ```
 
-`make compile` builds the guest as a **statically-linked rv64im ELF** under `<guest>/zig-out/bin/` — the [zkvm-standards](https://github.com/eth-act/zkvm-standards/blob/main/standards/riscv-target/target.md) artifact ("Object Format: ELF, statically linked"). `make test` runs the native Zig unit tests (see [Native test dependencies](#native-test-dependencies)).
+`make -C l2-execution gp-compile` builds the guest as a **statically-linked rv64im ELF** under `<guest>/zig-out/bin/` — the [zkvm-standards](https://github.com/eth-act/zkvm-standards/blob/main/standards/riscv-target/target.md) artifact ("Object Format: ELF, statically linked"). `make test` runs the native Zig unit tests (see [Native test dependencies](#native-test-dependencies)).
 
 ### Spec tests (l2-execution only — full EF zkevm fixture suite)
 
@@ -82,11 +82,11 @@ The runner walks the `blockchain_tests/` tree from the lazy `execution_spec_test
 - **Guest unit tests** — `zig fmt --check` plus the orchestrated `make test` (every guest in `GUESTS`).
 - **l2-execution EF spec tests** — the full fixture suite via `make spec-test` (fail-hard; ~2,900 files / ~23k blocks, minutes on a warm cache).
 
-The shared setup lives in [`.github/actions/setup-riscv-guests`](../.github/actions/setup-riscv-guests/action.yml): it installs the Zig pinned in `.zigversion` (via community mirrors — ziglang.org prunes dev builds), the apt crypto packages, and blst/mcl built from pinned upstream sources into `/usr/local`, with the builds and Zig package fetches cached. Running a guest **inside the ZKC interpreter** in CI is a separate, later stage: the `make gp-compile` → ELF→JSON → `zkc` path works locally (see below); wiring it into CI (which also needs `zkc` + `go`) is still pending.
+The shared setup lives in [`.github/actions/setup-riscv-guests`](../.github/actions/setup-riscv-guests/action.yml): it installs the Zig pinned in `.zigversion` (via community mirrors — ziglang.org prunes dev builds), the apt crypto packages, and blst/mcl built from pinned upstream sources into `/usr/local`, with the builds and Zig package fetches cached. Running a guest **inside the ZKC interpreter** in CI is a separate, later stage: the `make -C l2-execution gp-compile` → ELF→JSON → `zkc` path works locally (see below); wiring it into CI (which also needs `zkc` + `go`) is still pending.
 
 ## ZKC Interpreter Integration
 
-Running a guest in the ZKC interpreter goes ELF → JSON → `zkc`. `make gp-compile` produces the statically-linked ELF (entry stub + rv64im memory layout from `build_common`'s `installGuestElf`, shared by all guests); the ELF→JSON conversion + `zkc` invocation are owned by [`arithmetization/src/test/Makefile`](../arithmetization/src/test/Makefile) (single source of truth). A guest's `exec`/`debug` build the ELF and **delegate** the run there:
+Running a guest in the ZKC interpreter goes ELF → JSON → `zkc`. `make -C l2-execution gp-compile` produces the statically-linked ELF (entry stub + rv64im memory layout from `build_common`'s `installGuestElf`, shared by all guests); the ELF→JSON conversion + `zkc` invocation are owned by [`arithmetization/src/test/Makefile`](../arithmetization/src/test/Makefile) (single source of truth). A guest's `gp-exec`/`gp-debug` build the ELF and **delegate** the run there:
 
 ```bash
 make -C l2-execution gp-debug GP_INPUT=path/to/input.ssz

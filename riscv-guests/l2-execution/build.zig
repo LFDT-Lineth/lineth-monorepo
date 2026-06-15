@@ -66,7 +66,7 @@ pub fn build(b: *std.Build) void {
     guest_module.addImport("zesu_zkvm_accel", zesu_accel_mod);
     guest_module.addImport("linea_zkvm_accel", linea_accel_mod);
     guest_module.addImport("linea_zkvm_io", linea_io_mod);
-    guest_module.addOptions("build_options", guest_options); // for accelerants
+    guest_module.addOptions("build_options", guest_options); // keccak_accel flag, read in zkvm_provide.zig
     common.clearFreestandingNativeLinkage(b, guest_module);
     common.installGuestElf(b, guest_module, gp_name);
 

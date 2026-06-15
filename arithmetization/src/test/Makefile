@@ -3,7 +3,7 @@
 # Moreover, ABI being LP64 (soft-float) is relevant only for float numbers, which we do not use, so it can be omitted as well.
 
 # Declare all targets as phony to prevent conflicts with files of the same name
-.PHONY: exec debug compile elf-exec elf-debug elf-to-json install-zkc zkc-exec zkc-debug clean clean-all linker-script verify-elf vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec gp-exec gp-build require-gp-input require-test require-src require-bin-ext require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode
+.PHONY: exec debug compile elf-exec elf-debug elf-to-json install-zkc zkc-exec zkc-debug clean clean-all linker-script verify-elf vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-bin-ext require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode
 
 # Keep validation, build, and execution targets running in order
 .NOTPARALLEL:
@@ -156,37 +156,6 @@ elf-debug: elf-to-json
 elf-to-json: require-bin-ext
 # Generate JSON from ELF
 	$(call ELF_TO_JSON,$(BIN_EXT),$(JSON_EXT))
-
-#####################################################################
-# l2-execution guest program target
-#####################################################################
-
-# The l2-execution guest lives outside arithmetization, under riscv-guests/.
-GP_DIR   := $(abspath $(ARITHMETIZATION_DIR)/../riscv-guests/l2-execution)
-GP_ELF   := $(GP_DIR)/zig-out/bin/evm_execution_guest
-# SSZ input to feed the guest (a complete [u64 len][SSZ body] blob).
-GP_INPUT ?=
-# zkc flags for the run; default quiet because a full guest trace is enormous.
-GP_ZKC_EXEC_FLAGS ?= -q
-
-# Always invoke `zig build` with the flag: Zig's own cache keys on the -D option,
-# so this is a fast no-op when the accel ELF is already current, and a real
-# rebuild when the previous build used different flags or stale sources.
-gp-build:
-	@echo "\nBuilding l2-execution guest (keccak-accel) in $(GP_DIR)"
-	cd "$(GP_DIR)" && zig build -Dkeccak-accel=true
-
-# Build the guest if needed, then run it in zkc on GP_INPUT.
-# Usage: make gp-exec GP_INPUT=path/to/input.ssz
-gp-exec: require-gp-input gp-build
-	$(MAKE) -f $(MAKEFILE_DIR)Makefile elf-exec \
-		BIN_EXT="$(GP_ELF)" \
-		IN_BYTES="@$(abspath $(GP_INPUT))" \
-		ZKC_EXEC_FLAGS="$(GP_ZKC_EXEC_FLAGS)"
-
-require-gp-input:
-	@[ -n "$(GP_INPUT)" ] || { echo "GP_INPUT is mandatory. Usage: make gp-exec GP_INPUT=path/to/input.ssz"; exit 1; }
-	@[ -f "$(GP_INPUT)" ] || { echo "GP_INPUT file not found: $(GP_INPUT)"; exit 1; }
 
 install-zkc:
 	$(MAKE) -C $(ARITHMETIZATION_DIR) install-zkc
