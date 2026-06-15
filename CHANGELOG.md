@@ -3,6 +3,7 @@
 ### 🚀 Features
 
 - *(linea-besu)* Add interfaces module: security and LineaTransactionSelectionResult (#3238)
+- *(linea-besu)* Forced transactions integration with security policy transaction selector (#3295)
 
 ### 🐛 Bug Fixes
 
@@ -19,6 +20,11 @@
 - *(prover)* L2 Messages (#3195)
 - *(arithmetization)* Security alert 513 on loop condition in BlockDataInstruction (#3253)
 - *(prover)* Incorporate `isAllowedCircuitID` into aggregation FPI (#3194)
+- *(prover)* Invalidity prover bug fixes (#3138)
+
+### 🚜 Refactor
+
+- *(misc)* Rename Linea to Lineth across documentation and codebase (#3316)
 
 ### ⚙️ Miscellaneous Tasks
 
@@ -40,3 +46,8 @@
 - *(coordinator)* Log and message error improvements (#3193)
 - *(maru)* Remove spring dependency management (#3205)
 - Update gnark dependency (#3215)
+- *(ci)* Migrate amd64 runners to gha-lfdt-lineth-ss scale sets (#3280)
+- *(misc)* Rename Consensys/linea-monorepo references to LFDT-Lineth/lineth-monorepo (#3297)
+- *(misc)* Point references at in-tree paths for previously-external repos (#3309)
+- *(coordinator)* Favour generic name ChainSecurityRuleViolation over specific implementation Phylax (#3330)
+- *(packages)* Rename npm package scope (#3324)

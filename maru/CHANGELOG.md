@@ -15,3 +15,4 @@
 - *(maru)* Follow up for pr 3236 (#3237)
 - *(maru)* Split testing workflow (#3234)
 - *(maru)* Remove unused test (#3279)
+- *(maru)* Per-test log isolation + bounded integration-test concurrency (#3343)
