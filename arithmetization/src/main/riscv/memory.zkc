@@ -61,9 +61,11 @@ pub input decoded_stype(i:u64) -> (imm12:Imm12, rs2:Register, rs1:Register, func
 // offset is fully sign-extended into a ready-to-use 64-bit `imm` at decode time.
 pub input decoded_btype(i:u64) -> (imm:DoubleWord, rs2:Register, rs1:Register, funct3:Funct3)
 
-// Pre-decoded J-type field split, indexed by the same instruction index.
+// Pre-decoded J-type record, indexed by the same instruction index.
 // Replaces `imm20::imm10_1::imm11::imm19_12::rd = instruction_parameters` in j_type.zkc.
-pub input decoded_jtype(i:u64) -> (imm20:u1, imm10_1:u10, imm11:u1, imm19_12:u8, rd:Register)
+// The 21-bit signed jump offset is fully sign-extended into a ready-to-use 64-bit
+// `imm` at decode time, so the runtime shift and sign extension are eliminated.
+pub input decoded_jtype(i:u64) -> (imm:DoubleWord, rd:Register)
 
 // Pre-decoded U-type field split, indexed by the same instruction index.
 // Replaces `imm20::rd = instruction_parameters` in u_type.zkc.
