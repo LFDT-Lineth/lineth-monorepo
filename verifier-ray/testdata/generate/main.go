@@ -41,7 +41,7 @@ func main() {
 	writePoseidonCases(&out)
 	writeFiatShamirCases(&out)
 	writeRuntimeTraceCases(&out)
-	fixtureCases, compiledSystems, err := buildFixtureCases()
+	fixtureCases, compiledSystems, err := buildCompiledFixtureCases()
 	if err != nil {
 		panic(err)
 	}
@@ -568,7 +568,7 @@ func extTraceCell(value field.Ext) runtimeTraceCell {
 	return runtimeTraceCell{extValue: &value}
 }
 
-type vanishingFixtureCase struct {
+type fixtureCase struct {
 	name    string
 	honest  vanishingProofView
 	invalid *vanishingProofView
@@ -581,7 +581,7 @@ type vanishingProofView struct {
 	moduleSizes    []int
 }
 
-type scenarioAssign func(rt *wiop.Runtime)
+type assignFn func(rt *wiop.Runtime)
 
 func compileFullPipeline(sys *wiop.System) {
 	rangecheck.Compile(sys)
@@ -591,11 +591,11 @@ func compileFullPipeline(sys *wiop.System) {
 	global.Compile(sys)
 }
 
-func buildFixtureCases() ([]vanishingFixtureCase, []codegen.CompiledSystem, error) {
-	var cases []vanishingFixtureCase
+func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error) {
+	var cases []fixtureCase
 	var systems []codegen.CompiledSystem
 
-	add := func(source, name string, sys *wiop.System, honest scenarioAssign, invalid scenarioAssign) error {
+	add := func(source, name string, sys *wiop.System, honest assignFn, invalid assignFn) error {
 		compileFullPipeline(sys)
 		routing, err := codegen.BuildCoinRouting(sys)
 		if err != nil {
@@ -620,7 +620,7 @@ func buildFixtureCases() ([]vanishingFixtureCase, []codegen.CompiledSystem, erro
 			proof := buildVanishingProofView(sys, invalid)
 			invalidProof = &proof
 		}
-		cases = append(cases, vanishingFixtureCase{name: prefixedName, honest: honestProof, invalid: invalidProof})
+		cases = append(cases, fixtureCase{name: prefixedName, honest: honestProof, invalid: invalidProof})
 		systems = append(systems, codegen.CompiledSystem{Name: prefixedName, Routing: routing, Vanishing: vanishingSystem, LogDeriv: logDeriv})
 		return nil
 	}
@@ -628,6 +628,30 @@ func buildFixtureCases() ([]vanishingFixtureCase, []codegen.CompiledSystem, erro
 	for _, factory := range wioptest.VanishingScenarios() {
 		sc := factory()
 		if err := add("Vanishing", sc.Name, sc.Sys, sc.AssignHonest, sc.AssignInvalid); err != nil {
+			return nil, nil, err
+		}
+	}
+	for _, factory := range wioptest.LocalVanishingScenarios() {
+		sc := factory()
+		if err := add("LocalVanishing", sc.Name, sc.Sys, sc.AssignHonest, sc.AssignInvalid); err != nil {
+			return nil, nil, err
+		}
+	}
+	for _, factory := range wioptest.LogDerivativeSumCompilerScenarios() {
+		sc := factory()
+		if err := add("LogDerivativeSumCompiler", sc.Name, sc.Sys, sc.AssignWitness, nil); err != nil {
+			return nil, nil, err
+		}
+	}
+	for _, factory := range wioptest.LookupScenarios() {
+		sc := factory()
+		if err := add("Lookup", sc.Name, sc.Sys, sc.AssignWitness, nil); err != nil {
+			return nil, nil, err
+		}
+	}
+	for _, factory := range wioptest.RangeCheckCompilerScenarios() {
+		sc := factory()
+		if err := add("RangeCheckCompiler", sc.Name, sc.Sys, sc.AssignWitness, nil); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -655,30 +679,6 @@ func buildFixtureCases() ([]vanishingFixtureCase, []codegen.CompiledSystem, erro
 		honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 99, 7, 7))) }
 		invalid := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 98, 7, 7))) }
 		if err := add("Vanishing", "DynamicLagrangeSelectorBoundary", sys, honest, invalid); err != nil {
-			return nil, nil, err
-		}
-	}
-	for _, factory := range wioptest.LocalVanishingScenarios() {
-		sc := factory()
-		if err := add("LocalVanishing", sc.Name, sc.Sys, sc.AssignHonest, sc.AssignInvalid); err != nil {
-			return nil, nil, err
-		}
-	}
-	for _, factory := range wioptest.LogDerivativeSumCompilerScenarios() {
-		sc := factory()
-		if err := add("LogDerivativeSumCompiler", sc.Name, sc.Sys, sc.AssignWitness, nil); err != nil {
-			return nil, nil, err
-		}
-	}
-	for _, factory := range wioptest.LookupScenarios() {
-		sc := factory()
-		if err := add("Lookup", sc.Name, sc.Sys, sc.AssignWitness, nil); err != nil {
-			return nil, nil, err
-		}
-	}
-	for _, factory := range wioptest.RangeCheckCompilerScenarios() {
-		sc := factory()
-		if err := add("RangeCheckCompiler", sc.Name, sc.Sys, sc.AssignWitness, nil); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -724,7 +724,7 @@ func buildDynamicLagrangeSelectorBoundarySystem() (*wiop.System, *wiop.Column) {
 	return sys, col
 }
 
-func buildVanishingProofView(sys *wiop.System, assign scenarioAssign) vanishingProofView {
+func buildVanishingProofView(sys *wiop.System, assign assignFn) vanishingProofView {
 	rt := wiop.NewRuntime(sys)
 	assign(&rt)
 	runProver(&rt)
@@ -826,9 +826,9 @@ func runtimeTraceRoundFromRuntime(rt wiop.Runtime, round *wiop.Round) runtimeTra
 	return trace
 }
 
-func writeCompiledFixtures(cases []vanishingFixtureCase, systems []codegen.CompiledSystem) error {
+func writeCompiledFixtures(cases []fixtureCase, systems []codegen.CompiledSystem) error {
 	var out bytes.Buffer
-	writeFixtureHeader(&out)
+	writeCompiledHeader(&out)
 	for i := range cases {
 		if err := codegen.WriteSpecZigWithOptions(&out, systems[i].Routing, codegen.SpecZigOptions{
 			ProtocolImport: "verifier_ray.protocol",
@@ -848,9 +848,9 @@ func writeCompiledFixtures(cases []vanishingFixtureCase, systems []codegen.Compi
 		}); err != nil {
 			return err
 		}
-		writeFixtureScenario(&out, i, cases[i])
+		writeCompiledScenario(&out, i, cases[i])
 	}
-	writeFixtureScenarioList(&out, len(cases))
+	writeCompiledScenarioList(&out, len(cases))
 
 	data := out.Bytes()
 	zigfmt, err := runZigFmt(data)
@@ -860,7 +860,7 @@ func writeCompiledFixtures(cases []vanishingFixtureCase, systems []codegen.Compi
 	return os.WriteFile(filepath.Join("..", "generated", "vanishing.zig"), data, 0o644)
 }
 
-func writeFixtureHeader(out *bytes.Buffer) {
+func writeCompiledHeader(out *bytes.Buffer) {
 	fmt.Fprintln(out, "// Code generated by verifier-ray/testdata/generate; DO NOT EDIT.")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "const verifier_ray = @import(\"verifier_ray\");")
@@ -877,7 +877,7 @@ func writeFixtureHeader(out *bytes.Buffer) {
 	fmt.Fprintln(out)
 }
 
-func writeFixtureScenario(out *bytes.Buffer, idx int, tc vanishingFixtureCase) {
+func writeCompiledScenario(out *bytes.Buffer, idx int, tc fixtureCase) {
 	fmt.Fprintf(out, "const scenario_%d = Scenario{\n", idx)
 	fmt.Fprintf(out, "    .name = \"%s\",\n", zigString(tc.name))
 	fmt.Fprintf(out, "    .spec = system_%d_spec,\n", idx)
@@ -893,7 +893,7 @@ func writeFixtureScenario(out *bytes.Buffer, idx int, tc vanishingFixtureCase) {
 	fmt.Fprintln(out)
 }
 
-func writeFixtureScenarioList(out *bytes.Buffer, count int) {
+func writeCompiledScenarioList(out *bytes.Buffer, count int) {
 	fmt.Fprintln(out, "pub const scenarios = [_]Scenario{")
 	for i := range count {
 		fmt.Fprintf(out, "    scenario_%d,\n", i)
@@ -905,7 +905,7 @@ func writeVanishingProofView(out *bytes.Buffer, proof vanishingProofView, indent
 	fmt.Fprintf(out, "%s.{\n", indent)
 	fmt.Fprintf(out, "%s    .rounds = &.{\n", indent)
 	for _, round := range proof.rounds {
-		writeVanishingRuntimeTraceRound(out, round, indent+"        ")
+		writeTraceRound(out, round, indent+"        ")
 	}
 	fmt.Fprintf(out, "%s    },\n", indent)
 	fmt.Fprintf(out, "%s    .witness_claims = &%s,\n", indent, extSlice(proof.witnessClaims))
@@ -914,22 +914,22 @@ func writeVanishingProofView(out *bytes.Buffer, proof vanishingProofView, indent
 	fmt.Fprintf(out, "%s},\n", indent)
 }
 
-func writeVanishingRuntimeTraceRound(out *bytes.Buffer, round runtimeTraceRound, indent string) {
+func writeTraceRound(out *bytes.Buffer, round runtimeTraceRound, indent string) {
 	fmt.Fprintf(out, "%s.{\n", indent)
 	fmt.Fprintf(out, "%s    .columns = &.{\n", indent)
 	for _, column := range round.columns {
-		writeVanishingRuntimeTraceColumn(out, column, indent+"        ")
+		writeTraceColumn(out, column, indent+"        ")
 	}
 	fmt.Fprintf(out, "%s    },\n", indent)
 	fmt.Fprintf(out, "%s    .cells = &.{\n", indent)
 	for _, cell := range round.cells {
-		writeVanishingRuntimeTraceCell(out, cell, indent+"        ")
+		writeTraceCell(out, cell, indent+"        ")
 	}
 	fmt.Fprintf(out, "%s    },\n", indent)
 	fmt.Fprintf(out, "%s},\n", indent)
 }
 
-func writeVanishingRuntimeTraceColumn(out *bytes.Buffer, column runtimeTraceColumn, indent string) {
+func writeTraceColumn(out *bytes.Buffer, column runtimeTraceColumn, indent string) {
 	switch {
 	case column.commitments != nil:
 		fmt.Fprintf(out, "%s.{ .oracle = &%s },\n", indent, commitmentSlice(column.commitments))
@@ -942,7 +942,7 @@ func writeVanishingRuntimeTraceColumn(out *bytes.Buffer, column runtimeTraceColu
 	}
 }
 
-func writeVanishingRuntimeTraceCell(out *bytes.Buffer, cell runtimeTraceCell, indent string) {
+func writeTraceCell(out *bytes.Buffer, cell runtimeTraceCell, indent string) {
 	switch {
 	case cell.baseValue != nil:
 		fmt.Fprintf(out, "%s.{ .base = %d },\n", indent, u(*cell.baseValue))
