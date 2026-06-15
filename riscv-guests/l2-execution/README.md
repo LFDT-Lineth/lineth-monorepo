@@ -17,8 +17,7 @@ Run from the parent directory:
 
 ```bash
 cd riscv-guests
-make compile GUEST=l2-execution ZIG=/path/to/zig
-make test ZIG=/path/to/zig
+make gp-exec
 ```
 
-`make compile` writes the guest as a **statically-linked rv64im ELF** to `riscv-guests/l2-execution/zig-out/bin/evm_execution_guest` — the [zkvm-standards](https://github.com/eth-act/zkvm-standards/blob/main/standards/riscv-target/target.md) artifact ("Object Format: ELF, statically linked"), linked via `build_common`'s shared `installGuestElf`. The ZKC interpreter loads it (via ELF→JSON); `make exec`/`fixture-exec` build it and run it there — see the [parent README](../README.md#zkc-interpreter-integration). `make test` runs the native Zig test, which requires the native crypto libraries documented in the [parent README](../README.md#native-test-dependencies).
+`make gp-compile` writes the guest as a **statically-linked rv64im ELF** to `riscv-guests/l2-execution/zig-out/bin/evm_execution_guest` — the [zkvm-standards](https://github.com/eth-act/zkvm-standards/blob/main/standards/riscv-target/target.md) artifact ("Object Format: ELF, statically linked"), linked via `build_common`'s shared `installGuestElf`. The ZKC interpreter loads it (via ELF→JSON); `make gp-exec` build it and run it there — see the [parent README](../README.md#zkc-interpreter-integration). `make test` runs the native Zig test, which requires the native crypto libraries documented in the [parent README](../README.md#native-test-dependencies).
