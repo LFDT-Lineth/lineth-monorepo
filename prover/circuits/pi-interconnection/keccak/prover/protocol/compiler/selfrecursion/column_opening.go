@@ -300,8 +300,6 @@ func (ctx *SelfRecursionCtx) CollapsingPhase() {
 		// The collapsed preimage for the non SIS rounds
 		// Computed only if there are non zero number of non SIS rounds
 		var (
-			// The random linear combination of the collapsed preimage
-			// for the non SIS rounds
 			preImageNonSisEval ifaces.Accessor
 			preImageSisEval    ifaces.Accessor
 			// offset denotes the running power of alpha in the BivariateEval for the
@@ -310,24 +308,47 @@ func (ctx *SelfRecursionCtx) CollapsingPhase() {
 			preImageEval ifaces.Accessor
 		)
 		if len(ctx.MIMCMetaData.ToHashSizes) > 0 {
-			ctx.Columns.CollapsedPreimagesNonSis = expr_handle.RandLinCombCol(
-				ctx.Comp,
-				accessors.NewFromCoin(ctx.Coins.Collapse),
-				ctx.Columns.WholePreimagesNonSis,
-			)
+			// WholePreimagesNonSis is round-indexed. For each round i,
+			// col[k*colChunksPad + q] = q-th polynomial at opened column k,
+			// where colChunksPad = nextPow2(Pi_i).
+			// We evaluate sum_k collapse^k * sum_q alpha^q * col[k*colChunksPad+q]
+			// using EvalCoeffBivariate(col, alpha, collapse, colChunksPad, nextPow2(T)).
+			// The zero-padded entries (q >= Pi_i) don't contribute since they are zero.
+			alpha := accessors.NewFromCoin(ctx.Coins.Alpha)
+			collapse := accessors.NewFromCoin(ctx.Coins.Collapse)
+			numHashPad := utils.NextPowerOfTwo(ctx.VortexCtx.NbColsToOpen())
 
-			preImageNonSisEval = functionals.CoeffEval(
-				ctx.Comp,
-				ctx.constencyUalphaQPreimageRight(),
-				ctx.Coins.Alpha,
-				ctx.Columns.CollapsedPreimagesNonSis,
-			)
-
+			var preImageNonSisSymb *symbolic.Expression
 			for i := range ctx.MIMCMetaData.ToHashSizes {
-				// We add the number of polynomials per non SIS round
-				// to the offset
+				colChunksPad := ctx.MIMCMetaData.ColChunksPad[i]
+				roundEval := functionals.EvalCoeffBivariate(
+					ctx.Comp,
+					fmt.Sprintf("%v_NONSIS_%v", ctx.constencyUalphaQPreimageRight(), i),
+					ctx.Columns.WholePreimagesNonSis[i],
+					alpha,
+					collapse,
+					colChunksPad,
+					numHashPad,
+				)
+				var term *symbolic.Expression
+				if offset > 0 {
+					term = symbolic.Mul(symbolic.Pow(alpha, offset), roundEval)
+				} else {
+					term = symbolic.Mul(symbolic.NewConstant(1), roundEval)
+				}
+				if preImageNonSisSymb == nil {
+					preImageNonSisSymb = term
+				} else {
+					preImageNonSisSymb = symbolic.Add(preImageNonSisSymb, term)
+				}
+				// Advance offset by Pi_i (the actual polynomial count), not colChunksPad,
+				// because the Ualpha polynomial uses original polynomial indices.
 				offset += ctx.MIMCMetaData.ToHashSizes[i]
 			}
+			preImageNonSisEval = accessors.NewFromExpression(
+				preImageNonSisSymb,
+				fmt.Sprintf("PREIMAGE_NONSIS_EVAL_%v", ctx.SelfRecursionCnt),
+			)
 		}
 		/*
 			- The preimages are given in the form of several columns of the form:

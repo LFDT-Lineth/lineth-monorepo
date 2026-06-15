@@ -75,6 +75,7 @@ type ExprNode struct {
 	Constant         field.Element
 	Operator         Operator
 	Operands         []int
+	SelectorPosition int
 }
 
 type ExprKind int
@@ -85,6 +86,7 @@ const (
 	ExprCoinValue
 	ExprConstant
 	ExprOp
+	ExprLagrangeSelector
 )
 
 type ScalarRef struct {
@@ -256,6 +258,9 @@ func appendExpr(module *VanishingModule, views map[viewKey]int, routing CoinRout
 				SourceName: e.Context.Label,
 			},
 		})
+		return len(module.Expressions) - 1, nil
+	case *wiop.LagrangeSelector:
+		module.Expressions = append(module.Expressions, ExprNode{Kind: ExprLagrangeSelector, SelectorPosition: e.Position})
 		return len(module.Expressions) - 1, nil
 	default:
 		return 0, &UnsupportedExpressionError{Type: fmt.Sprintf("%T", expr)}
