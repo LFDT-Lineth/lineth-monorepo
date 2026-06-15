@@ -29,6 +29,9 @@ pub fn build(b: *std.Build) void {
     ) orelse false;
     const profiling_opts = b.addOptions();
     profiling_opts.addOption(bool, "is_enabled", verifier_profiling);
+    var r5_marks_arg = b.option(bool, "r5-marks", "Enable R5 phase markers") orelse false;
+    r5_marks_arg = r5_marks_arg and r5; // only allow R5 marks when building for R5 target
+    profiling_opts.addOption(bool, "is_r5_marks", r5_marks_arg);
 
     const verifier_mod = b.addModule("verifier_ray", .{
         .root_source_file = b.path("src/lib.zig"),
