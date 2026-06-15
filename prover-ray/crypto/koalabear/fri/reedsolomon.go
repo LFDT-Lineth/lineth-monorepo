@@ -1,17 +1,4 @@
-// Copyright Consensys Software Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
-// the License. You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
-// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
-// specific language governing permissions and limitations under the License.
-//
-// SPDX-License-Identifier: Apache-2.0
-
-package reedsolomon
+package fri
 
 import (
 	"math/bits"
@@ -20,8 +7,8 @@ import (
 	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
-// Encoder is a Reed-Solomon error correcting-code encoder and decoder.
-type Encoder struct {
+// RSEncoder is a Reed-Solomon error correcting-code encoder and decoder.
+type RSEncoder struct {
 	// Domain is the codeword domain (cardinality N), used for the forward FFT.
 	Domain *fft.Domain
 	// smallDomain has cardinality PlainTextSize and is used for the interpolating
@@ -32,8 +19,14 @@ type Encoder struct {
 }
 
 // NewEncoder constructs a ReedSolomonCodec and its inside domain.
-func NewEncoder(N uint64, plainTextSize int) Encoder {
-	return Encoder{
+func NewEncoder(N uint64, plainTextSize int) RSEncoder {
+
+	// TODO: rename N
+	if plainTextSize >= int(N) {
+		panic("plainTextSize > N")
+	}
+
+	return RSEncoder{
 		Domain:        fft.NewDomain(N),
 		smallDomain:   fft.NewDomain(uint64(plainTextSize)),
 		PlainTextSize: plainTextSize,
@@ -41,8 +34,8 @@ func NewEncoder(N uint64, plainTextSize int) Encoder {
 }
 
 // NewEncoderWithDomain constructs a ReedSolomonCodec.
-func NewEncoderWithDomain(domain *fft.Domain, plainTextSize int) Encoder {
-	return Encoder{
+func NewEncoderWithDomain(domain *fft.Domain, plainTextSize int) RSEncoder {
+	return RSEncoder{
 		Domain:        domain,
 		smallDomain:   fft.NewDomain(uint64(plainTextSize)),
 		PlainTextSize: plainTextSize,
@@ -55,7 +48,9 @@ func NewEncoderWithDomain(domain *fft.Domain, plainTextSize int) Encoder {
 // Optional fftOpts are forwarded to both internal FFTs (e.g. to cap inner
 // parallelism with fft.WithNbTasks when Encode is itself called inside a
 // parallel.Execute loop).
-func (codec *Encoder) Encode(p []field.Element, fftOpt ...fft.Option) []field.Element {
+//
+// TODO: codec -> enc for all functions
+func (codec *RSEncoder) Encode(p []field.Element, fftOpt ...fft.Option) []field.Element {
 
 	// get the size of p
 	n := len(p)
@@ -79,7 +74,7 @@ func (codec *Encoder) Encode(p []field.Element, fftOpt ...fft.Option) []field.El
 // EncodeExt evaluates an extension-field polynomial on the codec domain.
 // The input p is in Lagrange normal form over d; the output is a fresh
 // extension polynomial in Lagrange normal form over codec.Domain.
-func (codec *Encoder) EncodeExt(p []field.Ext, fftOpt ...fft.Option) []field.Ext {
+func (codec *RSEncoder) EncodeExt(p []field.Ext, fftOpt ...fft.Option) []field.Ext {
 	n := len(p)
 
 	N := codec.Domain.Cardinality
@@ -91,6 +86,11 @@ func (codec *Encoder) EncodeExt(p []field.Ext, fftOpt ...fft.Option) []field.Ext
 	codec.Domain.FFTExt6(_p, fft.DIT, fftOpt...)
 
 	return _p
+}
+
+// InverseRate returns the inverse-rate of the code
+func (codec *RSEncoder) InverseRate() int {
+	return int(codec.Domain.Cardinality) / codec.PlainTextSize
 }
 
 // scatterBitReversedCoeffs expands n-bit-reversed coefficients into the

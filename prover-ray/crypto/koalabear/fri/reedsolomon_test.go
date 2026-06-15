@@ -1,4 +1,4 @@
-package reedsolomon
+package fri
 
 import (
 	"math/rand/v2"
