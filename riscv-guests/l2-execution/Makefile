@@ -41,8 +41,10 @@ OBJDUMP     ?= false
 KECCAK_ACCEL ?= false
 
 # ── Proving-system-agnostic guest lifecycle ─────────────────────────────────
-fetch:
+fetch: gp-linker-script
 	$(ZIG) build $(ZIG_BUILD_FLAGS) --fetch
+
+compile: gp-compile
 
 test: gp-linker-script
 	$(ZIG) build test $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS)
