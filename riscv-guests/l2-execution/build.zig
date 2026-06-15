@@ -14,8 +14,7 @@ pub fn build(b: *std.Build) void {
     // Keccak provider: standard zig keccak (zesu stdlibs_accel) by default; the
     // arithmetization keccak wrapper (prover-accelerated custom op) when opted in
     // with -Dkeccak-accel=true. Read by zkvm_provide.zig at comptime.
-    const keccak_accel = b.option(bool, "keccak-accel",
-        "Use the arithmetization keccak wrapper instead of standard zig keccak (default: standard)") orelse false;
+    const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: standard)") orelse false;
     const guest_options = b.addOptions();
     guest_options.addOption(bool, "keccak_accel", keccak_accel);
 
