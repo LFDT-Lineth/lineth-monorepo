@@ -1,7 +1,14 @@
-## [unreleased]
+## [1.0.1-devnet] - 2026-06-15
 
 ### 🐛 Bug Fixes
 
+- Readzero trace constraints (#2805)
+- Keccak cyclic counter (#2824)
+- *(keccakf)* Added the decomposition constraint (#2827)
+- Flattening limbs for gnark circuit (#2835)
+- Ecpair pairID and Index consistency (#2837)
+- *(sis)* Adds overflow check in the multiset hash (#2786)
+- *(prover)* Trace limits and segments (#3345)
 - *(coordinator, jvm-libs, e2e, state-recovery, prover, docker, misc)* Remove state manager request version (#3099)
 - *(ci)* Provide correct path to rlp_blocks.bin (#3125)
 - *(prover)* Update rlp_blocks.bin path in shnarf_calculator tests (#3129)
@@ -10,18 +17,27 @@
 - *(prover)* L2 Messages (#3195)
 - *(prover)* Incorporate `isAllowedCircuitID` into aggregation FPI (#3194)
 - *(prover)* Invalidity prover bug fixes (#3138)
+- *(limitless)* Size FLATTEN bases to trace limit x 8
 - *(prover)* Post small-fields constraints (#2845)
 
 ### 🚜 Refactor
 
 - *(misc)* Rename Linea to Lineth across documentation and codebase (#3316)
 
+### ⚡ Performance
+
+- *(limitless)* Load outer-circuit setup in background
+- *(limitless)* Cache compiled GL circuit per module
+- *(limitless)* Set sub-prover concurrency to 5
+
 ### ⚙️ Miscellaneous Tasks
 
+- Fix gofmt
 - Update gnark (#3089)
 - Update to latest gnark and gnark-crypto (#3142)
 - Update gnark dependency (#3215)
 - *(ci)* Migrate amd64 runners to gha-lfdt-lineth-ss scale sets (#3280)
+- *(limitless)* Clean up the code
 ## [1.1.0-devnet] - 2026-06-08
 
 ### 🚀 Features
