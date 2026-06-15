@@ -112,12 +112,22 @@ func BenchmarkVortexHashPathsByRows(b *testing.B) {
 func referenceNoSisTransversalHash(v []smartvectors.SmartVector) []field.Octuplet {
 	nbRows := len(v)
 	nbCols := v[0].Len()
+	// Right-pad to colChunksPad*8 to match the optimized implementation.
+	colChunks := (nbRows + 7) / 8
+	colChunksPad := 1
+	for colChunksPad < colChunks {
+		colChunksPad <<= 1
+	}
+	paddedSize := colChunksPad * 8
 	res := make([]field.Octuplet, nbCols)
-	curCol := make([]field.Element, nbRows)
+	curCol := make([]field.Element, paddedSize)
 	h := poseidon2_koalabear.NewMDHasher()
 	for col := 0; col < nbCols; col++ {
 		for row := 0; row < nbRows; row++ {
 			curCol[row] = v[row].Get(col)
+		}
+		for row := nbRows; row < paddedSize; row++ {
+			curCol[row] = field.Zero()
 		}
 		h.WriteElements(curCol...)
 		res[col] = h.SumElement()
