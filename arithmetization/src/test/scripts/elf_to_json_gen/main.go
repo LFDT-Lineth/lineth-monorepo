@@ -340,7 +340,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	// types declared for the inputs in memory.zkc, because zkc packs input
 	// records tightly by bit width:
 	//   decoded_core : opcode:Opcode(u7), instruction_type:Type(u3), instruction_parameters:u25
-	//   decoded_itype: funct3:Funct3(u3), imm12:Imm12(u12), rs1:Register(u5), rd:Register(u5)
+	//   decoded_itype: funct3:Funct3(u3), signext_imm12_64:DoubleWord(u64), rs1:Register(u5), rd:Register(u5)
 	//   decoded_rtype: funct7:Funct7(u7), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3), rd:Register(u5)
 	//   decoded_stype: imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3)
 	//   decoded_btype: imm:DoubleWord(u64), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3)
@@ -368,6 +368,14 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		rs2 := (instr >> 20) & 0x1f
 		imm12 := (instr >> 20) & 0xfff
 		funct7 := (instr >> 25) & 0x7f
+
+		// I-type: pre-sign-extend the 12-bit signed immediate to a ready-to-use
+		// 64-bit value. Its low 12 bits still carry the raw imm12 the interpreter
+		// needs for shift-amount / funct6 / funct7 / funct12 decoding.
+		signImm12 := uint64(imm12)
+		if (imm12>>11)&0x1 == 1 {
+			signImm12 |= 0xFFFFFFFFFFFFF000 // sign-extend: set bits [63:12]
+		}
 
 		// S-type immediate is split in the encoding (imm[11] :: imm[10:5] :: imm[4:0]);
 		// reassemble it into the 12-bit store immediate.
@@ -401,7 +409,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		coreBits.writeBits(uint64(params), 25)
 
 		itypeBits.writeBits(uint64(funct3), 3)
-		itypeBits.writeBits(uint64(imm12), 12)
+		itypeBits.writeBits(signImm12, 64)
 		itypeBits.writeBits(uint64(rs1), 5)
 		itypeBits.writeBits(uint64(rd), 5)
 
