@@ -769,6 +769,58 @@ func (am *Module) checkPointer() {
 		// Check #2 for READ-ZERO: IsFirst[i] * IsReadZero[i] * (LeafPlusPrev[i] - LeafMinusIndex[i])
 		expr8 := symbolic.Mul(cols.IsFirst, cols.IsReadZero, symbolic.Sub(cols.LeafPlusPrev[i], cols.LeafMinusIndex[i]))
 		am.Comp.InsertGlobal(am.Round, am.qnamef("READ_ZERO_POINTER_2_%d", i), expr8)
+
+		// Binding constraints: anchor pointer columns to actual leaf data
+		// (LeafOpenings.Next/Prev) and Merkle positions (Positions).
+		//
+		// Row layout (from IsFirst row):
+		//   INSERT:    minus=0, plus=4  (6 rows total)
+		//   DELETE:    minus=0, deleted=2, plus=4  (6 rows total)
+		//   READ-ZERO: minus=0, plus=1  (2 rows total)
+
+		// LeafMinusIndex == Positions (shift 0, all three ops)
+		activeAll := symbolic.Add(
+			symbolic.Mul(cols.IsFirst, cols.IsInsert),
+			symbolic.Mul(cols.IsFirst, cols.IsDelete),
+			symbolic.Mul(cols.IsFirst, cols.IsReadZero),
+		)
+		am.Comp.InsertGlobal(am.Round, am.qnamef("POINTER_BIND_MINUS_INDEX_%d", i),
+			symbolic.Mul(activeAll, symbolic.Sub(cols.LeafMinusIndex[i], cols.Positions[i])))
+
+		// LeafMinusNext == LeafOpenings.Next (shift 0, all three ops)
+		am.Comp.InsertGlobal(am.Round, am.qnamef("POINTER_BIND_MINUS_NEXT_%d", i),
+			symbolic.Mul(activeAll, symbolic.Sub(cols.LeafMinusNext[i], cols.LeafOpenings.Next[i])))
+
+		// LeafPlusIndex == Shift(Positions, 4) for INSERT and DELETE
+		activeInsertDelete := symbolic.Mul(cols.IsFirst, symbolic.Add(cols.IsInsert, cols.IsDelete))
+		am.Comp.InsertGlobal(am.Round, am.qnamef("POINTER_BIND_PLUS_INDEX_INS_DEL_%d", i),
+			symbolic.Mul(activeInsertDelete, symbolic.Sub(cols.LeafPlusIndex[i], column.Shift(cols.Positions[i], 4))))
+
+		// LeafPlusPrev == Shift(LeafOpenings.Prev, 4) for INSERT and DELETE
+		am.Comp.InsertGlobal(am.Round, am.qnamef("POINTER_BIND_PLUS_PREV_INS_DEL_%d", i),
+			symbolic.Mul(activeInsertDelete, symbolic.Sub(cols.LeafPlusPrev[i], column.Shift(cols.LeafOpenings.Prev[i], 4))))
+
+		// LeafPlusIndex == Shift(Positions, 1) for READ-ZERO
+		activeReadZero := symbolic.Mul(cols.IsFirst, cols.IsReadZero)
+		am.Comp.InsertGlobal(am.Round, am.qnamef("POINTER_BIND_PLUS_INDEX_RZ_%d", i),
+			symbolic.Mul(activeReadZero, symbolic.Sub(cols.LeafPlusIndex[i], column.Shift(cols.Positions[i], 1))))
+
+		// LeafPlusPrev == Shift(LeafOpenings.Prev, 1) for READ-ZERO
+		am.Comp.InsertGlobal(am.Round, am.qnamef("POINTER_BIND_PLUS_PREV_RZ_%d", i),
+			symbolic.Mul(activeReadZero, symbolic.Sub(cols.LeafPlusPrev[i], column.Shift(cols.LeafOpenings.Prev[i], 1))))
+
+		// LeafDeletedIndex == Shift(Positions, 2) for DELETE
+		activeDelete := symbolic.Mul(cols.IsFirst, cols.IsDelete)
+		am.Comp.InsertGlobal(am.Round, am.qnamef("POINTER_BIND_DEL_INDEX_%d", i),
+			symbolic.Mul(activeDelete, symbolic.Sub(cols.LeafDeletedIndex[i], column.Shift(cols.Positions[i], 2))))
+
+		// LeafDeletedPrev == Shift(LeafOpenings.Prev, 2) for DELETE
+		am.Comp.InsertGlobal(am.Round, am.qnamef("POINTER_BIND_DEL_PREV_%d", i),
+			symbolic.Mul(activeDelete, symbolic.Sub(cols.LeafDeletedPrev[i], column.Shift(cols.LeafOpenings.Prev[i], 2))))
+
+		// LeafDeletedNext == Shift(LeafOpenings.Next, 2) for DELETE
+		am.Comp.InsertGlobal(am.Round, am.qnamef("POINTER_BIND_DEL_NEXT_%d", i),
+			symbolic.Mul(activeDelete, symbolic.Sub(cols.LeafDeletedNext[i], column.Shift(cols.LeafOpenings.Next[i], 2))))
 	}
 }
 
@@ -901,6 +953,26 @@ func (am *Module) checkNextFreeNode() {
 		symbolic.Sub(symbolic.Mul(cols.IsInsert, cols.IsEmptyLeaf),
 			cols.IsInsertRow3))
 	am.Comp.InsertGlobal(am.Round, am.qname("IS_INSERT_ROW3_CONSISTENCY"), expr5)
+
+	// Binding constraint: the insertion position (Positions at row 2 of INSERT,
+	// i.e. shift 2 from IsFirst) must equal the NextFreeNode value at the start
+	// of the INSERT operation (row 0). This ensures the prover allocates the new
+	// leaf at the sequentially next available position, not at an arbitrary empty
+	// slot (e.g. a previously deleted position).
+	activeInsert := symbolic.Mul(cols.IsFirst, cols.IsInsert)
+	for i := range cols.Positions {
+		am.Comp.InsertGlobal(am.Round, am.qnamef("INSERTION_POSITION_EQUALS_NEXT_FREE_NODE_%d", i),
+			symbolic.Mul(activeInsert, symbolic.Sub(column.Shift(cols.Positions[i], 2), cols.NextFreeNode[i])))
+	}
+
+	// Binding constraint: InsertionPath must equal Positions at the insertion
+	// row (IsInsertRow3). InsertionPath is assigned to proof.Path when
+	// isInsertRow3 is true and zero otherwise. This anchors the committed
+	// InsertionPath column to the actual Merkle-verified position.
+	for i := range cols.InsertionPath {
+		am.Comp.InsertGlobal(am.Round, am.qnamef("INSERTION_PATH_EQUALS_POSITION_%d", i),
+			symbolic.Mul(cols.IsInsertRow3, symbolic.Sub(cols.InsertionPath[i], cols.Positions[i])))
+	}
 }
 
 func (am *Module) checkTopRootHash() {
