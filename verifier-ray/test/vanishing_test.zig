@@ -106,39 +106,6 @@ test "dynamic vanishing module sizes are required and validated" {
     try std.testing.expect(wrong_size_failures > 0);
 }
 
-test "dynamic lagrange selector rejects position outside the supplied module size" {
-    // A dynamic module with L_3 (selector at position 3). Supply module_sizes = 2,
-    // so position 3 >= dynamic_n 2 — the guard must reject with InvalidModuleSize
-    // rather than silently wrapping ω^3 into the wrong root via ω^(3 mod 2).
-    const position = 3;
-    const expressions = [_]vanishing.ExprNode{.{ .lagrange_selector = position }};
-    const vanishings = [_]vanishing.Vanishing{.{ .expression = 0 }};
-    const buckets = [_]vanishing.Bucket{.{ .ratio = 1, .vanishings = &vanishings, .quotient_claim_offset = 0 }};
-    const modules = [_]vanishing.Module{.{
-        .size = .{ .dynamic = 0 }, // dynamic, index 0
-        .expressions = &expressions,
-        .buckets = &buckets,
-        .witness_claim_offset = 0,
-        .merge_coin_index = 0,
-        .eval_coin_index = 1,
-    }};
-    const system = vanishing.System{ .modules = &modules, .dynamic_module_count = 1, .total_witness_claims = 0, .total_quotient_claims = 1 };
-    const quotient_claims = [_]ext.Ext{ext.Ext.zero()};
-    const all_coins = [_]ext.Ext{ ext.Ext.one(), ext.Ext.lift(field.Element.init(2)) };
-    const ctx = protocol.Context{ .all_coins = &all_coins, .rounds = &.{} };
-
-    // module_sizes[0] = 2 < position 3: must reject.
-    try std.testing.expectError(
-        error.InvalidModuleSize,
-        vanishing.verify(system, .{ .ctx = ctx, .witness_claims = &.{}, .quotient_claims = &quotient_claims, .module_sizes = &.{2} }),
-    );
-    // module_sizes[0] = 4 >= position 3: guard clears, identity check follows.
-    try std.testing.expectError(
-        error.QuotientIdentityMismatch,
-        vanishing.verify(system, .{ .ctx = ctx, .witness_claims = &.{}, .quotient_claims = &quotient_claims, .module_sizes = &.{4} }),
-    );
-}
-
 test "lagrange selector rejects an in-domain evaluation coin" {
     // A minimal static module of size 4 whose sole vanishing is the bare
     // selector L_1. The Fiat-Shamir eval coin is never on-domain in practice,

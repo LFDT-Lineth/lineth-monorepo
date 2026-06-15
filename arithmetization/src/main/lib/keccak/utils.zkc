@@ -1,4 +1,5 @@
 include "../../riscv/memory.zkc"
+include "../../riscv/ram/read.zkc"
 
 // read_and_pad_64 is used by the keccak implementation to extract data
 // from ram; it is used when building the u64's of the final block;
@@ -10,25 +11,25 @@ fn read_and_pad_64<ram>(address:Address, n_bytes:u3, final_word_in_block:u1) -> 
             value = (final_word_in_block == 1 ? ONE_ZEROS_ONE_U64:ONE_U64)
         }
         case 1: {
-            value = (final_word_in_block == 1 ? ONE_ZEROS_ONE_U56:ONE_U56)::ram[address + 0]
+            value = (final_word_in_block == 1 ? ONE_ZEROS_ONE_U56:ONE_U56)::read_8(address + 0)
         }
         case 2: {
-            value = (final_word_in_block == 1 ? ONE_ZEROS_ONE_U48:ONE_U48)::ram[address + 1]::ram[address + 0]
+            value = (final_word_in_block == 1 ? ONE_ZEROS_ONE_U48 : ONE_U48)::read_16(address)
         }
         case 3: {
-            value = (final_word_in_block == 1 ? ONE_ZEROS_ONE_U40:ONE_U40)::ram[address + 2]::ram[address + 1]::ram[address + 0]
+            value = (final_word_in_block == 1 ? ONE_ZEROS_ONE_U40 : ONE_U40)::read_8(address + 2)::read_16(address)
         }
         case 4: {
-            value = (final_word_in_block == 1 ? ONE_ZEROS_ONE_U32:ONE_U32)::ram[address + 3]::ram[address + 2]::ram[address + 1]::ram[address + 0]
+            value = (final_word_in_block == 1 ? ONE_ZEROS_ONE_U32 : ONE_U32)::read_32(address)
         }
         case 5: {
-            value = (final_word_in_block == 1 ? ONE_ZEROS_ONE_U24:ONE_U24)::ram[address + 4]::ram[address + 3]::ram[address + 2]::ram[address + 1]::ram[address + 0]
+            value = (final_word_in_block == 1 ? ONE_ZEROS_ONE_U24 : ONE_U24)::read_8(address + 4)::read_32(address)
         }
         case 6: {
-            value = (final_word_in_block == 1 ? ONE_ZEROS_ONE_U16:ONE_U16)::ram[address + 5]::ram[address + 4]::ram[address + 3]::ram[address + 2]::ram[address + 1]::ram[address + 0]
+            value = (final_word_in_block == 1 ? ONE_ZEROS_ONE_U16 : ONE_U16)::read_16(address + 4)::read_32(address)
         }
         case 7: {
-            value = (final_word_in_block == 1 ? ONE_ZEROS_ONE_U8:ONE_U8)::ram[address + 6]::ram[address + 5]::ram[address + 4]::ram[address + 3]::ram[address + 2]::ram[address + 1]::ram[address + 0]
+            value = (final_word_in_block == 1 ? ONE_ZEROS_ONE_U8 : ONE_U8)::read_8(address + 6)::read_16(address + 4)::read_32(address)
         }
         default: {
             fail "invalid n_bytes parameter: %d should be 0 ≤ ∙∙∙ < 8", n_bytes

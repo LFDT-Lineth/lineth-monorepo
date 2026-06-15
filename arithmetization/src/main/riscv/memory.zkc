@@ -4,8 +4,7 @@ include "utils/type.zkc"
 // This will act as the program memory space and will contain, amongst other things,
 // the program executable itself and all data coming from loadable sections of the ELF
 // (e.g., .data, .rodata).
-#[bipartite]
-memory ram(address:Address) -> (bytes:u8)
+memory ram(address:Address) -> (word:u32)
 
 // Represents the Register File to use when executing the guest program.  That
 // is, the value of all registers at the given moment.

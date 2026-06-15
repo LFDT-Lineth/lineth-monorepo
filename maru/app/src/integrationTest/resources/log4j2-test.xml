@@ -1,13 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="warn">
+  <Properties>
+    <!-- Override with -Dmaru.integrationTest.logDir=... ; defaults to the Gradle build dir. -->
+    <Property name="logDir">${sys:maru.integrationTest.logDir:-build/integrationTest-logs}</Property>
+    <Property name="pattern">[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n</Property>
+  </Properties>
   <Appenders>
-    <Console name="console" target="SYSTEM_OUT">
-      <PatternLayout pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"/>
-    </Console>
+    <!-- Route each test's logs to its own file. Resolution order (per log event):
+           1. ctx:testId            - per-method file, set on the test thread by PerTestLoggingExtension
+           2. sys:maru.test.class   - per-class fallback for untagged logs from JVM-global pools
+                                      (e.g. ForkJoinPool.commonPool), set once per fork by the extension
+           3. _unrouted-worker-N    - last resort before any class starts (N = Gradle test worker id) -->
+    <Routing name="perTest">
+      <Routes pattern="$${ctx:testId:-$${sys:maru.test.class:-_unrouted-worker-$${sys:org.gradle.test.worker:-0}}}">
+        <Route>
+          <File name="testLog-${ctx:testId:-${sys:maru.test.class:-_unrouted-worker-${sys:org.gradle.test.worker:-0}}}"
+                fileName="${logDir}/${ctx:testId:-${sys:maru.test.class:-_unrouted-worker-${sys:org.gradle.test.worker:-0}}}.log"
+                append="false">
+            <PatternLayout pattern="${pattern}"/>
+          </File>
+        </Route>
+      </Routes>
+    </Routing>
   </Appenders>
   <Loggers>
     <Logger name="maru" level="INFO" additivity="false">
-      <AppenderRef ref="console"/>
+      <AppenderRef ref="perTest"/>
     </Logger>
 <!--    <Logger name="org.hyperledger.besu.ethereum.blockcreation" level="TRACE"/>-->
     <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.ExecutionEngineJsonRpcMethod"
@@ -21,7 +39,7 @@
     <Logger name="org.hyperledger.besu.consensus.qbft" level="INFO"/>
     <Logger name="maru.p2p" level="TRACE"/>
     <Root level="INFO" additivity="false">
-      <appender-ref ref="console"/>
+      <AppenderRef ref="perTest"/>
     </Root>
   </Loggers>
 </Configuration>

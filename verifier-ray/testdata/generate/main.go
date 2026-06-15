@@ -683,6 +683,33 @@ func buildFixtureCases() ([]vanishingFixtureCase, []codegen.CompiledSystem, erro
 		}
 	}
 
+	// LagrangeSelector boundary scenario. It is constructed here rather than in
+	// prover-ray's wioptest because it exercises the lagrange_selector codegen
+	// and Zig evaluator path, which the pinned prover-ray module already
+	// supports via wiop.NewLagrangeSelector; building it locally keeps the
+	// fixture reproducible from the pinned module (see `make verify-testdata`).
+	{
+		sys, col := buildLagrangeSelectorBoundarySystem()
+		honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 99, 7, 7))) }
+		invalid := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 98, 7, 7))) }
+		if err := add("Vanishing", "LagrangeSelectorBoundary", sys, honest, invalid); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	// Dynamic-module variant of the LagrangeSelectorBoundary scenario. Its
+	// module size is resolved at runtime (4, from the assigned column length),
+	// so it drives the Zig verifier's dynamic selector branch that the static
+	// fixture above leaves uncovered.
+	{
+		sys, col := buildDynamicLagrangeSelectorBoundarySystem()
+		honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 99, 7, 7))) }
+		invalid := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 98, 7, 7))) }
+		if err := add("Vanishing", "DynamicLagrangeSelectorBoundary", sys, honest, invalid); err != nil {
+			return nil, nil, err
+		}
+	}
+
 	return cases, systems, nil
 }
 

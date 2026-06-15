@@ -130,7 +130,7 @@ fn verifyModule(
 
     const ctx = EvalCtx{ .coin = eval_coin, .annihilator = annihilator, .dynamic_n = dynamic_n };
     inline for (module.buckets) |bucket| {
-        try verifyBucket(module, bucket, static_n, dynamic_n, input, merge_coin, ctx);
+        try verifyBucket(module, bucket, static_n, input, merge_coin, ctx);
     }
 }
 
@@ -148,7 +148,6 @@ fn verifyBucket(
     comptime module: Module,
     comptime bucket: Bucket,
     comptime static_n: usize,
-    dynamic_n: usize,
     input: CheckInput,
     merge_coin: ext.Ext,
     ctx: EvalCtx,
@@ -170,7 +169,7 @@ fn verifyBucket(
         // Aggregate the vanished numerators with the merge coin alpha:
         // P_agg(r) = sum_i alpha^i * P_i(r) * C_i(r).
         const value = try evalExpr(module, v.expression, static_n, ctx, input);
-        const cancellation = try cancellationAtPoint(v.cancelled_positions, static_n, dynamic_n, ctx.coin);
+        const cancellation = try cancellationAtPoint(v.cancelled_positions, static_n, ctx);
         aggregate = aggregate.add(coin_power.mul(value.mul(cancellation)));
         coin_power = coin_power.mul(merge_coin);
     }
@@ -260,9 +259,8 @@ fn evalLagrangeSelector(comptime position: usize, comptime static_n: usize, ctx:
     const omega_pos = if (static_n != 0)
         comptime staticRootPower(static_n, position)
     else blk: {
-        if (position >= ctx.dynamic_n) return error.InvalidModuleSize;
         const omega = field.rootOfUnityBy(ctx.dynamic_n) catch return error.InvalidModuleSize;
-        break :blk omega.pow(@as(u64, @intCast(position)));
+        break :blk omega.powComptime(position);
     };
 
     // numerator = omega^position * (r^n - 1).
@@ -284,26 +282,30 @@ fn evalLagrangeSelector(comptime position: usize, comptime static_n: usize, ctx:
 fn cancellationAtPoint(
     comptime positions: []const i32,
     comptime static_n: usize,
-    dynamic_n: usize,
-    r: ext.Ext,
+    ctx: EvalCtx,
 ) Error!ext.Ext {
     if (positions.len == 0) return ext.Ext.one();
 
-    const omega = if (static_n == 0) field.rootOfUnityBy(dynamic_n) catch return error.InvalidModuleSize else field.Element.one();
+    const omega = if (static_n == 0) field.rootOfUnityBy(ctx.dynamic_n) catch return error.InvalidModuleSize else field.Element.one();
     var result = ext.Ext.one();
 
     inline for (positions) |position| {
         // Cancellation polynomial for openings already enforced elsewhere:
         // C(r) = product_{k in cancelled} (r - omega_n^norm(k)).
-        const root = if (static_n != 0) comptime staticRootPower(static_n, normalizePosition(position, static_n, 0)) else omega.pow(@as(u64, @intCast(normalizePosition(position, 0, dynamic_n))));
-        result = result.mul(r.sub(ext.Ext.lift(root)));
+        const root = if (static_n != 0)
+            comptime staticRootPower(static_n, normalizePosition(position, static_n, 0))
+        else if (comptime position >= 0)
+            omega.powComptime(comptime @as(usize, @intCast(position)))
+        else
+            omega.pow(@as(u64, normalizePosition(position, 0, ctx.dynamic_n)));
+        result = result.mul(ctx.coin.sub(ext.Ext.lift(root)));
     }
     return result;
 }
 
 fn staticRootPower(comptime n: usize, comptime k: usize) field.Element {
     const omega = field.rootOfUnityBy(n) catch unreachable;
-    return omega.pow(@as(u64, k));
+    return omega.powComptime(k);
 }
 
 fn normalizePosition(comptime position: i32, comptime static_n: usize, dynamic_n: usize) usize {

@@ -2,6 +2,7 @@ package fri_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/field/koalabear"
@@ -241,5 +242,70 @@ func TestVerifyRejectsFlippedExtLeaf(t *testing.T) {
 	tsV := freshTS()
 	if err := fri.Verify(p, []hash.Digest{tree.Root()}, []int{p.D}, prf, tsV); err == nil {
 		t.Fatal("Verify accepted a proof with a corrupted ext leaf")
+	}
+}
+
+func TestVerifyRejectsExtRunningProofWithWrongLeafIndex(t *testing.T) {
+	p := testParams(t, 64, 4, 4)
+	evals, _ := p.EncodeExt(randomExtPoly(p.D))
+	tree := buildLevelTreeExt(t, p, evals)
+
+	tsP := freshTS()
+	prf, _, err := fri.Prove(p, []fri.Level{{
+		D:     p.D,
+		Evals: fri.LevelEvals{Ext: evals},
+		Tree:  tree,
+	}}, tsP)
+	if err != nil {
+		t.Fatalf("Prove: %v", err)
+	}
+
+	prf.FRIQueries[0].Layers[0].Path.LeafIdx += p.N / 2
+
+	tsV := freshTS()
+	err = fri.Verify(p, []hash.Digest{tree.Root()}, []int{p.D}, prf, tsV)
+	requireLeafIndexError(t, err)
+}
+
+func TestVerifyRejectsLevelProofWithWrongLeafIndex(t *testing.T) {
+	p := testParams(t, 64, 16, 4)
+	pSmall := testParams(t, 16, 4, 4)
+
+	evals0, _ := p.Encode(randomPoly(p.D))
+	evals1, _ := pSmall.Encode(randomPoly(pSmall.D))
+	tree0 := buildLevelTree(t, p, evals0)
+	tree1 := buildLevelTree(t, p, evals1)
+
+	tsP := freshTS()
+	prf, _, err := fri.Prove(p, []fri.Level{
+		{
+			D:     p.D,
+			Evals: fri.LevelEvals{Base: evals0},
+			Tree:  tree0,
+		},
+		{
+			D:     pSmall.D,
+			Evals: fri.LevelEvals{Base: evals1},
+			Tree:  tree1,
+		},
+	}, tsP)
+	if err != nil {
+		t.Fatalf("Prove: %v", err)
+	}
+
+	prf.LevelQueries[0][0].Path.LeafIdx += len(evals1) / 2
+
+	tsV := freshTS()
+	err = fri.Verify(p, []hash.Digest{tree0.Root(), tree1.Root()}, []int{p.D, pSmall.D}, prf, tsV)
+	requireLeafIndexError(t, err)
+}
+
+func requireLeafIndexError(t *testing.T, err error) {
+	t.Helper()
+	if err == nil {
+		t.Fatal("Verify accepted a proof with a wrong Merkle proof leaf index")
+	}
+	if !strings.Contains(err.Error(), "leaf index") && !strings.Contains(err.Error(), "opened leaf") {
+		t.Fatalf("Verify failed for a different reason: %v", err)
 	}
 }
