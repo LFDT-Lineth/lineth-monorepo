@@ -21,6 +21,7 @@
 - *(arithmetization)* Security alert 513 on loop condition in BlockDataInstruction (#3253)
 - *(prover)* Incorporate `isAllowedCircuitID` into aggregation FPI (#3194)
 - *(prover)* Invalidity prover bug fixes (#3138)
+- *(prover)* Post small-fields constraints (#2845)
 
 ### 🚜 Refactor
 
