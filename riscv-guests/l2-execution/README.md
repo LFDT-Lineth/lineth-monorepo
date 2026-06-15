@@ -33,12 +33,11 @@ make -C l2-execution gp-compile                     # standard zig keccak
 make -C l2-execution gp-compile KECCAK_ACCEL=true   # arithmetization keccak wrapper
 ```
 
-Equivalently, running `zig build` directly from this directory:
+Equivalently, running `zig build` directly from this directory (requires the generated linker script; run `make gp-linker-script` once after a clean checkout):
 
-```bash
-zig build                       # standard zig keccak
-zig build -Dkeccak-accel=true   # arithmetization keccak wrapper
-```
+    make gp-linker-script
+    zig build                       # standard zig keccak
+    zig build -Dkeccak-accel=true   # arithmetization keccak wrapper
 
 ## Shell alias
 
