@@ -8,7 +8,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
-	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
@@ -42,6 +41,8 @@ type chiInputs struct {
 	Blocks block
 	// flag for blocks other than the first one
 	IsBlockOther ifaces.Column
+	// active part of the keccakf module (1 for real rows, 0 for padding)
+	IsBlockActive ifaces.Column
 	// max number of keccakf permutations that module can support
 	KeccakfSize int
 }
@@ -83,7 +84,7 @@ func newChi(comp *wizard.CompiledIOP, in chiInputs) *chiIota {
 			comp,
 			0,
 			rcCols[i],
-			verifiercol.NewConstantCol(field.One(), keccakfSize, "keccak-rc-pattern"),
+			in.IsBlockActive,
 			"VAL_RC_BASE2_PATTERN_"+strconv.Itoa(i),
 		)
 	}

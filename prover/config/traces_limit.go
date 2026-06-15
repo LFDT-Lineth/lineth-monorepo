@@ -143,15 +143,22 @@ func (tl *TracesLimits) Checksum() string {
 	return digest
 }
 
-// findModuleLimits returns the limits for a module or panics.
-// mustFindModuleLimits returns the limits corresponding to the
-// name of the method. (auto-generated)
+// mustFindModuleLimits returns the limits for a module using longest-prefix match.
+// The list must be sorted in reverse alphabetical order so longer prefixes are
+// checked before shorter ones. The empty-string default entry acts as a fallback.
 func (tl *TracesLimits) mustFindModuleLimits(module string) ModuleLimit {
 	moduleLower := strings.ToLower(module)
-	for _, m := range tl.Modules {
+	var best *ModuleLimit
+	for i := range tl.Modules {
+		m := &tl.Modules[i]
 		if strings.HasPrefix(moduleLower, m.Module) {
-			return m
+			if best == nil || len(m.Module) > len(best.Module) {
+				best = m
+			}
 		}
+	}
+	if best != nil {
+		return *best
 	}
 	utils.Panic("found no module limits for module %q", module)
 	return ModuleLimit{}
@@ -418,18 +425,18 @@ func GetTestTracesLimits() *TracesLimits {
 			{Module: "", Limit: 131072, LimitLarge: 262144},
 			{Module: "add", Limit: 262144, LimitLarge: 524288},
 			{Module: "bin", Limit: 262144, LimitLarge: 524288},
-			{Module: "blake_modexp_data", Limit: 16384, LimitLarge: 32768},
-			{Module: "block_data", Limit: 4096, LimitLarge: 8192},
-			{Module: "block_hash", Limit: 2048, LimitLarge: 4096},
-			{Module: "ec_data", Limit: 65536, LimitLarge: 131072},
+			{Module: "blake2fmodexpdata", Limit: 16384, LimitLarge: 32768},
+			{Module: "blockdata", Limit: 4096, LimitLarge: 8192},
+			{Module: "blockhash", Limit: 2048, LimitLarge: 4096},
+			{Module: "ecdata", Limit: 65536, LimitLarge: 131072},
 			{Module: "euc", Limit: 65536, LimitLarge: 131072},
 			{Module: "exp", Limit: 65536, LimitLarge: 131072},
 			{Module: "ext", Limit: 524288, LimitLarge: 1048576},
 			{Module: "gas", Limit: 65536, LimitLarge: 131072},
 			{Module: "hub", Limit: 2097152, LimitLarge: 4194304},
 			{Module: "hub×4", Limit: 8388608, LimitLarge: 16777216},
-			{Module: "log_data", Limit: 65536, LimitLarge: 131072},
-			{Module: "log_info", Limit: 4096, LimitLarge: 8192},
+			{Module: "logdata", Limit: 65536, LimitLarge: 131072},
+			{Module: "loginfo", Limit: 4096, LimitLarge: 8192},
 			{Module: "mmio", Limit: 2097152, LimitLarge: 4194304},
 			{Module: "mmio×3", Limit: 8388608, LimitLarge: 16777216},
 			{Module: "mmu", Limit: 1048576, LimitLarge: 2097152},
@@ -437,16 +444,17 @@ func GetTestTracesLimits() *TracesLimits {
 			{Module: "mul", Limit: 65536, LimitLarge: 131072},
 			{Module: "mxp", Limit: 1048576, LimitLarge: 2097152},
 			{Module: "oob", Limit: 262144, LimitLarge: 524288},
-			{Module: "rlp_addr", Limit: 4096, LimitLarge: 8192},
-			{Module: "rlp_txn", Limit: 131072, LimitLarge: 262144},
-			{Module: "rlp_txn_rcpt", Limit: 65536, LimitLarge: 131072},
+			{Module: "rlpaddr", Limit: 4096, LimitLarge: 8192},
+			{Module: "rlptxn", Limit: 131072, LimitLarge: 262144},
+			{Module: "rlptxrcpt", Limit: 65536, LimitLarge: 131072},
+			{Module: "rlpauth", Limit: 16384, LimitLarge: 32768},
 			{Module: "rom", Limit: 8388608, LimitLarge: 8388608},
-			{Module: "rom_lex", Limit: 1024, LimitLarge: 2048},
-			{Module: "shakira_data", Limit: 65536, LimitLarge: 65536},
+			{Module: "romlex", Limit: 1024, LimitLarge: 2048},
+			{Module: "shakiradata", Limit: 65536, LimitLarge: 65536},
 			{Module: "shf", Limit: 262144, LimitLarge: 524288},
 			{Module: "stp", Limit: 16384, LimitLarge: 32768},
 			{Module: "trm", Limit: 32768, LimitLarge: 65536},
-			{Module: "txn_data", Limit: 8192, LimitLarge: 16384},
+			{Module: "txndata", Limit: 8192, LimitLarge: 16384},
 			{Module: "wcp", Limit: 262144, LimitLarge: 524288},
 			{Module: "precompile_ecrecover_effective_calls", Limit: 128, LimitLarge: 256},
 			{Module: "precompile_sha2_blocks", Limit: 200, LimitLarge: 400},
@@ -490,6 +498,9 @@ func GetTestTracesLimits() *TracesLimits {
 			{Module: "precompile_p256_verify_effective_calls", Limit: 128, LimitLarge: 256},
 		},
 	}
+
+	traceLimits.normalizeToLowercase()
+	traceLimits.sortReverseAlphabetical()
 
 	return traceLimits
 }
