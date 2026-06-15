@@ -344,7 +344,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	//   decoded_rtype: funct7:Funct7(u7), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3), rd:Register(u5)
 	//   decoded_stype: imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3)
 	//   decoded_btype: imm:DoubleWord(u64), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3)
-	//   decoded_jtype: imm20:u1, imm10_1:u10, imm11:u1, imm19_12:u8, rd:Register(u5)
+	//   decoded_jtype: imm:DoubleWord(u64), rd:Register(u5)
 	//   decoded_utype: imm20:Imm20(u20), rd:Register(u5)
 	var (
 		coreBits  bitWriter
@@ -383,11 +383,15 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 			bImm |= 0xFFFFFFFFFFFFE000 // sign-extend: set bits [63:13]
 		}
 
-		// J-type immediate sub-fields (kept split to match j_type.zkc's reconstruction).
-		jImm20 := (instr >> 31) & 0x1     // imm[20]
-		jImm10_1 := (instr >> 21) & 0x3ff // imm[10:1]
-		jImm11 := (instr >> 20) & 0x1     // imm[11]
-		jImm19_12 := (instr >> 12) & 0xff // imm[19:12]
+		// J-type: resolve the 21-bit signed jump offset (imm[20|19:12|11|10:1] with
+		// bit 0 = 0) to a ready-to-use 64-bit immediate. imm[20] is known
+		// statically, so the runtime shift and sign extension are collapsed here.
+		jImm20 := (instr >> 31) & 0x1                                                                   // imm[20]
+		jPre := (jImm20 << 19) | (((instr >> 12) & 0xff) << 11) | (((instr >> 20) & 0x1) << 10) | ((instr >> 21) & 0x3ff) // imm[20|19:12|11|10:1]
+		jImm := uint64(jPre) << 1
+		if jImm20 == 1 {
+			jImm |= 0xFFFFFFFFFFE00000 // sign-extend: set bits [63:21]
+		}
 
 		// U-type immediate: imm[31:12] (20 bits).
 		uImm20 := (instr >> 12) & 0xfffff
@@ -417,10 +421,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		btypeBits.writeBits(uint64(rs1), 5)
 		btypeBits.writeBits(uint64(funct3), 3)
 
-		jtypeBits.writeBits(uint64(jImm20), 1)
-		jtypeBits.writeBits(uint64(jImm10_1), 10)
-		jtypeBits.writeBits(uint64(jImm11), 1)
-		jtypeBits.writeBits(uint64(jImm19_12), 8)
+		jtypeBits.writeBits(jImm, 64)
 		jtypeBits.writeBits(uint64(rd), 5)
 
 		utypeBits.writeBits(uint64(uImm20), 20)

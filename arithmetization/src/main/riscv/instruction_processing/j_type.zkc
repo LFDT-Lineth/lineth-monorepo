@@ -21,21 +21,19 @@ include "../utils/signed_sum.zkc"
 //   pc_new = pc + sign_extend(imm21)  (unconditional jump to target)
 fn process_J_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Address) {
 
-    // The J-type field split (imm[20] :: imm[10:1] :: imm[11] :: imm[19:12] :: rd)
-    // is pre-decoded externally (see decoded_jtype in memory.zkc) and looked up by
-    // index.
-    var imm20:u1
-    var imm10_1:u10
-    var imm11:u1
-    var imm19_12:u8
+    // The J-type record is pre-decoded externally (see decoded_jtype in
+    // memory.zkc) and looked up by index. The 21-bit signed jump offset is already
+    // sign-extended into a ready-to-use 64-bit imm at decode time, so no shift or
+    // sign extension is needed here.
+    var imm:DoubleWord
     var rd:Register
-    imm20, imm10_1, imm11, imm19_12, rd = decoded_jtype[index]
 
-    // restructure and 1 left shift the immediate to get imm21
-    var imm21:u21 = ((imm20::imm19_12::imm11::imm10_1) as u21) << 1
+    // imm20::imm10_1::imm11::imm19_12::rd = instruction_parameters
+    // imm = imm20::imm19_12::imm11::imm10_1::0 as DoubleWord
+    imm, rd = decoded_jtype[index]
 
     printf "JAL "
-    print_j_operands(rd, sgn_extension_u21_u64(imm21))
+    print_j_operands(rd, imm)
     registers[rd] = signed_sum_of_double_word(pc, 4)
-    pc_new = signed_sum_of_double_word(pc, sgn_extension_u21_u64(imm21)) as Address
+    pc_new = signed_sum_of_double_word(pc, imm) as Address
 }
