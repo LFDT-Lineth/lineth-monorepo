@@ -54,7 +54,6 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     outputs:
       tests_outcome: ${{ steps.run_e2e_tests.outcome }}
-    # xl saves ~0 mins
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
     steps:
       - name: Setup upterm session
