@@ -503,7 +503,9 @@ func main() {
 	workloads := flag.String("workloads", "keccak,blake", "comma-separated list of workloads to render (keccak,blake)")
 	baseRef := flag.String("base-ref", "", "baseline branch/commit ref (informational)")
 	optimRef := flag.String("optim-ref", "", "optim-test branch/commit ref (informational)")
-	zkcVersion := flag.String("zkc-version", "", "zkc repo ref used to build the zkc binary (informational)")
+	zkcVersion := flag.String("zkc-version", "", "zkc repo ref used to build the zkc binary (informational, deprecated: use -zkc-ref-base/-zkc-ref-optim)")
+	zkcRefBase := flag.String("zkc-ref-base", "", "zkc repo ref for base-branch runs (informational)")
+	zkcRefOptim := flag.String("zkc-ref-optim", "", "zkc repo ref for optim-branch runs (informational)")
 	keccakNVectors := flag.Int("keccak-n-vectors", 0, "number of Keccak vectors batched into one zkc exec (informational, 0 = omit)")
 	blakeRounds := flag.Int("blake-rounds", 0, "number of Blake2b compression rounds (informational, 0 = omit)")
 	flag.Parse()
@@ -533,7 +535,13 @@ func main() {
 	if *optimRef != "" {
 		fmt.Fprintf(&out, "- optim branch ref: `%s`\n", *optimRef)
 	}
-	if *zkcVersion != "" {
+	if *zkcRefBase != "" {
+		fmt.Fprintf(&out, "- zkc ref (base): `%s`\n", *zkcRefBase)
+	}
+	if *zkcRefOptim != "" {
+		fmt.Fprintf(&out, "- zkc ref (optim): `%s`\n", *zkcRefOptim)
+	}
+	if *zkcVersion != "" && *zkcRefBase == "" && *zkcRefOptim == "" {
 		fmt.Fprintf(&out, "- zkc version (zkc ref): `%s`\n", *zkcVersion)
 	}
 	if *iters > 0 {

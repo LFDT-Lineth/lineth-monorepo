@@ -52,8 +52,13 @@ on:
         required: false
         type: number
         default: 5
-      zkc_ref:
-        description: 'zkc commit/branch/tag (defaults to main)'
+      zkc_ref_base:
+        description: 'zkc commit/branch/tag for BASE branch runs'
+        required: false
+        type: string
+        default: main
+      zkc_ref_optim:
+        description: 'zkc commit/branch/tag for OPTIM branch runs'
         required: false
         type: string
         default: main
@@ -86,10 +91,23 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-arithmetization-riscv
 
-      - name: Install zkc
-        run: make -C arithmetization install-zkc
-        env:
-          ZKC_REF: ${{ inputs.zkc_ref }}
+      - name: Build two zkc binaries (base + opt) via go install
+        run: |
+          set -eux
+          for variant in base opt; do
+            case "$variant" in
+              base) ref="${{ inputs.zkc_ref_base || 'main' }}" ;;
+              opt)  ref="${{ inputs.zkc_ref_optim || 'main' }}" ;;
+            esac
+            tmpbin=$(mktemp -d)
+            GOBIN="$tmpbin" go install "github.com/LFDT-Lineth/zkc/cmd/zkc@${ref}" \
+              || GOBIN="$tmpbin" go install "github.com/consensys/go-corset/cmd/zkc@${ref}"
+            mv "$tmpbin/zkc" "/tmp/zkc-${variant}"
+            rmdir "$tmpbin"
+            echo "::group::zkc-${variant} version (${ref})"
+            "/tmp/zkc-${variant}" --version || true
+            echo "::endgroup::"
+          done
 
       - name: Add worktrees for base and optim branches
         run: |
@@ -139,17 +157,19 @@ jobs:
           }
 
           run_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
+            local zkc_bin="/tmp/zkc-${1}"
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
-            /usr/bin/time -v zkc execute -v -q /tmp/keccak.json "$zkc_main" \
+            /usr/bin/time -v "$zkc_bin" execute -v -q /tmp/keccak.json "$zkc_main" \
               > "/tmp/bench/logs/keccak_${1}_${2}.log" 2>&1
           }
 
           run_blake() {   # $1=variant  $2=label. Runs all N vectors, one log file per vector.
+            local zkc_bin="/tmp/zkc-${1}"
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
             for json in /tmp/bench/json/blake/*.json; do
               local n
               n=$(basename "$json" .json)
-              /usr/bin/time -v zkc execute -v -q "$json" "$zkc_main" \
+              /usr/bin/time -v "$zkc_bin" execute -v -q "$json" "$zkc_main" \
                 > "/tmp/bench/logs/blake_${1}_${2}_${n}.log" 2>&1
             done
           }
@@ -180,7 +200,8 @@ jobs:
             -blake-n 1 \
             -base-ref "${{ inputs.base_ref || 'main' }}" \
             -optim-ref "${{ inputs.optim_ref || github.event.pull_request.head.sha || github.sha }}" \
-            -zkc-version "${{ inputs.zkc_ref || 'main' }}" \
+            -zkc-ref-base "${{ inputs.zkc_ref_base || 'main' }}" \
+            -zkc-ref-optim "${{ inputs.zkc_ref_optim || 'main' }}" \
             -keccak-n-vectors ${{ inputs.n_vectors_keccak || 10 }} \
             -blake-rounds ${{ inputs.n_rounds_blake || 12 }} \
             | tee -a "$GITHUB_STEP_SUMMARY" \
