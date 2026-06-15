@@ -20,6 +20,9 @@ const (
 	DECODED_ITYPE               = "decoded_itype"
 	DECODED_RTYPE               = "decoded_rtype"
 	DECODED_STYPE               = "decoded_stype"
+	DECODED_BTYPE               = "decoded_btype"
+	DECODED_JTYPE               = "decoded_jtype"
+	DECODED_UTYPE               = "decoded_utype"
 )
 
 // Instruction type identifiers. These MUST match the Type constants in
@@ -164,8 +167,8 @@ func main() {
 	}
 	// Statically decode the executable region into the pre-decoded instruction
 	// input tables consumed by the interpreter.
-	base, coreHex, itypeHex, rtypeHex, stypeHex := buildDecodedProgram(elfFile.Sections)
-	printJson(blobs, elfFile.Entry, base, coreHex, itypeHex, rtypeHex, stypeHex)
+	base, coreHex, itypeHex, rtypeHex, stypeHex, btypeHex, jtypeHex, utypeHex := buildDecodedProgram(elfFile.Sections)
+	printJson(blobs, elfFile.Entry, base, coreHex, itypeHex, rtypeHex, stypeHex, btypeHex, jtypeHex, utypeHex)
 }
 
 // parseInBytes turns an arg into raw input bytes. Four forms:
@@ -282,10 +285,11 @@ func readSectionBytes(s *elf.Section) []byte {
 
 // buildDecodedProgram statically decodes every 4-byte instruction word across
 // the executable region of the ELF, producing the base address plus the
-// hex-encoded decoded_core, decoded_itype, decoded_rtype and decoded_stype input
-// arrays. The arrays are dense (one record per word in [base, end)), indexed at
-// runtime by index = (pc - base) >> 2.
-func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHex, rtypeHex, stypeHex string) {
+// hex-encoded decoded_core / decoded_itype / decoded_rtype / decoded_stype /
+// decoded_btype / decoded_jtype / decoded_utype input arrays. The arrays are
+// dense (one record per word in [base, end)), indexed at runtime by
+// index = (pc - base) >> 2.
+func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHex, rtypeHex, stypeHex, btypeHex, jtypeHex, utypeHex string) {
 	var (
 		execSections []*elf.Section
 		minAddr      = ^uint64(0)
@@ -339,11 +343,17 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	//   decoded_itype: funct3:Funct3(u3), imm12:Imm12(u12), rs1:Register(u5), rd:Register(u5)
 	//   decoded_rtype: funct7:Funct7(u7), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3), rd:Register(u5)
 	//   decoded_stype: imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3)
+	//   decoded_btype: imm_sign:u1, imm_10_5:u6, rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3), imm_4_1:u4, imm_11:u1
+	//   decoded_jtype: imm20:u1, imm10_1:u10, imm11:u1, imm19_12:u8, rd:Register(u5)
+	//   decoded_utype: imm20:Imm20(u20), rd:Register(u5)
 	var (
 		coreBits  bitWriter
 		itypeBits bitWriter
 		rtypeBits bitWriter
 		stypeBits bitWriter
+		btypeBits bitWriter
+		jtypeBits bitWriter
+		utypeBits bitWriter
 	)
 	for off := uint64(0); off+4 <= uint64(len(image)); off += 4 {
 		instr := uint32(image[off]) | uint32(image[off+1])<<8 | uint32(image[off+2])<<16 | uint32(image[off+3])<<24
@@ -362,6 +372,21 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		// S-type immediate is split in the encoding (imm[11] :: imm[10:5] :: imm[4:0]);
 		// reassemble it into the 12-bit store immediate.
 		simm12 := (((instr >> 31) & 0x1) << 11) | (((instr >> 25) & 0x3f) << 5) | ((instr >> 7) & 0x1f)
+
+		// B-type immediate sub-fields (kept split to match b_type.zkc's reconstruction).
+		bImmSign := (instr >> 31) & 0x1  // imm[12]
+		bImm10_5 := (instr >> 25) & 0x3f // imm[10:5]
+		bImm4_1 := (instr >> 8) & 0xf    // imm[4:1]
+		bImm11 := (instr >> 7) & 0x1     // imm[11]
+
+		// J-type immediate sub-fields (kept split to match j_type.zkc's reconstruction).
+		jImm20 := (instr >> 31) & 0x1     // imm[20]
+		jImm10_1 := (instr >> 21) & 0x3ff // imm[10:1]
+		jImm11 := (instr >> 20) & 0x1     // imm[11]
+		jImm19_12 := (instr >> 12) & 0xff // imm[19:12]
+
+		// U-type immediate: imm[31:12] (20 bits).
+		uImm20 := (instr >> 12) & 0xfffff
 
 		coreBits.writeBits(uint64(opcode), 7)
 		coreBits.writeBits(uint64(instrType), 3)
@@ -382,9 +407,33 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		stypeBits.writeBits(uint64(rs2), 5)
 		stypeBits.writeBits(uint64(rs1), 5)
 		stypeBits.writeBits(uint64(funct3), 3)
+
+		btypeBits.writeBits(uint64(bImmSign), 1)
+		btypeBits.writeBits(uint64(bImm10_5), 6)
+		btypeBits.writeBits(uint64(rs2), 5)
+		btypeBits.writeBits(uint64(rs1), 5)
+		btypeBits.writeBits(uint64(funct3), 3)
+		btypeBits.writeBits(uint64(bImm4_1), 4)
+		btypeBits.writeBits(uint64(bImm11), 1)
+
+		jtypeBits.writeBits(uint64(jImm20), 1)
+		jtypeBits.writeBits(uint64(jImm10_1), 10)
+		jtypeBits.writeBits(uint64(jImm11), 1)
+		jtypeBits.writeBits(uint64(jImm19_12), 8)
+		jtypeBits.writeBits(uint64(rd), 5)
+
+		utypeBits.writeBits(uint64(uImm20), 20)
+		utypeBits.writeBits(uint64(rd), 5)
 	}
 
-	return base, hex.EncodeToString(coreBits.buf), hex.EncodeToString(itypeBits.buf), hex.EncodeToString(rtypeBits.buf), hex.EncodeToString(stypeBits.buf)
+	return base,
+		hex.EncodeToString(coreBits.buf),
+		hex.EncodeToString(itypeBits.buf),
+		hex.EncodeToString(rtypeBits.buf),
+		hex.EncodeToString(stypeBits.buf),
+		hex.EncodeToString(btypeBits.buf),
+		hex.EncodeToString(jtypeBits.buf),
+		hex.EncodeToString(utypeBits.buf)
 }
 
 // maxDecodedRecordsFromEnv returns the configured cap on decoded records.
@@ -407,7 +456,7 @@ func writeSectionsFile(file *os.File, blobs []memoryBlob) {
 	}
 }
 
-func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, coreHex, itypeHex, rtypeHex, stypeHex string) {
+func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, coreHex, itypeHex, rtypeHex, stypeHex, btypeHex, jtypeHex, utypeHex string) {
 	var (
 		entryPointString   = fmt.Sprintf("%016x", entryPoint)
 		blobsCountString   = fmt.Sprintf("%016x", len(blobs))
@@ -431,6 +480,9 @@ func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, coreHex, 
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_CORE, coreHex)
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_ITYPE, itypeHex)
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_RTYPE, rtypeHex)
-	fmt.Printf("\t\"%s\": \"0x%s\"\n", DECODED_STYPE, stypeHex)
+	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_STYPE, stypeHex)
+	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_BTYPE, btypeHex)
+	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_JTYPE, jtypeHex)
+	fmt.Printf("\t\"%s\": \"0x%s\"\n", DECODED_UTYPE, utypeHex)
 	fmt.Println("}")
 }
