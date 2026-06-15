@@ -16,10 +16,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	fiatshamir "github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/fiatshamir"
-	poseidon2 "github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/commitment"
+	fiatshamir "github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/fiatshamir"
 	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/fri"
+	poseidon2 "github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop"
@@ -1100,13 +1100,14 @@ func runZigFmt(data []byte) ([]byte, error) {
 // PCS verifier action exists in prover-ray, this function will walk the
 // compiled system instead of constructing the data by hand.
 func writeFRISpecFixture() error {
+	const grinding = 0
 	p, err := fri.NewParams(32, 8, 4,
 		commitment.DefaultLeafHasher, commitment.DefaultNodeHasher,
-		fri.WithGrinding(0))
+		fri.WithGrinding(grinding))
 	if err != nil {
 		return fmt.Errorf("fri.NewParams: %w", err)
 	}
-	params, err := codegen.BuildFRIParams(p)
+	params, err := codegen.BuildFRIParamsWithGrinding(p, grinding)
 	if err != nil {
 		return fmt.Errorf("BuildFRIParams: %w", err)
 	}
@@ -1118,8 +1119,8 @@ func writeFRISpecFixture() error {
 		AirBegin: 1, AirEnd: 1,
 		TreeSizes: []int{32},
 		ColSlots: map[string]codegen.Slot{
-			"col0": {TreeIdx: 0, PolyIdx: 0, Rail: codegen.RailBase},
-			"col1": {TreeIdx: 0, PolyIdx: 1, Rail: codegen.RailExt},
+			"col0": {TreeIdx: 0, PolyIdx: 0, Rail: field.KindBase},
+			"col1": {TreeIdx: 0, PolyIdx: 1, Rail: field.KindExt},
 		},
 		AirChunkSlots: map[string]codegen.Slot{},
 	})

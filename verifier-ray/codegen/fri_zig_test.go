@@ -7,6 +7,7 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/commitment"
 	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/fri"
+	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
 func testFRIParams(t *testing.T) FRIParams {
@@ -28,8 +29,8 @@ func testLayout(t *testing.T) Layout {
 		AirBegin: 1, AirEnd: 1,
 		TreeSizes: []int{32},
 		ColSlots: map[string]Slot{
-			"col0": {TreeIdx: 0, PolyIdx: 0, Rail: RailBase},
-			"col1": {TreeIdx: 0, PolyIdx: 1, Rail: RailExt},
+			"col0": {TreeIdx: 0, PolyIdx: 0, Rail: field.KindBase},
+			"col1": {TreeIdx: 0, PolyIdx: 1, Rail: field.KindExt},
 		},
 		AirChunkSlots: map[string]Slot{},
 	})

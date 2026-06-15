@@ -6,14 +6,7 @@ import (
 
 	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/fri"
-)
-
-// Rail identifies which Merkle tree rail a polynomial occupies.
-type Rail int
-
-const (
-	RailBase Rail = iota
-	RailExt
+	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // Slot identifies a polynomial's position within the commitment scheme:
@@ -22,7 +15,7 @@ const (
 type Slot struct {
 	TreeIdx int
 	PolyIdx int
-	Rail    Rail
+	Rail    field.Kind
 }
 
 // FRIParams holds the program-determined FRI configuration. It is derived from
@@ -43,13 +36,21 @@ type FRIParams struct {
 // Generators are returned as canonical (non-Montgomery) field element values
 // so the Zig renderer can emit them as integer literals.
 func BuildFRIParams(p fri.Params) (FRIParams, error) {
+	return BuildFRIParamsWithGrinding(p, 0)
+}
+
+// BuildFRIParamsWithGrinding is BuildFRIParams with the proof-of-work grinding
+// count supplied by the caller. The pinned prover-ray module does not expose
+// this unexported Params field, so codegen must carry the option value from the
+// same configuration point that constructs fri.Params.
+func BuildFRIParamsWithGrinding(p fri.Params, grinding int) (FRIParams, error) {
 	numRounds := bits.Len(uint(p.D)) - 1
 	out := FRIParams{
 		N:             p.N,
 		D:             p.D,
 		NumQueries:    p.NumQueries,
 		NumRounds:     numRounds,
-		Grinding:      p.Grinding(),
+		Grinding:      grinding,
 		DomainGens:    make([]uint64, numRounds+1),
 		DomainGensInv: make([]uint64, numRounds+1),
 	}
@@ -73,13 +74,13 @@ type LayoutConfig struct {
 	NumTrees      int
 	SetupBegin    int
 	SetupEnd      int
-	TraceBegin    []int            // per trace round; same length as TraceEnd
-	TraceEnd      []int            // per trace round
+	TraceBegin    []int // per trace round; same length as TraceEnd
+	TraceEnd      []int // per trace round
 	AirBegin      int
 	AirEnd        int
-	TreeSizes     []int            // indexed by tree index; length must equal NumTrees
-	ColSlots      map[string]Slot  // column name → slot
-	AirChunkSlots map[string]Slot  // air-chunk name → slot
+	TreeSizes     []int           // indexed by tree index; length must equal NumTrees
+	ColSlots      map[string]Slot // column name → slot
+	AirChunkSlots map[string]Slot // air-chunk name → slot
 }
 
 // Layout holds the program-determined tree layout, validated and ready for Zig

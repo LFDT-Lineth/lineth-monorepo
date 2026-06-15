@@ -6,6 +6,7 @@ import (
 	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/commitment"
 	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/fri"
+	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
 func newTestParams(t *testing.T, n, d, numQueries int, opts ...fri.Option) fri.Params {
@@ -84,8 +85,9 @@ func TestBuildFRIParamsHalvingProperty(t *testing.T) {
 
 // TestBuildFRIParamsGrinding verifies that the grinding bit count is preserved.
 func TestBuildFRIParamsGrinding(t *testing.T) {
-	p := newTestParams(t, 16, 4, 4, fri.WithGrinding(8))
-	out, err := BuildFRIParams(p)
+	const grinding = 8
+	p := newTestParams(t, 16, 4, 4, fri.WithGrinding(grinding))
+	out, err := BuildFRIParamsWithGrinding(p, grinding)
 	if err != nil {
 		t.Fatalf("BuildFRIParams: %v", err)
 	}
@@ -113,7 +115,7 @@ func TestBuildLayoutRejectsOutOfRangeColSlot(t *testing.T) {
 		NumTrees:  2,
 		TreeSizes: []int{64, 32},
 		ColSlots: map[string]Slot{
-			"col": {TreeIdx: 2, PolyIdx: 0, Rail: RailBase}, // TreeIdx 2 >= NumTrees 2
+			"col": {TreeIdx: 2, PolyIdx: 0, Rail: field.KindBase}, // TreeIdx 2 >= NumTrees 2
 		},
 	})
 	if err == nil {
@@ -128,7 +130,7 @@ func TestBuildLayoutRejectsOutOfRangeAirChunkSlot(t *testing.T) {
 		NumTrees:  2,
 		TreeSizes: []int{64, 32},
 		AirChunkSlots: map[string]Slot{
-			"air": {TreeIdx: 5, PolyIdx: 0, Rail: RailExt},
+			"air": {TreeIdx: 5, PolyIdx: 0, Rail: field.KindExt},
 		},
 	})
 	if err == nil {
@@ -146,11 +148,11 @@ func TestBuildLayoutAcceptsValidConfig(t *testing.T) {
 		AirBegin: 2, AirEnd: 3,
 		TreeSizes: []int{64, 32},
 		ColSlots: map[string]Slot{
-			"col0": {TreeIdx: 0, PolyIdx: 0, Rail: RailBase},
-			"col1": {TreeIdx: 1, PolyIdx: 0, Rail: RailExt},
+			"col0": {TreeIdx: 0, PolyIdx: 0, Rail: field.KindBase},
+			"col1": {TreeIdx: 1, PolyIdx: 0, Rail: field.KindExt},
 		},
 		AirChunkSlots: map[string]Slot{
-			"air0": {TreeIdx: 0, PolyIdx: 1, Rail: RailBase},
+			"air0": {TreeIdx: 0, PolyIdx: 1, Rail: field.KindBase},
 		},
 	}
 	got, err := BuildLayout(cfg)
@@ -163,8 +165,8 @@ func TestBuildLayoutAcceptsValidConfig(t *testing.T) {
 	if len(got.TreeSizes) != 2 || got.TreeSizes[0] != 64 || got.TreeSizes[1] != 32 {
 		t.Errorf("TreeSizes = %v, want [64 32]", got.TreeSizes)
 	}
-	if slot, ok := got.ColSlots["col1"]; !ok || slot.Rail != RailExt {
-		t.Errorf("ColSlots[col1] = %+v, want Rail=RailExt", slot)
+	if slot, ok := got.ColSlots["col1"]; !ok || slot.Rail != field.KindExt {
+		t.Errorf("ColSlots[col1] = %+v, want Rail=KindExt", slot)
 	}
 }
 

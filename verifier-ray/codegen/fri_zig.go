@@ -5,6 +5,8 @@ import (
 	"io"
 	"sort"
 	"text/template"
+
+	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // FRISpecZigOptions configures imports and pub-name overrides for generated
@@ -30,10 +32,10 @@ func WriteFRISpecZig(w io.Writer, params FRIParams, layout Layout, dq DQLayout) 
 
 func WriteFRISpecZigWithOptions(w io.Writer, params FRIParams, layout Layout, dq DQLayout, opts FRISpecZigOptions) error {
 	tmpl, err := template.New("fri_spec").Funcs(template.FuncMap{
-		"u32Array":  u32Array,
-		"u64Inits":  u64Inits,
-		"railLit":   railLiteral,
-		"zigStr":    zigString,
+		"u32Array": u32Array,
+		"u64Inits": u64Inits,
+		"railLit":  railLiteral,
+		"zigStr":   zigString,
 	}).Parse(friSpecTemplate)
 	if err != nil {
 		return err
@@ -54,7 +56,7 @@ type friSpecNamedSlot struct {
 	Name    string
 	TreeIdx int
 	PolyIdx int
-	Rail    Rail
+	Rail    field.Kind
 }
 
 type friSpecLayoutData struct {
@@ -136,8 +138,8 @@ func u64Inits(vals []uint64) string {
 	return out + " }"
 }
 
-func railLiteral(r Rail) string {
-	if r == RailExt {
+func railLiteral(r field.Kind) string {
+	if r == field.KindExt {
 		return ".ext"
 	}
 	return ".base"
