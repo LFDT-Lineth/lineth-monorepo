@@ -2,7 +2,6 @@ package main
 
 import (
 	"debug/elf"
-	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -80,7 +79,7 @@ func main() {
 }
 
 // parseInBytes turns an arg into raw input bytes. Four forms:
-// - `*.ssz`: (optional `@` prefix): return `LE8(len) ‖ ssz`, same endianness
+// - `*.ssz`: (optional `@` prefix): return `ssz`; expects little endian inputs;
 // - `0x...`: expects big-endian hex, byte-reversed before reaching RAM.
 // - `@path`: same as `0x…`, but reads the hex from a file.
 // - anything else: raw bytes, verbatim.
@@ -91,10 +90,7 @@ func parseInBytes(arg string) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("reading inBytes .ssz file: %w", err)
 		}
-		out := make([]byte, 8+len(ssz))
-		binary.LittleEndian.PutUint64(out[:8], uint64(len(ssz)))
-		copy(out[8:], ssz)
-		return out, nil
+		return ssz, nil
 	}
 
 	// input ≡ non ssz file
