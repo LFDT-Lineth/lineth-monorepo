@@ -279,9 +279,15 @@ func GnarkVerifyCommon(
 				panic("the vortex verifier circuit only supports a no-SIS hasher")
 			}
 
+			// Zero-pad to nextPow2 to match noSisTransversalHash.
+			paddedSubCol := make([]frontend.Variable, utils.NextPowerOfTwo(len(selectedSubCol)))
+			copy(paddedSubCol, selectedSubCol)
+			for z := len(selectedSubCol); z < len(paddedSubCol); z++ {
+				paddedSubCol[z] = frontend.Variable(0)
+			}
 			hasher, _ := params.NoSisHasher(api)
 			hasher.Reset()
-			hasher.Write(selectedSubCol...)
+			hasher.Write(paddedSubCol...)
 			digest := hasher.Sum()
 			selectedColSisDigests[i][j] = digest
 		}

@@ -123,11 +123,23 @@ task integrationTest(type: Test) {
   classpath = sourceSets.integrationTest.runtimeClasspath
   testClassesDirs = sourceSets.integrationTest.output.classesDirs
 
-  // To make room for Besu threads
-  systemProperties["junit.jupiter.execution.parallel.config.strategy"] = "fixed"
-  int maxThreads = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
-  systemProperties["junit.jupiter.execution.parallel.config.fixed.max-pool-size"] = maxThreads
-  systemProperties["junit.jupiter.execution.parallel.config.fixed.parallelism"] = maxThreads
+  // Limit concurrency to max(2, nCpu/4) and run one test class per JVM (forkEvery = 1) so each class is
+  // fully isolated (own statics, singletons, ForkJoinPool, log4j2 context). This overrides the root
+  // build.gradle default. The concurrency cap lives at the process
+  // level, so methods within a fork run sequentially (same_thread), overriding the root's concurrent mode.
+  // nCpu/4 (rather than nCpu/2) leaves headroom: each class spins up several Besu+Maru nodes with real
+  // P2P, and over-subscribing the host makes timing-sensitive peer-discovery awaits flake.
+  maxParallelForks = Math.max(2, Runtime.runtime.availableProcessors().intdiv(4))
+  forkEvery = 1
+  systemProperties["junit.jupiter.execution.parallel.mode.default"] = "same_thread"
+  systemProperties["junit.jupiter.execution.parallel.mode.classes.default"] = "same_thread"
+
+  // Isolate each test's logs into their own file under build/integrationTest-logs/. PerTestLoggingExtension
+  // (auto-registered, see src/integrationTest/resources) tags each test thread via the log4j2 ThreadContext
+  // (per-method file) and publishes the running class name as a system property (per-class fallback file for
+  // untagged logs from JVM-global pools such as ForkJoinPool.commonPool). Make the context map inheritable so
+  // the Besu/Maru worker threads a test spawns inherit its tag and log to the same file.
+  systemProperties["log4j2.isThreadContextMapInheritable"] = "true"
 
   testLogging {
     events TestLogEvent.FAILED,

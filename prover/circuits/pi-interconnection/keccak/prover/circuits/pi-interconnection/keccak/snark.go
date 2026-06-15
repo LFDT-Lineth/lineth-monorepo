@@ -294,6 +294,7 @@ func divByLanesPerBlock(api frontend.API, x frontend.Variable) (q, r frontend.Va
 		q, r = hintOuts[0], hintOuts[1]
 		api.AssertIsLessOrEqual(r, lanesPerBlock-1)
 		api.AssertIsLessOrEqual(q, x)
+		api.AssertIsEqual(x, api.Add(api.Mul(q, lanesPerBlock), r))
 	}
 	return
 }

@@ -109,7 +109,7 @@ func compileHornerQuery(comp *wizard.CompiledIOP, q *query.Horner) {
 			)
 		}
 
-		for j := 0; j < numList-1; j++ {
+		for j := 0; j < numList; j++ {
 
 			prevAcc := column.Shift(accumulators[numList-1], 1)
 			if j > 0 {

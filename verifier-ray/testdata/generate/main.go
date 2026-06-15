@@ -652,7 +652,72 @@ func buildVanishingFixtureCases() ([]vanishingFixtureCase, []codegen.NamedVanish
 		}
 	}
 
+	// LagrangeSelector boundary scenario. It is constructed here rather than in
+	// prover-ray's wioptest because it exercises the lagrange_selector codegen
+	// and Zig evaluator path, which the pinned prover-ray module already
+	// supports via wiop.NewLagrangeSelector; building it locally keeps the
+	// fixture reproducible from the pinned module (see `make verify-testdata`).
+	{
+		sys, col := buildLagrangeSelectorBoundarySystem()
+		honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 99, 7, 7))) }
+		invalid := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 98, 7, 7))) }
+		if err := add("Vanishing", "LagrangeSelectorBoundary", sys, honest, invalid); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	// Dynamic-module variant of the LagrangeSelectorBoundary scenario. Its
+	// module size is resolved at runtime (4, from the assigned column length),
+	// so it drives the Zig verifier's dynamic selector branch that the static
+	// fixture above leaves uncovered.
+	{
+		sys, col := buildDynamicLagrangeSelectorBoundarySystem()
+		honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 99, 7, 7))) }
+		invalid := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 98, 7, 7))) }
+		if err := add("Vanishing", "DynamicLagrangeSelectorBoundary", sys, honest, invalid); err != nil {
+			return nil, nil, err
+		}
+	}
+
 	return cases, systems, nil
+}
+
+// buildLagrangeSelectorBoundarySystem builds a size-4 module with the single
+// vanishing L_1·(col − 99) = 0. The Lagrange selector L_1 is 1 at row 1 and 0
+// elsewhere on the domain, so the constraint pins col[1] = 99 while leaving the
+// other rows free. It exercises the verifier's out-of-domain selector
+// evaluation L_1(r) = ω·(r⁴−1)/(4·(r−ω)). The column is returned so the caller
+// can assign witnesses.
+func buildLagrangeSelectorBoundarySystem() (*wiop.System, *wiop.Column) {
+	sys := wiop.NewSystemf("lagrange-sel")
+	r0 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
+	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	selector := wiop.NewLagrangeSelector(mod, 1)
+	value := wiop.NewConstantField(elem(99))
+	mod.NewVanishing(sys.Context.Childf("boundary"), wiop.Mul(selector, wiop.Sub(col.View(), value)))
+	return sys, col
+}
+
+// buildDynamicLagrangeSelectorBoundarySystem is the dynamic-module twin of
+// buildLagrangeSelectorBoundarySystem: same L_1·(col − 99) = 0 constraint, but
+// on a dynamic module whose domain size is fixed only at runtime (here 4, from
+// the assigned column length). Because the module is unsized at codegen time,
+// the Zig verifier takes the dynamic selector path — deriving ω from
+// ctx.dynamic_n via field.rootOfUnityBy and computing ω^position at runtime —
+// rather than folding ω^position to a comptime constant. The static fixture
+// never exercises that branch, so this one guards the path production dynamic
+// modules actually hit. The column is returned so the caller can assign
+// witnesses.
+func buildDynamicLagrangeSelectorBoundarySystem() (*wiop.System, *wiop.Column) {
+	sys := wiop.NewSystemf("lagrange-sel-dyn")
+	r0 := sys.NewRound()
+	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
+	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	selector := wiop.NewLagrangeSelector(mod, 1)
+	value := wiop.NewConstantField(elem(99))
+	mod.NewVanishing(sys.Context.Childf("boundary"), wiop.Mul(selector, wiop.Sub(col.View(), value)))
+	return sys, col
 }
 
 func buildVanishingProofView(sys *wiop.System, assign vanishingAssign) vanishingProofView {
