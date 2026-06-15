@@ -12,9 +12,9 @@ import (
 )
 
 // newSingleFractionLDS builds a size-4 module with a single LogDerivativeSum
-// query Σ col[i]/1, compiled to one Z column. It returns the system after the
-// logderivativesum compiler pass has registered the verifier action.
-func newSingleFractionLDS(t *testing.T) *wiop.System {
+// query Σ col[i]/1, compiled to one Z column. It returns the system and the
+// oracle column so callers can assign witnesses before running the prover.
+func newSingleFractionLDS(t *testing.T) (*wiop.System, *wiop.Column) {
 	t.Helper()
 	sys := wiop.NewSystemf("ld-codegen")
 	r0 := sys.NewRound()
@@ -26,13 +26,37 @@ func newSingleFractionLDS(t *testing.T) *wiop.System {
 		{Numerator: col.View(), Denominator: one},
 	})
 	logderivativesum.Compile(sys)
-	return sys
+	return sys, col
+}
+
+// runTestProver creates a runtime, assigns the given oracle columns, and
+// advances through all rounds running every prover action.
+func runTestProver(sys *wiop.System, assignments map[*wiop.Column][]uint64) wiop.Runtime {
+	rt := wiop.NewRuntime(sys)
+	for col, vals := range assignments {
+		elems := make([]field.Element, len(vals))
+		for i, v := range vals {
+			elems[i].SetUint64(v)
+		}
+		rt.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(elems)})
+	}
+	for _, action := range rt.CurrentRound().ProverActions {
+		action.Run(rt)
+	}
+	for rt.CurrentRound().ID < len(rt.System.Rounds)-1 {
+		rt.AdvanceRound()
+		for _, action := range rt.CurrentRound().ProverActions {
+			action.Run(rt)
+		}
+	}
+	return rt
 }
 
 func TestBuildLogDerivSystemExtractsQuery(t *testing.T) {
-	sys := newSingleFractionLDS(t)
+	sys, col := newSingleFractionLDS(t)
+	rt := runTestProver(sys, map[*wiop.Column][]uint64{col: {1, 2, 3, 4}})
 
-	ld, err := BuildLogDerivSystem(sys)
+	ld, err := BuildLogDerivSystem(sys, rt)
 	if err != nil {
 		t.Fatalf("BuildLogDerivSystem() error = %v", err)
 	}
@@ -46,15 +70,12 @@ func TestBuildLogDerivSystemExtractsQuery(t *testing.T) {
 	if q.ResultIsZero {
 		t.Fatalf("a plain LogDerivativeSum query must not be marked result-is-zero")
 	}
-	// The endpoint opening and the Result cell both live in the result round.
-	if q.ZFinals[0].Round != q.Result.Round {
-		t.Fatalf("z-final round %d and result round %d should match", q.ZFinals[0].Round, q.Result.Round)
-	}
 }
 
 func TestWriteLogDerivSystemZigRendersQuery(t *testing.T) {
-	sys := newSingleFractionLDS(t)
-	ld, err := BuildLogDerivSystem(sys)
+	sys, col := newSingleFractionLDS(t)
+	rt := runTestProver(sys, map[*wiop.Column][]uint64{col: {1, 2, 3, 4}})
+	ld, err := BuildLogDerivSystem(sys, rt)
 	if err != nil {
 		t.Fatalf("BuildLogDerivSystem() error = %v", err)
 	}
@@ -66,7 +87,7 @@ func TestWriteLogDerivSystemZigRendersQuery(t *testing.T) {
 	got := out.String()
 	for _, want := range []string{
 		"const logderivativesum = @import",
-		"system_0_logderiv_query_0_zfinals = [_]logderivativesum.ScalarRef{",
+		"system_0_logderiv_query_0_zfinals = [_][6]u32{",
 		"system_0_logderiv_queries = [_]logderivativesum.Query{",
 		".result_is_zero = false",
 		"const system_0_logderiv = logderivativesum.System{ .queries = &system_0_logderiv_queries };",
@@ -95,7 +116,13 @@ func TestBuildLogDerivSystemMarksLookupResultZero(t *testing.T) {
 	lookuptologderivsum.Compile(sys)
 	logderivativesum.Compile(sys)
 
-	ld, err := BuildLogDerivSystem(sys)
+	// Assign S ⊆ T: all values from S appear in T.
+	rt := runTestProver(sys, map[*wiop.Column][]uint64{
+		colT: {1, 2, 3, 4},
+		colS: {1, 1, 2, 3},
+	})
+
+	ld, err := BuildLogDerivSystem(sys, rt)
 	if err != nil {
 		t.Fatalf("BuildLogDerivSystem() error = %v", err)
 	}
@@ -111,8 +138,9 @@ func TestBuildLogDerivSystemNoQueries(t *testing.T) {
 	sys := wiop.NewSystemf("ld-none")
 	sys.NewRound()
 	sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
+	rt := runTestProver(sys, nil)
 
-	ld, err := BuildLogDerivSystem(sys)
+	ld, err := BuildLogDerivSystem(sys, rt)
 	if err != nil {
 		t.Fatalf("BuildLogDerivSystem() error = %v", err)
 	}

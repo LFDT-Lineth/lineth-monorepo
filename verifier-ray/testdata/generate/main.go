@@ -608,16 +608,16 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		if len(vanishingSystem.Modules) == 0 {
 			return nil
 		}
-		logDeriv, err := codegen.BuildLogDerivSystem(sys)
+		prefixedName := source + "/" + name
+		honestRt := runProver(sys, honest)
+		logDeriv, err := codegen.BuildLogDerivSystem(sys, honestRt)
 		if err != nil {
 			return fmt.Errorf("build logderiv system %s/%s: %w", source, name, err)
 		}
-
-		prefixedName := source + "/" + name
-		honestProof := buildVanishingProofView(sys, honest)
+		honestProof := extractVanishingProofView(sys, honestRt)
 		var invalidProof *vanishingProofView
 		if invalid != nil {
-			proof := buildVanishingProofView(sys, invalid)
+			proof := extractVanishingProofView(sys, runProver(sys, invalid))
 			invalidProof = &proof
 		}
 		cases = append(cases, fixtureCase{name: prefixedName, honest: honestProof, invalid: invalidProof})
@@ -724,11 +724,26 @@ func buildDynamicLagrangeSelectorBoundarySystem() (*wiop.System, *wiop.Column) {
 	return sys, col
 }
 
-func buildVanishingProofView(sys *wiop.System, assign assignFn) vanishingProofView {
+// runProver creates a runtime for sys, applies assign, advances all rounds
+// running every prover action, and returns the completed runtime.
+func runProver(sys *wiop.System, assign assignFn) wiop.Runtime {
 	rt := wiop.NewRuntime(sys)
 	assign(&rt)
-	runProver(&rt)
+	for _, action := range rt.CurrentRound().ProverActions {
+		action.Run(rt)
+	}
+	for rt.CurrentRound().ID < len(rt.System.Rounds)-1 {
+		rt.AdvanceRound()
+		for _, action := range rt.CurrentRound().ProverActions {
+			action.Run(rt)
+		}
+	}
+	return rt
+}
 
+// extractVanishingProofView reads witness/quotient claims and round trace data
+// from an already-completed runtime.
+func extractVanishingProofView(sys *wiop.System, rt wiop.Runtime) vanishingProofView {
 	verifiers := globalVerifiers(sys)
 
 	var witnessClaims []field.Ext
@@ -754,18 +769,6 @@ func buildVanishingProofView(sys *wiop.System, assign assignFn) vanishingProofVi
 		witnessClaims:  witnessClaims,
 		quotientClaims: quotientClaims,
 		moduleSizes:    dynamicModuleSizes(verifiers, rt),
-	}
-}
-
-func runProver(rt *wiop.Runtime) {
-	for _, action := range rt.CurrentRound().ProverActions {
-		action.Run(*rt)
-	}
-	for rt.CurrentRound().ID < len(rt.System.Rounds)-1 {
-		rt.AdvanceRound()
-		for _, action := range rt.CurrentRound().ProverActions {
-			action.Run(*rt)
-		}
 	}
 }
 

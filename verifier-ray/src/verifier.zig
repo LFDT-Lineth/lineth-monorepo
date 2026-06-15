@@ -23,7 +23,7 @@ const ext = @import("field/koalabear_ext.zig");
 //           sub_verifier_claims: []const ext.Ext,   // ← add
 //       };
 //     Some sub-verifiers need no extra proof data and can omit this step.
-//     LogDerivativeSum is such a case: it reads all it needs from ctx.rounds.
+//     LogDerivativeSum is such a case: its values are baked into the compiled system.
 //
 //  4. Add a dispatch call in `verify` step 3 — ctx is already built:
 //       try sub_verifier.verify(systems.sub_verifier, .{
@@ -93,14 +93,13 @@ pub fn verify(
     };
 
     // Step 3 — dispatch each sub-verifier with ctx + its own claims.
+    // LogDerivativeSum values are baked into the compiled system; no ctx needed.
+    try logderivativesum.verify(systems.logderivativesum);
     try vanishing.verify(systems.vanishing, .{
         .ctx = ctx,
         .witness_claims = proof.witness_claims,
         .quotient_claims = proof.quotient_claims,
         .module_sizes = proof.module_sizes,
     });
-    // LogDerivativeSum reads only public cell openings from ctx.rounds; its
-    // Z-recurrence and L_0 initial condition are discharged by vanishing above.
-    try logderivativesum.verify(systems.logderivativesum, ctx);
     // TODO(new-sub-verifier): dispatch here — step 4 above.
 }

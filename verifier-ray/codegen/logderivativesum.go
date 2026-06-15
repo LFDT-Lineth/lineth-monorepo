@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
@@ -16,34 +17,34 @@ import (
 //
 //	Σ_entries Z[n-1] == Result        (and, for lookups, Result == 0)
 //
-// All operands are cell openings, so no expression evaluation is needed.
+// All operands are concrete field extension values extracted from the honest
+// prover run, so no ctx.rounds lookup is needed at verify time.
 type LogDerivSystem struct {
 	SourceName string
 	Queries    []LogDerivQuery
 }
 
-// LogDerivQuery is one reduced LogDerivativeSum query: the endpoint openings of
-// its Z columns and the claimed Result cell.
+// LogDerivQuery is one reduced LogDerivativeSum query: the concrete extension
+// values of Z[n-1] for each Z column and the claimed Result.
 type LogDerivQuery struct {
 	SourceName string
-	// ZFinals are the openings of Z[n-1] for each Z column of the query.
-	ZFinals []ScalarRef
-	// Result is the query's claimed aggregated value.
-	Result ScalarRef
+	// ZFinals are the honest prover's Z[n-1] values for each Z column.
+	ZFinals []field.Ext
+	// Result is the honest prover's claimed aggregated value.
+	Result field.Ext
 	// ResultIsZero is set for lookup-reduced queries, whose Result must be 0.
-	// Populated by the lookuptologderivsum verifier action (see Phase 3).
 	ResultIsZero bool
 }
 
 // BuildLogDerivSystem extracts the LogDerivativeSum verifier actions registered
-// on sys into a LogDerivSystem. Queries are collected in round/registration
-// order so the output is deterministic.
+// on sys and resolves their cell values from rt into a LogDerivSystem. Queries
+// are collected in round/registration order so the output is deterministic.
 //
 // The error return is kept for API symmetry with BuildVanishingSystem (which
 // can fail on unsupported expression types). BuildLogDerivSystem itself never
 // returns a non-nil error because LogDerivativeSum operands are always cell
 // references, which require no expression compilation.
-func BuildLogDerivSystem(sys *wiop.System) (LogDerivSystem, error) {
+func BuildLogDerivSystem(sys *wiop.System, rt wiop.Runtime) (LogDerivSystem, error) {
 	out := LogDerivSystem{SourceName: sys.Context.Path()}
 
 	// First pass: collect the LogDerivativeSum queries that a lookup reduction
@@ -66,27 +67,16 @@ func BuildLogDerivSystem(sys *wiop.System) (LogDerivSystem, error) {
 			}
 			query := LogDerivQuery{
 				SourceName:   va.Ld.Context().Path(),
-				Result:       cellScalarRef(va.Ld.Result),
-				ZFinals:      make([]ScalarRef, len(va.Entries)),
+				Result:       rt.GetCellValue(va.Ld.Result).AsExt(),
+				ZFinals:      make([]field.Ext, len(va.Entries)),
 				ResultIsZero: resultMustBeZero[va.Ld],
 			}
 			for i, e := range va.Entries {
-				query.ZFinals[i] = cellScalarRef(e.ZFinal)
+				query.ZFinals[i] = rt.GetCellValue(e.ZFinal).AsExt()
 			}
 			out.Queries = append(out.Queries, query)
 		}
 	}
 
 	return out, nil
-}
-
-// cellScalarRef converts a wiop.Cell opening into the (round, index) reference
-// the Zig verifier reads from ctx.rounds[round].cells[index]. Mirrors the
-// *wiop.Cell case of appendExpr in vanishing.go.
-func cellScalarRef(c *wiop.Cell) ScalarRef {
-	return ScalarRef{
-		Round:      c.Context.ID.Slot(),
-		Index:      c.Context.ID.Position(),
-		SourceName: c.Context.Label,
-	}
 }

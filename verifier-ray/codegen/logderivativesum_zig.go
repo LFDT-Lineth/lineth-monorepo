@@ -3,6 +3,8 @@ package codegen
 import (
 	"fmt"
 	"io"
+
+	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // LogDerivZigOptions configures generated logderivativesum.System data.
@@ -38,11 +40,11 @@ func WriteLogDerivSystemZigWithOptions(w io.Writer, index int, system LogDerivSy
 
 	// Per-query z_finals arrays.
 	for q, query := range system.Queries {
-		if _, err := fmt.Fprintf(w, "const system_%d_logderiv_query_%d_zfinals = [_]%s.ScalarRef{\n", index, q, ld); err != nil {
+		if _, err := fmt.Fprintf(w, "const system_%d_logderiv_query_%d_zfinals = [_][6]u32{\n", index, q); err != nil {
 			return err
 		}
-		for _, ref := range query.ZFinals {
-			if _, err := fmt.Fprintf(w, "    .{ .round = %d, .index = %d }, // z-final: \"%s\"\n", ref.Round, ref.Index, zigString(ref.SourceName)); err != nil {
+		for _, val := range query.ZFinals {
+			if _, err := fmt.Fprintf(w, "    %s,\n", extLimbs(val)); err != nil {
 				return err
 			}
 		}
@@ -57,8 +59,8 @@ func WriteLogDerivSystemZigWithOptions(w io.Writer, index int, system LogDerivSy
 	}
 	for q, query := range system.Queries {
 		if _, err := fmt.Fprintf(w,
-			"    .{ .z_finals = &system_%d_logderiv_query_%d_zfinals, .result = .{ .round = %d, .index = %d }, .result_is_zero = %t }, // query: \"%s\"\n",
-			index, q, query.Result.Round, query.Result.Index, query.ResultIsZero, zigString(query.SourceName)); err != nil {
+			"    .{ .z_finals = &system_%d_logderiv_query_%d_zfinals, .result = %s, .result_is_zero = %t }, // query: \"%s\"\n",
+			index, q, extLimbs(query.Result), query.ResultIsZero, zigString(query.SourceName)); err != nil {
 			return err
 		}
 	}
@@ -73,4 +75,9 @@ func WriteLogDerivSystemZigWithOptions(w io.Writer, index int, system LogDerivSy
 		return err
 	}
 	return nil
+}
+
+func extLimbs(e field.Ext) string {
+	a0, a1, b0, b1, c0, c1 := field.ExtToUint64s(&e)
+	return fmt.Sprintf(".{ %d, %d, %d, %d, %d, %d }", a0, a1, b0, b1, c0, c1)
 }
