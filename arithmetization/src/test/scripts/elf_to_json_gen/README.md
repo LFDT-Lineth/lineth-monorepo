@@ -46,7 +46,7 @@ In addition to the original keys (`entry_point_and_blobs_count`,
 | `decoded_rtype`    | `funct7, rs2, rs1, funct3, rd`                         | `funct7::rs2::rs1::funct3::rd = instruction_parameters`    |
 | `decoded_stype`    | `imm12, rs2, rs1, funct3`                              | `imm_sign::uimm6::rs2::rs1::funct3::uimm5 = instruction_parameters` |
 | `decoded_btype`    | `imm, rs2, rs1, funct3`                                | `imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters` + sign-aware reassembly |
-| `decoded_jtype`    | `imm20, imm10_1, imm11, imm19_12, rd`                  | `imm20::imm10_1::imm11::imm19_12::rd = instruction_parameters` |
+| `decoded_jtype`    | `imm, rd`                                              | `imm20::imm10_1::imm11::imm19_12::rd = instruction_parameters` + sign-aware reassembly |
 | `decoded_utype`    | `imm20, rd`                                            | `imm20::rd = instruction_parameters`                       |
 
 Each value is a single `0x…` hex string. The field set and order of every table
@@ -61,9 +61,9 @@ For B-type the 13-bit signed branch offset is *fully resolved* at decode time:
 since the sign bit is statically known, the offset is sign-extended into a single
 ready-to-use 64-bit `imm`, so `b_type.zkc` does no reconstruction or branching.
 
-For J-type the immediate is left split into the same sub-fields the interpreter
-already destructures, so its (non-trivial, sign-aware) immediate reconstruction
-stays in `j_type.zkc` unchanged.
+J-type is resolved the same way: the 21-bit signed jump offset is sign-extended
+into a single 64-bit `imm` at decode time, so `j_type.zkc` does no shift or sign
+extension.
 
 ## How the pre-decoding is done
 
@@ -106,7 +106,7 @@ size is the sum of its field widths:
 | `decoded_rtype` | funct7 7, rs2 5, rs1 5, funct3 3, rd 5 | 25 bits |
 | `decoded_stype` | imm12 12, rs2 5, rs1 5, funct3 3 | 25 bits   |
 | `decoded_btype` | imm 64, rs2 5, rs1 5, funct3 3 | 77 bits |
-| `decoded_jtype` | imm20 1, imm10_1 10, imm11 1, imm19_12 8, rd 5 | 25 bits |
+| `decoded_jtype` | imm 64, rd 5 | 69 bits |
 | `decoded_utype` | imm20 20, rd 5 | 25 bits |
 
 > Important: if you change a field's type/width in `memory.zkc`, update the
