@@ -53,6 +53,7 @@ func buildLevelTreeExt(t *testing.T, p fri.Params, layer []ext.E6) *merkle.Tree 
 	return tree
 }
 
+
 func testParams(t *testing.T, N, D, queries int) fri.Params {
 	t.Helper()
 	p, err := fri.NewParams(N, D, queries, fri.DefaultLeafHasher, fri.DefaultNodeHasher)

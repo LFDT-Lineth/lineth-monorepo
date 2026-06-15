@@ -6,27 +6,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/hash"
 )
 
-type LeafHash = hash.Digest
-type NodeHash = hash.Digest
-
-// NodeHasher combines two child digests into a parent digest.
-type NodeHasher interface {
-	HashNode(left, right hash.Digest) hash.Digest
-}
-
-// Tree is a binary Merkle tree whose number of leaves is a power of two.
-//
-// Nodes are stored 1-indexed in a flat slice of length 2*nLeaves:
-//   - nodes[1]              = root
-//   - nodes[nLeaves..2*nLeaves-1] = leaves (leaf i at nodes[nLeaves+i])
-//   - children of node k   = nodes[2k] (left) and nodes[2k+1] (right)
-//   - parent of node k     = nodes[k/2]
-type Tree struct {
-	nodes      []hash.Digest
-	nLeaves    int
-	nodeHasher NodeHasher
-}
-
 // Proof is an opening proof for a single leaf.
 // Siblings[0] is the sibling at the leaf level; Siblings[depth-1] is the
 // sibling one level below the root.

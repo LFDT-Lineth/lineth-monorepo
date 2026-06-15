@@ -37,10 +37,6 @@ type Params struct {
 
 type Config struct {
 	WoFullDomainAllocation bool
-	// Grinding is the number of grinding bits for PoW. More grinding bits => more cpu work for the
-	// prover, but security goes from log_blowup * num_queries to
-	// log_blowup * num_queries + query_proof_of_work_bits.
-	Grinding int
 }
 
 type Option func(c *Config) error
@@ -48,16 +44,6 @@ type Option func(c *Config) error
 func WoFullDomainAllocation() Option {
 	return func(c *Config) error {
 		c.WoFullDomainAllocation = true
-		return nil
-	}
-}
-
-// WithGrinding forces the folding challenges to start with nbBits at zeroes, to increase security
-// It lowers the space <wrong proof x miraculously valid challenges>.
-// Security goes from log_blowup * num_queries to log_blowup * num_queries + query_proof_of_work_bits.
-func WithGrinding(nbBits int) Option {
-	return func(c *Config) error {
-		c.Grinding = nbBits
 		return nil
 	}
 }
@@ -103,7 +89,6 @@ func NewParams(
 		NodeHasher: nh,
 		numRounds:  numRounds,
 		invTwo:     invTwo,
-		grinding:   config.Grinding,
 	}
 
 	if !config.WoFullDomainAllocation {
@@ -210,10 +195,9 @@ type Proof struct {
 	// Running-polynomial FRI path
 	FRIRoots      []hash.Digest // Merkle roots for running poly T_1..T_{r-1}
 	FinalField    field.Kind
-	FinalPolyBase []field.Element                           // populated when FinalField == field.KindBase
-	FinalPolyExt  []field.Ext                               // populated when FinalField == field.KindExt
-	FRIQueries    []Query                                   // len = NumQueries
-	PoW           map[string]fiatshamirrefactor.ProofOfWork // proof of work in case grinding has nbBits > 0
+	FinalPolyBase []field.Element // populated when FinalField == field.KindBase
+	FinalPolyExt  []field.Ext     // populated when FinalField == field.KindExt
+	FRIQueries    []Query         // len = NumQueries
 }
 
 // FullDomainGenerator returns the generator of the full evaluation domain (layer 0, size N).
@@ -262,7 +246,7 @@ func (p Params) BuildLevelTreeExt(layer []field.Ext) (*merkle.Tree, error) {
 // contain one evaluation vector on exactly one rail. levels is sorted in-place
 // in decreasing order of D.
 // ts must already have been initialised with any prior-round context.
-func Prove(p Params, levels []Level, ts *fiatshamirrefactor.Transcript) (Proof, []int, error) {
+func Prove(p Params, levels []Level) (Proof, []int, error) {
 	sort.Slice(levels, func(i, j int) bool { return levels[i].D > levels[j].D })
 
 	plan, err := buildProvePlan(p, levels)
@@ -279,12 +263,37 @@ func Prove(p Params, levels []Level, ts *fiatshamirrefactor.Transcript) (Proof, 
 	return proveBase(p, levels, plan, ts)
 }
 
+// provePlan is the validated, precomputed schedule that Prove derives from the
+// caller-supplied levels before delegating to proveBase or proveExt. It answers
+// three questions the commit/query loops need:
+//
+//   - rail: does this run operate over the base field or the extension field?
+//     Taken from levels[0]; every other level must agree. It selects which
+//     prover (proveBase vs proveExt) runs.
+//
+//   - numLevels: how many committed polynomials are in play. levels[0] is the
+//     main degree-D polynomial; levels[1..numLevels-1] are the lower-degree
+//     polynomials batched in mid-fold. numLevels-1 is the count of extra levels.
+//
+//   - levelAtRound: the multi-degree FRI schedule, mapping a folding round j to
+//     the level index l (1-based) introduced at that round. A level of size
+//     levels[l].D is mixed into the running polynomial (scaled by γ^l) at round
+//     jl = log2(p.D / levels[l].D) — precisely when the running polynomial has
+//     folded down to that level's degree. The commit loops consult this map to
+//     know when to batch each extra level, and the verifier rebuilds the same
+//     map to replay the batching.
 type provePlan struct {
 	rail         field.Kind
 	numLevels    int
 	levelAtRound map[int]int
 }
 
+// buildProvePlan validates levels and computes the provePlan schedule. It
+// enforces that levels[0].D == p.D with a populated single-rail evaluation
+// vector of length N and a non-nil tree, that every extra level is a power-of-two
+// degree on the same rail with the matching evaluation length and tree, and that
+// no two levels are introduced at the same folding round. levels must already be
+// sorted in decreasing order of D (Prove does this).
 func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 	var plan provePlan
 	if len(levels) == 0 {
@@ -754,7 +763,6 @@ func verifyBase(
 	levelAtRound map[int]int,
 	roots []hash.Digest,
 	prf Proof,
-	ts *fiatshamirrefactor.Transcript,
 ) error {
 	numLevels := len(levelRoots)
 	numExtraLevels := numLevels - 1
