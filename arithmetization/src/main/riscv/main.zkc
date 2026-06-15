@@ -41,7 +41,7 @@ fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_ro
 
         // clock cycle starts at 1
         clock_cycle = clock_cycle + 1
-        printf "----------------------------------------------------------------- PC=%d, clock cycle: %d\n", pc, clock_cycle
+        printf "\n----------------------------------------------------------------- PC=%d, clock cycle: %d\n", pc, clock_cycle
 
         pc = interpreter(instruction, pc)
     }

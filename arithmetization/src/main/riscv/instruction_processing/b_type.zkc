@@ -67,7 +67,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
     switch funct3 {
         case FUNCT3_BEQ: {
             printf "BEQ "
-            // print_b_operands(rs1, rs2, imm)
+            print_b_operands(rs1, rs2, imm)
             if registers[rs1] == registers[rs2] {
                 // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
@@ -75,7 +75,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         }
         case FUNCT3_BNE: {
             printf "BNE "
-            // print_b_operands(rs1, rs2, imm)
+            print_b_operands(rs1, rs2, imm)
             if registers[rs1] != registers[rs2] {
                 // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
@@ -83,7 +83,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         }
         case FUNCT3_BLT: {
             printf "BLT "
-            // print_b_operands(rs1, rs2, imm)
+            print_b_operands(rs1, rs2, imm)
             comparison = signed_LT(registers[rs1], registers[rs2])
             if comparison == 1 {
                 // the branch case
@@ -92,7 +92,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         }
         case FUNCT3_BGE: {
             printf "BGE "
-            // print_b_operands(rs1, rs2, imm)
+            print_b_operands(rs1, rs2, imm)
             comparison = signed_LT(registers[rs1], registers[rs2])
             if comparison == 0 {
                 // the branch case
@@ -101,7 +101,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         }
         case FUNCT3_BLTU: {
             printf "BLTU "
-            // print_b_operands(rs1, rs2, imm)
+            print_b_operands(rs1, rs2, imm)
             if registers[rs1]<registers[rs2] {
                 // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
@@ -109,7 +109,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         }
         case FUNCT3_BGEU: {
             printf "BGEU "
-            // print_b_operands(rs1, rs2, imm)
+            print_b_operands(rs1, rs2, imm)
             if registers[rs1] >= registers[rs2] {
                 // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)

@@ -12,24 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// runAndVerify is a local copy of wioptest.RunAndVerify. We duplicate it here
-// instead of importing wioptest to keep the test self-contained.
-func runAndVerify(rt *wiop.Runtime) error {
-	sys := rt.System
-	for rt.CurrentRound().ID < len(sys.Rounds)-1 {
-		rt.AdvanceRound()
-		for _, a := range rt.CurrentRound().ProverActions {
-			a.Run(*rt)
-		}
-	}
-	for _, r := range sys.Rounds {
-		for _, va := range r.VerifierActions {
-			if err := va.Check(*rt); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+// proveVerify runs the explicit prover/verifier split on an already-compiled
+// system: it assigns the witness via assign, produces a strict public-only
+// Proof, and verifies it — returning the first failing check, or nil.
+func proveVerify(sys *wiop.System, assign func(rt *wiop.Runtime)) error {
+	proof := sys.Prove(assign)
+	return sys.Verify(proof)
 }
 
 func makeVec(vals ...uint64) *wiop.ConcreteVector {
@@ -137,9 +125,7 @@ func TestCompile_Completeness(t *testing.T) {
 			sys, honest, _ := sc.build()
 			localvanishing.Compile(sys)
 			global.Compile(sys)
-			rt := wiop.NewRuntime(sys)
-			honest(&rt)
-			require.NoError(t, runAndVerify(&rt),
+			require.NoError(t, proveVerify(sys, honest),
 				"compiled verifier must accept an honest witness")
 		})
 	}
@@ -151,9 +137,7 @@ func TestCompile_Soundness(t *testing.T) {
 			sys, _, invalid := sc.build()
 			localvanishing.Compile(sys)
 			global.Compile(sys)
-			rt := wiop.NewRuntime(sys)
-			invalid(&rt)
-			assert.Error(t, runAndVerify(&rt),
+			assert.Error(t, proveVerify(sys, invalid),
 				"compiled verifier must reject an invalid witness")
 		})
 	}
@@ -169,9 +153,7 @@ func TestCompile_WioptestCompleteness(t *testing.T) {
 		t.Run(sc.Name, func(t *testing.T) {
 			localvanishing.Compile(sc.Sys)
 			global.Compile(sc.Sys)
-			rt := wiop.NewRuntime(sc.Sys)
-			sc.AssignHonest(&rt)
-			require.NoError(t, wioptest.RunAndVerify(&rt),
+			require.NoError(t, proveVerify(sc.Sys, sc.AssignHonest),
 				"compiled verifier must accept an honest witness")
 		})
 	}
@@ -185,9 +167,7 @@ func TestCompile_WioptestSoundness(t *testing.T) {
 		t.Run(sc.Name, func(t *testing.T) {
 			localvanishing.Compile(sc.Sys)
 			global.Compile(sc.Sys)
-			rt := wiop.NewRuntime(sc.Sys)
-			sc.AssignInvalid(&rt)
-			assert.Error(t, wioptest.RunAndVerify(&rt),
+			assert.Error(t, proveVerify(sc.Sys, sc.AssignInvalid),
 				"compiled verifier must reject an invalid witness")
 		})
 	}
@@ -375,20 +355,20 @@ func TestCompile_BaseCellLeaf_RoundTrip(t *testing.T) {
 		sys, col, cell := build()
 		localvanishing.Compile(sys)
 		global.Compile(sys)
-		rt := wiop.NewRuntime(sys)
-		rt.AssignColumn(col, makeVec(5, 9, 9, 9))
-		rt.AssignCell(cell, field.ElemFromBase(elementFromUint64(5)))
-		require.NoError(t, runAndVerify(&rt))
+		require.NoError(t, proveVerify(sys, func(rt *wiop.Runtime) {
+			rt.AssignColumn(col, makeVec(5, 9, 9, 9))
+			rt.AssignCell(cell, field.ElemFromBase(elementFromUint64(5)))
+		}))
 	})
 
 	t.Run("invalid", func(t *testing.T) {
 		sys, col, cell := build()
 		localvanishing.Compile(sys)
 		global.Compile(sys)
-		rt := wiop.NewRuntime(sys)
-		rt.AssignColumn(col, makeVec(5, 9, 9, 9))
-		rt.AssignCell(cell, field.ElemFromBase(elementFromUint64(7)))
-		assert.Error(t, runAndVerify(&rt))
+		assert.Error(t, proveVerify(sys, func(rt *wiop.Runtime) {
+			rt.AssignColumn(col, makeVec(5, 9, 9, 9))
+			rt.AssignCell(cell, field.ElemFromBase(elementFromUint64(7)))
+		}))
 	})
 }
 
@@ -415,20 +395,20 @@ func TestCompile_ExtensionCellLeaf_RoundTrip(t *testing.T) {
 		sys, col, cell := build()
 		localvanishing.Compile(sys)
 		global.Compile(sys)
-		rt := wiop.NewRuntime(sys)
-		rt.AssignColumn(col, makeVec(5, 9, 9, 9))
-		rt.AssignCell(cell, extOf(5))
-		require.NoError(t, runAndVerify(&rt))
+		require.NoError(t, proveVerify(sys, func(rt *wiop.Runtime) {
+			rt.AssignColumn(col, makeVec(5, 9, 9, 9))
+			rt.AssignCell(cell, extOf(5))
+		}))
 	})
 
 	t.Run("invalid", func(t *testing.T) {
 		sys, col, cell := build()
 		localvanishing.Compile(sys)
 		global.Compile(sys)
-		rt := wiop.NewRuntime(sys)
-		rt.AssignColumn(col, makeVec(5, 9, 9, 9))
-		rt.AssignCell(cell, extOf(7))
-		assert.Error(t, runAndVerify(&rt))
+		assert.Error(t, proveVerify(sys, func(rt *wiop.Runtime) {
+			rt.AssignColumn(col, makeVec(5, 9, 9, 9))
+			rt.AssignCell(cell, extOf(7))
+		}))
 	})
 }
 
@@ -457,18 +437,18 @@ func TestCompile_CoinLeaf_RoundTrip(t *testing.T) {
 		sys, col := build()
 		localvanishing.Compile(sys)
 		global.Compile(sys)
-		rt := wiop.NewRuntime(sys)
-		rt.AssignColumn(col, makeVec(5, 9, 9, 9))
-		require.NoError(t, runAndVerify(&rt))
+		require.NoError(t, proveVerify(sys, func(rt *wiop.Runtime) {
+			rt.AssignColumn(col, makeVec(5, 9, 9, 9))
+		}))
 	})
 
 	t.Run("invalid", func(t *testing.T) {
 		sys, col := build()
 		localvanishing.Compile(sys)
 		global.Compile(sys)
-		rt := wiop.NewRuntime(sys)
-		rt.AssignColumn(col, makeVec(7, 9, 9, 9))
-		assert.Error(t, runAndVerify(&rt))
+		assert.Error(t, proveVerify(sys, func(rt *wiop.Runtime) {
+			rt.AssignColumn(col, makeVec(7, 9, 9, 9))
+		}))
 	})
 }
 
@@ -497,19 +477,19 @@ func TestCompile_ExtensionCellAndCoin_RoundTrip(t *testing.T) {
 		sys, col, cell := build()
 		localvanishing.Compile(sys)
 		global.Compile(sys)
-		rt := wiop.NewRuntime(sys)
-		rt.AssignColumn(col, makeVec(5, 9, 9, 9))
-		rt.AssignCell(cell, extOf(5))
-		require.NoError(t, runAndVerify(&rt))
+		require.NoError(t, proveVerify(sys, func(rt *wiop.Runtime) {
+			rt.AssignColumn(col, makeVec(5, 9, 9, 9))
+			rt.AssignCell(cell, extOf(5))
+		}))
 	})
 
 	t.Run("invalid", func(t *testing.T) {
 		sys, col, cell := build()
 		localvanishing.Compile(sys)
 		global.Compile(sys)
-		rt := wiop.NewRuntime(sys)
-		rt.AssignColumn(col, makeVec(5, 9, 9, 9))
-		rt.AssignCell(cell, extOf(7))
-		assert.Error(t, runAndVerify(&rt))
+		assert.Error(t, proveVerify(sys, func(rt *wiop.Runtime) {
+			rt.AssignColumn(col, makeVec(5, 9, 9, 9))
+			rt.AssignCell(cell, extOf(7))
+		}))
 	})
 }

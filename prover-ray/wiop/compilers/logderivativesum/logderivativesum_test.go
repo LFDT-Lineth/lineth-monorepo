@@ -20,11 +20,8 @@ func TestCompile_WioptestCompleteness(t *testing.T) {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			logderivativesum.Compile(sc.Sys)
-			rt := wiop.NewRuntime(sc.Sys)
-			sc.AssignWitness(&rt)
-			rt.AdvanceRound()
-			runRound(&rt)
-			require.NoError(t, checkAllVerifierActions(&rt),
+			proof := sc.Sys.Prove(sc.AssignWitness)
+			require.NoError(t, sc.Sys.Verify(proof),
 				"compiled verifier must accept an honest witness")
 		})
 	}
@@ -54,17 +51,14 @@ func TestCompile_WioptestSoundness(t *testing.T) {
 }
 
 // TestCompile_WioptestSoundness_TamperZ runs every wioptest scenario with a
-// constant-17 Z column instead of the honest prover output. The bogus Z
-// breaks the verifier's initial-condition check (Z[0]·zDen[0] = zNum[0])
-// on any non-trivial scenario; the recurrence vanishing is also violated
-// but the LDS verifier action is enough to surface the failure here.
+// constant-17 Z column instead of the honest prover output, and pins each
+// Result cell to zero. The final-sum verifier action then rejects the witness
+// because the sum of the (constant-17) Z[n-1] endpoints cannot equal zero.
 //
 // We bypass [proverAction.Run] entirely (no runRound), since the runtime
 // rejects re-assigning a column. Instead we set up the post-prover state
-// manually: Z gets the bogus value, every LocalOpening gets a SelfAssign
-// against that Z, and each LogDerivativeSum's Result cell is pinned to
-// zero. The verifier's claim-vs-running-sum check then catches a mismatch
-// even before the initial-condition check runs.
+// manually: Z gets the bogus value and each LogDerivativeSum's Result cell is
+// pinned to zero.
 func TestCompile_WioptestSoundness_TamperZ(t *testing.T) {
 	for _, build := range wioptest.LogDerivativeSumCompilerScenarios() {
 		sc := build()
@@ -557,15 +551,18 @@ func TestCompile_Soundness_WrongZ(t *testing.T) {
 	rt.AssignColumn(zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(bogus)})
 
 	require.Len(t, mod.Vanishings, 3,
-		"one recurrence plus the two endpoint-opening vanishings")
-	rec := mod.Vanishings[0] // the recurrence is registered before the openings
+		"one recurrence, the row-0 local constraint, and the endpoint opening")
+	rec := mod.Vanishings[0] // the recurrence is registered before the boundary constraints
 	require.True(t, rec.Expression.IsMultiValued(), "Vanishings[0] must be the recurrence")
 	assert.Error(t, rec.Check(rt),
 		"recurrence vanishing must reject a Z column that violates the relation")
 }
 
-// TestCompile_Soundness_WrongInitialZ asserts the verifier action rejects a
-// Z column whose row 0 does not satisfy Z[0]·zDen[0] = zNum[0].
+// TestCompile_Soundness_WrongInitialZ asserts the row-0 local constraint
+// rejects a Z column whose row 0 does not satisfy Z[0]·zDen[0] = zNum[0],
+// even though it satisfies the recurrence. This boundary used to be checked by
+// the verifier action; it is now pinned in-circuit by a local constraint, so
+// the verifier action (final-sum only) no longer sees it.
 func TestCompile_Soundness_WrongInitialZ(t *testing.T) {
 	sys, num, filter, ld := newSimpleFilteredSum(t, 4)
 	mod := sys.Modules[0]
@@ -588,17 +585,31 @@ func TestCompile_Soundness_WrongInitialZ(t *testing.T) {
 	}
 	rt.AssignColumn(zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(shifted)})
 
-	// The endpoint openings are lazy: they resolve to the (malicious) Z column
-	// values when the verifier action reads them, so no explicit assignment is
-	// needed here.
+	// The endpoint opening is lazy: it resolves to the (malicious) Z column
+	// value when read, so no explicit assignment is needed here.
 	rt.AssignCell(ld.Result, field.ElemFromExt(shifted[3]))
 
+	// The recurrence (multi-valued) accepts the constant-step Z, and the
+	// final-sum verifier action only compares consistent endpoints to Result —
+	// neither catches the shifted base.
+	rec := mod.Vanishings[0]
+	require.True(t, rec.Expression.IsMultiValued(), "Vanishings[0] must be the recurrence")
+	require.NoError(t, rec.Check(rt), "recurrence must accept a constant-step Z")
+	require.NoError(t, checkAllVerifierActions(&rt),
+		"the final-sum verifier action only checks endpoints against Result")
+
+	// The row-0 local constraint must reject the shifted base.
+	rejected := false
 	for _, v := range mod.Vanishings {
-		require.NoError(t, v.Check(rt),
-			"recurrence must accept a constant-step Z (this is the soundness gap that the initial-condition check closes)")
+		if v.Expression.IsMultiValued() {
+			continue
+		}
+		if err := v.Check(rt); err != nil {
+			rejected = true
+		}
 	}
-	assert.Error(t, checkAllVerifierActions(&rt),
-		"the verifier action must catch a Z whose row-0 value disagrees with zNum[0]/zDen[0]")
+	assert.True(t, rejected,
+		"the row-0 local constraint must reject a Z whose row-0 value disagrees with zNum[0]/zDen[0]")
 }
 
 // ---- Construction-time validation ----

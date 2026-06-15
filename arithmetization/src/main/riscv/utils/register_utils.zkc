@@ -1,5 +1,6 @@
 include "type.zkc"
 
+#[debug]
 fn print_register_values<registers>() -> () {
     printf "zero ≡ %d\n", registers[0]
     printf "ra   ≡ %d\n", registers[1]
@@ -35,6 +36,7 @@ fn print_register_values<registers>() -> () {
     printf "t6   ≡ %d\n", registers[31]
 }
 
+#[debug]
 fn print_register_name(r:Register) {
     switch r {
         case 0: {
@@ -139,6 +141,7 @@ fn print_register_name(r:Register) {
     }
 }
 
+#[debug]
 fn print_r_operands(rd:Register, rs1:Register, rs2:Register) {
     print_register_name(rd)
     printf ", "
@@ -148,6 +151,7 @@ fn print_r_operands(rd:Register, rs1:Register, rs2:Register) {
     printf "\n"
 }
 
+#[debug]
 fn print_i_operands(rd:Register, rs1:Register, imm:DoubleWord) {
     print_register_name(rd)
     printf ", "
@@ -155,6 +159,7 @@ fn print_i_operands(rd:Register, rs1:Register, imm:DoubleWord) {
     printf ", 0x%x\n", imm
 }
 
+#[debug]
 fn print_i_memory_operands(rd:Register, rs1:Register, imm:DoubleWord) {
     print_register_name(rd)
     printf ", 0x%x(", imm
@@ -162,6 +167,7 @@ fn print_i_memory_operands(rd:Register, rs1:Register, imm:DoubleWord) {
     printf ")\n"
 }
 
+#[debug]
 fn print_i_shift5_operands(rd:Register, rs1:Register, shamt:UImm5) {
     print_register_name(rd)
     printf ", "
@@ -169,6 +175,7 @@ fn print_i_shift5_operands(rd:Register, rs1:Register, shamt:UImm5) {
     printf ", 0x%x\n", shamt
 }
 
+#[debug]
 fn print_i_shift6_operands(rd:Register, rs1:Register, shamt:UImm6) {
     print_register_name(rd)
     printf ", "
@@ -176,6 +183,7 @@ fn print_i_shift6_operands(rd:Register, rs1:Register, shamt:UImm6) {
     printf ", 0x%x\n", shamt
 }
 
+#[debug]
 fn print_s_operands(rs2:Register, rs1:Register, imm:DoubleWord) {
     print_register_name(rs2)
     printf ", 0x%x(", imm
@@ -183,6 +191,7 @@ fn print_s_operands(rs2:Register, rs1:Register, imm:DoubleWord) {
     printf ")\n"
 }
 
+#[debug]
 fn print_b_operands(rs1:Register, rs2:Register, imm:DoubleWord) {
     print_register_name(rs1)
     printf ", "
@@ -190,11 +199,13 @@ fn print_b_operands(rs1:Register, rs2:Register, imm:DoubleWord) {
     printf ", 0x%x\n", imm
 }
 
+#[debug]
 fn print_u_operands(rd:Register, imm:Imm20) {
     print_register_name(rd)
     printf ", 0x%x\n", imm
 }
 
+#[debug]
 fn print_j_operands(rd:Register, imm:DoubleWord) {
     print_register_name(rd)
     printf ", 0x%x\n", imm

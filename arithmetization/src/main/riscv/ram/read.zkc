@@ -1,14 +1,72 @@
 include "../memory.zkc"
+include "../utils/constants.zkc"
 
-fn read_64<ram>(address:Address) -> (value:u64) {
-    value = ram[address + 7]::ram[address + 6]::ram[address + 5]::ram[address + 4]::ram[address + 3]::ram[address + 2]::ram[address + 1]::ram[address + 0]
-}
+// We use ram with word size of 32 bits.
+// To read a single byte from RAM at a byte address (address), we need to:
+// 1. Calculate the word index
+// word_idx = byte_address / word_size_in_bytes, here 4
+// 2. Calculate the offset
+// offset = address % word_size_in_bytes, here 4
+// 3. Load the word from RAM at the calculated word index word_idx
+// 4. Shift the word right by the offset * 8 bits to get the byte as the least significant byte
+// 5. Return the byte(s) value(s) via a mask operation
 
-fn read_32<ram>(address:Address) -> (value:u32) {
-    value = ram[address + 3]::ram[address + 2]::ram[address + 1]::ram[address + 0]
+fn read_8<ram>(address:Address) -> (value:u8) {
+    var word_idx:Address = address / 4
+    var offset:Address = address % 4
+    var trash:u24
+    trash::value = ram[word_idx] >> (offset * 8)
 }
 
 fn read_16<ram>(address:Address) -> (value:u16) {
-    value = ram[address + 1]::ram[address + 0]
+    var word_idx:Address = address / 4
+    var offset:Address = address % 4
+    switch offset {
+        case 3: {
+            var trash:u48
+            // Concatenate highest byte of (word_idx) and lowest byte of (word_idx + 1)
+            trash::value = (ram[word_idx + 1]::ram[word_idx]) >> 24
+            return
+        }
+        default: {
+            var trash:u16
+            trash::value = ram[word_idx] >> (offset * 8)
+            return
+        }
+    }
 }
 
+fn read_32<ram>(address:Address) -> (value:u32) {
+    var word_idx:Address = address / 4
+    var offset:Address = address % 4
+    switch offset {
+        case 0: {
+            value = ram[word_idx]
+            return
+        }
+        default: {
+            // Case 1, 2, 3 are collapse to reduce the number of instructions. 
+            // Default case cannot happen as offset is the result of % 4.
+            var trash:u32
+            trash::value = (ram[word_idx + 1]::ram[word_idx]) >> (offset * 8)
+            return
+        }
+    }
+}
+
+fn read_64<ram>(address:Address) -> (value:u64) {
+    var word_idx:Address = address / 4
+    var offset:Address = address % 4
+    switch offset {
+        case 0: {
+            value = ram[word_idx + 1]::ram[word_idx]
+            return
+        }
+        default: {
+            var lo:u32 = read_32(address)
+            var hi:u32 = read_32(address + 4)
+            value = hi::lo
+            return
+        }
+    }
+}

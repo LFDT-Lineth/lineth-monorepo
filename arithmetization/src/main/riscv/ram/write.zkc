@@ -1,52 +1,127 @@
 include "../memory.zkc"
+include "../utils/constants.zkc"
 
-// Everything in RISC5 is little endian
-fn write_64<ram>(address:Address, value:u64) -> () {
-    var v0:u8
-    var v1:u8
-    var v2:u8
-    var v3:u8
-    var v4:u8
-    var v5:u8
-    var v6:u8
-    var v7:u8
+// We use ram with word size of 32 bits.
+// To write a single byte to RAM at a byte address (address), we need to:
+// 1. Calculate the word index
+// word_idx = byte_address / word_size_in_bytes, here 4
+// 2. Calculate the offset
+// offset = address % word_size_in_bytes, here 4
+// 3. Load the word from RAM at the calculated word index word_idx
+// 4. Mask the byte(s) value(s) we want to write over
+// 5. Insert the byte(s) value(s) we want to write into the masked word
+// 6. Write the word back to RAM at the calculated word index word_idx
 
-    v7::v6::v5::v4::v3::v2::v1::v0 = value
-
-    ram[address + 0] = v0
-    ram[address + 1] = v1
-    ram[address + 2] = v2
-    ram[address + 3] = v3
-    ram[address + 4] = v4
-    ram[address + 5] = v5
-    ram[address + 6] = v6
-    ram[address + 7] = v7
-}
-
-fn write_32<ram>(address:Address, value:u32) -> () {
-    var v0:u8
-    var v1:u8
-    var v2:u8
-    var v3:u8
-
-    v3::v2::v1::v0 = value
-
-    ram[address + 0] = v0
-    ram[address + 1] = v1
-    ram[address + 2] = v2
-    ram[address + 3] = v3
+fn write_8<ram>(address:Address, value:u8) -> () {
+    var word_idx:Address = address / 4
+    var offset:Address = address % 4
+    switch offset {
+        case 0: {
+            var hi:u24
+            var lo:u8
+            hi::lo = ram[word_idx]
+            ram[word_idx] = hi::value
+            return
+        }
+        case 1: {
+            var hi:u16
+            var mid:u8
+            var lo:u8
+            hi::mid::lo = ram[word_idx]
+            ram[word_idx] = hi::value::lo
+            return
+        }
+        case 2: {
+            var hi:u8
+            var mid:u8
+            var lo:u16
+            hi::mid::lo = ram[word_idx]
+            ram[word_idx] = hi::value::lo
+            return
+        }
+        default: {
+            // Case 3 and default case are collapse to reduce the number of instructions. 
+            // Default case cannot happen as offset is the result of % 4.
+            var hi:u8
+            var lo:u24
+            hi::lo = ram[word_idx]
+            ram[word_idx] = value::lo
+            return
+        }
+    }
 }
 
 fn write_16<ram>(address:Address, value:u16) -> () {
-    var v0:u8
-    var v1:u8
-
-    v1::v0 = value
-
-    ram[address + 0] = v0
-    ram[address + 1] = v1
+    var word_idx:Address
+    var offset:Address = address % 4
+    switch offset {
+        case 0: {
+            word_idx = address / 4
+            var hi:u16
+            var lo:u16
+            hi::lo = ram[word_idx]
+            ram[word_idx] = hi::value
+            return
+        }
+        case 2: {
+            word_idx = address / 4
+            var hi:u16
+            var lo:u16
+            hi::lo = ram[word_idx]
+            ram[word_idx] = value::lo
+            return
+        }
+        default: {
+            // Case 1, 3 and default case are collapse to reduce the number of instructions. 
+            // Default case cannot happen as offset is the result of % 4.
+            var b0:u8
+            var b1:u8
+            b1::b0 = value
+            write_8(address, b0)
+            write_8(address + 1, b1)
+            return
+        }
+    }
 }
 
-fn write_8<ram>(address:Address, value:u8) -> () {
-    ram[address] = value
+fn write_32<ram>(address:Address, value:u32) -> () {
+    var word_idx:Address = address / 4
+    var offset:Address = address % 4
+    switch offset {
+        case 0: {
+            ram[word_idx] = value
+            return
+        }
+        default: {
+            var lo:u16
+            var hi:u16
+            hi::lo = value
+            write_16(address, lo)
+            write_16(address + 2, hi)
+            return
+        }
+    }
+}
+
+fn write_64<ram>(address:Address, value:u64) -> () {
+    var word_idx:Address = address / 4
+    var offset:Address = address % 4
+    switch offset {
+        case 0: {
+            var lo:u32
+            var hi:u32
+            hi::lo = value
+            ram[word_idx] = lo
+            ram[word_idx + 1] = hi
+            return
+        }
+        default: {
+            var lo:u32
+            var hi:u32
+            hi::lo = value
+            write_32(address, lo)
+            write_32(address + 4, hi)
+            return
+        }
+    }
 }

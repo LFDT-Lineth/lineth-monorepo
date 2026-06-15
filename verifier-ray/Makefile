@@ -19,7 +19,7 @@ VANISHING_BENCH_CASES ?= 0-5
 PASSING_INPUT_FILE := testdata/inputs/passing.bin
 FAILING_INPUT_FILE := testdata/inputs/failing.bin
 INPUT_FILE ?= $(PASSING_INPUT_FILE)
-IN_BYTES_OFFSET ?= 0x08800000
+IN_ORIGIN ?= 0x08800000
 NATIVE_INPUT_FILE := zig-out/input.bin
 IN_BYTES_FILE ?= zig-out/input.hex
 
@@ -61,7 +61,7 @@ help:
 		'  IN_BYTES_FILE         Big-endian hex transport file for zkc' \
 		'' \
 		'zkc variables:' \
-		'  IN_BYTES_OFFSET       Input bytes address, default 0x08800000' \
+		'  IN_ORIGIN            Input bytes address, default 0x08800000' \
 		'' \
 		'benchmark variables:' \
 		'  VANISHING_BENCH_CASE     Generated vanishing case index, default 0' \
@@ -147,7 +147,7 @@ prepare-zkc-input:
 	{ printf "0x"; xxd -p -c1 $(INPUT_FILE) | awk 'BEGIN{i=0} {lines[i++]=$$0} END{for(j=i-1;j>=0;j--) print lines[j]}' | tr -d '\n'; } > $(IN_BYTES_FILE)
 
 zkc-build: build-r5 prepare-zkc-input
-	go run $(ELF_TO_JSON) $(R5_BIN) "@$(IN_BYTES_FILE)" $(IN_BYTES_OFFSET) > $(R5_JSON)
+	go run $(ELF_TO_JSON) $(R5_BIN) "@$(IN_BYTES_FILE)" $(IN_ORIGIN) > $(R5_JSON)
 
 zkc-verify: zkc-build
 	zkc exec -q $(R5_JSON) $(ZKC_MAIN)
@@ -170,7 +170,7 @@ bench-vanishing-build: generate-testdata
 	zig build --release=small -Dstrip=true -Dr5=true -Dvanishing-bench=true -Dvanishing-case=$(VANISHING_BENCH_CASE)
 
 bench-vanishing-json: bench-vanishing-build
-	go run $(ELF_TO_JSON) $(VANISHING_BENCH_BIN) "" $(IN_BYTES_OFFSET) > $(VANISHING_BENCH_JSON)
+	go run $(ELF_TO_JSON) $(VANISHING_BENCH_BIN) "" $(IN_ORIGIN) > $(VANISHING_BENCH_JSON)
 
 bench-vanishing-zkc: bench-vanishing-json
 	mkdir -p $(dir $(VANISHING_BENCH_LOG))
@@ -198,7 +198,7 @@ bench-vanishing-compare-doc: generate-testdata
 	for case in $$cases; do \
 		echo "benchmarking vanishing case $$case"; \
 		zig build --release=small -Dstrip=true -Dr5=true -Dvanishing-bench=true -Dvanishing-case=$$case; \
-		go run $(ELF_TO_JSON) $(VANISHING_BENCH_BIN) "" $(IN_BYTES_OFFSET) > $(VANISHING_BENCH_JSON); \
+		go run $(ELF_TO_JSON) $(VANISHING_BENCH_BIN) "" $(IN_ORIGIN) > $(VANISHING_BENCH_JSON); \
 		zkc exec -q $(VANISHING_BENCH_JSON) $(VANISHING_BENCH_ZKC_MAIN) | tee $(VANISHING_BENCH_LOG_DIR)/case-$$case.log; \
 	done; \
 	go run bench/render_vanishing_benchmark/main.go \

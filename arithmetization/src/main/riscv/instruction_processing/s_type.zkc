@@ -59,22 +59,22 @@ fn process_S_type_instruction<ram, registers>(instruction_parameters:u25) {
     switch funct3 {
         case FUNCT3_SB: {
             printf "SB "
-            // print_s_operands(rs2, rs1, signext_imm12_64)
+            print_s_operands(rs2, rs1, signext_imm12_64)
             write_8(mem_address, (registers[rs2] & (0xFF as u64)) as u8)
         }
         case FUNCT3_SH: {
             printf "SH "
-            // print_s_operands(rs2, rs1, signext_imm12_64)
+            print_s_operands(rs2, rs1, signext_imm12_64)
             write_16(mem_address, (registers[rs2] & (0xFFFF as u64)) as u16)
         }
         case FUNCT3_SW: {
             printf "SW "
-            // print_s_operands(rs2, rs1, signext_imm12_64)
+            print_s_operands(rs2, rs1, signext_imm12_64)
             write_32(mem_address, (registers[rs2] & (0xFFFFFFFF as u64)) as u32)
         }
         case FUNCT3_SD: {
             printf "SD "
-            // print_s_operands(rs2, rs1, signext_imm12_64)
+            print_s_operands(rs2, rs1, signext_imm12_64)
             write_64(mem_address, registers[rs2])
         }
         default: {

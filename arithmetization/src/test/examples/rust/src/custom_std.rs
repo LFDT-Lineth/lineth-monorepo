@@ -27,13 +27,13 @@ fn panic(_: &core::panic::PanicInfo) -> ! {
 
 // Address where the zkVM writes input data before execution (from linker script)
 extern "C" {
-    static _input_start: u8;
+    static _in_start: u8;
 }
 
 // Read `len` bytes from `addr` of input region into the provided buffer
 pub fn read_memory(buf: *mut u8, len: usize) {
     unsafe {
-        let base = &raw const _input_start;
+        let base = &raw const _in_start;
         for i in 0..len {
             *buf.add(i) = *base.add(i);
         }

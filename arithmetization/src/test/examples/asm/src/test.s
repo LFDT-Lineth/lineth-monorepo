@@ -30,7 +30,7 @@ _start:
     la      t1, v1
     ld      t1, 0(t1)
 
-    la      t2, _input_start
+    la      t2, _in_start
     ld      t2, 0(t2)
 
     # Sum v0 and v1 

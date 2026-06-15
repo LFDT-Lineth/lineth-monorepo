@@ -56,33 +56,32 @@ JSON := $(BIN).json
 # Inputs and offsets for the program
 IN_BYTES        ?= ""
 
-# Values to generate the linker script
-# 128 MiB (0x00000000 -> 0x07FFFFFF)
-PROGRAM_OFFSET  ?= 0x00000000
+# Support function to evaluate expressions and format them as hex
+EVAL = $(shell printf "0x%08x" $$(( $(1) )))
 
-# 1 GiB   (0x08800000 -> 0x48FFFFFF)
-IN_BYTES_OFFSET ?= 0x08800000
+# Configurable parameters for the linker script
+STACK_ORIGIN   ?= 0x00000000
+SP             ?= 0x00800000
+PROGRAM_ORIGIN ?= 0x00800000
+IN_ORIGIN      ?= 0x08800000
+HEAP_ORIGIN    ?= 0x48800000
 
-# Since program starts from _start, the entry point is the same as the program offset
-ENTRY_POINT     := $(PROGRAM_OFFSET)
-
-# 8 MiB   (0x08000000 <- 0x08800000)
-SP              ?= 0x08800000
+# Derived parameters for the linker script
+ENTRY_POINT    := $(PROGRAM_ORIGIN)
+STACK_LENGTH   := $(call EVAL,$(SP) - $(STACK_ORIGIN))
+PROGRAM_LENGTH := $(call EVAL,$(IN_ORIGIN) - $(PROGRAM_ORIGIN))
+IN_LENGTH      := $(call EVAL,$(HEAP_ORIGIN) - $(IN_ORIGIN))
 
 # If true, generates an objdump of the generated ELF for debugging purposes
-OBJDUMP ?= false
+OBJDUMP        ?= false
 
-# Parsed values are just to verify that the generated ELF is correct (lazy evaluation allows to parse the ELF only after it is generated)
-PROGRAM_OFFSET_FROM_ELF  = $(shell LANG=C riscv64-unknown-elf-readelf -S $(BIN) | grep '\.text' | awk '{print "0x"$$5}')
-IN_BYTES_OFFSET_FROM_ELF = $(shell LANG=C riscv64-unknown-elf-nm $(BIN) | grep _input_start | awk '{print "0x"$$1}') 
-ENTRY_POINT_FROM_ELF     = $(shell LANG=C riscv64-unknown-elf-readelf -h $(BIN) | grep 'Entry point' | awk '{print $$4}')
-SP_FROM_ELF              = $(shell LANG=C riscv64-unknown-elf-nm $(BIN) | grep _stack_start | awk '{print "0x"$$1}')
-VERIFY_ELF               ?= false             
+# If true, verifies ELF entry point, origins, lengths, stack and heap symbols match the ones set
+VERIFY_ELF     ?= false
 
 # Support function to generate JSON from an ELF
 define ELF_TO_JSON
 	@echo "\nGenerating $(2) from $(1)"
-	@go run $(ELF_TO_JSON_GEN) "$(1)" "$(IN_BYTES)" $(IN_BYTES_OFFSET) > "$(2)"
+	@go run $(ELF_TO_JSON_GEN) "$(1)" "$(IN_BYTES)" $(IN_ORIGIN) > "$(2)"
 endef
 
 #####################################################################
@@ -132,7 +131,7 @@ compile: require-src linker-script
 		echo "\nDisassembling $(BIN)"; \
 		LANG=C riscv64-unknown-elf-objdump -D -s --line-numbers $(BIN) > $(BIN).objdump; \
 	fi
-# Verify that PROGRAM_OFFSET, IN_BYTES_OFFSET, ENTRY_POINT, SP match the ELF values
+# Verify that the configured memory layout matches the ELF values
 	@if [ "$(VERIFY_ELF)" = "true" ]; then \
 		$(MAKE) -f $(MAKEFILE_DIR)Makefile verify-elf TEST=$(TEST); \
 	fi
@@ -181,13 +180,15 @@ linker-script:
 		'ENTRY(_start)' \
 		'' \
 		'MEMORY {' \
-		'    PROGRAM (rx) : ORIGIN = $(PROGRAM_OFFSET), LENGTH = 0x8000000' \
-		'    STACK   (rw) : ORIGIN = $(shell printf "0x%08x" $$(($(SP) - 0x800000))), LENGTH = 0x800000' \
-		'    IN  (r)  : ORIGIN = $(IN_BYTES_OFFSET), LENGTH = 0x40000000' \
+		'    STACK  (rw) : ORIGIN = $(STACK_ORIGIN), LENGTH = $(STACK_LENGTH)' \
+		'    PROGRAM (rx) : ORIGIN = $(PROGRAM_ORIGIN), LENGTH = $(PROGRAM_LENGTH)' \
+		'    IN      (r)  : ORIGIN = $(IN_ORIGIN), LENGTH = $(IN_LENGTH)' \
+		'    /* HEAP  (rw) : ORIGIN = $(HEAP_ORIGIN), LENGTH = infinite */' \
 		'}' \
 		'' \
 		'SECTIONS {' \
 		'    . = ORIGIN(PROGRAM);' \
+		'    _program_start = ORIGIN(PROGRAM);' \
 		'' \
 		'    .text : {' \
 		'        *(.text .text.*)' \
@@ -206,29 +207,63 @@ linker-script:
 		'    } > PROGRAM' \
 		'' \
 		'    /* stack grows downward from the top of the stack region */' \
+		'    _stack_end = ORIGIN(STACK);' \
 		'    _stack_start = ORIGIN(STACK) + LENGTH(STACK);' \
 		'' \
-		'    /* symbol marking the start of the input region */' \
-		'    _input_start = ORIGIN(IN);' \
+		'    /* program and input regions grow upward */' \
+		'    _program_end = ORIGIN(PROGRAM) + LENGTH(PROGRAM);' \
+		'    _in_start = ORIGIN(IN);' \
+		'    _in_end = ORIGIN(IN) + LENGTH(IN);' \
+		'' \
+		'    /* heap grows upward from this address by program convention */' \
+		'    _heap_start = $(HEAP_ORIGIN);' \
 		'}' \
 		> $(LINKER_SCRIPT)
 
-# Verify that PROGRAM_OFFSET, IN_BYTES_OFFSET, ENTRY_POINT, SP match the ELF values
+# Verify that the generated ELF matches the configured memory layout
 verify-elf: require-test
-	@echo "\nVerify that PROGRAM_OFFSET, IN_BYTES_OFFSET, ENTRY_POINT, SP match the ELF values"
-	@[ "$(shell printf '0x%016x' $$(($(PROGRAM_OFFSET_FROM_ELF))))" = "$(shell printf '0x%016x' $$(($(PROGRAM_OFFSET))))" ] || \
-		(echo "ERROR: PROGRAM_OFFSET mismatch: expected $(PROGRAM_OFFSET), got $(PROGRAM_OFFSET_FROM_ELF)" && exit 1)
-	@echo "  PROGRAM_OFFSET:  $(PROGRAM_OFFSET) (expected) = $(PROGRAM_OFFSET_FROM_ELF) (from ELF)"
-	@[ "$(shell printf '0x%016x' $$(($(IN_BYTES_OFFSET_FROM_ELF))))" = "$(shell printf '0x%016x' $$(($(IN_BYTES_OFFSET))))" ] || \
-		(echo "ERROR: IN_BYTES_OFFSET mismatch: expected $(IN_BYTES_OFFSET), got $(IN_BYTES_OFFSET_FROM_ELF)" && exit 1)
-	@echo "  IN_BYTES_OFFSET: $(IN_BYTES_OFFSET) (expected) = $(IN_BYTES_OFFSET_FROM_ELF) (from ELF)"
-	@[ "$(shell printf '0x%016x' $$(($(ENTRY_POINT_FROM_ELF))))" = "$(shell printf '0x%016x' $$(($(ENTRY_POINT))))" ] || \
-		(echo "ERROR: ENTRY_POINT mismatch: expected $(ENTRY_POINT), got $(ENTRY_POINT_FROM_ELF)" && exit 1)
-	@echo "  ENTRY_POINT:     $(ENTRY_POINT) (expected) = $(ENTRY_POINT_FROM_ELF) (from ELF)"
-	@[ "$(shell printf '0x%016x' $$(($(SP_FROM_ELF))))" = "$(shell printf '0x%016x' $$(($(SP))))" ] || \
-		(echo "ERROR: SP mismatch: expected $(SP), got $(SP_FROM_ELF)" && exit 1)
-	@echo "  SP:              $(SP) (expected) = $(SP_FROM_ELF) (from ELF)"
-	@echo "All values match\n"
+# Support function descriptions:
+# elf_symbol:   reads a linker-defined symbol address from the ELF symbol table
+# section_addr: reads a section virtual address from the ELF section headers
+# hex:          normalizes decimal or hex values to 16-digit hex before comparing them
+# verify:       compares one expected Makefile value with the corresponding ELF value
+	@echo "\nVerify that the generated ELF matches the configured memory layout"
+	@set -e; \
+	elf_symbol() { \
+		LANG=C riscv64-unknown-elf-nm $(BIN) | awk -v symbol="$$1" '$$3 == symbol { print "0x" $$1; found = 1; exit } END { if (!found) exit 1 }'; \
+	}; \
+	section_addr() { \
+		LANG=C riscv64-unknown-elf-readelf -S $(BIN) | awk -v section="$$1" '{ for (i = 1; i <= NF; i++) if ($$i == section) { print "0x" $$(i + 2); found = 1; exit } } END { if (!found) exit 1 }'; \
+	}; \
+	hex() { printf '0x%016x' "$$(( $$1 ))"; }; \
+	verify() { \
+		label="$$1"; \
+		expected_raw="$$2"; \
+		actual_raw="$$3"; \
+		expected="$$(hex "$$expected_raw")"; \
+		actual="$$(hex "$$actual_raw")"; \
+		if [ "$$actual" != "$$expected" ]; then \
+			echo "ERROR: $$label mismatch: expected $$expected, got $$actual"; \
+			exit 1; \
+		fi; \
+		printf '  %-16s %s (expected) = %s (from ELF)\n' "$$label:" "$$expected" "$$actual"; \
+	}; \
+	verify "ENTRY_POINT" "$(ENTRY_POINT)" "$$(LANG=C riscv64-unknown-elf-readelf -h $(BIN) | awk '/Entry point/ { print $$4; found = 1; exit } END { if (!found) exit 1 }')"; \
+	verify "STACK_ORIGIN" "$(STACK_ORIGIN)" "$$(elf_symbol _stack_end)"; \
+	verify "STACK_LENGTH" "$(STACK_LENGTH)" "$$(( $$(elf_symbol _stack_start) - $$(elf_symbol _stack_end) ))"; \
+	verify "PROGRAM_ORIGIN" "$(PROGRAM_ORIGIN)" "$$(section_addr .text)"; \
+	verify "PROGRAM_LENGTH" "$(PROGRAM_LENGTH)" "$$(( $$(elf_symbol _program_end) - $$(elf_symbol _program_start) ))"; \
+	verify "IN_ORIGIN" "$(IN_ORIGIN)" "$$(elf_symbol _in_start)"; \
+	verify "IN_LENGTH" "$(IN_LENGTH)" "$$(( $$(elf_symbol _in_end) - $$(elf_symbol _in_start) ))"; \
+	verify "HEAP_ORIGIN" "$(HEAP_ORIGIN)" "$$(elf_symbol _heap_start)"; \
+	verify "_stack_end" "$(STACK_ORIGIN)" "$$(elf_symbol _stack_end)"; \
+	verify "_stack_start" "$(SP)" "$$(elf_symbol _stack_start)"; \
+	verify "_program_start" "$(PROGRAM_ORIGIN)" "$$(elf_symbol _program_start)"; \
+	verify "_program_end" "$(IN_ORIGIN)" "$$(elf_symbol _program_end)"; \
+	verify "_in_start" "$(IN_ORIGIN)" "$$(elf_symbol _in_start)"; \
+	verify "_in_end" "$(HEAP_ORIGIN)" "$$(elf_symbol _in_end)"; \
+	verify "_heap_start" "$(HEAP_ORIGIN)" "$$(elf_symbol _heap_start)"; \
+	echo "All values match\n"
 
 #####################################################################
 # Test vector targets
@@ -270,14 +305,14 @@ vector-json: require-src require-vector-file require-n-vectors require-vector-bu
 	[ -x "$$elf_to_json_bin" ] || { echo "ELF-to-JSON helper not found. Run vector-build first"; exit 1; }; \
 	if [ "$(VECTOR_JSON_MODE)" = "batched" ]; then \
 		echo "rendering ZKC JSON to $(VECTOR_JSON_FILE)"; \
-		"$$elf_to_json_bin" $(BIN) @$(VECTOR_SUBSET_FILE) $(IN_BYTES_OFFSET) > $(VECTOR_JSON_FILE) || exit $$?; \
+		"$$elf_to_json_bin" $(BIN) @$(VECTOR_SUBSET_FILE) $(IN_ORIGIN) > $(VECTOR_JSON_FILE) || exit $$?; \
 	elif [ "$(VECTOR_JSON_MODE)" = "per-vector" ]; then \
 		mkdir -p $(VECTOR_JSON_DIR); \
 		rm -f $(VECTOR_JSON_DIR)/*.json; \
 		echo "rendering one ZKC JSON per vector under $(VECTOR_JSON_DIR)"; \
 		n=0; while IFS= read -r in_bytes; do \
 			n=$$((n + 1)); idx=$$(printf '%03d' $$n); \
-			"$$elf_to_json_bin" $(BIN) "$$in_bytes" $(IN_BYTES_OFFSET) > "$(VECTOR_JSON_DIR)/$$idx.json" || exit $$?; \
+			"$$elf_to_json_bin" $(BIN) "$$in_bytes" $(IN_ORIGIN) > "$(VECTOR_JSON_DIR)/$$idx.json" || exit $$?; \
 		done < $(VECTOR_SUBSET_FILE); \
 		echo "generated $$n vector JSON(s) in $(VECTOR_JSON_DIR)"; \
 	fi

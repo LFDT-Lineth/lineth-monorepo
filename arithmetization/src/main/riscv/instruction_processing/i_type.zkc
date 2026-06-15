@@ -60,37 +60,37 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
             switch funct3 {
                 case FUNCT3_LB: {
                     printf "LB "
-                    // print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = sgn_extension_u8_u64(ram[rs1_plus_signext_imm12])
+                    print_i_memory_operands(rd, rs1, signext_imm12_64)
+                    registers[rd] = sgn_extension_u8_u64(read_8(rs1_plus_signext_imm12))
                 }
                 case FUNCT3_LH: {
                     printf "LH "
-                    // print_i_memory_operands(rd, rs1, signext_imm12_64)
+                    print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = sgn_extension_u16_u64(read_16(rs1_plus_signext_imm12))
                 }
                 case FUNCT3_LW: {
                     printf "LW "
-                    // print_i_memory_operands(rd, rs1, signext_imm12_64)
+                    print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = sgn_extension_u32_u64(read_32(rs1_plus_signext_imm12))
                 }
                 case FUNCT3_LBU: {
                     printf "LBU "
-                    // print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = ram[rs1_plus_signext_imm12] as DoubleWord
+                    print_i_memory_operands(rd, rs1, signext_imm12_64)
+                    registers[rd] = read_8(rs1_plus_signext_imm12) as DoubleWord
                 }
                 case FUNCT3_LHU: {
                     printf "LHU "
-                    // print_i_memory_operands(rd, rs1, signext_imm12_64)
+                    print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = read_16(rs1_plus_signext_imm12) as DoubleWord
                 }
                 case FUNCT3_LWU: {
                     printf "LWU "
-                    // print_i_memory_operands(rd, rs1, signext_imm12_64)
+                    print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = read_32(rs1_plus_signext_imm12) as DoubleWord
                 }
                 case FUNCT3_LD: {
                     printf "LD "
-                    // print_i_memory_operands(rd, rs1, signext_imm12_64)
+                    print_i_memory_operands(rd, rs1, signext_imm12_64)
                     registers[rd] = read_64(rs1_plus_signext_imm12) as DoubleWord
                 }
                 default: {
@@ -114,11 +114,11 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
 
             if funct3 == FUNCT3_ADDI {
                 printf "ADDI "
-                // print_i_operands(rd, rs1, signext_imm12_64)
+                print_i_operands(rd, rs1, signext_imm12_64)
                 registers[rd] = rs1_plus_signext_imm12
             } else if funct3 == FUNCT3_SLTI {
                 printf "SLTI "
-                // print_i_operands(rd, rs1, signext_imm12_64)
+                print_i_operands(rd, rs1, signext_imm12_64)
                 var is_lt:Boolean = signed_LT(registers[rs1], signext_imm12_64)
                 if is_lt == 1 {
                     registers[rd] = 1
@@ -127,7 +127,7 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                 }
             } else if funct3 == FUNCT3_SLTIU {
                 printf "SLTIU "
-                // print_i_operands(rd, rs1, signext_imm12_64)
+                print_i_operands(rd, rs1, signext_imm12_64)
                 // Warn: this is an unsigned comparison (even if imm12 is SGN_EXT)
                 if registers[rs1]<signext_imm12_64 {
                     registers[rd] = 1
@@ -136,27 +136,27 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                 }
             } else if funct3 == FUNCT3_XORI {
                 printf "XORI "
-                // print_i_operands(rd, rs1, signext_imm12_64)
+                print_i_operands(rd, rs1, signext_imm12_64)
                 registers[rd] = registers[rs1] ^ signext_imm12_64
             } else if funct3 == FUNCT3_ORI {
                 printf "ORI "
-                // print_i_operands(rd, rs1, signext_imm12_64)
+                print_i_operands(rd, rs1, signext_imm12_64)
                 registers[rd] = registers[rs1] | signext_imm12_64
             } else if funct3 == FUNCT3_ANDI {
                 printf "ANDI "
-                // print_i_operands(rd, rs1, signext_imm12_64)
+                print_i_operands(rd, rs1, signext_imm12_64)
                 registers[rd] = registers[rs1] & signext_imm12_64
             } else if (funct3 == FUNCT3_SLLI) && (funct6 == FUNCT6_SLLI) {
                 printf "SLLI "
-                // print_i_shift6_operands(rd, rs1, uimm6)
+                print_i_shift6_operands(rd, rs1, uimm6)
                 registers[rd] = registers[rs1] << uimm6
             } else if (funct3 == FUNCT3_SRLI) && (funct6 == FUNCT6_SRLI) {
                 printf "SRLI "
-                // print_i_shift6_operands(rd, rs1, uimm6)
+                print_i_shift6_operands(rd, rs1, uimm6)
                 registers[rd] = registers[rs1] >> uimm6
             } else if (funct3 == FUNCT3_SRAI) && (funct6 == FUNCT6_SRAI) {
                 printf "SRAI "
-                // print_i_shift6_operands(rd, rs1, uimm6)
+                print_i_shift6_operands(rd, rs1, uimm6)
                 registers[rd] = _ashr_u64(registers[rs1], uimm6)
             }
         }
@@ -174,19 +174,19 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
 
             if funct3 == FUNCT3_ADDIW {
                 printf "ADDIW "
-                // print_i_operands(rd, rs1, signext_imm12_64)
+                print_i_operands(rd, rs1, signext_imm12_64)
                 registers[rd] = sgn_extension_u32_u64((rs1_plus_signext_imm12 & MAX_UINT_32_AS_U64) as Word)
             } else if (funct3 == FUNCT3_SLLIW) && (funct7 == FUNCT7_SLLIW) {
                 printf "SLLIW "
-                // print_i_shift5_operands(rd, rs1, uimm5)
+                print_i_shift5_operands(rd, rs1, uimm5)
                 registers[rd] = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) << uimm5)
             } else if (funct3 == FUNCT3_SRLIW) && (funct7 == FUNCT7_SRLIW) {
                 printf "SRLIW "
-                // print_i_shift5_operands(rd, rs1, uimm5)
+                print_i_shift5_operands(rd, rs1, uimm5)
                 registers[rd] = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) >> uimm5)
             } else if (funct3 == FUNCT3_SRAIW) && (funct7 == FUNCT7_SRAIW) {
                 printf "SRAIW "
-                // print_i_shift5_operands(rd, rs1, uimm5)
+                print_i_shift5_operands(rd, rs1, uimm5)
                 registers[rd] = sgn_extension_u32_u64(_ashr_u32(registers[rs1], uimm5))
             }
         }
@@ -197,7 +197,7 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
 
         case JALR: {
             printf "JALR "
-            // print_i_memory_operands(rd, rs1, signext_imm12_64)
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
             // only instruction is JALR, no need to switch over funct3
             new_pc = rs1_plus_signext_imm12 & MASK_64_ERASE_LAST_BIT
             registers[rd] = (pc + 4) as DoubleWord
@@ -260,7 +260,7 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
             var a2:DoubleWord = registers[12] // count
             var addr:Address = a1
             for i:DoubleWord = 0; i<a2; i = i + 1 {
-                printf "%c", ram[addr]
+                printf "%c", read_8(addr)
                 addr = addr + 1
             }
             printf "\n"

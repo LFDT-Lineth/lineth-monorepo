@@ -18,9 +18,8 @@ func TestCompile_Completeness(t *testing.T) {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			global.Compile(sc.Sys)
-			rt := wiop.NewRuntime(sc.Sys)
-			sc.AssignHonest(&rt)
-			require.NoError(t, wioptest.RunAndVerify(&rt),
+			proof := sc.Sys.Prove(sc.AssignHonest)
+			require.NoError(t, sc.Sys.Verify(proof),
 				"compiled verifier must accept an honest witness")
 		})
 	}
@@ -35,9 +34,8 @@ func TestCompile_Soundness(t *testing.T) {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			global.Compile(sc.Sys)
-			rt := wiop.NewRuntime(sc.Sys)
-			sc.AssignInvalid(&rt)
-			assert.Error(t, wioptest.RunAndVerify(&rt),
+			proof := sc.Sys.Prove(sc.AssignInvalid)
+			assert.Error(t, sc.Sys.Verify(proof),
 				"compiled verifier must reject an invalid witness")
 		})
 	}
@@ -82,14 +80,12 @@ func TestCompile_GlobalConstraintWithLagrangeSelector(t *testing.T) {
 		}
 
 		sys, col := build()
-		rt := wiop.NewRuntime(sys)
-		rt.AssignColumn(col, colVec(size, pos, 0))
-		require.NoError(t, wioptest.RunAndVerify(&rt), "honest: col[pos]=0 must verify")
+		proof := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, colVec(size, pos, 0)) })
+		require.NoError(t, sys.Verify(proof), "honest: col[pos]=0 must verify")
 
 		sys, col = build()
-		rt = wiop.NewRuntime(sys)
-		rt.AssignColumn(col, colVec(size, pos, 5))
-		assert.Error(t, wioptest.RunAndVerify(&rt), "invalid: col[pos]=5 must be rejected")
+		proof = sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, colVec(size, pos, 5)) })
+		assert.Error(t, sys.Verify(proof), "invalid: col[pos]=5 must be rejected")
 	})
 
 	t.Run("quadratic", func(t *testing.T) {
@@ -108,15 +104,17 @@ func TestCompile_GlobalConstraintWithLagrangeSelector(t *testing.T) {
 		}
 
 		sys, a, b := build()
-		rt := wiop.NewRuntime(sys)
-		rt.AssignColumn(a, colVec(size, pos, 0)) // a[pos]=0 → product 0 at pos
-		rt.AssignColumn(b, colVec(size, pos, 5))
-		require.NoError(t, wioptest.RunAndVerify(&rt), "honest: (a·b)[pos]=0 must verify")
+		proof := sys.Prove(func(rt *wiop.Runtime) {
+			rt.AssignColumn(a, colVec(size, pos, 0)) // a[pos]=0 → product 0 at pos
+			rt.AssignColumn(b, colVec(size, pos, 5))
+		})
+		require.NoError(t, sys.Verify(proof), "honest: (a·b)[pos]=0 must verify")
 
 		sys, a, b = build()
-		rt = wiop.NewRuntime(sys)
-		rt.AssignColumn(a, colVec(size, pos, 3)) // a[pos]·b[pos]=15 ≠ 0
-		rt.AssignColumn(b, colVec(size, pos, 5))
-		assert.Error(t, wioptest.RunAndVerify(&rt), "invalid: (a·b)[pos]=15 must be rejected")
+		proof = sys.Prove(func(rt *wiop.Runtime) {
+			rt.AssignColumn(a, colVec(size, pos, 3)) // a[pos]·b[pos]=15 ≠ 0
+			rt.AssignColumn(b, colVec(size, pos, 5))
+		})
+		assert.Error(t, sys.Verify(proof), "invalid: (a·b)[pos]=15 must be rejected")
 	})
 }
