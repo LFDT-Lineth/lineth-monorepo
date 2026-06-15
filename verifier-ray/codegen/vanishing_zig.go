@@ -5,6 +5,8 @@ import (
 	"io"
 	"strings"
 	"text/template"
+
+	"github.com/consensys/linea-monorepo/prover-ray/wiop"
 )
 
 // VanishingZigOptions configures imports and wrapping sections for generated
@@ -176,11 +178,34 @@ func exprNodeLiteral(expr ExprNode) string {
 	case ExprConstant:
 		return fmt.Sprintf(".{ .constant = field.Element.init(%d) },", expr.Constant.Uint64())
 	case ExprOp:
-		return fmt.Sprintf(".{ .op = .{ .operator = .%s, .operands = &%s } },", expr.Operator, intSlice(expr.Operands))
+		return fmt.Sprintf(".{ .op = .{ .operator = .%s, .operands = &%s } },", operatorLiteral(expr.Operator), intSlice(expr.Operands))
 	case ExprLagrangeSelector:
 		return fmt.Sprintf(".{ .lagrange_selector = %d },", expr.SelectorPosition)
 	default:
 		panic(fmt.Sprintf("unknown ExprKind %d", int(expr.Kind)))
+	}
+}
+
+func operatorLiteral(op wiop.ArithmeticOperator) string {
+	switch op {
+	case wiop.ArithmeticOperatorAdd:
+		return "add"
+	case wiop.ArithmeticOperatorMul:
+		return "mul"
+	case wiop.ArithmeticOperatorSub:
+		return "sub"
+	case wiop.ArithmeticOperatorDiv:
+		return "div"
+	case wiop.ArithmeticOperatorDouble:
+		return "double"
+	case wiop.ArithmeticOperatorSquare:
+		return "square"
+	case wiop.ArithmeticOperatorNegate:
+		return "negate"
+	case wiop.ArithmeticOperatorInverse:
+		return "inverse"
+	default:
+		panic(fmt.Sprintf("unknown ArithmeticOperator %d", int(op)))
 	}
 }
 

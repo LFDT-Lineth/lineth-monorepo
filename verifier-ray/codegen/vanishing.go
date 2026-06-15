@@ -73,7 +73,7 @@ type ExprNode struct {
 	Cell             ScalarRef
 	Coin             ScalarRef
 	Constant         field.Element
-	Operator         Operator
+	Operator         wiop.ArithmeticOperator
 	Operands         []int
 	SelectorPosition int
 }
@@ -95,19 +95,6 @@ type ScalarRef struct {
 	FlatIndex  int
 	SourceName string
 }
-
-type Operator string
-
-const (
-	OperatorAdd     Operator = "add"
-	OperatorMul     Operator = "mul"
-	OperatorSub     Operator = "sub"
-	OperatorDiv     Operator = "div"
-	OperatorDouble  Operator = "double"
-	OperatorSquare  Operator = "square"
-	OperatorNegate  Operator = "negate"
-	OperatorInverse Operator = "inverse"
-)
 
 type viewKey struct {
 	id    wiop.ObjectID
@@ -228,11 +215,10 @@ func appendExpr(module *VanishingModule, views map[viewKey]int, routing CoinRout
 			}
 			operands[i] = idx
 		}
-		op, err := mapOperator(e.Operator)
-		if err != nil {
+		if err := validateOperator(e.Operator); err != nil {
 			return 0, err
 		}
-		module.Expressions = append(module.Expressions, ExprNode{Kind: ExprOp, Operator: op, Operands: operands})
+		module.Expressions = append(module.Expressions, ExprNode{Kind: ExprOp, Operator: e.Operator, Operands: operands})
 		return len(module.Expressions) - 1, nil
 	case *wiop.Cell:
 		module.Expressions = append(module.Expressions, ExprNode{
@@ -267,25 +253,18 @@ func appendExpr(module *VanishingModule, views map[viewKey]int, routing CoinRout
 	}
 }
 
-func mapOperator(op wiop.ArithmeticOperator) (Operator, error) {
+func validateOperator(op wiop.ArithmeticOperator) error {
 	switch op {
-	case wiop.ArithmeticOperatorAdd:
-		return OperatorAdd, nil
-	case wiop.ArithmeticOperatorMul:
-		return OperatorMul, nil
-	case wiop.ArithmeticOperatorSub:
-		return OperatorSub, nil
-	case wiop.ArithmeticOperatorDiv:
-		return OperatorDiv, nil
-	case wiop.ArithmeticOperatorDouble:
-		return OperatorDouble, nil
-	case wiop.ArithmeticOperatorSquare:
-		return OperatorSquare, nil
-	case wiop.ArithmeticOperatorNegate:
-		return OperatorNegate, nil
-	case wiop.ArithmeticOperatorInverse:
-		return OperatorInverse, nil
+	case wiop.ArithmeticOperatorAdd,
+		wiop.ArithmeticOperatorMul,
+		wiop.ArithmeticOperatorSub,
+		wiop.ArithmeticOperatorDiv,
+		wiop.ArithmeticOperatorDouble,
+		wiop.ArithmeticOperatorSquare,
+		wiop.ArithmeticOperatorNegate,
+		wiop.ArithmeticOperatorInverse:
+		return nil
 	default:
-		return "", &UnsupportedExpressionError{Type: fmt.Sprintf("ArithmeticOperator(%d)", int(op))}
+		return &UnsupportedExpressionError{Type: fmt.Sprintf("ArithmeticOperator(%d)", int(op))}
 	}
 }
