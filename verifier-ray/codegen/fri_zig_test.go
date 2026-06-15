@@ -17,7 +17,7 @@ func testFRIParams(t *testing.T) fri.Params {
 
 func testLayout(t *testing.T) Layout {
 	t.Helper()
-	l, err := BuildLayout(Layout{
+	return Layout{
 		NumTrees:   1,
 		SetupBegin: 0, SetupEnd: 0,
 		TraceBegin: []int{0}, TraceEnd: []int{1},
@@ -28,27 +28,19 @@ func testLayout(t *testing.T) Layout {
 			"col1": {TreeIdx: 0, PolyIdx: 1, Rail: field.KindExt},
 		},
 		AirChunkSlots: map[string]Slot{},
-	})
-	if err != nil {
-		t.Fatalf("BuildLayout: %v", err)
 	}
-	return l
 }
 
 func testDQLayout(t *testing.T) DQLayout {
 	t.Helper()
-	dq, err := BuildDQLayout([]DQLevel{
-		{
+	return DQLayout{
+		Levels: []DQLevel{{
 			Size:      32,
 			Shifts:    []int{0, 1},
 			ColGroups: [][]ColRef{{{"col0", "key0"}}, {{"col1", "key1"}}},
 			AirChunks: []string{},
-		},
-	})
-	if err != nil {
-		t.Fatalf("BuildDQLayout: %v", err)
+		}},
 	}
-	return dq
 }
 
 func TestWriteFRISpecZigEmitsParams(t *testing.T) {

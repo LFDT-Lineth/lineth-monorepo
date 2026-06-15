@@ -1,10 +1,6 @@
 package codegen
 
-import (
-	"fmt"
-
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-)
+import "github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 
 // Slot identifies a polynomial's position within the commitment scheme:
 // which tree it is in, which index within that tree's polynomial list, and
@@ -30,44 +26,6 @@ type Layout struct {
 	AirChunkSlots map[string]Slot // AIR chunk name to proof slot
 }
 
-// BuildLayout validates cfg and returns the Layout. It checks structural
-// invariants: slice lengths must match NumTrees, and every slot's TreeIdx must
-// be in [0, NumTrees).
-func BuildLayout(cfg Layout) (Layout, error) {
-	if len(cfg.TreeSizes) != cfg.NumTrees {
-		return Layout{}, fmt.Errorf("fri codegen: TreeSizes length %d != NumTrees %d",
-			len(cfg.TreeSizes), cfg.NumTrees)
-	}
-	if len(cfg.TraceBegin) != len(cfg.TraceEnd) {
-		return Layout{}, fmt.Errorf("fri codegen: TraceBegin length %d != TraceEnd length %d",
-			len(cfg.TraceBegin), len(cfg.TraceEnd))
-	}
-	for name, slot := range cfg.ColSlots {
-		if slot.TreeIdx >= cfg.NumTrees {
-			return Layout{}, fmt.Errorf("fri codegen: column %q slot tree_idx %d >= num_trees %d",
-				name, slot.TreeIdx, cfg.NumTrees)
-		}
-	}
-	for name, slot := range cfg.AirChunkSlots {
-		if slot.TreeIdx >= cfg.NumTrees {
-			return Layout{}, fmt.Errorf("fri codegen: air chunk %q slot tree_idx %d >= num_trees %d",
-				name, slot.TreeIdx, cfg.NumTrees)
-		}
-	}
-	return Layout{
-		NumTrees:      cfg.NumTrees,
-		SetupBegin:    cfg.SetupBegin,
-		SetupEnd:      cfg.SetupEnd,
-		TraceBegin:    append([]int(nil), cfg.TraceBegin...),
-		TraceEnd:      append([]int(nil), cfg.TraceEnd...),
-		AirBegin:      cfg.AirBegin,
-		AirEnd:        cfg.AirEnd,
-		TreeSizes:     append([]int(nil), cfg.TreeSizes...),
-		ColSlots:      cfg.ColSlots,
-		AirChunkSlots: cfg.AirChunkSlots,
-	}, nil
-}
-
 // ColRef identifies a column by its prover-ray source name and its protocol
 // key (the string used in ValuesAtZeta).
 type ColRef struct {
@@ -90,20 +48,4 @@ type DQLevel struct {
 // DQLayout holds the DEEP-quotient structure for all distinct domain sizes.
 type DQLayout struct {
 	Levels []DQLevel
-}
-
-// BuildDQLayout validates levels and returns the DQLayout. It checks that
-// every level's Size is a positive power of two, and that Shifts and ColGroups
-// have the same length for each level.
-func BuildDQLayout(levels []DQLevel) (DQLayout, error) {
-	for i, lv := range levels {
-		if lv.Size <= 0 || lv.Size&(lv.Size-1) != 0 {
-			return DQLayout{}, fmt.Errorf("fri codegen: level %d size %d is not a positive power of two", i, lv.Size)
-		}
-		if len(lv.Shifts) != len(lv.ColGroups) {
-			return DQLayout{}, fmt.Errorf("fri codegen: level %d: Shifts length %d != ColGroups length %d",
-				i, len(lv.Shifts), len(lv.ColGroups))
-		}
-	}
-	return DQLayout{Levels: append([]DQLevel(nil), levels...)}, nil
 }

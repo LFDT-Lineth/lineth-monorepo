@@ -1243,7 +1243,7 @@ func writeFRISpecFixture() error {
 	if err != nil {
 		return fmt.Errorf("fri.NewParams: %w", err)
 	}
-	layout, err := codegen.BuildLayout(codegen.Layout{
+	layout := codegen.Layout{
 		NumTrees:   1,
 		SetupBegin: 0, SetupEnd: 0,
 		TraceBegin: []int{0}, TraceEnd: []int{1},
@@ -1254,21 +1254,15 @@ func writeFRISpecFixture() error {
 			"col1": {TreeIdx: 0, PolyIdx: 1, Rail: field.KindExt},
 		},
 		AirChunkSlots: map[string]codegen.Slot{},
-	})
-	if err != nil {
-		return fmt.Errorf("BuildLayout: %w", err)
 	}
 
-	dq, err := codegen.BuildDQLayout([]codegen.DQLevel{
-		{
+	dq := codegen.DQLayout{
+		Levels: []codegen.DQLevel{{
 			Size:      32,
 			Shifts:    []int{0, 1},
 			ColGroups: [][]codegen.ColRef{{{"col0", "key0"}}, {{"col1", "key1"}}},
 			AirChunks: []string{},
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("BuildDQLayout: %w", err)
+		}},
 	}
 
 	var buf bytes.Buffer
