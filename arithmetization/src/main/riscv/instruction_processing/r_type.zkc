@@ -547,6 +547,10 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
             }
         }
         default: {
+            printf "[ERROR] Unsupported R-type instruction with\n"
+            printf "\topcode ≡ %x ≡ %b\n", opcode, opcode
+            printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
+            printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
             fail
         }
     }
