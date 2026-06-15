@@ -81,7 +81,7 @@ func TestFRIParamsGrinding(t *testing.T) {
 // TestBuildLayoutRejectsTreeSizeMismatch checks that BuildLayout rejects a
 // TreeSizes slice that does not match NumTrees.
 func TestBuildLayoutRejectsTreeSizeMismatch(t *testing.T) {
-	_, err := BuildLayout(LayoutConfig{
+	_, err := BuildLayout(Layout{
 		NumTrees:  3,
 		TreeSizes: []int{128, 64}, // length 2 != NumTrees 3
 	})
@@ -93,7 +93,7 @@ func TestBuildLayoutRejectsTreeSizeMismatch(t *testing.T) {
 // TestBuildLayoutRejectsOutOfRangeColSlot checks that BuildLayout rejects a
 // column slot whose TreeIdx is >= NumTrees.
 func TestBuildLayoutRejectsOutOfRangeColSlot(t *testing.T) {
-	_, err := BuildLayout(LayoutConfig{
+	_, err := BuildLayout(Layout{
 		NumTrees:  2,
 		TreeSizes: []int{64, 32},
 		ColSlots: map[string]Slot{
@@ -108,7 +108,7 @@ func TestBuildLayoutRejectsOutOfRangeColSlot(t *testing.T) {
 // TestBuildLayoutRejectsOutOfRangeAirChunkSlot checks that BuildLayout rejects
 // an air-chunk slot whose TreeIdx is >= NumTrees.
 func TestBuildLayoutRejectsOutOfRangeAirChunkSlot(t *testing.T) {
-	_, err := BuildLayout(LayoutConfig{
+	_, err := BuildLayout(Layout{
 		NumTrees:  2,
 		TreeSizes: []int{64, 32},
 		AirChunkSlots: map[string]Slot{
@@ -123,7 +123,7 @@ func TestBuildLayoutRejectsOutOfRangeAirChunkSlot(t *testing.T) {
 // TestBuildLayoutAcceptsValidConfig checks that a well-formed config builds
 // without error and round-trips its data.
 func TestBuildLayoutAcceptsValidConfig(t *testing.T) {
-	cfg := LayoutConfig{
+	cfg := Layout{
 		NumTrees:   2,
 		SetupBegin: 0, SetupEnd: 1,
 		TraceBegin: []int{1}, TraceEnd: []int{2},

@@ -17,7 +17,7 @@ func testFRIParams(t *testing.T) fri.Params {
 
 func testLayout(t *testing.T) Layout {
 	t.Helper()
-	l, err := BuildLayout(LayoutConfig{
+	l, err := BuildLayout(Layout{
 		NumTrees:   1,
 		SetupBegin: 0, SetupEnd: 0,
 		TraceBegin: []int{0}, TraceEnd: []int{1},

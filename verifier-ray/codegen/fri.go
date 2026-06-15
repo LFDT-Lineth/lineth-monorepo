@@ -15,41 +15,25 @@ type Slot struct {
 	Rail    field.Kind
 }
 
-// LayoutConfig is the input to BuildLayout. It carries the program-determined
-// tree structure for a compiled system. A future PCS compiler pass will
-// populate this from the compiled system's commitment metadata.
-type LayoutConfig struct {
-	NumTrees      int
-	SetupBegin    int
-	SetupEnd      int
-	TraceBegin    []int // per trace round; same length as TraceEnd
-	TraceEnd      []int // per trace round
-	AirBegin      int
-	AirEnd        int
-	TreeSizes     []int           // indexed by tree index; length must equal NumTrees
-	ColSlots      map[string]Slot // column name → slot
-	AirChunkSlots map[string]Slot // air-chunk name → slot
-}
-
 // Layout holds the program-determined tree layout, validated and ready for Zig
 // rendering.
 type Layout struct {
-	NumTrees      int
-	SetupBegin    int
-	SetupEnd      int
-	TraceBegin    []int
-	TraceEnd      []int
-	AirBegin      int
-	AirEnd        int
-	TreeSizes     []int
-	ColSlots      map[string]Slot
-	AirChunkSlots map[string]Slot
+	NumTrees      int             // total number of commitment trees in the proof layout
+	SetupBegin    int             // first setup commitment tree index
+	SetupEnd      int             // exclusive end of setup commitment tree indices
+	TraceBegin    []int           // per trace round, first trace commitment tree index
+	TraceEnd      []int           // per trace round, exclusive end of trace commitment tree indices
+	AirBegin      int             // first AIR quotient commitment tree index
+	AirEnd        int             // exclusive end of AIR quotient commitment tree indices
+	TreeSizes     []int           // tree_sizes[tree_idx] is the committed domain size
+	ColSlots      map[string]Slot // column name to proof slot
+	AirChunkSlots map[string]Slot // AIR chunk name to proof slot
 }
 
 // BuildLayout validates cfg and returns the Layout. It checks structural
 // invariants: slice lengths must match NumTrees, and every slot's TreeIdx must
 // be in [0, NumTrees).
-func BuildLayout(cfg LayoutConfig) (Layout, error) {
+func BuildLayout(cfg Layout) (Layout, error) {
 	if len(cfg.TreeSizes) != cfg.NumTrees {
 		return Layout{}, fmt.Errorf("fri codegen: TreeSizes length %d != NumTrees %d",
 			len(cfg.TreeSizes), cfg.NumTrees)

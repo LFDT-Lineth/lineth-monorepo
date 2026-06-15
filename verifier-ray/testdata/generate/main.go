@@ -1243,7 +1243,7 @@ func writeFRISpecFixture() error {
 	if err != nil {
 		return fmt.Errorf("fri.NewParams: %w", err)
 	}
-	layout, err := codegen.BuildLayout(codegen.LayoutConfig{
+	layout, err := codegen.BuildLayout(codegen.Layout{
 		NumTrees:   1,
 		SetupBegin: 0, SetupEnd: 0,
 		TraceBegin: []int{0}, TraceEnd: []int{1},
