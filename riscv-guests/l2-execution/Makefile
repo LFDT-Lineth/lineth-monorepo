@@ -23,7 +23,7 @@ ZIG_BUILD_FLAGS ?= --cache-dir $(BUILD_CACHE_DIR) --summary all
 # must NOT be passed to build/test targets. Pre-fetching is the dedicated `fetch` target.
 ZIG_FETCH_FLAGS ?=
 
-# Makefile containaining the logic for generating a linker scritpt, executing and debugging generic programs
+# Makefile containing the logic for generating a linker script, executing and debugging generic programs
 ARITHMETIZATION_TESTING_MAKEFILE := $(abspath $(MAKEFILE_DIR)../../arithmetization/src/test)/Makefile
 
 # Name and ELF generated of the guest program (@TODO: check if we need that)
