@@ -18,11 +18,17 @@
 
 const zesu_accel = @import("zesu_zkvm_accel"); // zesu-zkvm's pure-Zig precompile backend (stdlibs_accel)
 const linea_accel = @import("linea_zkvm_accel"); // Linea accelerator wrappers (source paths wired in build.zig)
+const build_options = @import("build_options"); // keccak_accel: standard zig keccak vs Linea wrapper
 
-// The manifest: every `zkvm_*` symbol zesu references, and where each comes from — keccak from the
-// Linea wrapper, the rest from the stdlibs_accel shims defined below.
+// The manifest: every `zkvm_*` symbol zesu references, and where each comes from — keccak is either
+// the Linea wrapper (prover-accelerated) or the standard stdlibs_accel shim, selected at build time
+// by -Dkeccak-accel; the rest come from the stdlibs_accel shims defined below.
 comptime {
-    @export(&linea_accel.keccak.zkvm_keccak256, .{ .name = "zkvm_keccak256" });
+    if (build_options.keccak_accel) {
+        @export(&linea_accel.keccak.zkvm_keccak256, .{ .name = "zkvm_keccak256" });
+    } else {
+        @export(&keccak256, .{ .name = "zkvm_keccak256" });
+    }
     @export(&sha256, .{ .name = "zkvm_sha256" });
     @export(&secp256k1_verify, .{ .name = "zkvm_secp256k1_verify" });
     @export(&secp256k1_ecrecover, .{ .name = "zkvm_secp256k1_ecrecover" });
@@ -56,6 +62,11 @@ const Bls12PairingPair = extern struct { g1: [96]u8, g2: [192]u8 };
 // ── C-ABI shims: extern zkvm_* (ptr+len) → stdlibs_accel's slice/array API ───────────────────────
 // One per precompile that has no Linea wrapper yet; all exported in the comptime block above.
 
+// Standard zig keccak (std.crypto via stdlibs_accel); used unless -Dkeccak-accel selects the wrapper.
+fn keccak256(data: [*]const u8, len: usize, output: *[32]u8) callconv(.c) i32 {
+    zesu_accel.keccak256(data[0..len], output);
+    return OK;
+}
 fn sha256(data: [*]const u8, len: usize, output: *[32]u8) callconv(.c) i32 {
     zesu_accel.sha256(data[0..len], output);
     return OK;
