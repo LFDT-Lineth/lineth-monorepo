@@ -183,6 +183,7 @@ clean-all:
 	rm -rf $(MAKEFILE_DIR)act4/bin/
 	rm -rf $(MAKEFILE_DIR)bin/
 	rm -f  $(LINKER_SCRIPT)
+	rm -f  $(MAKEFILE_DIR)common_inputs/*.json
 
 # Generate the linker script with the specified memory layout
 linker-script:
