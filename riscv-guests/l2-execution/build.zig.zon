@@ -28,7 +28,7 @@
         },
         // Shared build helpers for all riscv-guests packages (sibling path dependency).
         .build_common = .{ .path = "../build_common" },
-        // NB: the Linea zkVM wrappers (arithmetization/src/wrappers) are NOT a package dependency —
+        // NB: the Linea zkVM wrappers (arithmetization/src/main/wrappers) are NOT a package dependency —
         // build.zig imports them directly via b.path (sibling source), so no manifest is needed.
     },
     .paths = .{

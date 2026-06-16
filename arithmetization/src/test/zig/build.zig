@@ -41,7 +41,7 @@ pub fn build(b: *std.Build) void {
 
     // exposing the zkvm wrappers
     const wrappers = b.createModule(.{
-        .root_source_file = b.path("../../wrappers/root.zig"),
+        .root_source_file = b.path("../../main/wrappers/root.zig"),
         .target = target,
         .optimize = optimize,
     });
