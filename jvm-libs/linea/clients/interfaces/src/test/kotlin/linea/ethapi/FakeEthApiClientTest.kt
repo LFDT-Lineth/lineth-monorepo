@@ -1,8 +1,8 @@
 package linea.ethapi
 
 import linea.domain.BlockParameter
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.EthLog
+import linea.domain.toBlockParameter
 import linea.kotlin.decodeHex
 import net.consensys.linea.async.get
 import org.assertj.core.api.Assertions.assertThat
@@ -205,7 +205,7 @@ class FakeEthApiClientTest {
       witnessesByBlock = mapOf(blockHash to witness),
     )
 
-    val result = client.getExecutionWitness(BlockParameter.fromHash(blockHash.getHash())).get()
+    val result = client.getExecutionWitness(BlockParameter.fromHash(blockHash.hashBytes)).get()
 
     assertThat(result).isEqualTo(witness)
   }

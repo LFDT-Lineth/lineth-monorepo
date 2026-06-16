@@ -1,7 +1,8 @@
 package net.consensys.linea.ethereum.gaspricing.staticcap
 
-import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.BlockParameter
 import linea.domain.BlockWithTxHashes
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiBlockClient
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -39,7 +40,7 @@ class L2CalldataSizeAccumulatorImplTest {
 
     (0..4).forEach {
       verify(mockEthApiBlockClient, times(1))
-        .ethGetBlockByNumberTxHashes(eq((targetBlockNumber.toLong() - it).toBlockParameter()))
+        .ethGetBlockByNumberTxHashes(eq((targetBlockNumber - it.toULong()).toBlockParameter()))
     }
 
     val expectedCalldataSize = ((10540 - 540) * 5).toULong()
@@ -54,7 +55,9 @@ class L2CalldataSizeAccumulatorImplTest {
 
     val mockEthApiBlockClient = mock<EthApiBlockClient> {
       on {
-        ethGetBlockByNumberTxHashes(argThat { parameter -> parameter.getNumber() in 96uL..100uL })
+        ethGetBlockByNumberTxHashes(
+          argThat { parameter -> parameter is BlockParameter.BlockNumber && parameter.number in 96uL..100uL },
+        )
       } doReturn SafeFuture.completedFuture(mockBlock)
     }
     val l2CalldataSizeAccumulator = L2CalldataSizeAccumulatorImpl(
@@ -77,7 +80,7 @@ class L2CalldataSizeAccumulatorImplTest {
     // subsequent calls should not invoke ethGetBlockSizeByNumber
     (96..100).forEach { it ->
       verify(mockEthApiBlockClient, times(1))
-        .ethGetBlockByNumberTxHashes(eq(it.toBlockParameter()))
+        .ethGetBlockByNumberTxHashes(eq(it.toULong().toBlockParameter()))
     }
   }
 
@@ -98,7 +101,7 @@ class L2CalldataSizeAccumulatorImplTest {
 
     (0..4).forEach {
       verify(mockEthApiBlockClient, times(1))
-        .ethGetBlockByNumberTxHashes(eq((targetBlockNumber.toLong() - it).toBlockParameter()))
+        .ethGetBlockByNumberTxHashes(eq((targetBlockNumber - it.toULong()).toBlockParameter()))
     }
 
     assertThat(sumOfL2CalldataSize).isEqualTo(0uL)

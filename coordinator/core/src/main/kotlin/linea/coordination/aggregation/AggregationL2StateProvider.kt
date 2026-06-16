@@ -1,7 +1,7 @@
 package linea.coordination.aggregation
 
 import linea.contract.l2.L2MessageServiceSmartContractClientReadOnly
-import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiClient
 import linea.kotlin.zeroHash32
 import linea.persistence.ForcedTransactionsDao
@@ -75,7 +75,7 @@ class AggregationL2StateProviderImpl(
   override fun getAggregationL2State(blockNumber: Long): SafeFuture<AggregationL2State> {
     val anchoredMessageFuture = getLastAnchoredMessage(blockNumber.toULong())
     val aggregationFtxNumbersFuture = getAggregationFtxRollingInfo(blockNumber.toULong())
-    val blockFuture = ethApiClient.ethGetBlockByNumberTxHashes(blockNumber.toBlockParameter())
+    val blockFuture = ethApiClient.ethGetBlockByNumberTxHashes(blockNumber.toULong().toBlockParameter())
 
     return SafeFuture
       .allOf(anchoredMessageFuture, aggregationFtxNumbersFuture, blockFuture)
