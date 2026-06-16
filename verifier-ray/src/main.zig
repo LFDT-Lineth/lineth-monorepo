@@ -19,7 +19,10 @@ extern const _in_start: u8;
 // pointer to it, exactly like the mmap/linker paths do. This keeps `ProofData`
 // a plain runtime value — only `spec`/`systems` are comptime in `verify`. The
 // const is lazily analyzed, so it costs nothing when `embed_input` is false.
-const embedded_input: verifier.ProofData = embedded_data.getInput(embedded_data_conf.spec_index);
+const embedded_input: verifier.ProofData = if (embedded_data_conf.invalid_input)
+    embedded_data.getInputFailing(embedded_data_conf.spec_index)
+else
+    embedded_data.getInput(embedded_data_conf.spec_index);
 
 // The main entry point for the verifier ray smoke test. This is separate from
 // the main verifier entry point in `verifier.zig` because we want to be able to
