@@ -969,6 +969,7 @@ func writeVerifyFixtures(cases []vanishingFixtureCase, systems []codegen.NamedVa
 	writeVerifyMetadata(&out, cases, systems)
 	writeVerifyCaseSwitch(&out, cases)
 	writeVerifyInputSwitch(&out, cases)
+	writeVerifyFailingInputSwitch(&out, cases)
 
 	data := out.Bytes()
 	zigfmt, err := runZigFmt(data)
@@ -1013,6 +1014,9 @@ func writeVerifyHeader(out *bytes.Buffer, count int) {
 
 func writeVerifyCase(out *bytes.Buffer, idx int, tc vanishingFixtureCase) {
 	writeVerifyProof(out, fmt.Sprintf("verify_case_%d", idx), tc.honest)
+	if tc.invalid != nil {
+		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_failing", idx), *tc.invalid)
+	}
 	fmt.Fprintf(out, "const verify_case_%d_systems = verifier.Systems{ .vanishing = system_%d };\n", idx, idx)
 	fmt.Fprintln(out)
 }
@@ -1149,6 +1153,24 @@ func writeVerifyInputSwitch(out *bytes.Buffer, cases []vanishingFixtureCase) {
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i := range cases {
 		fmt.Fprintf(out, "        %d => verify_case_%d_proof,\n", i, i)
+	}
+	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
+	fmt.Fprintln(out, "    };")
+	fmt.Fprintln(out, "}")
+}
+
+// writeVerifyFailingInputSwitch emits the getInputFailing accessor, returning
+// the failing (invalid) proof data for a fixture case. Not every case defines a
+// failing input, so cases without one produce a comptime error when requested.
+func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []vanishingFixtureCase) {
+	fmt.Fprintln(out, "pub fn getInputFailing(comptime index: usize) verifier.ProofData {")
+	fmt.Fprintln(out, "    return switch (index) {")
+	for i, tc := range cases {
+		if tc.invalid != nil {
+			fmt.Fprintf(out, "        %d => verify_case_%d_failing_proof,\n", i, i)
+		} else {
+			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no failing input\"),\n", i, i, zigString(tc.name))
+		}
 	}
 	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
 	fmt.Fprintln(out, "    };")

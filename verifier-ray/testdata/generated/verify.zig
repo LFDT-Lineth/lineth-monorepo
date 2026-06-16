@@ -115,6 +115,54 @@ const verify_case_0_proof = verifier.ProofData{
     .module_sizes = &verify_case_0_module_sizes,
 };
 
+var verify_case_0_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 174395034, 187508812, 1644405456, 64543109, 1989752537, 850930437 }),
+};
+
+var verify_case_0_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 573262348, 489397423, 953933642, 372487517, 2011764470, 24549056 }),
+};
+
+var verify_case_0_failing_module_sizes = [_]usize{};
+
+var verify_case_0_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(2),
+    field.Element.init(0),
+    field.Element.init(1),
+};
+
+const verify_case_0_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_0_failing_round_0_column_0_base } },
+};
+
+var verify_case_0_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_0_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1604296705, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 958817896, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2124439554, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1331691521, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_0_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_0_failing_round_1_column_0_ext } },
+};
+
+var verify_case_0_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_0_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_0_failing_round_0_columns, .cells = &verify_case_0_failing_round_0_cells },
+    .{ .columns = &verify_case_0_failing_round_1_columns, .cells = &verify_case_0_failing_round_1_cells },
+};
+
+const verify_case_0_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_0_failing_rounds,
+    .witness_claims = &verify_case_0_failing_witness_claims,
+    .quotient_claims = &verify_case_0_failing_quotient_claims,
+    .module_sizes = &verify_case_0_failing_module_sizes,
+};
+
 const verify_case_0_systems = verifier.Systems{ .vanishing = system_0 };
 
 pub const system_1_spec = protocol.Spec{
@@ -214,6 +262,64 @@ const verify_case_1_proof = verifier.ProofData{
     .module_sizes = &verify_case_1_module_sizes,
 };
 
+var verify_case_1_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1151832766, 489109694, 745564059, 2065529070, 787588006, 1722051715 }),
+    ext.Ext.fromUints(.{ 1842952544, 1264021167, 1374471502, 1711228060, 247568247, 1873163260 }),
+    ext.Ext.fromUints(.{ 468663487, 519972582, 1677417873, 175539661, 684550919, 698689360 }),
+};
+
+var verify_case_1_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 105354878, 539148090, 407216735, 2029376794, 1215296786, 1606162197 }),
+};
+
+var verify_case_1_failing_module_sizes = [_]usize{};
+
+var verify_case_1_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(1),
+    field.Element.init(1),
+    field.Element.init(2),
+    field.Element.init(3),
+    field.Element.init(5),
+    field.Element.init(8),
+    field.Element.init(13),
+    field.Element.init(22),
+};
+
+const verify_case_1_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_1_failing_round_0_column_0_base } },
+};
+
+var verify_case_1_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_1_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1039702195, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1441997329, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1381606708, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 769807354, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1164221666, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 761926532, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 822317153, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1135626563, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_1_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_1_failing_round_1_column_0_ext } },
+};
+
+var verify_case_1_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_1_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_1_failing_round_0_columns, .cells = &verify_case_1_failing_round_0_cells },
+    .{ .columns = &verify_case_1_failing_round_1_columns, .cells = &verify_case_1_failing_round_1_cells },
+};
+
+const verify_case_1_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_1_failing_rounds,
+    .witness_claims = &verify_case_1_failing_witness_claims,
+    .quotient_claims = &verify_case_1_failing_quotient_claims,
+    .module_sizes = &verify_case_1_failing_module_sizes,
+};
+
 const verify_case_1_systems = verifier.Systems{ .vanishing = system_1 };
 
 pub const system_2_spec = protocol.Spec{
@@ -310,6 +416,63 @@ const verify_case_2_proof = verifier.ProofData{
     .witness_claims = &verify_case_2_witness_claims,
     .quotient_claims = &verify_case_2_quotient_claims,
     .module_sizes = &verify_case_2_module_sizes,
+};
+
+var verify_case_2_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1218205724, 1603148158, 917411023, 738469863, 1093002239, 906840879 }),
+    ext.Ext.fromUints(.{ 2090802652, 781532229, 196627541, 740980217, 296145893, 1174148865 }),
+};
+
+var verify_case_2_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 645006388, 1635411842, 233786543, 937491403, 1405815550, 1041399226 }),
+};
+
+var verify_case_2_failing_module_sizes = [_]usize{};
+
+var verify_case_2_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(1),
+    field.Element.init(3),
+    field.Element.init(9),
+    field.Element.init(27),
+    field.Element.init(81),
+    field.Element.init(243),
+    field.Element.init(729),
+    field.Element.init(2187),
+};
+
+const verify_case_2_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_2_failing_round_0_column_0_base } },
+};
+
+var verify_case_2_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_2_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1097135825, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1520620376, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2032560275, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1667051586, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1707115502, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 585422720, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1130884757, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1233300525, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_2_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_2_failing_round_1_column_0_ext } },
+};
+
+var verify_case_2_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_2_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_2_failing_round_0_columns, .cells = &verify_case_2_failing_round_0_cells },
+    .{ .columns = &verify_case_2_failing_round_1_columns, .cells = &verify_case_2_failing_round_1_cells },
+};
+
+const verify_case_2_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_2_failing_rounds,
+    .witness_claims = &verify_case_2_failing_witness_claims,
+    .quotient_claims = &verify_case_2_failing_quotient_claims,
+    .module_sizes = &verify_case_2_failing_module_sizes,
 };
 
 const verify_case_2_systems = verifier.Systems{ .vanishing = system_2 };
@@ -421,6 +584,76 @@ const verify_case_3_proof = verifier.ProofData{
     .witness_claims = &verify_case_3_witness_claims,
     .quotient_claims = &verify_case_3_quotient_claims,
     .module_sizes = &verify_case_3_module_sizes,
+};
+
+var verify_case_3_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1005143664, 444470892, 768896119, 713557852, 250295176, 1348450932 }),
+    ext.Ext.fromUints(.{ 200179298, 271327379, 629823045, 1987197001, 440067662, 522596674 }),
+    ext.Ext.fromUints(.{ 1256077328, 221724296, 1658075606, 921385519, 1413986813, 1387956995 }),
+};
+
+var verify_case_3_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1797683354, 158481732, 1769301639, 1990446138, 685069321, 365527916 }),
+};
+
+var verify_case_3_failing_module_sizes = [_]usize{};
+
+var verify_case_3_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(1),
+    field.Element.init(1),
+    field.Element.init(1),
+    field.Element.init(3),
+    field.Element.init(3),
+    field.Element.init(3),
+};
+
+var verify_case_3_failing_round_0_column_1_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(0),
+};
+
+const verify_case_3_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_3_failing_round_0_column_0_base } },
+    .{ .public_column = .{ .base = &verify_case_3_failing_round_0_column_1_base } },
+};
+
+var verify_case_3_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_3_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 846831671, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 846831671, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 846831671, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 846831671, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1771220468, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1629664756, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 846831671, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 846831671, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_3_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_3_failing_round_1_column_0_ext } },
+};
+
+var verify_case_3_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_3_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_3_failing_round_0_columns, .cells = &verify_case_3_failing_round_0_cells },
+    .{ .columns = &verify_case_3_failing_round_1_columns, .cells = &verify_case_3_failing_round_1_cells },
+};
+
+const verify_case_3_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_3_failing_rounds,
+    .witness_claims = &verify_case_3_failing_witness_claims,
+    .quotient_claims = &verify_case_3_failing_quotient_claims,
+    .module_sizes = &verify_case_3_failing_module_sizes,
 };
 
 const verify_case_3_systems = verifier.Systems{ .vanishing = system_3 };
@@ -549,6 +782,88 @@ const verify_case_4_proof = verifier.ProofData{
     .module_sizes = &verify_case_4_module_sizes,
 };
 
+var verify_case_4_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 988870300, 1203699276, 1330121521, 2115066293, 108155212, 1797498855 }),
+    ext.Ext.fromUints(.{ 2094768038, 208927751, 1661254795, 1662391509, 188846522, 57040700 }),
+    ext.Ext.fromUints(.{ 534917688, 335705016, 1683121587, 734272976, 1314390997, 106930461 }),
+};
+
+var verify_case_4_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 792555281, 1393289163, 105640680, 1958374838, 93028563, 1245367677 }),
+};
+
+var verify_case_4_failing_module_sizes = [_]usize{};
+
+var verify_case_4_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(5),
+    field.Element.init(1),
+    field.Element.init(17),
+    field.Element.init(5),
+    field.Element.init(13),
+    field.Element.init(0),
+    field.Element.init(0),
+};
+
+var verify_case_4_failing_round_0_column_1_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(3),
+    field.Element.init(0),
+    field.Element.init(15),
+    field.Element.init(4),
+    field.Element.init(5),
+    field.Element.init(0),
+    field.Element.init(0),
+};
+
+var verify_case_4_failing_round_0_column_2_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(5),
+    field.Element.init(1),
+    field.Element.init(8),
+    field.Element.init(3),
+    field.Element.init(12),
+    field.Element.init(0),
+    field.Element.init(0),
+};
+
+const verify_case_4_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_4_failing_round_0_column_0_base } },
+    .{ .public_column = .{ .base = &verify_case_4_failing_round_0_column_1_base } },
+    .{ .public_column = .{ .base = &verify_case_4_failing_round_0_column_2_base } },
+};
+
+var verify_case_4_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_4_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1992899991, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2092905736, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 393839656, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 712211300, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1186587689, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 776420915, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 147332501, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2121306113, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_4_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_4_failing_round_1_column_0_ext } },
+};
+
+var verify_case_4_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_4_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_4_failing_round_0_columns, .cells = &verify_case_4_failing_round_0_cells },
+    .{ .columns = &verify_case_4_failing_round_1_columns, .cells = &verify_case_4_failing_round_1_cells },
+};
+
+const verify_case_4_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_4_failing_rounds,
+    .witness_claims = &verify_case_4_failing_witness_claims,
+    .quotient_claims = &verify_case_4_failing_quotient_claims,
+    .module_sizes = &verify_case_4_failing_module_sizes,
+};
+
 const verify_case_4_systems = verifier.Systems{ .vanishing = system_4 };
 
 pub const system_5_spec = protocol.Spec{
@@ -648,6 +963,64 @@ const verify_case_5_proof = verifier.ProofData{
     .module_sizes = &verify_case_5_module_sizes,
 };
 
+var verify_case_5_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1151832766, 489109694, 745564059, 2065529070, 787588006, 1722051715 }),
+    ext.Ext.fromUints(.{ 1842952544, 1264021167, 1374471502, 1711228060, 247568247, 1873163260 }),
+    ext.Ext.fromUints(.{ 468663487, 519972582, 1677417873, 175539661, 684550919, 698689360 }),
+};
+
+var verify_case_5_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 105354878, 539148090, 407216735, 2029376794, 1215296786, 1606162197 }),
+};
+
+var verify_case_5_failing_module_sizes = [_]usize{8};
+
+var verify_case_5_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(1),
+    field.Element.init(1),
+    field.Element.init(2),
+    field.Element.init(3),
+    field.Element.init(5),
+    field.Element.init(8),
+    field.Element.init(13),
+    field.Element.init(22),
+};
+
+const verify_case_5_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_5_failing_round_0_column_0_base } },
+};
+
+var verify_case_5_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_5_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1039702195, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1441997329, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1381606708, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 769807354, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1164221666, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 761926532, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 822317153, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1135626563, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_5_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_5_failing_round_1_column_0_ext } },
+};
+
+var verify_case_5_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_5_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_5_failing_round_0_columns, .cells = &verify_case_5_failing_round_0_cells },
+    .{ .columns = &verify_case_5_failing_round_1_columns, .cells = &verify_case_5_failing_round_1_cells },
+};
+
+const verify_case_5_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_5_failing_rounds,
+    .witness_claims = &verify_case_5_failing_witness_claims,
+    .quotient_claims = &verify_case_5_failing_quotient_claims,
+    .module_sizes = &verify_case_5_failing_module_sizes,
+};
+
 const verify_case_5_systems = verifier.Systems{ .vanishing = system_5 };
 
 pub const system_6_spec = protocol.Spec{
@@ -733,6 +1106,54 @@ const verify_case_6_proof = verifier.ProofData{
     .witness_claims = &verify_case_6_witness_claims,
     .quotient_claims = &verify_case_6_quotient_claims,
     .module_sizes = &verify_case_6_module_sizes,
+};
+
+var verify_case_6_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1973127318, 1071725045, 1546701898, 1953591799, 619037885, 2117490245 }),
+};
+
+var verify_case_6_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 903580495, 2010933844, 1457560616, 1542548231, 939922038, 2024005909 }),
+};
+
+var verify_case_6_failing_module_sizes = [_]usize{};
+
+var verify_case_6_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(7),
+    field.Element.init(7),
+    field.Element.init(8),
+    field.Element.init(7),
+};
+
+const verify_case_6_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_6_failing_round_0_column_0_base } },
+};
+
+var verify_case_6_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_6_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1677931316, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_6_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_6_failing_round_1_column_0_ext } },
+};
+
+var verify_case_6_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_6_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_6_failing_round_0_columns, .cells = &verify_case_6_failing_round_0_cells },
+    .{ .columns = &verify_case_6_failing_round_1_columns, .cells = &verify_case_6_failing_round_1_cells },
+};
+
+const verify_case_6_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_6_failing_rounds,
+    .witness_claims = &verify_case_6_failing_witness_claims,
+    .quotient_claims = &verify_case_6_failing_quotient_claims,
+    .module_sizes = &verify_case_6_failing_module_sizes,
 };
 
 const verify_case_6_systems = verifier.Systems{ .vanishing = system_6 };
@@ -829,6 +1250,63 @@ const verify_case_7_proof = verifier.ProofData{
     .witness_claims = &verify_case_7_witness_claims,
     .quotient_claims = &verify_case_7_quotient_claims,
     .module_sizes = &verify_case_7_module_sizes,
+};
+
+var verify_case_7_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 804433097, 1620676177, 990287992, 2039018196, 135097793, 115387262 }),
+    ext.Ext.fromUints(.{ 994426305, 295676780, 247112034, 1839032690, 837435670, 1498661229 }),
+};
+
+var verify_case_7_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 680039963, 1613525747, 1314474821, 1491557534, 1376886374, 1014358606 }),
+};
+
+var verify_case_7_failing_module_sizes = [_]usize{};
+
+var verify_case_7_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(5),
+    field.Element.init(5),
+    field.Element.init(5),
+    field.Element.init(6),
+    field.Element.init(5),
+    field.Element.init(5),
+    field.Element.init(5),
+    field.Element.init(5),
+};
+
+const verify_case_7_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_7_failing_round_0_column_0_base } },
+};
+
+var verify_case_7_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_7_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 317302474, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 317302474, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1621978305, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 421358581, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 317302474, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 317302474, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 317302474, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 317302474, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_7_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_7_failing_round_1_column_0_ext } },
+};
+
+var verify_case_7_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_7_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_7_failing_round_0_columns, .cells = &verify_case_7_failing_round_0_cells },
+    .{ .columns = &verify_case_7_failing_round_1_columns, .cells = &verify_case_7_failing_round_1_cells },
+};
+
+const verify_case_7_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_7_failing_rounds,
+    .witness_claims = &verify_case_7_failing_witness_claims,
+    .quotient_claims = &verify_case_7_failing_quotient_claims,
+    .module_sizes = &verify_case_7_failing_module_sizes,
 };
 
 const verify_case_7_systems = verifier.Systems{ .vanishing = system_7 };
@@ -929,6 +1407,63 @@ const verify_case_8_proof = verifier.ProofData{
     .witness_claims = &verify_case_8_witness_claims,
     .quotient_claims = &verify_case_8_quotient_claims,
     .module_sizes = &verify_case_8_module_sizes,
+};
+
+var verify_case_8_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 289771514, 2003299582, 204734956, 1828861612, 1831108595, 1058301630 }),
+};
+
+var verify_case_8_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 252849193, 217432998, 1610577485, 1575739198, 30558966, 1119428406 }),
+    ext.Ext.fromUints(.{ 1819282283, 1599635040, 856355466, 1574593445, 2121728208, 1452707957 }),
+};
+
+var verify_case_8_failing_module_sizes = [_]usize{};
+
+var verify_case_8_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(2),
+};
+
+const verify_case_8_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_8_failing_round_0_column_0_base } },
+};
+
+var verify_case_8_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_8_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 318561282, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 266338305, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1878729729, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1774397755, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_8_failing_round_1_column_1_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1797522433, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1864368129, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1864629249, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 309537078, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_8_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_8_failing_round_1_column_0_ext } },
+    .{ .public_column = .{ .ext = &verify_case_8_failing_round_1_column_1_ext } },
+};
+
+var verify_case_8_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_8_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_8_failing_round_0_columns, .cells = &verify_case_8_failing_round_0_cells },
+    .{ .columns = &verify_case_8_failing_round_1_columns, .cells = &verify_case_8_failing_round_1_cells },
+};
+
+const verify_case_8_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_8_failing_rounds,
+    .witness_claims = &verify_case_8_failing_witness_claims,
+    .quotient_claims = &verify_case_8_failing_quotient_claims,
+    .module_sizes = &verify_case_8_failing_module_sizes,
 };
 
 const verify_case_8_systems = verifier.Systems{ .vanishing = system_8 };
@@ -1040,6 +1575,72 @@ const verify_case_9_proof = verifier.ProofData{
     .witness_claims = &verify_case_9_witness_claims,
     .quotient_claims = &verify_case_9_quotient_claims,
     .module_sizes = &verify_case_9_module_sizes,
+};
+
+var verify_case_9_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1823941423, 263151519, 1246146536, 1160182515, 358024184, 1680795416 }),
+    ext.Ext.fromUints(.{ 1115225087, 1838606502, 1371234076, 455485449, 1143193027, 1109562252 }),
+    ext.Ext.fromUints(.{ 1139230485, 956737555, 874529478, 157962489, 367920112, 1977938408 }),
+};
+
+var verify_case_9_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1603494983, 1785814702, 1280192645, 263529856, 1613395958, 558310126 }),
+};
+
+var verify_case_9_failing_module_sizes = [_]usize{};
+
+var verify_case_9_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(5),
+    field.Element.init(17),
+    field.Element.init(11),
+};
+
+var verify_case_9_failing_round_0_column_1_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(2),
+    field.Element.init(4),
+};
+
+var verify_case_9_failing_round_0_column_2_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(4),
+    field.Element.init(1),
+};
+
+const verify_case_9_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_9_failing_round_0_column_0_base } },
+    .{ .public_column = .{ .base = &verify_case_9_failing_round_0_column_1_base } },
+    .{ .public_column = .{ .base = &verify_case_9_failing_round_0_column_2_base } },
+};
+
+var verify_case_9_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_9_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1677931316, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_9_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_9_failing_round_1_column_0_ext } },
+};
+
+var verify_case_9_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_9_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_9_failing_round_0_columns, .cells = &verify_case_9_failing_round_0_cells },
+    .{ .columns = &verify_case_9_failing_round_1_columns, .cells = &verify_case_9_failing_round_1_cells },
+};
+
+const verify_case_9_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_9_failing_rounds,
+    .witness_claims = &verify_case_9_failing_witness_claims,
+    .quotient_claims = &verify_case_9_failing_quotient_claims,
+    .module_sizes = &verify_case_9_failing_module_sizes,
 };
 
 const verify_case_9_systems = verifier.Systems{ .vanishing = system_9 };
@@ -1157,6 +1758,80 @@ const verify_case_10_proof = verifier.ProofData{
     .module_sizes = &verify_case_10_module_sizes,
 };
 
+var verify_case_10_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 2074386300, 2071721473, 1061210629, 419950703, 1112831183, 1870491262 }),
+    ext.Ext.fromUints(.{ 1678501505, 1080527041, 1337532843, 1687882257, 595480026, 1155336596 }),
+    ext.Ext.fromUints(.{ 717197291, 1272088723, 573334617, 910825196, 1045760043, 530102252 }),
+};
+
+var verify_case_10_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 212652276, 444144378, 549665988, 731030959, 461881125, 251140824 }),
+};
+
+var verify_case_10_failing_module_sizes = [_]usize{};
+
+var verify_case_10_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(1),
+    field.Element.init(1),
+    field.Element.init(2),
+    field.Element.init(3),
+    field.Element.init(5),
+    field.Element.init(8),
+    field.Element.init(13),
+    field.Element.init(21),
+    field.Element.init(34),
+    field.Element.init(55),
+    field.Element.init(89),
+    field.Element.init(144),
+    field.Element.init(233),
+    field.Element.init(377),
+    field.Element.init(610),
+    field.Element.init(988),
+};
+
+const verify_case_10_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_10_failing_round_0_column_0_base } },
+};
+
+var verify_case_10_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_10_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 161593571, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 56838003, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 337774231, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1204261918, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 517696303, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 270561350, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2082786986, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 28905318, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1821096873, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1925852441, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1644916213, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 778428526, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1464994141, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1712129094, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2030609891, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 236641429, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_10_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_10_failing_round_1_column_0_ext } },
+};
+
+var verify_case_10_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_10_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_10_failing_round_0_columns, .cells = &verify_case_10_failing_round_0_cells },
+    .{ .columns = &verify_case_10_failing_round_1_columns, .cells = &verify_case_10_failing_round_1_cells },
+};
+
+const verify_case_10_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_10_failing_rounds,
+    .witness_claims = &verify_case_10_failing_witness_claims,
+    .quotient_claims = &verify_case_10_failing_quotient_claims,
+    .module_sizes = &verify_case_10_failing_module_sizes,
+};
+
 const verify_case_10_systems = verifier.Systems{ .vanishing = system_10 };
 
 pub const system_11_spec = protocol.Spec{
@@ -1257,6 +1932,63 @@ const verify_case_11_proof = verifier.ProofData{
     .module_sizes = &verify_case_11_module_sizes,
 };
 
+var verify_case_11_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 4, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1075501314, 1875079920, 388307539, 1663005651, 1625379181, 1388397484 }),
+};
+
+var verify_case_11_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1336408627, 2007396609, 1462072341, 1939077379, 2003470601, 746169839 }),
+};
+
+var verify_case_11_failing_module_sizes = [_]usize{};
+
+var verify_case_11_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(4),
+    field.Element.init(4),
+    field.Element.init(4),
+    field.Element.init(4),
+};
+
+var verify_case_11_failing_round_0_column_1_base = [_]field.Element{
+    field.Element.init(4),
+    field.Element.init(5),
+    field.Element.init(4),
+    field.Element.init(4),
+};
+
+const verify_case_11_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_11_failing_round_0_column_0_base } },
+    .{ .public_column = .{ .base = &verify_case_11_failing_round_0_column_1_base } },
+};
+
+var verify_case_11_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_11_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 846685573, 2059327613, 284186396, 640064918, 1492968971, 1927526189 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_11_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_11_failing_round_1_column_0_ext } },
+};
+
+var verify_case_11_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_11_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_11_failing_round_0_columns, .cells = &verify_case_11_failing_round_0_cells },
+    .{ .columns = &verify_case_11_failing_round_1_columns, .cells = &verify_case_11_failing_round_1_cells },
+};
+
+const verify_case_11_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_11_failing_rounds,
+    .witness_claims = &verify_case_11_failing_witness_claims,
+    .quotient_claims = &verify_case_11_failing_quotient_claims,
+    .module_sizes = &verify_case_11_failing_module_sizes,
+};
+
 const verify_case_11_systems = verifier.Systems{ .vanishing = system_11 };
 
 pub const system_12_spec = protocol.Spec{
@@ -1349,6 +2081,55 @@ const verify_case_12_proof = verifier.ProofData{
     .witness_claims = &verify_case_12_witness_claims,
     .quotient_claims = &verify_case_12_quotient_claims,
     .module_sizes = &verify_case_12_module_sizes,
+};
+
+var verify_case_12_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 7, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 7, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_12_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 69570753, 314764734, 1442360487, 502275499, 28665133, 206433943 }),
+};
+
+var verify_case_12_failing_module_sizes = [_]usize{};
+
+var verify_case_12_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(7),
+    field.Element.init(7),
+    field.Element.init(7),
+    field.Element.init(7),
+};
+
+const verify_case_12_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_12_failing_round_0_column_0_base } },
+};
+
+var verify_case_12_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_12_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 69570753, 314764734, 1442360487, 502275499, 28665133, 206433943 }),
+    ext.Ext.fromUints(.{ 69570753, 314764734, 1442360487, 502275499, 28665133, 206433943 }),
+    ext.Ext.fromUints(.{ 69570753, 314764734, 1442360487, 502275499, 28665133, 206433943 }),
+    ext.Ext.fromUints(.{ 69570753, 314764734, 1442360487, 502275499, 28665133, 206433943 }),
+};
+
+const verify_case_12_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_12_failing_round_1_column_0_ext } },
+};
+
+var verify_case_12_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_12_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_12_failing_round_0_columns, .cells = &verify_case_12_failing_round_0_cells },
+    .{ .columns = &verify_case_12_failing_round_1_columns, .cells = &verify_case_12_failing_round_1_cells },
+};
+
+const verify_case_12_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_12_failing_rounds,
+    .witness_claims = &verify_case_12_failing_witness_claims,
+    .quotient_claims = &verify_case_12_failing_quotient_claims,
+    .module_sizes = &verify_case_12_failing_module_sizes,
 };
 
 const verify_case_12_systems = verifier.Systems{ .vanishing = system_12 };
@@ -1484,6 +2265,80 @@ const verify_case_13_proof = verifier.ProofData{
     .module_sizes = &verify_case_13_module_sizes,
 };
 
+var verify_case_13_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1326141209, 907395769, 1437313093, 1266332665, 1246748923, 1739628158 }),
+    ext.Ext.fromUints(.{ 7, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_13_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1469394455, 262789538, 2073903642, 1591109914, 1810598607, 118935781 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_13_failing_module_sizes = [_]usize{};
+
+var verify_case_13_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(2),
+    field.Element.init(0),
+    field.Element.init(1),
+};
+
+var verify_case_13_failing_round_0_column_1_base = [_]field.Element{
+    field.Element.init(7),
+    field.Element.init(7),
+    field.Element.init(7),
+    field.Element.init(7),
+    field.Element.init(7),
+    field.Element.init(7),
+    field.Element.init(7),
+    field.Element.init(7),
+};
+
+const verify_case_13_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_13_failing_round_0_column_0_base } },
+    .{ .public_column = .{ .base = &verify_case_13_failing_round_0_column_1_base } },
+};
+
+var verify_case_13_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_13_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1604296705, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 958817896, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2124439554, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1331691521, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_13_failing_round_1_column_1_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_13_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_13_failing_round_1_column_0_ext } },
+    .{ .public_column = .{ .ext = &verify_case_13_failing_round_1_column_1_ext } },
+};
+
+var verify_case_13_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_13_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_13_failing_round_0_columns, .cells = &verify_case_13_failing_round_0_cells },
+    .{ .columns = &verify_case_13_failing_round_1_columns, .cells = &verify_case_13_failing_round_1_cells },
+};
+
+const verify_case_13_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_13_failing_rounds,
+    .witness_claims = &verify_case_13_failing_witness_claims,
+    .quotient_claims = &verify_case_13_failing_quotient_claims,
+    .module_sizes = &verify_case_13_failing_module_sizes,
+};
+
 const verify_case_13_systems = verifier.Systems{ .vanishing = system_13 };
 
 pub const system_14_spec = protocol.Spec{
@@ -1572,6 +2427,55 @@ const verify_case_14_proof = verifier.ProofData{
     .witness_claims = &verify_case_14_witness_claims,
     .quotient_claims = &verify_case_14_quotient_claims,
     .module_sizes = &verify_case_14_module_sizes,
+};
+
+var verify_case_14_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 291404139, 863054829, 427179187, 1257843797, 513529852, 41741884 }),
+    ext.Ext.fromUints(.{ 1889995693, 750070736, 1985651859, 1117142956, 1999516247, 1745032339 }),
+};
+
+var verify_case_14_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1289773871, 348908357, 823373999, 72871492, 1771777085, 968846551 }),
+};
+
+var verify_case_14_failing_module_sizes = [_]usize{};
+
+var verify_case_14_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(42),
+    field.Element.init(43),
+    field.Element.init(44),
+    field.Element.init(46),
+};
+
+const verify_case_14_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_14_failing_round_0_column_0_base } },
+};
+
+var verify_case_14_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_14_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1069531135, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1069531135, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1069531135, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1975290265, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_14_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_14_failing_round_1_column_0_ext } },
+};
+
+var verify_case_14_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_14_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_14_failing_round_0_columns, .cells = &verify_case_14_failing_round_0_cells },
+    .{ .columns = &verify_case_14_failing_round_1_columns, .cells = &verify_case_14_failing_round_1_cells },
+};
+
+const verify_case_14_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_14_failing_rounds,
+    .witness_claims = &verify_case_14_failing_witness_claims,
+    .quotient_claims = &verify_case_14_failing_quotient_claims,
+    .module_sizes = &verify_case_14_failing_module_sizes,
 };
 
 const verify_case_14_systems = verifier.Systems{ .vanishing = system_14 };
@@ -1664,6 +2568,55 @@ const verify_case_15_proof = verifier.ProofData{
     .module_sizes = &verify_case_15_module_sizes,
 };
 
+var verify_case_15_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 335028758, 2000745778, 746453253, 981575823, 1654003484, 365923992 }),
+    ext.Ext.fromUints(.{ 705723753, 1751515310, 1618523967, 472583522, 868054696, 560508846 }),
+};
+
+var verify_case_15_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 416098343, 714162962, 980147318, 1700768418, 750468824, 1579565168 }),
+};
+
+var verify_case_15_failing_module_sizes = [_]usize{};
+
+var verify_case_15_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(9),
+    field.Element.init(42),
+    field.Element.init(8),
+    field.Element.init(17),
+};
+
+const verify_case_15_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_15_failing_round_0_column_0_base } },
+};
+
+var verify_case_15_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_15_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 2078482431, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 530587640, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1570352325, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 534765566, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_15_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_15_failing_round_1_column_0_ext } },
+};
+
+var verify_case_15_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_15_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_15_failing_round_0_columns, .cells = &verify_case_15_failing_round_0_cells },
+    .{ .columns = &verify_case_15_failing_round_1_columns, .cells = &verify_case_15_failing_round_1_cells },
+};
+
+const verify_case_15_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_15_failing_rounds,
+    .witness_claims = &verify_case_15_failing_witness_claims,
+    .quotient_claims = &verify_case_15_failing_quotient_claims,
+    .module_sizes = &verify_case_15_failing_module_sizes,
+};
+
 const verify_case_15_systems = verifier.Systems{ .vanishing = system_15 };
 
 pub const system_16_spec = protocol.Spec{
@@ -1751,6 +2704,56 @@ const verify_case_16_proof = verifier.ProofData{
     .witness_claims = &verify_case_16_witness_claims,
     .quotient_claims = &verify_case_16_quotient_claims,
     .module_sizes = &verify_case_16_module_sizes,
+};
+
+var verify_case_16_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 923561453, 1341217096, 1695479306, 1415890710, 435375563, 1504960052 }),
+};
+
+var verify_case_16_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1236700717, 229835857, 1033279047, 284036938, 1843176493, 2042983112 }),
+};
+
+var verify_case_16_failing_module_sizes = [_]usize{};
+
+var verify_case_16_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(11),
+    field.Element.init(11),
+    field.Element.init(12),
+    field.Element.init(11),
+};
+
+const verify_case_16_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_16_failing_round_0_column_0_base } },
+};
+
+var verify_case_16_failing_round_0_cells = [_]protocol.Scalar{
+    .{ .base = field.Element.init(11) },
+};
+
+var verify_case_16_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1677931316, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_16_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_16_failing_round_1_column_0_ext } },
+};
+
+var verify_case_16_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_16_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_16_failing_round_0_columns, .cells = &verify_case_16_failing_round_0_cells },
+    .{ .columns = &verify_case_16_failing_round_1_columns, .cells = &verify_case_16_failing_round_1_cells },
+};
+
+const verify_case_16_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_16_failing_rounds,
+    .witness_claims = &verify_case_16_failing_witness_claims,
+    .quotient_claims = &verify_case_16_failing_quotient_claims,
+    .module_sizes = &verify_case_16_failing_module_sizes,
 };
 
 const verify_case_16_systems = verifier.Systems{ .vanishing = system_16 };
@@ -1846,6 +2849,60 @@ const verify_case_17_proof = verifier.ProofData{
     .witness_claims = &verify_case_17_witness_claims,
     .quotient_claims = &verify_case_17_quotient_claims,
     .module_sizes = &verify_case_17_module_sizes,
+};
+
+var verify_case_17_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1018444698, 510928748, 2052476326, 2046666802, 1861496364, 509283290 }),
+    ext.Ext.fromUints(.{ 469390399, 1466632015, 436409329, 2105995322, 1620804916, 1808185502 }),
+};
+
+var verify_case_17_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1812376492, 864938383, 819083467, 1445554049, 1710614314, 1930575025 }),
+};
+
+var verify_case_17_failing_module_sizes = [_]usize{};
+
+var verify_case_17_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(8),
+    field.Element.init(9),
+    field.Element.init(8),
+    field.Element.init(8),
+};
+
+const verify_case_17_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_17_failing_round_0_column_0_base } },
+};
+
+var verify_case_17_failing_round_0_cells = [_]protocol.Scalar{};
+
+const verify_case_17_failing_round_1_columns = [_]protocol.ColumnMessage{};
+
+var verify_case_17_failing_round_1_cells = [_]protocol.Scalar{};
+
+var verify_case_17_failing_round_2_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 428954110, 880838158, 10495769, 1464354977, 476193849, 801786597 }),
+    ext.Ext.fromUints(.{ 1760864052, 198817920, 647801941, 1250106441, 57458562, 2116331440 }),
+    ext.Ext.fromUints(.{ 183845090, 967688374, 119461637, 793003367, 1664486080, 699219622 }),
+    ext.Ext.fromUints(.{ 428954110, 880838158, 10495769, 1464354977, 476193849, 801786597 }),
+};
+
+const verify_case_17_failing_round_2_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_17_failing_round_2_column_0_ext } },
+};
+
+var verify_case_17_failing_round_2_cells = [_]protocol.Scalar{};
+
+const verify_case_17_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_17_failing_round_0_columns, .cells = &verify_case_17_failing_round_0_cells },
+    .{ .columns = &verify_case_17_failing_round_1_columns, .cells = &verify_case_17_failing_round_1_cells },
+    .{ .columns = &verify_case_17_failing_round_2_columns, .cells = &verify_case_17_failing_round_2_cells },
+};
+
+const verify_case_17_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_17_failing_rounds,
+    .witness_claims = &verify_case_17_failing_witness_claims,
+    .quotient_claims = &verify_case_17_failing_quotient_claims,
+    .module_sizes = &verify_case_17_failing_module_sizes,
 };
 
 const verify_case_17_systems = verifier.Systems{ .vanishing = system_17 };
@@ -1945,6 +3002,64 @@ const verify_case_18_proof = verifier.ProofData{
     .witness_claims = &verify_case_18_witness_claims,
     .quotient_claims = &verify_case_18_quotient_claims,
     .module_sizes = &verify_case_18_module_sizes,
+};
+
+var verify_case_18_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1946683252, 1929330494, 416488481, 941374490, 1004167468, 783886461 }),
+    ext.Ext.fromUints(.{ 1617419272, 799578598, 1457767614, 2075274270, 274522679, 1259553475 }),
+    ext.Ext.fromUints(.{ 1549984317, 797177602, 1451495987, 352803734, 274644296, 828326908 }),
+};
+
+var verify_case_18_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1624060146, 580838449, 1458592632, 1087535010, 836521278, 1485277406 }),
+};
+
+var verify_case_18_failing_module_sizes = [_]usize{};
+
+var verify_case_18_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(1),
+    field.Element.init(1),
+    field.Element.init(2),
+    field.Element.init(3),
+    field.Element.init(4),
+    field.Element.init(7),
+};
+
+const verify_case_18_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_18_failing_round_0_column_0_base } },
+};
+
+var verify_case_18_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_18_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 971161849, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1829099333, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1670600956, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 778932281, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 577679550, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 219594135, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1572155738, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1381271008, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_18_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_18_failing_round_1_column_0_ext } },
+};
+
+var verify_case_18_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_18_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_18_failing_round_0_columns, .cells = &verify_case_18_failing_round_0_cells },
+    .{ .columns = &verify_case_18_failing_round_1_columns, .cells = &verify_case_18_failing_round_1_cells },
+};
+
+const verify_case_18_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_18_failing_rounds,
+    .witness_claims = &verify_case_18_failing_witness_claims,
+    .quotient_claims = &verify_case_18_failing_quotient_claims,
+    .module_sizes = &verify_case_18_failing_module_sizes,
 };
 
 const verify_case_18_systems = verifier.Systems{ .vanishing = system_18 };
@@ -2067,6 +3182,81 @@ const verify_case_19_proof = verifier.ProofData{
     .module_sizes = &verify_case_19_module_sizes,
 };
 
+var verify_case_19_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 416000572, 1290445026, 906793859, 784242126, 2054442864, 937924386 }),
+};
+
+var verify_case_19_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 739478131, 1020238360, 896747218, 1693742011, 778098824, 1018799210 }),
+    ext.Ext.fromUints(.{ 997898718, 878577213, 975019172, 891604563, 279031866, 1136290959 }),
+    ext.Ext.fromUints(.{ 1753385026, 1614356563, 1981771553, 2124978732, 498911576, 447305516 }),
+    ext.Ext.fromUints(.{ 1761708098, 1614356563, 1981771553, 2124978732, 498911576, 447305516 }),
+};
+
+var verify_case_19_failing_module_sizes = [_]usize{};
+
+var verify_case_19_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(2),
+};
+
+const verify_case_19_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_19_failing_round_0_column_0_base } },
+};
+
+var verify_case_19_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_19_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1101680643, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1356660738, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 346533888, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1221798880, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_19_failing_round_1_column_1_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1006014466, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 516030465, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1291153409, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1180183510, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_19_failing_round_1_column_2_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 2122383361, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2122383361, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2122383361, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1321675732, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_19_failing_round_1_column_3_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1329998804, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_19_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_19_failing_round_1_column_0_ext } },
+    .{ .public_column = .{ .ext = &verify_case_19_failing_round_1_column_1_ext } },
+    .{ .public_column = .{ .ext = &verify_case_19_failing_round_1_column_2_ext } },
+    .{ .public_column = .{ .ext = &verify_case_19_failing_round_1_column_3_ext } },
+};
+
+var verify_case_19_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_19_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_19_failing_round_0_columns, .cells = &verify_case_19_failing_round_0_cells },
+    .{ .columns = &verify_case_19_failing_round_1_columns, .cells = &verify_case_19_failing_round_1_cells },
+};
+
+const verify_case_19_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_19_failing_rounds,
+    .witness_claims = &verify_case_19_failing_witness_claims,
+    .quotient_claims = &verify_case_19_failing_quotient_claims,
+    .module_sizes = &verify_case_19_failing_module_sizes,
+};
+
 const verify_case_19_systems = verifier.Systems{ .vanishing = system_19 };
 
 pub const system_20_spec = protocol.Spec{
@@ -2161,6 +3351,63 @@ const verify_case_20_proof = verifier.ProofData{
     .witness_claims = &verify_case_20_witness_claims,
     .quotient_claims = &verify_case_20_quotient_claims,
     .module_sizes = &verify_case_20_module_sizes,
+};
+
+var verify_case_20_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1441755679, 1546607480, 1167183543, 922434605, 1511134777, 977503327 }),
+    ext.Ext.fromUints(.{ 1721837416, 1489126610, 2054060195, 2118877939, 1244571932, 1716699190 }),
+};
+
+var verify_case_20_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 919044730, 699938810, 2114606905, 752538805, 1367047649, 551348400 }),
+};
+
+var verify_case_20_failing_module_sizes = [_]usize{8};
+
+var verify_case_20_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(8),
+    field.Element.init(9),
+    field.Element.init(9),
+};
+
+const verify_case_20_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_20_failing_round_0_column_0_base } },
+};
+
+var verify_case_20_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_20_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 2084978634, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2084978634, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2084978634, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2084978634, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2084978634, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1302145549, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 848781687, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2084978634, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_20_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_20_failing_round_1_column_0_ext } },
+};
+
+var verify_case_20_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_20_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_20_failing_round_0_columns, .cells = &verify_case_20_failing_round_0_cells },
+    .{ .columns = &verify_case_20_failing_round_1_columns, .cells = &verify_case_20_failing_round_1_cells },
+};
+
+const verify_case_20_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_20_failing_rounds,
+    .witness_claims = &verify_case_20_failing_witness_claims,
+    .quotient_claims = &verify_case_20_failing_quotient_claims,
+    .module_sizes = &verify_case_20_failing_module_sizes,
 };
 
 const verify_case_20_systems = verifier.Systems{ .vanishing = system_20 };
@@ -2274,6 +3521,76 @@ const verify_case_21_proof = verifier.ProofData{
     .witness_claims = &verify_case_21_witness_claims,
     .quotient_claims = &verify_case_21_quotient_claims,
     .module_sizes = &verify_case_21_module_sizes,
+};
+
+var verify_case_21_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 109767876, 613298344, 938343177, 717243899, 316332102, 1706916365 }),
+    ext.Ext.fromUints(.{ 619155612, 1326318455, 1447536772, 639551585, 362822289, 59351190 }),
+};
+
+var verify_case_21_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 273771528, 1116226430, 1954998734, 223609569, 512958974, 407939761 }),
+    ext.Ext.fromUints(.{ 1092528302, 481134226, 692307193, 235760926, 2052850167, 332952539 }),
+};
+
+var verify_case_21_failing_module_sizes = [_]usize{};
+
+var verify_case_21_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(1),
+    field.Element.init(1),
+    field.Element.init(1),
+    field.Element.init(1),
+    field.Element.init(1),
+    field.Element.init(2),
+    field.Element.init(1),
+    field.Element.init(1),
+};
+
+const verify_case_21_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_21_failing_round_0_column_0_base } },
+};
+
+var verify_case_21_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_21_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 786127070, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 609414847, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 432702624, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1378765345, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1971403620, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1090868189, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2020439992, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1970770782, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_21_failing_round_1_column_1_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 110610320, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1328767380, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 416218007, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 449640855, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 788671390, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1670114603, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1194902994, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 77187472, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_21_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_21_failing_round_1_column_0_ext } },
+    .{ .public_column = .{ .ext = &verify_case_21_failing_round_1_column_1_ext } },
+};
+
+var verify_case_21_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_21_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_21_failing_round_0_columns, .cells = &verify_case_21_failing_round_0_cells },
+    .{ .columns = &verify_case_21_failing_round_1_columns, .cells = &verify_case_21_failing_round_1_cells },
+};
+
+const verify_case_21_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_21_failing_rounds,
+    .witness_claims = &verify_case_21_failing_witness_claims,
+    .quotient_claims = &verify_case_21_failing_quotient_claims,
+    .module_sizes = &verify_case_21_failing_module_sizes,
 };
 
 const verify_case_21_systems = verifier.Systems{ .vanishing = system_21 };
@@ -2454,6 +3771,127 @@ const verify_case_22_proof = verifier.ProofData{
     .module_sizes = &verify_case_22_module_sizes,
 };
 
+var verify_case_22_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1000762965, 424812860, 1829652551, 1800859147, 763084662, 147208042 }),
+};
+
+var verify_case_22_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1871082908, 757905425, 460240282, 1040916105, 1001703905, 977036457 }),
+    ext.Ext.fromUints(.{ 1802424043, 295800760, 1421212634, 657590635, 1170955656, 343220247 }),
+    ext.Ext.fromUints(.{ 72762391, 251756953, 774064452, 785157668, 2114651741, 1327860223 }),
+    ext.Ext.fromUints(.{ 721510256, 1066204725, 1827593854, 961120950, 2052692954, 1466952673 }),
+    ext.Ext.fromUints(.{ 1471695921, 257347890, 1946366443, 1777524120, 2111786238, 2128619772 }),
+    ext.Ext.fromUints(.{ 1806191800, 1587423517, 395374918, 727785533, 1191233164, 2050466305 }),
+};
+
+var verify_case_22_failing_module_sizes = [_]usize{};
+
+var verify_case_22_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(2),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(1),
+};
+
+const verify_case_22_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_22_failing_round_0_column_0_base } },
+};
+
+var verify_case_22_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_22_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 532676609, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1420875384, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1740077057, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 442434295, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1311941910, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2039433611, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1589151746, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1424022795, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_22_failing_round_1_column_1_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1505698551, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1997015041, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 890287735, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 512926994, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 356580618, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 522240, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1508845962, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_22_failing_round_1_column_2_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 216399873, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1453070049, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2060531713, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 374301215, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 903421689, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1668832547, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 835897346, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 432286179, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_22_failing_round_1_column_3_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1431568385, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 986800538, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1634455553, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1472594971, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1852251889, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1535579752, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 829173761, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 932283366, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_22_failing_round_1_column_4_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 2080768001, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1276276028, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 50460672, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1885962108, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 104406766, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 520201925, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2046953473, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 246049925, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_22_failing_round_1_column_5_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 420683502, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_22_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_22_failing_round_1_column_0_ext } },
+    .{ .public_column = .{ .ext = &verify_case_22_failing_round_1_column_1_ext } },
+    .{ .public_column = .{ .ext = &verify_case_22_failing_round_1_column_2_ext } },
+    .{ .public_column = .{ .ext = &verify_case_22_failing_round_1_column_3_ext } },
+    .{ .public_column = .{ .ext = &verify_case_22_failing_round_1_column_4_ext } },
+    .{ .public_column = .{ .ext = &verify_case_22_failing_round_1_column_5_ext } },
+};
+
+var verify_case_22_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_22_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_22_failing_round_0_columns, .cells = &verify_case_22_failing_round_0_cells },
+    .{ .columns = &verify_case_22_failing_round_1_columns, .cells = &verify_case_22_failing_round_1_cells },
+};
+
+const verify_case_22_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_22_failing_rounds,
+    .witness_claims = &verify_case_22_failing_witness_claims,
+    .quotient_claims = &verify_case_22_failing_quotient_claims,
+    .module_sizes = &verify_case_22_failing_module_sizes,
+};
+
 const verify_case_22_systems = verifier.Systems{ .vanishing = system_22 };
 
 pub const system_23_spec = protocol.Spec{
@@ -2613,6 +4051,102 @@ const verify_case_23_proof = verifier.ProofData{
     .witness_claims = &verify_case_23_witness_claims,
     .quotient_claims = &verify_case_23_quotient_claims,
     .module_sizes = &verify_case_23_module_sizes,
+};
+
+var verify_case_23_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 177595024, 812269657, 800835790, 879450272, 2074674568, 274976158 }),
+    ext.Ext.fromUints(.{ 1406797314, 701206298, 712365316, 431506217, 2070867447, 169516254 }),
+};
+
+var verify_case_23_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1642428581, 1801097239, 1265562164, 219862568, 518668642, 1134097256 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 505183367, 1411310835, 1889859229, 686174882, 1585152228, 1865482273 }),
+    ext.Ext.fromUints(.{ 2096931289, 733472834, 1073059422, 1673570688, 543216611, 210903558 }),
+};
+
+var verify_case_23_failing_module_sizes = [_]usize{};
+
+var verify_case_23_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(1),
+};
+
+var verify_case_23_failing_round_0_column_1_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(2),
+};
+
+const verify_case_23_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_23_failing_round_0_column_0_base } },
+    .{ .public_column = .{ .base = &verify_case_23_failing_round_0_column_1_base } },
+};
+
+var verify_case_23_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_23_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1598029825, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1065353217, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1598029825, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1065353217, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_23_failing_round_1_column_1_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_23_failing_round_1_column_2_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 961427586, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 296562433, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1409006337, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 682491905, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1255969153, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1085067521, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2066578177, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1844618519, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_23_failing_round_1_column_3_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1032502915, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1829966081, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 333208579, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1980891137, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 464213886, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2115170049, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1532595710, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 646096146, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_23_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_23_failing_round_1_column_0_ext } },
+    .{ .public_column = .{ .ext = &verify_case_23_failing_round_1_column_1_ext } },
+    .{ .public_column = .{ .ext = &verify_case_23_failing_round_1_column_2_ext } },
+    .{ .public_column = .{ .ext = &verify_case_23_failing_round_1_column_3_ext } },
+};
+
+var verify_case_23_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_23_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_23_failing_round_0_columns, .cells = &verify_case_23_failing_round_0_cells },
+    .{ .columns = &verify_case_23_failing_round_1_columns, .cells = &verify_case_23_failing_round_1_cells },
+};
+
+const verify_case_23_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_23_failing_rounds,
+    .witness_claims = &verify_case_23_failing_witness_claims,
+    .quotient_claims = &verify_case_23_failing_quotient_claims,
+    .module_sizes = &verify_case_23_failing_module_sizes,
 };
 
 const verify_case_23_systems = verifier.Systems{ .vanishing = system_23 };
@@ -2799,6 +4333,147 @@ const verify_case_24_proof = verifier.ProofData{
     .module_sizes = &verify_case_24_module_sizes,
 };
 
+var verify_case_24_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 137776088, 1290407146, 267915201, 496903175, 405448373, 1245426846 }),
+};
+
+var verify_case_24_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 794554955, 360678593, 343753912, 1978414617, 280003398, 548125460 }),
+    ext.Ext.fromUints(.{ 812281328, 48894462, 584231351, 699193181, 1361833827, 1587684600 }),
+};
+
+var verify_case_24_failing_module_sizes = [_]usize{};
+
+var verify_case_24_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(2),
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(1),
+};
+
+const verify_case_24_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_24_failing_round_0_column_0_base } },
+};
+
+var verify_case_24_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_24_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 838486084, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 127493167, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1840443794, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1990472380, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 510121866, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 25378817, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1278358675, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 164891519, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1982476658, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1458431862, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 573945896, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2075063317, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 681044933, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 115904983, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1459917782, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 879434545, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 977854328, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1392957854, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1325155668, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 145856230, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 339093003, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1815211076, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1356882143, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 972759041, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 11399283, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 551339905, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 405006994, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1816592974, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 298584459, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 193778983, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 561758366, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1067123921, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_24_failing_round_1_column_1_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 2033643177, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 884397748, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1620697168, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 273918460, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1099527033, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 620062282, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1420303028, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1267698555, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 179535690, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1891201602, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 546372823, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1786326839, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 718488156, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 736572232, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 528627008, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2049242321, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1335174821, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1587078383, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1429720551, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1853254757, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1060199691, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2068129505, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1932236257, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2090131457, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1560156368, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1691100510, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 925667930, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 179370602, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1807213373, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 821259343, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1985886536, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2129980209, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_24_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_24_failing_round_1_column_0_ext } },
+    .{ .public_column = .{ .ext = &verify_case_24_failing_round_1_column_1_ext } },
+};
+
+var verify_case_24_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_24_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_24_failing_round_0_columns, .cells = &verify_case_24_failing_round_0_cells },
+    .{ .columns = &verify_case_24_failing_round_1_columns, .cells = &verify_case_24_failing_round_1_cells },
+};
+
+const verify_case_24_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_24_failing_rounds,
+    .witness_claims = &verify_case_24_failing_witness_claims,
+    .quotient_claims = &verify_case_24_failing_quotient_claims,
+    .module_sizes = &verify_case_24_failing_module_sizes,
+};
+
 const verify_case_24_systems = verifier.Systems{ .vanishing = system_24 };
 
 pub const system_25_spec = protocol.Spec{
@@ -2893,6 +4568,63 @@ const verify_case_25_proof = verifier.ProofData{
     .witness_claims = &verify_case_25_witness_claims,
     .quotient_claims = &verify_case_25_quotient_claims,
     .module_sizes = &verify_case_25_module_sizes,
+};
+
+var verify_case_25_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1049677316, 989713086, 305263581, 2027994646, 188766054, 791778254 }),
+    ext.Ext.fromUints(.{ 571991973, 1671805222, 2024770927, 632287230, 354668586, 429400776 }),
+};
+
+var verify_case_25_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 605522822, 510520734, 1533940761, 2011995412, 1090009456, 833886321 }),
+};
+
+var verify_case_25_failing_module_sizes = [_]usize{};
+
+var verify_case_25_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(4),
+    field.Element.init(4),
+    field.Element.init(5),
+    field.Element.init(4),
+    field.Element.init(4),
+    field.Element.init(4),
+    field.Element.init(4),
+    field.Element.init(4),
+};
+
+const verify_case_25_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_25_failing_round_0_column_0_base } },
+};
+
+var verify_case_25_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_25_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 730210523, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1799713717, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 4789484, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 612900421, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2039222893, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 439104108, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 802134381, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1434650369, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_25_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_25_failing_round_1_column_0_ext } },
+};
+
+var verify_case_25_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_25_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_25_failing_round_0_columns, .cells = &verify_case_25_failing_round_0_cells },
+    .{ .columns = &verify_case_25_failing_round_1_columns, .cells = &verify_case_25_failing_round_1_cells },
+};
+
+const verify_case_25_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_25_failing_rounds,
+    .witness_claims = &verify_case_25_failing_witness_claims,
+    .quotient_claims = &verify_case_25_failing_quotient_claims,
+    .module_sizes = &verify_case_25_failing_module_sizes,
 };
 
 const verify_case_25_systems = verifier.Systems{ .vanishing = system_25 };
@@ -2996,6 +4728,64 @@ const verify_case_26_proof = verifier.ProofData{
     .module_sizes = &verify_case_26_module_sizes,
 };
 
+var verify_case_26_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1459971786, 1066059957, 1616860063, 746913289, 1795852079, 1136758617 }),
+    ext.Ext.fromUints(.{ 219959044, 1616445864, 164167838, 1218889072, 34004147, 578109477 }),
+    ext.Ext.fromUints(.{ 2001208116, 1750372018, 1801334472, 1783259259, 359132698, 246191473 }),
+};
+
+var verify_case_26_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1489742122, 7270632, 792003693, 1735096915, 886652895, 907382589 }),
+};
+
+var verify_case_26_failing_module_sizes = [_]usize{};
+
+var verify_case_26_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(0),
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(0),
+    field.Element.init(0),
+    field.Element.init(0),
+};
+
+const verify_case_26_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_26_failing_round_0_column_0_base } },
+};
+
+var verify_case_26_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_26_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1952704258, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1787263785, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1911623643, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1454105533, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 266697111, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1252470274, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1084912899, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 628338068, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_26_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_26_failing_round_1_column_0_ext } },
+};
+
+var verify_case_26_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_26_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_26_failing_round_0_columns, .cells = &verify_case_26_failing_round_0_cells },
+    .{ .columns = &verify_case_26_failing_round_1_columns, .cells = &verify_case_26_failing_round_1_cells },
+};
+
+const verify_case_26_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_26_failing_rounds,
+    .witness_claims = &verify_case_26_failing_witness_claims,
+    .quotient_claims = &verify_case_26_failing_quotient_claims,
+    .module_sizes = &verify_case_26_failing_module_sizes,
+};
+
 const verify_case_26_systems = verifier.Systems{ .vanishing = system_26 };
 
 pub const system_27_spec = protocol.Spec{
@@ -3091,6 +4881,62 @@ const verify_case_27_proof = verifier.ProofData{
     .witness_claims = &verify_case_27_witness_claims,
     .quotient_claims = &verify_case_27_quotient_claims,
     .module_sizes = &verify_case_27_module_sizes,
+};
+
+var verify_case_27_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 2062694608, 1504861030, 970551382, 1959951254, 31778349, 1060070188 }),
+};
+
+var verify_case_27_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1244967415, 1464920846, 357149961, 716507833, 409564937, 2027460110 }),
+};
+
+var verify_case_27_failing_module_sizes = [_]usize{8};
+
+var verify_case_27_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(2),
+    field.Element.init(0),
+    field.Element.init(1),
+    field.Element.init(0),
+    field.Element.init(1),
+};
+
+const verify_case_27_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_27_failing_round_0_column_0_base } },
+};
+
+var verify_case_27_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_27_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 128448036, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1599074305, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 933729828, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 524881342, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1463314910, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1330647041, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 137890269, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1464860673, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_27_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_27_failing_round_1_column_0_ext } },
+};
+
+var verify_case_27_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_27_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_27_failing_round_0_columns, .cells = &verify_case_27_failing_round_0_cells },
+    .{ .columns = &verify_case_27_failing_round_1_columns, .cells = &verify_case_27_failing_round_1_cells },
+};
+
+const verify_case_27_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_27_failing_rounds,
+    .witness_claims = &verify_case_27_failing_witness_claims,
+    .quotient_claims = &verify_case_27_failing_quotient_claims,
+    .module_sizes = &verify_case_27_failing_module_sizes,
 };
 
 const verify_case_27_systems = verifier.Systems{ .vanishing = system_27 };
@@ -3236,6 +5082,102 @@ const verify_case_28_proof = verifier.ProofData{
     .module_sizes = &verify_case_28_module_sizes,
 };
 
+var verify_case_28_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 159265250, 881862916, 2014738136, 1644341278, 1107505403, 617775750 }),
+    ext.Ext.fromUints(.{ 934418010, 667762105, 49232403, 177300787, 1636714288, 912506113 }),
+};
+
+var verify_case_28_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 603620304, 1767794574, 902869831, 231044973, 2055743201, 135635472 }),
+    ext.Ext.fromUints(.{ 618475804, 2081014582, 559367810, 1312212346, 731208139, 1384169523 }),
+    ext.Ext.fromUints(.{ 1514767856, 1318221793, 678574654, 1122080416, 1482463879, 2027592366 }),
+    ext.Ext.fromUints(.{ 487422047, 1777164948, 1854973924, 492210751, 160929736, 488045422 }),
+};
+
+var verify_case_28_failing_module_sizes = [_]usize{};
+
+var verify_case_28_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(1),
+    field.Element.init(1),
+    field.Element.init(1),
+    field.Element.init(1),
+    field.Element.init(7),
+    field.Element.init(7),
+    field.Element.init(1),
+    field.Element.init(1),
+};
+
+const verify_case_28_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_28_failing_round_0_column_0_base } },
+};
+
+var verify_case_28_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_28_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1792381321, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1468688372, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1065481415, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 220832686, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1890375188, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1244972213, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1161065910, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1992704719, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_28_failing_round_1_column_1_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1577903462, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 576790576, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 771327476, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1804164875, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 411907249, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1357845939, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 53877436, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1712382022, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_28_failing_round_1_column_2_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 528974082, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1602535458, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 930367150, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1895396872, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1972550389, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 108546702, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1145209739, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1209261445, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_28_failing_round_1_column_3_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1395573987, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 619276601, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_28_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_28_failing_round_1_column_0_ext } },
+    .{ .public_column = .{ .ext = &verify_case_28_failing_round_1_column_1_ext } },
+    .{ .public_column = .{ .ext = &verify_case_28_failing_round_1_column_2_ext } },
+    .{ .public_column = .{ .ext = &verify_case_28_failing_round_1_column_3_ext } },
+};
+
+var verify_case_28_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_28_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_28_failing_round_0_columns, .cells = &verify_case_28_failing_round_0_cells },
+    .{ .columns = &verify_case_28_failing_round_1_columns, .cells = &verify_case_28_failing_round_1_cells },
+};
+
+const verify_case_28_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_28_failing_rounds,
+    .witness_claims = &verify_case_28_failing_witness_claims,
+    .quotient_claims = &verify_case_28_failing_quotient_claims,
+    .module_sizes = &verify_case_28_failing_module_sizes,
+};
+
 const verify_case_28_systems = verifier.Systems{ .vanishing = system_28 };
 
 pub const system_29_spec = protocol.Spec{
@@ -3321,6 +5263,54 @@ const verify_case_29_proof = verifier.ProofData{
     .witness_claims = &verify_case_29_witness_claims,
     .quotient_claims = &verify_case_29_quotient_claims,
     .module_sizes = &verify_case_29_module_sizes,
+};
+
+var verify_case_29_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1274614595, 1640606557, 196939003, 1253387747, 169067298, 1238726265 }),
+};
+
+var verify_case_29_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1435078769, 1794896995, 909393052, 347878077, 1828410, 1087977339 }),
+};
+
+var verify_case_29_failing_module_sizes = [_]usize{};
+
+var verify_case_29_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(7),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+};
+
+const verify_case_29_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_29_failing_round_0_column_0_base } },
+};
+
+var verify_case_29_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_29_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 559310438, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1069531136, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 532676608, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2126528513, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_29_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_29_failing_round_1_column_0_ext } },
+};
+
+var verify_case_29_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_29_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_29_failing_round_0_columns, .cells = &verify_case_29_failing_round_0_cells },
+    .{ .columns = &verify_case_29_failing_round_1_columns, .cells = &verify_case_29_failing_round_1_cells },
+};
+
+const verify_case_29_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_29_failing_rounds,
+    .witness_claims = &verify_case_29_failing_witness_claims,
+    .quotient_claims = &verify_case_29_failing_quotient_claims,
+    .module_sizes = &verify_case_29_failing_module_sizes,
 };
 
 const verify_case_29_systems = verifier.Systems{ .vanishing = system_29 };
@@ -3410,6 +5400,54 @@ const verify_case_30_proof = verifier.ProofData{
     .module_sizes = &verify_case_30_module_sizes,
 };
 
+var verify_case_30_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 801300001, 1700511553, 1485458003, 1214014267, 1995941774, 260429853 }),
+};
+
+var verify_case_30_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 735241292, 89350060, 1787065661, 926969351, 1048186770, 191378242 }),
+};
+
+var verify_case_30_failing_module_sizes = [_]usize{};
+
+var verify_case_30_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(7),
+};
+
+const verify_case_30_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_30_failing_round_0_column_0_base } },
+};
+
+var verify_case_30_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_30_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1069531136, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 532676608, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2126528513, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 559310438, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_30_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_30_failing_round_1_column_0_ext } },
+};
+
+var verify_case_30_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_30_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_30_failing_round_0_columns, .cells = &verify_case_30_failing_round_0_cells },
+    .{ .columns = &verify_case_30_failing_round_1_columns, .cells = &verify_case_30_failing_round_1_cells },
+};
+
+const verify_case_30_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_30_failing_rounds,
+    .witness_claims = &verify_case_30_failing_witness_claims,
+    .quotient_claims = &verify_case_30_failing_quotient_claims,
+    .module_sizes = &verify_case_30_failing_module_sizes,
+};
+
 const verify_case_30_systems = verifier.Systems{ .vanishing = system_30 };
 
 pub const system_31_spec = protocol.Spec{
@@ -3495,6 +5533,54 @@ const verify_case_31_proof = verifier.ProofData{
     .witness_claims = &verify_case_31_witness_claims,
     .quotient_claims = &verify_case_31_quotient_claims,
     .module_sizes = &verify_case_31_module_sizes,
+};
+
+var verify_case_31_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 351498494, 1956716827, 822696432, 709954196, 1113280092, 1727045471 }),
+};
+
+var verify_case_31_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1934237612, 1546353986, 1251013835, 895547668, 915537536, 1920234119 }),
+};
+
+var verify_case_31_failing_module_sizes = [_]usize{};
+
+var verify_case_31_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(9),
+    field.Element.init(7),
+    field.Element.init(9),
+    field.Element.init(9),
+};
+
+const verify_case_31_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_31_failing_round_0_column_0_base } },
+};
+
+var verify_case_31_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_31_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 2126528513, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 559310438, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1069531136, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 532676608, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_31_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_31_failing_round_1_column_0_ext } },
+};
+
+var verify_case_31_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_31_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_31_failing_round_0_columns, .cells = &verify_case_31_failing_round_0_cells },
+    .{ .columns = &verify_case_31_failing_round_1_columns, .cells = &verify_case_31_failing_round_1_cells },
+};
+
+const verify_case_31_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_31_failing_rounds,
+    .witness_claims = &verify_case_31_failing_witness_claims,
+    .quotient_claims = &verify_case_31_failing_quotient_claims,
+    .module_sizes = &verify_case_31_failing_module_sizes,
 };
 
 const verify_case_31_systems = verifier.Systems{ .vanishing = system_31 };
@@ -3595,6 +5681,63 @@ const verify_case_32_proof = verifier.ProofData{
     .module_sizes = &verify_case_32_module_sizes,
 };
 
+var verify_case_32_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 69019361, 271819072, 293303964, 1181487162, 565108940, 673695749 }),
+    ext.Ext.fromUints(.{ 51764523, 203864304, 219977973, 1951468588, 423831705, 1037948420 }),
+};
+
+var verify_case_32_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 867844568, 205614190, 515627474, 1651190779, 1315896138, 2005405521 }),
+};
+
+var verify_case_32_failing_module_sizes = [_]usize{};
+
+var verify_case_32_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(5),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+};
+
+var verify_case_32_failing_round_0_column_1_base = [_]field.Element{
+    field.Element.init(6),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+};
+
+const verify_case_32_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_32_failing_round_0_column_0_base } },
+    .{ .public_column = .{ .base = &verify_case_32_failing_round_0_column_1_base } },
+};
+
+var verify_case_32_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_32_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1251790029, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 534765568, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 266338304, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2128617473, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_32_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_32_failing_round_1_column_0_ext } },
+};
+
+var verify_case_32_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_32_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_32_failing_round_0_columns, .cells = &verify_case_32_failing_round_0_cells },
+    .{ .columns = &verify_case_32_failing_round_1_columns, .cells = &verify_case_32_failing_round_1_cells },
+};
+
+const verify_case_32_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_32_failing_rounds,
+    .witness_claims = &verify_case_32_failing_witness_claims,
+    .quotient_claims = &verify_case_32_failing_quotient_claims,
+    .module_sizes = &verify_case_32_failing_module_sizes,
+};
+
 const verify_case_32_systems = verifier.Systems{ .vanishing = system_32 };
 
 pub const system_33_spec = protocol.Spec{
@@ -3686,6 +5829,54 @@ const verify_case_33_proof = verifier.ProofData{
     .module_sizes = &verify_case_33_module_sizes,
 };
 
+var verify_case_33_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1284712310, 1733101199, 961625783, 1905958643, 2079991738, 67840584 }),
+};
+
+var verify_case_33_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1813818615, 1622977931, 1567881226, 1018943197, 518658594, 1014385179 }),
+};
+
+var verify_case_33_failing_module_sizes = [_]usize{};
+
+var verify_case_33_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(7),
+};
+
+const verify_case_33_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_33_failing_round_0_column_0_base } },
+};
+
+var verify_case_33_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_33_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 831936434, 1464156264, 308584744, 1897825907, 1783905384, 644197693 }),
+    ext.Ext.fromUints(.{ 91835267, 565849323, 84606330, 1831919656, 1234899486, 722713189 }),
+    ext.Ext.fromUints(.{ 1183973986, 332482474, 561766363, 553435686, 240006525, 1933869495 }),
+    ext.Ext.fromUints(.{ 1988902656, 1814430041, 1957671007, 659561355, 487889129, 1842138277 }),
+};
+
+const verify_case_33_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_33_failing_round_1_column_0_ext } },
+};
+
+var verify_case_33_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_33_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_33_failing_round_0_columns, .cells = &verify_case_33_failing_round_0_cells },
+    .{ .columns = &verify_case_33_failing_round_1_columns, .cells = &verify_case_33_failing_round_1_cells },
+};
+
+const verify_case_33_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_33_failing_rounds,
+    .witness_claims = &verify_case_33_failing_witness_claims,
+    .quotient_claims = &verify_case_33_failing_quotient_claims,
+    .module_sizes = &verify_case_33_failing_module_sizes,
+};
+
 const verify_case_33_systems = verifier.Systems{ .vanishing = system_33 };
 
 pub const system_34_spec = protocol.Spec{
@@ -3773,6 +5964,54 @@ const verify_case_34_proof = verifier.ProofData{
     .witness_claims = &verify_case_34_witness_claims,
     .quotient_claims = &verify_case_34_quotient_claims,
     .module_sizes = &verify_case_34_module_sizes,
+};
+
+var verify_case_34_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 352652724, 1244479907, 1008710826, 1620669676, 27285443, 963469259 }),
+};
+
+var verify_case_34_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 454123681, 488956403, 1558776752, 702497977, 201031782, 2112685355 }),
+};
+
+var verify_case_34_failing_module_sizes = [_]usize{};
+
+var verify_case_34_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(99),
+    field.Element.init(41),
+    field.Element.init(99),
+    field.Element.init(99),
+};
+
+const verify_case_34_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_34_failing_round_0_column_0_base } },
+};
+
+var verify_case_34_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_34_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 2009546753, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2050804920, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1186512882, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 532676601, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_34_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_34_failing_round_1_column_0_ext } },
+};
+
+var verify_case_34_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_34_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_34_failing_round_0_columns, .cells = &verify_case_34_failing_round_0_cells },
+    .{ .columns = &verify_case_34_failing_round_1_columns, .cells = &verify_case_34_failing_round_1_cells },
+};
+
+const verify_case_34_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_34_failing_rounds,
+    .witness_claims = &verify_case_34_failing_witness_claims,
+    .quotient_claims = &verify_case_34_failing_quotient_claims,
+    .module_sizes = &verify_case_34_failing_module_sizes,
 };
 
 const verify_case_34_systems = verifier.Systems{ .vanishing = system_34 };
@@ -3864,6 +6103,56 @@ const verify_case_35_proof = verifier.ProofData{
     .witness_claims = &verify_case_35_witness_claims,
     .quotient_claims = &verify_case_35_quotient_claims,
     .module_sizes = &verify_case_35_module_sizes,
+};
+
+var verify_case_35_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 739614139, 1979479951, 23791752, 1999039605, 1976916878, 1337894174 }),
+};
+
+var verify_case_35_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1373588758, 1004026633, 1012621471, 1691655720, 1527588887, 670667460 }),
+};
+
+var verify_case_35_failing_module_sizes = [_]usize{};
+
+var verify_case_35_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(5),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+};
+
+const verify_case_35_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_35_failing_round_0_column_0_base } },
+};
+
+var verify_case_35_failing_round_0_cells = [_]protocol.Scalar{
+    .{ .base = field.Element.init(7) },
+};
+
+var verify_case_35_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1970903449, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 8355839, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1065353216, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2122350593, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_35_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_35_failing_round_1_column_0_ext } },
+};
+
+var verify_case_35_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_35_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_35_failing_round_0_columns, .cells = &verify_case_35_failing_round_0_cells },
+    .{ .columns = &verify_case_35_failing_round_1_columns, .cells = &verify_case_35_failing_round_1_cells },
+};
+
+const verify_case_35_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_35_failing_rounds,
+    .witness_claims = &verify_case_35_failing_witness_claims,
+    .quotient_claims = &verify_case_35_failing_quotient_claims,
+    .module_sizes = &verify_case_35_failing_module_sizes,
 };
 
 const verify_case_35_systems = verifier.Systems{ .vanishing = system_35 };
@@ -3960,6 +6249,59 @@ const verify_case_36_proof = verifier.ProofData{
     .witness_claims = &verify_case_36_witness_claims,
     .quotient_claims = &verify_case_36_quotient_claims,
     .module_sizes = &verify_case_36_module_sizes,
+};
+
+var verify_case_36_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1413581963, 2065092919, 800736331, 988420386, 1713524121, 820074968 }),
+};
+
+var verify_case_36_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 876800542, 361862301, 1536549786, 509320046, 855325240, 1898052439 }),
+};
+
+var verify_case_36_failing_module_sizes = [_]usize{};
+
+var verify_case_36_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(7),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+};
+
+const verify_case_36_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_36_failing_round_0_column_0_base } },
+};
+
+var verify_case_36_failing_round_0_cells = [_]protocol.Scalar{};
+
+const verify_case_36_failing_round_1_columns = [_]protocol.ColumnMessage{};
+
+var verify_case_36_failing_round_1_cells = [_]protocol.Scalar{};
+
+var verify_case_36_failing_round_2_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1912048697, 1814906612, 1060639787, 906040340, 1963329928, 1667177320 }),
+    ext.Ext.fromUints(.{ 149551498, 319665621, 1791702116, 751562114, 244694318, 1931281279 }),
+    ext.Ext.fromUints(.{ 1026690315, 2021809943, 1835190570, 1561462509, 677010320, 1162669816 }),
+    ext.Ext.fromUints(.{ 1903829132, 1593247832, 1878679024, 240656471, 1109326322, 394058353 }),
+};
+
+const verify_case_36_failing_round_2_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_36_failing_round_2_column_0_ext } },
+};
+
+var verify_case_36_failing_round_2_cells = [_]protocol.Scalar{};
+
+const verify_case_36_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_36_failing_round_0_columns, .cells = &verify_case_36_failing_round_0_cells },
+    .{ .columns = &verify_case_36_failing_round_1_columns, .cells = &verify_case_36_failing_round_1_cells },
+    .{ .columns = &verify_case_36_failing_round_2_columns, .cells = &verify_case_36_failing_round_2_cells },
+};
+
+const verify_case_36_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_36_failing_rounds,
+    .witness_claims = &verify_case_36_failing_witness_claims,
+    .quotient_claims = &verify_case_36_failing_quotient_claims,
+    .module_sizes = &verify_case_36_failing_module_sizes,
 };
 
 const verify_case_36_systems = verifier.Systems{ .vanishing = system_36 };
@@ -4064,6 +6406,54 @@ const verify_case_37_proof = verifier.ProofData{
     .module_sizes = &verify_case_37_module_sizes,
 };
 
+var verify_case_37_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 475220899, 772548144, 278539221, 1940696670, 578453864, 1688829539 }),
+};
+
+var verify_case_37_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 773774268, 1562783103, 1416473854, 1119834351, 2009258876, 1650435165 }),
+};
+
+var verify_case_37_failing_module_sizes = [_]usize{};
+
+var verify_case_37_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(10),
+    field.Element.init(21),
+    field.Element.init(99),
+    field.Element.init(30),
+};
+
+const verify_case_37_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_37_failing_round_0_column_0_base } },
+};
+
+var verify_case_37_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_37_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 126000124, 30091540, 1136611288, 1880354567, 1007859201, 1100402297 }),
+    ext.Ext.fromUints(.{ 1959771651, 1628942766, 654693278, 278254014, 1917436790, 1144727181 }),
+    ext.Ext.fromUints(.{ 417689880, 1661809447, 1522527026, 715825089, 1156705905, 811002169 }),
+    ext.Ext.fromUints(.{ 860458768, 416732419, 967269610, 1440779784, 208265456, 1709500652 }),
+};
+
+const verify_case_37_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_37_failing_round_1_column_0_ext } },
+};
+
+var verify_case_37_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_37_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_37_failing_round_0_columns, .cells = &verify_case_37_failing_round_0_cells },
+    .{ .columns = &verify_case_37_failing_round_1_columns, .cells = &verify_case_37_failing_round_1_cells },
+};
+
+const verify_case_37_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_37_failing_rounds,
+    .witness_claims = &verify_case_37_failing_witness_claims,
+    .quotient_claims = &verify_case_37_failing_quotient_claims,
+    .module_sizes = &verify_case_37_failing_module_sizes,
+};
+
 const verify_case_37_systems = verifier.Systems{ .vanishing = system_37 };
 
 pub const system_38_spec = protocol.Spec{
@@ -4153,6 +6543,54 @@ const verify_case_38_proof = verifier.ProofData{
     .module_sizes = &verify_case_38_module_sizes,
 };
 
+var verify_case_38_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 674945390, 2057742713, 1897785137, 1717480901, 563876707, 1790463310 }),
+};
+
+var verify_case_38_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 591265767, 1716777070, 1842384025, 1413698341, 2014858861, 2037486492 }),
+};
+
+var verify_case_38_failing_module_sizes = [_]usize{};
+
+var verify_case_38_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(8),
+    field.Element.init(0),
+    field.Element.init(0),
+    field.Element.init(0),
+};
+
+const verify_case_38_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_38_failing_round_0_column_0_base } },
+};
+
+var verify_case_38_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_38_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1677931319, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2113994755, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 16711680, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_38_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_38_failing_round_1_column_0_ext } },
+};
+
+var verify_case_38_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_38_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_38_failing_round_0_columns, .cells = &verify_case_38_failing_round_0_cells },
+    .{ .columns = &verify_case_38_failing_round_1_columns, .cells = &verify_case_38_failing_round_1_cells },
+};
+
+const verify_case_38_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_38_failing_rounds,
+    .witness_claims = &verify_case_38_failing_witness_claims,
+    .quotient_claims = &verify_case_38_failing_quotient_claims,
+    .module_sizes = &verify_case_38_failing_module_sizes,
+};
+
 const verify_case_38_systems = verifier.Systems{ .vanishing = system_38 };
 
 pub const system_39_spec = protocol.Spec{
@@ -4238,6 +6676,54 @@ const verify_case_39_proof = verifier.ProofData{
     .witness_claims = &verify_case_39_witness_claims,
     .quotient_claims = &verify_case_39_quotient_claims,
     .module_sizes = &verify_case_39_module_sizes,
+};
+
+var verify_case_39_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1177658257, 688723135, 713952303, 1380884180, 1151087695, 1606473862 }),
+};
+
+var verify_case_39_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1481007698, 156087453, 1269076692, 576401249, 52003999, 1063630105 }),
+};
+
+var verify_case_39_failing_module_sizes = [_]usize{};
+
+var verify_case_39_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(99),
+    field.Element.init(99),
+    field.Element.init(99),
+    field.Element.init(7),
+};
+
+const verify_case_39_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_39_failing_round_0_column_0_base } },
+};
+
+var verify_case_39_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_39_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 192184297, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1065353205, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1938522113, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 26633796, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_39_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_39_failing_round_1_column_0_ext } },
+};
+
+var verify_case_39_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_39_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_39_failing_round_0_columns, .cells = &verify_case_39_failing_round_0_cells },
+    .{ .columns = &verify_case_39_failing_round_1_columns, .cells = &verify_case_39_failing_round_1_cells },
+};
+
+const verify_case_39_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_39_failing_rounds,
+    .witness_claims = &verify_case_39_failing_witness_claims,
+    .quotient_claims = &verify_case_39_failing_quotient_claims,
+    .module_sizes = &verify_case_39_failing_module_sizes,
 };
 
 const verify_case_39_systems = verifier.Systems{ .vanishing = system_39 };
@@ -4347,6 +6833,72 @@ const verify_case_40_proof = verifier.ProofData{
     .module_sizes = &verify_case_40_module_sizes,
 };
 
+var verify_case_40_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1391718603, 466748938, 1998965585, 1840764224, 1427320211, 1095264141 }),
+    ext.Ext.fromUints(.{ 927812405, 1731636914, 2042879201, 1937411627, 1661782285, 730176094 }),
+};
+
+var verify_case_40_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1596845586, 262709944, 788544252, 826541687, 1174395597, 1734792465 }),
+    ext.Ext.fromUints(.{ 838831858, 571070974, 625897955, 370210017, 435737816, 1310237667 }),
+};
+
+var verify_case_40_failing_module_sizes = [_]usize{};
+
+var verify_case_40_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(3),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+};
+
+var verify_case_40_failing_round_0_column_1_base = [_]field.Element{
+    field.Element.init(5),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+};
+
+const verify_case_40_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_40_failing_round_0_column_0_base } },
+    .{ .public_column = .{ .base = &verify_case_40_failing_round_0_column_1_base } },
+};
+
+var verify_case_40_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_40_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 8120053, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 144138222, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2130706424, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1453891584, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_40_failing_round_1_column_1_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 540796680, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1059086338, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 532676609, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 538943489, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_40_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_40_failing_round_1_column_0_ext } },
+    .{ .public_column = .{ .ext = &verify_case_40_failing_round_1_column_1_ext } },
+};
+
+var verify_case_40_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_40_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_40_failing_round_0_columns, .cells = &verify_case_40_failing_round_0_cells },
+    .{ .columns = &verify_case_40_failing_round_1_columns, .cells = &verify_case_40_failing_round_1_cells },
+};
+
+const verify_case_40_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_40_failing_rounds,
+    .witness_claims = &verify_case_40_failing_witness_claims,
+    .quotient_claims = &verify_case_40_failing_quotient_claims,
+    .module_sizes = &verify_case_40_failing_module_sizes,
+};
+
 const verify_case_40_systems = verifier.Systems{ .vanishing = system_40 };
 
 pub const system_41_spec = protocol.Spec{
@@ -4443,6 +6995,61 @@ const verify_case_41_proof = verifier.ProofData{
     .witness_claims = &verify_case_41_witness_claims,
     .quotient_claims = &verify_case_41_quotient_claims,
     .module_sizes = &verify_case_41_module_sizes,
+};
+
+var verify_case_41_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1509284537, 1852176687, 1235564866, 1126399174, 394806397, 148349774 }),
+};
+
+var verify_case_41_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1386654222, 100557681, 37212689, 1025994117, 1558014149, 912271469 }),
+};
+
+var verify_case_41_failing_module_sizes = [_]usize{};
+
+var verify_case_41_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(7),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+};
+
+const verify_case_41_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_41_failing_round_0_column_0_base } },
+};
+
+var verify_case_41_failing_round_0_cells = [_]protocol.Scalar{
+    .{ .ext = ext.Ext.fromUints(.{ 8, 0, 0, 0, 0, 0 }) },
+};
+
+const verify_case_41_failing_round_1_columns = [_]protocol.ColumnMessage{};
+
+var verify_case_41_failing_round_1_cells = [_]protocol.Scalar{};
+
+var verify_case_41_failing_round_2_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1037247287, 1917084554, 334120894, 829920229, 541073560, 364029988 }),
+    ext.Ext.fromUints(.{ 2044340974, 931380693, 1664127664, 671455623, 733509200, 1553166247 }),
+    ext.Ext.fromUints(.{ 1527687942, 1012778063, 423914357, 1704219153, 1923881850, 1481609027 }),
+    ext.Ext.fromUints(.{ 1011034910, 1094175433, 1314407483, 606276250, 983548067, 1410051807 }),
+};
+
+const verify_case_41_failing_round_2_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_41_failing_round_2_column_0_ext } },
+};
+
+var verify_case_41_failing_round_2_cells = [_]protocol.Scalar{};
+
+const verify_case_41_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_41_failing_round_0_columns, .cells = &verify_case_41_failing_round_0_cells },
+    .{ .columns = &verify_case_41_failing_round_1_columns, .cells = &verify_case_41_failing_round_1_cells },
+    .{ .columns = &verify_case_41_failing_round_2_columns, .cells = &verify_case_41_failing_round_2_cells },
+};
+
+const verify_case_41_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_41_failing_rounds,
+    .witness_claims = &verify_case_41_failing_witness_claims,
+    .quotient_claims = &verify_case_41_failing_quotient_claims,
+    .module_sizes = &verify_case_41_failing_module_sizes,
 };
 
 const verify_case_41_systems = verifier.Systems{ .vanishing = system_41 };
@@ -4554,6 +7161,72 @@ const verify_case_42_proof = verifier.ProofData{
     .module_sizes = &verify_case_42_module_sizes,
 };
 
+var verify_case_42_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 601155949, 1163407105, 200040892, 1259086504, 1629390023, 1220279472 }),
+    ext.Ext.fromUints(.{ 1821241591, 65369259, 1553831550, 129155525, 1796495493, 813519648 }),
+    ext.Ext.fromUints(.{ 9, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_42_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1812223292, 550407390, 785603832, 548841902, 1317701735, 1602745113 }),
+};
+
+var verify_case_42_failing_module_sizes = [_]usize{};
+
+var verify_case_42_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(3),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+};
+
+var verify_case_42_failing_round_0_column_1_base = [_]field.Element{
+    field.Element.init(5),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+};
+
+var verify_case_42_failing_round_0_column_2_base = [_]field.Element{
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+};
+
+const verify_case_42_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_42_failing_round_0_column_0_base } },
+    .{ .public_column = .{ .base = &verify_case_42_failing_round_0_column_1_base } },
+    .{ .public_column = .{ .base = &verify_case_42_failing_round_0_column_2_base } },
+};
+
+var verify_case_42_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_42_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 2050804938, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1086242814, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 532676607, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2109816833, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_42_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_42_failing_round_1_column_0_ext } },
+};
+
+var verify_case_42_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_42_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_42_failing_round_0_columns, .cells = &verify_case_42_failing_round_0_cells },
+    .{ .columns = &verify_case_42_failing_round_1_columns, .cells = &verify_case_42_failing_round_1_cells },
+};
+
+const verify_case_42_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_42_failing_rounds,
+    .witness_claims = &verify_case_42_failing_witness_claims,
+    .quotient_claims = &verify_case_42_failing_quotient_claims,
+    .module_sizes = &verify_case_42_failing_module_sizes,
+};
+
 const verify_case_42_systems = verifier.Systems{ .vanishing = system_42 };
 
 pub const system_43_spec = protocol.Spec{
@@ -4654,6 +7327,63 @@ const verify_case_43_proof = verifier.ProofData{
     .witness_claims = &verify_case_43_witness_claims,
     .quotient_claims = &verify_case_43_quotient_claims,
     .module_sizes = &verify_case_43_module_sizes,
+};
+
+var verify_case_43_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 899714392, 1099647894, 291023887, 290770495, 623747103, 1617792462 }),
+    ext.Ext.fromUints(.{ 740989069, 374969200, 1967002931, 837531607, 222806938, 1589283628 }),
+};
+
+var verify_case_43_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 616629028, 89610259, 1536175341, 944060876, 2015793925, 1199048812 }),
+};
+
+var verify_case_43_failing_module_sizes = [_]usize{};
+
+var verify_case_43_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(5),
+};
+
+var verify_case_43_failing_round_0_column_1_base = [_]field.Element{
+    field.Element.init(99),
+    field.Element.init(99),
+    field.Element.init(99),
+    field.Element.init(6),
+};
+
+const verify_case_43_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_43_failing_round_0_column_0_base } },
+    .{ .public_column = .{ .base = &verify_case_43_failing_round_0_column_1_base } },
+};
+
+var verify_case_43_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_43_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1108166466, 1301836583, 917519684, 453235517, 10988144, 2035001731 }),
+    ext.Ext.fromUints(.{ 1269486353, 981319554, 1108424791, 154242122, 188881092, 1016544073 }),
+    ext.Ext.fromUints(.{ 1500975573, 671649434, 992237667, 1570998880, 237331741, 641554279 }),
+    ext.Ext.fromUints(.{ 2001886938, 372530168, 592203873, 990102150, 576066576, 578065060 }),
+};
+
+const verify_case_43_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_43_failing_round_1_column_0_ext } },
+};
+
+var verify_case_43_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_43_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_43_failing_round_0_columns, .cells = &verify_case_43_failing_round_0_cells },
+    .{ .columns = &verify_case_43_failing_round_1_columns, .cells = &verify_case_43_failing_round_1_cells },
+};
+
+const verify_case_43_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_43_failing_rounds,
+    .witness_claims = &verify_case_43_failing_witness_claims,
+    .quotient_claims = &verify_case_43_failing_quotient_claims,
+    .module_sizes = &verify_case_43_failing_module_sizes,
 };
 
 const verify_case_43_systems = verifier.Systems{ .vanishing = system_43 };
@@ -4774,6 +7504,81 @@ const verify_case_44_proof = verifier.ProofData{
     .witness_claims = &verify_case_44_witness_claims,
     .quotient_claims = &verify_case_44_quotient_claims,
     .module_sizes = &verify_case_44_module_sizes,
+};
+
+var verify_case_44_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1022399370, 152362734, 1655407846, 263246936, 1360037635, 889609507 }),
+};
+
+var verify_case_44_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 496746402, 1426137152, 551604881, 1084016933, 40955471, 2013156863 }),
+    ext.Ext.fromUints(.{ 387853853, 2018871850, 373710812, 1564036200, 486053879, 2124230195 }),
+    ext.Ext.fromUints(.{ 1480207384, 370326310, 617337523, 1001114691, 1471344186, 359115288 }),
+    ext.Ext.fromUints(.{ 756100121, 370326310, 617337523, 1001114691, 1471344186, 359115288 }),
+};
+
+var verify_case_44_failing_module_sizes = [_]usize{};
+
+var verify_case_44_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(2),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+};
+
+const verify_case_44_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_44_failing_round_0_column_0_base } },
+};
+
+var verify_case_44_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_44_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 737649916, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1337230127, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 291307415, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 577076193, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_44_failing_round_1_column_1_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 629449996, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 495533088, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1647968274, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1468711970, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_44_failing_round_1_column_2_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1902880017, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 724107263, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 724107263, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 724107263, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_44_failing_round_1_column_3_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1178772754, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_44_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_44_failing_round_1_column_0_ext } },
+    .{ .public_column = .{ .ext = &verify_case_44_failing_round_1_column_1_ext } },
+    .{ .public_column = .{ .ext = &verify_case_44_failing_round_1_column_2_ext } },
+    .{ .public_column = .{ .ext = &verify_case_44_failing_round_1_column_3_ext } },
+};
+
+var verify_case_44_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_44_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_44_failing_round_0_columns, .cells = &verify_case_44_failing_round_0_cells },
+    .{ .columns = &verify_case_44_failing_round_1_columns, .cells = &verify_case_44_failing_round_1_cells },
+};
+
+const verify_case_44_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_44_failing_rounds,
+    .witness_claims = &verify_case_44_failing_witness_claims,
+    .quotient_claims = &verify_case_44_failing_quotient_claims,
+    .module_sizes = &verify_case_44_failing_module_sizes,
 };
 
 const verify_case_44_systems = verifier.Systems{ .vanishing = system_44 };
@@ -4899,6 +7704,72 @@ const verify_case_45_proof = verifier.ProofData{
     .module_sizes = &verify_case_45_module_sizes,
 };
 
+var verify_case_45_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1880561919, 1602638379, 1182471751, 598921129, 239689008, 1351139638 }),
+    ext.Ext.fromUints(.{ 1985361843, 691009021, 1175894523, 1335561002, 949585664, 365019247 }),
+};
+
+var verify_case_45_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1804236354, 696789751, 1149141792, 1084262301, 177683007, 1776142789 }),
+    ext.Ext.fromUints(.{ 2011314576, 2115001176, 1401964263, 310236187, 551295849, 205692885 }),
+};
+
+var verify_case_45_failing_module_sizes = [_]usize{};
+
+var verify_case_45_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(0),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+};
+
+var verify_case_45_failing_round_0_column_1_base = [_]field.Element{
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(7),
+};
+
+const verify_case_45_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_45_failing_round_0_column_0_base } },
+    .{ .public_column = .{ .base = &verify_case_45_failing_round_0_column_1_base } },
+};
+
+var verify_case_45_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_45_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 799014909, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 551477246, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 266338303, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2111905793, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_45_failing_round_1_column_1_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1069531136, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 532676608, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2126528513, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 559310438, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_45_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_45_failing_round_1_column_0_ext } },
+    .{ .public_column = .{ .ext = &verify_case_45_failing_round_1_column_1_ext } },
+};
+
+var verify_case_45_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_45_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_45_failing_round_0_columns, .cells = &verify_case_45_failing_round_0_cells },
+    .{ .columns = &verify_case_45_failing_round_1_columns, .cells = &verify_case_45_failing_round_1_cells },
+};
+
+const verify_case_45_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_45_failing_rounds,
+    .witness_claims = &verify_case_45_failing_witness_claims,
+    .quotient_claims = &verify_case_45_failing_quotient_claims,
+    .module_sizes = &verify_case_45_failing_module_sizes,
+};
+
 const verify_case_45_systems = verifier.Systems{ .vanishing = system_45 };
 
 pub const system_46_spec = protocol.Spec{
@@ -4994,6 +7865,62 @@ const verify_case_46_proof = verifier.ProofData{
     .module_sizes = &verify_case_46_module_sizes,
 };
 
+var verify_case_46_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1085956862, 171560619, 937768073, 957987431, 1736954368, 847931557 }),
+};
+
+var verify_case_46_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1825514900, 1223161481, 713913353, 1112048458, 584947956, 442732922 }),
+};
+
+var verify_case_46_failing_module_sizes = [_]usize{8};
+
+var verify_case_46_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(7),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+};
+
+const verify_case_46_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_46_failing_round_0_column_0_base } },
+};
+
+var verify_case_46_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_46_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1903669268, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 800045421, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 534765568, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 263190893, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 266338304, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 269485715, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2128617473, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1863337620, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_46_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_46_failing_round_1_column_0_ext } },
+};
+
+var verify_case_46_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_46_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_46_failing_round_0_columns, .cells = &verify_case_46_failing_round_0_cells },
+    .{ .columns = &verify_case_46_failing_round_1_columns, .cells = &verify_case_46_failing_round_1_cells },
+};
+
+const verify_case_46_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_46_failing_rounds,
+    .witness_claims = &verify_case_46_failing_witness_claims,
+    .quotient_claims = &verify_case_46_failing_quotient_claims,
+    .module_sizes = &verify_case_46_failing_module_sizes,
+};
+
 const verify_case_46_systems = verifier.Systems{ .vanishing = system_46 };
 
 pub const system_47_spec = protocol.Spec{
@@ -5087,6 +8014,62 @@ const verify_case_47_proof = verifier.ProofData{
     .witness_claims = &verify_case_47_witness_claims,
     .quotient_claims = &verify_case_47_quotient_claims,
     .module_sizes = &verify_case_47_module_sizes,
+};
+
+var verify_case_47_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1654528841, 148286215, 598317635, 644265069, 1889695918, 1142643855 }),
+};
+
+var verify_case_47_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 987080008, 2035966932, 1624915475, 1656061659, 1562175443, 1093820716 }),
+};
+
+var verify_case_47_failing_module_sizes = [_]usize{8};
+
+var verify_case_47_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(9),
+    field.Element.init(7),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+};
+
+const verify_case_47_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_47_failing_round_0_column_0_base } },
+};
+
+var verify_case_47_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_47_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1863337620, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1903669268, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 800045421, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 534765568, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 263190893, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 266338304, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 269485715, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 2128617473, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_47_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_47_failing_round_1_column_0_ext } },
+};
+
+var verify_case_47_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_47_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_47_failing_round_0_columns, .cells = &verify_case_47_failing_round_0_cells },
+    .{ .columns = &verify_case_47_failing_round_1_columns, .cells = &verify_case_47_failing_round_1_cells },
+};
+
+const verify_case_47_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_47_failing_rounds,
+    .witness_claims = &verify_case_47_failing_witness_claims,
+    .quotient_claims = &verify_case_47_failing_quotient_claims,
+    .module_sizes = &verify_case_47_failing_module_sizes,
 };
 
 const verify_case_47_systems = verifier.Systems{ .vanishing = system_47 };
@@ -5210,6 +8193,88 @@ const verify_case_48_proof = verifier.ProofData{
     .witness_claims = &verify_case_48_witness_claims,
     .quotient_claims = &verify_case_48_quotient_claims,
     .module_sizes = &verify_case_48_module_sizes,
+};
+
+var verify_case_48_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1384382885, 772493471, 1386970554, 1065339336, 2087089974, 1563010397 }),
+    ext.Ext.fromUints(.{ 1633157404, 1225231125, 924647036, 710226224, 1391393316, 1752242409 }),
+};
+
+var verify_case_48_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 171699420, 645197761, 604882073, 1671706582, 656667189, 2118484058 }),
+    ext.Ext.fromUints(.{ 1144398731, 107727674, 358302899, 414808064, 1517112730, 411942354 }),
+};
+
+var verify_case_48_failing_module_sizes = [_]usize{8};
+
+var verify_case_48_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(3),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+};
+
+var verify_case_48_failing_round_0_column_1_base = [_]field.Element{
+    field.Element.init(5),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+    field.Element.init(9),
+};
+
+const verify_case_48_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_48_failing_round_0_column_0_base } },
+    .{ .public_column = .{ .base = &verify_case_48_failing_round_0_column_1_base } },
+};
+
+var verify_case_48_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_48_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 816225431, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 382662873, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 875784183, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 871232480, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1464860668, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 37213972, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 322738176, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 573258784, 0, 0, 0, 0, 0 }),
+};
+
+var verify_case_48_failing_round_1_column_1_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1615240367, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 450358824, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1856534530, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1421947690, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 932184065, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 332988891, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1739032577, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1257102552, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_48_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_48_failing_round_1_column_0_ext } },
+    .{ .public_column = .{ .ext = &verify_case_48_failing_round_1_column_1_ext } },
+};
+
+var verify_case_48_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_48_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_48_failing_round_0_columns, .cells = &verify_case_48_failing_round_0_cells },
+    .{ .columns = &verify_case_48_failing_round_1_columns, .cells = &verify_case_48_failing_round_1_cells },
+};
+
+const verify_case_48_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_48_failing_rounds,
+    .witness_claims = &verify_case_48_failing_witness_claims,
+    .quotient_claims = &verify_case_48_failing_quotient_claims,
+    .module_sizes = &verify_case_48_failing_module_sizes,
 };
 
 const verify_case_48_systems = verifier.Systems{ .vanishing = system_48 };
@@ -13959,6 +17024,54 @@ const verify_case_88_proof = verifier.ProofData{
     .module_sizes = &verify_case_88_module_sizes,
 };
 
+var verify_case_88_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1671379099, 1820225737, 745496736, 1520101385, 483404820, 33935710 }),
+};
+
+var verify_case_88_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1758585595, 2051671926, 1287228006, 2025059932, 959328724, 423678391 }),
+};
+
+var verify_case_88_failing_module_sizes = [_]usize{};
+
+var verify_case_88_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(7),
+    field.Element.init(98),
+    field.Element.init(7),
+    field.Element.init(7),
+};
+
+const verify_case_88_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_88_failing_round_0_column_0_base } },
+};
+
+var verify_case_88_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_88_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 190095360, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 186436847, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 342581271, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1331691532, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_88_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_88_failing_round_1_column_0_ext } },
+};
+
+var verify_case_88_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_88_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_88_failing_round_0_columns, .cells = &verify_case_88_failing_round_0_cells },
+    .{ .columns = &verify_case_88_failing_round_1_columns, .cells = &verify_case_88_failing_round_1_cells },
+};
+
+const verify_case_88_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_88_failing_rounds,
+    .witness_claims = &verify_case_88_failing_witness_claims,
+    .quotient_claims = &verify_case_88_failing_quotient_claims,
+    .module_sizes = &verify_case_88_failing_module_sizes,
+};
+
 const verify_case_88_systems = verifier.Systems{ .vanishing = system_88 };
 
 pub const system_89_spec = protocol.Spec{
@@ -14046,6 +17159,54 @@ const verify_case_89_proof = verifier.ProofData{
     .witness_claims = &verify_case_89_witness_claims,
     .quotient_claims = &verify_case_89_quotient_claims,
     .module_sizes = &verify_case_89_module_sizes,
+};
+
+var verify_case_89_failing_witness_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1671379099, 1820225737, 745496736, 1520101385, 483404820, 33935710 }),
+};
+
+var verify_case_89_failing_quotient_claims = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 1758585595, 2051671926, 1287228006, 2025059932, 959328724, 423678391 }),
+};
+
+var verify_case_89_failing_module_sizes = [_]usize{4};
+
+var verify_case_89_failing_round_0_column_0_base = [_]field.Element{
+    field.Element.init(7),
+    field.Element.init(98),
+    field.Element.init(7),
+    field.Element.init(7),
+};
+
+const verify_case_89_failing_round_0_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .base = &verify_case_89_failing_round_0_column_0_base } },
+};
+
+var verify_case_89_failing_round_0_cells = [_]protocol.Scalar{};
+
+var verify_case_89_failing_round_1_column_0_ext = [_]ext.Ext{
+    ext.Ext.fromUints(.{ 190095360, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 186436847, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 342581271, 0, 0, 0, 0, 0 }),
+    ext.Ext.fromUints(.{ 1331691532, 0, 0, 0, 0, 0 }),
+};
+
+const verify_case_89_failing_round_1_columns = [_]protocol.ColumnMessage{
+    .{ .public_column = .{ .ext = &verify_case_89_failing_round_1_column_0_ext } },
+};
+
+var verify_case_89_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_89_failing_rounds = [_]protocol.RoundMessage{
+    .{ .columns = &verify_case_89_failing_round_0_columns, .cells = &verify_case_89_failing_round_0_cells },
+    .{ .columns = &verify_case_89_failing_round_1_columns, .cells = &verify_case_89_failing_round_1_cells },
+};
+
+const verify_case_89_failing_proof = verifier.ProofData{
+    .rounds = &verify_case_89_failing_rounds,
+    .witness_claims = &verify_case_89_failing_witness_claims,
+    .quotient_claims = &verify_case_89_failing_quotient_claims,
+    .module_sizes = &verify_case_89_failing_module_sizes,
 };
 
 const verify_case_89_systems = verifier.Systems{ .vanishing = system_89 };
@@ -14330,6 +17491,101 @@ pub fn getInput(comptime index: usize) verifier.ProofData {
         87 => verify_case_87_proof,
         88 => verify_case_88_proof,
         89 => verify_case_89_proof,
+        else => @compileError("unknown verifier fixture case index"),
+    };
+}
+pub fn getInputFailing(comptime index: usize) verifier.ProofData {
+    return switch (index) {
+        0 => verify_case_0_failing_proof,
+        1 => verify_case_1_failing_proof,
+        2 => verify_case_2_failing_proof,
+        3 => verify_case_3_failing_proof,
+        4 => verify_case_4_failing_proof,
+        5 => verify_case_5_failing_proof,
+        6 => verify_case_6_failing_proof,
+        7 => verify_case_7_failing_proof,
+        8 => verify_case_8_failing_proof,
+        9 => verify_case_9_failing_proof,
+        10 => verify_case_10_failing_proof,
+        11 => verify_case_11_failing_proof,
+        12 => verify_case_12_failing_proof,
+        13 => verify_case_13_failing_proof,
+        14 => verify_case_14_failing_proof,
+        15 => verify_case_15_failing_proof,
+        16 => verify_case_16_failing_proof,
+        17 => verify_case_17_failing_proof,
+        18 => verify_case_18_failing_proof,
+        19 => verify_case_19_failing_proof,
+        20 => verify_case_20_failing_proof,
+        21 => verify_case_21_failing_proof,
+        22 => verify_case_22_failing_proof,
+        23 => verify_case_23_failing_proof,
+        24 => verify_case_24_failing_proof,
+        25 => verify_case_25_failing_proof,
+        26 => verify_case_26_failing_proof,
+        27 => verify_case_27_failing_proof,
+        28 => verify_case_28_failing_proof,
+        29 => verify_case_29_failing_proof,
+        30 => verify_case_30_failing_proof,
+        31 => verify_case_31_failing_proof,
+        32 => verify_case_32_failing_proof,
+        33 => verify_case_33_failing_proof,
+        34 => verify_case_34_failing_proof,
+        35 => verify_case_35_failing_proof,
+        36 => verify_case_36_failing_proof,
+        37 => verify_case_37_failing_proof,
+        38 => verify_case_38_failing_proof,
+        39 => verify_case_39_failing_proof,
+        40 => verify_case_40_failing_proof,
+        41 => verify_case_41_failing_proof,
+        42 => verify_case_42_failing_proof,
+        43 => verify_case_43_failing_proof,
+        44 => verify_case_44_failing_proof,
+        45 => verify_case_45_failing_proof,
+        46 => verify_case_46_failing_proof,
+        47 => verify_case_47_failing_proof,
+        48 => verify_case_48_failing_proof,
+        49 => @compileError("verifier fixture case 49 (LogDerivativeSumCompiler/SingleFractionAllOnes) has no failing input"),
+        50 => @compileError("verifier fixture case 50 (LogDerivativeSumCompiler/PartialFilter) has no failing input"),
+        51 => @compileError("verifier fixture case 51 (LogDerivativeSumCompiler/AllZeroFilter) has no failing input"),
+        52 => @compileError("verifier fixture case 52 (LogDerivativeSumCompiler/FilterMasksZeroDenominator) has no failing input"),
+        53 => @compileError("verifier fixture case 53 (LogDerivativeSumCompiler/Packing4Fractions) has no failing input"),
+        54 => @compileError("verifier fixture case 54 (LogDerivativeSumCompiler/MultiModuleBucketing) has no failing input"),
+        55 => @compileError("verifier fixture case 55 (LogDerivativeSumCompiler/SizeOneModule) has no failing input"),
+        56 => @compileError("verifier fixture case 56 (LogDerivativeSumCompiler/ConditionalLookupShape) has no failing input"),
+        57 => @compileError("verifier fixture case 57 (LogDerivativeSumCompiler/ManyFractions) has no failing input"),
+        58 => @compileError("verifier fixture case 58 (LogDerivativeSumCompiler/SizeTwoModule) has no failing input"),
+        59 => @compileError("verifier fixture case 59 (LogDerivativeSumCompiler/MultipleQueries) has no failing input"),
+        60 => @compileError("verifier fixture case 60 (LogDerivativeSumCompiler/VectorDenominator) has no failing input"),
+        61 => @compileError("verifier fixture case 61 (LogDerivativeSumCompiler/AllFiltersOnesPacked) has no failing input"),
+        62 => @compileError("verifier fixture case 62 (Lookup/SingleColumnNoFilters) has no failing input"),
+        63 => @compileError("verifier fixture case 63 (Lookup/FilterOnIncluded) has no failing input"),
+        64 => @compileError("verifier fixture case 64 (Lookup/FilterOnIncluding) has no failing input"),
+        65 => @compileError("verifier fixture case 65 (Lookup/DoubleConditional) has no failing input"),
+        66 => @compileError("verifier fixture case 66 (Lookup/MultiColumn) has no failing input"),
+        67 => @compileError("verifier fixture case 67 (Lookup/SharedTable) has no failing input"),
+        68 => @compileError("verifier fixture case 68 (Lookup/DistinctTables) has no failing input"),
+        69 => @compileError("verifier fixture case 69 (Lookup/MultiColumnFilterOnIncluding) has no failing input"),
+        70 => @compileError("verifier fixture case 70 (Lookup/RepeatedValueInTable) has no failing input"),
+        71 => @compileError("verifier fixture case 71 (Lookup/ShiftedAColumn) has no failing input"),
+        72 => @compileError("verifier fixture case 72 (Lookup/ShiftedBColumn) has no failing input"),
+        73 => @compileError("verifier fixture case 73 (Lookup/MultipleAFragments) has no failing input"),
+        74 => @compileError("verifier fixture case 74 (Lookup/WidthThree) has no failing input"),
+        75 => @compileError("verifier fixture case 75 (Lookup/SizeOne) has no failing input"),
+        76 => @compileError("verifier fixture case 76 (Lookup/PrecomputedTable) has no failing input"),
+        77 => @compileError("verifier fixture case 77 (Lookup/RepeatedSValues) has no failing input"),
+        78 => @compileError("verifier fixture case 78 (Lookup/EmptySelected) has no failing input"),
+        79 => @compileError("verifier fixture case 79 (RangeCheckCompiler/Basic) has no failing input"),
+        80 => @compileError("verifier fixture case 80 (RangeCheckCompiler/SharedBound) has no failing input"),
+        81 => @compileError("verifier fixture case 81 (RangeCheckCompiler/DistinctBounds) has no failing input"),
+        82 => @compileError("verifier fixture case 82 (RangeCheckCompiler/BoundIsPowerOfTwo) has no failing input"),
+        83 => @compileError("verifier fixture case 83 (RangeCheckCompiler/BoundIsOne) has no failing input"),
+        84 => @compileError("verifier fixture case 84 (RangeCheckCompiler/MultiModule) has no failing input"),
+        85 => @compileError("verifier fixture case 85 (RangeCheckCompiler/LargeBound) has no failing input"),
+        86 => @compileError("verifier fixture case 86 (RangeCheckCompiler/NonPowerOfTwoBound) has no failing input"),
+        87 => @compileError("verifier fixture case 87 (RangeCheckCompiler/AllZeros) has no failing input"),
+        88 => verify_case_88_failing_proof,
+        89 => verify_case_89_failing_proof,
         else => @compileError("unknown verifier fixture case index"),
     };
 }
