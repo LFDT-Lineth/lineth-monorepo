@@ -45,6 +45,3 @@ help:
 	@echo "  make fmt         # format build_common + all guest sources in place (zig fmt)"
 	@echo "  make fmt-check   # verify formatting without writing (the CI gate)"
 	@echo ""
-	@echo "Guest-specific targets run directly, e.g.:"
-	@echo "  make -C l2-execution spec-test   # EF zkevm stateless fixtures (SPEC_ARGS=…)"
-	@echo "  make -C l2-execution gp-exec     # run inside the ZKC interpreter"

@@ -60,15 +60,11 @@ clean:
 	rm -rf $(MAKEFILE_DIR)zig-out/
 	rm -rf $(BUILD_CACHE_DIR)
 
-# Note: gp-compile uses custom logic to this Makefile.
-# gp-linker-scritpt, gp-exec, gp-debug delegate logic
-# to arithmetization/src/test/Makefile.
-
-# The following variables 
-# STACK_ORIGIN   
-# SP             
-# PROGRAM_ORIGIN 
-# IN_ORIGIN      
+# The following variables
+# STACK_ORIGIN
+# SP
+# PROGRAM_ORIGIN
+# IN_ORIGIN
 # HEAP_ORIGIN
 # in arithmetization/src/test/Makefile have default values but can be overriden.
 
