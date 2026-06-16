@@ -2,30 +2,35 @@ from dataclasses import dataclass, field
 from typing import List, Sequence, Tuple
 
 from ethereum.crypto.hash import Hash32, keccak256
-from ethereum.forks.osaka.blocks import Block as EthereumBlock, Header
-from ethereum.forks.osaka.transactions import (
+from .fork import (
     BlobTransaction,
     FeeMarketTransaction,
     SetCodeTransaction,
     recover_sender,
+    calculate_total_blob_gas,
 )
-from ethereum.forks.osaka.vm.gas import calculate_total_blob_gas
 from ethereum.state import Address
 from ethereum_types.bytes import Bytes32
 from ethereum_types.numeric import U64, Uint
 
 from .block import (
     ChainConfig,
+    ExecutionPayload,
     ForcedTransactionAcceptance,
+    ForcedTransactionWitness,
+    LineaPayloadInput,
     ResolvedForcedTransaction,
-    RollupBlock,
-    block_hash,
-    decode_block_rlp,
+    StatelessInput,
     decode_signed_transaction_rlp,
-    parse_block_transaction_rlps,
+    parse_payload_transaction_rlps,
     resolve_forced_transaction,
 )
-from .state_transition import ExecutionWitness, L2State, state_transition_modified
+from .stateless_input import decode_stateless_input_ssz
+from .state_transition import (
+    L2State,
+    StatelessExecutionResult,
+    execute_stateless_input,
+)
 
 BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0 = Hash32(
     bytes.fromhex("e856c2b8bd4eb0027ce32eeaf595c21b0b6b4644b326e5b7bd80a1cf8db72e6c"),
@@ -33,17 +38,12 @@ BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0 = Hash32(
 
 # Storage layout of the L2MessageService contract.
 #
-# The L1->L2 rolling hash is not a single slot — it lives in the
-# `l1RollingHashes` mapping keyed by message number, with the latest message
-# number tracked separately in `lastAnchoredL1MessageNumber`. The two slot
-# positions below are extracted from the compiled storage layout of
-# `contracts/src/messaging/l2/L2MessageService.sol` (build-info JSON in
-# `contracts/build/build-info/`; the layout is reproduced via
-# `_storage_layout_table` in the script that maintains these constants).
-# If the contract's storage layout changes — including adding/removing
-# upgrade-safety `__gap` slots in any ancestor — these slot indices MUST
-# be re-extracted; otherwise the proof reads zero / unrelated values and
-# the L1 finalization check on `l1RollingHash[messageNumber]` will fail.
+# The L1->L2 rolling hash lives in the `l1RollingHashes` mapping keyed by message
+# number, with the latest number in `lastAnchoredL1MessageNumber`. These slot
+# indices are extracted from the compiled storage layout of
+# `contracts/src/messaging/l2/L2MessageService.sol`. If that layout changes
+# (including `__gap` slots in any ancestor) they MUST be re-extracted, or the
+# proof reads wrong values and the L1 finalization check fails.
 LAST_ANCHORED_L1_MESSAGE_NUMBER_SLOT: Bytes32 = Bytes32(int(280).to_bytes(32, "big"))
 L1_ROLLING_HASHES_MAPPING_BASE_SLOT: Bytes32 = Bytes32(int(281).to_bytes(32, "big"))
 
@@ -59,18 +59,12 @@ def _mapping_slot(base_slot: Bytes32, key: bytes) -> Bytes32:
 
 def read_l1l2_bridge_state(state: L2State, l2_message_service_address: Address) -> Tuple[Hash32, U64]:
     """
-    Read the L1->L2 bridge rolling hash and its associated message number
-    from the L2MessageService contract's storage at `state.state_root`.
-    Reads through the EVM state interface — the production guest verifies
-    the corresponding MPT proof paths against `state.state_root` from the
-    `ExecutionWitness.state` node pool.
+    Read the L1->L2 bridge rolling hash and its message number from the
+    L2MessageService storage at `state.state_root` (via the EVM state interface;
+    the guest verifies the MPT paths from `ExecutionWitness.state`).
 
-    Two reads: (a) `lastAnchoredL1MessageNumber` at a fixed slot, and
-    (b) `l1RollingHashes[lastAnchoredL1MessageNumber]` at the mapping slot
-    computed via `keccak256(uint256_be(messageNumber) || base_slot)`.
-
-    PRECOMPILE (production guest): keccak256 (mapping-slot computation in
-    `_mapping_slot` below) and the MPT-walk hashes inside `state.storage()`.
+    Two reads: `lastAnchoredL1MessageNumber` at a fixed slot, then
+    `l1RollingHashes[thatNumber]` at `keccak256(uint256_be(number) || base_slot)`.
     """
     number_bytes = state.storage(l2_message_service_address, LAST_ANCHORED_L1_MESSAGE_NUMBER_SLOT)
     rolling_hash_number = U64(int.from_bytes(bytes(number_bytes), "big"))
@@ -103,12 +97,12 @@ def validate_forced_transactions(
     curr_rolling_hash: Hash32,
     last_processed_ftx_number: U64,
     chain_config: ChainConfig,
-    block_header: Header,
+    payload: ExecutionPayload,
     parent_state: L2State,
-    block: RollupBlock,
+    forced_transactions: Sequence[ForcedTransactionWitness],
 ) -> Tuple[List[Address], Hash32, U64]:
     """
-    Scan the forced transactions in this block and assert each has the
+    Scan the forced transactions declared for this payload and assert each has the
     correct outcome (Included / Invalid sub-case / Refused sub-case,
     §6.5). For the Invalid sub-cases, the FTX sender's account is read
     from `parent_state` (the L2 state at the parent of this block) via
@@ -119,22 +113,27 @@ def validate_forced_transactions(
       - FILTERED_ADDRESS_FROM | FILTERED_ADDRESS_TO         -> Refused;
         bubble up the relevant address for the L1 sanction-list check.
       - INCLUDED                                            -> assert
-        `txHash` is in the block's tx list.
+        `txHash` is in `executionPayload.transactions`.
       - BAD_NONCE | BAD_BALANCE                              -> Invalid;
-        assert `txHash` is NOT in the block AND that the specific
+        assert `txHash` is NOT in the payload AND that the specific
         pre-validation failure holds against the sender's account read
         from `parent_state`.
     """
     rejected_addresses: List[Address] = []
 
-    for ftx in block.forced_transactions:
+    payload_tx_hashes = [
+        keccak256(tx_rlp)
+        for tx_rlp in parse_payload_transaction_rlps(payload)
+    ]
+
+    for ftx in forced_transactions:
         # FTXs are processed in ascending L1-assigned number.
         if ftx.number != last_processed_ftx_number + 1:
             raise Exception("forced transactions must be processed in ascending sequence")
 
         # Deadline constraint (§6.5): the FTX must be handled in a block whose
         # number does not exceed its declared deadline.
-        if ftx.deadline < block_header.number:
+        if ftx.deadline < payload.block_number:
             raise Exception("deadline exceeded")
 
         resolved_ftx = resolve_forced_transaction(ftx, chain_config.chain_id)
@@ -162,13 +161,9 @@ def validate_forced_transactions(
             rejected_addresses.append(transaction.to)
             continue
 
-        # Block-membership check: INCLUDED variants must appear in the
-        # block; the two Invalid variants must NOT appear.
-        block_tx_hashes = [
-            keccak256(tx_rlp)
-            for tx_rlp in parse_block_transaction_rlps(block.block_rlp)
-        ]
-        tx_in_block = resolved_ftx.tx_hash in block_tx_hashes
+        # Payload-membership check: INCLUDED variants must appear in the
+        # Engine API transaction list; the two Invalid variants must NOT.
+        tx_in_block = resolved_ftx.tx_hash in payload_tx_hashes
 
         if resolved_ftx.acceptance == ForcedTransactionAcceptance.INCLUDED:
             if not tx_in_block:
@@ -244,22 +239,36 @@ class L2ExecutionProofPublicInput:
 @dataclass
 class L2ExecutionProofPrivateInput:
     """
-    Logical l2-execution request. `blocks` carries canonical block RLP bytes
-    plus per-block FTX metadata. `execution_witnesses` carries the corresponding
-    Besu `debug_executionWitness` payload for each block. The first witness must
-    contain the parent header whose hash is `blocks[0].header.parent_hash`.
+    l2-execution guest input: one Linea wrapper per block in the conflation.
 
-    The L1->L2 rolling-hash boundary values are not separate witness fields:
-    the guest reads them directly from the L2 state at the parent and end
-    state roots via the EVM state interface (`L2State.storage`). The witness
-    producer must ensure the relevant MPT paths are in
-    `ExecutionWitness.state`
+    Each wrapper's `stateless_input_ssz` is the raw vanilla stateless-input
+    byte slice, decoded inside the guest path (no decoded-input fallback). The
+    first input's witness must end with the parent header whose hash equals
+    `executionPayload.parentHash`.
+
+    The L1->L2 rolling-hash boundary values are not separate fields: the guest
+    reads them from L2 state at the parent and end roots (`L2State.storage`), so
+    the witness producer must include those MPT paths in `ExecutionWitness.state`.
     """
     parent_ftx_rolling_hash: Hash32
     parent_last_processed_ftx_number: U64
-    blocks: List[RollupBlock]
-    execution_witnesses: List[ExecutionWitness]
+    payloads: List[LineaPayloadInput]
     chain_config: ChainConfig
+
+
+def _decode_payload_stateless_inputs(payloads: Sequence[LineaPayloadInput]) -> List[StatelessInput]:
+    """
+    Decode the vanilla stateless-input SSZ bytes inside the guest path — matching
+    the underlying engine's boundary, where the guest receives length-delimited
+    byte slices, not pre-decoded objects.
+    """
+    decoded: List[StatelessInput] = []
+    for index, payload in enumerate(payloads):
+        try:
+            decoded.append(decode_stateless_input_ssz(payload.stateless_input_ssz))
+        except Exception as exc:
+            raise Exception(f"invalid statelessInputSsz for payload {index}") from exc
+    return decoded
 
 
 @dataclass
@@ -280,133 +289,111 @@ class L2ExecutionProof:
 
 def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2ExecutionProof:
     """
-    l2-execution: validates the EVM state transition for a contiguous block
-    range and emits the 15-field l2-execution PI (§2.1).
-    """
-    if len(execution_input.blocks) == 0:
-        raise Exception("l2-execution proof must cover at least one block")
-    decoded_blocks = [
-        decode_block_rlp(rollup_block.block_rlp)
-        for rollup_block in execution_input.blocks
-    ]
-    if len(execution_input.execution_witnesses) != len(execution_input.blocks):
-        raise Exception("execution witness count must match block count")
+    l2-execution: emits the 15-field l2-execution PI (§2.1) for a contiguous
+    block range.
 
-    parent_header = parent_header_from_execution_witness(
-        decoded_blocks[0],
-        execution_input.execution_witnesses[0],
-    )
-    parent_block_hash = block_hash(parent_header)
-    start_block_number = parent_header.number + 1
-    current_parent_header = parent_header
+    The per-block state transition is delegated to the underlying engine
+    (`execute_stateless_input`); this function adds only the Linea logic on top —
+    conflation-level linking, the empty-`executionRequests` policy, forced
+    transactions, L2->L1 messages, and the L1->L2 bridge rolling-hash reads.
+    """
+    if len(execution_input.payloads) == 0:
+        raise Exception("l2-execution proof must cover at least one payload")
+
+    # Parse each vanilla stateless input ONCE via the underlying engine's parser
+    # (e.g. Zesu); the parsed objects are shared between execution and the Linea
+    # logic below, so nothing is re-parsed.
+    stateless_inputs = _decode_payload_stateless_inputs(execution_input.payloads)
+    all_witnesses = [stateless_input.witness for stateless_input in stateless_inputs]
+
+    first_payload = stateless_inputs[0].new_payload_request.execution_payload
+    # The engine validates each payload's parentHash against its witness parent
+    # header, so the range's parent block hash is the first payload's parentHash
+    # and the start block number is the first payload's block number.
+    parent_block_hash = first_payload.parent_hash
+    start_block_number = first_payload.block_number
+    base_fee = Uint(first_payload.base_fee_per_gas)  # asserted constant across the range (§2.1)
     l2_ms_address = execution_input.chain_config.l2_message_service_address
 
-    # `base_fee` is sourced from the first block's header. The loop below
-    # asserts every other block carries the same value, so any of them would
-    # do; the first is canonical. (§2.1)
-    base_fee = Uint(decoded_blocks[0].header.base_fee_per_gas)
-
-    # Read the L1->L2 bridge rolling hash at the parent state root (start of
-    # this range) via the EVM state interface. The witness pool must contain
-    # the MPT path for the L2MessageService account + rolling-hash slots.
-    parent_state = L2State(
-        state_root=parent_header.state_root,
-        witnesses=execution_input.execution_witnesses,
-    )
-    parent_rolling_hash, parent_rolling_hash_number = read_l1l2_bridge_state(
-        parent_state, l2_ms_address,
-    )
-
+    current_parent_hash = parent_block_hash
     current_ftx_rolling_hash = execution_input.parent_ftx_rolling_hash
     current_last_processed_ftx_number = execution_input.parent_last_processed_ftx_number
     l2_l1_message_hashes: List[Hash32] = []
     tx_froms: List[Address] = []
     filtered_addresses: List[Address] = []
+    results: List[StatelessExecutionResult] = []
 
-    if decoded_blocks[0].header.number != start_block_number:
-        raise Exception("l2-execution proof block range does not start after parent block")
+    for linea_payload, stateless_input in zip(execution_input.payloads, stateless_inputs):
+        payload = stateless_input.new_payload_request.execution_payload
 
-    for rollup_block, execution_witness, block in zip(
-        execution_input.blocks,
-        execution_input.execution_witnesses,
-        decoded_blocks,
-    ):
-        if Uint(block.header.base_fee_per_gas) != base_fee:
+        # ── Conflation-level invariants the engine cannot know (it validates each
+        # block in isolation against its own witness parent) ──
+        if stateless_input.chain_config.chain_id != execution_input.chain_config.chain_id:
+            raise Exception("stateless input chain_id does not match proof-range chain configuration")
+        if payload.parent_hash != current_parent_hash:
+            raise Exception("payload parentHash does not chain from the previous payload")
+        if Uint(payload.base_fee_per_gas) != base_fee:
             raise Exception("baseFee must be constant across an l2-execution proof")
-        if block.header.coinbase != execution_input.chain_config.coinbase:
-            raise Exception("block coinbase does not match chain configuration")
-        # Sequencer consensus rules: parent-hash chain & monotonic timestamps
-        # (validate_header inside state_transition_modified covers the
-        # standard Ethereum checks; here we restate the chain-level invariants).
-        if block.header.parent_hash != block_hash(current_parent_header):
-            raise Exception("block parent_hash does not chain from previous header")
-        if Uint(block.header.timestamp) <= Uint(current_parent_header.timestamp):
-            raise Exception("block timestamp must be strictly increasing")
+        if payload.fee_recipient != execution_input.chain_config.coinbase:
+            raise Exception("payload feeRecipient does not match chain configuration")
+        # Monotonic timestamps and block-number contiguity follow from the
+        # engine's per-block timestamp/parent checks plus the parentHash chaining
+        # asserted above, so they are not restated here.
 
-        for tx_rlp in parse_block_transaction_rlps(rollup_block.block_rlp):
+        # ── Linea policy: this rollup does not support EIP-7685 requests ──
+        requests = stateless_input.new_payload_request.execution_requests
+        if requests.deposits or requests.withdrawals or requests.consolidations:
+            raise Exception("execution requests are not supported by this rollup")
+
+        # ── State transition (delegated) ──
+        # `execute_stateless_input` validates the witness header chain, the full
+        # Engine-API payload, and replays the EVM (see its docstring); none of
+        # that is re-checked here. It returns the boundary state roots and logs.
+        result = execute_stateless_input(stateless_input)
+        results.append(result)
+
+        # Linea PI: recover each transaction sender for `txFromsHash`.
+        for tx_rlp in parse_payload_transaction_rlps(payload):
             tx_froms.append(
-                # PRECOMPILE (production guest): secp256k1 ecrecover.
-                # The zkVM exposes signature-recovery as a native circuit;
-                # the Python reference defers to the execution-specs
-                # implementation (which compiles to that primitive).
                 recover_sender(
                     execution_input.chain_config.chain_id,
                     decode_signed_transaction_rlp(tx_rlp),
-                ),
+                )
             )
 
-        # FTX-invalid pre-validation reads the sender's account against the
-        # L2 state at this block's parent state root (§6.5 'Invalid'). The
-        # `L2State` interface is backed by the zkVM's MPT verifier
-        # (PRECOMPILE: keccak256 for node hashing) over the witness pool.
-        block_parent_state = L2State(
-            state_root=current_parent_header.state_root,
-            witnesses=execution_input.execution_witnesses,
-        )
+        # Forced transactions (§6.5): FTX-invalid reads the sender account at this
+        # block's parent state root by walking the witness MPT (`L2State`).
+        block_parent_state = L2State(state_root=result.pre_state_root, witnesses=all_witnesses)
         block_filtered_addresses, current_ftx_rolling_hash, current_last_processed_ftx_number = (
             validate_forced_transactions(
                 current_ftx_rolling_hash,
                 current_last_processed_ftx_number,
                 execution_input.chain_config,
-                block.header,
+                payload,
                 block_parent_state,
-                rollup_block,
+                linea_payload.rollup_extension.forced_transactions,
             )
         )
         filtered_addresses.extend(block_filtered_addresses)
 
-        # PRECOMPILE-INTENSIVE (production guest): full EVM state transition.
-        # `state_transition_modified` is the heart of the l2-execution proof —
-        # it replays the block and verifies the resulting header (state root,
-        # receipts root, transactions root, …). Internally it leans on
-        # zkVM-native primitives for keccak256, secp256k1 ecrecover, sha256
-        # (used by some precompiled contracts), modexp, BLS12-381 pairings
-        # (point evaluation precompile on L1; here it's executed inside the
-        # EVM), and MPT verification of every state/storage read.
-        block_output = state_transition_modified(
-            execution_input.chain_config.chain_id,
-            current_parent_header,
-            execution_witness,
-            block,
-            rollup_block.block_rlp,
-        )
-        current_parent_header = block.header
-        current_block = block
-
-        for log in block_output.block_logs:
-            if log.address != execution_input.chain_config.l2_message_service_address:
+        # L2->L1 messages from the block's logs.
+        for log in result.block_logs:
+            if log.address != l2_ms_address:
                 continue
             if log.topics[0] == BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0:
                 l2_l1_message_hashes.append(Hash32(log.topics[3]))
 
-    # Read the L1->L2 bridge rolling hash at the end state root (after all
-    # blocks in this range have applied) via the EVM state interface.
-    end_state = L2State(
-        state_root=current_block.header.state_root,
-        witnesses=execution_input.execution_witnesses,
+        current_parent_hash = payload.block_hash
+
+    last_payload = stateless_inputs[-1].new_payload_request.execution_payload
+
+    # L1->L2 bridge rolling-hash boundary reads, by walking the witness MPT
+    # (`L2State`), at the range's parent (pre) and end (post) state roots.
+    parent_rolling_hash, parent_rolling_hash_number = read_l1l2_bridge_state(
+        L2State(state_root=results[0].pre_state_root, witnesses=all_witnesses), l2_ms_address,
     )
     end_rolling_hash, end_rolling_hash_number = read_l1l2_bridge_state(
-        end_state, l2_ms_address,
+        L2State(state_root=results[-1].post_state_root, witnesses=all_witnesses), l2_ms_address,
     )
 
     if end_rolling_hash_number < parent_rolling_hash_number:
@@ -414,9 +401,9 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
 
     public_inputs = L2ExecutionProofPublicInput(
         parent_block_hash=parent_block_hash,
-        end_block_hash=block_hash(current_block.header),
-        end_block_number=current_block.header.number,
-        end_block_timestamp=U64(current_block.header.timestamp),
+        end_block_hash=last_payload.block_hash,
+        end_block_number=last_payload.block_number,
+        end_block_timestamp=U64(last_payload.timestamp),
         l2_l1_messages_hash=hash_hash_list(l2_l1_message_hashes),
         parent_l1_l2_bridge_rolling_hash=parent_rolling_hash,
         parent_l1_l2_bridge_rolling_hash_message_number=parent_rolling_hash_number,
@@ -433,29 +420,11 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
     return L2ExecutionProof(
         public_inputs=public_inputs,
         start_block_number=start_block_number,
-        end_block_number=current_block.header.number,
+        end_block_number=last_payload.block_number,
         l2_l1_messages=l2_l1_message_hashes,
         tx_froms=tx_froms,
         filtered_addresses=filtered_addresses,
     )
-
-
-def parent_header_from_execution_witness(block: EthereumBlock, execution_witness: ExecutionWitness) -> Header:
-    """
-    Extract the parent header for the first execution block from the witness.
-
-    The protocol witness supplies recent headers through
-    `debug_executionWitness.headers`; the parent header is the one whose block
-    hash equals the first block's `parent_hash`.
-    """
-    parent_headers = [
-        header
-        for header in execution_witness.headers
-        if block_hash(header) == block.header.parent_hash
-    ]
-    if len(parent_headers) != 1:
-        raise Exception("execution witness must contain exactly one parent header for the first block")
-    return parent_headers[0]
 
 
 def hash_hash_list(values: Sequence[Hash32]) -> Hash32:
@@ -464,7 +433,3 @@ def hash_hash_list(values: Sequence[Hash32]) -> Hash32:
 
 def hash_address_list(values: Sequence[Address]) -> Hash32:
     return keccak256(b"".join(bytes(value) for value in values))
-
-
-def uint256_topic_to_int(topic: Bytes32) -> int:
-    return int.from_bytes(bytes(topic), "big")

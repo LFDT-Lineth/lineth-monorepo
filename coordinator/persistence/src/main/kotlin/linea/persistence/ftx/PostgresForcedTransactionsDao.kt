@@ -34,7 +34,7 @@ class PostgresForcedTransactionsDao(
         linea.forcedtx.ForcedTransactionInclusionResult.TooManyLogs -> 5
         linea.forcedtx.ForcedTransactionInclusionResult.FilteredAddressFrom -> 6
         linea.forcedtx.ForcedTransactionInclusionResult.FilteredAddressTo -> 7
-        linea.forcedtx.ForcedTransactionInclusionResult.Phylax -> 8
+        linea.forcedtx.ForcedTransactionInclusionResult.ChainSecurityRuleViolation -> 8
       }
     }
 
@@ -47,7 +47,7 @@ class PostgresForcedTransactionsDao(
         5 -> linea.forcedtx.ForcedTransactionInclusionResult.TooManyLogs
         6 -> linea.forcedtx.ForcedTransactionInclusionResult.FilteredAddressFrom
         7 -> linea.forcedtx.ForcedTransactionInclusionResult.FilteredAddressTo
-        8 -> linea.forcedtx.ForcedTransactionInclusionResult.Phylax
+        8 -> linea.forcedtx.ForcedTransactionInclusionResult.ChainSecurityRuleViolation
         else -> throw IllegalArgumentException("Unknown inclusion_result value: $value")
       }
     }

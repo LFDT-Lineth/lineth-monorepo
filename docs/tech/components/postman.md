@@ -142,7 +142,7 @@ Linea uses a [variable gas pricing model](https://docs.linea.build/network/how-t
 priorityFeePerGas = MINIMUM_MARGIN * (min-gas-price * L2_compressed_tx_size_in_bytes / L2_tx_gas_used + fixed_cost)
 ```
 
-For L1→L2 claims, the Postman must pre-compute the compressed size to accurately estimate gas costs. This is handled by `L2ClaimMessageTransactionSizeProcessor` using `@consensys/linea-native-libs`.
+For L1→L2 claims, the Postman must pre-compute the compressed size to accurately estimate gas costs. This is handled by `L2ClaimMessageTransactionSizeProcessor` using `@lfdt-lineth/native-libs`.
 
 L2→L1 claims use standard EIP-1559 gas estimation, so this step is not required.
 
@@ -293,9 +293,9 @@ See the [README.md](../../../postman/README.md) for complete environment variabl
 
 ## Dependencies
 
-- **@consensys/linea-sdk**: Contract clients and gas providers
-- **@consensys/linea-shared-utils**: Shared utilities (logger, metrics, Express API)
-- **@consensys/linea-native-libs**: Native blob compression library
+- **@lfdt-lineth/sdk**: Contract clients and gas providers
+- **@lfdt-lineth/shared-utils**: Shared utilities (logger, metrics, Express API)
+- **@lfdt-lineth/native-libs**: Native blob compression library
 - **TypeORM**: Database ORM with PostgreSQL
 - **ethers**: Blockchain interactions
 

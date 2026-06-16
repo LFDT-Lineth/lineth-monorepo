@@ -18,6 +18,7 @@ on:
           - ':jvm-libs:linea:blob-shnarf-calculator'
           - ':jvm-libs:linea:linea-contracts:l1-rollup'
           - ':jvm-libs:linea:linea-contracts:l2-message-service'
+          - ':linea-besu:plugins:sequencer-interfaces'
       version:
         required: true
         type: string
@@ -25,7 +26,7 @@ on:
 
 jobs:
   release:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
       - name: Validate inputs
         env:

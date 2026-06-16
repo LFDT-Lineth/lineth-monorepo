@@ -3,7 +3,7 @@ import { ethers, upgrades } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
-import { tryVerifyContract, getRequiredEnvVar } from "../common/helpers";
+import { tryVerifyContract, getRequiredEnvVar, requireAddressFromRegistryOrEnv } from "../common/helpers";
 import { getUiSigner, withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
 
 const func: DeployFunction = withSignerUiSession(
@@ -11,9 +11,13 @@ const func: DeployFunction = withSignerUiSession(
   async function (hre: HardhatRuntimeEnvironment) {
     const signer = await getUiSigner(hre);
 
-    const proxyAddress = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS");
+    const proxyAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LineaRollup", "LINEA_ROLLUP_ADDRESS");
     const forcedTransactionFeeInWei = getRequiredEnvVar("LINEA_ROLLUP_FORCED_TRANSACTION_FEE_IN_WEI");
-    const addressFilter = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS_FILTER");
+    const addressFilter = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "AddressFilter",
+      "LINEA_ROLLUP_ADDRESS_FILTER",
+    );
 
     const contractName = "LineaRollup";
 

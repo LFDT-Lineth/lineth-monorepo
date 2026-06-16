@@ -44,7 +44,7 @@ on:
 jobs:
   ai-analysis:
     if: ${{ inputs.enable_ai_analysis }}
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     timeout-minutes: 15
     permissions:
       contents: read
@@ -262,7 +262,7 @@ jobs:
     # always() so Slack still runs when ai-analysis is skipped, fails, or succeeds; needs still gates ordering.
     needs: [ai-analysis]
     if: always()
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     steps:
       - name: Compute context values
         id: ctx

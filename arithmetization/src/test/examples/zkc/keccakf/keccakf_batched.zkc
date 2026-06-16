@@ -265,51 +265,8 @@ fn iota<state_row0>(round_constant:u64) {
 // ===================================================================
 
 fn bit_rotl64(word:u64, n:u6) -> (res:u64) {
-    var b5:u1
-    var b4:u1
-    var b3:u1
-    var b2:u1
-    var b1:u1
-    var b0:u1
-    b5::b4::b3::b2::b1::b0 = n
-    var w:u64 = word
-    if b5 == 1 {
-        var hi:u32
-        var lo:u32
-        hi::lo = w
-        w = lo::hi
-    }
-    if b4 == 1 {
-        var hi:u16
-        var lo:u48
-        hi::lo = w
-        w = lo::hi
-    }
-    if b3 == 1 {
-        var hi:u8
-        var lo:u56
-        hi::lo = w
-        w = lo::hi
-    }
-    if b2 == 1 {
-        var hi:u4
-        var lo:u60
-        hi::lo = w
-        w = lo::hi
-    }
-    if b1 == 1 {
-        var hi:u2
-        var lo:u62
-        hi::lo = w
-        w = lo::hi
-    }
-    if b0 == 1 {
-        var hi:u1
-        var lo:u63
-        hi::lo = w
-        w = lo::hi
-    }
-    res = w
+    var shift:u7 = 64 - (n as u7)
+    res = (word << n) | (word >> shift)
 }
 
 fn switch_endian_u64(val:u64) -> (res:u64) {

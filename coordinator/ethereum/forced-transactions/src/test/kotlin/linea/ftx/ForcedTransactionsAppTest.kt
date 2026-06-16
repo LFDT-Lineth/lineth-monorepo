@@ -860,7 +860,7 @@ class ForcedTransactionsAppTest {
     this.ftxClient.setFtxInclusionResultAfterReception(
       ftxNumber = 6UL,
       l2BlockNumber = 160UL,
-      inclusionResult = ForcedTransactionInclusionResult.Phylax,
+      inclusionResult = ForcedTransactionInclusionResult.ChainSecurityRuleViolation,
     )
     this.ftxClient.setFtxInclusionResultAfterReception(
       ftxNumber = 7UL,

@@ -1,4 +1,4 @@
-name: Reusable Component Release
+name: "Reusable: Component Release"
 
 permissions:
   actions: read
@@ -34,13 +34,13 @@ on:
       draft_release:
         description: 'Draft Release'
         required: false
-        default: false
         type: boolean
+        default: false
       pre_release:
         description: 'Pre Release'
         required: false
-        default: false
         type: boolean
+        default: false
     outputs:
       tag_changed:
         description: "Indicate whether the release tag of the component has changed"
@@ -57,7 +57,7 @@ on:
 
 jobs:
   check-branch-and-release-tag-suffix:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     steps:
       - name: Enforce non-main branch must have custom release tag suffix
         if: github.ref_name != 'main' && inputs.release_tag_suffix == ''
@@ -67,7 +67,7 @@ jobs:
 
   compute-commit-tag:
     needs: [check-branch-and-release-tag-suffix]
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     outputs:
        commit_tag: ${{ steps.compute-version-tags.outputs.commit_tag }}
     steps:
@@ -148,7 +148,6 @@ jobs:
     with:
       image_tag: local
       develop_tag: develop
-      image_name: consensys/linea-coordinator
       push_image: false
     secrets: inherit
 
@@ -163,7 +162,6 @@ jobs:
     with:
       image_tag: local
       develop_tag: develop
-      image_name: consensys/linea-postman
       push_image: false
     secrets: inherit
 
@@ -178,7 +176,6 @@ jobs:
     with:
       image_tag: local
       develop_tag: develop
-      image_name: consensys/linea-prover
       push_image: false
     secrets: inherit
 
@@ -193,7 +190,6 @@ jobs:
     with:
       image_tag: local
       develop_tag: develop
-      image_name: consensys/maru
       push_image: false
     secrets: inherit
 
@@ -208,7 +204,6 @@ jobs:
     with:
       image_tag: local
       develop_tag: develop
-      image_name: consensys/linea-transaction-exclusion-api
       push_image: false
     secrets: inherit
 
@@ -222,7 +217,7 @@ jobs:
        needs.build-local-prover.result            == 'success' ||
        needs.build-local-tx-exclusion-api.result  == 'success' ||
        needs.build-local-maru.result              == 'success')
-    uses: ./.github/workflows/reuse-run-e2e-tests.yml
+    uses: ./.github/workflows/reusable-run-e2e-tests.yml
     with:
       image_tag: local
       linea_besu_package_tag: ''

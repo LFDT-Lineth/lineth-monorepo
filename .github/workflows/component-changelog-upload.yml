@@ -9,7 +9,7 @@ concurrency:
 
 jobs:
   filter-commit-changes:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: Filter commit changes
     outputs:
       coordinator: ${{ steps.filter.outputs.coordinator }}
@@ -61,7 +61,7 @@ jobs:
 
   upload-component-changelog:
     needs: [filter-commit-changes]
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     strategy:
       fail-fast: false
       matrix:

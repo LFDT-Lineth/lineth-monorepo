@@ -1,4 +1,4 @@
-import { L1PublicClient } from "@consensys/linea-sdk-core";
+import { L1PublicClient } from "@lfdt-lineth/sdk-core";
 import { Abi, Account, Address, BlockNumber, BlockTag, Chain, Client, ContractEventName, Transport } from "viem";
 
 import {
@@ -40,7 +40,7 @@ export type PublicActionsL1<
      * @example
      * import { createPublicClient, http } from 'viem'
      * import { mainnet, linea } from 'viem/chains'
-     * import { publicActionsL1 } from '@consensys/linea-sdk-viem'
+     * import { publicActionsL1 } from '@lfdt-lineth/sdk-viem'
      *
      * const client = createPublicClient({
      *   chain: mainnet,
@@ -77,7 +77,7 @@ export type PublicActionsL1<
      * @example
      * import { createPublicClient, http } from 'viem'
      * import { mainnet, linea } from 'viem/chains'
-     * import { publicActionsL1 } from '@consensys/linea-sdk-viem'
+     * import { publicActionsL1 } from '@lfdt-lineth/sdk-viem'
      *
      * const client = createPublicClient({
      *   chain: mainnet,
@@ -114,7 +114,7 @@ export type PublicActionsL1<
      * @example
      * import { createPublicClient, http } from 'viem'
      * import { mainnet } from 'viem/chains'
-     * import { publicActionsL1 } from '@consensys/linea-sdk-viem'
+     * import { publicActionsL1 } from '@lfdt-lineth/sdk-viem'
      *
      * const client = createPublicClient({
      *   chain: mainnet,
@@ -137,7 +137,7 @@ export type PublicActionsL1<
      * @example
      * import { createPublicClient, http } from 'viem'
      * import { mainnet } from 'viem/chains'
-     * import { publicActionsL1 } from '@consensys/linea-sdk-viem'
+     * import { publicActionsL1 } from '@lfdt-lineth/sdk-viem'
      *
      * const client = createPublicClient({
      *   chain: mainnet,
@@ -162,7 +162,7 @@ export type PublicActionsL1<
      * @example
      * import { createPublicClient, http } from 'viem'
      * import { mainnet } from 'viem/chains'
-     * import { publicActionsL1 } from '@consensys/linea-sdk-viem'
+     * import { publicActionsL1 } from '@lfdt-lineth/sdk-viem'
      *
      * const client = createPublicClient({
      *   chain: mainnet,

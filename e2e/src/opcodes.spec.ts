@@ -1,5 +1,5 @@
-import { encodeFunctionCall } from "@consensys/linea-shared-utils";
 import { describe, expect, it } from "@jest/globals";
+import { encodeFunctionCall } from "@lfdt-lineth/shared-utils";
 
 import { estimateLineaGas, sendTransactionWithRetry } from "./common/utils";
 import { L2RpcEndpoint } from "./config/clients/l2-client";

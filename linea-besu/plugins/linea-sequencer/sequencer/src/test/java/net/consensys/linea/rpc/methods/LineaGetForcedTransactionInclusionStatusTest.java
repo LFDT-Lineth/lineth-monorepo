@@ -43,7 +43,7 @@ class LineaGetForcedTransactionInclusionStatusTest {
 
   @BeforeEach
   void setUp() {
-    pool = new LineaForcedTransactionPool(100, null);
+    pool = new LineaForcedTransactionPool(100, 0, null, null);
     method = new LineaGetForcedTransactionInclusionStatus().init(pool);
     txFactory = new TestTransactionFactory();
     forcedTxNumberGenerator = new AtomicLong(1);

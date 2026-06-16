@@ -1,5 +1,5 @@
-import { attempt, msToSeconds, weiToGweiNumber } from "@consensys/linea-shared-utils";
 import { jest, describe, it, expect, beforeEach } from "@jest/globals";
+import { attempt, msToSeconds, weiToGweiNumber } from "@lfdt-lineth/shared-utils";
 import { ResultAsync } from "neverthrow";
 
 import { createLoggerMock, createMetricsUpdaterMock } from "../../../__tests__/helpers/index.js";
@@ -18,11 +18,11 @@ import type { ILidoAccountingReportClient } from "../../../core/clients/ILidoAcc
 import type { YieldReport } from "../../../core/entities/YieldReport.js";
 import type { INativeYieldAutomationMetricsUpdater } from "../../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
 import type { IOperationModeMetricsRecorder } from "../../../core/metrics/IOperationModeMetricsRecorder.js";
-import type { ILogger } from "@consensys/linea-shared-utils";
+import type { ILogger } from "@lfdt-lineth/shared-utils";
 import type { Address, TransactionReceipt, Hex } from "viem";
 
-jest.mock("@consensys/linea-shared-utils", () => {
-  const actual = jest.requireActual("@consensys/linea-shared-utils") as typeof import("@consensys/linea-shared-utils");
+jest.mock("@lfdt-lineth/shared-utils", () => {
+  const actual = jest.requireActual("@lfdt-lineth/shared-utils") as typeof import("@lfdt-lineth/shared-utils");
   return {
     ...actual,
     attempt: jest.fn(),

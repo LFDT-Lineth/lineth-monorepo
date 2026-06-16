@@ -59,7 +59,7 @@ The main components of Linea are:
 * The provers which generate zk-proof for conflated blocks, kzg commitment and compression proof of the blobs, as well as aggregated proof for multiple conflation and compression proofs.
 
 
-![Diagram of Linea components](assets/linea.drawio.svg)
+![Diagram of Lineth components](assets/linea.drawio.svg)
 
 The above diagram shows the flow from transaction to finalization. High level, the flow is as follows:
 (1) the coordinator pulls the latest block from the sequencer,
@@ -89,7 +89,7 @@ A script automatically removes all files that are more than one week old.
 
 ## Sequencer
 
-> **Note**: The consensus protocol has since moved from Clique to QBFT via the [Maru](https://github.com/Consensys/maru) consensus client. See the [official architecture docs](https://docs.linea.build/protocol/architecture) for the current design.
+> **Note**: The consensus protocol has since moved from Clique to QBFT via the [Maru](../maru/) consensus client. See the [official architecture docs](https://docs.linea.build/protocol/architecture) for the current design.
 
 There is a unique instance of Sequencer. It’s a special instance of a consensus client based on Besu. The consensus protocol used is Clique.
 
@@ -472,7 +472,7 @@ Corset is hosted inside the same process as the short-running component of the p
   * Reduce the probability of incompatibility between Corset/Prover versions and their input/output formats;
 * Reduce latency of the overall system (rather a beneficial side effect than a driving motivation);
 
-The paragraphs highlight the roles of the different proofs that are generated. Please refer to the prover backend codebase [here](https://github.com/Consensys/linea-monorepo/tree/main/prover/backend) for details on the objects and attributes for various types of proof requests and responses 
+The paragraphs highlight the roles of the different proofs that are generated. Please refer to the prover backend codebase [here](https://github.com/LFDT-Lineth/lineth-monorepo/tree/main/prover/backend) for details on the objects and attributes for various types of proof requests and responses 
 
 ### Execution proofs
 
@@ -799,7 +799,7 @@ BlobSubmissionData
 L1 finalization is triggered by the coordinator once an aggregation proof has been generated. This is done by triggering a transaction to execute `LineaService.finalizeBlocks` method on L1. In the process, the aggregation
 proof is sent to L1. Once the transaction is completed on L1, all the blocks are finalized on L2.
 
-The interface use is described below labeled with their respective Linea release version.
+The interface use is described below labeled with their respective Lineth release version.
 
 ```
 finalizeBlocks(
@@ -845,7 +845,7 @@ Internally, the message service computes a rolling hash. It’s computed recursi
 
 Linea’s coordinator, which is subscribing to L1 events, detects the L1 finalized (2 epochs to avoid reorgs) cross-chain MessageSent event and anchors it on L2. The coordinator anchors the messages by batches.
 
-Anchoring (Anchoring is the process for placing a "cross-chain validity reference", that must exist for any message to be claimed) of messages is done through the executed via [anchorL1L2MessageHashes](https://github.com/Consensys/linea-monorepo/blob/main/contracts/src/messaging/l2/L2MessageManager.sol#L41) which is inherited by the [L2MessageService](https://github.com/Consensys/linea-monorepo/blob/main/contracts/src/messaging/l2/L2MessageService.sol) smart contract.
+Anchoring (Anchoring is the process for placing a "cross-chain validity reference", that must exist for any message to be claimed) of messages is done through the executed via [anchorL1L2MessageHashes](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/contracts/src/messaging/l2/L2MessageManager.sol#L41) which is inherited by the [L2MessageService](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/contracts/src/messaging/l2/L2MessageService.sol) smart contract.
 
 To anchor a message, the coordinator collects all L1-L2 message logs from which it gets the message hash, the rolling hash, the nonce (unique message number) and the L1 block number. Note that the L1 block number facilitates the processing but is not anchored on L2.
 
@@ -970,4 +970,4 @@ Any party (e.g. via an npm package we provide for the bridge/partners etc) does 
 
 # Finalized Block Tag on L2
 
-[Maru](https://github.com/Consensys/maru), a consensus client developed by Linea team, will be responsible on updating the execution clients for `finalized` block tag on L1
+[Maru](../maru/), a consensus client developed by Linea team, will be responsible on updating the execution clients for `finalized` block tag on L1

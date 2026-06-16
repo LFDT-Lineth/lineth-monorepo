@@ -23,6 +23,7 @@ func TestProveInvalidityFromRequestFile(t *testing.T) {
 
 	// Override assets_dir so the config can find the SRS from the test's CWD
 	viper.Set("assets_dir", filepath.Join("..", "..", "..", "prover-assets"))
+	viper.Set("layer2.chain_id", 1337)
 
 	outputFile := filepath.Join(t.TempDir(), "invalidity-response.json")
 

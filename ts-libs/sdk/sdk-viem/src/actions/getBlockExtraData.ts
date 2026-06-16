@@ -1,4 +1,4 @@
-import { parseBlockExtraData } from "@consensys/linea-sdk-core";
+import { parseBlockExtraData } from "@lfdt-lineth/sdk-core";
 import { Account, BlockTag, Chain, Client, GetBlockErrorType, GetBlockParameters, Prettify, Transport } from "viem";
 import { getBlock } from "viem/actions";
 
@@ -26,7 +26,7 @@ export type GetBlockExtraDataErrorType = GetBlockErrorType;
  * @example
  * import { createPublicClient, http } from 'viem'
  * import { linea } from 'viem/chains'
- * import { getBlockExtraData } from '@consensys/linea-sdk-viem'
+ * import { getBlockExtraData } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createPublicClient({
  *   chain: linea,

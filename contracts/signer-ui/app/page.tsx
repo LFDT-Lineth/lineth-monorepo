@@ -91,6 +91,8 @@ type SessionState = {
   scriptOrdinal?: number;
   batchRunActive?: boolean;
   batchTagsSummary?: string | null;
+  /** Wallet-signed transaction count for this session (proxy deploys use multiple steps). */
+  transactionOrdinal?: number;
   /** Set by the bridge just before a deploy batch closes so the UI can stop polling. */
   sessionOutcome?: "complete" | "error" | null;
   outcomeMessage?: string | null;
@@ -742,6 +744,21 @@ function ContractsDeployUiPage() {
         ],
       });
 
+      setSession((prev) =>
+        prev?.pendingRequest
+          ? {
+              ...prev,
+              transactionProgress: {
+                requestId: prev.pendingRequest.id,
+                stage: "submitted_waiting_for_rpc",
+                message:
+                  "Transaction submitted in the wallet. Waiting for Hardhat to confirm the handoff on the RPC.",
+                updatedAt: new Date().toISOString(),
+              },
+            }
+          : prev,
+      );
+
       await postJson(
         `${apiBaseUrl}/api/respond`,
         {
@@ -752,6 +769,20 @@ function ContractsDeployUiPage() {
         },
         sessionSecret,
       );
+
+      if (sessionUrl) {
+        try {
+          const sessionResponse = await fetch(sessionUrl, {
+            headers: { [HARDHAT_SIGNER_UI_SESSION_TOKEN_HEADER]: sessionSecret },
+          });
+          if (sessionResponse.ok) {
+            const refreshed = (await sessionResponse.json()) as SessionState;
+            setSession(refreshed);
+          }
+        } catch {
+          /* polling will catch up */
+        }
+      }
 
       const historyKey = signerUiHistoryStorageKey(apiBaseUrl, session.sessionId);
       const entry: CompletedDeploymentTx = {
@@ -849,6 +880,12 @@ function ContractsDeployUiPage() {
                   {isPostSubmitProgress ? "Current transaction in progress" : "Sign current transaction"}
                 </h2>
                 <p className="deploy-quick-action__label">{pending.label}</p>
+                {session?.transactionOrdinal && session.transactionOrdinal > 1 ? (
+                  <p className="deploy-quick-action__hint">
+                    Hardhat is waiting for wallet step {session.transactionOrdinal}. OpenZeppelin proxy deploys
+                    usually need several signatures — approve each one until the terminal reports complete.
+                  </p>
+                ) : null}
                 <TransactionKindBadges details={pending.transactionDetails} />
                 {progress && pending.id === progress.requestId ? (
                   <PendingTransactionProgress progress={progress} />

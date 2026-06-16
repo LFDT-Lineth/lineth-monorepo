@@ -1,3 +1,8 @@
-ethereum-execution @ git+https://github.com/ethereum/execution-specs.git
+# Pinned to a specific projects/zkevm commit (not the moving branch) for
+# reproducibility: ProtocolFork was last changed by PR #2926 (2026-05-27) and is
+# still in flux. This commit yields Amsterdam SSZ fork index = 20.
+#   https://github.com/ethereum/execution-specs/tree/a456712e04153ebeb17ff892446a01b6ba537f65
+ethereum-execution @ git+https://github.com/ethereum/execution-specs.git@a456712e04153ebeb17ff892446a01b6ba537f65
 ckzg>=2.1
 lz4>=4
+remerkleable>=0.1.28

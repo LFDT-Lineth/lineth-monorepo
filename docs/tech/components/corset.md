@@ -1,6 +1,6 @@
 # Corset
 
-> Rust-based constraint compiler that translates the Linea zkEVM constraint DSL into forms usable by the ZK prover.
+> Cnstraint compiler that translates the Lineth zkEVM constraint DSL into forms usable by the ZK prover.
 
 > **See also:** [Tracer Constraints](./tracer-constraints.md) — the Lisp/Corset constraint definitions that corset compiles
 

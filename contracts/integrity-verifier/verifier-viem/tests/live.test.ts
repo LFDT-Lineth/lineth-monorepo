@@ -26,7 +26,7 @@ import {
   RPC_ENV_VARS,
   CHAIN_IDS,
   KNOWN_NAMESPACES,
-} from "@consensys/linea-contract-integrity-verifier";
+} from "@lfdt-lineth/contract-integrity-verifier";
 import { ViemAdapter } from "../src/index";
 
 // ============================================================================

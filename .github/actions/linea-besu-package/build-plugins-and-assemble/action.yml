@@ -3,8 +3,8 @@ name: 'build-plugins-and-assemble'
 description: 'Composite action to build and assemble the artifacts for the target environment'
 
 inputs:
-  release_tag_prefix:
-    description: "Release version tag prefix"
+  release_version:
+    description: "Release version"
     required: true
   
   image_tag_suffix:
@@ -44,10 +44,6 @@ outputs:
   dockerimage:
     description: docker image
     value: ${{ steps.metadata.outputs.dockerimage }}
-
-  releasetag:
-    description: release tag
-    value: ${{ steps.metadata.outputs.releasetag }}
 
   tracer_plugin_version:
     description: tracer plugin version
@@ -89,7 +85,7 @@ runs:
       id: metadata
       uses: ./.github/actions/linea-besu-package/compute-metadata
       with:
-        release_tag_prefix: ${{ inputs.release_tag_prefix }}
+        release_version: ${{ inputs.release_version }}
         image_tag_suffix: ${{ inputs.image_tag_suffix }}
 
     - name: Display linea-besu-package metadata

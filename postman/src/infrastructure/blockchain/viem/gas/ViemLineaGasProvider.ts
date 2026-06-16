@@ -1,4 +1,4 @@
-import { ILogger } from "@consensys/linea-shared-utils";
+import { ILogger } from "@lfdt-lineth/shared-utils";
 import { type PublicClient } from "viem";
 import { estimateGas as lineaEstimateGas } from "viem/linea";
 

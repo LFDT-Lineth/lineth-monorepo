@@ -44,7 +44,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 public class CallDelegationTests extends TracerTestBase {
 
   /*
-  https://github.com/Consensys/linea-monorepo/issues/2470
+  https://github.com/LFDT-Lineth/lineth-monorepo/issues/2470
 
   In this test, a sender account sends a transaction to a root account, which executes a CALL instruction to a caller
   account, which itself executes a CALL instruction to a callee account.

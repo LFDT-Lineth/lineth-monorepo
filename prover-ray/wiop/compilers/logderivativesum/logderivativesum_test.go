@@ -79,10 +79,6 @@ func TestCompile_WioptestSoundness_TamperZ(t *testing.T) {
 				}
 				beforeByMod[m] = cols
 			}
-			openingsBefore := make(map[*wiop.Module]int)
-			for _, m := range sc.Sys.Modules {
-				openingsBefore[m] = len(m.LocalOpenings)
-			}
 
 			logderivativesum.Compile(sc.Sys)
 
@@ -114,16 +110,6 @@ func TestCompile_WioptestSoundness_TamperZ(t *testing.T) {
 					vals[i] = field.Lift(field.NewFromString("17"))
 				}
 				rt.AssignColumn(z, &wiop.ConcreteVector{Plain: field.VecFromExt(vals)})
-			}
-
-			// Self-assign every freshly-added LocalOpening (they read from Z).
-			for _, m := range sc.Sys.Modules {
-				for i, lo := range m.LocalOpenings {
-					if i < openingsBefore[m] {
-						continue
-					}
-					lo.SelfAssign(rt)
-				}
 			}
 
 			// Pin each LogDerivativeSum's Result cell to zero so the
@@ -230,20 +216,33 @@ func newSimpleFilteredSum(t *testing.T, n int) (
 
 // ---- Structural tests ----
 
+// countScalarVanishings returns the number of scalar (non-multi-valued)
+// vanishings on m — i.e. the endpoint openings produced by
+// [wiop.ColumnPosition.Open], as opposed to the multi-valued Z recurrence.
+func countScalarVanishings(m *wiop.Module) int {
+	n := 0
+	for _, v := range m.Vanishings {
+		if !v.Expression.IsMultiValued() {
+			n++
+		}
+	}
+	return n
+}
+
 func TestCompile_AddsZColumnAndVanishing(t *testing.T) {
 	sys, _, _, _ := newSimpleFilteredSum(t, 8)
 	mod := sys.Modules[0]
 	colsBefore := len(mod.Columns)
-	openingsBefore := len(mod.LocalOpenings)
+	vansBefore := len(mod.Vanishings)
 
 	logderivativesum.Compile(sys)
 
 	assert.Len(t, mod.Columns, colsBefore+1,
 		"compile must add exactly one Z column for a single fraction")
-	require.Len(t, mod.Vanishings, 1,
-		"compile must add exactly one recurrence vanishing for a single fraction")
-	assert.Len(t, mod.LocalOpenings, openingsBefore+2,
-		"compile must add Z[0] and Z[n-1] openings")
+	require.Len(t, mod.Vanishings, vansBefore+3,
+		"compile must add one recurrence plus the two endpoint-opening vanishings")
+	assert.Equal(t, 2, countScalarVanishings(mod),
+		"the Z[0] and Z[n-1] openings are scalar vanishings")
 	assert.True(t, sys.LogDerivativeSums[0].IsReduced(),
 		"the LogDerivativeSum query must be marked reduced after compile")
 }
@@ -254,10 +253,10 @@ func TestCompile_SkipsRecurrenceForSizeOne(t *testing.T) {
 
 	logderivativesum.Compile(sys)
 
-	assert.Empty(t, mod.Vanishings,
-		"a size-1 module needs no recurrence; everything is fixed by Z[0]")
-	assert.Len(t, mod.LocalOpenings, 2,
-		"Z[0] and Z[n-1] coincide but each opening is still registered")
+	require.Len(t, mod.Vanishings, 2,
+		"a size-1 module needs no recurrence; only the two endpoint openings remain")
+	assert.Equal(t, 2, countScalarVanishings(mod),
+		"Z[0] and Z[n-1] coincide but each opening is still a scalar vanishing")
 }
 
 func TestCompile_Idempotent(t *testing.T) {
@@ -267,16 +266,13 @@ func TestCompile_Idempotent(t *testing.T) {
 	mod := sys.Modules[0]
 	colsAfterFirst := len(mod.Columns)
 	vansAfterFirst := len(mod.Vanishings)
-	openingsAfterFirst := len(mod.LocalOpenings)
 
 	logderivativesum.Compile(sys)
 
 	assert.Len(t, mod.Columns, colsAfterFirst,
 		"second compile must not add new Z columns")
 	assert.Len(t, mod.Vanishings, vansAfterFirst,
-		"second compile must not add new vanishings")
-	assert.Len(t, mod.LocalOpenings, openingsAfterFirst,
-		"second compile must not add new openings")
+		"second compile must not add new vanishings (recurrence or openings)")
 }
 
 func TestCompile_NoQueries(t *testing.T) {
@@ -288,7 +284,6 @@ func TestCompile_NoQueries(t *testing.T) {
 
 	for _, m := range sys.Modules {
 		assert.Empty(t, m.Vanishings)
-		assert.Empty(t, m.LocalOpenings)
 	}
 }
 
@@ -313,10 +308,10 @@ func TestCompile_PacksFractions(t *testing.T) {
 
 	assert.Len(t, mod.Columns, colsBefore+2,
 		"4 fractions must be packed into ⌈4/3⌉ = 2 Z columns")
-	assert.Len(t, mod.Vanishings, 2,
-		"each Z column must have its own recurrence vanishing")
-	assert.Len(t, mod.LocalOpenings, 4,
-		"each Z column contributes two openings (Z[0] and Z[n-1])")
+	assert.Len(t, mod.Vanishings, 6,
+		"two Z columns: each has its own recurrence vanishing plus two endpoint openings")
+	assert.Equal(t, 4, countScalarVanishings(mod),
+		"each Z column contributes two scalar endpoint openings (Z[0] and Z[n-1])")
 }
 
 // ---- Completeness tests ----
@@ -501,8 +496,9 @@ func TestCompile_Completeness_BucketsByModule(t *testing.T) {
 	})
 
 	logderivativesum.Compile(sys)
-	assert.Len(t, mA.Vanishings, 1)
-	assert.Len(t, mB.Vanishings, 1)
+	// Each module gets one Z column → one recurrence plus two endpoint openings.
+	assert.Len(t, mA.Vanishings, 3)
+	assert.Len(t, mB.Vanishings, 3)
 
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(cA, makeVec(1, 2, 3, 4)) // sum_A = 10
@@ -560,8 +556,11 @@ func TestCompile_Soundness_WrongZ(t *testing.T) {
 	}
 	rt.AssignColumn(zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(bogus)})
 
-	require.Len(t, mod.Vanishings, 1)
-	assert.Error(t, mod.Vanishings[0].Check(rt),
+	require.Len(t, mod.Vanishings, 3,
+		"one recurrence plus the two endpoint-opening vanishings")
+	rec := mod.Vanishings[0] // the recurrence is registered before the openings
+	require.True(t, rec.Expression.IsMultiValued(), "Vanishings[0] must be the recurrence")
+	assert.Error(t, rec.Check(rt),
 		"recurrence vanishing must reject a Z column that violates the relation")
 }
 
@@ -589,9 +588,9 @@ func TestCompile_Soundness_WrongInitialZ(t *testing.T) {
 	}
 	rt.AssignColumn(zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(shifted)})
 
-	for _, lo := range mod.LocalOpenings {
-		lo.SelfAssign(rt)
-	}
+	// The endpoint openings are lazy: they resolve to the (malicious) Z column
+	// values when the verifier action reads them, so no explicit assignment is
+	// needed here.
 	rt.AssignCell(ld.Result, field.ElemFromExt(shifted[3]))
 
 	for _, v := range mod.Vanishings {

@@ -1,0 +1,284 @@
+name: "Linea Milestone Release with dry run (branch from main)"
+
+# Creates a fresh branch off the latest origin/main and dispatches
+# linea-milestone-release.yml against that branch. Useful for testing the
+# milestone release pipeline without running it directly on main.
+
+permissions:
+  actions: read
+  id-token: write
+  contents: write
+  packages: write
+  pull-requests: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run_release_on_branch:
+        description: 'Dry run release on a temporary branch forked from latest main'
+        required: false
+        type: boolean
+        default: true
+      pre_release:
+        description: 'Pre Release if checked; Draft release otherwise'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: linea-milestone-release-with-dry-run-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-branch-check:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    steps:
+      - name: Enforce main branch
+        if: ${{ github.ref != 'refs/heads/main' }}
+        run: |
+          echo "ERROR: This workflow must be dispatched from main (got ${{ github.ref }})"
+          exit 1
+
+  create-temp-branch-and-dispatch-release:
+    needs: [release-branch-check]
+    if: ${{ inputs.dry_run_release_on_branch }}
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    permissions:
+      actions: write
+    outputs:
+      branch: ${{ steps.mkbranch.outputs.branch }}
+      run_id: ${{ steps.find-run.outputs.run_id }}
+      release_tag_suffix: ${{ steps.dispatch-release.outputs.release_tag_suffix }}
+    steps:
+      # The default GITHUB_TOKEN cannot trigger another workflow_dispatch run
+      # (GitHub blocks token-initiated workflow chaining to prevent loops),
+      # so we mint an App token that has actions:write + contents:write.
+      - name: Mint App token (actions:write + contents:write)
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+
+      - name: Checkout current branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
+
+      - name: Calculate timestamp
+        id: timestamp
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%d%H%M%S)
+          echo "timestamp=${TIMESTAMP}" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push branch off latest tip of the current branch
+        id: mkbranch
+        env:
+          SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
+          TIMESTAMP: ${{ steps.timestamp.outputs.timestamp }}
+        run: |
+          set -euo pipefail
+          BRANCH="ci/milestone-dry-run-${TIMESTAMP}"
+          git fetch origin "${SOURCE_BRANCH}"
+          git checkout -b "${BRANCH}" "origin/${SOURCE_BRANCH}"
+          git push origin "${BRANCH}"
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch linea-milestone-release.yml on new branch with dry run release
+        id: dispatch-release
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          BRANCH: ${{ steps.mkbranch.outputs.branch }}
+          IMAGE_TAG_SUFFIX: ''
+          RELEASE_TAG_SUFFIX: 'dry-run'
+          PRE_RELEASE: false
+          TIMESTAMP: ${{ steps.timestamp.outputs.timestamp }}
+        run: |
+          set -euo pipefail
+          FULL_RELEASE_TAG_SUFFIX="${RELEASE_TAG_SUFFIX}-${TIMESTAMP}"
+          gh workflow run linea-milestone-release.yml \
+            --ref "${BRANCH}" \
+            -f image_tag_suffix="${IMAGE_TAG_SUFFIX}" \
+            -f release_tag_suffix="${FULL_RELEASE_TAG_SUFFIX}" \
+            -f pre_release="${PRE_RELEASE}" \
+            -f dry_run_release=true
+          echo "release_tag_suffix=${FULL_RELEASE_TAG_SUFFIX}" >> "$GITHUB_OUTPUT"
+
+      - name: Find dispatched run and report URL
+        id: find-run
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          BRANCH: ${{ steps.mkbranch.outputs.branch }}
+        run: |
+          set -euo pipefail
+          # gh workflow run does not return the run ID; poll briefly for the
+          # most recent run on the new branch and capture id + URL.
+          for attempt in 1 2 3 4 5 6; do
+            RUN_JSON=$(gh run list \
+              --workflow=linea-milestone-release.yml \
+              --branch "${BRANCH}" \
+              --limit 1 \
+              --json databaseId,url \
+              --jq '.[0]' || true)
+            if [ -n "${RUN_JSON:-}" ] && [ "${RUN_JSON}" != "null" ]; then
+              RUN_ID=$(echo "${RUN_JSON}" | jq -r .databaseId)
+              RUN_URL=$(echo "${RUN_JSON}" | jq -r .url)
+              echo "run_id=${RUN_ID}" >> "$GITHUB_OUTPUT"
+              echo "Dispatched run: ${RUN_URL}"
+              echo "Dispatched run: ${RUN_URL}" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Could not resolve dispatched run ID within the timeout." >&2
+          exit 1
+
+  manual-run-release-on-main:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    needs: [create-temp-branch-and-dispatch-release]
+    if: ${{ always() && !cancelled() && inputs.dry_run_release_on_branch }}
+    environment: ${{ inputs.dry_run_release_on_branch && 'run-release-on-main' || '' }}
+    concurrency:
+      group: manual-run-release-on-main-${{ github.ref }}
+    steps:
+      - name: Run the milestone release on main
+        run: |
+          echo "Going to run the milestone release on main"
+
+  dry-run-release-cleanup:
+    needs: [create-temp-branch-and-dispatch-release, manual-run-release-on-main]
+    # Run cleanup whenever the temp branch was created — including when the
+    # manual approval was rejected, when an upstream job failed, or when the
+    # dispatched dry-run itself failed. This ensures we never leak the temp
+    # branch / tags / releases / docker tags. The only skip case is when
+    # create-temp-branch-and-dispatch-release didn't succeed (nothing to clean).
+    if: ${{ always() && inputs.dry_run_release_on_branch && needs.create-temp-branch-and-dispatch-release.outputs.branch != '' }}
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    # Generous timeout — the milestone release workflow can run for a while
+    # (build + e2e + per-component releases). Bump if you hit it in practice.
+    timeout-minutes: 240
+    steps:
+      - name: Mint App token (actions:read + contents:write)
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+
+      # If the manual approval gate didn't succeed (e.g. reviewer rejected the
+      # deployment, or an upstream job failed), the dispatched dry-run on the
+      # temp branch may still be in-flight. Cancel it so the wait step below
+      # returns quickly instead of blocking for the rest of the run.
+      - name: Cancel the dispatched dry-run if upstream gate didn't approve
+        if: ${{ needs.manual-run-release-on-main.result != 'success' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ needs.create-temp-branch-and-dispatch-release.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          # Best-effort cancel; if the run is already terminal this no-ops.
+          gh run cancel "${RUN_ID}" || true
+
+      - name: Wait for dispatched milestone run to finish
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ needs.create-temp-branch-and-dispatch-release.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${RUN_ID}" ]]; then
+            echo "::warning::Dispatched run ID was not resolved; skipping wait/status lookup so cleanup can continue."
+            echo "Dispatched run ID was not resolved; cleanup will continue." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Watch the dispatched run until terminal. We intentionally ignore
+          # exit code: even a failed/cancelled run should still be cleaned up.
+          gh run watch "${RUN_ID}" --interval 30 --exit-status || true
+          STATE=$(gh run view "${RUN_ID}" --json status,conclusion --jq '.status + "/" + (.conclusion // "")' || true)
+          STATE="${STATE:-unknown/view-failed}"
+          echo "Dispatched run terminal state: ${STATE}"
+          echo "Dispatched run terminal state: ${STATE}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Checkout (full history + tags)
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          ref: main
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Enumerate tags created on the temp branch
+        id: list-tags
+        env:
+          RELEASE_TAG_SUFFIX: ${{ needs.create-temp-branch-and-dispatch-release.outputs.release_tag_suffix }}
+        run: |
+          set -euo pipefail
+          # Fetch all remote tags so locally-absent ones (pushed by the
+          # dispatched run after our checkout) are visible.
+          git fetch origin --tags --prune --prune-tags
+
+          # Every tag created by this dry-run ends with the unique suffix
+          # "dry-run-<TIMESTAMP>" that was passed to linea-milestone-release.yml.
+          # Using the suffix is more precise than the merge-reachability diff
+          # and doesn't require fetching the (potentially already-deleted) temp branch.
+          NEW_TAGS=$(git tag --list "*${RELEASE_TAG_SUFFIX}" | sort -u)
+
+          echo "Tags matching suffix '${RELEASE_TAG_SUFFIX}':"
+          echo "${NEW_TAGS:-<none>}"
+
+          # Multiline output via heredoc delimiter.
+          {
+            echo "tags<<__TAGS_EOF__"
+            echo "${NEW_TAGS}"
+            echo "__TAGS_EOF__"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Delete GitHub releases and tags
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          NEW_TAGS: ${{ steps.list-tags.outputs.tags }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NEW_TAGS//[[:space:]]/}" ]; then
+            echo "No new tags to delete."
+            exit 0
+          fi
+          while IFS= read -r tag; do
+            [ -z "${tag}" ] && continue
+            echo "→ Deleting release + tag: ${tag}"
+            # --cleanup-tag deletes the underlying tag too. Tolerate missing
+            # release (tag may exist without a GH release) and fall through
+            # to an explicit tag delete just in case.
+            gh release delete "${tag}" --yes --cleanup-tag || true
+            git push origin ":refs/tags/${tag}" || true
+          done <<< "${NEW_TAGS}"
+
+      - name: Delete temp branch
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          BRANCH: ${{ needs.create-temp-branch-and-dispatch-release.outputs.branch }}
+        run: |
+          set -euo pipefail
+          if git push origin --delete "${BRANCH}"; then
+            echo "Deleted branch ${BRANCH}"
+          else
+            echo "Branch ${BRANCH} could not be deleted (already gone or protected)." >&2
+          fi
+  
+  milestone-release-on-main:
+    needs: [manual-run-release-on-main]
+    if: ${{ always() && !cancelled() && (!inputs.dry_run_release_on_branch || needs.manual-run-release-on-main.result == 'success') }}
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+      packages: write
+      pull-requests: write
+    uses: ./.github/workflows/linea-milestone-release.yml
+    with:
+      pre_release: ${{ inputs.pre_release }}
+    secrets: inherit

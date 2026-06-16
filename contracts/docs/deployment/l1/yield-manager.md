@@ -16,12 +16,12 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. |
-| LINEA_ROLLUP_ADDRESS | true | address | LineaRollup contract address |
-| L1_SECURITY_COUNCIL  | true      | address | L1 Security Council Address |
-| NATIVE_YIELD_AUTOMATION_SERVICE_ADDRESS | true | address | Automation service address |
-| VAULT_HUB | true | address | Lido Vault Hub address |
-| VAULT_FACTORY | true | address | Lido Vault Factory address |
-| STETH | true | address | stETH token address |
+| LINEA_ROLLUP_ADDRESS | registry\|env | address | LineaRollup contract address. Read from registry on stable networks; env var used as fallback. |
+| L1_SECURITY_COUNCIL  | registry\|env | address | L1 Security Council Address. Read from registry on stable networks; env var used as fallback. |
+| NATIVE_YIELD_AUTOMATION_SERVICE_ADDRESS | registry\|env | address | Automation service address. Read from registry if present; env var used as fallback. |
+| VAULT_HUB | registry\|env | address | Lido Vault Hub address. Read from registry if present; env var used as fallback. |
+| VAULT_FACTORY | registry\|env | address | Lido Vault Factory address. Read from registry if present; env var used as fallback. |
+| STETH | registry\|env | address | stETH token address. Read from registry if present; env var used as fallback. |
 | MINIMUM_WITHDRAWAL_RESERVE_PERCENTAGE_BPS | true | uint256 | Minimum withdrawal reserve percentage in basis points |
 | TARGET_WITHDRAWAL_RESERVE_PERCENTAGE_BPS | true | uint256 | Target withdrawal reserve percentage in basis points |
 | MINIMUM_WITHDRAWAL_RESERVE_AMOUNT | true | uint256 | Minimum withdrawal reserve amount |
@@ -49,12 +49,12 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | --------------------- | -------- | -------------- | ----------- |
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | INFURA_API_KEY     | true     | key | Infura API Key. |
-| LINEA_ROLLUP_ADDRESS | true | address | LineaRollup contract address |
-| L1_SECURITY_COUNCIL  | true      | address | L1 Security Council Address |
-| NATIVE_YIELD_AUTOMATION_SERVICE_ADDRESS | true | address | Automation service address |
-| VAULT_HUB | true | address | Lido Vault Hub address |
-| VAULT_FACTORY | true | address | Lido Vault Factory address |
-| STETH | true | address | stETH token address |
+| LINEA_ROLLUP_ADDRESS | registry\|env | address | LineaRollup contract address. Read from registry on stable networks; env var used as fallback. |
+| L1_SECURITY_COUNCIL  | registry\|env | address | L1 Security Council Address. Read from registry on stable networks; env var used as fallback. |
+| NATIVE_YIELD_AUTOMATION_SERVICE_ADDRESS | registry\|env | address | Automation service address. Read from registry if present; env var used as fallback. |
+| VAULT_HUB | registry\|env | address | Lido Vault Hub address. Read from registry if present; env var used as fallback. |
+| VAULT_FACTORY | registry\|env | address | Lido Vault Factory address. Read from registry if present; env var used as fallback. |
+| STETH | registry\|env | address | stETH token address. Read from registry if present; env var used as fallback. |
 | MINIMUM_WITHDRAWAL_RESERVE_PERCENTAGE_BPS | true | uint256 | Minimum withdrawal reserve percentage in basis points |
 | TARGET_WITHDRAWAL_RESERVE_PERCENTAGE_BPS | true | uint256 | Target withdrawal reserve percentage in basis points |
 | MINIMUM_WITHDRAWAL_RESERVE_AMOUNT | true | uint256 | Minimum withdrawal reserve amount |
@@ -83,7 +83,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. |
-| LINEA_ROLLUP_ADDRESS | true | address | LineaRollup contract address (constructor argument) |
+| LINEA_ROLLUP_ADDRESS | registry\|env | address | LineaRollup contract address (constructor argument). Read from registry on stable networks; env var used as fallback. |
 
 <br />
 

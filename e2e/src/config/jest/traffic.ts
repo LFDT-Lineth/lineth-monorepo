@@ -1,4 +1,4 @@
-import { etherToWei } from "@consensys/linea-shared-utils";
+import { etherToWei } from "@lfdt-lineth/shared-utils";
 
 import { sendTransactionsToGenerateTrafficWithInterval } from "../../common/utils";
 

@@ -224,6 +224,7 @@ func (ds *DataChecksumSnark) Check(api frontend.API) error {
 	}
 
 	api.AssertIsEqual(compressor.Compress(ds.PartialHash, ds.Length), ds.Hash)
+	api.AssertIsLessOrEqual(ds.Length, uint64(1<<63)) // sanity check the length so it can't be used to roll around the modulus.
 
 	return nil
 }

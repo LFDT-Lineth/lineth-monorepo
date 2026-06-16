@@ -1,4 +1,4 @@
-import { etherToWei, generateKeccak256 } from "@consensys/linea-shared-utils";
+import { etherToWei, generateKeccak256 } from "@lfdt-lineth/shared-utils";
 import path from "path";
 import { zeroHash, parseGwei } from "viem";
 

@@ -1,3 +1,4 @@
+import { network } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 
 import {
@@ -12,6 +13,8 @@ import {
   generateRoleAssignments,
   getEnvVarOrDefault,
   getRequiredEnvVar,
+  requireAddressFromRegistryOrEnv,
+  requireAddressesFromRegistryOrEnv,
   tryVerifyContract,
   LogContractDeployment,
 } from "../common/helpers";
@@ -23,15 +26,23 @@ const func: DeployFunction = withSignerUiSession("03_deploy_LineaRollup.ts", asy
 
   // LineaRollup DEPLOYED AS UPGRADEABLE PROXY (OpenZeppelin transparent). Hardhat Upgrades may reuse an
   // implementation and/or ProxyAdmin from `.openzeppelin/` for this network, so you might sign fewer than three txs.
-  const verifierAddress = getRequiredEnvVar("PLONKVERIFIER_ADDRESS");
+  const verifierAddress = requireAddressFromRegistryOrEnv(network.name, "PlonkVerifier", "VERIFIER_ADDRESS");
   const lineaRollupInitialStateRootHash = getRequiredEnvVar("INITIAL_L2_STATE_ROOT_HASH");
   const lineaRollupInitialL2BlockNumber = getRequiredEnvVar("INITIAL_L2_BLOCK_NUMBER");
-  const lineaRollupSecurityCouncil = getRequiredEnvVar("L1_SECURITY_COUNCIL");
-  const lineaRollupOperators = getRequiredEnvVar("LINEA_ROLLUP_OPERATORS").split(",");
+  const lineaRollupSecurityCouncil = requireAddressFromRegistryOrEnv(
+    network.name,
+    "L1_SECURITY_COUNCIL",
+    "L1_SECURITY_COUNCIL",
+  );
+  const lineaRollupOperators = requireAddressesFromRegistryOrEnv(
+    network.name,
+    "LINEA_ROLLUP_OPERATORS",
+    "LINEA_ROLLUP_OPERATORS",
+  );
   const lineaRollupRateLimitPeriodInSeconds = getRequiredEnvVar("LINEA_ROLLUP_RATE_LIMIT_PERIOD");
   const lineaRollupRateLimitAmountInWei = getRequiredEnvVar("LINEA_ROLLUP_RATE_LIMIT_AMOUNT");
   const lineaRollupGenesisTimestamp = getRequiredEnvVar("L2_GENESIS_TIMESTAMP");
-  const MultiCallAddress = "0xcA11bde05977b3631167028862bE2a173976CA11";
+  const livenessRecoveryOperator = "0xcA11bde05977b3631167028862bE2a173976CA11";
 
   const pauseTypeRoles = getEnvVarOrDefault("LINEA_ROLLUP_PAUSE_TYPES_ROLES", LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES);
   const unpauseTypeRoles = getEnvVarOrDefault("LINEA_ROLLUP_UNPAUSE_TYPES_ROLES", LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES);
@@ -39,9 +50,9 @@ const func: DeployFunction = withSignerUiSession("03_deploy_LineaRollup.ts", asy
     { role: OPERATOR_ROLE, addresses: lineaRollupOperators },
   ]);
   const roleAddresses = getEnvVarOrDefault("LINEA_ROLLUP_ROLE_ADDRESSES", defaultRoleAddresses);
-  const yieldManagerAddress = getRequiredEnvVar("YIELD_MANAGER_ADDRESS");
+  const yieldManagerAddress = requireAddressFromRegistryOrEnv(network.name, "YieldManager", "YIELD_MANAGER_ADDRESS");
 
-  const addressFilter = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS_FILTER");
+  const addressFilter = requireAddressFromRegistryOrEnv(network.name, "AddressFilter", "LINEA_ROLLUP_ADDRESS_FILTER");
 
   const contract = await deployUpgradableFromFactory(
     "LineaRollup",
@@ -60,12 +71,12 @@ const func: DeployFunction = withSignerUiSession("03_deploy_LineaRollup.ts", asy
         shnarfProvider: ADDRESS_ZERO,
         addressFilter,
       },
-      MultiCallAddress,
+      livenessRecoveryOperator,
       yieldManagerAddress,
     ],
     {
       initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-      unsafeAllow: ["constructor"],
+      unsafeAllow: ["constructor", "incorrect-initializer-order"],
     },
   );
 

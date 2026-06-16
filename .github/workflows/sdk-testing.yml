@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   build-and-test:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: SDK Build, Test, Lint
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -38,31 +38,31 @@ jobs:
           pnpm-install-options: "--frozen-lockfile --prefer-offline --ignore-scripts"
 
       - name: Build sdk-core
-        run: pnpm -F @consensys/linea-sdk-core run build
+        run: pnpm -F @lfdt-lineth/sdk-core run build
 
       - name: Test sdk-core
-        run: pnpm -F @consensys/linea-sdk-core run test
+        run: pnpm -F @lfdt-lineth/sdk-core run test
 
       - name: Lint sdk-core
-        run: pnpm -F @consensys/linea-sdk-core run lint
+        run: pnpm -F @lfdt-lineth/sdk-core run lint
 
       - name: Build sdk-viem
-        run: pnpm -F @consensys/linea-sdk-viem run build
+        run: pnpm -F @lfdt-lineth/sdk-viem run build
 
       - name: Test sdk-viem
-        run: pnpm -F @consensys/linea-sdk-viem run test
+        run: pnpm -F @lfdt-lineth/sdk-viem run test
 
       - name: Lint sdk-viem
-        run: pnpm -F @consensys/linea-sdk-viem run lint
+        run: pnpm -F @lfdt-lineth/sdk-viem run lint
 
       - name: Build sdk-ethers (typechain + tsc)
-        run: pnpm -F @consensys/linea-sdk run build
+        run: pnpm -F @lfdt-lineth/sdk run build
 
       - name: Test sdk-ethers
-        run: pnpm -F @consensys/linea-sdk run test
+        run: pnpm -F @lfdt-lineth/sdk run test
 
       - name: Lint sdk-ethers
-        run: pnpm -F @consensys/linea-sdk run lint
+        run: pnpm -F @lfdt-lineth/sdk run lint
 
       - name: Compute coverage artifact tag
         id: cov-tag
@@ -92,7 +92,7 @@ jobs:
 
       - name: Upload sdk-core coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f #v7.0.0
         with:
           fail_ci_if_error: true
           files: ./ts-libs/sdk/sdk-core/coverage/lcov.info
@@ -104,7 +104,7 @@ jobs:
 
       - name: Upload sdk-viem coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f #v7.0.0
         with:
           fail_ci_if_error: true
           files: ./ts-libs/sdk/sdk-viem/coverage/lcov.info
@@ -116,7 +116,7 @@ jobs:
 
       - name: Upload sdk-ethers coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f #v7.0.0
         with:
           fail_ci_if_error: true
           files: ./ts-libs/sdk/sdk-ethers/coverage/lcov.info

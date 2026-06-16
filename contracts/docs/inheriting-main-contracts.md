@@ -1,6 +1,6 @@
 # Customizing Linea Rollup, Messaging, and Bridging Components
 
-This guide explains how to customize core rollup, messaging, and bridging functionality by overriding virtual functions in the Linea protocol contracts. Several examples are provided to help you get started. Please note, these are just illustrative samples.
+This guide explains how to customize core rollup, messaging, and bridging functionality by overriding virtual functions in the Lineth protocol contracts. Several examples are provided to help you get started. Please note, these are just illustrative samples.
 
 **Note:** It is recommended that any overrides or modifications from the original audited code should be independently audited for conflicting behavior.
 

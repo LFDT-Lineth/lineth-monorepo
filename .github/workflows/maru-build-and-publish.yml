@@ -8,10 +8,9 @@ permissions:
 on:
   workflow_call:
     inputs:
-      image_tag: #TODO: should be required as true when maru-release.yml get removed
-        required: false
+      image_tag:
+        required: true
         type: string
-        default: ''
       image_tag_with_suffix:
         required: false
         type: string
@@ -20,13 +19,10 @@ on:
         required: true
         type: string
       image_name:
-        required: true
-        type: string
-      push_image:
         required: false
-        type: boolean
-        default: false
-      upload_dist_artifact: # Used for release process to reuse the artifact #TODO: to be removed when maru-release.yml get removed
+        type: string
+        default: consensys/maru
+      push_image:
         required: false
         type: boolean
         default: false
@@ -35,30 +31,7 @@ on:
         required: false
       DOCKERHUB_TOKEN:
         required: false
-  workflow_dispatch:
-    inputs:
-      image_tag:
-        description: 'Image tag, if not given, HEAD commit hash will be used'
-        required: false
-        type: string
-        default: ''
-      develop_tag:
-        description: 'Image tag will be "develop" if target branch is main'
-        required: true
-        type: choice
-        options:
-          - develop
-        default: 'develop'
-      image_name:
-        description: 'Image name'
-        required: true
-        type: string
-        default: 'consensys/maru'
-      push_image:
-        description: 'Toggle whether to push image to docker registry'
-        required: false
-        type: boolean
-        default: true
+
 
 concurrency:
   group: maru-docker-build-and-publish-${{ github.workflow }}-${{ github.ref }}
@@ -66,7 +39,7 @@ concurrency:
 
 jobs:
   build-and-publish:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     name: Maru build and publish
     env:
       IMAGE_TAG: ${{ inputs.image_tag }}
@@ -101,20 +74,12 @@ jobs:
       - name: Build dist
         run: |
           ./gradlew :maru:app:installDist
-      - name: Upload distribution artifact
-        if: ${{ inputs.upload_dist_artifact }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: maru-distribution
-          path: maru/app/build/install/app/
-          retention-days: 1
       - name: Build and publish Docker image
         uses: ./.github/actions/docker-build-publish
         with:
           docker_context: maru/app
           image_name: ${{ env.IMAGE_NAME }}
-          image_tag: ${{ env.IMAGE_TAG }}
-          extra_image_tag: ${{ env.IMAGE_TAG_WITH_SUFFIX }}
+          image_tags: ${{ env.IMAGE_TAG_WITH_SUFFIX && format('{0},{1}', env.IMAGE_TAG, env.IMAGE_TAG_WITH_SUFFIX) || env.IMAGE_TAG }}
           develop_tag: ${{ env.DEVELOP_TAG }}
           push_image: ${{ env.PUSH_IMAGE }}
           dockerfile_path: maru/app/Dockerfile

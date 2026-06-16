@@ -1,4 +1,4 @@
-# @consensys/linea-sdk-viem
+# @lfdt-lineth/sdk-viem
 
 A TypeScript SDK for interacting with the Linea bridge and messaging system, built on top of [Viem](https://viem.sh/). This package provides high-level actions and decorators for bridging tokens, sending/claiming messages, and querying message status between L1 and L2 on Linea.
 
@@ -7,11 +7,11 @@ A TypeScript SDK for interacting with the Linea bridge and messaging system, bui
 ## Installation
 
 ```bash
-npm install @consensys/linea-sdk-viem viem
+npm install @lfdt-lineth/sdk-viem viem
 # or
-yarn add @consensys/linea-sdk-viem viem
+yarn add @lfdt-lineth/sdk-viem viem
 # or
-pnpm add @consensys/linea-sdk-viem viem
+pnpm add @lfdt-lineth/sdk-viem viem
 ```
 
 > **Note:** `viem@>=2.22.0` is a required peer dependency.
@@ -21,7 +21,7 @@ pnpm add @consensys/linea-sdk-viem viem
 Import the functions or decorators you need, and use the appropriate chain for your network (mainnet or testnet):
 
 ```ts
-import { deposit, withdraw, getBlockExtraData, publicActionsL1, walletActionsL2 } from '@consensys/linea-sdk-viem';
+import { deposit, withdraw, getBlockExtraData, publicActionsL1, walletActionsL2 } from '@lfdt-lineth/sdk-viem';
 import { mainnet, linea, sepolia, lineaSepolia } from 'viem/chains';
 
 // Example: Use sepolia and lineaSepolia for testnet
@@ -42,7 +42,7 @@ Deposits tokens from L1 to L2 or ETH if `token` is set to `zeroAddress`.
 import { createWalletClient, http, zeroAddress } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { mainnet, linea, sepolia, lineaSepolia } from 'viem/chains'
-import { deposit } from '@consensys/linea-sdk-viem'
+import { deposit } from '@lfdt-lineth/sdk-viem'
 
 // Use mainnet/linea for mainnet, sepolia/lineaSepolia for testnet
 const client = createWalletClient({
@@ -71,7 +71,7 @@ Withdraws tokens from L2 to L1 or ETH if `token` is set to `zeroAddress`.
 import { createWalletClient, http, zeroAddress } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { linea, lineaSepolia } from 'viem/chains'
-import { withdraw } from '@consensys/linea-sdk-viem'
+import { withdraw } from '@lfdt-lineth/sdk-viem'
 
 // Use linea for mainnet, lineaSepolia for testnet
 const client = createWalletClient({
@@ -94,7 +94,7 @@ Claim a message on L1.
 import { createWalletClient, http, zeroAddress } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { mainnet, sepolia } from 'viem/chains'
-import { claimOnL1 } from '@consensys/linea-sdk-viem'
+import { claimOnL1 } from '@lfdt-lineth/sdk-viem'
 
 // Use mainnet for mainnet, sepolia for testnet
 const client = createWalletClient({
@@ -125,7 +125,7 @@ Claim a message on L2.
 import { createWalletClient, http, zeroAddress } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { linea, lineaSepolia } from 'viem/chains'
-import { claimOnL2 } from '@consensys/linea-sdk-viem'
+import { claimOnL2 } from '@lfdt-lineth/sdk-viem'
 
 // Use linea for mainnet, lineaSepolia for testnet
 const client = createWalletClient({
@@ -160,7 +160,7 @@ Returns formatted Linea block extra data.
 ```ts
 import { createPublicClient, http } from 'viem'
 import { linea, lineaSepolia } from 'viem/chains'
-import { getBlockExtraData } from '@consensys/linea-sdk-viem'
+import { getBlockExtraData } from '@lfdt-lineth/sdk-viem'
 
 // Use linea for mainnet, lineaSepolia for testnet
 const client = createPublicClient({
@@ -178,7 +178,7 @@ Returns the status of an L1 to L2 message on Linea.
 ```ts
 import { createPublicClient, http } from 'viem'
 import { linea, lineaSepolia } from 'viem/chains'
-import { getL1ToL2MessageStatus } from '@consensys/linea-sdk-viem'
+import { getL1ToL2MessageStatus } from '@lfdt-lineth/sdk-viem'
 
 const client = createPublicClient({
   chain: lineaSepolia,
@@ -195,7 +195,7 @@ Returns the status of an L2 to L1 message on Linea.
 ```ts
 import { createPublicClient, http } from 'viem'
 import { mainnet, linea, sepolia, lineaSepolia } from 'viem/chains'
-import { getL2ToL1MessageStatus } from '@consensys/linea-sdk-viem'
+import { getL2ToL1MessageStatus } from '@lfdt-lineth/sdk-viem'
 
 const client = createPublicClient({
   chain: sepolia,
@@ -217,7 +217,7 @@ Returns the details of a message by its hash.
 ```ts
 import { createPublicClient, http } from 'viem'
 import { linea, lineaSepolia } from 'viem/chains'
-import { getMessageByMessageHash } from '@consensys/linea-sdk-viem'
+import { getMessageByMessageHash } from '@lfdt-lineth/sdk-viem'
 
 const client = createPublicClient({
   chain: lineaSepolia,
@@ -234,7 +234,7 @@ Returns the proof of a message sent from L2 to L1.
 ```ts
 import { createPublicClient, http } from 'viem'
 import { mainnet, linea, sepolia, lineaSepolia } from 'viem/chains'
-import { getMessageProof } from '@consensys/linea-sdk-viem'
+import { getMessageProof } from '@lfdt-lineth/sdk-viem'
 
 const client = createPublicClient({
   chain: sepolia,
@@ -256,7 +256,7 @@ Returns the details of messages sent in a transaction by its hash.
 ```ts
 import { createPublicClient, http } from 'viem'
 import { linea, lineaSepolia } from 'viem/chains'
-import { getMessagesByTransactionHash } from '@consensys/linea-sdk-viem'
+import { getMessagesByTransactionHash } from '@lfdt-lineth/sdk-viem'
 
 const client = createPublicClient({
   chain: lineaSepolia,
@@ -273,7 +273,7 @@ Returns the transaction receipt for a message sent by its message hash.
 ```ts
 import { createPublicClient, http } from 'viem'
 import { linea, lineaSepolia } from 'viem/chains'
-import { getTransactionReceiptByMessageHash } from '@consensys/linea-sdk-viem'
+import { getTransactionReceiptByMessageHash } from '@lfdt-lineth/sdk-viem'
 
 const client = createPublicClient({
   chain: lineaSepolia,
@@ -305,7 +305,7 @@ Extend a Viem public client with Linea public actions for L1 or L2. You can opti
 ```ts
 import { createPublicClient, http } from 'viem';
 import { mainnet, linea, sepolia, lineaSepolia } from 'viem/chains';
-import { publicActionsL1, publicActionsL2 } from '@consensys/linea-sdk-viem';
+import { publicActionsL1, publicActionsL2 } from '@lfdt-lineth/sdk-viem';
 
 const l1Client = createPublicClient({ chain: sepolia, transport: http() }).extend(publicActionsL1());
 const l2Client = createPublicClient({ chain: lineaSepolia, transport: http() }).extend(publicActionsL2());
@@ -338,7 +338,7 @@ Extend a Viem wallet client with Linea wallet actions for L1 or L2. You can opti
 ```ts
 import { createWalletClient, http } from 'viem';
 import { mainnet, linea, sepolia, lineaSepolia } from 'viem/chains';
-import { walletActionsL1, walletActionsL2 } from '@consensys/linea-sdk-viem';
+import { walletActionsL1, walletActionsL2 } from '@lfdt-lineth/sdk-viem';
 
 const l1Wallet = createWalletClient({ chain: sepolia, transport: http() }).extend(walletActionsL1());
 const l2Wallet = createWalletClient({ chain: lineaSepolia, transport: http() }).extend(walletActionsL2());

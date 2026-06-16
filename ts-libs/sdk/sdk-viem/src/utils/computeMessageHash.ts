@@ -21,7 +21,7 @@ export type ComputeMessageHashErrorType = EncodeAbiParametersErrorType;
  * @param args - {@link ComputeMessageHashParameters}
  *
  * @example
- * import { computeMessageHash } from '@consensys/linea-sdk-viem'
+ * import { computeMessageHash } from '@lfdt-lineth/sdk-viem'
  *
  * const messageHash = computeMessageHash({
  *   from: '0xSenderAddress',

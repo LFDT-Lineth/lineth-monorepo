@@ -5,16 +5,16 @@
  * Command-line interface using viem adapter.
  *
  * Usage:
- *   pnpx @consensys/linea-contract-integrity-verifier-viem -c config.json -v
+ *   pnpx @lfdt-lineth/contract-integrity-verifier-viem -c config.json -v
  */
 
-import { runCli, type CliRunnerConfig } from "@consensys/linea-contract-integrity-verifier";
+import { runCli, type CliRunnerConfig } from "@lfdt-lineth/contract-integrity-verifier";
 
 import { ViemAdapter } from "./index";
 
 const config: CliRunnerConfig = {
   adapterName: "Viem",
-  packageName: "@consensys/linea-contract-integrity-verifier-viem",
+  packageName: "@lfdt-lineth/contract-integrity-verifier-viem",
   createAdapter: (chainConfig) => new ViemAdapter({ rpcUrl: chainConfig.rpcUrl }),
 };
 

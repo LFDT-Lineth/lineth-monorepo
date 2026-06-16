@@ -1,4 +1,4 @@
-import { claimOnL1, getL2ToL1MessageStatus, getMessageProof as sdkGetMessageProof } from "@consensys/linea-sdk-viem";
+import { claimOnL1, getL2ToL1MessageStatus, getMessageProof as sdkGetMessageProof } from "@lfdt-lineth/sdk-viem";
 import { type PublicClient, type WalletClient, decodeErrorResult } from "viem";
 import { estimateContractGas, readContract } from "viem/actions";
 

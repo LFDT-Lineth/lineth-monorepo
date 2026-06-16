@@ -1,4 +1,4 @@
-import { WinstonLogger } from "@consensys/linea-shared-utils";
+import { WinstonLogger } from "@lfdt-lineth/shared-utils";
 
 import { ILidoGovernanceMonitorLogger } from "./ILidoGovernanceMonitorLogger.js";
 import { LidoGovernanceMonitorLogger } from "./LidoGovernanceMonitorLogger.js";

@@ -1,5 +1,5 @@
 {
-  "name": "@consensys/linea-native-yield-automation-service",
+  "name": "@lfdt-lineth/native-yield-automation-service",
   "version": "1.0.0",
   "author": "Consensys Software Inc.",
   "license": "(MIT OR Apache-2.0)",
@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@apollo/client": "4.1.9",
-    "@consensys/linea-shared-utils": "workspace:*",
+    "@lfdt-lineth/shared-utils": "workspace:*",
     "@lidofinance/lsv-cli": "1.8.0",
     "dotenv": "catalog:",
     "neverthrow": "catalog:",
@@ -25,7 +25,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@consensys/eslint-config": "workspace:*",
+    "@lfdt-lineth/eslint-config": "workspace:*",
     "@jest/globals": "catalog:",
     "@types/jest": "catalog:",
     "jest": "catalog:",

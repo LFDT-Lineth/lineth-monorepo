@@ -39,7 +39,6 @@ type Scenario struct {
 // Call each factory once per test to obtain an independent Scenario.
 func All() []func() *Scenario {
 	return []func() *Scenario{
-		NewLocalOpeningScenario,
 		NewLagrangeEvalScenario,
 		NewLogDerivativeSumScenario,
 		NewInclusionScenario,

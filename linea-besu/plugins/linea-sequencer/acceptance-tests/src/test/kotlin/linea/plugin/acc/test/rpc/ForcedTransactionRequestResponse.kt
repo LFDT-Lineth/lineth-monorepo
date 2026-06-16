@@ -23,7 +23,13 @@ data class ForcedTransactionParam(
   val forcedTransactionNumber: Long,
   val transaction: String,
   val deadlineBlockNumber: String,
-)
+) {
+  constructor(
+    forcedTransactionNumber: Long,
+    transaction: String,
+    deadlineBlockNumber: Long,
+  ) : this(forcedTransactionNumber, transaction, deadlineBlockNumber.toString())
+}
 
 /**
  * Request to send forced transactions.
