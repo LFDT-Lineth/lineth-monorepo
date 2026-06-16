@@ -5,8 +5,6 @@ import (
 	"io"
 	"strings"
 	"text/template"
-
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
 )
 
 // VanishingZigOptions configures imports and wrapping sections for generated
@@ -60,6 +58,7 @@ func WriteVanishingSystemZigWithOptions(w io.Writer, index int, system NamedVani
 func executeVanishingTemplate(w io.Writer, data vanishingTemplateData) error {
 	tmpl, err := template.New("vanishing_scenarios").Funcs(template.FuncMap{
 		"expr":       exprNodeLiteral,
+		"ints":       intSlice,
 		"intArray":   intArray,
 		"moduleSize": moduleSizeLiteral,
 		"zig":        zigString,
@@ -141,7 +140,7 @@ const vanishing = {{.Options.VanishingImport}};
 
 {{range $module.Buckets}}{{- $bucket := . }}const system_{{$case.Index}}_module_{{$bucket.ModuleIndex}}_bucket_{{$bucket.Index}}_vanishings = [_]vanishing.Vanishing{
 {{range $bucket.Bucket.Vanishings}}    // expression: "{{zig .SourceName}}"
-    .{ .expression = {{.Expression}}, .cancelled_positions = &.{{intArray .CancelledPositions}} },
+    .{ .expression = {{.Expression}}, .cancelled_positions = &{{ints .CancelledPositions}} },
 {{end}}};
 
 {{end}}const system_{{$case.Index}}_module_{{$module.Index}}_buckets = [_]vanishing.Bucket{
@@ -177,38 +176,11 @@ func exprNodeLiteral(expr ExprNode) string {
 	case ExprConstant:
 		return fmt.Sprintf(".{ .constant = field.Element.init(%d) },", expr.Constant.Uint64())
 	case ExprOp:
-		operator, ok := operatorLiteral(expr.Operator)
-		if !ok {
-			panic(fmt.Sprintf("unknown ArithmeticOperator %d", int(expr.Operator)))
-		}
-		return fmt.Sprintf(".{ .op = .{ .operator = .%s, .operands = &.%s } },", operator, intArray(expr.Operands))
+		return fmt.Sprintf(".{ .op = .{ .operator = .%s, .operands = &%s } },", expr.Operator, intSlice(expr.Operands))
 	case ExprLagrangeSelector:
 		return fmt.Sprintf(".{ .lagrange_selector = %d },", expr.SelectorPosition)
 	default:
 		panic(fmt.Sprintf("unknown ExprKind %d", int(expr.Kind)))
-	}
-}
-
-func operatorLiteral(op wiop.ArithmeticOperator) (string, bool) {
-	switch op {
-	case wiop.ArithmeticOperatorAdd:
-		return "add", true
-	case wiop.ArithmeticOperatorMul:
-		return "mul", true
-	case wiop.ArithmeticOperatorSub:
-		return "sub", true
-	case wiop.ArithmeticOperatorDiv:
-		return "div", true
-	case wiop.ArithmeticOperatorDouble:
-		return "double", true
-	case wiop.ArithmeticOperatorSquare:
-		return "square", true
-	case wiop.ArithmeticOperatorNegate:
-		return "negate", true
-	case wiop.ArithmeticOperatorInverse:
-		return "inverse", true
-	default:
-		return "", false
 	}
 }
 
@@ -217,6 +189,10 @@ func moduleSizeLiteral(size ModuleSize) string {
 		return fmt.Sprintf(".{ .dynamic = %d }", size.DynamicIndex)
 	}
 	return fmt.Sprintf(".{ .static = %d }", size.StaticSize)
+}
+
+func intSlice(values []int) string {
+	return "." + intArray(values)
 }
 
 func intArray(values []int) string {
