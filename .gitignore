@@ -200,6 +200,7 @@ arithmetization/src/test/rust/src/blake/blake_from_main
 arithmetization/src/test/rust/src/blake/blake_test_vectors
 arithmetization/src/test/rust/src/blake/blake_with_in_bytes
 arithmetization/src/test/rust/src/blake/blake_with_in_embedded
+arithmetization/src/test/common_inputs/*.json
 
 # RISC-V guest build artifacts and dependency caches are ignored per-directory:
 # see riscv-guests/.gitignore (each guest package has its own zig-out/zig-pkg/.zig-cache).

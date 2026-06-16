@@ -3,7 +3,7 @@
 # Moreover, ABI being LP64 (soft-float) is relevant only for float numbers, which we do not use, so it can be omitted as well.
 
 # Declare all targets as phony to prevent conflicts with files of the same name
-.PHONY: exec debug compile elf-exec elf-debug elf-to-json install-zkc zkc-exec zkc-debug clean clean-all linker-script verify-elf vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-bin-ext require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode require-json
+.PHONY: exec debug compile elf-exec elf-debug elf-to-json install-zkc zkc-exec zkc-debug clean clean-all linker-script verify-elf vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec keccak-zig-build keccak-zig-json keccak-zig-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-bin-ext require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode
 
 # Keep validation, build, and execution targets running in order
 .NOTPARALLEL:
@@ -375,18 +375,17 @@ vector-exec: require-vector-json-mode install-zkc
 # Keccak wrapper targets
 #####################################################################
 
-KECCAK_ALL_FILE       ?= $(MAKEFILE_DIR)rust/src/keccak/keccak.all
+KECCAK_ALL_FILE       ?= $(MAKEFILE_DIR)common_inputs/keccak.all
 KECCAK_N_VECTORS      ?= 10
+KECCAK_JSON_FILE      ?= $(MAKEFILE_DIR)common_inputs/keccak.json
 
 # Rust
 
-KECCAK_RUST_JSON_FILE ?= $(MAKEFILE_DIR)rust/target/riscv64im-unknown-none-elf/release/keccak.json
-
 keccak-rust-build:
 	cargo clean -p riscv-tests --manifest-path $(MAKEFILE_DIR)rust/Cargo.toml
-	KECCAK_N_VECTORS=$(if $(filter -1,$(KECCAK_N_VECTORS)),$(shell awk 'END { print NR }' $(KECCAK_ALL_FILE)),$(KECCAK_N_VECTORS)) $(MAKE) -f $(MAKEFILE_DIR)Makefile vector-build \
+	$(MAKE) -f $(MAKEFILE_DIR)Makefile vector-build \
+		KECCAK_N_VECTORS=$(if $(filter -1,$(KECCAK_N_VECTORS)),$(shell awk 'END { print NR }' $(KECCAK_ALL_FILE)),$(KECCAK_N_VECTORS)) \
 		TEST=keccak/keccak.rs \
-		IN_BYTES=0x00
 
 keccak-rust-json: keccak-rust-build
 	$(MAKE) -f $(MAKEFILE_DIR)Makefile vector-json \
@@ -394,14 +393,28 @@ keccak-rust-json: keccak-rust-build
 		VECTOR_FILE=$(KECCAK_ALL_FILE) \
 		VECTOR_N_VECTORS=$(KECCAK_N_VECTORS) \
 		VECTOR_JSON_MODE=batched \
-		VECTOR_JSON_FILE=$(KECCAK_RUST_JSON_FILE)
+		VECTOR_JSON_FILE=$(KECCAK_JSON_FILE)
 
 keccak-rust-exec: keccak-rust-json
-	$(MAKE) -f $(MAKEFILE_DIR)Makefile vector-exec VECTOR_JSON_MODE=batched VECTOR_JSON_FILE=$(KECCAK_RUST_JSON_FILE)
+	$(MAKE) -f $(MAKEFILE_DIR)Makefile vector-exec VECTOR_JSON_MODE=batched VECTOR_JSON_FILE=$(KECCAK_JSON_FILE)
 
 # Zig
 
+keccak-zig-build:
+	$(MAKE) -f $(MAKEFILE_DIR)Makefile vector-build \
+		KECCAK_N_VECTORS=$(if $(filter -1,$(KECCAK_N_VECTORS)),$(shell awk 'END { print NR }' $(KECCAK_ALL_FILE)),$(KECCAK_N_VECTORS)) \
+		TEST=keccak/keccak_with_provider_batched_inputs.zig
 
+keccak-zig-json: keccak-zig-build
+	$(MAKE) -f $(MAKEFILE_DIR)Makefile vector-json \
+		TEST=keccak/keccak_with_provider_batched_inputs.zig \
+		VECTOR_FILE=$(KECCAK_ALL_FILE) \
+		VECTOR_N_VECTORS=$(KECCAK_N_VECTORS) \
+		VECTOR_JSON_MODE=batched \
+		VECTOR_JSON_FILE=$(KECCAK_JSON_FILE)
+
+keccak-zig-exec: keccak-zig-json
+	$(MAKE) -f $(MAKEFILE_DIR)Makefile vector-exec VECTOR_JSON_MODE=batched VECTOR_JSON_FILE=$(KECCAK_JSON_FILE)
 
 #####################################################################
 # Blake Rust wrapper targets

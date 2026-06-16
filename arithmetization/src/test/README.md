@@ -89,7 +89,7 @@ Useful shell function (add to `~/.zshrc` or `~/.bashrc`):
 riscv-test() {
     local makefile="path/to/lineth-monorepo/arithmetization/src/test/Makefile"
     case "$1" in
-        elf-exec|elf-debug|elf-to-json|install-zkc|clean-all|linker-script|vector-exec|keccak-rust-build|keccak-rust-json|keccak-rust-exec|blake-rust-build|blake-rust-json|blake-rust-exec|act4-build|act4-exec)
+        elf-exec|elf-debug|elf-to-json|install-zkc|clean-all|linker-script|vector-exec|keccak-rust-build|keccak-rust-json|keccak-rust-exec|keccak-zig-build|keccak-zig-json|keccak-zig-exec|blake-rust-build|blake-rust-json|blake-rust-exec|act4-build|act4-exec)
             # targets that do NOT require TEST argument
             make -f "$makefile" "$1" "${@:2}"
             ;;
@@ -152,7 +152,7 @@ riscv-test clean-all
 # Run all Blake vectors from blake10.all
 riscv-test blake-rust-exec
 # Build one batched Keccak JSON
-riscv-test keccak-rust-json KECCAK_N_VECTORS=10 KECCAK_RUST_JSON_FILE=/path/to/keccak.json
+riscv-test keccak-rust-json KECCAK_N_VECTORS=10 KECCAK_JSON_FILE=/path/to/keccak.json
 # Build ACT4 ELFs
 riscv-test act4-build
 # Run ACT4 ELFs through zkc
@@ -235,9 +235,9 @@ riscv-test compile <name>.<ext> VERIFY_ELF=true
 | `BLAKE_ALL_FILE`             | `rust/src/blake/blake10.all`                                                           | Blake `.all` vector file used by `blake-rust-json`                                                                                            |
 | `BLAKE_N_VECTORS`            | `-1`                                                                                   | Number of Blake vectors to generate; `-1` means all vectors                                                                                   |
 | `BLAKE_JSON_DIR`             | `rust/target/riscv64im-unknown-none-elf/release/blake_json`                            | Directory where `blake-rust-json` writes per-vector JSON files                                                                                |
-| `KECCAK_ALL_FILE`            | `rust/src/keccak/keccak.all`                                                           | Keccak `.all` vector file used by `keccak-rust-json`                                                                                          |
+| `KECCAK_ALL_FILE`            | `common_inputs/keccak.all`                                                             | Keccak `.all` vector file used by `keccak-(rust\|zig)-json`                                                                                   |
 | `KECCAK_N_VECTORS`           | `10`                                                                                   | Number of Keccak vectors compiled into and packed for the Keccak guest; `-1` means all vectors                                                |
-| `KECCAK_RUST_JSON_FILE`      | `rust/target/riscv64im-unknown-none-elf/release/keccak.json`                           | JSON path written by `keccak-rust-json`                                                                                                       |
+| `KECCAK_JSON_FILE`           | `rust/target/riscv64im-unknown-none-elf/release/keccak.json`                           | JSON path written by `keccak-(rust\|zig)-json`                                                                                                |
 
 `IN_BYTES` values are expected in big-endian hex format.
 All `.all` vector files contain one big-endian `IN_BYTES` value per line.
