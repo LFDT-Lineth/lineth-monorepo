@@ -377,12 +377,14 @@ vector-exec: require-vector-json-mode install-zkc
 
 KECCAK_ALL_FILE       ?= $(MAKEFILE_DIR)rust/src/keccak/keccak.all
 KECCAK_N_VECTORS      ?= 10
-KECCAK_RUST_N_VECTORS = $(if $(filter -1,$(KECCAK_N_VECTORS)),$(shell awk 'END { print NR }' $(KECCAK_ALL_FILE)),$(KECCAK_N_VECTORS))
-KECCAK_JSON_FILE      ?= $(MAKEFILE_DIR)rust/target/riscv64im-unknown-none-elf/release/keccak.json
+
+# Rust
+
+KECCAK_RUST_JSON_FILE ?= $(MAKEFILE_DIR)rust/target/riscv64im-unknown-none-elf/release/keccak.json
 
 keccak-rust-build:
 	cargo clean -p riscv-tests --manifest-path $(MAKEFILE_DIR)rust/Cargo.toml
-	KECCAK_N_VECTORS=$(KECCAK_RUST_N_VECTORS) $(MAKE) -f $(MAKEFILE_DIR)Makefile vector-build \
+	KECCAK_N_VECTORS=$(if $(filter -1,$(KECCAK_N_VECTORS)),$(shell awk 'END { print NR }' $(KECCAK_ALL_FILE)),$(KECCAK_N_VECTORS)) $(MAKE) -f $(MAKEFILE_DIR)Makefile vector-build \
 		TEST=keccak/keccak.rs \
 		IN_BYTES=0x00
 
@@ -392,13 +394,17 @@ keccak-rust-json: keccak-rust-build
 		VECTOR_FILE=$(KECCAK_ALL_FILE) \
 		VECTOR_N_VECTORS=$(KECCAK_N_VECTORS) \
 		VECTOR_JSON_MODE=batched \
-		VECTOR_JSON_FILE=$(KECCAK_JSON_FILE)
+		VECTOR_JSON_FILE=$(KECCAK_RUST_JSON_FILE)
 
 keccak-rust-exec: keccak-rust-json
-	$(MAKE) -f $(MAKEFILE_DIR)Makefile vector-exec VECTOR_JSON_MODE=batched VECTOR_JSON_FILE=$(KECCAK_JSON_FILE)
+	$(MAKE) -f $(MAKEFILE_DIR)Makefile vector-exec VECTOR_JSON_MODE=batched VECTOR_JSON_FILE=$(KECCAK_RUST_JSON_FILE)
+
+# Zig
+
+
 
 #####################################################################
-# Blake wrapper targets
+# Blake Rust wrapper targets
 #####################################################################
 
 BLAKE_ALL_FILE  ?= $(MAKEFILE_DIR)rust/src/blake/blake10.all
