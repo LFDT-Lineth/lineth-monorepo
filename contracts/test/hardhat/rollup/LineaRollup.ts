@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture, time as networkTime } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES, LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES } from "contracts/common/constants";
+import { LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES, LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES } from "contracts/common/constants";
 import { AddressFilter, CallForwardingProxy, LineaRollup__factory, TestLineaRollup } from "contracts/typechain-types";
 import { ethers, upgrades } from "hardhat";
 
@@ -33,7 +33,7 @@ import {
   DEFAULT_ADMIN_ROLE,
   DEFAULT_LAST_FINALIZED_TIMESTAMP,
   SIX_MONTHS_IN_SECONDS,
-  LINEA_ROLLUP_INITIALIZE_SIGNATURE,
+  LINETH_ROLLUP_INITIALIZE_SIGNATURE,
   FORCED_TRANSACTION_FEE,
   SET_ADDRESS_FILTER_ROLE,
   MAX_GAS_LIMIT,
@@ -110,8 +110,8 @@ describe("Linea Rollup contract", () => {
       rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
       rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
       roleAddresses: [...roleAddresses.slice(1)],
-      pauseTypeRoles: LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES,
-      unpauseTypeRoles: LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
+      pauseTypeRoles: LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES,
+      unpauseTypeRoles: LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
       defaultAdmin: securityCouncil.address,
       shnarfProvider: ADDRESS_ZERO,
       addressFilter: addressFilterAddress,
@@ -126,7 +126,7 @@ describe("Linea Rollup contract", () => {
       contractName: string = "TestLineaRollup",
     ) =>
       deployUpgradableFromFactory(contractName, [initData, fallbackOperator, yieldManager], {
-        initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
+        initializer: LINETH_ROLLUP_INITIALIZE_SIGNATURE,
         unsafeAllow: ["constructor", "incorrect-initializer-order"],
       });
 
@@ -201,8 +201,8 @@ describe("Linea Rollup contract", () => {
         rateLimitPeriodInSeconds: BigInt(ONE_DAY_IN_SECONDS),
         rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
         roleAddresses,
-        pauseTypeRoles: LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
-        unpauseTypeRoles: LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
+        pauseTypeRoles: LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
+        unpauseTypeRoles: LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
         defaultAdmin: securityCouncil.address,
         shnarfProvider: ADDRESS_ZERO,
         addressFilter: addressFilterAddress,
@@ -227,7 +227,7 @@ describe("Linea Rollup contract", () => {
         "src/rollup/LineaRollup.sol:LineaRollup",
         [initializationData, FALLBACK_OPERATOR_ADDRESS, yieldManager],
         {
-          initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
+          initializer: LINETH_ROLLUP_INITIALIZE_SIGNATURE,
           unsafeAllow: ["constructor", "incorrect-initializer-order"],
         },
       );

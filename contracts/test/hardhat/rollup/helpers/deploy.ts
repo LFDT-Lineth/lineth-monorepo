@@ -1,8 +1,8 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { PRECOMPILES_ADDRESSES } from "contracts/common/constants";
 import {
-  LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES,
-  LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
+  LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES,
+  LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
   VALIDIUM_PAUSE_TYPES_ROLES,
   VALIDIUM_UNPAUSE_TYPES_ROLES,
 } from "contracts/common/constants/pauseTypes";
@@ -27,7 +27,7 @@ import {
   INITIAL_WITHDRAW_LIMIT,
   L2_BLOCK_DURATION_SECONDS,
   LINEA_MAINNET_CHAIN_ID,
-  LINEA_ROLLUP_INITIALIZE_SIGNATURE,
+  LINETH_ROLLUP_INITIALIZE_SIGNATURE,
   MAX_FORCED_TRANSACTION_GAS_LIMIT,
   MAX_INPUT_LENGTH_LIMIT,
   ONE_DAY_IN_SECONDS,
@@ -108,8 +108,8 @@ export async function deployLineaRollupFixture() {
     rateLimitPeriodInSeconds: BigInt(ONE_DAY_IN_SECONDS),
     rateLimitAmountInWei: BigInt(INITIAL_WITHDRAW_LIMIT),
     roleAddresses,
-    pauseTypeRoles: LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
-    unpauseTypeRoles: LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
+    pauseTypeRoles: LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
+    unpauseTypeRoles: LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
     defaultAdmin: securityCouncil.address,
     shnarfProvider: ADDRESS_ZERO,
     addressFilter: await addressFilter.getAddress(),
@@ -119,7 +119,7 @@ export async function deployLineaRollupFixture() {
     "TestLineaRollup",
     [initializationData, FALLBACK_OPERATOR_ADDRESS, yieldManager],
     {
-      initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
+      initializer: LINETH_ROLLUP_INITIALIZE_SIGNATURE,
       unsafeAllow: ["constructor", "incorrect-initializer-order"],
     },
   )) as unknown as TestLineaRollup;

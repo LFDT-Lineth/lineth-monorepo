@@ -24,7 +24,7 @@ import { getUiSigner, withSignerUiSession } from "../scripts/hardhat/signer-ui-b
  * so they use the generic PROXY_ADDRESS fallback.
  */
 const CONTRACT_PROXY_MAP: Record<string, { registryKey: string; envVar: string }> = {
-  LineaRollup: { registryKey: "LineaRollup", envVar: "LINEA_ROLLUP_ADDRESS" },
+  LineaRollup: { registryKey: "LineaRollup", envVar: "LINETH_ROLLUP_ADDRESS" },
   Validium: { registryKey: "Validium", envVar: "PROXY_ADDRESS" },
   L2MessageService: { registryKey: "L2MessageService", envVar: "L2_MESSAGE_SERVICE_ADDRESS" },
   TokenBridge: {

@@ -41,7 +41,7 @@ Environment variables follow a consistent naming pattern:
 |--------|-------|
 | `L1_` | Ethereum L1 (e.g. `L1_SECURITY_COUNCIL`, `L1_RPC_URL`) |
 | `L2_` | Linea L2 (e.g. `L2_SECURITY_COUNCIL`, `L2_RPC_URL`, `L2_MESSAGE_SERVICE_ADDRESS`) |
-| `LINEA_ROLLUP_*` | Linea Rollup contract (L1) — product-specific |
+| `LINETH_ROLLUP_*` | Linea Rollup contract (L1) — product-specific |
 
 **Shared per layer:**
 
@@ -50,7 +50,7 @@ Environment variables follow a consistent naming pattern:
 
 **Shared L1 base (Linea Rollup & Validium):** `INITIAL_L2_STATE_ROOT_HASH`, `INITIAL_L2_BLOCK_NUMBER`, `L2_GENESIS_TIMESTAMP` — common to both products via shared contract base
 
-**Product-specific:** `LINEA_ROLLUP_OPERATORS`, `LINEA_ROLLUP_RATE_LIMIT_*`, `VALIDIUM_OPERATORS`, `VALIDIUM_RATE_LIMIT_*`
+**Product-specific:** `LINETH_ROLLUP_OPERATORS`, `LINETH_ROLLUP_RATE_LIMIT_*`, `VALIDIUM_OPERATORS`, `VALIDIUM_RATE_LIMIT_*`
 
 **RPC endpoints:** `L1_RPC_URL`, `L2_RPC_URL`, `CUSTOM_RPC_URL` (replaces legacy `BLOCKCHAIN_NODE`, `L2_BLOCKCHAIN_NODE`, `CUSTOM_BLOCKCHAIN_URL`)
 

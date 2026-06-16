@@ -25,10 +25,10 @@ contract DeployL2LineaToken is Script {
     tokenAdmin = vm.envAddress("TOKEN_ADMIN_ADDRESS");
     console.log("Token admin address:\t", tokenAdmin);
 
-    lineaCanonicalTokenBridge = vm.envAddress("LINEA_CANONICAL_TOKEN_BRIDGE");
+    lineaCanonicalTokenBridge = vm.envAddress("LINETH_CANONICAL_TOKEN_BRIDGE");
     console.log("Linea Canonical Token Bridge address:\t", lineaCanonicalTokenBridge);
 
-    lineaMessageService = vm.envAddress("LINEA_MESSAGE_SERVICE_ADDRESS");
+    lineaMessageService = vm.envAddress("LINETH_MESSAGE_SERVICE_ADDRESS");
     console.log("Linea Message Service address:\t", lineaMessageService);
 
     l1LineaToken = vm.envAddress("L1_LINEA_TOKEN_ADDRESS");

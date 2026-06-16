@@ -11,7 +11,7 @@
         "$comment": "Verify implementation bytecode directly (after a proxy upgrade)",
         "name": "LineaRollup-Proxy",
         "chain": "ethereum-dynamic",
-        "address": "${LINEA_ROLLUP_ADDRESS}",
+        "address": "${LINETH_ROLLUP_ADDRESS}",
         "artifactFile": "../LineaRollup.json",
         "isProxy": true,
         "stateVerification": {
@@ -91,7 +91,7 @@
         "$comment": "Verify implementation bytecode directly (before proxy upgrade)",
         "name": "LineaRollup-Implementation",
         "chain": "ethereum-dynamic",
-        "address": "${LINEA_ROLLUP_IMPLEMENTATION_ADDRESS}",
+        "address": "${LINETH_ROLLUP_IMPLEMENTATION_ADDRESS}",
         "artifactFile": "../LineaRollup.json",
         "isProxy": false
       }

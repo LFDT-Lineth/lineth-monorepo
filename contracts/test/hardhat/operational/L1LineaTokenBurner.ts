@@ -62,7 +62,7 @@ describe("L1LineaTokenBurner", () => {
 
   beforeEach(async () => {
     ({ l1LineaTokenBurner, lineaToken, messageService } = await loadFixture(deployL1LineaTokenBurnerContractFixture));
-    // Mint some LINEA tokens to the admin so that we can test the burning functionality.
+    // Mint some LINETH tokens to the admin so that we can test the burning functionality.
     // It is used to initialize the total supply of the token.
     await lineaToken.mint(admin.address, INITIAL_LINEA_TOKEN_SUPPLY);
   });
@@ -76,7 +76,7 @@ describe("L1LineaTokenBurner", () => {
       );
     });
 
-    it("Should revert when LINEA token address is zero", async () => {
+    it("Should revert when LINETH token address is zero", async () => {
       await expectRevertWithCustomError(
         l1LineaTokenBurner,
         deployFromFactory("L1LineaTokenBurner", await messageService.getAddress(), ADDRESS_ZERO),
@@ -153,7 +153,7 @@ describe("L1LineaTokenBurner", () => {
       await expectRevertWithCustomError(l1LineaTokenBurner, txPromise, "NoTokensToBurn");
     });
 
-    it("Should only burn LINEA tokens and syncTotalSupplyToL2 when message is already claimed and burner contract balance > 0", async () => {
+    it("Should only burn LINETH tokens and syncTotalSupplyToL2 when message is already claimed and burner contract balance > 0", async () => {
       await messageService.setL2L1MessageToClaimed(1);
 
       const lineaTokensBalanceOwnedByBurnerContract = ethers.parseUnits("100", 18);
@@ -188,7 +188,7 @@ describe("L1LineaTokenBurner", () => {
       expect(burnerBalanceAfter).to.equal(0);
     });
 
-    it("Should claim message, burn LINEA tokens and syncTotalSupplyToL2 when message is not yet claimed and burner contract balance > 0", async () => {
+    it("Should claim message, burn LINETH tokens and syncTotalSupplyToL2 when message is not yet claimed and burner contract balance > 0", async () => {
       await messageService.addFunds({ value: INITIAL_WITHDRAW_LIMIT * 2n });
 
       const lineaTokensBalanceOwnedByBurnerContract = ethers.parseUnits("100", 18);

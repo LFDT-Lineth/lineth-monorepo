@@ -44,7 +44,7 @@ export async function prepareAndAddMessageMerkleRoot(
   const signerAddress = await signer.getAddress();
 
   // --- Resolve inputs from CLI or ENV (with sensible fallbacks to deployments) ---
-  const lineaRollupAddress = getTaskCliOrEnvValue(taskArgs, "lineaRollupAddress", "LINEA_ROLLUP_ADDRESS");
+  const lineaRollupAddress = getTaskCliOrEnvValue(taskArgs, "lineaRollupAddress", "LINETH_ROLLUP_ADDRESS");
   const fromAddress = getTaskCliOrEnvValue(taskArgs, "from", "FROM_ADDRESS") || signerAddress;
   const toAddress = getTaskCliOrEnvValue(taskArgs, "to", "TO_ADDRESS");
   const valueRaw = getTaskCliOrEnvValue(taskArgs, "value", "VALUE");
@@ -53,7 +53,7 @@ export async function prepareAndAddMessageMerkleRoot(
 
   // Validate required params
   const missing: string[] = [];
-  if (!lineaRollupAddress) missing.push("lineaRollupAddress / LINEA_ROLLUP_ADDRESS");
+  if (!lineaRollupAddress) missing.push("lineaRollupAddress / LINETH_ROLLUP_ADDRESS");
   if (!toAddress) missing.push("to / TO_ADDRESS");
   if (!valueRaw) missing.push("value / VALUE");
   // Note: data has a default value of "0x" (empty calldata), so validation is not needed

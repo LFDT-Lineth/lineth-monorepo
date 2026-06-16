@@ -13,7 +13,7 @@ import { deployFromFactory } from "../scripts/hardhat/utils";
 const func: DeployFunction = withSignerUiSession(
   "22_deploy_YieldManagerUpgrade.ts",
   async function (hre: HardhatRuntimeEnvironment) {
-    const lineaRollupAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LineaRollup", "LINEA_ROLLUP_ADDRESS");
+    const lineaRollupAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LineaRollup", "LINETH_ROLLUP_ADDRESS");
     const yieldManagerProxyAddress = requireAddressFromRegistryOrEnv(
       hre.network.name,
       "YieldManager",

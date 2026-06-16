@@ -14,9 +14,9 @@ import {
   bytecode as TransparentUpgradeableProxyBytecode,
 } from "./static-artifacts/TransparentUpgradeableProxy.json";
 import {
-  LINEA_ROLLUP_V6_PAUSE_TYPES_ROLES,
-  LINEA_ROLLUP_V6_UNPAUSE_TYPES_ROLES,
-  LINEA_ROLLUP_V6_ROLES,
+  LINETH_ROLLUP_V6_PAUSE_TYPES_ROLES,
+  LINETH_ROLLUP_V6_UNPAUSE_TYPES_ROLES,
+  LINETH_ROLLUP_V6_ROLES,
   OPERATOR_ROLE,
 } from "../common/constants";
 import { deployContractFromArtifacts, getInitializerData } from "../common/helpers/deployments";
@@ -65,22 +65,22 @@ async function main() {
   );
   const lineaRollupOperators = requireAddressesFromRegistryOrEnv(
     networkName,
-    "LINEA_ROLLUP_OPERATORS",
-    "LINEA_ROLLUP_OPERATORS",
+    "LINETH_ROLLUP_OPERATORS",
+    "LINETH_ROLLUP_OPERATORS",
   );
-  const lineaRollupRateLimitPeriodInSeconds = getRequiredEnvVar("LINEA_ROLLUP_RATE_LIMIT_PERIOD");
-  const lineaRollupRateLimitAmountInWei = getRequiredEnvVar("LINEA_ROLLUP_RATE_LIMIT_AMOUNT");
+  const lineaRollupRateLimitPeriodInSeconds = getRequiredEnvVar("LINETH_ROLLUP_RATE_LIMIT_PERIOD");
+  const lineaRollupRateLimitAmountInWei = getRequiredEnvVar("LINETH_ROLLUP_RATE_LIMIT_AMOUNT");
   const lineaRollupGenesisTimestamp = getRequiredEnvVar("L2_GENESIS_TIMESTAMP");
   const multiCallAddress = "0xcA11bde05977b3631167028862bE2a173976CA11";
   const lineaRollupName = "LineaRollupV6";
   const lineaRollupImplementationName = "LineaRollupV6Implementation";
 
-  const pauseTypeRoles = getEnvVarOrDefault("LINEA_ROLLUP_PAUSE_TYPES_ROLES", LINEA_ROLLUP_V6_PAUSE_TYPES_ROLES);
-  const unpauseTypeRoles = getEnvVarOrDefault("LINEA_ROLLUP_UNPAUSE_TYPES_ROLES", LINEA_ROLLUP_V6_UNPAUSE_TYPES_ROLES);
-  const defaultRoleAddresses = generateRoleAssignments(LINEA_ROLLUP_V6_ROLES, lineaRollupSecurityCouncil, [
+  const pauseTypeRoles = getEnvVarOrDefault("LINETH_ROLLUP_PAUSE_TYPES_ROLES", LINETH_ROLLUP_V6_PAUSE_TYPES_ROLES);
+  const unpauseTypeRoles = getEnvVarOrDefault("LINETH_ROLLUP_UNPAUSE_TYPES_ROLES", LINETH_ROLLUP_V6_UNPAUSE_TYPES_ROLES);
+  const defaultRoleAddresses = generateRoleAssignments(LINETH_ROLLUP_V6_ROLES, lineaRollupSecurityCouncil, [
     { role: OPERATOR_ROLE, addresses: lineaRollupOperators },
   ]);
-  const roleAddresses = getEnvVarOrDefault("LINEA_ROLLUP_ROLE_ADDRESSES", defaultRoleAddresses);
+  const roleAddresses = getEnvVarOrDefault("LINETH_ROLLUP_ROLE_ADDRESSES", defaultRoleAddresses);
 
   const verifierArtifacts = findContractArtifacts(path.join(__dirname, "./dynamic-artifacts"), verifierName);
 

@@ -69,7 +69,7 @@ describe("V3DexSwapWethDepositAdapter", () => {
       );
     });
 
-    it("Should revert when LINEA token address is zero", async () => {
+    it("Should revert when LINETH token address is zero", async () => {
       const randomnAddress = toChecksumAddress(generateRandomBytes(20));
       await expectRevertWithCustomError(
         dexSwap,
@@ -152,7 +152,7 @@ describe("V3DexSwapWethDepositAdapter", () => {
       );
     });
 
-    it("Should swap ETH to LINEA tokens", async () => {
+    it("Should swap ETH to LINETH tokens", async () => {
       const minLineaOut = ethers.parseUnits("2", 18);
       const deadline = (await time.latest()) + ONE_MINUTE_IN_SECONDS;
 
@@ -162,11 +162,11 @@ describe("V3DexSwapWethDepositAdapter", () => {
 
       const rollupRevenueVaultLineaTokensBalanceAfter = await lineaToken.balanceOf(rollupRevenueVault.address);
       expect(rollupRevenueVaultLineaTokensBalanceAfter).to.equal(
-        rollupRevenueVaultLineaTokensBalanceBefore + ethValueToSwap * 2n, // 1 ETH = 2 LINEA in the TestDexRouter
+        rollupRevenueVaultLineaTokensBalanceBefore + ethValueToSwap * 2n, // 1 ETH = 2 LINETH in the TestDexRouter
       );
     });
 
-    it("Should swap ETH to LINEA tokens if deadline in same block", async () => {
+    it("Should swap ETH to LINETH tokens if deadline in same block", async () => {
       const minLineaOut = ethers.parseUnits("2", 18);
       const deadline = (await time.latest()) + ONE_MINUTE_IN_SECONDS;
       await setNextBlockTimestamp(deadline);
@@ -177,7 +177,7 @@ describe("V3DexSwapWethDepositAdapter", () => {
 
       const rollupRevenueVaultLineaTokensBalanceAfter = await lineaToken.balanceOf(rollupRevenueVault.address);
       expect(rollupRevenueVaultLineaTokensBalanceAfter).to.equal(
-        rollupRevenueVaultLineaTokensBalanceBefore + ethValueToSwap * 2n, // 1 ETH = 2 LINEA in the TestDexRouter
+        rollupRevenueVaultLineaTokensBalanceBefore + ethValueToSwap * 2n, // 1 ETH = 2 LINETH in the TestDexRouter
       );
     });
   });

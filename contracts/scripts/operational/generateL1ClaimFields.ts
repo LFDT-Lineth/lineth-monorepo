@@ -12,7 +12,7 @@
  *   MESSAGE_HASH=0x... \
  *   L1_RPC_URL=https://... \
  *   L2_RPC_URL=https://... \
- *   LINEA_ROLLUP_ADDRESS=0x... \
+ *   LINETH_ROLLUP_ADDRESS=0x... \
  *   L2_MESSAGE_SERVICE_ADDRESS=0x... \
  *   pnpm exec ts-node scripts/operational/generateL1ClaimFields.ts
  *
@@ -163,7 +163,7 @@ function loadConfig(): ScriptConfig {
     messageHash: getRequiredCliOrEnvValue("message-hash", "MESSAGE_HASH"),
     l1RpcUrl: getRequiredCliOrEnvValue("l1-rpc-url", "L1_RPC_URL"),
     l2RpcUrl: getRequiredCliOrEnvValue("l2-rpc-url", "L2_RPC_URL"),
-    lineaRollupAddress: getRequiredCliOrEnvValue("linea-rollup-address", "LINEA_ROLLUP_ADDRESS"),
+    lineaRollupAddress: getRequiredCliOrEnvValue("linea-rollup-address", "LINETH_ROLLUP_ADDRESS"),
     l2MessageServiceAddress: getRequiredCliOrEnvValue("l2-message-service-address", "L2_MESSAGE_SERVICE_ADDRESS"),
     feeRecipient: getOptionalCliOrEnvValue("fee-recipient", "FEE_RECIPIENT") ?? ZeroAddress,
     outputPath: getCliValueFromEqualsSyntax("out") ?? getCliOrEnvValue("--out", "CLAIM_PARAMS_OUT"),

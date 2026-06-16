@@ -21,13 +21,13 @@ services:
       sequencer:
         condition: service_healthy
     environment:
-      LINEA_USE_MARU_OVERRIDE_CONFIG: ${LINEA_USE_MARU_OVERRIDE_CONFIG:-false}
+      LINETH_USE_MARU_OVERRIDE_CONFIG: ${LINETH_USE_MARU_OVERRIDE_CONFIG:-false}
       MARU_COMMAND: exec java -Dlog4j2.configurationFile=configs/log4j.xml -jar maru.jar --genesis-file /initialization/genesis-maru.json --config configs/config.toml
     command:
       - /bin/sh
       - -c
       - |
-        if [ "$$LINEA_USE_MARU_OVERRIDE_CONFIG" = "true" ]; then
+        if [ "$$LINETH_USE_MARU_OVERRIDE_CONFIG" = "true" ]; then
           $$MARU_COMMAND --config configs/config.overrides.toml
         else
           $$MARU_COMMAND
@@ -331,18 +331,18 @@ services:
       retries: 120
     restart: on-failure
     environment:
-      config__override__type2_state_proof_provider__disabled: ${LINEA_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER:-true}
-      config__override__l1_submission__blob__signer__type: ${LINEA_COORDINATOR_SIGNER_TYPE:-web3j}
-      config__override__l1_submission__aggregation__signer__type: ${LINEA_COORDINATOR_SIGNER_TYPE:-web3j}
-      config__override__message_anchoring__signer__type: ${LINEA_COORDINATOR_SIGNER_TYPE:-web3j}
-      config__override__l1_submission__data_availability: ${LINEA_COORDINATOR_DATA_AVAILABILITY:-ROLLUP}
-      dev_LINEA_COORDINATOR_DISABLED: ${dev_LINEA_COORDINATOR_DISABLED:-false}
+      config__override__type2_state_proof_provider__disabled: ${LINETH_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER:-true}
+      config__override__l1_submission__blob__signer__type: ${LINETH_COORDINATOR_SIGNER_TYPE:-web3j}
+      config__override__l1_submission__aggregation__signer__type: ${LINETH_COORDINATOR_SIGNER_TYPE:-web3j}
+      config__override__message_anchoring__signer__type: ${LINETH_COORDINATOR_SIGNER_TYPE:-web3j}
+      config__override__l1_submission__data_availability: ${LINETH_COORDINATOR_DATA_AVAILABILITY:-ROLLUP}
+      dev_LINETH_COORDINATOR_DISABLED: ${dev_LINETH_COORDINATOR_DISABLED:-false}
       CONFIG_OVERRIDE_OPTS: ''
     command:
       - sh
       - -c
       - |
-        if [ "$$dev_LINEA_COORDINATOR_DISABLED" = "true" ]; then
+        if [ "$$dev_LINETH_COORDINATOR_DISABLED" = "true" ]; then
           echo "Coordinator disabled"
         else
           exec java \

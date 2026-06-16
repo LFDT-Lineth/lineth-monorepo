@@ -2,7 +2,7 @@
 // pnpm exec hardhat deploy --network <network> --tags YieldManagerArtifacts
 //
 // Required environment variables:
-//   LINEA_ROLLUP_ADDRESS               (or registry: LineaRollup)
+//   LINETH_ROLLUP_ADDRESS               (or registry: LineaRollup)
 //   L1_SECURITY_COUNCIL                (or registry: L1_SECURITY_COUNCIL)
 //   MINIMUM_WITHDRAWAL_RESERVE_PERCENTAGE_BPS
 //   TARGET_WITHDRAWAL_RESERVE_PERCENTAGE_BPS
@@ -68,7 +68,7 @@ const func: DeployFunction = withSignerUiSession(
     const signer = await getUiSigner(hre);
 
     // YieldManager DEPLOYED AS UPGRADEABLE PROXY
-    const lineaRollupAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LineaRollup", "LINEA_ROLLUP_ADDRESS");
+    const lineaRollupAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LineaRollup", "LINETH_ROLLUP_ADDRESS");
     const lineaRollupSecurityCouncil = requireAddressFromRegistryOrEnv(
       hre.network.name,
       "L1_SECURITY_COUNCIL",

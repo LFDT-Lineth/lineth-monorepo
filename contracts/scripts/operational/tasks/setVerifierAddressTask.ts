@@ -34,7 +34,7 @@ task("setVerifierAddress", "Sets the verifier address on a Message Service contr
       const { get } = deployments;
 
       const proofType = getTaskCliOrEnvValue(taskArgs, "verifierProofType", "VERIFIER_PROOF_TYPE");
-      let LineaRollupAddress = getTaskCliOrEnvValue(taskArgs, "proxyAddress", "LINEA_ROLLUP_ADDRESS");
+      let LineaRollupAddress = getTaskCliOrEnvValue(taskArgs, "proxyAddress", "LINETH_ROLLUP_ADDRESS");
       const verifierName = getTaskCliOrEnvValue(taskArgs, "verifierContractName", "VERIFIER_CONTRACT_NAME");
 
       if (LineaRollupAddress === undefined) {

@@ -711,7 +711,7 @@ describe("RollupRevenueVault", () => {
       );
     });
 
-    it("Should burn ETH, swap to LINEA and bridge the tokens to L1 burner contract", async () => {
+    it("Should burn ETH, swap to LINETH and bridge the tokens to L1 burner contract", async () => {
       const lastInvoiceDate = await rollupRevenueVault.lastInvoiceDate();
       const startTimestamp = lastInvoiceDate + 1n;
       const endTimestamp = startTimestamp + BigInt(ONE_DAY_IN_SECONDS);

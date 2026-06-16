@@ -28,9 +28,9 @@ import {
   bytecode as TransparentUpgradeableProxyBytecode,
 } from "./static-artifacts/TransparentUpgradeableProxy.json";
 import {
-  LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES,
-  LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
-  LINEA_ROLLUP_V8_ROLES,
+  LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES,
+  LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
+  LINETH_ROLLUP_V8_ROLES,
   OPERATOR_ROLE,
   YIELD_PROVIDER_STAKING_ROLE,
   ADDRESS_ZERO,
@@ -83,11 +83,11 @@ async function main() {
   );
   const lineaRollupOperators = requireAddressesFromRegistryOrEnv(
     networkName,
-    "LINEA_ROLLUP_OPERATORS",
-    "LINEA_ROLLUP_OPERATORS",
+    "LINETH_ROLLUP_OPERATORS",
+    "LINETH_ROLLUP_OPERATORS",
   );
-  const lineaRollupRateLimitPeriodInSeconds = getRequiredEnvVar("LINEA_ROLLUP_RATE_LIMIT_PERIOD");
-  const lineaRollupRateLimitAmountInWei = getRequiredEnvVar("LINEA_ROLLUP_RATE_LIMIT_AMOUNT");
+  const lineaRollupRateLimitPeriodInSeconds = getRequiredEnvVar("LINETH_ROLLUP_RATE_LIMIT_PERIOD");
+  const lineaRollupRateLimitAmountInWei = getRequiredEnvVar("LINETH_ROLLUP_RATE_LIMIT_AMOUNT");
   const lineaRollupGenesisTimestamp = getRequiredEnvVar("L2_GENESIS_TIMESTAMP");
 
   // Forced Transaction Gateway
@@ -104,20 +104,20 @@ async function main() {
   const lineaRollupImplementationName = "LineaRollupV8Implementation";
   const forcedTransactionGatewayName = "ForcedTransactionGateway";
 
-  const pauseTypeRoles = getEnvVarOrDefault("LINEA_ROLLUP_PAUSE_TYPES_ROLES", LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES);
-  const unpauseTypeRoles = getEnvVarOrDefault("LINEA_ROLLUP_UNPAUSE_TYPES_ROLES", LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES);
+  const pauseTypeRoles = getEnvVarOrDefault("LINETH_ROLLUP_PAUSE_TYPES_ROLES", LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES);
+  const unpauseTypeRoles = getEnvVarOrDefault("LINETH_ROLLUP_UNPAUSE_TYPES_ROLES", LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES);
 
   const securityCouncilPrivateKey = getRequiredEnvVar("SECURITY_COUNCIL_PRIVATE_KEY");
 
   // Use random hardcoded address until we introduce YieldManager E2E tests
   const automationServiceAddress = "0x3A9f0c2b8e7D4F6e1b5a9C2e0Fd7a4B6C8e9F1A2";
   const defaultRoleAddresses = [
-    ...generateRoleAssignments(LINEA_ROLLUP_V8_ROLES, lineaRollupSecurityCouncil, [
+    ...generateRoleAssignments(LINETH_ROLLUP_V8_ROLES, lineaRollupSecurityCouncil, [
       { role: OPERATOR_ROLE, addresses: lineaRollupOperators },
     ]),
     { role: YIELD_PROVIDER_STAKING_ROLE, addressWithRole: automationServiceAddress },
   ];
-  const roleAddresses = getEnvVarOrDefault("LINEA_ROLLUP_ROLE_ADDRESSES", defaultRoleAddresses);
+  const roleAddresses = getEnvVarOrDefault("LINETH_ROLLUP_ROLE_ADDRESSES", defaultRoleAddresses);
 
   const verifierArtifacts = findContractArtifacts(path.join(__dirname, "./dynamic-artifacts"), verifierName);
 

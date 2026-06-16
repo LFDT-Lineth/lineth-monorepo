@@ -198,7 +198,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | INFURA_API_KEY     | true     | key | Infura API Key |
 | VERIFIER_PROOF_TYPE | true | uint256 | Verifier Proof type ("0" - Full Verifier, "1" - Full-Large Verifier, "2" - Light Verifier). If omitted in the .env, it must be provided as CLI argument using the `--verifier-proof-type` flag|
-| LINEA_ROLLUP_ADDRESS | true | address | Proxy contract address. If omitted in the .env, it must be provided as CLI argument using the `--proxy-address` flag|
+| LINETH_ROLLUP_ADDRESS | true | address | Proxy contract address. If omitted in the .env, it must be provided as CLI argument using the `--proxy-address` flag|
 | VERIFIER_ADDRESS | true | address | Verifier Address. If omitted in the .env, it must be provided as CLI argument using the `--verifier-address` flag|
 | VERIFIER_CONTRACT_NAME | true | string | Verifier Name. If omitted in the .env, it must be provided as CLI argument using the `--verifier-contract-name` flag|
 

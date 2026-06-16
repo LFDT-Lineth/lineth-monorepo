@@ -16,7 +16,7 @@ const func: DeployFunction = withSignerUiSession(
     const contractName = "ForcedTransactionGateway";
     const signer = await getUiSigner(hre);
 
-    const lineaRollupAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LineaRollup", "LINEA_ROLLUP_ADDRESS");
+    const lineaRollupAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LineaRollup", "LINETH_ROLLUP_ADDRESS");
     const destinationChainId = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID");
     const l2BlockBuffer = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER");
     const maxGasLimit = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_MAX_GAS_LIMIT");

@@ -16,7 +16,7 @@ const func: DeployFunction = withSignerUiSession(
     const signer = await getUiSigner(hre);
 
     // This should be the LineaRollup
-    const targetAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LineaRollup", "LINEA_ROLLUP_ADDRESS");
+    const targetAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LineaRollup", "LINETH_ROLLUP_ADDRESS");
 
     const contract = await deployFromFactory(contractName, signer, targetAddress);
 

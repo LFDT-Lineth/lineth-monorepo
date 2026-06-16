@@ -61,8 +61,8 @@ eth:0x9EcE20C1878E4D67a0a8bA730f3F990a031B00a7
 - **Required env variables:**
   - `PROXY_ADMIN_OWNER_ADDRESS`: Address that will be assigned as the admin of the ProxyAdmin (can upgrade or change the implementation).
   - `TOKEN_ADMIN_ADDRESS`: Address that will be assigned as the admin of the token contract (can perform admin actions on the token).
-  - `LINEA_CANONICAL_TOKEN_BRIDGE`: Address of the canonical token bridge contract on L2, used for bridging tokens between L1 and L2.
-  - `LINEA_MESSAGE_SERVICE_ADDRESS`: Address of the message service contract on L2, used for cross-chain messaging.
+  - `LINETH_CANONICAL_TOKEN_BRIDGE`: Address of the canonical token bridge contract on L2, used for bridging tokens between L1 and L2.
+  - `LINETH_MESSAGE_SERVICE_ADDRESS`: Address of the message service contract on L2, used for cross-chain messaging.
   - `L1_LINEA_TOKEN_ADDRESS`: Address of the deployed LineaToken contract on L1.
   - `TOKEN_NAME`: The name of the token.
   - `TOKEN_SYMBOL`: The symbol of the token.

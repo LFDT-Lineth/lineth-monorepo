@@ -11,12 +11,12 @@ const func: DeployFunction = withSignerUiSession(
   async function (hre: HardhatRuntimeEnvironment) {
     const signer = await getUiSigner(hre);
 
-    const proxyAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LineaRollup", "LINEA_ROLLUP_ADDRESS");
-    const forcedTransactionFeeInWei = getRequiredEnvVar("LINEA_ROLLUP_FORCED_TRANSACTION_FEE_IN_WEI");
+    const proxyAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LineaRollup", "LINETH_ROLLUP_ADDRESS");
+    const forcedTransactionFeeInWei = getRequiredEnvVar("LINETH_ROLLUP_FORCED_TRANSACTION_FEE_IN_WEI");
     const addressFilter = requireAddressFromRegistryOrEnv(
       hre.network.name,
       "AddressFilter",
-      "LINEA_ROLLUP_ADDRESS_FILTER",
+      "LINETH_ROLLUP_ADDRESS_FILTER",
     );
 
     const contractName = "LineaRollup";

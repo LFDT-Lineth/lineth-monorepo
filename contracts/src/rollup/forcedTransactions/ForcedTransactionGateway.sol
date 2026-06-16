@@ -25,7 +25,7 @@ contract ForcedTransactionGateway is AccessControl, IForcedTransactionGateway {
   uint256 private constant MIN_GAS_LIMIT = 21000;
 
   /// @notice Contains the destination address to store the forced transactions on.
-  IAcceptForcedTransactions public immutable LINEA_ROLLUP;
+  IAcceptForcedTransactions public immutable LINETH_ROLLUP;
 
   /// @notice Contains the destination chain ID used in the RLP encoding.
   uint256 public immutable DESTINATION_CHAIN_ID;
@@ -77,7 +77,7 @@ contract ForcedTransactionGateway is AccessControl, IForcedTransactionGateway {
     require(_l2BlockDurationSeconds != 0, IGenericErrors.ZeroValueNotAllowed());
     require(_blockNumberDeadlineBuffer != 0, IGenericErrors.ZeroValueNotAllowed());
 
-    LINEA_ROLLUP = IAcceptForcedTransactions(_lineaRollup);
+    LINETH_ROLLUP = IAcceptForcedTransactions(_lineaRollup);
     DESTINATION_CHAIN_ID = _destinationChainId;
     L2_BLOCK_BUFFER = _l2BlockBuffer;
     MAX_GAS_LIMIT = _maxGasLimit;
@@ -121,7 +121,7 @@ contract ForcedTransactionGateway is AccessControl, IForcedTransactionGateway {
       uint256 previousForcedTransactionBlockDeadline,
       uint256 currentFinalizedL2BlockNumber,
       uint256 forcedTransactionFeeAmount
-    ) = LINEA_ROLLUP.getRequiredForcedTransactionFields();
+    ) = LINETH_ROLLUP.getRequiredForcedTransactionFields();
 
     require(msg.value == forcedTransactionFeeAmount, ForcedTransactionFeeNotMet(forcedTransactionFeeAmount, msg.value));
 
@@ -205,7 +205,7 @@ contract ForcedTransactionGateway is AccessControl, IForcedTransactionGateway {
     transactionFieldList = LibRLP.p(transactionFieldList, _forcedTransaction.r);
     transactionFieldList = LibRLP.p(transactionFieldList, _forcedTransaction.s);
 
-    LINEA_ROLLUP.storeForcedTransaction{ value: msg.value }(
+    LINETH_ROLLUP.storeForcedTransaction{ value: msg.value }(
       Mimc.hash(
         abi.encode(
           previousForcedTransactionRollingHash,

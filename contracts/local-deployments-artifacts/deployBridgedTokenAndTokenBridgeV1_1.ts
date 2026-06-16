@@ -40,7 +40,7 @@ import { generateRoleAssignments } from "../common/helpers/roles";
 
 async function main() {
   const ORDERED_NONCE_POST_L2MESSAGESERVICE = 3;
-  const ORDERED_NONCE_POST_LINEAROLLUP = 7;
+  const ORDERED_NONCE_POST_LINETHROLLUP = 7;
   const networkName = getDeploymentNetworkName();
 
   let securityCouncilAddress: string;
@@ -56,7 +56,7 @@ async function main() {
     "L2MessageService",
     "L2_MESSAGE_SERVICE_ADDRESS",
   );
-  const lineaRollupAddress = requireAddressFromRegistryOrEnv(networkName, "LineaRollup", "LINEA_ROLLUP_ADDRESS");
+  const lineaRollupAddress = requireAddressFromRegistryOrEnv(networkName, "LineaRollup", "LINETH_ROLLUP_ADDRESS");
 
   const remoteChainId = getRequiredEnvVar("REMOTE_CHAIN_ID");
 
@@ -87,7 +87,7 @@ async function main() {
     if (!process.env.L1_NONCE) {
       return await wallet.getNonce();
     } else {
-      return parseInt(process.env.L1_NONCE) + ORDERED_NONCE_POST_LINEAROLLUP;
+      return parseInt(process.env.L1_NONCE) + ORDERED_NONCE_POST_LINETHROLLUP;
     }
   }
 

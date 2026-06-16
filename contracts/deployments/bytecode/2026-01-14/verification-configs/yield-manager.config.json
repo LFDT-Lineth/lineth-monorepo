@@ -21,7 +21,7 @@
           {
             "$comment": "Verify lineaRollup immutable - the LineaRollup proxy address",
             "function": "L1_MESSAGE_SERVICE",
-            "expected": "${LINEA_ROLLUP_ADDRESS}"
+            "expected": "${LINETH_ROLLUP_ADDRESS}"
           },
           {
             "$comment": "Verify minimumWithdrawalReservePercentageBps - 9000 = 90%",
@@ -308,9 +308,9 @@
       "address": "${YIELD_MANAGER_IMPLEMENTATION_ADDRESS}",
       "artifactFile": "../YieldManager.json",
       "isProxy": false,
-      "constructorArgs": ["${LINEA_ROLLUP_ADDRESS}"],
+      "constructorArgs": ["${LINETH_ROLLUP_ADDRESS}"],
       "immutableValues": {
-        "L1_MESSAGE_SERVICE": "${LINEA_ROLLUP_ADDRESS}"
+        "L1_MESSAGE_SERVICE": "${LINETH_ROLLUP_ADDRESS}"
       },
       "stateVerification": {
       "slots": [

@@ -35,7 +35,7 @@ const func: DeployFunction = withSignerUiSession(
       "L2MessageService",
       "L2_MESSAGE_SERVICE_ADDRESS",
     );
-    const lineaRollupAddress = requireAddressFromRegistryOrEnv(network.name, "LineaRollup", "LINEA_ROLLUP_ADDRESS");
+    const lineaRollupAddress = requireAddressFromRegistryOrEnv(network.name, "LineaRollup", "LINETH_ROLLUP_ADDRESS");
     const remoteChainId = getRequiredEnvVar("REMOTE_CHAIN_ID");
     const pauseTypeRoles = getEnvVarOrDefault("TOKEN_BRIDGE_PAUSE_TYPES_ROLES", TOKEN_BRIDGE_PAUSE_TYPES_ROLES);
     const unpauseTypeRoles = getEnvVarOrDefault("TOKEN_BRIDGE_UNPAUSE_TYPES_ROLES", TOKEN_BRIDGE_UNPAUSE_TYPES_ROLES);

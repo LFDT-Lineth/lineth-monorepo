@@ -32,7 +32,7 @@ const func: DeployFunction = withSignerUiSession(
     const contractName = "YieldManager";
 
     // YieldManager DEPLOYED AS UPGRADEABLE PROXY
-    const lineaRollupAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LineaRollup", "LINEA_ROLLUP_ADDRESS");
+    const lineaRollupAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LineaRollup", "LINETH_ROLLUP_ADDRESS");
     const lineaRollupSecurityCouncil = requireAddressFromRegistryOrEnv(
       hre.network.name,
       "L1_SECURITY_COUNCIL",
