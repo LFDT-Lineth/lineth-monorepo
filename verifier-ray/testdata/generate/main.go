@@ -610,7 +610,7 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		}
 		prefixedName := source + "/" + name
 		honestRt := runProver(sys, honest)
-		logDeriv, err := codegen.BuildLogDerivSystem(sys, honestRt)
+		logDeriv, err := codegen.BuildLogDerivSystem(sys)
 		if err != nil {
 			return fmt.Errorf("build logderiv system %s/%s: %w", source, name, err)
 		}
@@ -1084,9 +1084,9 @@ func runZigFmt(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer os.Remove(tmp.Name())
+	defer func() { _ = os.Remove(tmp.Name()) }()
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return nil, err
 	}
 	if err := tmp.Close(); err != nil {

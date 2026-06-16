@@ -23,7 +23,6 @@ const ext = @import("field/koalabear_ext.zig");
 //           sub_verifier_claims: []const ext.Ext,   // ← add
 //       };
 //     Some sub-verifiers need no extra proof data and can omit this step.
-//     LogDerivativeSum is such a case: its values are baked into the compiled system.
 //
 //  4. Add a dispatch call in `verify` step 3 — ctx is already built:
 //       try sub_verifier.verify(systems.sub_verifier, .{
@@ -93,8 +92,7 @@ pub fn verify(
     };
 
     // Step 3 — dispatch each sub-verifier with ctx + its own claims.
-    // LogDerivativeSum values are baked into the compiled system; no ctx needed.
-    try logderivativesum.verify(systems.logderivativesum);
+    try logderivativesum.verify(systems.logderivativesum, ctx);
     try vanishing.verify(systems.vanishing, .{
         .ctx = ctx,
         .witness_claims = proof.witness_claims,

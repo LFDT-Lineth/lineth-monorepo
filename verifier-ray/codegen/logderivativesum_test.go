@@ -7,6 +7,7 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/global"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
 )
@@ -26,6 +27,7 @@ func newSingleFractionLDS(t *testing.T) (*wiop.System, *wiop.Column) {
 		{Numerator: col.View(), Denominator: one},
 	})
 	logderivativesum.Compile(sys)
+	global.Compile(sys) // appends quotient+eval rounds so no cell lands in the last round
 	return sys, col
 }
 
@@ -53,10 +55,9 @@ func runTestProver(sys *wiop.System, assignments map[*wiop.Column][]uint64) wiop
 }
 
 func TestBuildLogDerivSystemExtractsQuery(t *testing.T) {
-	sys, col := newSingleFractionLDS(t)
-	rt := runTestProver(sys, map[*wiop.Column][]uint64{col: {1, 2, 3, 4}})
+	sys, _ := newSingleFractionLDS(t)
 
-	ld, err := BuildLogDerivSystem(sys, rt)
+	ld, err := BuildLogDerivSystem(sys)
 	if err != nil {
 		t.Fatalf("BuildLogDerivSystem() error = %v", err)
 	}
@@ -64,8 +65,8 @@ func TestBuildLogDerivSystemExtractsQuery(t *testing.T) {
 		t.Fatalf("expected exactly one query, got %d", len(ld.Queries))
 	}
 	q := ld.Queries[0]
-	if len(q.ZFinals) != 1 {
-		t.Fatalf("a single fraction packs into one Z column, got %d z-finals", len(q.ZFinals))
+	if len(q.ZFinalRefs) != 1 {
+		t.Fatalf("a single fraction packs into one Z column, got %d z-final refs", len(q.ZFinalRefs))
 	}
 	if q.ResultIsZero {
 		t.Fatalf("a plain LogDerivativeSum query must not be marked result-is-zero")
@@ -73,9 +74,8 @@ func TestBuildLogDerivSystemExtractsQuery(t *testing.T) {
 }
 
 func TestWriteLogDerivSystemZigRendersQuery(t *testing.T) {
-	sys, col := newSingleFractionLDS(t)
-	rt := runTestProver(sys, map[*wiop.Column][]uint64{col: {1, 2, 3, 4}})
-	ld, err := BuildLogDerivSystem(sys, rt)
+	sys, _ := newSingleFractionLDS(t)
+	ld, err := BuildLogDerivSystem(sys)
 	if err != nil {
 		t.Fatalf("BuildLogDerivSystem() error = %v", err)
 	}
@@ -87,14 +87,19 @@ func TestWriteLogDerivSystemZigRendersQuery(t *testing.T) {
 	got := out.String()
 	for _, want := range []string{
 		"const logderivativesum = @import",
-		"system_0_logderiv_query_0_zfinals = [_][6]u32{",
+		"system_0_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{",
 		"system_0_logderiv_queries = [_]logderivativesum.Query{",
+		".result_ref = .{",
 		".result_is_zero = false",
 		"const system_0_logderiv = logderivativesum.System{ .queries = &system_0_logderiv_queries };",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Zig missing %q:\n%s", want, got)
 		}
+	}
+	// No concrete field values should be emitted for z-finals or result.
+	if strings.Contains(got, "[_][6]u32{") {
+		t.Fatalf("generated Zig must not emit concrete [6]u32 arrays:\n%s", got)
 	}
 }
 
@@ -115,14 +120,9 @@ func TestBuildLogDerivSystemMarksLookupResultZero(t *testing.T) {
 
 	lookuptologderivsum.Compile(sys)
 	logderivativesum.Compile(sys)
+	global.Compile(sys)
 
-	// Assign S ⊆ T: all values from S appear in T.
-	rt := runTestProver(sys, map[*wiop.Column][]uint64{
-		colT: {1, 2, 3, 4},
-		colS: {1, 1, 2, 3},
-	})
-
-	ld, err := BuildLogDerivSystem(sys, rt)
+	ld, err := BuildLogDerivSystem(sys)
 	if err != nil {
 		t.Fatalf("BuildLogDerivSystem() error = %v", err)
 	}
@@ -138,9 +138,8 @@ func TestBuildLogDerivSystemNoQueries(t *testing.T) {
 	sys := wiop.NewSystemf("ld-none")
 	sys.NewRound()
 	sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	rt := runTestProver(sys, nil)
 
-	ld, err := BuildLogDerivSystem(sys, rt)
+	ld, err := BuildLogDerivSystem(sys)
 	if err != nil {
 		t.Fatalf("BuildLogDerivSystem() error = %v", err)
 	}

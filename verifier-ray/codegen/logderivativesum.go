@@ -1,7 +1,8 @@
 package codegen
 
 import (
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
+	"fmt"
+
 	"github.com/consensys/linea-monorepo/prover-ray/wiop"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
@@ -17,35 +18,48 @@ import (
 //
 //	Σ_entries Z[n-1] == Result        (and, for lookups, Result == 0)
 //
-// All operands are concrete field extension values extracted from the honest
-// prover run, so no ctx.rounds lookup is needed at verify time.
+// All operands are cell references (round, index) that the Zig verifier reads
+// from ctx.rounds at verify time, so the check is against the adversary's
+// transcript rather than baked-in honest-prover values.
 type LogDerivSystem struct {
 	SourceName string
 	Queries    []LogDerivQuery
 }
 
-// LogDerivQuery is one reduced LogDerivativeSum query: the concrete extension
-// values of Z[n-1] for each Z column and the claimed Result.
+// ScalarCellRef locates a cell in the proof transcript by its (round, index)
+// coordinates. Round is the proof.rounds index (0-based); Index is the
+// position within that round's cells slice. This mirrors the ObjectID.Slot() /
+// .Position() encoding used throughout the vanishing codegen.
+type ScalarCellRef struct {
+	Round int
+	Index int
+}
+
+// LogDerivQuery is one reduced LogDerivativeSum query: the transcript positions
+// of Z[n-1] for each Z column and the claimed Result.
 type LogDerivQuery struct {
 	SourceName string
-	// ZFinals are the honest prover's Z[n-1] values for each Z column.
-	ZFinals []field.Ext
-	// Result is the honest prover's claimed aggregated value.
-	Result field.Ext
+	// ZFinalRefs are the (round, index) positions of Z[n-1] for each Z column.
+	ZFinalRefs []ScalarCellRef
+	// ResultRef is the (round, index) position of the claimed aggregated value.
+	ResultRef ScalarCellRef
 	// ResultIsZero is set for lookup-reduced queries, whose Result must be 0.
 	ResultIsZero bool
 }
 
 // BuildLogDerivSystem extracts the LogDerivativeSum verifier actions registered
-// on sys and resolves their cell values from rt into a LogDerivSystem. Queries
-// are collected in round/registration order so the output is deterministic.
+// on sys and records their cell-reference coordinates in a LogDerivSystem.
+// Queries are collected in round/registration order so the output is
+// deterministic.
 //
-// The error return is kept for API symmetry with BuildVanishingSystem (which
-// can fail on unsupported expression types). BuildLogDerivSystem itself never
-// returns a non-nil error because LogDerivativeSum operands are always cell
-// references, which require no expression compilation.
-func BuildLogDerivSystem(sys *wiop.System, rt wiop.Runtime) (LogDerivSystem, error) {
+// Returns an error if any cell (ZFinal or Result) lives in sys.Rounds[len-1].
+// protocol.replay only carries len(sys.Rounds)-1 rounds into ctx.rounds, so a
+// cell in the last round would produce an out-of-bounds index in the Zig
+// verifier. The fix is to run global.Compile after logderivativesum.Compile so
+// that two rounds are appended after the logderivsum result round.
+func BuildLogDerivSystem(sys *wiop.System) (LogDerivSystem, error) {
 	out := LogDerivSystem{SourceName: sys.Context.Path()}
+	lastSlot := len(sys.Rounds) - 1
 
 	// First pass: collect the LogDerivativeSum queries that a lookup reduction
 	// requires to be zero (lookuptologderivsum registers a ResultIsZero action
@@ -65,14 +79,32 @@ func BuildLogDerivSystem(sys *wiop.System, rt wiop.Runtime) (LogDerivSystem, err
 			if !ok {
 				continue
 			}
+
+			resultSlot := va.Ld.Result.Context.ID.Slot()
+			if resultSlot == lastSlot {
+				return LogDerivSystem{}, fmt.Errorf(
+					"codegen: logderivsum result cell %q is in the last wiop round (slot %d); "+
+						"ctx.rounds excludes the last round — run global.Compile after logderivativesum.Compile",
+					va.Ld.Result.Context.Path(), lastSlot,
+				)
+			}
+
 			query := LogDerivQuery{
 				SourceName:   va.Ld.Context().Path(),
-				Result:       rt.GetCellValue(va.Ld.Result).AsExt(),
-				ZFinals:      make([]field.Ext, len(va.Entries)),
+				ResultRef:    ScalarCellRef{Round: resultSlot, Index: va.Ld.Result.Context.ID.Position()},
+				ZFinalRefs:   make([]ScalarCellRef, len(va.Entries)),
 				ResultIsZero: resultMustBeZero[va.Ld],
 			}
 			for i, e := range va.Entries {
-				query.ZFinals[i] = rt.GetCellValue(e.ZFinal).AsExt()
+				zSlot := e.ZFinal.Context.ID.Slot()
+				if zSlot == lastSlot {
+					return LogDerivSystem{}, fmt.Errorf(
+						"codegen: logderivsum z_final cell %q is in the last wiop round (slot %d); "+
+							"ctx.rounds excludes the last round — run global.Compile after logderivativesum.Compile",
+						e.ZFinal.Context.Path(), lastSlot,
+					)
+				}
+				query.ZFinalRefs[i] = ScalarCellRef{Round: zSlot, Index: e.ZFinal.Context.ID.Position()}
 			}
 			out.Queries = append(out.Queries, query)
 		}
