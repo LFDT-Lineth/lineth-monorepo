@@ -10,7 +10,6 @@ import (
 	zkc_util "github.com/consensys/go-corset/pkg/zkc/util"
 	"github.com/consensys/linea-monorepo/prover-ray/utils/files"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/wioptest"
 	"github.com/consensys/linea-monorepo/prover-ray/zkcdriver"
 )
 
@@ -101,10 +100,11 @@ func runTestCase(
 		zkcdriver.Settings{},
 		files.MustRead(scenario.BinFilePath))
 
-	rt := wiop.NewRuntime(sys)
-	driver.AssignWithPreRead(&rt, inputs)
+	proof := sys.Prove(func(rt *wiop.Runtime) {
+		driver.AssignWithPreRead(rt, inputs)
+	})
 
-	if err := wioptest.RunAndVerify(&rt); err != nil {
+	if err := sys.Verify(proof); err != nil {
 		return fmt.Errorf("error running verifier: %w", err)
 	}
 

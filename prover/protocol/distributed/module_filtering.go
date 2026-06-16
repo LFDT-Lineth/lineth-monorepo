@@ -7,6 +7,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/protocol/accessors"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
+	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
@@ -329,6 +330,10 @@ func (m *FilteredModuleInputs) addColumn(col ifaces.Column) bool {
 // column is neither a [verifiercol.ConstCol] nor a [column.Natural],
 // the function will panic.
 func (m *FilteredModuleInputs) addColumnLPP(col ifaces.Column) bool {
+
+	if _, ok := col.(verifiercol.ConstCol); ok {
+		return false
+	}
 
 	nat, isNat := col.(column.Natural)
 	if !isNat {

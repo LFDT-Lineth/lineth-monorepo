@@ -166,6 +166,27 @@ func TestRuntime_GetColumnAssignment_UnassignedPanic(t *testing.T) {
 	assert.Panics(t, func() { rt.GetColumnAssignment(col) })
 }
 
+func TestRuntime_OverrideColumn(t *testing.T) {
+	sys, r0, _, mod := newTestSystem(t)
+	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	rt := wiop.NewRuntime(sys)
+
+	rt.AssignColumn(col, baseVec(4, 7))
+	replacement := baseVec(4, 9)
+	rt.OverrideColumn(col, replacement)
+
+	assert.Equal(t, replacement, rt.GetColumnAssignment(col),
+		"override must replace the prior assignment")
+}
+
+func TestRuntime_OverrideColumn_UnassignedPanic(t *testing.T) {
+	sys, r0, _, mod := newTestSystem(t)
+	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	rt := wiop.NewRuntime(sys)
+	assert.Panics(t, func() { rt.OverrideColumn(col, baseVec(4, 1)) },
+		"overriding an unassigned column must panic")
+}
+
 // ---- Runtime: cell assignment ----
 
 func TestRuntime_AssignAndGetCell(t *testing.T) {
@@ -203,6 +224,27 @@ func TestRuntime_GetCellValue_UnassignedPanic(t *testing.T) {
 	cell := r0.NewCell(sys.Context.Childf("cell"), false)
 	rt := wiop.NewRuntime(sys)
 	assert.Panics(t, func() { rt.GetCellValue(cell) })
+}
+
+func TestRuntime_OverrideCell(t *testing.T) {
+	sys, r0, _, _ := newTestSystem(t)
+	cell := r0.NewCell(sys.Context.Childf("cell"), false)
+	rt := wiop.NewRuntime(sys)
+
+	rt.AssignCell(cell, field.ElemFromBase(field.NewFromString("5")))
+	replacement := field.ElemFromBase(field.NewFromString("8"))
+	rt.OverrideCell(cell, replacement)
+
+	assert.Equal(t, replacement, rt.GetCellValue(cell),
+		"override must replace the prior value")
+}
+
+func TestRuntime_OverrideCell_UnassignedPanic(t *testing.T) {
+	sys, r0, _, _ := newTestSystem(t)
+	cell := r0.NewCell(sys.Context.Childf("cell"), false)
+	rt := wiop.NewRuntime(sys)
+	assert.Panics(t, func() { rt.OverrideCell(cell, field.ElemZero()) },
+		"overriding an unassigned cell must panic")
 }
 
 // ---- Runtime: state bag ----

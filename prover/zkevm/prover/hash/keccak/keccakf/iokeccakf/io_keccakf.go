@@ -6,7 +6,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
-	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
@@ -75,7 +74,7 @@ func NewKeccakFBlocks(comp *wizard.CompiledIOP, inputs LaneInfo, keccakfSize int
 		comp,
 		0,
 		vector.PeriodicOne(keccak.NumRound, keccak.NumRound),
-		verifiercol.NewConstantCol(field.One(), keccakfSize, "ColRound_KeccakFRound"),
+		io.IsBlockActive,
 		"COL_ROUND",
 	)
 	colRound := io.ColRound.Natural
@@ -194,6 +193,8 @@ func (io *KeccakFBlocks) Run(run *wizard.ProverRuntime, traces keccak.PermTraces
 
 	// run base conversion to get laneX from lane
 	io.Bc.Run(run)
+	// assign IsBlockActive before ColRound, since ColRound's counter uses it
+	io.AssignIsBlockActive(run, traces)
 	// assign the repeated pattern for colRound
 	io.ColRound.Assign(run)
 	// assign the blocks and flags
@@ -202,12 +203,11 @@ func (io *KeccakFBlocks) Run(run *wizard.ProverRuntime, traces keccak.PermTraces
 
 }
 
-// Assigns blocks using the keccak traces.
-func (mod *KeccakFBlocks) AssignBlocks(
+// AssignIsBlockActive assigns the IsBlockActive column: 1 for real keccak rows, 0 for padding.
+func (mod *KeccakFBlocks) AssignIsBlockActive(
 	run *wizard.ProverRuntime,
 	traces keccak.PermTraces,
 ) {
-
 	var (
 		colSize      = mod.KeccakfSize
 		numKeccakF   = len(traces.KeccakFInps)
@@ -220,6 +220,19 @@ func (mod *KeccakFBlocks) AssignBlocks(
 			vector.Repeat(field.One(), unpaddedSize),
 			colSize,
 		),
+	)
+}
+
+// Assigns blocks using the keccak traces.
+func (mod *KeccakFBlocks) AssignBlocks(
+	run *wizard.ProverRuntime,
+	traces keccak.PermTraces,
+) {
+
+	var (
+		colSize      = mod.KeccakfSize
+		numKeccakF   = len(traces.KeccakFInps)
+		unpaddedSize = numKeccakF * keccak.NumRound
 	)
 
 	// Assign the block in BaseB.

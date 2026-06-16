@@ -192,6 +192,30 @@ func (run Runtime) AssignColumn(col *Column, v *ConcreteVector) {
 	run.columns[id] = v
 }
 
+// OverrideColumn replaces an existing assignment for col with v. Unlike
+// [Runtime.AssignColumn] it requires col to be already assigned and does not
+// enforce the current round, so soundness tests can corrupt a value the prover
+// has already committed to. When v carries no promise back-reference, the prior
+// assignment's promise is copied over so size and padding semantics survive.
+//
+// Panics if col has not been assigned yet.
+func (run Runtime) OverrideColumn(col *Column, v *ConcreteVector) {
+	run.lock.Lock()
+	defer run.lock.Unlock()
+	id := col.Context.ID
+	old, ok := run.columns[id]
+	if !ok {
+		panic(fmt.Sprintf(
+			"wiop: OverrideColumn: column %q is not assigned",
+			col.Context.Path(),
+		))
+	}
+	if v.promise == nil {
+		v.promise = old.promise
+	}
+	run.columns[id] = v
+}
+
 // GetColumnAssignment returns the concrete assignment of col. Panics if col
 // has not been assigned yet.
 func (run Runtime) GetColumnAssignment(col *Column) *ConcreteVector {
@@ -238,6 +262,25 @@ func (run Runtime) AssignCell(cell *Cell, v field.Gen) {
 	if _, exists := run.cells[id]; exists {
 		panic(fmt.Sprintf(
 			"wiop: AssignCell: cell %q already assigned",
+			cell.Context.Path(),
+		))
+	}
+	run.cells[id] = v
+}
+
+// OverrideCell replaces an existing value for cell with v. Unlike
+// [Runtime.AssignCell] it requires cell to be already assigned and does not
+// enforce the current round, so soundness tests can corrupt a value the prover
+// has already opened.
+//
+// Panics if cell has not been assigned yet.
+func (run Runtime) OverrideCell(cell *Cell, v field.Gen) {
+	run.lock.Lock()
+	defer run.lock.Unlock()
+	id := cell.Context.ID
+	if _, ok := run.cells[id]; !ok {
+		panic(fmt.Sprintf(
+			"wiop: OverrideCell: cell %q is not assigned",
 			cell.Context.Path(),
 		))
 	}
