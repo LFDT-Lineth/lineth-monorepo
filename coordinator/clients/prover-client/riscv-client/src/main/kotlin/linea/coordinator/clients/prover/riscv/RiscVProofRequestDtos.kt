@@ -81,7 +81,14 @@ data class ForcedTransactionDto(
   val acceptance: ForcedTransactionAcceptance,
 )
 
-// ExecutionPayloadV3 plus blockAccessList
+data class WithdrawalDto(
+  val index: Long,
+  val validatorIndex: Long,
+  val address: String,
+  val amount: Long,
+)
+
+// ExecutionPayLoadV4 (ExecutionPayloadV3 plus blockAccessList)
 data class ExecutionPayloadDto(
   val parentHash: String,
   val feeRecipient: String,
@@ -97,7 +104,7 @@ data class ExecutionPayloadDto(
   val baseFeePerGas: BigInteger,
   val blockHash: String,
   val transactions: List<String>,
-  val withdrawals: List<String>,
+  val withdrawals: List<WithdrawalDto>,
   val blobGasUsed: Long,
   val excessBlobGas: Long,
   val blockAccessList: String,
@@ -148,7 +155,7 @@ data class StatelessInputDto(
 )
 
 data class PayloadInputDto(
-  val statelessInputSzz: String,
+  val statelessInputSsz: String,
   val debugStatelessInput: StatelessInputDto,
   val rollupExtensionDto: RollupExtensionDto,
 )

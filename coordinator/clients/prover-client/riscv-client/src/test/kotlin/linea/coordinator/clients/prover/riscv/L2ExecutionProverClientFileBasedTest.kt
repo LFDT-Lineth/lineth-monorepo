@@ -4,6 +4,7 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.clients.ChainConfig
 import linea.clients.ExecutionPayload
+import linea.clients.ExecutionRequests
 import linea.clients.ExecutionWitness
 import linea.clients.L2ExecutionProofRequestV1
 import linea.coordinator.clients.prover.ExecutionProofFileNameProvider
@@ -80,7 +81,7 @@ class L2ExecutionProverClientFileBasedTest {
 
     val requestFile = config.requestsDirectory.resolve(ExecutionProofFileNameProvider.getFileName(proofIndex))
     assertThat(requestFile).exists()
-    println("RequestFile = ${requestFile.toAbsolutePath()}")
+    println("JONES: RequestFile = ${requestFile.toAbsolutePath()}")
 
     val writtenDto = jsonMapper.readValue(requestFile.toFile(), L2ExecutionProofRequestDto::class.java)
     val expectedDto = L2ExecutionProofRequestDtoMapper(proverVersion, chainConfig).invoke(request).get()
@@ -96,6 +97,11 @@ class L2ExecutionProverClientFileBasedTest {
     )
     val responseDto = l2ResponseDto()
     saveResponseFile(ExecutionProofFileNameProvider.getFileName(proofIndex), responseDto)
+    println(
+      "JONES: ResponseFile: ${config.responsesDirectory.resolve(
+        ExecutionProofFileNameProvider.getFileName(proofIndex),
+      ).toFile().absoluteFile}",
+    )
 
     val response = client.findProofResponse(proofIndex).get()
 
@@ -165,6 +171,20 @@ class L2ExecutionProverClientFileBasedTest {
         keys = emptyList(),
         codes = emptyList(),
         headers = emptyList(),
+      ),
+    ),
+    executionRequests = listOf(
+      ExecutionRequests(
+        blockNumber = 1000501UL,
+        deposits = emptyList(),
+        withdrawals = emptyList(),
+        consolidations = emptyList(),
+      ),
+      ExecutionRequests(
+        blockNumber = 1000502UL,
+        deposits = emptyList(),
+        withdrawals = emptyList(),
+        consolidations = emptyList(),
       ),
     ),
     forcedTransactions = emptyList(),

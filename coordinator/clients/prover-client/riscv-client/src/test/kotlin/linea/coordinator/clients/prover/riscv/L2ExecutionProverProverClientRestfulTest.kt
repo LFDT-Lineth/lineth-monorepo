@@ -11,6 +11,7 @@ import io.vertx.ext.web.client.WebClientOptions
 import io.vertx.junit5.VertxExtension
 import linea.clients.ChainConfig
 import linea.clients.ExecutionPayload
+import linea.clients.ExecutionRequests
 import linea.clients.ExecutionWitness
 import linea.clients.L2ExecutionProofRequestV1
 import linea.coordinator.clients.prover.serialization.JsonSerialization
@@ -152,6 +153,20 @@ class L2ExecutionProverProverClientRestfulTest {
         keys = emptyList(),
         codes = emptyList(),
         headers = emptyList(),
+      ),
+    ),
+    executionRequests = listOf(
+      ExecutionRequests(
+        blockNumber = 1000501UL,
+        deposits = emptyList(),
+        withdrawals = emptyList(),
+        consolidations = emptyList(),
+      ),
+      ExecutionRequests(
+        blockNumber = 1000503UL,
+        deposits = emptyList(),
+        withdrawals = emptyList(),
+        consolidations = emptyList(),
       ),
     ),
     forcedTransactions = emptyList(),

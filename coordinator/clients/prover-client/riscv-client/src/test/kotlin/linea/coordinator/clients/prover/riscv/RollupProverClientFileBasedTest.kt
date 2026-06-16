@@ -105,6 +105,7 @@ class RollupProverClientFileBasedTest {
     endBlockNumber = 1000503UL,
     startBlockTimestamp = Instant.fromEpochSeconds(1763000000),
     blobs = emptyList(),
+    blocks = emptyList(),
     parentShnarf = ByteArray(32) { 0x19 },
     endShnarf = ByteArray(32) { 0x20 },
     l2ExecutionProofs = emptyList(),

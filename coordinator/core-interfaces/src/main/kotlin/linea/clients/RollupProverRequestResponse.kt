@@ -1,6 +1,7 @@
 package linea.clients
 
 import linea.domain.BlobCompressionProof
+import linea.domain.Block
 import linea.domain.BlockInterval
 import linea.domain.StartBlockTimestampProvider
 import linea.kotlin.byteArrayListEquals
@@ -11,6 +12,7 @@ data class RollupProofRequestV1(
   override val endBlockNumber: ULong,
   override val startBlockTimestamp: Instant,
   val blobs: List<BlobCompressionProof>,
+  val blocks: List<Block>,
   val parentShnarf: ByteArray,
   val endShnarf: ByteArray,
   val l2ExecutionProofs: List<L2ExecutionProofResponse>,
@@ -25,6 +27,7 @@ data class RollupProofRequestV1(
     if (endBlockNumber != other.endBlockNumber) return false
     if (startBlockTimestamp != other.startBlockTimestamp) return false
     if (blobs != other.blobs) return false
+    if (blocks != other.blocks) return false
     if (!parentShnarf.contentEquals(other.parentShnarf)) return false
     if (!endShnarf.contentEquals(other.endShnarf)) return false
     if (l2ExecutionProofs != other.l2ExecutionProofs) return false
@@ -37,6 +40,7 @@ data class RollupProofRequestV1(
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + startBlockTimestamp.hashCode()
     result = 31 * result + blobs.hashCode()
+    result = 31 * result + blocks.hashCode()
     result = 31 * result + parentShnarf.contentHashCode()
     result = 31 * result + endShnarf.contentHashCode()
     result = 31 * result + l2ExecutionProofs.hashCode()

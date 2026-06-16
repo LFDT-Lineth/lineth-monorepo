@@ -128,6 +128,7 @@ class RollupProverClientRestfulTest {
     endBlockNumber = 1000520UL,
     startBlockTimestamp = Instant.fromEpochSeconds(1763000000),
     blobs = emptyList(),
+    blocks = emptyList(),
     parentShnarf = ByteArray(32) { 0x19 },
     endShnarf = ByteArray(32) { 0x20 },
     l2ExecutionProofs = emptyList(),

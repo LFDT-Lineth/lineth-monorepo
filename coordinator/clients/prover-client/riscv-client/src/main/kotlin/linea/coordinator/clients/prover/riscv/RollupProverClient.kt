@@ -4,6 +4,8 @@ import linea.clients.RollupProofRequestV1
 import linea.clients.RollupProofResponse
 import linea.clients.RollupProverClientV1
 import linea.domain.CompressionProofIndex
+import linea.encoding.BlockEncoder
+import linea.encoding.BlockRLPEncoder
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import org.apache.logging.log4j.LogManager
@@ -21,6 +23,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 internal class RollupProofRequestDtoMapper(
   private val proverVersion: String,
   private val chainId: Long,
+  private val encoder: BlockEncoder = BlockRLPEncoder,
 ) : (RollupProofRequestV1) -> SafeFuture<RollupProofRequestDto> {
   override fun invoke(request: RollupProofRequestV1): SafeFuture<RollupProofRequestDto> {
     val dto = RollupProofRequestDto(
@@ -30,7 +33,21 @@ internal class RollupProofRequestDtoMapper(
         startBlockNumber = request.startBlockNumber.toLong(),
         endBlockNumber = request.endBlockNumber.toLong(),
       ),
-      blobs = emptyList(), // TODO: RollupProofRequestV1 should contain blobs info
+      blobs = request.blobs.map {
+        BlobDto(
+          blobInputs = BlobInputsDto(
+            blobHash = it.dataHash.encodeHex(),
+            blobKzgProof = it.kzgProofContract.encodeHex(),
+          ),
+          blockRange = BlockRangeDto(
+            startBlockNumber = request.startBlockNumber.toLong(),
+            endBlockNumber = request.endBlockNumber.toLong(),
+          ),
+          blockRlps = request.blocks.map { block ->
+            encoder.encode(block).encodeHex()
+          },
+        )
+      },
       shnarfTransition = ShnarfTransitionDto(
         parentShnarf = request.parentShnarf.encodeHex(),
         endShnarf = request.endShnarf.encodeHex(),

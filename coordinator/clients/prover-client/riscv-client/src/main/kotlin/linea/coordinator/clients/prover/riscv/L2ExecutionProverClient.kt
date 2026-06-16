@@ -22,7 +22,9 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 internal class L2ExecutionProofRequestDtoMapper(
   private val proverVersion: String,
   private val chainConfig: ChainConfigDto,
-  // private val encoder: BlockEncoder = BlockRLPEncoder,
+  // private val statelessInputSszSerializer: StatelessInputSszSerializer = L2ExecutionStatelessInputSszSerializer(),
+  private val statelessInputDtoSszSerializer: StatelessInputDtoSszSerializer =
+    L2ExecutionStatelessInputDtoSszSerializer(),
 ) : (L2ExecutionProofRequestV1) -> SafeFuture<L2ExecutionProofRequestDto> {
   private fun mapFtxInclusionResultToAcceptance(
     inclusionResult: ForcedTransactionInclusionResult,
@@ -40,54 +42,74 @@ internal class L2ExecutionProofRequestDtoMapper(
   override fun invoke(request: L2ExecutionProofRequestV1): SafeFuture<L2ExecutionProofRequestDto> {
     val payloads = request.executionPayloads.map { executionPayload ->
       val blockNumber = executionPayload.blockNumber
-      PayloadInputDto(
-        statelessInputSzz = ByteArray(0).encodeHex(),
-        debugStatelessInput = StatelessInputDto(
-          newPayloadRequest = NewPayloadRequestDto(
-            executionPayload = ExecutionPayloadDto(
-              parentHash = executionPayload.parentHash.encodeHex(),
-              feeRecipient = executionPayload.feeRecipient.encodeHex(),
-              stateRoot = executionPayload.stateRoot.encodeHex(),
-              receiptsRoot = executionPayload.receiptsRoot.encodeHex(),
-              logsBloom = executionPayload.logsBloom.encodeHex(),
-              prevRandao = executionPayload.prevRandao.encodeHex(),
-              blockNumber = executionPayload.blockNumber.toLong(),
-              gasLimit = executionPayload.gasLimit.toLong(),
-              gasUsed = executionPayload.gasUsed.toLong(),
-              timestamp = executionPayload.timestamp.toLong(),
-              extraData = executionPayload.extraData.encodeHex(),
-              baseFeePerGas = executionPayload.baseFeePerGas,
-              blockHash = executionPayload.blockHash.encodeHex(),
-              transactions = executionPayload.transactions.map { it.encodeHex() },
-              withdrawals = executionPayload.withdrawals.map { it.encodeHex() },
-              blobGasUsed = executionPayload.blobGasUsed.toLong(),
-              excessBlobGas = executionPayload.excessBlobGas.toLong(),
-              blockAccessList = executionPayload.blockAccessList.encodeHex(),
-            ),
-            versionedHashes = emptyList(),
-            parentBeaconBlockRoot = ByteArray(32).encodeHex(),
-            executionRequests = ExecutionRequestsDto(
-              deposits = emptyList(),
-              withdrawals = emptyList(),
-              consolidations = emptyList(),
-            ),
+      val executionWitness = request.executionWitnesses.find { it.blockNumber == blockNumber }
+      val executionRequests = request.executionRequests.find { it.blockNumber == blockNumber }
+      val forcedTransactions = request.forcedTransactions.filter { it -> it.blockNumber == blockNumber }
+      val statelessInputDto = StatelessInputDto(
+        newPayloadRequest = NewPayloadRequestDto(
+          executionPayload = ExecutionPayloadDto(
+            parentHash = executionPayload.parentHash.encodeHex(),
+            feeRecipient = executionPayload.feeRecipient.encodeHex(),
+            stateRoot = executionPayload.stateRoot.encodeHex(),
+            receiptsRoot = executionPayload.receiptsRoot.encodeHex(),
+            logsBloom = executionPayload.logsBloom.encodeHex(),
+            prevRandao = executionPayload.prevRandao.encodeHex(),
+            blockNumber = executionPayload.blockNumber.toLong(),
+            gasLimit = executionPayload.gasLimit.toLong(),
+            gasUsed = executionPayload.gasUsed.toLong(),
+            timestamp = executionPayload.timestamp.toLong(),
+            extraData = executionPayload.extraData.encodeHex(),
+            baseFeePerGas = executionPayload.baseFeePerGas,
+            blockHash = executionPayload.blockHash.encodeHex(),
+            transactions = executionPayload.transactions.map { it.encodeHex() },
+            withdrawals = executionPayload.withdrawals.map {
+              WithdrawalDto(
+                index = it.index.toLong(),
+                validatorIndex = it.validatorIndex.toLong(),
+                address = it.address.encodeHex(),
+                amount = it.amount.toLong(),
+              )
+            },
+            blobGasUsed = executionPayload.blobGasUsed.toLong(),
+            excessBlobGas = executionPayload.excessBlobGas.toLong(),
+            blockAccessList = executionPayload.blockAccessList.encodeHex(),
           ),
-          executionWitness = request.executionWitnesses.find { it.blockNumber == blockNumber }!!.let { execWithness ->
-            ExecutionWitnessDto(
-              state = execWithness.state.map { it.encodeHex() },
-              keys = execWithness.keys.map { it.encodeHex() },
-              codes = execWithness.codes.map { it.encodeHex() },
-              headers = execWithness.headers.map { it.encodeHex() },
-            )
-          },
-          chainConfig = StatelessChainConfigDto(
-            chainId = request.chainConfig.chainId.toLong(),
-            forkName = "Osaka",
+          versionedHashes = emptyList(),
+          parentBeaconBlockRoot = ByteArray(32).encodeHex(),
+          executionRequests = ExecutionRequestsDto(
+            deposits = executionRequests?.deposits?.map { it.encodeHex() } ?: emptyList(),
+            withdrawals = executionRequests?.withdrawals?.map { it.encodeHex() } ?: emptyList(),
+            consolidations = executionRequests?.consolidations?.map { it.encodeHex() } ?: emptyList(),
           ),
-          publicKeys = emptyList(),
         ),
+        executionWitness = executionWitness!!.let { execWithness ->
+          ExecutionWitnessDto(
+            state = execWithness.state.map { it.encodeHex() },
+            keys = execWithness.keys.map { it.encodeHex() },
+            codes = execWithness.codes.map { it.encodeHex() },
+            headers = execWithness.headers.map { it.encodeHex() },
+          )
+        },
+        chainConfig = StatelessChainConfigDto(
+          chainId = request.chainConfig.chainId.toLong(),
+          forkName = "Amsterdam",
+        ),
+        publicKeys = emptyList(),
+      )
+      PayloadInputDto(
+        statelessInputSsz = statelessInputDtoSszSerializer.getStatelessInputDtoSsz(statelessInputDto),
+        // statelessInputSsz = statelessInputSszSerializer.getStatelessInputSsz(
+        //  executionPayload,
+        //  executionWitness,
+        //  request.chainConfig,
+        //  emptyList(),
+        //  ByteArray(0),
+        //  executionRequests!!,
+        //  emptyList(),
+        // ).encodeHex(),
+        debugStatelessInput = statelessInputDto,
         rollupExtensionDto = RollupExtensionDto(
-          forcedTransactions = request.forcedTransactions.filter { it -> it.blockNumber == blockNumber }.map {
+          forcedTransactions = forcedTransactions.map {
             ForcedTransactionDto(
               number = it.ftxNumber.toLong(),
               deadline = it.deadlineBlockNumber.toLong(),

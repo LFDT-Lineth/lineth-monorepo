@@ -11,6 +11,7 @@ import kotlin.time.Instant
 data class L2ExecutionProofRequestV1(
   val executionPayloads: List<ExecutionPayload>,
   val executionWitnesses: List<ExecutionWitness>,
+  val executionRequests: List<ExecutionRequests>,
   val forcedTransactions: List<ForcedTransaction>,
   val chainConfig: ChainConfig,
   val parentFtxRollingHash: ByteArray,
@@ -31,6 +32,7 @@ data class L2ExecutionProofRequestV1(
 
     if (executionPayloads != other.executionPayloads) return false
     if (executionWitnesses != other.executionWitnesses) return false
+    if (executionRequests != other.executionRequests) return false
     if (forcedTransactions != other.forcedTransactions) return false
     if (chainConfig != other.chainConfig) return false
     if (!parentFtxRollingHash.contentEquals(other.parentFtxRollingHash)) return false
@@ -42,6 +44,7 @@ data class L2ExecutionProofRequestV1(
   override fun hashCode(): Int {
     var result = executionPayloads.hashCode()
     result = 31 * result + executionWitnesses.hashCode()
+    result = 31 * result + executionRequests.hashCode()
     result = 31 * result + forcedTransactions.hashCode()
     result = 31 * result + chainConfig.hashCode()
     result = 31 * result + parentFtxRollingHash.contentHashCode()
@@ -108,8 +111,38 @@ data class ChainConfig(
   }
 }
 
+data class Withdrawal(
+  val index: ULong,
+  val validatorIndex: ULong,
+  val address: ByteArray,
+  val amount: ULong,
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as Withdrawal
+
+    if (index != other.index) return false
+    if (validatorIndex != other.validatorIndex) return false
+    if (!address.contentEquals(other.address)) return false
+    if (amount != other.amount) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = index.hashCode()
+    result = 31 * result + validatorIndex.hashCode()
+    result = 31 * result + address.contentHashCode()
+    result = 31 * result + amount.hashCode()
+    return result
+  }
+}
+
 /**
- * Execution Payload V3 + blockAccessList for the Engine API and Beacon Block
+ * Execution PayLoad V4 (Payload V3 + blockAccessList) for the Engine API and Beacon Block
+ * Should retrieve by using eth_getBlockByNumber/eth_getBlockByHash or debug_getRawBlock
  */
 data class ExecutionPayload(
   val parentHash: ByteArray,
@@ -126,7 +159,7 @@ data class ExecutionPayload(
   val baseFeePerGas: BigInteger,
   val blockHash: ByteArray,
   val transactions: List<ByteArray>,
-  val withdrawals: List<ByteArray>,
+  val withdrawals: List<Withdrawal>,
   val blobGasUsed: ULong,
   val excessBlobGas: ULong,
   val blockAccessList: ByteArray,
@@ -150,7 +183,7 @@ data class ExecutionPayload(
     if (baseFeePerGas != other.baseFeePerGas) return false
     if (!blockHash.contentEquals(other.blockHash)) return false
     if (!transactions.zip(other.transactions).all { it.first.contentEquals(it.second) }) return false
-    if (!withdrawals.zip(other.withdrawals).all { it.first.contentEquals(it.second) }) return false
+    if (withdrawals != other.withdrawals) return false
     if (blobGasUsed != other.blobGasUsed) return false
     if (excessBlobGas != other.excessBlobGas) return false
     if (!blockAccessList.contentEquals(other.extraData)) return false
@@ -209,6 +242,35 @@ data class ExecutionWitness(
     result = 31 * result + keys.hashCode()
     result = 31 * result + codes.hashCode()
     result = 31 * result + headers.hashCode()
+    return result
+  }
+}
+
+data class ExecutionRequests(
+  val blockNumber: ULong,
+  val deposits: List<ByteArray>,
+  val withdrawals: List<ByteArray>,
+  val consolidations: List<ByteArray>,
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as ExecutionRequests
+
+    if (blockNumber != other.blockNumber) return false
+    if (!deposits.zip(other.deposits).all { it.first.contentEquals(it.second) }) return false
+    if (!withdrawals.zip(other.withdrawals).all { it.first.contentEquals(it.second) }) return false
+    if (!consolidations.zip(other.consolidations).all { it.first.contentEquals(it.second) }) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = blockNumber.hashCode()
+    result = 31 * result + deposits.hashCode()
+    result = 31 * result + withdrawals.hashCode()
+    result = 31 * result + consolidations.hashCode()
     return result
   }
 }
