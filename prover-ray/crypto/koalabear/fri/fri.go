@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 	"math/bits"
-	"sort"
 
 	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
@@ -43,17 +42,17 @@ func WoFullDomainAllocation() Option {
 
 // NewParams constructs and validates a Params, precomputing r+1 domains and inv(2).
 func NewParams(
-	N, D, numQueries int,
+	n, d, numQueries int,
 	opts ...Option,
 ) (Params, error) {
-	if N <= 0 || N&(N-1) != 0 {
-		return Params{}, fmt.Errorf("fri: N must be a positive power of two, got %d", N)
+	if n <= 0 || n&(n-1) != 0 {
+		return Params{}, fmt.Errorf("fri: N must be a positive power of two, got %d", n)
 	}
-	if D <= 0 || D&(D-1) != 0 {
-		return Params{}, fmt.Errorf("fri: D must be a positive power of two, got %d", D)
+	if d <= 0 || d&(d-1) != 0 {
+		return Params{}, fmt.Errorf("fri: D must be a positive power of two, got %d", d)
 	}
-	if D >= N {
-		return Params{}, fmt.Errorf("fri: D must be < N, got D=%d N=%d", D, N)
+	if d >= n {
+		return Params{}, fmt.Errorf("fri: D must be < N, got D=%d N=%d", d, n)
 	}
 	if numQueries <= 0 {
 		return Params{}, fmt.Errorf("fri: numQueries must be positive, got %d", numQueries)
@@ -66,16 +65,15 @@ func NewParams(
 		}
 	}
 
-	// TODO: chase the other variables starting by an upper-case
-	numRounds := utils.Log2Ceil(D) // r = m = log₂(D)
+	numRounds := utils.Log2Ceil(d) // r = m = log₂(D)
 
 	var two, invTwo field.Element
 	two.SetUint64(2)
 	invTwo.Inverse(&two)
 
 	res := Params{
-		N:          N,
-		D:          D,
+		N:          n,
+		D:          d,
 		NumQueries: numQueries,
 		numRounds:  numRounds,
 		invTwo:     invTwo,
@@ -84,16 +82,16 @@ func NewParams(
 	if !config.WoFullDomainAllocation {
 		res.domains = make([]*fft.Domain, numRounds+1)
 		for j := 0; j <= numRounds; j++ {
-			res.domains[j] = fft.NewDomain(uint64(N) >> j)
+			res.domains[j] = fft.NewDomain(uint64(n) >> j)
 		}
 	}
 	res.domainsLight = make([]domainLight, numRounds+1)
 	for j := 0; j <= numRounds; j++ {
-		g, err := koalabear.Generator(uint64(N) >> j)
+		g, err := koalabear.Generator(uint64(n) >> j)
 		if err != nil {
 			return Params{}, err
 		}
-		res.domainsLight[j] = domainLight{cardinality: uint64(N) >> j, generator: g}
+		res.domainsLight[j] = domainLight{cardinality: uint64(n) >> j, generator: g}
 
 	}
 
@@ -152,22 +150,25 @@ func (p Params) FullDomainGenerator() field.Element {
 // ts must already have been initialised with any prior-round context.
 func Prove(p Params, levels []Level, alphas []field.Ext, openedPositions []int) Proof {
 
-	// TODO: shouldn't we assert sortedness instead of re-sorting?
-	sort.Slice(levels, func(i, j int) bool {
-		return levels[i].D > levels[j].D
-	})
-
-	plan, err := buildProvePlan(p, levels)
+	st, err := NewProverState(p, levels)
 	if err != nil {
-		utils.Panic("could not build prove plan: %v", err)
+		utils.Panic("could not build prover state: %v", err)
+	}
+	if len(alphas) < p.numRounds {
+		utils.Panic("fri: Prove: need %d folding challenges, got %d", p.numRounds, len(alphas))
 	}
 
-	return proveExt(p, levels, plan, alphas, openedPositions)
+	// Drive the state machine: feed one folding challenge per round, then open.
+	for j := 0; st.HasNext(); j++ {
+		st.Fold(alphas[j])
+	}
+
+	return st.Open(openedPositions)
 }
 
-// provePlan is the validated, precomputed schedule that Prove derives from the
-// caller-supplied levels before delegating to proveBase or proveExt. It answers
-// three questions the commit/query loops need:
+// provePlan is the validated, precomputed schedule that NewProverState derives
+// from the caller-supplied levels. It answers two questions the commit/query
+// phases need:
 //
 //   - numLevels: how many committed polynomials are in play. levels[0] is the
 //     main degree-D polynomial; levels[1..numLevels-1] are the lower-degree
@@ -175,9 +176,9 @@ func Prove(p Params, levels []Level, alphas []field.Ext, openedPositions []int) 
 //
 //   - levelAtRound: the multi-degree FRI schedule, mapping a folding round j to
 //     the level index l (1-based) introduced at that round. A level of size
-//     levels[l].D is mixed into the running polynomial (scaled by γ^l) at round
+//     levels[l].D is mixed into the fold output (batched with α²) at round
 //     jl = log2(p.D / levels[l].D) — precisely when the running polynomial has
-//     folded down to that level's degree. The commit loops consult this map to
+//     folded down to that level's degree. ProverState.Fold consults this map to
 //     know when to batch each extra level, and the verifier rebuilds the same
 //     map to replay the batching.
 type provePlan struct {
@@ -235,85 +236,6 @@ func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 	}
 
 	return plan, nil
-}
-
-func proveExt(
-	p Params,
-	levels []Level,
-	plan provePlan,
-	alpha []field.Ext,
-	openedPositions []int,
-) Proof {
-
-	running := make([]field.Ext, p.N)
-	copy(running, levels[0].Evals)
-
-	layers := make([][]field.Ext, p.numRounds+1)
-	friTrees := make([]*Tree, p.numRounds)
-	alphas := make([]field.Ext, p.numRounds)
-
-	var prf Proof
-	if p.numRounds > 1 {
-		prf.FRIRoots = make([]field.Octuplet, p.numRounds-1)
-	}
-
-	for j := 0; j < p.numRounds; j++ {
-
-		layers[j] = running
-
-		var tree *Tree
-		if j == 0 {
-			tree = levels[0].Tree
-		} else {
-			tree = buildTreeExt(running)
-		}
-		friTrees[j] = tree
-		root := tree.Root()
-
-		if j > 0 {
-			prf.FRIRoots[j-1] = root
-		}
-
-		// The level scheduled to come online at the next round is mixed into the
-		// fold as the auxiliary half-codeword, batched with alpha^2. Its
-		// evaluation vector has length N>>(j+1) = N_{j+1}, exactly the size of
-		// the fold output, so it lands directly in committed layer j+1. aux stays
-		// nil when no level is introduced at round j+1 (including the last round).
-		var aux []field.Ext
-		if l, ok := plan.levelAtRound[j+1]; ok {
-			aux = levels[l].Evals
-		}
-
-		running = foldLayerInternally(running, aux, alphas[j], p.domains[j], p.invTwo)
-	}
-
-	layers[p.numRounds] = running
-	prf.FinalPolyExt = running
-
-	prf.FRIQueries = make([]Query, p.NumQueries)
-	if plan.numLevels > 1 {
-		prf.LevelQueries = make([][]QueryLayer, plan.numLevels-1)
-		for l := range prf.LevelQueries {
-			prf.LevelQueries[l] = make(Query, p.NumQueries)
-		}
-	}
-
-	for k := 0; k < p.NumQueries; k++ {
-		var (
-			s = openedPositions[k]
-			q = openQueryExt(s, layers, friTrees, p.numRounds)
-		)
-		prf.FRIQueries[k] = q
-		for l := 1; l < plan.numLevels; l++ {
-			var (
-				base   = s >> l
-				branch = levels[l].Tree.OpenBranch(base)
-			)
-			prf.LevelQueries[l-1][k] = QueryLayer(branch)
-		}
-	}
-
-	return prf
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -473,7 +395,9 @@ func foldLayerInternally(
 	invTwo field.Element,
 ) []field.Ext {
 
-	// TODO: unsure about this assertion. Maybe it should be len(layer) / 2
+	// domain is the input layer's domain: its generator supplies the twiddles
+	// g^{-i} for the conjugate pairs, so its cardinality matches len(layer) (the
+	// half-size output uses this same domain, not its own).
 	if int(domain.Cardinality) != len(layer) {
 		panic("fri: foldLayerInternally: len(layer) != domain.Cardinality")
 	}

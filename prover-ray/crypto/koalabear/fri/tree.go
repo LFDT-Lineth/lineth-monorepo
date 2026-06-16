@@ -26,7 +26,7 @@ type Tree struct {
 }
 
 // Branch is a Merkle opening proof for a single leaf. The branch does  not open
-// a particular position but all the leaves targetted by a FRI IOP query. Unlike
+// a particular position but all the leaves targeted by a FRI IOP query. Unlike
 // usual Merkle proof construction, the Branch contains the leaf. The reason is
 // that it is used to open all the leaves in the same branch in practice.
 //
@@ -206,7 +206,6 @@ func (branch *Branch) RecoverRoot(idx int) (field.Octuplet, error) {
 	)
 
 	for i := len(branch.Siblings) - 1; i >= 0; i-- {
-
 		left, right := ancestor, branch.Siblings[i]
 		if currPos&1 > 0 {
 			left, right = right, left
