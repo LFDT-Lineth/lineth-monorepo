@@ -15,17 +15,17 @@
     "start": "next start"
   },
   "dependencies": {
-    "@tanstack/react-query": "5.100.9",
-    "next": "16.2.6",
-    "react": "19.2.6",
-    "react-dom": "19.2.6",
+    "@tanstack/react-query": "5.101.0",
+    "next": "16.2.9",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
     "viem": "catalog:",
-    "wagmi": "3.6.11"
+    "wagmi": "3.6.16"
   },
   "devDependencies": {
     "@lfdt-lineth/eslint-config": "workspace:*",
-    "@types/node": "24.12.2",
-    "@types/react": "19.2.14",
+    "@types/node": "24.13.2",
+    "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "eslint": "catalog:",
     "typescript": "5.9.3"
