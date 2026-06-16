@@ -45,7 +45,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     const linea_accel_mod = b.createModule(.{
-        .root_source_file = b.path("../../arithmetization/src/wrappers/root.zig"),
+        .root_source_file = b.path("../../arithmetization/src/main/wrappers/root.zig"),
         .target = target,
         .optimize = optimize,
     });
