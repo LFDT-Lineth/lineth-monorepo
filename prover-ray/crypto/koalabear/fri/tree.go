@@ -91,8 +91,11 @@ func NewTree(leaves [][]field.Octuplet) *Tree {
 	for i := 1; i < len(leaves); i++ {
 
 		var (
-			n             = 1 << (len(leaves) - i - 1)
-			levelStartPos = 1<<i - 1
+			n = 1 << (len(leaves) - i - 1)
+			// This level holds n nodes; in a complete binary tree they occupy the
+			// heap positions [n-1, 2n-1), i.e. right above the n-1 nodes of the
+			// levels below them.
+			levelStartPos = n - 1
 		)
 
 		for j := 0; j < n; j++ {
@@ -128,6 +131,37 @@ func NewTree(leaves [][]field.Octuplet) *Tree {
 		Nodes: nodes,
 		Aux:   aux,
 	}
+}
+
+// newCompleteBinaryTree builds a complete binary Merkle tree from a single bottom
+// layer of octuplet leaves; len(leaves) must be a positive power of two. There
+// are no auxiliary leaves, so every internal node k is hashNode(nodes[2k+1],
+// nodes[2k+2], nil). The returned tree carries a length-(n-1) all-nil Aux so that
+// OpenBranch/RecoverRoot index it consistently.
+func newCompleteBinaryTree(leaves []field.Octuplet) *Tree {
+
+	n := len(leaves)
+	if n == 0 || n&(n-1) != 0 {
+		panic("fri: newCompleteBinaryTree: number of leaves must be a positive power of two")
+	}
+
+	var (
+		nodes = make([]field.Octuplet, 2*n-1)
+		aux   = make([]*field.Octuplet, n-1) // all nil: no auxiliary leaves
+	)
+	copy(nodes[n-1:], leaves)
+
+	// Children always have a higher index than their parent, so a single
+	// descending pass computes every internal node after its children.
+	for k := n - 2; k >= 0; k-- {
+		nodes[k] = hashNode(nodes[2*k+1], nodes[2*k+2], nil)
+	}
+
+	if n > 1 && nodes[0] == (field.Octuplet{}) {
+		panic("fri: newCompleteBinaryTree: sanity-check failed: the root is zero")
+	}
+
+	return &Tree{Nodes: nodes, Aux: aux}
 }
 
 // Root returns the Merkle root digest. Build must be called first.
@@ -197,7 +231,7 @@ func (branch *Branch) RecoverRoot(idx int) (field.Octuplet, error) {
 	}
 
 	if len(branch.Siblings) == 0 {
-		panic("empty proof")
+		return field.Octuplet{}, errors.New("empty proof")
 	}
 
 	var (

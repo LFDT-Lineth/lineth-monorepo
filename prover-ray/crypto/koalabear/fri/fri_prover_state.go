@@ -49,7 +49,6 @@ type ProverState struct {
 // decreasing degree (as buildProvePlan requires).
 func NewProverState(p Params, levels []Level) (*ProverState, error) {
 
-	// TODO: shouldn't we assert sortedness instead of re-sorting?
 	sort.Slice(levels, func(i, j int) bool {
 		return levels[i].D > levels[j].D
 	})

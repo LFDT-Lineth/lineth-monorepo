@@ -5,6 +5,7 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/consensys/linea-monorepo/prover-ray/utils"
 )
 
 // CommitterState collects the data that are built during the commitment phase
@@ -100,11 +101,19 @@ func (table MultiSizeTable) Merkleize() *Tree {
 		}
 	}
 
-	// NewTree expects the levels to be provided from top to bottom.
+	// NewTree expects the levels from largest to smallest, one per tree level.
 	slices.Reverse(leaves)
 
+	// The blowup makes the largest committed table have len(leaves[0]) rows; a
+	// complete binary tree over them has Log2Ceil(len)+1 levels. The levels above
+	// the smallest committed table carry no auxiliary leaves, so pad with empty
+	// levels up to the tree height.
+	for targetLevels := utils.Log2Ceil(len(leaves[0])) + 1; len(leaves) < targetLevels; {
+		leaves = append(leaves, nil)
+	}
+
 	return NewTree(leaves)
-} 
+}
 
 // assertValidMultiEncoder checks that the provided list of encoder:
 //		- share the same inverse rate

@@ -24,7 +24,6 @@ type Params struct {
 	invTwo       field.Element
 	domains      []*fft.Domain // domains[j] has cardinality N/2^j, generator ωⱼ
 	domainsLight []domainLight // domainLight stores only the cardinality and the domain generator
-	grinding     int           // grinding bits for PoW, on the alpha
 }
 
 type Config struct {
@@ -118,7 +117,7 @@ type Query []QueryLayer // len = numRounds
 type Level struct {
 	D     int
 	Evals []field.Ext
-	Tree  *Tree // TODO: the leaves are stored twice which is a waste of memory
+	Tree  *Tree
 }
 
 // Proof is the complete multi-degree FRI proof. Level polynomial Merkle roots
@@ -147,7 +146,6 @@ func (p Params) FullDomainGenerator() field.Element {
 // with the query positions. levels[0].D must equal p.D and every Level must
 // contain one evaluation vector on exactly one rail. levels is sorted in-place
 // in decreasing order of D.
-// ts must already have been initialised with any prior-round context.
 func Prove(p Params, levels []Level, alphas []field.Ext, openedPositions []int) Proof {
 
 	st, err := NewProverState(p, levels)
@@ -313,6 +311,41 @@ func Verify(p Params, levelRoots []field.Octuplet, levelDs []int, prf Proof,
 		levelAtRound[jl] = l
 	}
 
+	// Structural validation: reject a malformed proof here, before any hashing,
+	// so that a missing or extra entry can never cause an out-of-bounds access or
+	// a silently-ignored field later in verification.
+	if len(openedPositions) < p.NumQueries {
+		return fmt.Errorf("fri: Verify: %d opened positions, need at least %d",
+			len(openedPositions), p.NumQueries)
+	}
+	if len(alphas) < p.numRounds {
+		return fmt.Errorf("fri: Verify: %d folding challenges, need at least %d",
+			len(alphas), p.numRounds)
+	}
+	if want := p.N >> p.numRounds; len(prf.FinalPolyExt) != want {
+		return fmt.Errorf("fri: Verify: FinalPolyExt has %d entries, want %d",
+			len(prf.FinalPolyExt), want)
+	}
+	for k := 0; k < p.NumQueries; k++ {
+		if s := openedPositions[k]; s < 0 || s >= p.N {
+			return fmt.Errorf("fri: Verify: opened position %d out of range [0,%d)", s, p.N)
+		}
+		q := prf.FRIQueries[k]
+		if len(q) != p.numRounds {
+			return fmt.Errorf("fri: Verify: query %d has %d layers, want %d", k, len(q), p.numRounds)
+		}
+		for j := 0; j < p.numRounds; j++ {
+			if err := checkBranchShape(Branch(q[j]), p.N>>j); err != nil {
+				return fmt.Errorf("fri: Verify: query %d round %d: %w", k, j, err)
+			}
+		}
+		for jl, li := range levelAtRound {
+			if err := checkBranchShape(Branch(prf.LevelQueries[li-1][k]), p.N>>jl); err != nil {
+				return fmt.Errorf("fri: Verify: query %d extra level %d: %w", k, li, err)
+			}
+		}
+	}
+
 	// Assemble FRI running-polynomial roots: roots[0] is the level-0 root;
 	// roots[1..r-1] come from prf.FRIRoots.
 	roots := make([]field.Octuplet, p.numRounds)
@@ -363,12 +396,27 @@ func verifyExt(
 	return nil
 }
 
-// buildTreeExt is the extension-field counterpart of buildTreeBase.
+// checkBranchShape verifies that a branch has the shape of an opening into a
+// complete binary tree with numLeaves leaves: exactly log2(numLeaves) siblings,
+// and one auxiliary sibling per sibling. This lets Verify reject branches with a
+// missing or extra node before RecoverRoot walks them.
+func checkBranchShape(b Branch, numLeaves int) error {
+	want := utils.Log2Ceil(numLeaves)
+	if len(b.Siblings) != want {
+		return fmt.Errorf("branch has %d siblings, want %d", len(b.Siblings), want)
+	}
+	if len(b.AuxSiblings) != want {
+		return fmt.Errorf("branch has %d aux siblings, want %d", len(b.AuxSiblings), want)
+	}
+	return nil
+}
+
+// buildTreeExt builds the FRI Merkle tree over one folding layer: a complete
+// binary tree whose leaves are the layer's extension elements (padded into
+// octuplets). Unlike NewTree, which is the 3-ary multi-size builder, this is a
+// plain power-of-two binary tree with no auxiliary leaves.
 func buildTreeExt(layer []field.Ext) *Tree {
-	layersOctuplet := mapExtToOctuplet(layer)
-	layers := make([][]field.Octuplet, utils.Log2Ceil(len(layer))+1)
-	layers[0] = layersOctuplet
-	return NewTree(layers)
+	return newCompleteBinaryTree(mapExtToOctuplet(layer))
 }
 
 // foldLayerInternally computes one step of the FRI split-and-fold routine on a
@@ -491,8 +539,10 @@ func openQueryExt(s int, layers [][]field.Ext, trees []*Tree, numRounds int) Que
 			path = trees[j].OpenBranch(base)
 		)
 
-		if 1<<(numRounds-1-j) != len(layers[j]) {
-			panic("the implementation assumes that the layers are in decreasing order")
+		// Each fold halves the layer, so layer j has half the entries of layer
+		// j-1. base = s>>j is the bit-reversed position of the query in layer j.
+		if j > 0 && len(layers[j])*2 != len(layers[j-1]) {
+			panic("fri: openQueryExt: layers must halve at each round")
 		}
 
 		q[j] = QueryLayer(path)
