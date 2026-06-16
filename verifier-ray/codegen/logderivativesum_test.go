@@ -31,29 +31,6 @@ func newSingleFractionLDS(t *testing.T) (*wiop.System, *wiop.Column) {
 	return sys, col
 }
 
-// runTestProver creates a runtime, assigns the given oracle columns, and
-// advances through all rounds running every prover action.
-func runTestProver(sys *wiop.System, assignments map[*wiop.Column][]uint64) wiop.Runtime {
-	rt := wiop.NewRuntime(sys)
-	for col, vals := range assignments {
-		elems := make([]field.Element, len(vals))
-		for i, v := range vals {
-			elems[i].SetUint64(v)
-		}
-		rt.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(elems)})
-	}
-	for _, action := range rt.CurrentRound().ProverActions {
-		action.Run(rt)
-	}
-	for rt.CurrentRound().ID < len(rt.System.Rounds)-1 {
-		rt.AdvanceRound()
-		for _, action := range rt.CurrentRound().ProverActions {
-			action.Run(rt)
-		}
-	}
-	return rt
-}
-
 func TestBuildLogDerivSystemExtractsQuery(t *testing.T) {
 	sys, _ := newSingleFractionLDS(t)
 

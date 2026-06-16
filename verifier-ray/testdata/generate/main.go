@@ -524,40 +524,16 @@ func writeRuntimeTraceRound(out *bytes.Buffer, round runtimeTraceRound) {
 	fmt.Fprintln(out, "        .{")
 	fmt.Fprintln(out, "            .columns = &.{")
 	for _, column := range round.columns {
-		writeRuntimeTraceColumn(out, column)
+		writeTraceColumn(out, column, "                ")
 	}
 	fmt.Fprintln(out, "            },")
 	fmt.Fprintln(out, "            .cells = &.{")
 	for _, cell := range round.cells {
-		writeRuntimeTraceCell(out, cell)
+		writeTraceCell(out, cell, "                ")
 	}
 	fmt.Fprintln(out, "            },")
 	fmt.Fprintf(out, "            .expected_coins = &%s,\n", extSlice(round.expectedCoins))
 	fmt.Fprintln(out, "        },")
-}
-
-func writeRuntimeTraceColumn(out *bytes.Buffer, column runtimeTraceColumn) {
-	switch {
-	case column.commitments != nil:
-		fmt.Fprintf(out, "                .{ .oracle = &%s },\n", commitmentSlice(column.commitments))
-	case column.publicBaseValues != nil:
-		fmt.Fprintf(out, "                .{ .public_base = &%s },\n", elemSlice(column.publicBaseValues))
-	case column.publicExtValues != nil:
-		fmt.Fprintf(out, "                .{ .public_ext = &%s },\n", extSlice(column.publicExtValues))
-	default:
-		panic("runtime trace column has no data variant")
-	}
-}
-
-func writeRuntimeTraceCell(out *bytes.Buffer, cell runtimeTraceCell) {
-	switch {
-	case cell.baseValue != nil:
-		fmt.Fprintf(out, "                .{ .base = %d },\n", u(*cell.baseValue))
-	case cell.extValue != nil:
-		fmt.Fprintf(out, "                .{ .ext = %s },\n", ext6(*cell.extValue))
-	default:
-		panic("runtime trace cell has no data variant")
-	}
 }
 
 func baseTraceCell(value field.Element) runtimeTraceCell {
