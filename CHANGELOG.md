@@ -28,6 +28,10 @@
 
 - *(misc)* Rename Linea to Lineth across documentation and codebase (#3316)
 
+### ⚡ Performance
+
+- *(prover)* Limitless prover performance optimization (#3362)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(linea-besu)* Move besu project under nested directory (#3063)
