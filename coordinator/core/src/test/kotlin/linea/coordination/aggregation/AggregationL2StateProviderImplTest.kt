@@ -1,7 +1,7 @@
 package linea.coordination.aggregation
 
 import linea.contract.l2.FakeL2MessageService
-import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.toBlockParameter
 import linea.ethapi.FakeEthApiClient
 import linea.persistence.ftx.FakeForcedTransactionsDao
 import linea.persistence.ftx.ForcedTransactionRecordFactory

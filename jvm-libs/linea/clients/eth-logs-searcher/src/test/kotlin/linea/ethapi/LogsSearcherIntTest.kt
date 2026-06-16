@@ -8,9 +8,9 @@ import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import io.vertx.core.Vertx
 import linea.SearchDirection
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.EthLog
 import linea.domain.RetryConfig
+import linea.domain.toBlockParameter
 import linea.jsonrpc.TestingJsonRpcServer
 import linea.kotlin.encodeHex
 import linea.kotlin.fromHexString

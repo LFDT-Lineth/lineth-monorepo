@@ -5,7 +5,7 @@ import linea.contract.l1.BlockAndNonce
 import linea.contract.l1.LineaValidiumSmartContractClient
 import linea.contract.l1.Web3JLineaValidiumSmartContractClientReadOnly
 import linea.domain.BlobRecord
-import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.BlockParameter
 import linea.domain.ProofToFinalize
 import linea.domain.gas.GasPriceCaps
 import linea.kotlin.toULong
@@ -67,7 +67,7 @@ class Web3JLineaValidiumSmartContractClient(
 
   private fun resetNonce(blockNumber: BigInteger): SafeFuture<ULong> {
     return transactionManager
-      .resetNonce(blockNumber.toBlockParameter())
+      .resetNonce(BlockParameter.fromNumber(blockNumber))
       .thenApply { currentNonce() }
   }
 

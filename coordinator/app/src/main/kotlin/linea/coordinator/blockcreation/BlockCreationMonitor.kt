@@ -4,7 +4,7 @@ import io.vertx.core.Vertx
 import linea.coordination.blockcreation.BlockCreated
 import linea.coordination.blockcreation.BlockCreationListener
 import linea.domain.Block
-import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiBlockClient
 import linea.kotlin.encodeHex
 import linea.timer.TimerSchedule

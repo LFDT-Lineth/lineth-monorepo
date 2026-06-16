@@ -1,7 +1,7 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.gas.GasPriceCaps
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiBlockClient
 import linea.gaspricing.GasPriceCapProvider
 import linea.kotlin.toGWei
@@ -84,7 +84,7 @@ class GasPriceCapProviderImpl(
 
   private fun calculateGasPriceCapsHelper(targetL2BlockNumber: Long): SafeFuture<GasPriceCaps?> {
     return if (isEnoughDataForGasPriceCapCalculation()) {
-      l2EthApiBlockClient.ethGetBlockByNumberTxHashes(targetL2BlockNumber.toBlockParameter())
+      l2EthApiBlockClient.ethGetBlockByNumberTxHashes(targetL2BlockNumber.toULong().toBlockParameter())
         .thenApply { it.timestamp }
         .thenApply {
           val targetL2BlockTimestamp = Instant.fromEpochSeconds(it.toLong())

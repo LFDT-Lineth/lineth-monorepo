@@ -28,22 +28,22 @@ class BlockParameterTest {
   fun `parse should parse block hash`() {
     val hashHex = "0x" + "ab".repeat(32)
     val parsed = BlockParameter.parse(hashHex) as BlockParameter.BlockHash
-    assertThat(parsed.getHash()).isEqualTo(hashHex)
+    assertThat(parsed.hashHex).isEqualTo(hashHex)
   }
 
   @Test
   fun `parse should parse block hash from encoded byte array`() {
     val hashHex = ByteArray(32) { index -> (index + 1).toByte() }.encodeHex(prefix = true)
     val parsed = BlockParameter.parse(hashHex) as BlockParameter.BlockHash
-    assertThat(parsed.getHash()).isEqualTo(hashHex)
+    assertThat(parsed.hashHex).isEqualTo(hashHex)
   }
 
   @Test
   fun `fromHash should accept bytes and hex string`() {
     val hash = ByteArray(32) { 1 }
     val hashHex = hash.encodeHex(prefix = true)
-    assertThat(BlockParameter.fromHash(hash).getHash()).isEqualTo(hashHex)
-    assertThat(BlockParameter.fromHash(hashHex).getHash()).isEqualTo(hashHex)
+    assertThat(BlockParameter.fromHash(hash).hashHex).isEqualTo(hashHex)
+    assertThat(BlockParameter.fromHash(hashHex).hashHex).isEqualTo(hashHex)
   }
 
   @Test

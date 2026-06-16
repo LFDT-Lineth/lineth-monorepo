@@ -4,12 +4,6 @@ import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 
 sealed interface BlockParameter {
-  fun getTag(): String
-
-  fun getNumber(): ULong
-
-  fun getHash(): String
-
   companion object {
     private const val BLOCK_HASH_HEX_LENGTH = 64
 
@@ -47,11 +41,6 @@ sealed interface BlockParameter {
         }
       }
     }
-
-    // Handy extensions
-    fun Number.toBlockParameter(): BlockParameter = fromNumber(this)
-    fun UInt.toBlockParameter(): BlockParameter = BlockNumber(this.toULong())
-    fun ULong.toBlockParameter(): BlockParameter = BlockNumber(this)
   }
 
   enum class Tag(val value: String) : BlockParameter {
@@ -61,14 +50,6 @@ sealed interface BlockParameter {
     SAFE("safe"),
     FINALIZED("finalized"),
     ;
-
-    override fun getTag(): String = value
-    override fun getNumber(): ULong = throw UnsupportedOperationException(
-      "getNumber isn't supposed to be called on a block tag!",
-    )
-    override fun getHash(): String = throw UnsupportedOperationException(
-      "getHash isn't supposed to be called on a block tag!",
-    )
 
     companion object {
       @JvmStatic
@@ -82,50 +63,28 @@ sealed interface BlockParameter {
   }
 
   @JvmInline
-  value class BlockNumber(private val parameter: ULong) : BlockParameter {
-
-    override fun getTag(): String {
-      throw UnsupportedOperationException("getTag isn't supported on BlockNumber!")
-    }
-
-    override fun getNumber(): ULong {
-      return parameter
-    }
-
-    override fun getHash(): String {
-      throw UnsupportedOperationException("getHash isn't supported on BlockNumber!")
-    }
-
-    override fun toString(): String {
-      return parameter.toString()
-    }
+  value class BlockNumber(val number: ULong) : BlockParameter {
+    override fun toString(): String = number.toString()
   }
 
-  data class BlockHash(private val hash: ByteArray) : BlockParameter {
+  data class BlockHash(val hashBytes: ByteArray) : BlockParameter {
     init {
-      require(hash.size == 32) { "block hash must be 32 bytes, got ${hash.size}" }
+      require(hashBytes.size == 32) { "block hash must be 32 bytes, got ${hashBytes.size}" }
     }
 
-    override fun getHash(): String = hash.encodeHex(prefix = true)
-
-    override fun getTag(): String {
-      throw UnsupportedOperationException("getTag isn't supported on BlockHash!")
-    }
-
-    override fun getNumber(): ULong {
-      throw UnsupportedOperationException("getNumber isn't supported on BlockHash!")
-    }
+    val hashHex: String get() = hashBytes.encodeHex(prefix = true)
 
     override fun equals(other: Any?): Boolean {
       if (this === other) return true
       if (other !is BlockHash) return false
-      return hash.contentEquals(other.hash)
+      return hashBytes.contentEquals(other.hashBytes)
     }
 
-    override fun hashCode(): Int = hash.contentHashCode()
+    override fun hashCode(): Int = hashBytes.contentHashCode()
 
-    override fun toString(): String {
-      return hash.encodeHex(prefix = true)
-    }
+    override fun toString(): String = hashHex
   }
 }
+
+fun ULong.toBlockParameter(): BlockParameter.BlockNumber = BlockParameter.BlockNumber(this)
+fun UInt.toBlockParameter(): BlockParameter.BlockNumber = BlockParameter.BlockNumber(this.toULong())

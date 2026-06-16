@@ -2,7 +2,7 @@ package linea.staterecovery
 
 import io.vertx.core.Vertx
 import linea.domain.BlockInterval
-import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.toBlockParameter
 import linea.staterecovery.datafetching.SubmissionEventsAndData
 import linea.staterecovery.datafetching.SubmissionsFetchingTask
 import net.consensys.linea.async.AsyncRetryer

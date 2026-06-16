@@ -331,7 +331,7 @@ class ConflationBacktestingApp(
     contractAddress = backtestingCoordinatorConfig.protocol.l2.contractAddress,
     smartContractErrors = backtestingCoordinatorConfig.smartContractErrors,
     smartContractDeploymentBlockNumber = backtestingCoordinatorConfig.protocol.l2.contractDeploymentBlockNumber
-      ?.getNumber(),
+      ?.number,
   )
 
   private val proofAggregationCoordinatorService: LongRunningService = ProofAggregationCoordinatorService.create(
