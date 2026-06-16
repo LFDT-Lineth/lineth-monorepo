@@ -57,3 +57,4 @@
 - *(misc)* Point references at in-tree paths for previously-external repos (#3309)
 - *(coordinator)* Favour generic name ChainSecurityRuleViolation over specific implementation Phylax (#3330)
 - *(packages)* Rename npm package scope (#3324)
+- *(deps)* Update eligible patch and minor dependencies (#3366)
