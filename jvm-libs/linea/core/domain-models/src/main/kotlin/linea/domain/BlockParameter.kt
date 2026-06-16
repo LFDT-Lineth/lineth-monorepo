@@ -67,20 +67,24 @@ sealed interface BlockParameter {
     override fun toString(): String = number.toString()
   }
 
-  data class BlockHash(val hashBytes: ByteArray) : BlockParameter {
+  class BlockHash(hashBytes: ByteArray) : BlockParameter {
+    private val _hashBytes: ByteArray
+
     init {
       require(hashBytes.size == 32) { "block hash must be 32 bytes, got ${hashBytes.size}" }
+      _hashBytes = hashBytes.copyOf()
     }
 
-    val hashHex: String get() = hashBytes.encodeHex(prefix = true)
+    val hashBytes: ByteArray get() = _hashBytes.copyOf()
+    val hashHex: String get() = _hashBytes.encodeHex(prefix = true)
 
     override fun equals(other: Any?): Boolean {
       if (this === other) return true
       if (other !is BlockHash) return false
-      return hashBytes.contentEquals(other.hashBytes)
+      return _hashBytes.contentEquals(other._hashBytes)
     }
 
-    override fun hashCode(): Int = hashBytes.contentHashCode()
+    override fun hashCode(): Int = _hashBytes.contentHashCode()
 
     override fun toString(): String = hashHex
   }
