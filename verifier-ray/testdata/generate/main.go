@@ -968,6 +968,7 @@ func writeVerifyFixtures(cases []vanishingFixtureCase, systems []codegen.NamedVa
 	}
 	writeVerifyMetadata(&out, cases, systems)
 	writeVerifyCaseSwitch(&out, cases)
+	writeVerifyInputSwitch(&out, cases)
 
 	data := out.Bytes()
 	zigfmt, err := runZigFmt(data)
@@ -992,7 +993,6 @@ func writeVerifyHeader(out *bytes.Buffer, count int) {
 	fmt.Fprintln(out, "    name: []const u8,")
 	fmt.Fprintln(out, "    spec: protocol.Spec,")
 	fmt.Fprintln(out, "    systems: verifier.Systems,")
-	fmt.Fprintln(out, "    proof: verifier.ProofData,")
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "pub const VerifyCaseMetadata = struct {")
@@ -1133,7 +1133,22 @@ func writeVerifyCaseSwitch(out *bytes.Buffer, cases []vanishingFixtureCase) {
 	fmt.Fprintln(out, "pub fn get(comptime index: usize) VerifyCase {")
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i, tc := range cases {
-		fmt.Fprintf(out, "        %d => .{ .name = \"%s\", .spec = system_%d_spec, .systems = verify_case_%d_systems, .proof = verify_case_%d_proof },\n", i, zigString(tc.name), i, i, i)
+		fmt.Fprintf(out, "        %d => .{ .name = \"%s\", .spec = system_%d_spec, .systems = verify_case_%d_systems },\n", i, zigString(tc.name), i, i)
+	}
+	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
+	fmt.Fprintln(out, "    };")
+	fmt.Fprintln(out, "}")
+}
+
+// writeVerifyInputSwitch emits the getInput accessor, which returns the proof
+// data for a fixture case. The proof is kept separate from VerifyCase (see
+// writeVerifyHeader) so callers that only need the spec/systems don't pull in
+// the proof, and so the input can be supplied independently at runtime.
+func writeVerifyInputSwitch(out *bytes.Buffer, cases []vanishingFixtureCase) {
+	fmt.Fprintln(out, "pub fn getInput(comptime index: usize) verifier.ProofData {")
+	fmt.Fprintln(out, "    return switch (index) {")
+	for i := range cases {
+		fmt.Fprintf(out, "        %d => verify_case_%d_proof,\n", i, i)
 	}
 	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
 	fmt.Fprintln(out, "    };")
