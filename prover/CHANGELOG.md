@@ -11,6 +11,7 @@
 - *(prover)* Incorporate `isAllowedCircuitID` into aggregation FPI (#3194)
 - *(prover)* Invalidity prover bug fixes (#3138)
 - *(prover)* Post small-fields constraints (#2845)
+- *(prover)* Populate isAllowedCircuitID in aggregation response (#3381)
 
 ### 🚜 Refactor
 
