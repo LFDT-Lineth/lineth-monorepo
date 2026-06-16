@@ -70,3 +70,10 @@ fn read_64<ram>(address:Address) -> (value:u64) {
         }
     }
 }
+
+fn read_register<registers>(id:Register) -> (value:DoubleWord) {
+    if id == 0 {
+        printf "REG_READ_0\n"
+    }
+    value = registers[id]
+}

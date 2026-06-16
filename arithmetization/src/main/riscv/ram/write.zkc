@@ -125,3 +125,10 @@ fn write_64<ram>(address:Address, value:u64) -> () {
         }
     }
 }
+
+fn write_register<registers>(id:Register, value:DoubleWord) -> () {
+    if id == 0 {
+        printf "REG_WRITE_0\n"
+    }
+    registers[id] = value
+}

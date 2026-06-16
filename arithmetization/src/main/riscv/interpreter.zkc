@@ -52,5 +52,5 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
     }
 
     // Forcefully set registers[0] = zero back to 0
-    registers[0] = 0
+    write_register(0,0)
 }
