@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "ethers": "catalog:",
-    "lru-cache": "11.3.6"
+    "lru-cache": "11.5.1"
   },
   "devDependencies": {
     "@lfdt-lineth/eslint-config": "workspace:*",
