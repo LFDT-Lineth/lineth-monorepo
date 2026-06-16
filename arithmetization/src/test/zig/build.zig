@@ -24,7 +24,7 @@ pub fn build(b: *std.Build) void {
 
     // Keccak provider: standard zig keccak (zesu stdlibs_accel) by default; the
     // arithmetization keccak wrapper (prover-accelerated custom op) when opted in
-    // with -Dkeccak-accel=true. Read by at comptime when needed.
+    // with -Dkeccak-accel=true. Read by keccak_selector.zig at comptime.
     const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: standard)") orelse false;
     const build_options = b.addOptions();
     build_options.addOption(bool, "keccak_accel", keccak_accel);
@@ -52,8 +52,16 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const zesu_zkvm = b.dependency("zesu_zkvm", .{});
+    const zesu_accel = b.createModule(.{
+        .root_source_file = zesu_zkvm.path("linea/src/runtime/stdlibs_accel.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    wrappers.addImport("zesu_zkvm_accel", zesu_accel);
+    wrappers.addOptions("build_options", build_options);
+
     exe.root_module.addImport("wrappers", wrappers);
-    exe.root_module.addOptions("build_options", build_options);
 
     // Point to assembly overwriting default SP with the one defined in the linker script
     exe.root_module.addAssemblyFile(b.path("src/start.s"));
