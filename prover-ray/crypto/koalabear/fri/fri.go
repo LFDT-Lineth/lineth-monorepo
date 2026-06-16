@@ -444,7 +444,7 @@ func verifyExt(
 // buildTreeExt is the extension-field counterpart of buildTreeBase.
 func buildTreeExt(layer []field.Ext) *Tree {
 	layersOctuplet := mapExtToOctuplet(layer)
-	layers := make([][]field.Octuplet, utils.Log2Ceil(len(layer)))
+	layers := make([][]field.Octuplet, utils.Log2Ceil(len(layer))+1)
 	layers[0] = layersOctuplet
 	return NewTree(layers)
 }
