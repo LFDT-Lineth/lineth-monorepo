@@ -4,7 +4,7 @@ SHELL := /bin/bash
 
 R5_BIN := zig-out/bin/verifier-ray
 R5_JSON := $(R5_BIN).json
-ELF_TO_JSON := ../arithmetization/src/test/examples/scripts/elf_to_json_gen/main.go
+ELF_TO_JSON := ../arithmetization/src/test/scripts/elf_to_json_gen/main.go
 ZKC_MAIN := ../arithmetization/src/main/riscv/main.zkc
 
 PASSING_INPUT_FILE := testdata/inputs/passing.bin

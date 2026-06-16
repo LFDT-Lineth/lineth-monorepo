@@ -44,7 +44,7 @@ make -C arithmetization install-sail
 Then build the ACT4 ELFs on the host:
 
 ```bash
-cd arithmetization/src/test/examples
+cd arithmetization/src/test
 make act4-build
 ```
 
@@ -76,20 +76,20 @@ make TEST=<src_optional_subfolder>/<name>.<ext>
 and from anywhere using `-f`:
 
 ```bash
-make -f /path/to/lineth-monorepo/arithmetization/src/test/examples/Makefile TEST=<src_optional_subfolder>/<name>.<ext>
+make -f /path/to/lineth-monorepo/arithmetization/src/test/Makefile TEST=<src_optional_subfolder>/<name>.<ext>
 ```
 
 **Note:** The extension `<ext>` must be `.s`, `.zig`, or `.rs`. Source files are by default expected in the corresponding `asm/src/`, `zig/src/`, or `rust/src/` directory or in subfolders.
 
-## Alias and usage examples
+## Shell aliases
 
 Useful shell function (add to `~/.zshrc` or `~/.bashrc`):
 
 ```bash
 riscv-test() {
-    local makefile="path/to/lineth-monorepo/arithmetization/src/test/examples/Makefile"
+    local makefile="path/to/lineth-monorepo/arithmetization/src/test/Makefile"
     case "$1" in
-        elf-exec|elf-to-json|install-zkc|clean-all|linker-script|vector-exec|keccak-rust-build|keccak-rust-json|keccak-rust-exec|blake-rust-build|blake-rust-json|blake-rust-exec|act4-build|act4-exec)
+        elf-exec|elf-debug|elf-to-json|install-zkc|clean-all|linker-script|vector-exec|keccak-rust-build|keccak-rust-json|keccak-rust-exec|blake-rust-build|blake-rust-json|blake-rust-exec|act4-build|act4-exec)
             # targets that do NOT require TEST argument
             make -f "$makefile" "$1" "${@:2}"
             ;;
@@ -103,9 +103,14 @@ riscv-test() {
             ;;
     esac
 }
+```
 
-# Usage examples
+For the accelerated l2-execution guest helper (`agp`), see the
+[l2-execution guest README](../../../riscv-guests/l2-execution/README.md).
 
+## Usage examples
+
+```bash
 # Compile and execute (note that <name>.<ext> can be replaced by <src_optional_subfolder>/<name>.<ext>)
 riscv-test <name>.<ext>
 # Compile and execute with input bytes as hex string
@@ -136,6 +141,8 @@ riscv-test vector-exec VECTOR_JSON_MODE=batched VECTOR_JSON_FILE=path/to/vectors
 riscv-test elf-to-json BIN_EXT=asm/bin/test
 # Execute an already compiled ELF
 riscv-test elf-exec BIN_EXT=path/to/bin
+# Debug an already compiled ELF
+riscv-test elf-debug BIN_EXT=path/to/bin
 # Execute an already compiled ELF in quiet mode
 riscv-test elf-exec BIN_EXT=path/to/bin ZKC_EXEC_FLAGS=-q
 # Clean build artifacts for a specific test
@@ -173,6 +180,7 @@ riscv-test compile <name>.<ext> VERIFY_ELF=true
 | `make debug TEST=foo.<ext>`                              | Compile and debug                                                                      |
 | `make compile TEST=foo.<ext>`                            | Compile only                                                                           |
 | `make elf-exec BIN_EXT=foo`                              | Convert and execute an already compiled ELF (`JSON_EXT=foo.json` by default)           |
+| `make elf-debug BIN_EXT=foo`                             | Convert and debug an already compiled ELF (`JSON_EXT=foo.json` by default)             |
 | `make elf-to-json BIN_EXT=foo`                           | Convert an already compiled ELF to JSON (`JSON_EXT=foo.json` by default)               |
 | `make install-zkc`                                       | Invoke `../../../Makefile install-zkc` to install zkc if not already installed         |
 | `make zkc-exec TEST=foo.<ext>`                           | Execute without recompiling                                                            |
@@ -201,8 +209,8 @@ riscv-test compile <name>.<ext> VERIFY_ELF=true
 |------------------------------|----------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
 | `TEST`                       | `""`                                                                                   | Source file path with extension, relative to the corresponding `src/` folder                                                                  |
 | `ZKC_EXEC_FLAGS`             | `""`                                                                                   | Flags to use when invoking `zkc exec` within `zkc-exec` and `elf-exec` targets                                                                |
-| `BIN_EXT`                    | `""`                                                                                   | Already compiled ELF used by `elf-to-json` and `elf-exec`                                                                                     |
-| `JSON_EXT`                   | `$(BIN_EXT).json`                                                                      | JSON output path used by `elf-to-json` and `elf-exec`                                                                                         |
+| `BIN_EXT`                    | `""`                                                                                   | Already compiled ELF used by `elf-to-json`, `elf-exec` and `elf-debug`                                                                        |
+| `JSON_EXT`                   | `$(BIN_EXT).json`                                                                      | JSON output path used by `elf-to-json`, `elf-exec` and `elf-debug`                                                                            |
 | `VECTOR_FILE`                | `""`                                                                                   | `.all` vector file consumed by `vector-json`; one `IN_BYTES` per line                                                                         |
 | `VECTOR_N_VECTORS`           | `""`                                                                                   | Number of vectors selected by `vector-json`; `-1` means all vectors                                                                           |
 | `VECTOR_JSON_MODE`           | `per-vector`                                                                           | `per-vector` for one JSON per vector, `batched` for one JSON with selected vectors concatenated                                               |
@@ -285,7 +293,7 @@ The folder structure is the following:
 ```text
 parent/
 ├── lineth-monorepo/
-│   └── arithmetization/src/test/examples/
+│   └── arithmetization/src/test/
 │       └── act4/
 │           ├── config/linea-rv64im-zicclsm/    # Linea ACT4 config
 │           └── bin/
@@ -297,7 +305,7 @@ parent/
 └── riscv-arch-test/                            # ACT4 framework checkout
 ```
 
-From `lineth-monorepo/arithmetization/src/test/examples`:
+From `lineth-monorepo/arithmetization/src/test`:
 
 ```bash
 make act4-exec                         # build on the host and run
@@ -327,9 +335,9 @@ zkc exec -q act4/bin/logs/<test-name>.json ../../main/riscv/main.zkc
 
 ```
 ___________________________________________ 0x00000000 ≡ STACK_ORIGIN * = _stack_end
- STACK:   ↑ 8 MiB STACK_LENGTH   
+ STACK:   ↑ 8 MiB STACK_LENGTH
 ___________________________________________ 0x00800000 ≡ SP * = _stack_start = PROGRAM_ORIGIN * = _program_start
- PROGRAM: ↓ 128 MiB PROGRAM_LENGTH 
+ PROGRAM: ↓ 128 MiB PROGRAM_LENGTH
 ___________________________________________ 0x08800000 ≡ _program_end = IN_ORIGIN * = _in_start
  IN:      ↓ 1 GiB: IN_LENGTH
 ___________________________________________ 0x48800000 ≡ _in_end = HEAP_ORIGIN * = _heap_start

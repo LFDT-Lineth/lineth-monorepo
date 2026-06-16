@@ -36,8 +36,21 @@ runs:
         shell: bash
         run: |
           curl https://mise.run | sh
+          MISE_DATA_DIR="${RUNNER_TEMP}/mise-data"
+          MISE_CACHE_DIR="${RUNNER_TEMP}/mise-cache"
+          MISE_WRAPPER_DIR="${RUNNER_TEMP}/mise-bin"
+          mkdir -p "${MISE_DATA_DIR}" "${MISE_CACHE_DIR}" "${MISE_WRAPPER_DIR}"
+          cat > "${MISE_WRAPPER_DIR}/mise" <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          exec flock "${RUNNER_TEMP}/mise.lock" "${HOME}/.local/bin/mise" "$@"
+          EOF
+          chmod +x "${MISE_WRAPPER_DIR}/mise"
+          echo "MISE_DATA_DIR=${MISE_DATA_DIR}" >> "${GITHUB_ENV}"
+          echo "MISE_CACHE_DIR=${MISE_CACHE_DIR}" >> "${GITHUB_ENV}"
+          echo "${MISE_WRAPPER_DIR}" >> "${GITHUB_PATH}"
           echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
-          echo "${HOME}/.local/share/mise/shims" >> "${GITHUB_PATH}"
+          echo "${MISE_DATA_DIR}/shims" >> "${GITHUB_PATH}"
 
       - name: Install riscv64-unknown-elf toolchain
         # Install the riscv64-unknown-elf toolchain
@@ -54,6 +67,5 @@ runs:
             | tar xz --directory="${XPACK_GCC_DIR}" --strip-components=1
           ln -sf "${XPACK_GCC_DIR}/bin/riscv-none-elf-gcc" "${XPACK_GCC_DIR}/bin/riscv64-unknown-elf-gcc"
           echo "${XPACK_GCC_DIR}/bin" >> "${GITHUB_PATH}"
-
 
 

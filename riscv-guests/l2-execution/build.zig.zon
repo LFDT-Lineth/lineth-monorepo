@@ -1,0 +1,40 @@
+.{
+    .name = .l2_execution_guest,
+    .version = "0.0.0",
+    .fingerprint = 0x16d3d5ae145fe30c,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        // Upstream Consensys/zesu, pinned by commit. Includes the PR #44 work (exposed module
+        // graph + accel_impl include-path fix + -Dcrypto-prefix).
+        .zesu = .{
+            .url = "https://github.com/Consensys/zesu/archive/61f9a5e250977a40a39a80d9bfe9748157a9141d.tar.gz",
+            .hash = "zesu-0.1.0-UtqpAMqiQwCgJzGwwwfTX-az25jDgG8Yjo7N6Uq4oh9-",
+        },
+        // execution-spec-tests zkevm stateless fixtures (tests-zkevm@v0.4.1) — the same SSZ
+        // SszStatelessInput vectors zesu validates against. Lazy: only fetched when the native test
+        // (which reads a fixture from it) is built.
+        .execution_spec_tests_zkevm = .{
+            .url = "https://github.com/ethereum/execution-specs/releases/download/tests-zkevm%40v0.4.1/fixtures_zkevm.tar.gz",
+            .hash = "N-V-__8AAOKjNuwrs7f2UozWmLSRumAsqbHVgWvai3e75cbJ",
+            .lazy = true,
+        },
+        // Consensys/zesu-zkvm — the Linea zkVM runtime. We consume only its pure-Zig precompile
+        // backend (linea/src/runtime/stdlibs_accel.zig, std-only) and delegate the guest's in-guest
+        // crypto to it instead of maintaining our own. Pinned to a commit; repoint to a release tag
+        // once one exists.
+        .zesu_zkvm = .{
+            .url = "https://github.com/Consensys/zesu-zkvm/archive/781e8ab5b86e2e08b111c8bee778f6fd777f8172.tar.gz",
+            .hash = "N-V-__8AALcFYQDEKjFlPv80maZPDDtCeu9sPCIH_vmRza1W",
+        },
+        // Shared build helpers for all riscv-guests packages (sibling path dependency).
+        .build_common = .{ .path = "../build_common" },
+        // NB: the Linea zkVM wrappers (arithmetization/src/wrappers) are NOT a package dependency —
+        // build.zig imports them directly via b.path (sibling source), so no manifest is needed.
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src", // production guest code (compiled into the rv64im object/ELF)
+        "test", // host-only: unit tests, spec-test harness, fixture parsing
+    },
+}

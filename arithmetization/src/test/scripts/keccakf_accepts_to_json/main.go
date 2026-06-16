@@ -9,7 +9,7 @@
 //     rate-1088 padded blocks (136 bytes each)
 //   - "result"        : WOM output — expected per-vector 256-bit digest
 //
-// in arithmetization/src/test/examples/Makefile.
+// in arithmetization/src/test/Makefile.
 // `zkc exec` accepts only ROM inputs; passing the WOM `result` field along
 // with the inputs makes it fail. This helper slices the fixture to the first
 // N vectors and drops `result`: `n_vectors` is re-encoded to N,

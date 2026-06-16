@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -20,47 +21,6 @@ type memoryBlob struct {
 	offset uint64
 	data   []byte
 	name   string
-}
-
-// parseInBytes accepts either an inline hex literal / raw string, or @path to a
-// file containing one 0x-prefixed hex input.
-//
-// Endianness contract:
-//   - `0x…` hex is treated as a big-endian `IN_BYTES` value and is byte-reversed
-//     here before reaching RAM.
-//   - `@path` files use the same rule, but keep large inputs out of the command
-//     line.
-//   - Raw (non-hex) inputs are passed through verbatim.
-func parseInBytes(arg string) ([]byte, error) {
-	if strings.HasPrefix(arg, "@") {
-		data, err := os.ReadFile(strings.TrimPrefix(arg, "@"))
-		if err != nil {
-			return nil, fmt.Errorf("reading inBytes file: %w", err)
-		}
-		fields := strings.Fields(string(data))
-		if len(fields) != 1 {
-			return nil, fmt.Errorf("expected @path to contain one 0x-prefixed input, got %d", len(fields))
-		}
-		return parseHexInBytes(fields[0])
-	}
-	if strings.HasPrefix(arg, "0x") || strings.HasPrefix(arg, "0X") {
-		return parseHexInBytes(arg)
-	}
-	return []byte(arg), nil
-}
-
-func parseHexInBytes(arg string) ([]byte, error) {
-	if !strings.HasPrefix(arg, "0x") && !strings.HasPrefix(arg, "0X") {
-		return nil, fmt.Errorf("expected 0x-prefixed input bytes, got %q", arg)
-	}
-	inBytes, err := hex.DecodeString(arg[2:])
-	if err != nil {
-		return nil, fmt.Errorf("decoding hex input bytes: %w", err)
-	}
-	for i, j := 0, len(inBytes)-1; i < j; i, j = i+1, j-1 {
-		inBytes[i], inBytes[j] = inBytes[j], inBytes[i]
-	}
-	return inBytes, nil
 }
 
 // The purpose of this program is simply to generate a suitable ZkC json input
@@ -116,6 +76,55 @@ func main() {
 		os.Exit(1)
 	}
 	printJson(blobs, elfFile.Entry)
+}
+
+// parseInBytes turns an arg into raw input bytes. Four forms:
+// - `*.ssz` (optional `@` prefix): returned verbatim — already a complete, length-framed input.
+// - `0x...`: expects big-endian hex, byte-reversed before reaching RAM.
+// - `@path`: same as `0x…`, but reads the hex from a file.
+// - anything else: raw bytes, verbatim.
+func parseInBytes(arg string) ([]byte, error) {
+	// input ≡ ssz file
+	if strings.HasSuffix(arg, ".ssz") {
+		ssz, err := os.ReadFile(strings.TrimPrefix(arg, "@"))
+		if err != nil {
+			return nil, fmt.Errorf("reading inBytes .ssz file: %w", err)
+		}
+		return ssz, nil
+	}
+
+	// input ≡ non ssz file
+	if strings.HasPrefix(arg, "@") {
+		data, err := os.ReadFile(strings.TrimPrefix(arg, "@"))
+		if err != nil {
+			return nil, fmt.Errorf("reading inBytes file: %w", err)
+		}
+		fields := strings.Fields(string(data))
+		if len(fields) != 1 {
+			return nil, fmt.Errorf("expected @path to contain one 0x-prefixed input, got %d", len(fields))
+		}
+		return parseHexInBytes(fields[0])
+	}
+
+	// input ≡ hex string
+	if strings.HasPrefix(arg, "0x") || strings.HasPrefix(arg, "0X") {
+		return parseHexInBytes(arg)
+	}
+
+	// input ≡ raw bytes
+	return []byte(arg), nil
+}
+
+func parseHexInBytes(arg string) ([]byte, error) {
+	if !strings.HasPrefix(arg, "0x") && !strings.HasPrefix(arg, "0X") {
+		return nil, fmt.Errorf("expected 0x-prefixed input bytes, got %q", arg)
+	}
+	inBytes, err := hex.DecodeString(arg[2:])
+	if err != nil {
+		return nil, fmt.Errorf("decoding hex input bytes: %w", err)
+	}
+	slices.Reverse(inBytes)
+	return inBytes, nil
 }
 
 // Extract sparse memory blobs from allocated file-backed sections. Zero-filled

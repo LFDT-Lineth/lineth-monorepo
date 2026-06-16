@@ -11,7 +11,7 @@ on:
       # - 'prover-ray/**'
       # Keep arithmetization integration dependencies documented but non-blocking
       # while the RISC-V/zkc pipeline is still moving quickly.
-      # - 'arithmetization/src/test/examples/main.go'
+      # - 'arithmetization/src/test/main.go'
       # - 'arithmetization/src/main/riscv/main.zkc'
       - '.github/workflows/verifier-ray.yml'
   push:
@@ -24,7 +24,7 @@ on:
       # - 'prover-ray/**'
       # Keep arithmetization integration dependencies documented but non-blocking
       # while the RISC-V/zkc pipeline is still moving quickly.
-      # - 'arithmetization/src/test/examples/main.go'
+      # - 'arithmetization/src/test/main.go'
       # - 'arithmetization/src/main/riscv/main.zkc'
       - '.github/workflows/verifier-ray.yml'
   workflow_call:
