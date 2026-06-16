@@ -1,7 +1,7 @@
 const wrappers = @import("wrappers");
 
 const custom_std = wrappers.custom_std;
-const keccak = wrappers.keccak_selector;
+const keccak = wrappers.keccak_provide;
 
 export fn main() noreturn {
     // buf_* variables represent all-zeros inputs

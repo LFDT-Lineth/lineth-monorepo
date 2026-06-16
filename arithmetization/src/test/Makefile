@@ -58,7 +58,7 @@ JSON := $(BIN).json
 # Hex big-endian input or `@path/to/in_bytes`
 IN_BYTES        ?= ""
 
-# If true, Zig tests using keccak_selector use the Linea keccak wrapper instead of Zesu stdlibs_accel
+# If true, Zig tests using keccak_provide use the Linea keccak wrapper instead of Zesu stdlibs_accel
 KECCAK_ACCEL    ?= false
 
 # Support function to evaluate expressions and format them as hex
