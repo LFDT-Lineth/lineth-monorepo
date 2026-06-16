@@ -66,7 +66,11 @@ jobs:
   publish-sdk-core:
     needs: guard
     if: inputs.package == 'sdk-core'
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    # GitHub-hosted runner required: npm trusted publishing (OIDC) does not support self-hosted runners.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - name: Checkout release commit
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -90,15 +94,9 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Configure npm auth
-        if: ${{ !inputs.dry_run && (steps.check.outputs.skip != 'true' || inputs.dual_publish_legacy) }}
-        run: echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" >> .npmrc
-
       - name: Publish sdk-core
         if: ${{ !inputs.dry_run && steps.check.outputs.skip != 'true' }}
-        run: pnpm -F @lfdt-lineth/sdk-core publish --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm -F @lfdt-lineth/sdk-core publish --no-git-checks --provenance
 
       - name: Check if legacy sdk-core version already published
         if: ${{ !inputs.dry_run && inputs.dual_publish_legacy }}
@@ -109,6 +107,10 @@ jobs:
             echo "::notice::@consensys/linea-sdk-core@$VERSION already published, skipping"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Configure npm auth for legacy publish
+        if: ${{ !inputs.dry_run && inputs.dual_publish_legacy && steps.legacy_check.outputs.skip != 'true' }}
+        run: echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" >> .npmrc
 
       - name: Publish legacy sdk-core
         if: ${{ !inputs.dry_run && inputs.dual_publish_legacy && steps.legacy_check.outputs.skip != 'true' }}
@@ -193,7 +195,11 @@ jobs:
   publish-sdk-viem:
     needs: guard
     if: inputs.package == 'sdk-viem'
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    # GitHub-hosted runner required: npm trusted publishing (OIDC) does not support self-hosted runners.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - name: Checkout release commit
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -236,15 +242,9 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Configure npm auth
-        if: ${{ !inputs.dry_run && (steps.check.outputs.skip != 'true' || inputs.dual_publish_legacy) }}
-        run: echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" >> .npmrc
-
       - name: Publish sdk-viem
         if: ${{ !inputs.dry_run && steps.check.outputs.skip != 'true' }}
-        run: pnpm -F @lfdt-lineth/sdk-viem publish --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm -F @lfdt-lineth/sdk-viem publish --no-git-checks --provenance
 
       - name: Check if legacy sdk-viem version already published
         if: ${{ !inputs.dry_run && inputs.dual_publish_legacy }}
@@ -255,6 +255,10 @@ jobs:
             echo "::notice::@consensys/linea-sdk-viem@$VERSION already published, skipping"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Configure npm auth for legacy publish
+        if: ${{ !inputs.dry_run && inputs.dual_publish_legacy && steps.legacy_check.outputs.skip != 'true' }}
+        run: echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" >> .npmrc
 
       - name: Publish legacy sdk-viem
         if: ${{ !inputs.dry_run && inputs.dual_publish_legacy && steps.legacy_check.outputs.skip != 'true' }}
