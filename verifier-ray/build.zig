@@ -2,6 +2,19 @@ const std = @import("std");
 
 pub fn build(b: *std.Build) void {
     const r5 = b.option(bool, "r5", "Build for the Linea R5 zkVM target") orelse false;
+    const verifier_profiling = b.option(
+        bool,
+        "verifier-profiling",
+        "Enable comptime inclusion of profiling counters",
+    ) orelse false;
+    const r5_marks_arg = (b.option(bool, "r5-marks", "Enable R5 phase markers") orelse false) and r5; // only allow R5 marks when building for R5 target
+    // The `embedded-spec` option gives the index of the embedded specification from the fixtures. Later we can make this option more
+    // flexible to also allow specifying a path to a spec file, but for now we just embed the spec from the fixtures. This is only used
+    // for execution target, not for any test fixtures or library.
+    const embedded_spec = b.option(usize, "embedded-spec", "Embedded specification index") orelse 0;
+    // The `embedded-input` option is used to embed the input file into the binary to avoid needing to pass it in at runtime as we don't have
+    // input serialization yet. This is only used for execution target, not for any test fixtures or library.
+    const embedded_input = b.option(bool, "embedded-input", "Embed the input file into the binary") orelse false;
 
     const default_target: std.Target.Query = if (r5) .{
         .cpu_arch = .riscv64,
@@ -22,23 +35,15 @@ pub fn build(b: *std.Build) void {
         b.standardOptimizeOption(.{});
     const strip = b.option(bool, "strip", "Omit debug symbols") orelse (r5 or optimize == .ReleaseSmall);
 
-    const verifier_profiling = b.option(
-        bool,
-        "verifier-profiling",
-        "Enable comptime inclusion of profiling counters",
-    ) orelse false;
-    const profiling_opts = b.addOptions();
-    profiling_opts.addOption(bool, "is_enabled", verifier_profiling);
-    var r5_marks_arg = b.option(bool, "r5-marks", "Enable R5 phase markers") orelse false;
-    r5_marks_arg = r5_marks_arg and r5; // only allow R5 marks when building for R5 target
-    profiling_opts.addOption(bool, "is_r5_marks", r5_marks_arg);
-
     const verifier_mod = b.addModule("verifier_ray", .{
         .root_source_file = b.path("src/lib.zig"),
         .target = target,
         .optimize = optimize,
         .strip = strip,
     });
+    const profiling_opts = b.addOptions();
+    profiling_opts.addOption(bool, "is_enabled", verifier_profiling);
+    profiling_opts.addOption(bool, "is_r5_marks", r5_marks_arg);
     verifier_mod.addOptions("profiling_config", profiling_opts);
 
     const test_vectors_mod = b.addModule("test_vectors", .{
@@ -54,6 +59,19 @@ pub fn build(b: *std.Build) void {
             .{ .name = "verifier_ray", .module = verifier_mod },
         },
     });
+
+    const embedded_data_opts = b.addOptions();
+    embedded_data_opts.addOption(usize, "spec_index", embedded_spec);
+    embedded_data_opts.addOption(bool, "embed_input", embedded_input);
+    const embedded_data_mod = b.addModule("embedded_data", .{
+        .root_source_file = b.path("testdata/generated/verify.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "verifier_ray", .module = verifier_mod },
+        },
+    });
+
     const exe = b.addExecutable(.{
         .name = "verifier-ray",
         .root_module = b.createModule(.{
@@ -63,6 +81,8 @@ pub fn build(b: *std.Build) void {
             .strip = strip,
             .imports = &.{
                 .{ .name = "verifier_ray", .module = verifier_mod },
+                .{ .name = "embedded_data", .module = embedded_data_mod },
+                .{ .name = "embedded_data_config", .module = embedded_data_opts.createModule() },
             },
         }),
     });
