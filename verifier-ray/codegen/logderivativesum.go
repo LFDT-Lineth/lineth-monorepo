@@ -52,11 +52,15 @@ type LogDerivQuery struct {
 // Queries are collected in round/registration order so the output is
 // deterministic.
 //
-// Returns an error if any cell (ZFinal or Result) lives in sys.Rounds[len-1].
-// protocol.replay only carries len(sys.Rounds)-1 rounds into ctx.rounds, so a
-// cell in the last round would produce an out-of-bounds index in the Zig
-// verifier. The fix is to run global.Compile after logderivativesum.Compile so
-// that two rounds are appended after the logderivsum result round.
+// Requires global.Compile to have been called after logderivativesum.Compile:
+// the Z-recurrence and L_0 initial condition are ordinary vanishing constraints
+// that global.Compile discharges — without it those constraints go unchecked
+// and the verifier is unsound. Calling global.Compile also appends
+// quotientRound and evalRound after the logderivsum result round, which ensures
+// result/ZFinal cells are never in the last wiop slot (protocol.replay excludes
+// the last round from ctx.rounds). The check below turns a silent Zig
+// out-of-bounds into a clear Go error at codegen time if global.Compile was
+// accidentally omitted.
 func BuildLogDerivSystem(sys *wiop.System) (LogDerivSystem, error) {
 	out := LogDerivSystem{SourceName: sys.Context.Path()}
 	lastSlot := len(sys.Rounds) - 1
@@ -81,12 +85,8 @@ func BuildLogDerivSystem(sys *wiop.System) (LogDerivSystem, error) {
 			}
 
 			resultSlot := va.Ld.Result.Context.ID.Slot()
-			if resultSlot == lastSlot {
-				return LogDerivSystem{}, fmt.Errorf(
-					"codegen: logderivsum result cell %q is in the last wiop round (slot %d); "+
-						"ctx.rounds excludes the last round — run global.Compile after logderivativesum.Compile",
-					va.Ld.Result.Context.Path(), lastSlot,
-				)
+			if err := checkNotLastSlot("result", va.Ld.Result.Context.Path(), resultSlot, lastSlot); err != nil {
+				return LogDerivSystem{}, err
 			}
 
 			query := LogDerivQuery{
@@ -97,12 +97,8 @@ func BuildLogDerivSystem(sys *wiop.System) (LogDerivSystem, error) {
 			}
 			for i, e := range va.Entries {
 				zSlot := e.ZFinal.Context.ID.Slot()
-				if zSlot == lastSlot {
-					return LogDerivSystem{}, fmt.Errorf(
-						"codegen: logderivsum z_final cell %q is in the last wiop round (slot %d); "+
-							"ctx.rounds excludes the last round — run global.Compile after logderivativesum.Compile",
-						e.ZFinal.Context.Path(), lastSlot,
-					)
+				if err := checkNotLastSlot("z_final", e.ZFinal.Context.Path(), zSlot, lastSlot); err != nil {
+					return LogDerivSystem{}, err
 				}
 				query.ZFinalRefs[i] = ScalarCellRef{Round: zSlot, Index: e.ZFinal.Context.ID.Position()}
 			}
@@ -111,4 +107,22 @@ func BuildLogDerivSystem(sys *wiop.System) (LogDerivSystem, error) {
 	}
 
 	return out, nil
+}
+
+// checkNotLastSlot is a defence-in-depth guard used by BuildLogDerivSystem.
+// It returns a clear error when a cell sits in the last wiop round — a slot
+// that protocol.replay excludes from ctx.rounds. In a correctly assembled
+// system (global.Compile called after logderivativesum.Compile) this is never
+// triggered; it exists solely to surface a forgotten global.Compile call at
+// codegen time rather than as a silent out-of-bounds in the Zig verifier.
+func checkNotLastSlot(kind, path string, slot, lastSlot int) error {
+	if slot != lastSlot {
+		return nil
+	}
+	return fmt.Errorf(
+		"codegen: logderivsum %s cell %q is in the last wiop round (slot %d); "+
+			"global.Compile must be called after logderivativesum.Compile — "+
+			"it is required for soundness and also ensures cells never land in the last round",
+		kind, path, slot,
+	)
 }
