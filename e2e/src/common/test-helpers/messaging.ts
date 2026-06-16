@@ -1,4 +1,4 @@
-import { encodeFunctionCall, etherToWei } from "@consensys/linea-shared-utils";
+import { encodeFunctionCall, etherToWei } from "@lfdt-lineth/shared-utils";
 import { randomBytes } from "crypto";
 import { PrivateKeyAccount, toHex, TransactionReceipt, Hash } from "viem";
 

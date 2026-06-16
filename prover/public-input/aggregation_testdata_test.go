@@ -90,6 +90,7 @@ func (j *AggregatedProofJSON) ToAggregation() Aggregation {
 		BaseFee:                                 j.BaseFee,
 		CoinBase:                                coinBase,
 		L2MessageServiceAddr:                    l2MessageServiceAddr,
+		IsAllowedCircuitID:                      j.IsAllowedCircuitID,
 		FilteredAddresses:                       filteredAddresses,
 	}
 

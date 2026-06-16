@@ -29,6 +29,10 @@ on:
         required: false
         type: boolean
         default: false
+      skip_docker_image_info:
+        required: false
+        type: boolean
+        default: false
       coordinator_metadata:
         required: true
         type: string
@@ -99,7 +103,7 @@ on:
 
 jobs:
   linea-milestone-gh-release:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -112,6 +116,7 @@ jobs:
           # from commit messages (via git-cliff) and may contain backticks, $(...), etc.
           CHANGELOG: ${{ inputs.changelog }}
           IMAGE_TAG_SUFFIX: ${{ inputs.image_tag_suffix }}
+          SKIP_DOCKER_IMAGE_INFO: ${{ inputs.skip_docker_image_info }}
           # One row per component: name|image|tag_changed|released_tag|latest_tag
           # released_tag : docker tag produced by this run's component gh-release
           #                (with suffix already baked in, when applicable)
@@ -128,26 +133,28 @@ jobs:
           set -euo pipefail
           mkdir release && cd release
           printf '%s\n' "$CHANGELOG" >> output.md
-          echo "### Docker Image Details" >> output.md
-          echo "" >> output.md
-
-          while IFS='|' read -r name image tag_changed released_tag latest_tag; do
-            # Skip blank/whitespace-only rows (e.g. trailing newline of the literal).
-            trimmed="$(echo "$name" | tr -d '[:space:]')"
-            [ -z "$trimmed" ] && continue
-
-            echo "To pull the **${name}** image:" >> output.md
-            echo "\`\`\`" >> output.md
-            if [ "$tag_changed" = "true" ]; then
-              printf 'docker pull consensys/%s:%s\n' "$image" "$released_tag" >> output.md
-            elif [ -n "$IMAGE_TAG_SUFFIX" ]; then
-              printf 'docker pull consensys/%s:%s-%s\n' "$image" "$latest_tag" "$IMAGE_TAG_SUFFIX" >> output.md
-            else
-              printf 'docker pull consensys/%s:%s\n' "$image" "$latest_tag" >> output.md
-            fi
-            echo "\`\`\`" >> output.md
+          if [ "$SKIP_DOCKER_IMAGE_INFO" != "true" ]; then
+            echo "### Docker Image Details" >> output.md
             echo "" >> output.md
-          done <<< "$COMPONENT_ROWS"
+
+            while IFS='|' read -r name image tag_changed released_tag latest_tag; do
+              # Skip blank/whitespace-only rows (e.g. trailing newline of the literal).
+              trimmed="$(echo "$name" | tr -d '[:space:]')"
+              [ -z "$trimmed" ] && continue
+
+              echo "To pull the **${name}** image:" >> output.md
+              echo "\`\`\`" >> output.md
+              if [ "$tag_changed" = "true" ]; then
+                printf 'docker pull consensys/%s:%s\n' "$image" "$released_tag" >> output.md
+              elif [ -n "$IMAGE_TAG_SUFFIX" ]; then
+                printf 'docker pull consensys/%s:%s-%s\n' "$image" "$latest_tag" "$IMAGE_TAG_SUFFIX" >> output.md
+              else
+                printf 'docker pull consensys/%s:%s\n' "$image" "$latest_tag" >> output.md
+              fi
+              echo "\`\`\`" >> output.md
+              echo "" >> output.md
+            done <<< "$COMPONENT_ROWS"
+          fi
 
       - name: gh-release
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b #v2.5.0

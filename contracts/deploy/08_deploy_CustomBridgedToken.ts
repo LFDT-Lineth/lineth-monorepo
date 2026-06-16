@@ -1,7 +1,7 @@
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 
-import { tryVerifyContract, getRequiredEnvVar } from "../common/helpers";
+import { tryVerifyContract, getRequiredEnvVar, requireAddressFromRegistryOrEnv } from "../common/helpers";
 import { withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
 import { deployUpgradableFromFactory } from "../scripts/hardhat/utils";
 
@@ -11,7 +11,11 @@ const func: DeployFunction = withSignerUiSession("08_deploy_CustomBridgedToken.t
   const CustomTokenBridge_name = getRequiredEnvVar("CUSTOMTOKENBRIDGE_NAME");
   const CustomTokenBridge_symbol = getRequiredEnvVar("CUSTOMTOKENBRIDGE_SYMBOL");
   const CustomTokenBridge_decimals = getRequiredEnvVar("CUSTOMTOKENBRIDGE_DECIMALS");
-  const CustomTokenBridge_bridge_address = getRequiredEnvVar("CUSTOMTOKENBRIDGE_BRIDGE_ADDRESS");
+  const CustomTokenBridge_bridge_address = requireAddressFromRegistryOrEnv(
+    network.name,
+    "CUSTOMTOKENBRIDGE_BRIDGE_ADDRESS",
+    "CUSTOMTOKENBRIDGE_BRIDGE_ADDRESS",
+  );
 
   const chainId = (await ethers.provider.getNetwork()).chainId;
   console.log(`Current network's chainId is ${chainId}`);

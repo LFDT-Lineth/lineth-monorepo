@@ -12,22 +12,46 @@ on:
     inputs:
       image_tag_suffix:
         description: 'Custom docker image tag suffix, i.e. All docker images would be retagged as [semver]-[YYYYMMDD]-[commit]-[suffix]'
-        required: true
+        required: false
         type: string
+        default: ''
       release_tag_suffix:
         description: 'Custom release tag suffix, i.e. release tag would be releases/[component]/v[semver]-[suffix]'
-        required: false
-        default: ''
-      without_besu_fleet_plugin:
-        description: 'Type "true" to exclude besu-fleet-plugin in the linea-besu-package release'
         required: false
         type: string
         default: ''
       pre_release:
         description: 'Pre Release if checked; Draft release otherwise'
         required: false
-        default: false
         type: boolean
+        default: false
+      dry_run_release:
+        description: 'Dry run a release (without build and push the docker images to dockerhub)'
+        required: false
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      image_tag_suffix:
+        description: 'Custom docker image tag suffix, i.e. All docker images would be retagged as [semver]-[YYYYMMDD]-[commit]-[suffix]'
+        required: false
+        type: string
+        default: ''
+      release_tag_suffix:
+        description: 'Custom release tag suffix, i.e. release tag would be releases/[component]/v[semver]-[suffix]'
+        type: string
+        required: false
+        default: ''
+      pre_release:
+        description: 'Pre Release if checked; Draft release otherwise'
+        required: false
+        type: boolean
+        default: false
+      dry_run_release:
+        description: 'Dry run a release (without build and push the docker images to dockerhub)'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: linea-milestone-release-${{ github.ref }}
@@ -44,7 +68,7 @@ jobs:
     needs: [check-branch-and-compute-tag]
     uses: ./.github/workflows/reusable-milestone-component-release-metadata.yml
     with:
-      release_tag_suffix: '' # no release tag suffix allowed for milestone component release 
+      release_tag_suffix: ${{ inputs.release_tag_suffix }} # non-empty release_tag_suffix can be only for non-main milestone release (e.g. dry run release)
     secrets: inherit
 
   build-local-coordinator:
@@ -54,7 +78,6 @@ jobs:
     with:
       image_tag: local
       develop_tag: develop
-      image_name: consensys/linea-coordinator
       push_image: false
     secrets: inherit
 
@@ -65,7 +88,6 @@ jobs:
     with:
       image_tag: local
       develop_tag: develop
-      image_name: consensys/linea-postman
       push_image: false
     secrets: inherit
 
@@ -76,7 +98,6 @@ jobs:
     with:
       image_tag: local
       develop_tag: develop
-      image_name: consensys/linea-prover
       push_image: false
     secrets: inherit
 
@@ -87,7 +108,6 @@ jobs:
     with:
       image_tag: local
       develop_tag: develop
-      image_name: consensys/linea-transaction-exclusion-api
       push_image: false
     secrets: inherit
 
@@ -98,7 +118,6 @@ jobs:
     with:
       image_tag: local
       develop_tag: develop
-      image_name: consensys/maru
       push_image: false
     secrets: inherit
 
@@ -107,8 +126,8 @@ jobs:
     if: ${{ fromJson(needs.component-release-metadata.outputs.linea-besu-package).tag_changed == 'true' }}
     uses: ./.github/workflows/linea-besu-package-build-and-upload.yml
     with:
-      release_tag_prefix: ${{ fromJson(needs.component-release-metadata.outputs.linea-besu-package).release_version }}
-      with_besu_fleet_plugin: ${{ inputs.without_besu_fleet_plugin != 'true' }}
+      release_version: ${{ fromJson(needs.component-release-metadata.outputs.linea-besu-package).release_version }}
+      with_besu_fleet_plugin: true
     secrets: inherit
 
   component-latest-docker-tags:
@@ -144,7 +163,7 @@ jobs:
       - component-latest-docker-tags
       - build-local-linea-besu-package
     if: always() && !cancelled() && needs.component-latest-docker-tags.result == 'success'
-    uses: ./.github/workflows/reuse-run-e2e-tests.yml
+    uses: ./.github/workflows/reusable-run-e2e-tests.yml
     with:
       image_tag: local
       coordinator_tag: ${{ fromJson(needs.component-release-metadata.outputs.coordinator).tag_changed != 'true' && needs.component-latest-docker-tags.outputs.coordinator || '' }}
@@ -169,9 +188,10 @@ jobs:
       folder-name: coordinator
       include-path: coordinator/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
-      release_tag_suffix: '' # no release tag suffix allowed for milestone component release 
+      release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
       draft_release: ${{ !inputs.pre_release }}
       pre_release: ${{ inputs.pre_release }}
+      dry_run_release: ${{ inputs.dry_run_release }}
       upload_changelog: true
     secrets: inherit
 
@@ -187,9 +207,10 @@ jobs:
       folder-name: prover
       include-path: prover/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
-      release_tag_suffix: '' # no release tag suffix allowed for milestone component release 
+      release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
       draft_release: ${{ !inputs.pre_release }}
       pre_release: ${{ inputs.pre_release }}
+      dry_run_release: ${{ inputs.dry_run_release }}
       upload_changelog: true
     secrets: inherit
 
@@ -205,9 +226,10 @@ jobs:
       folder-name: postman
       include-path: postman/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
-      release_tag_suffix: '' # no release tag suffix allowed for milestone component release 
+      release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
       draft_release: ${{ !inputs.pre_release }}
       pre_release: ${{ inputs.pre_release }}
+      dry_run_release: ${{ inputs.dry_run_release }}
       upload_changelog: true
     secrets: inherit
 
@@ -223,9 +245,10 @@ jobs:
       folder-name: transaction-exclusion-api
       include-path: transaction-exclusion-api/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
-      release_tag_suffix: '' # no release tag suffix allowed for milestone component release 
+      release_tag_suffix: ${{ inputs.release_tag_suffix }} # non-empty release_tag_suffix can be only for non-main milestone release (e.g. dry run release)
       draft_release: ${{ !inputs.pre_release }}
       pre_release: ${{ inputs.pre_release }}
+      dry_run_release: ${{ inputs.dry_run_release }}
       upload_changelog: true
     secrets: inherit
 
@@ -241,9 +264,10 @@ jobs:
       folder-name: maru
       include-path: maru/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
-      release_tag_suffix: '' # no release tag suffix allowed for milestone component release
+      release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
       draft_release: ${{ !inputs.pre_release }}
       pre_release: ${{ inputs.pre_release }}
+      dry_run_release: ${{ inputs.dry_run_release }}
       upload_changelog: true
     secrets: inherit
 
@@ -256,14 +280,14 @@ jobs:
     uses: ./.github/workflows/reusable-linea-besu-package-gh-release.yml
     with:
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
-      release_tag_suffix: '' # no release tag suffix allowed for milestone component release 
-      without_besu_fleet_plugin: ${{ inputs.without_besu_fleet_plugin }}
+      release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
       draft_release: ${{ !inputs.pre_release }}
       pre_release: ${{ inputs.pre_release }}
+      dry_run_release: ${{ inputs.dry_run_release }}
       upload_changelog: true
     secrets: inherit
 
-  # retag docker image tags with image_tag_suffix for tag-unchanged components
+  # retag docker image tags with image_tag_suffix for release tag unchanged components
   retag-latest-docker-tags:
     needs: [component-release-metadata, component-latest-docker-tags, run-e2e-tests]
     if: >
@@ -288,7 +312,7 @@ jobs:
       maru_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.maru }}
     secrets: inherit
 
-  # prepend CHANGELOG for each component for linea release (and then create PR)
+  # prepend CHANGELOG for each component and aggregate CHANGELOG for linea milestone release
   linea-milestone-push-tag-changelog-update:
     needs:
       - check-branch-and-compute-tag
@@ -363,4 +387,5 @@ jobs:
       tx_exclusion_api_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.tx-exclusion-api }}
       linea_besu_package_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.linea-besu-package }}
       maru_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.maru }}
+      skip_docker_image_info: ${{ inputs.dry_run_release }}
     secrets: inherit

@@ -60,6 +60,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
+import kotlin.time.Duration
 
 /**
  * Record containing all parameters required for engine_newPayloadV4 API calls.
@@ -209,18 +210,26 @@ abstract class LineaPluginPoSTestBase : LineaPluginTestBase() {
    * (with stale txpool state) absorbs our fcu and getPayload returns its cached
    * selection, missing any txs the test sent after the background tick fired.
    */
-  protected fun buildNewBlockAndWait(blockBuildingTimeMs: Long) {
+  protected fun buildNewBlockAndWait(blockBuildingTimeMs: Long): Long {
     val initialBlockNumber = getLatestBlockNumber()
     val latestTimestamp = minerNode.execute(ethTransactions.block()).timestamp
     buildNewBlock(
       latestTimestamp.toLong() + blockTimeSeconds!! + 1L,
       blockBuildingTimeMs,
     ) { false }
+    var latestBlockNumber = getLatestBlockNumber()
     await()
       .atMost(3 * blockTimeSeconds!!, TimeUnit.SECONDS)
       .pollInterval(100, TimeUnit.MILLISECONDS)
-      .untilAsserted { assertThat(getLatestBlockNumber()).isGreaterThan(initialBlockNumber) }
+      .untilAsserted {
+        latestBlockNumber = getLatestBlockNumber()
+        assertThat(latestBlockNumber).isGreaterThan(initialBlockNumber)
+      }
+    return latestBlockNumber
   }
+
+  protected fun buildNewBlockAndWait(blockBuildingTime: Duration): Long =
+    buildNewBlockAndWait(blockBuildingTime.inWholeMilliseconds)
 
   /**
    * Creates and sends a blob transaction. This method is designed to be stateless and should not

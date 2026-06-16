@@ -146,7 +146,7 @@ Builds Docker images for all changed components. Also builds the `linea-besu-pac
 
 ### 8. `run-e2e-tests` (reuse-run-e2e-tests.yml)
 
-Starts the full local Linea stack (L1 + L2 + coordinator + prover + postman + ...) using the images from step 7 and runs the protocol E2E test suite. Dumps logs on completion.
+Starts the full local Lineth stack (L1 + L2 + coordinator + prover + postman + ...) using the images from step 7 and runs the protocol E2E test suite. Dumps logs on completion.
 
 When `has-changes-requiring-e2e-testing == 'false'`, this job still runs but passes immediately - this keeps required status checks green on every PR.
 

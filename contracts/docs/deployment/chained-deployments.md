@@ -45,8 +45,8 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | INITIAL_L2_STATE_ROOT_HASH   | true      | bytes | Initial State Root Hash (shared base) |
 | INITIAL_L2_BLOCK_NUMBER   | true      | uint256 | Initial L2 Block Number (shared base) |
 | L2_GENESIS_TIMESTAMP | true | uint256 | Genesis timestamp (shared base) |
-| L1_SECURITY_COUNCIL  | true      | address | Security Council Address |
-| LINEA_ROLLUP_OPERATORS     | true      | address | Operators Addresses (comma-delimited if multiple) |
+| L1_SECURITY_COUNCIL  | registry\|env | address | Security Council Address. Read from registry on stable networks; env var used as fallback. |
+| LINEA_ROLLUP_OPERATORS     | registry\|env | address | Operators Addresses (comma-delimited if multiple). Read from registry on stable networks; env var used as fallback. |
 | LINEA_ROLLUP_RATE_LIMIT_PERIOD     | true  | uint256   | L1 Rate Limit Period |
 | LINEA_ROLLUP_RATE_LIMIT_AMOUNT     | true  | uint256   | L1 Rate Limit Amount |
 | TIMELOCK_PROPOSERS | true     | address | Timelock Proposers address |
@@ -58,10 +58,11 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | VERIFIER_CHAIN_ID | true | uint256 | Chain ID passed to the verifier constructor |
 | VERIFIER_BASE_FEE | true | uint256 | Base fee passed to the verifier constructor |
 | VERIFIER_COINBASE | true | address | Coinbase address passed to the verifier constructor |
-| L2_MESSAGE_SERVICE_ADDRESS | true | address | L2 Message Service address passed to the verifier constructor |
+| L2_MESSAGE_SERVICE_ADDRESS | registry\|env | address | L2 Message Service address passed to the verifier constructor. Read from registry on stable networks; env var used as fallback. |
+| VERIFIER_IS_ALLOWED_CIRCUIT_ID | true | uint256 | Allowed-circuit bit mask passed to the verifier constructor and folded into the verifier chain configuration hash. This value must match the prover-side `isAllowedCircuitID` used to generate aggregation proofs. |
 | VERIFIER_MIMC_ADDRESS | false | address | Optional. Reuse an existing deployed `Mimc` library for PlonkVerifier instead of deploying a new one (see [verifier.md](l1/verifier.md)). |
-| YIELD_MANAGER_ADDRESS | true | address | Yield Manager contract address |
-| LINEA_ROLLUP_ADDRESS_FILTER | true | address | AddressFilter contract address |
+| YIELD_MANAGER_ADDRESS | registry\|env | address | Yield Manager contract address. Read from registry on stable networks; env var used as fallback. |
+| LINEA_ROLLUP_ADDRESS_FILTER | registry\|env | address | AddressFilter contract address. Read from registry if present; env var used as fallback. |
 
 <br />
 
@@ -72,7 +73,7 @@ pnpm exec hardhat deploy --network sepolia --tags PlonkVerifier,LineaRollup,Time
 
 Base command with cli arguments:
 ```shell
-VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> INITIAL_L2_STATE_ROOT_HASH=<bytes> INITIAL_L2_BLOCK_NUMBER=<value> L2_GENESIS_TIMESTAMP=<value> L1_SECURITY_COUNCIL=<address> LINEA_ROLLUP_OPERATORS=<address> LINEA_ROLLUP_RATE_LIMIT_PERIOD=<value> LINEA_ROLLUP_RATE_LIMIT_AMOUNT=<value> YIELD_MANAGER_ADDRESS=<address> TIMELOCK_PROPOSERS=<address> TIMELOCK_EXECUTORS=<address> TIMELOCK_ADMIN_ADDRESS=<address> MIN_DELAY=<value> VERIFIER_CONTRACT_NAME=PlonkVerifierForMultiTypeDataAggregation pnpm exec hardhat deploy --network sepolia --tags PlonkVerifier,LineaRollup,Timelock
+VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> INITIAL_L2_STATE_ROOT_HASH=<bytes> INITIAL_L2_BLOCK_NUMBER=<value> L2_GENESIS_TIMESTAMP=<value> L1_SECURITY_COUNCIL=<address> LINEA_ROLLUP_OPERATORS=<address> LINEA_ROLLUP_RATE_LIMIT_PERIOD=<value> LINEA_ROLLUP_RATE_LIMIT_AMOUNT=<value> YIELD_MANAGER_ADDRESS=<address> TIMELOCK_PROPOSERS=<address> TIMELOCK_EXECUTORS=<address> TIMELOCK_ADMIN_ADDRESS=<address> MIN_DELAY=<value> VERIFIER_CONTRACT_NAME=PlonkVerifierForMultiTypeDataAggregation VERIFIER_IS_ALLOWED_CIRCUIT_ID=<value> pnpm exec hardhat deploy --network sepolia --tags PlonkVerifier,LineaRollup,Timelock
 ```
 
 (make sure to replace `<value>` `<bytes>` `<key>` `<address>` with actual values)
@@ -89,8 +90,8 @@ This will run the script that deploys Timelock, L2MessageService contracts.
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
-| L2_SECURITY_COUNCIL | true   | address | L2 Security council address |
-| L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER  | true  |  address | L1L2 Message Setter address on L2 |
+| L2_SECURITY_COUNCIL | registry\|env | address | L2 Security council address. Read from registry on stable networks; env var used as fallback. |
+| L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER  | registry\|env  |  address | L1L2 Message Setter address on L2. Read from registry on stable networks; env var used as fallback. |
 | L2_MESSAGE_SERVICE_RATE_LIMIT_PERIOD    | true  |  uint256 | L2 Rate Limit Period |
 | L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT    | true  |  uint256 | L2 Rate Limit Amount |
 | TIMELOCK_PROPOSERS | true     | address | Timelock Proposers address |
@@ -124,15 +125,15 @@ This will run the script that deploys the TokenBridge and BridgedToken contracts
 | \**DEPLOYER_PRIVATE_KEY*       | true     | key | Network-specific private key used when deploying the contract. |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY         | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
-| L2_MESSAGE_SERVICE_ADDRESS    | true  | address   | L2 Message Service address used when deploying TokenBridge.    |
-| LINEA_ROLLUP_ADDRESS         | true    | address       | L1 Rollup address used when deploying Token Bridge.   |
+| L2_MESSAGE_SERVICE_ADDRESS    | registry\|env  | address   | L2 Message Service address. Read from registry on stable networks; env var used as fallback. |
+| LINEA_ROLLUP_ADDRESS         | registry\|env    | address       | L1 Rollup address. Read from registry on stable networks; env var used as fallback. |
 | REMOTE_CHAIN_ID       | true      |   uint256     | ChainID of the remote (target) network |
-| REMOTE_SENDER_ADDRESS | true | address | Remote sender address (the TokenBridge on the other chain) |
-| TOKEN_BRIDGE_L1       | false     |true\|false| If Token Bridge is deployed on L1, TOKEN_BRIDGE_L1 should be set to `true`. Otherwise it should be `false`|
-| L1_SECURITY_COUNCIL | conditional | address | L1 Security Council address. Required when `TOKEN_BRIDGE_L1=true` |
-| L2_SECURITY_COUNCIL | conditional | address | L2 Security Council address. Required when `TOKEN_BRIDGE_L1=false` |
-| L1_RESERVED_TOKEN_ADDRESSES | false   | address   | If TOKEN_BRIDGE_L1=true, then L1_RESERVED_TOKEN_ADDRESSES should be defined. If multiple addresses, provide them in a comma-delimited array.|
-| L2_RESERVED_TOKEN_ADDRESSES | false   | address   | If TOKEN_BRIDGE_L1=false, then L2_RESERVED_TOKEN_ADDRESSES should be defined. If multiple addresses, provide them in a comma-delimited array.|
+| REMOTE_SENDER_ADDRESS | registry\|env | address | Remote sender address (the TokenBridge on the other chain). Read from registry if present; env var used as fallback. |
+| DEPLOY_TOKEN_BRIDGE_ON_L1       | false     |true\|false| If Token Bridge is deployed on L1, DEPLOY_TOKEN_BRIDGE_ON_L1 should be set to `true`. Otherwise it should be `false`|
+| L1_SECURITY_COUNCIL | registry\|env | address | L1 Security Council address. Required when `DEPLOY_TOKEN_BRIDGE_ON_L1=true`. Read from registry on stable networks; env var used as fallback. |
+| L2_SECURITY_COUNCIL | registry\|env | address | L2 Security Council address. Required when `DEPLOY_TOKEN_BRIDGE_ON_L1=false`. Read from registry on stable networks; env var used as fallback. |
+| L1_RESERVED_TOKEN_ADDRESSES | false   | address   | If DEPLOY_TOKEN_BRIDGE_ON_L1=true, then L1_RESERVED_TOKEN_ADDRESSES should be defined. If multiple addresses, provide them in a comma-delimited array.|
+| L2_RESERVED_TOKEN_ADDRESSES | false   | address   | If DEPLOY_TOKEN_BRIDGE_ON_L1=false, then L2_RESERVED_TOKEN_ADDRESSES should be defined. If multiple addresses, provide them in a comma-delimited array.|
 
 
 Base command:
@@ -142,6 +143,6 @@ pnpm exec hardhat deploy --network linea_sepolia --tags BridgedToken,TokenBridge
 
 Base command with cli arguments:
 ```shell
-VERIFY_CONTRACT=true ETHERSCAN_API_KEY=<key> DEPLOYER_PRIVATE_KEY=<key> INFURA_API_KEY=<key> REMOTE_CHAIN_ID=<uint256> TOKEN_BRIDGE_L1=true L1_SECURITY_COUNCIL=<address> L1_RESERVED_TOKEN_ADDRESSES=<address> L2_MESSAGE_SERVICE_ADDRESS=<address> LINEA_ROLLUP_ADDRESS=<address> REMOTE_SENDER_ADDRESS=<address> pnpm exec hardhat deploy --network linea_sepolia --tags BridgedToken,TokenBridge
+VERIFY_CONTRACT=true ETHERSCAN_API_KEY=<key> DEPLOYER_PRIVATE_KEY=<key> INFURA_API_KEY=<key> REMOTE_CHAIN_ID=<uint256> DEPLOY_TOKEN_BRIDGE_ON_L1=true L1_SECURITY_COUNCIL=<address> L1_RESERVED_TOKEN_ADDRESSES=<address> L2_MESSAGE_SERVICE_ADDRESS=<address> LINEA_ROLLUP_ADDRESS=<address> REMOTE_SENDER_ADDRESS=<address> pnpm exec hardhat deploy --network linea_sepolia --tags BridgedToken,TokenBridge
 ```
 (make sure to replace `<value>` `<key>` `<address>` with actual values)

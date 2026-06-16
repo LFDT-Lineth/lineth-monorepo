@@ -1,8 +1,9 @@
 include "utils/type.zkc"
 
 // Represents the available Random Access Memory (RAM) for the guest program.
-// This will act as the program "heap" and will contain, amongst other things,
-// the program executable itself and the program inputs. 
+// This will act as the program memory space and will contain, amongst other things,
+// the program executable itself and all data coming from loadable sections of the ELF
+// (e.g., .data, .rodata).
 #[bipartite]
 memory ram(address:Address) -> (bytes:u8)
 
@@ -18,3 +19,18 @@ pub input blobs_offset_and_size(i:u64) -> (blob_offset:Address, blob_size:Length
 
 // Concatenated bytes for all sparse memory blobs, in blob order
 pub input blobs_data(i:Address) -> (byte:u8)
+
+// keccak related memory
+memory state_row0(address:u3) -> (state:lane)
+memory state_row1(address:u3) -> (state:lane)
+memory state_row2(address:u3) -> (state:lane)
+memory state_row3(address:u3) -> (state:lane)
+memory state_row4(address:u3) -> (state:lane)
+memory b0(address:u3) -> (state:lane)
+memory b1(address:u3) -> (state:lane)
+memory b2(address:u3) -> (state:lane)
+memory b3(address:u3) -> (state:lane)
+memory b4(address:u3) -> (state:lane)
+memory c(address:u3) -> (state:lane)
+memory d(address:u3) -> (state:lane)
+memory padded_input_block(address:u5) -> (state:lane)

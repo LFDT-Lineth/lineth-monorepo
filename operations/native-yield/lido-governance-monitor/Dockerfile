@@ -33,7 +33,7 @@ COPY ts-libs/eslint-config ./ts-libs/eslint-config
 
 # Generate Prisma client and build
 # DATABASE_URL is required for prisma generate but not used during build
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store DATABASE_URL=postgresql://localhost:5432/dummy pnpm --filter @consensys/lido-governance-monitor db:generate \
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store DATABASE_URL=postgresql://localhost:5432/dummy pnpm --filter @lfdt-lineth/lido-governance-monitor db:generate \
     && pnpm run build \
     && pnpm deploy --legacy --filter=./operations/native-yield/lido-governance-monitor --prod ./prod/operations/native-yield/lido-governance-monitor
 

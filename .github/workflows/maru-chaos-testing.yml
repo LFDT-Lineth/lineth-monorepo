@@ -52,7 +52,7 @@ jobs:
       COMMIT_TAG: ${{ inputs.commit_tag }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-    runs-on: [ gha-runner-scale-set-ubuntu-24-amd64-large ]
+    runs-on: [ gha-lfdt-lineth-ss-ubuntu-24-amd64-large ]
     name: chaos tests
     # useful for debugging flaky tests.
     #    strategy:

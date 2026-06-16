@@ -18,7 +18,7 @@ env:
 jobs:
   run-contract-tests:
     # ~2 mins saved vs small
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     name: Run smart contracts tests
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -80,7 +80,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f #v7.0.0
         with:
           fail_ci_if_error: true
           files: ./contracts/coverage/coverage-final.json
@@ -91,7 +91,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   solidity-format-check:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     name: Solidity format check
     steps:
       - name: Checkout

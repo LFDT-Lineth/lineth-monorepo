@@ -1,5 +1,5 @@
 {
-  "name": "@consensys/eslint-config",
+  "name": "@lfdt-lineth/eslint-config",
   "version": "1.0.0",
   "description": "Shared ESLint v9 flat config for Linea monorepo",
   "author": "Consensys Software Inc.",

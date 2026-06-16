@@ -13,7 +13,7 @@ on:
 
 jobs:
   check:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
 
     steps:
     - name: Checkout code

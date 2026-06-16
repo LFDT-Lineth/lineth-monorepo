@@ -1,5 +1,5 @@
 {
-  "name": "@consensys/linea-native-libs",
+  "name": "@lfdt-lineth/native-libs",
   "version": "1.2.0",
   "description": "Linea native libs",
   "main": "./dist/index.js",
@@ -28,7 +28,7 @@
   "author": "",
   "license": "(MIT OR Apache-2.0)",
   "devDependencies": {
-    "@consensys/eslint-config": "workspace:*",
+    "@lfdt-lineth/eslint-config": "workspace:*",
     "@jest/globals": "catalog:",
     "@types/jest": "catalog:",
     "@types/unzipper": "0.10.11",

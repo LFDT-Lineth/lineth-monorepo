@@ -1,4 +1,4 @@
-name: "Reusable: Linea Milestone Push Tag and CHANGELOG Update"
+name: "Reusable: Milestone Push Tag and CHANGELOG Update"
 
 on:
   workflow_call:
@@ -52,7 +52,7 @@ permissions:
 
 jobs:
   update-linea-milestone-changelog:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     outputs:
       changelog: ${{ steps.prepend-milestone-header.outputs.changelog }}
     env:

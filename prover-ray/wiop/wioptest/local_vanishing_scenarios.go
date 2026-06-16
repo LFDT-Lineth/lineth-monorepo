@@ -491,3 +491,84 @@ func NewLocalProductIsZeroScenario() *LocalVanishingScenario {
 		},
 	}
 }
+
+// NewLocalDynamicFirstRowZeroScenario pins col at row 0 to zero on a
+// dynamic-size module. The module declares no size; its domain size is fixed by
+// the column assignment at runtime. This exercises the localvanishing →
+// global pipeline against a module whose size is unknown at compile time —
+// only possible because the lift uses a [wiop.LagrangeSelector] (computed from
+// the runtime size) rather than a static precomputed column.
+//
+//   - Valid: col = [0, 9, …]; row 0 satisfies col[0] = 0.
+//   - Invalid: col = [7, 9, …]; row 0 violates.
+func NewLocalDynamicFirstRowZeroScenario() *LocalVanishingScenario {
+	sys := wiop.NewSystemf("lv-dyn-row0")
+	r0 := sys.NewRound()
+	mod := sys.NewDynamicModule(sys.Context.Childf("dynmod"), wiop.PaddingDirectionRight)
+	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	mod.NewLocalConstraint(sys.Context.Childf("lc"), col.View(), 0)
+
+	return &LocalVanishingScenario{
+		Name: "DynamicFirstRowZero",
+		Sys:  sys,
+		AssignHonest: func(rt *wiop.Runtime) {
+			rt.AssignColumn(col, makeVec(0, 9, 9, 9, 9, 9, 9, 9)) // size 8, row 0 = 0
+		},
+		AssignInvalid: func(rt *wiop.Runtime) {
+			rt.AssignColumn(col, makeVec(7, 9, 9, 9, 9, 9, 9, 9))
+		},
+	}
+}
+
+// NewLocalDynamicShiftedScenario pins col at row 1 to zero (read via a +1 shift
+// from a row-0 anchor) on a dynamic-size module.
+//
+//   - Valid: col = [9, 0, …]; col[0 + 1] = 0.
+//   - Invalid: col = [9, 7, …]; col[1] != 0.
+func NewLocalDynamicShiftedScenario() *LocalVanishingScenario {
+	sys := wiop.NewSystemf("lv-dyn-shift")
+	r0 := sys.NewRound()
+	mod := sys.NewDynamicModule(sys.Context.Childf("dynmod"), wiop.PaddingDirectionRight)
+	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	mod.NewLocalConstraint(sys.Context.Childf("lc"), col.View().Shift(1), 0)
+
+	return &LocalVanishingScenario{
+		Name: "DynamicShifted",
+		Sys:  sys,
+		AssignHonest: func(rt *wiop.Runtime) {
+			rt.AssignColumn(col, makeVec(9, 0, 9, 9, 9, 9, 9, 9))
+		},
+		AssignInvalid: func(rt *wiop.Runtime) {
+			rt.AssignColumn(col, makeVec(9, 7, 9, 9, 9, 9, 9, 9))
+		},
+	}
+}
+
+// NewLocalDynamicProductIsZeroScenario asserts (a · b)[0] = 0 on a dynamic-size
+// module. The quadratic predicate lifts to a degree-(2·(n-1)+1) vanishing whose
+// quotient ratio exceeds 1, so it exercises the selector's coset evaluation on
+// the *large* coset (N = n·ratio) for a module sized only at runtime.
+//
+//   - Valid: a[0] = 0, b[0] = 5; product 0.
+//   - Invalid: a[0] = 3, b[0] = 5; product 15.
+func NewLocalDynamicProductIsZeroScenario() *LocalVanishingScenario {
+	sys := wiop.NewSystemf("lv-dyn-prod")
+	r0 := sys.NewRound()
+	mod := sys.NewDynamicModule(sys.Context.Childf("dynmod"), wiop.PaddingDirectionRight)
+	a := mod.NewColumn(sys.Context.Childf("a"), wiop.VisibilityOracle, r0)
+	b := mod.NewColumn(sys.Context.Childf("b"), wiop.VisibilityOracle, r0)
+	mod.NewLocalConstraint(sys.Context.Childf("lc"), wiop.Mul(a.View(), b.View()), 0)
+
+	return &LocalVanishingScenario{
+		Name: "DynamicProductIsZero",
+		Sys:  sys,
+		AssignHonest: func(rt *wiop.Runtime) {
+			rt.AssignColumn(a, makeVec(0, 9, 9, 9, 9, 9, 9, 9))
+			rt.AssignColumn(b, makeVec(5, 9, 9, 9, 9, 9, 9, 9))
+		},
+		AssignInvalid: func(rt *wiop.Runtime) {
+			rt.AssignColumn(a, makeVec(3, 9, 9, 9, 9, 9, 9, 9))
+			rt.AssignColumn(b, makeVec(5, 9, 9, 9, 9, 9, 9, 9))
+		},
+	}
+}

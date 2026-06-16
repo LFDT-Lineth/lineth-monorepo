@@ -1,0 +1,15 @@
+{
+  "$schema": "./schema.json",
+  "network": "hoodi",
+  "chainId": 560048,
+  "contracts": {
+    "YIELD_MANAGER_ADDRESS": {
+      "address": "0x73bF00aD18c7c0871EBA03Bcbef8C98225f9CEaA",
+      "notes": "Hoodi Yield Manager"
+    },
+    "LINEA_ROLLUP_ADDRESS": {
+      "address": "0x24B0E20c3Cec999C8A6723FCfC06d5c88fB4a056",
+      "notes": "Test Linea Rollup"
+    }
+  }
+}

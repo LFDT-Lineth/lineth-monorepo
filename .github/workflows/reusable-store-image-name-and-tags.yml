@@ -1,0 +1,42 @@
+name: "Reusable: Store Image Name and Tags"
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    outputs:
+      commit_tag:
+        value: ${{ jobs.store_image_name_and_tags.outputs.commit_tag }}
+      last_commit_tag:
+        value: ${{ jobs.store_image_name_and_tags.outputs.last_commit_tag }}
+      develop_tag:
+        value: ${{ jobs.store_image_name_and_tags.outputs.develop_tag }}
+
+concurrency:
+  group: store-image-name-and-tags-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  store_image_name_and_tags:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    name: Compute version tags
+    env:
+      # REF_NAME: ${{ github.ref_name }}
+      EVENT_BEFORE: ${{ github.event.before }}
+    outputs:
+      commit_tag: ${{ steps.compute-version-tags.outputs.commit_tag }}
+      last_commit_tag: ${{ steps.compute-version-tags.outputs.last_commit_tag }}
+      develop_tag: ${{ steps.compute-version-tags.outputs.develop_tag}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Compute version tags
+        id: compute-version-tags
+        uses: ./.github/actions/compute-version-tags
+      - name: Show version tags
+        run: |
+          echo "COMMIT_TAG: ${{ steps.compute-version-tags.outputs.commit_tag }}"
+          echo "LAST_COMMIT_TAG: ${{ steps.compute-version-tags.outputs.last_commit_tag }}"
+          echo "DEVELOP_TAG: ${{ steps.compute-version-tags.outputs.develop_tag }}"
+          echo "github.ref: ${{ github.ref }}"

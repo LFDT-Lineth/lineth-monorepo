@@ -264,7 +264,22 @@ func TestCompile_IsIdempotent(t *testing.T) {
 			"already reduced and the lifted one is multi-valued")
 }
 
-func TestCompile_SharesLagrangeColumnsByAnchor(t *testing.T) {
+// findSelector returns the first LagrangeSelector leaf in expr, or nil.
+func findSelector(expr wiop.Expression) *wiop.LagrangeSelector {
+	switch t := expr.(type) {
+	case *wiop.LagrangeSelector:
+		return t
+	case *wiop.ArithmeticOperation:
+		for _, op := range t.Operands {
+			if s := findSelector(op); s != nil {
+				return s
+			}
+		}
+	}
+	return nil
+}
+
+func TestCompile_SharesSelectorsByAnchor(t *testing.T) {
 	sys := wiop.NewSystemf("lv-share")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
@@ -276,15 +291,32 @@ func TestCompile_SharesLagrangeColumnsByAnchor(t *testing.T) {
 
 	colsBefore := len(mod.Columns)
 	localvanishing.Compile(sys)
-	assert.Len(t, mod.Columns, colsBefore+1,
-		"both vanishings share anchor 0, so only one Lagrange column should be created")
+
+	// Selectors are not committed columns, so the lift creates none.
+	assert.Len(t, mod.Columns, colsBefore,
+		"LagrangeSelectors are not committed, so no column should be created")
+
+	// Both lifted vanishings share anchor 0, so the per-(module, anchor) cache
+	// must hand them the same selector instance.
+	var selectors []*wiop.LagrangeSelector
+	for _, v := range mod.Vanishings {
+		if !v.IsReduced() && v.Expression.IsMultiValued() {
+			if s := findSelector(v.Expression); s != nil {
+				selectors = append(selectors, s)
+			}
+		}
+	}
+	require.Len(t, selectors, 2, "expected one lifted vanishing per local constraint")
+	assert.Same(t, selectors[0], selectors[1],
+		"both vanishings share anchor 0, so they must reuse one selector")
 }
 
-// TestCompile_PanicsOnOutOfRangePosition ensures the Lagrange-column constructor
-// rejects an out-of-range anchor with a localised panic instead of an opaque
-// "index out of range" crash deep inside the runtime. The expression
-// hand-constructs a *ColumnPosition with a negative Position via Column.At,
-// bypassing the normalisation that NewLocalConstraint would otherwise apply.
+// TestCompile_PanicsOnOutOfRangePosition ensures an out-of-range anchor is
+// rejected with a localised panic instead of an opaque "index out of range"
+// crash deep inside the runtime. The expression hand-constructs a
+// *ColumnPosition with a negative Position via Column.At, bypassing the
+// normalisation that NewLocalConstraint would otherwise apply; the negative
+// anchor then flows into NewLagrangeSelector, which validates it.
 func TestCompile_PanicsOnOutOfRangePosition(t *testing.T) {
 	sys := wiop.NewSystemf("lv-oob")
 	r0 := sys.NewRound()
@@ -297,16 +329,13 @@ func TestCompile_PanicsOnOutOfRangePosition(t *testing.T) {
 	badExpr := col.At(-1)
 	mod.NewLocalConstraint(sys.Context.Childf("lc"), badExpr, 0)
 
-	assert.PanicsWithValue(t, true, func() {
-		defer func() {
-			if r := recover(); r != nil {
-				msg, _ := r.(string)
-				assert.Contains(t, msg, "Lagrange anchor -1 out of range")
-				panic(true) // re-raise so PanicsWithValue sees a panic
-			}
-		}()
-		localvanishing.Compile(sys)
-	}, "out-of-range anchor must trigger the explicit precondition message")
+	defer func() {
+		r := recover()
+		require.NotNil(t, r, "out-of-range anchor must trigger a panic")
+		msg, _ := r.(string)
+		assert.Contains(t, msg, "position must be non-negative")
+	}()
+	localvanishing.Compile(sys)
 }
 
 // elementFromUint64 converts a literal uint64 into a koalabear field.Element.

@@ -22,7 +22,7 @@ on:
 
 jobs:
   compute-docker-image-tag:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: Compute docker image tag
     outputs:
       docker_tag: ${{ steps.dockertag.outputs.dockertag }}

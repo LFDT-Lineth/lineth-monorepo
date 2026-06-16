@@ -1,4 +1,4 @@
-name: Tracer simple zkc binary run and go-corset check
+name: Tracer simple zkc binary run and check
 
 on:
   pull_request:
@@ -18,8 +18,8 @@ on:
   workflow_call:
   workflow_dispatch:
     inputs:
-      go-corset-ref:
-        description: 'go-corset commit/branch/tag for zkc (defaults to main)'
+      zkc-ref:
+        description: 'zkc commit/branch/tag (defaults to pinned ref below)'
         required: false
         type: string
 
@@ -28,8 +28,8 @@ permissions:
   actions: read
 
 jobs:
-  binary-run-and-go-corset-check:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+  binary-run-and-zkc-check:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -39,11 +39,10 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-arithmetization-riscv
 
-      - name: Install zkc, compile risc binary for simple zkc test program and go-corset check it
+      - name: Install zkc, compile risc binary for simple zkc test program and check it
         run: make -C arithmetization zkc-compile-and-check
         env:
+          ZKC_REF: ${{ inputs.zkc-ref || 'main' }}
           ZKC_MAIN: src/test/examples/zkc/simple_add.zkc
           ZKC_FILES: src/test/examples/zkc/simple_add.zkc
           ZKC_INPUT: src/test/examples/zkc/simple_add.json
-          # Pinned to the last known-good commit before go-corset#1813
-          GO_CORSET_REF_FOR_ZKC: ${{ inputs.go-corset-ref || '5dc39754f5596b701231d6535c5973e3f8ec3889' }}

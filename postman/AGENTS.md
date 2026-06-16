@@ -15,7 +15,7 @@ pnpm run -F linea-shared-utils build && \
 pnpm run -F "./ts-libs/sdk/*" build
 
 # Build the postman
-pnpm -F @consensys/linea-postman run build
+pnpm -F @lfdt-lineth/postman run build
 
 # Run locally (requires local stack + PostgreSQL)
 pnpm exec ts-node src/main.ts
@@ -28,14 +28,14 @@ make start-env-with-tracing-v2
 
 ```bash
 # Unit tests
-pnpm -F @consensys/linea-postman run test
+pnpm -F @lfdt-lineth/postman run test
 ```
 
 ### Lint
 
 ```bash
-pnpm -F @consensys/linea-postman run lint
-pnpm -F @consensys/linea-postman run lint:fix
+pnpm -F @lfdt-lineth/postman run lint
+pnpm -F @lfdt-lineth/postman run lint:fix
 ```
 
 ## TypeScript-Specific Conventions
@@ -45,7 +45,7 @@ pnpm -F @consensys/linea-postman run lint:fix
 - **Blockchain library:** Viem
 - **ORM:** TypeORM 0.3 with PostgreSQL
 - **Configuration:** Zod schema validation (`src/application/postman/app/config/schema.ts`)
-- **Logging:** Winston via `@consensys/linea-shared-utils`
+- **Logging:** Winston via `@lfdt-lineth/shared-utils`
 - **Metrics:** Prometheus via `prom-client`
 
 ### Directory Structure
@@ -92,10 +92,10 @@ postman/
 | Dependency | Purpose |
 |------------|---------|
 | `viem` | Blockchain interactions (public/wallet clients, ABI encoding) |
-| `@consensys/linea-sdk-core` | Core SDK types and utilities |
-| `@consensys/linea-sdk-viem` | Viem-based SDK integration |
-| `@consensys/linea-native-libs` | Native library bindings (blob compressor) |
-| `@consensys/linea-shared-utils` | Shared utilities (logging, metrics, server) |
+| `@lfdt-lineth/sdk-core` | Core SDK types and utilities |
+| `@lfdt-lineth/sdk-viem` | Viem-based SDK integration |
+| `@lfdt-lineth/native-libs` | Native library bindings (blob compressor) |
+| `@lfdt-lineth/shared-utils` | Shared utilities (logging, metrics, server) |
 | `typeorm` | PostgreSQL ORM with migrations |
 | `zod` | Configuration schema validation |
 | `filtrex` | Calldata filter expression parsing |
@@ -129,7 +129,7 @@ Migrations are written manually — TypeORM CLI auto-generation is not used due 
 
 ## Agent Rules (Overrides)
 
-- Run `pnpm -F @consensys/linea-postman run lint` before proposing TypeScript changes
+- Run `pnpm -F @lfdt-lineth/postman run lint` before proposing TypeScript changes
 - Configuration changes must be reflected in both `config/schema.ts` (Zod) and `config/envLoader.ts`
 - New environment variables must be added to `.env.sample` with sensible defaults
 - Changes to blockchain client interfaces (`core/clients/`) affect both L1→L2 and L2→L1 paths — test both directions

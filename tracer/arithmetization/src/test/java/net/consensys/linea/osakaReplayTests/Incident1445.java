@@ -55,7 +55,7 @@ public class Incident1445 extends TracerTestBase {
   // as in prod
 
   // TODO: reenable when Besu 25.12.0-linea4 contains the fix for incident 1445
-  // https://github.com/Consensys/linea-monorepo/issues/2194
+  // https://github.com/LFDT-Lineth/lineth-monorepo/issues/2194
   /*
     @Test
     void block_28279180_runWithBesu(TestInfo testInfo) {
@@ -71,7 +71,7 @@ public class Incident1445 extends TracerTestBase {
   }
 
   // TODO: reenable when Besu 25.12.0-linea4 contains the fix for incident 1445
-  // https://github.com/Consensys/linea-monorepo/issues/2194
+  // https://github.com/LFDT-Lineth/lineth-monorepo/issues/2194
   /*  @Test
   void block_23985771_runWithBesu(TestInfo testInfo) {
     replay(SEPOLIA_TESTCONFIG(OSAKA), "osaka/incident-1445-23985771.sepolia.json.gz", testInfo, false, true);

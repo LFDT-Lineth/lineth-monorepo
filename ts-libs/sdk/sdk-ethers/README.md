@@ -21,17 +21,17 @@ The Linea SDK package a TypeScript library for seamless bridging operations betw
 ## Installation
 
 ```bash
-npm install @consensys/linea-sdk
+npm install @lfdt-lineth/sdk
 # or
-yarn add @consensys/linea-sdk
+yarn add @lfdt-lineth/sdk
 # or
-pnpm add @consensys/linea-sdk
+pnpm add @lfdt-lineth/sdk
 ```
 
 ## Quick Start
 
 ```typescript
-import { LineaSDK } from '@consensys/linea-sdk';
+import { LineaSDK } from '@lfdt-lineth/sdk';
 
 // Initialize SDK
 const sdk = new LineaSDK({

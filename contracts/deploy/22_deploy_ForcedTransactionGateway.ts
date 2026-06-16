@@ -2,7 +2,12 @@ import { ethers } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
-import { LogContractDeployment, getRequiredEnvVar, tryVerifyContractWithConstructorArgs } from "../common/helpers";
+import {
+  LogContractDeployment,
+  getRequiredEnvVar,
+  requireAddressFromRegistryOrEnv,
+  tryVerifyContractWithConstructorArgs,
+} from "../common/helpers";
 import { getUiSigner, withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
 
 const func: DeployFunction = withSignerUiSession(
@@ -11,14 +16,26 @@ const func: DeployFunction = withSignerUiSession(
     const contractName = "ForcedTransactionGateway";
     const signer = await getUiSigner(hre);
 
-    const lineaRollupAddress = ethers.getAddress(getRequiredEnvVar("LINEA_ROLLUP_ADDRESS"));
+    const lineaRollupAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LineaRollup", "LINEA_ROLLUP_ADDRESS");
     const destinationChainId = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID");
     const l2BlockBuffer = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER");
     const maxGasLimit = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_MAX_GAS_LIMIT");
     const maxInputLengthBuffer = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_MAX_INPUT_LENGTH_BUFFER");
-    const defaultAdmin = ethers.getAddress(getRequiredEnvVar("L1_SECURITY_COUNCIL"));
-    const addressFilter = ethers.getAddress(getRequiredEnvVar("FORCED_TRANSACTION_ADDRESS_FILTER"));
-    const mimcLibraryAddress = ethers.getAddress(getRequiredEnvVar("MIMC_LIBRARY_ADDRESS"));
+    const defaultAdmin = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "L1_SECURITY_COUNCIL",
+      "L1_SECURITY_COUNCIL",
+    );
+    const addressFilter = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "AddressFilter",
+      "FORCED_TRANSACTION_ADDRESS_FILTER",
+    );
+    const mimcLibraryAddress = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "MIMC_LIBRARY_ADDRESS",
+      "MIMC_LIBRARY_ADDRESS",
+    );
 
     const factory = await ethers.getContractFactory(contractName, {
       libraries: { Mimc: mimcLibraryAddress },

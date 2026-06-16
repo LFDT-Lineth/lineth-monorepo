@@ -5,58 +5,70 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/linea-monorepo/prover-ray/wiop"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestLocalOpening_Round_IsAlreadyAssigned_SelfAssign_Check(t *testing.T) {
+// TestColumnPosition_Open_RegistersScalarVanishing asserts that Open lowers an
+// opening into a single scalar vanishing on the column's module and returns a
+// cell living in the column's round.
+func TestColumnPosition_Open_RegistersScalarVanishing(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
 	col := mod.NewColumn(sys.Context.Childf("loCol"), wiop.VisibilityOracle, r0)
-	lo := col.At(2).Open(sys.Context.Childf("lo"))
 
-	require.NotNil(t, lo)
-	assert.Equal(t, r0, lo.Round())
+	vansBefore := len(mod.Vanishings)
+	result := col.At(2).Open(sys.Context.Childf("lo"))
+
+	require.NotNil(t, result)
+	assert.Equal(t, r0, result.Round())
+	require.Len(t, mod.Vanishings, vansBefore+1,
+		"Open must register exactly one vanishing")
+	v := mod.Vanishings[len(mod.Vanishings)-1]
+	assert.False(t, v.Expression.IsMultiValued(),
+		"the opening vanishing must be scalar so the local-vanishing compiler discharges it")
+}
+
+// TestColumnPosition_Open_LazyCellResolvesToColumnValue asserts that the result
+// cell is lazy: it is unassigned until read, then resolves to Column[Position].
+func TestColumnPosition_Open_LazyCellResolvesToColumnValue(t *testing.T) {
+	sys, r0, _, mod := newTestSystem(t)
+	col := mod.NewColumn(sys.Context.Childf("loCol"), wiop.VisibilityOracle, r0)
+	result := col.At(2).Open(sys.Context.Childf("lo"))
 
 	rt := wiop.NewRuntime(sys)
-	// Assign [0,1,2,3]; lo picks index 2 → expected 2
+	// Assign [0,1,2,3]; position 2 → expected 2.
 	elems := make([]field.Element, 4)
-	for i := range 4 {
+	for i := range elems {
 		elems[i].SetUint64(uint64(i))
 	}
 	rt.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(elems)})
 
-	assert.False(t, lo.IsAlreadyAssigned(rt))
-	lo.SelfAssign(rt)
-	assert.True(t, lo.IsAlreadyAssigned(rt))
+	assert.False(t, rt.HasCellValue(result), "lazy cell must be unassigned before first read")
 
-	require.NoError(t, lo.Check(rt))
+	got := rt.GetCellValue(result).AsBase()
+	var want field.Element
+	want.SetUint64(2)
+	assert.True(t, got.Equal(&want), "lazy cell must resolve to Column[2] == 2")
+	assert.True(t, rt.HasCellValue(result), "lazy cell must be cached after first read")
 }
 
-func TestLocalOpening_Check_Mismatch(t *testing.T) {
+// TestColumnPosition_Open_ExplicitAssignmentWins asserts that an explicit cell
+// assignment takes precedence over the lazy assigner (the basis for malicious-
+// prover / mutator scenarios that inject a wrong opening value).
+func TestColumnPosition_Open_ExplicitAssignmentWins(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("loMisCol"), wiop.VisibilityOracle, r0)
-	lo := col.At(1).Open(sys.Context.Childf("loMis"))
+	col := mod.NewColumn(sys.Context.Childf("loCol"), wiop.VisibilityOracle, r0)
+	result := col.At(2).Open(sys.Context.Childf("lo"))
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 5))
-	// manually assign wrong value to result cell
-	rt.AssignCell(lo.Result, field.ElemFromBase(field.NewFromString("9")))
+	rt.AssignColumn(col, baseVec(4, 7))
 
-	err := lo.Check(rt)
-	assert.Error(t, err)
-}
+	var wrong field.Element
+	wrong.SetUint64(9)
+	rt.AssignCell(result, field.ElemFromBase(wrong))
 
-func TestLocalOpening_Check_ColumnNotAssigned(t *testing.T) {
-	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("loUnassigned"), wiop.VisibilityOracle, r0)
-	lo := col.At(0).Open(sys.Context.Childf("loUnassignedQ"))
-
-	rt := wiop.NewRuntime(sys)
-	// don't assign column
-	rt.AssignCell(lo.Result, field.ElemZero())
-	err := lo.Check(rt)
-	assert.Error(t, err)
+	got := rt.GetCellValue(result).AsBase()
+	assert.True(t, got.Equal(&wrong), "explicit assignment must win over the lazy assigner")
 }
 
 func TestColumnPosition_Open_NilReceiverPanic(t *testing.T) {
@@ -70,20 +82,4 @@ func TestColumnPosition_Open_NilCtxPanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
 	col := mod.NewColumn(sys.Context.Childf("openNilCtx"), wiop.VisibilityOracle, r0)
 	assert.Panics(t, func() { col.At(0).Open(nil) })
-}
-
-// ---- Soundness ----
-
-func TestLocalOpening_Soundness_Completeness(t *testing.T) {
-	sc := wioptest.NewLocalOpeningScenario()
-	rt := wiop.NewRuntime(sc.Sys)
-	sc.RunHonest(&rt)
-	require.NoError(t, sc.Query.Check(rt), "honest witness must pass Check")
-}
-
-func TestLocalOpening_Soundness_InvalidWitness(t *testing.T) {
-	sc := wioptest.NewLocalOpeningScenario()
-	rt := wiop.NewRuntime(sc.Sys)
-	sc.RunInvalid(&rt)
-	assert.Error(t, sc.Query.Check(rt), "invalid witness must be rejected by Check")
 }

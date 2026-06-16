@@ -3,7 +3,7 @@ import { ethers, upgrades } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
-import { tryVerifyContract, getRequiredEnvVar } from "../common/helpers";
+import { tryVerifyContract, getRequiredEnvVar, requireAddressFromRegistryOrEnv } from "../common/helpers";
 import { getUiSigner, withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
 
 const func: DeployFunction = withSignerUiSession(
@@ -12,17 +12,53 @@ const func: DeployFunction = withSignerUiSession(
     const signer = await getUiSigner(hre);
     const contractName = "RollupRevenueVault";
 
-    const proxyAddress = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_ADDRESS");
+    const proxyAddress = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "RollupRevenueVault",
+      "ROLLUP_REVENUE_VAULT_ADDRESS",
+    );
     const lastInvoiceDate = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_LAST_INVOICE_DATE");
-    const securityCouncil = getRequiredEnvVar("L2_SECURITY_COUNCIL");
-    const invoiceSubmitter = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_INVOICE_SUBMITTER");
-    const burner = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_BURNER");
-    const invoicePaymentReceiver = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_INVOICE_PAYMENT_RECEIVER");
-    const tokenBridge = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_TOKEN_BRIDGE");
-    const messageService = getRequiredEnvVar("L2_MESSAGE_SERVICE_ADDRESS");
-    const l1LineaTokenBurner = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_L1_LINEA_TOKEN_BURNER");
-    const lineaToken = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_LINEA_TOKEN");
-    const dexSwapAdapter = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_DEX_SWAP_ADAPTER");
+    const securityCouncil = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "L2_SECURITY_COUNCIL",
+      "L2_SECURITY_COUNCIL",
+    );
+    const invoiceSubmitter = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "ROLLUP_REVENUE_VAULT_INVOICE_SUBMITTER",
+      "ROLLUP_REVENUE_VAULT_INVOICE_SUBMITTER",
+    );
+    const burner = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "ROLLUP_REVENUE_VAULT_BURNER",
+      "ROLLUP_REVENUE_VAULT_BURNER",
+    );
+    const invoicePaymentReceiver = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "ROLLUP_REVENUE_VAULT_INVOICE_PAYMENT_RECEIVER",
+      "ROLLUP_REVENUE_VAULT_INVOICE_PAYMENT_RECEIVER",
+    );
+    const tokenBridge = requireAddressFromRegistryOrEnv(hre.network.name, "TokenBridge_L2", "TOKEN_BRIDGE_ADDRESS");
+    const messageService = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "L2MessageService",
+      "L2_MESSAGE_SERVICE_ADDRESS",
+    );
+    const l1LineaTokenBurner = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "ROLLUP_REVENUE_VAULT_L1_LINEA_TOKEN_BURNER",
+      "ROLLUP_REVENUE_VAULT_L1_LINEA_TOKEN_BURNER",
+    );
+    const lineaToken = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "ROLLUP_REVENUE_VAULT_LINEA_TOKEN",
+      "ROLLUP_REVENUE_VAULT_LINEA_TOKEN",
+    );
+    const dexSwapAdapter = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "ROLLUP_REVENUE_VAULT_DEX_SWAP_ADAPTER",
+      "ROLLUP_REVENUE_VAULT_DEX_SWAP_ADAPTER",
+    );
 
     const factory = await ethers.getContractFactory(contractName, signer);
 

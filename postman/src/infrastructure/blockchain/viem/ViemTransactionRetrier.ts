@@ -1,4 +1,4 @@
-import { ILogger } from "@consensys/linea-shared-utils";
+import { ILogger } from "@lfdt-lineth/shared-utils";
 import { type LocalAccount, type PublicClient, type WalletClient } from "viem";
 
 import { ITransactionRetrier } from "../../../core/services/ITransactionRetrier";

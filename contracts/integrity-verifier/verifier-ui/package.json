@@ -1,5 +1,5 @@
 {
-  "name": "@consensys/linea-contract-integrity-verifier-ui",
+  "name": "@lfdt-lineth/contract-integrity-verifier-ui",
   "version": "1.0.0",
   "private": true,
   "license": "(MIT OR Apache-2.0)",
@@ -15,9 +15,9 @@
     "test": "playwright test"
   },
   "dependencies": {
-    "@consensys/linea-contract-integrity-verifier": "workspace:*",
-    "@consensys/linea-contract-integrity-verifier-ethers": "workspace:*",
-    "@consensys/linea-contract-integrity-verifier-viem": "workspace:*",
+    "@lfdt-lineth/contract-integrity-verifier": "workspace:*",
+    "@lfdt-lineth/contract-integrity-verifier-ethers": "workspace:*",
+    "@lfdt-lineth/contract-integrity-verifier-viem": "workspace:*",
     "@headlessui/react": "2.2.10",
     "@tanstack/react-query": "5.100.9",
     "clsx": "2.1.1",
@@ -29,7 +29,7 @@
     "zustand": "5.0.13"
   },
   "devDependencies": {
-    "@consensys/eslint-config": "workspace:*",
+    "@lfdt-lineth/eslint-config": "workspace:*",
     "@playwright/test": "1.59.1",
     "@types/node": "24.12.2",
     "@types/react": "19.2.14",

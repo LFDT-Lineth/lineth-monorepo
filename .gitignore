@@ -106,6 +106,10 @@ __pycache__/
 /contracts/coverage.json
 /contracts/**/cache
 /contracts/deployments/zkevm_dev
+/contracts/deployments/custom
+/contracts/deployments/l2
+/contracts/deployments/localhost
+/contracts/deployments/hardhat
 /contracts/lib/forge-std/
 /contracts/signer-ui/.next/
 /contracts/signer-ui/node_modules/

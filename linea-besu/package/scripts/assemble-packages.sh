@@ -51,7 +51,7 @@ echo "using JAR files under local tracer distribution folder: $LOCAL_TRACER_DIST
 cp -a $LOCAL_TRACER_DIST_FOLDER/. .
 
 echo "getting linea_staterecovery_plugin_version: $LINEA_STATERECOVERY_PLUGIN_VERSION"
-wget -nv https://github.com/Consensys/linea-monorepo/releases/download/linea-staterecovery-v$LINEA_STATERECOVERY_PLUGIN_VERSION/linea-staterecovery-besu-plugin-v$LINEA_STATERECOVERY_PLUGIN_VERSION.jar
+wget -nv https://github.com/LFDT-Lineth/lineth-monorepo/releases/download/linea-staterecovery-v$LINEA_STATERECOVERY_PLUGIN_VERSION/linea-staterecovery-besu-plugin-v$LINEA_STATERECOVERY_PLUGIN_VERSION.jar
 
 echo "getting shomei_plugin_version: $SHOMEI_PLUGIN_VERSION"
 wget -nv https://github.com/Consensys/besu-shomei-plugin/releases/download/v$SHOMEI_PLUGIN_VERSION/besu-shomei-plugin-v$SHOMEI_PLUGIN_VERSION.zip

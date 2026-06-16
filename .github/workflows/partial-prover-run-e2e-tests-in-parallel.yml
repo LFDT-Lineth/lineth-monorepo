@@ -23,7 +23,7 @@ on:
 
 jobs:
   download-images-and-run-e2e-tests-with-partial-prover:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-xxl
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     concurrency:
       group: run-e2e-tests-${{ github.workflow }}-${{ github.ref }}-${{ matrix.test }}
       cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -88,7 +88,6 @@ jobs:
           retry_on: error
           retry_wait_seconds: 30
           timeout_minutes: 10
-          # TODO: hardcoded image tags for testing, should be removed 
           command: |
             LINEA_BESU_PACKAGE_TAG=${{ inputs.linea_besu_package_image_tag || 'local' }} \
             LINEA_PROVER_TAG=${{ inputs.prover_image_tag || 'local' }} \

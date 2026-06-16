@@ -1,15 +1,18 @@
-from ethereum.forks.osaka.blocks import Block as EthereumBlock, Header
-from ethereum.forks.osaka.transactions import (
+from .fork import (
+    Block as EthereumBlock,
+    Header,
+    Withdrawal,
     Transaction,
     recover_sender,
     LegacyTransaction,
     decode_transaction,
+    ProtocolFork,
 )
 from ethereum.state import Address
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from ethereum_types.numeric import U64, Uint
 from ethereum.crypto.hash import Hash32, keccak256
-from ethereum_types.bytes import Bytes
+from ethereum_types.bytes import Bytes, Bytes32
 from ethereum_rlp import rlp
 from enum import Enum
 from typing import List, TypeAlias
@@ -141,37 +144,162 @@ class ResolvedForcedTransaction:
         return keccak256(self.signed_tx_rlp)
 
 @dataclass
-class RollupBlock:
+class DepositRequest:
     """
-    Logical l2-execution block witness.
+    EIP-7685 deposit request carried by `NewPayloadRequest.executionRequests`.
+    The SSZ decoder materializes this logical object from the guest input bytes.
+    """
+    pubkey: bytes
+    withdrawal_credentials: Bytes32
+    amount: U64
+    signature: bytes
+    index: U64
 
-    `block_rlp` is the canonical private input supplied by the coordinator. The
-    Python reference decodes an `EthereumBlock` from these bytes internally when
-    it needs an execution view.
+
+@dataclass
+class WithdrawalRequest:
     """
-    block_rlp: bytes
-    forced_transactions: List[ForcedTransactionWitness]
+    EIP-7002 withdrawal request carried by `NewPayloadRequest.executionRequests`.
+    """
+    source_address: Address
+    validator_pubkey: bytes
+    amount: U64
+
+
+@dataclass
+class ConsolidationRequest:
+    """
+    EIP-7251 consolidation request carried by `NewPayloadRequest.executionRequests`.
+    """
+    source_address: Address
+    source_pubkey: bytes
+    target_pubkey: bytes
+
+
+@dataclass
+class ExecutionRequests:
+    """
+    Typed Engine API execution requests.
+
+    In SSZ these are bounded lists of fixed-size request containers, per
+    EIP-8025. They are explicit here because the guest validates
+    `NewPayloadRequest`, not a canonical block RLP.
+    """
+    deposits: List[DepositRequest] = field(default_factory=list)
+    withdrawals: List[WithdrawalRequest] = field(default_factory=list)
+    consolidations: List[ConsolidationRequest] = field(default_factory=list)
+
+
+@dataclass
+class StatelessChainConfig:
+    """
+    Chain context carried inside the stateless input.
+
+    Linea still carries its proof-range `ChainConfig` outside the standard
+    stateless payload because it also contains Linea-specific fields such as the
+    L2MessageService address and coinbase. The guest must reject a payload whose
+    stateless `chain_id` disagrees with the proof-range chain config. `active_fork`
+    is the resolved `ProtocolFork` decoded from the SSZ `chain_config.active_fork`
+    index (validated to be the spec's single supported fork — see `fork.py`).
+    """
+    chain_id: U64
+    active_fork: ProtocolFork = ProtocolFork.Amsterdam
+
+
+@dataclass
+class ExecutionPayload:
+    """
+    Logical Engine API execution payload inside `NewPayloadRequest`.
+
+    `transactions` are canonical signed tx bytes; the reference decodes an
+    individual transaction only when it needs sender recovery or the
+    execution-spec view.
+    """
+    parent_hash: Hash32
+    fee_recipient: Address
+    state_root: Hash32
+    receipts_root: Hash32
+    logs_bloom: bytes
+    prev_randao: Bytes32
+    block_number: U64
+    gas_limit: Uint
+    gas_used: Uint
+    timestamp: U64
+    extra_data: bytes
+    base_fee_per_gas: Uint
+    block_hash: Hash32
+    transactions: List[bytes]
+    withdrawals: List[Withdrawal]
+    blob_gas_used: U64
+    excess_blob_gas: U64
+    block_access_list: bytes = b""
+    slot_number: U64 | None = None
+
+
+@dataclass
+class NewPayloadRequest:
+    """
+    EIP-8025 payload request supplied to the l2-execution guest (replacing the
+    old `blockRlp` input). Binds the proof to a concrete Engine API payload:
+    versioned hashes, parent beacon block root, and typed execution requests.
+    """
+    execution_payload: ExecutionPayload
+    versioned_hashes: List[Hash32]
+    parent_beacon_block_root: Hash32
+    execution_requests: ExecutionRequests = field(default_factory=ExecutionRequests)
+
+
+@dataclass
+class StatelessInput:
+    """
+    Decoded stateless input matching the underlying engine's guest boundary.
+
+    Forced-transaction metadata is deliberately not here — it rides on
+    `LineaPayloadInput.rollup_extension` so the stateless input stays vanilla.
+    `public_keys` is decoded only because it is part of the stateless input; Linea
+    derives signers via `recover_sender(chainID, tx)`, not from it.
+    """
+    new_payload_request: NewPayloadRequest
+    witness: "ExecutionWitness"
+    chain_config: StatelessChainConfig
+    public_keys: List[bytes] = field(default_factory=list)
+
+
+@dataclass
+class LineaRollupExtension:
+    """
+    Linea-only fields beside the vanilla stateless input. Must not be appended to
+    the stateless-input SSZ byte slice passed to the decoder.
+    """
+    forced_transactions: List[ForcedTransactionWitness] = field(default_factory=list)
+
+
+@dataclass
+class LineaPayloadInput:
+    """
+    One block of Linea l2-execution guest input.
+
+    `stateless_input_ssz` is the vanilla stateless-input byte slice
+    (length-delimited, decoded on its own); `rollup_extension` is Linea-only
+    metadata consumed after payload execution, intentionally outside the
+    stateless input.
+    """
+    stateless_input_ssz: bytes
+    rollup_extension: LineaRollupExtension = field(default_factory=LineaRollupExtension)
 
 def block_hash(header: Header) -> Hash32:
-    """
-    block_hash computes the hash of a block header
-    """
+    """Hash of a block header."""
     return keccak256(rlp.encode(header))
 
 def decode_block_rlp(block_rlp: bytes) -> EthereumBlock:
     """
-    Decode the canonical block RLP carried by the l2-execution private input
-    into the Ethereum execution-specs block view.
+    Decode a canonical block RLP carried by the rollup DA witness into the
+    Ethereum execution-specs block view.
     """
     return rlp.decode_to(EthereumBlock, block_rlp)
 
 def decode_signed_transaction_rlp(signed_tx_rlp: bytes) -> Transaction:
-    """
-    Decode the canonical signed transaction bytes used for forced transactions.
-
-    Typed EIP-2718 transactions are encoded as type byte || RLP(payload). Legacy
-    transactions are plain RLP.
-    """
+    """Decode a forced transaction's signed bytes (typed EIP-2718 or legacy)."""
     if len(signed_tx_rlp) == 0:
         raise Exception("empty signed transaction RLP")
     if signed_tx_rlp[0] in (1, 2, 3, 4):
@@ -195,33 +323,23 @@ def resolve_forced_transaction(ftx: ForcedTransactionWitness, chain_id: U64) -> 
     )
 
 
-def _canonical_transaction_bytes(transaction: BlockTransaction) -> bytes:
-    """
-    Return the canonical signed bytes for a transaction from an execution-spec
-    block view.
-
-    `Block.transactions` is `Tuple[bytes | LegacyTransaction, ...]`: typed
-    transactions are already EIP-2718 bytes, while legacy transactions are
-    decoded objects and need regular RLP encoding.
-    """
-    match transaction:
-        case bytes():
-            return transaction
-        case LegacyTransaction():
-            return rlp.encode(transaction)
+def parse_payload_transaction_rlps(payload: ExecutionPayload) -> List[bytes]:
+    """Return the signed transaction byte strings from an Engine API payload."""
+    return [bytes(tx_rlp) for tx_rlp in payload.transactions]
 
 
-def parse_block_transaction_rlps(block_rlp: bytes) -> List[bytes]:
+def payload_transactions_for_execution(payload: ExecutionPayload) -> tuple[BlockTransaction, ...]:
     """
-    Return the signed transaction RLP byte strings decoded from `block_rlp`.
-
-    `blockRlp` is the canonical witness bytes in the logical schema. Decoded
-    `EthereumBlock` objects are only execution views, so hash checks over block
-    transactions must use bytes extracted from `block_rlp` rather than
-    re-encoding decoded transaction objects.
+    Convert Engine API transaction bytes to the execution-spec `apply_body`
+    shape: typed transactions stay as EIP-2718 bytes, legacy transactions are
+    decoded to `LegacyTransaction`.
     """
-    block = decode_block_rlp(block_rlp)
-    return [
-        _canonical_transaction_bytes(transaction)
-        for transaction in block.transactions
-    ]
+    transactions: List[BlockTransaction] = []
+    for tx_rlp in parse_payload_transaction_rlps(payload):
+        if len(tx_rlp) == 0:
+            raise Exception("empty transaction in payload")
+        if tx_rlp[0] in (1, 2, 3, 4):
+            transactions.append(tx_rlp)
+        else:
+            transactions.append(rlp.decode_to(LegacyTransaction, tx_rlp))
+    return tuple(transactions)

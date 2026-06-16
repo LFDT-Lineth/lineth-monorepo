@@ -1,5 +1,5 @@
-import { attempt, msToSeconds, wait } from "@consensys/linea-shared-utils";
 import { jest, describe, it, expect, beforeEach } from "@jest/globals";
+import { attempt, msToSeconds, wait } from "@lfdt-lineth/shared-utils";
 import { ResultAsync } from "neverthrow";
 
 import { createLoggerMock, createMetricsUpdaterMock } from "../../../__tests__/helpers/index.js";
@@ -10,11 +10,11 @@ import type { IYieldManager } from "../../../core/clients/contracts/IYieldManage
 import type { IBeaconChainStakingClient } from "../../../core/clients/IBeaconChainStakingClient.js";
 import type { INativeYieldAutomationMetricsUpdater } from "../../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
 import type { IOperationModeMetricsRecorder } from "../../../core/metrics/IOperationModeMetricsRecorder.js";
-import type { ILogger } from "@consensys/linea-shared-utils";
+import type { ILogger } from "@lfdt-lineth/shared-utils";
 import type { TransactionReceipt, Address } from "viem";
 
-jest.mock("@consensys/linea-shared-utils", () => {
-  const actual = jest.requireActual("@consensys/linea-shared-utils") as typeof import("@consensys/linea-shared-utils");
+jest.mock("@lfdt-lineth/shared-utils", () => {
+  const actual = jest.requireActual("@lfdt-lineth/shared-utils") as typeof import("@lfdt-lineth/shared-utils");
   return {
     ...actual,
     wait: jest.fn(),

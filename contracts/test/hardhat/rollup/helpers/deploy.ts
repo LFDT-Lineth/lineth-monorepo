@@ -209,6 +209,10 @@ async function deployTestPlonkVerifierForDataAggregation(): Promise<string> {
       value: toBeHex("0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec", 32),
       name: "l2MessageServiceAddress",
     },
+    {
+      value: toBeHex(0n, 32),
+      name: "isAllowedCircuitID",
+    },
   ]);
   await verifier.waitForDeployment();
   return await verifier.getAddress();

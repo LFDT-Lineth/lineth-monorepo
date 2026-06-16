@@ -1,0 +1,59 @@
+{
+  "$schema": "./schema.json",
+  "network": "mainnet",
+  "chainId": 1,
+  "contracts": {
+    "STETH": {
+      "address": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+      "notes": "stETH"
+    },
+    "YIELD_MANAGER_ADDRESS": {
+      "address": "0xeb63cABDd78537b9b72A2AFB573F7caa91bd8D94",
+      "notes": "Yield Manager"
+    },
+    "NATIVE_YIELD_AUTOMATION_SERVICE_ADDRESS": {
+      "address": "0xcEE1f08Bcae342E950e88c209F7e6327ABB6d448",
+      "notes": "Yield Boost Automation Service"
+    },
+    "ROLLUP_REVENUE_VAULT_L1_LINEA_TOKEN_BURNER": {
+      "address": "0x5Ad9369254F29b724d98F6ce98Cb7bAD729969F3",
+      "notes": "L1 Token Burner"
+    },
+    "LINEA_TOKEN": {
+      "address": "0x1789e0043623282D5DCc7F213d703C6D8BAfBB04",
+      "notes": "L1 Linea Token"
+    },
+    "VERIFIER_ADDRESS": {
+      "address": "0x41A4d93d09f4718fe899D12A4aD2C8a09104bdc7",
+      "notes": "Plonk Verifier Mainnet Full"
+    },
+    "LINEA_ROLLUP_OPERATORS": {
+      "addresses": [
+        {
+          "address": "0x52FF08F313A00A54e3Beffb5C4a7F7446eFb6754",
+          "notes": "L1 Finalization Operator EOA"
+        },
+        {
+          "address": "0x46d2F319fd42165D4318F099E143dEA8124E9E3e",
+          "notes": "L1 Data Submission Operator EOA"
+        }
+      ]
+    },
+    "LINEA_ROLLUP_ADDRESS": {
+      "address": "0xd19d4B5d358258f05D7B411E21A1460D11B0876F",
+      "notes": "LineaRollup proxy (L1 message service)"
+    },
+    "L1_SECURITY_COUNCIL": {
+      "address": "0x892bb7EeD71efB060ab90140e7825d8127991DD3",
+      "notes": "L1 Main Security Council Safe"
+    },
+    "BRIDGED_TOKEN_ADDRESS": {
+      "address": "0x971f46a2852d11D59dbF0909e837cfd06f357DeB",
+      "notes": "L1 Bridged Token Template"
+    },
+    "TOKEN_BRIDGE_ADDRESS": {
+      "address": "0x051F1D88f0aF5763fB888eC4378b4D8B29ea3319",
+      "notes": "L1 Token Bridge"
+    }
+  }
+}

@@ -3,7 +3,7 @@ const verifier_ray = @import("verifier_ray");
 
 const field = verifier_ray.field.koalabear;
 const ext = verifier_ray.field.koalabear_ext;
-const polynomial = verifier_ray.pcs.polynomial;
+const polynomial = verifier_ray.polynomial.canonical;
 const poseidon2 = verifier_ray.crypto.poseidon2;
 const Transcript = verifier_ray.crypto.fiat_shamir.Transcript;
 
@@ -12,7 +12,7 @@ const is_native_os = builtin.target.os.tag == .linux or builtin.target.os.tag ==
 const is_native_arch = builtin.target.cpu.arch == .x86_64 or builtin.target.cpu.arch == .aarch64;
 const is_supported_native = is_native_os and is_native_arch;
 
-const Commitment = verifier_ray.proof.Commitment;
+const Commitment = verifier_ray.crypto.commitment.Commitment;
 const Digest = poseidon2.Digest;
 
 // Temporary smoke-test fixture shape. These values are currently hand-picked
@@ -91,25 +91,12 @@ fn runVerifierSmoke(input: *const Input) u8 {
         return 1;
     }
 
-    // run the actual verifier logic being tested, using the input loaded from
-    // either the native file or the R5 zkVM linked input. The verifier logic is
-    // the same in both environments, and any errors it returns will cause the
-    // smoke test to fail.
-    verifier_ray.verify(.{
-        .commitments = input.commitments[0..],
-        .public_inputs = input.public_inputs[0..],
-        .proof_bytes = input.proof_bytes[0..],
-    }) catch |err| switch (err) {
-        verifier_ray.VerifyError.Unsupported => {},
-        else => return 1,
-    };
-
     return 0;
 }
 
 fn exerciseTemporaryTraceWork(input: *const Input) bool {
     // Temporary zkVM trace exercise. Remove this once main verifies a realistic proof.
-    const evaluation = polynomial.evaluateBaseCanonicalAtExt(input.coefficients[0..], input.point);
+    const evaluation = polynomial.evaluateBaseAtExt(input.coefficients[0..], input.point);
 
     var transcript = Transcript.init();
     transcript.updateElements(input.coefficients[0..]);

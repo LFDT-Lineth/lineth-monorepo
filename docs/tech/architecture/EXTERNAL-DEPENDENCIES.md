@@ -2,11 +2,13 @@
 
 > **Diagrams:** [Sequencer Architecture](../diagrams/sequencer-architecture.mmd) | [State Recovery Flow](../diagrams/state-recovery-flow.mmd)
 
-This document describes external components that are used by the Linea stack but are not part of this monorepo.
+This document describes external components that are used by the Lineth stack but are not part of this monorepo.
 
 ## Maru Engine
 
-**Repository**: [Consensys/maru](https://github.com/Consensys/maru) (private/separate repo)
+**Source**: [`maru/`](../../../maru/) (in-tree; previously `Consensys/maru`, merged into this monorepo).
+
+> This section pre-dates the merge of Maru into the monorepo and is no longer strictly an "external dependency". The architecture description below remains accurate; a future docs pass may move this content out of `EXTERNAL-DEPENDENCIES.md` into the main architecture docs.
 
 ### Overview
 

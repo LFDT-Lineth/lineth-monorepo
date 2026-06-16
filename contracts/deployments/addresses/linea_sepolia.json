@@ -1,0 +1,43 @@
+{
+  "$schema": "./schema.json",
+  "network": "linea_sepolia",
+  "chainId": 59141,
+  "contracts": {
+    "ROLLUP_REVENUE_VAULT_ADDRESS": {
+      "address": "0xC86A8FC26e1b6f76b01944064163d804A63b9a96",
+      "notes": "Rollup Revenue Vault"
+    },
+    "ROLLUP_REVENUE_VAULT_BURNER": {
+      "address": "0xef4B863044B64DEa7bce8fa2121A90995f613a82",
+      "notes": "Burn And Bridge Submitter"
+    },
+    "ROLLUP_REVENUE_VAULT_INVOICE_SUBMITTER": {
+      "address": "0x8a1Dd81c1964C9cC7992109602F9482678F07b64",
+      "notes": "Revenue Invoice Submitter"
+    },
+    "L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER": {
+      "address": "0xd83C3dC7257Eb2E304CBEB50b0B98bc2dd2cdCd9",
+      "notes": "L2 Anchorer EOA"
+    },
+    "L2_SECURITY_COUNCIL": {
+      "address": "0x30B45d3fB50B33996f4Db6F0e4Fe82fa6CF8d753",
+      "notes": "L2 Sepolia Security Council Safe"
+    },
+    "L2_RESERVED_TOKEN_ADDRESSES": {
+      "address": "0xFEce4462D57bD51A6A552365A011b95f0E16d9B7",
+      "notes": "L2 USDC"
+    },
+    "BRIDGED_TOKEN_ADDRESS": {
+      "address": "0xc4Ba6dAfE5a789f8682980D53cefCEb4e82212de",
+      "notes": "Bridged Token Linea Devnet"
+    },
+    "TOKEN_BRIDGE_ADDRESS": {
+      "address": "0x93DcAdf238932e6e6a85852caC89cBd71798F463",
+      "notes": "Token Bridge Linea Sepolia"
+    },
+    "L2_MESSAGE_SERVICE_ADDRESS": {
+      "address": "0x971e727e956690b9957be6d51Ec16E73AcAC83A7",
+      "notes": "L2 Message Service"
+    }
+  }
+}

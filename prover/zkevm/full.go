@@ -414,6 +414,5 @@ func FullZKEVMWithSuite(
 	}
 
 	// Initialize the Full zkEVM arithmetization
-	fullZkEvm = NewZkEVM(settings)
-	return fullZkEvm
+	return NewZkEVM(settings)
 }

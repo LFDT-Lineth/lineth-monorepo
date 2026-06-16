@@ -19,8 +19,9 @@ on:
         required: true
         type: string
       image_name:
-        required: true
+        required: false
         type: string
+        default: consensys/linea-prover
       push_image:
         required: false
         type: boolean
@@ -30,34 +31,6 @@ on:
         required: false
       DOCKERHUB_TOKEN:
         required: false
-  workflow_dispatch:
-    inputs:
-      image_tag:
-        description: 'Image tag without suffix'
-        required: true
-        type: string
-      image_tag_with_suffix:
-        description: 'Image tag with suffix'
-        required: false
-        type: string
-        default: ''
-      develop_tag:
-        description: 'Image tag will be "develop" if target branch is main'
-        required: true
-        type: choice
-        options:
-          - develop
-        default: 'develop'
-      image_name:
-        description: 'Image name'
-        required: true
-        type: string
-        default: 'consensys/linea-prover'
-      push_image:
-        description: 'Toggle whether to push image to docker registry'
-        required: false
-        type: boolean
-        default: true
 
 concurrency:
   group: prover-build-and-publish-${{ github.workflow }}-${{ github.ref }}
@@ -68,7 +41,7 @@ env:
 
 jobs:
   build-and-publish:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     name: Prover build
     env:
       IMAGE_TAG: ${{ inputs.image_tag }}
@@ -95,8 +68,7 @@ jobs:
         uses: ./.github/actions/docker-build-publish
         with:
           image_name: ${{ env.IMAGE_NAME }}
-          image_tag: ${{ env.IMAGE_TAG }}
-          extra_image_tag: ${{ env.IMAGE_TAG_WITH_SUFFIX }}
+          image_tags: ${{ env.IMAGE_TAG_WITH_SUFFIX && format('{0},{1}', env.IMAGE_TAG, env.IMAGE_TAG_WITH_SUFFIX) || env.IMAGE_TAG }}
           develop_tag: ${{ env.DEVELOP_TAG }}
           push_image: ${{ env.PUSH_IMAGE }}
           dockerfile_path: ./prover/Dockerfile

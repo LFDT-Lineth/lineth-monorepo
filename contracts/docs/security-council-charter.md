@@ -2,7 +2,7 @@
 
 This Charter outlines the structure and responsibilities of the Linea Security Council (LSC) and its members.
 
-The Linea Security Council is composed of twelve members responsible for Linea's operational security and functionality. They operate a Gnosis Safe multisig wallet as signatories of 9/12 multisigs on the Ethereum and Linea blockchains. LSC members are tasked with creating, reviewing, and signing multisig transactions to upgrade and configure contracts on L1 Ethereum Mainnet and L2 Linea Mainnet, while protecting the chain and its users from any malicious change linked to the Security Council.
+The Linea Security Council is composed of twelve members responsible for Linea's operational security and functionality. They operate a Gnosis Safe multisig wallet as signatories of 5/9 multisigs on the Ethereum and Linea blockchains. LSC members are tasked with creating, reviewing, and signing multisig transactions to upgrade and configure contracts on L1 Ethereum Mainnet and L2 Linea Mainnet, while protecting the chain and its users from any malicious change linked to the Security Council.
 
 This charter sets forth the operations of the LSC and the responsibilities of its members. It provides operational guidelines to ensure the reliability, security, and efficiency of the Linea Security Council's activities and satisfy the requirements of Stages 0, 1, and 2 of the [L2Beat framework](https://l2beat.com/scaling/projects/linea#stage).
 
@@ -11,7 +11,7 @@ This charter sets forth the operations of the LSC and the responsibilities of it
 LSC members are tasked with reviewing and signing multisig transactions to implement changes requested by Linea governance, on Ethereum Mainnet or Linea Mainnet. LSC members are required to carry out their responsibilities in a manner consistent with this Charter and pursuant to the decisions of Linea governance, while protecting the chain and its users from any malicious change linked to the Security Council. These operations include but are not limited to:
 
 - Scheduling and Executing smart-contract upgrades and verifiers (based on OpenZeppelin Timelock controller)  
-- Changing role designations (based on OZ and Zodiac roles)  
+- Changing role designations (based on OZ roles)  
 - Operationally configuring contracts  
 - Signing unpause transactions (when an emergency pause was triggered)  
 - Changing the signatories and threshold of the LSC
@@ -58,7 +58,7 @@ The members of the Security Council are not expected to be able to review the sm
 
 Members of the LSC should be selected by the Linea Association in accordance with the following criteria:
 
-* Technical competency. Baseline proficiency with Linea Stack, experience with Safe infrastructure, and secure key management and signing standards.  
+* Technical competency. Baseline proficiency with Lineth Stack, experience with Safe infrastructure, and secure key management and signing standards.  
 * Reputation. Known, trusted standalone individuals or entities that have demonstrated consistent alignment with the Ethereum and Linea ethos.  
 * Geographic diversity. The number of participants who reside in any country should be less than 3\. The Linea Association will enforce this requirement as part of the eligibility screening process to avoid requiring participants to disclose their physical locations publicly.  
 * Diversity of interests. No more than 1 participant is associated with a particular entity, or that entity’s employees or affiliates, with the exception of Linea Association or Consensys employees.  

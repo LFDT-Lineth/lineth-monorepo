@@ -59,12 +59,16 @@ checks modeled separately in `l1_rollup.py`:
 
 | Guest program | Reference entry point | Scope |
 |---|---|---|
-| l2-execution | `l2_execution.py::run_l2_execution_guest` | Replays a contiguous L2 block range from canonical `blockRlp` plus `debug_executionWitness`, validates the EVM state transition, extracts bridge events, processes forced transactions, and emits the 15-field l2-execution PI. It does not read blobs, verify KZG, or recursively verify other proofs. |
+| l2-execution | `l2_execution.py::run_l2_execution_guest` | Replays a contiguous range of Engine API `NewPayloadRequest`s from vanilla stateless inputs plus Linea rollup-extension fields, validates the EVM state transition, extracts bridge events, processes Linea forced transactions, and emits the 15-field l2-execution PI. It does not read blobs, verify KZG, or recursively verify other proofs. |
 | rollup | `rollup.py::run_rollup_guest` | For each of `K >= 1` consecutive blobs, recomputes the canonical compressed payload from the witnessed full block RLPs (truncate → RLP-encode → LZ4-compress → zero-pad to `BLOB_BYTES_LENGTH`), computes the KZG commitment from those bytes, checks its versioned hash against the L1-committed `blobHash`, and verifies the KZG proof. Chains the shnarf transition, recursively verifies the `N` l2-execution proofs that tile the blob range, builds L2->L1 root commitments, merges refused-address outputs, and emits the 14-field rollup PI. It does not run the EVM or perform L1 finalization checks. |
 | rollup-aggregation | `rollup_aggregation.py::run_rollup_aggregation_guest` | Recursively verifies the `M` rollup proofs for a finalization range, checks proof-to-proof continuity, merges root/address commitments, and emits the final 14-field PI consumed by L1. It does not inspect raw blocks, raw blobs, or L1 storage. |
 
 `l1_rollup.py` models the contract-facing blob anchoring and finalization checks
 against L1 storage. It is intentionally not one of the RISC-V guest programs.
+
+**Reference environment.** The Python reference targets **Python 3.11+** (it uses
+`enum.StrEnum`) and pins its dependencies in `rollup_spec/requirements.txt`
+(`remerkleable`, a commit-pinned `ethereum-execution`, `ckzg`, `lz4`).
 
 ### 2.1 l2-execution Proof
 The l2-execution proof covers a contiguous range of L2 blocks and proves the EVM state transition, deposit processing, and withdrawal emission.
@@ -94,16 +98,19 @@ declared outcome is one of the allowed outcomes in §6.5.
 
 **Private Inputs (Witness)**
 
-- The complete set of L2 blocks in canonical RLP encoding (header + transaction list [+ withdrawals]); EIP-2718 typed transactions in full signed form. The guest recovers each transaction's sender via `secp256k1` and commits to the recovered list via `txFromsHash`.
-- The stateless execution witness per block, as produced by Besu's `debug_executionWitness` (`state`, `keys`, `codes`, `headers`); the parent header within `headers` carries the state root that anchors `parentBlockHash`. The `state` MPT node pool must additionally include proof paths for: (a) the L2MessageService's `L1L2RollingHash` and `L1L2RollingHashMessageNumber` slots at both the parent and end state roots — read at proof-range boundaries even when no block in the range writes them; (b) the sender account of any FTX whose declared outcome is *Invalid* (§6.5), at the parent state root of the block where that FTX would have been included.
-- The static chain config: `L2MessageServiceContract`, `coinBase`, `chainID`. `baseFee` — the fourth input to `dynamicChainConfigHash` — is NOT part of this struct; the guest reads it from the first block's header and asserts every subsequent block in the range carries the same value.
-- The forced-transaction witnesses for FTXs in the range — see §6
+- The complete set of L2 payloads as length-delimited vanilla stateless-input SSZ `StatelessInput` byte slices, one per block in the conflation. The guest decodes each slice into a `NewPayloadRequest`, execution witness, stateless chain config, and optional transaction public keys before reading Linea's rollup-extension fields. Each request carries `executionPayload`, `versionedHashes`, `parentBeaconBlockRoot`, and typed `executionRequests`. The Linea wrapper consumes normal transactions from `executionPayload.transactions` as canonical signed transaction bytes, derives each sender with execution-specs `recover_sender(chainID, tx)`, then commits to the ordered list via `txFromsHash`.
+- The stateless execution witness per payload after stateless-input SSZ decode (`state`, `codes`, `headers`, and optional JSON/debug `keys`). `headers` are RLP-encoded parent/ancestor headers ordered by block number and ending at the payload parent; the final header hash must equal `newPayloadRequest.executionPayload.parentHash`, and that parent header carries the state root that anchors `parentBlockHash`. The canonical `SszExecutionWitness` contains `state`, `codes`, and `headers`; an engine's JSON/debug path (e.g. Zesu's `StateWitness`) also carries `keys`, so the logical schema preserves `keys` for decoded debug fixtures. SSZ-encoded `keys` would require a distinct Linea schema id rather than changing the vanilla stateless-input slice. The `state` MPT node pool must additionally include proof paths for: (a) the L2MessageService's `L1L2RollingHash` and `L1L2RollingHashMessageNumber` slots at both the parent and end state roots — read at proof-range boundaries even when no block in the range writes them; (b) the sender account of any FTX whose declared outcome is *Invalid* (§6.5), at the parent state root of the block where that FTX would have been included.
+- Optional transaction public keys, ordered by `executionPayload.transactions` index. They are part of the vanilla stateless execution input, not the Linea rollup extension and not `executionWitness.keys`. The Linea logical spec does not derive senders from this field: signer derivation is stated as `recover_sender(chainID, tx)`. `publicKeys` is not a witness override; any production optimization that consumes it must produce the same accepted/rejected transaction result and sender address as `recover_sender(chainID, tx)`.
+- The static Linea proof-range chain config: `L2MessageServiceContract`, `coinBase`, `chainID`. `baseFee` — the fourth input to `dynamicChainConfigHash` — is NOT part of this struct; the guest reads it from the first `NewPayloadRequest.executionPayload.baseFeePerGas` and asserts every subsequent payload in the range carries the same value. `chainID` deliberately duplicates the chain id inside each vanilla `StatelessInput`: the inner copy preserves the unmodified stateless-input boundary, while the outer copy is the Linea range-level preimage for `dynamicChainConfigHash`. The guest rejects the range if any decoded stateless-input `chainID` differs from this range-level value.
+- The Linea rollup-extension forced-transaction witnesses for FTXs in the range — see §6
 
 **What it proves:**
 
-* **Validates the EVM state transition**: validating the state-root hash transition.
+* **Validates the EVM state transition**: validating the state-root hash transition from each `NewPayloadRequest.executionPayload`.
 
-* **Enforce sequencer consensus rules**: strictly monotonic timestamps across the range, constant `baseFee` (sourced from the first block header and asserted equal in every subsequent header), `coinbase` matching the chain configuration, and a contiguous parent-hash chain anchored at `parentBlockHash`. Standard Ethereum header validation (`validate_header`) is delegated to the state-transition primitive.
+* **Validates Engine API payload commitments**: checks the payload block hash, blob versioned hashes, and `parentBeaconBlockRoot` as part of the `NewPayloadRequest` validation path rather than trusting a full block RLP. Typed `executionRequests` are required to be empty — this rollup does not support EIP-7685 requests, so they are rejected if present rather than validated as a commitment.
+
+* **Enforce sequencer consensus rules**: strictly monotonic timestamps across the range, constant `baseFee` (sourced from the first payload and asserted equal in every subsequent payload), `coinbase` matching the chain configuration, and a contiguous parent-hash chain anchored at `parentBlockHash`. Standard Engine API payload validation is delegated to the state-transition primitive.
 
 * **Extract the canonical L2L1Message** hashes from the block receipt and compute their flat-hash using keccak256.
 
@@ -154,7 +161,7 @@ Plus three **new** rollup-level fields: `parentShnarf` (input), `endShnarf` (com
 | `blobHash_b` | The blob's versioned hash as submitted on L1 — cross-checked against `kzg_commitment_to_versioned_hash(computedBlobCommitment_b)` |
 | `KzgProof_b` | KZG proof for blob `b` |
 | `blockRange_b` | The `(startBlockNumber, endBlockNumber)` pair for the blocks contained in blob `b` |
-| `blockRlps_b` | The ordered list of canonical full block RLPs for blob `b` (`m_b` entries) — same canonical shape the l2-execution proof receives (header + tx list [+ withdrawals], EIP-2718 typed transactions in full signed form). Truncation per §3.2 happens *inside* the guest; there is no separately witnessed truncated form, and the compressed blob bytes are not witnessed either — the guest recomputes them. |
+| `blockRlps_b` | The ordered list of canonical full block RLPs published through the DA path for blob `b` (`m_b` entries: header + tx list [+ withdrawals], EIP-2718 typed transactions in full signed form). The l2-execution proof receives `NewPayloadRequest` inputs instead; the rollup proof cross-checks these DA blocks against l2-execution public block hashes and `txFromsHash`. Truncation per §3.2 happens *inside* the guest; there is no separately witnessed truncated form, and the compressed blob bytes are not witnessed either — the guest recomputes them. |
 | `E₁ … Eₙ` | The l2-execution proofs, ordered by block range, tiling the combined range of all K blobs |
 | `PI_E₁ … PI_Eₙ` | The public-input tuple for each l2-execution proof |
 | `L2L1MsgList_e` | Per-l2-execution-proof L2→L1 message hash list, for `e ∈ [1, N]` |
@@ -229,10 +236,11 @@ The same 14-field tuple as the rollup proof (§2.2) and as the final rollup-aggr
 - Their complete 14-field public-input tuples `PI_B₁ … PI_Bₘ`
 - For each `i`, the ordered L2L1 root array whose committed hash is `PI_Bᵢ.L2L1BridgeTransactionTree`
 - For each `i`, the ordered filtered-address list whose committed hash is `PI_Bᵢ.filteredAddressesHash`
+- The environment-dependent `isAllowedCircuitID` bitmask gating which inner circuit/program identities step 1 may accept (bit *i*, LSb→MSb, allows circuit ID *i*). It mirrors the prover's `Aggregation.is_allowed_circuit_id` config and is a proving-policy input only — not one of the 14 public-input fields and not part of `dynamicChainConfigHash`.
 
 **Statement (RISC-V Guest)**
 
-1. **Verify** all `M` inner proofs cryptographically against their claimed public inputs using recursive STARK verification.
+1. **Verify** all `M` inner proofs cryptographically against their claimed public inputs using recursive STARK verification, accepting an inner proof only if its circuit/program identity is permitted by the `isAllowedCircuitID` bitmask.
 
 2. **Assert continuity** in software, for each consecutive pair `(Bᵢ, Bᵢ₊₁)`:
    ```
@@ -290,7 +298,7 @@ The Python reference uses `raise Exception(...)` as compact notation for proof, 
 Classification:
 
 - Guest invariant failures in `l2_execution.py`, `rollup.py`, `rollup_aggregation.py`, `block.py`, and the MPT/account/storage checks in `state_transition.py` are proof rejection points. Zig/Rust implementations should return explicit deterministic error codes and terminate as failed executions rather than relying on an uncontrolled panic path.
-- Python-only stubs such as `state_transition.py::materialize_blockchain_from_execution_witness` are reference gaps, not guest semantics. They must not remain on an implementable production guest path.
+- `state_transition.py::execute_stateless_input` raises `NotImplementedError`: it marks the delegation boundary to the underlying stateless-execution engine, not a guest rejection point. A production guest satisfies it by calling that engine, not by terminating.
 - L1 finalization failures in `l1_rollup.py` model Solidity reverts, not zkVM guest termination.
 - Host/environment failures in this Python reference, such as a missing trusted setup file or a host library/runtime fault, must not be collapsed into ordinary proof-invalid errors in production. The production guest should use fixed trusted-setup semantics and typed errors around KZG, MPT, compression, and recursive-verifier primitives.
 - The current Python MPT helper rejects inline child nodes as "not supported in this reference". Inline MPT children are valid Ethereum trie encodings; production must either support them or document and enforce a witness-normalization rule that rejects them with a standardized failed-termination code.
@@ -331,22 +339,31 @@ The DA blob must contain the exact inputs required to re-execute the L2 blocks f
 
 The JSON files under `prover_inputs/` describe a logical schema. The bytes carried into the zkVM guest are binary.
 
-**Transport.** The guest reads input bytes via the zkVM's read-input primitive (`ziskos::read_input()` on Zisk). Transport framing is an 8-byte little-endian length prefix per chunk, padded to 8-byte alignment.
+**Transport.** The guest reads input bytes via the zkVM's read-input primitive (`ziskos::read_input()` on Zisk). The Linea l2-execution envelope length-delimits a vanilla SSZ `StatelessInput` byte slice per payload, then carries Linea rollup-extension fields beside that slice. The Python reference models this boundary in `stateless_input.py::decode_stateless_input_ssz`, using the `remerkleable` decoder for the same raw/Ere-prefixed stateless-input container shape while keeping Linea extension parsing outside the stateless-input slice. Do not append Linea bytes to that slice itself: the SSZ decoder treats the final field as consuming the remainder of the slice, so trailing Linea data would be interpreted as stateless input rather than ignored.
 
-**Container.** Inside the payload, the l2-execution layout is:
+**Container.** The logical request and witness shapes are defined once in the
+Python reference; this section does not restate their field lists, to avoid a
+second source of truth that drifts. See:
 
-```
-[u64 BE: block_rlp_len] [block_rlp_bytes]                — RLP-encoded block
-ExecutionWitness:
-  state:   [u64 BE: count] then [u64 BE: len][bytes]*    — debug_executionWitness field "state"
-  codes:   [u64 BE: count] then [u64 BE: len][bytes]*    — debug_executionWitness field "codes"
-  keys:    [u64 BE: count] then [u64 BE: len][bytes]*    — debug_executionWitness field "keys"
-  headers: [u64 BE: count] then [u64 BE: len][bytes]*    — debug_executionWitness field "headers"
-```
+- `l2_execution.py`
+- `block.py`
+- `state_transition.py`
 
-Outer framing is length-prefixed binary; inner payloads are RLP. The per-FTX `signedTxRlp` payloads and the `chainConfig` fields are appended in the same `count + length-prefixed bytes` style. Rollup-proof and rollup-aggregation-proof containers follow the same convention and are pinned alongside the corresponding guest implementations.
+The on-wire SSZ schema (the `Ssz*` containers) lives in `stateless_input.py` and
+`canonical_ssz.py`, mirroring execution-specs `forks/amsterdam/stateless_ssz.py` —
+the same schema the underlying engine (e.g. Zesu) decodes.
 
-**Debug format.** The `prover_inputs/` JSONs are the canonical schema source; the coordinator translates them to the binary container before invoking the prover. A separate supporting tool can convert JSON fixtures (e.g. `block.json` + `witness.json`) into the same binary container for local replay.
+Full block RLPs still exist in the rollup-proof DA witness (`blockRlps_b`) because the rollup guest recomputes the compressed blob payload from DA data, but l2-execution consumes `NewPayloadRequest` instead. The per-FTX `signedTxRlp` payloads and proof-range `chainConfig` fields are Linea wrapper fields outside the EIP-8025 `StatelessInput`. Rollup-proof and rollup-aggregation-proof containers follow their own schemas and are pinned alongside the corresponding guest implementations.
+
+**Debug format.** The guest input schema contains only
+`statelessInputSsz`, not a decoded `StatelessInput` object. Draft JSON
+fixtures may show a decoded `_debugStatelessInput` mirror for review, but
+fixture loaders must derive or validate that mirror from `statelessInputSsz`
+and discard it before constructing `L2ExecutionProofPrivateInput`. The guest
+consumes and decodes the stateless-input SSZ bytes; decoded mirrors are not
+accepted by `run_l2_execution_guest`, except for explicitly marked JSON-only
+debug documentation such as optional witness `keys`, which are not carried by the
+canonical stateless-input SSZ schema.
 
 ---
 
@@ -459,12 +476,12 @@ where `txHash = keccak256(signedTxRlp)` is the standard Ethereum transaction has
 
 **Outcome.** Each FTX carries the sequencer's declared `acceptance`, one of five variants — the cases the guest program can actually observe under RISC-V proving. The five variants and their proof-level treatment:
 
-- *INCLUDED* — the guest asserts `txHash` appears in the declared block's transaction list (decoded from `blockRlp`).
-- *Invalid sub-cases* (`BAD_NONCE` / `BAD_BALANCE`) — pre-validation must fail. The guest asserts `txHash` is NOT in the block, then reads the FTX sender's account from the L2 state at the parent state root of the block where the FTX would have been included, via the EVM state interface (a standard SLOAD/`basic`-style read against the in-process state DB backed by `debug_executionWitness.state`). It then asserts the specific failure condition:
+- *INCLUDED* — the guest asserts `txHash` appears in the declared payload's transaction list (`newPayloadRequest.executionPayload.transactions`).
+- *Invalid sub-cases* (`BAD_NONCE` / `BAD_BALANCE`) — pre-validation must fail. The guest asserts `txHash` is NOT in the payload transaction list, then reads the FTX sender's account from the L2 state at the parent state root of the payload where the FTX would have been included, via the EVM state interface (a standard SLOAD/`basic`-style read against the in-process state DB backed by `ExecutionWitness.state`). It then asserts the specific failure condition:
   - `BAD_NONCE`: `account.nonce != tx.nonce`
   - `BAD_BALANCE`: `account.balance < tx.gasLimit × tx.maxFeePerGas + tx.value` (using the canonical gas-cost formula per tx type, including the blob-gas surcharge for Type-3 transactions)
 
-  No separate per-FTX state witness is needed; the `debug_executionWitness.state` MPT node pool must include the sender account's proof path at the parent state root (§2.1).
+  No separate per-FTX state witness is needed; the `ExecutionWitness.state` MPT node pool must include the sender account's proof path at the parent state root (§2.1).
 - *Refused sub-cases* — the rollup declines for compliance reasons. No governance witness is required inside the proof; the sequencer simply declares the refusal. The L1 contract verifies a-posteriori that each bubbled-up address appears in its reference sanction list — if any entry is absent, the finalization call reverts.
   - `FILTERED_ADDRESS_FROM`: sender on the sanction list; `fromAddress` is appended to the filtered address list.
   - `FILTERED_ADDRESS_TO`: recipient on the sanction list; `toAddress` (decoded from `signedTxRlp`; rejected if the FTX is a contract-creation transaction with `to == None`) is appended instead.

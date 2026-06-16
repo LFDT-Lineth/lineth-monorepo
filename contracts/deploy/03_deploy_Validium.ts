@@ -1,3 +1,4 @@
+import { network } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 
 import {
@@ -12,6 +13,8 @@ import {
   generateRoleAssignments,
   getEnvVarOrDefault,
   getRequiredEnvVar,
+  requireAddressFromRegistryOrEnv,
+  requireAddressesFromRegistryOrEnv,
   tryVerifyContract,
   LogContractDeployment,
 } from "../common/helpers";
@@ -22,11 +25,15 @@ const func: DeployFunction = withSignerUiSession("03_deploy_Validium.ts", async 
   const contractName = "Validium";
 
   // Validium DEPLOYED AS UPGRADEABLE PROXY
-  const verifierAddress = getRequiredEnvVar("VERIFIER_ADDRESS");
+  const verifierAddress = requireAddressFromRegistryOrEnv(network.name, "PlonkVerifier", "VERIFIER_ADDRESS");
   const validiumInitialStateRootHash = getRequiredEnvVar("INITIAL_L2_STATE_ROOT_HASH");
   const validiumInitialL2BlockNumber = getRequiredEnvVar("INITIAL_L2_BLOCK_NUMBER");
-  const validiumSecurityCouncil = getRequiredEnvVar("L1_SECURITY_COUNCIL");
-  const validiumOperators = getRequiredEnvVar("VALIDIUM_OPERATORS").split(",");
+  const validiumSecurityCouncil = requireAddressFromRegistryOrEnv(
+    network.name,
+    "L1_SECURITY_COUNCIL",
+    "L1_SECURITY_COUNCIL",
+  );
+  const validiumOperators = requireAddressesFromRegistryOrEnv(network.name, "VALIDIUM_OPERATORS", "VALIDIUM_OPERATORS");
   const validiumRateLimitPeriodInSeconds = getRequiredEnvVar("VALIDIUM_RATE_LIMIT_PERIOD");
   const validiumRateLimitAmountInWei = getRequiredEnvVar("VALIDIUM_RATE_LIMIT_AMOUNT");
   const validiumGenesisTimestamp = getRequiredEnvVar("L2_GENESIS_TIMESTAMP");
@@ -37,6 +44,7 @@ const func: DeployFunction = withSignerUiSession("03_deploy_Validium.ts", async 
     { role: OPERATOR_ROLE, addresses: validiumOperators },
   ]);
   const roleAddresses = getEnvVarOrDefault("VALIDIUM_ROLE_ADDRESSES", defaultRoleAddresses);
+  const addressFilter = requireAddressFromRegistryOrEnv(network.name, "AddressFilter", "LINEA_ROLLUP_ADDRESS_FILTER");
 
   const contract = await deployUpgradableFromFactory(
     "Validium",
@@ -53,11 +61,12 @@ const func: DeployFunction = withSignerUiSession("03_deploy_Validium.ts", async 
         unpauseTypeRoles,
         defaultAdmin: validiumSecurityCouncil,
         shnarfProvider: ADDRESS_ZERO,
+        addressFilter,
       },
     ],
     {
       initializer: VALIDIUM_INITIALIZE_SIGNATURE,
-      unsafeAllow: ["constructor"],
+      unsafeAllow: ["constructor", "incorrect-initializer-order"],
     },
   );
 

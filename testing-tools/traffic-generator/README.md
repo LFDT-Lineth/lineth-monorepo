@@ -1,4 +1,4 @@
-# Tools to test Linea stack
+# Tools to test Lineth stack
 ## Getting Started
 
 ManualLoadTest main method provides a way to generate traffic based on file describing scenarios.

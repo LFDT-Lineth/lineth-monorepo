@@ -1,5 +1,5 @@
 {
-  "name": "@consensys/linea-postman",
+  "name": "@lfdt-lineth/postman",
   "version": "1.0.0",
   "author": "Consensys Software Inc.",
   "license": "(MIT OR Apache-2.0)",
@@ -15,10 +15,10 @@
     "migration:create": "ts-node -P ./tsconfig.json -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:create ./src/infrastructure/persistence/migrations/${MIGRATION_NAME}"
   },
   "dependencies": {
-    "@consensys/linea-native-libs": "workspace:*",
-    "@consensys/linea-sdk-core": "workspace:*",
-    "@consensys/linea-sdk-viem": "workspace:*",
-    "@consensys/linea-shared-utils": "workspace:*",
+    "@lfdt-lineth/native-libs": "workspace:*",
+    "@lfdt-lineth/sdk-core": "workspace:*",
+    "@lfdt-lineth/sdk-viem": "workspace:*",
+    "@lfdt-lineth/shared-utils": "workspace:*",
     "class-validator": "0.15.1",
     "dotenv": "catalog:",
     "viem": "catalog:",
@@ -32,7 +32,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@consensys/eslint-config": "workspace:*",
+    "@lfdt-lineth/eslint-config": "workspace:*",
     "@jest/globals": "catalog:",
     "@types/express": "5.0.6",
     "@types/jest": "catalog:",

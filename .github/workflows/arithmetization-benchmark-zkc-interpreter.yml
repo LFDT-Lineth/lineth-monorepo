@@ -13,13 +13,13 @@ name: Arithmetization zkc interpreter benchmark (base vs optim)
 
 # Benchmark data : 
 # -- For Keccak
-# In arithmetization/src/test/examples/rust/src/keccak/keccak.accepts
+# In arithmetization/src/test/examples/rust/src/keccak/keccak.all
 # There are 20k test vectors you can select from to run the benchmark.
 # Each test vector has a raw message of 16 * 32 bytes, ie fits in 4 blocks of 1088 bits.
 # 1 test vector = 4 blocks
 # -- For Blake
 # In the inputs, you can select the number of Blake compression rounds.
-# Script ./scripts/blake_rounds_to_accepts/main.go will generate the test vector with the requested number of compression rounds.
+# Script ./scripts/blake_rounds_to_in_bytes/main.go will generate the test vector with the requested number of compression rounds.
 # h, m, t, f are hard-coded to the standard Blake2b "abc" test vector.
 
 on:
@@ -52,13 +52,13 @@ on:
         required: false
         type: number
         default: 5
-      go_corset_ref:
-        description: 'go-corset commit/branch/tag for zkc (defaults to main)'
+      zkc_ref:
+        description: 'zkc commit/branch/tag (defaults to main)'
         required: false
         type: string
         default: main
       n_vectors_keccak:
-        description: 'First N Keccak test vectors from keccak.accepts (x4 for number of blocks)'
+        description: 'First N Keccak test vectors from keccak.all (x4 for number of blocks)'
         required: false
         type: number
         default: 10
@@ -74,7 +74,7 @@ permissions:
 
 jobs:
   bench:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     timeout-minutes: 120
     steps:
       - name: Checkout repository
@@ -89,7 +89,7 @@ jobs:
       - name: Install zkc
         run: make -C arithmetization install-zkc
         env:
-          GO_CORSET_REF_FOR_ZKC: ${{ inputs.go_corset_ref }}
+          ZKC_REF: ${{ inputs.zkc_ref }}
 
       - name: Add worktrees for base and optim branches
         run: |
@@ -109,12 +109,12 @@ jobs:
           # Keccak: one batched JSON.
           make keccak-rust-json \
             KECCAK_N_VECTORS=${{ inputs.n_vectors_keccak || 10 }} \
-            KECCAK_JSON=/tmp/keccak.json
+            KECCAK_JSON_FILE=/tmp/keccak.json
           # Blake: synthesize a single .all line at the requested rounds count
-          go build -o /tmp/bench/blake_rounds2bytes ./scripts/blake_rounds_to_accepts/main.go
-          /tmp/bench/blake_rounds2bytes ${{ inputs.n_rounds_blake || 12 }} > /tmp/blake_custom.accepts
+          go build -o /tmp/bench/blake_rounds_to_in_bytes ./scripts/blake_rounds_to_in_bytes/main.go
+          /tmp/bench/blake_rounds_to_in_bytes ${{ inputs.n_rounds_blake || 12 }} > /tmp/blake_custom.all
           make blake-rust-json \
-            BLAKE_ACCEPTS=/tmp/blake_custom.accepts \
+            BLAKE_ALL_FILE=/tmp/blake_custom.all \
             BLAKE_N_VECTORS=1 \
             BLAKE_JSON_DIR=/tmp/bench/json/blake
           # Helper binaries used by the timing loop and the summary step.
@@ -158,8 +158,8 @@ jobs:
             log "=== workload: ${wl} ==="
             # Untimed warmup: opt then base. Primes the page cache and shared libs
             # so both branches face an already-warm filesystem on iteration 1.
-            reset_state; log "${wl}: warmup opt  (untimed)"; run_${wl} opt  warmup || true
-            reset_state; log "${wl}: warmup base (untimed)"; run_${wl} base warmup || true
+            reset_state; log "${wl}: warmup opt  (untimed)"; run_${wl} opt  warmup
+            reset_state; log "${wl}: warmup base (untimed)"; run_${wl} base warmup
             # Timed runs: opt_i, base_i alternating, starting with opt.
             for i in $(seq 1 "$ITERS"); do
               reset_state; log "${wl}: iter ${i}/${ITERS} opt";  run_${wl} opt  "$i"
@@ -180,7 +180,7 @@ jobs:
             -blake-n 1 \
             -base-ref "${{ inputs.base_ref || 'main' }}" \
             -optim-ref "${{ inputs.optim_ref || github.event.pull_request.head.sha || github.sha }}" \
-            -zkc-version "${{ inputs.go_corset_ref || 'main' }}" \
+            -zkc-version "${{ inputs.zkc_ref || 'main' }}" \
             -keccak-n-vectors ${{ inputs.n_vectors_keccak || 10 }} \
             -blake-rounds ${{ inputs.n_rounds_blake || 12 }} \
             | tee -a "$GITHUB_STEP_SUMMARY" \
