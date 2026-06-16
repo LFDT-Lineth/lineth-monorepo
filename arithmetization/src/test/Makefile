@@ -303,8 +303,7 @@ vector-json: require-src require-vector-file require-vector-build-artifacts requ
 		END { \
 			available = NR; \
 			if (selector == "-1") { print 0, available - 1, available, "all"; exit 0 } \
-			if (selector ~ /\.\./) { \
-				if (selector !~ /^[0-9]+\.\.[0-9]+$$/) fail("VECTOR_N_VECTORS must be -1, a positive integer, or n..m, got: " selector); \
+			if (selector ~ /^[0-9]+\.\.[0-9]+$$/) { \
 				split(selector, bounds, /\.\./); \
 				start = bounds[1] + 0; \
 				end = bounds[2] + 0; \
@@ -313,10 +312,13 @@ vector-json: require-src require-vector-file require-vector-build-artifacts requ
 				print start, end, end - start + 1, selector; \
 				exit 0; \
 			} \
-			if (selector !~ /^[1-9][0-9]*$$/) fail("VECTOR_N_VECTORS must be -1, a positive integer, or n..m, got: " selector); \
-			count = selector + 0; \
-			if (count > available) fail("$(VECTOR_FILE): only " available " vector(s) available, requested " selector); \
-			print 0, count - 1, count, "0.." count - 1; \
+			if (selector ~ /^[1-9][0-9]*$$/) { \
+				count = selector + 0; \
+				if (count > available) fail("$(VECTOR_FILE): only " available " vector(s) available, requested " selector); \
+				print 0, count - 1, count, "0.." count - 1; \
+				exit 0; \
+			} \
+			fail("VECTOR_N_VECTORS must be -1, a positive integer, or n..m, got: " selector); \
 		}' "$(VECTOR_FILE)") || exit $$?; \
 	set -- $$selection; \
 	vector_start="$$1"; \
