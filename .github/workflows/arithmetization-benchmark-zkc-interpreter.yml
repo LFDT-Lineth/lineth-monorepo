@@ -236,6 +236,7 @@ jobs:
             -logs /tmp/bench/logs \
             -iters ${{ inputs.iterations || 1}} \
             -blake-n 1 \
+            -fast-mode ${{ inputs.fast_mode != false }} \
             -base-ref "${{ inputs.base_ref || 'main' }}" \
             -optim-ref "${{ inputs.optim_ref || github.event.pull_request.head.sha || github.sha }}" \
             -zkc-ref-base "${{ inputs.zkc_ref_base || 'main' }}" \
