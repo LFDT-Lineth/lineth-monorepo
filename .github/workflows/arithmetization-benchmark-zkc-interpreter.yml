@@ -156,6 +156,7 @@ jobs:
             sleep 5
           }
 
+
           run_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
             local zkc_bin="/tmp/zkc-${1}"
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
