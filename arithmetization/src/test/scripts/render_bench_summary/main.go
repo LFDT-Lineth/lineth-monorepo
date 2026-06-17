@@ -51,7 +51,9 @@ type metrics struct {
 }
 
 type variantMetrics struct {
-	byIter map[int]*metrics // iter -> aggregated metrics
+	byIter             map[int]*metrics // iter -> aggregated metrics
+	warmupSteps        uint64
+	warmupStepsPresent bool
 }
 
 type workload struct {
@@ -66,8 +68,10 @@ var (
 	reExecution     = regexp.MustCompile(`(?:Machine|Constraint) execution \((\d+) steps\) took ([\d.]+)s`)
 	reWall          = regexp.MustCompile(`Elapsed \(wall clock\) time \(h:mm:ss or m:ss\): (\S+)`)
 	reRSS           = regexp.MustCompile(`Maximum resident set size \(kbytes\): (\d+)`)
-	reKeccakLogName = regexp.MustCompile(`^keccak_(opt|base)_(\d+)\.log$`)
-	reBlakeLogName  = regexp.MustCompile(`^blake_(opt|base)_(\d+)_(\d+)\.log$`)
+	reKeccakLogName       = regexp.MustCompile(`^keccak_(opt|base)_(\d+)\.log$`)
+	reKeccakWarmupLogName = regexp.MustCompile(`^keccak_(opt|base)_warmup\.log$`)
+	reBlakeLogName        = regexp.MustCompile(`^blake_(opt|base)_(\d+)_(\d+)\.log$`)
+	reBlakeWarmupLogName  = regexp.MustCompile(`^blake_(opt|base)_warmup_(\d+)\.log$`)
 )
 
 func parseWall(s string) (float64, error) {
@@ -101,7 +105,7 @@ func parseWall(s string) (float64, error) {
 	return 0, fmt.Errorf("unrecognised elapsed-time format: %q", s)
 }
 
-func parseLog(path string) (metrics, error) {
+func parseLog(path string, requireExecution bool) (metrics, error) {
 	var m metrics
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -120,7 +124,7 @@ func parseLog(path string) (metrics, error) {
 		}
 		m.steps = steps
 		m.constraintS = secs
-	} else {
+	} else if requireExecution {
 		return m, fmt.Errorf("%s: execution line not found (neither Machine nor Constraint)", path)
 	}
 	if mm := reWall.FindStringSubmatch(body); mm != nil {
@@ -144,7 +148,7 @@ func parseLog(path string) (metrics, error) {
 	return m, nil
 }
 
-func discover(logsDir string, iters, blakeN int) (kc, bl workload, err error) {
+func discover(logsDir string, iters, blakeN int, fastMode bool) (kc, bl workload, err error) {
 	kc.name = "keccak"
 	bl.name = "blake"
 	kc.opt.byIter = make(map[int]*metrics)
@@ -152,12 +156,15 @@ func discover(logsDir string, iters, blakeN int) (kc, bl workload, err error) {
 	bl.opt.byIter = make(map[int]*metrics)
 	bl.base.byIter = make(map[int]*metrics)
 
+	requireExecution := !fastMode
+
 	type blakeAgg struct {
 		count              int
 		constraintS, wallS float64
 		steps, rssK        uint64
 	}
 	blakeAggs := map[[2]int]*blakeAgg{} // key: [iter, variant=0 opt / 1 base]
+	blakeWarmupAggs := map[int]*blakeAgg{} // key: variant=0 opt / 1 base
 
 	entries, err := os.ReadDir(logsDir)
 	if err != nil {
@@ -171,13 +178,28 @@ func discover(logsDir string, iters, blakeN int) (kc, bl workload, err error) {
 		name := e.Name()
 		full := filepath.Join(logsDir, name)
 
+		if mm := reKeccakWarmupLogName.FindStringSubmatch(name); mm != nil {
+			variant := mm[1]
+			m, perr := parseLog(full, true)
+			if perr != nil {
+				return kc, bl, perr
+			}
+			target := &kc.opt
+			if variant == "base" {
+				target = &kc.base
+			}
+			target.warmupSteps = m.steps
+			target.warmupStepsPresent = true
+			continue
+		}
+
 		if mm := reKeccakLogName.FindStringSubmatch(name); mm != nil {
 			variant := mm[1]
 			iter, _ := strconv.Atoi(mm[2])
 			if iter < 1 || iter > iters {
 				continue
 			}
-			m, perr := parseLog(full)
+			m, perr := parseLog(full, requireExecution)
 			if perr != nil {
 				return kc, bl, perr
 			}
@@ -189,13 +211,38 @@ func discover(logsDir string, iters, blakeN int) (kc, bl workload, err error) {
 			continue
 		}
 
+		if mm := reBlakeWarmupLogName.FindStringSubmatch(name); mm != nil {
+			variant := mm[1]
+			m, perr := parseLog(full, true)
+			if perr != nil {
+				return kc, bl, perr
+			}
+			vi := 0
+			if variant == "base" {
+				vi = 1
+			}
+			agg, ok := blakeWarmupAggs[vi]
+			if !ok {
+				agg = &blakeAgg{}
+				blakeWarmupAggs[vi] = agg
+			}
+			agg.count++
+			agg.constraintS += m.constraintS
+			agg.wallS += m.wallS
+			agg.steps += m.steps
+			if m.rssKB > agg.rssK {
+				agg.rssK = m.rssKB
+			}
+			continue
+		}
+
 		if mm := reBlakeLogName.FindStringSubmatch(name); mm != nil {
 			variant := mm[1]
 			iter, _ := strconv.Atoi(mm[2])
 			if iter < 1 || iter > iters {
 				continue
 			}
-			m, perr := parseLog(full)
+			m, perr := parseLog(full, requireExecution)
 			if perr != nil {
 				return kc, bl, perr
 			}
@@ -234,6 +281,18 @@ func discover(logsDir string, iters, blakeN int) (kc, bl workload, err error) {
 			target = &bl.base
 		}
 		target.byIter[key[0]] = m
+	}
+
+	for vi, a := range blakeWarmupAggs {
+		if a.count != blakeN {
+			return kc, bl, fmt.Errorf("blake warmup variant=%d: got %d log(s), expected %d", vi, a.count, blakeN)
+		}
+		target := &bl.opt
+		if vi == 1 {
+			target = &bl.base
+		}
+		target.warmupSteps = a.steps
+		target.warmupStepsPresent = true
 	}
 
 	return kc, bl, nil
@@ -355,7 +414,36 @@ func formatThousandsSigned(n int64) string {
 // We do still verify within-variant determinism: a single variant running the
 // same workload across iterations must produce the same step count, and any
 // drift is surfaced as a warning beneath the table.
-func renderStepCounts(out *strings.Builder, w workload) {
+func renderStepCounts(out *strings.Builder, w workload, fastMode bool) {
+	if fastMode {
+		bSteps, bPresent := w.base.warmupSteps, w.base.warmupStepsPresent
+		oSteps, oPresent := w.opt.warmupSteps, w.opt.warmupStepsPresent
+		if !bPresent && !oPresent {
+			return
+		}
+
+		fmt.Fprintf(out, "\n#### %s — machine exec steps (from warmup)\n\n", w.name)
+		fmt.Fprintln(out, "| metric | base | opt | Δ (o - b) | % |")
+		fmt.Fprintln(out, "| --- | ---: | ---: | ---: | ---: |")
+
+		bCell := "(missing)"
+		if bPresent {
+			bCell = formatThousands(bSteps)
+		}
+		oCell := "(missing)"
+		if oPresent {
+			oCell = formatThousands(oSteps)
+		}
+		dCell, pCell := "–", "–"
+		if bPresent && oPresent {
+			delta := int64(oSteps) - int64(bSteps)
+			dCell = formatThousandsSigned(delta)
+			pCell = fmt.Sprintf("%+.2f%%", pct(float64(delta), float64(bSteps)))
+		}
+		fmt.Fprintf(out, "| steps | %s | %s | %s | %s |\n", bCell, oCell, dCell, pCell)
+		return
+	}
+
 	canonical := func(v variantMetrics) (steps uint64, mismatch bool, present bool) {
 		first := true
 		for _, iter := range sortedIters(v.byIter) {
@@ -508,6 +596,7 @@ func main() {
 	zkcRefOptim := flag.String("zkc-ref-optim", "", "zkc repo ref for optim-branch runs (informational)")
 	keccakNVectors := flag.Int("keccak-n-vectors", 0, "number of Keccak vectors batched into one zkc exec (informational, 0 = omit)")
 	blakeRounds := flag.Int("blake-rounds", 0, "number of Blake2b compression rounds (informational, 0 = omit)")
+	fastMode := flag.Bool("fast-mode", false, "timed iterations used gogen (no execution steps in iter logs; read steps from warmup logs)")
 	flag.Parse()
 	if *logsDir == "" {
 		fmt.Fprintln(os.Stderr, "error: -logs is required")
@@ -519,7 +608,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	kc, bl, err := discover(*logsDir, *iters, *blakeN)
+	kc, bl, err := discover(*logsDir, *iters, *blakeN, *fastMode)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
@@ -547,6 +636,11 @@ func main() {
 	if *iters > 0 {
 		fmt.Fprintf(&out, "- number of timed iterations per variant: %d\n", *iters)
 	}
+	if *fastMode {
+		out.WriteString("- fast mode: enabled (timed iterations via gogen; step counts from warmup logs)\n")
+	} else {
+		out.WriteString("- fast mode: disabled (timed iterations via zkc execute)\n")
+	}
 	if wantKeccak && *keccakNVectors > 0 {
 		fmt.Fprintf(&out, "- number of Keccak vectors: %d\n", *keccakNVectors)
 	}
@@ -557,10 +651,10 @@ func main() {
 
 	out.WriteString("### Machine exec steps\n")
 	if wantKeccak {
-		renderStepCounts(&out, kc)
+		renderStepCounts(&out, kc, *fastMode)
 	}
 	if wantBlake {
-		renderStepCounts(&out, bl)
+		renderStepCounts(&out, bl, *fastMode)
 	}
 
 	out.WriteString("\n### Per-iteration timings\n")
