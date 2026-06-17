@@ -1,0 +1,13 @@
+diff --git a/dist/loaders.js b/dist/loaders.js
+index b7132fbc1816eeb494088e74c513bef1cfbca880..f66c1673aef3d7f97587ad5e5e93781dca0542bc 100644
+--- a/dist/loaders.js
++++ b/dist/loaders.js
+@@ -20,7 +20,7 @@ function loadJson(filepath        , content        )         {
+ }
+ 
+ function loadYaml(filepath        , content        )         {
+-  return yaml.safeLoad(content, { filename: filepath });
++  return yaml.load(content, { filename: filepath });
+ }
+ 
+ module.exports = {

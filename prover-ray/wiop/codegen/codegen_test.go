@@ -16,6 +16,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const testPackageName = "generated"
+
 // compiledFibSystem builds the Fibonacci scenario, runs the global compiler,
 // and returns the compiled system together with collected ActionVars.
 func compiledFibSystem(t *testing.T) (*wiop.System, codegen.ActionVars) {
@@ -37,7 +39,7 @@ func generate(t *testing.T, sys *wiop.System, vars codegen.ActionVars, opts code
 // TestGenerate_ValidGoSyntax verifies that the output parses as valid Go source.
 func TestGenerate_ValidGoSyntax(t *testing.T) {
 	sys, vars := compiledFibSystem(t)
-	src := generate(t, sys, vars, codegen.Options{Package: "generated"})
+	src := generate(t, sys, vars, codegen.Options{Package: testPackageName})
 
 	fset := token.NewFileSet()
 	_, err := parser.ParseFile(fset, "prove_gen.go", src, parser.AllErrors)
@@ -47,14 +49,14 @@ func TestGenerate_ValidGoSyntax(t *testing.T) {
 // TestGenerate_FuncName verifies the generated function uses Options.FuncName.
 func TestGenerate_FuncName(t *testing.T) {
 	sys, vars := compiledFibSystem(t)
-	src := generate(t, sys, vars, codegen.Options{Package: "generated", FuncName: "ProveBlock"})
+	src := generate(t, sys, vars, codegen.Options{Package: testPackageName, FuncName: "ProveBlock"})
 	assert.Contains(t, src, "func ProveBlock(")
 }
 
 // TestGenerate_DefaultFuncName verifies that the default function name is "Prove".
 func TestGenerate_DefaultFuncName(t *testing.T) {
 	sys, vars := compiledFibSystem(t)
-	src := generate(t, sys, vars, codegen.Options{Package: "generated"})
+	src := generate(t, sys, vars, codegen.Options{Package: testPackageName})
 	assert.Contains(t, src, "func Prove(")
 }
 
@@ -64,7 +66,7 @@ func TestGenerate_DefaultFuncName(t *testing.T) {
 //   - there is exactly one .Check(rt) call per registered VerifierAction
 func TestGenerate_RoundStructure(t *testing.T) {
 	sys, vars := compiledFibSystem(t)
-	src := generate(t, sys, vars, codegen.Options{Package: "generated"})
+	src := generate(t, sys, vars, codegen.Options{Package: testPackageName})
 
 	var wantProver, wantVerifier int
 	for _, r := range sys.Rounds {
@@ -83,7 +85,7 @@ func TestGenerate_RoundStructure(t *testing.T) {
 // TestGenerate_RoundComments verifies that each round has a section comment.
 func TestGenerate_RoundComments(t *testing.T) {
 	sys, vars := compiledFibSystem(t)
-	src := generate(t, sys, vars, codegen.Options{Package: "generated"})
+	src := generate(t, sys, vars, codegen.Options{Package: testPackageName})
 
 	for i := range sys.Rounds {
 		assert.Contains(t, src, "=== Round", "round %d must have a section comment", i)
@@ -165,7 +167,7 @@ func normaliseSource(t *testing.T, src string) string {
 // imports, var block (with concrete action types), and Prove function body.
 func TestGenerate_GoldenFibonacci(t *testing.T) {
 	sys, vars := compiledFibSystem(t)
-	actual := generate(t, sys, vars, codegen.Options{Package: "generated"})
+	actual := generate(t, sys, vars, codegen.Options{Package: testPackageName})
 
 	assert.Equal(t,
 		normaliseSource(t, fibExpectedSource),
@@ -177,7 +179,7 @@ func TestGenerate_GoldenFibonacci(t *testing.T) {
 // system with the same vars produces identical output (modulo the timestamp).
 func TestGenerate_Idempotent(t *testing.T) {
 	sys, vars := compiledFibSystem(t)
-	opts := codegen.Options{Package: "generated"}
+	opts := codegen.Options{Package: testPackageName}
 
 	src1 := generate(t, sys, vars, opts)
 	src2 := generate(t, sys, vars, opts)

@@ -294,28 +294,85 @@ func TestCompile_SharesSelectorsByAnchor(t *testing.T) {
 // TestCompile_PanicsOnOutOfRangePosition ensures an out-of-range anchor is
 // rejected with a localised panic instead of an opaque "index out of range"
 // crash deep inside the runtime. The expression hand-constructs a
-// *ColumnPosition with a negative Position via Column.At, bypassing the
-// normalisation that NewLocalConstraint would otherwise apply; the negative
-// anchor then flows into NewLagrangeSelector, which validates it.
+// *ColumnPosition with a Position beyond the module's domain via Column.At,
+// bypassing the normalisation that NewLocalConstraint would otherwise apply;
+// the out-of-range anchor then flows into NewLagrangeSelector, which validates
+// it against the static [−size, size) bound.
+//
+// Note: negative positions inside [−size, size) are valid (they index from the
+// end), so the out-of-range case uses Position = size.
 func TestCompile_PanicsOnOutOfRangePosition(t *testing.T) {
 	sys := wiop.NewSystemf("lv-oob")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
 	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
 
-	// Hand-built ColumnPosition with Position = -1; Column.At does no
-	// validation, so this slips past the lowerToRow normalisation that
-	// NewLocalConstraint normally applies.
-	badExpr := col.At(-1)
+	// Hand-built ColumnPosition with Position = 4 (== size, so out of range);
+	// Column.At does no validation, so this slips past the lowerToRow
+	// normalisation that NewLocalConstraint normally applies.
+	badExpr := col.At(mod.Size())
 	mod.NewLocalConstraint(sys.Context.Childf("lc"), badExpr, 0)
 
 	defer func() {
 		r := recover()
 		require.NotNil(t, r, "out-of-range anchor must trigger a panic")
 		msg, _ := r.(string)
-		assert.Contains(t, msg, "position must be non-negative")
+		assert.Contains(t, msg, "out of range")
 	}()
 	localvanishing.Compile(sys)
+}
+
+// TestCompile_DynamicModule_NegativeAnchor exercises the end-to-end lift of a
+// scalar vanishing pinned to the last row (Position −1) of a dynamic-size
+// module — the shape produced by an end-relative opening such as Z[−1] in the
+// logderivativesum compiler. The negative anchor flows through localvanishing
+// into a [wiop.LagrangeSelector] that resolves −1 to RuntimeSize−1 per-Runtime,
+// so a single compiled System verifies at multiple runtime sizes.
+//
+// The predicate is pinned via a raw negative *ColumnPosition (col.At(-1))
+// rather than NewLocalConstraint, which cannot normalise −1 on a dynamic module
+// whose size is unknown at construction time — this mirrors what
+// zCol.At(-1).Open produces in the LDS compiler.
+func TestCompile_DynamicModule_NegativeAnchor(t *testing.T) {
+	build := func() (*wiop.System, *wiop.Column) {
+		sys := wiop.NewSystemf("lv-dyn-neg")
+		r0 := sys.NewRound()
+		mod := sys.NewDynamicModule(sys.Context.Childf("dyn"), wiop.PaddingDirectionRight)
+		col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+		// Scalar predicate "col[last] == 0".
+		mod.NewVanishing(sys.Context.Childf("lc-last"), col.At(-1))
+		return sys, col
+	}
+
+	lastRowVec := func(n int, last uint64) *wiop.ConcreteVector {
+		vals := make([]uint64, n)
+		for i := range vals {
+			vals[i] = 9
+		}
+		vals[n-1] = last
+		return makeVec(vals...)
+	}
+
+	// Completeness: an honest witness (last entry zero) is accepted at every
+	// runtime size the same compiled System is run with.
+	for _, n := range []int{4, 8} {
+		sys, col := build()
+		localvanishing.Compile(sys)
+		global.Compile(sys)
+		rt := wiop.NewRuntime(sys)
+		rt.AssignColumn(col, lastRowVec(n, 0))
+		require.NoErrorf(t, wioptest.RunAndVerify(&rt), "n=%d: honest witness must be accepted", n)
+	}
+
+	// Soundness: a non-zero last entry must be rejected at every runtime size.
+	for _, n := range []int{4, 8} {
+		sys, col := build()
+		localvanishing.Compile(sys)
+		global.Compile(sys)
+		rt := wiop.NewRuntime(sys)
+		rt.AssignColumn(col, lastRowVec(n, 7))
+		assert.Errorf(t, wioptest.RunAndVerify(&rt), "n=%d: invalid witness must be rejected", n)
+	}
 }
 
 // elementFromUint64 converts a literal uint64 into a koalabear field.Element.
