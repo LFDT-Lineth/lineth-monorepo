@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { ExponentialBackoffRetryService } from "@consensys/linea-shared-utils";
+import { ExponentialBackoffRetryService } from "@lfdt-lineth/shared-utils";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { createPublicClient, http } from "viem";
 import { mainnet } from "viem/chains";

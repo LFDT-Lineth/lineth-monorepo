@@ -1,5 +1,5 @@
-import { etherToWei } from "@consensys/linea-shared-utils";
 import { describe, expect, it } from "@jest/globals";
+import { etherToWei } from "@lfdt-lineth/shared-utils";
 import { type Address, type Hash, encodeDeployData, encodeFunctionData } from "viem";
 
 import { deployContract } from "./common/deployments";

@@ -55,6 +55,7 @@ type Runtime struct {
 //
 // Panics if sys has no interactive rounds (len(sys.Rounds) == 0).
 func NewRuntime(sys *System) Runtime {
+
 	run := Runtime{
 		System:       sys,
 		fs:           fiatshamir.NewFiatShamir(),
@@ -101,7 +102,11 @@ func (run Runtime) CurrentRound() *Round { return run.currentRound }
 //  2. Every cell value assigned in the current round is fed into the
 //     Fiat-Shamir state. All cells are always public (see [Cell.Visibility]).
 //  3. The runtime advances to the next round.
-//  4. A fresh extension-field coin is derived via [fiatshamir.FiatShamir.RandomFext]
+//  4. Every [Round.PreSamplingHooks] entry on the new round runs, in
+//     declaration order. Hooks may mutate the Fiat-Shamir state via
+//     [Runtime.SetFSState] for shared-randomness seeding; any subsequent
+//     coin in this round is derived from the post-hook state.
+//  5. A fresh extension-field coin is derived via [fiatshamir.FiatShamir.RandomFext]
 //     for each [CoinField] declared in the new round.
 //
 // Panics if there is no next round, or if any oracle/public column in the
@@ -141,6 +146,14 @@ func (run *Runtime) AdvanceRound() {
 	}
 
 	run.currentRound = next
+
+	// Pre-sampling hooks: run before any coin is derived so they can seed
+	// the FS state (typically via [Runtime.SetFSState]). The Runtime value
+	// is shared with the hooks; FS-state mutations performed by them affect
+	// the coin loop below.
+	for _, h := range run.currentRound.PreSamplingHooks {
+		h.Run(*run)
+	}
 
 	// Derive a coin for every CoinField declared in the new round.
 	for _, coin := range run.currentRound.Coins {
@@ -191,6 +204,30 @@ func (run Runtime) AssignColumn(col *Column, v *ConcreteVector) {
 	run.columns[id] = v
 }
 
+// OverrideColumn replaces an existing assignment for col with v. Unlike
+// [Runtime.AssignColumn] it requires col to be already assigned and does not
+// enforce the current round, so soundness tests can corrupt a value the prover
+// has already committed to. When v carries no promise back-reference, the prior
+// assignment's promise is copied over so size and padding semantics survive.
+//
+// Panics if col has not been assigned yet.
+func (run Runtime) OverrideColumn(col *Column, v *ConcreteVector) {
+	run.lock.Lock()
+	defer run.lock.Unlock()
+	id := col.Context.ID
+	old, ok := run.columns[id]
+	if !ok {
+		panic(fmt.Sprintf(
+			"wiop: OverrideColumn: column %q is not assigned",
+			col.Context.Path(),
+		))
+	}
+	if v.promise == nil {
+		v.promise = old.promise
+	}
+	run.columns[id] = v
+}
+
 // GetColumnAssignment returns the concrete assignment of col. Panics if col
 // has not been assigned yet.
 func (run Runtime) GetColumnAssignment(col *Column) *ConcreteVector {
@@ -237,6 +274,25 @@ func (run Runtime) AssignCell(cell *Cell, v field.Gen) {
 	if _, exists := run.cells[id]; exists {
 		panic(fmt.Sprintf(
 			"wiop: AssignCell: cell %q already assigned",
+			cell.Context.Path(),
+		))
+	}
+	run.cells[id] = v
+}
+
+// OverrideCell replaces an existing value for cell with v. Unlike
+// [Runtime.AssignCell] it requires cell to be already assigned and does not
+// enforce the current round, so soundness tests can corrupt a value the prover
+// has already opened.
+//
+// Panics if cell has not been assigned yet.
+func (run Runtime) OverrideCell(cell *Cell, v field.Gen) {
+	run.lock.Lock()
+	defer run.lock.Unlock()
+	id := cell.Context.ID
+	if _, ok := run.cells[id]; !ok {
+		panic(fmt.Sprintf(
+			"wiop: OverrideCell: cell %q is not assigned",
 			cell.Context.Path(),
 		))
 	}
@@ -308,6 +364,18 @@ func (run Runtime) GetCoinValue(coin *CoinField) field.Gen {
 		))
 	}
 	return v
+}
+
+// SetFSState replaces the runtime's Fiat–Shamir state with s. It is
+// intended for [Round.PreSamplingHooks] entries that seed the FS state
+// from a precomputed shared randomness (e.g. cross-shard handoff). Calling
+// it outside a pre-sampling hook can desynchronize the prover and verifier
+// transcripts and is almost always a bug.
+//
+// fiatshamir is a goroutine-unsafe singleton inside the runtime — like the
+// rest of the AdvanceRound pipeline this must not be called concurrently.
+func (run Runtime) SetFSState(s field.Octuplet) {
+	run.fs.SetState(s)
 }
 
 // GetState returns the value stored under key and whether it was present.

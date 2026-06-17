@@ -5,7 +5,7 @@ import { createLoggerMock } from "../../../__tests__/helpers/index.js";
 import { VaultHubABI } from "../../../core/abis/VaultHub.js";
 import { VaultHubContractClient } from "../VaultHubContractClient.js";
 
-import type { IBlockchainClient, ILogger } from "@consensys/linea-shared-utils";
+import type { IBlockchainClient, ILogger } from "@lfdt-lineth/shared-utils";
 import type { PublicClient, TransactionReceipt, Address } from "viem";
 
 jest.mock("viem", () => {

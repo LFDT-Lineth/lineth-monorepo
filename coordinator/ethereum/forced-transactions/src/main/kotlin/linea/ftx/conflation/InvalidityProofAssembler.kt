@@ -118,8 +118,8 @@ class InvalidityProofAssembler(
       ForcedTransactionInclusionResult.TooManyLogs -> InvalidityReason.TooManyLogs
       ForcedTransactionInclusionResult.FilteredAddressFrom -> InvalidityReason.FilteredAddressFrom
       ForcedTransactionInclusionResult.FilteredAddressTo -> InvalidityReason.FilteredAddressTo
-      ForcedTransactionInclusionResult.Phylax ->
-        throw IllegalArgumentException("Phylax invalidity proofs are not supported yet")
+      ForcedTransactionInclusionResult.ChainSecurityRuleViolation ->
+        throw IllegalStateException("ChainSecurityRuleViolation cannot be mapped to InvalidityReason")
     }
   }
 

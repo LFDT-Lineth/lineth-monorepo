@@ -41,7 +41,6 @@ pub fn build(b: *std.Build) void {
             .{ .name = "verifier_ray", .module = verifier_mod },
         },
     });
-
     const exe = b.addExecutable(.{
         .name = "verifier-ray",
         .root_module = b.createModule(.{

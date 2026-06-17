@@ -1,5 +1,5 @@
 {
-  "name": "@consensys/linea-sdk-viem",
+  "name": "@lfdt-lineth/sdk-viem",
   "version": "1.0.0",
   "description": "Viem-based SDK for Linea bridge deposits, withdrawals, claims, and message queries",
   "author": "Consensys Software Inc.",
@@ -51,10 +51,10 @@
     "clean": "rimraf dist node_modules coverage"
   },
   "dependencies": {
-    "@consensys/linea-sdk-core": "workspace:*"
+    "@lfdt-lineth/sdk-core": "workspace:*"
   },
   "devDependencies": {
-    "@consensys/eslint-config": "workspace:*",
+    "@lfdt-lineth/eslint-config": "workspace:*",
     "@types/jest": "catalog:",
     "jest": "catalog:",
     "jest-environment-node": "catalog:",

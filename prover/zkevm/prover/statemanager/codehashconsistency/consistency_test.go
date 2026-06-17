@@ -38,11 +38,6 @@ func TestConsistency(t *testing.T) {
 	t.Run("empty-state-summary", func(t *testing.T) {
 		runTestcase(t, "testdata/mimc-codehash.csv", "testdata/state-summary-empty.csv")
 	})
-	// Regression test for CREATE2 OOG revert: the ROM module can contain code
-	// hashes for contracts whose deployment was rolled back (OOG), so they are
-	// present in ROM but absent from the state summary. The merge cursor in
-	// Assign must not advance the SS cursor in the same row that it exhausts
-	// ROM on such a phantom entry, or STATE_SUM_STAY_SAME panics.
 	t.Run("oog-create2-phantom-rom-entries", func(t *testing.T) {
 		runTestcaseWithPhantomRomEntries(t)
 	})
@@ -139,9 +134,6 @@ func runTestcase(t *testing.T, poseidonCodeHashCsvPath, stateSummaryCsvPath stri
 // no counterpart in the state summary. This simulates an OOG-reverted CREATE2:
 // the tracer emits the child contract's code hash into ROM, but the deployment
 // is rolled back so the account never appears in the state trie.
-//
-// Before the fix this caused STATE_SUM_STAY_SAME to be violated at the row
-// where ROM was exhausted on the phantom entry while SS was still ahead.
 func runTestcaseWithPhantomRomEntries(t *testing.T) {
 	t.Helper()
 
@@ -156,18 +148,12 @@ func runTestcaseWithPhantomRomEntries(t *testing.T) {
 		consistency         Module
 	)
 
-	// sharedKeccak is a code hash present in both ROM and SS (the normal case).
 	sharedKeccak := GenerateRandomLimbs(common.NbLimbU256, rand.New(utils.NewRandSource(42)))     //nolint:gosec
 	sharedPoseidon := GenerateRandomLimbs(poseidon2.BlockSize, rand.New(utils.NewRandSource(43))) //nolint:gosec
 
-	// phantomKeccak is only in ROM — no SS entry — simulating an OOG reverted CREATE2.
 	phantomKeccak := GenerateRandomLimbs(common.NbLimbU256, rand.New(utils.NewRandSource(44)))     //nolint:gosec
 	phantomPoseidon := GenerateRandomLimbs(poseidon2.BlockSize, rand.New(utils.NewRandSource(45))) //nolint:gosec
 
-	// Ensure phantom keccak > shared keccak so phantom sorts after shared.
-	// That puts SS (pointing at shared) ahead of ROM (pointing at phantom)
-	// when ROM reaches the phantom — the exact configuration that triggered
-	// the original STATE_SUM_STAY_SAME violation.
 	if CmpLimbs(sharedKeccak, phantomKeccak) > 0 {
 		sharedKeccak, phantomKeccak = phantomKeccak, sharedKeccak
 		sharedPoseidon, phantomPoseidon = phantomPoseidon, sharedPoseidon
@@ -213,7 +199,6 @@ func runTestcaseWithPhantomRomEntries(t *testing.T) {
 		one := field.One()
 		zero := field.Zero()
 
-		// SS: one account row (shared keccak, exists=1 for both initial and final).
 		run.AssignColumn(stateSummary.IsActive.GetColID(), colOf([]field.Element{one}, sizeStateSummary))
 		run.AssignColumn(stateSummary.IsStorage.GetColID(), colOf([]field.Element{zero}, sizeStateSummary))
 		run.AssignColumn(stateSummary.Account.Initial.Exists.GetColID(), colOf([]field.Element{one}, sizeStateSummary))
@@ -229,7 +214,6 @@ func runTestcaseWithPhantomRomEntries(t *testing.T) {
 			run.AssignColumn(stateSummary.Account.Final.KeccakCodeHash.Lo[i].GetColID(), colOf([]field.Element{sharedKeccak[common.NbLimbU128+i]}, sizeStateSummary))
 		}
 
-		// ROM: row 0 = shared contract (normal), row 1 = phantom OOG CREATE2 child.
 		run.AssignColumn(lineaCodeHashModule.IsActive.GetColID(), colOf([]field.Element{one, one}, sizeCodeHashModule))
 		run.AssignColumn(lineaCodeHashModule.IsHashEnd.GetColID(), colOf([]field.Element{one, one}, sizeCodeHashModule))
 		run.AssignColumn(lineaCodeHashModule.IsForConsistency.GetColID(), colOf([]field.Element{one, one}, sizeCodeHashModule))

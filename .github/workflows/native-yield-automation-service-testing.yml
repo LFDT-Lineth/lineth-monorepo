@@ -31,13 +31,13 @@ jobs:
 
       - name: Build
         run: |
-          pnpm --filter @consensys/linea-shared-utils build
-          pnpm --filter @consensys/linea-native-yield-automation-service build
+          pnpm --filter @lfdt-lineth/shared-utils build
+          pnpm --filter @lfdt-lineth/native-yield-automation-service build
 
       - name: Run tests and generate coverage report
         run: |
-          pnpm --filter @consensys/linea-shared-utils test
-          pnpm --filter @consensys/linea-native-yield-automation-service test
+          pnpm --filter @lfdt-lineth/shared-utils test
+          pnpm --filter @lfdt-lineth/native-yield-automation-service test
 
       - name: Stage TS coverage for artifact (fork PR uploads)
         run: |

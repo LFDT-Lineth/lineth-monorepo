@@ -1,4 +1,4 @@
-import { ILogger } from "@consensys/linea-shared-utils";
+import { ILogger } from "@lfdt-lineth/shared-utils";
 
 import { IBlockProvider } from "../../core/clients/blockchain/IProvider";
 import { DEFAULT_INITIAL_FROM_BLOCK } from "../../core/constants";

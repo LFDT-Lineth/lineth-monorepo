@@ -45,6 +45,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.extension.ExtendWith
 import org.slf4j.LoggerFactory
 import org.web3j.protocol.core.DefaultBlockParameter
+import org.web3j.protocol.core.methods.response.TransactionReceipt
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.lang.ProcessBuilder.Redirect
@@ -52,6 +53,7 @@ import java.math.BigInteger
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.jvm.optionals.getOrNull
 
 /** Base class for acceptance tests. */
 @ExtendWith(AcceptanceTestBaseTestWatcher::class)
@@ -216,5 +218,15 @@ abstract class AcceptanceTestBase {
     }
 
     return newAccounts
+  }
+
+  fun findTransactionReceipt(txHash: String): TransactionReceipt? = ethTransactions
+    .getTransactionReceipt(txHash)
+    .execute(minerNode.nodeRequests())
+    .getOrNull()
+
+  fun getTransactionReceipt(txHash: String): TransactionReceipt {
+    return findTransactionReceipt(txHash)
+      ?: throw AssertionError("Transaction $txHash not found in node ${minerNode.name}")
   }
 }

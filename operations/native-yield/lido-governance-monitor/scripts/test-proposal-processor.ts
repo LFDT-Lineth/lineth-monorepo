@@ -20,7 +20,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import { WinstonLogger } from "@consensys/linea-shared-utils";
+import { WinstonLogger } from "@lfdt-lineth/shared-utils";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 import { ClaudeAIClient } from "../src/clients/ClaudeAIClient.js";

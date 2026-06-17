@@ -39,6 +39,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.toJavaDuration
 
 class MaruDiscoveryService(
   privateKeyBytes: ByteArray,
@@ -136,6 +137,7 @@ class MaruDiscoveryService(
       .signer(signer)
       .localNodeRecord(createLocalNodeRecord())
       .localNodeRecordListener { _, newRecord -> localNodeRecordUpdated(newRecord) }
+      .retryTimeout(p2pConfig.discovery!!.retryTimeout.toJavaDuration())
       .build()
 
   private var poller: Timer? = null

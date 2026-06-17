@@ -1,0 +1,87 @@
+name: 'Setup RISC-V Guests Environment'
+description: >
+  Toolchain + native crypto libraries for building and host-testing the riscv-guests packages.
+  Installs the Zig version pinned in riscv-guests/.zigversion (via community mirrors — ziglang.org
+  prunes dev builds) and the native crypto stack that zesu's host backend links: libsecp256k1 and
+  OpenSSL from apt, blst and mcl built from pinned upstream sources into /usr/local (the build's
+  default -Dcrypto-prefix on Linux). Mirrors zesu's own `make install-apt-deps` recipe.
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Read pinned Zig version
+      id: zigversion
+      shell: bash
+      run: echo "version=$(cat riscv-guests/.zigversion)" >> "$GITHUB_OUTPUT"
+
+    - name: Install Zig
+      uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+      with:
+        version: ${{ steps.zigversion.outputs.version }}
+
+    - name: Install apt crypto dependencies
+      shell: bash
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y --no-install-recommends libsecp256k1-dev libssl-dev build-essential git
+
+    # blst + mcl are not packaged for Ubuntu; build once from pinned tags and cache the artifacts.
+    # Bump the two SHAs here AND in the cache key together.
+    - name: Cache blst + mcl builds
+      id: crypto-cache
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      with:
+        path: ~/.crypto-libs
+        key: crypto-libs-blst-e7f90de551e8df682f3cc99067d204d8b90d27ad-mcl-0499298adcfad3bbcebf77f17700ebbe97166060
+
+    - name: Build blst and mcl from source
+      if: steps.crypto-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        BLST_SHA=e7f90de551e8df682f3cc99067d204d8b90d27ad   # v0.3.16
+        MCL_SHA=0499298adcfad3bbcebf77f17700ebbe97166060    # v3.06
+        STAGE="$HOME/.crypto-libs"
+        mkdir -p "$STAGE/lib" "$STAGE/include"
+
+        git clone https://github.com/supranational/blst.git "$HOME/blst-src"
+        git -C "$HOME/blst-src" checkout --detach "$BLST_SHA"
+        (cd "$HOME/blst-src" && ./build.sh)
+        cp "$HOME/blst-src/libblst.a" "$STAGE/lib/"
+        cp "$HOME/blst-src/bindings/blst.h" "$HOME/blst-src/bindings/blst_aux.h" "$STAGE/include/"
+
+        git clone https://github.com/herumi/mcl.git "$HOME/mcl-src"
+        git -C "$HOME/mcl-src" checkout --detach "$MCL_SHA"
+        make -C "$HOME/mcl-src" -j"$(nproc)"
+        cp "$HOME/mcl-src/lib/libmcl.so" "$STAGE/lib/"
+        cp -r "$HOME/mcl-src/include/mcl" "$STAGE/include/"
+
+    - name: Install blst and mcl into /usr/local
+      shell: bash
+      run: |
+        sudo cp "$HOME/.crypto-libs/lib/libblst.a" /usr/local/lib/
+        sudo cp "$HOME/.crypto-libs/lib/libmcl.so" /usr/local/lib/
+        sudo rm -f /usr/local/lib/libmcl.a
+        sudo cp "$HOME/.crypto-libs/include/blst.h" "$HOME/.crypto-libs/include/blst_aux.h" /usr/local/include/
+        sudo cp -r "$HOME/.crypto-libs/include/mcl" /usr/local/include/
+        sudo ldconfig
+
+    # Zig package fetches (zesu, zesu-zkvm, EF zkevm fixtures) land in each guest's zig-pkg/.
+    - name: Cache Zig package fetches
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      with:
+        path: riscv-guests/*/zig-pkg
+        key: riscv-guests-zig-pkg-${{ hashFiles('riscv-guests/**/build.zig.zon') }}
+        restore-keys: |
+          riscv-guests-zig-pkg-
+
+    # Compile cache (the Makefiles pass --cache-dir <guest>/.zig-cache). Restoring it turns the
+    # multi-minute zesu graph rebuild into a no-op; zig's cache is content-addressed, so a stale
+    # restore (restore-keys fallback) still reuses every unchanged object. Keys hash only tracked
+    # build inputs — zig-pkg/ is populated at run time and must stay out of the key.
+    - name: Cache Zig compile cache
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      with:
+        path: riscv-guests/*/.zig-cache
+        key: riscv-guests-zig-cache-${{ hashFiles('riscv-guests/.zigversion', 'riscv-guests/build_common/**', 'riscv-guests/*/build.zig', 'riscv-guests/*/build.zig.zon', 'riscv-guests/*/src/**') }}
+        restore-keys: |
+          riscv-guests-zig-cache-
