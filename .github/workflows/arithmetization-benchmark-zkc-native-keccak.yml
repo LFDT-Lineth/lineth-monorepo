@@ -117,7 +117,7 @@ jobs:
           set -uo pipefail
           mkdir -p /tmp/bench/logs
           zkc_prog="$PWD/arithmetization/src/test/zkc/keccakf/keccakf_batched.zkc"
-          ITERS=${{ inputs.iterations || 0 }}
+          ITERS=${{ inputs.iterations || 1 }}
 
           # progress prints
           log() { printf '[%s] %s\n' "$(date +'%H:%M:%S')" "$*"; }
@@ -129,16 +129,19 @@ jobs:
             sleep 5
           }
 
-          run_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)
-            local zkc_bin="/tmp/zkc-${1}"
-            /usr/bin/time -v "$zkc_bin" exec -v -q --field KOALABEAR_16 \
+          # Can run with or without the --lower-native flag
+          run_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)  [$3=--lower-native]
+            local variant="$1" label="$2" zkc_bin="/tmp/zkc-${1}"
+            local extra_flags=()
+            [[ "${3:-}" == "--lower-native" ]] && extra_flags=(--lower-native)
+            /usr/bin/time -v "$zkc_bin" exec -v -q "${extra_flags[@]}" --field KOALABEAR_16 \
               /tmp/keccakf_input.json "$zkc_prog" \
-              > "/tmp/bench/logs/keccak_${1}_${2}.log" 2>&1
+              > "/tmp/bench/logs/keccak_${variant}_${label}.log" 2>&1
           }
 
           for variant in base opt; do
             log "=== variant: ${variant} ==="
-            reset_state; log "${variant}: warmup (untimed)"; run_native_keccak "$variant" warmup || true
+            reset_state; log "${variant}: warmup (untimed)"; run_native_keccak "$variant" warmup --lower-native
             for i in $(seq 1 "$ITERS"); do
               reset_state; log "${variant}: iter ${i}/${ITERS}"; run_native_keccak "$variant" "$i"
             done
@@ -153,7 +156,7 @@ jobs:
           mkdir -p /tmp/bench/logs
           /tmp/bench/render_bench_summary \
             -logs /tmp/bench/logs \
-            -iters ${{ inputs.iterations || 0 }} \
+            -iters ${{ inputs.iterations || 1 }} \
             -workloads keccak \
             -base-ref "${{ inputs.zkc_base_ref || 'main' }}" \
             -optim-ref "${{ inputs.zkc_optim_ref || 'b1af3445bfc4b3a3254a52b1929aadd07ad7fa3e' }}" \
