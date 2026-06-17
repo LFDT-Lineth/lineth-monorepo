@@ -28,6 +28,7 @@
 ### 🚜 Refactor
 
 - *(misc)* Rename Linea to Lineth across documentation and codebase (#3316)
+- *(prover-ray)* Export logderivativesum internals for verifier-ray codegen (#3354)
 
 ### ⚡ Performance
 
