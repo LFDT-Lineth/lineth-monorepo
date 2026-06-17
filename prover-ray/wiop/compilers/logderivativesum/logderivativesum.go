@@ -65,7 +65,7 @@ func compileQuery(ld *wiop.LogDerivativeSum) {
 
 	buckets := bucketByModule(ld.Fractions)
 
-	var entries []zEntry
+	var entries []ZEntry
 	for bIdx, b := range buckets {
 		groups := packFractions(b.fractions)
 		for kIdx, packed := range groups {
@@ -75,7 +75,7 @@ func compileQuery(ld *wiop.LogDerivativeSum) {
 	}
 
 	resultRound.RegisterAction(&proverAction{ld: ld, entries: entries})
-	resultRound.RegisterVerifierAction(&verifierAction{ld: ld, entries: entries})
+	resultRound.RegisterVerifierAction(&VerifierAction{LogDerivativeSum: ld, Entries: entries})
 }
 
 // fractionBucket groups fractions whose vector-valued side lives on the same
@@ -127,13 +127,14 @@ func fractionModule(f wiop.Fraction) *wiop.Module {
 	return f.Denominator.Module()
 }
 
-// zEntry collects the per-Z artefacts shared by the prover and verifier
+// ZEntry collects the per-Z artefacts shared by the prover and verifier
 // actions: the Z column, the raw fractions (filter, num, den) used by the
 // prover for filter-aware row skipping, and the column endpoint opening.
-type zEntry struct {
+type ZEntry struct {
 	zCol   *wiop.Column
 	packed []wiop.Fraction // raw fractions used by the prover for filter-aware evaluation
-	zFinal *wiop.Cell      // lazily-assigned opening of Z[n-1]
+	// ZFinal is the (round, slot) coordinate of the Z[n-1] opening in the proof transcript; carries no witness value.
+	ZFinal *wiop.Cell
 }
 
 // buildZ allocates one Z column for a packed fraction group, registers the
@@ -152,7 +153,7 @@ func buildZ(
 	round *wiop.Round,
 	ctx *wiop.ContextFrame,
 	bIdx, kIdx int,
-) zEntry {
+) ZEntry {
 	zNum, zDen := buildZExpressions(packed)
 
 	zCol := m.NewExtensionColumn(
@@ -212,10 +213,10 @@ func buildZ(
 	}
 	zFinal := zCol.At(endpointPos).Open(ctx.Childf("z-final-b%d-k%d", bIdx, kIdx))
 
-	return zEntry{
+	return ZEntry{
 		zCol:   zCol,
 		packed: packed,
-		zFinal: zFinal,
+		ZFinal: zFinal,
 	}
 }
 
@@ -257,7 +258,7 @@ func buildZExpressions(packed []wiop.Fraction) (zNum, zDen wiop.Expression) {
 // ld.Result.
 type proverAction struct {
 	ld      *wiop.LogDerivativeSum
-	entries []zEntry
+	entries []ZEntry
 }
 
 // Run implements [wiop.ProverAction].
@@ -393,32 +394,35 @@ func genToExt(v field.Gen) field.Ext {
 	return v.AsExt()
 }
 
-// verifierAction enforces the only boundary identity that is not already
+// VerifierAction enforces the only boundary identity that is not already
 // pinned in-circuit: the sum of all Z[n-1] endpoint openings equals the
 // claimed Result cell value. The per-Z initial condition is enforced by the
 // row-0 local constraint registered in buildZ, so this action reads only
 // local openings (cells) — never the oracle witness columns.
-type verifierAction struct {
-	ld      *wiop.LogDerivativeSum
-	entries []zEntry
+//
+// Exported (with exported fields) so out-of-package consumers — notably the
+// verifier-ray codegen — can read the endpoint openings and the Result cell.
+type VerifierAction struct {
+	LogDerivativeSum *wiop.LogDerivativeSum
+	Entries          []ZEntry
 }
 
 // Check implements [wiop.VerifierAction].
-func (a *verifierAction) Check(rt wiop.Runtime) error {
+func (a *VerifierAction) Check(rt wiop.Runtime) error {
 	var sum field.Ext
 
-	for _, e := range a.entries {
-		zFinal := genToExt(rt.GetCellValue(e.zFinal))
+	for _, e := range a.Entries {
+		zFinal := genToExt(rt.GetCellValue(e.ZFinal))
 		sum.Add(&sum, &zFinal)
 	}
 
-	claimed := genToExt(rt.GetCellValue(a.ld.Result))
+	claimed := genToExt(rt.GetCellValue(a.LogDerivativeSum.Result))
 	var diff field.Ext
 	diff.Sub(&sum, &claimed)
 	if !diff.IsZero() {
 		return fmt.Errorf(
 			"wiop/compilers/logderivativesum: final-sum check failed for query %q",
-			a.ld.Context().Path(),
+			a.LogDerivativeSum.Context().Path(),
 		)
 	}
 	return nil
