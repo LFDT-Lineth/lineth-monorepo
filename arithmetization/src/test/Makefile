@@ -394,7 +394,8 @@ KECCAK_JSON_FILE      ?= $(MAKEFILE_DIR)rust/target/riscv64im-unknown-none-elf/r
 
 keccak-rust-build:
 	cargo clean -p riscv-tests --manifest-path $(MAKEFILE_DIR)rust/Cargo.toml
-	KECCAK_N_VECTORS=$(KECCAK_RUST_N_VECTORS) $(MAKE) -f $(MAKEFILE_DIR)Makefile vector-build \
+	$(MAKE) -f $(MAKEFILE_DIR)Makefile vector-build \
+		KECCAK_N_VECTORS=$(KECCAK_RUST_N_VECTORS) \
 		TEST=keccak/keccak.rs \
 		IN_BYTES=0x00
 
