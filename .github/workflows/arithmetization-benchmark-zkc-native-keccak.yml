@@ -48,7 +48,7 @@ on:
         type: number
         default: 100
       fast_mode:
-        description: 'Run zkc exec with --fast (gogen for timed iterations when enabled)'
+        description: 'Run gogen for timed iterations when enabled'
         required: false
         type: boolean
         default: true
@@ -146,8 +146,8 @@ jobs:
               > "/tmp/bench/logs/keccak_${variant}_${label}.log" 2>&1
           }
 
-          # Can run in fast or tracing mode
-          run_native_keccak()  # $1=variant (base|opt)  $2=label (warmup|iter#)  optional: --fast
+          # Can run in fast or tracing mode to count steps in warmup phase
+          run_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)  optional: --fast
             local variant="$1" label="$2" zkc_bin="/tmp/zkc-${1}" fast_flag=()
             if [[ "${3:-}" == "--fast" ]]; then fast_flag=(--fast); fi
             /usr/bin/time -v "$zkc_bin" exec "${fast_flag[@]}" -v -q --field KOALABEAR_16 \
