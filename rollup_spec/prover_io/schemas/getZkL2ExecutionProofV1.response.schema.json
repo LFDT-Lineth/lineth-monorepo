@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://linea.build/schemas/getZkL2ExecutionProofV1.response.schema.json",
   "title": "getZkL2ExecutionProof V1 response",
-  "description": "Prover -> coordinator l2-execution proof response. The shared, versioned contract for rollup_spec/proof_io_v1.py::encode_response and the coordinator's Jackson mapper.",
+  "description": "Prover -> coordinator l2-execution proof response. The shared, versioned contract for the l2-execution guest output (L2ExecutionProof) and the coordinator's Jackson mapper.",
   "type": "object",
   "additionalProperties": false,
   "required": [

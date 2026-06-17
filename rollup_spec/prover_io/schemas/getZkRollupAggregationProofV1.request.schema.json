@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://linea.build/schemas/getZkRollupAggregationProofV1.request.schema.json",
   "title": "getZkRollupAggregationProof V1 request",
-  "description": "Coordinator -> prover rollup-aggregation proof request. The shared, versioned contract for rollup_spec/proof_io_v1.py::decode_aggregation_request. The example file getZkRollupAggregationProofV1.request.json uses '0x...' ellipsis placeholders for documentation and does NOT validate against this schema; real payloads must.",
+  "description": "Coordinator -> prover rollup-aggregation proof request. The shared, versioned contract for the rollup-aggregation guest input (RollupAggregationProofPrivateInput). The example file getZkRollupAggregationProofV1.request.json uses '0x...' ellipsis placeholders for documentation and does NOT validate against this schema; real payloads must.",
   "type": "object",
   "additionalProperties": false,
   "required": [

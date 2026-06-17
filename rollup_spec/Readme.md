@@ -342,7 +342,7 @@ The DA blob must contain the exact inputs required to re-execute the L2 blocks f
 
 ### 3.3 Prover I/O — On-Wire Format
 
-The JSON files under `prover_inputs/` describe a logical schema. The bytes carried into the zkVM guest are binary.
+The JSON request files under `prover_io/` describe a logical schema. The bytes carried into the zkVM guest are binary.
 
 **Transport.** The guest reads input bytes via the zkVM's read-input primitive (`ziskos::read_input()` on Zisk). The Linea l2-execution envelope length-delimits a vanilla SSZ `StatelessInput` byte slice per payload, then carries Linea rollup-extension fields beside that slice. The Python reference models this boundary in `stateless_input.py::decode_stateless_input_ssz`, using the `remerkleable` decoder for the same raw/Ere-prefixed stateless-input container shape while keeping Linea extension parsing outside the stateless-input slice. Do not append Linea bytes to that slice itself: the SSZ decoder treats the final field as consuming the remainder of the slice, so trailing Linea data would be interpreted as stateless input rather than ignored.
 
