@@ -30,7 +30,7 @@ import kotlin.time.Instant
 @ExtendWith(VertxExtension::class)
 class RollupProverClientRestfulTest {
   private val jsonMapper = JsonSerialization.proofResponseMapperV1
-  private val proverVersion = "4.0.0-riscv"
+  private val guestProgramId = "0x31139b3eaece046f5675fe237c36246e7bb2a5acc4cf4b358aef65c6d3771f4d"
   private val proofType = "rollup"
   private val chainId = 59144L
   private val jobsPathPattern = "/v1/jobs/$proofType/.*"
@@ -63,7 +63,7 @@ class RollupProverClientRestfulTest {
     )
     client = RollupProverClient(
       transport = transport,
-      proverVersion = proverVersion,
+      guestProgramId = guestProgramId,
       chainId = chainId,
     )
   }
@@ -86,7 +86,7 @@ class RollupProverClientRestfulTest {
 
     val body = jsonMapper.readTree(postedRequests.first().bodyAsString)
     val postedDto = jsonMapper.treeToValue(body.get("proof_request"), RollupProofRequestDto::class.java)
-    val expectedDto = RollupProofRequestDtoMapper(proverVersion, chainId).invoke(request).get()
+    val expectedDto = RollupProofRequestDtoMapper(guestProgramId, chainId).invoke(request).get()
     assertThat(postedDto).isEqualTo(expectedDto)
   }
 
@@ -135,7 +135,6 @@ class RollupProverClientRestfulTest {
   )
 
   private fun rollupResponseDto(): RollupProofResponseDto = RollupProofResponseDto(
-    proverVersion = proverVersion,
     startBlockNumber = 1000501,
     endBlockNumber = 1000520,
     proof = "0xabcd",

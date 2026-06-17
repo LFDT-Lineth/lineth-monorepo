@@ -2,7 +2,6 @@ package linea.coordinator.clients.prover.riscv
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.clients.RollupProofPublicInputs
 import linea.clients.RollupProofRequestV1
 import linea.coordinator.clients.prover.CompressionProofRequestFileNameProvider
 import linea.coordinator.clients.prover.CompressionProofResponseFileNameProvider
@@ -29,7 +28,7 @@ import kotlin.time.Instant
 @ExtendWith(VertxExtension::class)
 class RollupProverClientFileBasedTest {
   private val jsonMapper = JsonSerialization.proofResponseMapperV1
-  private val proverVersion = "4.0.0-riscv"
+  private val guestProgramId = "0x31139b3eaece046f5675fe237c36246e7bb2a5acc4cf4b358aef65c6d3771f4d"
   private val chainId = 59144L
 
   private lateinit var config: FileBasedProverConfig
@@ -59,7 +58,7 @@ class RollupProverClientFileBasedTest {
     )
     client = RollupProverClient(
       transport = transport,
-      proverVersion = proverVersion,
+      guestProgramId = guestProgramId,
       chainId = chainId,
     )
   }
@@ -74,7 +73,7 @@ class RollupProverClientFileBasedTest {
     assertThat(requestFile).exists()
 
     val writtenDto = jsonMapper.readValue(requestFile.toFile(), RollupProofRequestDto::class.java)
-    val expectedDto = RollupProofRequestDtoMapper(proverVersion, chainId).invoke(request).get()
+    val expectedDto = RollupProofRequestDtoMapper(guestProgramId, chainId).invoke(request).get()
     assertThat(writtenDto).isEqualTo(expectedDto)
   }
 
@@ -111,26 +110,8 @@ class RollupProverClientFileBasedTest {
     l2ExecutionProofs = emptyList(),
   )
 
-  private fun rollupPublicInputs(): RollupProofPublicInputs = RollupProofPublicInputs(
-    endBlockNumber = 1000520UL,
-    endBlockTimestamp = Instant.fromEpochSeconds(1763000457),
-    l2L1BridgeTransactionTree = ByteArray(32) { 0x10 },
-    parentL1L2BridgeRollingHash = ByteArray(32) { 0x11 },
-    parentL1L2BridgeRollingHashMessageNumber = 12UL,
-    endL1L2BridgeRollingHash = ByteArray(32) { 0x13 },
-    endL1L2BridgeRollingHashMessageNumber = 14UL,
-    dynamicChainConfigHash = ByteArray(32) { 0x0c },
-    parentFtxRollingHash = ByteArray(32) { 0x15 },
-    endFtxRollingHash = ByteArray(32) { 0x16 },
-    lastProcessedFtxNumber = 17UL,
-    filteredAddressesHash = ByteArray(32) { 0x18 },
-    parentShnarf = ByteArray(32) { 0x19 },
-    endShnarf = ByteArray(32) { 0x1a },
-  )
-
   private fun rollupResponseDto(): RollupProofResponseDto = RollupProofResponseDto(
     proof = "0xabcd",
-    proverVersion = "4.0.0-riscv",
     startBlockNumber = 1000500,
     endBlockNumber = 1000520,
     publicInputs = RollupProofPublicInputsDto(

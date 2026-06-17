@@ -1,5 +1,6 @@
 package linea.coordinator.clients.prover.riscv
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import linea.clients.L2ExecutionProofPublicInputs
 import linea.clients.L2ExecutionProofResponse
 import linea.clients.RollupProofPublicInputs
@@ -156,21 +157,24 @@ data class StatelessInputDto(
 
 data class PayloadInputDto(
   val statelessInputSsz: String,
+  @get:JsonProperty("_debugStatelessInput")
   val debugStatelessInput: StatelessInputDto,
   val rollupExtensionDto: RollupExtensionDto,
 )
 
-data class L2ExecutionProofRequestDto(
-  val proverVersion: String,
-  val blockRange: BlockRangeDto,
+data class L2ExecutionProofRequestParamsDto(
   val parentFtxRollingHash: String,
   val parentLastProcessedFtxNumber: Long,
   val payloads: List<PayloadInputDto>,
   val chainConfig: ChainConfigDto,
 )
 
+data class L2ExecutionProofRequestDto(
+  val guestProgramId: String,
+  val proofRequest: L2ExecutionProofRequestParamsDto,
+)
+
 data class L2ExecutionProofResponseDto(
-  val proverVersion: String,
   val startBlockNumber: Long,
   val endBlockNumber: Long,
   val proof: String,
@@ -211,17 +215,19 @@ data class L2ExecutionProofDto(
   val filteredAddresses: List<String>,
 )
 
-data class RollupProofRequestDto(
-  val proverVersion: String,
+data class RollupProofRequestParamsDto(
   val chainId: Long,
-  val blockRange: BlockRangeDto,
   val blobs: List<BlobDto>,
   val shnarfTransition: ShnarfTransitionDto,
   val l2ExecutionProofs: List<L2ExecutionProofDto>,
 )
 
+data class RollupProofRequestDto(
+  val guestProgramId: String,
+  val proofRequest: RollupProofRequestParamsDto,
+)
+
 data class RollupProofResponseDto(
-  val proverVersion: String,
   val startBlockNumber: Long,
   val endBlockNumber: Long,
   val proof: String,
@@ -246,18 +252,17 @@ data class RollupProofDto(
 
 typealias RollupAggregationPublicInputsDto = RollupProofPublicInputsDto
 
-data class RollupAggregationProofRequestDto(
-  val proverVersion: String,
-  val chainId: Long,
-  val blockRange: BlockRangeDto,
+data class RollupAggregationProofRequestParamsDto(
   val rollupProofs: List<RollupProofDto>,
+)
+
+data class RollupAggregationProofRequestDto(
+  val guestProgramId: String,
+  val proofRequest: RollupAggregationProofRequestParamsDto,
 )
 
 /** Response of a rollup-aggregation proof: the aggregated proof bytes plus the 14-field PI tuple (§2.4). */
 data class RollupAggregationProofResponseDto(
-  val proverVersion: String,
-  val startBlockNumber: Long,
-  val endBlockNumber: Long,
   val proof: String,
   val publicInputs: RollupAggregationPublicInputsDto,
 )

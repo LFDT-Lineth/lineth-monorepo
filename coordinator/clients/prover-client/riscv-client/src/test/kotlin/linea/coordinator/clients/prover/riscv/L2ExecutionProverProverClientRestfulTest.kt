@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.math.BigInteger
 import kotlin.random.Random
-import kotlin.random.nextULong
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -37,8 +36,8 @@ import kotlin.time.Instant
 @ExtendWith(VertxExtension::class)
 class L2ExecutionProverProverClientRestfulTest {
   private val jsonMapper = JsonSerialization.proofResponseMapperV1
-  private val proverVersion = "4.0.0-riscv"
-  private val proofType = "execution"
+  private val guestProgramId = "0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f"
+  private val proofType = "l2-execution"
   private val jobsPathPattern = "/v1/jobs/$proofType/.*"
   private val chainConfig = ChainConfigDto(
     l2MessageServiceAddress = "0x508ca82df566dcd1b0019d2dedf7e3d6f7ad6dde",
@@ -74,7 +73,7 @@ class L2ExecutionProverProverClientRestfulTest {
     )
     client = L2ExecutionProverClient(
       transport = transport,
-      proverVersion = proverVersion,
+      guestProgramId = guestProgramId,
       chainConfig = chainConfig,
     )
   }
@@ -98,7 +97,7 @@ class L2ExecutionProverProverClientRestfulTest {
 
     val body = jsonMapper.readTree(postedRequests.first().bodyAsString)
     val postedDto = jsonMapper.treeToValue(body.get("proof_request"), L2ExecutionProofRequestDto::class.java)
-    val expectedDto = L2ExecutionProofRequestDtoMapper(proverVersion, chainConfig).invoke(request).get()
+    val expectedDto = L2ExecutionProofRequestDtoMapper(guestProgramId, chainConfig).invoke(request).get()
     assertThat(postedDto).isEqualTo(expectedDto)
   }
 
@@ -187,8 +186,8 @@ class L2ExecutionProverProverClientRestfulTest {
     logsBloom = Random.nextBytes(256),
     prevRandao = Random.nextBytes(32),
     blockNumber = blockNumber,
-    gasLimit = Random.nextULong(),
-    gasUsed = Random.nextULong(),
+    gasLimit = Random.nextLong(0, Long.MAX_VALUE).toULong(),
+    gasUsed = Random.nextLong(0, Long.MAX_VALUE).toULong(),
     timestamp = 1000UL,
     extraData = Random.nextBytes(32),
     baseFeePerGas = BigInteger.valueOf(Random.nextLong(0, Long.MAX_VALUE)),
@@ -201,7 +200,6 @@ class L2ExecutionProverProverClientRestfulTest {
   )
 
   private fun l2ResponseDto(): L2ExecutionProofResponseDto = L2ExecutionProofResponseDto(
-    proverVersion = proverVersion,
     startBlockNumber = 1000501,
     endBlockNumber = 1000503,
     proof = "0xabcd",

@@ -20,7 +20,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
  * Those fields are flagged with `TODO` until the upstream request plumbing provides them.
  */
 internal class L2ExecutionProofRequestDtoMapper(
-  private val proverVersion: String,
+  private val guestProgramId: String,
   private val chainConfig: ChainConfigDto,
   // private val statelessInputSszSerializer: StatelessInputSszSerializer = L2ExecutionStatelessInputSszSerializer(),
   private val statelessInputDtoSszSerializer: StatelessInputDtoSszSerializer =
@@ -122,15 +122,13 @@ internal class L2ExecutionProofRequestDtoMapper(
     }
 
     val dto = L2ExecutionProofRequestDto(
-      proverVersion = proverVersion,
-      blockRange = BlockRangeDto(
-        startBlockNumber = request.startBlockNumber.toLong(),
-        endBlockNumber = request.endBlockNumber.toLong(),
+      guestProgramId = guestProgramId,
+      proofRequest = L2ExecutionProofRequestParamsDto(
+        parentFtxRollingHash = request.parentFtxRollingHash.encodeHex(),
+        parentLastProcessedFtxNumber = request.parentLastProcessedFtxNumber.toLong(),
+        chainConfig = chainConfig,
+        payloads = payloads,
       ),
-      parentFtxRollingHash = request.parentFtxRollingHash.encodeHex(),
-      parentLastProcessedFtxNumber = request.parentLastProcessedFtxNumber.toLong(),
-      chainConfig = chainConfig,
-      payloads = payloads,
     )
 
     return SafeFuture.completedFuture(dto)
@@ -171,10 +169,10 @@ private typealias L2ExecutionProofTransport =
  */
 class L2ExecutionProverClient(
   private val transport: L2ExecutionProofTransport,
-  proverVersion: String,
+  guestProgramId: String,
   chainConfig: ChainConfigDto,
   proofRequestDtoMapper: (L2ExecutionProofRequestV1) -> SafeFuture<L2ExecutionProofRequestDto> =
-    L2ExecutionProofRequestDtoMapper(proverVersion, chainConfig),
+    L2ExecutionProofRequestDtoMapper(guestProgramId, chainConfig),
   proofResponseDtoMapper: (ExecutionProofIndex, L2ExecutionProofResponseDto) -> L2ExecutionProofResponse =
     L2ExecutionProofResponseDtoMapper,
   log: Logger = LOG,

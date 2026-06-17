@@ -28,8 +28,7 @@ import kotlin.time.Instant
 @ExtendWith(VertxExtension::class)
 class RollupAggregationProverClientFileBasedTest {
   private val jsonMapper = JsonSerialization.proofResponseMapperV1
-  private val proverVersion = "4.0.0-riscv"
-  private val chainId = 59144L
+  private val guestProgramId = "0x8a5fdb137ddae03b9bad034500c0fcee76e1c61d70faca5f32bb7418d73392e1"
   private val proofIndexProvider =
     RollupAggregationProverClient.createProofIndexProviderFn(Sha256HashFunction())
 
@@ -60,8 +59,7 @@ class RollupAggregationProverClientFileBasedTest {
     )
     client = RollupAggregationProverClient(
       transport = transport,
-      proverVersion = proverVersion,
-      chainId = chainId,
+      guestProgramId = guestProgramId,
     )
   }
 
@@ -75,7 +73,7 @@ class RollupAggregationProverClientFileBasedTest {
     assertThat(requestFile).exists()
 
     val writtenDto = jsonMapper.readValue(requestFile.toFile(), RollupAggregationProofRequestDto::class.java)
-    val expectedDto = RollupAggregationProofRequestDtoMapper(proverVersion, chainId).invoke(request).get()
+    val expectedDto = RollupAggregationProofRequestDtoMapper(guestProgramId).invoke(request).get()
     assertThat(writtenDto).isEqualTo(expectedDto)
   }
 
@@ -102,9 +100,6 @@ class RollupAggregationProverClientFileBasedTest {
   )
 
   private fun aggregationResponseDto(): RollupAggregationProofResponseDto = RollupAggregationProofResponseDto(
-    proverVersion = proverVersion,
-    startBlockNumber = 1000501,
-    endBlockNumber = 1000567,
     proof = "0xabcd",
     publicInputs = RollupProofPublicInputsDto(
       endBlockNumber = 1000567,

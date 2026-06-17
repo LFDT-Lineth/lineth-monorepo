@@ -21,38 +21,36 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
  * upstream request plumbing provides them.
  */
 internal class RollupProofRequestDtoMapper(
-  private val proverVersion: String,
+  private val guestProgramId: String,
   private val chainId: Long,
   private val encoder: BlockEncoder = BlockRLPEncoder,
 ) : (RollupProofRequestV1) -> SafeFuture<RollupProofRequestDto> {
   override fun invoke(request: RollupProofRequestV1): SafeFuture<RollupProofRequestDto> {
     val dto = RollupProofRequestDto(
-      proverVersion = proverVersion,
-      chainId = chainId,
-      blockRange = BlockRangeDto(
-        startBlockNumber = request.startBlockNumber.toLong(),
-        endBlockNumber = request.endBlockNumber.toLong(),
+      guestProgramId = guestProgramId,
+      proofRequest = RollupProofRequestParamsDto(
+        chainId = chainId,
+        blobs = request.blobs.map {
+          BlobDto(
+            blobInputs = BlobInputsDto(
+              blobHash = it.dataHash.encodeHex(),
+              blobKzgProof = it.kzgProofContract.encodeHex(),
+            ),
+            blockRange = BlockRangeDto(
+              startBlockNumber = request.startBlockNumber.toLong(),
+              endBlockNumber = request.endBlockNumber.toLong(),
+            ),
+            blockRlps = request.blocks.map { block ->
+              encoder.encode(block).encodeHex()
+            },
+          )
+        },
+        shnarfTransition = ShnarfTransitionDto(
+          parentShnarf = request.parentShnarf.encodeHex(),
+          endShnarf = request.endShnarf.encodeHex(),
+        ),
+        l2ExecutionProofs = request.l2ExecutionProofs.map { it.fromDomainObject() },
       ),
-      blobs = request.blobs.map {
-        BlobDto(
-          blobInputs = BlobInputsDto(
-            blobHash = it.dataHash.encodeHex(),
-            blobKzgProof = it.kzgProofContract.encodeHex(),
-          ),
-          blockRange = BlockRangeDto(
-            startBlockNumber = request.startBlockNumber.toLong(),
-            endBlockNumber = request.endBlockNumber.toLong(),
-          ),
-          blockRlps = request.blocks.map { block ->
-            encoder.encode(block).encodeHex()
-          },
-        )
-      },
-      shnarfTransition = ShnarfTransitionDto(
-        parentShnarf = request.parentShnarf.encodeHex(),
-        endShnarf = request.endShnarf.encodeHex(),
-      ),
-      l2ExecutionProofs = request.l2ExecutionProofs.map { it.fromDomainObject() },
     )
 
     return SafeFuture.completedFuture(dto)
@@ -89,10 +87,10 @@ private typealias RollupProofTransport =
  */
 class RollupProverClient(
   private val transport: RollupProofTransport,
-  proverVersion: String,
+  guestProgramId: String,
   chainId: Long,
   proofRequestDtoMapper: (RollupProofRequestV1) -> SafeFuture<RollupProofRequestDto> =
-    RollupProofRequestDtoMapper(proverVersion, chainId),
+    RollupProofRequestDtoMapper(guestProgramId, chainId),
   proofResponseDtoMapper: (CompressionProofIndex, RollupProofResponseDto) -> RollupProofResponse =
     RollupProofResponseDtoMapper,
   log: Logger = LOG,

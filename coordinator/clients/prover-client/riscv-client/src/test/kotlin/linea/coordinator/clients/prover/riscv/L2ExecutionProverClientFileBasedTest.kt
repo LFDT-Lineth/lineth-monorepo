@@ -21,7 +21,6 @@ import org.junit.jupiter.api.io.TempDir
 import java.math.BigInteger
 import java.nio.file.Path
 import kotlin.random.Random
-import kotlin.random.nextULong
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -34,7 +33,7 @@ import kotlin.time.Instant
 @ExtendWith(VertxExtension::class)
 class L2ExecutionProverClientFileBasedTest {
   private val jsonMapper = JsonSerialization.proofResponseMapperV1
-  private val proverVersion = "4.0.0-riscv"
+  private val guestProgramId = "0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f"
   private val chainConfig = ChainConfigDto(
     l2MessageServiceAddress = "0x508ca82df566dcd1b0019d2dedf7e3d6f7ad6dde",
     coinbase = "0x0000000000000000000000000000000000000000",
@@ -68,7 +67,7 @@ class L2ExecutionProverClientFileBasedTest {
     )
     client = L2ExecutionProverClient(
       transport = transport,
-      proverVersion = proverVersion,
+      guestProgramId = guestProgramId,
       chainConfig = chainConfig,
     )
   }
@@ -84,7 +83,7 @@ class L2ExecutionProverClientFileBasedTest {
     println("JONES: RequestFile = ${requestFile.toAbsolutePath()}")
 
     val writtenDto = jsonMapper.readValue(requestFile.toFile(), L2ExecutionProofRequestDto::class.java)
-    val expectedDto = L2ExecutionProofRequestDtoMapper(proverVersion, chainConfig).invoke(request).get()
+    val expectedDto = L2ExecutionProofRequestDtoMapper(guestProgramId, chainConfig).invoke(request).get()
     assertThat(writtenDto).isEqualTo(expectedDto)
   }
 
@@ -124,8 +123,8 @@ class L2ExecutionProverClientFileBasedTest {
         logsBloom = Random.nextBytes(256),
         prevRandao = Random.nextBytes(32),
         blockNumber = 1000501UL,
-        gasLimit = Random.nextULong(),
-        gasUsed = Random.nextULong(),
+        gasLimit = Random.nextLong(0, Long.MAX_VALUE).toULong(),
+        gasUsed = Random.nextLong(0, Long.MAX_VALUE).toULong(),
         timestamp = 1000UL,
         extraData = Random.nextBytes(32),
         baseFeePerGas = BigInteger.valueOf(Random.nextLong(0, Long.MAX_VALUE)),
@@ -144,8 +143,8 @@ class L2ExecutionProverClientFileBasedTest {
         logsBloom = Random.nextBytes(256),
         prevRandao = Random.nextBytes(32),
         blockNumber = 1000502UL,
-        gasLimit = Random.nextULong(),
-        gasUsed = Random.nextULong(),
+        gasLimit = Random.nextLong(0, Long.MAX_VALUE).toULong(),
+        gasUsed = Random.nextLong(0, Long.MAX_VALUE).toULong(),
         timestamp = 1000UL,
         extraData = Random.nextBytes(32),
         baseFeePerGas = BigInteger.valueOf(Random.nextLong(0, Long.MAX_VALUE)),
@@ -199,7 +198,6 @@ class L2ExecutionProverClientFileBasedTest {
 
   private fun l2ResponseDto(): L2ExecutionProofResponseDto = L2ExecutionProofResponseDto(
     proof = "0xabcd",
-    proverVersion = "4.0.0-riscv",
     startBlockNumber = 1000500,
     endBlockNumber = 1000503,
     publicInputs = L2ExecutionProofPublicInputsDto(
