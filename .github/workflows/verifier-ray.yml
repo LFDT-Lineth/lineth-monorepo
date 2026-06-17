@@ -38,7 +38,7 @@ env:
   GO_VERSION: '1.25.7'
   GO_CORSET_VERSION: 'v1.2.17'
   GO_CORSET_REF_FOR_ZKC: 'c7d95e35a4975bd32814ad46b079b16760f2475f'
-  ZIG_VERSION: '0.17.0-dev.251+0db721ec2'
+  ZIG_VERSION: '0.16.0'
 
 concurrency:
   group: verifier-ray-${{ github.workflow }}-${{ github.ref }}
