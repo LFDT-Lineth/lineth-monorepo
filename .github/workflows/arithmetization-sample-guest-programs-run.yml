@@ -50,7 +50,6 @@ jobs:
       - name: Install zkc and run simple Zig guest program with zkc interpreter
         # IN_BYTES values not used in the sum test program but is still written in memory
         run: make TEST=test.zig IN_BYTES="0xAABB" IN_ORIGIN=0x08800000
-        env: 
         working-directory: arithmetization/src/test
         timeout-minutes: 6
 
