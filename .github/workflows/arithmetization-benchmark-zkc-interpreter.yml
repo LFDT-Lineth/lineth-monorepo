@@ -164,23 +164,28 @@ jobs:
             sleep 5
           }
 
+          TEST_MAKE_DIR="$PWD/arithmetization/src/test"
+
+          run_zkc_exec() {  # $1=variant  $2=log path  $3=json  $4=zkc_main  optional: --fast
+            local exec_flags="-q -v"
+            if [[ "${5:-}" == "--fast" ]]; then exec_flags="--fast -q -v"; fi
+            /usr/bin/time -v env ZKC="/tmp/zkc-${1}" ZKC_EXEC_FLAGS="$exec_flags" \
+              make -C "$TEST_MAKE_DIR" --no-print-directory zkc-exec \
+              JSON="$3" ZKC_MAIN="$4" \
+              > "$2" 2>&1
+          }
+
           run_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)  optional: --fast
-            local zkc_bin="/tmp/zkc-${1}" fast_flag=()
-            local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
-            if [[ "${3:-}" == "--fast" ]]; then fast_flag=(--fast); fi
-            /usr/bin/time -v "$zkc_bin" execute "${fast_flag[@]}" -v -q /tmp/keccak.json "$zkc_main" \
-              > "/tmp/bench/logs/keccak_${1}_${2}.log" 2>&1
+            run_zkc_exec "$1" "/tmp/bench/logs/keccak_${1}_${2}.log" /tmp/keccak.json \
+              "/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc" "${3:-}"
           }
 
           run_blake() {   # $1=variant  $2=label  optional: --fast. Runs all N vectors, one log file per vector.
-            local zkc_bin="/tmp/zkc-${1}" fast_flag=()
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
-            if [[ "${3:-}" == "--fast" ]]; then fast_flag=(--fast); fi
             for json in /tmp/bench/json/blake/*.json; do
               local n
               n=$(basename "$json" .json)
-              /usr/bin/time -v "$zkc_bin" execute "${fast_flag[@]}" -v -q "$json" "$zkc_main" \
-                > "/tmp/bench/logs/blake_${1}_${2}_${n}.log" 2>&1
+              run_zkc_exec "$1" "/tmp/bench/logs/blake_${1}_${2}_${n}.log" "$json" "$zkc_main" "${3:-}"
             done
           }
 

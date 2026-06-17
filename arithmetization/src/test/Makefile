@@ -89,7 +89,7 @@ endef
 #####################################################################
 
 # Default target (make)
-exec: compile zkc-exec
+exec: compile install-zkc zkc-exec
 
 debug: compile zkc-debug
 
@@ -160,8 +160,8 @@ elf-to-json: require-bin-ext
 install-zkc:
 	$(MAKE) -C $(ARITHMETIZATION_DIR) install-zkc
 
-# Run zkc exec (set TEST=... or JSON=path/to/input.json).
-zkc-exec: require-json install-zkc
+# Run zkc exec (set TEST=... or JSON=path/to/input.json)
+zkc-exec: require-json
 	zkc exec $(ZKC_EXEC_FLAGS) $(JSON) $(ZKC_MAIN)
 
 zkc-debug: require-test install-zkc
