@@ -3,11 +3,11 @@ package reedsolomon
 import (
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poly"
 	"github.com/consensys/gnark-crypto/field/koalabear"
 	ext "github.com/consensys/gnark-crypto/field/koalabear/extensions"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 	"github.com/consensys/gnark-crypto/utils"
-	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/poly"
 )
 
 func e6FromU64(a0, a1, b0, b1 uint64, b2 ...uint64) ext.E6 {

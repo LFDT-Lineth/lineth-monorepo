@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/hash"
 	"github.com/consensys/gnark-crypto/field/koalabear"
 	ext "github.com/consensys/gnark-crypto/field/koalabear/extensions"
-	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/hash"
 )
 
 type recordingHasher struct {

@@ -16,8 +16,8 @@ package reedsolomon
 import (
 	"math/bits"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poly"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
-	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/poly"
 )
 
 func NewEncoder(N uint64) Encoder {
