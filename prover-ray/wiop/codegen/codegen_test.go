@@ -49,7 +49,7 @@ func TestGenerate_ValidGoSyntax(t *testing.T) {
 // TestGenerate_FuncName verifies the generated function uses Options.FuncName.
 func TestGenerate_FuncName(t *testing.T) {
 	sys, vars := compiledFibSystem(t)
-	src := generate(t, sys, vars, codegen.Options{Package: "generated", FuncName: "ProveBlock"})
+	src := generate(t, sys, vars, codegen.Options{Package: testPackageName, FuncName: "ProveBlock"})
 	assert.Contains(t, src, "func ProveBlock(")
 }
 

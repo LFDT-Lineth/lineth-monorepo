@@ -75,7 +75,7 @@ func compileQuery(ld *wiop.LogDerivativeSum) {
 	}
 
 	resultRound.RegisterAction(&proverAction{ld: ld, entries: entries})
-	resultRound.RegisterVerifierAction(&VerifierAction{Ld: ld, Entries: entries})
+	resultRound.RegisterVerifierAction(&VerifierAction{LogDerivativeSum: ld, Entries: entries})
 }
 
 // fractionBucket groups fractions whose vector-valued side lives on the same
@@ -130,8 +130,6 @@ func fractionModule(f wiop.Fraction) *wiop.Module {
 // ZEntry collects the per-Z artefacts shared by the prover and verifier
 // actions: the Z column, the raw fractions (filter, num, den) used by the
 // prover for filter-aware row skipping, and the column endpoint opening.
-// ZFinal is exported so out-of-package consumers (e.g. the verifier-ray
-// codegen) can read the endpoint opening coordinate.
 type ZEntry struct {
 	zCol   *wiop.Column
 	packed []wiop.Fraction // raw fractions used by the prover for filter-aware evaluation
@@ -405,11 +403,8 @@ func genToExt(v field.Gen) field.Ext {
 // Exported (with exported fields) so out-of-package consumers — notably the
 // verifier-ray codegen — can read the endpoint openings and the Result cell.
 type VerifierAction struct {
-	// Ld is exported so codegen can read Result (cell coordinate) and use the
-	// pointer as a map key to correlate with ResultIsZeroVerifierAction.
-	Ld *wiop.LogDerivativeSum
-	// Entries is exported so codegen can iterate ZFinal cell coordinates.
-	Entries []ZEntry
+	LogDerivativeSum *wiop.LogDerivativeSum
+	Entries          []ZEntry
 }
 
 // Check implements [wiop.VerifierAction].
@@ -421,13 +416,13 @@ func (a *VerifierAction) Check(rt wiop.Runtime) error {
 		sum.Add(&sum, &zFinal)
 	}
 
-	claimed := genToExt(rt.GetCellValue(a.Ld.Result))
+	claimed := genToExt(rt.GetCellValue(a.LogDerivativeSum.Result))
 	var diff field.Ext
 	diff.Sub(&sum, &claimed)
 	if !diff.IsZero() {
 		return fmt.Errorf(
 			"wiop/compilers/logderivativesum: final-sum check failed for query %q",
-			a.Ld.Context().Path(),
+			a.LogDerivativeSum.Context().Path(),
 		)
 	}
 	return nil
