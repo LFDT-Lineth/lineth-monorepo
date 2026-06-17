@@ -3,7 +3,7 @@
 # Moreover, ABI being LP64 (soft-float) is relevant only for float numbers, which we do not use, so it can be omitted as well.
 
 # Declare all targets as phony to prevent conflicts with files of the same name
-.PHONY: exec debug compile elf-exec elf-debug elf-to-json install-zkc zkc-exec zkc-debug clean clean-all linker-script verify-elf vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-bin-ext require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode
+.PHONY: exec debug compile elf-exec elf-debug elf-to-json install-zkc zkc-exec zkc-debug clean clean-all linker-script verify-elf vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-bin-ext require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode require-json
 
 # Keep validation, build, and execution targets running in order
 .NOTPARALLEL:
@@ -23,9 +23,9 @@ LINKER_SCRIPT   := $(MAKEFILE_DIR)linker_script.ld
 # Assembly, Zig, or Rust test file to execute with exec target (TEST=src_optional_subfolder/your_test(.s|.zig|.rs)
 TEST ?=
 
-# Flags to use when invoking zkc exec within zkc-exec and elf-exec targets:  
+# Flags to use when invoking zkc exec via zkc-exec / elf-exec:
 # 	-q for quiet mode
-ZKC_EXEC_FLAGS ?=--fast
+ZKC_EXEC_FLAGS ?=--fast -q
 
 # Already compiled binary to execute with elf-exec target (BIN_EXT=path/to/your_bin)
 BIN_EXT  ?=
@@ -145,8 +145,8 @@ compile: require-src linker-script
 # Note: we use opt-level=2 to remove unused code.
 
 # Convert and execute an already compiled external ELF
-elf-exec: elf-to-json
-	zkc exec $(ZKC_EXEC_FLAGS) $(JSON_EXT) $(ZKC_MAIN)
+elf-exec: elf-to-json install-zkc
+	$(MAKE) --no-print-directory zkc-exec JSON=$(JSON_EXT)
 
 # Convert and debug an already compiled external ELF
 elf-debug: elf-to-json
@@ -160,7 +160,8 @@ elf-to-json: require-bin-ext
 install-zkc:
 	$(MAKE) -C $(ARITHMETIZATION_DIR) install-zkc
 
-zkc-exec: require-test install-zkc
+# Run zkc exec (set TEST=... or JSON=path/to/input.json).
+zkc-exec: require-json install-zkc
 	zkc exec $(ZKC_EXEC_FLAGS) $(JSON) $(ZKC_MAIN)
 
 zkc-debug: require-test install-zkc
@@ -330,7 +331,7 @@ vector-exec: require-vector-json-mode install-zkc
 		[ -f $(VECTOR_JSON_FILE) ] || { echo "VECTOR_JSON_FILE not found: $(VECTOR_JSON_FILE). Run vector-json first"; exit 1; }; \
 		echo "RUN   $(VECTOR_JSON_FILE)"; \
 		err="$(VECTOR_JSON_FILE).err"; \
-		zkc exec -q $(VECTOR_JSON_FILE) $(ZKC_MAIN) > /dev/null 2> "$$err"; \
+		$(MAKE) --no-print-directory zkc-exec JSON=$(VECTOR_JSON_FILE) > /dev/null 2> "$$err"; \
 		status=$$?; \
 		if [ "$$status" -eq 0 ] && [ ! -s "$$err" ]; then \
 			echo "PASS"; \
@@ -348,7 +349,7 @@ vector-exec: require-vector-json-mode install-zkc
 			i=$$((i + 1)); \
 			echo "RUN   case $$i  $$json"; \
 			err="$$json.err"; \
-			zkc exec -q "$$json" $(ZKC_MAIN) > /dev/null 2> "$$err"; \
+			$(MAKE) --no-print-directory zkc-exec JSON="$$json" > /dev/null 2> "$$err"; \
 			status=$$?; \
 			if [ "$$status" -eq 0 ] && [ ! -s "$$err" ]; then \
 				echo "PASS"; \
@@ -512,7 +513,7 @@ act4-exec: install-zkc act4-build
 		base="$(ACT4_LOGS)/$$name"; \
 		count=$$((count + 1)); \
 		echo "RUN   $$name  $$json"; \
-		zkc exec -q "$$json" $(ZKC_MAIN) > /dev/null 2> "$$base.err"; \
+		$(MAKE) --no-print-directory zkc-exec JSON="$$json" > /dev/null 2> "$$base.err"; \
 		status=$$?; \
 		if [ "$$status" -eq 0 ] && [ ! -s "$$base.err" ]; then \
 			echo "PASS"; \
@@ -540,6 +541,10 @@ act4-exec: install-zkc act4-build
 
 require-test:
 	@[ -n "$(TEST)" ] || { echo "TEST is mandatory. Usage: make TEST=src_optional_subfolder/your_test(.s|.zig|.rs)"; exit 1; }
+
+require-json:
+	@[ -n "$(JSON)" ] || { echo "JSON is mandatory (or set TEST=... so JSON is derived). Usage: make zkc-exec JSON=path/to/input.json"; exit 1; }
+	@[ -f "$(JSON)" ] || { echo "JSON file not found: $(JSON)"; exit 1; }
 
 require-src: require-test
 	@[ -f $(SRC) ] || { echo "TEST file not found: $(SRC)"; exit 1; }
