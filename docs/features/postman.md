@@ -48,7 +48,7 @@ When sponsorship is enabled (`L1_L2_ENABLE_POSTMAN_SPONSORING` / `L2_L1_ENABLE_P
 
 ## L1→L2 vs L2→L1 Differences
 
-**L1→L2** includes an extra `TRANSACTION_SIZE_COMPUTED` step. Linea's variable gas pricing depends on compressed transaction size, so the Postman pre-computes this via `@consensys/linea-native-libs` before estimating gas.
+**L1→L2** includes an extra `TRANSACTION_SIZE_COMPUTED` step. Linea's variable gas pricing depends on compressed transaction size, so the Postman pre-computes this via `@lfdt-lineth/native-libs` before estimating gas.
 
 **L2→L1** uses standard EIP-1559 gas estimation and requires Merkle proofs (retrieved from Shomei) for claiming on L1.
 

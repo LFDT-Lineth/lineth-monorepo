@@ -40,7 +40,7 @@ fn keccak<ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b
 }
 
 // print_hash prints the hash in BIG-ENDIAN convention
-fn print_hash<state_row0,state_row1,state_row2,state_row3>() {
+fn print_hash<state_row0, state_row1, state_row2, state_row3>() {
     printf "\nkeccak hash:\t"
     print_big_endian(state_row0[0])
     print_big_endian(state_row1[0])
@@ -50,9 +50,9 @@ fn print_hash<state_row0,state_row1,state_row2,state_row3>() {
 
 }
 // print_big_endian prints a u64 in BIG-ENDIAN convention
-fn print_big_endian(val :u64) {
+fn print_big_endian(val:u64) {
     var b7:u8, b6:u8, b5:u8, b4:u8, b3:u8, b2:u8, b1:u8, b0:u8
-    b7 :: b6 :: b5 :: b4 :: b3 :: b2 :: b1 :: b0 = val
+    b7::b6::b5::b4::b3::b2::b1::b0 = val
     printf "%x%x%x%x%x%x%x%x", b0, b1, b2, b3, b4, b5, b6, b7
 }
 
@@ -116,7 +116,7 @@ fn absorbing_phase<ram, state_row0, state_row1, state_row2, state_row3, state_ro
     for limb:u5 = 0; limb<n_full_words; limb = limb + 1 {
         padded_input_block[limb] = read_64(curr_address + (8 * (limb as Address)))
     }
-    curr_address = curr_address + (8 * (n_full_words  as Address))
+    curr_address = curr_address + (8 * (n_full_words as Address))
     padded_input_block[n_full_words] = read_and_pad_64(curr_address, n_bytes, final_word_in_block)
 
     // the code below should only trigger if n_full_words < 16 = 17 - 1

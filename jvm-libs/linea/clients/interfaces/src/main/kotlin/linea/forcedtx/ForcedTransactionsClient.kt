@@ -14,7 +14,7 @@ enum class ForcedTransactionInclusionResult {
   TooManyLogs,
   FilteredAddressFrom,
   FilteredAddressTo,
-  Phylax,
+  ChainSecurityRuleViolation,
 }
 
 data class ForcedTransactionInclusionStatus(

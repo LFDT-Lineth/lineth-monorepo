@@ -1,4 +1,4 @@
-import { serialize, etherToWei } from "@consensys/linea-shared-utils";
+import { serialize, etherToWei } from "@lfdt-lineth/shared-utils";
 import { Account, Chain, Client, Hash, SendTransactionErrorType, Transport } from "viem";
 import { getTransactionCount, sendTransaction, SendTransactionParameters } from "viem/actions";
 import { EstimateGasParameters } from "viem/linea";

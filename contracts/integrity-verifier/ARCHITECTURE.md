@@ -885,15 +885,15 @@ Each adapter package has two entry points:
 
 | Entry Point | Purpose | Browser-safe |
 |-------------|---------|--------------|
-| `@consensys/.../index` | Adapter class (e.g., `ViemAdapter`) | ✓ Yes |
-| `@consensys/.../tools` | Schema generation, crypto utilities | ✗ No (Node.js only) |
+| `@lfdt-lineth/.../index` | Adapter class (e.g., `ViemAdapter`) | ✓ Yes |
+| `@lfdt-lineth/.../tools` | Schema generation, crypto utilities | ✗ No (Node.js only) |
 
 ```typescript
 // Browser usage (safe)
-import { ViemAdapter } from "@consensys/linea-contract-integrity-verifier-viem";
+import { ViemAdapter } from "@lfdt-lineth/contract-integrity-verifier-viem";
 
 // Node.js CLI/script usage
-import { generateSchema, createCryptoAdapter } from "@consensys/linea-contract-integrity-verifier-viem/tools";
+import { generateSchema, createCryptoAdapter } from "@lfdt-lineth/contract-integrity-verifier-viem/tools";
 ```
 
 ### Static Export

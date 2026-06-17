@@ -6,7 +6,7 @@ import {
   PendingDeposit,
   get0x02WithdrawalCredentials,
   wait,
-} from "@consensys/linea-shared-utils";
+} from "@lfdt-lineth/shared-utils";
 import { Address, Hex, TransactionReceipt } from "viem";
 
 import { IOperationLoop } from "./IOperationLoop.js";

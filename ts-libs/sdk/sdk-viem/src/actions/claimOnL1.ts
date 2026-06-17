@@ -1,4 +1,4 @@
-import { getContractsAddressesByChainId, MessageProof, Message } from "@consensys/linea-sdk-core";
+import { getContractsAddressesByChainId, MessageProof, Message } from "@lfdt-lineth/sdk-core";
 import {
   Account,
   Address,
@@ -82,7 +82,7 @@ export type ClaimOnL1ErrorType =
  * import { createWalletClient, http, zeroAddress } from 'viem'
  * import { privateKeyToAccount } from 'viem/accounts'
  * import { mainnet } from 'viem/chains'
- * import { claimOnL1 } from '@consensys/linea-sdk-viem'
+ * import { claimOnL1 } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createWalletClient({
  *   chain: mainnet,
@@ -113,7 +113,7 @@ export type ClaimOnL1ErrorType =
  * import { createWalletClient, http, zeroAddress } from 'viem'
  * import { privateKeyToAccount } from 'viem/accounts'
  * import { mainnet } from 'viem/chains'
- * import { claimOnL1 } from '@consensys/linea-sdk-viem'
+ * import { claimOnL1 } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createWalletClient({
  *   chain: mainnet,
@@ -145,7 +145,7 @@ export type ClaimOnL1ErrorType =
  * import { createWalletClient, http, zeroAddress } from 'viem'
  * import { privateKeyToAccount } from 'viem/accounts'
  * import { mainnet } from 'viem/chains'
- * import { claimOnL1 } from '@consensys/linea-sdk-viem'
+ * import { claimOnL1 } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createWalletClient({
  *   account: privateKeyToAccount('0x…'),

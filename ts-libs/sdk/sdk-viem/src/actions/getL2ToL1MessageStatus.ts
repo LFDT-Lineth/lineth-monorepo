@@ -1,4 +1,4 @@
-import { getContractsAddressesByChainId, OnChainMessageStatus } from "@consensys/linea-sdk-core";
+import { getContractsAddressesByChainId, OnChainMessageStatus } from "@lfdt-lineth/sdk-core";
 import {
   Abi,
   Account,
@@ -64,7 +64,7 @@ export type GetL2ToL1MessageStatusErrorType =
  * @example
  * import { createPublicClient, http } from 'viem'
  * import { mainnet, linea } from 'viem/chains'
- * import { getL2ToL1MessageStatus } from '@consensys/linea-sdk-viem'
+ * import { getL2ToL1MessageStatus } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createPublicClient({
  *   chain: mainnet,

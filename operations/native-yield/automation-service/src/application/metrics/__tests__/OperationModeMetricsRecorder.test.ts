@@ -8,7 +8,7 @@ import { OperationModeMetricsRecorder } from "../OperationModeMetricsRecorder.js
 
 import type { IVaultHub } from "../../../core/clients/contracts/IVaultHub.js";
 import type { IYieldManager } from "../../../core/clients/contracts/IYieldManager.js";
-import type { IBlockchainClient } from "@consensys/linea-shared-utils";
+import type { IBlockchainClient } from "@lfdt-lineth/shared-utils";
 import type { TransactionReceipt, Address, PublicClient } from "viem";
 
 const ONE_GWEI = 1_000_000_000n;

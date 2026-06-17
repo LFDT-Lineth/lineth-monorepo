@@ -91,6 +91,98 @@ func TestLagrangeSelector_EvaluateOutOfDomain_PanicsOnOwnRow(t *testing.T) {
 	})
 }
 
+// TestLagrangeSelector_NegativePosition checks that a negative Position indexes
+// from the end of the domain: −1 is the last row, −2 the second-to-last, etc.
+// The materialised vector and the out-of-domain evaluation must both agree with
+// the equivalent non-negative position size+pos.
+func TestLagrangeSelector_NegativePosition(t *testing.T) {
+	const size = 8
+	baseX := field.ElemFromBase(field.NewFromString("7"))
+
+	for neg := -1; neg >= -size; neg-- {
+		absPos := size + neg // -1 -> 7, -8 -> 0
+
+		lsNeg, rtNeg := newLagrangeSelector(t, size, neg)
+		lsAbs, rtAbs := newLagrangeSelector(t, size, absPos)
+
+		// The materialised vectors must be identical.
+		vecNeg := lsNeg.EvaluateVector(rtNeg).Plain
+		vecAbs := lsAbs.EvaluateVector(rtAbs).Plain
+		require.Equalf(t, vecAbs.AsBase(), vecNeg.AsBase(),
+			"neg=%d: materialised vector must match position %d", neg, absPos)
+
+		// The single 1 must sit at the resolved row.
+		require.Truef(t, vecNeg.AsBase()[absPos].IsOne(),
+			"neg=%d: expected 1 at resolved row %d", neg, absPos)
+
+		// Out-of-domain evaluation must match the non-negative form.
+		gotNeg := lsNeg.EvaluateOutOfDomain(rtNeg, baseX)
+		gotAbs := lsAbs.EvaluateOutOfDomain(rtAbs, baseX)
+		diff := gotNeg.Sub(gotAbs)
+		require.Truef(t, diff.IsZero(),
+			"neg=%d: EvaluateOutOfDomain must match position %d", neg, absPos)
+	}
+}
+
+// TestLagrangeSelector_OutOfRangePosition checks construction-time bounds on a
+// statically sized module: positions in [−size, size) are accepted; anything
+// outside that range panics.
+func TestLagrangeSelector_OutOfRangePosition(t *testing.T) {
+	const size = 8
+	sys := wiop.NewSystemf("ls-bounds")
+	sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), size, wiop.PaddingDirectionNone)
+
+	// Boundaries inside the range must not panic.
+	require.NotPanics(t, func() { wiop.NewLagrangeSelector(mod, 0) })
+	require.NotPanics(t, func() { wiop.NewLagrangeSelector(mod, size-1) })
+	require.NotPanics(t, func() { wiop.NewLagrangeSelector(mod, -1) })
+	require.NotPanics(t, func() { wiop.NewLagrangeSelector(mod, -size) })
+
+	// Out-of-range on either side must panic.
+	require.Panics(t, func() { wiop.NewLagrangeSelector(mod, size) })
+	require.Panics(t, func() { wiop.NewLagrangeSelector(mod, -size-1) })
+}
+
+// TestLagrangeSelector_DynamicModule checks that a LagrangeSelector built on a
+// dynamic-size module with a negative (end-relative) Position resolves against
+// the per-Runtime size: the same selector is 1 at the last row whether the
+// runtime size is 4 or 8, and its out-of-domain evaluation tracks the size.
+func TestLagrangeSelector_DynamicModule(t *testing.T) {
+	baseX := field.ElemFromBase(field.NewFromString("7"))
+
+	sys := wiop.NewSystemf("ls-dyn")
+	r0 := sys.NewRound()
+	dyn := sys.NewDynamicModule(sys.Context.Childf("dyn"), wiop.PaddingDirectionRight)
+	col := dyn.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+
+	// Position −1: always the last row, regardless of runtime size.
+	ls := wiop.NewLagrangeSelector(dyn, -1)
+
+	for _, n := range []int{4, 8} {
+		rt := wiop.NewRuntime(sys)
+		// Assigning a column fixes the dynamic module's runtime size to n.
+		rt.AssignColumn(col, makeVec(n, 1))
+
+		vec := ls.EvaluateVector(rt).Plain
+		require.Equalf(t, n, vec.Len(), "n=%d: vector length", n)
+		for i := 0; i < n; i++ {
+			want := i == n-1
+			require.Equalf(t, want, vec.AsBase()[i].IsOne(),
+				"n=%d row=%d: selector value", n, i)
+		}
+
+		// The out-of-domain evaluation must match an equivalent static
+		// selector of size n at the last row (n−1).
+		lsStatic, rtStatic := newLagrangeSelector(t, n, n-1)
+		gotDyn := ls.EvaluateOutOfDomain(rt, baseX)
+		gotStatic := lsStatic.EvaluateOutOfDomain(rtStatic, baseX)
+		diff := gotDyn.Sub(gotStatic)
+		require.Truef(t, diff.IsZero(),
+			"n=%d: dynamic EvaluateOutOfDomain must match static size-%d selector", n, n)
+	}
+}
+
 // TestLagrangeSelector_InExpression checks that a LagrangeSelector composes as
 // an ordinary leaf inside an arithmetic expression and is evaluated correctly
 // by the expression compiler on the runtime (in-domain) path. The product

@@ -39,8 +39,8 @@ jobs:
 
       - name: Build ACT4 ELFs
         run: make act4-build
-        working-directory: arithmetization/src/test/examples
+        working-directory: arithmetization/src/test
 
       - name: Run ACT4 tests
         run: make act4-exec
-        working-directory: arithmetization/src/test/examples
+        working-directory: arithmetization/src/test

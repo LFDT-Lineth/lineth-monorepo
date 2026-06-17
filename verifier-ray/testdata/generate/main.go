@@ -597,7 +597,11 @@ func buildVanishingFixtureCases() ([]vanishingFixtureCase, []codegen.NamedVanish
 
 	add := func(source, name string, sys *wiop.System, honest vanishingAssign, invalid vanishingAssign) error {
 		compileFullPipeline(sys)
-		vanishingSystem, err := codegen.BuildVanishingSystem(sys)
+		routing, err := codegen.BuildCoinRouting(sys)
+		if err != nil {
+			return fmt.Errorf("build coin routing %s/%s: %w", source, name, err)
+		}
+		vanishingSystem, err := codegen.BuildVanishingSystem(sys, routing)
 		if err != nil {
 			return fmt.Errorf("build vanishing system %s/%s: %w", source, name, err)
 		}
@@ -613,7 +617,7 @@ func buildVanishingFixtureCases() ([]vanishingFixtureCase, []codegen.NamedVanish
 			invalidProof = &proof
 		}
 		cases = append(cases, vanishingFixtureCase{name: prefixedName, honest: honestProof, invalid: invalidProof})
-		systems = append(systems, codegen.NamedVanishingSystem{Name: prefixedName, System: vanishingSystem})
+		systems = append(systems, codegen.NamedVanishingSystem{Name: prefixedName, System: vanishingSystem, Routing: routing})
 		return nil
 	}
 
@@ -648,7 +652,72 @@ func buildVanishingFixtureCases() ([]vanishingFixtureCase, []codegen.NamedVanish
 		}
 	}
 
+	// LagrangeSelector boundary scenario. It is constructed here rather than in
+	// prover-ray's wioptest because it exercises the lagrange_selector codegen
+	// and Zig evaluator path, which the pinned prover-ray module already
+	// supports via wiop.NewLagrangeSelector; building it locally keeps the
+	// fixture reproducible from the pinned module (see `make verify-testdata`).
+	{
+		sys, col := buildLagrangeSelectorBoundarySystem()
+		honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 99, 7, 7))) }
+		invalid := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 98, 7, 7))) }
+		if err := add("Vanishing", "LagrangeSelectorBoundary", sys, honest, invalid); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	// Dynamic-module variant of the LagrangeSelectorBoundary scenario. Its
+	// module size is resolved at runtime (4, from the assigned column length),
+	// so it drives the Zig verifier's dynamic selector branch that the static
+	// fixture above leaves uncovered.
+	{
+		sys, col := buildDynamicLagrangeSelectorBoundarySystem()
+		honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 99, 7, 7))) }
+		invalid := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 98, 7, 7))) }
+		if err := add("Vanishing", "DynamicLagrangeSelectorBoundary", sys, honest, invalid); err != nil {
+			return nil, nil, err
+		}
+	}
+
 	return cases, systems, nil
+}
+
+// buildLagrangeSelectorBoundarySystem builds a size-4 module with the single
+// vanishing L_1·(col − 99) = 0. The Lagrange selector L_1 is 1 at row 1 and 0
+// elsewhere on the domain, so the constraint pins col[1] = 99 while leaving the
+// other rows free. It exercises the verifier's out-of-domain selector
+// evaluation L_1(r) = ω·(r⁴−1)/(4·(r−ω)). The column is returned so the caller
+// can assign witnesses.
+func buildLagrangeSelectorBoundarySystem() (*wiop.System, *wiop.Column) {
+	sys := wiop.NewSystemf("lagrange-sel")
+	r0 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
+	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	selector := wiop.NewLagrangeSelector(mod, 1)
+	value := wiop.NewConstantField(elem(99))
+	mod.NewVanishing(sys.Context.Childf("boundary"), wiop.Mul(selector, wiop.Sub(col.View(), value)))
+	return sys, col
+}
+
+// buildDynamicLagrangeSelectorBoundarySystem is the dynamic-module twin of
+// buildLagrangeSelectorBoundarySystem: same L_1·(col − 99) = 0 constraint, but
+// on a dynamic module whose domain size is fixed only at runtime (here 4, from
+// the assigned column length). Because the module is unsized at codegen time,
+// the Zig verifier takes the dynamic selector path — deriving ω from
+// ctx.dynamic_n via field.rootOfUnityBy and computing ω^position at runtime —
+// rather than folding ω^position to a comptime constant. The static fixture
+// never exercises that branch, so this one guards the path production dynamic
+// modules actually hit. The column is returned so the caller can assign
+// witnesses.
+func buildDynamicLagrangeSelectorBoundarySystem() (*wiop.System, *wiop.Column) {
+	sys := wiop.NewSystemf("lagrange-sel-dyn")
+	r0 := sys.NewRound()
+	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
+	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	selector := wiop.NewLagrangeSelector(mod, 1)
+	value := wiop.NewConstantField(elem(99))
+	mod.NewVanishing(sys.Context.Childf("boundary"), wiop.Mul(selector, wiop.Sub(col.View(), value)))
+	return sys, col
 }
 
 func buildVanishingProofView(sys *wiop.System, assign vanishingAssign) vanishingProofView {
@@ -757,6 +826,13 @@ func writeVanishingFixtures(cases []vanishingFixtureCase, systems []codegen.Name
 	var out bytes.Buffer
 	writeVanishingHeader(&out)
 	for i := range cases {
+		if err := codegen.WriteSpecZigWithOptions(&out, systems[i].Routing, codegen.SpecZigOptions{
+			ProtocolImport: "verifier_ray.protocol",
+			ConstName:      fmt.Sprintf("system_%d_spec", i),
+			EmitHeader:     false,
+		}); err != nil {
+			return err
+		}
 		if err := codegen.WriteVanishingSystemZigWithOptions(&out, i, systems[i], codegen.VanishingZigOptions{
 			FieldImport:     "verifier_ray.field.koalabear",
 			VanishingImport: "verifier_ray.query.vanishing",
@@ -780,19 +856,21 @@ func writeVanishingHeader(out *bytes.Buffer) {
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "const verifier_ray = @import(\"verifier_ray\");")
 	fmt.Fprintln(out, "const field = verifier_ray.field.koalabear;")
+	fmt.Fprintln(out, "const protocol = verifier_ray.protocol;")
 	fmt.Fprintln(out, "const vanishing = verifier_ray.query.vanishing;")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "pub const RuntimeTraceColumn = union(enum) { oracle: []const [8]u32, public_base: []const u32, public_ext: []const [6]u32 };")
 	fmt.Fprintln(out, "pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };")
 	fmt.Fprintln(out, "pub const RuntimeTraceRound = struct { columns: []const RuntimeTraceColumn, cells: []const RuntimeTraceCell };")
 	fmt.Fprintln(out, "pub const VanishingProofView = struct { rounds: []const RuntimeTraceRound, witness_claims: []const [6]u32, quotient_claims: []const [6]u32, module_sizes: []const usize };")
-	fmt.Fprintln(out, "pub const VanishingScenario = struct { name: []const u8, system: vanishing.System, honest: VanishingProofView, invalid: ?VanishingProofView = null };")
+	fmt.Fprintln(out, "pub const VanishingScenario = struct { name: []const u8, spec: protocol.Spec, system: vanishing.System, honest: VanishingProofView, invalid: ?VanishingProofView = null };")
 	fmt.Fprintln(out)
 }
 
 func writeVanishingScenario(out *bytes.Buffer, idx int, tc vanishingFixtureCase) {
 	fmt.Fprintf(out, "const vanishing_scenario_%d = VanishingScenario{\n", idx)
 	fmt.Fprintf(out, "    .name = \"%s\",\n", zigString(tc.name))
+	fmt.Fprintf(out, "    .spec = system_%d_spec,\n", idx)
 	fmt.Fprintf(out, "    .system = system_%d,\n", idx)
 	fmt.Fprintln(out, "    .honest =")
 	writeVanishingProofView(out, tc.honest, "        ")

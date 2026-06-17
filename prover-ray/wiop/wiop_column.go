@@ -373,12 +373,38 @@ func (cv *ColumnView) Visibility() Visibility { return cv.Column.Visibility }
 type ColumnPosition struct {
 	// Column is the parent column.
 	Column *Column
-	// Position is the zero-based row index into the column.
+	// Position is the row index into the column. Non-negative values index
+	// from the start of the domain; negative values index from the end, with
+	// −1 being the last row, −2 the second-to-last, etc. The end-indexed
+	// form is the only way to open the endpoint of a dynamic module, where
+	// the absolute row index is only known per-[Runtime]. The same
+	// convention is shared with [Vanishing.CancelledPositions].
 	Position int
 }
 
-// At constructs a [ColumnPosition] for this column at the given zero-based
-// row index. The result is a scalar [FieldPromise] evaluating to Column[pos].
+// resolvedRow returns the absolute row index of this position against a
+// runtime-known domain size n. Negative Position values are interpreted from
+// the end (−1 ⇒ n−1, −2 ⇒ n−2, …). Panics if the resolved index is out of
+// the [0, n) range.
+func (cp *ColumnPosition) resolvedRow(n int) int {
+	row := cp.Position
+	if row < 0 {
+		row += n
+	}
+	if row < 0 || row >= n {
+		panic(fmt.Sprintf(
+			"wiop: ColumnPosition: row %d (Position=%d, runtime size %d) out of bounds",
+			row, cp.Position, n,
+		))
+	}
+	return row
+}
+
+// At constructs a [ColumnPosition] for this column at the given row index.
+// Non-negative pos indexes from the start of the domain. Negative pos
+// indexes from the end and is the canonical way to address a dynamic
+// module's endpoint (pos = −1 ⇒ last row). The result is a scalar
+// [FieldPromise] evaluating to Column[pos].
 //
 // Panics if the receiver is nil.
 func (c *Column) At(pos int) *ColumnPosition {
@@ -434,10 +460,12 @@ func (cp *ColumnPosition) EvaluateVector(_ Runtime) ConcreteVector {
 }
 
 // EvaluateSingle implements [Expression]. Returns the value of the parent
-// column at Position in the given runtime.
+// column at Position in the given runtime. Negative Position values are
+// resolved from the end of the domain (see [ColumnPosition.Position]).
 func (cp *ColumnPosition) EvaluateSingle(rt Runtime) ConcreteField {
 	m := cp.Column.Module
-	elem := rt.GetColumnAssignment(cp.Column).ElementAtN(m.Padding, m.RuntimeSize(rt), cp.Position)
+	n := m.RuntimeSize(rt)
+	elem := rt.GetColumnAssignment(cp.Column).ElementAtN(m.Padding, n, cp.resolvedRow(n))
 	return ConcreteField{Value: elem, promise: cp}
 }
 
@@ -477,8 +505,11 @@ func (cp *ColumnPosition) Open(ctx *ContextFrame) *Cell {
 		col.IsExtension,
 		func(rt Runtime) field.Gen {
 			m := col.Module
-			return rt.GetColumnAssignment(col).
-				ElementAtN(m.Padding, m.RuntimeSize(rt), cp.Position)
+			n := m.RuntimeSize(rt)
+			// Negative Position values are resolved from the end at runtime;
+			// see [ColumnPosition.Position]. This is what allows callers to
+			// open the endpoint of a dynamic module via At(-1).
+			return rt.GetColumnAssignment(col).ElementAtN(m.Padding, n, cp.resolvedRow(n))
 		},
 	)
 

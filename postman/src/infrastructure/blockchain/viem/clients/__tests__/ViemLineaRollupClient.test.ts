@@ -1,5 +1,5 @@
-import { claimOnL1, getL2ToL1MessageStatus, getMessageProof } from "@consensys/linea-sdk-viem";
 import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
+import { claimOnL1, getL2ToL1MessageStatus, getMessageProof } from "@lfdt-lineth/sdk-viem";
 import { mock } from "jest-mock-extended";
 import { decodeErrorResult, type PublicClient, type WalletClient } from "viem";
 import { estimateContractGas, readContract } from "viem/actions";
@@ -19,7 +19,7 @@ import {
 } from "../../../../../utils/testing/constants";
 import { ViemLineaRollupClient } from "../ViemLineaRollupClient";
 
-jest.mock("@consensys/linea-sdk-viem", () => ({
+jest.mock("@lfdt-lineth/sdk-viem", () => ({
   claimOnL1: jest.fn(),
   getL2ToL1MessageStatus: jest.fn(),
   getMessageProof: jest.fn(),

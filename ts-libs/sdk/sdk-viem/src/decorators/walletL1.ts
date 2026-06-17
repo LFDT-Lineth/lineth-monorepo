@@ -1,4 +1,4 @@
-import { L1WalletClient } from "@consensys/linea-sdk-core";
+import { L1WalletClient } from "@lfdt-lineth/sdk-core";
 import { Account, Address, Chain, Client, DeriveChain, Transport } from "viem";
 
 import { claimOnL1, ClaimOnL1Parameters, ClaimOnL1ReturnType } from "../actions/claimOnL1";
@@ -23,7 +23,7 @@ export type WalletActionsL1<
      * import { createWalletClient, http } from 'viem';
      * import { privateKeyToAccount } from 'viem/accounts'
      * import { mainnet, linea } from 'viem/chains'
-     * import { walletActionsL1 } from '@consensys/linea-sdk-viem';
+     * import { walletActionsL1 } from '@lfdt-lineth/sdk-viem';
      *
      * const client = createWalletClient({
      *   chain: mainnet,
@@ -49,7 +49,7 @@ export type WalletActionsL1<
      * import { createWalletClient, http } from 'viem';
      * import { privateKeyToAccount } from 'viem/accounts';
      * import { mainnet, linea } from 'viem/chains';
-     * import { walletActionsL1 } from '@consensys/linea-sdk-viem';
+     * import { walletActionsL1 } from '@lfdt-lineth/sdk-viem';
      *
      * const client = createWalletClient({
      *   chain: mainnet,
@@ -90,7 +90,7 @@ export type WalletActionsL1<
      * import { createWalletClient, http } from 'viem';
      * import { privateKeyToAccount } from 'viem/accounts';
      * import { mainnet } from 'viem/chains';
-     * import { walletActionsL1 } from '@consensys/linea-sdk-viem';
+     * import { walletActionsL1 } from '@lfdt-lineth/sdk-viem';
      *
      * const client = createWalletClient({
      *   chain: mainnet,
@@ -121,7 +121,7 @@ export type WalletActionsL1<
      * import { createWalletClient, http } from 'viem';
      * import { privateKeyToAccount } from 'viem/accounts';
      * import { mainnet } from 'viem/chains';
-     * import { walletActionsL1 } from '@consensys/linea-sdk-viem';
+     * import { walletActionsL1 } from '@lfdt-lineth/sdk-viem';
      *
      * const client = createWalletClient({
      *   account: privateKeyToAccount('0x…'),

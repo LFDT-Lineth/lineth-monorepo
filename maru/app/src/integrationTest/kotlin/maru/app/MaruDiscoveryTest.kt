@@ -190,13 +190,6 @@ class MaruDiscoveryTest {
 
     log.info("All nodes have discovered their peers!")
 
-    // Verify each node can see the others
-    maruApps.forEachIndexed { index, app ->
-      val peers = app.p2pNetwork.getPeers()
-      log.info("Node $index peers: ${peers.map { it.nodeId }}")
-      assertThat(peers.size).isGreaterThanOrEqualTo(expectedPeers.toInt())
-    }
-
     log.info("Verifying followers sync EL blocks")
     val validatorBlockHeight =
       networkStacks[0].besuNode.getBlockNumber()

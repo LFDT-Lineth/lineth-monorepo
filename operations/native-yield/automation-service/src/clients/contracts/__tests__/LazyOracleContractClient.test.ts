@@ -7,7 +7,7 @@ import { LazyOracleABI } from "../../../core/abis/LazyOracle.js";
 import { OperationTrigger } from "../../../core/metrics/LineaNativeYieldAutomationServiceMetrics.js";
 import { LazyOracleContractClient } from "../LazyOracleContractClient.js";
 
-import type { ILogger, IBlockchainClient } from "@consensys/linea-shared-utils";
+import type { ILogger, IBlockchainClient } from "@lfdt-lineth/shared-utils";
 import type { Address, Hex, PublicClient, TransactionReceipt } from "viem";
 
 const LazyOracleCombinedABI = [...LazyOracleABI, ...LazyOracleErrorsABI] as const;

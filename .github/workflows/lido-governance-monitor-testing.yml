@@ -31,14 +31,14 @@ jobs:
 
       - name: Build
         run: |
-          pnpm --filter @consensys/linea-shared-utils build
-          DATABASE_URL=postgresql://localhost:5432/dummy pnpm --filter @consensys/lido-governance-monitor db:generate
-          pnpm --filter @consensys/lido-governance-monitor build
+          pnpm --filter @lfdt-lineth/shared-utils build
+          DATABASE_URL=postgresql://localhost:5432/dummy pnpm --filter @lfdt-lineth/lido-governance-monitor db:generate
+          pnpm --filter @lfdt-lineth/lido-governance-monitor build
 
       - name: Run tests and generate coverage report
         run: |
-          pnpm --filter @consensys/linea-shared-utils test
-          pnpm --filter @consensys/lido-governance-monitor test
+          pnpm --filter @lfdt-lineth/shared-utils test
+          pnpm --filter @lfdt-lineth/lido-governance-monitor test
 
       - name: Stage TS coverage for artifact (fork PR uploads)
         run: |

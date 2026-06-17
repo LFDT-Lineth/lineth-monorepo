@@ -4,13 +4,13 @@ SHELL := /bin/bash
 
 R5_BIN := zig-out/bin/verifier-ray
 R5_JSON := $(R5_BIN).json
-ELF_TO_JSON := ../arithmetization/src/test/examples/scripts/elf_to_json_gen/main.go
+ELF_TO_JSON := ../arithmetization/src/test/scripts/elf_to_json_gen/main.go
 ZKC_MAIN := ../arithmetization/src/main/riscv/main.zkc
 
 PASSING_INPUT_FILE := testdata/inputs/passing.bin
 FAILING_INPUT_FILE := testdata/inputs/failing.bin
 INPUT_FILE ?= $(PASSING_INPUT_FILE)
-IN_BYTES_OFFSET ?= 0x08800000
+IN_ORIGIN ?= 0x08800000
 NATIVE_INPUT_FILE := zig-out/input.bin
 IN_BYTES_FILE ?= zig-out/input.hex
 
@@ -49,7 +49,7 @@ help:
 		'  IN_BYTES_FILE         Big-endian hex transport file for zkc' \
 		'' \
 		'zkc variables:' \
-		'  IN_BYTES_OFFSET       Input bytes address, default 0x08800000'
+		'  IN_ORIGIN            Input bytes address, default 0x08800000'
 
 fmt: fmt-zig fmt-codegen fmt-testdata-generate
 
@@ -123,7 +123,7 @@ prepare-zkc-input:
 	{ printf "0x"; xxd -p -c1 $(INPUT_FILE) | awk 'BEGIN{i=0} {lines[i++]=$$0} END{for(j=i-1;j>=0;j--) print lines[j]}' | tr -d '\n'; } > $(IN_BYTES_FILE)
 
 zkc-build: build-r5 prepare-zkc-input
-	go run $(ELF_TO_JSON) $(R5_BIN) "@$(IN_BYTES_FILE)" $(IN_BYTES_OFFSET) > $(R5_JSON)
+	go run $(ELF_TO_JSON) $(R5_BIN) "@$(IN_BYTES_FILE)" $(IN_ORIGIN) > $(R5_JSON)
 
 zkc-verify: zkc-build
 	zkc exec -q $(R5_JSON) $(ZKC_MAIN)

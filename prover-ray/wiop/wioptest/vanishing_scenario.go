@@ -61,16 +61,15 @@ func VanishingScenarios() []func() *VanishingScenario {
 	}
 }
 
-// RunAndVerify drives a Runtime through every interactive round of its
-// system, running each round's registered prover actions before advancing
-// to the next. After the final round it runs all verifier actions across
-// every round and returns the first error encountered, or nil.
+// RunProver drives rt through every interactive round, running each round's
+// registered prover actions before advancing to the next. It leaves rt holding
+// a complete honest transcript: every committed column, cell, and coin is
+// populated. It does not run any verifier action.
 //
-// The caller must assign all r0 oracle columns before calling RunAndVerify;
-// any prover action registered on r0 (e.g. the multiplicity-column
-// assignment that lookuptologderivsum installs) is then run by RunAndVerify
-// itself.
-func RunAndVerify(rt *wiop.Runtime) error {
+// The caller must assign all r0 oracle columns before calling RunProver; any
+// prover action registered on r0 (e.g. the multiplicity-column assignment that
+// lookuptologderivsum installs) is then run here.
+func RunProver(rt *wiop.Runtime) {
 	sys := rt.System
 	// Run any prover actions on the current (first) round before any
 	// AdvanceRound. The lookup-to-log-derivative compiler installs its
@@ -85,12 +84,26 @@ func RunAndVerify(rt *wiop.Runtime) error {
 			a.Run(*rt)
 		}
 	}
-	for _, r := range sys.Rounds {
+}
+
+// RunVerifier runs every verifier action across all rounds against a fully
+// populated rt and returns the first error encountered, or nil. Separating it
+// from [RunProver] lets a test tamper with a committed value between proving
+// and verifying — the basis of transcript-level mutation testing.
+func RunVerifier(rt wiop.Runtime) error {
+	for _, r := range rt.System.Rounds {
 		for _, va := range r.VerifierActions {
-			if err := va.Check(*rt); err != nil {
+			if err := va.Check(rt); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+// RunAndVerify runs the honest prover to completion and then the verifier,
+// returning the first verification error or nil.
+func RunAndVerify(rt *wiop.Runtime) error {
+	RunProver(rt)
+	return RunVerifier(*rt)
 }

@@ -21,10 +21,8 @@ func TestCompile_WioptestCompleteness(t *testing.T) {
 		t.Run(sc.Name, func(t *testing.T) {
 			lookuptologderivsum.Compile(sc.Sys)
 			logderivativesum.Compile(sc.Sys)
-			rt := wiop.NewRuntime(sc.Sys)
-			sc.AssignWitness(&rt)
-			driveProtocol(&rt)
-			require.NoError(t, checkAllVerifierActions(&rt),
+			proof := sc.Sys.Prove(sc.AssignWitness)
+			require.NoError(t, sc.Sys.Verify(proof),
 				"compiled verifier must accept an honest witness")
 		})
 	}
@@ -40,9 +38,7 @@ func TestCompile_WioptestSoundnessPanics(t *testing.T) {
 		t.Run(sc.Name, func(t *testing.T) {
 			lookuptologderivsum.Compile(sc.Sys)
 			logderivativesum.Compile(sc.Sys)
-			rt := wiop.NewRuntime(sc.Sys)
-			sc.AssignWitness(&rt)
-			assert.Panics(t, func() { runRound(&rt) },
+			assert.Panics(t, func() { sc.Sys.Prove(sc.AssignWitness) },
 				"M-assignment prover task must panic on this invalid witness")
 		})
 	}

@@ -8,10 +8,12 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/files"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	"github.com/consensys/go-corset/pkg/zkc/constraints"
 	zkc_util "github.com/consensys/go-corset/pkg/zkc/util"
+	"github.com/consensys/linea-monorepo/prover-ray/utils/files"
+	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	"github.com/consensys/linea-monorepo/prover-ray/zkcdriver"
 )
 
 // zkcTestCase represents a zkc testcase. The user only needs to populate
@@ -101,10 +103,11 @@ func runTestCase(
 		zkcdriver.Settings{},
 		files.MustRead(scenario.BinFilePath))
 
-	rt := wiop.NewRuntime(sys)
-	driver.AssignWithPreRead(&rt, inputs)
+	proof := sys.Prove(func(rt *wiop.Runtime) {
+		driver.AssignWithPreRead(rt, inputs)
+	})
 
-	if err := wioptest.RunAndVerify(&rt); err != nil {
+	if err := sys.Verify(proof); err != nil {
 		return fmt.Errorf("error running verifier: %w", err)
 	}
 
