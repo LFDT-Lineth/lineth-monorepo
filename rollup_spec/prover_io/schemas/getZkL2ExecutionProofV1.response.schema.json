@@ -6,7 +6,6 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "proverVersion",
     "proof",
     "startBlockNumber",
     "endBlockNumber",
@@ -16,7 +15,6 @@
     "filteredAddresses"
   ],
   "properties": {
-    "proverVersion": { "type": "string", "minLength": 1 },
     "proof": { "$ref": "#/$defs/hex" },
     "startBlockNumber": { "$ref": "#/$defs/uint" },
     "endBlockNumber": { "$ref": "#/$defs/uint" },

@@ -6,35 +6,42 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "proverVersion",
-    "chainId",
-    "blockRange",
-    "blobs",
-    "shnarfTransition",
-    "l2ExecutionProofs"
+    "guestProgramId",
+    "proofRequest"
   ],
   "properties": {
-    "proverVersion": { "type": "string", "minLength": 1 },
-    "chainId": { "$ref": "#/$defs/uint" },
-    "blockRange": { "$ref": "#/$defs/blockRange" },
-    "blobs": {
-      "type": "array",
-      "minItems": 1,
-      "items": { "$ref": "#/$defs/blob" }
-    },
-    "shnarfTransition": {
+    "guestProgramId": { "$ref": "#/$defs/hash32" },
+     "proofRequest": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["parentShnarf", "endShnarf"],
+      "required": [
+        "chainId",
+        "blobs",
+        "shnarfTransition",
+        "l2ExecutionProofs"
+      ],
       "properties": {
-        "parentShnarf": { "$ref": "#/$defs/hash32" },
-        "endShnarf": { "$ref": "#/$defs/hash32" }
+        "chainId": { "$ref": "#/$defs/uint" },
+        "blobs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/blob" }
+        },
+        "shnarfTransition": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["parentShnarf", "endShnarf"],
+          "properties": {
+            "parentShnarf": { "$ref": "#/$defs/hash32" },
+            "endShnarf": { "$ref": "#/$defs/hash32" }
+          }
+        },
+        "l2ExecutionProofs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/l2ExecutionProof" }
+        }
       }
-    },
-    "l2ExecutionProofs": {
-      "type": "array",
-      "minItems": 1,
-      "items": { "$ref": "#/$defs/l2ExecutionProof" }
     }
   },
   "$defs": {
