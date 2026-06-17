@@ -11,7 +11,7 @@ type TestCase = {
 };
 
 function testPrivateKey(label: string): string {
-  return `0x${createHash("sha256").update(`linea-stack-account-setup-test:${label}`).digest("hex")}`;
+  return `0x${createHash("sha256").update(`lineth-stack-account-setup-test:${label}`).digest("hex")}`;
 }
 
 function testWallet(label: string): Wallet {

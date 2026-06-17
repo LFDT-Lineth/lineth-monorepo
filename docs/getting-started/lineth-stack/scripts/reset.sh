@@ -57,12 +57,12 @@ fi
 # shellcheck disable=SC2086
 $COMPOSE down -v --remove-orphans
 docker volume rm \
-  linea-stack-shared-config \
-  linea-stack-l2-genesis \
-  linea-stack-rendered-config \
-  linea-stack-postman-runtime-config >/dev/null 2>&1 || true
+  lineth-stack-shared-config \
+  lineth-stack-l2-genesis \
+  lineth-stack-rendered-config \
+  lineth-stack-postman-runtime-config >/dev/null 2>&1 || true
 if [ "$RESET_LOCAL_L1" = "true" ]; then
-  docker volume rm linea-stack-local-l1-data >/dev/null 2>&1 || true
+  docker volume rm lineth-stack-local-l1-data >/dev/null 2>&1 || true
 fi
 
 lineth_section "host artifacts"

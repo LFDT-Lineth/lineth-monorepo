@@ -2,7 +2,7 @@
 set -eu
 
 ROOT=$(git rev-parse --show-toplevel)
-STACK_REL=docs/getting-started/linea-stack
+STACK_REL=docs/getting-started/lineth-stack
 STACK="$ROOT/$STACK_REL"
 FAILURES=0
 
@@ -40,14 +40,14 @@ check_restructured_layout_paths() {
   old_postman_render='scripts/init/''render-postman-env'
   old_deploy_phase='scripts/internal/''deploy-contracts.sh'
 
-  if grep -R -n "$old_config_path" "$compose" "$STACK/scripts" >/tmp/linea-stack-old-config-paths.txt 2>/dev/null; then
-    fail "runtime Compose/scripts still reference old L2 config paths: $(tr '\n' ' ' </tmp/linea-stack-old-config-paths.txt)"
+  if grep -R -n "$old_config_path" "$compose" "$STACK/scripts" >/tmp/lineth-stack-old-config-paths.txt 2>/dev/null; then
+    fail "runtime Compose/scripts still reference old L2 config paths: $(tr '\n' ' ' </tmp/lineth-stack-old-config-paths.txt)"
   else
     pass "runtime Compose/scripts use config/genesis and config/services paths"
   fi
 
-  if grep -R -n -e "$old_init_render" -e "$old_postman_render" -e "$old_deploy_phase" "$compose" "$STACK/scripts" >/tmp/linea-stack-old-script-paths.txt 2>/dev/null; then
-    fail "runtime Compose/scripts still reference old phase/renderer paths: $(tr '\n' ' ' </tmp/linea-stack-old-script-paths.txt)"
+  if grep -R -n -e "$old_init_render" -e "$old_postman_render" -e "$old_deploy_phase" "$compose" "$STACK/scripts" >/tmp/lineth-stack-old-script-paths.txt 2>/dev/null; then
+    fail "runtime Compose/scripts still reference old phase/renderer paths: $(tr '\n' ' ' </tmp/lineth-stack-old-script-paths.txt)"
   else
     pass "runtime Compose/scripts use scripts/phases and scripts/services paths"
   fi
@@ -935,12 +935,12 @@ check_reuse_guardrails() {
     && grep -q '@chainsafe/hashtree-linux-' "$deploy_contracts" \
     && grep -q -- '--filter linea-monorepo' "$deploy_contracts" \
     && grep -q -- '--filter contracts...' "$deploy_contracts" \
-    && grep -q 'linea-contracts-pnpm-store:/workspace/.pnpm-store' "$compose" \
-    && grep -q 'linea-contracts-root-node-modules:/workspace/node_modules' "$compose" \
-    && grep -q 'linea-contracts-package-node-modules:/workspace/contracts/node_modules' "$compose" \
-    && grep -q 'linea-eslint-config-node-modules:/workspace/ts-libs/eslint-config/node_modules' "$compose" \
-    && grep -q 'linea-contracts-artifacts:/workspace/contracts/artifacts' "$compose" \
-    && grep -q 'linea-contracts-cache:/workspace/contracts/cache' "$compose"; then
+    && grep -q 'lineth-contracts-pnpm-store:/workspace/.pnpm-store' "$compose" \
+    && grep -q 'lineth-contracts-root-node-modules:/workspace/node_modules' "$compose" \
+    && grep -q 'lineth-contracts-package-node-modules:/workspace/contracts/node_modules' "$compose" \
+    && grep -q 'lineth-eslint-config-node-modules:/workspace/ts-libs/eslint-config/node_modules' "$compose" \
+    && grep -q 'lineth-contracts-artifacts:/workspace/contracts/artifacts' "$compose" \
+    && grep -q 'lineth-contracts-cache:/workspace/contracts/cache' "$compose"; then
     pass "deploy-contracts keeps Linux dependency and Hardhat caches in Docker volumes"
   else
     fail "deploy-contracts must not reuse host node_modules or throw away the Hardhat cache"
@@ -1168,7 +1168,7 @@ check_smoke_and_traffic_scripts() {
     && grep -q 'profiles: \["local-l1"\]' "$STACK/docker-compose.yml" \
     && grep -q 'l1-el-node' "$STACK/docker-compose.yml" \
     && grep -q 'l1-cl-node' "$STACK/docker-compose.yml" \
-    && grep -q 'linea-stack-local-l1-data' "$STACK/docker-compose.yml" \
+    && grep -q 'lineth-stack-local-l1-data' "$STACK/docker-compose.yml" \
     && grep -q 'lineth_l1_address_link' "$STACK/scripts/links.sh" \
     && grep -q 'lineth_l1_address_link' "$STACK/scripts/export-output.sh" \
     && grep -q 'lineth_l1_host_rpc_url' "$STACK/scripts/status.sh"; then
@@ -1440,8 +1440,8 @@ check_pinned_utility_images_and_docs() {
     fail "FOUNDRY_TAG must be pinned, not latest"
   fi
 
-  if grep -q 'linea-foundry-home:' "$compose" \
-    && grep -q 'linea-foundry-home:/root/.foundry' "$compose" \
+  if grep -q 'lineth-foundry-home:' "$compose" \
+    && grep -q 'lineth-foundry-home:/root/.foundry' "$compose" \
     && grep -q 'foundry-tools:' "$compose" \
     && grep -q 'ghcr.io/foundry-rs/foundry:${FOUNDRY_TAG}' "$compose" \
     && grep -q '00-prepare-deploy-tools.sh' "$compose" \

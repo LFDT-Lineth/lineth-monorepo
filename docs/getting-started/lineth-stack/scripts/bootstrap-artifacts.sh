@@ -154,10 +154,10 @@ migrate_legacy_volume_to_temp() {
 lineth_section "Clean old Docker-volume state"
 migrate_legacy_shared_dir "$STACK_DIR/artifacts/shared"
 migrate_legacy_rendered_dir "$STACK_DIR/artifacts/config/rendered"
-migrate_legacy_volume_to_temp linea-stack-shared-config migrate_legacy_shared_dir
-migrate_legacy_volume linea-stack-l2-genesis "$STACK_DIR/artifacts/genesis"
-migrate_legacy_volume_to_temp linea-stack-rendered-config migrate_legacy_rendered_dir
-docker volume rm linea-stack-postman-runtime-config >/dev/null 2>&1 || true
+migrate_legacy_volume_to_temp lineth-stack-shared-config migrate_legacy_shared_dir
+migrate_legacy_volume lineth-stack-l2-genesis "$STACK_DIR/artifacts/genesis"
+migrate_legacy_volume_to_temp lineth-stack-rendered-config migrate_legacy_rendered_dir
+docker volume rm lineth-stack-postman-runtime-config >/dev/null 2>&1 || true
 rm -rf "$STACK_DIR/artifacts/shared" "$STACK_DIR/artifacts/config/rendered"
 lineth_ok "generated files ready"
 

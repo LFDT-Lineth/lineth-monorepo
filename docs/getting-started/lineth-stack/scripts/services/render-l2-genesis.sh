@@ -1,5 +1,5 @@
 #!/bin/sh
-# L2 genesis init for the linea-stack public quickstart.
+# L2 genesis init for the lineth-stack public quickstart.
 #
 # Renders genesis-maru.json + genesis-besu.json from their .template files by
 # substituting:

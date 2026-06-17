@@ -18,7 +18,7 @@ source "$RUNTIME_KEYS_ENV"
 
 export ADDRESSES_PATH
 export L2_RPC_URL="${L2_RPC_URL:-http://l2-node-besu:8545}"
-export LINETH_STACK_DIR="${LINETH_STACK_DIR:-/workspace/docs/getting-started/linea-stack}"
+export LINETH_STACK_DIR="${LINETH_STACK_DIR:-/workspace/docs/getting-started/lineth-stack}"
 export LINETH_ACCOUNTS_DIR="${LINETH_ACCOUNTS_DIR:-/accounts}"
 L1_MODE="${L1_MODE:-sepolia}"
 case "$L1_MODE" in

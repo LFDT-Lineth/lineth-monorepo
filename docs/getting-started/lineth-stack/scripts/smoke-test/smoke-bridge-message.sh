@@ -141,7 +141,7 @@ section "send L1 message"
 SEND_RECEIPT="$(
   docker run --rm \
     --entrypoint sh \
-    --network linea-stack_linea \
+    --network lineth-stack_linea \
     -e L1_RPC_URL="$L1_CONTAINER_RPC_URL" \
     -e L1_DEPLOYER_PRIVATE_KEY="$L1_DEPLOYER_PRIVATE_KEY" \
     -e LINEA_ROLLUP="$LINEA_ROLLUP" \

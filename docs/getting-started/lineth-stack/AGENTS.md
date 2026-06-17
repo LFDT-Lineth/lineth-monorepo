@@ -2,7 +2,7 @@
 
 ## Goal
 
-Provide a fast, reproducible Linea Stack quickstart for demos, development, and validation.
+Provide a fast, reproducible Lineth Stack quickstart for demos, development, and validation.
 
 Current practical objective:
 - default path: local Linea L2 + Sepolia-backed L1 finality, usable by engineers and customer-facing demos;

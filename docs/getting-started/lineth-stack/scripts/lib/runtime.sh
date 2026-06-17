@@ -25,7 +25,7 @@ lineth_runtime_init() {
     dir="$(dirname "$dir")"
   done
 
-  printf 'lineth_runtime_init: could not find linea-stack root from %s\n' "$start" >&2
+  printf 'lineth_runtime_init: could not find lineth-stack root from %s\n' "$start" >&2
   return 1
 }
 

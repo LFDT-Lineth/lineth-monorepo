@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # Print a redacted, milestone-oriented status report for the Lineth quickstart.
-# Run from docs/getting-started/linea-stack while the stack is booting.
+# Run from docs/getting-started/lineth-stack while the stack is booting.
 set -eu
 
 SCRIPT_DIR="$(CDPATH= cd "$(dirname "$0")" && pwd -P)"

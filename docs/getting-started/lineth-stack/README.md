@@ -1,6 +1,6 @@
 # Lineth Stack quickstart
 
-Run a local Linea L2 stack using either Sepolia L1 finality or a quickstart-local
+Run a local Lineth L2 stack using either Sepolia L1 finality or a quickstart-local
 Besu+Teku L1. Sepolia remains the default public/customer demo path. Local L1 is
 for development, CI, rehearsal, and unreliable-Sepolia periods.
 
@@ -13,7 +13,7 @@ for development, CI, rehearsal, and unreliable-Sepolia periods.
 > Full inventory: `config/DEV-KEYS-INVENTORY.md`.
 
 > **Apple Silicon**
-> The Linea prover image is `linux/amd64` only and runs under Rosetta on M-series, 3–5× slower than native x86_64.
+> The Lineth prover image is `linux/amd64` only and runs under Rosetta on M-series, 3–5× slower than native x86_64.
 > For day-to-day work, keep `PROVER_DEV_OVERRIDE=true` in `.env` (see §8) so the prover serves dummy proofs in seconds regardless of architecture.
 > The slowdown only matters when you turn the override off for real partial-mode validation: the first proof takes roughly 30 minutes on M-series vs. 5–10 minutes on native x86_64.
 > Everything else in the stack is multi-arch.
@@ -23,7 +23,7 @@ for development, CI, rehearsal, and unreliable-Sepolia periods.
 Use the helper scripts first. Use raw Compose only when debugging.
 
 ```bash
-cd docs/getting-started/linea-stack
+cd docs/getting-started/lineth-stack
 cp .env.example .env
 $EDITOR .env
 ./scripts/start.sh --tail
@@ -94,7 +94,7 @@ Full key inventory: `config/DEV-KEYS-INVENTORY.md`.
 | RAM, partial-proof mode | 30-32 GB assigned to Docker; 128 GB recommended |
 | Disk | About 30 GB free |
 
-Apple Silicon note: the Linea prover image is `linux/amd64`. Keep
+Apple Silicon note: the Lineth prover image is `linux/amd64`. Keep
 `PROVER_DEV_OVERRIDE=true` for normal testing and demos. Partial proving on
 M-series machines is much slower.
 
@@ -529,7 +529,7 @@ availability, and funded testnet accounts.
 ## File layout
 
 ```text
-docs/getting-started/linea-stack/
+docs/getting-started/lineth-stack/
 |-- README.md
 |-- docker-compose.yml
 |-- versions.env

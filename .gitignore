@@ -144,12 +144,12 @@ __pycache__/
 /docker/config/l2-genesis-initialization/*.toml
 /docker/config/l2-genesis-initialization/fork-timestamp.txt
 
-# Linea Stack quickstart local runtime artifacts and evidence bundles.
-/docs/getting-started/linea-stack/.rendered/
-/docs/getting-started/linea-stack/rendered/
-/docs/getting-started/linea-stack/artifacts/*
-!/docs/getting-started/linea-stack/artifacts/.gitignore
-/docs/getting-started/linea-stack/lineth-output/
+# Lineth Stack quickstart local runtime artifacts and evidence bundles.
+/docs/getting-started/lineth-stack/.rendered/
+/docs/getting-started/lineth-stack/rendered/
+/docs/getting-started/lineth-stack/artifacts/*
+!/docs/getting-started/lineth-stack/artifacts/.gitignore
+/docs/getting-started/lineth-stack/lineth-output/
 
 !.gitkeep
 !operations/bin/

@@ -48,7 +48,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
-STACK="$ROOT/docs/getting-started/linea-stack"
+STACK="$ROOT/docs/getting-started/lineth-stack"
 COMPOSE="docker compose --env-file versions.env --env-file .env --profile stack-partial-prover"
 lineth_runtime_init "$STACK"
 L1_MODE="$(lineth_l1_mode)"

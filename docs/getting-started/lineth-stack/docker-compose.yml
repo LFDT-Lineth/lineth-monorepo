@@ -1,5 +1,5 @@
 # =============================================================================
-# Linea Stack — v0 standalone public quickstart (Sepolia L1).
+# Lineth Stack — v0 standalone public quickstart (Sepolia L1).
 #
 # L2 stack (Linea Besu sequencer + Maru consensus + l2-node-besu + coordinator
 # + postman + shomei + web3signer + prover) pointed at user-supplied Sepolia L1
@@ -39,29 +39,29 @@ networks:
         - subnet: 10.10.10.0/24
 
 volumes:
-  linea-local-dev:
-    name: "linea-stack-local-dev"
-  linea-stack-local-l1-data:
-    name: "linea-stack-local-l1-data"
-  linea-logs:
-    name: "linea-stack-logs"
+  lineth-local-dev:
+    name: "lineth-stack-local-dev"
+  lineth-stack-local-l1-data:
+    name: "lineth-stack-local-l1-data"
+  lineth-logs:
+    name: "lineth-stack-logs"
   coordinator-pg-data:
   postman-pg-data:
   blockscout-l2-pg-data:
-  linea-contracts-pnpm-store:
-    name: "linea-stack-contracts-pnpm-store"
-  linea-contracts-root-node-modules:
-    name: "linea-stack-contracts-root-node-modules"
-  linea-contracts-package-node-modules:
-    name: "linea-stack-contracts-package-node-modules"
-  linea-eslint-config-node-modules:
-    name: "linea-stack-eslint-config-node-modules"
-  linea-contracts-artifacts:
-    name: "linea-stack-contracts-artifacts"
-  linea-contracts-cache:
-    name: "linea-stack-contracts-cache"
-  linea-foundry-home:
-    name: "linea-stack-foundry-home"
+  lineth-contracts-pnpm-store:
+    name: "lineth-stack-contracts-pnpm-store"
+  lineth-contracts-root-node-modules:
+    name: "lineth-stack-contracts-root-node-modules"
+  lineth-contracts-package-node-modules:
+    name: "lineth-stack-contracts-package-node-modules"
+  lineth-eslint-config-node-modules:
+    name: "lineth-stack-eslint-config-node-modules"
+  lineth-contracts-artifacts:
+    name: "lineth-stack-contracts-artifacts"
+  lineth-contracts-cache:
+    name: "lineth-stack-contracts-cache"
+  lineth-foundry-home:
+    name: "lineth-stack-foundry-home"
 
 services:
 
@@ -80,7 +80,7 @@ services:
       - ../../../docker/config/l1-node/cl/network-config.yml:/config/network-config.yml:ro
       - ../../../docker/config/l1-node/el/genesis.json:/config/genesis.json
       - ../../../docker/config/l1-node/generate-genesis.sh:/generate-genesis.sh
-      - linea-stack-local-l1-data:/data
+      - lineth-stack-local-l1-data:/data
     networks: [l1network]
 
   l1-el-node:
@@ -106,7 +106,7 @@ services:
       - ../../../docker/config/l1-node/el/config.toml:/config/config.toml:ro
       - ../../../docker/config/l1-node/jwtsecret.txt:/config/jwtsecret.txt:ro
       - ../../../docker/config/l1-node/el/log4j.xml:/var/lib/besu/log4j.xml:ro
-      - linea-stack-local-l1-data:/data
+      - lineth-stack-local-l1-data:/data
     ports:
       - "${HOST_PORT_L1_RPC:-8445}:8545"
       - "${HOST_PORT_L1_WS:-8446}:8546"
@@ -143,7 +143,7 @@ services:
       - ../../../docker/config/l1-node/jwtsecret.txt:/config/jwtsecret.txt:ro
       - ../../../docker/config/l1-node/cl/config.yaml:/config/config-file.yaml:ro
       - ../../../docker/config/l1-node/cl/log4j.xml:/config/log4j.xml:ro
-      - linea-stack-local-l1-data:/data
+      - lineth-stack-local-l1-data:/data
     ports:
       - "${HOST_PORT_L1_CL_P2P:-9002}:9000"
       - "${HOST_PORT_L1_CL_METRICS:-8008}:8008/tcp"
@@ -201,14 +201,14 @@ services:
       L2_GAS_PRICE_WEI: ${L2_GAS_PRICE_WEI:-100000000}
       LINETH_KEYSTORE_PASSWORD: ${LINETH_KEYSTORE_PASSWORD:-}
       LINETH_KEYSTORE_PASSWORD_FILE: ${LINETH_KEYSTORE_PASSWORD_FILE:-}
-      LINETH_STACK_DIR: /workspace/docs/getting-started/linea-stack
+      LINETH_STACK_DIR: /workspace/docs/getting-started/lineth-stack
       LINETH_ACCOUNTS_DIR: /accounts
     volumes:
       - ../../..:/workspace
-      - linea-contracts-pnpm-store:/workspace/.pnpm-store
-      - linea-contracts-root-node-modules:/workspace/node_modules
-      - linea-contracts-package-node-modules:/workspace/contracts/node_modules
-      - linea-eslint-config-node-modules:/workspace/ts-libs/eslint-config/node_modules
+      - lineth-contracts-pnpm-store:/workspace/.pnpm-store
+      - lineth-contracts-root-node-modules:/workspace/node_modules
+      - lineth-contracts-package-node-modules:/workspace/contracts/node_modules
+      - lineth-eslint-config-node-modules:/workspace/ts-libs/eslint-config/node_modules
       - ./scripts/internal:/scripts/internal:ro
       - ./scripts/lib:/scripts/lib:ro
       - ./scripts/phases:/scripts/phases:ro
@@ -228,7 +228,7 @@ services:
     entrypoint: ["sh", "/scripts/phases/00-prepare-deploy-tools.sh"]
     volumes:
       - ./scripts/phases:/scripts/phases:ro
-      - linea-foundry-home:/foundry:rw
+      - lineth-foundry-home:/foundry:rw
 
   l2-genesis-init:
     image: busybox:${BUSYBOX_TAG}
@@ -423,7 +423,7 @@ services:
       - ./config/services/l2-node-besu/log4j.xml:/var/lib/besu/log4j.xml:ro
       - ./config/services/coordinator/traces-limits-v5.toml:/var/lib/besu/traces-limits.toml:ro
       - ./artifacts/genesis:/initialization:ro
-      - linea-local-dev:/data
+      - lineth-local-dev:/data
     ports:
       - "${HOST_PORT_L2_RPC:-8745}:8545"
       - "${HOST_PORT_L2_WS:-8746}:8546"
@@ -620,7 +620,7 @@ services:
       HOST_PORT_POSTMAN: ${HOST_PORT_POSTMAN:-9090}
       HOST_PORT_COORDINATOR: ${HOST_PORT_COORDINATOR:-9545}
       FOUNDRY_TAG: ${FOUNDRY_TAG:?FOUNDRY_TAG must be set in versions.env}
-      LINETH_STACK_DIR: /workspace/docs/getting-started/linea-stack
+      LINETH_STACK_DIR: /workspace/docs/getting-started/lineth-stack
       LINETH_ACCOUNTS_DIR: /accounts
     volumes:
       # Mount the whole linea-monorepo at /workspace because contracts/ is a
@@ -628,13 +628,13 @@ services:
       # at the repo root. Mounting just contracts/ breaks pnpm catalog resolution.
       - ../../..:/workspace
       # Keep deploy tooling dependencies Linux-native and Docker-scoped.
-      - linea-contracts-pnpm-store:/workspace/.pnpm-store
-      - linea-contracts-root-node-modules:/workspace/node_modules
-      - linea-contracts-package-node-modules:/workspace/contracts/node_modules
-      - linea-eslint-config-node-modules:/workspace/ts-libs/eslint-config/node_modules
-      - linea-contracts-artifacts:/workspace/contracts/artifacts
-      - linea-contracts-cache:/workspace/contracts/cache
-      - linea-foundry-home:/root/.foundry
+      - lineth-contracts-pnpm-store:/workspace/.pnpm-store
+      - lineth-contracts-root-node-modules:/workspace/node_modules
+      - lineth-contracts-package-node-modules:/workspace/contracts/node_modules
+      - lineth-eslint-config-node-modules:/workspace/ts-libs/eslint-config/node_modules
+      - lineth-contracts-artifacts:/workspace/contracts/artifacts
+      - lineth-contracts-cache:/workspace/contracts/cache
+      - lineth-foundry-home:/root/.foundry
       - ./scripts/internal:/scripts/internal:ro
       - ./scripts/lib:/scripts/lib:ro
       - ./scripts/phases:/scripts/phases:ro
@@ -730,7 +730,7 @@ services:
       - ./config/services/coordinator/vertx-options.json:/var/lib/coordinator/vertx-options.json:ro
       - ./config/services/coordinator/log4j2-dev.xml:/var/lib/coordinator/log4j2-dev.xml:ro
       - ./config/services/coordinator/tls-files/:/tls-files/:ro
-      - linea-local-dev:/data
+      - lineth-local-dev:/data
     ports:
       - "${HOST_PORT_COORDINATOR:-9545}:9545"
     networks: [linea]
@@ -789,8 +789,8 @@ services:
       # the directory at startup). Sourced from the monorepo's prover/
       # tree, same path the upstream compose-spec-l2-services.yml uses.
       - ../../../prover/prover-assets:/opt/linea/prover/prover-assets:ro
-      - linea-local-dev:/data
-      - linea-logs:/logs
+      - lineth-local-dev:/data
+      - lineth-logs:/logs
     networks: [linea]
 
   # ============================================================================
@@ -838,7 +838,7 @@ services:
       NEXT_PUBLIC_APP_HOST: localhost
       NEXT_PUBLIC_APP_PORT: ${HOST_PORT_L2_BLOCKSCOUT_FRONTEND:-4001}
       NEXT_PUBLIC_APP_ENV: development
-      NEXT_PUBLIC_APP_INSTANCE: linea-stack-local
+      NEXT_PUBLIC_APP_INSTANCE: lineth-stack-local
       NEXT_PUBLIC_NETWORK_NAME: "Local Linea"
       NEXT_PUBLIC_NETWORK_SHORT_NAME: Linea
       NEXT_PUBLIC_NETWORK_ID: ${L2_CHAIN_ID:-1337}

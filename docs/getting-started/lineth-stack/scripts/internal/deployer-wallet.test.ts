@@ -24,7 +24,7 @@ const LEGACY_PRIVATE_KEY = testPrivateKey("legacy-deployer");
 const SECRET_PASSWORD = "secret-password-for-test";
 
 function testPrivateKey(label: string): string {
-  return `0x${createHash("sha256").update(`linea-stack-test:${label}`).digest("hex")}`;
+  return `0x${createHash("sha256").update(`lineth-stack-test:${label}`).digest("hex")}`;
 }
 
 function tmpStackDir(): string {

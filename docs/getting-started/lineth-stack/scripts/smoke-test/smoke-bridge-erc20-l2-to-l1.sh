@@ -115,14 +115,14 @@ cast_event_topic() {
 
 cast_l1_call() {
   docker run --rm \
-    --network linea-stack_linea \
+    --network lineth-stack_linea \
     --entrypoint cast \
     "$FOUNDRY_IMAGE" call "$@" --rpc-url "$L1_CONTAINER_RPC_URL"
 }
 
 cast_l2_call() {
   docker run --rm \
-    --network linea-stack_linea \
+    --network lineth-stack_linea \
     --entrypoint cast \
     "$FOUNDRY_IMAGE" call "$@" --rpc-url "$L2_READ_RPC_URL"
 }
@@ -282,7 +282,7 @@ SEND_OUTPUT="$(
   docker run --rm \
     --user 0:0 \
     --entrypoint sh \
-    --network linea-stack_linea \
+    --network lineth-stack_linea \
     -v "$LINETH_ACCOUNTS_DIR:/accounts:ro" \
     -e L2_WITHDRAW_PRIVATE_KEY="${L2_WITHDRAW_PRIVATE_KEY:-}" \
     -e L2_BRIDGED_TOKEN="$L2_BRIDGED_TOKEN" \

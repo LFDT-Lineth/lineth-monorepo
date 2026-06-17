@@ -1,5 +1,5 @@
 // Forked from contracts/local-deployments-artifacts/deployBridgedTokenAndTokenBridgeV1_1.ts
-// for the linea-stack scaffold. Two changes vs upstream:
+// for the lineth-stack scaffold. Two changes vs upstream:
 //
 // 1. walletNonce comes from `await wallet.getNonce()` directly — the upstream
 //    `ORDERED_NONCE_POST_LINEAROLLUP = 7` offset is stale (step 1 actually
