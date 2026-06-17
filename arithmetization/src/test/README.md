@@ -94,7 +94,7 @@ riscv-test() {
             make -f "$makefile" "$1" "${@:2}"
             ;;
         exec|debug|compile|zkc-exec|zkc-debug|clean|verify-elf|vector-build|vector-json)
-            # targets that require TEST argument
+            # targets that require TEST argument
             make -f "$makefile" "$1" TEST="$2" "${@:3}"
             ;;
         *)
