@@ -65,8 +65,7 @@ static rot_offset(x:u3, y:u3) -> (offset:u6) {
 
 // Inputs and outputs (see header comment for layout details).
 pub input n_vectors(address:u1) -> (count:u64)
-pub input block_counts(address:u64) -> (count:u64)
-pub input blocks(address:u64) -> (block:bitrate_type)
+pub input block_counts(address:u64) -> (count:u64)pub input blocks(address:u64) -> (b16:u64, b15:u64, b14:u64, b13:u64, b12:u64, b11:u64, b10:u64, b9:u64, b8:u64, b7:u64, b6:u64, b5:u64, b4:u64, b3:u64, b2:u64, b1:u64, b0:u64)
 memory state_row0(address:u3) -> (state:lane)
 memory state_row1(address:u3) -> (state:lane)
 memory state_row2(address:u3) -> (state:lane)
@@ -79,7 +78,7 @@ memory b3(address:u3) -> (state:lane)
 memory b4(address:u3) -> (state:lane)
 memory c(address:u3) -> (state:lane)
 memory d(address:u3) -> (state:lane)
-pub output result(address:u64) -> (out:u256)
+pub output result(address:u64) -> (out3:u64, out2:u64, out1:u64, out0:u64)
 
 static mod5(address:u5) -> (result:u3) {
     0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4
@@ -103,9 +102,13 @@ fn main<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, 
     var offset:u64 = 0
     for v:u64 = 0; v<n_vectors[0]; v = v + 1 {
         var nb:u64 = block_counts[v]
+
         absorbing_phase(offset, nb)
+
         squeezing_phase(v)
+
         reset_state()
+
         offset = offset + nb
     }
 
@@ -130,7 +133,7 @@ fn reset_state<state_row0, state_row1, state_row2, state_row3, state_row4>() {
 fn absorbing_phase<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d>(base:u64, nb:u64) {
     for i:u64 = 0; i<nb; i = i + 1 {
         var c16:u64, c15:u64, c14:u64, c13:u64, c12:u64, c11:u64, c10:u64, c9:u64, c8:u64, c7:u64, c6:u64, c5:u64, c4:u64, c3:u64, c2:u64, c1:u64, c0:u64
-        c16::c15::c14::c13::c12::c11::c10::c9::c8::c7::c6::c5::c4::c3::c2::c1::c0 = blocks[base + i]
+        c16, c15, c14, c13, c12, c11, c10, c9, c8, c7, c6, c5, c4, c3, c2, c1, c0 = blocks[base + i]
         state_row0[0] = state_row0[0] ^ switch_endian_u64(c16)
         state_row1[0] = state_row1[0] ^ switch_endian_u64(c15)
         state_row2[0] = state_row2[0] ^ switch_endian_u64(c14)
@@ -154,7 +157,7 @@ fn absorbing_phase<state_row0, state_row1, state_row2, state_row3, state_row4, b
 }
 
 fn squeezing_phase<state_row0, state_row1, state_row2, state_row3, state_row4>(v:u64) {
-    result[v] = switch_endian_u64(state_row0[0])::switch_endian_u64(state_row1[0])::switch_endian_u64(state_row2[0])::switch_endian_u64(state_row3[0])
+    result[v] = switch_endian_u64(state_row0[0]), switch_endian_u64(state_row1[0]), switch_endian_u64(state_row2[0]), switch_endian_u64(state_row3[0])
 }
 
 // ===================================================================
