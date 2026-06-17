@@ -138,7 +138,14 @@ type zEntry struct {
 
 // buildZ allocates one Z column for a packed fraction group, registers the
 // recurrence Vanishing, pins the row-0 boundary with a local constraint, and
-// opens the column endpoint.
+// opens the column endpoint (a lazy [wiop.Cell] returned by
+// [ColumnPosition.Open]). The module's size does not need to be known at
+// compile time: the endpoint opening at Z[last] is addressed via
+// [ColumnPosition]'s negative-row convention (Position = −1 ⇒ last row),
+// and Vanishing's cancelled-positions logic gracefully handles a runtime
+// size of 1 by automatically skipping row 0 (the only row of a one-row
+// module), so the recurrence Vanishing is registered unconditionally for
+// dynamic modules.
 func buildZ(
 	m *wiop.Module,
 	packed []wiop.Fraction,
@@ -146,14 +153,6 @@ func buildZ(
 	ctx *wiop.ContextFrame,
 	bIdx, kIdx int,
 ) zEntry {
-	n := m.Size()
-	if n <= 0 {
-		panic(fmt.Sprintf(
-			"wiop/compilers/logderivativesum: module %q must be sized before Compile",
-			m.Context.Path(),
-		))
-	}
-
 	zNum, zDen := buildZExpressions(packed)
 
 	zCol := m.NewExtensionColumn(
@@ -163,13 +162,21 @@ func buildZ(
 	)
 
 	// The recurrence zNum − (Z − Z<<−1)·zDen carries a −1 shift on Z, so
-	// NewVanishing automatically cancels row 0. For a single-row module the
-	// recurrence is vacuous: skip it.
-	if n > 1 {
+	// NewVanishing automatically cancels row 0; the row-0 boundary is pinned
+	// separately by the local constraint below.
+	//
+	// For a *statically* one-row module the recurrence is vacuous and we
+	// skip it as an optimisation. For a dynamic module we cannot know the
+	// runtime size at compile time, so the Vanishing is registered
+	// unconditionally; Vanishing.Check's cancelled-positions logic makes
+	// the constraint vacuous if RuntimeSize ends up being 1.
+	if m.IsDynamic() || m.Size() > 1 {
 		zView := zCol.View()
 		recurrence := wiop.Sub(
 			zNum,
 			wiop.Mul(
+				// Shift(-1) is load-bearing for the dynamic n=1 corner case: it puts row 0 in NewVanishing's
+				// CancelledPositions, so when RuntimeSize == 1 the only row is cancelled and Check is vacuous.
 				wiop.Sub(zView, zView.Shift(-1)),
 				zDen,
 			),
@@ -183,15 +190,27 @@ func buildZ(
 	// Initial condition at row 0: zNum[0] − Z[0]·zDen[0] = 0. The recurrence
 	// cancels row 0, so the boundary is pinned here as a sound local constraint
 	// (lifted by localvanishing and discharged by global) rather than by the
-	// verifier reading the oracle witness columns. This also covers the
-	// single-row (n == 1) case where the recurrence is skipped.
+	// verifier reading the oracle witness columns. The constraint lives on row
+	// 0, which always exists, so it is well-defined for dynamic modules too;
+	// it also covers the single-row (RuntimeSize == 1) case where the
+	// recurrence is skipped or made vacuous.
 	m.NewLocalConstraint(
 		ctx.Childf("z-init-b%d-k%d", bIdx, kIdx),
 		wiop.Sub(zNum, wiop.Mul(zCol.View(), zDen)),
 		0,
 	)
 
-	zFinal := zCol.At(n - 1).Open(ctx.Childf("z-final-b%d-k%d", bIdx, kIdx))
+	// Endpoint opening Z[last] for the running-sum total. For static modules we
+	// resolve the endpoint to a concrete row index up front so the downstream
+	// localvanishing pass — which lowers each opening's binding Vanishing via a
+	// [LagrangeSelector] — sees only non-negative positions. Dynamic modules
+	// keep the negative-row form (Position = −1 resolved to RuntimeSize−1
+	// per-Runtime by [ColumnPosition.resolvedRow]).
+	endpointPos := -1
+	if !m.IsDynamic() {
+		endpointPos = m.Size() - 1
+	}
+	zFinal := zCol.At(endpointPos).Open(ctx.Childf("z-final-b%d-k%d", bIdx, kIdx))
 
 	return zEntry{
 		zCol:   zCol,

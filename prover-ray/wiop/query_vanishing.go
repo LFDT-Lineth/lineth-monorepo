@@ -194,6 +194,8 @@ func cancelledPositionsFromShifts(shifts map[int]struct{}) []int {
 				posSet[-i] = struct{}{}
 			}
 		} else if off < 0 {
+			// e.g. Shift(-1) in the LDS recurrence puts position 0 here, which is what makes Check
+			// vacuous on a dynamic module that turns out to have RuntimeSize == 1.
 			for i := 0; i < -off; i++ {
 				posSet[i] = struct{}{}
 			}
