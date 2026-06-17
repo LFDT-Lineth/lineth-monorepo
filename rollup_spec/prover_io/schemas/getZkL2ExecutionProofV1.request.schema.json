@@ -6,40 +6,34 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "proverVersion",
-    "blockRange",
-    "chainConfig",
-    "parentFtxRollingHash",
-    "parentLastProcessedFtxNumber",
-    "payloads"
+    "guestProgramId",
+    "proofRequest"
   ],
   "properties": {
-    "proverVersion": { "type": "string", "minLength": 1 },
-    "blockRange": {
+    "guestProgramId": { "$ref": "#/$defs/hash32" },
+    "proofRequest": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["startBlockNumber", "endBlockNumber"],
+      "required": ["chainConfig", "parentFtxRollingHash", "parentLastProcessedFtxNumber", "payloads"],
       "properties": {
-        "startBlockNumber": { "$ref": "#/$defs/uint" },
-        "endBlockNumber": { "$ref": "#/$defs/uint" }
+        "chainConfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["l2MessageServiceAddress", "coinbase", "chainId"],
+          "properties": {
+            "l2MessageServiceAddress": { "$ref": "#/$defs/address" },
+            "coinbase": { "$ref": "#/$defs/address" },
+            "chainId": { "$ref": "#/$defs/uint" }
+          }
+        },
+        "parentFtxRollingHash": { "$ref": "#/$defs/hash32" },
+        "parentLastProcessedFtxNumber": { "$ref": "#/$defs/uint" },
+        "payloads": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/payload" }
+        }
       }
-    },
-    "chainConfig": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["l2MessageServiceAddress", "coinbase", "chainId"],
-      "properties": {
-        "l2MessageServiceAddress": { "$ref": "#/$defs/address" },
-        "coinbase": { "$ref": "#/$defs/address" },
-        "chainId": { "$ref": "#/$defs/uint" }
-      }
-    },
-    "parentFtxRollingHash": { "$ref": "#/$defs/hash32" },
-    "parentLastProcessedFtxNumber": { "$ref": "#/$defs/uint" },
-    "payloads": {
-      "type": "array",
-      "minItems": 1,
-      "items": { "$ref": "#/$defs/payload" }
     }
   },
   "$defs": {

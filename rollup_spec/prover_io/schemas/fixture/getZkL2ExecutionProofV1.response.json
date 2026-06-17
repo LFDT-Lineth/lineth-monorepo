@@ -1,5 +1,4 @@
 {
-  "proverVersion": "4.0.0-riscv",
   "proof": "0xdeadbeef",
   "startBlockNumber": 1000501,
   "endBlockNumber": 1000503,
