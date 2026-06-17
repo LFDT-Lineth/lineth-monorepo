@@ -25,6 +25,18 @@ pub const Counters = struct {
     poseidon2_compress: u64 = 0,
 };
 
+/// Stable marker IDs emitted by `markR5Value`.
+///
+/// The zkc profiling parser uses these IDs to recover verifier phase boundaries
+/// from the generic RISC-V interpreter trace.
+pub const Mark = struct {
+    pub const verify_start: u64 = 1;
+    pub const transcript_done: u64 = 2;
+    pub const vanishing_start: u64 = 3;
+    pub const vanishing_done: u64 = 4;
+    pub const verify_done: u64 = 5;
+};
+
 /// Global counter state. Only ever touched when `enabled` is true.
 var counters: Counters = .{};
 

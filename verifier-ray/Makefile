@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: ci help fmt fmt-zig fmt-codegen fmt-testdata-generate build build-zig build-release build-r5 run run-passing run-failing run-failing-expected test test-zig test-generated-zig test-codegen generate-testdata verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected clean
+.PHONY: ci ci-checks help fmt fmt-zig fmt-codegen fmt-testdata-generator fmt-profile build build-zig build-release build-r5 run run-passing run-failing run-failing-expected test test-zig test-generated-zig test-codegen generate-testdata verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected profile-zkc profile-zkc-all clean
 
 R5_BIN := zig-out/bin/verifier-ray
 R5_JSON := $(R5_BIN).json
@@ -14,6 +14,11 @@ ZKC_MAIN := ../arithmetization/src/main/riscv/main.zkc
 # serialization lands, but are no longer used by the run/zkc targets.
 EMBEDDED_INPUT ?= valid
 EMBEDDED_SPEC ?= 0
+PROFILE_CASES ?= 0
+PROFILE_INPUT ?= valid
+PROFILE_MODE ?= profiled
+PROFILE_OUT ?= bench/verifier-profile.md
+PROFILE_TOP_INSTRUCTIONS ?= 10
 NATIVE_BIN := zig-out/bin/verifier-ray
 
 # Legacy file-based input plumbing (unused for now, kept for reintroduction).
@@ -24,7 +29,9 @@ IN_ORIGIN ?= 0x08800000
 NATIVE_INPUT_FILE := zig-out/input.bin
 IN_BYTES_FILE ?= zig-out/input.hex
 
-ci: fmt build-release run-passing run-failing-expected test zkc-verify-passing zkc-verify-failing-expected
+ci: generate-testdata ci-checks
+
+ci-checks: fmt build-release run-passing run-failing-expected test zkc-verify-passing zkc-verify-failing-expected
 
 help:
 	@printf '%s\n' \
@@ -51,16 +58,23 @@ help:
 		'  zkc-verify-passing    Run zkc with embedded valid input' \
 		'  zkc-verify-failing    Run zkc with embedded invalid input (exits non-zero)' \
 		'  zkc-verify-failing-expected  Require zkc invalid input to fail' \
+		'  profile-zkc           Profile verifier-ray through zkc and write a compact markdown report' \
+		'  profile-zkc-all       Profile every generated verifier case' \
 		'  clean                 Remove Zig build artifacts' \
 		'' \
 		'input variables:' \
 		'  EMBEDDED_INPUT        Embedded input fixture kind: valid or invalid, default valid' \
 		'  EMBEDDED_SPEC         Embedded fixture index, default 0' \
+		'  PROFILE_CASES         Profiling selector: all, N, A-B, or comma-separated selectors, default 0' \
+		'  PROFILE_INPUT         Profiling input fixture kind: valid or invalid, default valid' \
+		'  PROFILE_MODE          Profiling mode: raw, profiled, or both, default profiled' \
+		'  PROFILE_OUT           Profiling markdown output path, default bench/verifier-profile.md' \
+		'  PROFILE_TOP_INSTRUCTIONS  Number of top instructions in the report, default 10' \
 		'' \
 		'zkc variables:' \
 		'  IN_ORIGIN            Input bytes address, default 0x08800000'
 
-fmt: fmt-zig fmt-codegen fmt-testdata-generate
+fmt: fmt-zig fmt-codegen fmt-testdata-generator fmt-profile
 
 fmt-zig:
 	zig fmt --check build.zig src test testdata/generated
@@ -72,10 +86,17 @@ fmt-codegen:
 		exit 1; \
 	fi
 
-fmt-testdata-generate:
+fmt-testdata-generator:
 	@if [[ -n "$$(gofmt -l testdata/generate)" ]]; then \
 		echo "please run gofmt"; \
 		gofmt -l testdata/generate; \
+		exit 1; \
+	fi
+
+fmt-profile:
+	@if [[ -n "$$(gofmt -l bench)" ]]; then \
+		echo "please run gofmt"; \
+		gofmt -l bench; \
 		exit 1; \
 	fi
 
@@ -153,6 +174,17 @@ zkc-verify-failing-expected:
 	else \
 		echo "zkc-verify-failing failed as expected"; \
 	fi
+
+profile-zkc:
+	go run bench/verifier_profile/main.go \
+		-cases="$(PROFILE_CASES)" \
+		-input="$(PROFILE_INPUT)" \
+		-mode="$(PROFILE_MODE)" \
+		-out="$(PROFILE_OUT)" \
+		-top-instructions="$(PROFILE_TOP_INSTRUCTIONS)"
+
+profile-zkc-all:
+	$(MAKE) profile-zkc PROFILE_CASES=all
 
 clean:
 	rm -rf .zig-cache zig-out
