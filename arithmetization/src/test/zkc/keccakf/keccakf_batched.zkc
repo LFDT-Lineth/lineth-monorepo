@@ -78,7 +78,7 @@ memory b3(address:u3) -> (state:lane)
 memory b4(address:u3) -> (state:lane)
 memory c(address:u3) -> (state:lane)
 memory d(address:u3) -> (state:lane)
-pub output result(address:u1) -> (out3:u64, out2:u64, out1:u64, out0:u64)
+pub output result(address:u64) -> (out3:u64, out2:u64, out1:u64, out0:u64)
 
 static mod5(address:u5) -> (result:u3) {
     0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4
