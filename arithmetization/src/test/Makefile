@@ -512,7 +512,7 @@ act4-exec: install-zkc act4-build
 		base="$(ACT4_LOGS)/$$name"; \
 		count=$$((count + 1)); \
 		echo "RUN   $$name  $$json"; \
-		zkc exec --field BLS12_377 -q "$$json" $(ZKC_MAIN) > /dev/null 2> "$$base.err"; \
+		zkc exec -q "$$json" $(ZKC_MAIN) > /dev/null 2> "$$base.err"; \
 		status=$$?; \
 		if [ "$$status" -eq 0 ] && [ ! -s "$$base.err" ]; then \
 			echo "PASS"; \
