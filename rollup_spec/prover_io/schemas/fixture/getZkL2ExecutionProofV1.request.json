@@ -15,7 +15,7 @@
     {
       "statelessInputSsz": "0x0001abcd",
       "_debugStatelessInput": {
-        "_comment": "Review-only decoded mirror; discarded by proof_io_v1.decode_request. Kept here to prove it is ignored.",
+        "_comment": "Review-only decoded mirror; discarded when building the guest input. Kept here to prove it is ignored.",
         "anything": "discarded"
       },
       "rollupExtension": {
