@@ -1,8 +1,8 @@
 # Verifier R5 Profiling
 
 This workflow measures the RISC-V cost of the verifier by running the normal
-`src/main.zig` guest through the shared zkc RISC-V interpreter. It does not use a
-benchmark-only Zig guest or a custom zkc interpreter.
+`src/main.zig` guest through the shared zkc RISC-V interpreter. It does not use
+a benchmark-only Zig guest or a benchmark-specific zkc runner.
 
 ## Fixture Model
 
@@ -27,17 +27,15 @@ The profiling runner builds the R5 binary, converts it to zkc JSON, then runs:
 zkc exec zig-out/bin/verifier-ray.json ../arithmetization/src/main/riscv/main.zkc
 ```
 
-The command is intentionally run without `-q`. The shared interpreter prints a
-`clock cycle: N` line for every executed instruction and prints each decoded
-instruction mnemonic. The Go profiling tool streams that output line-by-line and
-extracts:
+The shared runner prints the normal interpreter trace. The Go profiling tool
+streams that output and keeps only:
 
-- final interpreted cycle count;
-- verifier phase marker cycles;
-- Poseidon2 compression count from the verifier profiling counter;
-- top decoded RISC-V instruction mnemonics.
+- the latest `clock cycle: <N>` line, used as the final interpreted cycle count;
+- `VERIFIER-MARK <phase> <value>` writes, used as phase checkpoints;
+- each marker value, currently Poseidon2 compressions so far.
 
-The full zkc trace is not stored. Only the compact markdown report is written.
+The full zkc trace is not written to disk by the report generator. Only the
+compact CSV report is stored.
 
 ## Profiling Markers
 
@@ -64,8 +62,8 @@ The current marker phases are:
 | 4 | vanishing verifier done | Poseidon2 compressions so far |
 | 5 | verifier done | Poseidon2 compressions so far |
 
-Phase cycle deltas are computed from the interpreter cycle number seen when the
-marker write is printed. These numbers are useful for attribution, but the marker
+The Go parser associates each marker with the most recent `clock cycle` printed
+by the shared runner. These numbers are useful for attribution, but the marker
 syscalls themselves add overhead. Use `PROFILE_MODE=raw` when you want the
 smallest total-cycle number without marker overhead.
 
@@ -98,7 +96,7 @@ make profile-zkc-all
 By default the report is written to:
 
 ```text
-bench/verifier-profile.md
+bench/verifier-profile.csv
 ```
 
 Useful variables:
@@ -108,5 +106,4 @@ Useful variables:
 | `PROFILE_CASES` | `0` | `all`, `N`, `A-B`, or comma-separated selectors |
 | `PROFILE_INPUT` | `valid` | embedded input fixture kind |
 | `PROFILE_MODE` | `profiled` | `raw`, `profiled`, or `both` |
-| `PROFILE_OUT` | `bench/verifier-profile.md` | markdown output path |
-| `PROFILE_TOP_INSTRUCTIONS` | `10` | number of instruction histogram entries |
+| `PROFILE_OUT` | `bench/verifier-profile.csv` | CSV output path |

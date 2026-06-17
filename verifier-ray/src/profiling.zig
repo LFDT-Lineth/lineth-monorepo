@@ -55,7 +55,7 @@ pub fn reset() void {
     if (comptime enabled) counters = .{};
 }
 
-/// Emit an ASCII `"VERIFIER-MARK/<phase>/<value>"` marker on the zkc write channel so
+/// Emit an ASCII `"VERIFIER-MARK\t<phase>\t<value>"` marker on the zkc write channel so
 /// entry/exit points are visible in the interpreter trace. The `phase` prefix
 /// is formatted at comptime; only the runtime `value` is rendered on the fly.
 ///

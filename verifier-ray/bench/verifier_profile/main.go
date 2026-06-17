@@ -1,15 +1,15 @@
 // Command verifier_profile profiles verifier-ray's real R5 verifier entrypoint
-// through zkc and renders a compact markdown report.
+// through zkc and renders a compact CSV report.
 //
 // The command intentionally avoids a benchmark-only guest program. For each
 // selected generated verifier case it:
 //   - builds `src/main.zig` for the R5 target with the selected typed fixture
 //     embedded at comptime;
 //   - converts the ELF to the JSON input shape consumed by zkc;
-//   - runs the shared RISC-V interpreter without `-q`;
-//   - streams stdout line-by-line, extracting cycle counts, verifier phase
-//     markers, Poseidon2 compression counts, and instruction frequencies;
-//   - writes only the compact markdown report, not the full zkc trace.
+//   - runs the shared zkc RISC-V interpreter;
+//   - streams the verbose trace and keeps only total cycles, verifier phase
+//     cycles, and Poseidon2 compression counts;
+//   - writes the compact CSV report.
 //
 // `raw` mode reports the least-instrumented total cycle count. `profiled` mode
 // enables verifier profiling counters and R5 marker syscalls, which add a small
@@ -19,6 +19,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/csv"
 	"errors"
 	"flag"
 	"fmt"
@@ -27,7 +28,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -35,8 +35,7 @@ import (
 const (
 	defaultInput       = "valid"
 	defaultInputOrigin = "0x08800000"
-	defaultOutput      = "bench/verifier-profile.md"
-	defaultTopCount    = 10
+	defaultOutput      = "bench/verifier-profile.csv"
 	traceTailLimit     = 40
 	r5Bin              = "zig-out/bin/verifier-ray"
 	r5JSON             = "zig-out/bin/verifier-ray.json"
@@ -69,20 +68,18 @@ type caseMetadata struct {
 	totalQuotientClaims uint64
 }
 
-// marker is one parsed `VERIFIER-MARK <phase> <value>` line. `cycle` is the
-// latest zkc clock-cycle line seen before the marker was printed.
+// marker is one verifier phase checkpoint recovered from the shared zkc trace.
 type marker struct {
 	phase uint64
 	value uint64
 	cycle uint64
 }
 
-// traceStats is the compact summary recovered from the streamed zkc output.
+// traceStats is the compact summary recovered from the zkc stdout stream.
 type traceStats struct {
-	totalCycles  uint64
-	markers      map[uint64]marker
-	instructions map[string]uint64
-	tail         []string
+	totalCycles uint64
+	markers     map[uint64]marker
+	tail        []string
 }
 
 type result struct {
@@ -93,28 +90,22 @@ type result struct {
 	stats     traceStats
 }
 
-type instructionCount struct {
-	mnemonic string
-	count    uint64
-}
-
 func main() {
 	var (
 		casesFlag = flag.String("cases", "0", "case selector: all, N, A-B, or comma-separated selectors")
 		inputFlag = flag.String("input", defaultInput, "embedded input kind: valid or invalid")
 		modeFlag  = flag.String("mode", "profiled", "run mode: raw, profiled, or both")
-		outFlag   = flag.String("out", defaultOutput, "markdown output path")
-		topFlag   = flag.Int("top-instructions", defaultTopCount, "number of top RISC-V instructions to print")
+		outFlag   = flag.String("out", defaultOutput, "CSV output path")
 	)
 	flag.Parse()
 
-	if err := run(*casesFlag, *inputFlag, *modeFlag, *outFlag, *topFlag); err != nil {
+	if err := run(*casesFlag, *inputFlag, *modeFlag, *outFlag); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func run(caseSelector, inputKind, mode, outPath string, topCount int) error {
+func run(caseSelector, inputKind, mode, outPath string) error {
 	if inputKind != "valid" && inputKind != "invalid" {
 		return fmt.Errorf("unsupported input %q: expected valid or invalid", inputKind)
 	}
@@ -149,7 +140,10 @@ func run(caseSelector, inputKind, mode, outPath string, topCount int) error {
 		}
 	}
 
-	report := renderMarkdown(results, topCount)
+	report, err := renderCSV(results)
+	if err != nil {
+		return err
+	}
 	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
 		return err
 	}
@@ -278,7 +272,7 @@ func parseCaseIndex(raw string, caseCount int) (int, error) {
 }
 
 // runCase builds one selected fixture, converts the R5 ELF to zkc JSON, and
-// streams the zkc interpreter output back into traceStats.
+// parses the shared zkc interpreter trace back into traceStats.
 func runCase(caseIndex int, inputKind, mode string) (traceStats, error) {
 	buildArgs := []string{
 		"build",
@@ -326,9 +320,9 @@ func writeJSONInput() error {
 	return cmd.Run()
 }
 
-// runZKC intentionally does not pass `-q`: the cycle lines, instruction
-// mnemonics, and marker writes are all printed on stdout by the shared zkc
-// RISC-V runner.
+// runZKC uses the shared RISC-V runner rather than a benchmark-specific zkc
+// wrapper. The runner is verbose, so parseTrace streams stdout and keeps only
+// the lines needed for the compact report.
 func runZKC() (traceStats, error) {
 	cmd := exec.Command("zkc", "exec", r5JSON, zkcMain)
 	stdout, err := cmd.StdoutPipe()
@@ -349,34 +343,34 @@ func runZKC() (traceStats, error) {
 		return traceStats{}, fmt.Errorf("%w\nlast zkc output:\n%s", waitErr, strings.Join(stats.tail, "\n"))
 	}
 	if stats.totalCycles == 0 {
-		return traceStats{}, errors.New("zkc trace did not contain a clock cycle line")
+		return traceStats{}, errors.New("zkc output did not contain a total cycle count")
 	}
 	return stats, nil
 }
 
-// parseTrace consumes zkc output incrementally. It keeps only the current
-// summary plus a small tail for useful error messages when zkc fails.
+// parseTrace consumes the shared zkc RISC-V trace. It intentionally ignores the
+// instruction trace and records only the latest clock cycle plus verifier marker
+// writes. A small tail is kept for useful error messages when zkc fails.
 func parseTrace(stdout io.Reader) (traceStats, error) {
 	stats := traceStats{
-		markers:      make(map[uint64]marker),
-		instructions: make(map[string]uint64),
+		markers: make(map[uint64]marker),
 	}
 	scanner := bufio.NewScanner(stdout)
 	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 
-	awaitingMnemonic := false
 	for scanner.Scan() {
 		line := scanner.Text()
 		stats.tail = appendTail(stats.tail, line)
+
 		if match := cycleRE.FindStringSubmatch(line); len(match) == 2 {
 			cycle, err := strconv.ParseUint(match[1], 10, 64)
 			if err != nil {
 				return traceStats{}, err
 			}
 			stats.totalCycles = cycle
-			awaitingMnemonic = true
 			continue
 		}
+
 		if match := markerRE.FindStringSubmatch(line); len(match) == 3 {
 			phase, err := strconv.ParseUint(match[1], 10, 64)
 			if err != nil {
@@ -387,13 +381,6 @@ func parseTrace(stdout io.Reader) (traceStats, error) {
 				return traceStats{}, err
 			}
 			stats.markers[phase] = marker{phase: phase, value: value, cycle: stats.totalCycles}
-			continue
-		}
-		if awaitingMnemonic {
-			if mnemonic := parseMnemonic(line); mnemonic != "" {
-				stats.instructions[mnemonic]++
-				awaitingMnemonic = false
-			}
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -411,179 +398,95 @@ func appendTail(tail []string, line string) []string {
 	return append(tail, line)
 }
 
-func parseMnemonic(line string) string {
-	fields := strings.Fields(strings.TrimSpace(line))
-	if len(fields) == 0 {
-		return ""
-	}
-	mnemonic := strings.TrimRight(fields[0], ":")
-	if knownMnemonics[mnemonic] {
-		return mnemonic
-	}
-	return ""
-}
-
-func renderMarkdown(results []result, topCount int) string {
+func renderCSV(results []result) (string, error) {
 	var out bytes.Buffer
-	fmt.Fprintln(&out, "# Verifier R5 Profiling")
-	fmt.Fprintln(&out)
-	fmt.Fprintln(&out, "This report is generated from the shared `src/main.zig` R5 verifier path and the shared `arithmetization/src/main/riscv/main.zkc` interpreter. The parser streams `zkc exec` output directly and does not store the full instruction trace.")
-	fmt.Fprintln(&out)
-	fmt.Fprintln(&out, "| Case | Name | Mode | Input | Total cycles | Verifier cycles | Transcript cycles | Vanishing cycles | Poseidon2 compressions | Top instructions |")
-	fmt.Fprintln(&out, "| ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |")
+	writer := csv.NewWriter(&out)
+	if err := writer.Write([]string{
+		"case",
+		"name",
+		"mode",
+		"input",
+		"total_cycles",
+		"verifier_cycles",
+		"transcript_cycles",
+		"vanishing_cycles",
+		"poseidon2_compressions",
+		"module_count",
+		"dynamic_module_count",
+		"round_count",
+		"expression_count",
+		"bucket_count",
+		"vanishing_count",
+		"total_witness_claims",
+		"total_quotient_claims",
+	}); err != nil {
+		return "", err
+	}
 	for _, result := range results {
-		fmt.Fprintf(
-			&out,
-			"| %d | %s | %s | %s | %d | %s | %s | %s | %s | %s |\n",
-			result.caseIndex,
-			escapeCell(result.metadata.name),
+		if err := writer.Write([]string{
+			strconv.Itoa(result.caseIndex),
+			result.metadata.name,
 			result.mode,
 			result.input,
-			result.stats.totalCycles,
+			strconv.FormatUint(result.stats.totalCycles, 10),
 			cycleDelta(result.stats.markers, markVerifyStart, markVerifyDone),
 			cycleDelta(result.stats.markers, markVerifyStart, markTranscriptDone),
 			cycleDelta(result.stats.markers, markVanishingStart, markVanishingDone),
 			markerValue(result.stats.markers, markVerifyDone),
-			escapeCell(topInstructions(result.stats.instructions, topCount)),
-		)
+			strconv.FormatUint(result.metadata.moduleCount, 10),
+			strconv.FormatUint(result.metadata.dynamicModuleCount, 10),
+			strconv.FormatUint(result.metadata.roundCount, 10),
+			strconv.FormatUint(result.metadata.expressionCount, 10),
+			strconv.FormatUint(result.metadata.bucketCount, 10),
+			strconv.FormatUint(result.metadata.vanishingCount, 10),
+			strconv.FormatUint(result.metadata.totalWitnessClaims, 10),
+			strconv.FormatUint(result.metadata.totalQuotientClaims, 10),
+		}); err != nil {
+			return "", err
+		}
 	}
-	fmt.Fprintln(&out)
-	fmt.Fprintln(&out, "## Fixture Metadata")
-	fmt.Fprintln(&out)
-	fmt.Fprintln(&out, "| Case | Modules | Dynamic modules | Rounds | Expressions | Buckets | Vanishings | Witness claims | Quotient claims |")
-	fmt.Fprintln(&out, "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
-	for _, result := range results {
-		fmt.Fprintf(
-			&out,
-			"| %d | %d | %d | %d | %d | %d | %d | %d | %d |\n",
-			result.caseIndex,
-			result.metadata.moduleCount,
-			result.metadata.dynamicModuleCount,
-			result.metadata.roundCount,
-			result.metadata.expressionCount,
-			result.metadata.bucketCount,
-			result.metadata.vanishingCount,
-			result.metadata.totalWitnessClaims,
-			result.metadata.totalQuotientClaims,
-		)
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return "", err
 	}
-	return out.String()
+	return out.String(), nil
 }
 
 func cycleDelta(markers map[uint64]marker, startPhase, endPhase uint64) string {
+	value, ok := cycleDeltaValue(markers, startPhase, endPhase)
+	if !ok {
+		return ""
+	}
+	return strconv.FormatUint(value, 10)
+}
+
+func cycleDeltaValue(markers map[uint64]marker, startPhase, endPhase uint64) (uint64, bool) {
 	start, ok := markers[startPhase]
 	if !ok {
-		return "-"
+		return 0, false
 	}
 	end, ok := markers[endPhase]
 	if !ok {
-		return "-"
+		return 0, false
 	}
 	if end.cycle < start.cycle {
-		return "-"
+		return 0, false
 	}
-	return strconv.FormatUint(end.cycle-start.cycle, 10)
+	return end.cycle - start.cycle, true
 }
 
 func markerValue(markers map[uint64]marker, phase uint64) string {
+	value, ok := markerValueRaw(markers, phase)
+	if !ok {
+		return ""
+	}
+	return strconv.FormatUint(value, 10)
+}
+
+func markerValueRaw(markers map[uint64]marker, phase uint64) (uint64, bool) {
 	marker, ok := markers[phase]
 	if !ok {
-		return "-"
+		return 0, false
 	}
-	return strconv.FormatUint(marker.value, 10)
-}
-
-func topInstructions(counts map[string]uint64, limit int) string {
-	if len(counts) == 0 || limit <= 0 {
-		return "-"
-	}
-	items := make([]instructionCount, 0, len(counts))
-	for mnemonic, count := range counts {
-		items = append(items, instructionCount{mnemonic: mnemonic, count: count})
-	}
-	sort.Slice(items, func(i, j int) bool {
-		if items[i].count == items[j].count {
-			return items[i].mnemonic < items[j].mnemonic
-		}
-		return items[i].count > items[j].count
-	})
-	if len(items) > limit {
-		items = items[:limit]
-	}
-	parts := make([]string, len(items))
-	for i, item := range items {
-		parts[i] = fmt.Sprintf("%s %d", item.mnemonic, item.count)
-	}
-	return strings.Join(parts, ", ")
-}
-
-func escapeCell(value string) string {
-	return strings.ReplaceAll(value, "|", "\\|")
-}
-
-var knownMnemonics = map[string]bool{
-	"ADD":    true,
-	"ADDI":   true,
-	"ADDIW":  true,
-	"ADDW":   true,
-	"AND":    true,
-	"ANDI":   true,
-	"AUIPC":  true,
-	"BEQ":    true,
-	"BGE":    true,
-	"BGEU":   true,
-	"BLT":    true,
-	"BLTU":   true,
-	"BNE":    true,
-	"DIV":    true,
-	"DIVU":   true,
-	"DIVUW":  true,
-	"DIVW":   true,
-	"ECALL":  true,
-	"JAL":    true,
-	"JALR":   true,
-	"KECCAK": true,
-	"LB":     true,
-	"LBU":    true,
-	"LD":     true,
-	"LH":     true,
-	"LHU":    true,
-	"LUI":    true,
-	"LW":     true,
-	"LWU":    true,
-	"MUL":    true,
-	"MULH":   true,
-	"MULHSU": true,
-	"MULHU":  true,
-	"MULW":   true,
-	"OR":     true,
-	"ORI":    true,
-	"REM":    true,
-	"REMU":   true,
-	"REMUW":  true,
-	"REMW":   true,
-	"SB":     true,
-	"SD":     true,
-	"SH":     true,
-	"SLL":    true,
-	"SLLI":   true,
-	"SLLIW":  true,
-	"SLLW":   true,
-	"SLT":    true,
-	"SLTI":   true,
-	"SLTIU":  true,
-	"SLTU":   true,
-	"SRA":    true,
-	"SRAI":   true,
-	"SRAIW":  true,
-	"SRAW":   true,
-	"SRL":    true,
-	"SRLI":   true,
-	"SRLIW":  true,
-	"SRLW":   true,
-	"SUB":    true,
-	"SUBW":   true,
-	"SW":     true,
-	"XOR":    true,
-	"XORI":   true,
+	return marker.value, true
 }

@@ -17,8 +17,7 @@ EMBEDDED_SPEC ?= 0
 PROFILE_CASES ?= 0
 PROFILE_INPUT ?= valid
 PROFILE_MODE ?= profiled
-PROFILE_OUT ?= bench/verifier-profile.md
-PROFILE_TOP_INSTRUCTIONS ?= 10
+PROFILE_OUT ?= bench/verifier-profile.csv
 NATIVE_BIN := zig-out/bin/verifier-ray
 
 # Legacy file-based input plumbing (unused for now, kept for reintroduction).
@@ -58,7 +57,7 @@ help:
 		'  zkc-verify-passing    Run zkc with embedded valid input' \
 		'  zkc-verify-failing    Run zkc with embedded invalid input (exits non-zero)' \
 		'  zkc-verify-failing-expected  Require zkc invalid input to fail' \
-		'  profile-zkc           Profile verifier-ray through zkc and write a compact markdown report' \
+		'  profile-zkc           Profile verifier-ray through zkc and write a compact CSV report' \
 		'  profile-zkc-all       Profile every generated verifier case' \
 		'  clean                 Remove Zig build artifacts' \
 		'' \
@@ -68,8 +67,7 @@ help:
 		'  PROFILE_CASES         Profiling selector: all, N, A-B, or comma-separated selectors, default 0' \
 		'  PROFILE_INPUT         Profiling input fixture kind: valid or invalid, default valid' \
 		'  PROFILE_MODE          Profiling mode: raw, profiled, or both, default profiled' \
-		'  PROFILE_OUT           Profiling markdown output path, default bench/verifier-profile.md' \
-		'  PROFILE_TOP_INSTRUCTIONS  Number of top instructions in the report, default 10' \
+		'  PROFILE_OUT           Profiling CSV output path, default bench/verifier-profile.csv' \
 		'' \
 		'zkc variables:' \
 		'  IN_ORIGIN            Input bytes address, default 0x08800000'
@@ -180,8 +178,7 @@ profile-zkc:
 		-cases="$(PROFILE_CASES)" \
 		-input="$(PROFILE_INPUT)" \
 		-mode="$(PROFILE_MODE)" \
-		-out="$(PROFILE_OUT)" \
-		-top-instructions="$(PROFILE_TOP_INSTRUCTIONS)"
+		-out="$(PROFILE_OUT)"
 
 profile-zkc-all:
 	$(MAKE) profile-zkc PROFILE_CASES=all
