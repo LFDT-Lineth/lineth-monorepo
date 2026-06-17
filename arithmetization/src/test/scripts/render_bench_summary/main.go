@@ -637,7 +637,9 @@ func main() {
 		fmt.Fprintf(&out, "- number of timed iterations per variant: %d\n", *iters)
 	}
 	if *fastMode {
-		out.WriteString("- fast mode: timed iterations via gogen (step counts from warmup logs)\n")
+		out.WriteString("- fast mode: enabled (timed iterations via gogen; step counts from warmup logs)\n")
+	} else {
+		out.WriteString("- fast mode: disabled (timed iterations via zkc execute)\n")
 	}
 	if wantKeccak && *keccakNVectors > 0 {
 		fmt.Fprintf(&out, "- number of Keccak vectors: %d\n", *keccakNVectors)

@@ -229,14 +229,19 @@ jobs:
       - name: Parse logs and emit summary
         if: always()
         shell: bash
+        env:
+          FAST_MODE: ${{ inputs.fast_mode }}
         run: |
           set -o pipefail
           mkdir -p /tmp/bench/logs
+          if [[ -z "${FAST_MODE:-}" ]]; then FAST_MODE=true; fi
+          fast_mode_arg=(-fast-mode=false)
+          if [[ "$FAST_MODE" == "true" ]]; then fast_mode_arg=(-fast-mode=true); fi
           /tmp/bench/render_bench_summary \
             -logs /tmp/bench/logs \
             -iters ${{ inputs.iterations || 1}} \
             -blake-n 1 \
-            -base-ref "${{ inputs.fast_mode || 'true' }}" \
+            "${fast_mode_arg[@]}" \
             -base-ref "${{ inputs.base_ref || 'main' }}" \
             -optim-ref "${{ inputs.optim_ref || github.event.pull_request.head.sha || github.sha }}" \
             -zkc-ref-base "${{ inputs.zkc_ref_base || 'main' }}" \
