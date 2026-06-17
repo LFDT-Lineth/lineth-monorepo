@@ -146,13 +146,16 @@ jobs:
               > "/tmp/bench/logs/keccak_${variant}_${label}.log" 2>&1
           }
 
-          # zkc exec on native keccakf_batched.zkc (--fast -v for warmup step counts in logs).
+          TEST_MAKE_DIR="$PWD/arithmetization/src/test"
+
+          # Run in tracing or fast mode via make zkc-exec
           run_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)  optional: --fast
-            local variant="$1" label="$2" zkc_bin="/tmp/zkc-${1}" fast_flag=()
-            if [[ "${3:-}" == "--fast" ]]; then fast_flag=(--fast); fi
-            /usr/bin/time -v "$zkc_bin" exec "${fast_flag[@]}" -v -q --field KOALABEAR_16 \
-              /tmp/keccakf_input.json "$zkc_prog" \
-              > "/tmp/bench/logs/keccak_${variant}_${label}.log" 2>&1
+            local exec_flags="-v -q --field KOALABEAR_16"
+            if [[ "${3:-}" == "--fast" ]]; then exec_flags="--fast -v -q --field KOALABEAR_16"; fi
+            /usr/bin/time -v env ZKC="/tmp/zkc-${1}" ZKC_EXEC_FLAGS="$exec_flags" \
+              make -C "$TEST_MAKE_DIR" --no-print-directory zkc-exec \
+              JSON=/tmp/keccakf_input.json ZKC_MAIN="$zkc_prog" \
+              > "/tmp/bench/logs/keccak_${1}_${2}.log" 2>&1
           }
 
           for variant in base opt; do

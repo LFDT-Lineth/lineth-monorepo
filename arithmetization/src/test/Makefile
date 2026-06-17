@@ -19,6 +19,8 @@ ARITHMETIZATION_DIR := $(abspath $(MAKEFILE_DIR)../..)
 # Paths to go main (to turn BIN into JSON), zkc main (to execute/debug the json) and linker script
 ELF_TO_JSON_GEN := $(MAKEFILE_DIR)scripts/elf_to_json_gen/main.go
 ZKC_MAIN        := $(MAKEFILE_DIR)../main/riscv/main.zkc
+# zkc binary (override for CI benchmarks, e.g. ZKC=/tmp/zkc-base).
+ZKC             ?= zkc
 LINKER_SCRIPT   := $(MAKEFILE_DIR)linker_script.ld
 # Assembly, Zig, or Rust test file to execute with exec target (TEST=src_optional_subfolder/your_test(.s|.zig|.rs)
 TEST ?=
@@ -150,7 +152,7 @@ elf-exec: elf-to-json install-zkc
 
 # Convert and debug an already compiled external ELF
 elf-debug: elf-to-json
-	zkc debug $(JSON_EXT) $(ZKC_MAIN)
+	$(ZKC) debug $(JSON_EXT) $(ZKC_MAIN)
 
 # Convert an already compiled external ELF to a JSON
 elf-to-json: require-bin-ext
@@ -160,12 +162,12 @@ elf-to-json: require-bin-ext
 install-zkc:
 	$(MAKE) -C $(ARITHMETIZATION_DIR) install-zkc
 
-# Run zkc exec (set TEST=... or JSON=path/to/input.json)
+# Run zkc exec (set TEST=... or JSON=path/to/input.json; override ZKC / ZKC_MAIN / ZKC_EXEC_FLAGS).
 zkc-exec: require-json
-	zkc exec $(ZKC_EXEC_FLAGS) $(JSON) $(ZKC_MAIN)
+	$(ZKC) exec $(ZKC_EXEC_FLAGS) $(JSON) $(ZKC_MAIN)
 
 zkc-debug: require-test install-zkc
-	zkc debug $(JSON) $(ZKC_MAIN)
+	$(ZKC) debug $(JSON) $(ZKC_MAIN)
 
 clean: require-test
 	rm -f $(BIN) $(JSON) $(BIN).objdump $(VECTOR_SUBSET_FILE) $(LINKER_SCRIPT)
