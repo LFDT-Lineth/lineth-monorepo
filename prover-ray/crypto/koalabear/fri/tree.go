@@ -73,7 +73,7 @@ func NewTree(leaves [][]field.Octuplet) *Tree {
 		panic("the first level must be non-empty")
 	}
 
-	for i, _ := range leaves {
+	for i := range leaves {
 		n := len(leaves[i])
 		if n != 0 && len(leaves[i]) != 1<<(len(leaves)-i-1) {
 			panic("leaves must be provided in the following order: " +

@@ -119,6 +119,7 @@ func applyMutation(root reflect.Value, m proofMutation) {
 	}
 }
 
+// nolint -- ignores: error should be the last return parameters
 func safeVerify(p Params, levelRoots []field.Octuplet, levelDs []int,
 	prf Proof, alphas []field.Ext, positions []int) (err error, panicked bool) {
 
