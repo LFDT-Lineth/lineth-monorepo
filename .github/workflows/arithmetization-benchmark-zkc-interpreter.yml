@@ -187,7 +187,7 @@ jobs:
           run_gogen_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
             local zkc_bin="/tmp/zkc-${1}"
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
-            "zkc_bin" generate -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
+            "$zkc_bin" generate -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
             go build -o riscv-gogen riscv.go
             /usr/bin/time -v ./riscv-gogen < /tmp/keccak.json \
               > "/tmp/bench/logs/keccak_${1}_${2}.log" 2>&1
@@ -196,7 +196,7 @@ jobs:
           run_gogen_blake() {   # $1=variant  $2=label. Runs all N vectors, one log file per vector.
             local zkc_bin="/tmp/zkc-${1}"
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
-            "zkc_bin" generate -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
+            "$zkc_bin" generate -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
             go build -o riscv-gogen riscv.go
             for json in /tmp/bench/json/blake/*.json; do
               local n
