@@ -151,7 +151,7 @@ jobs:
         run: |
           set -uo pipefail
           mkdir -p /tmp/bench/logs
-          ITERS=${{ inputs.iterations || 0 }}
+          ITERS=${{ inputs.iterations || 1 }}
           if [[ -z "${FAST_MODE:-}" ]]; then FAST_MODE=true; fi
 
           # progress prints
@@ -234,7 +234,7 @@ jobs:
           mkdir -p /tmp/bench/logs
           /tmp/bench/render_bench_summary \
             -logs /tmp/bench/logs \
-            -iters ${{ inputs.iterations || 0}} \
+            -iters ${{ inputs.iterations || 1}} \
             -blake-n 1 \
             -base-ref "${{ inputs.base_ref || 'main' }}" \
             -optim-ref "${{ inputs.optim_ref || github.event.pull_request.head.sha || github.sha }}" \
