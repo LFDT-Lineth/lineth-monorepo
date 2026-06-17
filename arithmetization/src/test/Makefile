@@ -25,7 +25,7 @@ TEST ?=
 
 # Flags to use when invoking zkc exec within zkc-exec and elf-exec targets:  
 # 	-q for quiet mode
-ZKC_EXEC_FLAGS ?=
+ZKC_EXEC_FLAGS ?=--fast
 
 # Already compiled binary to execute with elf-exec target (BIN_EXT=path/to/your_bin)
 BIN_EXT  ?=
