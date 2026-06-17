@@ -247,7 +247,6 @@ class RiscVProofResponseDtoMapperTest {
     val json = """
       {
         "proof": "0xabcd",
-        "proverVersion": "4.0.0-riscv",
         "startBlockNumber": 1000500,
         "endBlockNumber": 1000520,
         "publicInputs": {
