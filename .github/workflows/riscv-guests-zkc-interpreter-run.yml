@@ -59,8 +59,11 @@ permissions:
 jobs:
   zkc-interpreter-run:
     name: l2-execution guest in ZKC interpreter (accel)
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
-    timeout-minutes: 25            # cold zesu Zig build + zkc `go install` dominate, not the run itself
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large   # 32 GB; the trace run peaks ~15 GB resident
+    # Generous bound: the trace-mode interpreter run (below) dominates and its true wall time on this
+    # runner isn't measured yet (it's memory-bound and could not be timed cleanly on a constrained dev
+    # box). Tighten once the first real runs establish the actual duration.
+    timeout-minutes: 60
     env:
       ZKC_REF: ${{ inputs.zkc-ref || 'main' }}   # arithmetization/Makefile reads ZKC_REF from the env
     steps:
@@ -93,7 +96,9 @@ jobs:
         run: make -C arithmetization install-zkc
         timeout-minutes: 10
 
+      # Trace mode (gp-exec passes -q, not -f): the interpreter materializes the full execution trace,
+      # not just runs the program — this is the heavy, dominant step. Uses gp-exec's default GP_INPUT
+      # (the committed sample stateless input). A trap/failure exits non-zero even under -q.
       - name: Run l2-execution guest through the ZKC interpreter (accel keccak)
-        # Uses gp-exec's default GP_INPUT — the committed sample stateless input.
         run: make -C riscv-guests/l2-execution gp-exec KECCAK_ACCEL=true
-        timeout-minutes: 15
+        timeout-minutes: 50
