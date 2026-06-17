@@ -47,6 +47,11 @@ on:
         required: false
         type: number
         default: 100
+      fast_mode:
+        description: 'Run gogen for timed iterations when enabled'
+        required: false
+        type: boolean
+        default: true
       iterations:
         description: 'Number of timed iterations per variant'
         required: false
@@ -79,7 +84,7 @@ jobs:
           for variant in base opt; do
             case "$variant" in
               base) ref="${{ inputs.zkc_base_ref || 'main' }}" ;;
-              opt)  ref="${{ inputs.zkc_optim_ref || 'b1af3445bfc4b3a3254a52b1929aadd07ad7fa3e' }}" ;;
+              opt)  ref="${{ inputs.zkc_optim_ref || 'main' }}" ;;
             esac
             tmpbin=$(mktemp -d)
             # go-corset was renamed/moved to github.com/LFDT-Lineth/zkc. The module
@@ -113,11 +118,14 @@ jobs:
 
       - name: Run benchmark (warmup + sequential timed iterations, base then opt)
         shell: bash
+        env:
+          FAST_MODE: ${{ inputs.fast_mode }}
         run: |
           set -uo pipefail
           mkdir -p /tmp/bench/logs
           zkc_prog="$PWD/arithmetization/src/test/zkc/keccakf/keccakf_batched.zkc"
-          ITERS=${{ inputs.iterations || 0 }}
+          ITERS=${{ inputs.iterations || 1 }}
+          if [[ -z "${FAST_MODE:-}" ]]; then FAST_MODE=true; fi
 
           # progress prints
           log() { printf '[%s] %s\n' "$(date +'%H:%M:%S')" "$*"; }
@@ -129,18 +137,37 @@ jobs:
             sleep 5
           }
 
-          run_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)
-            local zkc_bin="/tmp/zkc-${1}"
-            /usr/bin/time -v "$zkc_bin" exec -v -q --field KOALABEAR_16 \
-              /tmp/keccakf_input.json "$zkc_prog" \
+          # Run fast mode with gogen
+          run_gogen_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)
+            local variant="$1" label="$2" zkc_bin="/tmp/zkc-${1}"
+            "$zkc_bin" generate -v -q --field KOALABEAR_16 -o riscv.go "$zkc_prog"
+            go build -o riscv-gogen riscv.go
+            /usr/bin/time -v ./riscv-gogen < /tmp/keccakf_input.json \
+              > "/tmp/bench/logs/keccak_${variant}_${label}.log" 2>&1
+          }
+
+          TEST_MAKE_DIR="$PWD/arithmetization/src/test"
+
+          # Run in tracing or fast mode via make zkc-exec
+          run_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)  optional: --fast
+            local exec_flags="-v -q --field KOALABEAR_16"
+            if [[ "${3:-}" == "--fast" ]]; then exec_flags="--fast -v -q --field KOALABEAR_16"; fi
+            /usr/bin/time -v env ZKC="/tmp/zkc-${1}" ZKC_EXEC_FLAGS="$exec_flags" \
+              make -C "$TEST_MAKE_DIR" --no-print-directory zkc-exec \
+              JSON=/tmp/keccakf_input.json ZKC_MAIN="$zkc_prog" \
               > "/tmp/bench/logs/keccak_${1}_${2}.log" 2>&1
           }
 
           for variant in base opt; do
             log "=== variant: ${variant} ==="
-            reset_state; log "${variant}: warmup (untimed)"; run_native_keccak "$variant" warmup || true
+            reset_state; log "${variant}: warmup (untimed)"; run_native_keccak "$variant" warmup --fast
             for i in $(seq 1 "$ITERS"); do
-              reset_state; log "${variant}: iter ${i}/${ITERS}"; run_native_keccak "$variant" "$i"
+              reset_state; log "${variant}: iter ${i}/${ITERS}"
+              if [[ "$FAST_MODE" == "true" ]]; then
+                run_gogen_native_keccak "$variant" "$i"
+              else
+                run_native_keccak "$variant" "$i"
+              fi
             done
           done
           log "all variants done"
@@ -148,15 +175,23 @@ jobs:
       - name: Parse logs and emit summary
         if: always()
         shell: bash
+        env:
+          FAST_MODE: ${{ inputs.fast_mode }}
         run: |
           set -o pipefail
           mkdir -p /tmp/bench/logs
+          if [[ -z "${FAST_MODE:-}" ]]; then FAST_MODE=true; fi
+          fast_mode_arg=(-fast-mode=false)
+          if [[ "$FAST_MODE" == "true" ]]; then fast_mode_arg=(-fast-mode=true); fi
           /tmp/bench/render_bench_summary \
             -logs /tmp/bench/logs \
-            -iters ${{ inputs.iterations || 0 }} \
+            -iters ${{ inputs.iterations || 1 }} \
             -workloads keccak \
+            "${fast_mode_arg[@]}" \
             -base-ref "${{ inputs.zkc_base_ref || 'main' }}" \
-            -optim-ref "${{ inputs.zkc_optim_ref || 'b1af3445bfc4b3a3254a52b1929aadd07ad7fa3e' }}" \
+            -optim-ref "${{ inputs.zkc_optim_ref || 'main' }}" \
+            -zkc-ref-base "${{ inputs.zkc_base_ref || 'main' }}" \
+            -zkc-ref-optim "${{ inputs.zkc_optim_ref || 'main' }}" \
             -keccak-n-vectors ${{ inputs.n_vectors_keccak || 100 }} \
             | tee -a "$GITHUB_STEP_SUMMARY" \
             | tee /tmp/bench/logs/summary.md
