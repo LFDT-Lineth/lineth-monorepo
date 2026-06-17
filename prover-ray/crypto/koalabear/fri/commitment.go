@@ -35,17 +35,17 @@ func Commit(encoder []*RSEncoder, witness MultiSizeTable) CommitterState {
 
 	return CommitterState{
 		EncodedTable: encoded,
-		Tree: tree,
+		Tree:         tree,
 	}
 }
 
 // Encode encodes all the subtable of the MultiSizeTable using the provided
 // list of encoder.
 //
-// The function expects that the encoder is well-formed: see 
+// The function expects that the encoder is well-formed: see
 // [assertValidMultiEncoder].
 func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
-	
+
 	assertValidMultiEncoder(encoders)
 	encoded := make([]SizedTable, len(table))
 
@@ -55,7 +55,7 @@ func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
 		for k, base := range table[i].Base {
 			encoded[i].Base[k] = encoders[i].Encode(base)
 		}
-		
+
 		encoded[i].Ext = make([][]field.Ext, len(table[i].Ext))
 		for k, ext := range table[i].Ext {
 			encoded[i].Ext[k] = encoders[i].EncodeExt(ext)
@@ -63,7 +63,7 @@ func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
 	}
 
 	return encoded
-} 
+}
 
 // Merkleize merkleizes the table using Poseidon2. The encoded table is hashed
 // line-by-line to form the leaves and auxiliary leaves of a [Tree]. The tree
@@ -73,7 +73,7 @@ func (table MultiSizeTable) Merkleize() *Tree {
 	// leaves stores the Merkle leaves of the tree
 	leaves := make([][]field.Octuplet, len(table))
 	hasher := poseidon2.NewMDHasher()
-	
+
 	for i := range table {
 		if table[i].NumRows() == 0 {
 			continue
@@ -84,7 +84,7 @@ func (table MultiSizeTable) Merkleize() *Tree {
 
 		for j := range size {
 			hasher.Reset()
-			
+
 			for k := range table[i].Base {
 				hasher.WriteElements(table[i].Base[k][j])
 			}
@@ -93,7 +93,7 @@ func (table MultiSizeTable) Merkleize() *Tree {
 				ext := table[i].Ext[k][j]
 				hasher.WriteElements(
 					ext.B0.A0, ext.B0.A1,
-					ext.B1.A0, ext.B1.A1, 
+					ext.B1.A0, ext.B1.A1,
 					ext.B2.A0, ext.B2.A1)
 			}
 
@@ -116,8 +116,8 @@ func (table MultiSizeTable) Merkleize() *Tree {
 }
 
 // assertValidMultiEncoder checks that the provided list of encoder:
-//		- share the same inverse rate
-//		- coder[i].PlainTextSize == 2**i
+//   - share the same inverse rate
+//   - coder[i].PlainTextSize == 2**i
 //
 // It panics on failure.
 func assertValidMultiEncoder(encoders []*RSEncoder) {
@@ -130,7 +130,7 @@ func assertValidMultiEncoder(encoders []*RSEncoder) {
 			panic("the encoder do not all have the same rate")
 		}
 
-		if encoders[i].PlainTextSize != 1 << i {
+		if encoders[i].PlainTextSize != 1<<i {
 			panic("the encoder does not have the right plaintext size")
 		}
 	}

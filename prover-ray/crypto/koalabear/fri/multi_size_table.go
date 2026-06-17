@@ -18,13 +18,13 @@ import (
 // not be empty.
 type MultiSizeTable []SizedTable
 
-// SizedTable represents a list of encoded rows of the same size. For all i and 
-// j, k we have the invariant that len(Base[i]) == len(Base[j]) and 
-// len(Base[i]) == len(Ext[k]) whenever this is defined. Their length is also a 
+// SizedTable represents a list of encoded rows of the same size. For all i and
+// j, k we have the invariant that len(Base[i]) == len(Base[j]) and
+// len(Base[i]) == len(Ext[k]) whenever this is defined. Their length is also a
 // power of 2.
 type SizedTable struct {
 	Base [][]field.Element
-	Ext [][]field.Ext
+	Ext  [][]field.Ext
 }
 
 // checkWellFormedness checks if the multi-size table has valid dimensions. It
@@ -35,8 +35,8 @@ func (table MultiSizeTable) checkWellFormedness() (k int, err error) {
 
 	for i := range table {
 
-		size := table[i].Size() // -1 if table[i] is empty 
-		if size < 0 && i == len(table) - 1 {
+		size := table[i].Size() // -1 if table[i] is empty
+		if size < 0 && i == len(table)-1 {
 			return 0, errors.New("last entry is empty")
 		}
 
@@ -49,7 +49,7 @@ func (table MultiSizeTable) checkWellFormedness() (k int, err error) {
 			k = kOther
 		}
 
-		if k != kOther{
+		if k != kOther {
 			return 0, errors.New("inconsistent size")
 		}
 	}
@@ -88,7 +88,7 @@ func (table *SizedTable) Size() int {
 	}
 
 	if size < 0 {
-		return size 
+		return size
 	}
 
 	if !utils.IsPowerOfTwo(size) {
@@ -97,4 +97,3 @@ func (table *SizedTable) Size() int {
 
 	return size
 }
-
