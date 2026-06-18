@@ -126,3 +126,47 @@ func TestBuildDecodedProgramRewritesRdZeroNoop(t *testing.T) {
 	_ = base
 	_ = image
 }
+
+func TestDecodeITypeSemantic(t *testing.T) {
+	tests := []struct {
+		name      string
+		opcode    uint32
+		funct3    uint32
+		imm12     uint32
+		wantOp    uint32
+		wantWB    uint32
+		wantImm12 uint32
+	}{
+		{name: "lb", opcode: opcodeLOAD, funct3: 0b000, imm12: 8, wantOp: itypeRead8Sgn, wantWB: wbStoreReg, wantImm12: 8},
+		{name: "lh", opcode: opcodeLOAD, funct3: 0b001, imm12: 4, wantOp: itypeRead16Sgn, wantWB: wbStoreReg, wantImm12: 4},
+		{name: "lw", opcode: opcodeLOAD, funct3: 0b010, imm12: 0, wantOp: itypeRead32Sgn, wantWB: wbStoreReg, wantImm12: 0},
+		{name: "ld", opcode: opcodeLOAD, funct3: 0b011, imm12: 0, wantOp: itypeRead64, wantWB: wbStoreReg, wantImm12: 0},
+		{name: "lbu", opcode: opcodeLOAD, funct3: 0b100, imm12: 1, wantOp: itypeRead8Zext, wantWB: wbStoreReg, wantImm12: 1},
+		{name: "lhu", opcode: opcodeLOAD, funct3: 0b101, imm12: 2, wantOp: itypeRead16Zext, wantWB: wbStoreReg, wantImm12: 2},
+		{name: "lwu", opcode: opcodeLOAD, funct3: 0b110, imm12: 3, wantOp: itypeRead32Zext, wantWB: wbStoreReg, wantImm12: 3},
+		{name: "addi", opcode: opcodeOPIMM, funct3: 0b000, imm12: 42, wantOp: itypeOpAddi, wantWB: wbStoreReg, wantImm12: 42},
+		{name: "slli", opcode: opcodeOPIMM, funct3: 0b001, imm12: 4, wantOp: itypeOpSlli, wantWB: wbStoreReg, wantImm12: 4},
+		{name: "srli", opcode: opcodeOPIMM, funct3: 0b101, imm12: 0b000000000011, wantOp: itypeOpSrli, wantWB: wbStoreReg, wantImm12: 3},
+		{name: "srai", opcode: opcodeOPIMM, funct3: 0b101, imm12: 0b010000000101, wantOp: itypeOpSrai, wantWB: wbStoreReg, wantImm12: 5},
+		{name: "xori", opcode: opcodeOPIMM, funct3: 0b100, imm12: 0xff, wantOp: itypeOpXori, wantWB: wbStoreReg, wantImm12: 0xff},
+		{name: "addiw", opcode: opcodeOPIMM32, funct3: 0b000, imm12: 7, wantOp: itypeOpAddiw, wantWB: wbStoreReg, wantImm12: 7},
+		{name: "slliw", opcode: opcodeOPIMM32, funct3: 0b001, imm12: 2, wantOp: itypeOpSlliw, wantWB: wbStoreReg, wantImm12: 2},
+		{name: "srliw", opcode: opcodeOPIMM32, funct3: 0b101, imm12: 0b000000000011, wantOp: itypeOpSrliw, wantWB: wbStoreReg, wantImm12: 3},
+		{name: "sraiw", opcode: opcodeOPIMM32, funct3: 0b101, imm12: 0b010000000100, wantOp: itypeOpSraiw, wantWB: wbStoreReg, wantImm12: 4},
+		{name: "jalr", opcode: opcodeJALR, funct3: 0, imm12: 0, wantOp: itypeJalr, wantWB: wbStoreReg, wantImm12: 0},
+		{name: "ecall", opcode: opcodeSYSTEM, funct3: 0, imm12: funct12Ecall, wantOp: itypeEcall, wantWB: wbNone, wantImm12: funct12Ecall},
+		{name: "ebreak", opcode: opcodeSYSTEM, funct3: 0, imm12: funct12Ebreak, wantOp: itypeEbreak, wantWB: wbNone, wantImm12: funct12Ebreak},
+		{name: "invalid slli funct6", opcode: opcodeOPIMM, funct3: 0b001, imm12: 0b010000000100, wantOp: itypeInvalid, wantWB: wbNone, wantImm12: 0b010000000100},
+		{name: "invalid load funct3", opcode: opcodeLOAD, funct3: 0b111, imm12: 0, wantOp: itypeInvalid, wantWB: wbNone, wantImm12: 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotOp, gotWB, gotImm := decodeITypeSemantic(tt.opcode, tt.funct3, tt.imm12)
+			if gotOp != tt.wantOp || gotWB != tt.wantWB || gotImm != tt.wantImm12 {
+				t.Fatalf("decodeITypeSemantic(op=%#x, f3=%#x, imm=%#x) = (%d, %d, %#x), want (%d, %d, %#x)",
+					tt.opcode, tt.funct3, tt.imm12, gotOp, gotWB, gotImm, tt.wantOp, tt.wantWB, tt.wantImm12)
+			}
+		})
+	}
+}
