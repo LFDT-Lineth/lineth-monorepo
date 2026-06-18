@@ -60,38 +60,41 @@ type Branch struct {
 }
 
 // NewTree builds a new Tree from the given leaves. The leaves must be  provided
-// in the following order.
+// in increasing-size order, from the top of the tree (smallest) down to the
+// bottom layer (largest):
 //
-//	for all 0 <= i < len(leaves): leaves[i] = 2**(N-i-1) or 0
+//	for all 0 <= i < len(leaves): len(leaves[i]) = 2**i or 0
 func NewTree(leaves [][]field.Octuplet) *Tree {
 
 	if len(leaves) == 0 {
 		panic("at least one level must be provided")
 	}
 
-	if len(leaves[0]) == 0 {
-		panic("the first level must be non-empty")
+	// The bottom layer (the largest, deepest leaves) must be non-empty.
+	bottom := len(leaves) - 1
+	if len(leaves[bottom]) == 0 {
+		panic("the bottom level must be non-empty")
 	}
 
 	for i := range leaves {
 		n := len(leaves[i])
-		if n != 0 && len(leaves[i]) != 1<<(len(leaves)-i-1) {
+		if n != 0 && n != 1<<i {
 			panic("leaves must be provided in the following order: " +
-				"for all 0 <= i < len(leaves): leaves[i] = 2**(N-i-1)")
+				"for all 0 <= i < len(leaves): leaves[i] = 2**i")
 		}
 	}
 
 	var (
-		nodes = make([]field.Octuplet, 2*len(leaves[0])-1)
-		aux   = make([]*field.Octuplet, len(leaves[0])-1)
+		nodes = make([]field.Octuplet, 2*len(leaves[bottom])-1)
+		aux   = make([]*field.Octuplet, len(leaves[bottom])-1)
 	)
 
-	copy(nodes[len(leaves[0])-1:], leaves[0])
+	copy(nodes[len(leaves[bottom])-1:], leaves[bottom])
 
-	for i := 1; i < len(leaves); i++ {
+	for i := bottom - 1; i >= 0; i-- {
 
 		var (
-			n = 1 << (len(leaves) - i - 1)
+			n = 1 << i
 			// This level holds n nodes; in a complete binary tree they occupy the
 			// heap positions [n-1, 2n-1), i.e. right above the n-1 nodes of the
 			// levels below them.

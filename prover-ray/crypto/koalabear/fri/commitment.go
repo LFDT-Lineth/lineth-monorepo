@@ -1,8 +1,6 @@
 package fri
 
 import (
-	"slices"
-
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
@@ -101,15 +99,17 @@ func (table MultiSizeTable) Merkleize() *Tree {
 		}
 	}
 
-	// NewTree expects the levels from largest to smallest, one per tree level.
-	slices.Reverse(leaves)
-
-	// The blowup makes the largest committed table have len(leaves[0]) rows; a
+	// NewTree expects the levels in increasing-size order, from the top of the
+	// tree (smallest) down to the bottom layer (largest). The table is already
+	// sorted by increasing size, so the largest committed table is the last one.
+	//
+	// The blowup makes the largest committed table have len(leaves[last]) rows; a
 	// complete binary tree over them has Log2Ceil(len)+1 levels. The levels above
-	// the smallest committed table carry no auxiliary leaves, so pad with empty
-	// levels up to the tree height.
-	for targetLevels := utils.Log2Ceil(len(leaves[0])) + 1; len(leaves) < targetLevels; {
-		leaves = append(leaves, nil)
+	// the smallest committed table carry no auxiliary leaves, so prepend empty
+	// levels at the top until we reach the tree height.
+	targetLevels := utils.Log2Ceil(len(leaves[len(leaves)-1])) + 1
+	if pad := targetLevels - len(leaves); pad > 0 {
+		leaves = append(make([][]field.Octuplet, pad), leaves...)
 	}
 
 	return NewTree(leaves)
