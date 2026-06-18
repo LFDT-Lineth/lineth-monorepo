@@ -18,7 +18,7 @@ fn read_from_state<poseidon2_state>(address:u8) -> (value:𝔽) {
 // get_felt reads a canonical BYTES_PER_FELT-byte big-endian field element from
 // ram.
 fn get_felt<ram>(offset:Address) -> (felt:𝔽) {
-    felt =                       (ram[(offset + 0) as Address] as 𝔽)
+    felt = (ram[(offset + 0) as Address] as 𝔽)
     felt = (felt * (256 as 𝔽)) + (ram[(offset + 1) as Address] as 𝔽)
     felt = (felt * (256 as 𝔽)) + (ram[(offset + 2) as Address] as 𝔽)
     felt = (felt * (256 as 𝔽)) + (ram[(offset + 3) as Address] as 𝔽)
