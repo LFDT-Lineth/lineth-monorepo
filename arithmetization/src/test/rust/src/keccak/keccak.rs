@@ -40,11 +40,27 @@ const VECTOR_BYTES: usize = INPUT_LEN + OUTPUT_LEN;
 /// Number of test vectors packed into the input region. Must match the
 /// size of the IN_BYTES blob built by the harness; if the harness ships
 /// fewer vectors, the program will read past the end of the valid data.
-const fn parse_usize_env(s: &str) -> usize {
+const fn parse_n_vectors_env(s: &str) -> usize {
     let b = s.as_bytes();
     let mut i = 0usize;
-    let mut n = 0usize;
     while i < b.len() {
+        if b[i] == b'.' {
+            assert!(i + 1 < b.len() && b[i + 1] == b'.');
+            let start = parse_usize_bytes(b, 0, i);
+            let end = parse_usize_bytes(b, i + 2, b.len());
+            assert!(end >= start);
+            return end - start + 1;
+        }
+        i += 1;
+    }
+    parse_usize_bytes(b, 0, b.len())
+}
+
+const fn parse_usize_bytes(b: &[u8], start: usize, end: usize) -> usize {
+    assert!(start < end);
+    let mut i = start;
+    let mut n = 0usize;
+    while i < end {
         let c = b[i];
         assert!(c >= b'0' && c <= b'9');
         n = n * 10 + (c - b'0') as usize;
@@ -53,7 +69,7 @@ const fn parse_usize_env(s: &str) -> usize {
     n
 }
 
-const N_VECTORS: usize = parse_usize_env(env!("KECCAK_N_VECTORS"));
+const N_VECTORS: usize = parse_n_vectors_env(env!("KECCAK_N_VECTORS"));
 
 /// Total bytes the program expects to find at `_in_start`.
 const TOTAL_INPUT_BYTES: usize = N_VECTORS * VECTOR_BYTES;
