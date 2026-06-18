@@ -148,7 +148,7 @@ compile: require-src linker-script
 
 # Convert and execute an already compiled external ELF
 elf-exec: elf-to-json install-zkc
-	$(MAKE) --no-print-directory zkc-exec JSON=$(JSON_EXT)
+	$(MAKE) --no-print-directory -f $(MAKEFILE_DIR)Makefile zkc-exec JSON=$(JSON_EXT)
 
 # Convert and debug an already compiled external ELF
 elf-debug: elf-to-json
