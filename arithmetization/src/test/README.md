@@ -89,12 +89,12 @@ Useful shell function (add to `~/.zshrc` or `~/.bashrc`):
 riscv-test() {
     local makefile="path/to/lineth-monorepo/arithmetization/src/test/Makefile"
     case "$1" in
-        elf-exec|elf-debug|elf-to-json|install-zkc|clean-all|linker-script|vector-exec|keccak-rust-build|keccak-rust-json|keccak-rust-exec|keccak-zig-build|keccak-zig-json|keccak-zig-exec|blake-rust-build|blake-rust-json|blake-rust-exec|act4-build|act4-exec)
+        elf-exec|elf-debug|elf-to-json|install-zkc|clean-all|linker-script|vector-exec|zkc-exec|zkc-debug|keccak-rust-build|keccak-rust-json|keccak-rust-exec|keccak-zig-build|keccak-zig-json|keccak-zig-exec|blake-rust-build|blake-rust-json|blake-rust-exec|act4-build|act4-exec)
             # targets that do NOT require TEST argument
             make -f "$makefile" "$1" "${@:2}"
             ;;
-        exec|debug|compile|zkc-exec|zkc-debug|clean|verify-elf|vector-build|vector-json)
-            # targets that require TEST argument
+        exec|debug|compile|clean|verify-elf|vector-build|vector-json)
+            # targets that require TEST argument
             make -f "$makefile" "$1" TEST="$2" "${@:3}"
             ;;
         *)
@@ -145,6 +145,13 @@ riscv-test elf-exec BIN_EXT=path/to/bin
 riscv-test elf-debug BIN_EXT=path/to/bin
 # Execute an already compiled ELF in quiet mode
 riscv-test elf-exec BIN_EXT=path/to/bin ZKC_EXEC_FLAGS=-q
+# Execute an existing JSON input (override ZKC / ZKC_MAIN / ZKC_EXEC_FLAGS as needed)
+riscv-test zkc-exec JSON=path/to/input.json
+riscv-test zkc-exec JSON=path/to/input.json ZKC_MAIN=path/to/main.zkc ZKC_EXEC_FLAGS="-q -v"
+# Debug an existing JSON input
+riscv-test zkc-debug JSON=path/to/input.json
+# Re-run a compiled test without recompiling (JSON must already exist at the default path)
+riscv-test zkc-exec TEST=keccak/keccak.rs
 # Clean build artifacts for a specific test
 riscv-test clean <name>.<ext>
 # Clean all build artifacts
@@ -183,8 +190,8 @@ riscv-test compile <name>.<ext> VERIFY_ELF=true
 | `make elf-debug BIN_EXT=foo`                             | Convert and debug an already compiled ELF (`JSON_EXT=foo.json` by default)             |
 | `make elf-to-json BIN_EXT=foo`                           | Convert an already compiled ELF to JSON (`JSON_EXT=foo.json` by default)               |
 | `make install-zkc`                                       | Invoke `../../../Makefile install-zkc` to install zkc if not already installed         |
-| `make zkc-exec TEST=foo.<ext>`                           | Execute without recompiling                                                            |
-| `make zkc-debug TEST=foo.<ext>`                          | Debug without recompiling                                                              |
+| `make zkc-exec JSON=foo.json`                            | Execute an existing JSON input (`ZKC`, `ZKC_MAIN`, `ZKC_EXEC_FLAGS` overridable)      |
+| `make zkc-debug JSON=foo.json`                           | Debug an existing JSON input (`ZKC`, `ZKC_MAIN` overridable)                         |
 | `make clean TEST=foo.<ext>`                              | Remove binary and JSON for this test                                                   |
 | `make clean-all`                                         | Remove all build artifacts                                                             |
 | `make linker-script`                                     | Generate the linker script with the memory layout                                      |
@@ -208,7 +215,10 @@ riscv-test compile <name>.<ext> VERIFY_ELF=true
 | Variable                     | Default                                                                                | Description                                                                                                                                   |
 |------------------------------|----------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
 | `TEST`                       | `""`                                                                                   | Source file path with extension, relative to the corresponding `src/` folder                                                                  |
-| `ZKC_EXEC_FLAGS`             | `""`                                                                                   | Flags to use when invoking `zkc exec` within `zkc-exec` and `elf-exec` targets                                                                |
+| `JSON`                       | `$(BIN).json` when `TEST` is set                                                       | JSON input path for `zkc-exec` and `zkc-debug`                                                                                                |
+| `ZKC`                        | `zkc`                                                                                  | `zkc` binary used by `zkc-exec` and `zkc-debug`                                                                                               |
+| `ZKC_MAIN`                   | `../main/riscv/main.zkc`                                                               | Program passed to `zkc exec` / `zkc debug`                                                                                                    |
+| `ZKC_EXEC_FLAGS`             | `--fast -q`                                                                            | Flags passed to `zkc exec` within `zkc-exec` and `elf-exec`                                                                                   |
 | `BIN_EXT`                    | `""`                                                                                   | Already compiled ELF used by `elf-to-json`, `elf-exec` and `elf-debug`                                                                        |
 | `JSON_EXT`                   | `$(BIN_EXT).json`                                                                      | JSON output path used by `elf-to-json`, `elf-exec` and `elf-debug`                                                                            |
 | `VECTOR_FILE`                | `""`                                                                                   | `.all` vector file consumed by `vector-json`; one `IN_BYTES` per line                                                                         |

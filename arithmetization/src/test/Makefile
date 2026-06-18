@@ -27,6 +27,7 @@ TEST ?=
 
 # Flags to use when invoking zkc exec via zkc-exec / elf-exec:
 # 	-q for quiet mode
+# 	--fast for fast mode (else tracing mode by default)
 ZKC_EXEC_FLAGS ?=--fast -q
 
 # Already compiled binary to execute with elf-exec target (BIN_EXT=path/to/your_bin)
@@ -169,7 +170,7 @@ install-zkc:
 zkc-exec: require-json
 	$(ZKC) exec $(ZKC_EXEC_FLAGS) $(JSON) $(ZKC_MAIN)
 
-zkc-debug: require-test install-zkc
+zkc-debug: require-json
 	$(ZKC) debug $(JSON) $(ZKC_MAIN)
 
 clean: require-test

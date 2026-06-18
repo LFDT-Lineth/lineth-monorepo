@@ -124,25 +124,30 @@ jobs:
           git worktree add /tmp/wt-base refs/bench/base
           git worktree add /tmp/wt-opt  refs/bench/opt
 
-      - name: Build ELFs, helpers, and per-vector JSONs (on opt worktree)
+      - name: Build ELFs, helpers, and per-variant JSON inputs
         run: |
           set -eux
-          mkdir -p /tmp/bench/logs /tmp/bench/json/blake
-          cd /tmp/wt-opt/arithmetization/src/test
-          # Keccak: one batched JSON.
-          make keccak-rust-json \
-            KECCAK_N_VECTORS=${{ inputs.n_vectors_keccak || 10 }} \
-            KECCAK_JSON_FILE=/tmp/keccak.json
-          # Blake: synthesize a single .all line at the requested rounds count
-          go build -o /tmp/bench/blake_rounds_to_in_bytes ./scripts/blake_rounds_to_in_bytes/main.go
+          mkdir -p /tmp/bench/logs
+          TEST_DIR="$PWD/arithmetization/src/test"
+          # Blake: synthesize a single .all line at the requested rounds count.
+          go build -o /tmp/bench/blake_rounds_to_in_bytes "$TEST_DIR/scripts/blake_rounds_to_in_bytes/main.go"
           /tmp/bench/blake_rounds_to_in_bytes ${{ inputs.n_rounds_blake || 12 }} > /tmp/blake_custom.all
-          make blake-rust-json \
-            BLAKE_ALL_FILE=/tmp/blake_custom.all \
-            BLAKE_N_VECTORS=1 \
-            BLAKE_JSON_DIR=/tmp/bench/json/blake
           # Helper binaries used by the timing loop and the summary step.
-          go build -o /tmp/bench/cache_thrasher       ./scripts/cache_thrasher/main.go
-          go build -o /tmp/bench/render_bench_summary ./scripts/render_bench_summary/main.go
+          go build -o /tmp/bench/cache_thrasher       "$TEST_DIR/scripts/cache_thrasher/main.go"
+          go build -o /tmp/bench/render_bench_summary "$TEST_DIR/scripts/render_bench_summary/main.go"
+          # Build guest JSON on each worktree so elf_to_json_gen output matches that
+          # branch's main.zkc inputs (e.g. pre-decoded instruction tables on optim only).
+          for variant in base opt; do
+            wt="/tmp/wt-${variant}/arithmetization/src/test"
+            mkdir -p "/tmp/bench/json/blake-${variant}"
+            make -C "$wt" keccak-rust-json \
+              KECCAK_N_VECTORS=${{ inputs.n_vectors_keccak || 10 }} \
+              KECCAK_JSON_FILE="/tmp/keccak-${variant}.json"
+            make -C "$wt" blake-rust-json \
+              BLAKE_ALL_FILE=/tmp/blake_custom.all \
+              BLAKE_N_VECTORS=1 \
+              BLAKE_JSON_DIR="/tmp/bench/json/blake-${variant}"
+          done
 
       - name: Run benchmark (warmup + alternating timed iterations with per-iter cache reset)
         shell: bash
@@ -176,13 +181,13 @@ jobs:
           }
 
           run_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)  optional: --fast
-            run_zkc_exec "$1" "/tmp/bench/logs/keccak_${1}_${2}.log" /tmp/keccak.json \
+            run_zkc_exec "$1" "/tmp/bench/logs/keccak_${1}_${2}.log" "/tmp/keccak-${1}.json" \
               "/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc" "${3:-}"
           }
 
           run_blake() {   # $1=variant  $2=label  optional: --fast. Runs all N vectors, one log file per vector.
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
-            for json in /tmp/bench/json/blake/*.json; do
+            for json in /tmp/bench/json/blake-"${1}"/*.json; do
               local n
               n=$(basename "$json" .json)
               run_zkc_exec "$1" "/tmp/bench/logs/blake_${1}_${2}_${n}.log" "$json" "$zkc_main" "${3:-}"
@@ -194,7 +199,7 @@ jobs:
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
             "$zkc_bin" generate -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
             go build -o riscv-gogen riscv.go
-            /usr/bin/time -v ./riscv-gogen < /tmp/keccak.json \
+            /usr/bin/time -v ./riscv-gogen < "/tmp/keccak-${1}.json" \
               > "/tmp/bench/logs/keccak_${1}_${2}.log" 2>&1
           }
 
@@ -203,7 +208,7 @@ jobs:
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
             "$zkc_bin" generate -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
             go build -o riscv-gogen riscv.go
-            for json in /tmp/bench/json/blake/*.json; do
+            for json in /tmp/bench/json/blake-"${1}"/*.json; do
               local n
               n=$(basename "$json" .json)
               /usr/bin/time -v ./riscv-gogen < "$json" \
