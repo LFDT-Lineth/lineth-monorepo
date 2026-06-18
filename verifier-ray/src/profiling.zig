@@ -45,13 +45,16 @@ pub inline fn poseidon2Compress() void {
     if (comptime enabled) counters.poseidon2_compress += 1;
 }
 
-/// Return a copy of the current counter values.
-pub fn snapshot() Counters {
+/// Return a copy of the current counter values. When profiling is disabled this
+/// returns a zero-valued snapshot without referencing `counters`, so the global
+/// counter state can be optimized out of non-profiled builds entirely.
+pub inline fn snapshot() Counters {
+    if (comptime !enabled) return .{};
     return counters;
 }
 
 /// Reset all counters back to zero.
-pub fn reset() void {
+pub inline fn reset() void {
     if (comptime enabled) counters = .{};
 }
 
