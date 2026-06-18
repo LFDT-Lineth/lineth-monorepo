@@ -42,7 +42,7 @@ In addition to the original keys (`entry_point_and_blobs_count`,
 | ------------------ | ------------------------------------------------------ | ---------------------------------------------------------- |
 | `instruction_base` | `base:Address`                                         | base address used to map `pc` → table index               |
 | `decoded_core`     | `opcode, instruction_type, instruction_parameters`     | `instruction_parameters::opcode = instruction` + type map  |
-| `decoded_itype`    | `funct3, imm12, rs1, rd`                               | `imm12::rs1::funct3::rd = instruction_parameters`          |
+| `decoded_itype`    | `compute_op, writeback, imm12, rs1, rd`                | flat semantic micro-op dispatch in `i_type.zkc`              |
 | `decoded_rtype`    | `funct7, rs2, rs1, funct3, rd`                         | `funct7::rs2::rs1::funct3::rd = instruction_parameters`    |
 | `decoded_stype`    | `imm12, rs2, rs1, funct3`                              | `imm_sign::uimm6::rs2::rs1::funct3::uimm5 = instruction_parameters` |
 | `decoded_btype`    | `imm_sign, imm_10_5, rs2, rs1, funct3, imm_4_1, imm_11`| `imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters` |
@@ -59,6 +59,24 @@ interpreter no longer has to recombine the split immediate.
 
 For J-type the 21-bit signed jump offset is sign-extended into a single 64-bit
 `imm` at decode time, so `j_type.zkc` does no shift or sign extension at runtime.
+
+## I-type semantic micro-ops (split compute + writeback)
+
+`decoded_itype` no longer replays raw `funct3` / opcode bits. Instead,
+`decodeITypeSemantic` in `main.go` maps each I-type encoding to:
+
+- **`compute_op`** — what to execute (`READ8_SGN`, `OP_ADDI`, `OP_SLLI`, `JALR`, …)
+- **`writeback`** — whether to store the computed result into `rd` (`WB_STORE_REG` or `WB_NONE`)
+- **`imm12`, `rs1`, `rd`** — operands (shift amounts are normalized into `imm12` at decode time)
+
+At runtime, `process_I_type_instruction` runs a flat `switch compute_op`, then a
+separate `switch writeback` with the usual `if (rd != 0)` guard. This is a
+Zisk-like split (compute, then store-to-register) scoped to I-type for now;
+`STORE_MEM` semantic ops for S-type are deferred.
+
+Constants for `compute_op` / `writeback` live in `constants.zkc` and are mirrored
+in `main.go` (`itypeOpAddi`, `wbStoreReg`, …). See `main_test.go` for
+`decodeITypeSemantic` coverage.
 
 ## Static rd=x0 no-op folding
 
@@ -122,7 +140,7 @@ size is the sum of its field widths:
 | Table           | Field widths (bits)            | Record size |
 | --------------- | ------------------------------ | ----------- |
 | `decoded_core`  | opcode 7, type 3, params 25    | 35 bits     |
-| `decoded_itype` | funct3 3, imm12 12, rs1 5, rd 5| 25 bits     |
+| `decoded_itype` | compute_op 6, writeback 2, imm12 12, rs1 5, rd 5 | 30 bits     |
 | `decoded_rtype` | funct7 7, rs2 5, rs1 5, funct3 3, rd 5 | 25 bits |
 | `decoded_stype` | imm12 12, rs2 5, rs1 5, funct3 3 | 25 bits   |
 | `decoded_btype` | imm_sign 1, imm_10_5 6, rs2 5, rs1 5, funct3 3, imm_4_1 4, imm_11 1 | 25 bits |

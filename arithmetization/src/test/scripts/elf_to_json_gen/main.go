@@ -154,6 +154,150 @@ func opImm32EncodingSupported(funct3, imm12 uint32) bool {
 	}
 }
 
+// I-type semantic micro-op constants. These MUST match constants.zkc.
+const (
+	itypeRead8Sgn   = 0
+	itypeRead16Sgn  = 1
+	itypeRead32Sgn  = 2
+	itypeRead64     = 3
+	itypeRead8Zext  = 4
+	itypeRead16Zext = 5
+	itypeRead32Zext = 6
+
+	itypeOpAddi  = 7
+	itypeOpSlti  = 8
+	itypeOpSltiu = 9
+	itypeOpXori  = 10
+	itypeOpOri   = 11
+	itypeOpAndi  = 12
+	itypeOpSlli  = 13
+	itypeOpSrli  = 14
+	itypeOpSrai  = 15
+
+	itypeOpAddiw = 16
+	itypeOpSlliw = 17
+	itypeOpSrliw = 18
+	itypeOpSraiw = 19
+
+	itypeJalr    = 20
+	itypeEcall   = 21
+	itypeEbreak  = 22
+	itypeInvalid = 63
+
+	wbNone      = 0
+	wbStoreReg  = 1
+)
+
+const (
+	funct12Ecall  = 0b000000000000
+	funct12Ebreak = 0b000000000001
+)
+
+// decodeITypeSemantic maps a raw I-type encoding to a semantic compute op,
+// writeback kind, and normalized immediate. Shift amounts are stripped to
+// their low uimm6/uimm5 bits; funct6/funct7 validation happens here.
+func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, writeback, normalizedImm12 uint32) {
+	funct6 := (imm12 >> 6) & 0x3f
+	funct7FromImm := (imm12 >> 5) & 0x7f
+	uimm6 := imm12 & 0x3f
+	uimm5 := imm12 & 0x1f
+
+	switch opcode {
+	case opcodeLOAD:
+		writeback = wbStoreReg
+		switch funct3 {
+		case 0b000:
+			return itypeRead8Sgn, writeback, imm12
+		case 0b001:
+			return itypeRead16Sgn, writeback, imm12
+		case 0b010:
+			return itypeRead32Sgn, writeback, imm12
+		case 0b011:
+			return itypeRead64, writeback, imm12
+		case 0b100:
+			return itypeRead8Zext, writeback, imm12
+		case 0b101:
+			return itypeRead16Zext, writeback, imm12
+		case 0b110:
+			return itypeRead32Zext, writeback, imm12
+		default:
+			return itypeInvalid, wbNone, imm12
+		}
+	case opcodeOPIMM:
+		writeback = wbStoreReg
+		switch funct3 {
+		case 0b000:
+			return itypeOpAddi, writeback, imm12
+		case 0b010:
+			return itypeOpSlti, writeback, imm12
+		case 0b011:
+			return itypeOpSltiu, writeback, imm12
+		case 0b100:
+			return itypeOpXori, writeback, imm12
+		case 0b110:
+			return itypeOpOri, writeback, imm12
+		case 0b111:
+			return itypeOpAndi, writeback, imm12
+		case 0b001:
+			if funct6 != 0b000000 {
+				return itypeInvalid, wbNone, imm12
+			}
+			return itypeOpSlli, writeback, uimm6
+		case 0b101:
+			switch funct6 {
+			case 0b000000:
+				return itypeOpSrli, writeback, uimm6
+			case 0b010000:
+				return itypeOpSrai, writeback, uimm6
+			default:
+				return itypeInvalid, wbNone, imm12
+			}
+		default:
+			return itypeInvalid, wbNone, imm12
+		}
+	case opcodeOPIMM32:
+		writeback = wbStoreReg
+		switch funct3 {
+		case 0b000:
+			return itypeOpAddiw, writeback, imm12
+		case 0b001:
+			if funct7FromImm != 0b0000000 {
+				return itypeInvalid, wbNone, imm12
+			}
+			return itypeOpSlliw, writeback, uimm5
+		case 0b101:
+			switch funct7FromImm {
+			case 0b0000000:
+				return itypeOpSrliw, writeback, uimm5
+			case 0b0100000:
+				return itypeOpSraiw, writeback, uimm5
+			default:
+				return itypeInvalid, wbNone, imm12
+			}
+		default:
+			return itypeInvalid, wbNone, imm12
+		}
+	case opcodeJALR:
+		return itypeJalr, wbStoreReg, imm12
+	case opcodeSYSTEM:
+		switch funct3 {
+		case 0b000:
+			switch imm12 {
+			case funct12Ecall:
+				return itypeEcall, wbNone, imm12
+			case funct12Ebreak:
+				return itypeEbreak, wbNone, imm12
+			default:
+				return itypeInvalid, wbNone, imm12
+			}
+		default:
+			return itypeInvalid, wbNone, imm12
+		}
+	default:
+		return itypeInvalid, wbNone, imm12
+	}
+}
+
 type memoryBlob struct {
 	offset uint64
 	data   []byte
@@ -410,7 +554,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	// types declared for the inputs in memory.zkc, because zkc packs input
 	// records tightly by bit width:
 	//   decoded_core : opcode:Opcode(u7), instruction_type:Type(u3), instruction_parameters:u25
-	//   decoded_itype: funct3:Funct3(u3), imm12:Imm12(u12), rs1:Register(u5), rd:Register(u5)
+	//   decoded_itype: compute_op:ITypeComputeOp(u6), writeback:ITypeWriteback(u2), imm12:Imm12(u12), rs1:Register(u5), rd:Register(u5)
 	//   decoded_rtype: funct7:Funct7(u7), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3), rd:Register(u5)
 	//   decoded_stype: imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3)
 	//   decoded_btype: imm_sign:u1, imm_10_5:u6, rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3), imm_4_1:u4, imm_11:u1
@@ -469,8 +613,14 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		coreBits.writeBits(uint64(instrType), 3)
 		coreBits.writeBits(uint64(params), 25)
 
-		itypeBits.writeBits(uint64(funct3), 3)
-		itypeBits.writeBits(uint64(imm12), 12)
+		computeOp, writeback, normImm12 := decodeITypeSemantic(opcode, funct3, imm12)
+		if instrType != iType {
+			computeOp, writeback, normImm12 = itypeInvalid, wbNone, imm12
+		}
+
+		itypeBits.writeBits(uint64(computeOp), 6)
+		itypeBits.writeBits(uint64(writeback), 2)
+		itypeBits.writeBits(uint64(normImm12), 12)
 		itypeBits.writeBits(uint64(rs1), 5)
 		itypeBits.writeBits(uint64(rd), 5)
 
