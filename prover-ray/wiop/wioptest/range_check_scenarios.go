@@ -114,7 +114,7 @@ func NewRangeCheckMultiModuleScenario() *RangeCheckCompilerScenario {
 	modB.NewRangeCheck(sys.Context.Childf("rcB"), colB, 4)
 
 	return &RangeCheckCompilerScenario{
-		Name: "MultiModule",
+		Name: multiModuleScenarioName,
 		Sys:  sys,
 		AssignWitness: func(rt *wiop.Runtime) {
 			rt.AssignColumn(colA, makeVec(0, 1, 2, 3))

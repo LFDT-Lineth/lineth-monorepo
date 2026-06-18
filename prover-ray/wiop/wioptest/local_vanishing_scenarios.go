@@ -450,7 +450,7 @@ func NewLocalMultiModuleScenario() *LocalVanishingScenario {
 	modB.NewLocalConstraint(sys.Context.Childf("b-zero"), colB.View(), -1)
 
 	return &LocalVanishingScenario{
-		Name: "MultiModule",
+		Name: multiModuleScenarioName,
 		Sys:  sys,
 		AssignHonest: func(rt *wiop.Runtime) {
 			rt.AssignColumn(colA, makeVec(0, 9, 9, 9))

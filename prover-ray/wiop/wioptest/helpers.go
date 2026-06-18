@@ -5,6 +5,8 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
+const multiModuleScenarioName = "MultiModule"
+
 // baseVec returns a ConcreteVector of length n where every element equals val.
 func baseVec(n int, val uint64) *wiop.ConcreteVector {
 	elems := make([]field.Element, n)

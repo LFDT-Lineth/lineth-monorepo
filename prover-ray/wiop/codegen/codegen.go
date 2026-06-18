@@ -189,7 +189,7 @@ func (v *ActionVars) sortedVerifier() []namedVerifier {
 // For *pkg.Type it returns "*alias.Type" where alias is the last path segment.
 func concreteTypeName(v any) string {
 	t := reflect.TypeOf(v)
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		alias := pkgAlias(t.Elem().PkgPath())
 		if alias == "" {
 			return "*" + t.Elem().Name()
@@ -204,7 +204,7 @@ func collectActionImports(vars ActionVars) []string {
 	seen := make(map[string]bool)
 	add := func(v any) {
 		t := reflect.TypeOf(v)
-		if t.Kind() == reflect.Ptr {
+		if t.Kind() == reflect.Pointer {
 			path := t.Elem().PkgPath()
 			if path != "" {
 				seen[path] = true
