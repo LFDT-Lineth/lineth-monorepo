@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 
-TIME_RE = re.compile(r"^(real|user|sys)\s+([0-9]+(?:\.[0-9]+)?)$")
+TIME_RE = re.compile(r"^(real|user|sys)\s+([0-9]+(?:[\.,][0-9]+)?)$")
 
 
 def parse_args() -> argparse.Namespace:
@@ -55,7 +55,7 @@ def run_timed(makefile_dir: Path, time_bin: str, accel: bool, selector: str) -> 
     for line in proc.stderr.splitlines():
         match = TIME_RE.match(line.strip())
         if match:
-            timings[match.group(1)] = float(match.group(2))
+            timings[match.group(1)] = float(match.group(2).replace(",", "."))
 
     if "real" not in timings:
         print(f"could not parse /usr/bin/time output for: {' '.join(cmd)}", file=sys.stderr)
