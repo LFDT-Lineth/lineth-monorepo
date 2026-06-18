@@ -34,6 +34,9 @@ fn process_J_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Addre
 
     printf "JAL "
     print_j_operands(rd, imm)
-    registers[rd] = signed_sum_of_double_word(pc, 4)
+    var link:DoubleWord = signed_sum_of_double_word(pc, 4)
+    if (rd != 0) {
+        registers[rd] = link
+    }
     pc_new = signed_sum_of_double_word(pc, imm) as Address
 }

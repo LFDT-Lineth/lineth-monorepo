@@ -51,5 +51,7 @@ fn process_U_type_instruction<registers>(opcode:Opcode, index:u64, pc:Address) -
     }
 
     // Note: the definition of tmp already works for the LUI opcode
-    registers[rd] = tmp as DoubleWord
+    if (rd != 0) {
+        registers[rd] = tmp as DoubleWord
+    }
 }
