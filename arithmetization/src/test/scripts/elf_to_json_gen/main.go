@@ -343,13 +343,8 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	//   decoded_itype: funct3:Funct3(u3), imm12:Imm12(u12), rs1:Register(u5), rd:Register(u5)
 	//   decoded_rtype: funct7:Funct7(u7), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3), rd:Register(u5)
 	//   decoded_stype: imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3)
-<<<<<<< HEAD
-	//   decoded_btype: imm:DoubleWord(u64), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3)
-	//   decoded_jtype: imm:DoubleWord(u64), rd:Register(u5)
-=======
 	//   decoded_btype: imm_sign:u1, imm_10_5:u6, rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3), imm_4_1:u4, imm_11:u1
 	//   decoded_jtype: imm20:u1, imm10_1:u10, imm11:u1, imm19_12:u8, rd:Register(u5)
->>>>>>> parent of bd31cffd9 (feat: improve b-type)
 	//   decoded_utype: imm20:Imm20(u20), rd:Register(u5)
 	var (
 		coreBits  bitWriter
