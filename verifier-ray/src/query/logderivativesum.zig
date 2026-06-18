@@ -40,11 +40,11 @@ pub fn verify(comptime system: System, ctx: protocol.Context) Error!void {
         // Σ_i Z_i[n-1], reading each Z endpoint from the transcript.
         var sum = ext.Ext.zero();
         inline for (query.z_final_refs) |ref| {
-            sum = sum.add(scalarToExt(ctx.rounds[ref.round].cells[ref.index]));
+            sum = sum.add(ctx.rounds[ref.round].cells[ref.index].toExt());
         }
 
         // The result is also read from the transcript, not baked in.
-        const result = scalarToExt(ctx.rounds[query.result_ref.round].cells[query.result_ref.index]);
+        const result = ctx.rounds[query.result_ref.round].cells[query.result_ref.index].toExt();
 
         // The final-sum identity links the Z endpoints to the claimed result.
         if (!sum.eql(result)) return error.FinalSumMismatch;
@@ -54,9 +54,3 @@ pub fn verify(comptime system: System, ctx: protocol.Context) Error!void {
     }
 }
 
-fn scalarToExt(value: protocol.Scalar) ext.Ext {
-    return switch (value) {
-        .base => |base| ext.Ext.lift(base),
-        .ext => |extended| extended,
-    };
-}

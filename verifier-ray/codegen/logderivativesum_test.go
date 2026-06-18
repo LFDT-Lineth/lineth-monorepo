@@ -5,11 +5,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/global"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/logderivativesum"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
 )
 
 // newSingleFractionLDS builds a size-4 module with a single LogDerivativeSum

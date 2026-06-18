@@ -33,10 +33,22 @@ fn baseScalar(v: u32) protocol.Scalar {
     return .{ .base = field.Element.init(v) };
 }
 
-const five: protocol.Scalar = .{ .base = field.Element.init(5) };
-const seven: protocol.Scalar = .{ .base = field.Element.init(7) };
-const three: protocol.Scalar = .{ .base = field.Element.init(3) };
-const zero: protocol.Scalar = .{ .base = field.Element.init(0) };
+const five = baseScalar(5);
+const seven = baseScalar(7);
+const three = baseScalar(3);
+const zero = baseScalar(0);
+// twoRefSystem returns a System with one query that has two z_final_refs
+// (indices 0 and 1) summed against result at index 2.
+fn twoRefSystem() logderivativesum.System {
+    return .{ .queries = &[_]logderivativesum.Query{.{
+        .z_final_refs = &[_]logderivativesum.ScalarRef{
+            .{ .round = 0, .index = 0 },
+            .{ .round = 0, .index = 1 },
+        },
+        .result_ref = .{ .round = 0, .index = 2 },
+        .result_is_zero = false,
+    }} };
+}
 
 test "logderiv accepts a matching final sum" {
     const cells: []const protocol.Scalar = &[_]protocol.Scalar{ five, five };
@@ -64,4 +76,19 @@ test "lookup rejects a non-zero aggregated result" {
 test "lookup accepts a zero aggregated result" {
     const cells: []const protocol.Scalar = &[_]protocol.Scalar{ zero, zero };
     try logderivativesum.verify(oneQuerySystem(true), makeCtx(cells));
+}
+
+test "logderiv accepts multiple z_final_refs that sum to result" {
+    // z_final[0]=3, z_final[1]=4, result=7 (3+4==7)
+    const cells: []const protocol.Scalar = &[_]protocol.Scalar{ three, baseScalar(4), seven };
+    try logderivativesum.verify(twoRefSystem(), makeCtx(cells));
+}
+
+test "logderiv rejects multiple z_final_refs whose sum disagrees with result" {
+    // z_final[0]=3, z_final[1]=5, result=7 (3+5==8 != 7)
+    const cells: []const protocol.Scalar = &[_]protocol.Scalar{ three, five, seven };
+    try std.testing.expectError(
+        error.FinalSumMismatch,
+        logderivativesum.verify(twoRefSystem(), makeCtx(cells)),
+    );
 }

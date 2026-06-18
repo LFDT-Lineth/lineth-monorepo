@@ -92,12 +92,12 @@ pub fn verify(
     };
 
     // Step 3 — dispatch each sub-verifier with ctx + its own claims.
-    try logderivativesum.verify(systems.logderivativesum, ctx);
     try vanishing.verify(systems.vanishing, .{
         .ctx = ctx,
         .witness_claims = proof.witness_claims,
         .quotient_claims = proof.quotient_claims,
         .module_sizes = proof.module_sizes,
     });
+    try logderivativesum.verify(systems.logderivativesum, ctx);
     // TODO(new-sub-verifier): dispatch here — step 4 above.
 }

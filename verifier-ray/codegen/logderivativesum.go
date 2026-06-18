@@ -3,9 +3,9 @@ package codegen
 import (
 	"fmt"
 
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/logderivativesum"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
 )
 
 // LogDerivSystem is the compiled metadata for every LogDerivativeSum query in a
@@ -72,7 +72,7 @@ func BuildLogDerivSystem(sys *wiop.System) (LogDerivSystem, error) {
 	for _, round := range sys.Rounds {
 		for _, action := range round.VerifierActions {
 			if la, ok := action.(*lookuptologderivsum.ResultIsZeroVerifierAction); ok {
-				resultMustBeZero[la.Ld] = true
+				resultMustBeZero[la.LogDerivativeSum] = true
 			}
 		}
 	}
@@ -84,16 +84,16 @@ func BuildLogDerivSystem(sys *wiop.System) (LogDerivSystem, error) {
 				continue
 			}
 
-			resultSlot := va.Ld.Result.Context.ID.Slot()
-			if err := checkNotLastSlot("result", va.Ld.Result.Context.Path(), resultSlot, lastSlot); err != nil {
+			resultSlot := va.LogDerivativeSum.Result.Context.ID.Slot()
+			if err := checkNotLastSlot("result", va.LogDerivativeSum.Result.Context.Path(), resultSlot, lastSlot); err != nil {
 				return LogDerivSystem{}, err
 			}
 
 			query := LogDerivQuery{
-				SourceName:   va.Ld.Context().Path(),
-				ResultRef:    ScalarCellRef{Round: resultSlot, Index: va.Ld.Result.Context.ID.Position()},
+				SourceName:   va.LogDerivativeSum.Context().Path(),
+				ResultRef:    ScalarCellRef{Round: resultSlot, Index: va.LogDerivativeSum.Result.Context.ID.Position()},
 				ZFinalRefs:   make([]ScalarCellRef, len(va.Entries)),
-				ResultIsZero: resultMustBeZero[va.Ld],
+				ResultIsZero: resultMustBeZero[va.LogDerivativeSum],
 			}
 			for i, e := range va.Entries {
 				zSlot := e.ZFinal.Context.ID.Slot()

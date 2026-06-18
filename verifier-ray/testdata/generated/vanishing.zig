@@ -51,13 +51,12 @@ const system_0 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "bool-col"
 const system_0_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "bool-col"
 const system_0_logderiv = logderivativesum.System{ .queries = &system_0_logderiv_queries };
-
 const scenario_0 = Scenario{
-    .name = "Vanishing/BooleanColumn",
+    .name = "BooleanColumn",
     .spec = system_0_spec,
     .system = system_0,
     .logderiv = system_0_logderiv,
@@ -140,13 +139,12 @@ const system_1 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "fib"
 const system_1_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "fib"
 const system_1_logderiv = logderivativesum.System{ .queries = &system_1_logderiv_queries };
-
 const scenario_1 = Scenario{
-    .name = "Vanishing/Fibonacci",
+    .name = "Fibonacci",
     .spec = system_1_spec,
     .system = system_1,
     .logderiv = system_1_logderiv,
@@ -229,13 +227,12 @@ const system_2 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "geo"
 const system_2_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "geo"
 const system_2_logderiv = logderivativesum.System{ .queries = &system_2_logderiv_queries };
-
 const scenario_2 = Scenario{
-    .name = "Vanishing/GeometricProgression",
+    .name = "GeometricProgression",
     .spec = system_2_spec,
     .system = system_2,
     .logderiv = system_2_logderiv,
@@ -318,13 +315,12 @@ const system_3 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "ctr"
 const system_3_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "ctr"
 const system_3_logderiv = logderivativesum.System{ .queries = &system_3_logderiv_queries };
-
 const scenario_3 = Scenario{
-    .name = "Vanishing/ConditionalCounter",
+    .name = "ConditionalCounter",
     .spec = system_3_spec,
     .system = system_3,
     .logderiv = system_3_logderiv,
@@ -412,13 +408,12 @@ const system_4 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "pyth"
 const system_4_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "pyth"
 const system_4_logderiv = logderivativesum.System{ .queries = &system_4_logderiv_queries };
-
 const scenario_4 = Scenario{
-    .name = "Vanishing/PythagoreanTriplet",
+    .name = "PythagoreanTriplet",
     .spec = system_4_spec,
     .system = system_4,
     .logderiv = system_4_logderiv,
@@ -505,13 +500,12 @@ const system_5 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "dyn-fib"
 const system_5_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "dyn-fib"
 const system_5_logderiv = logderivativesum.System{ .queries = &system_5_logderiv_queries };
-
 const scenario_5 = Scenario{
-    .name = "Vanishing/DynamicFibonacci",
+    .name = "DynamicFibonacci",
     .spec = system_5_spec,
     .system = system_5,
     .logderiv = system_5_logderiv,
@@ -592,13 +586,12 @@ const system_6 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "const-col"
 const system_6_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "const-col"
 const system_6_logderiv = logderivativesum.System{ .queries = &system_6_logderiv_queries };
-
 const scenario_6 = Scenario{
-    .name = "Vanishing/ConstantColumn",
+    .name = "ConstantColumn",
     .spec = system_6_spec,
     .system = system_6,
     .logderiv = system_6_logderiv,
@@ -679,13 +672,12 @@ const system_7 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "fwd-shift"
 const system_7_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "fwd-shift"
 const system_7_logderiv = logderivativesum.System{ .queries = &system_7_logderiv_queries };
-
 const scenario_7 = Scenario{
-    .name = "Vanishing/ForwardShiftConstant",
+    .name = "ForwardShiftConstant",
     .spec = system_7_spec,
     .system = system_7,
     .logderiv = system_7_logderiv,
@@ -770,13 +762,12 @@ const system_8 = vanishing.System{
     .total_quotient_claims = 2,
 };
 
+// logderiv system: "bool-cube"
 const system_8_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "bool-cube"
 const system_8_logderiv = logderivativesum.System{ .queries = &system_8_logderiv_queries };
-
 const scenario_8 = Scenario{
-    .name = "Vanishing/BooleanCube",
+    .name = "BooleanCube",
     .spec = system_8_spec,
     .system = system_8,
     .logderiv = system_8_logderiv,
@@ -865,13 +856,12 @@ const system_9 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "lin-comb"
 const system_9_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lin-comb"
 const system_9_logderiv = logderivativesum.System{ .queries = &system_9_logderiv_queries };
-
 const scenario_9 = Scenario{
-    .name = "Vanishing/LinearCombination",
+    .name = "LinearCombination",
     .spec = system_9_spec,
     .system = system_9,
     .logderiv = system_9_logderiv,
@@ -958,13 +948,12 @@ const system_10 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "fib-16"
 const system_10_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "fib-16"
 const system_10_logderiv = logderivativesum.System{ .queries = &system_10_logderiv_queries };
-
 const scenario_10 = Scenario{
-    .name = "Vanishing/LargeFibonacci",
+    .name = "LargeFibonacci",
     .spec = system_10_spec,
     .system = system_10,
     .logderiv = system_10_logderiv,
@@ -1049,13 +1038,12 @@ const system_11 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "same-ratio"
 const system_11_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "same-ratio"
 const system_11_logderiv = logderivativesum.System{ .queries = &system_11_logderiv_queries };
-
 const scenario_11 = Scenario{
-    .name = "Vanishing/MultipleVanishingsSameRatio",
+    .name = "MultipleVanishingsSameRatio",
     .spec = system_11_spec,
     .system = system_11,
     .logderiv = system_11_logderiv,
@@ -1144,13 +1132,12 @@ const system_12 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "mixed-ratio"
 const system_12_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "mixed-ratio"
 const system_12_logderiv = logderivativesum.System{ .queries = &system_12_logderiv_queries };
-
 const scenario_12 = Scenario{
-    .name = "Vanishing/MixedRatioVanishings",
+    .name = "MixedRatioVanishings",
     .spec = system_12_spec,
     .system = system_12,
     .logderiv = system_12_logderiv,
@@ -1251,13 +1238,12 @@ const system_13 = vanishing.System{
     .total_quotient_claims = 2,
 };
 
+// logderiv system: "multi-mod"
 const system_13_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "multi-mod"
 const system_13_logderiv = logderivativesum.System{ .queries = &system_13_logderiv_queries };
-
 const scenario_13 = Scenario{
-    .name = "Vanishing/MultiModule",
+    .name = "MultiModule",
     .spec = system_13_spec,
     .system = system_13,
     .logderiv = system_13_logderiv,
@@ -1344,13 +1330,12 @@ const system_14 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "manual-cxl"
 const system_14_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "manual-cxl"
 const system_14_logderiv = logderivativesum.System{ .queries = &system_14_logderiv_queries };
-
 const scenario_14 = Scenario{
-    .name = "Vanishing/ManualCancellation",
+    .name = "ManualCancellation",
     .spec = system_14_spec,
     .system = system_14,
     .logderiv = system_14_logderiv,
@@ -1433,13 +1418,12 @@ const system_15 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "pre-sel"
 const system_15_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "pre-sel"
 const system_15_logderiv = logderivativesum.System{ .queries = &system_15_logderiv_queries };
-
 const scenario_15 = Scenario{
-    .name = "Vanishing/PrecomputedSelector",
+    .name = "PrecomputedSelector",
     .spec = system_15_spec,
     .system = system_15,
     .logderiv = system_15_logderiv,
@@ -1520,13 +1504,12 @@ const system_16 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "cell-leaf"
 const system_16_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "cell-leaf"
 const system_16_logderiv = logderivativesum.System{ .queries = &system_16_logderiv_queries };
-
 const scenario_16 = Scenario{
-    .name = "Vanishing/CellLeaf",
+    .name = "CellLeaf",
     .spec = system_16_spec,
     .system = system_16,
     .logderiv = system_16_logderiv,
@@ -1613,13 +1596,12 @@ const system_17 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "coin-scaled"
 const system_17_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "coin-scaled"
 const system_17_logderiv = logderivativesum.System{ .queries = &system_17_logderiv_queries };
-
 const scenario_17 = Scenario{
-    .name = "Vanishing/CoinScaled",
+    .name = "CoinScaled",
     .spec = system_17_spec,
     .system = system_17,
     .logderiv = system_17_logderiv,
@@ -1710,13 +1692,12 @@ const system_18 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "step3"
 const system_18_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "step3"
 const system_18_logderiv = logderivativesum.System{ .queries = &system_18_logderiv_queries };
-
 const scenario_18 = Scenario{
-    .name = "Vanishing/ThreeStepRecurrence",
+    .name = "ThreeStepRecurrence",
     .spec = system_18_spec,
     .system = system_18,
     .logderiv = system_18_logderiv,
@@ -1803,13 +1784,12 @@ const system_19 = vanishing.System{
     .total_quotient_claims = 4,
 };
 
+// logderiv system: "quartic"
 const system_19_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "quartic"
 const system_19_logderiv = logderivativesum.System{ .queries = &system_19_logderiv_queries };
-
 const scenario_19 = Scenario{
-    .name = "Vanishing/Quartic",
+    .name = "Quartic",
     .spec = system_19_spec,
     .system = system_19,
     .logderiv = system_19_logderiv,
@@ -1896,13 +1876,12 @@ const system_20 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "dyn-leftpad"
 const system_20_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "dyn-leftpad"
 const system_20_logderiv = logderivativesum.System{ .queries = &system_20_logderiv_queries };
-
 const scenario_20 = Scenario{
-    .name = "Vanishing/LeftPadDynamic",
+    .name = "LeftPadDynamic",
     .spec = system_20_spec,
     .system = system_20,
     .logderiv = system_20_logderiv,
@@ -1987,13 +1966,12 @@ const system_21 = vanishing.System{
     .total_quotient_claims = 2,
 };
 
+// logderiv system: "cube-shift"
 const system_21_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "cube-shift"
 const system_21_logderiv = logderivativesum.System{ .queries = &system_21_logderiv_queries };
-
 const scenario_21 = Scenario{
-    .name = "Vanishing/CubicWithBackShift",
+    .name = "CubicWithBackShift",
     .spec = system_21_spec,
     .system = system_21,
     .logderiv = system_21_logderiv,
@@ -2094,13 +2072,12 @@ const system_22 = vanishing.System{
     .total_quotient_claims = 6,
 };
 
+// logderiv system: "mixed-hi-ratio"
 const system_22_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "mixed-hi-ratio"
 const system_22_logderiv = logderivativesum.System{ .queries = &system_22_logderiv_queries };
-
 const scenario_22 = Scenario{
-    .name = "Vanishing/MixedHighRatio",
+    .name = "MixedHighRatio",
     .spec = system_22_spec,
     .system = system_22,
     .logderiv = system_22_logderiv,
@@ -2217,13 +2194,12 @@ const system_23 = vanishing.System{
     .total_quotient_claims = 4,
 };
 
+// logderiv system: "multi-mod-hi-ratio"
 const system_23_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "multi-mod-hi-ratio"
 const system_23_logderiv = logderivativesum.System{ .queries = &system_23_logderiv_queries };
-
 const scenario_23 = Scenario{
-    .name = "Vanishing/MultiModuleHighRatio",
+    .name = "MultiModuleHighRatio",
     .spec = system_23_spec,
     .system = system_23,
     .logderiv = system_23_logderiv,
@@ -2316,13 +2292,12 @@ const system_24 = vanishing.System{
     .total_quotient_claims = 2,
 };
 
+// logderiv system: "cube-32"
 const system_24_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "cube-32"
 const system_24_logderiv = logderivativesum.System{ .queries = &system_24_logderiv_queries };
-
 const scenario_24 = Scenario{
-    .name = "Vanishing/SizeThirtyTwoCubic",
+    .name = "SizeThirtyTwoCubic",
     .spec = system_24_spec,
     .system = system_24,
     .logderiv = system_24_logderiv,
@@ -2405,13 +2380,12 @@ const system_25 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "fwd-shift-3"
 const system_25_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "fwd-shift-3"
 const system_25_logderiv = logderivativesum.System{ .queries = &system_25_logderiv_queries };
-
 const scenario_25 = Scenario{
-    .name = "Vanishing/LargeForwardShift",
+    .name = "LargeForwardShift",
     .spec = system_25_spec,
     .system = system_25,
     .logderiv = system_25_logderiv,
@@ -2496,13 +2470,12 @@ const system_26 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "two-shift"
 const system_26_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "two-shift"
 const system_26_logderiv = logderivativesum.System{ .queries = &system_26_logderiv_queries };
-
 const scenario_26 = Scenario{
-    .name = "Vanishing/BackAndForwardShift",
+    .name = "BackAndForwardShift",
     .spec = system_26_spec,
     .system = system_26,
     .logderiv = system_26_logderiv,
@@ -2585,13 +2558,12 @@ const system_27 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "dyn-quad"
 const system_27_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "dyn-quad"
 const system_27_logderiv = logderivativesum.System{ .queries = &system_27_logderiv_queries };
-
 const scenario_27 = Scenario{
-    .name = "Vanishing/DynamicQuadratic",
+    .name = "DynamicQuadratic",
     .spec = system_27_spec,
     .system = system_27,
     .logderiv = system_27_logderiv,
@@ -2680,13 +2652,12 @@ const system_28 = vanishing.System{
     .total_quotient_claims = 4,
 };
 
+// logderiv system: "quartic-shift"
 const system_28_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "quartic-shift"
 const system_28_logderiv = logderivativesum.System{ .queries = &system_28_logderiv_queries };
-
 const scenario_28 = Scenario{
-    .name = "Vanishing/QuarticWithBackShift",
+    .name = "QuarticWithBackShift",
     .spec = system_28_spec,
     .system = system_28,
     .logderiv = system_28_logderiv,
@@ -2773,13 +2744,12 @@ const system_29 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "lv-row0"
 const system_29_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-row0"
 const system_29_logderiv = logderivativesum.System{ .queries = &system_29_logderiv_queries };
-
 const scenario_29 = Scenario{
-    .name = "LocalVanishing/SingleColumnFirstRowZero",
+    .name = "SingleColumnFirstRowZero",
     .spec = system_29_spec,
     .system = system_29,
     .logderiv = system_29_logderiv,
@@ -2860,13 +2830,12 @@ const system_30 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "lv-rowN"
 const system_30_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-rowN"
 const system_30_logderiv = logderivativesum.System{ .queries = &system_30_logderiv_queries };
-
 const scenario_30 = Scenario{
-    .name = "LocalVanishing/SingleColumnLastRowZero",
+    .name = "SingleColumnLastRowZero",
     .spec = system_30_spec,
     .system = system_30,
     .logderiv = system_30_logderiv,
@@ -2947,13 +2916,12 @@ const system_31 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "lv-shift"
 const system_31_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-shift"
 const system_31_logderiv = logderivativesum.System{ .queries = &system_31_logderiv_queries };
-
 const scenario_31 = Scenario{
-    .name = "LocalVanishing/ShiftedColumnFirstRowZero",
+    .name = "ShiftedColumnFirstRowZero",
     .spec = system_31_spec,
     .system = system_31,
     .logderiv = system_31_logderiv,
@@ -3036,13 +3004,12 @@ const system_32 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "lv-pair"
 const system_32_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-pair"
 const system_32_logderiv = logderivativesum.System{ .queries = &system_32_logderiv_queries };
-
 const scenario_32 = Scenario{
-    .name = "LocalVanishing/TwoColumnsEqualAtFirstRow",
+    .name = "TwoColumnsEqualAtFirstRow",
     .spec = system_32_spec,
     .system = system_32,
     .logderiv = system_32_logderiv,
@@ -3129,13 +3096,12 @@ const system_33 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "lv-multi"
 const system_33_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-multi"
 const system_33_logderiv = logderivativesum.System{ .queries = &system_33_logderiv_queries };
-
 const scenario_33 = Scenario{
-    .name = "LocalVanishing/MultipleConstraintsSameModule",
+    .name = "MultipleConstraintsSameModule",
     .spec = system_33_spec,
     .system = system_33,
     .logderiv = system_33_logderiv,
@@ -3218,13 +3184,12 @@ const system_34 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "lv-row1"
 const system_34_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-row1"
 const system_34_logderiv = logderivativesum.System{ .queries = &system_34_logderiv_queries };
-
 const scenario_34 = Scenario{
-    .name = "LocalVanishing/SecondRowConstraint",
+    .name = "SecondRowConstraint",
     .spec = system_34_spec,
     .system = system_34,
     .logderiv = system_34_logderiv,
@@ -3307,13 +3272,12 @@ const system_35 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "lv-cell"
 const system_35_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-cell"
 const system_35_logderiv = logderivativesum.System{ .queries = &system_35_logderiv_queries };
-
 const scenario_35 = Scenario{
-    .name = "LocalVanishing/CellEquality",
+    .name = "CellEquality",
     .spec = system_35_spec,
     .system = system_35,
     .logderiv = system_35_logderiv,
@@ -3402,13 +3366,12 @@ const system_36 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "lv-coin"
 const system_36_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-coin"
 const system_36_logderiv = logderivativesum.System{ .queries = &system_36_logderiv_queries };
-
 const scenario_36 = Scenario{
-    .name = "LocalVanishing/CoinScaled",
+    .name = "CoinScaled",
     .spec = system_36_spec,
     .system = system_36,
     .logderiv = system_36_logderiv,
@@ -3512,13 +3475,12 @@ const system_37 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "lv-anchors"
 const system_37_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-anchors"
 const system_37_logderiv = logderivativesum.System{ .queries = &system_37_logderiv_queries };
-
 const scenario_37 = Scenario{
-    .name = "LocalVanishing/MultipleAnchorsSharedColumn",
+    .name = "MultipleAnchorsSharedColumn",
     .spec = system_37_spec,
     .system = system_37,
     .logderiv = system_37_logderiv,
@@ -3601,13 +3563,12 @@ const system_38 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "lv-const"
 const system_38_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-const"
 const system_38_logderiv = logderivativesum.System{ .queries = &system_38_logderiv_queries };
-
 const scenario_38 = Scenario{
-    .name = "LocalVanishing/ConstantSubtraction",
+    .name = "ConstantSubtraction",
     .spec = system_38_spec,
     .system = system_38,
     .logderiv = system_38_logderiv,
@@ -3688,13 +3649,12 @@ const system_39 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "lv-wrap"
 const system_39_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-wrap"
 const system_39_logderiv = logderivativesum.System{ .queries = &system_39_logderiv_queries };
-
 const scenario_39 = Scenario{
-    .name = "LocalVanishing/WrapAroundShift",
+    .name = "WrapAroundShift",
     .spec = system_39_spec,
     .system = system_39,
     .logderiv = system_39_logderiv,
@@ -3777,13 +3737,12 @@ const system_40 = vanishing.System{
     .total_quotient_claims = 2,
 };
 
+// logderiv system: "lv-prod"
 const system_40_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-prod"
 const system_40_logderiv = logderivativesum.System{ .queries = &system_40_logderiv_queries };
-
 const scenario_40 = Scenario{
-    .name = "LocalVanishing/ProductIsZero",
+    .name = "ProductIsZero",
     .spec = system_40_spec,
     .system = system_40,
     .logderiv = system_40_logderiv,
@@ -3872,13 +3831,12 @@ const system_41 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "lv-cell-coin"
 const system_41_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-cell-coin"
 const system_41_logderiv = logderivativesum.System{ .queries = &system_41_logderiv_queries };
-
 const scenario_41 = Scenario{
-    .name = "LocalVanishing/CellAndCoin",
+    .name = "CellAndCoin",
     .spec = system_41_spec,
     .system = system_41,
     .logderiv = system_41_logderiv,
@@ -3975,13 +3933,12 @@ const system_42 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "lv-3col"
 const system_42_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-3col"
 const system_42_logderiv = logderivativesum.System{ .queries = &system_42_logderiv_queries };
-
 const scenario_42 = Scenario{
-    .name = "LocalVanishing/ThreeColumnLinear",
+    .name = "ThreeColumnLinear",
     .spec = system_42_spec,
     .system = system_42,
     .logderiv = system_42_logderiv,
@@ -4072,13 +4029,12 @@ const system_43 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "lv-multi-anchor-multi-col"
 const system_43_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-multi-anchor-multi-col"
 const system_43_logderiv = logderivativesum.System{ .queries = &system_43_logderiv_queries };
-
 const scenario_43 = Scenario{
-    .name = "LocalVanishing/MultiAnchorMultiColumn",
+    .name = "MultiAnchorMultiColumn",
     .spec = system_43_spec,
     .system = system_43,
     .logderiv = system_43_logderiv,
@@ -4167,13 +4123,12 @@ const system_44 = vanishing.System{
     .total_quotient_claims = 4,
 };
 
+// logderiv system: "lv-cube"
 const system_44_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-cube"
 const system_44_logderiv = logderivativesum.System{ .queries = &system_44_logderiv_queries };
-
 const scenario_44 = Scenario{
-    .name = "LocalVanishing/CubeAtFirstRow",
+    .name = "CubeAtFirstRow",
     .spec = system_44_spec,
     .system = system_44,
     .logderiv = system_44_logderiv,
@@ -4278,13 +4233,12 @@ const system_45 = vanishing.System{
     .total_quotient_claims = 2,
 };
 
+// logderiv system: "lv-multi-mod"
 const system_45_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-multi-mod"
 const system_45_logderiv = logderivativesum.System{ .queries = &system_45_logderiv_queries };
-
 const scenario_45 = Scenario{
-    .name = "LocalVanishing/MultiModule",
+    .name = "MultiModule",
     .spec = system_45_spec,
     .system = system_45,
     .logderiv = system_45_logderiv,
@@ -4369,13 +4323,12 @@ const system_46 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "lv-dyn-row0"
 const system_46_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-dyn-row0"
 const system_46_logderiv = logderivativesum.System{ .queries = &system_46_logderiv_queries };
-
 const scenario_46 = Scenario{
-    .name = "LocalVanishing/DynamicFirstRowZero",
+    .name = "DynamicFirstRowZero",
     .spec = system_46_spec,
     .system = system_46,
     .logderiv = system_46_logderiv,
@@ -4456,13 +4409,12 @@ const system_47 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "lv-dyn-shift"
 const system_47_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-dyn-shift"
 const system_47_logderiv = logderivativesum.System{ .queries = &system_47_logderiv_queries };
-
 const scenario_47 = Scenario{
-    .name = "LocalVanishing/DynamicShifted",
+    .name = "DynamicShifted",
     .spec = system_47_spec,
     .system = system_47,
     .logderiv = system_47_logderiv,
@@ -4545,13 +4497,12 @@ const system_48 = vanishing.System{
     .total_quotient_claims = 2,
 };
 
+// logderiv system: "lv-dyn-prod"
 const system_48_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lv-dyn-prod"
 const system_48_logderiv = logderivativesum.System{ .queries = &system_48_logderiv_queries };
-
 const scenario_48 = Scenario{
-    .name = "LocalVanishing/DynamicProductIsZero",
+    .name = "DynamicProductIsZero",
     .spec = system_48_spec,
     .system = system_48,
     .logderiv = system_48_logderiv,
@@ -4659,15 +4610,14 @@ const system_49_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 1, .index = 1 },
 };
 
+// logderiv system: "lds-ones"
 const system_49_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_49_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-ones/ld"
 };
 
-// logderiv system: "lds-ones"
 const system_49_logderiv = logderivativesum.System{ .queries = &system_49_logderiv_queries };
-
 const scenario_49 = Scenario{
-    .name = "LogDerivativeSumCompiler/SingleFractionAllOnes",
+    .name = "SingleFractionAllOnes",
     .spec = system_49_spec,
     .system = system_49,
     .logderiv = system_49_logderiv,
@@ -4769,15 +4719,14 @@ const system_50_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 1, .index = 1 },
 };
 
+// logderiv system: "lds-partial"
 const system_50_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_50_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-partial/ld"
 };
 
-// logderiv system: "lds-partial"
 const system_50_logderiv = logderivativesum.System{ .queries = &system_50_logderiv_queries };
-
 const scenario_50 = Scenario{
-    .name = "LogDerivativeSumCompiler/PartialFilter",
+    .name = "PartialFilter",
     .spec = system_50_spec,
     .system = system_50,
     .logderiv = system_50_logderiv,
@@ -4882,15 +4831,14 @@ const system_51_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 1, .index = 1 },
 };
 
+// logderiv system: "lds-zeros"
 const system_51_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_51_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-zeros/ld"
 };
 
-// logderiv system: "lds-zeros"
 const system_51_logderiv = logderivativesum.System{ .queries = &system_51_logderiv_queries };
-
 const scenario_51 = Scenario{
-    .name = "LogDerivativeSumCompiler/AllZeroFilter",
+    .name = "AllZeroFilter",
     .spec = system_51_spec,
     .system = system_51,
     .logderiv = system_51_logderiv,
@@ -4995,15 +4943,14 @@ const system_52_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 1, .index = 1 },
 };
 
+// logderiv system: "lds-maskzero"
 const system_52_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_52_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-maskzero/ld"
 };
 
-// logderiv system: "lds-maskzero"
 const system_52_logderiv = logderivativesum.System{ .queries = &system_52_logderiv_queries };
-
 const scenario_52 = Scenario{
-    .name = "LogDerivativeSumCompiler/FilterMasksZeroDenominator",
+    .name = "FilterMasksZeroDenominator",
     .spec = system_52_spec,
     .system = system_52,
     .logderiv = system_52_logderiv,
@@ -5171,15 +5118,14 @@ const system_53_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 1, .index = 2 },
 };
 
+// logderiv system: "lds-pack"
 const system_53_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_53_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-pack/ld"
 };
 
-// logderiv system: "lds-pack"
 const system_53_logderiv = logderivativesum.System{ .queries = &system_53_logderiv_queries };
-
 const scenario_53 = Scenario{
-    .name = "LogDerivativeSumCompiler/Packing4Fractions",
+    .name = "Packing4Fractions",
     .spec = system_53_spec,
     .system = system_53,
     .logderiv = system_53_logderiv,
@@ -5328,15 +5274,14 @@ const system_54_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 1, .index = 2 },
 };
 
+// logderiv system: "lds-multi-mod"
 const system_54_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_54_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-multi-mod/ld"
 };
 
-// logderiv system: "lds-multi-mod"
 const system_54_logderiv = logderivativesum.System{ .queries = &system_54_logderiv_queries };
-
 const scenario_54 = Scenario{
-    .name = "LogDerivativeSumCompiler/MultiModuleBucketing",
+    .name = "MultiModuleBucketing",
     .spec = system_54_spec,
     .system = system_54,
     .logderiv = system_54_logderiv,
@@ -5428,15 +5373,14 @@ const system_55_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 1, .index = 1 },
 };
 
+// logderiv system: "lds-size1"
 const system_55_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_55_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-size1/ld"
 };
 
-// logderiv system: "lds-size1"
 const system_55_logderiv = logderivativesum.System{ .queries = &system_55_logderiv_queries };
-
 const scenario_55 = Scenario{
-    .name = "LogDerivativeSumCompiler/SizeOneModule",
+    .name = "SizeOneModule",
     .spec = system_55_spec,
     .system = system_55,
     .logderiv = system_55_logderiv,
@@ -5590,15 +5534,14 @@ const system_56_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 1, .index = 2 },
 };
 
+// logderiv system: "lds-cond"
 const system_56_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_56_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-cond/ld"
 };
 
-// logderiv system: "lds-cond"
 const system_56_logderiv = logderivativesum.System{ .queries = &system_56_logderiv_queries };
-
 const scenario_56 = Scenario{
-    .name = "LogDerivativeSumCompiler/ConditionalLookupShape",
+    .name = "ConditionalLookupShape",
     .spec = system_56_spec,
     .system = system_56,
     .logderiv = system_56_logderiv,
@@ -5838,15 +5781,14 @@ const system_57_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 1, .index = 3 },
 };
 
+// logderiv system: "lds-many"
 const system_57_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_57_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-many/ld"
 };
 
-// logderiv system: "lds-many"
 const system_57_logderiv = logderivativesum.System{ .queries = &system_57_logderiv_queries };
-
 const scenario_57 = Scenario{
-    .name = "LogDerivativeSumCompiler/ManyFractions",
+    .name = "ManyFractions",
     .spec = system_57_spec,
     .system = system_57,
     .logderiv = system_57_logderiv,
@@ -5954,15 +5896,14 @@ const system_58_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 1, .index = 1 },
 };
 
+// logderiv system: "lds-size2"
 const system_58_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_58_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-size2/ld"
 };
 
-// logderiv system: "lds-size2"
 const system_58_logderiv = logderivativesum.System{ .queries = &system_58_logderiv_queries };
-
 const scenario_58 = Scenario{
-    .name = "LogDerivativeSumCompiler/SizeTwoModule",
+    .name = "SizeTwoModule",
     .spec = system_58_spec,
     .system = system_58,
     .logderiv = system_58_logderiv,
@@ -6085,16 +6026,15 @@ const system_59_logderiv_query_1_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 1, .index = 3 },
 };
 
+// logderiv system: "lds-multi-q"
 const system_59_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_59_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-multi-q/ld1"
     .{ .z_final_refs = &system_59_logderiv_query_1_zfinal_refs, .result_ref = .{ .round = 1, .index = 1 }, .result_is_zero = false }, // query: "lds-multi-q/ld2"
 };
 
-// logderiv system: "lds-multi-q"
 const system_59_logderiv = logderivativesum.System{ .queries = &system_59_logderiv_queries };
-
 const scenario_59 = Scenario{
-    .name = "LogDerivativeSumCompiler/MultipleQueries",
+    .name = "MultipleQueries",
     .spec = system_59_spec,
     .system = system_59,
     .logderiv = system_59_logderiv,
@@ -6196,15 +6136,14 @@ const system_60_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 1, .index = 1 },
 };
 
+// logderiv system: "lds-vec-den"
 const system_60_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_60_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-vec-den/ld"
 };
 
-// logderiv system: "lds-vec-den"
 const system_60_logderiv = logderivativesum.System{ .queries = &system_60_logderiv_queries };
-
 const scenario_60 = Scenario{
-    .name = "LogDerivativeSumCompiler/VectorDenominator",
+    .name = "VectorDenominator",
     .spec = system_60_spec,
     .system = system_60,
     .logderiv = system_60_logderiv,
@@ -6361,15 +6300,14 @@ const system_61_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 1, .index = 1 },
 };
 
+// logderiv system: "lds-ones-pack"
 const system_61_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_61_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-ones-pack/ld"
 };
 
-// logderiv system: "lds-ones-pack"
 const system_61_logderiv = logderivativesum.System{ .queries = &system_61_logderiv_queries };
-
 const scenario_61 = Scenario{
-    .name = "LogDerivativeSumCompiler/AllFiltersOnesPacked",
+    .name = "AllFiltersOnesPacked",
     .spec = system_61_spec,
     .system = system_61,
     .logderiv = system_61_logderiv,
@@ -6528,15 +6466,14 @@ const system_62_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "lk-simple"
 const system_62_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_62_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-simple/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "lk-simple"
 const system_62_logderiv = logderivativesum.System{ .queries = &system_62_logderiv_queries };
-
 const scenario_62 = Scenario{
-    .name = "Lookup/SingleColumnNoFilters",
+    .name = "SingleColumnNoFilters",
     .spec = system_62_spec,
     .system = system_62,
     .logderiv = system_62_logderiv,
@@ -6703,15 +6640,14 @@ const system_63_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "lk-filterA"
 const system_63_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_63_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-filterA/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "lk-filterA"
 const system_63_logderiv = logderivativesum.System{ .queries = &system_63_logderiv_queries };
-
 const scenario_63 = Scenario{
-    .name = "Lookup/FilterOnIncluded",
+    .name = "FilterOnIncluded",
     .spec = system_63_spec,
     .system = system_63,
     .logderiv = system_63_logderiv,
@@ -6891,15 +6827,14 @@ const system_64_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "lk-filterT"
 const system_64_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_64_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-filterT/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "lk-filterT"
 const system_64_logderiv = logderivativesum.System{ .queries = &system_64_logderiv_queries };
-
 const scenario_64 = Scenario{
-    .name = "Lookup/FilterOnIncluding",
+    .name = "FilterOnIncluding",
     .spec = system_64_spec,
     .system = system_64,
     .logderiv = system_64_logderiv,
@@ -7083,15 +7018,14 @@ const system_65_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "lk-double"
 const system_65_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_65_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-double/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "lk-double"
 const system_65_logderiv = logderivativesum.System{ .queries = &system_65_logderiv_queries };
-
 const scenario_65 = Scenario{
-    .name = "Lookup/DoubleConditional",
+    .name = "DoubleConditional",
     .spec = system_65_spec,
     .system = system_65,
     .logderiv = system_65_logderiv,
@@ -7272,15 +7206,14 @@ const system_66_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "lk-multi-col"
 const system_66_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_66_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-multi-col/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "lk-multi-col"
 const system_66_logderiv = logderivativesum.System{ .queries = &system_66_logderiv_queries };
-
 const scenario_66 = Scenario{
-    .name = "Lookup/MultiColumn",
+    .name = "MultiColumn",
     .spec = system_66_spec,
     .system = system_66,
     .logderiv = system_66_logderiv,
@@ -7491,15 +7424,14 @@ const system_67_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 3 },
 };
 
+// logderiv system: "lk-shared"
 const system_67_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_67_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-shared/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "lk-shared"
 const system_67_logderiv = logderivativesum.System{ .queries = &system_67_logderiv_queries };
-
 const scenario_67 = Scenario{
-    .name = "Lookup/SharedTable",
+    .name = "SharedTable",
     .spec = system_67_spec,
     .system = system_67,
     .logderiv = system_67_logderiv,
@@ -7762,15 +7694,14 @@ const system_68_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 4 },
 };
 
+// logderiv system: "lk-distinct"
 const system_68_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_68_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-distinct/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "lk-distinct"
 const system_68_logderiv = logderivativesum.System{ .queries = &system_68_logderiv_queries };
-
 const scenario_68 = Scenario{
-    .name = "Lookup/DistinctTables",
+    .name = "DistinctTables",
     .spec = system_68_spec,
     .system = system_68,
     .logderiv = system_68_logderiv,
@@ -7978,15 +7909,14 @@ const system_69_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "lk-multi-filterT"
 const system_69_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_69_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-multi-filterT/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "lk-multi-filterT"
 const system_69_logderiv = logderivativesum.System{ .queries = &system_69_logderiv_queries };
-
 const scenario_69 = Scenario{
-    .name = "Lookup/MultiColumnFilterOnIncluding",
+    .name = "MultiColumnFilterOnIncluding",
     .spec = system_69_spec,
     .system = system_69,
     .logderiv = system_69_logderiv,
@@ -8152,15 +8082,14 @@ const system_70_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "lk-repeated"
 const system_70_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_70_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-repeated/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "lk-repeated"
 const system_70_logderiv = logderivativesum.System{ .queries = &system_70_logderiv_queries };
-
 const scenario_70 = Scenario{
-    .name = "Lookup/RepeatedValueInTable",
+    .name = "RepeatedValueInTable",
     .spec = system_70_spec,
     .system = system_70,
     .logderiv = system_70_logderiv,
@@ -8323,15 +8252,14 @@ const system_71_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "lk-shift-a"
 const system_71_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_71_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-shift-a/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "lk-shift-a"
 const system_71_logderiv = logderivativesum.System{ .queries = &system_71_logderiv_queries };
-
 const scenario_71 = Scenario{
-    .name = "Lookup/ShiftedAColumn",
+    .name = "ShiftedAColumn",
     .spec = system_71_spec,
     .system = system_71,
     .logderiv = system_71_logderiv,
@@ -8494,15 +8422,14 @@ const system_72_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "lk-shift-b"
 const system_72_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_72_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-shift-b/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "lk-shift-b"
 const system_72_logderiv = logderivativesum.System{ .queries = &system_72_logderiv_queries };
-
 const scenario_72 = Scenario{
-    .name = "Lookup/ShiftedBColumn",
+    .name = "ShiftedBColumn",
     .spec = system_72_spec,
     .system = system_72,
     .logderiv = system_72_logderiv,
@@ -8711,15 +8638,14 @@ const system_73_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 3 },
 };
 
+// logderiv system: "lk-multi-A"
 const system_73_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_73_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-multi-A/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "lk-multi-A"
 const system_73_logderiv = logderivativesum.System{ .queries = &system_73_logderiv_queries };
-
 const scenario_73 = Scenario{
-    .name = "Lookup/MultipleAFragments",
+    .name = "MultipleAFragments",
     .spec = system_73_spec,
     .system = system_73,
     .logderiv = system_73_logderiv,
@@ -8920,15 +8846,14 @@ const system_74_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "lk-w3"
 const system_74_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_74_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-w3/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "lk-w3"
 const system_74_logderiv = logderivativesum.System{ .queries = &system_74_logderiv_queries };
-
 const scenario_74 = Scenario{
-    .name = "Lookup/WidthThree",
+    .name = "WidthThree",
     .spec = system_74_spec,
     .system = system_74,
     .logderiv = system_74_logderiv,
@@ -9072,15 +8997,14 @@ const system_75_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "lk-size1"
 const system_75_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_75_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-size1/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "lk-size1"
 const system_75_logderiv = logderivativesum.System{ .queries = &system_75_logderiv_queries };
-
 const scenario_75 = Scenario{
-    .name = "Lookup/SizeOne",
+    .name = "SizeOne",
     .spec = system_75_spec,
     .system = system_75,
     .logderiv = system_75_logderiv,
@@ -9243,15 +9167,14 @@ const system_76_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "lk-precomp"
 const system_76_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_76_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-precomp/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "lk-precomp"
 const system_76_logderiv = logderivativesum.System{ .queries = &system_76_logderiv_queries };
-
 const scenario_76 = Scenario{
-    .name = "Lookup/PrecomputedTable",
+    .name = "PrecomputedTable",
     .spec = system_76_spec,
     .system = system_76,
     .logderiv = system_76_logderiv,
@@ -9413,15 +9336,14 @@ const system_77_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "lk-rep-s"
 const system_77_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_77_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-rep-s/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "lk-rep-s"
 const system_77_logderiv = logderivativesum.System{ .queries = &system_77_logderiv_queries };
-
 const scenario_77 = Scenario{
-    .name = "Lookup/RepeatedSValues",
+    .name = "RepeatedSValues",
     .spec = system_77_spec,
     .system = system_77,
     .logderiv = system_77_logderiv,
@@ -9588,15 +9510,14 @@ const system_78_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "lk-empty"
 const system_78_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_78_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-empty/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "lk-empty"
 const system_78_logderiv = logderivativesum.System{ .queries = &system_78_logderiv_queries };
-
 const scenario_78 = Scenario{
-    .name = "Lookup/EmptySelected",
+    .name = "EmptySelected",
     .spec = system_78_spec,
     .system = system_78,
     .logderiv = system_78_logderiv,
@@ -9760,15 +9681,14 @@ const system_79_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "rc-basic"
 const system_79_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_79_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "rc-basic/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "rc-basic"
 const system_79_logderiv = logderivativesum.System{ .queries = &system_79_logderiv_queries };
-
 const scenario_79 = Scenario{
-    .name = "RangeCheckCompiler/Basic",
+    .name = "Basic",
     .spec = system_79_spec,
     .system = system_79,
     .logderiv = system_79_logderiv,
@@ -9962,15 +9882,14 @@ const system_80_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "rc-shared"
 const system_80_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_80_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "rc-shared/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "rc-shared"
 const system_80_logderiv = logderivativesum.System{ .queries = &system_80_logderiv_queries };
-
 const scenario_80 = Scenario{
-    .name = "RangeCheckCompiler/SharedBound",
+    .name = "SharedBound",
     .spec = system_80_spec,
     .system = system_80,
     .logderiv = system_80_logderiv,
@@ -10217,15 +10136,14 @@ const system_81_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 3 },
 };
 
+// logderiv system: "rc-distinct"
 const system_81_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_81_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "rc-distinct/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "rc-distinct"
 const system_81_logderiv = logderivativesum.System{ .queries = &system_81_logderiv_queries };
-
 const scenario_81 = Scenario{
-    .name = "RangeCheckCompiler/DistinctBounds",
+    .name = "DistinctBounds",
     .spec = system_81_spec,
     .system = system_81,
     .logderiv = system_81_logderiv,
@@ -10398,15 +10316,14 @@ const system_82_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "rc-pow2"
 const system_82_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_82_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "rc-pow2/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "rc-pow2"
 const system_82_logderiv = logderivativesum.System{ .queries = &system_82_logderiv_queries };
-
 const scenario_82 = Scenario{
-    .name = "RangeCheckCompiler/BoundIsPowerOfTwo",
+    .name = "BoundIsPowerOfTwo",
     .spec = system_82_spec,
     .system = system_82,
     .logderiv = system_82_logderiv,
@@ -10556,15 +10473,14 @@ const system_83_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "rc-bound1"
 const system_83_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_83_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "rc-bound1/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "rc-bound1"
 const system_83_logderiv = logderivativesum.System{ .queries = &system_83_logderiv_queries };
-
 const scenario_83 = Scenario{
-    .name = "RangeCheckCompiler/BoundIsOne",
+    .name = "BoundIsOne",
     .spec = system_83_spec,
     .system = system_83,
     .logderiv = system_83_logderiv,
@@ -10772,15 +10688,14 @@ const system_84_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 3 },
 };
 
+// logderiv system: "rc-cross-mod"
 const system_84_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_84_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "rc-cross-mod/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "rc-cross-mod"
 const system_84_logderiv = logderivativesum.System{ .queries = &system_84_logderiv_queries };
-
 const scenario_84 = Scenario{
-    .name = "RangeCheckCompiler/MultiModule",
+    .name = "MultiModule",
     .spec = system_84_spec,
     .system = system_84,
     .logderiv = system_84_logderiv,
@@ -10948,15 +10863,14 @@ const system_85_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "rc-large"
 const system_85_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_85_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "rc-large/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "rc-large"
 const system_85_logderiv = logderivativesum.System{ .queries = &system_85_logderiv_queries };
-
 const scenario_85 = Scenario{
-    .name = "RangeCheckCompiler/LargeBound",
+    .name = "LargeBound",
     .spec = system_85_spec,
     .system = system_85,
     .logderiv = system_85_logderiv,
@@ -11118,15 +11032,14 @@ const system_86_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "rc-np2"
 const system_86_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_86_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "rc-np2/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "rc-np2"
 const system_86_logderiv = logderivativesum.System{ .queries = &system_86_logderiv_queries };
-
 const scenario_86 = Scenario{
-    .name = "RangeCheckCompiler/NonPowerOfTwoBound",
+    .name = "NonPowerOfTwoBound",
     .spec = system_86_spec,
     .system = system_86,
     .logderiv = system_86_logderiv,
@@ -11288,15 +11201,14 @@ const system_87_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 2 },
 };
 
+// logderiv system: "rc-zeros"
 const system_87_logderiv_queries = [_]logderivativesum.Query{
     .{ .z_final_refs = &system_87_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "rc-zeros/lookuptologderiv/aggregated"
 };
 
-// logderiv system: "rc-zeros"
 const system_87_logderiv = logderivativesum.System{ .queries = &system_87_logderiv_queries };
-
 const scenario_87 = Scenario{
-    .name = "RangeCheckCompiler/AllZeros",
+    .name = "AllZeros",
     .spec = system_87_spec,
     .system = system_87,
     .logderiv = system_87_logderiv,
@@ -11381,13 +11293,12 @@ const system_88 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "lagrange-sel"
 const system_88_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lagrange-sel"
 const system_88_logderiv = logderivativesum.System{ .queries = &system_88_logderiv_queries };
-
 const scenario_88 = Scenario{
-    .name = "Vanishing/LagrangeSelectorBoundary",
+    .name = "LagrangeSelectorBoundary",
     .spec = system_88_spec,
     .system = system_88,
     .logderiv = system_88_logderiv,
@@ -11470,13 +11381,12 @@ const system_89 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
+// logderiv system: "lagrange-sel-dyn"
 const system_89_logderiv_queries = [_]logderivativesum.Query{};
 
-// logderiv system: "lagrange-sel-dyn"
 const system_89_logderiv = logderivativesum.System{ .queries = &system_89_logderiv_queries };
-
 const scenario_89 = Scenario{
-    .name = "Vanishing/DynamicLagrangeSelectorBoundary",
+    .name = "DynamicLagrangeSelectorBoundary",
     .spec = system_89_spec,
     .system = system_89,
     .logderiv = system_89_logderiv,

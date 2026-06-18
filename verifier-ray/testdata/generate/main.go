@@ -16,17 +16,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	fiatshamir "github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/fiatshamir"
-	poseidon2 "github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/poseidon2"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/polynomials"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/global"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/localvanishing"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/logderivativesum"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/rangecheck"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/wioptest"
+	fiatshamir "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fiatshamir"
+	poseidon2 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/consensys/linea-monorepo/verifier-ray/codegen"
 )
 
@@ -584,7 +584,6 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		if len(vanishingSystem.Modules) == 0 {
 			return nil
 		}
-		prefixedName := source + "/" + name
 		honestRt := runProver(sys, honest)
 		logDeriv, err := codegen.BuildLogDerivSystem(sys)
 		if err != nil {
@@ -596,8 +595,8 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 			proof := extractVanishingProofView(sys, runProver(sys, invalid))
 			invalidProof = &proof
 		}
-		cases = append(cases, fixtureCase{name: prefixedName, honest: honestProof, invalid: invalidProof})
-		systems = append(systems, codegen.CompiledSystem{Name: prefixedName, Routing: routing, Vanishing: vanishingSystem, LogDeriv: logDeriv})
+		cases = append(cases, fixtureCase{name: name, honest: honestProof, invalid: invalidProof})
+		systems = append(systems, codegen.CompiledSystem{Routing: routing, Vanishing: vanishingSystem, LogDeriv: logDeriv})
 		return nil
 	}
 
@@ -808,23 +807,15 @@ func runtimeTraceRoundFromRuntime(rt wiop.Runtime, round *wiop.Round) runtimeTra
 func writeCompiledFixtures(cases []fixtureCase, systems []codegen.CompiledSystem) error {
 	var out bytes.Buffer
 	writeCompiledHeader(&out)
+	opts := codegen.CompiledSystemZigOptions{
+		EmitHeader:      false,
+		ProtocolImport:  "verifier_ray.protocol",
+		FieldImport:     "verifier_ray.field.koalabear",
+		VanishingImport: "verifier_ray.query.vanishing",
+		LogDerivImport:  "verifier_ray.query.logderivativesum",
+	}
 	for i := range cases {
-		if err := codegen.WriteSpecZigWithOptions(&out, systems[i].Routing, codegen.SpecZigOptions{
-			ProtocolImport: "verifier_ray.protocol",
-			ConstName:      fmt.Sprintf("system_%d_spec", i),
-			EmitHeader:     false,
-		}); err != nil {
-			return err
-		}
-		if err := codegen.WriteVanishingSystemZigWithOptions(&out, i, systems[i].Vanishing, codegen.VanishingZigOptions{
-			FieldImport:     "verifier_ray.field.koalabear",
-			VanishingImport: "verifier_ray.query.vanishing",
-		}); err != nil {
-			return err
-		}
-		if err := codegen.WriteLogDerivSystemZigWithOptions(&out, i, systems[i].LogDeriv, codegen.LogDerivZigOptions{
-			EmitImport: false,
-		}); err != nil {
+		if err := codegen.WriteCompiledSystemZig(&out, i, systems[i], opts); err != nil {
 			return err
 		}
 		writeCompiledScenario(&out, i, cases[i])
