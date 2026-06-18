@@ -1,0 +1,40 @@
+// Poseidon2 state: where the permutation takes place.
+//
+// The state is an array of STATE_WIDTH KOALABEAR field elements (felts):
+//
+//    [ σ₀, σ₁, ..., σ₁₅ ]
+//
+memory poseidon2_state(address:u8) -> (felt:𝔽)
+
+fn write_to_state<poseidon2_state>(address:u8, value:𝔽) -> () {
+    poseidon2_state[address] = value
+}
+
+fn read_from_state<poseidon2_state>(address:u8) -> (value:𝔽) {
+    value = poseidon2_state[address]
+    return
+}
+
+// get_felt reads a canonical BYTES_PER_FELT-byte big-endian field element from
+// ram.
+fn get_felt<ram>(offset:Address) -> (felt:𝔽) {
+    felt =                       (ram[(offset + 0) as Address] as 𝔽)
+    felt = (felt * (256 as 𝔽)) + (ram[(offset + 1) as Address] as 𝔽)
+    felt = (felt * (256 as 𝔽)) + (ram[(offset + 2) as Address] as 𝔽)
+    felt = (felt * (256 as 𝔽)) + (ram[(offset + 3) as Address] as 𝔽)
+}
+
+// state_to_ram writes the felt at σ[index] to ram as BYTES_PER_FELT big-endian
+// bytes (most significant byte first) and returns the next write address.
+fn state_to_ram<ram, poseidon2_state>(address:Address, index:u8) -> (address_updt:Address) {
+    var b3:u8
+    var b2:u8
+    var b1:u8
+    var b0:u8
+    b3::b2::b1::b0 = (poseidon2_state[index] as u32)
+    ram[address + 0] = b3
+    ram[address + 1] = b2
+    ram[address + 2] = b1
+    ram[address + 3] = b0
+    address_updt = address + 4
+}
