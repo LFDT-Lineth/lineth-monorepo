@@ -183,6 +183,10 @@ func QuotientLagrangeExt(p []field.Ext, v, z field.Ext) []field.Ext {
 		var num, den field.Ext
 		num.Sub(&v, &p[j])
 		field.SubByBase(&den, &z, &omegaJ)
+		// @alex: batch inverse here? My guts tell me that the efficient thing
+		// would be to implement a function computing all the quotients provided
+		// a list of poly and a list of claim. That way, we can batch the
+		// computation as efficiently as possible.
 		den.Inverse(&den)
 		q[j].Mul(&num, &den)
 		omegaJ.Mul(&omegaJ, &omega)
