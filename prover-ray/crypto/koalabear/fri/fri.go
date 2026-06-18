@@ -460,10 +460,14 @@ func foldLayerInternally(
 
 		next[j].Add(&sum, &diff)
 
-		// if there is an aux, add it
+		var auxTerm field.Ext
+
+		// if there is an aux, add it.
+		// @alex: this could be expanded in 2 loops to avoid rechecking len(aux)
+		// at every step.
 		if len(aux) > 0 {
-			auxTerm := new(field.Ext).Mul(&aux[j], alpha2)
-			next[j].Add(&next[j], auxTerm)
+			auxTerm.Mul(&aux[j], alpha2)
+			next[j].Add(&next[j], &auxTerm)
 		}
 	}
 
@@ -474,7 +478,7 @@ func foldLayerInternally(
 // coordinates 6 and 7 to be zero.
 func octupletToExt(o field.Octuplet) (field.Ext, error) {
 
-	if !o[6].IsZero() && !o[7].IsZero() {
+	if !o[6].IsZero() || !o[7].IsZero() {
 		return field.Ext{}, errors.New("octupletToExt: coordinates 6 and 7 must be zero")
 	}
 
@@ -593,6 +597,9 @@ func checkQueryExt(s int, fq Query,
 		diff.Mul(&diff, &alphas[j])
 		expected.Add(&sum, &diff)
 
+		var alpha2, term field.Ext
+		alpha2.Square(&alphas[j])
+
 		// Mix in the auxiliary half-codeword: the level entering at round j+1,
 		// batched with alpha², exactly as foldLayerInternally does on the prover.
 		if li, ok := levelAtRound[j+1]; ok {
@@ -611,8 +618,7 @@ func checkQueryExt(s int, fq Query,
 			if err != nil {
 				return fmt.Errorf("level %d: decode leaf: %w", li, err)
 			}
-			var alpha2, term field.Ext
-			alpha2.Square(&alphas[j])
+
 			term.Mul(&aux, &alpha2)
 			expected.Add(&expected, &term)
 		}
