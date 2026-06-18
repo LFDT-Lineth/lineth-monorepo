@@ -54,7 +54,7 @@ pub export fn r5_main() noreturn {
         unreachable;
     }
 
-    // the input is linked into the binary ype
+    // load the input depending on the running mode (embedded by the zkVM or at compile time)
     const input = loadR5Input();
 
     // run the verifier smoke test with the loaded input
