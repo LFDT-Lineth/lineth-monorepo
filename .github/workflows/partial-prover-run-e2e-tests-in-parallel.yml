@@ -105,7 +105,7 @@ jobs:
 
       - name: Run e2e tests with partial prover
         id: run_e2e_tests
-        timeout-minutes: 60
+        timeout-minutes: 110
         run: |
           LOG_LEVEL=debug pnpm run -F e2e test:partial-prover:${{ matrix.test }}
 

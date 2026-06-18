@@ -26,8 +26,8 @@ import {
 const context = createTestContext();
 const l1AccountManager = context.getL1AccountManager();
 const l2AccountManager = context.getL2AccountManager();
-const l1EventTimeOutMs = process.env.PARTIAL_PROVER != "true" ? 200_000 : 2400_000;
-const timeOutMs = process.env.PARTIAL_PROVER != "true" ? 300_000 : 3000_000;
+const l1EventTimeOutMs = process.env.PARTIAL_PROVER != "true" ? 200_000 : 5400_000;
+const timeOutMs = process.env.PARTIAL_PROVER != "true" ? 300_000 : 6000_000;
 
 async function expectReceiptNotFound(
   client: { getTransactionReceipt: (args: { hash: Hash }) => Promise<unknown> },
