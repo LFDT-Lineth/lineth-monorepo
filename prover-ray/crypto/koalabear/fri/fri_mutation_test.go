@@ -157,7 +157,7 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 	positions := []int{1, 5, 9, 13}
 
 	// Canonical proof (Prove sorts levels in place, so derive verifier inputs after).
-	base := Prove(p, levels, alphas, positions)
+	base := proverForTest(p, levels, alphas, positions)
 	levelRoots := make([]field.Octuplet, len(levels))
 	levelDs := make([]int, len(levels))
 	for i := range levels {
@@ -177,7 +177,7 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 	for _, m := range muts {
 		t.Run(m.name, func(t *testing.T) {
 			// Re-derive the canonical proof deterministically, then mutate it.
-			prf := Prove(p, levels, alphas, positions)
+			prf := proverForTest(p, levels, alphas, positions)
 			applyMutation(reflect.ValueOf(&prf).Elem(), m)
 
 			err, panicked := safeVerify(p, levelRoots, levelDs, prf, alphas, positions)

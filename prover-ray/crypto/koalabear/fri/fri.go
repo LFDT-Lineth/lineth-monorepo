@@ -142,28 +142,6 @@ func (p Params) FullDomainGenerator() field.Element {
 // Prove — multi-degree FRI prover
 // ────────────────────────────────────────────────────────────────────────────────
 
-// Prove runs multi-degree FRI (commit + query phase) and returns a Proof together
-// with the query positions. levels[0].D must equal p.D and every Level must
-// contain one evaluation vector on exactly one rail. levels is sorted in-place
-// in decreasing order of D.
-func Prove(p Params, levels []Level, alphas []field.Ext, openedPositions []int) Proof {
-
-	st, err := NewProverState(p, levels)
-	if err != nil {
-		utils.Panic("could not build prover state: %v", err)
-	}
-	if len(alphas) < p.numRounds {
-		utils.Panic("fri: Prove: need %d folding challenges, got %d", p.numRounds, len(alphas))
-	}
-
-	// Drive the state machine: feed one folding challenge per round, then open.
-	for j := 0; st.HasNext(); j++ {
-		st.Fold(alphas[j])
-	}
-
-	return st.Open(openedPositions)
-}
-
 // provePlan is the validated, precomputed schedule that NewProverState derives
 // from the caller-supplied levels. It answers two questions the commit/query
 // phases need:

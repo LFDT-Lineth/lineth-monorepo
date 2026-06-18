@@ -148,7 +148,7 @@ func TestProveVerify(t *testing.T) {
 				positions[i] = int(prng.Uint64() % uint64(p.N))
 			}
 
-			prf := Prove(p, levels, alphas, positions)
+			prf := proverForTest(p, levels, alphas, positions)
 
 			// Prove sorts levels by decreasing D; mirror that order for the verifier.
 			levelRoots := make([]field.Octuplet, len(levels))
@@ -180,4 +180,38 @@ func newRandomLevel(prng *rand.Rand, p Params, d int) Level {
 		evals[i] = field.PseudoRandExt(prng)
 	}
 	return Level{D: d, Evals: evals, Tree: buildTreeExt(evals)}
+}
+
+// proverForTest runs multi-degree FRI (commit + query phase) and returns a Proof
+// together with the query positions. levels[0].D must equal p.D and every Level
+// must contain one evaluation vector on exactly one rail. levels is sorted
+// in-place in decreasing order of D.
+//
+// This helper is test-only and INSECURE: it takes the folding challenges
+// (alphas) and the query positions (openedPositions) as explicit inputs instead
+// of deriving them from the commitments via Fiat-Shamir. A real, non-interactive
+// prover must squeeze every challenge and query position out of a transcript
+// that has already absorbed the corresponding Merkle roots, so that the prover
+// cannot choose them after the fact. Letting the caller supply them directly
+// breaks soundness — a malicious prover could pick alphas and positions that
+// make a low-degree-test failure go unnoticed — which is exactly why this lives
+// in the test file: tests need deterministic, externally-controlled challenges
+// to pin down behaviour, but no production code path should ever build a proof
+// this way.
+func proverForTest(p Params, levels []Level, alphas []field.Ext, openedPositions []int) Proof {
+
+	st, err := NewProverState(p, levels)
+	if err != nil {
+		utils.Panic("could not build prover state: %v", err)
+	}
+	if len(alphas) < p.numRounds {
+		utils.Panic("fri: Prove: need %d folding challenges, got %d", p.numRounds, len(alphas))
+	}
+
+	// Drive the state machine: feed one folding challenge per round, then open.
+	for j := 0; st.HasNext(); j++ {
+		st.Fold(alphas[j])
+	}
+
+	return st.Open(openedPositions)
 }
