@@ -226,7 +226,7 @@ func (t *Tree) OpenBranch(idx int) Branch {
 }
 
 // RecoverRoot recovers the root of the tree from a branch and a position. The
-// function errors if
+// function errors if the branch is malformed its size is inconsistent with idx.
 func (branch *Branch) RecoverRoot(idx int) (field.Octuplet, error) {
 
 	if len(branch.AuxSiblings) != len(branch.Siblings) {
