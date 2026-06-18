@@ -1,5 +1,4 @@
 include "../memory.zkc"
-include "../ram/read.zkc"
 include "../ram/write.zkc"
 include "../utils/constants.zkc"
 include "../utils/signed_sum.zkc"
@@ -55,28 +54,28 @@ fn process_S_type_instruction<ram, registers>(instruction_parameters:u25) {
     //    signext_imm12_64 = (imm_sign::uimm6::uimm5) as u64
     //}
 
-    var mem_address:Address = signed_sum_of_double_word(read_register(rs1), signext_imm12_64) as Address
+    var mem_address:Address = signed_sum_of_double_word(registers[rs1], signext_imm12_64) as Address
 
     switch funct3 {
         case FUNCT3_SB: {
             printf "SB "
             print_s_operands(rs2, rs1, signext_imm12_64)
-            write_8(mem_address, (read_register(rs2) & (0xFF as u64)) as u8)
+            write_8(mem_address, (registers[rs2] & (0xFF as u64)) as u8)
         }
         case FUNCT3_SH: {
             printf "SH "
             print_s_operands(rs2, rs1, signext_imm12_64)
-            write_16(mem_address, (read_register(rs2) & (0xFFFF as u64)) as u16)
+            write_16(mem_address, (registers[rs2] & (0xFFFF as u64)) as u16)
         }
         case FUNCT3_SW: {
             printf "SW "
             print_s_operands(rs2, rs1, signext_imm12_64)
-            write_32(mem_address, (read_register(rs2) & (0xFFFFFFFF as u64)) as u32)
+            write_32(mem_address, (registers[rs2] & (0xFFFFFFFF as u64)) as u32)
         }
         case FUNCT3_SD: {
             printf "SD "
             print_s_operands(rs2, rs1, signext_imm12_64)
-            write_64(mem_address, read_register(rs2))
+            write_64(mem_address, registers[rs2])
         }
         default: {
             printf "[ERROR] Unsupported S-type instruction with\n"

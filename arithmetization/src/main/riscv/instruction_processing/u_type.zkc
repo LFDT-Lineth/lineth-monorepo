@@ -1,5 +1,4 @@
 include "../memory.zkc"
-include "../ram/write.zkc"
 include "../utils/constants.zkc"
 include "../utils/sign_extend.zkc"
 include "../utils/signed_sum.zkc"
@@ -59,5 +58,5 @@ fn process_U_type_instruction<registers>(opcode:Opcode, instruction_parameters:u
     }
 
     // Note: the definition of tmp already works for the LUI opcode
-    write_register(rd, tmp as DoubleWord)
+    registers[rd] = tmp as DoubleWord
 }
