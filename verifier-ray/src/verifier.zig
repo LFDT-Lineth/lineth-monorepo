@@ -77,12 +77,12 @@ pub fn verify(
     proof: ProofData,
 ) !void {
     profiling.reset();
-    profiling.markR5Value(profiling.Mark.verify_start, 0);
+    if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.verify_start, 0);
 
     // Step 1 — replay transcript, derive all coins. `replay` comptime-validates
     // `spec` internal consistency and returns the stack-allocated coin array.
     const all_coins = try protocol.replay(spec, proof.rounds);
-    profiling.markR5Value(profiling.Mark.transcript_done, profiling.snapshot().poseidon2_compress);
+    if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.transcript_done, profiling.snapshot().poseidon2_compress);
 
     // Step 2 — assemble the shared context routed to every sub-verifier.
     const ctx = protocol.Context{
@@ -92,14 +92,14 @@ pub fn verify(
 
     // Step 3 — dispatch each sub-verifier with ctx + its own claims.
     // TODO(new-sub-verifier): add dispatch call here — step 4 above.
-    profiling.markR5Value(profiling.Mark.vanishing_start, profiling.snapshot().poseidon2_compress);
+    if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_start, profiling.snapshot().poseidon2_compress);
     try vanishing.verify(systems.vanishing, .{
         .ctx = ctx,
         .witness_claims = proof.witness_claims,
         .quotient_claims = proof.quotient_claims,
         .module_sizes = proof.module_sizes,
     });
-    profiling.markR5Value(profiling.Mark.vanishing_done, profiling.snapshot().poseidon2_compress);
+    if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_done, profiling.snapshot().poseidon2_compress);
     // For now vanishing_done and verifier_done are the same, but we separate them in case we want to add more phases after vanishing (e.g. FRI)
-    profiling.markR5Value(profiling.Mark.verify_done, profiling.snapshot().poseidon2_compress);
+    if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.verify_done, profiling.snapshot().poseidon2_compress);
 }
