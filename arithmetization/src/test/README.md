@@ -89,7 +89,7 @@ Useful shell function (add to `~/.zshrc` or `~/.bashrc`):
 riscv-test() {
     local makefile="path/to/lineth-monorepo/arithmetization/src/test/Makefile"
     case "$1" in
-        elf-exec|elf-debug|elf-to-json|install-zkc|clean-all|linker-script|vector-exec|keccak-rust-build|keccak-rust-json|keccak-rust-exec|blake-rust-build|blake-rust-json|blake-rust-exec|act4-build|act4-exec)
+        elf-exec|elf-debug|elf-to-json|install-zkc|clean-all|linker-script|vector-exec|keccak-rust-build|keccak-rust-json|keccak-rust-exec|keccak-zig-build|keccak-zig-json|keccak-zig-exec|blake-rust-build|blake-rust-json|blake-rust-exec|act4-build|act4-exec)
             # targets that do NOT require TEST argument
             make -f "$makefile" "$1" "${@:2}"
             ;;
@@ -218,6 +218,7 @@ riscv-test compile <name>.<ext> VERIFY_ELF=true
 | `VECTOR_JSON_DIR`            | `$(dir $(JSON))vector_json`                                                            | JSON directory used when `VECTOR_JSON_MODE=per-vector`                                                                                        |
 | `VECTOR_SUBSET_FILE`         | `$(BIN).all`                                                                           | Intermediate `.all` file selected from `VECTOR_FILE`; one line per vector, or one blob including all vectors                                  |
 | `IN_BYTES`                   | `""`                                                                                   | Hex big-endian input written in RAM at `IN_ORIGIN` as little-endian bytes before execution (either string or `@path/to/in_bytes`)             |
+| `KECCAK_ACCEL`               | `false`                                                                                | Set to `true` for Zig tests using `keccak_provide` to call the Linea keccak wrapper instead of Zesu stdlibs_accel                             |
 | `STACK_ORIGIN`               | `0x00000000`                                                                           | Low stack boundary; `_stack_end` is generated from this value                                                                                 |
 | `SP`                         | `STACK_ORIGIN + 0x00800000`                                                            | Initial stack pointer; `_stack_start` is generated from this value                                                                            |
 | `PROGRAM_ORIGIN`             | `SP`                                                                                   | Program start address                                                                                                                         |
@@ -234,9 +235,9 @@ riscv-test compile <name>.<ext> VERIFY_ELF=true
 | `BLAKE_ALL_FILE`             | `rust/src/blake/blake10.all`                                                           | Blake `.all` vector file used by `blake-rust-json`                                                                                            |
 | `BLAKE_N_VECTORS`            | `-1`                                                                                   | Vectors selected by `blake-rust-json`, notation is the same as `VECTOR_N_VECTORS`                                                             |
 | `BLAKE_JSON_DIR`             | `rust/target/riscv64im-unknown-none-elf/release/blake_json`                            | Directory where `blake-rust-json` writes per-vector JSON files                                                                                |
-| `KECCAK_ALL_FILE`            | `rust/src/keccak/keccak.all`                                                           | Keccak `.all` vector file used by `keccak-rust-json`                                                                                          |
-| `KECCAK_N_VECTORS`           | `10`                                                                                   | Vectors selected by `keccak-rust-json`, notation is the same as `VECTOR_N_VECTORS`                                                            |
-| `KECCAK_JSON_FILE`           | `rust/target/riscv64im-unknown-none-elf/release/keccak.json`                           | JSON path written by `keccak-rust-json`                                                                                                       |
+| `KECCAK_ALL_FILE`            | `common_inputs/keccak.all`                                                             | Keccak `.all` vector file used by `keccak-(rust\|zig)-json`                                                                                   |
+| `KECCAK_N_VECTORS`           | `10`                                                                                   | Number of Keccak vectors compiled into and packed for the Keccak guest; `-1` means all vectors                                                |
+| `KECCAK_JSON_FILE`           | `common_inputs/keccak.json`                                                            | JSON path written by `keccak-(rust\|zig)-json`                                                                                                |
 
 `IN_BYTES` values are expected in big-endian hex format.
 All `.all` vector files contain one big-endian `IN_BYTES` value per line.
