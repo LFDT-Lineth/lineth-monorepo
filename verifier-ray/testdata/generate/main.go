@@ -1022,21 +1022,21 @@ func writeVerifyCase(out *bytes.Buffer, idx int, tc vanishingFixtureCase) {
 }
 
 func writeVerifyProof(out *bytes.Buffer, prefix string, proof vanishingProofView) {
-	fmt.Fprintf(out, "var %s_witness_claims = [_]ext.Ext{\n", prefix)
+	fmt.Fprintf(out, "const %s_witness_claims = [_]ext.Ext{\n", prefix)
 	for _, claim := range proof.witnessClaims {
 		fmt.Fprintf(out, "    %s,\n", extValueLiteral(claim))
 	}
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
 
-	fmt.Fprintf(out, "var %s_quotient_claims = [_]ext.Ext{\n", prefix)
+	fmt.Fprintf(out, "const %s_quotient_claims = [_]ext.Ext{\n", prefix)
 	for _, claim := range proof.quotientClaims {
 		fmt.Fprintf(out, "    %s,\n", extValueLiteral(claim))
 	}
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
 
-	fmt.Fprintf(out, "var %s_module_sizes = [_]usize%s;\n", prefix, intArrayLiteral(proof.moduleSizes))
+	fmt.Fprintf(out, "const %s_module_sizes = [_]usize%s;\n", prefix, intArrayLiteral(proof.moduleSizes))
 	fmt.Fprintln(out)
 
 	for roundIdx, round := range proof.rounds {
@@ -1063,14 +1063,14 @@ func writeVerifyRoundData(out *bytes.Buffer, prefix string, roundIdx int, round 
 	for columnIdx, column := range round.columns {
 		switch {
 		case column.publicBaseValues != nil:
-			fmt.Fprintf(out, "var %s_round_%d_column_%d_base = [_]field.Element{\n", prefix, roundIdx, columnIdx)
+			fmt.Fprintf(out, "const %s_round_%d_column_%d_base = [_]field.Element{\n", prefix, roundIdx, columnIdx)
 			for _, value := range column.publicBaseValues {
 				fmt.Fprintf(out, "    %s,\n", fieldValueLiteral(value))
 			}
 			fmt.Fprintln(out, "};")
 			fmt.Fprintln(out)
 		case column.publicExtValues != nil:
-			fmt.Fprintf(out, "var %s_round_%d_column_%d_ext = [_]ext.Ext{\n", prefix, roundIdx, columnIdx)
+			fmt.Fprintf(out, "const %s_round_%d_column_%d_ext = [_]ext.Ext{\n", prefix, roundIdx, columnIdx)
 			for _, value := range column.publicExtValues {
 				fmt.Fprintf(out, "    %s,\n", extValueLiteral(value))
 			}
@@ -1097,7 +1097,7 @@ func writeVerifyRoundData(out *bytes.Buffer, prefix string, roundIdx int, round 
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
 
-	fmt.Fprintf(out, "var %s_round_%d_cells = [_]protocol.Scalar{\n", prefix, roundIdx)
+	fmt.Fprintf(out, "const %s_round_%d_cells = [_]protocol.Scalar{\n", prefix, roundIdx)
 	for _, cell := range round.cells {
 		switch {
 		case cell.baseValue != nil:
