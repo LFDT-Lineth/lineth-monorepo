@@ -295,22 +295,42 @@ vector-build: require-src
 	echo "building $$elf_to_json_bin..."; \
 	go build -o "$$elf_to_json_bin" $(ELF_TO_JSON_GEN)
 
-vector-json: require-src require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode
-	@echo "selecting $(if $(filter -1,$(VECTOR_N_VECTORS)),all,$(VECTOR_N_VECTORS)) vector(s) from $(VECTOR_FILE)"
+vector-json: require-src require-vector-file require-vector-build-artifacts require-vector-json-mode
 # VECTOR_FILE must contain one `IN_BYTES` value per line
 # `per-vector` keeps one line per JSON; `batched` writes one big-endian blob for the whole batch
-	@available=$$(awk 'END { print NR }' $(VECTOR_FILE)); \
-	if [ "$(VECTOR_N_VECTORS)" != "-1" ] && [ "$$available" -lt "$(VECTOR_N_VECTORS)" ]; then \
-		echo "$(VECTOR_FILE): only $$available vector(s) available, requested $(VECTOR_N_VECTORS)"; \
-		exit 1; \
-	fi; \
+	@selection=$$(awk -v selector="$(VECTOR_N_VECTORS)" '\
+		function fail(msg) { print msg > "/dev/stderr"; exit 1 } \
+		END { \
+			available = NR; \
+			if (selector == "-1") { print 0, available - 1, available, "all"; exit 0 } \
+			if (selector ~ /^[0-9]+\.\.[0-9]+$$/) { \
+				split(selector, bounds, /\.\./); \
+				start = bounds[1] + 0; \
+				end = bounds[2] + 0; \
+				if (end < start) fail("VECTOR_N_VECTORS range end must be >= start, got: " selector); \
+				if (end >= available) fail("$(VECTOR_FILE): only " available " vector(s) available, requested " selector); \
+				print start, end, end - start + 1, selector; \
+				exit 0; \
+			} \
+			if (selector ~ /^[1-9][0-9]*$$/) { \
+				count = selector + 0; \
+				if (count > available) fail("$(VECTOR_FILE): only " available " vector(s) available, requested " selector); \
+				print 0, count - 1, count, "0.." count - 1; \
+				exit 0; \
+			} \
+			fail("VECTOR_N_VECTORS must be -1, a positive integer, or n..m, got: " selector); \
+		}' "$(VECTOR_FILE)") || exit $$?; \
+	set -- $$selection; \
+	vector_start="$$1"; \
+	vector_end="$$2"; \
+	vector_count="$$3"; \
+	vector_label="$$4"; \
+	echo "selecting $$vector_label ($$vector_count vector(s)) from $(VECTOR_FILE)"; \
 	if [ "$(VECTOR_JSON_MODE)" = "batched" ]; then \
-		if [ "$(VECTOR_N_VECTORS)" = "-1" ]; then cat "$(VECTOR_FILE)"; else head -n $(VECTOR_N_VECTORS) "$(VECTOR_FILE)"; fi | \
+		awk -v start="$$vector_start" -v end="$$vector_end" 'NR >= start + 1 && NR <= end + 1' "$(VECTOR_FILE)" | \
 			awk '{ sub(/^0[xX]/, ""); line[NR] = $$0 } END { printf "0x"; for (i = NR; i >= 1; i--) printf "%s", line[i]; printf "\n" }' > $(VECTOR_SUBSET_FILE); \
-	elif [ "$(VECTOR_N_VECTORS)" = "-1" ]; then \
-		cat "$(VECTOR_FILE)" > $(VECTOR_SUBSET_FILE); \
 	else \
-		head -n $(VECTOR_N_VECTORS) "$(VECTOR_FILE)" > $(VECTOR_SUBSET_FILE); \
+		awk -v start="$$vector_start" -v end="$$vector_end" 'NR >= start + 1 && NR <= end + 1' "$(VECTOR_FILE)" > $(VECTOR_SUBSET_FILE); \
 	fi
 	@elf_to_json_bin="$(MAKEFILE_DIR)bin/elf_to_json_gen"; \
 	[ -x "$$elf_to_json_bin" ] || { echo "ELF-to-JSON helper not found. Run vector-build first"; exit 1; }; \
@@ -379,7 +399,8 @@ KECCAK_JSON_FILE      ?= $(MAKEFILE_DIR)rust/target/riscv64im-unknown-none-elf/r
 
 keccak-rust-build:
 	cargo clean -p riscv-tests --manifest-path $(MAKEFILE_DIR)rust/Cargo.toml
-	KECCAK_N_VECTORS=$(KECCAK_RUST_N_VECTORS) $(MAKE) -f $(MAKEFILE_DIR)Makefile vector-build \
+	$(MAKE) -f $(MAKEFILE_DIR)Makefile vector-build \
+		KECCAK_N_VECTORS=$(KECCAK_RUST_N_VECTORS) \
 		TEST=keccak/keccak.rs \
 		IN_BYTES=0x00
 
