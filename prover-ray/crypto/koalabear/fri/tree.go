@@ -259,13 +259,13 @@ func (branch *Branch) RecoverRoot(idx int) (field.Octuplet, error) {
 	return ancestor, nil
 }
 
-// hashNode hashes two field.Octuplets and an optional field.Octuplet.
+// hashNode hashes two field.Octuplets and an optional field.Octuplet. It works
+// by calling the compression function C directly (not MD hashing).
+// res = C(left, right) or C(aux, C(left, right))
 func hashNode(left, right field.Octuplet, aux *field.Octuplet) field.Octuplet {
-	hasher := poseidon2.NewMDHasher()
-	hasher.WriteElements(left[:]...)
-	hasher.WriteElements(right[:]...)
+	res := poseidon2.Compress(left, right)
 	if aux != nil {
-		hasher.WriteElements(aux[:]...)
+		res = poseidon2.Compress(res, *aux)
 	}
-	return hasher.SumDigest()
+	return res
 }
