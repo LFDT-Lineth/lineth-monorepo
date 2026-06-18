@@ -33,6 +33,12 @@ GP_BIN      := $(MAKEFILE_DIR)zig-out/bin/$(GP_NAME)
 # Sample fixture input used by gp-exec/gp-debug
 GP_INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
 
+# Flags forwarded to `zkc exec` by gp-exec. Default -q (quiet: suppress the guest's per-instruction
+# printf). Override to pick the execution backend — e.g. "--quiet --gogen --fast" runs the guest via
+# zkc's generated-Go backend in fast mode, the runnability path used while the interpreter does not
+# implement tracing yet.
+GP_ZKC_EXEC_FLAGS ?= -q
+
 # If true, generates an objdump of the generated ELF for debugging purposes
 OBJDUMP     ?= false
 
@@ -87,7 +93,7 @@ gp-require-input:
 	@[ -n "$(GP_INPUT)" ] && [ -f "$(GP_INPUT)" ] || { echo "GP_INPUT not found: '$(GP_INPUT)' (set GP_INPUT=path/to/input.ssz)"; exit 1; }
 
 gp-exec: gp-require-input gp-compile
-	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-exec BIN_EXT="$(GP_BIN)" IN_BYTES="@$(GP_INPUT)" ZKC_EXEC_FLAGS=-q
+	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-exec BIN_EXT="$(GP_BIN)" IN_BYTES="@$(GP_INPUT)" ZKC_EXEC_FLAGS="$(GP_ZKC_EXEC_FLAGS)"
 
 gp-debug: gp-require-input gp-compile
 	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-debug BIN_EXT="$(GP_BIN)" IN_BYTES="@$(GP_INPUT)"

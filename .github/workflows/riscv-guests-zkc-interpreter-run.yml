@@ -1,11 +1,13 @@
 # Guest-in-ZKC-interpreter CI for the l2-execution RISC-V guest.
 #
 # Builds the guest as a statically-linked rv64im ELF (KECCAK_ACCEL=true — the prover-accelerated
-# custom keccak op, the production proving config), converts it to the interpreter's JSON input, and
-# runs it through the Lineth ZKC interpreter via the existing `gp-exec` entry point. This is the
-# RISC-V/ZKC counterpart to the host-machine guest tests, which run the guest logic natively (no
-# RISC-V, no ZKC). It bridges the riscv-guests/ and arithmetization/ trees — depending on both the
-# guest source AND the interpreter + ELF->JSON tooling — so it triggers on changes to either.
+# custom keccak op, the production proving config), converts it to zkc's JSON input, and executes it
+# under zkc via the existing `gp-exec` entry point. Execution uses zkc's generated-Go backend in fast
+# mode (--gogen --fast); the tree-walking interpreter's trace path is skipped because tracing is not
+# implemented yet. This is the RISC-V/ZKC counterpart to the host-machine guest tests, which run the
+# guest logic natively (no RISC-V, no zkc). It bridges the riscv-guests/ and arithmetization/ trees —
+# depending on both the guest source AND the interpreter program + ELF->JSON tooling — so it triggers
+# on changes to either.
 #
 # Scope: this is a *runnability* smoke gate — it proves the build -> ELF -> ELF->JSON -> `zkc exec`
 # pipeline runs one representative committed block end-to-end under the production keccak op and exits
@@ -59,11 +61,13 @@ permissions:
 jobs:
   zkc-interpreter-run:
     name: l2-execution guest in ZKC interpreter (accel)
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large   # 32 GB; the trace run peaks ~15 GB resident
-    # Generous bound: the trace-mode interpreter run (below) dominates and its true wall time on this
-    # runner isn't measured yet (it's memory-bound and could not be timed cleanly on a constrained dev
-    # box). Tighten once the first real runs establish the actual duration.
-    timeout-minutes: 60
+    # gogen+fast execution is light (~tens of MB, seconds), so the 32 GB tier the heavy interpreter
+    # path would have needed is unnecessary — this job is build-bound, not memory-bound. The mid tier
+    # (16 GB) covers the zig/zesu build and the run comfortably.
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    # The gogen run is seconds and the build, on a warm cache, is seconds too — these budgets are only
+    # a backstop for a COLD-cache run: a from-scratch zesu zig build (the setup action caches it across
+    # runs, shared with host-tests) and zkc's `go install` from source. Warm steady state is ~2-3 min.
     env:
       ZKC_REF: ${{ inputs.zkc-ref || 'main' }}   # arithmetization/Makefile reads ZKC_REF from the env
     steps:
@@ -94,11 +98,11 @@ jobs:
       # above (empty-default behavior is "skip if already on PATH"; we set it to main).
       - name: Install zkc interpreter CLI
         run: make -C arithmetization install-zkc
-        timeout-minutes: 10
 
-      # Trace mode (gp-exec passes -q, not -f): the interpreter materializes the full execution trace,
-      # not just runs the program — this is the heavy, dominant step. Uses gp-exec's default GP_INPUT
-      # (the committed sample stateless input). A trap/failure exits non-zero even under -q.
-      - name: Run l2-execution guest through the ZKC interpreter (accel keccak)
-        run: make -C riscv-guests/l2-execution gp-exec KECCAK_ACCEL=true
-        timeout-minutes: 50
+      # Execute the guest via zkc's generated-Go backend (--gogen) in fast mode (--fast), quiet (-q):
+      # the interpreter does not implement tracing yet, so this runnability check skips the trace path
+      # — and gogen+fast is light (tens of MB, seconds, vs the tree-walking interpreter's ~15 GB). Uses
+      # gp-exec's default GP_INPUT (the committed sample stateless input). A trap/failure still exits
+      # non-zero under these flags.
+      - name: Run l2-execution guest under zkc (gogen, fast, accel keccak)
+        run: make -C riscv-guests/l2-execution gp-exec KECCAK_ACCEL=true GP_ZKC_EXEC_FLAGS="--quiet --gogen --fast"
