@@ -35,20 +35,15 @@ include "../utils/signed_sum.zkc"
 // For all opcodes except JALR, new_pc = pc + 4 (sequential fall-through).
 fn process_I_type_instruction<ram, registers>(index:u64, opcode:Opcode, pc:Address) -> (new_pc:Address) {
 
-    // The I-type record is pre-decoded externally (see decoded_itype in
-    // memory.zkc) and looked up by index. The immediate arrives already
-    // sign-extended to 64 bits, so no runtime sign extension is needed.
+    // The I-type field split (imm12 :: rs1 :: funct3 :: rd) is pre-decoded
+    // externally (see decoded_itype in memory.zkc) and looked up by index.
     var funct3:Funct3
-    var signext_imm12_64:DoubleWord
+    var imm12:Imm12
     var rs1:Register
     var rd:Register
-    funct3, signext_imm12_64, rs1, rd = decoded_itype[index]
+    funct3, imm12, rs1, rd = decoded_itype[index]
 
-    // The low 12 bits still carry the raw immediate, needed for the funct6 /
-    // funct7 / funct12 + shift-amount fields of the shift and SYSTEM instructions.
-    var imm12_high:u52
-    var imm12:Imm12
-
+    var signext_imm12_64:DoubleWord = sgn_extension_u12_u64(imm12)
     // Used as an Address in the LOAD instructions and as a DoubleWord in the OP-IMM and JALR instructions
     var rs1_plus_signext_imm12:u64 = signed_sum_of_double_word(registers[rs1], signext_imm12_64)
 
@@ -124,7 +119,6 @@ fn process_I_type_instruction<ram, registers>(index:u64, opcode:Opcode, pc:Addre
                     registers[rd] = rs1_plus_signext_imm12
                 }
                 case FUNCT3_SLLI: {
-                    imm12_high::imm12 = signext_imm12_64
                     funct6::uimm6 = imm12
                     if funct6 == FUNCT6_SLLI {
                         printf "SLLI "
@@ -149,7 +143,6 @@ fn process_I_type_instruction<ram, registers>(index:u64, opcode:Opcode, pc:Addre
                     registers[rd] = registers[rs1] ^ signext_imm12_64
                 }
                 case FUNCT3_SRLI: {
-                    imm12_high::imm12 = signext_imm12_64
                     funct6::uimm6 = imm12
                     // FUNCT3_SRLI and FUNCT3_SRAI share funct3 = 0b101; disambiguate with funct6.
                     switch funct6 {
@@ -187,7 +180,6 @@ fn process_I_type_instruction<ram, registers>(index:u64, opcode:Opcode, pc:Addre
             var funct7:Funct7
             var uimm5:UImm5
             // for SLLIW, SRLIW, SRAIW
-            imm12_high::imm12 = signext_imm12_64
             funct7::uimm5 = imm12
 
             switch funct3 {
@@ -241,7 +233,6 @@ fn process_I_type_instruction<ram, registers>(index:u64, opcode:Opcode, pc:Addre
             // note: same funct3 for ECALL and EBREAK
             if funct3 == FUNCT3_ECALL {
                 // imm12 is interpreted as funct12 for SYSTEM opcode
-                imm12_high::imm12 = signext_imm12_64
                 if imm12 == FUNCT12_ECALL {
                     printf "ECALL\n"
                     new_pc = process_syscall(pc)
