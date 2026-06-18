@@ -343,8 +343,13 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	//   decoded_itype: funct3:Funct3(u3), imm12:Imm12(u12), rs1:Register(u5), rd:Register(u5)
 	//   decoded_rtype: funct7:Funct7(u7), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3), rd:Register(u5)
 	//   decoded_stype: imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3)
+<<<<<<< HEAD
 	//   decoded_btype: imm:DoubleWord(u64), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3)
 	//   decoded_jtype: imm:DoubleWord(u64), rd:Register(u5)
+=======
+	//   decoded_btype: imm_sign:u1, imm_10_5:u6, rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3), imm_4_1:u4, imm_11:u1
+	//   decoded_jtype: imm20:u1, imm10_1:u10, imm11:u1, imm19_12:u8, rd:Register(u5)
+>>>>>>> parent of bd31cffd9 (feat: improve b-type)
 	//   decoded_utype: imm20:Imm20(u20), rd:Register(u5)
 	var (
 		coreBits  bitWriter
@@ -373,15 +378,11 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		// reassemble it into the 12-bit store immediate.
 		simm12 := (((instr >> 31) & 0x1) << 11) | (((instr >> 25) & 0x3f) << 5) | ((instr >> 7) & 0x1f)
 
-		// B-type: resolve the 13-bit signed branch offset (imm[12|11|10:5|4:1] with
-		// bit 0 = 0) to a ready-to-use 64-bit immediate. imm_sign is known
-		// statically, so the runtime if/else is collapsed here.
-		bImmSign := (instr >> 31) & 0x1                                                                     // imm[12]
-		bOffset := (bImmSign << 12) | (((instr >> 7) & 0x1) << 11) | (((instr >> 25) & 0x3f) << 5) | (((instr >> 8) & 0xf) << 1) // imm[12:1]::0
-		bImm := uint64(bOffset)
-		if bImmSign == 1 {
-			bImm |= 0xFFFFFFFFFFFFE000 // sign-extend: set bits [63:13]
-		}
+		// B-type immediate sub-fields (kept split to match b_type.zkc's reconstruction).
+		bImmSign := (instr >> 31) & 0x1  // imm[12]
+		bImm10_5 := (instr >> 25) & 0x3f // imm[10:5]
+		bImm4_1 := (instr >> 8) & 0xf    // imm[4:1]
+		bImm11 := (instr >> 7) & 0x1     // imm[11]
 
 		// J-type: resolve the 21-bit signed jump offset (imm[20|19:12|11|10:1] with
 		// bit 0 = 0) to a ready-to-use 64-bit immediate. imm[20] is known
@@ -416,10 +417,13 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		stypeBits.writeBits(uint64(rs1), 5)
 		stypeBits.writeBits(uint64(funct3), 3)
 
-		btypeBits.writeBits(bImm, 64)
+		btypeBits.writeBits(uint64(bImmSign), 1)
+		btypeBits.writeBits(uint64(bImm10_5), 6)
 		btypeBits.writeBits(uint64(rs2), 5)
 		btypeBits.writeBits(uint64(rs1), 5)
 		btypeBits.writeBits(uint64(funct3), 3)
+		btypeBits.writeBits(uint64(bImm4_1), 4)
+		btypeBits.writeBits(uint64(bImm11), 1)
 
 		jtypeBits.writeBits(jImm, 64)
 		jtypeBits.writeBits(uint64(rd), 5)

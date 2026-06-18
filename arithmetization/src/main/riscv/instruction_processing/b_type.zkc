@@ -24,11 +24,11 @@ include "../utils/signed_sum.zkc"
 // When the branch condition is true,  pc_new = pc + imm (taken branch).
 fn process_B_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Address) {
 
-    // The B-type record is pre-decoded externally (see decoded_btype in
-    // memory.zkc) and looked up by index. The 13-bit signed branch offset is
-    // already sign-extended into a ready-to-use 64-bit imm at decode time, so no
-    // reconstruction is needed here.
-    var imm:DoubleWord
+    // The B-type field split (imm_sign :: imm[10:5] :: rs2 :: rs1 :: funct3 ::
+    // imm[4:1] :: imm[11]) is pre-decoded externally (see decoded_btype in
+    // memory.zkc) and looked up by index.
+    var imm_sign:SignBit
+    var imm_10_5:u6
     var rs2:Register
     var rs1:Register
     var funct3:Funct3
