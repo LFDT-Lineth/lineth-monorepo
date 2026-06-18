@@ -3,7 +3,7 @@ package wioptest
 import (
 	"fmt"
 
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
 // MutationOutcome records the result of corrupting one trace position and

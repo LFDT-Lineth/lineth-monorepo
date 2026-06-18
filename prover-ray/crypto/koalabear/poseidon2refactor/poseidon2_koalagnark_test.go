@@ -3,12 +3,12 @@ package poseidon2refactor
 import (
 	"testing"
 
+	kbcircuit "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/circuit"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/scs"
-	kbcircuit "github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/circuit"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

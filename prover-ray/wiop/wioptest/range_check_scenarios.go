@@ -1,6 +1,6 @@
 package wioptest
 
-import "github.com/consensys/linea-monorepo/prover-ray/wiop"
+import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 
 // NewRangeCheckBasicScenario: a single RangeCheck with bound 8 over a
 // size-8 module, witness covering every value in [0, 8).

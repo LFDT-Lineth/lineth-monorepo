@@ -1,8 +1,8 @@
 package smtkoalabear
 
 import (
+	poseidon2 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/consensys/gnark/frontend"
-	poseidon2 "github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/poseidon2"
 )
 
 // GnarkProof mirrors [Proof] in a gnark circuit.

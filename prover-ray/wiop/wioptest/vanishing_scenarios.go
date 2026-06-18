@@ -5,8 +5,8 @@ package wioptest
 // independent fixtures; nothing is shared between successive calls.
 
 import (
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
 // NewFibonacciVanishingScenario returns a scenario for the Fibonacci recurrence

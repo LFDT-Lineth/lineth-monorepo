@@ -10,7 +10,7 @@
 // calling the factory twice yields two completely independent scenarios.
 package wioptest
 
-import "github.com/consensys/linea-monorepo/prover-ray/wiop"
+import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 
 // Scenario is a self-contained test fixture for one query type.
 //
