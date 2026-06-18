@@ -9,8 +9,8 @@ import (
 	"reflect"
 	"runtime"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
-	"github.com/consensys/linea-monorepo/prover-ray/utils/parallel"
 )
 
 // ExtensionDegree is the degree of the field extension over the base field.

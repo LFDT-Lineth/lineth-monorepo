@@ -52,6 +52,11 @@ on:
         required: false
         type: number
         default: 5
+      fast_mode:
+        description: 'Run gogen for timed iterations when enabled'
+        required: false
+        type: boolean
+        default: true
       zkc_ref_base:
         description: 'zkc commit/branch/tag for BASE branch runs'
         required: false
@@ -141,10 +146,13 @@ jobs:
 
       - name: Run benchmark (warmup + alternating timed iterations with per-iter cache reset)
         shell: bash
+        env:
+          FAST_MODE: ${{ inputs.fast_mode }}
         run: |
           set -uo pipefail
           mkdir -p /tmp/bench/logs
-          ITERS=${{ inputs.iterations || 0 }}
+          ITERS=${{ inputs.iterations || 1 }}
+          if [[ -z "${FAST_MODE:-}" ]]; then FAST_MODE=true; fi
 
           # progress prints
           log() { printf '[%s] %s\n' "$(date +'%H:%M:%S')" "$*"; }
@@ -156,20 +164,49 @@ jobs:
             sleep 5
           }
 
-          run_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
-            local zkc_bin="/tmp/zkc-${1}"
-            local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
-            /usr/bin/time -v "$zkc_bin" execute -v -q /tmp/keccak.json "$zkc_main" \
-              > "/tmp/bench/logs/keccak_${1}_${2}.log" 2>&1
+          TEST_MAKE_DIR="$PWD/arithmetization/src/test"
+
+          run_zkc_exec() {  # $1=variant  $2=log path  $3=json  $4=zkc_main  optional: --fast
+            local exec_flags="-v -q"
+            if [[ "${5:-}" == "--fast" ]]; then exec_flags="--fast -v -q"; fi
+            /usr/bin/time -v env ZKC="/tmp/zkc-${1}" ZKC_EXEC_FLAGS="$exec_flags" \
+              make -C "$TEST_MAKE_DIR" --no-print-directory zkc-exec \
+              JSON="$3" ZKC_MAIN="$4" \
+              > "$2" 2>&1
           }
 
-          run_blake() {   # $1=variant  $2=label. Runs all N vectors, one log file per vector.
-            local zkc_bin="/tmp/zkc-${1}"
+          run_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)  optional: --fast
+            run_zkc_exec "$1" "/tmp/bench/logs/keccak_${1}_${2}.log" /tmp/keccak.json \
+              "/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc" "${3:-}"
+          }
+
+          run_blake() {   # $1=variant  $2=label  optional: --fast. Runs all N vectors, one log file per vector.
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
             for json in /tmp/bench/json/blake/*.json; do
               local n
               n=$(basename "$json" .json)
-              /usr/bin/time -v "$zkc_bin" execute -v -q "$json" "$zkc_main" \
+              run_zkc_exec "$1" "/tmp/bench/logs/blake_${1}_${2}_${n}.log" "$json" "$zkc_main" "${3:-}"
+            done
+          }
+
+          run_gogen_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
+            local zkc_bin="/tmp/zkc-${1}"
+            local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
+            "$zkc_bin" generate -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
+            go build -o riscv-gogen riscv.go
+            /usr/bin/time -v ./riscv-gogen < /tmp/keccak.json \
+              > "/tmp/bench/logs/keccak_${1}_${2}.log" 2>&1
+          }
+
+          run_gogen_blake() {   # $1=variant  $2=label. Runs all N vectors, one log file per vector.
+            local zkc_bin="/tmp/zkc-${1}"
+            local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
+            "$zkc_bin" generate -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
+            go build -o riscv-gogen riscv.go
+            for json in /tmp/bench/json/blake/*.json; do
+              local n
+              n=$(basename "$json" .json)
+              /usr/bin/time -v ./riscv-gogen < "$json" \
                 > "/tmp/bench/logs/blake_${1}_${2}_${n}.log" 2>&1
             done
           }
@@ -178,12 +215,18 @@ jobs:
             log "=== workload: ${wl} ==="
             # Untimed warmup: opt then base. Primes the page cache and shared libs
             # so both branches face an already-warm filesystem on iteration 1.
-            reset_state; log "${wl}: warmup opt  (untimed)"; run_${wl} opt  warmup
-            reset_state; log "${wl}: warmup base (untimed)"; run_${wl} base warmup
+            reset_state; log "${wl}: warmup opt  (untimed)"; run_${wl} opt  warmup --fast
+            reset_state; log "${wl}: warmup base (untimed)"; run_${wl} base warmup --fast
             # Timed runs: opt_i, base_i alternating, starting with opt.
+            # Run in fast (with gogen) or tracing mode
             for i in $(seq 1 "$ITERS"); do
-              reset_state; log "${wl}: iter ${i}/${ITERS} opt";  run_${wl} opt  "$i"
-              reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_${wl} base "$i"
+              if [[ "$FAST_MODE" == "true" ]]; then
+                reset_state; log "${wl}: iter ${i}/${ITERS} opt";  run_gogen_${wl} opt  "$i"
+                reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_gogen_${wl} base "$i"
+              else
+                reset_state; log "${wl}: iter ${i}/${ITERS} opt"; run_${wl} opt "$i"
+                reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_${wl} base "$i"
+              fi
             done
           done
           log "all workloads done"
@@ -191,13 +234,19 @@ jobs:
       - name: Parse logs and emit summary
         if: always()
         shell: bash
+        env:
+          FAST_MODE: ${{ inputs.fast_mode }}
         run: |
           set -o pipefail
           mkdir -p /tmp/bench/logs
+          if [[ -z "${FAST_MODE:-}" ]]; then FAST_MODE=true; fi
+          fast_mode_arg=(-fast-mode=false)
+          if [[ "$FAST_MODE" == "true" ]]; then fast_mode_arg=(-fast-mode=true); fi
           /tmp/bench/render_bench_summary \
             -logs /tmp/bench/logs \
-            -iters ${{ inputs.iterations || 0}} \
+            -iters ${{ inputs.iterations || 1}} \
             -blake-n 1 \
+            "${fast_mode_arg[@]}" \
             -base-ref "${{ inputs.base_ref || 'main' }}" \
             -optim-ref "${{ inputs.optim_ref || github.event.pull_request.head.sha || github.sha }}" \
             -zkc-ref-base "${{ inputs.zkc_ref_base || 'main' }}" \

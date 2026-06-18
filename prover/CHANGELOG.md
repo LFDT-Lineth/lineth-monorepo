@@ -1,4 +1,4 @@
-## [unreleased]
+## [1.0.1] - 2026-06-18
 
 ### 🐛 Bug Fixes
 
@@ -16,6 +16,7 @@
 ### 🚜 Refactor
 
 - *(misc)* Rename Linea to Lineth across documentation and codebase (#3316)
+- *(prover-ray)* Export logderivativesum internals for verifier-ray codegen (#3354)
 
 ### ⚡ Performance
 

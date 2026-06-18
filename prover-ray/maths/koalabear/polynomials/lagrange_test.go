@@ -3,9 +3,9 @@ package polynomials
 import (
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 	"github.com/consensys/gnark-crypto/utils"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // fftExtInplace applies the FFT to each of the 6 coordinates of an []Ext slice

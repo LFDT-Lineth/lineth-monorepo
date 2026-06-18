@@ -23,10 +23,12 @@
 - *(prover)* Invalidity prover bug fixes (#3138)
 - *(prover)* Post small-fields constraints (#2845)
 - *(prover)* Populate isAllowedCircuitID in aggregation response (#3381)
+- *(e2e)* Trying to fix rare profitability issues, FTX fix (#3388)
 
 ### 🚜 Refactor
 
 - *(misc)* Rename Linea to Lineth across documentation and codebase (#3316)
+- *(prover-ray)* Export logderivativesum internals for verifier-ray codegen (#3354)
 
 ### ⚡ Performance
 

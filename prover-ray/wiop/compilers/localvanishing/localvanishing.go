@@ -54,7 +54,7 @@ package localvanishing
 import (
 	"fmt"
 
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
 // lagrangeKey identifies a Lagrange column by (module, anchor row). Cached

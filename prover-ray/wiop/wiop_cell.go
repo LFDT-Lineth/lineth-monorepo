@@ -1,6 +1,6 @@
 package wiop
 
-import "github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
+import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 
 // Cell is a scalar-valued symbolic object representing a single field element
 // that the prover assigns at runtime. It is the scalar counterpart to [Column]:

@@ -3,10 +3,10 @@ package poseidon2
 import (
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/scs"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/stretchr/testify/require"
 )
 
