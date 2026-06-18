@@ -1,3 +1,8 @@
+## [1.0.2] - 2026-06-18
+
+### ⚙️ Miscellaneous Tasks
+
+- Update gnark to a3ad59ad083caac7691cba84a497d4d7c1759d2a (#3402)
 ## [1.0.1] - 2026-06-18
 
 ### 🐛 Bug Fixes
