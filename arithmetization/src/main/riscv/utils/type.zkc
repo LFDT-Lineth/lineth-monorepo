@@ -30,3 +30,7 @@ type UnsignedDoubleWord = u64
 type Length = u64
 type Offset = u64
 
+// Semantic I-type micro-op tags (pre-decoded at ELF time).
+type ITypeComputeOp = u6
+type ITypeWriteback = u2
+

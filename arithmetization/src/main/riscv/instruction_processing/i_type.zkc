@@ -1,113 +1,74 @@
 include "../memory.zkc"
 include "../ram/read.zkc"
+include "../utils/constants.zkc"
 include "../utils/signed_comparisons.zkc"
 include "../utils/sign_extend.zkc"
 include "../utils/signed_sum.zkc"
 
 // Process a RISC-V I-type instruction and return the next program counter.
 //
-// I-type instructions share a common 25-bit encoding (opcode stripped) laid out as:
-//
-//   imm12 :: rs1 :: funct3 :: rd
-//
-// where imm12 is a 12-bit signed immediate, rs1 the source register, and rd the
-// destination register.  The `opcode` argument selects the operation group:
-//
-//   LOAD      — read from memory at address (rs1 + sign_extend(imm12)) into rd:
-//                 LB/LH/LW/LD  sign-extend the loaded value to 64 bits
-//                 LBU/LHU/LWU  zero-extend the loaded value to 64 bits
-//
-//   OP_IMM    — immediate arithmetic/logic on rs1 with sign_extend(imm12) → rd:
-//                 ADDI, SLTI, SLTIU, XORI, ORI, ANDI
-//               shift instructions use the upper bits of imm12 as funct6 and the
-//               lower bits as a 6-bit shift amount (uimm6):
-//                 SLLI, SRLI, SRAI
-//
-//   OP_IMM_32 — RV64 word-width (*W) variants; result is sign-extended from 32 bits:
-//                 ADDIW; shift variants use a 5-bit amount (uimm5): SLLIW, SRLIW, SRAIW
-//
-//   JALR      — jump-and-link register:
-//                 new_pc = (rs1 + sign_extend(imm12)) with LSB cleared
-//                 rd     = pc + 4  (return address)
-//
-//   SYSTEM    — system calls (not yet implemented)
-//
-// For all opcodes except JALR, new_pc = pc + 4 (sequential fall-through).
-fn process_I_type_instruction<ram, registers>(index:u64, opcode:Opcode, pc:Address) -> (new_pc:Address) {
+// I-type semantics are pre-decoded at ELF time into a semantic compute op,
+// a writeback kind, and operands (see decoded_itype in memory.zkc). Runtime
+// execution is a flat switch on compute_op (READ*, OP*, JALR, ECALL, …)
+// followed by a separate STORE_REG writeback step when applicable.
+fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:Address) {
 
-    // The I-type field split (imm12 :: rs1 :: funct3 :: rd) is pre-decoded
-    // externally (see decoded_itype in memory.zkc) and looked up by index.
-    var funct3:Funct3
+    var compute_op:ITypeComputeOp
+    var writeback:ITypeWriteback
     var imm12:Imm12
     var rs1:Register
     var rd:Register
-    funct3, imm12, rs1, rd = decoded_itype[index]
+    compute_op, writeback, imm12, rs1, rd = decoded_itype[index]
 
     var signext_imm12_64:DoubleWord = sgn_extension_u12_u64(imm12)
-    // Used as an Address in the LOAD instructions and as a DoubleWord in the OP-IMM and JALR instructions
     var rs1_plus_signext_imm12:u64 = signed_sum_of_double_word(registers[rs1], signext_imm12_64)
-
-    //TODO: this is the default case, we will overwrite it for JALR.
-    // We should handle this differently to avoid a potential second row just to overwrite the value of new_pc?
+    var result:DoubleWord
     new_pc = (pc + 4) as Address
 
-    switch opcode {
+    switch compute_op {
 
         // ===============================
-        // ----- LOAD (opcode LOAD) -----
+        // ----- READ (loads) -----
         // ===============================
 
-        case LOAD: {
-            var loaded:DoubleWord
-            switch funct3 {
-                case FUNCT3_LB: {
-                    printf "LB "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    loaded = sgn_extension_u8_u64(read_8(rs1_plus_signext_imm12))
-                }
-                case FUNCT3_LH: {
-                    printf "LH "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    loaded = sgn_extension_u16_u64(read_16(rs1_plus_signext_imm12))
-                }
-                case FUNCT3_LW: {
-                    printf "LW "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    loaded = sgn_extension_u32_u64(read_32(rs1_plus_signext_imm12))
-                }
-                case FUNCT3_LBU: {
-                    printf "LBU "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    loaded = read_8(rs1_plus_signext_imm12) as DoubleWord
-                }
-                case FUNCT3_LHU: {
-                    printf "LHU "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    loaded = read_16(rs1_plus_signext_imm12) as DoubleWord
-                }
-                case FUNCT3_LWU: {
-                    printf "LWU "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    loaded = read_32(rs1_plus_signext_imm12) as DoubleWord
-                }
-                case FUNCT3_LD: {
-                    printf "LD "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    loaded = read_64(rs1_plus_signext_imm12) as DoubleWord
-                }
-                default: {
-                    printf "[ERROR] Unsupported LOAD instruction of I-Type\n"
-                    printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
-                    fail
-                }
-            }
-            if (rd != 0) {
-                registers[rd] = loaded
-            }
+        case READ8_SGN: {
+            printf "LB "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            result = sgn_extension_u8_u64(read_8(rs1_plus_signext_imm12))
+        }
+        case READ16_SGN: {
+            printf "LH "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            result = sgn_extension_u16_u64(read_16(rs1_plus_signext_imm12))
+        }
+        case READ32_SGN: {
+            printf "LW "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            result = sgn_extension_u32_u64(read_32(rs1_plus_signext_imm12))
+        }
+        case READ64: {
+            printf "LD "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            result = read_64(rs1_plus_signext_imm12) as DoubleWord
+        }
+        case READ8_ZEXT: {
+            printf "LBU "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            result = read_8(rs1_plus_signext_imm12) as DoubleWord
+        }
+        case READ16_ZEXT: {
+            printf "LHU "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            result = read_16(rs1_plus_signext_imm12) as DoubleWord
+        }
+        case READ32_ZEXT: {
+            printf "LWU "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            result = read_32(rs1_plus_signext_imm12) as DoubleWord
         }
 
         // ===================================
-        // ----- OP-IMM (opcode OP_IMM) -----
+        // ----- OP-IMM -----
         // ===================================
 
         case OP_IMM: {
@@ -239,44 +200,108 @@ fn process_I_type_instruction<ram, registers>(index:u64, opcode:Opcode, pc:Addre
                 }
             }
         }
+        case OP_XORI: {
+            printf "XORI "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            result = registers[rs1] ^ signext_imm12_64
+        }
+        case OP_SRLI: {
+            var uimm6:UImm6 = imm12 as UImm6
+            printf "SRLI "
+            print_i_shift6_operands(rd, rs1, uimm6)
+            result = registers[rs1] >> uimm6
+        }
+        case OP_SRAI: {
+            var uimm6:UImm6 = imm12 as UImm6
+            printf "SRAI "
+            print_i_shift6_operands(rd, rs1, uimm6)
+            result = _ashr_u64(registers[rs1], uimm6)
+        }
+        case OP_ORI: {
+            printf "ORI "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            result = registers[rs1] | signext_imm12_64
+        }
+        case OP_ANDI: {
+            printf "ANDI "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            result = registers[rs1] & signext_imm12_64
+        }
+
+        // ===================================
+        // ----- OP-IMM-32 (RV64 *W) -----
+        // ===================================
+
+        case OP_ADDIW: {
+            printf "ADDIW "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            result = sgn_extension_u32_u64((rs1_plus_signext_imm12 & MAX_UINT_32_AS_U64) as Word)
+        }
+        case OP_SLLIW: {
+            var uimm5:UImm5 = imm12 as UImm5
+            printf "SLLIW "
+            print_i_shift5_operands(rd, rs1, uimm5)
+            result = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) << uimm5)
+        }
+        case OP_SRLIW: {
+            var uimm5:UImm5 = imm12 as UImm5
+            printf "SRLIW "
+            print_i_shift5_operands(rd, rs1, uimm5)
+            result = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) >> uimm5)
+        }
+        case OP_SRAIW: {
+            var uimm5:UImm5 = imm12 as UImm5
+            printf "SRAIW "
+            print_i_shift5_operands(rd, rs1, uimm5)
+            result = sgn_extension_u32_u64(_ashr_u32(registers[rs1], uimm5))
+        }
 
         // =================
         // ----- JALR -----
         // =================
 
-        case JALR: {
+        case ITYPE_JALR: {
             printf "JALR "
             print_i_memory_operands(rd, rs1, signext_imm12_64)
-            // only instruction is JALR, no need to switch over funct3
-            var link:DoubleWord = (pc + 4) as DoubleWord
+            result = (pc + 4) as DoubleWord
             new_pc = rs1_plus_signext_imm12 & MASK_64_ERASE_LAST_BIT
-            if (rd != 0) {
-                registers[rd] = link
-            }
         }
 
         // ===================
         // ----- SYSTEM -----
         // ===================
 
-        case SYSTEM: {
-            // note: same funct3 for ECALL and EBREAK
-            if funct3 == FUNCT3_ECALL {
-                // imm12 is interpreted as funct12 for SYSTEM opcode
-                if imm12 == FUNCT12_ECALL {
-                    printf "ECALL\n"
-                    new_pc = process_syscall(pc)
-                } else if imm12 == FUNCT12_EBREAK {
-                    printf "[ERROR] EBREAK instruction triggered\n"
-                }
-            } else {
-                printf "[ERROR] SYSTEM instruction with funct3 %b has been triggered, not implemented\n", funct3
-            }
+        case ITYPE_ECALL: {
+            printf "ECALL\n"
+            new_pc = process_syscall(pc)
+            return
         }
-
+        case ITYPE_EBREAK: {
+            printf "[ERROR] EBREAK instruction triggered\n"
+            fail
+        }
+        case ITYPE_INVALID: {
+            printf "[ERROR] Unsupported I-Type instruction (invalid semantic op)\n"
+            fail
+        }
         default: {
             printf "[ERROR] Unsupported I-Type instruction with\n"
-            printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
+            printf "\tcompute_op ≡ %x\n", compute_op
+            fail
+        }
+    }
+
+    switch writeback {
+        case WB_STORE_REG: {
+            if (rd != 0) {
+                registers[rd] = result
+            }
+        }
+        case WB_NONE: {
+            // no register writeback
+        }
+        default: {
+            printf "[ERROR] Unsupported I-Type writeback %d\n", writeback
             fail
         }
     }
