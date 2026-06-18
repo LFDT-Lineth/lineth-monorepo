@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"math/bits"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poly"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/poly"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // LagrangeEval is a [Query] that evaluates a batch of polynomials at a single

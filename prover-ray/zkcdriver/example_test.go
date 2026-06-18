@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/files"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	"github.com/consensys/go-corset/pkg/zkc/constraints"
 	zkc_util "github.com/consensys/go-corset/pkg/zkc/util"
-	"github.com/consensys/linea-monorepo/prover-ray/utils/files"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
-	"github.com/consensys/linea-monorepo/prover-ray/zkcdriver"
 )
 
 // zkcTestCase represents a zkc testcase. The user only needs to populate

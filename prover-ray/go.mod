@@ -1,4 +1,4 @@
-module github.com/consensys/linea-monorepo/prover-ray
+module github.com/LFDT-Lineth/lineth-monorepo/prover-ray
 
 go 1.25.7
 

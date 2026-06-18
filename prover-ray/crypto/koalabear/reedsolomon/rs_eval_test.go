@@ -3,9 +3,9 @@ package reedsolomon
 import (
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poly"
 	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
-	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/poly"
 )
 
 func TestEvaluateOnExtendedDomainRootMatchesEncode(t *testing.T) {

@@ -3,10 +3,10 @@ package fri
 import (
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/commitment"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/hash"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark-crypto/field/koalabear"
-	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/commitment"
-	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/hash"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
 func TestCheckQueryRejectsOpeningAtWrongLeafIndex(t *testing.T) {

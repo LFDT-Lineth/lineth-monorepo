@@ -3,8 +3,8 @@ package fiatshamirrefactor
 import (
 	"errors"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/hash"
 	"github.com/consensys/gnark-crypto/field/koalabear"
-	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/hash"
 )
 
 // errChallengeNotFound is returned when a wrong challenge name is provided.

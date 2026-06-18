@@ -3,7 +3,7 @@ package commitment
 import (
 	"fmt"
 
-	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/hash"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/hash"
 )
 
 const (
