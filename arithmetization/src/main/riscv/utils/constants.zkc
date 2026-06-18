@@ -302,3 +302,43 @@ const MASK_64_ERASE_LAST_BIT:u64 = 0xfffffffffffffffe
 // ======================
 const EXIT_SYSCALL:DoubleWord = 93
 const WRITE_SYSCALL:DoubleWord = 64
+
+// ======================
+// I-type semantic micro-ops (pre-decoded)
+// ======================
+
+// READ — load from memory at (rs1 + sign_extend(imm12))
+const READ8_SGN:ITypeComputeOp = 0
+const READ16_SGN:ITypeComputeOp = 1
+const READ32_SGN:ITypeComputeOp = 2
+const READ64:ITypeComputeOp = 3
+const READ8_ZEXT:ITypeComputeOp = 4
+const READ16_ZEXT:ITypeComputeOp = 5
+const READ32_ZEXT:ITypeComputeOp = 6
+
+// OP-IMM — immediate arithmetic/logic on rs1
+const OP_ADDI:ITypeComputeOp = 7
+const OP_SLTI:ITypeComputeOp = 8
+const OP_SLTIU:ITypeComputeOp = 9
+const OP_XORI:ITypeComputeOp = 10
+const OP_ORI:ITypeComputeOp = 11
+const OP_ANDI:ITypeComputeOp = 12
+const OP_SLLI:ITypeComputeOp = 13
+const OP_SRLI:ITypeComputeOp = 14
+const OP_SRAI:ITypeComputeOp = 15
+
+// OP-IMM-32 — RV64 word-width (*W) variants
+const OP_ADDIW:ITypeComputeOp = 16
+const OP_SLLIW:ITypeComputeOp = 17
+const OP_SRLIW:ITypeComputeOp = 18
+const OP_SRAIW:ITypeComputeOp = 19
+
+// Control / system
+const ITYPE_JALR:ITypeComputeOp = 20
+const ITYPE_ECALL:ITypeComputeOp = 21
+const ITYPE_EBREAK:ITypeComputeOp = 22
+const ITYPE_INVALID:ITypeComputeOp = 63
+
+// Writeback kinds (second micro-step after compute)
+const WB_NONE:ITypeWriteback = 0
+const WB_STORE_REG:ITypeWriteback = 1
