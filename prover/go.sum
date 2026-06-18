@@ -75,8 +75,8 @@ github.com/cncf/udpa/go v0.0.0-20200629203442-efcf912fb354/go.mod h1:WmhPx2Nbnht
 github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
 github.com/consensys/compress v0.3.0 h1:HRIcHvWkW9C9req0ZWg7mhYHzBarohXhcszIwHONVkM=
 github.com/consensys/compress v0.3.0/go.mod h1:pyM+ZXiNUh7/0+AUjUf9RKUM6vSH7T/fsn5LLS0j1Tk=
-github.com/consensys/gnark v0.15.1-0.20260526132122-c62f696e965f h1:jDznn3tPCxRdqfsL+VBZcUSbDmo8zUWCDCd0zv49NJM=
-github.com/consensys/gnark v0.15.1-0.20260526132122-c62f696e965f/go.mod h1:RIWXG9Gl+Ls2enSayeA/NdcM/FI3OOf6AqNdI2Jv8QU=
+github.com/consensys/gnark v0.15.1-0.20260612091543-a3ad59ad083c h1:OUYdQjZKpLruU0jehbE+TWo44kmPztLU15Lj2HCkIvg=
+github.com/consensys/gnark v0.15.1-0.20260612091543-a3ad59ad083c/go.mod h1:RIWXG9Gl+Ls2enSayeA/NdcM/FI3OOf6AqNdI2Jv8QU=
 github.com/consensys/gnark-crypto v0.20.2-0.20260518142632-dffbd6f30adb h1:62p/9G5DyYLN5gF1QnyGFV4p2md/zTTthyN01jgMSQo=
 github.com/consensys/gnark-crypto v0.20.2-0.20260518142632-dffbd6f30adb/go.mod h1:NzeBHSZ49bIM7RtrNTYYR2kymTqwvI/A4eTgQlyQc+Q=
 github.com/consensys/go-corset v1.2.10 h1:uKUICiHmERuMWzDRiRJr285fV2WncNGiCENSdNcQodY=
