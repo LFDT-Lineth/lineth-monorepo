@@ -42,7 +42,7 @@ In addition to the original keys (`entry_point_and_blobs_count`,
 | ------------------ | ------------------------------------------------------ | ---------------------------------------------------------- |
 | `instruction_base` | `base:Address`                                         | base address used to map `pc` → table index               |
 | `decoded_core`     | `opcode, instruction_type, instruction_parameters`     | `instruction_parameters::opcode = instruction` + type map  |
-| `decoded_itype`    | `funct3, signext_imm12_64, rs1, rd`                   | `imm12::rs1::funct3::rd = instruction_parameters` + `sgn_extension_u12_u64` |
+| `decoded_itype`    | `funct3, imm12, rs1, rd`                               | `imm12::rs1::funct3::rd = instruction_parameters`          |
 | `decoded_rtype`    | `funct7, rs2, rs1, funct3, rd`                         | `funct7::rs2::rs1::funct3::rd = instruction_parameters`    |
 | `decoded_stype`    | `imm12, rs2, rs1, funct3`                              | `imm_sign::uimm6::rs2::rs1::funct3::uimm5 = instruction_parameters` |
 | `decoded_btype`    | `imm, rs2, rs1, funct3`                                | `imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters` + sign-aware reassembly |
@@ -52,11 +52,6 @@ In addition to the original keys (`entry_point_and_blobs_count`,
 Each value is a single `0x…` hex string. The field set and order of every table
 **must** match the corresponding `pub input` declaration in
 `arithmetization/src/main/riscv/memory.zkc`.
-
-For I-type the 12-bit signed immediate is pre-sign-extended into a single 64-bit
-`signext_imm12_64`, so `i_type.zkc` does no runtime sign extension. Its low 12
-bits still carry the raw `imm12`, which the interpreter recovers for the
-shift-amount / funct6 / funct7 / funct12 fields.
 
 For S-type the 12-bit store immediate is reassembled
 (`imm[11] :: imm[10:5] :: imm[4:0]`) into a single `imm12` field, so the
@@ -107,7 +102,7 @@ size is the sum of its field widths:
 | Table           | Field widths (bits)            | Record size |
 | --------------- | ------------------------------ | ----------- |
 | `decoded_core`  | opcode 7, type 3, params 25    | 35 bits     |
-| `decoded_itype` | funct3 3, signext_imm12_64 64, rs1 5, rd 5 | 77 bits |
+| `decoded_itype` | funct3 3, imm12 12, rs1 5, rd 5| 25 bits     |
 | `decoded_rtype` | funct7 7, rs2 5, rs1 5, funct3 3, rd 5 | 25 bits |
 | `decoded_stype` | imm12 12, rs2 5, rs1 5, funct3 3 | 25 bits   |
 | `decoded_btype` | imm 64, rs2 5, rs1 5, funct3 3 | 77 bits |
