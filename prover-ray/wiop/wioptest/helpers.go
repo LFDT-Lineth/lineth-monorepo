@@ -1,8 +1,8 @@
 package wioptest
 
 import (
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
 // baseVec returns a ConcreteVector of length n where every element equals val.

@@ -3,9 +3,9 @@ package fri
 import (
 	"errors"
 
-	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/poseidon2"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 )
 
 // Tree is a Merkle tree for multi-size FRI. The tree is 3-ary, each node may

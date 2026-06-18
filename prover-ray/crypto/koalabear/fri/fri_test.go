@@ -6,10 +6,10 @@ import (
 	"math/rand/v2"
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/polynomials"
-	"github.com/consensys/linea-monorepo/prover-ray/utils"
 )
 
 // bitReverseIdx returns the nbits-wide bit-reversal of i (matching the slice

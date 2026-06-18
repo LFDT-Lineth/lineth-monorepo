@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // ProverState drives the FRI commit and query phases as a coin-fed state

@@ -6,11 +6,11 @@ import (
 	"math/big"
 	"math/bits"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 	gutils "github.com/consensys/gnark-crypto/utils"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/utils"
 )
 
 // Params holds the FRI configuration and precomputed per-level data.

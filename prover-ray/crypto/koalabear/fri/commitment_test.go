@@ -3,7 +3,7 @@ package fri
 import (
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // tableOfSize builds a SizedTable holding one base row and one ext row of the

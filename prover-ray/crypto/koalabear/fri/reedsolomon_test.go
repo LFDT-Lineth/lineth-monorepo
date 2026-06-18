@@ -4,11 +4,11 @@ import (
 	"math/rand/v2"
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 	gutils "github.com/consensys/gnark-crypto/utils"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/polynomials"
-	"github.com/consensys/linea-monorepo/prover-ray/utils"
 )
 
 func TestEvaluateOnExtendedDomainRootMatchesEncode(t *testing.T) {

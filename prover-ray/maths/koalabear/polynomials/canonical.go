@@ -1,7 +1,7 @@
 package polynomials
 
 import (
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // evalNative evaluates p(X) = Σᵢ p[i]·Xⁱ at z using Horner's method.

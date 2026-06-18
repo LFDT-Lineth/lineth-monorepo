@@ -5,8 +5,8 @@ import (
 	"slices"
 	"sort"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // Vanishing is a [Query] asserting that an expression evaluates to zero. It

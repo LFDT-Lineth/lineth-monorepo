@@ -3,8 +3,8 @@ package fri
 import (
 	"math/bits"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // RSEncoder is a Reed-Solomon error correcting-code encoder and decoder.
