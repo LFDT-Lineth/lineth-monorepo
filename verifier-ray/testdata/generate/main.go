@@ -1014,7 +1014,6 @@ func extSlice(values []field.Ext) string {
 	return ".{ " + strings.Join(parts, ", ") + " }"
 }
 
-
 func commitmentSlice(values []field.Octuplet) string {
 	parts := make([]string, len(values))
 	for i, value := range values {

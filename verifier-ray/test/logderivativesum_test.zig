@@ -33,10 +33,11 @@ fn baseScalar(v: u32) protocol.Scalar {
     return .{ .base = field.Element.init(v) };
 }
 
+const zero = baseScalar(0);
+const three = baseScalar(3);
+const four = baseScalar(4);
 const five = baseScalar(5);
 const seven = baseScalar(7);
-const three = baseScalar(3);
-const zero = baseScalar(0);
 // twoRefSystem returns a System with one query that has two z_final_refs
 // (indices 0 and 1) summed against result at index 2.
 fn twoRefSystem() logderivativesum.System {
@@ -80,7 +81,7 @@ test "lookup accepts a zero aggregated result" {
 
 test "logderiv accepts multiple z_final_refs that sum to result" {
     // z_final[0]=3, z_final[1]=4, result=7 (3+4==7)
-    const cells: []const protocol.Scalar = &[_]protocol.Scalar{ three, baseScalar(4), seven };
+    const cells: []const protocol.Scalar = &[_]protocol.Scalar{ three, four, seven };
     try logderivativesum.verify(twoRefSystem(), makeCtx(cells));
 }
 
