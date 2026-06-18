@@ -53,4 +53,3 @@ pub fn verify(comptime system: System, ctx: protocol.Context) Error!void {
         if (query.result_is_zero and !result.isZero()) return error.LookupResultNonZero;
     }
 }
-

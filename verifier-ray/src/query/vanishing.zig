@@ -211,7 +211,6 @@ fn evalExpr(
     };
 }
 
-
 fn evalOp(
     comptime module: Module,
     comptime op: ExprOp,
