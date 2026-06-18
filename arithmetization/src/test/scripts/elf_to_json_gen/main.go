@@ -53,6 +53,7 @@ const (
 	opcodeLUI     = 0b0110111
 	opcodeAUIPC   = 0b0010111
 	opcodeJAL     = 0b1101111
+	opcodeCUSTOM1 = 0b0101011
 )
 
 // defaultMaxDecodedRecords caps the number of pre-decoded instruction records
@@ -81,6 +82,75 @@ func instructionTypeFromOpcode(opcode uint32) uint32 {
 		return miscMemType
 	default:
 		return undefinedType
+	}
+}
+
+// isRdZeroNoop reports whether an instruction only discards its result into x0
+// and has no other architecturally visible effects (no memory access, no
+// control-flow change, no non-x0 register reads). Such slots are rewritten to
+// MISC_MEM_TYPE at pre-decode time so the interpreter only advances PC by 4.
+func isRdZeroNoop(opcode, instrType, rd, rs1, rs2, funct3, imm12, funct7 uint32) bool {
+	if rd != 0 {
+		return false
+	}
+	switch instrType {
+	case rType:
+		// Custom-1 includes the Keccak precompile, which has memory side effects.
+		if opcode == opcodeCUSTOM1 {
+			return false
+		}
+		return rs1 == 0 && rs2 == 0
+	case uType:
+		return opcode == opcodeLUI
+	case iType:
+		switch opcode {
+		case opcodeLOAD, opcodeJALR, opcodeSYSTEM:
+			return false
+		case opcodeOPIMM:
+			if rs1 != 0 {
+				return false
+			}
+			return opImmEncodingSupported(funct3, imm12)
+		case opcodeOPIMM32:
+			if rs1 != 0 {
+				return false
+			}
+			return opImm32EncodingSupported(funct3, imm12)
+		default:
+			return false
+		}
+	default:
+		return false
+	}
+}
+
+// opImmEncodingSupported mirrors the OP-IMM funct3 arms implemented in i_type.zkc.
+func opImmEncodingSupported(funct3, imm12 uint32) bool {
+	funct6 := (imm12 >> 6) & 0x3f
+	switch funct3 {
+	case 0b000, 0b010, 0b011, 0b100, 0b110, 0b111: // ADDI, SLTI, SLTIU, XORI, ORI, ANDI
+		return true
+	case 0b001: // SLLI
+		return funct6 == 0b000000
+	case 0b101: // SRLI / SRAI
+		return funct6 == 0b000000 || funct6 == 0b010000
+	default:
+		return false
+	}
+}
+
+// opImm32EncodingSupported mirrors the OP-IMM-32 arms implemented in i_type.zkc.
+func opImm32EncodingSupported(funct3, imm12 uint32) bool {
+	funct7FromImm := (imm12 >> 5) & 0x7f
+	switch funct3 {
+	case 0b000: // ADDIW
+		return true
+	case 0b001: // SLLIW
+		return funct7FromImm == 0b0000000
+	case 0b101: // SRLIW / SRAIW
+		return funct7FromImm == 0b0000000 || funct7FromImm == 0b0100000
+	default:
+		return false
 	}
 }
 
@@ -343,13 +413,8 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	//   decoded_itype: funct3:Funct3(u3), imm12:Imm12(u12), rs1:Register(u5), rd:Register(u5)
 	//   decoded_rtype: funct7:Funct7(u7), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3), rd:Register(u5)
 	//   decoded_stype: imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3)
-<<<<<<< HEAD
-	//   decoded_btype: imm:DoubleWord(u64), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3)
-	//   decoded_jtype: imm:DoubleWord(u64), rd:Register(u5)
-=======
 	//   decoded_btype: imm_sign:u1, imm_10_5:u6, rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3), imm_4_1:u4, imm_11:u1
-	//   decoded_jtype: imm20:u1, imm10_1:u10, imm11:u1, imm19_12:u8, rd:Register(u5)
->>>>>>> parent of bd31cffd9 (feat: improve b-type)
+	//   decoded_jtype: imm:DoubleWord(u64), rd:Register(u5)
 	//   decoded_utype: imm20:Imm20(u20), rd:Register(u5)
 	var (
 		coreBits  bitWriter
@@ -365,14 +430,17 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 
 		opcode := instr & 0x7f
 		params := (instr >> 7) & 0x1ffffff
-		instrType := instructionTypeFromOpcode(opcode)
-
 		rd := (instr >> 7) & 0x1f
 		funct3 := (instr >> 12) & 0x7
 		rs1 := (instr >> 15) & 0x1f
 		rs2 := (instr >> 20) & 0x1f
 		imm12 := (instr >> 20) & 0xfff
 		funct7 := (instr >> 25) & 0x7f
+
+		instrType := instructionTypeFromOpcode(opcode)
+		if isRdZeroNoop(opcode, instrType, rd, rs1, rs2, funct3, imm12, funct7) {
+			instrType = miscMemType
+		}
 
 		// S-type immediate is split in the encoding (imm[11] :: imm[10:5] :: imm[4:0]);
 		// reassemble it into the 12-bit store immediate.

@@ -45,13 +45,8 @@ In addition to the original keys (`entry_point_and_blobs_count`,
 | `decoded_itype`    | `funct3, imm12, rs1, rd`                               | `imm12::rs1::funct3::rd = instruction_parameters`          |
 | `decoded_rtype`    | `funct7, rs2, rs1, funct3, rd`                         | `funct7::rs2::rs1::funct3::rd = instruction_parameters`    |
 | `decoded_stype`    | `imm12, rs2, rs1, funct3`                              | `imm_sign::uimm6::rs2::rs1::funct3::uimm5 = instruction_parameters` |
-<<<<<<< HEAD
-| `decoded_btype`    | `imm, rs2, rs1, funct3`                                | `imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters` + sign-aware reassembly |
-| `decoded_jtype`    | `imm, rd`                                              | `imm20::imm10_1::imm11::imm19_12::rd = instruction_parameters` + sign-aware reassembly |
-=======
 | `decoded_btype`    | `imm_sign, imm_10_5, rs2, rs1, funct3, imm_4_1, imm_11`| `imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters` |
-| `decoded_jtype`    | `imm20, imm10_1, imm11, imm19_12, rd`                  | `imm20::imm10_1::imm11::imm19_12::rd = instruction_parameters` |
->>>>>>> parent of bd31cffd9 (feat: improve b-type)
+| `decoded_jtype`    | `imm, rd`                                              | `imm20::imm10_1::imm11::imm19_12::rd = instruction_parameters` + sign-aware reassembly |
 | `decoded_utype`    | `imm20, rd`                                            | `imm20::rd = instruction_parameters`                       |
 
 Each value is a single `0x…` hex string. The field set and order of every table
@@ -62,19 +57,33 @@ For S-type the 12-bit store immediate is reassembled
 (`imm[11] :: imm[10:5] :: imm[4:0]`) into a single `imm12` field, so the
 interpreter no longer has to recombine the split immediate.
 
-<<<<<<< HEAD
-For B-type the 13-bit signed branch offset is *fully resolved* at decode time:
-since the sign bit is statically known, the offset is sign-extended into a single
-ready-to-use 64-bit `imm`, so `b_type.zkc` does no reconstruction or branching.
+For J-type the 21-bit signed jump offset is sign-extended into a single 64-bit
+`imm` at decode time, so `j_type.zkc` does no shift or sign extension at runtime.
 
-J-type is resolved the same way: the 21-bit signed jump offset is sign-extended
-into a single 64-bit `imm` at decode time, so `j_type.zkc` does no shift or sign
-extension.
-=======
-For B-type and J-type the immediate is left split into the same sub-fields the
-interpreter already destructures, so the (non-trivial, sign-aware) immediate
-reconstruction stays in `b_type.zkc` / `j_type.zkc` unchanged.
->>>>>>> parent of bd31cffd9 (feat: improve b-type)
+## Static rd=x0 no-op folding
+
+Some encodings write their result to `x0`, which RISC-V discards. When an
+instruction has **no other visible effects** (no memory access, no control-flow
+change, no non-`x0` register reads), `buildDecodedProgram` rewrites
+`decoded_core[i].instruction_type` to `MISC_MEM_TYPE` (7).
+
+At runtime the interpreter then only advances `pc` by 4 — the same path used for
+`FENCE` / `FENCE.I`.
+
+Examples folded:
+
+- `addi x0, x0, imm` (NOP / hint)
+- `lui x0, imm`
+- `add/xor/… x0, x0, x0` (R-type with `rs1 = rs2 = x0`)
+
+Not folded (still have side effects):
+
+- `ld x0, …` — memory read
+- `jal/jalr x0, …` — control flow
+- `addi x0, t0, imm` — reads `t0`
+- `auipc x0, imm` — uses PC in the computation
+
+The predicate lives in `isRdZeroNoop` in `main.go` (see `main_test.go`).
 
 ## How the pre-decoding is done
 
@@ -92,7 +101,7 @@ All of this happens in `buildDecodedProgram`:
 4. **Decode each word.** Read the little-endian 32-bit instruction and extract
    fields with shifts/masks. `instructionTypeFromOpcode` reproduces the ZkC
    `instruction_type_from_opcode` mapping (and the constants mirror
-   `constants.zkc`).
+   `constants.zkc`). `isRdZeroNoop` may rewrite the type to `MISC_MEM_TYPE`.
 5. **Bit-pack each table** (see below).
 6. **Hex-encode** each bit buffer into the hex string for its JSON key.
 
@@ -116,13 +125,8 @@ size is the sum of its field widths:
 | `decoded_itype` | funct3 3, imm12 12, rs1 5, rd 5| 25 bits     |
 | `decoded_rtype` | funct7 7, rs2 5, rs1 5, funct3 3, rd 5 | 25 bits |
 | `decoded_stype` | imm12 12, rs2 5, rs1 5, funct3 3 | 25 bits   |
-<<<<<<< HEAD
-| `decoded_btype` | imm 64, rs2 5, rs1 5, funct3 3 | 77 bits |
-| `decoded_jtype` | imm 64, rd 5 | 69 bits |
-=======
 | `decoded_btype` | imm_sign 1, imm_10_5 6, rs2 5, rs1 5, funct3 3, imm_4_1 4, imm_11 1 | 25 bits |
-| `decoded_jtype` | imm20 1, imm10_1 10, imm11 1, imm19_12 8, rd 5 | 25 bits |
->>>>>>> parent of bd31cffd9 (feat: improve b-type)
+| `decoded_jtype` | imm 64, rd 5 | 69 bits |
 | `decoded_utype` | imm20 20, rd 5 | 25 bits |
 
 > Important: if you change a field's type/width in `memory.zkc`, update the
