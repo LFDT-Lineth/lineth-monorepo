@@ -30,7 +30,7 @@ func WriteLogDerivSystemZig(w io.Writer, index int, system LogDerivSystem) error
 
 func WriteLogDerivSystemZigWithOptions(w io.Writer, index int, system LogDerivSystem, opts LogDerivZigOptions) error {
 	tmpl, err := template.New("logderiv").Funcs(template.FuncMap{
-		"zig": zigString,
+		"zig": ZigString,
 	}).Parse(logDerivZigTemplate)
 	if err != nil {
 		return err

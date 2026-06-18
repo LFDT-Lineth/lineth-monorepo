@@ -58,10 +58,10 @@ func WriteVanishingSystemZigWithOptions(w io.Writer, index int, system Vanishing
 func executeVanishingTemplate(w io.Writer, data vanishingTemplateData) error {
 	tmpl, err := template.New("vanishing_scenarios").Funcs(template.FuncMap{
 		"expr":       exprNodeLiteral,
-		"ints":       intSlice,
+		"ints":       IntSlice,
 		"intArray":   intArray,
 		"moduleSize": moduleSizeLiteral,
-		"zig":        zigString,
+		"zig":        ZigString,
 	}).Parse(vanishingScenariosTemplate)
 	if err != nil {
 		return err
@@ -168,15 +168,15 @@ const system_{{$case.Index}} = vanishing.System{
 func exprNodeLiteral(expr ExprNode) string {
 	switch expr.Kind {
 	case ExprColumnClaim:
-		return fmt.Sprintf(".{ .column_claim = %d }, // col: \"%s\"", expr.ColumnClaim, zigString(expr.ColumnSourceName))
+		return fmt.Sprintf(".{ .column_claim = %d }, // col: \"%s\"", expr.ColumnClaim, ZigString(expr.ColumnSourceName))
 	case ExprCellValue:
-		return fmt.Sprintf(".{ .cell_value = .{ .round = %d, .index = %d } }, // cell: \"%s\"", expr.Cell.Round, expr.Cell.Index, zigString(expr.Cell.SourceName))
+		return fmt.Sprintf(".{ .cell_value = .{ .round = %d, .index = %d } }, // cell: \"%s\"", expr.Cell.Round, expr.Cell.Index, ZigString(expr.Cell.SourceName))
 	case ExprCoinValue:
-		return fmt.Sprintf(".{ .coin_value = %d }, // coin: \"%s\"", expr.Coin.FlatIndex, zigString(expr.Coin.SourceName))
+		return fmt.Sprintf(".{ .coin_value = %d }, // coin: \"%s\"", expr.Coin.FlatIndex, ZigString(expr.Coin.SourceName))
 	case ExprConstant:
 		return fmt.Sprintf(".{ .constant = field.Element.init(%d) },", expr.Constant.Uint64())
 	case ExprOp:
-		return fmt.Sprintf(".{ .op = .{ .operator = .%s, .operands = &%s } },", expr.Operator, intSlice(expr.Operands))
+		return fmt.Sprintf(".{ .op = .{ .operator = .%s, .operands = &%s } },", expr.Operator, IntSlice(expr.Operands))
 	case ExprLagrangeSelector:
 		return fmt.Sprintf(".{ .lagrange_selector = %d },", expr.SelectorPosition)
 	default:
@@ -191,7 +191,7 @@ func moduleSizeLiteral(size ModuleSize) string {
 	return fmt.Sprintf(".{ .static = %d }", size.StaticSize)
 }
 
-func intSlice(values []int) string {
+func IntSlice(values []int) string {
 	return "." + intArray(values)
 }
 
@@ -203,6 +203,6 @@ func intArray(values []int) string {
 	return "{ " + strings.Join(parts, ", ") + " }"
 }
 
-func zigString(value string) string {
+func ZigString(value string) string {
 	return strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(value)
 }

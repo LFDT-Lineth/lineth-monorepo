@@ -849,7 +849,7 @@ func writeCompiledHeader(out *bytes.Buffer) {
 
 func writeCompiledScenario(out *bytes.Buffer, idx int, tc fixtureCase) {
 	fmt.Fprintf(out, "const scenario_%d = Scenario{\n", idx)
-	fmt.Fprintf(out, "    .name = \"%s\",\n", zigString(tc.name))
+	fmt.Fprintf(out, "    .name = \"%s\",\n", codegen.ZigString(tc.name))
 	fmt.Fprintf(out, "    .spec = system_%d_spec,\n", idx)
 	fmt.Fprintf(out, "    .system = system_%d,\n", idx)
 	fmt.Fprintf(out, "    .logderiv = system_%d_logderiv,\n", idx)
@@ -880,7 +880,7 @@ func writeVanishingProofView(out *bytes.Buffer, proof vanishingProofView, indent
 	fmt.Fprintf(out, "%s    },\n", indent)
 	fmt.Fprintf(out, "%s    .witness_claims = &%s,\n", indent, extSlice(proof.witnessClaims))
 	fmt.Fprintf(out, "%s    .quotient_claims = &%s,\n", indent, extSlice(proof.quotientClaims))
-	fmt.Fprintf(out, "%s    .module_sizes = &%s,\n", indent, intSlice(proof.moduleSizes))
+	fmt.Fprintf(out, "%s    .module_sizes = &%s,\n", indent, codegen.IntSlice(proof.moduleSizes))
 	fmt.Fprintf(out, "%s},\n", indent)
 }
 
@@ -1014,17 +1014,6 @@ func extSlice(values []field.Ext) string {
 	return ".{ " + strings.Join(parts, ", ") + " }"
 }
 
-func intSlice(values []int) string {
-	parts := make([]string, len(values))
-	for i, value := range values {
-		parts[i] = fmt.Sprintf("%d", value)
-	}
-	return ".{ " + strings.Join(parts, ", ") + " }"
-}
-
-func zigString(value string) string {
-	return strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(value)
-}
 
 func commitmentSlice(values []field.Octuplet) string {
 	parts := make([]string, len(values))
