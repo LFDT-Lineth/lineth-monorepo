@@ -120,28 +120,17 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
         // ===================================
 
         case OP_IMM: {
-
+            
             // for SLLI, SRLI, SRAI
             var funct6:Funct6
             var uimm6:UImm6
 
-            if funct3 == FUNCT3_ADDI {
-                printf "ADDI "
-                print_i_operands(rd, rs1, signext_imm12_64)
-                if (rd != 0) {
-                    registers[rd] = rs1_plus_signext_imm12
-                }
-            } else if funct3 == FUNCT3_SLTI {
-                printf "SLTI "
-                print_i_operands(rd, rs1, signext_imm12_64)
-                var is_lt:Boolean = signed_LT(registers[rs1], signext_imm12_64)
-                if is_lt == 1 {
+            switch funct3 {
+                case FUNCT3_ADDI: {
+                    printf "ADDI "
+                    print_i_operands(rd, rs1, signext_imm12_64)
                     if (rd != 0) {
-                        registers[rd] = 1
-                    }
-                } else {
-                    if (rd != 0) {
-                        registers[rd] = 0
+                        registers[rd] = rs1_plus_signext_imm12
                     }
                 }
                 case FUNCT3_SLLI: {
@@ -149,33 +138,45 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                     if funct6 == FUNCT6_SLLI {
                         printf "SLLI "
                         print_i_shift6_operands(rd, rs1, uimm6)
-                        write_register(rd, read_register(rs1) << uimm6)
+                        if (rd != 0) {
+                            registers[rd] = registers[rs1] << uimm6
+                        }
                     }
                 }
                 case FUNCT3_SLTI: {
                     printf "SLTI "
                     print_i_operands(rd, rs1, signext_imm12_64)
-                    var is_lt:Boolean = signed_LT(read_register(rs1), signext_imm12_64)
+                    var is_lt:Boolean = signed_LT(registers[rs1], signext_imm12_64)
                     if is_lt == 1 {
-                        write_register(rd, 1)
+                        if (rd != 0) {
+                            registers[rd] = 1
+                        }
                     } else {
-                        write_register(rd, 0)
+                        if (rd != 0) {
+                            registers[rd] = 0
+                        }
                     }
                 }
                 case FUNCT3_SLTIU: {
                     printf "SLTIU "
                     print_i_operands(rd, rs1, signext_imm12_64)
                     // Warn: this is an unsigned comparison (even if imm12 is SGN_EXT)
-                    if read_register(rs1)<signext_imm12_64 {
-                        write_register(rd, 1)
+                    if registers[rs1]<signext_imm12_64 {
+                        if (rd != 0) {
+                            registers[rd] = 1
+                        }
                     } else {
-                        write_register(rd, 0)
+                        if (rd != 0) {
+                            registers[rd] = 0
+                        }
                     }
                 }
                 case FUNCT3_XORI: {
                     printf "XORI "
                     print_i_operands(rd, rs1, signext_imm12_64)
-                    write_register(rd, read_register(rs1) ^ signext_imm12_64)
+                    if (rd != 0) {
+                        registers[rd] = registers[rs1] ^ signext_imm12_64
+                    }
                 }
                 case FUNCT3_SRLI: {
                     funct6::uimm6 = imm12
@@ -183,58 +184,30 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                     if funct6 == FUNCT6_SRLI {
                         printf "SRLI "
                         print_i_shift6_operands(rd, rs1, uimm6)
-                        write_register(rd, read_register(rs1) >> uimm6)
+                        if (rd != 0) {
+                            registers[rd] = registers[rs1] >> uimm6
+                        }
                     } else if funct6 == FUNCT6_SRAI {
                         printf "SRAI "
                         print_i_shift6_operands(rd, rs1, uimm6)
-                        write_register(rd, _ashr_u64(read_register(rs1), uimm6))
+                        if (rd != 0) {
+                            registers[rd] = _ashr_u64(registers[rs1], uimm6)
+                        }
                     }
                 }
                 case FUNCT3_ORI: {
                     printf "ORI "
                     print_i_operands(rd, rs1, signext_imm12_64)
-                    write_register(rd, read_register(rs1) | signext_imm12_64)
+                    if (rd != 0) {
+                        registers[rd] = registers[rs1] | signext_imm12_64
+                    }
                 }
                 case FUNCT3_ANDI: {
                     printf "ANDI "
                     print_i_operands(rd, rs1, signext_imm12_64)
-                    write_register(rd, read_register(rs1) & signext_imm12_64)
-                }
-            } else if funct3 == FUNCT3_XORI {
-                printf "XORI "
-                print_i_operands(rd, rs1, signext_imm12_64)
-                if (rd != 0) {
-                    registers[rd] = registers[rs1] ^ signext_imm12_64
-                }
-            } else if funct3 == FUNCT3_ORI {
-                printf "ORI "
-                print_i_operands(rd, rs1, signext_imm12_64)
-                if (rd != 0) {
-                    registers[rd] = registers[rs1] | signext_imm12_64
-                }
-            } else if funct3 == FUNCT3_ANDI {
-                printf "ANDI "
-                print_i_operands(rd, rs1, signext_imm12_64)
-                if (rd != 0) {
-                    registers[rd] = registers[rs1] & signext_imm12_64
-                }
-            } else if (funct3 == FUNCT3_SLLI) && (funct6 == FUNCT6_SLLI) {
-                printf "SLLI "
-                print_i_shift6_operands(rd, rs1, uimm6)
-                if (rd != 0) {
-                    registers[rd] = registers[rs1] << uimm6
-                }
-            } else if (funct3 == FUNCT3_SRLI) && (funct6 == FUNCT6_SRLI) {
-                printf "SRLI "
-                print_i_shift6_operands(rd, rs1, uimm6)
-                if (rd != 0) {
-                    registers[rd] = registers[rs1] >> uimm6
-                }
-            } else if (funct3 == FUNCT3_SRAI) && (funct6 == FUNCT6_SRAI) {
-                printf "SRAI "
-                print_i_shift6_operands(rd, rs1, uimm6)
-                if (rd != 0) {
-                    registers[rd] = _ashr_u64(registers[rs1], uimm6)
+                    if (rd != 0) {
+                        registers[rd] = registers[rs1] & signext_imm12_64
+                    }
                 }
             }
         }
