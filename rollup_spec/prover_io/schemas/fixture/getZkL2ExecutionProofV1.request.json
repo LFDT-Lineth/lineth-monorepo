@@ -10,10 +10,46 @@
     "parentLastProcessedFtxNumber": 100,
     "payloads": [
       {
-        "statelessInputSsz": "0x0001abcd",
-        "_debugStatelessInput": {
-          "_comment": "Review-only decoded mirror; discarded when building the guest input. Kept here to prove it is ignored.",
-          "anything": "discarded"
+        "statelessInput": {
+          "newPayloadRequest": {
+            "executionPayload": {
+              "parentHash":      "0x0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "feeRecipient":    "0x0000000000000000000000000000000000000000",
+              "stateRoot":       "0x1111111111111111111111111111111111111111111111111111111111111111",
+              "receiptsRoot":    "0x2222222222222222222222222222222222222222222222222222222222222222",
+              "logsBloom":       "0x0000000a0b0c0",
+              "prevRandao":      "0x3333333333333333333333333333333333333333333333333333333333333333",
+              "blockNumber":     1000501,
+              "gasLimit":        30000000,
+              "gasUsed":         12000000,
+              "timestamp":       1763000101,
+              "extraData":       "0x",
+              "baseFeePerGas":   "0x01",
+              "blockHash":       "0x0111111111111111111111111111111111111111111111111111111111111111",
+              "transactions":    ["0x02f86b"],
+              "withdrawals":     [],
+              "blobGasUsed":     0,
+              "excessBlobGas":   0,
+              "blockAccessList": "0x"
+            },
+            "versionedHashes": [],
+            "parentBeaconBlockRoot": "0x4444444444444444444444444444444444444444444444444444444444444444",
+            "executionRequests": {
+              "deposits": [],
+              "withdrawals": [],
+              "consolidations": []
+            }
+          },
+          "executionWitness": {
+            "state":   ["0xf800000000"],
+            "codes":   ["0x6000000000"],
+            "headers": ["0xf900000000a"]
+          },
+          "chainConfig": {
+            "chainId": 59144,
+            "forkName": "Amsterdam"
+          },
+          "publicKeys": ["0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"]
         },
         "rollupExtension": {
           "forcedTransactions": [
@@ -22,22 +58,9 @@
               "deadline": 1000599,
               "signedTxRlp": "0x02f86b",
               "acceptance": "INCLUDED"
-            }
-          ]
-        }
-      },
-      {
-        "statelessInputSsz": "0x0002abcd",
-        "rollupExtension": {
-          "forcedTransactions": [
-            {
-              "number": 17,
-              "deadline": 1000600,
-              "signedTxRlp": "0x02f86b",
-              "acceptance": "INCLUDED"
             },
             {
-              "number": 18,
+              "number": 17,
               "deadline": 1000601,
               "signedTxRlp": "0x",
               "acceptance": "FILTERED_ADDRESS_TO"
