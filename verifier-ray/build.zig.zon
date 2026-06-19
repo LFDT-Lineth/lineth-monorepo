@@ -6,6 +6,8 @@
     .dependencies = .{
         // Shared build helpers (pinned toolchain check + the freestanding rv64im guest target).
         .build_common = .{ .path = "../riscv-guests/build_common" },
+        // Linea zkVM accelerator wrappers — used by the R5 entry point (main.zig) for zkvm_exit.
+        .lineth_accelerators = .{ .path = "../riscv-guests/lineth-accelerators" },
     },
     .paths = .{
         "README.md",

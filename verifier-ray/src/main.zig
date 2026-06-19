@@ -1,5 +1,6 @@
 const builtin = @import("builtin");
 const verifier_ray = @import("verifier_ray");
+const lineth = @import("lineth_accelerators");
 
 const field = verifier_ray.field.koalabear;
 const ext = verifier_ray.field.koalabear_ext;
@@ -146,26 +147,6 @@ fn exitR5(code: u8) noreturn {
     if (comptime !is_r5_zkvm) {
         @compileError("R5 exit currently supports only R5 zkVM target");
     }
-    switch (code) {
-        0 => exitR5Success(),
-        else => exitR5Failure(),
-    }
-}
-
-fn exitR5Success() noreturn {
-    asm volatile (
-        \\li a0, 0
-        \\li a7, 93
-        \\ecall
-    );
-    unreachable;
-}
-
-fn exitR5Failure() noreturn {
-    asm volatile (
-        \\li a0, 1
-        \\li a7, 93
-        \\ecall
-    );
-    unreachable;
+    // Delegate to the Linea accelerator package's standard zkVM exit (zkvm_std.h).
+    lineth.zkvm_exit(code);
 }

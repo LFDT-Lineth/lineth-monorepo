@@ -39,6 +39,9 @@ pub fn build(b: *std.Build) void {
             .{ .name = "verifier_ray", .module = verifier_mod },
         },
     });
+    // Linea zkVM accelerator wrappers — main.zig's R5 entry point uses zkvm_exit.
+    const lineth_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
+
     const exe = b.addExecutable(.{
         .name = "verifier-ray",
         .root_module = b.createModule(.{
@@ -48,6 +51,7 @@ pub fn build(b: *std.Build) void {
             .strip = strip,
             .imports = &.{
                 .{ .name = "verifier_ray", .module = verifier_mod },
+                .{ .name = "lineth_accelerators", .module = lineth_mod },
             },
         }),
     });
