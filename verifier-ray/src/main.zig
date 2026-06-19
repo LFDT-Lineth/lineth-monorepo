@@ -67,7 +67,16 @@ pub fn main() noreturn {
 // and exiting in the R5 zkVM environment. The actual verifier logic being tested
 // is still in `verifier.zig`, and this main function just serves as a thin wrapper
 // around it to handle R5-specific details.
-pub export fn r5_main() noreturn {
+//
+// build_common's shared entry stub (start.s) calls `main`, so the comptime block
+// below exports this R5 entry under that name when building for R5.
+comptime {
+    if (is_r5_zkvm) {
+        @export(&r5_main, .{ .name = "main" });
+    }
+}
+
+fn r5_main() callconv(.c) noreturn {
     if (comptime !is_r5_zkvm) {
         // this entry point should only be called from R5 zkVM build (`make build-r5` or `make build-r5-release`)
         unreachable;

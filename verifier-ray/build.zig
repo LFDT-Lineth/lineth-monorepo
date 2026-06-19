@@ -42,36 +42,26 @@ pub fn build(b: *std.Build) void {
     // Linea zkVM accelerator wrappers — main.zig's R5 entry point uses zkvm_exit.
     const lineth_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
 
-    const exe = b.addExecutable(.{
-        .name = "verifier-ray",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
-            .target = target,
-            .optimize = optimize,
-            .strip = strip,
-            .imports = &.{
-                .{ .name = "verifier_ray", .module = verifier_mod },
-                .{ .name = "lineth_accelerators", .module = lineth_mod },
-            },
-        }),
+    const main_mod = b.createModule(.{
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
+        .strip = strip,
+        .imports = &.{
+            .{ .name = "verifier_ray", .module = verifier_mod },
+            .{ .name = "lineth_accelerators", .module = lineth_mod },
+        },
     });
 
-    if (!r5) {
-        exe.root_module.link_libc = true;
-    }
-
     if (r5) {
-        // Point to assembly overwriting default SP with the one defined in the linker script.
-        exe.root_module.addAssemblyFile(b.path("src/start.s"));
-        exe.setLinkerScript(b.path("linker_script.ld"));
+        // Statically-linked rv64im ELF using the shared entry stub (start.s, which calls `main`) +
+        // rv64im memory layout + GC from build_common. main.zig exports its R5 entry as `main`.
+        common.installGuestElf(b, main_mod, "verifier-ray");
+    } else {
+        main_mod.link_libc = true;
+        const exe = b.addExecutable(.{ .name = "verifier-ray", .root_module = main_mod });
+        b.installArtifact(exe);
 
-        // Remove unused code sections for the zkVM binary.
-        exe.link_gc_sections = true;
-    }
-
-    b.installArtifact(exe);
-
-    if (!r5) {
         const run_exe = b.addRunArtifact(exe);
         if (b.args) |args| run_exe.addArgs(args);
 
