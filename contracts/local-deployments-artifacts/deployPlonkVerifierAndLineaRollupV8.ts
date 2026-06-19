@@ -85,16 +85,26 @@ function getBooleanEnvVarOrDefault(name: string, defaultValue: boolean): boolean
   throw new Error(`${name} must be either "true" or "false"`);
 }
 
+type DeployFeeOverrides = {
+  maxPriorityFeePerGas?: bigint;
+  maxFeePerGas?: bigint;
+  gasPrice?: bigint;
+};
+
 // The public quickstart can pin local L1 deploy gas for deterministic boot behavior.
 // Keep this scoped to the V8 local artifact script so shared deploy/ops scripts keep upstream fee policy.
-async function getDeployFeeOverrides(provider: ethers.Provider): Promise<{ gasPrice?: bigint }> {
+async function getDeployFeeOverrides(provider: ethers.Provider): Promise<DeployFeeOverrides> {
   const deployGasPriceWei = process.env.L1_DEPLOY_GAS_PRICE_WEI;
   if (deployGasPriceWei === undefined || deployGasPriceWei === "") {
-    const { gasPrice } = await get1559Fees(provider);
-    if (gasPrice === undefined) {
-      return {};
+    const feeOverrides = await get1559Fees(provider);
+    if (
+      feeOverrides.gasPrice === undefined &&
+      feeOverrides.maxFeePerGas === undefined &&
+      feeOverrides.maxPriorityFeePerGas === undefined
+    ) {
+      throw new Error("Provider did not return any deploy fee data. Set L1_DEPLOY_GAS_PRICE_WEI explicitly.");
     }
-    return { gasPrice };
+    return feeOverrides;
   }
 
   if (!/^[0-9]+$/.test(deployGasPriceWei)) {
@@ -104,6 +114,19 @@ async function getDeployFeeOverrides(provider: ethers.Provider): Promise<{ gasPr
   const gasPrice = BigInt(deployGasPriceWei);
   console.log(`Using environment variable L1_DEPLOY_GAS_PRICE_WEI=${gasPrice.toString()}`);
   return { gasPrice };
+}
+
+async function getDeployNonce(wallet: ethers.Wallet): Promise<number> {
+  const l1Nonce = process.env.L1_NONCE;
+  if (l1Nonce === undefined || l1Nonce === "") {
+    return wallet.getNonce();
+  }
+
+  if (!/^[0-9]+$/.test(l1Nonce)) {
+    throw new Error(`L1_NONCE must be a non-negative integer, got: ${l1Nonce}`);
+  }
+
+  return Number(l1Nonce);
 }
 
 async function main() {
@@ -154,13 +177,7 @@ async function main() {
 
   const feeOverrides = await getDeployFeeOverrides(provider);
 
-  let walletNonce;
-
-  if (!process.env.L1_NONCE) {
-    walletNonce = await wallet.getNonce();
-  } else {
-    walletNonce = parseInt(process.env.L1_NONCE);
-  }
+  const walletNonce = await getDeployNonce(wallet);
 
   const [verifier, lineaRollupImplementation, proxyAdmin, addressFilter] = await Promise.all([
     deployContractFromArtifacts(verifierName, verifierArtifacts.abi, verifierArtifacts.bytecode, wallet, {
