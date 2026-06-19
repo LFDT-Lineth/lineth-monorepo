@@ -44,11 +44,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    const linea_accel_mod = b.createModule(.{
-        .root_source_file = b.path("../../arithmetization/src/main/wrappers/root.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
+    const linea_accel_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
     const linea_io_mod = b.createModule(.{
         .root_source_file = zesu_zkvm.path("linea/src/zkvm_io.zig"),
         .target = target,

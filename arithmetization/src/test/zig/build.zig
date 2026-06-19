@@ -39,12 +39,8 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
-    // exposing the zkvm wrappers
-    const wrappers = b.createModule(.{
-        .root_source_file = b.path("../../main/wrappers/root.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
+    // exposing the zkvm wrappers (lineth-accelerators package, path dependency)
+    const wrappers = b.dependency("lineth_accelerators", .{}).module("lineth_accelerators");
     exe.root_module.addImport("wrappers", wrappers);
 
     // Point to assembly overwriting default SP with the one defined in the linker script

@@ -4,7 +4,7 @@
 // re-exported flat here, so consumers call e.g. `lib.zkvm_keccak256` rather
 // than `lib.keccak.zkvm_keccak256`.
 
-const custom_std = @import("custom_std.zig");
+const custom_std = @import("std.zig");
 const zkvm_types = @import("zkvm_types.zig");
 const keccak = @import("keccak.zig");
 const poseidon2 = @import("poseidon2.zig");

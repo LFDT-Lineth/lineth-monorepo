@@ -6,10 +6,11 @@ This directory holds the RISC-V guest programs that target the Linea ZKC interpr
 
 ```text
 riscv-guests/
-  .zigversion        Required Zig development version (shared by all guests)
-  Makefile           Top-level orchestrator — fans compile/test/… out to every guest in GUESTS
-  build_common/      Shared build helpers (+ the shared standalone-ELF link: start.s, linker_script.ld)
-  l2-execution/      Vanilla EVM execution guest: build.zig + build.zig.zon + Makefile + src/ + test/
+  .zigversion          Required Zig development version (shared by all guests)
+  Makefile             Top-level orchestrator — fans compile/test/… out to every guest in GUESTS
+  build_common/        Shared build helpers (+ the shared standalone-ELF link: start.s, linker_script.ld)
+  lineth-accelerators/ Shared library package: Linea accelerator wrappers (keccak, Poseidon2, …) + C headers (include/)
+  l2-execution/        Vanilla EVM execution guest: build.zig + build.zig.zon + Makefile + src/ + test/
 ```
 
 Within a guest, `src/` holds **only the production code that ships in the rv64im object/ELF**; host-only code (unit tests, the spec-test harness, fixture parsing) lives in `test/`, and committed sample/test data in `test/testdata/`. The split mirrors what `build.zig` builds: the object + `elf` step compile `src/`; `zig build test` / `spec-tests` compile `test/`. (Automated tests pull their EF fixtures from the lazy `execution_spec_tests_zkevm` dependency, not from committed data — `test/testdata/` is just the manual ZkC-run samples.)
