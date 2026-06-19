@@ -39,6 +39,11 @@ import {
 } from "../common/constants";
 import { deployContractFromArtifacts, getInitializerData } from "../common/helpers/deployments";
 import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
+import {
+  getDeploymentNetworkName,
+  requireAddressesFromRegistryOrEnv,
+  requireAddressFromRegistryOrEnv,
+} from "../common/helpers/readAddress";
 import { generateRoleAssignments } from "../common/helpers/roles";
 import { get1559Fees } from "../scripts/utils";
 
@@ -68,7 +73,6 @@ function findContractArtifacts(
 
 function getBooleanEnvVarOrDefault(name: string, defaultValue: boolean): boolean {
   const rawValue = process.env[name];
-  // Backward compatibility: upstream deploy behavior keeps ForcedTransactionGateway enabled by default true.
   if (rawValue === undefined || rawValue === "") {
     return defaultValue;
   }
@@ -81,16 +85,47 @@ function getBooleanEnvVarOrDefault(name: string, defaultValue: boolean): boolean
   throw new Error(`${name} must be either "true" or "false"`);
 }
 
+// The public quickstart can pin local L1 deploy gas for deterministic boot behavior.
+// Keep this scoped to the V8 local artifact script so shared deploy/ops scripts keep upstream fee policy.
+async function getDeployFeeOverrides(provider: ethers.Provider): Promise<{ gasPrice?: bigint }> {
+  const deployGasPriceWei = process.env.L1_DEPLOY_GAS_PRICE_WEI;
+  if (deployGasPriceWei === undefined || deployGasPriceWei === "") {
+    const { gasPrice } = await get1559Fees(provider);
+    if (gasPrice === undefined) {
+      return {};
+    }
+    return { gasPrice };
+  }
+
+  if (!/^[0-9]+$/.test(deployGasPriceWei)) {
+    throw new Error(`L1_DEPLOY_GAS_PRICE_WEI must be an integer wei value, got: ${deployGasPriceWei}`);
+  }
+
+  const gasPrice = BigInt(deployGasPriceWei);
+  console.log(`Using environment variable L1_DEPLOY_GAS_PRICE_WEI=${gasPrice.toString()}`);
+  return { gasPrice };
+}
+
 async function main() {
+  const networkName = getDeploymentNetworkName();
   const verifierName = getRequiredEnvVar("VERIFIER_CONTRACT_NAME");
   const lineaRollupInitialStateRootHash = getRequiredEnvVar("INITIAL_L2_STATE_ROOT_HASH");
   const lineaRollupInitialL2BlockNumber = getRequiredEnvVar("INITIAL_L2_BLOCK_NUMBER");
-  const lineaRollupSecurityCouncil = getRequiredEnvVar("L1_SECURITY_COUNCIL");
-  const lineaRollupOperators = getRequiredEnvVar("LINEA_ROLLUP_OPERATORS").split(",");
+  const lineaRollupSecurityCouncil = requireAddressFromRegistryOrEnv(
+    networkName,
+    "L1_SECURITY_COUNCIL",
+    "L1_SECURITY_COUNCIL",
+  );
+  const lineaRollupOperators = requireAddressesFromRegistryOrEnv(
+    networkName,
+    "LINEA_ROLLUP_OPERATORS",
+    "LINEA_ROLLUP_OPERATORS",
+  );
   const lineaRollupRateLimitPeriodInSeconds = getRequiredEnvVar("LINEA_ROLLUP_RATE_LIMIT_PERIOD");
   const lineaRollupRateLimitAmountInWei = getRequiredEnvVar("LINEA_ROLLUP_RATE_LIMIT_AMOUNT");
   const lineaRollupGenesisTimestamp = getRequiredEnvVar("L2_GENESIS_TIMESTAMP");
 
+  // The default true preserves existing local deploy behavior; the quickstart opts into false to skip the gateway.
   const deployForcedTransactionGateway = getBooleanEnvVarOrDefault("DEPLOY_FORCED_TRANSACTION_GATEWAY", true);
 
   const multiCallAddress = "0xcA11bde05977b3631167028862bE2a173976CA11";
@@ -98,8 +133,8 @@ async function main() {
   const lineaRollupImplementationName = "LineaRollupV8Implementation";
   const forcedTransactionGatewayName = "ForcedTransactionGateway";
 
-  const pauseTypeRoles = getEnvVarOrDefault("LINEA_ROLLUP_PAUSE_TYPE_ROLES", LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES);
-  const unpauseTypeRoles = getEnvVarOrDefault("LINEA_ROLLUP_UNPAUSE_TYPE_ROLES", LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES);
+  const pauseTypeRoles = getEnvVarOrDefault("LINEA_ROLLUP_PAUSE_TYPES_ROLES", LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES);
+  const unpauseTypeRoles = getEnvVarOrDefault("LINEA_ROLLUP_UNPAUSE_TYPES_ROLES", LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES);
 
   // Use random hardcoded address until we introduce YieldManager E2E tests
   const automationServiceAddress = "0x3A9f0c2b8e7D4F6e1b5a9C2e0Fd7a4B6C8e9F1A2";
@@ -117,7 +152,7 @@ async function main() {
 
   const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
 
-  const { gasPrice } = await get1559Fees(provider);
+  const feeOverrides = await getDeployFeeOverrides(provider);
 
   let walletNonce;
 
@@ -130,15 +165,15 @@ async function main() {
   const [verifier, lineaRollupImplementation, proxyAdmin, addressFilter] = await Promise.all([
     deployContractFromArtifacts(verifierName, verifierArtifacts.abi, verifierArtifacts.bytecode, wallet, {
       nonce: walletNonce,
-      gasPrice,
+      ...feeOverrides,
     }),
     deployContractFromArtifacts(lineaRollupImplementationName, LineaRollupV8Abi, LineaRollupV8Bytecode, wallet, {
       nonce: walletNonce + 1,
-      gasPrice,
+      ...feeOverrides,
     }),
     deployContractFromArtifacts(ProxyAdminContractName, ProxyAdminAbi, ProxyAdminBytecode, wallet, {
       nonce: walletNonce + 2,
-      gasPrice,
+      ...feeOverrides,
     }),
     deployContractFromArtifacts(
       AddressFilterContractName,
@@ -149,7 +184,7 @@ async function main() {
       PRECOMPILES_ADDRESSES,
       {
         nonce: walletNonce + 3,
-        gasPrice,
+        ...feeOverrides,
       },
     ),
   ]);
@@ -193,7 +228,7 @@ async function main() {
     initializer,
     {
       nonce: walletNonce + 4,
-      gasPrice,
+      ...feeOverrides,
     },
   );
 
@@ -215,7 +250,7 @@ async function main() {
       wallet,
       {
         nonce: walletNonce + 5,
-        gasPrice,
+        ...feeOverrides,
       },
     );
     const mimcAddress = await mimc.getAddress();
@@ -241,7 +276,7 @@ async function main() {
       ...args,
       {
         nonce: walletNonce + 6,
-        gasPrice,
+        ...feeOverrides,
       },
     );
 
@@ -252,13 +287,18 @@ async function main() {
     console.log(
       `Granting FORCED_TRANSACTION_SENDER_ROLE to ForcedTransactionGateway at ${forcedTransactionGatewayAddress}...`,
     );
-    const grantRoleTx = await lineaRollup.grantRole(FORCED_TRANSACTION_SENDER_ROLE, forcedTransactionGatewayAddress, {
-      gasPrice,
-    });
+    const grantRoleTx = await lineaRollup.grantRole(
+      FORCED_TRANSACTION_SENDER_ROLE,
+      forcedTransactionGatewayAddress,
+      feeOverrides,
+    );
     await grantRoleTx.wait();
     console.log(`FORCED_TRANSACTION_SENDER_ROLE granted to ForcedTransactionGateway`);
   } else {
-    console.log("DEPLOY_FORCED_TRANSACTION_GATEWAY=false; skipping Mimc and ForcedTransactionGateway deploy");
+    console.log(
+      "DEPLOY_FORCED_TRANSACTION_GATEWAY=false; skipping Mimc and ForcedTransactionGateway deploy. " +
+        "The next L1 deploy starts after the LineaRollup proxy nonce.",
+    );
   }
 }
 

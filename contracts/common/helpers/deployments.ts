@@ -1,5 +1,6 @@
 import { ethers, AbstractSigner, Interface, InterfaceAbi, BaseContract } from "ethers";
 
+import { normalizeAddressArgs } from "./normalize-address-args";
 import { clearSignerUiWorkflowStatus, setSignerUiWorkflowStatus } from "./signerUiWorkflowStatus";
 import {
   contractName as ProxyAdminContractName,
@@ -110,7 +111,8 @@ export async function deployContractFromArtifacts<A extends Array<unknown>>(
   const linkedBytecode = options.libraries ? linkLibraries(bytecode, options.libraries) : bytecode;
 
   const factory = new ethers.ContractFactory(abi, linkedBytecode, wallet);
-  const contract = await factory.deploy(...constructorArgs);
+  const normalizedArgs = await normalizeAddressArgs(factory, constructorArgs as unknown[]);
+  const contract = await factory.deploy(...normalizedArgs);
 
   await LogContractDeployment(contractName, contract);
 
@@ -125,10 +127,6 @@ export async function LogContractDeployment(contractName: string, contract: Base
 
   const receiptPending = deploymentTx.blockNumber === null || deploymentTx.blockNumber === undefined;
   if (receiptPending) {
-    if (process.env.LINEA_DEPLOY_LOG_PENDING_TX === "true") {
-      console.log(`contract=${contractName} pending: transactionHash=${deploymentTx.hash} nonce=${deploymentTx.nonce}`);
-    }
-
     await setSignerUiWorkflowStatus(
       "waiting_for_transaction_receipt",
       `Waiting for transaction receipt for ${contractName}.`,
