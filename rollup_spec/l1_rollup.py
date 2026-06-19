@@ -64,7 +64,17 @@ class LineaRollupState:
 @dataclass
 class FinalizationSubmission:
     """
-    Calldata supplied to the L1 finalization call.
+    The rollup-aggregation guest output as submitted to the L1 finalization
+    call. It is the guest output plus the `proof` bytes: the 14-field
+    `public_inputs` tuple and the revealed preimages L1 needs as calldata —
+    `l2_l1_roots` (preimage of `l2L1BridgeTransactionTree`) and
+    `filtered_addresses` (preimage of `filteredAddressesHash`).
+
+    Guest/prover boundary: the aggregation guest emits `public_inputs` and the
+    preimage lists; `proof` is attached by the zkVM/prover layer above and is a
+    placeholder (`b""`) in this reference (see `run_rollup_aggregation_guest`).
+    `l2_messaging_blocks_offsets` is carried for the L1 calldata shape but is
+    not yet consumed by `finalize_rollup`.
     """
     public_inputs: RollupPublicInput
     proof: bytes

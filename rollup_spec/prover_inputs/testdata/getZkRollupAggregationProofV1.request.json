@@ -1,6 +1,5 @@
 {
   "proverVersion": "4.0.0-riscv",
-  "chainId": 59144,
   "blockRange": {
     "startBlockNumber": 1000501,
     "endBlockNumber": 1000520
@@ -9,7 +8,6 @@
     {
       "proof": "0xabcdef",
       "startBlockNumber": 1000501,
-      "endBlockNumber": 1000520,
       "publicInputs": {
         "endBlockNumber": 1000520,
         "endBlockTimestamp": 1763000457,

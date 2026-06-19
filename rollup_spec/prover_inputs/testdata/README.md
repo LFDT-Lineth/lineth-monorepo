@@ -4,19 +4,20 @@ Fully-valid `getZkL2ExecutionProofV1`, `getZkRollupProofV1`, and
 `getZkRollupAggregationProofV1` request/response payloads (real hex, no ellipses)
 used by `rollup_spec/proof_io_v1_test.py`.
 
-These differ from the illustrative examples in `../` (the parent
-`prover_inputs/` directory): those use `0x...` placeholders for documentation and
-therefore do **not** validate against the JSON Schemas in `rollup_spec/schemas/`.
-The fixtures here do validate, and the request/response pair is mutually
-consistent so the codec round-trip (`decode_request`, `encode_response`) can be
-asserted byte-for-byte.
+These fixtures are the **language-neutral contract** for the prover wire format:
+each layer's request/response pair is mutually consistent, so the codec
+round-trip (`decode_*` then `encode_*`) holds, and any implementation (Go prover,
+Kotlin coordinator, …) can load them as golden vectors and assert its own
+serializer round-trips them byte-for-byte. There is no separate JSON Schema; the
+codec in `rollup_spec/proof_io_v1.py` is the wire authority and the guest
+dataclasses are the logical model.
 
 ## Fields ↔ guest dataclasses
 
 Each fixture's fields correspond to the input/output class of the entry function
 of the matching guest program (the codec in `rollup_spec/proof_io_v1.py` converts
 between them). A request maps to the entry function's input dataclass; a response
-maps to its output dataclass.
+maps to its output.
 
 | Fixture | Guest dataclass | Defined in | Guest entry function |
 |---|---|---|---|
@@ -25,14 +26,27 @@ maps to its output dataclass.
 | `getZkRollupProofV1.request.json` | `RollupProofPrivateInput` | `rollup.py` | `run_rollup_guest` (input) |
 | `getZkRollupProofV1.response.json` | `RollupProof` | `rollup.py` | `run_rollup_guest` (output) |
 | `getZkRollupAggregationProofV1.request.json` | `RollupAggregationProofPrivateInput` | `rollup_aggregation.py` | `run_rollup_aggregation_guest` (input) |
-| `getZkRollupAggregationProofV1.response.json` | `RollupPublicInput` | `rollup_aggregation.py` | `run_rollup_aggregation_guest` (output) |
+| `getZkRollupAggregationProofV1.response.json` | `FinalizationSubmission` | `l1_rollup.py` | `run_rollup_aggregation_guest` (output) |
 
-Note the JSON field names are not always a 1:1 camel↔snake mapping of the
-dataclass fields; the codec owns the renames and type coercion (see
-`proof_io_v1.py`). A few request fields are metadata that the entry-function
-input dataclass does not carry (e.g. `proverVersion`, the top-level `blockRange`,
-the rollup request's `shnarfTransition.endShnarf`, the aggregation request's
-`chainId`); the codec ignores them when building the dataclass.
+**Guest output vs prover output.** A guest emits its public-input tuple plus the
+revealed hash preimages (`l2L1Messages`, `txFroms`, `l2L1Roots`,
+`filteredAddresses`). The `proof` bytes are attached by the zkVM/prover layer,
+not the guest, so they are placeholders (`0x`) in these fixtures; a response
+equals the guest output plus `proof`. The aggregation response is a
+`FinalizationSubmission`: it additionally carries `l2L1Roots`,
+`filteredAddresses`, and `l2MessagingBlocksOffsets` — the preimages the L1
+`finalize_rollup` call consumes as calldata — so it is sufficient for L1
+finalization.
+
+The JSON field names are not always a 1:1 camel↔snake mapping of the dataclass
+fields; the codec owns the renames and type coercion (see `proof_io_v1.py`). A
+few request fields are metadata the entry-function input dataclass does not
+carry: `proverVersion` and the top-level `blockRange` (the range is implied by
+the payloads/blobs) on every request, plus `chainId` on the rollup request (used
+for DA sender recovery). Derivable duplication is deliberately kept off the wire:
+no top-level `endBlockNumber` (it is in `publicInputs`), no
+`shnarfTransition.endShnarf` echo on the rollup request (the guest recomputes it
+and returns it in the response PI), and no `chainId` on the aggregation request.
 
 ## Running the tests locally
 
@@ -58,10 +72,6 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m pip install pytest          # the test runner itself is not in requirements.txt
 ```
-
-`requirements.txt` already includes `jsonschema`, which the schema-conformance
-tests need; without it those tests are skipped (via `pytest.importorskip`) rather
-than failing.
 
 Run the tests from the **repo root** (so the `rollup_spec` package resolves):
 
