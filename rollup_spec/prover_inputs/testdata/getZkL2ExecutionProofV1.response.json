@@ -1,7 +1,7 @@
 {
+  "proverVersion": "4.0.0-riscv",
   "proof": "0xdeadbeef",
   "startBlockNumber": 1000501,
-  "endBlockNumber": 1000503,
   "publicInputs": {
     "parentBlockHash": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
     "endBlockHash": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",

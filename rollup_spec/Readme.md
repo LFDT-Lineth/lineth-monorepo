@@ -66,6 +66,19 @@ checks modeled separately in `l1_rollup.py`:
 `l1_rollup.py` models the contract-facing blob anchoring and finalization checks
 against L1 storage. It is intentionally not one of the RISC-V guest programs.
 
+**Guest output vs prover output.** Each guest emits its public-input tuple plus
+the revealed hash *preimages* it computed (l2-execution: `l2L1Messages`,
+`txFroms`, `filteredAddresses`; rollup and rollup-aggregation: `l2L1Roots`,
+`filteredAddresses`). The `proof` bytes are *not* produced by the guest — the
+zkVM/prover layer attaches them when it proves the guest execution. A prover
+**response** therefore equals the guest output plus `proof`, and each consumer
+(the next proving step, or the L1 contract for the final rollup-aggregation
+proof) takes that whole bundle: it recursively verifies `proof` against the
+public inputs and re-checks the preimages against their committed hashes. The
+reference models the split — `run_*_guest` returns the public inputs and
+preimages with `proof` left as a placeholder (`b""`); see `proof_io_v1.py` and
+§3.3.
+
 **Reference environment.** The Python reference targets **Python 3.11+** (it uses
 `enum.StrEnum`) and pins its dependencies in `rollup_spec/requirements.txt`
 (`remerkleable`, a commit-pinned `ethereum-execution`, `ckzg`, `lz4`).
@@ -118,7 +131,7 @@ declared outcome is one of the allowed outcomes in §6.5.
 
 * **Inspect the forced transactions**: See the corresponding section.
 
-* **Output**: the public-inputs as computed in the above steps.
+* **Output**: the 15-field public-input tuple computed above, together with the revealed preimages the rollup proof consumes (`l2L1Messages`, `txFroms`, `filteredAddresses`). The `proof` bytes are attached by the prover, not this guest (see §2, *Guest output vs prover output*).
 
 ### 2.2 rollup Proof
 
@@ -182,7 +195,7 @@ For each blob `b ∈ [1, K]` in order, perform the per-blob block (steps 1–2);
    ```
    shnarf_b = Hash(shnarf_{b-1}, lastBlockHash_b, blobHash_b)
    ```
-   where `shnarf_0 = parentShnarf` (public input) and `lastBlockHash_b` is the `blockHash` field of the last `TruncatedEthereumBlock` of blob `b` (from step 1). After all K blobs, assert `shnarf_K == endShnarf`.
+   where `shnarf_0 = parentShnarf` (public input) and `lastBlockHash_b` is the `blockHash` field of the last `TruncatedEthereumBlock` of blob `b` (from step 1). After all K blobs, the outbound `endShnarf = shnarf_K` is emitted in the PI tuple; it is not echoed back as a request input (the coordinator compares the returned `endShnarf` against its own expectation).
 
 3. **Verify sender addresses.** For each l2-execution proof `Eᵢ`, assert:
    ```
@@ -260,9 +273,9 @@ The same 14-field tuple as the rollup proof (§2.2) and as the final rollup-aggr
 
 4. **Merge filtered address lists.** Receive each rollup proof's address list, verify it against its committed hash, concatenate all `M` lists in order, and output `filteredAddressesHash = keccak256(addrs_B₁ ‖ … ‖ addrs_Bₘ)`.
 
-5. **Output** the combined public inputs covering the full range: take `parentShnarf`, `parentL1L2BridgeRollingHash`, `parentL1L2BridgeRollingHashMessageNumber`, `parentFtxRollingHash`, and `dynamicChainConfigHash` from `PI_B₁`; take `endBlockNumber`, `endBlockTimestamp`, `endL1L2BridgeRollingHash`, `endL1L2BridgeRollingHashMessageNumber`, `endFtxRollingHash`, `lastProcessedFtxNumber`, and `endShnarf` from `PI_Bₘ`; use the merged Merkle commitment from step 3 and merged filtered-address hash from step 4.
+5. **Output** the combined public inputs covering the full range: take `parentShnarf`, `parentL1L2BridgeRollingHash`, `parentL1L2BridgeRollingHashMessageNumber`, `parentFtxRollingHash`, and `dynamicChainConfigHash` from `PI_B₁`; take `endBlockNumber`, `endBlockTimestamp`, `endL1L2BridgeRollingHash`, `endL1L2BridgeRollingHashMessageNumber`, `endFtxRollingHash`, `lastProcessedFtxNumber`, and `endShnarf` from `PI_Bₘ`; use the merged Merkle commitment from step 3 and merged filtered-address hash from step 4. Alongside the PI tuple the guest returns the merged L2→L1 root list (step 3) and filtered-address list (step 4) as revealed preimages; with the prover-attached `proof` these form the L1 `FinalizationSubmission` (§5).
 
-The rollup-aggregation prover request includes the STARK→SNARK emulation wrap after this guest statement, so the response is directly L1-submittable — no separate emulation request file or prover invocation exists.
+The rollup-aggregation prover request includes the STARK→SNARK emulation wrap after this guest statement, so the response is directly L1-submittable: it is the `FinalizationSubmission` — the 14-field PI plus the prover-attached `proof` and the revealed `l2L1Roots` / `filteredAddresses` (and `l2MessagingBlocksOffsets`) the L1 contract consumes as calldata (§5). No separate emulation request file or prover invocation exists.
 
 ---
 
@@ -337,7 +350,7 @@ The DA blob must contain the exact inputs required to re-execute the L2 blocks f
 
 ### 3.3 Prover I/O — On-Wire Format
 
-The JSON request files under `prover_io/` describe a logical schema. The bytes carried into the zkVM guest are binary.
+The example fixtures under `prover_inputs/testdata/` document the request/response JSON the coordinator exchanges with the prover; they are the language-neutral contract and `proof_io_v1.py` is the wire authority (there is no separate JSON Schema). The bytes carried into the zkVM guest are binary, not this JSON.
 
 **Transport.** The guest reads input bytes via the zkVM's read-input primitive (`ziskos::read_input()` on Zisk). The Linea l2-execution envelope length-delimits a vanilla SSZ `StatelessInput` byte slice per payload, then carries Linea rollup-extension fields beside that slice. The Python reference models this boundary in `stateless_input.py::decode_stateless_input_ssz`, using the `remerkleable` decoder for the same raw/Ere-prefixed stateless-input container shape while keeping Linea extension parsing outside the stateless-input slice. Do not append Linea bytes to that slice itself: the SSZ decoder treats the final field as consuming the remainder of the slice, so trailing Linea data would be interpreted as stateless input rather than ignored.
 

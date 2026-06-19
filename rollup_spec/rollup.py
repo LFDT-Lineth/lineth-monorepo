@@ -304,13 +304,20 @@ class RollupProofPrivateInput:
 @dataclass
 class RollupProof:
     """
-    Reference wrapper for a rollup proof plus the root/address preimages
-    consumed by the rollup-aggregation proof. `proof` stands in for recursive
-    STARK bytes.
+    A rollup proof as the rollup-aggregation guest consumes it: the guest
+    *output* (the 14-field `public_inputs` tuple + the root/address preimages)
+    plus the `proof` bytes the aggregation guest recursively verifies.
+
+    Guest/prover boundary: the guest emits `public_inputs` and the preimage
+    lists only; `proof` is attached by the zkVM/prover layer above — a guest
+    cannot prove itself — and is a placeholder (`b""`) in this reference.
+
+    `end_block_number` is intentionally absent: it is already
+    `public_inputs.end_block_number`. Only `start_block_number` (not in the PI
+    tuple) is carried, so the aggregation guest can verify proof tiling.
     """
     public_inputs: RollupPublicInput
     start_block_number: U64
-    end_block_number: U64
     proof: bytes = b""
     l2_l1_roots: List[Hash32] = field(default_factory=list)
     filtered_addresses: List[Address] = field(default_factory=list)
@@ -391,7 +398,7 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     first_proof = rollup_input.l2_execution_proofs[0]
     last_proof = rollup_input.l2_execution_proofs[-1]
     for proof in rollup_input.l2_execution_proofs:
-        boundary_index = int(proof.end_block_number) - blob_start_block_number
+        boundary_index = int(proof.public_inputs.end_block_number) - blob_start_block_number
         if boundary_index < 0 or boundary_index >= len(truncated_block_hashes):
             raise Exception("l2-execution proof boundary falls outside the blob block range")
         if proof.public_inputs.end_block_hash != truncated_block_hashes[boundary_index]:
@@ -449,7 +456,6 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     return RollupProof(
         public_inputs=public_inputs,
         start_block_number=blob_start_block_number,
-        end_block_number=blob_end_block_number,
         l2_l1_roots=l2_l1_roots,
         filtered_addresses=concatenated_filtered_addresses,
     )
@@ -464,8 +470,6 @@ def verify_l2_execution_proof(proof: L2ExecutionProof) -> None:
     re-checks the hash-preimage bindings (`txFromsHash`, `l2L1MessagesHash`,
     `filteredAddressesHash`) the rollup proof consumes alongside the PI tuple.
     """
-    if proof.public_inputs.end_block_number != proof.end_block_number:
-        raise Exception("l2-execution proof range metadata does not match public inputs")
     # The three checks below are PRECOMPILE: keccak256 in production (used
     # to verify the preimage bindings that the rollup proof consumes).
     if hash_hash_list(proof.l2_l1_messages) != proof.public_inputs.l2_l1_messages_hash:
@@ -485,7 +489,7 @@ def verify_l2_execution_proof_tiling(
     for proof in l2_execution_proofs:
         if proof.start_block_number != expected_start:
             raise Exception("l2-execution proofs do not tile the blob block range")
-        expected_start = proof.end_block_number + 1
+        expected_start = proof.public_inputs.end_block_number + 1
     if expected_start != end_block_number + 1:
         raise Exception("l2-execution proofs do not cover the full blob block range")
 
