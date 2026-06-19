@@ -308,6 +308,9 @@ compute_expected_address() {
   printf '%s' "$address"
 }
 
+# L1 TokenBridge starts after the LineaRollup V8 deploys. With the gateway off,
+# that lane is 5 deploys (verifier, impl, ProxyAdmin, AddressFilter, proxy); with
+# it on it is 8 (plus Mimc, ForcedTransactionGateway, and the grantRole tx).
 if [[ "$DEPLOY_FORCED_TRANSACTION_GATEWAY" == "true" ]]; then
   L1_TOKEN_BRIDGE_NONCE_OFFSET=8
 else
@@ -324,6 +327,13 @@ EXPECTED_L2_TOKEN_BRIDGE_IMPL_NONCE=$((L2_DEPLOYER_START_NONCE + 4))
 EXPECTED_L2_PROXY_ADMIN_NONCE=$((L2_DEPLOYER_START_NONCE + 5))
 EXPECTED_L2_TOKEN_BEACON_NONCE=$((L2_DEPLOYER_START_NONCE + 6))
 EXPECTED_L2_TOKEN_BRIDGE_NONCE=$((L2_DEPLOYER_START_NONCE + 7))
+
+# Deterministic nonce that produces each step's primary precomputed address. The
+# LineaRollup V8 proxy is the 5th L1 deploy (start nonce + 4, matching
+# quickstart-invariants.ts); the L2 MessageService proxy is the 3rd L2 deploy
+# (start nonce + 2). Used by the restart-safe redeploy nonce guard below.
+EXPECTED_LINEA_ROLLUP_NONCE=$((L1_DEPLOYER_START_NONCE + 4))
+EXPECTED_L2_MESSAGE_SERVICE_NONCE=$((L2_DEPLOYER_START_NONCE + 2))
 
 EXPECTED_L1_BRIDGED_TOKEN="$(compute_expected_address "$L1_DEPLOYER_ADDRESS" "$EXPECTED_L1_BRIDGED_TOKEN_NONCE" "L1 BridgedToken")"
 EXPECTED_L1_TOKEN_BRIDGE_IMPL="$(compute_expected_address "$L1_DEPLOYER_ADDRESS" "$EXPECTED_L1_TOKEN_BRIDGE_IMPL_NONCE" "L1 TokenBridge implementation")"
@@ -613,6 +623,29 @@ step_already_done_with_code() {
   return 1
 }
 
+# Restart-safe redeploy guard. Call this only on the redeploy path — after the
+# skip-with-code check has decided this step must deploy because the expected
+# on-chain code is missing. A normal restart after a successful deploy never
+# reaches here (it skips with code), so a live nonce higher than the saved
+# start nonce is expected and must NOT fail there.
+#
+# The unsafe case this catches: the artifact set is partial/stale and the
+# deployer's live nonce has already advanced PAST the deterministic nonce that
+# produces the expected address. Redeploying would then land at a different
+# address. A live nonce equal to the expected nonce can still produce the
+# expected address, so only a strictly greater nonce fails here; a lower nonce
+# proceeds to the normal deploy + verify_address path.
+guard_redeploy_nonce_window() {
+  local chain_label="$1" rpc_url="$2" deployer="$3" expected_nonce="$4" expected_address="$5" label="$6"
+  local current_nonce
+  current_nonce="$(cast nonce "$deployer" --rpc-url "$rpc_url" | awk '{print $NF}')"
+  [[ "$current_nonce" =~ ^[0-9]+$ ]] || die "Could not read $chain_label deployer nonce for $deployer"
+  if (( current_nonce > expected_nonce )); then
+    die "$label expected at $expected_address from $chain_label deployer nonce $expected_nonce, but the current $chain_label deployer nonce is $current_nonce and no code exists at the expected address. This artifact set is partial or stale; run ./scripts/reset.sh before redeploying."
+  fi
+  log "guard $label: OK (current $chain_label nonce $current_nonce <= expected $expected_nonce)"
+}
+
 verify_step1_gateway_mode() {
   local logfile="$1" logged_gateway_mode
 
@@ -650,6 +683,9 @@ step1_l1_rollup() {
   fi
 
   [[ -f "$script" ]] || die "missing deploy script: $script"
+
+  guard_redeploy_nonce_window "L1" "$L1_RPC_URL" "$L1_DEPLOYER_ADDRESS" \
+    "$EXPECTED_LINEA_ROLLUP_NONCE" "$PRECOMPUTED_LINEA_ROLLUP" "LineaRollupV${L1_CONTRACT_VERSION}"
 
   # The L1 deployer remains the admin/security-council account. Coordinator's
   # blob and finalization senders are separate derived operator addresses so
@@ -703,6 +739,9 @@ step2_l2_message_service() {
     return 0
   fi
 
+  guard_redeploy_nonce_window "L2" "$L2_RPC_URL" "$PRECOMPUTED_L2_DEPLOYER" \
+    "$EXPECTED_L2_MESSAGE_SERVICE_NONCE" "$PRECOMPUTED_L2_MS" "L2MessageService"
+
   L2_MESSAGE_SERVICE_CONTRACT_NAME="L2MessageService" \
   DEPLOYER_PRIVATE_KEY="$L2_DEPLOYER_PRIVATE_KEY" \
   RPC_URL="$L2_RPC_URL" \
@@ -740,6 +779,9 @@ step3_token_bridge_l1() {
 
   : "${LINEA_ROLLUP_ADDRESS:?step1 must run first}"
   : "${L2_MESSAGE_SERVICE_ADDRESS:?step2 must run first}"
+
+  guard_redeploy_nonce_window "L1" "$L1_RPC_URL" "$L1_DEPLOYER_ADDRESS" \
+    "$EXPECTED_L1_TOKEN_BRIDGE_NONCE" "$EXPECTED_L1_TOKEN_BRIDGE" "L1 TokenBridge"
 
   # REMOTE_DEPLOYER_ADDRESS is the generated L2 deployer address from
   # account-setup. L1_SECURITY_COUNCIL stays the L1 deployer/admin account.
@@ -795,6 +837,9 @@ step4_token_bridge_l2() {
   : "${L2_MESSAGE_SERVICE_ADDRESS:?step2 must run first}"
 
   : "${L1_TOKEN_BRIDGE_ADDRESS:?step3 must run first}"
+
+  guard_redeploy_nonce_window "L2" "$L2_RPC_URL" "$PRECOMPUTED_L2_DEPLOYER" \
+    "$EXPECTED_L2_TOKEN_BRIDGE_NONCE" "$EXPECTED_L2_TOKEN_BRIDGE" "L2 TokenBridge"
 
   # REMOTE_TOKEN_BRIDGE_ADDRESS = the L1 TokenBridge proxy we deployed in
   # step 3 (forwarded as the L2 TokenBridge's remoteSender during init).
