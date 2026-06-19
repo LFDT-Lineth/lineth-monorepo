@@ -1,8 +1,8 @@
-const wrappers = @import("lineth_zkvm_accel");
+const lineth_accel = @import("lineth_zkvm_accel");
 
 // Number of field elements in a Poseidon2 state (the zkvm_bytes_64 state holds
 // STATE_WIDTH little-endian 32-bit felt words).
-const STATE_WIDTH = @sizeOf(wrappers.zkvm_bytes_64) / @sizeOf(u32);
+const STATE_WIDTH = @sizeOf(lineth_accel.zkvm_bytes_64) / @sizeOf(u32);
 
 // Applies the Poseidon2 permutation to `input` and compares the result against
 // `expected`, lane by lane. On any mismatch the program halts with exit code
@@ -15,15 +15,15 @@ const STATE_WIDTH = @sizeOf(wrappers.zkvm_bytes_64) / @sizeOf(u32);
 fn check(input: [STATE_WIDTH]u32, expected: [STATE_WIDTH]u32, fail_code: u32) void {
     // The state is passed as zkvm_bytes_64; on this little-endian target the
     // bytes of a [16]u32 array are exactly the 16 little-endian felt words.
-    var in_state: wrappers.zkvm_bytes_64 = .{ .data = @bitCast(input) };
-    var out_state: wrappers.zkvm_bytes_64 = undefined;
+    var in_state: lineth_accel.zkvm_bytes_64 = .{ .data = @bitCast(input) };
+    var out_state: lineth_accel.zkvm_bytes_64 = undefined;
 
-    _ = wrappers.lineth_zkvm_poseidon2_permutation(&in_state, &out_state);
+    _ = lineth_accel.lineth_zkvm_poseidon2_permutation(&in_state, &out_state);
 
     const got: [STATE_WIDTH]u32 = @bitCast(out_state.data);
     for (got, expected) |got_lane, want_lane| {
         if (got_lane != want_lane) {
-            wrappers.zkvm_exit(fail_code);
+            lineth_accel.zkvm_exit(fail_code);
         }
     }
 }
@@ -42,5 +42,5 @@ export fn main() noreturn {
     // case 6: random 2
     check([_]u32{ 2130706432, 2130706431, 1, 2, 1065353216, 1065353217, 3, 4, 2122383361, 1864368129, 2130706306, 8323072, 266338304, 133169152, 127, 1000000007 }, [_]u32{ 531247973, 1889552100, 357166750, 26070520, 1095542703, 259894082, 811856935, 503760263, 296235402, 619227490, 1271674584, 645125619, 836680447, 202813437, 869488616, 1543260919 }, 6);
 
-    wrappers.zkvm_exit(0);
+    lineth_accel.zkvm_exit(0);
 }
