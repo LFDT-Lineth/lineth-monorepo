@@ -262,7 +262,7 @@ def _sample_rollup_proof() -> RollupProof:
         start_block_number=U64(1000501),
         proof=b"\xde\xad\xbe\xef",
         l2_l1_roots=[Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32)],
-        filtered_addresses=[Address(bytes([0x01]) * 20)],
+        filtered_addresses=[Address(bytes([0x03]) * 20), Address(bytes([0x04]) * 20)],
     )
 
 
@@ -296,7 +296,7 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert int(proof.public_inputs.last_processed_ftx_number) == 12
     assert proof.l2_l1_messages == [Hash32(bytes([0x08]) * 32)]
     assert proof.tx_froms == [Address(bytes([0x01]) * 20), Address(bytes([0x02]) * 20)]
-    assert proof.filtered_addresses == []
+    assert proof.filtered_addresses == [Address(bytes([0x03]) * 20), Address(bytes([0x04]) * 20)]
 
 
 def test_decode_rollup_request_missing_field_is_rejected() -> None:
@@ -372,7 +372,7 @@ def test_encode_rollup_response_shape_and_values() -> None:
     }
 
     assert out["l2L1Roots"] == ["0x" + ("77" * 32), "0x" + ("88" * 32)]
-    assert out["filteredAddresses"] == ["0x" + ("01" * 20)]
+    assert out["filteredAddresses"] == ["0x" + ("03" * 20), "0x" + ("04" * 20)]
 
 
 # ══════════════════════════════════════════════════════════════════════════════
