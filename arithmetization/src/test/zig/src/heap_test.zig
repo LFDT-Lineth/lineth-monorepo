@@ -20,5 +20,5 @@ export fn main() noreturn {
         custom_std.panic();
     }
 
-    custom_std.exit(0);
+    custom_std.zkvm_exit(0);
 }

@@ -10,5 +10,5 @@ export fn main() noreturn {
     _ = @divTrunc(a, b);
     _ = @rem(a, b);
 
-    custom_std.exit(0);
+    custom_std.zkvm_exit(0);
 }

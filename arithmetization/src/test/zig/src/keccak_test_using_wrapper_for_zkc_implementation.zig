@@ -46,5 +46,5 @@ export fn main() noreturn {
     // keccak( "00".repeat(136) ) = 3a5912a7c5faa06ee4fe906253e339467a9ce87d533c65be3c15cb231cdb25f9
     // keccak( "00".repeat(137) ) = bee7fbb405cb0d91a8775e338c4a5e4b5d6b2d051f687fa942043cffdc73bd28
 
-    custom_std.exit(0);
+    custom_std.zkvm_exit(0);
 }
