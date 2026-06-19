@@ -2,7 +2,7 @@
 
 Boot and inspection commands stay in this directory so the normal flow remains short:
 
-- `start.sh`, `check-ports.sh`, `watch.sh`, `status.sh`, `links.sh`, `export-output.sh`
+- `start.sh`, `bootstrap-artifacts.sh`, `check-ports.sh`, `watch.sh`, `status.sh`, `links.sh`, `export-output.sh`, `reset.sh`
 - `check-quickstart-static.sh`
 
 Other scripts are split by purpose:

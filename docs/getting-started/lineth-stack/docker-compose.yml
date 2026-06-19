@@ -638,9 +638,10 @@ services:
       - ./scripts/internal:/scripts/internal:ro
       - ./scripts/lib:/scripts/lib:ro
       - ./scripts/phases:/scripts/phases:ro
-      # Forked deploy script — bind-mounted OVER the upstream path. Fixes the
-      # stale ORDERED_NONCE_POST_LINEAROLLUP=7 offset (step 1 actually consumes
-      # 8 nonces) and serializes the 3 parallel deploys. See
+      # Forked deploy script — bind-mounted OVER the upstream path. Drops the
+      # stale upstream ORDERED_NONCE_POST_LINEAROLLUP offset, serializes all
+      # deploys so ethers manages nonces from live wallet state, and routes
+      # fees through the shared single-fee-model helper. See
       # scripts/internal/deployBridgedTokenAndTokenBridgeV1_1.ts header for details.
       - ./scripts/internal/deployBridgedTokenAndTokenBridgeV1_1.ts:/workspace/contracts/local-deployments-artifacts/deployBridgedTokenAndTokenBridgeV1_1.ts:ro
       - ./artifacts/accounts:/accounts:ro

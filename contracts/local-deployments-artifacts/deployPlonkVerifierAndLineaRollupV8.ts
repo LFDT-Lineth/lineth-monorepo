@@ -39,13 +39,13 @@ import {
 } from "../common/constants";
 import { deployContractFromArtifacts, getInitializerData } from "../common/helpers/deployments";
 import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
+import { resolveOneModelFeeOverrides } from "../common/helpers/feeOverrides";
 import {
   getDeploymentNetworkName,
   requireAddressesFromRegistryOrEnv,
   requireAddressFromRegistryOrEnv,
 } from "../common/helpers/readAddress";
 import { generateRoleAssignments } from "../common/helpers/roles";
-import { get1559Fees } from "../scripts/utils";
 
 dotenv.config();
 
@@ -83,39 +83,6 @@ function getBooleanEnvVarOrDefault(name: string, defaultValue: boolean): boolean
     return false;
   }
   throw new Error(`${name} must be either "true" or "false"`);
-}
-
-type DeployFeeOverrides = {
-  maxPriorityFeePerGas?: bigint;
-  maxFeePerGas?: bigint;
-  gasPrice?: bigint;
-};
-
-// The public quickstart can pin local L1 deploy gas for deterministic boot behavior.
-// Keep this scoped to the V8 local artifact script so shared deploy/ops scripts keep upstream fee policy.
-async function getDeployFeeOverrides(provider: ethers.Provider): Promise<DeployFeeOverrides> {
-  const deployGasPriceWei = process.env.L1_DEPLOY_GAS_PRICE_WEI;
-  if (deployGasPriceWei === undefined || deployGasPriceWei === "") {
-    const { gasPrice, maxFeePerGas, maxPriorityFeePerGas } = await get1559Fees(provider);
-    if (maxFeePerGas !== undefined && maxPriorityFeePerGas !== undefined) {
-      return { maxFeePerGas, maxPriorityFeePerGas };
-    }
-    if (gasPrice !== undefined) {
-      return { gasPrice };
-    }
-    if (maxFeePerGas !== undefined || maxPriorityFeePerGas !== undefined) {
-      throw new Error("Provider did not return complete deploy fee data. Set L1_DEPLOY_GAS_PRICE_WEI explicitly.");
-    }
-    throw new Error("Provider did not return any deploy fee data. Set L1_DEPLOY_GAS_PRICE_WEI explicitly.");
-  }
-
-  if (!/^[0-9]+$/.test(deployGasPriceWei)) {
-    throw new Error(`L1_DEPLOY_GAS_PRICE_WEI must be an integer wei value, got: ${deployGasPriceWei}`);
-  }
-
-  const gasPrice = BigInt(deployGasPriceWei);
-  console.log(`Using environment variable L1_DEPLOY_GAS_PRICE_WEI=${gasPrice.toString()}`);
-  return { gasPrice };
 }
 
 async function getDeployNonce(wallet: ethers.Wallet): Promise<number> {
@@ -177,7 +144,10 @@ async function main() {
 
   const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
 
-  const feeOverrides = await getDeployFeeOverrides(provider);
+  // The public quickstart can pin local L1 deploy gas for deterministic boot
+  // behavior via L1_DEPLOY_GAS_PRICE_WEI; otherwise the provider's fee data is
+  // used. resolveOneModelFeeOverrides guarantees a single, complete fee model.
+  const feeOverrides = await resolveOneModelFeeOverrides(provider, "L1_DEPLOY_GAS_PRICE_WEI");
 
   const walletNonce = await getDeployNonce(wallet);
 

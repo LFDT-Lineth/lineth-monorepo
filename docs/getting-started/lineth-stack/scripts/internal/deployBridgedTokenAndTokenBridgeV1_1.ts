@@ -1,19 +1,19 @@
 // Forked from contracts/local-deployments-artifacts/deployBridgedTokenAndTokenBridgeV1_1.ts
-// for the lineth-stack scaffold. Two changes vs upstream:
+// for the lineth-stack scaffold. Three changes vs upstream:
 //
-// 1. walletNonce comes from `await wallet.getNonce()` directly — the upstream
-//    `ORDERED_NONCE_POST_LINEAROLLUP = 7` offset is stale (step 1 actually
-//    consumes 8 nonces: 7 deploys + 1 role grant). With the offset the first
-//    deploy hits "nonce too low" against any non-fresh Sepolia deployer.
+// 1. Every deploy is serialized via sequential `await` with no explicit nonce
+//    overrides, so ethers manages nonces from live wallet state. This drops the
+//    upstream `ORDERED_NONCE_POST_LINEAROLLUP` offset, which was stale for this
+//    quickstart's deploy order and broke against any non-fresh deployer.
 //
-// 2. The 3 implementation deploys (BridgedToken, tokenBridgeImpl, ProxyAdmin)
-//    are serialized via sequential `await` (no Promise.all, no explicit nonce
-//    overrides). Removes the entire class of parallel-deploy nonce races.
-//
-// 3. remoteSender is supplied directly via REMOTE_TOKEN_BRIDGE_ADDRESS env
+// 2. remoteSender is supplied directly via REMOTE_TOKEN_BRIDGE_ADDRESS env
 //    var instead of derived from `remoteDeployerNonce + 4`. The upstream
-//    derivation also depends on the stale offset and silently produces the
+//    derivation also depended on the stale offset and silently produced the
 //    wrong cross-chain TokenBridge initialization.
+//
+// 3. Deploy fees go through the shared single-fee-model helper so the L1
+//    TokenBridge follows the same L1_DEPLOY_GAS_PRICE_WEI policy as the V8
+//    rollup deploy, and no transaction mixes legacy and EIP-1559 fields.
 //
 // Bind-mounted over the upstream path in the deploy-contracts compose service.
 import {
@@ -49,6 +49,7 @@ import {
 } from "./static-artifacts/UpgradeableBeacon.json";
 import { deployContractFromArtifacts, getInitializerData } from "../common/helpers/deployments";
 import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
+import { assertSingleFeeModel, FeeOverrides, resolveOneModelFeeOverrides } from "../common/helpers/feeOverrides";
 import { generateRoleAssignments } from "../common/helpers/roles";
 
 async function main() {
@@ -77,13 +78,17 @@ async function main() {
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
   const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
 
-  let fees = {};
-  if (process.env.TOKEN_BRIDGE_L1 !== "true") {
-    fees = {
-      maxFeePerGas: 7_200_000_000_000n,
-      maxPriorityFeePerGas: 7_000_000_000_000n,
-    };
-  }
+  // L1 follows the same single-fee-model policy as the V8 rollup deploy
+  // (explicit L1_DEPLOY_GAS_PRICE_WEI, else provider fee data). L2 keeps the
+  // local fixed EIP-1559 fee required for the local Besu boot, routed through
+  // the same one-model-only validation so the two fields can never conflict.
+  const fees: FeeOverrides =
+    process.env.TOKEN_BRIDGE_L1 === "true"
+      ? await resolveOneModelFeeOverrides(provider, "L1_DEPLOY_GAS_PRICE_WEI")
+      : assertSingleFeeModel({
+          maxFeePerGas: 7_200_000_000_000n,
+          maxPriorityFeePerGas: 7_000_000_000_000n,
+        });
 
   const tokenBridgeContractImplementationName = "tokenBridgeContractImplementation";
 

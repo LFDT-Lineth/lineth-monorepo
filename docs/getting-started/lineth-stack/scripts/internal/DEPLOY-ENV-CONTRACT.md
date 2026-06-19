@@ -26,9 +26,9 @@ Captured by `makefile-contracts.mk:158-159`:
 | `L1_NONCE` | output of `get-wallet-nonce.ts --wallet-priv-key 0xac09…ff80 --rpc-url http://l1-el-node:8545` | computed at runtime |
 | `L2_NONCE` | output of `get-wallet-nonce.ts --wallet-priv-key 0x1dd1…1aae --rpc-url http://l2-node-besu:8545` | computed at runtime |
 
-Both are exported to the env of every leaf target. Each leaf script computes its own offset from a fixed nonce-ordering convention (constants `ORDERED_NONCE_POST_LINEAROLLUP`, `ORDERED_NONCE_POST_TOKENBRIDGE`, `ORDERED_NONCE_POST_L2MESSAGESERVICE` baked into the deploy scripts).
+Both are exported to the env of every leaf target. The upstream scripts computed their own offsets from a fixed nonce-ordering convention (constants `ORDERED_NONCE_POST_LINEAROLLUP`, `ORDERED_NONCE_POST_TOKENBRIDGE`, `ORDERED_NONCE_POST_L2MESSAGESERVICE` baked into the deploy scripts).
 
-Note: in serial execution we could let the scripts read the wallet's live nonce instead, but `deployBridgedTokenAndTokenBridgeV1_1.ts:77-89` **throws** if `L1_NONCE` / `L2_NONCE` are unset. So we must compute and pass them for the boot-critical TokenBridge steps.
+Note: in our serial flow the scripts read the wallet's live nonce. `deployPlonkVerifierAndLineaRollupV8.ts` honors an explicit `L1_NONCE` when set but falls back to `wallet.getNonce()`. The forked `deployBridgedTokenAndTokenBridgeV1_1.ts` no longer reads `L1_NONCE` / `L2_NONCE` at all — it serializes every deploy and lets ethers manage nonces from live wallet state. `04-deploy-contracts.sh` still captures `L1_NONCE` / `L2_NONCE` in the prelude (for V8 and logging) and additionally guards each step against redeploying past the expected deterministic nonce.
 
 ## L1 leaf targets
 
@@ -57,7 +57,7 @@ Source: `makefile-contracts.mk:34-57` (V8 default).
 | `FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER` | `10` | literal | required only when `DEPLOY_FORCED_TRANSACTION_GATEWAY=true` |
 | `SECURITY_COUNCIL_PRIVATE_KEY` | `0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6` (DEV) | literal | required only when `DEPLOY_FORCED_TRANSACTION_GATEWAY=true` |
 | `YIELD_MANAGER_ADDRESS` | `0x000000000000000000000000000000000000dEaD` | literal | required |
-| `L1_NONCE` | from prelude | parent | required (script throws if absent) |
+| `L1_NONCE` | from prelude | parent | optional (honored if set; falls back to `wallet.getNonce()`) |
 
 **Outputs** (consumed by token-bridge-l1 + token-bridge-l2):
 
@@ -78,7 +78,8 @@ Source: `makefile-contracts.mk:105-116`.
 | `L1_SECURITY_COUNCIL` | `0x90F79bf6EB2c4f870365E785982E1f101E93b906` | literal | required |
 | `L2_MESSAGE_SERVICE_ADDRESS` | `0xe537D669CA013d86EBeF1D64e40fC74CADC91987` (deterministic) | **literal in internal** — but in the rewrite we **forward from `dynamic-artifacts/1337-L2MessageService.json`** | required |
 | `LINEA_ROLLUP_ADDRESS` | `0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9` (deterministic) | **literal in internal** — but in the rewrite we **forward from `dynamic-artifacts/31648428-LineaRollupV8.json`** | required |
-| `L1_NONCE` | from prelude | parent | required (script throws otherwise) |
+| `REMOTE_TOKEN_BRIDGE_ADDRESS` | precomputed L2 TokenBridge | forwarded by `04-deploy-contracts.sh` | required (used directly as `remoteSender`) |
+| `L1_NONCE` | from prelude | parent | unused by the forked script (serial deploys read the live nonce) |
 | `L1_RESERVED_TOKEN_ADDRESSES` | (none) | optional, comma-separated | optional |
 
 Output: L1 BridgedToken + L1 TokenBridge addresses written to dynamic-artifacts.
@@ -116,7 +117,8 @@ Source: `makefile-contracts.mk:118-129`.
 | `L2_SECURITY_COUNCIL` | `0xf17f52151EbEF6C7334FAD080c5704D77216b732` (DEV — note differs from `deploy-l2messageservice` L2_SECURITY_COUNCIL!) | literal | required |
 | `L2_MESSAGE_SERVICE_ADDRESS` | `0xe537D669CA013d86EBeF1D64e40fC74CADC91987` | **literal in internal** — **forward from `dynamic-artifacts/1337-L2MessageService.json`** | required |
 | `LINEA_ROLLUP_ADDRESS` | `0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9` | **literal in internal** — **forward from `dynamic-artifacts/31648428-LineaRollupV8.json`** | required |
-| `L2_NONCE` | from prelude | parent | required |
+| `REMOTE_TOKEN_BRIDGE_ADDRESS` | L1 TokenBridge from step 3 | forwarded by `04-deploy-contracts.sh` | required (used directly as `remoteSender`) |
+| `L2_NONCE` | from prelude | parent | unused by the forked script (serial deploys read the live nonce) |
 | `L2_RESERVED_TOKEN_ADDRESSES` | (none) | optional, comma-separated | optional |
 
 Output: L2 BridgedToken + L2 TokenBridge addresses.

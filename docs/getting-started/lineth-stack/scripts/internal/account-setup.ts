@@ -121,9 +121,19 @@ function writeFileMode(file: string, contents: string, mode: number) {
   fs.chmodSync(file, mode);
 }
 
-// Host artifacts are bind-mounted into containers that do not necessarily share
-// the host user/group. These files are gitignored dev/demo material and must be
-// container-readable for Web3Signer, deploy, traffic, and smoke-test helpers.
+// DEV-ONLY file mode. These generated runtime keystores, the keystore password
+// file, the compatibility runtime-keys.env, and the Web3Signer YAMLs are written
+// world-readable on purpose. Host artifacts are bind-mounted into containers that
+// do not share the host UID/GID, and Web3Signer (plus deploy/traffic/smoke
+// helpers) runs as a non-root container user that cannot read host-owned 0o600
+// files. The funded L1 deployer keystore, which only root-running deploy tooling
+// reads, is kept at 0o600 by deployer-wallet.ts; these runtime files cannot use
+// that stricter mode without breaking the non-root Web3Signer container reads.
+//
+// This is acceptable ONLY because everything written here is gitignored local
+// demo material with throwaway keys: see config/DEV-KEYS-INVENTORY.md and the
+// README "Accounts and funding model" section. These artifacts must never be
+// reused or copied outside a local quickstart. Do not present 0o644 as secure.
 const CONTAINER_READABLE_FILE_MODE = 0o644;
 
 function loadKeystorePassword(): string {

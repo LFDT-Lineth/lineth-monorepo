@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { assertSingleFeeModel, FeeOverrides, feeBudgetPricePerGas } from "contracts/common/helpers/feeOverrides";
 import { isAddress, JsonRpcProvider, type TransactionReceipt, Wallet } from "ethers";
 
 import { resolveL1DeployerConfig } from "./deployer-wallet";
@@ -183,7 +184,7 @@ async function fundBatch(params: {
   provider: JsonRpcProvider;
   wallet: Wallet;
   targets: FundingTarget[];
-  gasPrice: bigint;
+  fees: FeeOverrides;
   gasLimit: bigint;
 }) {
   const startedMs = Date.now();
@@ -200,7 +201,9 @@ async function fundBatch(params: {
 
     const senderBalance = await params.provider.getBalance(params.wallet.address);
     const requiredValue = plans.reduce((total, plan) => total + plan.topUp, 0n);
-    const requiredGas = BigInt(plans.length) * params.gasLimit * params.gasPrice;
+    // Size the gas budget from the selected single fee model: the legacy
+    // gasPrice, or the EIP-1559 maxFeePerGas ceiling.
+    const requiredGas = BigInt(plans.length) * params.gasLimit * feeBudgetPricePerGas(params.fees);
     const requiredTotal = requiredValue + requiredGas;
     if (senderBalance < requiredTotal) {
       die(
@@ -223,7 +226,7 @@ async function fundBatch(params: {
         value: plan.topUp,
         nonce,
         gasLimit: params.gasLimit,
-        gasPrice: params.gasPrice,
+        ...params.fees,
       });
       log(`${params.label} funding ${plan.label}: tx=${tx.hash} nonce=${nonce}`);
       sent.push({ ...plan, hash: tx.hash, nonce });
@@ -296,7 +299,7 @@ async function main() {
       timingName: "Runtime funding: L1 batch",
       provider: l1Provider,
       wallet: l1Wallet,
-      gasPrice: policyConfig.l1DeployGasPriceWei,
+      fees: assertSingleFeeModel({ gasPrice: policyConfig.l1DeployGasPriceWei }),
       gasLimit: 21000n,
       targets: [
         {
@@ -324,7 +327,7 @@ async function main() {
       timingName: "Runtime funding: L2 batch",
       provider: l2Provider,
       wallet: l2Wallet,
-      gasPrice: policyConfig.l2GasPriceWei,
+      fees: assertSingleFeeModel({ gasPrice: policyConfig.l2GasPriceWei }),
       gasLimit: 21000n,
       targets: [
         {

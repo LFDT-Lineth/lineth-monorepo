@@ -1494,6 +1494,78 @@ check_pinned_utility_images_and_docs() {
   fi
 }
 
+check_quickstart_review_fixes() {
+  deploy_contracts="$STACK/scripts/phases/04-deploy-contracts.sh"
+  account_setup_ts="$STACK/scripts/internal/account-setup.ts"
+  token_bridge_ts="$STACK/scripts/internal/deployBridgedTokenAndTokenBridgeV1_1.ts"
+  fund_runtime_accounts="$STACK/scripts/internal/fund-runtime-accounts.ts"
+  rollup_deploy_script="$ROOT/contracts/local-deployments-artifacts/deployPlonkVerifierAndLineaRollupV8.ts"
+  fee_overrides_ts="$ROOT/contracts/common/helpers/feeOverrides.ts"
+  fee_overrides_test="$ROOT/contracts/common/helpers/feeOverrides.test.ts"
+  readme="$STACK/README.md"
+
+  # Task 2: restart-safe redeploy nonce guard.
+  if grep -q 'guard_redeploy_nonce_window()' "$deploy_contracts" \
+    && grep -q 'This artifact set is partial or stale; run ./scripts/reset.sh before redeploying.' "$deploy_contracts" \
+    && grep -q 'guard_redeploy_nonce_window "L1" "$L1_RPC_URL" "$L1_DEPLOYER_ADDRESS" \\' "$deploy_contracts" \
+    && grep -q 'EXPECTED_LINEA_ROLLUP_NONCE' "$deploy_contracts" \
+    && grep -q 'EXPECTED_L2_MESSAGE_SERVICE_NONCE' "$deploy_contracts" \
+    && [ "$(grep -c 'guard_redeploy_nonce_window ' "$deploy_contracts")" -ge 4 ] \
+    && grep -q 'current_nonce > expected_nonce' "$deploy_contracts"; then
+    pass "deploy-contracts guards stale/partial redeploys when the live deployer nonce passed the expected nonce"
+  else
+    fail "deploy-contracts must guard each deploy step with guard_redeploy_nonce_window and a reset hint"
+  fi
+
+  # Task 3: shared single-fee-model deploy helper.
+  if [ -f "$fee_overrides_ts" ] \
+    && grep -q 'resolveOneModelFeeOverrides' "$fee_overrides_ts" \
+    && grep -q 'assertSingleFeeModel' "$fee_overrides_ts" \
+    && grep -q 'feeBudgetPricePerGas' "$fee_overrides_ts" \
+    && grep -q 'must not set both legacy gasPrice and EIP-1559 fields' "$fee_overrides_ts" \
+    && [ -f "$fee_overrides_test" ]; then
+    pass "shared deploy fee helper enforces a single fee model and is unit-tested"
+  else
+    fail "contracts/common/helpers/feeOverrides.ts must own single-fee-model deploy logic with a unit test"
+  fi
+
+  if grep -q 'resolveOneModelFeeOverrides' "$rollup_deploy_script" \
+    && grep -q 'L1_DEPLOY_GAS_PRICE_WEI' "$rollup_deploy_script" \
+    && ! grep -q 'getDeployFeeOverrides' "$rollup_deploy_script"; then
+    pass "V8 rollup deploy routes fees through the shared single-fee-model helper"
+  else
+    fail "V8 rollup deploy must use resolveOneModelFeeOverrides instead of a local fee resolver"
+  fi
+
+  if grep -q 'resolveOneModelFeeOverrides' "$token_bridge_ts" \
+    && grep -q 'assertSingleFeeModel' "$token_bridge_ts" \
+    && grep -q 'L1_DEPLOY_GAS_PRICE_WEI' "$token_bridge_ts" \
+    && ! grep -q 'let fees = {}' "$token_bridge_ts"; then
+    pass "TokenBridge wrapper uses one fee model and follows the L1 deploy gas policy"
+  else
+    fail "TokenBridge wrapper must use the shared single-fee-model helper and must not mix fee fields"
+  fi
+
+  # Task 4: runtime funding uses the same single-fee-model shape.
+  if grep -q 'feeBudgetPricePerGas' "$fund_runtime_accounts" \
+    && grep -q 'FeeOverrides' "$fund_runtime_accounts" \
+    && grep -q 'assertSingleFeeModel' "$fund_runtime_accounts" \
+    && ! grep -q 'gasPrice: params.gasPrice' "$fund_runtime_accounts"; then
+    pass "runtime funding sizes gas from the shared single-fee-model helper"
+  else
+    fail "fund-runtime-accounts must route fees through the shared single-fee-model helper"
+  fi
+
+  # Task 5: dev-only world-readable runtime key permissions are documented.
+  if grep -q 'DEV-ONLY file mode' "$account_setup_ts" \
+    && grep -q 'Do not present 0o644 as secure' "$account_setup_ts" \
+    && grep -q 'written world-readable' "$readme"; then
+    pass "world-readable runtime key permissions are documented as a dev-only exception"
+  else
+    fail "account-setup.ts and README must document the dev-only world-readable runtime key permissions"
+  fi
+}
+
 check_no_tracked_generated_genesis
 check_restructured_layout_paths
 check_runtime_helper_usage
@@ -1510,6 +1582,7 @@ check_runtime_config_and_validium_guardrails
 check_reuse_guardrails
 check_smoke_and_traffic_scripts
 check_pinned_utility_images_and_docs
+check_quickstart_review_fixes
 
 if [ "$FAILURES" -ne 0 ]; then
   printf '[quickstart-static] %s failure(s)\n' "$FAILURES" >&2

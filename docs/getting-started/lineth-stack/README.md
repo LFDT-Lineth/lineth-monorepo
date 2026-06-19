@@ -14,7 +14,7 @@ for development, CI, rehearsal, and unreliable-Sepolia periods.
 
 > **Apple Silicon**
 > The Lineth prover image is `linux/amd64` only and runs under Rosetta on M-series, 3–5× slower than native x86_64.
-> For day-to-day work, keep `PROVER_DEV_OVERRIDE=true` in `.env` (see §8) so the prover serves dummy proofs in seconds regardless of architecture.
+> For day-to-day work, keep `PROVER_DEV_OVERRIDE=true` in `.env` (see [Prover mode](#prover-mode)) so the prover serves dummy proofs in seconds regardless of architecture.
 > The slowdown only matters when you turn the override off for real partial-mode validation: the first proof takes roughly 30 minutes on M-series vs. 5–10 minutes on native x86_64.
 > Everything else in the stack is multi-arch.
 
@@ -79,6 +79,16 @@ Generated boot material:
 - `./scripts/reset.sh` deletes generated artifacts and Docker state but
   preserves the generated Sepolia deployer by default. Use
   `./scripts/reset.sh --forget-deployer` to remove it.
+
+Generated runtime keystores, their keystore password file, the compatibility
+`runtime-keys.env`, and the Web3Signer YAMLs under `artifacts/accounts/` are
+written world-readable (`0o644`) on the host. This is a deliberate dev-only
+trade-off: the host `artifacts/` tree is bind-mounted into containers that do
+not share the host user, and the non-root Web3Signer container must be able to
+read these files. They hold throwaway local keys only, are gitignored, and must
+never be reused or copied outside a local quickstart. The funded L1 deployer
+keystore is the exception and stays `0o600` because only root-running deploy
+tooling reads it.
 
 Full key inventory: `config/DEV-KEYS-INVENTORY.md`.
 
@@ -153,7 +163,7 @@ Sepolia gas or RPC conditions are unstable.
 
 ```bash
 cp .env.example .env
-printf 'L1_MODE=local\nPROVER_DEV_OVERRIDE=true\n' > .env
+printf 'L1_MODE=local\nPROVER_DEV_OVERRIDE=true\n' >> .env
 ./scripts/start.sh --tail --no-pull
 ```
 
@@ -401,7 +411,7 @@ Latest verified local traffic checks (2026-05-28): one L2 ETH transfer, one L2
 run. Blockscout reported local L2 fees in the `10^12` wei range with
 `L2_GAS_PRICE_WEI=100000000`.
 
-Bridge smoke tests spend real Sepolia gas:
+Bridge smoke tests spend real Sepolia gas in Sepolia mode (local L1 mode uses the local L1 instead):
 
 ```bash
 ./scripts/smoke-test/smoke-bridge-message.sh
@@ -412,7 +422,7 @@ Bridge smoke tests spend real Sepolia gas:
 
 Coverage:
 
-- `smoke-bridge-message.sh`: L1-to-L2 generic message relay through Postman.
+- `scripts/smoke-test/smoke-bridge-message.sh`: L1-to-L2 generic message relay through Postman.
 - `scripts/smoke-test/smoke-bridge-erc20-l1-to-l2.sh`: ERC20 TokenBridge
   deposit to local L2.
 - `scripts/smoke-test/smoke-bridge-erc20-l2-to-l1.sh`: ERC20 TokenBridge
