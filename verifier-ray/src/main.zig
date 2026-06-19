@@ -27,7 +27,7 @@ const digest_limb_count = 8;
 
 const native_input_path: [:0]const u8 = "zig-out/input.bin";
 
-extern const _input_start: u8;
+extern const _in_start: u8;
 
 // Input is cast directly from raw bytes in both native mmap and R5 linked-memory paths.
 // Keep declaration-order layout stable for the binary fixtures.
@@ -73,9 +73,9 @@ pub export fn r5_main() noreturn {
     }
 
     // the input is linked into the binary at compile time using the
-    // `_input_start` symbol defined in the linker script, so we can just take its
+    // `_in_start` symbol defined in the linker script, so we can just take its
     // address and cast it to our structured input type
-    const input: *const Input = @ptrCast(@alignCast(&_input_start));
+    const input: *const Input = @ptrCast(@alignCast(&_in_start));
 
     // run the verifier smoke test with the loaded input
     const res = runVerifierSmoke(input);

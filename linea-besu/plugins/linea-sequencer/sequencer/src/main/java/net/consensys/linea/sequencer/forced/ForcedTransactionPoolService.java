@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import org.hyperledger.besu.plugin.services.BesuService;
 import org.hyperledger.besu.plugin.services.txselection.BlockTransactionSelectionService;
+import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
 
 /**
  * Service for managing forced transactions. Forced transactions are submitted via
@@ -53,4 +54,6 @@ public interface ForcedTransactionPoolService extends BesuService {
    * @return The number of pending transactions
    */
   int pendingCount();
+
+  boolean shallForceIncludeTransaction(final TransactionEvaluationContext txContext);
 }

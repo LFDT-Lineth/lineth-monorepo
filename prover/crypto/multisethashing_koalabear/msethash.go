@@ -16,33 +16,30 @@ const (
 	// 		from estimator.sis_parameters import *
 	//
 	//		// The modulus of the field (approximatively)
-	//		q = 2**31 for koalabear
+	//		q = 2**31 - 2**24 + 1 for koalabear
 	//		// max_number is the maximal number of parts we can have in the hash
 	//		// We are looking for a SIS instance that is secure for an L1 norm
 	//		// of at most that. We use the bound L1(x) > L2(x), to reduce that
 	//		// to finding a SIS instance that is secure for the L2 norm.
-	//		max_number = 2**12 (max number of insert/remove)
+	//		max_number = 2**16 (max number of insert/remove)
 	//		// an arbitrary big number to ensure the BKZ solver will find the
 	//		// optimal value to attack.
-	//		m = 2**20
+	//		m = 2**32
 	//
-	// 		params = SISParameters(n=23*8, q=q, length_bound=max_number, m=m, norm=2, tag='MSET')
+	// 		params = SISParameters(n=41*8, q=q, length_bound=max_number, m=m, norm=2, tag='MSET')
 	// 		SIS.estimate(params)
 	//		--------------------
-	//		>>> lattice  :: rop: ≈2^127.7, red: ≈2^127.7, δ: 1.004382, β: 348, d: 950, tag: euclidean
+	//		>>> lattice  :: rop: ≈2^128.6, red: ≈2^128.6, δ: 1.004373, β: 349, d: 1271, tag: euclidean
+	// 		n=328: rop ≈ 2^128.6
 	// ````
-	//		// q = 2**(31*8)
-	//		// max_number = 2**12
-	// 		// m = 2**20
-	// 		// n = 23
 	//
-	// 		params = SISParameters(n=23, q=2**(31*8), length_bound=2**12, m=2**20, norm=2, tag='MSET')
-	// 		// SIS.estimate(params)
-	// 		>>>lattice:: rop: ≈2^127.7, red: ≈2^127.7, δ: 1.004382, β: 348, d: 950, tag: euclidean
-	//
-	ChunkSize    = 23
+	ChunkSize    = 41
 	BlockSize    = 8
 	MSetHashSize = ChunkSize * BlockSize
+	// OverflowBoundBits tells the maximum number of inclusion that can be
+	// done in the multiset before we overflow. Equal to `log2(max_number)` in
+	// the above snippet.
+	OverflowBoundBits = 16
 )
 
 // MSetHash represents a multisets hash (LtHash) instantiated using the MiMC

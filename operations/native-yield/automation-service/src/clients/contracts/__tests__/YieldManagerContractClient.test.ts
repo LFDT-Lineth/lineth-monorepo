@@ -1,4 +1,4 @@
-import { absDiff, ONE_ETHER, weiToGweiNumber } from "@consensys/linea-shared-utils";
+import { absDiff, ONE_ETHER, weiToGweiNumber } from "@lfdt-lineth/shared-utils";
 import { mock, MockProxy } from "jest-mock-extended";
 import { concat, encodeAbiParameters, encodeFunctionData, getContract, parseEventLogs } from "viem";
 
@@ -15,7 +15,7 @@ import { YieldManagerContractClient } from "../YieldManagerContractClient.js";
 import type { WithdrawalRequests } from "../../../core/entities/LidoStakingVaultWithdrawalParams.js";
 import type { INativeYieldAutomationMetricsUpdater } from "../../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
 import type { IRebalanceQuotaService } from "../../../core/services/IRebalanceQuotaService.js";
-import type { ILogger, IBlockchainClient } from "@consensys/linea-shared-utils";
+import type { ILogger, IBlockchainClient } from "@lfdt-lineth/shared-utils";
 import type { Address, Hex, PublicClient, TransactionReceipt } from "viem";
 
 const YieldManagerCombinedABI = [

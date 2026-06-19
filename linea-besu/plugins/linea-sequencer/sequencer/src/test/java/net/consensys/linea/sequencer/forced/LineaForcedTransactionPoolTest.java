@@ -39,7 +39,7 @@ class LineaForcedTransactionPoolTest {
 
   @BeforeEach
   void setUp() {
-    pool = new LineaForcedTransactionPool(100, null);
+    pool = new LineaForcedTransactionPool(100, 0L, null, null);
     txFactory = new TestTransactionFactory();
     forcedTxNumberGenerator = new AtomicLong(1);
   }

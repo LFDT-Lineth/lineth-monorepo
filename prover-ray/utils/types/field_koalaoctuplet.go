@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 )
 
 // KoalaOctuplet is a wrapper around koalabear octuplets which can be used

@@ -86,7 +86,7 @@ jobs:
             exit 1
           fi
 
-          NPM_NAME="@consensys/linea-${PACKAGE}"
+          NPM_NAME="@lfdt-lineth/${PACKAGE}"
           if npm view "${NPM_NAME}@${NEXT_VERSION}" version 2>/dev/null; then
             echo "::error::${NPM_NAME}@${NEXT_VERSION} is already published on npm."
             exit 1
@@ -127,7 +127,7 @@ jobs:
             COMMITS="- No notable changes"
           fi
 
-          HEADER=$(head -n1 "$CHANGELOG" 2>/dev/null || echo "# @consensys/linea-${PACKAGE}")
+          HEADER=$(head -n1 "$CHANGELOG" 2>/dev/null || echo "# @lfdt-lineth/${PACKAGE}")
           BODY=$(tail -n+2 "$CHANGELOG" 2>/dev/null || echo "")
 
           {
@@ -155,17 +155,17 @@ jobs:
       - name: Lint
         env:
           PACKAGE: ${{ inputs.package }}
-        run: pnpm -F "@consensys/linea-${PACKAGE}" run lint
+        run: pnpm -F "@lfdt-lineth/${PACKAGE}" run lint
 
       - name: Build
         env:
           PACKAGE: ${{ inputs.package }}
-        run: pnpm -F "@consensys/linea-${PACKAGE}..." run build
+        run: pnpm -F "@lfdt-lineth/${PACKAGE}..." run build
 
       - name: Test
         env:
           PACKAGE: ${{ inputs.package }}
-        run: pnpm -F "@consensys/linea-${PACKAGE}" run test
+        run: pnpm -F "@lfdt-lineth/${PACKAGE}" run test
 
       - name: Write pull request body
         id: pr_body
@@ -178,7 +178,7 @@ jobs:
         run: |
           BODY_FILE="${RUNNER_TEMP}/sdk-release-pr-body.md"
           {
-            echo "## Release @consensys/linea-${PACKAGE} v${NEXT_VERSION}"
+            echo "## Release @lfdt-lineth/${PACKAGE} v${NEXT_VERSION}"
             echo ""
             echo "**Bump type:** ${BUMP}"
             echo "**Previous version:** ${CURRENT_VERSION}"
@@ -209,5 +209,6 @@ jobs:
           commit-message: "release(${{ inputs.package }}): v${{ steps.version.outputs.next }}"
           branch: release-${{ inputs.package }}-v${{ steps.version.outputs.next }}
           base: main
-          title: "release(${{ inputs.package }}): v${{ steps.version.outputs.next }}"
+          title: "chore(${{ inputs.package }}): release v${{ steps.version.outputs.next }}"
           body-path: ${{ steps.pr_body.outputs.path }}
+          signoff: true

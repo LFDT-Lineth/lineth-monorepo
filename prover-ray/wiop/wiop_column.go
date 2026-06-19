@@ -3,7 +3,7 @@ package wiop
 import (
 	"fmt"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // Module is a group of columns sharing the same domain size and padding
@@ -222,6 +222,9 @@ func (c *Column) Round() *Round { return c.round }
 // Degree returns the polynomial degree of the column over its domain, which
 // is Size() - 1. Panics if the owning module has not been sized yet.
 func (c *Column) Degree() int {
+	if c.Module.IsDynamic() {
+		panic(fmt.Sprintf("wiop: Degree() called on dynamic-sized column %q", c.Context.Path()))
+	}
 	if !c.Module.IsSized() {
 		panic(fmt.Sprintf("wiop: Degree() called on unsized column %q", c.Context.Path()))
 	}
@@ -290,8 +293,20 @@ func (cv *ColumnView) IsMultiValued() bool { return true }
 func (cv *ColumnView) IsSized() bool { return cv.Column.Module.IsSized() }
 
 // Size implements [Expression]. Returns the domain size of the owning module.
-// Returns 0 if the module has not been sized yet.
-func (cv *ColumnView) Size() int { return cv.Column.Module.Size() }
+//
+// Panics if the owning module is dynamic (its size is per-Runtime; use the
+// module's RuntimeSize instead) or has not yet been sized. Check IsSized()
+// first.
+func (cv *ColumnView) Size() int {
+	m := cv.Column.Module
+	if m.IsDynamic() {
+		panic(fmt.Sprintf("wiop: Size() called on dynamic-sized column view of %q", cv.Column.Context.Path()))
+	}
+	if !m.IsSized() {
+		panic(fmt.Sprintf("wiop: Size() called on unsized column view of %q", cv.Column.Context.Path()))
+	}
+	return m.Size()
+}
 
 // Degree implements [Expression]. Returns Size() - 1. Panics if the owning
 // module has not been sized yet.
@@ -358,12 +373,38 @@ func (cv *ColumnView) Visibility() Visibility { return cv.Column.Visibility }
 type ColumnPosition struct {
 	// Column is the parent column.
 	Column *Column
-	// Position is the zero-based row index into the column.
+	// Position is the row index into the column. Non-negative values index
+	// from the start of the domain; negative values index from the end, with
+	// −1 being the last row, −2 the second-to-last, etc. The end-indexed
+	// form is the only way to open the endpoint of a dynamic module, where
+	// the absolute row index is only known per-[Runtime]. The same
+	// convention is shared with [Vanishing.CancelledPositions].
 	Position int
 }
 
-// At constructs a [ColumnPosition] for this column at the given zero-based
-// row index. The result is a scalar [FieldPromise] evaluating to Column[pos].
+// resolvedRow returns the absolute row index of this position against a
+// runtime-known domain size n. Negative Position values are interpreted from
+// the end (−1 ⇒ n−1, −2 ⇒ n−2, …). Panics if the resolved index is out of
+// the [0, n) range.
+func (cp *ColumnPosition) resolvedRow(n int) int {
+	row := cp.Position
+	if row < 0 {
+		row += n
+	}
+	if row < 0 || row >= n {
+		panic(fmt.Sprintf(
+			"wiop: ColumnPosition: row %d (Position=%d, runtime size %d) out of bounds",
+			row, cp.Position, n,
+		))
+	}
+	return row
+}
+
+// At constructs a [ColumnPosition] for this column at the given row index.
+// Non-negative pos indexes from the start of the domain. Negative pos
+// indexes from the end and is the canonical way to address a dynamic
+// module's endpoint (pos = −1 ⇒ last row). The result is a scalar
+// [FieldPromise] evaluating to Column[pos].
 //
 // Panics if the receiver is nil.
 func (c *Column) At(pos int) *ColumnPosition {
@@ -419,10 +460,12 @@ func (cp *ColumnPosition) EvaluateVector(_ Runtime) ConcreteVector {
 }
 
 // EvaluateSingle implements [Expression]. Returns the value of the parent
-// column at Position in the given runtime.
+// column at Position in the given runtime. Negative Position values are
+// resolved from the end of the domain (see [ColumnPosition.Position]).
 func (cp *ColumnPosition) EvaluateSingle(rt Runtime) ConcreteField {
 	m := cp.Column.Module
-	elem := rt.GetColumnAssignment(cp.Column).ElementAtN(m.Padding, m.RuntimeSize(rt), cp.Position)
+	n := m.RuntimeSize(rt)
+	elem := rt.GetColumnAssignment(cp.Column).ElementAtN(m.Padding, n, cp.resolvedRow(n))
 	return ConcreteField{Value: elem, promise: cp}
 }
 
@@ -462,8 +505,11 @@ func (cp *ColumnPosition) Open(ctx *ContextFrame) *Cell {
 		col.IsExtension,
 		func(rt Runtime) field.Gen {
 			m := col.Module
-			return rt.GetColumnAssignment(col).
-				ElementAtN(m.Padding, m.RuntimeSize(rt), cp.Position)
+			n := m.RuntimeSize(rt)
+			// Negative Position values are resolved from the end at runtime;
+			// see [ColumnPosition.Position]. This is what allows callers to
+			// open the endpoint of a dynamic module via At(-1).
+			return rt.GetColumnAssignment(col).ElementAtN(m.Padding, n, cp.resolvedRow(n))
 		},
 	)
 

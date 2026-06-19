@@ -3,7 +3,7 @@ package collection
 import (
 	"iter"
 
-	"github.com/consensys/linea-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 )
 
 // DeterministicMap wraps a map and allows iterating in a deterministic order

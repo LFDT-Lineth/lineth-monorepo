@@ -81,10 +81,11 @@ func NewModule(comp *wizard.CompiledIOP, in KeccakfInputs) *Module {
 	rhoPi := newRho(comp, theta.StateNext)
 	// create the chi iota module with the state after rhoPi
 	chiIota := newChi(comp, chiInputs{
-		StateCurr:    *rhoPi.StateNext,
-		Blocks:       block(in.Blocks),
-		IsBlockOther: in.IsBlockBaseB,
-		KeccakfSize:  in.KeccakfSize,
+		StateCurr:     *rhoPi.StateNext,
+		Blocks:        block(in.Blocks),
+		IsBlockOther:  in.IsBlockBaseB,
+		IsBlockActive: in.IsActive,
+		KeccakfSize:   in.KeccakfSize,
 	})
 
 	// prepare the state to back to theta or output the hash result.

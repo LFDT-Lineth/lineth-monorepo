@@ -1,4 +1,4 @@
-import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
+import { getContractsAddressesByChainId } from "@lfdt-lineth/sdk-core";
 import {
   Client,
   Transport,
