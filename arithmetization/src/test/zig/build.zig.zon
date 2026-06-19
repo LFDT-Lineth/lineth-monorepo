@@ -4,6 +4,8 @@
     .fingerprint = 0x3f08e1379cc5c004,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
+        // Shared build helpers (the freestanding rv64im guest target).
+        .build_common = .{ .path = "../../../../riscv-guests/build_common" },
         // Linea zkVM accelerator wrappers exercised by the guest test programs under src/.
         .lineth_accelerators = .{ .path = "../../../../riscv-guests/lineth-accelerators" },
     },
