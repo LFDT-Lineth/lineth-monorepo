@@ -59,7 +59,7 @@ copy_if_present() {
   [ -e "$src" ] || return 0
   if [ -d "$src" ]; then
     mkdir -p "$dst"
-    cp -a "$src"/. "$dst"/ 2>/dev/null || true
+    cp -a "$src"/. "$dst"/
   else
     mkdir -p "$(dirname "$dst")"
     cp -a "$src" "$dst"
@@ -94,7 +94,7 @@ migrate_legacy_volume() {
     docker run --rm \
       -v "$volume:/from:ro" \
       -v "$target_dir:/to:rw" \
-      "busybox:${BUSYBOX_TAG}" sh -eu -c 'cp -a /from/. /to/ 2>/dev/null || true'
+      "busybox:${BUSYBOX_TAG}" sh -eu -c 'cp -a /from/. /to/'
     lineth_info "copied existing $volume contents into $target_dir"
   else
     lineth_info "$target_dir already has content; not copying old $volume contents"
