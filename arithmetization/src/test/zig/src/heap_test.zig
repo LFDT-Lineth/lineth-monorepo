@@ -1,4 +1,4 @@
-const custom_std = @import("wrappers").custom_std;
+const wrappers = @import("wrappers");
 
 // Linker-defined symbol whose address marks where runtime heap allocations can start
 extern var _heap_start: u8;
@@ -9,7 +9,7 @@ export fn main() noreturn {
 
     // A real allocator must fail if growing the heap would overflow the address space
     if (@addWithOverflow(heap_start, 1)[1] != 0) {
-        custom_std.panic();
+        wrappers.panic();
     }
 
     // Write to the first heap byte and read it back through a volatile pointer
@@ -17,8 +17,8 @@ export fn main() noreturn {
     allocation.* = 42;
 
     if (allocation.* != 42) {
-        custom_std.panic();
+        wrappers.panic();
     }
 
-    custom_std.zkvm_exit(0);
+    wrappers.zkvm_exit(0);
 }

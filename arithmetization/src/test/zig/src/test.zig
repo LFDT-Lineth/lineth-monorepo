@@ -1,4 +1,4 @@
-const custom_std = @import("wrappers").custom_std;
+const wrappers = @import("wrappers");
 
 export fn main() noreturn {
     const a: i64 = 42;
@@ -10,5 +10,5 @@ export fn main() noreturn {
     _ = @divTrunc(a, b);
     _ = @rem(a, b);
 
-    custom_std.zkvm_exit(0);
+    wrappers.zkvm_exit(0);
 }

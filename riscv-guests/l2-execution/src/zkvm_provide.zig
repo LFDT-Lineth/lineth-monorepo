@@ -25,7 +25,7 @@ const build_options = @import("build_options"); // keccak_accel: standard zig ke
 // by -Dkeccak-accel; the rest come from the stdlibs_accel shims defined below.
 comptime {
     if (build_options.keccak_accel) {
-        @export(&linea_accel.keccak.zkvm_keccak256, .{ .name = "zkvm_keccak256" });
+        @export(&linea_accel.zkvm_keccak256, .{ .name = "zkvm_keccak256" });
     } else {
         @export(&keccak256, .{ .name = "zkvm_keccak256" });
     }
