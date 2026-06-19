@@ -44,3 +44,5 @@ jobs:
       - name: Run ACT4 tests
         run: make act4-exec
         working-directory: arithmetization/src/test
+        env:
+          ZKC_REF: ${{ inputs.zkc-ref || 'v1.2.20' }}

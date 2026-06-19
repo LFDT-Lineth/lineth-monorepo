@@ -4,6 +4,8 @@ import (
 	"math/bits"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/consensys/gnark-crypto/field/koalabear"
+	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
 
 // EvalLagrange evaluates a polynomial given in Lagrange (evaluation) basis at
@@ -91,9 +93,11 @@ func EvalLagrangeBatch(p field.Vec, zs []field.Gen) []field.Gen {
 	return results
 }
 
-// ComputeLagrangeAtZ returns the vector [L₀(z), L₁(z), …, L_{n-1}(z)] where
+// EvalLagrangeBasisAtZ returns the vector [L₀(z), L₁(z), …, L_{n-1}(z)] where
 //
 //	Lᵢ(z) = ωⁱ/n · (zⁿ - 1) / (z - ωⁱ)
+//
+// are the Lagrange basis vectors on the root of unity subgroup.
 //
 // Uses the recurrence relation to avoid n-1 extra inversions:
 //
@@ -102,23 +106,93 @@ func EvalLagrangeBatch(p field.Vec, zs []field.Gen) []field.Gen {
 //
 // cardinality must be a power of two not exceeding 2^MaxOrderRoot; z must not
 // be a root of unity.
-func ComputeLagrangeAtZ(z field.Gen, cardinality uint64) []field.Gen {
-	gen := field.RootOfUnityBy(int(cardinality))
-	n := int(cardinality)
+func EvalLagrangeBasisAtZ(z field.Gen, cardinality uint64) []field.Gen {
+
+	var (
+		gen = field.RootOfUnityBy(int(cardinality))
+		n   = int(cardinality)
+	)
+
 	if z.IsBase() {
-		res := computeLagrangeAtZBase(z.AsBase(), gen, n)
-		out := make([]field.Gen, n)
+		var (
+			res = computeLagrangeAtZBase(z.AsBase(), gen, n)
+			out = make([]field.Gen, n)
+		)
+
 		for i, e := range res {
 			out[i] = field.ElemFromBase(e)
 		}
 		return out
 	}
-	res := computeLagrangeAtZExt(z.AsExt(), gen, n)
-	out := make([]field.Gen, n)
+
+	var (
+		res = computeLagrangeAtZExt(z.AsExt(), gen, n)
+		out = make([]field.Gen, n)
+	)
+
 	for i, e := range res {
 		out[i] = field.ElemFromExt(e)
 	}
 	return out
+}
+
+// QuotientLagrange computes q(X) = (v - p(X)) / (z - X) where p is in Lagrange
+// form over domain d and v = p(z) is the claimed evaluation at z outside the
+// domain. Returns q in Lagrange Normal form: q[j] = (v - p(ω^j)) / (z - ω^j).
+// Panics (division by zero) if z happens to be a domain point.
+func QuotientLagrange(p []field.Element, v, z field.Element) []field.Element {
+
+	var (
+		n      = len(p)
+		q      = make([]field.Element, n)
+		omegaJ = field.One()
+	)
+
+	omega, err := fft.Generator(uint64(n))
+	if err != nil {
+		panic(err) // there is no actual error case, this is a void error
+	}
+
+	for j := 0; j < n; j++ {
+		var num, den koalabear.Element
+		num.Sub(&v, &p[j])
+		den.Sub(&z, &omegaJ)
+		den.Inverse(&den)
+		q[j].Mul(&num, &den)
+		omegaJ.Mul(&omegaJ, &omega)
+	}
+
+	return q
+}
+
+// QuotientLagrangeExt is as QuotientLagrange but for extension fields.
+func QuotientLagrangeExt(p []field.Ext, v, z field.Ext) []field.Ext {
+
+	var (
+		n      = len(p)
+		q      = make([]field.Ext, n)
+		omegaJ = field.One()
+	)
+
+	omega, err := fft.Generator(uint64(n))
+	if err != nil {
+		panic(err) // there is no actual error case, this is a void error
+	}
+
+	for j := 0; j < n; j++ {
+		var num, den field.Ext
+		num.Sub(&v, &p[j])
+		field.SubByBase(&den, &z, &omegaJ)
+		// @alex: batch inverse here? My guts tell me that the efficient thing
+		// would be to implement a function computing all the quotients provided
+		// a list of poly and a list of claim. That way, we can batch the
+		// computation as efficiently as possible.
+		den.Inverse(&den)
+		q[j].Mul(&num, &den)
+		omegaJ.Mul(&omegaJ, &omega)
+	}
+
+	return q
 }
 
 // ---------------------------------------------------------------------------
