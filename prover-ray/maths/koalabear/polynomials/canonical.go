@@ -1,11 +1,7 @@
 package polynomials
 
 import (
-	"fmt"
-
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/gnark-crypto/field/koalabear/fft"
-	"github.com/consensys/gnark-crypto/utils"
 )
 
 // evalNative evaluates p(X) = Σᵢ p[i]·Xⁱ at z using Horner's method.
@@ -27,27 +23,32 @@ func evalNative(poly field.Vec, z field.Gen) field.Gen {
 	return res
 }
 
+// EvalCanonicalBase evaluates p(X) = Σᵢ p[i]·Xⁱ at z using Horner's method.
+// The result is tagged base.
+func EvalCanonicalBase(poly []field.Element, z field.Element) field.Element {
+	return evalNative(
+		field.VecFromBase(poly),
+		field.ElemFromBase(z),
+	).AsBase()
+}
+
+// EvalCanonicalBase evaluates p(X) = Σᵢ p[i]·Xⁱ at z using Horner's method.
+// The result is tagged base.
+func EvalCanonicalExt(poly []field.Ext, z field.Ext) field.Ext {
+	return evalNative(
+		field.VecFromExt(poly),
+		field.ElemFromExt(z),
+	).AsExt()
+}
+
 // EvalCanonical evaluates p(X) = Σᵢ p[i]·Xⁱ at z using Horner's method.
 // The result is tagged base iff both poly and z are base-field values.
 func EvalCanonical(poly field.Vec, z field.Gen) field.Gen {
 	return evalNative(poly, z)
 }
 
-// LCEvalsToCoefficients recovers the coefficients p[0],…,p[n-1] of p(X) = Σᵢ p[i]·Xⁱ
-// from its evaluations v[i] = p(ωⁱ) on the n-th roots of unity (n = d.Cardinality,
-// ω a primitive n-th root of unity), via p[j] = (1/n)·Σᵢ v[i]·ω⁻ⁱʲ, implemented as
-// a single IFFT_n + bit-reverse over the extension field.
-func LCEvalsToCoefficients(d *fft.Domain, v []field.Ext) []field.Ext {
-	n := int(d.Cardinality)
-	if len(v) != n {
-		panic(fmt.Sprintf("LCEvalsToCoefficients: expected %d evals got %d", n, len(v)))
-	}
-	coeffs := make([]field.Ext, n)
-	copy(coeffs, v)
-	d.FFTInverseExt6(coeffs, fft.DIF)
-	utils.BitReverse(coeffs)
-	return coeffs
-}
+// LinearCombineCanonical linearly combines a list of vectors into a single
+// vector using powers of alpha as weights.
 
 // EvalCanonicalBatch evaluates multiple polynomials at the same point z,
 // sharing a precomputed power table z⁰, z¹, ..., z^(maxDeg-1).
