@@ -3,7 +3,10 @@
     .version = "0.0.0",
     .fingerprint = 0xbb46af775b3e4be3,
     .minimum_zig_version = "0.16.0",
-    .dependencies = .{},
+    .dependencies = .{
+        // Shared build helpers (pinned toolchain + the common freestanding rv64im guest target).
+        .build_common = .{ .path = "../build_common" },
+    },
     .paths = .{
         "build.zig",
         "build.zig.zon",
