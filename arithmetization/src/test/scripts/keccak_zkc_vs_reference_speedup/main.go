@@ -1,7 +1,12 @@
 package main
 
+// Examples, from the repository root:
+//   GO111MODULE=off go run ./arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup \
+//     --intervals 100 --size 10
+//   GO111MODULE=off go run ./arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup \
+//     --single-input-lengths 512,1024,2048,4096,8192,16384,32768,65536,131072,262144,524288
+
 import (
-	"bufio"
 	"bytes"
 	"flag"
 	"fmt"
@@ -14,19 +19,35 @@ import (
 	"strings"
 )
 
+const batchedInputBytes = 512
+
 var timeRE = regexp.MustCompile(`^(real|user|sys)\s+([0-9]+(?:[\.,][0-9]+)?)$`)
 
 type config struct {
-	intervals   int
-	size        int
-	start       int
-	makefileDir string
-	timeBin     string
-	showLengths bool
+	intervals          int
+	size               int
+	start              int
+	makefileDir        string
+	timeBin            string
+	singleInputLengths string
 }
 
 func main() {
+	// Select the benchmark mode
 	cfg := parseArgs()
+
+	if cfg.singleInputLengths != "" {
+		lengths := parseInputLengthList(cfg.singleInputLengths)
+		fmt.Println("| input bytes | KECCAK_ACCEL=false real (s) | KECCAK_ACCEL=true real (s) | speedup |")
+		fmt.Println("|-------------|-----------------------------|----------------------------|---------|")
+		for _, length := range lengths {
+			falseTime := runTimedSingle(cfg.makefileDir, cfg.timeBin, false, length)
+			trueTime := runTimedSingle(cfg.makefileDir, cfg.timeBin, true, length)
+			printSingleRow(length, falseTime, trueTime)
+		}
+		return
+	}
+
 	if cfg.intervals < 1 {
 		fatal("--intervals must be >= 1")
 	}
@@ -37,37 +58,19 @@ func main() {
 		fatal("--start must be >= 0")
 	}
 
-	var inputLengths []uint64
-	if cfg.showLengths {
-		inputLengths = readInputLengths(filepath.Join(cfg.makefileDir, "common_inputs", "keccak.all"))
-	}
-
-	if cfg.showLengths {
-		fmt.Println("| vectors | input lengths (bytes) | KECCAK_ACCEL=false real (s) | KECCAK_ACCEL=true real (s) | speedup |")
-		fmt.Println("|---------|-----------------------|-----------------------------|----------------------------|---------|")
-	} else {
-		fmt.Println("| vectors | KECCAK_ACCEL=false real (s) | KECCAK_ACCEL=true real (s) | speedup |")
-		fmt.Println("|---------|-----------------------------|----------------------------|---------|")
-	}
+	fmt.Printf("| batched range (%d-byte inputs) | KECCAK_ACCEL=false real (s) | KECCAK_ACCEL=true real (s) | speedup |\n", batchedInputBytes)
+	fmt.Println("|--------------------------------|-----------------------------|----------------------------|---------|")
 
 	for index := 0; index < cfg.intervals; index++ {
-		selector := vectorRange(cfg.start, cfg.size, index)
-		lengths := []uint64(nil)
-		first := cfg.start + index*cfg.size
-		end := first + cfg.size
-		if cfg.showLengths {
-			if end > len(inputLengths) {
-				fatal("interval %s exceeds %d available vectors", selector, len(inputLengths))
-			}
-			lengths = inputLengths[first:end]
-		}
-		falseTime := runTimed(cfg.makefileDir, cfg.timeBin, false, selector)
-		trueTime := runTimed(cfg.makefileDir, cfg.timeBin, true, selector)
-		printRow(selector, lengths, falseTime, trueTime)
+		selector := batchedRange(cfg.start, cfg.size, index)
+		falseTime := runTimedBatched(cfg.makefileDir, cfg.timeBin, false, selector)
+		trueTime := runTimedBatched(cfg.makefileDir, cfg.timeBin, true, selector)
+		printBatchedRow(selector, falseTime, trueTime)
 	}
 }
 
 func parseArgs() config {
+	// Parse flags
 	cfg := config{
 		intervals:   100,
 		size:        10,
@@ -78,15 +81,18 @@ func parseArgs() config {
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Compare keccak-zig-exec timings with KECCAK_ACCEL=false and true.\n\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "Modes:\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  default: benchmark batched ranges of %d-byte inputs from common_inputs/keccak.all\n", batchedInputBytes)
+		fmt.Fprintf(flag.CommandLine.Output(), "  --single-input-lengths: benchmark generated all-zero inputs at the requested byte lengths\n\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 	flag.IntVar(&cfg.intervals, "intervals", cfg.intervals, "number of intervals to run")
-	flag.IntVar(&cfg.size, "size", cfg.size, "vectors per interval")
-	flag.IntVar(&cfg.start, "start", cfg.start, "first vector index")
+	flag.IntVar(&cfg.size, "size", cfg.size, "inputs per batched interval")
+	flag.IntVar(&cfg.start, "start", cfg.start, "first input index")
 	flag.StringVar(&cfg.makefileDir, "makefile-dir", cfg.makefileDir, "directory containing the Makefile")
 	flag.StringVar(&cfg.timeBin, "time-bin", cfg.timeBin, "path to time executable")
-	flag.BoolVar(&cfg.showLengths, "show-lengths", cfg.showLengths, "include selected input lengths in bytes")
+	flag.StringVar(&cfg.singleInputLengths, "single-input-lengths", cfg.singleInputLengths, "comma-separated byte lengths for generated all-zero input mode")
 	flag.Parse()
 
 	abs, err := filepath.Abs(cfg.makefileDir)
@@ -98,6 +104,7 @@ func parseArgs() config {
 }
 
 func defaultMakefileDir() string {
+	// Locate the test Makefile
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
 		return "."
@@ -105,13 +112,15 @@ func defaultMakefileDir() string {
 	return filepath.Dir(filepath.Dir(filepath.Dir(file)))
 }
 
-func vectorRange(start, size, index int) string {
+func batchedRange(start, size, index int) string {
+	// Build an inclusive batched range
 	first := start + index*size
 	last := first + size - 1
 	return fmt.Sprintf("%d..%d", first, last)
 }
 
-func command(timeBin string, accel bool, selector string) []string {
+func batchedCommand(timeBin string, accel bool, selector string) []string {
+	// Build the batched command
 	accelValue := "false"
 	if accel {
 		accelValue = "true"
@@ -126,8 +135,49 @@ func command(timeBin string, accel bool, selector string) []string {
 	}
 }
 
-func runTimed(makefileDir, timeBin string, accel bool, selector string) float64 {
-	args := command(timeBin, accel, selector)
+func runTimedBatched(makefileDir, timeBin string, accel bool, selector string) float64 {
+	// Time batched execution
+	return runCommand(makefileDir, batchedCommand(timeBin, accel, selector))
+}
+
+func singleCommand(timeBin string, accel bool, vectorFile, jsonDir string) []string {
+	// Build the single-input command
+	accelValue := "false"
+	if accel {
+		accelValue = "true"
+	}
+	return []string{
+		timeBin,
+		"-p",
+		"make",
+		"vector-build",
+		"vector-json",
+		"vector-exec",
+		"TEST=keccak/keccak_with_provider_single_input.zig",
+		"VECTOR_FILE=" + vectorFile,
+		"VECTOR_N_VECTORS=1",
+		"VECTOR_JSON_MODE=per-vector",
+		"VECTOR_JSON_DIR=" + jsonDir,
+		"KECCAK_ACCEL=" + accelValue,
+	}
+}
+
+func runTimedSingle(makefileDir, timeBin string, accel bool, inputBytes uint64) float64 {
+	// Time one generated input
+	vectorFile, cleanupVector := writeSingleInputVector(inputBytes)
+	defer cleanupVector()
+
+	jsonDir, err := os.MkdirTemp("", "keccak-single-json-*")
+	if err != nil {
+		fatal("creating temporary JSON directory: %v", err)
+	}
+	defer os.RemoveAll(jsonDir)
+
+	return runCommand(makefileDir, singleCommand(timeBin, accel, vectorFile, jsonDir))
+}
+
+func runCommand(makefileDir string, args []string) float64 {
+	// Run and parse timing output
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = makefileDir
 	cmd.Env = append(os.Environ(), "GO111MODULE=on")
@@ -156,35 +206,49 @@ func runTimed(makefileDir, timeBin string, accel bool, selector string) float64 
 	return realTime
 }
 
-func readInputLengths(path string) []uint64 {
-	file, err := os.Open(path)
-	if err != nil {
-		fatal("opening %s: %v", path, err)
-	}
-	defer file.Close()
-
+func parseInputLengthList(arg string) []uint64 {
+	// Parse comma-separated lengths
 	var lengths []uint64
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		line = strings.TrimPrefix(strings.TrimPrefix(line, "0x"), "0X")
-		if len(line) < 80 {
-			fatal("invalid keccak vector: expected at least 80 hex chars, got %d", len(line))
+	for _, part := range strings.Split(arg, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			fatal("empty input length in %q", arg)
 		}
-		// On disk each vector is byte-reversed; bytes 32..39 hold msg_len_bits.
-		bits, err := strconv.ParseUint(line[64:80], 16, 64)
+		length, err := strconv.ParseUint(part, 10, 64)
 		if err != nil {
-			fatal("parsing input length %q: %v", line[64:80], err)
+			fatal("parsing input length %q: %v", part, err)
 		}
-		lengths = append(lengths, (bits+7)/8)
-	}
-	if err := scanner.Err(); err != nil {
-		fatal("reading %s: %v", path, err)
+		lengths = append(lengths, length)
 	}
 	return lengths
 }
 
+func writeSingleInputVector(inputBytes uint64) (string, func()) {
+	// Create a temporary zero-input vector
+	file, err := os.CreateTemp("", "keccak-single-*.all")
+	if err != nil {
+		fatal("creating temporary vector file: %v", err)
+	}
+
+	// Hex inputs are reversed by elf_to_json_gen, so write payload first and length last.
+	line := fmt.Sprintf("0x%s%016x\n", strings.Repeat("00", int(inputBytes)), inputBytes)
+	if _, err := file.WriteString(line); err != nil {
+		_ = file.Close()
+		_ = os.Remove(file.Name())
+		fatal("writing temporary vector file: %v", err)
+	}
+	if err := file.Close(); err != nil {
+		_ = os.Remove(file.Name())
+		fatal("closing temporary vector file: %v", err)
+	}
+
+	return file.Name(), func() {
+		_ = os.Remove(file.Name())
+	}
+}
+
 func parseRealTime(timeOutput string) (float64, bool) {
+	// Extract the real time
 	timings := make(map[string]float64)
 	for _, line := range strings.Split(timeOutput, "\n") {
 		match := timeRE.FindStringSubmatch(strings.TrimSpace(line))
@@ -202,24 +266,20 @@ func parseRealTime(timeOutput string) (float64, bool) {
 	return realTime, ok
 }
 
-func printRow(selector string, inputLengths []uint64, falseTime, trueTime float64) {
+func printBatchedRow(selector string, falseTime, trueTime float64) {
+	// Print one batched row
 	speedup := falseTime / trueTime
-	if inputLengths == nil {
-		fmt.Printf("| %s | %.2f | %.2f | %.2fx |\n", selector, falseTime, trueTime, speedup)
-	} else {
-		fmt.Printf("| %s | %s | %.2f | %.2f | %.2fx |\n", selector, formatLengths(inputLengths), falseTime, trueTime, speedup)
-	}
+	fmt.Printf("| %s | %.2f | %.2f | %.2fx |\n", selector, falseTime, trueTime, speedup)
 }
 
-func formatLengths(lengths []uint64) string {
-	parts := make([]string, len(lengths))
-	for i, length := range lengths {
-		parts[i] = strconv.FormatUint(length, 10)
-	}
-	return "[" + strings.Join(parts, ", ") + "]"
+func printSingleRow(inputBytes uint64, falseTime, trueTime float64) {
+	// Print one single-input row
+	speedup := falseTime / trueTime
+	fmt.Printf("| %d | %.2f | %.2f | %.2fx |\n", inputBytes, falseTime, trueTime, speedup)
 }
 
 func fatal(format string, args ...any) {
+	// Print an error and exit
 	fmt.Fprintf(os.Stderr, format+"\n", args...)
 	os.Exit(1)
 }
