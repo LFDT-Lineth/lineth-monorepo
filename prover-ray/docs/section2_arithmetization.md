@@ -64,14 +64,6 @@ This decomposition is what makes the no-CPU design pay off:
 - **Bounded local complexity.** No single table has to encode the whole ISA;
   complexity stays local to each handler.
 
-> **Relationship to OpenVM.** This system shares OpenVM's no-CPU,
-> bus-interconnected principle but realizes it differently: the tables, the
-> inter-instruction bus connections, and the intra-instruction lookups are
-> produced by compiling a single **ZkC** interpreter through **go-corset** into
-> one AIR over KoalaBear (§2.5), and the whole arithmetization is closed by a
-> single proof system (the Arcane pipeline, §3) — in contrast to OpenVM's
-> Rust-frontend VM extensions and its support for different proof systems
-> across components.
 
 ## 2.3 Execution Model
 
@@ -170,14 +162,12 @@ team. ZkC's relevant characteristics:
   constraint mechanisms that the spec is careful not to conflate.
 - **`printf`**, a debugging aid with no effect on the generated constraints.
 
-> **Open design item — public-input materialization.** The end-to-end mapping
-> from ZkC `pub` modules to the concrete public input attached to a proof is
-> under discussion. One proposal under consideration is that a single
-> pub-module is expected per program and its hash becomes the public input of
-> the proof; this would simplify both prover and verifier. The choice is owned
-> by the proof-system side and is tracked here as a forward dependency on the
-> proving-architecture / public-inputs design.
-
+**Public-input materialization.** The public inputs of a guest program are technically its output.
+They are stored inside a ZkC module tagged as `pub`.
+The prover reads the public inputs from this module and attaches them to the proof.
+The prover may add its own public inputs on top and send
+the **Proof**, **PublicInputs**, and **VerificationKey** to the verifier.
+   
 **The compilation boundary.** The arithmetization is compiled by the `zkc`
 toolchain (part of go-corset) into a go-corset **`air.Schema`** — an Algebraic
 Intermediate Representation over the KoalaBear field — together with an execution

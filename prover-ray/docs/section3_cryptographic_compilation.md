@@ -29,7 +29,7 @@ The compilation proceeds in three conceptual phases:
    result is a **Polynomial IOP (Poly-IOP)**.
 3. **Polynomial commitment + Fiat–Shamir** (§3.4, §3.5) — the Poly-IOP is closed
    into a concrete interactive protocol by instantiating a polynomial commitment
-   scheme (**multi-size FRI / Vortex**), and made non-interactive via the
+   scheme (**multi-size FRI**), and made non-interactive via the
    **Fiat–Shamir transform** (which the framework applies continuously at round
    boundaries; see §3.5).
 
@@ -91,6 +91,8 @@ An expression's effective visibility is the minimum over its leaves. Note that
 offline precomputation round with a static assignment, and it still carries
 `Oracle` (committed) visibility.
 
+@azam; examples for Internal and public visibility.
+
 ### 3.2.3 Column Views
 
 Queries reference columns through a single lightweight indirection, the **column
@@ -123,6 +125,7 @@ $$
 \mathbb{F}_{p^6} = \mathbb{F}_{p^2}[v]\,/\,(v^3 - (u + 1)), \qquad
 \mathbb{F}_{p^2} = \mathbb{F}_{p}[u]\,/\,(u^2 - 3).
 $$
+@azam the reason for this extension versus the previous degree 4? 
 
 Throughout this section, when soundness errors are written as $O(\cdot/|F|)$, the
 quantity $|F|$ denotes the size of this **extension field** ($|F| = p^6 \approx 2^{186}$),
@@ -156,6 +159,9 @@ substantially relative to the original formulation (see the note below).
     against their union.
   - *Conditional inclusion* — per-side row selectors restrict the active rows on
     the $S$ side and/or the $T$ side.
+
+    @azam, the implementation does not seem to follow the spec.
+
 - **Log-derivative sum** — a list of filter-aware fractions
   $\mathrm{Filter}_k \cdot \mathrm{Num}_k / \mathrm{Den}_k$, reduced to a single field-element result asserted
   against a claim cell. This is the intermediate target of the inclusion pass
@@ -193,10 +199,9 @@ univariate evaluations at verifier-chosen random points — is exactly a
 **Polynomial IOP**, which the polynomial commitment scheme (§3.4) then closes into
 a concrete protocol.
 
-The **multi-point → single-point** reduction (batching evaluation claims at
-possibly different points into one) is **not** an Arcane pass. It is performed
-**implicitly by the PCS** (§3.4), which natively supports it.
 
+
+@azam with FRI it is more natural to combine this step inside the PCS.
 ## 3.3 The Arcane Compiler
 
 Arcane converts a Wizard-IOP into a Poly-IOP through the ordered passes below.

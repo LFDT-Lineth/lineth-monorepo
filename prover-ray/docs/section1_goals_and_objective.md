@@ -176,7 +176,7 @@ The stages, and where each is specified:
    precompiles — and compiled to a RISC-V (`riscv64im_zicclsm`) binary. The
    guest programs include not only application workloads but the
    proof-recursion programs themselves (execution-proof, compression-proof, and
-   aggregation-proof programs).
+   aggregation-proof programs, see @rollup_spec, and @verifier_ray packages).
 2. **Finalization.** The `R5 finalizer` links the compiled guest against the
    **R5 VM ZkC implementation** — the RISC-V interpreter written in ZkC that
    *is* the arithmetization (§2) — producing the artifact the proving stack
@@ -185,14 +185,15 @@ The stages, and where each is specified:
    artifact along two paths that meet the `(constraints, assignment)` interface:
    the **zkc tracer** emits the execution **Traces** (the assignment), and the
    **zkc compiler** lowers the program through several internal intermediate
-   representations into its final arithmetization layer, **AIR** — the
+   representations into its final arithmetization layer, **AIR** (the constraints) — the
    **Wizard AIR** (the `wiop.System`). The intermediate stages are go-corset
    implementation details (see §2.6); AIR is the stable boundary the proving
    pipeline depends on. Both `Traces` and `Wizard AIR` feed the prover.
 4. **Proving (§3).** The **Prover** runs the Arcane compiler — reducing the
-   Wizard-IOP to a Poly-IOP (§3.1–§3.3) — and closes it with the Vortex
+   Wizard-IOP to a Poly-IOP (§3.1–§3.3) — and closes it with the
    polynomial commitment scheme (§3.4) under a continuously applied Fiat–Shamir
-   transform (§3.5), emitting a **Proof** and its **Public Parameters**.
+   transform (§3.5), emitting a **Proof**, **PublicInputs** (from `Traces`),
+   and its **VerificationKey** (from `WizardAIR` and system parameters).
 5. **Recursion and aggregation.** Verification is performed by **Verifier Ray**,
    which is a *code generator*: it emits Zig source for the procedure that
    verifies a `(Proof, Public Parameters)` pair. Because that generated verifier
@@ -211,3 +212,4 @@ The stages, and where each is specified:
 > flagged where they recur: whether "precompiles" in the Zig guest are
 > ZkC-implemented routines the guest calls through to or Zig itself (§2.7, §5);
 > and the post-quantum status of the terminal PLONK wrap (§1.2, "Security").
+

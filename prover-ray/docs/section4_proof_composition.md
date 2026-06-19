@@ -293,27 +293,20 @@ program counter, initial register state, program-input binding — want
 the latter (they must fire exactly once, on the first row of shard 0).
 
 The mechanism: every shard receives **the same circuit**, with the
-shard's index passed as a **public input**. Local constraints that
+**IsFirst** passed as a **public input**. Local constraints that
 need trace-global semantics are encoded as local constraints predicated
-on `shard_index == 0`. No new constraint primitive is introduced. The
+on `IsFirst == 1`. No new constraint primitive is introduced. The
 first-row case is the most common but the principle is general: any
-local constraint can be predicated on the shard index to select which
+local constraint can be predicated on **IsFirst** to select which
 shards it fires on.
 
-This approach has two downstream consequences:
+  - go-corset declares global variables `isFirst`/`isLast` that are shard-scoped.
+  - go-corset uses them to activate/deactivate the local constraints that are produced by go-corset.
+  - go-corset exposes these values to the prover under a specific, explicit, and recognizable semantic, e.g., `schema.IsFirst()`, `traces.IsFirst()`.
+  - The prover adds them to the list of public inputs as it recognizes the values.
+  - The conglomeration checks that there is one and only one **IsFirst = 1** and the others are zero.
 
-- **The shard index is bound by the shared randomness binding** of
-  §4.1.4 automatically, because it is a public input. No additional
-  mechanism is needed to prevent a prover from claiming the wrong
-  index.
-- **Aggregation needs the shard index too** — to verify the shard-set
-  coverage check (§4.2.2), each shard proof must expose its index.
-  Carrying it through is therefore not an imposition specific to
-  local-constraint scoping; it has other uses downstream.
-
-> *[TODO: This resolution has been chosen but has not yet been written
-> back to the go-corset team. The go-corset side may want to model the
-> shard index more explicitly than as a generic public input.]*
+The same argument applies for **IsLast** if it is needed. 
 
 ---
 
@@ -382,9 +375,6 @@ exposes the following public inputs:
 - **Commitment-0 root list (or its hash)** — the running collection of
   shard-level commitment-0 roots accumulated so far. Combining a left
   and a right child concatenates their lists.
-- **Shard-set multiset hash** — a multiset hash over the shard indices
-  covered by the proof so far (§4.2.2). A shard proof for shard $i$
-  initializes this with the singleton $\{i\}$.
 - **Bus-LogUp partial sum** — the sum of bus-contribution running-sum
   endpoints for the shards covered so far (§4.2.4). For balanced bus
   semantics this sum at the root must be zero.
@@ -394,38 +384,6 @@ $\gamma$ and on the program identity (the latter being part of the
 verification key — see §4.2.5); they are *not* required to be adjacent
 in shard index.
 
-### 4.2.2 Multiset Commitment for Coverage and Anti-Replay
-
-Recursive aggregation must prevent two failure modes:
-
-- **Replay** — the same shard proof being incorporated more than once.
-  Without prevention, an adversary could produce a small number of
-  shard proofs and re-aggregate them to construct a tree whose bus sum
-  happens to fall on the target value (a lattice-style attack on the
-  aggregator).
-- **Missing coverage** — a complete-looking tree that omits some
-  shards. Each missing shard's bus contribution is silently dropped
-  from the global sum.
-
-Both are addressed by carrying a **multiset hash** over the shard
-indices through the tree. Each shard proof for shard $i$ initializes its
-multiset hash to a representation of $\{i\}$. Each aggregator step
-combines its children's multisets via the multiset-hash union
-operation. At the root, the verifier checks that the final multiset
-hash equals the **reference hash** of $\{0, 1, \dots, k-1\}$.
-
-The multiset hash construction enforces unique-coverage by its algebra:
-if each shard index hashes to a distinct element and the union
-operation is the appropriate algebraic combiner, equality with the
-reference hash for $\{0, \dots, k-1\}$ holds iff each index appears in
-the union exactly once. This is the standard property of additive or
-elliptic-curve-based multiset hashes.
-
-> *[TODO: Specify the concrete multiset hash construction. Candidates:
-> sum of Poseidon2 hashes of indices, polynomial-commitment-based,
-> elliptic-curve-based. The choice depends on the verifier's
-> arithmetization cost when verified inside the Verifier Ray guest
-> (§4.3).]*
 
 ### 4.2.3 Shared-Randomness Binding at the Root
 
@@ -465,31 +423,22 @@ resulting precomputed commitment becomes part of the
 the same verification key; the aggregator's verification step rejects
 any child whose verification key does not match the expected program.
 
-### 4.2.6 Open: Total Shard Count and the Binding Cycle
+### 4.2.6 Shared Randomness Contribution in Lookups
 
-The shard count $k$ enters the root verifier in two distinct ways: it
-is needed to compute the reference multiset hash of $\{0, \dots, k-1\}$
-(§4.2.2), and it has to be bound by the shared randomness derivation
-so an adversary cannot inflate the count after preflight.
+In PIOP systems, vk is the description of the AIR (trace size and vanishings) plus protocol parameters. If the prover tries to remove columns or constraints for an already initiated circuit, VK would change. This means that after the circuit is generated, the malicious prover can not remove columns or constraints. One attack is through column or constraint duplication, since the implementation itself usually does not count duplication and commits to the same columns only once. Such duplications can apply attacks if they affect a global operation, for example:
+3+1+2-3 !=0, but if we duplicate the last element, 3+1+2-3-3 = 0. The only type of such constraint in our PIOP is logDarivativeSum.
 
-These two roles create a binding cycle: $k$ is determined only at the
-*end* of preflight, after the shard layout is fixed; but $k$ is a public
-input that the shared randomness $\gamma$ must bind, and $\gamma$ is
-derived from commitment-0 roots that are computed during shard proving —
-which uses $\gamma$ as a challenge.
+We claim that the attack can be prevented if randomness is generated correctly per lookup. To prevent such attacks, the global operation should be equivalent to individual operations.
 
-Two natural directions for resolution:
+The challenge for the lookups from LogUpBus is generated via seed and lookupID, where seed is the shared randomness:
+Challenge for a Lookup with ID myID is: FS(sharedRandomness, myID)
 
-- **Make $k$ deterministic from the program inputs and setup.** If the
-  shard count is a known function of inputs and arithmetization, then
-  $k$ is determined before $\gamma$ is sampled, and binding $k$ via
-  shared randomness is straightforward.
-- **Bind $k$ into preflight directly.** Include $k$ in the preimage of
-  $\gamma$ alongside the commitment-0 roots, treating it as a
-  preflight-time quantity rather than a proof-time public input.
+This would break the global sum to individual sum per lookup and prevent the attack.
 
-> *[Open item: the binding mechanism for $k$ is under design. The two
-> resolutions above are not exclusive; a hybrid is possible.]*
+### Open directions: SharedRandomness generation
+
+@azam mention lattice multiset hash for generating commitments and gamma.
+
 
 ---
 
@@ -595,13 +544,6 @@ open.
 - **§4.1.6 allocation policy** — the per-module-group rules and the
   maximum-rows ceiling are noted; the full detailed policy is to be
   specified once the implementation lands.
-- **§4.1.7 first-row semantics** — chosen resolution (shard index as
-  a public input, branched on); to be written back to the go-corset
-  team.
-- **§4.2.2 multiset hash construction** — concrete construction to be
-  selected; the choice depends on Verifier Ray's verification cost.
-- **§4.2.6 shard count binding** — binding $k$ into shared
-  randomness has a dependency cycle that is under design.
 - **§4.3.2 recursion precompiles** — Poseidon2 decided; folded
   evaluation quotient and global-quotient precompiles are candidates;
   full list to be filled in once §5 lands.
