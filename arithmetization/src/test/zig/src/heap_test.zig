@@ -1,4 +1,4 @@
-const wrappers = @import("wrappers");
+const lineth_accel = @import("lineth_zkvm_accel");
 
 // Linker-defined symbol whose address marks where runtime heap allocations can start
 extern var _heap_start: u8;
@@ -9,7 +9,7 @@ export fn main() noreturn {
 
     // A real allocator must fail if growing the heap would overflow the address space
     if (@addWithOverflow(heap_start, 1)[1] != 0) {
-        wrappers.panic();
+        lineth_accel.panic();
     }
 
     // Write to the first heap byte and read it back through a volatile pointer
@@ -17,8 +17,8 @@ export fn main() noreturn {
     allocation.* = 42;
 
     if (allocation.* != 42) {
-        wrappers.panic();
+        lineth_accel.panic();
     }
 
-    wrappers.zkvm_exit(0);
+    lineth_accel.zkvm_exit(0);
 }

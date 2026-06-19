@@ -5,7 +5,7 @@
 //! resolve anything: every one of those externs must be DEFINED in the binary. This module defines
 //! all of them, from two sources:
 //!
-//!   • Linea accelerator wrappers (`linea_zkvm_accel`) — for the precompiles the prover accelerates
+//!   • Linea accelerator wrappers (`lineth_zkvm_accel`) — for the precompiles the prover accelerates
 //!     (keccak today). We re-export each wrapper under the C name zesu references; HOW a wrapper
 //!     accelerates is the wrapper module's own concern. The *set of wrappers that exist* is what is
 //!     accelerated, and grows as the prover implements more.
@@ -17,15 +17,15 @@
 //! `builtin.cpu.arch == .riscv64`); the native host build uses Zesu's C-backed crypto instead.
 
 const zesu_accel = @import("zesu_zkvm_accel"); // zesu-zkvm's pure-Zig precompile backend (stdlibs_accel)
-const linea_accel = @import("linea_zkvm_accel"); // Linea accelerator wrappers (source paths wired in build.zig)
-const build_options = @import("build_options"); // keccak_accel: standard zig keccak vs Linea wrapper
+const lineth_accel = @import("lineth_zkvm_accel"); // Lineth accelerator wrappers (source paths wired in build.zig)
+const build_options = @import("build_options"); // keccak_accel: standard zig keccak vs Lineth wrapper
 
 // The manifest: every `zkvm_*` symbol zesu references, and where each comes from — keccak is either
-// the Linea wrapper (prover-accelerated) or the standard stdlibs_accel shim, selected at build time
+// the Lineth wrapper (prover-accelerated) or the standard stdlibs_accel shim, selected at build time
 // by -Dkeccak-accel; the rest come from the stdlibs_accel shims defined below.
 comptime {
     if (build_options.keccak_accel) {
-        @export(&linea_accel.zkvm_keccak256, .{ .name = "zkvm_keccak256" });
+        @export(&lineth_accel.zkvm_keccak256, .{ .name = "zkvm_keccak256" });
     } else {
         @export(&keccak256, .{ .name = "zkvm_keccak256" });
     }

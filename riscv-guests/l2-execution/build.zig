@@ -31,7 +31,7 @@ pub fn build(b: *std.Build) void {
     //   • zesu executor + SSZ modules — the execution logic;
     //   • zesu_zkvm_accel — zesu-zkvm's stdlibs_accel: in-guest software precompiles that
     //     zkvm_provide.zig exports as the zkvm_* symbols zesu references;
-    //   • linea_zkvm_accel — Linea accelerator wrappers (keccak today): zkvm_* the prover accelerates
+    //   • lineth_zkvm_accel — Lineth accelerator wrappers (keccak today): zkvm_* the prover accelerates
     //     at execution rather than at link time, so the ELF stays fully resolved;
     //   • linea_zkvm_io — zesu-zkvm's zkvm_io: satisfies the standards `read_input` by reading the
     //     memory-mapped `_in_start` (the input slot is the proving system's detail, kept out of the
@@ -44,7 +44,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    const linea_accel_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
+    const lineth_accel_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
     const linea_io_mod = b.createModule(.{
         .root_source_file = zesu_zkvm.path("linea/src/zkvm_io.zig"),
         .target = target,
@@ -59,7 +59,7 @@ pub fn build(b: *std.Build) void {
     guest_module.code_model = .medium;
     addExecutionImports(guest_module, zesuImports(zesu_guest));
     guest_module.addImport("zesu_zkvm_accel", zesu_accel_mod);
-    guest_module.addImport("linea_zkvm_accel", linea_accel_mod);
+    guest_module.addImport("lineth_zkvm_accel", lineth_accel_mod);
     guest_module.addImport("linea_zkvm_io", linea_io_mod);
     guest_module.addOptions("build_options", guest_options); // keccak_accel flag, read in zkvm_provide.zig
     common.clearFreestandingNativeLinkage(b, guest_module);

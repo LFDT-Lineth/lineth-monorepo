@@ -40,8 +40,8 @@ pub fn build(b: *std.Build) void {
     });
 
     // exposing the zkvm wrappers (lineth-accelerators package, path dependency)
-    const wrappers = b.dependency("lineth_accelerators", .{}).module("lineth_accelerators");
-    exe.root_module.addImport("wrappers", wrappers);
+    const lineth_accel_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
+    exe.root_module.addImport("lineth_zkvm_accel", lineth_accel_mod);
 
     // Point to assembly overwriting default SP with the one defined in the linker script
     exe.root_module.addAssemblyFile(b.path("src/start.s"));
