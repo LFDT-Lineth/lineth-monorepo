@@ -1,5 +1,4 @@
 include "constants.zkc"
-include "memory.zkc"
 
 // ===================================================================================
 // zkc implementation of the Poseidon2 permutation using zkc's native field element type.
@@ -12,30 +11,20 @@ include "memory.zkc"
 // * width 16
 // * S-box degree 3
 // * 6 full + 21 partial rounds.
-// 
+//
 // ===================================================================================
 
-// poseidon2 applies the Poseidon2 permutation to STATE_WIDTH field elements.
-//
-// It reads STATE_WIDTH consecutive BYTES_PER_FELT-byte big-endian field elements
-// from ram[input_offset ..], applies the permutation, and writes the STATE_WIDTH
-// resulting elements (BYTES_PER_FELT bytes each) to ram[output_offset ..].
-//
-// input_offset and output_offset may alias.
-fn poseidon2<ram, poseidon2_state>(input_offset:Address, output_offset:Address) {
+// Poseidon2 state: where the permutation takes place. An array of STATE_WIDTH
+// KOALABEAR field elements (felts): [ σ₀, σ₁, ..., σ₁₅ ].
+memory poseidon2_state(address:u8) -> (felt:𝔽)
 
-    var curr_address:Address = input_offset
-    for i:u8 = 0; i<STATE_WIDTH; i = i + 1 {
-        write_to_state(i, get_felt(curr_address))
-        curr_address = curr_address + (BYTES_PER_FELT as Address)
-    }
+fn write_to_state<poseidon2_state>(address:u8, value:𝔽) -> () {
+    poseidon2_state[address] = value
+}
 
-    permutation()
-
-    curr_address = output_offset
-    for i:u8 = 0; i<STATE_WIDTH; i = i + 1 {
-        curr_address = state_to_ram(curr_address, i)
-    }
+fn read_from_state<poseidon2_state>(address:u8) -> (value:𝔽) {
+    value = poseidon2_state[address]
+    return
 }
 
 // permutation applies the full Poseidon2 permutation to σ in place:
