@@ -96,15 +96,17 @@ type DeployFeeOverrides = {
 async function getDeployFeeOverrides(provider: ethers.Provider): Promise<DeployFeeOverrides> {
   const deployGasPriceWei = process.env.L1_DEPLOY_GAS_PRICE_WEI;
   if (deployGasPriceWei === undefined || deployGasPriceWei === "") {
-    const feeOverrides = await get1559Fees(provider);
-    if (
-      feeOverrides.gasPrice === undefined &&
-      feeOverrides.maxFeePerGas === undefined &&
-      feeOverrides.maxPriorityFeePerGas === undefined
-    ) {
-      throw new Error("Provider did not return any deploy fee data. Set L1_DEPLOY_GAS_PRICE_WEI explicitly.");
+    const { gasPrice, maxFeePerGas, maxPriorityFeePerGas } = await get1559Fees(provider);
+    if (maxFeePerGas !== undefined && maxPriorityFeePerGas !== undefined) {
+      return { maxFeePerGas, maxPriorityFeePerGas };
     }
-    return feeOverrides;
+    if (gasPrice !== undefined) {
+      return { gasPrice };
+    }
+    if (maxFeePerGas !== undefined || maxPriorityFeePerGas !== undefined) {
+      throw new Error("Provider did not return complete deploy fee data. Set L1_DEPLOY_GAS_PRICE_WEI explicitly.");
+    }
+    throw new Error("Provider did not return any deploy fee data. Set L1_DEPLOY_GAS_PRICE_WEI explicitly.");
   }
 
   if (!/^[0-9]+$/.test(deployGasPriceWei)) {
