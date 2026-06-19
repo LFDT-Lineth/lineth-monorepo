@@ -139,7 +139,7 @@ compile: require-src linker-script
 	fi
 # Verify that the configured memory layout matches the ELF values
 	@if [ "$(VERIFY_ELF)" = "true" ]; then \
-		$(MAKE) -f $(MAKEFILE_DIR)Makefile verify-elf TEST=$(TEST); \
+		$(MAKE) -C $(MAKEFILE_DIR) verify-elf TEST=$(TEST); \
 	fi
 # Generate JSON from ELF
 	$(call ELF_TO_JSON,$(BIN),$(JSON))
@@ -152,7 +152,7 @@ compile: require-src linker-script
 
 # Convert and execute an already compiled external ELF
 elf-exec: elf-to-json install-zkc
-	$(MAKE) --no-print-directory zkc-exec JSON=$(JSON_EXT)
+	$(MAKE) -C $(MAKEFILE_DIR) --no-print-directory zkc-exec JSON=$(JSON_EXT)
 
 # Convert and debug an already compiled external ELF
 elf-debug: elf-to-json
