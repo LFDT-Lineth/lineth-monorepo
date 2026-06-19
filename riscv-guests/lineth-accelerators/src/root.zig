@@ -4,14 +4,14 @@
 // re-exported flat here, so consumers call e.g. `lib.zkvm_keccak256` rather
 // than `lib.keccak.zkvm_keccak256`.
 
-const custom_std = @import("std.zig");
+const lineth_std = @import("std.zig");
 const zkvm_types = @import("zkvm_types.zig");
 const keccak = @import("keccak.zig");
 const poseidon2 = @import("poseidon2.zig");
 
 // ── zkVM standard runtime (include/zkvm_std.h) ──────────────────────────────
-pub const zkvm_exit = custom_std.zkvm_exit;
-pub const panic = custom_std.panic;
+pub const zkvm_exit = lineth_std.zkvm_exit;
+pub const panic = lineth_std.panic;
 
 // ── Shared accelerator types (include/zkvm_accelerators.h) ──────────────────
 pub const zkvm_status = zkvm_types.zkvm_status;

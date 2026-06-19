@@ -1,4 +1,4 @@
-const custom_std = @import("custom_std.zig");
+const lineth_std = @import("std.zig");
 const types = @import("zkvm_types.zig");
 
 pub const zkvm_status = types.zkvm_status;
@@ -9,7 +9,7 @@ pub const zkvm_keccak256_hash = zkvm_bytes_32;
 // https://github.com/eth-act/zkvm-standards/blob/282cd356c3a0498416bb0619f9c8a347ce9933fb/standards/c-interface-accelerators/zkvm_accelerators.h#L166
 pub fn zkvm_keccak256(data: [*c]const u8, len: usize, output: [*c]zkvm_keccak256_hash) callconv(.c) zkvm_status {
     if (data == null or output == null) {
-        custom_std.panic();
+        lineth_std.panic();
     }
 
     // invoke custom opcode for keccak

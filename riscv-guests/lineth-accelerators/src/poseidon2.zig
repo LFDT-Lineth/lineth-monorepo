@@ -1,4 +1,4 @@
-const custom_std = @import("custom_std.zig");
+const lineth_std = @import("std.zig");
 const types = @import("zkvm_types.zig");
 
 pub const zkvm_status = types.zkvm_status;
@@ -14,7 +14,7 @@ pub const zkvm_bytes_64 = types.zkvm_bytes_64;
 // state to `output`. `input` and `output` may alias.
 pub fn lineth_zkvm_poseidon2_permutation(input: [*c]const zkvm_bytes_64, output: [*c]zkvm_bytes_64) callconv(.c) zkvm_status {
     if (input == null or output == null) {
-        custom_std.panic();
+        lineth_std.panic();
     }
 
     // invoke custom opcode for the Poseidon2 permutation. Kept in sync with arithmetization/src/main/riscv/utils/constants.zkc
