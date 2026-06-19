@@ -8,16 +8,6 @@ import { ethers } from "ethers";
 async function get1559Fees(
   provider: ethers.Provider,
 ): Promise<{ maxPriorityFeePerGas?: bigint; maxFeePerGas?: bigint; gasPrice?: bigint }> {
-  const deployGasPriceWei = process.env.L1_DEPLOY_GAS_PRICE_WEI;
-  if (deployGasPriceWei) {
-    if (!/^[0-9]+$/.test(deployGasPriceWei)) {
-      throw new Error(`L1_DEPLOY_GAS_PRICE_WEI must be an integer wei value, got: ${deployGasPriceWei}`);
-    }
-    const gasPrice = BigInt(deployGasPriceWei);
-    console.log(`Using environment variable L1_DEPLOY_GAS_PRICE_WEI=${gasPrice.toString()}`);
-    return { gasPrice };
-  }
-
   const { maxPriorityFeePerGas, maxFeePerGas, gasPrice } = await provider.getFeeData();
   return {
     ...(maxPriorityFeePerGas ? { maxPriorityFeePerGas } : {}),
