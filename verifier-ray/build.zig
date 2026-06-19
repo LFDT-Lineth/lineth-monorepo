@@ -1,18 +1,16 @@
 const std = @import("std");
+const common = @import("build_common");
 
 pub fn build(b: *std.Build) void {
+    common.requireZigVersion();
+
     const r5 = b.option(bool, "r5", "Build for the Linea R5 zkVM target") orelse false;
 
-    const default_target: std.Target.Query = if (r5) .{
-        .cpu_arch = .riscv64,
-        .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv64 },
-        .cpu_features_add = std.Target.riscv.featureSet(&.{.m}),
-        .cpu_features_sub = std.Target.riscv.featureSet(&.{ .a, .c, .d, .f, .zicsr, .zaamo, .zalrsc }),
-        .os_tag = .freestanding,
-        .abi = .none,
-    } else .{};
-
-    const target = b.standardTargetOptions(.{ .default_target = default_target });
+    // R5 builds the shared freestanding rv64im ZkC profile (build_common); native builds the host.
+    const target = if (r5)
+        common.standardGuestTarget(b)
+    else
+        b.standardTargetOptions(.{});
     // TODO: consider adding a "release" option that sets optimize to ReleaseFast instead of ReleaseSmall.
     // For R5 the ReleaseFast optimization causes 2x binary size increase but 1/3 reduction in execution time, so it may be worth having if the binary size is not a concern.
     // For native execution we don't really care about the difference between ReleaseSmall and ReleaseFast, so we can just use ReleaseSmall for the optimized native build.

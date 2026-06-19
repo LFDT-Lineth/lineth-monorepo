@@ -3,7 +3,10 @@
     .fingerprint = 0xd1f807a3b6cefe12,
     .version = "0.1.0",
     .minimum_zig_version = "0.16.0",
-    .dependencies = .{},
+    .dependencies = .{
+        // Shared build helpers (pinned toolchain check + the freestanding rv64im guest target).
+        .build_common = .{ .path = "../riscv-guests/build_common" },
+    },
     .paths = .{
         "README.md",
         "build.zig",
