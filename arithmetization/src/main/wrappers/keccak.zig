@@ -1,15 +1,8 @@
 const custom_std = @import("custom_std.zig");
+const types = @import("zkvm_types.zig");
 
-// https://github.com/eth-act/zkvm-standards/blob/282cd356c3a0498416bb0619f9c8a347ce9933fb/standards/c-interface-accelerators/zkvm_accelerators.h#L42
-pub const zkvm_status = enum(c_int) {
-    ZKVM_EOK = 0, // Success
-    ZKVM_EFAIL = -1, // Failure
-};
-
-// https://github.com/eth-act/zkvm-standards/blob/282cd356c3a0498416bb0619f9c8a347ce9933fb/standards/c-interface-accelerators/zkvm_accelerators.h#L72
-pub const zkvm_bytes_32 = extern struct {
-    data: [32]u8 align(8),
-};
+pub const zkvm_status = types.zkvm_status;
+pub const zkvm_bytes_32 = types.zkvm_bytes_32;
 
 pub const zkvm_keccak256_hash = zkvm_bytes_32;
 
