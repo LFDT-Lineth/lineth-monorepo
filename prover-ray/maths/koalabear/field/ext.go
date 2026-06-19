@@ -110,6 +110,13 @@ func AddByBase(z *Ext, first *Ext, second *Element) *Ext {
 	return z
 }
 
+// SubByBase implements mixed addition of a base field element.
+func SubByBase(z *Ext, first *Ext, second *Element) *Ext {
+	z.Set(first)
+	z.B0.A0.Sub(&z.B0.A0, second)
+	return z
+}
+
 // MulByBase implements element-wise multiplication by a base field scalar.
 func MulByBase(z *Ext, first *Ext, second *Element) *Ext {
 	z.B0.A0.Mul(&first.B0.A0, second)

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"math/bits"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poly"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/consensys/gnark/frontend"
 )
 
@@ -253,7 +253,7 @@ func (sys *System) newLagrangeEval(ctx *ContextFrame, polys []*ColumnView, x Fie
 func evalLagrangePadded(cv *ConcreteVector, m *Module, rt Runtime, z field.Gen) field.Gen {
 	data := cv.Plain
 	if m.Padding == PaddingDirectionNone {
-		return poly.EvalLagrange(data, z)
+		return polynomials.EvalLagrange(data, z)
 	}
 
 	n := m.RuntimeSize(rt)
