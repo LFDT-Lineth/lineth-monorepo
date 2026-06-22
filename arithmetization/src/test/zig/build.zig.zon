@@ -1,7 +1,7 @@
 .{
     .name = .arithmetization_zig_tests,
     .version = "0.0.0",
-    .fingerprint = 0x3f08e1379cc5c004,
+    .fingerprint = 0x3f08e137ab15ab78,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         // Shared build helpers (the freestanding rv64im guest target).
