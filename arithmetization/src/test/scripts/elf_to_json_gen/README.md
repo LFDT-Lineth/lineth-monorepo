@@ -43,7 +43,7 @@ In addition to the original keys (`entry_point_and_blobs_count`,
 | `instruction_base` | `base:Address`                                         | base address used to map `pc` → table index               |
 | `decoded_core`     | `opcode, instruction_type, instruction_parameters`     | `instruction_parameters::opcode = instruction` + type map  |
 | `decoded_itype`    | `compute_op, writeback, imm12, rs1, rd`                | flat semantic micro-op dispatch in `i_type.zkc`              |
-| `decoded_rtype`    | `funct7, rs2, rs1, funct3, rd`                         | `funct7::rs2::rs1::funct3::rd = instruction_parameters`    |
+| `decoded_rtype`    | `compute_op, writeback, rs1, rs2, rd`                  | flat semantic micro-op dispatch in `r_type.zkc`              |
 | `decoded_stype`    | `imm12, rs2, rs1, funct3`                              | `imm_sign::uimm6::rs2::rs1::funct3::uimm5 = instruction_parameters` |
 | `decoded_btype`    | `imm_sign, imm_10_5, rs2, rs1, funct3, imm_4_1, imm_11`| `imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters` |
 | `decoded_jtype`    | `imm, rd`                                              | `imm20::imm10_1::imm11::imm19_12::rd = instruction_parameters` + sign-aware reassembly |
@@ -77,6 +77,22 @@ Zisk-like split (compute, then store-to-register) scoped to I-type for now;
 Constants for `compute_op` / `writeback` live in `constants.zkc` and are mirrored
 in `main.go` (`itypeOpAddi`, `wbStoreReg`, …). See `main_test.go` for
 `decodeITypeSemantic` coverage.
+
+## R-type semantic micro-ops (split compute + writeback)
+
+`decoded_rtype` no longer replays raw `funct3` / `funct7` / opcode bits. Instead,
+`decodeRTypeSemantic` in `main.go` maps each R-type encoding to:
+
+- **`compute_op`** — what to execute (`RTYPE_ADD`, `RTYPE_MUL`, `RTYPE_KECCAK`, …)
+- **`writeback`** — whether to store the computed result into `rd` (`WB_STORE_REG` or `WB_NONE`)
+- **`rs1`, `rs2`, `rd`** — operands
+
+At runtime, `process_R_type_instruction` runs a flat `switch compute_op`, then a
+separate `switch writeback` with the usual `if (rd != 0)` guard. `RTYPE_KECCAK`
+uses `WB_NONE` and returns early after the precompile side effects.
+
+Constants for R-type `compute_op` live in `constants.zkc` and are mirrored in
+`main.go` (`rtypeOpAdd`, …). See `main_test.go` for `decodeRTypeSemantic` coverage.
 
 ## Static rd=x0 no-op folding
 
@@ -141,7 +157,7 @@ size is the sum of its field widths:
 | --------------- | ------------------------------ | ----------- |
 | `decoded_core`  | opcode 7, type 3, params 25    | 35 bits     |
 | `decoded_itype` | compute_op 6, writeback 2, imm12 12, rs1 5, rd 5 | 30 bits     |
-| `decoded_rtype` | funct7 7, rs2 5, rs1 5, funct3 3, rd 5 | 25 bits |
+| `decoded_rtype` | compute_op 6, writeback 2, rs1 5, rs2 5, rd 5 | 23 bits |
 | `decoded_stype` | imm12 12, rs2 5, rs1 5, funct3 3 | 25 bits   |
 | `decoded_btype` | imm_sign 1, imm_10_5 6, rs2 5, rs1 5, funct3 3, imm_4_1 4, imm_11 1 | 25 bits |
 | `decoded_jtype` | imm 64, rd 5 | 69 bits |

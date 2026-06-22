@@ -188,6 +188,44 @@ const (
 	wbStoreReg  = 1
 )
 
+// R-type semantic micro-op constants. These MUST match constants.zkc.
+const (
+	rtypeOpAdd    = 0
+	rtypeOpSub    = 1
+	rtypeOpSll    = 2
+	rtypeOpSlt    = 3
+	rtypeOpSltu   = 4
+	rtypeOpXor    = 5
+	rtypeOpSrl    = 6
+	rtypeOpSra    = 7
+	rtypeOpOr     = 8
+	rtypeOpAnd    = 9
+
+	rtypeOpMul    = 10
+	rtypeOpMulh   = 11
+	rtypeOpMulhsu = 12
+	rtypeOpMulhu  = 13
+	rtypeOpDiv    = 14
+	rtypeOpDivu   = 15
+	rtypeOpRem    = 16
+	rtypeOpRemu   = 17
+
+	rtypeOpAddw  = 18
+	rtypeOpSubw  = 19
+	rtypeOpSllw  = 20
+	rtypeOpSrlw  = 21
+	rtypeOpSraw  = 22
+
+	rtypeOpMulw  = 23
+	rtypeOpDivw  = 24
+	rtypeOpDivuw = 25
+	rtypeOpRemw  = 26
+	rtypeOpRemuw = 27
+
+	rtypeOpKeccak  = 28
+	rtypeInvalid   = 63
+)
+
 const (
 	funct12Ecall  = 0b000000000000
 	funct12Ebreak = 0b000000000001
@@ -295,6 +333,106 @@ func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, writeback, no
 		}
 	default:
 		return itypeInvalid, wbNone, imm12
+	}
+}
+
+// decodeRTypeSemantic maps a raw R-type encoding to a semantic compute op and
+// writeback kind. funct3/funct7 validation happens here.
+func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp, writeback uint32) {
+	switch opcode {
+	case opcodeOP:
+		if funct7 == 0b0000001 {
+			writeback = wbStoreReg
+			switch funct3 {
+			case 0b000:
+				return rtypeOpMul, writeback
+			case 0b001:
+				return rtypeOpMulh, writeback
+			case 0b010:
+				return rtypeOpMulhsu, writeback
+			case 0b011:
+				return rtypeOpMulhu, writeback
+			case 0b100:
+				return rtypeOpDiv, writeback
+			case 0b101:
+				return rtypeOpDivu, writeback
+			case 0b110:
+				return rtypeOpRem, writeback
+			case 0b111:
+				return rtypeOpRemu, writeback
+			}
+		} else if funct7 == 0b0000000 {
+			writeback = wbStoreReg
+			switch funct3 {
+			case 0b000:
+				return rtypeOpAdd, writeback
+			case 0b001:
+				return rtypeOpSll, writeback
+			case 0b010:
+				return rtypeOpSlt, writeback
+			case 0b011:
+				return rtypeOpSltu, writeback
+			case 0b100:
+				return rtypeOpXor, writeback
+			case 0b101:
+				return rtypeOpSrl, writeback
+			case 0b110:
+				return rtypeOpOr, writeback
+			case 0b111:
+				return rtypeOpAnd, writeback
+			}
+		} else if funct7 == 0b0100000 {
+			writeback = wbStoreReg
+			switch funct3 {
+			case 0b000:
+				return rtypeOpSub, writeback
+			case 0b101:
+				return rtypeOpSra, writeback
+			}
+		}
+		return rtypeInvalid, wbNone
+	case opcodeOP32:
+		if funct7 == 0b0000001 {
+			writeback = wbStoreReg
+			switch funct3 {
+			case 0b000:
+				return rtypeOpMulw, writeback
+			case 0b100:
+				return rtypeOpDivw, writeback
+			case 0b101:
+				return rtypeOpDivuw, writeback
+			case 0b110:
+				return rtypeOpRemw, writeback
+			case 0b111:
+				return rtypeOpRemuw, writeback
+			}
+		} else if funct7 == 0b0000000 {
+			writeback = wbStoreReg
+			switch funct3 {
+			case 0b000:
+				return rtypeOpAddw, writeback
+			case 0b001:
+				return rtypeOpSllw, writeback
+			case 0b101:
+				return rtypeOpSrlw, writeback
+			}
+		} else if funct7 == 0b0100000 {
+			writeback = wbStoreReg
+			switch funct3 {
+			case 0b000:
+				return rtypeOpSubw, writeback
+			case 0b101:
+				return rtypeOpSraw, writeback
+			}
+		}
+		return rtypeInvalid, wbNone
+	case opcodeCUSTOM1:
+		if funct3 == 0b000 && funct7 == 0b0000000 {
+			return rtypeOpKeccak, wbNone
+		}
+		return rtypeInvalid, wbNone
+	default:
+		return rtypeInvalid, wbNone
 	}
 }
 
@@ -555,7 +693,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	// records tightly by bit width:
 	//   decoded_core : opcode:Opcode(u7), instruction_type:Type(u3), instruction_parameters:u25
 	//   decoded_itype: compute_op:ITypeComputeOp(u6), writeback:ITypeWriteback(u2), imm12:Imm12(u12), rs1:Register(u5), rd:Register(u5)
-	//   decoded_rtype: funct7:Funct7(u7), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3), rd:Register(u5)
+	//   decoded_rtype: compute_op:RTypeComputeOp(u6), writeback:ITypeWriteback(u2), rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
 	//   decoded_stype: imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3)
 	//   decoded_btype: imm_sign:u1, imm_10_5:u6, rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3), imm_4_1:u4, imm_11:u1
 	//   decoded_jtype: imm:DoubleWord(u64), rd:Register(u5)
@@ -624,10 +762,15 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		itypeBits.writeBits(uint64(rs1), 5)
 		itypeBits.writeBits(uint64(rd), 5)
 
-		rtypeBits.writeBits(uint64(funct7), 7)
-		rtypeBits.writeBits(uint64(rs2), 5)
+		rtypeComputeOp, rtypeWriteback := decodeRTypeSemantic(opcode, funct3, funct7)
+		if instrType != rType {
+			rtypeComputeOp, rtypeWriteback = rtypeInvalid, wbNone
+		}
+
+		rtypeBits.writeBits(uint64(rtypeComputeOp), 6)
+		rtypeBits.writeBits(uint64(rtypeWriteback), 2)
 		rtypeBits.writeBits(uint64(rs1), 5)
-		rtypeBits.writeBits(uint64(funct3), 3)
+		rtypeBits.writeBits(uint64(rs2), 5)
 		rtypeBits.writeBits(uint64(rd), 5)
 
 		stypeBits.writeBits(uint64(simm12), 12)

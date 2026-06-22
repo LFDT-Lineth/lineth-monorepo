@@ -47,9 +47,10 @@ pub input decoded_core(i:u64) -> (opcode:Opcode, instruction_type:Type, instruct
 // compute_op switch plus a separate writeback step (WB_STORE_REG / WB_NONE).
 pub input decoded_itype(i:u64) -> (compute_op:ITypeComputeOp, writeback:ITypeWriteback, imm12:Imm12, rs1:Register, rd:Register)
 
-// Pre-decoded R-type field split, indexed by the same instruction index.
-// Replaces `funct7::rs2::rs1::funct3::rd = instruction_parameters` in r_type.zkc.
-pub input decoded_rtype(i:u64) -> (funct7:Funct7, rs2:Register, rs1:Register, funct3:Funct3, rd:Register)
+// Pre-decoded R-type semantic micro-ops, indexed by the same instruction index.
+// Replaces runtime opcode/funct3/funct7 disambiguation in r_type.zkc with a flat
+// compute_op switch plus a separate writeback step (WB_STORE_REG / WB_NONE).
+pub input decoded_rtype(i:u64) -> (compute_op:RTypeComputeOp, writeback:ITypeWriteback, rs1:Register, rs2:Register, rd:Register)
 
 // Pre-decoded S-type field split, indexed by the same instruction index.
 // Replaces `imm_sign::uimm6::rs2::rs1::funct3::uimm5 = instruction_parameters` in s_type.zkc.

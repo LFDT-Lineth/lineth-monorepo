@@ -34,3 +34,6 @@ type Offset = u64
 type ITypeComputeOp = u6
 type ITypeWriteback = u2
 
+// Semantic R-type micro-op tags (pre-decoded at ELF time).
+type RTypeComputeOp = u6
+
