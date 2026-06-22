@@ -79,14 +79,19 @@ fmt-testdata-generate:
 
 build: build-zig
 
-build-zig:
-	zig build
-
-build-release:
-	zig build --release=small -Dstrip=true
-
+# the build_common package for importing in build.zig is shared with riscv-guests for unified
+# ELF generation. It normally is required only for the R5 build, but it is included unconditionally
+# to avoid complicating build.zig here with conditional imports and to use `requiredZigVersion`
+# for checking the Zig version. But it also embeds the generated linker script, so we need to set
+# the linker script path for non-R5 builds as well.
 linker-script:
 	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) linker-script LINKER_SCRIPT=$(MAKEFILE_DIR)../riscv-guests/build_common/linker_script.ld
+
+build-zig: linker-script
+	zig build
+
+build-release: linker-script
+	zig build --release=small -Dstrip=true
 
 build-r5: linker-script
 	zig build --release=small -Dstrip=true -Dr5=true -Ddisable-accelerators=$(DISABLE_ACCELERATORS)
