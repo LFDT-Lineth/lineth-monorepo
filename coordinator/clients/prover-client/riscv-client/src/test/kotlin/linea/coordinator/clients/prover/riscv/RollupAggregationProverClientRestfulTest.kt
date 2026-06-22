@@ -13,12 +13,14 @@ import linea.clients.RollupAggregationProofRequestV1
 import linea.coordinator.clients.prover.serialization.JsonSerialization
 import linea.crypto.Sha256HashFunction
 import linea.domain.AggregationProofIndex
+import linea.kotlin.encodeHex
 import net.consensys.linea.httprest.client.VertxHttpRestClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -144,5 +146,8 @@ class RollupAggregationProverClientRestfulTest {
       parentShnarf = "0x19",
       endShnarf = "0x1a",
     ),
+    l2L1Roots = listOf(Random.nextBytes(32).encodeHex()),
+    filteredAddresses = listOf(Random.nextBytes(20).encodeHex()),
+    l2MessagingBlocksOffsets = listOf(1, 20, 100),
   )
 }

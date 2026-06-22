@@ -2,6 +2,7 @@ package linea.clients
 
 import linea.domain.BlockInterval
 import linea.domain.StartBlockTimestampProvider
+import linea.kotlin.byteArrayListEquals
 import kotlin.time.Instant
 
 typealias RollupAggregationPublicInputs = RollupProofPublicInputs
@@ -47,6 +48,9 @@ data class RollupAggregationProofResponse(
   override val endBlockNumber: ULong,
   val proof: ByteArray,
   val publicInputs: RollupAggregationPublicInputs,
+  val l2L1Roots: List<ByteArray>,
+  val filteredAddresses: List<ByteArray>,
+  val l2MessagingBlocksOffsets: List<ULong>,
 ) : BlockInterval {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -58,6 +62,9 @@ data class RollupAggregationProofResponse(
     if (endBlockNumber != other.endBlockNumber) return false
     if (!proof.contentEquals(other.proof)) return false
     if (publicInputs != other.publicInputs) return false
+    if (!l2L1Roots.byteArrayListEquals(other.l2L1Roots)) return false
+    if (!filteredAddresses.byteArrayListEquals(other.filteredAddresses)) return false
+    if (l2MessagingBlocksOffsets != other.l2MessagingBlocksOffsets) return false
 
     return true
   }
@@ -67,6 +74,9 @@ data class RollupAggregationProofResponse(
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + proof.contentHashCode()
     result = 31 * result + publicInputs.hashCode()
+    result = 31 * result + l2L1Roots.hashCode()
+    result = 31 * result + filteredAddresses.hashCode()
+    result = 31 * result + l2MessagingBlocksOffsets.hashCode()
     return result
   }
 }

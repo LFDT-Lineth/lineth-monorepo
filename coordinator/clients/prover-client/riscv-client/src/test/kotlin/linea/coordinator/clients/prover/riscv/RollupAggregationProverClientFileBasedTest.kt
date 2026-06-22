@@ -10,12 +10,14 @@ import linea.crypto.Sha256HashFunction
 import linea.domain.AggregationProofIndex
 import linea.fileio.FileReader
 import linea.fileio.FileWriter
+import linea.kotlin.encodeHex
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
+import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -117,5 +119,8 @@ class RollupAggregationProverClientFileBasedTest {
       parentShnarf = "0x19",
       endShnarf = "0x1a",
     ),
+    l2L1Roots = listOf(Random.nextBytes(32).encodeHex()),
+    filteredAddresses = listOf(Random.nextBytes(20).encodeHex()),
+    l2MessagingBlocksOffsets = listOf(1, 20, 100),
   )
 }

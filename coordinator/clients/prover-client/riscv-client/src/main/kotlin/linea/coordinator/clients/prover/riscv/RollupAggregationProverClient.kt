@@ -52,6 +52,9 @@ internal object RollupAggregationProofResponseDtoMapper :
       endBlockNumber = proofIndex.endBlockNumber,
       proof = responseDto.proof.decodeHex(),
       publicInputs = responseDto.publicInputs.toDomainObject(),
+      l2L1Roots = responseDto.l2L1Roots.map { it.decodeHex() },
+      filteredAddresses = responseDto.filteredAddresses.map { it.decodeHex() },
+      l2MessagingBlocksOffsets = responseDto.l2MessagingBlocksOffsets.map { it.toULong() },
     )
   }
 }

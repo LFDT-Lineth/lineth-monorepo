@@ -165,6 +165,9 @@ class RiscVProofResponseDtoMapperTest {
     val dto = RollupAggregationProofResponseDto(
       proof = "0xabcd",
       publicInputs = rollupPublicInputsDto(),
+      l2L1Roots = listOf("0xaa", "0xcc"),
+      filteredAddresses = listOf("0xbb", "0xdd"),
+      l2MessagingBlocksOffsets = listOf(1, 20, 100),
     )
 
     assertThat(
@@ -183,6 +186,9 @@ class RiscVProofResponseDtoMapperTest {
         endBlockNumber = 1000503UL,
         proof = "0xabcd".decodeHex(),
         publicInputs = expectedRollupPublicInputs(),
+        l2L1Roots = listOf("0xaa".decodeHex(), "0xcc".decodeHex()),
+        filteredAddresses = listOf("0xbb".decodeHex(), "0xdd".decodeHex()),
+        l2MessagingBlocksOffsets = listOf(1UL, 20UL, 100UL),
       ),
     )
   }

@@ -23,8 +23,7 @@ internal class L2ExecutionProofRequestDtoMapper(
   private val guestProgramId: String,
   private val chainConfig: ChainConfigDto,
   // private val statelessInputSszSerializer: StatelessInputSszSerializer = L2ExecutionStatelessInputSszSerializer(),
-  private val statelessInputDtoSszSerializer: StatelessInputDtoSszSerializer =
-    L2ExecutionStatelessInputDtoSszSerializer(),
+  // private val statelessInputDtoSszSerializer: StatelessInputDtoSszSerializer = L2ExecutionStatelessInputDtoSszSerializer(),
 ) : (L2ExecutionProofRequestV1) -> SafeFuture<L2ExecutionProofRequestDto> {
   private fun mapFtxInclusionResultToAcceptance(
     inclusionResult: ForcedTransactionInclusionResult,
@@ -97,7 +96,7 @@ internal class L2ExecutionProofRequestDtoMapper(
         publicKeys = emptyList(),
       )
       PayloadInputDto(
-        statelessInputSsz = statelessInputDtoSszSerializer.getStatelessInputDtoSsz(statelessInputDto),
+        // statelessInputSsz = statelessInputDtoSszSerializer.getStatelessInputDtoSsz(statelessInputDto),
         // statelessInputSsz = statelessInputSszSerializer.getStatelessInputSsz(
         //  executionPayload,
         //  executionWitness,
@@ -107,8 +106,8 @@ internal class L2ExecutionProofRequestDtoMapper(
         //  executionRequests!!,
         //  emptyList(),
         // ).encodeHex(),
-        debugStatelessInput = statelessInputDto,
-        rollupExtensionDto = RollupExtensionDto(
+        statelessInput = statelessInputDto,
+        rollupExtension = RollupExtensionDto(
           forcedTransactions = forcedTransactions.map {
             ForcedTransactionDto(
               number = it.ftxNumber.toLong(),

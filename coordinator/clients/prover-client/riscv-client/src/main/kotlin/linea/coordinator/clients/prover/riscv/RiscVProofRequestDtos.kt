@@ -1,6 +1,5 @@
 package linea.coordinator.clients.prover.riscv
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import linea.clients.L2ExecutionProofPublicInputs
 import linea.clients.L2ExecutionProofResponse
 import linea.clients.RollupProofPublicInputs
@@ -156,10 +155,8 @@ data class StatelessInputDto(
 )
 
 data class PayloadInputDto(
-  val statelessInputSsz: String,
-  @get:JsonProperty("_debugStatelessInput")
-  val debugStatelessInput: StatelessInputDto,
-  val rollupExtensionDto: RollupExtensionDto,
+  val statelessInput: StatelessInputDto,
+  val rollupExtension: RollupExtensionDto,
 )
 
 data class L2ExecutionProofRequestParamsDto(
@@ -265,6 +262,9 @@ data class RollupAggregationProofRequestDto(
 data class RollupAggregationProofResponseDto(
   val proof: String,
   val publicInputs: RollupAggregationPublicInputsDto,
+  val l2L1Roots: List<String>,
+  val filteredAddresses: List<String>,
+  val l2MessagingBlocksOffsets: List<Long>,
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
