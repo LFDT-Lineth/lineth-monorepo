@@ -8,7 +8,7 @@ const polynomial = verifier_ray.polynomial.canonical;
 const poseidon2 = verifier_ray.crypto.poseidon2;
 const Transcript = verifier_ray.crypto.fiat_shamir.Transcript;
 
-const is_r5_zkvm = builtin.target.cpu.arch == .riscv64 and builtin.target.os.tag == .freestanding;
+const is_r5_zkvm = verifier_ray.r5_config.is_r5_zkvm;
 const is_native_os = builtin.target.os.tag == .linux or builtin.target.os.tag == .macos;
 const is_native_arch = builtin.target.cpu.arch == .x86_64 or builtin.target.cpu.arch == .aarch64;
 const is_supported_native = is_native_os and is_native_arch;
