@@ -59,7 +59,7 @@ func main() {
 	if err := writeCompiledFixtures(fixtureCases, compiledSystems); err != nil {
 		panic(err)
 	}
-	if err := writeVerifyFixtures(vanishingCases, vanishingSystems); err != nil {
+	if err := writeVerifyFixtures(fixtureCases, compiledSystems); err != nil {
 		panic(err)
 	}
 }
@@ -926,23 +926,19 @@ func writeTraceCell(out *bytes.Buffer, cell runtimeTraceCell, indent string) {
 	}
 }
 
-func writeVerifyFixtures(cases []vanishingFixtureCase, systems []codegen.NamedVanishingSystem) error {
+func writeVerifyFixtures(cases []fixtureCase, systems []codegen.CompiledSystem) error {
 	var out bytes.Buffer
 	writeVerifyHeader(&out, len(cases))
+	opts := codegen.CompiledSystemZigOptions{
+		EmitHeader:      false,
+		ProtocolImport:  "protocol",
+		FieldImport:     "field",
+		VanishingImport: "vanishing",
+		LogDerivImport:  "logderivativesum",
+	}
+
 	for i := range cases {
-		if err := codegen.WriteSpecZigWithOptions(&out, systems[i].Routing, codegen.SpecZigOptions{
-			ProtocolImport: "protocol",
-			ConstName:      fmt.Sprintf("system_%d_spec", i),
-			EmitHeader:     false,
-		}); err != nil {
-			return err
-		}
-		if err := codegen.WriteVanishingSystemZigWithOptions(&out, i, systems[i], codegen.VanishingZigOptions{
-			FieldImport:     "field",
-			VanishingImport: "vanishing",
-			EmitHeader:      false,
-			EmitSystemsList: false,
-		}); err != nil {
+		if err := codegen.WriteCompiledSystemZig(&out, i, systems[i], opts); err != nil {
 			return err
 		}
 		writeVerifyCase(&out, i, cases[i])
@@ -969,6 +965,7 @@ func writeVerifyHeader(out *bytes.Buffer, count int) {
 	fmt.Fprintln(out, "const protocol = verifier_ray.protocol;")
 	fmt.Fprintln(out, "const commitment = verifier_ray.crypto.commitment;")
 	fmt.Fprintln(out, "const vanishing = verifier_ray.query.vanishing;")
+	fmt.Fprintln(out, "const logderivativesum = verifier_ray.query.logderivativesum;")
 	fmt.Fprintln(out, "const verifier = verifier_ray.verifier;")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "pub const VerifyCase = struct {")
@@ -993,12 +990,16 @@ func writeVerifyHeader(out *bytes.Buffer, count int) {
 	fmt.Fprintln(out)
 }
 
-func writeVerifyCase(out *bytes.Buffer, idx int, tc vanishingFixtureCase) {
+func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
 	writeVerifyProof(out, fmt.Sprintf("verify_case_%d", idx), tc.honest)
 	if tc.invalid != nil {
 		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_failing", idx), *tc.invalid)
 	}
-	fmt.Fprintf(out, "const verify_case_%d_systems = verifier.Systems{ .vanishing = system_%d };\n", idx, idx)
+	fmt.Fprintf(
+		out,
+		"const verify_case_%d_systems = verifier.Systems{ .vanishing = system_%d, .logderivativesum = system_%d_logderiv };\n",
+		idx, idx, idx,
+	)
 	fmt.Fprintln(out)
 }
 
@@ -1093,32 +1094,39 @@ func writeVerifyRoundData(out *bytes.Buffer, prefix string, roundIdx int, round 
 	fmt.Fprintln(out)
 }
 
-func writeVerifyMetadata(out *bytes.Buffer, cases []vanishingFixtureCase, systems []codegen.NamedVanishingSystem) {
+func writeVerifyMetadata(out *bytes.Buffer, cases []fixtureCase, systems []codegen.CompiledSystem) {
 	fmt.Fprintln(out, "pub const metadata = [_]VerifyCaseMetadata{")
 	for i, tc := range cases {
-		system := systems[i].System
-		expressionCount, bucketCount, vanishingCount := vanishingBenchCounts(system)
+		vanishingSystem := systems[i].Vanishing
+		expressionCount, bucketCount, vanishingCount := vanishingBenchCounts(vanishingSystem)
 		fmt.Fprintf(out, "    .{ .name = \"%s\", .module_count = %d, .dynamic_module_count = %d, .round_count = %d, .expression_count = %d, .bucket_count = %d, .vanishing_count = %d, .total_witness_claims = %d, .total_quotient_claims = %d },\n",
-			zigString(tc.name),
-			len(system.Modules),
-			system.DynamicModuleCount,
+			codegen.ZigString(tc.name),
+			len(vanishingSystem.Modules),
+			vanishingSystem.DynamicModuleCount,
 			len(systems[i].Routing.RoundCoinCounts),
 			expressionCount,
 			bucketCount,
 			vanishingCount,
-			system.TotalWitnessClaims,
-			system.TotalQuotientClaims,
+			vanishingSystem.TotalWitnessClaims,
+			vanishingSystem.TotalQuotientClaims,
 		)
 	}
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
 }
 
-func writeVerifyCaseSwitch(out *bytes.Buffer, cases []vanishingFixtureCase) {
+func writeVerifyCaseSwitch(out *bytes.Buffer, cases []fixtureCase) {
 	fmt.Fprintln(out, "pub fn get(comptime index: usize) VerifyCase {")
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i, tc := range cases {
-		fmt.Fprintf(out, "        %d => .{ .name = \"%s\", .spec = system_%d_spec, .systems = verify_case_%d_systems },\n", i, zigString(tc.name), i, i)
+		fmt.Fprintf(
+			out,
+			"        %d => .{ .name = \"%s\", .spec = system_%d_spec, .systems = verify_case_%d_systems },\n",
+			i,
+			codegen.ZigString(tc.name),
+			i,
+			i,
+		)
 	}
 	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
 	fmt.Fprintln(out, "    };")
@@ -1129,7 +1137,7 @@ func writeVerifyCaseSwitch(out *bytes.Buffer, cases []vanishingFixtureCase) {
 // data for a fixture case. The proof is kept separate from VerifyCase (see
 // writeVerifyHeader) so callers that only need the spec/systems don't pull in
 // the proof, and so the input can be supplied independently at runtime.
-func writeVerifyInputSwitch(out *bytes.Buffer, cases []vanishingFixtureCase) {
+func writeVerifyInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 	fmt.Fprintln(out, "pub fn getInput(comptime index: usize) verifier.ProofData {")
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i := range cases {
@@ -1143,14 +1151,14 @@ func writeVerifyInputSwitch(out *bytes.Buffer, cases []vanishingFixtureCase) {
 // writeVerifyFailingInputSwitch emits the getInputFailing accessor, returning
 // the failing (invalid) proof data for a fixture case. Not every case defines a
 // failing input, so cases without one produce a comptime error when requested.
-func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []vanishingFixtureCase) {
+func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 	fmt.Fprintln(out, "pub fn getInputFailing(comptime index: usize) verifier.ProofData {")
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i, tc := range cases {
 		if tc.invalid != nil {
 			fmt.Fprintf(out, "        %d => verify_case_%d_failing_proof,\n", i, i)
 		} else {
-			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no failing input\"),\n", i, i, zigString(tc.name))
+			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no failing input\"),\n", i, i, codegen.ZigString(tc.name))
 		}
 	}
 	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
