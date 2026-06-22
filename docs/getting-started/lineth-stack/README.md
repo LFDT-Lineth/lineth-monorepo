@@ -24,10 +24,14 @@ Use the helper scripts first. Use raw Compose only when debugging.
 
 ```bash
 cd docs/getting-started/lineth-stack
-cp .env.example .env
-$EDITOR .env
-./scripts/start.sh --tail
+./scripts/start.sh --wizard --then-start
 ```
+
+The wizard is a thin front door to the existing `.env`, preflight, and
+`start.sh` flow. It writes `.env` safely, preserves hand-added keys, redacts RPC
+URLs in summaries, and refuses dangerous L1/prover mode switches when existing
+stack state is present. Use the manual `.env` path below only when debugging or
+when you intentionally want to edit every value yourself.
 
 On a clean Sepolia checkout, the first run generates
 `artifacts/accounts/deployer-keystore/l1-deployer.json`, prints the deployer
@@ -110,12 +114,40 @@ M-series machines is much slower.
 
 ## Setup
 
-Required `.env` values:
+Recommended setup:
+
+```bash
+./scripts/start.sh --wizard
+./scripts/start.sh --tail
+```
+
+Use `--wizard --then-start` to write `.env` and immediately continue into
+`./scripts/start.sh --tail`.
+
+For CI or scripted demos, use non-interactive flags:
+
+```bash
+./scripts/start.sh --wizard --non-interactive --l1-mode local --prover dev
+./scripts/start.sh --wizard --non-interactive \
+  --l1-mode sepolia \
+  --l1-rpc-url https://sepolia.infura.io/v3/<your-project-id> \
+  --prover dev
+```
+
+The matching environment variables are `WIZARD_L1_MODE`, `WIZARD_L1_RPC_URL`,
+and `WIZARD_PROVER`. Precedence is: command flag, wizard environment variable,
+existing `.env`, then `.env.example`.
+
+Manual advanced `.env` values:
 
 ```bash
 L1_MODE=sepolia
 L1_RPC_URL=https://sepolia.infura.io/v3/<your-project-id>
 ```
+
+When the wizard overwrites an existing `.env`, it first writes a backup under
+`artifacts/env-backups/.env.<timestamp>`. No-op reruns skip the backup and leave
+the file untouched.
 
 The first Sepolia run creates the deployer keystore and prints the address to fund.
 If host TypeScript dependencies are installed, this happens before Docker pull/start;
@@ -162,8 +194,7 @@ This mode is intended for development, CI, rehearsals, and repeated demos when
 Sepolia gas or RPC conditions are unstable.
 
 ```bash
-cp .env.example .env
-printf 'L1_MODE=local\nPROVER_DEV_OVERRIDE=true\n' >> .env
+./scripts/start.sh --wizard --non-interactive --l1-mode local --prover dev
 ./scripts/start.sh --tail --no-pull
 ```
 
@@ -278,6 +309,8 @@ retry-noise detail in the terminal:
 If you bypass `start.sh`, prepare generated files first:
 
 ```bash
+cp .env.example .env
+$EDITOR .env
 ./scripts/bootstrap-artifacts.sh
 docker compose --env-file versions.env --env-file .env --profile stack-partial-prover up -d
 ```

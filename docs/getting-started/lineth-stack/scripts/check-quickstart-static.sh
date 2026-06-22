@@ -552,7 +552,7 @@ check_typescript_quickstart_helpers() {
   fi
 
   if awk '
-    /^run_ts_preflight$/ { preflight = NR }
+    /run_ts_preflight/ && $0 !~ /^run_ts_preflight\(\)/ { preflight = NR }
     /Pull Docker images/ { pull = NR }
     /Start services/ { up = NR }
     END { exit !(preflight && pull && up && preflight < pull && preflight < up) }
@@ -1494,6 +1494,103 @@ check_pinned_utility_images_and_docs() {
   fi
 }
 
+check_wizard_cli() {
+  start_script="$STACK/scripts/start.sh"
+  wizard_lib="$STACK/scripts/lib/wizard.sh"
+  wizard_tests="$STACK/scripts/tests/wizard/run.sh"
+  quickstart_preflight="$STACK/scripts/internal/quickstart-preflight.ts"
+  readme="$STACK/README.md"
+  scripts_readme="$STACK/scripts/README.md"
+  stack_gitignore="$STACK/.gitignore"
+
+  if [ -f "$wizard_lib" ] \
+    && grep -q 'lineth_wizard_main' "$wizard_lib" \
+    && grep -q 'set_env_key()' "$wizard_lib" \
+    && grep -q 'LINETH_WIZARD_MANAGED_KEYS="L1_MODE L1_RPC_URL PROVER_DEV_OVERRIDE PROVER_GOMEMLIMIT"' "$wizard_lib"; then
+    pass "wizard shell library owns the managed .env key flow"
+  else
+    fail "scripts/lib/wizard.sh must define the wizard managed-key flow"
+  fi
+
+  set_env_body="$(awk '/^set_env_key\(\)/,/^lineth_wizard_build_env_file\(\)/ { print }' "$wizard_lib")"
+  if printf '%s\n' "$set_env_body" | grep -q 'sed'; then
+    fail "set_env_key must not use sed for value replacement"
+  else
+    pass "set_env_key avoids sed-based value replacement"
+  fi
+
+  if grep -q 'lib/wizard.sh' "$start_script" \
+    && grep -q 'LINETH_WIZARD_FLAG_L1_MODE' "$start_script" \
+    && grep -q 'lineth_wizard_main "$STACK" "$SCRIPT_DIR"' "$start_script"; then
+    pass "start.sh sources and invokes the wizard before normal boot"
+  else
+    fail "start.sh must source scripts/lib/wizard.sh and invoke lineth_wizard_main"
+  fi
+
+  if grep -q -- '--then-start requires --wizard; to just boot, run ./scripts/start.sh --tail' "$start_script" \
+    && grep -q 'exec "$SCRIPT_DIR/start.sh" --tail' "$start_script"; then
+    pass "start.sh guards --then-start and hands off with exec"
+  else
+    fail "start.sh must reject --then-start without --wizard and exec start.sh --tail after wizard success"
+  fi
+
+  if grep -q '^run_ts_preflight$' "$start_script" \
+    && ! grep -q 'LINETH_PRECHECKED' "$start_script"; then
+    pass "start.sh still runs full preflight after wizard handoff"
+  else
+    fail "start.sh must not skip full preflight after --wizard --then-start"
+  fi
+
+  if grep -q 'LINETH_PREFLIGHT_RPC_ONLY' "$wizard_lib" \
+    && grep -q 'LINETH_PREFLIGHT_RPC_ONLY' "$quickstart_preflight" \
+    && grep -q 'runRpcOnlyCheck' "$quickstart_preflight"; then
+    pass "wizard uses quickstart-preflight RPC-only mode before .env exists"
+  else
+    fail "wizard Sepolia validation must use quickstart-preflight RPC-only mode"
+  fi
+
+  if [ -f "$stack_gitignore" ] && grep -q '^\.env\.bak\*$' "$stack_gitignore" \
+    && git -C "$ROOT" check-ignore -q "$STACK_REL/.env.bak.test"; then
+    pass "lineth-stack .gitignore ignores .env.bak*"
+  else
+    fail "docs/getting-started/lineth-stack/.gitignore must ignore .env.bak*"
+  fi
+
+  if [ -f "$wizard_tests" ] \
+    && grep -q 'set_env_key preserves comments and URL-like values literally' "$wizard_tests" \
+    && grep -q 'assert_golden local-dev' "$wizard_tests" \
+    && grep -q 'WIZARD_L1_MODE env var configures non-interactive mode' "$wizard_tests" \
+    && grep -q 'L1 prompt uses numbered choice header' "$wizard_tests" \
+    && grep -q 'backup collision keeps both backups' "$wizard_tests" \
+    && grep -q 'mode-switch guard points at reset' "$wizard_tests" \
+    && grep -q 'busy-port simulation writes .env before failing' "$wizard_tests" \
+    && [ -f "$STACK/scripts/tests/wizard/golden/local-dev.env" ] \
+    && [ -f "$STACK/scripts/tests/wizard/golden/local-partial.env" ] \
+    && [ -f "$STACK/scripts/tests/wizard/golden/sepolia-dev.env" ] \
+    && [ -f "$STACK/scripts/tests/wizard/golden/sepolia-partial.env" ]; then
+    pass "wizard deterministic test runner covers key safety behaviors"
+  else
+    fail "scripts/tests/wizard/run.sh must cover golden outputs, URL-safe env writes, mode guard, and busy-port ordering"
+  fi
+
+  wizard_test_log="/tmp/lineth-wizard-tests-static.$$"
+  if sh "$wizard_tests" > "$wizard_test_log" 2>&1; then
+    pass "wizard deterministic test runner passes"
+  else
+    fail "wizard deterministic test runner must pass: $(tr '\n' ' ' < "$wizard_test_log")"
+  fi
+  rm -f "$wizard_test_log"
+
+  if grep -q './scripts/start.sh --wizard --then-start' "$readme" \
+    && grep -q 'WIZARD_L1_MODE' "$readme" \
+    && grep -q 'artifacts/env-backups/.env.<timestamp>' "$readme" \
+    && grep -q -- '--wizard' "$scripts_readme"; then
+    pass "README files document wizard usage, non-interactive env vars, and backups"
+  else
+    fail "README files must document the wizard, non-interactive env vars, and backup location"
+  fi
+}
+
 check_quickstart_review_fixes() {
   deploy_contracts="$STACK/scripts/phases/04-deploy-contracts.sh"
   account_setup_ts="$STACK/scripts/internal/account-setup.ts"
@@ -1582,6 +1679,7 @@ check_runtime_config_and_validium_guardrails
 check_reuse_guardrails
 check_smoke_and_traffic_scripts
 check_pinned_utility_images_and_docs
+check_wizard_cli
 check_quickstart_review_fixes
 
 if [ "$FAILURES" -ne 0 ]; then

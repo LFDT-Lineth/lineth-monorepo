@@ -3,7 +3,15 @@ import * as path from "node:path";
 import { JsonRpcProvider } from "ethers";
 
 import { resolveL1DeployerConfig } from "./deployer-wallet";
-import { buildSepoliaPolicyConfig, readDotEnvFile, runL1PolicyCheck, sanitizeExternalError } from "./sepolia-policy";
+import {
+  buildSepoliaPolicyConfig,
+  envValue,
+  LOCAL_L1_CHAIN_ID,
+  readDotEnvFile,
+  runL1PolicyCheck,
+  sanitizeExternalError,
+  SEPOLIA_CHAIN_ID,
+} from "./sepolia-policy";
 
 function log(message: string) {
   process.stdout.write(`[quickstart-preflight] ${sanitizeExternalError(message)}\n`);
@@ -42,6 +50,34 @@ class FundingRequiredError extends Error {
   }
 }
 
+async function runRpcOnlyCheck(env: Record<string, string | undefined>) {
+  const mode = envValue("L1_MODE", env, "sepolia");
+  if (mode !== "sepolia" && mode !== "local") {
+    throw new Error(`L1_MODE must be one of sepolia, local (got '${mode}')`);
+  }
+
+  const rpcUrl =
+    mode === "local"
+      ? `http://localhost:${envValue("HOST_PORT_L1_RPC", env, "8445")}`
+      : envValue("L1_RPC_URL", env);
+  if (!rpcUrl) {
+    throw new Error("L1_RPC_URL must be set in .env");
+  }
+
+  const provider = new JsonRpcProvider(rpcUrl);
+  try {
+    const network = await provider.getNetwork();
+    const expectedChainId = mode === "local" ? LOCAL_L1_CHAIN_ID : SEPOLIA_CHAIN_ID;
+    if (network.chainId !== expectedChainId) {
+      throw new Error(`expected chainId ${expectedChainId}, got ${network.chainId}`);
+    }
+    log("rpc                           reachable");
+    log(`chain                         chainId ${network.chainId}`);
+  } finally {
+    provider.destroy();
+  }
+}
+
 function isUnderfundedError(error: unknown): boolean {
   return error instanceof Error && /fund it to at least [0-9]+ wei/.test(error.message);
 }
@@ -69,8 +105,14 @@ async function printFundingInstructions(params: {
 async function main() {
   const stackDir = process.env.LINETH_STACK_DIR ?? process.cwd();
   const envPath = path.join(stackDir, ".env");
-  const fileEnv = readDotEnvFile(envPath);
+  const rpcOnly = process.env.LINETH_PREFLIGHT_RPC_ONLY === "true";
+  const fileEnv = rpcOnly ? {} : readDotEnvFile(envPath);
   const env = { ...fileEnv, ...process.env };
+
+  if (rpcOnly) {
+    await runRpcOnlyCheck(env);
+    return;
+  }
 
   const l1Deployer = await resolveL1DeployerConfig(env, "host", { stackDir });
   const provider = new JsonRpcProvider(l1Deployer.rpcUrl);

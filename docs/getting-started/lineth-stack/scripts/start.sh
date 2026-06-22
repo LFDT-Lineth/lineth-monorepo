@@ -13,19 +13,69 @@ LINETH_LOG_CONTEXT="start"
 TAIL=false
 PULL=true
 LINETH_VERBOSE="${LINETH_VERBOSE:-false}"
+WIZARD=false
+WIZARD_THEN_START=false
+WIZARD_NON_INTERACTIVE=false
+WIZARD_YES=false
+WIZARD_FLAG_L1_MODE=""
+WIZARD_FLAG_L1_RPC_URL=""
+WIZARD_FLAG_PROVER=""
+WIZARD_OPTION_REQUIRES=""
+
+ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
+STACK="$ROOT/docs/getting-started/lineth-stack"
 
 usage() {
   cat <<'EOF'
 Usage: ./scripts/start.sh [--tail] [--no-pull] [--verbose]
+       ./scripts/start.sh --wizard [--then-start] [--non-interactive] [--yes]
 
-  --tail     start the stack, then show the guided deployment/finality progress
-  --no-pull  skip docker compose pull
-  --verbose  show raw preparation/pull details in the default terminal output
+  --tail              start the stack, then show guided deployment/finality progress
+  --no-pull           skip docker compose pull
+  --verbose           show raw preparation/pull details in the default terminal output
+  --wizard, --init    configure .env with the guided setup wizard
+  --then-start        after --wizard succeeds, start with ./scripts/start.sh --tail
+  --non-interactive   resolve wizard answers from flags/env/.env defaults; never prompt
+  --yes               accept the wizard write without a confirmation prompt
+
+Run ./scripts/start.sh --wizard --help for all wizard options.
 EOF
 }
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
+    --wizard|--init)
+      WIZARD=true
+      ;;
+    --then-start)
+      WIZARD_THEN_START=true
+      ;;
+    --non-interactive)
+      WIZARD_NON_INTERACTIVE=true
+      WIZARD_OPTION_REQUIRES="${WIZARD_OPTION_REQUIRES:---non-interactive}"
+      ;;
+    --yes)
+      WIZARD_YES=true
+      WIZARD_OPTION_REQUIRES="${WIZARD_OPTION_REQUIRES:---yes}"
+      ;;
+    --l1-mode)
+      shift
+      [ "$#" -gt 0 ] || lineth_die "--l1-mode requires local or sepolia"
+      WIZARD_FLAG_L1_MODE="$1"
+      WIZARD_OPTION_REQUIRES="${WIZARD_OPTION_REQUIRES:---l1-mode}"
+      ;;
+    --l1-rpc-url)
+      shift
+      [ "$#" -gt 0 ] || lineth_die "--l1-rpc-url requires a URL"
+      WIZARD_FLAG_L1_RPC_URL="$1"
+      WIZARD_OPTION_REQUIRES="${WIZARD_OPTION_REQUIRES:---l1-rpc-url}"
+      ;;
+    --prover)
+      shift
+      [ "$#" -gt 0 ] || lineth_die "--prover requires dev or partial"
+      WIZARD_FLAG_PROVER="$1"
+      WIZARD_OPTION_REQUIRES="${WIZARD_OPTION_REQUIRES:---prover}"
+      ;;
     --tail)
       TAIL=true
       ;;
@@ -37,7 +87,13 @@ while [ "$#" -gt 0 ]; do
       export LINETH_VERBOSE
       ;;
     -h|--help)
-      usage
+      if [ "$WIZARD" = "true" ]; then
+        # shellcheck disable=SC1091
+        . "$SCRIPT_DIR/lib/wizard.sh"
+        lineth_wizard_usage
+      else
+        usage
+      fi
       exit 0
       ;;
     *)
@@ -47,8 +103,40 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
-ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
-STACK="$ROOT/docs/getting-started/lineth-stack"
+if [ "$WIZARD_THEN_START" = "true" ] && [ "$WIZARD" != "true" ]; then
+  lineth_die "--then-start requires --wizard; to just boot, run ./scripts/start.sh --tail"
+fi
+
+if [ "$WIZARD" != "true" ] && [ -n "$WIZARD_OPTION_REQUIRES" ]; then
+  lineth_die "$WIZARD_OPTION_REQUIRES requires --wizard; to just boot, run ./scripts/start.sh --tail"
+fi
+
+if [ "$WIZARD" = "true" ]; then
+  # shellcheck disable=SC1091
+  . "$SCRIPT_DIR/lib/wizard.sh"
+  LINETH_WIZARD_FLAG_L1_MODE="$WIZARD_FLAG_L1_MODE" \
+    LINETH_WIZARD_FLAG_L1_RPC_URL="$WIZARD_FLAG_L1_RPC_URL" \
+    LINETH_WIZARD_FLAG_PROVER="$WIZARD_FLAG_PROVER" \
+    LINETH_WIZARD_NON_INTERACTIVE="$WIZARD_NON_INTERACTIVE" \
+    LINETH_WIZARD_YES="$WIZARD_YES" \
+    LINETH_WIZARD_THEN_START="$WIZARD_THEN_START" \
+    lineth_wizard_main "$STACK" "$SCRIPT_DIR"
+
+  if [ "$WIZARD_THEN_START" != "true" ]; then
+    exit 0
+  fi
+
+  if [ "$PULL" = "false" ] && [ "$LINETH_VERBOSE" = "true" ]; then
+    exec "$SCRIPT_DIR/start.sh" --tail --no-pull --verbose
+  elif [ "$PULL" = "false" ]; then
+    exec "$SCRIPT_DIR/start.sh" --tail --no-pull
+  elif [ "$LINETH_VERBOSE" = "true" ]; then
+    exec "$SCRIPT_DIR/start.sh" --tail --verbose
+  else
+    exec "$SCRIPT_DIR/start.sh" --tail
+  fi
+fi
+
 COMPOSE="docker compose --env-file versions.env --env-file .env --profile stack-partial-prover"
 lineth_runtime_init "$STACK"
 L1_MODE="$(lineth_l1_mode)"
