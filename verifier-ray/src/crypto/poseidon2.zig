@@ -1,5 +1,8 @@
 const field = @import("../field/koalabear.zig");
 const constants = @import("poseidon2_constants.zig");
+const r5_config = @import("r5_config");
+
+const lineth_accel = if (!r5_config.disable_accelerators) @import("lineth_accelerators") else null;
 
 pub const Error = field.Error || error{InvalidInputLength};
 pub const Digest = [8]field.Element;
@@ -109,7 +112,15 @@ pub fn hashElements(values: []const field.Element) Digest {
     return h.sumDigest();
 }
 
-fn permutation(comptime width: usize, state: *[width]field.Element) void {
+pub fn permutation(comptime width: usize, state: *[width]field.Element) void {
+    if (comptime !r5_config.disable_accelerators) {
+        permutationAccel16(state);
+    } else {
+        permutationNative(width, state);
+    }
+}
+
+fn permutationNative(comptime width: usize, state: *[width]field.Element) void {
     if (width != constants.width) @compileError("Poseidon2 Koalabear verifier constants support width 16");
     const round_keys = &constants.round_keys;
 
@@ -133,6 +144,18 @@ fn permutation(comptime width: usize, state: *[width]field.Element) void {
         sBoxAll(width, state);
         matMulExternalInPlace(width, state);
     }
+}
+
+// Delegate the width-16 permutation to the Linea Poseidon2 accelerator opcode.
+//
+// `field.Element` is `extern struct { value: u32 }`, so `[16]Element` is exactly
+// 16 little-endian canonical 32-bit words — the same layout the accelerator
+// expects in `zkvm_bytes_64`. The bit casts are therefore plain reinterpretations.
+fn permutationAccel16(state: *[constants.width]field.Element) void {
+    var in_state: lineth_accel.zkvm_bytes_64 = .{ .data = @bitCast(state.*) };
+    var out_state: lineth_accel.zkvm_bytes_64 = undefined;
+    _ = lineth_accel.lineth_zkvm_poseidon2_permutation(&in_state, &out_state);
+    state.* = @bitCast(out_state.data);
 }
 
 fn addRoundKey(
