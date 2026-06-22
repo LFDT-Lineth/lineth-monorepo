@@ -149,11 +149,11 @@ Follow this sequence when writing or modifying Solidity contracts:
    ```
 5. **Verify NatSpec coverage**: confirm all public/external functions, events, and errors have complete docstrings with `@notice`, `@param` (in signature order), and `@return`.
 6. **Review gas patterns**: check for unnecessary `memory` copies, repeated storage reads, and missing batch limits.
-7. **Commit** after passing the checklist below.
+7. **Commit** only if the user explicitly requested a commit: review the staged diff and confirm every item in the checklist below passes before committing.
 
-## Commit Checklist
+## Pre-Commit Checklist
 
-Before making a commit, please verify:
+Run through this before committing (skip if the user only asked for a code change or review):
 
 - [ ] Rules on licenses and Solidity pragma have been applied
 - [ ] All public items have NatSpec docstrings (`@notice`, `@param`, `@return`)
