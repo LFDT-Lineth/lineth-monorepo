@@ -269,15 +269,8 @@ class FakeEthApiClient(
       }
   }
 
-  override fun getExecutionWitness(block: BlockParameter): SafeFuture<ExecutionWitness> {
-    val witness = witnessesByBlock[block]
-      ?: return SafeFuture.failedFuture(
-        ExecutionWitnessClientException(
-          ExecutionWitnessError.NULL_RESULT,
-          "no witness configured for block=$block",
-        ),
-      )
-    return SafeFuture.completedFuture(witness)
+  override fun getExecutionWitness(block: BlockParameter): SafeFuture<ExecutionWitness?> {
+    return SafeFuture.completedFuture(witnessesByBlock[block])
   }
 
   private fun findLogsInRange(fromBlock: BlockParameter, toBlock: BlockParameter): List<EthLog> {

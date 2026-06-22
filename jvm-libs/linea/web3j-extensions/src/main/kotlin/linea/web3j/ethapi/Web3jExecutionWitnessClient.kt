@@ -10,8 +10,6 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import linea.domain.BlockParameter
 import linea.ethapi.ExecutionWitness
 import linea.ethapi.ExecutionWitnessClient
-import linea.ethapi.ExecutionWitnessClientException
-import linea.ethapi.ExecutionWitnessError
 import linea.web3j.requestAsync
 import org.web3j.protocol.ObjectMapperFactory
 import org.web3j.protocol.Web3jService
@@ -26,19 +24,13 @@ class Web3jExecutionWitnessClient(
   private val web3jService: Web3jService,
 ) : ExecutionWitnessClient {
 
-  override fun getExecutionWitness(block: BlockParameter): SafeFuture<ExecutionWitness> {
+  override fun getExecutionWitness(block: BlockParameter): SafeFuture<ExecutionWitness?> {
     return Request(
       "debug_executionWitness",
       listOf(block.toDebugExecutionWitnessRpcParam()),
       web3jService,
       ExecutionWitnessResponse::class.java,
-    ).requestAsync { response ->
-      response.result
-        ?: throw ExecutionWitnessClientException(
-          ExecutionWitnessError.NULL_RESULT,
-          "debug_executionWitness returned null (witness unavailable for block)",
-        )
-    }
+    ).requestAsync { response -> response.result }
   }
 }
 

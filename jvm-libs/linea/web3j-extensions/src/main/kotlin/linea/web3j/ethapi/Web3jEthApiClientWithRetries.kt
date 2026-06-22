@@ -171,7 +171,7 @@ class Web3jEthApiClientWithRetries(
     return retry { ethApiClient.ethEstimateGas(transaction) }
   }
 
-  override fun getExecutionWitness(block: BlockParameter): SafeFuture<ExecutionWitness> {
+  override fun getExecutionWitness(block: BlockParameter): SafeFuture<ExecutionWitness?> {
     return retry(stopRetriesPredicateForTag(block)) {
       ethApiClient.getExecutionWitness(block)
     }
