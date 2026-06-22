@@ -18,10 +18,16 @@ ZIG    ?= zig
 # Mirrors the CI `zig fmt --check` invocation (riscv-guests-host-tests.yml) and scales with GUESTS.
 FMT_PATHS := build_common/build.zig $(foreach g,$(GUESTS),$(g)/build.zig $(g)/src $(g)/test)
 
-.PHONY: compile test fetch clean fmt fmt-check help
+.PHONY: build-common compile test fetch clean fmt fmt-check help
+
+# Prepare the build_common/ submodule for use by the guest Makefiles. Particularly, this generates
+# the linker scripts which are embedded in build_common/build.zig, so we have to have the linker
+# script generated before we can build any guest.
+build-common:
+	$(MAKE) -C $(abspath $(MAKEFILE_DIR)../build_common) build-common
 
 # Each common target fans out to every guest's own Makefile.
-compile test fetch clean:
+compile test fetch clean: build-common
 	@for g in $(GUESTS); do \
 		echo "==> make $@ ($$g)"; \
 		$(MAKE) -C $$g $@ ZIG="$(ZIG)" || exit $$?; \

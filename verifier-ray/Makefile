@@ -7,7 +7,7 @@ R5_JSON := $(R5_BIN).json
 ELF_TO_JSON := ../arithmetization/src/test/scripts/elf_to_json_gen/main.go
 ZKC_MAIN := ../arithmetization/src/main/riscv/main.zkc
 # Makefile containing the logic for generating a linker script, executing and debugging generic programs
-ARITHMETIZATION_TESTING_MAKEFILE := $(abspath $(MAKEFILE_DIR)../arithmetization/src/test)/Makefile
+BUILD_COMMON_DIR := $(abspath $(MAKEFILE_DIR)../riscv-guests/build_common)
 
 PASSING_INPUT_FILE := testdata/inputs/passing.bin
 FAILING_INPUT_FILE := testdata/inputs/failing.bin
@@ -84,16 +84,16 @@ build: build-zig
 # to avoid complicating build.zig here with conditional imports and to use `requiredZigVersion`
 # for checking the Zig version. But it also embeds the generated linker script, so we need to set
 # the linker script path for non-R5 builds as well.
-linker-script:
-	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) linker-script LINKER_SCRIPT=$(MAKEFILE_DIR)../riscv-guests/build_common/linker_script.ld
+build-common:
+	$(MAKE) -C $(BUILD_COMMON_DIR) build-common
 
-build-zig: linker-script
+build-zig: build-common
 	zig build
 
-build-release: linker-script
+build-release: build-common
 	zig build --release=small -Dstrip=true
 
-build-r5: linker-script
+build-r5: build-common
 	zig build --release=small -Dstrip=true -Dr5=true -Ddisable-accelerators=$(DISABLE_ACCELERATORS)
 
 run:
