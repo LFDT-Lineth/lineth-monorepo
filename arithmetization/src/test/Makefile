@@ -3,7 +3,7 @@
 # Moreover, ABI being LP64 (soft-float) is relevant only for float numbers, which we do not use, so it can be omitted as well.
 
 # Declare all targets as phony to prevent conflicts with files of the same name
-.PHONY: exec debug compile elf-exec elf-debug elf-to-json install-zkc zkc-exec zkc-debug clean clean-all linker-script verify-elf vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec keccak-zig-build keccak-zig-json keccak-zig-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-bin-ext require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode require-json
+.PHONY: build-common exec debug compile elf-exec elf-debug elf-to-json install-zkc zkc-exec zkc-debug clean clean-all linker-script verify-elf vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec keccak-zig-build keccak-zig-json keccak-zig-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-bin-ext require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode require-json
 
 # Keep validation, build, and execution targets running in order
 .NOTPARALLEL:
@@ -94,12 +94,17 @@ endef
 # Compilation, execution, debugging and verification targets
 #####################################################################
 
+# Zig tests rely on the build-common package to ensure we're testing against the path
+# end-users would be using (not internal workspace path). So we need to build the build-common package before running tests.
+build-common:
+	$(MAKE) -C $(abspath $(MAKEFILE_DIR)../../../riscv-guests/build_common) build-common
+
 # Default target (make)
 exec: compile install-zkc zkc-exec
 
 debug: compile zkc-debug
 
-compile: require-src linker-script
+compile: require-src linker-script build-common
 # Print all variables for debugging purposes
 	@echo "TEST:      $(TEST)"
 	@echo "BASENAME:  $(BASENAME)"
