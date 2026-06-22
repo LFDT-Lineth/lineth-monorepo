@@ -1,4 +1,5 @@
 include "constants.zkc"
+include "../../riscv/memory.zkc"
 
 // ===================================================================================
 // zkc implementation of the Poseidon2 permutation using zkc's native field element type.
@@ -14,15 +15,11 @@ include "constants.zkc"
 //
 // ===================================================================================
 
-// Poseidon2 state: where the permutation takes place. An array of STATE_WIDTH
-// KOALABEAR field elements (felts): [ σ₀, σ₁, ..., σ₁₅ ].
-memory poseidon2_state(address:u8) -> (felt:𝔽)
-
-fn write_to_state<poseidon2_state>(address:u8, value:𝔽) -> () {
+fn write_to_state<poseidon2_state>(address:u5, value:𝔽) -> () {
     poseidon2_state[address] = value
 }
 
-fn read_from_state<poseidon2_state>(address:u8) -> (value:𝔽) {
+fn read_from_state<poseidon2_state>(address:u5) -> (value:𝔽) {
     value = poseidon2_state[address]
     return
 }
@@ -34,15 +31,15 @@ fn permutation<poseidon2_state>() {
 
     mat_mul_external()
 
-    for r:u8 = 0; r<FULL_ROUNDS_HALF; r = r + 1 {
+    for r:u5 = 0; r<FULL_ROUNDS_HALF; r = r + 1 {
         full_round(r)
     }
 
-    for r:u8 = 0; r<PRTL_ROUNDS; r = r + 1 {
+    for r:u5 = 0; r<PRTL_ROUNDS; r = r + 1 {
         partial_round(r + FULL_ROUNDS_HALF)
     }
 
-    for r:u8 = 0; r<FULL_ROUNDS_HALF; r = r + 1 {
+    for r:u5 = 0; r<FULL_ROUNDS_HALF; r = r + 1 {
         full_round(r + FULL_ROUNDS_HALF + PRTL_ROUNDS)
     }
 }
@@ -56,9 +53,9 @@ fn sbox(x:𝔽) -> (res:𝔽) {
 
 // full_round adds the round's key to every lane, applies the S-box to every
 // lane, then applies the external matrix.
-fn full_round<poseidon2_state>(r:u8) {
+fn full_round<poseidon2_state>(r:u5) {
     add_round_key_full(r)
-    for i:u8 = 0; i<STATE_WIDTH; i = i + 1 {
+    for i:u5 = 0; i<STATE_WIDTH; i = i + 1 {
         poseidon2_state[i] = sbox(poseidon2_state[i])
     }
     mat_mul_external()
@@ -66,17 +63,17 @@ fn full_round<poseidon2_state>(r:u8) {
 
 // partial_round adds the round's single key to lane 0, applies the S-box to
 // lane 0 only, then applies the internal matrix.
-fn partial_round<poseidon2_state>(r:u8) {
+fn partial_round<poseidon2_state>(r:u5) {
     add_round_key_partial(r)
     poseidon2_state[0] = sbox(poseidon2_state[0])
     mat_mul_internal()
 }
 
 // add_round_key_full adds the STATE_WIDTH round keys of round r to the state.
-fn add_round_key_full<poseidon2_state>(r:u8) {
-    var index:u16 = (r as u16) * (STATE_WIDTH as u16)
+fn add_round_key_full<poseidon2_state>(r:u5) {
+    var index:u10 = (r as u10) * (STATE_WIDTH as u10)
 
-    for i:u8 = 0; i<STATE_WIDTH; i = i + 1 {
+    for i:u5 = 0; i<STATE_WIDTH; i = i + 1 {
         poseidon2_state[i] = poseidon2_state[i] + round_keys[index]
         index = index + 1
     }
@@ -84,8 +81,8 @@ fn add_round_key_full<poseidon2_state>(r:u8) {
 
 // add_round_key_partial adds the single lane-0 round key of round r. The
 // remaining round-key entries for a partial round are zero (see constants.zkc).
-fn add_round_key_partial<poseidon2_state>(r:u8) {
-    var index:u16 = (r as u16) * (STATE_WIDTH as u16)
+fn add_round_key_partial<poseidon2_state>(r:u5) {
+    var index:u10 = (r as u10) * (STATE_WIDTH as u10)
     poseidon2_state[0] = poseidon2_state[0] + round_keys[index]
 }
 
@@ -104,8 +101,8 @@ fn mat_mul_external<poseidon2_state>() {
     s2 = 0
     s3 = 0
 
-    var o:u8
-    for c:u8 = 0; c<M4_CHUNKS; c = c + 1 {
+    var o:u5
+    for c:u5 = 0; c<M4_CHUNKS; c = c + 1 {
         o = 4 * c
         s0 = s0 + poseidon2_state[o + 0]
         s1 = s1 + poseidon2_state[o + 1]
@@ -113,7 +110,7 @@ fn mat_mul_external<poseidon2_state>() {
         s3 = s3 + poseidon2_state[o + 3]
     }
 
-    for c:u8 = 0; c<M4_CHUNKS; c = c + 1 {
+    for c:u5 = 0; c<M4_CHUNKS; c = c + 1 {
         o = 4 * c
         poseidon2_state[o + 0] = poseidon2_state[o + 0] + s0
         poseidon2_state[o + 1] = poseidon2_state[o + 1] + s1
@@ -141,9 +138,9 @@ fn mat_mul_m4<poseidon2_state>() {
     var t0123:𝔽
     var t01123:𝔽
     var t01233:𝔽
-    var o:u8
+    var o:u5
 
-    for c:u8 = 0; c<M4_CHUNKS; c = c + 1 {
+    for c:u5 = 0; c<M4_CHUNKS; c = c + 1 {
         o = 4 * c
         x0 = poseidon2_state[o + 0]
         x1 = poseidon2_state[o + 1]
@@ -169,11 +166,11 @@ fn mat_mul_m4<poseidon2_state>() {
 fn mat_mul_internal<poseidon2_state>() {
     var sum:𝔽
     sum = 0
-    for i:u8 = 0; i<STATE_WIDTH; i = i + 1 {
+    for i:u5 = 0; i<STATE_WIDTH; i = i + 1 {
         sum = sum + poseidon2_state[i]
     }
 
-    for i:u8 = 0; i<STATE_WIDTH; i = i + 1 {
+    for i:u5 = 0; i<STATE_WIDTH; i = i + 1 {
         poseidon2_state[i] = sum + (internal_diag[i] * poseidon2_state[i])
     }
 }

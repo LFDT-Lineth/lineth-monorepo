@@ -33,3 +33,7 @@ memory b4(address:u3) -> (state:lane)
 memory c(address:u3) -> (state:lane)
 memory d(address:u3) -> (state:lane)
 memory padded_input_block(address:u5) -> (state:lane)
+
+// Poseidon2 state: where the permutation takes place. An array of 16
+// KOALABEAR field elements (felts): [ σ₀, σ₁, ..., σ₁₅ ].
+memory poseidon2_state(address:u5) -> (felt:𝔽)

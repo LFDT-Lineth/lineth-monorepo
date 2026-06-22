@@ -1,4 +1,5 @@
 include "poseidon2.zkc"
+include "../../riscv/memory.zkc"
 include "../../riscv/ram/read.zkc"
 include "../../riscv/ram/write.zkc"
 
@@ -15,13 +16,13 @@ include "../../riscv/ram/write.zkc"
 // input_offset, applies the permutation, and writes the STATE_WIDTH results
 // starting at output_offset. input_offset and output_offset may alias.
 fn poseidon2<ram, poseidon2_state>(input_offset:Address, output_offset:Address) {
-    for i:u8 = 0; i<STATE_WIDTH; i = i + 1 {
+    for i:u5 = 0; i<STATE_WIDTH; i = i + 1 {
         write_to_state(i, read_32(input_offset + ((4 * i) as Address)) as 𝔽)
     }
 
     permutation()
 
-    for i:u8 = 0; i<STATE_WIDTH; i = i + 1 {
+    for i:u5 = 0; i<STATE_WIDTH; i = i + 1 {
         write_32(output_offset + ((4 * i) as Address), read_from_state(i) as u32)
     }
 }
