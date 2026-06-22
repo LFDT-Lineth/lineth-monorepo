@@ -14,7 +14,6 @@ ZKC_MAIN := ../arithmetization/src/main/riscv/main.zkc
 # serialization lands, but are no longer used by the run/zkc targets.
 EMBEDDED_INPUT ?= valid
 EMBEDDED_SPEC ?= 0
-PROFILE_OUT ?= bench/verifier-profile.csv
 NATIVE_BIN := zig-out/bin/verifier-ray
 
 # Legacy file-based input plumbing (unused for now, kept for reintroduction).
@@ -60,7 +59,6 @@ help:
 		'input variables:' \
 		'  EMBEDDED_INPUT        Embedded input fixture kind: valid or invalid, default valid' \
 		'  EMBEDDED_SPEC         Embedded fixture index, default 0' \
-		'  PROFILE_OUT           Profiling CSV output path, default bench/verifier-profile.csv' \
 		'' \
 		'zkc variables:' \
 		'  IN_ORIGIN            Input bytes address, default 0x08800000'
@@ -168,7 +166,7 @@ zkc-verify-failing-expected:
 
 profile-zkc:
 	go run bench/verifier_profile/main.go \
-		-out="$(PROFILE_OUT)"
+		-out=bench/verifier-profile.csv
 
 clean:
 	rm -rf .zig-cache zig-out
