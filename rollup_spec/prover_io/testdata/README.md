@@ -8,9 +8,10 @@ These fixtures are the **language-neutral contract** for the prover wire format:
 each layer's request/response pair is mutually consistent, so the codec
 round-trip (`decode_*` then `encode_*`) holds, and any implementation (Go prover,
 Kotlin coordinator, …) can load them as golden vectors and assert its own
-serializer round-trips them byte-for-byte. There is no separate JSON Schema; the
-codec in `rollup_spec/proof_io_v1.py` is the wire authority and the guest
-dataclasses are the logical model.
+serializer round-trips them byte-for-byte. They also validate against the JSON
+Schemas under `../schemas/` (the versioned contract; see that directory's
+conformance test), and the codec in `rollup_spec/proof_io_v1.py` converts between
+schema-valid JSON and the guest dataclasses (the logical model).
 
 ## Fields ↔ guest dataclasses
 
@@ -41,12 +42,13 @@ finalization.
 The JSON field names are not always a 1:1 camel↔snake mapping of the dataclass
 fields; the codec owns the renames and type coercion (see `proof_io_v1.py`). A
 few request fields are metadata the entry-function input dataclass does not
-carry: `proverVersion` and the top-level `blockRange` (the range is implied by
-the payloads/blobs) on every request, plus `chainId` on the rollup request (used
-for DA sender recovery). Derivable duplication is deliberately kept off the wire:
-no top-level `endBlockNumber` (it is in `publicInputs`), no
-`shnarfTransition.endShnarf` echo on the rollup request (the guest recomputes it
-and returns it in the response PI), and no `chainId` on the aggregation request.
+carry: each request is a `{guestProgramId, proofRequest}` envelope, where
+`guestProgramId` is routing metadata (the block range is implied by the
+payloads/blobs), plus `chainId` on the rollup request (used for DA sender
+recovery). Derivable duplication is deliberately kept off the wire: no top-level
+`endBlockNumber` (it is in `publicInputs`), no `endShnarf` echo on the rollup
+request (only `parentShnarf` is sent; the guest recomputes `endShnarf` and
+returns it in the response PI), and no `chainId` on the aggregation request.
 
 ## Running the tests locally
 

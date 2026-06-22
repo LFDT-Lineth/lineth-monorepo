@@ -1,7 +1,7 @@
 """
 Round-trip tests for the V1 JSON <-> guest-dataclass codec (`proof_io_v1.py`).
 
-These load the fully-valid fixtures under `prover_inputs/testdata/` (mutually
+These load the fully-valid fixtures under `prover_io/testdata/` (mutually
 consistent request/response pairs) and assert the codec round-trip against them.
 The fixtures are the language-neutral golden vectors: any implementation (Go
 prover, Kotlin coordinator, …) can load them and assert its own serializer
@@ -39,8 +39,9 @@ from rollup_spec.proof_io_v1 import (
     encode_response,
     encode_rollup_response,
 )
+from rollup_spec.stateless_input import decode_stateless_input_ssz
 
-_TESTDATA_DIR = Path(__file__).parent / "prover_inputs" / "testdata"
+_TESTDATA_DIR = Path(__file__).parent / "prover_io" / "testdata"
 _PROVER_VERSION = "4.0.0-riscv"
 
 
@@ -98,7 +99,12 @@ def test_decode_request_maps_all_fields_and_renames() -> None:
     assert int(req.chain_config.chain_id) == 59144
 
     assert len(req.payloads) == 2
-    assert bytes(req.payloads[0].stateless_input_ssz) == bytes.fromhex("0001abcd")
+    # The readable statelessInput object was SSZ-encoded into stateless_input_ssz
+    # (the prover's encode step); decoding it back recovers the payload.
+    si0 = decode_stateless_input_ssz(req.payloads[0].stateless_input_ssz)
+    assert int(si0.new_payload_request.execution_payload.block_number) == 1000501
+    assert int(si0.chain_config.chain_id) == 59144
+    assert si0.chain_config.active_fork.value == "Amsterdam"
     ftxs = req.payloads[0].rollup_extension.forced_transactions
     assert len(ftxs) == 1
     assert int(ftxs[0].number) == 16
@@ -107,7 +113,10 @@ def test_decode_request_maps_all_fields_and_renames() -> None:
     assert ftxs[0].acceptance == ForcedTransactionAcceptance.INCLUDED
 
     ftxs = req.payloads[1].rollup_extension.forced_transactions
-    assert bytes(req.payloads[1].stateless_input_ssz) == bytes.fromhex("0001abcd")
+    assert int(
+        decode_stateless_input_ssz(req.payloads[1].stateless_input_ssz)
+        .new_payload_request.execution_payload.block_number
+    ) == 1000502
     assert len(ftxs) == 2
     assert int(ftxs[0].number) == 17
     assert int(ftxs[0].deadline) == 1000600
@@ -117,45 +126,49 @@ def test_decode_request_maps_all_fields_and_renames() -> None:
     assert bytes(ftxs[1].signed_tx_rlp) == b""
 
 
-def test_debug_stateless_input_is_ignored() -> None:
+def test_unknown_payload_field_is_ignored() -> None:
     req = _valid_request()
-    req["payloads"][0]["_debugStatelessInput"] = {"garbage": [1, 2, 3], "nested": {"x": "0xzz"}}
-    # Decoding must succeed and not look at the mirror.
+    # The codec reads only the keys it needs, so an unknown payload field is
+    # ignored (matching the coordinator's lenient Jackson config).
+    req["proofRequest"]["payloads"][0]["_debugStatelessInput"] = {"garbage": [1, 2, 3]}
     decoded = decode_request(req)
-    assert bytes(decoded.payloads[0].stateless_input_ssz) == bytes.fromhex("0001abcd")
+    assert int(
+        decode_stateless_input_ssz(decoded.payloads[0].stateless_input_ssz)
+        .new_payload_request.execution_payload.block_number
+    ) == 1000501
 
 
 def test_missing_required_field_is_rejected() -> None:
     req = _valid_request()
-    del req["chainConfig"]["l2MessageServiceAddress"]
+    del req["proofRequest"]["chainConfig"]["l2MessageServiceAddress"]
     with pytest.raises(ProofIoError, match="l2MessageServiceAddress"):
         decode_request(req)
 
 
 def test_unknown_acceptance_is_rejected() -> None:
     req = _valid_request()
-    req["payloads"][1]["rollupExtension"]["forcedTransactions"][0]["acceptance"] = "MAYBE"
+    req["proofRequest"]["payloads"][1]["rollupExtension"]["forcedTransactions"][0]["acceptance"] = "MAYBE"
     with pytest.raises(ProofIoError, match="acceptance"):
         decode_request(req)
 
 
 def test_malformed_hex_is_rejected() -> None:
     req = _valid_request()
-    req["parentFtxRollingHash"] = "0xnothex"
+    req["proofRequest"]["parentFtxRollingHash"] = "0xnothex"
     with pytest.raises(ProofIoError, match="parentFtxRollingHash"):
         decode_request(req)
 
 
 def test_non_hex_quantity_is_rejected() -> None:
     req = _valid_request()
-    req["parentLastProcessedFtxNumber"] = "100"  # decimal string, not int / 0x-hex
+    req["proofRequest"]["parentLastProcessedFtxNumber"] = "100"  # decimal string, not int / 0x-hex
     with pytest.raises(ProofIoError, match="parentLastProcessedFtxNumber"):
         decode_request(req)
 
 
 def test_u64_accepts_hex_quantity() -> None:
     req = _valid_request()
-    req["chainConfig"]["chainId"] = "0xe708"  # 59144
+    req["proofRequest"]["chainConfig"]["chainId"] = "0xe708"  # 59144
     decoded = decode_request(req)
     assert int(decoded.chain_config.chain_id) == 59144
 
@@ -301,35 +314,35 @@ def test_decode_rollup_request_maps_all_fields() -> None:
 
 def test_decode_rollup_request_missing_field_is_rejected() -> None:
     req = _valid_rollup_request()
-    del req["parentShnarf"]
+    del req["proofRequest"]["parentShnarf"]
     with pytest.raises(ProofIoError, match="parentShnarf"):
         decode_rollup_request(req)
 
 
 def test_decode_rollup_request_empty_blobs_is_rejected() -> None:
     req = _valid_rollup_request()
-    req["blobs"] = []
+    req["proofRequest"]["blobs"] = []
     with pytest.raises(ProofIoError, match="blobs"):
         decode_rollup_request(req)
 
 
 def test_decode_rollup_request_empty_l2_execution_proofs_is_rejected() -> None:
     req = _valid_rollup_request()
-    req["l2ExecutionProofs"] = []
+    req["proofRequest"]["l2ExecutionProofs"] = []
     with pytest.raises(ProofIoError, match="l2ExecutionProofs"):
         decode_rollup_request(req)
 
 
 def test_decode_rollup_request_non_array_blobs_is_rejected() -> None:
     req = _valid_rollup_request()
-    req["blobs"] = {"not": "an array"}
+    req["proofRequest"]["blobs"] = {"not": "an array"}
     with pytest.raises(ProofIoError, match="blobs"):
         decode_rollup_request(req)
 
 
 def test_decode_rollup_request_malformed_kzg_proof_is_rejected() -> None:
     req = _valid_rollup_request()
-    req["blobs"][0]["blobInputs"]["blobKzgProof"] = "0xnothex"
+    req["proofRequest"]["blobs"][0]["blobInputs"]["blobKzgProof"] = "0xnothex"
     with pytest.raises(ProofIoError, match="blobKzgProof"):
         decode_rollup_request(req)
 
@@ -428,28 +441,28 @@ def test_decode_aggregation_request_maps_all_fields() -> None:
 
 def test_decode_aggregation_request_empty_rollup_proofs_is_rejected() -> None:
     req = _valid_aggregation_request()
-    req["rollupProofs"] = []
+    req["proofRequest"]["rollupProofs"] = []
     with pytest.raises(ProofIoError, match="rollupProofs"):
         decode_aggregation_request(req)
 
 
 def test_decode_aggregation_request_non_array_rollup_proofs_is_rejected() -> None:
     req = _valid_aggregation_request()
-    req["rollupProofs"] = {"not": "an array"}
+    req["proofRequest"]["rollupProofs"] = {"not": "an array"}
     with pytest.raises(ProofIoError, match="rollupProofs"):
         decode_aggregation_request(req)
 
 
 def test_decode_aggregation_request_missing_nested_pi_field_is_rejected() -> None:
     req = _valid_aggregation_request()
-    del req["rollupProofs"][0]["publicInputs"]["endShnarf"]
+    del req["proofRequest"]["rollupProofs"][0]["publicInputs"]["endShnarf"]
     with pytest.raises(ProofIoError, match="endShnarf"):
         decode_aggregation_request(req)
 
 
 def test_decode_aggregation_request_malformed_nested_hash_is_rejected() -> None:
     req = _valid_aggregation_request()
-    req["rollupProofs"][0]["publicInputs"]["parentShnarf"] = "0xnothex"
+    req["proofRequest"]["rollupProofs"][0]["publicInputs"]["parentShnarf"] = "0xnothex"
     with pytest.raises(ProofIoError, match="parentShnarf"):
         decode_aggregation_request(req)
 

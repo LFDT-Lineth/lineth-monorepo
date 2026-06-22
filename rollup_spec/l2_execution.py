@@ -267,7 +267,7 @@ def _decode_payload_stateless_inputs(payloads: Sequence[LineaPayloadInput]) -> L
         try:
             decoded.append(decode_stateless_input_ssz(payload.stateless_input_ssz))
         except Exception as exc:
-            raise Exception(f"invalid statelessInputSsz for payload {index}") from exc
+            raise Exception(f"invalid stateless input SSZ for payload {index}") from exc
     return decoded
 
 

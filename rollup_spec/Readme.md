@@ -350,7 +350,7 @@ The DA blob must contain the exact inputs required to re-execute the L2 blocks f
 
 ### 3.3 Prover I/O — On-Wire Format
 
-The example fixtures under `prover_inputs/testdata/` document the request/response JSON the coordinator exchanges with the prover; they are the language-neutral contract and `proof_io_v1.py` is the wire authority (there is no separate JSON Schema). The bytes carried into the zkVM guest are binary, not this JSON.
+The fixtures under `prover_io/testdata/` document the request/response JSON the coordinator exchanges with the prover; they validate against the JSON Schemas under `prover_io/schemas/` (the versioned contract), and `proof_io_v1.py` is the codec that converts schema-valid JSON to/from the guest dataclasses. The bytes carried into the zkVM guest are binary, not this JSON.
 
 **Transport.** The guest reads input bytes via the zkVM's read-input primitive (`ziskos::read_input()` on Zisk). The Linea l2-execution envelope length-delimits a vanilla SSZ `StatelessInput` byte slice per payload, then carries Linea rollup-extension fields beside that slice. The Python reference models this boundary in `stateless_input.py::decode_stateless_input_ssz`, using the `remerkleable` decoder for the same raw/Ere-prefixed stateless-input container shape while keeping Linea extension parsing outside the stateless-input slice. Do not append Linea bytes to that slice itself: the SSZ decoder treats the final field as consuming the remainder of the slice, so trailing Linea data would be interpreted as stateless input rather than ignored.
 
@@ -368,15 +368,16 @@ the same schema the underlying engine (e.g. Zesu) decodes.
 
 Full block RLPs still exist in the rollup-proof DA witness (`blockRlps_b`) because the rollup guest recomputes the compressed blob payload from DA data, but l2-execution consumes `NewPayloadRequest` instead. The per-FTX `signedTxRlp` payloads and proof-range `chainConfig` fields are Linea wrapper fields outside the EIP-8025 `StatelessInput`. Rollup-proof and rollup-aggregation-proof containers follow their own schemas and are pinned alongside the corresponding guest implementations.
 
-**Debug format.** The guest input schema contains only
-`statelessInputSsz`, not a decoded `StatelessInput` object. Draft JSON
-fixtures may show a decoded `_debugStatelessInput` mirror for review, but
-fixture loaders must derive or validate that mirror from `statelessInputSsz`
-and discard it before constructing `L2ExecutionProofPrivateInput`. The guest
-consumes and decodes the stateless-input SSZ bytes; decoded mirrors are not
-accepted by `run_l2_execution_guest`, except for explicitly marked JSON-only
-debug documentation such as optional witness `keys`, which are not carried by the
-canonical stateless-input SSZ schema.
+**Readable input vs guest bytes.** The request carries `statelessInput` as a
+decoded JSON object (the schema form), not raw SSZ bytes. The codec
+(`proof_io_v1.py`, via `stateless_input.py::encode_stateless_input_ssz`)
+SSZ-encodes it into the length-delimited bytes the guest reads — the prover's
+encode step — and `run_l2_execution_guest` decodes them back with
+`decode_stateless_input_ssz`. The readable `chainConfig` carries
+`{chainId, forkName}` only; the encoder reconstructs the full SSZ fork config
+(the guest validates only the fork index). Optional witness `keys` are JSON-only
+debug documentation and are not carried by the canonical stateless-input SSZ
+schema.
 
 ---
 

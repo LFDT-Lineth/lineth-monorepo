@@ -28,16 +28,17 @@ Design notes:
   - The JSON field names are NOT a clean camel->snake mapping of the dataclass
     fields; several are semantic renames. Those renames are owned here,
     explicitly, in one place.
-  - Per-payload `statelessInputSsz` stays opaque bytes here; the guest path
-    decodes it on its own via `stateless_input.py::decode_stateless_input_ssz`.
-    The `_debugStatelessInput` mirror in the request is review-only and is
-    intentionally discarded (see §3.3 of the spec Readme).
-  - There is no separate wire-schema artifact: this codec is the wire authority
-    and the fixtures under `prover_inputs/testdata/` are the language-neutral
-    golden vectors (round-trip-checked by `proof_io_v1_test.py`). Inline
-    coercion (`_require`, `_bytes_from_hex`, `_u64`, the enum lookup) is the
-    validation and yields precise field-path errors. Only `proverVersion`
-    (a version tag) travels on the wire.
+  - Per-payload `statelessInput` is a readable JSON object (mirroring SSZ
+    `StatelessInput`); the codec SSZ-encodes it into the bytes the guest reads
+    via `stateless_input.encode_stateless_input_ssz` (the prover's encode step),
+    and the guest decodes them with `decode_stateless_input_ssz`.
+  - The JSON Schemas under `prover_io/schemas/` are the versioned wire contract:
+    this codec converts schema-valid JSON to/from the guest dataclasses. The
+    fixtures under `prover_io/testdata/` are the language-neutral golden vectors
+    (schema-checked by the schemas' conformance test, round-trip-checked by
+    `proof_io_v1_test.py`). Inline coercion (`_require`, `_bytes_from_hex`,
+    `_u64`, the enum lookup) yields precise field-path errors. `proverVersion`
+    (on responses) and `guestProgramId` (on requests) are routing metadata.
 
 Conventions (Linea): byte/hash fields are 0x-prefixed hex; integers that fit in
 JSON are plain numbers but `_u64` also accepts 0x-hex strings defensively.
@@ -58,6 +59,7 @@ from .block import (
     LineaPayloadInput,
     LineaRollupExtension,
 )
+from .stateless_input import encode_stateless_input_ssz
 from .l2_execution import (
     L2ExecutionProof,
     L2ExecutionProofPrivateInput,
@@ -166,15 +168,19 @@ def _decode_forced_transaction(obj: dict, ctx: str) -> ForcedTransactionWitness:
 
 def _decode_payload(obj: dict, index: int) -> LineaPayloadInput:
     ctx = f"payloads[{index}]."
-    # `_debugStatelessInput` is review-only and deliberately ignored here.
+    stateless_input = _require(obj, "statelessInput", ctx)
+    try:
+        # The readable `statelessInput` object is SSZ-encoded into the bytes the
+        # guest reads via read_input — the prover's encode step.
+        stateless_input_ssz = encode_stateless_input_ssz(stateless_input)
+    except Exception as exc:  # SSZ build/encode rejects a malformed statelessInput
+        raise ProofIoError(f"'{ctx}statelessInput' could not be SSZ-encoded: {exc}") from exc
     rollup_extension = _require(obj, "rollupExtension", ctx)
     forced = _require(rollup_extension, "forcedTransactions", f"{ctx}rollupExtension.")
     if not isinstance(forced, list):
         raise ProofIoError(f"'{ctx}rollupExtension.forcedTransactions' must be an array")
     return LineaPayloadInput(
-        stateless_input_ssz=_bytes_from_hex(
-            _require(obj, "statelessInputSsz", ctx), f"{ctx}statelessInputSsz"
-        ),
+        stateless_input_ssz=stateless_input_ssz,
         rollup_extension=LineaRollupExtension(
             forced_transactions=[
                 _decode_forced_transaction(ftx, f"{ctx}rollupExtension.forcedTransactions[{i}].")
@@ -187,20 +193,29 @@ def _decode_payload(obj: dict, index: int) -> LineaPayloadInput:
 def decode_request(obj: dict) -> L2ExecutionProofPrivateInput:
     """
     Convert a parsed `getZkL2ExecutionProofV1.request.json` object into the guest
-    input dataclass. `proverVersion` / `blockRange` are request metadata and are
-    not part of the guest input (block range is implied by the payloads).
+    input dataclass.
+
+    The request is a `{guestProgramId, proofRequest}` envelope: `guestProgramId`
+    is routing metadata and the block range is implied by the payloads. Each
+    payload's readable `statelessInput` object is SSZ-encoded into the guest's
+    `stateless_input_ssz` (the prover's encode step, in `_decode_payload`).
     """
-    payloads = _require(obj, "payloads", "")
+    proof_request = _require(obj, "proofRequest", "")
+    payloads = _require(proof_request, "payloads", "proofRequest.")
     if not isinstance(payloads, list) or not payloads:
-        raise ProofIoError("'payloads' must be a non-empty array")
+        raise ProofIoError("'proofRequest.payloads' must be a non-empty array")
     return L2ExecutionProofPrivateInput(
         parent_ftx_rolling_hash=Hash32(
-            _bytes_from_hex(_require(obj, "parentFtxRollingHash", ""), "parentFtxRollingHash")
+            _bytes_from_hex(
+                _require(proof_request, "parentFtxRollingHash", "proofRequest."),
+                "proofRequest.parentFtxRollingHash",
+            )
         ),
         parent_last_processed_ftx_number=_u64(
-            _require(obj, "parentLastProcessedFtxNumber", ""), "parentLastProcessedFtxNumber"
+            _require(proof_request, "parentLastProcessedFtxNumber", "proofRequest."),
+            "proofRequest.parentLastProcessedFtxNumber",
         ),
-        chain_config=_decode_chain_config(_require(obj, "chainConfig", "")),
+        chain_config=_decode_chain_config(_require(proof_request, "chainConfig", "proofRequest.")),
         payloads=[_decode_payload(p, i) for i, p in enumerate(payloads)],
     )
 
@@ -359,25 +374,29 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
     Convert a parsed `getZkRollupProofV1.request.json` object into the rollup
     guest input dataclass.
 
-    `proverVersion` and the top-level `blockRange` are request metadata (the
-    block range is implied by the blobs); only `parentShnarf` is a guest input.
-    The outbound `endShnarf` is recomputed by the guest and returned in the
-    response PI, so it is not echoed in the request.
+    The request is a `{guestProgramId, proofRequest}` envelope: `guestProgramId`
+    is routing metadata and the block range is implied by the blobs. `parentShnarf`
+    is a guest input; the outbound `endShnarf` is recomputed by the guest and
+    returned in the response PI, so it is not echoed in the request.
     """
-    blobs = _require_list(obj, "blobs", "")
+    proof_request = _require(obj, "proofRequest", "")
+    blobs = _require_list(proof_request, "blobs", "proofRequest.")
     if not blobs:
-        raise ProofIoError("'blobs' must be a non-empty array")
-    l2_execution_proofs = _require_list(obj, "l2ExecutionProofs", "")
+        raise ProofIoError("'proofRequest.blobs' must be a non-empty array")
+    l2_execution_proofs = _require_list(proof_request, "l2ExecutionProofs", "proofRequest.")
     if not l2_execution_proofs:
-        raise ProofIoError("'l2ExecutionProofs' must be a non-empty array")
+        raise ProofIoError("'proofRequest.l2ExecutionProofs' must be a non-empty array")
     return RollupProofPrivateInput(
         parent_shnarf=Hash32(
-            _bytes_from_hex(_require(obj, "parentShnarf", ""), "parentShnarf")
+            _bytes_from_hex(
+                _require(proof_request, "parentShnarf", "proofRequest."),
+                "proofRequest.parentShnarf",
+            )
         ),
-        chain_id=_u64(_require(obj, "chainId", ""), "chainId"),
-        blobs=[_decode_blob_witness(b, f"blobs[{i}].") for i, b in enumerate(blobs)],
+        chain_id=_u64(_require(proof_request, "chainId", "proofRequest."), "proofRequest.chainId"),
+        blobs=[_decode_blob_witness(b, f"proofRequest.blobs[{i}].") for i, b in enumerate(blobs)],
         l2_execution_proofs=[
-            _decode_l2_execution_proof(p, f"l2ExecutionProofs[{i}].")
+            _decode_l2_execution_proof(p, f"proofRequest.l2ExecutionProofs[{i}].")
             for i, p in enumerate(l2_execution_proofs)
         ],
     )
@@ -511,18 +530,20 @@ def decode_aggregation_request(obj: dict) -> RollupAggregationProofPrivateInput:
     Convert a parsed `getZkRollupAggregationProofV1.request.json` object into the
     rollup-aggregation guest input dataclass.
 
-    `proverVersion` and the top-level `blockRange` are request metadata; the
-    aggregation guest input is just the flat list of rollup proofs. There is no
-    `chainId` (unlike the rollup request): the aggregation guest does no sender
-    recovery and inherits chain-config integrity from the inner proofs'
-    `dynamicChainConfigHash`.
+    The request is a `{guestProgramId, proofRequest}` envelope: `guestProgramId`
+    is routing metadata and the aggregation guest input is just the flat list of
+    rollup proofs. There is no `chainId` (unlike the rollup request): the
+    aggregation guest does no sender recovery and inherits chain-config integrity
+    from the inner proofs' `dynamicChainConfigHash`.
     """
-    rollup_proofs = _require_list(obj, "rollupProofs", "")
+    proof_request = _require(obj, "proofRequest", "")
+    rollup_proofs = _require_list(proof_request, "rollupProofs", "proofRequest.")
     if not rollup_proofs:
-        raise ProofIoError("'rollupProofs' must be a non-empty array")
+        raise ProofIoError("'proofRequest.rollupProofs' must be a non-empty array")
     return RollupAggregationProofPrivateInput(
         rollup_proofs=[
-            _decode_rollup_proof(p, f"rollupProofs[{i}].") for i, p in enumerate(rollup_proofs)
+            _decode_rollup_proof(p, f"proofRequest.rollupProofs[{i}].")
+            for i, p in enumerate(rollup_proofs)
         ],
     )
 
