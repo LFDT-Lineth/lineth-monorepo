@@ -54,10 +54,14 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
 
     imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters
 
-    if imm_sign == 1 {
-        imm = DWORD_SIGN_EXT_PREFIX_52_ONES::imm_11::imm_10_5::imm_4_1::(0 as u1)
-    } else {
-        imm = (imm_11::imm_10_5::imm_4_1::(0 as u1)) as DoubleWord
+    switch imm_sign {
+        case 1: {
+            imm = DWORD_SIGN_EXT_PREFIX_52_ONES::imm_11::imm_10_5::imm_4_1::(0 as u1)
+        }
+        default: {
+            // default case is 0
+            imm = (imm_11::imm_10_5::imm_4_1::(0 as u1)) as DoubleWord
+        }
     }
 
     // "no branching" value of pc_new;
