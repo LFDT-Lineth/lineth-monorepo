@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://linea.build/schemas/getZkL2ExecutionProofV1.request.schema.json",
   "title": "getZkL2ExecutionProof V1 request",
-  "description": "Coordinator -> prover l2-execution proof request. The shared, versioned contract for the l2-execution guest input (L2ExecutionProofPrivateInput). Each payload carries a SSZ-decoded `statelessInput` mirroring the `StatelessInput` (newPayloadRequest + executionWitness + chainConfig + publicKeys).",
+  "description": "Coordinator -> prover l2-execution proof request. The shared, versioned contract for the l2-execution guest input (L2ExecutionProofPrivateInput). Each payload carries a SSZ-decoded `statelessInput` mirroring the `StatelessInput` (newPayloadRequest + executionWitness + chainConfig); transaction public keys are recovered by the prover middleware from the signed transactions, not sent on the wire.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -52,11 +52,6 @@
       "description": "Fixed 256-byte bloom filter (Ethereum SSZ ByteVector[256]).",
       "type": "string",
       "pattern": "^0x[0-9a-fA-F]{512}$"
-    },
-    "publicKey": {
-      "description": "Uncompressed 65-byte secp256k1 public key (SSZ ByteVector[65]).",
-      "type": "string",
-      "pattern": "^0x[0-9a-fA-F]{130}$"
     },
     "quantity": {
       "description": "0x-prefixed hex quantity with at least one digit (e.g. baseFeePerGas).",
@@ -183,15 +178,14 @@
       }
     },
     "statelessInput": {
-      "description": "Mirrors SSZ SszStatelessInput.",
+      "description": "Mirrors SSZ SszStatelessInput, minus publicKeys: the prover middleware recovers the transaction public keys from the signed transactions, so they are not sent on the wire.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["newPayloadRequest", "executionWitness", "chainConfig", "publicKeys"],
+      "required": ["newPayloadRequest", "executionWitness", "chainConfig"],
       "properties": {
         "newPayloadRequest": { "$ref": "#/$defs/newPayloadRequest" },
         "executionWitness": { "$ref": "#/$defs/executionWitness" },
-        "chainConfig": { "$ref": "#/$defs/statelessChainConfig" },
-        "publicKeys": { "type": "array", "items": { "$ref": "#/$defs/publicKey" } }
+        "chainConfig": { "$ref": "#/$defs/statelessChainConfig" }
       }
     },
     "forcedTransaction": {

@@ -27,7 +27,7 @@
               "baseFeePerGas": "0x01",
               "blockHash": "0x0101010101010101010101010101010101010101010101010101010101010101",
               "transactions": [
-                "0x02f86b"
+                "0x02f86882e7088001843b9aca008252089422222222222222222222222222222222222222228080c080a0b09c2773ac7819dcf8cea66d878d5a41ebc04079162d4f78b7e8add87caa81a8a002cb3f20eb686af3b082e97d96a9fd7f68fabb9e927885a29738824b1d2dcd29"
               ],
               "withdrawals": [],
               "blobGasUsed": 0,
@@ -56,10 +56,7 @@
           "chainConfig": {
             "chainId": 59144,
             "forkName": "Amsterdam"
-          },
-          "publicKeys": [
-            "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-          ]
+          }
         },
         "rollupExtension": {
           "forcedTransactions": [
@@ -90,7 +87,7 @@
               "baseFeePerGas": "0x01",
               "blockHash": "0x0101010101010101010101010101010101010101010101010101010101010101",
               "transactions": [
-                "0x02f86b"
+                "0x02f86882e7088001843b9aca008252089422222222222222222222222222222222222222228080c080a0b09c2773ac7819dcf8cea66d878d5a41ebc04079162d4f78b7e8add87caa81a8a002cb3f20eb686af3b082e97d96a9fd7f68fabb9e927885a29738824b1d2dcd29"
               ],
               "withdrawals": [],
               "blobGasUsed": 0,
@@ -119,10 +116,7 @@
           "chainConfig": {
             "chainId": 59144,
             "forkName": "Amsterdam"
-          },
-          "publicKeys": [
-            "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-          ]
+          }
         },
         "rollupExtension": {
           "forcedTransactions": [

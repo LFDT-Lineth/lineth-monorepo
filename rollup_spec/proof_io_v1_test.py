@@ -105,6 +105,10 @@ def test_decode_request_maps_all_fields_and_renames() -> None:
     assert int(si0.new_payload_request.execution_payload.block_number) == 1000501
     assert int(si0.chain_config.chain_id) == 59144
     assert si0.chain_config.active_fork.value == "Amsterdam"
+    # publicKeys are not on the wire; the codec recovered them from the signed
+    # transactions (the prover middleware step) into the SSZ public_keys field.
+    assert len(si0.public_keys) == 1
+    assert len(bytes(si0.public_keys[0])) == 65 and bytes(si0.public_keys[0])[:1] == b"\x04"
     ftxs = req.payloads[0].rollup_extension.forced_transactions
     assert len(ftxs) == 1
     assert int(ftxs[0].number) == 16

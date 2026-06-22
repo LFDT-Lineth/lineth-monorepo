@@ -20,6 +20,7 @@ from .block import (
     StatelessChainConfig,
     StatelessInput,
     WithdrawalRequest,
+    decode_signed_transaction_rlp,
 )
 from .state_transition import ExecutionWitness
 
@@ -389,12 +390,31 @@ def _ssz_chain_config_from_obj(obj: dict) -> SszChainConfig:
     )
 
 
+def _recover_public_keys(transactions: list, chain_id: int) -> list:
+    """
+    Recover each transaction's uncompressed SEC1 public key — the SSZ
+    `public_keys` field — from the signed transactions. The readable request does
+    not carry `publicKeys` (they are derivable from the transactions already in
+    the payload), so the prover middleware recovers them here, mirroring how the
+    guest recovers senders (`recover_sender`). `recover_transaction_public_key`
+    returns the 65-byte `0x04 || x || y` key directly.
+    """
+    keys = []
+    for tx_hex in transactions:
+        tx = decode_signed_transaction_rlp(_hexbytes(tx_hex))
+        keys.append(bytes(fork.recover_transaction_public_key(U64(chain_id), tx)))
+    return keys
+
+
 def _ssz_stateless_input_from_obj(obj: dict) -> SszStatelessInput:
     return SszStatelessInput(
         new_payload_request=_ssz_new_payload_request_from_obj(obj["newPayloadRequest"]),
         witness=_ssz_execution_witness_from_obj(obj["executionWitness"]),
         chain_config=_ssz_chain_config_from_obj(obj["chainConfig"]),
-        public_keys=[_hexbytes(pk) for pk in obj["publicKeys"]],
+        public_keys=_recover_public_keys(
+            obj["newPayloadRequest"]["executionPayload"]["transactions"],
+            int(obj["chainConfig"]["chainId"]),
+        ),
     )
 
 
