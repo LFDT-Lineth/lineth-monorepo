@@ -8,6 +8,7 @@ import com.github.michaelbull.result.Ok
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.ext.web.client.HttpResponse
+import linea.clients.ProverProofTransport
 import linea.coordinator.clients.prover.serialization.JsonSerialization
 import linea.domain.ProofIndex
 import net.consensys.linea.async.AsyncRetryer

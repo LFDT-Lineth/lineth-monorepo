@@ -34,7 +34,7 @@ import kotlin.time.Instant
  *  - reading a response: GET job body -> response DTO -> domain response.
  */
 @ExtendWith(VertxExtension::class)
-class L2ExecutionProverProverClientRestfulTest {
+class L2ExecutionProverClientRestfulTest {
   private val jsonMapper = JsonSerialization.proofResponseMapperV1
   private val guestProgramId = "0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f"
   private val proofType = "l2-execution"

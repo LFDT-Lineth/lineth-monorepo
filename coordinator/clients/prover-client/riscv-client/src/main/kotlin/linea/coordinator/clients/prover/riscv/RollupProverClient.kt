@@ -1,5 +1,6 @@
 package linea.coordinator.clients.prover.riscv
 
+import linea.clients.ProverProofTransport
 import linea.clients.RollupProofRequestV1
 import linea.clients.RollupProofResponse
 import linea.clients.RollupProverClientV1

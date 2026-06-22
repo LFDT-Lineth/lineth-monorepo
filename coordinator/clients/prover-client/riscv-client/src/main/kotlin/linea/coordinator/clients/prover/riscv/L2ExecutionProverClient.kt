@@ -3,6 +3,7 @@ package linea.coordinator.clients.prover.riscv
 import linea.clients.L2ExecutionProofRequestV1
 import linea.clients.L2ExecutionProofResponse
 import linea.clients.L2ExecutionProverClientV1
+import linea.clients.ProverProofTransport
 import linea.domain.ExecutionProofIndex
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.decodeHex

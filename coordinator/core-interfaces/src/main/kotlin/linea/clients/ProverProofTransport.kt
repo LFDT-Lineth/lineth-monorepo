@@ -1,25 +1,20 @@
-package linea.coordinator.clients.prover.riscv
+package linea.clients
 
 import linea.domain.ProofIndex
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 /**
- * Transport abstraction used by [GenericRiscVProverClient] to decouple the prover-client logic from the
+ * Transport abstraction used by the generic RISC-V prover client to decouple the prover-client logic from the
  * mechanism used to submit a proof request and to obtain its response.
  *
- * Two concrete strategies are envisaged:
- *  - a file-based one ([FileBasedProverProofTransport]): the request DTO is written to a JSON file and the
- *    response is read back from a JSON file produced by the prover;
- *  - a RESTful one ([RestfulProverProofTransport]): the request DTO is sent as the body of an HTTP POST and the
+ * Two concrete strategies exist:
+ *  - a file-based one (`FileBasedProverProofTransport`): the request DTO is written to a JSON file and the response
+ *    is read back from a JSON file produced by the prover;
+ *  - a RESTful one (`RestfulProverProofTransport`): the request DTO is sent as the body of an HTTP POST and the
  *    response is polled via periodic HTTP GET calls.
  *
- * The exact REST call syntax (endpoints, payload envelope, status semantics) is not finalized yet, hence the
- * RESTful implementation is currently a skeleton.
- *
  * @param RequestDto the serializable request payload produced by the client's request mapper.
- * @param ResponseDto the deserialized response payload understood by the client's response mapper. For proof types
- *   whose response is not parsed (e.g. execution), this can be [Any] and the value is only used as an availability
- *   signal.
+ * @param ResponseDto the deserialized response payload understood by the client's response mapper.
  * @param TProofIndex the proof index uniquely identifying a request/response pair.
  */
 interface ProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : ProofIndex> {
