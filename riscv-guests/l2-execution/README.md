@@ -13,29 +13,28 @@ This package contains the RISC-V guest program for vanilla EVM execution. The gu
 
 The Zig version, dependency checkout, build manifest, and ZKC helper commands are shared by all guests at `riscv-guests/`.
 
-Run from the parent directory (the top `riscv-guests/Makefile` has no `gp-*`
-targets — they live in this guest's Makefile, so invoke it with `-C`):
+Run from the parent directory:
 
 ```bash
-make -C l2-execution gp-exec
+make -C l2-execution exec
 ```
 
-`make -C l2-execution gp-compile` writes the guest as a **statically-linked rv64im ELF** to `riscv-guests/l2-execution/zig-out/bin/evm_execution_guest` — the [zkvm-standards](https://github.com/eth-act/zkvm-standards/blob/main/standards/riscv-target/target.md) artifact ("Object Format: ELF, statically linked"), linked via `build_common`'s shared `installGuestElf`. The ZKC interpreter loads it (via ELF→JSON); `make -C l2-execution gp-exec` builds it and runs it there — see the [parent README](../README.md#zkc-interpreter-integration). `make test` runs the native Zig test, which requires the native crypto libraries documented in the [parent README](../README.md#native-test-dependencies).
+`make -C l2-execution compile` writes the guest as a **statically-linked rv64im ELF** to `riscv-guests/l2-execution/zig-out/bin/evm_execution_guest` — the [zkvm-standards](https://github.com/eth-act/zkvm-standards/blob/main/standards/riscv-target/target.md) artifact ("Object Format: ELF, statically linked"), linked via `build_common`'s shared `installGuestElf`. The ZKC interpreter loads it (via ELF→JSON); `make -C l2-execution exec` builds it and runs it there — see the [parent README](../README.md#zkc-interpreter-integration). `make test` runs the native Zig test, which requires the native crypto libraries documented in the [parent README](../README.md#native-test-dependencies).
 
 ## Compilation
 
-`make -C l2-execution gp-compile` (and `gp-exec`/`gp-debug`) build the guest with
+`make -C l2-execution compile` (and `exec`/`debug`) build the guest with
 the **standard** zig keccak by default. Pass `KECCAK_ACCEL=true` to build with the
 arithmetization keccak wrapper (the prover-accelerated custom op) instead:
 
 ```bash
-make -C l2-execution gp-compile                     # standard zig keccak
-make -C l2-execution gp-compile KECCAK_ACCEL=true   # arithmetization keccak wrapper
+make -C l2-execution compile                     # standard zig keccak
+make -C l2-execution compile KECCAK_ACCEL=true   # arithmetization keccak wrapper
 ```
 
-Equivalently, running `zig build` directly from this directory (requires the generated linker script; run `make gp-linker-script` once after a clean checkout):
+Equivalently, running `zig build` directly from this directory (requires the generated linker script; run `make linker-script` once after a clean checkout):
 
-    make gp-linker-script
+    make linker-script
     zig build                       # standard zig keccak
     zig build -Dkeccak-accel=true   # arithmetization keccak wrapper
 
@@ -49,7 +48,7 @@ agp() {
     local input
     input="$(realpath "$1")" || { echo "agp: no such file: $1" >&2; return 1; }
     /usr/bin/time -p make -C /path/to/lineth-monorepo/riscv-guests/l2-execution \
-        gp-exec KECCAK_ACCEL=true GP_INPUT="$input" "${@:2}"
+        exec KECCAK_ACCEL=true INPUT="$input" "${@:2}"
 }
 ```
 
