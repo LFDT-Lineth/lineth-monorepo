@@ -84,8 +84,8 @@ Both can be set simultaneously (both checks run, the more restrictive one wins).
 
 ### Transaction validation - LineaTransactionPoolValidatorPlugin
 
-> **Mutually exclusive with `LineaBlockTransactionValidatorPlugin`.** Enabling both will cause Besu
-> to fail on startup with an `IllegalStateException`. See
+> Overlaps with `LineaBlockTransactionValidatorPlugin` on transaction-type validation; the two are
+> not mutually exclusive and may be enabled together. See
 > [Choosing between transaction type validation plugins](#choosing-between-transaction-type-validation-plugins)
 > below for guidance.
 
@@ -112,8 +112,8 @@ The validators are in the package `net.consensys.linea.sequencer.txpoolvalidatio
 
 ### Block transaction validation - LineaBlockTransactionValidatorPlugin
 
-> **Mutually exclusive with `LineaTransactionPoolValidatorPlugin`.** Enabling both will cause Besu
-> to fail on startup with an `IllegalStateException`. See
+> Overlaps with `LineaTransactionPoolValidatorPlugin` on transaction-type validation; the two are
+> not mutually exclusive and may be enabled together. See
 > [Choosing between transaction type validation plugins](#choosing-between-transaction-type-validation-plugins)
 > below for guidance.
 
@@ -134,14 +134,17 @@ which transaction types (blob, delegate code) are accepted.
 `LineaTransactionPoolValidatorPlugin` and `LineaBlockTransactionValidatorPlugin` both validate
 blob and delegate code transaction types using shared logic (`TransactionTypeValidation`), driven
 by the same CLI options (`--plugin-linea-blob-tx-enabled`, `--plugin-linea-delegate-code-tx-enabled`).
-They cannot be loaded together — Besu will refuse to start if both are present.
+They hook different points of the transaction lifecycle. When both are active, the pool validator
+detects the block plugin and skips its own transaction-type check, so types are validated once at
+pool admission (by the block plugin's protocol-level rule); the block plugin additionally enforces
+the type rules during block import and block production.
 
 Choose based on your node's role:
 
-| Node role | Plugin to enable | Why |
-|-----------|------------------|-----|
-| **Sequencer / RPC node** | `LineaTransactionPoolValidatorPlugin` | Provides pool-level validation (deny lists, gas limits, profitability, simulation) in addition to transaction type checks. Covers the full RPC/P2P admission pipeline. |
-| **Validator node** | `LineaBlockTransactionValidatorPlugin` | Lightweight protocol-level filtering. Rejects unsupported transaction types during block import and block production without the overhead of pool-level validators. |
+| Node role                      | Plugin(s) to enable | Why |
+|--------------------------------|---------------------|-----|
+| **Validator / RPC node**       | `LineaTransactionPoolValidatorPlugin` | Full pool-level validation (deny lists, gas limits, calldata size, profitability, simulation) plus transaction-type checks, covering the RPC/P2P admission pipeline. |
+| **Validator node** | `LineaBlockTransactionValidatorPlugin` | Lightweight protocol-level transaction-type filtering during block import and block production, without the overhead of pool-level validators. |
 
 ### Reporting rejected transactions
 The transaction selection and validation plugins can report rejected transactions as JSON-RPC calls to an external

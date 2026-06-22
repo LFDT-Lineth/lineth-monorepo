@@ -14,7 +14,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaTransactionValidatorConfiguration;
-import net.consensys.linea.sequencer.txpoolvalidation.LineaTransactionPoolValidatorPlugin;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.TransactionValidatorService;
@@ -25,12 +24,23 @@ import org.hyperledger.besu.plugin.services.TransactionValidatorService;
  * types (e.g. blob, delegate code) are accepted at the protocol level.
  *
  * <p>Note: Besu's {@link TransactionValidatorService} rules also run during transaction pool
- * admission (RPC/P2P). Pool-level type validation is explicitly handled by {@link
- * net.consensys.linea.sequencer.txpoolvalidation.LineaTransactionPoolValidatorPlugin}.
+ * admission (RPC/P2P), so the type checks here overlap with the pool-level type validation in
+ * {@link net.consensys.linea.sequencer.txpoolvalidation.LineaTransactionPoolValidatorPlugin}. The
+ * two plugins may be enabled together; to avoid validating transaction types twice at pool
+ * admission, the pool plugin skips its own type validator when this plugin is registered (detected
+ * via {@link #registered}). This plugin remains the source of type enforcement during block import
+ * and block production.
  */
 @Slf4j
 @AutoService(BesuPlugin.class)
 public class LineaBlockTransactionValidatorPlugin extends AbstractLineaRequiredPlugin {
+
+  /**
+   * Set once this plugin has been registered. Lets {@link
+   * net.consensys.linea.sequencer.txpoolvalidation.LineaTransactionPoolValidatorPlugin} detect that
+   * protocol-level transaction-type validation is active and skip its own redundant pool-level type
+   * validator, since this plugin's rule already runs at pool admission.
+   */
   public static final AtomicBoolean registered = new AtomicBoolean(false);
 
   private TransactionValidatorService transactionValidatorService;
@@ -54,13 +64,6 @@ public class LineaBlockTransactionValidatorPlugin extends AbstractLineaRequiredP
   @Override
   public void beforeExternalServices() {
     super.beforeExternalServices();
-    if (LineaTransactionPoolValidatorPlugin.registered.get()) {
-      throw new IllegalStateException(
-          "Both LineaBlockTransactionValidatorPlugin and LineaTransactionPoolValidatorPlugin are"
-              + " enabled. Only one should be active at a time since their transaction type"
-              + " validation functionality overlaps. Use LineaTransactionPoolValidatorPlugin for"
-              + " RPC/P2P nodes or LineaBlockTransactionValidatorPlugin for validator nodes.");
-    }
     this.config = transactionValidatorConfiguration();
     this.transactionValidatorService.registerTransactionValidatorRule(
         (tx) -> TransactionTypeValidation.validate(tx, config));
