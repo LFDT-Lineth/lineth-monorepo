@@ -61,8 +61,8 @@ export const configSchema = z
      * and secret to obtain properly scoped access tokens.
      */
     CONSENSYS_STAKING_OAUTH2_AUDIENCE: z.string().min(1),
-    // Address of the Linea Rollup contract.
-    LINEA_ROLLUP_ADDRESS: Address,
+    // Address of the LinethRollup contract.
+    LINETH_ROLLUP_ADDRESS: Address,
     // Address of the Lido LazyOracle contract.
     LAZY_ORACLE_ADDRESS: Address,
     // Address of the Lido VaultHub contract.
