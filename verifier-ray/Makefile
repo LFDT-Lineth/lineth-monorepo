@@ -164,7 +164,7 @@ zkc-verify-failing-expected:
 		echo "zkc-verify-failing failed as expected"; \
 	fi
 
-profile-zkc:
+profile-zkc: generate-testdata
 	go run bench/verifier_profile/main.go \
 		-out=bench/verifier-profile.csv
 

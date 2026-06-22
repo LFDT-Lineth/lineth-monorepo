@@ -1032,7 +1032,7 @@ func writeVerifyProof(out *bytes.Buffer, prefix string, proof vanishingProofView
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
 
-	fmt.Fprintf(out, "const %s_proof = verifier.ProofData{\n", prefix)
+	fmt.Fprintf(out, "const %s_proof = verifier.Proof{\n", prefix)
 	fmt.Fprintf(out, "    .rounds = &%s_rounds,\n", prefix)
 	fmt.Fprintf(out, "    .witness_claims = &%s_witness_claims,\n", prefix)
 	fmt.Fprintf(out, "    .quotient_claims = &%s_quotient_claims,\n", prefix)
@@ -1138,7 +1138,7 @@ func writeVerifyCaseSwitch(out *bytes.Buffer, cases []fixtureCase) {
 // writeVerifyHeader) so callers that only need the spec/systems don't pull in
 // the proof, and so the input can be supplied independently at runtime.
 func writeVerifyInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
-	fmt.Fprintln(out, "pub fn getInput(comptime index: usize) verifier.ProofData {")
+	fmt.Fprintln(out, "pub fn getInput(comptime index: usize) verifier.Proof {")
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i := range cases {
 		fmt.Fprintf(out, "        %d => verify_case_%d_proof,\n", i, i)
@@ -1152,7 +1152,7 @@ func writeVerifyInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 // the failing (invalid) proof data for a fixture case. Not every case defines a
 // failing input, so cases without one produce a comptime error when requested.
 func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
-	fmt.Fprintln(out, "pub fn getInputFailing(comptime index: usize) verifier.ProofData {")
+	fmt.Fprintln(out, "pub fn getInputFailing(comptime index: usize) verifier.Proof {")
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i, tc := range cases {
 		if tc.invalid != nil {

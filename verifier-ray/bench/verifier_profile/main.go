@@ -35,7 +35,7 @@ const (
 	traceTailLimit     = 40
 	r5Bin              = "zig-out/bin/verifier-ray"
 	r5JSON             = "zig-out/bin/verifier-ray.json"
-	elfToJSON          = "../arithmetization/src/test/examples/scripts/elf_to_json_gen/main.go"
+	elfToJSON          = "../arithmetization/src/test/scripts/elf_to_json_gen/main.go"
 	zkcMain            = "../arithmetization/src/main/riscv/main.zkc"
 	verifyFixture      = "testdata/generated/verify.zig"
 	// Marker IDs must match verifier-ray/src/profiling.zig profiling.Mark.
