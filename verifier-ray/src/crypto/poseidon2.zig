@@ -2,7 +2,7 @@ const field = @import("../field/koalabear.zig");
 const constants = @import("poseidon2_constants.zig");
 const r5_config = @import("r5_config");
 
-const lineth_accel = if (!r5_config.disable_accelerators) @import("lineth_accelerators") else null;
+const lineth_accel = if (r5_config.disable_accelerators) struct {} else @import("lineth_accelerators");
 
 pub const Error = field.Error || error{InvalidInputLength};
 pub const Digest = [8]field.Element;
