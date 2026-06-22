@@ -16,7 +16,7 @@ Key invariant: user funds in the rollup must always be redeemable. The withdrawa
 | LidoStVaultYieldProvider | `contracts/src/yield/LidoStVaultYieldProvider.sol` | Lido stVault integration |
 | LidoStVaultYieldProviderFactory | `contracts/src/yield/LidoStVaultYieldProviderFactory.sol` | Factory for deploying yield providers |
 | YieldProviderBase | `contracts/src/yield/YieldProviderBase.sol` | Abstract yield provider interface |
-| ValidatorContainerProofVerifier | `contracts/src/yield/ValidatorContainerProofVerifier.sol` | Beacon chain validator proof verification |
+| ValidatorContainerProofVerifier | `contracts/src/yield/libs/ValidatorContainerProofVerifier.sol` | Beacon chain validator proof verification |
 | LineaRollupYieldExtension | `contracts/src/rollup/LineaRollupYieldExtension.sol` | Integrates YieldManager into LineaRollup |
 | SSZ/GIndex libs | `contracts/src/yield/libs/` | Beacon chain SSZ proof helpers |
 

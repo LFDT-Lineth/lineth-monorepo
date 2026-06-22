@@ -43,7 +43,7 @@ flowchart TD
 
 ### Controller
 
-The controller (`prover/cmd/controller/controller.go`) runs a long-lived process that:
+The controller (`prover/cmd/controller/controller/controller.go`) runs a long-lived process that:
 
 1. Watches request directories via `FsWatcher`
 2. Selects the highest-priority job via `GetBest()`

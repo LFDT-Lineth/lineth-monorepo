@@ -134,10 +134,10 @@ See [Postman Feature](postman.md) for the full message lifecycle, sponsorship mo
 
 | Test File | Runner | Validates |
 |-----------|--------|-----------|
-| `contracts/test/hardhat/messaging/L1MessageService.ts` | Hardhat | L1 send, claim, fees, rate limits |
-| `contracts/test/hardhat/messaging/L2MessageService.ts` | Hardhat | L2 init, send, claim, fees, roles |
-| `contracts/test/hardhat/messaging/L1MessageManager.ts` | Hardhat | Hash storage, Merkle root management |
-| `contracts/test/hardhat/messaging/L2MessageManager.ts` | Hardhat | Anchoring, rolling hash verification |
+| `contracts/test/hardhat/messaging/l1/L1MessageService.ts` | Hardhat | L1 send, claim, fees, rate limits |
+| `contracts/test/hardhat/messaging/l2/L2MessageService.ts` | Hardhat | L2 init, send, claim, fees, roles |
+| `contracts/test/hardhat/messaging/l1/L1MessageManager.ts` | Hardhat | Hash storage, Merkle root management |
+| `contracts/test/hardhat/messaging/l2/L2MessageManager.ts` | Hardhat | Anchoring, rolling hash verification |
 | `contracts/test/hardhat/messaging/MessageServiceBase.ts` | Hardhat | Shared base behavior |
 | `e2e/src/messaging.spec.ts` | Jest | Full L1↔L2 message round-trips, postman sponsoring |
 
