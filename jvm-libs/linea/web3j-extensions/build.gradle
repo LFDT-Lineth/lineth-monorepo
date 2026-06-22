@@ -16,7 +16,6 @@ dependencies {
   api project(':jvm-libs:generic:extensions:futures')
   api project(':jvm-libs:linea:besu-libs')
   api project(':jvm-libs:generic:serialization:jackson')
-  api project(':jvm-libs:generic:json-rpc')
 
 
 

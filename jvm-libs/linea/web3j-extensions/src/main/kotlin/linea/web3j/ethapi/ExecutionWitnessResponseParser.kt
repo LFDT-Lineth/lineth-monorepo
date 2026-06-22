@@ -2,27 +2,16 @@ package linea.web3j.ethapi
 
 import com.fasterxml.jackson.databind.JsonNode
 import linea.ethapi.ExecutionWitness
-import linea.ethapi.ExecutionWitnessClientException
-import linea.ethapi.ExecutionWitnessError
 import linea.kotlin.decodeHex
 
 object ExecutionWitnessResponseParser {
 
   fun parse(json: JsonNode): ExecutionWitness {
-    return try {
-      ExecutionWitness(
-        state = parseHexList(json, "state"),
-        keys = parseHexList(json, "keys"),
-        codes = parseHexList(json, "codes"),
-        headers = parseHexList(json, "headers"),
-      )
-    } catch (throwable: Throwable) {
-      throw ExecutionWitnessClientException(
-        ExecutionWitnessError.PARSE_ERROR,
-        throwable.message ?: "failed to parse execution witness",
-        throwable,
-      )
-    }
+    return ExecutionWitness(
+      state = parseHexList(json, "state"),
+      codes = parseHexList(json, "codes"),
+      headers = parseHexList(json, "headers"),
+    )
   }
 
   private fun parseHexList(json: JsonNode, field: String): List<ByteArray> {
