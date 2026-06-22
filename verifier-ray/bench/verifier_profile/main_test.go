@@ -6,22 +6,6 @@ import (
 	"testing"
 )
 
-func TestParseCaseSelector(t *testing.T) {
-	cases, err := parseCaseSelector("0,2-4,3", 6)
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := []int{0, 2, 3, 4}
-	if len(cases) != len(want) {
-		t.Fatalf("case count mismatch: got %v, want %v", cases, want)
-	}
-	for i := range want {
-		if cases[i] != want[i] {
-			t.Fatalf("case selector mismatch: got %v, want %v", cases, want)
-		}
-	}
-}
-
 func TestParseTrace(t *testing.T) {
 	output := strings.Join([]string{
 		"----------------------------------------------------------------- PC=1, clock cycle: 1",
@@ -58,8 +42,6 @@ func TestParseTrace(t *testing.T) {
 func TestRenderCSV(t *testing.T) {
 	report, err := renderCSV([]result{{
 		caseIndex: 7,
-		mode:      "profiled",
-		input:     "valid",
 		metadata: caseMetadata{
 			name:                "Case, With Comma",
 			moduleCount:         1,
@@ -94,13 +76,13 @@ func TestRenderCSV(t *testing.T) {
 		t.Fatalf("record count: got %d, want 2", len(records))
 	}
 	row := records[1]
-	if row[0] != "7" || row[1] != "Case, With Comma" || row[4] != "100" {
+	if row[0] != "7" || row[1] != "Case, With Comma" || row[2] != "100" {
 		t.Fatalf("unexpected identity/cycle fields: %#v", row)
 	}
-	if row[5] != "85" || row[6] != "30" || row[7] != "40" || row[8] != "5" {
+	if row[3] != "85" || row[4] != "30" || row[5] != "40" || row[6] != "5" {
 		t.Fatalf("unexpected profiling fields: %#v", row)
 	}
-	if row[9] != "1" || row[16] != "8" {
+	if row[7] != "1" || row[14] != "8" {
 		t.Fatalf("unexpected metadata fields: %#v", row)
 	}
 }

@@ -2,7 +2,7 @@
 // through zkc and renders a compact CSV report.
 //
 // The command intentionally avoids a benchmark-only guest program. For each
-// selected generated verifier case it:
+// generated verifier case it:
 //   - builds `src/main.zig` for the R5 target with the selected typed fixture
 //     embedded at comptime;
 //   - converts the ELF to the JSON input shape consumed by zkc;
@@ -10,10 +10,6 @@
 //   - streams the verbose trace and keeps only total cycles, verifier phase
 //     cycles, and Poseidon2 compression counts;
 //   - writes the compact CSV report.
-//
-// `raw` mode reports the least-instrumented total cycle count. `profiled` mode
-// enables verifier profiling counters and R5 marker syscalls, which add a small
-// amount of overhead but give phase-level attribution.
 package main
 
 import (
@@ -84,60 +80,38 @@ type traceStats struct {
 
 type result struct {
 	caseIndex int
-	mode      string
-	input     string
 	metadata  caseMetadata
 	stats     traceStats
 }
 
 func main() {
-	var (
-		casesFlag = flag.String("cases", "0", "case selector: all, N, A-B, or comma-separated selectors")
-		inputFlag = flag.String("input", defaultInput, "embedded input kind: valid or invalid")
-		modeFlag  = flag.String("mode", "profiled", "run mode: raw, profiled, or both")
-		outFlag   = flag.String("out", defaultOutput, "CSV output path")
-	)
+	outFlag := flag.String("out", defaultOutput, "CSV output path")
 	flag.Parse()
 
-	if err := run(*casesFlag, *inputFlag, *modeFlag, *outFlag); err != nil {
+	if err := run(*outFlag); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func run(caseSelector, inputKind, mode, outPath string) error {
-	if inputKind != "valid" && inputKind != "invalid" {
-		return fmt.Errorf("unsupported input %q: expected valid or invalid", inputKind)
-	}
-	modes, err := parseModes(mode)
-	if err != nil {
-		return err
-	}
+func run(outPath string) error {
 	metadata, err := readMetadata(verifyFixture)
 	if err != nil {
 		return err
 	}
-	cases, err := parseCaseSelector(caseSelector, len(metadata))
-	if err != nil {
-		return err
-	}
 
-	results := make([]result, 0, len(cases)*len(modes))
-	for _, caseIndex := range cases {
-		for _, runMode := range modes {
-			fmt.Fprintf(os.Stderr, "profiling case %d (%s), mode=%s, input=%s\n", caseIndex, metadata[caseIndex].name, runMode, inputKind)
-			stats, err := runCase(caseIndex, inputKind, runMode)
-			if err != nil {
-				return fmt.Errorf("case %d (%s), mode=%s: %w", caseIndex, metadata[caseIndex].name, runMode, err)
-			}
-			results = append(results, result{
-				caseIndex: caseIndex,
-				mode:      runMode,
-				input:     inputKind,
-				metadata:  metadata[caseIndex],
-				stats:     stats,
-			})
+	results := make([]result, 0, len(metadata))
+	for caseIndex, caseMetadata := range metadata {
+		fmt.Fprintf(os.Stderr, "profiling case %d (%s)\n", caseIndex, caseMetadata.name)
+		stats, err := runCase(caseIndex)
+		if err != nil {
+			return fmt.Errorf("case %d (%s): %w", caseIndex, caseMetadata.name, err)
 		}
+		results = append(results, result{
+			caseIndex: caseIndex,
+			metadata:  caseMetadata,
+			stats:     stats,
+		})
 	}
 
 	report, err := renderCSV(results)
@@ -152,19 +126,6 @@ func run(caseSelector, inputKind, mode, outPath string) error {
 	}
 	fmt.Fprintf(os.Stderr, "wrote %s\n", outPath)
 	return nil
-}
-
-func parseModes(mode string) ([]string, error) {
-	switch mode {
-	case "raw":
-		return []string{"raw"}, nil
-	case "profiled":
-		return []string{"profiled"}, nil
-	case "both":
-		return []string{"raw", "profiled"}, nil
-	default:
-		return nil, fmt.Errorf("unsupported mode %q: expected raw, profiled, or both", mode)
-	}
 }
 
 func readMetadata(path string) ([]caseMetadata, error) {
@@ -201,89 +162,18 @@ func readMetadata(path string) ([]caseMetadata, error) {
 	return metadata, nil
 }
 
-func parseCaseSelector(selector string, caseCount int) ([]int, error) {
-	selector = strings.TrimSpace(selector)
-	if selector == "" {
-		return nil, errors.New("empty case selector")
-	}
-	if selector == "all" {
-		cases := make([]int, caseCount)
-		for i := range cases {
-			cases[i] = i
-		}
-		return cases, nil
-	}
-
-	seen := make(map[int]bool)
-	var cases []int
-	for _, part := range strings.Split(selector, ",") {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-		if strings.Contains(part, "-") {
-			parts := strings.Split(part, "-")
-			if len(parts) != 2 {
-				return nil, fmt.Errorf("invalid case range %q", part)
-			}
-			start, err := parseCaseIndex(strings.TrimSpace(parts[0]), caseCount)
-			if err != nil {
-				return nil, err
-			}
-			end, err := parseCaseIndex(strings.TrimSpace(parts[1]), caseCount)
-			if err != nil {
-				return nil, err
-			}
-			if start > end {
-				return nil, fmt.Errorf("invalid case range %q: start is greater than end", part)
-			}
-			for i := start; i <= end; i++ {
-				if !seen[i] {
-					seen[i] = true
-					cases = append(cases, i)
-				}
-			}
-			continue
-		}
-		index, err := parseCaseIndex(part, caseCount)
-		if err != nil {
-			return nil, err
-		}
-		if !seen[index] {
-			seen[index] = true
-			cases = append(cases, index)
-		}
-	}
-	if len(cases) == 0 {
-		return nil, errors.New("case selector did not select any cases")
-	}
-	return cases, nil
-}
-
-func parseCaseIndex(raw string, caseCount int) (int, error) {
-	index, err := strconv.Atoi(raw)
-	if err != nil {
-		return 0, fmt.Errorf("invalid case index %q", raw)
-	}
-	if index < 0 || index >= caseCount {
-		return 0, fmt.Errorf("case index %d out of range [0,%d)", index, caseCount)
-	}
-	return index, nil
-}
-
 // runCase builds one selected fixture, converts the R5 ELF to zkc JSON, and
 // parses the shared zkc interpreter trace back into traceStats.
-func runCase(caseIndex int, inputKind, mode string) (traceStats, error) {
+func runCase(caseIndex int) (traceStats, error) {
 	buildArgs := []string{
 		"build",
 		"--release=small",
 		"-Dstrip=true",
 		"-Dr5=true",
-		"-Dembedded-input=" + inputKind,
+		"-Dembedded-input=" + defaultInput,
 		fmt.Sprintf("-Dembedded-spec=%d", caseIndex),
-	}
-	if mode == "profiled" {
-		buildArgs = append(buildArgs, "-Dverifier-profiling=true", "-Dr5-marks=true")
+		"-Dverifier-profiling=true",
+		"-Dr5-marks=true",
 	}
 	if err := runCommand("zig", buildArgs...); err != nil {
 		return traceStats{}, err
@@ -404,8 +294,6 @@ func renderCSV(results []result) (string, error) {
 	if err := writer.Write([]string{
 		"case",
 		"name",
-		"mode",
-		"input",
 		"total_cycles",
 		"verifier_cycles",
 		"transcript_cycles",
@@ -426,8 +314,6 @@ func renderCSV(results []result) (string, error) {
 		if err := writer.Write([]string{
 			strconv.Itoa(result.caseIndex),
 			result.metadata.name,
-			result.mode,
-			result.input,
 			strconv.FormatUint(result.stats.totalCycles, 10),
 			cycleDelta(result.stats.markers, markVerifyStart, markVerifyDone),
 			cycleDelta(result.stats.markers, markVerifyStart, markTranscriptDone),

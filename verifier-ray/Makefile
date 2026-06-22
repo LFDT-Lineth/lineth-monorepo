@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: ci ci-checks help fmt fmt-zig fmt-codegen fmt-testdata-generator fmt-profile build build-zig build-release build-r5 run run-passing run-failing run-failing-expected test test-zig test-generated-zig test-codegen generate-testdata verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected profile-zkc profile-zkc-all clean
+.PHONY: ci ci-checks help fmt fmt-zig fmt-codegen fmt-testdata-generator fmt-profile build build-zig build-release build-r5 run run-passing run-failing run-failing-expected test test-zig test-generated-zig test-codegen generate-testdata verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected profile-zkc clean
 
 R5_BIN := zig-out/bin/verifier-ray
 R5_JSON := $(R5_BIN).json
@@ -14,9 +14,6 @@ ZKC_MAIN := ../arithmetization/src/main/riscv/main.zkc
 # serialization lands, but are no longer used by the run/zkc targets.
 EMBEDDED_INPUT ?= valid
 EMBEDDED_SPEC ?= 0
-PROFILE_CASES ?= 0
-PROFILE_INPUT ?= valid
-PROFILE_MODE ?= profiled
 PROFILE_OUT ?= bench/verifier-profile.csv
 NATIVE_BIN := zig-out/bin/verifier-ray
 
@@ -57,16 +54,12 @@ help:
 		'  zkc-verify-passing    Run zkc with embedded valid input' \
 		'  zkc-verify-failing    Run zkc with embedded invalid input (exits non-zero)' \
 		'  zkc-verify-failing-expected  Require zkc invalid input to fail' \
-		'  profile-zkc           Profile verifier-ray through zkc and write a compact CSV report' \
-		'  profile-zkc-all       Profile every generated verifier case' \
+		'  profile-zkc           Profile every generated verifier case and write a compact CSV report' \
 		'  clean                 Remove Zig build artifacts' \
 		'' \
 		'input variables:' \
 		'  EMBEDDED_INPUT        Embedded input fixture kind: valid or invalid, default valid' \
 		'  EMBEDDED_SPEC         Embedded fixture index, default 0' \
-		'  PROFILE_CASES         Profiling selector: all, N, A-B, or comma-separated selectors, default 0' \
-		'  PROFILE_INPUT         Profiling input fixture kind: valid or invalid, default valid' \
-		'  PROFILE_MODE          Profiling mode: raw, profiled, or both, default profiled' \
 		'  PROFILE_OUT           Profiling CSV output path, default bench/verifier-profile.csv' \
 		'' \
 		'zkc variables:' \
@@ -175,13 +168,7 @@ zkc-verify-failing-expected:
 
 profile-zkc:
 	go run bench/verifier_profile/main.go \
-		-cases="$(PROFILE_CASES)" \
-		-input="$(PROFILE_INPUT)" \
-		-mode="$(PROFILE_MODE)" \
 		-out="$(PROFILE_OUT)"
-
-profile-zkc-all:
-	$(MAKE) profile-zkc PROFILE_CASES=all
 
 clean:
 	rm -rf .zig-cache zig-out

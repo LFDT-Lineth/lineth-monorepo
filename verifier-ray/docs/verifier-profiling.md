@@ -7,10 +7,11 @@ a benchmark-only Zig guest or a benchmark-specific zkc runner.
 ## Fixture Model
 
 The executable imports `testdata/generated/verify.zig` as typed comptime data.
-Each profiling run selects one generated verifier case with:
+The profiler runs every generated verifier case. For each case it builds the R5
+binary with:
 
 ```bash
--Dembedded-spec=<N> -Dembedded-input=<valid|invalid>
+-Dembedded-spec=<N> -Dembedded-input=valid
 ```
 
 The selected spec and systems remain comptime inputs to `verifier.verify`, while
@@ -35,12 +36,14 @@ streams that output and keeps only:
 - each marker value, currently Poseidon2 compressions so far.
 
 The full zkc trace is not written to disk by the report generator. Only the
-compact CSV report is stored.
+compact CSV report is stored. Invalid cases are intentionally excluded: their
+cycle counts depend on the particular failure path and are not useful for
+comparing verifier phase costs.
 
 ## Profiling Markers
 
 `src/profiling.zig` exposes build-time-gated helpers. In normal builds these are
-compiled away. For profiled R5 runs the Make target builds with:
+compiled away. The profiling target always builds with:
 
 ```bash
 -Dverifier-profiling=true -Dr5-marks=true
@@ -64,33 +67,14 @@ The current marker phases are:
 
 The Go parser associates each marker with the most recent `clock cycle` printed
 by the shared runner. These numbers are useful for attribution, but the marker
-syscalls themselves add overhead. Use `PROFILE_MODE=raw` when you want the
-smallest total-cycle number without marker overhead.
+syscalls themselves add overhead.
 
 ## Commands
 
-Profile one case:
+Profile every generated valid case:
 
 ```bash
-make profile-zkc PROFILE_CASES=6
-```
-
-Profile a range:
-
-```bash
-make profile-zkc PROFILE_CASES=0-10
-```
-
-Profile multiple selectors:
-
-```bash
-make profile-zkc PROFILE_CASES=0,6,62-68
-```
-
-Profile all generated verifier cases:
-
-```bash
-make profile-zkc-all
+make profile-zkc
 ```
 
 By default the report is written to:
@@ -103,7 +87,4 @@ Useful variables:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `PROFILE_CASES` | `0` | `all`, `N`, `A-B`, or comma-separated selectors |
-| `PROFILE_INPUT` | `valid` | embedded input fixture kind |
-| `PROFILE_MODE` | `profiled` | `raw`, `profiled`, or `both` |
 | `PROFILE_OUT` | `bench/verifier-profile.csv` | CSV output path |
