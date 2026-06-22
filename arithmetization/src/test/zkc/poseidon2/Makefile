@@ -21,7 +21,7 @@ test:
 	readarray -t lines < <(grep '^{' $(ACCEPTS)); \
 	for i in "$${!lines[@]}"; do \
 		printf '%s\n' "$${lines[$$i]}" > $$tmp; \
-		if zkc execute -q --field KOALABEAR_16 $$tmp $(SRC) >/dev/null 2>&1; then \
+		if zkc execute --fast -q --field KOALABEAR_16 $$tmp $(SRC) >/dev/null 2>&1; then \
 			echo "accept[$$i] PASS"; \
 		else \
 			echo "accept[$$i] FAIL (expected to be accepted)"; rc=1; \
@@ -30,7 +30,7 @@ test:
 	readarray -t lines < <(grep '^{' $(REJECTS)); \
 	for i in "$${!lines[@]}"; do \
 		printf '%s\n' "$${lines[$$i]}" > $$tmp; \
-		if zkc execute -q --field KOALABEAR_16 $$tmp $(SRC) >/dev/null 2>&1; then \
+		if zkc execute --fast -q --field KOALABEAR_16 $$tmp $(SRC) >/dev/null 2>&1; then \
 			echo "reject[$$i] FAIL (expected to be rejected)"; rc=1; \
 		else \
 			echo "reject[$$i] PASS"; \
