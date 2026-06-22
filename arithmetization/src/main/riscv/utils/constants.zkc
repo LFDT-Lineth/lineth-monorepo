@@ -29,8 +29,8 @@ static instruction_type_from_opcode(opcode:Opcode) -> (instruction_type:Type) {
     UNDEFINED_TYPE, // 0b0001000
     UNDEFINED_TYPE, // 0b0001001
     UNDEFINED_TYPE, // 0b0001010
-    UNDEFINED_TYPE, // 0b0001011
-    R_TYPE, // 0b0001100 ≡ 0x0c ≡ custom-1 opcode
+    R_TYPE, // 0b0001011 ≡ 0x0b ≡ custom-0 opcode
+    UNDEFINED_TYPE, // 0b0001100
     UNDEFINED_TYPE, // 0b0001101
     UNDEFINED_TYPE, // 0b0001110
     MISC_MEM_TYPE, // 0b0001111  (FENCE, FENCE.I — no-op on this implementation)
@@ -61,7 +61,7 @@ static instruction_type_from_opcode(opcode:Opcode) -> (instruction_type:Type) {
     UNDEFINED_TYPE, // 0b0101000
     UNDEFINED_TYPE, // 0b0101001
     UNDEFINED_TYPE, // 0b0101010
-    UNDEFINED_TYPE, // 0b0101011
+    R_TYPE, // 0b0101011 ≡ 0x2b ≡ custom-1 opcode
     UNDEFINED_TYPE, // 0b0101100
     UNDEFINED_TYPE, // 0b0101101
     UNDEFINED_TYPE, // 0b0101110
@@ -151,7 +151,8 @@ static instruction_type_from_opcode(opcode:Opcode) -> (instruction_type:Type) {
 // R_type
 const OP:Opcode = 0b0110011 // ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND
 const OP_32:Opcode = 0b0111011 // ADDW, SUBW, SLLW, SRLW, SRAW (RV64 only)
-const CUSTOM_1:Opcode = 0b0000_1100 // custom-1
+const CUSTOM_0:Opcode = 0b0001011 // custom-0
+const CUSTOM_1:Opcode = 0b0101011 // custom-1
 
 // Extraneous precompiles
 const FUNCT3_KECCAK:Funct3 = 0b000

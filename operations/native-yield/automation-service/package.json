@@ -15,7 +15,7 @@
     "test": "jest --bail --detectOpenHandles --forceExit"
   },
   "dependencies": {
-    "@apollo/client": "4.1.9",
+    "@apollo/client": "4.2.3",
     "@lfdt-lineth/shared-utils": "workspace:*",
     "@lidofinance/lsv-cli": "1.8.0",
     "dotenv": "catalog:",

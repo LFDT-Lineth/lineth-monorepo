@@ -607,7 +607,6 @@ func (ctx *Ctx) registerOpeningProof(lastRound int) {
 	// and registers the opened columns
 	numRows := utils.NextPowerOfTwo(ctx.CommittedRowsCount)
 	numRowsSIS := utils.NextPowerOfTwo(ctx.CommittedRowsCountSIS)
-	numRowsNonSIS := utils.NextPowerOfTwo(ctx.CommittedRowsCount - ctx.CommittedRowsCountSIS)
 	for col := 0; col < ctx.NbColsToOpen(); col++ {
 		openedCol := ctx.Comp.InsertProof(
 			lastRound+2,
@@ -623,14 +622,38 @@ func (ctx *Ctx) registerOpeningProof(lastRound int) {
 			)
 			ctx.Items.OpenedSISColumns = append(ctx.Items.OpenedSISColumns, openedColSIS)
 		}
-		if numRowsNonSIS != 0 {
-			openedColNonSIS := ctx.Comp.InsertProof(
-				lastRound+2,
-				ctx.SelectedColNonSISName(col),
-				numRowsNonSIS,
-			)
-			ctx.Items.OpenedNonSISColumns = append(ctx.Items.OpenedNonSISColumns, openedColNonSIS)
+	}
+
+	// Register round-indexed non-SIS opened columns.
+	// One column per non-SIS round with size nextPow2(Pi_i) * nextPow2(T),
+	// where Pi_i is the number of polynomials in that round and T = NbColsToOpen().
+	// Layout: col[k*nextPow2(Pi_i) + q] = q-th polynomial of round i at opened column k.
+	// The nextPow2(Pi_i) stride is required by EvalCoeffBivariate's PeriodicSample.
+	numHashPad := utils.NextPowerOfTwo(ctx.NbColsToOpen())
+	if ctx.IsNonEmptyPrecomputed() && !ctx.IsSISAppliedToPrecomputed() {
+		piI := len(ctx.Items.Precomputeds.PrecomputedColums)
+		colChunksPad := utils.NextPowerOfTwo(piI)
+		colSize := colChunksPad * numHashPad
+		openedColNonSIS := ctx.Comp.InsertProof(
+			lastRound+2,
+			ctx.SelectedColNonSISName(len(ctx.Items.OpenedNonSISColumns)),
+			colSize,
+		)
+		ctx.Items.OpenedNonSISColumns = append(ctx.Items.OpenedNonSISColumns, openedColNonSIS)
+	}
+	for round := 0; round <= ctx.MaxCommittedRound; round++ {
+		if ctx.RoundStatus[round] != IsOnlyMiMCApplied {
+			continue
 		}
+		piI := ctx.CommitmentsByRounds.LenOf(round)
+		colChunksPad := utils.NextPowerOfTwo(piI)
+		colSize := colChunksPad * numHashPad
+		openedColNonSIS := ctx.Comp.InsertProof(
+			lastRound+2,
+			ctx.SelectedColNonSISName(len(ctx.Items.OpenedNonSISColumns)),
+			colSize,
+		)
+		ctx.Items.OpenedNonSISColumns = append(ctx.Items.OpenedNonSISColumns, openedColNonSIS)
 	}
 
 	// In case of the Merkle-proof mode, we also registers the

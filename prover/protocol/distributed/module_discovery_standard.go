@@ -143,10 +143,11 @@ func (disc *StandardModuleDiscoverer) analyzeWithAdvices(comp *wizard.CompiledIO
 		// adviceOfColumn lists
 		adviceOfColumn    = collection.MakeDeterministicMap[ifaces.ColID, *ModuleDiscoveryAdvice](comp.Columns.NumEntriesTotal())
 		adviceMappingErrs = []error{}
+		adviceUseCount    = make([]int, len(disc.Advices))
 	)
 
 	for _, col := range comp.Columns.All() {
-		for _, adv := range disc.Advices {
+		for i, adv := range disc.Advices {
 
 			if !adv.DoesMatch(col) {
 				continue
@@ -159,6 +160,7 @@ func (disc *StandardModuleDiscoverer) analyzeWithAdvices(comp *wizard.CompiledIO
 				}
 			}
 
+			adviceUseCount[i]++
 			break
 		}
 	}
@@ -206,6 +208,16 @@ func (disc *StandardModuleDiscoverer) analyzeWithAdvices(comp *wizard.CompiledIO
 		newModule := moduleSets[adviceFound.Cluster]
 		newModule.SubModules = append(newModule.SubModules, qbm)
 		newModule.NewSizes = append(newModule.NewSizes, adviceFound.BaseSize)
+	}
+
+	// Check for advices that matched zero columns.
+	for i := range disc.Advices {
+		if adviceUseCount[i] == 0 {
+			adviceMappingErrs = append(adviceMappingErrs,
+				fmt.Errorf("advice matched no columns: cluster=%v, baseSize=%v, advice=%+v",
+					disc.Advices[i].Cluster, disc.Advices[i].BaseSize, disc.Advices[i]),
+			)
+		}
 	}
 
 	if len(adviceMappingErrs) > 0 {

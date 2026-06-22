@@ -407,6 +407,28 @@ func (ctx *Ctx) assignOpenedColumns(
 	entryList []int,
 	selectedCols [][][]field.Element,
 	mode commitmentMode) {
+
+	// For SelfRecursionMiMCOnly, we assign round-indexed columns:
+	// one column per non-SIS round, with layout col[k*colChunksPad + q] where
+	// k is the opened column index, q is the polynomial index, and
+	// colChunksPad = nextPow2(Pi_i) to satisfy EvalCoeffBivariate's PeriodicSample.
+	if mode == SelfRecursionMiMCOnly {
+		numHashPad := utils.NextPowerOfTwo(len(entryList))
+		for i := range selectedCols {
+			piI := len(selectedCols[i][0])
+			colChunksPad := utils.NextPowerOfTwo(piI)
+			targetSize := colChunksPad * numHashPad
+			fullCol := make([]field.Element, targetSize)
+			for k := range entryList {
+				// Copy piI entries into the k-th block of size colChunksPad.
+				// Entries at positions piI..colChunksPad-1 within each block remain zero.
+				copy(fullCol[k*colChunksPad:k*colChunksPad+piI], selectedCols[i][k])
+			}
+			pr.AssignColumn(ctx.Items.OpenedNonSISColumns[i].GetColID(), smartvectors.NewRegular(fullCol))
+		}
+		return
+	}
+
 	// The columns are split by commitment round. So we need to
 	// restick them when we commit them.
 	for j := range entryList {
@@ -424,8 +446,6 @@ func (ctx *Ctx) assignOpenedColumns(
 			pr.AssignColumn(ctx.Items.OpenedColumns[j].GetColID(), assignable)
 		} else if mode == SelfRecursionSIS {
 			pr.AssignColumn(ctx.Items.OpenedSISColumns[j].GetColID(), assignable)
-		} else if mode == SelfRecursionMiMCOnly {
-			pr.AssignColumn(ctx.Items.OpenedNonSISColumns[j].GetColID(), assignable)
 		}
 	}
 

@@ -3,7 +3,7 @@ package wiop
 import (
 	"fmt"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // Fraction is a filter-aware fraction triple. The semantic contribution of a

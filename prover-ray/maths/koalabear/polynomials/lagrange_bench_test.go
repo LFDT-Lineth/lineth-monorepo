@@ -3,7 +3,7 @@ package polynomials
 import (
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
 const benchSize = 1 << 14
@@ -31,6 +31,6 @@ func BenchmarkComputeLagrangeAtZExt(b *testing.B) {
 	z := field.ElemFromExt(randExt(rng))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = ComputeLagrangeAtZ(z, uint64(benchSize))
+		_ = EvalLagrangeBasisAtZ(z, uint64(benchSize))
 	}
 }

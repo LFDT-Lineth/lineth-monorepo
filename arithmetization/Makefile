@@ -11,13 +11,15 @@ REPO_ROOT := $(abspath $(MAKEFILE_DIR)/..)
 ZKC ?= $(REPO_ROOT)/zkc
 ZKC_REPO ?= https://github.com/LFDT-Lineth/zkc.git
 # Optional: pin a commit or branch (e.g. 763f30878e5fc260f0d88863c9883c904f8fc056). Leave empty for default branch.
-ZKC_REF ?=
+ZKC_REF ?=v1.2.20
 
 # Used to install Sail for ACT4 host builds.
 ACT4_RISCV_DIR ?= $(HOME)/riscv
 SAIL_RISCV_VERSION ?= 0.11
 
-ZKC_FILES ?= $(shell find $(MAKEFILE_DIR)src/main/riscv/* -name "*.zkc")
+ZKC_RISCV_INTERPRETER ?= $(shell find $(MAKEFILE_DIR)src/main/riscv/* -name "*.zkc")
+ZKC_ZKVM_LIBRARY ?= $(shell find $(MAKEFILE_DIR)src/main/lib/* -name "*.zkc")
+ZKC_FILES ?= $(ZKC_RISCV_INTERPRETER) $(ZKC_ZKVM_LIBRARY)
 ZKC_MAIN ?= $(MAKEFILE_DIR)src/main/riscv/main.zkc
 ZKC_BINDIR ?= $(MAKEFILE_DIR)bin
 ZKC_BINARY ?= riscv.bin

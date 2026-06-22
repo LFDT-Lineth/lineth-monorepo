@@ -124,6 +124,9 @@ func (spiq *FunctionalPublicInputQSnark) RangeCheck(api frontend.API) {
 	for i := range spiq.FinalRollingHashUpdate {
 		rc.Check(spiq.FinalRollingHashUpdate[i], 8)
 	}
+	for i := range spiq.InitialRollingHashUpdate {
+		rc.Check(spiq.InitialRollingHashUpdate[i], 8)
+	}
 	rc.Check(spiq.FinalBlockNumber, 64)
 	rc.Check(spiq.FinalBlockTimestamp, 64)
 	rc.Check(spiq.InitialBlockTimestamp, 64)

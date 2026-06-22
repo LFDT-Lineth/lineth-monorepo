@@ -1,3 +1,8 @@
+## [unreleased]
+
+### 🐛 Bug Fixes
+
+- *(e2e)* Trying to fix rare profitability issues, FTX fix (#3388)
 ## [1.1.0] - 2026-06-11
 
 ### 🚀 Features

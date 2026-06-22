@@ -3,7 +3,7 @@ package codegen
 import (
 	"fmt"
 
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
 // CoinRouting is the protocol-level Fiat-Shamir coin layout shared by every

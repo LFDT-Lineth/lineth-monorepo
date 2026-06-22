@@ -59,6 +59,7 @@ func TestSetupRoundTripPrecompileLogs(t *testing.T) {
 	builder := invalidity.NewBuilder(
 		invalidity.Config{
 			ZkEvmComp: comp,
+			MaxL2Logs: config.GetTestTracesLimits().BlockL2L1Logs(),
 		},
 		&invalidity.BadPrecompileCircuit{},
 	)

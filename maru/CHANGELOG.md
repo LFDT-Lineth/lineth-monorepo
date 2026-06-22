@@ -4,6 +4,7 @@
 
 - *(maru)* Address PR 3126 workflow follow-ups (#3164)
 - *(arithmetization)* Fix alert 514 (#3246)
+- *(maru)* Making discovery retry configurable to increase the convergence speed (#3387)
 
 ### 🚜 Refactor
 

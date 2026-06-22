@@ -113,6 +113,23 @@ func TestStandardDiscoveryOnZkEVM(t *testing.T) {
 		}
 	})
 
+	t.Run("every advice matches at least one column", func(t *testing.T) {
+		allCols := z.InitialCompiledIOP.Columns.All()
+		for _, adv := range disc.Advices {
+			matched := false
+			for _, col := range allCols {
+				if adv.DoesMatch(col) {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				t.Errorf("advice matched no columns: cluster=%v, baseSize=%v, regexp=%v",
+					adv.Cluster, adv.BaseSize, adv.Regexp)
+			}
+		}
+	})
+
 	t.Logf("totalNumber of columns: %v", len(z.InitialCompiledIOP.Columns.AllKeys()))
 
 	for _, mod := range disc.Modules {
