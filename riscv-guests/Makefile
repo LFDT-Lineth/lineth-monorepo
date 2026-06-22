@@ -24,7 +24,7 @@ FMT_PATHS := build_common/build.zig $(foreach g,$(GUESTS),$(g)/build.zig $(g)/sr
 # the linker scripts which are embedded in build_common/build.zig, so we have to have the linker
 # script generated before we can build any guest.
 build-common:
-	$(MAKE) -C $(abspath $(MAKEFILE_DIR)../build_common) build-common
+	$(MAKE) -C $(abspath $(MAKEFILE_DIR))build_common build-common
 
 # Each common target fans out to every guest's own Makefile.
 compile test fetch clean: build-common
