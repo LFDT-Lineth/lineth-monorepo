@@ -14,6 +14,8 @@ IN_ORIGIN ?= 0x08800000
 NATIVE_INPUT_FILE := zig-out/input.bin
 IN_BYTES_FILE ?= zig-out/input.hex
 
+DISABLE_ACCELERATORS ?= false
+
 ci: fmt build-release run-passing run-failing-expected test zkc-verify-passing zkc-verify-failing-expected
 
 help:
@@ -26,7 +28,7 @@ help:
 		'  fmt                   Run Zig and Go formatting checks' \
 		'  build                 Build verifier-ray natively' \
 		'  build-release         Build verifier-ray natively with ReleaseSmall and stripped symbols' \
-		'  build-r5              Build verifier-ray for the Linea R5 zkVM target' \
+		'  build-r5              Build verifier-ray for the Lineth R5 zkVM target' \
 		'  run                   Run verifier-ray natively with INPUT_FILE' \
 		'  run-passing           Run verifier-ray natively with the passing fixture' \
 		'  run-failing           Run verifier-ray natively with the failing fixture (exits non-zero)' \
@@ -49,7 +51,10 @@ help:
 		'  IN_BYTES_FILE         Big-endian hex transport file for zkc' \
 		'' \
 		'zkc variables:' \
-		'  IN_ORIGIN            Input bytes address, default 0x08800000'
+		'  IN_ORIGIN             Input bytes address, default 0x08800000' \
+		'' \
+		'R5 build variables:' \
+		'  DISABLE_ACCELERATORS  Disable Lineth zkVM accelerator wrappers (for compatibility testing), default false' \
 
 fmt: fmt-zig fmt-codegen fmt-testdata-generate
 
@@ -79,7 +84,7 @@ build-release:
 	zig build --release=small -Dstrip=true
 
 build-r5:
-	zig build --release=small -Dstrip=true -Dr5=true
+	zig build --release=small -Dstrip=true -Dr5=true -Ddisable-accelerators=$(DISABLE_ACCELERATORS)
 
 run:
 	mkdir -p $(dir $(NATIVE_INPUT_FILE))
