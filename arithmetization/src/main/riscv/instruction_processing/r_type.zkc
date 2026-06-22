@@ -222,8 +222,11 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                                 v1_abs = absolute_value_double_word(v1)
                                 v2_abs = absolute_value_double_word(v2)
                                 registers[rd] = v1_abs / v2_abs
-                                if (v1_sign ^ v2_sign) == 1 {
-                                    registers[rd] = negative_of_double_word(registers[rd])
+                                var result_sign:SignBit = v1_sign ^ v2_sign
+                                switch result_sign {
+                                    case 1: {
+                                        registers[rd] = negative_of_double_word(registers[rd])
+                                    }
                                 }
                             }
                         }
@@ -250,24 +253,33 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                             print_r_operands(rd, rs1, rs2)
                             v1_sign = sign_bit_of_double_word(v1)
                             shift_discard_6::shift_amount_6 = v2
-                            if (v1_sign == 1) {
-                                double_word_working_copy = bit_flip_double_word(v1)
-                            } else {
-                                double_word_working_copy = v1
+                            switch v1_sign {
+                                case 1: {
+                                    double_word_working_copy = bit_flip_double_word(v1)
+                                }
+                                default: {
+                                    // default case is 0
+                                    double_word_working_copy = v1
+                                }
                             }
                             double_word_working_copy = double_word_working_copy >> shift_amount_6
-                            if (v1_sign == 1) {
-                                double_word_working_copy = bit_flip_double_word(double_word_working_copy)
+                            switch v1_sign {
+                                case 1: {
+                                    double_word_working_copy = bit_flip_double_word(double_word_working_copy)
+                                }
                             }
                             registers[rd] = double_word_working_copy
                         }
                         case FUNCT7_DIVU: {
                             printf "DIVU "
                             print_r_operands(rd, rs1, rs2)
-                            if v2 == 0 {
-                                registers[rd] = NEGATIVE_ONE_AS_I64
-                            } else {
-                                registers[rd] = v1 / v2
+                            switch v2 {
+                                case 0: {
+                                    registers[rd] = NEGATIVE_ONE_AS_I64
+                                }
+                                default: {
+                                    registers[rd] = v1 / v2
+                                }
                             }
                         }
                         default: {
