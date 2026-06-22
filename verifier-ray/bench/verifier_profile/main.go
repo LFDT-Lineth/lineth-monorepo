@@ -211,10 +211,11 @@ func writeJSONInput() error {
 }
 
 // runZKC uses the shared RISC-V runner rather than a benchmark-specific zkc
-// wrapper. The runner is verbose, so parseTrace streams stdout and keeps only
-// the lines needed for the compact report.
+// wrapper. Fast execution still runs the runner and prints its cycle/marker
+// output, but skips zkc's post-execution constraint lowering; profiling only
+// needs the guest RISC-V cycles and phase markers.
 func runZKC() (traceStats, error) {
-	cmd := exec.Command("zkc", "exec", r5JSON, zkcMain)
+	cmd := exec.Command("zkc", "exec", "-f", r5JSON, zkcMain)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return traceStats{}, err
