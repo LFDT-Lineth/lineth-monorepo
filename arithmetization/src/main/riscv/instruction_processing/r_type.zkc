@@ -458,7 +458,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                                         }
                                     }
                                 }
-                            }    
+                            }
                         }
                         default: {
                             printf "[ERROR] Unsupported R-type instruction with\n"
