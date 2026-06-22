@@ -39,7 +39,7 @@ export type GetL2ToL1MessageStatusParameters<
     "fromBlock" | "toBlock"
   >;
   // Defaults to the message service address for the L1 chain
-  lineaRollupAddress?: Address;
+  linethRollupAddress?: Address;
   // Defaults to the message service address for the L2 chain
   l2MessageServiceAddress?: Address;
 };
@@ -114,12 +114,12 @@ export async function getL2ToL1MessageStatus<
     throw new MessageNotFoundError({ hash: messageHash });
   }
 
-  const lineaRollupAddress =
-    parameters.lineaRollupAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
+  const linethRollupAddress =
+    parameters.linethRollupAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
 
   const [[l2MessagingBlockAnchoredEvent], isMessageClaimed] = await Promise.all([
     getContractEvents(client, {
-      address: lineaRollupAddress,
+      address: linethRollupAddress,
       abi: [
         {
           anonymous: false,
@@ -136,7 +136,7 @@ export async function getL2ToL1MessageStatus<
       toBlock: "latest",
     }),
     readContract(client, {
-      address: lineaRollupAddress,
+      address: linethRollupAddress,
       abi: [
         {
           inputs: [{ internalType: "uint256", name: "_messageNumber", type: "uint256" }],

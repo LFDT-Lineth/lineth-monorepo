@@ -55,7 +55,7 @@ export type GetMessageProofParameters<
     "fromBlock" | "toBlock"
   >;
   // Defaults to the message service address for the L1 chain
-  lineaRollupAddress?: Address | undefined;
+  linethRollupAddress?: Address | undefined;
   // Defaults to the message service address for the L2 chain
   l2MessageServiceAddress?: Address | undefined;
 };
@@ -135,11 +135,11 @@ export async function getMessageProof<
     throw new MessageNotFoundError({ hash: messageHash });
   }
 
-  const lineaRollupAddress =
-    parameters.lineaRollupAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
+  const linethRollupAddress =
+    parameters.linethRollupAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
 
   const [l2MessagingBlockAnchoredEvent] = await getContractEvents(client, {
-    address: lineaRollupAddress,
+    address: linethRollupAddress,
     abi: [
       {
         anonymous: false,
@@ -162,7 +162,7 @@ export async function getMessageProof<
 
   const finalizationInfo = await getFinalizationMessagingInfo(client, {
     transactionHash: l2MessagingBlockAnchoredEvent.transactionHash,
-    lineaRollupAddress,
+    linethRollupAddress,
   });
 
   const l2MessageHashesInBlockRange = (
@@ -204,7 +204,7 @@ export async function getMessageProof<
 async function getFinalizationMessagingInfo<chain extends Chain | undefined, account extends Account | undefined>(
   client: Client<Transport, chain, account>,
   parameters: {
-    lineaRollupAddress: Hex;
+    linethRollupAddress: Hex;
     transactionHash: Hex;
   },
 ) {
@@ -215,7 +215,7 @@ async function getFinalizationMessagingInfo<chain extends Chain | undefined, acc
   const blocksNumber: number[] = [];
 
   const filteredLogs = receipt.logs.filter(
-    (log) => log.address.toLowerCase() === parameters.lineaRollupAddress.toLowerCase(),
+    (log) => log.address.toLowerCase() === parameters.linethRollupAddress.toLowerCase(),
   );
 
   const parsedLogs = parseEventLogs({

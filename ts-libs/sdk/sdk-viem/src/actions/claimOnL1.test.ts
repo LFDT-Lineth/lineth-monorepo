@@ -210,7 +210,7 @@ describe("claimOnL1", () => {
 
     expect(getMessageProof).toHaveBeenCalledWith(client, {
       l2Client,
-      lineaRollupAddress: undefined,
+      linethRollupAddress: undefined,
       l2MessageServiceAddress: undefined,
       messageHash: computeMessageHash({
         from,
@@ -291,14 +291,14 @@ describe("claimOnL1", () => {
       messageNonce,
       feeRecipient,
       l2Client,
-      lineaRollupAddress: TEST_CONTRACT_ADDRESS_1,
+      linethRollupAddress: TEST_CONTRACT_ADDRESS_1,
       l2MessageServiceAddress: TEST_CONTRACT_ADDRESS_2,
       account: mockAccount,
     });
 
     expect(getMessageProof).toHaveBeenCalledWith(client, {
       l2Client,
-      lineaRollupAddress: TEST_CONTRACT_ADDRESS_1,
+      linethRollupAddress: TEST_CONTRACT_ADDRESS_1,
       l2MessageServiceAddress: TEST_CONTRACT_ADDRESS_2,
       messageHash: computeMessageHash({
         from,

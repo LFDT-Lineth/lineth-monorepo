@@ -158,7 +158,7 @@ export type WalletActionsL1<
 >;
 
 export type WalletActionsL1Parameters = {
-  lineaRollupAddress: Address;
+  linethRollupAddress: Address;
   l2MessageServiceAddress: Address;
   l1TokenBridgeAddress: Address;
   l2TokenBridgeAddress: Address;
@@ -176,7 +176,7 @@ export function walletActionsL1(parameters?: WalletActionsL1Parameters) {
         ...args,
         ...(parameters
           ? {
-              lineaRollupAddress: parameters.lineaRollupAddress,
+              linethRollupAddress: parameters.linethRollupAddress,
               l2MessageServiceAddress: parameters.l2MessageServiceAddress,
               l1TokenBridgeAddress: parameters.l1TokenBridgeAddress,
               l2TokenBridgeAddress: parameters.l2TokenBridgeAddress,
@@ -189,7 +189,7 @@ export function walletActionsL1(parameters?: WalletActionsL1Parameters) {
           ...args,
           ...(parameters
             ? {
-                lineaRollupAddress: parameters.lineaRollupAddress,
+                linethRollupAddress: parameters.linethRollupAddress,
                 l2MessageServiceAddress: parameters.l2MessageServiceAddress,
               }
             : {}),
@@ -199,7 +199,7 @@ export function walletActionsL1(parameters?: WalletActionsL1Parameters) {
         ...args,
         ...(parameters
           ? {
-              lineaRollupAddress: parameters.lineaRollupAddress,
+              linethRollupAddress: parameters.linethRollupAddress,
             }
           : {}),
       });

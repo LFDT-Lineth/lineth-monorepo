@@ -18,9 +18,9 @@ import {
   TEST_TRANSACTION_HASH,
 } from "./constants/common";
 import {
-  LineaRollupClient,
-  EthersLineaRollupLogClient,
-  LineaRollupMessageRetriever,
+  LinethRollupClient,
+  EthersLinethRollupLogClient,
+  LinethRollupMessageRetriever,
   MerkleTreeService,
 } from "../../clients/ethereum";
 import { DefaultGasProvider, GasProvider } from "../../clients/gas";
@@ -175,7 +175,7 @@ export const generateMessage = (overrides?: Partial<Message>): Message => {
   };
 };
 
-export function generateLineaRollupClient(
+export function generateLinethRollupClient(
   l1Provider: Provider,
   l2Provider: LineaProvider,
   l1ContractAddress: string,
@@ -188,32 +188,32 @@ export function generateLineaRollupClient(
     enforceMaxGasFee?: boolean;
   },
 ): {
-  lineaRollupClient: LineaRollupClient;
-  lineaRollupLogClient: EthersLineaRollupLogClient;
+  linethRollupClient: LinethRollupClient;
+  linethRollupLogClient: EthersLinethRollupLogClient;
   l2MessageServiceLogClient: EthersL2MessageServiceLogClient;
   gasProvider: DefaultGasProvider;
-  messageRetriever: LineaRollupMessageRetriever;
+  messageRetriever: LinethRollupMessageRetriever;
   merkleTreeService: MerkleTreeService;
 } {
-  const lineaRollupLogClient = new EthersLineaRollupLogClient(l1Provider, l1ContractAddress);
+  const linethRollupLogClient = new EthersLinethRollupLogClient(l1Provider, l1ContractAddress);
   const l2MessageServiceLogClient = new EthersL2MessageServiceLogClient(l2Provider, l2ContractAddres);
   const gasProvider = new DefaultGasProvider(l1Provider, {
     maxFeePerGasCap: gasFeesOptions?.maxFeePerGasCap ?? DEFAULT_MAX_FEE_PER_GAS_CAP,
     gasEstimationPercentile: gasFeesOptions?.gasEstimationPercentile ?? DEFAULT_GAS_ESTIMATION_PERCENTILE,
     enforceMaxGasFee: gasFeesOptions?.enforceMaxGasFee ?? DEFAULT_ENFORCE_MAX_GAS_FEE,
   });
-  const messageRetriever = new LineaRollupMessageRetriever(l1Provider, lineaRollupLogClient, l1ContractAddress);
+  const messageRetriever = new LinethRollupMessageRetriever(l1Provider, linethRollupLogClient, l1ContractAddress);
   const merkleTreeService = new MerkleTreeService(
     l1Provider,
     l1ContractAddress,
-    lineaRollupLogClient,
+    linethRollupLogClient,
     l2MessageServiceLogClient,
     DEFAULT_L2_MESSAGE_TREE_DEPTH,
   );
-  const lineaRollupClient = new LineaRollupClient(
+  const linethRollupClient = new LinethRollupClient(
     l1Provider,
     l1ContractAddress,
-    lineaRollupLogClient,
+    linethRollupLogClient,
     l2MessageServiceLogClient,
     gasProvider,
     messageRetriever,
@@ -223,8 +223,8 @@ export function generateLineaRollupClient(
   );
 
   return {
-    lineaRollupClient,
-    lineaRollupLogClient,
+    linethRollupClient,
+    linethRollupLogClient,
     l2MessageServiceLogClient,
     gasProvider,
     messageRetriever,

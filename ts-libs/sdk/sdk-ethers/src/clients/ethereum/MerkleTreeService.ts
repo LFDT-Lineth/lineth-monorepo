@@ -1,8 +1,8 @@
 import { Block, TransactionReceipt, TransactionRequest, TransactionResponse } from "ethers";
 
-import { LineaRollup, LineaRollup__factory } from "../../contracts/typechain";
+import { LinethRollup, LinethRollup__factory } from "../../contracts/typechain";
 import {
-  ILineaRollupLogClient,
+  ILinethRollupLogClient,
   FinalizationMessagingInfo,
   IMerkleTreeService,
   Proof,
@@ -19,14 +19,14 @@ import { SparseMerkleTreeFactory } from "../../utils/merkleTree/MerkleTreeFactor
 import { BrowserProvider, Provider } from "../providers";
 
 export class MerkleTreeService implements IMerkleTreeService {
-  private readonly contract: LineaRollup;
+  private readonly contract: LinethRollup;
 
   /**
    * Initializes a new instance of the `MerkleTreeService`.
    *
    * @param {IProvider} provider - The provider for interacting with the blockchain.
    * @param {string} contractAddress - The address of the Linea Rollup contract.
-   * @param {ILineaRollupLogClient} lineaRollupLogClient - An instance of a class implementing the `ILineaRollupLogClient` interface for fetching events from ethereum.
+   * @param {ILinethRollupLogClient} linethRollupLogClient - An instance of a class implementing the `ILinethRollupLogClient` interface for fetching events from ethereum.
    * @param {IL2MessageServiceLogClient} l2MessageServiceLogClient - An instance of a class implementing the `IL2MessageServiceLogClient` interface for fetching events from linea.
    * @param {number} l2MessageTreeDepth - The depth of the L2 message tree.
    */
@@ -39,11 +39,11 @@ export class MerkleTreeService implements IMerkleTreeService {
       Provider | BrowserProvider
     >,
     private readonly contractAddress: string,
-    private readonly lineaRollupLogClient: ILineaRollupLogClient,
+    private readonly linethRollupLogClient: ILinethRollupLogClient,
     private readonly l2MessageServiceLogClient: IL2MessageServiceLogClient,
     private readonly l2MessageTreeDepth: number,
   ) {
-    this.contract = LineaRollup__factory.connect(contractAddress, this.provider);
+    this.contract = LinethRollup__factory.connect(contractAddress, this.provider);
   }
 
   /**
@@ -62,7 +62,7 @@ export class MerkleTreeService implements IMerkleTreeService {
       throw makeBaseError(`Message hash does not exist on L2. Message hash: ${messageHash}`);
     }
 
-    const [l2MessagingBlockAnchoredEvent] = await this.lineaRollupLogClient.getL2MessagingBlockAnchoredEvents({
+    const [l2MessagingBlockAnchoredEvent] = await this.linethRollupLogClient.getL2MessagingBlockAnchoredEvents({
       filters: { l2Block: BigInt(messageEvent.blockNumber) },
     });
 

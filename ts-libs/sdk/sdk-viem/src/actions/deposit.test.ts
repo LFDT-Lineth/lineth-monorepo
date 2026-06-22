@@ -415,7 +415,7 @@ describe("deposit", () => {
       amount,
       data,
       account: mockAccount,
-      lineaRollupAddress: customAddress,
+      linethRollupAddress: customAddress,
       l2MessageServiceAddress: customAddress,
     });
     expect(sendTransaction).toHaveBeenCalledTimes(1);
