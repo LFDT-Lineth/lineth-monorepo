@@ -171,7 +171,7 @@ func TestComputeLagrangeAtZ(t *testing.T) {
 		reference[i] = field.ElemFromExt(hornerExt(indicator, z.AsExt()))
 	}
 
-	got := ComputeLagrangeAtZ(z, d.Cardinality)
+	got := EvalLagrangeBasisAtZ(z, d.Cardinality)
 	if len(got) != size {
 		t.Fatalf("len: got %d, want %d", len(got), size)
 	}

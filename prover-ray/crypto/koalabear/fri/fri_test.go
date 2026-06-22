@@ -1,311 +1,217 @@
-package fri_test
+package fri
 
 import (
-	"fmt"
-	"strings"
+	"math/big"
+	"math/bits"
+	"math/rand/v2"
 	"testing"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/commitment"
-	fiatshamir "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fiatshamirrefactor"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/hash"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/merkle"
-	"github.com/consensys/gnark-crypto/field/koalabear"
-	ext "github.com/consensys/gnark-crypto/field/koalabear/extensions"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
 
-func freshTS() *fiatshamir.Transcript {
-	hasher := hash.NewPoseidon2SpongeHasher()
-	return fiatshamir.NewTranscript(&hasher)
-}
-
-func randomPoly(n int) []koalabear.Element {
-	elems := make([]koalabear.Element, n)
-	for i := range elems {
-		_, _ = elems[i].SetRandom()
+// bitReverseIdx returns the nbits-wide bit-reversal of i (matching the slice
+// permutation gnark's BitReverse applies).
+func bitReverseIdx(i, nbits int) int {
+	if nbits == 0 {
+		return 0
 	}
-	return elems
+	return int(bits.Reverse64(uint64(i)) >> (64 - nbits))
 }
 
-func randomExtPoly(n int) []ext.E6 {
-	elems := make([]ext.E6, n)
-	for i := range elems {
-		elems[i].MustSetRandom()
+// TestFoldLayerInternally checks that folding a bit-reversed codeword of P with
+// challenge alpha yields the bit-reversed codeword of the folded polynomial
+// Q(Y) = P_e(Y) + alpha·P_o(Y), and that a non-nil auxiliary vector adds
+// alpha²·aux at the matching output position. The expected codeword is built by
+// an independent canonical evaluation, so this also pins down the bit-reversed
+// twiddle alignment.
+func TestFoldLayerInternally(t *testing.T) {
+
+	prng := rand.New(utils.NewRandSource(1))
+
+	var two, invTwo field.Element
+	two.SetUint64(2)
+	invTwo.Inverse(&two)
+
+	for _, n := range []int{4, 8, 16} {
+
+		var (
+			kN     = utils.Log2Ceil(n)
+			half   = n / 2
+			domain = fft.NewDomain(uint64(n))
+			g      = domain.Generator
+			alpha  = field.PseudoRandExt(prng)
+		)
+
+		// random degree-(n-1) polynomial in canonical (coefficient) form
+		coeffs := make([]field.Ext, n)
+		for i := range coeffs {
+			coeffs[i] = field.PseudoRandExt(prng)
+		}
+
+		// bit-reversed codeword: layer[m] = P(g^{bitReverse(m)})
+		layer := make([]field.Ext, n)
+		for m := 0; m < n; m++ {
+			var x field.Element
+			x.Exp(g, big.NewInt(int64(bitReverseIdx(m, kN))))
+			layer[m] = polynomials.EvalCanonicalExt(coeffs, field.Lift(x))
+		}
+
+		// Q(Y) = P_e(Y) + alpha·P_o(Y): q_i = c_{2i} + alpha·c_{2i+1}
+		qcoeffs := make([]field.Ext, half)
+		for i := range qcoeffs {
+			var odd field.Ext
+			odd.Mul(&coeffs[2*i+1], &alpha)
+			qcoeffs[i].Add(&coeffs[2*i], &odd)
+		}
+
+		// expected: bit-reversed codeword of Q over the half domain (generator g²)
+		var g2 field.Element
+		g2.Square(&g)
+		want := make([]field.Ext, half)
+		for tt := 0; tt < half; tt++ {
+			var y field.Element
+			y.Exp(g2, big.NewInt(int64(bitReverseIdx(tt, kN-1))))
+			want[tt] = polynomials.EvalCanonicalExt(qcoeffs, field.Lift(y))
+		}
+
+		got := foldLayerInternally(layer, nil, alpha, domain, invTwo)
+		if len(got) != half {
+			t.Fatalf("n=%d: fold returned %d values, want %d", n, len(got), half)
+		}
+		for tt := 0; tt < half; tt++ {
+			if !got[tt].Equal(&want[tt]) {
+				t.Fatalf("n=%d: fold[%d] = %s, want %s", n, tt, got[tt].String(), want[tt].String())
+			}
+		}
+
+		// aux: the fold mixes alpha²·aux[t] into output position t
+		aux := make([]field.Ext, half)
+		for i := range aux {
+			aux[i] = field.PseudoRandExt(prng)
+		}
+		var alpha2 field.Ext
+		alpha2.Square(&alpha)
+
+		gotAux := foldLayerInternally(layer, aux, alpha, domain, invTwo)
+		for tt := 0; tt < half; tt++ {
+			var wantAux, term field.Ext
+			term.Mul(&aux[tt], &alpha2)
+			wantAux.Add(&want[tt], &term)
+			if !gotAux[tt].Equal(&wantAux) {
+				t.Fatalf("n=%d: fold+aux[%d] mismatch", n, tt)
+			}
+		}
 	}
-	return elems
 }
 
-// buildLevelTree builds the paired-leaf Merkle tree expected by FRI for a
-// single-poly level (helper around p.BuildLevelTree).
-func buildLevelTree(t *testing.T, p fri.Params, layer []koalabear.Element) *merkle.Tree {
-	t.Helper()
-	tree, err := p.BuildLevelTree(layer)
-	if err != nil {
-		t.Fatalf("BuildLevelTree: %v", err)
-	}
-	return tree
-}
-
-func buildLevelTreeExt(t *testing.T, p fri.Params, layer []ext.E6) *merkle.Tree {
-	t.Helper()
-	tree, err := p.BuildLevelTreeExt(layer)
-	if err != nil {
-		t.Fatalf("BuildLevelTreeExt: %v", err)
-	}
-	return tree
-}
-
-func testParams(t *testing.T, N, D, queries int) fri.Params {
-	t.Helper()
-	p, err := fri.NewParams(N, D, queries, commitment.DefaultLeafHasher, commitment.DefaultNodeHasher)
-	if err != nil {
-		t.Fatalf("NewParams(%d,%d,%d): %v", N, D, queries, err)
-	}
-	return p
-}
-
-// TestProveVerify runs prove+verify for several (N, D, Q) parameter sets.
+// TestProveVerify is the end-to-end check: an honest proof verifies across a few
+// (N, D, levels) configurations, and tampering with an opened leaf is rejected.
+// It exercises the full ProverState (Fold/Open), the query opening, and
+// checkQueryExt including the alpha²-batched extra levels.
 func TestProveVerify(t *testing.T) {
-	cases := []struct{ N, D, Q int }{
-		{16, 2, 1},
-		{16, 4, 2},
-		{64, 4, 4},
-		{64, 8, 3},
-		{256, 16, 5},
+
+	type cfg struct {
+		name     string
+		n, d, nq int
+		extraDs  []int
 	}
-	for _, tc := range cases {
-		tc := tc
-		t.Run(fmt.Sprintf("N%d_D%d_Q%d", tc.N, tc.D, tc.Q), func(t *testing.T) {
-			p := testParams(t, tc.N, tc.D, tc.Q)
+	cfgs := []cfg{
+		{"single-level", 8, 4, 3, nil},
+		{"one-extra", 16, 8, 4, []int{2}},
+		{"two-extra", 16, 8, 4, []int{4, 2}},
+	}
 
-			poly := randomPoly(tc.D)
-			evals, err := p.Encode(poly)
+	prng := rand.New(utils.NewRandSource(99))
+
+	for _, c := range cfgs {
+		t.Run(c.name, func(t *testing.T) {
+
+			p, err := NewParams(c.n, c.d, c.nq)
 			if err != nil {
-				t.Fatalf("Encode: %v", err)
+				t.Fatalf("NewParams: %v", err)
 			}
 
-			tree := buildLevelTree(t, p, evals)
-			tsP := freshTS()
-			prf, _, err := fri.Prove(p, []fri.Level{{
-				D:     p.D,
-				Evals: fri.LevelEvals{Base: evals},
-				Tree:  tree,
-			}}, tsP)
-			if err != nil {
-				t.Fatalf("Prove: %v", err)
+			levels := []Level{newRandomLevel(prng, p, c.d)}
+			for _, d := range c.extraDs {
+				levels = append(levels, newRandomLevel(prng, p, d))
 			}
 
-			tsV := freshTS()
-			if err := fri.Verify(p, []hash.Digest{tree.Root()}, []int{p.D}, prf, tsV); err != nil {
-				t.Fatalf("Verify: %v", err)
+			alphas := make([]field.Ext, p.numRounds)
+			for i := range alphas {
+				alphas[i] = field.PseudoRandExt(prng)
+			}
+			positions := make([]int, p.NumQueries)
+			for i := range positions {
+				positions[i] = int(prng.Uint64() % uint64(p.N))
+			}
+
+			prf := proverForTest(p, levels, alphas, positions)
+
+			// Prove sorts levels by decreasing D; mirror that order for the verifier.
+			levelRoots := make([]field.Octuplet, len(levels))
+			levelDs := make([]int, len(levels))
+			for i := range levels {
+				levelRoots[i] = levels[i].Tree.Root()
+				levelDs[i] = levels[i].D
+			}
+
+			if err := Verify(p, levelRoots, levelDs, prf, alphas, positions); err != nil {
+				t.Fatalf("Verify (honest) failed: %v", err)
+			}
+
+			// Tampering an opened leaf must make verification fail.
+			prf.FRIQueries[0][0].Leaf = field.PseudoRandOctuplet(prng)
+			if err := Verify(p, levelRoots, levelDs, prf, alphas, positions); err == nil {
+				t.Fatalf("Verify accepted a proof with a tampered leaf")
 			}
 		})
 	}
 }
 
-func TestProveVerifyExtRail(t *testing.T) {
-	p := testParams(t, 64, 4, 4)
-
-	poly := randomExtPoly(p.D)
-	evals, err := p.EncodeExt(poly)
-	if err != nil {
-		t.Fatalf("EncodeExt: %v", err)
+// newRandomLevel builds a Level with a random evaluation vector of the size
+// dictated by its degree d (N·d/D = N>>jl) and the matching binary Merkle tree.
+func newRandomLevel(prng *rand.Rand, p Params, d int) Level {
+	size := p.N * d / p.D
+	evals := make([]field.Ext, size)
+	for i := range evals {
+		evals[i] = field.PseudoRandExt(prng)
 	}
-
-	tree := buildLevelTreeExt(t, p, evals)
-	tsP := freshTS()
-	prf, _, err := fri.Prove(p, []fri.Level{{
-		D:     p.D,
-		Evals: fri.LevelEvals{Ext: evals},
-		Tree:  tree,
-	}}, tsP)
-	if err != nil {
-		t.Fatalf("Prove: %v", err)
-	}
-
-	tsV := freshTS()
-	if err := fri.Verify(p, []hash.Digest{tree.Root()}, []int{p.D}, prf, tsV); err != nil {
-		t.Fatalf("Verify: %v", err)
-	}
+	return Level{D: d, Evals: evals, Tree: buildTreeExt(evals)}
 }
 
-func TestProveVerifyExtRailWithExtraLevel(t *testing.T) {
-	p := testParams(t, 64, 16, 4)
-	pSmall := testParams(t, 16, 4, 4)
+// proverForTest runs multi-degree FRI (commit + query phase) and returns a Proof
+// together with the query positions. levels[0].D must equal p.D and every Level
+// must contain one evaluation vector on exactly one rail. levels is sorted
+// in-place in decreasing order of D.
+//
+// This helper is test-only and INSECURE: it takes the folding challenges
+// (alphas) and the query positions (openedPositions) as explicit inputs instead
+// of deriving them from the commitments via Fiat-Shamir. A real, non-interactive
+// prover must squeeze every challenge and query position out of a transcript
+// that has already absorbed the corresponding Merkle roots, so that the prover
+// cannot choose them after the fact. Letting the caller supply them directly
+// breaks soundness — a malicious prover could pick alphas and positions that
+// make a low-degree-test failure go unnoticed — which is exactly why this lives
+// in the test file: tests need deterministic, externally-controlled challenges
+// to pin down behaviour, but no production code path should ever build a proof
+// this way.
+func proverForTest(p Params, levels []Level, alphas []field.Ext, openedPositions []int) Proof {
 
-	poly0 := randomExtPoly(p.D)
-	evals0, err := p.EncodeExt(poly0)
+	st, err := NewProverState(p, levels)
 	if err != nil {
-		t.Fatalf("EncodeExt level 0: %v", err)
+		utils.Panic("could not build prover state: %v", err)
 	}
-	poly1 := randomExtPoly(pSmall.D)
-	evals1, err := pSmall.EncodeExt(poly1)
-	if err != nil {
-		t.Fatalf("EncodeExt extra level: %v", err)
+	if len(alphas) < p.numRounds {
+		utils.Panic("fri: Prove: need %d folding challenges, got %d", p.numRounds, len(alphas))
 	}
 
-	tree0 := buildLevelTreeExt(t, p, evals0)
-	tree1 := buildLevelTreeExt(t, p, evals1)
-
-	tsP := freshTS()
-	prf, _, err := fri.Prove(p, []fri.Level{
-		{
-			D:     p.D,
-			Evals: fri.LevelEvals{Ext: evals0},
-			Tree:  tree0,
-		},
-		{
-			D:     pSmall.D,
-			Evals: fri.LevelEvals{Ext: evals1},
-			Tree:  tree1,
-		},
-	}, tsP)
-	if err != nil {
-		t.Fatalf("Prove: %v", err)
-	}
-	if len(prf.LevelQueries) != 1 {
-		t.Fatalf("LevelQueries length = %d, want 1", len(prf.LevelQueries))
+	// Drive the state machine: feed one folding challenge per round, then open.
+	for j := 0; st.HasNext(); j++ {
+		st.Fold(alphas[j])
 	}
 
-	tsV := freshTS()
-	if err := fri.Verify(p, []hash.Digest{tree0.Root(), tree1.Root()}, []int{p.D, pSmall.D}, prf, tsV); err != nil {
-		t.Fatalf("Verify: %v", err)
-	}
-}
-
-// TestVerifyRejectsWrongRoot ensures Verify fails when root0 doesn't match the proof.
-func TestVerifyRejectsWrongRoot(t *testing.T) {
-	p := testParams(t, 64, 4, 4)
-	evals, _ := p.Encode(randomPoly(p.D))
-
-	tree := buildLevelTree(t, p, evals)
-	tsP := freshTS()
-	prf, _, _ := fri.Prove(p, []fri.Level{{
-		D:     p.D,
-		Evals: fri.LevelEvals{Base: evals},
-		Tree:  tree,
-	}}, tsP)
-
-	var badRoot hash.Digest
-	for i := range badRoot {
-		_, _ = badRoot[i].SetRandom()
-	}
-
-	tsV := freshTS()
-	if err := fri.Verify(p, []hash.Digest{badRoot}, []int{p.D}, prf, tsV); err == nil {
-		t.Fatal("Verify accepted a proof with a wrong root0")
-	}
-}
-
-// TestVerifyRejectsFlippedLeaf corrupts one leaf in a QueryLayer and expects rejection.
-func TestVerifyRejectsFlippedLeaf(t *testing.T) {
-	p := testParams(t, 64, 4, 4)
-	evals, _ := p.Encode(randomPoly(p.D))
-	tree := buildLevelTree(t, p, evals)
-
-	tsP := freshTS()
-	prf, _, err := fri.Prove(p, []fri.Level{{
-		D:     p.D,
-		Evals: fri.LevelEvals{Base: evals},
-		Tree:  tree,
-	}}, tsP)
-	if err != nil {
-		t.Fatalf("Prove: %v", err)
-	}
-
-	// Flip the first leaf of the first query, first layer.
-	_, _ = prf.FRIQueries[0].Layers[0].LeafPBase.SetRandom()
-
-	tsV := freshTS()
-	if err := fri.Verify(p, []hash.Digest{tree.Root()}, []int{p.D}, prf, tsV); err == nil {
-		t.Fatal("Verify accepted a proof with a corrupted leaf")
-	}
-}
-
-func TestVerifyRejectsFlippedExtLeaf(t *testing.T) {
-	p := testParams(t, 64, 4, 4)
-	evals, _ := p.EncodeExt(randomExtPoly(p.D))
-	tree := buildLevelTreeExt(t, p, evals)
-
-	tsP := freshTS()
-	prf, _, err := fri.Prove(p, []fri.Level{{
-		D:     p.D,
-		Evals: fri.LevelEvals{Ext: evals},
-		Tree:  tree,
-	}}, tsP)
-	if err != nil {
-		t.Fatalf("Prove: %v", err)
-	}
-
-	prf.FRIQueries[0].Layers[0].LeafPExt.MustSetRandom()
-
-	tsV := freshTS()
-	if err := fri.Verify(p, []hash.Digest{tree.Root()}, []int{p.D}, prf, tsV); err == nil {
-		t.Fatal("Verify accepted a proof with a corrupted ext leaf")
-	}
-}
-
-func TestVerifyRejectsExtRunningProofWithWrongLeafIndex(t *testing.T) {
-	p := testParams(t, 64, 4, 4)
-	evals, _ := p.EncodeExt(randomExtPoly(p.D))
-	tree := buildLevelTreeExt(t, p, evals)
-
-	tsP := freshTS()
-	prf, _, err := fri.Prove(p, []fri.Level{{
-		D:     p.D,
-		Evals: fri.LevelEvals{Ext: evals},
-		Tree:  tree,
-	}}, tsP)
-	if err != nil {
-		t.Fatalf("Prove: %v", err)
-	}
-
-	prf.FRIQueries[0].Layers[0].Path.LeafIdx += p.N / 2
-
-	tsV := freshTS()
-	err = fri.Verify(p, []hash.Digest{tree.Root()}, []int{p.D}, prf, tsV)
-	requireLeafIndexError(t, err)
-}
-
-func TestVerifyRejectsLevelProofWithWrongLeafIndex(t *testing.T) {
-	p := testParams(t, 64, 16, 4)
-	pSmall := testParams(t, 16, 4, 4)
-
-	evals0, _ := p.Encode(randomPoly(p.D))
-	evals1, _ := pSmall.Encode(randomPoly(pSmall.D))
-	tree0 := buildLevelTree(t, p, evals0)
-	tree1 := buildLevelTree(t, p, evals1)
-
-	tsP := freshTS()
-	prf, _, err := fri.Prove(p, []fri.Level{
-		{
-			D:     p.D,
-			Evals: fri.LevelEvals{Base: evals0},
-			Tree:  tree0,
-		},
-		{
-			D:     pSmall.D,
-			Evals: fri.LevelEvals{Base: evals1},
-			Tree:  tree1,
-		},
-	}, tsP)
-	if err != nil {
-		t.Fatalf("Prove: %v", err)
-	}
-
-	prf.LevelQueries[0][0].Path.LeafIdx += len(evals1) / 2
-
-	tsV := freshTS()
-	err = fri.Verify(p, []hash.Digest{tree0.Root(), tree1.Root()}, []int{p.D, pSmall.D}, prf, tsV)
-	requireLeafIndexError(t, err)
-}
-
-func requireLeafIndexError(t *testing.T, err error) {
-	t.Helper()
-	if err == nil {
-		t.Fatal("Verify accepted a proof with a wrong Merkle proof leaf index")
-	}
-	if !strings.Contains(err.Error(), "leaf index") && !strings.Contains(err.Error(), "opened leaf") {
-		t.Fatalf("Verify failed for a different reason: %v", err)
-	}
+	return st.Open(openedPositions)
 }
