@@ -12,6 +12,14 @@ pub const Vector = union(enum) {
 pub const Scalar = union(enum) {
     base: base.Element,
     ext: ext.Ext,
+
+    // TODO: consider short-circuiting when all scalars are base elements to avoid lifting overhead.
+    pub fn toExt(self: Scalar) ext.Ext {
+        return switch (self) {
+            .base => |b| ext.Ext.lift(b),
+            .ext => |e| e,
+        };
+    }
 };
 
 pub fn ElementArray(comptime len: usize) type {
