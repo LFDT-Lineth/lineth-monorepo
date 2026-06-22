@@ -32,8 +32,8 @@ func main() {
 		fatal("--size must be >= 1")
 	}
 
-	fmt.Println("| vectors | false real (s) | true real (s) | speedup |")
-	fmt.Println("|---|---|---|---|")
+	fmt.Println("| vectors | KECCAK_ACCEL=false real (s) | KECCAK_ACCEL=true real (s) | speedup |")
+	fmt.Println("|---------|-----------------------------|----------------------------|---------|")
 
 	for index := 0; index < cfg.intervals; index++ {
 		selector := vectorRange(cfg.start, cfg.size, index)
