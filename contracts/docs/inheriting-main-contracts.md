@@ -1,4 +1,4 @@
-# Customizing Linea Rollup, Messaging, and Bridging Components
+# Customizing LinEth Rollup, Messaging, and Bridging Components
 
 This guide explains how to customize core rollup, messaging, and bridging functionality by overriding virtual functions in the Lineth protocol contracts. Several examples are provided to help you get started. Please note, these are just illustrative samples.
 
@@ -8,9 +8,9 @@ This guide explains how to customize core rollup, messaging, and bridging functi
 
 To modify the ABI version returned, the `CONTRACT_VERSION()` must be overriden with your specific string value. The default is the base version.
 
-## 🧱 Customizing Linea Rollup Behavior
+## 🧱 Customizing LinEth Rollup Behavior
 
-To modify the behavior of the rollup mechanism itself (e.g. blob submission for finalization), you can override virtual functions in `LineaRollup.sol`.
+To modify the behavior of the rollup mechanism itself (e.g. blob submission for finalization), you can override virtual functions in `LinethRollup.sol`.
 
 ## ✉️ Customizing Message Sending Behavior
 

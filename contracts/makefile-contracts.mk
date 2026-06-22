@@ -31,8 +31,8 @@ deploy-upgradeable-predeploys:
 		RPC_URL=http:\\localhost:8545/ \
 		pnpm exec ts-node local-deployments-artifacts/deployPredeployContractsV1.ts
 
-deploy-linea-rollup: L1_CONTRACT_VERSION:=8
-deploy-linea-rollup:
+deploy-lineth-rollup: L1_CONTRACT_VERSION:=8
+deploy-lineth-rollup:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
 		export FORK_TIMESTAMP=$$(cat docker/config/l2-genesis-initialization/fork-timestamp.txt 2>/dev/null || true) && \
 		cd $(contracts_package_dir); \
@@ -43,9 +43,9 @@ deploy-linea-rollup:
 		INITIAL_L2_BLOCK_NUMBER=0 \
 		L2_GENESIS_TIMESTAMP=$${FORK_TIMESTAMP:-1683325137} \
 		L1_SECURITY_COUNCIL=0x90F79bf6EB2c4f870365E785982E1f101E93b906 \
-		LINEA_ROLLUP_OPERATORS=$${LINEA_ROLLUP_OPERATORS:-0x70997970C51812dc3A010C7d01b50e0d17dc79C8,0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC} \
-		LINEA_ROLLUP_RATE_LIMIT_PERIOD=86400 \
-		LINEA_ROLLUP_RATE_LIMIT_AMOUNT=1000000000000000000000 \
+		LINETH_ROLLUP_OPERATORS=$${LINETH_ROLLUP_OPERATORS:-0x70997970C51812dc3A010C7d01b50e0d17dc79C8,0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC} \
+		LINETH_ROLLUP_RATE_LIMIT_PERIOD=86400 \
+		LINETH_ROLLUP_RATE_LIMIT_AMOUNT=1000000000000000000000 \
 		FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID=1337 \
 		FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER=2000 \
 		FORCED_TRANSACTION_GATEWAY_MAX_GAS_LIMIT=300000 \
@@ -54,18 +54,18 @@ deploy-linea-rollup:
 		FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER=10 \
 		SECURITY_COUNCIL_PRIVATE_KEY=0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6 \
 		YIELD_MANAGER_ADDRESS=0x000000000000000000000000000000000000dEaD \
-		pnpm exec ts-node local-deployments-artifacts/deployPlonkVerifierAndLineaRollupV$(L1_CONTRACT_VERSION).ts
+		pnpm exec ts-node local-deployments-artifacts/deployPlonkVerifierAndLinethRollupV$(L1_CONTRACT_VERSION).ts
 
-deploy-linea-rollup-v6:
-		$(MAKE) deploy-linea-rollup L1_CONTRACT_VERSION=6
+deploy-lineth-rollup-v6:
+		$(MAKE) deploy-lineth-rollup L1_CONTRACT_VERSION=6
 
-deploy-linea-rollup-v7_1:
-		$(MAKE) deploy-linea-rollup L1_CONTRACT_VERSION=7_1
+deploy-lineth-rollup-v7_1:
+		$(MAKE) deploy-lineth-rollup L1_CONTRACT_VERSION=7_1
 
-deploy-linea-rollup-v7: deploy-linea-rollup-v7_1
+deploy-lineth-rollup-v7: deploy-lineth-rollup-v7_1
 
-deploy-linea-rollup-v8:
-		$(MAKE) deploy-linea-rollup L1_CONTRACT_VERSION=8
+deploy-lineth-rollup-v8:
+		$(MAKE) deploy-lineth-rollup L1_CONTRACT_VERSION=8
 
 deploy-validium: L1_CONTRACT_VERSION:=2
 deploy-validium:
@@ -112,7 +112,7 @@ deploy-token-bridge-l1:
 		DEPLOY_TOKEN_BRIDGE_ON_L1=true \
 		L1_SECURITY_COUNCIL=0x90F79bf6EB2c4f870365E785982E1f101E93b906 \
 		L2_MESSAGE_SERVICE_ADDRESS=0xe537D669CA013d86EBeF1D64e40fC74CADC91987 \
-		LINEA_ROLLUP_ADDRESS=0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9 \
+		LINETH_ROLLUP_ADDRESS=0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9 \
 		pnpm exec ts-node local-deployments-artifacts/deployBridgedTokenAndTokenBridgeV1_1.ts
 
 deploy-token-bridge-l2:
@@ -125,7 +125,7 @@ deploy-token-bridge-l2:
 		DEPLOY_TOKEN_BRIDGE_ON_L1=false \
 		L2_SECURITY_COUNCIL=0xf17f52151EbEF6C7334FAD080c5704D77216b732 \
 		L2_MESSAGE_SERVICE_ADDRESS=0xe537D669CA013d86EBeF1D64e40fC74CADC91987 \
-		LINEA_ROLLUP_ADDRESS=0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9 \
+		LINETH_ROLLUP_ADDRESS=0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9 \
 		pnpm exec ts-node local-deployments-artifacts/deployBridgedTokenAndTokenBridgeV1_1.ts
 
 deploy-l1-test-erc20:
@@ -151,17 +151,17 @@ deploy-l2-test-erc20:
 		pnpm exec ts-node local-deployments-artifacts/deployTestERC20.ts
 
 deploy-contracts: L1_CONTRACT_VERSION:=8
-deploy-contracts: LINEA_PROTOCOL_CONTRACTS_ONLY:=false
-deploy-contracts: LINEA_L1_CONTRACT_DEPLOYMENT_TARGET:=deploy-linea-rollup-v$(L1_CONTRACT_VERSION)
+deploy-contracts: LINETH_PROTOCOL_CONTRACTS_ONLY:=false
+deploy-contracts: LINETH_L1_CONTRACT_DEPLOYMENT_TARGET:=deploy-lineth-rollup-v$(L1_CONTRACT_VERSION)
 deploy-contracts:
 	cd $(contracts_package_dir); \
 	export L1_NONCE=$$(pnpm exec ts-node local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --rpc-url http://localhost:8445) && \
 	export L2_NONCE=$$(pnpm exec ts-node local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae --rpc-url http://localhost:8545) && \
 	cd .. && \
-	if [ "$(LINEA_PROTOCOL_CONTRACTS_ONLY)" = "false" ]; then \
-		$(MAKE) -j7 $(LINEA_L1_CONTRACT_DEPLOYMENT_TARGET) deploy-token-bridge-l1 deploy-l1-test-erc20 deploy-l2messageservice deploy-token-bridge-l2 deploy-l2-test-erc20 deploy-l2-evm-opcode-tester; \
+	if [ "$(LINETH_PROTOCOL_CONTRACTS_ONLY)" = "false" ]; then \
+		$(MAKE) -j7 $(LINETH_L1_CONTRACT_DEPLOYMENT_TARGET) deploy-token-bridge-l1 deploy-l1-test-erc20 deploy-l2messageservice deploy-token-bridge-l2 deploy-l2-test-erc20 deploy-l2-evm-opcode-tester; \
 	else \
-		$(MAKE) -j6 $(LINEA_L1_CONTRACT_DEPLOYMENT_TARGET) deploy-l2messageservice; \
+		$(MAKE) -j6 $(LINETH_L1_CONTRACT_DEPLOYMENT_TARGET) deploy-l2messageservice; \
 	fi
 
 
@@ -190,14 +190,14 @@ deploy-l2-scenario-testing-proxy:
 		RPC_URL=http:\\localhost:8545/ \
 		pnpm exec ts-node local-deployments-artifacts/deployLineaScenarioDelegatingProxy.ts
 
-execute-scenario-testing-proxy-scenario: LINEA_SCENARIO_DELEGATING_PROXY_ADDRESS:=0x2f6dAaF8A81AB675fbD37Ca6Ed5b72cf86237453
+execute-scenario-testing-proxy-scenario: LINETH_SCENARIO_DELEGATING_PROXY_ADDRESS:=0x2f6dAaF8A81AB675fbD37Ca6Ed5b72cf86237453
 execute-scenario-testing-proxy-scenario:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
 		# GAS_LIMIT=452500 will cause it to fail
 		cd $(contracts_package_dir); \
-		LINEA_SCENARIO_DELEGATING_PROXY_ADDRESS=$(LINEA_SCENARIO_DELEGATING_PROXY_ADDRESS) \
+		LINETH_SCENARIO_DELEGATING_PROXY_ADDRESS=$(LINETH_SCENARIO_DELEGATING_PROXY_ADDRESS) \
 		NUMBER_OF_LOOPS=10000000 \
-		LINEA_SCENARIO=1 \
+		LINETH_SCENARIO=1 \
 		GAS_LIMIT=452500 \
 		DEPLOYER_PRIVATE_KEY=0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae \
 		RPC_URL=http:\\localhost:8545/ \

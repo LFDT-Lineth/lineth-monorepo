@@ -837,7 +837,7 @@
             }
           ],
           "indexed": false,
-          "internalType": "struct ILineaRollupBase.BaseInitializationData",
+          "internalType": "struct ILinethRollupBase.BaseInitializationData",
           "name": "initializationData",
           "type": "tuple"
         },
@@ -848,7 +848,7 @@
           "type": "bytes32"
         }
       ],
-      "name": "LineaRollupBaseInitialized",
+      "name": "LinethRollupBaseInitialized",
       "type": "event"
     },
     {
@@ -867,7 +867,7 @@
           "type": "bytes8"
         }
       ],
-      "name": "LineaRollupVersionChanged",
+      "name": "LinethRollupVersionChanged",
       "type": "event"
     },
     {
@@ -1879,7 +1879,7 @@
                   "type": "bytes32"
                 }
               ],
-              "internalType": "struct ILineaRollupBase.ShnarfData",
+              "internalType": "struct ILinethRollupBase.ShnarfData",
               "name": "shnarfData",
               "type": "tuple"
             },
@@ -1949,7 +1949,7 @@
               "type": "bytes"
             }
           ],
-          "internalType": "struct ILineaRollupBase.FinalizationDataV4",
+          "internalType": "struct ILinethRollupBase.FinalizationDataV4",
           "name": "_finalizationData",
           "type": "tuple"
         }
@@ -2224,7 +2224,7 @@
               "type": "address"
             }
           ],
-          "internalType": "struct ILineaRollupBase.BaseInitializationData",
+          "internalType": "struct ILinethRollupBase.BaseInitializationData",
           "name": "_initializationData",
           "type": "tuple"
         }

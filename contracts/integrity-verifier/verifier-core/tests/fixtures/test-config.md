@@ -25,16 +25,16 @@ schema: ../../examples/schemas/yield-manager.json
 
 ---
 
-## Contract: TestLineaRollup-Proxy
+## Contract: TestLinethRollup-Proxy
 
 ```verifier
-name: TestLineaRollup-Proxy
+name: TestLinethRollup-Proxy
 address: 0x2A5CDCfc38856e2590E9Bd32F54Fa348e5De5f48
 chain: test-chain
-artifact: ./artifacts/LineaRollup.json
+artifact: ./artifacts/LinethRollup.json
 isProxy: true
 ozVersion: v4
-schema: ../../examples/schemas/linea-rollup.json
+schema: ../../examples/schemas/lineth-rollup.json
 ```
 
 ### State Verification
@@ -44,17 +44,17 @@ schema: ../../examples/schemas/linea-rollup.json
 | viewCall | Contract version | `CONTRACT_VERSION` | | `7.0` |
 | viewCall | OPERATOR_ROLE check | `hasRole` | `0x76ef52a5344b10ed112c1d48c7c06f51e919518ea6fb005f9b25b359b955e3be`,`0xe6Ec44e651B6d961c15f1A8df9eA7DFaDb986eA1` | true |
 | slot | Initialized version | `0x0` | uint8 | `7` |
-| storagePath | Yield manager address | `LineaRollupYieldExtensionStorage:_yieldManager` | | `0xafeB487DD3E3Cb0342e8CF0215987FfDc9b72c9b` |
+| storagePath | Yield manager address | `LinethRollupYieldExtensionStorage:_yieldManager` | | `0xafeB487DD3E3Cb0342e8CF0215987FfDc9b72c9b` |
 
 ---
 
-## Contract: TestLineaRollup-Implementation
+## Contract: TestLinethRollup-Implementation
 
 ```verifier
-name: TestLineaRollup-Implementation
+name: TestLinethRollup-Implementation
 address: 0xCaAa421FfCF701bEFd676a2F5d0A161CCFA5a07E
 chain: test-chain
-artifact: ./artifacts/LineaRollup.json
+artifact: ./artifacts/LinethRollup.json
 isProxy: false
 ```
 

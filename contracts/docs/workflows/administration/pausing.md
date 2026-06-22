@@ -1,5 +1,5 @@
 
-# ⏸️ Pausing Features on the LineaRollup, TokenBridge, and L2MessageService (with Pause Types)
+# ⏸️ Pausing Features on the LinethRollup, TokenBridge, and L2MessageService (with Pause Types)
 
 This document outlines how a Safe Member can pause specific features on key Linea ecosystem contracts using well-defined pause types.
 
@@ -76,7 +76,7 @@ Safe Member
 
 | Contract           | Address                                           |
 |--------------------|---------------------------------------------------|
-| LineaRollup        | `0xd194Bd535d285f05D7B411E21A1460D11B0876F`       |
+| LinethRollup        | `0xd194Bd535d285f05D7B411E21A1460D11B0876F`       |
 | L1 TokenBridge     | `0x051F1D88f0aF5763fB888eC4378b4D8B29ea3319`       |
 | L2MessageService   | `0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec`      |
 | L2 Token Bridge    | `0x353012dc4a9A6cF55c941bADC267f82004A8ceB9`        |

@@ -289,10 +289,10 @@ Requires a `schemaFile` that defines the storage layout.
 ```json
 {
   "stateVerification": {
-    "schemaFile": "../schemas/linea-rollup.json",
+    "schemaFile": "../schemas/lineth-rollup.json",
     "storagePaths": [
       {
-        "path": "LineaRollupYieldExtensionStorage:_yieldManager",
+        "path": "LinethRollupYieldExtensionStorage:_yieldManager",
         "expected": "0xafeB487DD3E3Cb0342e8CF0215987FfDc9b72c9b"
       },
       {
@@ -432,7 +432,7 @@ For Markdown configs, use a table with these columns:
 | viewCall | Contract version | `CONTRACT_VERSION` | | `7.0` |
 | viewCall | Admin role check | `hasRole` | `0x00...`,`0xe6Ec...` | true |
 | slot | Initialized version | `0x0` | uint8 | `7` |
-| storagePath | Yield manager | `LineaRollupStorage:_yieldManager` | | `0xafeB...` |
+| storagePath | Yield manager | `LinethRollupStorage:_yieldManager` | | `0xafeB...` |
 ```
 
 **Column Meanings by Type:**
@@ -650,11 +650,11 @@ cd verifier-core
 
 # Analyze and print suggestions to console
 pnpm exec ts-node tools/analyze-initializers.ts \
-  ../contracts/out/LineaRollup.sol/LineaRollup.json
+  ../contracts/out/LinethRollup.sol/LinethRollup.json
 
 # Save analysis to file
 pnpm exec ts-node tools/analyze-initializers.ts \
-  ../contracts/out/LineaRollup.sol/LineaRollup.json \
+  ../contracts/out/LinethRollup.sol/LinethRollup.json \
   analysis.json
 ```
 
@@ -695,7 +695,7 @@ node dist/generate-schema-cli.mjs Storage.sol -o schema.json
 pnpx generate-schema-viem Storage.sol schema.json
 
 # Multiple files (for inherited storage)
-pnpx generate-schema-viem LineaRollupYieldExtension.sol YieldManager.sol -o schema.json
+pnpx generate-schema-viem LinethRollupYieldExtension.sol YieldManager.sol -o schema.json
 
 # Process all .sol files in a directory
 pnpx generate-schema-viem ./contracts/storage/ -o schema.json --verbose

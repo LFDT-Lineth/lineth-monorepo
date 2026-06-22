@@ -10,7 +10,7 @@ import { getRequiredEnvVar } from "../common/helpers/environment";
 import { get1559Fees } from "../scripts/utils";
 
 async function main() {
-  const ORDERED_NONCE_POST_LINEAROLLUP = 7;
+  const ORDERED_NONCE_POST_LINETHROLLUP = 7;
   const ORDERED_NONCE_POST_TOKENBRIDGE = 5;
   const ORDERED_NONCE_POST_L2MESSAGESERVICE = 3;
 
@@ -28,7 +28,7 @@ async function main() {
     if (!process.env.L1_NONCE) {
       walletNonce = await wallet.getNonce();
     } else {
-      walletNonce = parseInt(process.env.L1_NONCE) + ORDERED_NONCE_POST_LINEAROLLUP + ORDERED_NONCE_POST_TOKENBRIDGE;
+      walletNonce = parseInt(process.env.L1_NONCE) + ORDERED_NONCE_POST_LINETHROLLUP + ORDERED_NONCE_POST_TOKENBRIDGE;
     }
     fees = { gasPrice: (await get1559Fees(provider)).gasPrice };
   } else {

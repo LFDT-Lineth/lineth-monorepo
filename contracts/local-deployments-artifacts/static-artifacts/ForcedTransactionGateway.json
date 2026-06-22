@@ -7,7 +7,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "_lineaRollup",
+          "name": "_linethRollup",
           "type": "address"
         },
         {
@@ -349,7 +349,7 @@
     },
     {
       "inputs": [],
-      "name": "LINEA_ROLLUP",
+      "name": "LINETH_ROLLUP",
       "outputs": [
         {
           "internalType": "contract IAcceptForcedTransactions",

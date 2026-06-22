@@ -3,13 +3,13 @@
 This configuration is used for live integration tests against Sepolia.
 Requires `ETHEREUM_SEPOLIA_RPC_URL` environment variable.
 
-## Contract: LineaRollup-Proxy
+## Contract: LinethRollup-Proxy
 
 ```verifier
-name: LineaRollup-Proxy
+name: LinethRollup-Proxy
 address: 0x2A5CDCfc38856e2590E9Bd32F54Fa348e5De5f48
 chain: ethereum-sepolia
-artifact: ../../../../../contracts/deployments/bytecode/2026-01-14/LineaRollup.json
+artifact: ../../../../../contracts/deployments/bytecode/2026-01-14/LinethRollup.json
 isProxy: true
 ozVersion: v4
 ```
@@ -23,13 +23,13 @@ ozVersion: v4
 
 ---
 
-## Contract: LineaRollup-Implementation
+## Contract: LinethRollup-Implementation
 
 ```verifier
-name: LineaRollup-Implementation
+name: LinethRollup-Implementation
 address: 0xCaAa421FfCF701bEFd676a2F5d0A161CCFA5a07E
 chain: ethereum-sepolia
-artifact: ../../../../../contracts/deployments/bytecode/2026-01-14/LineaRollup.json
+artifact: ../../../../../contracts/deployments/bytecode/2026-01-14/LinethRollup.json
 isProxy: false
 ```
 

@@ -22,7 +22,7 @@ This app is local operator tooling for the contracts package. It is not intended
 
 ## One session per `hardhat deploy` run
 
-For chained tags, e.g. `--tags PlonkVerifier,LineaRollup,Timelock`, Hardhat keeps **one** browser session for the **entire** run. Deploy scripts execute in order; you reconnect/sign per transaction, but the UI and bridge are **not** restarted between files.
+For chained tags, e.g. `--tags PlonkVerifier,LinethRollup,Timelock`, Hardhat keeps **one** browser session for the **entire** run. Deploy scripts execute in order; you reconnect/sign per transaction, but the UI and bridge are **not** restarted between files.
 
 ## UI features (operator-facing)
 

@@ -68,7 +68,7 @@ The Forced Transaction system provides **processing guarantees** for Linea L2. I
 
 The **Coordinator** is an off-chain service that bridges L1 and L2:
 
-1. **Listens** to `ForcedTransactionAdded` events emitted by LineaRollup on L1
+1. **Listens** to `ForcedTransactionAdded` events emitted by LinethRollup on L1
 2. **Extracts** the RLP-encoded signed transaction from the event
 3. **Submits** the transaction to the Sequencer for processing on L2 via `linea_sendForcedRawTransaction` JSON-RPC including `forcedTransactionNumber`
 
@@ -79,7 +79,7 @@ The Coordinator ensures that forced transactions registered on L1 are actually d
 │                         COORDINATOR RESPONSIBILITIES                        │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-  L1 LineaRollup                    Coordinator                    L2 Sequencer
+  L1 LinethRollup                    Coordinator                    L2 Sequencer
   ───────────────                   ───────────                    ────────────
         │                                │                              │
         │  ForcedTransactionAdded        │                              │
@@ -115,7 +115,7 @@ The **Sequencer** is responsible for block production:
   ┌──────────────────────────────────────┐
   │   ForcedTransactionGateway           │
   │   ────────────────────────────────── │
-  │   - LINEA_ROLLUP                     │
+  │   - LINETH_ROLLUP                     │
   │   - DESTINATION_CHAIN_ID             │
   │   - L2_BLOCK_BUFFER                  │
   │   - L2_BLOCK_DURATION_SECONDS        │
@@ -130,7 +130,7 @@ The **Sequencer** is responsible for block production:
                      │ calls
                      ▼
   ┌─────────────────────────────┐      ┌─────────────────────────────┐
-  │        LineaRollup          │      │       AddressFilter         │
+  │        LinethRollup          │      │       AddressFilter         │
   │   ───────────────────────── │      │   ───────────────────────── │
   │   - currentFinalizedState   │      │   - filteredAddresses       │
   │   - nextForcedTxNumber      │◄────►│   ───────────────────────── │
@@ -166,7 +166,7 @@ The **Sequencer** is responsible for block production:
                                                       │ submits proof + finalization
                                                       ▼
                                               ┌───────────────┐
-                                              │ LineaRollup   │
+                                              │ LinethRollup   │
                                               │ finalizeBlocks│
                                               └───────────────┘
 ```
@@ -183,7 +183,7 @@ The user-facing contract that validates and submits forced transactions.
 
 | Parameter | Description |
 |-----------|-------------|
-| `LINEA_ROLLUP` | Reference to the LineaRollup contract |
+| `LINETH_ROLLUP` | Reference to the LinethRollup contract |
 | `DESTINATION_CHAIN_ID` | L2 chain ID for RLP encoding |
 | `L2_BLOCK_BUFFER` | Buffer added to deadline calculation (in L2 blocks) |
 | `L2_BLOCK_DURATION_SECONDS` | L2 block time in seconds, used to convert elapsed time to L2 blocks in deadline calculation |
@@ -192,7 +192,7 @@ The user-facing contract that validates and submits forced transactions.
 | `MAX_INPUT_LENGTH_LIMIT` | Maximum calldata length |
 | `ADDRESS_FILTER` | Contract for address filtering |
 
-### 2. LineaRollup
+### 2. LinethRollup
 
 The main rollup contract that stores forced transactions and enforces processing during finalization.
 
@@ -298,7 +298,7 @@ PHASE 4: STORAGE & CHAINING
   2. Compute new rolling hash via MiMC:
      newRollingHash = MiMC(prevRollingHash, txHashMSB, txHashLSB, deadline, signer)
 
-  3. Store in LineaRollup:
+  3. Store in LinethRollup:
      forcedTransactionRollingHashes[nextNumber] = newRollingHash
      forcedTransactionL2BlockNumbers[nextNumber] = deadline
      nextForcedTransactionNumber++
@@ -421,7 +421,7 @@ The sequencer will typically process forced transactions **well before** the dea
 │                   FINALIZATION PROCESSING CHECK                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-  OFF-CHAIN (Prover)                        ON-CHAIN (LineaRollup)
+  OFF-CHAIN (Prover)                        ON-CHAIN (LinethRollup)
   ──────────────────                        ─────────────────────
         │                                          │
   ┌─────┴─────┐                                    │
@@ -477,7 +477,7 @@ The sequencer will typically process forced transactions **well before** the dea
                                                          └────────────────┘       │
 ```
 
-### Rolling Hash Existence Check (from LineaRollup)
+### Rolling Hash Existence Check (from LinethRollup)
 
 Before the censorship check, finalization verifies that the rolling hash exists for the claimed final forced transaction:
 
@@ -497,7 +497,7 @@ if (
 }
 ```
 
-### The Censorship Resistance Check (from LineaRollup)
+### The Censorship Resistance Check (from LinethRollup)
 
 ```solidity
 // Get the NEXT forced transaction number after the one being finalized
@@ -611,9 +611,9 @@ Users must provide the `LastFinalizedState` struct when submitting forced transa
     messageNumber ──────────────────┼──> From FinalizedStateUpdated event
     forcedTransactionNumber ────────┘
     
-    messageRollingHash ─────────────────> lineaRollup.rollingHashes(messageNumber)
+    messageRollingHash ─────────────────> linethRollup.rollingHashes(messageNumber)
     
-    forcedTransactionRollingHash ───────> lineaRollup.forcedTransactionRollingHashes(
+    forcedTransactionRollingHash ───────> linethRollup.forcedTransactionRollingHashes(
                                               forcedTransactionNumber
                                           )
   }
@@ -623,8 +623,8 @@ Users must provide the `LastFinalizedState` struct when submitting forced transa
 
 ```typescript
 // 1. Get the latest FinalizedStateUpdated event
-const events = await lineaRollup.queryFilter(
-    lineaRollup.filters.FinalizedStateUpdated()
+const events = await linethRollup.queryFilter(
+    linethRollup.filters.FinalizedStateUpdated()
 );
 const latestEvent = events[events.length - 1];
 
@@ -637,8 +637,8 @@ const {
 } = latestEvent.args;
 
 // 3. Query rolling hashes from contract state
-const messageRollingHash = await lineaRollup.rollingHashes(messageNumber);
-const forcedTransactionRollingHash = await lineaRollup
+const messageRollingHash = await linethRollup.rollingHashes(messageNumber);
+const forcedTransactionRollingHash = await linethRollup
     .forcedTransactionRollingHashes(forcedTransactionNumber);
 
 // 4. Construct the LastFinalizedState
@@ -658,7 +658,7 @@ const expectedHash = keccak256(abi.encode(
     forcedTransactionRollingHash,
     timestamp
 ));
-const storedHash = await lineaRollup.currentFinalizedState();
+const storedHash = await linethRollup.currentFinalizedState();
 assert(expectedHash === storedHash, "State mismatch - data may be stale");
 ```
 

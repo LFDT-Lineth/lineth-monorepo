@@ -7,7 +7,7 @@ This document describes the step-by-step flow of how a canonical message is sent
 
 ## 🔄 Step-by-Step Flow
 
-1. **L1 User** calls `sendMessage()` on the `LineaRollup` or `L1MessageService` contract.
+1. **L1 User** calls `sendMessage()` on the `LinethRollup` or `L1MessageService` contract.
 2. The contract:
    - Verifies non-empty data
    - Gets the next message number
@@ -25,7 +25,7 @@ This document describes the step-by-step flow of how a canonical message is sent
    - **L2 Blocks and Transactions** are produced
    - **Prover / Trace Generator Compressor** uses L2 data, generates traces and all proofs
    - Proofs are submitted to the Coordinator via `SubmitBlocks` / `finalizeBlocks`
-8. **L1MessageService / LineaRollup** verifies rolling hash sync as part of a feedback loop.
+8. **L1MessageService / LinethRollup** verifies rolling hash sync as part of a feedback loop.
 
 ---
 

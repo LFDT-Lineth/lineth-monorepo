@@ -266,7 +266,7 @@ class StatelessInput:
 
 
 @dataclass
-class LineaRollupExtension:
+class LinethRollupExtension:
     """
     Linea-only fields beside the vanilla stateless input. Must not be appended to
     the stateless-input SSZ byte slice passed to the decoder.
@@ -285,7 +285,7 @@ class LineaPayloadInput:
     stateless input.
     """
     stateless_input_ssz: bytes
-    rollup_extension: LineaRollupExtension = field(default_factory=LineaRollupExtension)
+    rollup_extension: LinethRollupExtension = field(default_factory=LinethRollupExtension)
 
 def block_hash(header: Header) -> Hash32:
     """Hash of a block header."""

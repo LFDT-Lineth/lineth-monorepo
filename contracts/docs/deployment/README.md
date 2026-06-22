@@ -41,16 +41,16 @@ Environment variables follow a consistent naming pattern:
 |--------|-------|
 | `L1_` | Ethereum L1 (e.g. `L1_SECURITY_COUNCIL`, `L1_RPC_URL`) |
 | `L2_` | Linea L2 (e.g. `L2_SECURITY_COUNCIL`, `L2_RPC_URL`, `L2_MESSAGE_SERVICE_ADDRESS`) |
-| `LINEA_ROLLUP_*` | Linea Rollup contract (L1) — product-specific |
+| `LINETH_ROLLUP_*` | LinethRollup contract (L1), using the Lineth env namespace |
 
 **Shared per layer:**
 
-- `L1_SECURITY_COUNCIL` — shared across all L1 contracts (Linea Rollup, Validium, Token Bridge L1, RecoverFunds, Yield Manager)
+- `L1_SECURITY_COUNCIL` — shared across all L1 contracts (LinEth Rollup, Validium, Token Bridge L1, RecoverFunds, Yield Manager)
 - `L2_SECURITY_COUNCIL` — shared across all L2 contracts (L2 Message Service, Rollup Revenue Vault, Token Bridge L2)
 
-**Shared L1 base (Linea Rollup & Validium):** `INITIAL_L2_STATE_ROOT_HASH`, `INITIAL_L2_BLOCK_NUMBER`, `L2_GENESIS_TIMESTAMP` — common to both products via shared contract base
+**Shared L1 base (LinEth Rollup & Validium):** `INITIAL_L2_STATE_ROOT_HASH`, `INITIAL_L2_BLOCK_NUMBER`, `L2_GENESIS_TIMESTAMP` — common to both products via shared contract base
 
-**Product-specific:** `LINEA_ROLLUP_OPERATORS`, `LINEA_ROLLUP_RATE_LIMIT_*`, `VALIDIUM_OPERATORS`, `VALIDIUM_RATE_LIMIT_*`
+**Product-specific:** `LINETH_ROLLUP_OPERATORS`, `LINETH_ROLLUP_RATE_LIMIT_*`, `VALIDIUM_OPERATORS`, `VALIDIUM_RATE_LIMIT_*`
 
 **RPC endpoints:** `L1_RPC_URL`, `L2_RPC_URL`, `CUSTOM_RPC_URL` (replaces legacy `BLOCKCHAIN_NODE`, `L2_BLOCKCHAIN_NODE`, `CUSTOM_BLOCKCHAIN_URL`)
 
@@ -167,7 +167,7 @@ Verifier deployments require chain-configuration inputs in addition to the contr
 | Contract | Doc | Tags |
 |----------|-----|------|
 | PlonkVerifier | [verifier.md](l1/verifier.md) | `PlonkVerifier` |
-| LineaRollup | [linea-rollup.md](l1/linea-rollup.md) | `LineaRollup`, `LineaRollupWithReinitialization`, `LineaRollupV8WithReinitialization` |
+| LinethRollup | [lineth-rollup.md](l1/lineth-rollup.md) | `LinethRollup`, `LinethRollupWithReinitialization`, `LinethRollupV8WithReinitialization` |
 | Validium | [validium.md](l1/validium.md) | `Validium` |
 | Timelock | [timelock.md](l1/timelock.md) | `Timelock` |
 | YieldManager | [yield-manager.md](l1/yield-manager.md) | `YieldManager`, `YieldManagerArtifacts`, `YieldManagerImplementation` |

@@ -155,14 +155,14 @@ Blob + Compression Proof ───▶ BlobSubmissionCoordinator
                                         │
                                         ▼
                               Submit EIP-4844 blob to L1
-                              (LineaRollup.submitBlobs)
+                              (LinethRollup.submitBlobs)
                                         │
                                         ▼
 Aggregated Proof ───▶ AggregationFinalizationCoordinator
                                         │
                                         ▼
                               Submit finalization to L1
-                              (LineaRollup.finalizeBlocks)
+                              (LinethRollup.finalizeBlocks)
                                         │
                                         ▼
                               FinalizationMonitor tracks

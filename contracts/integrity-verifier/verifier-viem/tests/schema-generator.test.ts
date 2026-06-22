@@ -254,12 +254,12 @@ const EXPLICIT_CONSTANT_SOURCE = `
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-/// @custom:storage-location erc7201:linea.storage.LineaRollupYieldExtensionStorage
-struct LineaRollupYieldExtensionStorage {
+/// @custom:storage-location erc7201:linea.storage.LinethRollupYieldExtensionStorage
+struct LinethRollupYieldExtensionStorage {
     address _yieldManager;
 }
 
-bytes32 private constant LineaRollupYieldExtensionStorageStorageLocation =
+bytes32 private constant LinethRollupYieldExtensionStorageStorageLocation =
     0x594904a11ae10ad7613c91ac3c92c7c3bba397934d377ce6d3e0aaffbc17df00;
 `;
 
@@ -590,9 +590,9 @@ function testExplicitConstantValidation(): void {
   const { schema } = parseSoliditySource(EXPLICIT_CONSTANT_SOURCE, "ExplicitConstant.sol");
 
   // Should find the struct
-  assert("LineaRollupYieldExtensionStorage" in schema.structs, "Struct found");
+  assert("LinethRollupYieldExtensionStorage" in schema.structs, "Struct found");
 
-  const struct = schema.structs["LineaRollupYieldExtensionStorage"];
+  const struct = schema.structs["LinethRollupYieldExtensionStorage"];
 
   // The baseSlot should match the explicit constant
   assertEqual(
@@ -602,7 +602,7 @@ function testExplicitConstantValidation(): void {
   );
 
   // Verify namespace
-  assert(struct.namespace === "linea.storage.LineaRollupYieldExtensionStorage", "Namespace correct");
+  assert(struct.namespace === "linea.storage.LinethRollupYieldExtensionStorage", "Namespace correct");
 
   // Check field
   assertEqual(struct.fields["_yieldManager"], { slot: 0, type: "address" }, "_yieldManager field correct");
@@ -649,7 +649,7 @@ function testErc7201BaseSlotCalculation(): void {
   console.log("\n=== ERC-7201 Base Slot Calculation Test ===");
 
   // Test known namespace from Linea contracts
-  const lineaYieldSlot = calculateErc7201BaseSlot("linea.storage.LineaRollupYieldExtensionStorage");
+  const lineaYieldSlot = calculateErc7201BaseSlot("linea.storage.LinethRollupYieldExtensionStorage");
   assertEqual(
     lineaYieldSlot,
     "0x594904a11ae10ad7613c91ac3c92c7c3bba397934d377ce6d3e0aaffbc17df00",

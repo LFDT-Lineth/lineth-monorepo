@@ -18,7 +18,7 @@ The architecture is driven by four principles:
 1. **Move intelligence from circuits to software.** Logic that today lives in custom Gnark/Vortex circuits moves into standard RISC-V guest programs written in Rust or C. This trades circuit complexity for software simplicity.
 2. **Use industry-standard primitives.** SNARK-friendly workarounds (MiMC hashing, custom LZSS) are replaced with standard algorithms (Keccak256, LZ4/zstd, BLS12-381) that can be compiled directly into the guest.
 3. **Leverage recursive proof composition for continuity.** Instead of a bespoke interconnection circuit that manually checks array mappings at the gate level, adjacent proofs are composed via recursive STARK verification with software `assert_eq!` continuity checks.
-4. **Minimize the L1 footprint.** The L1 `LineaRollup` contract should verify as little as possible — a single proof and a small set of public values. All cryptographic complexity belongs inside the proof.
+4. **Minimize the L1 footprint.** The L1 `LinethRollup` contract should verify as little as possible — a single proof and a small set of public values. All cryptographic complexity belongs inside the proof.
 
 ### 1.3 System Overview
 
@@ -399,7 +399,7 @@ The L2→L1 bridge state is tracked via `L2L1BridgeTransactionTree`, a commitmen
 
 ## 5. L1 Smart Contract
 
-The new architecture dramatically simplifies the `LineaRollup` contract.
+The new architecture dramatically simplifies the `LinethRollup` contract.
 In the Python reference, this contract-facing logic lives in `l1_rollup.py`; it is
 separate from the l2-execution, rollup, and rollup-aggregation guest programs.
 

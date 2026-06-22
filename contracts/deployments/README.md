@@ -18,8 +18,8 @@ Pinned, audit-signed contract bytecode snapshots used by `*Artifacts` deploy scr
 
 | Directory | Contents |
 |-----------|----------|
-| `bytecode/2024-12-03/` | LineaRollup, L2MessageService, TokenBridge (Dec 2024 audit) |
+| `bytecode/2024-12-03/` | LinethRollup, L2MessageService, TokenBridge (Dec 2024 audit) |
 | `bytecode/2026-01-14/` | YieldManager, ValidatorContainerProofVerifier, LidoStVaultYieldProviderFactory (Jan 2026 audit) |
-| `bytecode/2026-02-17/` | LineaRollup, L2MessageService, TokenBridge (Feb 2026 audit) |
+| `bytecode/2026-02-17/` | LinethRollup, L2MessageService, TokenBridge (Feb 2026 audit) |
 | `bytecode/2025-10-27/` | RollupRevenueVault, V3DexSwapAdapter, L1LineaTokenBurner (Oct 2025 audit) |
 | `bytecode/mainnet-proxy/` | TransparentUpgradeableProxy and ProxyAdmin bytecode (mainnet-verified) |

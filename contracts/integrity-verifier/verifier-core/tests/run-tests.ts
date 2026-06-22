@@ -257,7 +257,7 @@ async function testErc7201SlotCalculation(): Promise<void> {
   assert(slot.slice(-2) === "00", "Last byte is masked to 0x00");
 
   const slot1 = calculateErc7201Slot(mockAdapter, "linea.storage.YieldManager");
-  const slot2 = calculateErc7201Slot(mockAdapter, "linea.storage.LineaRollup");
+  const slot2 = calculateErc7201Slot(mockAdapter, "linea.storage.LinethRollup");
   assert(slot1 !== slot2, "Different namespaces produce different slots");
 }
 
@@ -676,10 +676,10 @@ async function testErc7201BaseSlotCalculation(): Promise<void> {
 
   const mockAdapter = new MockAdapter();
 
-  // Test with known namespace - LineaRollupYieldExtension
+  // Test with known namespace - LinethRollupYieldExtension
   // The expected slot can be verified using Solidity:
-  // bytes32 slot = keccak256(abi.encode(uint256(keccak256("linea.storage.LineaRollupYieldExtension")) - 1)) & ~bytes32(uint256(0xff));
-  const namespace = "linea.storage.LineaRollupYieldExtension";
+  // bytes32 slot = keccak256(abi.encode(uint256(keccak256("linea.storage.LinethRollupYieldExtension")) - 1)) & ~bytes32(uint256(0xff));
+  const namespace = "linea.storage.LinethRollupYieldExtension";
   const slot = calculateErc7201BaseSlot(mockAdapter, namespace);
 
   // Should be a valid 32-byte hex string

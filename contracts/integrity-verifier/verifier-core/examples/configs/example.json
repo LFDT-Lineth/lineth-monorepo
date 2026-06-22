@@ -37,14 +37,14 @@
       }
     },
     {
-      "name": "LineaRollup-Proxy",
+      "name": "LinethRollup-Proxy",
       "chain": "ethereum-sepolia",
       "address": "0x2A5CDCfc38856e2590E9Bd32F54Fa348e5De5f48",
-      "artifactFile": "../artifacts/hardhat/LineaRollup.json",
+      "artifactFile": "../artifacts/hardhat/LinethRollup.json",
       "isProxy": true,
       "stateVerification": {
         "ozVersion": "v4",
-        "schemaFile": "../schemas/linea-rollup.json",
+        "schemaFile": "../schemas/lineth-rollup.json",
         "viewCalls": [
           {
             "$comment": "Verify initialized version is 7",
@@ -108,8 +108,8 @@
         ],
         "storagePaths": [
           {
-            "$comment": "yieldManager from ERC-7201 storage (linea.storage.LineaRollupYieldExtensionStorage)",
-            "path": "LineaRollupYieldExtensionStorage:_yieldManager",
+            "$comment": "yieldManager from ERC-7201 storage (linea.storage.LinethRollupYieldExtensionStorage)",
+            "path": "LinethRollupYieldExtensionStorage:_yieldManager",
             "expected": "0xafeB487DD3E3Cb0342e8CF0215987FfDc9b72c9b"
           }
         ]
@@ -117,10 +117,10 @@
     },
     {
       "$comment": "Verify implementation bytecode directly (before proxy upgrade)",
-      "name": "LineaRollup-Implementation",
+      "name": "LinethRollup-Implementation",
       "chain": "ethereum-sepolia",
       "address": "0xCaAa421FfCF701bEFd676a2F5d0A161CCFA5a07E",
-      "artifactFile": "../artifacts/hardhat/LineaRollup.json",
+      "artifactFile": "../artifacts/hardhat/LinethRollup.json",
       "isProxy": false
     }
   ]

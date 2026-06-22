@@ -177,7 +177,7 @@ make staterecovery-replay-from-block \
 ### Deployment Steps
 
 1. Deploy PlonkVerifier
-2. Deploy LineaRollup (with verifier address)
+2. Deploy LinethRollup (with verifier address)
 3. Deploy L2MessageService
 4. Deploy TokenBridge (L1 and L2)
 5. Verify all contract deployments

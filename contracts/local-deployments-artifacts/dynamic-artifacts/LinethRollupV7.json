@@ -1,7 +1,7 @@
 {
   "_format": "hh-sol-artifact-1",
-  "contractName": "LineaRollup",
-  "sourceName": "contracts/LineaRollup.sol",
+  "contractName": "LinethRollup",
+  "sourceName": "contracts/LinethRollup.sol",
   "abi": [
     {
       "inputs": [],
@@ -696,7 +696,7 @@
           "type": "bytes8"
         }
       ],
-      "name": "LineaRollupVersionChanged",
+      "name": "LinethRollupVersionChanged",
       "type": "event"
     },
     {
@@ -1861,7 +1861,7 @@
                   "type": "bytes32"
                 }
               ],
-              "internalType": "struct ILineaRollup.ShnarfData",
+              "internalType": "struct ILinethRollup.ShnarfData",
               "name": "shnarfData",
               "type": "tuple"
             },
@@ -1911,7 +1911,7 @@
               "type": "bytes"
             }
           ],
-          "internalType": "struct ILineaRollup.FinalizationDataV3",
+          "internalType": "struct ILinethRollup.FinalizationDataV3",
           "name": "_finalizationData",
           "type": "tuple"
         }
@@ -2109,7 +2109,7 @@
               "type": "address"
             }
           ],
-          "internalType": "struct ILineaRollup.InitializationData",
+          "internalType": "struct ILinethRollup.InitializationData",
           "name": "_initializationData",
           "type": "tuple"
         }
@@ -2338,7 +2338,7 @@
           "type": "address"
         }
       ],
-      "name": "reinitializeLineaRollupV7",
+      "name": "reinitializeLinethRollupV7",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -2575,7 +2575,7 @@
               "type": "bytes32"
             }
           ],
-          "internalType": "struct ILineaRollup.BlobSubmission[]",
+          "internalType": "struct ILinethRollup.BlobSubmission[]",
           "name": "_blobSubmissions",
           "type": "tuple[]"
         },
@@ -2615,7 +2615,7 @@
               "type": "bytes"
             }
           ],
-          "internalType": "struct ILineaRollup.CompressedCalldataSubmission",
+          "internalType": "struct ILinethRollup.CompressedCalldataSubmission",
           "name": "_submission",
           "type": "tuple"
         },

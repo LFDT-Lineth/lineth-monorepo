@@ -89,7 +89,7 @@ export const ERC7201_NAMESPACE_PREFIX = "linea.storage.";
 export const KNOWN_NAMESPACES = {
   // Linea namespaces
   YIELD_MANAGER: "linea.storage.YieldManagerStorage",
-  LINEA_ROLLUP_YIELD_EXTENSION: "linea.storage.LineaRollupYieldExtensionStorage",
+  LINETH_ROLLUP_YIELD_EXTENSION: "linea.storage.LinethRollupYieldExtensionStorage",
   // OpenZeppelin v5 namespaces
   OZ_INITIALIZABLE: "openzeppelin.storage.Initializable",
   OZ_ACCESS_CONTROL: "openzeppelin.storage.AccessControl",
@@ -103,14 +103,14 @@ export const KNOWN_NAMESPACES = {
 // ============================================================================
 
 /**
- * LineaRollup proxy address on Sepolia.
+ * LinethRollup proxy address on Sepolia.
  */
-export const SEPOLIA_LINEA_ROLLUP_PROXY = "0x2A5CDCfc38856e2590E9Bd32F54Fa348e5De5f48";
+export const SEPOLIA_LINETH_ROLLUP_PROXY = "0x2A5CDCfc38856e2590E9Bd32F54Fa348e5De5f48";
 
 /**
- * LineaRollup implementation address on Sepolia (V7).
+ * LinethRollup implementation address on Sepolia (V7).
  */
-export const SEPOLIA_LINEA_ROLLUP_IMPLEMENTATION = "0xCaAa421FfCF701bEFd676a2F5d0A161CCFA5a07E";
+export const SEPOLIA_LINETH_ROLLUP_IMPLEMENTATION = "0xCaAa421FfCF701bEFd676a2F5d0A161CCFA5a07E";
 
 /**
  * YieldManager address on Sepolia.
@@ -243,7 +243,7 @@ export const BYTECODE_MATCH_THRESHOLD_PERCENT = 90;
  * Expected contract versions for verification.
  */
 export const CONTRACT_VERSIONS = {
-  LINEA_ROLLUP_V7: "7.0",
+  LINETH_ROLLUP_V7: "7.0",
 } as const;
 
 // ============================================================================

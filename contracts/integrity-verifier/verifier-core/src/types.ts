@@ -376,7 +376,7 @@ export interface StorageSchema {
 }
 
 export interface StoragePathConfig {
-  /** Storage path (e.g., "YieldManagerStorage:yieldManager" or "LineaRollupStorage:yieldManager") */
+  /** Storage path (e.g., "YieldManagerStorage:yieldManager" or "LinethRollupStorage:yieldManager") */
   path: string;
   /** Expected value */
   expected: unknown;

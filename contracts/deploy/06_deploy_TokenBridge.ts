@@ -35,7 +35,7 @@ const func: DeployFunction = withSignerUiSession(
       "L2MessageService",
       "L2_MESSAGE_SERVICE_ADDRESS",
     );
-    const lineaRollupAddress = requireAddressFromRegistryOrEnv(network.name, "LineaRollup", "LINEA_ROLLUP_ADDRESS");
+    const linethRollupAddress = requireAddressFromRegistryOrEnv(network.name, "LinethRollup", "LINETH_ROLLUP_ADDRESS");
     const remoteChainId = getRequiredEnvVar("REMOTE_CHAIN_ID");
     const pauseTypeRoles = getEnvVarOrDefault("TOKEN_BRIDGE_PAUSE_TYPES_ROLES", TOKEN_BRIDGE_PAUSE_TYPES_ROLES);
     const unpauseTypeRoles = getEnvVarOrDefault("TOKEN_BRIDGE_UNPAUSE_TYPES_ROLES", TOKEN_BRIDGE_UNPAUSE_TYPES_ROLES);
@@ -63,7 +63,7 @@ const func: DeployFunction = withSignerUiSession(
       console.log(
         `DEPLOY_TOKEN_BRIDGE_ON_L1=${process.env.DEPLOY_TOKEN_BRIDGE_ON_L1}. Deploying TokenBridge on L1, using L1_RESERVED_TOKEN_ADDRESSES from registry or env`,
       );
-      deployingChainMessageService = lineaRollupAddress;
+      deployingChainMessageService = linethRollupAddress;
       reservedAddresses = getAddressesFromRegistryOrEnv(
         network.name,
         "L1_RESERVED_TOKEN_ADDRESSES",

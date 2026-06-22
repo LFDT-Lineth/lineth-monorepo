@@ -21,7 +21,7 @@ class PlonkVerifier:
     `contracts/deploy/01_deploy_PlonkVerifier.ts`); the constructor hashes
     those values and stores ONLY the digest in `bytes32 immutable
     CHAIN_CONFIGURATION`, then emits the full preimage in the
-    `ChainConfigurationSet` event. The L1 `LineaRollupBase` reads the
+    `ChainConfigurationSet` event. The L1 `LinethRollupBase` reads the
     digest at finalization time via `getChainConfiguration()`; changing
     the chain configuration requires deploying a new verifier and pointing
     the rollup at it via `setVerifierAddress`. The preimage is therefore
@@ -35,9 +35,9 @@ class PlonkVerifier:
 
 
 @dataclass
-class LineaRollupState:
+class LinethRollupState:
     """
-    L1 `LineaRollup` storage relevant to proof finalization.
+    L1 `LinethRollup` storage relevant to proof finalization.
 
     Note that `dynamicChainConfigHash` is NOT a field of this state — it
     lives in the verifier as an immutable bytes32, and is read via
@@ -74,7 +74,7 @@ class FinalizationSubmission:
 
 
 def anchor_blob_submission(
-    state: LineaRollupState,
+    state: LinethRollupState,
     parent_shnarf: Hash32,
     last_block_hash: Hash32,
     blob_hash: Hash32,
@@ -84,7 +84,7 @@ def anchor_blob_submission(
     return end_shnarf
 
 
-def finalize_rollup(state: LineaRollupState, submission: FinalizationSubmission) -> None:
+def finalize_rollup(state: LinethRollupState, submission: FinalizationSubmission) -> None:
     pi = submission.public_inputs
 
     if not verify_rollup_aggregation_snark(submission.proof, pi):
@@ -153,7 +153,7 @@ def verify_rollup_aggregation_snark(proof: bytes, public_inputs: RollupPublicInp
 verify_aggregation_snark = verify_rollup_aggregation_snark
 
 
-def _l1_l2_rolling_hash_at(state: LineaRollupState, message_number: U64) -> Hash32:
+def _l1_l2_rolling_hash_at(state: LinethRollupState, message_number: U64) -> Hash32:
     if message_number == state.current_finalized_l1_l2_bridge_rolling_hash_message_number:
         return state.current_finalized_l1_l2_bridge_rolling_hash
     if message_number not in state.l1_l2_rolling_hashes:
@@ -161,7 +161,7 @@ def _l1_l2_rolling_hash_at(state: LineaRollupState, message_number: U64) -> Hash
     return state.l1_l2_rolling_hashes[message_number]
 
 
-def _ftx_rolling_hash_at(state: LineaRollupState, ftx_number: U64) -> Hash32:
+def _ftx_rolling_hash_at(state: LinethRollupState, ftx_number: U64) -> Hash32:
     if ftx_number == state.current_finalized_last_processed_ftx_number:
         return state.current_finalized_ftx_rolling_hash
     if ftx_number not in state.ftx_rolling_hashes:
@@ -170,7 +170,7 @@ def _ftx_rolling_hash_at(state: LineaRollupState, ftx_number: U64) -> Hash32:
 
 
 def _check_forced_transaction_deadlines(
-    state: LineaRollupState,
+    state: LinethRollupState,
     end_block_number: U64,
     last_processed_ftx_number: U64,
 ) -> None:

@@ -4,7 +4,7 @@
 
 ## Overview
 
-State recovery is a Besu plugin that enables an L2 node to reconstruct its state entirely from data posted to L1. It fetches finalization events from the LineaRollup contract, retrieves the corresponding blobs (via BlobScan), decompresses them, and replays the recovered blocks through Besu's execution layer.
+State recovery is a Besu plugin that enables an L2 node to reconstruct its state entirely from data posted to L1. It fetches finalization events from the LinethRollup contract, retrieves the corresponding blobs (via BlobScan), decompresses them, and replays the recovered blocks through Besu's execution layer.
 
 This provides a censorship-resistance guarantee: even if the sequencer stops producing blocks, any party can recover the full L2 state from L1 data.
 

@@ -34,11 +34,11 @@ task("setVerifierAddress", "Sets the verifier address on a Message Service contr
       const { get } = deployments;
 
       const proofType = getTaskCliOrEnvValue(taskArgs, "verifierProofType", "VERIFIER_PROOF_TYPE");
-      let LineaRollupAddress = getTaskCliOrEnvValue(taskArgs, "proxyAddress", "LINEA_ROLLUP_ADDRESS");
+      let LinethRollupAddress = getTaskCliOrEnvValue(taskArgs, "proxyAddress", "LINETH_ROLLUP_ADDRESS");
       const verifierName = getTaskCliOrEnvValue(taskArgs, "verifierContractName", "VERIFIER_CONTRACT_NAME");
 
-      if (LineaRollupAddress === undefined) {
-        LineaRollupAddress = (await get("LineaRollup")).address;
+      if (LinethRollupAddress === undefined) {
+        LinethRollupAddress = (await get("LinethRollup")).address;
       }
 
       let verifierAddress = getTaskCliOrEnvValue(taskArgs, "verifierAddress", "VERIFIER_ADDRESS");
@@ -54,15 +54,15 @@ task("setVerifierAddress", "Sets the verifier address on a Message Service contr
       }
 
       const signer = await getUiSigner(hre);
-      const LineaRollup = await ethers.getContractAt("LineaRollup", LineaRollupAddress, signer);
+      const LinethRollup = await ethers.getContractAt("LinethRollup", LinethRollupAddress, signer);
 
       console.log(`Setting verifier address ${verifierAddress} of type ${proofType}`);
-      const tx = await LineaRollup.setVerifierAddress(verifierAddress, proofType);
+      const tx = await LinethRollup.setVerifierAddress(verifierAddress, proofType);
 
       console.log("Waiting for transaction to process");
       await tx.wait();
 
-      const checkVerifierIsSet = await LineaRollup.verifiers(proofType);
+      const checkVerifierIsSet = await LinethRollup.verifiers(proofType);
       console.log(`Linea Rollup implementation added ${checkVerifierIsSet} as new verifier`);
     });
   });
