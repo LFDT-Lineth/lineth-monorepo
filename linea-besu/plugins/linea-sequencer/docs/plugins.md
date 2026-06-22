@@ -143,8 +143,9 @@ Choose based on your node's role:
 
 | Node role                      | Plugin(s) to enable | Why |
 |--------------------------------|---------------------|-----|
-| **Validator / RPC node**       | `LineaTransactionPoolValidatorPlugin` | Full pool-level validation (deny lists, gas limits, calldata size, profitability, simulation) plus transaction-type checks, covering the RPC/P2P admission pipeline. |
-| **Validator node** | `LineaBlockTransactionValidatorPlugin` | Lightweight protocol-level transaction-type filtering during block import and block production, without the overhead of pool-level validators. |
+| **RPC / P2P node**             | `LineaTransactionPoolValidatorPlugin` | Full pool-level validation (deny lists, gas limits, calldata size, profitability, simulation) plus transaction-type checks at pool admission. No block import, so the block plugin is unnecessary. |
+| **Validator node**             | `LineaBlockTransactionValidatorPlugin` | Lightweight protocol-level transaction-type filtering during block import and block production, without the overhead of pool-level validators. |
+| **Sequencer (both roles)**     | Both plugins | The pool plugin covers pool admission (deny lists, profitability, simulation, etc.); the block plugin enforces type rules during block import and production. When both are active, the pool plugin skips its own type check (the block plugin's rule already covers it at pool admission). |
 
 ### Reporting rejected transactions
 The transaction selection and validation plugins can report rejected transactions as JSON-RPC calls to an external

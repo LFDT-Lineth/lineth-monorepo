@@ -36,10 +36,13 @@ import org.hyperledger.besu.plugin.services.TransactionValidatorService;
 public class LineaBlockTransactionValidatorPlugin extends AbstractLineaRequiredPlugin {
 
   /**
-   * Set once this plugin has been registered. Lets {@link
-   * net.consensys.linea.sequencer.txpoolvalidation.LineaTransactionPoolValidatorPlugin} detect that
-   * protocol-level transaction-type validation is active and skip its own redundant pool-level type
-   * validator, since this plugin's rule already runs at pool admission.
+   * {@code true} while this plugin is registered and running; reset to {@code false} in {@link
+   * #stop()} so that a plugin restart cycle leaves the flag in the correct state.
+   *
+   * <p>Used by {@link
+   * net.consensys.linea.sequencer.txpoolvalidation.LineaTransactionPoolValidatorPlugin} to detect
+   * that protocol-level transaction-type validation is active and skip its own redundant pool-level
+   * type validator, since this plugin's rule already runs at pool admission.
    */
   public static final AtomicBoolean registered = new AtomicBoolean(false);
 
