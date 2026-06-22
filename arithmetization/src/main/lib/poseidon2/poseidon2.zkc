@@ -1,5 +1,4 @@
 include "constants.zkc"
-include "../../riscv/memory.zkc"
 
 // ===================================================================================
 // zkc implementation of the Poseidon2 permutation using zkc's native field element type.
@@ -174,3 +173,7 @@ fn mat_mul_internal<poseidon2_state>() {
         poseidon2_state[i] = sum + (internal_diag[i] * poseidon2_state[i])
     }
 }
+
+// Poseidon2 state: where the permutation takes place. An array of 16
+// KOALABEAR field elements (felts): [ σ₀, σ₁, ..., σ₁₅ ].
+memory poseidon2_state(address:u5) -> (felt:𝔽)

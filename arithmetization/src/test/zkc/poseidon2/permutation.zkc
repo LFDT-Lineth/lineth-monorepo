@@ -15,17 +15,17 @@ include "../../../main/lib/poseidon2/poseidon2.zkc"
 
 // Inputs are 32-bit words reduced into the field via `as 𝔽`, so values >= the
 // KoalaBear modulus exercise the reduction path.
-pub input in_state(address:u8) -> (word:u32)
-pub input expected(address:u8) -> (word:u32)
+pub input in_state(address:u5) -> (word:u32)
+pub input expected(address:u5) -> (word:u32)
 
 fn main<poseidon2_state>() {
-    for i:u8 = 0; i<STATE_WIDTH; i = i + 1 {
+    for i:u5 = 0; i<STATE_WIDTH; i = i + 1 {
         write_to_state(i, in_state[i] as 𝔽)
     }
 
     permutation()
 
-    for i:u8 = 0; i<STATE_WIDTH; i = i + 1 {
+    for i:u5 = 0; i<STATE_WIDTH; i = i + 1 {
         if read_from_state(i) != (expected[i] as 𝔽) {
             fail
         }
