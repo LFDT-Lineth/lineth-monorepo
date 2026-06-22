@@ -5,7 +5,7 @@ import io.vertx.sqlclient.SqlClient
 import linea.LongRunningService
 import linea.contract.l1.FinalizedStateDataProvider
 import linea.contract.l1.LineaSmartContractClient
-import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
+import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
 import linea.coordination.EventDispatcher
 import linea.coordination.HighestULongTracker
 import linea.coordination.LatestBlobSubmittedBlockNumberTracker
@@ -165,12 +165,12 @@ class L1DependentApp(
     )
   }
 
-  val lineaRollupClientForFinalizationMonitor = run {
+  val linethRollupClientForFinalizationMonitor = run {
     val web3j = createWeb3jHttpClient(
       rpcUrl = configs.l1FinalizationMonitor.l1Endpoint.toString(),
       log = LogManager.getLogger("clients.l1.eth.finalization-monitor"),
     )
-    Web3JLineaRollupSmartContractClientReadOnly(
+    Web3JLinethRollupSmartContractClientReadOnly(
       contractAddress = configs.protocol.l1.contractAddress,
       web3j = web3j,
       ethLogsClient = createEthApiClient(
@@ -188,7 +188,7 @@ class L1DependentApp(
         pollingInterval = configs.l1FinalizationMonitor.l1PollingInterval,
         l1QueryBlockTag = configs.l1FinalizationMonitor.l1QueryBlockTag,
       ),
-      finalizedStateDataProvider = lineaRollupClientForFinalizationMonitor,
+      finalizedStateDataProvider = linethRollupClientForFinalizationMonitor,
       l2EthApiClient = createEthApiClient(
         rpcUrl = configs.l1FinalizationMonitor.l2Endpoint.toString(),
         log = LogManager.getLogger("clients.l2.eth.finalization-monitor"),
@@ -209,7 +209,7 @@ class L1DependentApp(
     setupL1FinalizationMonitorForShomeiFrontend(
       type2StateProofProviderConfig = configs.type2StateProofProvider,
       httpJsonRpcClientFactory = httpJsonRpcClientFactory,
-      finalizedStateDataProvider = lineaRollupClientForFinalizationMonitor,
+      finalizedStateDataProvider = linethRollupClientForFinalizationMonitor,
       l2EthApiClient = l2EthApiClient,
       vertx = vertx,
     )
@@ -481,7 +481,7 @@ class L1DependentApp(
   private fun lastFinalizedBlock(): SafeFuture<ULong> {
     val l1BasedLastFinalizedBlockProvider = L1BasedLastFinalizedBlockProvider(
       vertx,
-      lineaRollupSmartContractClient = lineaRollupClientForFinalizationMonitor,
+      linethRollupSmartContractClient = linethRollupClientForFinalizationMonitor,
       consistentNumberOfBlocksOnL1 = configs.conflation.consistentNumberOfBlocksOnL1ToWait,
     )
     return l1BasedLastFinalizedBlockProvider.getLastFinalizedBlock()

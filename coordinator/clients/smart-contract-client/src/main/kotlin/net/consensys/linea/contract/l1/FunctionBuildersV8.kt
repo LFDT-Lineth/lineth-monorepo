@@ -1,6 +1,6 @@
 package net.consensys.linea.contract.l1
 
-import linea.contract.LineaRollupV8
+import linea.contract.LinethRollupV8
 import linea.domain.BlobRecord
 import linea.domain.ProofToFinalize
 import linea.kotlin.encodeHex
@@ -19,7 +19,7 @@ internal object FunctionBuildersV8 {
     parentL1RollingHashMessageNumber: Long,
   ): Function {
     val aggregationEndBlobInfo =
-      LineaRollupV8.ShnarfData(
+      LinethRollupV8.ShnarfData(
         // parentShnarf
         aggregationLastBlob.blobCompressionProof!!.prevShnarf,
         // snarkHash
@@ -52,7 +52,7 @@ internal object FunctionBuildersV8 {
     // )
 
     val finalizationData =
-      LineaRollupV8.FinalizationDataV4(
+      LinethRollupV8.FinalizationDataV4(
         // parentStateRootHash
         aggregationProof.parentStateRootHash,
         // endBlockNumber
@@ -96,7 +96,7 @@ internal object FunctionBuildersV8 {
      */
     val function =
       Function(
-        LineaRollupV8.FUNC_FINALIZEBLOCKS,
+        LinethRollupV8.FUNC_FINALIZEBLOCKS,
         listOf(
           DynamicBytes(aggregationProof.aggregatedProof),
           Uint256(aggregationProof.aggregatedVerifierIndex.toLong()),

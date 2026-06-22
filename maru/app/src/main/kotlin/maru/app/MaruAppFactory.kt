@@ -14,8 +14,8 @@ import io.micrometer.core.instrument.MeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.micrometer.MicrometerMetricsOptions
 import io.vertx.micrometer.backends.BackendRegistries
-import linea.contract.l1.LineaRollupSmartContractClientReadOnly
-import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
+import linea.contract.l1.LinethRollupSmartContractClientReadOnly
+import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
 import linea.kotlin.encodeHex
 import linea.timer.JvmTimerFactory
 import linea.timer.TimerFactory
@@ -92,7 +92,7 @@ interface MaruAppFactoryCreator {
     clock: Clock = Clock.systemUTC(),
     overridingP2PNetwork: P2PNetwork? = null,
     overridingFinalizationProvider: FinalizationProvider? = null,
-    overridingLineaContractClient: LineaRollupSmartContractClientReadOnly? = null,
+    overridingLineaContractClient: LinethRollupSmartContractClientReadOnly? = null,
     overridingApiServer: ApiServer? = null,
     p2pNetworkFactory: (
       ByteArray,
@@ -120,7 +120,7 @@ class MaruAppFactory : MaruAppFactoryCreator {
     clock: Clock,
     overridingP2PNetwork: P2PNetwork?,
     overridingFinalizationProvider: FinalizationProvider?,
-    overridingLineaContractClient: LineaRollupSmartContractClientReadOnly?,
+    overridingLineaContractClient: LinethRollupSmartContractClientReadOnly?,
     overridingApiServer: ApiServer?,
     p2pNetworkFactory: (
       ByteArray,
@@ -355,7 +355,7 @@ class MaruAppFactory : MaruAppFactoryCreator {
 
     private fun setupFinalizationProvider(
       config: MaruConfig,
-      overridingLineaContractClient: LineaRollupSmartContractClientReadOnly?,
+      overridingLineaContractClient: LinethRollupSmartContractClientReadOnly?,
       vertx: Vertx,
       timerFactory: TimerFactory,
     ): FinalizationProvider =
@@ -368,7 +368,7 @@ class MaruAppFactory : MaruAppFactoryCreator {
             )
           val contractClient =
             overridingLineaContractClient
-              ?: Web3JLineaRollupSmartContractClientReadOnly(
+              ?: Web3JLinethRollupSmartContractClientReadOnly(
                 web3j = web3jClient,
                 contractAddress = lineaConfig.contractAddress.encodeHex(),
                 ethLogsClient = createEthApiClient(

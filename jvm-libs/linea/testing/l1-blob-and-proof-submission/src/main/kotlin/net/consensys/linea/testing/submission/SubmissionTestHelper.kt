@@ -1,6 +1,6 @@
 package net.consensys.linea.testing.submission
 
-import linea.contract.l1.LineaRollupSmartContractClient
+import linea.contract.l1.LinethRollupSmartContractClient
 import linea.domain.Aggregation
 import linea.domain.BlobRecord
 import linea.domain.BlockInterval
@@ -59,7 +59,7 @@ fun assertTxsSuccess(
  * returns list of tx hashes, does not wait for txs to be mined
  */
 fun submitBlobs(
-  contractClient: LineaRollupSmartContractClient,
+  contractClient: LinethRollupSmartContractClient,
   aggregationsAndBlobs: List<AggregationAndBlobs>,
   blobChunksSize: Int = 9,
   awaitForPreviousTxBeforeSubmittingNext: Boolean = false,
@@ -93,8 +93,8 @@ fun submitBlobs(
 }
 
 fun submitBlobsAndAggregationsAndWaitExecution(
-  contractClientForBlobSubmission: LineaRollupSmartContractClient,
-  contractClientForAggregationSubmission: LineaRollupSmartContractClient = contractClientForBlobSubmission,
+  contractClientForBlobSubmission: LinethRollupSmartContractClient,
+  contractClientForAggregationSubmission: LinethRollupSmartContractClient = contractClientForBlobSubmission,
   aggregationsAndBlobs: List<AggregationAndBlobs>,
   blobChunksMaxSize: Int = 9,
   l1EthApiClient: EthApiClient,

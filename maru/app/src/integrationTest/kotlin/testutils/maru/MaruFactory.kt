@@ -13,7 +13,7 @@ import io.libp2p.core.crypto.KeyType
 import io.libp2p.core.crypto.generateKeyPair
 import io.libp2p.core.crypto.marshalPrivateKey
 import io.libp2p.core.crypto.unmarshalPrivateKey
-import linea.contract.l1.LineaRollupSmartContractClientReadOnly
+import linea.contract.l1.LinethRollupSmartContractClientReadOnly
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import linea.timer.TimerFactory
@@ -217,7 +217,7 @@ class MaruFactory(
     qbftOptions: QbftConfig? = null,
     observabilityOptions: ObservabilityConfig =
       ObservabilityConfig(port = 0u, prometheusMetricsEnabled = true, jvmMetricsEnabled = true),
-    overridingLineaContractClient: LineaRollupSmartContractClientReadOnly? = null,
+    overridingLineaContractClient: LinethRollupSmartContractClientReadOnly? = null,
     l1EthApiEndpoint: String? = null,
     apiConfig: ApiConfig = ApiConfig(port = 0u),
     syncingConfig: SyncingConfig = defaultSyncingConfig,
@@ -316,7 +316,7 @@ class MaruFactory(
     qbftOptions: QbftConfig? = null,
     observabilityOptions: ObservabilityConfig =
       ObservabilityConfig(port = 0u, prometheusMetricsEnabled = true, jvmMetricsEnabled = true),
-    overridingLineaContractClient: LineaRollupSmartContractClientReadOnly? = null,
+    overridingLineaContractClient: LinethRollupSmartContractClientReadOnly? = null,
     apiConfig: ApiConfig = ApiConfig(port = 0u),
     syncingConfig: SyncingConfig = defaultSyncingConfig,
     allowEmptyBlocks: Boolean = false,
@@ -362,7 +362,7 @@ class MaruFactory(
     initialValidators: Set<Validator> = this.initialValidators,
     overridingP2PNetwork: P2PNetwork? = null,
     overridingFinalizationProvider: FinalizationProvider? = null,
-    overridingLineaContractClient: LineaRollupSmartContractClientReadOnly? = null,
+    overridingLineaContractClient: LinethRollupSmartContractClientReadOnly? = null,
     p2pNetworkFactory: (
       ByteArray,
       P2PConfig,
@@ -474,7 +474,7 @@ class MaruFactory(
     validatorNodeIdForStaticPeering: String? = null,
     overridingP2PNetwork: P2PNetwork? = null,
     overridingFinalizationProvider: FinalizationProvider? = null,
-    overridingLineaContractClient: LineaRollupSmartContractClientReadOnly? = null,
+    overridingLineaContractClient: LinethRollupSmartContractClientReadOnly? = null,
     l1EthApiEndpoint: String? = null,
     p2pPort: UInt = 0u,
     allowEmptyBlocks: Boolean = false,
@@ -536,7 +536,7 @@ class MaruFactory(
     dataDir: Path,
     overridingP2PNetwork: P2PNetwork? = null,
     overridingFinalizationProvider: FinalizationProvider? = null,
-    overridingLineaContractClient: LineaRollupSmartContractClientReadOnly? = null,
+    overridingLineaContractClient: LinethRollupSmartContractClientReadOnly? = null,
     p2pPort: UInt = 0u,
     discoveryPort: UInt = 0u,
     bootnode: String? = null,
@@ -604,7 +604,7 @@ class MaruFactory(
     dataDir: Path,
     overridingP2PNetwork: P2PNetwork? = null,
     overridingFinalizationProvider: FinalizationProvider? = null,
-    overridingLineaContractClient: LineaRollupSmartContractClientReadOnly? = null,
+    overridingLineaContractClient: LinethRollupSmartContractClientReadOnly? = null,
     p2pPort: UInt = 0u,
     discoveryPort: UInt = 0u,
     bootnode: String? = null,
@@ -670,7 +670,7 @@ class MaruFactory(
     validatorPortForStaticPeering: UInt?,
     followers: FollowersConfig = FollowersConfig(emptyMap()),
     overridingFinalizationProvider: FinalizationProvider? = null,
-    overridingLineaContractClient: LineaRollupSmartContractClientReadOnly? = null,
+    overridingLineaContractClient: LinethRollupSmartContractClientReadOnly? = null,
     l1EthApiEndpoint: String? = null,
     allowEmptyBlocks: Boolean = false,
     syncingConfig: SyncingConfig = defaultSyncingConfig,
@@ -724,7 +724,7 @@ class MaruFactory(
     dataDir: Path,
     overridingP2PNetwork: P2PNetwork? = null,
     overridingFinalizationProvider: FinalizationProvider? = null,
-    overridingLineaContractClient: LineaRollupSmartContractClientReadOnly? = null,
+    overridingLineaContractClient: LinethRollupSmartContractClientReadOnly? = null,
     p2pPort: UInt = 0u,
     allowEmptyBlocks: Boolean = false,
     followers: FollowersConfig = FollowersConfig(emptyMap()),

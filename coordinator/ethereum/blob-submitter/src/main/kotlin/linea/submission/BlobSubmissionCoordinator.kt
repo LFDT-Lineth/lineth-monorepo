@@ -1,7 +1,7 @@
 package linea.submission
 
 import io.vertx.core.Vertx
-import linea.contract.l1.LineaRollupSmartContractClient
+import linea.contract.l1.LinethRollupSmartContractClient
 import linea.contract.l1.LineaSmartContractClient
 import linea.contract.l1.LineaValidiumSmartContractClient
 import linea.domain.BlobRecord
@@ -207,7 +207,7 @@ class BlobSubmissionCoordinator(
       )
 
       val blobSubmitter = when (lineaSmartContractClient) {
-        is LineaRollupSmartContractClient -> {
+        is LinethRollupSmartContractClient -> {
           BlobSubmitterAsEIP4844MultipleBlobsPerTx(
             contract = lineaSmartContractClient,
             gasPriceCapProvider = gasPriceCapProvider,

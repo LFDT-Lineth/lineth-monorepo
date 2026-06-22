@@ -2,7 +2,7 @@ package linea.submission
 
 import io.vertx.core.Vertx
 import linea.contract.l1.BlockAndNonce
-import linea.contract.l1.LineaRollupSmartContractClient
+import linea.contract.l1.LinethRollupSmartContractClient
 import linea.domain.BlobRecord
 import linea.domain.BlockIntervals
 import linea.domain.createAggregation
@@ -29,7 +29,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 class BlobSubmissionCoordinatorTest {
-  private lateinit var lineaRollupSmartContractClient: LineaRollupSmartContractClient
+  private lateinit var linethRollupSmartContractClient: LinethRollupSmartContractClient
   private lateinit var blobsRepository: BlobsRepository
   private lateinit var aggregationsRepository: AggregationsRepository
   private lateinit var blobSubmitter: BlobSubmitter
@@ -61,7 +61,7 @@ class BlobSubmissionCoordinatorTest {
   fun beforeEach() {
     blobsRepository = mock()
     aggregationsRepository = mock()
-    lineaRollupSmartContractClient = mock {
+    linethRollupSmartContractClient = mock {
       on { updateNonceAndReferenceBlockToLastL1Block() }
         .thenReturn(SafeFuture.completedFuture(BlockAndNonce(blockNumber = 1u, nonce = 1u)))
       on { finalizedL2BlockNumber() }.thenReturn(SafeFuture.completedFuture(0u))
@@ -87,7 +87,7 @@ class BlobSubmissionCoordinatorTest {
         ),
         blobsRepository = blobsRepository,
         aggregationsRepository = aggregationsRepository,
-        lineaSmartContractClient = lineaRollupSmartContractClient,
+        lineaSmartContractClient = linethRollupSmartContractClient,
         blobSubmitter = blobSubmitter,
         vertx = vertx,
         clock = fakeClock,

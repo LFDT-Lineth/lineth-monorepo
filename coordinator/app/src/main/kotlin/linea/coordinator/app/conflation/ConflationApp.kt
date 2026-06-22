@@ -7,7 +7,7 @@ import linea.clients.StateManagerV1JsonRpcClient
 import linea.conflation.ConflationService
 import linea.conflation.FixedLaggingHeadSafeBlockProvider
 import linea.conflation.calculators.CalculatorsFactory
-import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
+import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
 import linea.contract.l2.Web3JL2MessageServiceSmartContractClient
 import linea.coordination.HighestConflationTracker
 import linea.coordination.HighestProvenBatchTracker
@@ -145,7 +145,7 @@ class ConflationApp(
         rpcUrl = ftxConfig.l1Endpoint.toString(),
         log = LogManager.getLogger("clients.l1.eth.ftx"),
       )
-      val contractClient = Web3JLineaRollupSmartContractClientReadOnly(
+      val contractClient = Web3JLinethRollupSmartContractClientReadOnly(
         contractAddress = configs.protocol.l1.contractAddress,
         web3j = l1Web3jClient,
         ethLogsClient = createEthApiClient(

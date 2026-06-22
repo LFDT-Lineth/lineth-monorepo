@@ -1,0 +1,245 @@
+package linea.contract.l1
+
+import linea.contract.FAKE_READ_ONLY_CREDENTIALS
+import linea.contract.LinethRollupV6
+import linea.contract.LinethRollupV8
+import linea.contract.events.FinalizedStateUpdatedEvent
+import linea.domain.BlockParameter
+import linea.ethapi.EthLogsClient
+import linea.kotlin.toBigInteger
+import linea.kotlin.toHexStringUInt256
+import linea.kotlin.toULong
+import linea.web3j.domain.toWeb3j
+import net.consensys.linea.async.toSafeFuture
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
+import org.web3j.protocol.Web3j
+import org.web3j.tx.Contract
+import org.web3j.tx.gas.StaticGasProvider
+import tech.pegasys.teku.infrastructure.async.SafeFuture
+import java.math.BigInteger
+import java.util.concurrent.atomic.AtomicReference
+
+open class Web3JLinethRollupSmartContractClientReadOnly(
+  val web3j: Web3j,
+  val contractAddress: String,
+  private val ethLogsClient: EthLogsClient,
+  private val log: Logger = LogManager.getLogger(Web3JLinethRollupSmartContractClientReadOnly::class.java),
+) : LinethRollupSmartContractClientReadOnly,
+  LinethRollupSmartContractClientReadOnlyFinalizedStateProvider,
+  FinalizedStateDataProvider {
+
+  protected fun contractClientV8AtBlock(blockParameter: BlockParameter): LinethRollupV8 {
+    return contractClientAtBlock(blockParameter, LinethRollupV8::class.java)
+  }
+
+  protected fun <T : Contract> loadContractClient(contract: Class<T>): T {
+    @Suppress("UNCHECKED_CAST")
+    return when {
+      LinethRollupV6::class.java.isAssignableFrom(contract) -> LinethRollupV6.load(
+        contractAddress,
+        web3j,
+        FAKE_READ_ONLY_CREDENTIALS,
+        StaticGasProvider(BigInteger.ZERO, BigInteger.ZERO),
+      )
+
+      LinethRollupV8::class.java.isAssignableFrom(contract) -> LinethRollupV8.load(
+        contractAddress,
+        web3j,
+        FAKE_READ_ONLY_CREDENTIALS,
+        StaticGasProvider(BigInteger.ZERO, BigInteger.ZERO),
+      )
+
+      else -> throw IllegalArgumentException("Unsupported contract type: ${contract::class.java}")
+    } as T
+  }
+
+  protected fun <T : Contract> contractClientAtBlock(blockParameter: BlockParameter, contract: Class<T>): T {
+    @Suppress("UNCHECKED_CAST")
+    return loadContractClient(contract).apply {
+      this.setDefaultBlockParameter(blockParameter.toWeb3j())
+    }
+  }
+
+  private val smartContractVersionCache = AtomicReference<LinethRollupContractVersion>(null)
+
+  private fun getSmartContractVersion(): SafeFuture<LinethRollupContractVersion> {
+    return if (smartContractVersionCache.get() == LinethRollupContractVersion.V8) {
+      // once upgraded, it's not downgraded
+      SafeFuture.completedFuture(LinethRollupContractVersion.V8)
+    } else {
+      fetchSmartContractVersion()
+        .thenPeek { contractLatestVersion ->
+          if (smartContractVersionCache.get() != null &&
+            contractLatestVersion != smartContractVersionCache.get()
+          ) {
+            log.info(
+              "Smart contract upgraded: prevVersion={} upgradedVersion={}",
+              smartContractVersionCache.get(),
+              contractLatestVersion,
+            )
+          }
+          smartContractVersionCache.set(contractLatestVersion)
+        }
+    }
+  }
+
+  private fun fetchSmartContractVersion(
+    blockParameter: BlockParameter = BlockParameter.Tag.LATEST,
+  ): SafeFuture<LinethRollupContractVersion> {
+    return contractClientAtBlock(blockParameter, LinethRollupV6::class.java)
+      .CONTRACT_VERSION()
+      .sendAsync()
+      .toSafeFuture()
+      .thenApply(::parseContractVersion)
+  }
+
+  private fun parseContractVersion(version: String): LinethRollupContractVersion {
+    return when {
+      version.startsWith("6") -> LinethRollupContractVersion.V6
+      version.startsWith("7") -> LinethRollupContractVersion.V7
+      version.startsWith("8") -> LinethRollupContractVersion.V8
+      else -> throw IllegalStateException("Unsupported contract version: $version")
+    }
+  }
+
+  override fun getAddress(): String = contractAddress
+
+  override fun getVersion(blockParameter: BlockParameter): SafeFuture<LinethRollupContractVersion> {
+    return if (blockParameter == BlockParameter.Tag.LATEST) {
+      getSmartContractVersion()
+    } else {
+      fetchSmartContractVersion(blockParameter)
+    }
+  }
+
+  override fun finalizedL2BlockNumber(blockParameter: BlockParameter): SafeFuture<ULong> {
+    return contractClientV8AtBlock(blockParameter)
+      .currentL2BlockNumber().sendAsync()
+      .thenApply { it.toULong() }
+      .toSafeFuture()
+  }
+
+  override fun getMessageRollingHash(blockParameter: BlockParameter, messageNumber: Long): SafeFuture<ByteArray> {
+    require(messageNumber >= 0) { "messageNumber must be greater than or equal to 0" }
+
+    return contractClientV8AtBlock(
+      blockParameter,
+    ).rollingHashes(messageNumber.toBigInteger()).sendAsync().toSafeFuture()
+  }
+
+  override fun isBlobShnarfPresent(blockParameter: BlockParameter, shnarf: ByteArray): SafeFuture<Boolean> {
+    return getVersion()
+      .thenCompose { version ->
+        when (version) {
+          LinethRollupContractVersion.V6,
+          LinethRollupContractVersion.V7,
+          LinethRollupContractVersion.V8,
+          -> contractClientV8AtBlock(blockParameter).blobShnarfExists(shnarf)
+        }
+          .sendAsync()
+          .thenApply { it != BigInteger.ZERO }
+          .toSafeFuture()
+      }
+  }
+
+  override fun blockStateRootHash(blockParameter: BlockParameter, lineaL2BlockNumber: ULong): SafeFuture<ByteArray> {
+    return contractClientV8AtBlock(blockParameter)
+      .stateRootHashes(lineaL2BlockNumber.toBigInteger()).sendAsync()
+      .toSafeFuture()
+  }
+
+  override fun getLatestFinalizedState(blockParameter: BlockParameter): SafeFuture<LinethRollupFinalizedState> {
+    return getVersion()
+      .thenApply { contractVersion ->
+        if (contractVersion != LinethRollupContractVersion.V8) {
+          throw UnsupportedOperationException("Contract $contractVersion does not support getLatestFinalizedState")
+        }
+        contractClientV8AtBlock(blockParameter)
+      }.thenCompose { contractClient ->
+        contractClient
+          .currentL2BlockNumber()
+          .sendAsync()
+          .toSafeFuture()
+          .thenCompose { finalizedBlockNumber ->
+            getFinalizedStateEvent(
+              upToBlock = blockParameter,
+              finalisedBlockNumber = finalizedBlockNumber.toULong(),
+            )
+              .thenApply { finalState ->
+                LinethRollupFinalizedState(
+                  blockNumber = finalState.blockNumber,
+                  blockTimestamp = finalState.timestamp,
+                  messageNumber = finalState.messageNumber,
+                  forcedTransactionNumber = finalState.forcedTransactionNumber,
+                )
+              }
+          }
+      }
+  }
+
+  override fun getFinalizedStateData(
+    blockParameter: BlockParameter,
+  ): SafeFuture<FinalizedStateDataProvider.FinalizedStateData> {
+    return getVersion()
+      .thenCombine(
+        finalizedL2BlockNumber(blockParameter),
+      ) { version, finalizedBlockNumber -> version to finalizedBlockNumber }
+      .thenCompose { (version, finalizedBlockNumber) ->
+        when (version) {
+          LinethRollupContractVersion.V6,
+          LinethRollupContractVersion.V7,
+          ->
+            SafeFuture.completedFuture(
+              FinalizedStateDataProvider.FinalizedStateData(
+                blockNumber = finalizedBlockNumber,
+                forcedTransactionNumber = 0UL, // ftx is not available in V6 and V7 contract, return the initial value
+              ),
+            )
+
+          LinethRollupContractVersion.V8 ->
+            findFinalizedStateEvent(blockParameter, finalizedBlockNumber)
+              .thenApply { finalizedState ->
+                val forcedTransactionNumber = finalizedState?.forcedTransactionNumber ?: 0UL
+                FinalizedStateDataProvider.FinalizedStateData(
+                  blockNumber = finalizedBlockNumber,
+                  forcedTransactionNumber = forcedTransactionNumber,
+                )
+              }
+        }
+      }
+  }
+
+  private fun findFinalizedStateEvent(
+    upToBlock: BlockParameter,
+    finalisedBlockNumber: ULong,
+  ): SafeFuture<FinalizedStateUpdatedEvent?> {
+    return ethLogsClient.getLogs(
+      fromBlock = BlockParameter.Tag.EARLIEST,
+      toBlock = upToBlock,
+      address = contractAddress,
+      topics = listOf(
+        FinalizedStateUpdatedEvent.topic,
+        finalisedBlockNumber.toHexStringUInt256(),
+      ),
+    ).thenApply { logs ->
+      // only one log expected because we use indexed finalized block number
+      logs.firstOrNull()
+        ?.let(FinalizedStateUpdatedEvent::fromEthLog)
+        ?.event
+    }
+  }
+
+  private fun getFinalizedStateEvent(
+    upToBlock: BlockParameter,
+    finalisedBlockNumber: ULong,
+  ): SafeFuture<FinalizedStateUpdatedEvent> {
+    return findFinalizedStateEvent(upToBlock = upToBlock, finalisedBlockNumber = finalisedBlockNumber)
+      .thenApply { event ->
+        // it means contract was just upgraded but no event published yet,
+        // we cannot deterministically get the finalized fields
+        // throw unsupported operation exception to let caller decide what to do, either retry later or fail
+        event ?: throw UnsupportedOperationException("event FinalizedStateUpdated not found on L1")
+      }
+  }
+}
