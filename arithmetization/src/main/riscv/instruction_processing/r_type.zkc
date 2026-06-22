@@ -311,8 +311,10 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                                 v1_abs = absolute_value_double_word(v1)
                                 v2_abs = absolute_value_double_word(v2)
                                 registers[rd] = v1_abs % v2_abs
-                                if v1_sign == 1 {
-                                    registers[rd] = negative_of_double_word(registers[rd])
+                                switch v1_sign {
+                                    case 1: {
+                                        registers[rd] = negative_of_double_word(registers[rd])
+                                    }
                                 }
                             }
                         }
@@ -336,10 +338,13 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                         case FUNCT7_REMU: {
                             printf "REMU "
                             print_r_operands(rd, rs1, rs2)
-                            if v2 == 0 {
-                                registers[rd] = v1
-                            } else {
-                                registers[rd] = v1 % v2
+                            switch v2 {
+                                case 0: {
+                                    registers[rd] = v1
+                                }
+                                default: {
+                                    registers[rd] = v1 % v2
+                                }
                             }
                         }
                         default: {
@@ -393,10 +398,13 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                             print_r_operands(rd, rs1, rs2)
                             product_upper::product_lower = (v1_lower as DoubleWord) * (v2_lower as DoubleWord)
                             sign_bit = sign_bit_of_word(product_lower)
-                            if (sign_bit == 1) {
-                                registers[rd] = MAX_UINT_32::product_lower
-                            } else {
-                                registers[rd] = product_lower as DoubleWord
+                            switch sign_bit {
+                                case 1: {
+                                    registers[rd] = MAX_UINT_32::product_lower
+                                }
+                                default: {
+                                    registers[rd] = product_lower as DoubleWord
+                                }
                             }
                         }
                         default: {
@@ -435,16 +443,22 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                         case FUNCT7_DIVW: {
                             printf "DIVW "
                             print_r_operands(rd, rs1, rs2)
-                            if (v2_lower == 0) {
-                                registers[rd] = NEGATIVE_ONE_AS_I64
-                            } else {
-                                word_wip = v1_lower_abs / v2_lower_abs
-                                if (sign_bit_of_word(v1_lower) == sign_bit_of_word(v2_lower)) {
-                                    registers[rd] = sgn_extension_u32_u64(word_wip)
-                                } else {
-                                    registers[rd] = sgn_extension_u32_u64(negative_of_word(word_wip))
+                            switch v2_lower {
+                                case 0: {
+                                    registers[rd] = NEGATIVE_ONE_AS_I64
                                 }
-                            }
+                                default: {
+                                    word_wip = v1_lower_abs / v2_lower_abs
+                                    switch sign_bit_of_word(v1_lower) {
+                                        case 0: {
+                                            registers[rd] = sgn_extension_u32_u64(word_wip)
+                                        }
+                                        default: {
+                                            registers[rd] = sgn_extension_u32_u64(negative_of_word(word_wip))
+                                        }
+                                    }
+                                }
+                            }    
                         }
                         default: {
                             printf "[ERROR] Unsupported R-type instruction with\n"
@@ -468,24 +482,29 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                             printf "SRAW "
                             print_r_operands(rd, rs1, rs2)
                             shift_discard_5::shift_amount_5 = v2_lower
-                            if (sign_bit_of_word(v1_lower) == 1) {
-                                word_working_copy = bit_flip_word(v1_lower)
-                            } else {
-                                word_working_copy = v1_lower
-                            }
-                            word_working_copy = word_working_copy >> shift_amount_5
-                            if (sign_bit_of_word(v1_lower) == 1) {
-                                word_working_copy = bit_flip_word(word_working_copy)
+                            switch sign_bit_of_word(v1_lower) {
+                                case 1: {
+                                    word_working_copy = bit_flip_word(v1_lower)
+                                    word_working_copy = word_working_copy >> shift_amount_5
+                                    word_working_copy = bit_flip_word(word_working_copy)
+                                }
+                                default: {
+                                    word_working_copy = v1_lower
+                                    word_working_copy = word_working_copy >> shift_amount_5
+                                }
                             }
                             registers[rd] = sgn_extension_u32_u64(word_working_copy)
                         }
                         case FUNCT7_DIVUW: {
                             printf "DIVUW "
                             print_r_operands(rd, rs1, rs2)
-                            if (v2_lower == 0) {
-                                registers[rd] = NEGATIVE_ONE_AS_I64
-                            } else {
-                                registers[rd] = sgn_extension_u32_u64(v1_lower / v2_lower)
+                            switch v2_lower {
+                                case 0: {
+                                    registers[rd] = NEGATIVE_ONE_AS_I64
+                                }
+                                default: {
+                                    registers[rd] = sgn_extension_u32_u64(v1_lower / v2_lower)
+                                }
                             }
                         }
                         default: {
@@ -502,14 +521,20 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                         case FUNCT7_REMW: {
                             printf "REMW "
                             print_r_operands(rd, rs1, rs2)
-                            if (v2_lower == 0) {
-                                registers[rd] = sgn_extension_u32_u64(v1_lower)
-                            } else {
-                                word_wip = v1_lower_abs % v2_lower_abs
-                                if (sign_bit_of_word(v1_lower) == 0) {
-                                    registers[rd] = sgn_extension_u32_u64(word_wip)
-                                } else {
-                                    registers[rd] = sgn_extension_u32_u64(negative_of_word(word_wip))
+                            switch v2_lower {
+                                case 0: {
+                                    registers[rd] = sgn_extension_u32_u64(v1_lower)
+                                }
+                                default: {
+                                    word_wip = v1_lower_abs % v2_lower_abs
+                                    switch sign_bit_of_word(v1_lower) {
+                                        case 0: {
+                                            registers[rd] = sgn_extension_u32_u64(word_wip)
+                                        }
+                                        default: {
+                                            registers[rd] = sgn_extension_u32_u64(negative_of_word(word_wip))
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -527,10 +552,13 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                         case FUNCT7_REMUW: {
                             printf "REMUW "
                             print_r_operands(rd, rs1, rs2)
-                            if (v2_lower == 0) {
-                                registers[rd] = sgn_extension_u32_u64(v1_lower)
-                            } else {
-                                registers[rd] = sgn_extension_u32_u64(v1_lower % v2_lower)
+                            switch v2_lower {
+                                case 0: {
+                                    registers[rd] = sgn_extension_u32_u64(v1_lower)
+                                }
+                                default: {
+                                    registers[rd] = sgn_extension_u32_u64(v1_lower % v2_lower)
+                                }
                             }
                         }
                         default: {
