@@ -80,7 +80,6 @@ class L2ExecutionProverClientFileBasedTest {
 
     val requestFile = config.requestsDirectory.resolve(ExecutionProofFileNameProvider.getFileName(proofIndex))
     assertThat(requestFile).exists()
-    println("JONES: RequestFile = ${requestFile.toAbsolutePath()}")
 
     val writtenDto = jsonMapper.readValue(requestFile.toFile(), L2ExecutionProofRequestDto::class.java)
     val expectedDto = L2ExecutionProofRequestDtoMapper(guestProgramId, chainConfig).invoke(request).get()
@@ -96,11 +95,6 @@ class L2ExecutionProverClientFileBasedTest {
     )
     val responseDto = l2ResponseDto()
     saveResponseFile(ExecutionProofFileNameProvider.getFileName(proofIndex), responseDto)
-    println(
-      "JONES: ResponseFile: ${config.responsesDirectory.resolve(
-        ExecutionProofFileNameProvider.getFileName(proofIndex),
-      ).toFile().absoluteFile}",
-    )
 
     val response = client.findProofResponse(proofIndex).get()
 

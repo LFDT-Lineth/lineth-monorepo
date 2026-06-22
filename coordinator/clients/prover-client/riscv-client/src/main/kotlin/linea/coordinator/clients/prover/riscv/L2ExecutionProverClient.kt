@@ -22,8 +22,6 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 internal class L2ExecutionProofRequestDtoMapper(
   private val guestProgramId: String,
   private val chainConfig: ChainConfigDto,
-  // private val statelessInputSszSerializer: StatelessInputSszSerializer = L2ExecutionStatelessInputSszSerializer(),
-  // private val statelessInputDtoSszSerializer: StatelessInputDtoSszSerializer = L2ExecutionStatelessInputDtoSszSerializer(),
 ) : (L2ExecutionProofRequestV1) -> SafeFuture<L2ExecutionProofRequestDto> {
   private fun mapFtxInclusionResultToAcceptance(
     inclusionResult: ForcedTransactionInclusionResult,
@@ -96,16 +94,6 @@ internal class L2ExecutionProofRequestDtoMapper(
         publicKeys = emptyList(),
       )
       PayloadInputDto(
-        // statelessInputSsz = statelessInputDtoSszSerializer.getStatelessInputDtoSsz(statelessInputDto),
-        // statelessInputSsz = statelessInputSszSerializer.getStatelessInputSsz(
-        //  executionPayload,
-        //  executionWitness,
-        //  request.chainConfig,
-        //  emptyList(),
-        //  ByteArray(0),
-        //  executionRequests!!,
-        //  emptyList(),
-        // ).encodeHex(),
         statelessInput = statelessInputDto,
         rollupExtension = RollupExtensionDto(
           forcedTransactions = forcedTransactions.map {
