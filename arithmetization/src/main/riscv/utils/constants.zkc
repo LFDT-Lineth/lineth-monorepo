@@ -342,3 +342,39 @@ const ITYPE_INVALID:ITypeComputeOp = 63
 // Writeback kinds (second micro-step after compute)
 const WB_NONE:ITypeWriteback = 0
 const WB_STORE_REG:ITypeWriteback = 1
+
+// R-type semantic compute ops (pre-decoded at ELF time).
+const RTYPE_ADD:RTypeComputeOp = 0
+const RTYPE_SUB:RTypeComputeOp = 1
+const RTYPE_SLL:RTypeComputeOp = 2
+const RTYPE_SLT:RTypeComputeOp = 3
+const RTYPE_SLTU:RTypeComputeOp = 4
+const RTYPE_XOR:RTypeComputeOp = 5
+const RTYPE_SRL:RTypeComputeOp = 6
+const RTYPE_SRA:RTypeComputeOp = 7
+const RTYPE_OR:RTypeComputeOp = 8
+const RTYPE_AND:RTypeComputeOp = 9
+
+const RTYPE_MUL:RTypeComputeOp = 10
+const RTYPE_MULH:RTypeComputeOp = 11
+const RTYPE_MULHSU:RTypeComputeOp = 12
+const RTYPE_MULHU:RTypeComputeOp = 13
+const RTYPE_DIV:RTypeComputeOp = 14
+const RTYPE_DIVU:RTypeComputeOp = 15
+const RTYPE_REM:RTypeComputeOp = 16
+const RTYPE_REMU:RTypeComputeOp = 17
+
+const RTYPE_ADDW:RTypeComputeOp = 18
+const RTYPE_SUBW:RTypeComputeOp = 19
+const RTYPE_SLLW:RTypeComputeOp = 20
+const RTYPE_SRLW:RTypeComputeOp = 21
+const RTYPE_SRAW:RTypeComputeOp = 22
+
+const RTYPE_MULW:RTypeComputeOp = 23
+const RTYPE_DIVW:RTypeComputeOp = 24
+const RTYPE_DIVUW:RTypeComputeOp = 25
+const RTYPE_REMW:RTypeComputeOp = 26
+const RTYPE_REMUW:RTypeComputeOp = 27
+
+const RTYPE_KECCAK:RTypeComputeOp = 28
+const RTYPE_INVALID:RTypeComputeOp = 63

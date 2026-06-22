@@ -19,7 +19,7 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
 
     switch instruction_type {
         case R_TYPE: {
-            process_R_type_instruction(index, opcode)
+            process_R_type_instruction(index)
             new_pc = pc + 4 as Address
         }
         case I_TYPE: {

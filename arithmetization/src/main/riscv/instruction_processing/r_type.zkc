@@ -12,13 +12,10 @@ include "../../lib/poseidon2/ram.zkc"
 //
 // R-type instructions operate on two source registers (rs1, rs2) and write the
 // result to a destination register (rd).  They never affect the program counter
-// (no pc parameter — the caller always advances by 4).  The 25-bit encoding
-// (opcode stripped) is:
+// (no pc parameter — the caller always advances by 4).  The 23-bit semantic
+// record is pre-decoded at ELF time:
 //
-//   funct7 :: rs2 :: rs1 :: funct3 :: rd
-//
-// funct3 selects the operation family; funct7 disambiguates within that family
-// (e.g. ADD vs SUB, SRL vs SRA, or base vs M-extension).
+//   compute_op :: writeback :: rs1 :: rs2 :: rd
 //
 // Supported operation groups:
 //
@@ -34,11 +31,13 @@ include "../../lib/poseidon2/ram.zkc"
 //   M-extension *W — word-width multiply/divide/remainder, sign-extended to 64 bits:
 //     MULW, DIVW, DIVUW, REMW, REMUW
 //
+//   Custom-1 — Keccak precompile (no register writeback)
+//
 // Signed operations (SLT, SRA, MULH, MULHSU, DIV, REM, and their *W variants)
 // treat register values as two's-complement integers.  Division and remainder
 // follow RISC-V semantics: division by zero returns −1 (or the dividend for REM),
 // and signed overflow (INT_MIN / −1) returns INT_MIN (or 0 for REM).
-fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block, opcode_stats,poseidon2_state>(index:u64, opcode:Opcode) {
+fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block, opcode_stats,poseidon2_state>(index:u64) {
 
     var v1:DoubleWord
     var v2:DoubleWord
@@ -50,7 +49,6 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
     var shift_amount_6:u6
     var shift_discard_5:u27 // 27 + 5 = 32, used for Words
     var shift_amount_5:u5
-    var double_word_working_copy:DoubleWord
     var word_working_copy:Word
     var overflow:SignBit
     var v1_upper:Word
@@ -63,14 +61,12 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
     var product_lower:Word
     var word_wip:Word
 
-    // The R-type field split (funct7 :: rs2 :: rs1 :: funct3 :: rd) is pre-decoded
-    // externally (see decoded_rtype in memory.zkc) and looked up by index.
-    var funct7:Funct7
-    var rs2:Register
+    var compute_op:RTypeComputeOp
+    var writeback:ITypeWriteback
     var rs1:Register
-    var funct3:Funct3
+    var rs2:Register
     var rd:Register
-    funct7, rs2, rs1, funct3, rd = decoded_rtype[index]
+    compute_op, writeback, rs1, rs2, rd = decoded_rtype[index]
 
     v1 = registers[rs1]
     v2 = registers[rs2]
@@ -346,12 +342,104 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                 }
             }
         }
-        case OP_32: {
-
-            // =============================================
-            // RISCV-64-I base instruction set instructions
-            // =============================================
-
+        case RTYPE_DIVU: {
+            printf "DIVU "
+            print_r_operands(rd, rs1, rs2)
+            if v2 == 0 {
+                result = NEGATIVE_ONE_AS_I64
+            } else {
+                result = v1 / v2
+            }
+        }
+        case RTYPE_REM: {
+            printf "REM "
+            print_r_operands(rd, rs1, rs2)
+            if v2 == 0 {
+                result = v1
+            } else if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
+                result = 0
+            } else {
+                v1_sign = sign_bit_of_double_word(v1)
+                v1_abs = absolute_value_double_word(v1)
+                v2_abs = absolute_value_double_word(v2)
+                result = v1_abs % v2_abs
+                if v1_sign == 1 {
+                    result = negative_of_double_word(result)
+                }
+            }
+        }
+        case RTYPE_REMU: {
+            printf "REMU "
+            print_r_operands(rd, rs1, rs2)
+            if v2 == 0 {
+                result = v1
+            } else {
+                result = v1 % v2
+            }
+        }
+        case RTYPE_ADDW: {
+            v1_upper::v1_lower = v1
+            v2_upper::v2_lower = v2
+            printf "ADDW "
+            print_r_operands(rd, rs1, rs2)
+            overflow::word_wip = (v1_lower as u33) + (v2_lower as u33)
+            result = sgn_extension_u32_u64(word_wip)
+        }
+        case RTYPE_SUBW: {
+            v1_upper::v1_lower = v1
+            v2_upper::v2_lower = v2
+            printf "SUBW "
+            print_r_operands(rd, rs1, rs2)
+            overflow::word_wip = ((1 as u1)::v1_lower) - (v2_lower as u33)
+            result = sgn_extension_u32_u64(word_wip)
+        }
+        case RTYPE_SLLW: {
+            v1_upper::v1_lower = v1
+            v2_upper::v2_lower = v2
+            printf "SLLW "
+            print_r_operands(rd, rs1, rs2)
+            shift_discard_5::shift_amount_5 = v2_lower
+            result = sgn_extension_u32_u64(v1_lower << shift_amount_5)
+        }
+        case RTYPE_SRLW: {
+            v1_upper::v1_lower = v1
+            v2_upper::v2_lower = v2
+            printf "SRLW "
+            print_r_operands(rd, rs1, rs2)
+            shift_discard_5::shift_amount_5 = v2_lower
+            result = sgn_extension_u32_u64(v1_lower >> shift_amount_5)
+        }
+        case RTYPE_SRAW: {
+            v1_upper::v1_lower = v1
+            v2_upper::v2_lower = v2
+            printf "SRAW "
+            print_r_operands(rd, rs1, rs2)
+            shift_discard_5::shift_amount_5 = v2_lower
+            if (sign_bit_of_word(v1_lower) == 1) {
+                word_working_copy = bit_flip_word(v1_lower)
+            } else {
+                word_working_copy = v1_lower
+            }
+            word_working_copy = word_working_copy >> shift_amount_5
+            if (sign_bit_of_word(v1_lower) == 1) {
+                word_working_copy = bit_flip_word(word_working_copy)
+            }
+            result = sgn_extension_u32_u64(word_working_copy)
+        }
+        case RTYPE_MULW: {
+            v1_upper::v1_lower = v1
+            v2_upper::v2_lower = v2
+            printf "MULW "
+            print_r_operands(rd, rs1, rs2)
+            product_upper::product_lower = (v1_lower as DoubleWord) * (v2_lower as DoubleWord)
+            sign_bit = sign_bit_of_word(product_lower)
+            if (sign_bit == 1) {
+                result = MAX_UINT_32::product_lower
+            } else {
+                result = product_lower as DoubleWord
+            }
+        }
+        case RTYPE_DIVW: {
             v1_upper::v1_lower = v1
             v2_upper::v2_lower = v2
             v1_lower_abs = absolute_value_word(v1_lower)
@@ -534,17 +622,65 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                 // STATE_WIDTH field elements at input_addr, writing the result to output_addr.
                 poseidon2(v1 as Address, registers[rd] as Address)
             } else {
-                printf "[ERROR] Unsupported R-type custom-1 instruction with\n"
-                printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
-                printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
-                fail
+                result = sgn_extension_u32_u64(v1_lower / v2_lower)
             }
+        }
+        case RTYPE_REMW: {
+            v1_upper::v1_lower = v1
+            v2_upper::v2_lower = v2
+            v1_lower_abs = absolute_value_word(v1_lower)
+            v2_lower_abs = absolute_value_word(v2_lower)
+            printf "REMW "
+            print_r_operands(rd, rs1, rs2)
+            if (v2_lower == 0) {
+                result = sgn_extension_u32_u64(v1_lower)
+            } else {
+                word_wip = v1_lower_abs % v2_lower_abs
+                if (sign_bit_of_word(v1_lower) == 0) {
+                    result = sgn_extension_u32_u64(word_wip)
+                } else {
+                    result = sgn_extension_u32_u64(negative_of_word(word_wip))
+                }
+            }
+        }
+        case RTYPE_REMUW: {
+            v1_upper::v1_lower = v1
+            v2_upper::v2_lower = v2
+            printf "REMUW "
+            print_r_operands(rd, rs1, rs2)
+            if (v2_lower == 0) {
+                result = sgn_extension_u32_u64(v1_lower)
+            } else {
+                result = sgn_extension_u32_u64(v1_lower % v2_lower)
+            }
+        }
+        case RTYPE_KECCAK: {
+            printf "KECCAK precompile "
+            keccak(v1 as Address, v2 as u32, registers[rd] as Address)
+            return
+        }
+        case RTYPE_INVALID: {
+            printf "[ERROR] Unsupported R-type instruction (invalid semantic op)\n"
+            fail
         }
         default: {
             printf "[ERROR] Unsupported R-type instruction with\n"
-            printf "\topcode ≡ %x ≡ %b\n", opcode, opcode
-            printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
-            printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
+            printf "\tcompute_op ≡ %x\n", compute_op
+            fail
+        }
+    }
+
+    switch writeback {
+        case WB_STORE_REG: {
+            if (rd != 0) {
+                registers[rd] = result
+            }
+        }
+        case WB_NONE: {
+            // no register writeback
+        }
+        default: {
+            printf "[ERROR] Unsupported R-type writeback %d\n", writeback
             fail
         }
     }

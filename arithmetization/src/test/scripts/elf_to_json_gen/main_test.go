@@ -170,3 +170,48 @@ func TestDecodeITypeSemantic(t *testing.T) {
 		})
 	}
 }
+
+func TestDecodeRTypeSemantic(t *testing.T) {
+	tests := []struct {
+		name   string
+		opcode uint32
+		funct3 uint32
+		funct7 uint32
+		wantOp uint32
+		wantWB uint32
+	}{
+		{name: "add", opcode: opcodeOP, funct3: 0b000, funct7: 0b0000000, wantOp: rtypeOpAdd, wantWB: wbStoreReg},
+		{name: "sub", opcode: opcodeOP, funct3: 0b000, funct7: 0b0100000, wantOp: rtypeOpSub, wantWB: wbStoreReg},
+		{name: "sll", opcode: opcodeOP, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeOpSll, wantWB: wbStoreReg},
+		{name: "slt", opcode: opcodeOP, funct3: 0b010, funct7: 0b0000000, wantOp: rtypeOpSlt, wantWB: wbStoreReg},
+		{name: "sltu", opcode: opcodeOP, funct3: 0b011, funct7: 0b0000000, wantOp: rtypeOpSltu, wantWB: wbStoreReg},
+		{name: "xor", opcode: opcodeOP, funct3: 0b100, funct7: 0b0000000, wantOp: rtypeOpXor, wantWB: wbStoreReg},
+		{name: "srl", opcode: opcodeOP, funct3: 0b101, funct7: 0b0000000, wantOp: rtypeOpSrl, wantWB: wbStoreReg},
+		{name: "sra", opcode: opcodeOP, funct3: 0b101, funct7: 0b0100000, wantOp: rtypeOpSra, wantWB: wbStoreReg},
+		{name: "or", opcode: opcodeOP, funct3: 0b110, funct7: 0b0000000, wantOp: rtypeOpOr, wantWB: wbStoreReg},
+		{name: "and", opcode: opcodeOP, funct3: 0b111, funct7: 0b0000000, wantOp: rtypeOpAnd, wantWB: wbStoreReg},
+		{name: "mul", opcode: opcodeOP, funct3: 0b000, funct7: 0b0000001, wantOp: rtypeOpMul, wantWB: wbStoreReg},
+		{name: "mulh", opcode: opcodeOP, funct3: 0b001, funct7: 0b0000001, wantOp: rtypeOpMulh, wantWB: wbStoreReg},
+		{name: "div", opcode: opcodeOP, funct3: 0b100, funct7: 0b0000001, wantOp: rtypeOpDiv, wantWB: wbStoreReg},
+		{name: "remu", opcode: opcodeOP, funct3: 0b111, funct7: 0b0000001, wantOp: rtypeOpRemu, wantWB: wbStoreReg},
+		{name: "addw", opcode: opcodeOP32, funct3: 0b000, funct7: 0b0000000, wantOp: rtypeOpAddw, wantWB: wbStoreReg},
+		{name: "subw", opcode: opcodeOP32, funct3: 0b000, funct7: 0b0100000, wantOp: rtypeOpSubw, wantWB: wbStoreReg},
+		{name: "sllw", opcode: opcodeOP32, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeOpSllw, wantWB: wbStoreReg},
+		{name: "sraw", opcode: opcodeOP32, funct3: 0b101, funct7: 0b0100000, wantOp: rtypeOpSraw, wantWB: wbStoreReg},
+		{name: "mulw", opcode: opcodeOP32, funct3: 0b000, funct7: 0b0000001, wantOp: rtypeOpMulw, wantWB: wbStoreReg},
+		{name: "divw", opcode: opcodeOP32, funct3: 0b100, funct7: 0b0000001, wantOp: rtypeOpDivw, wantWB: wbStoreReg},
+		{name: "keccak", opcode: opcodeCUSTOM1, funct3: 0b000, funct7: 0b0000000, wantOp: rtypeOpKeccak, wantWB: wbNone},
+		{name: "invalid op funct3", opcode: opcodeOP, funct3: 0b010, funct7: 0b0100000, wantOp: rtypeInvalid, wantWB: wbNone},
+		{name: "invalid custom-1", opcode: opcodeCUSTOM1, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeInvalid, wantWB: wbNone},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotOp, gotWB := decodeRTypeSemantic(tt.opcode, tt.funct3, tt.funct7)
+			if gotOp != tt.wantOp || gotWB != tt.wantWB {
+				t.Fatalf("decodeRTypeSemantic(op=%#x, f3=%#x, f7=%#x) = (%d, %d), want (%d, %d)",
+					tt.opcode, tt.funct3, tt.funct7, gotOp, gotWB, tt.wantOp, tt.wantWB)
+			}
+		})
+	}
+}
