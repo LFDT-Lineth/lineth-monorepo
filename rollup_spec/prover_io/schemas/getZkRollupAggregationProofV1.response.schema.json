@@ -2,15 +2,30 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://linea.build/schemas/getZkRollupAggregationProofV1.response.schema.json",
   "title": "getZkRollupAggregationProof V1 response",
-  "description": "Prover -> coordinator rollup-aggregation proof response (the final proof). The shared, versioned contract for the rollup-aggregation guest output (RollupPublicInput) and the coordinator's Jackson mapper. The publicInputs are the same 14-field rollup PI tuple; unlike the rollup response there are no top-level l2L1Roots / filteredAddresses.",
+  "description": "Prover -> coordinator rollup-aggregation proof response (the final proof). The shared, versioned contract for the rollup-aggregation guest output (FinalizationSubmission) and the coordinator's Jackson mapper. It carries the 14-field rollup PI tuple plus the preimage data the L1 finalization call consumes: the merged L2->L1 Merkle roots, the merged filtered (sanctioned) addresses, and the L2 messaging block offsets.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "proof",
-    "publicInputs"
+    "publicInputs",
+    "l2L1Roots",
+    "filteredAddresses",
+    "l2MessagingBlocksOffsets"
   ],
   "properties": {
     "proof": { "$ref": "#/$defs/hex" },
+    "l2L1Roots": { 
+      "type": "array",
+      "items": { "$ref": "#/$defs/hash32" }
+    },
+    "filteredAddresses": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/address" }
+    },
+    "l2MessagingBlocksOffsets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/uint" }
+    },
     "publicInputs": {
       "type": "object",
       "additionalProperties": false,
@@ -51,6 +66,7 @@
   "$defs": {
     "uint": { "type": "integer", "minimum": 0 },
     "hex": { "type": "string", "pattern": "^0x([0-9a-fA-F]{2})*$" },
-    "hash32": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" }
+    "hash32": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
+    "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" }
   }
 }
