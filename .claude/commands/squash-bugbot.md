@@ -1,0 +1,1 @@
+../../.agents/skills/squash-bugbot/SKILL.md

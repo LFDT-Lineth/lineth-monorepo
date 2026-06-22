@@ -1,0 +1,15 @@
+plugins {
+  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'java-test-fixtures'
+}
+
+dependencies {
+  implementation project(':jvm-libs:linea:metrics:micrometer')
+  implementation project(':jvm-libs:linea:core:metrics')
+  implementation "org.hyperledger.besu.internal:besu-metrics-core"
+  implementation "org.hyperledger.besu:besu-plugin-api"
+  implementation "com.google.guava:guava:${libs.versions.guava.get()}-jre"
+  implementation(project(':maru:core'))
+
+  testImplementation "org.awaitility:awaitility-kotlin:${libs.versions.awaitility.get()}"
+}

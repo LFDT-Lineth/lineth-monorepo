@@ -46,6 +46,9 @@ on:
       constraints_changed:
         required: true
         type: string
+      maru_changed:
+        required: true
+        type: string
 
 jobs:
   # Cache for pulling Docker images is disabled as we empirically found that this
@@ -122,9 +125,16 @@ jobs:
     if: ${{ inputs.constraints_changed == 'true' }}
     secrets: inherit
 
+  maru:
+    uses: ./.github/workflows/maru-testing.yml
+    if: ${{ inputs.maru_changed == 'true' }}
+    with:
+      commit_tag: ${{ inputs.commit_tag }}
+    secrets: inherit
+
   # Run Jacoco report after all JVM tests complete
   jacoco-report:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     name: Generate Jacoco Coverage Report
     # Run if at least one JVM test job completed (whether passed, failed, or cancelled)
     # Don't run if all test jobs were skipped due to no changes
@@ -145,7 +155,7 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           submodules: false
 
@@ -154,31 +164,31 @@ jobs:
 
       - name: Download Jacoco execution data from coordinator
         if: needs.coordinator.result != 'skipped'
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: jacoco-coordinator-exec
           path: .
       - name: Download Jacoco execution data from linea-sequencer unit tests
         if: needs.linea-sequencer.result != 'skipped'
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: jacoco-linea-sequencer-unit-exec
           path: .
       - name: Download Jacoco execution data from linea-sequencer acceptance tests
         if: needs.linea-sequencer.result != 'skipped'
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: jacoco-linea-sequencer-acceptance-exec
           path: .
       - name: Download Jacoco execution data from staterecovery
         if: needs.staterecovery.result != 'skipped'
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: jacoco-staterecovery-exec
           path: .
       - name: Download Jacoco execution data from transaction-exclusion-api
         if: needs.transaction-exclusion-api.result != 'skipped'
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: jacoco-transaction-exclusion-api-exec
           path: .
@@ -187,7 +197,7 @@ jobs:
         run: |
           ./gradlew jacocoRootReport
       - name: Upload Jacoco test coverage report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: jacocoRootReport-${{ env.COMMIT_TAG }}.xml
           if-no-files-found: error
@@ -195,7 +205,7 @@ jobs:
             ${{ github.workspace }}/build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml
       - name: Upload coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f #v7.0.0
         with:
           fail_ci_if_error: true
           files: ${{ github.workspace }}/build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml
@@ -208,7 +218,7 @@ jobs:
   # If all jobs are skipped, the workflow will still succeed.
   always_succeed:
     runs-on: ubuntu-24.04
-    if: ${{ inputs.coordinator_changed == 'false' && inputs.prover_changed == 'false' && inputs.prover_ray_changed == 'false' && inputs.native_yield_automation_service_changed == 'false' && inputs.lido_governance_monitor_changed == 'false' && inputs.postman_changed == 'false' && inputs.transaction_exclusion_api_changed == 'false' && inputs.staterecovery_changed == 'false' && inputs.smart_contracts_changed == 'false' && inputs.linea_sequencer_changed == 'false' && inputs.constraints_changed == 'false' }}
+    if: ${{ inputs.coordinator_changed == 'false' && inputs.prover_changed == 'false' && inputs.prover_ray_changed == 'false' && inputs.native_yield_automation_service_changed == 'false' && inputs.lido_governance_monitor_changed == 'false' && inputs.postman_changed == 'false' && inputs.transaction_exclusion_api_changed == 'false' && inputs.staterecovery_changed == 'false' && inputs.smart_contracts_changed == 'false' && inputs.linea_sequencer_changed == 'false' && inputs.constraints_changed == 'false' && inputs.maru_changed == 'false' }}
     steps:
       - name: Ensure Workflow Success
         run: echo "All jobs were skipped, but workflow succeeds."

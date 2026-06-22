@@ -1,9 +1,9 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
 import linea.domain.gas.GasPriceCaps
+import linea.gaspricing.GasPriceCapProvider
 import linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.zkevm.ethereum.gaspricing.GasPriceCapProvider
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.atomic.AtomicReference
 
@@ -22,14 +22,6 @@ class GasPriceCapProviderForFinalization(
   init {
     require(config.gasPriceCapMultiplier >= 0.0) {
       "gasPriceCapMultiplier must be no less than 0. Value=${config.gasPriceCapMultiplier}"
-    }
-
-    require(config.maxPriorityFeePerGasCap >= 0uL) {
-      "maxPriorityFeePerGasCap must be no less than 0. Value=${config.maxPriorityFeePerGasCap}"
-    }
-
-    require(config.maxFeePerGasCap >= 0uL) {
-      "maxFeePerGasCap must be no less than 0. Value=${config.maxFeePerGasCap}"
     }
 
     metricsFacade.createGauge(
@@ -56,11 +48,8 @@ class GasPriceCapProviderForFinalization(
 
     val amplifiedMaxFeePerGasCap = (config.maxFeePerGasCap.toDouble() * config.gasPriceCapMultiplier).toULong()
     val maxFeePerGasCap = (
-      if (gasPriceCaps.maxBaseFeePerGasCap != null) {
-        gasPriceCaps.maxBaseFeePerGasCap!! + maxPriorityFeePerGasCap
-      } else {
-        gasPriceCaps.maxFeePerGasCap
-      }
+      gasPriceCaps.maxBaseFeePerGasCap?.let { it + maxPriorityFeePerGasCap }
+        ?: gasPriceCaps.maxFeePerGasCap
       )
       .coerceAtMost(amplifiedMaxFeePerGasCap)
       .run { if (this <= 0uL) amplifiedMaxFeePerGasCap else this }

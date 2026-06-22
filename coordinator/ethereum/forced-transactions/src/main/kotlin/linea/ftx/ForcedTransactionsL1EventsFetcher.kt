@@ -33,6 +33,7 @@ internal class ForcedTransactionsL1EventsFetcher(
   private val l1EarliestBlock: BlockParameter = BlockParameter.Tag.EARLIEST,
   private val l1HighestBlock: BlockParameter = BlockParameter.Tag.FINALIZED,
   private val ftxQueue: Queue<ForcedTransactionWithTimestamp>,
+  private val metrics: ForcedTransactionsMetrics = NoOpForcedTransactionsMetrics,
   private val log: Logger = LogManager.getLogger(ForcedTransactionsL1EventsFetcher::class.java),
 ) : LongRunningService {
   private lateinit var eventsSubscription: EthLogsFilterSubscriptionManager
@@ -150,6 +151,7 @@ internal class ForcedTransactionsL1EventsFetcher(
           l1BlockTimestamp = l1BlockTimestamp,
         )
         ftxQueue.add(ftxWithTimestamp)
+        metrics.recordAcceptedEvent(event.event.forcedTransactionNumber)
       }
         .onFailure {
           log.warn("failed to add event to queue, it will retry on next tick: errorMessage={}", it.message)

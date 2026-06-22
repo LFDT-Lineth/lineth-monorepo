@@ -13,8 +13,33 @@ permissions:
   packages: write
 
 jobs:
+  code-analysis:
+    uses: ./.github/workflows/codeql.yml
+  
+  lint-latest-commit-messages:
+    uses: ./.github/workflows/lint-commit-messages.yml
+    permissions:
+      contents: read
+      pull-requests: read
+    secrets: inherit
+
+  component-changelog-upload:
+    if: github.ref == 'refs/heads/main'
+    needs: [lint-latest-commit-messages]
+    uses: ./.github/workflows/component-changelog-upload.yml
+  
+  component-changelog-commit:
+    if: github.ref == 'refs/heads/main'
+    needs: [component-changelog-upload]
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/component-changelog-commit.yml
+    secrets: inherit
+
   filter-commit-changes:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    needs: [lint-latest-commit-messages]
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: Filter commit changes
     outputs:
       coordinator: ${{ steps.filter.outputs.coordinator }}
@@ -31,11 +56,12 @@ jobs:
       lido-governance-monitor: ${{ steps.filter.outputs.lido-governance-monitor }}
       tracer: ${{ steps.filter.outputs.tracer }}
       tracer-constraints: ${{ steps.filter.outputs.tracer-constraints }}
+      maru: ${{ steps.filter.outputs.maru }}
       has-changes-requiring-build: ${{ steps.exclusion-filter.outputs.has-changes-requiring-build }}
       has-changes-requiring-linea-besu-package-build: ${{ steps.filter.outputs.linea-sequencer-plugin == 'true' || steps.filter.outputs.tracer == 'true' || steps.filter.outputs.tracer-constraints == 'true' ||  steps.filter.outputs.linea-besu == 'true' || steps.filter.outputs.linea-besu-package == 'true' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Filter commit changes
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2
         id: filter
@@ -108,7 +134,7 @@ jobs:
               - '.github/workflows/main.yml'
               - '.github/workflows/run-smc-tests.yml'
             linea-sequencer-plugin:
-              - 'besu-plugins/linea-sequencer/**'
+              - 'linea-besu/plugins/linea-sequencer/**'
               - '.github/workflows/linea-sequencer-plugin-testing.yml'
               - 'buildSrc/**'
               - 'gradle/**'
@@ -116,17 +142,17 @@ jobs:
               - 'gradle.properties'
               - 'settings.gradle'
             linea-besu:
-              - 'linea-besu/**'
+              - 'linea-besu/besu/**'
             linea-besu-package:
-              - 'linea-besu-package/versions.env'
-              - 'linea-besu-package/scripts/assemble-packages.sh'
+              - 'linea-besu/package/versions.env'
+              - 'linea-besu/package/scripts/assemble-packages.sh'
             native-yield-automation-service:
-              - 'operations/native-yield-operations/automation-service/**'
+              - 'operations/native-yield/automation-service/**'
               - 'ts-libs/linea-shared-utils/**'
               - '.github/workflows/native-yield-automation-service-*.yml'
               - '.nvmrc'
             lido-governance-monitor:
-              - 'operations/native-yield-operations/lido-governance-monitor/**'
+              - 'operations/native-yield/lido-governance-monitor/**'
               - 'ts-libs/linea-shared-utils/**'
               - '.github/workflows/lido-governance-monitor-*.yml'
               - '.nvmrc'
@@ -138,6 +164,17 @@ jobs:
               - 'tracer-constraints/**'
               - '.github/workflows/tracer-constraints-*.yml'
               - 'tracer/gradle/corset.gradle'
+            maru:
+              - 'maru/**'
+              - 'buildSrc/**'
+              - 'jvm-libs/**'
+              - 'gradle/**'
+              - 'build.gradle'
+              - 'gradle.properties'
+              - 'settings.gradle'
+              - '.github/workflows/maru-*.yml'
+              - '.github/workflows/build-and-publish.yml'
+              - '.github/workflows/main.yml'
 
       - name: Filter out commit changes
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2
@@ -158,28 +195,16 @@ jobs:
           # For 'has-changes-requiring-build', it means we have an exclusion list that we can append to.
           predicate-quantifier: "every"
 
-  check-and-tag-images:
+  compute-commit-tags:
     needs: [filter-commit-changes]
-    uses: ./.github/workflows/reuse-check-images-tags-and-push.yml
-    with:
-      has-changes-requiring-build: ${{ needs.filter-commit-changes.outputs.has-changes-requiring-build }}
-      coordinator_changed: ${{ needs.filter-commit-changes.outputs.coordinator }}
-      postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
-      prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
-      transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
-      native_yield_automation_service_changed: ${{ needs.filter-commit-changes.outputs.native-yield-automation-service }}
-      lido_governance_monitor_changed: ${{ needs.filter-commit-changes.outputs.lido-governance-monitor }}
-    secrets: inherit
-
-  code-analysis:
-    uses: ./.github/workflows/codeql.yml
+    uses: ./.github/workflows/reusable-compute-commit-tags.yml
 
   testing:
-    needs: [filter-commit-changes, check-and-tag-images]
-    if: ${{ always() && needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' && needs.check-and-tag-images.outputs.commit_tag != '' }}
+    needs: [filter-commit-changes, compute-commit-tags]
+    if: ${{ always() && needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' && needs.compute-commit-tags.outputs.commit_tag != '' }}
     uses: ./.github/workflows/testing.yml
     with:
-      commit_tag: ${{ needs.check-and-tag-images.outputs.commit_tag }}
+      commit_tag: ${{ needs.compute-commit-tags.outputs.commit_tag }}
       coordinator_changed: ${{ needs.filter-commit-changes.outputs.coordinator }}
       linea_sequencer_changed: ${{ needs.filter-commit-changes.outputs.linea-sequencer-plugin }}
       postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
@@ -192,6 +217,7 @@ jobs:
       lido_governance_monitor_changed: ${{ needs.filter-commit-changes.outputs.lido-governance-monitor }}
       tracer_changed: ${{ needs.filter-commit-changes.outputs.tracer }}
       constraints_changed: ${{ needs.filter-commit-changes.outputs.tracer-constraints }}
+      maru_changed: ${{ needs.filter-commit-changes.outputs.maru }}
     secrets: inherit
 
   get-has-changes-requiring-e2e-testing:
@@ -199,8 +225,8 @@ jobs:
     uses: ./.github/workflows/get-has-changes-requiring-e2e-testing.yml
 
   manual-docker-build-and-e2e-tests:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
-    needs: [check-and-tag-images, get-has-changes-requiring-e2e-testing]
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    needs: [compute-commit-tags, get-has-changes-requiring-e2e-testing]
     if: ${{ needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'true' }}
     environment: ${{ github.ref != 'refs/heads/main' && 'docker-build-and-e2e' || '' }}
     concurrency:
@@ -215,44 +241,39 @@ jobs:
     needs:
       [
         filter-commit-changes,
-        check-and-tag-images,
+        compute-commit-tags,
         manual-docker-build-and-e2e-tests,
       ]
     uses: ./.github/workflows/build-and-publish.yml
     with:
-      commit_tag: ${{ needs.check-and-tag-images.outputs.commit_tag }}
-      develop_tag: ${{ needs.check-and-tag-images.outputs.develop_tag }}
+      commit_tag: ${{ needs.compute-commit-tags.outputs.commit_tag }}
+      develop_tag: ${{ needs.compute-commit-tags.outputs.develop_tag }}
       coordinator_changed: ${{ needs.filter-commit-changes.outputs.coordinator }}
       postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
       prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
       native_yield_automation_service_changed: ${{ needs.filter-commit-changes.outputs.native-yield-automation-service }}
       lido_governance_monitor_changed: ${{ needs.filter-commit-changes.outputs.lido-governance-monitor }}
+      maru_changed: ${{ needs.filter-commit-changes.outputs.maru }}
       build_linea_besu_package: ${{ needs.filter-commit-changes.outputs.has-changes-requiring-linea-besu-package-build }}
-      coordinator_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_coordinator }}
-      postman_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_postman }}
-      prover_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_prover }}
-      transaction_exclusion_api_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_transaction_exclusion_api }}
-      native_yield_automation_service_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_native_yield_automation_service }}
-      lido_governance_monitor_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_lido_governance_monitor }}
     secrets: inherit
 
   run-e2e-tests:
     needs:
       [
-        check-and-tag-images,
+        compute-commit-tags,
         docker-build,
         get-has-changes-requiring-e2e-testing,
         manual-docker-build-and-e2e-tests,
       ]
-    # Make this execute for has-changes-requiring-e2e-testing == 'false' so that we can get to the required job @ which is in reuse-run-e2e-tests.yml
+    # Make this execute for has-changes-requiring-e2e-testing == 'false' so that we can get to the required job @ which is in reusable-run-e2e-tests.yml
     if: ${{ always() && needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'false' || needs.docker-build.result == 'success' }}
     concurrency:
       group: run-e2e-tests-${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
-    uses: ./.github/workflows/reuse-run-e2e-tests.yml
+    uses: ./.github/workflows/reusable-run-e2e-tests.yml
     with:
-      commit_tag: ${{ needs.check-and-tag-images.outputs.commit_tag }}
+      image_tag: ${{ needs.compute-commit-tags.outputs.commit_tag }}
       linea_besu_package_tag: ${{ needs.docker-build.outputs.linea_besu_package_tag }}
       e2e-tests-logs-dump: true
       has-changes-requiring-e2e-testing: ${{ needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing }}
@@ -269,33 +290,10 @@ jobs:
     uses: ./.github/workflows/linea-besu-build-and-publish.yml
     secrets: inherit
 
-  publish-images-after-run-tests-success-on-main:
-    needs: [filter-commit-changes, check-and-tag-images, testing, run-e2e-tests, get-has-changes-requiring-e2e-testing]
-    if: ${{ always() && github.ref == 'refs/heads/main' && needs.check-and-tag-images.outputs.commit_tag != '' && needs.testing.result == 'success' && (needs.run-e2e-tests.outputs.tests_outcome == 'success' || needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'false') }}
-    uses: ./.github/workflows/build-and-publish.yml
-    with:
-      push_image: true
-      commit_tag: ${{ needs.check-and-tag-images.outputs.commit_tag }}
-      develop_tag: ${{ needs.check-and-tag-images.outputs.develop_tag }}
-      coordinator_changed: ${{ needs.filter-commit-changes.outputs.coordinator }}
-      postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
-      prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
-      transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
-      native_yield_automation_service_changed: ${{ needs.filter-commit-changes.outputs.native-yield-automation-service }}
-      lido_governance_monitor_changed: ${{ needs.filter-commit-changes.outputs.lido-governance-monitor }}
-      build_linea_besu_package: ${{ needs.filter-commit-changes.outputs.has-changes-requiring-linea-besu-package-build }}
-      coordinator_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_coordinator }}
-      postman_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_postman }}
-      prover_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_prover }}
-      transaction_exclusion_api_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_transaction_exclusion_api }}
-      native_yield_automation_service_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_native_yield_automation_service }}
-      lido_governance_monitor_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_lido_governance_monitor }}
-    secrets: inherit
-
   cleanup-deployments:
     needs: [run-e2e-tests]
     if: ${{ always() && github.event.pull_request.head.repo.fork == false }}
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     permissions:
       contents: read
       deployments: write
@@ -313,14 +311,13 @@ jobs:
     needs:
       [
         filter-commit-changes,
-        check-and-tag-images,
+        compute-commit-tags,
         code-analysis,
         testing,
         get-has-changes-requiring-e2e-testing,
         manual-docker-build-and-e2e-tests,
         docker-build,
         run-e2e-tests,
-        publish-images-after-run-tests-success-on-main,
         cleanup-deployments,
       ]
     if: ${{ always() && github.ref == 'refs/heads/main' && contains(needs.*.result, 'failure') }}

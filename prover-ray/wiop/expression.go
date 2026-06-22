@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	field "github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
+	field "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // Expression is the interface satisfied by all symbolic arithmetic expressions
@@ -30,6 +30,17 @@ type Expression interface {
 	// Panics if the expression contains a non-polynomial operation (Div,
 	// Inverse).
 	Degree() int
+	// DegreeFactor returns the degree of the expression as a multiple of the
+	// column degree. For a single column, DegreeFactor() returns 1. For a
+	// product of two columns, DegreeFactor() returns 2. For constants and
+	// scalars, DegreeFactor() returns 0.
+	//
+	// This allows computing the quotient ratio without knowing the module size,
+	// which is required for dynamic-size modules. The actual degree is
+	// DegreeFactor() * (n - 1) where n is the module size.
+	//
+	// Panics for non-polynomial operators (Div, Inverse).
+	DegreeFactor() int
 	// Size returns the length of the vector produced by this expression.
 	// Precondition: IsMultiValued() must be true; panics otherwise.
 	Size() int
@@ -121,6 +132,29 @@ func (op ArithmeticOperator) combineDegree(operandDegrees []int) int {
 		return 2 * operandDegrees[0]
 	case ArithmeticOperatorDiv, ArithmeticOperatorInverse:
 		panic(fmt.Sprintf("wiop: Degree() called on non-polynomial expression (%v)", op))
+	default:
+		panic(fmt.Sprintf("wiop: unknown ArithmeticOperator %d", int(op)))
+	}
+}
+
+// combineDegreeFactor returns the degree factor of the expression formed by
+// applying op to operands whose degree factors are given by operandFactors.
+// The degree factor is the degree expressed as a multiple of (n-1), where n is
+// the module size. This allows computing the quotient ratio without knowing n.
+//
+// Panics for non-polynomial operators (Div, Inverse).
+func (op ArithmeticOperator) combineDegreeFactor(operandFactors []int) int {
+	switch op {
+	case ArithmeticOperatorAdd, ArithmeticOperatorSub:
+		return max(operandFactors[0], operandFactors[1])
+	case ArithmeticOperatorDouble, ArithmeticOperatorNegate:
+		return operandFactors[0]
+	case ArithmeticOperatorMul:
+		return operandFactors[0] + operandFactors[1]
+	case ArithmeticOperatorSquare:
+		return 2 * operandFactors[0]
+	case ArithmeticOperatorDiv, ArithmeticOperatorInverse:
+		panic(fmt.Sprintf("wiop: DegreeFactor() called on non-polynomial expression (%v)", op))
 	default:
 		panic(fmt.Sprintf("wiop: unknown ArithmeticOperator %d", int(op)))
 	}
@@ -222,6 +256,16 @@ func (a *ArithmeticOperation) Degree() int {
 		degrees[i] = o.Degree()
 	}
 	return a.Operator.combineDegree(degrees)
+}
+
+// DegreeFactor implements [Expression]. Combines the degree factors of the
+// operands using the operator's own degree-combination rule.
+func (a *ArithmeticOperation) DegreeFactor() int {
+	factors := make([]int, len(a.Operands))
+	for i, o := range a.Operands {
+		factors[i] = o.DegreeFactor()
+	}
+	return a.Operator.combineDegreeFactor(factors)
 }
 
 // Size implements [Expression]. Returns the size of the first vector-valued
@@ -389,6 +433,15 @@ func (c *Constant) Degree() int {
 	return c.module.Size() - 1
 }
 
+// DegreeFactor implements [Expression]. Returns 0 for scalar constants, 1 for
+// vector constants (degree is 1 * (n-1) = n-1).
+func (c *Constant) DegreeFactor() int {
+	if c.module == nil {
+		return 0
+	}
+	return 1
+}
+
 // Module implements [Expression]. Returns the bound module, or nil for scalar
 // constants.
 func (c *Constant) Module() *Module { return c.module }
@@ -403,10 +456,14 @@ func (c *Constant) IsSized() bool {
 }
 
 // Size implements [Expression]. Delegates to the bound module. Panics if
-// scalar; check [Constant.IsMultiValued] first.
+// scalar (check [Constant.IsMultiValued] first) or if the bound module is
+// dynamic or unsized (check [Constant.IsSized] first).
 func (c *Constant) Size() int {
 	if c.module == nil {
 		panic("wiop: Size() cannot be called on a scalar Constant; check IsMultiValued() first")
+	}
+	if !c.module.IsSized() {
+		panic("wiop: Size() called on a vector Constant with an unsized or dynamic module; check IsSized() first")
 	}
 	return c.module.Size()
 }

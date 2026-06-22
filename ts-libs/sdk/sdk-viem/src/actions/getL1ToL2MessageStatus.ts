@@ -1,4 +1,4 @@
-import { formatMessageStatus, getContractsAddressesByChainId, OnChainMessageStatus } from "@consensys/linea-sdk-core";
+import { formatMessageStatus, getContractsAddressesByChainId, OnChainMessageStatus } from "@lfdt-lineth/sdk-core";
 import {
   Account,
   Address,
@@ -32,7 +32,7 @@ export type GetL1ToL2MessageStatusErrorType = ReadContractErrorType | ChainNotFo
  * @example
  * import { createPublicClient, http } from 'viem'
  * import { linea } from 'viem/chains'
- * import { getL1ToL2MessageStatus } from '@consensys/linea-sdk-viem'
+ * import { getL1ToL2MessageStatus } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createPublicClient({
  *   chain: linea,

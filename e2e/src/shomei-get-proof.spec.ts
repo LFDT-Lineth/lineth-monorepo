@@ -1,8 +1,8 @@
-import { serialize } from "@consensys/linea-shared-utils";
 import { describe, it } from "@jest/globals";
+import { serialize } from "@lfdt-lineth/shared-utils";
 import { BaseError, ContractFunctionExecutionError, toHex } from "viem";
 
-import { awaitUntil, getDockerImageTag } from "./common/utils";
+import { awaitUntil } from "./common/utils";
 import { L2RpcEndpoint } from "./config/clients/l2-client";
 import { LineaGetProofReturnType } from "./config/clients/linea-rpc/linea-get-proof";
 import { createTestContext } from "./config/setup";
@@ -33,9 +33,6 @@ describe("Shomei Linea get proof test suite", () => {
   it.concurrent(
     "Call linea_getProof to Shomei frontend node and get a valid proof",
     async () => {
-      const shomeiImageTag = await getDockerImageTag("shomei-frontend", "consensys/linea-shomei");
-      logger.info(`shomeiImageTag=${shomeiImageTag}`);
-
       let targetL2BlockNumber = await awaitUntil(
         async () => {
           try {
@@ -124,7 +121,6 @@ describe("Shomei Linea get proof test suite", () => {
       const { zkEndStateRootHash } = await lineaShomeiClient.rollupGetZkEVMStateMerkleProofV0({
         startBlockNumber: Number(targetL2BlockNumber),
         endBlockNumber: Number(targetL2BlockNumber),
-        zkStateManagerVersion: shomeiImageTag,
       });
 
       logger.info(`zkEndStateRootHash=${zkEndStateRootHash}`);

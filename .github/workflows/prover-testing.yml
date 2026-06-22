@@ -15,20 +15,20 @@ concurrency:
 jobs:
   staticcheck:
     # ~1.5 mins saved vs small
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     name: Prover static check
     steps:
     - name: checkout code
-      uses: actions/checkout@v6
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         fetch-depth: 0
     - name: install Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
       with:
         go-version: 1.25.7
         cache-dependency-path: |
               prover/go.sum
-    - uses: actions/cache@v5.0.4
+    - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
       with:
         path: |
           ~/.cache/go-build
@@ -59,20 +59,20 @@ jobs:
       matrix:
         go-version: [1.25.7]
     # ~1 min saved vs large
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-xxl
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     name: Prover testing
     needs:
       - staticcheck
     steps:
     - name: checkout code
-      uses: actions/checkout@v6
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
     - name: install Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
       with:
         go-version: ${{ matrix.go-version }}
         cache-dependency-path: |
               prover/go.sum
-    - uses: actions/cache@v5.0.4
+    - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
       with:
         path: |
           ~/.cache/go-build

@@ -1,0 +1,111 @@
+name: "Reusable: Milestone Retag Latest Docker Tags"
+
+# For each component whose release tag did NOT change at this milestone commit,
+# re-tag its most recent docker image with the milestone's image_tag_suffix so
+# the milestone publication carries a consistent set of suffixed images.
+
+on:
+  workflow_call:
+    inputs:
+      image_tag_suffix:
+        description: 'Suffix to append to the existing docker image tag'
+        required: true
+        type: string
+      coordinator_metadata:
+        required: true
+        type: string
+      prover_metadata:
+        required: true
+        type: string
+      postman_metadata:
+        required: true
+        type: string
+      tx_exclusion_api_metadata:
+        required: true
+        type: string
+      linea_besu_package_metadata:
+        required: true
+        type: string
+      maru_metadata:
+        required: true
+        type: string
+      coordinator_latest_docker_tag:
+        required: true
+        type: string
+      prover_latest_docker_tag:
+        required: true
+        type: string
+      postman_latest_docker_tag:
+        required: true
+        type: string
+      tx_exclusion_api_latest_docker_tag:
+        required: true
+        type: string
+      linea_besu_package_latest_docker_tag:
+        required: true
+        type: string
+      maru_latest_docker_tag:
+        required: true
+        type: string
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
+
+jobs:
+  retag-latest-docker-tags:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    strategy:
+      fail-fast: true
+      matrix:
+        component: [ coordinator, maru, prover, postman, tx-exclusion-api, linea-besu-package ]
+        include:
+          - component: coordinator
+            image-name: linea-coordinator
+            metadata: ${{ inputs.coordinator_metadata }}
+            latest-docker-tag: ${{ inputs.coordinator_latest_docker_tag }}
+          - component: maru
+            # maru is published as consensys/maru rather than consensys/linea-maru.
+            image-name: maru
+            metadata: ${{ inputs.maru_metadata }}
+            latest-docker-tag: ${{ inputs.maru_latest_docker_tag }}
+          - component: prover
+            image-name: linea-prover
+            metadata: ${{ inputs.prover_metadata }}
+            latest-docker-tag: ${{ inputs.prover_latest_docker_tag }}
+          - component: postman
+            image-name: linea-postman
+            metadata: ${{ inputs.postman_metadata }}
+            latest-docker-tag: ${{ inputs.postman_latest_docker_tag }}
+          - component: tx-exclusion-api
+            image-name: linea-transaction-exclusion-api
+            metadata: ${{ inputs.tx_exclusion_api_metadata }}
+            latest-docker-tag: ${{ inputs.tx_exclusion_api_latest_docker_tag }}
+          - component: linea-besu-package
+            image-name: linea-besu-package
+            metadata: ${{ inputs.linea_besu_package_metadata }}
+            latest-docker-tag: ${{ inputs.linea_besu_package_latest_docker_tag }}
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Retag latest docker tag
+        id: retag-latest-docker-tag
+        if: fromJson(matrix.metadata).tag_changed != 'true'
+        shell: bash
+        env:
+          IMAGE_NAME: ${{ matrix.image-name }}
+          IMAGE_TAG: ${{ matrix.latest-docker-tag }}
+          IMAGE_TAG_SUFFIX: ${{ inputs.image_tag_suffix }}
+        run: |
+          SOURCE_IMAGE="consensys/${IMAGE_NAME}:${IMAGE_TAG}"
+          TARGET_IMAGE="consensys/${IMAGE_NAME}:${IMAGE_TAG}-${IMAGE_TAG_SUFFIX}"
+
+          docker buildx imagetools create --tag "${TARGET_IMAGE}" "${SOURCE_IMAGE}"

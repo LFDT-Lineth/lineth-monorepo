@@ -1,0 +1,16 @@
+pub input in(address:u16) -> (word:u16)
+pub output out(address:u16) -> (word:u16)
+
+// copy non-zero input elements to output
+fn main() {
+    var n:u16 = in[0]
+    var j:u16 = 0
+    for i:u16 = 1; i <= n; i = i + 1 {
+        if in[i] == 0 {
+            continue
+        }
+        out[j] = in[i]
+        j = j + 1
+    }
+    return
+}

@@ -1,0 +1,11 @@
+pub input data(address:u8) -> (byte:u8)
+
+fn main() {
+    var x:u8 = data[0]
+    var expected:u8 = data[1]
+
+    if (x>6 ? 0:6) != expected {
+        fail
+    }
+    return
+}

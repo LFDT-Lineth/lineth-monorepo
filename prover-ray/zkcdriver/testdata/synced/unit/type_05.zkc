@@ -1,0 +1,6 @@
+type bool = u1
+const TRUE:bool = 1
+const FALSE:bool = ~TRUE
+const RES1:bool = TRUE & 1
+const RES2:bool = TRUE | 0
+const RES3:bool = TRUE ^ 1

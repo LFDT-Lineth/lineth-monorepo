@@ -1,0 +1,55 @@
+{
+  "$schema": "./schema.json",
+  "network": "sepolia",
+  "chainId": 11155111,
+  "contracts": {
+    "YIELD_MANAGER_ADDRESS": {
+      "address": "0x26Df1c9C70f3aCf9B75632e08d075Cd7e06c67e5",
+      "notes": "Yield Manager - Sepolia"
+    },
+    "ROLLUP_REVENUE_VAULT_DEX_SWAP_ADAPTER": {
+      "address": "0x22F40239790EE2ADE11b3887ddAcdbD89A3b01Df",
+      "notes": "V3 Dex Swap Adapter"
+    },
+    "ROLLUP_REVENUE_VAULT_L1_LINEA_TOKEN_BURNER": {
+      "address": "0xdeE416C6EaDa6646E6ab50bfC86386A7128E18E2",
+      "notes": "L1 Token Burner"
+    },
+    "L1_RESERVED_TOKEN_ADDRESSES": {
+      "address": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+      "notes": "USDC"
+    },
+    "TOKEN_BRIDGE_ADDRESS": {
+      "address": "0x5A0a48389BB0f12E5e017116c1105da97E129142",
+      "notes": "Token Bridge Sepolia"
+    },
+    "BRIDGED_TOKEN_ADDRESS": {
+      "address": "0xA73B1FFa214903F23309535EEa98f14cb87a2137",
+      "notes": "Bridged Token Sepolia"
+    },
+    "LINEA_ROLLUP_OPERATORS": {
+      "addresses": [
+        {
+          "address": "0x5948ccC8A59B464c6DcC87db4004Cf0a8d600C93",
+          "notes": "L1 Finalization Operator EOA"
+        },
+        {
+          "address": "0x47C63d1E391FcB3dCdC40C4d7fA58ADb172f8c38",
+          "notes": "L1 Data Submission Operator EOA"
+        }
+      ]
+    },
+    "L1_SECURITY_COUNCIL": {
+      "address": "0xCaBfaEE33dF7a94d8FECA5fAfE977DcaB069C91B",
+      "notes": "L1 Sepolia Security Council Safe"
+    },
+    "LINEA_ROLLUP_ADDRESS": {
+      "address": "0xB218f8A4Bc926cF1cA7b3423c154a0D627Bdb7E5",
+      "notes": "LineaRollup proxy on Sepolia L1"
+    },
+    "VERIFIER_ADDRESS": {
+      "address": "0x5ca5dBf7Cb8F3f3c92E04B16FF5fCA1cdf147f79",
+      "notes": "Plonk Verifier For Data Aggregation"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+pub input data(address:u32) -> (data:u8)
+pub output hash(address:u1) -> (hash:u64)
+
+const OFFSET64:u64 = 14695981039346656037
+const PRIME64:u128 = 1099511628211
+
+fn main() {
+    var len:u32
+    // Decode length
+    len = data[0] as u32
+    len = (len << 8) | (data[1] as u32)
+    len = (len << 8) | (data[2] as u32)
+    len = (len << 8) | (data[3] as u32)
+    // compute hash
+    hash[0] = hasher(4, 4 + len)
+}
+
+fn hasher(start:u32, end:u32) -> (hash:u64) {
+    var tmp:u128
+    //
+    hash = OFFSET64
+    //
+    for i:u32 = start; i<end; i = i + 1 {
+        hash = hash ^ (data[i] as u64)
+        tmp = (hash as u128) * PRIME64
+        hash = (tmp & 0xffffffff_ffffffff) as u64
+    }
+}

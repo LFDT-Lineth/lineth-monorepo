@@ -6,6 +6,8 @@ import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.micrometer.backends.BackendRegistries
 import io.vertx.sqlclient.SqlClient
+import linea.persistence.db.Db
+import linea.persistence.db.PersistenceRetryer
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.async.toVertxFuture
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
@@ -18,8 +20,6 @@ import net.consensys.linea.vertx.loadVertxConfig
 import net.consensys.zkevm.persistence.dao.rejectedtransaction.RejectedTransactionsDao
 import net.consensys.zkevm.persistence.dao.rejectedtransaction.RejectedTransactionsPostgresDao
 import net.consensys.zkevm.persistence.dao.rejectedtransaction.RetryingRejectedTransactionsPostgresDao
-import net.consensys.zkevm.persistence.db.Db
-import net.consensys.zkevm.persistence.db.PersistenceRetryer
 import org.apache.logging.log4j.LogManager
 import java.time.Duration
 import kotlin.time.Duration.Companion.seconds

@@ -13,7 +13,6 @@ class StateManagerParsingTest {
     val toml =
       """
       [state-manager]
-      version = "2.2.0"
       endpoints = ["http://shomei:8888/"]
       request-limit-per-endpoint = 3
       request-timeout = "PT30S"
@@ -25,7 +24,6 @@ class StateManagerParsingTest {
 
     val config =
       StateManagerToml(
-        version = "2.2.0",
         endpoints = listOf("http://shomei:8888/".toURL()),
         requestLimitPerEndpoint = 3u,
         requestTimeout = 30.seconds,
@@ -40,13 +38,11 @@ class StateManagerParsingTest {
     val tomlMinimal =
       """
       [state-manager]
-      version = "2.2.0"
       endpoints = ["http://shomei:8888/"]
       """.trimIndent()
 
     val configMinimal =
       StateManagerToml(
-        version = "2.2.0",
         endpoints = listOf("http://shomei:8888/".toURL()),
         requestLimitPerEndpoint = UInt.MAX_VALUE,
         requestTimeout = null,

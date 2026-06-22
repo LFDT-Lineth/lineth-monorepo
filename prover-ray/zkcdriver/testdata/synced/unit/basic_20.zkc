@@ -1,0 +1,19 @@
+pub input data(address:u8) -> (byte:u8)
+memory ram(address:u8) -> (byte:u8)
+
+fn main<ram>() {
+    var length:u8 = data[0]
+    var address:u8 = data[1]
+    var expected:u8 = data[2]
+    var actual:u8
+    // copy over data
+    for i:u8 = 0; i != length; i = i + 1 {
+        ram[i] = data[i]
+    }
+    // Make the read
+    actual = ram[address]
+    // check expected against actual
+    if expected != actual {
+        fail
+    }
+}

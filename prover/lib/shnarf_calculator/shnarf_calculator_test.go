@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	blockRlpBin       = "../../../jvm-libs/blob-compressor/src/test/resources/net/consensys/linea/nativecompressor/rlp_blocks.bin"
+	blockRlpBin       = "../../../coordinator/core/src/test/resources/linea/coordination/blob/rlp_blocks.bin"
 	compressorDictBin = "../compressor/compressor_dict.bin"
 )
 

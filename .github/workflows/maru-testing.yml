@@ -1,0 +1,70 @@
+name: maru-testing
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  workflow_call:
+    inputs:
+      commit_tag:
+        required: true
+        type: string
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: false
+      DOCKERHUB_TOKEN:
+        required: false
+
+concurrency:
+  group: maru-testing-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  run-tests:
+    env:
+      COMMIT_TAG: ${{ inputs.commit_tag }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    name: maru tests
+    # useful for debugging flaky tests. Comment out Jacoco and Codecov steps because they override the test results.
+    #    strategy:
+    #      matrix:
+    #        iterations: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: false
+      - name: Setup Java and Gradle
+        uses: ./.github/actions/setup-java-and-gradle
+      - name: Build maru and Unit tests
+        run: |
+          ./gradlew -V maru:app:buildNeeded
+      - name: Run integration tests
+        run: |
+          ./gradlew maru:app:integrationTest
+      - name: Store reports
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test reports
+          path: |
+            maru/**/build/reports/tests/
+            maru/**/build/integrationTest-logs/
+          if-no-files-found: ignore
+      - name: Upload Jacoco execution data
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: jacoco-maru-exec
+          path: |
+            maru/**/build/jacoco/*.exec
+          if-no-files-found: ignore
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() && env.CODECOV_TOKEN != '' }}
+        uses: codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 # v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}

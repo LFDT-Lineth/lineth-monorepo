@@ -1,0 +1,203 @@
+name: "Reusable: Component Push Tag and Changelog and GitHub Release"
+
+permissions:
+  actions: read
+  contents: write
+  packages: write
+  pull-requests: write
+
+on:
+  workflow_call:
+    inputs:
+      component-name:
+        description: "Component name — used to derive tag pattern (e.g. coordinator, postman)"
+        required: true
+        type: string
+      folder-name:
+        description: "Folder name of the component which hosts CHANGELOG.md (e.g. linea-besu's home folder is linea-besu/package)"
+        required: true
+        type: string
+      include-path:
+        description: 'newline-separated string to represent the "git-cliff --include-path filter"'
+        required: true
+        type: string
+      image_tag_suffix:
+        description: 'Custom docker image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDD]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDD]-[commit]'
+        required: false
+        type: string
+        default: ''
+      release_tag_suffix:
+        description: 'Custom release tag suffix, i.e. release tag would be releases/[component]/v[semver]-[suffix]'
+        required: false
+        type: string
+        default: ''
+      draft_release:
+        description: 'Draft Release'
+        required: false
+        type: boolean
+        default: false
+      pre_release:
+        description: 'Pre Release'
+        required: false
+        type: boolean
+        default: false
+      upload_changelog:
+        description: "Upload the updated CHANGELOG.md and skip pushing the commit or creating PR"
+        required: false
+        type: boolean
+        default: false
+      dry_run_release:
+        description: "Dry run a release (without build and push the docker image to dockerhub)"
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      docker_tag:
+        description: "Docker image tag base (without suffix)"
+        value: ${{ jobs.compute-docker-tag.outputs.docker_tag }}
+      docker_tag_with_suffix:
+        description: "Docker image tag with suffix (same value as docker_tag if no suffix is given)"
+        value: ${{ jobs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+
+jobs:
+  release-push-tag-changelog:
+    uses: ./.github/workflows/reusable-component-release-push-tag-changelog.yml
+    with:
+      component-name: ${{ inputs.component-name }}
+      folder-name: ${{ inputs.folder-name }}
+      include-path: ${{ inputs.include-path }}
+      release_tag_suffix: ${{ inputs.release_tag_suffix }}
+      upload_changelog: ${{ inputs.upload_changelog }}
+    secrets: inherit
+
+  compute-docker-tag:
+    needs: [release-push-tag-changelog]
+    if: inputs.dry_run_release == false
+    uses: ./.github/workflows/reusable-component-docker-tag.yml
+    with:
+      version-prefix: ${{ needs.release-push-tag-changelog.outputs.release_version }}
+      image-tag-suffix: ${{ inputs.image_tag_suffix }}
+
+  build-and-publish-image-coordinator:
+    needs: [compute-docker-tag]
+    if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'coordinator'
+    uses: ./.github/workflows/coordinator-build-and-publish.yml
+    with:
+      image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
+      image_tag_with_suffix: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+      develop_tag: develop
+      push_image: true
+    secrets: inherit
+
+  build-and-publish-image-postman:
+    needs: [compute-docker-tag]
+    if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'postman'
+    uses: ./.github/workflows/postman-build-and-publish.yml
+    with:
+      image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
+      image_tag_with_suffix: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+      develop_tag: develop
+      push_image: true
+    secrets: inherit
+
+  build-and-publish-image-prover:
+    needs: [compute-docker-tag]
+    if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'prover'
+    uses: ./.github/workflows/prover-build-and-publish.yml
+    with:
+      image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
+      image_tag_with_suffix: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+      develop_tag: develop
+      push_image: true
+    secrets: inherit
+
+  build-and-publish-image-maru:
+    needs: [compute-docker-tag]
+    if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'maru'
+    uses: ./.github/workflows/maru-build-and-publish.yml
+    with:
+      image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
+      image_tag_with_suffix: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+      develop_tag: develop
+      push_image: true
+    secrets: inherit
+
+  build-and-publish-image-tx-exclusion-api:
+    needs: [compute-docker-tag]
+    if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'tx-exclusion-api'
+    uses: ./.github/workflows/transaction-exclusion-api-build-and-publish.yml
+    with:
+      image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
+      image_tag_with_suffix: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+      develop_tag: develop
+      push_image: true
+    secrets: inherit
+
+  gh-release:
+    needs: [release-push-tag-changelog, compute-docker-tag, build-and-publish-image-coordinator, build-and-publish-image-postman, build-and-publish-image-prover, build-and-publish-image-tx-exclusion-api, build-and-publish-image-maru]
+    if: >
+      always() && !cancelled() &&
+      (inputs.dry_run_release ||
+      (needs.build-and-publish-image-coordinator.result       == 'success' ||
+       needs.build-and-publish-image-postman.result           == 'success' ||
+       needs.build-and-publish-image-prover.result            == 'success' ||
+       needs.build-and-publish-image-tx-exclusion-api.result  == 'success' ||
+       needs.build-and-publish-image-maru.result              == 'success'))
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Append Changelog Action to release note
+        id: append_change_log
+        shell: bash
+        env:
+          # Pass via env to avoid shell injection: changelog content is derived
+          # from commit messages (via git-cliff) and may contain backticks, $(...), etc.
+          CHANGELOG: ${{ needs.release-push-tag-changelog.outputs.changelog }}
+          DOCKER_TAG: ${{ needs.compute-docker-tag.outputs.docker_tag }}
+          DOCKER_TAG_WITH_SUFFIX: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+          COMPONENT_NAME: ${{ inputs.component-name }}
+          DOCKER_IMAGE_SUFFIX: ${{ inputs.folder-name }}
+          SKIP_DOCKER_IMAGE_INFO: ${{ inputs.dry_run_release }}
+        run: |
+          mkdir release && cd release
+          # maru's image is published as consensys/maru rather than consensys/linea-maru.
+          if [ "$COMPONENT_NAME" = "maru" ]; then
+            IMAGE_NAME="consensys/maru"
+          else
+            IMAGE_NAME="consensys/linea-${DOCKER_IMAGE_SUFFIX}"
+          fi
+          printf '%s\n' "$CHANGELOG" >> output.md
+          # Only include docker pull instructions when an image was actually published.
+          if [ "$SKIP_DOCKER_IMAGE_INFO" != "true" ]; then
+            echo "### Docker Image Details" >> output.md
+            echo "" >> output.md
+            echo "To pull the image, use any of the following commands:" >> output.md
+            echo "\`\`\`" >> output.md
+            printf 'docker pull %s:%s\n' "$IMAGE_NAME" "$DOCKER_TAG" >> output.md
+            echo "\`\`\`" >> output.md
+            if [ -n "$DOCKER_TAG_WITH_SUFFIX" ] && [ "$DOCKER_TAG_WITH_SUFFIX" != "$DOCKER_TAG" ]; then
+              echo "\`\`\`" >> output.md
+              printf 'docker pull %s:%s\n' "$IMAGE_NAME" "$DOCKER_TAG_WITH_SUFFIX" >> output.md
+              echo "\`\`\`" >> output.md
+            fi
+          fi
+
+      - name: Set capitalized component name
+        env:
+          COMPONENT_NAME: ${{ inputs.component-name }}
+        run: |
+          echo "COMPONENT_CAP=${COMPONENT_NAME^}" >> $GITHUB_ENV
+
+      - name: gh-release
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b #v2.5.0
+        with:
+          name: ${{ env.COMPONENT_CAP }} v${{ needs.release-push-tag-changelog.outputs.release_version }}
+          tag_name: ${{ needs.release-push-tag-changelog.outputs.release_tag }}
+          body_path: release/output.md
+          draft: ${{ inputs.draft_release }}
+          prerelease: ${{ inputs.pre_release }}
+          generate_release_notes: false
+          target_commitish: ${{ github.sha }}
+          fail_on_unmatched_files: true

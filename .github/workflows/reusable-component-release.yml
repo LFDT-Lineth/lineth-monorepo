@@ -1,0 +1,240 @@
+name: "Reusable: Component Release"
+
+permissions:
+  actions: read
+  contents: write
+  packages: write
+  pull-requests: write
+
+on:
+  workflow_call:
+    inputs:
+      component-name:
+        description: "Component name — used to derive tag pattern (e.g. coordinator, postman)"
+        required: true
+        type: string
+      folder-name:
+        description: "Folder name of the component which hosts CHANGELOG.md (e.g. linea-besu's home folder is linea-besu/package)"
+        required: true
+        type: string
+      include-path:
+        description: 'newline-separated string to represent the "git-cliff --include-path filter"'
+        required: true
+        type: string
+      image_tag_suffix:
+        description: 'Custom docker image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDD]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDD]-[commit]'
+        required: false
+        type: string
+        default: ''
+      release_tag_suffix:
+        description: 'Custom release tag suffix, i.e. release tag would be releases/[component]/v[semver]-[suffix]'
+        required: false
+        type: string
+        default: ''
+      draft_release:
+        description: 'Draft Release'
+        required: false
+        type: boolean
+        default: false
+      pre_release:
+        description: 'Pre Release'
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      tag_changed:
+        description: "Indicate whether the release tag of the component has changed"
+        value: ${{ jobs.compute-release-metadata.outputs.tag_changed }}
+      docker_tag:
+        description: "Docker image tag associated with the release tag, empty if tag_changed is false"
+        value: ${{ jobs.compute-docker-tag.outputs.docker_tag }}
+      release_version:
+        description: "Release semver associated with the release tag (e.g. 1.2.3), empty if tag_changed is false"
+        value: ${{ jobs.compute-release-metadata.outputs.release_version }}
+      release_tag:
+        description: "Release tag (e.g. releases/coordinator/v1.2.3), empty if tag_changed is false"
+        value: ${{ jobs.compute-release-metadata.outputs.release_tag }}
+
+jobs:
+  check-branch-and-release-tag-suffix:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    steps:
+      - name: Enforce non-main branch must have custom release tag suffix
+        if: github.ref_name != 'main' && inputs.release_tag_suffix == ''
+        run: |
+          echo "❌ Non-main branch must have non-empty custom tag suffix"
+          exit 1
+
+  compute-commit-tag:
+    needs: [check-branch-and-release-tag-suffix]
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    outputs:
+       commit_tag: ${{ steps.compute-version-tags.outputs.commit_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Compute version tags
+        id: compute-version-tags
+        uses: ./.github/actions/compute-version-tags
+
+  compute-release-metadata:
+    needs: [compute-commit-tag]
+    uses: ./.github/workflows/reusable-component-release-metadata.yml
+    with:
+      component-name: ${{ inputs.component-name }}
+      include-path: ${{ inputs.include-path }}
+      release_tag_suffix: ${{ inputs.release_tag_suffix }}
+
+  run-test-coordinator:
+    uses: ./.github/workflows/coordinator-testing.yml
+    needs: [compute-commit-tag, compute-release-metadata]
+    if: >
+      needs.compute-release-metadata.outputs.tag_changed == 'true' && 
+      inputs.component-name == 'coordinator' &&
+      github.ref_name != 'main'
+    with:
+      commit_tag: ${{ needs.compute-commit-tag.outputs.commit_tag }}
+    secrets: inherit
+
+  run-test-postman:
+    uses: ./.github/workflows/postman-testing.yml
+    needs: [compute-commit-tag, compute-release-metadata]
+    if: >
+      needs.compute-release-metadata.outputs.tag_changed == 'true' && 
+      inputs.component-name == 'postman' && 
+      github.ref_name != 'main'
+    with:
+      commit_tag: ${{ needs.compute-commit-tag.outputs.commit_tag }}
+    secrets: inherit
+
+  run-test-prover:
+    uses: ./.github/workflows/prover-testing.yml
+    needs: [compute-release-metadata]
+    if: >
+      needs.compute-release-metadata.outputs.tag_changed == 'true' && 
+      inputs.component-name == 'prover' && 
+      github.ref_name != 'main'
+    secrets: inherit
+
+  run-test-maru:
+    uses: ./.github/workflows/maru-testing.yml
+    needs: [compute-commit-tag, compute-release-metadata]
+    if: >
+      needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      inputs.component-name == 'maru' &&
+      github.ref_name != 'main'
+    with:
+      commit_tag: ${{ needs.compute-commit-tag.outputs.commit_tag }}
+    secrets: inherit
+
+  run-test-transaction-exclusion-api:
+    uses: ./.github/workflows/transaction-exclusion-api-testing.yml
+    needs: [compute-release-metadata]
+    if: >
+      needs.compute-release-metadata.outputs.tag_changed == 'true' && 
+      inputs.component-name == 'tx-exclusion-api' && 
+      github.ref_name != 'main'
+    secrets: inherit
+
+  build-local-coordinator:
+    needs: [compute-release-metadata, run-test-coordinator]
+    if: >
+      always() && !cancelled() &&
+      needs.compute-release-metadata.outputs.tag_changed == 'true' && 
+      inputs.component-name == 'coordinator' &&
+      (github.ref_name == 'main' || needs.run-test-coordinator.result == 'success')
+    uses: ./.github/workflows/coordinator-build-and-publish.yml
+    with:
+      image_tag: local
+      develop_tag: develop
+      push_image: false
+    secrets: inherit
+
+  build-local-postman:
+    needs: [compute-release-metadata, run-test-postman]
+    if: >
+      always() && !cancelled() &&
+      needs.compute-release-metadata.outputs.tag_changed == 'true' && 
+      inputs.component-name == 'postman' &&
+      (github.ref_name == 'main' || needs.run-test-postman.result == 'success')
+    uses: ./.github/workflows/postman-build-and-publish.yml
+    with:
+      image_tag: local
+      develop_tag: develop
+      push_image: false
+    secrets: inherit
+
+  build-local-prover:
+    needs: [compute-release-metadata, run-test-prover]
+    if: >
+      always() && !cancelled() &&
+      needs.compute-release-metadata.outputs.tag_changed == 'true' && 
+      inputs.component-name == 'prover' &&
+      (github.ref_name == 'main' || needs.run-test-prover.result == 'success')
+    uses: ./.github/workflows/prover-build-and-publish.yml
+    with:
+      image_tag: local
+      develop_tag: develop
+      push_image: false
+    secrets: inherit
+
+  build-local-maru:
+    needs: [compute-release-metadata, run-test-maru]
+    if: >
+      always() && !cancelled() &&
+      needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      inputs.component-name == 'maru' &&
+      (github.ref_name == 'main' || needs.run-test-maru.result == 'success')
+    uses: ./.github/workflows/maru-build-and-publish.yml
+    with:
+      image_tag: local
+      develop_tag: develop
+      push_image: false
+    secrets: inherit
+
+  build-local-tx-exclusion-api:
+    needs: [compute-release-metadata, run-test-transaction-exclusion-api]
+    if: >
+      always() && !cancelled() &&
+      needs.compute-release-metadata.outputs.tag_changed == 'true' && 
+      inputs.component-name == 'tx-exclusion-api' &&
+      (github.ref_name == 'main' || needs.run-test-transaction-exclusion-api.result == 'success')
+    uses: ./.github/workflows/transaction-exclusion-api-build-and-publish.yml
+    with:
+      image_tag: local
+      develop_tag: develop
+      push_image: false
+    secrets: inherit
+
+  run-e2e-tests:
+    needs: [compute-release-metadata, build-local-coordinator, build-local-postman, build-local-prover, build-local-tx-exclusion-api, build-local-maru]
+    if: >
+      always() && !cancelled() &&
+      needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      (needs.build-local-coordinator.result       == 'success' ||
+       needs.build-local-postman.result           == 'success' ||
+       needs.build-local-prover.result            == 'success' ||
+       needs.build-local-tx-exclusion-api.result  == 'success' ||
+       needs.build-local-maru.result              == 'success')
+    uses: ./.github/workflows/reusable-run-e2e-tests.yml
+    with:
+      image_tag: local
+      linea_besu_package_tag: ''
+      e2e-tests-logs-dump: true
+      has-changes-requiring-e2e-testing: "true"
+    secrets: inherit
+
+  push-tag-update-changelog-and-gh-release:
+    needs: [run-e2e-tests]
+    if: always() && !cancelled() && needs.run-e2e-tests.result == 'success'
+    uses: ./.github/workflows/reusable-component-gh-release.yml
+    with:
+      component-name: ${{ inputs.component-name }}
+      folder-name: ${{ inputs.folder-name }}
+      include-path: ${{ inputs.include-path }}
+      image_tag_suffix: ${{ inputs.image_tag_suffix }}
+      release_tag_suffix: ${{ inputs.release_tag_suffix }}
+      draft_release: ${{ inputs.draft_release }}
+      pre_release: ${{ inputs.pre_release }}
+    secrets: inherit

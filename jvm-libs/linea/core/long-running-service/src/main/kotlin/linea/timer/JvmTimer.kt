@@ -1,7 +1,6 @@
 package linea.timer
 
 import java.util.Timer
-import kotlin.concurrent.timer
 import kotlin.concurrent.timerTask
 import kotlin.time.Duration
 
@@ -26,13 +25,19 @@ class JvmTimer(
     val timerTask = timerTask {
       try {
         task.run()
-      } catch (e: Throwable) {
-        errorHandler(e)
+      } catch (t: Throwable) {
+        try {
+          errorHandler(t)
+        } catch (handlerEx: Throwable) {
+          System.err.println("JvmTimer[$name] errorHandler threw: ${handlerEx.message}")
+        }
+        if (t is VirtualMachineError || t is LinkageError) throw t
       }
     }
     when (timerSchedule) {
       TimerSchedule.FIXED_DELAY ->
         timer!!.schedule(timerTask, initialDelay.inWholeMilliseconds, period.inWholeMilliseconds)
+
       TimerSchedule.FIXED_RATE ->
         timer!!.scheduleAtFixedRate(timerTask, initialDelay.inWholeMilliseconds, period.inWholeMilliseconds)
     }

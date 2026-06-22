@@ -1,0 +1,54 @@
+const NIL:u8 = 0xFF
+
+// =============================================================================
+// Test Harness
+// =============================================================================
+
+pub input ins(address:u8) -> (value:u8)
+pub input outs(address:u8) -> (value:u8)
+
+fn main() {
+    var n_ins:u8 = ins[0]
+    var n_outs:u8 = outs[0]
+    // run containment checks
+    for i:u8 = 0; i<n_ins; i = i + 1 {
+        if contains(ins[i + 1], 0) == 0 {
+            fail
+        }
+    }
+    // run non-containment checks
+    for i:u8 = 0; i<n_outs; i = i + 1 {
+        if contains(outs[i + 1], 0) == 1 {
+            fail
+        }
+    }
+}
+
+// =============================================================================
+// Binary Search Tree
+// =============================================================================
+
+// An array of nodes whose left / right values are either: (1) indexes back into
+// the array; or (2) terminators signalted by 0xFFFF.
+input nodes(address:u8) -> (value:u8, left:u8, right:u8)
+
+// Check whether the given value is stored in the tree rooted at ptr,
+// returning 1=true or 0=false otherwise.
+fn contains(value:u8, ptr:u8) -> (res:u1) {
+    var v:u8, l:u8, r:u8
+    // Check for empty tree
+    if ptr == NIL {
+        res = 0
+        return
+    }
+    // Access node infor
+    v, l, r = nodes[ptr]
+    // Check whether we found it or, if not, which branch to traverse.
+    if v == value {
+        res = 1
+    } else if v>value {
+        res = contains(value, l)
+    } else {
+        res = contains(value, r)
+    }
+}

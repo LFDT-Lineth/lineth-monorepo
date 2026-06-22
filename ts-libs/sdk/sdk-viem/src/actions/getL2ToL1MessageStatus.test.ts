@@ -1,4 +1,4 @@
-import { OnChainMessageStatus } from "@consensys/linea-sdk-core";
+import { OnChainMessageStatus } from "@lfdt-lineth/sdk-core";
 import { Client, Transport, Chain, Account } from "viem";
 import { getContractEvents, readContract } from "viem/actions";
 import { linea, mainnet } from "viem/chains";

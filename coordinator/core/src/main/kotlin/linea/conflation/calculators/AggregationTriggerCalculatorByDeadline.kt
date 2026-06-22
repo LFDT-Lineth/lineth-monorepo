@@ -109,12 +109,13 @@ class AggregationTriggerCalculatorByDeadline(
           blobsToAggregate = BlobsToAggregate(blobCounters.startBlockNumber, blobCounters.endBlockNumber),
         )
     } else {
+      val current = checkNotNull(inFlightAggregation)
       inFlightAggregation =
         InFlightAggregation(
-          aggregationStartTimeStamp = inFlightAggregation!!.aggregationStartTimeStamp,
+          aggregationStartTimeStamp = current.aggregationStartTimeStamp,
           blobsToAggregate =
           BlobsToAggregate(
-            inFlightAggregation!!.blobsToAggregate.startBlockNumber,
+            current.blobsToAggregate.startBlockNumber,
             blobCounters.endBlockNumber,
           ),
         )

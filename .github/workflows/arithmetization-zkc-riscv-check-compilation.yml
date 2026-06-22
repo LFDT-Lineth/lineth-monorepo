@@ -17,14 +17,19 @@ on:
      - '.github/workflows/arithmetization-*.yml'
   workflow_call:
   workflow_dispatch:
+    inputs:
+      zkc-ref:
+        description: 'zkc commit/branch/tag (defaults to pinned ref below)'
+        required: false
+        type: string
 
 permissions:
   contents: read
   actions: read
 
 jobs:
-  build:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+  check-compilation:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -36,6 +41,8 @@ jobs:
 
       - name: Install zkc and check compilation of RISC-V in ZkC
         run: make -C arithmetization riscv-check-compilation
+        env:
+          ZKC_REF: ${{ inputs.zkc-ref || 'v1.2.20' }}
 
       - name: Linting Check
         run: make -C arithmetization riscv-check-lint

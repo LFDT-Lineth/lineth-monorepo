@@ -1,6 +1,6 @@
 package net.consensys.linea.contract.l1
 
-import build.linea.contract.LineaRollupV8
+import linea.contract.LineaRollupV8
 import linea.domain.BlobRecord
 import linea.domain.ProofToFinalize
 import linea.kotlin.encodeHex

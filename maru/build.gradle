@@ -1,0 +1,59 @@
+// :maru is the parent project for the maru beacon-chain client subtree, imported
+// from Consensys/maru via `git filter-repo --to-subdirectory-filter maru` + merge.
+// Convention plugins (Kotlin/Java setup, base Spotless ktlint, JUnit, JaCoCo)
+// come from the monorepo's root build.gradle and zkevm/buildSrc conventions.
+// Versions are governed by zkevm's gradle/libs.versions.toml.
+//
+// This file adds the only maru-local concern that isn't part of the monorepo's
+// defaults: the SPDX dual MIT/Apache license-header rule + Java importOrder,
+// layered on top of the monorepo's base Spotless ktlint / googleJavaFormat
+// config. The monorepo doesn't enforce headers; maru retains them so the
+// licensing markers stay on every Kotlin and Java file.
+
+subprojects {
+  // Maru runs on Vert.x 4 at test runtime because Besu 26.5's acceptance-tests-dsl
+  // (and besu-ethereum-p2p / besu-metrics-core internals it loads via
+  // ThreadBesuNodeRunner) is bytecode-bound to removed Vert.x 4 types and methods
+  // (e.g. io.vertx.core.impl.ConcurrentHashSet, Vertx.nettyEventLoopGroup).
+  // zkevm's kotlin-common-conventions applies `api platform("vertx-stack-depchain
+  // :5.0.10")` which would normally win conflict resolution; resolutionStrategy.force
+  // on individual artifacts overrides that without colliding with the strict-5.0.10
+  // constraint on vertx-stack-depchain itself.
+  // Drop this block once Besu moves to Vert.x 5.
+  configurations.configureEach { cfg ->
+    resolutionStrategy.eachDependency { details ->
+      if (details.requested.group == 'io.vertx' && details.requested.name != 'vertx-stack-depchain') {
+        details.useVersion('4.5.24')
+        details.because('Force Vert.x 4 for Besu 26.5 acceptance-tests-dsl bytecode compatibility')
+      }
+      // Besu 26.5's metrics-core (PrometheusMetricsSystem, PrometheusGuavaCache$Context)
+      // is bytecode-bound to io.micrometer.prometheus.PrometheusMeterRegistry, which was
+      // renamed to io.micrometer.prometheusmetrics.PrometheusMeterRegistry in Micrometer
+      // 1.13+. zkevm's catalog pins 1.16.4 (new package); pinning maru to the last 1.12.x
+      // keeps the old package so Besu's class-load succeeds.
+      if (details.requested.group == 'io.micrometer') {
+        details.useVersion('1.12.13')
+        details.because('Match Besu 26.5 bytecode that references io.micrometer.prometheus.* (pre-1.13 package)')
+      }
+    }
+  }
+
+  afterEvaluate { subproject ->
+    if (subproject.plugins.hasPlugin('com.diffplug.spotless')) {
+      subproject.spotless {
+        kotlin {
+          licenseHeaderFile(
+              "${project.rootDir}/maru/gradle/spotless/java-kotlin.license"
+              ).onlyIfContentMatches("^(?!/\\*\\r?\\n \\*.*ConsenSys AG\\.)")
+        }
+        java {
+          target 'src/**/*.java'
+          importOrder 'build.linea', 'java', ''
+          licenseHeaderFile(
+              "${project.rootDir}/maru/gradle/spotless/java-kotlin.license"
+              ).onlyIfContentMatches("^(?!/\\*\\r?\\n \\*.*ConsenSys AG\\.)")
+        }
+      }
+    }
+  }
+}

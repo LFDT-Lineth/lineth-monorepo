@@ -35,6 +35,12 @@ alwaysApply: true
 - API/versioning rules: `/.cursor/rules/versioning-guidelines/RULES.md`
 - Smart-contract specific Cursor rule: `/.cursor/rules/smart-contract-guidelines/RULE.md`
 
+## Local Skills
+
+- Squash Bugbot skill: `/.agents/skills/squash-bugbot/SKILL.md`
+- Invocation: `/squash-bugbot <PR_NUMBER>` in agents that support project skills.
+- This repository does not maintain a separate `/.cursor/skills` copy; use the canonical `/.agents/skills` skill.
+
 ## Package-Specific Agent Docs
 
 - `/contracts/AGENTS.md`
@@ -42,7 +48,7 @@ alwaysApply: true
 - `/prover/AGENTS.md`
 - `/tracer/AGENTS.md`
 - `/sdk/AGENTS.md`
-- `/besu-plugins/AGENTS.md`
+- `/linea-besu/plugins/AGENTS.md`
 - `/transaction-exclusion-api/AGENTS.md`
 - `/e2e/AGENTS.md`
 

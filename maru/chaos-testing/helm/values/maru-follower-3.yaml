@@ -1,0 +1,18 @@
+replicaCount: 1
+fullnameOverride: maru-follower-3
+componentRole: follower
+configFiles:
+  privateKey: |
+    0x0802122100cb876c984d90b683011e93321be79d6f384e6cc78b1b0f1f882b20d00fe89022
+  configsToml: |
+    [fork-transition]
+    l2-eth-api-endpoint = { endpoint = "http://besu-follower-3-0.besu-follower-3.default.svc.cluster.local:8545" }
+
+    [syncing]
+    el-sync-status-refresh-interval = "1 seconds"
+
+    [payload-validator]
+    engine-api-endpoint = { endpoint = "http://besu-follower-3-0.besu-follower-3.default.svc.cluster.local:8550" }
+
+    [follower-engine-apis]
+    follower-besu = { endpoint = "http://besu-follower-3-1.besu-follower-3.default.svc.cluster.local:8550" }

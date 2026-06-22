@@ -1,13 +1,13 @@
 package net.consensys.linea.testing.submission
 
+import linea.coordinator.clients.prover.serialization.BlobCompressionProofJsonResponse
+import linea.coordinator.clients.prover.serialization.ProofToFinalizeJsonResponse
 import linea.domain.Aggregation
 import linea.domain.BlobRecord
 import linea.domain.TestConstants.LINEA_BLOCK_INTERVAL
 import linea.domain.createAggregation
 import linea.domain.createBlobRecords
 import net.consensys.linea.testing.filesystem.getPathTo
-import net.consensys.zkevm.coordinator.clients.prover.serialization.BlobCompressionProofJsonResponse
-import net.consensys.zkevm.coordinator.clients.prover.serialization.ProofToFinalizeJsonResponse
 import java.io.File
 import kotlin.time.Instant
 

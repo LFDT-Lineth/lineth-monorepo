@@ -3,9 +3,14 @@ name: 'build-plugins-and-assemble'
 description: 'Composite action to build and assemble the artifacts for the target environment'
 
 inputs:
-  release_tag_prefix:
-    description: "Release version tag prefix"
+  release_version:
+    description: "Release version"
     required: true
+  
+  image_tag_suffix:
+    description: 'Custom docker image tag suffix'
+    required: false
+    default: ''
   
   with_besu_fleet_plugin:
     description: When "true", assemble with besu fleet plugin
@@ -29,16 +34,16 @@ outputs:
     value: ${{ steps.metadata.outputs.build_date }}
 
   dockertag:
-    description: docker tag
+    description: docker image tag base (without suffix)
     value: ${{ steps.metadata.outputs.dockertag }}
+
+  dockertag_with_suffix:
+    description: docker image tag with suffix (same value as dockertag if no suffix is given)
+    value: ${{ steps.metadata.outputs.dockertag_with_suffix }}
 
   dockerimage:
     description: docker image
     value: ${{ steps.metadata.outputs.dockerimage }}
-
-  releasetag:
-    description: release tag
-    value: ${{ steps.metadata.outputs.releasetag }}
 
   tracer_plugin_version:
     description: tracer plugin version
@@ -72,7 +77,7 @@ runs:
     
     - name: Build besu from source
       shell: bash
-      run: ./gradlew linea-besu:build -PskipDownloadBesuDist=false
+      run: ./gradlew :linea-besu:besu:build -PskipDownloadBesuDist=false
       env:
         JAVA_OPTS: -Xmx2g
 
@@ -80,7 +85,8 @@ runs:
       id: metadata
       uses: ./.github/actions/linea-besu-package/compute-metadata
       with:
-        release_tag_prefix: ${{ inputs.release_tag_prefix }}
+        release_version: ${{ inputs.release_version }}
+        image_tag_suffix: ${{ inputs.image_tag_suffix }}
 
     - name: Display linea-besu-package metadata
       shell: bash
@@ -88,7 +94,7 @@ runs:
 
     - name: Build tracer and sequencer from source
       shell: bash
-      run: cd linea-besu-package && make build-tracer-and-sequencer
+      run: cd linea-besu/package && make build-tracer-and-sequencer
       env:
         JAVA_OPTS: -Xmx2g
         TRACER_PLUGIN_VERSION: ${{ steps.metadata.outputs.tracer_plugin_version }}

@@ -1,0 +1,168 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
+plugins {
+  id 'net.consensys.zkevm.kotlin-application-conventions'
+}
+
+sourceSets {
+  integrationTest {
+    kotlin {
+      compileClasspath += main.output
+      runtimeClasspath += main.output
+    }
+    compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + sourceSets.test.compileClasspath
+    runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath + sourceSets.test.runtimeClasspath
+  }
+}
+
+dependencies {
+  implementation(project(':maru:api'))
+  implementation(project(':maru:config'))
+  implementation(project(':maru:consensus'))
+  implementation(project(':maru:core'))
+  implementation(project(':maru:executionlayer'))
+  implementation(project(':maru:p2p'))
+  implementation(project(':maru:storage'))
+  implementation(project(':maru:syncing'))
+  implementation(project(':maru:crypto'))
+  implementation(project(':maru:serialization'))
+  implementation(project(':maru:observability'))
+  implementation(project(':jvm-libs:linea:teku-web3j'))
+  api(project(':maru:linea-finalization-provider')) {
+    exclude group: "build.linea", module: "besu-libs"
+  }
+  implementation(project(':jvm-libs:linea:web3j-extensions')) {
+    exclude group: "build.linea", module: "besu-libs"
+  }
+  implementation project(':jvm-libs:generic:extensions:kotlin')
+  implementation project(':jvm-libs:generic:extensions:futures')
+  implementation project(':jvm-libs:linea:core:long-running-service')
+
+  // Previously inherited from maru's `maru.kotlin-application-conventions` plugin (which the
+  // import dropped in favor of zkevm's lighter `net.consensys.zkevm.kotlin-application-conventions`).
+  implementation project(':jvm-libs:linea:core:metrics')
+  implementation project(':jvm-libs:linea:metrics:micrometer')
+  // Pinned to the published Vert.x 4-era artifact rather than the local
+  // :jvm-libs:generic:vertx-helper (Vert.x 5) because Besu 26.5's acceptance-tests-dsl
+  // and besu-ethereum-p2p call removed Vert.x 4 methods/internals at runtime.
+  // Tracked in libs.versions.toml `lineaPackages`.
+  implementation("build.linea.internal:vertx-helper:${libs.versions.lineaPackages.get()}") {
+    exclude group: "build.linea.internal", module: "kotlin"
+    exclude group: "build.linea.internal", module: "futures"
+  }
+  implementation "io.vertx:vertx-micrometer-metrics"
+
+  implementation "info.picocli:picocli:${libs.versions.picoli.get()}"
+  implementation "com.sksamuel.hoplite:hoplite-core:${libs.versions.hoplite.get()}"
+
+  implementation("org.hyperledger.besu.internal:besu-consensus-qbft-core")
+  implementation("org.hyperledger.besu.internal:besu-metrics-core")
+  implementation("org.hyperledger.besu.internal:besu-crypto-algorithms")
+  implementation("tech.pegasys.teku.internal:p2p:${libs.versions.teku.get()}")
+  implementation("tech.pegasys.teku.internal:eth2:${libs.versions.teku.get()}")
+  implementation ("io.consensys.protocols:discovery:${libs.versions.discovery.get()}")
+
+  integrationTestRuntimeOnly("org.junit.platform:junit-platform-launcher:${libs.versions.junitPlatform.get()}")
+  integrationTestImplementation "org.jetbrains.kotlinx:kotlinx-datetime:${libs.versions.kotlinxDatetime.get()}"
+  integrationTestImplementation "org.awaitility:awaitility-kotlin:${libs.versions.awaitility.get()}"
+  integrationTestImplementation(project(':jvm-libs:linea:testing:besu'))
+  integrationTestImplementation(testFixtures(project(':maru:p2p')))
+  integrationTestImplementation(testFixtures(project(':maru:crypto')))
+  integrationTestImplementation("org.hyperledger.besu.internal:besu-crypto-services")
+  integrationTestImplementation("org.hyperledger.besu.internal:besu-consensus-common")
+  integrationTestImplementation("org.hyperledger.besu.internal:besu-consensus-qbft")
+  integrationTestImplementation("org.hyperledger.besu.internal:besu-ethereum-core")
+  integrationTestImplementation "org.hyperledger.besu.internal:besu-ethereum-api"
+  integrationTestImplementation(group: 'org.hyperledger.besu.internal', name: 'besu-ethereum-core', classifier: 'test-support')
+  integrationTestImplementation("org.hyperledger.besu.internal:besu-ethereum-p2p")
+  integrationTestImplementation("com.squareup.okhttp3:okhttp:${libs.versions.okhttp.get()}")
+  integrationTestImplementation("io.javalin:javalin:${libs.versions.javalin.get()}")
+  testImplementation(testFixtures(project(':maru:core')))
+}
+
+// Besu and Teku have similar versioning and some modules are also named the same. This creates conflicts when
+// dependencies are collected
+tasks.named("distTar").configure {
+  enabled = false // disable from build, not used
+  duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+tasks.named("distZip").configure {
+  enabled = false // disable from build, not used
+  duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+application {
+  mainClass = 'maru.app.CliEntrypoint'
+}
+
+jar {
+  archiveBaseName = 'maru'
+  manifest {
+    attributes(
+        'Class-Path': project.configurations.runtimeClasspath
+        .collect {
+          it.getName()
+        }
+        .findAll {
+          it.endsWith('jar')
+        }
+        .join(' '),
+        'Main-Class': 'maru.app.CliEntrypoint',
+        'Multi-Release': 'true'
+        )
+  }
+}
+
+task integrationTest(type: Test) {
+  description = "Runs integration tests."
+  group = "verification"
+  useJUnitPlatform()
+
+  classpath = sourceSets.integrationTest.runtimeClasspath
+  testClassesDirs = sourceSets.integrationTest.output.classesDirs
+
+  // Limit concurrency to max(2, nCpu/4) and run one test class per JVM (forkEvery = 1) so each class is
+  // fully isolated (own statics, singletons, ForkJoinPool, log4j2 context). This overrides the root
+  // build.gradle default. The concurrency cap lives at the process
+  // level, so methods within a fork run sequentially (same_thread), overriding the root's concurrent mode.
+  // nCpu/4 (rather than nCpu/2) leaves headroom: each class spins up several Besu+Maru nodes with real
+  // P2P, and over-subscribing the host makes timing-sensitive peer-discovery awaits flake.
+  maxParallelForks = Math.max(2, Runtime.runtime.availableProcessors().intdiv(4))
+  forkEvery = 1
+  systemProperties["junit.jupiter.execution.parallel.mode.default"] = "same_thread"
+  systemProperties["junit.jupiter.execution.parallel.mode.classes.default"] = "same_thread"
+
+  // Isolate each test's logs into their own file under build/integrationTest-logs/. PerTestLoggingExtension
+  // (auto-registered, see src/integrationTest/resources) tags each test thread via the log4j2 ThreadContext
+  // (per-method file) and publishes the running class name as a system property (per-class fallback file for
+  // untagged logs from JVM-global pools such as ForkJoinPool.commonPool). Make the context map inheritable so
+  // the Besu/Maru worker threads a test spawns inherit its tag and log to the same file.
+  systemProperties["log4j2.isThreadContextMapInheritable"] = "true"
+
+  testLogging {
+    events TestLogEvent.FAILED,
+        TestLogEvent.SKIPPED,
+        TestLogEvent.STANDARD_ERROR
+    // TestLogEvent.STARTED,
+    // TestLogEvent.PASSED
+    exceptionFormat TestExceptionFormat.FULL
+    showCauses true
+    showExceptions true
+    showStackTraces true
+    // set showStandardStreams if you need to see test logs
+    showStandardStreams false
+  }
+}
+
+afterEvaluate {
+  // Integration tests are getting unstable when running concurrently with other tests
+  tasks.named('integrationTest') {
+    mustRunAfter rootProject.subprojects.collect {
+      it.tasks.matching {
+        it.name == 'test'
+      }
+    }.flatten()
+  }
+}

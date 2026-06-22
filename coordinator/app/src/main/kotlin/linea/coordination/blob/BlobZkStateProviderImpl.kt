@@ -1,0 +1,21 @@
+package linea.coordination.blob
+
+import linea.clients.GetStateMerkleProofRequest
+import linea.clients.StateManagerClientV1
+import linea.domain.BlockInterval
+import tech.pegasys.teku.infrastructure.async.SafeFuture
+
+class BlobZkStateProviderImpl(
+  private val zkStateClient: StateManagerClientV1,
+) : BlobZkStateProvider {
+  override fun getBlobZKState(blockRange: ULongRange): SafeFuture<BlobZkState> {
+    return zkStateClient
+      .makeRequest(GetStateMerkleProofRequest(BlockInterval(blockRange.first, blockRange.last)))
+      .thenApply {
+        BlobZkState(
+          parentStateRootHash = it.zkParentStateRootHash,
+          finalStateRootHash = it.zkEndStateRootHash,
+        )
+      }
+  }
+}

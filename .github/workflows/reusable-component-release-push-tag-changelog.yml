@@ -1,0 +1,189 @@
+name: "Reusable: Component Release Push Tag and Changelog"
+
+on:
+  workflow_call:
+    inputs:
+      component-name:
+        description: "Component name — used to derive tag pattern (e.g. coordinator, postman)"
+        required: true
+        type: string
+      folder-name:
+        description: "Folder name of the component which hosts CHANGELOG.md (e.g. linea-besu's home folder is linea-besu/package)"
+        required: true
+        type: string
+      include-path:
+        description: 'newline-separated string to represent the "git-cliff --include-path filter"'
+        required: true
+        type: string
+      release_tag_suffix:
+        description: "Custom tag release tag suffix, i.e. releases/[component]/v[semver]-[suffix]"
+        required: false
+        type: string
+        default: ''
+      upload_changelog:
+        description: "Upload the updated CHANGELOG.md and skip pushing the commit or creating PR"
+        required: false
+        type: boolean
+        default: false
+      create_pull_request:
+        description: "Create PR instead of direct commit"
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      release_tag:
+        description: "Full release tag (e.g. releases/coordinator/v0.2.0)"
+        value: ${{ jobs.release-component.outputs.release_tag }}
+      release_version:
+        description: "Bare semver (e.g. 0.2.0)"
+        value: ${{ jobs.release-component.outputs.release_version }}
+      changelog:
+        description: "Latest changelog section content"
+        value: ${{ jobs.release-component.outputs.changelog }}
+
+jobs:
+  release-component:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    permissions:
+      contents: write
+      pull-requests: write
+    name: Release ${{ inputs.component-name }} (push changelog + tag)
+    outputs:
+      release_tag: ${{ steps.prepend-changelog.outputs.next_tag }}
+      release_version: ${{ steps.prepend-changelog.outputs.next_version }}
+      changelog: ${{ steps.prepend-changelog.outputs.changelog_content }}
+    steps:
+      # Mint a short-lived token either for the release bot GitHub App to commit the changelog changes 
+      # directly bypassin the branch-protection or for PR bot GitHub App to create PR with the changelog changes.
+      - name: Generate release or PR bot App token
+        id: app-token
+        if: ${{ !inputs.upload_changelog }}
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ !inputs.create_pull_request && secrets.RELEASE_BOT_APP_ID || secrets.CREATE_GITHUB_PR_APP_ID }}
+          private-key: ${{ !inputs.create_pull_request && secrets.RELEASE_BOT_PRIVATE_KEY || secrets.CREATE_GITHUB_PR_PRIVATE_KEY }}
+
+      # Look up the App's bot user id so the commit author email follows
+      # GitHub's canonical noreply format and shows up under the App in the UI.
+      - name: Resolve bot user id
+        id: bot-user
+        if: ${{ !inputs.upload_changelog }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          set -euo pipefail
+          user_id=$(gh api "/users/${APP_SLUG}%5Bbot%5D" --jq .id)
+          echo "user-id=${user_id}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # Use the App token so subsequent `git push` is authenticated as the App.
+          token: ${{ (!inputs.upload_changelog && steps.app-token.outputs.token) ||  github.token }}
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
+          fetch-tags: true
+          submodules: false
+
+      - name: Configure git identity for app bot
+        if: ${{ !inputs.upload_changelog }}
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          USER_ID: ${{ steps.bot-user.outputs.user-id }}
+        run: |
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+
+      - name: Configure git identity for push tag use
+        if: ${{ inputs.upload_changelog }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Install git-cliff
+        uses: taiki-e/install-action@5f57d6cb7cd20b14a8a27f522884c4bc8a187458 #(v2.75.19)
+        with:
+          tool: git-cliff
+
+      # Stamp the prepended entry with the bare semver (e.g. "## [0.2.0] - 2026-04-27")
+      - name: Generate and prepend release changelog section
+        id: prepend-changelog
+        uses: ./.github/actions/run-git-cliff-commands
+        with:
+          component-name: ${{ inputs.component-name }}
+          folder-name: ${{ inputs.folder-name }}
+          include-path: ${{ inputs.include-path }}
+          release_tag_suffix: ${{ inputs.release_tag_suffix }}
+          prepend-changelog: 'true'
+          generate-changelog-with-next-tag-version: 'true'
+
+      - name: Commit and push ${{ inputs.component-name }}/CHANGELOG.md
+        if: ${{ !inputs.upload_changelog && !inputs.create_pull_request }}
+        env:
+          SCOPE_NAME: ${{ inputs.component-name == 'linea-besu-package' && 'linea-besu' || inputs.component-name }}
+          FOLDER_NAME: ${{ inputs.folder-name }}
+          TAG: ${{ steps.prepend-changelog.outputs.next_tag }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- "${FOLDER_NAME}/CHANGELOG.md"; then
+            echo "No ${FOLDER_NAME}/CHANGELOG.md changes; nothing to do."
+            exit 0
+          fi
+          git add "${FOLDER_NAME}/CHANGELOG.md"
+          git commit -m "chore(${SCOPE_NAME}): update CHANGELOG.md for ${TAG} release [skip ci]"
+
+          # Rebase on top of any commits that landed on the branch between
+          # checkout and now (e.g. a concurrent component-changelog-update push),
+          # then push. Retry a few times in case of repeated races.
+          for attempt in 1 2 3; do
+            git fetch origin "${GITHUB_REF_NAME}"
+            if ! git rebase "origin/${GITHUB_REF_NAME}"; then
+              git rebase --abort
+              echo "Rebase conflict on attempt ${attempt}; aborting."
+              exit 1
+            fi
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              exit 0
+            fi
+            echo "Push rejected on attempt ${attempt}; refetching and retrying..."
+          done
+          echo "Failed to push ${FOLDER_NAME}/CHANGELOG.md after 3 attempts." >&2
+          exit 1
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0
+        if: ${{ !inputs.upload_changelog && inputs.create_pull_request }}
+        id: create-pull-request
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          commit-message: "chore(${{ inputs.component-name == 'linea-besu-package' && 'linea-besu' || inputs.component-name }}): update CHANGELOG.md for ${{ steps.prepend-changelog.outputs.next_tag }} release [skip ci]"
+          branch: ci/chore-${{ inputs.component-name == 'linea-besu-package' && 'linea-besu' || inputs.component-name }}-changelog-update-release-v${{ steps.prepend-changelog.outputs.next_version }}
+          base: ${{ github.head_ref || github.ref_name }}
+          title: "chore(${{ inputs.component-name == 'linea-besu-package' && 'linea-besu' || inputs.component-name }}): update CHANGELOG.md for ${{ steps.prepend-changelog.outputs.next_tag }} release [skip ci]"
+          add-paths: ${{ inputs.folder-name }}/CHANGELOG.md
+
+      - name: Upload CHANGELOG.md artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ inputs.upload_changelog }}
+        with:
+          name: prepended-changelog-${{ inputs.component-name }}
+          path: ${{ inputs.folder-name }}/CHANGELOG.md
+
+      - name: Create and push ${{ inputs.component-name }} release tag
+        env:
+          COMPONENT: ${{ inputs.component-name }}
+          TAG: ${{ steps.prepend-changelog.outputs.next_tag }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TAG}" ]; then
+            echo "No tag computed; aborting."
+            exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/${TAG}" > /dev/null; then
+            echo "Tag ${TAG} already exists; exit now."
+            exit 0
+          fi
+          git tag -a "${TAG}" -m "${COMPONENT^} release ${TAG}"
+          git push origin "${TAG}"
+          echo "Pushed ${TAG} pointing at $(git rev-parse HEAD)"

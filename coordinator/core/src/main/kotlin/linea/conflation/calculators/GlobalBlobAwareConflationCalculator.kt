@@ -195,11 +195,13 @@ class GlobalBlobAwareConflationCalculator(
         conflations = blobBatches,
         compressedData = compressedData,
         startBlockTime =
-        blobBlockCounters
-          .find { it.blockNumber == blobInterval.startBlockNumber }!!.blockTimestamp,
+        checkNotNull(blobBlockCounters.find { it.blockNumber == blobInterval.startBlockNumber }) {
+          "No block counter found for startBlockNumber=${blobInterval.startBlockNumber}"
+        }.blockTimestamp,
         endBlockTime =
-        blobBlockCounters
-          .find { it.blockNumber == blobInterval.endBlockNumber }!!.blockTimestamp,
+        checkNotNull(blobBlockCounters.find { it.blockNumber == blobInterval.endBlockNumber }) {
+          "No block counter found for endBlockNumber=${blobInterval.endBlockNumber}"
+        }.blockTimestamp,
       )
     val triggerName =
       if (numberOfBatches >= batchesLimit) {

@@ -1,0 +1,62 @@
+// ===================================================================
+// fallthrough behaviour of switches with respect to the discriminant
+// and failing in non matching cases
+// ===================================================================
+
+type exmp = u8
+
+const CASE_A:exmp = 1
+const CASE_B:exmp = 2
+const CASE_MATCH:exmp = 13
+
+fn main() {
+
+    var discr:exmp = CASE_MATCH
+
+    // no match
+    switch discr {
+        case CASE_A, CASE_B: {
+            fail
+        }
+    }
+
+    // no fall through
+    switch discr {
+        case CASE_MATCH: {
+        }
+        default: {
+            fail
+        }
+    }
+
+    // no fall through after modifying discr
+    switch discr {
+        case CASE_MATCH: {
+            discr = CASE_A
+        }
+        default: {
+            fail
+        }
+    }
+    discr = reset(discr)
+
+    // generic case
+    switch discr {
+        case CASE_MATCH: {
+            discr = CASE_A
+        }
+        case CASE_A: {
+            fail
+        }
+    }
+    discr = reset(discr)
+
+    printf "success"
+}
+
+fn reset(discr:exmp) -> (discr_reset:exmp) {
+    discr_reset = CASE_MATCH
+    printf "reset of discriminant"
+    printf "\tincoming = %d", discr
+    printf "\toutgoing ← %d", discr_reset
+}

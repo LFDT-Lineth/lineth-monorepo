@@ -22,7 +22,7 @@ web3jContractWrappers {
   def contractV6Abi = contractsDir.file("LineaRollupV6.0.abi").asFile.absolutePath
   def contractV8Abi = contractsDir.file("LineaRollupV8.0.abi").asFile.absolutePath
 
-  contractsPackage = "build.linea.contract"
+  contractsPackage = "linea.contract"
   contracts = [
     "$contractV6Abi": "LineaRollupV6",
     "$contractV8Abi": "LineaRollupV8"

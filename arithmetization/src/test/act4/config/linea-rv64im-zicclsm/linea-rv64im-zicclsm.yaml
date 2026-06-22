@@ -1,0 +1,80 @@
+# yaml-language-server: $schema=../../../external/riscv-unified-db/spec/schemas/config_schema.json
+---
+$schema: config_schema.json#
+kind: architecture configuration
+type: fully configured
+name: linea-rv64im-zicclsm
+description: ETH-ACT Target — RV64IM+Zicclsm compliance profile (Linea)
+
+implemented_extensions:
+  - { name: I,       version: "= 2.1" }
+  - { name: M,       version: "= 2.0" }
+  - { name: Zicclsm, version: "= 1.0.0" }
+  # Sm is required to unlock all the MUTABLE_*, MISA_*, MTVEC_*, etc. params
+  # defined below. Pinned at 1.12.0 to match the reference Sail configs.
+  - { name: Sm,      version: "= 1.12.0" }
+
+params:
+  # M params
+  MUTABLE_MISA_M: false
+  # Sm params
+  MXLEN: 64
+  PRECISE_SYNCHRONOUS_EXCEPTIONS: true
+  TRAP_ON_ECALL_FROM_M: true
+  TRAP_ON_EBREAK: true
+  MARCHID_IMPLEMENTED: false
+  MIMPID_IMPLEMENTED: false
+  VENDOR_ID_BANK: 0x0
+  VENDOR_ID_OFFSET: 0x0
+  MISALIGNED_LDST: true
+  MISALIGNED_LDST_EXCEPTION_PRIORITY: low
+  MISALIGNED_MAX_ATOMICITY_GRANULE_SIZE: 4
+  MISALIGNED_SPLIT_STRATEGY: sequential_bytes
+  TRAP_ON_ILLEGAL_WLRL: false
+  TRAP_ON_UNIMPLEMENTED_INSTRUCTION: true
+  TRAP_ON_RESERVED_INSTRUCTION: true
+  TRAP_ON_UNIMPLEMENTED_CSR: true
+  REPORT_VA_IN_MTVAL_ON_BREAKPOINT: false
+  REPORT_VA_IN_MTVAL_ON_LOAD_MISALIGNED: false
+  REPORT_VA_IN_MTVAL_ON_STORE_AMO_MISALIGNED: false
+  REPORT_VA_IN_MTVAL_ON_INSTRUCTION_MISALIGNED: false
+  REPORT_VA_IN_MTVAL_ON_LOAD_ACCESS_FAULT: false
+  REPORT_VA_IN_MTVAL_ON_STORE_AMO_ACCESS_FAULT: false
+  REPORT_VA_IN_MTVAL_ON_INSTRUCTION_ACCESS_FAULT: false
+  REPORT_ENCODING_IN_MTVAL_ON_ILLEGAL_INSTRUCTION: false
+  MTVAL_WIDTH: 64
+  CONFIG_PTR_ADDRESS: 0
+  PMA_GRANULARITY: 3
+  PHYS_ADDR_WIDTH: 64
+  M_MODE_ENDIANNESS: little
+  MISA_CSR_IMPLEMENTED: false
+  MTVEC_ACCESS: rw
+  MTVEC_MODES: [0]
+  MTVEC_BASE_ALIGNMENT_DIRECT: 4
+  MTVEC_ILLEGAL_WRITE_BEHAVIOR: retain
+  COUNTINHIBIT_EN:
+    [
+      false, false, false, false, false, false, false, false,
+      false, false, false, false, false, false, false, false,
+      false, false, false, false, false, false, false, false,
+      false, false, false, false, false, false, false, false,
+    ]
+  # No HPM counters implemented (indices 3..31 are HPM counters; 0..2 are
+  # the standard cycle/time/instret which we don't expose either).
+  HPM_COUNTER_EN:
+    [
+      false, false, false, false, false, false, false, false,
+      false, false, false, false, false, false, false, false,
+      false, false, false, false, false, false, false, false,
+      false, false, false, false, false, false, false, false,
+    ]
+  # mcountinhibit / mcounteren bits — disabled to match the no-HPM choice above.
+  MCOUNTENABLE_EN:
+    [
+      false, false, false, false, false, false, false, false,
+      false, false, false, false, false, false, false, false,
+      false, false, false, false, false, false, false, false,
+      false, false, false, false, false, false, false, false,
+    ]
+  # No PMP entries (matches rvtest_config.h's `#define RVMODEL_NUM_PMPS 0`).
+  NUM_PMP_ENTRIES: 0

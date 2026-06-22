@@ -83,7 +83,6 @@ fs-responses-directory = "/data/prover/v3/aggregation/responses"
 #fs-responses-directory = "/data/prover/v3/aggregation/responses"
 
 [traces]
-expected-traces-api-version = "beta-v5.0-rc3"
 [traces.counters]
 endpoints = ["http://l2-node-besu:8545/"]
 request-limit-per-endpoint = 1
@@ -100,7 +99,6 @@ backoff-delay = "PT1S"
 failures-warning-threshold = 10
 
 [state-manager]
-version = "3.2.3"
 endpoints = ["http://shomei:8888/"]
 request-limit-per-endpoint = 3
 [state-manager.request-retries]

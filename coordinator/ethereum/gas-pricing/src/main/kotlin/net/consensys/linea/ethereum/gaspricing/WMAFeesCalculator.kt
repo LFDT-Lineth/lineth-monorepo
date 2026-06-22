@@ -36,32 +36,20 @@ class WMAFeesCalculator(
         .mapIndexed { index, gasUsedRatio -> gasUsedRatio * (index + 1).toDouble() }
         .sum()
 
-    try {
-      val weightedPriorityFee =
-        when {
-          weightedSumOfRewards == 0.0 || weightedRatiosSum == 0.0 -> 0.0
-          else -> (weightedSumOfRewards * this.config.priorityFeeWmaCoefficient) / weightedRatiosSum
-        }
+    val weightedPriorityFee =
+      when {
+        weightedSumOfRewards == 0.0 || weightedRatiosSum == 0.0 -> 0.0
+        else -> (weightedSumOfRewards * this.config.priorityFeeWmaCoefficient) / weightedRatiosSum
+      }
 
-      val calculatedGasPrice = scaledBaseFee + weightedPriorityFee
+    val calculatedGasPrice = scaledBaseFee + weightedPriorityFee
 
-      log.debug(
-        "Calculated gasPrice={} wei, l1Blocks={} feeHistory={}",
-        calculatedGasPrice,
-        feeHistory.blocksRange().toIntervalString(),
-        feeHistory,
-      )
-      return calculatedGasPrice
-    } catch (e: Exception) {
-      log.error(
-        "Error: weightedSumOfRewards={} weightedRatiosSum={} feehistory={} errorMessage={}",
-        weightedSumOfRewards,
-        weightedRatiosSum,
-        feeHistory,
-        e.message,
-        e,
-      )
-      throw e
-    }
+    log.debug(
+      "Calculated gasPrice={} wei, l1Blocks={} feeHistory={}",
+      calculatedGasPrice,
+      feeHistory.blocksRange().toIntervalString(),
+      feeHistory,
+    )
+    return calculatedGasPrice
   }
 }

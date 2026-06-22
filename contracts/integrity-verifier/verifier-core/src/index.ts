@@ -1,5 +1,5 @@
 /**
- * @consensys/linea-contract-integrity-verifier
+ * @lfdt-lineth/contract-integrity-verifier
  *
  * A tool to verify deployed smart contract integrity (bytecode, ABI, and state)
  * against local artifact files.

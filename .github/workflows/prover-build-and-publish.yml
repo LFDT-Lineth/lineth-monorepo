@@ -8,15 +8,20 @@ permissions:
 on:
   workflow_call:
     inputs:
-      commit_tag:
+      image_tag:
         required: true
         type: string
+      image_tag_with_suffix:
+        required: false
+        type: string
+        default: ''
       develop_tag:
         required: true
         type: string
       image_name:
-        required: true
+        required: false
         type: string
+        default: consensys/linea-prover
       push_image:
         required: false
         type: boolean
@@ -26,29 +31,6 @@ on:
         required: false
       DOCKERHUB_TOKEN:
         required: false
-  workflow_dispatch:
-    inputs:
-      commit_tag:
-        description: 'Image tag'
-        required: true
-        type: string
-      develop_tag:
-        description: 'Image tag will be "develop" if target branch is main'
-        required: true
-        type: choice
-        options:
-          - develop
-        default: 'develop'
-      image_name:
-        description: 'Image name'
-        required: true
-        type: string
-        default: 'consensys/linea-prover'
-      push_image:
-        description: 'Toggle whether to push image to docker registry'
-        required: false
-        type: boolean
-        default: true
 
 concurrency:
   group: prover-build-and-publish-${{ github.workflow }}-${{ github.ref }}
@@ -59,10 +41,11 @@ env:
 
 jobs:
   build-and-publish:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     name: Prover build
     env:
-      COMMIT_TAG: ${{ inputs.commit_tag }}
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      IMAGE_TAG_WITH_SUFFIX: ${{ inputs.image_tag_with_suffix }}
       DEVELOP_TAG: ${{ inputs.develop_tag }}
       IMAGE_NAME: ${{ inputs.image_name }}
       PUSH_IMAGE: ${{ inputs.push_image }}
@@ -70,7 +53,7 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           submodules: true
 
@@ -85,7 +68,7 @@ jobs:
         uses: ./.github/actions/docker-build-publish
         with:
           image_name: ${{ env.IMAGE_NAME }}
-          image_tag: ${{ env.COMMIT_TAG }}
+          image_tags: ${{ env.IMAGE_TAG_WITH_SUFFIX && format('{0},{1}', env.IMAGE_TAG, env.IMAGE_TAG_WITH_SUFFIX) || env.IMAGE_TAG }}
           develop_tag: ${{ env.DEVELOP_TAG }}
           push_image: ${{ env.PUSH_IMAGE }}
           dockerfile_path: ./prover/Dockerfile

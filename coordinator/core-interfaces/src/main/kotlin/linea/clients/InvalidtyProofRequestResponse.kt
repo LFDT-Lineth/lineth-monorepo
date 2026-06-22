@@ -1,7 +1,5 @@
 package linea.clients
 
-import build.linea.clients.GetZkEVMStateMerkleProofResponse
-import build.linea.clients.LineaAccountProof
 import linea.domain.StartBlockTimestampProvider
 import kotlin.time.Instant
 

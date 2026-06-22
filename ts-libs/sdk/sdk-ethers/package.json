@@ -1,5 +1,5 @@
 {
-  "name": "@consensys/linea-sdk",
+  "name": "@lfdt-lineth/sdk",
   "version": "1.0.0",
   "author": "Consensys Software Inc.",
   "license": "(MIT OR Apache-2.0)",
@@ -19,14 +19,15 @@
   },
   "dependencies": {
     "ethers": "catalog:",
-    "lru-cache": "11.3.5"
+    "lru-cache": "11.5.1"
   },
   "devDependencies": {
-    "@consensys/eslint-config": "workspace:*",
+    "@lfdt-lineth/eslint-config": "workspace:*",
     "@jest/globals": "catalog:",
     "@typechain/ethers-v6": "catalog:",
     "@types/jest": "catalog:",
     "jest": "catalog:",
+    "jest-environment-node": "catalog:",
     "jest-mock-extended": "catalog:",
     "ts-jest": "catalog:",
     "typechain": "catalog:"

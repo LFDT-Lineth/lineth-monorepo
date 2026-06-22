@@ -35,7 +35,7 @@ const architectureResourceDirMapping: Record<string, string> = {
 };
 
 async function downloadReleaseAsset(nativeLibReleaseTag: string): Promise<string> {
-  const assetReleaseUrl = `https://github.com/Consensys/linea-monorepo/releases/download/${nativeLibReleaseTag}/linea-${nativeLibReleaseTag}.zip`;
+  const assetReleaseUrl = `https://github.com/LFDT-Lineth/lineth-monorepo/releases/download/${nativeLibReleaseTag}/linea-${nativeLibReleaseTag}.zip`;
   const fileName = `${nativeLibReleaseTag}.zip`;
   const destPath = path.resolve("build", fileName);
   console.log(`Downloading ${fileName} from ${assetReleaseUrl} to ${destPath}`);

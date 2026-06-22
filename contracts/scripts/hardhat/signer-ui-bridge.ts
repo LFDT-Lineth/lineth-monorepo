@@ -150,6 +150,8 @@ type SessionState = {
   batchRunActive: boolean;
   /** Comma-separated tags from `--tags`, if any. */
   batchTagsSummary: string | null;
+  /** Count of browser-signed transactions requested in this session (OpenZeppelin proxy deploys use several). */
+  transactionOrdinal: number;
   /**
    * Set just before the deploy batch closes the bridge so the UI can stop polling gracefully.
    * `null` while the run is in progress.
@@ -206,8 +208,9 @@ const SERVER_CLOSE_TIMEOUT_MS = 3000;
 const HARDHAT_SIGNER_UI_SESSION_TOKEN_HEADER = "x-hardhat-signer-ui-session-token";
 /** Reject huge JSON bodies on the local bridge (DoS / accidental OOM). */
 const MAX_JSON_BODY_BYTES = 256 * 1024;
-const TX_LOOKUP_TIMEOUT_MS_DEFAULT = 12_000;
+const TX_LOOKUP_TIMEOUT_MS_DEFAULT = 60_000;
 const TX_LOOKUP_INTERVAL_MS = 200;
+const TX_LOOKUP_RPC_ATTEMPT_TIMEOUT_MS = 5_000;
 
 /**
  * Some RPC / wallet paths (e.g. private submission) return txs slowly; override with
@@ -224,6 +227,7 @@ function getSignerUiTxLookupTimeoutMs(): number {
   }
   return Math.min(Math.max(n, 1000), 300_000);
 }
+
 /** Time to allow the browser to poll terminal `sessionOutcome` before the bridge closes (deploy batch only). */
 const DEFAULT_SHUTDOWN_DRAIN_MS = 1500;
 /** After the bridge port closes, wait before SIGTERM on Next so the UI can observe connection loss first. */
@@ -766,14 +770,71 @@ async function getTransactionWithRetry(
   intervalMs: number,
 ): Promise<TransactionResponse | null> {
   const startedAt = Date.now();
-  while (Date.now() - startedAt < timeoutMs) {
-    const tx = await provider.getTransaction(hash);
+  let remainingMs = timeoutMs;
+  while (remainingMs > 0) {
+    const tx = await getTransactionWithTimeout(provider, hash, Math.min(TX_LOOKUP_RPC_ATTEMPT_TIMEOUT_MS, remainingMs));
     if (tx) {
       return tx;
     }
-    await new Promise((resolveSleep) => setTimeout(resolveSleep, intervalMs));
+    remainingMs = timeoutMs - (Date.now() - startedAt);
+    if (remainingMs <= 0) {
+      break;
+    }
+    await new Promise((resolveSleep) => setTimeout(resolveSleep, Math.min(intervalMs, remainingMs)));
+    remainingMs = timeoutMs - (Date.now() - startedAt);
   }
+
+  // Wallets / RPCs sometimes expose the receipt before `eth_getTransactionByHash` indexes the tx.
+  try {
+    const receipt = await getTransactionReceiptWithTimeout(
+      provider,
+      hash,
+      Math.min(TX_LOOKUP_RPC_ATTEMPT_TIMEOUT_MS, timeoutMs),
+    );
+    if (receipt) {
+      return await getTransactionWithTimeout(provider, hash, TX_LOOKUP_RPC_ATTEMPT_TIMEOUT_MS);
+    }
+  } catch {
+    /* fall through */
+  }
+
   return null;
+}
+
+async function getTransactionReceiptWithTimeout(
+  provider: Provider,
+  hash: string,
+  timeoutMs: number,
+): Promise<{ blockNumber: number | null } | null> {
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      provider.getTransactionReceipt(hash),
+      new Promise<null>((resolveTimeout) => {
+        timeoutHandle = setTimeout(() => resolveTimeout(null), timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeoutHandle);
+  }
+}
+
+async function getTransactionWithTimeout(
+  provider: Provider,
+  hash: string,
+  timeoutMs: number,
+): Promise<TransactionResponse | null> {
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      provider.getTransaction(hash),
+      new Promise<null>((resolveTimeout) => {
+        timeoutHandle = setTimeout(() => resolveTimeout(null), timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeoutHandle);
+  }
 }
 
 function formatMismatchValue(value: string | bigint | null | undefined): string {
@@ -955,15 +1016,22 @@ function writeJson(response: ServerResponse, statusCode: number, payload: unknow
   response.end(JSON.stringify(payload));
 }
 
+function buildSignerUiUrl(uiPort: number, apiBaseUrl: string): string {
+  return `http://${LOCALHOST}:${uiPort}?apiBaseUrl=${encodeURIComponent(apiBaseUrl)}`;
+}
+
+function isAllowedSignerUiOrigin(request: IncomingMessage, uiPort: number): boolean {
+  return request.headers.origin === `http://${LOCALHOST}:${uiPort}`;
+}
+
 /**
  * Only allow the local Next dev origin. Reflecting arbitrary Origin would let any website trigger
  * credentialess cross-origin requests to the bridge from the user's browser (mitigated by Private
  * Network Access in some browsers, but we still avoid wildcard / reflection).
  */
 function applySignerUiCors(request: IncomingMessage, response: ServerResponse, uiPort: number): void {
-  const allowedOrigin = `http://${LOCALHOST}:${uiPort}`;
   const origin = request.headers.origin;
-  if (origin === allowedOrigin) {
+  if (isAllowedSignerUiOrigin(request, uiPort) && typeof origin === "string") {
     response.setHeader("Access-Control-Allow-Origin", origin);
     response.setHeader("Vary", "Origin");
   }
@@ -1179,6 +1247,8 @@ class SignerUiSession {
   private signer?: SignerUiSigner;
   private sessionOutcome: "complete" | "error" | null = null;
   private sessionOutcomeMessage: string | null = null;
+  private sessionAuthenticated = false;
+  private transactionOrdinal = 0;
 
   public constructor(context: SignerUiContext) {
     this.context = context;
@@ -1404,6 +1474,7 @@ class SignerUiSession {
       scriptOrdinal: this.scriptOrdinal,
       batchRunActive: signerUiHardhatDeployBatchActive,
       batchTagsSummary: this.batchTagsSummary,
+      transactionOrdinal: this.transactionOrdinal,
       sessionOutcome: this.sessionOutcome,
       outcomeMessage: this.sessionOutcomeMessage,
     };
@@ -1536,11 +1607,21 @@ class SignerUiSession {
       );
     }
 
+    this.transactionOrdinal += 1;
+    const stepLabel = this.transactionOrdinal > 1 ? `${label} (step ${this.transactionOrdinal})` : label;
+    console.log(
+      `HARDHAT_SIGNER_UI: waiting for wallet signature — ${stepLabel} (${this.activeScriptContext}). ` +
+        "OpenZeppelin proxy deploys may require multiple signatures.",
+    );
+
     const extra = this.takeNextTransactionDetails();
     const prompt: TransactionPrompt = {
       id: randomUUID(),
-      label,
-      description,
+      label: stepLabel,
+      description:
+        this.transactionOrdinal > 1
+          ? `${description} Proxy deploys often need several sequential wallet approvals.`
+          : description,
       createdAt: new Date().toISOString(),
       request: await serializeTransactionRequest(transactionRequest),
       transactionDetails: extra,
@@ -1552,7 +1633,11 @@ class SignerUiSession {
         resolve: resolvePrompt,
         reject: rejectPrompt,
       };
-      this.setTransactionProgress(prompt.id, "awaiting_wallet_approval", `Waiting for wallet approval for ${label}.`);
+      this.setTransactionProgress(
+        prompt.id,
+        "awaiting_wallet_approval",
+        `Waiting for wallet approval for ${stepLabel}.`,
+      );
     });
   }
 
@@ -1569,8 +1654,20 @@ class SignerUiSession {
       );
     }
 
+    try {
+      const receipt = await provider.waitForTransaction(hash, 1, SESSION_TIMEOUT_MS);
+      if (receipt) {
+        const transaction = await getTransactionWithTimeout(provider, hash, TX_LOOKUP_RPC_ATTEMPT_TIMEOUT_MS);
+        if (transaction) {
+          return transaction;
+        }
+      }
+    } catch {
+      /* fall back to polling below */
+    }
+
     while (Date.now() - startedAt < SESSION_TIMEOUT_MS) {
-      const transaction = await provider.getTransaction(hash);
+      const transaction = await getTransactionWithTimeout(provider, hash, TX_LOOKUP_RPC_ATTEMPT_TIMEOUT_MS);
       if (transaction) {
         return transaction;
       }
@@ -1606,12 +1703,19 @@ class SignerUiSession {
       return;
     }
 
+    const url = new URL(request.url ?? "/", `http://${LOCALHOST}`);
+
+    if (request.method === "POST" && url.pathname === "/api/bootstrap") {
+      this.handleBootstrapRoute(request, response);
+      return;
+    }
+
     if (!isValidSignerUiSessionToken(this.sessionSecret, request)) {
       writeJson(response, 401, { error: "Missing or invalid signer UI session token." });
       return;
     }
 
-    const url = new URL(request.url ?? "/", `http://${LOCALHOST}`);
+    this.sessionAuthenticated = true;
 
     if (request.method === "GET" && url.pathname === "/health") {
       writeJson(response, 200, { ok: true, sessionId: this.sessionId });
@@ -1644,6 +1748,22 @@ class SignerUiSession {
     }
 
     writeJson(response, 404, { error: "Not found" });
+  }
+
+  private handleBootstrapRoute(request: IncomingMessage, response: ServerResponse): void {
+    if (this.uiPort === undefined || !isAllowedSignerUiOrigin(request, this.uiPort)) {
+      writeJson(response, 403, { error: "Signer UI bootstrap must originate from the local signer UI." });
+      return;
+    }
+
+    if (this.sessionAuthenticated) {
+      writeJson(response, 409, {
+        error: "Signer UI session has already been bootstrapped. Reopen the original tab for this Hardhat run.",
+      });
+      return;
+    }
+
+    writeJson(response, 200, { sessionToken: this.sessionSecret });
   }
 
   private async handleWalletRoute(request: IncomingMessage, response: ServerResponse): Promise<void> {
@@ -1724,6 +1844,7 @@ class SignerUiSession {
       writeJson(response, 400, { error: "No matching pending transaction request was found." });
       return;
     }
+    const pendingRequest = this.pendingRequest;
 
     this.setTransactionProgress(
       payload.requestId,
@@ -1738,15 +1859,22 @@ class SignerUiSession {
       TX_LOOKUP_INTERVAL_MS,
     );
 
+    if (!this.pendingRequest || this.pendingRequest !== pendingRequest) {
+      writeJson(response, 409, { error: "Pending transaction request was cancelled before validation completed." });
+      return;
+    }
+
     if (!onChain) {
-      this.setTransactionProgress(
-        payload.requestId,
-        "failed",
-        "Transaction not found on the RPC yet. Wait for the wallet to broadcast, then try again from the UI if needed.",
-      );
-      writeJson(response, 400, {
-        error:
-          "Transaction not found on the RPC yet. Wait for the wallet to broadcast, then try again from the UI if needed.",
+      const message =
+        `Transaction ${payload.hash} was returned by the browser wallet, but Hardhat could not find it on ` +
+        `${this.context.networkName} after ${getSignerUiTxLookupTimeoutMs()}ms. ` +
+        "Check the wallet activity against this exact RPC/chain, or increase HARDHAT_SIGNER_UI_TX_LOOKUP_TIMEOUT_MS.";
+      this.setTransactionProgress(payload.requestId, "failed", message);
+      console.warn(`HARDHAT_SIGNER_UI: ${message}`);
+      const rejectOutcome = pendingRequest.reject;
+      this.pendingRequest = undefined;
+      writeJson(response, 400, { error: message }, () => {
+        queueMicrotask(() => rejectOutcome(new Error(message)));
       });
       return;
     }
@@ -1759,7 +1887,7 @@ class SignerUiSession {
 
     const mismatch = getOnChainTransactionPromptMismatch(
       onChain,
-      this.pendingRequest.prompt.request,
+      pendingRequest.prompt.request,
       this.walletState.address,
     );
     if (mismatch) {
@@ -1767,15 +1895,14 @@ class SignerUiSession {
         txHash: payload.hash,
         mismatch,
         tx: onChain,
-        promptRequest: this.pendingRequest.prompt.request,
+        promptRequest: pendingRequest.prompt.request,
       });
-      this.setTransactionProgress(
-        payload.requestId,
-        "failed",
-        `Submitted transaction did not match the pending Hardhat request. ${mismatch}`,
-      );
-      writeJson(response, 400, {
-        error: `On-chain transaction does not match the pending signer UI request. ${mismatch}`,
+      const message = `Submitted transaction did not match the pending Hardhat request. ${mismatch}`;
+      this.setTransactionProgress(payload.requestId, "failed", message);
+      const rejectOutcome = pendingRequest.reject;
+      this.pendingRequest = undefined;
+      writeJson(response, 400, { error: message }, () => {
+        queueMicrotask(() => rejectOutcome(new Error(message)));
       });
       return;
     }
@@ -1787,7 +1914,7 @@ class SignerUiSession {
       chainId: payload.chainId,
     };
 
-    const { resolve: resolveOutcome } = this.pendingRequest;
+    const { resolve: resolveOutcome } = pendingRequest;
     this.pendingRequest = undefined;
     this.setTransactionProgress(
       payload.requestId,
@@ -1849,11 +1976,18 @@ class SignerUiSession {
   }
 
   private getUiUrl(): string {
-    const base = `http://${LOCALHOST}:${this.uiPort}?apiBaseUrl=${encodeURIComponent(this.getApiBaseUrl())}`;
-    return `${base}&sessionToken=${encodeURIComponent(this.sessionSecret)}`;
+    if (this.uiPort === undefined) {
+      throw new Error("Signer UI port has not been allocated.");
+    }
+
+    return buildSignerUiUrl(this.uiPort, this.getApiBaseUrl());
   }
 
   private getApiBaseUrl(): string {
+    if (this.serverPort === undefined) {
+      throw new Error("Signer UI bridge port has not been allocated.");
+    }
+
     return `http://${LOCALHOST}:${this.serverPort}`;
   }
 
@@ -2200,6 +2334,7 @@ export async function signerUiHardhatDeployRunSubtaskAction(
 }
 
 export const __testOnlySignerUiBridge = {
+  buildSignerUiUrl,
   buildSerializedTransactionRequest,
   calldataMatchesPromptForSignerUiValidation,
   normalizeGasFeeFieldsForWallet,

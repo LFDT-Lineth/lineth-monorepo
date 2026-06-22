@@ -62,6 +62,24 @@ tasks.register("generateExecutionSpecBlockchainTests", RefTestGenerationTask) {
   failedConstraint = System.getenv('FAILED_CONSTRAINT') ?: ""
 }
 
+// Added to fix the state root parallelization disabling for ref tests that triggered a StackOverflow error
+// This mimics the JVM args used in the linea-tracer plugin's test task, to exclude // on besu side "'-Xss4m',"
+tasks.withType(Test).configureEach {
+  minHeapSize = "256m"
+  maxHeapSize = System.getenv().containsKey("CI") ? "32g" : "8g"
+  jvmArgs = [
+    //    '-XX:-UseGCOverheadLimit',
+    //    '-Xlog:gc',
+    // Mockito and jackson-databind do some strange reflection during tests.
+    // This suppresses an illegal access warning.
+    '-Xss4m',
+    '--add-opens',
+    'java.base/java.util=ALL-UNNAMED',
+    '--add-opens',
+    'java.base/java.util.concurrent=ALL-UNNAMED'
+  ]
+}
+
 tasks.register('referenceExecutionSpecBlockchainTests', Test) {
   // Gradle 9: custom Test tasks must explicitly wire the test source set
   testClassesDirs = sourceSets.test.output.classesDirs

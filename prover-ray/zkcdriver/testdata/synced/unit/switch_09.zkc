@@ -1,0 +1,67 @@
+// ============================================================================
+// switch statements involving numerical constants with failures in some cases
+// ============================================================================
+
+type exmp = u32
+
+input inputs(c:u1) -> (in:exmp)
+input outputs(c:u1) -> (out:exmp)
+
+fn main() {
+
+    var discr:exmp = inputs[0]
+    var res:exmp = 23
+
+    // no match
+    switch discr {
+        case 0xfa1701: {
+            fail
+        }
+    }
+    switch discr {
+        case 0xfa1702: {
+            fail
+        }
+        default: {
+        }
+    }
+
+    // no match
+    switch discr {
+        case 0xfa1703, 0xfa1704: {
+            fail
+        }
+    }
+    switch discr {
+        case 0xfa1705, 0xfa1706: {
+            fail
+        }
+        default: {
+        }
+    }
+
+    // no match
+    switch discr {
+        case 0xfa1707: {
+            fail
+        }
+        case 0xfa1708: {
+            fail
+        }
+    }
+    switch discr {
+        case 0xfa1709: {
+            fail
+        }
+        default: {
+            res = outputs[0]
+        }
+        case 0xbeef: {
+            res = outputs[1]
+        }
+    }
+
+    if res != outputs[0] && res != outputs[1] {
+        fail
+    }
+}

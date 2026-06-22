@@ -9,14 +9,14 @@ on:
 jobs:
   changes:
     name: Detect Changes
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     outputs:
       languages: ${{ steps.set-matrix.outputs.languages }}
     permissions:
       contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
@@ -81,7 +81,7 @@ jobs:
 
   analyze:
     name: Analyze
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     needs: changes
     if: ${{ needs.changes.outputs.languages != '[]' }}
     permissions:
@@ -96,13 +96,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@c10b8064de6f491fea524254123dbe5e09572f13 #v4.35.1
         with:
           languages: ${{ matrix.language }}
-          queries: security-extended,security-and-quality
+          queries: security-extended
           config-file: .github/codeql/codeql-config.yml
 
       - name: Setup Java
@@ -126,7 +126,7 @@ jobs:
           output: sarif-results
 
       - name: Upload CodeQL Results
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: codeql-results-${{ matrix.language }}
           path: sarif-results

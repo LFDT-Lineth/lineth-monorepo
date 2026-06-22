@@ -1,7 +1,44 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { HARDHAT_SIGNER_UI_SESSION_TOKEN_HEADER, __testOnly, postJson } from "../app/bridgeApiClient.ts";
+import {
+  HARDHAT_SIGNER_UI_SESSION_TOKEN_HEADER,
+  __testOnly,
+  bootstrapSession,
+  postJson,
+} from "../app/bridgeApiClient.ts";
+
+test("bootstrapSession requests local bootstrap without a bearer header", async () => {
+  let capturedUrl: string | undefined;
+  let capturedInit: RequestInit | undefined;
+
+  const fetchMock: typeof fetch = async (input, init) => {
+    capturedUrl = String(input);
+    capturedInit = init;
+    return new Response(JSON.stringify({ sessionToken: "session-secret" }), { status: 200 });
+  };
+
+  const token = await bootstrapSession("http://127.0.0.1:15555", fetchMock);
+
+  assert.equal(token, "session-secret");
+  assert.equal(capturedUrl, "http://127.0.0.1:15555/api/bootstrap");
+  assert.equal(capturedInit?.method, "POST");
+  assert.equal(capturedInit?.headers, undefined);
+});
+
+test("bootstrapSession rejects malformed responses", async () => {
+  const fetchMock: typeof fetch = async () => {
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  };
+
+  await assert.rejects(
+    () => bootstrapSession("http://127.0.0.1:15555", fetchMock),
+    (error: unknown) => {
+      assert.equal((error as Error).message, "Session bootstrap response did not include a token.");
+      return true;
+    },
+  );
+});
 
 test("postJson sends JSON payload and signer-ui session header", async () => {
   let capturedUrl: string | undefined;

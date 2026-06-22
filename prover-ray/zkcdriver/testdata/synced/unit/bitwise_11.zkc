@@ -1,0 +1,11 @@
+pub input data(address:u8) -> (byte:u8)
+
+// prove that a | b | 0xFF == 0xFF
+fn main() {
+    var a:u8 = data[0]
+    var b:u8 = data[1]
+
+    if (a | b | 0xFF) != 0xFF {
+        fail
+    }
+}

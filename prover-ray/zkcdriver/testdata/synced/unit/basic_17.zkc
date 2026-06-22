@@ -1,0 +1,22 @@
+fn keyword_at_beginning_of_word() {
+    var as_X:u32
+    var break_X:u32
+    var continue_X:u32
+    var const_X:u32
+    var else_X:u32
+    var fail_X:u32
+    var fn_X:u32
+    var for_X:u32
+    var if_X:u32
+    var include_X:u32
+    var input_X:u32
+    var memory_X:u32
+    var return_X:u32
+    var static_X:u32
+    var output_X:u32
+    var printf_X:u32
+    var pub_X:u32
+    var while_X:u32
+    var var_X:u32
+    var type_X:u32
+}

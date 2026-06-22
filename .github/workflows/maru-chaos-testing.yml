@@ -1,0 +1,154 @@
+name: maru-chaos-testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      consensus-client-changed:
+        required: true
+        type: string
+        default: 'true'
+        description: 'when false, skips the job'
+      enable_ssh_debug:
+        description: 'Enable SSH debugging before tests start'
+        required: false
+        type: boolean
+        default: false
+      ssh_debug_on_failure:
+        required: false
+        type: boolean
+        default: false
+        description: 'Enable SSH debugging on test failure'
+  workflow_call:
+    inputs:
+      consensus-client-changed:
+        required: true
+        type: string
+      enable_ssh_debug:
+        required: false
+        type: boolean
+        default: false
+      ssh_debug_on_failure:
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: false
+      DOCKERHUB_TOKEN:
+        required: false
+
+permissions: {} # lock everything by default (least-privilege)
+
+concurrency:
+  group: maru-chaos-testing-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  run-chaos-tests:
+    permissions:
+      contents: read # for actions/checkout
+    if: ${{ inputs.consensus-client-changed == 'true' }}
+    env:
+      COMMIT_TAG: ${{ inputs.commit_tag }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    runs-on: [ gha-lfdt-lineth-ss-ubuntu-24-amd64-large ]
+    name: chaos tests
+    # useful for debugging flaky tests.
+    #    strategy:
+    #      matrix:
+    #        iterations: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Login to Docker Hub
+        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Setup Java and Gradle
+        uses: ./.github/actions/setup-java-and-gradle
+      - name: Install helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        with:
+          version: 'v3.18.3'
+        id: install
+
+      # SSH debugging session - before tests (if explicitly requested)
+      - name: Setup upterm session (pre-test)
+        if: ${{ inputs.enable_ssh_debug }}
+        uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 # v1
+        with:
+          ## If no one connects shut down ssh server after timeout.
+          wait-timeout-minutes: 20
+
+      - name: Run chaos tests
+        id: chaos-tests
+        timeout-minutes: 30
+        working-directory: maru/chaos-testing
+        run: |
+          mkdir -p ~/.kube
+          export KUBECONFIG=~/.kube/k3s-server
+          make k3s-reload    # installs k3s K8S implementation
+          kubectl config set-context --current --namespace=default
+          make chaos-redeploy-chaos-mesh-and-linea maru_image=consensys/maru:local
+          make chaos-health-check # just make sure that the cluster is healthy before starting the chaos tests
+          make chaos-experiment-workflow-and-health-check
+
+      - name: Collect pod logs
+        if: failure()
+        run: |
+          export KUBECONFIG=~/.kube/k3s-server
+          mkdir -p maru/chaos-testing/tmp/pod-logs
+          echo "Collecting logs from all pods..."
+          for pod in $(kubectl get pods -n default -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
+            echo "Collecting logs for $pod"
+            kubectl logs "$pod" -n default --tail=5000 > "maru/chaos-testing/tmp/pod-logs/${pod}.log" 2>&1 || true
+            # Also collect previous container logs (if pod restarted)
+            kubectl logs "$pod" -n default --previous --tail=5000 > "maru/chaos-testing/tmp/pod-logs/${pod}-previous.log" 2>&1 || true
+          done
+          # Collect pod status/describe for context
+          kubectl get pods -n default -o wide > "maru/chaos-testing/tmp/pod-logs/pod-status.txt" 2>&1 || true
+          kubectl describe pods -n default > "maru/chaos-testing/tmp/pod-logs/pod-describe.txt" 2>&1 || true
+          echo "Log collection complete"
+          ls -la maru/chaos-testing/tmp/pod-logs/
+
+      - name: Collect port-forward logs
+        if: failure()
+        run: |
+          echo "Collecting port-forward logs..."
+          if [ -d maru/chaos-testing/tmp/pf ]; then
+            ls -la maru/chaos-testing/tmp/pf/
+          else
+            echo "No port-forward log directory found"
+          fi
+          # Also collect port-forward summary files
+          for f in maru/chaos-testing/tmp/port-forward-*.txt; do
+            if [ -f "$f" ]; then
+              echo "=== $f ==="
+              cat "$f"
+            fi
+          done
+          # Check for any surviving port-forward processes
+          ps -o pid=,command= -ax | grep 'kubectl port-forward' | grep -v grep > maru/chaos-testing/tmp/pod-logs/port-forward-processes.txt 2>&1 || true
+          echo "Port-forward process collection complete"
+
+      - name: Store reports and pod logs
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: chaos-test-reports-and-logs
+          path: |
+            maru/**/build/reports/tests/
+            maru/chaos-testing/tmp/pod-logs/
+            maru/chaos-testing/tmp/pf/
+            maru/chaos-testing/tmp/port-forward-*.txt
+
+      # SSH debugging session - on failure (if requested)
+      - name: Setup upterm session after failure
+        if: ${{ (failure() || steps.chaos-tests.outcome == 'failure') && inputs.ssh_debug_on_failure == true }}
+        uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 # v1
+        with:
+          ## If no one connects shut down ssh server after timeout.
+          wait-timeout-minutes: 20

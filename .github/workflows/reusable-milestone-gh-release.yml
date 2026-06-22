@@ -1,0 +1,169 @@
+name: "Reusable: Milestone GH Release"
+
+# Publish the aggregated Linea milestone GitHub Release. Body assembled from the
+# per-component CHANGELOG (already aggregated upstream) plus per-component docker
+# pull instructions, choosing between the freshly released tag and the pre-existing
+# latest tag based on whether the component bumped at this milestone commit.
+
+on:
+  workflow_call:
+    inputs:
+      release_version:
+        required: true
+        type: string
+      release_tag:
+        required: true
+        type: string
+      changelog:
+        description: "Aggregated milestone CHANGELOG content (markdown)"
+        required: true
+        type: string
+      image_tag_suffix:
+        required: true
+        type: string
+      draft_release:
+        required: false
+        type: boolean
+        default: false
+      pre_release:
+        required: false
+        type: boolean
+        default: false
+      skip_docker_image_info:
+        required: false
+        type: boolean
+        default: false
+      coordinator_metadata:
+        required: true
+        type: string
+      prover_metadata:
+        required: true
+        type: string
+      postman_metadata:
+        required: true
+        type: string
+      tx_exclusion_api_metadata:
+        required: true
+        type: string
+      linea_besu_package_metadata:
+        required: true
+        type: string
+      maru_metadata:
+        required: true
+        type: string
+      coordinator_docker_tag_with_suffix:
+        description: "Docker tag (with suffix already baked in) produced by this run's coordinator gh-release"
+        required: false
+        type: string
+        default: ''
+      prover_docker_tag_with_suffix:
+        required: false
+        type: string
+        default: ''
+      postman_docker_tag_with_suffix:
+        required: false
+        type: string
+        default: ''
+      tx_exclusion_api_docker_tag_with_suffix:
+        required: false
+        type: string
+        default: ''
+      linea_besu_package_docker_tag_with_suffix:
+        required: false
+        type: string
+        default: ''
+      maru_docker_tag_with_suffix:
+        required: false
+        type: string
+        default: ''
+      coordinator_latest_docker_tag:
+        required: false
+        type: string
+        default: ''
+      prover_latest_docker_tag:
+        required: false
+        type: string
+        default: ''
+      postman_latest_docker_tag:
+        required: false
+        type: string
+        default: ''
+      tx_exclusion_api_latest_docker_tag:
+        required: false
+        type: string
+        default: ''
+      linea_besu_package_latest_docker_tag:
+        required: false
+        type: string
+        default: ''
+      maru_latest_docker_tag:
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  linea-milestone-gh-release:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Append Changelog Action to release note
+        id: append_change_log
+        shell: bash
+        env:
+          # Pass via env to avoid shell injection: changelog content is derived
+          # from commit messages (via git-cliff) and may contain backticks, $(...), etc.
+          CHANGELOG: ${{ inputs.changelog }}
+          IMAGE_TAG_SUFFIX: ${{ inputs.image_tag_suffix }}
+          SKIP_DOCKER_IMAGE_INFO: ${{ inputs.skip_docker_image_info }}
+          # One row per component: name|image|tag_changed|released_tag|latest_tag
+          # released_tag : docker tag produced by this run's component gh-release
+          #                (with suffix already baked in, when applicable)
+          # latest_tag   : most recent docker tag previously published for the
+          #                component, used as a fallback when nothing changed
+          COMPONENT_ROWS: |
+            coordinator|linea-coordinator|${{ fromJson(inputs.coordinator_metadata).tag_changed }}|${{ inputs.coordinator_docker_tag_with_suffix }}|${{ inputs.coordinator_latest_docker_tag }}
+            postman|linea-postman|${{ fromJson(inputs.postman_metadata).tag_changed }}|${{ inputs.postman_docker_tag_with_suffix }}|${{ inputs.postman_latest_docker_tag }}
+            prover|linea-prover|${{ fromJson(inputs.prover_metadata).tag_changed }}|${{ inputs.prover_docker_tag_with_suffix }}|${{ inputs.prover_latest_docker_tag }}
+            tx-exclusion-api|linea-transaction-exclusion-api|${{ fromJson(inputs.tx_exclusion_api_metadata).tag_changed }}|${{ inputs.tx_exclusion_api_docker_tag_with_suffix }}|${{ inputs.tx_exclusion_api_latest_docker_tag }}
+            linea-besu|linea-besu-package|${{ fromJson(inputs.linea_besu_package_metadata).tag_changed }}|${{ inputs.linea_besu_package_docker_tag_with_suffix }}|${{ inputs.linea_besu_package_latest_docker_tag }}
+            maru|maru|${{ fromJson(inputs.maru_metadata).tag_changed }}|${{ inputs.maru_docker_tag_with_suffix }}|${{ inputs.maru_latest_docker_tag }}
+        run: |
+          set -euo pipefail
+          mkdir release && cd release
+          printf '%s\n' "$CHANGELOG" >> output.md
+          if [ "$SKIP_DOCKER_IMAGE_INFO" != "true" ]; then
+            echo "### Docker Image Details" >> output.md
+            echo "" >> output.md
+
+            while IFS='|' read -r name image tag_changed released_tag latest_tag; do
+              # Skip blank/whitespace-only rows (e.g. trailing newline of the literal).
+              trimmed="$(echo "$name" | tr -d '[:space:]')"
+              [ -z "$trimmed" ] && continue
+
+              echo "To pull the **${name}** image:" >> output.md
+              echo "\`\`\`" >> output.md
+              if [ "$tag_changed" = "true" ]; then
+                printf 'docker pull consensys/%s:%s\n' "$image" "$released_tag" >> output.md
+              elif [ -n "$IMAGE_TAG_SUFFIX" ]; then
+                printf 'docker pull consensys/%s:%s-%s\n' "$image" "$latest_tag" "$IMAGE_TAG_SUFFIX" >> output.md
+              else
+                printf 'docker pull consensys/%s:%s\n' "$image" "$latest_tag" >> output.md
+              fi
+              echo "\`\`\`" >> output.md
+              echo "" >> output.md
+            done <<< "$COMPONENT_ROWS"
+          fi
+
+      - name: gh-release
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b #v2.5.0
+        with:
+          name: Linea Milestone v${{ inputs.release_version }}
+          tag_name: ${{ inputs.release_tag }}
+          body_path: release/output.md
+          draft: ${{ inputs.draft_release }}
+          prerelease: ${{ inputs.pre_release }}
+          generate_release_notes: false
+          target_commitish: ${{ github.sha }}
+          fail_on_unmatched_files: true

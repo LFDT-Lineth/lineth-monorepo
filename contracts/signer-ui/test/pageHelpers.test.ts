@@ -9,7 +9,6 @@ import {
   progressTone,
   scrollToHistoryFragment,
   signerAddressMismatch,
-  signerUiSessionSecretStorageKey,
   signerTxFragmentId,
   signerUiHistoryStorageKey,
   signerUiLastSessionIdStorageKey,
@@ -43,10 +42,6 @@ test("storage key helpers are deterministic", () => {
   assert.equal(
     signerUiLastSessionIdStorageKey("http://127.0.0.1:15555"),
     "signerUiLastSessionId:http://127.0.0.1:15555",
-  );
-  assert.equal(
-    signerUiSessionSecretStorageKey("http://127.0.0.1:15555"),
-    "signerUiSessionSecret:http://127.0.0.1:15555",
   );
 });
 

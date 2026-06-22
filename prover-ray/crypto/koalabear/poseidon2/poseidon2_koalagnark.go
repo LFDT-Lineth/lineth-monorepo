@@ -5,9 +5,9 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/circuit"
 	"github.com/consensys/gnark-crypto/field/koalabear/poseidon2"
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/circuit"
 )
 
 // KoalagnarkOctuplet is an octuplet of circuit.Element

@@ -1,0 +1,3 @@
+replicaCount: 2
+fullnameOverride: besu-follower-3
+componentRole: follower

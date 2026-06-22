@@ -2,7 +2,7 @@ import {
   fetchBeaconHeader,
   fetchBeaconState,
   fetchBeaconHeaderByParentRoot,
-} from "@lidofinance/lsv-cli/dist/utils/fetchCL";
+} from "@lidofinance/lsv-cli/dist/utils/fetch-cl.js";
 import { createBeaconHeaderProof, createStateProof } from "@lidofinance/lsv-cli/dist/utils/proof/proofs.js";
 import { hexlify, AbiCoder } from "ethers";
 import * as fs from "fs";

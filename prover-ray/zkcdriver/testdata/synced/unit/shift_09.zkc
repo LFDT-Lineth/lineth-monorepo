@@ -1,0 +1,16 @@
+pub input data(address:u8) -> (byte:u8)
+
+// check for module duplicate when lowering shift operation
+fn main() {
+    var a:u8 = data[0]
+    var b:u8 = data[1]
+
+    var x:u8 = a << b
+    var y:u8 = a << (b as u9)
+
+    if (x != y) {
+        fail
+    }
+
+    return
+}

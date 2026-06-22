@@ -10,26 +10,26 @@ on:
     branches:
       - main
     paths:
-      - "operations/operations-cli/**"
+      - "operations/cli/**"
       - ".github/workflows/all-tools.yml"
       - ".nvmrc"
   pull_request:
     branches:
       - main
     paths:
-      - "operations/operations-cli/**"
+      - "operations/cli/**"
       - ".github/workflows/all-tools.yml"
       - ".nvmrc"
 
 jobs:
   changes:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: Filter commit changes
     outputs:
       all-tools: ${{ steps.filter.outputs['all-tools'] }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Filter commit changes
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2
         id: filter
@@ -38,22 +38,22 @@ jobs:
           list-files: "json"
           filters: |
             all-tools:
-              - 'operations/operations-cli/**'
+              - 'operations/cli/**'
               - '.github/workflows/all-tools.yml'
-              - '.github/workflows/reuse-*.yml'
+              - '.github/workflows/reusable-*.yml'
               - '.nvmrc'
 
   store_image_name_and_tags:
-    uses: ./.github/workflows/reuse-store-image-name-and-tags.yml
+    uses: ./.github/workflows/reusable-store-image-name-and-tags.yml
 
   check_image_tags_exist:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: Check image tags exist
     needs: [changes, store_image_name_and_tags]
     if: ${{ needs.changes.outputs['all-tools'] == 'false' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Check image tags exist
         uses: ./.github/actions/check-image-tags-exist
         with:
@@ -61,7 +61,7 @@ jobs:
           image_name: consensys/linea-alltools
 
   all-tools-tag-only:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: All tools tag only
     needs: [changes, store_image_name_and_tags, check_image_tags_exist]
     if: ${{ github.event_name != 'pull_request' && needs.changes.outputs['all-tools'] == 'false' }}
@@ -69,7 +69,7 @@ jobs:
       image_tagged: ${{ steps.image_tag_push.outputs.image_tagged }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Tag and push image
         id: image_tag_push
         uses: ./.github/actions/image-tag-and-push
@@ -86,7 +86,7 @@ jobs:
     needs: [changes, store_image_name_and_tags, all-tools-tag-only]
     if: ${{ always() && needs.store_image_name_and_tags.outputs.commit_tag != '' && (needs.changes.outputs['all-tools'] == 'true' || needs.all-tools-tag-only.result != 'success' || needs.all-tools-tag-only.outputs.image_tagged != 'true') }}
     # ~0.5 mins saved vs small
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     env:
       COMMIT_TAG: ${{ needs.store_image_name_and_tags.outputs.commit_tag }}
       DEVELOP_TAG: ${{ needs.store_image_name_and_tags.outputs.develop_tag }}
@@ -96,7 +96,7 @@ jobs:
     name: All tools build and push
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Login to Docker Hub
         if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
@@ -131,7 +131,7 @@ jobs:
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 #v7.0.0
         with:
           context: .
-          file: ./operations/operations-cli/Dockerfile
+          file: ./operations/cli/Dockerfile
           platforms: linux/amd64 # Note: Build amd64 image only
           push: ${{ github.event_name != 'pull_request' }}
           tags: |

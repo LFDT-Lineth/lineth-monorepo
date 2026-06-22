@@ -1,0 +1,18 @@
+plugins {
+  id 'net.consensys.zkevm.kotlin-library-conventions'
+}
+
+dependencies {
+  implementation project(':jvm-libs:linea:core:metrics')
+  implementation project(':jvm-libs:linea:core:long-running-service')
+  implementation "com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}"
+  implementation "io.javalin:javalin:${libs.versions.javalin.get()}"
+  implementation project(':maru:core')
+  implementation project(':maru:p2p')
+  implementation project(':jvm-libs:generic:extensions:kotlin')
+
+  testImplementation(testFixtures(project(':maru:core')))
+  testImplementation(project(':maru:serialization'))
+  testImplementation(project(':maru:syncing'))
+  testImplementation("com.squareup.okhttp3:okhttp:${libs.versions.okhttp.get()}")
+}

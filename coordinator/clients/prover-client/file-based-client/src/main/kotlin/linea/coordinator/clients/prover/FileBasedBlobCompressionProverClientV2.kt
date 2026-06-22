@@ -1,0 +1,76 @@
+package linea.coordinator.clients.prover
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import io.vertx.core.Vertx
+import linea.clients.BlobCompressionProverClientV2
+import linea.coordinator.clients.prover.serialization.BlobCompressionProofJsonRequest
+import linea.coordinator.clients.prover.serialization.BlobCompressionProofJsonResponse
+import linea.coordinator.clients.prover.serialization.JsonSerialization
+import linea.domain.BlobCompressionProof
+import linea.domain.BlobCompressionProofRequest
+import linea.domain.CompressionProofIndex
+import linea.fileio.FileReader
+import linea.fileio.FileWriter
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
+import tech.pegasys.teku.infrastructure.async.SafeFuture
+
+/**
+ * Implementation of interface with the Blob Compression Prover through Files.
+ *
+ * Blob Compression Prover will ingest file like
+ * path/to/prover/requests/<startBlockNumber>-<endBlockNumber>-<expectedShnarf>-getZkBlobCompressionProof.json
+ *
+ * When done prover will output file
+ * path/to/prover/responses/<startBlockNumber>-<endBlockNumber>-<expectedShnarf>-getZkBlobCompressionProof.json
+ *
+ * So, this class will need to watch the file system and wait for the output proof to be generated
+ */
+class FileBasedBlobCompressionProverClientV2(
+  val config: FileBasedProverConfig,
+  val vertx: Vertx,
+  jsonObjectMapper: ObjectMapper = JsonSerialization.proofResponseMapperV1,
+  log: Logger,
+) :
+  GenericFileBasedProverClient<
+    BlobCompressionProofRequest,
+    BlobCompressionProof,
+    BlobCompressionProofJsonRequest,
+    BlobCompressionProofJsonResponse,
+    CompressionProofIndex,
+    >(
+    config = config,
+    vertx = vertx,
+    fileWriter = FileWriter(vertx, jsonObjectMapper),
+    fileReader = FileReader(
+      vertx,
+      jsonObjectMapper,
+      BlobCompressionProofJsonResponse::class.java,
+    ),
+    requestFileNameProvider = CompressionProofRequestFileNameProvider,
+    responseFileNameProvider = CompressionProofResponseFileNameProvider,
+    proofIndexProvider = FileBasedBlobCompressionProverClientV2::blobFileIndex,
+    requestMapper = FileBasedBlobCompressionProverClientV2::requestDtoMapper,
+    responseMapper = BlobCompressionProofJsonResponse::toDomainObject,
+    proofTypeLabel = "blob",
+    log = log,
+  ),
+  BlobCompressionProverClientV2 {
+
+  companion object {
+    val LOG: Logger = LogManager.getLogger(FileBasedBlobCompressionProverClientV2::class.java)
+
+    fun blobFileIndex(request: BlobCompressionProofRequest): CompressionProofIndex {
+      return CompressionProofIndex(
+        startBlockNumber = request.startBlockNumber,
+        endBlockNumber = request.endBlockNumber,
+        hash = request.expectedShnarfResult.expectedShnarf,
+        startBlockTimestamp = request.startBlockTimestamp,
+      )
+    }
+
+    fun requestDtoMapper(domainRequest: BlobCompressionProofRequest): SafeFuture<BlobCompressionProofJsonRequest> {
+      return SafeFuture.completedFuture(BlobCompressionProofJsonRequest.fromDomainObject(domainRequest))
+    }
+  }
+}

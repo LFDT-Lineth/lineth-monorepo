@@ -1,0 +1,11 @@
+pub input data(address:u16) -> (byte:u32)
+
+const ONE:u16 = 1
+
+// prove that two numbers add up to a third.
+fn main() {
+    var lhs:u32 = data[0]
+    var rhs:u32 = data[1]
+    //
+    printf "hello world %d\n", ONE
+}

@@ -198,6 +198,36 @@ func (theta *theta) computationStepConstraints(comp *wizard.CompiledIOP) {
 			}
 		}
 	}
+	// Booleanity and decomposition constraints for StateNext bits.
+	// StateNext[x][y][z*8+j] must be binary (0 or 1) and must recompose
+	// in base 4 to equal StateInternalClean[x][y][z].
+	for x := 0; x < 5; x++ {
+		for y := 0; y < 5; y++ {
+			for z := 0; z < 8; z++ {
+				// Booleanity: bit * (1 - bit) == 0
+				for j := 0; j < 8; j++ {
+					bit := theta.StateNext[x][y][z*8+j]
+					exprBool := sym.Mul(bit, sym.Sub(field.One(), bit))
+					comp.InsertGlobal(0,
+						ifaces.QueryIDf("THETA_BIT_BOOL_%v_%v_%v_%v", x, y, z, j),
+						exprBool,
+					)
+				}
+				// Decomposition: StateInternalClean[x][y][z] == sum(StateNext[x][y][z*8+j] * 4^j, j=0..7)
+				pow4j := 1
+				recomposed := sym.Mul(theta.StateNext[x][y][z*8], pow4j)
+				for j := 1; j < 8; j++ {
+					pow4j *= thetaBase
+					recomposed = sym.Add(recomposed, sym.Mul(theta.StateNext[x][y][z*8+j], pow4j))
+				}
+				exprDecomp := sym.Sub(theta.StateInternalClean[x][y][z], recomposed)
+				comp.InsertGlobal(0,
+					ifaces.QueryIDf("THETA_DECOMP_%v_%v_%v", x, y, z),
+					exprDecomp,
+				)
+			}
+		}
+	}
 }
 
 // lookupConstraints use inclusion query to validate the dirty and clean versions

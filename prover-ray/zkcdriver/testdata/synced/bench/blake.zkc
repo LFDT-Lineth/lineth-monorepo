@@ -1,0 +1,93 @@
+// BLAKE2F module implementation
+// Implementation of BLAKE2 compression function `F` precompile (EIP-152)
+
+pub input r(address:u1) -> (word:u32)
+pub input h(address:u3) -> (word:u64)
+pub input m(address:u4) -> (word:u64)
+pub input t(address:u1) -> (word:u64)
+pub input f(address:u1) -> (byte:u8)
+pub output h_out(address:u3) -> (word:u64)
+memory v_buffer(address:u4) -> (word:u64)
+memory s_buffer(address:u4) -> (s:u4)
+
+const MASK_u64:u128 = 0xFFFFFFFFFFFFFFFF
+
+fn main<v_buffer, s_buffer>() {
+    for i:u4 = 0; i <= 7; i = i + 1 {
+        v_buffer[i as u4] = h[i as u3]
+    }
+    for j:u4 = 0; j <= 7; j = j + 1 {
+        v_buffer[j + 8] = IV[j as u3]
+    }
+    v_buffer[12] = v_buffer[12] ^ t[0]
+    v_buffer[13] = v_buffer[13] ^ t[1]
+
+    if f[0] == 1 {
+        v_buffer[14] = ~v_buffer[14]
+    }
+
+    var k_mod_10:u4 = 0
+    for k:u32 = 0; k<r[0]; k = k + 1 {
+        for col:u5 = 0; col <= 15; col = col + 1 {
+            s_buffer[col as u4] = SIGMA[k_mod_10, col as u4]
+        }
+        g1g2(0, 4, 8, 12, m[s_buffer[0]], m[s_buffer[4]])
+        g1g2(1, 5, 9, 13, m[s_buffer[1]], m[s_buffer[5]])
+        g1g2(2, 6, 10, 14, m[s_buffer[2]], m[s_buffer[6]])
+        g1g2(3, 7, 11, 15, m[s_buffer[3]], m[s_buffer[7]])
+
+        g1g2(0, 5, 10, 15, m[s_buffer[8]], m[s_buffer[12]])
+        g1g2(1, 6, 11, 12, m[s_buffer[9]], m[s_buffer[13]])
+        g1g2(2, 7, 8, 13, m[s_buffer[10]], m[s_buffer[14]])
+        g1g2(3, 4, 9, 14, m[s_buffer[11]], m[s_buffer[15]])
+        // equivalent to k_mod_10 = (k_mod_10 + 1) % 10
+        if k_mod_10 == 9 {
+            k_mod_10 = 0
+        } else {
+            k_mod_10 = k_mod_10 + 1
+        }
+    }
+
+    // Xor two halves
+    for n:u4 = 0; n <= 7; n = n + 1 {
+        h_out[n as u3] = h[n as u3] ^ (v_buffer[n] ^ v_buffer[n + 8])
+    }
+}
+
+// Initialization vector
+static IV(address:u3) -> (iv:u64) {
+    0x6a09e667f3bcc908, // IV0
+    0xbb67ae8584caa73b, // IV1
+    0x3c6ef372fe94f82b, // IV2
+    0xa54ff53a5f1d36f1, // IV3
+    0x510e527fade682d1, // IV4
+    0x9b05688c2b3e6c1f, // IV5
+    0x1f83d9abfb41bd6b, // IV6
+    0x5be0cd19137e2179 // IV7
+}
+
+static SIGMA(line:u4, column:u4) -> (sigma:u4) {
+    0, 2, 4, 6, 1, 3, 5, 7, 8, 10, 12, 14, 9, 11, 13, 15,
+    14, 4, 9, 13, 10, 8, 15, 6, 1, 0, 11, 5, 12, 2, 7, 3,
+    11, 12, 5, 15, 8, 0, 2, 13, 10, 3, 7, 9, 14, 6, 1, 4,
+    7, 3, 13, 11, 9, 1, 12, 14, 2, 5, 4, 15, 6, 10, 0, 8,
+    9, 5, 2, 10, 0, 7, 4, 15, 14, 11, 6, 3, 1, 12, 8, 13,
+    2, 6, 0, 8, 12, 10, 11, 3, 4, 7, 15, 1, 13, 5, 14, 9,
+    12, 1, 14, 4, 5, 15, 13, 10, 0, 6, 9, 8, 7, 3, 2, 11,
+    13, 7, 12, 3, 11, 14, 1, 9, 5, 15, 8, 2, 0, 4, 6, 10,
+    6, 14, 11, 0, 15, 9, 3, 8, 12, 13, 1, 10, 2, 7, 4, 5,
+    10, 8, 7, 1, 2, 4, 6, 5, 15, 9, 3, 13, 11, 14, 12, 0
+}
+
+fn g1g2<v_buffer>(a:u4, b:u4, c:u4, d:u4, x:u64, y:u64) {
+    // g1
+    v_buffer[a] = ((v_buffer[a] as u128 + v_buffer[b] as u128 + x as u128) & MASK_u64) as u64
+    v_buffer[d] = ((v_buffer[d] ^ v_buffer[a]) >> 32) | ((v_buffer[d] ^ v_buffer[a]) << 32)
+    v_buffer[c] = ((v_buffer[c] as u128 + v_buffer[d] as u128) & MASK_u64) as u64
+    v_buffer[b] = ((v_buffer[b] ^ v_buffer[c]) >> 24) | ((v_buffer[b] ^ v_buffer[c]) << 40)
+    // g2
+    v_buffer[a] = ((v_buffer[a] as u128 + v_buffer[b] as u128 + y as u128) & MASK_u64) as u64
+    v_buffer[d] = ((v_buffer[d] ^ v_buffer[a]) >> 16) | ((v_buffer[d] ^ v_buffer[a]) << 48)
+    v_buffer[c] = ((v_buffer[c] as u128 + v_buffer[d] as u128) & MASK_u64) as u64
+    v_buffer[b] = ((v_buffer[b] ^ v_buffer[c]) >> 63) | ((v_buffer[b] ^ v_buffer[c]) << 1)
+}

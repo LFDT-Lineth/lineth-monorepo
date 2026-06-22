@@ -1,0 +1,11 @@
+pub input data(address:u16) -> (byte:u16)
+pub output result(address:u16) -> (byte:u8)
+
+// Extract the high byte of a u16 via right-shift and cast.
+// The shifted value is always <= 0xff, so the cast never overflows.
+fn main() {
+    var x:u16 = data[0]
+    var sh:u16 = x >> 8
+    result[0] = sh as u8
+    return
+}

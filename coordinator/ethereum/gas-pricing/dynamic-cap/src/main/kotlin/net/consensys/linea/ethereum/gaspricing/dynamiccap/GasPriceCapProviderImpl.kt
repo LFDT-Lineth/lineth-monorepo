@@ -3,9 +3,9 @@ package net.consensys.linea.ethereum.gaspricing.dynamiccap
 import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.gas.GasPriceCaps
 import linea.ethapi.EthApiBlockClient
+import linea.gaspricing.GasPriceCapProvider
 import linea.kotlin.toGWei
 import linea.kotlin.toULong
-import net.consensys.zkevm.ethereum.gaspricing.GasPriceCapProvider
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

@@ -1,0 +1,19 @@
+pub input in(address:u16) -> (word:u16)
+pub output out(address:u16) -> (word:u16)
+
+// Demonstrates that two for-loops can reuse the same loop variable name.
+// Reads in[0], adds 1 five times, then adds 2 three times, writes to out[0].
+fn main() {
+    var r:u16 = in[0]
+    //
+    for i:u8 = 0; i<5; i = i + 1 {
+        r = r + 1
+    }
+    //
+    for i:u8 = 0; i<3; i = i + 1 {
+        r = r + 2
+    }
+    //
+    out[0] = r
+    return
+}

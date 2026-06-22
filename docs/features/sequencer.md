@@ -4,7 +4,7 @@
 
 ## Overview
 
-The sequencer is a Linea Besu node with QBFT consensus (via the [Maru](https://github.com/Consensys/maru) consensus client) that serves as the block producer. It uses a plugin architecture (`besu-plugins/linea-sequencer/`) to enforce Linea-specific transaction selection and validation rules beyond standard Ethereum mempool logic. The sequencer is not directly accessible externally; RPC nodes forward transactions to it via P2P.
+The sequencer is a Linea Besu node with QBFT consensus (via the [Maru](../../maru/) consensus client) that serves as the block producer. It uses a plugin architecture (`linea-besu/plugins/linea-sequencer/`) to enforce Linea-specific transaction selection and validation rules beyond standard Ethereum mempool logic. The sequencer is not directly accessible externally; RPC nodes forward transactions to it via P2P.
 
 Blocks are only produced when transactions exist — no empty blocks are created.
 
@@ -12,8 +12,8 @@ Blocks are only produced when transactions exist — no empty blocks are created
 
 | Component | Path | Role |
 |-----------|------|------|
-| LineaTransactionSelectorPlugin | `besu-plugins/linea-sequencer/sequencer/` | Registers transaction selectors |
-| LineaTransactionValidatorPlugin | `besu-plugins/linea-sequencer/sequencer/` | Registers pool validators |
+| LineaTransactionSelectorPlugin | `linea-besu/plugins/linea-sequencer/sequencer/` | Registers transaction selectors |
+| LineaTransactionValidatorPlugin | `linea-besu/plugins/linea-sequencer/sequencer/` | Registers pool validators |
 | LineaTransactionSelector | `sequencer/.../selectors/` | Composite selector orchestrating all rules |
 | LineaTransactionPoolValidatorFactory | `sequencer/.../txpoolvalidation/` | Chains all pool validators |
 
@@ -69,8 +69,8 @@ The `BundleConstraintTransactionSelector` and `MaxBundleGasPerBlockTransactionSe
 
 | Test File | Runner | Validates |
 |-----------|--------|-----------|
-| `besu-plugins/linea-sequencer/sequencer/` unit tests | JUnit 5 | Selectors, validators, trace limits |
-| `besu-plugins/linea-sequencer/acceptance-tests/` | Jest | End-to-end sequencer behavior |
+| `linea-besu/plugins/linea-sequencer/sequencer/` unit tests | JUnit 5 | Selectors, validators, trace limits |
+| `linea-besu/plugins/linea-sequencer/acceptance-tests/` | Jest | End-to-end sequencer behavior |
 | `e2e/src/l2.spec.ts` | Jest | Calldata limits, legacy/EIP-1559 tx types |
 | `e2e/src/opcodes.spec.ts` | Jest | `linea_estimateGas`, opcode execution |
 | `e2e/src/liveness.spec.ts` | Jest | Sequencer restart and liveness |

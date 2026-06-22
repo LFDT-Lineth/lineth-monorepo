@@ -1,5 +1,5 @@
-import { etherToWei, serialize } from "@consensys/linea-shared-utils";
 import { describe, expect, it } from "@jest/globals";
+import { etherToWei, serialize } from "@lfdt-lineth/shared-utils";
 import { encodeFunctionData, parseEther, toHex } from "viem";
 
 import {

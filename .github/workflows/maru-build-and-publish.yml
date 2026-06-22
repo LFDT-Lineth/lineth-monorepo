@@ -1,0 +1,91 @@
+name: maru-build-and-publish
+
+permissions:
+  contents: read
+  actions: read
+  packages: write
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        required: true
+        type: string
+      image_tag_with_suffix:
+        required: false
+        type: string
+        default: ''
+      develop_tag:
+        required: true
+        type: string
+      image_name:
+        required: false
+        type: string
+        default: consensys/maru
+      push_image:
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: false
+      DOCKERHUB_TOKEN:
+        required: false
+
+
+concurrency:
+  group: maru-docker-build-and-publish-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build-and-publish:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    name: Maru build and publish
+    env:
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      IMAGE_TAG_WITH_SUFFIX: ${{ inputs.image_tag_with_suffix }}
+      DEVELOP_TAG: ${{ inputs.develop_tag }}
+      IMAGE_NAME: ${{ inputs.image_name }}
+      PUSH_IMAGE: ${{ inputs.push_image }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set image tag if not given
+        if: ${{ inputs.image_tag == '' }}
+        run: |
+          # For PR, GITHUB_SHA is NOT the last commit pushed onto the PR branch - https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#pull_request
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            IMAGE_TAG=$(git rev-parse --short ${{ github.event.pull_request.head.sha }})
+          else
+            IMAGE_TAG=$(git rev-parse --short $GITHUB_SHA)
+          fi
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+          echo "IMAGE_TAG=$IMAGE_TAG"
+      - name: Login to Docker Hub
+        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Setup Java and Gradle
+        uses: ./.github/actions/setup-java-and-gradle
+      - name: Build dist
+        run: |
+          ./gradlew :maru:app:installDist
+      - name: Build and publish Docker image
+        uses: ./.github/actions/docker-build-publish
+        with:
+          docker_context: maru/app
+          image_name: ${{ env.IMAGE_NAME }}
+          image_tags: ${{ env.IMAGE_TAG_WITH_SUFFIX && format('{0},{1}', env.IMAGE_TAG, env.IMAGE_TAG_WITH_SUFFIX) || env.IMAGE_TAG }}
+          develop_tag: ${{ env.DEVELOP_TAG }}
+          push_image: ${{ env.PUSH_IMAGE }}
+          dockerfile_path: maru/app/Dockerfile
+          requires_qemu: ${{ env.PUSH_IMAGE }}
+          build_contexts: |
+            libs=./maru/app/build/install/app/lib/
+            maru=./maru/app/build/libs/
+          save_artifact: ${{ env.PUSH_IMAGE == 'false' }}
+          artifact_name: maru

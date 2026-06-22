@@ -15,26 +15,30 @@ on:
 
 jobs:
   release:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
       - name: Set version
         id: name
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
-          TIMESTAMP=`date -u +'%Y%m%d%H%M%S'`
-          INPUT_VERSION=${{ github.event.inputs.version }}
+          TIMESTAMP=$(date -u +'%Y%m%d%H%M%S')
           if [ -z "$INPUT_VERSION" ]; then
-            VERSION="0.0.1-v$TIMESTAMP"
+            VERSION="0.0.1-v${TIMESTAMP}"
+          elif [[ "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            VERSION="$INPUT_VERSION"
           else
-            VERSION=$INPUT_VERSION
+            echo "Error: version must be a semantic version (MAJOR.MINOR.PATCH, digits only), got: '$INPUT_VERSION'" >&2
+            exit 1
           fi
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
 
       - name: Print version
         run: |
           echo "VERSION: $VERSION"
 
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 1
 
@@ -72,7 +76,7 @@ jobs:
       # Persist logs
       - name: JReleaser release output
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: jreleaser-release
           path: |

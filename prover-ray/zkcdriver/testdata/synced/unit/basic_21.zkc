@@ -1,0 +1,8 @@
+input data(addr:u16) -> (flag:u1)
+
+fn main() {
+    //
+    if data[0] == data[1] {
+        fail
+    }
+}

@@ -3,12 +3,12 @@ package poseidon2
 import (
 	"testing"
 
+	kbcircuit "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/circuit"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/scs"
-	kbcircuit "github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/circuit"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -49,7 +49,7 @@ func getKoalagnarkMDHasherWitness(nbElmts int) (*KoalagnarkMDHasherCircuit, *Koa
 	// sum using the native hasher
 	phasher := NewMDHasher()
 	phasher.WriteElements(vals...)
-	res := phasher.SumElement()
+	res := phasher.SumDigest()
 
 	// create witness and circuit
 	var circuit, witness KoalagnarkMDHasherCircuit
@@ -205,7 +205,7 @@ func TestKoalagnarkConsistencyWithOriginal(t *testing.T) {
 	// Compute hash using native hasher
 	phasher := NewMDHasher()
 	phasher.WriteElements(vals...)
-	expected := phasher.SumElement()
+	expected := phasher.SumDigest()
 
 	// The circuit will verify that both implementations produce the same result
 	// This is implicitly tested by the fact that we use the native hasher's output
@@ -214,7 +214,7 @@ func TestKoalagnarkConsistencyWithOriginal(t *testing.T) {
 	// Additional explicit test: verify the native hasher output matches
 	phasher2 := NewMDHasher()
 	phasher2.WriteElements(vals...)
-	result := phasher2.SumElement()
+	result := phasher2.SumDigest()
 
 	for i := 0; i < 8; i++ {
 		assert.Equal(t, expected[i], result[i], "element %d mismatch", i)

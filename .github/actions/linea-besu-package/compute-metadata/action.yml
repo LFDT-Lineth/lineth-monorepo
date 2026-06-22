@@ -3,9 +3,14 @@ name: 'compute metadata'
 description: 'Composite action to compute the metadata for linea-besu-package'
 
 inputs:
-  release_tag_prefix:
-    description: "Release version tag prefix"
+  release_version:
+    description: "Release version"
     required: true
+
+  image_tag_suffix:
+    description: 'Custom docker image tag suffix'
+    required: false
+    default: ''
 
 outputs:
   workflow_id:
@@ -17,16 +22,16 @@ outputs:
     value: ${{ steps.workflowdetails.outputs.build_date }}
 
   dockertag:
-    description: docker tag
+    description: docker image tag base (without suffix)
     value: ${{ steps.dockertag.outputs.dockertag }}
+
+  dockertag_with_suffix:
+    description: docker image tag with suffix (same value as dockertag if no suffix is given)
+    value: ${{ steps.dockertag.outputs.dockertag_with_suffix }}
 
   dockerimage:
     description: docker image
     value: ${{ steps.dockerimage.outputs.dockerimage }}
-
-  releasetag:
-    description: release tag
-    value: ${{ steps.releasetag.outputs.releasetag }}
 
   tracer_plugin_version:
     description: tracer plugin version
@@ -69,7 +74,7 @@ runs:
       id: dotenv
       uses: falti/dotenv-action@a33be0b8cf6a6e6f1b82cc9f3782061ab1022be5 #v1.1.4
       with:
-        path: linea-besu-package/versions.env
+        path: linea-besu/package/versions.env
         mode: development
         keys-case: lower
         log-variables: true
@@ -82,23 +87,13 @@ runs:
         echo "id=${{ github.run_id }}" >> $GITHUB_OUTPUT
         echo "build_date=$(date --rfc-3339=date)" >> $GITHUB_OUTPUT
     
-    - name: Set timestamp
-      id: timestamp
-      shell: bash
-      run: |
-        echo "TIMESTAMP=$(date -u +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
-
-    - name: set docker tag
+    - name: Compute docker tag
       id: dockertag
-      shell: bash
-      run: |
-        echo "dockertag=${{ inputs.release_tag_prefix }}-${{ steps.timestamp.outputs.TIMESTAMP }}-${{ steps.compute_version_tags.outputs.commit_tag }}" >> $GITHUB_OUTPUT
-    
-    - name: set release tag
-      id: releasetag
-      shell: bash
-      run: |
-        echo "releasetag=${{ steps.dockertag.outputs.dockertag }}" >> $GITHUB_OUTPUT
+      uses: ./.github/actions/compute-docker-tag
+      with:
+        version_prefix: ${{ inputs.release_version }}
+        image_tag_suffix: ${{ inputs.image_tag_suffix }}
+        commit_tag: ${{ steps.compute_version_tags.outputs.commit_tag }}
 
     - name: set docker image
       id: dockerimage

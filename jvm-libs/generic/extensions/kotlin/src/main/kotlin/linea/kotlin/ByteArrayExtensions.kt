@@ -2,6 +2,9 @@ package linea.kotlin
 
 import java.math.BigInteger
 import java.util.HexFormat
+import kotlin.experimental.xor
+
+fun zeroHash32(): ByteArray = ByteArray(32)
 
 fun ByteArray.assertSize(expectedSize: UInt, fieldName: String = ""): ByteArray = apply {
   require(size == expectedSize.toInt()) { "$fieldName expected to have $expectedSize bytes, but got $size" }
@@ -63,6 +66,13 @@ fun ByteArray.encodeHex(prefix: Boolean = true): String {
   } else {
     return hexStr
   }
+}
+
+fun ByteArray.xor(other: ByteArray): ByteArray {
+  require(this.size == other.size) {
+    "ByteArrays must have the same length. Array sizes: ${this.size}, ${other.size}"
+  }
+  return ByteArray(this.size) { i -> this[i].xor(other[i]) }
 }
 
 fun ByteArray.toULongFromLast8Bytes(lenient: Boolean = false): ULong {

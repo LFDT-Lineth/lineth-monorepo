@@ -9,6 +9,18 @@ inline val ULong.gwei: ULong get() = this.multiplyExact(OneGWei.toULong())
 inline val ULong.eth: ULong get() = this.multiplyExact(OneEth.toULong())
 fun ULong.toGWei(): Double = this.toDouble().toGWei()
 
+fun ULong.toBytes32(): ByteArray {
+  val bytes = ByteArray(32)
+  val longBytes = this.toByteArray()
+  longBytes.copyInto(destination = bytes, destinationOffset = 32 - ULong.SIZE_BYTES)
+  return bytes
+}
+
+private fun ULong.toByteArray(): ByteArray =
+  ByteArray(ULong.SIZE_BYTES) { i ->
+    ((this shr ((ULong.SIZE_BYTES - 1 - i) * Byte.SIZE_BITS)) and 0xFFu).toByte()
+  }
+
 /**
  * Parses an hexadecimal string as [ULong] number and returns the result.
  * @throws NumberFormatException if the string is not a valid hexadecimal representation of a number.
@@ -61,6 +73,15 @@ fun ULong.minusCoercingUnderflow(other: ULong): ULong {
     this - other
   } else {
     0UL
+  }
+}
+
+fun ULong.clampedAdd(other: ULong): ULong {
+  val result = this + other
+  return if (result < this || result < other) {
+    ULong.MAX_VALUE // Overflow occurred, return max value
+  } else {
+    result // No overflow, return the result
   }
 }
 

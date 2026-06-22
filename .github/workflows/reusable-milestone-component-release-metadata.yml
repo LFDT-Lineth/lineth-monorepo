@@ -1,0 +1,107 @@
+name: "Reusable: Milestone Component Release Metadata"
+
+on:
+  workflow_call:
+    inputs:
+      release_tag_suffix:
+        description: 'Custom release tag suffix (passed through to component cliff runs)'
+        required: false
+        type: string
+        default: ''
+    outputs:
+      coordinator:
+        description: "JSON: {changelog, release_version, release_tag, tag_changed} for coordinator"
+        value: ${{ jobs.component-release-metadata.outputs.coordinator }}
+      prover:
+        description: "JSON: {changelog, release_version, release_tag, tag_changed} for prover"
+        value: ${{ jobs.component-release-metadata.outputs.prover }}
+      postman:
+        description: "JSON: {changelog, release_version, release_tag, tag_changed} for postman"
+        value: ${{ jobs.component-release-metadata.outputs.postman }}
+      tx-exclusion-api:
+        description: "JSON: {changelog, release_version, release_tag, tag_changed} for tx-exclusion-api"
+        value: ${{ jobs.component-release-metadata.outputs.tx-exclusion-api }}
+      linea-besu-package:
+        description: "JSON: {changelog, release_version, release_tag, tag_changed} for linea-besu-package"
+        value: ${{ jobs.component-release-metadata.outputs.linea-besu-package }}
+      maru:
+        description: "JSON: {changelog, release_version, release_tag, tag_changed} for maru"
+        value: ${{ jobs.component-release-metadata.outputs.maru }}
+
+jobs:
+  component-release-metadata:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    strategy:
+      fail-fast: false
+      matrix:
+        component-name: [ coordinator, maru, prover, postman, tx-exclusion-api, linea-besu-package ]
+        include:
+          - component-name: coordinator
+            include-path: coordinator/**
+          - component-name: maru
+            include-path: maru/**
+          - component-name: prover
+            include-path: prover/**
+          - component-name: postman
+            include-path: postman/**
+          - component-name: tx-exclusion-api
+            include-path: transaction-exclusion-api/**
+          - component-name: linea-besu-package
+            include-path: |
+              tracer/**
+              tracer-constraints/**
+              linea-besu/plugins/linea-sequencer/**
+              linea-besu/besu/**
+              linea-besu/package/**
+              gradle/libs.versions.toml
+    outputs:
+      coordinator: ${{ steps.changelog-outputs.outputs.coordinator }}
+      maru: ${{ steps.changelog-outputs.outputs.maru }}
+      prover: ${{ steps.changelog-outputs.outputs.prover }}
+      postman: ${{ steps.changelog-outputs.outputs.postman }}
+      tx-exclusion-api: ${{ steps.changelog-outputs.outputs.tx-exclusion-api }}
+      linea-besu-package: ${{ steps.changelog-outputs.outputs.linea-besu-package }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
+          fetch-tags: true
+          submodules: false
+
+      - name: Install git-cliff
+        uses: taiki-e/install-action@5f57d6cb7cd20b14a8a27f522884c4bc8a187458 #(v2.75.19)
+        with:
+          tool: git-cliff
+
+      - name: Generate ${{ matrix.component-name }} latest changelog
+        id: changelog
+        uses: ./.github/actions/run-git-cliff-commands
+        with:
+          component-name: ${{ matrix.component-name }}
+          include-path: ${{ matrix.include-path }}
+          release_tag_suffix: ${{ inputs.release_tag_suffix }}
+          generate-changelog-with-next-tag-version: 'true'
+
+      - name: Changelog outputs
+        id: changelog-outputs
+        env:
+          COMPONENT_NAME: ${{ matrix.component-name }}
+          CHANGELOG_CONTENT: ${{ steps.changelog.outputs.changelog_content }}
+          NEXT_VERSION: ${{ steps.changelog.outputs.next_version }}
+          NEXT_TAG: ${{ steps.changelog.outputs.next_tag }}
+          TAG_CHANGED: ${{ steps.changelog.outputs.tag_changed }}
+        run: |
+          set -euo pipefail
+          JSON_OUTPUTS=$(jq -c -n \
+            --arg changelog_content "$CHANGELOG_CONTENT" \
+            --arg next_version      "$NEXT_VERSION" \
+            --arg next_tag          "$NEXT_TAG" \
+            --arg tag_changed       "$TAG_CHANGED" \
+            '{changelog: $changelog_content, release_version: $next_version, release_tag: $next_tag, tag_changed: $tag_changed}')
+          {
+            echo "${COMPONENT_NAME}<<__JSON_EOF__"
+            printf '%s\n' "$JSON_OUTPUTS"
+            echo "__JSON_EOF__"
+          } >> "$GITHUB_OUTPUT"

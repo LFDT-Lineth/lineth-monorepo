@@ -9,7 +9,7 @@
     <Logger name="net.consensys.linea.jsonrpc" level="trace" additivity="false">
       <AppenderRef ref="console"/>
     </Logger>
-    <Logger name="net.consensys.zkevm.coordinator.clients" level="trace" additivity="false">
+    <Logger name="linea.coordinator.clients" level="trace" additivity="false">
       <AppenderRef ref="console"/>
     </Logger>
     <Root level="WARN" additivity="false">

@@ -22,8 +22,8 @@ import {
   decodeSlotValue,
   parseMarkdownConfig,
   Verifier,
-} from "@consensys/linea-contract-integrity-verifier";
-import type { Web3Adapter, AbiElement } from "@consensys/linea-contract-integrity-verifier";
+} from "@lfdt-lineth/contract-integrity-verifier";
+import type { Web3Adapter, AbiElement } from "@lfdt-lineth/contract-integrity-verifier";
 import { readFileSync } from "fs";
 
 // ============================================================================

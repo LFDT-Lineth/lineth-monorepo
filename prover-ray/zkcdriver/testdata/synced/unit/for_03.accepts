@@ -1,0 +1,13 @@
+{ "in": "0x0000", "out": "0x" }
+{ "in": "0x00010000", "out": "0x0000" }
+{ "in": "0x000200000000", "out": "0x00000000" }
+{ "in": "0x0003000000000000", "out": "0x000000000000" }
+{ "in": "0x0001ffff", "out": "0x3456" }
+{ "in": "0x0002ffffffff", "out": "0x3456f2f2" }
+{ "in": "0x0003ffffffffffff", "out": "0x3456f2f22299" }
+{ "in": "0x0004ffffffffffffffff", "out": "0x3456f2f222993456" }
+{ "in": "0x00015678", "out": "0x1450" }
+{ "in": "0x0002aaaa5555", "out": "0x20025050" }
+{ "in": "0x00031234abcd9876", "out": "0x1014a2c00010" }
+{ "in": "0x0005ffffffffffffffffffff", "out": "0x3456f2f222993456f2f2" }
+{ "in": "0x0006ffffffffffffffffffffffff", "out": "0x3456f2f222993456f2f22299" }

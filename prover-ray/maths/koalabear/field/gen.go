@@ -4,7 +4,7 @@ package field
 import "math/rand/v2"
 
 // Gen is a union type that holds either a base field element ([Element])
-// or a degree-4 extension field element ([Ext]). The embedded [Ext] is the
+// or a degree-6 extension field element ([Ext]). The embedded [Ext] is the
 // canonical storage in both cases; [Gen.IsBase] tracks whether the value
 // was constructed from a base element and has remained in the base field
 // through subsequent operations.
@@ -76,8 +76,8 @@ func (e Gen) Sub(b Gen) Gen {
 }
 
 // Mul returns e * b. When both operands are base, it uses the cheaper base
-// field multiplication (1 mul vs ~9). When exactly one is base, it uses
-// [Ext.MulByElement] (4 muls vs ~9).
+// field multiplication (1 mul vs ~24). When exactly one is base, it uses
+// [Ext.MulByElement] (6 muls vs ~24).
 // The result is tagged base iff both operands are base.
 func (e Gen) Mul(b Gen) Gen {
 	if e.isBase && b.isBase {

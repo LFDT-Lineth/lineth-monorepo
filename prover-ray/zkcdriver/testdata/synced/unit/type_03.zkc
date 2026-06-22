@@ -1,0 +1,5 @@
+type address = u160
+fn f(x:address) -> (r:address) {
+    r = 0
+    return
+}

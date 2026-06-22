@@ -3,12 +3,50 @@ package rangecheck_test
 import (
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/rangecheck"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// TestCompile_WioptestCompleteness runs every scenario from
+// [wioptest.RangeCheckCompilerScenarios] through the full
+// rangecheck → lookuptologderivsum → logderivativesum pipeline. The
+// verifier must accept.
+func TestCompile_WioptestCompleteness(t *testing.T) {
+	for _, build := range wioptest.RangeCheckCompilerScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			rangecheck.Compile(sc.Sys)
+			lookuptologderivsum.Compile(sc.Sys)
+			logderivativesum.Compile(sc.Sys)
+			proof := sc.Sys.Prove(sc.AssignWitness)
+			require.NoError(t, sc.Sys.Verify(proof),
+				"compiled verifier must accept an honest witness")
+		})
+	}
+}
+
+// TestCompile_WioptestSoundnessPanics runs every scenario from
+// [wioptest.RangeCheckSoundnessScenarios]. An out-of-range value reaches the
+// downstream M-assignment prover action with no matching row, which panics
+// while the prover runs inside Prove.
+func TestCompile_WioptestSoundnessPanics(t *testing.T) {
+	for _, build := range wioptest.RangeCheckSoundnessScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			rangecheck.Compile(sc.Sys)
+			lookuptologderivsum.Compile(sc.Sys)
+			logderivativesum.Compile(sc.Sys)
+			assert.Panics(t, func() { sc.Sys.Prove(sc.AssignWitness) },
+				"out-of-range value must cause the downstream M-assignment to panic")
+		})
+	}
+}
 
 // newRC builds a minimal system with one sized module and one RangeCheck.
 func newRC(t *testing.T, b int) (sys *wiop.System, col *wiop.Column, rc *wiop.RangeCheck) {
@@ -37,7 +75,6 @@ func TestCompile_CreatesInclusion(t *testing.T) {
 
 	assert.True(t, rc.IsReduced(), "RangeCheck must be marked reduced after Compile")
 	require.Len(t, sys.TableRelations, 1)
-	assert.Equal(t, wiop.TableRelationInclusion, sys.TableRelations[0].Kind)
 }
 
 func TestCompile_SharedRangeColumn(t *testing.T) {

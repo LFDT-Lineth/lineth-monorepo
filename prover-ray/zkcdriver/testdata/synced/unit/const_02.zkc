@@ -1,0 +1,2 @@
+const LARGE:u16 = 32
+const LARGEMO:u16 = LARGE + 1

@@ -1,0 +1,61 @@
+#docker compose -f docker/compose.yml -f docker/compose.dev.yml
+name: maru
+
+services:
+
+  maru:
+    # make build-local-image
+    # MARU_TAG=local make docker-run-stack
+    image: consensys/maru:${MARU_TAG:-dbb6c73}
+    container_name: maru
+    depends_on:
+      - sequencer
+      - follower-geth
+    command: [ 'java',
+#               '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005'
+#               '-Dvertx.configurationFile=/opt/consensys/maru/configs/vertx-options.json',
+               '-Dlog4j2.configurationFile=configs/log4j.xml',
+               '-jar', "maru.jar",
+               '--maru-genesis-file', 'configs/genesis.json',
+               '--config', 'configs/config.dev.toml' ]
+    volumes:
+      - ./maru/config.dev.toml:/opt/consensys/maru/configs/config.dev.toml:ro
+      - ./maru/log4j.xml:/opt/consensys/maru/configs/log4j.xml:ro
+#      - ./maru/vertx-options.json:/opt/consensys/maru/configs/vertx-options.json
+      - ./initialization/genesis-maru.json:/opt/consensys/maru/configs/genesis.json:ro
+      - ./maru/0x1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0.key:/tmp/maru-db/private-key
+      - ./jwt:/opt/consensys/docker/jwt:ro
+    ports:
+      # Attach the IDE's remote java debugger to localhost:5005 to debug maru
+      - "5005:5005"
+      - "8080:8080"
+      - "9191:9090"
+    networks:
+      - linea
+
+  prometheus:
+    container_name: prometheus
+    hostname: prometheus
+    image: prom/prometheus:v2.53.4
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yaml'
+    networks:
+      - linea
+
+  grafana:
+    container_name: grafana
+    hostname: grafana
+    image: grafana/grafana:12.0.1
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./config/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - linea

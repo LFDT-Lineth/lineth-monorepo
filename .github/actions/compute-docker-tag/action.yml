@@ -1,0 +1,39 @@
+---
+name: Compute docker tag
+description: 'Composite action to compute docker tag'
+
+inputs:
+  version_prefix:
+    description: "Version tag prefix"
+    required: true
+
+  image_tag_suffix:
+    description: 'Custom docker image tag suffix'
+    required: false
+    default: ''
+  
+  commit_tag:
+    description: 'Commit tag'
+    required: true
+
+outputs:
+  dockertag:
+    description: "Docker image tag base (without suffix)"
+    value: ${{ steps.dockertag.outputs.dockertag }}
+
+  dockertag_with_suffix:
+    description: "Docker image tag with suffix (same value as docker_tag if no suffix is given)"
+    value: ${{ steps.dockertag.outputs.dockertag_with_suffix }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: set docker tag
+      id: dockertag
+      shell: bash
+      run: |
+        timestamp="$(date -u +%Y%m%d)"
+        base="${{ inputs.version_prefix }}-${timestamp}-${{ inputs.commit_tag }}"
+        suffix="${{ inputs.image_tag_suffix && format('-{0}', inputs.image_tag_suffix) || '' }}"
+        echo "dockertag_with_suffix=${base}${suffix}" >> "$GITHUB_OUTPUT"
+        echo "dockertag=${base}" >> "$GITHUB_OUTPUT"

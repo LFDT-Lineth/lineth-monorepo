@@ -1,0 +1,66 @@
+---
+name: Download and update component's changelog
+description: Composite action to download and update component's changelog
+
+inputs:
+  artifact_prefix:
+    description: "Artifact prefix, e.g. 'unreleased-changelog-'"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+      - name: Download CHANGELOG.md artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        continue-on-error: true
+        with:
+          pattern: ${{ inputs.artifact_prefix }}*
+          path: ${{ github.workspace }}/tmp/artifacts
+          # Keep each artifact in its own subdir so we can recover the
+          # destination folder name from the artifact name suffix.
+          merge-multiple: false
+
+      - name: Distribute CHANGELOG.md to component folders
+        env:
+          ARTIFACTS_DIR: ${{ github.workspace }}/tmp/artifacts
+          PREFIX: ${{ inputs.artifact_prefix }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -d "${ARTIFACTS_DIR}" ]; then
+            echo "No artifacts directory at ${ARTIFACTS_DIR}; nothing to do."
+            exit 0
+          fi
+
+          shopt -s nullglob
+          applied=0
+          for dir in "${ARTIFACTS_DIR}/${PREFIX}"*/; do
+            artifact_name=$(basename "${dir}")
+            # Strip the artifact prefix → destination folder name.
+            dest_folder="${artifact_name#${PREFIX}}"
+            if [ "${dest_folder}" = "linea-besu-package" ]; then
+              dest_folder="linea-besu/package"
+            elif [ "${dest_folder}" = "tx-exclusion-api" ]; then
+              dest_folder="transaction-exclusion-api"
+            elif [ "${dest_folder}" = "linea" ]; then
+              dest_folder="."
+            fi
+            src="${dir}CHANGELOG.md"
+            dest="${GITHUB_WORKSPACE}/${dest_folder}/CHANGELOG.md"
+
+            if [ ! -f "${src}" ]; then
+              echo "✗ ${src} missing; skipping."
+              continue
+            fi
+
+            mkdir -p "$(dirname "${dest}")"
+            cp "${src}" "${dest}"
+            echo "✓ ${artifact_name} -> ${dest_folder}/CHANGELOG.md"
+            applied=$((applied + 1))
+          done
+
+          if [ "${applied}" -eq 0 ]; then
+            echo "No CHANGELOG.md artifacts were applied."
+          else
+            echo "Applied ${applied} CHANGELOG.md update(s)."
+          fi

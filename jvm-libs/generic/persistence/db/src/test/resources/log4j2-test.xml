@@ -7,7 +7,7 @@
     <List name="ListAppender"/>
   </Appenders>
   <Loggers>
-    <Logger name="net.consensys.zkevm.persistence.db.PersistenceRetryer" level="warn" additivity="false">
+    <Logger name="linea.persistence.db.PersistenceRetryer" level="warn" additivity="false">
       <AppenderRef ref="ListAppender"/>
       <AppenderRef ref="console"/>
     </Logger>

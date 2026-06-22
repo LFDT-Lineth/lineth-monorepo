@@ -1,0 +1,2 @@
+type bool = u1
+const TRUE:bool = 1

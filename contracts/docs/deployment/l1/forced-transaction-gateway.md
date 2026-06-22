@@ -14,16 +14,16 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. |
-| LINEA_ROLLUP_ADDRESS | true | address | LineaRollup contract address |
-| L1_SECURITY_COUNCIL | true | address | L1 Security Council address (default admin) |
+| LINEA_ROLLUP_ADDRESS | registry\|env | address | LineaRollup contract address. Read from registry on stable networks; env var used as fallback. |
+| L1_SECURITY_COUNCIL | registry\|env | address | L1 Security Council address (default admin). Read from registry on stable networks; env var used as fallback. |
 | FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID | true | uint256 | Destination L2 chain ID |
 | FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER | true | uint256 | L2 block buffer for forced transaction inclusion |
 | FORCED_TRANSACTION_GATEWAY_MAX_GAS_LIMIT | true | uint256 | Maximum gas limit for forced transactions |
 | FORCED_TRANSACTION_GATEWAY_MAX_INPUT_LENGTH_BUFFER | true | uint256 | Maximum input length buffer |
-| FORCED_TRANSACTION_ADDRESS_FILTER | true | address | AddressFilter contract address |
+| FORCED_TRANSACTION_ADDRESS_FILTER | registry\|env | address | AddressFilter contract address. Read from registry if present; env var used as fallback. |
 | FORCED_TRANSACTION_L2_BLOCK_DURATION_SECONDS | true | uint256 | L2 block duration in seconds |
 | FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER | true | uint256 | Block number deadline buffer |
-| MIMC_LIBRARY_ADDRESS | true | address | Pre-deployed Mimc library address |
+| MIMC_LIBRARY_ADDRESS | registry\|env | address | Pre-deployed Mimc library address. Read from registry if present; env var used as fallback. |
 
 <br />
 

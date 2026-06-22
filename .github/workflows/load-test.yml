@@ -30,11 +30,11 @@ concurrency:
 
 jobs:
   run-load-test:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: Run Load Test
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
@@ -44,21 +44,43 @@ jobs:
         with:
           exclude_inputs: network, file
 
+      - name: Validate inputs
+        env:
+          INPUT_FILE: ${{ github.event.inputs.file }}
+          INPUT_PRIVATE_KEY_OVERWRITE: ${{ github.event.inputs.private_key_overwrite }}
+        run: |
+          if ! [[ "$INPUT_FILE" =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]*\.json$ ]]; then
+            echo "Error: file must be a .json filename using only alphanumeric, dot, hyphen, or underscore characters, got: '$INPUT_FILE'" >&2
+            exit 1
+          fi
+          if [ -n "$INPUT_PRIVATE_KEY_OVERWRITE" ] && ! [[ "$INPUT_PRIVATE_KEY_OVERWRITE" =~ ^(0x)?[0-9a-fA-F]{64}$ ]]; then
+            echo "Error: private_key_overwrite must be a 64-character hex Ethereum private key (optionally 0x-prefixed)" >&2
+            exit 1
+          fi
+
       - name: Determine Private Key
         id: set_private_key
+        env:
+          INPUT_NETWORK: ${{ github.event.inputs.network }}
+          INPUT_PRIVATE_KEY_OVERWRITE: ${{ github.event.inputs.private_key_overwrite }}
+          DEVNET_KEY: ${{ secrets.DEVNET_LOAD_TEST_PRIVATE_KEY }}
+          SEPOLIA_KEY: ${{ secrets.SEPOLIA_LOAD_TEST_PRIVATE_KEY }}
         run: |
-          if [ -n "${{ github.event.inputs.private_key_overwrite }}" ]; then
+          if [ -n "$INPUT_PRIVATE_KEY_OVERWRITE" ]; then
             echo "Using provided private key."
-            echo "PRIVATE_KEY=${{ github.event.inputs.private_key_overwrite }}" >> $GITHUB_ENV
-          elif [ "${{ github.event.inputs.network }}" == "devnet" ]; then
+            echo "PRIVATE_KEY=$INPUT_PRIVATE_KEY_OVERWRITE" >> "$GITHUB_ENV"
+          elif [ "$INPUT_NETWORK" = "devnet" ]; then
             echo "Using devnet private key from secrets."
-            echo "PRIVATE_KEY=${{ secrets.DEVNET_LOAD_TEST_PRIVATE_KEY }}" >> $GITHUB_ENV
-          elif [ "${{ github.event.inputs.network }}" == "sepolia" ]; then
+            echo "PRIVATE_KEY=$DEVNET_KEY" >> "$GITHUB_ENV"
+          elif [ "$INPUT_NETWORK" = "sepolia" ]; then
             echo "Using sepolia private key from secrets."
-            echo "PRIVATE_KEY=${{ secrets.SEPOLIA_LOAD_TEST_PRIVATE_KEY }}" >> $GITHUB_ENV
+            echo "PRIVATE_KEY=$SEPOLIA_KEY" >> "$GITHUB_ENV"
           fi
 
       - name: Load Test
+        env:
+          INPUT_NETWORK: ${{ github.event.inputs.network }}
+          INPUT_FILE: ${{ github.event.inputs.file }}
         run: |
-          echo "Network to execute load test on: ${{ github.event.inputs.network }}"
-          ./gradlew :testing-tools:app:run --args="-request ${{ github.event.inputs.network }}/${{ github.event.inputs.file }} -pk $PRIVATE_KEY"
+          echo "Network to execute load test on: ${INPUT_NETWORK}"
+          ./gradlew :testing-tools:traffic-generator:run --args="-request ${INPUT_NETWORK}/${INPUT_FILE} -pk ${PRIVATE_KEY}"

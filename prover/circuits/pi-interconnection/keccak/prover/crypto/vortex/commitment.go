@@ -199,6 +199,15 @@ func (p *Params) noSisTransversalHash(v []smartvectors.SmartVector) []field.Elem
 				xBytes := x.Bytes()
 				hasher.Write(xBytes[:])
 			}
+			// Zero-pad to nextPow2(numRows) so the hash is consistent with
+			// the self-recursion's CheckLinearHash which uses nextPow2(Pi) as
+			// the period (required for EvalCoeffBivariate's PeriodicSample).
+			paddedRows := utils.NextPowerOfTwo(numRows)
+			var zero field.Element
+			zeroBytes := zero.Bytes()
+			for row := numRows; row < paddedRows; row++ {
+				hasher.Write(zeroBytes[:])
+			}
 
 			digest := hasher.Sum(nil)
 			res[col].SetBytes(digest)

@@ -1,0 +1,212 @@
+package linea.finalization
+
+import io.vertx.core.Vertx
+import io.vertx.junit5.Timeout
+import io.vertx.junit5.VertxExtension
+import io.vertx.junit5.VertxTestContext
+import linea.Account
+import linea.ContractsManager
+import linea.MakeFileDelegatedContractsManager
+import linea.contract.l1.LineaRollupContractVersion
+import linea.contract.l1.LineaRollupSmartContractClient
+import linea.coordination.EventDispatcher
+import linea.domain.Aggregation
+import linea.domain.BlobRecord
+import linea.domain.BlobSubmittedEvent
+import linea.domain.FinalizationSubmittedEvent
+import linea.persistence.AggregationsRepository
+import linea.persistence.BlobsRepository
+import linea.persistence.conflation.AggregationsRepositoryImpl
+import linea.persistence.conflation.BlobsPostgresDao
+import linea.persistence.conflation.BlobsRepositoryImpl
+import linea.persistence.conflation.PostgresAggregationsDao
+import linea.persistence.db.DbHelper
+import linea.persistence.db.test.CleanDbTestSuiteParallel
+import linea.submission.BlobSubmissionCoordinator
+import linea.submission.L1ShnarfBasedAlreadySubmittedBlobsFilter
+import net.consensys.FakeFixedClock
+import net.consensys.linea.ethereum.gaspricing.FakeGasPriceCapProvider
+import net.consensys.linea.testing.submission.loadBlobsAndAggregations
+import org.assertj.core.api.Assertions.assertThat
+import org.awaitility.Awaitility.waitAtMost
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
+import tech.pegasys.teku.infrastructure.async.SafeFuture
+import java.util.concurrent.TimeUnit
+import java.util.function.Consumer
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
+
+@ExtendWith(VertxExtension::class)
+@Disabled("tmp disabled until we generate new sample data")
+class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
+  init {
+    target = "4"
+  }
+
+  override val databaseName = DbHelper.generateUniqueDbName("coordinator-tests-submission-int-test")
+  private val fakeClock = FakeFixedClock()
+  private lateinit var lineaRollupContractForAggregationSubmission: LineaRollupSmartContractClient
+  private lateinit var contractDeploymentAccount: Account
+  private lateinit var aggregationsRepository: AggregationsRepository
+  private lateinit var blobsRepository: BlobsRepository
+  private lateinit var blobSubmissionCoordinator: BlobSubmissionCoordinator
+  private lateinit var aggregationFinalizationCoordinator: AggregationFinalizationCoordinator
+  private val testDataDir = "testdata/coordinator/prover/v3/submissionAndFinalization/"
+  private lateinit var blobSubmittedEvent: BlobSubmittedEvent
+  private var blobSubmissionDelay = 0L
+  private lateinit var finalizationSubmittedEvent: FinalizationSubmittedEvent
+  private var finalizationSubmissionDelay = 0L
+  private var acceptedBlob = 0UL
+
+  // 1-block-per-blob test data has 2 aggregations: 1..10, 11..20 with 1 more than the max blob submission
+  private lateinit var aggregations: List<Aggregation>
+  private lateinit var blobs: List<BlobRecord>
+
+  private fun setupTest(vertx: Vertx, smartContractVersion: LineaRollupContractVersion) {
+    // V6 is always used, this is left for when V7 is implemented.
+    if (listOf(LineaRollupContractVersion.V6).contains(smartContractVersion).not()) {
+      throw IllegalArgumentException("unsupported contract version=$smartContractVersion!")
+    }
+    val rollupDeploymentFuture = ContractsManager.get()
+      .deployLineaRollup(numberOfOperators = 2, contractVersion = smartContractVersion)
+    // load files from FS while smc deploy
+    loadBlobsAndAggregations(
+      blobsResponsesDir = "$testDataDir/compression/responses",
+      aggregationsResponsesDir = "$testDataDir/aggregation/responses",
+    )
+      .let { (blobs, aggregations) ->
+        this.blobs = blobs
+        this.aggregations = aggregations
+      }
+    // wait smc deployment finishes
+    val rollupDeploymentResult = rollupDeploymentFuture.get()
+
+    contractDeploymentAccount = rollupDeploymentResult.contractDeploymentAccount
+
+    blobsRepository = BlobsRepositoryImpl(
+      BlobsPostgresDao(
+        config = BlobsPostgresDao.Config(maxBlobsToReturn = 100U),
+        connection = sqlClient,
+        clock = fakeClock,
+      ),
+    )
+    aggregationsRepository = AggregationsRepositoryImpl(PostgresAggregationsDao(sqlClient, fakeClock))
+
+    val lineaRollupContractForDataSubmissionV6 = rollupDeploymentResult.rollupOperatorClient
+
+    val acceptedBlobEndBlockNumberConsumer = Consumer<ULong> { acceptedBlob = it }
+
+    @Suppress("DEPRECATION")
+    val alreadySubmittedBlobFilter = L1ShnarfBasedAlreadySubmittedBlobsFilter(
+      lineaSmartContractClientReadOnly = lineaRollupContractForDataSubmissionV6,
+      acceptedBlobEndBlockNumberConsumer = acceptedBlobEndBlockNumberConsumer,
+    )
+    val blobSubmittedEventConsumers = mapOf(
+      Consumer<BlobSubmittedEvent> { blobSubmittedEvent = it } to "Blob Submitted Consumer 1",
+      Consumer<BlobSubmittedEvent> { blobSubmissionDelay = it.getSubmissionDelay() } to "Blob Submitted Consumer 2",
+    )
+
+    blobSubmissionCoordinator = run {
+      BlobSubmissionCoordinator.create(
+        config = BlobSubmissionCoordinator.Config(
+          pollingInterval = 6.seconds,
+          proofSubmissionDelay = 0.seconds,
+          maxBlobsToSubmitPerTick = 100u,
+          targetBlobsToSubmitPerTx = 9u,
+        ),
+        blobsRepository = blobsRepository,
+        aggregationsRepository = aggregationsRepository,
+        lineaSmartContractClient = lineaRollupContractForDataSubmissionV6,
+        alreadySubmittedBlobsFilter = alreadySubmittedBlobFilter,
+        gasPriceCapProvider = FakeGasPriceCapProvider(),
+        blobSubmittedEventDispatcher = EventDispatcher(blobSubmittedEventConsumers),
+        vertx = vertx,
+        clock = fakeClock,
+      )
+    }
+
+    aggregationFinalizationCoordinator = run {
+      lineaRollupContractForAggregationSubmission = MakeFileDelegatedContractsManager
+        .connectToLineaRollupContract(
+          rollupDeploymentResult.contractAddress,
+          rollupDeploymentResult.rollupOperators[1].txManager,
+
+        )
+
+      val submittedFinalizationConsumers = mapOf(
+        Consumer<FinalizationSubmittedEvent> { finalizationSubmittedEvent = it } to "Finalization Submitted Consumer 1",
+        Consumer<FinalizationSubmittedEvent> { finalizationSubmissionDelay = it.getSubmissionDelay() }
+          to "Finalization Submitted Consumer 2",
+      )
+
+      val aggregationSubmitter = AggregationSubmitterImpl(
+        lineaSmartContractClient = lineaRollupContractForAggregationSubmission,
+        gasPriceCapProvider = FakeGasPriceCapProvider(),
+        aggregationSubmittedEventConsumer = EventDispatcher(submittedFinalizationConsumers),
+        clock = fakeClock,
+      )
+
+      AggregationFinalizationCoordinator(
+        config = AggregationFinalizationCoordinator.Config(
+          pollingInterval = 6.seconds,
+          proofSubmissionDelay = 0.seconds,
+        ),
+        aggregationSubmitter = aggregationSubmitter,
+        aggregationsRepository = aggregationsRepository,
+        blobsRepository = blobsRepository,
+        lineaSmartContractClient = lineaRollupContractForAggregationSubmission,
+        alreadySubmittedBlobsFilter = alreadySubmittedBlobFilter,
+        vertx = vertx,
+        clock = fakeClock,
+      )
+    }
+  }
+
+  private fun testSubmission(
+    vertx: Vertx,
+    testContext: VertxTestContext,
+    smartContractVersion: LineaRollupContractVersion,
+  ) {
+    setupTest(vertx, smartContractVersion)
+
+    SafeFuture.allOf(
+      SafeFuture.collectAll(blobs.map { blobsRepository.saveNewBlob(it) }.stream()),
+      SafeFuture.collectAll(aggregations.map { aggregationsRepository.saveNewAggregation(it) }.stream()),
+    ).get()
+
+    val aggEndTime = aggregations.last().aggregationProof!!.finalTimestamp
+    val blobsEndTime = blobs.last().endBlockTime
+    val endTime = if (aggEndTime > blobsEndTime) aggEndTime else blobsEndTime
+
+    // submission do the cutoff by minutes, so we need to add 1 minute to the end time
+    fakeClock.setTimeTo(endTime.plus(1.minutes))
+
+    blobSubmissionCoordinator.start()
+    aggregationFinalizationCoordinator.start()
+      .thenApply {
+        waitAtMost(2.minutes.toJavaDuration())
+          .pollInterval(1.seconds.toJavaDuration())
+          .untilAsserted {
+            val finalizedBlockNumber = lineaRollupContractForAggregationSubmission.finalizedL2BlockNumber().get()
+            assertThat(finalizedBlockNumber).isEqualTo(aggregations.last().endBlockNumber)
+            assertThat(blobSubmittedEvent.blobs.last().endBlockNumber).isEqualTo(blobs[12].endBlockNumber)
+            assertThat(acceptedBlob).isEqualTo(blobs[12].endBlockNumber)
+            assertThat(finalizationSubmittedEvent.endBlockNumber).isEqualTo(
+              aggregations.last().endBlockNumber,
+            )
+            assertThat(blobSubmissionDelay).isGreaterThan(0L)
+            assertThat(finalizationSubmissionDelay).isGreaterThan(0L)
+          }
+        testContext.completeNow()
+      }.whenException(testContext::failNow)
+  }
+
+  @Test
+  @Timeout(3, timeUnit = TimeUnit.MINUTES)
+  fun `submission works with contract V6`(vertx: Vertx, testContext: VertxTestContext) {
+    testSubmission(vertx, testContext, LineaRollupContractVersion.V6)
+  }
+}

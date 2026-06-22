@@ -1,6 +1,6 @@
 package net.consensys.linea.contract.l1
 
-import build.linea.contract.ValidiumV1
+import linea.contract.ValidiumV1
 import linea.contract.l1.LineaValidiumContractVersion
 import linea.domain.BlobRecord
 import linea.domain.ProofToFinalize

@@ -1,0 +1,39 @@
+// =============================================
+// using a general expression as a discriminant
+// =============================================
+
+const CASE_TRUE:u8 = 1
+const CASE_FALSE:u8 = 2
+const CASE_DEFAULT:u8 = 3
+
+input inputs(c:u1) -> (d:u8)
+input results(c:u1) -> (res:u8)
+
+// standard switch case statement doing actual computations
+// computations are checked against inputs
+fn main() {
+
+    var cond:u8
+    var result:u8 = 0
+    cond = inputs[0]
+
+    switch (cond == 1 ? CASE_TRUE:CASE_FALSE) {
+        case CASE_TRUE: {
+            result = CASE_TRUE
+        }
+        case CASE_FALSE: {
+            result = CASE_FALSE
+        }
+        default: {
+            result = CASE_DEFAULT
+        }
+    }
+
+    if results[0] != result {
+        fail
+    }
+
+    if result == CASE_DEFAULT {
+        fail
+    }
+}

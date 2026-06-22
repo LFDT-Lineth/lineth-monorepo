@@ -22,7 +22,9 @@ func extEq(a, b Ext) bool {
 	return a.B0.A0.Equal(&b.B0.A0) &&
 		a.B0.A1.Equal(&b.B0.A1) &&
 		a.B1.A0.Equal(&b.B1.A0) &&
-		a.B1.A1.Equal(&b.B1.A1)
+		a.B1.A1.Equal(&b.B1.A1) &&
+		a.B2.A0.Equal(&b.B2.A0) &&
+		a.B2.A1.Equal(&b.B2.A1)
 }
 
 // checkExt marks t as failed if want != got.

@@ -4,7 +4,7 @@
 
 ## Package Overview
 
-Kotlin-based orchestration service for the Linea protocol. Manages proof submission, blob submission, finalization monitoring, message anchoring, and gas pricing. Built on Vert.x with Picocli CLI, Hoplite config, and Jackson serialization.
+Kotlin-based orchestration service for the Lineth protocol. Manages proof submission, blob submission, finalization monitoring, message anchoring, and gas pricing. Built on Vert.x with Picocli CLI, Hoplite config, and Jackson serialization.
 
 ## How to Run
 
@@ -50,7 +50,7 @@ make start-env-with-tracing-v2 LINEA_COORDINATOR_TAG=local
 - **Kotlin version:** 2.3.0
 - **Formatter:** ktlint via Spotless (disabled rules: discouraged-comment-location, property-naming, function-naming, function-signature)
 - **Build plugin:** `net.consensys.zkevm.kotlin-application-conventions`
-- **Main class:** `net.consensys.zkevm.coordinator.app.CoordinatorAppMain`
+- **Main class:** `linea.coordinator.app.CoordinatorAppMain`
 - **Warnings as errors** unless `LINEA_DEV_ALLOW_WARNINGS` is set
 
 ### Directory Structure
@@ -61,7 +61,7 @@ coordinator/
 ├── core/         Core business logic
 ├── clients/      Client implementations (prover, smart-contract, web3signer, traces-generator)
 ├── ethereum/     Ethereum modules (gas-pricing, blob-submitter, finalization-monitor, message-anchoring)
-├── persistence/  Database persistence (aggregation, batch, blob, feehistory, db-common)
+├── persistence/  Database persistence (aggregation, batch, blob, fee history)
 └── utilities/    Shared utilities
 ```
 

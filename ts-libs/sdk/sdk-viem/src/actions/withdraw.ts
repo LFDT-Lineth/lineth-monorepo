@@ -1,4 +1,4 @@
-import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
+import { getContractsAddressesByChainId } from "@lfdt-lineth/sdk-core";
 import {
   Account,
   Address,
@@ -63,7 +63,7 @@ export type WithdrawErrorType =
  * import { createWalletClient, http, zeroAddress } from 'viem'
  * import { privateKeyToAccount } from 'viem/accounts'
  * import { linea } from 'viem/chains'
- * import { withdraw } from '@consensys/linea-sdk-viem'
+ * import { withdraw } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createWalletClient({
  *   chain: linea,
@@ -82,7 +82,7 @@ export type WithdrawErrorType =
  * import { createWalletClient, http, zeroAddress } from 'viem'
  * import { privateKeyToAccount } from 'viem/accounts'
  * import { linea } from 'viem/chains'
- * import { withdraw } from '@consensys/linea-sdk-viem'
+ * import { withdraw } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createWalletClient({
  *   account: privateKeyToAccount('0x…'),

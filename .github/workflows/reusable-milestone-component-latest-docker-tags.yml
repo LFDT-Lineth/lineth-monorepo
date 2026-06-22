@@ -1,0 +1,139 @@
+name: "Reusable: Milestone Component Latest Docker Tags"
+
+# For each component whose release tag did NOT change at this milestone commit,
+# look up the most recent docker tag (and the underlying release version) so the
+# milestone can re-tag and reference it. Components whose tag DID change skip
+# this lookup — the caller already has fresh build outputs for them.
+
+on:
+  workflow_call:
+    inputs:
+      coordinator_metadata:
+        description: "JSON metadata for coordinator (from milestone-component-release-metadata)"
+        required: true
+        type: string
+      prover_metadata:
+        description: "JSON metadata for prover"
+        required: true
+        type: string
+      postman_metadata:
+        description: "JSON metadata for postman"
+        required: true
+        type: string
+      tx_exclusion_api_metadata:
+        description: "JSON metadata for tx-exclusion-api"
+        required: true
+        type: string
+      linea_besu_package_metadata:
+        description: "JSON metadata for linea-besu-package"
+        required: true
+        type: string
+      maru_metadata:
+        description: "JSON metadata for maru"
+        required: true
+        type: string
+    outputs:
+      coordinator:
+        description: "Coordinator latest docker tag"
+        value: ${{ jobs.component-latest-docker-tags.outputs.coordinator }}
+      prover:
+        description: "Prover latest docker tag"
+        value: ${{ jobs.component-latest-docker-tags.outputs.prover }}
+      postman:
+        description: "Postman latest docker tag"
+        value: ${{ jobs.component-latest-docker-tags.outputs.postman }}
+      tx-exclusion-api:
+        description: "Tx-exclusion-api latest docker tag"
+        value: ${{ jobs.component-latest-docker-tags.outputs.tx-exclusion-api }}
+      linea-besu-package:
+        description: "Linea-besu-package latest docker tag"
+        value: ${{ jobs.component-latest-docker-tags.outputs.linea-besu-package }}
+      maru:
+        description: "Maru latest docker tag"
+        value: ${{ jobs.component-latest-docker-tags.outputs.maru }}
+      coordinator-release-version:
+        description: "Coordinator release version associated with the latest docker tag"
+        value: ${{ jobs.component-latest-docker-tags.outputs.coordinator-release-version }}
+      prover-release-version:
+        description: "Prover release version associated with the latest docker tag"
+        value: ${{ jobs.component-latest-docker-tags.outputs.prover-release-version }}
+      postman-release-version:
+        description: "Postman release version associated with the latest docker tag"
+        value: ${{ jobs.component-latest-docker-tags.outputs.postman-release-version }}
+      tx-exclusion-api-release-version:
+        description: "Tx-exclusion-api release version associated with the latest docker tag"
+        value: ${{ jobs.component-latest-docker-tags.outputs.tx-exclusion-api-release-version }}
+      linea-besu-package-release-version:
+        description: "Linea-besu-package release version associated with the latest docker tag"
+        value: ${{ jobs.component-latest-docker-tags.outputs.linea-besu-package-release-version }}
+      maru-release-version:
+        description: "Maru release version associated with the latest docker tag"
+        value: ${{ jobs.component-latest-docker-tags.outputs.maru-release-version }}
+
+jobs:
+  component-latest-docker-tags:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    strategy:
+      fail-fast: true
+      matrix:
+        component: [ coordinator, maru, prover, postman, tx-exclusion-api, linea-besu-package ]
+        include:
+          - component: coordinator
+            image-name: linea-coordinator
+            metadata: ${{ inputs.coordinator_metadata }}
+          - component: maru
+            # maru is published as consensys/maru rather than consensys/linea-maru.
+            image-name: maru
+            metadata: ${{ inputs.maru_metadata }}
+          - component: prover
+            image-name: linea-prover
+            metadata: ${{ inputs.prover_metadata }}
+          - component: postman
+            image-name: linea-postman
+            metadata: ${{ inputs.postman_metadata }}
+          - component: tx-exclusion-api
+            image-name: linea-transaction-exclusion-api
+            metadata: ${{ inputs.tx_exclusion_api_metadata }}
+          - component: linea-besu-package
+            image-name: linea-besu-package
+            metadata: ${{ inputs.linea_besu_package_metadata }}
+    outputs:
+      coordinator: ${{ steps.latest-docker-tag.outputs.coordinator-latest-docker-tag }}
+      prover: ${{ steps.latest-docker-tag.outputs.prover-latest-docker-tag }}
+      postman: ${{ steps.latest-docker-tag.outputs.postman-latest-docker-tag }}
+      tx-exclusion-api: ${{ steps.latest-docker-tag.outputs.tx-exclusion-api-latest-docker-tag }}
+      linea-besu-package: ${{ steps.latest-docker-tag.outputs.linea-besu-package-latest-docker-tag }}
+      maru: ${{ steps.latest-docker-tag.outputs.maru-latest-docker-tag }}
+      coordinator-release-version: ${{ steps.latest-release-version.outputs.coordinator-latest-release-version }}
+      prover-release-version: ${{ steps.latest-release-version.outputs.prover-latest-release-version }}
+      postman-release-version: ${{ steps.latest-release-version.outputs.postman-latest-release-version }}
+      tx-exclusion-api-release-version: ${{ steps.latest-release-version.outputs.tx-exclusion-api-latest-release-version }}
+      linea-besu-package-release-version: ${{ steps.latest-release-version.outputs.linea-besu-package-latest-release-version }}
+      maru-release-version: ${{ steps.latest-release-version.outputs.maru-latest-release-version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6
+        if: fromJson(matrix.metadata).tag_changed != 'true'
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
+
+      - name: Component latest docker tag
+        id: get-latest-docker-tag
+        uses: ./.github/actions/get-latest-release-image-tag
+        if: fromJson(matrix.metadata).tag_changed != 'true'
+        with:
+          component-name: ${{ matrix.component }}
+          image-name: ${{ matrix.image-name }}
+
+      - name: Output latest docker tags
+        id: latest-docker-tag
+        if: fromJson(matrix.metadata).tag_changed != 'true'
+        run: |
+          echo "${{ matrix.component }}-latest-docker-tag=${{ steps.get-latest-docker-tag.outputs.image_tag }}" >> $GITHUB_OUTPUT
+
+      - name: Output latest release version
+        id: latest-release-version
+        if: fromJson(matrix.metadata).tag_changed != 'true'
+        run: |
+          echo "${{ matrix.component }}-latest-release-version=${{ steps.get-latest-docker-tag.outputs.release_version }}" >> $GITHUB_OUTPUT

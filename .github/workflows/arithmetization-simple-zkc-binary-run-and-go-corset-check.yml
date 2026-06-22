@@ -1,0 +1,48 @@
+name: Tracer simple zkc binary run and check
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'arithmetization/**'
+      - '.github/actions/setup-arithmetization-riscv/**'
+      - '.github/workflows/arithmetization-*.yml'
+  push:
+    branches:
+     - main
+    paths:
+     - 'arithmetization/**'
+     - '.github/actions/setup-arithmetization-riscv/**'
+     - '.github/workflows/arithmetization-*.yml'
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      zkc-ref:
+        description: 'zkc commit/branch/tag (defaults to pinned ref below)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  binary-run-and-zkc-check:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: false
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-arithmetization-riscv
+
+      - name: Install zkc, compile risc binary for simple zkc test program and check it
+        run: make -C arithmetization zkc-compile-and-check
+        env:
+          ZKC_REF: ${{ inputs.zkc-ref || 'v1.2.20' }}
+          ZKC_MAIN: src/test/zkc/simple_add.zkc
+          ZKC_FILES: src/test/zkc/simple_add.zkc
+          ZKC_INPUT: src/test/zkc/simple_add.json

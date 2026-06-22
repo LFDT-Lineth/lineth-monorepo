@@ -4,7 +4,7 @@ plugins {
 
 dependencies {
   api project(":coordinator:core")
-  api project(":coordinator:persistence:aggregation")
+  api project(":coordinator:persistence")
   api project(":jvm-libs:linea:clients:linea-contract-clients")
   api project(":jvm-libs:linea:clients:interfaces")
   api project(":jvm-libs:linea:clients:eth-logs-searcher")
@@ -12,11 +12,12 @@ dependencies {
 
 
   testImplementation project(":jvm-libs:generic:logging")
+  testImplementation project(":jvm-libs:linea:metrics:micrometer")
   testImplementation project(":coordinator:ethereum:test-utils")
   testImplementation testFixtures(project(":coordinator:core"))
   testImplementation testFixtures(project(":jvm-libs:generic:extensions:kotlin"))
   testImplementation testFixtures(project(":jvm-libs:linea:core:domain-models"))
   testImplementation testFixtures(project(":jvm-libs:linea:clients:interfaces"))
   testImplementation testFixtures(project(":jvm-libs:linea:clients:linea-contract-clients"))
-  testImplementation testFixtures(project(":coordinator:persistence:aggregation"))
+  testImplementation testFixtures(project(":coordinator:persistence"))
 }

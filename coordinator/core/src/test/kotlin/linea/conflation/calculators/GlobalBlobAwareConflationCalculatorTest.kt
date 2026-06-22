@@ -3,6 +3,7 @@ package linea.conflation.calculators
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import linea.blob.BlobCompressor
 import linea.conflation.SafeBlockProvider
+import linea.coordination.blob.FakeBlobCompressor
 import linea.domain.Blob
 import linea.domain.BlockCounters
 import linea.domain.BlockHeaderSummary
@@ -16,7 +17,6 @@ import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.linea.traces.fakeTracesCountersV2
-import net.consensys.zkevm.ethereum.coordination.blob.FakeBlobCompressor
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

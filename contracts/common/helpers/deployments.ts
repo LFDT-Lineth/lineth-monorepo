@@ -1,5 +1,6 @@
 import { ethers, AbstractSigner, Interface, InterfaceAbi, BaseContract } from "ethers";
 
+import { normalizeAddressArgs } from "./normalize-address-args";
 import { clearSignerUiWorkflowStatus, setSignerUiWorkflowStatus } from "./signerUiWorkflowStatus";
 import {
   contractName as ProxyAdminContractName,
@@ -110,7 +111,8 @@ export async function deployContractFromArtifacts<A extends Array<unknown>>(
   const linkedBytecode = options.libraries ? linkLibraries(bytecode, options.libraries) : bytecode;
 
   const factory = new ethers.ContractFactory(abi, linkedBytecode, wallet);
-  const contract = await factory.deploy(...constructorArgs);
+  const normalizedArgs = await normalizeAddressArgs(factory, constructorArgs as unknown[]);
+  const contract = await factory.deploy(...normalizedArgs);
 
   await LogContractDeployment(contractName, contract);
 

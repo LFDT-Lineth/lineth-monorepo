@@ -7,7 +7,7 @@ import (
 )
 
 // Vec holds a vector of field elements in either the base field 𝔽_p or
-// the degree-4 extension 𝔽_{p^4}. Exactly one of base or ext is non-nil;
+// the degree-6 extension 𝔽_{p^6}. Exactly one of base or ext is non-nil;
 // this invariant is the caller's responsibility when constructing via
 // [VecFromBase] or [VecFromExt].
 //
@@ -85,7 +85,7 @@ func VecAddBaseBase(res, a, b []Element) {
 
 // VecAddExtBase sets res[i] = a[i] + b[i] where a is an extension vector and
 // b is a base vector. Only the first coordinate of each a[i] is updated; the
-// remaining three are copied unchanged. Cost: 1 base addition per element.
+// remaining five are copied unchanged. Cost: 1 base addition per element.
 // All slices must have equal length.
 func VecAddExtBase(res []Ext, a []Ext, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
@@ -103,7 +103,7 @@ func VecAddBaseExt(res []Ext, a []Element, b []Ext) {
 }
 
 // VecAddExtExt sets res[i] = a[i] + b[i] over the extension field.
-// Cost: 4 base additions per element. All slices must have equal length.
+// Cost: 6 base additions per element. All slices must have equal length.
 func VecAddExtExt(res, a, b []Ext) {
 	mustEqualLen(len(res), len(a), len(b))
 	for i := range res {
@@ -156,20 +156,20 @@ func VecSubExtBase(res []Ext, a []Ext, b []Element) {
 // VecSubBaseExt sets res[i] = a[i] - b[i] where a is a base vector and b is
 // an extension vector. Note that subtraction is not commutative, so this
 // cannot simply delegate to VecSubExtBase.
-// Cost: 4 base negations + 1 base addition per element.
+// Cost: 6 base negations + 1 base addition per element.
 // All slices must have equal length.
 func VecSubBaseExt(res []Ext, a []Element, b []Ext) {
 	mustEqualLen(len(res), len(a), len(b))
 	for i := range res {
 		// Compute Lift(a[i]) - b[i] without allocating:
-		// negate all four components of b[i], then add a[i] to the first.
+		// negate all six components of b[i], then add a[i] to the first.
 		res[i].Neg(&b[i])
 		res[i].B0.A0.Add(&res[i].B0.A0, &a[i])
 	}
 }
 
 // VecSubExtExt sets res[i] = a[i] - b[i] over the extension field.
-// Cost: 4 base subtractions per element. All slices must have equal length.
+// Cost: 6 base subtractions per element. All slices must have equal length.
 func VecSubExtExt(res, a, b []Ext) {
 	mustEqualLen(len(res), len(a), len(b))
 	for i := range res {
@@ -212,7 +212,7 @@ func VecMulBaseBase(res, a, b []Element) {
 // VecMulExtBase sets res[i] = a[i] * b[i] where a is an extension vector and
 // b is a base vector. Uses [Ext.MulByElement] which exploits the base-field
 // structure of b[i].
-// Cost: 4 base multiplications per element (vs ~9 for full extension mul).
+// Cost: 6 base multiplications per element (vs ~24 for full extension mul).
 // All slices must have equal length.
 func VecMulExtBase(res []Ext, a []Ext, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
@@ -224,14 +224,14 @@ func VecMulExtBase(res []Ext, a []Ext, b []Element) {
 // VecMulBaseExt sets res[i] = a[i] * b[i] where a is a base vector and b is
 // an extension vector. Multiplication is commutative, so this delegates to
 // [VecMulExtBase].
-// Cost: 4 base multiplications per element.
+// Cost: 6 base multiplications per element.
 // All slices must have equal length.
 func VecMulBaseExt(res []Ext, a []Element, b []Ext) {
 	VecMulExtBase(res, b, a)
 }
 
 // VecMulExtExt sets res[i] = a[i] * b[i] over the extension field.
-// Cost: ~9 base multiplications per element (Karatsuba over E2).
+// Cost: ~24 base multiplications per element (Karatsuba over E2 for E6).
 // All slices must have equal length.
 func VecMulExtExt(res, a, b []Ext) {
 	mustEqualLen(len(res), len(a), len(b))
@@ -309,7 +309,7 @@ func VecScaleBaseBase(res []Element, s Element, a []Element) {
 
 // VecScaleBaseExt sets res[i] = s * a[i] where s is a base scalar and a is an
 // extension vector. Uses [Ext.MulByElement] to exploit the base structure of s.
-// Cost: 4 base multiplications per element.
+// Cost: 6 base multiplications per element.
 // res and a must have equal length.
 func VecScaleBaseExt(res []Ext, s Element, a []Ext) {
 	mustEqualLen2(len(res), len(a))
@@ -321,7 +321,7 @@ func VecScaleBaseExt(res []Ext, s Element, a []Ext) {
 // VecScaleExtBase sets res[i] = s * a[i] where s is an extension scalar and a
 // is a base vector. Uses [Ext.MulByElement] to exploit the base structure of
 // each a[i].
-// Cost: 4 base multiplications per element.
+// Cost: 6 base multiplications per element.
 // res and a must have equal length.
 func VecScaleExtBase(res []Ext, s Ext, a []Element) {
 	mustEqualLen2(len(res), len(a))
@@ -331,7 +331,7 @@ func VecScaleExtBase(res []Ext, s Ext, a []Element) {
 }
 
 // VecScaleExtExt sets res[i] = s * a[i] where s and a are both extension-field.
-// Cost: ~9 base multiplications per element.
+// Cost: ~24 base multiplications per element.
 // res and a must have equal length.
 func VecScaleExtExt(res []Ext, s Ext, a []Ext) {
 	mustEqualLen2(len(res), len(a))

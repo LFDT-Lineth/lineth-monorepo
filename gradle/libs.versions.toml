@@ -7,7 +7,6 @@ jreleaser = {id = "org.jreleaser", version = "1.23.0"}
 dependencyLicenseReport = { id = "com.github.jk1.dependency-license-report", version = "3.1.1" }
 lombok = { id = "io.freefair.lombok", version = "9.2.0" }
 gradleVersions = { id = "com.github.ben-manes.versions", version = "0.51.0" }
-dependencyManagement = { id = "io.spring.dependency-management", version = "1.1.5" }
 besuPluginLibrary = { id = "net.consensys.besu-plugin-library", version = "0.2.1" }
 besuPluginDistribution = { id = "net.consensys.besu-plugin-distribution", version = "0.2.1" }
 hierynomusLicense = { id = "com.github.hierynomus.license", version = "0.16.1" }
@@ -40,9 +39,9 @@ undercouchDownload = "5.6.0"
 # Runtime
 # Besu commit hash from https://github.com/besu-eth/besu
 # This is the single source of truth for the Besu version.
-# During task execution, linea-besu/build.gradle resolves this commit,
-# writes linea-besu/.besu-resolved, and read by dependent modules.
-besuCommit = "36cda4fd1f5cfe0d55044885fde3530d71b7d57a"
+# During task execution, linea-besu/besu/build.gradle resolves this commit,
+# writes linea-besu/besu/.besu-resolved, and read by dependent modules.
+besuCommit = "9fcf3cc4aa746b84d0e0eaab86a00a0263f5b374"
 blobCompressor = "4.0.1"
 commonsIo = "2.21.0"
 blobShnarfCalculator = "3.0.1"
@@ -59,7 +58,7 @@ log4j = "2.25.3"
 micrometer = "1.16.4"
 netty = "4.2.12.Final"
 picoli = "4.7.6"
-slf4j="1.7.36"
+slf4j="2.0.16"
 teku = "25.12.0"
 tuweni = "2.7.1"
 vertx = "5.0.10"
@@ -70,6 +69,25 @@ jacoco = "0.8.14"
 flywaydb = "12.0.3"
 postgresql = "42.7.10"
 guava = "33.5.0"
+
+# Maru
+discovery = "26.3.0"
+# The published build.linea.internal:vertx-helper artifact is on Vert.x 4.
+# Maru depends on it (rather than the local :jvm-libs:generic:vertx-helper, which is on
+# Vert.x 5) because Besu 26.5's bytecode references both removed Vert.x 4 internal
+# types (e.g. io.vertx.core.impl.ConcurrentHashSet) AND removed Vert.x 4 methods on
+# still-present types (e.g. Vertx.nettyEventLoopGroup). Class-level shims cover the
+# former but not the latter, so maru must run on Vert.x 4 at test runtime. Drop this
+# pin and switch back to :jvm-libs:generic:vertx-helper once Besu moves to Vert.x 5.
+lineaPackages = "0.0.1-v20260327160734"
+dockerComposeRule = "2.3.0"
+http4k = "6.15.1.0"
+javalin = "6.7.0"
+jvmLibp2p = "1.2.2-RELEASE"
+kotlinxDatetime = "0.7.0"
+okhttp = "4.12.0"
+pktsCore = "3.0.10"
+rocksdbjni = "9.7.3"
 
 # Other
 googleJavaFormat = "1.27.0"

@@ -18,10 +18,10 @@ import (
 )
 
 const (
-	NbAggregationFPI = 18 // hardcoded constant , the number of functional public inputs used in the keccak hash.
+	NbAggregationFPI = 18 // hardcoded constant, the number of functional public inputs used in the keccak hash.
 )
 
-// Aggregation collects all the field that are used to construct the public
+// Aggregation collects all the fields that are used to construct the public
 // input of the finalization proof.
 type Aggregation struct {
 	FinalShnarf                             string
@@ -94,7 +94,7 @@ func (p Aggregation) Sum(hsh hash.Hash) []byte {
 	filteredAddrsHash := hsh.Sum(nil)
 
 	// Compute chain configuration hash using MiMC first
-	chainConfigHash := computeChainConfigurationHash(p.ChainID, p.BaseFee, p.CoinBase, p.L2MessageServiceAddr)
+	chainConfigHash := computeChainConfigurationHash(p.ChainID, p.BaseFee, p.CoinBase, p.L2MessageServiceAddr, p.IsAllowedCircuitID)
 
 	hsh.Reset()
 	writeHex(p.ParentAggregationFinalShnarf)
@@ -353,10 +353,8 @@ func (pi *AggregationFPISnark) Sum(api frontend.API, hash keccak.BlockHasher) [3
 		gnarkutil.ToBytes32(api, pi.FinalFtxNumber),
 		gnarkutil.ToBytes32(api, pi.L2MsgMerkleTreeDepth),
 		hash.Sum(pi.NbL2MsgMerkleTreeRoots, pi.L2MsgMerkleTreeRoots...),
-
 		//include a hash of the chain configuration
-		utils.ToBytes(api, pi.ChainConfigurationFPISnark.Sum(api)),
-
+		gnarkutil.ToBytes32(api, pi.ChainConfigurationFPISnark.Sum(api)),
 		pi.FilteredAddressesFPISnark.Sum(api, hash),
 	)
 
@@ -396,7 +394,7 @@ func copyFromHex(dst []byte, src string) error {
 func (pi *FilteredAddressesFPISnark) Sum(api frontend.API, hash keccak.BlockHasher) [32]frontend.Variable {
 	bytes32 := [][32]frontend.Variable{}
 	for _, addr := range pi.Addresses {
-		bytes32 = append(bytes32, utils.ToBytes(api, addr))
+		bytes32 = append(bytes32, gnarkutil.ToBytes32(api, addr))
 	}
 	// Use NbAddresses to hash only actual addresses, not padded ones
 	return hash.Sum(pi.NbAddresses, bytes32...)
@@ -457,11 +455,12 @@ func (pi *ChainConfigurationFPISnark) Sum(api frontend.API) frontend.Variable {
 		state = api.Select(firstBitIsZero, fullValueCompression, leastCompression)
 		api.Println(valueName, "new state after processing:", state)
 	}
-	// Process all three configuration values in order
+	// Process all configuration values in order
 	processValue(pi.ChainID, "ChainID")
 	processValue(pi.BaseFee, "BaseFee")
 	processValue(pi.CoinBase, "CoinBase")
 	processValue(pi.L2MessageServiceAddress, "L2MessageServiceAddress")
+	processValue(pi.IsAllowedCircuitID, "IsAllowedCircuitID")
 	api.Println("Final MiMC state:", state)
 
 	// TODO: @gusiri keep api.Println until dynamic chain config is released and stable.
@@ -480,7 +479,7 @@ func (pi *ChainConfigurationFPISnark) Sum(api frontend.API) frontend.Variable {
 //   - All realistic values have MSB (bit 255) = 0, so splitting never occurs
 //
 // The code is kept to match the Solidity implementation exactly.
-func computeChainConfigurationHash(chainID uint64, baseFee uint64, coinBase types.EthAddress, l2MessageServiceAddr types.EthAddress) [32]byte {
+func computeChainConfigurationHash(chainID uint64, baseFee uint64, coinBase types.EthAddress, l2MessageServiceAddr types.EthAddress, isAllowedCircuitID uint64) [32]byte {
 	h := mimc.NewMiMC()
 	h.Reset()
 
@@ -506,6 +505,9 @@ func computeChainConfigurationHash(chainID uint64, baseFee uint64, coinBase type
 	var addrBytes [32]byte
 	copy(addrBytes[12:], l2MessageServiceAddr[:]) // address is 20 bytes. Padding to 32 bytes
 	h.Write(addrBytes[:])
+
+	// Process IsAllowedCircuitID bitmask
+	writeValue(new(big.Int).SetUint64(isAllowedCircuitID))
 
 	var result [32]byte
 	copy(result[:], h.Sum(nil))

@@ -1,7 +1,7 @@
 package polynomials
 
 import (
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // evalNative evaluates p(X) = Σᵢ p[i]·Xⁱ at z using Horner's method.
@@ -23,11 +23,32 @@ func evalNative(poly field.Vec, z field.Gen) field.Gen {
 	return res
 }
 
+// EvalCanonicalBase evaluates p(X) = Σᵢ p[i]·Xⁱ at z using Horner's method.
+// The result is tagged base.
+func EvalCanonicalBase(poly []field.Element, z field.Element) field.Element {
+	return evalNative(
+		field.VecFromBase(poly),
+		field.ElemFromBase(z),
+	).AsBase()
+}
+
+// EvalCanonicalBase evaluates p(X) = Σᵢ p[i]·Xⁱ at z using Horner's method.
+// The result is tagged base.
+func EvalCanonicalExt(poly []field.Ext, z field.Ext) field.Ext {
+	return evalNative(
+		field.VecFromExt(poly),
+		field.ElemFromExt(z),
+	).AsExt()
+}
+
 // EvalCanonical evaluates p(X) = Σᵢ p[i]·Xⁱ at z using Horner's method.
 // The result is tagged base iff both poly and z are base-field values.
 func EvalCanonical(poly field.Vec, z field.Gen) field.Gen {
 	return evalNative(poly, z)
 }
+
+// LinearCombineCanonical linearly combines a list of vectors into a single
+// vector using powers of alpha as weights.
 
 // EvalCanonicalBatch evaluates multiple polynomials at the same point z,
 // sharing a precomputed power table z⁰, z¹, ..., z^(maxDeg-1).
@@ -77,12 +98,12 @@ func EvalCanonicalBatch(polys []field.Vec, z field.Gen) []field.Gen {
 		acc := field.ElemZero()
 		if poly.IsBase() {
 			base := poly.AsBase()
-			for i := 0; i < n; i++ {
+			for i := range n {
 				acc = acc.Add(field.ElemFromBase(base[i]).Mul(powers[i]))
 			}
 		} else {
 			ext := poly.AsExt()
-			for i := 0; i < n; i++ {
+			for i := range n {
 				acc = acc.Add(field.ElemFromExt(ext[i]).Mul(powers[i]))
 			}
 		}

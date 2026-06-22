@@ -1,0 +1,37 @@
+buildscript {
+  repositories {
+    mavenCentral()
+    gradlePluginPortal()
+  }
+  dependencies {
+    classpath(libs.jreleaser)
+  }
+}
+
+repositories {
+  mavenCentral()
+  maven {
+    name = 'linea-besu'
+    url = "https://artifacts.consensys.net/public/linea-besu/maven/"
+  }
+}
+
+group = 'build.linea'
+description = 'Linea chain security interfaces'
+// publishing.gradle uses project.artifactId when set (or else falling back to project.name)
+ext.artifactId = 'sequencer-interfaces'
+
+jar { enabled = true }
+
+dependencies {
+  // Besu Plugin API and core dependencies
+  compileOnly "org.hyperledger.besu:besu-plugin-api:${rootProject.ext.resolveBesuVersion()}"
+  compileOnly "org.hyperledger.besu:besu-evm:${rootProject.ext.resolveBesuVersion()}"
+  compileOnly "org.hyperledger.besu:besu-datatypes:${rootProject.ext.resolveBesuVersion()}"
+}
+
+apply from: rootProject.file("gradle/publishing.gradle")
+
+tasks.withType(GenerateModuleMetadata).configureEach {
+  suppressedValidationErrors.add('enforced-platform')
+}

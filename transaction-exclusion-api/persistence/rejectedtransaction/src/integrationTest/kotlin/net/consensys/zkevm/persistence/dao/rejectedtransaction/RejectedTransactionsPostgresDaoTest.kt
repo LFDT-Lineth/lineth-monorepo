@@ -9,6 +9,8 @@ import linea.error.DuplicatedRecordException
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import linea.kotlin.trimToMillisecondPrecision
+import linea.persistence.db.DbHelper
+import linea.persistence.db.test.CleanDbTestSuiteParallel
 import net.consensys.FakeFixedClock
 import net.consensys.linea.async.get
 import net.consensys.linea.transactionexclusion.ModuleOverflow
@@ -16,8 +18,6 @@ import net.consensys.linea.transactionexclusion.RejectedTransaction
 import net.consensys.linea.transactionexclusion.TransactionInfo
 import net.consensys.linea.transactionexclusion.test.defaultRejectedTransaction
 import net.consensys.linea.transactionexclusion.test.rejectedContractDeploymentTransaction
-import net.consensys.zkevm.persistence.db.DbHelper
-import net.consensys.zkevm.persistence.db.test.CleanDbTestSuiteParallel
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

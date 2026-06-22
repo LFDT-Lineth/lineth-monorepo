@@ -1,0 +1,32 @@
+pub input data(address:u8) -> (byte:u24)
+
+// check that cast (a | b) == (cast a | cast b) ... and equivalent for AND, XOR
+// where width a < power of 2 < width of cast a 
+
+fn main() {
+    var x:u24 = data[0]
+    var y:u24 = data[1]
+
+    var xcast:u35 = x as u35
+    var ycast:u35 = y as u35
+
+    var or:u35 = (x | y) as u35
+    var orcast:u35 = xcast | ycast
+    if or != orcast {
+        fail
+    }
+
+    var and:u35 = (x & y) as u35
+    var andcast:u35 = xcast & ycast
+    if and != andcast {
+        fail
+    }
+
+    var xor:u35 = (x ^ y) as u35
+    var xorcast:u35 = xcast ^ ycast
+    if xor != xorcast {
+        fail
+    }
+
+    return
+}

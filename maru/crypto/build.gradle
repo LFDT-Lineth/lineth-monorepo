@@ -1,0 +1,20 @@
+plugins {
+  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'java-test-fixtures'
+}
+
+dependencies {
+  implementation(project(':maru:core'))
+  implementation(project(':jvm-libs:generic:extensions:kotlin'))
+  implementation("org.hyperledger.besu:besu-datatypes")
+  implementation("org.hyperledger.besu.internal:besu-crypto-algorithms")
+  implementation("org.hyperledger.besu.internal:besu-crypto-services")
+  implementation("org.hyperledger.besu.internal:besu-ethereum-core")
+  implementation "io.consensys.tuweni:tuweni-bytes:${libs.versions.tuweni.get()}"
+
+  testFixturesImplementation "io.libp2p:jvm-libp2p:${libs.versions.jvmLibp2p.get()}"
+  testFixturesImplementation "tech.pegasys.teku.internal:p2p:${libs.versions.teku.get()}"
+  testFixturesImplementation project(':jvm-libs:generic:extensions:kotlin')
+
+  testImplementation project(':jvm-libs:generic:extensions:kotlin')
+}

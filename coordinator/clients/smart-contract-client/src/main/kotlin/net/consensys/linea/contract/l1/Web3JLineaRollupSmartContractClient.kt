@@ -1,6 +1,6 @@
 package net.consensys.linea.contract.l1
 
-import build.linea.contract.LineaRollupV6
+import linea.contract.LineaRollupV6
 import linea.contract.l1.BlockAndNonce
 import linea.contract.l1.LineaRollupSmartContractClient
 import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
@@ -108,7 +108,7 @@ class Web3JLineaRollupSmartContractClient internal constructor(
       .thenCompose { blockNumber ->
         web3jLineaClient.setDefaultBlockParameter(DefaultBlockParameter.valueOf(blockNumber))
         resetNonce(blockNumber)
-          .thenApply { BlockAndNonce(blockNumber.toULong(), currentNonce()) }
+          .thenApply { currentNonce -> BlockAndNonce(blockNumber.toULong(), currentNonce) }
       }
   }
 

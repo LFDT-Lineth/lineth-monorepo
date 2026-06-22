@@ -16,16 +16,16 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. |
-| L2_SECURITY_COUNCIL  | true      | address | L2 Security Council Address |
+| L2_SECURITY_COUNCIL  | registry\|env | address | L2 Security Council Address. Read from registry on stable networks; env var used as fallback. |
 | ROLLUP_REVENUE_VAULT_LAST_INVOICE_DATE | true | uint256 | Last invoice date timestamp |
-| ROLLUP_REVENUE_VAULT_INVOICE_SUBMITTER | true | address | Invoice submitter address |
-| ROLLUP_REVENUE_VAULT_BURNER | true | address | Burner address |
-| ROLLUP_REVENUE_VAULT_INVOICE_PAYMENT_RECEIVER | true | address | Invoice payment receiver address |
-| ROLLUP_REVENUE_VAULT_TOKEN_BRIDGE | true | address | Token bridge address |
-| L2_MESSAGE_SERVICE_ADDRESS | true | address | L2 Message Service address |
-| ROLLUP_REVENUE_VAULT_L1_LINEA_TOKEN_BURNER | true | address | L1 Linea token burner address |
-| ROLLUP_REVENUE_VAULT_LINEA_TOKEN | true | address | Linea token address |
-| ROLLUP_REVENUE_VAULT_DEX_SWAP_ADAPTER | true | address | DEX swap adapter address |
+| ROLLUP_REVENUE_VAULT_INVOICE_SUBMITTER | registry\|env | address | Invoice submitter address. Read from registry on stable networks; env var used as fallback. |
+| ROLLUP_REVENUE_VAULT_BURNER | registry\|env | address | Burner address. Read from registry on stable networks; env var used as fallback. |
+| ROLLUP_REVENUE_VAULT_INVOICE_PAYMENT_RECEIVER | registry\|env | address | Invoice payment receiver address. Read from registry if present; env var used as fallback. |
+| TOKEN_BRIDGE_ADDRESS | registry\|env | address | Token bridge (L2) address. Looks up `TokenBridge_L2` from registry on stable networks; env var used as fallback. |
+| L2_MESSAGE_SERVICE_ADDRESS | registry\|env | address | L2 Message Service address. Read from registry on stable networks; env var used as fallback. |
+| ROLLUP_REVENUE_VAULT_L1_LINEA_TOKEN_BURNER | registry\|env | address | L1 Linea token burner address. Read from registry if present; env var used as fallback. |
+| ROLLUP_REVENUE_VAULT_LINEA_TOKEN | registry\|env | address | Linea token address. Read from registry on stable networks; env var used as fallback. |
+| ROLLUP_REVENUE_VAULT_DEX_SWAP_ADAPTER | registry\|env | address | DEX swap adapter address. Read from registry if present; env var used as fallback. |
 
 <br />
 
@@ -47,17 +47,17 @@ Deploys a new RollupRevenueVault implementation and generates encoded upgrade ca
 | Parameter name | Required | Input value | Description |
 |---|---|---|---|
 | \**DEPLOYER_PRIVATE_KEY* | true | key | Network-specific private key |
-| ROLLUP_REVENUE_VAULT_ADDRESS | true | address | Existing RollupRevenueVault proxy address |
+| ROLLUP_REVENUE_VAULT_ADDRESS | registry\|env | address | Existing RollupRevenueVault proxy address. Read from registry on stable networks; env var used as fallback. |
 | ROLLUP_REVENUE_VAULT_LAST_INVOICE_DATE | true | uint256 | Last invoice date timestamp |
-| L2_SECURITY_COUNCIL | true | address | L2 Security Council Address |
-| ROLLUP_REVENUE_VAULT_INVOICE_SUBMITTER | true | address | Invoice submitter address |
-| ROLLUP_REVENUE_VAULT_BURNER | true | address | Burner address |
-| ROLLUP_REVENUE_VAULT_INVOICE_PAYMENT_RECEIVER | true | address | Invoice payment receiver address |
-| ROLLUP_REVENUE_VAULT_TOKEN_BRIDGE | true | address | Token bridge address |
-| L2_MESSAGE_SERVICE_ADDRESS | true | address | L2 Message Service address |
-| ROLLUP_REVENUE_VAULT_L1_LINEA_TOKEN_BURNER | true | address | L1 Linea token burner address |
-| ROLLUP_REVENUE_VAULT_LINEA_TOKEN | true | address | Linea token address |
-| ROLLUP_REVENUE_VAULT_DEX_SWAP_ADAPTER | true | address | DEX swap adapter address |
+| L2_SECURITY_COUNCIL | registry\|env | address | L2 Security Council Address. Read from registry on stable networks; env var used as fallback. |
+| ROLLUP_REVENUE_VAULT_INVOICE_SUBMITTER | registry\|env | address | Invoice submitter address. Read from registry on stable networks; env var used as fallback. |
+| ROLLUP_REVENUE_VAULT_BURNER | registry\|env | address | Burner address. Read from registry on stable networks; env var used as fallback. |
+| ROLLUP_REVENUE_VAULT_INVOICE_PAYMENT_RECEIVER | registry\|env | address | Invoice payment receiver address. Read from registry if present; env var used as fallback. |
+| TOKEN_BRIDGE_ADDRESS | registry\|env | address | Token bridge (L2) address. Looks up `TokenBridge_L2` from registry on stable networks; env var used as fallback. |
+| L2_MESSAGE_SERVICE_ADDRESS | registry\|env | address | L2 Message Service address. Read from registry on stable networks; env var used as fallback. |
+| ROLLUP_REVENUE_VAULT_L1_LINEA_TOKEN_BURNER | registry\|env | address | L1 Linea token burner address. Read from registry if present; env var used as fallback. |
+| ROLLUP_REVENUE_VAULT_LINEA_TOKEN | registry\|env | address | Linea token address. Read from registry on stable networks; env var used as fallback. |
+| ROLLUP_REVENUE_VAULT_DEX_SWAP_ADAPTER | registry\|env | address | DEX swap adapter address. Read from registry if present; env var used as fallback. |
 
 ```shell
 pnpm exec hardhat deploy --network linea_sepolia --tags RollupRevenueVaultWithReinitialization

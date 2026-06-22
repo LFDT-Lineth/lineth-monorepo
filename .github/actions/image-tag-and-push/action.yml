@@ -67,7 +67,7 @@ runs:
         docker save ${{ inputs.image_name }}:${{ inputs.commit_tag }} | gzip > ${{ steps.split.outputs.image_name_suffix }}-docker-image.tar.gz
     - name: Upload Docker image artifact for later use in e2e test
       if: ${{ github.ref == 'refs/heads/main' && inputs.last_commit_tag_exists == '0' }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: ${{ steps.split.outputs.image_name_suffix }}
         path: ${{ steps.split.outputs.image_name_suffix }}-docker-image.tar.gz

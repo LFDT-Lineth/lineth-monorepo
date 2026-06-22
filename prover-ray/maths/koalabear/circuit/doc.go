@@ -2,7 +2,7 @@
 //
 // This package contains two main types:
 //   - [Var]: A circuit variable over the KoalaBear base field
-//   - [Ext]: A circuit variable over the degree-4 extension field
+//   - [Ext]: A circuit variable over the degree-6 extension field
 //
 // These types abstract over native and emulated arithmetic, allowing the same
 // circuit code to work in both native KoalaBear circuits and emulated circuits

@@ -1,0 +1,15 @@
+.{
+    .name = .verifier_ray,
+    .fingerprint = 0xd1f807a3b6cefe12,
+    .version = "0.1.0",
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{},
+    .paths = .{
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "test",
+        "testdata",
+    },
+}

@@ -1,6 +1,6 @@
-# Linea Monorepo Documentation
+# Lineth Monorepo Documentation
 
-> Comprehensive technical documentation for the Linea zkEVM rollup stack.
+> Comprehensive technical documentation for the Lineth zkEVM rollup stack.
 
 > **See also:** [All Mermaid Diagrams](./diagrams/README.md) — Index of all architecture and flow diagrams
 
@@ -18,11 +18,11 @@
 ## Repository Structure
 
 ```
-linea-monorepo/
+lineth-monorepo/
 ├── Kotlin/Java (Gradle)
 │   ├── coordinator/          # Orchestration service
 │   ├── jvm-libs/             # Shared JVM libraries
-│   ├── besu-plugins/         # Besu plugin extensions
+│   ├── linea-besu/plugins/         # Besu plugin extensions
 │   ├── tracer/               # EVM trace generation
 │   ├── transaction-exclusion-api/
 │   └── testing-tools/
@@ -40,8 +40,8 @@ linea-monorepo/
 │   ├── e2e/                  # End-to-end tests
 │   ├── ts-libs/              # Shared TS libraries
 │   └── operations/
-│       ├── operations-cli/   # CLI operational tools
-│       └── native-yield-operations/
+│       ├── cli/   # CLI operational tools
+│       └── native-yield/
 │
 ├── Rust
 │   └── corset/               # Constraint compiler

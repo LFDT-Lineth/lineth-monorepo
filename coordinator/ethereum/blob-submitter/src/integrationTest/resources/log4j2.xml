@@ -6,7 +6,7 @@
     </Console>
   </Appenders>
   <Loggers>
-    <Logger name="net.consensys.zkevm.ethereum" level="debug" additivity="false">
+    <Logger name="linea" level="debug" additivity="false">
       <AppenderRef ref="console"/>
     </Logger>
     <Logger name="net.consensys.linea" level="info" additivity="false">

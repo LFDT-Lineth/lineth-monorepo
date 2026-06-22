@@ -1,0 +1,15 @@
+type word = u8
+pub input data(address:u8) -> (byte:u8)
+
+// typeShiftExpression: alias (word) << UnsignedInt (u8) - same bitwidth
+fn main() {
+    var x:word = data[0]
+    var y:u8 = data[1]
+    var z:word = data[2]
+
+    if (x << y) != z {
+        fail
+    }
+
+    return
+}

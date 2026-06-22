@@ -5,7 +5,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { flushSync } from "react-dom";
 
-import { HARDHAT_SIGNER_UI_SESSION_TOKEN_HEADER, postJson } from "./bridgeApiClient";
+import { HARDHAT_SIGNER_UI_SESSION_TOKEN_HEADER, bootstrapSession, postJson } from "./bridgeApiClient";
 import { LineaWordmark } from "./components/LineaWordmark";
 import {
   canEnableSignButton,
@@ -18,7 +18,6 @@ import {
   signerTxFragmentId,
   signerUiHistoryStorageKey,
   signerUiLastSessionIdStorageKey,
-  signerUiSessionSecretStorageKey,
   transactionExplorerUrl,
   transactionKindBadgeLabels,
   type TransactionDetails,
@@ -92,6 +91,8 @@ type SessionState = {
   scriptOrdinal?: number;
   batchRunActive?: boolean;
   batchTagsSummary?: string | null;
+  /** Wallet-signed transaction count for this session (proxy deploys use multiple steps). */
+  transactionOrdinal?: number;
   /** Set by the bridge just before a deploy batch closes so the UI can stop polling. */
   sessionOutcome?: "complete" | "error" | null;
   outcomeMessage?: string | null;
@@ -305,20 +306,41 @@ function ContractsDeployUiPage() {
       return;
     }
 
+    let cancelled = false;
+    setSessionAuthReady(false);
+
     if (sessionSecretFromUrl) {
       setSessionSecret(sessionSecretFromUrl);
       const nextUrl = new URL(window.location.href);
       nextUrl.searchParams.delete("sessionToken");
       window.history.replaceState({}, "", `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
       setSessionAuthReady(true);
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
 
-    const storageKey = signerUiSessionSecretStorageKey(apiBaseUrl);
-    setSessionSecret((previousSessionSecret) => {
-      return previousSessionSecret ?? sessionStorage.getItem(storageKey);
-    });
-    setSessionAuthReady(true);
+    const loadSessionSecret = async () => {
+      try {
+        const bootstrappedSessionSecret = await bootstrapSession(apiBaseUrl);
+        if (cancelled) {
+          return;
+        }
+        setSessionSecret(bootstrappedSessionSecret);
+        setSessionAuthReady(true);
+      } catch (error) {
+        if (!cancelled) {
+          setSessionSecret(null);
+          setActionError((error as Error).message ?? "Failed to bootstrap the signer session.");
+          setSessionAuthReady(true);
+        }
+      }
+    };
+
+    void loadSessionSecret();
+    return () => {
+      cancelled = true;
+    };
   }, [apiBaseUrl, sessionSecretFromUrl]);
 
   const sessionUrl = useMemo(() => {
@@ -370,9 +392,7 @@ function ContractsDeployUiPage() {
     }
 
     if (!sessionSecret) {
-      setActionError(
-        "Missing session token. Open this UI using the full URL from Hardhat (HARDHAT_SIGNER_UI), not a bookmark without sessionToken.",
-      );
+      setActionError("Missing session token. Open this UI from the current Hardhat signer run, not an old bookmark.");
       return;
     }
 
@@ -724,6 +744,21 @@ function ContractsDeployUiPage() {
         ],
       });
 
+      setSession((prev) =>
+        prev?.pendingRequest
+          ? {
+              ...prev,
+              transactionProgress: {
+                requestId: prev.pendingRequest.id,
+                stage: "submitted_waiting_for_rpc",
+                message:
+                  "Transaction submitted in the wallet. Waiting for Hardhat to confirm the handoff on the RPC.",
+                updatedAt: new Date().toISOString(),
+              },
+            }
+          : prev,
+      );
+
       await postJson(
         `${apiBaseUrl}/api/respond`,
         {
@@ -734,6 +769,20 @@ function ContractsDeployUiPage() {
         },
         sessionSecret,
       );
+
+      if (sessionUrl) {
+        try {
+          const sessionResponse = await fetch(sessionUrl, {
+            headers: { [HARDHAT_SIGNER_UI_SESSION_TOKEN_HEADER]: sessionSecret },
+          });
+          if (sessionResponse.ok) {
+            const refreshed = (await sessionResponse.json()) as SessionState;
+            setSession(refreshed);
+          }
+        } catch {
+          /* polling will catch up */
+        }
+      }
 
       const historyKey = signerUiHistoryStorageKey(apiBaseUrl, session.sessionId);
       const entry: CompletedDeploymentTx = {
@@ -831,6 +880,12 @@ function ContractsDeployUiPage() {
                   {isPostSubmitProgress ? "Current transaction in progress" : "Sign current transaction"}
                 </h2>
                 <p className="deploy-quick-action__label">{pending.label}</p>
+                {session?.transactionOrdinal && session.transactionOrdinal > 1 ? (
+                  <p className="deploy-quick-action__hint">
+                    Hardhat is waiting for wallet step {session.transactionOrdinal}. OpenZeppelin proxy deploys
+                    usually need several signatures — approve each one until the terminal reports complete.
+                  </p>
+                ) : null}
                 <TransactionKindBadges details={pending.transactionDetails} />
                 {progress && pending.id === progress.requestId ? (
                   <PendingTransactionProgress progress={progress} />

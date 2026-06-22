@@ -14,32 +14,32 @@ concurrency:
 jobs:
   run-linea-sequencer-plugins-unit-tests:
     name: "Sequencer Plugin Unit Tests"
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Tracer Environment # configures Go, Java, and Gradle
         uses: ./.github/actions/setup-tracer-environment
 
       - name: spotless
-        run: ./gradlew --parallel besu-plugins:linea-sequencer:spotlessCheck
+        run: ./gradlew --parallel linea-besu:plugins:linea-sequencer:spotlessCheck
 
       - name: Build
-        run: ./gradlew besu-plugins:linea-sequencer:build
+        run: ./gradlew linea-besu:plugins:linea-sequencer:build
 
       - name: Run unit tests
-        run: ./gradlew besu-plugins:linea-sequencer:sequencer:test
+        run: ./gradlew linea-besu:plugins:linea-sequencer:sequencer:test
 
       - name: Upload test report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: unit-test-report
-          path: besu-plugins/linea-sequencer/sequencer/build/reports/tests/test/
+          path: linea-besu/plugins/linea-sequencer/sequencer/build/reports/tests/test/
       - name: Upload Jacoco execution data
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: jacoco-linea-sequencer-unit-exec
           path: |
@@ -48,28 +48,28 @@ jobs:
 
   run-linea-sequencer-plugins-acceptance-tests:
     name: "Sequencer Plugin Acceptance Tests"
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Tracer Environment
         uses: ./.github/actions/setup-tracer-environment
 
       - name: Run acceptance tests
-        run: ./gradlew besu-plugins:linea-sequencer:acceptance-tests:acceptanceTests
+        run: ./gradlew linea-besu:plugins:linea-sequencer:acceptance-tests:acceptanceTests
         env:
           JAVA_OPTS: -Xmx10g -Xms2g
 
       - name: Upload test report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: acceptance-test-report
-          path: besu-plugins/linea-sequencer/acceptance-tests/build/reports/tests/
+          path: linea-besu/plugins/linea-sequencer/acceptance-tests/build/reports/tests/
       - name: Upload Jacoco execution data
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: jacoco-linea-sequencer-acceptance-exec
           path: |

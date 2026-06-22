@@ -1,8 +1,8 @@
 package linea.coordinator.config.v2.toml
 
-import net.consensys.zkevm.coordinator.clients.prover.FileBasedProverConfig
-import net.consensys.zkevm.coordinator.clients.prover.ProverConfig
-import net.consensys.zkevm.coordinator.clients.prover.ProversConfig
+import linea.coordinator.clients.prover.FileBasedProverConfig
+import linea.coordinator.clients.prover.ProverConfig
+import linea.coordinator.clients.prover.ProversConfig
 import java.nio.file.Path
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds

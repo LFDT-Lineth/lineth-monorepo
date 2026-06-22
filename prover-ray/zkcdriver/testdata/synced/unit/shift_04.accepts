@@ -1,0 +1,6 @@
+{ "data": "0x00000000_00000000_00000000" }
+{ "data": "0xffffffff_00000000_ffffffff" }
+{ "data": "0xffffffff_00000001_7fffffff" }
+{ "data": "0xffffffff_00000008_00ffffff" }
+{ "data": "0xdeadbeef_00000004_0deadbee" }
+{ "data": "0x80000000_0000001f_00000001" }

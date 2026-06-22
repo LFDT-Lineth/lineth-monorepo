@@ -1,4 +1,5 @@
 include "utils/constants.zkc"
+include "utils/register_utils.zkc"
 include "utils/type.zkc"
 include "instruction_processing/b_type.zkc"
 include "instruction_processing/r_type.zkc"
@@ -7,7 +8,7 @@ include "instruction_processing/s_type.zkc"
 include "instruction_processing/j_type.zkc"
 include "instruction_processing/u_type.zkc"
 
-fn interpreter<ram, registers>(instruction:u32, pc:Address) -> (new_pc:Address) {
+fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block>(instruction:u32, pc:Address) -> (new_pc:Address) {
 
     var instruction_parameters:u25
     var instruction_type:Type
@@ -15,41 +16,34 @@ fn interpreter<ram, registers>(instruction:u32, pc:Address) -> (new_pc:Address) 
     instruction_parameters::opcode = instruction
     instruction_type = instruction_type_from_opcode(opcode)
 
-    printf "instruction %b\n", instruction
-    printf "opcode:     %b\n", opcode
-    printf "type:       %b\n", instruction_type
-    printf "parameters: %b\n", instruction_parameters
-
     // TODO: handle the case where rd = 0: we will handle this in RAM itself, likely by adding an extra read-write pair
     // to reset the value in registers[rd] to 0
 
     switch instruction_type {
         case R_TYPE: {
-            printf "R-Type instruction\n"
             process_R_type_instruction(opcode, instruction_parameters)
             new_pc = pc + 4 as Address
         }
         case I_TYPE: {
-            printf "I-Type instruction\n"
             new_pc = process_I_type_instruction(opcode, instruction_parameters, pc)
         }
         case S_TYPE: {
-            printf "S-Type instruction\n"
             process_S_type_instruction(instruction_parameters)
             new_pc = pc + 4 as Address
         }
         case B_TYPE: {
-            printf "B-Type instruction\n"
             new_pc = process_B_type_instruction(instruction_parameters, pc)
         }
         case U_TYPE: {
-            printf "U-Type instruction\n"
             process_U_type_instruction(opcode, instruction_parameters, pc)
             new_pc = pc + 4 as Address
         }
         case J_TYPE: {
-            printf "J-Type instruction\n"
             new_pc = process_J_type_instruction(instruction_parameters, pc)
+        }
+        case MISC_MEM_TYPE: {
+            // FENCE / FENCE.I — no caches, single hart, so this is a no-op.
+            new_pc = pc + 4 as Address
         }
         default: {
             printf "[ERROR] Unsupported instruction type %d\n", instruction_type
@@ -57,6 +51,6 @@ fn interpreter<ram, registers>(instruction:u32, pc:Address) -> (new_pc:Address) 
         }
     }
 
-    printf "-----------\n"
+    // Forcefully set registers[0] = zero back to 0
+    registers[0] = 0
 }
-

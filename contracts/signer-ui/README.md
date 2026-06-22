@@ -4,7 +4,7 @@ When `HARDHAT_SIGNER_UI=true`, Hardhat deploy scripts can route transactions thr
 
 `HARDHAT_SIGNER_UI=true` and `DEPLOYER_PRIVATE_KEY` are mutually exclusive. If both are set, Hardhat fails immediately rather than guessing between browser signing and private-key signing.
 
-The Hardhat side (`contracts/scripts/hardhat/signer-ui-bridge.ts`) starts a **local HTTP bridge** (session API + CORS), launches **`pnpm --dir contracts/signer-ui exec next dev`** on a free port, prints/opens the UI URL, and blocks until each transaction is **verified on-chain** against the pending request.
+The Hardhat side (`contracts/scripts/hardhat/signer-ui-bridge.ts`) starts a **local HTTP bridge** (session API + CORS), launches **`pnpm --dir contracts/signer-ui exec next dev`** on a free port, prints/opens the UI URL, bootstraps the browser session over loopback, and blocks until each transaction is **verified on-chain** against the pending request.
 
 This app is local operator tooling for the contracts package. It is not intended to be published, imported, or consumed as a standalone package.
 
@@ -61,7 +61,7 @@ pnpm exec hardhat deploy --network zkevm_dev --tags TestERC20
 ```
 
 1. Open the printed URL (or rely on auto-open unless `HARDHAT_SIGNER_UI_OPEN_BROWSER=false`).
-2. Use the full URL including `sessionToken` — it authenticates the browser to the bridge.
+2. Use the printed URL from the current Hardhat run. The browser bootstraps its bridge token over loopback; the token is not included in the URL.
 3. Connect the wallet and switch chain if prompted.
 4. Approve the transaction; the CLI continues when the tx matches the pending request on the RPC.
 

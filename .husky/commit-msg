@@ -25,10 +25,10 @@ ALLOWED_TYPES='feat|fix|docs|style|refactor|perf|test|chore|ci|revert|build'
 
 # Allowed scopes
 ALLOWED_SCOPES=\
-'coordinator prover prover-ray postman tx-exclusion-api '\
+'coordinator prover prover-ray verifier-ray postman tx-exclusion-api '\
 'linea-besu contracts sdk-core sdk-ethers sdk-viem '\
 'tracer sequencer state-recovery jvm-libs blob-libs '\
-'e2e ci docker deps misc'
+'e2e ci docker deps misc maru'
 
 # Match overall structure: <type>(<scope-group>)!?: <subject>
 HEADER_RE="^(${ALLOWED_TYPES})\\(([^)]+)\\)!?: .+"

@@ -1,0 +1,124 @@
+name: "Linea Besu Release"
+
+permissions:
+  actions: read
+  id-token: write
+  contents: write
+  packages: write
+  pull-requests: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag_suffix:
+        description: 'Custom docker image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDD]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDD]-[commit]'
+        required: false
+        type: string
+        default: ''
+      release_tag_suffix:
+        description: 'Custom release tag suffix (must need for non-main release), i.e. release tag would be releases/[component]/v[semver]-[suffix]'
+        required: false
+        type: string
+        default: ''
+      without_besu_fleet_plugin:
+        description: 'Type "true" to exclude besu-fleet-plugin in the release'
+        required: false
+        type: string
+        default: ''
+      pre_release:
+        description: 'Pre Release if checked; Draft release otherwise'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: linea-besu-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check-branch-and-release-tag-suffix:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    steps:
+      - name: Enforce non-main branch must have custom release tag suffix
+        if: github.ref_name != 'main' && inputs.release_tag_suffix == ''
+        run: |
+          echo "❌ Non-main branch must have non-empty custom tag suffix"
+          exit 1
+
+  compute-linea-besu-release-metadata:
+    needs: [check-branch-and-release-tag-suffix]
+    uses: ./.github/workflows/reusable-component-release-metadata.yml
+    with:
+      # Release tag uses 'linea-besu-package' (e.g. releases/linea-besu-package/v1.2.3)
+      component-name: linea-besu-package
+      include-path: |
+        tracer/**
+        tracer-constraints/**
+        linea-besu/plugins/linea-sequencer/**
+        linea-besu/besu/**
+        linea-besu/package/**
+        gradle/libs.versions.toml
+      release_tag_suffix: ${{ inputs.release_tag_suffix }}
+
+  run-test-linea-sequencer:
+    needs: [compute-linea-besu-release-metadata]
+    uses: ./.github/workflows/linea-sequencer-plugin-testing.yml
+    if: >
+      needs.compute-linea-besu-release-metadata.outputs.tag_changed == 'true' && 
+      github.ref_name != 'main'
+    secrets: inherit
+
+  run-test-constraints:
+    needs: [compute-linea-besu-release-metadata]
+    uses: ./.github/workflows/tracer-constraints-check-compilation.yml
+    if: >
+      needs.compute-linea-besu-release-metadata.outputs.tag_changed == 'true' && 
+      github.ref_name != 'main'
+    secrets: inherit
+
+  build-and-upload-artifact:
+    needs: [compute-linea-besu-release-metadata, run-test-linea-sequencer, run-test-constraints]
+    if: >
+      always() && !cancelled() &&
+      needs.compute-linea-besu-release-metadata.outputs.tag_changed == 'true' && 
+      (github.ref_name == 'main' || (needs.run-test-linea-sequencer.result == 'success' && needs.run-test-constraints.result == 'success'))
+    uses: ./.github/workflows/linea-besu-package-build-and-upload.yml
+    with:
+      release_version: ${{ needs.compute-linea-besu-release-metadata.outputs.release_version }}
+      with_besu_fleet_plugin: ${{ inputs.without_besu_fleet_plugin != 'true' }}
+    secrets: inherit
+
+  run-test:
+    needs: [ build-and-upload-artifact ]
+    if: always() && !cancelled() && needs.build-and-upload-artifact.result == 'success'
+    concurrency:
+      group: run-test-${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+    uses: ./.github/workflows/reusable-linea-besu-package-run-test.yml
+    with:
+      dockerimage: ${{ needs.build-and-upload-artifact.outputs.dockerimage }}
+
+  run-e2e-tests:
+    needs: [ build-and-upload-artifact ]
+    if: always() && !cancelled() && needs.build-and-upload-artifact.result == 'success'
+    concurrency:
+      group: run-e2e-tests-${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+    uses: ./.github/workflows/reusable-linea-besu-package-run-e2e-tests.yml
+    with:
+      linea_besu_package_tag: ${{ needs.build-and-upload-artifact.outputs.linea_besu_package_tag }}
+      e2e-tests-logs-dump: true
+      e2e-tests-with-besu-fleet: ${{ inputs.without_besu_fleet_plugin != 'true' }}
+    secrets: inherit
+
+  push-tag-update-changelog-and-gh-release:
+    needs: [run-test, run-e2e-tests]
+    if: always() && !cancelled() && needs.run-test.result == 'success' && needs.run-e2e-tests.result == 'success'
+    uses: ./.github/workflows/reusable-linea-besu-package-gh-release.yml
+    with:
+      image_tag_suffix: ${{ inputs.image_tag_suffix }}
+      release_tag_suffix: ${{ inputs.release_tag_suffix }}
+      without_besu_fleet_plugin: ${{ inputs.without_besu_fleet_plugin }}
+      draft_release: ${{ !inputs.pre_release }}
+      pre_release: ${{ inputs.pre_release }}
+    secrets: inherit

@@ -1,0 +1,61 @@
+name: "Reusable: Compute Component Release Metadata"
+
+on:
+  workflow_call:
+    inputs:
+      component-name:
+        description: "Component name — used to derive tag pattern (e.g. coordinator, postman)"
+        required: true
+        type: string
+      include-path:
+        description: 'newline-separated string to represent the "git-cliff --include-path filter"'
+        type: string
+      release_tag_suffix:
+        description: "Custom release tag suffix, i.e. release tag would be releases/[component]/v[semver]-[suffix]"
+        required: false
+        type: string
+        default: ''
+    outputs:
+      release_tag:
+        description: "Full release tag (e.g. releases/coordinator/v0.2.0)"
+        value: ${{ jobs.compute-release-metadata.outputs.release_tag }}
+      release_version:
+        description: "Bare semver (e.g. 0.2.0)"
+        value: ${{ jobs.compute-release-metadata.outputs.release_version }}
+      tag_changed:
+        description: "Whether the release tag has changed"
+        value: ${{ jobs.compute-release-metadata.outputs.tag_changed }}
+      changelog:
+        description: "Latest changelog section content"
+        value: ${{ jobs.compute-release-metadata.outputs.changelog }}
+
+jobs:
+  compute-release-metadata:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    name: Compute ${{ inputs.component-name }} release metadata (changelog + tag)
+    outputs:
+      release_tag: ${{ steps.changelog.outputs.next_tag }}
+      release_version: ${{ steps.changelog.outputs.next_version }}
+      tag_changed: ${{ steps.changelog.outputs.tag_changed }}
+      changelog: ${{ steps.changelog.outputs.changelog_content }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          submodules: false
+
+      - name: Install git-cliff
+        uses: taiki-e/install-action@5f57d6cb7cd20b14a8a27f522884c4bc8a187458 #(v2.75.19)
+        with:
+          tool: git-cliff
+
+      - name: Generate ${{ inputs.component-name }} latest changelog
+        id: changelog
+        uses: ./.github/actions/run-git-cliff-commands
+        with:
+          component-name: ${{ inputs.component-name }}
+          include-path: ${{ inputs.include-path }}
+          release_tag_suffix: ${{ inputs.release_tag_suffix }}
+          generate-changelog-with-next-tag-version: 'true'

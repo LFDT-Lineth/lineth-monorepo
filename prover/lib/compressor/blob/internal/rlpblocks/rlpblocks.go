@@ -22,7 +22,7 @@ var Get = sync.OnceValue(func() [][]byte {
 		panic(err)
 	}
 
-	rlpBlocksBinPath := filepath.Join(rootPath, "coordinator/core/src/test/resources/net/consensys/zkevm/coordination/blob/rlp_blocks.bin")
+	rlpBlocksBinPath := filepath.Join(rootPath, "coordinator/core/src/test/resources/linea/coordination/blob/rlp_blocks.bin")
 
 	// Try to read execution response data and generate blocks
 	var blocks [][]byte

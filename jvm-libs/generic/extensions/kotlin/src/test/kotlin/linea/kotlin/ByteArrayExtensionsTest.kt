@@ -18,6 +18,15 @@ class ByteArrayExtensionsTest {
   }
 
   @Test
+  fun `ByteArray#xor`() {
+    assertThat(byteArrayOf(0x0f, 0x55).xor(byteArrayOf(0xf0.toByte(), 0xaa.toByte())))
+      .isEqualTo(byteArrayOf(0xff.toByte(), 0xff.toByte()))
+    assertThatThrownBy { byteArrayOf(0x01).xor(byteArrayOf(0x01, 0x02)) }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessageContaining("ByteArrays must have the same length")
+  }
+
+  @Test
   fun `ByteArray#assertSize`() {
     assertThatThrownBy {
       byteArrayOf(1, 2, 3).assertSize(2u, "shortNumber")

@@ -1,6 +1,0 @@
-# Auto-managed cache of the (besuCommit -> resolved besuVersion) mapping.
-# Written by Gradle (:linea-besu:resolveBesuVersion) and refreshed by CI
-# (.github/workflows/linea-besu-build-and-publish.yml) on besuCommit bumps.
-# Do NOT edit by hand and do NOT commit local changes — this file is gitignored.
-besuCommit=36cda4fd1f5cfe0d55044885fde3530d71b7d57a
-besuVersion=26.5.0-36cda4f

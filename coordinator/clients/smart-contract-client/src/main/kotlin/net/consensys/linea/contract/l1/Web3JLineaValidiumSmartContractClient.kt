@@ -1,6 +1,6 @@
 package net.consensys.linea.contract.l1
 
-import build.linea.contract.ValidiumV1
+import linea.contract.ValidiumV1
 import linea.contract.l1.BlockAndNonce
 import linea.contract.l1.LineaValidiumSmartContractClient
 import linea.contract.l1.Web3JLineaValidiumSmartContractClientReadOnly

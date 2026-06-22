@@ -132,6 +132,7 @@ func (i *FunctionalPublicInputQSnark) RangeCheck(api frontend.API) {
 	}
 	rc.Check(i.Y[0], 128)
 	rc.Check(i.Y[1], 128)
+	api.AssertIsBoolean(i.Eip4844Enabled)
 }
 
 func (i *FunctionalPublicInput) ToSnarkType(maxNbBatches int) (FunctionalPublicInputSnark, error) {
@@ -288,13 +289,18 @@ func (c Circuit) Define(api frontend.API) error {
 	if err != nil {
 		return err
 	}
-	api.AssertIsDifferent(payloadLen, -1) // decompression should not fail
+	rBatches := internal.NewRange(api, c.FuncPI.NbBatches, len(c.FuncPI.BatchSums))
 
+	// payloadLen must be equal to the sum of the lengths of the batches.
+	// The Check method guarantees that they cannot add up to -1,
+	// which implicitly checks decompression success.
 	for i := range c.FuncPI.BatchSums {
 		if err = c.FuncPI.BatchSums[i].Check(api); err != nil {
 			return err
 		}
+		payloadLen = api.Sub(payloadLen, api.Mul(rBatches.InRange[i], c.FuncPI.BatchSums[i].Length))
 	}
+	api.AssertIsEqual(payloadLen, 0)
 
 	if err = CheckBatchesPartialSums(api, nbBatches, payload, c.FuncPI.BatchSums); err != nil {
 		return err

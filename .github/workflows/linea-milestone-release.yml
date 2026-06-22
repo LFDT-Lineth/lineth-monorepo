@@ -1,0 +1,391 @@
+name: "Linea Milestone Release"
+
+permissions:
+  actions: read
+  id-token: write
+  contents: write
+  packages: write
+  pull-requests: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag_suffix:
+        description: 'Custom docker image tag suffix, i.e. All docker images would be retagged as [semver]-[YYYYMMDD]-[commit]-[suffix]'
+        required: false
+        type: string
+        default: ''
+      release_tag_suffix:
+        description: 'Custom release tag suffix, i.e. release tag would be releases/[component]/v[semver]-[suffix]'
+        required: false
+        type: string
+        default: ''
+      pre_release:
+        description: 'Pre Release if checked; Draft release otherwise'
+        required: false
+        type: boolean
+        default: false
+      dry_run_release:
+        description: 'Dry run a release (without build and push the docker images to dockerhub)'
+        required: false
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      image_tag_suffix:
+        description: 'Custom docker image tag suffix, i.e. All docker images would be retagged as [semver]-[YYYYMMDD]-[commit]-[suffix]'
+        required: false
+        type: string
+        default: ''
+      release_tag_suffix:
+        description: 'Custom release tag suffix, i.e. release tag would be releases/[component]/v[semver]-[suffix]'
+        type: string
+        required: false
+        default: ''
+      pre_release:
+        description: 'Pre Release if checked; Draft release otherwise'
+        required: false
+        type: boolean
+        default: false
+      dry_run_release:
+        description: 'Dry run a release (without build and push the docker images to dockerhub)'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: linea-milestone-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check-branch-and-compute-tag:
+    uses: ./.github/workflows/reusable-milestone-check-branch-and-compute-tag.yml
+    with:
+      release_tag_suffix: ${{ inputs.release_tag_suffix }}
+    secrets: inherit
+
+  component-release-metadata:
+    needs: [check-branch-and-compute-tag]
+    uses: ./.github/workflows/reusable-milestone-component-release-metadata.yml
+    with:
+      release_tag_suffix: ${{ inputs.release_tag_suffix }} # non-empty release_tag_suffix can be only for non-main milestone release (e.g. dry run release)
+    secrets: inherit
+
+  build-local-coordinator:
+    needs: [component-release-metadata]
+    if: ${{ fromJson(needs.component-release-metadata.outputs.coordinator).tag_changed == 'true' }}
+    uses: ./.github/workflows/coordinator-build-and-publish.yml
+    with:
+      image_tag: local
+      develop_tag: develop
+      push_image: false
+    secrets: inherit
+
+  build-local-postman:
+    needs: [component-release-metadata]
+    if: ${{ fromJson(needs.component-release-metadata.outputs.postman).tag_changed == 'true' }}
+    uses: ./.github/workflows/postman-build-and-publish.yml
+    with:
+      image_tag: local
+      develop_tag: develop
+      push_image: false
+    secrets: inherit
+
+  build-local-prover:
+    needs: [component-release-metadata]
+    if: ${{ fromJson(needs.component-release-metadata.outputs.prover).tag_changed == 'true' }}
+    uses: ./.github/workflows/prover-build-and-publish.yml
+    with:
+      image_tag: local
+      develop_tag: develop
+      push_image: false
+    secrets: inherit
+
+  build-local-tx-exclusion-api:
+    needs: [component-release-metadata]
+    if: ${{ fromJson(needs.component-release-metadata.outputs.tx-exclusion-api).tag_changed == 'true' }}
+    uses: ./.github/workflows/transaction-exclusion-api-build-and-publish.yml
+    with:
+      image_tag: local
+      develop_tag: develop
+      push_image: false
+    secrets: inherit
+
+  build-local-maru:
+    needs: [component-release-metadata]
+    if: ${{ fromJson(needs.component-release-metadata.outputs.maru).tag_changed == 'true' }}
+    uses: ./.github/workflows/maru-build-and-publish.yml
+    with:
+      image_tag: local
+      develop_tag: develop
+      push_image: false
+    secrets: inherit
+
+  build-local-linea-besu-package:
+    needs: [component-release-metadata]
+    if: ${{ fromJson(needs.component-release-metadata.outputs.linea-besu-package).tag_changed == 'true' }}
+    uses: ./.github/workflows/linea-besu-package-build-and-upload.yml
+    with:
+      release_version: ${{ fromJson(needs.component-release-metadata.outputs.linea-besu-package).release_version }}
+      with_besu_fleet_plugin: true
+    secrets: inherit
+
+  component-latest-docker-tags:
+    needs:
+      - component-release-metadata
+      - build-local-coordinator
+      - build-local-postman
+      - build-local-prover
+      - build-local-tx-exclusion-api
+      - build-local-linea-besu-package
+      - build-local-maru
+    if: >
+      always() && !cancelled() &&
+      ((fromJson(needs.component-release-metadata.outputs.coordinator).tag_changed != 'true' || needs.build-local-coordinator.result == 'success') &&
+      (fromJson(needs.component-release-metadata.outputs.postman).tag_changed != 'true' || needs.build-local-postman.result == 'success') &&
+      (fromJson(needs.component-release-metadata.outputs.prover).tag_changed != 'true' || needs.build-local-prover.result == 'success') &&
+      (fromJson(needs.component-release-metadata.outputs.tx-exclusion-api).tag_changed != 'true' || needs.build-local-tx-exclusion-api.result == 'success') &&
+      (fromJson(needs.component-release-metadata.outputs.linea-besu-package).tag_changed != 'true' || needs.build-local-linea-besu-package.result == 'success') &&
+      (fromJson(needs.component-release-metadata.outputs.maru).tag_changed != 'true' || needs.build-local-maru.result == 'success'))
+    uses: ./.github/workflows/reusable-milestone-component-latest-docker-tags.yml
+    with:
+      coordinator_metadata: ${{ needs.component-release-metadata.outputs.coordinator }}
+      prover_metadata: ${{ needs.component-release-metadata.outputs.prover }}
+      postman_metadata: ${{ needs.component-release-metadata.outputs.postman }}
+      tx_exclusion_api_metadata: ${{ needs.component-release-metadata.outputs.tx-exclusion-api }}
+      linea_besu_package_metadata: ${{ needs.component-release-metadata.outputs.linea-besu-package }}
+      maru_metadata: ${{ needs.component-release-metadata.outputs.maru }}
+    secrets: inherit
+
+  run-e2e-tests:
+    needs: 
+      - component-release-metadata
+      - component-latest-docker-tags
+      - build-local-linea-besu-package
+    if: always() && !cancelled() && needs.component-latest-docker-tags.result == 'success'
+    uses: ./.github/workflows/reusable-run-e2e-tests.yml
+    with:
+      image_tag: local
+      coordinator_tag: ${{ fromJson(needs.component-release-metadata.outputs.coordinator).tag_changed != 'true' && needs.component-latest-docker-tags.outputs.coordinator || '' }}
+      postman_tag: ${{ fromJson(needs.component-release-metadata.outputs.postman).tag_changed != 'true' && needs.component-latest-docker-tags.outputs.postman || '' }}
+      prover_tag: ${{ fromJson(needs.component-release-metadata.outputs.prover).tag_changed != 'true' && needs.component-latest-docker-tags.outputs.prover || '' }}
+      tx_exclusion_api_tag: ${{ fromJson(needs.component-release-metadata.outputs.tx-exclusion-api).tag_changed != 'true' && needs.component-latest-docker-tags.outputs.tx-exclusion-api || '' }}
+      linea_besu_package_tag: ${{ fromJson(needs.component-release-metadata.outputs.linea-besu-package).tag_changed != 'true' && needs.component-latest-docker-tags.outputs.linea-besu-package || needs.build-local-linea-besu-package.outputs.linea_besu_package_tag }}
+      maru_tag: ${{ fromJson(needs.component-release-metadata.outputs.maru).tag_changed != 'true' && needs.component-latest-docker-tags.outputs.maru || '' }}
+      e2e-tests-logs-dump: true
+      has-changes-requiring-e2e-testing: 'true'
+    secrets: inherit
+
+  coordinator-gh-release:
+    needs: [component-release-metadata, run-e2e-tests]
+    if: >
+      always() && !cancelled() && 
+      needs.run-e2e-tests.result == 'success' &&
+      fromJson(needs.component-release-metadata.outputs.coordinator).tag_changed == 'true'
+    uses: ./.github/workflows/reusable-component-gh-release.yml
+    with:
+      component-name: coordinator
+      folder-name: coordinator
+      include-path: coordinator/**
+      image_tag_suffix: ${{ inputs.image_tag_suffix }}
+      release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
+      draft_release: ${{ !inputs.pre_release }}
+      pre_release: ${{ inputs.pre_release }}
+      dry_run_release: ${{ inputs.dry_run_release }}
+      upload_changelog: true
+    secrets: inherit
+
+  prover-gh-release:
+    needs: [component-release-metadata, run-e2e-tests]
+    if: >
+      always() && !cancelled() && 
+      needs.run-e2e-tests.result == 'success' &&
+      fromJson(needs.component-release-metadata.outputs.prover).tag_changed == 'true'
+    uses: ./.github/workflows/reusable-component-gh-release.yml
+    with:
+      component-name: prover
+      folder-name: prover
+      include-path: prover/**
+      image_tag_suffix: ${{ inputs.image_tag_suffix }}
+      release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
+      draft_release: ${{ !inputs.pre_release }}
+      pre_release: ${{ inputs.pre_release }}
+      dry_run_release: ${{ inputs.dry_run_release }}
+      upload_changelog: true
+    secrets: inherit
+
+  postman-gh-release:
+    needs: [component-release-metadata, run-e2e-tests]
+    if: >
+      always() && !cancelled() && 
+      needs.run-e2e-tests.result == 'success' &&
+      fromJson(needs.component-release-metadata.outputs.postman).tag_changed == 'true'
+    uses: ./.github/workflows/reusable-component-gh-release.yml
+    with:
+      component-name: postman
+      folder-name: postman
+      include-path: postman/**
+      image_tag_suffix: ${{ inputs.image_tag_suffix }}
+      release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
+      draft_release: ${{ !inputs.pre_release }}
+      pre_release: ${{ inputs.pre_release }}
+      dry_run_release: ${{ inputs.dry_run_release }}
+      upload_changelog: true
+    secrets: inherit
+
+  tx-exclusion-api-gh-release:
+    needs: [component-release-metadata, run-e2e-tests]
+    if: >
+      always() && !cancelled() && 
+      needs.run-e2e-tests.result == 'success' &&
+      fromJson(needs.component-release-metadata.outputs.tx-exclusion-api).tag_changed == 'true'
+    uses: ./.github/workflows/reusable-component-gh-release.yml
+    with:
+      component-name: tx-exclusion-api
+      folder-name: transaction-exclusion-api
+      include-path: transaction-exclusion-api/**
+      image_tag_suffix: ${{ inputs.image_tag_suffix }}
+      release_tag_suffix: ${{ inputs.release_tag_suffix }} # non-empty release_tag_suffix can be only for non-main milestone release (e.g. dry run release)
+      draft_release: ${{ !inputs.pre_release }}
+      pre_release: ${{ inputs.pre_release }}
+      dry_run_release: ${{ inputs.dry_run_release }}
+      upload_changelog: true
+    secrets: inherit
+
+  maru-gh-release:
+    needs: [component-release-metadata, run-e2e-tests]
+    if: >
+      always() && !cancelled() &&
+      needs.run-e2e-tests.result == 'success' &&
+      fromJson(needs.component-release-metadata.outputs.maru).tag_changed == 'true'
+    uses: ./.github/workflows/reusable-component-gh-release.yml
+    with:
+      component-name: maru
+      folder-name: maru
+      include-path: maru/**
+      image_tag_suffix: ${{ inputs.image_tag_suffix }}
+      release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
+      draft_release: ${{ !inputs.pre_release }}
+      pre_release: ${{ inputs.pre_release }}
+      dry_run_release: ${{ inputs.dry_run_release }}
+      upload_changelog: true
+    secrets: inherit
+
+  linea-besu-gh-release:
+    needs: [component-release-metadata, run-e2e-tests]
+    if: >
+      always() && !cancelled() && 
+      needs.run-e2e-tests.result == 'success' &&
+      fromJson(needs.component-release-metadata.outputs.linea-besu-package).tag_changed == 'true'
+    uses: ./.github/workflows/reusable-linea-besu-package-gh-release.yml
+    with:
+      image_tag_suffix: ${{ inputs.image_tag_suffix }}
+      release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
+      draft_release: ${{ !inputs.pre_release }}
+      pre_release: ${{ inputs.pre_release }}
+      dry_run_release: ${{ inputs.dry_run_release }}
+      upload_changelog: true
+    secrets: inherit
+
+  # retag docker image tags with image_tag_suffix for release tag unchanged components
+  retag-latest-docker-tags:
+    needs: [component-release-metadata, component-latest-docker-tags, run-e2e-tests]
+    if: >
+      always() && !cancelled() &&
+      inputs.image_tag_suffix != '' &&
+      needs.run-e2e-tests.result == 'success' &&
+      needs.component-latest-docker-tags.result == 'success'
+    uses: ./.github/workflows/reusable-milestone-retag-latest-docker-tags.yml
+    with:
+      image_tag_suffix: ${{ inputs.image_tag_suffix }}
+      coordinator_metadata: ${{ needs.component-release-metadata.outputs.coordinator }}
+      prover_metadata: ${{ needs.component-release-metadata.outputs.prover }}
+      postman_metadata: ${{ needs.component-release-metadata.outputs.postman }}
+      tx_exclusion_api_metadata: ${{ needs.component-release-metadata.outputs.tx-exclusion-api }}
+      linea_besu_package_metadata: ${{ needs.component-release-metadata.outputs.linea-besu-package }}
+      maru_metadata: ${{ needs.component-release-metadata.outputs.maru }}
+      coordinator_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.coordinator }}
+      prover_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.prover }}
+      postman_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.postman }}
+      tx_exclusion_api_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.tx-exclusion-api }}
+      linea_besu_package_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.linea-besu-package }}
+      maru_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.maru }}
+    secrets: inherit
+
+  # prepend CHANGELOG for each component and aggregate CHANGELOG for linea milestone release
+  linea-milestone-push-tag-changelog-update:
+    needs:
+      - check-branch-and-compute-tag
+      - component-release-metadata
+      - component-latest-docker-tags
+      - retag-latest-docker-tags
+      - coordinator-gh-release
+      - postman-gh-release
+      - prover-gh-release
+      - tx-exclusion-api-gh-release
+      - linea-besu-gh-release
+      - maru-gh-release
+    if: >
+      always() && !cancelled() &&
+      (inputs.image_tag_suffix == '' || needs.retag-latest-docker-tags.result == 'success') &&
+      (fromJson(needs.component-release-metadata.outputs.coordinator).tag_changed != 'true' || needs.coordinator-gh-release.result == 'success') &&
+      (fromJson(needs.component-release-metadata.outputs.postman).tag_changed != 'true' || needs.postman-gh-release.result == 'success') &&
+      (fromJson(needs.component-release-metadata.outputs.prover).tag_changed != 'true' || needs.prover-gh-release.result == 'success') &&
+      (fromJson(needs.component-release-metadata.outputs.tx-exclusion-api).tag_changed != 'true' || needs.tx-exclusion-api-gh-release.result == 'success') &&
+      (fromJson(needs.component-release-metadata.outputs.linea-besu-package).tag_changed != 'true' || needs.linea-besu-gh-release.result == 'success') &&
+      (fromJson(needs.component-release-metadata.outputs.maru).tag_changed != 'true' || needs.maru-gh-release.result == 'success')
+    uses: ./.github/workflows/reusable-milestone-release-push-tag-changelog.yml
+    with:
+      release_version: ${{ needs.check-branch-and-compute-tag.outputs.release_version }}
+      release_tag: ${{ needs.check-branch-and-compute-tag.outputs.release_tag }}
+      coordinator_release_version: ${{ fromJson(needs.component-release-metadata.outputs.coordinator).release_version || needs.component-latest-docker-tags.outputs.coordinator-release-version }}
+      postman_release_version: ${{ fromJson(needs.component-release-metadata.outputs.postman).release_version || needs.component-latest-docker-tags.outputs.postman-release-version }}
+      prover_release_version: ${{ fromJson(needs.component-release-metadata.outputs.prover).release_version || needs.component-latest-docker-tags.outputs.prover-release-version }}
+      tx_exclusion_api_release_version: ${{ fromJson(needs.component-release-metadata.outputs.tx-exclusion-api).release_version || needs.component-latest-docker-tags.outputs.tx-exclusion-api-release-version }}
+      linea_besu_release_version: ${{ fromJson(needs.component-release-metadata.outputs.linea-besu-package).release_version || needs.component-latest-docker-tags.outputs.linea-besu-package-release-version }}
+      maru_release_version: ${{ fromJson(needs.component-release-metadata.outputs.maru).release_version || needs.component-latest-docker-tags.outputs.maru-release-version }}
+    secrets: inherit
+
+  linea-milestone-gh-release:
+    needs:
+      - check-branch-and-compute-tag
+      - component-release-metadata
+      - component-latest-docker-tags
+      - linea-milestone-push-tag-changelog-update
+      - coordinator-gh-release
+      - postman-gh-release
+      - prover-gh-release
+      - tx-exclusion-api-gh-release
+      - linea-besu-gh-release
+      - maru-gh-release
+    if: >
+      always() && !cancelled() &&
+      needs.linea-milestone-push-tag-changelog-update.result == 'success'
+    uses: ./.github/workflows/reusable-milestone-gh-release.yml
+    with:
+      release_version: ${{ needs.check-branch-and-compute-tag.outputs.release_version }}
+      release_tag: ${{ needs.check-branch-and-compute-tag.outputs.release_tag }}
+      changelog: ${{ needs.linea-milestone-push-tag-changelog-update.outputs.changelog }}
+      image_tag_suffix: ${{ inputs.image_tag_suffix }}
+      draft_release: ${{ !inputs.pre_release }}
+      pre_release: ${{ inputs.pre_release }}
+      coordinator_metadata: ${{ needs.component-release-metadata.outputs.coordinator }}
+      prover_metadata: ${{ needs.component-release-metadata.outputs.prover }}
+      postman_metadata: ${{ needs.component-release-metadata.outputs.postman }}
+      tx_exclusion_api_metadata: ${{ needs.component-release-metadata.outputs.tx-exclusion-api }}
+      linea_besu_package_metadata: ${{ needs.component-release-metadata.outputs.linea-besu-package }}
+      maru_metadata: ${{ needs.component-release-metadata.outputs.maru }}
+      coordinator_docker_tag_with_suffix: ${{ needs.coordinator-gh-release.outputs.docker_tag_with_suffix }}
+      prover_docker_tag_with_suffix: ${{ needs.prover-gh-release.outputs.docker_tag_with_suffix }}
+      postman_docker_tag_with_suffix: ${{ needs.postman-gh-release.outputs.docker_tag_with_suffix }}
+      tx_exclusion_api_docker_tag_with_suffix: ${{ needs.tx-exclusion-api-gh-release.outputs.docker_tag_with_suffix }}
+      linea_besu_package_docker_tag_with_suffix: ${{ needs.linea-besu-gh-release.outputs.docker_tag_with_suffix }}
+      maru_docker_tag_with_suffix: ${{ needs.maru-gh-release.outputs.docker_tag_with_suffix }}
+      coordinator_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.coordinator }}
+      prover_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.prover }}
+      postman_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.postman }}
+      tx_exclusion_api_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.tx-exclusion-api }}
+      linea_besu_package_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.linea-besu-package }}
+      maru_latest_docker_tag: ${{ needs.component-latest-docker-tags.outputs.maru }}
+      skip_docker_image_info: ${{ inputs.dry_run_release }}
+    secrets: inherit

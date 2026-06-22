@@ -1,0 +1,32 @@
+replicaCount: 1
+fullnameOverride: maru-sequencer-0
+componentRole: sequencer
+configFiles:
+  privateKey: |
+    0x080212201dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae
+  configsToml: |
+    [fork-transition]
+    l2-eth-api-endpoint = { endpoint = "http://besu-sequencer-0-0.besu-sequencer-0.default.svc.cluster.local:8545" }
+
+    [qbft]
+    fee-recipient = "0x0000000000000000000000000000000000000000"
+
+    [payload-validator]
+    engine-api-endpoint = { endpoint = "http://besu-sequencer-0-0.besu-sequencer-0.default.svc.cluster.local:8550" }
+
+    [syncing]
+    desync-tolerance = 0
+
+  genesisJson: |
+    {
+      "chainId": 1337,
+      "config": {
+        "0": {
+          "type": "qbft",
+          "validatorSet": ["0x1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0"],
+          "blockTimeSeconds": 2,
+          "feeRecipient": "0x0000000000000000000000000000000000000000",
+          "elFork": "Osaka"
+        }
+      }
+    }

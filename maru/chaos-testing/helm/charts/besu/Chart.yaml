@@ -1,0 +1,6 @@
+apiVersion: v2
+name: besu
+description: A Helm chart for deploying Besu application for Local Development and Testing
+version: 0.0.1
+appVersion: "0.0.1"
+

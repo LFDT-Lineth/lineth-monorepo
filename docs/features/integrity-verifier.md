@@ -16,10 +16,10 @@ Supports proxy detection (EIP-1967), Hardhat and Foundry artifacts, and both eth
 
 | Package | Path | Role |
 |---------|------|------|
-| `@consensys/linea-contract-integrity-verifier` | `contracts/integrity-verifier/verifier-core/` | Core library — adapter interface, verifier class, types, utilities |
-| `@consensys/linea-contract-integrity-verifier-ethers` | `contracts/integrity-verifier/verifier-ethers/` | ethers adapter + CLI |
-| `@consensys/linea-contract-integrity-verifier-viem` | `contracts/integrity-verifier/verifier-viem/` | viem adapter + CLI |
-| `@consensys/linea-contract-integrity-verifier-ui` | `contracts/integrity-verifier/verifier-ui/` | Next.js web interface with client-side verification |
+| `@lfdt-lineth/contract-integrity-verifier` | `contracts/integrity-verifier/verifier-core/` | Core library — adapter interface, verifier class, types, utilities |
+| `@lfdt-lineth/contract-integrity-verifier-ethers` | `contracts/integrity-verifier/verifier-ethers/` | ethers adapter + CLI |
+| `@lfdt-lineth/contract-integrity-verifier-viem` | `contracts/integrity-verifier/verifier-viem/` | viem adapter + CLI |
+| `@lfdt-lineth/contract-integrity-verifier-ui` | `contracts/integrity-verifier/verifier-ui/` | Next.js web interface with client-side verification |
 
 The core package has zero web3 dependencies. Adapter packages provide `Web3Adapter` implementations that handle RPC calls, ABI encoding, and crypto operations.
 

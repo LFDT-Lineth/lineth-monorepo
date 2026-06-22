@@ -1,0 +1,10 @@
+pub input data(address:u16) -> (byte:u32)
+
+// Exercise padded format specifiers in printf.
+fn main() {
+    var lhs:u32 = data[0]
+    //
+    printf "zero-padded:  %08x\n", lhs
+    printf "space-padded: %8x\n", lhs
+    printf "padded dec:   %04d\n", lhs
+}

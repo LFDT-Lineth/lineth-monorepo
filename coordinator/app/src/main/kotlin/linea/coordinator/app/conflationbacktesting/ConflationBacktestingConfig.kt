@@ -1,0 +1,29 @@
+package linea.coordinator.app.conflationbacktesting
+
+import linea.blob.BlobCompressorVersion
+import java.net.URL
+
+data class ConflationBacktestingConfig(
+  val startBlockNumber: ULong,
+  val endBlockNumber: ULong,
+  val blobCompressorVersion: BlobCompressorVersion,
+  val batchesFixedSize: UInt? = null,
+  val parentBlobShnarf: String? = null,
+  val tracesApi: TracesApiConfig,
+  val tracesConflationApi: TracesApiConfig? = null,
+  val shomeiApi: ShomeiApiConfig,
+) {
+  fun jobId(): String {
+    return "$startBlockNumber-$endBlockNumber-${this.hashCode()}"
+  }
+}
+
+data class TracesApiConfig(
+  val endpoint: URL,
+  val requestLimitPerEndpoint: UInt = 1u,
+)
+
+data class ShomeiApiConfig(
+  val endpoint: URL,
+  val requestLimitPerEndpoint: UInt = 1u,
+)

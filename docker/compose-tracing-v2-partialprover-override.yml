@@ -1,4 +1,11 @@
 services:
+  sequencer:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: sequencer
+    environment:
+      BESU_PLUGIN_LINEA_LIVENESS_ENABLED: false
+
   prover-v3:
     extends:
       file: compose-spec-l2-services.yml
@@ -21,6 +28,5 @@ services:
     environment:
       config__override__conflation__blocks_limit: 20
       config__override__conflation__conflation_deadline: PT30M
-      config__override__conflation__blob_compression__batches_limit: 2
+      config__override__conflation__blob_compression__batches_limit: 1
       config__override__conflation__proof_aggregation__deadline: PT30M
-      CONFIG_OVERRIDE_OPTS: ${LINEA_SHOMEI_TAG:+-Dconfig.override.state-manager.version=$LINEA_SHOMEI_TAG}

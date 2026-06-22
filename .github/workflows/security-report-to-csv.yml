@@ -8,12 +8,12 @@ permissions:
 on: workflow_dispatch
 jobs:
   data_gathering:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     steps:
       - name: CSV export
-        uses: advanced-security/ghas-to-csv@v3
+        uses: advanced-security/ghas-to-csv@8c2ad35efb234e8e1bd12efaced0f0609ad8afbb # v3
       - name: Upload CSV
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ghas-data
           path: ${{ github.workspace }}/*.csv

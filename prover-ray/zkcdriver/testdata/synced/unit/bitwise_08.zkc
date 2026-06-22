@@ -1,0 +1,13 @@
+pub input data(address:u8) -> (byte:u32)
+
+// prove that ~x == z
+fn main() {
+    var x:u32 = data[0]
+    var z:u32 = data[1]
+
+    if ~x != z {
+        fail
+    }
+
+    return
+}

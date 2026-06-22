@@ -1,0 +1,10 @@
+type word = u8
+pub input data(address:u8) -> (byte:word)
+pub output out(address:u8) -> (byte:word)
+
+// encode/decode with alias type: input and output use "word" (= u8)
+fn main() {
+    out[0] = data[0]
+    out[1] = data[1]
+    return
+}

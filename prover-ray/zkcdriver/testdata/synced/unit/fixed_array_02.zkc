@@ -1,0 +1,5 @@
+fn main() {
+    var items:[u8;1]
+    items[0] = 3
+    var item_one:u8 = items[0]
+}

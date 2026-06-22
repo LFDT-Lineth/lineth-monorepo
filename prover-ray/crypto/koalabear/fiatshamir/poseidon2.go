@@ -5,10 +5,10 @@ package fiatshamir
 import (
 	"unsafe"
 
-	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/poseidon2"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/utils"
-	"github.com/consensys/linea-monorepo/prover-ray/utils/types"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/types"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -38,7 +38,7 @@ func (fs *FiatShamir) UpdateExt(vec ...field.Ext) {
 	if len(vec) == 0 {
 		return
 	}
-	vElems := unsafe.Slice((*field.Element)(unsafe.Pointer(&vec[0])), 4*len(vec)) //nolint
+	vElems := unsafe.Slice((*field.Element)(unsafe.Pointer(&vec[0])), field.ExtensionDegree*len(vec)) //nolint
 	fs.h.WriteElements(vElems...)
 }
 
@@ -89,26 +89,30 @@ func (fs *FiatShamir) UpdateSV(sv field.Vec) {
 	}
 }
 
-// RandomField samples a random octuplet from the current transcript state.
-func (fs *FiatShamir) RandomField() field.Octuplet {
+// RandomDigest samples a random octuplet from the current transcript state.
+func (fs *FiatShamir) RandomDigest() field.Octuplet {
 	defer fs.safeguardUpdate()
-	return fs.h.SumElement()
+	return fs.h.SumDigest()
 }
 
 // RandomFext samples a random extension field element from the transcript.
+// Uses the first ExtensionDegree (=6) of the 8 octuplet coordinates; the
+// remaining two are discarded.
 func (fs *FiatShamir) RandomFext() field.Ext {
-	s := fs.RandomField() // already calls safeguardUpdate()
+	s := fs.RandomDigest() // already calls safeguardUpdate()
 	var res field.Ext
 	res.B0.A0 = s[0]
 	res.B0.A1 = s[1]
 	res.B1.A0 = s[2]
 	res.B1.A1 = s[3]
+	res.B2.A0 = s[4]
+	res.B2.A1 = s[5]
 
 	return res
 }
 
-// RandomFieldFromSeed derives a deterministic extension field element from a seed and name.
-func (fs *FiatShamir) RandomFieldFromSeed(seed field.Octuplet, name string) field.Ext {
+// RandomFextFromSeed derives a deterministic extension field element from a seed and name.
+func (fs *FiatShamir) RandomFextFromSeed(seed field.Octuplet, name string) field.Ext {
 
 	// The first step encodes the 'name' into a single field element. The
 	// field element is obtained by hashing and taking the modulo of the
@@ -145,7 +149,7 @@ func (fs *FiatShamir) RandomManyIntegers(num, upperBound int) []int {
 
 	for i < num {
 		// take the remainder mod n of each limb
-		c := fs.RandomField() // already calls safeguardUpdate()
+		c := fs.RandomDigest() // already calls safeguardUpdate()
 		for j := 0; j < 8; j++ {
 			b := c[j].Bits()
 			res[i] = int(b[0]) % upperBound

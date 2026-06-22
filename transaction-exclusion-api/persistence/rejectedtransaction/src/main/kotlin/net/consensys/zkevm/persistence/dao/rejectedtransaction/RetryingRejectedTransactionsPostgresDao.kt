@@ -1,7 +1,7 @@
 package net.consensys.zkevm.persistence.dao.rejectedtransaction
 
+import linea.persistence.db.PersistenceRetryer
 import net.consensys.linea.transactionexclusion.RejectedTransaction
-import net.consensys.zkevm.persistence.db.PersistenceRetryer
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 

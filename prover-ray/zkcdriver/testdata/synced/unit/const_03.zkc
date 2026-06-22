@@ -1,0 +1,13 @@
+pub input data(address:u16) -> (byte:u16)
+
+const C1:u16 = 0x1fb, C2:u16 = 0x11
+
+fn main() {
+    var c:u16 = C1 + C2
+
+    if data[0]>c {
+        fail
+    }
+
+    return
+}

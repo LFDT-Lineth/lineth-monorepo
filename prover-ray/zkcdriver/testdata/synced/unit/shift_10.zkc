@@ -1,0 +1,23 @@
+pub input data(address:u8) -> (byte:u8)
+
+// prove that x >> y == z
+fn main() {
+    var a:u8 = data[0]
+    var b:u8 = data[1]
+
+    var base:u8 = a >> b
+    var shifting_cast:u8 = a >> (b as u9)
+
+    if (base != shifting_cast) {
+        fail
+    }
+
+    var double_cast:u9 = (a as u9) >> (b as u9)
+    var shifted_cast:u9 = (a as u9) >> b
+
+    if (shifted_cast != double_cast) {
+        fail
+    }
+
+    return
+}

@@ -1,5 +1,5 @@
 {
-  "name": "@consensys/linea-contract-integrity-verifier-ui",
+  "name": "@lfdt-lineth/contract-integrity-verifier-ui",
   "version": "1.0.0",
   "private": true,
   "license": "(MIT OR Apache-2.0)",
@@ -15,27 +15,27 @@
     "test": "playwright test"
   },
   "dependencies": {
-    "@consensys/linea-contract-integrity-verifier": "workspace:*",
-    "@consensys/linea-contract-integrity-verifier-ethers": "workspace:*",
-    "@consensys/linea-contract-integrity-verifier-viem": "workspace:*",
+    "@lfdt-lineth/contract-integrity-verifier": "workspace:*",
+    "@lfdt-lineth/contract-integrity-verifier-ethers": "workspace:*",
+    "@lfdt-lineth/contract-integrity-verifier-viem": "workspace:*",
     "@headlessui/react": "2.2.10",
-    "@tanstack/react-query": "5.100.7",
+    "@tanstack/react-query": "5.101.0",
     "clsx": "2.1.1",
-    "next": "16.2.4",
-    "react": "19.2.5",
-    "react-dom": "19.2.5",
+    "next": "16.2.9",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
     "viem": "catalog:",
     "zod": "catalog:",
-    "zustand": "5.0.12"
+    "zustand": "5.0.14"
   },
   "devDependencies": {
-    "@consensys/eslint-config": "workspace:*",
-    "@playwright/test": "1.59.1",
-    "@types/node": "24.12.2",
-    "@types/react": "19.2.14",
+    "@lfdt-lineth/eslint-config": "workspace:*",
+    "@playwright/test": "1.60.0",
+    "@types/node": "24.13.2",
+    "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "eslint": "catalog:",
-    "sass": "1.99.0",
+    "sass": "1.101.0",
     "typescript": "5.9.3"
   }
 }

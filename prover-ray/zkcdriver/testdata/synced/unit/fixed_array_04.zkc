@@ -1,0 +1,16 @@
+pub input data(address:u8) -> (byte:u8)
+pub output result(address:u8) -> (byte:u8)
+
+fn main() {
+    var items:[u8;3]
+    items[0] = data[0]
+    items[1] = data[1]
+    items[2] = data[2]
+    result[0] = sum(1, items, 5)
+    return
+}
+
+fn sum(pre:u8, item:[u8;3], post:u8) -> (res:u8) {
+    res = pre + item[0] + item[1] + item[2] + post
+    return
+}

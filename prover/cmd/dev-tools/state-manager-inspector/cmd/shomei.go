@@ -22,8 +22,7 @@ const (
 	"params": [
 		{
 			"startBlockNumber": "{{.StartBlockNumberHex}}",
-			"endBlockNumber": "{{.EndBlockNumberHex}}",
-			"zkStateManagerVersion": "{{.ShomeiVersion}}"
+			"endBlockNumber": "{{.EndBlockNumberHex}}"
 		}
 	],
 	"id": 1
@@ -58,7 +57,6 @@ type zkEVMStateMerkleProofV0Req struct {
 	EndBlockNumber      int
 	StartBlockNumberHex string
 	EndBlockNumberHex   string
-	ShomeiVersion       string
 }
 
 // Sends a request to collect the zk state proofs for a conflated sequence of

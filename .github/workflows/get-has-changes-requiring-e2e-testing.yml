@@ -11,12 +11,12 @@ on:
 
 jobs:
   get-has-changes-requiring-e2e-testing:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     outputs:
       has_changes_requiring_e2e_testing: ${{ steps.evaluate.outputs.result }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Filter for e2e-relevant paths
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2
@@ -31,8 +31,7 @@ jobs:
               - 'transaction-exclusion-api/**/src/main/**'
               - 'config/**/*.toml'
               - 'linea-besu/**'
-              - 'linea-besu-package/versions.env'
-              - 'linea-besu-package/scripts/assemble-packages.sh'
+              - 'maru/**/src/main/**'
               - 'gradle/libs.versions.toml'
               - 'postman/src/**'
               - 'postman/package.json'
@@ -43,12 +42,12 @@ jobs:
               - '**/Dockerfile'
               - 'e2e/src/**'
               - 'e2e/package.json'
-              - 'besu-plugins/linea-sequencer/**'
+              - 'linea-besu/plugins/linea-sequencer/**'
               - 'tracer/**'
               - 'tracer-constraints/**'
               - 'ts-libs/**/src/**'
               - 'ts-libs/**/package.json'
-              - '.github/workflows/reuse-run-e2e-tests.yml'
+              - '.github/workflows/reusable-run-e2e-tests.yml'
               - '.nvmrc'
               - 'package.json'
 
@@ -65,22 +64,22 @@ jobs:
             echo "result=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
+
           echo "Matched files: $E2E_PATHS_FILES"
-          
+
           # Parse JSON array safely using jq
           mapfile -t FILES < <(echo "$E2E_PATHS_FILES" | jq -r '.[]')
-          
+
           for file in "${FILES[@]}"; do
             # Skip unit test files EXCEPT those in e2e/src/ (e2e tests themselves)
             if [[ "$file" =~ \.test\.ts$ ]] && [[ ! "$file" =~ ^e2e/src/ ]]; then
               continue
             fi
-            
+
             if [[ "$file" =~ \.spec\.ts$ ]] && [[ ! "$file" =~ ^e2e/src/ ]]; then
               continue
             fi
-            
+
             if [[ "$file" =~ _test\.go$ ]]; then
               continue
             fi
@@ -90,19 +89,19 @@ jobs:
               continue
             fi
 
-            if [[ "$file" =~ ^besu-plugins/linea-sequencer/acceptance-tests/ ]]; then
+            if [[ "$file" =~ ^linea-besu/plugins/linea-sequencer/acceptance-tests/ ]]; then
               continue
             fi
-            
+
             # Skip doc files
             if [[ "$file" =~ \.(md|mdx)$ ]]; then
               continue
             fi
-            
+
             echo "✓ e2e-relevant file: $file"
             echo "result=true" >> $GITHUB_OUTPUT
             exit 0
           done
-          
+
           echo "Only excluded e2e paths, test files, or doc files changed"
           echo "result=false" >> $GITHUB_OUTPUT

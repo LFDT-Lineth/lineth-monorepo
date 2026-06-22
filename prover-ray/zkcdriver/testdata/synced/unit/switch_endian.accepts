@@ -1,0 +1,5 @@
+{ "data": "0x0102030405060708", "result": "0x0807060504030201" }
+{ "data": "0x0807060504030201", "result": "0x0102030405060708" }
+{ "data": "0x0000000000000000", "result": "0x0000000000000000" }
+{ "data": "0xffffffffffffffff", "result": "0xffffffffffffffff" }
+{ "data": "0xdeadbeefcafebabe", "result": "0xbebafecaefbeadde" }

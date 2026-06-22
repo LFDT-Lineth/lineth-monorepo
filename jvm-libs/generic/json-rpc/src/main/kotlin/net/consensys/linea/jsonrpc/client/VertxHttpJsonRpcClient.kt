@@ -28,7 +28,6 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.net.URL
 
-@Suppress("UNCHECKED_CAST")
 class VertxHttpJsonRpcClient(
   private val httpClient: HttpClient,
   private val endpoint: URL,
