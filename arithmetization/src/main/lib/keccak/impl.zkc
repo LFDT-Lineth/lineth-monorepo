@@ -127,6 +127,7 @@ fn absorbing_phase<ram, state_row0, state_row1, state_row2, state_row3, state_ro
     // more padding happens: zero words followed by a terminating 1
     switch final_word_in_block {
         case 1: {
+            // Do nothing
         }
         default: {
             // default case is != 1

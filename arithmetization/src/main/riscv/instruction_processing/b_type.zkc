@@ -101,7 +101,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
             print_b_operands(rs1, rs2, imm)
             comparison = signed_LT(registers[rs1], registers[rs2])
             switch comparison {
-                case 1: {
+                case 0: {
                     // the branch case
                     pc_new = signed_sum_of_double_word(pc, imm)
                 }
