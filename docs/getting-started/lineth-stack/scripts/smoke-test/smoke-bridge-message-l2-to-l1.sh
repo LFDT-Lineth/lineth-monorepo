@@ -23,26 +23,6 @@ die() { lineth_die "$*"; }
 
 lineth_banner "bridge smoke · L2 to L1 message"
 
-require_address() {
-  label="$1"
-  value="$2"
-  echo "$value" | grep -qE '^0x[a-fA-F0-9]{40}$' || die "$label missing or invalid"
-}
-
-require_hash() {
-  label="$1"
-  value="$2"
-  echo "$value" | grep -qE '^0x[a-fA-F0-9]{64}$' || die "$label missing or invalid"
-}
-
-require_uint() {
-  label="$1"
-  value="$2"
-  case "$value" in
-    ''|*[!0-9]*) die "$label must be a non-negative integer" ;;
-  esac
-}
-
 rpc_l1() {
   method="$1"
   params="$2"
@@ -85,12 +65,12 @@ L2_CHAIN_ID="$(lineth_json_meta_value "$ADDR" l2ChainId)"
 L1_POSTMAN_ADDRESS="$(lineth_json_section_addr "$PRE" signers l1PostmanAddress)"
 L2_DEPLOYER_ADDRESS="$(lineth_json_section_addr "$PRE" signers l2DeployerAddress)"
 
-require_address "L1 LineaRollupV8" "$LINEA_ROLLUP"
-require_address "L2 L2MessageService" "$L2_MESSAGE_SERVICE"
-require_address "L1 postman signer" "$L1_POSTMAN_ADDRESS"
-require_address "L2 deployer" "$L2_DEPLOYER_ADDRESS"
-require_uint "l1ChainId" "$L1_CHAIN_ID"
-require_uint "l2ChainId" "$L2_CHAIN_ID"
+lineth_require_address "L1 LineaRollupV8" "$LINEA_ROLLUP"
+lineth_require_address "L2 L2MessageService" "$L2_MESSAGE_SERVICE"
+lineth_require_address "L1 postman signer" "$L1_POSTMAN_ADDRESS"
+lineth_require_address "L2 deployer" "$L2_DEPLOYER_ADDRESS"
+lineth_require_uint "l1ChainId" "$L1_CHAIN_ID"
+lineth_require_uint "l2ChainId" "$L2_CHAIN_ID"
 
 HOST_PORT_L2_BLOCKSCOUT_FRONTEND="$(lineth_host_port HOST_PORT_L2_BLOCKSCOUT_FRONTEND 4001)"
 
@@ -111,15 +91,15 @@ L2_READ_RPC_URL="${L2_READ_RPC_URL:-${L2_RPC_URL:-http://l2-node-besu:8545}}"
 L2_SEND_RPC_URL="${L2_SEND_RPC_URL:-http://sequencer:8545}"
 MESSAGE_CLAIMED_TOPIC="0xa4c827e719e911e8f19393ccdb85b5102f08f0910604d340ba38390b7ff2ab0e"
 
-require_address "RECIPIENT" "$RECIPIENT"
-require_uint "L2_L1_MESSAGE_VALUE_WEI" "$L2_L1_MESSAGE_VALUE_WEI"
-require_uint "L2_L1_MESSAGE_FEE_WEI" "$L2_L1_MESSAGE_FEE_WEI"
-require_uint "BRIDGE_SMOKE_TIMEOUT_SECONDS" "$BRIDGE_SMOKE_TIMEOUT_SECONDS"
-require_uint "BRIDGE_SMOKE_POLL_SECONDS" "$BRIDGE_SMOKE_POLL_SECONDS"
-require_uint "L1_RECEIPT_TIMEOUT_SECONDS" "$L1_RECEIPT_TIMEOUT_SECONDS"
-require_uint "L2_TRAFFIC_ETH_MIN_BALANCE_WEI" "$L2_TRAFFIC_ETH_MIN_BALANCE_WEI"
-require_uint "L2_TRAFFIC_ETH_TOP_UP_WEI" "$L2_TRAFFIC_ETH_TOP_UP_WEI"
-require_uint "L2_GAS_PRICE_WEI" "$L2_GAS_PRICE_WEI"
+lineth_require_address "RECIPIENT" "$RECIPIENT"
+lineth_require_uint "L2_L1_MESSAGE_VALUE_WEI" "$L2_L1_MESSAGE_VALUE_WEI"
+lineth_require_uint "L2_L1_MESSAGE_FEE_WEI" "$L2_L1_MESSAGE_FEE_WEI"
+lineth_require_uint "BRIDGE_SMOKE_TIMEOUT_SECONDS" "$BRIDGE_SMOKE_TIMEOUT_SECONDS"
+lineth_require_uint "BRIDGE_SMOKE_POLL_SECONDS" "$BRIDGE_SMOKE_POLL_SECONDS"
+lineth_require_uint "L1_RECEIPT_TIMEOUT_SECONDS" "$L1_RECEIPT_TIMEOUT_SECONDS"
+lineth_require_uint "L2_TRAFFIC_ETH_MIN_BALANCE_WEI" "$L2_TRAFFIC_ETH_MIN_BALANCE_WEI"
+lineth_require_uint "L2_TRAFFIC_ETH_TOP_UP_WEI" "$L2_TRAFFIC_ETH_TOP_UP_WEI"
+lineth_require_uint "L2_GAS_PRICE_WEI" "$L2_GAS_PRICE_WEI"
 echo "$CALLDATA" | grep -qE '^0x([a-fA-F0-9]{2})*$' || die "CALLDATA must be hex bytes"
 
 if [ "$L2_L1_MESSAGE_VALUE_WEI" != "0" ] || [ "$L2_L1_MESSAGE_FEE_WEI" != "0" ]; then
@@ -138,7 +118,7 @@ log "l2ReadRpc: $L2_READ_RPC_URL"
 log "l2SendRpc: $L2_SEND_RPC_URL"
 
 START_MESSAGE_ID="$(lineth_psql_value "select coalesce(max(id),0) from message;")"
-require_uint "postman max message id" "$START_MESSAGE_ID"
+lineth_require_uint "postman max message id" "$START_MESSAGE_ID"
 
 section "ensuring disposable traffic account"
 TRAFFIC_ACCOUNT_OUTPUT="$(
@@ -156,7 +136,7 @@ TRAFFIC_ACCOUNT_OUTPUT="$(
 )"
 printf '%s\n' "$TRAFFIC_ACCOUNT_OUTPUT" | lineth_child_output
 TRAFFIC_ACCOUNT_ADDRESS="$(printf '%s\n' "$TRAFFIC_ACCOUNT_OUTPUT" | sed -nE 's/^TRAFFIC_ACCOUNT_ADDRESS=(0x[a-fA-F0-9]{40})$/\1/p' | tail -1)"
-require_address "traffic account helper address" "$TRAFFIC_ACCOUNT_ADDRESS"
+lineth_require_address "traffic account helper address" "$TRAFFIC_ACCOUNT_ADDRESS"
 
 section "send L2 message"
 SEND_OUTPUT="$(
@@ -241,8 +221,8 @@ printf '%s\n' "$SEND_OUTPUT" | lineth_child_output
 L2_SENDER="$(printf '%s\n' "$SEND_OUTPUT" | sed -nE 's/.*sender=(0x[a-fA-F0-9]{40}).*/\1/p' | tail -1)"
 L2_TX_HASH="$(printf '%s\n' "$SEND_OUTPUT" | sed -nE 's/.*l2Tx=(0x[a-fA-F0-9]{64}).*/\1/p' | tail -1)"
 L2_TX_BLOCK="$(printf '%s\n' "$SEND_OUTPUT" | sed -nE 's/.*l2Block=([^[:space:]]+).*/\1/p' | tail -1)"
-require_address "L2 sender" "$L2_SENDER"
-require_hash "L2 tx hash" "$L2_TX_HASH"
+lineth_require_address "L2 sender" "$L2_SENDER"
+lineth_require_hash "L2 tx hash" "$L2_TX_HASH"
 
 log "l2TxExplorer: http://localhost:$HOST_PORT_L2_BLOCKSCOUT_FRONTEND/tx/$L2_TX_HASH"
 
@@ -289,13 +269,13 @@ MESSAGE_CALLDATA="$(printf '%s' "$ROW" | cut -d '|' -f 9)"
 SENT_BLOCK_NUMBER="$(printf '%s' "$ROW" | cut -d '|' -f 10)"
 CLAIM_TX_HASH="$(printf '%s' "$ROW" | cut -d '|' -f 11)"
 
-require_hash "messageHash" "$MESSAGE_HASH"
-require_address "messageSender" "$MESSAGE_SENDER"
-require_address "destination" "$DESTINATION"
-require_uint "message fee" "$MESSAGE_FEE"
-require_uint "message value" "$MESSAGE_VALUE"
-require_uint "message nonce" "$MESSAGE_NONCE"
-require_uint "sent block number" "$SENT_BLOCK_NUMBER"
+lineth_require_hash "messageHash" "$MESSAGE_HASH"
+lineth_require_address "messageSender" "$MESSAGE_SENDER"
+lineth_require_address "destination" "$DESTINATION"
+lineth_require_uint "message fee" "$MESSAGE_FEE"
+lineth_require_uint "message value" "$MESSAGE_VALUE"
+lineth_require_uint "message nonce" "$MESSAGE_NONCE"
+lineth_require_uint "sent block number" "$SENT_BLOCK_NUMBER"
 echo "$MESSAGE_CALLDATA" | grep -qE '^0x([a-fA-F0-9]{2})*$' || die "message calldata malformed"
 
 log "messageId: $MESSAGE_ID"
@@ -318,11 +298,11 @@ if [ "$STATUS" != "CLAIMED_SUCCESS" ]; then
   PROOF_LEAF_INDEX="$(printf '%s\n' "$CLAIM_OUTPUT" | lineth_json_stdin_number_field proofLeafIndex)"
   PROOF_LENGTH="$(printf '%s\n' "$CLAIM_OUTPUT" | lineth_json_stdin_number_field proofLength)"
   CLAIMANT="$(printf '%s\n' "$CLAIM_OUTPUT" | lineth_json_stdin_string_field claimant)"
-  require_hash "claim tx hash" "$CLAIM_TX_HASH"
-  require_hash "proof root" "$PROOF_ROOT"
-  require_uint "proof leaf index" "$PROOF_LEAF_INDEX"
-  require_uint "proof length" "$PROOF_LENGTH"
-  require_address "claimant" "$CLAIMANT"
+  lineth_require_hash "claim tx hash" "$CLAIM_TX_HASH"
+  lineth_require_hash "proof root" "$PROOF_ROOT"
+  lineth_require_uint "proof leaf index" "$PROOF_LEAF_INDEX"
+  lineth_require_uint "proof length" "$PROOF_LENGTH"
+  lineth_require_address "claimant" "$CLAIMANT"
 
   log "claimant: $CLAIMANT"
   log "proofRoot: $PROOF_ROOT"
@@ -331,7 +311,7 @@ if [ "$STATUS" != "CLAIMED_SUCCESS" ]; then
   log "l1ClaimTx: $CLAIM_TX_HASH"
 fi
 
-require_hash "L1 claim tx" "$CLAIM_TX_HASH"
+lineth_require_hash "L1 claim tx" "$CLAIM_TX_HASH"
 log "l1ClaimTxLink: $(lineth_l1_tx_link "$CLAIM_TX_HASH")"
 
 section "verify L1 receipt"

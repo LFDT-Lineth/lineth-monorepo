@@ -24,26 +24,6 @@ die() { lineth_die "$*"; }
 
 lineth_banner "ERC20 bridge smoke · L2 to L1"
 
-require_address() {
-  label="$1"
-  value="$2"
-  echo "$value" | grep -qE '^0x[a-fA-F0-9]{40}$' || die "$label missing or invalid"
-}
-
-require_hash() {
-  label="$1"
-  value="$2"
-  echo "$value" | grep -qE '^0x[a-fA-F0-9]{64}$' || die "$label missing or invalid"
-}
-
-require_uint() {
-  label="$1"
-  value="$2"
-  case "$value" in
-    ''|*[!0-9]*) die "$label must be a non-negative integer" ;;
-  esac
-}
-
 rpc_l1() {
   method="$1"
   params="$2"
@@ -103,14 +83,14 @@ L1_DEPLOYER_ADDRESS="$(lineth_json_section_addr "$PRE" deployers l1)"
 L1_CHAIN_ID="$(lineth_json_meta_value "$ADDR" l1ChainId)"
 L2_CHAIN_ID="$(lineth_json_meta_value "$ADDR" l2ChainId)"
 
-require_address "L1 LineaRollupV8" "$LINEA_ROLLUP"
-require_address "L1 TokenBridge" "$L1_TOKEN_BRIDGE"
-require_address "L2 TokenBridge" "$L2_TOKEN_BRIDGE"
-require_address "L1 ERC20Example" "$L1_ERC20"
-require_address "L2 L2MessageService" "$L2_MESSAGE_SERVICE"
-require_address "L1 deployer" "$L1_DEPLOYER_ADDRESS"
-require_uint "l1ChainId" "$L1_CHAIN_ID"
-require_uint "l2ChainId" "$L2_CHAIN_ID"
+lineth_require_address "L1 LineaRollupV8" "$LINEA_ROLLUP"
+lineth_require_address "L1 TokenBridge" "$L1_TOKEN_BRIDGE"
+lineth_require_address "L2 TokenBridge" "$L2_TOKEN_BRIDGE"
+lineth_require_address "L1 ERC20Example" "$L1_ERC20"
+lineth_require_address "L2 L2MessageService" "$L2_MESSAGE_SERVICE"
+lineth_require_address "L1 deployer" "$L1_DEPLOYER_ADDRESS"
+lineth_require_uint "l1ChainId" "$L1_CHAIN_ID"
+lineth_require_uint "l2ChainId" "$L2_CHAIN_ID"
 
 L1_RPC_URL="$(lineth_l1_host_rpc_url)"
 L1_CONTAINER_RPC_URL="$(lineth_l1_container_rpc_url)"
@@ -134,26 +114,26 @@ L2_GAS_PRICE_WEI="${L2_GAS_PRICE_WEI:-100000000}"
 MESSAGE_CLAIMED_TOPIC="0xa4c827e719e911e8f19393ccdb85b5102f08f0910604d340ba38390b7ff2ab0e"
 BRIDGING_FINALIZED_V2_TOPIC="$(cast_event_topic 'BridgingFinalizedV2(address,address,uint256,address)')"
 
-require_uint "BRIDGE_AMOUNT_WEI" "$BRIDGE_AMOUNT_WEI"
-require_uint "BRIDGE_MESSAGE_FEE_WEI" "$BRIDGE_MESSAGE_FEE_WEI"
-require_uint "BRIDGE_SMOKE_TIMEOUT_SECONDS" "$BRIDGE_SMOKE_TIMEOUT_SECONDS"
-require_uint "BRIDGE_SMOKE_POLL_SECONDS" "$BRIDGE_SMOKE_POLL_SECONDS"
-require_uint "L1_RECEIPT_TIMEOUT_SECONDS" "$L1_RECEIPT_TIMEOUT_SECONDS"
-require_uint "L2_TRAFFIC_ETH_MIN_BALANCE_WEI" "$L2_TRAFFIC_ETH_MIN_BALANCE_WEI"
-require_uint "L2_TRAFFIC_ETH_TOP_UP_WEI" "$L2_TRAFFIC_ETH_TOP_UP_WEI"
-require_uint "L2_APPROVE_GAS_LIMIT" "$L2_APPROVE_GAS_LIMIT"
-require_uint "L2_BRIDGE_GAS_LIMIT" "$L2_BRIDGE_GAS_LIMIT"
-require_uint "L2_GAS_PRICE_WEI" "$L2_GAS_PRICE_WEI"
+lineth_require_uint "BRIDGE_AMOUNT_WEI" "$BRIDGE_AMOUNT_WEI"
+lineth_require_uint "BRIDGE_MESSAGE_FEE_WEI" "$BRIDGE_MESSAGE_FEE_WEI"
+lineth_require_uint "BRIDGE_SMOKE_TIMEOUT_SECONDS" "$BRIDGE_SMOKE_TIMEOUT_SECONDS"
+lineth_require_uint "BRIDGE_SMOKE_POLL_SECONDS" "$BRIDGE_SMOKE_POLL_SECONDS"
+lineth_require_uint "L1_RECEIPT_TIMEOUT_SECONDS" "$L1_RECEIPT_TIMEOUT_SECONDS"
+lineth_require_uint "L2_TRAFFIC_ETH_MIN_BALANCE_WEI" "$L2_TRAFFIC_ETH_MIN_BALANCE_WEI"
+lineth_require_uint "L2_TRAFFIC_ETH_TOP_UP_WEI" "$L2_TRAFFIC_ETH_TOP_UP_WEI"
+lineth_require_uint "L2_APPROVE_GAS_LIMIT" "$L2_APPROVE_GAS_LIMIT"
+lineth_require_uint "L2_BRIDGE_GAS_LIMIT" "$L2_BRIDGE_GAS_LIMIT"
+lineth_require_uint "L2_GAS_PRICE_WEI" "$L2_GAS_PRICE_WEI"
 [ "$BRIDGE_AMOUNT_WEI" -gt 0 ] || die "BRIDGE_AMOUNT_WEI must be greater than zero"
 [ "$BRIDGE_MESSAGE_FEE_WEI" -gt 0 ] || die "BRIDGE_MESSAGE_FEE_WEI must be greater than zero for Postman L2->L1 claiming"
-require_hash "BridgingFinalizedV2 topic" "$BRIDGING_FINALIZED_V2_TOPIC"
+lineth_require_hash "BridgingFinalizedV2 topic" "$BRIDGING_FINALIZED_V2_TOPIC"
 
 if [ -n "${RECIPIENT:-}" ]; then
   L1_RECIPIENT="$RECIPIENT"
 else
   L1_RECIPIENT="$L1_DEPLOYER_ADDRESS"
 fi
-require_address "L1 recipient" "$L1_RECIPIENT"
+lineth_require_address "L1 recipient" "$L1_RECIPIENT"
 
 REQUIRED_L2_WITHDRAW_ETH_MIN_BALANCE_WEI=$((L2_TRAFFIC_ETH_MIN_BALANCE_WEI + BRIDGE_MESSAGE_FEE_WEI))
 section "ensuring disposable withdraw account"
@@ -173,10 +153,10 @@ TRAFFIC_ACCOUNT_OUTPUT="$(
 )"
 printf '%s\n' "$TRAFFIC_ACCOUNT_OUTPUT" | lineth_child_output
 L2_SENDER="$(printf '%s\n' "$TRAFFIC_ACCOUNT_OUTPUT" | sed -nE 's/^TRAFFIC_ACCOUNT_ADDRESS=(0x[a-fA-F0-9]{40})$/\1/p' | tail -1)"
-require_address "L2 sender" "$L2_SENDER"
+lineth_require_address "L2 sender" "$L2_SENDER"
 
 L2_BRIDGED_TOKEN="$(cast_l2_call "$L2_TOKEN_BRIDGE" 'nativeToBridgedToken(uint256,address)(address)' "$L1_CHAIN_ID" "$L1_ERC20" | tr -d '[:space:]')"
-require_address "L2 bridged token" "$L2_BRIDGED_TOKEN"
+lineth_require_address "L2 bridged token" "$L2_BRIDGED_TOKEN"
 case "$L2_BRIDGED_TOKEN" in
   0x0000000000000000000000000000000000000000|0x0000000000000000000000000000000000000111|0x0000000000000000000000000000000000000222|0x0000000000000000000000000000000000000333)
     die "L2 bridged token is not deployed yet; run ./scripts/smoke-test/smoke-bridge-erc20-l1-to-l2.sh first"
@@ -185,7 +165,7 @@ esac
 
 L2_BALANCE_RAW="$(cast_l2_call "$L2_BRIDGED_TOKEN" 'balanceOf(address)(uint256)' "$L2_SENDER")"
 L2_BALANCE="$(printf '%s\n' "$L2_BALANCE_RAW" | awk '{print $1}')"
-require_uint "L2 sender bridged token balance" "$L2_BALANCE"
+lineth_require_uint "L2 sender bridged token balance" "$L2_BALANCE"
 [ "$L2_BALANCE" -ge "$BRIDGE_AMOUNT_WEI" ] || {
   log "l2Sender: $L2_SENDER"
   log "l2BridgedToken: $L2_BRIDGED_TOKEN"
@@ -195,10 +175,10 @@ require_uint "L2 sender bridged token balance" "$L2_BALANCE"
 
 L1_BALANCE_BEFORE_RAW="$(cast_l1_call "$L1_ERC20" 'balanceOf(address)(uint256)' "$L1_RECIPIENT")"
 L1_BALANCE_BEFORE="$(printf '%s\n' "$L1_BALANCE_BEFORE_RAW" | awk '{print $1}')"
-require_uint "L1 recipient ERC20 balance before" "$L1_BALANCE_BEFORE"
+lineth_require_uint "L1 recipient ERC20 balance before" "$L1_BALANCE_BEFORE"
 
 START_MESSAGE_ID="$(lineth_psql_value "select coalesce(max(id),0) from message;")"
-require_uint "postman max message id" "$START_MESSAGE_ID"
+lineth_require_uint "postman max message id" "$START_MESSAGE_ID"
 
 section "preflight"
 log "L1 ERC20Example: $(lineth_l1_address_link "$L1_ERC20")"
@@ -292,8 +272,8 @@ printf '%s\n' "$SEND_OUTPUT" | lineth_child_output
 APPROVE_TX_HASH="$(printf '%s\n' "$SEND_OUTPUT" | sed -nE 's/.*approveTx=(0x[a-fA-F0-9]{64}).*/\1/p' | tail -1)"
 BRIDGE_TX_HASH="$(printf '%s\n' "$SEND_OUTPUT" | sed -nE 's/.*bridgeTx=(0x[a-fA-F0-9]{64}).*/\1/p' | tail -1)"
 BRIDGE_BLOCK="$(printf '%s\n' "$SEND_OUTPUT" | sed -nE 's/.*bridgeBlock=([^[:space:]]+).*/\1/p' | tail -1)"
-require_hash "L2 approve tx hash" "$APPROVE_TX_HASH"
-require_hash "L2 bridge tx hash" "$BRIDGE_TX_HASH"
+lineth_require_hash "L2 approve tx hash" "$APPROVE_TX_HASH"
+lineth_require_hash "L2 bridge tx hash" "$BRIDGE_TX_HASH"
 log "l2ApproveExplorer: http://localhost:$HOST_PORT_L2_BLOCKSCOUT_FRONTEND/tx/$APPROVE_TX_HASH"
 log "l2BridgeExplorer: http://localhost:$HOST_PORT_L2_BLOCKSCOUT_FRONTEND/tx/$BRIDGE_TX_HASH"
 
@@ -347,13 +327,13 @@ MESSAGE_CALLDATA="$(printf '%s' "$ROW" | cut -d '|' -f 9)"
 SENT_BLOCK_NUMBER="$(printf '%s' "$ROW" | cut -d '|' -f 10)"
 CLAIM_TX_HASH="$(printf '%s' "$ROW" | cut -d '|' -f 11)"
 
-require_hash "messageHash" "$MESSAGE_HASH"
-require_address "messageSender" "$MESSAGE_SENDER"
-require_address "destination" "$DESTINATION"
-require_uint "message fee" "$MESSAGE_FEE"
-require_uint "message value" "$MESSAGE_VALUE"
-require_uint "message nonce" "$MESSAGE_NONCE"
-require_uint "sent block number" "$SENT_BLOCK_NUMBER"
+lineth_require_hash "messageHash" "$MESSAGE_HASH"
+lineth_require_address "messageSender" "$MESSAGE_SENDER"
+lineth_require_address "destination" "$DESTINATION"
+lineth_require_uint "message fee" "$MESSAGE_FEE"
+lineth_require_uint "message value" "$MESSAGE_VALUE"
+lineth_require_uint "message nonce" "$MESSAGE_NONCE"
+lineth_require_uint "sent block number" "$SENT_BLOCK_NUMBER"
 echo "$MESSAGE_CALLDATA" | grep -qE '^0x([a-fA-F0-9]{2})*$' || die "message calldata malformed"
 
 log "messageId: $MESSAGE_ID"
@@ -382,11 +362,11 @@ if [ "$STATUS" != "CLAIMED_SUCCESS" ]; then
     PROOF_LEAF_INDEX="$(printf '%s\n' "$CLAIM_OUTPUT" | lineth_json_stdin_number_field proofLeafIndex)"
     PROOF_LENGTH="$(printf '%s\n' "$CLAIM_OUTPUT" | lineth_json_stdin_number_field proofLength)"
     CLAIMANT="$(printf '%s\n' "$CLAIM_OUTPUT" | lineth_json_stdin_string_field claimant)"
-    require_hash "claim tx hash" "$CLAIM_TX_HASH"
-    require_hash "proof root" "$PROOF_ROOT"
-    require_uint "proof leaf index" "$PROOF_LEAF_INDEX"
-    require_uint "proof length" "$PROOF_LENGTH"
-    require_address "claimant" "$CLAIMANT"
+    lineth_require_hash "claim tx hash" "$CLAIM_TX_HASH"
+    lineth_require_hash "proof root" "$PROOF_ROOT"
+    lineth_require_uint "proof leaf index" "$PROOF_LEAF_INDEX"
+    lineth_require_uint "proof length" "$PROOF_LENGTH"
+    lineth_require_address "claimant" "$CLAIMANT"
 
     log "claimant: $CLAIMANT"
     log "proofRoot: $PROOF_ROOT"
@@ -396,7 +376,7 @@ if [ "$STATUS" != "CLAIMED_SUCCESS" ]; then
   fi
 fi
 
-require_hash "L1 claim tx" "$CLAIM_TX_HASH"
+lineth_require_hash "L1 claim tx" "$CLAIM_TX_HASH"
 log "l1ClaimTxLink: $(lineth_l1_tx_link "$CLAIM_TX_HASH")"
 
 section "verify L1 receipt and ERC20 balance"
@@ -447,7 +427,7 @@ printf '%s\n' "$CLAIM_RECEIPT" | grep -qi "$BRIDGING_FINALIZED_V2_TOPIC" || {
 
 L1_BALANCE_AFTER_RAW="$(cast_l1_call "$L1_ERC20" 'balanceOf(address)(uint256)' "$L1_RECIPIENT")"
 L1_BALANCE_AFTER="$(printf '%s\n' "$L1_BALANCE_AFTER_RAW" | awk '{print $1}')"
-require_uint "L1 recipient ERC20 balance after" "$L1_BALANCE_AFTER"
+lineth_require_uint "L1 recipient ERC20 balance after" "$L1_BALANCE_AFTER"
 
 DELTA=$((L1_BALANCE_AFTER - L1_BALANCE_BEFORE))
 [ "$DELTA" -ge "$BRIDGE_AMOUNT_WEI" ] || {

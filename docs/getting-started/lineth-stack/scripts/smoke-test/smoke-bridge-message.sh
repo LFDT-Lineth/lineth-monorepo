@@ -23,20 +23,6 @@ die() { lineth_die "$*"; }
 
 lineth_banner "bridge smoke · L1 to L2 message"
 
-require_address() {
-  label="$1"
-  value="$2"
-  echo "$value" | grep -qE '^0x[a-fA-F0-9]{40}$' || die "$label missing or invalid"
-}
-
-require_uint() {
-  label="$1"
-  value="$2"
-  case "$value" in
-    ''|*[!0-9]*) die "$label must be a non-negative integer" ;;
-  esac
-}
-
 rpc_l2() {
   method="$1"
   params="$2"
@@ -81,9 +67,9 @@ L1_TOKEN_BRIDGE="$(lineth_json_section_addr "$ADDR" l1 TokenBridge)"
 L2_TOKEN_BRIDGE="$(lineth_json_section_addr "$ADDR" l2 TokenBridge)"
 L1_DEPLOYER_ADDRESS="$(lineth_json_section_addr "$PRE" deployers l1)"
 
-require_address "L1 LineaRollupV8" "$LINEA_ROLLUP"
-require_address "L2 L2MessageService" "$L2_MESSAGE_SERVICE"
-require_address "L1 deployer" "$L1_DEPLOYER_ADDRESS"
+lineth_require_address "L1 LineaRollupV8" "$LINEA_ROLLUP"
+lineth_require_address "L2 L2MessageService" "$L2_MESSAGE_SERVICE"
+lineth_require_address "L1 deployer" "$L1_DEPLOYER_ADDRESS"
 
 HOST_PORT_L2_BLOCKSCOUT_FRONTEND="$(lineth_host_port HOST_PORT_L2_BLOCKSCOUT_FRONTEND 4001)"
 
@@ -105,11 +91,11 @@ BRIDGE_SMOKE_TIMEOUT_SECONDS="${BRIDGE_SMOKE_TIMEOUT_SECONDS:-360}"
 BRIDGE_SMOKE_POLL_SECONDS="${BRIDGE_SMOKE_POLL_SECONDS:-5}"
 MESSAGE_CLAIMED_TOPIC="0xa4c827e719e911e8f19393ccdb85b5102f08f0910604d340ba38390b7ff2ab0e"
 
-require_address "RECIPIENT" "$RECIPIENT"
-require_uint "L1_MESSAGE_VALUE_WEI" "$L1_MESSAGE_VALUE_WEI"
-require_uint "L1_MESSAGE_FEE_WEI" "$L1_MESSAGE_FEE_WEI"
-require_uint "BRIDGE_SMOKE_TIMEOUT_SECONDS" "$BRIDGE_SMOKE_TIMEOUT_SECONDS"
-require_uint "BRIDGE_SMOKE_POLL_SECONDS" "$BRIDGE_SMOKE_POLL_SECONDS"
+lineth_require_address "RECIPIENT" "$RECIPIENT"
+lineth_require_uint "L1_MESSAGE_VALUE_WEI" "$L1_MESSAGE_VALUE_WEI"
+lineth_require_uint "L1_MESSAGE_FEE_WEI" "$L1_MESSAGE_FEE_WEI"
+lineth_require_uint "BRIDGE_SMOKE_TIMEOUT_SECONDS" "$BRIDGE_SMOKE_TIMEOUT_SECONDS"
+lineth_require_uint "BRIDGE_SMOKE_POLL_SECONDS" "$BRIDGE_SMOKE_POLL_SECONDS"
 echo "$CALLDATA" | grep -qE '^0x([a-fA-F0-9]{2})*$' || die "CALLDATA must be hex bytes"
 
 TOTAL_VALUE_WEI=$((L1_MESSAGE_VALUE_WEI + L1_MESSAGE_FEE_WEI))
@@ -125,7 +111,7 @@ log "valueWei: $L1_MESSAGE_VALUE_WEI"
 log "feeWei: $L1_MESSAGE_FEE_WEI"
 
 START_MESSAGE_ID="$(lineth_psql_value "select coalesce(max(id),0) from message;")"
-require_uint "postman max message id" "$START_MESSAGE_ID"
+lineth_require_uint "postman max message id" "$START_MESSAGE_ID"
 
 BALANCE_BEFORE_HEX="$(rpc_l2 eth_getBalance "[\"$RECIPIENT\",\"latest\"]" | rpc_result_hex)"
 [ -n "$BALANCE_BEFORE_HEX" ] || die "could not read recipient L2 balance before send"

@@ -23,26 +23,6 @@ die() { lineth_die "$*"; }
 
 lineth_banner "ERC20 bridge smoke · L1 to L2"
 
-require_address() {
-  label="$1"
-  value="$2"
-  echo "$value" | grep -qE '^0x[a-fA-F0-9]{40}$' || die "$label missing or invalid"
-}
-
-require_hash() {
-  label="$1"
-  value="$2"
-  echo "$value" | grep -qE '^0x[a-fA-F0-9]{64}$' || die "$label missing or invalid"
-}
-
-require_uint() {
-  label="$1"
-  value="$2"
-  case "$value" in
-    ''|*[!0-9]*) die "$label must be a non-negative integer" ;;
-  esac
-}
-
 cast_l2_call() {
   lineth_cast_run "$L2_RPC_URL" call "$@"
 }
@@ -86,10 +66,10 @@ L2_TOKEN_BRIDGE="$(lineth_json_section_addr "$ADDR" l2 TokenBridge)"
 L1_ERC20="$(lineth_json_section_addr "$ADDR" l1 ERC20Example)"
 L1_CHAIN_ID="$(lineth_json_meta_value "$ADDR" l1ChainId)"
 
-require_address "L1 TokenBridge" "$L1_TOKEN_BRIDGE"
-require_address "L2 TokenBridge" "$L2_TOKEN_BRIDGE"
-require_address "L1 ERC20Example" "$L1_ERC20"
-require_uint "l1ChainId" "$L1_CHAIN_ID"
+lineth_require_address "L1 TokenBridge" "$L1_TOKEN_BRIDGE"
+lineth_require_address "L2 TokenBridge" "$L2_TOKEN_BRIDGE"
+lineth_require_address "L1 ERC20Example" "$L1_ERC20"
+lineth_require_uint "l1ChainId" "$L1_CHAIN_ID"
 
 L1_RPC_URL="$(lineth_l1_container_rpc_url)"
 L1_DEPLOYER_PRIVATE_KEY="$(lineth_l1_deployer_private_key)"
@@ -104,10 +84,10 @@ BRIDGE_MESSAGE_FEE_WEI="${BRIDGE_MESSAGE_FEE_WEI:-10000000000000000}"
 BRIDGE_SMOKE_TIMEOUT_SECONDS="${BRIDGE_SMOKE_TIMEOUT_SECONDS:-900}"
 BRIDGE_SMOKE_POLL_SECONDS="${BRIDGE_SMOKE_POLL_SECONDS:-10}"
 
-require_uint "BRIDGE_AMOUNT_WEI" "$BRIDGE_AMOUNT_WEI"
-require_uint "BRIDGE_MESSAGE_FEE_WEI" "$BRIDGE_MESSAGE_FEE_WEI"
-require_uint "BRIDGE_SMOKE_TIMEOUT_SECONDS" "$BRIDGE_SMOKE_TIMEOUT_SECONDS"
-require_uint "BRIDGE_SMOKE_POLL_SECONDS" "$BRIDGE_SMOKE_POLL_SECONDS"
+lineth_require_uint "BRIDGE_AMOUNT_WEI" "$BRIDGE_AMOUNT_WEI"
+lineth_require_uint "BRIDGE_MESSAGE_FEE_WEI" "$BRIDGE_MESSAGE_FEE_WEI"
+lineth_require_uint "BRIDGE_SMOKE_TIMEOUT_SECONDS" "$BRIDGE_SMOKE_TIMEOUT_SECONDS"
+lineth_require_uint "BRIDGE_SMOKE_POLL_SECONDS" "$BRIDGE_SMOKE_POLL_SECONDS"
 [ "$BRIDGE_AMOUNT_WEI" -gt 0 ] || die "BRIDGE_AMOUNT_WEI must be greater than zero"
 
 SENDER="$(lineth_cast_wallet_address "$L1_DEPLOYER_PRIVATE_KEY")"
@@ -121,10 +101,10 @@ elif [ -s "$DEMO_TRAFFIC_ENV" ]; then
 else
   L2_RECIPIENT="0x1000000000000000000000000000000000000001"
 fi
-require_address "L2 recipient" "$L2_RECIPIENT"
+lineth_require_address "L2 recipient" "$L2_RECIPIENT"
 
 START_MESSAGE_ID="$(lineth_psql_value "select coalesce(max(id),0) from message;")"
-require_uint "postman max message id" "$START_MESSAGE_ID"
+lineth_require_uint "postman max message id" "$START_MESSAGE_ID"
 
 section "preflight"
 log "L1 ERC20Example: $(lineth_l1_address_link "$L1_ERC20")"
@@ -143,25 +123,25 @@ case "$BRIDGED_TOKEN_BEFORE" in
   *)
     BALANCE_BEFORE_RAW="$(cast_l2_call "$BRIDGED_TOKEN_BEFORE" 'balanceOf(address)(uint256)' "$L2_RECIPIENT")"
     BALANCE_BEFORE="$(printf '%s\n' "$BALANCE_BEFORE_RAW" | awk '{print $1}')"
-    require_uint "recipient bridged balance before" "$BALANCE_BEFORE"
+    lineth_require_uint "recipient bridged balance before" "$BALANCE_BEFORE"
     ;;
 esac
 
 section "mint and approve on L1"
 MINT_RECEIPT="$(cast_l1_send "$L1_ERC20" 'mint(address,uint256)' "$SENDER" "$BRIDGE_AMOUNT_WEI")"
 MINT_TX_HASH="$(printf '%s\n' "$MINT_RECEIPT" | lineth_json_stdin_string_field transactionHash)"
-require_hash "mint tx hash" "$MINT_TX_HASH"
+lineth_require_hash "mint tx hash" "$MINT_TX_HASH"
 log "mintTx: $(lineth_l1_tx_link "$MINT_TX_HASH")"
 
 APPROVE_RECEIPT="$(cast_l1_send "$L1_ERC20" 'approve(address,uint256)' "$L1_TOKEN_BRIDGE" "$BRIDGE_AMOUNT_WEI")"
 APPROVE_TX_HASH="$(printf '%s\n' "$APPROVE_RECEIPT" | lineth_json_stdin_string_field transactionHash)"
-require_hash "approve tx hash" "$APPROVE_TX_HASH"
+lineth_require_hash "approve tx hash" "$APPROVE_TX_HASH"
 log "approveTx: $(lineth_l1_tx_link "$APPROVE_TX_HASH")"
 
 section "bridge L1 ERC20Example to L2"
 BRIDGE_RECEIPT="$(cast_l1_send "$L1_TOKEN_BRIDGE" 'bridgeToken(address,uint256,address)' "$L1_ERC20" "$BRIDGE_AMOUNT_WEI" "$L2_RECIPIENT" --value "$BRIDGE_MESSAGE_FEE_WEI")"
 BRIDGE_TX_HASH="$(printf '%s\n' "$BRIDGE_RECEIPT" | lineth_json_stdin_string_field transactionHash)"
-require_hash "bridge tx hash" "$BRIDGE_TX_HASH"
+lineth_require_hash "bridge tx hash" "$BRIDGE_TX_HASH"
 log "bridgeTx: $(lineth_l1_tx_link "$BRIDGE_TX_HASH")"
 
 section "wait for Postman L2 claim"
@@ -195,13 +175,13 @@ CLAIM_TX_HASH="$(printf '%s' "$ROW" | cut -d '|' -f 4)"
   printf '%s\n' "$ROW" >&2
   die "timed out waiting for CLAIMED_SUCCESS; last status=$STATUS"
 }
-require_hash "L2 claim tx hash" "$CLAIM_TX_HASH"
+lineth_require_hash "L2 claim tx hash" "$CLAIM_TX_HASH"
 log "l2ClaimTx: $CLAIM_TX_HASH"
 log "l2ClaimExplorer: http://localhost:$HOST_PORT_L2_BLOCKSCOUT_FRONTEND/tx/$CLAIM_TX_HASH"
 
 section "verify bridged ERC20 balance"
 BRIDGED_TOKEN="$(cast_l2_call "$L2_TOKEN_BRIDGE" 'nativeToBridgedToken(uint256,address)(address)' "$L1_CHAIN_ID" "$L1_ERC20" | tr -d '[:space:]')"
-require_address "L2 bridged token" "$BRIDGED_TOKEN"
+lineth_require_address "L2 bridged token" "$BRIDGED_TOKEN"
 case "$BRIDGED_TOKEN" in
   0x0000000000000000000000000000000000000000|0x0000000000000000000000000000000000000111|0x0000000000000000000000000000000000000222|0x0000000000000000000000000000000000000333)
     die "L2 TokenBridge mapping did not resolve to a bridged token: $BRIDGED_TOKEN"
@@ -210,7 +190,7 @@ esac
 
 BALANCE_AFTER_RAW="$(cast_l2_call "$BRIDGED_TOKEN" 'balanceOf(address)(uint256)' "$L2_RECIPIENT")"
 BALANCE_AFTER="$(printf '%s\n' "$BALANCE_AFTER_RAW" | awk '{print $1}')"
-require_uint "recipient bridged balance after" "$BALANCE_AFTER"
+lineth_require_uint "recipient bridged balance after" "$BALANCE_AFTER"
 
 DELTA=$((BALANCE_AFTER - BALANCE_BEFORE))
 [ "$DELTA" -ge "$BRIDGE_AMOUNT_WEI" ] || {
