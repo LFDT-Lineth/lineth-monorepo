@@ -107,13 +107,10 @@ fn absorbing_phase<ram, state_row0, state_row1, state_row2, state_row3, state_ro
     var n_bytes:u3 = (remainder % 8) as u3
 
     var final_word_in_block:u1
-    switch n_full_words {
-        case 16: {
-            final_word_in_block = 1
-        }
-        default: {
-            final_word_in_block = 0
-        }
+    if n_full_words == 16 {
+        final_word_in_block = 1
+    } else {
+        final_word_in_block = 0
     }
 
     for limb:u5 = 0; limb<n_full_words; limb = limb + 1 {
@@ -125,17 +122,11 @@ fn absorbing_phase<ram, state_row0, state_row1, state_row2, state_row3, state_ro
     // the code below should only trigger if n_full_words < 16 = 17 - 1
     // the above "read_and_pad_64" call didn't fill the final word, so
     // more padding happens: zero words followed by a terminating 1
-    switch final_word_in_block {
-        case 1: {
-            // Do nothing
+    if final_word_in_block != 1 {
+        for limb:u5 = n_full_words + 1; limb<16; limb = limb + 1 {
+            padded_input_block[limb] = 0
         }
-        default: {
-            // default case is != 1
-            for limb:u5 = n_full_words + 1; limb<16; limb = limb + 1 {
-                padded_input_block[limb] = 0
-            }
-            padded_input_block[16] = FINAL_RIGHT_PADDING
-        }
+        padded_input_block[16] = FINAL_RIGHT_PADDING
     }
 
     xor_padded_input_block_into_state()

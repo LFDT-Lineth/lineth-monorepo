@@ -54,14 +54,10 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
 
     imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters
 
-    switch imm_sign {
-        case 1: {
-            imm = DWORD_SIGN_EXT_PREFIX_52_ONES::imm_11::imm_10_5::imm_4_1::(0 as u1)
-        }
-        default: {
-            // default case is 0
-            imm = (imm_11::imm_10_5::imm_4_1::(0 as u1)) as DoubleWord
-        }
+    if imm_sign == 1 {
+        imm = DWORD_SIGN_EXT_PREFIX_52_ONES::imm_11::imm_10_5::imm_4_1::(0 as u1)
+    } else {
+        imm = (imm_11::imm_10_5::imm_4_1::(0 as u1)) as DoubleWord
     }
 
     // "no branching" value of pc_new;
@@ -89,22 +85,18 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
             printf "BLT "
             print_b_operands(rs1, rs2, imm)
             comparison = signed_LT(registers[rs1], registers[rs2])
-            switch comparison {
-                case 1: {
-                    // the branch case
-                    pc_new = signed_sum_of_double_word(pc, imm)
-                }
+            if comparison == 1 {
+                // the branch case
+                pc_new = signed_sum_of_double_word(pc, imm)
             }
         }
         case FUNCT3_BGE: {
             printf "BGE "
             print_b_operands(rs1, rs2, imm)
             comparison = signed_LT(registers[rs1], registers[rs2])
-            switch comparison {
-                case 0: {
-                    // the branch case
-                    pc_new = signed_sum_of_double_word(pc, imm)
-                }
+            if comparison == 0 {
+                // the branch case
+                pc_new = signed_sum_of_double_word(pc, imm)
             }
         }
         case FUNCT3_BLTU: {

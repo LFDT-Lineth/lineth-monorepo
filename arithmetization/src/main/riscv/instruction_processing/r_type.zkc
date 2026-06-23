@@ -253,33 +253,25 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                             print_r_operands(rd, rs1, rs2)
                             v1_sign = sign_bit_of_double_word(v1)
                             shift_discard_6::shift_amount_6 = v2
-                            switch v1_sign {
-                                case 1: {
-                                    double_word_working_copy = bit_flip_double_word(v1)
-                                }
-                                default: {
-                                    // default case is 0
-                                    double_word_working_copy = v1
-                                }
+                            if v1_sign == 1 {
+                                double_word_working_copy = bit_flip_double_word(v1)
+                            } else {
+                                // default case is 0
+                                double_word_working_copy = v1
                             }
                             double_word_working_copy = double_word_working_copy >> shift_amount_6
-                            switch v1_sign {
-                                case 1: {
-                                    double_word_working_copy = bit_flip_double_word(double_word_working_copy)
-                                }
+                            if v1_sign == 1 {
+                                double_word_working_copy = bit_flip_double_word(double_word_working_copy)
                             }
                             registers[rd] = double_word_working_copy
                         }
                         case FUNCT7_DIVU: {
                             printf "DIVU "
                             print_r_operands(rd, rs1, rs2)
-                            switch v2 {
-                                case 0: {
-                                    registers[rd] = NEGATIVE_ONE_AS_I64
-                                }
-                                default: {
-                                    registers[rd] = v1 / v2
-                                }
+                            if v2 == 0 {
+                                registers[rd] = NEGATIVE_ONE_AS_I64
+                            } else {
+                                registers[rd] = v1 / v2
                             }
                         }
                         default: {
@@ -498,13 +490,10 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                         case FUNCT7_DIVUW: {
                             printf "DIVUW "
                             print_r_operands(rd, rs1, rs2)
-                            switch v2_lower {
-                                case 0: {
-                                    registers[rd] = NEGATIVE_ONE_AS_I64
-                                }
-                                default: {
-                                    registers[rd] = sgn_extension_u32_u64(v1_lower / v2_lower)
-                                }
+                            if v2_lower == 0 {
+                                registers[rd] = NEGATIVE_ONE_AS_I64
+                            } else {
+                                registers[rd] = sgn_extension_u32_u64(v1_lower / v2_lower)
                             }
                         }
                         default: {
@@ -552,13 +541,10 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                         case FUNCT7_REMUW: {
                             printf "REMUW "
                             print_r_operands(rd, rs1, rs2)
-                            switch v2_lower {
-                                case 0: {
-                                    registers[rd] = sgn_extension_u32_u64(v1_lower)
-                                }
-                                default: {
-                                    registers[rd] = sgn_extension_u32_u64(v1_lower % v2_lower)
-                                }
+                            if v2_lower == 0 {
+                                registers[rd] = sgn_extension_u32_u64(v1_lower) 
+                            } else {
+                                registers[rd] = sgn_extension_u32_u64(v1_lower % v2_lower)
                             }
                         }
                         default: {
@@ -582,17 +568,14 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
         case CUSTOM_1: {
             switch funct3 {
                 case FUNCT3_KECCAK: {
-                    switch funct7 {
-                        case FUNCT7_KECCAK: {
-                            printf "KECCAK precompile "
-                            keccak(v1 as Address, v2 as u32, registers[rd] as Address)
-                        }
-                        default: {
-                            printf "[ERROR] Unsupported R-type custom-1 instruction with\n"
-                            printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
-                            printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
-                            fail
-                        }
+                    if funct7 == FUNCT7_KECCAK {
+                        printf "KECCAK precompile "
+                        keccak(v1 as Address, v2 as u32, registers[rd] as Address)
+                    } else {
+                        printf "[ERROR] Unsupported R-type custom-1 instruction with\n"
+                        printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
+                        printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
+                        fail
                     }
                 }
                 default: {

@@ -119,26 +119,20 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                 }
                 case FUNCT3_SLLI: {
                     funct6::uimm6 = imm12
-                    switch funct6 {
-                        case FUNCT6_SLLI: {
-                            printf "SLLI "
-                            print_i_shift6_operands(rd, rs1, uimm6)
-                            registers[rd] = registers[rs1] << uimm6
-                        }
+                    if funct6 == FUNCT6_SLLI {
+                        printf "SLLI "
+                        print_i_shift6_operands(rd, rs1, uimm6)
+                        registers[rd] = registers[rs1] << uimm6
                     }
                 }
                 case FUNCT3_SLTI: {
                     printf "SLTI "
                     print_i_operands(rd, rs1, signext_imm12_64)
                     var is_lt:Boolean = signed_LT(registers[rs1], signext_imm12_64)
-                    switch is_lt {
-                        case 1: {
-                            registers[rd] = 1
-                        }
-                        default: {
-                            // default case is 0
-                            registers[rd] = 0
-                        }
+                    if is_lt == 1 {
+                        registers[rd] = 1
+                    } else {
+                        registers[rd] = 0
                     }
                 }
                 case FUNCT3_SLTIU: {
@@ -203,12 +197,10 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                     registers[rd] = sgn_extension_u32_u64((rs1_plus_signext_imm12 & MAX_UINT_32_AS_U64) as Word)
                 }
                 case FUNCT3_SLLIW: {
-                    switch funct7 {
-                        case FUNCT7_SLLIW: {
-                            printf "SLLIW "
-                            print_i_shift5_operands(rd, rs1, uimm5)
-                            registers[rd] = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) << uimm5)
-                        }
+                    if funct7 == FUNCT7_SLLIW {
+                        printf "SLLIW "
+                        print_i_shift5_operands(rd, rs1, uimm5)
+                        registers[rd] = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) << uimm5)
                     }
                 }
                 case FUNCT3_SRLIW: {
@@ -281,13 +273,10 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
         case EXIT_SYSCALL: { // exit
             printf "ECALL for exit\n"
             var a0:DoubleWord = registers[10] // exit code
-            switch a0 {
-                case 0: {
-                    printf "EXIT CODE = 0\n"
-                }
-                default: {
-                    fail "EXIT CODE = %d\n", a0
-                }
+            if a0 == 0 {
+                printf "EXIT CODE = 0\n"
+            } else {
+                fail "EXIT CODE = %d\n", a0
             }
             // set stop signal to terminate execution
             new_pc = MAX_UINT_64
