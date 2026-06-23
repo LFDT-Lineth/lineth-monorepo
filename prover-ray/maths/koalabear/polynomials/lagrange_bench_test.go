@@ -31,6 +31,6 @@ func BenchmarkComputeLagrangeAtZExt(b *testing.B) {
 	z := field.ElemFromExt(randExt(rng))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = ComputeLagrangeAtZ(z, uint64(benchSize))
+		_ = EvalLagrangeBasisAtZ(z, uint64(benchSize))
 	}
 }

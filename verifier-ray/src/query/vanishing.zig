@@ -203,18 +203,11 @@ fn evalExpr(
     const node = module.expressions[expr_index];
     return switch (node) {
         .column_claim => |claim_index| input.witness_claims[module.witness_claim_offset + claim_index],
-        .cell_value => |ref| scalarToExt(input.ctx.rounds[ref.round].cells[ref.index]),
+        .cell_value => |ref| input.ctx.rounds[ref.round].cells[ref.index].toExt(),
         .coin_value => |coin_index| input.ctx.all_coins[coin_index],
         .constant => |value| ext.Ext.lift(value),
         .op => |op| try evalOp(module, op, static_n, ctx, input),
         .lagrange_selector => |position| try evalLagrangeSelector(position, static_n, ctx),
-    };
-}
-
-fn scalarToExt(value: protocol.Scalar) ext.Ext {
-    return switch (value) {
-        .base => |base| ext.Ext.lift(base),
-        .ext => |extended| extended,
     };
 }
 

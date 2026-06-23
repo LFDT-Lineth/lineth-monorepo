@@ -42,7 +42,7 @@ jobs:
       - name: Install zkc and check compilation of RISC-V in ZkC
         run: make -C arithmetization riscv-check-compilation
         env:
-          ZKC_REF: ${{ inputs.zkc-ref || 'main' }}
+          ZKC_REF: ${{ inputs.zkc-ref || 'v1.2.20' }}
 
       - name: Linting Check
         run: make -C arithmetization riscv-check-lint

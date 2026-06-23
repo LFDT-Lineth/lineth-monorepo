@@ -42,7 +42,7 @@ jobs:
       - name: Install zkc, compile risc binary for simple zkc test program and check it
         run: make -C arithmetization zkc-compile-and-check
         env:
-          ZKC_REF: ${{ inputs.zkc-ref || 'main' }}
+          ZKC_REF: ${{ inputs.zkc-ref || 'v1.2.20' }}
           ZKC_MAIN: src/test/zkc/simple_add.zkc
           ZKC_FILES: src/test/zkc/simple_add.zkc
           ZKC_INPUT: src/test/zkc/simple_add.json

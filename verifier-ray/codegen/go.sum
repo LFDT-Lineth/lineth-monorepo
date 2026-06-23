@@ -1,3 +1,5 @@
+github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260618065234-5d29f81a0d2c h1:MFhR9i2AXaJAaTaiMevDeNhg9tziY5CUlpkA3aFxW0c=
+github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260618065234-5d29f81a0d2c/go.mod h1:apYk+H/I+uQsEQA/e5t+fL3/OqK7px7PpqF6bYhn2fg=
 github.com/bits-and-blooms/bitset v1.24.4 h1:95H15Og1clikBrKr/DuzMXkQzECs1M6hhoGXLwLQOZE=
 github.com/bits-and-blooms/bitset v1.24.4/go.mod h1:7hO7Gc7Pp1vODcmWvKMRA9BNmbv6a/7QIWpPxHddWR8=
 github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=
@@ -6,8 +8,6 @@ github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565 h1:NlOAmbLYsVb/
 github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565/go.mod h1:EoWWbEboQRydCqJDSA7zrFxucIeoy/5R+MDx04oFpF4=
 github.com/consensys/gnark-crypto v0.20.2-0.20260521181528-f8db9b5b907d h1:BvrCCp3hEQ9eXJYDkuP7chEHeBYqHNbmE8Ag/30Hx3c=
 github.com/consensys/gnark-crypto v0.20.2-0.20260521181528-f8db9b5b907d/go.mod h1:NzeBHSZ49bIM7RtrNTYYR2kymTqwvI/A4eTgQlyQc+Q=
-github.com/consensys/linea-monorepo/prover-ray v0.0.0-20260610132712-f735159cffa9 h1:Zq8+Co0bXWMPreAxLdkFUxjkhBP2mtouUuM7wHnU2kU=
-github.com/consensys/linea-monorepo/prover-ray v0.0.0-20260610132712-f735159cffa9/go.mod h1:syPkQgeCxGKflmraYqacgkkDQzmJwqW5V6Ru/QJE3PA=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/fxamacker/cbor/v2 v2.9.1 h1:2rWm8B193Ll4VdjsJY28jxs70IdDsHRWgQYAI80+rMQ=

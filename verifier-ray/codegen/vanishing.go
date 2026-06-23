@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/global"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
 )
 
 // UnsupportedExpressionError reports an expression leaf or operation that the
@@ -22,12 +22,6 @@ func (e *UnsupportedExpressionError) Error() string {
 func IsUnsupportedExpression(err error) bool {
 	var unsupported *UnsupportedExpressionError
 	return errors.As(err, &unsupported)
-}
-
-type NamedVanishingSystem struct {
-	Name    string
-	System  VanishingSystem
-	Routing CoinRouting
 }
 
 type VanishingSystem struct {
