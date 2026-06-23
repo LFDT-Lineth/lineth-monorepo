@@ -1,17 +1,17 @@
 {
   "guestProgramId": "0x31139b3eaece046f5675fe237c36246e7bb2a5acc4cf4b358aef65c6d3771f4d",
+  "metadata": {
+    "startBlockNumber": 1000501,
+    "endBlockNumber": 1000510
+  },
   "proofRequest": {
     "chainId": 59144,
     "blobs": [
       {
-        "blobInputs": {
-          "blobHash": "0x1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
-          "blobKzgProof": "0x949494949494949494949494949494949494949494949494949494949494949494949494949494949494949494949494"
-        },
-        "blockRange": {
-          "startBlockNumber": 1000501,
-          "endBlockNumber": 1000510
-        },
+        "startBlockNumber": 1000501,
+        "endBlockNumber": 1000510,
+        "blobHash": "0x1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+        "blobKzgProof": "0x949494949494949494949494949494949494949494949494949494949494949494949494949494949494949494949494",
         "blockRlps": [
           "0xf90215a0",
           "0xf90216b1"
