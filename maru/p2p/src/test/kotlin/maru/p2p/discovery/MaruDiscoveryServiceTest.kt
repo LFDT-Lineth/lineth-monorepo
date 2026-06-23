@@ -14,6 +14,7 @@ import linea.timer.JvmTimerFactory
 import maru.config.P2PConfig
 import maru.consensus.ElFork
 import maru.consensus.ForkIdManagerFactory.createForkIdHashManager
+import maru.core.ext.DataGenerators
 import maru.database.InMemoryBeaconChain
 import maru.database.InMemoryP2PState
 import maru.database.P2PState
@@ -59,13 +60,22 @@ class MaruDiscoveryServiceTest {
     private val key3 = "0x4437acb8e84bc346f7640f239da84abe99bc6f97b7855f204e34688d2977fd57".decodeHex()
 
     private val chainId = 1337u
-    private val beaconChain = InMemoryBeaconChain.fromGenesis()
+    private val beaconChain = inMemoryBeaconChainFromGenesis()
     private val forkIdHashProvider =
       createForkIdHashManager(
         chainId = chainId,
         beaconChain = beaconChain,
         elFork = ElFork.Prague,
       )
+
+    private fun inMemoryBeaconChainFromGenesis(
+      genesisTimestampSeconds: ULong = 0UL,
+    ): InMemoryBeaconChain {
+      val (beaconState, sealedBlock) = DataGenerators.genesisState(
+        genesisTimestamp = genesisTimestampSeconds,
+      )
+      return InMemoryBeaconChain(beaconState, sealedBlock)
+    }
   }
 
   private lateinit var p2PState: P2PState

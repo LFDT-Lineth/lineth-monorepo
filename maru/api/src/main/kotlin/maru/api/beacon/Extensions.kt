@@ -8,7 +8,7 @@
  */
 package maru.api.beacon
 
-import maru.extensions.encodeHex
+import linea.kotlin.encodeHex
 import maru.core.BeaconBlockHeader as MaruBeaconBlockHeader
 import maru.core.ExecutionPayload as MaruExecutionPayload
 import maru.core.Seal as MaruSeal

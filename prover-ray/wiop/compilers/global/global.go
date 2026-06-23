@@ -3,11 +3,12 @@ package global
 import (
 	"fmt"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/polynomials"
-	"github.com/consensys/linea-monorepo/prover-ray/utils"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	gnarkutils "github.com/consensys/gnark-crypto/utils"
 )
 
 // Compile adds the global-quotient compilation pass to sys. It groups each
@@ -100,11 +101,11 @@ type proverBucket struct {
 	scratchAgg []field.Ext // aggregate[j], length N = n*ratio
 }
 
-// verifierBucket holds everything the verifier needs for one ratio bucket.
-type verifierBucket struct {
-	ratio          int
-	vanishings     []*wiop.Vanishing
-	quotientClaims []*wiop.Cell // Q_k(r) claim cells, length = ratio
+// VerifierBucket holds everything the verifier needs for one ratio bucket.
+type VerifierBucket struct {
+	Ratio          int
+	Vanishings     []*wiop.Vanishing
+	QuotientClaims []*wiop.Cell // Q_k(r) claim cells, length = ratio
 }
 
 // ---------------------------------------------------------------------------
@@ -228,22 +229,22 @@ func compileModule(
 	})
 
 	// --- Step 10: register verifier action ---
-	vBuckets := make([]verifierBucket, len(rawBuckets))
+	vBuckets := make([]VerifierBucket, len(rawBuckets))
 	for i, bkt := range rawBuckets {
-		vBuckets[i] = verifierBucket{
-			ratio:          bkt.ratio,
-			vanishings:     bkt.vanishings,
-			quotientClaims: quotientBucketClaims[i],
+		vBuckets[i] = VerifierBucket{
+			Ratio:          bkt.ratio,
+			Vanishings:     bkt.vanishings,
+			QuotientClaims: quotientBucketClaims[i],
 		}
 	}
 	evalRound.RegisterVerifierAction(&Verifier{
-		m:             m,
-		mergeCoin:     mergeCoin,
-		evalCoin:      evalCoin,
-		witnessViews:  views,
-		witnessClaims: witnessClaims,
+		Module:        m,
+		MergeCoin:     mergeCoin,
+		EvalCoin:      evalCoin,
+		WitnessViews:  views,
+		WitnessClaims: witnessClaims,
 		viewKeyToIdx:  viewKeyToIdx,
-		buckets:       vBuckets,
+		Buckets:       vBuckets,
 	})
 }
 
@@ -352,6 +353,98 @@ func computeCancellationCoset(cancelled []int, n, N int) []field.Element {
 	return cVals
 }
 
+// computeLagrangeSelectorCoset returns the base-field evaluation of the
+// Lagrange selector polynomial
+//
+//	L_p(X) = ω^p · (X^n − 1) / (n · (X − ω^p))
+//
+// at all N = n·ratio coset points {g · ω_N^j : j = 0…N-1}, where ω =
+// RootOfUnityBy(n), ω_N = RootOfUnityBy(N), g = MultiplicativeGen, and p is
+// `position` normalised into [0, n). This is the polynomial that
+// [wiop.LagrangeSelector] represents (1 at row p, 0 elsewhere on the domain);
+// the same closed form is used pointwise by
+// [wiop.LagrangeSelector.EvaluateOutOfDomain].
+//
+// The coset parametrisation mirrors [computeCancellationCoset] exactly so the
+// result lines up with the FFT-coset evaluations of the witness columns. The
+// denominator never vanishes: a coset point g·ω_N^j is never a pure n-th root
+// of unity, so X − ω^p ≠ 0.
+func computeLagrangeSelectorCoset(position, n, N int) []field.Element {
+	// Normalise the anchor into [0, n).
+	p := ((position % n) + n) % n
+
+	omega := field.RootOfUnityBy(n)
+	var omegaP field.Element
+	field.ExpToInt(&omegaP, omega, p)
+
+	// Constant numerator coefficient ω^p / n.
+	var nInv field.Element
+	nInv.SetUint64(uint64(n))
+	nInv.Inverse(&nInv)
+	var numCoef field.Element
+	numCoef.Mul(&omegaP, &nInv)
+
+	omegaN := field.RootOfUnityBy(N)
+	var g field.Element
+	g.SetUint64(field.MultiplicativeGen)
+
+	// x_j^n = (g·ω_N^j)^n = g^n · (ω_N^n)^j cycles with period ratio = N/n,
+	// advanced incrementally to avoid a per-point exponentiation.
+	var gPowN, omegaNPowN field.Element
+	field.ExpToInt(&gPowN, g, n)           // g^n
+	field.ExpToInt(&omegaNPowN, omegaN, n) // ω_N^n
+	var one field.Element
+	one.SetOne()
+
+	denom := make([]field.Element, N) // x_j − ω^p
+	num := make([]field.Element, N)   // x_j^n − 1
+	x := g
+	xPowN := gPowN
+	for j := 0; j < N; j++ {
+		denom[j].Sub(&x, &omegaP)
+		num[j].Sub(&xPowN, &one)
+		x.Mul(&x, &omegaN)
+		xPowN.Mul(&xPowN, &omegaNPowN)
+	}
+
+	invDenom := make([]field.Element, N)
+	field.VecBatchInvBase(invDenom, denom)
+
+	res := make([]field.Element, N)
+	for j := 0; j < N; j++ {
+		res[j].Mul(&numCoef, &num[j])
+		res[j].Mul(&res[j], &invDenom[j])
+	}
+	return res
+}
+
+// collectLagrangeSelectorPositions records the Position of every
+// [wiop.LagrangeSelector] leaf reachable from expr into out.
+func collectLagrangeSelectorPositions(expr wiop.Expression, out map[int]struct{}) {
+	switch e := expr.(type) {
+	case *wiop.LagrangeSelector:
+		out[e.Position] = struct{}{}
+	case *wiop.ArithmeticOperation:
+		for _, op := range e.Operands {
+			collectLagrangeSelectorPositions(op, out)
+		}
+	}
+}
+
+// bktVanishings returns the Vanishing constraints of a bucket, regardless of
+// whether it is a static bucket (size-dependent data precomputed into entries)
+// or a dynamic bucket (raw vanishings deferred to runtime).
+func bktVanishings(bkt *proverBucket) []*wiop.Vanishing {
+	if bkt.entries != nil {
+		vs := make([]*wiop.Vanishing, len(bkt.entries))
+		for i, e := range bkt.entries {
+			vs[i] = e.v
+		}
+		return vs
+	}
+	return bkt.vanishings
+}
+
 // ---------------------------------------------------------------------------
 // Prover actions
 // ---------------------------------------------------------------------------
@@ -418,12 +511,34 @@ func (a *QuotientProverAction) Run(rt wiop.Runtime) {
 		}
 
 		// --- Evaluate all root columns on the large coset ---
-		// cosetEvals[colID][j] = col evaluated at coset point j
+		// cosetEvals[colID][j] = col evaluated at coset point j (base-field
+		// columns); cosetEvalsExt[colID][j] for extension-field columns.
+		// A column populates exactly one of the two maps; expression
+		// evaluators dispatch on Column.IsExtension.
 		cosetEvals := make(map[wiop.ObjectID][]field.Element, len(bkt.rootCols))
+		cosetEvalsExt := make(map[wiop.ObjectID][]field.Ext, len(bkt.rootCols))
 		for _, col := range bkt.rootCols {
-			cosetEvals[col.Context.ID] = reevalOnLargeCoset(
-				rt, col, a.m, n, N, smallDomain, largeDomain,
-			)
+			if col.IsExtension {
+				cosetEvalsExt[col.Context.ID] = reevalOnLargeCosetExt(
+					rt, col, a.m, n, N, smallDomain, largeDomain,
+				)
+			} else {
+				cosetEvals[col.Context.ID] = reevalOnLargeCoset(
+					rt, col, a.m, n, N, smallDomain, largeDomain,
+				)
+			}
+		}
+
+		// --- Evaluate every distinct Lagrange selector on the large coset ---
+		// Selectors are not committed columns, so they are computed analytically
+		// rather than re-FFT'd. selectorCosets[position][j] = L_position(coset_j).
+		selectorPositions := make(map[int]struct{})
+		for _, v := range bktVanishings(&bkt) {
+			collectLagrangeSelectorPositions(v.Expression, selectorPositions)
+		}
+		selectorCosets := make(map[int][]field.Element, len(selectorPositions))
+		for pos := range selectorPositions {
+			selectorCosets[pos] = computeLagrangeSelectorCoset(pos, n, N)
 		}
 
 		// --- Compute the aggregate extension-field polynomial on the coset ---
@@ -445,7 +560,7 @@ func (a *QuotientProverAction) Run(rt wiop.Runtime) {
 			// Static module: use precomputed cancellation cosets.
 			for _, entry := range bkt.entries {
 				accumulateOnCoset(
-					rt, entry.v.Expression, cosetEvals,
+					rt, entry.v.Expression, cosetEvals, cosetEvalsExt, selectorCosets,
 					entry.cancellationCoset, &coinPow, aggregate, ratio, N,
 				)
 				// advance coinPow: coinPow *= coinExt
@@ -456,7 +571,7 @@ func (a *QuotientProverAction) Run(rt wiop.Runtime) {
 			for _, v := range bkt.vanishings {
 				cancellationCoset := computeCancellationCoset(v.CancelledPositions, n, N)
 				accumulateOnCoset(
-					rt, v.Expression, cosetEvals,
+					rt, v.Expression, cosetEvals, cosetEvalsExt, selectorCosets,
 					cancellationCoset, &coinPow, aggregate, ratio, N,
 				)
 				coinPow.Mul(&coinPow, &coinExt)
@@ -471,12 +586,31 @@ func (a *QuotientProverAction) Run(rt wiop.Runtime) {
 
 		// --- IFFT on the large coset: coset evals → canonical coefficients ---
 		// FFTInverseExt6 operates directly on the contiguous E6 layout.
+		// In DIF mode it returns coefficients in BIT-REVERSED order across
+		// the full size-N domain.
 		largeDomain.FFTInverseExt6(aggregate[:N], fft.DIF, fft.OnCoset())
+
+		// For ratio == 1 the FFT(DIT) in the loop below consumes bit-reversed
+		// input directly, so we can slice without a prior bit-reverse. For
+		// ratio > 1 the bit-reversal across N interleaves coefficients
+		// across the ratio chunks (for ratio = 2, aggregate[0:n] would hold
+		// the even-indexed coefficients of the size-N polynomial rather
+		// than the contiguous low-degree slice we need to form Q_0). We
+		// bit-reverse to natural order, then bit-reverse each chunk so the
+		// subsequent FFT(DIT) still sees its expected bit-reversed input.
+		// Net effect for ratio > 1: aggregate -> natural, then per-chunk
+		// natural -> bit-reversed -> FFT(DIT) -> natural Lagrange.
+		if ratio > 1 {
+			gnarkutils.BitReverse(aggregate[:N])
+		}
 
 		// --- Split into ratio chunks and FFT each to standard Lagrange form ---
 		for k := range ratio {
 			chunk := make([]field.Ext, n)
 			copy(chunk, aggregate[k*n:(k+1)*n])
+			if ratio > 1 {
+				gnarkutils.BitReverse(chunk)
+			}
 			extFFT(smallDomain, chunk)
 
 			cv := &wiop.ConcreteVector{
@@ -513,9 +647,62 @@ func reevalOnLargeCoset(
 	}
 
 	// iFFT on small domain (standard, no coset shift): Lagrange → canonical.
+	// FFTInverse(DIF) leaves the output in bit-reversed-of-n order. When
+	// n == N (ratio == 1) the trailing zero-pad is empty and bit-reversed-of-n
+	// matches bit-reversed-of-N, so FFT(DIT) below consumes the result
+	// directly. For n < N the bit-reversal index space changes between the
+	// two FFTs, so we normalise to natural order in between (BitReverse on
+	// vals[:n] then on vals[:N]) before re-introducing bit-reversal for the
+	// large FFT's DIT input convention.
 	smallDomain.FFTInverse(vals[:n], fft.DIF)
+	if N != n {
+		gnarkutils.BitReverse(vals[:n])
+		// vals[n:N] is already zero, so vals[:N] is now natural-order
+		// coefficients of the zero-padded polynomial. Re-bit-reverse to
+		// feed FFT(DIT) which expects bit-reversed input.
+		gnarkutils.BitReverse(vals[:N])
+	}
 	// FFT on large coset: canonical → coset Lagrange.
 	largeDomain.FFT(vals, fft.DIT, fft.OnCoset())
+	return vals
+}
+
+// reevalOnLargeCosetExt is the extension-field counterpart of
+// [reevalOnLargeCoset]. It evaluates an extension-field column on the
+// large coset, using the Ext6 FFT path so the prover can incorporate
+// extension witness columns (e.g. the Z columns produced by the
+// log-derivative compiler) into a quotient bucket.
+//
+// The bit-reversal accounting mirrors the base-field version: the small
+// IFFT(DIF) returns bit-reversed-of-n coefficients in vals[:n] with the
+// trailing zero-pad untouched; if n < N the index space switches between
+// the two FFTs, so we BitReverse twice to normalise the polynomial layout
+// before feeding it to the large FFT(DIT, OnCoset).
+func reevalOnLargeCosetExt(
+	rt wiop.Runtime,
+	col *wiop.Column,
+	m *wiop.Module,
+	n, N int,
+	smallDomain, largeDomain *fft.Domain,
+) []field.Ext {
+	cv := rt.GetColumnAssignment(col)
+
+	vals := make([]field.Ext, N) // zero-padded
+	for i := range n {
+		elem := cv.ElementAtN(m.Padding, n, i)
+		if elem.IsBase() {
+			vals[i] = field.Lift(elem.AsBase())
+		} else {
+			vals[i] = elem.AsExt()
+		}
+	}
+
+	smallDomain.FFTInverseExt6(vals[:n], fft.DIF)
+	if N != n {
+		gnarkutils.BitReverse(vals[:n])
+		gnarkutils.BitReverse(vals[:N])
+	}
+	largeDomain.FFTExt6(vals, fft.DIT, fft.OnCoset())
 	return vals
 }
 
@@ -539,44 +726,44 @@ func (a *EvalProverAction) Run(rt wiop.Runtime) {
 // Verifier checks the PLONK quotient identity for one module.
 // It runs in evalRound.
 type Verifier struct {
-	m             *wiop.Module
-	mergeCoin     *wiop.CoinField
-	evalCoin      *wiop.CoinField
-	witnessViews  []*wiop.ColumnView
-	witnessClaims []*wiop.Cell
+	Module        *wiop.Module
+	MergeCoin     *wiop.CoinField
+	EvalCoin      *wiop.CoinField
+	WitnessViews  []*wiop.ColumnView
+	WitnessClaims []*wiop.Cell
 	viewKeyToIdx  map[colViewKey]int
-	buckets       []verifierBucket
+	Buckets       []VerifierBucket
 }
 
 // Check verifies the PLONK quotient identity for the module using the runtime's claimed values.
 func (gv *Verifier) Check(rt wiop.Runtime) error {
-	n := gv.m.RuntimeSize(rt)
+	n := gv.Module.RuntimeSize(rt)
 
-	if !gv.m.IsDynamic() && n != gv.m.Size() {
+	if !gv.Module.IsDynamic() && n != gv.Module.Size() {
 		panic(fmt.Sprintf(
 			"wiop/compilers: global quotient Check called with runtime size %d but module size is %d",
 			n,
-			gv.m.Size(),
+			gv.Module.Size(),
 		))
 	}
-	r := rt.GetCoinValue(gv.evalCoin)
-	coinExt := rt.GetCoinValue(gv.mergeCoin).Ext
+	r := rt.GetCoinValue(gv.EvalCoin)
+	coinExt := rt.GetCoinValue(gv.MergeCoin).Ext
 
 	// Build the map from column-view key → evaluation at r.
-	viewEvals := make(map[colViewKey]field.Gen, len(gv.witnessViews))
-	for i, cv := range gv.witnessViews {
+	viewEvals := make(map[colViewKey]field.Gen, len(gv.WitnessViews))
+	for i, cv := range gv.WitnessViews {
 		key := colViewKey{id: cv.Column.Context.ID, shift: cv.ShiftingOffset}
-		viewEvals[key] = rt.GetCellValue(gv.witnessClaims[i])
+		viewEvals[key] = rt.GetCellValue(gv.WitnessClaims[i])
 	}
 
 	// Compute annihilator r^n − 1.
 	annihilator := computeAnnihilator(r, n)
 
-	for _, bkt := range gv.buckets {
+	for _, bkt := range gv.Buckets {
 		// --- Recombine quotient shares: Q(r) = Σ_k r^{kn} · Q_k(r) ---
 		qr := field.ElemZero()
 		rPowKN := field.ElemOne() // r^{kn}, starts at r^0 = 1
-		for k, claim := range bkt.quotientClaims {
+		for k, claim := range bkt.QuotientClaims {
 			_ = k
 			qk := rt.GetCellValue(claim) // Q_k(r)
 			qr = qr.Add(rPowKN.Mul(qk))
@@ -590,8 +777,8 @@ func (gv *Verifier) Check(rt wiop.Runtime) error {
 		pagg := field.ElemZero()
 		var coinPow field.Ext
 		coinPow.SetOne()
-		for _, v := range bkt.vanishings {
-			pr := evalExprAtPoint(v.Expression, viewEvals, rt)
+		for _, v := range bkt.Vanishings {
+			pr := evalExprAtPoint(v.Expression, viewEvals, r, rt)
 			cr := evalCancellationAtPoint(v.CancelledPositions, n, r)
 			pTimesC := pr.Mul(cr)
 			// coinPow · pTimesC  (coinPow is Ext, pTimesC may be base or ext)
@@ -614,7 +801,7 @@ func (gv *Verifier) Check(rt wiop.Runtime) error {
 		if !diff.IsZero() {
 			return fmt.Errorf(
 				"wiop/compilers: global quotient check failed for module (n=%d, ratio=%d): P_agg(r) ≠ (r^n−1)·Q(r)",
-				n, bkt.ratio,
+				n, bkt.Ratio,
 			)
 		}
 	}
@@ -660,12 +847,13 @@ func evalCancellationAtPoint(cancelled []int, n int, r field.Gen) field.Gen {
 	return result
 }
 
-// evalExprAtPoint evaluates a symbolic expression at a pre-computed scalar
-// point using the witness column evaluation map (from LagrangeEval claim cells).
-// Coins and cells are looked up directly from the runtime.
+// evalExprAtPoint evaluates a symbolic expression at the point r using the
+// witness column evaluation map (from LagrangeEval claim cells). Coins and
+// cells are looked up directly from the runtime.
 func evalExprAtPoint(
 	expr wiop.Expression,
 	viewEvals map[colViewKey]field.Gen,
+	r field.Gen,
 	rt wiop.Runtime,
 ) field.Gen {
 	switch e := expr.(type) {
@@ -679,9 +867,11 @@ func evalExprAtPoint(
 			))
 		}
 		return v
+	case *wiop.LagrangeSelector:
+		return e.EvaluateOutOfDomain(rt, r)
 	case *wiop.ArithmeticOperation:
 		eval := func(i int) field.Gen {
-			return evalExprAtPoint(e.Operands[i], viewEvals, rt)
+			return evalExprAtPoint(e.Operands[i], viewEvals, r, rt)
 		}
 		a0 := eval(0)
 		switch e.Operator {
@@ -734,6 +924,8 @@ func accumulateOnCoset(
 	rt wiop.Runtime,
 	expr wiop.Expression,
 	cosetEvals map[wiop.ObjectID][]field.Element,
+	cosetEvalsExt map[wiop.ObjectID][]field.Ext,
+	selectorCosets map[int][]field.Element,
 	cancellationCoset []field.Element,
 	coinPow *field.Ext,
 	aggregate []field.Ext,
@@ -741,7 +933,7 @@ func accumulateOnCoset(
 ) {
 	if isBaseExpr(expr) {
 		for j := 0; j < N; j++ {
-			pVal := evalExprOnCoset(rt, expr, cosetEvals, j, ratio, N)
+			pVal := evalExprOnCoset(rt, expr, cosetEvals, selectorCosets, j, ratio, N)
 			var pTimesC field.Element
 			if cancellationCoset != nil {
 				pTimesC.Mul(&pVal, &cancellationCoset[j])
@@ -755,7 +947,7 @@ func accumulateOnCoset(
 		return
 	}
 	for j := 0; j < N; j++ {
-		pVal := evalExprOnCosetExt(rt, expr, cosetEvals, j, ratio, N)
+		pVal := evalExprOnCosetExt(rt, expr, cosetEvals, cosetEvalsExt, selectorCosets, j, ratio, N)
 		var pTimesC field.Ext
 		if cancellationCoset != nil {
 			pTimesC.MulByElement(&pVal, &cancellationCoset[j])
@@ -769,13 +961,18 @@ func accumulateOnCoset(
 }
 
 // isBaseExpr reports whether expr evaluates to a base-field element at every
-// coset point. Extension-field cells and CoinField leaves (always extension)
-// make the result extension; everything else is base. The check is purely
-// structural, so it is computed once per Vanishing expression and reused
-// across all N coset points.
+// coset point. Extension-field cells, extension-field column views, and
+// CoinField leaves (always extension) make the result extension;
+// everything else is base. The check is purely structural, so it is
+// computed once per Vanishing expression and reused across all N coset
+// points.
 func isBaseExpr(expr wiop.Expression) bool {
 	switch e := expr.(type) {
-	case *wiop.ColumnView, *wiop.Constant:
+	case *wiop.ColumnView:
+		return !e.Column.IsExtension
+	case *wiop.LagrangeSelector:
+		return true
+	case *wiop.Constant:
 		return true
 	case *wiop.Cell:
 		return !e.IsExtension()
@@ -808,6 +1005,7 @@ func evalExprOnCoset(
 	rt wiop.Runtime,
 	expr wiop.Expression,
 	cosetEvals map[wiop.ObjectID][]field.Element,
+	selectorCosets map[int][]field.Element,
 	j, ratio, N int,
 ) field.Element {
 	switch e := expr.(type) {
@@ -815,6 +1013,9 @@ func evalExprOnCoset(
 		k := e.ShiftingOffset
 		idx := ((j+k*ratio)%N + N) % N
 		return cosetEvals[e.Column.Context.ID][idx]
+	case *wiop.LagrangeSelector:
+		// Selectors are unshifted, so the coset index is j directly.
+		return selectorCosets[e.Position][j]
 	case *wiop.Cell:
 		if e.IsExtension() {
 			panic(fmt.Sprintf(
@@ -835,7 +1036,7 @@ func evalExprOnCoset(
 		return e.Value
 	case *wiop.ArithmeticOperation:
 		eval := func(i int) field.Element {
-			return evalExprOnCoset(rt, e.Operands[i], cosetEvals, j, ratio, N)
+			return evalExprOnCoset(rt, e.Operands[i], cosetEvals, selectorCosets, j, ratio, N)
 		}
 		a0 := eval(0)
 		var res field.Element
@@ -876,24 +1077,36 @@ func evalExprOnCoset(
 // evalExprOnCosetExt is the extension-field counterpart of [evalExprOnCoset].
 // It accepts any leaf type, lifting base-field values (column samples,
 // constants, base cells) into the extension field, and is used when the
-// expression contains at least one extension-typed leaf (extension cell or
-// any coin).
+// expression contains at least one extension-typed leaf (extension cell,
+// extension column view, or any coin).
 //
 // All arithmetic runs in the extension field — including for sub-expressions
 // that happen to be pure base — so this path is slower per operation than
 // [evalExprOnCoset]. Callers should dispatch on [isBaseExpr] to use the
 // base-field fast path whenever possible.
+//
+// cosetEvalsExt holds the extension-field coset evaluations for any
+// extension witness columns referenced by the expression. ColumnView leaves
+// dispatch on their underlying column's IsExtension flag.
 func evalExprOnCosetExt(
 	rt wiop.Runtime,
 	expr wiop.Expression,
 	cosetEvals map[wiop.ObjectID][]field.Element,
+	cosetEvalsExt map[wiop.ObjectID][]field.Ext,
+	selectorCosets map[int][]field.Element,
 	j, ratio, N int,
 ) field.Ext {
 	switch e := expr.(type) {
 	case *wiop.ColumnView:
 		k := e.ShiftingOffset
 		idx := ((j+k*ratio)%N + N) % N
+		if e.Column.IsExtension {
+			return cosetEvalsExt[e.Column.Context.ID][idx]
+		}
 		return field.Lift(cosetEvals[e.Column.Context.ID][idx])
+	case *wiop.LagrangeSelector:
+		// Selectors are base-field and unshifted: lift L_pos(coset_j) into 𝔽_{p^6}.
+		return field.Lift(selectorCosets[e.Position][j])
 	case *wiop.Cell:
 		return rt.GetCellValue(e).AsExt()
 	case *wiop.CoinField:
@@ -902,7 +1115,7 @@ func evalExprOnCosetExt(
 		return field.Lift(e.Value)
 	case *wiop.ArithmeticOperation:
 		eval := func(i int) field.Ext {
-			return evalExprOnCosetExt(rt, e.Operands[i], cosetEvals, j, ratio, N)
+			return evalExprOnCosetExt(rt, e.Operands[i], cosetEvals, cosetEvalsExt, selectorCosets, j, ratio, N)
 		}
 		a0 := eval(0)
 		var res field.Ext

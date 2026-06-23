@@ -8,11 +8,11 @@
  */
 package maru.p2p.messages
 
-import maru.core.ext.DataGenerators.randomStatus
 import maru.p2p.MessageData
 import maru.p2p.RequestMessageAdapter
 import maru.p2p.RpcMessageType
 import maru.p2p.Version
+import maru.p2p.ext.DataGenerators.randomStatus
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

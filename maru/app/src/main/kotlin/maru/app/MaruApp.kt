@@ -9,6 +9,7 @@
 package maru.app
 
 import io.vertx.core.Vertx
+import linea.kotlin.encodeHex
 import linea.timer.TimerFactory
 import maru.api.ApiServer
 import maru.config.MaruConfig
@@ -26,7 +27,6 @@ import maru.core.SealedBeaconBlock
 import maru.core.Validator
 import maru.crypto.SecpCrypto
 import maru.database.BeaconChain
-import maru.extensions.encodeHex
 import maru.finalization.LineaFinalizationProvider
 import maru.metrics.MaruMetricsCategory
 import maru.p2p.P2PNetwork

@@ -19,11 +19,11 @@ plugins {
 }
 
 dependencies {
-  implementation(project(':maru:jvm-libs:extensions'))
   api(project(':maru:core'))
   api(project(':jvm-libs:linea:clients:linea-contract-clients')){
     exclude group: "build.linea", module: "besu-libs"
   }
   api(project(':jvm-libs:linea:clients:interfaces'))
+  implementation(project(':jvm-libs:generic:extensions:kotlin'))
   implementation(project(':jvm-libs:linea:core:long-running-service'))
 }

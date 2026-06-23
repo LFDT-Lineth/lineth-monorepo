@@ -1,6 +1,6 @@
 import { ApolloClient, HttpLink, InMemoryCache, ApolloLink } from "@apollo/client";
 import { SetContextLink } from "@apollo/client/link/context";
-import { IOAuth2TokenClient } from "@consensys/linea-shared-utils";
+import { IOAuth2TokenClient } from "@lfdt-lineth/shared-utils";
 
 /**
  * Creates an Apollo Client instance configured with OAuth2 authentication.

@@ -15,6 +15,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import linea.blob.BlobCompressorSelectorByTimestamp;
+import linea.security.ChainSecurityPolicy;
+import linea.security.LineaChainSecurityPolicy;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.bundles.BundlePoolService;
@@ -91,6 +93,7 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
   protected static BlobCompressorSelectorByTimestamp blobCompressorSelectorByTimestamp;
   protected static TransactionCompressor transactionCompressor;
   protected static TransactionProfitabilityCalculator transactionProfitabilityCalculator;
+  protected static LineaChainSecurityPolicy lineaChainSecurityPolicyService;
 
   public static final int DEFAULT_COMPRESSED_SIZE_LIMIT = 128 * 1024;
   // Shared reloadable deny lists - centralized management for all plugins
@@ -242,6 +245,10 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
                 () ->
                     new RuntimeException(
                         "Failed to obtain RpcEndpointService from the ServiceManager."));
+
+    // needs to be registered early to be available to other plugins on start()
+    lineaChainSecurityPolicyService = new LineaChainSecurityPolicy();
+    serviceManager.addService(ChainSecurityPolicy.class, lineaChainSecurityPolicyService);
   }
 
   @Override
@@ -298,7 +305,13 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
 
     forcedTransactionPoolService =
         new LineaForcedTransactionPool(
-            forcedTransactionConfiguration().statusCacheSize(), metricsSystem, besuEvents);
+            forcedTransactionConfiguration().statusCacheSize(),
+            forcedTransactionConfiguration().chainSecurityViolationHoldOffBeforeDeadline(),
+            metricsSystem,
+            besuEvents);
+
+    lineaChainSecurityPolicyService.init(
+        forcedTransactionPoolService::shallForceIncludeTransaction);
 
     invalidTransactionByLineCountCache =
         new InvalidTransactionByLineCountCache(
@@ -426,5 +439,6 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
     sharedBundleDeniedAddresses = null;
     sharedDeniedEvents = null;
     sharedDeniedBundleEvents = null;
+    lineaChainSecurityPolicyService = null;
   }
 }

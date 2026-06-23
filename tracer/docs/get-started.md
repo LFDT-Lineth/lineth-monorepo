@@ -25,13 +25,11 @@ echo "net.git-fetch-with-cli=true" >> .cargo/config.toml
 cargo install --git ssh://git@github.com/Consensys/corset --locked --force
 ```
 
-#### Step 5: Update constraints [submodule](https://github.com/Consensys/linea-constraints)
+#### Step 5: Constraints
 
-```shell
-git submodule update --init --recursive
-```
+The constraint system lives in-tree at [`tracer-constraints/`](../../tracer-constraints/) (previously the `Consensys/linea-constraints` submodule, now merged into this monorepo). No additional setup is required — it is checked out alongside the rest of the monorepo.
 
-Note: Windows user may have to run 'git config core.protectNTFS false' command within the linea-constraints folder to bypass CON.* file names being reserved.
+Note: Windows users may need to run `git config core.protectNTFS false` within the `tracer-constraints/` folder to bypass CON.* file names being reserved.
 
 #### Step 6: Install [pre-commit](https://pre-commit.com/)
 

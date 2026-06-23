@@ -5,7 +5,7 @@
  *
  * Example usage:
  * ETHEREUM_RPC_URL=https://mainnet.infura.io/v3/YOUR_KEY \
- * pnpm --filter @consensys/lido-governance-monitor exec tsx scripts/test-ldo-voting-contract-fetcher.ts
+ * pnpm --filter @lfdt-lineth/lido-governance-monitor exec tsx scripts/test-ldo-voting-contract-fetcher.ts
  *
  * Optional env vars:
  * LDO_VOTING_CONTRACT_ADDRESS=0x2e59a20f205bb85a89c53f1936454680651e618e  # Default

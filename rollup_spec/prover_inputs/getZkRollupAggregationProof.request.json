@@ -1,0 +1,60 @@
+{
+    "_comment": "Rollup-aggregation proof request schema (§2.3) — flat aggregation of M rollup proofs plus the STARK→SNARK emulation wrap for L1. Emits the 14-field PI tuple defined in §2.4; there is no separate emulation request.",
+
+    "proverVersion":      "4.0.0-riscv",
+
+    "_comment_blockRange": "Combined block range across all M rollup proofs. Equals rollupProofs[0]'s startBlockNumber .. rollupProofs[M-1]'s endBlockNumber.",
+    "blockRange": {
+        "startBlockNumber": 1000501,
+        "endBlockNumber":   1000567
+    },
+
+    "_comment_isAllowedCircuitID": "Environment-dependent bitmask gating which inner circuit/program identities the rollup-aggregation guest may accept during recursive STARK verification (§2.3 step 1). Bit i (LSb->MSb) allows circuit ID i, following the prover's circuits.GlobalCircuitIDMapping convention; computed with circuits.ComputeIsAllowedCircuitID. Mirrors the prover config field Aggregation.is_allowed_circuit_id (prover/config/config.go) and is echoed back in the aggregation response as isAllowedCircuitID. It is a proving-policy input only: it is NOT part of dynamicChainConfigHash and NOT one of the 14 PI-tuple fields, so it does not appear in expectedRollupAggregationPublicInputs. The example value 15932 (0b11111000111100) enables the production payload + invalidity circuits (bits 2-5, 9-13); testnet/dev environments additionally enable the dummy circuits.",
+    "isAllowedCircuitID": 15932,
+
+    "_comment_rollupProofs": "M rollup proofs in shnarf-chain order. Each entry inlines everything the rollup-aggregation guest needs for that rollup proof: the recursive STARK `proof` bytes, the 14-field `publicInputs` tuple, and the preimages of the two hash-committed PI fields — `L2L1Roots` (preimage of publicInputs.L2L1BridgeTransactionTree) and `filteredAddresses` (preimage of publicInputs.filteredAddressesHash).",
+    "rollupProofs": [
+        {
+            "proof": "0x...",
+            "publicInputs": {
+                "endBlockNumber":                           1000520,
+                "endBlockTimestamp":                        1763000457,
+                "L2L1BridgeTransactionTree":                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "parentL1L2BridgeRollingHash":              "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "parentL1L2BridgeRollingHashMessageNumber": 0,
+                "endL1L2BridgeRollingHash":                 "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "endL1L2BridgeRollingHashMessageNumber":    0,
+                "dynamicChainConfigHash":                   "0xc0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ff",
+                "parentFtxRollingHash":                     "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "endFtxRollingHash":                        "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "lastProcessedFtxNumber":                   0,
+                "filteredAddressesHash":                    "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
+                "parentShnarf":                             "0x47452a1b9ebadfe02bdd02f580fa1eba17680d57eec968a591644d05d78ee84f",
+                "endShnarf":                                "0x8d0a74047e241998a03664b98064da391c492e8a4ad96160ae46eeaaabdc7b5a"
+            },
+            "L2L1Roots":         [],
+            "filteredAddresses": []
+        },
+        { "_comment": "remaining M-1 entries (rollup proofs covering 1000521-1000545 and 1000546-1000567) have the same shape; abbreviated in the fixture" }
+    ],
+
+    "_comment_l1Context": "L1 continuity anchors are not rollup-aggregation guest inputs. The L1 contract checks them during finalization against the 14-field public output.",
+
+    "_comment_expectedRollupAggregationPublicInputs": "The 14-field PI tuple defined in §2.4.",
+    "expectedRollupAggregationPublicInputs": {
+        "endBlockNumber":                      1000567,
+        "endBlockTimestamp":                   1763002301,
+        "L2L1BridgeTransactionTree":               "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "parentL1L2BridgeRollingHash":               "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "parentL1L2BridgeRollingHashMessageNumber":  0,
+        "endL1L2BridgeRollingHash":                   "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "endL1L2BridgeRollingHashMessageNumber":      0,
+        "dynamicChainConfigHash":                  "0xc0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ff",
+        "parentFtxRollingHash":                      "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "endFtxRollingHash":                       "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "lastProcessedFtxNumber":                  0,
+        "filteredAddressesHash":                   "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
+        "parentShnarf":                              "0x47452a1b9ebadfe02bdd02f580fa1eba17680d57eec968a591644d05d78ee84f",
+        "endShnarf":                               "0x8d0a74047e241998a03664b98064da391c492e8a4ad96160ae46eeaaabdc7b5a"
+    }
+}

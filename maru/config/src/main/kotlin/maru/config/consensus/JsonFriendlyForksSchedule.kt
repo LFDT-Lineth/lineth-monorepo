@@ -19,6 +19,7 @@ import com.sksamuel.hoplite.fp.NonEmptyList
 import com.sksamuel.hoplite.fp.invalid
 import com.sksamuel.hoplite.fp.valid
 import com.sksamuel.hoplite.valueOrNull
+import linea.kotlin.decodeHex
 import maru.consensus.ChainFork
 import maru.consensus.ClFork
 import maru.consensus.ConsensusConfig
@@ -28,7 +29,6 @@ import maru.consensus.ForkSpec
 import maru.consensus.ForksSchedule
 import maru.consensus.QbftConsensusConfig
 import maru.core.Validator
-import maru.extensions.fromHexToByteArray
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.map
@@ -89,7 +89,7 @@ object ForkConfigDecoder : Decoder<JsonFriendlyForksSchedule> {
             .elements
             .map {
               Validator(
-                it.valueOrNull()!!.fromHexToByteArray(),
+                it.valueOrNull()!!.decodeHex(),
               )
             }.toSet(),
           fork = ChainFork(

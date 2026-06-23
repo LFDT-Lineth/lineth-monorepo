@@ -1,8 +1,7 @@
-// Package lookuptologderivsum compiles every unreduced [wiop.TableRelation]
-// of kind [wiop.TableRelationInclusion] into a single [wiop.LogDerivativeSum]
-// query whose final result is asserted to be zero. It is the prover-ray
-// analogue of linea/prover/protocol/compiler/logderivativesum's
-// LookupIntoLogDerivativeSum pass.
+// Package lookuptologderivsum compiles every unreduced [wiop.LookupQuery]
+// into a single [wiop.LogDerivativeSum] query whose final result is asserted
+// to be zero. It is the prover-ray analogue of linea/prover/protocol/compiler/
+// logderivativesum's LookupIntoLogDerivativeSum pass.
 //
 // The reduction follows the standard log-derivative argument:
 //
@@ -37,7 +36,7 @@
 // A-side, mirroring linea/lookuptologderivsum's IsFilteredOnIncluding
 // handling.
 //
-// After Compile runs, every consumed [wiop.TableRelation] is marked reduced
+// After Compile runs, every consumed [wiop.LookupQuery] is marked reduced
 // and a single [wiop.LogDerivativeSum] query is left in sys for the
 // downstream [logderivativesum] compiler pass to consume.
 //
@@ -53,11 +52,11 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
-// Compile reduces every unreduced inclusion [wiop.TableRelation] in sys to a
+// Compile reduces every unreduced inclusion [wiop.LookupQuery] in sys to a
 // single [wiop.LogDerivativeSum] query plus a multiplicity column per
 // lookup-table fragment, plus a verifier action that asserts the resulting
 // LogDerivativeSum result equals zero.
@@ -84,12 +83,36 @@ func Compile(sys *wiop.System) {
 	sort.Strings(keys)
 
 	// Determine the latest witness round across every group: this dictates
-	// where the coin and result rounds live.
+	// where the coin and result rounds live. Groups whose only contributing
+	// columns are precomputed leave witnessRound nil (see
+	// [lookupGroup.updateWitnessRound]); they are skipped here and patched up
+	// after the loop so the compiler still emits its M / α / γ on an
+	// interactive round.
 	var latestWitness *wiop.Round
 	for _, k := range keys {
 		g := groups[k]
+		if g.witnessRound == nil {
+			continue
+		}
 		if latestWitness == nil || g.witnessRound.ID > latestWitness.ID {
 			latestWitness = g.witnessRound
+		}
+	}
+	if latestWitness == nil {
+		// Every group's columns were precomputed. Default to the first
+		// interactive round so M (committed in each group's witness round)
+		// still lives outside the PrecomputedRound.
+		if len(sys.Rounds) == 0 {
+			panic("wiop/compilers/lookuptologderivsum: cannot compile a fully-precomputed inclusion " +
+				"against a system with no interactive rounds; call sys.NewRound() first")
+		}
+		latestWitness = sys.Rounds[0]
+	}
+	// Backfill any group whose witnessRound is still nil so compileGroup can
+	// rely on a non-nil interactive round.
+	for _, k := range keys {
+		if groups[k].witnessRound == nil {
+			groups[k].witnessRound = latestWitness
 		}
 	}
 
@@ -112,7 +135,7 @@ func Compile(sys *wiop.System) {
 
 	var (
 		fractions  []wiop.Fraction
-		consumedQs []*wiop.TableRelation
+		consumedQs []*wiop.LookupQuery
 	)
 	for _, k := range keys {
 		g := groups[k]
@@ -126,7 +149,7 @@ func Compile(sys *wiop.System) {
 	ld := sys.NewLogDerivativeSum(compCtx.Childf("aggregated"), fractions)
 
 	// The verifier check: the aggregated log-derivative sum must be zero.
-	ld.Result.Round().RegisterVerifierAction(&resultIsZeroVerifierAction{ld: ld})
+	ld.Result.Round().RegisterVerifierAction(&ResultIsZeroVerifierAction{LogDerivativeSum: ld})
 
 	// Mark every consumed query as reduced so subsequent compiler passes skip
 	// them. We deliberately wait until the LogDerivativeSum has been
@@ -157,9 +180,6 @@ func collectGroups(sys *wiop.System) map[string]*lookupGroup {
 	groups := make(map[string]*lookupGroup)
 	for _, q := range sys.TableRelations {
 		if q.IsReduced() {
-			continue
-		}
-		if q.Kind != wiop.TableRelationInclusion {
 			continue
 		}
 		if len(q.B) != 1 {
@@ -391,22 +411,26 @@ func viewExprs(cols []*wiop.ColumnView) []wiop.Expression {
 	return out
 }
 
-// resultIsZeroVerifierAction asserts that the aggregated [wiop.LogDerivativeSum]
+// ResultIsZeroVerifierAction asserts that the aggregated [wiop.LogDerivativeSum]
 // result cell holds the zero field element. This is the standard
 // log-derivative identity: the sum of A-side fractions cancels the sum of
 // T-side fractions exactly when every selected A row is in the union of
 // selected B rows.
-type resultIsZeroVerifierAction struct {
-	ld *wiop.LogDerivativeSum
+//
+// Exported (with an exported field) so out-of-package consumers — notably the
+// verifier-ray codegen — can recognise a lookup-reduced LogDerivativeSum and
+// flag that its Result must be zero.
+type ResultIsZeroVerifierAction struct {
+	LogDerivativeSum *wiop.LogDerivativeSum
 }
 
 // Check implements [wiop.VerifierAction].
-func (a *resultIsZeroVerifierAction) Check(rt wiop.Runtime) error {
-	v := rt.GetCellValue(a.ld.Result)
+func (a *ResultIsZeroVerifierAction) Check(rt wiop.Runtime) error {
+	v := rt.GetCellValue(a.LogDerivativeSum.Result)
 	if !v.IsZero() {
 		return fmt.Errorf(
 			"wiop/compilers/lookuptologderivsum: aggregated lookup result for query %q must be zero",
-			a.ld.Context().Path(),
+			a.LogDerivativeSum.Context().Path(),
 		)
 	}
 	return nil

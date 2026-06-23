@@ -53,7 +53,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-// https://github.com/Consensys/linea-monorepo/issues/2455
+// https://github.com/LFDT-Lineth/lineth-monorepo/issues/2455
 
 @ExtendWith(UnitTestWatcher.class)
 public class MultiDelegationTest extends TracerTestBase {

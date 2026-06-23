@@ -10,6 +10,9 @@ package maru.app
 
 import linea.domain.BlockParameter
 import linea.ethapi.EthApiClient
+import linea.testing.besu.BesuFactory
+import linea.testing.besu.BesuTransactionsHelper
+import linea.testing.besu.ethGetBlockByNumber
 import linea.timer.JvmTimerFactory
 import linea.timer.TimerFactory
 import linea.web3j.ethapi.createEthApiClient
@@ -38,9 +41,6 @@ import testutils.FourEmptyResponsesStrategy
 import testutils.MisbehavingP2PNetwork
 import testutils.PeeringNodeNetworkStack
 import testutils.TimeOutResponsesStrategy
-import testutils.besu.BesuFactory
-import testutils.besu.BesuTransactionsHelper
-import testutils.besu.ethGetBlockByNumber
 import testutils.maru.MaruFactory
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds

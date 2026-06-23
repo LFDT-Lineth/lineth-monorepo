@@ -8,10 +8,10 @@
  */
 package maru.api
 
+import linea.kotlin.decodeHex
 import maru.core.BeaconState
 import maru.core.SealedBeaconBlock
 import maru.database.BeaconChain
-import maru.extensions.fromHexToByteArray
 
 class ChainDataProviderImpl(
   val beaconChain: BeaconChain,
@@ -31,7 +31,7 @@ class ChainDataProviderImpl(
   }
 
   override fun getBeaconBlockByBlockRoot(blockRoot: String): SealedBeaconBlock {
-    val blockRootBytes = blockRoot.fromHexToByteArray()
+    val blockRootBytes = blockRoot.decodeHex()
     return beaconChain.getSealedBeaconBlock(blockRootBytes) ?: throw BlockNotFoundException()
   }
 }

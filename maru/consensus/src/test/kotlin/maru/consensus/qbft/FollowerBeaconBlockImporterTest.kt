@@ -14,6 +14,7 @@ import maru.consensus.state.FinalizationState
 import maru.core.BeaconState
 import maru.core.ExecutionPayload
 import maru.core.ext.DataGenerators
+import maru.core.ext.DataGenerators.randomExecutionPayload
 import maru.executionlayer.manager.ExecutionLayerManager
 import maru.executionlayer.manager.ForkChoiceUpdatedResult
 import maru.executionlayer.manager.LatestBlockMetadata
@@ -26,6 +27,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.random.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import maru.executionlayer.manager.ext.DataGenerators as ExecutionLayerDataGenerators
 
 class FollowerBeaconBlockImporterTest {
   private lateinit var executionLayerManagerDouble: FakeExecutionLayerManager
@@ -56,8 +58,12 @@ class FollowerBeaconBlockImporterTest {
   @Test
   fun `importBlock should call setHeadAndStartBlockBuilding when shouldBuildNextBlock returns true`() {
     shouldBuildNextBlock = true
-    val randomBeaconBlock = DataGenerators.randomBeaconBlock(1UL)
-    val randomBeaconState = DataGenerators.randomBeaconState(1UL)
+    val randomBeaconBlock = DataGenerators.randomBeaconBlock(
+      1UL,
+    )
+    val randomBeaconState = DataGenerators.randomBeaconState(
+      1UL,
+    )
 
     val result = beaconBlockImporter.importBlock(randomBeaconState, randomBeaconBlock)
 
@@ -76,8 +82,12 @@ class FollowerBeaconBlockImporterTest {
   @Test
   fun `importBlock should call setHead when shouldBuildNextBlock returns false`() {
     shouldBuildNextBlock = false
-    val randomBeaconBlock = DataGenerators.randomBeaconBlock(1UL)
-    val randomBeaconState = DataGenerators.randomBeaconState(1UL)
+    val randomBeaconBlock = DataGenerators.randomBeaconBlock(
+      1UL,
+    )
+    val randomBeaconState = DataGenerators.randomBeaconState(
+      1UL,
+    )
 
     val result = beaconBlockImporter.importBlock(randomBeaconState, randomBeaconBlock)
 
@@ -93,8 +103,12 @@ class FollowerBeaconBlockImporterTest {
 
   @Test
   fun `importBlock should pass last block timestamp and next block's round identifier`() {
-    val randomBeaconBlock = DataGenerators.randomBeaconBlock(1UL)
-    val randomBeaconState = DataGenerators.randomBeaconState(1UL)
+    val randomBeaconBlock = DataGenerators.randomBeaconBlock(
+      1UL,
+    )
+    val randomBeaconState = DataGenerators.randomBeaconState(
+      1UL,
+    )
     val expectedConsensusRoundIdentifier = ConsensusRoundIdentifier(2, 0)
 
     val shouldBuildNextBlockDouble = FakeShouldBuildNextBlockPredicate()
@@ -187,7 +201,7 @@ class FollowerBeaconBlockImporterTest {
   class FakeExecutionLayerManager : ExecutionLayerManager {
     val expectedResponse: SafeFuture<ForkChoiceUpdatedResult> =
       SafeFuture.completedFuture(
-        DataGenerators.randomValidForkChoiceUpdatedResult(),
+        ExecutionLayerDataGenerators.randomValidForkChoiceUpdatedResult(),
       )
     val setHeadAndStartBlockBuildingCalls = mutableListOf<SetHeadAndStartBlockBuildingCall>()
     val setHeadCalls = mutableListOf<SetHeadCall>()
@@ -224,7 +238,7 @@ class FollowerBeaconBlockImporterTest {
 
     // Implement required abstract methods that aren't used in tests
     override fun finishBlockBuilding(): SafeFuture<ExecutionPayload> =
-      SafeFuture.completedFuture(DataGenerators.randomExecutionPayload())
+      SafeFuture.completedFuture(randomExecutionPayload())
 
     override fun getLatestBlockMetadata(): SafeFuture<LatestBlockMetadata> =
       SafeFuture.completedFuture(LatestBlockMetadata(blockHash = Random.nextBytes(32), timestamp = 0UL))
@@ -232,7 +246,7 @@ class FollowerBeaconBlockImporterTest {
     override fun isOnline(): SafeFuture<Boolean> = SafeFuture.completedFuture(true)
 
     override fun newPayload(executionPayload: ExecutionPayload): SafeFuture<PayloadStatus> =
-      SafeFuture.completedFuture(DataGenerators.randomValidPayloadStatus())
+      SafeFuture.completedFuture(ExecutionLayerDataGenerators.randomValidPayloadStatus())
   }
 
   data class ShouldBuildNextBlockCall(

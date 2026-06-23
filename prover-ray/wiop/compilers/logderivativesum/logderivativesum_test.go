@@ -3,12 +3,121 @@ package logderivativesum_test
 import (
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/logderivativesum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// TestCompile_WioptestCompleteness exercises every
+// [wioptest.LogDerivativeSumCompilerScenarios] fixture: an honest assignment
+// must drive the prover actions to completion and the verifier actions must
+// then accept.
+func TestCompile_WioptestCompleteness(t *testing.T) {
+	for _, build := range wioptest.LogDerivativeSumCompilerScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			logderivativesum.Compile(sc.Sys)
+			proof := sc.Sys.Prove(sc.AssignWitness)
+			require.NoError(t, sc.Sys.Verify(proof),
+				"compiled verifier must accept an honest witness")
+		})
+	}
+}
+
+// TestCompile_WioptestSoundness exercises every
+// [wioptest.LogDerivativeSumCompilerScenarios] fixture's invalid path. The
+// witness is assigned honestly; the test then advances to the result round
+// and corrupts the Result cell BEFORE the prover action runs (the prover
+// skips re-assigning a cell that already holds a value). This isolates the
+// verifier's claim-vs-running-sum identity from the per-bucket recurrence
+// check.
+func TestCompile_WioptestSoundness(t *testing.T) {
+	for _, build := range wioptest.LogDerivativeSumCompilerScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			logderivativesum.Compile(sc.Sys)
+			rt := wiop.NewRuntime(sc.Sys)
+			sc.AssignWitness(&rt)
+			rt.AdvanceRound()
+			sc.TamperResult(&rt)
+			runRound(&rt)
+			assert.Error(t, checkAllVerifierActions(&rt),
+				"compiled verifier must reject an invalid witness")
+		})
+	}
+}
+
+// TestCompile_WioptestSoundness_TamperZ runs every wioptest scenario with a
+// constant-17 Z column instead of the honest prover output, and pins each
+// Result cell to zero. The final-sum verifier action then rejects the witness
+// because the sum of the (constant-17) Z[n-1] endpoints cannot equal zero.
+//
+// We bypass [proverAction.Run] entirely (no runRound), since the runtime
+// rejects re-assigning a column. Instead we set up the post-prover state
+// manually: Z gets the bogus value and each LogDerivativeSum's Result cell is
+// pinned to zero.
+func TestCompile_WioptestSoundness_TamperZ(t *testing.T) {
+	for _, build := range wioptest.LogDerivativeSumCompilerScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			// Snapshot per-module column lists so we can identify Z columns
+			// (added by the compiler) by diffing after compile.
+			beforeByMod := make(map[*wiop.Module]map[*wiop.Column]struct{})
+			for _, m := range sc.Sys.Modules {
+				cols := make(map[*wiop.Column]struct{}, len(m.Columns))
+				for _, c := range m.Columns {
+					cols[c] = struct{}{}
+				}
+				beforeByMod[m] = cols
+			}
+
+			logderivativesum.Compile(sc.Sys)
+
+			var zCols []*wiop.Column
+			for _, m := range sc.Sys.Modules {
+				before := beforeByMod[m]
+				for _, c := range m.Columns {
+					if _, existed := before[c]; existed {
+						continue
+					}
+					if c.IsExtension {
+						zCols = append(zCols, c)
+					}
+				}
+			}
+			if len(zCols) == 0 {
+				t.Skip("scenario emits no Z columns — nothing to tamper")
+			}
+
+			rt := wiop.NewRuntime(sc.Sys)
+			sc.AssignWitness(&rt)
+			rt.AdvanceRound()
+
+			// Pre-assign every Z column with a constant non-zero extension value.
+			for _, z := range zCols {
+				n := z.Module.RuntimeSize(rt)
+				vals := make([]field.Ext, n)
+				for i := range vals {
+					vals[i] = field.Lift(field.NewFromString("17"))
+				}
+				rt.AssignColumn(z, &wiop.ConcreteVector{Plain: field.VecFromExt(vals)})
+			}
+
+			// Pin each LogDerivativeSum's Result cell to zero so the
+			// claim-vs-running-sum check fires (the sum of constant-17
+			// Z[n-1] across entries cannot equal zero).
+			for _, ld := range sc.Sys.LogDerivativeSums {
+				rt.AssignCell(ld.Result, field.ElemFromExt(field.Ext{}))
+			}
+
+			assert.Error(t, checkAllVerifierActions(&rt),
+				"verifier must reject a corrupted Z column")
+		})
+	}
+}
 
 // ---- Helpers ----
 
@@ -101,20 +210,33 @@ func newSimpleFilteredSum(t *testing.T, n int) (
 
 // ---- Structural tests ----
 
+// countScalarVanishings returns the number of scalar (non-multi-valued)
+// vanishings on m — i.e. the endpoint openings produced by
+// [wiop.ColumnPosition.Open], as opposed to the multi-valued Z recurrence.
+func countScalarVanishings(m *wiop.Module) int {
+	n := 0
+	for _, v := range m.Vanishings {
+		if !v.Expression.IsMultiValued() {
+			n++
+		}
+	}
+	return n
+}
+
 func TestCompile_AddsZColumnAndVanishing(t *testing.T) {
 	sys, _, _, _ := newSimpleFilteredSum(t, 8)
 	mod := sys.Modules[0]
 	colsBefore := len(mod.Columns)
-	openingsBefore := len(mod.LocalOpenings)
+	vansBefore := len(mod.Vanishings)
 
 	logderivativesum.Compile(sys)
 
 	assert.Len(t, mod.Columns, colsBefore+1,
 		"compile must add exactly one Z column for a single fraction")
-	require.Len(t, mod.Vanishings, 1,
-		"compile must add exactly one recurrence vanishing for a single fraction")
-	assert.Len(t, mod.LocalOpenings, openingsBefore+2,
-		"compile must add Z[0] and Z[n-1] openings")
+	require.Len(t, mod.Vanishings, vansBefore+3,
+		"compile must add one recurrence plus the two endpoint-opening vanishings")
+	assert.Equal(t, 2, countScalarVanishings(mod),
+		"the Z[0] and Z[n-1] openings are scalar vanishings")
 	assert.True(t, sys.LogDerivativeSums[0].IsReduced(),
 		"the LogDerivativeSum query must be marked reduced after compile")
 }
@@ -125,10 +247,10 @@ func TestCompile_SkipsRecurrenceForSizeOne(t *testing.T) {
 
 	logderivativesum.Compile(sys)
 
-	assert.Empty(t, mod.Vanishings,
-		"a size-1 module needs no recurrence; everything is fixed by Z[0]")
-	assert.Len(t, mod.LocalOpenings, 2,
-		"Z[0] and Z[n-1] coincide but each opening is still registered")
+	require.Len(t, mod.Vanishings, 2,
+		"a size-1 module needs no recurrence; only the two endpoint openings remain")
+	assert.Equal(t, 2, countScalarVanishings(mod),
+		"Z[0] and Z[n-1] coincide but each opening is still a scalar vanishing")
 }
 
 func TestCompile_Idempotent(t *testing.T) {
@@ -138,16 +260,13 @@ func TestCompile_Idempotent(t *testing.T) {
 	mod := sys.Modules[0]
 	colsAfterFirst := len(mod.Columns)
 	vansAfterFirst := len(mod.Vanishings)
-	openingsAfterFirst := len(mod.LocalOpenings)
 
 	logderivativesum.Compile(sys)
 
 	assert.Len(t, mod.Columns, colsAfterFirst,
 		"second compile must not add new Z columns")
 	assert.Len(t, mod.Vanishings, vansAfterFirst,
-		"second compile must not add new vanishings")
-	assert.Len(t, mod.LocalOpenings, openingsAfterFirst,
-		"second compile must not add new openings")
+		"second compile must not add new vanishings (recurrence or openings)")
 }
 
 func TestCompile_NoQueries(t *testing.T) {
@@ -159,7 +278,6 @@ func TestCompile_NoQueries(t *testing.T) {
 
 	for _, m := range sys.Modules {
 		assert.Empty(t, m.Vanishings)
-		assert.Empty(t, m.LocalOpenings)
 	}
 }
 
@@ -184,10 +302,10 @@ func TestCompile_PacksFractions(t *testing.T) {
 
 	assert.Len(t, mod.Columns, colsBefore+2,
 		"4 fractions must be packed into ⌈4/3⌉ = 2 Z columns")
-	assert.Len(t, mod.Vanishings, 2,
-		"each Z column must have its own recurrence vanishing")
-	assert.Len(t, mod.LocalOpenings, 4,
-		"each Z column contributes two openings (Z[0] and Z[n-1])")
+	assert.Len(t, mod.Vanishings, 6,
+		"two Z columns: each has its own recurrence vanishing plus two endpoint openings")
+	assert.Equal(t, 4, countScalarVanishings(mod),
+		"each Z column contributes two scalar endpoint openings (Z[0] and Z[n-1])")
 }
 
 // ---- Completeness tests ----
@@ -372,8 +490,9 @@ func TestCompile_Completeness_BucketsByModule(t *testing.T) {
 	})
 
 	logderivativesum.Compile(sys)
-	assert.Len(t, mA.Vanishings, 1)
-	assert.Len(t, mB.Vanishings, 1)
+	// Each module gets one Z column → one recurrence plus two endpoint openings.
+	assert.Len(t, mA.Vanishings, 3)
+	assert.Len(t, mB.Vanishings, 3)
 
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(cA, makeVec(1, 2, 3, 4)) // sum_A = 10
@@ -431,13 +550,19 @@ func TestCompile_Soundness_WrongZ(t *testing.T) {
 	}
 	rt.AssignColumn(zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(bogus)})
 
-	require.Len(t, mod.Vanishings, 1)
-	assert.Error(t, mod.Vanishings[0].Check(rt),
+	require.Len(t, mod.Vanishings, 3,
+		"one recurrence, the row-0 local constraint, and the endpoint opening")
+	rec := mod.Vanishings[0] // the recurrence is registered before the boundary constraints
+	require.True(t, rec.Expression.IsMultiValued(), "Vanishings[0] must be the recurrence")
+	assert.Error(t, rec.Check(rt),
 		"recurrence vanishing must reject a Z column that violates the relation")
 }
 
-// TestCompile_Soundness_WrongInitialZ asserts the verifier action rejects a
-// Z column whose row 0 does not satisfy Z[0]·zDen[0] = zNum[0].
+// TestCompile_Soundness_WrongInitialZ asserts the row-0 local constraint
+// rejects a Z column whose row 0 does not satisfy Z[0]·zDen[0] = zNum[0],
+// even though it satisfies the recurrence. This boundary used to be checked by
+// the verifier action; it is now pinned in-circuit by a local constraint, so
+// the verifier action (final-sum only) no longer sees it.
 func TestCompile_Soundness_WrongInitialZ(t *testing.T) {
 	sys, num, filter, ld := newSimpleFilteredSum(t, 4)
 	mod := sys.Modules[0]
@@ -460,17 +585,248 @@ func TestCompile_Soundness_WrongInitialZ(t *testing.T) {
 	}
 	rt.AssignColumn(zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(shifted)})
 
-	for _, lo := range mod.LocalOpenings {
-		lo.SelfAssign(rt)
-	}
+	// The endpoint opening is lazy: it resolves to the (malicious) Z column
+	// value when read, so no explicit assignment is needed here.
 	rt.AssignCell(ld.Result, field.ElemFromExt(shifted[3]))
 
+	// The recurrence (multi-valued) accepts the constant-step Z, and the
+	// final-sum verifier action only compares consistent endpoints to Result —
+	// neither catches the shifted base.
+	rec := mod.Vanishings[0]
+	require.True(t, rec.Expression.IsMultiValued(), "Vanishings[0] must be the recurrence")
+	require.NoError(t, rec.Check(rt), "recurrence must accept a constant-step Z")
+	require.NoError(t, checkAllVerifierActions(&rt),
+		"the final-sum verifier action only checks endpoints against Result")
+
+	// The row-0 local constraint must reject the shifted base.
+	rejected := false
 	for _, v := range mod.Vanishings {
-		require.NoError(t, v.Check(rt),
-			"recurrence must accept a constant-step Z (this is the soundness gap that the initial-condition check closes)")
+		if v.Expression.IsMultiValued() {
+			continue
+		}
+		if err := v.Check(rt); err != nil {
+			rejected = true
+		}
 	}
+	assert.True(t, rejected,
+		"the row-0 local constraint must reject a Z whose row-0 value disagrees with zNum[0]/zDen[0]")
+}
+
+// ---- Dynamic-module coverage ----
+
+// newDynamicFilteredSum is the dynamic-module counterpart of
+// [newSimpleFilteredSum]: it builds the same single-fraction Num/1 LDS query
+// but over a [wiop.NewDynamicModule] whose domain size is fixed at runtime
+// by the first column assignment instead of at construction time. The
+// helper does NOT supply a size — every [TestCompile_DynamicModule_*]
+// caller is expected to pick one per [wiop.Runtime] via the witness vector
+// it assigns.
+func newDynamicFilteredSum(t *testing.T) (
+	sys *wiop.System,
+	num *wiop.Column,
+	filter *wiop.Column,
+	ld *wiop.LogDerivativeSum,
+) {
+	t.Helper()
+	sys = wiop.NewSystemf("ld2-dyn-test")
+	r0 := sys.NewRound()
+	sys.NewRound() // hosts ld.Result
+	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
+	num = mod.NewColumn(sys.Context.Childf("num"), wiop.VisibilityOracle, r0)
+	filter = mod.NewColumn(sys.Context.Childf("filter"), wiop.VisibilityOracle, r0)
+	one := wiop.NewConstantVector(mod, field.NewFromString("1"))
+	ld = sys.NewLogDerivativeSum(
+		sys.Context.Childf("ld2-dyn"),
+		[]wiop.Fraction{{
+			Filter:      filter.View(),
+			Numerator:   num.View(),
+			Denominator: one,
+		}},
+	)
+	return
+}
+
+// TestCompile_DynamicModule_Completeness exercises the completeness path for
+// dynamic-module LDS: the same compiled System is re-driven against two
+// different runtime sizes, and an honest witness must verify both times.
+// This pins down the end-to-end behaviour of [zCol.At(-1)] +
+// [Module.RuntimeSize] driving the endpoint LocalOpening to the correct row.
+func TestCompile_DynamicModule_Completeness(t *testing.T) {
+	sys, num, filter, _ := newDynamicFilteredSum(t)
+	logderivativesum.Compile(sys)
+
+	for _, tc := range []struct {
+		name string
+		n    int
+	}{
+		{"size-4", 4},
+		{"size-8", 8},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			nums := make([]uint64, tc.n)
+			fil := make([]uint64, tc.n)
+			for i := range nums {
+				nums[i] = 2
+				fil[i] = 1
+			}
+
+			rt := wiop.NewRuntime(sys)
+			rt.AssignColumn(num, makeVec(nums...))
+			rt.AssignColumn(filter, makeVec(fil...))
+			rt.AdvanceRound()
+			runRound(&rt)
+
+			require.NoError(t, checkAllVerifierActions(&rt),
+				"honest dynamic-module assignment must verify (RuntimeSize=%d)", tc.n)
+		})
+	}
+}
+
+// TestCompile_DynamicModule_RecurrenceCatchesWrongZ is the soundness
+// counterpart focused on the recurrence Vanishing. The honest Z for
+// num=[2,2,2,2], filter=[1,1,1,1] is [2,4,6,8]; we instead pin Z to a
+// constant column and assert the Vanishing rejects it. This proves the
+// unconditional Vanishing emission for dynamic modules ([m.IsDynamic() ||
+// m.Size() > 1]) is actually constraining at runtime — without it, a
+// tampered Z would pass the recurrence and only the LDS verifier action's
+// initial-condition check could catch the error.
+func TestCompile_DynamicModule_RecurrenceCatchesWrongZ(t *testing.T) {
+	sys, num, filter, _ := newDynamicFilteredSum(t)
+	mod := sys.Modules[0]
+	witnessColumns := append([]*wiop.Column{}, mod.Columns...)
+	logderivativesum.Compile(sys)
+	zCol := findZColumn(t, mod, witnessColumns)
+
+	// Three vanishings per LDS: 1 recurrence + 2 endpoint-opening bindings
+	// (one each for Z[0] and Z[last], registered by ColumnPosition.Open).
+	// The recurrence is always Vanishings[0] (registered before the openings).
+	require.Len(t, mod.Vanishings, 3,
+		"dynamic module must emit the recurrence Vanishing unconditionally plus two endpoint-opening bindings")
+
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(num, makeVec(2, 2, 2, 2))
+	rt.AssignColumn(filter, makeVec(1, 1, 1, 1))
+	rt.AdvanceRound()
+
+	bogus := []field.Ext{
+		field.Lift(field.NewFromString("1")),
+		field.Lift(field.NewFromString("1")),
+		field.Lift(field.NewFromString("1")),
+		field.Lift(field.NewFromString("1")),
+	}
+	rt.AssignColumn(zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(bogus)})
+
+	assert.Error(t, mod.Vanishings[0].Check(rt),
+		"recurrence Vanishing must reject a constant Z on a dynamic module")
+}
+
+// TestCompile_DynamicModule_Soundness_WrongResult is the dynamic-module
+// counterpart of [TestCompile_Soundness_WrongResult]: a tampered Result
+// cell must be caught by the LDS verifier action's claim-vs-running-sum
+// identity, even when the underlying column lives on a dynamic module.
+func TestCompile_DynamicModule_Soundness_WrongResult(t *testing.T) {
+	sys, num, filter, ld := newDynamicFilteredSum(t)
+	logderivativesum.Compile(sys)
+
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(num, makeVec(2, 2, 2, 2))
+	rt.AssignColumn(filter, makeVec(1, 1, 1, 1))
+	rt.AdvanceRound()
+	// Pre-assigning Result before the prover action runs short-circuits the
+	// prover-side AssignCell (HasCellAssignment is true), so the bogus value
+	// survives into the verifier action.
+	rt.AssignCell(ld.Result, field.ElemFromBase(field.NewFromString("99")))
+	runRound(&rt)
+
 	assert.Error(t, checkAllVerifierActions(&rt),
-		"the verifier action must catch a Z whose row-0 value disagrees with zNum[0]/zDen[0]")
+		"a corrupted Result cell on a dynamic-module LDS must be detected by the verifier action")
+}
+
+// TestCompile_DynamicModule_Soundness_WrongInitialZ is the dynamic-module
+// counterpart of [TestCompile_Soundness_WrongInitialZ]: a Z column whose
+// per-row differences satisfy the recurrence but whose row-0 value is
+// shifted away from the honest zNum[0]/zDen[0] must pass the recurrence
+// Vanishing yet be rejected by the row-0 local constraint. This boundary used
+// to be checked by the verifier action; it is now pinned in-circuit by a local
+// constraint, so the verifier action (final-sum only) no longer sees it — on
+// the dynamic-module path just like on the static one.
+func TestCompile_DynamicModule_Soundness_WrongInitialZ(t *testing.T) {
+	sys, num, filter, ld := newDynamicFilteredSum(t)
+	mod := sys.Modules[0]
+	witnessColumns := append([]*wiop.Column{}, mod.Columns...)
+	logderivativesum.Compile(sys)
+	zCol := findZColumn(t, mod, witnessColumns)
+
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(num, makeVec(2, 2, 2, 2))
+	rt.AssignColumn(filter, makeVec(1, 1, 1, 1))
+	rt.AdvanceRound()
+
+	// Honest Z = [2, 4, 6, 8]. A constant-step-of-2 sequence starting at 5
+	// satisfies Z[i] − Z[i−1] = 2 but disagrees with Z[0]·zDen[0] = zNum[0].
+	shifted := []field.Ext{
+		field.Lift(field.NewFromString("5")),
+		field.Lift(field.NewFromString("7")),
+		field.Lift(field.NewFromString("9")),
+		field.Lift(field.NewFromString("11")),
+	}
+	rt.AssignColumn(zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(shifted)})
+
+	// The endpoint opening is lazy: it self-resolves from Z on first read, no
+	// explicit assignment needed.
+	rt.AssignCell(ld.Result, field.ElemFromExt(shifted[3]))
+
+	// The recurrence (multi-valued) accepts the constant-step Z, and the
+	// final-sum verifier action only compares consistent endpoints to Result —
+	// neither catches the shifted base on the dynamic path.
+	rec := mod.Vanishings[0]
+	require.True(t, rec.Expression.IsMultiValued(), "Vanishings[0] must be the recurrence")
+	require.NoError(t, rec.Check(rt), "recurrence must accept a constant-step Z on a dynamic module")
+	require.NoError(t, checkAllVerifierActions(&rt),
+		"the final-sum verifier action only checks endpoints against Result")
+
+	// The row-0 local constraint must reject the shifted base.
+	rejected := false
+	for _, v := range mod.Vanishings {
+		if v.Expression.IsMultiValued() {
+			continue
+		}
+		if err := v.Check(rt); err != nil {
+			rejected = true
+		}
+	}
+	assert.True(t, rejected,
+		"the row-0 local constraint must reject a Z whose row-0 value disagrees with zNum[0]/zDen[0] on a dynamic module")
+}
+
+// TestCompile_DynamicModule_SizeOne pins down the corner case that drives
+// the [m.IsDynamic() || m.Size() > 1] decision in buildZ: the recurrence
+// Vanishing is emitted at compile time even though the runtime size turns
+// out to be 1, and Vanishing.Check must treat the constraint as vacuous on
+// the single row (cancelled by the Shift(-1) on Z). Both the recurrence
+// and the LDS verifier action must accept an honest single-row witness.
+func TestCompile_DynamicModule_SizeOne(t *testing.T) {
+	sys, num, filter, _ := newDynamicFilteredSum(t)
+	mod := sys.Modules[0]
+	logderivativesum.Compile(sys)
+
+	// Three vanishings per LDS: 1 recurrence (Vanishings[0]) + 1 row-0 local
+	// constraint + 1 endpoint-opening binding registered by ColumnPosition.Open.
+	require.Len(t, mod.Vanishings, 3,
+		"dynamic module always emits the recurrence Vanishing at compile time, "+
+			"even when the runtime size will turn out to be 1")
+
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(num, makeVec(7))
+	rt.AssignColumn(filter, makeVec(1))
+	rt.AdvanceRound()
+	runRound(&rt)
+
+	require.NoError(t, mod.Vanishings[0].Check(rt),
+		"recurrence Vanishing must be vacuous when RuntimeSize == 1 "+
+			"(the only row is cancelled by Z's −1 shift)")
+	require.NoError(t, checkAllVerifierActions(&rt),
+		"honest single-row dynamic-module assignment must verify end-to-end")
 }
 
 // ---- Construction-time validation ----

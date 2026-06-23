@@ -32,7 +32,12 @@ class KvDatabaseTest {
   fun `test read and write beacon state`(
     @TempDir databasePath: Path,
   ) {
-    val testBeaconStates = (1..10).map { DataGenerators.randomBeaconState(it.toULong()) }
+    val testBeaconStates =
+      (1..10).map {
+        DataGenerators.randomBeaconState(
+          it.toULong(),
+        )
+      }
     createDatabase(databasePath).use { db ->
       testBeaconStates.forEach { testBeaconState ->
         db.newBeaconChainUpdater().use {
@@ -55,7 +60,12 @@ class KvDatabaseTest {
   fun `test read and write latest beacon state`(
     @TempDir databasePath: Path,
   ) {
-    val testBeaconStates = (1..10).map { DataGenerators.randomBeaconState(it.toULong()) }
+    val testBeaconStates =
+      (1..10).map {
+        DataGenerators.randomBeaconState(
+          it.toULong(),
+        )
+      }
     createDatabase(databasePath).use { db ->
       testBeaconStates.forEach { testBeaconState ->
         db.newBeaconChainUpdater().use {
@@ -89,7 +99,11 @@ class KvDatabaseTest {
     @TempDir databasePath: Path,
   ) {
     val testBeaconBlocks =
-      (1..10).map { DataGenerators.randomSealedBeaconBlock(it.toULong()) }
+      (1..10).map {
+        DataGenerators.randomSealedBeaconBlock(
+          it.toULong(),
+        )
+      }
     createDatabase(databasePath).use { db ->
       testBeaconBlocks.forEach { testBeaconBlock ->
         db.newBeaconChainUpdater().use {
@@ -118,7 +132,9 @@ class KvDatabaseTest {
   fun `test repeated write`(
     @TempDir databasePath: Path,
   ) {
-    val testBeaconBlock = DataGenerators.randomSealedBeaconBlock(1uL)
+    val testBeaconBlock = DataGenerators.randomSealedBeaconBlock(
+      1uL,
+    )
     createDatabase(databasePath).use { db ->
       db.newBeaconChainUpdater().use {
         it.putSealedBeaconBlock(testBeaconBlock).commit()
@@ -141,10 +157,14 @@ class KvDatabaseTest {
   fun `test update rollback`(
     @TempDir databasePath: Path,
   ) {
-    val testBeaconBlock1 = DataGenerators.randomSealedBeaconBlock(1uL)
+    val testBeaconBlock1 = DataGenerators.randomSealedBeaconBlock(
+      1uL,
+    )
     val testBeaconBlock1Number = testBeaconBlock1.beaconBlock.beaconBlockHeader.number
     val testBeaconBlock1Root = testBeaconBlock1.beaconBlock.beaconBlockHeader.hash
-    val testBeaconBlock2 = DataGenerators.randomSealedBeaconBlock(2uL)
+    val testBeaconBlock2 = DataGenerators.randomSealedBeaconBlock(
+      2uL,
+    )
     val testBeaconBlock2Number = testBeaconBlock2.beaconBlock.beaconBlockHeader.number
     val testBeaconBlock2Root = testBeaconBlock2.beaconBlock.beaconBlockHeader.hash
     createDatabase(databasePath).use { db ->
@@ -179,7 +199,11 @@ class KvDatabaseTest {
   fun `test getSealedBeaconBlocks returns consecutive blocks`(
     @TempDir databasePath: Path,
   ) {
-    val testBlocks = (0uL..5uL).map { DataGenerators.randomSealedBeaconBlock(it) }
+    val testBlocks = (0uL..5uL).map {
+      DataGenerators.randomSealedBeaconBlock(
+        it,
+      )
+    }
 
     createDatabase(databasePath).use { db ->
       // Store blocks
@@ -211,7 +235,9 @@ class KvDatabaseTest {
   fun `test getSealedBeaconBlocks returns empty list when count is zero`(
     @TempDir databasePath: Path,
   ) {
-    val testBlock = DataGenerators.randomSealedBeaconBlock(1uL)
+    val testBlock = DataGenerators.randomSealedBeaconBlock(
+      1uL,
+    )
 
     createDatabase(databasePath).use { db ->
       db.newBeaconChainUpdater().use {
@@ -236,10 +262,16 @@ class KvDatabaseTest {
   fun `test getSealedBeaconBlocks stops at gap in sequence`(
     @TempDir databasePath: Path,
   ) {
-    val block1 = DataGenerators.randomSealedBeaconBlock(1uL)
-    val block2 = DataGenerators.randomSealedBeaconBlock(2uL)
+    val block1 = DataGenerators.randomSealedBeaconBlock(
+      1uL,
+    )
+    val block2 = DataGenerators.randomSealedBeaconBlock(
+      2uL,
+    )
     // Skip block 3
-    val block4 = DataGenerators.randomSealedBeaconBlock(4uL)
+    val block4 = DataGenerators.randomSealedBeaconBlock(
+      4uL,
+    )
 
     createDatabase(databasePath).use { db ->
       db.newBeaconChainUpdater().use {
@@ -271,7 +303,11 @@ class KvDatabaseTest {
   fun `test getSealedBeaconBlocks returns available blocks when count exceeds available`(
     @TempDir databasePath: Path,
   ) {
-    val testBlocks = (1uL..3uL).map { DataGenerators.randomSealedBeaconBlock(it) }
+    val testBlocks = (1uL..3uL).map {
+      DataGenerators.randomSealedBeaconBlock(
+        it,
+      )
+    }
 
     createDatabase(databasePath).use { db ->
       testBlocks.forEach { block ->

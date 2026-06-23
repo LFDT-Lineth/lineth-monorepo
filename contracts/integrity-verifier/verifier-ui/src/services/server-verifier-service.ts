@@ -15,7 +15,7 @@ import type { ParsedConfig, VerificationOptions, FileRef, AdapterType } from "@/
 import { VerifierServiceError, ServiceErrorCodes } from "./types";
 
 import type { VerifierService, StoredSession, StoredFile } from "./types";
-import type { VerificationSummary } from "@consensys/linea-contract-integrity-verifier";
+import type { VerificationSummary } from "@lfdt-lineth/contract-integrity-verifier";
 
 /**
  * Server-side verifier service using API routes.

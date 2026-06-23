@@ -31,7 +31,7 @@ on:
 
 jobs:
   compute-release-metadata:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     name: Compute ${{ inputs.component-name }} release metadata (changelog + tag)
     outputs:
       release_tag: ${{ steps.changelog.outputs.next_tag }}

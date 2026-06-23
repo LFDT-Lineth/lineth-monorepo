@@ -41,7 +41,9 @@ class ProposerSelectorAdapterTest {
     val beaconChain = mock<BeaconChain>()
     val currentBlockNumber = 3uL
     val previousBlockNumber = currentBlockNumber.dec()
-    val expectedState = DataGenerators.randomBeaconState(previousBlockNumber)
+    val expectedState = DataGenerators.randomBeaconState(
+      previousBlockNumber,
+    )
     whenever(beaconChain.getBeaconState(previousBlockNumber)).thenReturn(expectedState)
     val proposerSelector = ProposerSelectorAdapter(beaconChain, ProposerSelectorImpl)
     val consensusRoundIdentifier = ConsensusRoundIdentifier(currentBlockNumber.toLong(), 0)

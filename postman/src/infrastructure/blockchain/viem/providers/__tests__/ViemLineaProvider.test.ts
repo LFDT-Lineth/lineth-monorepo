@@ -1,12 +1,12 @@
-import * as lineaSdkViem from "@consensys/linea-sdk-viem";
 import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
+import * as lineaSdkViem from "@lfdt-lineth/sdk-viem";
 import { mock } from "jest-mock-extended";
 import { PublicClient } from "viem";
 
 import { mockLogger } from "../../../../../utils/testing/mocks";
 import { ViemLineaProvider } from "../ViemLineaProvider";
 
-jest.mock("@consensys/linea-sdk-viem", () => ({
+jest.mock("@lfdt-lineth/sdk-viem", () => ({
   getBlockExtraData: jest.fn(),
 }));
 

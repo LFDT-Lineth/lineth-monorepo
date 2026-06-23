@@ -1,22 +1,22 @@
 import { Command, Flags } from "@oclif/core";
-import { ethers } from "ethers";
 import { readFileSync } from "fs";
+import { type Hex } from "viem";
+import { sendRawTransaction } from "viem/actions";
 
 import {
+  createSynctxClient,
   getPendingTransactions,
+  getTransactionPool,
+  getTransactionsFromPool,
+  hasPendingTransactions,
   isLocalPort,
   isValidNodeTarget,
-  parsePendingTransactions,
-  Transaction,
-  Txpool,
-  ClientApi,
+  parseTransactionsFileContent,
+  serializeVerifiedTxpoolTransaction,
+  type Transaction,
+  type TransactionPool,
   getClientType,
 } from "../utils/synctx/index.js";
-
-const clientApi: ClientApi = {
-  geth: { api: "txpool_content", params: [] },
-  besu: { api: "txpool_besuPendingTransactions", params: [2000] },
-};
 
 export default class Synctx extends Command {
   static examples = [
@@ -85,6 +85,10 @@ export default class Synctx extends Command {
     let pendingTransactionsToSync: Transaction[] = [];
     const concurrentCount = flags.concurrency as number;
 
+    if (concurrentCount <= 0) {
+      this.error("Invalid concurrency supplied; must be greater than 0");
+    }
+
     if ((filePath === "" && sourceNode === "") || (filePath !== "" && sourceNode !== "")) {
       this.error(
         "Invalid flag values are supplied; source and file are mutually exclusive, and at least one needs to be specified",
@@ -100,11 +104,11 @@ export default class Synctx extends Command {
       this.error("Invalid nodes supplied to source and/or target; must be valid URLs");
     }
 
-    const sourceProvider = sourceNode ? new ethers.JsonRpcProvider(sourceNode) : undefined;
-    const targetProvider = new ethers.JsonRpcProvider(targetNode);
+    const sourceClient = sourceNode ? createSynctxClient(sourceNode) : undefined;
+    const targetClient = createSynctxClient(targetNode);
 
-    const sourceClientType = sourceProvider ? await getClientType(sourceProvider) : undefined;
-    const targetClientType = await getClientType(targetProvider);
+    const sourceClientType = sourceClient ? await getClientType(sourceClient) : undefined;
+    const targetClientType = await getClientType(targetClient);
 
     if (sourceNode) {
       this.log(`Source ${sourceClientType} node: ${sourceNode}`);
@@ -113,51 +117,48 @@ export default class Synctx extends Command {
     }
     this.log(`Target ${targetClientType} node: ${targetNode}`);
 
-    let sourceTransactionPool: Txpool = { pending: {}, queued: {} };
-    let targetTransactionPool: Txpool = { pending: {}, queued: {} };
+    let sourceTransactionPool: TransactionPool = { pending: {}, queued: {} };
+    let targetTransactionPool: TransactionPool = { pending: {}, queued: {} };
     try {
-      if (sourceProvider && sourceClientType) {
+      if (sourceClient && sourceClientType) {
         this.log(`Fetching pending txs from txpool`);
-        sourceTransactionPool = await sourceProvider.send(
-          clientApi[sourceClientType].api,
-          clientApi[sourceClientType].params,
-        );
-        targetTransactionPool = await targetProvider.send(
-          clientApi[targetClientType].api,
-          clientApi[targetClientType].params,
-        );
+        sourceTransactionPool = await getTransactionPool(sourceClient, sourceClientType);
+        targetTransactionPool = await getTransactionPool(targetClient, targetClientType);
       } else {
         this.log(`Skip fetching txs from source node as txs file is supplied`);
       }
-    } catch (err) {
-      this.error(`Invalid RPC provider(s) - ${err}`);
+    } catch {
+      this.error(`Failed to get transaction pool from source and target nodes.`);
     }
 
-    if (
-      (sourceClientType === "geth" && Object.keys(sourceTransactionPool.pending).length === 0) ||
-      (sourceClientType === "besu" && Object.keys(sourceTransactionPool).length === 0)
-    ) {
-      this.log("No pending transactions found on source node");
-      return;
-    }
+    let sourcePendingTransactions: Transaction[] = [];
+    let targetPendingTransactions: Transaction[] = [];
+    if (sourceNode) {
+      if (!sourceClientType) {
+        this.error("Failed to determine source node client type");
+      }
 
-    const sourcePendingTransactions: Transaction[] =
-      sourceClientType === "geth"
-        ? parsePendingTransactions(sourceTransactionPool)
-        : (sourceTransactionPool as unknown as Transaction[]);
-    const targetPendingTransactions: Transaction[] =
-      targetClientType === "geth"
-        ? parsePendingTransactions(targetTransactionPool)
-        : (targetTransactionPool as unknown as Transaction[]);
+      if (!hasPendingTransactions(sourceClientType, sourceTransactionPool)) {
+        this.log("No pending transactions found on source node");
+        return;
+      }
+
+      sourcePendingTransactions = getTransactionsFromPool(sourceClientType, sourceTransactionPool);
+      targetPendingTransactions = getTransactionsFromPool(targetClientType, targetTransactionPool);
+    }
 
     if (sourceNode) {
       this.log(`Source pending transactions: ${sourcePendingTransactions.length}`);
       this.log(`Target pending transactions: ${targetPendingTransactions.length}`);
     }
 
-    pendingTransactionsToSync = sourceNode
-      ? getPendingTransactions(sourcePendingTransactions, targetPendingTransactions)
-      : JSON.parse(readFileSync(filePath, "utf-8"));
+    try {
+      pendingTransactionsToSync = sourceNode
+        ? getPendingTransactions(sourcePendingTransactions, targetPendingTransactions)
+        : parseTransactionsFileContent(readFileSync(filePath, "utf-8"), filePath);
+    } catch (error) {
+      this.error((error as Error).message);
+    }
 
     if (pendingTransactionsToSync.length === 0) {
       if (sourceNode) {
@@ -172,45 +173,16 @@ export default class Synctx extends Command {
 
     // Track errors during serialization
     let errorSerialization = 0;
-    const transactions: Array<string> = [];
+    const transactions: Hex[] = [];
 
-    // Asynchronous loop to handle address resolution
     for (const tx of pendingTransactionsToSync) {
-      // Resolve the 'to' address if necessary
-      const toAddress = tx.to ? await ethers.resolveAddress(tx.to) : undefined;
-
-      const transaction: ethers.TransactionLike<string> = {
-        to: toAddress ?? null,
-        nonce: Number(tx.nonce),
-        gasLimit: BigInt(tx.gas),
-        ...(Number(tx.type) === 2
-          ? {
-              maxFeePerGas: BigInt(tx.maxFeePerGas!),
-              maxPriorityFeePerGas: BigInt(tx.maxPriorityFeePerGas!),
-            }
-          : { gasPrice: BigInt(tx.gasPrice!) }),
-        data: tx.input || "0x",
-        value: BigInt(tx.value),
-        ...(tx.chainId && Number(tx.type) !== 0 ? { chainId: Number(tx.chainId) } : {}),
-        ...(Number(tx.type) === 1 || Number(tx.type) === 2
-          ? { accessList: tx.accessList as ethers.AccessListish, type: Number(tx.type) }
-          : {}),
-      };
-
       try {
-        const rawTx = ethers.Transaction.from(transaction).serialized;
-
-        if (ethers.keccak256(rawTx) !== tx.hash) {
-          errorSerialization++;
-          this.warn(`Failed to serialize transaction: ${tx.hash}`);
-        }
-        transactions.push(rawTx);
+        transactions.push(serializeVerifiedTxpoolTransaction(tx));
       } catch (error) {
         errorSerialization++;
         this.warn(`Error serializing transaction ${tx.hash}: ${(error as Error).message}`);
       }
     }
-
     const totalBatchesToProcess = Math.ceil(transactions.length / concurrentCount);
 
     this.log(`Total serialization errors: ${errorSerialization}`);
@@ -236,7 +208,7 @@ export default class Synctx extends Command {
       this.log(`Processing batch: ${i + 1} of ${totalBatchesToProcess}, size ${transactionBatch.length}`);
 
       const transactionPromises = transactionBatch.map((rawTransaction) => {
-        return targetProvider.broadcastTransaction(rawTransaction);
+        return sendRawTransaction(targetClient, { serializedTransaction: rawTransaction });
       });
 
       const results = await Promise.allSettled(transactionPromises);

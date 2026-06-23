@@ -6,7 +6,7 @@
  *
  * Usage:
  * ANTHROPIC_API_KEY=sk-ant-xxx \
- * pnpm --filter @consensys/lido-governance-monitor exec tsx scripts/run-eval.ts
+ * pnpm --filter @lfdt-lineth/lido-governance-monitor exec tsx scripts/run-eval.ts
  *
  * Optional env vars:
  * RISK_THRESHOLD=60                          # effectiveRisk threshold for alerting (default: 60)

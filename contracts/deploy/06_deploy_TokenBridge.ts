@@ -9,7 +9,9 @@ import {
 } from "../common/constants";
 import {
   generateRoleAssignments,
+  getAddressesFromRegistryOrEnv,
   getEnvVarOrDefault,
+  requireAddressFromRegistryOrEnv,
   tryVerifyContract,
   getRequiredEnvVar,
   LogContractDeployment,
@@ -28,12 +30,20 @@ const func: DeployFunction = withSignerUiSession(
     const signer = await getUiSigner(hre);
     const contractName = "TokenBridge";
 
-    const l2MessageServiceAddress = getRequiredEnvVar("L2_MESSAGE_SERVICE_ADDRESS");
-    const lineaRollupAddress = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS");
+    const l2MessageServiceAddress = requireAddressFromRegistryOrEnv(
+      network.name,
+      "L2MessageService",
+      "L2_MESSAGE_SERVICE_ADDRESS",
+    );
+    const lineaRollupAddress = requireAddressFromRegistryOrEnv(network.name, "LineaRollup", "LINEA_ROLLUP_ADDRESS");
     const remoteChainId = getRequiredEnvVar("REMOTE_CHAIN_ID");
     const pauseTypeRoles = getEnvVarOrDefault("TOKEN_BRIDGE_PAUSE_TYPES_ROLES", TOKEN_BRIDGE_PAUSE_TYPES_ROLES);
     const unpauseTypeRoles = getEnvVarOrDefault("TOKEN_BRIDGE_UNPAUSE_TYPES_ROLES", TOKEN_BRIDGE_UNPAUSE_TYPES_ROLES);
-    const remoteSender = getRequiredEnvVar("REMOTE_SENDER_ADDRESS");
+    const remoteSender = requireAddressFromRegistryOrEnv(
+      network.name,
+      "REMOTE_SENDER_ADDRESS",
+      "REMOTE_SENDER_ADDRESS",
+    );
 
     let securityCouncilAddress;
 
@@ -42,30 +52,43 @@ const func: DeployFunction = withSignerUiSession(
     console.log(`Current network's chainId is ${chainId}. Remote (target) network's chainId is ${remoteChainId}`);
 
     let deployingChainMessageService = l2MessageServiceAddress;
-    let reservedAddresses = process.env.L2_RESERVED_TOKEN_ADDRESSES
-      ? process.env.L2_RESERVED_TOKEN_ADDRESSES.split(",")
-      : [];
+    let reservedAddresses: string[];
 
-    if (process.env.TOKEN_BRIDGE_L1 === "true") {
-      securityCouncilAddress = getRequiredEnvVar("L1_SECURITY_COUNCIL");
+    if (process.env.DEPLOY_TOKEN_BRIDGE_ON_L1 === "true") {
+      securityCouncilAddress = requireAddressFromRegistryOrEnv(
+        network.name,
+        "L1_SECURITY_COUNCIL",
+        "L1_SECURITY_COUNCIL",
+      );
       console.log(
-        `TOKEN_BRIDGE_L1=${process.env.TOKEN_BRIDGE_L1}. Deploying TokenBridge on L1, using L1_RESERVED_TOKEN_ADDRESSES environment variable`,
+        `DEPLOY_TOKEN_BRIDGE_ON_L1=${process.env.DEPLOY_TOKEN_BRIDGE_ON_L1}. Deploying TokenBridge on L1, using L1_RESERVED_TOKEN_ADDRESSES from registry or env`,
       );
       deployingChainMessageService = lineaRollupAddress;
-      reservedAddresses = process.env.L1_RESERVED_TOKEN_ADDRESSES
-        ? process.env.L1_RESERVED_TOKEN_ADDRESSES.split(",")
-        : [];
+      reservedAddresses = getAddressesFromRegistryOrEnv(
+        network.name,
+        "L1_RESERVED_TOKEN_ADDRESSES",
+        "L1_RESERVED_TOKEN_ADDRESSES",
+      );
     } else {
-      securityCouncilAddress = getRequiredEnvVar("L2_SECURITY_COUNCIL");
+      securityCouncilAddress = requireAddressFromRegistryOrEnv(
+        network.name,
+        "L2_SECURITY_COUNCIL",
+        "L2_SECURITY_COUNCIL",
+      );
       console.log(
-        `TOKEN_BRIDGE_L1=${process.env.TOKEN_BRIDGE_L1}. Deploying TokenBridge on L2, using L2_RESERVED_TOKEN_ADDRESSES environment variable`,
+        `DEPLOY_TOKEN_BRIDGE_ON_L1=${process.env.DEPLOY_TOKEN_BRIDGE_ON_L1}. Deploying TokenBridge on L2, using L2_RESERVED_TOKEN_ADDRESSES from registry or env`,
+      );
+      reservedAddresses = getAddressesFromRegistryOrEnv(
+        network.name,
+        "L2_RESERVED_TOKEN_ADDRESSES",
+        "L2_RESERVED_TOKEN_ADDRESSES",
       );
     }
 
     const defaultRoleAddresses = generateRoleAssignments(TOKEN_BRIDGE_ROLES, securityCouncilAddress, []);
     const roleAddresses = getEnvVarOrDefault("TOKEN_BRIDGE_ROLE_ADDRESSES", defaultRoleAddresses);
 
-    const bridgedTokenAddress = getRequiredEnvVar("BRIDGED_TOKEN_ADDRESS");
+    const bridgedTokenAddress = requireAddressFromRegistryOrEnv(network.name, "BridgedToken", "BRIDGED_TOKEN_ADDRESS");
 
     // Deploying TokenBridge
     const TokenBridgeFactory = await ethers.getContractFactory(contractName, signer);
@@ -105,7 +128,7 @@ const func: DeployFunction = withSignerUiSession(
 
     const tokenBridgeAddress = await tokenBridge.getAddress();
 
-    if (process.env.TOKEN_BRIDGE_L1 === "true") {
+    if (process.env.DEPLOY_TOKEN_BRIDGE_ON_L1 === "true") {
       console.log(`L1 TokenBridge deployed on ${network.name}, at address: ${tokenBridgeAddress}`);
     } else {
       console.log(`L2 TokenBridge deployed on ${network.name}, at address: ${tokenBridgeAddress}`);

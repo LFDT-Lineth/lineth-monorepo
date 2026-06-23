@@ -1,4 +1,4 @@
-import { ILogger, IMetricsService, IApplication } from "@consensys/linea-shared-utils";
+import { ILogger, IMetricsService, IApplication } from "@lfdt-lineth/shared-utils";
 import { mock, MockProxy } from "jest-mock-extended";
 import { DataSource, EntityManager } from "typeorm";
 

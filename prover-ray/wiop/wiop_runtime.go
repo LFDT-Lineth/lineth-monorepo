@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/fiatshamir"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fiatshamir"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 )
 
 // columnSizeMaxSupported is the maximum supported size of a column. The value
@@ -55,6 +55,7 @@ type Runtime struct {
 //
 // Panics if sys has no interactive rounds (len(sys.Rounds) == 0).
 func NewRuntime(sys *System) Runtime {
+
 	run := Runtime{
 		System:       sys,
 		fs:           fiatshamir.NewFiatShamir(),
@@ -101,7 +102,11 @@ func (run Runtime) CurrentRound() *Round { return run.currentRound }
 //  2. Every cell value assigned in the current round is fed into the
 //     Fiat-Shamir state. All cells are always public (see [Cell.Visibility]).
 //  3. The runtime advances to the next round.
-//  4. A fresh extension-field coin is derived via [fiatshamir.FiatShamir.RandomFext]
+//  4. Every [Round.PreSamplingHooks] entry on the new round runs, in
+//     declaration order. Hooks may mutate the Fiat-Shamir state via
+//     [Runtime.SetFSState] for shared-randomness seeding; any subsequent
+//     coin in this round is derived from the post-hook state.
+//  5. A fresh extension-field coin is derived via [fiatshamir.FiatShamir.RandomFext]
 //     for each [CoinField] declared in the new round.
 //
 // Panics if there is no next round, or if any oracle/public column in the
@@ -127,9 +132,10 @@ func (run *Runtime) AdvanceRound() {
 		run.fs.UpdateSV(cv.Plain)
 	}
 
-	// Feed all cell values into the Fiat-Shamir state.
+	// Feed all cell values into the Fiat-Shamir state. Lazily-assigned cells
+	// are resolved here if they have not been read yet.
 	for _, cell := range run.currentRound.Cells {
-		v, ok := run.cells[cell.Context.ID]
+		v, ok := run.resolveLazyCell(cell)
 		if !ok {
 			panic(fmt.Sprintf(
 				"wiop: AdvanceRound: cell %q not assigned before advancing round",
@@ -140,6 +146,14 @@ func (run *Runtime) AdvanceRound() {
 	}
 
 	run.currentRound = next
+
+	// Pre-sampling hooks: run before any coin is derived so they can seed
+	// the FS state (typically via [Runtime.SetFSState]). The Runtime value
+	// is shared with the hooks; FS-state mutations performed by them affect
+	// the coin loop below.
+	for _, h := range run.currentRound.PreSamplingHooks {
+		h.Run(*run)
+	}
 
 	// Derive a coin for every CoinField declared in the new round.
 	for _, coin := range run.currentRound.Coins {
@@ -187,6 +201,30 @@ func (run Runtime) AssignColumn(col *Column, v *ConcreteVector) {
 		))
 	}
 
+	run.columns[id] = v
+}
+
+// OverrideColumn replaces an existing assignment for col with v. Unlike
+// [Runtime.AssignColumn] it requires col to be already assigned and does not
+// enforce the current round, so soundness tests can corrupt a value the prover
+// has already committed to. When v carries no promise back-reference, the prior
+// assignment's promise is copied over so size and padding semantics survive.
+//
+// Panics if col has not been assigned yet.
+func (run Runtime) OverrideColumn(col *Column, v *ConcreteVector) {
+	run.lock.Lock()
+	defer run.lock.Unlock()
+	id := col.Context.ID
+	old, ok := run.columns[id]
+	if !ok {
+		panic(fmt.Sprintf(
+			"wiop: OverrideColumn: column %q is not assigned",
+			col.Context.Path(),
+		))
+	}
+	if v.promise == nil {
+		v.promise = old.promise
+	}
 	run.columns[id] = v
 }
 
@@ -242,19 +280,67 @@ func (run Runtime) AssignCell(cell *Cell, v field.Gen) {
 	run.cells[id] = v
 }
 
-// GetCellValue returns the concrete scalar value of cell. Panics if cell has
-// not been assigned yet.
-func (run Runtime) GetCellValue(cell *Cell) field.Gen {
+// OverrideCell replaces an existing value for cell with v. Unlike
+// [Runtime.AssignCell] it requires cell to be already assigned and does not
+// enforce the current round, so soundness tests can corrupt a value the prover
+// has already opened.
+//
+// Panics if cell has not been assigned yet.
+func (run Runtime) OverrideCell(cell *Cell, v field.Gen) {
 	run.lock.Lock()
 	defer run.lock.Unlock()
-	v, ok := run.cells[cell.Context.ID]
-	if !ok {
+	id := cell.Context.ID
+	if _, ok := run.cells[id]; !ok {
 		panic(fmt.Sprintf(
-			"wiop: GetCellValue: cell %q is not assigned",
+			"wiop: OverrideCell: cell %q is not assigned",
 			cell.Context.Path(),
 		))
 	}
-	return v
+	run.cells[id] = v
+}
+
+// GetCellValue returns the concrete scalar value of cell, resolving a lazily-
+// assigned cell on demand. Panics if cell is neither assigned nor lazy.
+func (run Runtime) GetCellValue(cell *Cell) field.Gen {
+	if v, ok := run.resolveLazyCell(cell); ok {
+		return v
+	}
+	panic(fmt.Sprintf(
+		"wiop: GetCellValue: cell %q is not assigned",
+		cell.Context.Path(),
+	))
+}
+
+// resolveLazyCell returns cell's value and whether it has one. An already-
+// assigned cell is returned directly. An unassigned cell with a non-nil
+// [Cell.Assigner] is resolved by invoking the assigner, caching the result,
+// and returning it. An unassigned cell with no assigner yields (_, false).
+//
+// The assigner is invoked without holding the runtime lock because it typically
+// reads a column assignment (which takes the lock itself). If a concurrent path
+// assigns the cell first, that value wins and the freshly-computed one is
+// discarded.
+func (run Runtime) resolveLazyCell(cell *Cell) (field.Gen, bool) {
+	run.lock.Lock()
+	v, ok := run.cells[cell.Context.ID]
+	run.lock.Unlock()
+	if ok {
+		return v, true
+	}
+	if cell.Assigner == nil {
+		return field.Gen{}, false
+	}
+
+	v = cell.Assigner(run)
+
+	run.lock.Lock()
+	if existing, exists := run.cells[cell.Context.ID]; exists {
+		v = existing
+	} else {
+		run.cells[cell.Context.ID] = v
+	}
+	run.lock.Unlock()
+	return v, true
 }
 
 // HasCellAssignment reports whether cell has been assigned in this runtime.
@@ -278,6 +364,18 @@ func (run Runtime) GetCoinValue(coin *CoinField) field.Gen {
 		))
 	}
 	return v
+}
+
+// SetFSState replaces the runtime's Fiat–Shamir state with s. It is
+// intended for [Round.PreSamplingHooks] entries that seed the FS state
+// from a precomputed shared randomness (e.g. cross-shard handoff). Calling
+// it outside a pre-sampling hook can desynchronize the prover and verifier
+// transcripts and is almost always a bug.
+//
+// fiatshamir is a goroutine-unsafe singleton inside the runtime — like the
+// rest of the AdvanceRound pipeline this must not be called concurrently.
+func (run Runtime) SetFSState(s field.Octuplet) {
+	run.fs.SetState(s)
 }
 
 // GetState returns the value stored under key and whether it was present.

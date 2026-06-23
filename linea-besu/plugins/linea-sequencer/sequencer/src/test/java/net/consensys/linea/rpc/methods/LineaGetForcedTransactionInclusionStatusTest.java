@@ -8,7 +8,7 @@
  */
 package net.consensys.linea.rpc.methods;
 
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_TO;
+import static linea.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_TO;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -43,7 +43,7 @@ class LineaGetForcedTransactionInclusionStatusTest {
 
   @BeforeEach
   void setUp() {
-    pool = new LineaForcedTransactionPool(100, null);
+    pool = new LineaForcedTransactionPool(100, 0, null, null);
     method = new LineaGetForcedTransactionInclusionStatus().init(pool);
     txFactory = new TestTransactionFactory();
     forcedTxNumberGenerator = new AtomicLong(1);

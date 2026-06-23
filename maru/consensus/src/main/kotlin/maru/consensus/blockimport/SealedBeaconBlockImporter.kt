@@ -13,6 +13,7 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.flatMap
 import com.github.michaelbull.result.mapError
+import linea.kotlin.encodeHex
 import maru.consensus.AsyncFunction
 import maru.consensus.CallAndForgetFutureMultiplexer
 import maru.consensus.state.StateTransition
@@ -20,7 +21,6 @@ import maru.consensus.validation.BeaconBlockValidatorFactory
 import maru.consensus.validation.SealsVerifier
 import maru.core.SealedBeaconBlock
 import maru.database.BeaconChain
-import maru.extensions.encodeHex
 import maru.p2p.SealedBeaconBlockHandler
 import maru.p2p.ValidationResult
 import org.apache.logging.log4j.LogManager

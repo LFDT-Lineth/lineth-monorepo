@@ -9,12 +9,13 @@
 package maru.app
 
 import io.libp2p.etc.types.fromHex
+import linea.kotlin.encodeHex
+import linea.testing.besu.BesuFactory
 import maru.consensus.qbft.ProposerSelectorImpl
 import maru.core.SealedBeaconBlock
 import maru.core.Validator
 import maru.crypto.SecpCrypto
 import maru.database.BeaconChain
-import maru.extensions.encodeHex
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.await
@@ -28,7 +29,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import testutils.PeeringNodeNetworkStack
-import testutils.besu.BesuFactory
 import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
 import kotlin.time.Duration

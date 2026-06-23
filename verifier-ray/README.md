@@ -1,155 +1,129 @@
 # verifier-ray
 
-`verifier-ray` is the Zig verifier package for Ray proofs. Its job is to
-reimplement the verifier-side pieces of `prover-ray` with a small, fixed
-runtime that can eventually be used inside a zkVM precompile.
+`verifier-ray` is the Zig verifier package for Ray proofs. It reimplements the verifier-visible pieces of `prover-ray` with a small runtime.
 
-The package is intentionally independent from `prover-ray` at runtime. Tests and
-fixture generation may import `prover-ray`, but the Zig verifier library under
-`src/` does not.
+The Zig library under `src/` is independent from `prover-ray` at runtime. Go tests and fixture generation may import `prover-ray` to produce compatibility data.
 
-## What Lives Here
+## Documentation
 
-- `src/field/` implements Koalabear base and extension field arithmetic.
-- `src/crypto/` implements Poseidon2 and the Fiat-Shamir transcript.
-- `src/pcs/` implements polynomial helpers used by verifier logic.
-- `src/runtime.zig` holds the verifier-side runtime state, currently the
-  Fiat-Shamir transcript and round counter.
-- `src/generated/` contains generated verifier stubs.
-- `codegen/` contains the Go code generation tool skeleton.
-- `test/` contains Zig tests.
-- `testdata/generate/` is a Go fixture generator that imports `prover-ray`.
-- `testdata/generated/vectors.zig` is generated Zig test data. Do not edit it by
-  hand.
+- `docs/system-codegen.md` explains how compiled prover-ray systems are extracted and rendered as comptime Zig verifier data.
+- `docs/global-constraint.md` explains how the vanishing polynomial/global constraint check is asserted.
+- `docs/vanishing-pcs-integration-notes.md` tracks assumptions to revisit when PCS/FRI verification is wired in.
 
-## Relationship With prover-ray
+## Testdata Generation
 
-`prover-ray` is the source of truth for the protocol implementation. The Zig
-verifier should match its public verifier behavior, but it should not copy the
-entire prover runtime. Instead, we port only the verifier-visible subset:
+Generated fixtures are checked into git and live in:
 
-- field and extension arithmetic
-- Poseidon2 hashing
-- Fiat-Shamir transcript updates and squeezes
-- round advancement and random coin derivation
-- later, FRI verifier query logic
-
-Golden tests enforce this. The Go generator in `testdata/generate/` computes
-expected values with `prover-ray`, writes them into `vectors.zig`, and Zig tests
-compare `verifier-ray` against those values.
-
-## Runtime And Rounds
-
-The verifier runtime is in `src/runtime.zig`.
-
-`Runtime` contains:
-
-- `transcript`: the Fiat-Shamir transcript.
-- `current_round`: the round the verifier expects to process next.
-- `total_rounds`: the total number of protocol rounds in the scripted protocol.
-
-`Visibility` contains only the verifier-relevant tags:
-
-- `oracle = 1`
-- `public = 2`
-
-These numeric values intentionally match `prover-ray`'s WIOP visibility
-encoding. The verifier runtime does not model `internal = 0`; callers should
-filter internal columns before constructing a `RoundMessage`.
-
-The main round API is:
-
-```zig
-pub fn advanceRoundWithMessage(
-    self: *Runtime,
-    expected_round: usize,
-    message: RoundMessage,
-    out_coins: []Coin,
-) Error![]const Coin
+```text
+testdata/generated/vectors.zig
+testdata/generated/vanishing.zig
 ```
 
-It mirrors the verifier-relevant behavior of `prover-ray/wiop/wiop_runtime.go`
-`AdvanceRound()`:
+The generator is in:
 
-1. Require the caller to advance the runtime's current round.
-2. Reject protocols with no rounds, invalid round indexes, or attempts to
-   advance the final round.
-3. Reject requests for more output coins than the caller-provided backing slice
-   can hold.
-4. Absorb every column assignment included in `message.columns`, in order.
-5. Absorb every public cell included in `message.cells`, in order.
-6. Advance `current_round`.
-7. Squeeze the requested number of Koalabear E6 extension coins into
-   `out_coins` and return the initialized prefix.
+```text
+testdata/generate/
+```
 
-`RoundMessage` is the already-filtered verifier-visible message for one round.
-Columns in the message are concrete assignments for `oracle` or `public`
-columns. The runtime does not receive internal columns and does not validate
-missing assignments for columns or cells that are not included in the message;
-that filtering and completeness check belongs to the caller or generated
-verifier code.
-
-## Test Data Workflow
-
-Generated vectors are intentionally checked into git. When code in
-`testdata/generate/` or `prover-ray` behavior changes, regenerate them:
+Regenerate all generated Zig fixtures from local prover-ray references with:
 
 ```bash
-cd verifier-ray/testdata/generate
-go run .
+make generate-testdata
 ```
 
-Then run:
+## Zig Tests
+
+Run the Zig test suite with:
 
 ```bash
-cd verifier-ray
-make verify-testdata
-zig build test
+make test-zig
 ```
 
-`make verify-testdata` regenerates vectors and then runs:
+Run Go codegen tests with:
 
 ```bash
-git diff --exit-code -- testdata/generated/vectors.zig
+make test-codegen
 ```
 
-This means it passes only when generated fixtures are already committed or no
-fixture changes are expected.
-
-## Common Commands
-
-From `verifier-ray/`:
-
-```bash
-make fmt
-make build
-zig build test
-cd codegen && go test ./...
-cd testdata/generate && go test ./...
-```
-
-The broader check is:
+Run both with:
 
 ```bash
 make test
 ```
 
-`make test` first verifies generated test data, then runs Zig tests and Go
-codegen tests.
+## Building Programs
 
-## Current Scope
+Build the native debug executable:
 
-Implemented and golden-tested:
+```bash
+make build
+```
 
-- Koalabear base field
-- Koalabear E6 extension field
-- polynomial evaluation helpers
-- Poseidon2 compression and Merkle-Damgard hashing
-- Fiat-Shamir transcript updates and random field/extension squeezes
-- per-round verifier random coin derivation for extension-field coins
+Build the native optimized executable:
 
-Still incomplete or placeholder:
+```bash
+make build-release
+```
 
-- FRI PCS query checks
-- full generated verifier logic
-- zkVM `zkc` execution smoke test
+Build the Linea R5 zkVM executable:
+
+```bash
+make build-r5
+```
+
+The native and R5 executable targets currently run the smoke-test entry point in `src/main.zig`. Binary smoke-test inputs live in:
+
+```text
+testdata/inputs/passing.bin
+testdata/inputs/failing.bin
+```
+
+## Running Example Programs
+
+Run the native executable with `INPUT_FILE`, defaulting to the passing fixture:
+
+```bash
+make run
+```
+
+Run explicit native fixtures:
+
+```bash
+make run-passing
+make run-failing
+make run-failing-expected
+```
+
+`run-failing` is expected to exit non-zero. `run-failing-expected` wraps it and succeeds only when the failure happens.
+
+Run through `zkc` with `INPUT_FILE`, defaulting to the passing fixture:
+
+```bash
+make zkc-verify
+```
+
+Run explicit `zkc` fixtures:
+
+```bash
+make zkc-verify-passing
+make zkc-verify-failing
+make zkc-verify-failing-expected
+```
+
+`zkc-verify-failing` is expected to exit non-zero. `zkc-verify-failing-expected` wraps it and succeeds only when the failure happens.
+
+## Formatting
+
+Run all formatting checks with:
+
+```bash
+make fmt
+```
+
+Or run them by area:
+
+```bash
+make fmt-zig
+make fmt-codegen
+make fmt-testdata-generate
+```

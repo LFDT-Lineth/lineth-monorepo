@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/sirupsen/logrus"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/consensys/go-corset/pkg/ir/air"
 	"github.com/consensys/go-corset/pkg/schema"
 	"github.com/consensys/go-corset/pkg/schema/register"
 	"github.com/consensys/go-corset/pkg/util/field/koalabear"
-	"github.com/consensys/linea-monorepo/prover-ray/utils"
 )
 
 const (
@@ -227,29 +227,6 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 			s.Sys.Context.Childf("lookup-%v", name),
 			[]wiop.Table{tableSource},
 			[]wiop.Table{tableTarget},
-		)
-
-	case air.PermutationConstraint[koalabear.Element]:
-
-		var (
-			pc       = cs.Unwrap()
-			numCol   = len(pc.Sources)
-			cSources = pc.Sources
-			cTargets = pc.Targets
-			wSources = make([]*wiop.ColumnView, numCol)
-			wTargets = make([]*wiop.ColumnView, numCol)
-		)
-
-		// this will panic over interleaved columns, we can debug that later
-		for i := 0; i < numCol; i++ {
-			wSources[i] = s.compColumnByCorsetID(pc.Context, cSources[i]).View()
-			wTargets[i] = s.compColumnByCorsetID(pc.Context, cTargets[i]).View()
-		}
-
-		s.Sys.NewPermutation(
-			s.Sys.Context.Childf("permutation-%v", name),
-			[]wiop.Table{wiop.NewTable(wSources...)},
-			[]wiop.Table{wiop.NewTable(wTargets...)},
 		)
 
 	case air.VanishingConstraint[koalabear.Element]:

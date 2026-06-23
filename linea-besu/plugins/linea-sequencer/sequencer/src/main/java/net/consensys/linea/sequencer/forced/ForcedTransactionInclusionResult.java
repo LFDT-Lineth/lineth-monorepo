@@ -31,8 +31,8 @@ public enum ForcedTransactionInclusionResult {
   /** Transaction failed because recipient address is on deny list. */
   FilteredAddressTo,
 
-  /** Transaction was rejected by Phylax filtering. */
-  Phylax,
+  /** Transaction was rejected by the security policy rules filtering. */
+  ChainSecurityRuleViolation,
 
   /**
    * Transaction failed for an unrecognized reason. This is a transient status - the transaction
@@ -46,6 +46,6 @@ public enum ForcedTransactionInclusionResult {
    * @return true if the transaction should be retried
    */
   public boolean shouldRetry() {
-    return this == Other;
+    return this == Other || this == ChainSecurityRuleViolation;
   }
 }

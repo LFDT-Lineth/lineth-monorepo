@@ -1,5 +1,5 @@
-import { getBlockExtraData } from "@consensys/linea-sdk-viem";
-import { ILogger } from "@consensys/linea-shared-utils";
+import { getBlockExtraData } from "@lfdt-lineth/sdk-viem";
+import { ILogger } from "@lfdt-lineth/shared-utils";
 import { BlockNumber, type BlockTag, type PublicClient } from "viem";
 
 import { ViemProvider } from "./ViemProvider";

@@ -8,9 +8,9 @@
  */
 package net.consensys.linea.sequencer.txselection.selectors;
 
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_AUTHORIZATION;
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_FROM;
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_TO;
+import static linea.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_AUTHORIZATION;
+import static linea.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_FROM;
+import static linea.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_TO;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
 import java.util.List;

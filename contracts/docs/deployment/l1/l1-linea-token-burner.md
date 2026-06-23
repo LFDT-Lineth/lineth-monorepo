@@ -13,8 +13,8 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | VERIFY_CONTRACT    | false    | true\|false | Verifies the deployed contract |
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | INFURA_API_KEY     | true     | key | Infura API Key. |
-| LINEA_ROLLUP_ADDRESS | true | address | LineaRollup address (L1 message service) |
-| LINEA_TOKEN_BURNER_LINEA_TOKEN | true | address | Linea token address |
+| LINEA_ROLLUP_ADDRESS | registry\|env | address | LineaRollup address (L1 message service). Read from registry on stable networks; env var used as fallback. |
+| LINEA_TOKEN | true | address | L1 Linea token address |
 
 <br />
 

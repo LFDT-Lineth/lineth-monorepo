@@ -8,7 +8,12 @@ pub const mont_constant_inv: u32 = 1_057_030_144;
 
 pub const Error = error{NonCanonicalEncoding};
 
-pub const Element = struct {
+/// KoalaBear base-field element stored as a canonical representative modulo `modulus`.
+///
+/// This is an `extern struct` because field elements are embedded in verifier
+/// inputs that can be cast directly from bytes. The stable C-compatible field
+/// layout keeps the native and R5 input representations identical.
+pub const Element = extern struct {
     value: u32,
 
     pub fn init(raw: u64) Element {
@@ -101,6 +106,17 @@ pub const Element = struct {
                 result = result.mul(base);
             }
             base = base.square();
+        }
+        return result;
+    }
+
+    pub fn powComptime(self: Element, comptime exponent: usize) Element {
+        var result = Element.one();
+        var b = self;
+        comptime var exp = exponent;
+        inline while (exp != 0) : (exp >>= 1) {
+            if ((exp & 1) == 1) result = result.mul(b);
+            b = b.square();
         }
         return result;
     }

@@ -8,8 +8,8 @@
  */
 package maru.syncing.beaconchain.pipeline
 
+import linea.kotlin.encodeHex
 import maru.consensus.blockimport.SealedBeaconBlockImporter
-import maru.extensions.encodeHex
 import maru.p2p.ValidationResult
 import maru.p2p.ValidationResultCode
 import maru.p2p.ValidationResultCode.ACCEPT

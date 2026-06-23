@@ -13,6 +13,7 @@ import io.micrometer.core.instrument.DistributionSummary
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.distribution.HistogramSnapshot
 import io.vertx.micrometer.backends.BackendRegistries
+import linea.testing.besu.BesuFactory
 import maru.crypto.SecpCrypto
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
@@ -26,7 +27,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import testutils.PeeringNodeNetworkStack
-import testutils.besu.BesuFactory
 import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
 import java.util.concurrent.CountDownLatch

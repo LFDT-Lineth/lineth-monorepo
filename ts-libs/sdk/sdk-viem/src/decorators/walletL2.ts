@@ -1,4 +1,4 @@
-import { L2WalletClient } from "@consensys/linea-sdk-core";
+import { L2WalletClient } from "@lfdt-lineth/sdk-core";
 import { Account, Address, Chain, Client, DeriveChain, Transport } from "viem";
 
 import { claimOnL2, ClaimOnL2Parameters, ClaimOnL2ReturnType } from "../actions/claimOnL2";
@@ -22,7 +22,7 @@ export type WalletActionsL2<
      * import { createWalletClient, http, zeroAddress } from 'viem'
      * import { privateKeyToAccount } from 'viem/accounts'
      * import { linea } from 'viem/chains'
-     * import { walletActionsL2 } from '@consensys/linea-sdk-viem'
+     * import { walletActionsL2 } from '@lfdt-lineth/sdk-viem'
      *
      * const client = createWalletClient({
      *   chain: linea,
@@ -41,7 +41,7 @@ export type WalletActionsL2<
      * import { createWalletClient, http, zeroAddress } from 'viem'
      * import { privateKeyToAccount } from 'viem/accounts'
      * import { linea } from 'viem/chains'
-     * import { walletActionsL2 } from '@consensys/linea-sdk-viem'
+     * import { walletActionsL2 } from '@lfdt-lineth/sdk-viem'
      *
      * const client = createWalletClient({
      *   account: privateKeyToAccount('0x…'),
@@ -74,7 +74,7 @@ export type WalletActionsL2<
      * import { createWalletClient, http, zeroAddress } from 'viem'
      * import { privateKeyToAccount } from 'viem/accounts'
      * import { linea } from 'viem/chains'
-     * import { walletActionsL2 } from '@consensys/linea-sdk-viem'
+     * import { walletActionsL2 } from '@lfdt-lineth/sdk-viem'
      *
      * const client = createWalletClient({
      *   chain: linea,
@@ -100,7 +100,7 @@ export type WalletActionsL2<
      * import { createWalletClient, http, zeroAddress } from 'viem'
      * import { privateKeyToAccount } from 'viem/accounts'
      * import { linea } from 'viem/chains'
-     * import { walletActionsL2 } from '@consensys/linea-sdk-viem'
+     * import { walletActionsL2 } from '@lfdt-lineth/sdk-viem'
      *
      * const client = createWalletClient({
      *   account: privateKeyToAccount('0x…'),

@@ -1,5 +1,5 @@
-import { MINIMUM_0X02_VALIDATOR_EFFECTIVE_BALANCE, ONE_GWEI } from "@consensys/linea-shared-utils";
 import { jest } from "@jest/globals";
+import { MINIMUM_0X02_VALIDATOR_EFFECTIVE_BALANCE, ONE_GWEI } from "@lfdt-lineth/shared-utils";
 
 import { createLoggerMock, createMetricsUpdaterMock } from "../../__tests__/helpers/index.js";
 import { BeaconChainStakingClient } from "../BeaconChainStakingClient.js";
@@ -13,7 +13,7 @@ import type {
   ValidatorBalance,
   ValidatorBalanceWithPendingWithdrawal,
 } from "../../core/entities/Validator.js";
-import type { PendingPartialWithdrawal } from "@consensys/linea-shared-utils";
+import type { PendingPartialWithdrawal } from "@lfdt-lineth/shared-utils";
 import type { Address, Hex, TransactionReceipt } from "viem";
 
 // Test constants

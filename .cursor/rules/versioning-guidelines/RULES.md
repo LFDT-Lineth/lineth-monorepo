@@ -6,7 +6,7 @@ alwaysApply: true
 
 # API and Asset Versioning Rules
 
-Components must maintain backwards compatibility, especially those already released beyond devnet (sepolia, external partners). This is critical for Linea Stack/Enterprise, where components (e.g. coordinator, contracts, tracing modules) must coexist across multiple versions.
+Components must maintain backwards compatibility, especially those already released beyond devnet (sepolia, external partners). This is critical for Lineth Stack/Enterprise, where components (e.g. coordinator, contracts, tracing modules) must coexist across multiple versions.
 
 Refer to [EXAMPLES.md](EXAMPLES.md) for detailed do/don't examples.
 

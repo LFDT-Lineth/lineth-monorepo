@@ -3,6 +3,7 @@ package invalidity
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"os"
 	"path"
 	"path/filepath"
@@ -23,6 +24,7 @@ import (
 	linTypes "github.com/consensys/linea-monorepo/prover/utils/types"
 	"github.com/consensys/linea-monorepo/prover/zkevm"
 	"github.com/ethereum/go-ethereum/common"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -82,6 +84,10 @@ func Prove(cfg *config.Config, req *Request, large bool) (*Response, error) {
 		return nil, fmt.Errorf("could not decode the RlpEncodedTx: %w", err)
 	}
 
+	if cfg.Invalidity.ProverMode != config.ProverModeDev {
+		SanityCheckInvalidityChainConfig(cfg, tx)
+	}
+
 	funcInput := FuncInput(req, cfg)
 
 	if cfg.Invalidity.ProverMode == config.ProverModeDev {
@@ -104,6 +110,7 @@ func Prove(cfg *config.Config, req *Request, large bool) (*Response, error) {
 			InvalidityType: req.InvalidityType,
 			FuncInputs:     *funcInput,
 			MaxRlpByteSize: cfg.Invalidity.MaxRlpByteSize,
+			MaxL2Logs:      cfg.TracesLimits.BlockL2L1Logs(),
 		}
 
 		switch req.InvalidityType {
@@ -280,4 +287,29 @@ func Prove(cfg *config.Config, req *Request, large bool) (*Response, error) {
 		ProverMode:                       cfg.Invalidity.ProverMode,
 	}
 	return rsp, nil
+}
+
+// SanityCheckInvalidityChainConfig checks that the transaction's chainID matches
+// the config. For non-legacy txs the chainID is embedded in the transaction;
+// for legacy txs this check is skipped (chainID derived from V is unreliable).
+func SanityCheckInvalidityChainConfig(cfg *config.Config, tx *ethtypes.Transaction) {
+	if tx.Type() == ethtypes.LegacyTxType {
+		return
+	}
+	cfgChainID := new(big.Int).SetUint64(uint64(cfg.Layer2.ChainID))
+	txChainID := tx.ChainId()
+	if txChainID == nil || txChainID.Sign() == 0 {
+		return
+	}
+	if txChainID.Cmp(cfgChainID) != 0 {
+		utils.Panic(
+			"chain config mismatch — transaction chainID does not match config!\n\n"+
+				"  config chainID: %d\n"+
+				"  tx chainID:     %s\n\n"+
+				"  Check your config file's [layer2] chain_id setting.\n",
+			cfg.Layer2.ChainID, txChainID.String(),
+		)
+	}
+	logrus.Infof("Invalidity chain config check passed: tx chainID=%s matches config chainID=%d",
+		txChainID.String(), cfg.Layer2.ChainID)
 }

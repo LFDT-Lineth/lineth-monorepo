@@ -1,5 +1,5 @@
 /**
- * Browser-compatible exports for @consensys/linea-contract-integrity-verifier
+ * Browser-compatible exports for @lfdt-lineth/contract-integrity-verifier
  *
  * This entry point excludes Node.js-only functions (loadArtifact, loadStorageSchema, loadConfig)
  * that depend on the 'fs' module.

@@ -8,7 +8,7 @@
  */
 package maru.core
 
-import maru.extensions.encodeHex
+import linea.kotlin.encodeHex
 
 data class BeaconBlockHeader(
   val number: ULong,

@@ -1,37 +1,9 @@
 package wioptest
 
 import (
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
-
-// NewLocalOpeningScenario returns a scenario for LocalOpening.
-//
-//   - Column: [7, 7, 7, 7]; opening at position 2 → claimed value 7.
-//   - Invalid: column honest, Result cell set to 0 (≠ 7).
-func NewLocalOpeningScenario() *Scenario {
-	sys := wiop.NewSystemf("lo-sc")
-	r0 := sys.NewRound()
-	sys.NewRound() // r1 needed so LagrangeEval / runtime construction is valid
-	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
-	lo := col.At(2).Open(sys.Context.Childf("lo"))
-
-	return &Scenario{
-		Name:  "LocalOpening",
-		Sys:   sys,
-		Query: lo,
-		RunHonest: func(rt *wiop.Runtime) {
-			rt.AssignColumn(col, baseVec(4, 7))
-			lo.SelfAssign(*rt)
-		},
-		RunInvalid: func(rt *wiop.Runtime) {
-			rt.AssignColumn(col, baseVec(4, 7))
-			// Correct value is 7; assign 0 instead.
-			rt.AssignCell(lo.Result, field.ElemZero())
-		},
-	}
-}
 
 // NewLagrangeEvalScenario returns a scenario for LagrangeEval.
 //
@@ -96,37 +68,6 @@ func NewLogDerivativeSumScenario() *Scenario {
 			rt.AdvanceRound()
 			// Real result is 8; claim 0 instead.
 			rt.AssignCell(rr.Result, field.ElemZero())
-		},
-	}
-}
-
-// NewPermutationScenario returns a scenario for a Permutation TableRelation.
-//
-//   - Valid: A = [1, 2, 3, 4], B = [2, 1, 4, 3] (same multiset, rows shuffled).
-//   - Invalid: A = [1, 2, 3, 4], B = [1, 2, 3, 5] (5 ≠ 4; different multisets).
-func NewPermutationScenario() *Scenario {
-	sys := wiop.NewSystemf("perm-sc")
-	r0 := sys.NewRound()
-	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	colA := mod.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
-	perm := sys.NewPermutation(
-		sys.Context.Childf("perm"),
-		[]wiop.Table{wiop.NewTable(colA.View())},
-		[]wiop.Table{wiop.NewTable(colB.View())},
-	)
-
-	return &Scenario{
-		Name:  "Permutation",
-		Sys:   sys,
-		Query: perm,
-		RunHonest: func(rt *wiop.Runtime) {
-			rt.AssignColumn(colA, makeVec(1, 2, 3, 4))
-			rt.AssignColumn(colB, makeVec(2, 1, 4, 3)) // same multiset, different order
-		},
-		RunInvalid: func(rt *wiop.Runtime) {
-			rt.AssignColumn(colA, makeVec(1, 2, 3, 4))
-			rt.AssignColumn(colB, makeVec(1, 2, 3, 5)) // 5 replaces 4 → different multisets
 		},
 	}
 }

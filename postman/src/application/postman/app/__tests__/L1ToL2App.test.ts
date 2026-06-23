@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
 import { buildL1ToL2Deps } from "../../../../utils/testing/fixtures";
 import { L1ToL2App } from "../L1ToL2App";
 
-jest.mock("@consensys/linea-shared-utils", () => {
+jest.mock("@lfdt-lineth/shared-utils", () => {
   const buildLoggerMock = () => {
     const mock: Record<string, unknown> = {
       info: jest.fn(),

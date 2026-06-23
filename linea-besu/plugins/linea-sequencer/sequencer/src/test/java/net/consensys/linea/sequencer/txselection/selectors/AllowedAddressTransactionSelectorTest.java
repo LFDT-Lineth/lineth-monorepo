@@ -8,9 +8,9 @@
  */
 package net.consensys.linea.sequencer.txselection.selectors;
 
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_AUTHORIZATION;
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_FROM;
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_TO;
+import static linea.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_AUTHORIZATION;
+import static linea.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_FROM;
+import static linea.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_TO;
 import static net.consensys.linea.utils.EIP7702TestUtils.addressFromKeyPair;
 import static net.consensys.linea.utils.EIP7702TestUtils.createCodeDelegation;
 import static net.consensys.linea.utils.EIP7702TestUtils.createDelegateCodeTransaction;

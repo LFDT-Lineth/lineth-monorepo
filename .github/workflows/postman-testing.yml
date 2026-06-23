@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   run-tests:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     name: Postman & SDK tests
     env:
       COMMIT_TAG: ${{ inputs.commit_tag }}
@@ -33,8 +33,8 @@ jobs:
         env:
           NATIVE_LIBS_RELEASE_TAG: blob-libs-v3.0.1
         run: |
-          pnpm run -F "@consensys/linea-postman^..." build
-          pnpm run -F @consensys/linea-native-libs test
+          pnpm run -F "@lfdt-lineth/postman^..." build
+          pnpm run -F @lfdt-lineth/native-libs test
           pnpm run -F ./postman test;
           pnpm run -F ./ts-libs/sdk/sdk-viem test;
 
@@ -56,7 +56,7 @@ jobs:
 
       - name: Upload linea-native-libs coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f #v7.0.0
         with:
           fail_ci_if_error: true
           files: ./ts-libs/linea-native-libs/coverage/lcov.info
@@ -68,7 +68,7 @@ jobs:
 
       - name: Upload postman coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f #v7.0.0
         with:
           fail_ci_if_error: true
           files: ./postman/coverage/lcov.info
@@ -80,7 +80,7 @@ jobs:
 
       - name: Upload sdk-viem coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f #v7.0.0
         with:
           fail_ci_if_error: true
           files: ./ts-libs/sdk/sdk-viem/coverage/lcov.info

@@ -18,7 +18,6 @@ plugins {
 }
 
 dependencies {
-  implementation(project(':maru:jvm-libs:extensions'))
   implementation(project(':maru:core'))
   api(project(':jvm-libs:linea:core:domain-models'))
   api(project(':jvm-libs:generic:extensions:kotlin'))

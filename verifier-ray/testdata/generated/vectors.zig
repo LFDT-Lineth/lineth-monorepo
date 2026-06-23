@@ -43,8 +43,11 @@ pub const PoseidonCompressCase = struct { left: [8]u32, right: [8]u32, expected:
 pub const PoseidonMdCase = struct { message: []const u32, expected: [8]u32 };
 pub const FiatShamirCase = struct { base_updates: []const u32, ext_updates: []const [6]u32, random_field: [8]u32, random_ext: [6]u32 };
 
-pub const RuntimeTraceColumn = struct { visibility: u8, is_assigned: bool, is_ext: bool, base_values: []const u32, ext_values: []const [6]u32 };
-pub const RuntimeTraceCell = struct { is_assigned: bool, is_ext: bool, base_value: u32, ext_value: [6]u32 };
+pub const prover_visibility_oracle: u8 = 1;
+pub const prover_visibility_public: u8 = 2;
+
+pub const RuntimeTraceColumn = union(enum) { oracle: []const [8]u32, public_base: []const u32, public_ext: []const [6]u32 };
+pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };
 pub const RuntimeTraceRound = struct { columns: []const RuntimeTraceColumn, cells: []const RuntimeTraceCell, expected_coins: []const [6]u32 };
 pub const RuntimeTraceCase = struct { rounds: []const RuntimeTraceRound };
 
@@ -141,30 +144,24 @@ pub const runtime_trace_cases = [_]RuntimeTraceCase{
     .{ .rounds = &.{
         .{
             .columns = &.{
-                .{ .visibility = 1, .is_assigned = true, .is_ext = false, .base_values = &.{ 3, 1, 4, 1 }, .ext_values = &.{} },
-                .{ .visibility = 2, .is_assigned = true, .is_ext = true, .base_values = &.{}, .ext_values = &.{ .{ 5, 9, 2, 6, 5, 3 }, .{ 5, 8, 9, 7, 9, 3 }, .{ 2, 3, 8, 4, 6, 2 }, .{ 6, 4, 3, 3, 8, 3 } } },
-                .{ .visibility = 0, .is_assigned = false, .is_ext = false, .base_values = &.{}, .ext_values = &.{} },
+                .{ .oracle = &.{.{ 457422437, 1507660014, 804096924, 2039788297, 2029215976, 1604256236, 365254649, 820778084 }} },
+                .{ .public_ext = &.{ .{ 5, 9, 2, 6, 5, 3 }, .{ 5, 8, 9, 7, 9, 3 }, .{ 2, 3, 8, 4, 6, 2 }, .{ 6, 4, 3, 3, 8, 3 } } },
             },
             .cells = &.{
-                .{ .is_assigned = true, .is_ext = false, .base_value = 23, .ext_value = .{ 0, 0, 0, 0, 0, 0 } },
-                .{ .is_assigned = true, .is_ext = true, .base_value = 0, .ext_value = .{ 10, 20, 30, 40, 50, 60 } },
+                .{ .base = 23 },
+                .{ .ext = .{ 10, 20, 30, 40, 50, 60 } },
             },
-            .expected_coins = &.{ .{ 801423174, 1112238097, 730631189, 1937398400, 284419417, 80048649 }, .{ 1418026916, 65193884, 839433822, 939931361, 1821039800, 1785241556 } },
+            .expected_coins = &.{ .{ 2017567272, 1778391968, 1167748950, 87048359, 648365507, 1492709184 }, .{ 805362770, 1925645492, 1910453979, 533502493, 1296767730, 105917673 } },
         },
         .{
             .columns = &.{
-                .{ .visibility = 1, .is_assigned = true, .is_ext = true, .base_values = &.{}, .ext_values = &.{ .{ 101, 102, 103, 104, 105, 106 }, .{ 201, 202, 203, 204, 205, 206 }, .{ 301, 302, 303, 304, 305, 306 }, .{ 401, 402, 403, 404, 405, 406 } } },
-                .{ .visibility = 2, .is_assigned = true, .is_ext = false, .base_values = &.{ 11, 22, 33, 44 }, .ext_values = &.{} },
+                .{ .oracle = &.{.{ 1513238224, 1205466055, 1958485117, 1171311743, 1105605557, 2123056526, 1446366138, 1204090127 }} },
+                .{ .public_base = &.{ 11, 22, 33, 44 } },
             },
             .cells = &.{
-                .{ .is_assigned = true, .is_ext = false, .base_value = 77, .ext_value = .{ 0, 0, 0, 0, 0, 0 } },
+                .{ .base = 77 },
             },
-            .expected_coins = &.{.{ 1285509378, 897649283, 1356811217, 1746075755, 877556703, 130031402 }},
-        },
-        .{
-            .columns = &.{},
-            .cells = &.{},
-            .expected_coins = &.{},
+            .expected_coins = &.{.{ 599462548, 106956218, 1562197620, 1802592085, 1991170243, 971914108 }},
         },
     } },
 };

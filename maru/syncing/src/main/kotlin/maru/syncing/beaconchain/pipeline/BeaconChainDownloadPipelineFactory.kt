@@ -8,8 +8,8 @@
  */
 package maru.syncing.beaconchain.pipeline
 
+import linea.kotlin.clampedAdd
 import maru.consensus.blockimport.SealedBeaconBlockImporter
-import maru.extensions.clampedAdd
 import maru.p2p.PeerLookup
 import maru.p2p.ValidationResult
 import maru.p2p.messages.BeaconBlocksByRangeHandler.Companion.MAX_BLOCKS_PER_REQUEST

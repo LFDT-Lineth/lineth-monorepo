@@ -66,12 +66,14 @@ class QbftMessageProcessorTest {
   }
 
   private fun createBeaconChainAtHeight(targetHeight: ULong): InMemoryBeaconChain {
-    val beaconChain = InMemoryBeaconChain.fromGenesis()
+    val beaconChain = inMemoryBeaconChainFromGenesis()
     var currentState = beaconChain.getLatestBeaconState()
 
     // Advance chain to target height
     for (blockNumber in 1UL..targetHeight) {
-      val beaconBlock = DataGenerators.randomBeaconBlock(blockNumber)
+      val beaconBlock = DataGenerators.randomBeaconBlock(
+        blockNumber,
+      )
       val sealedBlock = SealedBeaconBlock(beaconBlock, emptySet())
       currentState = currentState.copy(beaconBlockHeader = beaconBlock.beaconBlockHeader)
 
@@ -83,6 +85,11 @@ class QbftMessageProcessorTest {
     }
 
     return beaconChain
+  }
+
+  private fun inMemoryBeaconChainFromGenesis(): InMemoryBeaconChain {
+    val (beaconState, sealedBlock) = DataGenerators.genesisState()
+    return InMemoryBeaconChain(beaconState, sealedBlock)
   }
 
   @Test
@@ -168,7 +175,10 @@ class QbftMessageProcessorTest {
 
   private fun createQbftMessage(sequenceNumber: Long): QbftMessage {
     val roundIdentifier = ConsensusRoundIdentifier(sequenceNumber, 1)
-    val beaconBlock = DataGenerators.randomBeaconBlock(sequenceNumber.toULong())
+    val beaconBlock =
+      DataGenerators.randomBeaconBlock(
+        sequenceNumber.toULong(),
+      )
     val qbftBlock = QbftBlockAdapter(beaconBlock)
 
     val proposalPayload = ProposalPayload(roundIdentifier, qbftBlock, QbftBlockCodecAdapter)

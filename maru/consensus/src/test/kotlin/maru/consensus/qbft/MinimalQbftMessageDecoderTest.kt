@@ -88,7 +88,10 @@ class MinimalQbftMessageDecoderTest {
 
   @Test
   fun `should decode Proposal message`() {
-    val beaconBlock = DataGenerators.randomBeaconBlock(sequenceNumber.toULong())
+    val beaconBlock =
+      DataGenerators.randomBeaconBlock(
+        sequenceNumber.toULong(),
+      )
     val qbftBlock = QbftBlockAdapter(beaconBlock)
     val proposalPayload = ProposalPayload(roundIdentifier, qbftBlock, QbftBlockCodecAdapter)
     val signature = nodeKey.sign(Bytes32.wrap(proposalPayload.hashForSignature().bytes))

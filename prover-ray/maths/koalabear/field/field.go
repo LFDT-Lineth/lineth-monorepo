@@ -9,9 +9,9 @@ import (
 	"runtime"
 	"unsafe"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear"
-	"github.com/consensys/linea-monorepo/prover-ray/utils"
-	"github.com/consensys/linea-monorepo/prover-ray/utils/parallel"
 )
 
 // Element is the base field element type alias for the KoalaBear field.
@@ -258,5 +258,43 @@ func RootOfUnityBy(n int) Element {
 		res.Square(&res)
 	}
 
+	return res
+}
+
+// ================ dual rail utils =================
+
+// Kind identifies which field a column, expression, or DAG node lives in.
+type Kind uint8
+
+const (
+	KindBase Kind = iota
+	KindExt
+)
+
+func (k Kind) String() string {
+	switch k {
+	case KindBase:
+		return "base"
+	case KindExt:
+		return "ext"
+	default:
+		return "unknown"
+	}
+}
+
+// Join returns the field needed to contain values from both inputs.
+func Join(a, b Kind) Kind {
+	if a == KindExt || b == KindExt {
+		return KindExt
+	}
+	return KindBase
+}
+
+// JoinAll returns the field needed to contain every input.
+func JoinAll(fields ...Kind) Kind {
+	res := KindBase
+	for _, f := range fields {
+		res = Join(res, f)
+	}
 	return res
 }

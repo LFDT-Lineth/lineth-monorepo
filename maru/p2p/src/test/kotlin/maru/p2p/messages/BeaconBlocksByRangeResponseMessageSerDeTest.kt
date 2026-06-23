@@ -26,7 +26,11 @@ class BeaconBlocksByRangeResponseMessageSerDeTest {
 
     val response =
       BeaconBlocksByRangeResponse(
-        blocks = listOf(DataGenerators.randomSealedBeaconBlock(number = 5UL)),
+        blocks = listOf(
+          DataGenerators.randomSealedBeaconBlock(
+            number = 5UL,
+          ),
+        ),
       )
     val message =
       MessageData(

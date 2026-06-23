@@ -40,7 +40,7 @@ import org.web3j.protocol.core.methods.response.EthBlock;
 
 /*
  * Taken from Linea Besu plugin acceptance tests from
- * linea-monorepo/linea-besu/plugins/linea-sequencer/acceptance-tests/src/test/java/org/hyperledger/besu/
+ * lineth-monorepo/linea-besu/plugins/linea-sequencer/acceptance-tests/src/test/java/org/hyperledger/besu/
  * tests/acceptance/dsl/EngineAPIService.java.
  * EngineAPIService from the monorepo is compatible with Prague, so we adapt it here to Paris, Shanghai and Cancun.
  * We use this class to emulate Engine API calls to the Besu Node.

@@ -48,7 +48,7 @@ linea-shared-utils/
 
 ## Installation and Usage
 
-This package is part of the Linea monorepo and is typically used as a workspace dependency. It is used by other Linea services such as the `automation-service`.
+This package is part of the Lineth monorepo and is typically used as a workspace dependency. It is used by other Lineth services such as the `automation-service`.
 
 Example imports:
 
@@ -59,7 +59,7 @@ import {
   SingletonMetricsService,
   ExpressApiApplication,
   ExponentialBackoffRetryService
-} from "@consensys/linea-shared-utils";
+} from "@lfdt-lineth/shared-utils";
 ```
 
 ## Development
@@ -67,13 +67,13 @@ import {
 ### Build
 
 ```bash
-pnpm --filter @consensys/linea-shared-utils build
+pnpm --filter @lfdt-lineth/shared-utils build
 ```
 
 ### Test
 
 ```bash
-pnpm --filter @consensys/linea-shared-utils test
+pnpm --filter @lfdt-lineth/shared-utils test
 ```
 
 ## License

@@ -7,7 +7,7 @@ import {
   IMetricsService,
   IRetryService,
   WinstonLogger,
-} from "@consensys/linea-shared-utils";
+} from "@lfdt-lineth/shared-utils";
 import {
   IBlockchainClient,
   ViemBlockchainClientAdapter,
@@ -17,7 +17,7 @@ import {
   IBeaconNodeAPIClient,
   BeaconNodeApiClient,
   OAuth2TokenClient,
-} from "@consensys/linea-shared-utils";
+} from "@lfdt-lineth/shared-utils";
 import { Chain, PublicClient, TransactionReceipt } from "viem";
 import { mainnet, hoodi } from "viem/chains";
 

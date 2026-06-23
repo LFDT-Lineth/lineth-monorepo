@@ -15,14 +15,14 @@
 
 plugins {
   id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'java-test-fixtures'
 }
 
 dependencies {
   implementation(project(':maru:core'))
   implementation(project(':maru:config'))
 
-  implementation(project(':maru:jvm-libs:mappers'))
-  implementation(project(':maru:jvm-libs:extensions'))
+  implementation(project(':jvm-libs:linea:teku-web3j'))
 
   api "tech.pegasys.teku.internal:executionclient:${libs.versions.teku.get()}"
 
@@ -31,6 +31,14 @@ dependencies {
   implementation "tech.pegasys.teku.internal:unsigned:${libs.versions.teku.get()}"
   implementation "tech.pegasys.teku.internal:bytes:${libs.versions.teku.get()}"
   implementation "tech.pegasys.teku.internal:spec:${libs.versions.teku.get()}"
+  implementation "org.hyperledger.besu.internal:besu-metrics-core"
+  implementation "org.hyperledger.besu.internal:besu-crypto-algorithms"
+  implementation "org.hyperledger.besu.internal:besu-ethereum-core"
+  implementation "org.hyperledger.besu:besu-datatypes"
+  implementation "org.hyperledger.besu:besu-plugin-api"
+  implementation "io.consensys.tuweni:tuweni-bytes:${libs.versions.tuweni.get()}"
+  implementation project(':jvm-libs:generic:extensions:kotlin')
+  implementation project(':jvm-libs:generic:extensions:futures')
   implementation project(':jvm-libs:linea:core:metrics')
 
   testImplementation (group: 'tech.pegasys.teku.internal', name: 'spec', version: libs.versions.teku.get(), classifier: 'test-fixtures')

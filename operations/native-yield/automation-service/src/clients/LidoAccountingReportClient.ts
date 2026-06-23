@@ -1,4 +1,4 @@
-import { ILogger, IRetryService, bigintReplacer } from "@consensys/linea-shared-utils";
+import { ILogger, IRetryService, bigintReplacer } from "@lfdt-lineth/shared-utils";
 import { getReportProofByVault } from "@lidofinance/lsv-cli/dist/utils/report/report-proof.js";
 import { Address, TransactionReceipt } from "viem";
 
