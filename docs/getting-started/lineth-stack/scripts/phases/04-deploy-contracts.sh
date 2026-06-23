@@ -539,7 +539,7 @@ extract_address() {
   printf "%s" "$addr"
 }
 
-require_address() {
+extract_required_address() {
   local logfile="$1" contract_name="$2" out
   out="$(extract_address "$logfile" "$contract_name")" || \
     die "failed to extract $contract_name address from $logfile"
@@ -570,14 +570,14 @@ verify_bridge_step_addresses() {
   local expected_bridged_token="$3" expected_token_bridge_impl="$4" expected_proxy_admin="$5"
   local expected_token_beacon="$6" expected_token_bridge="$7"
 
-  verify_address "$(require_address "$logfile" "BridgedToken")" "$expected_bridged_token" "$chain_label BridgedToken"
+  verify_address "$(extract_required_address "$logfile" "BridgedToken")" "$expected_bridged_token" "$chain_label BridgedToken"
   verify_address \
-    "$(require_address "$logfile" "tokenBridgeContractImplementation")" \
+    "$(extract_required_address "$logfile" "tokenBridgeContractImplementation")" \
     "$expected_token_bridge_impl" \
     "$chain_label TokenBridge implementation"
-  verify_address "$(require_address "$logfile" "ProxyAdmin")" "$expected_proxy_admin" "$chain_label ProxyAdmin"
-  verify_address "$(require_address "$logfile" "UpgradeableBeacon")" "$expected_token_beacon" "$chain_label UpgradeableBeacon"
-  verify_address "$(require_address "$logfile" "TokenBridge")" "$expected_token_bridge" "$chain_label TokenBridge"
+  verify_address "$(extract_required_address "$logfile" "ProxyAdmin")" "$expected_proxy_admin" "$chain_label ProxyAdmin"
+  verify_address "$(extract_required_address "$logfile" "UpgradeableBeacon")" "$expected_token_beacon" "$chain_label UpgradeableBeacon"
+  verify_address "$(extract_required_address "$logfile" "TokenBridge")" "$expected_token_bridge" "$chain_label TokenBridge"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -611,7 +611,7 @@ step_already_done_with_code() {
     return 1
   fi
 
-  address="$(require_address "$logfile" "$contract_name")"
+  address="$(extract_required_address "$logfile" "$contract_name")"
   verify_address "$address" "$expected_address" "$label"
   code="$(cast code "$address" --rpc-url "$rpc_url" 2>/dev/null || true)"
   if [[ "$code" =~ ^0x[0-9a-fA-F]+$ && "$code" != "0x" ]]; then
@@ -676,7 +676,7 @@ step1_l1_rollup() {
   verify_step1_gateway_mode "$logfile"
   if step_already_done_with_code "$logfile" "$primary_contract" "$L1_RPC_URL" "L1" "$PRECOMPUTED_LINEA_ROLLUP" "LineaRollupV${L1_CONTRACT_VERSION}"; then
     log "Step 1: $logfile present — skipping deploy, re-using prior addresses"
-    LINEA_ROLLUP_ADDRESS="$(require_address "$logfile" "$primary_contract")"
+    LINEA_ROLLUP_ADDRESS="$(extract_required_address "$logfile" "$primary_contract")"
     export LINEA_ROLLUP_ADDRESS
     log "Forwarding LINEA_ROLLUP_ADDRESS=$LINEA_ROLLUP_ADDRESS"
     return 0
@@ -716,7 +716,7 @@ step1_l1_rollup() {
   ) 2>&1 | tee "$logfile"
 
   # Forward the rollup address into the global env for steps 3 + 4.
-  LINEA_ROLLUP_ADDRESS="$(require_address "$logfile" "LineaRollupV${L1_CONTRACT_VERSION}")"
+  LINEA_ROLLUP_ADDRESS="$(extract_required_address "$logfile" "LineaRollupV${L1_CONTRACT_VERSION}")"
   verify_address "$LINEA_ROLLUP_ADDRESS" "$PRECOMPUTED_LINEA_ROLLUP" "LineaRollupV${L1_CONTRACT_VERSION}"
   FORCED_TX_GW_ADDRESS="$(extract_address "$logfile" "ForcedTransactionGateway")" || FORCED_TX_GW_ADDRESS=""
   if [[ -n "$FORCED_TX_GW_ADDRESS" ]]; then
@@ -733,7 +733,7 @@ step2_l2_message_service() {
 
   if step_already_done_with_code "$logfile" "L2MessageService" "$L2_RPC_URL" "L2" "$PRECOMPUTED_L2_MS" "L2MessageService"; then
     log "Step 2: $logfile present — skipping deploy"
-    L2_MESSAGE_SERVICE_ADDRESS="$(require_address "$logfile" "L2MessageService")"
+    L2_MESSAGE_SERVICE_ADDRESS="$(extract_required_address "$logfile" "L2MessageService")"
     export L2_MESSAGE_SERVICE_ADDRESS
     log "Forwarding L2_MESSAGE_SERVICE_ADDRESS=$L2_MESSAGE_SERVICE_ADDRESS"
     return 0
@@ -751,7 +751,7 @@ step2_l2_message_service() {
   L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT="1000000000000000000000" \
     pnpm -s exec ts-node "$ART_DIR/deployL2MessageServiceV1.ts" 2>&1 | tee "$logfile"
 
-  L2_MESSAGE_SERVICE_ADDRESS="$(require_address "$logfile" "L2MessageService")"
+  L2_MESSAGE_SERVICE_ADDRESS="$(extract_required_address "$logfile" "L2MessageService")"
   verify_address "$L2_MESSAGE_SERVICE_ADDRESS" "$PRECOMPUTED_L2_MS" "L2MessageService"
   export L2_MESSAGE_SERVICE_ADDRESS
   log "Forwarding L2_MESSAGE_SERVICE_ADDRESS=$L2_MESSAGE_SERVICE_ADDRESS"
@@ -764,7 +764,7 @@ step3_token_bridge_l1() {
 
   if step_already_done_with_code "$logfile" "TokenBridge" "$L1_RPC_URL" "L1" "$EXPECTED_L1_TOKEN_BRIDGE" "L1 TokenBridge"; then
     log "Step 3: $logfile present — skipping deploy"
-    L1_TOKEN_BRIDGE_ADDRESS="$(require_address "$logfile" "TokenBridge")"
+    L1_TOKEN_BRIDGE_ADDRESS="$(extract_required_address "$logfile" "TokenBridge")"
     verify_bridge_step_addresses \
       "$logfile" \
       "L1" \
@@ -800,7 +800,7 @@ step3_token_bridge_l1() {
   LINEA_ROLLUP_ADDRESS="$LINEA_ROLLUP_ADDRESS" \
     pnpm -s exec ts-node "$ART_DIR/deployBridgedTokenAndTokenBridgeV1_1.ts" 2>&1 | tee "$logfile"
 
-  L1_TOKEN_BRIDGE_ADDRESS="$(require_address "$logfile" "TokenBridge")"
+  L1_TOKEN_BRIDGE_ADDRESS="$(extract_required_address "$logfile" "TokenBridge")"
   verify_bridge_step_addresses \
     "$logfile" \
     "L1" \
@@ -820,7 +820,7 @@ step4_token_bridge_l2() {
 
   if step_already_done_with_code "$logfile" "TokenBridge" "$L2_RPC_URL" "L2" "$EXPECTED_L2_TOKEN_BRIDGE" "L2 TokenBridge"; then
     log "Step 4: $logfile present — skipping deploy"
-    L2_TOKEN_BRIDGE_ADDRESS="$(require_address "$logfile" "TokenBridge")"
+    L2_TOKEN_BRIDGE_ADDRESS="$(extract_required_address "$logfile" "TokenBridge")"
     verify_bridge_step_addresses \
       "$logfile" \
       "L2" \
@@ -854,7 +854,7 @@ step4_token_bridge_l2() {
   LINEA_ROLLUP_ADDRESS="$LINEA_ROLLUP_ADDRESS" \
     pnpm -s exec ts-node "$ART_DIR/deployBridgedTokenAndTokenBridgeV1_1.ts" 2>&1 | tee "$logfile"
 
-  L2_TOKEN_BRIDGE_ADDRESS="$(require_address "$logfile" "TokenBridge")"
+  L2_TOKEN_BRIDGE_ADDRESS="$(extract_required_address "$logfile" "TokenBridge")"
   verify_bridge_step_addresses \
     "$logfile" \
     "L2" \
