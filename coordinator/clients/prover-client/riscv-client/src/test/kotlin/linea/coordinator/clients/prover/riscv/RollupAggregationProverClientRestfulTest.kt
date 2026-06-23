@@ -34,6 +34,7 @@ import kotlin.time.Instant
 class RollupAggregationProverClientRestfulTest {
   private val jsonMapper = JsonSerialization.proofResponseMapperV1
   private val guestProgramId = "0x8a5fdb137ddae03b9bad034500c0fcee76e1c61d70faca5f32bb7418d73392e1"
+  private val proverVersion = "4.0.0-riscv"
   private val proofType = "rollup-aggregation"
   private val jobsPathPattern = "/v1/jobs/$proofType/.*"
   private val proofIndexProvider =
@@ -111,7 +112,7 @@ class RollupAggregationProverClientRestfulTest {
   private fun jobResponseBody(status: String, proofResponse: RollupAggregationProofResponseDto): String {
     val job = jsonMapper.createObjectNode().apply {
       put("proof_type", proofType)
-      put("start_block", 1L)
+      put("start_block", proofResponse.startBlockNumber)
       put("end_block", proofResponse.publicInputs.endBlockNumber)
       put("status", status)
       put("tier", "large")
@@ -129,7 +130,9 @@ class RollupAggregationProverClientRestfulTest {
   )
 
   private fun aggregationResponseDto(): RollupAggregationProofResponseDto = RollupAggregationProofResponseDto(
+    proverVersion = proverVersion,
     proof = "0xabcd",
+    startBlockNumber = 1000501,
     publicInputs = RollupProofPublicInputsDto(
       endBlockNumber = 1000567,
       endBlockTimestamp = 1763002301,

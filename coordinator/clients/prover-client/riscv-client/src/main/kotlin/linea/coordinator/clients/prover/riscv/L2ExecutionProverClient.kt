@@ -74,25 +74,15 @@ internal class L2ExecutionProofRequestDtoMapper(
           ),
           versionedHashes = emptyList(),
           parentBeaconBlockRoot = ByteArray(32).encodeHex(),
-          executionRequests = ExecutionRequestsDto(
-            deposits = executionRequests?.deposits?.map { it.encodeHex() } ?: emptyList(),
-            withdrawals = executionRequests?.withdrawals?.map { it.encodeHex() } ?: emptyList(),
-            consolidations = executionRequests?.consolidations?.map { it.encodeHex() } ?: emptyList(),
-          ),
+          executionRequests = executionRequests?.executionRequests?.map { it.encodeHex() } ?: emptyList(),
         ),
         executionWitness = executionWitness!!.let { execWithness ->
           ExecutionWitnessDto(
             state = execWithness.state.map { it.encodeHex() },
-            keys = execWithness.keys.map { it.encodeHex() },
             codes = execWithness.codes.map { it.encodeHex() },
             headers = execWithness.headers.map { it.encodeHex() },
           )
         },
-        chainConfig = StatelessChainConfigDto(
-          chainId = request.chainConfig.chainId.toLong(),
-          forkName = "Amsterdam",
-        ),
-        publicKeys = emptyList(),
       )
       PayloadInputDto(
         statelessInput = statelessInputDto,
@@ -117,6 +107,10 @@ internal class L2ExecutionProofRequestDtoMapper(
         chainConfig = chainConfig,
         payloads = payloads,
       ),
+      metadata = MetaDataDto(
+        startBlockNumber = request.startBlockNumber.toLong(),
+        endBlockNumber = request.endBlockNumber.toLong(),
+      ),
     )
 
     return SafeFuture.completedFuture(dto)
@@ -137,8 +131,9 @@ internal object L2ExecutionProofResponseDtoMapper : (
     responseDto: L2ExecutionProofResponseDto,
   ): L2ExecutionProofResponse {
     return L2ExecutionProofResponse(
+      proverVersion = responseDto.proverVersion,
       startBlockNumber = responseDto.startBlockNumber.toULong(),
-      endBlockNumber = responseDto.endBlockNumber.toULong(),
+      endBlockNumber = responseDto.publicInputs.endBlockNumber.toULong(),
       proof = responseDto.proof.decodeHex(),
       publicInputs = responseDto.publicInputs.toDomainObject(),
       l2L1Messages = responseDto.l2L1Messages.map { it.decodeHex() },

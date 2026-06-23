@@ -30,6 +30,10 @@ internal class RollupAggregationProofRequestDtoMapper(
       proofRequest = RollupAggregationProofRequestParamsDto(
         rollupProofs = request.rollupProofs.map { it.fromDomainObject() },
       ),
+      metadata = MetaDataDto(
+        startBlockNumber = request.startBlockNumber.toLong(),
+        endBlockNumber = request.endBlockNumber.toLong(),
+      ),
     )
 
     return SafeFuture.completedFuture(dto)
@@ -49,8 +53,9 @@ internal object RollupAggregationProofResponseDtoMapper :
     responseDto: RollupAggregationProofResponseDto,
   ): RollupAggregationProofResponse {
     return RollupAggregationProofResponse(
-      startBlockNumber = proofIndex.startBlockNumber,
-      endBlockNumber = proofIndex.endBlockNumber,
+      proverVersion = responseDto.proverVersion,
+      startBlockNumber = responseDto.startBlockNumber.toULong(),
+      endBlockNumber = responseDto.publicInputs.endBlockNumber.toULong(),
       proof = responseDto.proof.decodeHex(),
       publicInputs = responseDto.publicInputs.toDomainObject(),
       l2L1Roots = responseDto.l2L1Roots.map { it.decodeHex() },

@@ -96,8 +96,8 @@ class RiscVProofResponseDtoMapperTest {
   @Test
   fun `L2ExecutionProofResponseDtoMapper decodes every field`() {
     val dto = L2ExecutionProofResponseDto(
+      proverVersion = "4.0.0-riscv",
       startBlockNumber = 1000500L,
-      endBlockNumber = 1000503L,
       proof = "0xabcd",
       publicInputs = executionPublicInputsDto(),
       l2L1Messages = listOf("0xaa"),
@@ -116,6 +116,7 @@ class RiscVProofResponseDtoMapperTest {
       ),
     ).isEqualTo(
       L2ExecutionProofResponse(
+        proverVersion = "4.0.0-riscv",
         startBlockNumber = 1000500UL,
         endBlockNumber = 1000503UL,
         proof = "0xabcd".decodeHex(),
@@ -130,8 +131,8 @@ class RiscVProofResponseDtoMapperTest {
   @Test
   fun `RollupProofResponseDtoMapper decodes every field`() {
     val dto = RollupProofResponseDto(
+      proverVersion = "4.0.0-riscv",
       startBlockNumber = 1000500L,
-      endBlockNumber = 1000503L,
       proof = "0xabcd",
       publicInputs = rollupPublicInputsDto(),
       l2L1Roots = listOf("0xaa"),
@@ -142,7 +143,7 @@ class RiscVProofResponseDtoMapperTest {
       RollupProofResponseDtoMapper(
         CompressionProofIndex(
           1000500UL,
-          1000503UL,
+          1000520UL,
           ByteArray(32),
           Instant.DISTANT_PAST,
         ),
@@ -150,8 +151,9 @@ class RiscVProofResponseDtoMapperTest {
       ),
     ).isEqualTo(
       RollupProofResponse(
+        proverVersion = "4.0.0-riscv",
         startBlockNumber = 1000500UL,
-        endBlockNumber = 1000503UL,
+        endBlockNumber = 1000520UL,
         proof = "0xabcd".decodeHex(),
         publicInputs = expectedRollupPublicInputs(),
         l2L1Roots = listOf("0xaa".decodeHex()),
@@ -163,7 +165,9 @@ class RiscVProofResponseDtoMapperTest {
   @Test
   fun `RollupAggregationProofResponseDtoMapper decodes every field`() {
     val dto = RollupAggregationProofResponseDto(
+      proverVersion = "4.0.0-riscv",
       proof = "0xabcd",
+      startBlockNumber = 1000500L,
       publicInputs = rollupPublicInputsDto(),
       l2L1Roots = listOf("0xaa", "0xcc"),
       filteredAddresses = listOf("0xbb", "0xdd"),
@@ -174,7 +178,7 @@ class RiscVProofResponseDtoMapperTest {
       RollupAggregationProofResponseDtoMapper(
         AggregationProofIndex(
           1000500UL,
-          1000503UL,
+          1000520UL,
           ByteArray(32),
           Instant.DISTANT_PAST,
         ),
@@ -182,8 +186,9 @@ class RiscVProofResponseDtoMapperTest {
       ),
     ).isEqualTo(
       RollupAggregationProofResponse(
+        proverVersion = "4.0.0-riscv",
         startBlockNumber = 1000500UL,
-        endBlockNumber = 1000503UL,
+        endBlockNumber = 1000520UL,
         proof = "0xabcd".decodeHex(),
         publicInputs = expectedRollupPublicInputs(),
         l2L1Roots = listOf("0xaa".decodeHex(), "0xcc".decodeHex()),
@@ -200,7 +205,6 @@ class RiscVProofResponseDtoMapperTest {
         "proverVersion": "4.0.0-riscv",
         "proof": "0xabcd",
         "startBlockNumber": 1000500,
-        "endBlockNumber": 1000503,
         "publicInputs": {
           "parentBlockHash": "0x0a",
           "endBlockHash": "0x0b",
@@ -237,6 +241,7 @@ class RiscVProofResponseDtoMapperTest {
       ),
     ).isEqualTo(
       L2ExecutionProofResponse(
+        proverVersion = "4.0.0-riscv",
         startBlockNumber = 1000500UL,
         endBlockNumber = 1000503UL,
         proof = "0xabcd".decodeHex(),
@@ -252,9 +257,9 @@ class RiscVProofResponseDtoMapperTest {
   fun `rollup proof response JSON parses into the DTO and maps to the domain response`() {
     val json = """
       {
+        "proverVersion": "4.0.0-riscv",
         "proof": "0xabcd",
         "startBlockNumber": 1000500,
-        "endBlockNumber": 1000520,
         "publicInputs": {
           "endBlockNumber": 1000520,
           "endBlockTimestamp": 1763000457,
@@ -289,6 +294,7 @@ class RiscVProofResponseDtoMapperTest {
 
     assertThat(mappedDto).isEqualTo(
       RollupProofResponse(
+        proverVersion = "4.0.0-riscv",
         startBlockNumber = 1000500UL,
         endBlockNumber = 1000520UL,
         proof = "0xabcd".decodeHex(),

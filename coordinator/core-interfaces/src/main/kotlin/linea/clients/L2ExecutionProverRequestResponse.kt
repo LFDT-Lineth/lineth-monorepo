@@ -217,7 +217,6 @@ data class ExecutionPayload(
 data class ExecutionWitness(
   val blockNumber: ULong,
   val state: List<ByteArray>,
-  val keys: List<ByteArray>,
   val codes: List<ByteArray>,
   val headers: List<ByteArray>,
 ) {
@@ -229,7 +228,6 @@ data class ExecutionWitness(
 
     if (blockNumber != other.blockNumber) return false
     if (!state.byteArrayListEquals(other.state)) return false
-    if (!keys.byteArrayListEquals(other.keys)) return false
     if (!codes.byteArrayListEquals(other.codes)) return false
     if (!headers.byteArrayListEquals(other.headers)) return false
 
@@ -239,7 +237,6 @@ data class ExecutionWitness(
   override fun hashCode(): Int {
     var result = blockNumber.hashCode()
     result = 31 * result + state.hashCode()
-    result = 31 * result + keys.hashCode()
     result = 31 * result + codes.hashCode()
     result = 31 * result + headers.hashCode()
     return result
@@ -248,9 +245,7 @@ data class ExecutionWitness(
 
 data class ExecutionRequests(
   val blockNumber: ULong,
-  val deposits: List<ByteArray>,
-  val withdrawals: List<ByteArray>,
-  val consolidations: List<ByteArray>,
+  val executionRequests: List<ByteArray>,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -259,18 +254,14 @@ data class ExecutionRequests(
     other as ExecutionRequests
 
     if (blockNumber != other.blockNumber) return false
-    if (!deposits.zip(other.deposits).all { it.first.contentEquals(it.second) }) return false
-    if (!withdrawals.zip(other.withdrawals).all { it.first.contentEquals(it.second) }) return false
-    if (!consolidations.zip(other.consolidations).all { it.first.contentEquals(it.second) }) return false
+    if (!executionRequests.zip(other.executionRequests).all { it.first.contentEquals(it.second) }) return false
 
     return true
   }
 
   override fun hashCode(): Int {
     var result = blockNumber.hashCode()
-    result = 31 * result + deposits.hashCode()
-    result = 31 * result + withdrawals.hashCode()
-    result = 31 * result + consolidations.hashCode()
+    result = 31 * result + executionRequests.hashCode()
     return result
   }
 }
@@ -354,6 +345,7 @@ data class L2ExecutionProofPublicInputs(
 data class L2ExecutionProofResponse(
   override val startBlockNumber: ULong,
   override val endBlockNumber: ULong,
+  val proverVersion: String,
   val proof: ByteArray,
   val publicInputs: L2ExecutionProofPublicInputs,
   val l2L1Messages: List<ByteArray>,
@@ -369,6 +361,7 @@ data class L2ExecutionProofResponse(
 
     if (startBlockNumber != other.startBlockNumber) return false
     if (endBlockNumber != other.endBlockNumber) return false
+    if (proverVersion != other.proverVersion) return false
     if (!proof.contentEquals(other.proof)) return false
     if (publicInputs != other.publicInputs) return false
     if (!l2L1Messages.byteArrayListEquals(other.l2L1Messages)) return false
@@ -381,6 +374,7 @@ data class L2ExecutionProofResponse(
   override fun hashCode(): Int {
     var result = startBlockNumber.hashCode()
     result = 31 * result + endBlockNumber.hashCode()
+    result = 31 * result + proverVersion.hashCode()
     result = 31 * result + proof.contentHashCode()
     result = 31 * result + publicInputs.hashCode()
     result = 31 * result + l2L1Messages.hashCode()

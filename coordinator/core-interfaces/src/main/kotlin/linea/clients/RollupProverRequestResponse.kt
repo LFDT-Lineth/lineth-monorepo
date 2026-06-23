@@ -124,6 +124,7 @@ data class RollupProofPublicInputs(
 data class RollupProofResponse(
   override val startBlockNumber: ULong,
   override val endBlockNumber: ULong,
+  val proverVersion: String,
   val proof: ByteArray,
   val publicInputs: RollupProofPublicInputs,
   val l2L1Roots: List<ByteArray>,
@@ -137,6 +138,7 @@ data class RollupProofResponse(
 
     if (startBlockNumber != other.startBlockNumber) return false
     if (endBlockNumber != other.endBlockNumber) return false
+    if (proverVersion != other.proverVersion) return false
     if (!proof.contentEquals(other.proof)) return false
     if (publicInputs != other.publicInputs) return false
     if (!l2L1Roots.byteArrayListEquals(other.l2L1Roots)) return false
@@ -148,6 +150,7 @@ data class RollupProofResponse(
   override fun hashCode(): Int {
     var result = startBlockNumber.hashCode()
     result = 31 * result + endBlockNumber.hashCode()
+    result = 31 * result + proverVersion.hashCode()
     result = 31 * result + proof.contentHashCode()
     result = 31 * result + publicInputs.hashCode()
     result = 31 * result + l2L1Roots.hashCode()

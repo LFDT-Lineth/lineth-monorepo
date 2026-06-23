@@ -31,6 +31,7 @@ import kotlin.time.Instant
 class RollupProverClientRestfulTest {
   private val jsonMapper = JsonSerialization.proofResponseMapperV1
   private val guestProgramId = "0x31139b3eaece046f5675fe237c36246e7bb2a5acc4cf4b358aef65c6d3771f4d"
+  private val proverVersion = "4.0.0-riscv"
   private val proofType = "rollup"
   private val chainId = 59144L
   private val jobsPathPattern = "/v1/jobs/$proofType/.*"
@@ -114,7 +115,7 @@ class RollupProverClientRestfulTest {
     val job = jsonMapper.createObjectNode().apply {
       put("proof_type", proofType)
       put("start_block", proofResponse.startBlockNumber)
-      put("end_block", proofResponse.endBlockNumber)
+      put("end_block", proofResponse.publicInputs.endBlockNumber)
       put("status", status)
       put("tier", "large")
       put("attempt", 1)
@@ -135,8 +136,8 @@ class RollupProverClientRestfulTest {
   )
 
   private fun rollupResponseDto(): RollupProofResponseDto = RollupProofResponseDto(
+    proverVersion = proverVersion,
     startBlockNumber = 1000501,
-    endBlockNumber = 1000520,
     proof = "0xabcd",
     publicInputs = RollupProofPublicInputsDto(
       endBlockNumber = 1000520,

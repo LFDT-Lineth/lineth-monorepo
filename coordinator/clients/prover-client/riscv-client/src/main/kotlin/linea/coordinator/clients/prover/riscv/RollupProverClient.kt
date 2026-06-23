@@ -33,24 +33,21 @@ internal class RollupProofRequestDtoMapper(
         chainId = chainId,
         blobs = request.blobs.map {
           BlobDto(
-            blobInputs = BlobInputsDto(
-              blobHash = it.dataHash.encodeHex(),
-              blobKzgProof = it.kzgProofContract.encodeHex(),
-            ),
-            blockRange = BlockRangeDto(
-              startBlockNumber = request.startBlockNumber.toLong(),
-              endBlockNumber = request.endBlockNumber.toLong(),
-            ),
+            blobHash = it.dataHash.encodeHex(),
+            blobKzgProof = it.kzgProofContract.encodeHex(),
+            startBlockNumber = request.startBlockNumber.toLong(),
+            endBlockNumber = request.endBlockNumber.toLong(),
             blockRlps = request.blocks.map { block ->
               encoder.encode(block).encodeHex()
             },
           )
         },
-        shnarfTransition = ShnarfTransitionDto(
-          parentShnarf = request.parentShnarf.encodeHex(),
-          endShnarf = request.endShnarf.encodeHex(),
-        ),
+        parentShnarf = request.parentShnarf.encodeHex(),
         l2ExecutionProofs = request.l2ExecutionProofs.map { it.fromDomainObject() },
+      ),
+      metadata = MetaDataDto(
+        startBlockNumber = request.startBlockNumber.toLong(),
+        endBlockNumber = request.endBlockNumber.toLong(),
       ),
     )
 
@@ -69,8 +66,9 @@ internal object RollupProofResponseDtoMapper : (CompressionProofIndex, RollupPro
     responseDto: RollupProofResponseDto,
   ): RollupProofResponse {
     return RollupProofResponse(
+      proverVersion = responseDto.proverVersion,
       startBlockNumber = responseDto.startBlockNumber.toULong(),
-      endBlockNumber = responseDto.endBlockNumber.toULong(),
+      endBlockNumber = responseDto.publicInputs.endBlockNumber.toULong(),
       proof = responseDto.proof.decodeHex(),
       publicInputs = responseDto.publicInputs.toDomainObject(),
       l2L1Roots = responseDto.l2L1Roots.map { it.decodeHex() },

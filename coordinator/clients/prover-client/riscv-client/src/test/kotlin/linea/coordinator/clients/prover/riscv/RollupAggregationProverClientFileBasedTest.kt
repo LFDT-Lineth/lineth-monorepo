@@ -102,6 +102,8 @@ class RollupAggregationProverClientFileBasedTest {
   )
 
   private fun aggregationResponseDto(): RollupAggregationProofResponseDto = RollupAggregationProofResponseDto(
+    proverVersion = "4.0.0-riscv",
+    startBlockNumber = 1000501L,
     proof = "0xabcd",
     publicInputs = RollupProofPublicInputsDto(
       endBlockNumber = 1000567,

@@ -12,12 +12,6 @@ import java.math.BigInteger
  * The DTO <-> domain mapping lives in `RiscVProofDtoMappers.kt`.
  */
 
-/** Inclusive `[startBlockNumber, endBlockNumber]` block range. */
-data class BlockRangeDto(
-  val startBlockNumber: Long,
-  val endBlockNumber: Long,
-)
-
 /** The 15-field PI tuple emitted by a l2-execution proof (rollup_spec §2.1). */
 data class L2ExecutionProofPublicInputsDto(
   val parentBlockHash: String,
@@ -53,6 +47,11 @@ data class RollupProofPublicInputsDto(
   val filteredAddressesHash: String,
   val parentShnarf: String,
   val endShnarf: String,
+)
+
+data class MetaDataDto(
+  val startBlockNumber: Long,
+  val endBlockNumber: Long,
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -105,17 +104,11 @@ data class ExecutionPayloadDto(
   val blockAccessList: String,
 )
 
-data class ExecutionRequestsDto(
-  val deposits: List<String>,
-  val withdrawals: List<String>,
-  val consolidations: List<String>,
-)
-
 data class NewPayloadRequestDto(
   val executionPayload: ExecutionPayloadDto,
   val versionedHashes: List<String>,
   val parentBeaconBlockRoot: String,
-  val executionRequests: ExecutionRequestsDto,
+  val executionRequests: List<String>,
 )
 
 /** Static chain configuration (preimage inputs of `dynamicChainConfigHash`). */
@@ -123,12 +116,12 @@ data class ChainConfigDto(
   val l2MessageServiceAddress: String,
   val coinbase: String,
   val chainId: Long,
+  val forkName: String,
 )
 
 /** A single `debug_executionWitness` entry, one per block in canonical order. */
 data class ExecutionWitnessDto(
   val state: List<String>,
-  val keys: List<String>,
   val codes: List<String>,
   val headers: List<String>,
 )
@@ -137,16 +130,9 @@ data class RollupExtensionDto(
   val forcedTransactions: List<ForcedTransactionDto>,
 )
 
-data class StatelessChainConfigDto(
-  val chainId: Long,
-  val forkName: String,
-)
-
 data class StatelessInputDto(
   val newPayloadRequest: NewPayloadRequestDto,
   val executionWitness: ExecutionWitnessDto,
-  val chainConfig: StatelessChainConfigDto,
-  val publicKeys: List<String>,
 )
 
 data class PayloadInputDto(
@@ -164,11 +150,12 @@ data class L2ExecutionProofRequestParamsDto(
 data class L2ExecutionProofRequestDto(
   val guestProgramId: String,
   val proofRequest: L2ExecutionProofRequestParamsDto,
+  val metadata: MetaDataDto,
 )
 
 data class L2ExecutionProofResponseDto(
+  val proverVersion: String,
   val startBlockNumber: Long,
-  val endBlockNumber: Long,
   val proof: String,
   val publicInputs: L2ExecutionProofPublicInputsDto,
   val l2L1Messages: List<String>,
@@ -180,20 +167,12 @@ data class L2ExecutionProofResponseDto(
 // getZkRollupProof.request.json (§2.2)
 // ---------------------------------------------------------------------------------------------------------------------
 
-data class BlobInputsDto(
+data class BlobDto(
+  val startBlockNumber: Long,
+  val endBlockNumber: Long,
   val blobHash: String,
   val blobKzgProof: String,
-)
-
-data class BlobDto(
-  val blobInputs: BlobInputsDto,
-  val blockRange: BlockRangeDto,
   val blockRlps: List<String>,
-)
-
-data class ShnarfTransitionDto(
-  val parentShnarf: String,
-  val endShnarf: String,
 )
 
 /** An inlined l2-execution proof consumed by the rollup guest. */
@@ -210,18 +189,19 @@ data class L2ExecutionProofDto(
 data class RollupProofRequestParamsDto(
   val chainId: Long,
   val blobs: List<BlobDto>,
-  val shnarfTransition: ShnarfTransitionDto,
+  val parentShnarf: String,
   val l2ExecutionProofs: List<L2ExecutionProofDto>,
 )
 
 data class RollupProofRequestDto(
   val guestProgramId: String,
   val proofRequest: RollupProofRequestParamsDto,
+  val metadata: MetaDataDto,
 )
 
 data class RollupProofResponseDto(
+  val proverVersion: String,
   val startBlockNumber: Long,
-  val endBlockNumber: Long,
   val proof: String,
   val publicInputs: RollupProofPublicInputsDto,
   val l2L1Roots: List<String>,
@@ -251,10 +231,13 @@ data class RollupAggregationProofRequestParamsDto(
 data class RollupAggregationProofRequestDto(
   val guestProgramId: String,
   val proofRequest: RollupAggregationProofRequestParamsDto,
+  val metadata: MetaDataDto,
 )
 
 /** Response of a rollup-aggregation proof: the aggregated proof bytes plus the 14-field PI tuple (§2.4). */
 data class RollupAggregationProofResponseDto(
+  val proverVersion: String,
+  val startBlockNumber: Long,
   val proof: String,
   val publicInputs: RollupAggregationPublicInputsDto,
   val l2L1Roots: List<String>,

@@ -111,9 +111,9 @@ class RollupProverClientFileBasedTest {
   )
 
   private fun rollupResponseDto(): RollupProofResponseDto = RollupProofResponseDto(
+    proverVersion = "4.0.0-riscv",
     proof = "0xabcd",
     startBlockNumber = 1000500,
-    endBlockNumber = 1000520,
     publicInputs = RollupProofPublicInputsDto(
       endBlockNumber = 1000520,
       endBlockTimestamp = 1763000457,

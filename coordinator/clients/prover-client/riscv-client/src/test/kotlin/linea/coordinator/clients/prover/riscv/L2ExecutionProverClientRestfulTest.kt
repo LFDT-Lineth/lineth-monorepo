@@ -37,12 +37,14 @@ import kotlin.time.Instant
 class L2ExecutionProverClientRestfulTest {
   private val jsonMapper = JsonSerialization.proofResponseMapperV1
   private val guestProgramId = "0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f"
+  private val proverVersion = "4.0.0-riscv"
   private val proofType = "l2-execution"
   private val jobsPathPattern = "/v1/jobs/$proofType/.*"
   private val chainConfig = ChainConfigDto(
     l2MessageServiceAddress = "0x508ca82df566dcd1b0019d2dedf7e3d6f7ad6dde",
     coinbase = "0x0000000000000000000000000000000000000000",
     chainId = 59144,
+    forkName = "Amsterdam",
   )
 
   private lateinit var wiremock: WireMockServer
@@ -124,7 +126,7 @@ class L2ExecutionProverClientRestfulTest {
     val job = jsonMapper.createObjectNode().apply {
       put("proof_type", proofType)
       put("start_block", proofResponse.startBlockNumber)
-      put("end_block", proofResponse.endBlockNumber)
+      put("end_block", proofResponse.publicInputs.endBlockNumber)
       put("status", status)
       put("tier", "small")
       put("attempt", 1)
@@ -142,14 +144,12 @@ class L2ExecutionProverClientRestfulTest {
       ExecutionWitness(
         blockNumber = 1000501UL,
         state = emptyList(),
-        keys = emptyList(),
         codes = emptyList(),
         headers = emptyList(),
       ),
       ExecutionWitness(
         blockNumber = 1000503UL,
         state = emptyList(),
-        keys = emptyList(),
         codes = emptyList(),
         headers = emptyList(),
       ),
@@ -157,15 +157,11 @@ class L2ExecutionProverClientRestfulTest {
     executionRequests = listOf(
       ExecutionRequests(
         blockNumber = 1000501UL,
-        deposits = emptyList(),
-        withdrawals = emptyList(),
-        consolidations = emptyList(),
+        executionRequests = emptyList(),
       ),
       ExecutionRequests(
         blockNumber = 1000503UL,
-        deposits = emptyList(),
-        withdrawals = emptyList(),
-        consolidations = emptyList(),
+        executionRequests = emptyList(),
       ),
     ),
     forcedTransactions = emptyList(),
@@ -200,8 +196,8 @@ class L2ExecutionProverClientRestfulTest {
   )
 
   private fun l2ResponseDto(): L2ExecutionProofResponseDto = L2ExecutionProofResponseDto(
+    proverVersion = proverVersion,
     startBlockNumber = 1000501,
-    endBlockNumber = 1000503,
     proof = "0xabcd",
     publicInputs = L2ExecutionProofPublicInputsDto(
       parentBlockHash = "0x0a",

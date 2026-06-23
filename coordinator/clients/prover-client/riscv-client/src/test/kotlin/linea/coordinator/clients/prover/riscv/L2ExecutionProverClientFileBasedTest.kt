@@ -38,6 +38,7 @@ class L2ExecutionProverClientFileBasedTest {
     l2MessageServiceAddress = "0x508ca82df566dcd1b0019d2dedf7e3d6f7ad6dde",
     coinbase = "0x0000000000000000000000000000000000000000",
     chainId = 59144,
+    forkName = "Amsterdam",
   )
 
   private lateinit var config: FileBasedProverConfig
@@ -154,14 +155,12 @@ class L2ExecutionProverClientFileBasedTest {
       ExecutionWitness(
         blockNumber = 1000501UL,
         state = emptyList(),
-        keys = emptyList(),
         codes = emptyList(),
         headers = emptyList(),
       ),
       ExecutionWitness(
         blockNumber = 1000502UL,
         state = emptyList(),
-        keys = emptyList(),
         codes = emptyList(),
         headers = emptyList(),
       ),
@@ -169,15 +168,11 @@ class L2ExecutionProverClientFileBasedTest {
     executionRequests = listOf(
       ExecutionRequests(
         blockNumber = 1000501UL,
-        deposits = emptyList(),
-        withdrawals = emptyList(),
-        consolidations = emptyList(),
+        executionRequests = emptyList(),
       ),
       ExecutionRequests(
         blockNumber = 1000502UL,
-        deposits = emptyList(),
-        withdrawals = emptyList(),
-        consolidations = emptyList(),
+        executionRequests = emptyList(),
       ),
     ),
     forcedTransactions = emptyList(),
@@ -191,9 +186,9 @@ class L2ExecutionProverClientFileBasedTest {
   )
 
   private fun l2ResponseDto(): L2ExecutionProofResponseDto = L2ExecutionProofResponseDto(
+    proverVersion = "4.0.0-riscv",
     proof = "0xabcd",
     startBlockNumber = 1000500,
-    endBlockNumber = 1000503,
     publicInputs = L2ExecutionProofPublicInputsDto(
       parentBlockHash = "0x0a",
       endBlockHash = "0x0b",
