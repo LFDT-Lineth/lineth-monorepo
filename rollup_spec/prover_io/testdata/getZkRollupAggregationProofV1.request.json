@@ -1,5 +1,9 @@
 {
   "guestProgramId": "0x8a5fdb137ddae03b9bad034500c0fcee76e1c61d70faca5f32bb7418d73392e1",
+  "metadata": {
+    "startBlockNumber": 1000501,
+    "endBlockNumber": 1000520
+  },
   "proofRequest": {
     "rollupProofs": [
       {

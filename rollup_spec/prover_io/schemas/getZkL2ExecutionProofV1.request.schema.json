@@ -11,6 +11,7 @@
   ],
   "properties": {
     "guestProgramId": { "$ref": "#/$defs/hash32" },
+    "metadata": { "$ref": "#/$defs/metadata" },
     "proofRequest": {
       "type": "object",
       "additionalProperties": false,
@@ -23,7 +24,8 @@
           "properties": {
             "l2MessageServiceAddress": { "$ref": "#/$defs/address" },
             "coinbase": { "$ref": "#/$defs/address" },
-            "chainId": { "$ref": "#/$defs/uint" }
+            "chainId": { "$ref": "#/$defs/uint" },
+            "forkName": { "type": "string" }
           }
         },
         "parentFtxRollingHash": { "$ref": "#/$defs/hash32" },
@@ -38,6 +40,15 @@
   },
   "$defs": {
     "uint": { "type": "integer", "minimum": 0 },
+    "metadata": {
+      "description": "Non-contractual, debug/ops-only fields. NOT consumed by the guest",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "startBlockNumber": { "$ref": "#/$defs/uint" },
+        "endBlockNumber": { "$ref": "#/$defs/uint" }
+      }
+    },
     "hex": {
       "description": "0x-prefixed, even-length (whole-byte) hex string.",
       "type": "string",
@@ -133,17 +144,6 @@
         "blockAccessList": { "$ref": "#/$defs/bytes" }
       }
     },
-    "executionRequests": {
-      "description": "EIP-7685 typed execution requests, grouped by kind.",
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["deposits", "withdrawals", "consolidations"],
-      "properties": {
-        "deposits": { "type": "array", "items": { "$ref": "#/$defs/bytes" } },
-        "withdrawals": { "type": "array", "items": { "$ref": "#/$defs/bytes" } },
-        "consolidations": { "type": "array", "items": { "$ref": "#/$defs/bytes" } }
-      }
-    },
     "newPayloadRequest": {
       "description": "Mirrors SSZ SszNewPayloadRequest.",
       "type": "object",
@@ -153,7 +153,11 @@
         "executionPayload": { "$ref": "#/$defs/executionPayload" },
         "versionedHashes": { "type": "array", "items": { "$ref": "#/$defs/hash32" } },
         "parentBeaconBlockRoot": { "$ref": "#/$defs/hash32" },
-        "executionRequests": { "$ref": "#/$defs/executionRequests" }
+        "executionRequests": {
+          "description": "EIP-7685 typed execution requests, represented as a list of byte array",
+          "type": "array",
+          "items": { "$ref": "#/$defs/bytes" }
+        }
       }
     },
     "executionWitness": {
@@ -167,25 +171,14 @@
         "headers": { "type": "array", "items": { "$ref": "#/$defs/bytes" } }
       }
     },
-    "statelessChainConfig": {
-      "description": "Chain config carried inside the stateless input (SSZ SszChainConfig holds chainId; forkName is a JSON-only mirror).",
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["chainId"],
-      "properties": {
-        "chainId": { "$ref": "#/$defs/uint" },
-        "forkName": { "type": "string" }
-      }
-    },
     "statelessInput": {
       "description": "Mirrors SSZ SszStatelessInput, minus publicKeys: the prover middleware recovers the transaction public keys from the signed transactions, so they are not sent on the wire.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["newPayloadRequest", "executionWitness", "chainConfig"],
+      "required": ["newPayloadRequest", "executionWitness"],
       "properties": {
         "newPayloadRequest": { "$ref": "#/$defs/newPayloadRequest" },
-        "executionWitness": { "$ref": "#/$defs/executionWitness" },
-        "chainConfig": { "$ref": "#/$defs/statelessChainConfig" }
+        "executionWitness": { "$ref": "#/$defs/executionWitness" }
       }
     },
     "forcedTransaction": {

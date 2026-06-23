@@ -11,7 +11,8 @@
   ],
   "properties": {
     "guestProgramId": { "$ref": "#/$defs/hash32" },
-     "proofRequest": {
+    "metadata": { "$ref": "#/$defs/metadata" },
+    "proofRequest": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -42,10 +43,10 @@
     "hash32": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
     "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
     "kzgProof": { "type": "string", "pattern": "^0x[0-9a-fA-F]{96}$" },
-    "blockRange": {
+    "metadata": {
+      "description": "Non-contractual, debug/ops-only fields. NOT consumed by the guest",
       "type": "object",
       "additionalProperties": false,
-      "required": ["startBlockNumber", "endBlockNumber"],
       "properties": {
         "startBlockNumber": { "$ref": "#/$defs/uint" },
         "endBlockNumber": { "$ref": "#/$defs/uint" }
@@ -54,18 +55,12 @@
     "blob": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["blobInputs", "blockRange", "blockRlps"],
+      "required": ["startBlockNumber", "endBlockNumber", "blobHash", "blobKzgProof", "blockRlps"],
       "properties": {
-        "blobInputs": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["blobHash", "blobKzgProof"],
-          "properties": {
-            "blobHash": { "$ref": "#/$defs/hash32" },
-            "blobKzgProof": { "$ref": "#/$defs/kzgProof" }
-          }
-        },
-        "blockRange": { "$ref": "#/$defs/blockRange" },
+        "startBlockNumber": { "$ref": "#/$defs/uint" },
+        "endBlockNumber": { "$ref": "#/$defs/uint" },
+        "blobHash": { "$ref": "#/$defs/hash32" },
+        "blobKzgProof": { "$ref": "#/$defs/kzgProof" },
         "blockRlps": {
           "type": "array",
           "items": { "$ref": "#/$defs/hex" }
