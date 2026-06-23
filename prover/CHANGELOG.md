@@ -2,6 +2,16 @@
 
 ### 🐛 Bug Fixes
 
+- *(prover)* Bump BLOCKHASH module limit from 2048 to 4096 (#3426)
+## [1.0.2] - 2026-06-18
+
+### ⚙️ Miscellaneous Tasks
+
+- Update gnark to a3ad59ad083caac7691cba84a497d4d7c1759d2a (#3402)
+## [1.0.1] - 2026-06-18
+
+### 🐛 Bug Fixes
+
 - *(coordinator, jvm-libs, e2e, state-recovery, prover, docker, misc)* Remove state manager request version (#3099)
 - *(ci)* Provide correct path to rlp_blocks.bin (#3125)
 - *(prover)* Update rlp_blocks.bin path in shnarf_calculator tests (#3129)
@@ -16,6 +26,7 @@
 ### 🚜 Refactor
 
 - *(misc)* Rename Linea to Lineth across documentation and codebase (#3316)
+- *(prover-ray)* Export logderivativesum internals for verifier-ray codegen (#3354)
 
 ### ⚡ Performance
 

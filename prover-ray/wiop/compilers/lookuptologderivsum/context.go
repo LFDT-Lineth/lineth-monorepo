@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
 // includedSpec captures one A-side fragment from a single Inclusion query:

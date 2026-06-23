@@ -1,6 +1,6 @@
 package wioptest
 
-import "github.com/consensys/linea-monorepo/prover-ray/wiop"
+import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 
 // NewRangeCheckBasicScenario: a single RangeCheck with bound 8 over a
 // size-8 module, witness covering every value in [0, 8).
@@ -114,7 +114,7 @@ func NewRangeCheckMultiModuleScenario() *RangeCheckCompilerScenario {
 	modB.NewRangeCheck(sys.Context.Childf("rcB"), colB, 4)
 
 	return &RangeCheckCompilerScenario{
-		Name: "MultiModule",
+		Name: multiModuleScenarioName,
 		Sys:  sys,
 		AssignWitness: func(rt *wiop.Runtime) {
 			rt.AssignColumn(colA, makeVec(0, 1, 2, 3))

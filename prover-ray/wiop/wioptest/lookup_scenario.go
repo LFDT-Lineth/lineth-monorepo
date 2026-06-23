@@ -1,6 +1,6 @@
 package wioptest
 
-import "github.com/consensys/linea-monorepo/prover-ray/wiop"
+import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 
 // LookupScenario is a fixture for testing the
 // lookuptologderivsum → logderivativesum compiler pipeline end-to-end.

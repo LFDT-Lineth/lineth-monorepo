@@ -24,10 +24,12 @@
 - *(prover)* Post small-fields constraints (#2845)
 - *(prover)* Populate isAllowedCircuitID in aggregation response (#3381)
 - *(e2e)* Trying to fix rare profitability issues, FTX fix (#3388)
+- *(prover)* Bump BLOCKHASH module limit from 2048 to 4096 (#3426)
 
 ### 🚜 Refactor
 
 - *(misc)* Rename Linea to Lineth across documentation and codebase (#3316)
+- *(prover-ray)* Export logderivativesum internals for verifier-ray codegen (#3354)
 
 ### ⚡ Performance
 
@@ -59,3 +61,4 @@
 - *(coordinator)* Favour generic name ChainSecurityRuleViolation over specific implementation Phylax (#3330)
 - *(packages)* Rename npm package scope (#3324)
 - *(deps)* Update eligible patch and minor dependencies (#3366)
+- Update gnark to a3ad59ad083caac7691cba84a497d4d7c1759d2a (#3402)
