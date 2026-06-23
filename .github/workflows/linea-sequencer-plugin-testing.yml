@@ -14,7 +14,7 @@ concurrency:
 jobs:
   run-linea-sequencer-plugins-unit-tests:
     name: "Sequencer Plugin Unit Tests"
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -48,7 +48,7 @@ jobs:
 
   run-linea-sequencer-plugins-acceptance-tests:
     name: "Sequencer Plugin Acceptance Tests"
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

@@ -52,12 +52,4 @@ pub const Transcript = struct {
             .B2 = .{ .a0 = challenge[4], .a1 = challenge[5] },
         };
     }
-
-    pub fn state(self: Transcript) poseidon2.Digest {
-        return self.hasher.getState();
-    }
-
-    pub fn setState(self: *Transcript, digest: poseidon2.Digest) void {
-        self.hasher.setState(digest);
-    }
 };

@@ -6,18 +6,14 @@
  * PRIVATE_KEY=0xabc123... \
  * LAZY_ORACLE_ADDRESS=0x... \
  * LIDO_VAULT_ADDRESS=0x... \
- * pnpm --filter @consensys/linea-native-yield-automation-service exec tsx scripts/test-lazy-oracle-contract-client.ts
+ * pnpm --filter @lfdt-lineth/native-yield-automation-service exec tsx scripts/test-lazy-oracle-contract-client.ts
  *
  * Optional flags:
  * POLL_INTERVAL_MS=60000 \
  * WAIT_TIMEOUT_MS=300000 \
  */
 
-import {
-  ViemBlockchainClientAdapter,
-  ViemWalletSignerClientAdapter,
-  WinstonLogger,
-} from "@consensys/linea-shared-utils";
+import { ViemBlockchainClientAdapter, ViemWalletSignerClientAdapter, WinstonLogger } from "@lfdt-lineth/shared-utils";
 import { Address, Hex } from "viem";
 import { hoodi } from "viem/chains";
 

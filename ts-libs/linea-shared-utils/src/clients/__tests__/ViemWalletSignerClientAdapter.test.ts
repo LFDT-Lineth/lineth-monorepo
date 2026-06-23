@@ -151,6 +151,42 @@ describe("ViemWalletSignerClientAdapter", () => {
       });
     });
 
+    it("should strip the account field injected by viem before re-signing", async () => {
+      // Arrange
+      // viem >= 2.52 injects the wrapping `account` into the transaction it
+      // passes down to `account.signTransaction`. If forwarded to our own wallet
+      // client it would override its account and re-enter this signer infinitely.
+      walletSignTransaction.mockResolvedValue(TEST_SERIALIZED_SIGNED_TX);
+      mockedParseTransaction.mockReturnValue({
+        r: TEST_SIGNATURE_R,
+        s: TEST_SIGNATURE_S,
+        yParity: TEST_SIGNATURE_Y_PARITY,
+      } as any);
+      mockedSerializeSignature.mockReturnValue(TEST_SIGNATURE_HEX);
+
+      const tx = {
+        to: TEST_TRANSACTION_TO,
+        value: TEST_TRANSACTION_VALUE,
+        gas: TEST_TRANSACTION_GAS,
+        account: { address: "0xWRAPPER", signTransaction: jest.fn() },
+        chainId: 111,
+      } as any;
+
+      // Act
+      const signature = await client.sign(tx);
+
+      // Assert
+      expect(signature).toBe(TEST_SIGNATURE_HEX);
+      const forwardedTx = walletSignTransaction.mock.calls[0][0];
+      expect(forwardedTx).not.toHaveProperty("account");
+      expect(walletSignTransaction).toHaveBeenCalledWith({
+        to: TEST_TRANSACTION_TO,
+        value: TEST_TRANSACTION_VALUE,
+        gas: TEST_TRANSACTION_GAS,
+        chainId: 111,
+      });
+    });
+
     it("should throw error when signature r component is missing", async () => {
       // Arrange
       walletSignTransaction.mockResolvedValue(TEST_SERIALIZED_SIGNED_TX);

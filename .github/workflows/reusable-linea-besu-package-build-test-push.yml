@@ -96,7 +96,7 @@ jobs:
   build-and-push-dockerhub:
     needs: [ run-test, run-e2e-tests ]
     if: ${{ always() && !cancelled() && (!inputs.run_e2e_test || needs.run-e2e-tests.outputs.tests_outcome == 'success') && (!inputs.run-test || needs.run-test.result == 'success') }}
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     environment: dockerhub
     env:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -164,7 +164,6 @@ jobs:
             consensys/linea-besu-package-with-fleet:${{ steps.build-plugins-and-assemble.outputs.dockertag }}
             ${{ inputs.image_tag_suffix != '' && format('consensys/linea-besu-package-with-fleet:{0}', steps.build-plugins-and-assemble.outputs.dockertag_with_suffix) || ''}}
             ${{ github.ref == 'refs/heads/main' && 'consensys/linea-besu-package-with-fleet:develop' || '' }}
-            ${{ github.event_name == 'workflow_dispatch' && 'consensys/linea-besu-package-with-fleet:latest' || '' }}
 
       - name: Calculate the checksum of Besu fleet plugin
         id: besu-fleet-plugin-checksum
@@ -198,7 +197,6 @@ jobs:
             consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag }}
             ${{ inputs.image_tag_suffix != '' && format('consensys/linea-besu-package:{0}', steps.build-plugins-and-assemble.outputs.dockertag_with_suffix) || ''}}
             ${{ github.ref == 'refs/heads/main' && 'consensys/linea-besu-package:develop' || '' }}
-            ${{ github.event_name == 'workflow_dispatch' && 'consensys/linea-besu-package:latest' || '' }}
 
       ### update the release notes with docker hashes
       - name: create the release notes and then the release
@@ -211,7 +209,7 @@ jobs:
           echo "# Release Artifact: Linea Besu Package" > output.md
           echo "**Name:** linea-besu-package-${{ steps.build-plugins-and-assemble.outputs.dockertag }}.tar.gz" >> output.md
           echo "**SHA256:** $(sha256sum linea-besu-package-${{ steps.build-plugins-and-assemble.outputs.dockertag }}.tar.gz | awk '{ print $1 }' )" >> output.md
-          echo "**From:** [${{ github.ref_name }} (${{ github.event_name }})](https://github.com/Consensys/linea-monorepo/actions/runs/${{ github.run_id }})" >> output.md
+          echo "**From:** [${{ github.ref_name }} (${{ github.event_name }})](https://github.com/LFDT-Lineth/lineth-monorepo/actions/runs/${{ github.run_id }})" >> output.md
           echo "" >> output.md
 
           echo "### Besu and Plugin Details" >> output.md

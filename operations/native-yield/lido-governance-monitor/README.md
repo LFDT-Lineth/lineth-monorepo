@@ -89,7 +89,7 @@ The Discourse fetcher waits 250ms between proposal detail requests by default. O
 ### Running
 
 ```bash
-pnpm --filter @consensys/lido-governance-monitor exec tsx run.ts
+pnpm --filter @lfdt-lineth/lido-governance-monitor exec tsx run.ts
 ```
 
 ### E2E Local Test
@@ -111,12 +111,12 @@ Run the full pipeline locally against the test database and live APIs:
    SLACK_WEBHOOK_URL="https://hooks.slack.com/services/xxx" \
    ETHEREUM_RPC_URL="https://mainnet.infura.io/v3/xxx" \
    LDO_VOTING_CONTRACT_ADDRESS="0x2e59a20f205bb85a89c53f1936454680651e618e" \
-   pnpm --filter @consensys/lido-governance-monitor exec tsx run.ts
+   pnpm --filter @lfdt-lineth/lido-governance-monitor exec tsx run.ts
    ```
 
    Or add these to `.env` and run:
    ```bash
-   pnpm --filter @consensys/lido-governance-monitor exec tsx run.ts
+   pnpm --filter @lfdt-lineth/lido-governance-monitor exec tsx run.ts
    ```
 
 3. Clean up when done:
@@ -127,19 +127,19 @@ Run the full pipeline locally against the test database and live APIs:
 ### Build
 
 ```bash
-pnpm --filter @consensys/lido-governance-monitor build
+pnpm --filter @lfdt-lineth/lido-governance-monitor build
 ```
 
 ### Unit Tests
 
 ```bash
-pnpm --filter @consensys/lido-governance-monitor test
+pnpm --filter @lfdt-lineth/lido-governance-monitor test
 ```
 
 ### Lint
 
 ```bash
-pnpm --filter @consensys/lido-governance-monitor lint
+pnpm --filter @lfdt-lineth/lido-governance-monitor lint
 ```
 
 ## License

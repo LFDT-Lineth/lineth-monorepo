@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   run-tests:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     name: native-yield-automation-service-testing
     env:
       COMMIT_TAG: ${{ inputs.commit_tag }}
@@ -31,13 +31,13 @@ jobs:
 
       - name: Build
         run: |
-          pnpm --filter @consensys/linea-shared-utils build
-          pnpm --filter @consensys/linea-native-yield-automation-service build
+          pnpm --filter @lfdt-lineth/shared-utils build
+          pnpm --filter @lfdt-lineth/native-yield-automation-service build
 
       - name: Run tests and generate coverage report
         run: |
-          pnpm --filter @consensys/linea-shared-utils test
-          pnpm --filter @consensys/linea-native-yield-automation-service test
+          pnpm --filter @lfdt-lineth/shared-utils test
+          pnpm --filter @lfdt-lineth/native-yield-automation-service test
 
       - name: Stage TS coverage for artifact (fork PR uploads)
         run: |
@@ -54,7 +54,7 @@ jobs:
 
       - name: Upload linea-shared-utils coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f #v7.0.0
         with:
           fail_ci_if_error: true
           files: ./ts-libs/linea-shared-utils/coverage/lcov.info
@@ -66,7 +66,7 @@ jobs:
 
       - name: Upload native-yield-automation-service coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 #v6.0.0
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f #v7.0.0
         with:
           fail_ci_if_error: true
           files: ./operations/native-yield/automation-service/coverage/lcov.info

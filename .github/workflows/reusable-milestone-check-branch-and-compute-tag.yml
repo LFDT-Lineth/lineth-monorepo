@@ -21,7 +21,7 @@ on:
 
 jobs:
   check-branch-and-compute-tag:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     outputs:
       release_version: ${{ steps.compute-release-tag.outputs.next_version }}
       release_tag: ${{ steps.compute-release-tag.outputs.next_tag }}

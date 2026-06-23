@@ -1,4 +1,4 @@
-import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
+import { getContractsAddressesByChainId } from "@lfdt-lineth/sdk-core";
 import {
   Account,
   Address,
@@ -41,7 +41,7 @@ export type GetTransactionReceiptByMessageHashErrorType =
  * @example
  * import { createPublicClient, http } from 'viem'
  * import { linea } from 'viem/chains'
- * import { getTransactionReceiptByMessageHash } from '@consensys/linea-sdk-viem'
+ * import { getTransactionReceiptByMessageHash } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createPublicClient({
  *   chain: linea,

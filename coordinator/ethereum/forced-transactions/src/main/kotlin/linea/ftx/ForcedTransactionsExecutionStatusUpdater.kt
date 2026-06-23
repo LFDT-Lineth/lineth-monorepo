@@ -205,9 +205,10 @@ internal class ForcedTransactionsStatusUpdater(
         if (ftxStatus == null) {
           SafeFuture.completedFuture(null)
         } else {
-          if (ftxStatus.inclusionResult == ForcedTransactionInclusionResult.Phylax) {
+          if (ftxStatus.inclusionResult == ForcedTransactionInclusionResult.ChainSecurityRuleViolation) {
             log.warn(
-              "FTX rejected by Phylax: potential security incident, please notify Ops/Support immediately." +
+              "FTX rejected due to ChainSecurityRuleViolation: " +
+                "potential security incident, please notify Ops/Support immediately." +
                 " Stopping conflation. sequencerResult={}",
               ftxStatus,
             )

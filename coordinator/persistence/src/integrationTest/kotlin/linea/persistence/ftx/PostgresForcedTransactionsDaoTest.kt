@@ -155,7 +155,7 @@ class PostgresForcedTransactionsDaoTest : CleanDbTestSuiteParallel() {
       ForcedTransactionInclusionResult.TooManyLogs,
       ForcedTransactionInclusionResult.FilteredAddressFrom,
       ForcedTransactionInclusionResult.FilteredAddressTo,
-      ForcedTransactionInclusionResult.Phylax,
+      ForcedTransactionInclusionResult.ChainSecurityRuleViolation,
     )
 
     inclusionResults.forEachIndexed { index, inclusionResult ->
@@ -311,7 +311,7 @@ class PostgresForcedTransactionsDaoTest : CleanDbTestSuiteParallel() {
     assertThat(inclusionResultToDbValue(ForcedTransactionInclusionResult.TooManyLogs)).isEqualTo(5)
     assertThat(inclusionResultToDbValue(ForcedTransactionInclusionResult.FilteredAddressFrom)).isEqualTo(6)
     assertThat(inclusionResultToDbValue(ForcedTransactionInclusionResult.FilteredAddressTo)).isEqualTo(7)
-    assertThat(inclusionResultToDbValue(ForcedTransactionInclusionResult.Phylax)).isEqualTo(8)
+    assertThat(inclusionResultToDbValue(ForcedTransactionInclusionResult.ChainSecurityRuleViolation)).isEqualTo(8)
 
     assertThat(dbValueToInclusionResult(1)).isEqualTo(ForcedTransactionInclusionResult.Included)
     assertThat(dbValueToInclusionResult(2)).isEqualTo(ForcedTransactionInclusionResult.BadNonce)
@@ -320,7 +320,7 @@ class PostgresForcedTransactionsDaoTest : CleanDbTestSuiteParallel() {
     assertThat(dbValueToInclusionResult(5)).isEqualTo(ForcedTransactionInclusionResult.TooManyLogs)
     assertThat(dbValueToInclusionResult(6)).isEqualTo(ForcedTransactionInclusionResult.FilteredAddressFrom)
     assertThat(dbValueToInclusionResult(7)).isEqualTo(ForcedTransactionInclusionResult.FilteredAddressTo)
-    assertThat(dbValueToInclusionResult(8)).isEqualTo(ForcedTransactionInclusionResult.Phylax)
+    assertThat(dbValueToInclusionResult(8)).isEqualTo(ForcedTransactionInclusionResult.ChainSecurityRuleViolation)
 
     // Test proof status mappings
     assertThat(proofStatusToDbValue(ForcedTransactionRecord.ProofStatus.UNREQUESTED)).isEqualTo(1)

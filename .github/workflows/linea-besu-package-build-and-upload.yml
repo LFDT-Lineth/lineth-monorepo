@@ -31,7 +31,7 @@ on:
 
 jobs:
   build-and-upload-artifact:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     outputs:
       linea_besu_package_tag: ${{ steps.build-plugins-and-assemble.outputs.dockertag }}
       dockerimage: ${{ steps.build-plugins-and-assemble.outputs.dockerimage }}

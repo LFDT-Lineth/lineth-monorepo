@@ -1,4 +1,4 @@
-import { type ILogger } from "@consensys/linea-shared-utils";
+import { type ILogger } from "@lfdt-lineth/shared-utils";
 import {
   EventSubscriber,
   EntitySubscriberInterface,

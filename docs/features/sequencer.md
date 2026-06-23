@@ -4,7 +4,7 @@
 
 ## Overview
 
-The sequencer is a Linea Besu node with QBFT consensus (via the [Maru](https://github.com/Consensys/maru) consensus client) that serves as the block producer. It uses a plugin architecture (`linea-besu/plugins/linea-sequencer/`) to enforce Linea-specific transaction selection and validation rules beyond standard Ethereum mempool logic. The sequencer is not directly accessible externally; RPC nodes forward transactions to it via P2P.
+The sequencer is a Linea Besu node with QBFT consensus (via the [Maru](../../maru/) consensus client) that serves as the block producer. It uses a plugin architecture (`linea-besu/plugins/linea-sequencer/`) to enforce Linea-specific transaction selection and validation rules beyond standard Ethereum mempool logic. The sequencer is not directly accessible externally; RPC nodes forward transactions to it via P2P.
 
 Blocks are only produced when transactions exist — no empty blocks are created.
 

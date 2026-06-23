@@ -1,6 +1,6 @@
 package wioptest
 
-import "github.com/consensys/linea-monorepo/prover-ray/wiop"
+import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 
 // LocalVanishingScenario is a fixture for testing the localvanishing → global
 // compiler pipeline.
@@ -53,5 +53,8 @@ func LocalVanishingScenarios() []func() *LocalVanishingScenario {
 		NewLocalMultiAnchorMultiColumnScenario,
 		NewLocalCubeAtFirstRowScenario,
 		NewLocalMultiModuleScenario,
+		NewLocalDynamicFirstRowZeroScenario,
+		NewLocalDynamicShiftedScenario,
+		NewLocalDynamicProductIsZeroScenario,
 	}
 }

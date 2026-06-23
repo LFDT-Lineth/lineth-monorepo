@@ -16,9 +16,10 @@
 //   - one or more "running-sum" extension columns Z, each absorbing up to
 //     packingArity fractions whose vector-valued sides live on the same module;
 //   - a vanishing recurrence per Z column linking it to its source fractions;
-//   - LocalOpenings of Z[0] (initial condition) and Z[n-1] (column endpoint);
-//   - a verifier action that checks the initial condition for every Z column
-//     and that the sum of endpoints matches the query's claimed Result cell.
+//   - a local constraint pinning the row-0 boundary of each Z column;
+//   - an opening of Z[n-1] (column endpoint) per Z column;
+//   - a verifier action that checks the sum of endpoints matches the query's
+//     claimed Result cell.
 //
 // The prover-side computation is filter-aware: rows with a zero filter are
 // skipped without inverting the corresponding denominator. This is what
@@ -34,9 +35,9 @@ package logderivativesum
 import (
 	"fmt"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/utils"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
 // packingArity is the maximum number of fractions packed into a single Z
@@ -44,7 +45,7 @@ import (
 const packingArity = 3
 
 // Compile reduces every [wiop.LogDerivativeSum] query in sys to a Z-column
-// recurrence plus endpoint LocalOpenings, and registers prover/verifier
+// recurrence plus endpoint openings, and registers prover/verifier
 // actions that tie the resulting artefacts back to the query's Result cell.
 // Already-reduced queries are skipped.
 func Compile(sys *wiop.System) {
@@ -64,7 +65,7 @@ func compileQuery(ld *wiop.LogDerivativeSum) {
 
 	buckets := bucketByModule(ld.Fractions)
 
-	var entries []zEntry
+	var entries []ZEntry
 	for bIdx, b := range buckets {
 		groups := packFractions(b.fractions)
 		for kIdx, packed := range groups {
@@ -74,7 +75,7 @@ func compileQuery(ld *wiop.LogDerivativeSum) {
 	}
 
 	resultRound.RegisterAction(&proverAction{ld: ld, entries: entries})
-	resultRound.RegisterVerifierAction(&verifierAction{ld: ld, entries: entries})
+	resultRound.RegisterVerifierAction(&VerifierAction{LogDerivativeSum: ld, Entries: entries})
 }
 
 // fractionBucket groups fractions whose vector-valued side lives on the same
@@ -126,36 +127,33 @@ func fractionModule(f wiop.Fraction) *wiop.Module {
 	return f.Denominator.Module()
 }
 
-// zEntry collects the per-Z artefacts shared by the prover and verifier
-// actions: the Z column, the symbolic packed numerator/denominator, the raw
-// triples (filter, num, den) used by the prover for filter-aware row skipping,
-// and the endpoint LocalOpenings.
-type zEntry struct {
+// ZEntry collects the per-Z artefacts shared by the prover and verifier
+// actions: the Z column, the raw fractions (filter, num, den) used by the
+// prover for filter-aware row skipping, and the column endpoint opening.
+type ZEntry struct {
 	zCol   *wiop.Column
-	zNum   wiop.Expression
-	zDen   wiop.Expression
 	packed []wiop.Fraction // raw fractions used by the prover for filter-aware evaluation
-	zInit  *wiop.LocalOpening
-	zFinal *wiop.LocalOpening
+	// ZFinal is the (round, slot) coordinate of the Z[n-1] opening in the proof transcript; carries no witness value.
+	ZFinal *wiop.Cell
 }
 
 // buildZ allocates one Z column for a packed fraction group, registers the
-// recurrence Vanishing, and opens the two endpoints.
+// recurrence Vanishing, pins the row-0 boundary with a local constraint, and
+// opens the column endpoint (a lazy [wiop.Cell] returned by
+// [ColumnPosition.Open]). The module's size does not need to be known at
+// compile time: the endpoint opening at Z[last] is addressed via
+// [ColumnPosition]'s negative-row convention (Position = −1 ⇒ last row),
+// and Vanishing's cancelled-positions logic gracefully handles a runtime
+// size of 1 by automatically skipping row 0 (the only row of a one-row
+// module), so the recurrence Vanishing is registered unconditionally for
+// dynamic modules.
 func buildZ(
 	m *wiop.Module,
 	packed []wiop.Fraction,
 	round *wiop.Round,
 	ctx *wiop.ContextFrame,
 	bIdx, kIdx int,
-) zEntry {
-	n := m.Size()
-	if n <= 0 {
-		panic(fmt.Sprintf(
-			"wiop/compilers/logderivativesum: module %q must be sized before Compile",
-			m.Context.Path(),
-		))
-	}
-
+) ZEntry {
 	zNum, zDen := buildZExpressions(packed)
 
 	zCol := m.NewExtensionColumn(
@@ -165,14 +163,21 @@ func buildZ(
 	)
 
 	// The recurrence zNum − (Z − Z<<−1)·zDen carries a −1 shift on Z, so
-	// NewVanishing automatically cancels row 0 — the initial condition is
-	// instead enforced by the verifier action through the Z[0] opening.
-	// For a single-row module the recurrence is vacuous: skip it.
-	if n > 1 {
+	// NewVanishing automatically cancels row 0; the row-0 boundary is pinned
+	// separately by the local constraint below.
+	//
+	// For a *statically* one-row module the recurrence is vacuous and we
+	// skip it as an optimisation. For a dynamic module we cannot know the
+	// runtime size at compile time, so the Vanishing is registered
+	// unconditionally; Vanishing.Check's cancelled-positions logic makes
+	// the constraint vacuous if RuntimeSize ends up being 1.
+	if m.IsDynamic() || m.Size() > 1 {
 		zView := zCol.View()
 		recurrence := wiop.Sub(
 			zNum,
 			wiop.Mul(
+				// Shift(-1) is load-bearing for the dynamic n=1 corner case: it puts row 0 in NewVanishing's
+				// CancelledPositions, so when RuntimeSize == 1 the only row is cancelled and Check is vacuous.
 				wiop.Sub(zView, zView.Shift(-1)),
 				zDen,
 			),
@@ -183,16 +188,35 @@ func buildZ(
 		)
 	}
 
-	zInit := zCol.At(0).Open(ctx.Childf("z-init-b%d-k%d", bIdx, kIdx))
-	zFinal := zCol.At(n - 1).Open(ctx.Childf("z-final-b%d-k%d", bIdx, kIdx))
+	// Initial condition at row 0: zNum[0] − Z[0]·zDen[0] = 0. The recurrence
+	// cancels row 0, so the boundary is pinned here as a sound local constraint
+	// (lifted by localvanishing and discharged by global) rather than by the
+	// verifier reading the oracle witness columns. The constraint lives on row
+	// 0, which always exists, so it is well-defined for dynamic modules too;
+	// it also covers the single-row (RuntimeSize == 1) case where the
+	// recurrence is skipped or made vacuous.
+	m.NewLocalConstraint(
+		ctx.Childf("z-init-b%d-k%d", bIdx, kIdx),
+		wiop.Sub(zNum, wiop.Mul(zCol.View(), zDen)),
+		0,
+	)
 
-	return zEntry{
+	// Endpoint opening Z[last] for the running-sum total. For static modules we
+	// resolve the endpoint to a concrete row index up front so the downstream
+	// localvanishing pass — which lowers each opening's binding Vanishing via a
+	// [LagrangeSelector] — sees only non-negative positions. Dynamic modules
+	// keep the negative-row form (Position = −1 resolved to RuntimeSize−1
+	// per-Runtime by [ColumnPosition.resolvedRow]).
+	endpointPos := -1
+	if !m.IsDynamic() {
+		endpointPos = m.Size() - 1
+	}
+	zFinal := zCol.At(endpointPos).Open(ctx.Childf("z-final-b%d-k%d", bIdx, kIdx))
+
+	return ZEntry{
 		zCol:   zCol,
-		zNum:   zNum,
-		zDen:   zDen,
 		packed: packed,
-		zInit:  zInit,
-		zFinal: zFinal,
+		ZFinal: zFinal,
 	}
 }
 
@@ -234,7 +258,7 @@ func buildZExpressions(packed []wiop.Fraction) (zNum, zDen wiop.Expression) {
 // ld.Result.
 type proverAction struct {
 	ld      *wiop.LogDerivativeSum
-	entries []zEntry
+	entries []ZEntry
 }
 
 // Run implements [wiop.ProverAction].
@@ -247,10 +271,9 @@ func (a *proverAction) Run(rt wiop.Runtime) {
 
 		rt.AssignColumn(e.zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(z)})
 
-		// SelfAssign reads Z[0] and Z[n-1] from the runtime, so the column
-		// must already be assigned at this point.
-		e.zInit.SelfAssign(rt)
-		e.zFinal.SelfAssign(rt)
+		// zFinal is a lazy opening of Z[n-1]; it resolves from this column
+		// assignment on first read (or at round advance), so no explicit
+		// assignment is needed here.
 
 		total.Add(&total, &z[n-1])
 	}
@@ -371,63 +394,36 @@ func genToExt(v field.Gen) field.Ext {
 	return v.AsExt()
 }
 
-// verifierAction enforces the boundary identities the compiler relies on:
-//   - For each Z column: Z[0]·zDen[0] = zNum[0] (initial condition).
-//   - The sum of all Z[n-1] equals the claimed Result cell value.
-type verifierAction struct {
-	ld      *wiop.LogDerivativeSum
-	entries []zEntry
+// VerifierAction enforces the only boundary identity that is not already
+// pinned in-circuit: the sum of all Z[n-1] endpoint openings equals the
+// claimed Result cell value. The per-Z initial condition is enforced by the
+// row-0 local constraint registered in buildZ, so this action reads only
+// local openings (cells) — never the oracle witness columns.
+//
+// Exported (with exported fields) so out-of-package consumers — notably the
+// verifier-ray codegen — can read the endpoint openings and the Result cell.
+type VerifierAction struct {
+	LogDerivativeSum *wiop.LogDerivativeSum
+	Entries          []ZEntry
 }
 
 // Check implements [wiop.VerifierAction].
-func (a *verifierAction) Check(rt wiop.Runtime) error {
+func (a *VerifierAction) Check(rt wiop.Runtime) error {
 	var sum field.Ext
 
-	for i, e := range a.entries {
-		zInit := genToExt(rt.GetCellValue(e.zInit.Result))
-		zFinal := genToExt(rt.GetCellValue(e.zFinal.Result))
-
-		num0 := genToExt(evaluateRowZero(rt, e.zNum))
-		den0 := genToExt(evaluateRowZero(rt, e.zDen))
-
-		var prod, lhs field.Ext
-		prod.Mul(&zInit, &den0)
-		lhs.Sub(&num0, &prod)
-		if !lhs.IsZero() {
-			return fmt.Errorf(
-				"wiop/compilers/logderivativesum: initial-condition check failed for Z entry %d (%s)",
-				i, e.zCol.Context.Path(),
-			)
-		}
-
+	for _, e := range a.Entries {
+		zFinal := genToExt(rt.GetCellValue(e.ZFinal))
 		sum.Add(&sum, &zFinal)
 	}
 
-	claimed := genToExt(rt.GetCellValue(a.ld.Result))
+	claimed := genToExt(rt.GetCellValue(a.LogDerivativeSum.Result))
 	var diff field.Ext
 	diff.Sub(&sum, &claimed)
 	if !diff.IsZero() {
 		return fmt.Errorf(
 			"wiop/compilers/logderivativesum: final-sum check failed for query %q",
-			a.ld.Context().Path(),
+			a.LogDerivativeSum.Context().Path(),
 		)
 	}
 	return nil
-}
-
-// evaluateRowZero returns the value of expr at row 0 of its module domain.
-// Scalar expressions are returned directly.
-func evaluateRowZero(rt wiop.Runtime, expr wiop.Expression) field.Gen {
-	if !expr.IsMultiValued() {
-		return expr.EvaluateSingle(rt).Value
-	}
-	cv := expr.EvaluateVector(rt)
-	plain := cv.Plain
-	if plain.Len() == 0 {
-		return field.ElemFromBase(cv.Padding)
-	}
-	if plain.IsBase() {
-		return field.ElemFromBase(plain.AsBase()[0])
-	}
-	return field.ElemFromExt(plain.AsExt()[0])
 }

@@ -39,7 +39,7 @@ concurrency:
 
 jobs:
   build-and-publish:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     name: Maru build and publish
     env:
       IMAGE_TAG: ${{ inputs.image_tag }}

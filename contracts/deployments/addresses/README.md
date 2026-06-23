@@ -1,6 +1,6 @@
 # Contract Address Registry
 
-This directory contains the PR-reviewed, per-network deployed address registry for the Linea protocol. Files may be edited manually or generated from an external source of truth, then validated before use.
+This directory contains the PR-reviewed, per-network deployed address registry for the Lineth protocol. Files may be edited manually or generated from an external source of truth, then validated before use.
 
 ## Files
 

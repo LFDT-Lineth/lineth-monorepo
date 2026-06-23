@@ -23,7 +23,7 @@ public class LineaProfitabilityCliOptions implements LineaCliOptions {
   public static final long DEFAULT_FIXED_GAS_COST_WEI = 0;
 
   public static final String VARIABLE_GAS_COST_WEI = "--plugin-linea-variable-gas-cost-wei";
-  public static final long DEFAULT_VARIABLE_GAS_COST_WEI = 1_000_000_000;
+  public static final long DEFAULT_VARIABLE_GAS_COST_WEI = 10_000_000_000L;
 
   public static final String MIN_MARGIN = "--plugin-linea-min-margin";
   public static final BigDecimal DEFAULT_MIN_MARGIN = BigDecimal.ONE;

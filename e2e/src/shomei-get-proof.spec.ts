@@ -1,5 +1,5 @@
-import { serialize } from "@consensys/linea-shared-utils";
 import { describe, it } from "@jest/globals";
+import { serialize } from "@lfdt-lineth/shared-utils";
 import { BaseError, ContractFunctionExecutionError, toHex } from "viem";
 
 import { awaitUntil } from "./common/utils";

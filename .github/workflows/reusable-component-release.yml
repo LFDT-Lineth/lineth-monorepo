@@ -57,7 +57,7 @@ on:
 
 jobs:
   check-branch-and-release-tag-suffix:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     steps:
       - name: Enforce non-main branch must have custom release tag suffix
         if: github.ref_name != 'main' && inputs.release_tag_suffix == ''
@@ -67,7 +67,7 @@ jobs:
 
   compute-commit-tag:
     needs: [check-branch-and-release-tag-suffix]
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     outputs:
        commit_tag: ${{ steps.compute-version-tags.outputs.commit_tag }}
     steps:

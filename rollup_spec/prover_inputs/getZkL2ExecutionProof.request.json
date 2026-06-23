@@ -1,5 +1,5 @@
 {
-    "_comment": "l2-execution proof request schema. Covers a contiguous range of L2 blocks; emits the 15-field PI tuple defined in §2.1.",
+    "_comment": "l2-execution proof request schema. Covers a contiguous range of L2 payloads; each entry carries a vanilla StatelessInput byte slice plus Linea rollup-extension metadata. Emits the 15-field PI tuple defined in §2.1.",
 
     "proverVersion": "4.0.0-riscv",
     "blockRange": {
@@ -10,62 +10,186 @@
     "_comment_publicInputs": "The 15-field PI tuple defined in §2.1.",
     "publicInputs": {
         "parentBlockHash":                       "0x0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "endBlockHash":                        "0x0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        "endBlockNumber":                      1000503,
-        "endBlockTimestamp":                    1763000123,
-        "L2L1MessagesHash":                        "0x0000000000000000000000000000000000000000000000000000000000000000",
-        "parentL1L2BridgeRollingHash":               "0x0000000000000000000000000000000000000000000000000000000000000000",
-        "parentL1L2BridgeRollingHashMessageNumber":  0,
-        "endL1L2BridgeRollingHash":                   "0x0000000000000000000000000000000000000000000000000000000000000000",
-        "endL1L2BridgeRollingHashMessageNumber":      0,
-        "dynamicChainConfigHash":                  "0xc0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ff",
-        "parentFtxRollingHash":                      "0x0000000000000000000000000000000000000000000000000000000000000000",
-        "endFtxRollingHash":                       "0x0000000000000000000000000000000000000000000000000000000000000000",
-        "lastProcessedFtxNumber":                  0,
-        "filteredAddressesHash":                   "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
-        "txFromsHash":                             "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+        "endBlockHash":                          "0x0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "endBlockNumber":                        1000503,
+        "endBlockTimestamp":                     1763000123,
+        "L2L1MessagesHash":                      "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "parentL1L2BridgeRollingHash":           "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "parentL1L2BridgeRollingHashMessageNumber": 0,
+        "endL1L2BridgeRollingHash":              "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "endL1L2BridgeRollingHashMessageNumber": 0,
+        "dynamicChainConfigHash":                "0xc0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ff",
+        "parentFtxRollingHash":                  "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "endFtxRollingHash":                     "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "lastProcessedFtxNumber":                0,
+        "filteredAddressesHash":                 "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
+        "txFromsHash":                           "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
     },
 
-    "_comment_chainConfig": "Static chain configuration. Forms three of the four preimage inputs of publicInputs.dynamicChainConfigHash (§2.1); the fourth input (baseFee) is sourced from the first block header and asserted equal across every block in the range — it is NOT a private input. dynamicChainConfigHash = keccak256(uint256_be(chainId) || coinbase || l2MessageServiceContract || uint256_be(baseFee)). A change in any of these four values is a finalization boundary.",
+    "_comment_chainConfig": "Linea proof-range chain configuration. Forms three of the four preimage inputs of publicInputs.dynamicChainConfigHash (§2.1); the fourth input (baseFee) is sourced from the first NewPayloadRequest.executionPayload.baseFeePerGas and asserted equal across every payload in the range. chainId deliberately duplicates the chain id inside each vanilla StatelessInput; the guest rejects the proof if any decoded inner chain id differs from this range-level value. dynamicChainConfigHash = keccak256(uint256_be(chainId) || coinbase || l2MessageServiceContract || uint256_be(baseFee)). A change in any of these four values is a finalization boundary.",
     "chainConfig": {
         "l2MessageServiceContract": "0x508Ca82Df566dCD1B0019D2DEdF7e3D6f7Ad6ddE",
-        "coinbase":                  "0x0000000000000000000000000000000000000000",
-        "chainId":                   59144
+        "coinbase":                 "0x0000000000000000000000000000000000000000",
+        "chainId":                  59144
     },
 
-    "_comment_blocks": "Canonical RLP-encoded L2 blocks (header + transaction list [+ withdrawals]), EIP-2718 typed transactions in full signed form. The parent block is not a top-level field — it lives inside `executionWitness.headers`. `forcedTransactions` is per-block FTX metadata (§6.5); empty for blocks without FTXs.",
-    "blocks": [
+    "_comment_payloads": "One entry per L2 block in canonical block-range order. `statelessInputSsz` is a length-delimited vanilla stateless input byte slice (raw SSZ, or Ere length-prefixed SSZ). `_debugStatelessInput` is a decoded review mirror only; loaders must derive or validate it from `statelessInputSsz` and discard it before constructing L2ExecutionProofPrivateInput. `rollupExtension` carries Linea-specific metadata outside the StatelessInput; those bytes must not be appended to the stateless-input slice passed to the underlying engine.",
+    "payloads": [
         {
-            "blockRlp":           "0xf90215a0...",
-            "forcedTransactions": []
+            "statelessInputSsz": "0x...",
+            "_debugStatelessInput": {
+                "newPayloadRequest": {
+                    "executionPayload": {
+                        "parentHash":      "0x0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                        "feeRecipient":    "0x0000000000000000000000000000000000000000",
+                        "stateRoot":       "0x1111111111111111111111111111111111111111111111111111111111111111",
+                        "receiptsRoot":    "0x2222222222222222222222222222222222222222222222222222222222222222",
+                        "logsBloom":       "0x0000...",
+                        "prevRandao":      "0x3333333333333333333333333333333333333333333333333333333333333333",
+                        "blockNumber":     1000501,
+                        "gasLimit":        30000000,
+                        "gasUsed":         12000000,
+                        "timestamp":       1763000101,
+                        "extraData":       "0x",
+                        "baseFeePerGas":   "0x01",
+                        "blockHash":       "0x0111111111111111111111111111111111111111111111111111111111111111",
+                        "transactions":    ["0x02f86b..."],
+                        "withdrawals":     [],
+                        "blobGasUsed":     0,
+                        "excessBlobGas":   0,
+                        "blockAccessList": "0x"
+                    },
+                    "versionedHashes": [],
+                    "parentBeaconBlockRoot": "0x4444444444444444444444444444444444444444444444444444444444444444",
+                    "executionRequests": {
+                        "deposits": [],
+                        "withdrawals": [],
+                        "consolidations": []
+                    }
+                },
+                "executionWitness": {
+                    "_comment": "Decoded logical execution witness fields. The canonical SszExecutionWitness decodes `state`, `codes`, and `headers`; `keys` is populated only by JSON/debug mirrors unless a future Linea schema id explicitly adds it. `headers` are RLP-encoded parent/ancestor headers ordered by block number and ending at this payload's parent.",
+                    "state":   ["0xf8..."],
+                    "codes":   ["0x60..."],
+                    "keys":    ["0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
+                    "headers": ["0xf9..."]
+                },
+                "chainConfig": {
+                    "chainId": 59144,
+                    "forkName": "Amsterdam"
+                },
+                "_comment_publicKeys": "Optional transaction public keys ordered by executionPayload.transactions index. They are distinct from executionWitness.keys. The Linea logical spec derives senders with execution-specs recover_sender(chainID, tx). publicKeys is not a witness override; any implementation optimization that consumes it must produce the same accepted/rejected transaction result and sender address as recover_sender.",
+                "publicKeys": []
+            },
+            "rollupExtension": {
+                "forcedTransactions": []
+            }
         },
         {
-            "blockRlp": "0xf90215a0...",
-            "forcedTransactions": [
-                {
-                    "_comment":           "Per-FTX metadata (§6.5). `ftxNumber`, `deadlineBlockNumber`, and `signedTxRlp` are the canonical fields. `fromAddress` is recovered from `signedTxRlp` inside the guest and is not witnessed separately. `acceptance` is one of the five `ForcedTransactionAcceptance` variants: INCLUDED, BAD_NONCE, BAD_BALANCE, FILTERED_ADDRESS_FROM, FILTERED_ADDRESS_TO. For Invalid sub-cases (BAD_NONCE / BAD_BALANCE) the guest reads the sender's account via the EVM state interface at this block's parent state root — no per-FTX state witness; the witness pool must include the MPT path (see `_comment_executionWitness`).",
-                    "ftxNumber":           17,
-                    "deadlineBlockNumber": 1000600,
-                    "signedTxRlp":         "0x02f86b...",
-                    "acceptance":          "INCLUDED"
-                }
-            ]
+            "statelessInputSsz": "0x...",
+            "_debugStatelessInput": {
+                "newPayloadRequest": {
+                    "executionPayload": {
+                        "parentHash":      "0x0111111111111111111111111111111111111111111111111111111111111111",
+                        "feeRecipient":    "0x0000000000000000000000000000000000000000",
+                        "stateRoot":       "0x5555555555555555555555555555555555555555555555555555555555555555",
+                        "receiptsRoot":    "0x6666666666666666666666666666666666666666666666666666666666666666",
+                        "logsBloom":       "0x0000...",
+                        "prevRandao":      "0x7777777777777777777777777777777777777777777777777777777777777777",
+                        "blockNumber":     1000502,
+                        "gasLimit":        30000000,
+                        "gasUsed":         11000000,
+                        "timestamp":       1763000112,
+                        "extraData":       "0x",
+                        "baseFeePerGas":   "0x01",
+                        "blockHash":       "0x0222222222222222222222222222222222222222222222222222222222222222",
+                        "transactions":    ["0x02f86b..."],
+                        "withdrawals":     [],
+                        "blobGasUsed":     0,
+                        "excessBlobGas":   0,
+                        "blockAccessList": "0x"
+                    },
+                    "versionedHashes": [],
+                    "parentBeaconBlockRoot": "0x8888888888888888888888888888888888888888888888888888888888888888",
+                    "executionRequests": {
+                        "deposits": [],
+                        "withdrawals": [],
+                        "consolidations": []
+                    }
+                },
+                "executionWitness": {
+                    "state":   ["0xf8..."],
+                    "codes":   ["0x60..."],
+                    "keys":    ["0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
+                    "headers": ["0xf9..."]
+                },
+                "chainConfig": {
+                    "chainId": 59144,
+                    "forkName": "Amsterdam"
+                },
+                "_comment_publicKeys": "Optional transaction public keys ordered by executionPayload.transactions index. They are distinct from executionWitness.keys. The Linea logical spec derives senders with execution-specs recover_sender(chainID, tx). publicKeys is not a witness override; any implementation optimization that consumes it must produce the same accepted/rejected transaction result and sender address as recover_sender.",
+                "publicKeys": []
+            },
+            "rollupExtension": {
+                "forcedTransactions": [
+                    {
+                        "_comment": "Per-FTX metadata (§6.5). `ftxNumber`, `deadlineBlockNumber`, and `signedTxRlp` are the canonical fields. `fromAddress` is recovered from `signedTxRlp` inside the guest and is not witnessed separately. `acceptance` is one of the five ForcedTransactionAcceptance variants: INCLUDED, BAD_NONCE, BAD_BALANCE, FILTERED_ADDRESS_FROM, FILTERED_ADDRESS_TO. For Invalid sub-cases (BAD_NONCE / BAD_BALANCE) the guest reads the sender's account via the EVM state interface at this payload's parent state root; the witness pool must include the MPT path.",
+                        "ftxNumber":           17,
+                        "deadlineBlockNumber": 1000600,
+                        "signedTxRlp":         "0x02f86b...",
+                        "acceptance":          "INCLUDED"
+                    }
+                ]
+            }
         },
         {
-            "blockRlp":           "0xf90215a0...",
-            "forcedTransactions": []
+            "statelessInputSsz": "0x...",
+            "_debugStatelessInput": {
+                "newPayloadRequest": {
+                    "executionPayload": {
+                        "parentHash":      "0x0222222222222222222222222222222222222222222222222222222222222222",
+                        "feeRecipient":    "0x0000000000000000000000000000000000000000",
+                        "stateRoot":       "0x9999999999999999999999999999999999999999999999999999999999999999",
+                        "receiptsRoot":    "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                        "logsBloom":       "0x0000...",
+                        "prevRandao":      "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "blockNumber":     1000503,
+                        "gasLimit":        30000000,
+                        "gasUsed":         10000000,
+                        "timestamp":       1763000123,
+                        "extraData":       "0x",
+                        "baseFeePerGas":   "0x01",
+                        "blockHash":       "0x0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "transactions":    [],
+                        "withdrawals":     [],
+                        "blobGasUsed":     0,
+                        "excessBlobGas":   0,
+                        "blockAccessList": "0x"
+                    },
+                    "versionedHashes": [],
+                    "parentBeaconBlockRoot": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                    "executionRequests": {
+                        "deposits": [],
+                        "withdrawals": [],
+                        "consolidations": []
+                    }
+                },
+                "executionWitness": {
+                    "state":   ["0xf8..."],
+                    "codes":   ["0x60..."],
+                    "keys":    [],
+                    "headers": ["0xf9..."]
+                },
+                "chainConfig": {
+                    "chainId": 59144,
+                    "forkName": "Amsterdam"
+                },
+                "_comment_publicKeys": "Optional transaction public keys ordered by executionPayload.transactions index. They are distinct from executionWitness.keys. The Linea logical spec derives senders with execution-specs recover_sender(chainID, tx). publicKeys is not a witness override; any implementation optimization that consumes it must produce the same accepted/rejected transaction result and sender address as recover_sender.",
+                "publicKeys": []
+            },
+            "rollupExtension": {
+                "forcedTransactions": []
+            }
         }
-    ],
-
-    "_comment_executionWitness": "Output of Besu's `debug_executionWitness`, one entry per block in canonical block-range order. Each entry contains `state` (state-trie nodes touched), `keys` (storage keys accessed), `codes` (accessed contract bytecode), and `headers` (recent block headers for the BLOCKHASH opcode). The first entry's `headers` must contain exactly one parent header whose block hash equals the first block's parentHash; that header anchors `parentBlockHash` and provides the starting state root. The `state` pool MUST additionally include MPT paths for: (a) the L2MessageService's `L1L2RollingHash` and `L1L2RollingHashMessageNumber` slots at both the parent and end state roots (read at proof-range boundaries via the EVM state interface, §2.1 / §4.1) — even when no block in the range writes them; (b) the sender account of any FTX whose declared outcome is Invalid, at the parent state root of the block where that FTX would have been included (§6.5).",
-    "executionWitness": [
-        {
-            "state":   ["..."],
-            "keys":    ["..."],
-            "codes":   ["..."],
-            "headers": ["..."]
-        },
-        { "state": ["..."], "keys": ["..."], "codes": ["..."], "headers": ["..."] },
-        { "state": ["..."], "keys": ["..."], "codes": ["..."], "headers": ["..."] }
     ]
 }

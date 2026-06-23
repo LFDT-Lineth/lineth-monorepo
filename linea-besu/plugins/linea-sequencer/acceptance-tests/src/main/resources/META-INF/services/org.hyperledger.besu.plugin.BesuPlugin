@@ -1,1 +1,2 @@
 linea.plugin.acc.test.RecordingTransactionSelectorPlugin
+linea.plugin.acc.test.FakeChainSecurityPolicyTxValidatorPlugin

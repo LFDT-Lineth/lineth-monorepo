@@ -31,7 +31,7 @@ concurrency:
 
 jobs:
   release-branch-check:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     steps:
       - name: Enforce main branch
         if: ${{ github.ref != 'refs/heads/main' }}
@@ -42,7 +42,7 @@ jobs:
   create-temp-branch-and-dispatch-release:
     needs: [release-branch-check]
     if: ${{ inputs.dry_run_release_on_branch }}
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     permissions:
       actions: write
     outputs:
@@ -136,7 +136,7 @@ jobs:
           exit 1
 
   manual-run-release-on-main:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     needs: [create-temp-branch-and-dispatch-release]
     if: ${{ always() && !cancelled() && inputs.dry_run_release_on_branch }}
     environment: ${{ inputs.dry_run_release_on_branch && 'run-release-on-main' || '' }}
@@ -155,7 +155,7 @@ jobs:
     # branch / tags / releases / docker tags. The only skip case is when
     # create-temp-branch-and-dispatch-release didn't succeed (nothing to clean).
     if: ${{ always() && inputs.dry_run_release_on_branch && needs.create-temp-branch-and-dispatch-release.outputs.branch != '' }}
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     # Generous timeout — the milestone release workflow can run for a while
     # (build + e2e + per-component releases). Bump if you hit it in practice.
     timeout-minutes: 240

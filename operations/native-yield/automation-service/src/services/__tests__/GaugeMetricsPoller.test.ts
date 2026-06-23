@@ -1,4 +1,4 @@
-import { ONE_GWEI } from "@consensys/linea-shared-utils";
+import { ONE_GWEI } from "@lfdt-lineth/shared-utils";
 
 import { createLoggerMock } from "../../__tests__/helpers/index.js";
 import { DashboardContractClient } from "../../clients/contracts/DashboardContractClient.js";
@@ -16,7 +16,7 @@ import type {
   ValidatorBalance,
 } from "../../core/entities/Validator.js";
 import type { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
-import type { ILogger, IBeaconNodeAPIClient } from "@consensys/linea-shared-utils";
+import type { ILogger, IBeaconNodeAPIClient } from "@lfdt-lineth/shared-utils";
 import type { TransactionReceipt, Address } from "viem";
 
 jest.mock("../../clients/contracts/DashboardContractClient.js", () => ({

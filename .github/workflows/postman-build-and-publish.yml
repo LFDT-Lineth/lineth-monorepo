@@ -38,7 +38,7 @@ concurrency:
 
 jobs:
   build-and-publish:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     name: Postman build
     env:
       IMAGE_TAG: ${{ inputs.image_tag }}

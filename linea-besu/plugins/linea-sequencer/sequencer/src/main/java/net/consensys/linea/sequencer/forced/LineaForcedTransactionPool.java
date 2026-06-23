@@ -13,6 +13,7 @@ import static linea.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDR
 import static net.consensys.linea.sequencer.forced.ForcedTransactionInclusionResult.BadBalance;
 import static net.consensys.linea.sequencer.forced.ForcedTransactionInclusionResult.BadNonce;
 import static net.consensys.linea.sequencer.forced.ForcedTransactionInclusionResult.BadPrecompile;
+import static net.consensys.linea.sequencer.forced.ForcedTransactionInclusionResult.ChainSecurityRuleViolation;
 import static net.consensys.linea.sequencer.forced.ForcedTransactionInclusionResult.FilteredAddressFrom;
 import static net.consensys.linea.sequencer.forced.ForcedTransactionInclusionResult.FilteredAddressTo;
 import static net.consensys.linea.sequencer.forced.ForcedTransactionInclusionResult.Included;
@@ -34,6 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+import linea.txselection.LineaTransactionSelectionResult;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.metrics.LineaMetricCategory;
 import org.hyperledger.besu.datatypes.Hash;
@@ -46,6 +48,8 @@ import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.metrics.LabelledSuppliedMetric;
 import org.hyperledger.besu.plugin.services.txselection.BlockTransactionSelectionService;
+import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
+import org.slf4j.event.Level;
 
 /**
  * Implementation of the forced transaction pool. Maintains a queue of pending forced transactions
@@ -60,11 +64,21 @@ public class LineaForcedTransactionPool
     implements ForcedTransactionPoolService, BesuEvents.BlockAddedListener {
 
   public static final int DEFAULT_STATUS_CACHE_SIZE = 10_000;
+  // 2H of 1s block time = 7_200s (2 hours)  before ftx deadline
+  public static final int DEFAULT_CHAIN_SECURITY_VIOLATION_BEFORE_DEADLINE_INCLUSION_ALLOWANCE =
+      7_200;
 
   private final Deque<ForcedTransaction> pendingQueue = new ConcurrentLinkedDeque<>();
   private final Cache<Long, ForcedTransactionStatus> statusCache;
   private final Map<ForcedTransactionInclusionResult, AtomicLong> inclusionResultCounters =
       new EnumMap<>(ForcedTransactionInclusionResult.class);
+
+  /**
+   * Number of blocks before the ftx.deadline that the FTX will be put on hold when it violates
+   * security policy rejected with a chain security violation status
+   */
+  private long chainSecurityViolationBeforeDeadlineInclusionAllowance =
+      DEFAULT_CHAIN_SECURITY_VIOLATION_BEFORE_DEADLINE_INCLUSION_ALLOWANCE;
 
   /**
    * Tracks tentative rejections during block building, separated by block number. Only rejections
@@ -83,16 +97,19 @@ public class LineaForcedTransactionPool
   private record TentativeRejection(
       ForcedTransaction transaction, ForcedTransactionInclusionResult inclusionResult) {}
 
-  public LineaForcedTransactionPool() {
-    this(DEFAULT_STATUS_CACHE_SIZE, null, null);
-  }
-
-  public LineaForcedTransactionPool(final int statusCacheSize, final MetricsSystem metricsSystem) {
-    this(statusCacheSize, metricsSystem, null);
-  }
-
   public LineaForcedTransactionPool(
-      final int statusCacheSize, final MetricsSystem metricsSystem, final BesuEvents besuEvents) {
+      final int statusCacheSize,
+      final long chainSecurityViolationHoldOffBeforeDeadline,
+      final MetricsSystem metricsSystem,
+      final BesuEvents besuEvents) {
+    if (chainSecurityViolationHoldOffBeforeDeadline < 0) {
+      throw new IllegalArgumentException(
+          String.format(
+              "chainSecurityViolationHoldOffBeforeDeadline=%s must be non-negative!",
+              chainSecurityViolationHoldOffBeforeDeadline));
+    }
+    this.chainSecurityViolationBeforeDeadlineInclusionAllowance =
+        chainSecurityViolationHoldOffBeforeDeadline;
     this.statusCache = Caffeine.newBuilder().maximumSize(statusCacheSize).build();
 
     for (ForcedTransactionInclusionResult result : ForcedTransactionInclusionResult.values()) {
@@ -226,7 +243,9 @@ public class LineaForcedTransactionPool
         } else {
           // Retry - keep in queue, will try again next block (e.g. unknown rejection reason;
           // status is not recorded so getInclusionStatus returns absent)
-          log.atInfo()
+          final Level logLevel =
+              inclusionResult == ChainSecurityRuleViolation ? Level.WARN : Level.INFO;
+          log.atLevel(logLevel)
               .setMessage(
                   "action=forced_tx_retry_scheduled forcedTxNumber={} txHash={} blockNumber={} index={} inclusionResult={}")
               .addArgument(ftx::forcedTransactionNumber)
@@ -248,6 +267,11 @@ public class LineaForcedTransactionPool
         .addArgument(pendingQueue::size)
         .addArgument(blockRejections::size)
         .log();
+  }
+
+  private boolean isCloseToDeadline(ForcedTransaction ftx, long blockNumber) {
+    return blockNumber + chainSecurityViolationBeforeDeadlineInclusionAllowance
+        >= ftx.deadlineBlockNumber();
   }
 
   @Override
@@ -314,6 +338,20 @@ public class LineaForcedTransactionPool
     return pendingQueue.size();
   }
 
+  @Override
+  public boolean shallForceIncludeTransaction(final TransactionEvaluationContext txContext) {
+    if (pendingQueue.isEmpty()) {
+      return false;
+    }
+
+    var txHash = txContext.getPendingTransaction().getTransaction().getHash().getBytes();
+    return pendingQueue.stream()
+        .filter(ftx -> ftx.txHash().getBytes().equals(txHash))
+        .findFirst()
+        .map(ftx -> isCloseToDeadline(ftx, txContext.getPendingBlockHeader().getNumber()))
+        .orElse(false);
+  }
+
   private void recordStatus(
       final ForcedTransaction ftx,
       final long blockNumber,
@@ -351,11 +389,15 @@ public class LineaForcedTransactionPool
    */
   private ForcedTransactionInclusionResult mapToInclusionResult(
       final TransactionSelectionResult result) {
+    System.out.println("SELECTION_RESULT: " + result.toString());
     if (result.equals(TX_FILTERED_ADDRESS_FROM)) {
       return FilteredAddressFrom;
     }
     if (result.equals(TX_FILTERED_ADDRESS_TO)) {
       return FilteredAddressTo;
+    }
+    if (result.equals(LineaTransactionSelectionResult.CHAIN_SECURITY_RULE_VIOLATED)) {
+      return ChainSecurityRuleViolation;
     }
 
     if (result.maybeInvalidReason().isPresent()) {

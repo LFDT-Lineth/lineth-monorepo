@@ -358,30 +358,32 @@ func (ctx *linearHashCtx) IsNotEndOfHashVar() *symbolic.Expression {
 	return symbolic.NewConstant(1).Sub(ctx.IsEndOfHashVar())
 }
 
-// PrepareToHashWitness pads a segment to the full chunked size and reshapes it
-// into blockSize columns for hashing.
+// PrepareToHashWitness reshapes a segment into the 8-lane format expected by CheckLinearHash.
+// Writes exactly colChunks = ceil(len(segment)/BlockSize) entries per lane starting at position start.
+// Full chunks are laid out naturally: lane j, chunk c gets segment[c*BlockSize+j].
+// The last partial chunk (if any) is left-padded with zeros, matching MDHasher's SumElement behaviour.
+// The caller is responsible for allocating th with at least colChunks entries per lane beyond start.
 func PrepareToHashWitness(th [BlockSize][]field.Element, segment []field.Element, start int) [BlockSize][]field.Element {
 	colSize := len(segment)
-	for j := 0; j < BlockSize; j++ {
-		// Allocate segments to TOHASH columns
-		completeChunks := colSize / BlockSize
-		for k := 0; k < completeChunks; k++ {
-			th[j][k+start] = segment[k*BlockSize+j]
-		}
-
-		lastChunkElements := colSize % BlockSize
-		lastChunkPadding := 0
-		if lastChunkElements > 0 {
-			lastChunkPadding = BlockSize - lastChunkElements
-
-			k := completeChunks
-			if j < lastChunkPadding {
-				// Left padding
-				th[j][k+start] = field.Zero()
-			} else {
-				// Actual data
-				actualIdx := k*BlockSize + (j - lastChunkPadding)
-				th[j][k+start] = segment[actualIdx]
+	colChunks := (colSize + BlockSize - 1) / BlockSize
+	for c := 0; c < colChunks; c++ {
+		chunkStart := c * BlockSize
+		chunkEnd := chunkStart + BlockSize
+		if chunkEnd <= colSize {
+			// Full chunk: natural layout.
+			for j := 0; j < BlockSize; j++ {
+				th[j][c+start] = segment[chunkStart+j]
+			}
+		} else {
+			// Partial last chunk: left-pad with zeros to match MDHasher behaviour.
+			remaining := colSize - chunkStart
+			pad := BlockSize - remaining
+			for j := 0; j < BlockSize; j++ {
+				if j < pad {
+					th[j][c+start] = field.Zero()
+				} else {
+					th[j][c+start] = segment[chunkStart+(j-pad)]
+				}
 			}
 		}
 	}

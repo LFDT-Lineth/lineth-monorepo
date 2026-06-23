@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	field "github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
+	field "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // Expression is the interface satisfied by all symbolic arithmetic expressions
@@ -456,10 +456,14 @@ func (c *Constant) IsSized() bool {
 }
 
 // Size implements [Expression]. Delegates to the bound module. Panics if
-// scalar; check [Constant.IsMultiValued] first.
+// scalar (check [Constant.IsMultiValued] first) or if the bound module is
+// dynamic or unsized (check [Constant.IsSized] first).
 func (c *Constant) Size() int {
 	if c.module == nil {
 		panic("wiop: Size() cannot be called on a scalar Constant; check IsMultiValued() first")
+	}
+	if !c.module.IsSized() {
+		panic("wiop: Size() called on a vector Constant with an unsized or dynamic module; check IsSized() first")
 	}
 	return c.module.Size()
 }
