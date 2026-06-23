@@ -112,6 +112,10 @@ if [ "$WIZARD" != "true" ] && [ -n "$WIZARD_OPTION_REQUIRES" ]; then
 fi
 
 if [ "$WIZARD" = "true" ]; then
+  if [ -n "${LINETH_WIZARD_STACK_OVERRIDE:-}" ]; then
+    STACK="$LINETH_WIZARD_STACK_OVERRIDE"
+  fi
+
   # shellcheck disable=SC1091
   . "$SCRIPT_DIR/lib/wizard.sh"
   LINETH_WIZARD_FLAG_L1_MODE="$WIZARD_FLAG_L1_MODE" \
@@ -124,6 +128,10 @@ if [ "$WIZARD" = "true" ]; then
 
   if [ "$WIZARD_THEN_START" != "true" ]; then
     exit 0
+  fi
+
+  if [ ! -f "$STACK/.env" ]; then
+    lineth_die "wizard did not write .env; nothing to start. Re-run ./scripts/start.sh --wizard"
   fi
 
   if [ "$PULL" = "false" ] && [ "$LINETH_VERBOSE" = "true" ]; then
@@ -154,7 +162,7 @@ show_compose_failure() {
 }
 
 run_ts_preflight() {
-  if [ ! -x "$ROOT/node_modules/.bin/ts-node" ]; then
+  if ! lineth_ts_node_available "$ROOT"; then
     lineth_warn "host L1 check skipped; run pnpm install for earlier balance/gas checks"
     lineth_info "account generation still runs the same checks before runtime containers are created"
     return 0
@@ -162,12 +170,8 @@ run_ts_preflight() {
 
   tmp="$(mktemp)"
   if (
-    cd "$ROOT/contracts"
-    export NODE_PATH="$ROOT/node_modules:$ROOT/contracts/node_modules${NODE_PATH:+:$NODE_PATH}"
-    LINETH_STACK_DIR="$STACK" \
-    TS_NODE_TRANSPILE_ONLY=1 \
-    TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
-      pnpm -s exec ts-node "$STACK/scripts/internal/quickstart-preflight.ts"
+    export LINETH_STACK_DIR="$STACK"
+    lineth_run_ts_node "$ROOT" "$STACK/scripts/internal/quickstart-preflight.ts"
   ) > "$tmp" 2>&1; then
     status=0
   else

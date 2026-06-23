@@ -51,6 +51,8 @@ class FundingRequiredError extends Error {
 }
 
 async function runRpcOnlyCheck(env: Record<string, string | undefined>) {
+  // The wizard currently calls this only for Sepolia, but keeping local support
+  // here makes the RPC-only path reusable without duplicating chain checks.
   const mode = envValue("L1_MODE", env, "sepolia");
   if (mode !== "sepolia" && mode !== "local") {
     throw new Error(`L1_MODE must be one of sepolia, local (got '${mode}')`);

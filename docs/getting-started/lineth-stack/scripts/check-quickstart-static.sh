@@ -552,7 +552,7 @@ check_typescript_quickstart_helpers() {
   fi
 
   if awk '
-    /run_ts_preflight/ && $0 !~ /^run_ts_preflight\(\)/ { preflight = NR }
+    /^run_ts_preflight$/ { preflight = NR }
     /Pull Docker images/ { pull = NR }
     /Start services/ { up = NR }
     END { exit !(preflight && pull && up && preflight < pull && preflight < up) }
@@ -1505,18 +1505,22 @@ check_wizard_cli() {
 
   if [ -f "$wizard_lib" ] \
     && grep -q 'lineth_wizard_main' "$wizard_lib" \
-    && grep -q 'set_env_key()' "$wizard_lib" \
+    && grep -q 'lineth_wizard_set_env_key()' "$wizard_lib" \
     && grep -q 'LINETH_WIZARD_MANAGED_KEYS="L1_MODE L1_RPC_URL PROVER_DEV_OVERRIDE PROVER_GOMEMLIMIT"' "$wizard_lib"; then
     pass "wizard shell library owns the managed .env key flow"
   else
     fail "scripts/lib/wizard.sh must define the wizard managed-key flow"
   fi
 
-  set_env_body="$(awk '/^set_env_key\(\)/,/^lineth_wizard_build_env_file\(\)/ { print }' "$wizard_lib")"
+  set_env_body="$(awk '
+    /^lineth_wizard_set_env_key\(\)/ { in_function = 1 }
+    in_function { print }
+    in_function && /^}/ { exit }
+  ' "$wizard_lib")"
   if printf '%s\n' "$set_env_body" | grep -q 'sed'; then
-    fail "set_env_key must not use sed for value replacement"
+    fail "lineth_wizard_set_env_key must not use sed for value replacement"
   else
-    pass "set_env_key avoids sed-based value replacement"
+    pass "lineth_wizard_set_env_key avoids sed-based value replacement"
   fi
 
   if grep -q 'lib/wizard.sh' "$start_script" \
@@ -1549,21 +1553,23 @@ check_wizard_cli() {
     fail "wizard Sepolia validation must use quickstart-preflight RPC-only mode"
   fi
 
-  if [ -f "$stack_gitignore" ] && grep -q '^\.env\.bak\*$' "$stack_gitignore" \
-    && git -C "$ROOT" check-ignore -q "$STACK_REL/.env.bak.test"; then
-    pass "lineth-stack .gitignore ignores .env.bak*"
+  if [ -f "$stack_gitignore" ] && grep -q '^\.env\.\*\.tmp$' "$stack_gitignore" \
+    && git -C "$ROOT" check-ignore -q "$STACK_REL/.env.123.456.tmp"; then
+    pass "lineth-stack .gitignore ignores wizard .env.*.tmp candidates"
   else
-    fail "docs/getting-started/lineth-stack/.gitignore must ignore .env.bak*"
+    fail "docs/getting-started/lineth-stack/.gitignore must ignore .env.*.tmp"
   fi
 
   if [ -f "$wizard_tests" ] \
-    && grep -q 'set_env_key preserves comments and URL-like values literally' "$wizard_tests" \
+    && grep -q 'lineth_wizard_set_env_key preserves comments and URL-like values literally' "$wizard_tests" \
     && grep -q 'assert_golden local-dev' "$wizard_tests" \
     && grep -q 'WIZARD_L1_MODE env var configures non-interactive mode' "$wizard_tests" \
     && grep -q 'L1 prompt uses numbered choice header' "$wizard_tests" \
     && grep -q 'backup collision keeps both backups' "$wizard_tests" \
     && grep -q 'mode-switch guard points at reset' "$wizard_tests" \
     && grep -q 'busy-port simulation writes .env before failing' "$wizard_tests" \
+    && grep -q 'RPC preflight failure leaves no .env' "$wizard_tests" \
+    && grep -q 'LINETH_WIZARD_STACK_OVERRIDE' "$wizard_tests" \
     && [ -f "$STACK/scripts/tests/wizard/golden/local-dev.env" ] \
     && [ -f "$STACK/scripts/tests/wizard/golden/local-partial.env" ] \
     && [ -f "$STACK/scripts/tests/wizard/golden/sepolia-dev.env" ] \

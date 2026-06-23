@@ -137,6 +137,9 @@ For CI or scripted demos, use non-interactive flags:
 The matching environment variables are `WIZARD_L1_MODE`, `WIZARD_L1_RPC_URL`,
 and `WIZARD_PROVER`. Precedence is: command flag, wizard environment variable,
 existing `.env`, then `.env.example`.
+`--non-interactive` requires an explicit L1 mode (`--l1-mode` or
+`WIZARD_L1_MODE`); unlike the interactive prompt, it does not assume local and
+will fail fast if a Sepolia RPC URL is missing.
 
 Manual advanced `.env` values:
 

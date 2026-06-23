@@ -2,26 +2,21 @@
 set -eu
 
 SCRIPT_DIR="$(CDPATH= cd "$(dirname "$0")" && pwd -P)"
-STACK="$(CDPATH= cd "$SCRIPT_DIR/../../.." && pwd -P)"
+REAL_STACK="$(CDPATH= cd "$SCRIPT_DIR/../../.." && pwd -P)"
+TMP_DIR="$(mktemp -d)"
+STACK="$TMP_DIR/stack"
 ENV_FILE="$STACK/.env"
 BACKUP_DIR="$STACK/artifacts/env-backups"
-TMP_DIR="$(mktemp -d)"
+START_SH="$REAL_STACK/scripts/start.sh"
 FAILURES=0
-HAD_ENV=false
 
-if [ -f "$ENV_FILE" ]; then
-  HAD_ENV=true
-  cp "$ENV_FILE" "$TMP_DIR/original.env"
-fi
+mkdir -p "$BACKUP_DIR"
+cp "$REAL_STACK/.env.example" "$STACK/.env.example"
+export LINETH_WIZARD_STACK_OVERRIDE="$STACK"
 
 cleanup() {
-  if [ "$HAD_ENV" = "true" ]; then
-    cp "$TMP_DIR/original.env" "$ENV_FILE"
-  else
-    rm -f "$ENV_FILE"
-  fi
-  rm -f "$BACKUP_DIR/.env.test-$$" "$BACKUP_DIR/.env.test-$$.1" "$BACKUP_DIR/.env.noop-$$"
-  rm -f "$BACKUP_DIR/.env.guard-$$"
+  rm -f "$BACKUP_DIR"/.env.test-"$$"* "$BACKUP_DIR"/.env.noop-"$$"* \
+    "$BACKUP_DIR"/.env.guard-"$$"* "$BACKUP_DIR"/.env.devmem-"$$"*
   rm -rf "$TMP_DIR"
 }
 trap cleanup EXIT INT TERM
@@ -61,7 +56,7 @@ run_wizard() {
   env LINETH_WIZARD_STATE_EXISTS=false \
     LINETH_WIZARD_SKIP_PORT_CHECK=true \
     LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true \
-    "$STACK/scripts/start.sh" "$@"
+    "$START_SH" "$@"
 }
 
 write_managed_snapshot() {
@@ -91,14 +86,14 @@ reset_env() {
   unset WIZARD_L1_MODE WIZARD_L1_RPC_URL WIZARD_PROVER
 }
 
-if sh -n "$STACK/scripts/start.sh" "$STACK/scripts/lib/wizard.sh"; then
+if sh -n "$REAL_STACK/scripts/start.sh" "$REAL_STACK/scripts/lib/wizard.sh"; then
   pass "start.sh and wizard.sh have valid shell syntax"
 else
   fail "start.sh and wizard.sh have valid shell syntax"
 fi
 
 if command -v shellcheck >/dev/null 2>&1; then
-  if shellcheck "$STACK/scripts/start.sh" "$STACK/scripts/lib/wizard.sh"; then
+  if shellcheck "$REAL_STACK/scripts/start.sh" "$REAL_STACK/scripts/lib/wizard.sh"; then
     pass "start.sh and wizard.sh pass shellcheck"
   else
     fail "start.sh and wizard.sh pass shellcheck"
@@ -109,16 +104,16 @@ fi
 
 (
   # shellcheck disable=SC1091
-  . "$STACK/scripts/lib/wizard.sh"
+  . "$REAL_STACK/scripts/lib/wizard.sh"
   test_env="$TMP_DIR/set-env.env"
   expected="$TMP_DIR/set-env.expected"
   printf '# preserved comment\nA=1\nL1_RPC_URL=old\nTRAIL=ok\n' > "$test_env"
-  set_env_key L1_RPC_URL 'https://example.test/a/b?x=1&y=2#frag ' "$test_env"
-  set_env_key NEW_KEY 'a/b&c=d#e' "$test_env"
+  lineth_wizard_set_env_key L1_RPC_URL 'https://example.test/a/b?x=1&y=2#frag ' "$test_env"
+  lineth_wizard_set_env_key NEW_KEY 'a/b&c=d#e' "$test_env"
   printf '# preserved comment\nA=1\nL1_RPC_URL=https://example.test/a/b?x=1&y=2#frag \nTRAIL=ok\nNEW_KEY=a/b&c=d#e\n' > "$expected"
   cmp -s "$test_env" "$expected"
-) && pass "set_env_key preserves comments and URL-like values literally" \
-  || fail "set_env_key preserves comments and URL-like values literally"
+) && pass "lineth_wizard_set_env_key preserves comments and URL-like values literally" \
+  || fail "lineth_wizard_set_env_key preserves comments and URL-like values literally"
 
 reset_env
 if run_wizard --wizard --non-interactive --l1-mode local --prover dev >/tmp/lineth-wizard-local-dev.$$ 2>&1; then
@@ -221,7 +216,7 @@ L1_RPC_URL=
 PROVER_DEV_OVERRIDE=false
 PROVER_GOMEMLIMIT=24GiB
 EOF
-if run_wizard --wizard --non-interactive --l1-mode local --prover dev >/tmp/lineth-wizard-dev-gomemlimit.$$ 2>&1; then
+if LINETH_WIZARD_BACKUP_TIMESTAMP="devmem-$$" run_wizard --wizard --non-interactive --l1-mode local --prover dev >/tmp/lineth-wizard-dev-gomemlimit.$$ 2>&1; then
   assert_file_contains "$ENV_FILE" 'PROVER_DEV_OVERRIDE=true' "switching to dev writes dev override"
   assert_file_contains "$ENV_FILE" 'PROVER_GOMEMLIMIT=24GiB' "dev mode preserves existing PROVER_GOMEMLIMIT by design"
 else
@@ -237,7 +232,7 @@ if env LINETH_WIZARD_STATE_EXISTS=true \
   LINETH_WIZARD_SKIP_PORT_CHECK=true \
   LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true \
   LINETH_WIZARD_BACKUP_TIMESTAMP="guard-$$" \
-  "$STACK/scripts/start.sh" --wizard --non-interactive --l1-mode local --prover dev >/tmp/lineth-wizard-guard.$$ 2>&1; then
+  "$START_SH" --wizard --non-interactive --l1-mode local --prover dev >/tmp/lineth-wizard-guard.$$ 2>&1; then
   fail "mode switch with existing state fails"
 else
   assert_file_contains /tmp/lineth-wizard-guard.$$ './scripts/reset.sh' "mode-switch guard points at reset"
@@ -249,7 +244,7 @@ reset_env
 if env LINETH_WIZARD_STATE_EXISTS=false \
   LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true \
   LINETH_WIZARD_PORT_CHECK_STATUS=1 \
-  "$STACK/scripts/start.sh" --wizard --non-interactive --l1-mode local --prover dev >/tmp/lineth-wizard-ports.$$ 2>&1; then
+  "$START_SH" --wizard --non-interactive --l1-mode local --prover dev >/tmp/lineth-wizard-ports.$$ 2>&1; then
   fail "busy-port simulation exits non-zero"
 else
   [ -f "$ENV_FILE" ] && pass "busy-port simulation writes .env before failing" || fail "busy-port simulation writes .env before failing"
@@ -257,7 +252,19 @@ else
 fi
 
 reset_env
-if printf '' | env LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true "$STACK/scripts/start.sh" --wizard >/tmp/lineth-wizard-eof.$$ 2>&1; then
+if env LINETH_WIZARD_STATE_EXISTS=false \
+  LINETH_WIZARD_SKIP_PORT_CHECK=true \
+  LINETH_WIZARD_RPC_CHECK_STATUS=1 \
+  "$START_SH" --wizard --non-interactive \
+    --l1-mode sepolia --l1-rpc-url 'https://rpc.example.test/key' --prover dev \
+    >/tmp/lineth-wizard-rpc-fail.$$ 2>&1; then
+  fail "sepolia RPC preflight failure exits non-zero"
+else
+  [ ! -f "$ENV_FILE" ] && pass "RPC preflight failure leaves no .env" || fail "RPC preflight failure leaves no .env"
+fi
+
+reset_env
+if printf '' | env LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true "$START_SH" --wizard >/tmp/lineth-wizard-eof.$$ 2>&1; then
   fail "closed stdin exits non-zero"
 else
   [ ! -f "$ENV_FILE" ] && pass "closed stdin leaves no .env" || fail "closed stdin leaves no .env"
@@ -265,7 +272,7 @@ fi
 
 reset_env
 if printf '1\n1\n\n' \
-  | env LINETH_WIZARD_STATE_EXISTS=false LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true LINETH_WIZARD_SKIP_PORT_CHECK=true "$STACK/scripts/start.sh" --wizard >/tmp/lineth-wizard-numbered-local.$$ 2>&1; then
+  | env LINETH_WIZARD_STATE_EXISTS=false LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true LINETH_WIZARD_SKIP_PORT_CHECK=true "$START_SH" --wizard >/tmp/lineth-wizard-numbered-local.$$ 2>&1; then
   assert_file_contains /tmp/lineth-wizard-numbered-local.$$ 'Choose L1 mode [1]:' "L1 prompt uses numbered choice header"
   assert_file_contains /tmp/lineth-wizard-numbered-local.$$ '1. Local L1' "L1 prompt explains local option"
   assert_file_contains /tmp/lineth-wizard-numbered-local.$$ '2. Sepolia' "L1 prompt explains Sepolia option"
@@ -279,7 +286,7 @@ fi
 
 reset_env
 if printf '2\nhttps://rpc.example.test\n2\n\n' \
-  | env LINETH_WIZARD_STATE_EXISTS=false LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true LINETH_WIZARD_SKIP_PORT_CHECK=true "$STACK/scripts/start.sh" --wizard >/tmp/lineth-wizard-numbered-sepolia.$$ 2>&1; then
+  | env LINETH_WIZARD_STATE_EXISTS=false LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true LINETH_WIZARD_SKIP_PORT_CHECK=true "$START_SH" --wizard >/tmp/lineth-wizard-numbered-sepolia.$$ 2>&1; then
   assert_file_contains "$ENV_FILE" 'L1_MODE=sepolia' "numbered L1 choice 2 maps to sepolia"
   assert_file_contains "$ENV_FILE" 'L1_RPC_URL=https://rpc.example.test' "numbered sepolia flow captures RPC URL"
   assert_file_contains "$ENV_FILE" 'PROVER_DEV_OVERRIDE=false' "numbered prover choice 2 maps to partial"
@@ -290,7 +297,7 @@ fi
 
 reset_env
 if printf '\n\n\n' \
-  | env LINETH_WIZARD_STATE_EXISTS=false LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true LINETH_WIZARD_SKIP_PORT_CHECK=true "$STACK/scripts/start.sh" --wizard >/tmp/lineth-wizard-numbered-defaults.$$ 2>&1; then
+  | env LINETH_WIZARD_STATE_EXISTS=false LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true LINETH_WIZARD_SKIP_PORT_CHECK=true "$START_SH" --wizard >/tmp/lineth-wizard-numbered-defaults.$$ 2>&1; then
   assert_file_contains "$ENV_FILE" 'L1_MODE=local' "empty L1 answer defaults to local"
   assert_file_contains "$ENV_FILE" 'PROVER_DEV_OVERRIDE=true' "empty prover answer defaults to dev"
 else
@@ -299,7 +306,7 @@ fi
 
 reset_env
 if printf 'sepolia\nhttps://rpc.example.test\npartial\n\n' \
-  | env LINETH_WIZARD_STATE_EXISTS=false LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true LINETH_WIZARD_SKIP_PORT_CHECK=true "$STACK/scripts/start.sh" --wizard >/tmp/lineth-wizard-aliases.$$ 2>&1; then
+  | env LINETH_WIZARD_STATE_EXISTS=false LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true LINETH_WIZARD_SKIP_PORT_CHECK=true "$START_SH" --wizard >/tmp/lineth-wizard-aliases.$$ 2>&1; then
   assert_file_contains "$ENV_FILE" 'L1_MODE=sepolia' "text alias sepolia still works"
   assert_file_contains "$ENV_FILE" 'PROVER_DEV_OVERRIDE=false' "text alias partial still works"
 else
@@ -308,7 +315,7 @@ fi
 
 reset_env
 if printf 'x\ny\nz\n' \
-  | env LINETH_WIZARD_STATE_EXISTS=false LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true "$STACK/scripts/start.sh" --wizard >/tmp/lineth-wizard-numbered-invalid.$$ 2>&1; then
+  | env LINETH_WIZARD_STATE_EXISTS=false LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true "$START_SH" --wizard >/tmp/lineth-wizard-numbered-invalid.$$ 2>&1; then
   fail "three invalid numbered L1 answers fail"
 else
   [ ! -f "$ENV_FILE" ] && pass "three invalid numbered L1 answers leave no .env" || fail "three invalid numbered L1 answers leave no .env"
@@ -321,7 +328,7 @@ L1_RPC_URL=
 PROVER_DEV_OVERRIDE=true
 EOF
 if printf 'sepolia\nhttps://rpc.example.test\npartial\n\n' \
-  | env LINETH_WIZARD_STATE_EXISTS=false LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true "$STACK/scripts/start.sh" --wizard >/tmp/lineth-wizard-confirm.$$ 2>&1; then
+  | env LINETH_WIZARD_STATE_EXISTS=false LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true "$START_SH" --wizard >/tmp/lineth-wizard-confirm.$$ 2>&1; then
   assert_file_contains /tmp/lineth-wizard-confirm.$$ 'no changes written' "existing .env default confirmation is No"
   assert_file_contains "$ENV_FILE" 'L1_MODE=local' "default-No confirmation leaves .env unchanged"
   assert_file_not_contains "$ENV_FILE" 'PROVER_DEV_OVERRIDE=false' "default-No confirmation does not apply changes"
@@ -329,13 +336,13 @@ else
   fail "existing .env default-No confirmation run exits cleanly"
 fi
 
-if "$STACK/scripts/start.sh" --then-start >/tmp/lineth-wizard-then-start.$$ 2>&1; then
+if "$START_SH" --then-start >/tmp/lineth-wizard-then-start.$$ 2>&1; then
   fail "--then-start without wizard fails"
 else
   assert_file_contains /tmp/lineth-wizard-then-start.$$ '--then-start requires --wizard' "--then-start guard message"
 fi
 
-if "$STACK/scripts/start.sh" --l1-mode local >/tmp/lineth-wizard-flag-without-wizard.$$ 2>&1; then
+if "$START_SH" --l1-mode local >/tmp/lineth-wizard-flag-without-wizard.$$ 2>&1; then
   fail "wizard-only flags without --wizard fail"
 else
   assert_file_contains /tmp/lineth-wizard-flag-without-wizard.$$ '--l1-mode requires --wizard' "wizard-only flag guard message"
@@ -345,7 +352,7 @@ rm -f /tmp/lineth-wizard-local-dev.$$ /tmp/lineth-wizard-local-partial.$$ /tmp/l
 rm -f /tmp/lineth-wizard-sepolia-partial.$$ /tmp/lineth-wizard-missing-rpc.$$
 rm -f /tmp/lineth-wizard-precedence.$$ /tmp/lineth-wizard-env-only.$$ /tmp/lineth-wizard-backup.$$
 rm -f /tmp/lineth-wizard-noop.$$ /tmp/lineth-wizard-backup-collision.$$ /tmp/lineth-wizard-dev-gomemlimit.$$
-rm -f /tmp/lineth-wizard-guard.$$ /tmp/lineth-wizard-ports.$$ /tmp/lineth-wizard-eof.$$
+rm -f /tmp/lineth-wizard-guard.$$ /tmp/lineth-wizard-ports.$$ /tmp/lineth-wizard-rpc-fail.$$ /tmp/lineth-wizard-eof.$$
 rm -f /tmp/lineth-wizard-numbered-local.$$ /tmp/lineth-wizard-numbered-sepolia.$$
 rm -f /tmp/lineth-wizard-numbered-defaults.$$ /tmp/lineth-wizard-aliases.$$
 rm -f /tmp/lineth-wizard-numbered-invalid.$$

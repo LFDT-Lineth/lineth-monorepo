@@ -330,12 +330,14 @@ lineth_wizard_collect_interactive() {
   fi
 }
 
-set_env_key() {
+lineth_wizard_set_env_key() {
   wizard_set_key="$1"
   wizard_set_value="$2"
   wizard_set_file="$3"
   wizard_set_tmp="${wizard_set_file}.$$.$(date '+%Y%m%d%H%M%S').tmp"
 
+  # Values go through awk -v, which interprets backslash escapes; the
+  # managed values (URLs, true/false, sizes) never contain backslashes.
   awk -v key="$wizard_set_key" -v value="$wizard_set_value" '
     BEGIN { replaced = 0; prefix = key "=" }
     index($0, prefix) == 1 {
@@ -363,16 +365,16 @@ lineth_wizard_build_env_file() {
 
   cp "$wizard_build_base" "$wizard_build_target"
 
-  set_env_key L1_MODE "$WIZARD_L1_MODE_RESOLVED" "$wizard_build_target"
+  lineth_wizard_set_env_key L1_MODE "$WIZARD_L1_MODE_RESOLVED" "$wizard_build_target"
   if [ "$WIZARD_L1_MODE_RESOLVED" = "local" ]; then
-    set_env_key L1_RPC_URL "" "$wizard_build_target"
+    lineth_wizard_set_env_key L1_RPC_URL "" "$wizard_build_target"
   else
-    set_env_key L1_RPC_URL "$WIZARD_L1_RPC_URL_RESOLVED" "$wizard_build_target"
+    lineth_wizard_set_env_key L1_RPC_URL "$WIZARD_L1_RPC_URL_RESOLVED" "$wizard_build_target"
   fi
 
-  set_env_key PROVER_DEV_OVERRIDE "$(lineth_wizard_prover_to_bool "$WIZARD_PROVER_RESOLVED")" "$wizard_build_target"
+  lineth_wizard_set_env_key PROVER_DEV_OVERRIDE "$(lineth_wizard_prover_to_bool "$WIZARD_PROVER_RESOLVED")" "$wizard_build_target"
   if [ "$WIZARD_PROVER_RESOLVED" = "partial" ]; then
-    set_env_key PROVER_GOMEMLIMIT "24GiB" "$wizard_build_target"
+    lineth_wizard_set_env_key PROVER_GOMEMLIMIT "24GiB" "$wizard_build_target"
   fi
 }
 
@@ -470,8 +472,11 @@ lineth_wizard_backup_env() {
 lineth_wizard_check_rpc_deep() {
   [ "$WIZARD_L1_MODE_RESOLVED" = "sepolia" ] || return 0
   [ "${LINETH_WIZARD_SKIP_RPC_PREFLIGHT:-false}" = "true" ] && return 0
+  if [ -n "${LINETH_WIZARD_RPC_CHECK_STATUS:-}" ]; then
+    return "$LINETH_WIZARD_RPC_CHECK_STATUS"
+  fi
   [ -n "${ROOT:-}" ] || return 0
-  if [ ! -x "$ROOT/node_modules/.bin/ts-node" ]; then
+  if ! lineth_ts_node_available "$ROOT"; then
     lineth_warn "host Sepolia RPC check skipped; run pnpm install for earlier chain checks"
     return 0
   fi
@@ -479,15 +484,11 @@ lineth_wizard_check_rpc_deep() {
   lineth_info "Checking RPC..."
   wizard_rpc_tmp="$(mktemp)"
   if (
-    cd "$ROOT/contracts"
-    export NODE_PATH="$ROOT/node_modules:$ROOT/contracts/node_modules${NODE_PATH:+:$NODE_PATH}"
-    LINETH_STACK_DIR="$LINETH_WIZARD_STACK" \
-    LINETH_PREFLIGHT_RPC_ONLY=true \
-    L1_MODE="$WIZARD_L1_MODE_RESOLVED" \
-    L1_RPC_URL="$WIZARD_L1_RPC_URL_RESOLVED" \
-    TS_NODE_TRANSPILE_ONLY=1 \
-    TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
-      pnpm -s exec ts-node "$LINETH_WIZARD_STACK/scripts/internal/quickstart-preflight.ts"
+    export LINETH_STACK_DIR="$LINETH_WIZARD_STACK"
+    export LINETH_PREFLIGHT_RPC_ONLY=true
+    export L1_MODE="$WIZARD_L1_MODE_RESOLVED"
+    export L1_RPC_URL="$WIZARD_L1_RPC_URL_RESOLVED"
+    lineth_run_ts_node "$ROOT" "$LINETH_WIZARD_STACK/scripts/internal/quickstart-preflight.ts"
   ) > "$wizard_rpc_tmp" 2>&1; then
     lineth_child_output < "$wizard_rpc_tmp"
     rm -f "$wizard_rpc_tmp"
@@ -560,14 +561,17 @@ lineth_wizard_main() {
   LINETH_WIZARD_STACK="$1"
   LINETH_WIZARD_SCRIPT_DIR="$2"
   WIZARD_CANDIDATE_ENV=""
-  trap lineth_wizard_cancelled INT
+  trap lineth_wizard_cancelled INT TERM
 
   lineth_wizard_resolve_defaults
   if [ "${LINETH_WIZARD_NON_INTERACTIVE:-false}" != "true" ]; then
     lineth_wizard_collect_interactive
   fi
   lineth_wizard_validate_resolved
-  lineth_wizard_check_rpc_with_retries
+  if ! lineth_wizard_check_rpc_with_retries; then
+    lineth_wizard_cleanup
+    return 1
+  fi
 
   WIZARD_CANDIDATE_ENV="$LINETH_WIZARD_STACK/.env.$$.$(date '+%Y%m%d%H%M%S').tmp"
   lineth_wizard_build_env_file "$WIZARD_CANDIDATE_ENV"
