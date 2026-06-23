@@ -5,6 +5,7 @@ import { encryptKeystoreJson, HDNodeWallet, isAddress, JsonRpcProvider, Wallet }
 
 import { resolveL1DeployerConfig } from "./deployer-wallet";
 import { sanitizeExternalError } from "./lib/errors";
+import { ensureDir, writeFileAtomic } from "./lib/fs";
 import { computeBootPrecomputedAddresses } from "./quickstart-invariants";
 import { runL1PolicyCheck } from "./sepolia-policy";
 
@@ -111,17 +112,6 @@ function envNumber(name: string, fallback: number): number {
   return Number(raw);
 }
 
-function ensureDir(dir: string) {
-  fs.mkdirSync(dir, { recursive: true });
-}
-
-function writeFileMode(file: string, contents: string, mode: number) {
-  const tmp = `${file}.tmp`;
-  fs.writeFileSync(tmp, contents, { mode });
-  fs.renameSync(tmp, file);
-  fs.chmodSync(file, mode);
-}
-
 // DEV-ONLY file mode. These generated runtime keystores, the keystore password
 // file, the compatibility runtime-keys.env, and the Web3Signer YAMLs are written
 // world-readable on purpose. Host artifacts are bind-mounted into containers that
@@ -167,7 +157,7 @@ async function loadOrCreateRuntimeWallet(role: RuntimeRole, password: string): P
       p: envNumber("LINETH_KEYSTORE_SCRYPT_P", 1),
     },
   });
-  writeFileMode(file, `${encrypted}\n`, CONTAINER_READABLE_FILE_MODE);
+  writeFileAtomic(file, `${encrypted}\n`, CONTAINER_READABLE_FILE_MODE);
   log(`Wrote encrypted keystore for ${role.label}: ${file}`);
   return wallet;
 }
@@ -328,18 +318,18 @@ function writeRuntimeKeysEnv(wallets: Record<string, RuntimeWallet>) {
     ...runtimeRoles.map((role) => `${role.envName}='${wallets[role.envName].privateKey}'`),
     "",
   ];
-  writeFileMode(OUT_RUNTIME_KEYS_ENV, lines.join("\n"), CONTAINER_READABLE_FILE_MODE);
+  writeFileAtomic(OUT_RUNTIME_KEYS_ENV, lines.join("\n"), CONTAINER_READABLE_FILE_MODE);
   log(`Wrote ${OUT_RUNTIME_KEYS_ENV}`);
 }
 
 function writeKeystorePasswordFile(password: string) {
-  writeFileMode(OUT_KEYSTORE_PASSWORD_FILE, `${password}\n`, CONTAINER_READABLE_FILE_MODE);
+  writeFileAtomic(OUT_KEYSTORE_PASSWORD_FILE, `${password}\n`, CONTAINER_READABLE_FILE_MODE);
   log(`Wrote ${OUT_KEYSTORE_PASSWORD_FILE}`);
 }
 
 function writeWeb3SignerKey(fileName: string, label: string, keyFile: string) {
   const file = path.join(OUT_WEB3SIGNER_KEYS_DIR, `${fileName}.yaml`);
-  writeFileMode(
+  writeFileAtomic(
     file,
     `# ============================================================\n` +
       `# DEV ONLY — generated at boot by account-setup.ts.\n` +
@@ -434,7 +424,7 @@ async function main() {
     wallets,
   });
 
-  writeFileMode(OUT_JSON, `${JSON.stringify(addresses, null, 2)}\n`, CONTAINER_READABLE_FILE_MODE);
+  writeFileAtomic(OUT_JSON, `${JSON.stringify(addresses, null, 2)}\n`, CONTAINER_READABLE_FILE_MODE);
   log(`${reused ? "Reused" : "Wrote"} ${OUT_JSON}`);
   log(`Pre-computed L1 LineaRollupV8 (proxy): ${addresses.l1.LineaRollupV8}`);
   log(`Pre-computed L2 MessageService: ${addresses.l2.L2MessageService}`);

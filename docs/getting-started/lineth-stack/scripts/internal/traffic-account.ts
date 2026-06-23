@@ -4,6 +4,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 import { Contract, JsonRpcProvider, Wallet, isAddress } from "ethers";
 
+import { ensureDir, writeFileAtomic } from "./lib/fs";
 import { LOCAL_L2_POLICY_DEFAULTS, envValue, parseDecimalWei, readDotEnvContents } from "./sepolia-policy";
 
 export type TrafficAccountMode = "ensure" | "require-existing";
@@ -116,11 +117,8 @@ async function withTrafficAccountLock<T>(demoTrafficEnvPath: string, run: () => 
 }
 
 function writeTrafficEnvAtomic(demoTrafficEnvPath: string, privateKey: string) {
-  fs.mkdirSync(path.dirname(demoTrafficEnvPath), { recursive: true });
-  const tmpPath = `${demoTrafficEnvPath}.${process.pid}.tmp`;
-  fs.writeFileSync(tmpPath, `L2_TRAFFIC_PRIVATE_KEY=${privateKey}\n`, { mode: 0o600 });
-  fs.renameSync(tmpPath, demoTrafficEnvPath);
-  fs.chmodSync(demoTrafficEnvPath, 0o600);
+  ensureDir(path.dirname(demoTrafficEnvPath));
+  writeFileAtomic(demoTrafficEnvPath, `L2_TRAFFIC_PRIVATE_KEY=${privateKey}\n`, 0o600);
 }
 
 async function resolveTrafficPrivateKey(

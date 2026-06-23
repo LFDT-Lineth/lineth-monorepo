@@ -4,6 +4,7 @@ import * as path from "node:path";
 import { encryptKeystoreJson, Wallet } from "ethers";
 
 import { sanitizeExternalError } from "./lib/errors";
+import { ensureDir, writeFileAtomic } from "./lib/fs";
 
 export type EnvMap = Record<string, string | undefined>;
 
@@ -113,17 +114,6 @@ function defaultAccountsDir(stackDir: string): string {
   return normalizeDir(process.env.LINETH_ACCOUNTS_DIR ?? path.join(stackDir, "artifacts", "accounts"));
 }
 
-function ensureDir(dir: string) {
-  fs.mkdirSync(dir, { recursive: true });
-}
-
-function writeFileMode(file: string, contents: string, mode: number) {
-  const tmp = `${file}.tmp`;
-  fs.writeFileSync(tmp, contents, { mode });
-  fs.renameSync(tmp, file);
-  fs.chmodSync(file, mode);
-}
-
 function pathInside(child: string, parent: string): boolean {
   const relative = path.relative(parent, child);
   return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
@@ -214,9 +204,9 @@ async function createGeneratedKeystore(
       p: envNumber("LINETH_DEPLOYER_KEYSTORE_SCRYPT_P", env, 1),
     },
   });
-  writeFileMode(keystorePath, `${encrypted}\n`, 0o600);
+  writeFileAtomic(keystorePath, `${encrypted}\n`, 0o600);
   if (!fs.existsSync(passwordFilePath)) {
-    writeFileMode(passwordFilePath, `${password}\n`, 0o600);
+    writeFileAtomic(passwordFilePath, `${password}\n`, 0o600);
   }
   return wallet as Wallet;
 }
