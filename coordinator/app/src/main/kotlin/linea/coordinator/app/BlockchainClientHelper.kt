@@ -14,8 +14,8 @@ import linea.web3j.ECKeypairSignerAdapter
 import linea.web3j.SmartContractErrors
 import linea.web3j.Web3SignerTxSignService
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
-import net.consensys.linea.contract.l1.Web3JLinethRollupSmartContractClient
 import net.consensys.linea.contract.l1.Web3JLineaValidiumSmartContractClient
+import net.consensys.linea.contract.l1.Web3JLinethRollupSmartContractClient
 import net.consensys.linea.httprest.client.VertxHttpRestClient
 import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j
