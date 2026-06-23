@@ -6,17 +6,17 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
+    "proverVersion",
     "proof",
     "startBlockNumber",
-    "endBlockNumber",
     "publicInputs",
     "l2L1Roots",
     "filteredAddresses"
   ],
   "properties": {
+    "proverVersion": { "type": "string" },
     "proof": { "$ref": "#/$defs/hex" },
     "startBlockNumber": { "$ref": "#/$defs/uint" },
-    "endBlockNumber": { "$ref": "#/$defs/uint" },
     "publicInputs": {
       "type": "object",
       "additionalProperties": false,

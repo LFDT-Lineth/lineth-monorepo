@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://linea.build/schemas/getZkRollupProofV1.request.schema.json",
   "title": "getZkRollupProof V1 request",
-  "description": "Coordinator -> prover rollup proof request. The shared, versioned contract for the rollup guest input (RollupProofPrivateInput). The example file getZkRollupProofV1.request.json uses '0x...' ellipsis placeholders for documentation and does NOT validate against this schema; real payloads must.",
+  "description": "Coordinator -> prover rollup proof request. The shared, versioned contract for the rollup guest input (RollupProofPrivateInput): a {guestProgramId, proofRequest} envelope embedding the l2-execution proofs it recursively verifies.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -11,13 +11,14 @@
   ],
   "properties": {
     "guestProgramId": { "$ref": "#/$defs/hash32" },
-     "proofRequest": {
+    "metadata": { "$ref": "#/$defs/metadata" },
+    "proofRequest": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "chainId",
         "blobs",
-        "shnarfTransition",
+        "parentShnarf",
         "l2ExecutionProofs"
       ],
       "properties": {
@@ -27,15 +28,7 @@
           "minItems": 1,
           "items": { "$ref": "#/$defs/blob" }
         },
-        "shnarfTransition": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["parentShnarf", "endShnarf"],
-          "properties": {
-            "parentShnarf": { "$ref": "#/$defs/hash32" },
-            "endShnarf": { "$ref": "#/$defs/hash32" }
-          }
-        },
+        "parentShnarf": { "$ref": "#/$defs/hash32" },
         "l2ExecutionProofs": {
           "type": "array",
           "minItems": 1,
@@ -50,10 +43,10 @@
     "hash32": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
     "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
     "kzgProof": { "type": "string", "pattern": "^0x[0-9a-fA-F]{96}$" },
-    "blockRange": {
+    "metadata": {
+      "description": "Non-contractual, debug/ops-only fields. NOT consumed by the guest",
       "type": "object",
       "additionalProperties": false,
-      "required": ["startBlockNumber", "endBlockNumber"],
       "properties": {
         "startBlockNumber": { "$ref": "#/$defs/uint" },
         "endBlockNumber": { "$ref": "#/$defs/uint" }
@@ -62,18 +55,12 @@
     "blob": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["blobInputs", "blockRange", "blockRlps"],
+      "required": ["startBlockNumber", "endBlockNumber", "blobHash", "blobKzgProof", "blockRlps"],
       "properties": {
-        "blobInputs": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["blobHash", "blobKzgProof"],
-          "properties": {
-            "blobHash": { "$ref": "#/$defs/hash32" },
-            "blobKzgProof": { "$ref": "#/$defs/kzgProof" }
-          }
-        },
-        "blockRange": { "$ref": "#/$defs/blockRange" },
+        "startBlockNumber": { "$ref": "#/$defs/uint" },
+        "endBlockNumber": { "$ref": "#/$defs/uint" },
+        "blobHash": { "$ref": "#/$defs/hash32" },
+        "blobKzgProof": { "$ref": "#/$defs/kzgProof" },
         "blockRlps": {
           "type": "array",
           "items": { "$ref": "#/$defs/hex" }
@@ -124,7 +111,6 @@
       "required": [
         "proof",
         "startBlockNumber",
-        "endBlockNumber",
         "publicInputs",
         "l2L1Messages",
         "txFroms",
@@ -133,7 +119,6 @@
       "properties": {
         "proof": { "$ref": "#/$defs/hex" },
         "startBlockNumber": { "$ref": "#/$defs/uint" },
-        "endBlockNumber": { "$ref": "#/$defs/uint" },
         "publicInputs": { "$ref": "#/$defs/l2ExecutionPublicInputs" },
         "l2L1Messages": { "type": "array", "items": { "$ref": "#/$defs/hash32" } },
         "txFroms": { "type": "array", "items": { "$ref": "#/$defs/address" } },

@@ -267,20 +267,27 @@ def _decode_payload_stateless_inputs(payloads: Sequence[LineaPayloadInput]) -> L
         try:
             decoded.append(decode_stateless_input_ssz(payload.stateless_input_ssz))
         except Exception as exc:
-            raise Exception(f"invalid statelessInputSsz for payload {index}") from exc
+            raise Exception(f"invalid stateless input SSZ for payload {index}") from exc
     return decoded
 
 
 @dataclass
 class L2ExecutionProof:
     """
-    Reference wrapper for an l2-execution proof plus the hash preimages consumed
-    by the rollup guest. `proof` stands in for the STARK bytes that the rollup
-    guest recursively verifies.
+    An l2-execution proof as the rollup guest consumes it: the guest *output*
+    (the 15-field `public_inputs` tuple + the revealed hash preimages) plus the
+    `proof` bytes the rollup guest recursively verifies.
+
+    Guest/prover boundary: the guest emits `public_inputs` and the preimage
+    lists only; `proof` is attached by the zkVM/prover layer above — a guest
+    cannot prove itself — and is a placeholder (`b""`) in this reference.
+
+    `end_block_number` is intentionally absent: it is already
+    `public_inputs.end_block_number`. Only `start_block_number` (not in the PI
+    tuple) is carried, so the rollup guest can verify proof tiling.
     """
     public_inputs: L2ExecutionProofPublicInput
     start_block_number: U64
-    end_block_number: U64
     proof: bytes = b""
     l2_l1_messages: List[Hash32] = field(default_factory=list)
     tx_froms: List[Address] = field(default_factory=list)
@@ -420,7 +427,6 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
     return L2ExecutionProof(
         public_inputs=public_inputs,
         start_block_number=start_block_number,
-        end_block_number=last_payload.block_number,
         l2_l1_messages=l2_l1_message_hashes,
         tx_froms=tx_froms,
         filtered_addresses=filtered_addresses,

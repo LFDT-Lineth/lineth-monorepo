@@ -1,6 +1,7 @@
 """
-Standalone conformance test: every fixture under `fixture/` must validate against
-its corresponding JSON Schema in this directory.
+Standalone conformance test: every golden-vector fixture under `../testdata/`
+(both requests and responses) must validate against its corresponding JSON
+Schema in this directory.
 
 This test does NOT import the guest dataclasses, so it has no native
 dependencies (`ckzg`/`coincurve`/`lz4`) — only `jsonschema`. It runs on any
@@ -8,7 +9,7 @@ Python and is the cheapest way to catch a fixture drifting from its schema.
 
 Fixture <-> schema pairing is by filename convention:
 
-    fixture/<name>.json   <->   <name>.schema.json
+    testdata/<name>.json   <->   schemas/<name>.schema.json
 
 Fixtures are discovered automatically, so a new fixture/schema pair is covered
 without editing this file.
@@ -23,11 +24,11 @@ from pathlib import Path
 import pytest
 
 _SCHEMA_DIR = Path(__file__).parent
-_FIXTURE_DIR = _SCHEMA_DIR / "fixture"
+_FIXTURE_DIR = _SCHEMA_DIR.parent / "testdata"
 
 
 def _schema_path_for(fixture_path: Path) -> Path:
-    """fixture/<name>.json -> <name>.schema.json (sibling of this test)."""
+    """testdata/<name>.json -> <name>.schema.json (sibling of this test)."""
     return _SCHEMA_DIR / f"{fixture_path.name[: -len('.json')]}.schema.json"
 
 

@@ -66,6 +66,19 @@ checks modeled separately in `l1_rollup.py`:
 `l1_rollup.py` models the contract-facing blob anchoring and finalization checks
 against L1 storage. It is intentionally not one of the RISC-V guest programs.
 
+**Guest output vs prover output.** Each guest emits its public-input tuple plus
+the revealed hash *preimages* it computed (l2-execution: `l2L1Messages`,
+`txFroms`, `filteredAddresses`; rollup and rollup-aggregation: `l2L1Roots`,
+`filteredAddresses`). The `proof` bytes are *not* produced by the guest — the
+zkVM/prover layer attaches them when it proves the guest execution. A prover
+**response** therefore equals the guest output plus `proof`, and each consumer
+(the next proving step, or the L1 contract for the final rollup-aggregation
+proof) takes that whole bundle: it recursively verifies `proof` against the
+public inputs and re-checks the preimages against their committed hashes. The
+reference models the split — `run_*_guest` returns the public inputs and
+preimages with `proof` left as a placeholder (`b""`); see `proof_io_v1.py` and
+§3.3.
+
 **Reference environment.** The Python reference targets **Python 3.11+** (it uses
 `enum.StrEnum`) and pins its dependencies in `rollup_spec/requirements.txt`
 (`remerkleable`, a commit-pinned `ethereum-execution`, `ckzg`, `lz4`).
@@ -101,7 +114,7 @@ declared outcome is one of the allowed outcomes in §6.5.
 
 - The complete set of L2 payloads as length-delimited vanilla stateless-input SSZ `StatelessInput` byte slices, one per block in the conflation. The guest decodes each slice into a `NewPayloadRequest`, execution witness, stateless chain config, and optional transaction public keys before reading Linea's rollup-extension fields. Each request carries `executionPayload`, `versionedHashes`, `parentBeaconBlockRoot`, and typed `executionRequests`. The Linea wrapper consumes normal transactions from `executionPayload.transactions` as canonical signed transaction bytes, derives each sender with execution-specs `recover_sender(chainID, tx)`, then commits to the ordered list via `txFromsHash`.
 - The stateless execution witness per payload after stateless-input SSZ decode (`state`, `codes`, `headers`, and optional JSON/debug `keys`). `headers` are RLP-encoded parent/ancestor headers ordered by block number and ending at the payload parent; the final header hash must equal `newPayloadRequest.executionPayload.parentHash`, and that parent header carries the state root that anchors `parentBlockHash`. The canonical `SszExecutionWitness` contains `state`, `codes`, and `headers`; an engine's JSON/debug path (e.g. Zesu's `StateWitness`) also carries `keys`, so the logical schema preserves `keys` for decoded debug fixtures. SSZ-encoded `keys` would require a distinct Linea schema id rather than changing the vanilla stateless-input slice. The `state` MPT node pool must additionally include proof paths for: (a) the L2MessageService's `L1L2RollingHash` and `L1L2RollingHashMessageNumber` slots at both the parent and end state roots — read at proof-range boundaries even when no block in the range writes them; (b) the sender account of any FTX whose declared outcome is *Invalid* (§6.5), at the parent state root of the block where that FTX would have been included.
-- Optional transaction public keys, ordered by `executionPayload.transactions` index. They are part of the vanilla stateless execution input, not the Linea rollup extension and not `executionWitness.keys`. The Linea logical spec does not derive senders from this field: signer derivation is stated as `recover_sender(chainID, tx)`. `publicKeys` is not a witness override; any production optimization that consumes it must produce the same accepted/rejected transaction result and sender address as `recover_sender(chainID, tx)`.
+- Transaction public keys, ordered by `executionPayload.transactions` index, are part of the vanilla stateless execution input (the SSZ `StatelessInput.public_keys`), not the Linea rollup extension and not `executionWitness.keys`. They are **not transmitted on the wire**: the readable request omits them and the prover middleware recovers them from the signed transactions when building the guest's SSZ input (`stateless_input.py::_recover_public_keys`). The Linea logical spec does not derive senders from this field: signer derivation is `recover_sender(chainID, tx)`. `public_keys` is not a witness override; any production optimization that consumes it must produce the same accepted/rejected transaction result and sender address as `recover_sender(chainID, tx)`.
 - The static Linea proof-range chain config: `L2MessageServiceContract`, `coinBase`, `chainID`. `baseFee` — the fourth input to `dynamicChainConfigHash` — is NOT part of this struct; the guest reads it from the first `NewPayloadRequest.executionPayload.baseFeePerGas` and asserts every subsequent payload in the range carries the same value. `chainID` deliberately duplicates the chain id inside each vanilla `StatelessInput`: the inner copy preserves the unmodified stateless-input boundary, while the outer copy is the Linea range-level preimage for `dynamicChainConfigHash`. The guest rejects the range if any decoded stateless-input `chainID` differs from this range-level value.
 - The Linea rollup-extension forced-transaction witnesses for FTXs in the range — see §6
 
@@ -119,7 +132,7 @@ declared outcome is one of the allowed outcomes in §6.5.
 
 * **Inspect the forced transactions**: See the corresponding section.
 
-* **Output**: the public-inputs as computed in the above steps.
+* **Output**: the 15-field public-input tuple computed above, together with the revealed preimages the rollup proof consumes (`l2L1Messages`, `txFroms`, `filteredAddresses`). The `proof` bytes are attached by the prover, not this guest (see §2, *Guest output vs prover output*).
 
 ### 2.2 rollup Proof
 
@@ -184,7 +197,7 @@ For each blob `b ∈ [1, K]` in order, perform the per-blob block (steps 1–2);
    ```
    shnarf_b = Hash(shnarf_{b-1}, lastBlockHash_b, blobHash_b)
    ```
-   where `shnarf_0 = parentShnarf` (public input) and `lastBlockHash_b` is the `blockHash` field of the last `TruncatedEthereumBlock` of blob `b` (from step 1). After all K blobs, assert `shnarf_K == endShnarf`.
+   where `shnarf_0 = parentShnarf` (public input) and `lastBlockHash_b` is the `blockHash` field of the last `TruncatedEthereumBlock` of blob `b` (from step 1). After all K blobs, the outbound `endShnarf = shnarf_K` is emitted in the PI tuple; it is not echoed back as a request input (the coordinator compares the returned `endShnarf` against its own expectation).
 
 3. **Verify sender addresses.** For each l2-execution proof `Eᵢ`, assert:
    ```
@@ -264,9 +277,9 @@ The same 15-field tuple as the rollup proof (§2.2) and as the final rollup-aggr
 
 4. **Merge filtered address lists.** Receive each rollup proof's address list, verify it against its committed hash, concatenate all `M` lists in order, and output `filteredAddressesHash = keccak256(addrs_B₁ ‖ … ‖ addrs_Bₘ)`.
 
-5. **Output** the combined public inputs covering the full range: take `parentShnarf`, `parentL1L2BridgeRollingHash`, `parentL1L2BridgeRollingHashMessageNumber`, `parentFtxRollingHash`, `parentProcessedFtxNumber`, and `dynamicChainConfigHash` from `PI_B₁`; take `endBlockNumber`, `endBlockTimestamp`, `endL1L2BridgeRollingHash`, `endL1L2BridgeRollingHashMessageNumber`, `endFtxRollingHash`, `endProcessedFtxNumber`, and `endShnarf` from `PI_Bₘ`; use the merged Merkle commitment from step 3 and merged filtered-address hash from step 4.
+5. **Output** the combined public inputs covering the full range: take `parentShnarf`, `parentL1L2BridgeRollingHash`, `parentL1L2BridgeRollingHashMessageNumber`, `parentFtxRollingHash`, `parentProcessedFtxNumber`, and `dynamicChainConfigHash` from `PI_B₁`; take `endBlockNumber`, `endBlockTimestamp`, `endL1L2BridgeRollingHash`, `endL1L2BridgeRollingHashMessageNumber`, `endFtxRollingHash`, `endProcessedFtxNumber`, and `endShnarf` from `PI_Bₘ`; use the merged Merkle commitment from step 3 and merged filtered-address hash from step 4. Alongside the PI tuple the guest returns the merged L2→L1 root list (step 3) and filtered-address list (step 4) as revealed preimages; with the prover-attached `proof` these form the L1 `FinalizationSubmission` (§5).
 
-The rollup-aggregation prover request includes the STARK→SNARK emulation wrap after this guest statement, so the response is directly L1-submittable — no separate emulation request file or prover invocation exists.
+The rollup-aggregation prover request includes the STARK→SNARK emulation wrap after this guest statement, so the response is directly L1-submittable: it is the `FinalizationSubmission` — the 14-field PI plus the prover-attached `proof` and the revealed `l2L1Roots` / `filteredAddresses` (and `l2MessagingBlocksOffsets`) the L1 contract consumes as calldata (§5). No separate emulation request file or prover invocation exists.
 
 ---
 
@@ -342,7 +355,7 @@ The DA blob must contain the exact inputs required to re-execute the L2 blocks f
 
 ### 3.3 Prover I/O — On-Wire Format
 
-The JSON request files under `prover_io/` describe a logical schema. The bytes carried into the zkVM guest are binary.
+The fixtures under `prover_io/testdata/` document the request/response JSON the coordinator exchanges with the prover; they validate against the JSON Schemas under `prover_io/schemas/` (the versioned contract), and `proof_io_v1.py` is the codec that converts schema-valid JSON to/from the guest dataclasses. The bytes carried into the zkVM guest are binary, not this JSON.
 
 **Transport.** The guest reads input bytes via the zkVM's read-input primitive (`ziskos::read_input()` on Zisk). The Linea l2-execution envelope length-delimits a vanilla SSZ `StatelessInput` byte slice per payload, then carries Linea rollup-extension fields beside that slice. The Python reference models this boundary in `stateless_input.py::decode_stateless_input_ssz`, using the `remerkleable` decoder for the same raw/Ere-prefixed stateless-input container shape while keeping Linea extension parsing outside the stateless-input slice. Do not append Linea bytes to that slice itself: the SSZ decoder treats the final field as consuming the remainder of the slice, so trailing Linea data would be interpreted as stateless input rather than ignored.
 
@@ -360,15 +373,16 @@ the same schema the underlying engine (e.g. Zesu) decodes.
 
 Full block RLPs still exist in the rollup-proof DA witness (`blockRlps_b`) because the rollup guest recomputes the compressed blob payload from DA data, but l2-execution consumes `NewPayloadRequest` instead. The per-FTX `signedTxRlp` payloads and proof-range `chainConfig` fields are Linea wrapper fields outside the EIP-8025 `StatelessInput`. Rollup-proof and rollup-aggregation-proof containers follow their own schemas and are pinned alongside the corresponding guest implementations.
 
-**Debug format.** The guest input schema contains only
-`statelessInputSsz`, not a decoded `StatelessInput` object. Draft JSON
-fixtures may show a decoded `_debugStatelessInput` mirror for review, but
-fixture loaders must derive or validate that mirror from `statelessInputSsz`
-and discard it before constructing `L2ExecutionProofPrivateInput`. The guest
-consumes and decodes the stateless-input SSZ bytes; decoded mirrors are not
-accepted by `run_l2_execution_guest`, except for explicitly marked JSON-only
-debug documentation such as optional witness `keys`, which are not carried by the
-canonical stateless-input SSZ schema.
+**Readable input vs guest bytes.** The request carries `statelessInput` as a
+decoded JSON object (the schema form), not raw SSZ bytes. The codec
+(`proof_io_v1.py`, via `stateless_input.py::encode_stateless_input_ssz`)
+SSZ-encodes it into the length-delimited bytes the guest reads — the prover's
+encode step — and `run_l2_execution_guest` decodes them back with
+`decode_stateless_input_ssz`. The readable `chainConfig` carries
+`{chainId, forkName}` only; the encoder reconstructs the full SSZ fork config
+(the guest validates only the fork index). Optional witness `keys` are JSON-only
+debug documentation and are not carried by the canonical stateless-input SSZ
+schema.
 
 ---
 
