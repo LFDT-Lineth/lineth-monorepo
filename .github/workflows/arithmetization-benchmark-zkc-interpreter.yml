@@ -56,7 +56,7 @@ on:
         description: 'Run gogen for timed iterations when enabled'
         required: false
         type: boolean
-        default: true
+        default: false
       zkc_ref_base:
         description: 'zkc commit/branch/tag for BASE branch runs'
         required: false
@@ -226,14 +226,12 @@ jobs:
             # Run in fast (with gogen) or tracing mode
             for i in $(seq 1 "$ITERS"); do
               if [[ "$FAST_MODE" == "true" ]]; then
-               # RESTORE when gogen is supporting native fields
-               #  reset_state; log "${wl}: iter ${i}/${ITERS} opt";  run_gogen_${wl} opt  "$i"
-               # reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_gogen_${wl} base "$i"
-              reset_state; log "${wl}: warmup opt  (untimed)"; run_${wl} opt  warmup --fast
-              reset_state; log "${wl}: warmup base (untimed)"; run_${wl} base warmup --fast
+               reset_state; log "${wl}: iter ${i}/${ITERS} opt";  run_gogen_${wl} opt  "$i"
+               reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_gogen_${wl} base "$i"
               else
-                reset_state; log "${wl}: iter ${i}/${ITERS} opt"; run_${wl} opt "$i"
-                reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_${wl} base "$i"
+                # RESTORE to tracing (without --fast) when gogen is supporting native fields
+                reset_state; log "${wl}: iter ${i}/${ITERS} opt"; run_${wl} opt "$i" --fast
+                reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_${wl} base "$i" --fast
               fi
             done
           done
