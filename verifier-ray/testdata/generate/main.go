@@ -1178,15 +1178,23 @@ func vanishingBenchCounts(system codegen.VanishingSystem) (expressionCount, buck
 }
 
 func fieldValueLiteral(value field.Element) string {
-	return fmt.Sprintf("field.Element.init(%d)", u(value))
+	return fmt.Sprintf(".{ .value = %d }", u(value))
 }
 
 func extValueLiteral(value field.Ext) string {
-	return "ext.Ext.fromUints(" + ext6(value) + ")"
+	a0, a1, b0, b1, c0, c1 := field.ExtToUint64s(&value)
+	return fmt.Sprintf(
+		"ext.Ext{ .B0 = .{ .a0 = .{ .value = %d }, .a1 = .{ .value = %d } }, .B1 = .{ .a0 = .{ .value = %d }, .a1 = .{ .value = %d } }, .B2 = .{ .a0 = .{ .value = %d }, .a1 = .{ .value = %d } } }",
+		a0, a1, b0, b1, c0, c1,
+	)
 }
 
 func commitmentValueLiteral(value field.Octuplet) string {
-	return "commitment.fromUints(" + oct8(value) + ")"
+	parts := make([]string, len(value))
+	for i, elem := range value {
+		parts[i] = fieldValueLiteral(elem)
+	}
+	return "commitment.Commitment{ " + strings.Join(parts, ", ") + " }"
 }
 
 func intArrayLiteral(values []int) string {

@@ -141,6 +141,62 @@ func NewLookupMultiColumnScenario() *LookupScenario {
 	}
 }
 
+// NewLookupMultiColumnBenchScenario: a width 10 inclusion query. The column sizes are
+// kept as 2^19 to get an idea of the number of zkc cycles needed for real zkVM
+// usecase
+func NewLookupMultiColumnBenchScenario() *LookupScenario {
+	var (
+		bigSize = 1 << 10
+		numCols = 5
+		tCols   = make([]*wiop.Column, numCols)
+		sCols   = make([]*wiop.Column, numCols)
+		tTableView  = make([]*wiop.ColumnView, numCols)
+		sTableView  = make([]*wiop.ColumnView, numCols)
+		tAssignments = make([][]uint64, numCols)
+		sAssignments = make([][]uint64, numCols)
+	)
+	sys := wiop.NewSystemf("lk-multi-col-bench")
+	r0 := sys.NewRound()
+	modT := sys.NewSizedModule(sys.Context.Childf("modT"), bigSize, wiop.PaddingDirectionNone)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), bigSize, wiop.PaddingDirectionNone)
+	for i := range(len(tCols)) {
+		tCols[i] = modT.NewColumn(sys.Context.Childf("T%d", i), wiop.VisibilityOracle, r0)
+		sCols[i] = modS.NewColumn(sys.Context.Childf("S%d", i), wiop.VisibilityOracle, r0)
+		tTableView[i] = tCols[i].View()
+		sTableView[i] = sCols[i].View()
+	}
+	sys.NewInclusion(
+		sys.Context.Childf("inc-big-table-bench"),
+		[]wiop.Table{wiop.NewTable(sTableView...)},
+		[]wiop.Table{wiop.NewTable(tTableView...)},
+	)
+	// Assign t and s cols
+	for i := range(len(tCols)) {
+		tAssignments[i] = make([]uint64, bigSize)
+		sAssignments[i] = make([]uint64, bigSize)
+		// t cols are assigned values from 1 to bigSize
+		// s cols are assigned values from 1 to bigSize/2, and then repeated
+		// each assignment is shifted by its index in the array
+		for j := 0; j < bigSize; j++ {
+			tAssignments[i][j] = uint64(i + j + 1)
+		}
+		for j := 0; j < bigSize; j++ {
+			sAssignments[i][j] = uint64(i + (j % (bigSize / 2)) + 1)
+		}
+	}
+
+	return &LookupScenario{
+		Name: "MultiColumnBench",
+		Sys:  sys,
+		AssignWitness: func(rt *wiop.Runtime) {
+			for i := range(len(tCols)) {
+				rt.AssignColumn(tCols[i], makeVec(tAssignments[i]...))
+				rt.AssignColumn(sCols[i], makeVec(sAssignments[i]...))
+			}
+		},
+	}
+}
+
 // NewLookupSharedTableScenario: two inclusion queries share the same B
 // fragment. The compiler must allocate exactly one M column for both
 // queries (otherwise the B-side and A-side terms would not cancel).
