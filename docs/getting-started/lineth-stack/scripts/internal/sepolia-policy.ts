@@ -5,6 +5,7 @@ import {
   envValue,
   l1Mode,
 } from "./deployer-wallet";
+import { sanitizeExternalError } from "./lib/errors";
 
 export {
   type EnvMap,
@@ -144,13 +145,6 @@ export function buildSepoliaPolicyConfig(env: EnvMap): SepoliaPolicyConfig {
     l2RuntimeTopUpWei: localL2Wei("L2_RUNTIME_TOP_UP_WEI"),
     l2GasPriceWei: localL2Wei("L2_GAS_PRICE_WEI"),
   };
-}
-
-export function sanitizeExternalError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  return message
-    .replace(/https?:\/\/[^\s)"']+/g, "<redacted-url>")
-    .replace(/0x[a-fA-F0-9]{64}/g, "<redacted-hex>");
 }
 
 function requireCapAbove(name: string, cap: bigint, observed: bigint | undefined, observedLabel: string) {

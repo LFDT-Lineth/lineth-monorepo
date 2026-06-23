@@ -5,7 +5,8 @@ import { assertSingleFeeModel, FeeOverrides, feeBudgetPricePerGas } from "contra
 import { isAddress, JsonRpcProvider, type TransactionReceipt, Wallet } from "ethers";
 
 import { resolveL1DeployerConfig } from "./deployer-wallet";
-import { buildSepoliaPolicyConfig, sanitizeExternalError } from "./sepolia-policy";
+import { sanitizeExternalError } from "./lib/errors";
+import { buildSepoliaPolicyConfig } from "./sepolia-policy";
 
 type AddressBook = {
   deployers?: {

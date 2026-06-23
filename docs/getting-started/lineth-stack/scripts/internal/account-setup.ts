@@ -4,8 +4,9 @@ import * as path from "node:path";
 import { encryptKeystoreJson, HDNodeWallet, isAddress, JsonRpcProvider, Wallet } from "ethers";
 
 import { resolveL1DeployerConfig } from "./deployer-wallet";
+import { sanitizeExternalError } from "./lib/errors";
 import { computeBootPrecomputedAddresses } from "./quickstart-invariants";
-import { runL1PolicyCheck, sanitizeExternalError } from "./sepolia-policy";
+import { runL1PolicyCheck } from "./sepolia-policy";
 
 type RuntimeWallet = HDNodeWallet | Wallet;
 

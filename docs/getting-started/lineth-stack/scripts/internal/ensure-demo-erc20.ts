@@ -3,13 +3,8 @@ import * as fs from "node:fs";
 import { ContractFactory, JsonRpcProvider, Wallet, type InterfaceAbi } from "ethers";
 
 import { resolveL1DeployerConfig } from "./deployer-wallet";
-import {
-  envValue,
-  LOCAL_L2_POLICY_DEFAULTS,
-  parseDecimalWei,
-  sanitizeExternalError,
-  SEPOLIA_POLICY_DEFAULTS,
-} from "./sepolia-policy";
+import { sanitizeExternalError } from "./lib/errors";
+import { envValue, LOCAL_L2_POLICY_DEFAULTS, parseDecimalWei, SEPOLIA_POLICY_DEFAULTS } from "./sepolia-policy";
 
 type Lane = "l1" | "l2";
 

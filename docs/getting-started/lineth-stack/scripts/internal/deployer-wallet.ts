@@ -3,6 +3,8 @@ import * as path from "node:path";
 
 import { encryptKeystoreJson, Wallet } from "ethers";
 
+import { sanitizeExternalError } from "./lib/errors";
+
 export type EnvMap = Record<string, string | undefined>;
 
 export type L1Mode = "sepolia" | "local";
@@ -24,13 +26,6 @@ export type L1DeployerConfig = L1Config & {
   keystorePath?: string;
   passwordFilePath?: string;
 };
-
-function sanitizeExternalError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  return message
-    .replace(/https?:\/\/[^\s)"']+/g, "<redacted-url>")
-    .replace(/0x[a-fA-F0-9]{64}/g, "<redacted-hex>");
-}
 
 export type ResolveL1DeployerOptions = {
   stackDir?: string;
