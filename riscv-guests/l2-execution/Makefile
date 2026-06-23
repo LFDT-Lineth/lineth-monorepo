@@ -9,8 +9,6 @@
 # itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-# guest-program = gp
-
 .PHONY: fetch test spec-test clean linker-script compile exec debug require-input
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -33,11 +31,11 @@ BIN      := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 # Sample fixture input used by exec/debug
 INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
 
-# Flags forwarded to `zkc exec` by gp-exec. Default -q (quiet: suppress the guest's per-instruction
+# Flags forwarded to `zkc exec` by exec. Default -q (quiet: suppress the guest's per-instruction
 # printf). Override to pick the execution backend — e.g. "--quiet --gogen --fast" runs the guest via
 # zkc's generated-Go backend in fast mode, the runnability path used while the interpreter does not
 # implement tracing yet.
-GP_ZKC_EXEC_FLAGS ?= -q
+ZKC_EXEC_FLAGS ?= -q
 
 # If true, generates an objdump of the generated ELF for debugging purposes
 OBJDUMP     ?= false
@@ -91,7 +89,7 @@ require-input:
 	@[ -n "$(INPUT)" ] && [ -f "$(INPUT)" ] || { echo "INPUT not found: '$(INPUT)' (set INPUT=path/to/input.ssz)"; exit 1; }
 
 exec: require-input compile
-	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-exec BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" ZKC_EXEC_FLAGS="$(GP_ZKC_EXEC_FLAGS)"
+	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-exec BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
 
 debug: require-input compile
 	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-debug BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)"
