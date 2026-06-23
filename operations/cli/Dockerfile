@@ -19,7 +19,7 @@ COPY operations/cli/ ./operations/cli/
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
 RUN pnpm run -F operations build
-RUN pnpm deploy --legacy --filter=./operations/cli --prod ./prod
+RUN pnpm deploy --legacy --filter=./operations/cli --prod ./prod --config.allowUnusedPatches=true
 
 FROM node:${NODE_VERSION}-slim AS release
 
