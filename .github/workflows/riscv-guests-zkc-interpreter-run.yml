@@ -88,13 +88,14 @@ jobs:
           go-version: '1.24.6'
           cache-dependency-path: "**/*.sum"
 
-      # Install zkc up front as its own step (clear logs, version from inputs.zkc-ref or the
-      # Makefile's pinned default). exec's elf-exec also depends on install-zkc, but the run step
-      # below passes ZKC_REF= (empty), and since zkc is already on PATH the prereq no-ops —
-      # zkc is built exactly once, here. Install logic lives in arithmetization/Makefile.
+      # Install zkc up front as its own step (clear logs, pinned via ZKC_REF). exec's elf-exec also
+      # depends on install-zkc, but in the run step below ZKC_REF is unset and zkc is already on PATH,
+      # so that dependency no-ops — zkc is built once, here. Install logic lives in arithmetization/Makefile.
       - name: Install zkc interpreter CLI
-        run: make -C arithmetization install-zkc ${{ inputs.zkc-ref && format('ZKC_REF={0}', inputs.zkc-ref) || '' }}
+        env:
+          ZKC_REF: ${{ inputs.zkc-ref || 'main' }}
 
+        run: make -C arithmetization install-zkc
       # Execute the guest via zkc's generated-Go backend (--gogen) in fast mode (--fast), quiet (-q):
       # the interpreter does not implement tracing yet, so this runnability check skips the trace path
       # — and gogen+fast is light (tens of MB, seconds, vs the tree-walking interpreter's ~15 GB). Uses
@@ -103,4 +104,4 @@ jobs:
       # ZKC_REF= (empty) ensures the install-zkc prereq inside elf-exec is a guaranteed no-op
       # (zkc is already on PATH from the step above; an empty ZKC_REF triggers the skip path).
       - name: Run l2-execution guest under zkc (gogen, fast, accel keccak)
-        run: make -C riscv-guests/l2-execution exec KECCAK_ACCEL=true GP_ZKC_EXEC_FLAGS="--quiet --gogen --fast" ZKC_REF=
+        run: make -C riscv-guests/l2-execution exec KECCAK_ACCEL=true GP_ZKC_EXEC_FLAGS="--quiet --gogen --fast"
