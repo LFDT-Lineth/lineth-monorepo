@@ -22,6 +22,7 @@ ENV PNPM_STORE_DIR=/pnpm/store
 WORKDIR /usr/src/app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
+COPY patches/ ./patches/
 
 COPY ./operations/native-yield/automation-service/package.json ./operations/native-yield/automation-service/package.json
 COPY ./ts-libs/linea-shared-utils/package.json ./ts-libs/linea-shared-utils/package.json
