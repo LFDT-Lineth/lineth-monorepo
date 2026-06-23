@@ -3,8 +3,9 @@ import * as path from "node:path";
 import { JsonRpcProvider } from "ethers";
 
 import { resolveL1DeployerConfig } from "./deployer-wallet";
+import { readDotEnvFile } from "./lib/env";
 import { sanitizeExternalError } from "./lib/errors";
-import { buildSepoliaPolicyConfig, readDotEnvFile, runL1PolicyCheck } from "./sepolia-policy";
+import { buildSepoliaPolicyConfig, runL1PolicyCheck } from "./sepolia-policy";
 
 function log(message: string) {
   process.stdout.write(`[quickstart-preflight] ${sanitizeExternalError(message)}\n`);

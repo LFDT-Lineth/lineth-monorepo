@@ -4,6 +4,7 @@ import * as path from "node:path";
 import { encryptKeystoreJson, HDNodeWallet, isAddress, JsonRpcProvider, Wallet } from "ethers";
 
 import { resolveL1DeployerConfig } from "./deployer-wallet";
+import { envNumber } from "./lib/env";
 import { sanitizeExternalError } from "./lib/errors";
 import { ensureDir, writeFileAtomic } from "./lib/fs";
 import { computeBootPrecomputedAddresses } from "./quickstart-invariants";
@@ -104,14 +105,6 @@ function die(message: string): never {
   throw new Error(`[account-setup] ERROR: ${message}`);
 }
 
-function envNumber(name: string, fallback: number): number {
-  const raw = process.env[name] ?? fallback.toString();
-  if (!/^[0-9]+$/.test(raw)) {
-    die(`${name} must be an integer value`);
-  }
-  return Number(raw);
-}
-
 // DEV-ONLY file mode. These generated runtime keystores, the keystore password
 // file, the compatibility runtime-keys.env, and the Web3Signer YAMLs are written
 // world-readable on purpose. Host artifacts are bind-mounted into containers that
@@ -152,9 +145,9 @@ async function loadOrCreateRuntimeWallet(role: RuntimeRole, password: string): P
   const wallet = Wallet.createRandom();
   const encrypted = await encryptKeystoreJson({ address: wallet.address, privateKey: wallet.privateKey }, password, {
     scrypt: {
-      N: envNumber("LINETH_KEYSTORE_SCRYPT_N", 1 << 12),
-      r: envNumber("LINETH_KEYSTORE_SCRYPT_R", 8),
-      p: envNumber("LINETH_KEYSTORE_SCRYPT_P", 1),
+      N: envNumber("LINETH_KEYSTORE_SCRYPT_N", process.env, 1 << 12),
+      r: envNumber("LINETH_KEYSTORE_SCRYPT_R", process.env, 8),
+      p: envNumber("LINETH_KEYSTORE_SCRYPT_P", process.env, 1),
     },
   });
   writeFileAtomic(file, `${encrypted}\n`, CONTAINER_READABLE_FILE_MODE);

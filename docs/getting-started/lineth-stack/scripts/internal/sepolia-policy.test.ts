@@ -7,12 +7,12 @@ import {
   LOCAL_L1_CONTAINER_RPC_URL,
   LOCAL_L1_DEPLOYER_PRIVATE_KEY,
   LOCAL_L1_HOST_RPC_URL,
+  resolveL1Config,
+} from "./deployer-wallet";
+import { parseBoolean, parseDecimalWei, readDotEnvContents } from "./lib/env";
+import {
   SEPOLIA_POLICY_DEFAULTS,
   buildSepoliaPolicyConfig,
-  parseBoolean,
-  parseDecimalWei,
-  readDotEnvContents,
-  resolveL1Config,
   runL1PolicyCheck,
   runSepoliaPolicyCheck,
 } from "./sepolia-policy";

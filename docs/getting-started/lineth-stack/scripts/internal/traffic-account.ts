@@ -4,8 +4,9 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 import { Contract, JsonRpcProvider, Wallet, isAddress } from "ethers";
 
+import { envValue, parseDecimalWei, readDotEnvContents } from "./lib/env";
 import { ensureDir, writeFileAtomic } from "./lib/fs";
-import { LOCAL_L2_POLICY_DEFAULTS, envValue, parseDecimalWei, readDotEnvContents } from "./sepolia-policy";
+import { LOCAL_L2_POLICY_DEFAULTS } from "./sepolia-policy";
 
 export type TrafficAccountMode = "ensure" | "require-existing";
 export type TrafficAccountSource = "env" | "artifact" | "generated";

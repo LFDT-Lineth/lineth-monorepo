@@ -3,10 +3,9 @@ import * as path from "node:path";
 
 import { encryptKeystoreJson, Wallet } from "ethers";
 
+import { type EnvMap, envNumber, envValue, readDotEnvFile, requiredEnvValue } from "./lib/env";
 import { sanitizeExternalError } from "./lib/errors";
 import { ensureDir, writeFileAtomic } from "./lib/fs";
-
-export type EnvMap = Record<string, string | undefined>;
 
 export type L1Mode = "sepolia" | "local";
 export type L1Context = "host" | "container";
@@ -44,47 +43,6 @@ export const LOCAL_L1_DEPLOYER_PRIVATE_KEY =
 const DEFAULT_DEPLOYER_KEYSTORE_PASSWORD = "linea-local-dev-deployer";
 const DEFAULT_DEPLOYER_KEYSTORE_FILE = "l1-deployer.json";
 const DEFAULT_DEPLOYER_PASSWORD_FILE = "password.txt";
-
-export function readDotEnvContents(contents: string): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const line of contents.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) {
-      continue;
-    }
-    const index = trimmed.indexOf("=");
-    if (index === -1) {
-      continue;
-    }
-    const key = trimmed.slice(0, index).trim();
-    let value = trimmed.slice(index + 1).trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
-    }
-    result[key] = value;
-  }
-  return result;
-}
-
-export function readDotEnvFile(envPath: string): Record<string, string> {
-  if (!fs.existsSync(envPath)) {
-    throw new Error(`${envPath} is missing; copy .env.example to .env first`);
-  }
-  return readDotEnvContents(fs.readFileSync(envPath, "utf8"));
-}
-
-export function envValue(name: string, env: EnvMap, fallback = ""): string {
-  const raw = env[name];
-  return raw === undefined || raw === "" ? fallback : raw;
-}
-
-export function requiredEnvValue(name: string, env: EnvMap): string {
-  const value = envValue(name, env);
-  if (!value) {
-    throw new Error(`${name} must be set in .env`);
-  }
-  return value;
-}
 
 export function l1Mode(env: EnvMap): L1Mode {
   const raw = envValue("L1_MODE", env, "sepolia");
@@ -163,14 +121,6 @@ function resolveGeneratedPassword(env: EnvMap, stackDir: string, accountsDir: st
     return readPasswordFile(passwordFile, "generated deployer password file");
   }
   return DEFAULT_DEPLOYER_KEYSTORE_PASSWORD;
-}
-
-function envNumber(name: string, env: EnvMap, fallback: number): number {
-  const raw = envValue(name, env, fallback.toString());
-  if (!/^[0-9]+$/.test(raw)) {
-    throw new Error(`${name} must be an integer value`);
-  }
-  return Number(raw);
 }
 
 async function decryptWallet(keystorePath: string, password: string): Promise<Wallet> {

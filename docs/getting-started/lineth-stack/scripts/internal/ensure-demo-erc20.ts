@@ -3,9 +3,10 @@ import * as fs from "node:fs";
 import { ContractFactory, JsonRpcProvider, Wallet, type InterfaceAbi } from "ethers";
 
 import { resolveL1DeployerConfig } from "./deployer-wallet";
+import { envValue, parseDecimalWei, requiredProcessEnv } from "./lib/env";
 import { sanitizeExternalError } from "./lib/errors";
 import { writeFileAtomic } from "./lib/fs";
-import { envValue, LOCAL_L2_POLICY_DEFAULTS, parseDecimalWei, SEPOLIA_POLICY_DEFAULTS } from "./sepolia-policy";
+import { LOCAL_L2_POLICY_DEFAULTS, SEPOLIA_POLICY_DEFAULTS } from "./sepolia-policy";
 
 type Lane = "l1" | "l2";
 
@@ -19,14 +20,6 @@ const lane = laneArg as Lane;
 
 if (lane !== "l1" && lane !== "l2") {
   throw new Error("usage: ensure-demo-erc20.ts <l1|l2>");
-}
-
-function requiredEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`${name} must be set`);
-  }
-  return value;
 }
 
 function log(message: string) {
@@ -48,8 +41,8 @@ async function main() {
   addressBook.l2 ??= {};
 
   const l1Config = lane === "l1" ? await resolveL1DeployerConfig(process.env, "container") : undefined;
-  const rpcUrl = lane === "l1" ? l1Config!.rpcUrl : requiredEnv("L2_RPC_URL");
-  const privateKey = lane === "l1" ? l1Config!.privateKey : requiredEnv("L2_DEPLOYER_PRIVATE_KEY");
+  const rpcUrl = lane === "l1" ? l1Config!.rpcUrl : requiredProcessEnv("L2_RPC_URL");
+  const privateKey = lane === "l1" ? l1Config!.privateKey : requiredProcessEnv("L2_DEPLOYER_PRIVATE_KEY");
   const provider = new JsonRpcProvider(rpcUrl);
   const wallet = new Wallet(privateKey, provider);
   const artifactPath =

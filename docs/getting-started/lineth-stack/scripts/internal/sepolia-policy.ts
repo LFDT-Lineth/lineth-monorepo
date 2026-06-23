@@ -1,29 +1,6 @@
-import {
-  type EnvMap,
-  type L1Mode,
-  LOCAL_L1_CHAIN_ID,
-  envValue,
-  l1Mode,
-} from "./deployer-wallet";
+import { type L1Mode, LOCAL_L1_CHAIN_ID, l1Mode } from "./deployer-wallet";
+import { type EnvMap, envValue, parseBoolean, parseDecimalWei } from "./lib/env";
 import { sanitizeExternalError } from "./lib/errors";
-
-export {
-  type EnvMap,
-  type L1Config,
-  type L1Context,
-  type L1Mode,
-  LOCAL_L1_CHAIN_ID,
-  LOCAL_L1_CONTAINER_RPC_URL,
-  LOCAL_L1_DEPLOYER_PRIVATE_KEY,
-  LOCAL_L1_HOST_RPC_URL,
-  L1_MODE_VALUES,
-  envValue,
-  l1Mode,
-  readDotEnvContents,
-  readDotEnvFile,
-  requiredEnvValue,
-  resolveL1Config,
-} from "./deployer-wallet";
 
 export type SepoliaPolicyConfig = {
   dataAvailabilityMode: string;
@@ -91,23 +68,6 @@ export const LOCAL_L2_POLICY_DEFAULTS = {
   L2_RUNTIME_TOP_UP_WEI: "10000000000000000000",
   L2_GAS_PRICE_WEI: "100000000",
 } as const;
-
-export function parseDecimalWei(name: string, raw: string): bigint {
-  if (!/^[0-9]+$/.test(raw)) {
-    throw new Error(`${name} must be an integer wei value`);
-  }
-  return BigInt(raw);
-}
-
-export function parseBoolean(name: string, raw: string): boolean {
-  if (raw === "true") {
-    return true;
-  }
-  if (raw === "false") {
-    return false;
-  }
-  throw new Error(`${name} must be true or false (got '${raw}')`);
-}
 
 export function buildSepoliaPolicyConfig(env: EnvMap): SepoliaPolicyConfig {
   const dataAvailabilityMode = envValue("LINEA_COORDINATOR_DATA_AVAILABILITY", env, "ROLLUP");

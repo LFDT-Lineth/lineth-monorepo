@@ -5,6 +5,7 @@ import { assertSingleFeeModel, FeeOverrides, feeBudgetPricePerGas } from "contra
 import { isAddress, JsonRpcProvider, type TransactionReceipt, Wallet } from "ethers";
 
 import { resolveL1DeployerConfig } from "./deployer-wallet";
+import { envNumber, requiredProcessEnv } from "./lib/env";
 import { sanitizeExternalError } from "./lib/errors";
 import { buildSepoliaPolicyConfig } from "./sepolia-policy";
 
@@ -47,22 +48,6 @@ function log(message: string) {
 
 function die(message: string): never {
   throw new Error(`[fund-runtime-accounts] ERROR: ${message}`);
-}
-
-function requiredEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    die(`${name} must be set`);
-  }
-  return value;
-}
-
-function envNumber(name: string, fallback: number): number {
-  const raw = process.env[name] ?? fallback.toString();
-  if (!/^[0-9]+$/.test(raw)) {
-    die(`${name} must be an integer value`);
-  }
-  return Number(raw);
 }
 
 function sleep(ms: number): Promise<void> {
@@ -189,9 +174,9 @@ async function fundBatch(params: {
   gasLimit: bigint;
 }) {
   const startedMs = Date.now();
-  const receiptTimeoutMs = envNumber("RUNTIME_FUNDING_RECEIPT_TIMEOUT_MS", 300_000);
-  const receiptPollIntervalMs = envNumber("RUNTIME_FUNDING_RECEIPT_POLL_INTERVAL_MS", 2_000);
-  const rpcRequestTimeoutMs = envNumber("RUNTIME_FUNDING_RPC_REQUEST_TIMEOUT_MS", 15_000);
+  const receiptTimeoutMs = envNumber("RUNTIME_FUNDING_RECEIPT_TIMEOUT_MS", process.env, 300_000);
+  const receiptPollIntervalMs = envNumber("RUNTIME_FUNDING_RECEIPT_POLL_INTERVAL_MS", process.env, 2_000);
+  const rpcRequestTimeoutMs = envNumber("RUNTIME_FUNDING_RPC_REQUEST_TIMEOUT_MS", process.env, 15_000);
   try {
     const plans = await buildFundingPlans(params.provider, params.targets);
     if (plans.length === 0) {
@@ -277,9 +262,9 @@ async function fundBatch(params: {
 async function main() {
   const l1Config = await resolveL1DeployerConfig(process.env, "container");
   const l1Provider = new JsonRpcProvider(l1Config.rpcUrl);
-  const l2Provider = new JsonRpcProvider(requiredEnv("L2_RPC_URL"));
+  const l2Provider = new JsonRpcProvider(requiredProcessEnv("L2_RPC_URL"));
   const l1Wallet = new Wallet(l1Config.privateKey, l1Provider);
-  const l2Wallet = new Wallet(requiredEnv("L2_DEPLOYER_PRIVATE_KEY"), l2Provider);
+  const l2Wallet = new Wallet(requiredProcessEnv("L2_DEPLOYER_PRIVATE_KEY"), l2Provider);
   const addressBook = loadAddressBook();
   const signers = addressBook.signers ?? {};
 
