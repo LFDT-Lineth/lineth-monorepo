@@ -5,7 +5,7 @@
 Provide a fast, reproducible Lineth Stack quickstart for demos, development, and validation.
 
 Current practical objective:
-- default path: local Linea L2 + Sepolia-backed L1 finality, usable by engineers and customer-facing demos;
+- default path: local Lineth L2 + Sepolia-backed L1 finality, usable by engineers and customer-facing demos;
 - fallback path: `L1_MODE=local` for development, CI, rehearsal, and periods where Sepolia gas/RPC/funding make repeated testing unreliable.
 
 This quickstart is still a dev/demo stack, not a production deployment model.
@@ -45,7 +45,7 @@ Completed and already integrated on this branch:
 - README was updated to describe the artifact-backed layout, TS role, Web3Signer use, and current boot path.
 
 Current branch/repo status:
-- branch: `feat/linea-stack-quickstart`
+- branch: `feat/lineth-stack-quickstart`
 - `L1_MODE=sepolia|local` is implemented on this branch;
 - local-L1 fresh-boot validation has been run successfully through first L1 finality;
 - local mode ignores stale Sepolia RPC/deployer keystore/private-key config and uses the built-in local genesis deployer
@@ -180,7 +180,7 @@ Generated, gitignored state is host-backed under `artifacts/`:
 - Boot/finality timing is materially affected by Sepolia congestion and RPC quality.
 
 ### Local L2 stack
-- Local Linea L2 remains the core runtime surface:
+- Local Lineth L2 remains the core runtime surface:
   - sequencer
   - shomei
   - l2-node-besu

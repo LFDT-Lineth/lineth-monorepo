@@ -124,11 +124,11 @@ account_setup_progress_lines() {
 deployed_links_lines() {
   [ -f "$DEPLOYMENTS_ARTIFACTS_DIR/addresses.json" ] || return 0
   host_port="${HOST_PORT_L2_BLOCKSCOUT_FRONTEND:-4001}"
-  l1_rollup="$(lineth_json_section_addr "$DEPLOYMENTS_ARTIFACTS_DIR/addresses.json" l1 LineaRollupV8)"
+  l1_rollup="$(lineth_json_section_addr "$DEPLOYMENTS_ARTIFACTS_DIR/addresses.json" l1 LinethRollupV8)"
   l1_bridge="$(lineth_json_section_addr "$DEPLOYMENTS_ARTIFACTS_DIR/addresses.json" l1 TokenBridge)"
   l2_ms="$(lineth_json_section_addr "$DEPLOYMENTS_ARTIFACTS_DIR/addresses.json" l2 L2MessageService)"
   l2_bridge="$(lineth_json_section_addr "$DEPLOYMENTS_ARTIFACTS_DIR/addresses.json" l2 TokenBridge)"
-  [ -n "$l1_rollup" ] && echo "L1 LineaRollupV8 $(lineth_l1_address_link "$l1_rollup")"
+  [ -n "$l1_rollup" ] && echo "L1 LinethRollupV8 $(lineth_l1_address_link "$l1_rollup")"
   [ -n "$l1_bridge" ] && echo "L1 TokenBridge $(lineth_l1_address_link "$l1_bridge")"
   [ -n "$l2_ms" ] && echo "L2 MessageService http://localhost:$host_port/address/$l2_ms"
   [ -n "$l2_bridge" ] && echo "L2 TokenBridge http://localhost:$host_port/address/$l2_bridge"
@@ -195,7 +195,7 @@ deploy_progress_lines() {
           }
 
           /\[deploy-contracts\] Step 1: .*present .*skipping deploy/ {
-            emit("reuse", "Step 1 reused: L1 Verifier + LineaRollup")
+            emit("reuse", "Step 1 reused: L1 Verifier + LinethRollup")
             next
           }
 

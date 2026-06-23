@@ -84,7 +84,7 @@ claim_l2_to_l1() {
     -e L1_SIGNER_PRIVATE_KEY="$l1_postman_private_key" \
     -e SMOKE_L1_CHAIN_ID="$L1_CHAIN_ID" \
     -e SMOKE_L2_CHAIN_ID="$L2_CHAIN_ID" \
-    -e SMOKE_LINEA_ROLLUP_ADDRESS="$LINEA_ROLLUP" \
+    -e SMOKE_LINETH_ROLLUP_ADDRESS="$LINETH_ROLLUP" \
     -e SMOKE_L2_MESSAGE_SERVICE_ADDRESS="$L2_MESSAGE_SERVICE" \
     -e SMOKE_MESSAGE_HASH="$MESSAGE_HASH" \
     -e SMOKE_MESSAGE_SENDER="$MESSAGE_SENDER" \
@@ -115,14 +115,14 @@ cast_event_topic() {
 
 cast_l1_call() {
   docker run --rm \
-    --network lineth-stack_linea \
+    --network lineth-stack_lineth \
     --entrypoint cast \
     "$FOUNDRY_IMAGE" call "$@" --rpc-url "$L1_CONTAINER_RPC_URL"
 }
 
 cast_l2_call() {
   docker run --rm \
-    --network lineth-stack_linea \
+    --network lineth-stack_lineth \
     --entrypoint cast \
     "$FOUNDRY_IMAGE" call "$@" --rpc-url "$L2_READ_RPC_URL"
 }
@@ -156,7 +156,7 @@ ADDR="$(lineth_deployments_file addresses.json)"
 [ -s "$PRE" ] || die "addresses-precomputed.json missing"
 [ -s "$ADDR" ] || die "addresses.json missing; deploy-contracts has not completed"
 
-LINEA_ROLLUP="$(lineth_json_section_addr "$ADDR" l1 LineaRollupV8)"
+LINETH_ROLLUP="$(lineth_json_section_addr "$ADDR" l1 LinethRollupV8)"
 L1_TOKEN_BRIDGE="$(lineth_json_section_addr "$ADDR" l1 TokenBridge)"
 L2_TOKEN_BRIDGE="$(lineth_json_section_addr "$ADDR" l2 TokenBridge)"
 L1_ERC20="$(lineth_json_section_addr "$ADDR" l1 ERC20Example)"
@@ -165,7 +165,7 @@ L1_DEPLOYER_ADDRESS="$(lineth_json_section_addr "$PRE" deployers l1)"
 L1_CHAIN_ID="$(lineth_json_meta_value "$ADDR" l1ChainId)"
 L2_CHAIN_ID="$(lineth_json_meta_value "$ADDR" l2ChainId)"
 
-require_address "L1 LineaRollupV8" "$LINEA_ROLLUP"
+require_address "L1 LinethRollupV8" "$LINETH_ROLLUP"
 require_address "L1 TokenBridge" "$L1_TOKEN_BRIDGE"
 require_address "L2 TokenBridge" "$L2_TOKEN_BRIDGE"
 require_address "L1 ERC20Example" "$L1_ERC20"
@@ -282,7 +282,7 @@ SEND_OUTPUT="$(
   docker run --rm \
     --user 0:0 \
     --entrypoint sh \
-    --network lineth-stack_linea \
+    --network lineth-stack_lineth \
     -v "$LINETH_ACCOUNTS_DIR:/accounts:ro" \
     -e L2_WITHDRAW_PRIVATE_KEY="${L2_WITHDRAW_PRIVATE_KEY:-}" \
     -e L2_BRIDGED_TOKEN="$L2_BRIDGED_TOKEN" \

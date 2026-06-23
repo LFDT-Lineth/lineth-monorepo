@@ -406,7 +406,7 @@ check_account_setup_key_model() {
     fi
   done
 
-  for contract in LineaRollupV8 L2MessageService; do
+  for contract in LinethRollupV8 L2MessageService; do
     if grep -Eq "\"?$contract\"?[[:space:]]*:" "$account_setup_ts"; then
       pass "addresses-precomputed.json includes boot-critical $contract"
     else
@@ -713,7 +713,7 @@ check_postman_key_model() {
 
   if grep -q 'addresses-precomputed.json' "$render_postman_env" \
     && grep -q 'l1PostmanListenerStartBlock' "$render_postman_env" \
-    && ! grep -q 'deploy-runtime.env\|addresses.json\|deploy-logs\|step1-linea-rollup' "$render_postman_env"; then
+    && ! grep -q 'deploy-runtime.env\|addresses.json\|deploy-logs\|step1-lineth-rollup' "$render_postman_env"; then
     pass "postman config renders from early precomputed artifacts only"
   else
     fail "render-postman-config.sh must use addresses-precomputed.json only for deploy facts"
@@ -866,7 +866,7 @@ check_runtime_config_and_validium_guardrails() {
     && grep -q 'GENESIS_STATE_ROOT_HASH' "$deploy_contracts" \
     && grep -q 'GENESIS_SHNARF' "$deploy_contracts" \
     && grep -q 'L2_MESSAGE_SERVICE_DEPLOY_BLOCK' "$deploy_contracts" \
-    && grep -q 'LINEA_ROLLUP_L1_DEPLOY_BLOCK' "$deploy_contracts" \
+    && grep -q 'LINETH_ROLLUP_L1_DEPLOY_BLOCK' "$deploy_contracts" \
     && ! grep -q 'Patched coordinator-config.toml\|coordinator-config.toml.new' "$deploy_contracts"; then
     pass "deploy-contracts writes deploy-runtime.env without patching rendered coordinator config"
   else
@@ -892,7 +892,7 @@ check_reuse_guardrails() {
   account_setup_ts="$STACK/scripts/internal/account-setup.ts"
   compose="$STACK/docker-compose.yml"
   deploy_contracts="$STACK/scripts/phases/04-deploy-contracts.sh"
-  rollup_deploy_script="$ROOT/contracts/local-deployments-artifacts/deployPlonkVerifierAndLineaRollupV8.ts"
+  rollup_deploy_script="$ROOT/contracts/local-deployments-artifacts/deployPlonkVerifierAndLinethRollupV8.ts"
   ensure_demo_erc20="$STACK/scripts/internal/ensure-demo-erc20.ts"
   ensure_demo_erc20_sh="$STACK/scripts/internal/ensure-demo-erc20.sh"
   traffic_account_sh="$STACK/scripts/internal/traffic-account.sh"
@@ -904,7 +904,7 @@ check_reuse_guardrails() {
     && grep -q 'cast code' "$deploy_contracts" \
     && grep -q 'verify_address "$address" "$expected_address" "$label"' "$deploy_contracts" \
     && grep -q 'present but no code' "$deploy_contracts" \
-    && grep -q 'step_already_done_with_code "$logfile" "$primary_contract" "$L1_RPC_URL" "L1" "$PRECOMPUTED_LINEA_ROLLUP"' "$deploy_contracts" \
+    && grep -q 'step_already_done_with_code "$logfile" "$primary_contract" "$L1_RPC_URL" "L1" "$PRECOMPUTED_LINETH_ROLLUP"' "$deploy_contracts" \
     && grep -q 'step_already_done_with_code "$logfile" "L2MessageService" "$L2_RPC_URL" "L2" "$PRECOMPUTED_L2_MS"' "$deploy_contracts" \
     && grep -q 'step_already_done_with_code "$logfile" "TokenBridge" "$L1_RPC_URL" "L1" "$EXPECTED_L1_TOKEN_BRIDGE"' "$deploy_contracts" \
     && grep -q 'step_already_done_with_code "$logfile" "TokenBridge" "$L2_RPC_URL" "L2" "$EXPECTED_L2_TOKEN_BRIDGE"' "$deploy_contracts" \
@@ -1110,7 +1110,7 @@ check_smoke_and_traffic_scripts() {
     && grep -q 'Deploy contracts' "$STACK/scripts/watch.sh" \
     && grep -q 'Wait for finality' "$STACK/scripts/watch.sh" \
     && grep -q 'Show links' "$STACK/scripts/watch.sh" \
-    && grep -q 'Step 1 reused: L1 Verifier + LineaRollup' "$STACK/scripts/watch.sh" \
+    && grep -q 'Step 1 reused: L1 Verifier + LinethRollup' "$STACK/scripts/watch.sh" \
     && grep -q 'Step 2 reused: L2 MessageService' "$STACK/scripts/watch.sh" \
     && grep -q 'Step 3 reused: L1 TokenBridge' "$STACK/scripts/watch.sh" \
     && grep -q 'Step 4 reused: L2 TokenBridge' "$STACK/scripts/watch.sh" \
@@ -1213,10 +1213,10 @@ check_smoke_and_traffic_scripts() {
     fail "deploy-contracts must mount ./scripts/lib:/scripts/lib:ro when deploy output uses shared L1 link helpers"
   fi
 
-  if grep -q 'verify_address "$LINEA_ROLLUP_ADDRESS" "$PRECOMPUTED_LINEA_ROLLUP"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
+  if grep -q 'verify_address "$LINETH_ROLLUP_ADDRESS" "$PRECOMPUTED_LINETH_ROLLUP"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
     && grep -q 'verify_address "$L2_MESSAGE_SERVICE_ADDRESS" "$PRECOMPUTED_L2_MS"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
     && grep -q 'verify_bridge_step_addresses' "$STACK/scripts/phases/04-deploy-contracts.sh" \
-    && grep -q 'step_already_done_with_code "$logfile" "$primary_contract" "$L1_RPC_URL" "L1" "$PRECOMPUTED_LINEA_ROLLUP"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
+    && grep -q 'step_already_done_with_code "$logfile" "$primary_contract" "$L1_RPC_URL" "L1" "$PRECOMPUTED_LINETH_ROLLUP"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
     && grep -q 'step_already_done_with_code "$logfile" "L2MessageService" "$L2_RPC_URL" "L2" "$PRECOMPUTED_L2_MS"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
     && grep -q 'step_already_done_with_code "$logfile" "TokenBridge" "$L1_RPC_URL" "L1" "$EXPECTED_L1_TOKEN_BRIDGE"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
     && grep -q 'step_already_done_with_code "$logfile" "TokenBridge" "$L2_RPC_URL" "L2" "$EXPECTED_L2_TOKEN_BRIDGE"' "$STACK/scripts/phases/04-deploy-contracts.sh"; then
@@ -1269,7 +1269,7 @@ check_smoke_and_traffic_scripts() {
   if [ -f "$STACK/scripts/phases/04-deploy-contracts.sh" ] \
     && grep -q 'useful links:' "$STACK/scripts/phases/04-deploy-contracts.sh" \
     && grep -q 'L2 Blockscout UI' "$STACK/scripts/phases/04-deploy-contracts.sh" \
-    && grep -q 'L1 LineaRollupV8' "$STACK/scripts/phases/04-deploy-contracts.sh"; then
+    && grep -q 'L1 LinethRollupV8' "$STACK/scripts/phases/04-deploy-contracts.sh"; then
     pass "deploy-contracts prints useful links after addresses.json is written"
   else
     fail "deploy-contracts must print useful links after addresses.json is written"
@@ -1499,7 +1499,7 @@ check_quickstart_review_fixes() {
   account_setup_ts="$STACK/scripts/internal/account-setup.ts"
   token_bridge_ts="$STACK/scripts/internal/deployBridgedTokenAndTokenBridgeV1_1.ts"
   fund_runtime_accounts="$STACK/scripts/internal/fund-runtime-accounts.ts"
-  rollup_deploy_script="$ROOT/contracts/local-deployments-artifacts/deployPlonkVerifierAndLineaRollupV8.ts"
+  rollup_deploy_script="$ROOT/contracts/local-deployments-artifacts/deployPlonkVerifierAndLinethRollupV8.ts"
   fee_overrides_ts="$ROOT/contracts/common/helpers/feeOverrides.ts"
   fee_overrides_test="$ROOT/contracts/common/helpers/feeOverrides.test.ts"
   readme="$STACK/README.md"
@@ -1508,7 +1508,7 @@ check_quickstart_review_fixes() {
   if grep -q 'guard_redeploy_nonce_window()' "$deploy_contracts" \
     && grep -q 'This artifact set is partial or stale; run ./scripts/reset.sh before redeploying.' "$deploy_contracts" \
     && grep -q 'guard_redeploy_nonce_window "L1" "$L1_RPC_URL" "$L1_DEPLOYER_ADDRESS" \\' "$deploy_contracts" \
-    && grep -q 'EXPECTED_LINEA_ROLLUP_NONCE' "$deploy_contracts" \
+    && grep -q 'EXPECTED_LINETH_ROLLUP_NONCE' "$deploy_contracts" \
     && grep -q 'EXPECTED_L2_MESSAGE_SERVICE_NONCE' "$deploy_contracts" \
     && [ "$(grep -c 'guard_redeploy_nonce_window ' "$deploy_contracts")" -ge 4 ] \
     && grep -q 'current_nonce > expected_nonce' "$deploy_contracts"; then

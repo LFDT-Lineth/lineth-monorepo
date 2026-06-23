@@ -149,7 +149,7 @@ container_id="$(docker run -d \
   --name "$CONTAINER_NAME" \
   --user 0:0 \
   --entrypoint sh \
-  --network lineth-stack_linea \
+  --network lineth-stack_lineth \
   -v "$LINETH_ACCOUNTS_DIR:/accounts:ro" \
   -v "$LINETH_DEPLOYMENTS_DIR:/deployments:ro" \
   -e AMOUNT_WEI="${AMOUNT_WEI:-1}" \

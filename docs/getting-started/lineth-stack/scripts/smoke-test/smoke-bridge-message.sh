@@ -80,13 +80,13 @@ ADDR="$(lineth_deployments_file addresses.json)"
 [ -s "$PRE" ] || die "addresses-precomputed.json missing"
 [ -s "$ADDR" ] || die "addresses.json missing; deploy-contracts has not completed"
 
-LINEA_ROLLUP="$(lineth_json_section_addr "$ADDR" l1 LineaRollupV8)"
+LINETH_ROLLUP="$(lineth_json_section_addr "$ADDR" l1 LinethRollupV8)"
 L2_MESSAGE_SERVICE="$(lineth_json_section_addr "$ADDR" l2 L2MessageService)"
 L1_TOKEN_BRIDGE="$(lineth_json_section_addr "$ADDR" l1 TokenBridge)"
 L2_TOKEN_BRIDGE="$(lineth_json_section_addr "$ADDR" l2 TokenBridge)"
 L1_DEPLOYER_ADDRESS="$(lineth_json_section_addr "$PRE" deployers l1)"
 
-require_address "L1 LineaRollupV8" "$LINEA_ROLLUP"
+require_address "L1 LinethRollupV8" "$LINETH_ROLLUP"
 require_address "L2 L2MessageService" "$L2_MESSAGE_SERVICE"
 require_address "L1 deployer" "$L1_DEPLOYER_ADDRESS"
 
@@ -121,7 +121,7 @@ echo "$CALLDATA" | grep -qE '^0x([a-fA-F0-9]{2})*$' || die "CALLDATA must be hex
 TOTAL_VALUE_WEI=$((L1_MESSAGE_VALUE_WEI + L1_MESSAGE_FEE_WEI))
 
 section "preflight"
-log "LineaRollupV8: $(lineth_l1_address_link "$LINEA_ROLLUP")"
+log "LinethRollupV8: $(lineth_l1_address_link "$LINETH_ROLLUP")"
 log "L2MessageService: http://localhost:$HOST_PORT_L2_BLOCKSCOUT_FRONTEND/address/$L2_MESSAGE_SERVICE"
 [ -n "$L1_TOKEN_BRIDGE" ] && log "L1 TokenBridge: $(lineth_l1_address_link "$L1_TOKEN_BRIDGE")"
 [ -n "$L2_TOKEN_BRIDGE" ] && log "L2 TokenBridge: http://localhost:$HOST_PORT_L2_BLOCKSCOUT_FRONTEND/address/$L2_TOKEN_BRIDGE"
@@ -141,16 +141,16 @@ section "send L1 message"
 SEND_RECEIPT="$(
   docker run --rm \
     --entrypoint sh \
-    --network lineth-stack_linea \
+    --network lineth-stack_lineth \
     -e L1_RPC_URL="$L1_CONTAINER_RPC_URL" \
     -e L1_DEPLOYER_PRIVATE_KEY="$L1_DEPLOYER_PRIVATE_KEY" \
-    -e LINEA_ROLLUP="$LINEA_ROLLUP" \
+    -e LINETH_ROLLUP="$LINETH_ROLLUP" \
     -e RECIPIENT="$RECIPIENT" \
     -e L1_MESSAGE_FEE_WEI="$L1_MESSAGE_FEE_WEI" \
     -e TOTAL_VALUE_WEI="$TOTAL_VALUE_WEI" \
     -e CALLDATA="$CALLDATA" \
     "$FOUNDRY_IMAGE" \
-    -lc 'cast send "$LINEA_ROLLUP" "sendMessage(address,uint256,bytes)" "$RECIPIENT" "$L1_MESSAGE_FEE_WEI" "$CALLDATA" --value "$TOTAL_VALUE_WEI" --rpc-url "$L1_RPC_URL" --private-key "$L1_DEPLOYER_PRIVATE_KEY" --json'
+    -lc 'cast send "$LINETH_ROLLUP" "sendMessage(address,uint256,bytes)" "$RECIPIENT" "$L1_MESSAGE_FEE_WEI" "$CALLDATA" --value "$TOTAL_VALUE_WEI" --rpc-url "$L1_RPC_URL" --private-key "$L1_DEPLOYER_PRIVATE_KEY" --json'
 )"
 
 L1_TX_HASH="$(printf '%s\n' "$SEND_RECEIPT" | lineth_json_stdin_string_field transactionHash)"
