@@ -105,6 +105,58 @@ smoke-test/smoke-bridge-erc20-l2-to-l1.sh
       pass "scripts/$script does not redefine shared runtime helpers at top-level"
     fi
   done
+
+  smoke_lib="$STACK/scripts/lib/smoke.sh"
+  if [ -f "$smoke_lib" ] \
+    && grep -q 'lineth_require_docker()' "$smoke_lib" \
+    && grep -q 'lineth_foundry_image()' "$smoke_lib" \
+    && grep -q 'lineth_psql_value()' "$smoke_lib" \
+    && grep -q 'lineth_cast_wallet_address()' "$smoke_lib" \
+    && grep -q 'lineth_cast_run()' "$smoke_lib" \
+    && grep -q 'lineth_wait_postman_claim_tx()' "$smoke_lib" \
+    && grep -q 'lineth_claim_l2_to_l1()' "$smoke_lib"; then
+    pass "scripts/lib/smoke.sh centralizes shared host-side smoke/traffic helpers"
+  else
+    fail "scripts/lib/smoke.sh must define the shared host-side smoke/traffic helpers"
+  fi
+
+  smoke_scripts="
+smoke-test/smoke-bridge-message.sh
+smoke-test/smoke-bridge-message-l2-to-l1.sh
+smoke-test/smoke-bridge-erc20-l1-to-l2.sh
+smoke-test/smoke-bridge-erc20-l2-to-l1.sh
+"
+  traffic_scripts="
+traffic-generation/send-l2-test-tx.sh
+traffic-generation/send-l2-erc20-transfer.sh
+traffic-generation/generate-l2-erc20-traffic.sh
+"
+
+  for script in $smoke_scripts $traffic_scripts; do
+    script_path="$STACK/scripts/$script"
+    if grep -q 'lib/smoke.sh' "$script_path"; then
+      pass "scripts/$script sources shared smoke helper lib/smoke.sh"
+    else
+      fail "scripts/$script must source scripts/lib/smoke.sh"
+    fi
+
+    shared_smoke_helpers="$(grep -nE '^(psql_value|claim_l2_to_l1|wait_for_postman_claim_tx|cast_wallet_address)\(\)|^FOUNDRY_IMAGE=' "$script_path" || true)"
+    if [ -n "$shared_smoke_helpers" ]; then
+      fail "scripts/$script redefines shared smoke helper(s); use lineth_* from lib/smoke.sh: $(printf '%s' "$shared_smoke_helpers" | tr '\n' ' ')"
+    else
+      pass "scripts/$script does not redefine shared smoke helpers"
+    fi
+  done
+
+  for script in $smoke_scripts; do
+    script_path="$STACK/scripts/$script"
+    local_require_helpers="$(grep -nE '^(require_address|require_hash|require_uint)\(\)' "$script_path" || true)"
+    if [ -n "$local_require_helpers" ]; then
+      fail "scripts/$script redefines require_* validator(s); use lineth_require_*: $(printf '%s' "$local_require_helpers" | tr '\n' ' ')"
+    else
+      pass "scripts/$script uses shared lineth_require_* validators"
+    fi
+  done
 }
 
 check_generated_genesis_is_volume_scoped() {
@@ -1358,20 +1410,30 @@ check_smoke_and_traffic_scripts() {
     fail "claim-l2-to-l1.ts and its test must centralize L2-to-L1 SDK proof and claim logic"
   fi
 
+  smoke_lib="$STACK/scripts/lib/smoke.sh"
+  if [ -f "$smoke_lib" ] \
+    && grep -q 'lineth_claim_l2_to_l1()' "$smoke_lib" \
+    && grep -q 'claim-l2-to-l1.ts' "$smoke_lib" \
+    && grep -q 'docker exec -i' "$smoke_lib" \
+    && grep -q '. "$runtime_keys_env"' "$smoke_lib"; then
+    pass "lib/smoke.sh centralizes the manual L1 claim helper"
+  else
+    fail "lib/smoke.sh must centralize the manual L1 claim via lineth_claim_l2_to_l1"
+  fi
+
   for script in smoke-bridge-message-l2-to-l1.sh smoke-bridge-erc20-l2-to-l1.sh; do
     script_path="$STACK/scripts/smoke-test/$script"
-	  if [ -f "$script_path" ] \
-	    && grep -q 'claim_l2_to_l1()' "$script_path" \
-	    && grep -q 'claim-l2-to-l1.ts' "$script_path" \
-	    && grep -q 'docker exec -i' "$script_path" \
-	    && grep -q '. "$runtime_keys_env"' "$script_path" \
-	    && ! grep -q 'sed -nE .*L1_POSTMAN_PRIVATE_KEY' "$script_path" \
-	    && ! grep -q 'getMessageProof' "$script_path" \
+    if [ -f "$script_path" ] \
+      && grep -q 'lineth_claim_l2_to_l1' "$script_path" \
+      && grep -q 'lib/smoke.sh' "$script_path" \
+      && ! grep -q 'claim_l2_to_l1()' "$script_path" \
+      && ! grep -q 'sed -nE .*L1_POSTMAN_PRIVATE_KEY' "$script_path" \
+      && ! grep -q 'getMessageProof' "$script_path" \
       && ! grep -q 'claimOnL1' "$script_path" \
       && ! grep -q "node --input-type=module.*<<'NODE'" "$script_path"; then
-      pass "$script delegates manual L1 claims to claim-l2-to-l1.ts"
+      pass "$script delegates manual L1 claims to lineth_claim_l2_to_l1"
     else
-      fail "$script must delegate manual L1 claims to claim-l2-to-l1.ts without embedded SDK heredocs"
+      fail "$script must delegate manual L1 claims to lineth_claim_l2_to_l1 without embedded SDK heredocs"
     fi
   done
 
