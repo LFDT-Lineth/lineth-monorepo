@@ -12,6 +12,8 @@ LINETH_LOG_CONTEXT="bridge-smoke"
 . "$SCRIPT_DIR/../lib/logging.sh"
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/../lib/runtime.sh"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/../lib/smoke.sh"
 lineth_runtime_init "$SCRIPT_DIR"
 STACK_DIR="$LINETH_STACK_DIR"
 
@@ -48,17 +50,10 @@ rpc_result_hex() {
 }
 
 cast_to_dec() {
-  docker run --rm --entrypoint cast "$FOUNDRY_IMAGE" to-dec "$1"
+  docker run --rm --entrypoint cast "$(lineth_foundry_image)" to-dec "$1"
 }
 
-psql_value() {
-  docker exec postman-pg psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-postman}" -At -F '|' -c "$1" \
-    | tr -d '\r'
-}
-
-if ! docker info >/dev/null 2>&1; then
-  die "Docker daemon is not reachable"
-fi
+lineth_require_docker
 
 [ -s "$(lineth_accounts_file addresses-precomputed.json)" ] || die "addresses-precomputed.json missing. Boot the stack first."
 [ -s "$(lineth_deployments_file addresses.json)" ] || die "addresses.json missing; deploy-contracts has not completed."
@@ -108,7 +103,6 @@ L1_MESSAGE_FEE_WEI="${L1_MESSAGE_FEE_WEI:-0}"
 CALLDATA="${CALLDATA:-0x}"
 BRIDGE_SMOKE_TIMEOUT_SECONDS="${BRIDGE_SMOKE_TIMEOUT_SECONDS:-360}"
 BRIDGE_SMOKE_POLL_SECONDS="${BRIDGE_SMOKE_POLL_SECONDS:-5}"
-FOUNDRY_IMAGE="${FOUNDRY_IMAGE:-ghcr.io/foundry-rs/foundry:${FOUNDRY_TAG:-latest}}"
 MESSAGE_CLAIMED_TOPIC="0xa4c827e719e911e8f19393ccdb85b5102f08f0910604d340ba38390b7ff2ab0e"
 
 require_address "RECIPIENT" "$RECIPIENT"
@@ -130,7 +124,7 @@ log "recipient: $RECIPIENT"
 log "valueWei: $L1_MESSAGE_VALUE_WEI"
 log "feeWei: $L1_MESSAGE_FEE_WEI"
 
-START_MESSAGE_ID="$(psql_value "select coalesce(max(id),0) from message;")"
+START_MESSAGE_ID="$(lineth_psql_value "select coalesce(max(id),0) from message;")"
 require_uint "postman max message id" "$START_MESSAGE_ID"
 
 BALANCE_BEFORE_HEX="$(rpc_l2 eth_getBalance "[\"$RECIPIENT\",\"latest\"]" | rpc_result_hex)"
@@ -149,7 +143,7 @@ SEND_RECEIPT="$(
     -e L1_MESSAGE_FEE_WEI="$L1_MESSAGE_FEE_WEI" \
     -e TOTAL_VALUE_WEI="$TOTAL_VALUE_WEI" \
     -e CALLDATA="$CALLDATA" \
-    "$FOUNDRY_IMAGE" \
+    "$(lineth_foundry_image)" \
     -lc 'cast send "$LINEA_ROLLUP" "sendMessage(address,uint256,bytes)" "$RECIPIENT" "$L1_MESSAGE_FEE_WEI" "$CALLDATA" --value "$TOTAL_VALUE_WEI" --rpc-url "$L1_RPC_URL" --private-key "$L1_DEPLOYER_PRIVATE_KEY" --json'
 )"
 
@@ -165,7 +159,7 @@ section "wait for Postman claim"
 DEADLINE=$(( $(date +%s) + BRIDGE_SMOKE_TIMEOUT_SECONDS ))
 ROW=""
 while [ "$(date +%s)" -le "$DEADLINE" ]; do
-  ROW="$(psql_value "select id,status,message_hash,coalesce(claim_tx_hash,''),message_sender,destination,value,message_nonce,coalesce(compressed_transaction_size::text,''),coalesce(is_for_sponsorship::text,'') from message where id > $START_MESSAGE_ID and direction='L1_TO_L2' and lower(destination)=lower('$RECIPIENT') and value='$L1_MESSAGE_VALUE_WEI' order by id desc limit 1;")"
+  ROW="$(lineth_psql_value "select id,status,message_hash,coalesce(claim_tx_hash,''),message_sender,destination,value,message_nonce,coalesce(compressed_transaction_size::text,''),coalesce(is_for_sponsorship::text,'') from message where id > $START_MESSAGE_ID and direction='L1_TO_L2' and lower(destination)=lower('$RECIPIENT') and value='$L1_MESSAGE_VALUE_WEI' order by id desc limit 1;")"
   if [ -n "$ROW" ]; then
     STATUS="$(printf '%s' "$ROW" | cut -d '|' -f 2)"
     CLAIM_TX_HASH="$(printf '%s' "$ROW" | cut -d '|' -f 4)"

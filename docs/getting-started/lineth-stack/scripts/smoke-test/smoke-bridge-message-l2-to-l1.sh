@@ -12,6 +12,8 @@ LINETH_LOG_CONTEXT="bridge-smoke-l2-to-l1"
 . "$SCRIPT_DIR/../lib/logging.sh"
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/../lib/runtime.sh"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/../lib/smoke.sh"
 lineth_runtime_init "$SCRIPT_DIR"
 STACK_DIR="$LINETH_STACK_DIR"
 
@@ -49,58 +51,7 @@ rpc_l1() {
     --data "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"$method\",\"params\":$params}"
 }
 
-psql_value() {
-  docker exec postman-pg psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-postman}" -At -F '|' -c "$1" \
-    | tr -d '\r'
-}
-
-wait_for_postman_claim_tx() {
-  message_id="$1"
-  deadline="$2"
-
-  while [ "$(date +%s)" -le "$deadline" ]; do
-    claim_tx_hash="$(
-      psql_value "select coalesce(claim_tx_hash,'') from message where id=$message_id and status='CLAIMED_SUCCESS';"
-    )"
-    if printf '%s' "$claim_tx_hash" | grep -qE '^0x[a-fA-F0-9]{64}$'; then
-      printf '%s\n' "$claim_tx_hash"
-      return 0
-    fi
-    sleep "$BRIDGE_SMOKE_POLL_SECONDS"
-  done
-
-  return 1
-}
-
-claim_l2_to_l1() {
-  runtime_keys_env="$(lineth_accounts_file runtime-keys.env)"
-  # shellcheck disable=SC1090
-  . "$runtime_keys_env"
-  l1_postman_private_key="${L1_POSTMAN_PRIVATE_KEY:-}"
-  [ -n "$l1_postman_private_key" ] || die "L1_POSTMAN_PRIVATE_KEY missing from runtime-keys.env"
-
-  docker exec -i \
-    -e L1_SIGNER_PRIVATE_KEY="$l1_postman_private_key" \
-    -e SMOKE_L1_CHAIN_ID="$L1_CHAIN_ID" \
-    -e SMOKE_L2_CHAIN_ID="$L2_CHAIN_ID" \
-    -e SMOKE_LINEA_ROLLUP_ADDRESS="$LINEA_ROLLUP" \
-    -e SMOKE_L2_MESSAGE_SERVICE_ADDRESS="$L2_MESSAGE_SERVICE" \
-    -e SMOKE_MESSAGE_HASH="$MESSAGE_HASH" \
-    -e SMOKE_MESSAGE_SENDER="$MESSAGE_SENDER" \
-    -e SMOKE_DESTINATION="$DESTINATION" \
-    -e SMOKE_FEE="$MESSAGE_FEE" \
-    -e SMOKE_VALUE="$MESSAGE_VALUE" \
-    -e SMOKE_MESSAGE_NONCE="$MESSAGE_NONCE" \
-    -e SMOKE_CALLDATA="$MESSAGE_CALLDATA" \
-    -e SMOKE_SENT_BLOCK_NUMBER="$SENT_BLOCK_NUMBER" \
-    postman \
-    sh -lc 'cd /usr/src/app/postman && node --input-type=module' \
-    < "$STACK_DIR/scripts/internal/claim-l2-to-l1.ts"
-}
-
-if ! docker info >/dev/null 2>&1; then
-  die "Docker daemon is not reachable"
-fi
+lineth_require_docker
 
 [ -s "$(lineth_accounts_file addresses-precomputed.json)" ] || die "addresses-precomputed.json missing. Boot the stack first."
 [ -s "$(lineth_accounts_file runtime-keys.env)" ] || die "runtime-keys.env missing. Boot the stack first."
@@ -156,7 +107,6 @@ L1_RECEIPT_TIMEOUT_SECONDS="${L1_RECEIPT_TIMEOUT_SECONDS:-180}"
 L2_TRAFFIC_ETH_MIN_BALANCE_WEI="${L2_TRAFFIC_ETH_MIN_BALANCE_WEI:-100000000000000000}"
 L2_TRAFFIC_ETH_TOP_UP_WEI="${L2_TRAFFIC_ETH_TOP_UP_WEI:-1000000000000000000}"
 L2_GAS_PRICE_WEI="${L2_GAS_PRICE_WEI:-100000000}"
-FOUNDRY_IMAGE="${FOUNDRY_IMAGE:-ghcr.io/foundry-rs/foundry:${FOUNDRY_TAG:-latest}}"
 L2_READ_RPC_URL="${L2_READ_RPC_URL:-${L2_RPC_URL:-http://l2-node-besu:8545}}"
 L2_SEND_RPC_URL="${L2_SEND_RPC_URL:-http://sequencer:8545}"
 MESSAGE_CLAIMED_TOPIC="0xa4c827e719e911e8f19393ccdb85b5102f08f0910604d340ba38390b7ff2ab0e"
@@ -187,7 +137,7 @@ log "l2GasPriceWei: $L2_GAS_PRICE_WEI"
 log "l2ReadRpc: $L2_READ_RPC_URL"
 log "l2SendRpc: $L2_SEND_RPC_URL"
 
-START_MESSAGE_ID="$(psql_value "select coalesce(max(id),0) from message;")"
+START_MESSAGE_ID="$(lineth_psql_value "select coalesce(max(id),0) from message;")"
 require_uint "postman max message id" "$START_MESSAGE_ID"
 
 section "ensuring disposable traffic account"
@@ -226,7 +176,7 @@ SEND_OUTPUT="$(
     -e L2_READ_RPC_URL="$L2_READ_RPC_URL" \
     -e L2_SEND_RPC_URL="$L2_SEND_RPC_URL" \
     -e L2_GAS_PRICE_WEI="$L2_GAS_PRICE_WEI" \
-    "$FOUNDRY_IMAGE" \
+    "$(lineth_foundry_image)" \
     -lc '
       set -eu
 
@@ -301,7 +251,7 @@ DEADLINE=$(( $(date +%s) + BRIDGE_SMOKE_TIMEOUT_SECONDS ))
 ROW=""
 READY=0
 while [ "$(date +%s)" -le "$DEADLINE" ]; do
-  ROW="$(psql_value "select id,status,message_hash,message_sender,destination,fee,value,message_nonce,calldata,sent_block_number,coalesce(claim_tx_hash,'') from message where id > $START_MESSAGE_ID and direction='L2_TO_L1' and lower(message_sender)=lower('$L2_SENDER') and lower(destination)=lower('$RECIPIENT') and fee='$L2_L1_MESSAGE_FEE_WEI' and value='$L2_L1_MESSAGE_VALUE_WEI' order by id desc limit 1;")"
+  ROW="$(lineth_psql_value "select id,status,message_hash,message_sender,destination,fee,value,message_nonce,calldata,sent_block_number,coalesce(claim_tx_hash,'') from message where id > $START_MESSAGE_ID and direction='L2_TO_L1' and lower(message_sender)=lower('$L2_SENDER') and lower(destination)=lower('$RECIPIENT') and fee='$L2_L1_MESSAGE_FEE_WEI' and value='$L2_L1_MESSAGE_VALUE_WEI' order by id desc limit 1;")"
   if [ -n "$ROW" ]; then
     STATUS="$(printf '%s' "$ROW" | cut -d '|' -f 2)"
     case "$STATUS" in
@@ -358,7 +308,7 @@ log "sentBlockNumber: $SENT_BLOCK_NUMBER"
 if [ "$STATUS" != "CLAIMED_SUCCESS" ]; then
   section "claim on L1"
   CLAIM_OUTPUT=""
-  if ! CLAIM_OUTPUT="$(claim_l2_to_l1)"; then
+  if ! CLAIM_OUTPUT="$(lineth_claim_l2_to_l1)"; then
     printf '%s\n' "$CLAIM_OUTPUT" >&2
     die "L1 SDK claim failed"
   fi
@@ -397,7 +347,7 @@ done
 
 if ! printf '%s\n' "$CLAIM_RECEIPT" | grep -q '"result":[[:space:]]*{'; then
   POSTMAN_CLAIM_TX_HASH=""
-  if POSTMAN_CLAIM_TX_HASH="$(wait_for_postman_claim_tx "$MESSAGE_ID" "$RECEIPT_DEADLINE")" \
+  if POSTMAN_CLAIM_TX_HASH="$(lineth_wait_postman_claim_tx "$MESSAGE_ID" "$RECEIPT_DEADLINE")" \
     && [ "$POSTMAN_CLAIM_TX_HASH" != "$CLAIM_TX_HASH" ]; then
     log "postman claimed while manual claim raced: $POSTMAN_CLAIM_TX_HASH"
     CLAIM_TX_HASH="$POSTMAN_CLAIM_TX_HASH"

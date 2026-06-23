@@ -12,6 +12,8 @@ LINETH_LOG_CONTEXT="erc20-bridge-l1-to-l2"
 . "$SCRIPT_DIR/../lib/logging.sh"
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/../lib/runtime.sh"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/../lib/smoke.sh"
 lineth_runtime_init "$SCRIPT_DIR"
 STACK_DIR="$LINETH_STACK_DIR"
 
@@ -41,23 +43,8 @@ require_uint() {
   esac
 }
 
-psql_value() {
-  docker exec postman-pg psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-postman}" -At -F '|' -c "$1" \
-    | tr -d '\r'
-}
-
-cast_wallet_address() {
-  private_key="$1"
-  docker run --rm \
-    --entrypoint cast \
-    "$FOUNDRY_IMAGE" wallet address --private-key "$private_key"
-}
-
 cast_l2_call() {
-  docker run --rm \
-    --network lineth-stack_linea \
-    --entrypoint cast \
-    "$FOUNDRY_IMAGE" call "$@" --rpc-url "$L2_RPC_URL"
+  lineth_cast_run "$L2_RPC_URL" call "$@"
 }
 
 cast_l1_send() {
@@ -66,12 +53,10 @@ cast_l1_send() {
     --entrypoint cast \
     -e L1_RPC_URL="$L1_RPC_URL" \
     -e L1_DEPLOYER_PRIVATE_KEY="$L1_DEPLOYER_PRIVATE_KEY" \
-    "$FOUNDRY_IMAGE" send "$@" --rpc-url "$L1_RPC_URL" --private-key "$L1_DEPLOYER_PRIVATE_KEY" --json
+    "$(lineth_foundry_image)" send "$@" --rpc-url "$L1_RPC_URL" --private-key "$L1_DEPLOYER_PRIVATE_KEY" --json
 }
 
-if ! docker info >/dev/null 2>&1; then
-  die "Docker daemon is not reachable"
-fi
+lineth_require_docker
 
 [ -s "$(lineth_deployments_file addresses.json)" ] || die "addresses.json missing; deploy-contracts has not completed."
 
@@ -113,7 +98,6 @@ L1_DEPLOYER_PRIVATE_KEY="$(lineth_l1_deployer_private_key)"
 
 HOST_PORT_L2_BLOCKSCOUT_FRONTEND="$(lineth_host_port HOST_PORT_L2_BLOCKSCOUT_FRONTEND 4001)"
 
-FOUNDRY_IMAGE="${FOUNDRY_IMAGE:-ghcr.io/foundry-rs/foundry:${FOUNDRY_TAG:-latest}}"
 L2_RPC_URL="${L2_RPC_URL:-http://l2-node-besu:8545}"
 BRIDGE_AMOUNT_WEI="${BRIDGE_AMOUNT_WEI:-1000000000000000000}"
 BRIDGE_MESSAGE_FEE_WEI="${BRIDGE_MESSAGE_FEE_WEI:-10000000000000000}"
@@ -126,20 +110,20 @@ require_uint "BRIDGE_SMOKE_TIMEOUT_SECONDS" "$BRIDGE_SMOKE_TIMEOUT_SECONDS"
 require_uint "BRIDGE_SMOKE_POLL_SECONDS" "$BRIDGE_SMOKE_POLL_SECONDS"
 [ "$BRIDGE_AMOUNT_WEI" -gt 0 ] || die "BRIDGE_AMOUNT_WEI must be greater than zero"
 
-SENDER="$(cast_wallet_address "$L1_DEPLOYER_PRIVATE_KEY")"
+SENDER="$(lineth_cast_wallet_address "$L1_DEPLOYER_PRIVATE_KEY")"
 if [ -n "${RECIPIENT:-}" ]; then
   L2_RECIPIENT="$RECIPIENT"
 elif [ -s "$DEMO_TRAFFIC_ENV" ]; then
   # shellcheck disable=SC1090
   . "$DEMO_TRAFFIC_ENV"
   [ -n "${L2_TRAFFIC_PRIVATE_KEY:-}" ] || die "demo-traffic.env exists but L2_TRAFFIC_PRIVATE_KEY is missing"
-  L2_RECIPIENT="$(cast_wallet_address "$L2_TRAFFIC_PRIVATE_KEY")"
+  L2_RECIPIENT="$(lineth_cast_wallet_address "$L2_TRAFFIC_PRIVATE_KEY")"
 else
   L2_RECIPIENT="0x1000000000000000000000000000000000000001"
 fi
 require_address "L2 recipient" "$L2_RECIPIENT"
 
-START_MESSAGE_ID="$(psql_value "select coalesce(max(id),0) from message;")"
+START_MESSAGE_ID="$(lineth_psql_value "select coalesce(max(id),0) from message;")"
 require_uint "postman max message id" "$START_MESSAGE_ID"
 
 section "preflight"
@@ -184,7 +168,7 @@ section "wait for Postman L2 claim"
 DEADLINE=$(( $(date +%s) + BRIDGE_SMOKE_TIMEOUT_SECONDS ))
 ROW=""
 while [ "$(date +%s)" -le "$DEADLINE" ]; do
-  ROW="$(psql_value "select id,status,message_hash,coalesce(claim_tx_hash,''),message_sender,destination,value from message where id > $START_MESSAGE_ID and direction='L1_TO_L2' and lower(message_sender)=lower('$L1_TOKEN_BRIDGE') and lower(destination)=lower('$L2_TOKEN_BRIDGE') order by id desc limit 1;")"
+  ROW="$(lineth_psql_value "select id,status,message_hash,coalesce(claim_tx_hash,''),message_sender,destination,value from message where id > $START_MESSAGE_ID and direction='L1_TO_L2' and lower(message_sender)=lower('$L1_TOKEN_BRIDGE') and lower(destination)=lower('$L2_TOKEN_BRIDGE') order by id desc limit 1;")"
   if [ -n "$ROW" ]; then
     STATUS="$(printf '%s' "$ROW" | cut -d '|' -f 2)"
     CLAIM_TX_HASH="$(printf '%s' "$ROW" | cut -d '|' -f 4)"
