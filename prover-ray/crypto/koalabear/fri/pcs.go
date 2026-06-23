@@ -51,16 +51,16 @@
 // both produce identical OpeningProofs.
 //
 //   - One-shot:   pcs.Open(in OpenInputs) (OpeningProof, error)
-//                 pcs.Verify(in VerifyInputs, proof OpeningProof) error
+//     pcs.Verify(in VerifyInputs, proof OpeningProof) error
 //
 //     For callers that have all challenges + query positions ready
 //     up-front (precomputed transcript, tests, integration recipes).
 //
 //   - State-machine: NewOpenerState(...) ->
-//        ComputeClaimedValues(zeta) ->
-//        CommitDeepQuotient(alphaDEEP) ->
-//        Fold(alpha_j)        // numRounds times
-//        Open(queryPositions)
+//     ComputeClaimedValues(zeta) ->
+//     CommitDeepQuotient(alphaDEEP) ->
+//     Fold(alpha_j)        // numRounds times
+//     Open(queryPositions)
 //
 //     Mirrors [fri.ProverState]'s coin-fed pattern: caller binds each
 //     returned root to its transcript and derives the next challenge.
@@ -89,77 +89,77 @@
 // internal/fri/. Decision matrix already pinned there:
 //   - (i)   per-size reset.
 //   - (ii)  per-(N, s) bundle batching (one accumulation per shift,
-//           shift ascending, no reset inside a size).
+//     shift ascending, no reset inside a size).
 //   - (iii) empty shift list is an error (every committed row is
-//           opened at least once). OPEN QUESTION 1 below.
+//     opened at least once). OPEN QUESTION 1 below.
 //   - (iv)  duplicate shifts inside a row's shift list is an error.
 //   - (v)   no cross-batch dedup; caller is responsible.
 //   - (vi)  caller picks batch order. Convention: setup batches at
-//           the front, AIR-quotient batch at the back, witness rounds
-//           in between -- though the PCS itself doesn't care, only
-//           that prover and verifier agree on the order.
+//     the front, AIR-quotient batch at the back, witness rounds
+//     in between -- though the PCS itself doesn't care, only
+//     that prover and verifier agree on the order.
 //
 // =============================================================================
 // Open questions for review
 // =============================================================================
 //
-// 1. Empty shift lists. Loom rejects them; should this PCS too? An
-//    empty shift list means "committed but not opened" -- the row's
-//    value is still authenticated by the Merkle path, but it doesn't
-//    contribute to the DEEP quotient. Allowing this is more flexible
-//    but adds a dead-code-detection failure mode (typos in the shift
-//    schedule become silent commitments). Default proposal: REJECT
-//    empty shift lists, matching loom.
+//  1. Empty shift lists. Loom rejects them; should this PCS too? An
+//     empty shift list means "committed but not opened" -- the row's
+//     value is still authenticated by the Merkle path, but it doesn't
+//     contribute to the DEEP quotient. Allowing this is more flexible
+//     but adds a dead-code-detection failure mode (typos in the shift
+//     schedule become silent commitments). Default proposal: REJECT
+//     empty shift lists, matching loom.
 //
-// 2. Multi-size conjugate-pair openings. The underlying [Tree] is
-//    multi-size (smaller-size rows live in AuxSiblings), but
-//    [Branch] opens only ONE position per level: the leaf + deepest
-//    sibling form a conjugate pair AT THE BOTTOM SIZE only. The
-//    conjugate at a smaller size N_small lives at a different aux
-//    octuplet -- specifically, the sibling at aux-level for size
-//    N_small -- which the current Branch does NOT include.
+//  2. Multi-size conjugate-pair openings. The underlying [Tree] is
+//     multi-size (smaller-size rows live in AuxSiblings), but
+//     [Branch] opens only ONE position per level: the leaf + deepest
+//     sibling form a conjugate pair AT THE BOTTOM SIZE only. The
+//     conjugate at a smaller size N_small lives at a different aux
+//     octuplet -- specifically, the sibling at aux-level for size
+//     N_small -- which the current Branch does NOT include.
 //
-//    The DEEP bridge needs DQ_{N_small}(x) AND DQ_{N_small}(-x) at
-//    every query position to verify the FRI level leaf at that size.
-//    So an opening must surface BOTH conjugate values at every
-//    present size.
+//     The DEEP bridge needs DQ_{N_small}(x) AND DQ_{N_small}(-x) at
+//     every query position to verify the FRI level leaf at that size.
+//     So an opening must surface BOTH conjugate values at every
+//     present size.
 //
-//    Three concrete options to choose from:
-//      (a) Open TWO branches per query per batch (one at position s,
-//          one at s ^ 1 ... but that gives bottom-conjugate only).
-//          Actually the right shape is "open the bottom and the
-//          full-conjugate path" -- needs sketching.
-//      (b) Extend the Branch structure to carry, at each aux level,
-//          BOTH the path-aligned aux AND its sibling aux. Doubles
-//          per-level aux data but keeps one Branch per (query, batch).
-//      (c) Restrict batches to single-size only (each batch has a
-//          single populated SizedTable). This degenerates to loom's
-//          shape today; the multi-size tree's aux-leaf machinery is
-//          unused.
+//     Three concrete options to choose from:
+//     (a) Open TWO branches per query per batch (one at position s,
+//     one at s ^ 1 ... but that gives bottom-conjugate only).
+//     Actually the right shape is "open the bottom and the
+//     full-conjugate path" -- needs sketching.
+//     (b) Extend the Branch structure to carry, at each aux level,
+//     BOTH the path-aligned aux AND its sibling aux. Doubles
+//     per-level aux data but keeps one Branch per (query, batch).
+//     (c) Restrict batches to single-size only (each batch has a
+//     single populated SizedTable). This degenerates to loom's
+//     shape today; the multi-size tree's aux-leaf machinery is
+//     unused.
 //
-//    Default proposal: option (b) -- a new "PairedBranch" type that
-//    pairs the existing Branch with sibling-aux octuplets at every
-//    level, plus raw row data at both s and s^1 for the bottom and at
-//    both (s>>d) and (s>>d)^1 for each aux level. WMerkleOpening
-//    below reflects this. Worth re-validating on cost vs option (c).
+//     Default proposal: option (b) -- a new "PairedBranch" type that
+//     pairs the existing Branch with sibling-aux octuplets at every
+//     level, plus raw row data at both s and s^1 for the bottom and at
+//     both (s>>d) and (s>>d)^1 for each aux level. WMerkleOpening
+//     below reflects this. Worth re-validating on cost vs option (c).
 //
-// 3. State-machine vs one-shot API. Both proposed; concrete decision
-//    point for the team is: which one ships in the v1 implementation,
-//    or do both ship simultaneously? Default proposal: ship the state-
-//    machine variant (mirrors the existing fri.ProverState pattern);
-//    add the one-shot wrapper if a caller asks for it.
+//  3. State-machine vs one-shot API. Both proposed; concrete decision
+//     point for the team is: which one ships in the v1 implementation,
+//     or do both ship simultaneously? Default proposal: ship the state-
+//     machine variant (mirrors the existing fri.ProverState pattern);
+//     add the one-shot wrapper if a caller asks for it.
 //
-// 4. Where does the canonical-name -> (batchIdx, sizeLog2, rowIdx, isExt)
-//    mapping live? Caller-side, per the precedent set by loom (the PCS
-//    doesn't know column names). Worth documenting an example caller
-//    that builds this mapping at compile time.
+//  4. Where does the canonical-name -> (batchIdx, sizeLog2, rowIdx, isExt)
+//     mapping live? Caller-side, per the precedent set by loom (the PCS
+//     doesn't know column names). Worth documenting an example caller
+//     that builds this mapping at compile time.
 //
-// 5. Encoders + Params relationship. [NewPCS] currently takes both. We
-//    could derive one set of encoders from Params (since Params knows
-//    rate = N / D and the size schedule), but encoders also carry FFT
-//    domains which Params already precomputes. Default proposal: take
-//    both; document that pcs.Encoders[i] must have PlainTextSize =
-//    2^i and inverse rate == pcs.Params.N / pcs.Params.D.
+//  5. Encoders + Params relationship. [NewPCS] currently takes both. We
+//     could derive one set of encoders from Params (since Params knows
+//     rate = N / D and the size schedule), but encoders also carry FFT
+//     domains which Params already precomputes. Default proposal: take
+//     both; document that pcs.Encoders[i] must have PlainTextSize =
+//     2^i and inverse rate == pcs.Params.N / pcs.Params.D.
 package fri
 
 import (
@@ -365,9 +365,9 @@ type SizedConjugatePair struct {
 //   - Leaf      : the path-aligned bottom-level octuplet.
 //   - SibleafQ  : the conjugate bottom-level octuplet (= Branch.Siblings[last]).
 //   - Siblings  : the chain of node-level siblings above the bottom
-//                 (= Branch.Siblings[:len-1]).
+//     (= Branch.Siblings[:len-1]).
 //   - AuxPathOctuplets[level]    : the path-aligned aux at this level
-//                                  (= Branch.AuxSiblings[level]).
+//     (= Branch.AuxSiblings[level]).
 //   - AuxSiblingOctuplets[level] : the SIBLING aux at this level (new).
 //
 // Either nil if no aux at that level (no SizedTable of that size).
@@ -492,7 +492,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 //	    root := os.Fold(alpha_j)
 //	    // transcript absorbs root, derives alpha_{j+1}
 //	}
-//	// transcript absorbs the final polynomial (read from os.FinalPolyExt())
+//	// transcript absorbs the final polynomial (read from os.FinalPoly())
 //	// derives the query positions
 //	proof := os.Open(queryPositions)
 //
@@ -563,7 +563,7 @@ func (os *OpenerState) HasNext() bool {
 // foldLayerInternally), and returns the new layer's Merkle root.
 //
 // On the final fold, the running polynomial collapses to the final
-// polynomial (read via FinalPolyExt) and the returned octuplet is the
+// polynomial (read via FinalPoly) and the returned octuplet is the
 // zero-octuplet sentinel.
 //
 // Wraps the inner [fri.ProverState.Fold].
@@ -571,11 +571,11 @@ func (os *OpenerState) Fold(alpha field.Ext) field.Octuplet {
 	panic("TODO(pcs): OpenerState.Fold")
 }
 
-// FinalPolyExt returns the FRI final polynomial after all folds are
+// FinalPoly returns the FRI final polynomial after all folds are
 // done. Used by the caller to bind into the transcript before
 // deriving the query positions.
-func (os *OpenerState) FinalPolyExt() []field.Ext {
-	panic("TODO(pcs): OpenerState.FinalPolyExt")
+func (os *OpenerState) FinalPoly() []field.Ext {
+	panic("TODO(pcs): OpenerState.FinalPoly")
 }
 
 // Open consumes the FRI query positions and assembles the final
