@@ -5,13 +5,9 @@ inputs:
   image_name:
     description: 'Docker image name (e.g., consensys/linea-coordinator)'
     required: true
-  image_tag:
-    description: 'Docker image tag'
+  image_tags:
+    description: 'Comma-separated list of docker image tags to apply (e.g. "0.3.4-20260511-935ef04,0.3.4-20260511-935ef04-rc1"). The first entry is treated as the primary tag; all entries are pushed when push_image is true. Duplicates and empty entries will be dropped.'
     required: true
-  extra_image_tag:
-    description: 'Extra docker image tag'
-    required: false
-    default: ''
   develop_tag:
     description: 'Develop tag (used when on main branch)'
     required: false
@@ -59,31 +55,54 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Validate inputs
-      shell: bash
-      run: |
-        if [[ -z "${{ inputs.image_tag }}" ]]; then
-          echo "::error::image_tag is empty — this usually means the upstream version-tag job was cancelled or failed. Failing early to avoid an invalid Docker tag."
-          exit 1
-        fi
-
     - name: Set tags
       id: set-tags
       shell: bash
       env:
         IMAGE_NAME: ${{ inputs.image_name }}
-        IMAGE_TAG: ${{ inputs.image_tag }}
-        EXTRA_IMAGE_TAG: ${{ inputs.extra_image_tag }}
+        IMAGE_TAGS: ${{ inputs.image_tags }}
         DEVELOP_TAG: ${{ inputs.develop_tag }}
       run: |
-        TAGS="${IMAGE_NAME}:${IMAGE_TAG}"
+        set -euo pipefail
+
+        # Parse image_tags (comma-separated). The first non-empty entry is the
+        # "primary" tag — used for the local build/load and `docker save`. All
+        # entries get pushed when push_image=true. Optionally append develop_tag
+        # when running on main.
+        TAGS_RAW=()
+        if [[ -n "${IMAGE_TAGS}" ]]; then
+          IFS=',' read -ra PARSED <<< "${IMAGE_TAGS}"
+          for t in "${PARSED[@]}"; do
+            # Trim surrounding whitespace.
+            t="${t#"${t%%[![:space:]]*}"}"
+            t="${t%"${t##*[![:space:]]}"}"
+            [[ -n "${t}" ]] && TAGS_RAW+=("${t}")
+          done
+        fi
         if [[ "${{ github.ref }}" == "refs/heads/main" ]] && [[ -n "${DEVELOP_TAG}" ]]; then
-          TAGS="${TAGS},${IMAGE_NAME}:${DEVELOP_TAG}"
+          TAGS_RAW+=("${DEVELOP_TAG}")
         fi
-        if [[ -n "${EXTRA_IMAGE_TAG}" ]] && [[ "${EXTRA_IMAGE_TAG}" != "${IMAGE_TAG}" ]]; then
-          TAGS="${TAGS},${IMAGE_NAME}:${EXTRA_IMAGE_TAG}"
+
+        if [[ ${#TAGS_RAW[@]} -eq 0 ]]; then
+          echo "::error::image_tags is empty — this usually means the upstream version-tag job was cancelled or failed. Failing early to avoid an invalid Docker tag."
+          exit 1
         fi
-        echo "tags=$TAGS" >> $GITHUB_OUTPUT
+
+        PRIMARY_TAG="${TAGS_RAW[0]}"
+
+        # De-duplicate while preserving first-occurrence order.
+        declare -A SEEN=()
+        TAGS=""
+        for t in "${TAGS_RAW[@]}"; do
+          if [[ -z "${SEEN[$t]:-}" ]]; then
+            SEEN[$t]=1
+            TAGS+="${TAGS:+,}${IMAGE_NAME}:${t}"
+          fi
+        done
+
+        echo "primary_tag=${PRIMARY_TAG}" >> "$GITHUB_OUTPUT"
+        echo "primary_image=${IMAGE_NAME}:${PRIMARY_TAG}" >> "$GITHUB_OUTPUT"
+        echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
 
     - name: Set up QEMU
       if: ${{ inputs.requires_qemu == 'true' }}
@@ -125,7 +144,7 @@ runs:
         platforms: linux/amd64
         load: true
         push: false
-        tags: ${{ inputs.image_name }}:${{ inputs.image_tag }}
+        tags: ${{ steps.set-tags.outputs.primary_image }}
         secrets: ${{ inputs.build_secrets }}
         build-args: ${{ inputs.build_args }}
         cache-from: ${{ steps.cache-config.outputs.cache_from_test }}
@@ -134,7 +153,7 @@ runs:
       if: ${{ inputs.save_artifact == 'true' }}
       shell: bash
       run: |
-        docker save ${{ inputs.image_name }}:${{ inputs.image_tag }} | gzip > ${{ inputs.artifact_name }}-docker-image.tar.gz
+        docker save ${{ steps.set-tags.outputs.primary_image }} | gzip > ${{ inputs.artifact_name }}-docker-image.tar.gz
 
     - name: Upload Docker image artifact
       if: ${{ inputs.save_artifact == 'true' }}

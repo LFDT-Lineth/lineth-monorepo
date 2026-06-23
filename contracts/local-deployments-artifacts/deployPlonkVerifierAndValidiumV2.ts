@@ -29,6 +29,7 @@ import {
 } from "../common/constants";
 import { deployContractFromArtifacts, getInitializerData } from "../common/helpers/deployments";
 import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
+import { getDeploymentNetworkName, requireAddressFromRegistryOrEnv } from "../common/helpers/readAddress";
 import { generateRoleAssignments } from "../common/helpers/roles";
 import { get1559Fees } from "../scripts/utils";
 
@@ -57,14 +58,19 @@ function findContractArtifacts(
 }
 
 async function main() {
+  const networkName = getDeploymentNetworkName();
   const verifierName = getRequiredEnvVar("VERIFIER_CONTRACT_NAME");
-  const validiumInitialStateRootHash = getRequiredEnvVar("VALIDIUM_INITIAL_STATE_ROOT_HASH");
-  const validiumInitialL2BlockNumber = getRequiredEnvVar("VALIDIUM_INITIAL_L2_BLOCK_NUMBER");
-  const validiumSecurityCouncil = getRequiredEnvVar("VALIDIUM_SECURITY_COUNCIL");
+  const validiumInitialStateRootHash = getRequiredEnvVar("INITIAL_L2_STATE_ROOT_HASH");
+  const validiumInitialL2BlockNumber = getRequiredEnvVar("INITIAL_L2_BLOCK_NUMBER");
+  const validiumSecurityCouncil = requireAddressFromRegistryOrEnv(
+    networkName,
+    "L1_SECURITY_COUNCIL",
+    "L1_SECURITY_COUNCIL",
+  );
   const validiumOperators = getRequiredEnvVar("VALIDIUM_OPERATORS").split(",");
   const validiumRateLimitPeriodInSeconds = getRequiredEnvVar("VALIDIUM_RATE_LIMIT_PERIOD");
   const validiumRateLimitAmountInWei = getRequiredEnvVar("VALIDIUM_RATE_LIMIT_AMOUNT");
-  const validiumGenesisTimestamp = getRequiredEnvVar("VALIDIUM_GENESIS_TIMESTAMP");
+  const validiumGenesisTimestamp = getRequiredEnvVar("L2_GENESIS_TIMESTAMP");
 
   const validiumName = "Validium";
   const validiumImplementationName = "ValidiumV2Implementation";
@@ -86,7 +92,7 @@ async function main() {
 
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
 
-  const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
+  const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
 
   const { gasPrice } = await get1559Fees(provider);
 

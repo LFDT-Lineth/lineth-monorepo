@@ -8,8 +8,8 @@
  */
 package net.consensys.linea.sequencer.txselection.selectors;
 
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE;
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE_UPFRONT;
+import static linea.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE;
+import static linea.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE_UPFRONT;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
 import java.util.EnumMap;

@@ -8,7 +8,7 @@
  */
 package net.consensys.linea.sequencer.txselection.selectors;
 
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.BUNDLE_GAS_EXCEEDS_MAX_BUNDLE_BLOCK_GAS;
+import static linea.txselection.LineaTransactionSelectionResult.BUNDLE_GAS_EXCEEDS_MAX_BUNDLE_BLOCK_GAS;
 import static net.consensys.linea.sequencer.txselection.selectors.MaxBundleBlockGasTransactionSelectorTest.TestParams.concat;
 import static net.consensys.linea.sequencer.txselection.selectors.MaxBundleBlockGasTransactionSelectorTest.TestParams.notSelected;
 import static net.consensys.linea.sequencer.txselection.selectors.MaxBundleBlockGasTransactionSelectorTest.TestParams.selected;

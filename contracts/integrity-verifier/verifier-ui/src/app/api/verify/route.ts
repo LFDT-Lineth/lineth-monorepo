@@ -14,9 +14,9 @@
 
 export const dynamic = "force-static";
 
-import { Verifier } from "@consensys/linea-contract-integrity-verifier";
-import { EthersAdapter } from "@consensys/linea-contract-integrity-verifier-ethers";
-import { ViemAdapter } from "@consensys/linea-contract-integrity-verifier-viem";
+import { Verifier } from "@lfdt-lineth/contract-integrity-verifier";
+import { EthersAdapter } from "@lfdt-lineth/contract-integrity-verifier-ethers";
+import { ViemAdapter } from "@lfdt-lineth/contract-integrity-verifier-viem";
 import { NextResponse } from "next/server";
 import { dirname } from "path";
 
@@ -30,8 +30,8 @@ import { getSession } from "@/lib/session";
 import { verifyRequestSchema } from "@/lib/validation";
 import type { ApiError, VerifyResponse } from "@/types";
 
-import type { ContractVerificationResult, VerificationSummary } from "@consensys/linea-contract-integrity-verifier";
-import type { VerifierConfig } from "@consensys/linea-contract-integrity-verifier";
+import type { ContractVerificationResult, VerificationSummary } from "@lfdt-lineth/contract-integrity-verifier";
+import type { VerifierConfig } from "@lfdt-lineth/contract-integrity-verifier";
 
 // Type for adapters
 type Web3Adapter = InstanceType<typeof EthersAdapter> | InstanceType<typeof ViemAdapter>;

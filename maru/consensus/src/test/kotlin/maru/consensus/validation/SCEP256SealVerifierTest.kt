@@ -26,7 +26,9 @@ class SCEP256SealVerifierTest {
 
   @Test
   fun `test extract validator`() {
-    val beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(101u)
+    val beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(
+      101u,
+    )
     val signature = signatureAlgorithm.sign(Bytes32.wrap(beaconBlockHeader.hash), keypair)
     val seal = Seal(signature.encodedBytes().toArray())
     val result = verifier.extractValidator(seal, beaconBlockHeader)

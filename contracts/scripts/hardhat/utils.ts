@@ -232,9 +232,12 @@ async function deployUpgradableFromFactory(
     constructorArgs: jsonSafeForUi(opts?.constructorArgs),
     ...(proxyOptions === undefined ? {} : { proxyOptions }),
     openZeppelinProxyKind: openZeppelinProxyKindFromOpts(opts),
+    notes:
+      "OpenZeppelin proxy deploys may require multiple wallet signatures (implementation, ProxyAdmin, proxy). " +
+      "Approve each step in this UI until Hardhat reports the deploy complete.",
   });
+  const deployed = await upgrades.deployProxy(factory.connect(runner), args, opts);
   const contract = await withUiReceiptWorkflow(contractName, async () => {
-    const deployed = await upgrades.deployProxy(factory.connect(runner), args, opts);
     await deployed.waitForDeployment();
     return deployed;
   });
@@ -267,9 +270,12 @@ async function deployUpgradableWithAbiAndByteCode(
     constructorArgs: jsonSafeForUi(opts?.constructorArgs),
     ...(proxyOptions === undefined ? {} : { proxyOptions }),
     openZeppelinProxyKind: openZeppelinProxyKindFromOpts(opts),
+    notes:
+      "OpenZeppelin proxy deploys may require multiple wallet signatures (implementation, ProxyAdmin, proxy). " +
+      "Approve each step in this UI until Hardhat reports the deploy complete.",
   });
+  const deployed = await upgrades.deployProxy(factory, args, opts);
   const contract = await withUiReceiptWorkflow(contractName, async () => {
-    const deployed = await upgrades.deployProxy(factory, args, opts);
     await deployed.waitForDeployment();
     return deployed;
   });
@@ -305,12 +311,15 @@ async function deployUpgradableFromFactoryWithConstructorArgs(
     initializerArgs: jsonSafeForUi(initializerArgs),
     ...(proxyOptions === undefined ? {} : { proxyOptions }),
     openZeppelinProxyKind: openZeppelinProxyKindFromOpts(opts),
+    notes:
+      "OpenZeppelin proxy deploys may require multiple wallet signatures (implementation, ProxyAdmin, proxy). " +
+      "Approve each step in this UI until Hardhat reports the deploy complete.",
+  });
+  const deployed = await upgrades.deployProxy(factory.connect(runner), initializerArgs, {
+    ...opts,
+    constructorArgs,
   });
   const contract = await withUiReceiptWorkflow(contractName, async () => {
-    const deployed = await upgrades.deployProxy(factory.connect(runner), initializerArgs, {
-      ...opts,
-      constructorArgs,
-    });
     await deployed.waitForDeployment();
     return deployed;
   });

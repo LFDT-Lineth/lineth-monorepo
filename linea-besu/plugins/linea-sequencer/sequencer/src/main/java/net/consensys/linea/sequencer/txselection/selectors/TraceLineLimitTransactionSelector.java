@@ -8,10 +8,10 @@
  */
 package net.consensys.linea.sequencer.txselection.selectors;
 
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.BLOCK_MODULE_LINE_COUNT_FULL;
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_MODULE_LINE_INVALID_COUNT;
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.txModuleLineCountOverflow;
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.txModuleLineCountOverflowCached;
+import static linea.txselection.LineaTransactionSelectionResult.BLOCK_MODULE_LINE_COUNT_FULL;
+import static linea.txselection.LineaTransactionSelectionResult.TX_MODULE_LINE_INVALID_COUNT;
+import static linea.txselection.LineaTransactionSelectionResult.txModuleLineCountOverflow;
+import static linea.txselection.LineaTransactionSelectionResult.txModuleLineCountOverflowCached;
 import static net.consensys.linea.zktracer.Fork.fromMainnetHardforkIdToTracerFork;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTION_CANCELLED;

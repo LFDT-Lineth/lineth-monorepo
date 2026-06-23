@@ -27,7 +27,7 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     name: maru tests
     # useful for debugging flaky tests. Comment out Jacoco and Codecov steps because they override the test results.
     #    strategy:
@@ -40,14 +40,12 @@ jobs:
           submodules: false
       - name: Setup Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
-      - name: Build maru and run unit + integration tests
+      - name: Build maru and Unit tests
         run: |
-          # :maru:build is an aggregate task defined in maru/build.gradle that
-          # depends on each :maru:* subproject's `build`. We avoid `buildNeeded`
-          # because :maru:core's testFixtures depend on :maru:serialization
-          # which depends on :maru:core's main jar -- linear under `build` but a
-          # cycle under `buildNeeded` (which walks testFixtures).
-          ./gradlew -V :maru:build
+          ./gradlew -V maru:app:buildNeeded
+      - name: Run integration tests
+        run: |
+          ./gradlew maru:app:integrationTest
       - name: Store reports
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -55,6 +53,8 @@ jobs:
           name: test reports
           path: |
             maru/**/build/reports/tests/
+            maru/**/build/integrationTest-logs/
+          if-no-files-found: ignore
       - name: Upload Jacoco execution data
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

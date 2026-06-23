@@ -1,4 +1,4 @@
-import { wait } from "@consensys/linea-shared-utils";
+import { wait } from "@lfdt-lineth/shared-utils";
 
 import { createTestLogger } from "../../config/logger/logger";
 

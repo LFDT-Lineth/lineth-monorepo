@@ -1,4 +1,4 @@
-import { etherToWei } from "@consensys/linea-shared-utils";
+import { etherToWei } from "@lfdt-lineth/shared-utils";
 import { encodeDeployData, formatEther, parseGwei } from "viem";
 
 import { DEPLOYER_ACCOUNT_INDEX, LIVENESS_ACCOUNT_INDEX } from "../../common/constants";

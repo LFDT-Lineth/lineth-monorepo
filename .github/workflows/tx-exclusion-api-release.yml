@@ -22,8 +22,8 @@ on:
       pre_release:
         description: 'Pre Release if checked; Draft release otherwise'
         required: false
-        default: false
         type: boolean
+        default: false
 
 concurrency:
   group: tx-exclusion-api-release-${{ github.ref }}

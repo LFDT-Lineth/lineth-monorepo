@@ -4,7 +4,7 @@
 
 ## Overview
 
-The prover is a Go service that generates zero-knowledge proofs for three distinct circuit types. It consumes proof requests from a shared file system, expands traces via Corset (Rust), and produces proofs using gnark-based PLONK circuits. Multiple prover instances run in parallel, with a dedicated large-memory instance for edge cases.
+The prover is a Go service that generates zero-knowledge proofs for three distinct circuit types. It consumes proof requests from a shared file system, expands traces via Corset (Golang), and produces proofs using gnark-based PLONK circuits. Multiple prover instances run in parallel, with a dedicated large-memory instance for edge cases.
 
 ## Components
 
@@ -15,7 +15,7 @@ The prover is a Go service that generates zero-knowledge proofs for three distin
 | Blob Decompression Circuit | `prover/circuits/blobdecompression/` | Proves compression integrity |
 | Aggregation Circuit | `prover/circuits/aggregation/` | Recursively verifies execution + compression proofs |
 | PI Interconnection | `prover/circuits/pi-interconnection/` | Public input consistency across circuits |
-| Corset | `corset/` | Rust trace expander (compiled into prover binary) |
+| Corset | `corset/` | Golang trace expander (compiled into prover binary) |
 | Crypto | `prover/crypto/` | Vortex, SHA2, Keccak, MiMC, Fiat-Shamir, Ringsis |
 
 ## Circuit Registry

@@ -1,8 +1,8 @@
-# @consensys/linea-sdk-viem
+# @lfdt-lineth/sdk-viem
 
-## 1.0.0 (2026-04-10)
+## 1.0.0 (2026-06-10)
 
-Initial release of `@consensys/linea-sdk-viem`, a TypeScript SDK for interacting with the Linea bridge and messaging system built on [Viem](https://viem.sh/).
+Initial release of `@lfdt-lineth/sdk-viem`, a TypeScript SDK for interacting with the Linea bridge and messaging system built on [Viem](https://viem.sh/).
 
 ### Features
 
@@ -28,10 +28,8 @@ Initial release of `@consensys/linea-sdk-viem`, a TypeScript SDK for interacting
 
 ### Network Support
 
-- Ethereum Mainnet, Linea Mainnet, Sepolia, and Linea Sepolia with automatic contract address resolution via `@consensys/linea-sdk-core`
+- Ethereum Mainnet, Linea Mainnet, Sepolia, and Linea Sepolia with automatic contract address resolution via `@lfdt-lineth/sdk-core`
 
 ### Error Handling
 
 - Structured Viem `BaseError` subclasses: `MessageNotFoundError`, `L2BlockNotFinalizedError`, `MessagesNotFoundInBlockRangeError`, `MerkleRootNotFoundInFinalizationDataError`, `EventNotFoundInFinalizationDataError`, `MissingMessageProofOrClientForClaimingOnL1Error`, `AccountNotFoundError`
-
-

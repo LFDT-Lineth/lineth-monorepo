@@ -22,6 +22,7 @@ import {
 import { ADDRESS_ZERO } from "../common/constants/general";
 import { deployContractFromArtifacts, getInitializerData } from "../common/helpers/deployments";
 import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
+import { getDeploymentNetworkName, requireAddressFromRegistryOrEnv } from "../common/helpers/readAddress";
 import { generateRoleAssignments } from "../common/helpers/roles";
 import { get1559Fees } from "../scripts/utils";
 
@@ -50,10 +51,15 @@ function findContractArtifacts(
 }
 
 async function main() {
+  const networkName = getDeploymentNetworkName();
   const verifierName = getRequiredEnvVar("VERIFIER_CONTRACT_NAME");
   const validiumInitialStateRootHash = getRequiredEnvVar("INITIAL_L2_STATE_ROOT_HASH");
   const validiumInitialL2BlockNumber = getRequiredEnvVar("INITIAL_L2_BLOCK_NUMBER");
-  const validiumSecurityCouncil = getRequiredEnvVar("L1_SECURITY_COUNCIL");
+  const validiumSecurityCouncil = requireAddressFromRegistryOrEnv(
+    networkName,
+    "L1_SECURITY_COUNCIL",
+    "L1_SECURITY_COUNCIL",
+  );
   const validiumOperators = getRequiredEnvVar("VALIDIUM_OPERATORS").split(",");
   const validiumRateLimitPeriodInSeconds = getRequiredEnvVar("VALIDIUM_RATE_LIMIT_PERIOD");
   const validiumRateLimitAmountInWei = getRequiredEnvVar("VALIDIUM_RATE_LIMIT_AMOUNT");

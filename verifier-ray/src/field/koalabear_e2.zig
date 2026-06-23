@@ -1,7 +1,10 @@
 const base = @import("koalabear.zig");
 
 /// Quadratic extension F_{p^2} = F_p[u]/(u^2 - 3).
-pub const E2 = struct {
+///
+/// This is an `extern struct` so nested extension-field values keep declaration
+/// order when they are part of byte-cast verifier inputs.
+pub const E2 = extern struct {
     a0: base.Element,
     a1: base.Element,
 

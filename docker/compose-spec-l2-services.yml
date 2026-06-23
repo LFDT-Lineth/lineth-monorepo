@@ -16,7 +16,7 @@ services:
     image: consensys/maru:${MARU_TAG:-9737a45}
     hostname: maru
     container_name: maru
-    profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
+    profiles: [ "l2", "l2-bc", "debug" ]
     depends_on:
       sequencer:
         condition: service_healthy

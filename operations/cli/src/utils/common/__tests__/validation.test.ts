@@ -1,5 +1,4 @@
 import { describe, it, expect } from "@jest/globals";
-import { ethers } from "ethers";
 
 import { isValidProtocolUrl, validateEthereumAddress, validateHexString, validateUrl } from "../validation.js";
 
@@ -13,7 +12,7 @@ describe("Validation utils", () => {
     });
 
     it("should return the input when it is a valid Ethereum address", () => {
-      const address = ethers.hexlify(ethers.randomBytes(20));
+      const address = "0x0000000000000000000000000000000000000001";
       expect(validateEthereumAddress(address, "Address")).toStrictEqual(address);
     });
   });

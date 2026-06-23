@@ -2,7 +2,7 @@ import { ethers, upgrades } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
-import { tryVerifyContract } from "../common/helpers";
+import { tryVerifyContract, setHandoffAddress } from "../common/helpers";
 import {
   clearUiWorkflowStatus,
   getUiSigner,
@@ -36,7 +36,7 @@ const func: DeployFunction = withSignerUiSession(
     }
 
     const bridgedTokenAddress = await bridgedToken.getAddress();
-    process.env.BRIDGED_TOKEN_ADDRESS = bridgedTokenAddress;
+    setHandoffAddress("BRIDGED_TOKEN_ADDRESS", bridgedTokenAddress);
 
     // @ts-expect-error - deployTransaction is not a standard property but exists in this plugin's return type
     const deployTx = bridgedToken.deployTransaction;
@@ -44,7 +44,7 @@ const func: DeployFunction = withSignerUiSession(
       throw "Contract deployment transaction receipt not found.";
     }
 
-    if (process.env.TOKEN_BRIDGE_L1 === "true") {
+    if (process.env.DEPLOY_TOKEN_BRIDGE_ON_L1 === "true") {
       console.log(`L1 BridgedToken beacon deployed on ${hre.network.name}, at address:`, bridgedTokenAddress);
     } else {
       console.log(`L2 BridgedToken beacon deployed on ${hre.network.name}, at address:`, bridgedTokenAddress);

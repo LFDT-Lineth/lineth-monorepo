@@ -8,8 +8,8 @@
  */
 package net.consensys.linea.sequencer.txselection.selectors;
 
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.BUNDLE_GAS_EXCEEDS_MAX_BUNDLE_BLOCK_GAS;
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.BUNDLE_TOO_LARGE_FOR_REMAINING_BUNDLE_BLOCK_GAS;
+import static linea.txselection.LineaTransactionSelectionResult.BUNDLE_GAS_EXCEEDS_MAX_BUNDLE_BLOCK_GAS;
+import static linea.txselection.LineaTransactionSelectionResult.BUNDLE_TOO_LARGE_FOR_REMAINING_BUNDLE_BLOCK_GAS;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
 import lombok.extern.slf4j.Slf4j;

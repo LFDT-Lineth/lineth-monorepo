@@ -56,7 +56,7 @@ concurrency:
 
 jobs:
   build-and-publish:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     name: lido-governance-monitor
     env:
       COMMIT_TAG: ${{ inputs.commit_tag }}
@@ -85,7 +85,7 @@ jobs:
         with:
           docker_context: .
           image_name: ${{ env.IMAGE_NAME }}
-          image_tag: ${{ env.COMMIT_TAG }}
+          image_tags: ${{ env.COMMIT_TAG }}
           develop_tag: ${{ env.DEVELOP_TAG }}
           push_platforms: linux/amd64
           push_image: ${{ env.PUSH_IMAGE }}

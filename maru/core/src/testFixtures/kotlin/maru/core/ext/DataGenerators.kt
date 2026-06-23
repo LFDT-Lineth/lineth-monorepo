@@ -19,10 +19,6 @@ import maru.core.HashUtil
 import maru.core.Seal
 import maru.core.SealedBeaconBlock
 import maru.core.Validator
-import maru.executionlayer.manager.ExecutionPayloadStatus
-import maru.executionlayer.manager.ForkChoiceUpdatedResult
-import maru.executionlayer.manager.PayloadStatus
-import maru.p2p.messages.Status
 import maru.serialization.rlp.RLPSerializers
 import maru.serialization.rlp.bodyRoot
 import maru.serialization.rlp.stateRoot
@@ -82,13 +78,6 @@ object DataGenerators {
 
     return Pair(genesisState, genesisSealedBeaconBlock)
   }
-
-  fun randomStatus(latestBlockNumber: ULong): Status =
-    Status(
-      forkIdHash = Random.nextBytes(32),
-      latestStateRoot = Random.nextBytes(32),
-      latestBlockNumber = latestBlockNumber,
-    )
 
   fun randomBeaconState(
     number: ULong,
@@ -190,22 +179,9 @@ object DataGenerators {
     )
   }
 
-  fun randomValidForkChoiceUpdatedResult(payloadId: ByteArray? = Random.nextBytes(8)): ForkChoiceUpdatedResult {
-    val expectedPayloadStatus =
-      PayloadStatus(
-        ExecutionPayloadStatus.VALID,
-        latestValidHash = Random.nextBytes(32),
-        validationError = null,
-      )
-    return ForkChoiceUpdatedResult(expectedPayloadStatus, payloadId)
-  }
-
   fun randomValidator(): Validator = Validator(Random.nextBytes(20))
 
   fun randomValidators(): SequencedSet<Validator> = List(3) { randomValidator() }.toSortedSet()
-
-  fun randomValidPayloadStatus(): PayloadStatus =
-    PayloadStatus(ExecutionPayloadStatus.VALID, latestValidHash = Random.nextBytes(32), validationError = null)
 
   // Generates a random timestamp restricted to 0..Long.MAX_VALUE because ForkSpec converts it to a Java long.
   fun randomTimestamp(): ULong = Random.nextLong(0, Long.MAX_VALUE).toULong()

@@ -8,6 +8,7 @@
  */
 package maru.syncing
 
+import linea.timer.TestablePeriodicTimerFactory
 import maru.consensus.NewBlockHandler
 import maru.core.ext.DataGenerators
 import maru.database.InMemoryBeaconChain
@@ -16,11 +17,11 @@ import maru.executionlayer.manager.ForkChoiceUpdatedResult
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import testutils.maru.TestablePeriodicTimerFactory
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.incrementAndFetch
 import kotlin.time.Duration.Companion.seconds
+import maru.executionlayer.manager.ext.DataGenerators as ExecutionLayerDataGenerators
 
 @OptIn(ExperimentalAtomicApi::class)
 class ELSyncServiceTest {
@@ -36,14 +37,18 @@ class ELSyncServiceTest {
     }
     val config = ELSyncService.Config(pollingInterval = 1.seconds)
     val beaconChain =
-      DataGenerators.genesisState(0uL, emptySet()).let {
-        InMemoryBeaconChain(initialBeaconState = it.first, initialBeaconBlock = it.second)
-      }
+      DataGenerators
+        .genesisState(
+          0uL,
+          emptySet(),
+        ).let {
+          InMemoryBeaconChain(initialBeaconState = it.first, initialBeaconBlock = it.second)
+        }
     val blockImportHandler =
       NewBlockHandler<Unit> { SafeFuture.completedFuture(Unit) }
     val blockValidatorHandler =
       NewBlockHandler<ForkChoiceUpdatedResult> {
-        SafeFuture.completedFuture(DataGenerators.randomValidForkChoiceUpdatedResult())
+        SafeFuture.completedFuture(ExecutionLayerDataGenerators.randomValidForkChoiceUpdatedResult())
       }
 
     val timerFactory = TestablePeriodicTimerFactory()
@@ -80,12 +85,18 @@ class ELSyncServiceTest {
     }
     val config = ELSyncService.Config(pollingInterval = 1.seconds)
     val beaconChain =
-      DataGenerators.genesisState(0uL, emptySet()).let {
-        InMemoryBeaconChain(initialBeaconState = it.first, initialBeaconBlock = it.second)
-      }
+      DataGenerators
+        .genesisState(
+          0uL,
+          emptySet(),
+        ).let {
+          InMemoryBeaconChain(initialBeaconState = it.first, initialBeaconBlock = it.second)
+        }
     var forkChoiceResultToReturn =
-      DataGenerators.randomValidForkChoiceUpdatedResult().copy(
-        payloadStatus = DataGenerators.randomValidPayloadStatus().copy(status = ExecutionPayloadStatus.SYNCING),
+      ExecutionLayerDataGenerators.randomValidForkChoiceUpdatedResult().copy(
+        payloadStatus = ExecutionLayerDataGenerators.randomValidPayloadStatus().copy(
+          status = ExecutionPayloadStatus.SYNCING,
+        ),
       )
     val blockImportHandler =
       NewBlockHandler<Unit> { SafeFuture.completedFuture(Unit) }
@@ -112,14 +123,23 @@ class ELSyncServiceTest {
 
     beaconChain
       .newBeaconChainUpdater()
-      .putBeaconState(DataGenerators.randomBeaconState(number = 3uL, timestamp = switchTimestamp))
-      .putSealedBeaconBlock(DataGenerators.randomSealedBeaconBlock(3UL))
+      .putBeaconState(
+        DataGenerators.randomBeaconState(
+          number = 3uL,
+          timestamp = switchTimestamp,
+        ),
+      )
+      .putSealedBeaconBlock(
+        DataGenerators.randomSealedBeaconBlock(
+          3UL,
+        ),
+      )
       .commit()
 
     timer.runNextTask()
     assertThat(elSyncStatus).isEqualTo(ELSyncStatus.SYNCING)
 
-    forkChoiceResultToReturn = DataGenerators.randomValidForkChoiceUpdatedResult()
+    forkChoiceResultToReturn = ExecutionLayerDataGenerators.randomValidForkChoiceUpdatedResult()
     timer.runNextTask()
     assertThat(elSyncStatus).isEqualTo(ELSyncStatus.SYNCED)
     assertThat(onStatusChangeCount.load()).isEqualTo(3)

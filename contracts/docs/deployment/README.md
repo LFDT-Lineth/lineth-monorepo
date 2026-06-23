@@ -1,5 +1,38 @@
 # Linea Deployment Scripts
 
+## Address Registry
+
+For stable, named networks (`mainnet`, `sepolia`, `hoodi`, `linea_mainnet`, `linea_sepolia`) the deploy scripts read contract addresses from a **PR-reviewed registry** committed to the repository:
+
+```
+contracts/deployments/addresses/
+  mainnet.json
+  sepolia.json
+  hoodi.json
+  linea_mainnet.json
+  linea_sepolia.json
+```
+
+See [contracts/deployments/addresses/README.md](../../deployments/addresses/README.md) for the full guide — how addresses are resolved, how to update the registry, and the registry-key-to-env-var mapping.
+
+### Resolution order
+
+| Registry entry | Env var set | Outcome |
+|---|---|---|
+| Present (non-zero) | Not set | Registry address used — env var is **optional** |
+| Present (non-zero) | **Matches** registry | Registry address used |
+| Present (non-zero) | **Conflicts** with registry | **Hard fail before any transaction is sent** |
+| Absent or zero | Set | Env var used (format-validated) |
+| Absent or zero | Not set | Hard fail — no source available |
+
+Networks without a registry (`custom`, `zkevm_dev`, `l2`) fall back to env var only — same behavior as before.
+
+### Address validation
+
+Registry-backed address env vars are validated with `ethers.isAddress` before use and normalized to EIP-55 checksum form. The registry validator is stricter: committed JSON addresses must already be EIP-55 checksummed. An invalid address (wrong length, bad checksum, etc.) throws immediately with a clear message before any RPC call is made.
+
+<br />
+
 ## Environment Variables Naming Convention
 
 Environment variables follow a consistent naming pattern:
@@ -116,18 +149,20 @@ Selected **operational Hardhat tasks** (under `scripts/operational/`) also suppo
 
 ## Order of Precedence
 
- When deploying, if required variables such as deployed contract addresses are not defined in the .env or provided as CLI arguments, the script will look and check if it can use the addresses stored in the deployments/<network_name>/ folder. 
- <br />
- The order of priority (unless specified otherwise) will be:
- - CLI arguments, 
- - .env variables ,
- - deployments/<network_name>/
+When deploying, the address resolution priority for deploy scripts is:
+
+1. **Address registry** (`contracts/deployments/addresses/<network>.json`) — for stable, named networks. If an entry is present and a conflicting env var is also set, the deploy **hard fails before sending any transaction**.
+2. **CLI arguments / env vars** — used when no registry entry exists (e.g. ephemeral addresses, unregistered contracts, or local networks like `custom` / `zkevm_dev`).
+
+The old fallback to `deployments/<network_name>/ContractName.json` (hardhat-deploy artefact format) is deprecated in favour of the address registry above.
 
 <br />
 
 ## Deployments
 
 ### L1 Contracts (Ethereum)
+
+Verifier deployments require chain-configuration inputs in addition to the contract name and proof type. See [verifier.md](l1/verifier.md) for the full list, including `VERIFIER_IS_ALLOWED_CIRCUIT_ID`.
 
 | Contract | Doc | Tags |
 |----------|-----|------|

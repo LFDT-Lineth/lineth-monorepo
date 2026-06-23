@@ -22,14 +22,20 @@ class BeaconBlockHeaderTest {
   fun `hash is not initialised on header construction`() {
     val headerHashFunction = Mockito.mock(HeaderHashFunction::class.java)
 
-    val header = DataGenerators.randomBeaconBlockHeader(1u).copy(headerHashFunction = headerHashFunction)
+    val header =
+      DataGenerators
+        .randomBeaconBlockHeader(1u)
+        .copy(headerHashFunction = headerHashFunction)
     verify(headerHashFunction, Mockito.never()).invoke(header)
   }
 
   @Test
   fun `hash is calculated only once`() {
     val headerHashFunction = Mockito.mock(HeaderHashFunction::class.java)
-    val header = DataGenerators.randomBeaconBlockHeader(1u).copy(headerHashFunction = headerHashFunction)
+    val header =
+      DataGenerators
+        .randomBeaconBlockHeader(1u)
+        .copy(headerHashFunction = headerHashFunction)
     whenever(headerHashFunction.invoke(header)).thenReturn(Random.nextBytes(32))
 
     verify(headerHashFunction, Mockito.never()).invoke(header)

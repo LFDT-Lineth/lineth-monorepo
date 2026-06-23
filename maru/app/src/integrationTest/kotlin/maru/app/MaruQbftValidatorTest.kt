@@ -10,12 +10,13 @@ package maru.app
 
 import com.github.michaelbull.result.Ok
 import linea.kotlin.decodeHex
+import linea.testing.besu.BesuTransactionsHelper
+import linea.testing.besu.startWithRetry
 import maru.consensus.StaticValidatorProvider
 import maru.consensus.qbft.toAddress
 import maru.consensus.validation.QuorumOfSealsVerifier
 import maru.consensus.validation.SCEP256SealVerifier
 import maru.core.Validator
-import maru.extensions.fromHexToByteArray
 import maru.p2p.NoOpP2PNetwork
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
@@ -38,8 +39,6 @@ import testutils.Checks.verifyBlockTime
 import testutils.Checks.verifyBlockTimeWithAGapOn
 import testutils.SingleNodeNetworkStack
 import testutils.SpyingP2PNetwork
-import testutils.besu.BesuTransactionsHelper
-import testutils.besu.startWithRetry
 import testutils.maru.MaruFactory
 
 class MaruQbftValidatorTest {
@@ -141,7 +140,7 @@ class MaruQbftValidatorTest {
     }
 
   private fun allBlocksAreSignedByTheExpectedSigner() {
-    val validatorProvider = StaticValidatorProvider(setOf(Validator(maruFactory.validatorAddress.fromHexToByteArray())))
+    val validatorProvider = StaticValidatorProvider(setOf(Validator(maruFactory.validatorAddress.decodeHex())))
     val sealVerifier = SCEP256SealVerifier()
     val sealsVerifier = QuorumOfSealsVerifier(validatorProvider = validatorProvider, sealVerifier)
     spyingP2pNetwork.emittedBlockMessages.forEach { sealedBeaconBlock ->

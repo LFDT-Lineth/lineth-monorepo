@@ -8,6 +8,7 @@
  */
 package maru.app
 
+import linea.teku.TekuWeb3JClientFactory
 import maru.config.ApiEndpointConfig
 import maru.consensus.ElFork
 import maru.consensus.ForksSchedule
@@ -16,7 +17,6 @@ import maru.consensus.blockimport.ElForkAwareBlockImporter
 import maru.consensus.blockimport.FollowerBeaconBlockImporter
 import maru.consensus.state.FinalizationProvider
 import maru.executionlayer.ExecutionLayerFactory.buildExecutionLayerManager
-import maru.web3j.TekuWeb3JClientFactory
 import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient

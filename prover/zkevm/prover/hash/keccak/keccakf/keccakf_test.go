@@ -96,6 +96,10 @@ func keccakfTestingModule(
 			keccakfBlocks.AssignBlocks(run, traces)
 			keccakfBlocks.AssignBlockFlags(run, traces)
 
+			// Assign IsBlockActive before keccakf.Assign, since cyclic
+			// counters use it as their isActive column.
+			keccakfBlocks.AssignIsBlockActive(run, traces)
+
 			// Assigns the module
 			mod.Assign(run, traces)
 

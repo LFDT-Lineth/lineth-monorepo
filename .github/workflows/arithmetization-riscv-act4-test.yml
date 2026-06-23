@@ -24,7 +24,7 @@ permissions:
 
 jobs:
   act4-reference-tests:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -38,9 +38,11 @@ jobs:
         run: make -C arithmetization install-sail
 
       - name: Build ACT4 ELFs
-        run: make build-act4
-        working-directory: arithmetization/src/test/examples
+        run: make act4-build
+        working-directory: arithmetization/src/test
 
       - name: Run ACT4 tests
-        run: make run-act4
-        working-directory: arithmetization/src/test/examples
+        run: make act4-exec
+        working-directory: arithmetization/src/test
+        env:
+          ZKC_REF: ${{ inputs.zkc-ref || 'v1.2.20' }}

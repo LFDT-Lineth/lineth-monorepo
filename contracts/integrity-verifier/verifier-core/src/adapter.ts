@@ -17,7 +17,7 @@ import type { AbiElement } from "./types";
  *
  * @example
  * ```typescript
- * import { createCryptoAdapter } from "@consensys/linea-verifier-viem";
+ * import { createCryptoAdapter } from "@lfdt-lineth/contract-integrity-verifier-viem";
  *
  * const crypto = createCryptoAdapter();
  * const hash = crypto.keccak256("hello");
@@ -50,8 +50,8 @@ export interface CryptoAdapter {
  *
  * @example
  * ```typescript
- * import { EthersAdapter } from "@consensys/linea-verifier-ethers";
- * import { Verifier } from "@consensys/linea-verifier-core";
+ * import { EthersAdapter } from "@lfdt-lineth/contract-integrity-verifier-ethers";
+ * import { Verifier } from "@lfdt-lineth/contract-integrity-verifier";
  *
  * const adapter = new EthersAdapter("https://rpc.linea.build");
  * const verifier = new Verifier(adapter);

@@ -4,25 +4,25 @@
 
 ## Package Overview
 
-TypeScript SDK libraries for interacting with the Linea protocol. Three packages: `sdk-core` (framework-agnostic types and utilities), `sdk-ethers` (ethers.js v6 wrapper with typechain-generated contract bindings), and `sdk-viem` (Viem wrapper).
+TypeScript SDK libraries for interacting with the Lineth protocol. Three packages: `sdk-core` (framework-agnostic types and utilities), `sdk-ethers` (ethers.js v6 wrapper with typechain-generated contract bindings), and `sdk-viem` (Viem wrapper).
 
 ## How to Run
 
 ```bash
 # Build all SDKs
-pnpm -F @consensys/linea-sdk-core run build
-pnpm -F @consensys/linea-sdk run build
-pnpm -F @consensys/linea-sdk-viem run build
+pnpm -F @lfdt-lineth/sdk-core run build
+pnpm -F @lfdt-lineth/sdk run build
+pnpm -F @lfdt-lineth/sdk-viem run build
 
 # Test all SDKs
-pnpm -F @consensys/linea-sdk-core run test
-pnpm -F @consensys/linea-sdk run test
-pnpm -F @consensys/linea-sdk-viem run test
+pnpm -F @lfdt-lineth/sdk-core run test
+pnpm -F @lfdt-lineth/sdk run test
+pnpm -F @lfdt-lineth/sdk-viem run test
 
 # Lint
-pnpm -F @consensys/linea-sdk-core run lint
-pnpm -F @consensys/linea-sdk run lint
-pnpm -F @consensys/linea-sdk-viem run lint
+pnpm -F @lfdt-lineth/sdk-core run lint
+pnpm -F @lfdt-lineth/sdk run lint
+pnpm -F @lfdt-lineth/sdk-viem run lint
 ```
 
 ## SDK-Specific Conventions
@@ -41,7 +41,7 @@ pnpm -F @consensys/linea-sdk-viem run lint
 postman -> sdk-viem -> sdk-core
 ```
 
-- `sdk-ethers` requires `pnpm -F @consensys/linea-sdk run build:pre` (typechain) before build
+- `sdk-ethers` requires `pnpm -F @lfdt-lineth/sdk run build:pre` (typechain) before build
 - `sdk-viem` declares `viem` as a peer dependency — consumers must provide it
 
 ### Testing
@@ -66,8 +66,8 @@ ts-libs/sdk/
 
 | Package | npm | Scope |
 |---------|-----|-------|
-| `sdk-core` | `@consensys/linea-sdk-core` | public |
-| `sdk-viem` | `@consensys/linea-sdk-viem` | public |
+| `sdk-core` | `@lfdt-lineth/sdk-core` | public |
+| `sdk-viem` | `@lfdt-lineth/sdk-viem` | public |
 
 `sdk-ethers` is **not** published to npm (out of scope).
 
@@ -102,7 +102,7 @@ Go to **Actions → sdk-publish → Run workflow**, select the package. CI build
 
 ### workspace:* Protocol
 
-`sdk-viem` declares `"@consensys/linea-sdk-core": "workspace:*"` in `dependencies`. `pnpm publish` automatically resolves `workspace:*` to the actual version at publish time. Do not change this to a pinned version in source.
+`sdk-viem` declares `"@lfdt-lineth/sdk-core": "workspace:*"` in `dependencies`. `pnpm publish` automatically resolves `workspace:*` to the actual version at publish time. Do not change this to a pinned version in source.
 
 ### CI
 

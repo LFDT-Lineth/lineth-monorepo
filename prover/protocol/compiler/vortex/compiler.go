@@ -260,8 +260,15 @@ type Ctx struct {
 		OpenedColumns []ifaces.Column
 		// Opened SIS columns, to be used in the Self recursion compilation
 		OpenedSISColumns []ifaces.Column
-		// Opened non-SIS columns, to be used in the Self recursion compilation
-		OpenedNonSISColumns []ifaces.Column
+		// Opened non-SIS columns, to be used in the Self recursion compilation.
+		// Indexed [round_idx][lane_j] where lane_j ∈ 0..7.
+		// round_idx=0 is the precomputed non-SIS round (if present), then committed
+		// non-SIS rounds in order.
+		// Each lane column has size colChunksPad * numHashPad where
+		//   colChunksPad = nextPow2(ceil(numPols / 8))
+		//   numHashPad   = nextPow2(NbColsToOpen())
+		// lane[j][k*colChunksPad+c] = poly_{c*8+j}(Q_k) for k<NbColsToOpen, c*8+j<numPols, else 0.
+		OpenedNonSISColumns [][blockSize]ifaces.Column
 		// MerkleProofs
 		// We represents all the Merkle proof as specfied here:
 		MerkleProofs [blockSize]ifaces.Column
@@ -332,7 +339,7 @@ func newCtx(comp *wizard.CompiledIOP, univQ query.UnivariateEval, blowUpFactor i
 			Q                   coin.Info
 			OpenedColumns       []ifaces.Column
 			OpenedSISColumns    []ifaces.Column
-			OpenedNonSISColumns []ifaces.Column
+			OpenedNonSISColumns [][blockSize]ifaces.Column
 			MerkleProofs        [blockSize]ifaces.Column
 			MerkleRoots         [][blockSize]ifaces.Column
 
@@ -671,7 +678,6 @@ func (ctx *Ctx) registerOpeningProof(lastRound int) {
 	// and registers the opened columns
 	numRows := utils.NextPowerOfTwo(ctx.CommittedRowsCount)
 	numRowsSIS := utils.NextPowerOfTwo(ctx.CommittedRowsCountSIS)
-	numRowsNonSIS := utils.NextPowerOfTwo(ctx.CommittedRowsCount - ctx.CommittedRowsCountSIS)
 	for col := 0; col < ctx.NbColsToOpen(); col++ {
 		openedCol := ctx.Comp.InsertProof(
 			lastRound+2,
@@ -689,15 +695,35 @@ func (ctx *Ctx) registerOpeningProof(lastRound int) {
 			)
 			ctx.Items.OpenedSISColumns = append(ctx.Items.OpenedSISColumns, openedColSIS)
 		}
-		if numRowsNonSIS != 0 {
-			openedColNonSIS := ctx.Comp.InsertProof(
-				lastRound+2,
-				ctx.SelectedColNonSISName(col),
-				numRowsNonSIS,
-				true,
-			)
-			ctx.Items.OpenedNonSISColumns = append(ctx.Items.OpenedNonSISColumns, openedColNonSIS)
+	}
+
+	// Register per-round 8-lane non-SIS columns.
+	// round_idx=0 is the precomputed non-SIS round (when present), then committed rounds.
+	// Each lane column has size colChunksPad * numHashPad (both powers of two).
+	numHashPad := utils.NextPowerOfTwo(ctx.NbColsToOpen())
+	if ctx.IsNonEmptyPrecomputed() && !ctx.IsSISAppliedToPrecomputed() {
+		colSize := len(ctx.Items.Precomputeds.PrecomputedColums)
+		colChunksPad := utils.NextPowerOfTwo((colSize + blockSize - 1) / blockSize)
+		laneSize := colChunksPad * numHashPad
+		var roundCols [blockSize]ifaces.Column
+		for j := 0; j < blockSize; j++ {
+			roundCols[j] = ctx.Comp.InsertProof(lastRound+2, ctx.SelectedColNonSISRoundLaneName(0, j), laneSize, true)
 		}
+		ctx.Items.OpenedNonSISColumns = append(ctx.Items.OpenedNonSISColumns, roundCols)
+	}
+	for roundNum, status := range ctx.RoundStatus {
+		if status != IsNoSis {
+			continue
+		}
+		roundIdx := len(ctx.Items.OpenedNonSISColumns)
+		colSize := ctx.GetNumPolsForNonSisRounds(roundNum)
+		colChunksPad := utils.NextPowerOfTwo((colSize + blockSize - 1) / blockSize)
+		laneSize := colChunksPad * numHashPad
+		var roundCols [blockSize]ifaces.Column
+		for j := 0; j < blockSize; j++ {
+			roundCols[j] = ctx.Comp.InsertProof(lastRound+2, ctx.SelectedColNonSISRoundLaneName(roundIdx, j), laneSize, true)
+		}
+		ctx.Items.OpenedNonSISColumns = append(ctx.Items.OpenedNonSISColumns, roundCols)
 	}
 
 	// In case of the Merkle-proof mode, we also registers the
@@ -759,7 +785,9 @@ func (ctx *Ctx) IsNonEmptyPrecomputed() bool {
 // columns. This happens when the number of precomputed columns is greater than
 // the ApplySISHashThreshold.
 func (ctx *Ctx) IsSISAppliedToPrecomputed() bool {
-	if ctx.Items.Precomputeds.PrecomputedColums == nil {
+	// An empty (or nil) precomputed list means there is no precomputed round,
+	// so SIS cannot be applied regardless of the threshold.
+	if len(ctx.Items.Precomputeds.PrecomputedColums) == 0 {
 		return false
 	}
 	if ctx.IsBLS {

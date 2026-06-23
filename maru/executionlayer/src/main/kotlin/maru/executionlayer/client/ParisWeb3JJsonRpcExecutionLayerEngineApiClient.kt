@@ -10,9 +10,9 @@ package maru.executionlayer.client
 
 import maru.consensus.ElFork
 import maru.core.ExecutionPayload
-import maru.extensions.captureTimeSafeFuture
-import maru.mappers.Mappers.toDomainExecutionPayload
-import maru.mappers.Mappers.toExecutionPayloadV1
+import maru.executionlayer.mappers.Mappers.toDomainExecutionPayload
+import maru.executionlayer.mappers.Mappers.toExecutionPayloadV1
+import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.metrics.MetricsFacade
 import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceStateV1
 import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceUpdatedResult
@@ -32,7 +32,7 @@ class ParisWeb3JJsonRpcExecutionLayerEngineApiClient(
   override fun getFork(): ElFork = ElFork.Paris
 
   override fun getPayload(payloadId: Bytes8): SafeFuture<Response<ExecutionPayload>> =
-    createRequestTimer<ExecutionPayload>(method = "getPayload").captureTimeSafeFuture(
+    createRequestTimer<ExecutionPayload>(method = "getPayload").captureTime(
       web3jEngineClient.getPayloadV1(payloadId).thenApply {
         when {
           it.payload != null ->
@@ -45,10 +45,10 @@ class ParisWeb3JJsonRpcExecutionLayerEngineApiClient(
             throw IllegalStateException("Failed to get payload!")
         }
       },
-    )
+    ).toSafeFuture()
 
   override fun newPayload(executionPayload: ExecutionPayload): SafeFuture<Response<PayloadStatusV1>> =
-    createRequestTimer<PayloadStatusV1>(method = "newPayload").captureTimeSafeFuture(
+    createRequestTimer<PayloadStatusV1>(method = "newPayload").captureTime(
       web3jEngineClient
         .newPayloadV1(executionPayload.toExecutionPayloadV1())
         .thenApply {
@@ -58,7 +58,7 @@ class ParisWeb3JJsonRpcExecutionLayerEngineApiClient(
             Response.fromErrorMessage(it.errorMessage)
           }
         },
-    )
+    ).toSafeFuture()
 
   override fun forkChoiceUpdate(
     forkChoiceState: ForkChoiceStateV1,
@@ -66,7 +66,7 @@ class ParisWeb3JJsonRpcExecutionLayerEngineApiClient(
   ): SafeFuture<Response<ForkChoiceUpdatedResult>> =
     createRequestTimer<ForkChoiceUpdatedResult>(
       method = "forkChoiceUpdate",
-    ).captureTimeSafeFuture(
+    ).captureTime(
       web3jEngineClient.forkChoiceUpdatedV1(forkChoiceState, Optional.ofNullable(payloadAttributes)),
-    )
+    ).toSafeFuture()
 }

@@ -27,7 +27,10 @@ class MaruCompressorRLPSerDeTest {
 
   @Test
   fun `can serialize and deserialize same value`() {
-    val beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(Random.nextULong())
+    val beaconBlockHeader =
+      DataGenerators.randomBeaconBlockHeader(
+        Random.nextULong(),
+      )
     val beaconBlockBody =
       BeaconBlockBody(
         prevCommitSeals = buildSet(3) { add(Seal(Random.nextBytes(96))) },

@@ -1,4 +1,4 @@
-// pnpm --filter @consensys/linea-shared-utils exec tsx scripts/test-beacon-node-api-client.ts
+// pnpm --filter @lfdt-lineth/shared-utils exec tsx scripts/test-beacon-node-api-client.ts
 
 import { ExponentialBackoffRetryService } from "../src";
 import { BeaconNodeApiClient } from "../src/clients/BeaconNodeApiClient";

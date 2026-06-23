@@ -12,6 +12,7 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.mapError
+import linea.kotlin.encodeHex
 import maru.consensus.qbft.ProposerSelector
 import maru.consensus.qbft.toConsensusRoundIdentifier
 import maru.consensus.state.StateTransition
@@ -23,7 +24,6 @@ import maru.core.ExecutionPayload
 import maru.core.HashUtil
 import maru.database.BeaconChain
 import maru.executionlayer.manager.ExecutionLayerManager
-import maru.extensions.encodeHex
 import maru.serialization.rlp.bodyRoot
 import maru.serialization.rlp.stateRoot
 import tech.pegasys.teku.infrastructure.async.SafeFuture

@@ -1,0 +1,346 @@
+Multi-degree FRI
+================
+
+Goal
+----
+Standard FRI tests proximity for a single polynomial of degree < D evaluated on
+a domain of size N. When a proof system needs to certify several polynomials of
+*different* degrees, the naive approach pads all of them to the maximum degree
+(by evaluating on the full domain of size N) and commits to them before round 0.
+
+Multi-degree FRI avoids this cost: a polynomial of degree D_l < D is committed
+and batched into the running FRI polynomial exactly at the folding round where
+the running polynomial's degree has been reduced to D_l. That polynomial is then
+*never* evaluated on the full-size domain, only on its natural domain of size
+N_l = N * D_l / D (same blowup factor as the initial polynomial).
+
+This is the protocol needed in loom because, after the STARK quotient
+computation, the prover holds polynomials of several different degrees: the
+trace polynomials (degree N_module for each module) and the AIR quotient chunks
+(degree N_module / chunks). Rather than padding all of them to the largest
+module domain, multi-degree FRI lets each polynomial be committed and folded
+at its own level.
+
+
+Terminology
+-----------
+  N       = 2^n : full evaluation domain size (shared across all levels)
+  D       = 2^m : maximum degree (degree of the initial polynomial)
+  r = m   : total number of folding rounds
+  ρ = N/D : common blowup factor (must be the same for all levels)
+
+Domain at round j (j = 0..r):
+  Nⱼ = N / 2^j     (domain size)
+  Dⱼ = D / 2^j     (degree bound of the running polynomial after j folds)
+
+Pairing property (inherited from standard FRI): for any x = ωⱼ^i,
+its sibling is -x = ωⱼ^(i + Nⱼ/2).
+
+
+Level concept
+-------------
+A Level is one polynomial with degree bound D_l, introduced into the FRI
+protocol at the folding round where the running polynomial has the same degree
+bound. Callers that have several same-degree polynomials must batch/fold them
+before calling FRI.
+
+  type Level struct {
+      D     int         // degree bound; must divide D and D must divide N
+      Evals LevelEvals  // exactly one Base or Ext evaluation vector, size N_l = N * D_l / D
+      Tree  *merkle.Tree
+  }
+
+Key property: D_l must equal Dⱼ for some j ∈ {0..r}. The introduction round is:
+
+  j_l = log₂(D / D_l)
+
+At round j_l, the running polynomial has been folded j_l times and lives on
+domain Dⱼ_l = D / 2^{j_l} = D_l. The level polynomials share this domain, so
+they can be linearly combined with the running polynomial without any
+intermediate commitment to the combined result.
+
+The first level (j_l = 0) contains exactly ONE polynomial — the initial
+polynomial. All subsequent levels (j_l > 0) also contain exactly one polynomial.
+
+
+Commit phase (Prover)
+---------------------
+Input:
+  levels  : []Level, sorted in *decreasing* order of Level.D
+            levels[0].D = D (the initial polynomial)
+            levels[1].D > levels[2].D > ... (strictly decreasing)
+
+State: running = levels[0].Evals   (evaluation vector of size N)
+
+For j = 0 .. r-1:
+
+  ── Level batching step (if any level l has j_l = j, i.e. levels[l].D = Dⱼ) ──
+  Note: j = 0 is handled as the "initial polynomial" and there is no batching
+  step at j = 0 (levels[0] simply initialises `running`).
+  For j > 0 and any level l with j_l = j:
+
+    1. The caller provides the Merkle tree T_l over levels[l].Evals
+       (using the same paired-leaf scheme as standard FRI:
+        leaf k = hash( encode(evals[k]) || encode(evals[k + N_l/2]) )).
+       Bind its root to the transcript:
+         ts.Bind("fri_level_{l}_gamma", R_l)
+
+    2. Compute batching challenge:
+         ts.NewChallenge("fri_level_{l}_gamma")
+         b = ts.ComputeChallenge("fri_level_{l}_gamma")
+         γ_l.SetBytes(b)
+
+    3. Mix the level polynomial into running (pointwise):
+         running = running + γ_l * levels[l].Evals
+
+  ── Standard FRI commit step ────────────────────────────────────────────────
+
+  4. Build Merkle tree T_j over running (the current, possibly batched, vector):
+       ts.Bind("fri_fold_{j}", root(T_j))
+
+  5. Compute fold challenge:
+       b = ts.ComputeChallenge("fri_fold_{j}")
+       α_j.SetBytes(b)
+
+  6. Fold:
+       running = foldLayer(running, α_j, domains[j])
+     (standard FRI folding: halves the domain and degree)
+
+After all r rounds, running has size N_r = N/D (= blowup factor, the number
+of constant evaluations). This is FinalPoly.
+
+  7. Send FinalPoly explicitly.
+       ts.Bind("fri_query_0", serialise(FinalPoly))
+
+
+Query phase (Prover and Verifier)
+----------------------------------
+Query indices are derived the same way as in standard FRI:
+
+  For k = 0..Q-1:
+    b = ts.ComputeChallenge("fri_query_{k}")
+    s_k = BigEndian.Uint64(b[:8]) mod (N/2)
+    ts.Bind("fri_query_{k+1}", b)      (if k < Q-1)
+
+For each query k with index s_k, the proof must provide:
+
+  (A) For each level l at round j_l (l = 1..numLevels-1):
+        Open the pair at position s_k in T_l:
+          base_l = s_k mod (N_l / 2)
+          LeafP_l = levels[l].Evals[ base_l ]
+          LeafQ_l = levels[l].Evals[ base_l + N_l/2 ]
+        Provide Merkle proof against R_l.
+
+  (B) For each round j = 0..r-1 (the standard FRI path):
+        Open the pair at position s_k in T_j:
+          base_j = s_k mod (N_j / 2)
+          LeafP_j = running_j[ base_j ]
+          LeafQ_j = running_j[ base_j + N_j/2 ]
+        Provide Merkle proof against root(T_j).
+
+        (Note: running_j is the evaluation vector of the running polynomial
+         AFTER all level batching at round j, BEFORE folding. It is what
+         T_j was built from.)
+
+
+Verification
+------------
+The verifier replays the Fiat-Shamir transcript (same challenge names and Bind
+sequence as the prover) to derive γ_l, α_j, and s_k.
+
+For each query k with index s_k:
+
+  1. Authenticate all level openings (part A):
+     For each level l with j_l > 0:
+       leafData = encode(LeafP_l) || encode(LeafQ_l)
+       Verify Merkle proof against R_l.
+
+  2. Authenticate and fold along the FRI path (part B):
+     For j = 0..r-1:
+       base_j = s_k mod (N_j / 2)
+       leafData = encode(LeafP_j) || encode(LeafQ_j)
+       Verify Merkle proof against root(T_j).
+
+       Compute expected folded value:
+         x^{-1} = ωⱼ^{N_j - base_j}
+         expected_j = (LeafP_j + LeafQ_j) * invTwo
+                    + α_j * (LeafP_j - LeafQ_j) * invTwo * x^{-1}
+
+       If j < r-1:  check expected_j == Layers[j+1].LeafP (or LeafQ)
+       If j == r-1: check expected_j == FinalPoly[ s_k mod N_r ]
+
+  3. Check batching consistency at each level boundary:
+     For each level l with j_l > 0, at positions base_l = s_k mod (N_l / 2):
+
+       Let "pre_P" = the value of the running polynomial at base_l
+         BEFORE level l was added. This is derived from the previous folding
+         step: it is expected_{j_l - 1} that was computed in step 2 when
+         j = j_l - 1.
+
+         (More precisely, if base_{j_l} = base_l in the lower half of T_{j_l},
+          then pre_P = expected_{j_l - 1}. The "upper half" case uses the fact
+          that running_{j_l}[base_l] = LeafP_{j_l} and checking involves LeafQ.)
+
+       Verify that the committed running_j_l value is the linear combination:
+
+         LeafP_{j_l} = pre_P + γ_l * LeafP_l
+         LeafQ_{j_l} = pre_Q + γ_l * LeafQ_l
+
+       where pre_Q is the corresponding upper-half value derived analogously.
+
+     This check ties the Merkle-authenticated level polynomial openings to the
+     Merkle-authenticated running polynomial openings.
+
+Caveat: for j = 0 (the initial polynomial) there is no batching check — the
+running polynomial IS levels[0].Evals, and its Merkle root R_0 = root(T_0)
+is provided separately to Verify (same convention as standard FRI).
+
+
+Proof structure
+---------------
+  type Proof struct {
+      // Level roots are not stored here. Verify receives one root per Level
+      // from the caller; root[0] is the root of the initial running polynomial.
+
+      // ── Standard FRI fields (running polynomial path) ──────────────────────
+      FRIRoots  [][]byte             // Merkle roots of running polynomial T_1..T_{r-1}
+      FinalPoly []koalabear.Element  // explicit final folded evaluations
+
+      // Query phase
+      // LevelQueries[l][k] = opening of level-(l+1) at query k
+      //   (indexed from l=0 for levels[1])
+      LevelQueries [][]QueryLayer    // [numLevels-1][NumQueries]
+
+      // FRIQueries[k] = standard FRI query path for query k
+      FRIQueries []Query             // [NumQueries]
+  }
+
+Challenge naming convention
+----------------------------
+Building on the existing fri naming:
+
+  Level batching challenges:
+    "fri_level_{l}_gamma"       bind the level root, then derive γ_l
+
+  Standard fold challenges (unchanged):
+    "fri_fold_{j}"              for j = 0..r-1
+
+  Query challenges (unchanged):
+    "fri_query_{k}"             for k = 0..Q-1
+
+Both Prove and Verify register these names at the start (ts.NewChallenge).
+The registration order must be identical in prover and verifier.
+
+Registration order:
+  1. For j = 0..r-1:
+       if a level is introduced at j: ts.NewChallenge("fri_level_{l}_gamma")
+       ts.NewChallenge("fri_fold_{j}")
+  2. For k = 0..Q-1: ts.NewChallenge("fri_query_{k}")
+
+The Bind/Compute interleaving during the commit phase must follow the same
+order as above — level l's roots are bound before the fold challenge for
+round j_l, and fold challenges are derived in round order j = 0..r-1.
+
+
+Relationship to standard FRI
+------------------------------
+Standard FRI is the special case with a single level:
+  levels = []Level{ {D: D, Evals: LevelEvals{Base: a₀}, Tree: T_0} }
+
+There are no "fri_level_*" challenges, and multi-degree Prove reduces to
+standard FRI. The Proof type also reduces to the standard proof shape.
+
+
+Go API
+------
+
+// Prove runs multi-degree FRI. It requires:
+//   p      : Params built with the MAXIMUM degree D and domain N
+//   levels : []Level sorted in decreasing order of Level.D
+//            levels[0].D must equal p.D
+//            Each levels[l].Evals must have length N * levels[l].D / p.D
+//            Each levels[l].Tree must commit to levels[l].Evals
+//   ts     : transcript already initialised with outer context
+//
+// Returns the Proof and the query positions s_0..s_{Q-1}.
+func Prove(p Params, levels []Level, ts *fiatshamir.Transcript) (Proof, []int, error)
+
+// Verify checks a multi-degree FRI proof.
+//   p      : same Params used in Prove
+//   roots  : one Merkle root per Level, in the same order as levelDs
+//   levelDs: one D value per Level, in the same order used by Prove
+//   proof  : Proof produced by Prove
+//   ts     : transcript in the same state as when Prove was called
+func Verify(p Params, roots [][]byte, levelDs []int, proof Proof, ts *fiatshamir.Transcript) error
+
+
+Implementation notes
+---------------------
+1. Level ordering: Prove must sort levels by decreasing D before proceeding.
+   Verify that levels[0].D == p.D and levels[0].Evals has length p.N.
+   Each levels[l].D must be a power of two dividing p.D; j_l = log₂(D/levels[l].D)
+   must be in {1..r-1}.
+
+2. Domain reuse: domain[j_l] in p.Params is already precomputed and has
+   cardinality N_l = N / 2^{j_l} = N * levels[l].D / D. No new domain is needed.
+
+3. Merkle tree construction: same paired-leaf scheme as standard FRI.
+   leaf k = hash( encode(evals[k]) || encode(evals[k + N_l/2]) )
+   Applied to each levels[l].Evals.
+
+4. Batching challenge: each non-initial level contributes γ_l * levels[l].Evals.
+
+5. Pre-computation of running polynomial at level boundaries: the running
+   polynomial at the START of round j_l is the result of foldLayer applied
+   j_l times to levels[0].Evals. It is NOT separately committed; only
+   the POST-batching running polynomial is committed (T_{j_l} builds over
+   the combined vector).
+
+   For the verifier's batching check, "pre_P" is reconstructed from the
+   folding consistency chain: expected_{j_l - 1} gives the folded value
+   that equals running_{j_l} MINUS the level contributions. Rearranging:
+     pre_P = LeafP_{j_l} - γ_l * LeafP_l
+   and the verifier checks this equals expected_{j_l - 1}.
+
+6. Edge case — multiple levels at the same round: the spec allows at most one
+   level per folding round. If two sets of polynomials have the same degree,
+   the caller must batch them before FRI. The Prove precondition check should
+   reject duplicate D values in levels.
+
+7. The query for a level polynomial has a single paired-leaf opening, since the
+   polynomial is only committed at its natural domain level. The subsequent FRI
+   folding consistency is ensured through the running polynomial path (the
+   standard FRIQueries), not through another per-level folding path.
+
+
+Design decisions
+-----------------
+[1] COMMIT BEFORE OR AFTER BATCHING?
+  Option A (chosen): commit to each level polynomial separately (T_l over
+    levels[l].Evals), then mix it into the running polynomial. The running
+    polynomial T_{j_l} commits to the POST-batching vector.
+  Option B: batch first (without committing level polys separately), then commit
+    the combined running polynomial. Verification cannot check batching without
+    the separate commitments, so option B is unsound.
+
+[2] SINGLE γ PER LEVEL VS PER POLYNOMIAL
+  There is one challenge γ_l per non-initial level. It is derived after binding
+  that level's root and is used as γ_l * levels[l].Evals.
+
+[3] LEVEL POLYNOMIAL QUERY DEPTH
+  Each level polynomial only needs a single Merkle opening (at its natural
+  domain level). It is NOT folded through subsequent rounds in its own tree.
+  The folding consistency from round j_l onward is entirely captured by the
+  running polynomial path.
+
+[4] INTERACTION WITH OUTER PROOF SYSTEM (loom)
+  In loom, the outer proof system calls Prove with:
+    - levels[0]: the deep-quotient polynomial DQ (degree N_max, the largest
+      module domain size), evaluated on a domain of size N_max * RATE
+    - Additional levels for each distinct module/chunk degree
+
+  The query positions returned by Prove are the same s_k used in loom's
+  PointSamplings. The FS transcript is shared with loom's outer protocol
+  (same *fiatshamir.Transcript). The "check FRI bridge" verifier step must
+  verify that DQ(ω^{s_k}) computed from PointSamplings equals the Layer-0
+  LeafP/LeafQ of each FRIQuery, as in the single-degree case.

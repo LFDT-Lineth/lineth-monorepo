@@ -8,7 +8,7 @@
  * CLIENT_SECRET=... \
  * AUDIENCE=... \
  * BEACON_NODE_RPC_URL=https://example/beacon \
- * pnpm --filter @consensys/linea-native-yield-automation-service exec tsx scripts/test-consensys-staking-graphql-client.ts
+ * pnpm --filter @lfdt-lineth/native-yield-automation-service exec tsx scripts/test-consensys-staking-graphql-client.ts
  */
 
 import {
@@ -16,7 +16,7 @@ import {
   WinstonLogger,
   OAuth2TokenClient,
   ExponentialBackoffRetryService,
-} from "@consensys/linea-shared-utils";
+} from "@lfdt-lineth/shared-utils";
 
 import { ConsensysStakingApiClient } from "../src/clients/ConsensysStakingApiClient.js";
 import { createApolloClient } from "../src/utils/createApolloClient.js";

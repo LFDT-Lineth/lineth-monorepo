@@ -10,8 +10,8 @@ package maru.executionlayer.client
 
 import maru.consensus.ElFork
 import maru.core.ExecutionPayload
-import maru.extensions.captureTimeSafeFuture
-import maru.mappers.Mappers.toDomainExecutionPayload
+import maru.executionlayer.mappers.Mappers.toDomainExecutionPayload
+import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.metrics.MetricsFacade
 import tech.pegasys.teku.ethereum.executionclient.schema.Response
 import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
@@ -25,7 +25,7 @@ class OsakaWeb3JJsonRpcExecutionLayerEngineApiClient(
   override fun getFork(): ElFork = ElFork.Osaka
 
   override fun getPayload(payloadId: Bytes8): SafeFuture<Response<ExecutionPayload>> =
-    createRequestTimer<ExecutionPayload>(method = "getPayload").captureTimeSafeFuture(
+    createRequestTimer<ExecutionPayload>(method = "getPayload").captureTime(
       web3jEngineClient.getPayloadV5(payloadId).thenApply {
         when {
           it.payload != null ->
@@ -38,5 +38,5 @@ class OsakaWeb3JJsonRpcExecutionLayerEngineApiClient(
             throw IllegalStateException("Failed to get payload!")
         }
       },
-    )
+    ).toSafeFuture()
 }

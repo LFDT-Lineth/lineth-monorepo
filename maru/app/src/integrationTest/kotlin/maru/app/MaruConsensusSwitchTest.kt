@@ -9,6 +9,10 @@
 package maru.app
 
 import linea.kotlin.decodeHex
+import linea.testing.besu.BesuFactory
+import linea.testing.besu.BesuTransactionsHelper
+import linea.testing.besu.ethGetBlockByNumber
+import linea.testing.besu.startWithRetry
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
@@ -26,10 +30,6 @@ import org.web3j.protocol.core.methods.response.EthBlock
 import testutils.Checks.checkAllNodesHaveSameBlocks
 import testutils.Checks.getMinedBlocks
 import testutils.Checks.verifyBlockTime
-import testutils.besu.BesuFactory
-import testutils.besu.BesuTransactionsHelper
-import testutils.besu.ethGetBlockByNumber
-import testutils.besu.startWithRetry
 import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
 import java.io.File

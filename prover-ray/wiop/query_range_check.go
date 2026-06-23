@@ -3,7 +3,7 @@ package wiop
 import (
 	"fmt"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // RangeCheck is a [Query] asserting that every row of a column lies in [0, B).

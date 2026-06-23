@@ -1,4 +1,4 @@
-import { ILogger, wait } from "@consensys/linea-shared-utils";
+import { ILogger, wait } from "@lfdt-lineth/shared-utils";
 import { Address, TransactionReceipt } from "viem";
 
 import { IOperationLoop } from "./IOperationLoop.js";

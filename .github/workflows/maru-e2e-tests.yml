@@ -54,7 +54,7 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     outputs:
       tests_outcome: ${{ steps.run_e2e_tests.outcome }}
-    runs-on: [gha-runner-scale-set-ubuntu-24-amd64-med]
+    runs-on: [gha-lfdt-lineth-ss-ubuntu-24-amd64-med]
     name: e2e tests
     steps:
       - name: Setup upterm session

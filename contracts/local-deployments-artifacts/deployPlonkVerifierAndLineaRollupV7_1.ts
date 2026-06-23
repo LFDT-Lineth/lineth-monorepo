@@ -25,6 +25,11 @@ import {
 } from "../common/constants";
 import { deployContractFromArtifacts, getInitializerData } from "../common/helpers/deployments";
 import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
+import {
+  getDeploymentNetworkName,
+  requireAddressesFromRegistryOrEnv,
+  requireAddressFromRegistryOrEnv,
+} from "../common/helpers/readAddress";
 import { generateRoleAssignments } from "../common/helpers/roles";
 import { get1559Fees } from "../scripts/utils";
 
@@ -53,15 +58,24 @@ function findContractArtifacts(
 }
 
 async function main() {
+  const networkName = getDeploymentNetworkName();
   const verifierName = getRequiredEnvVar("VERIFIER_CONTRACT_NAME");
   const lineaRollupInitialStateRootHash = getRequiredEnvVar("INITIAL_L2_STATE_ROOT_HASH");
   const lineaRollupInitialL2BlockNumber = getRequiredEnvVar("INITIAL_L2_BLOCK_NUMBER");
-  const lineaRollupSecurityCouncil = getRequiredEnvVar("L1_SECURITY_COUNCIL");
-  const lineaRollupOperators = getRequiredEnvVar("LINEA_ROLLUP_OPERATORS").split(",");
+  const lineaRollupSecurityCouncil = requireAddressFromRegistryOrEnv(
+    networkName,
+    "L1_SECURITY_COUNCIL",
+    "L1_SECURITY_COUNCIL",
+  );
+  const lineaRollupOperators = requireAddressesFromRegistryOrEnv(
+    networkName,
+    "LINEA_ROLLUP_OPERATORS",
+    "LINEA_ROLLUP_OPERATORS",
+  );
   const lineaRollupRateLimitPeriodInSeconds = getRequiredEnvVar("LINEA_ROLLUP_RATE_LIMIT_PERIOD");
   const lineaRollupRateLimitAmountInWei = getRequiredEnvVar("LINEA_ROLLUP_RATE_LIMIT_AMOUNT");
   const lineaRollupGenesisTimestamp = getRequiredEnvVar("L2_GENESIS_TIMESTAMP");
-  const lineaRollupYieldManager = getRequiredEnvVar("YIELD_MANAGER_ADDRESS");
+  const lineaRollupYieldManager = requireAddressFromRegistryOrEnv(networkName, "YieldManager", "YIELD_MANAGER_ADDRESS");
   const multiCallAddress = "0xcA11bde05977b3631167028862bE2a173976CA11";
   const lineaRollupName = "LineaRollupV7.1";
   const lineaRollupImplementationName = "LineaRollupV7_1Implementation";

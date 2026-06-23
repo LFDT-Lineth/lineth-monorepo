@@ -9,7 +9,7 @@ concurrency:
 
 jobs:
   filter-commit-changes:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: Filter commit changes
     outputs:
       coordinator: ${{ steps.filter.outputs.coordinator }}
@@ -17,6 +17,7 @@ jobs:
       prover: ${{ steps.filter.outputs.prover }}
       tx-exclusion-api: ${{ steps.filter.outputs.tx-exclusion-api }}
       linea-besu-package: ${{ steps.filter.outputs.linea-besu-package }}
+      maru: ${{ steps.filter.outputs.maru }}
       linea: ${{ steps.filter.outputs.linea }}
     steps:
       - name: Checkout
@@ -30,6 +31,8 @@ jobs:
           filters: |
             coordinator:
               - 'coordinator/**'
+            maru:
+              - 'maru/**'
             postman:
               - 'postman/**'
             prover:
@@ -45,6 +48,7 @@ jobs:
               - 'gradle/libs.versions.toml'
             linea:
               - 'coordinator/**'
+              - 'maru/**'
               - 'postman/**'
               - 'prover/**'
               - 'transaction-exclusion-api/**'
@@ -57,15 +61,18 @@ jobs:
 
   upload-component-changelog:
     needs: [filter-commit-changes]
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     strategy:
       fail-fast: false
       matrix:
-        component: [ coordinator, prover, postman, tx-exclusion-api, linea-besu-package, linea ]
+        component: [ coordinator, maru, prover, postman, tx-exclusion-api, linea-besu-package, linea ]
         include:
           - component: coordinator
             folder-name: coordinator
             include-path: coordinator/**
+          - component: maru
+            folder-name: maru
+            include-path: maru/**
           - component: prover
             folder-name: prover
             include-path: prover/**

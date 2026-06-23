@@ -38,7 +38,10 @@ class BeaconBlockSerializerTest {
 
   @Test
   fun `can serialize and deserialize same value`() {
-    val beaconBLockHeader = DataGenerators.randomBeaconBlockHeader(Random.nextULong())
+    val beaconBLockHeader =
+      DataGenerators.randomBeaconBlockHeader(
+        Random.nextULong(),
+      )
     val beaconBlockBody =
       BeaconBlockBody(
         prevCommitSeals = buildSet(3) { add(Seal(Random.nextBytes(96))) },

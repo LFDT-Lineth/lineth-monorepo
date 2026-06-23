@@ -22,9 +22,15 @@ import org.junit.jupiter.api.Test
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class ValidatingSealedBeaconBlockImporterTest {
-  private val blockHeader = DataGenerators.randomBeaconBlockHeader(1u)
-  private val beaconBlock = DataGenerators.randomBeaconBlock(blockHeader.number)
-  private val sealedBeaconBlock = DataGenerators.randomSealedBeaconBlock(beaconBlock.beaconBlockHeader.number)
+  private val blockHeader = DataGenerators.randomBeaconBlockHeader(
+    1u,
+  )
+  private val beaconBlock = DataGenerators.randomBeaconBlock(
+    blockHeader.number,
+  )
+  private val sealedBeaconBlock = DataGenerators.randomSealedBeaconBlock(
+    beaconBlock.beaconBlockHeader.number,
+  )
 
   private fun blockValidator(result: Result<Unit, BlockValidator.BlockValidationError>) =
     object : BlockValidator {

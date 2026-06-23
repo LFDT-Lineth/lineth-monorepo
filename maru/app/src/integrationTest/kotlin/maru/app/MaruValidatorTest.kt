@@ -8,6 +8,9 @@
  */
 package maru.app
 
+import linea.testing.besu.BesuFactory
+import linea.testing.besu.BesuTransactionsHelper
+import linea.testing.besu.ethGetBlockByNumber
 import maru.config.SyncingConfig
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
@@ -24,9 +27,6 @@ import org.junit.jupiter.api.Test
 import testutils.Checks.assertMinedBlocks
 import testutils.Checks.getMinedBlocks
 import testutils.PeeringNodeNetworkStack
-import testutils.besu.BesuFactory
-import testutils.besu.BesuTransactionsHelper
-import testutils.besu.ethGetBlockByNumber
 import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
 import kotlin.time.Duration.Companion.seconds

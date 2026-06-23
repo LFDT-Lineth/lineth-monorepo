@@ -43,6 +43,14 @@ pub const PoseidonCompressCase = struct { left: [8]u32, right: [8]u32, expected:
 pub const PoseidonMdCase = struct { message: []const u32, expected: [8]u32 };
 pub const FiatShamirCase = struct { base_updates: []const u32, ext_updates: []const [6]u32, random_field: [8]u32, random_ext: [6]u32 };
 
+pub const prover_visibility_oracle: u8 = 1;
+pub const prover_visibility_public: u8 = 2;
+
+pub const RuntimeTraceColumn = union(enum) { oracle: []const [8]u32, public_base: []const u32, public_ext: []const [6]u32 };
+pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };
+pub const RuntimeTraceRound = struct { columns: []const RuntimeTraceColumn, cells: []const RuntimeTraceCell, expected_coins: []const [6]u32 };
+pub const RuntimeTraceCase = struct { rounds: []const RuntimeTraceRound };
+
 pub const field_cases = [_]FieldCase{
     .{ .a = 0, .b = 1, .add = 1, .sub = 2130706432, .mul = 0, .square_a = 0, .neg_a = 0, .has_inv_a = false, .inv_a = 0, .has_div_ab = true, .div_ab = 0, .bytes_a = .{ 0x00, 0x00, 0x00, 0x00 } },
     .{ .a = 1, .b = 2, .add = 3, .sub = 2130706432, .mul = 2, .square_a = 1, .neg_a = 2130706432, .has_inv_a = true, .inv_a = 1, .has_div_ab = true, .div_ab = 1065353217, .bytes_a = .{ 0x00, 0x00, 0x00, 0x01 } },
@@ -130,4 +138,30 @@ pub const poseidon_md_cases = [_]PoseidonMdCase{
 pub const fiat_shamir_cases = [_]FiatShamirCase{
     .{ .base_updates = &.{ 3, 4, 5 }, .ext_updates = &.{.{ 1, 2, 3, 4, 5, 6 }}, .random_field = .{ 1369968576, 1921227010, 1284177723, 1574299405, 1986605901, 1260024162, 2021358802, 1052246783 }, .random_ext = .{ 378558963, 1331620468, 704318959, 1741344688, 795303229, 1909764152 } },
     .{ .base_updates = &.{ 2130706432, 9 }, .ext_updates = &.{ .{ 5, 0, 6, 0, 7, 8 }, .{ 7, 8, 9, 10, 11, 12 } }, .random_field = .{ 821752357, 1879104200, 444728925, 120774738, 934984782, 1711802630, 89715619, 2068643356 }, .random_ext = .{ 420362591, 716070027, 1100697449, 1384724807, 307514712, 1179118643 } },
+};
+
+pub const runtime_trace_cases = [_]RuntimeTraceCase{
+    .{ .rounds = &.{
+        .{
+            .columns = &.{
+                .{ .oracle = &.{.{ 457422437, 1507660014, 804096924, 2039788297, 2029215976, 1604256236, 365254649, 820778084 }} },
+                .{ .public_ext = &.{ .{ 5, 9, 2, 6, 5, 3 }, .{ 5, 8, 9, 7, 9, 3 }, .{ 2, 3, 8, 4, 6, 2 }, .{ 6, 4, 3, 3, 8, 3 } } },
+            },
+            .cells = &.{
+                .{ .base = 23 },
+                .{ .ext = .{ 10, 20, 30, 40, 50, 60 } },
+            },
+            .expected_coins = &.{ .{ 2017567272, 1778391968, 1167748950, 87048359, 648365507, 1492709184 }, .{ 805362770, 1925645492, 1910453979, 533502493, 1296767730, 105917673 } },
+        },
+        .{
+            .columns = &.{
+                .{ .oracle = &.{.{ 1513238224, 1205466055, 1958485117, 1171311743, 1105605557, 2123056526, 1446366138, 1204090127 }} },
+                .{ .public_base = &.{ 11, 22, 33, 44 } },
+            },
+            .cells = &.{
+                .{ .base = 77 },
+            },
+            .expected_coins = &.{.{ 599462548, 106956218, 1562197620, 1802592085, 1991170243, 971914108 }},
+        },
+    } },
 };

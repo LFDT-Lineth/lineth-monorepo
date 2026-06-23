@@ -74,12 +74,16 @@ runs:
         IMAGE: consensys/${{ inputs.image-name }}
         SUFFIX: ${{ steps.latest_tag.outputs.release_tag_commit }}
       run: |
-        # Fetch tags from DockerHub API
-        TAGS=$(curl -s "https://hub.docker.com/v2/repositories/${IMAGE}/tags?page_size=100" \
+        set -euo pipefail
+        # Use Docker Hub's server-side `name` substring filter so we don't
+        # depend on the tag we want being within the most-recent 100. This
+        # matters for stable components that rarely push new images
+        TAGS=$(curl -fsS "https://hub.docker.com/v2/repositories/${IMAGE}/tags?name=${SUFFIX}&page_size=100" \
           | jq -r '.results[] | select(.content_type == "image") | .name')
 
-        # Filter by suffix
-        MATCH=$(echo "$TAGS" | grep -e "${SUFFIX}$" | head -1 || true)
+        # Prefer an exact suffix match so we don't pick a tag where the commit
+        # appears mid-string (e.g. as part of a different version's suffix).
+        MATCH=$(echo "$TAGS" | grep -E "${SUFFIX}$" | head -1 || true)
 
         if [ -z "$MATCH" ]; then
           echo "No matching docker image tag with suffix=$SUFFIX found, will set as 'develop' instead"
@@ -88,5 +92,5 @@ runs:
           echo "Found image tag: $MATCH"
         fi
 
-        echo "image_tag=$MATCH" >> $GITHUB_OUTPUT
+        echo "image_tag=$MATCH" >> "$GITHUB_OUTPUT"
 

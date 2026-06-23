@@ -10,7 +10,6 @@ package maru.database
 
 import maru.core.BeaconState
 import maru.core.SealedBeaconBlock
-import maru.core.ext.DataGenerators
 
 // Wrapper class for ByteArray to use as a key in maps. This is necessary because ByteArray does not implement
 // equals/hashCode correctly for content comparison
@@ -31,13 +30,6 @@ class InMemoryBeaconChain(
   private val sealedBeaconBlockByBlockRoot = mutableMapOf<ByteArrayWrapper, SealedBeaconBlock>()
   private val sealedBeaconBlockByBlockNumber = mutableMapOf<ULong, SealedBeaconBlock>()
   private var latestBeaconState: BeaconState = initialBeaconState
-
-  companion object {
-    fun fromGenesis(genesisTimestampSeconds: ULong = 0UL): InMemoryBeaconChain {
-      val (beaconState, sealedBlock) = DataGenerators.genesisState(genesisTimestampSeconds)
-      return InMemoryBeaconChain(beaconState, sealedBlock)
-    }
-  }
 
   init {
     newBeaconChainUpdater().run {

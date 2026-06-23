@@ -51,8 +51,8 @@ interface ReportSummary {
 }
 
 const DEFAULT_DAYS = 30;
-const OWNER = "Consensys";
-const REPO = "linea-monorepo";
+const OWNER = "LFDT-Lineth";
+const REPO = "lineth-monorepo";
 const WORKFLOW_FILE = "main.yml";
 const E2E_JOB_NAME = "run-e2e-tests / run-e2e-tests";
 
