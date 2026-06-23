@@ -1,0 +1,79 @@
+##
+# Smart contract error codes from:
+# https://www.notion.so/consensys/Smart-Contracts-Error-Code-Registry-bb4bd68f8ddf4b0ba90000d1136e42ef
+##
+
+[smart-contract-errors]
+# L1 Linea Rollup
+# Generated from `pnpm exec ts-node contracts/scripts/operational/getSmartContractErrorsFromABI.ts contracts/local-deployments-artifacts/deployed-artifacts/LineaRollupV6-Deployed-2024-12-03.json`
+"0f06cd15" = "DataAlreadySubmitted"
+"c01eab56" = "EmptySubmissionData"
+"36459fa0" = "L1RollingHashDoesNotExistOnL1"
+"70614405" = "FinalBlockNumberLessThanOrEqualToLastFinalizedBlock"
+"2898482a" = "FinalBlockStateEqualsZeroHash"
+"bf81c6e0" = "FinalizationInTheFuture"
+"0c256592" = "MissingMessageNumberForRollingHash"
+"5228f4c8" = "MissingRollingHashForMessageNumber"
+"729eebce" = "FirstByteIsNotZero"
+"6426c6c5" = "BytesLengthNotMultipleOf32"
+"68dcad5f" = "PointEvaluationResponseInvalid"
+"f75db381" = "PrecompileReturnDataLengthWrong"
+"a71194af" = "PointEvaluationFailed"
+"bc5aad11" = "FinalizationStateIncorrect"
+"b1504a5f" = "BlobSubmissionDataIsMissing"
+"c0e41e1d" = "EmptyBlobDataAtIndex"
+"d3664fb3" = "FinalShnarfWrong"
+"4e686675" = "L2MerkleRootDoesNotExist"
+"e5d14425" = "L2MerkleRootAlreadyAnchored"
+"0c91d776" = "BytesLengthNotMultipleOfTwo"
+"ead4c30e" = "StartingRootHashDoesNotMatch"
+"7907d79b" = "ProofIsEmpty"
+"69ed70ab" = "InvalidProofType"
+"09bde339" = "InvalidProof"
+"ca389c44" = "InvalidProofOrProofVerificationRanOutOfGas"
+"6e5424c2" = "ParentBlobNotSubmitted"
+"edeae83c" = "FinalBlobNotSubmitted"
+"8019aff7" = "BlobSubmissionDataEmpty"
+"b05e92fa" = "InvalidMerkleProof"
+"4306cbb1" = "LastFinalizationTimeNotLapsed"
+"f7ec9097" = "LeafIndexOutOfBounds"
+"335a4a90" = "MessageAlreadyClaimed"
+"7f7497e9" = "OnlyNonFallbackOperator"
+"5e3fd6ad" = "ProofLengthDifferentThanMerkleDepth"
+"37ed32e8" = "ReentrantCall"
+"6dfcc650" = "SafeCastOverflowedUintDowncast"
+"c77b964c" = "ParentShnarfNotSubmitted"
+"e69adeca" = "ShnarfAlreadySubmitted"
+"87fb99b3" = "ShnarfSubmissionIsZeroHash"
+"f9069dd8" = "FinalStateRootHashIsZeroHash"
+"49d466c5" = "FinalShnarfNotSubmitted"
+
+# Finalization (forced transaction integration)
+# with bytes32 included.
+"d35bb1d1" = "FinalShnarfNotSubmitted"
+"ec4f874b" = "AddressIsNotFiltered"
+"b90e2e84" = "FinalizationDataMissingForcedTransaction"
+"eca429d2" = "MissingRollingHashForForcedTransactionNumber"
+"beb1b948" = "ForcedTransactionExistsForBlockOrIsTooLow"
+
+# L2 Message Service
+# Generated from `pnpm exec ts-node contracts/scripts/operational/getSmartContractErrorsFromABI.ts contracts/local-deployments-artifacts/deployed-artifacts/L2MessageServiceV1-Deployed-2024-12-03.json`
+"3b174434" = "MessageHashesListLengthHigherThanOneHundred"
+"6446cc9c" = "MessageHashesListLengthIsZero"
+"d39e75f9" = "L1MessageNumberSynchronizationWrong"
+"7557a60a" = "L1RollingHashSynchronizationWrong"
+"36a4bb94" = "FinalRollingHashIsZero"
+"732f9413" = "FeeTooLow"
+
+# Shared Message Service (L1 and L2) Errors
+"a57c4df4" = "FeePaymentFailed"
+"18659654" = "IsNotPaused"
+"c0a71b58" = "IsPaused"
+"d10d72bb" = "LimitIsZero"
+"992d87c3" = "MessageDoesNotExistOrHasAlreadyBeenClaimed"
+"54613443" = "MessageSendingFailed"
+"b5ed5a3b" = "PeriodIsZero"
+"a74c1c5f" = "RateLimitExceeded"
+"b03b6932" = "ValueSentTooLow"
+"8579befe" = "ZeroAddressNotAllowed"
+"0742d053" = "ZeroHashNotAllowed"
