@@ -643,7 +643,8 @@ check_typescript_quickstart_helpers() {
 
   if grep -q 'deploy-timing.ts' "$deploy_contracts" \
     && grep -q 'DEPLOY_TIMING_PATH' "$deploy_contracts" \
-    && grep -q 'appendFileSync' "$deploy_timing_ts" \
+    && grep -q 'appendDeployTimingRecord' "$deploy_timing_ts" \
+    && grep -q 'appendFileSync' "$STACK/scripts/internal/lib/timing.ts" \
     && grep -q 'deploy-timing.jsonl' "$deploy_timing_ts"; then
     pass "deploy-contracts emits a TypeScript-backed deploy timing report"
   else
@@ -1566,6 +1567,71 @@ check_quickstart_review_fixes() {
   fi
 }
 
+check_quickstart_lib_consolidation() {
+  internal_dir="$STACK/scripts/internal"
+  lib_dir="$internal_dir/lib"
+
+  for lib_file in errors.ts fs.ts env.ts timing.ts errors.test.ts fs.test.ts env.test.ts timing.test.ts; do
+    if [ -f "$lib_dir/$lib_file" ]; then
+      pass "scripts/internal/lib/$lib_file exists"
+    else
+      fail "scripts/internal/lib/$lib_file must exist"
+    fi
+  done
+
+  # Moved INFRA helpers must not be redefined outside scripts/internal/lib/.
+  for fn in sanitizeExternalError ensureDir writeFileMode; do
+    dupes="$(grep -Rn "function ${fn}(" "$internal_dir" 2>/dev/null | grep -v '/lib/' || true)"
+    if [ -n "$dupes" ]; then
+      fail "INFRA helper '$fn' must only be defined under scripts/internal/lib/: $(printf '%s' "$dupes" | tr '\n' ' ')"
+    else
+      pass "INFRA helper '$fn' is not redefined outside scripts/internal/lib/"
+    fi
+  done
+
+  if grep -q 'function sanitizeExternalError' "$lib_dir/errors.ts" \
+    && grep -q 'function sanitizeSecrets' "$lib_dir/errors.ts" \
+    && grep -q 'sanitizeSecrets' "$internal_dir/claim-l2-to-l1.ts" \
+    && ! grep -q 'function sanitizeError' "$internal_dir/claim-l2-to-l1.ts"; then
+    pass "lib/errors.ts is the single redaction source and claim-l2-to-l1 uses sanitizeSecrets"
+  else
+    fail "lib/errors.ts must own sanitizeExternalError/sanitizeSecrets and claim-l2-to-l1 must use sanitizeSecrets"
+  fi
+
+  if grep -q 'function ensureDir' "$lib_dir/fs.ts" \
+    && grep -q 'function writeFileAtomic' "$lib_dir/fs.ts" \
+    && grep -q '0o600' "$internal_dir/deployer-wallet.ts" \
+    && grep -q '0o600' "$internal_dir/traffic-account.ts" \
+    && grep -q 'CONTAINER_READABLE_FILE_MODE = 0o644' "$internal_dir/account-setup.ts"; then
+    pass "lib/fs.ts owns the atomic write and the 0o600 vs 0o644 distinction is preserved"
+  else
+    fail "lib/fs.ts must own ensureDir/writeFileAtomic while callers preserve the 0o600 vs 0o644 distinction"
+  fi
+
+  if grep -q 'requiredProcessEnv' "$lib_dir/env.ts" \
+    && grep -q 'parseDecimalWei' "$lib_dir/env.ts" \
+    && grep -q 'parseBoolean' "$lib_dir/env.ts"; then
+    pass "lib/env.ts owns the shared env helpers"
+  else
+    fail "lib/env.ts must own parseDecimalWei/parseBoolean and requiredProcessEnv"
+  fi
+
+  # sepolia-policy.ts must own policy only and stop acting as an env-helper barrel.
+  if grep -qE 'readDotEnvFile|readDotEnvContents|requiredEnvValue' "$internal_dir/sepolia-policy.ts"; then
+    fail "sepolia-policy.ts must not re-export env helpers (readDotEnv*/requiredEnvValue)"
+  else
+    pass "sepolia-policy.ts no longer re-exports env helpers"
+  fi
+
+  if grep -q 'appendDeployTimingRecord' "$lib_dir/timing.ts" \
+    && grep -q 'appendDeployTimingRecord' "$internal_dir/deploy-timing.ts" \
+    && grep -q 'appendDeployTimingRecord' "$internal_dir/fund-runtime-accounts.ts"; then
+    pass "deploy-timing JSONL writer is shared from lib/timing.ts"
+  else
+    fail "deploy-timing.ts and fund-runtime-accounts.ts must share lib/timing.ts appendDeployTimingRecord"
+  fi
+}
+
 check_no_tracked_generated_genesis
 check_restructured_layout_paths
 check_runtime_helper_usage
@@ -1583,6 +1649,7 @@ check_reuse_guardrails
 check_smoke_and_traffic_scripts
 check_pinned_utility_images_and_docs
 check_quickstart_review_fixes
+check_quickstart_lib_consolidation
 
 if [ "$FAILURES" -ne 0 ]; then
   printf '[quickstart-static] %s failure(s)\n' "$FAILURES" >&2

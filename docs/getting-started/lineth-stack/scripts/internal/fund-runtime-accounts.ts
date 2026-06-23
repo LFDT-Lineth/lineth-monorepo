@@ -1,5 +1,4 @@
 import * as fs from "node:fs";
-import * as path from "node:path";
 
 import { assertSingleFeeModel, FeeOverrides, feeBudgetPricePerGas } from "contracts/common/helpers/feeOverrides";
 import { isAddress, JsonRpcProvider, type TransactionReceipt, Wallet } from "ethers";
@@ -7,6 +6,7 @@ import { isAddress, JsonRpcProvider, type TransactionReceipt, Wallet } from "eth
 import { resolveL1DeployerConfig } from "./deployer-wallet";
 import { envNumber, requiredProcessEnv } from "./lib/env";
 import { sanitizeExternalError } from "./lib/errors";
+import { appendDeployTimingRecord } from "./lib/timing";
 import { buildSepoliaPolicyConfig } from "./sepolia-policy";
 
 type AddressBook = {
@@ -89,19 +89,7 @@ function loadAddressBook(): AddressBook {
 }
 
 function recordTiming(name: string, startedMs: number, endedMs: number, status: "ok" | "failed") {
-  const durationMs = Math.max(0, endedMs - startedMs);
-  fs.mkdirSync(path.dirname(DEPLOY_TIMING_PATH), { recursive: true });
-  fs.appendFileSync(
-    DEPLOY_TIMING_PATH,
-    `${JSON.stringify({
-      name,
-      status,
-      startedAt: new Date(startedMs).toISOString(),
-      endedAt: new Date(endedMs).toISOString(),
-      durationMs,
-      durationSeconds: Number((durationMs / 1000).toFixed(3)),
-    })}\n`,
-  );
+  appendDeployTimingRecord(DEPLOY_TIMING_PATH, { name, status, startedMs, endedMs });
 }
 
 async function buildFundingPlans(provider: JsonRpcProvider, targets: FundingTarget[]): Promise<FundingPlan[]> {
