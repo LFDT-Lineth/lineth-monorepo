@@ -95,11 +95,23 @@ jobs:
       - name: Install zkc interpreter CLI
         run: make -C arithmetization install-zkc ${{ inputs.zkc-ref && format('ZKC_REF={0}', inputs.zkc-ref) || '' }}
 
-      # Execute the guest via zkc's generated-Go backend (--gogen) in fast mode (--fast), quiet (-q):
-      # the interpreter does not implement tracing yet, so this runnability check skips the trace path
-      # — and gogen+fast is light (tens of MB, seconds, vs the tree-walking interpreter's ~15 GB). Uses
-      # exec's default GP_INPUT (the committed sample stateless input). A trap/failure still exits
-      # non-zero under these flags.
+      # Pre-warm the Go build cache for the gogen binary. zkc exec --gogen runs `go build` on
+      # generated Go source inside gogen.Build; on a cold cache that compilation dominates the
+      # step and can stall the runner. Running it here once, in a dedicated step, warms $GOCACHE
+      # so the go build inside zkc exec is a near-instant cache hit. setup-go saves $GOCACHE
+      # at the end of the job, keeping subsequent runs warm too.
+      - name: Pre-warm gogen build cache
+        run: |
+          d=$(mktemp -d)
+          zkc generate --quiet arithmetization/src/main/riscv/main.zkc > "$d/main.go"
+          printf 'module zkcgen\n\ngo 1.24\n' > "$d/go.mod"
+          (cd "$d" && go build -o prog .)
+          rm -rf "$d"
+
+      # Execute the guest via zkc's generated-Go backend (--gogen) in fast mode (--fast), quiet (-q).
+      # --gogen compiles the interpreter to native Go so it runs in seconds rather than stepping
+      # through the word machine 1-by-1; the go build inside gogen.Build hits the cache warmed
+      # above and is near-instant. A trap/failure still exits non-zero.
       # ZKC_REF= (empty) ensures the install-zkc prereq inside elf-exec is a guaranteed no-op
       # (zkc is already on PATH from the step above; an empty ZKC_REF triggers the skip path).
       - name: Run l2-execution guest under zkc (gogen, fast, accel keccak)
