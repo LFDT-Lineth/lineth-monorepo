@@ -357,6 +357,34 @@ lineth_wizard_set_env_key() {
   mv "$wizard_set_tmp" "$wizard_set_file"
 }
 
+lineth_wizard_dedupe_managed_keys() {
+  wizard_dedupe_file="$1"
+
+  for wizard_dedupe_key in $LINETH_WIZARD_MANAGED_KEYS; do
+    wizard_dedupe_count="$(awk -v key="$wizard_dedupe_key" '
+      BEGIN { count = 0; prefix = key "=" }
+      index($0, prefix) == 1 { count += 1 }
+      END { print count }
+    ' "$wizard_dedupe_file")"
+
+    [ "$wizard_dedupe_count" -gt 1 ] || continue
+    lineth_warn "$wizard_dedupe_key appears $wizard_dedupe_count times in .env; keeping last occurrence"
+
+    wizard_dedupe_tmp="${wizard_dedupe_file}.$$.$wizard_dedupe_key.dedupe.tmp"
+    awk -v key="$wizard_dedupe_key" -v count="$wizard_dedupe_count" '
+      BEGIN { seen = 0; prefix = key "=" }
+      index($0, prefix) == 1 {
+        seen += 1
+        if (seen < count) {
+          next
+        }
+      }
+      { print }
+    ' "$wizard_dedupe_file" > "$wizard_dedupe_tmp"
+    mv "$wizard_dedupe_tmp" "$wizard_dedupe_file"
+  done
+}
+
 lineth_wizard_build_env_file() {
   wizard_build_target="$1"
   wizard_build_base="$WIZARD_EXAMPLE_FILE"
@@ -364,6 +392,7 @@ lineth_wizard_build_env_file() {
   [ -f "$wizard_build_base" ] || lineth_die ".env.example not found"
 
   cp "$wizard_build_base" "$wizard_build_target"
+  lineth_wizard_dedupe_managed_keys "$wizard_build_target"
 
   lineth_wizard_set_env_key L1_MODE "$WIZARD_L1_MODE_RESOLVED" "$wizard_build_target"
   if [ "$WIZARD_L1_MODE_RESOLVED" = "local" ]; then

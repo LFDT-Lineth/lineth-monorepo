@@ -8,7 +8,7 @@ lineth_runtime_init() {
     start="$(dirname "$start")"
   fi
 
-  dir="$(CDPATH= cd "$start" 2>/dev/null && pwd -P)" || return 1
+  dir="$(CDPATH='' cd "$start" 2>/dev/null && pwd -P)" || return 1
   while [ "$dir" != "/" ]; do
     if [ -f "$dir/docker-compose.yml" ] && [ -f "$dir/versions.env" ]; then
       LINETH_STACK_DIR="$dir"
@@ -330,7 +330,26 @@ lineth_hex_to_dec_small() {
   hex="$1"
   hex="${hex#0x}"
   [ -n "$hex" ] || { echo "0"; return; }
-  printf '%d\n' "$((16#$hex))" 2>/dev/null || printf '0x%s\n' "$hex"
+  awk -v hex="$hex" '
+    BEGIN {
+      value = 0
+      for (i = 1; i <= length(hex); i += 1) {
+        digit = substr(hex, i, 1)
+        if (digit >= "0" && digit <= "9") {
+          nibble = digit + 0
+        } else if (digit >= "a" && digit <= "f") {
+          nibble = index("abcdef", digit) + 9
+        } else if (digit >= "A" && digit <= "F") {
+          nibble = index("ABCDEF", digit) + 9
+        } else {
+          print "0x" hex
+          exit
+        }
+        value = (value * 16) + nibble
+      }
+      printf "%.0f\n", value
+    }
+  '
 }
 
 lineth_rpc_json() {

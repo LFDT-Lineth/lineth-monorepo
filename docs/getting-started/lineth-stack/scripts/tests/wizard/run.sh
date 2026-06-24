@@ -191,6 +191,32 @@ else
   fail "backup/preserve run succeeds"
 fi
 
+cat > "$ENV_FILE" <<'EOF'
+L1_MODE=local
+CUSTOM_HAND_ADDED=keep-me
+L1_MODE=sepolia
+L1_RPC_URL=https://rpc.example.test/key
+PROVER_DEV_OVERRIDE=true
+EOF
+unset WIZARD_L1_MODE WIZARD_L1_RPC_URL WIZARD_PROVER
+if run_wizard --wizard --non-interactive --prover dev >/tmp/lineth-wizard-duplicate-keys.$$ 2>&1; then
+  assert_file_contains /tmp/lineth-wizard-duplicate-keys.$$ 'L1_MODE appears 2 times in .env; keeping last occurrence' "duplicate managed keys warn before normalization"
+  assert_file_contains "$ENV_FILE" 'L1_MODE=sepolia' "duplicate managed key keeps last-read value"
+  [ "$(grep -c '^L1_MODE=' "$ENV_FILE")" -eq 1 ] \
+    && pass "duplicate managed key is normalized to one entry" \
+    || fail "duplicate managed key is normalized to one entry"
+  assert_file_contains "$ENV_FILE" 'CUSTOM_HAND_ADDED=keep-me' "duplicate normalization preserves unknown keys"
+else
+  fail "duplicate managed-key run succeeds"
+fi
+
+cat > "$ENV_FILE" <<'EOF'
+L1_MODE=local
+L1_RPC_URL=
+PROVER_DEV_OVERRIDE=false
+PROVER_GOMEMLIMIT=24GiB
+CUSTOM_HAND_ADDED=keep-me
+EOF
 rm -f "$BACKUP_DIR/.env.noop-$$"
 if LINETH_WIZARD_BACKUP_TIMESTAMP="noop-$$" run_wizard --wizard --non-interactive --l1-mode local --prover partial >/tmp/lineth-wizard-noop.$$ 2>&1; then
   [ ! -f "$BACKUP_DIR/.env.noop-$$" ] && pass "no-op rerun skips backup" || fail "no-op rerun skips backup"
@@ -351,6 +377,7 @@ fi
 rm -f /tmp/lineth-wizard-local-dev.$$ /tmp/lineth-wizard-local-partial.$$ /tmp/lineth-wizard-sepolia-dev.$$
 rm -f /tmp/lineth-wizard-sepolia-partial.$$ /tmp/lineth-wizard-missing-rpc.$$
 rm -f /tmp/lineth-wizard-precedence.$$ /tmp/lineth-wizard-env-only.$$ /tmp/lineth-wizard-backup.$$
+rm -f /tmp/lineth-wizard-duplicate-keys.$$
 rm -f /tmp/lineth-wizard-noop.$$ /tmp/lineth-wizard-backup-collision.$$ /tmp/lineth-wizard-dev-gomemlimit.$$
 rm -f /tmp/lineth-wizard-guard.$$ /tmp/lineth-wizard-ports.$$ /tmp/lineth-wizard-rpc-fail.$$ /tmp/lineth-wizard-eof.$$
 rm -f /tmp/lineth-wizard-numbered-local.$$ /tmp/lineth-wizard-numbered-sepolia.$$

@@ -3,7 +3,8 @@
 # Sepolia/key preflight and account setup.
 set -eu
 
-SCRIPT_DIR="$(CDPATH= cd "$(dirname "$0")" && pwd -P)"
+SCRIPT_DIR="$(CDPATH='' cd "$(dirname "$0")" && pwd -P)"
+# shellcheck disable=SC2034
 LINETH_LOG_CONTEXT="start"
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/lib/logging.sh"
