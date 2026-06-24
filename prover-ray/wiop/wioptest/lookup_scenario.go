@@ -37,6 +37,9 @@ func LookupScenarios() []func() *LookupScenario {
 		NewLookupFilterOnIncludingScenario,
 		NewLookupDoubleConditionalScenario,
 		NewLookupMultiColumnScenario,
+		// a heavy benchmark scenario for verifier-ray,
+		// we can segregate them when we have more of them and
+		// input serialisation is supported in verifier-ray (issue#3431)
 		NewLookupMultiColumnBenchScenario,
 		NewLookupSharedTableScenario,
 		NewLookupDistinctTablesScenario,
@@ -53,16 +56,6 @@ func LookupScenarios() []func() *LookupScenario {
 		NewLookupEmptySelectedScenario,
 	}
 }
-
-// Segregate the high-volume benchmark scenario from the rest of the LookupScenarios so that
-// it can be run in isolation without the other scenarios' overhead. The other
-// scenarios are small enough to run in a single test suite, but the benchmark
-// scenario is large enough to be a separate test suite.
-// func LookupScenariosBench() []func() *LookupScenario {
-// 	return []func() *LookupScenario{
-// 		NewLookupMultiColumnBenchScenario,
-// 	}
-// }
 
 // LookupSoundnessScenario describes a prover-time failure of the
 // lookup-to-logderivative pipeline: the witness column assignments cause

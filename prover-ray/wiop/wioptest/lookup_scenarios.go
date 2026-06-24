@@ -141,8 +141,8 @@ func NewLookupMultiColumnScenario() *LookupScenario {
 	}
 }
 
-// NewLookupMultiColumnBenchScenario: a width 10 inclusion query. The column sizes are
-// kept as 2^19 to get an idea of the number of zkc cycles needed for real zkVM
+// NewLookupMultiColumnBenchScenario: a larger width inclusion query. The column sizes are
+// kept large to get an idea of the number of zkc cycles needed for real zkVM
 // usecase
 func NewLookupMultiColumnBenchScenario() *LookupScenario {
 	var (
