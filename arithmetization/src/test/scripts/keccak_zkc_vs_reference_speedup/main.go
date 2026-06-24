@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -168,7 +167,7 @@ func singleCommand(timeBin string, accel bool, vectorFile, jsonDir string) []str
 	}
 }
 
-func runTimedSingle(makefileDir, timeBin string, accel bool, inputBytes uint64) float64 {
+func runTimedSingle(makefileDir, timeBin string, accel bool, inputBytes int) float64 {
 	// Time one generated input
 	vectorFile, cleanupVector := writeSingleInputVector(inputBytes)
 	defer cleanupVector()
@@ -212,40 +211,35 @@ func runCommand(makefileDir string, args []string) float64 {
 	return realTime
 }
 
-func parseInputLengthList(arg string) []uint64 {
+func parseInputLengthList(arg string) []int {
 	// Parse comma-separated lengths
-	var lengths []uint64
+	var lengths []int
 	for _, part := range strings.Split(arg, ",") {
 		part = strings.TrimSpace(part)
 		if part == "" {
 			fatal("empty input length in %q", arg)
 		}
-		length, err := strconv.ParseUint(part, 10, 64)
+		length, err := strconv.Atoi(part)
 		if err != nil {
 			fatal("parsing input length %q: %v", part, err)
+		}
+		if length < 0 {
+			fatal("input length must be >= 0, got %d", length)
 		}
 		lengths = append(lengths, length)
 	}
 	return lengths
 }
 
-func writeSingleInputVector(inputBytes uint64) (string, func()) {
+func writeSingleInputVector(inputBytes int) (string, func()) {
 	// Create a temporary zero-input vector
 	file, err := os.CreateTemp("", "keccak-single-*.all")
 	if err != nil {
 		fatal("creating temporary vector file: %v", err)
 	}
 
-	// Guard conversion from uint64 to int for strings
-	if inputBytes > uint64(math.MaxInt) {
-		_ = file.Close()
-		_ = os.Remove(file.Name())
-		fatal("input length %d exceeds maximum supported value %d", inputBytes, math.MaxInt)
-	}
-	repeatCount := int(inputBytes)
-
 	// Hex inputs are reversed by elf_to_json_gen, so write payload first and length last
-	line := fmt.Sprintf("0x%s%016x\n", strings.Repeat("00", repeatCount), inputBytes)
+	line := fmt.Sprintf("0x%s%016x\n", strings.Repeat("00", inputBytes), inputBytes)
 	if _, err := file.WriteString(line); err != nil {
 		_ = file.Close()
 		_ = os.Remove(file.Name())
@@ -289,7 +283,7 @@ func printBatchedRow(selector string, falseTime, trueTime float64) {
 	)
 }
 
-func printSingleRow(inputBytes uint64, falseTime, trueTime float64) {
+func printSingleRow(inputBytes int, falseTime, trueTime float64) {
 	// Print one single-input row
 	speedup := falseTime / trueTime
 	fmt.Printf(
