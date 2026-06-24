@@ -146,12 +146,12 @@ func NewLookupMultiColumnScenario() *LookupScenario {
 // usecase
 func NewLookupMultiColumnBenchScenario() *LookupScenario {
 	var (
-		bigSize = 1 << 10
-		numCols = 5
-		tCols   = make([]*wiop.Column, numCols)
-		sCols   = make([]*wiop.Column, numCols)
-		tTableView  = make([]*wiop.ColumnView, numCols)
-		sTableView  = make([]*wiop.ColumnView, numCols)
+		bigSize      = 1 << 10
+		numCols      = 5
+		tCols        = make([]*wiop.Column, numCols)
+		sCols        = make([]*wiop.Column, numCols)
+		tTableView   = make([]*wiop.ColumnView, numCols)
+		sTableView   = make([]*wiop.ColumnView, numCols)
 		tAssignments = make([][]uint64, numCols)
 		sAssignments = make([][]uint64, numCols)
 	)
@@ -159,7 +159,7 @@ func NewLookupMultiColumnBenchScenario() *LookupScenario {
 	r0 := sys.NewRound()
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), bigSize, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), bigSize, wiop.PaddingDirectionNone)
-	for i := range(len(tCols)) {
+	for i := range len(tCols) {
 		tCols[i] = modT.NewColumn(sys.Context.Childf("T%d", i), wiop.VisibilityOracle, r0)
 		sCols[i] = modS.NewColumn(sys.Context.Childf("S%d", i), wiop.VisibilityOracle, r0)
 		tTableView[i] = tCols[i].View()
@@ -171,7 +171,7 @@ func NewLookupMultiColumnBenchScenario() *LookupScenario {
 		[]wiop.Table{wiop.NewTable(tTableView...)},
 	)
 	// Assign t and s cols
-	for i := range(len(tCols)) {
+	for i := range len(tCols) {
 		tAssignments[i] = make([]uint64, bigSize)
 		sAssignments[i] = make([]uint64, bigSize)
 		// t cols are assigned values from 1 to bigSize
@@ -189,7 +189,7 @@ func NewLookupMultiColumnBenchScenario() *LookupScenario {
 		Name: "MultiColumnBench",
 		Sys:  sys,
 		AssignWitness: func(rt *wiop.Runtime) {
-			for i := range(len(tCols)) {
+			for i := range len(tCols) {
 				rt.AssignColumn(tCols[i], makeVec(tAssignments[i]...))
 				rt.AssignColumn(sCols[i], makeVec(sAssignments[i]...))
 			}
