@@ -14,7 +14,7 @@ sealed interface BlockParameter {
 
     fun fromNumber(blockNumber: ULong): BlockNumber = BlockNumber(blockNumber)
 
-    fun fromHash(blockHash: ByteArray): BlockHash = BlockHash(blockHash.copyOf())
+    fun fromHash(blockHash: ByteArray): BlockHash = BlockHash(blockHash)
 
     fun fromHash(blockHashHex: String): BlockHash = BlockHash(blockHashHex.decodeHex())
 
@@ -22,7 +22,7 @@ sealed interface BlockParameter {
       return try {
         // Try to parse the input as a tag
         Tag.fromString(input)
-      } catch (e: IllegalArgumentException) {
+      } catch (_: IllegalArgumentException) {
         // If it's not a valid tag, try to parse it as a block hash or block number
         if (input.startsWith("0x")) {
           val hexBody = input.drop(2)
@@ -92,3 +92,5 @@ sealed interface BlockParameter {
 
 fun ULong.toBlockParameter(): BlockParameter.BlockNumber = BlockParameter.BlockNumber(this)
 fun UInt.toBlockParameter(): BlockParameter.BlockNumber = BlockParameter.BlockNumber(this.toULong())
+fun String.toBlockParameter(): BlockParameter = BlockParameter.parse(this)
+fun java.math.BigInteger.toBlockParameter(): BlockParameter.BlockNumber = BlockParameter.fromNumber(this)
