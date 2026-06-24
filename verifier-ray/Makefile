@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: ci ci-checks help fmt fmt-zig fmt-codegen fmt-testdata-generator fmt-profile build build-zig build-release build-r5 run run-passing run-failing run-failing-expected test test-zig test-generated-zig test-codegen generate-testdata verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected profile-zkc-case profile-zkc clean
+.PHONY: ci ci-checks help fmt fmt-zig fmt-go build build-zig build-release build-r5 run run-passing run-failing run-failing-expected test test-zig test-zig-generated test-generated-zig test-codegen generate-testdata verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected profile-zkc-case profile-zkc clean
 
 R5_BIN := zig-out/bin/verifier-ray
 R5_JSON := $(R5_BIN).json
@@ -24,9 +24,10 @@ IN_ORIGIN ?= 0x08800000
 NATIVE_INPUT_FILE := zig-out/input.bin
 IN_BYTES_FILE ?= zig-out/input.hex
 
-ci: generate-testdata ci-checks
+ci: generate-testdata
+	$(MAKE) ci-checks
 
-ci-checks: fmt build-release run-passing run-failing-expected test zkc-verify-passing zkc-verify-failing-expected
+ci-checks: fmt build-release run-passing run-failing-expected test-zig-generated test-codegen zkc-verify-passing zkc-verify-failing-expected
 
 help:
 	@printf '%s\n' \
@@ -63,29 +64,15 @@ help:
 		'zkc variables:' \
 		'  IN_ORIGIN            Input bytes address, default 0x08800000'
 
-fmt: fmt-zig fmt-codegen fmt-testdata-generator fmt-profile
+fmt: fmt-zig fmt-go
 
 fmt-zig:
 	zig fmt --check build.zig src test testdata/generated
 
-fmt-codegen:
-	@if [[ -n "$$(gofmt -l codegen)" ]]; then \
+fmt-go:
+	@if [[ -n "$$(gofmt -l codegen testdata/generate bench)" ]]; then \
 		echo "please run gofmt"; \
-		gofmt -l codegen; \
-		exit 1; \
-	fi
-
-fmt-testdata-generator:
-	@if [[ -n "$$(gofmt -l testdata/generate)" ]]; then \
-		echo "please run gofmt"; \
-		gofmt -l testdata/generate; \
-		exit 1; \
-	fi
-
-fmt-profile:
-	@if [[ -n "$$(gofmt -l bench)" ]]; then \
-		echo "please run gofmt"; \
-		gofmt -l bench; \
+		gofmt -l codegen testdata/generate bench; \
 		exit 1; \
 	fi
 
@@ -120,6 +107,9 @@ run-failing-expected:
 test: test-zig test-codegen
 
 test-zig: generate-testdata
+	$(MAKE) test-zig-generated
+
+test-zig-generated:
 	zig build test
 	zig build -Dverifier-profiling=true test-profiling
 
