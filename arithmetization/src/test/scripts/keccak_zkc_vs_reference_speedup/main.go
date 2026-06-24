@@ -228,8 +228,17 @@ func writeSingleInputVector(inputBytes uint64) (string, func()) {
 		fatal("creating temporary vector file: %v", err)
 	}
 
+	// Guard conversion from uint64 to int for strings.Repeat count.
+	maxInt := uint64(^uint(0) >> 1)
+	if inputBytes > maxInt {
+		_ = file.Close()
+		_ = os.Remove(file.Name())
+		fatal("input length %d exceeds maximum supported value %d", inputBytes, maxInt)
+	}
+	repeatCount := int(inputBytes)
+
 	// Hex inputs are reversed by elf_to_json_gen, so write payload first and length last.
-	line := fmt.Sprintf("0x%s%016x\n", strings.Repeat("00", int(inputBytes)), inputBytes)
+	line := fmt.Sprintf("0x%s%016x\n", strings.Repeat("00", repeatCount), inputBytes)
 	if _, err := file.WriteString(line); err != nil {
 		_ = file.Close()
 		_ = os.Remove(file.Name())
