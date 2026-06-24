@@ -441,13 +441,10 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                                 }
                                 default: {
                                     word_wip = v1_lower_abs / v2_lower_abs
-                                    switch sign_bit_of_word(v1_lower) {
-                                        case 0: {
-                                            registers[rd] = sgn_extension_u32_u64(word_wip)
-                                        }
-                                        default: {
-                                            registers[rd] = sgn_extension_u32_u64(negative_of_word(word_wip))
-                                        }
+                                    if sign_bit_of_word(v1_lower) == sign_bit_of_word(v2_lower) {
+                                        registers[rd] = sgn_extension_u32_u64(word_wip)
+                                    } else {
+                                        registers[rd] = sgn_extension_u32_u64(negative_of_word(word_wip))
                                     }
                                 }
                             }
