@@ -15,6 +15,10 @@ pass() {
   printf '[quickstart-static] OK: %s\n' "$*"
 }
 
+warn() {
+  printf '[quickstart-static] WARN: %s\n' "$*" >&2
+}
+
 check_no_tracked_generated_genesis() {
   tracked=$(git -C "$ROOT" ls-files "$STACK_REL/config" \
     | grep -E '/(genesis-(besu|maru)\.json|fork-timestamp\.txt)$' || true)
@@ -481,6 +485,21 @@ check_account_setup_key_model() {
     pass "web3signer loads generated runtime signers from encrypted keystores"
   else
     fail "account-setup must generate Web3Signer file-keystore configs, not file-raw private-key configs"
+  fi
+}
+
+check_internal_typescript_typecheck() {
+  internal_tsconfig="$STACK/scripts/internal/tsconfig.json"
+
+  if [ ! -f "$internal_tsconfig" ]; then
+    warn "scripts/internal/tsconfig.json not found; skipped quickstart TypeScript typecheck"
+    return
+  fi
+
+  if (cd "$ROOT/contracts" && pnpm -w exec tsc --noEmit --project "$internal_tsconfig"); then
+    pass "scripts/internal TypeScript files pass tsc --noEmit"
+  else
+    fail "scripts/internal TypeScript files must pass tsc --noEmit"
   fi
 }
 
@@ -1640,6 +1659,7 @@ check_init_scripts_and_compose_shell
 check_generated_l2_deployer_genesis
 check_l2_chain_id_wiring
 check_account_setup_key_model
+check_internal_typescript_typecheck
 check_typescript_quickstart_helpers
 check_postman_key_model
 check_incremental_typescript_helpers

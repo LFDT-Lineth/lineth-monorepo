@@ -238,13 +238,11 @@ wait_rpc "$L2_RPC_URL" L2
 # 02-generate-l2-genesis.sh writes /initialization/fork-timestamp.txt into
 # artifacts/genesis. deploy-contracts mounts it read-only at /generated-genesis.
 FORK_TIMESTAMP=""
-for f in "/generated-genesis/fork-timestamp.txt"; do
-  if [[ -f "$f" ]]; then
-    FORK_TIMESTAMP="$(cat "$f")"
-    log "Read FORK_TIMESTAMP=$FORK_TIMESTAMP from $f"
-    break
-  fi
-done
+fork_timestamp_file="/generated-genesis/fork-timestamp.txt"
+if [[ -f "$fork_timestamp_file" ]]; then
+  FORK_TIMESTAMP="$(cat "$fork_timestamp_file")"
+  log "Read FORK_TIMESTAMP=$FORK_TIMESTAMP from $fork_timestamp_file"
+fi
 : "${FORK_TIMESTAMP:=1683325137}"
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -701,7 +699,7 @@ step1_l1_rollup() {
     export LINEA_ROLLUP_OPERATORS="${LINEA_ROLLUP_OPERATORS:-$DEFAULT_L1_OPERATOR_ADDRESSES}"
     export LINEA_ROLLUP_RATE_LIMIT_PERIOD="86400"
     export LINEA_ROLLUP_RATE_LIMIT_AMOUNT="1000000000000000000000"
-    export DEPLOY_FORCED_TRANSACTION_GATEWAY="$DEPLOY_FORCED_TRANSACTION_GATEWAY"
+    export DEPLOY_FORCED_TRANSACTION_GATEWAY
     if [[ "$DEPLOY_FORCED_TRANSACTION_GATEWAY" == "true" ]]; then
       export FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID="$L2_CHAIN_ID"
       export FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER="2000"

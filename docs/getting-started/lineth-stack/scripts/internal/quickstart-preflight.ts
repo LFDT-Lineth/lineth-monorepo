@@ -87,13 +87,17 @@ async function main() {
       });
     } catch (error) {
       if (l1Deployer.mode === "sepolia" && isUnderfundedError(error)) {
-        await printFundingInstructions({
+        const fundingInstructions = {
           provider,
           address: l1Deployer.address,
           minimumBalanceWei: buildSepoliaPolicyConfig(env).l1DeployerMinBalanceWei,
-          keystorePath: l1Deployer.keystorePath,
           source: l1Deployer.source,
-        });
+        };
+        if (l1Deployer.keystorePath !== undefined) {
+          await printFundingInstructions({ ...fundingInstructions, keystorePath: l1Deployer.keystorePath });
+        } else {
+          await printFundingInstructions(fundingInstructions);
+        }
         throw new FundingRequiredError();
       }
       throw error;

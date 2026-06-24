@@ -27,6 +27,11 @@ export type L1DeployerConfig = L1Config & {
   passwordFilePath?: string;
 };
 
+type DeployerWallet = {
+  address: string;
+  privateKey: string;
+};
+
 export type ResolveL1DeployerOptions = {
   stackDir?: string;
   accountsDir?: string;
@@ -123,15 +128,15 @@ function resolveGeneratedPassword(env: EnvMap, stackDir: string, accountsDir: st
   return DEFAULT_DEPLOYER_KEYSTORE_PASSWORD;
 }
 
-async function decryptWallet(keystorePath: string, password: string): Promise<Wallet> {
+async function decryptWallet(keystorePath: string, password: string): Promise<DeployerWallet> {
   try {
-    return (await Wallet.fromEncryptedJson(fs.readFileSync(keystorePath, "utf8"), password)) as Wallet;
+    return await Wallet.fromEncryptedJson(fs.readFileSync(keystorePath, "utf8"), password);
   } catch (_error) {
     throw new Error(`Could not decrypt L1 deployer keystore at ${keystorePath}`);
   }
 }
 
-function walletFromPrivateKey(privateKey: string, label: string): Wallet {
+function walletFromPrivateKey(privateKey: string, label: string): DeployerWallet {
   try {
     return new Wallet(privateKey);
   } catch (_error) {
@@ -144,7 +149,7 @@ async function createGeneratedKeystore(
   passwordFilePath: string,
   password: string,
   env: EnvMap,
-): Promise<Wallet> {
+): Promise<DeployerWallet> {
   ensureDir(path.dirname(keystorePath));
   const wallet = Wallet.createRandom();
   const encrypted = await encryptKeystoreJson({ address: wallet.address, privateKey: wallet.privateKey }, password, {
@@ -158,19 +163,19 @@ async function createGeneratedKeystore(
   if (!fs.existsSync(passwordFilePath)) {
     writeFileAtomic(passwordFilePath, `${password}\n`, 0o600);
   }
-  return wallet as Wallet;
+  return wallet;
 }
 
 function buildResolved(params: {
   mode: L1Mode;
   rpcUrl: string;
-  wallet: Wallet;
+  wallet: DeployerWallet;
   source: L1DeployerSource;
   created: boolean;
   keystorePath?: string;
   passwordFilePath?: string;
 }): L1DeployerConfig {
-  return {
+  const resolved: L1DeployerConfig = {
     mode: params.mode,
     rpcUrl: params.rpcUrl,
     deployerPrivateKey: params.wallet.privateKey,
@@ -178,9 +183,14 @@ function buildResolved(params: {
     address: params.wallet.address,
     source: params.source,
     created: params.created,
-    keystorePath: params.keystorePath,
-    passwordFilePath: params.passwordFilePath,
   };
+  if (params.keystorePath !== undefined) {
+    resolved.keystorePath = params.keystorePath;
+  }
+  if (params.passwordFilePath !== undefined) {
+    resolved.passwordFilePath = params.passwordFilePath;
+  }
+  return resolved;
 }
 
 export async function resolveL1DeployerConfig(

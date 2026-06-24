@@ -210,7 +210,7 @@ export async function runL1PolicyCheck(params: {
   const l1AccountSetupBlockNumber = await params.provider.getBlockNumber();
   const l1PostmanListenerStartBlock = Math.max(0, l1AccountSetupBlockNumber - 5);
 
-  return {
+  const report: SepoliaPolicyReport = {
     mode,
     config,
     deployerAddress: params.deployerAddress,
@@ -219,10 +219,15 @@ export async function runL1PolicyCheck(params: {
     pendingNonce,
     balanceWei,
     minimumBalanceWei,
-    currentExecutionFeeWei,
-    blobBaseFeeWei,
     l1AccountSetupBlockNumber,
     l1PostmanListenerStartBlock,
     warnings,
   };
+  if (currentExecutionFeeWei !== undefined) {
+    report.currentExecutionFeeWei = currentExecutionFeeWei;
+  }
+  if (blobBaseFeeWei !== undefined) {
+    report.blobBaseFeeWei = blobBaseFeeWei;
+  }
+  return report;
 }

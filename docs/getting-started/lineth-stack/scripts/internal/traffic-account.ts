@@ -220,14 +220,21 @@ export async function ensureTrafficAccount(
     }
   }
 
-  return {
+  const result: TrafficAccountResult = {
     address,
     source,
     ethBalanceWei,
-    ethTopUpTx,
-    erc20BalanceWei,
-    erc20TopUpTx,
   };
+  if (ethTopUpTx !== undefined) {
+    result.ethTopUpTx = ethTopUpTx;
+  }
+  if (erc20BalanceWei !== undefined) {
+    result.erc20BalanceWei = erc20BalanceWei;
+  }
+  if (erc20TopUpTx !== undefined) {
+    result.erc20TopUpTx = erc20TopUpTx;
+  }
+  return result;
 }
 
 export function formatTrafficAccountOutput(result: TrafficAccountResult): string {
@@ -331,7 +338,7 @@ function buildConfigFromEnv(mode: TrafficAccountMode, env: Record<string, string
       }
     : undefined;
 
-  return {
+  const config: TrafficAccountConfig = {
     mode,
     env,
     runtimeKeysPath: envValue("RUNTIME_KEYS_ENV", env, "/accounts/runtime-keys.env"),
@@ -348,9 +355,12 @@ function buildConfigFromEnv(mode: TrafficAccountMode, env: Record<string, string
       "L2_TRAFFIC_ETH_TOP_UP_WEI",
       envValue("L2_TRAFFIC_ETH_TOP_UP_WEI", env, "1000000000000000000"),
     ),
-    erc20,
     log: (message) => console.error(message),
   };
+  if (erc20 !== undefined) {
+    config.erc20 = erc20;
+  }
+  return config;
 }
 
 async function main() {
