@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="warn" shutdownHook="disable" monitorInterval="2" packages="net.consensys.linea.logging">
+  <Properties>
+    <Property name="logPath">tmp/logs/coordinator</Property>
+    <Property name="logPathJson">tmp/logs/coordinator-json</Property>
+    <Property name="logPathJsonCustom">tmp/logs/coordinator-json-custom</Property>
+    <Property name="logFileName">coordinator</Property>
+    <!--    <Property name="logPattern">time=%d{ISO8601}Z level=%level message=%m | logger=%c{1} thread=%t | %throwable{separator(\n)}%n</Property>-->
+    <Property name="logPattern">time=%d{ISO8601}Z level=%level message=%m | logger=%c{1} thread=%t | %throwable%n
+    </Property>
+  </Properties>
+  <Appenders>
+    <Console name="console" target="SYSTEM_OUT">
+      <RegexFilter regex="^App configs:.*" onMatch="DENY" onMismatch="NEUTRAL"/>
+      <PatternLayout pattern="${logPattern}"/>
+    </Console>
+    <Rewrite name="rewrite">
+      <AppenderRef ref="console"/>
+      <Log4jLineaRewriter>
+        <KnownErrors>
+          <KnownError logLevel="DEBUG" message="^.*?\bAlready known\b.*?$" />
+          <KnownError logLevel="DEBUG" message="^.*?\bTransaction receipt was not generated after\b.*?$" />
+          <KnownError logLevel="DEBUG" message="^.*?\bShutting down\b.*?$" />
+          <KnownError logLevel="DEBUG" message="^.*?\bKnown transaction\b.*?$" />
+          <KnownError logLevel="DEBUG" message="^.*?\bHeader not found\b.*?$" />
+          <KnownError logLevel="DEBUG" message="^.*?\bBlock not found\b.*?$" />
+          <KnownError logLevel="INFO"  message="^.*?\bReplacement transaction underpriced\b.*?$" />
+          <KnownError logLevel="INFO"  message="^.*?\bNonce too low\b.*?$" />
+          <KnownError logLevel="DEBUG" message="^.*?\bConnection reset\b.*?$" stackTrace="true" />
+          <KnownError logLevel="INFO"  message="^.*?\beth_call\b.*?\bContract Call has been reverted by the EVM with the reason\b.*?$"/>
+          <KnownError logLevel="INFO"  message="^.*?\brequest beyond head block\b.*?$"/>
+        </KnownErrors>
+      </Log4jLineaRewriter>
+    </Rewrite>
+<!--    <Console name="consoleJSON" target="SYSTEM_OUT">-->
+<!--      <JSONLayout compact="true" eventEol="true" includeStacktrace="true" includeTimeMillis="true"-->
+<!--        stacktraceAsString="true"/>-->
+<!--    </Console>-->
+<!--    <Console name="consoleJSONCustom" target="SYSTEM_OUT">-->
+<!--      <JsonTemplateLayout eventTemplateUri="classpath:EcsJsonLayout.json"/>-->
+<!--    </Console>-->
+
+    <RollingFile name="RollingLogFile" fileName="${logPath}/${logFileName}.log"
+      filePattern="${logPath}/${logFileName}-%d{yyyy-MM-dd-HH-mm-ss}-%i.log">
+      <RegexFilter regex="^App configs:.*" onMatch="DENY" onMismatch="NEUTRAL"/>
+      <PatternLayout pattern="${logPattern}"/>
+      <Policies>
+        <OnStartupTriggeringPolicy/>
+        <SizeBasedTriggeringPolicy size="10MB"/>
+      </Policies>
+      <DefaultRolloverStrategy max="20"/>
+    </RollingFile>
+    <Async name="AsyncLogFile">
+      <AppenderRef ref="RollingLogFile"/>
+    </Async>
+
+    <!-- File Appender -->
+<!--    <RollingFile name="RollingLogFileJson" fileName="${logPathJson}/${logFileName}.log"-->
+<!--      filePattern="${logPathJson}/${logFileName}-%d{yyyy-MM-dd-HH-mm-ss}-%i.log">-->
+<!--      <JSONLayout compact="true" eventEol="true" includeStacktrace="true" includeTimeMillis="true"-->
+<!--        stacktraceAsString="true"/>-->
+<!--      <Policies>-->
+<!--        <OnStartupTriggeringPolicy/>-->
+<!--        <SizeBasedTriggeringPolicy size="10MB"/>-->
+<!--      </Policies>-->
+<!--      <DefaultRolloverStrategy max="20"/>-->
+<!--    </RollingFile>-->
+
+<!--    <RollingFile name="RollingLogFileJsonCustom" fileName="${logPathJsonCustom}/${logFileName}.log"-->
+<!--      filePattern="${logPathJsonCustom}/${logFileName}-%d{yyyy-MM-dd-HH-mm-ss}-%i.log">-->
+<!--      <JsonTemplateLayout eventTemplateUri="classpath:EcsJsonLayout.json"/>-->
+<!--      <Policies>-->
+<!--        <OnStartupTriggeringPolicy/>-->
+<!--        <SizeBasedTriggeringPolicy size="10MB"/>-->
+<!--      </Policies>-->
+<!--      <DefaultRolloverStrategy max="20"/>-->
+<!--    </RollingFile>-->
+  </Appenders>
+  <Loggers>
+    <!--    <Logger name="net.consensys.zkevm.ethereum.coordination.dynamicgasprice.GasPriceUpdaterImpl" level="TRACE" additivity="false">-->
+    <!--      <appender-ref ref="console"/>-->
+    <!--    </Logger>-->
+    <!--    <Logger name="net.consensys.zkevm.coordinator.blockcreation" level="DEBUG" additivity="false">-->
+    <!--      <appender-ref ref="console"/>-->
+    <!--    </Logger>-->
+    <!--    <Logger name="net.consensys.linea" level="DEBUG" additivity="false">-->
+    <!--      <appender-ref ref="console"/>-->
+    <!--    </Logger>-->
+    <!--    <Logger name="net.consensys.zkevm" level="DEBUG" additivity="false">-->
+    <!--      <appender-ref ref="console"/>-->
+    <!--    </Logger>-->
+    <!--    <Logger name="net.consensys.zkevm.ethereum.coordination.conflation" level="TRACE" additivity="false">-->
+    <!--      <appender-ref ref="console"/>-->
+    <!--    </Logger>-->
+    <!--    <Logger name="net.consensys.zkevm.ethereum.coordination.blob" level="TRACE" additivity="false">-->
+    <!--      <appender-ref ref="console"/>-->
+    <!--    </Logger>-->
+    <Logger name="net.consensys.zkevm.ethereum.submission" level="INFO" additivity="false">
+      <DebouncingFilter/>
+      <appender-ref ref="rewrite"/>
+    </Logger>
+    <Logger name="net.consensys.linea.ethereum.gaspricing.staticcap" level="ERROR" additivity="false">
+      <DebouncingFilter/>
+      <appender-ref ref="rewrite"/>
+    </Logger>
+    <Logger name="net.consensys.zkevm.ethereum.finalization" level="INFO" additivity="false">
+      <DebouncingFilter/>
+      <appender-ref ref="rewrite"/>
+    </Logger>
+    <Logger name="net.consensys.linea.ethereum.gaspricing.dynamiccap" level="INFO" additivity="false">
+      <DebouncingFilter/>
+      <appender-ref ref="rewrite"/>
+    </Logger>
+    <Logger name="net.consensys.zkevm.persistence.db.PersistenceRetryer" level="WARN" additivity="false">
+      <DebouncingFilter/>
+      <appender-ref ref="console"/>
+    </Logger>
+    <Logger name="net.consensys.zkevm.coordinator.clients.prover.GenericFileBasedProverClient" level="TRACE" additivity="false">
+      <appender-ref ref="console"/>
+    </Logger>
+<!--    <Logger name="clients.l2" level="DEBUG" additivity="false">-->
+<!--      <DebouncingFilter/>-->
+<!--      <appender-ref ref="console"/>-->
+<!--    </Logger>-->
+    <Logger name="clients.StateManagerShomeiClient" level="DEBUG" additivity="false">
+      <DebouncingFilter/>
+      <appender-ref ref="console"/>
+    </Logger>
+<!--    <Logger name="clients.l1" level="DEBUG" additivity="false">-->
+<!--      <DebouncingFilter/>-->
+<!--      <appender-ref ref="console"/>-->
+<!--    </Logger>-->
+    <Logger name="clients.l2.ftx" level="TRACE" additivity="false">
+      <appender-ref ref="console"/>
+    </Logger>
+    <!--    <Logger name="clients.TracesCounters" level="TRACE" additivity="false">-->
+    <!--      <DebouncingFilter/>-->
+    <!--      <appender-ref ref="console"/>-->
+    <!--    </Logger>-->
+    <!--    <Logger name="clients.l2" level="DEBUG" additivity="false">-->
+    <!--      <appender-ref ref="console"/>-->
+    <!--    </Logger>-->
+    <!--    <Logger name="clients" level="DEBUG" additivity="false">-->
+    <!--      <appender-ref ref="console"/>-->
+    <!--    </Logger>-->
+    <Root level="INFO" additivity="true">
+      <appender-ref ref="console"/>
+      <!-- <appender-ref ref="consoleJSON"/>-->
+      <!-- <appender-ref ref="consoleJSONCustom"/>-->
+      <appender-ref ref="AsyncLogFile"/>
+      <!-- <appender-ref ref="RollingLogFileJson"/>-->
+      <!-- <appender-ref ref="RollingLogFileJsonCustom"/>-->
+    </Root>
+  </Loggers>
+
+</Configuration>

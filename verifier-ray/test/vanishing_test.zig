@@ -6,6 +6,7 @@ const field = verifier_ray.field.koalabear;
 const ext = verifier_ray.field.koalabear_ext;
 const protocol = verifier_ray.protocol;
 const vanishing = verifier_ray.query.vanishing;
+const logderivativesum = verifier_ray.query.logderivativesum;
 const commitment_mod = verifier_ray.crypto.commitment;
 
 test "vanishing quotient honest scenarios match prover-ray" {
@@ -24,6 +25,9 @@ test "vanishing quotient honest scenarios match prover-ray" {
             .quotient_claims = proof.quotient_claims,
             .module_sizes = proof.module_sizes,
         });
+        // The same honest proof must satisfy the LogDerivativeSum boundary
+        // checks (final-sum == Result). Empty logderiv systems pass trivially.
+        try logderivativesum.verify(case.logderiv, ctx);
     }
 }
 

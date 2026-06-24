@@ -1,3 +1,8 @@
+## [unreleased]
+
+### 🐛 Bug Fixes
+
+- *(prover)* Bump BLOCKHASH module limit from 2048 to 4096 (#3426)
 ## [1.0.2] - 2026-06-18
 
 ### ⚙️ Miscellaneous Tasks

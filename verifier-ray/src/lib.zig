@@ -20,4 +20,5 @@ pub const polynomial = struct {
 
 pub const query = struct {
     pub const vanishing = @import("query/vanishing.zig");
+    pub const logderivativesum = @import("query/logderivativesum.zig");
 };
