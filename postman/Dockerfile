@@ -48,7 +48,7 @@ COPY ./ts-libs/eslint-config ./ts-libs/eslint-config
 
 # Build and create production deployment
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm run build \
-    && pnpm deploy --legacy --filter=./postman --prod ./prod/postman
+    && pnpm deploy --legacy --filter=./postman --prod ./prod/postman --config.allowUnusedPatches=true
 
 FROM node:${NODE_VERSION}-slim AS production
 
