@@ -188,7 +188,7 @@ type PCS struct {
 // NewPCS validates the encoder schedule against Params and returns a
 // ready-to-use PCS. Wraps [assertValidMultiEncoder] for the
 // cross-encoder consistency check.
-func NewPCS(params Params, encoders []*RSEncoder) (*PCS, error) {
+func NewPCS(params Params, encoders []*RSEncoder) (*PCS, error) { //nolint:revive // design stub
 	panic("TODO(pcs): NewPCS")
 }
 
@@ -240,25 +240,24 @@ type SizedShifts struct {
 // Mirrors loom's canonicalLayout. Producer of the alpha_DEEP power
 // schedule consumed by both Open and Verify. Made package-internal;
 // callers don't need to look inside.
-
-type deepEntry struct {
+type deepEntry struct { //nolint:unused // design stub
 	BatchIdx int
 	SizeLog2 int
 	RowIdx   int
 	IsExt    bool
 }
 
-type shiftBundle struct {
+type shiftBundle struct { //nolint:unused // design stub
 	Shift   int
 	Entries []deepEntry
 }
 
-type sizeBundle struct {
+type sizeBundle struct { //nolint:unused // design stub
 	SizeLog2 int
 	Bundles  []shiftBundle
 }
 
-type layout []sizeBundle
+type layout []sizeBundle //nolint:unused // design stub
 
 // canonicalLayout walks shapes + shifts and produces the canonical
 // enumeration. Validates shape alignment, per-row shift invariants
@@ -266,13 +265,13 @@ type layout []sizeBundle
 //
 // Used by both Open (with shapes derived from witnesses) and Verify
 // (with shapes passed in directly).
-func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) {
+func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) { //nolint:revive,unused // design stub
 	panic("TODO(pcs): canonicalLayout")
 }
 
 // canonicalLayoutFromBatches is the prover-side entry point: shapes
 // are inferred from witness row counts. Delegates to canonicalLayout.
-func canonicalLayoutFromBatches(batches []Batch, shifts []BatchShifts) (layout, error) {
+func canonicalLayoutFromBatches(batches []Batch, shifts []BatchShifts) (layout, error) { //nolint:revive,unused
 	panic("TODO(pcs): canonicalLayoutFromBatches")
 }
 
@@ -433,7 +432,7 @@ type OpenInputs struct {
 // (The "absorb running-layer root" step at j=0 is actually
 // absorbing the DEEP roots, since the running polynomial AT round 0
 // is the largest DEEP codeword.)
-func (pcs *PCS) Open(in OpenInputs) (OpeningProof, error) {
+func (pcs *PCS) Open(in OpenInputs) (OpeningProof, error) { //nolint:revive // design stub
 	panic("TODO(pcs): Open")
 }
 
@@ -468,7 +467,7 @@ type VerifyInputs struct {
 //     DQ_N(X) and DQ_N(-X) in canonical layout order from raw row
 //     data + claimed values, compare to the FRI level leaves at that
 //     query.
-func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
+func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error { //nolint:revive // design stub
 	panic("TODO(pcs): Verify")
 }
 
@@ -514,10 +513,10 @@ type OpenerState struct {
 //   - canonical layout produces a non-empty enumeration (open
 //     question 1 may relax this).
 func NewOpenerState(
-	pcs *PCS,
-	batches []Batch,
-	committed []CommitterState,
-	shifts []BatchShifts,
+	pcs *PCS, //nolint:revive // design stub
+	batches []Batch, //nolint:revive // design stub
+	committed []CommitterState, //nolint:revive // design stub
+	shifts []BatchShifts, //nolint:revive // design stub
 ) (*OpenerState, error) {
 	panic("TODO(pcs): NewOpenerState")
 }
@@ -530,7 +529,7 @@ func NewOpenerState(
 // Returns a snapshot the caller can both bind and embed into the
 // final OpeningProof; OpenerState.Open will reuse the same snapshot
 // for the bridge construction.
-func (os *OpenerState) ComputeClaimedValues(zeta field.Ext) []BatchClaimedValues {
+func (os *OpenerState) ComputeClaimedValues(zeta field.Ext) []BatchClaimedValues { //nolint:revive // design stub
 	panic("TODO(pcs): OpenerState.ComputeClaimedValues")
 }
 
@@ -548,7 +547,7 @@ func (os *OpenerState) ComputeClaimedValues(zeta field.Ext) []BatchClaimedValues
 //
 // The state machine transitions to the FRI commit phase: subsequent
 // calls to Fold expect the FRI fold challenges in order.
-func (os *OpenerState) CommitDeepQuotient(alphaDEEP field.Ext) []field.Octuplet {
+func (os *OpenerState) CommitDeepQuotient(alphaDEEP field.Ext) []field.Octuplet { //nolint:revive // design stub
 	panic("TODO(pcs): OpenerState.CommitDeepQuotient")
 }
 
@@ -567,7 +566,7 @@ func (os *OpenerState) HasNext() bool {
 // zero-octuplet sentinel.
 //
 // Wraps the inner [fri.ProverState.Fold].
-func (os *OpenerState) Fold(alpha field.Ext) field.Octuplet {
+func (os *OpenerState) Fold(alpha field.Ext) field.Octuplet { //nolint:revive // design stub
 	panic("TODO(pcs): OpenerState.Fold")
 }
 
@@ -584,7 +583,7 @@ func (os *OpenerState) FinalPoly() []field.Ext {
 // For each (query, batch), the method opens the batch's commitment
 // tree at the folded query position via PairedBranch, then packages
 // the raw conjugate-pair row data at every present size in the batch.
-func (os *OpenerState) Open(queryPositions []int) OpeningProof {
+func (os *OpenerState) Open(queryPositions []int) OpeningProof { //nolint:revive // design stub
 	panic("TODO(pcs): OpenerState.Open")
 }
 
