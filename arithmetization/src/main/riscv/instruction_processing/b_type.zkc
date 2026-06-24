@@ -5,56 +5,38 @@ include "../utils/signed_sum.zkc"
 
 // Process a RISC-V B-type (branch) instruction and return the next program counter.
 //
-// B-type instructions encode a 13-bit signed PC-relative byte offset (imm) spread
-// across four non-contiguous fields in bits [31:7] of the raw 32-bit word; the 7-bit
-// opcode is stripped before this function is called, so `instruction_parameters`
-// carries the remaining 25 bits in the order:
-//
-//   imm[12] :: imm[10:5] :: rs2 :: rs1 :: funct3 :: imm[4:1] :: imm[11]
-//
-// The six branch variants and their conditions are:
-//   BEQ  (funct3 = 0b000) — branch if rs1 == rs2
-//   BNE  (funct3 = 0b001) — branch if rs1 != rs2
-//   BLT  (funct3 = 0b100) — branch if rs1 <  rs2 (signed)
-//   BGE  (funct3 = 0b101) — branch if rs1 >= rs2 (signed)
-//   BLTU (funct3 = 0b110) — branch if rs1 <  rs2 (unsigned)
-//   BGEU (funct3 = 0b111) — branch if rs1 >= rs2 (unsigned)
+// B-type semantics are pre-decoded at ELF time into a semantic branch op and
+// operands (see decoded_btype in memory.zkc). Runtime execution is a flat
+// switch on compute_op (BRANCH_BEQ, BRANCH_BNE, …). The 13-bit signed
+// PC-relative offset sub-fields are reassembled and sign-extended here.
 //
 // When the branch condition is false, pc_new = pc + 4 (fall-through).
 // When the branch condition is true,  pc_new = pc + imm (taken branch).
 fn process_B_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Address) {
 
-    // The B-type field split (imm_sign :: imm[10:5] :: rs2 :: rs1 :: funct3 ::
-    // imm[4:1] :: imm[11]) is pre-decoded externally (see decoded_btype in
-    // memory.zkc) and looked up by index.
+    var compute_op:BTypeComputeOp
     var imm_sign:SignBit
     var imm_10_5:u6
     var rs2:Register
     var rs1:Register
-    var funct3:Funct3
     var imm_4_1:u4
     var imm_11:u1
-    imm_sign, imm_10_5, rs2, rs1, funct3, imm_4_1, imm_11 = decoded_btype[index]
-<<<<<<< HEAD
     
-=======
+    compute_op, imm_sign, imm_10_5, rs2, rs1, imm_4_1, imm_11 = decoded_btype[index]
 
-    var imm:DoubleWord
-    var comparison:Boolean
-
->>>>>>> c1ffca63f (Revert "feat: zisk like at interpreter level, no processing per type")
     if imm_sign == 1 {
         imm = DWORD_SIGN_EXT_PREFIX_52_ONES::imm_11::imm_10_5::imm_4_1::(0 as u1)
     } else {
         imm = (imm_11::imm_10_5::imm_4_1::(0 as u1)) as DoubleWord
     }
 
+    
     // "no branching" value of pc_new;
     // gets overwritten if branching occurs
     pc_new = pc + 4
 
-    switch funct3 {
-        case FUNCT3_BEQ: {
+    switch compute_op {
+        case BRANCH_BEQ: {
             printf "BEQ "
             print_b_operands(rs1, rs2, imm)
             if registers[rs1] == registers[rs2] {
@@ -62,41 +44,31 @@ fn process_B_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Addre
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
         }
-        case FUNCT3_BNE: {
+        case BRANCH_BNE: {
             printf "BNE "
             print_b_operands(rs1, rs2, imm)
-            if registers[rs1] != registers[rs2] {
+            if registers[rs1] != registers[rs2] {  
                 // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
         }
-        case FUNCT3_BLT: {
+        case BRANCH_BLT: {
             printf "BLT "
             print_b_operands(rs1, rs2, imm)
-<<<<<<< HEAD
             if signed_LT(registers[rs1], registers[rs2]) == 1 {
-=======
-            comparison = signed_LT(registers[rs1], registers[rs2])
-            if comparison == 1 {
->>>>>>> c1ffca63f (Revert "feat: zisk like at interpreter level, no processing per type")
                 // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
         }
-        case FUNCT3_BGE: {
+        case BRANCH_BGE: {
             printf "BGE "
             print_b_operands(rs1, rs2, imm)
-<<<<<<< HEAD
             if signed_LT(registers[rs1], registers[rs2]) == 0 {
-=======
-            comparison = signed_LT(registers[rs1], registers[rs2])
-            if comparison == 0 {
->>>>>>> c1ffca63f (Revert "feat: zisk like at interpreter level, no processing per type")
                 // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
         }
-        case FUNCT3_BLTU: {
+        case BRANCH_BLTU: {
             printf "BLTU "
             print_b_operands(rs1, rs2, imm)
             if registers[rs1]<registers[rs2] {
@@ -104,16 +76,17 @@ fn process_B_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Addre
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
         }
-        case FUNCT3_BGEU: {
+        case BRANCH_BGEU: {
             printf "BGEU "
             print_b_operands(rs1, rs2, imm)
-            if registers[rs1] >= registers[rs2] {
+            if registers[rs1] >= registers[rs2] {      
                 // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
         }
         default: {
-            printf "[ERROR] Unsupported B-Type instruction with funct3 ≡ %x ≡ %b", funct3, funct3
+            printf "[ERROR] Unsupported B-Type instruction with\n"
+            printf "\tcompute_op ≡ %x\n", compute_op
             fail
         }
     }

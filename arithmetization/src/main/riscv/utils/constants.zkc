@@ -378,3 +378,28 @@ const RTYPE_REMUW:RTypeComputeOp = 27
 
 const RTYPE_KECCAK:RTypeComputeOp = 28
 const RTYPE_INVALID:RTypeComputeOp = 63
+
+// S-type semantic compute ops (pre-decoded at ELF time).
+const STORE_SB:STypeComputeOp = 0
+const STORE_SH:STypeComputeOp = 1
+const STORE_SW:STypeComputeOp = 2
+const STORE_SD:STypeComputeOp = 3
+const STYPE_INVALID:STypeComputeOp = 63
+
+// B-type semantic compute ops (pre-decoded at ELF time).
+const BRANCH_BEQ:BTypeComputeOp = 0
+const BRANCH_BNE:BTypeComputeOp = 1
+const BRANCH_BLT:BTypeComputeOp = 2
+const BRANCH_BGE:BTypeComputeOp = 3
+const BRANCH_BLTU:BTypeComputeOp = 4
+const BRANCH_BGEU:BTypeComputeOp = 5
+const BTYPE_INVALID:BTypeComputeOp = 63
+
+// J-type semantic compute ops (pre-decoded at ELF time).
+const JTYPE_JAL:JTypeComputeOp = 0
+const JTYPE_INVALID:JTypeComputeOp = 63
+
+// U-type semantic compute ops (pre-decoded at ELF time).
+const UTYPE_LUI:UTypeComputeOp = 0
+const UTYPE_AUIPC:UTypeComputeOp = 1
+const UTYPE_INVALID:UTypeComputeOp = 63
