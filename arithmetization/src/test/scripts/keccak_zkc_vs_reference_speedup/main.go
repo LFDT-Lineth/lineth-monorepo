@@ -1,10 +1,8 @@
 package main
 
 // Examples, from the repository root:
-//   GO111MODULE=off go run ./arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup \
-//     --intervals 100 --size 10
-//   GO111MODULE=off go run ./arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup \
-//     --single-input-lengths 512,1024,2048,4096,8192,16384,32768,65536,131072,262144,524288
+//   GO111MODULE=off go run ./arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup --intervals 100 --size 10
+//   GO111MODULE=off go run ./arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup --single-input-lengths 512,1024,2048,4096,8192,16384,32768,65536,131072,262144,524288
 
 import (
 	"bytes"
