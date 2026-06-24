@@ -35,14 +35,14 @@ export function loadArtifactFromDirectory(
 /**
  * Resolves a deploy nonce from an env var (e.g. "L1_NONCE"/"L2_NONCE"), validated as a
  * non-negative integer. When the var is unset/empty, falls back to the wallet's live nonce.
- * `offset` is added on top for scripts that deploy in a fixed order from a base nonce.
+ * `offset` is added only when the env var is set, for scripts that deploy in a fixed order from a base nonce.
  *
  * Replaces the unvalidated `parseInt(process.env.L1_NONCE)` pattern across deploy scripts.
  */
 export async function getDeployNonceFromEnv(wallet: AbstractSigner, envVarName: string, offset = 0): Promise<number> {
   const raw = process.env[envVarName];
   if (raw === undefined || raw === "") {
-    return (await wallet.getNonce()) + offset;
+    return await wallet.getNonce();
   }
   if (!/^[0-9]+$/.test(raw)) {
     throw new Error(`${envVarName} must be a non-negative integer, got: ${raw}`);

@@ -57,14 +57,14 @@ const tests: TestCase[] = [
     },
   },
   {
-    name: "getDeployNonceFromEnv falls back to the live wallet nonce plus offset when unset or empty",
+    name: "getDeployNonceFromEnv falls back to the live wallet nonce when unset or empty (offset ignored)",
     run: async () => {
       await withEnv(undefined, async () => {
         assert.equal(await getDeployNonceFromEnv(mockWallet(42), ENV_NAME), 42);
-        assert.equal(await getDeployNonceFromEnv(mockWallet(42), ENV_NAME, 3), 45);
+        assert.equal(await getDeployNonceFromEnv(mockWallet(42), ENV_NAME, 3), 42);
       });
       await withEnv("", async () => {
-        assert.equal(await getDeployNonceFromEnv(mockWallet(7), ENV_NAME, 1), 8);
+        assert.equal(await getDeployNonceFromEnv(mockWallet(7), ENV_NAME, 1), 7);
       });
     },
   },
