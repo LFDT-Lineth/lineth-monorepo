@@ -16,13 +16,7 @@ const (
 	BLOBS_OFFSET_AND_SIZE       = "blobs_offset_and_size"
 	BLOBS_DATA                  = "blobs_data"
 	INSTRUCTION_BASE            = "instruction_base"
-	DECODED_CORE                = "decoded_core"
-	DECODED_ITYPE               = "decoded_itype"
-	DECODED_RTYPE               = "decoded_rtype"
-	DECODED_STYPE               = "decoded_stype"
-	DECODED_BTYPE               = "decoded_btype"
-	DECODED_JTYPE               = "decoded_jtype"
-	DECODED_UTYPE               = "decoded_utype"
+	DECODED                     = "decoded"
 )
 
 // Instruction type identifiers. These MUST match the Type constants in
@@ -184,22 +178,22 @@ const (
 	itypeEbreak  = 22
 	itypeInvalid = 63
 
-	wbNone      = 0
-	wbStoreReg  = 1
+	wbNone     = 0
+	wbStoreReg = 1
 )
 
 // R-type semantic micro-op constants. These MUST match constants.zkc.
 const (
-	rtypeOpAdd    = 0
-	rtypeOpSub    = 1
-	rtypeOpSll    = 2
-	rtypeOpSlt    = 3
-	rtypeOpSltu   = 4
-	rtypeOpXor    = 5
-	rtypeOpSrl    = 6
-	rtypeOpSra    = 7
-	rtypeOpOr     = 8
-	rtypeOpAnd    = 9
+	rtypeOpAdd  = 0
+	rtypeOpSub  = 1
+	rtypeOpSll  = 2
+	rtypeOpSlt  = 3
+	rtypeOpSltu = 4
+	rtypeOpXor  = 5
+	rtypeOpSrl  = 6
+	rtypeOpSra  = 7
+	rtypeOpOr   = 8
+	rtypeOpAnd  = 9
 
 	rtypeOpMul    = 10
 	rtypeOpMulh   = 11
@@ -210,11 +204,11 @@ const (
 	rtypeOpRem    = 16
 	rtypeOpRemu   = 17
 
-	rtypeOpAddw  = 18
-	rtypeOpSubw  = 19
-	rtypeOpSllw  = 20
-	rtypeOpSrlw  = 21
-	rtypeOpSraw  = 22
+	rtypeOpAddw = 18
+	rtypeOpSubw = 19
+	rtypeOpSllw = 20
+	rtypeOpSrlw = 21
+	rtypeOpSraw = 22
 
 	rtypeOpMulw  = 23
 	rtypeOpDivw  = 24
@@ -222,13 +216,87 @@ const (
 	rtypeOpRemw  = 26
 	rtypeOpRemuw = 27
 
-	rtypeOpKeccak  = 28
-	rtypeInvalid   = 63
+	rtypeOpKeccak = 28
+	rtypeInvalid  = 63
 )
 
 const (
 	funct12Ecall  = 0b000000000000
 	funct12Ebreak = 0b000000000001
+)
+
+// Unified instruction-model constants for the zisk-style pipeline. These MUST
+// match the OPR_*/A_*/B_*/RK_*/WK_*/PK_* constants in constants.zkc.
+const (
+	oprAdd        = 0
+	oprSub        = 1
+	oprSll        = 2
+	oprSlt        = 3
+	oprSltu       = 4
+	oprXor        = 5
+	oprSrl        = 6
+	oprSra        = 7
+	oprOr         = 8
+	oprAnd        = 9
+	oprAddw       = 10
+	oprSubw       = 11
+	oprSllw       = 12
+	oprSrlw       = 13
+	oprSraw       = 14
+	oprMul        = 15
+	oprMulh       = 16
+	oprMulhsu     = 17
+	oprMulhu      = 18
+	oprDiv        = 19
+	oprDivu       = 20
+	oprRem        = 21
+	oprRemu       = 22
+	oprMulw       = 23
+	oprDivw       = 24
+	oprDivuw      = 25
+	oprRemw       = 26
+	oprRemuw      = 27
+	oprMoveLoaded = 28
+	oprMoveB      = 29
+	oprLink       = 30
+	oprCmpEq      = 31
+	oprCmpNe      = 32
+	oprCmpLt      = 33
+	oprCmpGe      = 34
+	oprCmpLtu     = 35
+	oprCmpGeu     = 36
+	oprKeccak     = 37
+	oprNop        = 38
+	oprInvalid    = 63
+
+	aRS1 = 0
+	aPC  = 1
+
+	bRS2 = 0
+	bIMM = 1
+
+	rkNone = 0
+	rk8S   = 1
+	rk16S  = 2
+	rk32S  = 3
+	rk64   = 4
+	rk8U   = 5
+	rk16U  = 6
+	rk32U  = 7
+
+	wkNone  = 0
+	wkReg   = 1
+	wkMem8  = 2
+	wkMem16 = 3
+	wkMem32 = 4
+	wkMem64 = 5
+
+	pkNext    = 0
+	pkBranch  = 1
+	pkJumpRel = 2
+	pkJumpAbs = 3
+	pkSyscall = 4
+	pkHalt    = 5
 )
 
 // decodeITypeSemantic maps a raw I-type encoding to a semantic compute op,
@@ -436,6 +504,327 @@ func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp, writeback ui
 	}
 }
 
+// unifiedRecord is the single pre-decoded record per instruction consumed by the
+// interpreter's zisk-style pipeline. Field order/widths MUST match the `decoded`
+// pub input in memory.zkc.
+type unifiedRecord struct {
+	operation uint32
+	aSrc      uint32
+	bSrc      uint32
+	readKind  uint32
+	writeKind uint32
+	pcKind    uint32
+	rs1       uint32
+	rs2       uint32
+	rd        uint32
+	imm       uint64
+}
+
+// sext64 sign-extends the low `bits` bits of value to 64 bits.
+func sext64(value uint32, bits uint) uint64 {
+	mask := (uint64(1) << bits) - 1
+	v := uint64(value) & mask
+	if v&(uint64(1)<<(bits-1)) != 0 {
+		v |= ^mask
+	}
+	return v
+}
+
+// rtypeToUnified maps an R-type semantic compute op to a unified Operation.
+func rtypeToUnified(rop uint32) uint32 {
+	switch rop {
+	case rtypeOpAdd:
+		return oprAdd
+	case rtypeOpSub:
+		return oprSub
+	case rtypeOpSll:
+		return oprSll
+	case rtypeOpSlt:
+		return oprSlt
+	case rtypeOpSltu:
+		return oprSltu
+	case rtypeOpXor:
+		return oprXor
+	case rtypeOpSrl:
+		return oprSrl
+	case rtypeOpSra:
+		return oprSra
+	case rtypeOpOr:
+		return oprOr
+	case rtypeOpAnd:
+		return oprAnd
+	case rtypeOpAddw:
+		return oprAddw
+	case rtypeOpSubw:
+		return oprSubw
+	case rtypeOpSllw:
+		return oprSllw
+	case rtypeOpSrlw:
+		return oprSrlw
+	case rtypeOpSraw:
+		return oprSraw
+	case rtypeOpMul:
+		return oprMul
+	case rtypeOpMulh:
+		return oprMulh
+	case rtypeOpMulhsu:
+		return oprMulhsu
+	case rtypeOpMulhu:
+		return oprMulhu
+	case rtypeOpDiv:
+		return oprDiv
+	case rtypeOpDivu:
+		return oprDivu
+	case rtypeOpRem:
+		return oprRem
+	case rtypeOpRemu:
+		return oprRemu
+	case rtypeOpMulw:
+		return oprMulw
+	case rtypeOpDivw:
+		return oprDivw
+	case rtypeOpDivuw:
+		return oprDivuw
+	case rtypeOpRemw:
+		return oprRemw
+	case rtypeOpRemuw:
+		return oprRemuw
+	case rtypeOpKeccak:
+		return oprKeccak
+	default:
+		return oprInvalid
+	}
+}
+
+// itypeAluToUnified maps an I-type OP-IMM / OP-IMM-32 compute op to a unified
+// Operation. Immediate and register ALU forms share the same op (operand b is
+// the immediate, selected by b_src).
+func itypeAluToUnified(iop uint32) uint32 {
+	switch iop {
+	case itypeOpAddi:
+		return oprAdd
+	case itypeOpSlti:
+		return oprSlt
+	case itypeOpSltiu:
+		return oprSltu
+	case itypeOpXori:
+		return oprXor
+	case itypeOpOri:
+		return oprOr
+	case itypeOpAndi:
+		return oprAnd
+	case itypeOpSlli:
+		return oprSll
+	case itypeOpSrli:
+		return oprSrl
+	case itypeOpSrai:
+		return oprSra
+	case itypeOpAddiw:
+		return oprAddw
+	case itypeOpSlliw:
+		return oprSllw
+	case itypeOpSrliw:
+		return oprSrlw
+	case itypeOpSraiw:
+		return oprSraw
+	default:
+		return oprInvalid
+	}
+}
+
+// isITypeLoad reports whether an I-type compute op is a memory load.
+func isITypeLoad(iop uint32) bool {
+	return iop >= itypeRead8Sgn && iop <= itypeRead32Zext
+}
+
+// loadReadKind maps an I-type load compute op to the read-phase load kind.
+func loadReadKind(iop uint32) uint32 {
+	switch iop {
+	case itypeRead8Sgn:
+		return rk8S
+	case itypeRead16Sgn:
+		return rk16S
+	case itypeRead32Sgn:
+		return rk32S
+	case itypeRead64:
+		return rk64
+	case itypeRead8Zext:
+		return rk8U
+	case itypeRead16Zext:
+		return rk16U
+	case itypeRead32Zext:
+		return rk32U
+	default:
+		return rkNone
+	}
+}
+
+// isITypeShift reports whether an I-type compute op is a shift-immediate (its
+// immediate carries a raw shift amount and is not sign-extended).
+func isITypeShift(iop uint32) bool {
+	switch iop {
+	case itypeOpSlli, itypeOpSrli, itypeOpSrai, itypeOpSlliw, itypeOpSrliw, itypeOpSraiw:
+		return true
+	default:
+		return false
+	}
+}
+
+// decodeUnified reduces a raw 32-bit instruction (with its already-folded
+// instruction type) to the single unified record. It reuses the per-type
+// semantic decoders and folds operand sourcing, writeback, and pc-update into
+// uniform selectors.
+func decodeUnified(instr, instrType uint32) unifiedRecord {
+	opcode := instr & 0x7f
+	rd := (instr >> 7) & 0x1f
+	funct3 := (instr >> 12) & 0x7
+	rs1 := (instr >> 15) & 0x1f
+	rs2 := (instr >> 20) & 0x1f
+	imm12 := (instr >> 20) & 0xfff
+	funct7 := (instr >> 25) & 0x7f
+
+	rec := unifiedRecord{
+		operation: oprNop,
+		aSrc:      aRS1,
+		bSrc:      bIMM,
+		readKind:  rkNone,
+		writeKind: wkNone,
+		pcKind:    pkNext,
+		rs1:       rs1,
+		rs2:       rs2,
+		rd:        rd,
+	}
+
+	switch instrType {
+	case rType:
+		rop, wb := decodeRTypeSemantic(opcode, funct3, funct7)
+		rec.operation = rtypeToUnified(rop)
+		rec.aSrc = aRS1
+		rec.bSrc = bRS2
+		if wb == wbStoreReg {
+			rec.writeKind = wkReg
+		}
+		rec.pcKind = pkNext
+	case iType:
+		iop, _, normImm12 := decodeITypeSemantic(opcode, funct3, imm12)
+		rec.aSrc = aRS1
+		rec.bSrc = bIMM
+		switch {
+		case isITypeLoad(iop):
+			rec.operation = oprMoveLoaded
+			rec.readKind = loadReadKind(iop)
+			rec.writeKind = wkReg
+			rec.imm = sext64(imm12, 12)
+		case iop == itypeJalr:
+			rec.operation = oprLink
+			rec.writeKind = wkReg
+			rec.pcKind = pkJumpAbs
+			rec.imm = sext64(imm12, 12)
+		case iop == itypeEcall:
+			rec.operation = oprNop
+			rec.pcKind = pkSyscall
+		case iop == itypeEbreak:
+			rec.operation = oprNop
+			rec.pcKind = pkHalt
+		case iop == itypeInvalid:
+			rec.operation = oprInvalid
+			rec.imm = sext64(imm12, 12)
+		default:
+			rec.operation = itypeAluToUnified(iop)
+			rec.writeKind = wkReg
+			if isITypeShift(iop) {
+				rec.imm = uint64(normImm12) // raw shift amount, no sign extension
+			} else {
+				rec.imm = sext64(imm12, 12)
+			}
+		}
+	case sType:
+		simm12 := (((instr >> 31) & 0x1) << 11) | (((instr >> 25) & 0x3f) << 5) | ((instr >> 7) & 0x1f)
+		rec.aSrc = aRS1
+		rec.bSrc = bIMM
+		rec.imm = sext64(simm12, 12)
+		switch funct3 {
+		case 0b000:
+			rec.writeKind = wkMem8
+		case 0b001:
+			rec.writeKind = wkMem16
+		case 0b010:
+			rec.writeKind = wkMem32
+		case 0b011:
+			rec.writeKind = wkMem64
+		default:
+			rec.operation = oprInvalid
+		}
+	case bType:
+		bImmSign := (instr >> 31) & 0x1
+		bImm10_5 := (instr >> 25) & 0x3f
+		bImm4_1 := (instr >> 8) & 0xf
+		bImm11 := (instr >> 7) & 0x1
+		offset := (bImmSign << 12) | (bImm11 << 11) | (bImm10_5 << 5) | (bImm4_1 << 1)
+		rec.aSrc = aRS1
+		rec.bSrc = bRS2
+		rec.imm = sext64(offset, 13)
+		rec.pcKind = pkBranch
+		switch funct3 {
+		case 0b000:
+			rec.operation = oprCmpEq
+		case 0b001:
+			rec.operation = oprCmpNe
+		case 0b100:
+			rec.operation = oprCmpLt
+		case 0b101:
+			rec.operation = oprCmpGe
+		case 0b110:
+			rec.operation = oprCmpLtu
+		case 0b111:
+			rec.operation = oprCmpGeu
+		default:
+			rec.operation = oprInvalid
+			rec.pcKind = pkNext
+		}
+	case jType:
+		jImm20 := (instr >> 31) & 0x1
+		jPre := (jImm20 << 19) | (((instr >> 12) & 0xff) << 11) | (((instr >> 20) & 0x1) << 10) | ((instr >> 21) & 0x3ff)
+		jImm := uint64(jPre) << 1
+		if jImm20 == 1 {
+			jImm |= 0xFFFFFFFFFFE00000
+		}
+		rec.operation = oprLink
+		rec.aSrc = aPC
+		rec.bSrc = bIMM
+		rec.writeKind = wkReg
+		rec.pcKind = pkJumpRel
+		rec.imm = jImm
+	case uType:
+		uImm20 := (instr >> 12) & 0xfffff
+		rec.bSrc = bIMM
+		rec.writeKind = wkReg
+		rec.imm = sext64(uImm20<<12, 32)
+		if opcode == opcodeLUI {
+			rec.operation = oprMoveB
+			rec.aSrc = aRS1 // unused by OPR_MOVE_B
+		} else { // AUIPC
+			rec.operation = oprAdd
+			rec.aSrc = aPC
+		}
+	case miscMemType:
+		rec.operation = oprNop
+	default: // undefinedType
+		rec.operation = oprInvalid
+	}
+
+	// Fold register writes to x0 into no-ops: x0 is hard-wired to zero, so a
+	// WK_REG write with rd == 0 has no effect. Folding it to WK_NONE at decode
+	// time lets the interpreter's WK_REG path write registers[rd] without a
+	// per-instruction rd != 0 guard. Memory stores and pc updates are untouched,
+	// so loads/jumps with rd == 0 still perform their read/jump side effects.
+	if rec.writeKind == wkReg && rec.rd == 0 {
+		rec.writeKind = wkNone
+	}
+
+	return rec
+}
+
 type memoryBlob struct {
 	offset uint64
 	data   []byte
@@ -517,10 +906,10 @@ func main() {
 		fmt.Fprintf(os.Stderr, "ELF2JSON_WRITE_SECTIONS must be true or false, got %q\n", writeSections)
 		os.Exit(1)
 	}
-	// Statically decode the executable region into the pre-decoded instruction
-	// input tables consumed by the interpreter.
-	base, coreHex, itypeHex, rtypeHex, stypeHex, btypeHex, jtypeHex, utypeHex := buildDecodedProgram(elfFile.Sections)
-	printJson(blobs, elfFile.Entry, base, coreHex, itypeHex, rtypeHex, stypeHex, btypeHex, jtypeHex, utypeHex)
+	// Statically decode the executable region into the single pre-decoded
+	// instruction input table consumed by the interpreter.
+	base, decodedHex := buildDecodedProgram(elfFile.Sections)
+	printJson(blobs, elfFile.Entry, base, decodedHex)
 }
 
 // parseInBytes turns an arg into raw input bytes. Four forms:
@@ -637,11 +1026,9 @@ func readSectionBytes(s *elf.Section) []byte {
 
 // buildDecodedProgram statically decodes every 4-byte instruction word across
 // the executable region of the ELF, producing the base address plus the
-// hex-encoded decoded_core / decoded_itype / decoded_rtype / decoded_stype /
-// decoded_btype / decoded_jtype / decoded_utype input arrays. The arrays are
-// dense (one record per word in [base, end)), indexed at runtime by
-// index = (pc - base) >> 2.
-func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHex, rtypeHex, stypeHex, btypeHex, jtypeHex, utypeHex string) {
+// hex-encoded `decoded` input array. The array is dense (one record per word in
+// [base, end)), indexed at runtime by index = (pc - base) >> 2.
+func buildDecodedProgram(sections []*elf.Section) (base uint64, decodedHex string) {
 	var (
 		execSections []*elf.Section
 		minAddr      = ^uint64(0)
@@ -688,30 +1075,17 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		data := readSectionBytes(s)
 		copy(image[s.Addr-base:], data)
 	}
-	// Decode each instruction word. Field bit widths MUST match the semantic
-	// types declared for the inputs in memory.zkc, because zkc packs input
-	// records tightly by bit width:
-	//   decoded_core : opcode:Opcode(u7), instruction_type:Type(u3), instruction_parameters:u25
-	//   decoded_itype: compute_op:ITypeComputeOp(u6), writeback:ITypeWriteback(u2), imm12:Imm12(u12), rs1:Register(u5), rd:Register(u5)
-	//   decoded_rtype: compute_op:RTypeComputeOp(u6), writeback:ITypeWriteback(u2), rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
-	//   decoded_stype: imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3)
-	//   decoded_btype: imm_sign:u1, imm_10_5:u6, rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3), imm_4_1:u4, imm_11:u1
-	//   decoded_jtype: imm:DoubleWord(u64), rd:Register(u5)
-	//   decoded_utype: imm20:Imm20(u20), rd:Register(u5)
-	var (
-		coreBits  bitWriter
-		itypeBits bitWriter
-		rtypeBits bitWriter
-		stypeBits bitWriter
-		btypeBits bitWriter
-		jtypeBits bitWriter
-		utypeBits bitWriter
-	)
+	// Decode each instruction word into the unified record. Field bit widths
+	// MUST match the `decoded` pub input declared in memory.zkc, because zkc
+	// packs input records tightly by bit width:
+	//   decoded: operation:Operation(u6), a_src:ASrc(u1), b_src:BSrc(u1),
+	//            read_kind:ReadKind(u3), write_kind:WriteKind(u3), pc_kind:PcKind(u3),
+	//            rs1:Register(u5), rs2:Register(u5), rd:Register(u5), imm:DoubleWord(u64)
+	var decodedBits bitWriter
 	for off := uint64(0); off+4 <= uint64(len(image)); off += 4 {
 		instr := uint32(image[off]) | uint32(image[off+1])<<8 | uint32(image[off+2])<<16 | uint32(image[off+3])<<24
 
 		opcode := instr & 0x7f
-		params := (instr >> 7) & 0x1ffffff
 		rd := (instr >> 7) & 0x1f
 		funct3 := (instr >> 12) & 0x7
 		rs1 := (instr >> 15) & 0x1f
@@ -724,83 +1098,21 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 			instrType = miscMemType
 		}
 
-		// S-type immediate is split in the encoding (imm[11] :: imm[10:5] :: imm[4:0]);
-		// reassemble it into the 12-bit store immediate.
-		simm12 := (((instr >> 31) & 0x1) << 11) | (((instr >> 25) & 0x3f) << 5) | ((instr >> 7) & 0x1f)
+		rec := decodeUnified(instr, instrType)
 
-		// B-type immediate sub-fields (kept split to match b_type.zkc's reconstruction).
-		bImmSign := (instr >> 31) & 0x1  // imm[12]
-		bImm10_5 := (instr >> 25) & 0x3f // imm[10:5]
-		bImm4_1 := (instr >> 8) & 0xf    // imm[4:1]
-		bImm11 := (instr >> 7) & 0x1     // imm[11]
-
-		// J-type: resolve the 21-bit signed jump offset (imm[20|19:12|11|10:1] with
-		// bit 0 = 0) to a ready-to-use 64-bit immediate. imm[20] is known
-		// statically, so the runtime shift and sign extension are collapsed here.
-		jImm20 := (instr >> 31) & 0x1                                                                   // imm[20]
-		jPre := (jImm20 << 19) | (((instr >> 12) & 0xff) << 11) | (((instr >> 20) & 0x1) << 10) | ((instr >> 21) & 0x3ff) // imm[20|19:12|11|10:1]
-		jImm := uint64(jPre) << 1
-		if jImm20 == 1 {
-			jImm |= 0xFFFFFFFFFFE00000 // sign-extend: set bits [63:21]
-		}
-
-		// U-type immediate: imm[31:12] (20 bits).
-		uImm20 := (instr >> 12) & 0xfffff
-
-		coreBits.writeBits(uint64(opcode), 7)
-		coreBits.writeBits(uint64(instrType), 3)
-		coreBits.writeBits(uint64(params), 25)
-
-		computeOp, writeback, normImm12 := decodeITypeSemantic(opcode, funct3, imm12)
-		if instrType != iType {
-			computeOp, writeback, normImm12 = itypeInvalid, wbNone, imm12
-		}
-
-		itypeBits.writeBits(uint64(computeOp), 6)
-		itypeBits.writeBits(uint64(writeback), 2)
-		itypeBits.writeBits(uint64(normImm12), 12)
-		itypeBits.writeBits(uint64(rs1), 5)
-		itypeBits.writeBits(uint64(rd), 5)
-
-		rtypeComputeOp, rtypeWriteback := decodeRTypeSemantic(opcode, funct3, funct7)
-		if instrType != rType {
-			rtypeComputeOp, rtypeWriteback = rtypeInvalid, wbNone
-		}
-
-		rtypeBits.writeBits(uint64(rtypeComputeOp), 6)
-		rtypeBits.writeBits(uint64(rtypeWriteback), 2)
-		rtypeBits.writeBits(uint64(rs1), 5)
-		rtypeBits.writeBits(uint64(rs2), 5)
-		rtypeBits.writeBits(uint64(rd), 5)
-
-		stypeBits.writeBits(uint64(simm12), 12)
-		stypeBits.writeBits(uint64(rs2), 5)
-		stypeBits.writeBits(uint64(rs1), 5)
-		stypeBits.writeBits(uint64(funct3), 3)
-
-		btypeBits.writeBits(uint64(bImmSign), 1)
-		btypeBits.writeBits(uint64(bImm10_5), 6)
-		btypeBits.writeBits(uint64(rs2), 5)
-		btypeBits.writeBits(uint64(rs1), 5)
-		btypeBits.writeBits(uint64(funct3), 3)
-		btypeBits.writeBits(uint64(bImm4_1), 4)
-		btypeBits.writeBits(uint64(bImm11), 1)
-
-		jtypeBits.writeBits(jImm, 64)
-		jtypeBits.writeBits(uint64(rd), 5)
-
-		utypeBits.writeBits(uint64(uImm20), 20)
-		utypeBits.writeBits(uint64(rd), 5)
+		decodedBits.writeBits(uint64(rec.operation), 6)
+		decodedBits.writeBits(uint64(rec.aSrc), 1)
+		decodedBits.writeBits(uint64(rec.bSrc), 1)
+		decodedBits.writeBits(uint64(rec.readKind), 3)
+		decodedBits.writeBits(uint64(rec.writeKind), 3)
+		decodedBits.writeBits(uint64(rec.pcKind), 3)
+		decodedBits.writeBits(uint64(rec.rs1), 5)
+		decodedBits.writeBits(uint64(rec.rs2), 5)
+		decodedBits.writeBits(uint64(rec.rd), 5)
+		decodedBits.writeBits(rec.imm, 64)
 	}
 
-	return base,
-		hex.EncodeToString(coreBits.buf),
-		hex.EncodeToString(itypeBits.buf),
-		hex.EncodeToString(rtypeBits.buf),
-		hex.EncodeToString(stypeBits.buf),
-		hex.EncodeToString(btypeBits.buf),
-		hex.EncodeToString(jtypeBits.buf),
-		hex.EncodeToString(utypeBits.buf)
+	return base, hex.EncodeToString(decodedBits.buf)
 }
 
 // maxDecodedRecordsFromEnv returns the configured cap on decoded records.
@@ -823,7 +1135,7 @@ func writeSectionsFile(file *os.File, blobs []memoryBlob) {
 	}
 }
 
-func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, coreHex, itypeHex, rtypeHex, stypeHex, btypeHex, jtypeHex, utypeHex string) {
+func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, decodedHex string) {
 	var (
 		entryPointString   = fmt.Sprintf("%016x", entryPoint)
 		blobsCountString   = fmt.Sprintf("%016x", len(blobs))
@@ -844,12 +1156,6 @@ func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, coreHex, 
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", BLOBS_OFFSET_AND_SIZE, strings.Join(blobMetadata, "____"))
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", BLOBS_DATA, strings.Join(blobData, "____"))
 	fmt.Printf("\t\"%s\": \"0x%016x\",\n", INSTRUCTION_BASE, instructionBase)
-	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_CORE, coreHex)
-	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_ITYPE, itypeHex)
-	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_RTYPE, rtypeHex)
-	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_STYPE, stypeHex)
-	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_BTYPE, btypeHex)
-	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_JTYPE, jtypeHex)
-	fmt.Printf("\t\"%s\": \"0x%s\"\n", DECODED_UTYPE, utypeHex)
+	fmt.Printf("\t\"%s\": \"0x%s\"\n", DECODED, decodedHex)
 	fmt.Println("}")
 }

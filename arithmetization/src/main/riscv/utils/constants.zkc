@@ -1,153 +1,5 @@
 include "type.zkc"
 
-const UNDEFINED_TYPE:Type = 0
-const R_TYPE:Type = 1
-const I_TYPE:Type = 2
-const S_TYPE:Type = 3
-const B_TYPE:Type = 4
-const U_TYPE:Type = 5
-const J_TYPE:Type = 6
-// MISC-MEM opcode (FENCE / FENCE.I). On a single-hart machine with no caches
-// or memory hierarchy, both are architecturally allowed to be no-ops, so we
-// treat them as such — advance PC by 4, do nothing else.
-const MISC_MEM_TYPE:Type = 7
-
-// ===============
-// decoding types
-// ===============
-
-// TODO: add support for sparse reference tables
-static instruction_type_from_opcode(opcode:Opcode) -> (instruction_type:Type) {
-    UNDEFINED_TYPE, // 0b0000000
-    UNDEFINED_TYPE, // 0b0000001
-    UNDEFINED_TYPE, // 0b0000010
-    I_TYPE, // 0b0000011
-    UNDEFINED_TYPE, // 0b0000100
-    UNDEFINED_TYPE, // 0b0000101
-    UNDEFINED_TYPE, // 0b0000110
-    UNDEFINED_TYPE, // 0b0000111
-    UNDEFINED_TYPE, // 0b0001000
-    UNDEFINED_TYPE, // 0b0001001
-    UNDEFINED_TYPE, // 0b0001010
-    R_TYPE, // 0b0001011 ≡ 0x0b ≡ custom-0 opcode
-    UNDEFINED_TYPE, // 0b0001100
-    UNDEFINED_TYPE, // 0b0001101
-    UNDEFINED_TYPE, // 0b0001110
-    MISC_MEM_TYPE, // 0b0001111  (FENCE, FENCE.I — no-op on this implementation)
-    UNDEFINED_TYPE, // 0b0010000
-    UNDEFINED_TYPE, // 0b0010001
-    UNDEFINED_TYPE, // 0b0010010
-    I_TYPE, // 0b0010011
-    UNDEFINED_TYPE, // 0b0010100
-    UNDEFINED_TYPE, // 0b0010101
-    UNDEFINED_TYPE, // 0b0010110
-    U_TYPE, // 0b0010111
-    UNDEFINED_TYPE, // 0b0011000
-    UNDEFINED_TYPE, // 0b0011001
-    UNDEFINED_TYPE, // 0b0011010
-    I_TYPE, // 0b0011011
-    UNDEFINED_TYPE, // 0b0011100
-    UNDEFINED_TYPE, // 0b0011101
-    UNDEFINED_TYPE, // 0b0011110
-    UNDEFINED_TYPE, // 0b0011111
-    UNDEFINED_TYPE, // 0b0100000
-    UNDEFINED_TYPE, // 0b0100001
-    UNDEFINED_TYPE, // 0b0100010
-    S_TYPE, // 0b0100011
-    UNDEFINED_TYPE, // 0b0100100
-    UNDEFINED_TYPE, // 0b0100101
-    UNDEFINED_TYPE, // 0b0100110
-    UNDEFINED_TYPE, // 0b0100111
-    UNDEFINED_TYPE, // 0b0101000
-    UNDEFINED_TYPE, // 0b0101001
-    UNDEFINED_TYPE, // 0b0101010
-    R_TYPE, // 0b0101011 ≡ 0x2b ≡ custom-1 opcode
-    UNDEFINED_TYPE, // 0b0101100
-    UNDEFINED_TYPE, // 0b0101101
-    UNDEFINED_TYPE, // 0b0101110
-    UNDEFINED_TYPE, // 0b0101111
-    UNDEFINED_TYPE, // 0b0110000
-    UNDEFINED_TYPE, // 0b0110001
-    UNDEFINED_TYPE, // 0b0110010
-    R_TYPE, // 0b0110011
-    UNDEFINED_TYPE, // 0b0110100
-    UNDEFINED_TYPE, // 0b0110101
-    UNDEFINED_TYPE, // 0b0110110
-    U_TYPE, // 0b0110111
-    UNDEFINED_TYPE, // 0b0111000
-    UNDEFINED_TYPE, // 0b0111001
-    UNDEFINED_TYPE, // 0b0111010
-    R_TYPE, // 0b0111011
-    UNDEFINED_TYPE, // 0b0111100
-    UNDEFINED_TYPE, // 0b0111101
-    UNDEFINED_TYPE, // 0b0111110
-    UNDEFINED_TYPE, // 0b0111111
-    UNDEFINED_TYPE, // 0b1000000
-    UNDEFINED_TYPE, // 0b1000001
-    UNDEFINED_TYPE, // 0b1000010
-    UNDEFINED_TYPE, // 0b1000011
-    UNDEFINED_TYPE, // 0b1000100
-    UNDEFINED_TYPE, // 0b1000101
-    UNDEFINED_TYPE, // 0b1000110
-    UNDEFINED_TYPE, // 0b1000111
-    UNDEFINED_TYPE, // 0b1001000
-    UNDEFINED_TYPE, // 0b1001001
-    UNDEFINED_TYPE, // 0b1001010
-    UNDEFINED_TYPE, // 0b1001011
-    UNDEFINED_TYPE, // 0b1001100
-    UNDEFINED_TYPE, // 0b1001101
-    UNDEFINED_TYPE, // 0b1001110
-    UNDEFINED_TYPE, // 0b1001111
-    UNDEFINED_TYPE, // 0b1010000
-    UNDEFINED_TYPE, // 0b1010001
-    UNDEFINED_TYPE, // 0b1010010
-    UNDEFINED_TYPE, // 0b1010011
-    UNDEFINED_TYPE, // 0b1010100
-    UNDEFINED_TYPE, // 0b1010101
-    UNDEFINED_TYPE, // 0b1010110
-    UNDEFINED_TYPE, // 0b1010111
-    UNDEFINED_TYPE, // 0b1011000
-    UNDEFINED_TYPE, // 0b1011001
-    UNDEFINED_TYPE, // 0b1011010
-    UNDEFINED_TYPE, // 0b1011011
-    UNDEFINED_TYPE, // 0b1011100
-    UNDEFINED_TYPE, // 0b1011101
-    UNDEFINED_TYPE, // 0b1011110
-    UNDEFINED_TYPE, // 0b1011111
-    UNDEFINED_TYPE, // 0b1100000
-    UNDEFINED_TYPE, // 0b1100001
-    UNDEFINED_TYPE, // 0b1100010
-    B_TYPE, // 0b1100011
-    UNDEFINED_TYPE, // 0b1100100
-    UNDEFINED_TYPE, // 0b1100101
-    UNDEFINED_TYPE, // 0b1100110
-    I_TYPE, // 0b1100111
-    UNDEFINED_TYPE, // 0b1101000
-    UNDEFINED_TYPE, // 0b1101001
-    UNDEFINED_TYPE, // 0b1101010
-    UNDEFINED_TYPE, // 0b1101011
-    UNDEFINED_TYPE, // 0b1101100
-    UNDEFINED_TYPE, // 0b1101101
-    UNDEFINED_TYPE, // 0b1101110
-    J_TYPE, // 0b1101111
-    UNDEFINED_TYPE, // 0b1110000
-    UNDEFINED_TYPE, // 0b1110001
-    UNDEFINED_TYPE, // 0b1110010
-    I_TYPE, // 0b1110011
-    UNDEFINED_TYPE, // 0b1110100
-    UNDEFINED_TYPE, // 0b1110101
-    UNDEFINED_TYPE, // 0b1110110
-    UNDEFINED_TYPE, // 0b1110111
-    UNDEFINED_TYPE, // 0b1111000
-    UNDEFINED_TYPE, // 0b1111001
-    UNDEFINED_TYPE, // 0b1111010
-    UNDEFINED_TYPE, // 0b1111011
-    UNDEFINED_TYPE, // 0b1111100
-    UNDEFINED_TYPE, // 0b1111101
-    UNDEFINED_TYPE, // 0b1111110
-    UNDEFINED_TYPE, // 0b1111111
-}
-
 // R_type
 const OP:Opcode = 0b0110011 // ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND
 const OP_32:Opcode = 0b0111011 // ADDW, SUBW, SLLW, SRLW, SRAW (RV64 only)
@@ -303,78 +155,99 @@ const MASK_64_ERASE_LAST_BIT:u64 = 0xfffffffffffffffe
 const EXIT_SYSCALL:DoubleWord = 93
 const WRITE_SYSCALL:DoubleWord = 64
 
-// ======================
-// I-type semantic micro-ops (pre-decoded)
-// ======================
+// =========================================================================
+// Unified instruction model (zisk-style pipeline) — pre-decoded at ELF time.
+// These integer values MUST mirror the constants in the Go pre-decoder
+// (arithmetization/src/test/scripts/elf_to_json_gen/main.go).
+// =========================================================================
 
-// READ — load from memory at (rs1 + sign_extend(imm12))
-const READ8_SGN:ITypeComputeOp = 0
-const READ16_SGN:ITypeComputeOp = 1
-const READ32_SGN:ITypeComputeOp = 2
-const READ64:ITypeComputeOp = 3
-const READ8_ZEXT:ITypeComputeOp = 4
-const READ16_ZEXT:ITypeComputeOp = 5
-const READ32_ZEXT:ITypeComputeOp = 6
+// ----- Operation (compute phase: result = op(a, b), or branch condition) -----
 
-// OP-IMM — immediate arithmetic/logic on rs1
-const OP_ADDI:ITypeComputeOp = 7
-const OP_SLTI:ITypeComputeOp = 8
-const OP_SLTIU:ITypeComputeOp = 9
-const OP_XORI:ITypeComputeOp = 10
-const OP_ORI:ITypeComputeOp = 11
-const OP_ANDI:ITypeComputeOp = 12
-const OP_SLLI:ITypeComputeOp = 13
-const OP_SRLI:ITypeComputeOp = 14
-const OP_SRAI:ITypeComputeOp = 15
+// ALU (64-bit). Immediate and register forms share the same op: operand b is
+// either registers[rs2] or imm, selected by b_src.
+const OPR_ADD:Operation = 0 // ADD, ADDI, AUIPC (a = pc)
+const OPR_SUB:Operation = 1 // SUB
+const OPR_SLL:Operation = 2 // SLL, SLLI
+const OPR_SLT:Operation = 3 // SLT, SLTI
+const OPR_SLTU:Operation = 4 // SLTU, SLTIU
+const OPR_XOR:Operation = 5 // XOR, XORI
+const OPR_SRL:Operation = 6 // SRL, SRLI
+const OPR_SRA:Operation = 7 // SRA, SRAI
+const OPR_OR:Operation = 8 // OR, ORI
+const OPR_AND:Operation = 9 // AND, ANDI
 
-// OP-IMM-32 — RV64 word-width (*W) variants
-const OP_ADDIW:ITypeComputeOp = 16
-const OP_SLLIW:ITypeComputeOp = 17
-const OP_SRLIW:ITypeComputeOp = 18
-const OP_SRAIW:ITypeComputeOp = 19
+// ALU word-width (*W), result sign-extended from 32 to 64 bits.
+const OPR_ADDW:Operation = 10 // ADDW, ADDIW
+const OPR_SUBW:Operation = 11 // SUBW
+const OPR_SLLW:Operation = 12 // SLLW, SLLIW
+const OPR_SRLW:Operation = 13 // SRLW, SRLIW
+const OPR_SRAW:Operation = 14 // SRAW, SRAIW
 
-// Control / system
-const ITYPE_JALR:ITypeComputeOp = 20
-const ITYPE_ECALL:ITypeComputeOp = 21
-const ITYPE_EBREAK:ITypeComputeOp = 22
-const ITYPE_INVALID:ITypeComputeOp = 63
+// M-extension multiply/divide/remainder (64-bit).
+const OPR_MUL:Operation = 15
+const OPR_MULH:Operation = 16
+const OPR_MULHSU:Operation = 17
+const OPR_MULHU:Operation = 18
+const OPR_DIV:Operation = 19
+const OPR_DIVU:Operation = 20
+const OPR_REM:Operation = 21
+const OPR_REMU:Operation = 22
 
-// Writeback kinds (second micro-step after compute)
-const WB_NONE:ITypeWriteback = 0
-const WB_STORE_REG:ITypeWriteback = 1
+// M-extension word-width (*W).
+const OPR_MULW:Operation = 23
+const OPR_DIVW:Operation = 24
+const OPR_DIVUW:Operation = 25
+const OPR_REMW:Operation = 26
+const OPR_REMUW:Operation = 27
 
-// R-type semantic compute ops (pre-decoded at ELF time).
-const RTYPE_ADD:RTypeComputeOp = 0
-const RTYPE_SUB:RTypeComputeOp = 1
-const RTYPE_SLL:RTypeComputeOp = 2
-const RTYPE_SLT:RTypeComputeOp = 3
-const RTYPE_SLTU:RTypeComputeOp = 4
-const RTYPE_XOR:RTypeComputeOp = 5
-const RTYPE_SRL:RTypeComputeOp = 6
-const RTYPE_SRA:RTypeComputeOp = 7
-const RTYPE_OR:RTypeComputeOp = 8
-const RTYPE_AND:RTypeComputeOp = 9
+// Moves / link.
+const OPR_MOVE_LOADED:Operation = 28 // loads: result = value from the read phase
+const OPR_MOVE_B:Operation = 29 // LUI: result = b (= imm)
+const OPR_LINK:Operation = 30 // JAL, JALR: result = pc + 4
 
-const RTYPE_MUL:RTypeComputeOp = 10
-const RTYPE_MULH:RTypeComputeOp = 11
-const RTYPE_MULHSU:RTypeComputeOp = 12
-const RTYPE_MULHU:RTypeComputeOp = 13
-const RTYPE_DIV:RTypeComputeOp = 14
-const RTYPE_DIVU:RTypeComputeOp = 15
-const RTYPE_REM:RTypeComputeOp = 16
-const RTYPE_REMU:RTypeComputeOp = 17
+// Branch comparisons. result is the taken/not-taken condition (1/0).
+const OPR_CMP_EQ:Operation = 31 // BEQ
+const OPR_CMP_NE:Operation = 32 // BNE
+const OPR_CMP_LT:Operation = 33 // BLT  (signed)
+const OPR_CMP_GE:Operation = 34 // BGE  (signed)
+const OPR_CMP_LTU:Operation = 35 // BLTU (unsigned)
+const OPR_CMP_GEU:Operation = 36 // BGEU (unsigned)
 
-const RTYPE_ADDW:RTypeComputeOp = 18
-const RTYPE_SUBW:RTypeComputeOp = 19
-const RTYPE_SLLW:RTypeComputeOp = 20
-const RTYPE_SRLW:RTypeComputeOp = 21
-const RTYPE_SRAW:RTypeComputeOp = 22
+// Precompile / no-op / invalid.
+const OPR_KECCAK:Operation = 37 // custom-1 Keccak precompile (side effects)
+const OPR_NOP:Operation = 38 // no compute (stores, FENCE, ECALL, rd=x0 folds)
+const OPR_INVALID:Operation = 63
 
-const RTYPE_MULW:RTypeComputeOp = 23
-const RTYPE_DIVW:RTypeComputeOp = 24
-const RTYPE_DIVUW:RTypeComputeOp = 25
-const RTYPE_REMW:RTypeComputeOp = 26
-const RTYPE_REMUW:RTypeComputeOp = 27
+// ----- Operand a source -----
+const A_RS1:ASrc = 0
+const A_PC:ASrc = 1
 
-const RTYPE_KECCAK:RTypeComputeOp = 28
-const RTYPE_INVALID:RTypeComputeOp = 63
+// ----- Operand b source -----
+const B_RS2:BSrc = 0
+const B_IMM:BSrc = 1
+
+// ----- Read phase: memory load width/extension (address = a + b) -----
+const RK_NONE:ReadKind = 0
+const RK_8S:ReadKind = 1 // LB
+const RK_16S:ReadKind = 2 // LH
+const RK_32S:ReadKind = 3 // LW
+const RK_64:ReadKind = 4 // LD
+const RK_8U:ReadKind = 5 // LBU
+const RK_16U:ReadKind = 6 // LHU
+const RK_32U:ReadKind = 7 // LWU
+
+// ----- Write phase: writeback target -----
+const WK_NONE:WriteKind = 0
+const WK_REG:WriteKind = 1 // registers[rd] = result (rd==0 folded to WK_NONE at decode)
+const WK_MEM8:WriteKind = 2 // SB: mem[a + b] = registers[rs2]
+const WK_MEM16:WriteKind = 3 // SH
+const WK_MEM32:WriteKind = 4 // SW
+const WK_MEM64:WriteKind = 5 // SD
+
+// ----- Advance-PC phase: program-counter update mode -----
+const PK_NEXT:PcKind = 0 // pc + 4
+const PK_BRANCH:PcKind = 1 // cond ? pc + imm : pc + 4
+const PK_JUMP_REL:PcKind = 2 // JAL: pc + imm (= addr, since a = pc)
+const PK_JUMP_ABS:PcKind = 3 // JALR: (rs1 + imm) & ~1 (= addr & ~1)
+const PK_SYSCALL:PcKind = 4 // ECALL
+const PK_HALT:PcKind = 5 // EBREAK

@@ -1,0 +1,32 @@
+include "../memory.zkc"
+include "../ram/write.zkc"
+include "../utils/constants.zkc"
+
+// =========================================================================
+// WRITE phase of the unified interpreter pipeline — memory stores only.
+//
+// The register-write (WK_REG) and no-writeback (WK_NONE) cases are handled
+// inline in the interpreter hot path; this helper is reached only for the
+// WK_MEM* store widths. Stores take their data from registers[rs2]; the lower N
+// bits are written according to the store width (address = a + b).
+// =========================================================================
+fn write<registers, ram>(write_kind:WriteKind, address:Address, rs2:Register) -> () {
+    switch write_kind {
+        case WK_MEM8: {
+            write_8(address, (registers[rs2] & (0xFF as u64)) as u8)
+        }
+        case WK_MEM16: {
+            write_16(address, (registers[rs2] & (0xFFFF as u64)) as u16)
+        }
+        case WK_MEM32: {
+            write_32(address, (registers[rs2] & (0xFFFFFFFF as u64)) as u32)
+        }
+        case WK_MEM64: {
+            write_64(address, registers[rs2])
+        }
+        default: {
+            printf "[ERROR] Unsupported write kind %d\n", write_kind
+            fail
+        }
+    }
+}
