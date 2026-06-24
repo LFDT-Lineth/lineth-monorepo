@@ -1,0 +1,107 @@
+# Guest-in-ZKC-interpreter CI for the l2-execution RISC-V guest.
+#
+# Builds the guest as a statically-linked rv64im ELF (KECCAK_ACCEL=true — the prover-accelerated
+# custom keccak op, the production proving config), converts it to zkc's JSON input, and executes it
+# under zkc via the existing `exec` entry point. Execution uses zkc's generated-Go backend in fast
+# mode (--gogen --fast); the tree-walking interpreter's trace path is skipped because tracing is not
+# implemented yet. This is the RISC-V/ZKC counterpart to the host-machine guest tests, which run the
+# guest logic natively (no RISC-V, no zkc). It bridges the riscv-guests/ and arithmetization/ trees —
+# depending on both the guest source AND the interpreter program + ELF->JSON tooling — so it triggers
+# on changes to either.
+#
+# Scope: this is a *runnability* smoke gate — it proves the build -> ELF -> ELF->JSON -> `zkc exec`
+# pipeline runs one representative committed block end-to-end under the production keccak op and exits
+# cleanly. Output/correctness equivalence over the full EF zkevm corpus is the native host suite's job.
+name: riscv-guests zkc interpreter run
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'riscv-guests/**'
+      - 'arithmetization/src/main/riscv/**'      # main.zkc — the interpreter (ZKC_MAIN)
+      - 'arithmetization/src/main/lib/**'         # zkc stdlib used by the interpreter
+      - 'arithmetization/src/main/wrappers/**'    # linea_zkvm_accel — imported by the guest build (l2-execution/build.zig)
+      - 'arithmetization/src/test/Makefile'       # elf-exec / elf-to-json / linker-script
+      - 'arithmetization/src/test/scripts/**'     # elf_to_json_gen
+      - 'arithmetization/Makefile'                # install-zkc / ZKC_REF
+      - '.github/actions/setup-riscv-guests/**'
+      - '.github/workflows/riscv-guests-zkc-interpreter-run.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'riscv-guests/**'
+      - 'arithmetization/src/main/riscv/**'
+      - 'arithmetization/src/main/lib/**'
+      - 'arithmetization/src/main/wrappers/**'
+      - 'arithmetization/src/test/Makefile'
+      - 'arithmetization/src/test/scripts/**'
+      - 'arithmetization/Makefile'
+      - '.github/actions/setup-riscv-guests/**'
+      - '.github/workflows/riscv-guests-zkc-interpreter-run.yml'
+  workflow_dispatch:
+    inputs:
+      zkc-ref:
+        description: 'zkc commit/branch/tag (defaults to main)'
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      zkc-ref:
+        description: 'zkc commit/branch/tag (defaults to main)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  zkc-interpreter-run:
+    name: l2-execution guest in ZKC interpreter (accel)
+    # gogen+fast execution is light (~tens of MB, seconds), so the 32 GB tier the heavy interpreter
+    # path would have needed is unnecessary — this job is build-bound, not memory-bound. The mid tier
+    # (16 GB) covers the zig/zesu build and the run comfortably.
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: false
+
+      # Pinned Zig (from .zigversion) + zig-pkg/.zig-cache caches that make the zesu graph build a
+      # near-no-op. This action also builds native crypto libs (blst/mcl/…) that the FREESTANDING
+      # guest ELF does not link (its precompiles are pure-Zig or a custom op) — that work is cached
+      # and harmless; we reuse the action for the Zig pin + caching, so do not "optimize" it away.
+      - name: Setup RISC-V guests environment (Zig + caches)
+        uses: ./.github/actions/setup-riscv-guests
+
+      # exec needs Go twice: zkc's `go install` and elf_to_json_gen's `go run`. The Zig setup above
+      # installs no Go. Pin chosen to match the repo's other Go pins (keep in sync). setup-go@v5 puts
+      # $(go env GOPATH)/bin on PATH, so `zkc` is found in later steps without adding ~/go/bin
+      # manually — the same precedent the repo's existing zkc workflows rely on.
+      - name: Install Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.24.6'
+          cache-dependency-path: "**/*.sum"
+
+      # Install zkc up front as its own step (clear logs, pinned via ZKC_REF). exec's elf-exec also
+      # depends on install-zkc, but in the run step below ZKC_REF is unset and zkc is already on PATH,
+      # so that dependency no-ops — zkc is built once, here. Install logic lives in arithmetization/Makefile.
+      - name: Install zkc interpreter CLI
+        env:
+          ZKC_REF: ${{ inputs.zkc-ref || 'main' }}
+
+        run: make -C arithmetization install-zkc
+      # Execute the guest via zkc's generated-Go backend (--gogen) in fast mode (--fast), quiet (-q):
+      # the interpreter does not implement tracing yet, so this runnability check skips the trace path
+      # — and gogen+fast is light (tens of MB, seconds, vs the tree-walking interpreter's ~15 GB). Uses
+      # exec's default INPUT (the committed sample stateless input). A trap/failure still exits
+      # non-zero under these flags.
+      # ZKC_REF= (empty) ensures the install-zkc prereq inside elf-exec is a guaranteed no-op
+      # (zkc is already on PATH from the step above; an empty ZKC_REF triggers the skip path).
+      - name: Run l2-execution guest under zkc (gogen, fast, accel keccak)
+        run: make -C riscv-guests/l2-execution exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--quiet --gogen --fast"

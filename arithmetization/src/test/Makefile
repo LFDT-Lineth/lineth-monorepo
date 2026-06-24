@@ -486,8 +486,8 @@ ACT4_FAST       ?= false
 # If true, enables debug output (signature objdump, trace files, and trap report)
 ACT4_DEBUG      ?= true
 
-# Build the ACT4 self-checking ELFs with the Linea ACT4 config 
-# Note: 
+# Build the ACT4 self-checking ELFs with the Linea ACT4 config
+# Note:
 #	- clone https://github.com/riscv/riscv-arch-test.git if needed
 #	- ELFs are built at every invocation (in case Linea ACT4 config changes)
 #   - JSONs are generated from the ELFs at every invocation

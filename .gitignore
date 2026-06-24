@@ -51,6 +51,8 @@
 .cursor/*
 !.cursor/BUGBOT.md
 !.cursor/rules/
+# Ignore .codex config but commit shared team skills/rules etc.
+.codex/config.toml
 
 atlassian-ide-plugin.xml
 circuit.bin
@@ -76,11 +78,9 @@ proving_key.bin
 **/.direnv
 
 # Prisma generated clients
-/operations/native-yield/lido-governance-monitor/prisma/client/
+/native-yield-operations/lido-governance-monitor/prisma/client/
 
 bin/
-!/operations/cli/bin/
-!/operations/cli/bin/**
 build/
 cache_forge/
 coverage/
@@ -94,22 +94,14 @@ tmp/
 typechain/
 typechain-types/
 generated/
-!/verifier-ray/src/generated/
-!/verifier-ray/src/generated/**
-!/verifier-ray/testdata/generated/
-!/verifier-ray/testdata/generated/**
 __pycache__/
 
-/linea-besu/plugins/linea-sequencer/**/site
+/besu-plugins/linea-sequencer/**/site
 
 /contracts/.env~
 /contracts/coverage.json
 /contracts/**/cache
 /contracts/deployments/zkevm_dev
-/contracts/deployments/custom
-/contracts/deployments/l2
-/contracts/deployments/localhost
-/contracts/deployments/hardhat
 /contracts/lib/forge-std/
 /contracts/signer-ui/.next/
 /contracts/signer-ui/node_modules/
@@ -152,7 +144,15 @@ __pycache__/
 /docker/config/l2-genesis-initialization/*.toml
 /docker/config/l2-genesis-initialization/fork-timestamp.txt
 
+# Lineth Stack quickstart local runtime artifacts and evidence bundles.
+/docs/getting-started/lineth-stack/.rendered/
+/docs/getting-started/lineth-stack/rendered/
+/docs/getting-started/lineth-stack/artifacts/*
+!/docs/getting-started/lineth-stack/artifacts/.gitignore
+/docs/getting-started/lineth-stack/lineth-output/
+
 !.gitkeep
+!operations/bin/
 # Authorize the kzg srs folder
 !prover/prover-assets/kzgsrs/**
 !prover/**/testdata/**/*.csv
@@ -182,6 +182,7 @@ contracts/.claude/settings.local.json
 .worktrees/
 e2e/e2e-runtime-report.html
 e2e/e2e-runtime-report-summary.json
+/linea-besu/.besu-resolved
 .zig-cache/
 arithmetization/src/test/zig/zig-pkg/
 arithmetization/src/test/linker_script.ld
