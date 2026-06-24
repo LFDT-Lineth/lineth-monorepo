@@ -4,6 +4,8 @@ type Register = u5
 
 type Opcode = u7
 
+type Type = u3
+
 type Funct3 = u3
 type Funct6 = u6
 type Funct7 = u7
@@ -28,30 +30,10 @@ type UnsignedDoubleWord = u64
 type Length = u64
 type Offset = u64
 
-// =========================================================================
-// Unified instruction model (zisk-style pipeline)
-//
-// Every RISC-V instruction is pre-decoded (at ELF time) into a single uniform
-// record consumed by the interpreter's four-phase pipeline:
-//   read (operand gathering + optional memory load) -> compute(a, b) ->
-//   write (register or memory) -> advance PC.
-// =========================================================================
+// Semantic I-type micro-op tags (pre-decoded at ELF time).
+type ITypeComputeOp = u6
+type ITypeWriteback = u2
 
-// The compute operation applied to operands a and b (see OPR_* in constants.zkc).
-type Operation = u6
-
-// Source selector for operand a (registers[rs1] or pc).
-type ASrc = u1
-
-// Source selector for operand b (registers[rs2] or imm).
-type BSrc = u1
-
-// Memory load width/extension for the read phase (RK_* in constants.zkc).
-type ReadKind = u3
-
-// Writeback target for the write phase (WK_* in constants.zkc).
-type WriteKind = u3
-
-// Program-counter update mode for the advance-PC phase (PK_* in constants.zkc).
-type PcKind = u3
+// Semantic R-type micro-op tags (pre-decoded at ELF time).
+type RTypeComputeOp = u6
 

@@ -1,0 +1,42 @@
+include "../memory.zkc"
+include "../utils/sign_extend.zkc"
+include "../utils/signed_sum.zkc"
+
+// Process a RISC-V J-type instruction (JAL) and return the next program counter.
+//
+// J-type is used exclusively for JAL (Jump And Link).  The 25-bit encoding
+// (opcode stripped) scrambles the immediate bits to share control lines with
+// other formats; the fields arrive in this order:
+//
+//   imm[20] :: imm[10:1] :: imm[11] :: imm[19:12] :: rd
+//
+// They are reassembled into a 21-bit signed PC-relative byte offset:
+//
+//   imm21 = imm[20] :: imm[19:12] :: imm[11] :: imm[10:1] :: 0
+//
+// The appended zero means the target is always 2-byte aligned (LSB always 0).
+//
+// Effect:
+//   rd     = pc + 4           (return address saved in destination register)
+//   pc_new = pc + sign_extend(imm21)  (unconditional jump to target)
+fn process_J_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Address) {
+
+    // The J-type record is pre-decoded externally (see decoded_jtype in
+    // memory.zkc) and looked up by index. The 21-bit signed jump offset is already
+    // sign-extended into a ready-to-use 64-bit imm at decode time, so no shift or
+    // sign extension is needed here.
+    var imm:DoubleWord
+    var rd:Register
+
+    // imm20::imm10_1::imm11::imm19_12::rd = instruction_parameters
+    // imm = imm20::imm19_12::imm11::imm10_1::0 as DoubleWord
+    imm, rd = decoded_jtype[index]
+
+    printf "JAL "
+    print_j_operands(rd, imm)
+    var link:DoubleWord = signed_sum_of_double_word(pc, 4)
+    if (rd != 0) {
+        registers[rd] = link
+    }
+    pc_new = signed_sum_of_double_word(pc, imm) as Address
+}

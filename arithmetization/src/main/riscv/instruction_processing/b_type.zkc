@@ -35,7 +35,14 @@ fn process_B_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Addre
     var imm_4_1:u4
     var imm_11:u1
     imm_sign, imm_10_5, rs2, rs1, funct3, imm_4_1, imm_11 = decoded_btype[index]
+<<<<<<< HEAD
     
+=======
+
+    var imm:DoubleWord
+    var comparison:Boolean
+
+>>>>>>> c1ffca63f (Revert "feat: zisk like at interpreter level, no processing per type")
     if imm_sign == 1 {
         imm = DWORD_SIGN_EXT_PREFIX_52_ONES::imm_11::imm_10_5::imm_4_1::(0 as u1)
     } else {
@@ -66,7 +73,12 @@ fn process_B_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Addre
         case FUNCT3_BLT: {
             printf "BLT "
             print_b_operands(rs1, rs2, imm)
+<<<<<<< HEAD
             if signed_LT(registers[rs1], registers[rs2]) == 1 {
+=======
+            comparison = signed_LT(registers[rs1], registers[rs2])
+            if comparison == 1 {
+>>>>>>> c1ffca63f (Revert "feat: zisk like at interpreter level, no processing per type")
                 // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
@@ -74,7 +86,12 @@ fn process_B_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Addre
         case FUNCT3_BGE: {
             printf "BGE "
             print_b_operands(rs1, rs2, imm)
+<<<<<<< HEAD
             if signed_LT(registers[rs1], registers[rs2]) == 0 {
+=======
+            comparison = signed_LT(registers[rs1], registers[rs2])
+            if comparison == 0 {
+>>>>>>> c1ffca63f (Revert "feat: zisk like at interpreter level, no processing per type")
                 // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
