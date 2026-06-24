@@ -1,0 +1,48 @@
+include "../memory.zkc"
+include "../ram/read.zkc"
+include "../utils/constants.zkc"
+include "../utils/sign_extend.zkc"
+
+// =========================================================================
+// READ phase of the unified interpreter pipeline.
+//
+// Operand gathering (a = registers[rs1] | pc, b = registers[rs2] | imm) and the
+// effective-address sum are inlined in the interpreter hot path; this file is
+// left with the memory load, which the interpreter calls only for actual loads.
+// =========================================================================
+
+// Memory load step. Called only when read_kind != RK_NONE (the interpreter
+// guards the call). Loads apply the sign/zero extension encoded by read_kind so
+// the compute phase can simply move the result into rd.
+fn read<ram>(read_kind:ReadKind, address:Address) -> (loaded:DoubleWord) {
+    switch read_kind {
+        case RK_NONE: {
+            loaded = 0
+        }
+        case RK_8S: {
+            loaded = sgn_extension_u8_u64(read_8(address))
+        }
+        case RK_16S: {
+            loaded = sgn_extension_u16_u64(read_16(address))
+        }
+        case RK_32S: {
+            loaded = sgn_extension_u32_u64(read_32(address))
+        }
+        case RK_64: {
+            loaded = read_64(address) as DoubleWord
+        }
+        case RK_8U: {
+            loaded = read_8(address) as DoubleWord
+        }
+        case RK_16U: {
+            loaded = read_16(address) as DoubleWord
+        }
+        case RK_32U: {
+            loaded = read_32(address) as DoubleWord
+        }
+        default: {
+            printf "[ERROR] Unsupported read kind %d\n", read_kind
+            fail
+        }
+    }
+}
