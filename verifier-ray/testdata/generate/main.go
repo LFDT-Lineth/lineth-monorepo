@@ -626,6 +626,16 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		if err := add("Lookup", sc.Name, sc.Sys, sc.AssignWitness, nil); err != nil {
 			return nil, nil, err
 		}
+		// Todo: This is just to put bench test just after the Multicolumn scenario. We should remove the conditional case in future.
+		if sc.Name == "MultiColumn" {
+			// Verifier-ray-only benchmark scenario. This is intentionally kept out of
+			// prover-ray's shared wioptest LookupScenarios because it is not extra prover
+			// behavior coverage; it is a larger verifier fixture used to stress profiling.
+			sys, honest := buildLookupMultiColumnBenchSystem()
+			if err := add("Lookup", "MultiColumnBench", sys, honest, nil); err != nil {
+				return nil, nil, err
+			}
+		}
 	}
 	for _, factory := range wioptest.RangeCheckCompilerScenarios() {
 		sc := factory()
@@ -662,6 +672,58 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 	}
 
 	return cases, systems, nil
+}
+
+// buildLookupMultiColumnBenchSystem is a verifier-ray-local stress fixture for
+// profiling a wider lookup/log-derivative/vanishing pipeline. It stays local to
+// verifier-ray because its purpose is benchmark shape, not reusable prover-ray
+// scenario coverage.
+func buildLookupMultiColumnBenchSystem() (*wiop.System, assignFn) {
+	const (
+		bigSize = 1 << 10
+		numCols = 5
+	)
+	var (
+		tCols        = make([]*wiop.Column, numCols)
+		sCols        = make([]*wiop.Column, numCols)
+		tTableView   = make([]*wiop.ColumnView, numCols)
+		sTableView   = make([]*wiop.ColumnView, numCols)
+		tAssignments = make([][]field.Element, numCols)
+		sAssignments = make([][]field.Element, numCols)
+	)
+
+	sys := wiop.NewSystemf("lk-multi-col-bench")
+	r0 := sys.NewRound()
+	modT := sys.NewSizedModule(sys.Context.Childf("modT"), bigSize, wiop.PaddingDirectionNone)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), bigSize, wiop.PaddingDirectionNone)
+	for i := range tCols {
+		tCols[i] = modT.NewColumn(sys.Context.Childf("T%d", i), wiop.VisibilityOracle, r0)
+		sCols[i] = modS.NewColumn(sys.Context.Childf("S%d", i), wiop.VisibilityOracle, r0)
+		tTableView[i] = tCols[i].View()
+		sTableView[i] = sCols[i].View()
+	}
+	sys.NewInclusion(
+		sys.Context.Childf("inc-big-table-bench"),
+		[]wiop.Table{wiop.NewTable(sTableView...)},
+		[]wiop.Table{wiop.NewTable(tTableView...)},
+	)
+
+	for i := range tCols {
+		tAssignments[i] = make([]field.Element, bigSize)
+		sAssignments[i] = make([]field.Element, bigSize)
+		for j := 0; j < bigSize; j++ {
+			tAssignments[i][j] = elem(uint64(i + j + 1))
+			sAssignments[i][j] = elem(uint64(i + (j % (bigSize / 2)) + 1))
+		}
+	}
+
+	honest := func(rt *wiop.Runtime) {
+		for i := range tCols {
+			rt.AssignColumn(tCols[i], concreteBase(tAssignments[i]))
+			rt.AssignColumn(sCols[i], concreteBase(sAssignments[i]))
+		}
+	}
+	return sys, honest
 }
 
 // buildLagrangeSelectorBoundarySystem builds a size-4 module with the single

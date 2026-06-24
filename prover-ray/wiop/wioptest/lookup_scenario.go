@@ -37,10 +37,6 @@ func LookupScenarios() []func() *LookupScenario {
 		NewLookupFilterOnIncludingScenario,
 		NewLookupDoubleConditionalScenario,
 		NewLookupMultiColumnScenario,
-		// a heavy benchmark scenario for verifier-ray,
-		// we can segregate them when we have more of them and
-		// input serialisation is supported in verifier-ray (issue#3431)
-		NewLookupMultiColumnBenchScenario,
 		NewLookupSharedTableScenario,
 		NewLookupDistinctTablesScenario,
 		NewLookupMultiColumnFilterOnIncludingScenario,
