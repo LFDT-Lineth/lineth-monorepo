@@ -16,24 +16,22 @@ binary with:
 
 The selected spec and systems remain comptime inputs to `verifier.verify`, while
 the selected proof is embedded as static read-only data and passed as a runtime
-`ProofData` value. This keeps profiling close to the verifier path used by the
+`Proof` value. This keeps profiling close to the verifier path used by the
 R5 smoke target while avoiding proof serialization/parsing cost, which does not
 exist yet in verifier-ray.
 
 ## What Is Measured
 
-The profiling runner builds the R5 binary, converts it to zkc JSON, then runs:
-
-```bash
-zkc exec zig-out/bin/verifier-ray.json ../arithmetization/src/main/riscv/main.zkc
-```
+For each case, the profiling runner calls the Makefile's `profile-zkc-case`
+target. That target owns the R5 build flags, ELF-to-JSON conversion, zkc input
+origin, and shared zkc runner invocation.
 
 The shared runner prints the normal interpreter trace. The Go profiling tool
 streams that output and keeps only:
 
 - the latest `clock cycle: <N>` line, used as the final interpreted cycle count;
 - `VERIFIER-MARK <phase> <value>` writes, used as phase checkpoints;
-- each marker value, currently Poseidon2 compressions so far.
+- the final marker value, currently total Poseidon2 compressions for the case.
 
 The full zkc trace is not written to disk by the report generator. Only the
 compact CSV report is stored. Invalid cases are intentionally excluded: their
@@ -60,10 +58,10 @@ The current marker phases are:
 | Phase | Meaning | Value |
 | ---: | --- | --- |
 | 1 | verifier start | 0 |
-| 2 | transcript replay done | Poseidon2 compressions so far |
-| 3 | vanishing verifier start | Poseidon2 compressions so far |
-| 4 | vanishing verifier done | Poseidon2 compressions so far |
-| 5 | verifier done | Poseidon2 compressions so far |
+| 2 | transcript replay done | 0 |
+| 3 | vanishing verifier start | 0 |
+| 4 | vanishing verifier done | 0 |
+| 5 | log-derivative-sum verifier done | Poseidon2 compressions so far |
 
 The Go parser associates each marker with the most recent `clock cycle` printed
 by the shared runner. These numbers are useful for attribution, but the marker
@@ -83,8 +81,8 @@ By default the report is written to:
 bench/verifier-profile.csv
 ```
 
-Useful variables:
+Use the profiler directly to choose a different output path:
 
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `PROFILE_OUT` | `bench/verifier-profile.csv` | CSV output path |
+```bash
+go run bench/verifier_profile/main.go -out=<path>
+```
