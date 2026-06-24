@@ -1,4 +1,6 @@
 import { ethers, AbstractSigner, Interface, InterfaceAbi, BaseContract } from "ethers";
+import fs from "fs";
+import path from "path";
 
 import { normalizeAddressArgs } from "./normalize-address-args";
 import { clearSignerUiWorkflowStatus, setSignerUiWorkflowStatus } from "./signerUiWorkflowStatus";
@@ -12,6 +14,41 @@ import {
   abi as TransparentUpgradeableProxyAbi,
   bytecode as TransparentUpgradeableProxyBytecode,
 } from "../../deployments/bytecode/mainnet-proxy/TransparentUpgradeableProxy.json";
+
+/**
+ * Loads a compiled contract artifact ("<contractName>.json") from a directory.
+ * Replaces the per-script `findContractArtifacts` copies in local-deployments-artifacts.
+ */
+export function loadArtifactFromDirectory(
+  folderPath: string,
+  contractName: string,
+): { abi: ethers.InterfaceAbi; bytecode: ethers.BytesLike } {
+  const fileName = `${contractName}.json`;
+  const filePath = path.join(folderPath, fileName);
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Contract "${contractName}" not found in folder "${folderPath}"`);
+  }
+  const fileContent = fs.readFileSync(filePath, "utf-8").trim();
+  return JSON.parse(fileContent);
+}
+
+/**
+ * Resolves a deploy nonce from an env var (e.g. "L1_NONCE"/"L2_NONCE"), validated as a
+ * non-negative integer. When the var is unset/empty, falls back to the wallet's live nonce.
+ * `offset` is added on top for scripts that deploy in a fixed order from a base nonce.
+ *
+ * Replaces the unvalidated `parseInt(process.env.L1_NONCE)` pattern across deploy scripts.
+ */
+export async function getDeployNonceFromEnv(wallet: AbstractSigner, envVarName: string, offset = 0): Promise<number> {
+  const raw = process.env[envVarName];
+  if (raw === undefined || raw === "") {
+    return (await wallet.getNonce()) + offset;
+  }
+  if (!/^[0-9]+$/.test(raw)) {
+    throw new Error(`${envVarName} must be a non-negative integer, got: ${raw}`);
+  }
+  return Number(raw) + offset;
+}
 
 export function getInitializerData(contractAbi: InterfaceAbi, initializerFunctionName: string, args: unknown[]) {
   const contractInterface = new Interface(contractAbi);
