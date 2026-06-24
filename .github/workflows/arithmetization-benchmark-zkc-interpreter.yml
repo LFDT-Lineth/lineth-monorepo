@@ -226,16 +226,8 @@ jobs:
             # Run in fast (with gogen) or tracing mode
             for i in $(seq 1 "$ITERS"); do
               if [[ "$FAST_MODE" == "true" ]]; then
-<<<<<<< HEAD
                reset_state; log "${wl}: iter ${i}/${ITERS} opt";  run_gogen_${wl} opt  "$i"
                reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_gogen_${wl} base "$i"
-=======
-               # RESTORE when gogen is supporting native fields
-               #  reset_state; log "${wl}: iter ${i}/${ITERS} opt";  run_gogen_${wl} opt  "$i"
-               # reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_gogen_${wl} base "$i"
-              reset_state; log "${wl}: warmup opt  (untimed)"; run_${wl} opt  warmup --fast
-              reset_state; log "${wl}: warmup base (untimed)"; run_${wl} base warmup --fast
->>>>>>> 827fa8301 (feat(arithmetization): wait for native field support to run gogen on bench interpreter (#3419))
               else
                 # RESTORE to tracing (without --fast) when gogen is supporting native fields
                 reset_state; log "${wl}: iter ${i}/${ITERS} opt"; run_${wl} opt "$i" --fast
