@@ -542,7 +542,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                             printf "REMUW "
                             print_r_operands(rd, rs1, rs2)
                             if v2_lower == 0 {
-                                registers[rd] = sgn_extension_u32_u64(v1_lower) 
+                                registers[rd] = sgn_extension_u32_u64(v1_lower)
                             } else {
                                 registers[rd] = sgn_extension_u32_u64(v1_lower % v2_lower)
                             }
