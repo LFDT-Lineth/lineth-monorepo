@@ -328,8 +328,8 @@ class MaruPeerManagerTest {
       )
     manager.start(discoveryService = null, p2pNetwork = mock())
 
-    manager.onConnect(firstPeer)   // peers[nodeId] = closedMaruPeer
-    manager.onConnect(secondPeer)  // peers[nodeId] = survivingMaruPeer (overwrites)
+    manager.onConnect(firstPeer) // peers[nodeId] = closedMaruPeer
+    manager.onConnect(secondPeer) // peers[nodeId] = survivingMaruPeer (overwrites)
     manager.onDisconnect(firstPeer) // first connection closes; survivingMaruPeer still alive
 
     assertThat(manager.peerCount).isEqualTo(1)
