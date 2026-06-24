@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: ci ci-checks help fmt fmt-zig fmt-codegen fmt-testdata-generator fmt-profile build build-zig build-release build-r5 run run-passing run-failing run-failing-expected test test-zig test-generated-zig test-codegen generate-testdata verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected profile-zkc clean
+.PHONY: ci ci-checks help fmt fmt-zig fmt-codegen fmt-testdata-generator fmt-profile build build-zig build-release build-r5 run run-passing run-failing run-failing-expected test test-zig test-generated-zig test-codegen generate-testdata verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected profile-zkc-case profile-zkc clean
 
 R5_BIN := zig-out/bin/verifier-ray
 R5_JSON := $(R5_BIN).json
@@ -163,6 +163,11 @@ zkc-verify-failing-expected:
 	else \
 		echo "zkc-verify-failing failed as expected"; \
 	fi
+
+profile-zkc-case:
+	@zig build --release=small -Dstrip=true -Dr5=true -Dembedded-input=$(EMBEDDED_INPUT) -Dembedded-spec=$(EMBEDDED_SPEC) -Dverifier-profiling=true -Dr5-marks=true
+	@go run $(ELF_TO_JSON) $(R5_BIN) "0x00" $(IN_ORIGIN) > $(R5_JSON)
+	@zkc exec -f $(R5_JSON) $(ZKC_MAIN)
 
 profile-zkc: generate-testdata
 	go run bench/verifier_profile/main.go \

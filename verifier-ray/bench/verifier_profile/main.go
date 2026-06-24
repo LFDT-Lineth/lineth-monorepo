@@ -3,10 +3,8 @@
 //
 // The command intentionally avoids a benchmark-only guest program. For each
 // generated verifier case it:
-//   - builds `src/main.zig` for the R5 target with the selected typed fixture
-//     embedded at comptime;
-//   - converts the ELF to the JSON input shape consumed by zkc;
-//   - runs the shared zkc RISC-V interpreter;
+//   - asks the Makefile to build the selected typed fixture, convert the ELF
+//     to zkc JSON, and run the shared zkc RISC-V interpreter;
 //   - streams the verbose trace and keeps only total cycles, verifier phase
 //     cycles, and Poseidon2 compression counts;
 //   - writes the compact CSV report.
@@ -29,21 +27,15 @@ import (
 )
 
 const (
-	defaultInput       = "valid"
-	defaultInputOrigin = "0x08800000"
-	defaultOutput      = "bench/verifier-profile.csv"
-	traceTailLimit     = 40
-	r5Bin              = "zig-out/bin/verifier-ray"
-	r5JSON             = "zig-out/bin/verifier-ray.json"
-	elfToJSON          = "../arithmetization/src/test/scripts/elf_to_json_gen/main.go"
-	zkcMain            = "../arithmetization/src/main/riscv/main.zkc"
-	verifyFixture      = "testdata/generated/verify.zig"
+	defaultOutput  = "bench/verifier-profile.csv"
+	traceTailLimit = 40
+	verifyFixture  = "testdata/generated/verify.zig"
 	// Marker IDs must match verifier-ray/src/profiling.zig profiling.Mark.
-	markVerifyStart    = 1
-	markTranscriptDone = 2
-	markVanishingStart = 3
-	markVanishingDone  = 4
-	markVerifyDone     = 5
+	markVerifyStart          = 1
+	markTranscriptDone       = 2
+	markVanishingStart       = 3
+	markVanishingDone        = 4
+	markLogDerivativeSumDone = 5
 )
 
 var (
@@ -162,60 +154,15 @@ func readMetadata(path string) ([]caseMetadata, error) {
 	return metadata, nil
 }
 
-// runCase builds one selected fixture, converts the R5 ELF to zkc JSON, and
+// runCase asks the Makefile to build and execute one selected fixture, then
 // parses the shared zkc interpreter trace back into traceStats.
 func runCase(caseIndex int) (traceStats, error) {
-	buildArgs := []string{
-		"build",
-		"--release=small",
-		"-Dstrip=true",
-		"-Dr5=true",
-		"-Dembedded-input=" + defaultInput,
-		fmt.Sprintf("-Dembedded-spec=%d", caseIndex),
-		"-Dverifier-profiling=true",
-		"-Dr5-marks=true",
-	}
-	if err := runCommand("zig", buildArgs...); err != nil {
-		return traceStats{}, err
-	}
-	if err := writeJSONInput(); err != nil {
-		return traceStats{}, err
-	}
-	return runZKC()
-}
-
-func runCommand(name string, args ...string) error {
-	cmd := exec.Command(name, args...)
-	cmd.Stdout = os.Stderr
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
-}
-
-// writeJSONInput keeps using the existing ELF-to-JSON helper. The verifier input
-// is already embedded into the binary, so the JSON input bytes are just a
-// one-byte placeholder required by the helper.
-func writeJSONInput() error {
-	if err := os.MkdirAll(filepath.Dir(r5JSON), 0o755); err != nil {
-		return err
-	}
-	out, err := os.Create(r5JSON)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	cmd := exec.Command("go", "run", elfToJSON, r5Bin, "0x00", defaultInputOrigin)
-	cmd.Stdout = out
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
-}
-
-// runZKC uses the shared RISC-V runner rather than a benchmark-specific zkc
-// wrapper. Fast execution still runs the runner and prints its cycle/marker
-// output, but skips zkc's post-execution constraint lowering; profiling only
-// needs the guest RISC-V cycles and phase markers.
-func runZKC() (traceStats, error) {
-	cmd := exec.Command("zkc", "exec", "-f", r5JSON, zkcMain)
+	cmd := exec.Command(
+		"make",
+		"--no-print-directory",
+		"profile-zkc-case",
+		fmt.Sprintf("EMBEDDED_SPEC=%d", caseIndex),
+	)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return traceStats{}, err
@@ -299,6 +246,7 @@ func renderCSV(results []result) (string, error) {
 		"verifier_cycles",
 		"transcript_cycles",
 		"vanishing_cycles",
+		"logderivativesum_cycles",
 		"poseidon2_compressions",
 		"module_count",
 		"dynamic_module_count",
@@ -316,10 +264,11 @@ func renderCSV(results []result) (string, error) {
 			strconv.Itoa(result.caseIndex),
 			result.metadata.name,
 			strconv.FormatUint(result.stats.totalCycles, 10),
-			cycleDelta(result.stats.markers, markVerifyStart, markVerifyDone),
+			cycleDelta(result.stats.markers, markVerifyStart, markLogDerivativeSumDone),
 			cycleDelta(result.stats.markers, markVerifyStart, markTranscriptDone),
 			cycleDelta(result.stats.markers, markVanishingStart, markVanishingDone),
-			markerValue(result.stats.markers, markVerifyDone),
+			cycleDelta(result.stats.markers, markVanishingDone, markLogDerivativeSumDone),
+			markerValue(result.stats.markers, markLogDerivativeSumDone),
 			strconv.FormatUint(result.metadata.moduleCount, 10),
 			strconv.FormatUint(result.metadata.dynamicModuleCount, 10),
 			strconv.FormatUint(result.metadata.roundCount, 10),
