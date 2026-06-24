@@ -351,18 +351,28 @@ export function emitShellEnv(config: L1DeployerConfig): string {
 async function cli() {
   const [, , command, ...args] = process.argv;
   if (command !== "emit-shell-env") {
-    throw new Error("usage: deployer-wallet.ts emit-shell-env --context <host|container>");
+    throw new Error("usage: deployer-wallet.ts emit-shell-env --context <host|container> [--output-file <path>]");
   }
   const contextIndex = args.indexOf("--context");
   const context = contextIndex === -1 ? undefined : args[contextIndex + 1];
   if (context !== "host" && context !== "container") {
-    throw new Error("usage: deployer-wallet.ts emit-shell-env --context <host|container>");
+    throw new Error("usage: deployer-wallet.ts emit-shell-env --context <host|container> [--output-file <path>]");
+  }
+  const outputFileIndex = args.indexOf("--output-file");
+  const outputFile = outputFileIndex === -1 ? undefined : args[outputFileIndex + 1];
+  if (outputFileIndex !== -1 && !outputFile) {
+    throw new Error("usage: deployer-wallet.ts emit-shell-env --context <host|container> [--output-file <path>]");
   }
   const stackDir = defaultStackDir();
   const envPath = path.join(stackDir, ".env");
   const fileEnv = fs.existsSync(envPath) ? readDotEnvFile(envPath) : {};
   const resolved = await resolveL1DeployerConfig({ ...fileEnv, ...process.env }, context, { stackDir });
-  process.stdout.write(emitShellEnv(resolved));
+  const shellEnv = emitShellEnv(resolved);
+  if (outputFile) {
+    fs.writeFileSync(outputFile, shellEnv, { mode: 0o600 });
+  } else {
+    process.stdout.write(shellEnv);
+  }
 }
 
 if (require.main === module) {

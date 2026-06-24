@@ -291,6 +291,12 @@ check_init_scripts_and_compose_shell() {
     pass "shellcheck not installed; skipped implementation shellcheck"
   fi
 
+  if grep -nE 'eval[[:space:]]+"?\$resolver_''env' "$phases_dir/04-deploy-contracts.sh" >/tmp/lineth-resolver-env-eval.txt 2>/dev/null; then
+    fail "deploy-contracts must source resolver env from a file, not eval resolver stdout: $(tr '\n' ' ' </tmp/lineth-resolver-env-eval.txt)"
+  else
+    pass "deploy-contracts does not eval resolver stdout"
+  fi
+
   for file in $expected_internal_files; do
     file_path="$internal_dir/$file"
     if [ -f "$file_path" ]; then

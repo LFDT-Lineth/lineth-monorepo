@@ -92,6 +92,7 @@ timing_now_ms() {
 
 TIMING_STEP_NAME=""
 TIMING_STEP_STARTED_MS="$(timing_now_ms)"
+RESOLVER_ENV_FILE=""
 
 timing_record() {
   local name="$1" started_ms="$2" ended_ms="$3" status="$4"
@@ -122,6 +123,9 @@ step() {
 
 finish_deploy_timing() {
   local status=$?
+  if [[ -n "${RESOLVER_ENV_FILE:-}" ]]; then
+    rm -f "$RESOLVER_ENV_FILE"
+  fi
   if [[ "$status" -eq 0 ]]; then
     timing_finish_current_step "ok"
   else
@@ -180,12 +184,15 @@ cd "$CONTRACTS_DIR"
 step "Resolve L1 deployer"
 export NODE_PATH="/workspace/node_modules:/workspace/contracts/node_modules${NODE_PATH:+:$NODE_PATH}"
 set +x 2>/dev/null || true
-resolver_env="$(
-  TS_NODE_TRANSPILE_ONLY=1 \
-  TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
-    pnpm -s exec ts-node /scripts/internal/deployer-wallet.ts emit-shell-env --context container
-)"
-eval "$resolver_env"
+RESOLVER_ENV_FILE="$(mktemp)"
+TS_NODE_TRANSPILE_ONLY=1 \
+TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
+  pnpm -s exec ts-node /scripts/internal/deployer-wallet.ts emit-shell-env --context container \
+    --output-file "$RESOLVER_ENV_FILE"
+# shellcheck disable=SC1090
+. "$RESOLVER_ENV_FILE"
+rm -f "$RESOLVER_ENV_FILE"
+RESOLVER_ENV_FILE=""
 RESOLVED_L1_DEPLOYER_ADDRESS="$L1_DEPLOYER_ADDRESS"
 export L1_MODE L1_RPC_URL L1_DEPLOYER_PRIVATE_KEY L1_DEPLOYER_SOURCE RESOLVED_L1_DEPLOYER_ADDRESS
 log "Resolved L1 deployer source: $L1_DEPLOYER_SOURCE"
@@ -238,13 +245,11 @@ wait_rpc "$L2_RPC_URL" L2
 # 02-generate-l2-genesis.sh writes /initialization/fork-timestamp.txt into
 # artifacts/genesis. deploy-contracts mounts it read-only at /generated-genesis.
 FORK_TIMESTAMP=""
-for f in "/generated-genesis/fork-timestamp.txt"; do
-  if [[ -f "$f" ]]; then
-    FORK_TIMESTAMP="$(cat "$f")"
-    log "Read FORK_TIMESTAMP=$FORK_TIMESTAMP from $f"
-    break
-  fi
-done
+fork_timestamp_file="/generated-genesis/fork-timestamp.txt"
+if [[ -f "$fork_timestamp_file" ]]; then
+  FORK_TIMESTAMP="$(cat "$fork_timestamp_file")"
+  log "Read FORK_TIMESTAMP=$FORK_TIMESTAMP from $fork_timestamp_file"
+fi
 : "${FORK_TIMESTAMP:=1683325137}"
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -701,7 +706,7 @@ step1_l1_rollup() {
     export LINEA_ROLLUP_OPERATORS="${LINEA_ROLLUP_OPERATORS:-$DEFAULT_L1_OPERATOR_ADDRESSES}"
     export LINEA_ROLLUP_RATE_LIMIT_PERIOD="86400"
     export LINEA_ROLLUP_RATE_LIMIT_AMOUNT="1000000000000000000000"
-    export DEPLOY_FORCED_TRANSACTION_GATEWAY="$DEPLOY_FORCED_TRANSACTION_GATEWAY"
+    export DEPLOY_FORCED_TRANSACTION_GATEWAY
     if [[ "$DEPLOY_FORCED_TRANSACTION_GATEWAY" == "true" ]]; then
       export FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID="$L2_CHAIN_ID"
       export FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER="2000"
